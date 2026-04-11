@@ -1,26 +1,23 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
-import { requireDmRole } from '../../functions'
 import { validateCampaignName, validateCampaignSlug } from '../validation'
 import type { WithoutSystemFields } from 'convex/server'
 import type { Doc, Id } from '../../_generated/dataModel'
-import type { AuthMutationCtx } from '../../functions'
+import type { DmMutationCtx } from '../../functions'
 
 export async function updateCampaign(
-  ctx: AuthMutationCtx,
+  ctx: DmMutationCtx,
   {
     name,
     description,
     slug,
-    campaignId,
   }: {
     name?: string
     description?: string
     slug?: string
-    campaignId: Id<'campaigns'>
   },
 ): Promise<Id<'campaigns'>> {
-  const { campaign } = await requireDmRole(ctx, campaignId)
-  const profile = ctx.user.profile
+  const campaign = ctx.campaign
+  const userId = ctx.membership.userId
 
   const updates: Partial<WithoutSystemFields<Doc<'campaigns'>>> = {}
 
@@ -43,7 +40,7 @@ export async function updateCampaign(
     if (slugError) throwClientError(ERROR_CODE.VALIDATION_FAILED, slugError)
     const conflict = await ctx.db
       .query('campaigns')
-      .withIndex('by_slug_dm', (q) => q.eq('slug', trimmedSlug).eq('dmUserId', profile._id))
+      .withIndex('by_slug_dm', (q) => q.eq('slug', trimmedSlug).eq('dmUserId', userId))
       .unique()
     if (conflict && conflict._id !== campaign._id) {
       throwClientError(ERROR_CODE.CONFLICT, 'A campaign with this slug already exists')
@@ -58,7 +55,7 @@ export async function updateCampaign(
   await ctx.db.patch('campaigns', campaign._id, {
     ...updates,
     updatedTime: Date.now(),
-    updatedBy: ctx.user.profile._id,
+    updatedBy: userId,
   })
 
   return campaign._id

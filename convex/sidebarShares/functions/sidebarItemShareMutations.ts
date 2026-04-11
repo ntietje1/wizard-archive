@@ -1,11 +1,10 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
-import { getCurrentSession } from '../../sessions/functions/getCurrentSession'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { PermissionLevel } from '../../permissions/types'
 
 export async function shareSidebarItemWithMember(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   {
     sidebarItemId,
     campaignMemberId,
@@ -55,14 +54,14 @@ export async function shareSidebarItemWithMember(
       await ctx.db.patch('sidebarItemShares', existingShare._id, {
         ...updates,
         updatedTime: now,
-        updatedBy: ctx.user.profile._id,
+        updatedBy: ctx.membership.userId,
       })
     }
     return existingShare._id
   }
 
-  // Get current session if any
-  const currentSession = await getCurrentSession(ctx, { campaignId })
+  const currentSessionId = ctx.campaign.currentSessionId
+  const currentSession = currentSessionId ? await ctx.db.get('sessions', currentSessionId) : null
 
   return await ctx.db.insert('sidebarItemShares', {
     campaignId,
@@ -75,12 +74,12 @@ export async function shareSidebarItemWithMember(
     deletedBy: null,
     updatedTime: null,
     updatedBy: null,
-    createdBy: ctx.user.profile._id,
+    createdBy: ctx.membership.userId,
   })
 }
 
 export async function unshareSidebarItemFromMember(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   {
     sidebarItemId,
     campaignMemberId,
@@ -111,9 +110,9 @@ export async function unshareSidebarItemFromMember(
     const now = Date.now()
     await ctx.db.patch('sidebarItemShares', share._id, {
       deletionTime: now,
-      deletedBy: ctx.user.profile._id,
+      deletedBy: ctx.membership.userId,
       updatedTime: now,
-      updatedBy: ctx.user.profile._id,
+      updatedBy: ctx.membership.userId,
     })
   }
 }

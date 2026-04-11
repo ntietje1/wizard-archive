@@ -4,11 +4,11 @@ import { requireItemAccess } from '../../sidebarItems/validation'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { rollbackYjsDocument } from '../../yjsSync/functions/rollbackYjsDocument'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 export async function rollbackCanvas(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   itemId: Id<'sidebarItems'>,
   snapshotData: ArrayBuffer,
 ): Promise<void> {

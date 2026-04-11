@@ -21,7 +21,10 @@ describe('getNote', () => {
     })
     await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id)
 
-    const result = await dmAuth.query(api.notes.queries.getNote, { noteId })
+    const result = await dmAuth.query(api.notes.queries.getNote, {
+      campaignId: ctx.campaignId,
+      noteId,
+    })
 
     expect(result).not.toBeNull()
     expect(result!._id).toBe(noteId)
@@ -43,6 +46,7 @@ describe('getNote', () => {
     })
 
     const result = await dmAuth.query(api.notes.queries.getNote, {
+      campaignId: ctx.campaignId,
       noteId: realNoteId,
     })
     expect(result).toBeNull()
@@ -65,7 +69,10 @@ describe('getNote', () => {
       permissionLevel: 'view',
     })
 
-    const result = await playerAuth.query(api.notes.queries.getNote, { noteId })
+    const result = await playerAuth.query(api.notes.queries.getNote, {
+      campaignId: ctx.campaignId,
+      noteId,
+    })
 
     expect(result).not.toBeNull()
     expect(result!._id).toBe(noteId)
@@ -87,6 +94,7 @@ describe('getNote', () => {
     })
 
     const result = await playerAuth.query(api.notes.queries.getNote, {
+      campaignId: ctx.campaignId,
       noteId,
     })
     expect(result).toBeNull()
@@ -96,7 +104,9 @@ describe('getNote', () => {
     const ctx = await setupCampaignContext(t)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await expectNotAuthenticated(t.query(api.notes.queries.getNote, { noteId }))
+    await expectNotAuthenticated(
+      t.query(api.notes.queries.getNote, { campaignId: ctx.campaignId, noteId }),
+    )
   })
 })
 
@@ -112,6 +122,7 @@ describe('updateNote', () => {
     })
 
     const result = await dmAuth.mutation(api.notes.mutations.updateNote, {
+      campaignId: ctx.campaignId,
       noteId,
       name: 'Renamed Note',
     })
@@ -132,6 +143,7 @@ describe('updateNote', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.notes.mutations.updateNote, {
+      campaignId: ctx.campaignId,
       noteId,
       iconName: 'scroll',
     })
@@ -149,6 +161,7 @@ describe('updateNote', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.notes.mutations.updateNote, {
+      campaignId: ctx.campaignId,
       noteId,
       color: '#ff0000',
     })
@@ -172,6 +185,7 @@ describe('updateNote', () => {
 
     await expectValidationFailed(
       dmAuth.mutation(api.notes.mutations.updateNote, {
+        campaignId: ctx.campaignId,
         noteId,
         name: 'Existing',
       }),
@@ -195,6 +209,7 @@ describe('updateNote', () => {
     })
 
     const result = await playerAuth.mutation(api.notes.mutations.updateNote, {
+      campaignId: ctx.campaignId,
       noteId,
       name: 'Player Renamed',
     })
@@ -224,6 +239,7 @@ describe('updateNote', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.notes.mutations.updateNote, {
+        campaignId: ctx.campaignId,
         noteId,
         name: 'Hacked',
       }),
@@ -248,6 +264,7 @@ describe('updateNote', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.notes.mutations.updateNote, {
+        campaignId: ctx.campaignId,
         noteId,
         name: 'Hacked',
       }),
@@ -260,6 +277,7 @@ describe('updateNote', () => {
 
     await expectNotAuthenticated(
       t.mutation(api.notes.mutations.updateNote, {
+        campaignId: ctx.campaignId,
         noteId,
         name: 'Nope',
       }),

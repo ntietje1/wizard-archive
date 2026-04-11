@@ -3,6 +3,7 @@ import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { useConvexYjsCollaboration } from './useConvexYjsCollaboration'
 import type { Id } from 'convex/_generated/dataModel'
+import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { logger } from '~/shared/utils/logger'
 
 export const PERSIST_INTERVAL_MS = 10_000
@@ -13,13 +14,14 @@ export function useNoteYjsCollaboration(
   canEdit: boolean,
 ) {
   const convex = useConvex()
+  const { campaignId } = useCampaign()
   const result = useConvexYjsCollaboration(noteId, user, canEdit)
   const isPersistingRef = useRef(false)
   const pendingCleanupPersistRef = useRef(false)
   const generationRef = useRef(0)
 
   useEffect(() => {
-    if (!canEdit || result.isLoading) return
+    if (!canEdit || result.isLoading || !campaignId) return
 
     const generation = ++generationRef.current
     isPersistingRef.current = false
@@ -34,6 +36,7 @@ export function useNoteYjsCollaboration(
       isPersistingRef.current = true
       convex
         .mutation(api.notes.mutations.persistNoteBlocks, {
+          campaignId,
           documentId: noteId,
         })
         .catch((err: unknown) => {
@@ -61,7 +64,7 @@ export function useNoteYjsCollaboration(
         persist()
       }
     }
-  }, [noteId, canEdit, result.isLoading, convex])
+  }, [noteId, canEdit, result.isLoading, convex, campaignId])
 
   return result
 }

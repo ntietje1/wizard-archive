@@ -64,6 +64,7 @@ describe('folder cascade hierarchy', () => {
       })
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: folderId,
         location: 'trash',
       })
@@ -100,6 +101,7 @@ describe('folder cascade hierarchy', () => {
       expect(afterTrash.bookmark!.deletionTime).not.toBeNull()
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: folderId,
         location: 'sidebar',
       })
@@ -221,10 +223,12 @@ describe('folder cascade hierarchy', () => {
       })
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: folderId,
         location: 'trash',
       })
       await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: folderId,
       })
 
@@ -290,6 +294,7 @@ describe('folder cascade hierarchy', () => {
       const block = await createBlock(t, leaf, ctx.campaignId, dmId)
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: root,
         location: 'trash',
       })
@@ -313,6 +318,7 @@ describe('folder cascade hierarchy', () => {
       expect(afterTrash.block!.deletionTime).not.toBeNull()
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: root,
         location: 'sidebar',
       })
@@ -402,10 +408,12 @@ describe('folder cascade hierarchy', () => {
       })
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: root,
         location: 'trash',
       })
       await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: root,
       })
 

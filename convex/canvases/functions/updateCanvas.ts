@@ -5,14 +5,13 @@ import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
-import { requireCampaignMembership } from '../../functions'
 import type { EditHistoryChange } from '../../editHistory/types'
 import type { WithoutSystemFields } from 'convex/server'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 
 export async function updateCanvas(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   {
     canvasId,
     name,
@@ -27,7 +26,6 @@ export async function updateCanvas(
 ): Promise<{ canvasId: Id<'sidebarItems'>; slug: string }> {
   const rawItem = await getSidebarItem(ctx, canvasId)
   if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Canvas not found')
-  await requireCampaignMembership(ctx, rawItem.campaignId)
   const canvas = await requireItemAccess(ctx, {
     rawItem,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
@@ -74,13 +72,12 @@ export async function updateCanvas(
   await ctx.db.patch('sidebarItems', canvas._id, {
     ...updates,
     updatedTime: Date.now(),
-    updatedBy: ctx.user.profile._id,
+    updatedBy: ctx.membership.userId,
   })
 
   await logEditHistory(ctx, {
     itemId: canvas._id,
     itemType: SIDEBAR_ITEM_TYPES.canvases,
-    campaignId: canvas.campaignId,
     changes,
   })
 

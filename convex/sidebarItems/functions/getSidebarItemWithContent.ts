@@ -2,12 +2,12 @@ import { getSidebarItem } from './getSidebarItem'
 import { enhanceSidebarItemWithContent } from './enhanceSidebarItem'
 import { checkItemAccess } from '../validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import type { AuthQueryCtx } from '../../functions'
+import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { SidebarItemTypeKey, WithContentByType } from '../types/types'
 
 export async function getSidebarItemWithContent<K extends SidebarItemTypeKey = SidebarItemTypeKey>(
-  ctx: AuthQueryCtx,
+  ctx: CampaignQueryCtx,
   id: Id<'sidebarItems'>,
 ): Promise<WithContentByType[K] | null> {
   const item = await getSidebarItem(ctx, id)

@@ -1,15 +1,14 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
-import { requireCampaignMembership } from '../../functions'
 import { requireItemAccess } from '../validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { logger } from '../../common/logger'
 import { getSidebarItem } from './getSidebarItem'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 export async function setPreviewImage(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   {
     itemId,
     previewStorageId,
@@ -22,7 +21,6 @@ export async function setPreviewImage(
 ): Promise<void> {
   const item = await getSidebarItem(ctx, itemId)
   if (!item) throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
-  await requireCampaignMembership(ctx, item.campaignId)
   await requireItemAccess(ctx, {
     rawItem: item,
     requiredLevel: PERMISSION_LEVEL.EDIT,

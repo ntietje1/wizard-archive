@@ -1,10 +1,10 @@
 import { v } from 'convex/values'
-import { authMutation } from '../functions'
+import { campaignMutation } from '../functions'
 import { createFolder as createFolderFn } from './functions/createFolder'
 import { updateFolder as updateFolderFn } from './functions/updateFolder'
 import type { Id } from '../_generated/dataModel'
 
-export const updateFolder = authMutation({
+export const updateFolder = campaignMutation({
   args: {
     folderId: v.id('sidebarItems'),
     name: v.optional(v.string()),
@@ -25,9 +25,8 @@ export const updateFolder = authMutation({
   },
 })
 
-export const createFolder = authMutation({
+export const createFolder = campaignMutation({
   args: {
-    campaignId: v.id('campaigns'),
     name: v.string(),
     parentId: v.nullable(v.id('sidebarItems')),
     iconName: v.optional(v.string()),
@@ -43,7 +42,6 @@ export const createFolder = authMutation({
       parentId: args.parentId,
       iconName: args.iconName,
       color: args.color,
-      campaignId: args.campaignId,
     })
   },
 })

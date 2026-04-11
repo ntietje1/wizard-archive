@@ -6,22 +6,20 @@ import { getBlockSharesByBlock } from '../../blockShares/functions/getBlockShare
 import { SIDEBAR_ITEM_LOCATION } from '../../sidebarItems/types/baseTypes'
 import { enhanceBase } from '../../sidebarItems/functions/enhanceSidebarItem'
 import { SHARE_STATUS } from '../../blockShares/types'
-import { requireCampaignMembership } from '../../functions'
-import type { AuthQueryCtx } from '../../functions'
+import type { CampaignQueryCtx } from '../../functions'
 import type { BlockMeta, Note, NoteFromDb, NoteWithContent } from '../types'
 
 export const enhanceNote = async (
-  ctx: AuthQueryCtx,
+  ctx: CampaignQueryCtx,
   { note }: { note: NoteFromDb },
 ): Promise<Note> => {
   return enhanceBase(ctx, { item: note })
 }
 
 export const enhanceNoteWithContent = async (
-  ctx: AuthQueryCtx,
+  ctx: CampaignQueryCtx,
   { note }: { note: Note },
 ): Promise<NoteWithContent> => {
-  await requireCampaignMembership(ctx, note.campaignId)
   const [ancestors = [], topLevelBlocks = []] = await Promise.all([
     getSidebarItemAncestors(ctx, {
       initialParentId: note.parentId,

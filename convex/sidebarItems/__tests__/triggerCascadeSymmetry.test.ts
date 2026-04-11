@@ -38,6 +38,7 @@ describe('trigger cascade symmetry', () => {
       })
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: noteId,
         location: 'trash',
       })
@@ -54,6 +55,7 @@ describe('trigger cascade symmetry', () => {
       expect(afterTrash[2]!.deletionTime).not.toBeNull()
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: noteId,
         location: 'sidebar',
       })
@@ -94,10 +96,12 @@ describe('trigger cascade symmetry', () => {
       )
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: noteId,
         location: 'trash',
       })
       await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: noteId,
       })
 
@@ -134,6 +138,7 @@ describe('trigger cascade symmetry', () => {
       )
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: canvasId,
         location: 'trash',
       })
@@ -142,6 +147,7 @@ describe('trigger cascade symmetry', () => {
       expect(afterTrash).not.toBeNull()
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: canvasId,
         location: 'sidebar',
       })
@@ -167,10 +173,12 @@ describe('trigger cascade symmetry', () => {
       )
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: canvasId,
         location: 'trash',
       })
       await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: canvasId,
       })
 
@@ -197,6 +205,7 @@ describe('trigger cascade symmetry', () => {
       const pin2 = await createMapPin(t, mapId, dmId, { itemId: pinnedNote })
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: mapId,
         location: 'trash',
       })
@@ -208,6 +217,7 @@ describe('trigger cascade symmetry', () => {
       expect(afterTrash[1]!.deletionTime).not.toBeNull()
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: mapId,
         location: 'sidebar',
       })
@@ -237,10 +247,12 @@ describe('trigger cascade symmetry', () => {
       })
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: mapId,
         location: 'trash',
       })
       await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: mapId,
       })
 
@@ -274,6 +286,7 @@ describe('trigger cascade symmetry', () => {
       })
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: fileId,
         location: 'trash',
       })
@@ -282,6 +295,7 @@ describe('trigger cascade symmetry', () => {
       expect(afterTrash).not.toBeNull()
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: fileId,
         location: 'sidebar',
       })
@@ -306,10 +320,12 @@ describe('trigger cascade symmetry', () => {
       })
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: fileId,
         location: 'trash',
       })
       await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: fileId,
       })
 
@@ -340,6 +356,7 @@ describe('trigger cascade symmetry', () => {
       })
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: folderId,
         location: 'trash',
       })
@@ -349,6 +366,7 @@ describe('trigger cascade symmetry', () => {
       expect(afterTrash!.inheritShares).toBe(true)
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: folderId,
         location: 'sidebar',
       })
@@ -374,10 +392,12 @@ describe('trigger cascade symmetry', () => {
       })
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: folderId,
         location: 'trash',
       })
       await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: folderId,
       })
 
@@ -416,6 +436,7 @@ describe('trigger cascade symmetry', () => {
       })
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId,
         location: 'trash',
       })
@@ -430,6 +451,7 @@ describe('trigger cascade symmetry', () => {
       expect(afterTrash[1]!.deletionTime).not.toBeNull()
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId,
         location: 'sidebar',
       })
@@ -468,10 +490,12 @@ describe('trigger cascade symmetry', () => {
       })
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId,
         location: 'trash',
       })
       await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId,
       })
 

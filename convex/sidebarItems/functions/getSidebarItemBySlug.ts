@@ -1,21 +1,17 @@
-import { requireCampaignMembership } from '../../functions'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { checkItemAccess } from '../validation'
 import { enhanceSidebarItemWithContent } from './enhanceSidebarItem'
 import { getSidebarItem } from './getSidebarItem'
 import type { AnySidebarItemWithContent } from '../types/types'
-import type { AuthQueryCtx } from '../../functions'
-import type { Id } from '../../_generated/dataModel'
+import type { CampaignQueryCtx } from '../../functions'
 
 export const getSidebarItemBySlug = async (
-  ctx: AuthQueryCtx,
-  { slug, campaignId }: { slug: string; campaignId: Id<'campaigns'> },
+  ctx: CampaignQueryCtx,
+  { slug }: { slug: string },
 ): Promise<AnySidebarItemWithContent | null> => {
-  await requireCampaignMembership(ctx, campaignId)
-
   const raw = await ctx.db
     .query('sidebarItems')
-    .withIndex('by_campaign_slug', (q) => q.eq('campaignId', campaignId).eq('slug', slug))
+    .withIndex('by_campaign_slug', (q) => q.eq('campaignId', ctx.campaign._id).eq('slug', slug))
     .unique()
 
   if (!raw) return null

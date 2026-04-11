@@ -1,10 +1,10 @@
 import { v } from 'convex/values'
-import { authQuery } from '../functions'
+import { campaignQuery } from '../functions'
 import { mapWithContentValidator } from './schema'
 import { getSidebarItemWithContent } from '../sidebarItems/functions/getSidebarItemWithContent'
 import type { GameMapWithContent } from './types'
 
-export const getMap = authQuery({
+export const getMap = campaignQuery({
   args: {
     mapId: v.id('sidebarItems'),
   },

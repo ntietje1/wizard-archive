@@ -8,7 +8,6 @@ import {
   validateSidebarMove,
   validateSidebarParentChange,
 } from '../validation'
-import { requireCampaignMembership } from '../../functions'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { getSidebarItemsByParent } from './getSidebarItemsByParent'
@@ -17,7 +16,7 @@ import { trashTree, restoreTreeDescendants } from './treeOperations'
 import { getSidebarItem } from './getSidebarItem'
 import type { SidebarItemLocation } from '../types/baseTypes'
 import type { AnySidebarItemFromDb } from '../types/types'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 const clearDeletion = { deletionTime: null, deletedBy: null }
@@ -27,19 +26,16 @@ const clearDeletion = { deletionTime: null, deletedBy: null }
  * Returns a patch object with the unique name/slug if they differ from current.
  */
 async function resolveRestoreConflicts(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   item: AnySidebarItemFromDb,
 ): Promise<{ name?: string; slug?: string }> {
-  const campaignId = item.campaignId
   const siblings = await getSidebarItemsByParent(ctx, {
-    campaignId,
     parentId: item.parentId,
   })
   const otherNames = siblings.filter((s) => s._id !== item._id).map((s) => s.name)
 
   const uniqueName = deduplicateName(item.name, otherNames)
   const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
-    campaignId,
     itemId: item._id,
     name: uniqueName,
   })
@@ -51,7 +47,7 @@ async function resolveRestoreConflicts(
 }
 
 export async function moveSidebarItem(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   {
     itemId,
     location,
@@ -68,9 +64,6 @@ export async function moveSidebarItem(
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 
-  const campaignId = item.campaignId
-  const { membership } = await requireCampaignMembership(ctx, campaignId)
-
   const isRelocating = location !== undefined && location !== item.location
   const isTrashing = isRelocating && location === SIDEBAR_ITEM_LOCATION.trash
   const isRestoring = isRelocating && item.location === SIDEBAR_ITEM_LOCATION.trash
@@ -82,26 +75,31 @@ export async function moveSidebarItem(
 
   // --- Relocate: entering trash ---
   if (isTrashing) {
-    if (item.type === SIDEBAR_ITEM_TYPES.folders && membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
+    if (
+      item.type === SIDEBAR_ITEM_TYPES.folders &&
+      ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM
+    ) {
       throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Only the DM can trash folders')
     }
 
     await trashTree(ctx, item, {
       deletionTime: Date.now(),
-      deletedBy: ctx.user.profile._id,
+      deletedBy: ctx.membership.userId,
     })
 
     await logEditHistory(ctx, {
       itemId: item._id,
       itemType: item.type,
-      campaignId,
       action: EDIT_HISTORY_ACTION.trashed,
     })
   }
 
   // --- Relocate: leaving trash ---
   if (isRestoring) {
-    if (item.type === SIDEBAR_ITEM_TYPES.folders && membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
+    if (
+      item.type === SIDEBAR_ITEM_TYPES.folders &&
+      ctx.membership.role !== CAMPAIGN_MEMBER_ROLE.DM
+    ) {
       throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Only the DM can restore folders')
     }
     if (location === undefined)
@@ -131,7 +129,6 @@ export async function moveSidebarItem(
     await logEditHistory(ctx, {
       itemId: item._id,
       itemType: item.type,
-      campaignId,
       action: EDIT_HISTORY_ACTION.restored,
     })
   }
@@ -146,13 +143,12 @@ export async function moveSidebarItem(
     await ctx.db.patch('sidebarItems', itemId, {
       parentId: parentId,
       updatedTime: Date.now(),
-      updatedBy: ctx.user.profile._id,
+      updatedBy: ctx.membership.userId,
     })
 
     await logEditHistory(ctx, {
       itemId: item._id,
       itemType: item.type,
-      campaignId,
       action: EDIT_HISTORY_ACTION.moved,
       metadata: {
         from: oldParent?.name ?? null,

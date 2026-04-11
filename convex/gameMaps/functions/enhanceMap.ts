@@ -3,11 +3,11 @@ import { SIDEBAR_ITEM_LOCATION } from '../../sidebarItems/types/baseTypes'
 import { getSidebarItemAncestors } from '../../folders/functions/getSidebarItemAncestors'
 import { enhanceBase, enhanceSidebarItem } from '../../sidebarItems/functions/enhanceSidebarItem'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
-import type { AuthQueryCtx } from '../../functions'
+import type { CampaignQueryCtx } from '../../functions'
 import type { GameMap, GameMapFromDb, GameMapWithContent, MapPin, MapPinWithItem } from '../types'
 
 export const enhanceGameMap = async (
-  ctx: AuthQueryCtx,
+  ctx: CampaignQueryCtx,
   { gameMap }: { gameMap: GameMapFromDb },
 ): Promise<GameMap> => {
   const [base, imageUrl] = await Promise.all([
@@ -22,7 +22,7 @@ export const enhanceGameMap = async (
 }
 
 const enhanceMapPin = async (
-  ctx: AuthQueryCtx,
+  ctx: CampaignQueryCtx,
   { pin }: { pin: MapPin },
 ): Promise<MapPinWithItem | null> => {
   const item = await getSidebarItem(ctx, pin.itemId)
@@ -37,7 +37,7 @@ const enhanceMapPin = async (
 }
 
 export const enhanceGameMapWithContent = async (
-  ctx: AuthQueryCtx,
+  ctx: CampaignQueryCtx,
   { gameMap }: { gameMap: GameMap },
 ): Promise<GameMapWithContent> => {
   const [ancestors, rawPins] = await Promise.all([

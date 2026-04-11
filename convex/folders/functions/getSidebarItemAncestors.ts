@@ -1,13 +1,12 @@
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { enhanceSidebarItem } from '../../sidebarItems/functions/enhanceSidebarItem'
-import { requireCampaignMembership } from '../../functions'
-import type { AuthQueryCtx } from '../../functions'
+import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { Folder } from '../types'
 
 export async function getSidebarItemAncestors(
-  ctx: AuthQueryCtx,
+  ctx: CampaignQueryCtx,
   {
     initialParentId,
     isTrashed,
@@ -26,7 +25,6 @@ export async function getSidebarItemAncestors(
     if (!item || item.type !== SIDEBAR_ITEM_TYPES.folders) {
       break
     }
-    await requireCampaignMembership(ctx, item.campaignId)
     if (isTrashed && item.location !== SIDEBAR_ITEM_LOCATION.trash) {
       break
     }

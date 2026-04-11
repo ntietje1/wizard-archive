@@ -24,6 +24,7 @@ describe('pushUpdate', () => {
 
     await expectNotAuthenticated(
       t.mutation(api.yjsSync.mutations.pushUpdate, {
+        campaignId: ctx.campaignId,
         documentId: noteId,
         update: makeEmptyYjsUpdate(),
       }),
@@ -37,6 +38,7 @@ describe('pushUpdate', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+        campaignId: ctx.campaignId,
         documentId: noteId,
         update: makeEmptyYjsUpdate(),
       }),
@@ -54,6 +56,7 @@ describe('pushUpdate', () => {
     })
 
     const result = await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
       update: makeEmptyYjsUpdate(),
     })
@@ -72,14 +75,17 @@ describe('pushUpdate', () => {
     })
 
     const r1 = await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
       update: makeEmptyYjsUpdate(),
     })
     const r2 = await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
       update: makeEmptyYjsUpdate(),
     })
     const r3 = await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
       update: makeEmptyYjsUpdate(),
     })
@@ -109,6 +115,7 @@ describe('pushUpdate', () => {
     })
 
     const result = await playerAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
       update: makeEmptyYjsUpdate(),
     })
@@ -137,6 +144,7 @@ describe('pushUpdate', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+        campaignId: ctx.campaignId,
         documentId: noteId,
         update: makeEmptyYjsUpdate(),
       }),
@@ -154,6 +162,7 @@ describe('pushUpdate', () => {
 
     await expectNotFound(
       dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+        campaignId: ctx.campaignId,
         documentId: noteId,
         update: makeEmptyYjsUpdate(),
       }),
@@ -174,6 +183,7 @@ describe('pushUpdate', () => {
 
       for (let i = 1; i <= COMPACT_INTERVAL; i++) {
         await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+          campaignId: ctx.campaignId,
           documentId: noteId,
           update: makeEmptyYjsUpdate(),
         })
@@ -207,6 +217,7 @@ describe('pushUpdate', () => {
 
     for (let i = 1; i <= 19; i++) {
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+        campaignId: ctx.campaignId,
         documentId: noteId,
         update: makeEmptyYjsUpdate(),
       })
@@ -232,6 +243,7 @@ describe('pushAwareness', () => {
 
     await expectNotAuthenticated(
       t.mutation(api.yjsSync.mutations.pushAwareness, {
+        campaignId: ctx.campaignId,
         documentId: noteId,
         clientId: 1,
         state: makeAwarenessState(),
@@ -246,6 +258,7 @@ describe('pushAwareness', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.yjsSync.mutations.pushAwareness, {
+        campaignId: ctx.campaignId,
         documentId: noteId,
         clientId: 1,
         state: makeAwarenessState(),
@@ -266,6 +279,7 @@ describe('pushAwareness', () => {
     const state = makeAwarenessState()
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 42,
       state,
@@ -295,6 +309,7 @@ describe('pushAwareness', () => {
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 10,
       state: makeAwarenessState(),
@@ -302,6 +317,7 @@ describe('pushAwareness', () => {
 
     const newState = new Uint8Array([5, 6, 7, 8]).buffer
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 10,
       state: newState,
@@ -328,12 +344,14 @@ describe('pushAwareness', () => {
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 1,
       state: makeAwarenessState(),
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 2,
       state: makeAwarenessState(),
@@ -369,6 +387,7 @@ describe('pushAwareness', () => {
     })
 
     await playerAuth.mutation(api.yjsSync.mutations.pushAwareness, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 99,
       state: makeAwarenessState(),
@@ -395,6 +414,7 @@ describe('removeAwareness', () => {
 
     await expectNotAuthenticated(
       t.mutation(api.yjsSync.mutations.removeAwareness, {
+        campaignId: ctx.campaignId,
         documentId: noteId,
         clientId: 1,
       }),
@@ -412,12 +432,14 @@ describe('removeAwareness', () => {
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 5,
       state: makeAwarenessState(),
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.removeAwareness, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 5,
     })
@@ -443,6 +465,7 @@ describe('removeAwareness', () => {
     })
 
     const result = await dmAuth.mutation(api.yjsSync.mutations.removeAwareness, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 999,
     })
@@ -461,18 +484,21 @@ describe('removeAwareness', () => {
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 1,
       state: makeAwarenessState(),
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 2,
       state: makeAwarenessState(),
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.removeAwareness, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 1,
     })

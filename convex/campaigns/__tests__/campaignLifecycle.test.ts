@@ -31,6 +31,7 @@ describe('campaign lifecycle', () => {
     expect(pendingMember).toBeDefined()
 
     await dm.authed.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+      campaignId,
       memberId: pendingMember!._id,
       status: 'Accepted',
     })
@@ -54,6 +55,7 @@ describe('campaign lifecycle', () => {
     expect(itemsWithNoAccess.length).toBe(playerSidebarItems.length)
 
     await dm.authed.mutation(api.sidebarShares.mutations.setAllPlayersPermission, {
+      campaignId,
       sidebarItemId: folderId,
       permissionLevel: 'view',
     })
@@ -67,6 +69,7 @@ describe('campaign lifecycle', () => {
     expect(folderItem!.myPermissionLevel).toBe('view')
 
     await dm.authed.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+      campaignId,
       memberId: pendingMember!._id,
       status: 'Removed',
     })
@@ -141,10 +144,12 @@ describe('campaign lifecycle', () => {
     expect(p3Member).toBeDefined()
 
     await dm.authed.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+      campaignId,
       memberId: p1Member!._id,
       status: 'Accepted',
     })
     await dm.authed.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+      campaignId,
       memberId: p2Member!._id,
       status: 'Rejected',
     })
@@ -159,11 +164,13 @@ describe('campaign lifecycle', () => {
     expect(p3Campaigns).toHaveLength(0)
 
     await dm.authed.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+      campaignId,
       memberId: p2Member!._id,
       status: 'Accepted',
     })
 
     await dm.authed.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+      campaignId,
       memberId: p1Member!._id,
       status: 'Removed',
     })

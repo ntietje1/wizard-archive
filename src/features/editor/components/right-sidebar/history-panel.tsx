@@ -123,18 +123,18 @@ function groupByDay(
 const PAGE_SIZE = 20
 
 export function HistoryPanel({ itemId }: { itemId: Id<'sidebarItems'> }) {
+  const membersQuery = useCampaignMembers()
+  const { campaign, campaignId } = useCampaign()
+
   const {
     results = [],
     status,
     loadMore,
   } = useAuthPaginatedQuery(
     api.editHistory.queries.getItemHistory,
-    { itemId },
+    campaignId ? { campaignId, itemId } : 'skip',
     { initialNumItems: PAGE_SIZE },
   )
-
-  const membersQuery = useCampaignMembers()
-  const { campaign } = useCampaign()
   const { canEdit } = useEditorMode()
   const myMemberId = campaign.data?.myMembership?._id
   const previewingEntryId = useHistoryPreviewStore((s) => s.previewingEntryId)

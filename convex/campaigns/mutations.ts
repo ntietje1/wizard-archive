@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { authMutation } from '../functions'
+import { authMutation, dmMutation } from '../functions'
 import { createCampaign as createCampaignFn } from './functions/createCampaign'
 import { joinCampaign as joinCampaignFn } from './functions/joinCampaign'
 import { updateCampaign as updateCampaignFn } from './functions/updateCampaign'
@@ -39,9 +39,8 @@ export const joinCampaign = authMutation({
   },
 })
 
-export const updateCampaign = authMutation({
+export const updateCampaign = dmMutation({
   args: {
-    campaignId: v.id('campaigns'),
     name: v.optional(v.string()),
     description: v.optional(v.string()),
     slug: v.optional(v.string()),
@@ -52,22 +51,19 @@ export const updateCampaign = authMutation({
       name: args.name,
       description: args.description,
       slug: args.slug,
-      campaignId: args.campaignId,
     })
   },
 })
 
-export const deleteCampaign = authMutation({
-  args: {
-    campaignId: v.id('campaigns'),
-  },
+export const deleteCampaign = dmMutation({
+  args: {},
   returns: v.id('campaigns'),
-  handler: async (ctx, args): Promise<Id<'campaigns'>> => {
-    return deleteCampaignFn(ctx, { campaignId: args.campaignId })
+  handler: async (ctx): Promise<Id<'campaigns'>> => {
+    return deleteCampaignFn(ctx)
   },
 })
 
-export const updateCampaignMemberStatus = authMutation({
+export const updateCampaignMemberStatus = dmMutation({
   args: {
     memberId: v.id('campaignMembers'),
     status: campaignMemberStatusValidator,

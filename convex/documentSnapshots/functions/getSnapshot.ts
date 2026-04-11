@@ -2,12 +2,12 @@ import { ERROR_CODE, throwClientError } from '../../errors'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireItemAccess } from '../../sidebarItems/validation'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
-import type { AuthQueryCtx } from '../../functions'
+import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { DocumentSnapshot } from '../types'
 
 export async function getSnapshotForHistoryEntry(
-  ctx: AuthQueryCtx,
+  ctx: CampaignQueryCtx,
   { editHistoryId }: { editHistoryId: Id<'editHistory'> },
 ): Promise<DocumentSnapshot | null> {
   const historyEntry = await ctx.db.get('editHistory', editHistoryId)

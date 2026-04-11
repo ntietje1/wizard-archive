@@ -5,11 +5,11 @@ import { insertBlock } from './insertBlock'
 import { updateBlock } from './updateBlock'
 import { removeBlockIfNotNeeded } from './removeBlockIfNotNeeded'
 import type { Id } from '../../_generated/dataModel'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { CustomBlock } from '../../notes/editorSpecs'
 
 export async function saveTopLevelBlocksForNote(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   { noteId, content }: { noteId: Id<'sidebarItems'>; content: Array<CustomBlock> },
 ): Promise<void> {
   const note = await ctx.db.get('sidebarItems', noteId)

@@ -1,13 +1,8 @@
-import { requireCampaignMembership } from '../../functions'
-import type { AuthQueryCtx } from '../../functions'
-import type { Id } from '../../_generated/dataModel'
+import type { CampaignQueryCtx } from '../../functions'
 import type { Session } from '../types'
 
-export async function getSessionsByCampaign(
-  ctx: AuthQueryCtx,
-  { campaignId }: { campaignId: Id<'campaigns'> },
-): Promise<Array<Session>> {
-  await requireCampaignMembership(ctx, campaignId)
+export async function getSessionsByCampaign(ctx: CampaignQueryCtx): Promise<Array<Session>> {
+  const campaignId = ctx.campaign._id
 
   const sessions = await ctx.db
     .query('sessions')

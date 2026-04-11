@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { authMutation } from '../functions'
+import { campaignMutation, dmMutation } from '../functions'
 import { sidebarItemIdValidator, sidebarItemLocationValidator } from './schema/baseValidators'
 import { moveSidebarItem as moveSidebarItemFn } from './functions/moveSidebarItem'
 import { permanentlyDeleteSidebarItem as permanentlyDeleteSidebarItemFn } from './functions/permanentlyDeleteSidebarItem'
@@ -8,7 +8,7 @@ import { claimPreviewGeneration as claimPreviewGenerationFn } from './functions/
 import { setPreviewImage as setPreviewImageFn } from './functions/setPreviewImage'
 import type { Id } from '../_generated/dataModel'
 
-export const moveSidebarItem = authMutation({
+export const moveSidebarItem = campaignMutation({
   args: {
     itemId: sidebarItemIdValidator,
     parentId: v.optional(v.nullable(v.id('sidebarItems'))),
@@ -24,7 +24,7 @@ export const moveSidebarItem = authMutation({
   },
 })
 
-export const permanentlyDeleteSidebarItem = authMutation({
+export const permanentlyDeleteSidebarItem = campaignMutation({
   args: {
     itemId: sidebarItemIdValidator,
   },
@@ -35,18 +35,16 @@ export const permanentlyDeleteSidebarItem = authMutation({
   },
 })
 
-export const emptyTrashBin = authMutation({
-  args: {
-    campaignId: v.id('campaigns'),
-  },
+export const emptyTrashBin = dmMutation({
+  args: {},
   returns: v.null(),
-  handler: async (ctx, args): Promise<null> => {
-    await emptyTrashBinFn(ctx, { campaignId: args.campaignId })
+  handler: async (ctx): Promise<null> => {
+    await emptyTrashBinFn(ctx)
     return null
   },
 })
 
-export const claimPreviewGeneration = authMutation({
+export const claimPreviewGeneration = campaignMutation({
   args: {
     itemId: sidebarItemIdValidator,
   },
@@ -59,7 +57,7 @@ export const claimPreviewGeneration = authMutation({
   },
 })
 
-export const setPreviewImage = authMutation({
+export const setPreviewImage = campaignMutation({
   args: {
     itemId: sidebarItemIdValidator,
     previewStorageId: v.id('_storage'),

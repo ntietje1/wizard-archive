@@ -56,7 +56,7 @@ async function enhanceCampaign(
   return { ...campaign, dmUserProfile, playerCount, myMembership }
 }
 
-// NOTE: No requireCampaignMembership here — callers need to verify membership
+// NOTE: No membership check here — callers need to verify membership
 export async function getCampaign(
   ctx: AuthQueryCtx,
   { campaignId }: { campaignId: Id<'campaigns'> },

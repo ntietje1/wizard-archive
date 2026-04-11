@@ -1,11 +1,11 @@
 import { asyncMap } from 'convex-helpers'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 const DELETE_BATCH_SIZE = 100
 
 export async function rollbackYjsDocument(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   documentId: Id<'sidebarItems'>,
   snapshotData: ArrayBuffer,
 ): Promise<void> {

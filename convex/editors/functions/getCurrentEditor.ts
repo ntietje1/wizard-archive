@@ -1,22 +1,13 @@
-import { requireCampaignMembership } from '../../functions'
-import type { Id } from '../../_generated/dataModel'
-import type { AuthQueryCtx } from '../../functions'
+import type { CampaignQueryCtx } from '../../functions'
 import type { Editor } from '../types'
 
-export async function getCurrentEditor(
-  ctx: AuthQueryCtx,
-  { campaignId }: { campaignId?: Id<'campaigns'> } = {},
-): Promise<Editor | null> {
-  if (!campaignId) {
-    return null
-  }
-
-  await requireCampaignMembership(ctx, campaignId)
+export async function getCurrentEditor(ctx: CampaignQueryCtx): Promise<Editor | null> {
+  const campaignId = ctx.campaign._id
 
   const editor = await ctx.db
     .query('editor')
     .withIndex('by_campaign_user', (q) =>
-      q.eq('campaignId', campaignId).eq('userId', ctx.user.profile._id),
+      q.eq('campaignId', campaignId).eq('userId', ctx.membership.userId),
     )
     .unique()
 

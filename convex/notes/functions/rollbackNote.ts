@@ -4,10 +4,10 @@ import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import type { Id } from '../../_generated/dataModel'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 
 export async function rollbackNote(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   itemId: Id<'sidebarItems'>,
   snapshotData: ArrayBuffer,
 ): Promise<void> {

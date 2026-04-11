@@ -6,40 +6,36 @@ import {
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 export async function createFolder(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   {
     name,
     parentId,
     iconName,
     color,
-    campaignId,
   }: {
     name: string
     parentId: Id<'sidebarItems'> | null
     iconName?: string
     color?: string
-    campaignId: Id<'campaigns'>
   },
 ): Promise<{ folderId: Id<'sidebarItems'>; slug: string }> {
   name = name.trim()
 
-  await validateSidebarCreateParent(ctx, { campaignId, parentId })
+  await validateSidebarCreateParent(ctx, { parentId })
   await validateSidebarItemName(ctx, {
-    campaignId,
     parentId,
     name,
   })
 
   const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
     name,
-    campaignId,
   })
 
-  const profileId = ctx.user.profile._id
+  const userId = ctx.membership.userId
 
   const folderId = await ctx.db.insert('sidebarItems', {
     name,
@@ -48,7 +44,7 @@ export async function createFolder(
     color: color ?? null,
     parentId,
     allPermissionLevel: null,
-    campaignId,
+    campaignId: ctx.campaign._id,
     type: SIDEBAR_ITEM_TYPES.folders,
     location: SIDEBAR_ITEM_LOCATION.sidebar,
     previewStorageId: null,
@@ -59,7 +55,7 @@ export async function createFolder(
     deletedBy: null,
     updatedTime: null,
     updatedBy: null,
-    createdBy: profileId,
+    createdBy: userId,
   })
 
   await ctx.db.insert('folders', {
@@ -69,13 +65,12 @@ export async function createFolder(
     deletedBy: null,
     updatedTime: null,
     updatedBy: null,
-    createdBy: profileId,
+    createdBy: userId,
   })
 
   await logEditHistory(ctx, {
     itemId: folderId,
     itemType: SIDEBAR_ITEM_TYPES.folders,
-    campaignId,
     action: EDIT_HISTORY_ACTION.created,
   })
 

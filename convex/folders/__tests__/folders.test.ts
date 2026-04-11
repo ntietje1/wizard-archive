@@ -190,6 +190,7 @@ describe('updateFolder', () => {
     })
 
     const result = await dmAuth.mutation(api.folders.mutations.updateFolder, {
+      campaignId: ctx.campaignId,
       folderId,
       name: 'Renamed Folder',
     })
@@ -210,6 +211,7 @@ describe('updateFolder', () => {
     const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.folders.mutations.updateFolder, {
+      campaignId: ctx.campaignId,
       folderId,
       iconName: 'treasure-chest',
     })
@@ -227,6 +229,7 @@ describe('updateFolder', () => {
     const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.folders.mutations.updateFolder, {
+      campaignId: ctx.campaignId,
       folderId,
       color: '#00ff00',
     })
@@ -253,6 +256,7 @@ describe('updateFolder', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.folders.mutations.updateFolder, {
+        campaignId: ctx.campaignId,
         folderId,
         name: 'Hacked',
       }),
@@ -274,6 +278,7 @@ describe('updateFolder', () => {
     })
 
     const result = await playerAuth.mutation(api.folders.mutations.updateFolder, {
+      campaignId: ctx.campaignId,
       folderId,
       name: 'Player Updated',
     })
@@ -286,6 +291,7 @@ describe('updateFolder', () => {
 
     await expectNotAuthenticated(
       t.mutation(api.folders.mutations.updateFolder, {
+        campaignId: ctx.campaignId,
         folderId,
         name: 'Nope',
       }),
@@ -303,6 +309,7 @@ describe('updateFolder', () => {
 
     await expectNotFound(
       dmAuth.mutation(api.folders.mutations.updateFolder, {
+        campaignId: ctx.campaignId,
         folderId,
         name: 'Ghost',
       }),
@@ -322,6 +329,7 @@ describe('updateFolder', () => {
 
     await expectValidationFailed(
       dmAuth.mutation(api.folders.mutations.updateFolder, {
+        campaignId: ctx.campaignId,
         folderId: secondId,
         name: 'Alpha',
       }),
@@ -335,6 +343,7 @@ describe('updateFolder', () => {
     const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     const result = await dmAuth.mutation(api.folders.mutations.updateFolder, {
+      campaignId: ctx.campaignId,
       folderId,
       iconName: 'test',
     })
@@ -364,6 +373,7 @@ describe('getFolderContentsForDownload', () => {
     })
 
     const result = await dmAuth.query(api.folders.queries.getFolderContentsForDownload, {
+      campaignId: ctx.campaignId,
       folderId,
     })
 
@@ -380,6 +390,7 @@ describe('getFolderContentsForDownload', () => {
 
     await expectPermissionDenied(
       playerAuth.query(api.folders.queries.getFolderContentsForDownload, {
+        campaignId: ctx.campaignId,
         folderId,
       }),
     )
@@ -407,6 +418,7 @@ describe('getFolderContentsForDownload', () => {
     })
 
     const result = await playerAuth.query(api.folders.queries.getFolderContentsForDownload, {
+      campaignId: ctx.campaignId,
       folderId,
     })
 
@@ -420,7 +432,10 @@ describe('getFolderContentsForDownload', () => {
     const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     await expectNotAuthenticated(
-      t.query(api.folders.queries.getFolderContentsForDownload, { folderId }),
+      t.query(api.folders.queries.getFolderContentsForDownload, {
+        campaignId: ctx.campaignId,
+        folderId,
+      }),
     )
   })
 })

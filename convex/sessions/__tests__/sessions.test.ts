@@ -138,7 +138,10 @@ describe('setCurrentSession', () => {
       campaignId: ctx.campaignId,
     })
 
-    const resumedId = await dmAuth.mutation(api.sessions.mutations.setCurrentSession, { sessionId })
+    const resumedId = await dmAuth.mutation(api.sessions.mutations.setCurrentSession, {
+      campaignId: ctx.campaignId,
+      sessionId,
+    })
 
     expect(resumedId).toBe(sessionId)
 
@@ -168,6 +171,7 @@ describe('setCurrentSession', () => {
 
     await expectConflict(
       dmAuth.mutation(api.sessions.mutations.setCurrentSession, {
+        campaignId: ctx.campaignId,
         sessionId: firstId,
       }),
     )
@@ -188,6 +192,7 @@ describe('setCurrentSession', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.sessions.mutations.setCurrentSession, {
+        campaignId: ctx.campaignId,
         sessionId,
       }),
     )
@@ -207,6 +212,7 @@ describe('updateSession', () => {
     })
 
     await dmAuth.mutation(api.sessions.mutations.updateSession, {
+      campaignId: ctx.campaignId,
       sessionId,
       name: 'Updated',
     })
@@ -230,6 +236,7 @@ describe('updateSession', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.sessions.mutations.updateSession, {
+        campaignId: ctx.campaignId,
         sessionId,
         name: 'Hacked',
       }),

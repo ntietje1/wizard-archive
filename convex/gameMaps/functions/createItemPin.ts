@@ -1,7 +1,6 @@
 import { requireItemAccess } from '../../sidebarItems/validation'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { requireCampaignMembership } from '../../functions'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { validatePinTarget } from '../validation'
 import { logEditHistory } from '../../editHistory/log'
@@ -9,11 +8,11 @@ import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { logger } from '../../common/logger'
 import { captureGameMapSnapshot } from './captureGameMapSnapshot'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 export async function createItemPin(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   {
     mapId,
     x,
@@ -28,7 +27,6 @@ export async function createItemPin(
 ): Promise<Id<'mapPins'>> {
   const rawItem = await getSidebarItem(ctx, mapId)
   if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Map not found')
-  await requireCampaignMembership(ctx, rawItem.campaignId)
   await requireItemAccess(ctx, {
     rawItem,
     requiredLevel: PERMISSION_LEVEL.EDIT,
@@ -58,7 +56,7 @@ export async function createItemPin(
     throwClientError(ERROR_CODE.VALIDATION_FAILED, validationError)
   }
 
-  const profileId = ctx.user.profile._id
+  const userId = ctx.membership.userId
 
   const pinId = await ctx.db.insert('mapPins', {
     mapId: mapId,
@@ -70,12 +68,12 @@ export async function createItemPin(
     deletedBy: null,
     updatedTime: null,
     updatedBy: null,
-    createdBy: profileId,
+    createdBy: userId,
   })
 
   await ctx.db.patch('sidebarItems', mapId, {
     updatedTime: Date.now(),
-    updatedBy: profileId,
+    updatedBy: userId,
   })
 
   const editHistoryId = await logEditHistory(
@@ -83,7 +81,6 @@ export async function createItemPin(
     {
       itemId: mapId,
       itemType: SIDEBAR_ITEM_TYPES.gameMaps,
-      campaignId: rawItem.campaignId,
       action: EDIT_HISTORY_ACTION.map_pin_added,
       metadata: { pinItemName: item.name },
     },
@@ -95,7 +92,7 @@ export async function createItemPin(
       mapId,
       editHistoryId,
       campaignId: rawItem.campaignId,
-      createdBy: profileId,
+      createdBy: userId,
     })
     await ctx.db.patch('editHistory', editHistoryId, { hasSnapshot: true })
   } catch (error) {

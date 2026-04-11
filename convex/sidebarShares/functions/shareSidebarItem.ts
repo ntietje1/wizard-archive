@@ -1,15 +1,14 @@
 import { requireItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { requireDmRole } from '../../functions'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { shareSidebarItemWithMember } from './sidebarItemShareMutations'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { PermissionLevel } from '../../permissions/types'
 export const shareSidebarItem = async (
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   {
     sidebarItemId,
     campaignMemberId,
@@ -25,7 +24,6 @@ export const shareSidebarItem = async (
     rawItem: itemFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
-  await requireDmRole(ctx, item.campaignId)
 
   const existingShare = await ctx.db
     .query('sidebarItemShares')
@@ -50,7 +48,6 @@ export const shareSidebarItem = async (
   await logEditHistory(ctx, {
     itemId: sidebarItemId,
     itemType: item.type,
-    campaignId: item.campaignId,
     action: EDIT_HISTORY_ACTION.permission_changed,
     metadata: {
       memberName: memberProfile?.name ?? 'Unknown',

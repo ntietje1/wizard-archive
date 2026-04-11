@@ -1,18 +1,17 @@
 import { requireItemAccess, validateSidebarItemRename } from '../../sidebarItems/validation'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { requireCampaignMembership } from '../../functions'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import type { EditHistoryChange } from '../../editHistory/types'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { WithoutSystemFields } from 'convex/server'
 import type { Doc, Id } from '../../_generated/dataModel'
 
 export async function updateNote(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   {
     noteId,
     name,
@@ -27,7 +26,6 @@ export async function updateNote(
 ): Promise<{ noteId: Id<'sidebarItems'>; slug: string }> {
   const rawItem = await getSidebarItem(ctx, noteId)
   if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
-  await requireCampaignMembership(ctx, rawItem.campaignId)
   const note = await requireItemAccess(ctx, {
     rawItem,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
@@ -76,13 +74,12 @@ export async function updateNote(
   await ctx.db.patch('sidebarItems', noteId, {
     ...updates,
     updatedTime: Date.now(),
-    updatedBy: ctx.user.profile._id,
+    updatedBy: ctx.membership.userId,
   })
 
   await logEditHistory(ctx, {
     itemId: note._id,
     itemType: SIDEBAR_ITEM_TYPES.notes,
-    campaignId: note.campaignId,
     changes,
   })
 

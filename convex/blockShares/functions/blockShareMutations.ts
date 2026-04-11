@@ -4,15 +4,14 @@ import { findBlockByBlockNoteId } from '../../blocks/functions/findBlockByBlockN
 import { insertBlock } from '../../blocks/functions/insertBlock'
 import { updateBlock } from '../../blocks/functions/updateBlock'
 import { removeBlockIfNotNeeded } from '../../blocks/functions/removeBlockIfNotNeeded'
-import { getCurrentSession } from '../../sessions/functions/getCurrentSession'
 import { SHARE_STATUS } from '../types'
 import type { NoteFromDb } from '../../notes/types'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { BlockItem, ShareStatus } from '../types'
 
 async function upsertBlockForSharing(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   {
     note,
     blockItem,
@@ -52,7 +51,7 @@ async function upsertBlockForSharing(
 }
 
 async function addBlockShare(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   {
     noteId,
     blockId,
@@ -88,13 +87,14 @@ async function addBlockShare(
         deletionTime: null,
         deletedBy: null,
         updatedTime: now,
-        updatedBy: ctx.user.profile._id,
+        updatedBy: ctx.membership.userId,
       })
     }
     return existingShare._id
   }
 
-  const currentSession = await getCurrentSession(ctx, { campaignId })
+  const currentSessionId = ctx.campaign.currentSessionId
+  const currentSession = currentSessionId ? await ctx.db.get('sessions', currentSessionId) : null
 
   return await ctx.db.insert('blockShares', {
     campaignId,
@@ -106,12 +106,12 @@ async function addBlockShare(
     deletedBy: null,
     updatedTime: null,
     updatedBy: null,
-    createdBy: ctx.user.profile._id,
+    createdBy: ctx.membership.userId,
   })
 }
 
 async function removeBlockShare(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   { blockId, campaignMemberId }: { blockId: Id<'blocks'>; campaignMemberId: Id<'campaignMembers'> },
 ): Promise<void> {
   const block = await ctx.db.get('blocks', blockId)
@@ -131,15 +131,15 @@ async function removeBlockShare(
     const now = Date.now()
     await ctx.db.patch('blockShares', share._id, {
       deletionTime: now,
-      deletedBy: ctx.user.profile._id,
+      deletedBy: ctx.membership.userId,
       updatedTime: now,
-      updatedBy: ctx.user.profile._id,
+      updatedBy: ctx.membership.userId,
     })
   }
 }
 
 async function clearBlockShares(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   { blockId }: { blockId: Id<'blocks'> },
 ): Promise<void> {
   const block = await ctx.db.get('blocks', blockId)
@@ -154,19 +154,19 @@ async function clearBlockShares(
     .collect()
 
   const now = Date.now()
-  const profileId = ctx.user.profile._id
+  const userId = ctx.membership.userId
   await asyncMap(shares, (share) =>
     ctx.db.patch('blockShares', share._id, {
       deletionTime: now,
-      deletedBy: profileId,
+      deletedBy: userId,
       updatedTime: now,
-      updatedBy: profileId,
+      updatedBy: userId,
     }),
   )
 }
 
 export async function shareBlockWithMemberHelper(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   {
     note,
     blockItem,
@@ -187,7 +187,7 @@ export async function shareBlockWithMemberHelper(
 }
 
 export async function unshareBlockFromMemberHelper(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   {
     note,
     blockNoteId,
@@ -218,14 +218,14 @@ export async function unshareBlockFromMemberHelper(
     await ctx.db.patch('blocks', block._id, {
       shareStatus: SHARE_STATUS.NOT_SHARED,
       updatedTime: Date.now(),
-      updatedBy: ctx.user.profile._id,
+      updatedBy: ctx.membership.userId,
     })
     await removeBlockIfNotNeeded(ctx, { blockId: block._id })
   }
 }
 
 export async function setBlockShareStatusHelper(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   { note, blockItem, status }: { note: NoteFromDb; blockItem: BlockItem; status: ShareStatus },
 ): Promise<void> {
   const blockId = await upsertBlockForSharing(ctx, {

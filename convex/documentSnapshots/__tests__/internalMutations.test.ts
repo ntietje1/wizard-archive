@@ -16,6 +16,7 @@ import type { GameMapSnapshotData } from '../../gameMaps/types'
 function createEditHistoryEntry(
   t: ReturnType<typeof createTestContext>,
   args: LogEditHistoryArgs & {
+    campaignId: Id<'campaigns'>
     campaignMemberId: Id<'campaignMembers'>
     hasSnapshot: boolean
   },

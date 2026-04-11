@@ -101,6 +101,7 @@ describe('updateFile', () => {
     })
 
     const result = await dmAuth.mutation(api.files.mutations.updateFile, {
+      campaignId: ctx.campaignId,
       fileId,
       name: 'Renamed File',
     })
@@ -130,6 +131,7 @@ describe('updateFile', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.files.mutations.updateFile, {
+        campaignId: ctx.campaignId,
         fileId,
         name: 'Hacked',
       }),
@@ -151,6 +153,7 @@ describe('updateFile', () => {
     })
 
     const result = await playerAuth.mutation(api.files.mutations.updateFile, {
+      campaignId: ctx.campaignId,
       fileId,
       name: 'Player Updated',
     })
@@ -163,6 +166,7 @@ describe('updateFile', () => {
 
     await expectNotAuthenticated(
       t.mutation(api.files.mutations.updateFile, {
+        campaignId: ctx.campaignId,
         fileId,
         name: 'Nope',
       }),
@@ -181,7 +185,10 @@ describe('getFile', () => {
       name: 'Test File',
     })
 
-    const result = await dmAuth.query(api.files.queries.getFile, { fileId })
+    const result = await dmAuth.query(api.files.queries.getFile, {
+      campaignId: ctx.campaignId,
+      fileId,
+    })
 
     expect(result).not.toBeNull()
     expect(result!._id).toBe(fileId)
@@ -200,6 +207,7 @@ describe('getFile', () => {
     })
 
     const result = await playerAuth.query(api.files.queries.getFile, {
+      campaignId: ctx.campaignId,
       fileId,
     })
     expect(result).toBeNull()
@@ -229,6 +237,7 @@ describe('getFile', () => {
     })
 
     const result = await playerAuth.query(api.files.queries.getFile, {
+      campaignId: ctx.campaignId,
       fileId,
     })
     expect(result).not.toBeNull()
@@ -245,7 +254,10 @@ describe('getFile', () => {
       await dbCtx.db.delete('sidebarItems', fileId)
     })
 
-    const result = await dmAuth.query(api.files.queries.getFile, { fileId })
+    const result = await dmAuth.query(api.files.queries.getFile, {
+      campaignId: ctx.campaignId,
+      fileId,
+    })
     expect(result).toBeNull()
   })
 
@@ -253,6 +265,8 @@ describe('getFile', () => {
     const ctx = await setupCampaignContext(t)
     const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await expectNotAuthenticated(t.query(api.files.queries.getFile, { fileId }))
+    await expectNotAuthenticated(
+      t.query(api.files.queries.getFile, { campaignId: ctx.campaignId, fileId }),
+    )
   })
 })

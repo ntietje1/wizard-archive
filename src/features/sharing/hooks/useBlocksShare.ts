@@ -5,10 +5,10 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { CampaignMember } from 'convex/campaigns/types'
 import type { BlockShareInfo } from 'convex/blocks/types'
 import { handleError } from '~/shared/utils/logger'
-import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
+import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { isNote } from '~/features/sidebar/utils/sidebar-item-utils'
 
 export interface ShareItem {
@@ -33,14 +33,14 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
   const campaignData = campaign.data
   const blockIds = blocks.map((b) => b.id)
 
-  const query = useAuthQuery(
+  const query = useCampaignQuery(
     api.blocks.queries.getBlocksWithShares,
     isNote(item) && blockIds.length > 0 && campaignData ? { noteId: item._id, blockIds } : 'skip',
   )
 
-  const setBlocksShareStatus = useAppMutation(api.blockShares.mutations.setBlocksShareStatus)
-  const shareBlocks = useAppMutation(api.blockShares.mutations.shareBlocks)
-  const unshareBlocks = useAppMutation(api.blockShares.mutations.unshareBlocks)
+  const setBlocksShareStatus = useCampaignMutation(api.blockShares.mutations.setBlocksShareStatus)
+  const shareBlocks = useCampaignMutation(api.blockShares.mutations.shareBlocks)
+  const unshareBlocks = useCampaignMutation(api.blockShares.mutations.unshareBlocks)
 
   const isMutating =
     setBlocksShareStatus.isPending || shareBlocks.isPending || unshareBlocks.isPending

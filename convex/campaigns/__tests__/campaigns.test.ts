@@ -499,6 +499,7 @@ describe('updateCampaignMemberStatus', () => {
     })
 
     const result = await dm.authed.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+      campaignId,
       memberId,
       status: 'Accepted',
     })
@@ -519,6 +520,7 @@ describe('updateCampaignMemberStatus', () => {
     })
 
     await dm.authed.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+      campaignId,
       memberId,
       status: 'Rejected',
     })
@@ -534,6 +536,7 @@ describe('updateCampaignMemberStatus', () => {
     const dmAuth = asDm(ctx)
 
     await dmAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+      campaignId: ctx.campaignId,
       memberId: ctx.player.memberId,
       status: 'Removed',
     })
@@ -553,6 +556,7 @@ describe('updateCampaignMemberStatus', () => {
     })
 
     await dm.authed.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+      campaignId,
       memberId,
       status: 'Accepted',
     })
@@ -573,6 +577,7 @@ describe('updateCampaignMemberStatus', () => {
 
     await expectValidationFailed(
       dm.authed.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+        campaignId,
         memberId,
         status: 'Accepted',
       }),
@@ -585,6 +590,7 @@ describe('updateCampaignMemberStatus', () => {
 
     await expectValidationFailed(
       dmAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+        campaignId: ctx.campaignId,
         memberId: ctx.player.memberId,
         status: 'Accepted',
       }),
@@ -601,6 +607,7 @@ describe('updateCampaignMemberStatus', () => {
 
     await expectValidationFailed(
       dm.authed.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+        campaignId,
         memberId,
         status: 'Removed',
       }),
@@ -618,6 +625,7 @@ describe('updateCampaignMemberStatus', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+        campaignId: ctx.campaignId,
         memberId,
         status: 'Accepted',
       }),
@@ -630,6 +638,7 @@ describe('updateCampaignMemberStatus', () => {
 
     await expectPermissionDenied(
       dmAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+        campaignId: ctx.campaignId,
         memberId: ctx.dm.memberId,
         status: 'Removed',
       }),
@@ -653,6 +662,7 @@ describe('updateCampaignMemberStatus', () => {
 
     await expectNotFound(
       dm.authed.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+        campaignId,
         memberId,
         status: 'Accepted',
       }),
@@ -663,6 +673,7 @@ describe('updateCampaignMemberStatus', () => {
     const ctx = await setupCampaignContext(t)
     await expectNotAuthenticated(
       t.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+        campaignId: ctx.campaignId,
         memberId: ctx.player.memberId,
         status: 'Removed',
       }),

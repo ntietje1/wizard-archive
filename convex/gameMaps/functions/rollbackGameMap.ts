@@ -6,11 +6,11 @@ import { PERMISSION_LEVEL } from '../../permissions/types'
 import { logger } from '../../common/logger'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import type { GameMapSnapshotData } from '../types'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 export async function rollbackGameMap(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   itemId: Id<'sidebarItems'>,
   snapshotData: ArrayBuffer,
 ): Promise<void> {
@@ -78,10 +78,10 @@ export async function rollbackGameMap(
     .collect()
 
   const now = Date.now()
-  const profileId = ctx.user.profile._id
+  const userId = ctx.membership.userId
 
   await asyncMap(existingPins, (pin) =>
-    ctx.db.patch('mapPins', pin._id, { deletionTime: now, deletedBy: profileId }),
+    ctx.db.patch('mapPins', pin._id, { deletionTime: now, deletedBy: userId }),
   )
 
   const pinTargetChecks = await asyncMap(parsed.pins, async (pin) => {
@@ -108,7 +108,7 @@ export async function rollbackGameMap(
       x: pin.x,
       y: pin.y,
       visible: pin.visible,
-      createdBy: profileId,
+      createdBy: userId,
       updatedTime: null,
       updatedBy: null,
       deletionTime: null,

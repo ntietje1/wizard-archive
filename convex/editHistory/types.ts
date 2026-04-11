@@ -97,7 +97,6 @@ export type LogEditHistoryArgs = {
   [K in EditHistoryAction]: {
     itemId: Id<'sidebarItems'>
     itemType: SidebarItemType
-    campaignId: Id<'campaigns'>
     action: K
   } & (EditHistoryMetadataMap[K] extends null
     ? { metadata?: null }

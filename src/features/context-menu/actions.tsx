@@ -272,6 +272,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       try {
         if (!campaignId) return
         await convex.mutation(api.gameMaps.mutations.removeItemPin, {
+          campaignId,
           mapPinId: ctx.activePin._id,
         })
         toast.success('Pin removed')
@@ -287,6 +288,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       try {
         if (!campaignId) return
         await convex.mutation(api.gameMaps.mutations.updatePinVisibility, {
+          campaignId,
           mapPinId: ctx.activePin._id,
           visible: newVisible,
         })
@@ -309,9 +311,8 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     },
 
     startSession: () => {
-      if (!campaignId) return
       startNewSession.mutate(
-        { campaignId },
+        {},
         {
           onSuccess: () => toast.success('Session started'),
         },
@@ -319,9 +320,8 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     },
 
     endSession: () => {
-      if (!campaignId) return
       endCurrentSession.mutate(
-        { campaignId },
+        {},
         {
           onSuccess: () => toast.success('Session ended'),
         },
@@ -333,6 +333,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
 
       try {
         await convex.mutation(api.sidebarShares.mutations.setAllPlayersPermission, {
+          campaignId,
           sidebarItemId: ctx.item._id,
           permissionLevel: level,
         })
@@ -371,10 +372,11 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     },
 
     downloadNote: async (ctx: MenuContext) => {
-      if (!ctx.item || !isNote(ctx.item)) return
+      if (!ctx.item || !isNote(ctx.item) || !campaignId) return
 
       try {
         const fullItem = await convex.query(api.sidebarItems.queries.getSidebarItem, {
+          campaignId,
           id: ctx.item._id,
         })
         if (!fullItem || fullItem.type !== SIDEBAR_ITEM_TYPES.notes) {
@@ -429,14 +431,14 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     },
 
     downloadFolder: async (ctx: MenuContext) => {
-      if (!ctx.item || !isFolder(ctx.item)) return
+      if (!ctx.item || !isFolder(ctx.item) || !campaignId) return
 
       const toastId = toast.loading('Preparing download...')
 
       try {
         const { folderName, items } = await convex.query(
           api.folders.queries.getFolderContentsForDownload,
-          { folderId: ctx.item._id },
+          { campaignId, folderId: ctx.item._id },
         )
 
         if (items.length === 0) {

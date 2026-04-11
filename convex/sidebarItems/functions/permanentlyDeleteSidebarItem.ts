@@ -3,14 +3,13 @@ import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { hasAtLeastPermissionLevel } from '../../permissions/hasAtLeastPermissionLevel'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
-import { requireCampaignMembership } from '../../functions'
 import { hardDeleteTree } from './treeOperations'
 import { getSidebarItem } from './getSidebarItem'
 import type { Id } from '../../_generated/dataModel'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 
 export async function permanentlyDeleteSidebarItem(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   { itemId }: { itemId: Id<'sidebarItems'> },
 ): Promise<void> {
   const rawItem = await getSidebarItem(ctx, itemId)
@@ -22,7 +21,7 @@ export async function permanentlyDeleteSidebarItem(
     throwClientError(ERROR_CODE.NOT_FOUND, 'This item is no longer in the trash')
   }
 
-  const { membership } = await requireCampaignMembership(ctx, rawItem.campaignId)
+  const { membership } = ctx
 
   if (membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
     if (rawItem.type === SIDEBAR_ITEM_TYPES.folders) {

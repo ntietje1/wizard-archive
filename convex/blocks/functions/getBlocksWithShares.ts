@@ -5,17 +5,16 @@ import { getCampaignMembers } from '../../campaigns/functions/getCampaignMembers
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { SHARE_STATUS } from '../../blockShares/types'
 import { checkItemAccess } from '../../sidebarItems/validation'
-import { requireDmRole } from '../../functions'
 import { findBlockByBlockNoteId } from './findBlockByBlockNoteId'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { ShareStatus } from '../../blockShares/types'
-import type { AuthQueryCtx } from '../../functions'
+import type { DmQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMember } from '../../campaigns/types'
 import type { BlockShareInfo } from '../types'
 
 export const getBlocksWithShares = async (
-  ctx: AuthQueryCtx,
+  ctx: DmQueryCtx,
   {
     noteId,
     blockIds,
@@ -29,14 +28,13 @@ export const getBlocksWithShares = async (
 }> => {
   const note = await getSidebarItem(ctx, noteId)
   if (!note) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
-  await requireDmRole(ctx, note.campaignId)
   await checkItemAccess(ctx, {
     rawItem: note,
     requiredLevel: PERMISSION_LEVEL.VIEW,
   })
 
   const [allMembers, allNoteShares] = await Promise.all([
-    getCampaignMembers(ctx, { campaignId: note.campaignId }),
+    getCampaignMembers(ctx),
     ctx.db
       .query('blockShares')
       .withIndex('by_campaign_note', (q) =>

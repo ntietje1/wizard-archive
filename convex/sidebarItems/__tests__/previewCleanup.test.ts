@@ -42,6 +42,7 @@ describe('preview cleanup on hard delete', () => {
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: noteId,
     })
 
@@ -79,6 +80,7 @@ describe('preview cleanup on hard delete', () => {
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: fileId,
     })
 
@@ -115,6 +117,7 @@ describe('preview cleanup on hard delete', () => {
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: mapId,
     })
 
@@ -152,6 +155,7 @@ describe('preview cleanup on hard delete', () => {
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: mapId,
     })
 
@@ -174,6 +178,7 @@ describe('preview cleanup on hard delete', () => {
     await trashItem(t, noteId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: noteId,
     })
 
@@ -191,6 +196,7 @@ describe('preview cleanup on hard delete', () => {
     await trashItem(t, folderId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: folderId,
     })
 

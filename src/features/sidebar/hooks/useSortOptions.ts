@@ -2,10 +2,9 @@ import { api } from 'convex/_generated/api'
 import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
 import { useEffect, useState } from 'react'
 import type { SortOptions } from 'convex/editors/types'
-import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { handleError } from '~/shared/utils/logger'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
-import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
+import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
+import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 
 const defaultSortOptions: SortOptions = {
   order: SORT_ORDERS.DateCreated,
@@ -13,13 +12,8 @@ const defaultSortOptions: SortOptions = {
 }
 
 export const useSortOptions = () => {
-  const { campaign } = useCampaign()
-  const campaignData = campaign.data
-  const currentEditor = useAuthQuery(
-    api.editors.queries.getCurrentEditor,
-    campaignData?._id ? { campaignId: campaignData._id } : 'skip',
-  )
-  const setCurrentEditor = useAppMutation(api.editors.mutations.setCurrentEditor)
+  const currentEditor = useCampaignQuery(api.editors.queries.getCurrentEditor, {})
+  const setCurrentEditor = useCampaignMutation(api.editors.mutations.setCurrentEditor)
 
   const [sortOptions, setSortOptions] = useState(defaultSortOptions)
 
@@ -41,10 +35,8 @@ export const useSortOptions = () => {
 
   const setSortOptionsAction = async (options: SortOptions) => {
     setSortOptions(options)
-    if (!campaignData?._id) return
     try {
       await setCurrentEditor.mutateAsync({
-        campaignId: campaignData._id,
         sortOrder: options.order,
         sortDirection: options.direction,
       })

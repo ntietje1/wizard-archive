@@ -24,13 +24,17 @@ describe('permission inheritance through nested folder trees', () => {
     })
 
     await dmAuth.mutation(api.sidebarShares.mutations.shareSidebarItem, {
+      campaignId: ctx.campaignId,
       sidebarItemId: folders[0],
       sidebarItemType: 'folder',
       campaignMemberId: ctx.player.memberId,
       permissionLevel: 'view',
     })
 
-    const leafItem = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, { id: leaf })
+    const leafItem = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+      campaignId: ctx.campaignId,
+      id: leaf,
+    })
     expect(leafItem.myPermissionLevel).toBe('view')
   })
 
@@ -45,21 +49,31 @@ describe('permission inheritance through nested folder trees', () => {
     })
 
     await dmAuth.mutation(api.sidebarShares.mutations.shareSidebarItem, {
+      campaignId: ctx.campaignId,
       sidebarItemId: folders[0],
       sidebarItemType: 'folder',
       campaignMemberId: ctx.player.memberId,
       permissionLevel: 'view',
     })
 
-    const leafBefore = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, { id: leaf })
+    const leafBefore = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+      campaignId: ctx.campaignId,
+      id: leaf,
+    })
     expect(leafBefore.myPermissionLevel).toBe('view')
 
     await dmAuth.mutation(api.sidebarShares.mutations.setFolderInheritShares, {
+      campaignId: ctx.campaignId,
       folderId: folders[0],
       inheritShares: false,
     })
 
-    await expectNotFound(playerAuth.query(api.sidebarItems.queries.getSidebarItem, { id: leaf }))
+    await expectNotFound(
+      playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+        campaignId: ctx.campaignId,
+        id: leaf,
+      }),
+    )
   })
 
   it('re-enabling inheritance on the shared folder restores access', async () => {
@@ -73,20 +87,30 @@ describe('permission inheritance through nested folder trees', () => {
     })
 
     await dmAuth.mutation(api.sidebarShares.mutations.shareSidebarItem, {
+      campaignId: ctx.campaignId,
       sidebarItemId: folders[0],
       sidebarItemType: 'folder',
       campaignMemberId: ctx.player.memberId,
       permissionLevel: 'view',
     })
 
-    await expectNotFound(playerAuth.query(api.sidebarItems.queries.getSidebarItem, { id: leaf }))
+    await expectNotFound(
+      playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+        campaignId: ctx.campaignId,
+        id: leaf,
+      }),
+    )
 
     await dmAuth.mutation(api.sidebarShares.mutations.setFolderInheritShares, {
+      campaignId: ctx.campaignId,
       folderId: folders[0],
       inheritShares: true,
     })
 
-    const leafItem = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, { id: leaf })
+    const leafItem = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+      campaignId: ctx.campaignId,
+      id: leaf,
+    })
     expect(leafItem.myPermissionLevel).toBe('view')
   })
 
@@ -101,6 +125,7 @@ describe('permission inheritance through nested folder trees', () => {
     })
 
     await dmAuth.mutation(api.sidebarShares.mutations.shareSidebarItem, {
+      campaignId: ctx.campaignId,
       sidebarItemId: folders[0],
       sidebarItemType: 'folder',
       campaignMemberId: ctx.player.memberId,
@@ -108,11 +133,15 @@ describe('permission inheritance through nested folder trees', () => {
     })
 
     await dmAuth.mutation(api.sidebarShares.mutations.setAllPlayersPermission, {
+      campaignId: ctx.campaignId,
       sidebarItemId: folders[1],
       permissionLevel: 'edit',
     })
 
-    const leafItem = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, { id: leaf })
+    const leafItem = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+      campaignId: ctx.campaignId,
+      id: leaf,
+    })
     expect(leafItem.myPermissionLevel).toBe('edit')
   })
 
@@ -127,6 +156,7 @@ describe('permission inheritance through nested folder trees', () => {
     })
 
     await dmAuth.mutation(api.sidebarShares.mutations.shareSidebarItem, {
+      campaignId: ctx.campaignId,
       sidebarItemId: folders[0],
       sidebarItemType: 'folder',
       campaignMemberId: ctx.player.memberId,
@@ -134,13 +164,17 @@ describe('permission inheritance through nested folder trees', () => {
     })
 
     await dmAuth.mutation(api.sidebarShares.mutations.shareSidebarItem, {
+      campaignId: ctx.campaignId,
       sidebarItemId: leaf,
       sidebarItemType: 'note',
       campaignMemberId: ctx.player.memberId,
       permissionLevel: 'edit',
     })
 
-    const leafItem = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, { id: leaf })
+    const leafItem = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+      campaignId: ctx.campaignId,
+      id: leaf,
+    })
     expect(leafItem.myPermissionLevel).toBe('edit')
   })
 
@@ -156,23 +190,36 @@ describe('permission inheritance through nested folder trees', () => {
     })
 
     await dmAuth.mutation(api.sidebarShares.mutations.shareSidebarItem, {
+      campaignId: campaignId,
       sidebarItemId: folders[0],
       sidebarItemType: 'folder',
       campaignMemberId: p1.memberId,
       permissionLevel: 'view',
     })
 
-    const p1Leaf = await p1.authed.query(api.sidebarItems.queries.getSidebarItem, { id: leaf })
+    const p1Leaf = await p1.authed.query(api.sidebarItems.queries.getSidebarItem, {
+      campaignId: campaignId,
+      id: leaf,
+    })
     expect(p1Leaf.myPermissionLevel).toBe('view')
 
-    await expectNotFound(p2.authed.query(api.sidebarItems.queries.getSidebarItem, { id: leaf }))
+    await expectNotFound(
+      p2.authed.query(api.sidebarItems.queries.getSidebarItem, {
+        campaignId: campaignId,
+        id: leaf,
+      }),
+    )
 
     await dmAuth.mutation(api.sidebarShares.mutations.setAllPlayersPermission, {
+      campaignId: campaignId,
       sidebarItemId: folders[0],
       permissionLevel: 'view',
     })
 
-    const p2Leaf = await p2.authed.query(api.sidebarItems.queries.getSidebarItem, { id: leaf })
+    const p2Leaf = await p2.authed.query(api.sidebarItems.queries.getSidebarItem, {
+      campaignId: campaignId,
+      id: leaf,
+    })
     expect(p2Leaf.myPermissionLevel).toBe('view')
   })
 })

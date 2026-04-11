@@ -1,7 +1,6 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { requireItemAccess } from '../../sidebarItems/validation'
-import { requireCampaignMembership } from '../../functions'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { assertNever } from '../../common/types'
@@ -9,12 +8,12 @@ import { rollbackNote } from '../../notes/functions/rollbackNote'
 import { rollbackCanvas } from '../../canvases/functions/rollbackCanvas'
 import { rollbackGameMap } from '../../gameMaps/functions/rollbackGameMap'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { SidebarItemType } from '../../sidebarItems/types/baseTypes'
 
 export async function rollbackToSnapshot(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   { editHistoryId }: { editHistoryId: Id<'editHistory'> },
 ): Promise<void> {
   const historyEntry = await ctx.db.get('editHistory', editHistoryId)
@@ -27,7 +26,6 @@ export async function rollbackToSnapshot(
     rawItem: itemFromDb,
     requiredLevel: PERMISSION_LEVEL.EDIT,
   })
-  const { membership } = await requireCampaignMembership(ctx, historyEntry.campaignId)
 
   const snapshot = await ctx.db
     .query('documentSnapshots')
@@ -59,18 +57,17 @@ export async function rollbackToSnapshot(
   }
 
   const now = Date.now()
-  const profileId = ctx.user.profile._id
 
   await ctx.db.patch('sidebarItems', historyEntry.itemId, {
     updatedTime: now,
-    updatedBy: profileId,
+    updatedBy: ctx.membership.userId,
   })
 
   await ctx.db.insert('editHistory', {
     itemId: historyEntry.itemId,
     itemType: historyEntry.itemType,
-    campaignId: historyEntry.campaignId,
-    campaignMemberId: membership._id,
+    campaignId: ctx.campaign._id,
+    campaignMemberId: ctx.membership._id,
     action: EDIT_HISTORY_ACTION.rolled_back,
     metadata: { restoredFromHistoryEntryId: editHistoryId },
     hasSnapshot: false,

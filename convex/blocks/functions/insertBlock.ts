@@ -1,11 +1,11 @@
 import { SHARE_STATUS } from '../../blockShares/types'
 import type { ShareStatus } from '../../blockShares/types'
 import type { Id } from '../../_generated/dataModel'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { CustomBlock } from '../../notes/editorSpecs'
 
 export async function insertBlock(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   params: {
     noteId: Id<'sidebarItems'>
     campaignId: Id<'campaigns'>
@@ -28,6 +28,6 @@ export async function insertBlock(
     deletedBy: null,
     updatedTime: null,
     updatedBy: null,
-    createdBy: ctx.user.profile._id,
+    createdBy: ctx.membership.userId,
   })
 }

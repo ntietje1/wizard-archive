@@ -19,10 +19,12 @@ export function MembersSection({
   dmMember,
   acceptedPlayers,
   isDm,
+  campaignId,
 }: {
   dmMember: CampaignMember | undefined
   acceptedPlayers: Array<CampaignMember>
   isDm: boolean
+  campaignId: Id<'campaigns'>
 }) {
   const [deletingMemberId, setDeletingMemberId] = useState<Id<'campaignMembers'> | null>(null)
 
@@ -85,6 +87,7 @@ export function MembersSection({
 
       <RemovePlayerDialog
         player={deletingPlayer}
+        campaignId={campaignId}
         isOpen={!!deletingPlayer}
         onClose={() => setDeletingMemberId(null)}
       />

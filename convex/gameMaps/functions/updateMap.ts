@@ -2,17 +2,16 @@ import { requireItemAccess, validateSidebarItemRename } from '../../sidebarItems
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { requireCampaignMembership } from '../../functions'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import type { EditHistoryChange } from '../../editHistory/types'
 import type { WithoutSystemFields } from 'convex/server'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 
 export async function updateMap(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   {
     mapId,
     name,
@@ -30,7 +29,6 @@ export async function updateMap(
   const rawItem = await getSidebarItem(ctx, mapId)
   if (!rawItem || rawItem.type !== SIDEBAR_ITEM_TYPES.gameMaps)
     throwClientError(ERROR_CODE.NOT_FOUND, 'Map not found')
-  await requireCampaignMembership(ctx, rawItem.campaignId)
   const map = await requireItemAccess(ctx, {
     rawItem,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
@@ -94,13 +92,12 @@ export async function updateMap(
   await ctx.db.patch('sidebarItems', mapId, {
     ...updates,
     updatedTime: Date.now(),
-    updatedBy: ctx.user.profile._id,
+    updatedBy: ctx.membership.userId,
   })
 
   await logEditHistory(ctx, {
     itemId: map._id,
     itemType: SIDEBAR_ITEM_TYPES.gameMaps,
-    campaignId: map.campaignId,
     changes,
   })
 

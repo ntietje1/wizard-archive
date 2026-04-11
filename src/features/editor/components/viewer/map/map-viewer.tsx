@@ -24,7 +24,7 @@ import {
   rejectionReasonMessage,
 } from '~/features/dnd/utils/dnd-registry'
 import { handleError } from '~/shared/utils/logger'
-import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
@@ -332,9 +332,9 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
   const draggedPinPositionRef = useRef<PinPosition | null>(null)
   const justFinishedDraggingRef = useRef<Id<'mapPins'> | null>(null)
 
-  const createItemPinMutation = useAppMutation(api.gameMaps.mutations.createItemPin)
+  const createItemPinMutation = useCampaignMutation(api.gameMaps.mutations.createItemPin)
 
-  const updateItemPinMutation = useAppMutation(api.gameMaps.mutations.updateItemPin)
+  const updateItemPinMutation = useCampaignMutation(api.gameMaps.mutations.updateItemPin)
 
   const handleTransformChange = (
     _: unknown,
@@ -847,7 +847,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
 }
 
 function MapImageUpload({ mapId }: { mapId: Id<'sidebarItems'> }) {
-  const updateMap = useAppMutation(api.gameMaps.mutations.updateMap)
+  const updateMap = useCampaignMutation(api.gameMaps.mutations.updateMap)
 
   const fileUpload = useFileWithPreview({
     isOpen: true,

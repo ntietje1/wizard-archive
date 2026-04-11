@@ -5,7 +5,6 @@ import { enhanceNote, enhanceNoteWithContent } from '../../notes/functions/enhan
 import { enhanceCanvas, enhanceCanvasWithContent } from '../../canvases/functions/enhanceCanvas'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sidebarItemPermissions'
-import { requireCampaignMembership } from '../../functions'
 import { assertNever } from '../../common/types'
 import type {
   AnySidebarItemFromDb,
@@ -14,13 +13,13 @@ import type {
   SidebarItemTypeKey,
   WithContentByType,
 } from '../types/types'
-import type { AuthQueryCtx } from '../../functions'
+import type { CampaignQueryCtx } from '../../functions'
 
 export async function enhanceBase<T extends AnySidebarItemFromDb>(
-  ctx: AuthQueryCtx,
+  ctx: CampaignQueryCtx,
   { item }: { item: T },
 ) {
-  const { membership } = await requireCampaignMembership(ctx, item.campaignId)
+  const { membership } = ctx
 
   const [shares, bookmark, myPermissionLevel, previewUrl] = await Promise.all([
     ctx.db
@@ -54,7 +53,7 @@ export async function enhanceBase<T extends AnySidebarItemFromDb>(
 }
 
 export async function enhanceSidebarItem<T extends AnySidebarItemFromDb>(
-  ctx: AuthQueryCtx,
+  ctx: CampaignQueryCtx,
   { item }: { item: T },
 ): Promise<EnhancedSidebarItem<T>> {
   switch (item.type) {
@@ -76,7 +75,7 @@ export async function enhanceSidebarItem<T extends AnySidebarItemFromDb>(
 export async function enhanceSidebarItemWithContent<
   K extends SidebarItemTypeKey = SidebarItemTypeKey,
 >(
-  ctx: AuthQueryCtx,
+  ctx: CampaignQueryCtx,
   { item }: { item: EnhancedByType[SidebarItemTypeKey] },
 ): Promise<WithContentByType[K]> {
   switch (item.type) {

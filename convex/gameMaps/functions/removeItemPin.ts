@@ -3,11 +3,11 @@ import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { captureGameMapSnapshot } from './captureGameMapSnapshot'
 import { requirePinAccess } from './requirePinAccess'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 export async function removeItemPin(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   { mapPinId }: { mapPinId: Id<'mapPins'> },
 ): Promise<Id<'mapPins'>> {
   const { pin, map } = await requirePinAccess(ctx, { mapPinId })
@@ -15,14 +15,14 @@ export async function removeItemPin(
   const now = Date.now()
   await ctx.db.patch('mapPins', mapPinId, {
     deletionTime: now,
-    deletedBy: ctx.user.profile._id,
+    deletedBy: ctx.membership.userId,
     updatedTime: now,
-    updatedBy: ctx.user.profile._id,
+    updatedBy: ctx.membership.userId,
   })
 
   await ctx.db.patch('sidebarItems', map._id, {
     updatedTime: now,
-    updatedBy: ctx.user.profile._id,
+    updatedBy: ctx.membership.userId,
   })
 
   const pinnedItem = await ctx.db.get('sidebarItems', pin.itemId)
@@ -32,7 +32,6 @@ export async function removeItemPin(
     {
       itemId: map._id,
       itemType: SIDEBAR_ITEM_TYPES.gameMaps,
-      campaignId: map.campaignId,
       action: EDIT_HISTORY_ACTION.map_pin_removed,
       metadata: { pinItemName: pinnedItem?.name ?? 'Unknown' },
     },
@@ -43,7 +42,7 @@ export async function removeItemPin(
     mapId: map._id,
     editHistoryId,
     campaignId: map.campaignId,
-    createdBy: ctx.user.profile._id,
+    createdBy: ctx.membership.userId,
   })
 
   return mapPinId

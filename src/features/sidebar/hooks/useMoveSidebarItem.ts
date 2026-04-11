@@ -4,7 +4,7 @@ import type { SidebarItemLocation } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
-import { useAppMutation } from '~/shared/hooks/useAppMutation'
+import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { isFolder } from '~/features/sidebar/utils/sidebar-item-utils'
 import { collectDescendantIds } from '~/features/sidebar/utils/sidebar-item-maps'
 import { useSidebarItemsCache } from '~/features/sidebar/hooks/useSidebarItemsCache'
@@ -15,7 +15,7 @@ export function useMoveSidebarItem() {
   const { campaignId, campaign } = useCampaign()
   const cache = useSidebarItemsCache()
 
-  const moveSidebarItemMutation = useAppMutation(api.sidebarItems.mutations.moveSidebarItem)
+  const moveSidebarItemMutation = useCampaignMutation(api.sidebarItems.mutations.moveSidebarItem)
 
   const moveItem = async (
     item: AnySidebarItem,

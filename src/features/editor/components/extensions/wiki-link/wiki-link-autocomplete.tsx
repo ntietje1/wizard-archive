@@ -9,7 +9,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import { buildBreadcrumbs, getItemTypeLabel } from '~/features/sidebar/utils/sidebar-item-utils'
 import { extractHeadingsFromContent } from '~/features/editor/utils/heading-utils'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import {
   getItemPath,
@@ -220,7 +220,7 @@ export function WikiLinkAutocomplete({ editor }: { editor: CustomBlockNoteEditor
 
   const context = menu.show ? getAutocompleteContext(menu.query, sidebarItems, itemsMap) : null
 
-  const noteQuery = useAuthQuery(
+  const noteQuery = useCampaignQuery(
     api.notes.queries.getNote,
     context?.mode === 'heading' && context.resolvedItem?._id
       ? { noteId: context.resolvedItem._id as Id<'sidebarItems'> }

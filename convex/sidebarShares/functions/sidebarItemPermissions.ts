@@ -1,15 +1,14 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
-import { requireCampaignMembership } from '../../functions'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
-import type { AuthQueryCtx } from '../../functions'
+import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { AnySidebarItem, AnySidebarItemFromDb } from '../../sidebarItems/types/types'
 import type { PermissionLevel } from '../../permissions/types'
 
 export async function resolveInheritedPermissions(
-  ctx: AuthQueryCtx,
+  ctx: CampaignQueryCtx,
   {
     parentId,
     campaignId,
@@ -101,11 +100,11 @@ export async function resolveInheritedPermissions(
 }
 
 export async function getSidebarItemPermissionLevel(
-  ctx: AuthQueryCtx,
+  ctx: CampaignQueryCtx,
   { item }: { item: AnySidebarItem | AnySidebarItemFromDb },
 ): Promise<PermissionLevel> {
   const campaignId = item.campaignId
-  const { membership } = await requireCampaignMembership(ctx, campaignId)
+  const { membership } = ctx
 
   if (membership.role === CAMPAIGN_MEMBER_ROLE.DM) {
     return PERMISSION_LEVEL.FULL_ACCESS

@@ -1,17 +1,16 @@
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { requireItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { requireDmRole } from '../../functions'
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { resolveInheritedPermissions } from './sidebarItemPermissions'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
-import type { AuthQueryCtx } from '../../functions'
+import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { PermissionLevel } from '../../permissions/types'
 import type { SidebarItemShare } from '../types'
 
 export const getSidebarItemWithShares = async (
-  ctx: AuthQueryCtx,
+  ctx: CampaignQueryCtx,
   {
     sidebarItemId,
   }: {
@@ -31,7 +30,6 @@ export const getSidebarItemWithShares = async (
     rawItem: itemFromDb,
     requiredLevel: PERMISSION_LEVEL.VIEW,
   })
-  await requireDmRole(ctx, item.campaignId)
 
   const members = await ctx.db
     .query('campaignMembers')

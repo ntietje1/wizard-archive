@@ -13,7 +13,13 @@ import { Button } from '~/features/shadcn/components/button'
 import { Separator } from '~/features/shadcn/components/separator'
 import { cn } from '~/features/shadcn/lib/utils'
 
-export function RejectedRemovedSection({ players }: { players: Array<CampaignMember> }) {
+export function RejectedRemovedSection({
+  players,
+  campaignId,
+}: {
+  players: Array<CampaignMember>
+  campaignId: Id<'campaigns'>
+}) {
   const [showRejected, setShowRejected] = useState(false)
   const [updatingId, setUpdatingId] = useState<Id<'campaignMembers'> | null>(null)
 
@@ -25,7 +31,7 @@ export function RejectedRemovedSection({ players }: { players: Array<CampaignMem
   ) => {
     try {
       setUpdatingId(memberId)
-      await updateStatus.mutateAsync({ memberId, status })
+      await updateStatus.mutateAsync({ campaignId, memberId, status })
       toast.success('Player status updated')
     } catch (error) {
       handleError(error, 'Failed to update status')

@@ -16,10 +16,12 @@ describe('storage lifecycle with file/map deletion', () => {
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: fileId,
       location: 'trash',
     })
     await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: fileId,
     })
 
@@ -36,10 +38,12 @@ describe('storage lifecycle with file/map deletion', () => {
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: mapId,
       location: 'trash',
     })
     await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: mapId,
     })
 
@@ -80,6 +84,7 @@ describe('storage lifecycle with file/map deletion', () => {
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: folderId,
       location: 'trash',
     })
@@ -106,10 +111,12 @@ describe('storage lifecycle with file/map deletion', () => {
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: fileId,
       location: 'trash',
     })
     await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: fileId,
     })
 
@@ -127,10 +134,12 @@ describe('storage lifecycle with file/map deletion', () => {
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: mapId,
       location: 'trash',
     })
     await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: mapId,
     })
 

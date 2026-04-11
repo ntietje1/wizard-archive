@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { authQuery } from '../functions'
+import { authQuery, campaignQuery } from '../functions'
 import { getCampaignMembers } from './functions/getCampaignMembers'
 import { campaignMemberValidator, campaignValidator } from './schema'
 import { getUserCampaigns as getUserCampaignsFn } from './functions/getUserCampaigns'
@@ -29,10 +29,10 @@ export const getCampaignBySlug = authQuery({
   },
 })
 
-export const getPlayersByCampaign = authQuery({
-  args: { campaignId: v.id('campaigns') },
+export const getPlayersByCampaign = campaignQuery({
+  args: {},
   returns: v.array(campaignMemberValidator),
-  handler: async (ctx, args): Promise<Array<CampaignMember>> => {
-    return await getCampaignMembers(ctx, { campaignId: args.campaignId })
+  handler: async (ctx): Promise<Array<CampaignMember>> => {
+    return await getCampaignMembers(ctx)
   },
 })

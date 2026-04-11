@@ -74,7 +74,7 @@ export function PeopleTab() {
         <p className="text-sm text-destructive">Failed to load players</p>
       )}
 
-      {players.data && (
+      {players.data && campaignData && (
         <>
           {isDm && <InviteLinkSection joinUrl={joinUrl} />}
 
@@ -82,11 +82,16 @@ export function PeopleTab() {
             dmMember={dmMember}
             acceptedPlayers={acceptedPlayers}
             isDm={isDm === true}
+            campaignId={campaignData._id}
           />
 
-          {isDm && <PendingRequestsSection pendingPlayers={pendingPlayers} />}
+          {isDm && (
+            <PendingRequestsSection pendingPlayers={pendingPlayers} campaignId={campaignData._id} />
+          )}
 
-          {isDm && <RejectedRemovedSection players={rejectedOrRemoved} />}
+          {isDm && (
+            <RejectedRemovedSection players={rejectedOrRemoved} campaignId={campaignData._id} />
+          )}
         </>
       )}
     </div>

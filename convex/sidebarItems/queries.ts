@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { authQuery } from '../functions'
+import { campaignQuery } from '../functions'
 import { SIDEBAR_ITEM_LOCATION } from './types/baseTypes'
 import { fetchCampaignSidebarItems } from './functions/fetchCampaignSidebarItems'
 import { getSidebarItemsByParent as getSidebarItemsByParentFn } from './functions/getSidebarItemsByParent'
@@ -11,15 +11,13 @@ import type { AnySidebarItem, AnySidebarItemWithContent } from './types/types'
 import { getSidebarItemWithContent } from './functions/getSidebarItemWithContent'
 import { ERROR_CODE, throwClientError } from '../errors'
 
-export const getSidebarItemsByLocation = authQuery({
+export const getSidebarItemsByLocation = campaignQuery({
   args: {
-    campaignId: v.id('campaigns'),
     location: sidebarItemLocationValidator,
   },
   returns: v.array(anySidebarItemValidator),
   handler: async (ctx, args): Promise<Array<AnySidebarItem>> => {
     const items = await fetchCampaignSidebarItems(ctx, {
-      campaignId: args.campaignId,
       location: args.location,
     })
     if (args.location === SIDEBAR_ITEM_LOCATION.trash) {
@@ -29,21 +27,19 @@ export const getSidebarItemsByLocation = authQuery({
   },
 })
 
-export const getSidebarItemsByParent = authQuery({
+export const getSidebarItemsByParent = campaignQuery({
   args: {
-    campaignId: v.id('campaigns'),
     parentId: v.nullable(v.id('sidebarItems')),
   },
   returns: v.array(anySidebarItemValidator),
   handler: async (ctx, args): Promise<Array<AnySidebarItem>> => {
     return await getSidebarItemsByParentFn(ctx, {
-      campaignId: args.campaignId,
       parentId: args.parentId,
     })
   },
 })
 
-export const getSidebarItem = authQuery({
+export const getSidebarItem = campaignQuery({
   args: {
     id: sidebarItemIdValidator,
   },
@@ -57,16 +53,14 @@ export const getSidebarItem = authQuery({
   },
 })
 
-export const getSidebarItemBySlug = authQuery({
+export const getSidebarItemBySlug = campaignQuery({
   args: {
-    campaignId: v.id('campaigns'),
     slug: v.string(),
   },
   returns: v.nullable(anySidebarItemWithContentValidator),
   handler: async (ctx, args): Promise<AnySidebarItemWithContent | null> => {
     return await getSidebarItemBySlugFn(ctx, {
       slug: args.slug,
-      campaignId: args.campaignId,
     })
   },
 })

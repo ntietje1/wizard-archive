@@ -14,8 +14,10 @@ import { Separator } from '~/features/shadcn/components/separator'
 
 export function PendingRequestsSection({
   pendingPlayers,
+  campaignId,
 }: {
   pendingPlayers: Array<CampaignMember>
+  campaignId: Id<'campaigns'>
 }) {
   const [updatingId, setUpdatingId] = useState<Id<'campaignMembers'> | null>(null)
 
@@ -27,7 +29,7 @@ export function PendingRequestsSection({
   ) => {
     try {
       setUpdatingId(memberId)
-      await updateStatus.mutateAsync({ memberId, status })
+      await updateStatus.mutateAsync({ campaignId, memberId, status })
       toast.success('Player status updated')
     } catch (error) {
       handleError(error, 'Failed to update status')

@@ -1,9 +1,9 @@
 import { v } from 'convex/values'
-import { authQuery } from '../functions'
+import { campaignQuery } from '../functions'
 import { documentSnapshotValidator } from './schema'
 import { getSnapshotForHistoryEntry as getSnapshotFn } from './functions/getSnapshot'
 
-export const getSnapshotForHistoryEntry = authQuery({
+export const getSnapshotForHistoryEntry = campaignQuery({
   args: {
     editHistoryId: v.id('editHistory'),
   },

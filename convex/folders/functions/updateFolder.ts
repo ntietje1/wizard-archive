@@ -2,17 +2,16 @@ import { ERROR_CODE, throwClientError } from '../../errors'
 import { requireItemAccess, validateSidebarItemRename } from '../../sidebarItems/validation'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { requireCampaignMembership } from '../../functions'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import type { EditHistoryChange } from '../../editHistory/types'
 import type { WithoutSystemFields } from 'convex/server'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 
 export async function updateFolder(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   {
     folderId,
     name,
@@ -27,7 +26,6 @@ export async function updateFolder(
 ): Promise<{ folderId: Id<'sidebarItems'>; slug: string }> {
   const rawItem = await getSidebarItem(ctx, folderId)
   if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Folder not found')
-  await requireCampaignMembership(ctx, rawItem.campaignId)
   const folder = await requireItemAccess(ctx, {
     rawItem,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
@@ -76,13 +74,12 @@ export async function updateFolder(
   await ctx.db.patch('sidebarItems', folderId, {
     ...updates,
     updatedTime: Date.now(),
-    updatedBy: ctx.user.profile._id,
+    updatedBy: ctx.membership.userId,
   })
 
   await logEditHistory(ctx, {
     itemId: folder._id,
     itemType: SIDEBAR_ITEM_TYPES.folders,
-    campaignId: folder.campaignId,
     changes,
   })
 

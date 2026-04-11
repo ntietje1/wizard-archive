@@ -43,6 +43,7 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
 
     // Trash the folder
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: folderId,
       location: 'trash',
     })
@@ -66,12 +67,14 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     // Player cannot see note
     await expectNotFound(
       playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+        campaignId: ctx.campaignId,
         id: noteId,
       }),
     )
 
     // Restore the folder
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: folderId,
       location: 'sidebar',
     })
@@ -94,16 +97,19 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
 
     // Player can see note again
     const noteAfterRestore = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+      campaignId: ctx.campaignId,
       id: noteId,
     })
     expect(noteAfterRestore.myPermissionLevel).toBe('view')
 
     // Trash again and permanently delete
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: folderId,
       location: 'trash',
     })
     await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: folderId,
     })
 
@@ -138,15 +144,20 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: noteId,
       location: 'trash',
     })
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: noteId,
       location: 'sidebar',
     })
 
-    const note = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, { id: noteId })
+    const note = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+      campaignId: ctx.campaignId,
+      id: noteId,
+    })
     expect(note.myPermissionLevel).toBe('edit')
   })
 
@@ -169,6 +180,7 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
 
     // Trash note (soft-deletes dependents including blockShare)
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: noteId,
       location: 'trash',
     })
@@ -178,6 +190,7 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
 
     // Permanently delete
     await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: noteId,
     })
 

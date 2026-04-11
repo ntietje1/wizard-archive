@@ -53,6 +53,7 @@ describe('session workflows', () => {
       expect(s2Ended!.endedAt).not.toBeNull()
 
       await dmAuth.mutation(api.sessions.mutations.setCurrentSession, {
+        campaignId: ctx.campaignId,
         sessionId: s2Id,
       })
 
@@ -61,6 +62,7 @@ describe('session workflows', () => {
 
       await expectConflict(
         dmAuth.mutation(api.sessions.mutations.setCurrentSession, {
+          campaignId: ctx.campaignId,
           sessionId: s1Id,
         }),
       )
@@ -91,6 +93,7 @@ describe('session workflows', () => {
 
       await expectPermissionDenied(
         playerAuth.mutation(api.sessions.mutations.setCurrentSession, {
+          campaignId: ctx.campaignId,
           sessionId,
         }),
       )

@@ -67,6 +67,7 @@ describe('bulk trash operations', () => {
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: root,
       location: 'trash',
     })
@@ -114,6 +115,7 @@ describe('bulk trash operations', () => {
 
     for (const item of items) {
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: item.id as never,
         location: 'trash',
       })
@@ -146,10 +148,12 @@ describe('bulk trash operations', () => {
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: note1,
       location: 'trash',
     })
     await dm2.authed.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: campaign2Id,
       itemId: note2,
       location: 'trash',
     })
@@ -181,10 +185,12 @@ describe('bulk trash operations', () => {
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: noteId,
       location: 'trash',
     })
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: folderId,
       location: 'trash',
     })
@@ -222,6 +228,7 @@ describe('bulk trash operations', () => {
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: folders[0],
       location: 'trash',
     })

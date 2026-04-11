@@ -39,6 +39,7 @@ describe('hard delete YJS cleanup', () => {
     expect(await queryYjsUpdates(noteId)).toHaveLength(1)
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: noteId,
       location: 'trash',
     })
@@ -61,6 +62,7 @@ describe('hard delete YJS cleanup', () => {
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 42,
       state: new ArrayBuffer(4),
@@ -69,6 +71,7 @@ describe('hard delete YJS cleanup', () => {
     expect(await queryYjsAwareness(noteId)).toHaveLength(1)
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: noteId,
       location: 'trash',
     })
@@ -95,6 +98,7 @@ describe('hard delete YJS cleanup', () => {
     expect(await queryYjsUpdates(noteId)).toHaveLength(1)
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
+      campaignId: ctx.campaignId,
       documentId: noteId,
       clientId: 42,
       state: new ArrayBuffer(4),
@@ -103,6 +107,7 @@ describe('hard delete YJS cleanup', () => {
     expect(await queryYjsAwareness(noteId)).toHaveLength(1)
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: folderId,
       location: 'trash',
     })

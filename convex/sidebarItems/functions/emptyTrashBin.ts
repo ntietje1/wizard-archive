@@ -1,23 +1,16 @@
 import { asyncMap } from 'convex-helpers'
-import { requireDmRole } from '../../functions'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { hardDeleteTree } from './treeOperations'
 import { hardDeleteItem } from './hardDeleteItem'
 import { getSidebarItem } from './getSidebarItem'
 import type { AnySidebarItemFromDb } from '../types/types'
-import type { AuthMutationCtx } from '../../functions'
-import type { Id } from '../../_generated/dataModel'
+import type { CampaignMutationCtx } from '../../functions'
 
-export async function emptyTrashBin(
-  ctx: AuthMutationCtx,
-  { campaignId }: { campaignId: Id<'campaigns'> },
-): Promise<void> {
-  await requireDmRole(ctx, campaignId)
-
+export async function emptyTrashBin(ctx: CampaignMutationCtx): Promise<void> {
   const allTrashed = await ctx.db
     .query('sidebarItems')
     .withIndex('by_campaign_location_parent_name', (q) =>
-      q.eq('campaignId', campaignId).eq('location', SIDEBAR_ITEM_LOCATION.trash),
+      q.eq('campaignId', ctx.campaign._id).eq('location', SIDEBAR_ITEM_LOCATION.trash),
     )
     .collect()
 

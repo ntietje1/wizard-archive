@@ -24,6 +24,7 @@ describe('trash workflows', () => {
       })
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: original.noteId,
         location: 'trash',
       })
@@ -33,6 +34,7 @@ describe('trash workflows', () => {
       })
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: original.noteId,
         location: 'sidebar',
       })
@@ -78,6 +80,7 @@ describe('trash workflows', () => {
       })
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: folder.folderId,
         location: 'trash',
       })
@@ -103,6 +106,7 @@ describe('trash workflows', () => {
       expect(trashedBookmark!.deletionTime).not.toBeNull()
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: folder.folderId,
         location: 'sidebar',
       })
@@ -168,11 +172,13 @@ describe('trash workflows', () => {
       })
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: folder.folderId,
         location: 'trash',
       })
 
       await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: folder.folderId,
       })
 
@@ -223,14 +229,17 @@ describe('trash workflows', () => {
       })
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: note1.noteId,
         location: 'trash',
       })
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: note2.noteId,
         location: 'trash',
       })
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: folder.folderId,
         location: 'trash',
       })

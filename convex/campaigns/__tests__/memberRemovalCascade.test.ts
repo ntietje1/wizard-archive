@@ -35,6 +35,7 @@ describe('multi-player share + membership removal cascade', () => {
     })
 
     await dmAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+      campaignId,
       memberId: p1.memberId,
       status: 'Removed',
     })
@@ -42,7 +43,10 @@ describe('multi-player share + membership removal cascade', () => {
     const p1Campaigns = await p1.authed.query(api.campaigns.queries.getUserCampaigns, {})
     expect(p1Campaigns).toHaveLength(0)
 
-    const p2Note = await p2.authed.query(api.sidebarItems.queries.getSidebarItem, { id: noteId })
+    const p2Note = await p2.authed.query(api.sidebarItems.queries.getSidebarItem, {
+      campaignId,
+      id: noteId,
+    })
     expect(p2Note.myPermissionLevel).toBe('view')
   })
 
@@ -65,6 +69,7 @@ describe('multi-player share + membership removal cascade', () => {
     })
 
     await dmAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+      campaignId,
       memberId: p1.memberId,
       status: 'Removed',
     })
@@ -78,17 +83,19 @@ describe('multi-player share + membership removal cascade', () => {
   })
 
   it('Removed status cannot transition to Accepted', async () => {
-    const { dm, players } = await setupMultiPlayerContext(t, 1)
+    const { dm, players, campaignId } = await setupMultiPlayerContext(t, 1)
     const dmAuth = dm.authed
     const p1 = players[0]
 
     await dmAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+      campaignId,
       memberId: p1.memberId,
       status: 'Removed',
     })
 
     await expectValidationFailed(
       dmAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+        campaignId,
         memberId: p1.memberId,
         status: 'Accepted',
       }),
@@ -119,11 +126,12 @@ describe('multi-player share + membership removal cascade', () => {
     })
 
     await dmAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+      campaignId,
       memberId: p1.memberId,
       status: 'Removed',
     })
 
-    await expectPermissionDenied(p1.authed.query(api.notes.queries.getNote, { noteId }))
+    await expectPermissionDenied(p1.authed.query(api.notes.queries.getNote, { campaignId, noteId }))
 
     const blockShare = await t.run(async (dbCtx) => dbCtx.db.get('blockShares', blockShareId))
     expect(blockShare).not.toBeNull()
@@ -136,10 +144,12 @@ describe('multi-player share + membership removal cascade', () => {
     const { noteId } = await createNote(t, campaignId, dm.profile._id)
 
     await dmAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+      campaignId,
       memberId: players[0].memberId,
       status: 'Removed',
     })
     await dmAuth.mutation(api.campaigns.mutations.updateCampaignMemberStatus, {
+      campaignId,
       memberId: players[1].memberId,
       status: 'Removed',
     })

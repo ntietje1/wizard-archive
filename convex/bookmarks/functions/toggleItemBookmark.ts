@@ -1,13 +1,12 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { checkItemAccess } from '../../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { requireCampaignMembership } from '../../functions'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 export async function toggleItemBookmark(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   { sidebarItemId }: { sidebarItemId: Id<'sidebarItems'> },
 ) {
   const item = await getSidebarItem(ctx, sidebarItemId)
@@ -16,15 +15,13 @@ export async function toggleItemBookmark(
   }
 
   const campaignId = item.campaignId
-  const { membership } = await requireCampaignMembership(ctx, campaignId)
+  const campaignMemberId = ctx.membership._id
 
   await checkItemAccess(ctx, {
     rawItem: item,
     requiredLevel: PERMISSION_LEVEL.VIEW,
   })
-  const campaignMemberId = membership._id
 
-  // Check if bookmark already exists
   const existingBookmark = await ctx.db
     .query('bookmarks')
     .withIndex('by_campaign_member_item', (q) =>
@@ -36,15 +33,15 @@ export async function toggleItemBookmark(
     .unique()
 
   const now = Date.now()
-  const profileId = ctx.user.profile._id
+  const userId = ctx.membership.userId
 
   if (existingBookmark) {
     if (existingBookmark.deletionTime === null) {
       await ctx.db.patch('bookmarks', existingBookmark._id, {
         deletionTime: now,
-        deletedBy: profileId,
+        deletedBy: userId,
         updatedTime: now,
-        updatedBy: profileId,
+        updatedBy: userId,
       })
       return { isBookmarked: false }
     }
@@ -52,7 +49,7 @@ export async function toggleItemBookmark(
       deletionTime: null,
       deletedBy: null,
       updatedTime: now,
-      updatedBy: profileId,
+      updatedBy: userId,
     })
     return { isBookmarked: true }
   }
@@ -65,7 +62,7 @@ export async function toggleItemBookmark(
     deletedBy: null,
     updatedTime: null,
     updatedBy: null,
-    createdBy: profileId,
+    createdBy: userId,
   })
   return { isBookmarked: true }
 }

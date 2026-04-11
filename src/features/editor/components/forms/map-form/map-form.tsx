@@ -18,7 +18,7 @@ import { useFileWithPreview } from '~/features/file-upload/hooks/useFileWithPrev
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { ImageUploadSection } from '~/features/file-upload/components/image-upload-section'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import {
   InputGroup,
   InputGroupAddon,
@@ -51,7 +51,7 @@ export function MapForm({ mapId, campaignId, parentId, onClose, onSuccess }: Map
   const { navigateToItem } = useEditorNavigation()
   const { editItem } = useEditSidebarItem()
   const { createItem } = useCreateSidebarItem()
-  const map = useAuthQuery(api.gameMaps.queries.getMap, mapId ? { mapId } : 'skip')
+  const map = useCampaignQuery(api.gameMaps.queries.getMap, mapId ? { mapId } : 'skip')
 
   const imageUpload = useFileWithPreview({
     isOpen: true,

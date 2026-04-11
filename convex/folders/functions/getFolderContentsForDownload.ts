@@ -9,9 +9,8 @@ import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sid
 import { hasAtLeastPermissionLevel } from '../../permissions/hasAtLeastPermissionLevel'
 import { enforceBlockSharePermissionsOrNull } from '../../blockShares/functions/getBlockPermissionLevel'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { requireCampaignMembership } from '../../functions'
 import { assertNever } from '../../common/types'
-import type { AuthQueryCtx } from '../../functions'
+import type { CampaignQueryCtx } from '../../functions'
 import type { CustomBlock } from '../../notes/editorSpecs'
 import type { Id } from '../../_generated/dataModel'
 
@@ -30,18 +29,16 @@ export type DownloadItem =
     }
 
 async function collectItemsRecursively(
-  ctx: AuthQueryCtx,
+  ctx: CampaignQueryCtx,
   {
-    campaignId,
     parentId,
     currentPath,
   }: {
-    campaignId: Id<'campaigns'>
     parentId: Id<'sidebarItems'> | null
     currentPath: string
   },
 ): Promise<Array<DownloadItem>> {
-  const children = await getSidebarItemsByParent(ctx, { campaignId, parentId })
+  const children = await getSidebarItemsByParent(ctx, { parentId })
   const items: Array<DownloadItem> = []
   const permissionLevels = await asyncMap(children, (child) =>
     getSidebarItemPermissionLevel(ctx, { item: child }),
@@ -97,7 +94,6 @@ async function collectItemsRecursively(
       }
       case SIDEBAR_ITEM_TYPES.folders: {
         const nestedItems = await collectItemsRecursively(ctx, {
-          campaignId,
           parentId: child._id,
           currentPath: buildPath(child.name),
         })
@@ -116,15 +112,13 @@ async function collectItemsRecursively(
 }
 
 export async function getFolderContentsForDownload(
-  ctx: AuthQueryCtx,
+  ctx: CampaignQueryCtx,
   folderId: Id<'sidebarItems'>,
 ): Promise<{ folderName: string; items: Array<DownloadItem> }> {
   const rawItem = await getSidebarItem(ctx, folderId)
   if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Folder not found')
   if (rawItem.type !== SIDEBAR_ITEM_TYPES.folders)
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Item is not a folder')
-  const campaignId = rawItem.campaignId
-  await requireCampaignMembership(ctx, campaignId)
   const folder = await requireItemAccess(ctx, {
     rawItem,
     requiredLevel: PERMISSION_LEVEL.VIEW,
@@ -132,7 +126,6 @@ export async function getFolderContentsForDownload(
 
   const folderName = folder.name
   const items = await collectItemsRecursively(ctx, {
-    campaignId,
     parentId: folderId,
     currentPath: '',
   })
@@ -141,12 +134,9 @@ export async function getFolderContentsForDownload(
 }
 
 export async function getRootContentsForDownload(
-  ctx: AuthQueryCtx,
-  { campaignId }: { campaignId: Id<'campaigns'> },
+  ctx: CampaignQueryCtx,
 ): Promise<{ items: Array<DownloadItem> }> {
-  await requireCampaignMembership(ctx, campaignId)
   const items = await collectItemsRecursively(ctx, {
-    campaignId,
     parentId: null,
     currentPath: '',
   })

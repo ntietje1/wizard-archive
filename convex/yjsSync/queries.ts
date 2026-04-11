@@ -1,9 +1,9 @@
 import { v } from 'convex/values'
-import { authQuery } from '../functions'
+import { campaignQuery } from '../functions'
 import { yjsDocumentIdValidator } from './schema'
 import { checkYjsReadAccess } from './functions/checkYjsAccess'
 
-export const getUpdates = authQuery({
+export const getUpdates = campaignQuery({
   args: {
     documentId: yjsDocumentIdValidator,
     afterSeq: v.optional(v.number()),
@@ -30,7 +30,7 @@ export const getUpdates = authQuery({
   },
 })
 
-export const getAwareness = authQuery({
+export const getAwareness = campaignQuery({
   args: {
     documentId: yjsDocumentIdValidator,
   },

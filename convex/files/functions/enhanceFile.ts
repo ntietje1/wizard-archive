@@ -1,11 +1,11 @@
 import { SIDEBAR_ITEM_LOCATION } from '../../sidebarItems/types/baseTypes'
 import { getSidebarItemAncestors } from '../../folders/functions/getSidebarItemAncestors'
 import { enhanceBase } from '../../sidebarItems/functions/enhanceSidebarItem'
-import type { AuthQueryCtx } from '../../functions'
+import type { CampaignQueryCtx } from '../../functions'
 import type { FileFromDb, FileWithContent, SidebarFile } from '../types'
 
 export const enhanceFile = async (
-  ctx: AuthQueryCtx,
+  ctx: CampaignQueryCtx,
   { file }: { file: FileFromDb },
 ): Promise<SidebarFile> => {
   const [base, downloadUrl, storageMetadata] = await Promise.all([
@@ -22,7 +22,7 @@ export const enhanceFile = async (
 }
 
 export const enhanceFileWithContent = async (
-  ctx: AuthQueryCtx,
+  ctx: CampaignQueryCtx,
   { file }: { file: SidebarFile },
 ): Promise<FileWithContent> => {
   const ancestors = await getSidebarItemAncestors(ctx, {

@@ -4,7 +4,7 @@ import { applyToTree } from './applyToTree'
 import { hardDeleteItem } from './hardDeleteItem'
 import type { SidebarItemLocation } from '../types/baseTypes'
 import type { AnySidebarItemFromDb } from '../types/types'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { MutationCtx } from '../../_generated/server'
 import type { Id } from '../../_generated/dataModel'
 
@@ -24,18 +24,15 @@ export async function trashTree(
 }
 
 export async function restoreTreeDescendants(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   item: AnySidebarItemFromDb,
   location: SidebarItemLocation,
 ): Promise<void> {
-  const campaignId = item.campaignId
-
   await applyToTree(ctx, item, async (_, i) => {
     if (i._id === item._id) return
     if (i.location !== SIDEBAR_ITEM_LOCATION.trash) return
 
     const slug = await findUniqueSidebarItemSlug(ctx, {
-      campaignId,
       itemId: i._id,
       name: i.name,
     })

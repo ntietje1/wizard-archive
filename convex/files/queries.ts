@@ -1,10 +1,10 @@
 import { v } from 'convex/values'
-import { authQuery } from '../functions'
+import { campaignQuery } from '../functions'
 import { fileWithContentValidator } from './schema'
 import { getSidebarItemWithContent } from '../sidebarItems/functions/getSidebarItemWithContent'
 import type { FileWithContent } from './types'
 
-export const getFile = authQuery({
+export const getFile = campaignQuery({
   args: {
     fileId: v.id('sidebarItems'),
   },

@@ -4,11 +4,11 @@ import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { logger } from '../../common/logger'
 import { captureGameMapSnapshot } from './captureGameMapSnapshot'
 import { requirePinAccess } from './requirePinAccess'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 export async function updateItemPin(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   {
     mapPinId,
     x,
@@ -25,7 +25,7 @@ export async function updateItemPin(
     x,
     y,
     updatedTime: Date.now(),
-    updatedBy: ctx.user.profile._id,
+    updatedBy: ctx.membership.userId,
   })
 
   const pinnedItem = await ctx.db.get('sidebarItems', pin.itemId)
@@ -38,7 +38,6 @@ export async function updateItemPin(
     {
       itemId: map._id,
       itemType: SIDEBAR_ITEM_TYPES.gameMaps,
-      campaignId: map.campaignId,
       action: EDIT_HISTORY_ACTION.map_pin_moved,
       metadata: { pinItemName: pinnedItem?.name ?? 'Unknown' },
     },
@@ -49,7 +48,7 @@ export async function updateItemPin(
     mapId: map._id,
     editHistoryId,
     campaignId: map.campaignId,
-    createdBy: ctx.user.profile._id,
+    createdBy: ctx.membership.userId,
   })
 
   return mapPinId

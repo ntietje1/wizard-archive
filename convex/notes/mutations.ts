@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { BlockNoteEditor } from '@blocknote/core'
 import { yDocToBlocks } from '@blocknote/core/yjs'
-import { authMutation } from '../functions'
+import { campaignMutation } from '../functions'
 import { customBlockValidator } from '../blocks/schema'
 import { saveTopLevelBlocksForNote } from '../blocks/functions/saveTopLevelBlocksForNote'
 import { checkYjsWriteAccess } from '../yjsSync/functions/checkYjsAccess'
@@ -11,7 +11,7 @@ import { updateNote as updateNoteFn } from './functions/updateNote'
 import { editorSchema } from './editorSpecs'
 import type { Id } from '../_generated/dataModel'
 
-export const updateNote = authMutation({
+export const updateNote = campaignMutation({
   args: {
     noteId: v.id('sidebarItems'),
     name: v.optional(v.string()),
@@ -32,9 +32,8 @@ export const updateNote = authMutation({
   },
 })
 
-export const createNote = authMutation({
+export const createNote = campaignMutation({
   args: {
-    campaignId: v.id('campaigns'),
     name: v.string(),
     parentId: v.nullable(v.id('sidebarItems')),
     iconName: v.optional(v.string()),
@@ -52,12 +51,11 @@ export const createNote = authMutation({
       iconName: args.iconName,
       color: args.color,
       content: args.content,
-      campaignId: args.campaignId,
     })
   },
 })
 
-export const persistNoteBlocks = authMutation({
+export const persistNoteBlocks = campaignMutation({
   args: {
     documentId: v.id('sidebarItems'),
   },

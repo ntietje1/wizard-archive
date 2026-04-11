@@ -36,16 +36,19 @@ describe('moveSidebarItem cross-module effects', () => {
 
     await expectNotFound(
       playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+        campaignId: ctx.campaignId,
         id: noteId,
       }),
     )
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: noteId,
       parentId: sharedFolder,
     })
 
     const noteAfterMove = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+      campaignId: ctx.campaignId,
       id: noteId,
     })
     expect(noteAfterMove.myPermissionLevel).toBe('view')
@@ -75,17 +78,20 @@ describe('moveSidebarItem cross-module effects', () => {
     })
 
     const noteBefore = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+      campaignId: ctx.campaignId,
       id: noteId,
     })
     expect(noteBefore.myPermissionLevel).toBe('view')
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: noteId,
       parentId: null,
     })
 
     await expectNotFound(
       playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+        campaignId: ctx.campaignId,
         id: noteId,
       }),
     )
@@ -105,6 +111,7 @@ describe('moveSidebarItem cross-module effects', () => {
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: folderId,
       location: 'trash',
     })
@@ -132,6 +139,7 @@ describe('moveSidebarItem cross-module effects', () => {
 
     await expectValidationFailed(
       dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: parent,
         parentId: child,
       }),
@@ -156,6 +164,7 @@ describe('moveSidebarItem cross-module effects', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: folderId,
         location: 'trash',
       }),
@@ -180,12 +189,14 @@ describe('moveSidebarItem cross-module effects', () => {
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
       itemId: folderId,
       location: 'trash',
     })
 
     await expectPermissionDenied(
       playerAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
         itemId: folderId,
         location: 'sidebar',
       }),

@@ -3,17 +3,16 @@ import { enhanceSidebarItem } from './enhanceSidebarItem'
 import { getSidebarItem } from './getSidebarItem'
 import type { SidebarItemLocation } from '../types/baseTypes'
 import type { AnySidebarItem } from '../types/types'
-import type { AuthQueryCtx } from '../../functions'
-import type { Id } from '../../_generated/dataModel'
+import type { CampaignQueryCtx } from '../../functions'
 
 export const fetchCampaignSidebarItems = async (
-  ctx: AuthQueryCtx,
-  { campaignId, location }: { campaignId: Id<'campaigns'>; location: SidebarItemLocation },
+  ctx: CampaignQueryCtx,
+  { location }: { location: SidebarItemLocation },
 ): Promise<Array<AnySidebarItem>> => {
   const rawItems = await ctx.db
     .query('sidebarItems')
     .withIndex('by_campaign_location_parent_name', (q) =>
-      q.eq('campaignId', campaignId).eq('location', location),
+      q.eq('campaignId', ctx.campaign._id).eq('location', location),
     )
     .collect()
 

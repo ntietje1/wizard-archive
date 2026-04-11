@@ -32,12 +32,14 @@ describe('setBlocksShareStatus', () => {
     const { blockId } = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
+      campaignId: ctx.campaignId,
       noteId,
       blocks: [{ blockNoteId: blockId, content: BLOCK_CONTENT }],
       status: 'all_shared',
     })
 
     const result = await dmAuth.query(api.blocks.queries.getBlockWithShares, {
+      campaignId: ctx.campaignId,
       noteId,
       blockId,
     })
@@ -54,12 +56,14 @@ describe('setBlocksShareStatus', () => {
     })
 
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
+      campaignId: ctx.campaignId,
       noteId,
       blocks: [{ blockNoteId: blockId, content: BLOCK_CONTENT }],
       status: 'not_shared',
     })
 
     const result = await dmAuth.query(api.blocks.queries.getBlockWithShares, {
+      campaignId: ctx.campaignId,
       noteId,
       blockId,
     })
@@ -74,12 +78,14 @@ describe('setBlocksShareStatus', () => {
     const { blockId } = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
+      campaignId: ctx.campaignId,
       noteId,
       blocks: [{ blockNoteId: blockId, content: BLOCK_CONTENT }],
       status: 'individually_shared',
     })
 
     const result = await dmAuth.query(api.blocks.queries.getBlockWithShares, {
+      campaignId: ctx.campaignId,
       noteId,
       blockId,
     })
@@ -93,12 +99,14 @@ describe('setBlocksShareStatus', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
+      campaignId: ctx.campaignId,
       noteId,
       blocks: [{ blockNoteId: 'new-block-id', content: BLOCK_CONTENT }],
       status: 'all_shared',
     })
 
     const result = await dmAuth.query(api.blocks.queries.getBlockWithShares, {
+      campaignId: ctx.campaignId,
       noteId,
       blockId: 'new-block-id',
     })
@@ -113,6 +121,7 @@ describe('setBlocksShareStatus', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
+        campaignId: ctx.campaignId,
         noteId,
         blocks: [{ blockNoteId: 'block-1', content: BLOCK_CONTENT }],
         status: 'all_shared',
@@ -131,12 +140,14 @@ describe('shareBlocks', () => {
     const { blockId } = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
+      campaignId: ctx.campaignId,
       noteId,
       blocks: [{ blockNoteId: blockId, content: BLOCK_CONTENT }],
       campaignMemberId: ctx.player.memberId,
     })
 
     const result = await dmAuth.query(api.blocks.queries.getBlockWithShares, {
+      campaignId: ctx.campaignId,
       noteId,
       blockId,
     })
@@ -153,6 +164,7 @@ describe('shareBlocks', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.blockShares.mutations.shareBlocks, {
+        campaignId: ctx.campaignId,
         noteId,
         blocks: [{ blockNoteId: 'block-1', content: BLOCK_CONTENT }],
         campaignMemberId: ctx.player.memberId,
@@ -184,12 +196,14 @@ describe('unshareBlocks', () => {
     })
 
     await dmAuth.mutation(api.blockShares.mutations.unshareBlocks, {
+      campaignId: ctx.campaignId,
       noteId,
       blockNoteIds: [blockId],
       campaignMemberId: ctx.player.memberId,
     })
 
     const result = await dmAuth.query(api.blocks.queries.getBlockWithShares, {
+      campaignId: ctx.campaignId,
       noteId,
       blockId,
     })
@@ -216,12 +230,14 @@ describe('unshareBlocks', () => {
     })
 
     await dmAuth.mutation(api.blockShares.mutations.unshareBlocks, {
+      campaignId: ctx.campaignId,
       noteId,
       blockNoteIds: [blockId],
       campaignMemberId: ctx.player.memberId,
     })
 
     const result = await dmAuth.query(api.blocks.queries.getBlockWithShares, {
+      campaignId: ctx.campaignId,
       noteId,
       blockId,
     })
@@ -236,6 +252,7 @@ describe('unshareBlocks', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.blockShares.mutations.unshareBlocks, {
+        campaignId: ctx.campaignId,
         noteId,
         blockNoteIds: ['block-1'],
         campaignMemberId: ctx.player.memberId,
@@ -263,6 +280,7 @@ describe('getBlockShares', () => {
     })
 
     const shares = await dmAuth.query(api.blockShares.queries.getBlockShares, {
+      campaignId: ctx.campaignId,
       blockId: blockDbId,
     })
     expect(shares).toHaveLength(1)
@@ -285,6 +303,7 @@ describe('getBlockShares', () => {
     })
 
     const shares = await dmAuth.query(api.blockShares.queries.getBlockShares, {
+      campaignId: ctx.campaignId,
       blockId: blockDbId,
     })
     expect(shares[0]).toHaveProperty('_id')
@@ -310,6 +329,7 @@ describe('getBlockShares', () => {
     })
 
     const shares = await dmAuth.query(api.blockShares.queries.getBlockShares, {
+      campaignId: ctx.campaignId,
       blockId: blockDbId,
     })
     expect(shares).toHaveLength(0)
@@ -328,6 +348,7 @@ describe('block permission resolution', () => {
     })
 
     const result = await dmAuth.query(api.blocks.queries.getBlockWithShares, {
+      campaignId: ctx.campaignId,
       noteId,
       blockId,
     })
@@ -352,7 +373,10 @@ describe('block permission resolution', () => {
       shareStatus: 'all_shared',
     })
 
-    const item = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, { id: noteId })
+    const item = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+      campaignId: ctx.campaignId,
+      id: noteId,
+    })
     expect(item).toBeTruthy()
     expect(item.myPermissionLevel).toBe('view')
   })
@@ -369,6 +393,7 @@ describe('block permission resolution', () => {
     })
 
     const item = (await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
+      campaignId: ctx.campaignId,
       id: noteId,
     })) as NoteWithContent
     expect(item).toBeTruthy()
@@ -403,6 +428,7 @@ describe('block permission resolution', () => {
     })
 
     const item = (await asPlayer(ctx).query(api.sidebarItems.queries.getSidebarItem, {
+      campaignId: ctx.campaignId,
       id: noteId,
     })) as NoteWithContent
     expect(item).toBeTruthy()
@@ -449,6 +475,7 @@ describe('block permission resolution', () => {
     const unsharedPlayer = mCtx.players[1].authed
 
     const sharedResult = (await sharedPlayer.query(api.sidebarItems.queries.getSidebarItem, {
+      campaignId: mCtx.campaignId,
       id: noteId,
     })) as NoteWithContent
     expect(sharedResult).toBeTruthy()
@@ -456,6 +483,7 @@ describe('block permission resolution', () => {
     expect(sharedResult.blockMeta[blockId].myPermissionLevel).toBe('view')
 
     const unsharedResult = (await unsharedPlayer.query(api.sidebarItems.queries.getSidebarItem, {
+      campaignId: mCtx.campaignId,
       id: noteId,
     })) as NoteWithContent
     expect(unsharedResult).toBeTruthy()

@@ -1,11 +1,10 @@
 import { v } from 'convex/values'
-import { authMutation } from '../functions'
+import { campaignMutation } from '../functions'
 import { createCanvas as createCanvasFn } from './functions/createCanvas'
 import { updateCanvas as updateCanvasFn } from './functions/updateCanvas'
 
-export const createCanvas = authMutation({
+export const createCanvas = campaignMutation({
   args: {
-    campaignId: v.id('campaigns'),
     name: v.string(),
     parentId: v.nullable(v.id('sidebarItems')),
     iconName: v.optional(v.string()),
@@ -21,12 +20,11 @@ export const createCanvas = authMutation({
       parentId: args.parentId,
       iconName: args.iconName,
       color: args.color,
-      campaignId: args.campaignId,
     })
   },
 })
 
-export const updateCanvas = authMutation({
+export const updateCanvas = campaignMutation({
   args: {
     canvasId: v.id('sidebarItems'),
     name: v.optional(v.string()),

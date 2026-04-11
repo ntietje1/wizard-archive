@@ -1,12 +1,11 @@
 import { v } from 'convex/values'
-import { authMutation } from '../functions'
+import { campaignMutation } from '../functions'
 import { createFile as createFileFn } from './functions/createFile'
 import { updateFile as updateFileFn } from './functions/updateFile'
 import type { Id } from '../_generated/dataModel'
 
-export const createFile = authMutation({
+export const createFile = campaignMutation({
   args: {
-    campaignId: v.id('campaigns'),
     name: v.string(),
     storageId: v.optional(v.id('_storage')),
     parentId: v.nullable(v.id('sidebarItems')),
@@ -24,12 +23,11 @@ export const createFile = authMutation({
       parentId: args.parentId,
       iconName: args.iconName,
       color: args.color,
-      campaignId: args.campaignId,
     })
   },
 })
 
-export const updateFile = authMutation({
+export const updateFile = campaignMutation({
   args: {
     fileId: v.id('sidebarItems'),
     name: v.optional(v.string()),

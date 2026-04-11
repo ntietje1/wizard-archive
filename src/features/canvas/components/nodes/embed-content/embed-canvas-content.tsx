@@ -8,7 +8,7 @@ import { RectanglePreview } from '../rectangle-node'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Edge, Node } from '@xyflow/react'
 import type { StrokeNodeData } from '../stroke-node'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 
 const DEFAULT_NODE_WIDTH = 150
@@ -243,7 +243,7 @@ function useReadOnlyYjsCanvas(canvasId: Id<'sidebarItems'>) {
     }
   }, [canvasId])
 
-  const updatesResult = useAuthQuery(api.yjsSync.queries.getUpdates, {
+  const updatesResult = useCampaignQuery(api.yjsSync.queries.getUpdates, {
     documentId: canvasId,
     afterSeq,
   })

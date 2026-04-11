@@ -3,12 +3,12 @@ import {
   permissionLevelValidator,
   sidebarItemIdValidator,
 } from '../sidebarItems/schema/baseValidators'
-import { authQuery } from '../functions'
+import { dmQuery } from '../functions'
 import { sidebarItemShareValidator } from './schema'
 import { getSidebarItemShares as getSidebarItemSharesFn } from './functions/getSidebarItemShares'
 import { getSidebarItemWithShares as getSidebarItemWithSharesFn } from './functions/getSidebarItemWithShares'
 
-export const getSidebarItemShares = authQuery({
+export const getSidebarItemShares = dmQuery({
   args: {
     sidebarItemId: sidebarItemIdValidator,
   },
@@ -24,7 +24,7 @@ export const getSidebarItemShares = authQuery({
  * Get share info for a sidebar item.
  * Returns allPermissionLevel, individual shares, and inherited permissions.
  */
-export const getSidebarItemWithShares = authQuery({
+export const getSidebarItemWithShares = dmQuery({
   args: {
     sidebarItemId: sidebarItemIdValidator,
   },

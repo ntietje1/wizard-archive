@@ -9,43 +9,39 @@ import { createYjsDocument } from '../../yjsSync/functions/createYjsDocument'
 import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
-import type { AuthMutationCtx } from '../../functions'
+import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 export async function createCanvas(
-  ctx: AuthMutationCtx,
+  ctx: CampaignMutationCtx,
   {
     name,
     parentId,
     iconName,
     color,
-    campaignId,
   }: {
     name: string
     parentId: Id<'sidebarItems'> | null
     iconName?: string
     color?: string
-    campaignId: Id<'campaigns'>
   },
 ): Promise<{ canvasId: Id<'sidebarItems'>; slug: string }> {
   const trimmedName = name.trim()
 
-  await validateSidebarCreateParent(ctx, { campaignId, parentId })
+  await validateSidebarCreateParent(ctx, { parentId })
   await validateSidebarItemName(ctx, {
-    campaignId,
     parentId,
     name: trimmedName,
   })
 
   const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
     name: trimmedName,
-    campaignId,
   })
 
-  const profileId = ctx.user.profile._id
+  const userId = ctx.membership.userId
 
   const canvasId = await ctx.db.insert('sidebarItems', {
-    campaignId,
+    campaignId: ctx.campaign._id,
     name: trimmedName,
     slug: uniqueSlug,
     iconName: iconName ?? null,
@@ -62,7 +58,7 @@ export async function createCanvas(
     deletedBy: null,
     updatedTime: null,
     updatedBy: null,
-    createdBy: profileId,
+    createdBy: userId,
   })
 
   await ctx.db.insert('canvases', {
@@ -71,7 +67,7 @@ export async function createCanvas(
     deletedBy: null,
     updatedTime: null,
     updatedBy: null,
-    createdBy: profileId,
+    createdBy: userId,
   })
 
   const doc = new Y.Doc()
@@ -86,7 +82,6 @@ export async function createCanvas(
   await logEditHistory(ctx, {
     itemId: canvasId,
     itemType: SIDEBAR_ITEM_TYPES.canvases,
-    campaignId,
     action: EDIT_HISTORY_ACTION.created,
   })
 

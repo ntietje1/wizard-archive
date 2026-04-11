@@ -36,6 +36,7 @@ describe('rollback permission checks', () => {
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+        campaignId: ctx.campaignId,
         documentId: noteId,
         update: makeYjsUpdate(),
       })
@@ -50,6 +51,7 @@ describe('rollback permission checks', () => {
 
       await expectPermissionDenied(
         playerAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+          campaignId: ctx.campaignId,
           editHistoryId: historyEntry!._id,
         }),
       )
@@ -72,6 +74,7 @@ describe('rollback permission checks', () => {
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+        campaignId: ctx.campaignId,
         documentId: noteId,
         update: makeYjsUpdate(),
       })
@@ -86,6 +89,7 @@ describe('rollback permission checks', () => {
 
       await expectPermissionDenied(
         playerAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+          campaignId: ctx.campaignId,
           editHistoryId: historyEntry!._id,
         }),
       )
@@ -120,6 +124,7 @@ describe('rollback error handling', () => {
 
     await expectNotFound(
       dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+        campaignId: ctx.campaignId,
         editHistoryId: fakeId,
       }),
     )
@@ -149,6 +154,7 @@ describe('rollback error handling', () => {
 
       await expectNotFound(
         dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+          campaignId: ctx.campaignId,
           editHistoryId: historyEntry!._id,
         }),
       )
@@ -185,6 +191,7 @@ describe('note rollback data integrity', () => {
       const originalUpdate = makeYjsUpdateWithBlocks(originalBlocks)
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+        campaignId: ctx.campaignId,
         documentId: noteId,
         update: originalUpdate,
       })
@@ -212,12 +219,14 @@ describe('note rollback data integrity', () => {
       const modifiedUpdate = makeYjsUpdateWithBlocks(modifiedBlocks)
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+        campaignId: ctx.campaignId,
         documentId: noteId,
         update: modifiedUpdate,
       })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
       await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+        campaignId: ctx.campaignId,
         editHistoryId: snapshotEntry!._id,
       })
 
@@ -260,6 +269,7 @@ describe('canvas rollback data integrity', () => {
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+        campaignId: ctx.campaignId,
         documentId: canvasId,
         update: makeYjsUpdate(),
       })
@@ -300,12 +310,14 @@ describe('canvas rollback data integrity', () => {
         },
       ]
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+        campaignId: ctx.campaignId,
         documentId: canvasId,
         update: makeYjsUpdateWithBlocks(modifiedBlocks),
       })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
       await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+        campaignId: ctx.campaignId,
         editHistoryId: snapshotEntry!._id,
       })
 
@@ -347,6 +359,7 @@ describe('rollback metadata integrity', () => {
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+        campaignId: ctx.campaignId,
         mapId,
         x: 10,
         y: 20,
@@ -362,6 +375,7 @@ describe('rollback metadata integrity', () => {
       })
 
       await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+        campaignId: ctx.campaignId,
         editHistoryId: sourceEntry!._id,
       })
 
@@ -395,6 +409,7 @@ describe('rollback metadata integrity', () => {
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+        campaignId: ctx.campaignId,
         documentId: noteId,
         update: makeYjsUpdate(),
       })
@@ -414,6 +429,7 @@ describe('rollback metadata integrity', () => {
       vi.advanceTimersByTime(1000)
 
       await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+        campaignId: ctx.campaignId,
         editHistoryId: historyEntry!._id,
       })
 
@@ -442,6 +458,7 @@ describe('map rollback with deleted pin targets', () => {
       const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+        campaignId: ctx.campaignId,
         mapId,
         x: 10,
         y: 20,
@@ -450,6 +467,7 @@ describe('map rollback with deleted pin targets', () => {
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+        campaignId: ctx.campaignId,
         mapId,
         x: 30,
         y: 40,
@@ -471,6 +489,7 @@ describe('map rollback with deleted pin targets', () => {
       })
 
       await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+        campaignId: ctx.campaignId,
         editHistoryId: secondPinEntry._id,
       })
 
@@ -504,6 +523,7 @@ describe('sequential rollbacks', () => {
       const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+        campaignId: ctx.campaignId,
         mapId,
         x: 10,
         y: 20,
@@ -519,6 +539,7 @@ describe('sequential rollbacks', () => {
       })
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+        campaignId: ctx.campaignId,
         mapId,
         x: 30,
         y: 40,
@@ -536,6 +557,7 @@ describe('sequential rollbacks', () => {
       })
 
       await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+        campaignId: ctx.campaignId,
         editHistoryId: secondEntry._id,
       })
 
@@ -549,6 +571,7 @@ describe('sequential rollbacks', () => {
       })
 
       await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+        campaignId: ctx.campaignId,
         editHistoryId: firstEntry!._id,
       })
 
@@ -578,6 +601,7 @@ describe('sequential rollbacks', () => {
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+        campaignId: ctx.campaignId,
         mapId,
         x: 10,
         y: 20,
@@ -593,9 +617,11 @@ describe('sequential rollbacks', () => {
       })
 
       await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+        campaignId: ctx.campaignId,
         editHistoryId: entry!._id,
       })
       await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+        campaignId: ctx.campaignId,
         editHistoryId: entry!._id,
       })
 
@@ -631,6 +657,7 @@ describe('map rollback restores image state', () => {
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+        campaignId: ctx.campaignId,
         mapId,
         x: 10,
         y: 20,
@@ -659,6 +686,7 @@ describe('map rollback restores image state', () => {
       })
 
       await dmAuth.mutation(api.gameMaps.mutations.updateMap, {
+        campaignId: ctx.campaignId,
         mapId,
         imageStorageId: newStorageId,
       })
@@ -672,6 +700,7 @@ describe('map rollback restores image state', () => {
       })
 
       await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
+        campaignId: ctx.campaignId,
         editHistoryId: snapshotEntry!._id,
       })
 

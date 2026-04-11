@@ -1,8 +1,8 @@
 import { toast } from 'sonner'
 import { api } from 'convex/_generated/api'
 import { useHistoryPreviewStore } from '~/features/editor/stores/history-preview-store'
-import { useAppMutation } from '~/shared/hooks/useAppMutation'
-import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
+import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { handleError } from '~/shared/utils/logger'
 import { formatRelativeTime } from '~/shared/utils/format-relative-time'
 import {
@@ -21,12 +21,12 @@ export function RollbackConfirmDialog() {
   const setRollbackEntryId = useHistoryPreviewStore((s) => s.setRollbackEntryId)
   const clearPreview = useHistoryPreviewStore((s) => s.clearPreview)
 
-  const historyEntry = useAuthQuery(
+  const historyEntry = useCampaignQuery(
     api.editHistory.queries.getHistoryEntry,
     rollbackEntryId ? { editHistoryId: rollbackEntryId } : 'skip',
   )
 
-  const rollback = useAppMutation(api.documentSnapshots.mutations.rollbackToSnapshot)
+  const rollback = useCampaignMutation(api.documentSnapshots.mutations.rollbackToSnapshot)
 
   const handleRestore = async () => {
     if (!rollbackEntryId || rollback.isPending) return

@@ -1,15 +1,11 @@
 import { asyncMap } from 'convex-helpers'
 import { hardDeleteItem } from '../../sidebarItems/functions/hardDeleteItem'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
-import { requireDmRole } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { AuthMutationCtx } from '../../functions'
+import type { DmMutationCtx } from '../../functions'
 
-export async function deleteCampaign(
-  ctx: AuthMutationCtx,
-  { campaignId }: { campaignId: Id<'campaigns'> },
-): Promise<Id<'campaigns'>> {
-  await requireDmRole(ctx, campaignId)
+export async function deleteCampaign(ctx: DmMutationCtx): Promise<Id<'campaigns'>> {
+  const campaignId = ctx.campaign._id
 
   const rawItems = await ctx.db
     .query('sidebarItems')
@@ -22,7 +18,6 @@ export async function deleteCampaign(
     if (item) await hardDeleteItem(ctx, item)
   }
 
-  // Delete sessions
   const sessions = await ctx.db
     .query('sessions')
     .withIndex('by_campaign_startedAt', (q) => q.eq('campaignId', campaignId))
@@ -32,7 +27,6 @@ export async function deleteCampaign(
     await ctx.db.delete('sessions', session._id)
   }
 
-  // Delete campaign members
   const campaignMembers = await ctx.db
     .query('campaignMembers')
     .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaignId))

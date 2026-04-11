@@ -89,6 +89,7 @@ describe('updateMap', () => {
     })
 
     const result = await dmAuth.mutation(api.gameMaps.mutations.updateMap, {
+      campaignId: ctx.campaignId,
       mapId,
       name: 'Renamed Map',
     })
@@ -118,6 +119,7 @@ describe('updateMap', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.gameMaps.mutations.updateMap, {
+        campaignId: ctx.campaignId,
         mapId,
         name: 'Hacked',
       }),
@@ -139,6 +141,7 @@ describe('updateMap', () => {
     })
 
     const result = await playerAuth.mutation(api.gameMaps.mutations.updateMap, {
+      campaignId: ctx.campaignId,
       mapId,
       name: 'Player Updated',
     })
@@ -151,6 +154,7 @@ describe('updateMap', () => {
 
     await expectNotAuthenticated(
       t.mutation(api.gameMaps.mutations.updateMap, {
+        campaignId: ctx.campaignId,
         mapId,
         name: 'Nope',
       }),
@@ -168,6 +172,7 @@ describe('updateMap', () => {
     })
 
     await dmAuth.mutation(api.gameMaps.mutations.updateMap, {
+      campaignId: ctx.campaignId,
       mapId,
       imageStorageId: storageId,
     })
@@ -198,6 +203,7 @@ describe('updateMap', () => {
     })
 
     await dmAuth.mutation(api.gameMaps.mutations.updateMap, {
+      campaignId: ctx.campaignId,
       mapId,
       name: 'New Name',
     })
@@ -220,6 +226,7 @@ describe('pin CRUD', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const pinId = await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      campaignId: ctx.campaignId,
       mapId,
       x: 100,
       y: 200,
@@ -247,6 +254,7 @@ describe('pin CRUD', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      campaignId: ctx.campaignId,
       mapId,
       x: 10,
       y: 20,
@@ -255,6 +263,7 @@ describe('pin CRUD', () => {
 
     await expectValidationFailed(
       dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+        campaignId: ctx.campaignId,
         mapId,
         x: 30,
         y: 40,
@@ -271,6 +280,7 @@ describe('pin CRUD', () => {
 
     await expectValidationFailed(
       dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+        campaignId: ctx.campaignId,
         mapId,
         x: 10,
         y: 20,
@@ -287,6 +297,7 @@ describe('pin CRUD', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const pinId = await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      campaignId: ctx.campaignId,
       mapId,
       x: 10,
       y: 20,
@@ -294,6 +305,7 @@ describe('pin CRUD', () => {
     })
 
     await dmAuth.mutation(api.gameMaps.mutations.updateItemPin, {
+      campaignId: ctx.campaignId,
       mapPinId: pinId,
       x: 50,
       y: 60,
@@ -314,6 +326,7 @@ describe('pin CRUD', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const pinId = await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      campaignId: ctx.campaignId,
       mapId,
       x: 10,
       y: 20,
@@ -321,6 +334,7 @@ describe('pin CRUD', () => {
     })
 
     await dmAuth.mutation(api.gameMaps.mutations.updatePinVisibility, {
+      campaignId: ctx.campaignId,
       mapPinId: pinId,
       visible: true,
     })
@@ -339,6 +353,7 @@ describe('pin CRUD', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const pinId = await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      campaignId: ctx.campaignId,
       mapId,
       x: 10,
       y: 20,
@@ -346,6 +361,7 @@ describe('pin CRUD', () => {
     })
 
     await dmAuth.mutation(api.gameMaps.mutations.removeItemPin, {
+      campaignId: ctx.campaignId,
       mapPinId: pinId,
     })
 
@@ -372,6 +388,7 @@ describe('pin CRUD', () => {
 
     await expectPermissionDenied(
       playerAuth.mutation(api.gameMaps.mutations.createItemPin, {
+        campaignId: ctx.campaignId,
         mapId,
         x: 10,
         y: 20,
@@ -396,6 +413,7 @@ describe('pin CRUD', () => {
     })
 
     const pinId = await playerAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      campaignId: ctx.campaignId,
       mapId,
       x: 10,
       y: 20,
@@ -418,13 +436,17 @@ describe('getMap', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      campaignId: ctx.campaignId,
       mapId,
       x: 10,
       y: 20,
       itemId: noteId,
     })
 
-    const result = await dmAuth.query(api.gameMaps.queries.getMap, { mapId })
+    const result = await dmAuth.query(api.gameMaps.queries.getMap, {
+      campaignId: ctx.campaignId,
+      mapId,
+    })
 
     expect(result).not.toBeNull()
     expect(result!._id).toBe(mapId)
@@ -447,6 +469,7 @@ describe('getMap', () => {
     })
 
     const result = await playerAuth.query(api.gameMaps.queries.getMap, {
+      campaignId: ctx.campaignId,
       mapId,
     })
     expect(result).toBeNull()
@@ -461,7 +484,10 @@ describe('getMap', () => {
       await dbCtx.db.delete('sidebarItems', mapId)
     })
 
-    const result = await dmAuth.query(api.gameMaps.queries.getMap, { mapId })
+    const result = await dmAuth.query(api.gameMaps.queries.getMap, {
+      campaignId: ctx.campaignId,
+      mapId,
+    })
     expect(result).toBeNull()
   })
 
@@ -469,6 +495,8 @@ describe('getMap', () => {
     const ctx = await setupCampaignContext(t)
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await expectNotAuthenticated(t.query(api.gameMaps.queries.getMap, { mapId }))
+    await expectNotAuthenticated(
+      t.query(api.gameMaps.queries.getMap, { campaignId: ctx.campaignId, mapId }),
+    )
   })
 })

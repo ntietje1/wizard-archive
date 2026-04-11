@@ -79,14 +79,14 @@ A campaign management platform built for Dungeon Masters and their players. Orga
 
 ## Tech Stack
 
-| Layer          | Technologies                                                                                     |
-| -------------- | ------------------------------------------------------------------------------------------------ |
-| **Frontend**   | React 19, TypeScript, TanStack Router, TanStack React Query, Tailwind CSS v4, shadcn/ui, Zustand |
-| **Editor**      | BlockNote, Yjs, Tiptap                                                                          |
-| **Canvases**    | ReactFlow, Yjs                                                                                  |
-| **Maps**        | React Zoom Pan Pinch                                                                            |
-| **Drag & Drop** | Atlaskit Pragmatic Drag and Drop                                                                |
+| Layer           | Technologies                                                                                     |
+| --------------- | ------------------------------------------------------------------------------------------------ |
+| **Frontend**    | React 19, TypeScript, TanStack Router, TanStack React Query, Tailwind CSS v4, shadcn/ui, Zustand |
+| **Editor**      | BlockNote, Yjs, Tiptap                                                                           |
+| **Canvases**    | ReactFlow, Yjs                                                                                   |
+| **Maps**        | React Zoom Pan Pinch                                                                             |
+| **Drag & Drop** | Atlaskit Pragmatic Drag and Drop                                                                 |
 | **Backend**     | Convex (real-time database, serverless functions, file storage)                                  |
-| **Auth**       | Better Auth (email/password, OAuth, 2FA)                                                         |
-| **Deployment** | Cloudflare Workers (serverless edge)                                                             |
-| **Tooling**    | Vite+, Vitest, Playwright, React Compiler                                                        |
+| **Auth**        | Better Auth (email/password, OAuth, 2FA)                                                         |
+| **Deployment**  | Cloudflare Workers (serverless edge)                                                             |
+| **Tooling**     | Vite+, Vitest, Playwright, React Compiler                                                        |
