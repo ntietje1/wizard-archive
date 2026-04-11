@@ -98,10 +98,10 @@ A campaign management platform built for Dungeon Masters and their players. Orga
 
 ## Testing
 
-| Suite | Runner | Scope |
-|---|---|---|
-| **Backend** | Vitest (edge-runtime) | 53 test files, 651 tests — mutations, queries, permissions, cascading deletes, sharing workflows, snapshots |
-| **Frontend** | Vitest (jsdom) | 24 test files, 358 tests — components, hooks, stores, utilities |
-| **E2E** | Playwright (Chromium) | Full user flows — campaign creation, note editing, sharing, navigation |
+| Suite        | Runner                | Scope                                                                                                       |
+| ------------ | --------------------- | ----------------------------------------------------------------------------------------------------------- |
+| **Backend**  | Vitest (edge-runtime) | 53 test files, 651 tests — mutations, queries, permissions, cascading deletes, sharing workflows, snapshots |
+| **Frontend** | Vitest (jsdom)        | 24 test files, 358 tests — components, hooks, stores, utilities                                             |
+| **E2E**      | Playwright (Chromium) | Full user flows — campaign creation, note editing, sharing, navigation                                      |
 
 Backend and frontend suites run on every push via GitHub Actions. E2E tests run in CI and locally against a live app instance.
