@@ -47,8 +47,12 @@ vi.mock('@convex-dev/react-query', () => ({
   useConvex: () => mockConvexClient,
 }))
 
-vi.mock('~/shared/hooks/useAuthQuery', () => ({
-  useAuthQuery: (...args: Array<unknown>) => mockUseAuthQuery(...args),
+vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
+  useCampaign: () => ({ campaignId: 'test-campaign-id' }),
+}))
+
+vi.mock('~/shared/hooks/useCampaignQuery', () => ({
+  useCampaignQuery: (...args: Array<unknown>) => mockUseAuthQuery(...args),
 }))
 
 vi.mock('../../providers/convex-yjs-provider', () => ({
