@@ -1,6 +1,8 @@
 name: E2E Tests
 
 on:
+  schedule:
+    - cron: '0 14 * * 1'
   workflow_dispatch:
 
 env:
@@ -19,7 +21,7 @@ jobs:
           cache: true
       - run: vp install --frozen-lockfile
       - run: npx playwright install --with-deps chromium
-      - run: pnpm test:e2e
+      - run: vp run test:e2e
         env:
           VITE_CONVEX_URL: ${{ secrets.VITE_CONVEX_URL }}
           VITE_CONVEX_SITE_URL: ${{ secrets.VITE_CONVEX_SITE_URL }}
