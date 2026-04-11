@@ -63,7 +63,9 @@ jobs:
         id: fallow-score
         if: github.ref == 'refs/heads/main'
         run: |
-          SCORE=$(vp run fallow health --score)
+          RAW=$(vp run fallow health --score)
+          SCORE=$(echo "$RAW" | tr -dc '0-9')
+          SCORE=${SCORE:-0}
           if [ "$SCORE" -ge 75 ]; then COLOR="brightgreen";
           elif [ "$SCORE" -ge 50 ]; then COLOR="yellow";
           else COLOR="red"; fi
@@ -113,7 +115,9 @@ jobs:
       - name: Generate badge JSON
         if: github.ref == 'refs/heads/main' && steps.doctor.outputs.score != ''
         run: |
-          SCORE=${{ steps.doctor.outputs.score }}
+          RAW="${{ steps.doctor.outputs.score }}"
+          SCORE=$(echo "$RAW" | tr -dc '0-9')
+          SCORE=${SCORE:-0}
           if [ "$SCORE" -ge 75 ]; then COLOR="brightgreen";
           elif [ "$SCORE" -ge 50 ]; then COLOR="yellow";
           else COLOR="red"; fi
