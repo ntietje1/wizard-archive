@@ -110,7 +110,7 @@ jobs:
         id: doctor
         if: github.ref == 'refs/heads/main'
         run: |
-          SCORE=$(npx -y react-doctor@latest . --verbose --fail-on error --score)
+          SCORE=$(GITHUB_OUTPUT=/dev/null npx -y react-doctor@latest . --verbose --fail-on error --score)
           echo "score=$SCORE" >> "$GITHUB_OUTPUT"
       - name: Generate badge JSON
         if: github.ref == 'refs/heads/main' && steps.doctor.outputs.score != ''
