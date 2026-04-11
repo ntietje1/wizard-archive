@@ -2,8 +2,9 @@
 
 ![CI](https://img.shields.io/github/actions/workflow/status/ntietje1/wizard-archive/ci.yml?branch=main&label=CI)
 ![E2E](https://img.shields.io/github/actions/workflow/status/ntietje1/wizard-archive/e2e.yml?label=E2E)
-[![Backend Coverage](https://codecov.io/gh/ntietje1/wizard-archive/branch/main/graph/badge.svg?flag=backend)](https://codecov.io/gh/ntietje1/wizard-archive)
-[![Frontend Coverage](https://codecov.io/gh/ntietje1/wizard-archive/branch/main/graph/badge.svg?flag=frontend)](https://codecov.io/gh/ntietje1/wizard-archive)
+![Unit Tests](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/ntietje1/wizard-archive/badges/unit-tests-badge.json)
+![Fallow Health](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/ntietje1/wizard-archive/badges/fallow-badge.json)
+![React Doctor](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/ntietje1/wizard-archive/badges/react-doctor-badge.json)
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
