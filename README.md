@@ -14,9 +14,6 @@
 ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
 
-![CI](https://img.shields.io/github/actions/workflow/status/ntietje1/wizard-archive/ci.yml?branch=main&label=CI)
-![E2E](https://img.shields.io/github/actions/workflow/status/ntietje1/wizard-archive/e2e.yml?label=E2E)
-
 A campaign management platform built for Dungeon Masters and their players. Organize your world, share what your players need to see, and keep your secrets safe — all in real time.
 
 <!-- TODO: Add screenshot or demo GIF -->
