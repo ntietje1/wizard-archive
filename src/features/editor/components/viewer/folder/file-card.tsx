@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { ClientOnly, Link } from '@tanstack/react-router'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
@@ -67,8 +67,8 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
 
   const FileIcon = getFileTypeIcon(file.contentType, file.name)
-  const [imageError, setImageError] = useState(false)
-  useEffect(() => setImageError(false), [file.previewUrl])
+  const [erroredUrl, setErroredUrl] = useState<string | null>(null)
+  const imageError = erroredUrl === file.previewUrl
 
   const { isDraggingRef } = useDraggable({
     ref,
@@ -128,7 +128,7 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
                 src={file.previewUrl}
                 alt={file.name}
                 className="w-full h-full object-cover"
-                onError={() => setImageError(true)}
+                onError={() => setErroredUrl(file.previewUrl)}
                 draggable={false}
                 loading="lazy"
               />

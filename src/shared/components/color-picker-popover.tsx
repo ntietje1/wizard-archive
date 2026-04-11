@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Slider as SliderPrimitive } from '@base-ui/react/slider'
 import Color from 'color'
 import {
@@ -25,10 +25,11 @@ export function ColorPickerPopover({
   onOpacityChange,
 }: ColorPickerPopoverProps) {
   const [localOpacity, setLocalOpacity] = useState(opacity ?? 100)
-
-  useEffect(() => {
+  const [prevOpacity, setPrevOpacity] = useState(opacity)
+  if (opacity !== prevOpacity) {
+    setPrevOpacity(opacity)
     setLocalOpacity(opacity ?? 100)
-  }, [opacity])
+  }
 
   const handleOpacitySlider = useCallback(
     (val: number | ReadonlyArray<number>) => {

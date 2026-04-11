@@ -130,7 +130,7 @@ function EmbedRichContent({
         />
       )
     case SIDEBAR_ITEM_TYPES.canvases:
-      return <EmbedCanvasContent canvasId={contentItem._id} />
+      return <EmbedCanvasContent key={contentItem._id} canvasId={contentItem._id} />
     default:
       assertNever(contentItem)
       return null

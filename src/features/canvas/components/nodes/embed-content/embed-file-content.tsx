@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { File, FileAudio, FileText, FileVideo } from 'lucide-react'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 
@@ -11,13 +11,10 @@ export function EmbedFileContent({
   contentType: string | null
   alt?: string
 }) {
-  const [imgError, setImgError] = useState(false)
-  const [imgLoading, setImgLoading] = useState(true)
-
-  useEffect(() => {
-    setImgError(false)
-    setImgLoading(true)
-  }, [downloadUrl])
+  const [erroredUrl, setErroredUrl] = useState<string | null>(null)
+  const [loadedUrl, setLoadedUrl] = useState<string | null>(null)
+  const imgError = erroredUrl === downloadUrl
+  const imgLoading = loadedUrl !== downloadUrl
 
   if (!downloadUrl) {
     return (
@@ -40,10 +37,10 @@ export function EmbedFileContent({
           alt={alt ?? 'Embedded image'}
           className={`h-full w-full object-contain transition-opacity ${imgLoading ? 'opacity-0' : 'opacity-100'}`}
           draggable={false}
-          onLoad={() => setImgLoading(false)}
+          onLoad={() => setLoadedUrl(downloadUrl)}
           onError={() => {
-            setImgLoading(false)
-            setImgError(true)
+            setLoadedUrl(downloadUrl)
+            setErroredUrl(downloadUrl)
           }}
         />
       </div>

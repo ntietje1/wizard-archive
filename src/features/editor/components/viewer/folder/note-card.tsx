@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { ClientOnly, Link } from '@tanstack/react-router'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
@@ -38,8 +38,8 @@ function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
   const canDrag = hasAtLeastPermissionLevel(note.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
   const isSelected = useIsSelectedItem(note)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
-  const [imgError, setImgError] = useState(false)
-  useEffect(() => setImgError(false), [note.previewUrl])
+  const [erroredUrl, setErroredUrl] = useState<string | null>(null)
+  const imgError = erroredUrl === note.previewUrl
 
   const { isDraggingRef } = useDraggable({
     ref,
@@ -101,7 +101,7 @@ function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
                 loading="lazy"
                 draggable={false}
                 onDragStart={(e) => e.preventDefault()}
-                onError={() => setImgError(true)}
+                onError={() => setErroredUrl(note.previewUrl)}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
