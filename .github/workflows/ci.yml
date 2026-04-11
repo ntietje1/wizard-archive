@@ -104,11 +104,17 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: true
       - run: vp install --frozen-lockfile
-      - run: vp test run --config vitest.config.ts --reporter=verbose --coverage
+      - run: vp test run --config vitest.config.ts --reporter=verbose --reporter=junit --outputFile=test-results/frontend.junit.xml --coverage
       - uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: frontend
+      - uses: codecov/test-results-action@v5
+        if: ${{ !cancelled() }}
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: frontend
+          file: test-results/frontend.junit.xml
 
   backend-test:
     name: Backend Tests
@@ -121,16 +127,24 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: true
       - run: vp install --frozen-lockfile
-      - run: vp test run --config convex/vitest.config.mts --reporter=verbose --coverage
+      - run: vp test run --config convex/vitest.config.mts --reporter=verbose --reporter=junit --outputFile=test-results/backend.junit.xml --coverage
       - uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: backend
+      - uses: codecov/test-results-action@v5
+        if: ${{ !cancelled() }}
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: backend
+          file: test-results/backend.junit.xml
 
   build:
     name: Build
     runs-on: ubuntu-latest
     needs: [check]
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: voidzero-dev/setup-vp@v1
