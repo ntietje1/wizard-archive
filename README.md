@@ -1,68 +1,92 @@
-# The Wizard's Archive (D&D Connect)
+# The Wizard's Archive
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![Convex](https://img.shields.io/badge/Convex-FF731D?style=for-the-badge)
+![TanStack Router](https://img.shields.io/badge/TanStack_Router-EF4444?style=for-the-badge)
+![TanStack Query](https://img.shields.io/badge/TanStack_Query-FF4154?style=for-the-badge)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![shadcn/ui](https://img.shields.io/badge/shadcn%2Fui-000000?style=for-the-badge&logo=shadcnui&logoColor=white)
+![Zustand](https://img.shields.io/badge/Zustand-453F39?style=for-the-badge)
+![BlockNote](https://img.shields.io/badge/BlockNote-6C63FF?style=for-the-badge)
+![Yjs](https://img.shields.io/badge/Yjs-6EDB8F?style=for-the-badge)
+![Better Auth](https://img.shields.io/badge/Better_Auth-1A1A2E?style=for-the-badge)
+![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
 
-A modern note-taking and sharing platform designed specifically for Dungeon Masters and their players. Seamlessly organize, manage, and share campaign notes while maintaining the perfect balance between open information and DM secrets.
+A campaign management platform built for Dungeon Masters and their players. Organize your world, share what your players need to see, and keep your secrets safe — all in real time.
 
-## 🎲 Features
+<!-- TODO: Add screenshot or demo GIF -->
 
-### For Dungeon Masters
+## Features
 
-- **Campaign Management**
-  - Create and manage multiple campaigns
-  - Generate invite links for players
-  - Full control over note sharing and visibility
-  - Organize notes hierarchically with markdown support
-  - Tag system for easy categorization (characters, locations, etc.)
-  - Upload and manage campaign assets (maps, character portraits, etc.)
+### Campaign Management
 
-### For Players
+- Create and run multiple campaigns with unique invite links
+- Manage players and membership across campaigns
+- Start and track game sessions
+- DM "view-as" mode to preview exactly what a player sees
 
-- **Dual Note Interface**
-  - Join one or more campaigns
-  - View DM-shared content in a dedicated window
-  - Session-based tagging
-  - Create and maintain personal notes
-  - Add personal annotations to DM-shared content
+### Rich-Text Notes
 
-### Core Features
+- Block-based editor powered by BlockNote with slash commands, formatting toolbar, and drag-to-reorder
+- Real-time collaborative editing via Yjs — multiple users can edit the same note simultaneously
+- Wiki-links with autocomplete to connect notes, maps, and files across your campaign
+- Block-level sharing — selectively reveal or hide individual blocks per player
 
-- **Smart Note Organization**
-  - Intuitive sidebar navigation
-  - Markdown formatting support
-  - Tag-based organization
-  - Hierarchical note structure
-  - Image support for maps and assets
+### Canvases
 
-- **Real-time Sharing**
-  - Instant updates for shared content
-  - Selective content sharing based on tags
-  - DM control over shared content
-  - Retroactive edit capability
+- Freeform visual workspaces for spatial thinking — sketch, diagram, and lay out ideas on an infinite canvas
+- Drawing tools with adjustable brush sizes, eraser, shapes, sticky notes, and text nodes
+- Embed other campaign content (notes, folders, canvases) as interactive nodes
+- Real-time collaboration with remote cursor visibility
+- Pan, zoom, minimap, and fit-to-view navigation
+- Snapshot history with rollback
 
-- **Search & Filter**
-  - Full-text search across notes
-  - Filter by tags
+### Sidebar & Organization
 
-## 🎯 Planned Features
+- Hierarchical content tree with folders, notes, canvases, game maps, and files
+- Drag-and-drop reordering and nesting throughout the app — sidebar items, editor blocks, map pins, and canvas nodes
+- Context menus across the sidebar, editor, and maps for quick actions
+- Soft-delete with trash and recovery
+- Search and slug-based navigation
+- Bookmark items for quick access during sessions
 
-- **Enhanced Organization**
-  - Custom tag creation
-  - Wiki-style note linking
-  - Advanced filtering options
-  - Embedded documents and other file formats
+### Game Maps
 
-- **Additional Tools**
-  - Combat assistant
-  - Character sheet creator
-  - Virtual Tabletop
+- Upload map images and place interactive pins linked to sidebar items
+- Pan, zoom, and manage pin visibility per player
+- Link pins directly to notes, files, or folders for in-context detail
 
-## 🔧 Tech Stack
+### File Management
 
-- **Frontend**: Vite, React, TanStack-Start, TanStack-Query, TypeScript, Tailwind CSS, shadcn/ui
-- **Backend**: Convex Functions
-- **Authentication**: Clerk
-- **Storage**: Convex realtime DB & File Storage
+- Upload and organize campaign assets (images, PDFs, documents)
+- File previews, type detection, and download support
+- Multi-file upload with progress tracking
+
+### Sharing & Permissions
+
+- Three-tier permission model: **none**, **view**, and **edit**
+- Share individual items or entire folders (permissions cascade to children)
+- Share with specific players or all campaign members at once
+- DMs always retain full access — players only see what they're meant to
+
+### Authentication & Accounts
+
+- Email/password sign-up with two-factor authentication
+- OAuth provider support
+- Password reset flows and session management
+
+## Tech Stack
+
+| Layer          | Technologies                                                                                     |
+| -------------- | ------------------------------------------------------------------------------------------------ |
+| **Frontend**   | React 19, TypeScript, TanStack Router, TanStack React Query, Tailwind CSS v4, shadcn/ui, Zustand |
+| **Editor**      | BlockNote, Yjs, Tiptap                                                                          |
+| **Canvases**    | ReactFlow, Yjs                                                                                  |
+| **Maps**        | React Zoom Pan Pinch                                                                            |
+| **Drag & Drop** | Atlaskit Pragmatic Drag and Drop                                                                |
+| **Backend**     | Convex (real-time database, serverless functions, file storage)                                  |
+| **Auth**       | Better Auth (email/password, OAuth, 2FA)                                                         |
+| **Deployment** | Cloudflare Workers (serverless edge)                                                             |
+| **Tooling**    | Vite+, Vitest, Playwright, React Compiler                                                        |
