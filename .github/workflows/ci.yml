@@ -59,23 +59,6 @@ jobs:
           else
             vp run fallow --format json > fallow-report.json
           fi
-      - name: Generate badge JSON
-        id: fallow-score
-        if: github.ref == 'refs/heads/main'
-        run: |
-          RAW=$(vp run fallow health --score)
-          SCORE=$(echo "$RAW" | tr -dc '0-9')
-          SCORE=${SCORE:-0}
-          if [ "$SCORE" -ge 75 ]; then COLOR="brightgreen";
-          elif [ "$SCORE" -ge 50 ]; then COLOR="yellow";
-          else COLOR="red"; fi
-          echo '{"schemaVersion":1,"label":"fallow health","message":"'"$SCORE"'/100","color":"'"$COLOR"'"}' > fallow-badge.json
-      - name: Upload badge
-        if: github.ref == 'refs/heads/main' && steps.fallow-score.conclusion == 'success'
-        uses: actions/upload-artifact@v4
-        with:
-          name: fallow-badge
-          path: fallow-badge.json
 
   react-compiler:
     name: React Compiler Health
@@ -112,67 +95,6 @@ jobs:
         run: |
           SCORE=$(GITHUB_OUTPUT=/dev/null npx -y react-doctor@latest . --verbose --fail-on error --score)
           echo "score=$SCORE" >> "$GITHUB_OUTPUT"
-      - name: Generate badge JSON
-        if: github.ref == 'refs/heads/main' && steps.doctor.outputs.score != ''
-        run: |
-          RAW="${{ steps.doctor.outputs.score }}"
-          SCORE=$(echo "$RAW" | tr -dc '0-9')
-          SCORE=${SCORE:-0}
-          if [ "$SCORE" -ge 75 ]; then COLOR="brightgreen";
-          elif [ "$SCORE" -ge 50 ]; then COLOR="yellow";
-          else COLOR="red"; fi
-          echo '{"schemaVersion":1,"label":"react doctor","message":"'"$SCORE"'/100","color":"'"$COLOR"'"}' > react-doctor-badge.json
-      - name: Upload badge
-        if: github.ref == 'refs/heads/main' && steps.doctor.outputs.score != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: react-doctor-badge
-          path: react-doctor-badge.json
-
-  unit-tests-badge:
-    name: Unit Tests Badge
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && always()
-    needs: [frontend-test, backend-test]
-    steps:
-      - name: Generate badge JSON
-        run: |
-          if [ "${{ needs.frontend-test.result }}" = "success" ] && [ "${{ needs.backend-test.result }}" = "success" ]; then
-            MSG="passing"; COLOR="brightgreen"
-          else
-            MSG="failing"; COLOR="red"
-          fi
-          echo '{"schemaVersion":1,"label":"unit tests","message":"'"$MSG"'","color":"'"$COLOR"'"}' > unit-tests-badge.json
-      - uses: actions/upload-artifact@v4
-        with:
-          name: unit-tests-badge
-          path: unit-tests-badge.json
-
-  publish-badges:
-    name: Publish Badges
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && always()
-    needs: [fallow, react-doctor, unit-tests-badge]
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/download-artifact@v4
-        with:
-          path: badges
-          merge-multiple: true
-      - name: Push to badges branch
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout --orphan badges-tmp
-          git rm -rf . > /dev/null 2>&1 || true
-          cp badges/* . 2>/dev/null || true
-          git add *.json 2>/dev/null || true
-          git commit -m "Update badges" --allow-empty
-          git push origin badges-tmp:badges --force
 
   frontend-test:
     name: Frontend Tests

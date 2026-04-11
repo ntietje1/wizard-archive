@@ -1,11 +1,5 @@
 # The Wizard's Archive
 
-![CI](https://img.shields.io/github/actions/workflow/status/ntietje1/wizard-archive/ci.yml?branch=main&label=CI)
-![E2E](https://img.shields.io/github/actions/workflow/status/ntietje1/wizard-archive/e2e.yml?label=E2E)
-![Unit Tests](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/ntietje1/wizard-archive/badges/unit-tests-badge.json)
-![Fallow Health](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/ntietje1/wizard-archive/badges/fallow-badge.json)
-![React Doctor](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/ntietje1/wizard-archive/badges/react-doctor-badge.json)
-
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![Convex](https://img.shields.io/badge/Convex-FF731D?style=for-the-badge)
@@ -19,6 +13,9 @@
 ![Better Auth](https://img.shields.io/badge/Better_Auth-1A1A2E?style=for-the-badge)
 ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+
+![CI](https://img.shields.io/github/actions/workflow/status/ntietje1/wizard-archive/ci.yml?branch=main&label=CI)
+![E2E](https://img.shields.io/github/actions/workflow/status/ntietje1/wizard-archive/e2e.yml?label=E2E)
 
 A campaign management platform built for Dungeon Masters and their players. Organize your world, share what your players need to see, and keep your secrets safe — all in real time.
 
