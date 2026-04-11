@@ -13,6 +13,7 @@ export default defineConfig({
     include: ['src/**/__tests__/**/*.test.{ts,tsx}'],
     coverage: {
       provider: 'v8',
+      reporter: ['text', 'lcov'],
       include: ['src/features/**', 'src/shared/**'],
       exclude: ['src/features/shadcn/**'],
     },

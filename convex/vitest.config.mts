@@ -10,5 +10,10 @@ export default defineConfig({
         inline: ['convex-test'],
       },
     },
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov'],
+      include: ['convex/**/functions/**'],
+    },
   },
 })

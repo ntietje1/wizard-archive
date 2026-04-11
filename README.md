@@ -1,5 +1,10 @@
 # The Wizard's Archive
 
+![CI](https://img.shields.io/github/actions/workflow/status/ntietje1/wizard-archive/ci.yml?branch=main&label=CI)
+![E2E](https://img.shields.io/github/actions/workflow/status/ntietje1/wizard-archive/e2e.yml?label=E2E)
+[![Backend Coverage](https://codecov.io/gh/ntietje1/wizard-archive/branch/main/graph/badge.svg?flag=backend)](https://codecov.io/gh/ntietje1/wizard-archive)
+[![Frontend Coverage](https://codecov.io/gh/ntietje1/wizard-archive/branch/main/graph/badge.svg?flag=frontend)](https://codecov.io/gh/ntietje1/wizard-archive)
+
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![Convex](https://img.shields.io/badge/Convex-FF731D?style=for-the-badge)
@@ -90,3 +95,13 @@ A campaign management platform built for Dungeon Masters and their players. Orga
 | **Auth**        | Better Auth (email/password, OAuth, 2FA)                                                         |
 | **Deployment**  | Cloudflare Workers (serverless edge)                                                             |
 | **Tooling**     | Vite+, Vitest, Playwright, React Compiler                                                        |
+
+## Testing
+
+| Suite | Runner | Scope |
+|---|---|---|
+| **Backend** | Vitest (edge-runtime) | 53 test files, 651 tests — mutations, queries, permissions, cascading deletes, sharing workflows, snapshots |
+| **Frontend** | Vitest (jsdom) | 24 test files, 358 tests — components, hooks, stores, utilities |
+| **E2E** | Playwright (Chromium) | Full user flows — campaign creation, note editing, sharing, navigation |
+
+Backend and frontend suites run on every push via GitHub Actions. E2E tests run in CI and locally against a live app instance.

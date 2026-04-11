@@ -1,6 +1,8 @@
 name: CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
 
 concurrency:
@@ -96,7 +98,11 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: true
       - run: vp install --frozen-lockfile
-      - run: vp test run --config vitest.config.ts --reporter=verbose
+      - run: vp test run --config vitest.config.ts --reporter=verbose --coverage
+      - uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: frontend
 
   backend-test:
     name: Backend Tests
@@ -109,7 +115,11 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: true
       - run: vp install --frozen-lockfile
-      - run: vp test run --config convex/vitest.config.mts --reporter=verbose
+      - run: vp test run --config convex/vitest.config.mts --reporter=verbose --coverage
+      - uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: backend
 
   build:
     name: Build
