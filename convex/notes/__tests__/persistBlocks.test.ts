@@ -164,16 +164,20 @@ describe('persistBlocks', () => {
 
       const headingBlock = blocks.find((b) => b.blockId === blockIds.heading)
       expect(headingBlock).toMatchObject({
-        isTopLevel: true,
-        content: { type: 'heading' },
+        type: 'heading',
+        parentBlockId: null,
+        depth: 0,
         position: 0,
+        plainText: 'Hello World',
       })
 
       const paragraphBlock = blocks.find((b) => b.blockId === blockIds.paragraph)
       expect(paragraphBlock).toMatchObject({
-        isTopLevel: true,
-        content: { type: 'paragraph' },
+        type: 'paragraph',
+        parentBlockId: null,
+        depth: 0,
         position: 1,
+        plainText: 'Some paragraph text',
       })
     })
   })

@@ -1,5 +1,4 @@
 import type { Id } from '../_generated/dataModel'
-import type { CustomBlock } from '../notes/editorSpecs'
 
 export type BlockShare = {
   _id: Id<'blockShares'>
@@ -25,7 +24,6 @@ export const SHARE_STATUS = {
 
 export type ShareStatus = (typeof SHARE_STATUS)[keyof typeof SHARE_STATUS]
 
-export interface BlockItem {
+export interface BlockIdentifier {
   blockNoteId: string
-  content: CustomBlock
 }

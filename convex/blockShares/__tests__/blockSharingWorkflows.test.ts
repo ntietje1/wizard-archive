@@ -1,12 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, setupMultiPlayerContext } from '../../_test/identities.helper'
-import {
-  createBlock,
-  createNote,
-  createSidebarShare,
-  testBlock,
-} from '../../_test/factories.helper'
+import { createBlock, createNote, createSidebarShare } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 
 describe('block sharing workflows', () => {
@@ -36,23 +31,17 @@ describe('block sharing workflows', () => {
         campaignMemberId: p2.memberId,
       })
 
-      const blockContent1 = testBlock(block1.blockId)
-      const blockContent2 = testBlock(block2.blockId)
-
       await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blocks: [
-          { blockNoteId: block1.blockId, content: blockContent1 },
-          { blockNoteId: block2.blockId, content: blockContent2 },
-        ],
+        blocks: [{ blockNoteId: block1.blockId }, { blockNoteId: block2.blockId }],
         status: 'individually_shared',
       })
 
       await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blocks: [{ blockNoteId: block1.blockId, content: blockContent1 }],
+        blocks: [{ blockNoteId: block1.blockId }],
         campaignMemberId: p1.memberId,
       })
 
@@ -74,10 +63,7 @@ describe('block sharing workflows', () => {
       await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blocks: [
-          { blockNoteId: block1.blockId, content: blockContent1 },
-          { blockNoteId: block2.blockId, content: blockContent2 },
-        ],
+        blocks: [{ blockNoteId: block1.blockId }, { blockNoteId: block2.blockId }],
         status: 'all_shared',
       })
 
@@ -93,10 +79,7 @@ describe('block sharing workflows', () => {
       await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blocks: [
-          { blockNoteId: block1.blockId, content: blockContent1 },
-          { blockNoteId: block2.blockId, content: blockContent2 },
-        ],
+        blocks: [{ blockNoteId: block1.blockId }, { blockNoteId: block2.blockId }],
         status: 'not_shared',
       })
 
@@ -128,19 +111,17 @@ describe('block sharing workflows', () => {
         campaignMemberId: p1.memberId,
       })
 
-      const blockContent = testBlock(block.blockId)
-
       await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blocks: [{ blockNoteId: block.blockId, content: blockContent }],
+        blocks: [{ blockNoteId: block.blockId }],
         status: 'individually_shared',
       })
 
       await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blocks: [{ blockNoteId: block.blockId, content: blockContent }],
+        blocks: [{ blockNoteId: block.blockId }],
         campaignMemberId: p1.memberId,
       })
 
@@ -161,7 +142,7 @@ describe('block sharing workflows', () => {
       await dmAuth.mutation(api.blockShares.mutations.unshareBlocks, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blockNoteIds: [block.blockId],
+        blocks: [{ blockNoteId: block.blockId }],
         campaignMemberId: p1.memberId,
       })
 
@@ -203,7 +184,7 @@ describe('block sharing workflows', () => {
       await dmAuth.mutation(api.blockShares.mutations.unshareBlocks, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blockNoteIds: [block.blockId],
+        blocks: [{ blockNoteId: block.blockId }],
         campaignMemberId: p1.memberId,
       })
 
@@ -241,26 +222,24 @@ describe('block sharing workflows', () => {
         campaignMemberId: p1.memberId,
       })
 
-      const blockContent = testBlock(block.blockId)
-
       await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blocks: [{ blockNoteId: block.blockId, content: blockContent }],
+        blocks: [{ blockNoteId: block.blockId }],
         status: 'individually_shared',
       })
 
       await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blocks: [{ blockNoteId: block.blockId, content: blockContent }],
+        blocks: [{ blockNoteId: block.blockId }],
         campaignMemberId: p1.memberId,
       })
 
       await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blocks: [{ blockNoteId: block.blockId, content: blockContent }],
+        blocks: [{ blockNoteId: block.blockId }],
         campaignMemberId: p1.memberId,
       })
 
@@ -297,19 +276,17 @@ describe('block sharing workflows', () => {
       const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
       const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id)
 
-      const blockContent = testBlock(block.blockId)
-
       await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blocks: [{ blockNoteId: block.blockId, content: blockContent }],
+        blocks: [{ blockNoteId: block.blockId }],
         status: 'individually_shared',
       })
 
       await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blocks: [{ blockNoteId: block.blockId, content: blockContent }],
+        blocks: [{ blockNoteId: block.blockId }],
         campaignMemberId: p1.memberId,
       })
 

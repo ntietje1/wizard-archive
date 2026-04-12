@@ -61,7 +61,6 @@ export const getBlocksWithShares = async (
         blockNoteId: blockId,
         shareStatus: SHARE_STATUS.NOT_SHARED,
         sharedMemberIds: [],
-        isTopLevel: true,
       }
     }
 
@@ -74,7 +73,6 @@ export const getBlocksWithShares = async (
       blockNoteId: blockId,
       shareStatus,
       sharedMemberIds,
-      isTopLevel: block.isTopLevel,
     }
   })
 

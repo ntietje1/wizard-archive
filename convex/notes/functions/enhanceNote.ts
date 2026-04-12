@@ -1,5 +1,6 @@
 import { asyncMap } from 'convex-helpers'
-import { getTopLevelBlocksByNote } from '../../blocks/functions/getTopLevelBlocksByNote'
+import { getAllBlocksByNote } from '../../blocks/functions/getAllBlocksByNote'
+import { reconstructBlockTree } from '../../blocks/functions/reconstructBlockTree'
 import { getSidebarItemAncestors } from '../../folders/functions/getSidebarItemAncestors'
 import { enforceBlockSharePermissionsOrNull } from '../../blockShares/functions/getBlockPermissionLevel'
 import { getBlockSharesByBlock } from '../../blockShares/functions/getBlockSharesForBlock'
@@ -20,15 +21,15 @@ export const enhanceNoteWithContent = async (
   ctx: CampaignQueryCtx,
   { note }: { note: Note },
 ): Promise<NoteWithContent> => {
-  const [ancestors = [], topLevelBlocks = []] = await Promise.all([
+  const [ancestors = [], allBlocks = []] = await Promise.all([
     getSidebarItemAncestors(ctx, {
       initialParentId: note.parentId,
       isTrashed: note.location === SIDEBAR_ITEM_LOCATION.trash,
     }),
-    getTopLevelBlocksByNote(ctx, { noteId: note._id }),
+    getAllBlocksByNote(ctx, { noteId: note._id }),
   ])
 
-  const blockMetaEntries = await asyncMap(topLevelBlocks, async (block) => {
+  const blockMetaEntries = await asyncMap(allBlocks, async (block) => {
     const [result, blockShares] = await Promise.all([
       enforceBlockSharePermissionsOrNull(ctx, { block }),
       block.shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED
@@ -50,7 +51,7 @@ export const enhanceNoteWithContent = async (
     if (entry) blockMeta[entry.blockId] = entry.meta
   }
 
-  const content = topLevelBlocks.map((block) => block.content)
+  const content = reconstructBlockTree(allBlocks)
   return {
     ...note,
     content,

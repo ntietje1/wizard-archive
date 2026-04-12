@@ -11,13 +11,10 @@ import {
   createBlockShare,
   createNote,
   createSidebarShare,
-  testBlock,
 } from '../../_test/factories.helper'
-import { expectPermissionDenied } from '../../_test/assertions.helper'
+import { expectNotFound, expectPermissionDenied } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 import type { NoteWithContent } from '../../notes/types'
-
-const BLOCK_CONTENT = testBlock('test-block-1')
 
 describe('setBlocksShareStatus', () => {
   const t = createTestContext()
@@ -31,7 +28,7 @@ describe('setBlocksShareStatus', () => {
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId,
-      blocks: [{ blockNoteId: blockId, content: BLOCK_CONTENT }],
+      blocks: [{ blockNoteId: blockId }],
       status: 'all_shared',
     })
 
@@ -55,7 +52,7 @@ describe('setBlocksShareStatus', () => {
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId,
-      blocks: [{ blockNoteId: blockId, content: BLOCK_CONTENT }],
+      blocks: [{ blockNoteId: blockId }],
       status: 'not_shared',
     })
 
@@ -77,7 +74,7 @@ describe('setBlocksShareStatus', () => {
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId,
-      blocks: [{ blockNoteId: blockId, content: BLOCK_CONTENT }],
+      blocks: [{ blockNoteId: blockId }],
       status: 'individually_shared',
     })
 
@@ -90,25 +87,19 @@ describe('setBlocksShareStatus', () => {
     expect(result!.shareStatus).toBe('individually_shared')
   })
 
-  it('creates blocks if they do not exist', async () => {
+  it('throws NOT_FOUND when block does not exist', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
-      campaignId: ctx.campaignId,
-      noteId,
-      blocks: [{ blockNoteId: 'new-block-id', content: BLOCK_CONTENT }],
-      status: 'all_shared',
-    })
-
-    const result = await dmAuth.query(api.blocks.queries.getBlockWithShares, {
-      campaignId: ctx.campaignId,
-      noteId,
-      blockId: 'new-block-id',
-    })
-    expect(result).not.toBeNull()
-    expect(result!.shareStatus).toBe('all_shared')
+    await expectNotFound(
+      dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
+        campaignId: ctx.campaignId,
+        noteId,
+        blocks: [{ blockNoteId: 'nonexistent-block' }],
+        status: 'all_shared',
+      }),
+    )
   })
 
   it('requires DM role', async () => {
@@ -120,7 +111,7 @@ describe('setBlocksShareStatus', () => {
       playerAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
         campaignId: ctx.campaignId,
         noteId,
-        blocks: [{ blockNoteId: 'block-1', content: BLOCK_CONTENT }],
+        blocks: [{ blockNoteId: 'block-1' }],
         status: 'all_shared',
       }),
     )
@@ -139,7 +130,7 @@ describe('shareBlocks', () => {
     await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
       campaignId: ctx.campaignId,
       noteId,
-      blocks: [{ blockNoteId: blockId, content: BLOCK_CONTENT }],
+      blocks: [{ blockNoteId: blockId }],
       campaignMemberId: ctx.player.memberId,
     })
 
@@ -154,6 +145,21 @@ describe('shareBlocks', () => {
     expect(result!.shares[0].campaignMemberId).toBe(ctx.player.memberId)
   })
 
+  it('throws NOT_FOUND when block does not exist', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+    await expectNotFound(
+      dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
+        campaignId: ctx.campaignId,
+        noteId,
+        blocks: [{ blockNoteId: 'nonexistent-block' }],
+        campaignMemberId: ctx.player.memberId,
+      }),
+    )
+  })
+
   it('requires DM role', async () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
@@ -163,7 +169,7 @@ describe('shareBlocks', () => {
       playerAuth.mutation(api.blockShares.mutations.shareBlocks, {
         campaignId: ctx.campaignId,
         noteId,
-        blocks: [{ blockNoteId: 'block-1', content: BLOCK_CONTENT }],
+        blocks: [{ blockNoteId: 'block-1' }],
         campaignMemberId: ctx.player.memberId,
       }),
     )
@@ -195,7 +201,7 @@ describe('unshareBlocks', () => {
     await dmAuth.mutation(api.blockShares.mutations.unshareBlocks, {
       campaignId: ctx.campaignId,
       noteId,
-      blockNoteIds: [blockId],
+      blocks: [{ blockNoteId: blockId }],
       campaignMemberId: ctx.player.memberId,
     })
 
@@ -229,7 +235,7 @@ describe('unshareBlocks', () => {
     await dmAuth.mutation(api.blockShares.mutations.unshareBlocks, {
       campaignId: ctx.campaignId,
       noteId,
-      blockNoteIds: [blockId],
+      blocks: [{ blockNoteId: blockId }],
       campaignMemberId: ctx.player.memberId,
     })
 
@@ -242,6 +248,19 @@ describe('unshareBlocks', () => {
     expect(result!.shareStatus).toBe('not_shared')
   })
 
+  it('is a no-op when block does not exist', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+    await dmAuth.mutation(api.blockShares.mutations.unshareBlocks, {
+      campaignId: ctx.campaignId,
+      noteId,
+      blocks: [{ blockNoteId: 'nonexistent-block' }],
+      campaignMemberId: ctx.player.memberId,
+    })
+  })
+
   it('requires DM role', async () => {
     const ctx = await setupCampaignContext(t)
     const playerAuth = asPlayer(ctx)
@@ -251,7 +270,7 @@ describe('unshareBlocks', () => {
       playerAuth.mutation(api.blockShares.mutations.unshareBlocks, {
         campaignId: ctx.campaignId,
         noteId,
-        blockNoteIds: ['block-1'],
+        blocks: [{ blockNoteId: 'block-1' }],
         campaignMemberId: ctx.player.memberId,
       }),
     )

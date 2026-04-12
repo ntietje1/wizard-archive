@@ -1,7 +1,8 @@
 import { asyncMap } from 'convex-helpers'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { getSidebarItemsByParent } from '../../sidebarItems/functions/getSidebarItemsByParent'
-import { getTopLevelBlocksByNote } from '../../blocks/functions/getTopLevelBlocksByNote'
+import { getAllBlocksByNote } from '../../blocks/functions/getAllBlocksByNote'
+import { reconstructBlockTree } from '../../blocks/functions/reconstructBlockTree'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { requireItemAccess } from '../../sidebarItems/validation'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
@@ -63,15 +64,16 @@ async function collectItemsRecursively(
       }
       case SIDEBAR_ITEM_TYPES.notes: {
         const noteName = child.name.endsWith('.md') ? child.name : `${child.name}.md`
-        const topLevelBlocks = await getTopLevelBlocksByNote(ctx, {
+        const allBlocks = await getAllBlocksByNote(ctx, {
           noteId: child._id,
         })
-        const results = await asyncMap(topLevelBlocks, (block) =>
+        const results = await asyncMap(allBlocks, (block) =>
           enforceBlockSharePermissionsOrNull(ctx, { block }),
         )
-        const content = results
+        const permittedBlocks = results
           .filter((result): result is NonNullable<typeof result> => result !== null)
-          .map((result) => result.block.content)
+          .map((result) => result.block)
+        const content = reconstructBlockTree(permittedBlocks)
         items.push({
           type: SIDEBAR_ITEM_TYPES.notes,
           name: noteName,

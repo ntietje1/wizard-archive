@@ -1,5 +1,5 @@
 import * as Y from 'yjs'
-import { saveTopLevelBlocksForNote } from '../../blocks/functions/saveTopLevelBlocksForNote'
+import { saveAllBlocksForNote } from '../../blocks/functions/saveAllBlocksForNote'
 import {
   findUniqueSidebarItemSlug,
   validateSidebarCreateParent,
@@ -77,7 +77,7 @@ export async function createNote(
 
   let initialState: ArrayBuffer | undefined
   if (content && content.length > 0) {
-    await saveTopLevelBlocksForNote(ctx, { noteId, content })
+    await saveAllBlocksForNote(ctx, { noteId, content })
 
     const doc = blocksToYDoc(content, 'document')
     try {

@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { campaignMutation } from '../functions'
 import { customBlockValidator } from '../blocks/schema'
-import { saveTopLevelBlocksForNote } from '../blocks/functions/saveTopLevelBlocksForNote'
+import { saveAllBlocksForNote } from '../blocks/functions/saveAllBlocksForNote'
 import { checkYjsWriteAccess } from '../yjsSync/functions/checkYjsAccess'
 import { reconstructYDoc } from '../yjsSync/functions/reconstructYDoc'
 import { createNote as createNoteFn } from './functions/createNote'
@@ -65,7 +65,7 @@ export const persistNoteBlocks = campaignMutation({
     try {
       const blocks = yDocToBlocks(doc, 'document')
 
-      await saveTopLevelBlocksForNote(ctx, {
+      await saveAllBlocksForNote(ctx, {
         noteId: documentId,
         content: blocks,
       })

@@ -55,16 +55,14 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
 
   const hasCompleteData = query.data?.blocks && blockIds.every((id) => blockInfoMap.has(id))
 
-  const topLevelBlocks = blocks.filter((b) => blockInfoMap.get(b.id)?.isTopLevel !== false)
-
   const aggregateShareStatus: AggregateShareStatus = (() => {
-    if (!hasCompleteData || topLevelBlocks.length === 0) return AGGREGATE_SHARE_STATUS.NOT_SHARED
+    if (!hasCompleteData || blocks.length === 0) return AGGREGATE_SHARE_STATUS.NOT_SHARED
 
-    const statuses = topLevelBlocks.map(
+    const statuses = blocks.map(
       (b) => blockInfoMap.get(b.id)?.shareStatus ?? SHARE_STATUS.NOT_SHARED,
     )
 
-    if (statuses.some((s) => s === SHARE_STATUS.NOT_SHARED)) {
+    if (statuses.every((s) => s === SHARE_STATUS.NOT_SHARED)) {
       return AGGREGATE_SHARE_STATUS.NOT_SHARED
     } else if (statuses.every((s) => s === SHARE_STATUS.ALL_SHARED)) {
       return AGGREGATE_SHARE_STATUS.ALL_SHARED
@@ -75,7 +73,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
     }
   })()
 
-  const unsharedBlocks = topLevelBlocks.filter(
+  const unsharedBlocks = blocks.filter(
     (b) =>
       (blockInfoMap.get(b.id)?.shareStatus ?? SHARE_STATUS.NOT_SHARED) === SHARE_STATUS.NOT_SHARED,
   )
@@ -83,9 +81,9 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
   const playerMembers = query.data?.playerMembers ?? []
 
   const getShareState = (memberId: Id<'campaignMembers'>): 'all' | 'some' | 'none' => {
-    if (topLevelBlocks.length === 0) return 'none'
+    if (blocks.length === 0) return 'none'
     let count = 0
-    for (const block of topLevelBlocks) {
+    for (const block of blocks) {
       const info = blockInfoMap.get(block.id)
       const status = info?.shareStatus ?? SHARE_STATUS.NOT_SHARED
       if (
@@ -96,20 +94,20 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
       }
     }
     if (count === 0) return 'none'
-    if (count === topLevelBlocks.length) return 'all'
+    if (count === blocks.length) return 'all'
     return 'some'
   }
 
   const toggleShareStatus = async () => {
-    if (!campaignData?._id || !isNote(item) || isMutating || topLevelBlocks.length === 0) return
+    if (!campaignData?._id || !isNote(item) || isMutating || blocks.length === 0) return
     try {
-      const blocksToUpdate = unsharedBlocks.length > 0 ? unsharedBlocks : topLevelBlocks
+      const blocksToUpdate = unsharedBlocks.length > 0 ? unsharedBlocks : blocks
       const newStatus =
         unsharedBlocks.length > 0 ? SHARE_STATUS.ALL_SHARED : SHARE_STATUS.NOT_SHARED
 
       await setBlocksShareStatus.mutateAsync({
         noteId: item._id,
-        blocks: blocksToUpdate.map((b) => ({ blockNoteId: b.id, content: b })),
+        blocks: blocksToUpdate.map((b) => ({ blockNoteId: b.id })),
         status: newStatus,
       })
     } catch (error) {
@@ -118,16 +116,16 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
   }
 
   const toggleShareWithMember = async (memberId: Id<'campaignMembers'>) => {
-    if (!campaignData?._id || !isNote(item) || isMutating || topLevelBlocks.length === 0) return
+    if (!campaignData?._id || !isNote(item) || isMutating || blocks.length === 0) return
     try {
       if (getShareState(memberId) === 'all') {
         await unshareBlocks.mutateAsync({
           noteId: item._id,
-          blockNoteIds: topLevelBlocks.map((b) => b.id),
+          blocks: blocks.map((b) => ({ blockNoteId: b.id })),
           campaignMemberId: memberId,
         })
       } else {
-        const blocksToShare = topLevelBlocks.filter((block) => {
+        const blocksToShare = blocks.filter((block) => {
           const info = blockInfoMap.get(block.id)
           const status = info?.shareStatus ?? SHARE_STATUS.NOT_SHARED
           return (
@@ -140,7 +138,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
 
         await shareBlocks.mutateAsync({
           noteId: item._id,
-          blocks: blocksToShare.map((b) => ({ blockNoteId: b.id, content: b })),
+          blocks: blocksToShare.map((b) => ({ blockNoteId: b.id })),
           campaignMemberId: memberId,
         })
       }
@@ -160,8 +158,6 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
     isPending: query.isPending,
     isMutating,
     aggregateShareStatus,
-    topLevelBlocks,
-    hasNonTopLevelBlocks: topLevelBlocks.length < blocks.length,
     playerMembers,
     shareItems,
     toggleShareStatus,

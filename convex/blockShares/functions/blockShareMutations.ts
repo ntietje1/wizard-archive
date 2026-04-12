@@ -1,53 +1,20 @@
 import { asyncMap } from 'convex-helpers'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { findBlockByBlockNoteId } from '../../blocks/functions/findBlockByBlockNoteId'
-import { insertBlock } from '../../blocks/functions/insertBlock'
 import { updateBlock } from '../../blocks/functions/updateBlock'
-import { removeBlockIfNotNeeded } from '../../blocks/functions/removeBlockIfNotNeeded'
 import { SHARE_STATUS } from '../types'
 import type { NoteFromDb } from '../../notes/types'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { BlockItem, ShareStatus } from '../types'
+import type { BlockIdentifier, ShareStatus } from '../types'
 
-async function upsertBlockForSharing(
+async function findBlockOrThrow(
   ctx: CampaignMutationCtx,
-  {
-    note,
-    blockItem,
-    shareStatus,
-  }: {
-    note: NoteFromDb
-    blockItem: BlockItem
-    shareStatus: ShareStatus
-  },
+  { noteId, blockNoteId }: { noteId: Id<'sidebarItems'>; blockNoteId: string },
 ): Promise<Id<'blocks'>> {
-  const noteId = note._id
-
-  const existingBlock = await findBlockByBlockNoteId(ctx, {
-    noteId,
-    blockId: blockItem.blockNoteId,
-  })
-
-  if (existingBlock) {
-    await updateBlock(ctx, {
-      blockDbId: existingBlock._id,
-      content: blockItem.content,
-      isTopLevel: true,
-      shareStatus,
-    })
-    return existingBlock._id
-  }
-
-  return await insertBlock(ctx, {
-    campaignId: note.campaignId,
-    blockId: blockItem.blockNoteId,
-    content: blockItem.content,
-    isTopLevel: true,
-    noteId,
-    shareStatus,
-    position: null,
-  })
+  const block = await findBlockByBlockNoteId(ctx, { noteId, blockId: blockNoteId })
+  if (!block) throw throwClientError(ERROR_CODE.NOT_FOUND, 'Block not found')
+  return block._id
 }
 
 async function addBlockShare(
@@ -63,12 +30,12 @@ async function addBlockShare(
   },
 ): Promise<Id<'blockShares'>> {
   const block = await ctx.db.get('blocks', blockId)
-  if (!block) throwClientError(ERROR_CODE.NOT_FOUND, 'This content could not be found')
+  if (!block) throw throwClientError(ERROR_CODE.NOT_FOUND, 'This content could not be found')
   const campaignId = block.campaignId
 
   const member = await ctx.db.get('campaignMembers', campaignMemberId)
   if (!member || member.campaignId !== campaignId)
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Member does not belong to this campaign')
+    throw throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Member does not belong to this campaign')
 
   const existingShare = await ctx.db
     .query('blockShares')
@@ -115,7 +82,7 @@ async function removeBlockShare(
   { blockId, campaignMemberId }: { blockId: Id<'blocks'>; campaignMemberId: Id<'campaignMembers'> },
 ): Promise<void> {
   const block = await ctx.db.get('blocks', blockId)
-  if (!block) return
+  if (!block) throw throwClientError(ERROR_CODE.NOT_FOUND, 'Block not found')
 
   const share = await ctx.db
     .query('blockShares')
@@ -143,7 +110,7 @@ async function clearBlockShares(
   { blockId }: { blockId: Id<'blocks'> },
 ): Promise<void> {
   const block = await ctx.db.get('blocks', blockId)
-  if (!block) return
+  if (!block) throw throwClientError(ERROR_CODE.NOT_FOUND, 'Block not found')
 
   const shares = await ctx.db
     .query('blockShares')
@@ -169,17 +136,21 @@ export async function shareBlockWithMemberHelper(
   ctx: CampaignMutationCtx,
   {
     note,
-    blockItem,
+    blockIdentifier,
     campaignMemberId,
   }: {
     note: NoteFromDb
-    blockItem: BlockItem
+    blockIdentifier: BlockIdentifier
     campaignMemberId: Id<'campaignMembers'>
   },
 ): Promise<void> {
-  const blockId = await upsertBlockForSharing(ctx, {
-    note,
-    blockItem,
+  const blockId = await findBlockOrThrow(ctx, {
+    noteId: note._id,
+    blockNoteId: blockIdentifier.blockNoteId,
+  })
+
+  await updateBlock(ctx, {
+    blockDbId: blockId,
     shareStatus: SHARE_STATUS.INDIVIDUALLY_SHARED,
   })
 
@@ -215,27 +186,32 @@ export async function unshareBlockFromMemberHelper(
     .first()
 
   if (!remainingShares) {
-    await ctx.db.patch('blocks', block._id, {
+    await updateBlock(ctx, {
+      blockDbId: block._id,
       shareStatus: SHARE_STATUS.NOT_SHARED,
-      updatedTime: Date.now(),
-      updatedBy: ctx.membership.userId,
     })
-    await removeBlockIfNotNeeded(ctx, { blockId: block._id })
   }
 }
 
 export async function setBlockShareStatusHelper(
   ctx: CampaignMutationCtx,
-  { note, blockItem, status }: { note: NoteFromDb; blockItem: BlockItem; status: ShareStatus },
-): Promise<void> {
-  const blockId = await upsertBlockForSharing(ctx, {
+  {
     note,
-    blockItem,
+    blockIdentifier,
+    status,
+  }: { note: NoteFromDb; blockIdentifier: BlockIdentifier; status: ShareStatus },
+): Promise<void> {
+  const blockId = await findBlockOrThrow(ctx, {
+    noteId: note._id,
+    blockNoteId: blockIdentifier.blockNoteId,
+  })
+
+  await updateBlock(ctx, {
+    blockDbId: blockId,
     shareStatus: status,
   })
 
   if (status === SHARE_STATUS.NOT_SHARED) {
     await clearBlockShares(ctx, { blockId })
-    await removeBlockIfNotNeeded(ctx, { blockId })
   }
 }

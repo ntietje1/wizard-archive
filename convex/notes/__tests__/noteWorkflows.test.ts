@@ -11,7 +11,6 @@ import {
   createFolder,
   createNote,
   createSidebarShare,
-  testBlock,
 } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 
@@ -44,21 +43,18 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
       campaignMemberId: p2.memberId,
     })
 
-    const blockContent = {
-      blockNoteId: block.blockId,
-      content: testBlock(block.blockId),
-    }
+    const blockRef = { blockNoteId: block.blockId }
 
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
-      blocks: [blockContent],
+      blocks: [blockRef],
       status: 'individually_shared',
     })
     await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
-      blocks: [blockContent],
+      blocks: [blockRef],
       campaignMemberId: p1.memberId,
     })
 
@@ -77,7 +73,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
-      blocks: [blockContent],
+      blocks: [blockRef],
       campaignMemberId: p2.memberId,
     })
 
@@ -105,15 +101,12 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
       campaignMemberId: ctx.player.memberId,
     })
 
-    const blockContent = {
-      blockNoteId: block.blockId,
-      content: testBlock(block.blockId),
-    }
+    const blockRef = { blockNoteId: block.blockId }
 
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
-      blocks: [blockContent],
+      blocks: [blockRef],
       status: 'all_shared',
     })
 
@@ -126,7 +119,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
-      blocks: [blockContent],
+      blocks: [blockRef],
       status: 'not_shared',
     })
 
@@ -181,12 +174,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId,
-      blocks: [
-        {
-          blockNoteId: block.blockId,
-          content: testBlock(block.blockId),
-        },
-      ],
+      blocks: [{ blockNoteId: block.blockId }],
       status: 'all_shared',
     })
 
@@ -251,10 +239,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
       campaignMemberId: ctx.player.memberId,
     })
 
-    const blockRef = {
-      blockNoteId: block.blockId,
-      content: testBlock(block.blockId),
-    }
+    const blockRef = { blockNoteId: block.blockId }
 
     const getVisibility = async () => {
       const n = await playerAuth.query(api.notes.queries.getNote, {
@@ -297,5 +282,56 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
       status: 'not_shared',
     })
     expect(await getVisibility()).toBe(false)
+  })
+
+  it('player sees nested shared blocks in blockMeta but not unshared siblings', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const playerAuth = asPlayer(ctx)
+
+    const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+    await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
+      blockId: 'root',
+      depth: 0,
+      parentBlockId: null,
+      position: 0,
+    })
+    await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
+      blockId: 'shared-child',
+      depth: 1,
+      parentBlockId: 'root',
+      position: 0,
+    })
+    await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
+      blockId: 'unshared-child',
+      depth: 1,
+      parentBlockId: 'root',
+      position: 1,
+    })
+
+    await createSidebarShare(t, ctx.dm.profile._id, {
+      campaignId: ctx.campaignId,
+      sidebarItemId: note.noteId,
+      sidebarItemType: 'note',
+      campaignMemberId: ctx.player.memberId,
+    })
+
+    await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
+      campaignId: ctx.campaignId,
+      noteId: note.noteId,
+      blocks: [{ blockNoteId: 'root' }, { blockNoteId: 'shared-child' }],
+      status: 'all_shared',
+    })
+
+    const playerNote = await playerAuth.query(api.notes.queries.getNote, {
+      campaignId: ctx.campaignId,
+      noteId: note.noteId,
+    })
+
+    expect(playerNote).not.toBeNull()
+    expect(playerNote!.blockMeta['root']).toBeDefined()
+    expect(playerNote!.blockMeta['shared-child']).toBeDefined()
+    expect(playerNote!.blockMeta['unshared-child']).toBeUndefined()
   })
 })

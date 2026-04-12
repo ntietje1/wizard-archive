@@ -23,10 +23,6 @@ interface ShareMenuContentProps {
    */
   isMutating: boolean
   /**
-   * Whether sharing is disabled
-   */
-  isDisabled: boolean
-  /**
    * List of players with their share states.
    * Uses ShareItem from useBlocksShare - same structure for both blocks and sidebar items.
    */
@@ -51,7 +47,6 @@ export function ShareMenuContent({
   label = 'Share with',
   isPending,
   isMutating,
-  isDisabled,
   shareItems,
   onToggleShareWithMember,
   unsharableMessage,
@@ -79,7 +74,6 @@ export function ShareMenuContent({
             key={shareItem.key}
             shareItem={shareItem}
             isMutating={isMutating}
-            isDisabled={isDisabled}
             onToggle={onToggleShareWithMember}
           />
         ))
@@ -91,11 +85,10 @@ export function ShareMenuContent({
 interface ShareMenuItemProps {
   shareItem: ShareItem
   isMutating: boolean
-  isDisabled: boolean
   onToggle: (memberId: Id<'campaignMembers'>) => Promise<void>
 }
 
-function ShareMenuItem({ shareItem, isMutating, isDisabled, onToggle }: ShareMenuItemProps) {
+function ShareMenuItem({ shareItem, isMutating, onToggle }: ShareMenuItemProps) {
   const profile = shareItem.member.userProfile
   const displayText = profile.name
     ? profile.name
@@ -108,7 +101,7 @@ function ShareMenuItem({ shareItem, isMutating, isDisabled, onToggle }: ShareMen
   return (
     <ContextMenuCheckboxItem
       checked={isChecked}
-      disabled={isMutating || isDisabled}
+      disabled={isMutating}
       onClick={async (e) => {
         e.preventDefault()
         e.stopPropagation()

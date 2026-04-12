@@ -1,8 +1,8 @@
-import { SHARE_STATUS } from '../../blockShares/types'
+import { ERROR_CODE, throwClientError } from '../../errors'
 import type { ShareStatus } from '../../blockShares/types'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
-import type { CustomBlock } from '../../notes/editorSpecs'
+import type { BlockProps, BlockType, InlineContent } from '../types'
 
 export async function insertBlock(
   ctx: CampaignMutationCtx,
@@ -10,20 +10,30 @@ export async function insertBlock(
     noteId: Id<'sidebarItems'>
     campaignId: Id<'campaigns'>
     blockId: string
-    isTopLevel: boolean
+    parentBlockId: string | null
+    depth: number
     position: number | null
-    content: CustomBlock
+    type: BlockType
+    props: BlockProps
+    inlineContent: InlineContent | null
+    plainText: string | null
     shareStatus: ShareStatus
   },
 ): Promise<Id<'blocks'>> {
+  if (params.depth < 0) throwClientError(ERROR_CODE.VALIDATION_FAILED, 'depth must be non-negative')
+
   return await ctx.db.insert('blocks', {
     noteId: params.noteId,
     campaignId: params.campaignId,
     blockId: params.blockId,
+    parentBlockId: params.parentBlockId,
+    depth: params.depth,
     position: params.position,
-    content: params.content,
-    isTopLevel: params.isTopLevel,
-    shareStatus: params.shareStatus ?? SHARE_STATUS.NOT_SHARED,
+    type: params.type,
+    props: params.props,
+    inlineContent: params.inlineContent,
+    plainText: params.plainText,
+    shareStatus: params.shareStatus,
     deletionTime: null,
     deletedBy: null,
     updatedTime: null,

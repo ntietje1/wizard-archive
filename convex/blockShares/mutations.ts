@@ -1,23 +1,18 @@
 import { v } from 'convex/values'
 import { dmMutation } from '../functions'
-import {
-  blockNoteIdValidator,
-  blockShareStatusValidator,
-  customBlockValidator,
-} from '../blocks/schema'
+import { blockNoteIdValidator, blockShareStatusValidator } from '../blocks/schema'
 import { setBlocksShareStatus as setBlocksShareStatusFn } from './functions/setBlocksShareStatus'
 import { shareBlocks as shareBlocksFn } from './functions/shareBlocks'
 import { unshareBlocks as unshareBlocksFn } from './functions/unshareBlocks'
 
-const blockItemValidator = v.object({
+const blockIdentifierValidator = v.object({
   blockNoteId: blockNoteIdValidator,
-  content: customBlockValidator,
 })
 
 export const setBlocksShareStatus = dmMutation({
   args: {
     noteId: v.id('sidebarItems'),
-    blocks: v.array(blockItemValidator),
+    blocks: v.array(blockIdentifierValidator),
     status: blockShareStatusValidator,
   },
   returns: v.null(),
@@ -33,7 +28,7 @@ export const setBlocksShareStatus = dmMutation({
 export const shareBlocks = dmMutation({
   args: {
     noteId: v.id('sidebarItems'),
-    blocks: v.array(blockItemValidator),
+    blocks: v.array(blockIdentifierValidator),
     campaignMemberId: v.id('campaignMembers'),
   },
   returns: v.null(),
@@ -49,14 +44,14 @@ export const shareBlocks = dmMutation({
 export const unshareBlocks = dmMutation({
   args: {
     noteId: v.id('sidebarItems'),
-    blockNoteIds: v.array(blockNoteIdValidator),
+    blocks: v.array(blockIdentifierValidator),
     campaignMemberId: v.id('campaignMembers'),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     return await unshareBlocksFn(ctx, {
       noteId: args.noteId,
-      blockNoteIds: args.blockNoteIds,
+      blocks: args.blocks,
       campaignMemberId: args.campaignMemberId,
     })
   },

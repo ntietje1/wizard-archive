@@ -32,7 +32,6 @@ const blockShareInfoValidator = v.object({
   blockNoteId: blockNoteIdValidator,
   shareStatus: blockShareStatusValidator,
   sharedMemberIds: v.array(v.id('campaignMembers')),
-  isTopLevel: v.boolean(),
 })
 
 export const getBlocksWithShares = dmQuery({

@@ -9,16 +9,17 @@ import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
+import type { BlockIdentifier } from '../types'
 
 export const unshareBlocks = async (
   ctx: CampaignMutationCtx,
   {
     noteId,
-    blockNoteIds,
+    blocks,
     campaignMemberId,
   }: {
     noteId: Id<'sidebarItems'>
-    blockNoteIds: Array<string>
+    blocks: Array<BlockIdentifier>
     campaignMemberId: Id<'campaignMembers'>
   },
 ): Promise<null> => {
@@ -30,10 +31,10 @@ export const unshareBlocks = async (
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 
-  await asyncMap(blockNoteIds, (blockNoteId) =>
+  await asyncMap(blocks, (block) =>
     unshareBlockFromMemberHelper(ctx, {
       note,
-      blockNoteId,
+      blockNoteId: block.blockNoteId,
       campaignMemberId,
     }),
   )
@@ -45,7 +46,7 @@ export const unshareBlocks = async (
     metadata: {
       status: 'unshared',
       campaignMemberId,
-      blockCount: blockNoteIds.length,
+      blockCount: blocks.length,
     },
   })
 

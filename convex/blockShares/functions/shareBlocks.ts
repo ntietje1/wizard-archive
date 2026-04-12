@@ -9,6 +9,7 @@ import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
+import type { BlockIdentifier } from '../types'
 
 export const shareBlocks = async (
   ctx: CampaignMutationCtx,
@@ -18,7 +19,7 @@ export const shareBlocks = async (
     campaignMemberId,
   }: {
     noteId: Id<'sidebarItems'>
-    blocks: Array<{ blockNoteId: string; content: any }>
+    blocks: Array<BlockIdentifier>
     campaignMemberId: Id<'campaignMembers'>
   },
 ): Promise<null> => {
@@ -30,10 +31,10 @@ export const shareBlocks = async (
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 
-  await asyncMap(blocks, (blockItem) =>
+  await asyncMap(blocks, (blockIdentifier) =>
     shareBlockWithMemberHelper(ctx, {
       note,
-      blockItem,
+      blockIdentifier,
       campaignMemberId,
     }),
   )

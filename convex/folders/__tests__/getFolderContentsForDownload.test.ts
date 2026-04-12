@@ -8,7 +8,6 @@ import {
   createFolder,
   createGameMap,
   createNote,
-  testBlock,
 } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
@@ -53,7 +52,8 @@ describe('getFolderContentsForDownload — collectItemsRecursively', () => {
     })
     await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
       position: 0,
-      content: testBlock('b1', { content: [{ type: 'text', text: 'Hello' }] }),
+      inlineContent: [{ type: 'text', text: 'Hello', styles: {} }],
+      plainText: 'Hello',
     })
 
     const result = await dmAuth.query(api.folders.queries.getFolderContentsForDownload, {
@@ -283,14 +283,15 @@ describe('getFolderContentsForDownload — collectItemsRecursively', () => {
       name: 'Ordered Note',
     })
 
-    // Insert blocks out of order
     await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
       position: 2,
-      content: testBlock('b2', { content: [{ type: 'text', text: 'Second' }] }),
+      inlineContent: [{ type: 'text', text: 'Second', styles: {} }],
+      plainText: 'Second',
     })
     await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
       position: 1,
-      content: testBlock('b1', { content: [{ type: 'text', text: 'First' }] }),
+      inlineContent: [{ type: 'text', text: 'First', styles: {} }],
+      plainText: 'First',
     })
 
     const result = await dmAuth.query(api.folders.queries.getFolderContentsForDownload, {

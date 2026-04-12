@@ -5,7 +5,6 @@ import {
   useExtension,
   useExtensionState,
 } from '@blocknote/react'
-import { toast } from 'sonner'
 import { Share2 } from 'lucide-react'
 import type { CustomBlock, CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { AggregateShareStatus } from '~/features/sharing/hooks/useBlocksShare'
@@ -44,7 +43,6 @@ export default function ShareSideMenuButton() {
     selector: (state) => state?.block,
   }) as CustomBlock | undefined
 
-  // Determine blocks to operate on: selection if hovered block is in it, otherwise just the hovered block
   const selection = editor.getSelection()
   const selectedBlocks =
     selection && selection.blocks.length > 1 ? (selection.blocks as Array<CustomBlock>) : null
@@ -56,25 +54,19 @@ export default function ShareSideMenuButton() {
     isPending,
     isMutating,
     aggregateShareStatus,
-    topLevelBlocks,
-    hasNonTopLevelBlocks,
     shareItems,
     toggleShareStatus,
     toggleShareWithMember,
   } = useBlocksShare(blocks)
 
   const isMultiBlock = blocks.length > 1
-  const blockCount = topLevelBlocks.length
-  const skippedCount = blocks.length - topLevelBlocks.length
+  const blockCount = blocks.length
 
   const handleButtonClick = (e: React.MouseEvent | React.KeyboardEvent) => {
     if (!item || isMutating || isPending) return
     if (e.ctrlKey || e.metaKey) return
 
-    if (topLevelBlocks.length === 0) {
-      toast.error('Cannot share non-top-level blocks.')
-      return
-    }
+    if (blocks.length === 0) return
 
     e.preventDefault()
     e.stopPropagation()
@@ -83,13 +75,12 @@ export default function ShareSideMenuButton() {
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault() // Prevent scroll on space
+      e.preventDefault()
       handleButtonClick(e)
     }
   }
 
   const buttonColorClass = getButtonColorClass(aggregateShareStatus)
-  const isDisabled = topLevelBlocks.length === 0
 
   if (!block || !isDm) return null
 
@@ -104,7 +95,7 @@ export default function ShareSideMenuButton() {
           render={
             <Components.SideMenu.Button
               label={isMultiBlock ? `Share ${blockCount} blocks` : 'Share'}
-              className={`!p-0 !px-0 !h-6 !w-6 ${buttonColorClass} ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`!p-0 !px-0 !h-6 !w-6 ${buttonColorClass}`}
               icon={<Share2 size={18} />}
             />
           }
@@ -119,16 +110,8 @@ export default function ShareSideMenuButton() {
           }
           isPending={isPending}
           isMutating={isMutating}
-          isDisabled={isDisabled}
           shareItems={shareItems}
           onToggleShareWithMember={toggleShareWithMember}
-          unsharableMessage={
-            hasNonTopLevelBlocks
-              ? `${skippedCount} nested block${skippedCount !== 1 ? 's' : ''} will be skipped`
-              : isDisabled && !isPending
-                ? 'No shareable blocks.'
-                : undefined
-          }
         />
       </ContextMenuContent>
     </ContextMenu>
