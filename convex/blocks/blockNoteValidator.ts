@@ -4,7 +4,7 @@ import { zodToConvex } from 'convex-helpers/server/zod4'
 // --- Styles ---
 
 const stylesSchema = z
-  .object({
+  .strictObject({
     bold: z.boolean().optional(),
     italic: z.boolean().optional(),
     underline: z.boolean().optional(),
@@ -18,7 +18,7 @@ const stylesSchema = z
 // --- Inline Content ---
 // Link inline content is removed in our editor schema (editorSpecs.ts)
 
-const styledTextSchema = z.object({
+const styledTextSchema = z.strictObject({
   type: z.literal('text'),
   text: z.string(),
   styles: stylesSchema,
@@ -28,13 +28,13 @@ const inlineContentSchema = styledTextSchema
 
 // --- Table Content ---
 
-const tableContentSchema = z.object({
+const tableContentSchema = z.strictObject({
   type: z.literal('tableContent'),
   columnWidths: z.array(z.number().nullable()),
   headerRows: z.number().optional(),
   headerCols: z.number().optional(),
   rows: z.array(
-    z.object({
+    z.strictObject({
       cells: z.array(z.array(inlineContentSchema)),
     }),
   ),
@@ -63,17 +63,17 @@ type BlockNoteBlock = {
 const blockNoteBlockSchema: z.ZodType<BlockNoteBlock> = z.lazy(() =>
   z.discriminatedUnion('type', [
     // --- Inline content blocks ---
-    z.object({
+    z.strictObject({
       id: z.string(),
       type: z.literal('paragraph'),
-      props: z.object({ ...defaultPropsSchema }),
+      props: z.strictObject({ ...defaultPropsSchema }),
       content: z.array(inlineContentSchema).optional(),
       children: z.array(blockNoteBlockSchema).optional(),
     }),
-    z.object({
+    z.strictObject({
       id: z.string(),
       type: z.literal('heading'),
-      props: z.object({
+      props: z.strictObject({
         level: z.union([
           z.literal(1),
           z.literal(2),
@@ -88,54 +88,54 @@ const blockNoteBlockSchema: z.ZodType<BlockNoteBlock> = z.lazy(() =>
       content: z.array(inlineContentSchema).optional(),
       children: z.array(blockNoteBlockSchema).optional(),
     }),
-    z.object({
+    z.strictObject({
       id: z.string(),
       type: z.literal('bulletListItem'),
-      props: z.object({ ...defaultPropsSchema }),
+      props: z.strictObject({ ...defaultPropsSchema }),
       content: z.array(inlineContentSchema).optional(),
       children: z.array(blockNoteBlockSchema).optional(),
     }),
-    z.object({
+    z.strictObject({
       id: z.string(),
       type: z.literal('numberedListItem'),
-      props: z.object({
+      props: z.strictObject({
         start: z.number().optional(),
         ...defaultPropsSchema,
       }),
       content: z.array(inlineContentSchema).optional(),
       children: z.array(blockNoteBlockSchema).optional(),
     }),
-    z.object({
+    z.strictObject({
       id: z.string(),
       type: z.literal('checkListItem'),
-      props: z.object({
+      props: z.strictObject({
         checked: z.boolean().optional(),
         ...defaultPropsSchema,
       }),
       content: z.array(inlineContentSchema).optional(),
       children: z.array(blockNoteBlockSchema).optional(),
     }),
-    z.object({
+    z.strictObject({
       id: z.string(),
       type: z.literal('toggleListItem'),
-      props: z.object({ ...defaultPropsSchema }),
+      props: z.strictObject({ ...defaultPropsSchema }),
       content: z.array(inlineContentSchema).optional(),
       children: z.array(blockNoteBlockSchema).optional(),
     }),
-    z.object({
+    z.strictObject({
       id: z.string(),
       type: z.literal('quote'),
-      props: z.object({
+      props: z.strictObject({
         textColor: z.string().optional(),
         backgroundColor: z.string().optional(),
       }),
       content: z.array(inlineContentSchema).optional(),
       children: z.array(blockNoteBlockSchema).optional(),
     }),
-    z.object({
+    z.strictObject({
       id: z.string(),
       type: z.literal('codeBlock'),
-      props: z.object({
+      props: z.strictObject({
         language: z.string().optional(),
       }),
       content: z.array(inlineContentSchema).optional(),
@@ -143,17 +143,17 @@ const blockNoteBlockSchema: z.ZodType<BlockNoteBlock> = z.lazy(() =>
     }),
 
     // --- No-content blocks ---
-    z.object({
+    z.strictObject({
       id: z.string(),
       type: z.literal('divider'),
-      props: z.object({}),
+      props: z.strictObject({}),
       content: z.array(inlineContentSchema).optional(),
       children: z.array(blockNoteBlockSchema).optional(),
     }),
-    z.object({
+    z.strictObject({
       id: z.string(),
       type: z.literal('image'),
-      props: z.object({
+      props: z.strictObject({
         name: z.string().optional(),
         url: z.string().optional(),
         caption: z.string().optional(),
@@ -165,10 +165,10 @@ const blockNoteBlockSchema: z.ZodType<BlockNoteBlock> = z.lazy(() =>
       content: z.array(inlineContentSchema).optional(),
       children: z.array(blockNoteBlockSchema).optional(),
     }),
-    z.object({
+    z.strictObject({
       id: z.string(),
       type: z.literal('video'),
-      props: z.object({
+      props: z.strictObject({
         name: z.string().optional(),
         url: z.string().optional(),
         caption: z.string().optional(),
@@ -180,10 +180,10 @@ const blockNoteBlockSchema: z.ZodType<BlockNoteBlock> = z.lazy(() =>
       content: z.array(inlineContentSchema).optional(),
       children: z.array(blockNoteBlockSchema).optional(),
     }),
-    z.object({
+    z.strictObject({
       id: z.string(),
       type: z.literal('audio'),
-      props: z.object({
+      props: z.strictObject({
         name: z.string().optional(),
         url: z.string().optional(),
         caption: z.string().optional(),
@@ -193,10 +193,10 @@ const blockNoteBlockSchema: z.ZodType<BlockNoteBlock> = z.lazy(() =>
       content: z.array(inlineContentSchema).optional(),
       children: z.array(blockNoteBlockSchema).optional(),
     }),
-    z.object({
+    z.strictObject({
       id: z.string(),
       type: z.literal('file'),
-      props: z.object({
+      props: z.strictObject({
         name: z.string().optional(),
         url: z.string().optional(),
         caption: z.string().optional(),
@@ -207,10 +207,10 @@ const blockNoteBlockSchema: z.ZodType<BlockNoteBlock> = z.lazy(() =>
     }),
 
     // --- Table block ---
-    z.object({
+    z.strictObject({
       id: z.string(),
       type: z.literal('table'),
-      props: z.object({
+      props: z.strictObject({
         textColor: z.string().optional(),
       }),
       content: tableContentSchema.optional(),
