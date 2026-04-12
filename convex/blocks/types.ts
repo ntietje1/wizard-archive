@@ -1,6 +1,5 @@
 import type { ShareStatus } from '../blockShares/types'
-import type { Id } from '../_generated/dataModel'
-import type { CustomBlock } from '../notes/editorSpecs'
+import type { Id, Doc } from '../_generated/dataModel'
 
 export type BlockShareInfo = {
   blockNoteId: string
@@ -9,19 +8,4 @@ export type BlockShareInfo = {
   isTopLevel: boolean
 }
 
-export type Block = {
-  _id: Id<'blocks'>
-  _creationTime: number
-  noteId: Id<'sidebarItems'>
-  blockId: string
-  position: number | null
-  content: CustomBlock
-  isTopLevel: boolean
-  campaignId: Id<'campaigns'>
-  shareStatus: ShareStatus | null
-  updatedTime: number | null
-  updatedBy: Id<'userProfiles'> | null
-  createdBy: Id<'userProfiles'>
-  deletionTime: number | null
-  deletedBy: Id<'userProfiles'> | null
-}
+export type Block = Doc<'blocks'>

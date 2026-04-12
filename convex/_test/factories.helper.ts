@@ -8,8 +8,23 @@ import type schema from '../schema'
 import type { SidebarItemLocation, SidebarItemType } from '../sidebarItems/types/baseTypes'
 import type { PermissionLevel } from '../permissions/types'
 import type { ShareStatus } from '../blockShares/types'
+import type { CustomBlock } from '../notes/editorSpecs'
 
 type T = TestConvex<typeof schema>
+
+/** Create a test block content object typed as CustomBlock */
+export function testBlock(
+  id: string,
+  overrides?: Partial<{ type: string; props: Record<string, unknown>; content: Array<unknown> }>,
+): CustomBlock {
+  return {
+    id,
+    type: 'paragraph',
+    props: {},
+    content: [],
+    ...overrides,
+  } as CustomBlock
+}
 
 let counter = 0
 
@@ -341,7 +356,7 @@ export async function createBlock(
   overrides?: Partial<{
     blockId: string
     position: number | null
-    content: Record<string, unknown>
+    content: CustomBlock
     isTopLevel: boolean
     shareStatus: ShareStatus | null
     deletionTime: number | null
@@ -354,7 +369,7 @@ export async function createBlock(
     noteId: noteId,
     blockId: `block-${n}`,
     position: null,
-    content: { id: `block-${n}`, type: 'paragraph', content: [] },
+    content: testBlock(`block-${n}`),
     isTopLevel: true,
     campaignId,
     shareStatus,

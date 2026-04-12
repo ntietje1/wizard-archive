@@ -165,6 +165,9 @@ importers:
       yjs:
         specifier: ^13.6.29
         version: 13.6.29
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
       zustand:
         specifier: ^5.0.11
         version: 5.0.11(@types/react@19.1.11)(react@19.1.1)(use-sync-external-store@1.6.0(react@19.1.1))
@@ -618,6 +621,7 @@ packages:
   '@clerk/clerk-react@5.44.0':
     resolution: {integrity: sha512-navFmAeDcM6GV0BJlg4KYKgG7vOOSIQ65xbDZjATafoACO+HNgO95lC4Nhq1O79Cr4Yy1s3ue608RCnrB+LKDg==}
     engines: {node: '>=18.17.0'}
+    deprecated: 'This package is no longer supported. Please use @clerk/react instead. See the upgrade guide for more info: https://clerk.com/docs/guides/development/upgrading/upgrade-guides/core-3'
     peerDependencies:
       react: ^18.0.0 || ^19.0.0 || ^19.0.0-0
       react-dom: ^18.0.0 || ^19.0.0 || ^19.0.0-0

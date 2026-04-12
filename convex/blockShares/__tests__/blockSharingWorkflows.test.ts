@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, setupMultiPlayerContext } from '../../_test/identities.helper'
-import { createBlock, createNote, createSidebarShare } from '../../_test/factories.helper'
+import {
+  createBlock,
+  createNote,
+  createSidebarShare,
+  testBlock,
+} from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 
 describe('block sharing workflows', () => {
@@ -31,16 +36,8 @@ describe('block sharing workflows', () => {
         campaignMemberId: p2.memberId,
       })
 
-      const blockContent1 = {
-        id: block1.blockId,
-        type: 'paragraph' as const,
-        content: [],
-      }
-      const blockContent2 = {
-        id: block2.blockId,
-        type: 'paragraph' as const,
-        content: [],
-      }
+      const blockContent1 = testBlock(block1.blockId)
+      const blockContent2 = testBlock(block2.blockId)
 
       await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
         campaignId: ctx.campaignId,
@@ -131,11 +128,7 @@ describe('block sharing workflows', () => {
         campaignMemberId: p1.memberId,
       })
 
-      const blockContent = {
-        id: block.blockId,
-        type: 'paragraph' as const,
-        content: [],
-      }
+      const blockContent = testBlock(block.blockId)
 
       await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
         campaignId: ctx.campaignId,
@@ -248,11 +241,7 @@ describe('block sharing workflows', () => {
         campaignMemberId: p1.memberId,
       })
 
-      const blockContent = {
-        id: block.blockId,
-        type: 'paragraph' as const,
-        content: [],
-      }
+      const blockContent = testBlock(block.blockId)
 
       await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
         campaignId: ctx.campaignId,
@@ -308,11 +297,7 @@ describe('block sharing workflows', () => {
       const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
       const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id)
 
-      const blockContent = {
-        id: block.blockId,
-        type: 'paragraph' as const,
-        content: [],
-      }
+      const blockContent = testBlock(block.blockId)
 
       await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
         campaignId: ctx.campaignId,

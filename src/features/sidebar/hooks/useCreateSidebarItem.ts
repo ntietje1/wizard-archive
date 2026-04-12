@@ -2,7 +2,7 @@ import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
-import type { CustomPartialBlock } from 'convex/notes/editorSpecs'
+import type { CustomBlock } from 'convex/notes/editorSpecs'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { assertNever } from '~/shared/utils/utils'
@@ -17,7 +17,7 @@ interface CreateItemBase {
 
 type CreateNoteArgs = CreateItemBase & {
   type: typeof SIDEBAR_ITEM_TYPES.notes
-  content?: Array<CustomPartialBlock>
+  content?: Array<CustomBlock>
 }
 
 type CreateFolderArgs = CreateItemBase & {

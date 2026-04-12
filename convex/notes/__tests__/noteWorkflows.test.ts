@@ -11,6 +11,7 @@ import {
   createFolder,
   createNote,
   createSidebarShare,
+  testBlock,
 } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 
@@ -45,7 +46,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
 
     const blockContent = {
       blockNoteId: block.blockId,
-      content: { id: block.blockId, type: 'paragraph' as const, content: [] },
+      content: testBlock(block.blockId),
     }
 
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
@@ -106,7 +107,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
 
     const blockContent = {
       blockNoteId: block.blockId,
-      content: { id: block.blockId, type: 'paragraph' as const, content: [] },
+      content: testBlock(block.blockId),
     }
 
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
@@ -183,11 +184,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
       blocks: [
         {
           blockNoteId: block.blockId,
-          content: {
-            id: block.blockId,
-            type: 'paragraph' as const,
-            content: [],
-          },
+          content: testBlock(block.blockId),
         },
       ],
       status: 'all_shared',
@@ -256,7 +253,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
 
     const blockRef = {
       blockNoteId: block.blockId,
-      content: { id: block.blockId, type: 'paragraph' as const, content: [] },
+      content: testBlock(block.blockId),
     }
 
     const getVisibility = async () => {

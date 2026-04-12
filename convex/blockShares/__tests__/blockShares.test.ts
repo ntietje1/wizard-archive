@@ -11,16 +11,13 @@ import {
   createBlockShare,
   createNote,
   createSidebarShare,
+  testBlock,
 } from '../../_test/factories.helper'
 import { expectPermissionDenied } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 import type { NoteWithContent } from '../../notes/types'
 
-const BLOCK_CONTENT = {
-  id: 'test-block-1',
-  type: 'paragraph' as const,
-  content: [],
-}
+const BLOCK_CONTENT = testBlock('test-block-1')
 
 describe('setBlocksShareStatus', () => {
   const t = createTestContext()

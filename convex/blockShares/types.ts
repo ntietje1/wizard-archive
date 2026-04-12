@@ -1,5 +1,5 @@
-import type { CustomBlock } from '../notes/editorSpecs'
 import type { Id } from '../_generated/dataModel'
+import type { CustomBlock } from '../notes/editorSpecs'
 
 export type BlockShare = {
   _id: Id<'blockShares'>

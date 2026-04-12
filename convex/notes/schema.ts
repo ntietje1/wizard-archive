@@ -3,7 +3,7 @@ import { commonSidebarItemValidatorFields } from '../sidebarItems/schema/baseFie
 import { commonValidatorFields } from '../common/schema'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 import { permissionLevelValidator } from '../sidebarItems/schema/baseValidators'
-import { blockShareStatusValidator } from '../blocks/schema'
+import { blockShareStatusValidator, customBlockValidator } from '../blocks/schema'
 import { folderValidator } from '../folders/baseSchema'
 
 const noteValidatorFields = {
@@ -22,7 +22,7 @@ const blockMetaValidator = v.object({
 
 export const noteWithContentValidator = v.object({
   ...noteValidatorFields,
-  content: v.array(v.any()),
+  content: v.array(customBlockValidator),
   blockMeta: v.record(v.string(), blockMetaValidator),
   ancestors: v.array(folderValidator),
 })

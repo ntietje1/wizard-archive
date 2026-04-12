@@ -23,6 +23,7 @@ import type * as blockShares_functions_unshareBlocks from "../blockShares/functi
 import type * as blockShares_mutations from "../blockShares/mutations.js";
 import type * as blockShares_queries from "../blockShares/queries.js";
 import type * as blockShares_types from "../blockShares/types.js";
+import type * as blocks_blockNoteValidator from "../blocks/blockNoteValidator.js";
 import type * as blocks_functions_findBlockByBlockNoteId from "../blocks/functions/findBlockByBlockNoteId.js";
 import type * as blocks_functions_getBlockWithShares from "../blocks/functions/getBlockWithShares.js";
 import type * as blocks_functions_getBlocksWithShares from "../blocks/functions/getBlocksWithShares.js";
@@ -235,6 +236,7 @@ declare const fullApi: ApiFromModules<{
   "blockShares/mutations": typeof blockShares_mutations;
   "blockShares/queries": typeof blockShares_queries;
   "blockShares/types": typeof blockShares_types;
+  "blocks/blockNoteValidator": typeof blocks_blockNoteValidator;
   "blocks/functions/findBlockByBlockNoteId": typeof blocks_functions_findBlockByBlockNoteId;
   "blocks/functions/getBlockWithShares": typeof blocks_functions_getBlockWithShares;
   "blocks/functions/getBlocksWithShares": typeof blocks_functions_getBlocksWithShares;

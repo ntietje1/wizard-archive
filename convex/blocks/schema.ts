@@ -1,11 +1,19 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
+import type { Validator } from 'convex/values'
 import { literals } from 'convex-helpers/validators'
 import { commonTableFields, commonValidatorFields } from '../common/schema'
+import { blockNoteBlockValidator } from './blockNoteValidator'
+import type { CustomBlock } from '../notes/editorSpecs'
 
 export const blockNoteIdValidator = v.string()
 
-export const customBlockValidator = v.any() // BlockNote block content
+// Cast so Doc<'blocks'>['content'] infers as CustomBlock throughout the codebase.
+// The runtime validator (blockNoteBlockValidator) is unchanged and validates strictly.
+export const customBlockValidator = blockNoteBlockValidator as unknown as Validator<
+  CustomBlock,
+  'required'
+>
 
 export const blockShareStatusValidator = literals('all_shared', 'not_shared', 'individually_shared')
 

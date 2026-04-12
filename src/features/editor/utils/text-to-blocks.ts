@@ -1,7 +1,22 @@
 import { BlockNoteEditor } from '@blocknote/core'
+import type { Link, StyledText } from '@blocknote/core'
 import { editorSchema } from 'convex/notes/editorSpecs'
 import escapeHtml from 'escape-html'
-import type { CustomPartialBlock } from 'convex/notes/editorSpecs'
+import type { CustomBlock, CustomPartialBlock, CustomStyleSchema } from 'convex/notes/editorSpecs'
+
+// Inline content from the parser — includes links that our editor schema excludes.
+type ParsedInlineContent = StyledText<CustomStyleSchema> | Link<CustomStyleSchema>
+
+type ParsedBlock = {
+  type: string
+  props?: Record<string, string>
+  content?: Array<ParsedInlineContent>
+  children?: Array<ParsedBlock>
+}
+
+function textNode(text: string): StyledText<CustomStyleSchema> {
+  return { type: 'text', text, styles: {} }
+}
 
 export function convertBlocksToMarkdown(blocks: Array<CustomPartialBlock>): string {
   const editor = BlockNoteEditor.create({
@@ -24,52 +39,50 @@ export function convertTextContentToBlocks(
   textContent: string,
   fileName: string,
   mimeType: string,
-): Array<CustomPartialBlock> {
+): Array<CustomBlock> {
+  const editor = BlockNoteEditor.create({ schema: editorSchema })
+
   if (isMarkdownFile(fileName, mimeType)) {
-    // parse links into link nodes, then convert back to md link syntax
-    const defaultEditor = BlockNoteEditor.create()
-    const blocks = defaultEditor.tryParseMarkdownToBlocks(textContent)
-    flattenLinksToText(blocks)
-    return blocks as unknown as Array<CustomPartialBlock>
+    return flattenLinksToBlocks(editor.tryParseMarkdownToBlocks(textContent))
   } else {
-    const editor = BlockNoteEditor.create({ schema: editorSchema })
     const html = convertTextToHTML(textContent)
-    return editor.tryParseHTMLToBlocks(html)
+    return flattenLinksToBlocks(editor.tryParseHTMLToBlocks(html))
   }
 }
 
-/**
- * Walks parsed blocks and converts link inline content nodes to plain text
- * containing the original markdown syntax. Also converts image blocks to
- * paragraphs with literal ![alt](url) text.
- */
-function flattenLinksToText(blocks: Array<Record<string, unknown>>): void {
+/** Replaces link/image nodes with plain markdown text. ParsedBlock in, CustomBlock out. */
+function flattenLinksToBlocks(parserOutput: Array<ParsedBlock>): Array<CustomBlock> {
+  const blocks = [...parserOutput]
+
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i]
 
-    // Convert image blocks to paragraphs with literal markdown
     if (block.type === 'image') {
-      const props = block.props as Record<string, string> | undefined
-      const url = props?.url ?? ''
-      const caption = props?.caption ?? props?.name ?? ''
+      const url = block.props?.url ?? ''
+      const caption = block.props?.caption ?? block.props?.name ?? ''
+      const escapedCaption = caption.replace(/\\/g, '\\\\').replace(/]/g, '\\]')
+      const escapedUrl = url.replace(/\\/g, '\\\\').replace(/\)/g, '\\)')
       blocks[i] = {
         type: 'paragraph',
-        content: [{ type: 'text', text: `![${caption}](${url})` }],
+        content: [textNode(`![${escapedCaption}](${escapedUrl})`)],
       }
       continue
     }
 
-    if (Array.isArray(block.content)) {
-      const newContent: Array<Record<string, unknown>> = []
-      for (const ic of block.content as Array<Record<string, unknown>>) {
+    if (block.content) {
+      const newContent: Array<ParsedInlineContent> = []
+      for (const ic of block.content) {
         if (ic.type === 'link') {
-          const linkText = getLinkText(ic.content as Array<Record<string, unknown>> | undefined)
-          const href = (ic.href as string) ?? ''
-          if (linkText === href) {
-            // Bare URL that was auto-linked — restore as plain text
-            newContent.push({ type: 'text', text: href })
+          const linkText = ic.content.map((c) => c.text).join('')
+          if (linkText === ic.href) {
+            newContent.push(textNode(ic.href))
           } else {
-            newContent.push({ type: 'text', text: `[${linkText}](${href})` })
+            const escapedLinkText = linkText
+              .replace(/\\/g, '\\\\')
+              .replace(/\[/g, '\\[')
+              .replace(/]/g, '\\]')
+            const escapedHref = ic.href.replace(/\\/g, '\\\\').replace(/\)/g, '\\)')
+            newContent.push(textNode(`[${escapedLinkText}](${escapedHref})`))
           }
         } else {
           newContent.push(ic)
@@ -78,18 +91,15 @@ function flattenLinksToText(blocks: Array<Record<string, unknown>>): void {
       block.content = newContent
     }
 
-    if (Array.isArray(block.children)) {
-      flattenLinksToText(block.children as Array<Record<string, unknown>>)
+    if (block.children) {
+      block.children = flattenLinksToBlocks(block.children) as unknown as Array<ParsedBlock>
     }
   }
+
+  return blocks as unknown as Array<CustomBlock>
 }
 
-function getLinkText(content: Array<Record<string, unknown>> | undefined): string {
-  if (!Array.isArray(content)) return ''
-  return content.map((c) => (c.text as string) ?? '').join('')
-}
-
-export async function convertTextToBlocks(file: File): Promise<Array<CustomPartialBlock>> {
+export async function convertTextToBlocks(file: File): Promise<Array<CustomBlock>> {
   const textContent = await file.text()
   return convertTextContentToBlocks(textContent, file.name, file.type)
 }
