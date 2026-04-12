@@ -12,6 +12,7 @@
 ![Yjs](https://img.shields.io/badge/Yjs-6EDB8F?style=for-the-badge)
 ![Better Auth](https://img.shields.io/badge/Better_Auth-1A1A2E?style=for-the-badge)
 ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)
+![Zod](https://img.shields.io/badge/Zod-3E67B1?style=for-the-badge&logo=zod&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
 
 A campaign management platform built for Dungeon Masters and their players. Organize your world, share what your players need to see, and keep your secrets safe — all in real time.
@@ -86,6 +87,7 @@ A campaign management platform built for Dungeon Masters and their players. Orga
 | **Canvases**    | ReactFlow, Yjs                                                                                   |
 | **Maps**        | React Zoom Pan Pinch                                                                             |
 | **Drag & Drop** | Atlaskit Pragmatic Drag and Drop                                                                 |
+| **Validation**  | Zod, Convex Validators                                                                           |
 | **Backend**     | Convex (real-time database, serverless functions, file storage)                                  |
 | **Auth**        | Better Auth (email/password, OAuth, 2FA)                                                         |
 | **Deployment**  | Cloudflare Workers (serverless edge)                                                             |
@@ -93,10 +95,10 @@ A campaign management platform built for Dungeon Masters and their players. Orga
 
 ## Testing
 
-| Suite        | Runner                | Scope                                                                                                       |
-| ------------ | --------------------- | ----------------------------------------------------------------------------------------------------------- |
-| **Backend**  | Vitest (edge-runtime) | 53 test files, 651 tests — mutations, queries, permissions, cascading deletes, sharing workflows, snapshots |
-| **Frontend** | Vitest (jsdom)        | 24 test files, 358 tests — components, hooks, stores, utilities                                             |
-| **E2E**      | Playwright (Chromium) | Full user flows — campaign creation, note editing, sharing, navigation                                      |
+| Suite        | Runner                | Scope                                                                                         |
+| ------------ | --------------------- | --------------------------------------------------------------------------------------------- |
+| **Backend**  | Vitest (edge-runtime) | 600+ tests — mutations, queries, permissions, cascading deletes, sharing workflows, snapshots |
+| **Frontend** | Vitest (jsdom)        | 300+ tests — components, hooks, stores, utilities                                             |
+| **E2E**      | Playwright (Chromium) | Full user flows — campaign creation, note editing, sharing, navigation                        |
 
 Backend and frontend suites run on every push via GitHub Actions. E2E tests run in CI and locally against a live app instance.
