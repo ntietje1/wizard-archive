@@ -80,7 +80,7 @@ export async function saveAllBlocksForNote(
       .filter((q) => q.eq(q.field('deletionTime'), null))
       .collect()
 
-    await asyncMap(blockShares, (share) => ctx.db.delete(share._id))
-    await ctx.db.delete(block._id)
+    await asyncMap(blockShares, (share) => ctx.db.delete('blockShares', share._id))
+    await ctx.db.delete('blocks', block._id)
   })
 }
