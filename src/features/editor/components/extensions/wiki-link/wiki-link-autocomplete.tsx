@@ -30,10 +30,11 @@ interface FileItem {
   item: AnySidebarItem
   linkPath: Array<string>
 }
+
 interface HeadingItem {
   key: string
   title: string
-  level: 1 | 2 | 3
+  level: 1 | 2 | 3 | 4 | 5 | 6
   heading: HeadingEntry
   fullPath: Array<string>
 }

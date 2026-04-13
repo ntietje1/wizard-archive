@@ -7,12 +7,9 @@ export function MapImagePreview({ imageUrl }: { imageUrl: string | null }) {
 
   if (!imageUrl || imgError) {
     return (
-      <div
-        className="h-full flex items-center justify-center text-muted-foreground"
-        role="img"
-        aria-label="Map image not available"
-      >
-        <ImageOff className="h-6 w-6" />
+      <div className="h-full flex items-center justify-center text-muted-foreground">
+        <ImageOff className="h-6 w-6" aria-hidden="true" />
+        <span className="sr-only">Map image not available</span>
       </div>
     )
   }

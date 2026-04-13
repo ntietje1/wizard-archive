@@ -118,12 +118,7 @@ function EmbedRichContent({
   const hasScrollableContent = contentItem.type === SIDEBAR_ITEM_TYPES.folders
 
   return (
-    <div
-      className={cn(
-        'h-full overflow-hidden',
-        hasScrollableContent && selected && 'nowheel',
-      )}
-    >
+    <div className={cn('h-full overflow-hidden', hasScrollableContent && selected && 'nowheel')}>
       <ItemPreviewContent item={contentItem} />
     </div>
   )

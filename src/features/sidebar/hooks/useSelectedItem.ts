@@ -3,6 +3,8 @@ import { useMatch } from '@tanstack/react-router'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { getSlug } from '~/features/sidebar/utils/sidebar-item-utils'
+import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
+import { addRecentItem } from '~/features/search/hooks/use-recent-items'
 
 export function useSelectedItemSync() {
   const editorMatch = useMatch({
@@ -11,10 +13,15 @@ export function useSelectedItemSync() {
   })
   const editorSearch = editorMatch?.search ?? {}
   const slug = getSlug(editorSearch)
+  const { campaignId } = useCampaign()
 
   useEffect(() => {
     useSidebarUIStore.getState().setSelected(slug)
   }, [slug])
+
+  useEffect(() => {
+    if (slug && campaignId) addRecentItem(campaignId, slug)
+  }, [slug, campaignId])
 
   return slug
 }

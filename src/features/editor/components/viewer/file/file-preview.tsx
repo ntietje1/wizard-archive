@@ -17,7 +17,6 @@ export function FilePreview({
   const [loadedUrl, setLoadedUrl] = useState<string | null>(null)
 
   const markErrored = (url: string) => {
-    setLoadedUrl(url)
     setErroredUrls((prev) => new Set(prev).add(url))
   }
 
