@@ -2,6 +2,8 @@ import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../campaigns/types
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 import { SHARE_STATUS } from '../blockShares/types'
 import { slugify } from '../common/slug'
+import { makeYjsUpdateWithBlocks } from '../yjsSync/__tests__/makeYjsUpdate.helper'
+import type { TestBlock } from '../yjsSync/__tests__/makeYjsUpdate.helper'
 import type { TestConvex } from 'convex-test'
 import type { Id } from '../_generated/dataModel'
 import type schema from '../schema'
@@ -551,4 +553,26 @@ export async function setupFolderTree(
       throw new Error(`Unknown leaf type: ${String(_exhaustive)}`)
     }
   }
+}
+
+export async function syncBlocksToYjs(
+  t: T,
+  noteId: Id<'sidebarItems'>,
+  blocks: Array<TestBlock>,
+): Promise<void> {
+  const update = makeYjsUpdateWithBlocks(blocks)
+  await t.run(async (ctx) => {
+    const latest = await ctx.db
+      .query('yjsUpdates')
+      .withIndex('by_document_seq', (q: any) => q.eq('documentId', noteId))
+      .order('desc')
+      .first()
+    const seq = (latest?.seq ?? -1) + 1
+    await ctx.db.insert('yjsUpdates', {
+      documentId: noteId,
+      update,
+      seq,
+      isSnapshot: false,
+    })
+  })
 }

@@ -11,6 +11,7 @@ import {
   createFolder,
   createNote,
   createSidebarShare,
+  syncBlocksToYjs,
   testBlockNoteId,
 } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
@@ -30,6 +31,9 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
       blockNoteId: testBlockNoteId('secret-block'),
     })
+    await syncBlocksToYjs(t, note.noteId, [
+      { id: testBlockNoteId('secret-block'), type: 'paragraph' },
+    ])
 
     await createSidebarShare(t, ctx.dm.profile._id, {
       campaignId: ctx.campaignId,
@@ -92,6 +96,9 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
       blockNoteId: testBlockNoteId('revocable-block'),
     })
+    await syncBlocksToYjs(t, note.noteId, [
+      { id: testBlockNoteId('revocable-block'), type: 'paragraph' },
+    ])
 
     await createSidebarShare(t, ctx.dm.profile._id, {
       campaignId: ctx.campaignId,
@@ -161,6 +168,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     const block = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
       blockNoteId: testBlockNoteId('nested-block'),
     })
+    await syncBlocksToYjs(t, noteId, [{ id: testBlockNoteId('nested-block'), type: 'paragraph' }])
 
     const playerNoteWithBlocks = await playerAuth.query(api.notes.queries.getNote, {
       campaignId: ctx.campaignId,
@@ -228,6 +236,9 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
       blockNoteId: testBlockNoteId('transition-block'),
     })
+    await syncBlocksToYjs(t, note.noteId, [
+      { id: testBlockNoteId('transition-block'), type: 'paragraph' },
+    ])
 
     await createSidebarShare(t, ctx.dm.profile._id, {
       campaignId: ctx.campaignId,
@@ -304,6 +315,16 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
       parentBlockId: testBlockNoteId('root'),
       position: 1,
     })
+    await syncBlocksToYjs(t, note.noteId, [
+      {
+        id: testBlockNoteId('root'),
+        type: 'paragraph',
+        children: [
+          { id: testBlockNoteId('shared-child'), type: 'paragraph' },
+          { id: testBlockNoteId('unshared-child'), type: 'paragraph' },
+        ],
+      },
+    ])
 
     await createSidebarShare(t, ctx.dm.profile._id, {
       campaignId: ctx.campaignId,

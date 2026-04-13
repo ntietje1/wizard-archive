@@ -1,12 +1,10 @@
 import { v } from 'convex/values'
 import { campaignMutation } from '../functions'
 import { customBlockValidator } from '../blocks/schema'
-import { saveAllBlocksForNote } from '../blocks/functions/saveAllBlocksForNote'
+import { ensureBlocksPersisted } from '../blocks/functions/ensureBlocksPersisted'
 import { checkYjsWriteAccess } from '../yjsSync/functions/checkYjsAccess'
-import { reconstructYDoc } from '../yjsSync/functions/reconstructYDoc'
 import { createNote as createNoteFn } from './functions/createNote'
 import { updateNote as updateNoteFn } from './functions/updateNote'
-import { yDocToBlocks } from './blocknote'
 import type { Id } from '../_generated/dataModel'
 
 export const updateNote = campaignMutation({
@@ -60,18 +58,7 @@ export const persistNoteBlocks = campaignMutation({
   returns: v.null(),
   handler: async (ctx, { documentId }) => {
     await checkYjsWriteAccess(ctx, documentId)
-
-    const { doc } = await reconstructYDoc(ctx, documentId)
-    try {
-      const blocks = yDocToBlocks(doc, 'document')
-
-      await saveAllBlocksForNote(ctx, {
-        noteId: documentId,
-        content: blocks,
-      })
-    } finally {
-      doc.destroy()
-    }
+    await ensureBlocksPersisted(ctx, { noteId: documentId })
 
     return null
   },

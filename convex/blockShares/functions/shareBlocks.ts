@@ -6,6 +6,7 @@ import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { shareBlockWithMemberHelper } from './blockShareMutations'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
+import { ensureBlocksPersisted } from '../../blocks/functions/ensureBlocksPersisted'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
@@ -30,6 +31,8 @@ export const shareBlocks = async (
     rawItem,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
+
+  await ensureBlocksPersisted(ctx, { noteId })
 
   await asyncMap(blockNoteIds, (blockNoteId) =>
     shareBlockWithMemberHelper(ctx, {

@@ -5,6 +5,7 @@ import {
   createBlock,
   createBlockShare,
   createNote,
+  syncBlocksToYjs,
   testBlockNoteId,
 } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
@@ -28,6 +29,13 @@ describe('share mutations with nested blocks', () => {
       depth: 1,
       parentBlockId: testBlockNoteId('root'),
     })
+    await syncBlocksToYjs(t, noteId, [
+      {
+        id: testBlockNoteId('root'),
+        type: 'paragraph',
+        children: [{ id: testBlockNoteId('child'), type: 'paragraph' }],
+      },
+    ])
 
     await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
       campaignId: ctx.campaignId,
@@ -67,6 +75,19 @@ describe('share mutations with nested blocks', () => {
       depth: 2,
       parentBlockId: testBlockNoteId('depth-1'),
     })
+    await syncBlocksToYjs(t, noteId, [
+      {
+        id: testBlockNoteId('depth-0'),
+        type: 'paragraph',
+        children: [
+          {
+            id: testBlockNoteId('depth-1'),
+            type: 'paragraph',
+            children: [{ id: testBlockNoteId('depth-2'), type: 'paragraph' }],
+          },
+        ],
+      },
+    ])
 
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
@@ -111,6 +132,13 @@ describe('share mutations with nested blocks', () => {
       parentBlockId: testBlockNoteId('some-parent'),
       shareStatus: 'individually_shared',
     })
+    await syncBlocksToYjs(t, noteId, [
+      {
+        id: testBlockNoteId('some-parent'),
+        type: 'paragraph',
+        children: [{ id: testBlockNoteId('nested'), type: 'paragraph' }],
+      },
+    ])
 
     await createBlockShare(t, ctx.dm.profile._id, {
       campaignId: ctx.campaignId,

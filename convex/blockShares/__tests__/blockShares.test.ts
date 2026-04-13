@@ -11,6 +11,7 @@ import {
   createBlockShare,
   createNote,
   createSidebarShare,
+  syncBlocksToYjs,
 } from '../../_test/factories.helper'
 import { expectNotFound, expectPermissionDenied } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
@@ -24,6 +25,7 @@ describe('setBlocksShareStatus', () => {
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id)
+    await syncBlocksToYjs(t, noteId, [{ id: blockNoteId, type: 'paragraph' }])
 
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
@@ -48,6 +50,7 @@ describe('setBlocksShareStatus', () => {
     const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
       shareStatus: 'all_shared',
     })
+    await syncBlocksToYjs(t, noteId, [{ id: blockNoteId, type: 'paragraph' }])
 
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
@@ -70,6 +73,7 @@ describe('setBlocksShareStatus', () => {
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id)
+    await syncBlocksToYjs(t, noteId, [{ id: blockNoteId, type: 'paragraph' }])
 
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
@@ -126,6 +130,7 @@ describe('shareBlocks', () => {
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id)
+    await syncBlocksToYjs(t, noteId, [{ id: blockNoteId, type: 'paragraph' }])
 
     await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
       campaignId: ctx.campaignId,

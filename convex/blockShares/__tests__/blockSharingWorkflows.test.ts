@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, setupMultiPlayerContext } from '../../_test/identities.helper'
-import { createBlock, createNote, createSidebarShare } from '../../_test/factories.helper'
+import {
+  createBlock,
+  createNote,
+  createSidebarShare,
+  syncBlocksToYjs,
+} from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 
 describe('block sharing workflows', () => {
@@ -17,6 +22,10 @@ describe('block sharing workflows', () => {
       const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
       const block1 = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id)
       const block2 = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id)
+      await syncBlocksToYjs(t, note.noteId, [
+        { id: block1.blockNoteId, type: 'paragraph' },
+        { id: block2.blockNoteId, type: 'paragraph' },
+      ])
 
       await createSidebarShare(t, ctx.dm.profile._id, {
         campaignId: ctx.campaignId,
@@ -105,6 +114,7 @@ describe('block sharing workflows', () => {
 
       const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
       const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id)
+      await syncBlocksToYjs(t, note.noteId, [{ id: block.blockNoteId, type: 'paragraph' }])
 
       await createSidebarShare(t, ctx.dm.profile._id, {
         campaignId: ctx.campaignId,
@@ -216,6 +226,7 @@ describe('block sharing workflows', () => {
 
       const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
       const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id)
+      await syncBlocksToYjs(t, note.noteId, [{ id: block.blockNoteId, type: 'paragraph' }])
 
       await createSidebarShare(t, ctx.dm.profile._id, {
         campaignId: ctx.campaignId,
@@ -278,6 +289,7 @@ describe('block sharing workflows', () => {
 
       const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
       const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id)
+      await syncBlocksToYjs(t, note.noteId, [{ id: block.blockNoteId, type: 'paragraph' }])
 
       await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
         campaignId: ctx.campaignId,

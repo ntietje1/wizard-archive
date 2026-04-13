@@ -24,6 +24,7 @@ import type * as blockShares_mutations from "../blockShares/mutations.js";
 import type * as blockShares_queries from "../blockShares/queries.js";
 import type * as blockShares_types from "../blockShares/types.js";
 import type * as blocks_blockSchemas from "../blocks/blockSchemas.js";
+import type * as blocks_functions_ensureBlocksPersisted from "../blocks/functions/ensureBlocksPersisted.js";
 import type * as blocks_functions_extractPlainText from "../blocks/functions/extractPlainText.js";
 import type * as blocks_functions_findBlockByBlockNoteId from "../blocks/functions/findBlockByBlockNoteId.js";
 import type * as blocks_functions_flattenBlocks from "../blocks/functions/flattenBlocks.js";
@@ -239,6 +240,7 @@ declare const fullApi: ApiFromModules<{
   "blockShares/queries": typeof blockShares_queries;
   "blockShares/types": typeof blockShares_types;
   "blocks/blockSchemas": typeof blocks_blockSchemas;
+  "blocks/functions/ensureBlocksPersisted": typeof blocks_functions_ensureBlocksPersisted;
   "blocks/functions/extractPlainText": typeof blocks_functions_extractPlainText;
   "blocks/functions/findBlockByBlockNoteId": typeof blocks_functions_findBlockByBlockNoteId;
   "blocks/functions/flattenBlocks": typeof blocks_functions_flattenBlocks;
