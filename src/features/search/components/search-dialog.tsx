@@ -135,10 +135,14 @@ export function SearchDialog() {
         <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
           <SearchIcon className="size-4 shrink-0 text-muted-foreground" />
           <input
+            role="combobox"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search..."
             aria-label="Search"
+            aria-expanded={true}
+            aria-controls="search-results-list"
+            aria-autocomplete="list"
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             autoFocus
           />
@@ -162,7 +166,11 @@ export function SearchDialog() {
               'flex flex-col min-h-0',
             )}
           >
-            <div className="px-3 py-1.5 text-xs text-muted-foreground font-medium">
+            <div
+              role="status"
+              aria-live="polite"
+              className="px-3 py-1.5 text-xs text-muted-foreground font-medium"
+            >
               {hasQuery
                 ? results.length > 0
                   ? `${results.length} result${results.length === 1 ? '' : 's'}`
@@ -172,7 +180,7 @@ export function SearchDialog() {
                   : ''}
             </div>
             <ScrollArea className="flex-1">
-              <div className="p-1">
+              <div id="search-results-list" role="listbox" aria-label="Search results" className="p-1">
                 {!hasQuery && recentItems.length === 0 && (
                   <div className="px-3 py-8 text-center text-sm text-muted-foreground">
                     Type to search your vault
