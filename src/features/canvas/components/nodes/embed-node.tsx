@@ -4,18 +4,15 @@ import { AlertTriangle } from 'lucide-react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { CanvasContext } from '../../utils/canvas-context'
 import { ResizableNodeWrapper } from './resizable-node-wrapper'
-import { EmbedNoteContent } from './embed-content/embed-note-content'
-import { EmbedFolderContent } from './embed-content/embed-folder-content'
-import { EmbedMapContent } from './embed-content/embed-map-content'
-import { EmbedFileContent } from './embed-content/embed-file-content'
-import { EmbedCanvasContent } from './embed-content/embed-canvas-content'
+import { EmbedNoteContent } from './embed-note-content'
+import { ItemPreviewContent } from '~/features/editor/components/item-preview-content'
 import type { NodeProps } from '@xyflow/react'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
 import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
-import { assertNever } from '~/shared/utils/utils'
+import { cn } from '~/features/shadcn/lib/utils'
 
 export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
   const sidebarItemId = data.sidebarItemId as Id<'sidebarItems'> | undefined
@@ -105,34 +102,29 @@ function EmbedRichContent({
     )
   }
 
-  switch (contentItem.type) {
-    case SIDEBAR_ITEM_TYPES.notes:
-      return (
-        <EmbedNoteContent
-          noteId={contentItem._id}
-          content={contentItem.content}
-          editable={isEditing}
-          selected={selected}
-          scrollTopRef={scrollTopRef}
-          clickCoordsRef={clickCoordsRef}
-        />
-      )
-    case SIDEBAR_ITEM_TYPES.folders:
-      return <EmbedFolderContent folderId={contentItem._id} />
-    case SIDEBAR_ITEM_TYPES.gameMaps:
-      return <EmbedMapContent imageUrl={contentItem.imageUrl} />
-    case SIDEBAR_ITEM_TYPES.files:
-      return (
-        <EmbedFileContent
-          downloadUrl={contentItem.downloadUrl}
-          contentType={contentItem.contentType}
-          alt={contentItem.name}
-        />
-      )
-    case SIDEBAR_ITEM_TYPES.canvases:
-      return <EmbedCanvasContent key={contentItem._id} canvasId={contentItem._id} />
-    default:
-      assertNever(contentItem)
-      return null
+  if (contentItem.type === SIDEBAR_ITEM_TYPES.notes) {
+    return (
+      <EmbedNoteContent
+        noteId={contentItem._id}
+        content={contentItem.content}
+        editable={isEditing}
+        selected={selected}
+        scrollTopRef={scrollTopRef}
+        clickCoordsRef={clickCoordsRef}
+      />
+    )
   }
+
+  const hasScrollableContent = contentItem.type === SIDEBAR_ITEM_TYPES.folders
+
+  return (
+    <div
+      className={cn(
+        'h-full overflow-hidden',
+        hasScrollableContent && selected && 'nowheel',
+      )}
+    >
+      <ItemPreviewContent item={contentItem} />
+    </div>
+  )
 }

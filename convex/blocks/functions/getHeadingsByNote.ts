@@ -6,7 +6,7 @@ import type { BlockNoteId } from '../types'
 export interface HeadingResult {
   blockNoteId: BlockNoteId
   text: string
-  level: 1 | 2 | 3
+  level: 1 | 2 | 3 | 4 | 5 | 6
   normalizedText: string
 }
 
@@ -29,8 +29,7 @@ export async function getHeadingsByNote(
   for (const block of blocks) {
     const text = block.plainText
     if (!text) continue
-    const rawLevel =
-      block.type === 'heading' ? (block.props as Record<string, unknown>).level : undefined
+    const rawLevel = block.props.level
     const level: 1 | 2 | 3 = rawLevel === 1 || rawLevel === 2 || rawLevel === 3 ? rawLevel : 1
     headings.push({
       blockNoteId: block.blockNoteId,

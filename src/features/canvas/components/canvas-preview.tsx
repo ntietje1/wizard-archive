@@ -1,13 +1,13 @@
 import { useEffect, useState, useRef } from 'react'
 import { api } from 'convex/_generated/api'
 import * as Y from 'yjs'
-import { StrokePreview } from '../stroke-node'
-import { TextPreview } from '../text-node'
-import { StickyPreview } from '../sticky-node'
-import { RectanglePreview } from '../rectangle-node'
+import { StrokePreview } from './nodes/stroke-node'
+import { TextPreview } from './nodes/text-node'
+import { StickyPreview } from './nodes/sticky-node'
+import { RectanglePreview } from './nodes/rectangle-node'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Edge, Node } from '@xyflow/react'
-import type { StrokeNodeData } from '../stroke-node'
+import type { StrokeNodeData } from './nodes/stroke-node'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 
@@ -22,12 +22,12 @@ function getNodeDimensions(node: Node): { w: number; h: number } {
   }
 }
 
-export function EmbedCanvasContent({ canvasId }: { canvasId: Id<'sidebarItems'> }) {
+export function CanvasPreview({ canvasId }: { canvasId: Id<'sidebarItems'> }) {
   const { nodes, edges, isLoading, isError } = useReadOnlyYjsCanvas(canvasId)
 
   if (isLoading) {
     return (
-      <div className="nodrag nopan nowheel h-full w-full flex items-center justify-center">
+      <div className="h-full w-full flex items-center justify-center">
         <LoadingSpinner size="sm" />
       </div>
     )
@@ -35,14 +35,14 @@ export function EmbedCanvasContent({ canvasId }: { canvasId: Id<'sidebarItems'> 
 
   if (isError) {
     return (
-      <div className="nodrag nopan nowheel h-full w-full flex items-center justify-center text-muted-foreground text-sm">
+      <div className="h-full w-full flex items-center justify-center text-muted-foreground text-sm">
         Failed to load canvas
       </div>
     )
   }
 
   return (
-    <div className="nodrag nopan nowheel h-full w-full pointer-events-none overflow-hidden bg-background">
+    <div className="h-full w-full pointer-events-none overflow-hidden bg-background">
       <StaticCanvasRenderer nodes={nodes} edges={edges} />
     </div>
   )
@@ -101,6 +101,8 @@ function StaticCanvasRenderer({ nodes, edges }: { nodes: Array<Node>; edges: Arr
         <>
           <svg
             className="absolute pointer-events-none"
+            width="100%"
+            height="100%"
             overflow="visible"
             style={{
               transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale})`,
@@ -255,6 +257,9 @@ function useReadOnlyYjsCanvas(canvasId: Id<'sidebarItems'>) {
   useEffect(() => {
     const nodesMap = doc.getMap<Node>('nodes')
     const edgesMap = doc.getMap<Edge>('edges')
+
+    setNodes(yMapToArray(nodesMap))
+    setEdges(yMapToArray(edgesMap))
 
     const onNodesChange = () => setNodes(yMapToArray(nodesMap))
     const onEdgesChange = () => setEdges(yMapToArray(edgesMap))

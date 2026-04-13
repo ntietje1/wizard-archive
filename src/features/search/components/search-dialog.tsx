@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { SearchIcon, ExternalLinkIcon } from 'lucide-react'
 import { api } from 'convex/_generated/api'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import {
   Dialog,
   DialogContent,
@@ -12,10 +11,11 @@ import {
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { Button } from '~/features/shadcn/components/button'
 import { Separator } from '~/features/shadcn/components/separator'
-import { NoteContent } from '~/features/editor/components/note-content'
+import { ItemPreviewContent } from '~/features/editor/components/item-preview-content'
 import { useSearchStore } from '../stores/search-store'
 import { useFilteredSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
+import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { buildBreadcrumbs } from '~/features/sidebar/utils/sidebar-item-utils'
@@ -23,7 +23,6 @@ import { HighlightedText } from './highlighted-text'
 import { SearchResultItem } from './search-result-item'
 import { mergeSearchResults } from '../utils/merge-search-results'
 import type { SearchResult } from '../utils/merge-search-results'
-import type { Id } from 'convex/_generated/dataModel'
 
 export function SearchDialog() {
   const { isOpen, query, close, setQuery, open } = useSearchStore()
@@ -37,12 +36,16 @@ export function SearchDialog() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
-        open()
+        if (isOpen) {
+          close()
+        } else {
+          open()
+        }
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [open])
+  }, [isOpen, open, close])
 
   useEffect(() => {
     if (!query.trim()) {
@@ -75,12 +78,9 @@ export function SearchDialog() {
   }, [selectedIndex])
 
   const selectedResult: SearchResult | undefined = results[selectedIndex]
-  const selectedNoteId =
-    selectedResult?.item.type === SIDEBAR_ITEM_TYPES.notes ? selectedResult.item._id : null
 
-  const notePreviewQuery = useCampaignQuery(
-    api.notes.queries.getNote,
-    selectedNoteId ? { noteId: selectedNoteId as Id<'sidebarItems'> } : 'skip',
+  const { data: selectedContentItem, isLoading: isPreviewLoading } = useSidebarItemById(
+    selectedResult?.item._id,
   )
 
   const handleSelect = (result: SearchResult) => {
@@ -125,8 +125,8 @@ export function SearchDialog() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search notes..."
-            aria-label="Search notes"
+            placeholder="Search..."
+            aria-label="Search"
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             autoFocus
           />
@@ -196,21 +196,19 @@ export function SearchDialog() {
                     <ExternalLinkIcon className="size-3.5" />
                   </Button>
                 </div>
-                <ScrollArea className="flex-1">
-                  {selectedNoteId && notePreviewQuery.data ? (
-                    <div className="pointer-events-none text-sm">
-                      <NoteContent content={notePreviewQuery.data.content} editable={false} />
+                <div className="flex-1 min-h-0">
+                  {isPreviewLoading ? (
+                    <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+                      Loading preview...
                     </div>
+                  ) : selectedContentItem ? (
+                    <ItemPreviewContent item={selectedContentItem} />
                   ) : (
-                    <div className="px-3 py-8 text-center text-sm text-muted-foreground">
-                      {!selectedNoteId
-                        ? 'Preview not available for this item type'
-                        : notePreviewQuery.isError
-                          ? 'Failed to load preview'
-                          : 'Loading preview...'}
+                    <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+                      Failed to load preview
                     </div>
                   )}
-                </ScrollArea>
+                </div>
               </>
             ) : (
               <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
