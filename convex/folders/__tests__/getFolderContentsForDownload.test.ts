@@ -71,6 +71,48 @@ describe('getFolderContentsForDownload — collectItemsRecursively', () => {
     }
   })
 
+  it('nested blocks preserve parent-child hierarchy in content', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Nested',
+    })
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      parentId: folderId,
+      name: 'Nested Note',
+    })
+    const parent = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+      position: 0,
+      inlineContent: [{ type: 'text', text: 'Parent', styles: {} }],
+      plainText: 'Parent',
+    })
+    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+      position: 0,
+      parentBlockId: parent.blockNoteId,
+      depth: 1,
+      inlineContent: [{ type: 'text', text: 'Child', styles: {} }],
+      plainText: 'Child',
+    })
+
+    const result = await dmAuth.query(api.folders.queries.getFolderContentsForDownload, {
+      campaignId: ctx.campaignId,
+      folderId,
+    })
+
+    expect(result.items.length).toBe(1)
+    const item = result.items[0]
+    expect(item.type).toBe(SIDEBAR_ITEM_TYPES.notes)
+    if (item.type === SIDEBAR_ITEM_TYPES.notes) {
+      expect(item.content.length).toBe(1)
+      const parentBlock = item.content[0]
+      expect(getFirstInlineText(parentBlock)).toBe('Parent')
+      expect(parentBlock.children).toBeDefined()
+      expect(parentBlock.children!.length).toBe(1)
+      expect(getFirstInlineText(parentBlock.children![0] as CustomBlock)).toBe('Child')
+    }
+  })
+
   it('folder with one file returns file with name and path', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
@@ -306,6 +348,64 @@ describe('getFolderContentsForDownload — collectItemsRecursively', () => {
       expect(item.content.length).toBe(2)
       const texts = item.content.map((c) => getFirstInlineText(c))
       expect(texts).toEqual(['First', 'Second'])
+    }
+  })
+
+  it('nested blocks preserve hierarchy in ordered content', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'OrderedNested',
+    })
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      parentId: folderId,
+      name: 'Ordered Nested Note',
+    })
+
+    const parentBlock = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+      position: 0,
+      inlineContent: [{ type: 'text', text: 'Parent', styles: {} }],
+      plainText: 'Parent',
+    })
+    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+      position: 0,
+      parentBlockId: parentBlock.blockNoteId,
+      depth: 1,
+      inlineContent: [{ type: 'text', text: 'Nested child', styles: {} }],
+      plainText: 'Nested child',
+    })
+    const parentBlock2 = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+      position: 1,
+      inlineContent: [{ type: 'text', text: 'Parent 2', styles: {} }],
+      plainText: 'Parent 2',
+    })
+    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+      position: 0,
+      parentBlockId: parentBlock2.blockNoteId,
+      depth: 1,
+      inlineContent: [{ type: 'text', text: 'Nested child 2', styles: {} }],
+      plainText: 'Nested child 2',
+    })
+
+    const result = await dmAuth.query(api.folders.queries.getFolderContentsForDownload, {
+      campaignId: ctx.campaignId,
+      folderId,
+    })
+
+    expect(result.items.length).toBe(1)
+    const item = result.items[0]
+    expect(item.type).toBe(SIDEBAR_ITEM_TYPES.notes)
+    if (item.type === SIDEBAR_ITEM_TYPES.notes) {
+      expect(item.content.length).toBe(2)
+      expect(getFirstInlineText(item.content[0])).toBe('Parent')
+      expect(getFirstInlineText(item.content[1])).toBe('Parent 2')
+      expect(item.content[0].children).toBeDefined()
+      expect(item.content[0].children!.length).toBe(1)
+      expect(getFirstInlineText(item.content[0].children![0] as CustomBlock)).toBe('Nested child')
+      expect(item.content[1].children).toBeDefined()
+      expect(item.content[1].children!.length).toBe(1)
+      expect(getFirstInlineText(item.content[1].children![0] as CustomBlock)).toBe('Nested child 2')
     }
   })
 

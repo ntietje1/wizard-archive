@@ -8,11 +8,15 @@ export interface HeadingEntry {
   normalizedText: string
 }
 
+function isTextNode(item: unknown): item is { type: 'text'; text?: string } {
+  return typeof item === 'object' && item !== null && 'type' in item && item.type === 'text'
+}
+
 function extractText(content: unknown): string {
   if (!Array.isArray(content)) return ''
   return content
-    .filter((c: { type: string }) => c.type === 'text')
-    .map((c: { text?: string }) => c.text ?? '')
+    .filter(isTextNode)
+    .map((c) => c.text ?? '')
     .join('')
 }
 

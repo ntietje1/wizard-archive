@@ -54,8 +54,9 @@ export function useScrollToHeading(
         }
       }
 
+      const escapedId = CSS.escape(target.blockNoteId)
       document
-        .querySelector(`[data-id="${target.blockNoteId}"]`)
+        .querySelector(`[data-id="${escapedId}"]`)
         ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
       void navigate({

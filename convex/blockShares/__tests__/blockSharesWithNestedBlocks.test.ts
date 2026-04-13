@@ -32,7 +32,7 @@ describe('share mutations with nested blocks', () => {
     await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
       campaignId: ctx.campaignId,
       noteId,
-      blocks: [testBlockNoteId('child')],
+      blockNoteIds: [testBlockNoteId('child')],
       campaignMemberId: ctx.player.memberId,
     })
 
@@ -71,7 +71,11 @@ describe('share mutations with nested blocks', () => {
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId,
-      blocks: [testBlockNoteId('depth-0'), testBlockNoteId('depth-1'), testBlockNoteId('depth-2')],
+      blockNoteIds: [
+        testBlockNoteId('depth-0'),
+        testBlockNoteId('depth-1'),
+        testBlockNoteId('depth-2'),
+      ],
       status: 'all_shared',
     })
 
@@ -118,7 +122,7 @@ describe('share mutations with nested blocks', () => {
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId,
-      blocks: [testBlockNoteId('nested')],
+      blockNoteIds: [testBlockNoteId('nested')],
       status: 'not_shared',
     })
 
@@ -127,6 +131,7 @@ describe('share mutations with nested blocks', () => {
       noteId,
       blockNoteId: testBlockNoteId('nested'),
     })
+    expect(result).not.toBeNull()
     expect(result!.shareStatus).toBe('not_shared')
 
     await t.run(async (dbCtx) => {
@@ -194,8 +199,21 @@ describe('share mutations with nested blocks', () => {
     })
 
     await t.run(async (dbCtx) => {
+      const root = await dbCtx.db
+        .query('blocks')
+        .filter((q) =>
+          q.and(
+            q.eq(q.field('noteId'), noteId),
+            q.eq(q.field('blockNoteId'), testBlockNoteId('root')),
+          ),
+        )
+        .first()
+      expect(root).not.toBeNull()
+      expect(root!.deletionTime).toBeNull()
+
       const child = await dbCtx.db.get('blocks', childDbId)
       expect(child).toBeNull()
+
       const share = await dbCtx.db.get('blockShares', shareId)
       expect(share).toBeNull()
     })

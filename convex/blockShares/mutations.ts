@@ -8,14 +8,14 @@ import { unshareBlocks as unshareBlocksFn } from './functions/unshareBlocks'
 export const setBlocksShareStatus = dmMutation({
   args: {
     noteId: v.id('sidebarItems'),
-    blocks: v.array(blockNoteIdValidator),
+    blockNoteIds: v.array(blockNoteIdValidator),
     status: blockShareStatusValidator,
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     return await setBlocksShareStatusFn(ctx, {
       noteId: args.noteId,
-      blocks: args.blocks,
+      blockNoteIds: args.blockNoteIds,
       status: args.status,
     })
   },
@@ -24,14 +24,14 @@ export const setBlocksShareStatus = dmMutation({
 export const shareBlocks = dmMutation({
   args: {
     noteId: v.id('sidebarItems'),
-    blocks: v.array(blockNoteIdValidator),
+    blockNoteIds: v.array(blockNoteIdValidator),
     campaignMemberId: v.id('campaignMembers'),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     return await shareBlocksFn(ctx, {
       noteId: args.noteId,
-      blocks: args.blocks,
+      blockNoteIds: args.blockNoteIds,
       campaignMemberId: args.campaignMemberId,
     })
   },
@@ -40,14 +40,14 @@ export const shareBlocks = dmMutation({
 export const unshareBlocks = dmMutation({
   args: {
     noteId: v.id('sidebarItems'),
-    blocks: v.array(blockNoteIdValidator),
+    blockNoteIds: v.array(blockNoteIdValidator),
     campaignMemberId: v.id('campaignMembers'),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     return await unshareBlocksFn(ctx, {
       noteId: args.noteId,
-      blocks: args.blocks,
+      blockNoteIds: args.blockNoteIds,
       campaignMemberId: args.campaignMemberId,
     })
   },

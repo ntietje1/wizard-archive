@@ -1,38 +1,21 @@
 import { extractPlainText } from './extractPlainText'
 import type { CustomBlock } from '../../notes/editorSpecs'
-import type { BlockNoteId, BlockProps, BlockType, FlatBlockContent, InlineContent } from '../types'
+import type { BlockNoteId, FlatBlockContent } from '../types'
 
-export type FlatBlockInput = {
-  blockNoteId: BlockNoteId
-  parentBlockId: BlockNoteId | null
-  depth: number
-  position: number
-  type: BlockType
-  props: BlockProps
-  inlineContent: InlineContent | null
-  plainText: string | null
+function toFlatBlockContent(block: CustomBlock): FlatBlockContent {
+  return { type: block.type, props: block.props, content: block.content } as FlatBlockContent
 }
 
-export function flattenBlocks(blocks: Array<CustomBlock>): Array<FlatBlockInput> {
-  const result: Array<FlatBlockInput> = []
-
-  function walk(
+export function flattenBlocks(blocks: Array<CustomBlock>) {
+  function makeFlatBlock(
     block: CustomBlock,
     parentBlockId: BlockNoteId | null,
     depth: number,
     position: number,
   ) {
-    const flatContent: FlatBlockContent = {
-      type: block.type,
-      props: block.props,
-      content: block.content,
-    } as FlatBlockContent
-
-    const plainText = extractPlainText(flatContent)
-
+    const plainText = extractPlainText(toFlatBlockContent(block))
     const inlineContent = block.content !== undefined ? block.content : null
-
-    result.push({
+    return {
       blockNoteId: block.id,
       parentBlockId,
       depth,
@@ -41,7 +24,18 @@ export function flattenBlocks(blocks: Array<CustomBlock>): Array<FlatBlockInput>
       props: block.props,
       inlineContent,
       plainText,
-    })
+    }
+  }
+
+  const result: Array<ReturnType<typeof makeFlatBlock>> = []
+
+  function walk(
+    block: CustomBlock,
+    parentBlockId: BlockNoteId | null,
+    depth: number,
+    position: number,
+  ) {
+    result.push(makeFlatBlock(block, parentBlockId, depth, position))
 
     if (block.children) {
       for (let i = 0; i < block.children.length; i++) {

@@ -66,8 +66,6 @@ export default function ShareSideMenuButton() {
     if (!item || isMutating || isPending) return
     if (e.ctrlKey || e.metaKey) return
 
-    if (blocks.length === 0) return
-
     e.preventDefault()
     e.stopPropagation()
     void toggleShareStatus()
@@ -95,7 +93,7 @@ export default function ShareSideMenuButton() {
           render={
             <Components.SideMenu.Button
               label={isMultiBlock ? `Share ${blockCount} blocks` : 'Share'}
-              className={`!p-0 !px-0 !h-6 !w-6 ${buttonColorClass}`}
+              className={`!p-0 !px-0 !h-6 !w-6 ${buttonColorClass} ${isPending || isMutating ? 'opacity-50 cursor-wait' : ''}`}
               icon={<Share2 size={18} />}
             />
           }

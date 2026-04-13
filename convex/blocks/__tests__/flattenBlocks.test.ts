@@ -87,13 +87,13 @@ describe('flattenBlocks', () => {
     const result = flattenBlocks(blocks)
     expect(result).toHaveLength(4)
 
-    const parent = result.find((b) => b.blockNoteId === testBlockNoteId('parent'))!
+    const parent = result.find((b) => b.blockNoteId === testBlockNoteId('parent'))
+    expect(parent).toBeDefined()
     const child1 = result.find((b) => b.blockNoteId === testBlockNoteId('child-1'))!
     const child2 = result.find((b) => b.blockNoteId === testBlockNoteId('child-2'))!
     const grandchild = result.find((b) => b.blockNoteId === testBlockNoteId('grandchild'))!
-
-    expect(parent.parentBlockId).toBeNull()
-    expect(parent.depth).toBe(0)
+    expect(parent!.parentBlockId).toBeNull()
+    expect(parent!.depth).toBe(0)
     expect(child1.parentBlockId).toBe(testBlockNoteId('parent'))
     expect(child1.depth).toBe(1)
     expect(child1.position).toBe(0)

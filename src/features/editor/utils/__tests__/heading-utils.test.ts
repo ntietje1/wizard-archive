@@ -10,7 +10,7 @@ import {
 function heading(
   id: string,
   text: string,
-  level: number,
+  level: 1 | 2 | 3 | 4 | 5 | 6,
   children: Array<CustomBlock> = [],
 ): CustomBlock {
   return {

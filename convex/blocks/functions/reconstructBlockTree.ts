@@ -52,5 +52,41 @@ export function reconstructBlockTree(flatBlocks: Array<Block>): Array<CustomBloc
     })
   }
 
-  return buildChildren(null, new Set())
+  const visited = new Set<BlockNoteId>()
+  const result = buildChildren(null, visited)
+
+  const unreached = flatBlocks.filter((b) => !visited.has(b.blockNoteId))
+  if (unreached.length > 0) {
+    const parentMap = new Map(flatBlocks.map((b) => [b.blockNoteId, b.parentBlockId]))
+    const cyclic: Array<BlockNoteId> = []
+    const orphaned: Array<BlockNoteId> = []
+    for (const block of unreached) {
+      const seen = new Set<BlockNoteId>()
+      let current: BlockNoteId | null = block.blockNoteId
+      let isCyclic = false
+      while (current !== null) {
+        if (visited.has(current)) break
+        if (seen.has(current)) {
+          isCyclic = true
+          break
+        }
+        seen.add(current)
+        current = parentMap.get(current) ?? null
+      }
+      if (isCyclic) cyclic.push(block.blockNoteId)
+      else orphaned.push(block.blockNoteId)
+    }
+    if (cyclic.length > 0) {
+      console.warn(
+        `[reconstructBlockTree] ${cyclic.length} block(s) in unreachable cycles: ${cyclic.join(', ')}`,
+      )
+    }
+    if (orphaned.length > 0) {
+      console.warn(
+        `[reconstructBlockTree] ${orphaned.length} unreachable orphaned block(s): ${orphaned.join(', ')}`,
+      )
+    }
+  }
+
+  return result
 }

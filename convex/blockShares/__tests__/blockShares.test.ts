@@ -28,7 +28,7 @@ describe('setBlocksShareStatus', () => {
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId,
-      blocks: [blockNoteId],
+      blockNoteIds: [blockNoteId],
       status: 'all_shared',
     })
 
@@ -52,7 +52,7 @@ describe('setBlocksShareStatus', () => {
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId,
-      blocks: [blockNoteId],
+      blockNoteIds: [blockNoteId],
       status: 'not_shared',
     })
 
@@ -74,7 +74,7 @@ describe('setBlocksShareStatus', () => {
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId,
-      blocks: [blockNoteId],
+      blockNoteIds: [blockNoteId],
       status: 'individually_shared',
     })
 
@@ -96,7 +96,7 @@ describe('setBlocksShareStatus', () => {
       dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
         campaignId: ctx.campaignId,
         noteId,
-        blocks: ['nonexistent-block'],
+        blockNoteIds: ['nonexistent-block'],
         status: 'all_shared',
       }),
     )
@@ -111,7 +111,7 @@ describe('setBlocksShareStatus', () => {
       playerAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
         campaignId: ctx.campaignId,
         noteId,
-        blocks: ['block-1'],
+        blockNoteIds: ['block-1'],
         status: 'all_shared',
       }),
     )
@@ -130,7 +130,7 @@ describe('shareBlocks', () => {
     await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
       campaignId: ctx.campaignId,
       noteId,
-      blocks: [blockNoteId],
+      blockNoteIds: [blockNoteId],
       campaignMemberId: ctx.player.memberId,
     })
 
@@ -154,7 +154,7 @@ describe('shareBlocks', () => {
       dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
         campaignId: ctx.campaignId,
         noteId,
-        blocks: ['nonexistent-block'],
+        blockNoteIds: ['nonexistent-block'],
         campaignMemberId: ctx.player.memberId,
       }),
     )
@@ -169,7 +169,7 @@ describe('shareBlocks', () => {
       playerAuth.mutation(api.blockShares.mutations.shareBlocks, {
         campaignId: ctx.campaignId,
         noteId,
-        blocks: ['block-1'],
+        blockNoteIds: ['block-1'],
         campaignMemberId: ctx.player.memberId,
       }),
     )
@@ -201,7 +201,7 @@ describe('unshareBlocks', () => {
     await dmAuth.mutation(api.blockShares.mutations.unshareBlocks, {
       campaignId: ctx.campaignId,
       noteId,
-      blocks: [blockNoteId],
+      blockNoteIds: [blockNoteId],
       campaignMemberId: ctx.player.memberId,
     })
 
@@ -235,7 +235,7 @@ describe('unshareBlocks', () => {
     await dmAuth.mutation(api.blockShares.mutations.unshareBlocks, {
       campaignId: ctx.campaignId,
       noteId,
-      blocks: [blockNoteId],
+      blockNoteIds: [blockNoteId],
       campaignMemberId: ctx.player.memberId,
     })
 
@@ -252,13 +252,22 @@ describe('unshareBlocks', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id)
 
     await dmAuth.mutation(api.blockShares.mutations.unshareBlocks, {
       campaignId: ctx.campaignId,
       noteId,
-      blocks: ['nonexistent-block'],
+      blockNoteIds: ['nonexistent-block'],
       campaignMemberId: ctx.player.memberId,
     })
+
+    const result = await dmAuth.query(api.blocks.queries.getBlockWithShares, {
+      campaignId: ctx.campaignId,
+      noteId,
+      blockNoteId,
+    })
+    expect(result).not.toBeNull()
+    expect(result!.shareStatus).toBe('not_shared')
   })
 
   it('requires DM role', async () => {
@@ -270,7 +279,7 @@ describe('unshareBlocks', () => {
       playerAuth.mutation(api.blockShares.mutations.unshareBlocks, {
         campaignId: ctx.campaignId,
         noteId,
-        blocks: ['block-1'],
+        blockNoteIds: ['block-1'],
         campaignMemberId: ctx.player.memberId,
       }),
     )

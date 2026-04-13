@@ -15,11 +15,11 @@ export const shareBlocks = async (
   ctx: CampaignMutationCtx,
   {
     noteId,
-    blocks,
+    blockNoteIds,
     campaignMemberId,
   }: {
     noteId: Id<'sidebarItems'>
-    blocks: Array<BlockNoteId>
+    blockNoteIds: Array<BlockNoteId>
     campaignMemberId: Id<'campaignMembers'>
   },
 ): Promise<null> => {
@@ -31,7 +31,7 @@ export const shareBlocks = async (
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 
-  await asyncMap(blocks, (blockNoteId) =>
+  await asyncMap(blockNoteIds, (blockNoteId) =>
     shareBlockWithMemberHelper(ctx, {
       note,
       blockNoteId,
@@ -46,7 +46,7 @@ export const shareBlocks = async (
     metadata: {
       status: 'shared',
       campaignMemberId,
-      blockCount: blocks.length,
+      blockCount: blockNoteIds.length,
     },
   })
 

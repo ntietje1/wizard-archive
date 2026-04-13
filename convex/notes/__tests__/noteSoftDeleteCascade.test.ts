@@ -113,6 +113,24 @@ describe('note soft-delete cascade to blocks and blockShares', () => {
       location: 'trash',
     })
 
+    await t.run(async (dbCtx) => {
+      const blocks = await dbCtx.db
+        .query('blocks')
+        .filter((q) => q.eq(q.field('noteId'), noteId))
+        .collect()
+      expect(blocks).toHaveLength(3)
+      for (const block of blocks) {
+        expect(block.deletionTime).toBeTypeOf('number')
+      }
+
+      const shares = await dbCtx.db
+        .query('blockShares')
+        .filter((q) => q.eq(q.field('noteId'), noteId))
+        .collect()
+      expect(shares).toHaveLength(1)
+      expect(shares[0].deletionTime).toBeTypeOf('number')
+    })
+
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
       campaignId: ctx.campaignId,
       itemId: noteId,
@@ -183,7 +201,7 @@ describe('note soft-delete cascade to blocks and blockShares', () => {
         .filter((q) => q.eq(q.field('noteId'), noteId))
         .collect()
 
-      const nonDeleted = blocks.filter((b) => b.deletionTime == null)
+      const nonDeleted = blocks.filter((b) => b.deletionTime === null)
       expect(nonDeleted).toHaveLength(0)
 
       const blockB = blocks.find((b) => b.blockNoteId === testBlockNoteId('block-b'))

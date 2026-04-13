@@ -25,7 +25,18 @@ export async function saveAllBlocksForNote(
 
   const existingBlocksMap = new Map(existingBlocks.map((block) => [block.blockNoteId, block]))
 
-  const flatBlocks = flattenBlocks(content)
+  const rawFlatBlocks = flattenBlocks(content)
+  const deduped = new Map<string, (typeof rawFlatBlocks)[number]>()
+  for (const flat of rawFlatBlocks) {
+    if (deduped.has(flat.blockNoteId)) {
+      console.warn(
+        `[saveAllBlocksForNote] Duplicate blockNoteId "${flat.blockNoteId}" in note ${noteId}, keeping first occurrence`,
+      )
+    } else {
+      deduped.set(flat.blockNoteId, flat)
+    }
+  }
+  const flatBlocks = [...deduped.values()]
   const incomingBlockIds = new Set(flatBlocks.map((b) => b.blockNoteId))
 
   await asyncMap(flatBlocks, async (flat) => {

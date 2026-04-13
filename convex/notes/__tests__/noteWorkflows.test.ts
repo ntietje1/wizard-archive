@@ -47,13 +47,13 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
-      blocks: [block.blockNoteId],
+      blockNoteIds: [block.blockNoteId],
       status: 'individually_shared',
     })
     await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
-      blocks: [block.blockNoteId],
+      blockNoteIds: [block.blockNoteId],
       campaignMemberId: p1.memberId,
     })
 
@@ -72,7 +72,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
-      blocks: [block.blockNoteId],
+      blockNoteIds: [block.blockNoteId],
       campaignMemberId: p2.memberId,
     })
 
@@ -103,7 +103,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
-      blocks: [block.blockNoteId],
+      blockNoteIds: [block.blockNoteId],
       status: 'all_shared',
     })
 
@@ -116,7 +116,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
-      blocks: [block.blockNoteId],
+      blockNoteIds: [block.blockNoteId],
       status: 'not_shared',
     })
 
@@ -171,7 +171,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId,
-      blocks: [block.blockNoteId],
+      blockNoteIds: [block.blockNoteId],
       status: 'all_shared',
     })
 
@@ -249,7 +249,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
-      blocks: [block.blockNoteId],
+      blockNoteIds: [block.blockNoteId],
       status: 'all_shared',
     })
     expect(await getVisibility()).toBe(true)
@@ -257,7 +257,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
-      blocks: [block.blockNoteId],
+      blockNoteIds: [block.blockNoteId],
       status: 'individually_shared',
     })
     expect(await getVisibility()).toBe(false)
@@ -265,7 +265,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
-      blocks: [block.blockNoteId],
+      blockNoteIds: [block.blockNoteId],
       campaignMemberId: ctx.player.memberId,
     })
     expect(await getVisibility()).toBe(true)
@@ -273,7 +273,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
-      blocks: [block.blockNoteId],
+      blockNoteIds: [block.blockNoteId],
       status: 'not_shared',
     })
     expect(await getVisibility()).toBe(false)
@@ -315,7 +315,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
-      blocks: [testBlockNoteId('root'), testBlockNoteId('shared-child')],
+      blockNoteIds: [testBlockNoteId('root'), testBlockNoteId('shared-child')],
       status: 'all_shared',
     })
 

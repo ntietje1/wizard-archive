@@ -109,7 +109,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
 
       await setBlocksShareStatus.mutateAsync({
         noteId: item._id,
-        blocks: blocksToUpdate.map((b) => b.id),
+        blockNoteIds: blocksToUpdate.map((b) => b.id),
         status: newStatus,
       })
     } catch (error) {
@@ -123,7 +123,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
       if (getShareState(memberId) === 'all') {
         await unshareBlocks.mutateAsync({
           noteId: item._id,
-          blocks: blocks.map((b) => b.id),
+          blockNoteIds: blocks.map((b) => b.id),
           campaignMemberId: memberId,
         })
       } else {
@@ -140,7 +140,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
 
         await shareBlocks.mutateAsync({
           noteId: item._id,
-          blocks: blocksToShare.map((b) => b.id),
+          blockNoteIds: blocksToShare.map((b) => b.id),
           campaignMemberId: memberId,
         })
       }

@@ -15,11 +15,11 @@ export const unshareBlocks = async (
   ctx: CampaignMutationCtx,
   {
     noteId,
-    blocks,
+    blockNoteIds,
     campaignMemberId,
   }: {
     noteId: Id<'sidebarItems'>
-    blocks: Array<BlockNoteId>
+    blockNoteIds: Array<BlockNoteId>
     campaignMemberId: Id<'campaignMembers'>
   },
 ): Promise<null> => {
@@ -31,7 +31,7 @@ export const unshareBlocks = async (
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 
-  await asyncMap(blocks, (blockNoteId) =>
+  await asyncMap(blockNoteIds, (blockNoteId) =>
     unshareBlockFromMemberHelper(ctx, {
       note,
       blockNoteId,
@@ -46,7 +46,7 @@ export const unshareBlocks = async (
     metadata: {
       status: 'unshared',
       campaignMemberId,
-      blockCount: blocks.length,
+      blockCount: blockNoteIds.length,
     },
   })
 

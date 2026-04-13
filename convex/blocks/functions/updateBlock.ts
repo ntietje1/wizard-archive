@@ -21,7 +21,10 @@ export async function updateBlock(
   const { blockDbId, ...fields } = params
   const updates: Partial<WithoutSystemFields<Doc<'blocks'>>> = {}
   if (fields.parentBlockId !== undefined) updates.parentBlockId = fields.parentBlockId
-  if (fields.depth !== undefined) updates.depth = fields.depth
+  if (fields.depth !== undefined) {
+    if (fields.depth < 0) throw new Error('depth must be non-negative')
+    updates.depth = fields.depth
+  }
   if (fields.position !== undefined) updates.position = fields.position
   if (fields.type !== undefined) updates.type = fields.type
   if (fields.props !== undefined) updates.props = fields.props

@@ -10,6 +10,7 @@ import type { PermissionLevel } from '../permissions/types'
 import type { ShareStatus } from '../blockShares/types'
 import type { BlockNoteId, BlockProps, BlockType, InlineContent } from '../blocks/types'
 import type { CustomBlock } from '../notes/editorSpecs'
+import { createHash } from 'crypto'
 
 type T = TestConvex<typeof schema>
 
@@ -34,8 +35,8 @@ function nextId() {
 }
 
 export function testBlockNoteId(label: string): string {
-  const hex = Buffer.from(label.padEnd(12, '\0')).toString('hex').slice(0, 24)
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32).padEnd(12, '0')}`
+  const hex = createHash('sha256').update(label).digest('hex')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`
 }
 
 const commonFields = (creatorId: Id<'userProfiles'>) => ({
@@ -390,6 +391,9 @@ export async function createBlock(
     ...commonFields(creatorProfileId),
   }
   const data = { ...defaults, ...overrides }
+  if (data.parentBlockId !== null && overrides?.depth === undefined) {
+    throw new Error('createBlock: depth must be explicitly provided when parentBlockId is set')
+  }
   const blockDbId = await t.run(async (ctx) => {
     return await ctx.db.insert('blocks', data)
   })

@@ -186,7 +186,7 @@ export async function unshareBlockFromMemberHelper(
     .filter((q) => q.eq(q.field('deletionTime'), null))
     .first()
 
-  if (!remainingShares) {
+  if (!remainingShares && block.shareStatus !== SHARE_STATUS.ALL_SHARED) {
     await updateBlock(ctx, {
       blockDbId: block._id,
       shareStatus: SHARE_STATUS.NOT_SHARED,

@@ -76,6 +76,7 @@ const toggleListItemPropsSchema = z.strictObject({ ...defaultProps })
 const quotePropsSchema = z.strictObject({
   textColor: z.string().optional(),
   backgroundColor: z.string().optional(),
+  textAlignment: textAlignmentSchema,
 })
 
 const codeBlockPropsSchema = z.strictObject({
@@ -195,12 +196,14 @@ type BlockNoteBlock = {
 }
 
 export const blockNoteBlockSchema: z.ZodType<BlockNoteBlock> = z.lazy(() => {
-  const [first, second, ...rest] = flatBlockContentSchema.options.map((opt) =>
+  const options = flatBlockContentSchema.options.map((opt) =>
     opt.extend({ id: blockNoteIdSchema, children: z.array(blockNoteBlockSchema).optional() }),
   )
-  return z.discriminatedUnion('type', [
-    first!,
-    second!,
-    ...rest,
-  ]) as unknown as z.ZodType<BlockNoteBlock>
+  if (options.length < 2) {
+    throw new Error(`blockNoteBlockSchema requires at least 2 block types, got ${options.length}`)
+  }
+  return z.discriminatedUnion(
+    'type',
+    options as [(typeof options)[0], (typeof options)[1], ...typeof options],
+  ) as z.ZodType<BlockNoteBlock>
 })

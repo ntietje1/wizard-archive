@@ -16,15 +16,15 @@ export const setBlocksShareStatus = async (
   ctx: CampaignMutationCtx,
   {
     noteId,
-    blocks,
+    blockNoteIds,
     status,
   }: {
     noteId: Id<'sidebarItems'>
-    blocks: Array<BlockNoteId>
+    blockNoteIds: Array<BlockNoteId>
     status: ShareStatus
   },
 ): Promise<null> => {
-  if (blocks.length === 0) {
+  if (blockNoteIds.length === 0) {
     return null
   }
 
@@ -36,7 +36,7 @@ export const setBlocksShareStatus = async (
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 
-  await asyncMap(blocks, (blockNoteId) =>
+  await asyncMap(blockNoteIds, (blockNoteId) =>
     setBlockShareStatusHelper(ctx, {
       note,
       blockNoteId,

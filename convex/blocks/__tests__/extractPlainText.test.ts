@@ -118,6 +118,42 @@ describe('extractPlainText', () => {
     expect(extractPlainText(block)).toBe('A quote')
   })
 
+  it('extracts text from numberedListItem block', () => {
+    const block: FlatBlockContent = {
+      type: 'numberedListItem',
+      props: {},
+      content: [{ type: 'text', text: 'Numbered item', styles: {} }],
+    }
+    expect(extractPlainText(block)).toBe('Numbered item')
+  })
+
+  it('extracts text from codeBlock block', () => {
+    const block: FlatBlockContent = {
+      type: 'codeBlock',
+      props: {},
+      content: [{ type: 'text', text: 'const x = 1', styles: {} }],
+    }
+    expect(extractPlainText(block)).toBe('const x = 1')
+  })
+
+  it('extracts text from checkListItem block', () => {
+    const block: FlatBlockContent = {
+      type: 'checkListItem',
+      props: {},
+      content: [{ type: 'text', text: 'Todo item', styles: {} }],
+    }
+    expect(extractPlainText(block)).toBe('Todo item')
+  })
+
+  it('returns empty string for text node with empty string', () => {
+    const block: FlatBlockContent = {
+      type: 'paragraph',
+      props: {},
+      content: [{ type: 'text', text: '', styles: {} }],
+    }
+    expect(extractPlainText(block)).toBe('')
+  })
+
   it('returns null for empty heading content', () => {
     const block: FlatBlockContent = {
       type: 'heading',
@@ -127,18 +163,13 @@ describe('extractPlainText', () => {
     expect(extractPlainText(block)).toBeNull()
   })
 
-  it('space-separates mixed inline content types', () => {
+  it('space-separates text with mixed styles', () => {
     const block: FlatBlockContent = {
       type: 'paragraph',
       props: {},
       content: [
         { type: 'text', text: 'Hello', styles: {} },
-        {
-          type: 'link',
-          href: 'https://example.com',
-          content: [{ type: 'text', text: 'link', styles: {} }],
-          text: 'link',
-        } as any,
+        { type: 'text', text: 'link', styles: { underline: true } },
         { type: 'text', text: 'end', styles: { bold: true } },
       ],
     }

@@ -20,8 +20,20 @@ export const blockNoteIdValidator = zodToConvex(blockNoteIdSchema)
 
 export const blockShareStatusValidator = literals('all_shared', 'not_shared', 'individually_shared')
 
-// Cast so API args/returns using customBlockValidator infer as CustomBlock.
-// The runtime validator validates strictly via the underlying Zod schema.
+// Compile-time check: blockNoteBlockSchema output shares the structural keys with CustomBlock.
+// Full mutual assignability isn't possible because CustomBlock carries BlockNote-specific
+// generic parameters, but the runtime validator (zodToConvex) validates strictly via Zod.
+type _BlockSchemaOutput = z.infer<typeof blockNoteBlockSchema>
+type _AssertKeysPresent = _BlockSchemaOutput extends {
+  id: string
+  type: string
+  props: Record<string, unknown>
+  children?: Array<unknown>
+}
+  ? true
+  : never
+const _keyCheck: _AssertKeysPresent = true as _AssertKeysPresent
+
 export const customBlockValidator = zodToConvex(blockNoteBlockSchema) as unknown as Validator<
   CustomBlock,
   'required'

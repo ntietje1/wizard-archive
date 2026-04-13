@@ -6,9 +6,14 @@ describe('flat block type coverage', () => {
   const editorBlockTypes = Object.keys(customBlockSpecs)
 
   it('accepts every block type from the editor schema', () => {
+    const minimalProps: Record<string, Record<string, unknown>> = {
+      heading: { level: 1 },
+    }
     for (const blockType of editorBlockTypes) {
-      const block: Record<string, unknown> = { type: blockType, props: {} }
-      if (blockType === 'heading') block.props = { level: 1 }
+      const block: Record<string, unknown> = {
+        type: blockType,
+        props: minimalProps[blockType] ?? {},
+      }
       const result = flatBlockContentSchema.safeParse(block)
       expect(result.success, `Validator should accept block type "${blockType}"`).toBe(true)
     }

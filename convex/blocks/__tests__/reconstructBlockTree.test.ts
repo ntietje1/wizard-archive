@@ -201,25 +201,22 @@ describe('reconstructBlockTree', () => {
     const blocks = [
       makeFlatBlock({ blockNoteId: testBlockNoteId('root'), parentBlockId: null, position: 0 }),
       makeFlatBlock({
-        blockNoteId: testBlockNoteId('a'),
-        parentBlockId: testBlockNoteId('root'),
+        blockNoteId: testBlockNoteId('ca'),
+        parentBlockId: testBlockNoteId('cb'),
         depth: 1,
         position: 0,
       }),
       makeFlatBlock({
-        blockNoteId: testBlockNoteId('a'),
-        parentBlockId: testBlockNoteId('a'),
-        depth: 2,
+        blockNoteId: testBlockNoteId('cb'),
+        parentBlockId: testBlockNoteId('ca'),
+        depth: 1,
         position: 0,
       }),
     ]
     const result = reconstructBlockTree(blocks)
     expect(result).toHaveLength(1)
     expect(result[0].id).toBe(testBlockNoteId('root'))
-    expect(result[0].children).toHaveLength(1)
-    expect(result[0].children![0].id).toBe(testBlockNoteId('a'))
-    expect(result[0].children![0].children).toBeUndefined()
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Cycle detected'))
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('unreachable cycles'))
   })
 
   it('handles mixed null and numbered positions among siblings', () => {

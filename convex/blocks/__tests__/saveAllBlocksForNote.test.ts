@@ -69,7 +69,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       expect(blocks).toHaveLength(1)
       const block = blocks[0]
       expect(block._id).toBe(originalBlock._id)
-      expect(block.updatedTime).not.toBeNull()
+      expect(block.updatedTime).not.toBe(originalBlock.updatedTime)
     })
   })
 

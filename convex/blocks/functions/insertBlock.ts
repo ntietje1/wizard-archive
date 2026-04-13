@@ -21,6 +21,10 @@ export async function insertBlock(
   },
 ): Promise<Id<'blocks'>> {
   if (params.depth < 0) throwClientError(ERROR_CODE.VALIDATION_FAILED, 'depth must be non-negative')
+  if (params.parentBlockId === null && params.depth !== 0)
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'depth must be 0 when parentBlockId is null')
+  if (params.parentBlockId !== null && params.depth === 0)
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'depth must be > 0 when parentBlockId is set')
 
   return await ctx.db.insert('blocks', {
     noteId: params.noteId,

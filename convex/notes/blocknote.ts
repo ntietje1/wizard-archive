@@ -13,7 +13,11 @@ export function blocksToYDoc(blocks: Array<CustomPartialBlock>, fragment: string
   try {
     return bnBlocksToYDoc(editor, blocks, fragment)
   } finally {
-    editor._tiptapEditor.destroy()
+    try {
+      editor._tiptapEditor.destroy()
+    } catch (e) {
+      console.error('[blocksToYDoc] Failed to destroy tiptap editor:', e)
+    }
   }
 }
 
@@ -22,6 +26,10 @@ export function yDocToBlocks(doc: Y.Doc, fragment: string): Array<CustomBlock> {
   try {
     return bnYDocToBlocks(editor, doc, fragment)
   } finally {
-    editor._tiptapEditor.destroy()
+    try {
+      editor._tiptapEditor.destroy()
+    } catch (e) {
+      console.error('[yDocToBlocks] Failed to destroy tiptap editor:', e)
+    }
   }
 }
