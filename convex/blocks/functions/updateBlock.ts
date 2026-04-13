@@ -14,7 +14,7 @@ export async function updateBlock(
     type?: BlockType
     props?: BlockProps
     inlineContent?: InlineContent | null
-    plainText?: string | null
+    plainText?: string
     shareStatus?: ShareStatus
   },
 ): Promise<void> {

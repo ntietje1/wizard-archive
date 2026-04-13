@@ -19,8 +19,8 @@ export function EmbedNoteContent({
   content: Array<CustomBlock>
   editable: boolean
   selected: boolean
-  scrollTopRef: React.MutableRefObject<number>
-  clickCoordsRef: React.MutableRefObject<{ x: number; y: number } | null>
+  scrollTopRef: React.RefObject<number>
+  clickCoordsRef: React.RefObject<{ x: number; y: number } | null>
 }) {
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)

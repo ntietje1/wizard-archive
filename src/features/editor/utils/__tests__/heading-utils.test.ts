@@ -10,7 +10,7 @@ import {
 function heading(
   id: string,
   text: string,
-  level: 1 | 2 | 3 | 4 | 5 | 6,
+  level: number,
   children: Array<CustomBlock> = [],
 ): CustomBlock {
   return {
@@ -63,7 +63,7 @@ describe('extractHeadingsFromContent', () => {
   })
 
   it('defaults to level 1 for invalid levels', () => {
-    const content: Array<CustomBlock> = [heading('b1', 'Bad Level', 5)]
+    const content: Array<CustomBlock> = [heading('b1', 'Bad Level', 7)]
     const headings = extractHeadingsFromContent(content)
     expect(headings[0].level).toBe(1)
   })

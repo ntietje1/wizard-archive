@@ -1,21 +1,20 @@
 import { useContext, useRef } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, ExternalLinkIcon } from 'lucide-react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { CanvasContext } from '../../utils/canvas-context'
 import { ResizableNodeWrapper } from './resizable-node-wrapper'
-import { EmbedNoteContent } from './embed-content/embed-note-content'
-import { EmbedFolderContent } from './embed-content/embed-folder-content'
-import { EmbedMapContent } from './embed-content/embed-map-content'
-import { EmbedFileContent } from './embed-content/embed-file-content'
-import { EmbedCanvasContent } from './embed-content/embed-canvas-content'
+import { EmbedNoteContent } from './embed-note-content'
+import { ItemPreviewContent } from '~/features/editor/components/item-preview-content'
 import type { NodeProps } from '@xyflow/react'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
 import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
-import { assertNever } from '~/shared/utils/utils'
+import { Button } from '~/features/shadcn/components/button'
+import { cn } from '~/features/shadcn/lib/utils'
 
 export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
   const sidebarItemId = data.sidebarItemId as Id<'sidebarItems'> | undefined
@@ -36,6 +35,8 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
       setEditingEmbedId(id)
     }
   }
+
+  const { navigateToItem } = useEditorNavigation()
 
   const Icon = getSidebarItemIcon(item)
   const label = item?.name ?? 'Missing item'
@@ -64,6 +65,27 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
           <div className="min-w-0 flex-1">
             <p className="text-sm truncate select-none">{label}</p>
           </div>
+          {item && (
+            <div
+              className={cn(
+                'shrink-0 overflow-hidden',
+                selected ? 'w-auto opacity-100' : 'w-0 opacity-0',
+              )}
+            >
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  void navigateToItem(item.slug)
+                }}
+                aria-label="Open item"
+                tabIndex={selected ? 0 : -1}
+              >
+                <ExternalLinkIcon className="size-3.5" />
+              </Button>
+            </div>
+          )}
         </div>
 
         {!isMissing && (
@@ -105,34 +127,24 @@ function EmbedRichContent({
     )
   }
 
-  switch (contentItem.type) {
-    case SIDEBAR_ITEM_TYPES.notes:
-      return (
-        <EmbedNoteContent
-          noteId={contentItem._id}
-          content={contentItem.content}
-          editable={isEditing}
-          selected={selected}
-          scrollTopRef={scrollTopRef}
-          clickCoordsRef={clickCoordsRef}
-        />
-      )
-    case SIDEBAR_ITEM_TYPES.folders:
-      return <EmbedFolderContent folderId={contentItem._id} />
-    case SIDEBAR_ITEM_TYPES.gameMaps:
-      return <EmbedMapContent imageUrl={contentItem.imageUrl} />
-    case SIDEBAR_ITEM_TYPES.files:
-      return (
-        <EmbedFileContent
-          downloadUrl={contentItem.downloadUrl}
-          contentType={contentItem.contentType}
-          alt={contentItem.name}
-        />
-      )
-    case SIDEBAR_ITEM_TYPES.canvases:
-      return <EmbedCanvasContent key={contentItem._id} canvasId={contentItem._id} />
-    default:
-      assertNever(contentItem)
-      return null
+  if (contentItem.type === SIDEBAR_ITEM_TYPES.notes) {
+    return (
+      <EmbedNoteContent
+        noteId={contentItem._id}
+        content={contentItem.content}
+        editable={isEditing}
+        selected={selected}
+        scrollTopRef={scrollTopRef}
+        clickCoordsRef={clickCoordsRef}
+      />
+    )
   }
+
+  const hasScrollableContent = contentItem.type === SIDEBAR_ITEM_TYPES.folders
+
+  return (
+    <div className={cn('h-full overflow-hidden', hasScrollableContent && selected && 'nowheel')}>
+      <ItemPreviewContent item={contentItem} />
+    </div>
+  )
 }

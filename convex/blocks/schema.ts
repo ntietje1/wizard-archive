@@ -55,7 +55,7 @@ const blockTableFields = {
   type: zodToConvex(blockTypeSchema),
   props: zodToConvex(blockPropsSchema),
   inlineContent: zodToConvex(blockInlineContentSchema),
-  plainText: v.nullable(v.string()),
+  plainText: v.string(),
   campaignId: v.id('campaigns'),
   shareStatus: v.nullable(blockShareStatusValidator),
   ...commonTableFields,
@@ -66,7 +66,11 @@ export const blocksTables = {
     ...blockTableFields,
   })
     .index('by_campaign_note', ['campaignId', 'noteId'])
-    .index('by_campaign_note_block', ['campaignId', 'noteId', 'blockNoteId']),
+    .index('by_campaign_note_block', ['campaignId', 'noteId', 'blockNoteId'])
+    .searchIndex('search_plainText', {
+      searchField: 'plainText',
+      filterFields: ['campaignId', 'noteId', 'type', 'deletionTime'],
+    }),
 }
 
 const blockValidatorFields = {

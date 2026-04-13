@@ -504,7 +504,7 @@ describe('flatten ↔ reconstruct symmetry', () => {
           _creationTime: 0,
           noteId: 'sidebarItems:n' as Id<'sidebarItems'>,
           campaignId: 'campaigns:c' as Id<'campaigns'>,
-          plainText: null,
+          plainText: '',
           shareStatus: 'not_shared',
           deletionTime: null,
           deletedBy: null,

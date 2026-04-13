@@ -16,7 +16,7 @@ function makeFlatBlock(overrides: Partial<Block> & { blockNoteId: string }): Blo
     type: 'paragraph',
     props: {},
     inlineContent: null,
-    plainText: null,
+    plainText: '',
     shareStatus: 'not_shared',
     deletionTime: null,
     deletedBy: null,

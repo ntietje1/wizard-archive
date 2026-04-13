@@ -6,26 +6,27 @@ import { UserMenu } from '~/features/auth/components/user-menu'
 import { usePanelPreference } from '~/features/settings/hooks/use-panel-preference'
 import { BookmarksFilterButton } from '~/features/sidebar/components/sidebar-toolbar/bookmarks-filter-button'
 import { CloseAllFoldersButton } from '~/features/sidebar/components/sidebar-toolbar/close-all-folders'
-import { NewFolderButton } from '~/features/sidebar/components/sidebar-toolbar/new-folder'
-import { NewNoteButton } from '~/features/sidebar/components/sidebar-toolbar/new-note'
 import { SortMenu } from '~/features/sidebar/components/sidebar-toolbar/sort-menu'
 import {
   LEFT_SIDEBAR_DEFAULTS,
   LEFT_SIDEBAR_PANEL_ID,
 } from '~/features/sidebar/components/sidebar-toolbar/constants'
+import { SearchButton } from './search-button'
+import { NewNoteButton } from './new-note'
 
 export function SidebarWrapper({ children }: { children: React.ReactNode }) {
   const { visible } = usePanelPreference(LEFT_SIDEBAR_PANEL_ID, LEFT_SIDEBAR_DEFAULTS)
 
   return (
     <div className="h-full flex flex-col bg-background">
-      <div className="shrink-0 flex items-center py-0.5 pl-0.5 space-x-0.25">
+      <div className="shrink-0 flex items-center py-0.5 px-0.5 space-x-0.25">
         <CollapseToggle />
         <NewNoteButton />
-        <NewFolderButton />
         <CloseAllFoldersButton />
         <SortMenu />
         <BookmarksFilterButton />
+        <div className="flex-1" />
+        <SearchButton />
       </div>
       <div className="flex-1 flex min-h-0">
         <div className="shrink-0 flex flex-col items-center px-0.5 space-y-1">

@@ -370,7 +370,7 @@ export async function createBlock(
     type: BlockType
     props: BlockProps
     inlineContent: InlineContent | null
-    plainText: string | null
+    plainText: string
     shareStatus: ShareStatus | null
     deletionTime: number | null
     deletedBy: Id<'userProfiles'> | null
@@ -387,7 +387,7 @@ export async function createBlock(
     type: 'paragraph' as const,
     props: {},
     inlineContent: null,
-    plainText: null,
+    plainText: '',
     campaignId,
     shareStatus,
     ...commonFields(creatorProfileId),
@@ -564,7 +564,7 @@ export async function syncBlocksToYjs(
   await t.run(async (ctx) => {
     const latest = await ctx.db
       .query('yjsUpdates')
-      .withIndex('by_document_seq', (q: any) => q.eq('documentId', noteId))
+      .withIndex('by_document_seq', (q) => q.eq('documentId', noteId))
       .order('desc')
       .first()
     const seq = (latest?.seq ?? -1) + 1
