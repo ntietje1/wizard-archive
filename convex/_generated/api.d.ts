@@ -31,9 +31,11 @@ import type * as blocks_functions_flattenBlocks from "../blocks/functions/flatte
 import type * as blocks_functions_getAllBlocksByNote from "../blocks/functions/getAllBlocksByNote.js";
 import type * as blocks_functions_getBlockWithShares from "../blocks/functions/getBlockWithShares.js";
 import type * as blocks_functions_getBlocksWithShares from "../blocks/functions/getBlocksWithShares.js";
+import type * as blocks_functions_getHeadingsByNote from "../blocks/functions/getHeadingsByNote.js";
 import type * as blocks_functions_insertBlock from "../blocks/functions/insertBlock.js";
 import type * as blocks_functions_reconstructBlockTree from "../blocks/functions/reconstructBlockTree.js";
 import type * as blocks_functions_saveAllBlocksForNote from "../blocks/functions/saveAllBlocksForNote.js";
+import type * as blocks_functions_searchBlocks from "../blocks/functions/searchBlocks.js";
 import type * as blocks_functions_updateBlock from "../blocks/functions/updateBlock.js";
 import type * as blocks_queries from "../blocks/queries.js";
 import type * as blocks_types from "../blocks/types.js";
@@ -247,9 +249,11 @@ declare const fullApi: ApiFromModules<{
   "blocks/functions/getAllBlocksByNote": typeof blocks_functions_getAllBlocksByNote;
   "blocks/functions/getBlockWithShares": typeof blocks_functions_getBlockWithShares;
   "blocks/functions/getBlocksWithShares": typeof blocks_functions_getBlocksWithShares;
+  "blocks/functions/getHeadingsByNote": typeof blocks_functions_getHeadingsByNote;
   "blocks/functions/insertBlock": typeof blocks_functions_insertBlock;
   "blocks/functions/reconstructBlockTree": typeof blocks_functions_reconstructBlockTree;
   "blocks/functions/saveAllBlocksForNote": typeof blocks_functions_saveAllBlocksForNote;
+  "blocks/functions/searchBlocks": typeof blocks_functions_searchBlocks;
   "blocks/functions/updateBlock": typeof blocks_functions_updateBlock;
   "blocks/queries": typeof blocks_queries;
   "blocks/types": typeof blocks_types;

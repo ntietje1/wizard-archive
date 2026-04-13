@@ -66,7 +66,11 @@ export const blocksTables = {
     ...blockTableFields,
   })
     .index('by_campaign_note', ['campaignId', 'noteId'])
-    .index('by_campaign_note_block', ['campaignId', 'noteId', 'blockNoteId']),
+    .index('by_campaign_note_block', ['campaignId', 'noteId', 'blockNoteId'])
+    .searchIndex('search_plainText', {
+      searchField: 'plainText',
+      filterFields: ['campaignId', 'noteId', 'type', 'deletionTime'],
+    }),
 }
 
 const blockValidatorFields = {

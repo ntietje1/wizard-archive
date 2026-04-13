@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { getWikiLinkContext } from './wiki-link-utils'
@@ -7,17 +8,17 @@ import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { HeadingEntry } from '~/features/editor/utils/heading-utils'
 import type { Id } from 'convex/_generated/dataModel'
 import { buildBreadcrumbs, getItemTypeLabel } from '~/features/sidebar/utils/sidebar-item-utils'
-import { extractHeadingsFromContent } from '~/features/editor/utils/heading-utils'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
+import { SearchResultItem } from '~/features/search/components/search-result-item'
+import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import {
   getItemPath,
   getMinDisambiguationPath,
   resolveItemByPath,
 } from '~/features/editor/hooks/useWikiLinkExtension'
 import { filterSuggestionItems } from '~/features/editor/utils/filter-suggestion-items'
-import './wiki-link-autocomplete.css'
 
 type AutocompleteMode = 'file' | 'heading' | 'display-name'
 
@@ -27,7 +28,6 @@ interface FileItem {
   subtext: string
   badge: string
   item: AnySidebarItem
-  /** The minimum path needed to uniquely identify this item (used for insertion) */
   linkPath: Array<string>
 }
 interface HeadingItem {
@@ -40,11 +40,8 @@ interface HeadingItem {
 
 interface AutocompleteContext {
   mode: AutocompleteMode
-  /** The current search query (last segment after final /) */
   fileQuery: string
-  /** Completed folder path segments (folders typed with / after them) */
   completedFolderPath: Array<string>
-  /** The resolved parent folder for the completed path, if any */
   resolvedParentFolder: AnySidebarItem | null
   headingQuery: string
   completedHeadingPath: Array<string>
@@ -70,7 +67,6 @@ function getAutocompleteContext(
 
   const hashIdx = query.indexOf('#')
   if (hashIdx === -1) {
-    // File mode - split by / to get folder path and current query
     const segments = query.split('/')
     const currentQuery = segments.at(-1) || ''
     const completedFolderPath = segments
@@ -78,7 +74,6 @@ function getAutocompleteContext(
       .map((s) => s.trim())
       .filter(Boolean)
 
-    // Resolve the parent folder if we have a completed path
     const resolvedParentFolder =
       completedFolderPath.length > 0
         ? (resolveItemByPath(completedFolderPath, allItems, itemsMap) ?? null)
@@ -101,12 +96,9 @@ function getAutocompleteContext(
     .map((s) => s.trim())
     .filter(Boolean)
 
-  // Resolve the item using path-based lookup
   const item = resolveItemByPath(filePathSegments, allItems, itemsMap)
 
-  // Only notes support heading links
   if (!item || item.type !== SIDEBAR_ITEM_TYPES.notes) {
-    // Fall back to file mode
     const segments = query.split('/')
     const currentQuery = segments.at(-1) || ''
     const completedFolderPath = segments
@@ -141,7 +133,6 @@ function getAutocompleteContext(
   }
 }
 
-/** Get child headings under a parent level, stopping at same-or-higher level */
 function getChildHeadings(
   headings: Array<HeadingEntry>,
   parentLevel: number,
@@ -155,7 +146,6 @@ function getChildHeadings(
   return children
 }
 
-/** Build heading items with paths for the autocomplete menu */
 function buildHeadingItems(
   headings: Array<HeadingEntry>,
   completedPath: Array<string>,
@@ -164,7 +154,6 @@ function buildHeadingItems(
   let remaining = headings
   let parentLevel = 0
 
-  // Walk through completed path segments
   for (const segment of completedPath) {
     const normalized = segment.toLowerCase().trim().replace(/\s+/g, ' ')
     if (!normalized) continue
@@ -174,13 +163,11 @@ function buildHeadingItems(
     remaining = getChildHeadings(remaining, parentLevel, idx + 1)
   }
 
-  // Build items with full paths
   const items: Array<HeadingItem> = []
   const parentAt = new Map<number, string>()
 
   for (const h of remaining) {
     parentAt.set(h.level, h.text)
-    // Clear deeper levels
     for (const [lvl] of parentAt) if (lvl > h.level) parentAt.delete(lvl)
 
     const fullPath = [...parentAt.entries()].sort(([a], [b]) => a - b).map(([, text]) => text)
@@ -194,7 +181,6 @@ function buildHeadingItems(
     })
   }
 
-  // Filter by query
   if (query) {
     const q = query.toLowerCase()
     return items.filter((i) => i.title.toLowerCase().includes(q))
@@ -217,39 +203,35 @@ export function WikiLinkAutocomplete({ editor }: { editor: CustomBlockNoteEditor
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const hasEditedRef = useRef(false)
+  const selectedItemRef = useRef<HTMLDivElement>(null)
 
   const context = menu.show ? getAutocompleteContext(menu.query, sidebarItems, itemsMap) : null
 
-  const noteQuery = useCampaignQuery(
-    api.notes.queries.getNote,
+  const headingsQuery = useCampaignQuery(
+    api.blocks.queries.getHeadingsByNote,
     context?.mode === 'heading' && context.resolvedItem?._id
-      ? { noteId: context.resolvedItem._id as Id<'sidebarItems'> }
+      ? { noteId: context.resolvedItem._id }
       : 'skip',
   )
 
-  const headings = noteQuery.data ? extractHeadingsFromContent(noteQuery.data.content) : []
+  const headings = headingsQuery.data ?? []
 
-  // Build filtered items
   const fileResult = ((): {
     items: Array<FileItem>
     totalCount: number
   } => {
     if (!sidebarItems || !itemsMap || context?.mode !== 'file') return { items: [], totalCount: 0 }
 
-    // Filter items by parent folder if we have a completed folder path
     let itemsToShow = sidebarItems
     if (context.completedFolderPath.length > 0) {
       if (context.resolvedParentFolder) {
-        // Show direct children of the resolved parent folder
         itemsToShow = sidebarItems.filter(
           (item) => item.parentId === context.resolvedParentFolder?._id,
         )
       } else {
-        // No valid parent folder found, filter by path prefix match
         const normalizedPath = context.completedFolderPath.map((s) => s.toLowerCase())
         itemsToShow = sidebarItems.filter((item) => {
           const itemPath = getItemPath(item, itemsMap).map((s) => s.toLowerCase())
-          // Item path must start with the completed folder path
           if (itemPath.length <= normalizedPath.length) return false
           return normalizedPath.every((segment, i) => itemPath[i] === segment)
         })
@@ -262,7 +244,6 @@ export function WikiLinkAutocomplete({ editor }: { editor: CustomBlockNoteEditor
       subtext: buildBreadcrumbs(item, itemsMap),
       badge: getItemTypeLabel(item.type),
       item,
-      // Calculate the minimum path needed to uniquely identify this item
       linkPath: getMinDisambiguationPath(item, sidebarItems, itemsMap),
     }))
     const filtered = context.fileQuery ? filterSuggestionItems(all, context.fileQuery) : all
@@ -284,7 +265,6 @@ export function WikiLinkAutocomplete({ editor }: { editor: CustomBlockNoteEditor
   const totalCount = context?.mode === 'heading' ? headingResult.totalCount : fileResult.totalCount
   const truncatedCount = totalCount - items.length
 
-  // Reset selection on mode/path change
   const completedHeadingPath = context?.completedHeadingPath?.join('#')
   const completedFolderPath = context?.completedFolderPath?.join('/')
   const prevResetKeyRef = useRef({
@@ -305,7 +285,10 @@ export function WikiLinkAutocomplete({ editor }: { editor: CustomBlockNoteEditor
     setSelectedIndex(0)
   }
 
-  // Track dragging to hide menu during text selection
+  useEffect(() => {
+    selectedItemRef.current?.scrollIntoView({ block: 'nearest' })
+  }, [selectedIndex])
+
   useEffect(() => {
     const editorEl = editor?.domElement
     if (!editorEl) return
@@ -322,7 +305,6 @@ export function WikiLinkAutocomplete({ editor }: { editor: CustomBlockNoteEditor
     }
   }, [editor])
 
-  // Listen to editor changes
   useEffect(() => {
     const tiptap = editor?._tiptapEditor
     if (!tiptap) return
@@ -429,7 +411,6 @@ export function WikiLinkAutocomplete({ editor }: { editor: CustomBlockNoteEditor
     [editor],
   )
 
-  // Keyboard navigation
   useEffect(() => {
     const editorEl = editor?.domElement
     if (!editorEl || !menu.show) return
@@ -454,10 +435,8 @@ export function WikiLinkAutocomplete({ editor }: { editor: CustomBlockNoteEditor
           if (context?.mode === 'file' && fileItems[selectedIndex]) {
             const selectedItem = fileItems[selectedIndex]
             if (selectedItem.item.type === SIDEBAR_ITEM_TYPES.notes) {
-              // Notes: continue to heading selection with #
               continueLink(selectedItem, context)
             } else if (selectedItem.item.type === SIDEBAR_ITEM_TYPES.folders) {
-              // Folders: continue folder path with /
               continueFolderPath(selectedItem, context)
             } else {
               insertLink(selectedItem, context)
@@ -493,11 +472,10 @@ export function WikiLinkAutocomplete({ editor }: { editor: CustomBlockNoteEditor
   if (!editor || !menu.show || !menu.pos || context?.mode === 'display-name') return null
 
   const isHeading = context?.mode === 'heading'
-  const loading = isHeading && noteQuery.isPending
+  const loading = isHeading && headingsQuery.isPending
 
-  return (
+  return createPortal(
     <div
-      className="wiki-link-menu-container"
       style={{
         position: 'fixed',
         left: menu.pos.left,
@@ -505,84 +483,72 @@ export function WikiLinkAutocomplete({ editor }: { editor: CustomBlockNoteEditor
         zIndex: 2000,
       }}
     >
-      <div className="wiki-link-menu">
+      <div className="w-[340px] max-w-[90vw] max-h-80 flex flex-col bg-popover text-popover-foreground rounded-lg shadow-md border border-border text-[13px] overflow-hidden">
         {isHeading && context?.resolvedItem && (
-          <div className="wiki-link-menu-header">
-            Headings in "{context.resolvedItem.name}"
+          <div className="px-2 py-1.5 text-[11px] font-medium text-muted-foreground border-b border-border/50 truncate">
+            Headings in &ldquo;{context.resolvedItem.name}&rdquo;
             {context.completedHeadingPath.length > 0 && (
-              <span className="wiki-link-menu-path">
+              <span className="text-muted-foreground/70">
                 {' '}
                 &gt; {context.completedHeadingPath.join(' > ')}
               </span>
             )}
           </div>
         )}
-        <ScrollArea className="wiki-link-menu-scroll-area">
+        <ScrollArea className="flex-1 max-h-[calc(320px-32px)]">
           {loading ? (
-            <div className="wiki-link-menu-empty">Loading headings...</div>
+            <div className="px-3 py-3 text-center text-xs text-muted-foreground">
+              Loading headings...
+            </div>
           ) : items.length === 0 ? (
-            <div className="wiki-link-menu-empty">
+            <div className="px-3 py-3 text-center text-xs text-muted-foreground">
               {isHeading ? 'No headings found' : 'No matches found'}
             </div>
           ) : isHeading ? (
-            <div className="wiki-link-menu-items" role="listbox">
+            <div className="p-0.5" role="listbox">
               {headingItems.map((item, i) => (
                 <div
                   key={item.key}
+                  ref={i === selectedIndex ? selectedItemRef : undefined}
                   role="option"
                   aria-selected={i === selectedIndex}
                   onClick={() => insertLink(item, context)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      insertLink(item, context)
-                    }
-                  }}
                   onMouseEnter={() => setSelectedIndex(i)}
-                  className={`wiki-link-menu-item ${i === selectedIndex ? 'selected' : ''}`}
+                  className={`flex items-center justify-between gap-2 px-2 py-1 rounded-sm cursor-default select-none ${
+                    i === selectedIndex ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'
+                  }`}
                 >
-                  <div className="wiki-link-menu-item-title-row">
-                    <span
-                      className="wiki-link-menu-item-title"
-                      style={{ paddingLeft: `${(item.level - 1) * 12}px` }}
-                    >
-                      {'#'.repeat(item.level)} {item.title}
-                    </span>
-                    <span className="wiki-link-menu-badge">H{item.level}</span>
-                  </div>
+                  <span
+                    className="font-medium truncate"
+                    style={{ paddingLeft: `${(item.level - 1) * 12}px` }}
+                  >
+                    {'#'.repeat(item.level)} {item.title}
+                  </span>
+                  <span className="shrink-0 h-4 px-1.5 text-[10px] font-medium rounded-sm bg-muted text-muted-foreground border border-border inline-flex items-center">
+                    H{item.level}
+                  </span>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="wiki-link-menu-items" role="listbox">
+            <div className="p-0.5" role="listbox">
               {fileItems.map((item, i) => (
-                <div
-                  key={item.key}
-                  role="option"
-                  aria-selected={i === selectedIndex}
-                  onClick={() => insertLink(item, context)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      insertLink(item, context)
-                    }
-                  }}
-                  onMouseEnter={() => setSelectedIndex(i)}
-                  className={`wiki-link-menu-item ${i === selectedIndex ? 'selected' : ''}`}
-                >
-                  <div className="wiki-link-menu-item-title-row">
-                    <span className="wiki-link-menu-item-title">{item.title}</span>
-                    <span className="wiki-link-menu-badge">{item.badge}</span>
-                  </div>
-                  {item.subtext && (
-                    <div className="wiki-link-menu-item-subtext">{item.subtext}</div>
-                  )}
+                <div key={item.key} ref={i === selectedIndex ? selectedItemRef : undefined}>
+                  <SearchResultItem
+                    icon={getSidebarItemIcon(item.item)}
+                    title={item.title}
+                    subtitle={item.subtext || undefined}
+                    badge={item.badge}
+                    isSelected={i === selectedIndex}
+                    onClick={() => insertLink(item, context)}
+                    onMouseEnter={() => setSelectedIndex(i)}
+                  />
                 </div>
               ))}
             </div>
           )}
         </ScrollArea>
-        <div className="wiki-link-menu-footer">
+        <div className="flex items-center justify-evenly gap-3 px-2 py-1 text-[10px] text-muted-foreground border-t border-border/50">
           {truncatedCount > 0 && <span>+{truncatedCount} more</span>}
           <span>↑↓ navigate</span>
           <span>↵ select</span>
@@ -590,6 +556,7 @@ export function WikiLinkAutocomplete({ editor }: { editor: CustomBlockNoteEditor
           <span>esc close</span>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

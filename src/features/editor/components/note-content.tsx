@@ -210,9 +210,11 @@ function CollaborativeEditorInner({
   if (!editor) return null
 
   return (
-    <NoteView editor={editor} editable={true}>
+    <>
+      <NoteView editor={editor} editable={true}>
+        {children}
+      </NoteView>
       <WikiLinkAutocomplete editor={editor} />
-      {children}
-    </NoteView>
+    </>
   )
 }
