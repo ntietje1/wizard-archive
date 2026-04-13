@@ -23,7 +23,8 @@ export function FilePreview({
   if (!downloadUrl) {
     return (
       <div className="h-full flex items-center justify-center text-muted-foreground">
-        <File className="h-6 w-6" />
+        <File className="h-6 w-6" aria-hidden />
+        <span className="sr-only">File preview unavailable</span>
       </div>
     )
   }
@@ -56,7 +57,8 @@ export function FilePreview({
 
   return (
     <div className="h-full flex items-center justify-center text-muted-foreground">
-      <Icon className="h-6 w-6" />
+      <Icon className="h-6 w-6" aria-hidden />
+      <span className="sr-only">File preview unavailable</span>
     </div>
   )
 }
@@ -86,6 +88,7 @@ function ImageWithLoader({
         alt={alt}
         className={`h-full w-full object-contain transition-opacity ${isLoading ? 'opacity-0' : 'opacity-100'}`}
         draggable={false}
+        referrerPolicy="no-referrer"
         onLoad={onLoad}
         onError={onError}
       />

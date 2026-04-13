@@ -5,12 +5,12 @@ import type { FlatBlockContent } from '../types'
 describe('extractPlainText', () => {
   it('returns null for blocks with no content', () => {
     const block: FlatBlockContent = { type: 'divider', props: {} }
-    expect(extractPlainText(block)).toBeNull()
+    expect(extractPlainText(block)).toBe('')
   })
 
   it('returns null for blocks with empty content array', () => {
     const block: FlatBlockContent = { type: 'paragraph', props: {}, content: [] }
-    expect(extractPlainText(block)).toBeNull()
+    expect(extractPlainText(block)).toBe('')
   })
 
   it('space-separates text from inline content', () => {
@@ -88,7 +88,7 @@ describe('extractPlainText', () => {
         rows: [],
       },
     }
-    expect(extractPlainText(block)).toBeNull()
+    expect(extractPlainText(block)).toBe('')
   })
 
   it('extracts text from heading block', () => {
@@ -160,7 +160,7 @@ describe('extractPlainText', () => {
       props: { level: 2 },
       content: [],
     }
-    expect(extractPlainText(block)).toBeNull()
+    expect(extractPlainText(block)).toBe('')
   })
 
   it('space-separates text with mixed styles', () => {

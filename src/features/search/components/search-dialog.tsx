@@ -120,10 +120,6 @@ export function SearchDialog() {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogHeader className="sr-only">
-        <DialogTitle>Search</DialogTitle>
-        <DialogDescription>Search your vault</DialogDescription>
-      </DialogHeader>
       <DialogContent
         className={cn(
           showPreview ? 'sm:max-w-4xl!' : 'sm:max-w-xl!',
@@ -132,6 +128,10 @@ export function SearchDialog() {
         showCloseButton={false}
         onKeyDown={handleKeyDown}
       >
+        <DialogHeader className="sr-only">
+          <DialogTitle>Search</DialogTitle>
+          <DialogDescription>Search your vault</DialogDescription>
+        </DialogHeader>
         <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
           <SearchIcon className="size-4 shrink-0 text-muted-foreground" />
           <input

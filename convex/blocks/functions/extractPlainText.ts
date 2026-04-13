@@ -1,16 +1,16 @@
 import type { FlatBlockContent } from '../types'
 
-function collectTexts(items: Array<{ text?: string }>): string | null {
+function collectTexts(items: Array<{ text?: string }>): string {
   const texts: Array<string> = []
   for (const item of items) {
     if (item.text !== undefined) texts.push(item.text)
   }
-  return texts.length > 0 ? texts.join(' ') : null
+  return texts.join(' ')
 }
 
-export function extractPlainText(block: FlatBlockContent): string | null {
+export function extractPlainText(block: FlatBlockContent): string {
   const content = block.content
-  if (!content) return null
+  if (!content) return ''
 
   if ('type' in content && content.type === 'tableContent') {
     const items: Array<{ text?: string }> = []
@@ -28,5 +28,5 @@ export function extractPlainText(block: FlatBlockContent): string | null {
     return collectTexts(content)
   }
 
-  return null
+  return ''
 }

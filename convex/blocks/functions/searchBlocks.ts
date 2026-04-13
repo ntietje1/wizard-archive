@@ -25,7 +25,7 @@ export async function searchBlocks(
   return results.map((block) => ({
     blockNoteId: block.blockNoteId,
     noteId: block.noteId,
-    plainText: block.plainText ?? '',
+    plainText: block.plainText,
     type: block.type as BlockType,
   }))
 }

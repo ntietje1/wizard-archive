@@ -370,7 +370,7 @@ export async function createBlock(
     type: BlockType
     props: BlockProps
     inlineContent: InlineContent | null
-    plainText: string | null
+    plainText: string
     shareStatus: ShareStatus | null
     deletionTime: number | null
     deletedBy: Id<'userProfiles'> | null
@@ -387,7 +387,7 @@ export async function createBlock(
     type: 'paragraph' as const,
     props: {},
     inlineContent: null,
-    plainText: null,
+    plainText: '',
     campaignId,
     shareStatus,
     ...commonFields(creatorProfileId),

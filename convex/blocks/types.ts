@@ -37,7 +37,7 @@ export type Block = CommonValidatorFields<'blocks'> & {
   type: BlockType
   props: BlockProps
   inlineContent: InlineContent | null
-  plainText: string | null
+  plainText: string
   campaignId: Id<'campaigns'>
   shareStatus: ShareStatus | null
 }

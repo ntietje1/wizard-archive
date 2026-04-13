@@ -16,7 +16,7 @@ export async function insertBlock(
     type: BlockType
     props: BlockProps
     inlineContent: InlineContent | null
-    plainText: string | null
+    plainText: string
     shareStatus: ShareStatus
   },
 ): Promise<Id<'blocks'>> {

@@ -55,7 +55,7 @@ const blockTableFields = {
   type: zodToConvex(blockTypeSchema),
   props: zodToConvex(blockPropsSchema),
   inlineContent: zodToConvex(blockInlineContentSchema),
-  plainText: v.nullable(v.string()),
+  plainText: v.string(),
   campaignId: v.id('campaigns'),
   shareStatus: v.nullable(blockShareStatusValidator),
   ...commonTableFields,

@@ -69,8 +69,18 @@ export function useRecentItems(): Array<SearchResult> {
     slugToItem.set(item.slug, item)
   }
 
+  const validEntries = Array.isArray(entries)
+    ? entries.filter(
+        (e): e is RecentEntry =>
+          typeof e === 'object' &&
+          e !== null &&
+          typeof e.slug === 'string' &&
+          typeof e.timestamp === 'number',
+      )
+    : []
+
   const results: Array<SearchResult> = []
-  for (const entry of entries) {
+  for (const entry of validEntries) {
     const item = slugToItem.get(entry.slug)
     if (item) {
       results.push({
