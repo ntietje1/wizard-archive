@@ -536,6 +536,7 @@ export function WikiLinkAutocomplete({ editor }: { editor: CustomBlockNoteEditor
               {fileItems.map((item, i) => (
                 <div key={item.key} ref={i === selectedIndex ? selectedItemRef : undefined}>
                   <SearchResultItem
+                    id={item.key}
                     icon={getSidebarItemIcon(item.item)}
                     title={item.title}
                     subtitle={item.subtext || undefined}

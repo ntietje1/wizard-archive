@@ -70,7 +70,5 @@ describe('useSearchStore', () => {
     const persisted = partialize(full)
 
     expect(persisted).toEqual({ showPreview: false })
-    expect(persisted).not.toHaveProperty('isOpen')
-    expect(persisted).not.toHaveProperty('query')
   })
 })

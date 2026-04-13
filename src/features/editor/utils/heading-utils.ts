@@ -33,7 +33,9 @@ export function extractHeadingsFromContent(content: Array<CustomBlock>): Array<H
       if (text) {
         const rawLevel = (block.props as { level?: number })?.level
         const level =
-          rawLevel && rawLevel >= 1 && rawLevel <= 6 ? (rawLevel as 1 | 2 | 3 | 4 | 5 | 6) : 1
+          rawLevel && Number.isInteger(rawLevel) && rawLevel >= 1 && rawLevel <= 6
+            ? (rawLevel as 1 | 2 | 3 | 4 | 5 | 6)
+            : 1
         headings.push({
           blockNoteId: block.id,
           text,

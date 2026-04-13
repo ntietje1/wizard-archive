@@ -16,18 +16,21 @@ function storageKey(campaignId: string) {
   return `recent-items-${campaignId}`
 }
 
+function isRecentEntry(e: unknown): e is RecentEntry {
+  return (
+    typeof e === 'object' &&
+    e !== null &&
+    typeof (e as RecentEntry).slug === 'string' &&
+    typeof (e as RecentEntry).timestamp === 'number'
+  )
+}
+
 function parseEntries(raw: string | null, key: string): Array<RecentEntry> {
   if (!raw) return []
   try {
     const parsed: unknown = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
-    return parsed.filter(
-      (e): e is RecentEntry =>
-        typeof e === 'object' &&
-        e !== null &&
-        typeof e.slug === 'string' &&
-        typeof e.timestamp === 'number',
-    )
+    return parsed.filter(isRecentEntry)
   } catch (error) {
     logger.debug('Failed to parse recent items for key', key, error)
     return []
@@ -69,15 +72,7 @@ export function useRecentItems(): Array<SearchResult> {
     slugToItem.set(item.slug, item)
   }
 
-  const validEntries = Array.isArray(entries)
-    ? entries.filter(
-        (e): e is RecentEntry =>
-          typeof e === 'object' &&
-          e !== null &&
-          typeof e.slug === 'string' &&
-          typeof e.timestamp === 'number',
-      )
-    : []
+  const validEntries = Array.isArray(entries) ? entries.filter(isRecentEntry) : []
 
   const results: Array<SearchResult> = []
   for (const entry of validEntries) {

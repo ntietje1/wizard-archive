@@ -3,12 +3,12 @@ import { extractPlainText } from '../functions/extractPlainText'
 import type { FlatBlockContent } from '../types'
 
 describe('extractPlainText', () => {
-  it('returns null for blocks with no content', () => {
+  it('returns empty string for blocks with no content', () => {
     const block: FlatBlockContent = { type: 'divider', props: {} }
     expect(extractPlainText(block)).toBe('')
   })
 
-  it('returns null for blocks with empty content array', () => {
+  it('returns empty string for blocks with empty content array', () => {
     const block: FlatBlockContent = { type: 'paragraph', props: {}, content: [] }
     expect(extractPlainText(block)).toBe('')
   })
@@ -78,7 +78,7 @@ describe('extractPlainText', () => {
     expect(extractPlainText(block)).toBe('Only')
   })
 
-  it('returns null for table with no text', () => {
+  it('returns empty string for table with no text', () => {
     const block: FlatBlockContent = {
       type: 'table',
       props: {},
@@ -154,7 +154,7 @@ describe('extractPlainText', () => {
     expect(extractPlainText(block)).toBe('')
   })
 
-  it('returns null for empty heading content', () => {
+  it('returns empty string for empty heading content', () => {
     const block: FlatBlockContent = {
       type: 'heading',
       props: { level: 2 },

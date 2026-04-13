@@ -142,6 +142,9 @@ export function SearchDialog() {
             aria-label="Search"
             aria-expanded={true}
             aria-controls="search-results-list"
+            aria-activedescendant={
+              displayItems.length > 0 ? `search-result-${selectedIndex}` : undefined
+            }
             aria-autocomplete="list"
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             autoFocus
@@ -180,7 +183,12 @@ export function SearchDialog() {
                   : ''}
             </div>
             <ScrollArea className="flex-1">
-              <div id="search-results-list" role="listbox" aria-label="Search results" className="p-1">
+              <div
+                id="search-results-list"
+                role="listbox"
+                aria-label="Search results"
+                className="p-1"
+              >
                 {!hasQuery && recentItems.length === 0 && (
                   <div className="px-3 py-8 text-center text-sm text-muted-foreground">
                     Type to search your vault
@@ -197,6 +205,7 @@ export function SearchDialog() {
                     ref={index === selectedIndex ? selectedItemRef : undefined}
                   >
                     <SearchResultItem
+                      id={`search-result-${index}`}
                       icon={getSidebarItemIcon(result.item)}
                       title={
                         hasQuery && result.matchType === 'title' ? (

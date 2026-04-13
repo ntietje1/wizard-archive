@@ -122,7 +122,7 @@ describe('addRecentItem', () => {
   })
 
   it('does not throw when localStorage.setItem throws', () => {
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    setItemSpy.mockImplementation(() => {
       throw new Error('QuotaExceededError')
     })
 

@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react'
 
 interface SearchResultItemProps {
+  id: string
   icon: LucideIcon
   title: React.ReactNode
   subtitle?: string
@@ -12,6 +13,7 @@ interface SearchResultItemProps {
 }
 
 export function SearchResultItem({
+  id,
   icon: Icon,
   title,
   subtitle,
@@ -23,6 +25,7 @@ export function SearchResultItem({
 }: SearchResultItemProps) {
   return (
     <div
+      id={id}
       role="option"
       aria-selected={isSelected}
       className={`flex items-start gap-2 rounded-lg px-2 py-1.5 cursor-default select-none ${

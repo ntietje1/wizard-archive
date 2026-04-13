@@ -564,7 +564,7 @@ export async function syncBlocksToYjs(
   await t.run(async (ctx) => {
     const latest = await ctx.db
       .query('yjsUpdates')
-      .withIndex('by_document_seq', (q: any) => q.eq('documentId', noteId))
+      .withIndex('by_document_seq', (q) => q.eq('documentId', noteId))
       .order('desc')
       .first()
     const seq = (latest?.seq ?? -1) + 1

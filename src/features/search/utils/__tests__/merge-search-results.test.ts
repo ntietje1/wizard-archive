@@ -94,6 +94,7 @@ describe('mergeSearchResults', () => {
     expect(results[0].matchType).toBe('body')
     expect(results[0].matchText).toBe('some body text')
     expect(results[1].matchType).toBe('body')
+    expect(results[1].matchText).toBe('other body text')
   })
 
   it('handles undefined bodyResults', () => {
@@ -185,7 +186,7 @@ describe('mergeSearchResults', () => {
     expect(results[1].matchType).toBe('body')
   })
 
-  it('handles body result with empty plainText', () => {
+  it('includes body result with empty plainText when query does not match', () => {
     const note = mockItem('1', 'Note')
     const map = buildItemsMap([note])
 

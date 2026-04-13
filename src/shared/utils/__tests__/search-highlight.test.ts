@@ -78,4 +78,12 @@ describe('getHighlightRanges', () => {
   it('merges repeated single-character matches into contiguous range', () => {
     expect(getHighlightRanges('aaa', 'a')).toEqual([{ start: 0, end: 3 }])
   })
+
+  it('treats special regex characters as literals', () => {
+    expect(getHighlightRanges('test.case', '.')).toEqual([{ start: 4, end: 5 }])
+  })
+
+  it('handles unicode characters', () => {
+    expect(getHighlightRanges('café latte', 'é')).toEqual([{ start: 3, end: 4 }])
+  })
 })

@@ -49,7 +49,7 @@ export async function typeSearch(page: Page, text: string) {
 }
 
 export async function waitForResults(page: Page) {
-  await page.waitForTimeout(500)
+  await expect(getStatusText(page)).toBeAttached({ timeout: 5000 })
 }
 
 export async function expectResultCount(page: Page, count: number) {
@@ -67,7 +67,7 @@ export async function expectResultWithText(
   text: string,
   timeout = 10000,
 ): Promise<Locator> {
-  const item = getResultItems(page).filter({ hasText: text })
-  await expect(item.first()).toBeVisible({ timeout })
-  return item.first()
+  const first = getResultItems(page).filter({ hasText: text }).first()
+  await expect(first).toBeVisible({ timeout })
+  return first
 }

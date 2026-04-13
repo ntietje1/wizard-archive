@@ -62,8 +62,9 @@ test.describe.serial('search', () => {
 
     await createItemViaUI(page, 'Folder', folderTreasure)
 
-    // Wait for all note content to persist to Convex and be indexed
-    await page.waitForTimeout(5000)
+    // Wait for note content to persist and be indexed
+    const indexWaitMs = Number(process.env.TEST_INDEX_WAIT_MS ?? 5000)
+    await page.waitForTimeout(indexWaitMs)
 
     await page.close()
     await context.close()
@@ -75,8 +76,8 @@ test.describe.serial('search', () => {
     await page.goto('/campaigns')
     try {
       await deleteCampaign(page, campaignName)
-    } catch {
-      /* best-effort */
+    } catch (e) {
+      console.warn(`Cleanup failed for "${campaignName}":`, e)
     }
     await page.close()
     await context.close()
@@ -368,7 +369,7 @@ test.describe.serial('search', () => {
 
     const items = getResultItems(page)
     const count = await items.count()
-    if (count < 2) return
+    expect(count).toBeGreaterThanOrEqual(2)
 
     // Hover over second item
     await items.nth(1).hover()
@@ -417,12 +418,12 @@ test.describe.serial('search', () => {
     await openSearchDialog(page)
     const dialog = getSearchDialog(page)
 
-    // Ensure preview is on
     const toggleBtn = dialog.getByRole('button', { name: 'Toggle preview' })
-    // If preview is off, toggle it on
-    if (await dialog.getByRole('button', { name: 'Open result' }).isVisible().catch(() => false)) {
-      // Preview already on
-    } else {
+    const previewOn = await dialog
+      .getByRole('button', { name: 'Open result' })
+      .isVisible()
+      .catch(() => false)
+    if (!previewOn) {
       await toggleBtn.click()
     }
 
@@ -443,15 +444,13 @@ test.describe.serial('search', () => {
     await typeSearch(page, noteDragonLore)
     await waitForResults(page)
 
-    // Ensure preview is on and has a result
     const openBtn = dialog.getByRole('button', { name: 'Open result' })
-    if (await openBtn.isVisible()) {
-      await openBtn.click()
-      await expect(dialog).not.toBeVisible({ timeout: 5000 })
-      await expect(page.getByRole('textbox', { name: 'Item name' })).toHaveValue(noteDragonLore, {
-        timeout: 10000,
-      })
-    }
+    await expect(openBtn).toBeVisible({ timeout: 5000 })
+    await openBtn.click()
+    await expect(dialog).not.toBeVisible({ timeout: 5000 })
+    await expect(page.getByRole('textbox', { name: 'Item name' })).toHaveValue(noteDragonLore, {
+      timeout: 10000,
+    })
   })
 
   // --- Recent Items ---
@@ -541,6 +540,8 @@ test.describe.serial('search', () => {
     await typeSearch(page, longQuery)
     await waitForResults(page)
 
-    await expect(getSearchDialog(page).getByText('No results found')).toBeVisible({ timeout: 10000 })
+    await expect(getSearchDialog(page).getByText('No results found')).toBeVisible({
+      timeout: 10000,
+    })
   })
 })

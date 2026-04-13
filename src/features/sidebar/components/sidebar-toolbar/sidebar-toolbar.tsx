@@ -12,6 +12,7 @@ import {
   LEFT_SIDEBAR_PANEL_ID,
 } from '~/features/sidebar/components/sidebar-toolbar/constants'
 import { SearchButton } from './search-button'
+import { NewNoteButton } from './new-note'
 
 export function SidebarWrapper({ children }: { children: React.ReactNode }) {
   const { visible } = usePanelPreference(LEFT_SIDEBAR_PANEL_ID, LEFT_SIDEBAR_DEFAULTS)
@@ -20,6 +21,7 @@ export function SidebarWrapper({ children }: { children: React.ReactNode }) {
     <div className="h-full flex flex-col bg-background">
       <div className="shrink-0 flex items-center py-0.5 px-0.5 space-x-0.25">
         <CollapseToggle />
+        <NewNoteButton />
         <CloseAllFoldersButton />
         <SortMenu />
         <BookmarksFilterButton />
