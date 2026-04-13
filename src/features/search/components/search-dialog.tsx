@@ -26,13 +26,24 @@ import { mergeSearchResults } from '../utils/merge-search-results'
 import { useRecentItems } from '../hooks/use-recent-items'
 import type { SearchResult } from '../utils/merge-search-results'
 
+function useDebouncedValue<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delay)
+    return () => clearTimeout(timer)
+  }, [value, delay])
+
+  return debounced
+}
+
 export function SearchDialog() {
   const { isOpen, query, close, setQuery, open, showPreview, togglePreview } = useSearchStore()
   const { data: items, itemsMap } = useFilteredSidebarItems()
   const { navigateToItem } = useEditorNavigation()
   const [selectedIndex, setSelectedIndex] = useState(0)
   const selectedItemRef = useRef<HTMLDivElement>(null)
-  const [debouncedQuery, setDebouncedQuery] = useState('')
+  const debouncedQuery = useDebouncedValue(query, 200)
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -48,15 +59,6 @@ export function SearchDialog() {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isOpen, open, close])
-
-  useEffect(() => {
-    if (!query.trim()) {
-      setDebouncedQuery('')
-      return
-    }
-    const timer = setTimeout(() => setDebouncedQuery(query), 200)
-    return () => clearTimeout(timer)
-  }, [query])
 
   const titleMatches = debouncedQuery.trim()
     ? items.filter((item) => item.name.toLowerCase().includes(debouncedQuery.toLowerCase()))
@@ -76,9 +78,11 @@ export function SearchDialog() {
   const hasQuery = debouncedQuery.trim().length > 0
   const displayItems = hasQuery ? results : recentItems
 
-  useEffect(() => {
-    setSelectedIndex(0)
-  }, [debouncedQuery])
+  const prevQueryRef = useRef(debouncedQuery)
+  if (prevQueryRef.current !== debouncedQuery) {
+    prevQueryRef.current = debouncedQuery
+    if (selectedIndex !== 0) setSelectedIndex(0)
+  }
 
   useEffect(() => {
     selectedItemRef.current?.scrollIntoView({ block: 'nearest' })

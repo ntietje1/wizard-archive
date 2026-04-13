@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useSyncExternalStore, useState, useRef } from 'react'
 import { api } from 'convex/_generated/api'
 import * as Y from 'yjs'
 import { StrokePreview } from './nodes/stroke-node'
@@ -219,10 +219,25 @@ function yMapToArray<T>(map: Y.Map<T>): Array<T> {
   return items
 }
 
+function useYMapAsArray<T>(doc: Y.Doc, mapName: string): Array<T> {
+  const snapshotRef = useRef<Array<T>>(yMapToArray(doc.getMap<T>(mapName)))
+
+  return useSyncExternalStore(
+    (cb) => {
+      const map = doc.getMap<T>(mapName)
+      const onChange = () => {
+        snapshotRef.current = yMapToArray(map)
+        cb()
+      }
+      map.observe(onChange)
+      return () => map.unobserve(onChange)
+    },
+    () => snapshotRef.current,
+  )
+}
+
 function useReadOnlyYjsCanvas(canvasId: Id<'sidebarItems'>) {
   const [doc] = useState(() => new Y.Doc())
-  const [nodes, setNodes] = useState<Array<Node>>([])
-  const [edges, setEdges] = useState<Array<Edge>>([])
   const [afterSeq, setAfterSeq] = useState<number | undefined>(undefined)
   const [initialLoadComplete, setInitialLoadComplete] = useState(false)
   const lastAppliedSeqRef = useRef(-1)
@@ -254,23 +269,8 @@ function useReadOnlyYjsCanvas(canvasId: Id<'sidebarItems'>) {
     }
   }, [updatesResult.data, doc])
 
-  useEffect(() => {
-    const nodesMap = doc.getMap<Node>('nodes')
-    const edgesMap = doc.getMap<Edge>('edges')
-
-    setNodes(yMapToArray(nodesMap))
-    setEdges(yMapToArray(edgesMap))
-
-    const onNodesChange = () => setNodes(yMapToArray(nodesMap))
-    const onEdgesChange = () => setEdges(yMapToArray(edgesMap))
-
-    nodesMap.observe(onNodesChange)
-    edgesMap.observe(onEdgesChange)
-    return () => {
-      nodesMap.unobserve(onNodesChange)
-      edgesMap.unobserve(onEdgesChange)
-    }
-  }, [doc])
+  const nodes = useYMapAsArray<Node>(doc, 'nodes')
+  const edges = useYMapAsArray<Edge>(doc, 'edges')
 
   return { nodes, edges, isLoading, isError }
 }
