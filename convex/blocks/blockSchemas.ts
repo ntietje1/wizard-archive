@@ -1,7 +1,4 @@
 import { z } from 'zod'
-import { zodToConvex } from 'convex-helpers/server/zod4'
-import type { Validator } from 'convex/values'
-import type { CustomBlock } from '../notes/editorSpecs'
 
 // --- Styles & inline content ---
 
@@ -175,9 +172,6 @@ export const flatBlockContentSchema = z.discriminatedUnion('type', [
   }),
 ])
 
-export type FlatBlockContent = z.infer<typeof flatBlockContentSchema>
-export const flatBlockContentValidator = zodToConvex(flatBlockContentSchema)
-
 // --- Derived: block type enum ---
 
 const blockTypes = flatBlockContentSchema.options.map((opt) => opt.shape.type.value) as [
@@ -193,31 +187,20 @@ export const blockNoteIdSchema = z.uuid({ version: 'v4' })
 // --- Derived: hierarchical BlockNote schema (adds id + recursive children) ---
 
 type BlockNoteBlock = {
-  id: string
-  type: string
-  props: Record<string, unknown>
+  id: z.infer<typeof blockNoteIdSchema>
+  type: z.infer<typeof blockTypeSchema>
+  props: z.infer<typeof flatBlockContentSchema>['props']
   content?: Array<z.infer<typeof inlineContentSchema>> | z.infer<typeof tableContentSchema>
   children?: Array<BlockNoteBlock>
 }
 
 export const blockNoteBlockSchema: z.ZodType<BlockNoteBlock> = z.lazy(() => {
-  const variants = flatBlockContentSchema.options.map((opt) =>
+  const [first, second, ...rest] = flatBlockContentSchema.options.map((opt) =>
     opt.extend({ id: blockNoteIdSchema, children: z.array(blockNoteBlockSchema).optional() }),
-  ) as [z.ZodObject<any>, z.ZodObject<any>, ...Array<z.ZodObject<any>>]
-  return z.discriminatedUnion('type', variants) as unknown as z.ZodType<BlockNoteBlock>
+  )
+  return z.discriminatedUnion('type', [
+    first!,
+    second!,
+    ...rest,
+  ]) as unknown as z.ZodType<BlockNoteBlock>
 })
-
-// Cast so API args/returns using customBlockValidator infer as CustomBlock.
-// The runtime validator (blockNoteBlockValidator) validates strictly.
-export const customBlockValidator = zodToConvex(blockNoteBlockSchema) as unknown as Validator<
-  CustomBlock,
-  'required'
->
-
-// --- Convex table field schemas ---
-
-export const blockInlineContentSchema = z.nullable(
-  z.union([z.array(inlineContentSchema), tableContentSchema]),
-)
-
-export const blockPropsSchema = z.record(z.string(), z.union([z.string(), z.number(), z.boolean()]))

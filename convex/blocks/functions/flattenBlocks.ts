@@ -1,11 +1,10 @@
 import { extractPlainText } from './extractPlainText'
 import type { CustomBlock } from '../../notes/editorSpecs'
-import type { BlockNoteId, BlockProps, BlockType, InlineContent } from '../types'
-import type { FlatBlockContent } from '../blockSchemas'
+import type { BlockNoteId, BlockProps, BlockType, FlatBlockContent, InlineContent } from '../types'
 
 export type FlatBlockInput = {
   blockNoteId: BlockNoteId
-  parentBlockId: string | null
+  parentBlockId: BlockNoteId | null
   depth: number
   position: number
   type: BlockType
@@ -17,7 +16,12 @@ export type FlatBlockInput = {
 export function flattenBlocks(blocks: Array<CustomBlock>): Array<FlatBlockInput> {
   const result: Array<FlatBlockInput> = []
 
-  function walk(block: CustomBlock, parentBlockId: string | null, depth: number, position: number) {
+  function walk(
+    block: CustomBlock,
+    parentBlockId: BlockNoteId | null,
+    depth: number,
+    position: number,
+  ) {
     const flatContent: FlatBlockContent = {
       type: block.type,
       props: block.props,
@@ -33,7 +37,7 @@ export function flattenBlocks(blocks: Array<CustomBlock>): Array<FlatBlockInput>
       parentBlockId,
       depth,
       position,
-      type: block.type as BlockType,
+      type: block.type,
       props: block.props,
       inlineContent,
       plainText,

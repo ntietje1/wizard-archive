@@ -362,7 +362,7 @@ export async function createBlock(
   overrides?: Partial<{
     blockNoteId: BlockNoteId
     position: number | null
-    parentBlockId: string | null
+    parentBlockId: BlockNoteId | null
     depth: number
     type: BlockType
     props: BlockProps

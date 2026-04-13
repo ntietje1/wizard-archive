@@ -3,8 +3,7 @@ import { commonSidebarItemValidatorFields } from '../sidebarItems/schema/baseFie
 import { commonValidatorFields } from '../common/schema'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 import { permissionLevelValidator } from '../sidebarItems/schema/baseValidators'
-import { blockShareStatusValidator } from '../blocks/schema'
-import { customBlockValidator } from '../blocks/blockSchemas'
+import { blockShareStatusValidator, customBlockValidator } from '../blocks/schema'
 import { folderValidator } from '../folders/baseSchema'
 
 const noteValidatorFields = {

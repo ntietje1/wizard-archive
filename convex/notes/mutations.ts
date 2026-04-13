@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import { campaignMutation } from '../functions'
-import { customBlockValidator } from '../blocks/blockSchemas'
+import { customBlockValidator } from '../blocks/schema'
 import { saveAllBlocksForNote } from '../blocks/functions/saveAllBlocksForNote'
 import { checkYjsWriteAccess } from '../yjsSync/functions/checkYjsAccess'
 import { reconstructYDoc } from '../yjsSync/functions/reconstructYDoc'

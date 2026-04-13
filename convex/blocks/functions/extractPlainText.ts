@@ -1,4 +1,4 @@
-import type { FlatBlockContent } from '../blockSchemas'
+import type { FlatBlockContent } from '../types'
 
 export function extractPlainText(block: FlatBlockContent): string | null {
   const content = block.content

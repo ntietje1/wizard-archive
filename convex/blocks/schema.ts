@@ -1,18 +1,38 @@
+import { z } from 'zod'
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { zodToConvex } from 'convex-helpers/server/zod4'
 import { literals } from 'convex-helpers/validators'
+import type { Validator } from 'convex/values'
+import type { CustomBlock } from '../notes/editorSpecs'
 import {
   blockNoteIdSchema,
+  blockNoteBlockSchema,
   blockTypeSchema,
-  blockInlineContentSchema,
-  blockPropsSchema,
+  inlineContentSchema,
+  tableContentSchema,
 } from './blockSchemas'
 import { commonTableFields, commonValidatorFields } from '../common/schema'
+
+// --- Convex validators (all zodToConvex conversions live here) ---
 
 export const blockNoteIdValidator = zodToConvex(blockNoteIdSchema)
 
 export const blockShareStatusValidator = literals('all_shared', 'not_shared', 'individually_shared')
+
+// Cast so API args/returns using customBlockValidator infer as CustomBlock.
+// The runtime validator validates strictly via the underlying Zod schema.
+export const customBlockValidator = zodToConvex(blockNoteBlockSchema) as unknown as Validator<
+  CustomBlock,
+  'required'
+>
+
+// --- Table definition ---
+
+const blockInlineContentSchema = z.nullable(
+  z.union([z.array(inlineContentSchema), tableContentSchema]),
+)
+const blockPropsSchema = z.record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
 
 const blockTableFields = {
   noteId: v.id('sidebarItems'),

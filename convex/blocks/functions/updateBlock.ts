@@ -2,13 +2,13 @@ import type { WithoutSystemFields } from 'convex/server'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 import type { ShareStatus } from '../../blockShares/types'
-import type { BlockProps, BlockType, InlineContent } from '../types'
+import type { BlockNoteId, BlockProps, BlockType, InlineContent } from '../types'
 
 export async function updateBlock(
   ctx: CampaignMutationCtx,
   params: {
     blockDbId: Id<'blocks'>
-    parentBlockId?: string | null
+    parentBlockId?: BlockNoteId | null
     depth?: number
     position?: number
     type?: BlockType
