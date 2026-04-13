@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
-import { createBlock, createBlockShare, createNote } from '../../_test/factories.helper'
+import {
+  createBlock,
+  createBlockShare,
+  createNote,
+  testBlockNoteId,
+} from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 import { makeYjsUpdateWithBlocks } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
 
@@ -14,14 +19,14 @@ describe('note soft-delete cascade to blocks and blockShares', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: 'root',
+      blockId: testBlockNoteId('root'),
       depth: 0,
       parentBlockId: null,
     })
     await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: 'child',
+      blockId: testBlockNoteId('child'),
       depth: 1,
-      parentBlockId: 'root',
+      parentBlockId: testBlockNoteId('root'),
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
@@ -49,7 +54,7 @@ describe('note soft-delete cascade to blocks and blockShares', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: 'shared',
+      blockId: testBlockNoteId('shared'),
       shareStatus: 'individually_shared',
     })
     await createBlockShare(t, ctx.dm.profile._id, {
@@ -82,17 +87,17 @@ describe('note soft-delete cascade to blocks and blockShares', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: 'root',
+      blockId: testBlockNoteId('root'),
       depth: 0,
       parentBlockId: null,
     })
     await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: 'child',
+      blockId: testBlockNoteId('child'),
       depth: 1,
-      parentBlockId: 'root',
+      parentBlockId: testBlockNoteId('root'),
     })
     const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: 'shared',
+      blockId: testBlockNoteId('shared'),
       shareStatus: 'individually_shared',
     })
     await createBlockShare(t, ctx.dm.profile._id, {
@@ -146,7 +151,7 @@ describe('note soft-delete cascade to blocks and blockShares', () => {
       campaignId: ctx.campaignId,
       documentId: noteId,
       update: makeYjsUpdateWithBlocks([
-        { id: 'block-a', type: 'paragraph', props: {}, children: [] },
+        { id: testBlockNoteId('block-a'), type: 'paragraph', props: {}, children: [] },
       ]),
     })
     await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
@@ -164,7 +169,7 @@ describe('note soft-delete cascade to blocks and blockShares', () => {
       campaignId: ctx.campaignId,
       documentId: noteId,
       update: makeYjsUpdateWithBlocks([
-        { id: 'block-b', type: 'heading', props: { level: 1 }, children: [] },
+        { id: testBlockNoteId('block-b'), type: 'heading', props: { level: 1 }, children: [] },
       ]),
     })
     await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
@@ -181,7 +186,7 @@ describe('note soft-delete cascade to blocks and blockShares', () => {
       const nonDeleted = blocks.filter((b) => b.deletionTime == null)
       expect(nonDeleted).toHaveLength(0)
 
-      const blockB = blocks.find((b) => b.blockId === 'block-b')
+      const blockB = blocks.find((b) => b.blockId === testBlockNoteId('block-b'))
       expect(blockB).toBeUndefined()
     })
   })

@@ -8,6 +8,7 @@ import {
   createFolder,
   createNote,
   createSidebarShare,
+  testBlockNoteId,
 } from '../../_test/factories.helper'
 import { expectNotFound } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
@@ -168,7 +169,7 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, dmId)
     const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, dmId, {
-      blockId: 'b1',
+      blockId: testBlockNoteId('b1'),
       shareStatus: 'individually_shared',
     })
     const { blockShareId } = await createBlockShare(t, dmId, {

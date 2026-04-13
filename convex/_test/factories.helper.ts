@@ -19,7 +19,7 @@ export function testBlock(
   overrides?: Partial<{ type: string; props: Record<string, unknown>; content: Array<unknown> }>,
 ): CustomBlock {
   return {
-    id,
+    id: testBlockNoteId(id),
     type: 'paragraph',
     props: {},
     content: [],
@@ -31,6 +31,11 @@ let counter = 0
 
 function nextId() {
   return ++counter
+}
+
+export function testBlockNoteId(label: string): string {
+  const hex = Buffer.from(label.padEnd(12, '\0')).toString('hex').slice(0, 24)
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32).padEnd(12, '0')}`
 }
 
 const commonFields = (creatorId: Id<'userProfiles'>) => ({
@@ -372,7 +377,7 @@ export async function createBlock(
   const shareStatus: ShareStatus | null = SHARE_STATUS.NOT_SHARED
   const defaults = {
     noteId: noteId,
-    blockId: `block-${n}`,
+    blockId: testBlockNoteId(`block-${n}`),
     position: null,
     parentBlockId: null,
     depth: 0,

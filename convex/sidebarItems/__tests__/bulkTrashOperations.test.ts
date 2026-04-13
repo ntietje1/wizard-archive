@@ -12,6 +12,7 @@ import {
   createNote,
   createSidebarShare,
   setupFolderTree,
+  testBlockNoteId,
 } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 
@@ -49,7 +50,7 @@ describe('bulk trash operations', () => {
     })
 
     const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, dmId, {
-      blockId: 'bulk-b1',
+      blockId: testBlockNoteId('bulk-b1'),
     })
     const { shareId } = await createSidebarShare(t, dmId, {
       campaignId: ctx.campaignId,
@@ -218,7 +219,7 @@ describe('bulk trash operations', () => {
     })
 
     const { blockDbId } = await createBlock(t, leafId, ctx.campaignId, dmId, {
-      blockId: 'deep-block',
+      blockId: testBlockNoteId('deep-block'),
     })
     const { shareId } = await createSidebarShare(t, dmId, {
       campaignId: ctx.campaignId,

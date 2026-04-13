@@ -1,4 +1,4 @@
-import type { FlatBlockContent } from '../flatBlockValidator'
+import type { FlatBlockContent } from '../blockSchemas'
 
 export function extractPlainText(block: FlatBlockContent): string | null {
   const content = block.content

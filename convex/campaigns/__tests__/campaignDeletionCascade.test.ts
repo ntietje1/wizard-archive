@@ -12,6 +12,7 @@ import {
   createNote,
   createSession,
   createSidebarShare,
+  testBlockNoteId,
 } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 
@@ -41,7 +42,7 @@ describe('campaign deletion cascade', () => {
     })
 
     const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, dmId, {
-      blockId: 'b1',
+      blockId: testBlockNoteId('b1'),
     })
     const { blockShareId } = await createBlockShare(t, dmId, {
       campaignId: ctx.campaignId,

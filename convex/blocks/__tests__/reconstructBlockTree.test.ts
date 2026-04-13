@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { reconstructBlockTree } from '../functions/reconstructBlockTree'
+import { testBlockNoteId } from '../../_test/factories.helper'
 import type { Block } from '../types'
 import type { Id } from '../../_generated/dataModel'
 
@@ -36,55 +37,81 @@ describe('reconstructBlockTree', () => {
   })
 
   it('reconstructs a single top-level block', () => {
-    const blocks = [makeFlatBlock({ blockId: 'a', type: 'paragraph', position: 0 })]
+    const blocks = [
+      makeFlatBlock({ blockId: testBlockNoteId('a'), type: 'paragraph', position: 0 }),
+    ]
     const result = reconstructBlockTree(blocks)
     expect(result).toHaveLength(1)
-    expect(result[0].id).toBe('a')
+    expect(result[0].id).toBe(testBlockNoteId('a'))
     expect(result[0].type).toBe('paragraph')
   })
 
   it('sorts top-level blocks by position', () => {
     const blocks = [
-      makeFlatBlock({ blockId: 'b', position: 1 }),
-      makeFlatBlock({ blockId: 'a', position: 0 }),
-      makeFlatBlock({ blockId: 'c', position: 2 }),
+      makeFlatBlock({ blockId: testBlockNoteId('b'), position: 1 }),
+      makeFlatBlock({ blockId: testBlockNoteId('a'), position: 0 }),
+      makeFlatBlock({ blockId: testBlockNoteId('c'), position: 2 }),
     ]
     const result = reconstructBlockTree(blocks)
-    expect(result.map((b) => b.id)).toEqual(['a', 'b', 'c'])
+    expect(result.map((b) => b.id)).toEqual([
+      testBlockNoteId('a'),
+      testBlockNoteId('b'),
+      testBlockNoteId('c'),
+    ])
   })
 
   it('nests children under their parent', () => {
     const blocks = [
-      makeFlatBlock({ blockId: 'parent', position: 0 }),
-      makeFlatBlock({ blockId: 'child-1', parentBlockId: 'parent', depth: 1, position: 0 }),
-      makeFlatBlock({ blockId: 'child-2', parentBlockId: 'parent', depth: 1, position: 1 }),
+      makeFlatBlock({ blockId: testBlockNoteId('parent'), position: 0 }),
+      makeFlatBlock({
+        blockId: testBlockNoteId('child-1'),
+        parentBlockId: testBlockNoteId('parent'),
+        depth: 1,
+        position: 0,
+      }),
+      makeFlatBlock({
+        blockId: testBlockNoteId('child-2'),
+        parentBlockId: testBlockNoteId('parent'),
+        depth: 1,
+        position: 1,
+      }),
     ]
     const result = reconstructBlockTree(blocks)
     expect(result).toHaveLength(1)
     expect(result[0].children).toHaveLength(2)
-    expect(result[0].children![0].id).toBe('child-1')
-    expect(result[0].children![1].id).toBe('child-2')
+    expect(result[0].children![0].id).toBe(testBlockNoteId('child-1'))
+    expect(result[0].children![1].id).toBe(testBlockNoteId('child-2'))
   })
 
   it('reconstructs deeply nested tree', () => {
     const blocks = [
-      makeFlatBlock({ blockId: 'root', position: 0 }),
-      makeFlatBlock({ blockId: 'child', parentBlockId: 'root', depth: 1, position: 0 }),
-      makeFlatBlock({ blockId: 'grandchild', parentBlockId: 'child', depth: 2, position: 0 }),
+      makeFlatBlock({ blockId: testBlockNoteId('root'), position: 0 }),
+      makeFlatBlock({
+        blockId: testBlockNoteId('child'),
+        parentBlockId: testBlockNoteId('root'),
+        depth: 1,
+        position: 0,
+      }),
+      makeFlatBlock({
+        blockId: testBlockNoteId('grandchild'),
+        parentBlockId: testBlockNoteId('child'),
+        depth: 2,
+        position: 0,
+      }),
     ]
     const result = reconstructBlockTree(blocks)
-    expect(result[0].children![0].children![0].id).toBe('grandchild')
+    expect(result[0].children![0].children![0].id).toBe(testBlockNoteId('grandchild'))
   })
 
   it('restores inlineContent as content', () => {
     const inlineContent = [{ type: 'text' as const, text: 'Hello', styles: {} }]
-    const blocks = [makeFlatBlock({ blockId: 'a', inlineContent })]
+    const blocks = [makeFlatBlock({ blockId: testBlockNoteId('a'), inlineContent })]
     const result = reconstructBlockTree(blocks)
     expect(result[0].content).toEqual(inlineContent)
   })
 
   it('sets content to undefined when inlineContent is null', () => {
-    const blocks = [makeFlatBlock({ blockId: 'a', inlineContent: null })]
+    const blocks = [makeFlatBlock({ blockId: testBlockNoteId('a'), inlineContent: null })]
     const result = reconstructBlockTree(blocks)
     expect(result[0].content).toBeUndefined()
   })
@@ -92,37 +119,59 @@ describe('reconstructBlockTree', () => {
   it('drops orphaned blocks and logs warning', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const blocks = [
-      makeFlatBlock({ blockId: 'root', position: 0 }),
+      makeFlatBlock({ blockId: testBlockNoteId('root'), position: 0 }),
       makeFlatBlock({
-        blockId: 'orphan',
-        parentBlockId: 'deleted-parent',
+        blockId: testBlockNoteId('orphan'),
+        parentBlockId: testBlockNoteId('deleted-parent'),
         depth: 1,
         position: 0,
       }),
     ]
     const result = reconstructBlockTree(blocks)
     expect(result).toHaveLength(1)
-    expect(result[0].id).toBe('root')
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('deleted-parent'))
+    expect(result[0].id).toBe(testBlockNoteId('root'))
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining(testBlockNoteId('deleted-parent')))
   })
 
   it('handles position collisions without crashing', () => {
     const blocks = [
-      makeFlatBlock({ blockId: 'parent', position: 0 }),
-      makeFlatBlock({ blockId: 'a', parentBlockId: 'parent', depth: 1, position: 0 }),
-      makeFlatBlock({ blockId: 'b', parentBlockId: 'parent', depth: 1, position: 0 }),
+      makeFlatBlock({ blockId: testBlockNoteId('parent'), position: 0 }),
+      makeFlatBlock({
+        blockId: testBlockNoteId('a'),
+        parentBlockId: testBlockNoteId('parent'),
+        depth: 1,
+        position: 0,
+      }),
+      makeFlatBlock({
+        blockId: testBlockNoteId('b'),
+        parentBlockId: testBlockNoteId('parent'),
+        depth: 1,
+        position: 0,
+      }),
     ]
     const result = reconstructBlockTree(blocks)
     expect(result).toHaveLength(1)
     expect(result[0].children).toHaveLength(2)
-    expect(result[0].children!.map((c) => c.id)).toEqual(expect.arrayContaining(['a', 'b']))
+    expect(result[0].children!.map((c) => c.id)).toEqual(
+      expect.arrayContaining([testBlockNoteId('a'), testBlockNoteId('b')]),
+    )
   })
 
   it('returns empty array when all blocks are orphaned', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const blocks = [
-      makeFlatBlock({ blockId: 'a', parentBlockId: 'missing-1', depth: 1, position: 0 }),
-      makeFlatBlock({ blockId: 'b', parentBlockId: 'missing-2', depth: 1, position: 0 }),
+      makeFlatBlock({
+        blockId: testBlockNoteId('a'),
+        parentBlockId: testBlockNoteId('missing-1'),
+        depth: 1,
+        position: 0,
+      }),
+      makeFlatBlock({
+        blockId: testBlockNoteId('b'),
+        parentBlockId: testBlockNoteId('missing-2'),
+        depth: 1,
+        position: 0,
+      }),
     ]
     const result = reconstructBlockTree(blocks)
     expect(result).toEqual([])
@@ -130,7 +179,7 @@ describe('reconstructBlockTree', () => {
   })
 
   it('sets children to undefined for leaf blocks', () => {
-    const blocks = [makeFlatBlock({ blockId: 'leaf', position: 0 })]
+    const blocks = [makeFlatBlock({ blockId: testBlockNoteId('leaf'), position: 0 })]
     const result = reconstructBlockTree(blocks)
     expect(result).toHaveLength(1)
     expect(result[0].children).toBeUndefined()
@@ -138,43 +187,68 @@ describe('reconstructBlockTree', () => {
 
   it('sorts blocks with null positions as 0', () => {
     const blocks = [
-      makeFlatBlock({ blockId: 'explicit', position: 1 }),
-      makeFlatBlock({ blockId: 'null-pos', position: null }),
+      makeFlatBlock({ blockId: testBlockNoteId('explicit'), position: 1 }),
+      makeFlatBlock({ blockId: testBlockNoteId('null-pos'), position: null }),
     ]
     const result = reconstructBlockTree(blocks)
     expect(result).toHaveLength(2)
-    expect(result[0].id).toBe('null-pos')
-    expect(result[1].id).toBe('explicit')
+    expect(result[0].id).toBe(testBlockNoteId('null-pos'))
+    expect(result[1].id).toBe(testBlockNoteId('explicit'))
   })
 
   it('breaks cycles gracefully and logs warning', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const blocks = [
-      makeFlatBlock({ blockId: 'root', parentBlockId: null, position: 0 }),
-      makeFlatBlock({ blockId: 'a', parentBlockId: 'root', depth: 1, position: 0 }),
-      makeFlatBlock({ blockId: 'a', parentBlockId: 'a', depth: 2, position: 0 }),
+      makeFlatBlock({ blockId: testBlockNoteId('root'), parentBlockId: null, position: 0 }),
+      makeFlatBlock({
+        blockId: testBlockNoteId('a'),
+        parentBlockId: testBlockNoteId('root'),
+        depth: 1,
+        position: 0,
+      }),
+      makeFlatBlock({
+        blockId: testBlockNoteId('a'),
+        parentBlockId: testBlockNoteId('a'),
+        depth: 2,
+        position: 0,
+      }),
     ]
     const result = reconstructBlockTree(blocks)
     expect(result).toHaveLength(1)
-    expect(result[0].id).toBe('root')
+    expect(result[0].id).toBe(testBlockNoteId('root'))
     expect(result[0].children).toHaveLength(1)
-    expect(result[0].children![0].id).toBe('a')
+    expect(result[0].children![0].id).toBe(testBlockNoteId('a'))
     expect(result[0].children![0].children).toBeUndefined()
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Cycle detected'))
   })
 
   it('handles mixed null and numbered positions among siblings', () => {
     const blocks = [
-      makeFlatBlock({ blockId: 'parent', position: 0 }),
-      makeFlatBlock({ blockId: 'c-pos2', parentBlockId: 'parent', depth: 1, position: 2 }),
-      makeFlatBlock({ blockId: 'c-null', parentBlockId: 'parent', depth: 1, position: null }),
-      makeFlatBlock({ blockId: 'c-pos1', parentBlockId: 'parent', depth: 1, position: 1 }),
+      makeFlatBlock({ blockId: testBlockNoteId('parent'), position: 0 }),
+      makeFlatBlock({
+        blockId: testBlockNoteId('c-pos2'),
+        parentBlockId: testBlockNoteId('parent'),
+        depth: 1,
+        position: 2,
+      }),
+      makeFlatBlock({
+        blockId: testBlockNoteId('c-null'),
+        parentBlockId: testBlockNoteId('parent'),
+        depth: 1,
+        position: null,
+      }),
+      makeFlatBlock({
+        blockId: testBlockNoteId('c-pos1'),
+        parentBlockId: testBlockNoteId('parent'),
+        depth: 1,
+        position: 1,
+      }),
     ]
     const result = reconstructBlockTree(blocks)
     const children = result[0].children!
     expect(children).toHaveLength(3)
-    expect(children[0].id).toBe('c-null')
-    expect(children[1].id).toBe('c-pos1')
-    expect(children[2].id).toBe('c-pos2')
+    expect(children[0].id).toBe(testBlockNoteId('c-null'))
+    expect(children[1].id).toBe(testBlockNoteId('c-pos1'))
+    expect(children[2].id).toBe(testBlockNoteId('c-pos2'))
   })
 })

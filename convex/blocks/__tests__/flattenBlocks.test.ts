@@ -1,16 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { flattenBlocks } from '../functions/flattenBlocks'
 import { reconstructBlockTree } from '../functions/reconstructBlockTree'
+import { testBlockNoteId } from '../../_test/factories.helper'
 import type { Block } from '../types'
 import type { CustomBlock } from '../../notes/editorSpecs'
 import type { Id } from '../../_generated/dataModel'
 
 function makeBlock(
-  id: string,
+  label: string,
   overrides?: Partial<CustomBlock> & { children?: Array<CustomBlock> },
 ): CustomBlock {
   return {
-    id,
+    id: testBlockNoteId(label),
     type: 'paragraph',
     props: {},
     content: [],
@@ -54,7 +55,7 @@ describe('flattenBlocks', () => {
     const result = flattenBlocks(blocks)
     expect(result).toHaveLength(1)
     expect(result[0]).toMatchObject({
-      blockId: 'a',
+      blockId: testBlockNoteId('a'),
       parentBlockId: null,
       depth: 0,
       position: 0,
@@ -86,20 +87,20 @@ describe('flattenBlocks', () => {
     const result = flattenBlocks(blocks)
     expect(result).toHaveLength(4)
 
-    const parent = result.find((b) => b.blockId === 'parent')!
-    const child1 = result.find((b) => b.blockId === 'child-1')!
-    const child2 = result.find((b) => b.blockId === 'child-2')!
-    const grandchild = result.find((b) => b.blockId === 'grandchild')!
+    const parent = result.find((b) => b.blockId === testBlockNoteId('parent'))!
+    const child1 = result.find((b) => b.blockId === testBlockNoteId('child-1'))!
+    const child2 = result.find((b) => b.blockId === testBlockNoteId('child-2'))!
+    const grandchild = result.find((b) => b.blockId === testBlockNoteId('grandchild'))!
 
     expect(parent.parentBlockId).toBeNull()
     expect(parent.depth).toBe(0)
-    expect(child1.parentBlockId).toBe('parent')
+    expect(child1.parentBlockId).toBe(testBlockNoteId('parent'))
     expect(child1.depth).toBe(1)
     expect(child1.position).toBe(0)
-    expect(child2.parentBlockId).toBe('parent')
+    expect(child2.parentBlockId).toBe(testBlockNoteId('parent'))
     expect(child2.depth).toBe(1)
     expect(child2.position).toBe(1)
-    expect(grandchild.parentBlockId).toBe('child-2')
+    expect(grandchild.parentBlockId).toBe(testBlockNoteId('child-2'))
     expect(grandchild.depth).toBe(2)
     expect(grandchild.position).toBe(0)
   })
@@ -154,7 +155,7 @@ describe('flattenBlocks', () => {
     const blocks = [makeBlock('a', { children: [] })]
     const result = flattenBlocks(blocks)
     expect(result).toHaveLength(1)
-    expect(result[0].blockId).toBe('a')
+    expect(result[0].blockId).toBe(testBlockNoteId('a'))
   })
 
   it('flattens multiple root blocks each with nested children', () => {
@@ -165,15 +166,15 @@ describe('flattenBlocks', () => {
     const result = flattenBlocks(blocks)
     expect(result).toHaveLength(4)
 
-    const r1 = result.find((b) => b.blockId === 'r1')!
-    const r2 = result.find((b) => b.blockId === 'r2')!
-    const c1 = result.find((b) => b.blockId === 'c1')!
-    const c2 = result.find((b) => b.blockId === 'c2')!
+    const r1 = result.find((b) => b.blockId === testBlockNoteId('r1'))!
+    const r2 = result.find((b) => b.blockId === testBlockNoteId('r2'))!
+    const c1 = result.find((b) => b.blockId === testBlockNoteId('c1'))!
+    const c2 = result.find((b) => b.blockId === testBlockNoteId('c2'))!
 
     expect(r1).toMatchObject({ parentBlockId: null, depth: 0, position: 0 })
     expect(r2).toMatchObject({ parentBlockId: null, depth: 0, position: 1 })
-    expect(c1).toMatchObject({ parentBlockId: 'r1', depth: 1, position: 0 })
-    expect(c2).toMatchObject({ parentBlockId: 'r2', depth: 1, position: 0 })
+    expect(c1).toMatchObject({ parentBlockId: testBlockNoteId('r1'), depth: 1, position: 0 })
+    expect(c2).toMatchObject({ parentBlockId: testBlockNoteId('r2'), depth: 1, position: 0 })
   })
 
   it('round-trips through flatten then reconstruct producing equivalent tree', () => {
@@ -196,14 +197,14 @@ describe('flattenBlocks', () => {
     const reconstructed = reconstructBlockTree(toFakeBlocks(flat))
 
     expect(reconstructed).toHaveLength(2)
-    expect(reconstructed[0].id).toBe('h1')
+    expect(reconstructed[0].id).toBe(testBlockNoteId('h1'))
     expect(reconstructed[0].type).toBe('heading')
     expect(reconstructed[0].children).toHaveLength(1)
-    expect(reconstructed[0].children![0].id).toBe('p1')
+    expect(reconstructed[0].children![0].id).toBe(testBlockNoteId('p1'))
     expect(reconstructed[0].children![0].children).toHaveLength(1)
-    expect(reconstructed[0].children![0].children![0].id).toBe('nested')
+    expect(reconstructed[0].children![0].children![0].id).toBe(testBlockNoteId('nested'))
     expect(reconstructed[0].children![0].children![0].type).toBe('bulletListItem')
-    expect(reconstructed[1].id).toBe('d1')
+    expect(reconstructed[1].id).toBe(testBlockNoteId('d1'))
     expect(reconstructed[1].type).toBe('divider')
     expect(reconstructed[1].content).toBeUndefined()
     expect(reconstructed[1].children).toBeUndefined()
@@ -236,10 +237,10 @@ describe('flattenBlocks', () => {
     expect(flat).toHaveLength(6)
 
     for (let i = 0; i < 6; i++) {
-      const block = flat.find((b) => b.blockId === `d${i}`)!
+      const block = flat.find((b) => b.blockId === testBlockNoteId(`d${i}`))!
       expect(block.depth).toBe(i)
       expect(block.position).toBe(0)
-      expect(block.parentBlockId).toBe(i === 0 ? null : `d${i - 1}`)
+      expect(block.parentBlockId).toBe(i === 0 ? null : testBlockNoteId(`d${i - 1}`))
     }
 
     const reconstructed = reconstructBlockTree(toFakeBlocks(flat))
@@ -247,11 +248,11 @@ describe('flattenBlocks', () => {
 
     let node = reconstructed[0]
     for (let i = 0; i < 5; i++) {
-      expect(node.id).toBe(`d${i}`)
+      expect(node.id).toBe(testBlockNoteId(`d${i}`))
       expect(node.children).toHaveLength(1)
       node = node.children![0]
     }
-    expect(node.id).toBe('d5')
+    expect(node.id).toBe(testBlockNoteId('d5'))
     expect(node.children).toBeUndefined()
   })
 
@@ -277,51 +278,51 @@ describe('flattenBlocks', () => {
     const flat = flattenBlocks(tree)
     expect(flat).toHaveLength(10)
 
-    expect(flat.find((b) => b.blockId === 'r1')!).toMatchObject({
+    expect(flat.find((b) => b.blockId === testBlockNoteId('r1'))!).toMatchObject({
       parentBlockId: null,
       depth: 0,
       position: 0,
     })
-    expect(flat.find((b) => b.blockId === 'r2')!).toMatchObject({
+    expect(flat.find((b) => b.blockId === testBlockNoteId('r2'))!).toMatchObject({
       parentBlockId: null,
       depth: 0,
       position: 1,
     })
 
-    expect(flat.find((b) => b.blockId === 'r1-c0')!).toMatchObject({
-      parentBlockId: 'r1',
+    expect(flat.find((b) => b.blockId === testBlockNoteId('r1-c0'))!).toMatchObject({
+      parentBlockId: testBlockNoteId('r1'),
       depth: 1,
       position: 0,
     })
-    expect(flat.find((b) => b.blockId === 'r1-c1')!).toMatchObject({
-      parentBlockId: 'r1',
+    expect(flat.find((b) => b.blockId === testBlockNoteId('r1-c1'))!).toMatchObject({
+      parentBlockId: testBlockNoteId('r1'),
       depth: 1,
       position: 1,
     })
-    expect(flat.find((b) => b.blockId === 'r1-c2')!).toMatchObject({
-      parentBlockId: 'r1',
+    expect(flat.find((b) => b.blockId === testBlockNoteId('r1-c2'))!).toMatchObject({
+      parentBlockId: testBlockNoteId('r1'),
       depth: 1,
       position: 2,
     })
 
-    expect(flat.find((b) => b.blockId === 'r1-c0-g0')!).toMatchObject({
-      parentBlockId: 'r1-c0',
+    expect(flat.find((b) => b.blockId === testBlockNoteId('r1-c0-g0'))!).toMatchObject({
+      parentBlockId: testBlockNoteId('r1-c0'),
       depth: 2,
       position: 0,
     })
-    expect(flat.find((b) => b.blockId === 'r1-c0-g1')!).toMatchObject({
-      parentBlockId: 'r1-c0',
+    expect(flat.find((b) => b.blockId === testBlockNoteId('r1-c0-g1'))!).toMatchObject({
+      parentBlockId: testBlockNoteId('r1-c0'),
       depth: 2,
       position: 1,
     })
 
-    expect(flat.find((b) => b.blockId === 'r2-c0')!).toMatchObject({
-      parentBlockId: 'r2',
+    expect(flat.find((b) => b.blockId === testBlockNoteId('r2-c0'))!).toMatchObject({
+      parentBlockId: testBlockNoteId('r2'),
       depth: 1,
       position: 0,
     })
-    expect(flat.find((b) => b.blockId === 'r2-c1')!).toMatchObject({
-      parentBlockId: 'r2',
+    expect(flat.find((b) => b.blockId === testBlockNoteId('r2-c1'))!).toMatchObject({
+      parentBlockId: testBlockNoteId('r2'),
       depth: 1,
       position: 1,
     })
@@ -470,7 +471,7 @@ describe('flatten ↔ reconstruct symmetry', () => {
   it('reconstruct → flatten → reconstruct is stable', () => {
     const fakeBlocks: Array<Block> = [
       {
-        blockId: 'a',
+        blockId: testBlockNoteId('a'),
         parentBlockId: null,
         depth: 0,
         position: 0,
@@ -479,8 +480,8 @@ describe('flatten ↔ reconstruct symmetry', () => {
         inlineContent: [{ type: 'text', text: 'Hi', styles: {} }],
       },
       {
-        blockId: 'b',
-        parentBlockId: 'a',
+        blockId: testBlockNoteId('b'),
+        parentBlockId: testBlockNoteId('a'),
         depth: 1,
         position: 0,
         type: 'paragraph',
@@ -488,8 +489,8 @@ describe('flatten ↔ reconstruct symmetry', () => {
         inlineContent: [{ type: 'text', text: 'Child', styles: {} }],
       },
       {
-        blockId: 'c',
-        parentBlockId: 'a',
+        blockId: testBlockNoteId('c'),
+        parentBlockId: testBlockNoteId('a'),
         depth: 1,
         position: 1,
         type: 'divider',

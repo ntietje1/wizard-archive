@@ -1,7 +1,7 @@
 import type { z } from 'zod'
 import type { ShareStatus } from '../blockShares/types'
 import type { Id, Doc } from '../_generated/dataModel'
-import type { blockTypeSchema, inlineContentSchema, tableContentSchema } from './sharedBlockSchemas'
+import type { blockTypeSchema, inlineContentSchema, tableContentSchema } from './blockSchemas'
 
 export type BlockType = z.infer<typeof blockTypeSchema>
 

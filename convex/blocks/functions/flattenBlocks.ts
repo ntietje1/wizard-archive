@@ -1,7 +1,7 @@
 import { extractPlainText } from './extractPlainText'
-import type { FlatBlockContent } from '../flatBlockValidator'
 import type { CustomBlock } from '../../notes/editorSpecs'
 import type { BlockProps, BlockType, InlineContent } from '../types'
+import type { FlatBlockContent } from '../blockSchemas'
 
 export type FlatBlockInput = {
   blockId: string

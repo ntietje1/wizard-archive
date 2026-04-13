@@ -6,6 +6,7 @@ import {
   createBlockShare,
   createNote,
   createSidebarShare,
+  testBlockNoteId,
 } from '../../_test/factories.helper'
 import { expectPermissionDenied } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
@@ -22,7 +23,7 @@ describe('block query edge cases', () => {
     const result = await dmAuth.query(api.blocks.queries.getBlockWithShares, {
       campaignId: ctx.campaignId,
       noteId,
-      blockId: 'nonexistent-block',
+      blockId: testBlockNoteId('nonexistent-block'),
     })
     expect(result).toBeNull()
   })
@@ -36,7 +37,7 @@ describe('block query edge cases', () => {
     const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
       campaignId: ctx.campaignId,
       noteId,
-      blockIds: ['unknown-1', 'unknown-2'],
+      blockIds: [testBlockNoteId('unknown-1'), testBlockNoteId('unknown-2')],
     })
 
     expect(result.blocks).toHaveLength(2)
@@ -54,15 +55,15 @@ describe('block query edge cases', () => {
 
     const { noteId } = await createNote(t, campaignId, dm.profile._id)
     const b1 = await createBlock(t, noteId, campaignId, dm.profile._id, {
-      blockId: 'agg-1',
+      blockId: testBlockNoteId('agg-1'),
       shareStatus: 'individually_shared',
     })
     const b2 = await createBlock(t, noteId, campaignId, dm.profile._id, {
-      blockId: 'agg-2',
+      blockId: testBlockNoteId('agg-2'),
       shareStatus: 'individually_shared',
     })
     const b3 = await createBlock(t, noteId, campaignId, dm.profile._id, {
-      blockId: 'agg-3',
+      blockId: testBlockNoteId('agg-3'),
       shareStatus: 'individually_shared',
     })
 
@@ -94,12 +95,12 @@ describe('block query edge cases', () => {
     const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
       campaignId,
       noteId,
-      blockIds: ['agg-1', 'agg-2', 'agg-3'],
+      blockIds: [testBlockNoteId('agg-1'), testBlockNoteId('agg-2'), testBlockNoteId('agg-3')],
     })
 
-    const block1 = result.blocks.find((b) => b.blockNoteId === 'agg-1')
-    const block2 = result.blocks.find((b) => b.blockNoteId === 'agg-2')
-    const block3 = result.blocks.find((b) => b.blockNoteId === 'agg-3')
+    const block1 = result.blocks.find((b) => b.blockNoteId === testBlockNoteId('agg-1'))
+    const block2 = result.blocks.find((b) => b.blockNoteId === testBlockNoteId('agg-2'))
+    const block3 = result.blocks.find((b) => b.blockNoteId === testBlockNoteId('agg-3'))
 
     expect(block1!.sharedMemberIds).toHaveLength(1)
     expect(block1!.sharedMemberIds).toContain(p1.memberId)
@@ -118,7 +119,7 @@ describe('block query edge cases', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const block = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: 'soft-del',
+      blockId: testBlockNoteId('soft-del'),
       shareStatus: 'individually_shared',
     })
     await createBlockShare(t, ctx.dm.profile._id, {
@@ -133,10 +134,10 @@ describe('block query edge cases', () => {
     const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
       campaignId: ctx.campaignId,
       noteId,
-      blockIds: ['soft-del'],
+      blockIds: [testBlockNoteId('soft-del')],
     })
 
-    const blockResult = result.blocks.find((b) => b.blockNoteId === 'soft-del')
+    const blockResult = result.blocks.find((b) => b.blockNoteId === testBlockNoteId('soft-del'))
     expect(blockResult!.sharedMemberIds).toHaveLength(0)
   })
 
@@ -153,14 +154,14 @@ describe('block query edge cases', () => {
       permissionLevel: 'view',
     })
     await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: 'dm-only',
+      blockId: testBlockNoteId('dm-only'),
     })
 
     await expectPermissionDenied(
       playerAuth.query(api.blocks.queries.getBlockWithShares, {
         campaignId: ctx.campaignId,
         noteId,
-        blockId: 'dm-only',
+        blockId: testBlockNoteId('dm-only'),
       }),
     )
   })

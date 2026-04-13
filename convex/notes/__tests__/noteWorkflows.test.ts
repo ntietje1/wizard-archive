@@ -11,6 +11,7 @@ import {
   createFolder,
   createNote,
   createSidebarShare,
+  testBlockNoteId,
 } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 
@@ -27,7 +28,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
       name: 'Secrets',
     })
     const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: 'secret-block',
+      blockId: testBlockNoteId('secret-block'),
     })
 
     await createSidebarShare(t, ctx.dm.profile._id, {
@@ -91,7 +92,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
 
     const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: 'revocable-block',
+      blockId: testBlockNoteId('revocable-block'),
     })
 
     await createSidebarShare(t, ctx.dm.profile._id, {
@@ -162,7 +163,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     expect(playerNote!.name).toBe('Nested Note')
 
     const block = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: 'nested-block',
+      blockId: testBlockNoteId('nested-block'),
     })
 
     const playerNoteWithBlocks = await playerAuth.query(api.notes.queries.getNote, {
@@ -229,7 +230,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
 
     const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: 'transition-block',
+      blockId: testBlockNoteId('transition-block'),
     })
 
     await createSidebarShare(t, ctx.dm.profile._id, {
@@ -292,21 +293,21 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: 'root',
+      blockId: testBlockNoteId('root'),
       depth: 0,
       parentBlockId: null,
       position: 0,
     })
     await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: 'shared-child',
+      blockId: testBlockNoteId('shared-child'),
       depth: 1,
-      parentBlockId: 'root',
+      parentBlockId: testBlockNoteId('root'),
       position: 0,
     })
     await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: 'unshared-child',
+      blockId: testBlockNoteId('unshared-child'),
       depth: 1,
-      parentBlockId: 'root',
+      parentBlockId: testBlockNoteId('root'),
       position: 1,
     })
 
@@ -320,7 +321,10 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
-      blocks: [{ blockNoteId: 'root' }, { blockNoteId: 'shared-child' }],
+      blocks: [
+        { blockNoteId: testBlockNoteId('root') },
+        { blockNoteId: testBlockNoteId('shared-child') },
+      ],
       status: 'all_shared',
     })
 
@@ -330,8 +334,8 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     })
 
     expect(playerNote).not.toBeNull()
-    expect(playerNote!.blockMeta['root']).toBeDefined()
-    expect(playerNote!.blockMeta['shared-child']).toBeDefined()
-    expect(playerNote!.blockMeta['unshared-child']).toBeUndefined()
+    expect(playerNote!.blockMeta[testBlockNoteId('root')]).toBeDefined()
+    expect(playerNote!.blockMeta[testBlockNoteId('shared-child')]).toBeDefined()
+    expect(playerNote!.blockMeta[testBlockNoteId('unshared-child')]).toBeUndefined()
   })
 })

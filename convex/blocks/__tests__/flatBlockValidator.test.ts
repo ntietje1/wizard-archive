@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { flatBlockContentSchema } from '../flatBlockValidator'
 import { customBlockSpecs } from '../../notes/editorSpecs'
+import { flatBlockContentSchema } from '../blockSchemas'
 
 describe('flat block type coverage', () => {
   const editorBlockTypes = Object.keys(customBlockSpecs)

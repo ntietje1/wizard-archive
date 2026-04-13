@@ -1,5 +1,4 @@
 import { defineSchema } from 'convex/server'
-import { blocksTables } from './blocks/schema'
 import { campaignTables } from './campaigns/schema'
 import { editorTables } from './editors/schema'
 import { userTables } from './users/schema'
@@ -14,6 +13,7 @@ import { yjsSyncTables } from './yjsSync/schema'
 import { editHistoryTables } from './editHistory/schema'
 import { documentSnapshotsTables } from './documentSnapshots/schema'
 import { sidebarItemsTables } from './sidebarItems/schema/sidebarItemsTable'
+import { blocksTables } from './blocks/schema'
 
 export default defineSchema({
   ...blocksTables,

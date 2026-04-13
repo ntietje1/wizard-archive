@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
-import { createBlock } from '../../_test/factories.helper'
+import { createBlock, testBlockNoteId } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
 import {
@@ -40,7 +40,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
 
     await pushAndPersist(dmAuth, ctx.campaignId, noteId, [
       {
-        id: 'block-a',
+        id: testBlockNoteId('block-a'),
         type: 'heading',
         props: { level: 1 },
         content: [{ type: 'text', text: 'Hello', styles: {} }],
@@ -53,7 +53,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
         .query('blocks')
         .filter((q) => q.eq(q.field('noteId'), noteId))
         .collect()
-      return blocks.find((b) => b.blockId === 'block-a')!
+      return blocks.find((b) => b.blockId === testBlockNoteId('block-a'))!
     })
 
     await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
@@ -88,12 +88,12 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       ctx.campaignId,
       ctx.dm.profile._id,
       {
-        blockId: 'remove',
+        blockId: testBlockNoteId('remove'),
       },
     )
 
     await pushAndPersist(dmAuth, ctx.campaignId, noteId, [
-      { id: 'keep', type: 'paragraph', props: {}, children: [] },
+      { id: testBlockNoteId('keep'), type: 'paragraph', props: {}, children: [] },
     ])
 
     await t.run(async (dbCtx) => {
@@ -102,7 +102,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
         .filter((q) => q.eq(q.field('noteId'), noteId))
         .collect()
       expect(blocks).toHaveLength(1)
-      expect(blocks[0].blockId).toBe('keep')
+      expect(blocks[0].blockId).toBe(testBlockNoteId('keep'))
       const removed = await dbCtx.db.get('blocks', removedBlockId)
       expect(removed).toBeNull()
     })
@@ -118,7 +118,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     })
 
     const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: 'shared-block',
+      blockId: testBlockNoteId('shared-block'),
       shareStatus: 'individually_shared',
     })
 
@@ -138,7 +138,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     })
 
     await pushAndPersist(dmAuth, ctx.campaignId, noteId, [
-      { id: 'other-block', type: 'paragraph', props: {}, children: [] },
+      { id: testBlockNoteId('other-block'), type: 'paragraph', props: {}, children: [] },
     ])
 
     await t.run(async (dbCtx) => {
@@ -160,7 +160,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
 
     await pushAndPersist(dmAuth, ctx.campaignId, noteId, [
       {
-        id: 'block-a',
+        id: testBlockNoteId('block-a'),
         type: 'paragraph',
         props: {},
         content: [{ type: 'text', text: 'Hello', styles: {} }],
@@ -201,7 +201,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     })
 
     await pushAndPersist(dmAuth, ctx.campaignId, noteId, [
-      { id: 'block-a', type: 'paragraph', props: {}, children: [] },
+      { id: testBlockNoteId('block-a'), type: 'paragraph', props: {}, children: [] },
     ])
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
@@ -214,8 +214,8 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       campaignId: ctx.campaignId,
       documentId: noteId,
       update: makeYjsUpdateWithBlocks([
-        { id: 'block-a', type: 'paragraph', props: {}, children: [] },
-        { id: 'block-b', type: 'paragraph', props: {}, children: [] },
+        { id: testBlockNoteId('block-a'), type: 'paragraph', props: {}, children: [] },
+        { id: testBlockNoteId('block-b'), type: 'paragraph', props: {}, children: [] },
       ]),
     })
     await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
@@ -230,7 +230,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
         .collect()
       const nonDeleted = blocks.filter((b) => b.deletionTime === null)
       expect(nonDeleted).toHaveLength(0)
-      const blockB = blocks.find((b) => b.blockId === 'block-b')
+      const blockB = blocks.find((b) => b.blockId === testBlockNoteId('block-b'))
       expect(blockB).toBeUndefined()
     })
   })
@@ -244,8 +244,12 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       parentId: null,
     })
 
-    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, { blockId: 'a' })
-    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, { blockId: 'b' })
+    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+      blockId: testBlockNoteId('a'),
+    })
+    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+      blockId: testBlockNoteId('b'),
+    })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
       campaignId: ctx.campaignId,
@@ -277,19 +281,19 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
 
     await pushAndPersist(dmAuth, ctx.campaignId, noteId, [
       {
-        id: 'root',
+        id: testBlockNoteId('root'),
         type: 'paragraph',
         props: {},
         content: [{ type: 'text', text: 'Root', styles: {} }],
         children: [
           {
-            id: 'child',
+            id: testBlockNoteId('child'),
             type: 'bulletListItem',
             props: {},
             content: [{ type: 'text', text: 'Child', styles: {} }],
             children: [
               {
-                id: 'grandchild',
+                id: testBlockNoteId('grandchild'),
                 type: 'paragraph',
                 props: {},
                 content: [{ type: 'text', text: 'Grandchild', styles: {} }],
@@ -308,19 +312,19 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
         .collect()
       expect(blocks).toHaveLength(3)
 
-      const root = blocks.find((b) => b.blockId === 'root')!
-      const child = blocks.find((b) => b.blockId === 'child')!
-      const grandchild = blocks.find((b) => b.blockId === 'grandchild')!
+      const root = blocks.find((b) => b.blockId === testBlockNoteId('root'))!
+      const child = blocks.find((b) => b.blockId === testBlockNoteId('child'))!
+      const grandchild = blocks.find((b) => b.blockId === testBlockNoteId('grandchild'))!
 
       expect(root).toMatchObject({ parentBlockId: null, depth: 0, position: 0, plainText: 'Root' })
       expect(child).toMatchObject({
-        parentBlockId: 'root',
+        parentBlockId: testBlockNoteId('root'),
         depth: 1,
         position: 0,
         plainText: 'Child',
       })
       expect(grandchild).toMatchObject({
-        parentBlockId: 'child',
+        parentBlockId: testBlockNoteId('child'),
         depth: 2,
         position: 0,
         plainText: 'Grandchild',
@@ -338,12 +342,12 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     })
 
     await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: 'existing',
+      blockId: testBlockNoteId('existing'),
     })
 
     await pushAndPersist(dmAuth, ctx.campaignId, noteId, [
       {
-        id: 'new-block',
+        id: testBlockNoteId('new-block'),
         type: 'heading',
         props: { level: 1 },
         content: [{ type: 'text', text: 'New', styles: {} }],
@@ -357,11 +361,11 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
         .filter((q) => q.eq(q.field('noteId'), noteId))
         .collect()
       const nonDeleted = blocks.filter((b) => b.deletionTime === null)
-      const newBlock = nonDeleted.find((b) => b.blockId === 'new-block')
+      const newBlock = nonDeleted.find((b) => b.blockId === testBlockNoteId('new-block'))
       expect(newBlock).toBeDefined()
       expect(newBlock!.type).toBe('heading')
       expect(newBlock!.plainText).toBe('New')
-      const existing = nonDeleted.find((b) => b.blockId === 'existing')
+      const existing = nonDeleted.find((b) => b.blockId === testBlockNoteId('existing'))
       expect(existing).toBeUndefined()
     })
   })
@@ -377,31 +381,31 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
 
     await pushAndPersist(dmAuth, ctx.campaignId, noteId, [
       {
-        id: 'd0',
+        id: testBlockNoteId('d0'),
         type: 'toggleListItem',
         props: {},
         content: [{ type: 'text', text: 'Level 0', styles: {} }],
         children: [
           {
-            id: 'd1',
+            id: testBlockNoteId('d1'),
             type: 'bulletListItem',
             props: {},
             content: [{ type: 'text', text: 'Level 1', styles: {} }],
             children: [
               {
-                id: 'd2',
+                id: testBlockNoteId('d2'),
                 type: 'paragraph',
                 props: {},
                 content: [{ type: 'text', text: 'Level 2', styles: {} }],
                 children: [
                   {
-                    id: 'd3',
+                    id: testBlockNoteId('d3'),
                     type: 'checkListItem',
                     props: {},
                     content: [{ type: 'text', text: 'Level 3', styles: {} }],
                     children: [
                       {
-                        id: 'd4',
+                        id: testBlockNoteId('d4'),
                         type: 'paragraph',
                         props: {},
                         content: [{ type: 'text', text: 'Level 4', styles: {} }],
@@ -425,9 +429,9 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       expect(blocks).toHaveLength(5)
 
       for (let i = 0; i < 5; i++) {
-        const block = blocks.find((b) => b.blockId === `d${i}`)!
+        const block = blocks.find((b) => b.blockId === testBlockNoteId(`d${i}`))!
         expect(block.depth).toBe(i)
-        expect(block.parentBlockId).toBe(i === 0 ? null : `d${i - 1}`)
+        expect(block.parentBlockId).toBe(i === 0 ? null : testBlockNoteId(`d${i - 1}`))
         expect(block.plainText).toBe(`Level ${i}`)
       }
     })
@@ -443,7 +447,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     })
 
     await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: 'will-update',
+      blockId: testBlockNoteId('will-update'),
       shareStatus: 'all_shared',
     })
     const { blockDbId: deleteId } = await createBlock(
@@ -452,20 +456,20 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       ctx.campaignId,
       ctx.dm.profile._id,
       {
-        blockId: 'will-delete',
+        blockId: testBlockNoteId('will-delete'),
       },
     )
 
     await pushAndPersist(dmAuth, ctx.campaignId, noteId, [
       {
-        id: 'will-update',
+        id: testBlockNoteId('will-update'),
         type: 'heading',
         props: { level: 1 },
         content: [{ type: 'text', text: 'Updated', styles: {} }],
         children: [],
       },
       {
-        id: 'will-insert',
+        id: testBlockNoteId('will-insert'),
         type: 'paragraph',
         props: {},
         content: [{ type: 'text', text: 'New', styles: {} }],
@@ -481,12 +485,12 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       const nonDeleted = blocks.filter((b) => b.deletionTime === null)
       expect(nonDeleted).toHaveLength(2)
 
-      const updated = nonDeleted.find((b) => b.blockId === 'will-update')!
+      const updated = nonDeleted.find((b) => b.blockId === testBlockNoteId('will-update'))!
       expect(updated.type).toBe('heading')
       expect(updated.shareStatus).toBe('all_shared')
       expect(updated.updatedTime).not.toBeNull()
 
-      const inserted = nonDeleted.find((b) => b.blockId === 'will-insert')!
+      const inserted = nonDeleted.find((b) => b.blockId === testBlockNoteId('will-insert'))!
       expect(inserted.type).toBe('paragraph')
       expect(inserted.plainText).toBe('New')
       expect(inserted.shareStatus).toBe('not_shared')

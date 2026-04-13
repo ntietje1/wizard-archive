@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { blockNoteBlockSchema } from '../blockNoteValidator'
+import { blockNoteBlockSchema } from '../blockSchemas'
 import {
   customBlockSpecs,
   customInlineContentSpecs,
   customStyleSpecs,
 } from '../../notes/editorSpecs'
+import { testBlockNoteId } from '../../_test/factories.helper'
 
 // ---------------------------------------------------------------------------
 // These tests ensure the Zod validator stays in sync with the BlockNote editor
@@ -21,7 +22,11 @@ describe('block type coverage', () => {
 
   it('validator accepts every block type from the editor schema', () => {
     for (const blockType of editorBlockTypes) {
-      const block: Record<string, unknown> = { id: 'test', type: blockType, props: {} }
+      const block: Record<string, unknown> = {
+        id: testBlockNoteId('test'),
+        type: blockType,
+        props: {},
+      }
       // heading requires level prop
       if (blockType === 'heading') block.props = { level: 1 }
       const result = blockNoteBlockSchema.safeParse(block)
@@ -33,7 +38,7 @@ describe('block type coverage', () => {
     const fakeTypes = ['type1', 'type2', 'type3', 'type4']
     for (const fakeType of fakeTypes) {
       const result = blockNoteBlockSchema.safeParse({
-        id: 'test',
+        id: testBlockNoteId('test'),
         type: fakeType,
         props: {},
       })
@@ -73,7 +78,7 @@ describe('style coverage', () => {
 describe('valid blocks are accepted', () => {
   it('accepts a minimal paragraph', () => {
     const result = blockNoteBlockSchema.safeParse({
-      id: 'test-1',
+      id: testBlockNoteId('test-1'),
       type: 'paragraph',
       props: {},
       content: [],
@@ -84,7 +89,7 @@ describe('valid blocks are accepted', () => {
 
   it('accepts a paragraph with styled text', () => {
     const result = blockNoteBlockSchema.safeParse({
-      id: 'test-2',
+      id: testBlockNoteId('test-2'),
       type: 'paragraph',
       props: { textColor: 'red', textAlignment: 'center' },
       content: [
@@ -98,7 +103,7 @@ describe('valid blocks are accepted', () => {
 
   it('accepts a heading with all props', () => {
     const result = blockNoteBlockSchema.safeParse({
-      id: 'h-1',
+      id: testBlockNoteId('h-1'),
       type: 'heading',
       props: { level: 3, isToggleable: true, textColor: 'blue' },
       content: [{ type: 'text', text: 'Title', styles: {} }],
@@ -108,7 +113,7 @@ describe('valid blocks are accepted', () => {
 
   it('accepts a checkListItem', () => {
     const result = blockNoteBlockSchema.safeParse({
-      id: 'cl-1',
+      id: testBlockNoteId('cl-1'),
       type: 'checkListItem',
       props: { checked: true },
       content: [{ type: 'text', text: 'Done', styles: {} }],
@@ -118,7 +123,7 @@ describe('valid blocks are accepted', () => {
 
   it('accepts a divider with no content', () => {
     const result = blockNoteBlockSchema.safeParse({
-      id: 'd-1',
+      id: testBlockNoteId('d-1'),
       type: 'divider',
       props: {},
     })
@@ -127,7 +132,7 @@ describe('valid blocks are accepted', () => {
 
   it('accepts an image block', () => {
     const result = blockNoteBlockSchema.safeParse({
-      id: 'img-1',
+      id: testBlockNoteId('img-1'),
       type: 'image',
       props: {
         url: 'https://example.com/img.png',
@@ -143,7 +148,7 @@ describe('valid blocks are accepted', () => {
 
   it('accepts a table block with content', () => {
     const result = blockNoteBlockSchema.safeParse({
-      id: 't-1',
+      id: testBlockNoteId('t-1'),
       type: 'table',
       props: { textColor: 'default' },
       content: {
@@ -164,13 +169,13 @@ describe('valid blocks are accepted', () => {
 
   it('accepts nested children', () => {
     const result = blockNoteBlockSchema.safeParse({
-      id: 'p-1',
+      id: testBlockNoteId('p-1'),
       type: 'paragraph',
       props: {},
       content: [],
       children: [
         {
-          id: 'p-2',
+          id: testBlockNoteId('p-2'),
           type: 'paragraph',
           props: {},
           content: [{ type: 'text', text: 'Nested', styles: {} }],
@@ -196,7 +201,7 @@ describe('invalid blocks are rejected', () => {
 
   it('rejects a block with no type', () => {
     const result = blockNoteBlockSchema.safeParse({
-      id: 'x',
+      id: testBlockNoteId('x'),
       props: {},
       content: [],
     })
@@ -205,7 +210,7 @@ describe('invalid blocks are rejected', () => {
 
   it('rejects an unknown block type', () => {
     const result = blockNoteBlockSchema.safeParse({
-      id: 'x',
+      id: testBlockNoteId('x'),
       type: 'unknownWidget',
       props: {},
       content: [],
@@ -215,7 +220,7 @@ describe('invalid blocks are rejected', () => {
 
   it('rejects a heading with invalid level', () => {
     const result = blockNoteBlockSchema.safeParse({
-      id: 'h',
+      id: testBlockNoteId('h'),
       type: 'heading',
       props: { level: 99 },
     })
@@ -224,7 +229,7 @@ describe('invalid blocks are rejected', () => {
 
   it('rejects invalid textAlignment', () => {
     const result = blockNoteBlockSchema.safeParse({
-      id: 'p',
+      id: testBlockNoteId('p'),
       type: 'paragraph',
       props: { textAlignment: 'middle' },
     })
@@ -233,7 +238,7 @@ describe('invalid blocks are rejected', () => {
 
   it('rejects inline content with wrong type', () => {
     const result = blockNoteBlockSchema.safeParse({
-      id: 'p',
+      id: testBlockNoteId('p'),
       type: 'paragraph',
       props: {},
       content: [{ type: 'link', href: 'http://example.com', content: [] }],
@@ -243,7 +248,7 @@ describe('invalid blocks are rejected', () => {
 
   it('rejects a style with wrong value type', () => {
     const result = blockNoteBlockSchema.safeParse({
-      id: 'p',
+      id: testBlockNoteId('p'),
       type: 'paragraph',
       props: {},
       content: [{ type: 'text', text: 'x', styles: { bold: 'yes' } }],
