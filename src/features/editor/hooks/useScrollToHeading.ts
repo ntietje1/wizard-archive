@@ -48,14 +48,14 @@ export function useScrollToHeading(
       if (editor?._tiptapEditor?.view) {
         try {
           editor.focus()
-          editor.setTextCursorPosition(target.blockId, 'start')
+          editor.setTextCursorPosition(target.blockNoteId, 'start')
         } catch {
           // Block might not exist yet or position out of range
         }
       }
 
       document
-        .querySelector(`[data-id="${target.blockId}"]`)
+        .querySelector(`[data-id="${target.blockNoteId}"]`)
         ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
       void navigate({

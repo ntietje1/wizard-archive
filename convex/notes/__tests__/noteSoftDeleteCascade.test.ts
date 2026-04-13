@@ -19,12 +19,12 @@ describe('note soft-delete cascade to blocks and blockShares', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: testBlockNoteId('root'),
+      blockNoteId: testBlockNoteId('root'),
       depth: 0,
       parentBlockId: null,
     })
     await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: testBlockNoteId('child'),
+      blockNoteId: testBlockNoteId('child'),
       depth: 1,
       parentBlockId: testBlockNoteId('root'),
     })
@@ -54,7 +54,7 @@ describe('note soft-delete cascade to blocks and blockShares', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: testBlockNoteId('shared'),
+      blockNoteId: testBlockNoteId('shared'),
       shareStatus: 'individually_shared',
     })
     await createBlockShare(t, ctx.dm.profile._id, {
@@ -87,17 +87,17 @@ describe('note soft-delete cascade to blocks and blockShares', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: testBlockNoteId('root'),
+      blockNoteId: testBlockNoteId('root'),
       depth: 0,
       parentBlockId: null,
     })
     await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: testBlockNoteId('child'),
+      blockNoteId: testBlockNoteId('child'),
       depth: 1,
       parentBlockId: testBlockNoteId('root'),
     })
     const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: testBlockNoteId('shared'),
+      blockNoteId: testBlockNoteId('shared'),
       shareStatus: 'individually_shared',
     })
     await createBlockShare(t, ctx.dm.profile._id, {
@@ -186,7 +186,7 @@ describe('note soft-delete cascade to blocks and blockShares', () => {
       const nonDeleted = blocks.filter((b) => b.deletionTime == null)
       expect(nonDeleted).toHaveLength(0)
 
-      const blockB = blocks.find((b) => b.blockId === testBlockNoteId('block-b'))
+      const blockB = blocks.find((b) => b.blockNoteId === testBlockNoteId('block-b'))
       expect(blockB).toBeUndefined()
     })
   })

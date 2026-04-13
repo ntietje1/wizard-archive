@@ -6,13 +6,14 @@ import { SHARE_STATUS } from '../types'
 import type { NoteFromDb } from '../../notes/types'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { BlockIdentifier, ShareStatus } from '../types'
+import type { ShareStatus } from '../types'
+import type { BlockNoteId } from '../../blocks/types'
 
 async function findBlockOrThrow(
   ctx: CampaignMutationCtx,
-  { noteId, blockNoteId }: { noteId: Id<'sidebarItems'>; blockNoteId: string },
+  { noteId, blockNoteId }: { noteId: Id<'sidebarItems'>; blockNoteId: BlockNoteId },
 ): Promise<Id<'blocks'>> {
-  const block = await findBlockByBlockNoteId(ctx, { noteId, blockId: blockNoteId })
+  const block = await findBlockByBlockNoteId(ctx, { noteId, blockNoteId })
   if (!block) throw throwClientError(ERROR_CODE.NOT_FOUND, 'Block not found')
   return block._id
 }
@@ -136,17 +137,17 @@ export async function shareBlockWithMemberHelper(
   ctx: CampaignMutationCtx,
   {
     note,
-    blockIdentifier,
+    blockNoteId,
     campaignMemberId,
   }: {
     note: NoteFromDb
-    blockIdentifier: BlockIdentifier
+    blockNoteId: BlockNoteId
     campaignMemberId: Id<'campaignMembers'>
   },
 ): Promise<void> {
   const blockId = await findBlockOrThrow(ctx, {
     noteId: note._id,
-    blockNoteId: blockIdentifier.blockNoteId,
+    blockNoteId,
   })
 
   await updateBlock(ctx, {
@@ -165,13 +166,13 @@ export async function unshareBlockFromMemberHelper(
     campaignMemberId,
   }: {
     note: NoteFromDb
-    blockNoteId: string
+    blockNoteId: BlockNoteId
     campaignMemberId: Id<'campaignMembers'>
   },
 ): Promise<void> {
   const block = await findBlockByBlockNoteId(ctx, {
     noteId: note._id,
-    blockId: blockNoteId,
+    blockNoteId,
   })
   if (!block) return
 
@@ -197,13 +198,13 @@ export async function setBlockShareStatusHelper(
   ctx: CampaignMutationCtx,
   {
     note,
-    blockIdentifier,
+    blockNoteId,
     status,
-  }: { note: NoteFromDb; blockIdentifier: BlockIdentifier; status: ShareStatus },
+  }: { note: NoteFromDb; blockNoteId: BlockNoteId; status: ShareStatus },
 ): Promise<void> {
   const blockId = await findBlockOrThrow(ctx, {
     noteId: note._id,
-    blockNoteId: blockIdentifier.blockNoteId,
+    blockNoteId,
   })
 
   await updateBlock(ctx, {

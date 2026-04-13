@@ -14,7 +14,7 @@ import { api } from '../../_generated/api'
 describe('block query edge cases', () => {
   const t = createTestContext()
 
-  it('getBlockWithShares returns null for non-existent blockId', async () => {
+  it('getBlockWithShares returns null for non-existent blockNoteId', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
@@ -23,12 +23,12 @@ describe('block query edge cases', () => {
     const result = await dmAuth.query(api.blocks.queries.getBlockWithShares, {
       campaignId: ctx.campaignId,
       noteId,
-      blockId: testBlockNoteId('nonexistent-block'),
+      blockNoteId: testBlockNoteId('nonexistent-block'),
     })
     expect(result).toBeNull()
   })
 
-  it('getBlocksWithShares returns not_shared with empty sharedMemberIds for unknown blockIds', async () => {
+  it('getBlocksWithShares returns not_shared with empty sharedMemberIds for unknown blockNoteIds', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
@@ -37,7 +37,7 @@ describe('block query edge cases', () => {
     const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
       campaignId: ctx.campaignId,
       noteId,
-      blockIds: [testBlockNoteId('unknown-1'), testBlockNoteId('unknown-2')],
+      blockNoteIds: [testBlockNoteId('unknown-1'), testBlockNoteId('unknown-2')],
     })
 
     expect(result.blocks).toHaveLength(2)
@@ -55,15 +55,15 @@ describe('block query edge cases', () => {
 
     const { noteId } = await createNote(t, campaignId, dm.profile._id)
     const b1 = await createBlock(t, noteId, campaignId, dm.profile._id, {
-      blockId: testBlockNoteId('agg-1'),
+      blockNoteId: testBlockNoteId('agg-1'),
       shareStatus: 'individually_shared',
     })
     const b2 = await createBlock(t, noteId, campaignId, dm.profile._id, {
-      blockId: testBlockNoteId('agg-2'),
+      blockNoteId: testBlockNoteId('agg-2'),
       shareStatus: 'individually_shared',
     })
     const b3 = await createBlock(t, noteId, campaignId, dm.profile._id, {
-      blockId: testBlockNoteId('agg-3'),
+      blockNoteId: testBlockNoteId('agg-3'),
       shareStatus: 'individually_shared',
     })
 
@@ -95,7 +95,7 @@ describe('block query edge cases', () => {
     const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
       campaignId,
       noteId,
-      blockIds: [testBlockNoteId('agg-1'), testBlockNoteId('agg-2'), testBlockNoteId('agg-3')],
+      blockNoteIds: [testBlockNoteId('agg-1'), testBlockNoteId('agg-2'), testBlockNoteId('agg-3')],
     })
 
     const block1 = result.blocks.find((b) => b.blockNoteId === testBlockNoteId('agg-1'))
@@ -119,7 +119,7 @@ describe('block query edge cases', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const block = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: testBlockNoteId('soft-del'),
+      blockNoteId: testBlockNoteId('soft-del'),
       shareStatus: 'individually_shared',
     })
     await createBlockShare(t, ctx.dm.profile._id, {
@@ -134,7 +134,7 @@ describe('block query edge cases', () => {
     const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
       campaignId: ctx.campaignId,
       noteId,
-      blockIds: [testBlockNoteId('soft-del')],
+      blockNoteIds: [testBlockNoteId('soft-del')],
     })
 
     const blockResult = result.blocks.find((b) => b.blockNoteId === testBlockNoteId('soft-del'))
@@ -154,14 +154,14 @@ describe('block query edge cases', () => {
       permissionLevel: 'view',
     })
     await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: testBlockNoteId('dm-only'),
+      blockNoteId: testBlockNoteId('dm-only'),
     })
 
     await expectPermissionDenied(
       playerAuth.query(api.blocks.queries.getBlockWithShares, {
         campaignId: ctx.campaignId,
         noteId,
-        blockId: testBlockNoteId('dm-only'),
+        blockNoteId: testBlockNoteId('dm-only'),
       }),
     )
   })
@@ -175,7 +175,7 @@ describe('block query edge cases', () => {
     const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
       campaignId,
       noteId,
-      blockIds: [],
+      blockNoteIds: [],
     })
 
     expect(result.playerMembers).toHaveLength(3)

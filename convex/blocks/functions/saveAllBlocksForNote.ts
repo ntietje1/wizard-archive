@@ -23,13 +23,13 @@ export async function saveAllBlocksForNote(
     .filter((q) => q.eq(q.field('deletionTime'), null))
     .collect()
 
-  const existingBlocksMap = new Map(existingBlocks.map((block) => [block.blockId, block]))
+  const existingBlocksMap = new Map(existingBlocks.map((block) => [block.blockNoteId, block]))
 
   const flatBlocks = flattenBlocks(content)
-  const incomingBlockIds = new Set(flatBlocks.map((b) => b.blockId))
+  const incomingBlockIds = new Set(flatBlocks.map((b) => b.blockNoteId))
 
   await asyncMap(flatBlocks, async (flat) => {
-    const existing = existingBlocksMap.get(flat.blockId)
+    const existing = existingBlocksMap.get(flat.blockNoteId)
     if (existing) {
       await updateBlock(ctx, {
         blockDbId: existing._id,
@@ -45,7 +45,7 @@ export async function saveAllBlocksForNote(
       await insertBlock(ctx, {
         noteId,
         campaignId,
-        blockId: flat.blockId,
+        blockNoteId: flat.blockNoteId,
         parentBlockId: flat.parentBlockId,
         depth: flat.depth,
         position: flat.position,
@@ -59,7 +59,7 @@ export async function saveAllBlocksForNote(
   })
 
   // hard delete blocks that don't exist in the document anymore
-  const blocksToDelete = existingBlocks.filter((b) => !incomingBlockIds.has(b.blockId))
+  const blocksToDelete = existingBlocks.filter((b) => !incomingBlockIds.has(b.blockNoteId))
   await asyncMap(blocksToDelete, async (block) => {
     const blockShares = await ctx.db
       .query('blockShares')

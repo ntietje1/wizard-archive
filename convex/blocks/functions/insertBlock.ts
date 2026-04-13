@@ -2,15 +2,15 @@ import { ERROR_CODE, throwClientError } from '../../errors'
 import type { ShareStatus } from '../../blockShares/types'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
-import type { BlockProps, BlockType, InlineContent } from '../types'
+import type { BlockNoteId, BlockProps, BlockType, InlineContent } from '../types'
 
 export async function insertBlock(
   ctx: CampaignMutationCtx,
   params: {
     noteId: Id<'sidebarItems'>
     campaignId: Id<'campaigns'>
-    blockId: string
-    parentBlockId: string | null
+    blockNoteId: BlockNoteId
+    parentBlockId: BlockNoteId | null
     depth: number
     position: number | null
     type: BlockType
@@ -25,7 +25,7 @@ export async function insertBlock(
   return await ctx.db.insert('blocks', {
     noteId: params.noteId,
     campaignId: params.campaignId,
-    blockId: params.blockId,
+    blockNoteId: params.blockNoteId,
     parentBlockId: params.parentBlockId,
     depth: params.depth,
     position: params.position,

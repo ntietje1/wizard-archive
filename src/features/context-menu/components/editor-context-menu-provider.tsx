@@ -52,7 +52,7 @@ export function EditorContextMenuProvider({
     activePin: mapView?.activePin ?? undefined,
     hasActiveSession: !!currentSession.data,
     editor: blockNoteCtx?.editor ?? undefined,
-    blockId: blockNoteCtx?.blockId,
+    blockNoteId: blockNoteCtx?.blockNoteId,
   }
 
   const allMenuItems = createMenuItems(menuActions.actions)

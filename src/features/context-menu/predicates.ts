@@ -37,7 +37,7 @@ export const inNoteView: Predicate = (ctx) => ctx.viewContext === VIEW_CONTEXT.N
 
 export const hasBlockNoteEditor: Predicate = (ctx) => ctx.editor !== undefined
 
-export const hasBlockId: Predicate = (ctx) => ctx.blockId !== undefined
+export const hasBlockNoteId: Predicate = (ctx) => ctx.blockNoteId !== undefined
 
 export const viewingCanvas: Predicate = (ctx) => ctx.viewContext === VIEW_CONTEXT.CANVAS_VIEW
 

@@ -169,7 +169,7 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, dmId)
     const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, dmId, {
-      blockId: testBlockNoteId('b1'),
+      blockNoteId: testBlockNoteId('b1'),
       shareStatus: 'individually_shared',
     })
     const { blockShareId } = await createBlockShare(t, dmId, {

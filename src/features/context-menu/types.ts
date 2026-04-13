@@ -3,6 +3,7 @@ import type { CampaignMemberRole } from 'convex/campaigns/types'
 import type { LucideIcon } from 'lucide-react'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
+import type { BlockNoteId } from 'convex/blocks/types'
 import type { PermissionLevel } from 'convex/permissions/types'
 import type { VIEW_CONTEXT } from './constants'
 
@@ -31,7 +32,7 @@ export interface MenuContext {
 
   // BlockNote editor context (for editor-related menus)
   editor?: CustomBlockNoteEditor
-  blockId?: string
+  blockNoteId?: BlockNoteId
 }
 
 export type Predicate = (ctx: MenuContext) => boolean

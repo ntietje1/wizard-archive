@@ -6,6 +6,7 @@ import type { EditorContextMenuRef } from '~/features/context-menu/components/ed
 import type { BlockNoteContextMenuEvent } from '~/features/editor/hooks/useBlockNoteContextMenu'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { BlockNoteContextMenuContext } from '~/features/editor/hooks/useBlockNoteContextMenu'
+import type { BlockNoteId } from 'convex/blocks/types'
 
 interface BlockNoteContextMenuProviderProps {
   children: ReactNode
@@ -25,14 +26,14 @@ export function BlockNoteContextMenuProvider({
   }
 
   const currentEditor = editorOverride ?? editor
-  const [currentBlockId, setCurrentBlockId] = useState<string | undefined>(undefined)
+  const [currentBlockNoteId, setCurrentBlockNoteId] = useState<BlockNoteId | undefined>(undefined)
   const [menuState, setMenuState] = useState<BlockNoteContextMenuEvent | null>(null)
   const contextMenuRef = useRef<EditorContextMenuRef>(null)
 
   useEffect(() => {
     const handleOpenRequest = (e: CustomEvent<BlockNoteContextMenuEvent>) => {
       setMenuState(e.detail)
-      setCurrentBlockId(e.detail.blockId)
+      setCurrentBlockNoteId(e.detail.blockNoteId)
       requestAnimationFrame(() => {
         contextMenuRef.current?.open(e.detail.position)
       })
@@ -46,7 +47,7 @@ export function BlockNoteContextMenuProvider({
 
   const handleClose = () => {
     setMenuState(null)
-    setCurrentBlockId(undefined)
+    setCurrentBlockNoteId(undefined)
   }
 
   return (
@@ -54,8 +55,8 @@ export function BlockNoteContextMenuProvider({
       value={{
         editor: currentEditor,
         setEditor: setEditorOverride,
-        blockId: currentBlockId,
-        setBlockId: setCurrentBlockId,
+        blockNoteId: currentBlockNoteId,
+        setBlockNoteId: setCurrentBlockNoteId,
       }}
     >
       {children}

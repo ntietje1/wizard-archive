@@ -1,10 +1,36 @@
 import { describe, expect, it } from 'vitest'
+import type { CustomBlock } from 'convex/notes/editorSpecs'
 import {
   extractHeadingsFromContent,
   findHeadingByText,
   normalizeHeadingText,
   resolveHeadingPath,
 } from '~/features/editor/utils/heading-utils'
+
+function heading(
+  id: string,
+  text: string,
+  level: number,
+  children: Array<CustomBlock> = [],
+): CustomBlock {
+  return {
+    id,
+    type: 'heading',
+    props: { level },
+    content: [{ type: 'text', text, styles: {} }],
+    children,
+  } as unknown as CustomBlock
+}
+
+function paragraph(id: string, text: string, children: Array<CustomBlock> = []): CustomBlock {
+  return {
+    id,
+    type: 'paragraph',
+    props: {},
+    content: [{ type: 'text', text, styles: {} }],
+    children,
+  } as unknown as CustomBlock
+}
 
 describe('normalizeHeadingText', () => {
   it('lowercases and trims', () => {
@@ -18,28 +44,10 @@ describe('normalizeHeadingText', () => {
 
 describe('extractHeadingsFromContent', () => {
   it('extracts headings from blocks', () => {
-    const content = [
-      {
-        id: 'b1',
-        type: 'heading' as const,
-        props: { level: 1 },
-        content: [{ type: 'text', text: 'Introduction' }],
-        children: [],
-      },
-      {
-        id: 'b2',
-        type: 'paragraph' as const,
-        props: {},
-        content: [{ type: 'text', text: 'body text' }],
-        children: [],
-      },
-      {
-        id: 'b3',
-        type: 'heading' as const,
-        props: { level: 2 },
-        content: [{ type: 'text', text: 'Details' }],
-        children: [],
-      },
+    const content: Array<CustomBlock> = [
+      heading('b1', 'Introduction', 1),
+      paragraph('b2', 'body text'),
+      heading('b3', 'Details', 2),
     ]
     const headings = extractHeadingsFromContent(content)
     expect(headings).toHaveLength(2)
@@ -50,62 +58,18 @@ describe('extractHeadingsFromContent', () => {
   })
 
   it('skips headings without text', () => {
-    const content = [
-      {
-        id: 'b1',
-        type: 'heading' as const,
-        props: { level: 1 },
-        content: [],
-        children: [],
-      },
-    ]
-    expect(extractHeadingsFromContent(content)).toHaveLength(0)
-  })
-
-  it('skips headings without id', () => {
-    const content = [
-      {
-        type: 'heading' as const,
-        props: { level: 1 },
-        content: [{ type: 'text', text: 'No ID' }],
-        children: [],
-      },
-    ]
+    const content: Array<CustomBlock> = [heading('b1', '', 1)]
     expect(extractHeadingsFromContent(content)).toHaveLength(0)
   })
 
   it('defaults to level 1 for invalid levels', () => {
-    const content = [
-      {
-        id: 'b1',
-        type: 'heading' as const,
-        props: { level: 5 },
-        content: [{ type: 'text', text: 'Bad Level' }],
-        children: [],
-      },
-    ]
+    const content: Array<CustomBlock> = [heading('b1', 'Bad Level', 5)]
     const headings = extractHeadingsFromContent(content)
     expect(headings[0].level).toBe(1)
   })
 
   it('processes nested children', () => {
-    const content = [
-      {
-        id: 'b1',
-        type: 'paragraph' as const,
-        props: {},
-        content: [],
-        children: [
-          {
-            id: 'b2',
-            type: 'heading' as const,
-            props: { level: 3 },
-            content: [{ type: 'text', text: 'Nested' }],
-            children: [],
-          },
-        ],
-      },
-    ]
+    const content: Array<CustomBlock> = [paragraph('b1', '', [heading('b2', 'Nested', 3)])]
     const headings = extractHeadingsFromContent(content)
     expect(headings).toHaveLength(1)
     expect(headings[0].text).toBe('Nested')
@@ -115,13 +79,13 @@ describe('extractHeadingsFromContent', () => {
 describe('findHeadingByText', () => {
   const headings = [
     {
-      blockId: 'b1',
+      blockNoteId: 'b1',
       text: 'Introduction',
       level: 1 as const,
       normalizedText: 'introduction',
     },
     {
-      blockId: 'b2',
+      blockNoteId: 'b2',
       text: 'Details',
       level: 2 as const,
       normalizedText: 'details',
@@ -129,7 +93,7 @@ describe('findHeadingByText', () => {
   ]
 
   it('finds heading by text (case-insensitive)', () => {
-    expect(findHeadingByText(headings, 'INTRODUCTION')?.blockId).toBe('b1')
+    expect(findHeadingByText(headings, 'INTRODUCTION')?.blockNoteId).toBe('b1')
   })
 
   it('returns undefined for non-existent heading', () => {
@@ -140,19 +104,19 @@ describe('findHeadingByText', () => {
 describe('resolveHeadingPath', () => {
   const headings = [
     {
-      blockId: 'b1',
+      blockNoteId: 'b1',
       text: 'Chapter 1',
       level: 1 as const,
       normalizedText: 'chapter 1',
     },
     {
-      blockId: 'b2',
+      blockNoteId: 'b2',
       text: 'Section A',
       level: 2 as const,
       normalizedText: 'section a',
     },
     {
-      blockId: 'b3',
+      blockNoteId: 'b3',
       text: 'Section B',
       level: 2 as const,
       normalizedText: 'section b',
@@ -160,11 +124,11 @@ describe('resolveHeadingPath', () => {
   ]
 
   it('resolves single path segment', () => {
-    expect(resolveHeadingPath(headings, ['Chapter 1'])?.blockId).toBe('b1')
+    expect(resolveHeadingPath(headings, ['Chapter 1'])?.blockNoteId).toBe('b1')
   })
 
   it('resolves chained path', () => {
-    expect(resolveHeadingPath(headings, ['Chapter 1', 'Section B'])?.blockId).toBe('b3')
+    expect(resolveHeadingPath(headings, ['Chapter 1', 'Section B'])?.blockNoteId).toBe('b3')
   })
 
   it('returns undefined for empty path', () => {
@@ -174,19 +138,19 @@ describe('resolveHeadingPath', () => {
   it('resolves to first match when duplicates exist', () => {
     const duplicateHeadings = [
       {
-        blockId: 'b1',
+        blockNoteId: 'b1',
         text: 'Overview',
         level: 1 as const,
         normalizedText: 'overview',
       },
       {
-        blockId: 'b2',
+        blockNoteId: 'b2',
         text: 'Overview',
         level: 2 as const,
         normalizedText: 'overview',
       },
     ]
-    expect(resolveHeadingPath(duplicateHeadings, ['Overview'])?.blockId).toBe('b1')
+    expect(resolveHeadingPath(duplicateHeadings, ['Overview'])?.blockNoteId).toBe('b1')
   })
 
   it('returns undefined when path segment not found', () => {

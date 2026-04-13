@@ -9,7 +9,7 @@ import { getBlocksWithShares as getBlocksWithSharesFn } from './functions/getBlo
 export const getBlockWithShares = dmQuery({
   args: {
     noteId: v.id('sidebarItems'),
-    blockId: blockNoteIdValidator,
+    blockNoteId: blockNoteIdValidator,
   },
   returns: v.union(
     v.object({
@@ -23,7 +23,7 @@ export const getBlockWithShares = dmQuery({
   handler: async (ctx, args) => {
     return await getBlockWithSharesFn(ctx, {
       noteId: args.noteId,
-      blockId: args.blockId,
+      blockNoteId: args.blockNoteId,
     })
   },
 })
@@ -37,7 +37,7 @@ const blockShareInfoValidator = v.object({
 export const getBlocksWithShares = dmQuery({
   args: {
     noteId: v.id('sidebarItems'),
-    blockIds: v.array(blockNoteIdValidator),
+    blockNoteIds: v.array(blockNoteIdValidator),
   },
   returns: v.object({
     blocks: v.array(blockShareInfoValidator),
@@ -46,7 +46,7 @@ export const getBlocksWithShares = dmQuery({
   handler: async (ctx, args) => {
     return await getBlocksWithSharesFn(ctx, {
       noteId: args.noteId,
-      blockIds: args.blockIds,
+      blockNoteIds: args.blockNoteIds,
     })
   },
 })

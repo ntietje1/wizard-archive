@@ -25,13 +25,13 @@ export function BlockNoteContextMenuHandler() {
       // Determine what block was clicked
       const target = e.target as HTMLElement
       const blockElement = target.closest('[data-node-type="blockContainer"]')
-      const blockId = blockElement?.getAttribute('data-id') ?? undefined
+      const blockNoteId = blockElement?.getAttribute('data-id') ?? undefined
 
       openBlockNoteContextMenu({
         position: { x: e.clientX, y: e.clientY },
         viewContext: 'note-view',
         item: undefined, // No sidebar item for general editor context
-        blockId,
+        blockNoteId,
       })
     }
 

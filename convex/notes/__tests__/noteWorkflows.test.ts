@@ -28,7 +28,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
       name: 'Secrets',
     })
     const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: testBlockNoteId('secret-block'),
+      blockNoteId: testBlockNoteId('secret-block'),
     })
 
     await createSidebarShare(t, ctx.dm.profile._id, {
@@ -44,18 +44,16 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
       campaignMemberId: p2.memberId,
     })
 
-    const blockRef = { blockNoteId: block.blockId }
-
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
-      blocks: [blockRef],
+      blocks: [block.blockNoteId],
       status: 'individually_shared',
     })
     await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
-      blocks: [blockRef],
+      blocks: [block.blockNoteId],
       campaignMemberId: p1.memberId,
     })
 
@@ -63,18 +61,18 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
     })
-    expect(Object.keys(p1Note!.blockMeta)).toContain(block.blockId)
+    expect(Object.keys(p1Note!.blockMeta)).toContain(block.blockNoteId)
 
     const p2Note = await p2.authed.query(api.notes.queries.getNote, {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
     })
-    expect(Object.keys(p2Note!.blockMeta)).not.toContain(block.blockId)
+    expect(Object.keys(p2Note!.blockMeta)).not.toContain(block.blockNoteId)
 
     await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
-      blocks: [blockRef],
+      blocks: [block.blockNoteId],
       campaignMemberId: p2.memberId,
     })
 
@@ -82,7 +80,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
     })
-    expect(Object.keys(p2NoteAfter!.blockMeta)).toContain(block.blockId)
+    expect(Object.keys(p2NoteAfter!.blockMeta)).toContain(block.blockNoteId)
   })
 
   it('unsharing blocks reverts visibility', async () => {
@@ -92,7 +90,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
 
     const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: testBlockNoteId('revocable-block'),
+      blockNoteId: testBlockNoteId('revocable-block'),
     })
 
     await createSidebarShare(t, ctx.dm.profile._id, {
@@ -102,12 +100,10 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
       campaignMemberId: ctx.player.memberId,
     })
 
-    const blockRef = { blockNoteId: block.blockId }
-
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
-      blocks: [blockRef],
+      blocks: [block.blockNoteId],
       status: 'all_shared',
     })
 
@@ -115,12 +111,12 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
     })
-    expect(Object.keys(visibleNote!.blockMeta)).toContain(block.blockId)
+    expect(Object.keys(visibleNote!.blockMeta)).toContain(block.blockNoteId)
 
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
-      blocks: [blockRef],
+      blocks: [block.blockNoteId],
       status: 'not_shared',
     })
 
@@ -128,7 +124,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
     })
-    expect(Object.keys(hiddenNote!.blockMeta)).not.toContain(block.blockId)
+    expect(Object.keys(hiddenNote!.blockMeta)).not.toContain(block.blockNoteId)
   })
 
   it('note inside shared folder inherits visibility but blocks still require explicit sharing', async () => {
@@ -163,19 +159,19 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     expect(playerNote!.name).toBe('Nested Note')
 
     const block = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: testBlockNoteId('nested-block'),
+      blockNoteId: testBlockNoteId('nested-block'),
     })
 
     const playerNoteWithBlocks = await playerAuth.query(api.notes.queries.getNote, {
       campaignId: ctx.campaignId,
       noteId,
     })
-    expect(Object.keys(playerNoteWithBlocks!.blockMeta)).not.toContain(block.blockId)
+    expect(Object.keys(playerNoteWithBlocks!.blockMeta)).not.toContain(block.blockNoteId)
 
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId,
-      blocks: [{ blockNoteId: block.blockId }],
+      blocks: [block.blockNoteId],
       status: 'all_shared',
     })
 
@@ -183,7 +179,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
       campaignId: ctx.campaignId,
       noteId,
     })
-    expect(Object.keys(playerNoteShared!.blockMeta)).toContain(block.blockId)
+    expect(Object.keys(playerNoteShared!.blockMeta)).toContain(block.blockNoteId)
   })
 
   it('removing sidebar share hides note entirely regardless of block shares', async () => {
@@ -208,7 +204,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
       noteId: note.noteId,
     })
     expect(before).not.toBeNull()
-    expect(Object.keys(before!.blockMeta)).toContain(block.blockId)
+    expect(Object.keys(before!.blockMeta)).toContain(block.blockNoteId)
 
     await dmAuth.mutation(api.sidebarShares.mutations.unshareSidebarItem, {
       campaignId: ctx.campaignId,
@@ -230,7 +226,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
 
     const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: testBlockNoteId('transition-block'),
+      blockNoteId: testBlockNoteId('transition-block'),
     })
 
     await createSidebarShare(t, ctx.dm.profile._id, {
@@ -240,14 +236,12 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
       campaignMemberId: ctx.player.memberId,
     })
 
-    const blockRef = { blockNoteId: block.blockId }
-
     const getVisibility = async () => {
       const n = await playerAuth.query(api.notes.queries.getNote, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
       })
-      return Object.keys(n!.blockMeta).includes(block.blockId)
+      return Object.keys(n!.blockMeta).includes(block.blockNoteId)
     }
 
     expect(await getVisibility()).toBe(false)
@@ -255,7 +249,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
-      blocks: [blockRef],
+      blocks: [block.blockNoteId],
       status: 'all_shared',
     })
     expect(await getVisibility()).toBe(true)
@@ -263,7 +257,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
-      blocks: [blockRef],
+      blocks: [block.blockNoteId],
       status: 'individually_shared',
     })
     expect(await getVisibility()).toBe(false)
@@ -271,7 +265,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
-      blocks: [blockRef],
+      blocks: [block.blockNoteId],
       campaignMemberId: ctx.player.memberId,
     })
     expect(await getVisibility()).toBe(true)
@@ -279,7 +273,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
-      blocks: [blockRef],
+      blocks: [block.blockNoteId],
       status: 'not_shared',
     })
     expect(await getVisibility()).toBe(false)
@@ -293,19 +287,19 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: testBlockNoteId('root'),
+      blockNoteId: testBlockNoteId('root'),
       depth: 0,
       parentBlockId: null,
       position: 0,
     })
     await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: testBlockNoteId('shared-child'),
+      blockNoteId: testBlockNoteId('shared-child'),
       depth: 1,
       parentBlockId: testBlockNoteId('root'),
       position: 0,
     })
     await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: testBlockNoteId('unshared-child'),
+      blockNoteId: testBlockNoteId('unshared-child'),
       depth: 1,
       parentBlockId: testBlockNoteId('root'),
       position: 1,
@@ -321,10 +315,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId: note.noteId,
-      blocks: [
-        { blockNoteId: testBlockNoteId('root') },
-        { blockNoteId: testBlockNoteId('shared-child') },
-      ],
+      blocks: [testBlockNoteId('root'), testBlockNoteId('shared-child')],
       status: 'all_shared',
     })
 

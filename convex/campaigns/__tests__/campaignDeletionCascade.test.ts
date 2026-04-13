@@ -42,7 +42,7 @@ describe('campaign deletion cascade', () => {
     })
 
     const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, dmId, {
-      blockId: testBlockNoteId('b1'),
+      blockNoteId: testBlockNoteId('b1'),
     })
     const { blockShareId } = await createBlockShare(t, dmId, {
       campaignId: ctx.campaignId,

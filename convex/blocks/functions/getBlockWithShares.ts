@@ -9,7 +9,7 @@ import { findBlockByBlockNoteId } from './findBlockByBlockNoteId'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { DmQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { Block } from '../types'
+import type { Block, BlockNoteId } from '../types'
 import type { BlockShare, ShareStatus } from '../../blockShares/types'
 import type { CampaignMember } from '../../campaigns/types'
 
@@ -17,10 +17,10 @@ export const getBlockWithShares = async (
   ctx: DmQueryCtx,
   {
     noteId,
-    blockId,
+    blockNoteId,
   }: {
     noteId: Id<'sidebarItems'>
-    blockId: string
+    blockNoteId: BlockNoteId
   },
 ): Promise<{
   block: Block
@@ -37,7 +37,7 @@ export const getBlockWithShares = async (
 
   const block = await findBlockByBlockNoteId(ctx, {
     noteId,
-    blockId,
+    blockNoteId,
   })
   if (!block) {
     return null

@@ -1,25 +1,18 @@
-import type { CustomPartialBlock } from 'convex/notes/editorSpecs'
+import type { BlockNoteId } from 'convex/blocks/types'
+import type { CustomBlock } from 'convex/notes/editorSpecs'
 
 export interface HeadingEntry {
-  blockId: string
+  blockNoteId: BlockNoteId
   text: string
   level: 1 | 2 | 3
   normalizedText: string
 }
 
-interface BlockLike {
-  id?: string
-  type?: string
-  props?: Record<string, unknown>
-  content?: Array<{ type: string; text?: string }>
-  children?: Array<BlockLike>
-}
-
-function extractText(content: Array<{ type: string; text?: string }> | undefined): string {
-  if (!content) return ''
+function extractText(content: unknown): string {
+  if (!Array.isArray(content)) return ''
   return content
-    .filter((c) => c.type === 'text' && c.text)
-    .map((c) => c.text)
+    .filter((c: { type: string }) => c.type === 'text')
+    .map((c: { text?: string }) => c.text ?? '')
     .join('')
 }
 
@@ -27,19 +20,16 @@ export function normalizeHeadingText(text: string): string {
   return text.toLowerCase().trim().replace(/\s+/g, ' ')
 }
 
-export function extractHeadingsFromContent(
-  content: Array<CustomPartialBlock | BlockLike>,
-): Array<HeadingEntry> {
+export function extractHeadingsFromContent(content: Array<CustomBlock>): Array<HeadingEntry> {
   const headings: Array<HeadingEntry> = []
 
-  const process = (block: BlockLike) => {
+  const process = (block: CustomBlock) => {
     if (block.type === 'heading') {
       const text = extractText(block.content)
       if (text) {
         const level = (block.props as { level?: number })?.level
-        if (!block.id) return
         headings.push({
-          blockId: block.id,
+          blockNoteId: block.id,
           text,
           level: level === 1 || level === 2 || level === 3 ? level : 1,
           normalizedText: normalizeHeadingText(text),

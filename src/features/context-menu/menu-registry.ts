@@ -131,11 +131,11 @@ export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
       icon: Pencil,
       group: 'primary',
       priority: 0,
-      shouldShow: (ctx) => p.hasBlockId(ctx),
+      shouldShow: (ctx) => p.hasBlockNoteId(ctx),
       action: (ctx) => {
-        logger.debug('test-block', ctx.blockId)
-        if (!ctx.blockId) return
-        const block = ctx.editor?.getBlock(ctx.blockId)
+        logger.debug('test-block', ctx.blockNoteId)
+        if (!ctx.blockNoteId) return
+        const block = ctx.editor?.getBlock(ctx.blockNoteId)
         logger.debug(block?.content)
       },
     },

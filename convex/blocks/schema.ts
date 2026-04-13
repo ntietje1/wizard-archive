@@ -16,7 +16,7 @@ export const blockShareStatusValidator = literals('all_shared', 'not_shared', 'i
 
 const blockTableFields = {
   noteId: v.id('sidebarItems'),
-  blockId: zodToConvex(blockNoteIdSchema),
+  blockNoteId: zodToConvex(blockNoteIdSchema),
   position: v.nullable(v.number()),
   parentBlockId: v.nullable(zodToConvex(blockNoteIdSchema)),
   depth: v.number(),
@@ -34,7 +34,7 @@ export const blocksTables = {
     ...blockTableFields,
   })
     .index('by_campaign_note', ['campaignId', 'noteId'])
-    .index('by_campaign_note_block', ['campaignId', 'noteId', 'blockId']),
+    .index('by_campaign_note_block', ['campaignId', 'noteId', 'blockNoteId']),
 }
 
 const blockValidatorFields = {

@@ -1,11 +1,11 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
-import type { Block } from '../types'
+import type { Block, BlockNoteId } from '../types'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignQueryCtx } from '../../functions'
 
 export const findBlockByBlockNoteId = async (
   ctx: CampaignQueryCtx,
-  { noteId, blockId }: { noteId: Id<'sidebarItems'>; blockId: string },
+  { noteId, blockNoteId }: { noteId: Id<'sidebarItems'>; blockNoteId: BlockNoteId },
 ): Promise<Block | null> => {
   const note = await ctx.db.get('sidebarItems', noteId)
   if (!note) {
@@ -15,7 +15,7 @@ export const findBlockByBlockNoteId = async (
   const block = await ctx.db
     .query('blocks')
     .withIndex('by_campaign_note_block', (q) =>
-      q.eq('campaignId', note.campaignId).eq('noteId', noteId).eq('blockId', blockId),
+      q.eq('campaignId', note.campaignId).eq('noteId', noteId).eq('blockNoteId', blockNoteId),
     )
     .filter((q) => q.eq(q.field('deletionTime'), null))
     .first()

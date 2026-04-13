@@ -162,7 +162,7 @@ describe('persistBlocks', () => {
 
       expect(blocks.length).toBe(2)
 
-      const headingBlock = blocks.find((b) => b.blockId === blockIds.heading)
+      const headingBlock = blocks.find((b) => b.blockNoteId === blockIds.heading)
       expect(headingBlock).toMatchObject({
         type: 'heading',
         parentBlockId: null,
@@ -171,7 +171,7 @@ describe('persistBlocks', () => {
         plainText: 'Hello World',
       })
 
-      const paragraphBlock = blocks.find((b) => b.blockId === blockIds.paragraph)
+      const paragraphBlock = blocks.find((b) => b.blockNoteId === blockIds.paragraph)
       expect(paragraphBlock).toMatchObject({
         type: 'paragraph',
         parentBlockId: null,

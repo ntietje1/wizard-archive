@@ -23,11 +23,11 @@ function toFakeBlocks(flat: ReturnType<typeof flattenBlocks>): Array<Block> {
   return flat.map(
     (f) =>
       ({
-        _id: `blocks:${f.blockId}` as Id<'blocks'>,
+        _id: `blocks:${f.blockNoteId}` as Id<'blocks'>,
         _creationTime: 0,
         noteId: 'sidebarItems:n' as Id<'sidebarItems'>,
         campaignId: 'campaigns:c' as Id<'campaigns'>,
-        blockId: f.blockId,
+        blockNoteId: f.blockNoteId,
         parentBlockId: f.parentBlockId,
         depth: f.depth,
         position: f.position,
@@ -55,7 +55,7 @@ describe('flattenBlocks', () => {
     const result = flattenBlocks(blocks)
     expect(result).toHaveLength(1)
     expect(result[0]).toMatchObject({
-      blockId: testBlockNoteId('a'),
+      blockNoteId: testBlockNoteId('a'),
       parentBlockId: null,
       depth: 0,
       position: 0,
@@ -87,10 +87,10 @@ describe('flattenBlocks', () => {
     const result = flattenBlocks(blocks)
     expect(result).toHaveLength(4)
 
-    const parent = result.find((b) => b.blockId === testBlockNoteId('parent'))!
-    const child1 = result.find((b) => b.blockId === testBlockNoteId('child-1'))!
-    const child2 = result.find((b) => b.blockId === testBlockNoteId('child-2'))!
-    const grandchild = result.find((b) => b.blockId === testBlockNoteId('grandchild'))!
+    const parent = result.find((b) => b.blockNoteId === testBlockNoteId('parent'))!
+    const child1 = result.find((b) => b.blockNoteId === testBlockNoteId('child-1'))!
+    const child2 = result.find((b) => b.blockNoteId === testBlockNoteId('child-2'))!
+    const grandchild = result.find((b) => b.blockNoteId === testBlockNoteId('grandchild'))!
 
     expect(parent.parentBlockId).toBeNull()
     expect(parent.depth).toBe(0)
@@ -155,7 +155,7 @@ describe('flattenBlocks', () => {
     const blocks = [makeBlock('a', { children: [] })]
     const result = flattenBlocks(blocks)
     expect(result).toHaveLength(1)
-    expect(result[0].blockId).toBe(testBlockNoteId('a'))
+    expect(result[0].blockNoteId).toBe(testBlockNoteId('a'))
   })
 
   it('flattens multiple root blocks each with nested children', () => {
@@ -166,10 +166,10 @@ describe('flattenBlocks', () => {
     const result = flattenBlocks(blocks)
     expect(result).toHaveLength(4)
 
-    const r1 = result.find((b) => b.blockId === testBlockNoteId('r1'))!
-    const r2 = result.find((b) => b.blockId === testBlockNoteId('r2'))!
-    const c1 = result.find((b) => b.blockId === testBlockNoteId('c1'))!
-    const c2 = result.find((b) => b.blockId === testBlockNoteId('c2'))!
+    const r1 = result.find((b) => b.blockNoteId === testBlockNoteId('r1'))!
+    const r2 = result.find((b) => b.blockNoteId === testBlockNoteId('r2'))!
+    const c1 = result.find((b) => b.blockNoteId === testBlockNoteId('c1'))!
+    const c2 = result.find((b) => b.blockNoteId === testBlockNoteId('c2'))!
 
     expect(r1).toMatchObject({ parentBlockId: null, depth: 0, position: 0 })
     expect(r2).toMatchObject({ parentBlockId: null, depth: 0, position: 1 })
@@ -237,7 +237,7 @@ describe('flattenBlocks', () => {
     expect(flat).toHaveLength(6)
 
     for (let i = 0; i < 6; i++) {
-      const block = flat.find((b) => b.blockId === testBlockNoteId(`d${i}`))!
+      const block = flat.find((b) => b.blockNoteId === testBlockNoteId(`d${i}`))!
       expect(block.depth).toBe(i)
       expect(block.position).toBe(0)
       expect(block.parentBlockId).toBe(i === 0 ? null : testBlockNoteId(`d${i - 1}`))
@@ -278,50 +278,50 @@ describe('flattenBlocks', () => {
     const flat = flattenBlocks(tree)
     expect(flat).toHaveLength(10)
 
-    expect(flat.find((b) => b.blockId === testBlockNoteId('r1'))!).toMatchObject({
+    expect(flat.find((b) => b.blockNoteId === testBlockNoteId('r1'))!).toMatchObject({
       parentBlockId: null,
       depth: 0,
       position: 0,
     })
-    expect(flat.find((b) => b.blockId === testBlockNoteId('r2'))!).toMatchObject({
+    expect(flat.find((b) => b.blockNoteId === testBlockNoteId('r2'))!).toMatchObject({
       parentBlockId: null,
       depth: 0,
       position: 1,
     })
 
-    expect(flat.find((b) => b.blockId === testBlockNoteId('r1-c0'))!).toMatchObject({
+    expect(flat.find((b) => b.blockNoteId === testBlockNoteId('r1-c0'))!).toMatchObject({
       parentBlockId: testBlockNoteId('r1'),
       depth: 1,
       position: 0,
     })
-    expect(flat.find((b) => b.blockId === testBlockNoteId('r1-c1'))!).toMatchObject({
+    expect(flat.find((b) => b.blockNoteId === testBlockNoteId('r1-c1'))!).toMatchObject({
       parentBlockId: testBlockNoteId('r1'),
       depth: 1,
       position: 1,
     })
-    expect(flat.find((b) => b.blockId === testBlockNoteId('r1-c2'))!).toMatchObject({
+    expect(flat.find((b) => b.blockNoteId === testBlockNoteId('r1-c2'))!).toMatchObject({
       parentBlockId: testBlockNoteId('r1'),
       depth: 1,
       position: 2,
     })
 
-    expect(flat.find((b) => b.blockId === testBlockNoteId('r1-c0-g0'))!).toMatchObject({
+    expect(flat.find((b) => b.blockNoteId === testBlockNoteId('r1-c0-g0'))!).toMatchObject({
       parentBlockId: testBlockNoteId('r1-c0'),
       depth: 2,
       position: 0,
     })
-    expect(flat.find((b) => b.blockId === testBlockNoteId('r1-c0-g1'))!).toMatchObject({
+    expect(flat.find((b) => b.blockNoteId === testBlockNoteId('r1-c0-g1'))!).toMatchObject({
       parentBlockId: testBlockNoteId('r1-c0'),
       depth: 2,
       position: 1,
     })
 
-    expect(flat.find((b) => b.blockId === testBlockNoteId('r2-c0'))!).toMatchObject({
+    expect(flat.find((b) => b.blockNoteId === testBlockNoteId('r2-c0'))!).toMatchObject({
       parentBlockId: testBlockNoteId('r2'),
       depth: 1,
       position: 0,
     })
-    expect(flat.find((b) => b.blockId === testBlockNoteId('r2-c1'))!).toMatchObject({
+    expect(flat.find((b) => b.blockNoteId === testBlockNoteId('r2-c1'))!).toMatchObject({
       parentBlockId: testBlockNoteId('r2'),
       depth: 1,
       position: 1,
@@ -471,7 +471,7 @@ describe('flatten ↔ reconstruct symmetry', () => {
   it('reconstruct → flatten → reconstruct is stable', () => {
     const fakeBlocks: Array<Block> = [
       {
-        blockId: testBlockNoteId('a'),
+        blockNoteId: testBlockNoteId('a'),
         parentBlockId: null,
         depth: 0,
         position: 0,
@@ -480,7 +480,7 @@ describe('flatten ↔ reconstruct symmetry', () => {
         inlineContent: [{ type: 'text', text: 'Hi', styles: {} }],
       },
       {
-        blockId: testBlockNoteId('b'),
+        blockNoteId: testBlockNoteId('b'),
         parentBlockId: testBlockNoteId('a'),
         depth: 1,
         position: 0,
@@ -489,7 +489,7 @@ describe('flatten ↔ reconstruct symmetry', () => {
         inlineContent: [{ type: 'text', text: 'Child', styles: {} }],
       },
       {
-        blockId: testBlockNoteId('c'),
+        blockNoteId: testBlockNoteId('c'),
         parentBlockId: testBlockNoteId('a'),
         depth: 1,
         position: 1,
@@ -500,7 +500,7 @@ describe('flatten ↔ reconstruct symmetry', () => {
     ].map(
       (b) =>
         ({
-          _id: `blocks:${b.blockId}` as Id<'blocks'>,
+          _id: `blocks:${b.blockNoteId}` as Id<'blocks'>,
           _creationTime: 0,
           noteId: 'sidebarItems:n' as Id<'sidebarItems'>,
           campaignId: 'campaigns:c' as Id<'campaigns'>,

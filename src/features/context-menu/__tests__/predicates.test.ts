@@ -197,8 +197,8 @@ describe('editor predicates', () => {
     expect(p.hasBlockNoteEditor(ctx())).toBe(false)
   })
 
-  it('hasBlockId', () => {
-    expect(p.hasBlockId(ctx({ blockId: 'b1' }))).toBe(true)
-    expect(p.hasBlockId(ctx())).toBe(false)
+  it('hasBlockNoteId', () => {
+    expect(p.hasBlockNoteId(ctx({ blockNoteId: 'b1' }))).toBe(true)
+    expect(p.hasBlockNoteId(ctx())).toBe(false)
   })
 })

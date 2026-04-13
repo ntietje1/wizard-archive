@@ -110,7 +110,7 @@ describe('multi-player share + membership removal cascade', () => {
 
     const { noteId } = await createNote(t, campaignId, dm.profile._id)
     const { blockDbId } = await createBlock(t, noteId, campaignId, dm.profile._id, {
-      blockId: testBlockNoteId('secret'),
+      blockNoteId: testBlockNoteId('secret'),
       shareStatus: 'individually_shared',
     })
     const { blockShareId } = await createBlockShare(t, dm.profile._id, {

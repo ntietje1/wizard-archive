@@ -8,7 +8,7 @@ import type schema from '../schema'
 import type { SidebarItemLocation, SidebarItemType } from '../sidebarItems/types/baseTypes'
 import type { PermissionLevel } from '../permissions/types'
 import type { ShareStatus } from '../blockShares/types'
-import type { BlockType, InlineContent } from '../blocks/types'
+import type { BlockNoteId, BlockProps, BlockType, InlineContent } from '../blocks/types'
 import type { CustomBlock } from '../notes/editorSpecs'
 
 type T = TestConvex<typeof schema>
@@ -360,12 +360,12 @@ export async function createBlock(
   campaignId: Id<'campaigns'>,
   creatorProfileId: Id<'userProfiles'>,
   overrides?: Partial<{
-    blockId: string
+    blockNoteId: BlockNoteId
     position: number | null
     parentBlockId: string | null
     depth: number
     type: BlockType
-    props: Record<string, unknown>
+    props: BlockProps
     inlineContent: InlineContent | null
     plainText: string | null
     shareStatus: ShareStatus | null
@@ -377,7 +377,7 @@ export async function createBlock(
   const shareStatus: ShareStatus | null = SHARE_STATUS.NOT_SHARED
   const defaults = {
     noteId: noteId,
-    blockId: testBlockNoteId(`block-${n}`),
+    blockNoteId: testBlockNoteId(`block-${n}`),
     position: null,
     parentBlockId: null,
     depth: 0,

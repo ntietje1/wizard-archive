@@ -5,14 +5,10 @@ import { setBlocksShareStatus as setBlocksShareStatusFn } from './functions/setB
 import { shareBlocks as shareBlocksFn } from './functions/shareBlocks'
 import { unshareBlocks as unshareBlocksFn } from './functions/unshareBlocks'
 
-const blockIdentifierValidator = v.object({
-  blockNoteId: blockNoteIdValidator,
-})
-
 export const setBlocksShareStatus = dmMutation({
   args: {
     noteId: v.id('sidebarItems'),
-    blocks: v.array(blockIdentifierValidator),
+    blocks: v.array(blockNoteIdValidator),
     status: blockShareStatusValidator,
   },
   returns: v.null(),
@@ -28,7 +24,7 @@ export const setBlocksShareStatus = dmMutation({
 export const shareBlocks = dmMutation({
   args: {
     noteId: v.id('sidebarItems'),
-    blocks: v.array(blockIdentifierValidator),
+    blocks: v.array(blockNoteIdValidator),
     campaignMemberId: v.id('campaignMembers'),
   },
   returns: v.null(),
@@ -44,7 +40,7 @@ export const shareBlocks = dmMutation({
 export const unshareBlocks = dmMutation({
   args: {
     noteId: v.id('sidebarItems'),
-    blocks: v.array(blockIdentifierValidator),
+    blocks: v.array(blockNoteIdValidator),
     campaignMemberId: v.id('campaignMembers'),
   },
   returns: v.null(),

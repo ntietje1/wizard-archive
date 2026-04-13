@@ -31,11 +31,13 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
   const { item } = useCurrentItem()
   const { campaign } = useCampaign()
   const campaignData = campaign.data
-  const blockIds = blocks.map((b) => b.id)
+  const blockNoteIds = blocks.map((b) => b.id)
 
   const query = useCampaignQuery(
     api.blocks.queries.getBlocksWithShares,
-    isNote(item) && blockIds.length > 0 && campaignData ? { noteId: item._id, blockIds } : 'skip',
+    isNote(item) && blockNoteIds.length > 0 && campaignData
+      ? { noteId: item._id, blockNoteIds }
+      : 'skip',
   )
 
   const setBlocksShareStatus = useCampaignMutation(api.blockShares.mutations.setBlocksShareStatus)
@@ -53,7 +55,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
     return map
   })()
 
-  const hasCompleteData = query.data?.blocks && blockIds.every((id) => blockInfoMap.has(id))
+  const hasCompleteData = query.data?.blocks && blockNoteIds.every((id) => blockInfoMap.has(id))
 
   const aggregateShareStatus: AggregateShareStatus = (() => {
     if (!hasCompleteData || blocks.length === 0) return AGGREGATE_SHARE_STATUS.NOT_SHARED
@@ -107,7 +109,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
 
       await setBlocksShareStatus.mutateAsync({
         noteId: item._id,
-        blocks: blocksToUpdate.map((b) => ({ blockNoteId: b.id })),
+        blocks: blocksToUpdate.map((b) => b.id),
         status: newStatus,
       })
     } catch (error) {
@@ -121,7 +123,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
       if (getShareState(memberId) === 'all') {
         await unshareBlocks.mutateAsync({
           noteId: item._id,
-          blocks: blocks.map((b) => ({ blockNoteId: b.id })),
+          blocks: blocks.map((b) => b.id),
           campaignMemberId: memberId,
         })
       } else {
@@ -138,7 +140,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>) {
 
         await shareBlocks.mutateAsync({
           noteId: item._id,
-          blocks: blocksToShare.map((b) => ({ blockNoteId: b.id })),
+          blocks: blocksToShare.map((b) => b.id),
           campaignMemberId: memberId,
         })
       }

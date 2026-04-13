@@ -19,12 +19,12 @@ describe('share mutations with nested blocks', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: testBlockNoteId('root'),
+      blockNoteId: testBlockNoteId('root'),
       depth: 0,
       parentBlockId: null,
     })
     await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: testBlockNoteId('child'),
+      blockNoteId: testBlockNoteId('child'),
       depth: 1,
       parentBlockId: testBlockNoteId('root'),
     })
@@ -32,14 +32,14 @@ describe('share mutations with nested blocks', () => {
     await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
       campaignId: ctx.campaignId,
       noteId,
-      blocks: [{ blockNoteId: testBlockNoteId('child') }],
+      blocks: [testBlockNoteId('child')],
       campaignMemberId: ctx.player.memberId,
     })
 
     const result = await dmAuth.query(api.blocks.queries.getBlockWithShares, {
       campaignId: ctx.campaignId,
       noteId,
-      blockId: testBlockNoteId('child'),
+      blockNoteId: testBlockNoteId('child'),
     })
     expect(result).not.toBeNull()
     expect(result!.shareStatus).toBe('individually_shared')
@@ -53,17 +53,17 @@ describe('share mutations with nested blocks', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: testBlockNoteId('depth-0'),
+      blockNoteId: testBlockNoteId('depth-0'),
       depth: 0,
       parentBlockId: null,
     })
     await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: testBlockNoteId('depth-1'),
+      blockNoteId: testBlockNoteId('depth-1'),
       depth: 1,
       parentBlockId: testBlockNoteId('depth-0'),
     })
     await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: testBlockNoteId('depth-2'),
+      blockNoteId: testBlockNoteId('depth-2'),
       depth: 2,
       parentBlockId: testBlockNoteId('depth-1'),
     })
@@ -71,18 +71,14 @@ describe('share mutations with nested blocks', () => {
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId,
-      blocks: [
-        { blockNoteId: testBlockNoteId('depth-0') },
-        { blockNoteId: testBlockNoteId('depth-1') },
-        { blockNoteId: testBlockNoteId('depth-2') },
-      ],
+      blocks: [testBlockNoteId('depth-0'), testBlockNoteId('depth-1'), testBlockNoteId('depth-2')],
       status: 'all_shared',
     })
 
     const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
       campaignId: ctx.campaignId,
       noteId,
-      blockIds: [
+      blockNoteIds: [
         testBlockNoteId('depth-0'),
         testBlockNoteId('depth-1'),
         testBlockNoteId('depth-2'),
@@ -101,12 +97,12 @@ describe('share mutations with nested blocks', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: testBlockNoteId('some-parent'),
+      blockNoteId: testBlockNoteId('some-parent'),
       depth: 0,
       parentBlockId: null,
     })
     const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: testBlockNoteId('nested'),
+      blockNoteId: testBlockNoteId('nested'),
       depth: 1,
       parentBlockId: testBlockNoteId('some-parent'),
       shareStatus: 'individually_shared',
@@ -122,14 +118,14 @@ describe('share mutations with nested blocks', () => {
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId,
-      blocks: [{ blockNoteId: testBlockNoteId('nested') }],
+      blocks: [testBlockNoteId('nested')],
       status: 'not_shared',
     })
 
     const result = await dmAuth.query(api.blocks.queries.getBlockWithShares, {
       campaignId: ctx.campaignId,
       noteId,
-      blockId: testBlockNoteId('nested'),
+      blockNoteId: testBlockNoteId('nested'),
     })
     expect(result!.shareStatus).toBe('not_shared')
 
@@ -153,7 +149,7 @@ describe('share mutations with nested blocks', () => {
     })
 
     await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockId: testBlockNoteId('root'),
+      blockNoteId: testBlockNoteId('root'),
       depth: 0,
       parentBlockId: null,
     })
@@ -163,7 +159,7 @@ describe('share mutations with nested blocks', () => {
       ctx.campaignId,
       ctx.dm.profile._id,
       {
-        blockId: testBlockNoteId('child'),
+        blockNoteId: testBlockNoteId('child'),
         depth: 1,
         parentBlockId: testBlockNoteId('root'),
         shareStatus: 'individually_shared',

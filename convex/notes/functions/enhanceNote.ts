@@ -38,7 +38,7 @@ export const enhanceNoteWithContent = async (
     ])
     if (!result) return null
     return {
-      blockId: block.blockId,
+      blockNoteId: block.blockNoteId,
       meta: {
         myPermissionLevel: result.permissionLevel,
         shareStatus: block.shareStatus ?? SHARE_STATUS.NOT_SHARED,
@@ -48,7 +48,7 @@ export const enhanceNoteWithContent = async (
   })
   const blockMeta: Record<string, BlockMeta> = {}
   for (const entry of blockMetaEntries) {
-    if (entry) blockMeta[entry.blockId] = entry.meta
+    if (entry) blockMeta[entry.blockNoteId] = entry.meta
   }
 
   const content = reconstructBlockTree(allBlocks)

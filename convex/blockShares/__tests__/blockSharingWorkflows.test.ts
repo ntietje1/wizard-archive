@@ -34,43 +34,43 @@ describe('block sharing workflows', () => {
       await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blocks: [{ blockNoteId: block1.blockId }, { blockNoteId: block2.blockId }],
+        blocks: [block1.blockNoteId, block2.blockNoteId],
         status: 'individually_shared',
       })
 
       await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blocks: [{ blockNoteId: block1.blockId }],
+        blocks: [block1.blockNoteId],
         campaignMemberId: p1.memberId,
       })
 
       const dmResult = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blockIds: [block1.blockId, block2.blockId],
+        blockNoteIds: [block1.blockNoteId, block2.blockNoteId],
       })
 
-      const b1Info = dmResult.blocks.find((b) => b.blockNoteId === block1.blockId)!
+      const b1Info = dmResult.blocks.find((b) => b.blockNoteId === block1.blockNoteId)!
       expect(b1Info.shareStatus).toBe('individually_shared')
       expect(b1Info.sharedMemberIds).toContain(p1.memberId)
       expect(b1Info.sharedMemberIds).not.toContain(p2.memberId)
 
-      const b2Info = dmResult.blocks.find((b) => b.blockNoteId === block2.blockId)!
+      const b2Info = dmResult.blocks.find((b) => b.blockNoteId === block2.blockNoteId)!
       expect(b2Info.shareStatus).toBe('individually_shared')
       expect(b2Info.sharedMemberIds).toHaveLength(0)
 
       await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blocks: [{ blockNoteId: block1.blockId }, { blockNoteId: block2.blockId }],
+        blocks: [block1.blockNoteId, block2.blockNoteId],
         status: 'all_shared',
       })
 
       const allSharedResult = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blockIds: [block1.blockId, block2.blockId],
+        blockNoteIds: [block1.blockNoteId, block2.blockNoteId],
       })
       for (const b of allSharedResult.blocks) {
         expect(b.shareStatus).toBe('all_shared')
@@ -79,14 +79,14 @@ describe('block sharing workflows', () => {
       await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blocks: [{ blockNoteId: block1.blockId }, { blockNoteId: block2.blockId }],
+        blocks: [block1.blockNoteId, block2.blockNoteId],
         status: 'not_shared',
       })
 
       const notSharedResult = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blockIds: [block1.blockId, block2.blockId],
+        blockNoteIds: [block1.blockNoteId, block2.blockNoteId],
       })
       for (const b of notSharedResult.blocks) {
         expect(b.shareStatus).toBe('not_shared')
@@ -114,14 +114,14 @@ describe('block sharing workflows', () => {
       await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blocks: [{ blockNoteId: block.blockId }],
+        blocks: [block.blockNoteId],
         status: 'individually_shared',
       })
 
       await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blocks: [{ blockNoteId: block.blockId }],
+        blocks: [block.blockNoteId],
         campaignMemberId: p1.memberId,
       })
 
@@ -142,7 +142,7 @@ describe('block sharing workflows', () => {
       await dmAuth.mutation(api.blockShares.mutations.unshareBlocks, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blocks: [{ blockNoteId: block.blockId }],
+        blocks: [block.blockNoteId],
         campaignMemberId: p1.memberId,
       })
 
@@ -184,7 +184,7 @@ describe('block sharing workflows', () => {
       await dmAuth.mutation(api.blockShares.mutations.unshareBlocks, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blocks: [{ blockNoteId: block.blockId }],
+        blocks: [block.blockNoteId],
         campaignMemberId: p1.memberId,
       })
 
@@ -225,21 +225,21 @@ describe('block sharing workflows', () => {
       await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blocks: [{ blockNoteId: block.blockId }],
+        blocks: [block.blockNoteId],
         status: 'individually_shared',
       })
 
       await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blocks: [{ blockNoteId: block.blockId }],
+        blocks: [block.blockNoteId],
         campaignMemberId: p1.memberId,
       })
 
       await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blocks: [{ blockNoteId: block.blockId }],
+        blocks: [block.blockNoteId],
         campaignMemberId: p1.memberId,
       })
 
@@ -260,9 +260,9 @@ describe('block sharing workflows', () => {
       const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blockIds: [block.blockId],
+        blockNoteIds: [block.blockNoteId],
       })
-      const blockInfo = result.blocks.find((b) => b.blockNoteId === block.blockId)!
+      const blockInfo = result.blocks.find((b) => b.blockNoteId === block.blockNoteId)!
       expect(blockInfo.sharedMemberIds.filter((id) => id === p1.memberId)).toHaveLength(1)
     })
   })
@@ -279,23 +279,23 @@ describe('block sharing workflows', () => {
       await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blocks: [{ blockNoteId: block.blockId }],
+        blocks: [block.blockNoteId],
         status: 'individually_shared',
       })
 
       await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blocks: [{ blockNoteId: block.blockId }],
+        blocks: [block.blockNoteId],
         campaignMemberId: p1.memberId,
       })
 
       const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
-        blockIds: [block.blockId],
+        blockNoteIds: [block.blockNoteId],
       })
-      const blockInfo = result.blocks.find((b) => b.blockNoteId === block.blockId)!
+      const blockInfo = result.blocks.find((b) => b.blockNoteId === block.blockNoteId)!
       expect(blockInfo.sharedMemberIds).toContain(p1.memberId)
     })
   })

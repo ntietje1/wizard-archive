@@ -11,16 +11,16 @@ import type { ShareStatus } from '../../blockShares/types'
 import type { DmQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMember } from '../../campaigns/types'
-import type { BlockShareInfo } from '../types'
+import type { BlockNoteId, BlockShareInfo } from '../types'
 
 export const getBlocksWithShares = async (
   ctx: DmQueryCtx,
   {
     noteId,
-    blockIds,
+    blockNoteIds,
   }: {
     noteId: Id<'sidebarItems'>
-    blockIds: Array<string>
+    blockNoteIds: Array<BlockNoteId>
   },
 ): Promise<{
   blocks: Array<BlockShareInfo>
@@ -53,12 +53,12 @@ export const getBlocksWithShares = async (
     else sharesByBlockId.set(share.blockId, [share.campaignMemberId])
   }
 
-  const blocks = await asyncMap(blockIds, async (blockId): Promise<BlockShareInfo> => {
-    const block = await findBlockByBlockNoteId(ctx, { noteId, blockId })
+  const blocks = await asyncMap(blockNoteIds, async (blockNoteId): Promise<BlockShareInfo> => {
+    const block = await findBlockByBlockNoteId(ctx, { noteId, blockNoteId })
 
     if (!block) {
       return {
-        blockNoteId: blockId,
+        blockNoteId,
         shareStatus: SHARE_STATUS.NOT_SHARED,
         sharedMemberIds: [],
       }
@@ -70,7 +70,7 @@ export const getBlocksWithShares = async (
       shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED ? (sharesByBlockId.get(block._id) ?? []) : []
 
     return {
-      blockNoteId: blockId,
+      blockNoteId,
       shareStatus,
       sharedMemberIds,
     }

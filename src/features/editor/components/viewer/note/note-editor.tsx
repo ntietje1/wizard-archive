@@ -70,7 +70,7 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
       position: { x: e.clientX, y: e.clientY },
       viewContext: 'note-view',
       item: undefined,
-      blockId: undefined,
+      blockNoteId: undefined,
     })
   }
 

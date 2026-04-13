@@ -186,7 +186,7 @@ function buildHeadingItems(
     const fullPath = [...parentAt.entries()].sort(([a], [b]) => a - b).map(([, text]) => text)
 
     items.push({
-      key: h.blockId,
+      key: h.blockNoteId,
       title: h.text,
       level: h.level,
       heading: h,
