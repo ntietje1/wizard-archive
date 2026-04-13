@@ -31,11 +31,13 @@ export function extractHeadingsFromContent(content: Array<CustomBlock>): Array<H
     if (block.type === 'heading') {
       const text = extractText(block.content)
       if (text) {
-        const level = (block.props as { level?: number })?.level
+        const rawLevel = (block.props as { level?: number })?.level
+        const level =
+          rawLevel && rawLevel >= 1 && rawLevel <= 6 ? (rawLevel as 1 | 2 | 3 | 4 | 5 | 6) : 1
         headings.push({
           blockNoteId: block.id,
           text,
-          level: level === 1 || level === 2 || level === 3 ? level : 1,
+          level,
           normalizedText: normalizeHeadingText(text),
         })
       }

@@ -1,6 +1,6 @@
 import { useContext, useRef } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, ExternalLinkIcon } from 'lucide-react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { CanvasContext } from '../../utils/canvas-context'
 import { ResizableNodeWrapper } from './resizable-node-wrapper'
@@ -11,7 +11,9 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
 import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
+import { Button } from '~/features/shadcn/components/button'
 import { cn } from '~/features/shadcn/lib/utils'
 
 export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
@@ -33,6 +35,8 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
       setEditingEmbedId(id)
     }
   }
+
+  const { navigateToItem } = useEditorNavigation()
 
   const Icon = getSidebarItemIcon(item)
   const label = item?.name ?? 'Missing item'
@@ -61,6 +65,27 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
           <div className="min-w-0 flex-1">
             <p className="text-sm truncate select-none">{label}</p>
           </div>
+          {item && (
+            <div
+              className={cn(
+                'shrink-0 overflow-hidden',
+                selected ? 'w-auto opacity-100' : 'w-0 opacity-0',
+              )}
+            >
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  void navigateToItem(item.slug)
+                }}
+                aria-label="Open item"
+                tabIndex={selected ? 0 : -1}
+              >
+                <ExternalLinkIcon className="size-3.5" />
+              </Button>
+            </div>
+          )}
         </div>
 
         {!isMissing && (

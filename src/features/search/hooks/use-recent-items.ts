@@ -22,7 +22,11 @@ function parseEntries(raw: string | null, key: string): Array<RecentEntry> {
     const parsed: unknown = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
     return parsed.filter(
-      (e): e is RecentEntry => typeof e === 'object' && e !== null && typeof e.slug === 'string',
+      (e): e is RecentEntry =>
+        typeof e === 'object' &&
+        e !== null &&
+        typeof e.slug === 'string' &&
+        typeof e.timestamp === 'number',
     )
   } catch (error) {
     logger.debug('Failed to parse recent items for key', key, error)
