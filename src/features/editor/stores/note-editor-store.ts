@@ -3,10 +3,18 @@ import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 
 interface NoteEditorStore {
   editor: CustomBlockNoteEditor | null
-  setEditor: (editor: CustomBlockNoteEditor | null) => void
+  claimEditor: (editor: CustomBlockNoteEditor | null) => () => void
 }
+
+let claimToken = 0
 
 export const useNoteEditorStore = create<NoteEditorStore>((set) => ({
   editor: null,
-  setEditor: (editor) => set({ editor }),
+  claimEditor: (editor) => {
+    const token = ++claimToken
+    set({ editor })
+    return () => {
+      if (claimToken === token) set({ editor: null })
+    }
+  },
 }))

@@ -74,41 +74,37 @@ function HeadingItem({
 
   return (
     <div>
-      <button
-        type="button"
+      <div
         className={cn(
-          'flex items-center gap-1 w-full text-left py-1 px-2 text-sm rounded-md',
+          'flex items-center gap-1 w-full py-1 px-2 rounded-md',
           'hover:bg-accent hover:text-accent-foreground transition-colors duration-100',
           'text-muted-foreground',
         )}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
-        onClick={() => onNavigate(node.blockNoteId)}
       >
         {hasChildren ? (
-          <span
-            role="button"
-            tabIndex={-1}
-            className="flex items-center justify-center w-4 h-4 shrink-0 rounded hover:bg-foreground/10"
-            onClick={(e) => {
-              e.stopPropagation()
-              setExpanded(!expanded)
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.stopPropagation()
-                setExpanded(!expanded)
-              }
-            }}
+          <button
+            type="button"
+            aria-expanded={expanded}
+            aria-label={expanded ? `Collapse ${node.text}` : `Expand ${node.text}`}
+            className="flex items-center justify-center w-4 h-4 shrink-0 rounded hover:bg-foreground/10 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+            onClick={() => setExpanded(!expanded)}
           >
             <ChevronRight
               className={cn('h-3 w-3 transition-transform duration-100', expanded && 'rotate-90')}
             />
-          </span>
+          </button>
         ) : (
           <span className="w-4 h-4 shrink-0" />
         )}
-        <span className="truncate">{node.text}</span>
-      </button>
+        <button
+          type="button"
+          className="truncate text-left text-sm rounded focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+          onClick={() => onNavigate(node.blockNoteId)}
+        >
+          {node.text}
+        </button>
+      </div>
       {hasChildren && expanded && (
         <div>
           {node.children.map((child) => (

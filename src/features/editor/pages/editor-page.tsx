@@ -17,7 +17,9 @@ export function EditorPage() {
             <EditorContent />
           </ErrorBoundary>
         </div>
-        <RightSidebarContainer />
+        <ErrorBoundary FallbackComponent={ErrorFallback}>
+          <RightSidebarContainer />
+        </ErrorBoundary>
       </div>
     </div>
   )

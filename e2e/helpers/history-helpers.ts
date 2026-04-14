@@ -18,7 +18,7 @@ export function getClickableHistoryEntry(page: Page, text: string | RegExp) {
 
 export async function waitForHistoryEntry(page: Page, text: string | RegExp) {
   await expect(getHistoryEntry(page, text).first()).toBeVisible({
-    timeout: 25000,
+    timeout: 15000,
   })
 }
 
