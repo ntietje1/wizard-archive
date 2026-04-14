@@ -16,6 +16,7 @@ import { useFilteredNoteContent } from '~/features/editor/hooks/useFilteredNoteC
 import { useScrollToHeading } from '~/features/editor/hooks/useScrollToHeading'
 import { useRestoreScrollPosition } from '~/features/editor/hooks/useRestoreScrollPosition'
 import { useNoteEditorDropTarget } from '~/features/dnd/hooks/useNoteEditorDropTarget'
+import { useNoteEditorStore } from '~/features/editor/stores/note-editor-store'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 
 export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
@@ -27,19 +28,26 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
   const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
   const [doc, setDoc] = useState<Doc | null>(null)
 
+  const setStoreEditor = useNoteEditorStore((s) => s.setEditor)
+
   const onEditorChange = useCallback(
     (newEditor: CustomBlockNoteEditor | null, newDoc: Doc | null) => {
       setEditor(newEditor)
+      setStoreEditor(newEditor)
       setDoc(newDoc)
     },
-    [],
+    [setStoreEditor],
   )
+
+  useEffect(() => {
+    return () => setStoreEditor(null)
+  }, [setStoreEditor])
 
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const noteEditorRef = useRef<HTMLElement | null>(null)
 
-  const { isScrollingToHeading } = useScrollToHeading(note.content, true, editor ?? undefined)
+  const { isScrollingToHeading } = useScrollToHeading(note.content, true)
   useRestoreScrollPosition(note._id, scrollAreaRef, isScrollingToHeading)
 
   useEffect(() => {
