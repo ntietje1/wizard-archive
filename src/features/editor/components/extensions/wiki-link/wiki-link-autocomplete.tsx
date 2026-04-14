@@ -5,7 +5,7 @@ import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { getWikiLinkContext } from './wiki-link-utils'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
-import type { HeadingEntry } from '~/features/editor/utils/heading-utils'
+import type { Heading, HeadingLevel } from 'convex/blocks/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { buildBreadcrumbs, getItemTypeLabel } from '~/features/sidebar/utils/sidebar-item-utils'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
@@ -34,8 +34,8 @@ interface FileItem {
 interface HeadingItem {
   key: string
   title: string
-  level: 1 | 2 | 3 | 4 | 5 | 6
-  heading: HeadingEntry
+  level: HeadingLevel
+  heading: Heading
   fullPath: Array<string>
 }
 
@@ -135,11 +135,11 @@ function getAutocompleteContext(
 }
 
 function getChildHeadings(
-  headings: Array<HeadingEntry>,
+  headings: Array<Heading>,
   parentLevel: number,
   startIdx: number,
-): Array<HeadingEntry> {
-  const children: Array<HeadingEntry> = []
+): Array<Heading> {
+  const children: Array<Heading> = []
   for (let i = startIdx; i < headings.length; i++) {
     if (headings[i].level <= parentLevel) break
     children.push(headings[i])
@@ -148,7 +148,7 @@ function getChildHeadings(
 }
 
 function buildHeadingItems(
-  headings: Array<HeadingEntry>,
+  headings: Array<Heading>,
   completedPath: Array<string>,
   query: string,
 ): Array<HeadingItem> {

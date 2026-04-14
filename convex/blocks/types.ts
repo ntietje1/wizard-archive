@@ -28,6 +28,15 @@ export type BlockShareInfo = {
   sharedMemberIds: Array<Id<'campaignMembers'>>
 }
 
+export type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6
+
+export type Heading = {
+  blockNoteId: BlockNoteId
+  text: string
+  level: HeadingLevel
+  normalizedText: string
+}
+
 export type Block = CommonValidatorFields<'blocks'> & {
   noteId: Id<'sidebarItems'>
   blockNoteId: BlockNoteId

@@ -1,25 +1,18 @@
 import { useEffect, useRef } from 'react'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
-import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { Id } from 'convex/_generated/dataModel'
 import { NOTE_EDITOR_DROP_TYPE, getDragItemId } from '~/features/dnd/utils/dnd-registry'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { getMinDisambiguationPath } from '~/features/editor/hooks/useWikiLinkExtension'
+import { useNoteEditorStore } from '~/features/editor/stores/note-editor-store'
 
-/**
- * Registers the note editor as a pragmatic-dnd drop target.
- * When a non-trashed sidebar item is dropped, inserts a [[wiki-link]]
- * at the drop position.
- */
 export function useNoteEditorDropTarget({
   ref,
-  editor,
   noteId,
 }: {
   ref: React.RefObject<HTMLElement | null>
-  editor: CustomBlockNoteEditor | null
   noteId: Id<'sidebarItems'>
 }) {
   const dropData = { type: NOTE_EDITOR_DROP_TYPE, noteId }
@@ -30,8 +23,6 @@ export function useNoteEditorDropTarget({
   })
 
   const { data: allItems, itemsMap } = useActiveSidebarItems()
-  const editorRef = useRef(editor)
-  editorRef.current = editor
   const allItemsRef = useRef(allItems)
   allItemsRef.current = allItems
   const itemsMapRef = useRef(itemsMap)
@@ -51,8 +42,9 @@ export function useNoteEditorDropTarget({
         if (!item || item.location === SIDEBAR_ITEM_LOCATION.trash) return
 
         const { clientX, clientY } = location.current.input
-        if (!editorRef.current) return
-        const tiptap = editorRef.current._tiptapEditor
+        const editor = useNoteEditorStore.getState().editor
+        if (!editor) return
+        const tiptap = editor._tiptapEditor
         const posResult = tiptap.view.posAtCoords({
           left: clientX,
           top: clientY,

@@ -6,15 +6,16 @@ import type * as Y from 'yjs'
 import { logger } from '~/shared/utils/logger'
 
 const DEBOUNCE_MS = 5_000
+const BLOCKNOTE_EDITOR_SELECTOR = '.bn-editor'
 
 export function useNotePreview({
   noteId,
   doc,
-  editorContainerRef,
+  containerRef,
 }: {
   noteId: Id<'sidebarItems'>
   doc: Y.Doc | null
-  editorContainerRef: React.RefObject<HTMLElement | null>
+  containerRef: React.RefObject<HTMLElement | null>
 }) {
   const isGeneratingRef = useRef(false)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -32,7 +33,9 @@ export function useNotePreview({
 
     const generate = async () => {
       if (isGeneratingRef.current) return
-      const el = editorContainerRef.current
+      const el = containerRef.current?.querySelector(
+        BLOCKNOTE_EDITOR_SELECTOR,
+      ) as HTMLElement | null
       if (!el) return
 
       isGeneratingRef.current = true

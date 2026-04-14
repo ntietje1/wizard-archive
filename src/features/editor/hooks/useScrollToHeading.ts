@@ -1,33 +1,33 @@
 import { useEffect, useRef } from 'react'
-import { useNavigate } from '@tanstack/react-router'
-import type { CustomBlock, CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
-import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
+import { useMatch, useNavigate } from '@tanstack/react-router'
+import type { CustomBlock } from 'convex/notes/editorSpecs'
 import {
   extractHeadingsFromContent,
   resolveHeadingPath,
 } from '~/features/editor/utils/heading-utils'
+import { useNoteEditorStore } from '~/features/editor/stores/note-editor-store'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 
 const EDITOR_ROUTE = '/campaigns/$dmUsername/$campaignSlug/editor' as const
 
-/**
- * Scrolls to a heading when URL contains ?heading= parameter.
- */
-export function useScrollToHeading(
-  content: Array<CustomBlock> | undefined,
-  isContentLoaded: boolean,
-  editor?: CustomBlockNoteEditor,
-): { isScrollingToHeading: boolean } {
-  const { editorSearch } = useCurrentItem()
+export function useScrollToHeading(content: Array<CustomBlock> | undefined) {
+  const editorMatch = useMatch({
+    from: '/_authed/campaigns/$dmUsername/$campaignSlug/editor',
+    shouldThrow: false,
+  })
+  const heading = editorMatch?.search?.heading
+  const searchItem = editorMatch?.search?.item
+  const searchTrash = editorMatch?.search?.trash
+
   const navigate = useNavigate()
   const { dmUsername, campaignSlug } = useCampaign()
+  const editor = useNoteEditorStore((s) => s.editor)
   const lastScrolledRef = useRef<string | null>(null)
 
-  const hasHeadingParam = Boolean(editorSearch.heading)
+  const hasHeadingParam = Boolean(heading)
 
   useEffect(() => {
-    const { heading, ...restSearch } = editorSearch
-    if (!heading || !isContentLoaded || !content) {
+    if (!heading || !content) {
       if (!heading) lastScrolledRef.current = null
       return
     }
@@ -42,22 +42,11 @@ export function useScrollToHeading(
 
     lastScrolledRef.current = heading
 
-    // Wait for DOM to render before scrolling
-    requestAnimationFrame(() => {
-      // Ensure editor and view are ready before setting cursor position
-      if (editor?._tiptapEditor?.view) {
-        try {
-          editor.focus()
-          editor.setTextCursorPosition(target.blockNoteId, 'start')
-        } catch {
-          // Block might not exist yet or position out of range
-        }
-      }
+    const restSearch = { item: searchItem, trash: searchTrash }
 
+    requestAnimationFrame(() => {
       const escapedId = CSS.escape(target.blockNoteId)
-      document
-        .querySelector(`[data-id="${escapedId}"]`)
-        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      document.querySelector(`[data-id="${escapedId}"]`)?.scrollIntoView({ block: 'start' })
 
       void navigate({
         to: EDITOR_ROUTE,
@@ -65,8 +54,18 @@ export function useScrollToHeading(
         search: restSearch,
         replace: true,
       })
-    })
-  }, [editorSearch, content, isContentLoaded, navigate, editor, dmUsername, campaignSlug])
 
-  return { isScrollingToHeading: hasHeadingParam }
+      requestAnimationFrame(() => {
+        if (!editor?._tiptapEditor?.view) return
+        try {
+          editor.focus()
+          editor.setTextCursorPosition(target.blockNoteId, 'end')
+        } catch {
+          // Block might not exist yet or position out of range
+        }
+      })
+    })
+  }, [heading, searchItem, searchTrash, content, navigate, editor, dmUsername, campaignSlug])
+
+  return { hasHeadingParam }
 }

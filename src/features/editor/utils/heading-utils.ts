@@ -1,12 +1,5 @@
-import type { BlockNoteId } from 'convex/blocks/types'
+import type { Heading, HeadingLevel } from 'convex/blocks/types'
 import type { CustomBlock } from 'convex/notes/editorSpecs'
-
-export interface HeadingEntry {
-  blockNoteId: BlockNoteId
-  text: string
-  level: 1 | 2 | 3 | 4 | 5 | 6
-  normalizedText: string
-}
 
 function isTextNode(item: unknown): item is { type: 'text'; text?: string } {
   return typeof item === 'object' && item !== null && 'type' in item && item.type === 'text'
@@ -24,8 +17,8 @@ export function normalizeHeadingText(text: string): string {
   return text.toLowerCase().trim().replace(/\s+/g, ' ')
 }
 
-export function extractHeadingsFromContent(content: Array<CustomBlock>): Array<HeadingEntry> {
-  const headings: Array<HeadingEntry> = []
+export function extractHeadingsFromContent(content: Array<CustomBlock>): Array<Heading> {
+  const headings: Array<Heading> = []
 
   const process = (block: CustomBlock) => {
     if (block.type === 'heading') {
@@ -34,7 +27,7 @@ export function extractHeadingsFromContent(content: Array<CustomBlock>): Array<H
         const rawLevel = (block.props as { level?: number })?.level
         const level =
           rawLevel && Number.isInteger(rawLevel) && rawLevel >= 1 && rawLevel <= 6
-            ? (rawLevel as 1 | 2 | 3 | 4 | 5 | 6)
+            ? (rawLevel as HeadingLevel)
             : 1
         headings.push({
           blockNoteId: block.id,
@@ -52,22 +45,22 @@ export function extractHeadingsFromContent(content: Array<CustomBlock>): Array<H
 }
 
 export function findHeadingByText(
-  headings: Array<HeadingEntry>,
+  headings: Array<Heading>,
   searchText: string,
-): HeadingEntry | undefined {
+): Heading | undefined {
   const normalized = normalizeHeadingText(searchText)
   return headings.find((h) => h.normalizedText === normalized)
 }
 
 /** Resolve chained heading path (e.g., H1#H2) to final heading */
 export function resolveHeadingPath(
-  headings: Array<HeadingEntry>,
+  headings: Array<Heading>,
   path: Array<string>,
-): HeadingEntry | undefined {
+): Heading | undefined {
   if (path.length === 0) return undefined
 
   let startIdx = 0
-  let result: HeadingEntry | undefined
+  let result: Heading | undefined
 
   for (const text of path) {
     const normalized = normalizeHeadingText(text)

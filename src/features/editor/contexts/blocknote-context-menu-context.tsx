@@ -6,26 +6,24 @@ import type { EditorContextMenuRef } from '~/features/context-menu/components/ed
 import type { BlockNoteContextMenuEvent } from '~/features/editor/hooks/useBlockNoteContextMenu'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { BlockNoteContextMenuContext } from '~/features/editor/hooks/useBlockNoteContextMenu'
+import { useNoteEditorStore } from '~/features/editor/stores/note-editor-store'
 import type { BlockNoteId } from 'convex/blocks/types'
 
 interface BlockNoteContextMenuProviderProps {
   children: ReactNode
-  editor: CustomBlockNoteEditor | null
 }
 
-export function BlockNoteContextMenuProvider({
-  children,
-  editor,
-}: BlockNoteContextMenuProviderProps) {
+export function BlockNoteContextMenuProvider({ children }: BlockNoteContextMenuProviderProps) {
+  const storeEditor = useNoteEditorStore((s) => s.editor)
   const [editorOverride, setEditorOverride] = useState<CustomBlockNoteEditor | null>(null)
-  const prevEditorRef = useRef(editor)
+  const prevEditorRef = useRef(storeEditor)
 
-  if (editor !== prevEditorRef.current) {
-    prevEditorRef.current = editor
+  if (storeEditor !== prevEditorRef.current) {
+    prevEditorRef.current = storeEditor
     setEditorOverride(null)
   }
 
-  const currentEditor = editorOverride ?? editor
+  const currentEditor = editorOverride ?? storeEditor
   const [currentBlockNoteId, setCurrentBlockNoteId] = useState<BlockNoteId | undefined>(undefined)
   const [menuState, setMenuState] = useState<BlockNoteContextMenuEvent | null>(null)
   const contextMenuRef = useRef<EditorContextMenuRef>(null)

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { createCampaign, deleteCampaign } from './helpers/campaign-helpers'
+import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import { createNote, openContextMenu } from './helpers/sidebar-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
@@ -14,6 +14,8 @@ test.describe.serial('trash operations', () => {
     const page = await context.newPage()
     await page.goto('/campaigns')
     await createCampaign(page, campaignName)
+    await navigateToCampaign(page, campaignName)
+    await createNote(page, noteName)
     await page.close()
     await context.close()
   })
@@ -35,33 +37,42 @@ test.describe.serial('trash operations', () => {
 
   test('delete item moves it to trash', async ({ page }) => {
     await page.goto('/campaigns')
-    await page.getByText(campaignName).click()
-    await page.waitForURL(/\/campaigns\//)
-    await createNote(page, noteName)
+    await navigateToCampaign(page, campaignName)
+
+    const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
+    await expect(sidebar.getByRole('link', { name: noteName, exact: true })).toBeVisible({
+      timeout: 10000,
+    })
+
     await openContextMenu(page, noteName)
-    await page.getByText(/move to trash|delete/i).click()
-    await expect(page.getByText(noteName)).not.toBeVisible()
+    await page.getByRole('menuitem', { name: /move to trash/i }).click()
+
+    await expect(sidebar.getByRole('link', { name: noteName, exact: true })).not.toBeVisible({
+      timeout: 10000,
+    })
   })
 
   test('trash view shows deleted item', async ({ page }) => {
     await page.goto('/campaigns')
-    await page.getByText(campaignName).click()
-    await page.waitForURL(/\/campaigns\//)
+    await navigateToCampaign(page, campaignName)
     await page.getByRole('button', { name: /^trash/i }).click()
-    await expect(page.getByText(noteName)).toBeVisible()
+    const trashItem = page.getByTestId(`trash-item-${noteName}`)
+    await expect(trashItem).toBeVisible({ timeout: 10000 })
   })
 
   test('restore item from trash', async ({ page }) => {
     await page.goto('/campaigns')
-    await page.getByText(campaignName).click()
-    await page.waitForURL(/\/campaigns\//)
+    await navigateToCampaign(page, campaignName)
     await page.getByRole('button', { name: /^trash/i }).click()
-    await expect(page.getByText(noteName)).toBeVisible({ timeout: 5000 })
+
     const trashItem = page.getByTestId(`trash-item-${noteName}`)
+    await expect(trashItem).toBeVisible({ timeout: 10000 })
     await trashItem.hover()
     const restoreBtn = trashItem.getByRole('button', { name: /restore/i })
     await restoreBtn.click()
-    await expect(page.getByRole('link', { name: noteName, exact: true })).toBeVisible({
+
+    const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
+    await expect(sidebar.getByRole('link', { name: noteName, exact: true })).toBeVisible({
       timeout: 10000,
     })
   })
