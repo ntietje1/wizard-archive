@@ -22,11 +22,12 @@ export async function createNote(page: Page, name: string) {
 }
 
 export async function createFolder(page: Page, name: string) {
+  const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
+  await sidebar.getByRole('link', { name: 'New' }).click()
   const prevUrl = page.url()
-  await page.getByRole('button', { name: 'Create new folder' }).click()
+  await page.getByRole('button', { name: /^Folder / }).click()
   await expect(page).not.toHaveURL(prevUrl, { timeout: 10000 })
   await renameCurrentItem(page, name)
-  const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
   await expect(sidebar.getByRole('link', { name, exact: true })).toBeVisible({
     timeout: 10000,
   })

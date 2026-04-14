@@ -323,7 +323,10 @@ test.describe.serial('search', () => {
 
     await openSearchDialog(page)
     await typeSearch(page, 'Dragon')
-    await waitForResults(page)
+
+    // Wait for body results to arrive so the result list is stable
+    const hiddenGemsResult = getResultItems(page).filter({ hasText: noteHiddenGems })
+    await expect(hiddenGemsResult.first()).toBeVisible({ timeout: 15000 })
 
     // At first item, ArrowUp should stay at first
     const firstSelected = await getSelectedResult(page).textContent()
@@ -365,7 +368,10 @@ test.describe.serial('search', () => {
 
     await openSearchDialog(page)
     await typeSearch(page, 'Dragon')
-    await waitForResults(page)
+
+    // Wait for body results to arrive so the result list is stable
+    const hiddenGemsResult = getResultItems(page).filter({ hasText: noteHiddenGems })
+    await expect(hiddenGemsResult.first()).toBeVisible({ timeout: 15000 })
 
     const items = getResultItems(page)
     const count = await items.count()

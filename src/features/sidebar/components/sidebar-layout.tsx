@@ -68,9 +68,11 @@ export function SidebarLayout({
         isLoaded={panelState.isLoaded}
         extraWidth={NAV_COLUMN_WIDTH}
       >
-        <SidebarWrapper>
-          <SidebarContent />
-        </SidebarWrapper>
+        <nav aria-label="Sidebar" className="h-full">
+          <SidebarWrapper>
+            <SidebarContent />
+          </SidebarWrapper>
+        </nav>
       </ResizableSidebar>
 
       <div className="flex flex-col flex-1 min-h-0 min-w-0">{children}</div>

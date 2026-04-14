@@ -11,7 +11,7 @@ import {
 } from './helpers/history-helpers'
 import type { Page } from '@playwright/test'
 
-const campaignName = testName('E2E EditHistory')
+const campaignName = testName('E2E History')
 const noteName = `History Note ${Date.now()}`
 const initialContent = 'Hello history test'
 const updatedContent = ' — updated content'
@@ -87,7 +87,7 @@ test.describe.serial('edit history', () => {
     await openHistoryPanel(page)
     await clickHistoryEntry(page, /edited content/i)
 
-    await expect(page.getByRole('button', { name: 'Restore' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Restore', exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Exit' })).toBeVisible()
   })
 
@@ -117,7 +117,7 @@ test.describe.serial('edit history', () => {
     await openHistoryPanel(page)
     await clickHistoryEntry(page, /edited content/i)
 
-    await page.getByRole('button', { name: 'Restore' }).click()
+    await page.getByRole('button', { name: 'Restore', exact: true }).click()
 
     const dialog = page.getByRole('alertdialog')
     await expect(dialog).toBeVisible({ timeout: 5000 })
@@ -137,7 +137,7 @@ test.describe.serial('edit history', () => {
     await openHistoryPanel(page)
     await clickHistoryEntry(page, /edited content/i)
 
-    await page.getByRole('button', { name: 'Restore' }).click()
+    await page.getByRole('button', { name: 'Restore', exact: true }).click()
     const dialog = page.getByRole('alertdialog')
     await expect(dialog).toBeVisible({ timeout: 5000 })
 
