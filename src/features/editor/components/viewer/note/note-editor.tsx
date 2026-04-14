@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
 import { EDITOR_MODE } from 'convex/editors/types'
 import { BlockNoteContextMenuHandler } from '../../extensions/blocknote-context-menu/blocknote-context-menu-handler'
@@ -10,7 +11,8 @@ import { isNote } from '~/features/sidebar/utils/sidebar-item-utils'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useFilteredNoteContent } from '~/features/editor/hooks/useFilteredNoteContent'
 import { useNoteEditorState } from '~/features/editor/hooks/useNoteEditorState'
-import { useNoteEditorScroll } from '~/features/editor/hooks/useNoteEditorScroll'
+import { useScrollPersistence } from '~/features/editor/hooks/useScrollPersistence'
+import { useScrollToHeading } from '~/features/editor/hooks/useScrollToHeading'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 
 export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
@@ -20,7 +22,9 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
   const editable = !isViewOnly && editorMode === EDITOR_MODE.EDITOR && canEdit
 
   const { onEditorChange, wrapperRef } = useNoteEditorState(note._id)
-  const { scrollAreaRef } = useNoteEditorScroll(note._id, note.content)
+  const viewportRef = useRef<HTMLDivElement>(null)
+  const { hasHeadingParam } = useScrollToHeading(note.content)
+  useScrollPersistence(note._id, viewportRef, hasHeadingParam)
 
   if (!isNote(note)) {
     return (
@@ -55,7 +59,7 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
           className="flex flex-col flex-1 min-h-0"
           onContextMenu={handleWrapperContextMenu}
         >
-          <ScrollArea ref={scrollAreaRef} className="flex-1 min-h-0">
+          <ScrollArea viewportRef={viewportRef} className="flex-1 min-h-0">
             <NoteContent
               key={note._id}
               noteId={note._id}
