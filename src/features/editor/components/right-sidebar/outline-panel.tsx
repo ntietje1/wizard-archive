@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { api } from 'convex/_generated/api'
 import { ChevronRight, List } from 'lucide-react'
 import type { Id } from 'convex/_generated/dataModel'
-import type { BlockNoteId, HeadingLevel } from 'convex/blocks/types'
+import type { BlockNoteId, Heading, HeadingLevel } from 'convex/blocks/types'
 import { useNoteEditorStore } from '~/features/editor/stores/note-editor-store'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
@@ -15,9 +15,7 @@ interface HeadingNode {
   children: Array<HeadingNode>
 }
 
-function buildHeadingTree(
-  headings: Array<{ blockNoteId: BlockNoteId; text: string; level: number }>,
-): Array<HeadingNode> {
+function buildHeadingTree(headings: Array<Heading>): Array<HeadingNode> {
   const root: Array<HeadingNode> = []
   const stack: Array<HeadingNode> = []
 
@@ -25,7 +23,7 @@ function buildHeadingTree(
     const node: HeadingNode = {
       blockNoteId: heading.blockNoteId,
       text: heading.text,
-      level: heading.level as HeadingLevel,
+      level: heading.level,
       children: [],
     }
 
@@ -131,6 +129,15 @@ export function OutlinePanel({ itemId }: { itemId: Id<'sidebarItems'> }) {
     return (
       <div className="flex flex-col h-full">
         <p className="text-sm text-muted-foreground p-4 text-center">Loading outline...</p>
+      </div>
+    )
+  }
+
+  if (headingsQuery.isError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-4 text-center">
+        <List className="h-8 w-8 text-muted-foreground mb-2" aria-hidden="true" />
+        <p className="text-sm font-medium text-muted-foreground">Failed to load outline</p>
       </div>
     )
   }

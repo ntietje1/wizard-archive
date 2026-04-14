@@ -34,7 +34,8 @@ export function useRightSidebar() {
     isLoaded: panel.isLoaded,
     setSize: panel.setSize,
     setVisible: panel.setVisible,
-    setActiveContent: panel.setActiveContent,
+    setActiveContent: (contentId: RightSidebarContentId | null) =>
+      panel.setActiveContent(contentId),
     open,
     close,
     toggle,
