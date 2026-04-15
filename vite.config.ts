@@ -17,6 +17,7 @@ export default defineConfig({
       typeCheck: true,
     },
     ignorePatterns: [
+      'LICENSE.md',
       '.output/**',
       '.nitro/**',
       'convex/_generated/**',
