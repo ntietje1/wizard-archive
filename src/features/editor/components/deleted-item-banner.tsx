@@ -7,7 +7,7 @@ import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { handleError } from '~/shared/utils/logger'
 import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
-import { Button } from '~/features/shadcn/components/button'
+import { Banner, BannerButton } from '~/shared/components/banner'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useDeleteSidebarItem } from '~/features/sidebar/hooks/useDeleteSidebarItem'
 import { useMoveSidebarItem } from '~/features/sidebar/hooks/useMoveSidebarItem'
@@ -54,10 +54,6 @@ export function TrashBanner({ item }: TrashBannerProps) {
   return <RootTrashBanner />
 }
 
-/**
- * Banner for viewing a specific trashed item.
- * Shows who deleted it, when, and how long until auto-deletion.
- */
 function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
   const isDeleted = item.location === SIDEBAR_ITEM_LOCATION.trash
   const { moveItem } = useMoveSidebarItem()
@@ -113,21 +109,24 @@ function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
     <>
       {isDeleted && (
         <div className="overflow-hidden fade-in-delayed-fast">
-          <BannerBar
-            message={message}
+          <Banner
+            icon={<Trash2 className="h-3.5 w-3.5 shrink-0" />}
+            variant="destructive"
             actions={
               <>
                 <BannerButton onClick={handleRestore}>
                   <RotateCcw className="h-3 w-3 mr-0.5" />
                   Restore
                 </BannerButton>
-                <BannerButton onClick={() => setConfirmDelete(true)}>
+                <BannerButton variant="destructive" onClick={() => setConfirmDelete(true)}>
                   <Trash2 className="h-3 w-3 mr-0.5" />
                   Delete from Trash
                 </BannerButton>
               </>
             }
-          />
+          >
+            {message}
+          </Banner>
         </div>
       )}
 
@@ -146,18 +145,17 @@ function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
   )
 }
 
-/**
- * Banner for the root trash view (no specific item).
- * Shows auto-deletion notice and "Empty Trash" button.
- */
 function RootTrashBanner() {
   const { isDm } = useCampaign()
 
   return (
-    <BannerBar
-      message={`Items older than ${TRASH_RETENTION_DAYS} days are automatically deleted`}
+    <Banner
+      icon={<Trash2 className="h-3.5 w-3.5 shrink-0" />}
+      variant="destructive"
       actions={isDm ? <EmptyTrashButton /> : undefined}
-    />
+    >
+      {`Items older than ${TRASH_RETENTION_DAYS} days are automatically deleted`}
+    </Banner>
   )
 }
 
@@ -181,7 +179,9 @@ function EmptyTrashButton() {
 
   return (
     <>
-      <BannerButton onClick={() => setConfirmEmptyTrash(true)}>Empty Trash</BannerButton>
+      <BannerButton variant="destructive" onClick={() => setConfirmEmptyTrash(true)}>
+        Empty Trash
+      </BannerButton>
       {confirmEmptyTrash && (
         <ConfirmationDialog
           isOpen={true}
@@ -194,30 +194,5 @@ function EmptyTrashButton() {
         />
       )}
     </>
-  )
-}
-
-function BannerBar({ message, actions }: { message: string; actions?: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between px-3 h-8 border-b border-destructive/40 bg-destructive/10 text-destructive dark:bg-destructive/20 dark:border-destructive/60 dark:text-destructive/70">
-      <div className="flex items-center gap-1.5 text-xs font-medium min-w-0">
-        <Trash2 className="h-3.5 w-3.5 shrink-0" />
-        <span className="truncate">{message}</span>
-      </div>
-      {actions && <div className="flex items-center gap-1 shrink-0">{actions}</div>}
-    </div>
-  )
-}
-
-function BannerButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
-  return (
-    <Button
-      variant="ghost"
-      size="sm"
-      className="h-5 px-1.5 text-xs text-destructive hover:text-destructive hover:bg-destructive/15"
-      onClick={onClick}
-    >
-      {children}
-    </Button>
   )
 }

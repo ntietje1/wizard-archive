@@ -142,7 +142,7 @@ function RootDocument({
       <head>
         <HeadContent />
       </head>
-      <body className="flex flex-col min-h-screen">
+      <body className="flex flex-col h-dvh overflow-hidden">
         <LazyMotion features={domAnimation}>
           <NavigationProgress />
           {isPreview && <PreviewBanner />}
