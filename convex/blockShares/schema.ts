@@ -1,6 +1,6 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
-import { commonTableFields, commonValidatorFields } from '../common/schema'
+import { convexValidatorFields } from '../common/schema'
 
 const blockShareTableFields = {
   campaignId: v.id('campaigns'),
@@ -8,7 +8,6 @@ const blockShareTableFields = {
   blockId: v.id('blocks'),
   campaignMemberId: v.id('campaignMembers'),
   sessionId: v.nullable(v.id('sessions')),
-  ...commonTableFields,
 }
 
 export const blockShareTables = {
@@ -16,13 +15,12 @@ export const blockShareTables = {
     ...blockShareTableFields,
   })
     .index('by_campaign_note', ['campaignId', 'noteId'])
-    .index('by_campaign_session', ['campaignId', 'sessionId'])
     .index('by_campaign_member', ['campaignId', 'campaignMemberId'])
     .index('by_campaign_block_member', ['campaignId', 'blockId', 'campaignMemberId']),
 }
 
 const blockShareValidatorFields = {
-  ...commonValidatorFields('blockShares'),
+  ...convexValidatorFields('blockShares'),
   ...blockShareTableFields,
 }
 

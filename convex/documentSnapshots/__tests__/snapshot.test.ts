@@ -444,7 +444,6 @@ describe('rollback data integrity', () => {
         const activePins = await dbCtx.db
           .query('mapPins')
           .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
-          .filter((q) => q.eq(q.field('deletionTime'), null))
           .collect()
 
         expect(activePins).toHaveLength(1)

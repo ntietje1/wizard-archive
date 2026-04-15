@@ -14,13 +14,11 @@ export async function captureYjsState(
     snapshotType,
     editHistoryId,
     campaignId,
-    createdBy,
   }: {
     documentId: Id<'sidebarItems'>
     snapshotType: SnapshotType
     editHistoryId: Id<'editHistory'>
     campaignId: Id<'campaigns'>
-    createdBy: Id<'userProfiles'>
   },
 ): Promise<void> {
   const doc = await ctx.db.get('sidebarItems', documentId)
@@ -40,7 +38,6 @@ export async function captureYjsState(
       campaignId,
       snapshotType,
       data: uint8ToArrayBuffer(encoded),
-      createdBy,
     })
   } finally {
     yDoc?.destroy()

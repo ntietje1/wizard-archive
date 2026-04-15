@@ -1,6 +1,7 @@
 import { v } from 'convex/values'
-import { authQuery, campaignQuery } from '../functions'
+import { authQuery, campaignQuery, dmQuery } from '../functions'
 import { getCampaignMembers } from './functions/getCampaignMembers'
+import { getCampaignRequests as getCampaignRequestsFn } from './functions/getCampaignRequests'
 import { campaignMemberValidator, campaignValidator } from './schema'
 import { getUserCampaigns as getUserCampaignsFn } from './functions/getUserCampaigns'
 import { getCampaignBySlug as getCampaignBySlugFn } from './functions/getCampaign'
@@ -34,5 +35,13 @@ export const getPlayersByCampaign = campaignQuery({
   returns: v.array(campaignMemberValidator),
   handler: async (ctx): Promise<Array<CampaignMember>> => {
     return await getCampaignMembers(ctx)
+  },
+})
+
+export const getCampaignRequests = dmQuery({
+  args: {},
+  returns: v.array(campaignMemberValidator),
+  handler: async (ctx): Promise<Array<CampaignMember>> => {
+    return await getCampaignRequestsFn(ctx)
   },
 })

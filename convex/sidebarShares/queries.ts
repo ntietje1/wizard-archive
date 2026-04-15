@@ -1,8 +1,5 @@
 import { v } from 'convex/values'
-import {
-  permissionLevelValidator,
-  sidebarItemIdValidator,
-} from '../sidebarItems/schema/baseValidators'
+import { permissionLevelValidator } from '../sidebarItems/schema/validators'
 import { dmQuery } from '../functions'
 import { sidebarItemShareValidator } from './schema'
 import { getSidebarItemShares as getSidebarItemSharesFn } from './functions/getSidebarItemShares'
@@ -10,7 +7,7 @@ import { getSidebarItemWithShares as getSidebarItemWithSharesFn } from './functi
 
 export const getSidebarItemShares = dmQuery({
   args: {
-    sidebarItemId: sidebarItemIdValidator,
+    sidebarItemId: v.id('sidebarItems'),
   },
   returns: v.array(sidebarItemShareValidator),
   handler: async (ctx, args) => {
@@ -26,7 +23,7 @@ export const getSidebarItemShares = dmQuery({
  */
 export const getSidebarItemWithShares = dmQuery({
   args: {
-    sidebarItemId: sidebarItemIdValidator,
+    sidebarItemId: v.id('sidebarItems'),
   },
   returns: v.object({
     allPermissionLevel: v.nullable(permissionLevelValidator),

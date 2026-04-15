@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
-import { createBookmark, createNote, createSidebarShare } from '../../_test/factories.helper'
+import { createNote, createSidebarShare } from '../../_test/factories.helper'
 import { expectNotFound } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 
@@ -22,7 +22,7 @@ describe('toggleBookmark', () => {
     expect(result.isBookmarked).toBe(true)
   })
 
-  it('second toggle soft-deletes bookmark', async () => {
+  it('second toggle removes bookmark', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
@@ -84,7 +84,7 @@ describe('toggleBookmark', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',
@@ -132,19 +132,11 @@ describe('toggleBookmark', () => {
     expect(typeof result.isBookmarked).toBe('boolean')
   })
 
-  it('soft-deleted bookmark is excluded from sidebar item', async () => {
+  it('unbookmarked item shows isBookmarked false', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-
-    await createBookmark(t, ctx.dm.profile._id, {
-      campaignId: ctx.campaignId,
-      sidebarItemId: noteId,
-      campaignMemberId: ctx.dm.memberId,
-      deletionTime: Date.now(),
-      deletedBy: ctx.dm.profile._id,
-    })
 
     const item = await dmAuth.query(api.sidebarItems.queries.getSidebarItem, {
       campaignId: ctx.campaignId,

@@ -1,14 +1,12 @@
 import { v } from 'convex/values'
-import { commonSidebarItemValidatorFields } from '../sidebarItems/schema/baseFields'
-import { commonValidatorFields } from '../common/schema'
+import { sidebarItemValidatorFields } from '../sidebarItems/schema/sidebarItemsTable'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
-import { permissionLevelValidator } from '../sidebarItems/schema/baseValidators'
+import { permissionLevelValidator } from '../sidebarItems/schema/validators'
 import { blockShareStatusValidator, customBlockValidator } from '../blocks/schema'
 import { folderValidator } from '../folders/baseSchema'
 
 const noteValidatorFields = {
-  ...commonValidatorFields('sidebarItems'),
-  ...commonSidebarItemValidatorFields,
+  ...sidebarItemValidatorFields,
   type: v.literal(SIDEBAR_ITEM_TYPES.notes),
 }
 

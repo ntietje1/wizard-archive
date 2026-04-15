@@ -49,15 +49,6 @@ async function addBlockShare(
     .unique()
 
   if (existingShare) {
-    if (existingShare.deletionTime !== null) {
-      const now = Date.now()
-      await ctx.db.patch('blockShares', existingShare._id, {
-        deletionTime: null,
-        deletedBy: null,
-        updatedTime: now,
-        updatedBy: ctx.membership.userId,
-      })
-    }
     return existingShare._id
   }
 
@@ -70,11 +61,6 @@ async function addBlockShare(
     blockId,
     campaignMemberId,
     sessionId: currentSession?._id ?? null,
-    deletionTime: null,
-    deletedBy: null,
-    updatedTime: null,
-    updatedBy: null,
-    createdBy: ctx.membership.userId,
   })
 }
 
@@ -95,14 +81,8 @@ async function removeBlockShare(
     )
     .unique()
 
-  if (share && share.deletionTime === null) {
-    const now = Date.now()
-    await ctx.db.patch('blockShares', share._id, {
-      deletionTime: now,
-      deletedBy: ctx.membership.userId,
-      updatedTime: now,
-      updatedBy: ctx.membership.userId,
-    })
+  if (share) {
+    await ctx.db.delete('blockShares', share._id)
   }
 }
 
@@ -118,19 +98,9 @@ async function clearBlockShares(
     .withIndex('by_campaign_block_member', (q) =>
       q.eq('campaignId', block.campaignId).eq('blockId', blockId),
     )
-    .filter((q) => q.eq(q.field('deletionTime'), null))
     .collect()
 
-  const now = Date.now()
-  const userId = ctx.membership.userId
-  await asyncMap(shares, (share) =>
-    ctx.db.patch('blockShares', share._id, {
-      deletionTime: now,
-      deletedBy: userId,
-      updatedTime: now,
-      updatedBy: userId,
-    }),
-  )
+  await asyncMap(shares, (share) => ctx.db.delete('blockShares', share._id))
 }
 
 export async function shareBlockWithMemberHelper(
@@ -178,15 +148,14 @@ export async function unshareBlockFromMemberHelper(
 
   await removeBlockShare(ctx, { blockId: block._id, campaignMemberId })
 
-  const remainingShares = await ctx.db
+  const remainingShare = await ctx.db
     .query('blockShares')
     .withIndex('by_campaign_block_member', (q) =>
       q.eq('campaignId', block.campaignId).eq('blockId', block._id),
     )
-    .filter((q) => q.eq(q.field('deletionTime'), null))
     .first()
 
-  if (!remainingShares && block.shareStatus !== SHARE_STATUS.ALL_SHARED) {
+  if (!remainingShare && block.shareStatus !== SHARE_STATUS.ALL_SHARED) {
     await updateBlock(ctx, {
       blockDbId: block._id,
       shareStatus: SHARE_STATUS.NOT_SHARED,

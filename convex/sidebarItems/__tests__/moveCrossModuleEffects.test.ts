@@ -22,7 +22,7 @@ describe('moveSidebarItem cross-module effects', () => {
       name: 'Shared Folder',
       inheritShares: true,
     })
-    await createSidebarShare(t, dmId, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: sharedFolder,
       sidebarItemType: 'folder',
@@ -64,7 +64,7 @@ describe('moveSidebarItem cross-module effects', () => {
       name: 'Shared Folder',
       inheritShares: true,
     })
-    await createSidebarShare(t, dmId, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: sharedFolder,
       sidebarItemType: 'folder',
@@ -154,7 +154,7 @@ describe('moveSidebarItem cross-module effects', () => {
     const { folderId } = await createFolder(t, ctx.campaignId, dmId, {
       name: 'Player Folder',
     })
-    await createSidebarShare(t, dmId, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: folderId,
       sidebarItemType: 'folder',
@@ -180,7 +180,7 @@ describe('moveSidebarItem cross-module effects', () => {
     const { folderId } = await createFolder(t, ctx.campaignId, dmId, {
       name: 'Restore Folder',
     })
-    await createSidebarShare(t, dmId, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: folderId,
       sidebarItemType: 'folder',

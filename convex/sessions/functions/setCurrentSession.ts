@@ -22,19 +22,12 @@ export async function setCurrentSession(
     throwClientError(ERROR_CODE.CONFLICT, 'Cannot resume a session while another session is active')
   }
 
-  const userId = ctx.membership.userId
-  const now = Date.now()
-
   await Promise.all([
     ctx.db.patch('sessions', sessionId, {
       endedAt: null,
-      updatedTime: now,
-      updatedBy: userId,
     }),
     ctx.db.patch('campaigns', ctx.campaign._id, {
       currentSessionId: sessionId,
-      updatedTime: now,
-      updatedBy: userId,
     }),
   ])
   return sessionId

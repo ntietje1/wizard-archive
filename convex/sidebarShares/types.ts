@@ -11,9 +11,4 @@ export type SidebarItemShare = {
   campaignMemberId: Id<'campaignMembers'>
   sessionId: Id<'sessions'> | null
   permissionLevel: PermissionLevel | null
-  updatedTime: number | null
-  updatedBy: Id<'userProfiles'> | null
-  createdBy: Id<'userProfiles'>
-  deletionTime: number | null
-  deletedBy: Id<'userProfiles'> | null
 }

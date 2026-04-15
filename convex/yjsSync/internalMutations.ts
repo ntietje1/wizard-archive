@@ -36,7 +36,7 @@ export const maybeCreateSnapshot = internalMutation({
     triggerSeq: v.number(),
     campaignId: v.id('campaigns'),
     campaignMemberId: v.id('campaignMembers'),
-    createdBy: v.id('userProfiles'),
+    userId: v.id('userProfiles'),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -73,7 +73,7 @@ export const maybeCreateSnapshot = internalMutation({
 
     await ctx.db.patch('sidebarItems', args.documentId, {
       updatedTime: Date.now(),
-      updatedBy: args.createdBy,
+      updatedBy: args.userId,
     })
 
     const editHistoryId = await ctx.db.insert('editHistory', {
@@ -89,7 +89,6 @@ export const maybeCreateSnapshot = internalMutation({
     const snapshotArgs = {
       editHistoryId,
       campaignId: args.campaignId,
-      createdBy: args.createdBy,
     }
 
     if (doc.type === SIDEBAR_ITEM_TYPES.notes) {

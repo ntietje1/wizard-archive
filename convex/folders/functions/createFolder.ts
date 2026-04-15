@@ -61,11 +61,6 @@ export async function createFolder(
   await ctx.db.insert('folders', {
     sidebarItemId: folderId,
     inheritShares: false,
-    deletionTime: null,
-    deletedBy: null,
-    updatedTime: null,
-    updatedBy: null,
-    createdBy: userId,
   })
 
   await logEditHistory(ctx, {

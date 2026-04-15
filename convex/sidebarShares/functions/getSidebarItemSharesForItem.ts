@@ -15,6 +15,5 @@ export async function getSidebarItemSharesForItem(
     .withIndex('by_campaign_item_member', (q) =>
       q.eq('campaignId', item.campaignId).eq('sidebarItemId', sidebarItemId),
     )
-    .filter((q) => q.eq(q.field('deletionTime'), null))
     .collect()
 }

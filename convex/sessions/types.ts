@@ -1,7 +1,7 @@
 import type { Id } from '../_generated/dataModel'
-import type { CommonValidatorFields } from '../common/types'
+import type { ConvexValidatorFields } from '../common/types'
 
-export type Session = CommonValidatorFields<'sessions'> & {
+export type Session = ConvexValidatorFields<'sessions'> & {
   campaignId: Id<'campaigns'>
   name: string | null
   startedAt: number

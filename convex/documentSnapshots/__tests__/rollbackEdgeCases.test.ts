@@ -27,7 +27,7 @@ describe('rollback permission checks', () => {
         parentId: null,
       })
 
-      await createSidebarShare(t, ctx.dm.profile._id, {
+      await createSidebarShare(t, {
         campaignId: ctx.campaignId,
         sidebarItemId: noteId,
         sidebarItemType: 'note',
@@ -497,7 +497,6 @@ describe('map rollback with deleted pin targets', () => {
         const activePins = await dbCtx.db
           .query('mapPins')
           .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
-          .filter((q) => q.eq(q.field('deletionTime'), null))
           .collect()
 
         expect(activePins).toHaveLength(1)
@@ -565,7 +564,6 @@ describe('sequential rollbacks', () => {
         const pins = await dbCtx.db
           .query('mapPins')
           .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
-          .filter((q) => q.eq(q.field('deletionTime'), null))
           .collect()
         expect(pins).toHaveLength(2)
       })
@@ -579,7 +577,6 @@ describe('sequential rollbacks', () => {
         const pins = await dbCtx.db
           .query('mapPins')
           .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
-          .filter((q) => q.eq(q.field('deletionTime'), null))
           .collect()
         expect(pins).toHaveLength(1)
         expect(pins[0].itemId).toBe(n1)

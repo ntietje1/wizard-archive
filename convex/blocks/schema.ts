@@ -12,7 +12,7 @@ import {
   inlineContentSchema,
   tableContentSchema,
 } from './blockSchemas'
-import { commonTableFields, commonValidatorFields } from '../common/schema'
+import { convexValidatorFields } from '../common/schema'
 
 // --- Convex validators (all zodToConvex conversions live here) ---
 
@@ -44,23 +44,21 @@ const blockTableFields = {
   plainText: v.string(),
   campaignId: v.id('campaigns'),
   shareStatus: v.nullable(blockShareStatusValidator),
-  ...commonTableFields,
 }
 
 export const blocksTables = {
   blocks: defineTable({
     ...blockTableFields,
   })
-    .index('by_campaign_note', ['campaignId', 'noteId'])
     .index('by_campaign_note_block', ['campaignId', 'noteId', 'blockNoteId'])
     .searchIndex('search_plainText', {
       searchField: 'plainText',
-      filterFields: ['campaignId', 'noteId', 'type', 'deletionTime'],
+      filterFields: ['campaignId', 'noteId', 'type'],
     }),
 }
 
 const blockValidatorFields = {
-  ...commonValidatorFields('blocks'),
+  ...convexValidatorFields('blocks'),
   ...blockTableFields,
 }
 

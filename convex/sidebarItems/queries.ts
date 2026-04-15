@@ -4,9 +4,9 @@ import { SIDEBAR_ITEM_LOCATION } from './types/baseTypes'
 import { fetchCampaignSidebarItems } from './functions/fetchCampaignSidebarItems'
 import { getSidebarItemsByParent as getSidebarItemsByParentFn } from './functions/getSidebarItemsByParent'
 import { getSidebarItemBySlug as getSidebarItemBySlugFn } from './functions/getSidebarItemBySlug'
-import { anySidebarItemValidator } from './schema/schema'
-import { sidebarItemIdValidator, sidebarItemLocationValidator } from './schema/baseValidators'
-import { anySidebarItemWithContentValidator } from './schema/contentSchema'
+import { anySidebarItemValidator } from './schema/anySidebarItemValidator'
+import { sidebarItemLocationValidator } from './schema/validators'
+import { anySidebarItemWithContentValidator } from './schema/anySidebarItemWithContentValidator'
 import type { AnySidebarItem, AnySidebarItemWithContent } from './types/types'
 import { getSidebarItemWithContent } from './functions/getSidebarItemWithContent'
 import { ERROR_CODE, throwClientError } from '../errors'
@@ -41,7 +41,7 @@ export const getSidebarItemsByParent = campaignQuery({
 
 export const getSidebarItem = campaignQuery({
   args: {
-    id: sidebarItemIdValidator,
+    id: v.id('sidebarItems'),
   },
   returns: anySidebarItemWithContentValidator,
   handler: async (ctx, args): Promise<AnySidebarItemWithContent> => {

@@ -25,8 +25,7 @@ export const userTables = {
     ...userProfileTableFields,
   })
     .index('by_user', ['authUserId'])
-    .index('by_username', ['username'])
-    .index('by_email', ['email']),
+    .index('by_username', ['username']),
 }
 
 // profile with profileImage resolved to a direct URL

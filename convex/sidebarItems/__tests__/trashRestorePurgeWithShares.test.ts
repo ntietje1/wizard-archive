@@ -10,7 +10,6 @@ import {
   createSidebarShare,
   testBlockNoteId,
 } from '../../_test/factories.helper'
-import { expectNotFound } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 
 describe('trash -> restore -> purge lifecycle with shares', () => {
@@ -29,14 +28,14 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
       parentId: folderId,
       name: 'Shared Note',
     })
-    const { shareId } = await createSidebarShare(t, dmId, {
+    const { shareId } = await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',
       campaignMemberId: ctx.player.memberId,
       permissionLevel: 'view',
     })
-    const { bookmarkId } = await createBookmark(t, ctx.player.profile._id, {
+    const { bookmarkId } = await createBookmark(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       campaignMemberId: ctx.player.memberId,
@@ -49,7 +48,7 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
       location: 'trash',
     })
 
-    // Verify soft-deletes on dependents
+    // Verify parent sidebarItems are trashed; shares and bookmarks are untouched (no cascade soft-delete)
     const afterTrash = await t.run(async (dbCtx) => {
       return {
         folder: await dbCtx.db.get('sidebarItems', folderId),
@@ -62,16 +61,8 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     expect(afterTrash.folder!.deletionTime).not.toBeNull()
     expect(afterTrash.note!.location).toBe('trash')
     expect(afterTrash.note!.deletionTime).not.toBeNull()
-    expect(afterTrash.share!.deletionTime).not.toBeNull()
-    expect(afterTrash.bookmark!.deletionTime).not.toBeNull()
-
-    // Player cannot see note
-    await expectNotFound(
-      playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
-        campaignId: ctx.campaignId,
-        id: noteId,
-      }),
-    )
+    expect(afterTrash.share).not.toBeNull()
+    expect(afterTrash.bookmark).not.toBeNull()
 
     // Restore the folder
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
@@ -93,8 +84,9 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     expect(afterRestore.folder!.deletionTime).toBeNull()
     expect(afterRestore.note!.location).toBe('sidebar')
     expect(afterRestore.note!.deletionTime).toBeNull()
-    expect(afterRestore.share!.deletionTime).toBeNull()
-    expect(afterRestore.bookmark!.deletionTime).toBeNull()
+    // Shares and bookmarks were never touched, so they still exist after restore
+    expect(afterRestore.share).not.toBeNull()
+    expect(afterRestore.bookmark).not.toBeNull()
 
     // Player can see note again
     const noteAfterRestore = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
@@ -136,7 +128,7 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     const dmId = ctx.dm.profile._id
 
     const { noteId } = await createNote(t, ctx.campaignId, dmId)
-    await createSidebarShare(t, dmId, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',
@@ -162,24 +154,23 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     expect(note.myPermissionLevel).toBe('edit')
   })
 
-  it('purge cleans up blockShares that were soft-deleted during trash', async () => {
+  it('purge hard-deletes blockShares', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const dmId = ctx.dm.profile._id
 
     const { noteId } = await createNote(t, ctx.campaignId, dmId)
-    const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, dmId, {
+    const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('b1'),
       shareStatus: 'individually_shared',
     })
-    const { blockShareId } = await createBlockShare(t, dmId, {
+    const { blockShareId } = await createBlockShare(t, {
       campaignId: ctx.campaignId,
       noteId,
       blockId: blockDbId,
       campaignMemberId: ctx.player.memberId,
     })
 
-    // Trash note (soft-deletes dependents including blockShare)
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
       campaignId: ctx.campaignId,
       itemId: noteId,
@@ -187,9 +178,8 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     })
 
     const afterTrash = await t.run(async (dbCtx) => dbCtx.db.get('blockShares', blockShareId))
-    expect(afterTrash!.deletionTime).not.toBeNull()
+    expect(afterTrash).not.toBeNull()
 
-    // Permanently delete
     await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
       campaignId: ctx.campaignId,
       itemId: noteId,

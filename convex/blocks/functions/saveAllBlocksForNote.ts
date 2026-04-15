@@ -19,8 +19,7 @@ export async function saveAllBlocksForNote(
 
   const existingBlocks = await ctx.db
     .query('blocks')
-    .withIndex('by_campaign_note', (q) => q.eq('campaignId', campaignId).eq('noteId', noteId))
-    .filter((q) => q.eq(q.field('deletionTime'), null))
+    .withIndex('by_campaign_note_block', (q) => q.eq('campaignId', campaignId).eq('noteId', noteId))
     .collect()
 
   const existingBlocksMap = new Map(existingBlocks.map((block) => [block.blockNoteId, block]))
@@ -77,7 +76,6 @@ export async function saveAllBlocksForNote(
       .withIndex('by_campaign_block_member', (q) =>
         q.eq('campaignId', campaignId).eq('blockId', block._id),
       )
-      .filter((q) => q.eq(q.field('deletionTime'), null))
       .collect()
 
     await asyncMap(blockShares, (share) => ctx.db.delete('blockShares', share._id))

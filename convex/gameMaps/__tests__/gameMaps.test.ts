@@ -109,7 +109,7 @@ describe('updateMap', () => {
 
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: mapId,
       sidebarItemType: 'gameMap',
@@ -132,7 +132,7 @@ describe('updateMap', () => {
 
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: mapId,
       sidebarItemType: 'gameMap',
@@ -345,7 +345,7 @@ describe('pin CRUD', () => {
     })
   })
 
-  it('removes a pin via soft delete', async () => {
+  it('removes a pin via hard delete', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
@@ -367,7 +367,7 @@ describe('pin CRUD', () => {
 
     await t.run(async (dbCtx) => {
       const pin = await dbCtx.db.get('mapPins', pinId)
-      expect(pin!.deletionTime).not.toBeNull()
+      expect(pin).toBeNull()
     })
   })
 
@@ -378,7 +378,7 @@ describe('pin CRUD', () => {
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: mapId,
       sidebarItemType: 'gameMap',
@@ -404,7 +404,7 @@ describe('pin CRUD', () => {
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: mapId,
       sidebarItemType: 'gameMap',

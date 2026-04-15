@@ -22,7 +22,7 @@ export async function updateCampaignMemberStatus(
   { memberId, status }: { memberId: Id<'campaignMembers'>; status: CampaignMemberStatus },
 ): Promise<Id<'campaignMembers'>> {
   const member = await ctx.db.get('campaignMembers', memberId)
-  if (!member || member.deletionTime !== null) {
+  if (!member) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Member not found')
   }
 
@@ -42,11 +42,8 @@ export async function updateCampaignMemberStatus(
     )
   }
 
-  const now = Date.now()
   await ctx.db.patch('campaignMembers', member._id, {
     status,
-    updatedTime: now,
-    updatedBy: ctx.membership.userId,
   })
 
   return member._id

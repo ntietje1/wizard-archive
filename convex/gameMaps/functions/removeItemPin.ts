@@ -12,16 +12,10 @@ export async function removeItemPin(
 ): Promise<Id<'mapPins'>> {
   const { pin, map } = await requirePinAccess(ctx, { mapPinId })
 
-  const now = Date.now()
-  await ctx.db.patch('mapPins', mapPinId, {
-    deletionTime: now,
-    deletedBy: ctx.membership.userId,
-    updatedTime: now,
-    updatedBy: ctx.membership.userId,
-  })
+  await ctx.db.delete('mapPins', mapPinId)
 
   await ctx.db.patch('sidebarItems', map._id, {
-    updatedTime: now,
+    updatedTime: Date.now(),
     updatedBy: ctx.membership.userId,
   })
 
@@ -42,7 +36,6 @@ export async function removeItemPin(
     mapId: map._id,
     editHistoryId,
     campaignId: map.campaignId,
-    createdBy: ctx.membership.userId,
   })
 
   return mapPinId

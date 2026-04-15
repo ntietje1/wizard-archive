@@ -11,10 +11,5 @@ export async function trackUpload(
     userId: ctx.user.profile._id,
     storageId,
     originalFileName: originalFileName ?? null,
-    deletionTime: null,
-    deletedBy: null,
-    updatedTime: null,
-    updatedBy: null,
-    createdBy: ctx.user.profile._id,
   })
 }

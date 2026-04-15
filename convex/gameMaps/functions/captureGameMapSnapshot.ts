@@ -15,19 +15,17 @@ export async function captureGameMapSnapshot(
     mapId,
     editHistoryId,
     campaignId,
-    createdBy,
   }: {
     mapId: Id<'sidebarItems'>
     editHistoryId: Id<'editHistory'>
     campaignId: Id<'campaigns'>
-    createdBy: Id<'userProfiles'>
   },
 ): Promise<void> {
   const [map, pins] = await Promise.all([
     getSidebarItem<'gameMaps'>(ctx, mapId),
     ctx.db
       .query('mapPins')
-      .withIndex('by_map_deletionTime', (q) => q.eq('mapId', mapId).eq('deletionTime', null))
+      .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
       .order('asc')
       .collect(),
   ])
@@ -77,6 +75,5 @@ export async function captureGameMapSnapshot(
     campaignId,
     snapshotType: GAME_MAP_SNAPSHOT_TYPE,
     data,
-    createdBy,
   })
 }

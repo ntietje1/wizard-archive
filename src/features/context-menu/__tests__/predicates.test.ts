@@ -146,11 +146,6 @@ describe('map predicates', () => {
     y: 0,
     visible: true,
     item: null,
-    updatedTime: null,
-    updatedBy: null,
-    createdBy: testId<'userProfiles'>('user_1'),
-    deletionTime: null,
-    deletedBy: null,
   }
 
   const mockMap: GameMapWithContent = {

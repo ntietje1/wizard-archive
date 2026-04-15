@@ -222,7 +222,6 @@ describe('rollback of game map pin with non-note itemId', () => {
         const pin = await dbCtx.db
           .query('mapPins')
           .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
-          .filter((q) => q.eq(q.field('deletionTime'), null))
           .first()
         expect(pin).not.toBeNull()
         return pin!._id
@@ -245,7 +244,6 @@ describe('rollback of game map pin with non-note itemId', () => {
         const activePins = await dbCtx.db
           .query('mapPins')
           .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
-          .filter((q) => q.eq(q.field('deletionTime'), null))
           .collect()
 
         expect(activePins).toHaveLength(1)

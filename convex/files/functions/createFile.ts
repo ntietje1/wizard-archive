@@ -71,11 +71,6 @@ export async function createFile(
   await ctx.db.insert('files', {
     sidebarItemId: fileId,
     storageId: storageId ?? null,
-    deletionTime: null,
-    deletedBy: null,
-    updatedTime: null,
-    updatedBy: null,
-    createdBy: userId,
   })
 
   await logEditHistory(ctx, {

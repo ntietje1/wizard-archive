@@ -1,5 +1,5 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
-import { CAMPAIGN_MEMBER_STATUS } from '../types'
+import { CAMPAIGN_MEMBER_STATUS, CAMPAIGN_STATUS } from '../types'
 import {
   getUserProfileById,
   getUserProfileByUserId,
@@ -18,9 +18,7 @@ async function countAcceptedPlayers(
     .query('campaignMembers')
     .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaignId))
     .collect()
-  return members.filter(
-    (m) => m.deletionTime === null && m.status === CAMPAIGN_MEMBER_STATUS.Accepted,
-  ).length
+  return members.filter((m) => m.status === CAMPAIGN_MEMBER_STATUS.Accepted).length
 }
 
 async function enhanceCampaign(
@@ -46,7 +44,7 @@ async function enhanceCampaign(
       )
       .unique()
 
-    if (member && member.deletionTime === null) {
+    if (member && member.status !== CAMPAIGN_MEMBER_STATUS.Removed) {
       myMembership = {
         ...member,
         userProfile: profile,
@@ -62,7 +60,7 @@ export async function getCampaign(
   { campaignId }: { campaignId: Id<'campaigns'> },
 ): Promise<Campaign | null> {
   const campaign = await ctx.db.get('campaigns', campaignId)
-  if (!campaign || campaign.deletionTime !== null) return null
+  if (!campaign || campaign.status === CAMPAIGN_STATUS.Deleted) return null
   return enhanceCampaign(ctx, { campaign })
 }
 
@@ -79,7 +77,7 @@ export async function getCampaignBySlug(
     .query('campaigns')
     .withIndex('by_slug_dm', (q) => q.eq('slug', slug).eq('dmUserId', dmUserProfile._id))
     .unique()
-  if (!campaign || campaign.deletionTime !== null)
+  if (!campaign || campaign.status === CAMPAIGN_STATUS.Deleted)
     throwClientError(ERROR_CODE.NOT_FOUND, 'Campaign not found')
   return enhanceCampaign(ctx, { campaign })
 }

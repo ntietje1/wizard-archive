@@ -74,15 +74,10 @@ export async function rollbackGameMap(
 
   const existingPins = await ctx.db
     .query('mapPins')
-    .withIndex('by_map_deletionTime', (q) => q.eq('mapId', map._id).eq('deletionTime', null))
+    .withIndex('by_map_item', (q) => q.eq('mapId', map._id))
     .collect()
 
-  const now = Date.now()
-  const userId = ctx.membership.userId
-
-  await asyncMap(existingPins, (pin) =>
-    ctx.db.patch('mapPins', pin._id, { deletionTime: now, deletedBy: userId }),
-  )
+  await asyncMap(existingPins, (pin) => ctx.db.delete('mapPins', pin._id))
 
   const pinTargetChecks = await asyncMap(parsed.pins, async (pin) => {
     try {
@@ -108,11 +103,6 @@ export async function rollbackGameMap(
       x: pin.x,
       y: pin.y,
       visible: pin.visible,
-      createdBy: userId,
-      updatedTime: null,
-      updatedBy: null,
-      deletionTime: null,
-      deletedBy: null,
     }),
   )
 }

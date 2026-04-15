@@ -11,16 +11,6 @@ async function getPins(db: DatabaseWriter, mapId: Id<'sidebarItems'>) {
 }
 
 export const gameMapTriggers: SidebarItemTriggerHandlers = {
-  onSoftDelete: async (db, item, deletion) => {
-    const pins = await getPins(db, item.id)
-    await asyncMap(pins, (p) => db.patch('mapPins', p._id, deletion))
-  },
-
-  onRestore: async (db, item, cleared) => {
-    const pins = await getPins(db, item.id)
-    await asyncMap(pins, (p) => db.patch('mapPins', p._id, cleared))
-  },
-
   onHardDelete: async (db, storage, item) => {
     const [pins, ext] = await Promise.all([
       getPins(db, item.id),

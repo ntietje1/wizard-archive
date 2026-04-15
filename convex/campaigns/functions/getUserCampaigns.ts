@@ -13,8 +13,7 @@ export async function getUserCampaigns(ctx: AuthQueryCtx): Promise<Array<Campaig
     .collect()
     .then((memberships) =>
       memberships.filter(
-        (membership) =>
-          membership.deletionTime === null && membership.status === CAMPAIGN_MEMBER_STATUS.Accepted,
+        (membership) => membership.status === CAMPAIGN_MEMBER_STATUS.Accepted,
       ),
     )
 

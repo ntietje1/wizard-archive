@@ -49,7 +49,7 @@ describe('trash workflows', () => {
   })
 
   describe('folder trash cascades', () => {
-    it('trashing a folder cascades to children, shares, and bookmarks then restores all', async () => {
+    it('trashing a folder cascades to children then restores all; shares and bookmarks are preserved throughout', async () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
@@ -66,14 +66,14 @@ describe('trash workflows', () => {
         parentId: folder.folderId,
       })
 
-      const share = await createSidebarShare(t, ctx.dm.profile._id, {
+      const share = await createSidebarShare(t, {
         campaignId: ctx.campaignId,
         sidebarItemId: noteA.noteId,
         sidebarItemType: 'note',
         campaignMemberId: ctx.player.memberId,
       })
 
-      const bookmark = await createBookmark(t, ctx.player.profile._id, {
+      const bookmark = await createBookmark(t, {
         campaignId: ctx.campaignId,
         sidebarItemId: noteA.noteId,
         campaignMemberId: ctx.player.memberId,
@@ -102,8 +102,9 @@ describe('trash workflows', () => {
       expect(trashedNoteA!.deletionTime).not.toBeNull()
       expect(trashedNoteB!.location).toBe('trash')
       expect(trashedNoteB!.deletionTime).not.toBeNull()
-      expect(trashedShare!.deletionTime).not.toBeNull()
-      expect(trashedBookmark!.deletionTime).not.toBeNull()
+      // Shares and bookmarks have no deletionTime — they are preserved unchanged when parent is trashed
+      expect(trashedShare).not.toBeNull()
+      expect(trashedBookmark).not.toBeNull()
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
         campaignId: ctx.campaignId,
@@ -130,8 +131,9 @@ describe('trash workflows', () => {
       expect(restoredNoteB!.location).toBe('sidebar')
       expect(restoredNoteB!.deletionTime).toBeNull()
       expect(restoredNoteB!.parentId).toBe(folder.folderId)
-      expect(restoredShare!.deletionTime).toBeNull()
-      expect(restoredBookmark!.deletionTime).toBeNull()
+      // Shares and bookmarks were never touched, still present after restore
+      expect(restoredShare).not.toBeNull()
+      expect(restoredBookmark).not.toBeNull()
     })
   })
 
@@ -149,22 +151,22 @@ describe('trash workflows', () => {
         parentId: folder.folderId,
       })
 
-      const share = await createSidebarShare(t, ctx.dm.profile._id, {
+      const share = await createSidebarShare(t, {
         campaignId: ctx.campaignId,
         sidebarItemId: note.noteId,
         sidebarItemType: 'note',
         campaignMemberId: ctx.player.memberId,
       })
 
-      const bookmark = await createBookmark(t, ctx.player.profile._id, {
+      const bookmark = await createBookmark(t, {
         campaignId: ctx.campaignId,
         sidebarItemId: note.noteId,
         campaignMemberId: ctx.player.memberId,
       })
 
-      const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id)
+      const block = await createBlock(t, note.noteId, ctx.campaignId)
 
-      const blockShare = await createBlockShare(t, ctx.dm.profile._id, {
+      const blockShare = await createBlockShare(t, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
         blockId: block.blockDbId,

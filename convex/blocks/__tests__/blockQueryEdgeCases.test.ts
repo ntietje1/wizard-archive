@@ -54,38 +54,38 @@ describe('block query edge cases', () => {
     const p2 = players[1]
 
     const { noteId } = await createNote(t, campaignId, dm.profile._id)
-    const b1 = await createBlock(t, noteId, campaignId, dm.profile._id, {
+    const b1 = await createBlock(t, noteId, campaignId, {
       blockNoteId: testBlockNoteId('agg-1'),
       shareStatus: 'individually_shared',
     })
-    const b2 = await createBlock(t, noteId, campaignId, dm.profile._id, {
+    const b2 = await createBlock(t, noteId, campaignId, {
       blockNoteId: testBlockNoteId('agg-2'),
       shareStatus: 'individually_shared',
     })
-    const b3 = await createBlock(t, noteId, campaignId, dm.profile._id, {
+    const b3 = await createBlock(t, noteId, campaignId, {
       blockNoteId: testBlockNoteId('agg-3'),
       shareStatus: 'individually_shared',
     })
 
-    await createBlockShare(t, dm.profile._id, {
+    await createBlockShare(t, {
       campaignId,
       noteId,
       blockId: b1.blockDbId,
       campaignMemberId: p1.memberId,
     })
-    await createBlockShare(t, dm.profile._id, {
+    await createBlockShare(t, {
       campaignId,
       noteId,
       blockId: b2.blockDbId,
       campaignMemberId: p2.memberId,
     })
-    await createBlockShare(t, dm.profile._id, {
+    await createBlockShare(t, {
       campaignId,
       noteId,
       blockId: b3.blockDbId,
       campaignMemberId: p1.memberId,
     })
-    await createBlockShare(t, dm.profile._id, {
+    await createBlockShare(t, {
       campaignId,
       noteId,
       blockId: b3.blockDbId,
@@ -113,31 +113,23 @@ describe('block query edge cases', () => {
     expect(block3!.sharedMemberIds).toContain(p2.memberId)
   })
 
-  it('getBlocksWithShares excludes soft-deleted blockShares', async () => {
+  it('getBlocksWithShares returns empty sharedMemberIds when no shares exist', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    const block = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockNoteId: testBlockNoteId('soft-del'),
+    await createBlock(t, noteId, ctx.campaignId, {
+      blockNoteId: testBlockNoteId('no-shares'),
       shareStatus: 'individually_shared',
-    })
-    await createBlockShare(t, ctx.dm.profile._id, {
-      campaignId: ctx.campaignId,
-      noteId,
-      blockId: block.blockDbId,
-      campaignMemberId: ctx.player.memberId,
-      deletionTime: Date.now(),
-      deletedBy: ctx.dm.profile._id,
     })
 
     const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
       campaignId: ctx.campaignId,
       noteId,
-      blockNoteIds: [testBlockNoteId('soft-del')],
+      blockNoteIds: [testBlockNoteId('no-shares')],
     })
 
-    const blockResult = result.blocks.find((b) => b.blockNoteId === testBlockNoteId('soft-del'))
+    const blockResult = result.blocks.find((b) => b.blockNoteId === testBlockNoteId('no-shares'))
     expect(blockResult!.sharedMemberIds).toHaveLength(0)
   })
 
@@ -146,14 +138,14 @@ describe('block query edge cases', () => {
     const playerAuth = ctx.player.authed
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',
       campaignMemberId: ctx.player.memberId,
       permissionLevel: 'view',
     })
-    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('dm-only'),
     })
 

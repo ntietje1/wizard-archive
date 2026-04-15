@@ -2,9 +2,8 @@ import { v } from 'convex/values'
 import { dmMutation } from '../functions'
 import {
   permissionLevelValidator,
-  sidebarItemIdValidator,
   sidebarItemTypeValidator,
-} from '../sidebarItems/schema/baseValidators'
+} from '../sidebarItems/schema/validators'
 import { shareSidebarItem as shareSidebarItemFn } from './functions/shareSidebarItem'
 import { unshareSidebarItem as unshareSidebarItemFn } from './functions/unshareSidebarItem'
 import { setAllPlayersPermission as setAllPlayersPermissionFn } from './functions/setAllPlayersPermission'
@@ -16,7 +15,7 @@ import { setFolderInheritShares as setFolderInheritSharesFn } from './functions/
  */
 export const shareSidebarItem = dmMutation({
   args: {
-    sidebarItemId: sidebarItemIdValidator,
+    sidebarItemId: v.id('sidebarItems'),
     sidebarItemType: sidebarItemTypeValidator,
     campaignMemberId: v.id('campaignMembers'),
     permissionLevel: v.optional(permissionLevelValidator),
@@ -37,7 +36,7 @@ export const shareSidebarItem = dmMutation({
  */
 export const unshareSidebarItem = dmMutation({
   args: {
-    sidebarItemId: sidebarItemIdValidator,
+    sidebarItemId: v.id('sidebarItems'),
     campaignMemberId: v.id('campaignMembers'),
   },
   returns: v.null(),
@@ -55,7 +54,7 @@ export const unshareSidebarItem = dmMutation({
  */
 export const updateSidebarItemSharePermission = dmMutation({
   args: {
-    sidebarItemId: sidebarItemIdValidator,
+    sidebarItemId: v.id('sidebarItems'),
     sidebarItemType: sidebarItemTypeValidator,
     campaignMemberId: v.id('campaignMembers'),
     permissionLevel: permissionLevelValidator,
@@ -78,7 +77,7 @@ export const updateSidebarItemSharePermission = dmMutation({
  */
 export const setAllPlayersPermission = dmMutation({
   args: {
-    sidebarItemId: sidebarItemIdValidator,
+    sidebarItemId: v.id('sidebarItems'),
     permissionLevel: v.nullable(permissionLevelValidator),
   },
   returns: v.null(),

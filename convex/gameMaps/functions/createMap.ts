@@ -64,11 +64,6 @@ export async function createMap(
   await ctx.db.insert('gameMaps', {
     sidebarItemId: mapId,
     imageStorageId: imageStorageId ?? null,
-    deletionTime: null,
-    deletedBy: null,
-    updatedTime: null,
-    updatedBy: null,
-    createdBy: userId,
   })
 
   await logEditHistory(ctx, {

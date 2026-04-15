@@ -6,8 +6,6 @@ export const sidebarItemLocationValidator = v.union(
   v.literal(SIDEBAR_ITEM_LOCATION.trash),
 )
 
-export const sidebarItemIdValidator = v.id('sidebarItems')
-
 export const sidebarItemTypeValidator = v.union(
   v.literal(SIDEBAR_ITEM_TYPES.notes),
   v.literal(SIDEBAR_ITEM_TYPES.folders),

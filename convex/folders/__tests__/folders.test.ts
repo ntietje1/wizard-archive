@@ -71,7 +71,7 @@ describe('createFolder', () => {
 
     const { folderId: parentId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: parentId,
       sidebarItemType: 'folder',
@@ -94,7 +94,7 @@ describe('createFolder', () => {
 
     const { folderId: parentId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: parentId,
       sidebarItemType: 'folder',
@@ -117,7 +117,7 @@ describe('createFolder', () => {
 
     const { folderId: parentId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: parentId,
       sidebarItemType: 'folder',
@@ -246,7 +246,7 @@ describe('updateFolder', () => {
 
     const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: folderId,
       sidebarItemType: 'folder',
@@ -269,7 +269,7 @@ describe('updateFolder', () => {
 
     const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: folderId,
       sidebarItemType: 'folder',
@@ -409,7 +409,7 @@ describe('getFolderContentsForDownload', () => {
       name: 'Shared Note',
     })
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: folderId,
       sidebarItemType: 'folder',

@@ -1,5 +1,5 @@
 import type { Id } from '../_generated/dataModel'
-import type { CommonValidatorFields } from '../common/types'
+import type { ConvexValidatorFields } from '../common/types'
 
 export const SORT_ORDERS = {
   Alphabetical: 'Alphabetical',
@@ -28,7 +28,7 @@ export const EDITOR_MODE = {
 
 export type EditorMode = (typeof EDITOR_MODE)[keyof typeof EDITOR_MODE]
 
-export type Editor = CommonValidatorFields<'editor'> & {
+export type Editor = ConvexValidatorFields<'editor'> & {
   campaignId: Id<'campaigns'>
   userId: Id<'userProfiles'>
   sortOrder: SortOrder

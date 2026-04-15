@@ -2,7 +2,6 @@ import { v } from 'convex/values'
 import { literals } from 'convex-helpers/validators'
 import { paginationOptsValidator } from 'convex/server'
 import { campaignQuery } from '../functions'
-import { sidebarItemIdValidator } from '../sidebarItems/schema/baseValidators'
 import { requireItemAccess } from '../sidebarItems/validation'
 import { PERMISSION_LEVEL } from '../permissions/types'
 import { getSidebarItem } from '../sidebarItems/functions/getSidebarItem'
@@ -10,7 +9,7 @@ import { getSidebarItem } from '../sidebarItems/functions/getSidebarItem'
 const historyEntryValidator = v.object({
   _id: v.id('editHistory'),
   _creationTime: v.number(),
-  itemId: sidebarItemIdValidator,
+  itemId: v.id('sidebarItems'),
   itemType: v.string(),
   campaignId: v.id('campaigns'),
   campaignMemberId: v.id('campaignMembers'),
@@ -40,7 +39,7 @@ export const getHistoryEntry = campaignQuery({
 
 export const getItemHistory = campaignQuery({
   args: {
-    itemId: sidebarItemIdValidator,
+    itemId: v.id('sidebarItems'),
     paginationOpts: paginationOptsValidator,
   },
   returns: v.object({

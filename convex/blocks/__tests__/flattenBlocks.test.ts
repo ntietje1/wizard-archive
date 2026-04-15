@@ -36,11 +36,6 @@ function toFakeBlocks(flat: ReturnType<typeof flattenBlocks>): Array<Block> {
         inlineContent: f.inlineContent,
         plainText: f.plainText,
         shareStatus: 'not_shared',
-        deletionTime: null,
-        deletedBy: null,
-        updatedTime: null,
-        updatedBy: null,
-        createdBy: 'userProfiles:u' as Id<'userProfiles'>,
       }) as Block,
   )
 }
@@ -506,11 +501,6 @@ describe('flatten ↔ reconstruct symmetry', () => {
           campaignId: 'campaigns:c' as Id<'campaigns'>,
           plainText: '',
           shareStatus: 'not_shared',
-          deletionTime: null,
-          deletedBy: null,
-          updatedTime: null,
-          updatedBy: null,
-          createdBy: 'userProfiles:u' as Id<'userProfiles'>,
           ...b,
         }) as Block,
     )

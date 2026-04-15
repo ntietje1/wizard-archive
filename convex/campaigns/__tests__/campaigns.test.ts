@@ -189,14 +189,11 @@ describe('getUserCampaigns', () => {
     expect(campaigns).toHaveLength(0)
   })
 
-  it('excludes soft-deleted campaigns', async () => {
+  it('excludes deleted campaigns', async () => {
     const user = await setupUser(t)
     const { campaignId } = await createCampaignWithDm(t, user.profile)
     await t.run(async (ctx) => {
-      await ctx.db.patch('campaigns', campaignId, {
-        deletionTime: Date.now(),
-        deletedBy: user.profile._id,
-      })
+      await ctx.db.delete('campaigns', campaignId)
     })
 
     const campaigns = await user.authed.query(api.campaigns.queries.getUserCampaigns, {})
@@ -257,7 +254,7 @@ describe('getCampaignBySlug', () => {
     )
   })
 
-  it('returns NOT_FOUND for soft-deleted campaign', async () => {
+  it('returns NOT_FOUND for deleted campaign', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
@@ -265,10 +262,7 @@ describe('getCampaignBySlug', () => {
     await t.run(async (dbCtx) => {
       const campaign = await dbCtx.db.get('campaigns', ctx.campaignId)
       slug = campaign!.slug
-      await dbCtx.db.patch('campaigns', ctx.campaignId, {
-        deletionTime: Date.now(),
-        deletedBy: ctx.dm.profile._id,
-      })
+      await dbCtx.db.delete('campaigns', ctx.campaignId)
     })
 
     await expectNotFound(
@@ -283,7 +277,7 @@ describe('getCampaignBySlug', () => {
 describe('getPlayersByCampaign', () => {
   const t = createTestContext()
 
-  it('returns all members with profiles', async () => {
+  it('returns only Accepted members with profiles', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
@@ -293,28 +287,49 @@ describe('getPlayersByCampaign', () => {
 
     expect(members.length).toBeGreaterThanOrEqual(2)
     for (const member of members) {
+      expect(member.status).toBe('Accepted')
       expect(member.userProfile).toBeDefined()
       expect(member.userProfile.username).toBeDefined()
     }
   })
 
-  it('excludes soft-deleted members', async () => {
+  it('excludes Pending members', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-
-    await t.run(async (dbCtx) => {
-      await dbCtx.db.patch('campaignMembers', ctx.player.memberId, {
-        deletionTime: Date.now(),
-        deletedBy: ctx.dm.profile._id,
-      })
-    })
+    const newPlayer = await setupUser(t)
+    await addPlayerToCampaign(t, ctx.campaignId, newPlayer.profile, { status: 'Pending' })
 
     const members = await dmAuth.query(api.campaigns.queries.getPlayersByCampaign, {
       campaignId: ctx.campaignId,
     })
 
-    const playerMember = members.find((m) => m._id === ctx.player.memberId)
-    expect(playerMember).toBeUndefined()
+    expect(members.find((m) => m.userId === newPlayer.profile._id)).toBeUndefined()
+  })
+
+  it('excludes Rejected members', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const newPlayer = await setupUser(t)
+    await addPlayerToCampaign(t, ctx.campaignId, newPlayer.profile, { status: 'Rejected' })
+
+    const members = await dmAuth.query(api.campaigns.queries.getPlayersByCampaign, {
+      campaignId: ctx.campaignId,
+    })
+
+    expect(members.find((m) => m.userId === newPlayer.profile._id)).toBeUndefined()
+  })
+
+  it('excludes Removed members', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const newPlayer = await setupUser(t)
+    await addPlayerToCampaign(t, ctx.campaignId, newPlayer.profile, { status: 'Removed' })
+
+    const members = await dmAuth.query(api.campaigns.queries.getPlayersByCampaign, {
+      campaignId: ctx.campaignId,
+    })
+
+    expect(members.find((m) => m.userId === newPlayer.profile._id)).toBeUndefined()
   })
 
   it('requires membership', async () => {
@@ -332,6 +347,64 @@ describe('getPlayersByCampaign', () => {
     const ctx = await setupCampaignContext(t)
     await expectNotAuthenticated(
       t.query(api.campaigns.queries.getPlayersByCampaign, {
+        campaignId: ctx.campaignId,
+      }),
+    )
+  })
+})
+
+describe('getCampaignRequests', () => {
+  const t = createTestContext()
+
+  it('returns only non-Accepted members with profiles', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const pending = await setupUser(t)
+    const rejected = await setupUser(t)
+    const removed = await setupUser(t)
+    await addPlayerToCampaign(t, ctx.campaignId, pending.profile, { status: 'Pending' })
+    await addPlayerToCampaign(t, ctx.campaignId, rejected.profile, { status: 'Rejected' })
+    await addPlayerToCampaign(t, ctx.campaignId, removed.profile, { status: 'Removed' })
+
+    const members = await dmAuth.query(api.campaigns.queries.getCampaignRequests, {
+      campaignId: ctx.campaignId,
+    })
+
+    for (const member of members) {
+      expect(member.userProfile).toBeDefined()
+    }
+    expect(members.find((m) => m.userId === pending.profile._id)?.status).toBe('Pending')
+    expect(members.find((m) => m.userId === rejected.profile._id)?.status).toBe('Rejected')
+    expect(members.find((m) => m.userId === removed.profile._id)?.status).toBe('Removed')
+    expect(members.find((m) => m.userId === ctx.player.profile._id)).toBeUndefined()
+  })
+
+  it('requires DM role', async () => {
+    const ctx = await setupCampaignContext(t)
+    const playerAuth = asPlayer(ctx)
+
+    await expectPermissionDenied(
+      playerAuth.query(api.campaigns.queries.getCampaignRequests, {
+        campaignId: ctx.campaignId,
+      }),
+    )
+  })
+
+  it('requires membership', async () => {
+    const ctx = await setupCampaignContext(t)
+    const outsider = await setupUser(t)
+
+    await expectPermissionDenied(
+      outsider.authed.query(api.campaigns.queries.getCampaignRequests, {
+        campaignId: ctx.campaignId,
+      }),
+    )
+  })
+
+  it('requires authentication', async () => {
+    const ctx = await setupCampaignContext(t)
+    await expectNotAuthenticated(
+      t.query(api.campaigns.queries.getCampaignRequests, {
         campaignId: ctx.campaignId,
       }),
     )
@@ -390,7 +463,7 @@ describe('joinCampaign', () => {
     expect(status).toBe('Accepted')
   })
 
-  it('returns NOT_FOUND for soft-deleted campaign', async () => {
+  it('returns NOT_FOUND for deleted campaign', async () => {
     const dm = await setupUser(t)
     const { campaignId } = await createCampaignWithDm(t, dm.profile)
     const player = await setupUser(t)
@@ -399,10 +472,7 @@ describe('joinCampaign', () => {
     await t.run(async (ctx) => {
       const campaign = await ctx.db.get('campaigns', campaignId)
       slug = campaign!.slug
-      await ctx.db.patch('campaigns', campaignId, {
-        deletionTime: Date.now(),
-        deletedBy: dm.profile._id,
-      })
+      await ctx.db.delete('campaigns', campaignId)
     })
 
     await expectNotFound(
@@ -645,7 +715,7 @@ describe('updateCampaignMemberStatus', () => {
     )
   })
 
-  it('rejects soft-deleted member', async () => {
+  it('rejects deleted member', async () => {
     const dm = await setupUser(t)
     const { campaignId } = await createCampaignWithDm(t, dm.profile)
     const player = await setupUser(t)
@@ -654,10 +724,7 @@ describe('updateCampaignMemberStatus', () => {
     })
 
     await t.run(async (ctx) => {
-      await ctx.db.patch('campaignMembers', memberId, {
-        deletionTime: Date.now(),
-        deletedBy: dm.profile._id,
-      })
+      await ctx.db.delete('campaignMembers', memberId)
     })
 
     await expectNotFound(
@@ -813,7 +880,7 @@ describe('deleteCampaign', () => {
 
     await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
-    await createSession(t, ctx.campaignId, ctx.dm.profile._id)
+    await createSession(t, ctx.campaignId)
 
     await dmAuth.mutation(api.campaigns.mutations.deleteCampaign, {
       campaignId: ctx.campaignId,

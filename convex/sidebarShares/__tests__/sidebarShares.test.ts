@@ -65,18 +65,22 @@ describe('shareSidebarItem', () => {
     )
   })
 
-  it('re-activates a soft-deleted share', async () => {
+  it('re-creates a share after unsharing', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await dmAuth.mutation(api.sidebarShares.mutations.shareSidebarItem, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',
       campaignMemberId: ctx.player.memberId,
-      deletionTime: Date.now(),
-      deletedBy: ctx.dm.profile._id,
+    })
+
+    await dmAuth.mutation(api.sidebarShares.mutations.unshareSidebarItem, {
+      campaignId: ctx.campaignId,
+      sidebarItemId: noteId,
+      campaignMemberId: ctx.player.memberId,
     })
 
     await dmAuth.mutation(api.sidebarShares.mutations.shareSidebarItem, {
@@ -91,14 +95,13 @@ describe('shareSidebarItem', () => {
       sidebarItemId: noteId,
     })
     expect(shares).toHaveLength(1)
-    expect(shares[0].deletionTime).toBeNull()
   })
 })
 
 describe('unshareSidebarItem', () => {
   const t = createTestContext()
 
-  it('soft-deletes a share', async () => {
+  it('hard-deletes a share', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
@@ -327,7 +330,7 @@ describe('getSidebarItemShares', () => {
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',
@@ -343,18 +346,22 @@ describe('getSidebarItemShares', () => {
     expect(shares[0].campaignMemberId).toBe(ctx.player.memberId)
   })
 
-  it('excludes soft-deleted shares', async () => {
+  it('excludes unshared (deleted) shares', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await dmAuth.mutation(api.sidebarShares.mutations.shareSidebarItem, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',
       campaignMemberId: ctx.player.memberId,
-      deletionTime: Date.now(),
-      deletedBy: ctx.dm.profile._id,
+    })
+
+    await dmAuth.mutation(api.sidebarShares.mutations.unshareSidebarItem, {
+      campaignId: ctx.campaignId,
+      sidebarItemId: noteId,
+      campaignMemberId: ctx.player.memberId,
     })
 
     const shares = await dmAuth.query(api.sidebarShares.queries.getSidebarItemShares, {
@@ -375,7 +382,7 @@ describe('getSidebarItemWithShares', () => {
       allPermissionLevel: 'view',
     })
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',
@@ -414,7 +421,7 @@ describe('permission resolution', () => {
     const playerAuth = asPlayer(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',
@@ -434,7 +441,7 @@ describe('permission resolution', () => {
     const playerAuth = asPlayer(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',
@@ -483,7 +490,7 @@ describe('permission resolution', () => {
       allPermissionLevel: 'view',
     })
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',
@@ -498,19 +505,24 @@ describe('permission resolution', () => {
     expect(item.myPermissionLevel).toBe('edit')
   })
 
-  it('ignores soft-deleted share', async () => {
+  it('ignores removed share', async () => {
     const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
     const playerAuth = asPlayer(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await dmAuth.mutation(api.sidebarShares.mutations.shareSidebarItem, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',
       campaignMemberId: ctx.player.memberId,
       permissionLevel: 'view',
-      deletionTime: Date.now(),
-      deletedBy: ctx.dm.profile._id,
+    })
+
+    await dmAuth.mutation(api.sidebarShares.mutations.unshareSidebarItem, {
+      campaignId: ctx.campaignId,
+      sidebarItemId: noteId,
+      campaignMemberId: ctx.player.memberId,
     })
 
     await expectNotFound(
@@ -565,7 +577,7 @@ describe('permission resolution', () => {
       inheritShares: true,
     })
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: folderId,
       sidebarItemType: 'folder',

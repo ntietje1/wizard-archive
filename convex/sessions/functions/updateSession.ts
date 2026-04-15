@@ -21,9 +21,6 @@ export async function updateSession(
   }
 
   if (Object.keys(updates).length > 0) {
-    const now = Date.now()
-    updates.updatedTime = now
-    updates.updatedBy = ctx.membership.userId
     await ctx.db.patch('sessions', sessionId, updates)
   }
 

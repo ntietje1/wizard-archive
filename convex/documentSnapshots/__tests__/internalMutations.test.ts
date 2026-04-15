@@ -65,7 +65,6 @@ describe('captureCanvasSnapshot', () => {
         canvasId,
         editHistoryId,
         campaignId: ctx.campaignId,
-        createdBy: ctx.dm.profile._id,
       })
     })
 
@@ -79,7 +78,6 @@ describe('captureCanvasSnapshot', () => {
       expect(snapshot!.snapshotType).toBe(SNAPSHOT_TYPE.yjs_state)
       expect(snapshot!.itemId).toBe(canvasId)
       expect(snapshot!.itemType).toBe(SIDEBAR_ITEM_TYPES.canvases)
-      expect(snapshot!.createdBy).toBe(ctx.dm.profile._id)
 
       const expectedDoc = new Y.Doc()
       Y.applyUpdate(expectedDoc, new Uint8Array(yjsUpdate))
@@ -146,7 +144,6 @@ describe('captureCanvasSnapshot', () => {
         canvasId,
         editHistoryId,
         campaignId: ctx.campaignId,
-        createdBy: ctx.dm.profile._id,
       })
     })
 
@@ -197,7 +194,6 @@ describe('captureNoteSnapshot', () => {
         noteId,
         editHistoryId,
         campaignId: ctx.campaignId,
-        createdBy: ctx.dm.profile._id,
       })
     })
 
@@ -235,7 +231,7 @@ describe('captureGameMapSnapshot', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createMapPin(t, mapId, ctx.dm.profile._id, {
+    await createMapPin(t, mapId, {
       itemId: noteId,
       x: 10,
       y: 20,
@@ -257,7 +253,6 @@ describe('captureGameMapSnapshot', () => {
         mapId,
         editHistoryId,
         campaignId: ctx.campaignId,
-        createdBy: ctx.dm.profile._id,
       })
     })
 
@@ -270,7 +265,6 @@ describe('captureGameMapSnapshot', () => {
       expect(snapshot).not.toBeNull()
       expect(snapshot!.snapshotType).toBe(SNAPSHOT_TYPE.game_map)
       expect(snapshot!.itemId).toBe(mapId)
-      expect(snapshot!.createdBy).toBe(ctx.dm.profile._id)
 
       const parsed: GameMapSnapshotData = JSON.parse(new TextDecoder().decode(snapshot!.data))
       expect(parsed.imageStorageId).toBeNull()
@@ -286,25 +280,27 @@ describe('captureGameMapSnapshot', () => {
     })
   })
 
-  it('excludes soft-deleted pins', async () => {
+  it('excludes hard-deleted pins', async () => {
     const ctx = await setupCampaignContext(t)
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId: note1 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId: note2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createMapPin(t, mapId, ctx.dm.profile._id, {
+    await createMapPin(t, mapId, {
       itemId: note1,
       x: 0,
       y: 0,
       visible: true,
     })
-    await createMapPin(t, mapId, ctx.dm.profile._id, {
+    const { pinId: pin2 } = await createMapPin(t, mapId, {
       itemId: note2,
       x: 50,
       y: 50,
       visible: false,
-      deletionTime: Date.now(),
-      deletedBy: ctx.dm.profile._id,
+    })
+
+    await t.run(async (dbCtx) => {
+      await dbCtx.db.delete('mapPins', pin2)
     })
 
     const editHistoryId = await createEditHistoryEntry(t, {
@@ -322,7 +318,6 @@ describe('captureGameMapSnapshot', () => {
         mapId,
         editHistoryId,
         campaignId: ctx.campaignId,
-        createdBy: ctx.dm.profile._id,
       })
     })
 
@@ -366,7 +361,6 @@ describe('captureGameMapSnapshot', () => {
           mapId,
           editHistoryId,
           campaignId: ctx.campaignId,
-          createdBy: ctx.dm.profile._id,
         })
       }),
     ).rejects.toThrow(/map .* not found/)
@@ -390,7 +384,6 @@ describe('captureGameMapSnapshot', () => {
         mapId,
         editHistoryId,
         campaignId: ctx.campaignId,
-        createdBy: ctx.dm.profile._id,
       })
     })
 
@@ -412,19 +405,19 @@ describe('captureGameMapSnapshot', () => {
     const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId: n3 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createMapPin(t, mapId, ctx.dm.profile._id, {
+    await createMapPin(t, mapId, {
       itemId: n1,
       x: 100,
       y: 200,
       visible: true,
     })
-    await createMapPin(t, mapId, ctx.dm.profile._id, {
+    await createMapPin(t, mapId, {
       itemId: n2,
       x: 300,
       y: 400,
       visible: false,
     })
-    await createMapPin(t, mapId, ctx.dm.profile._id, {
+    await createMapPin(t, mapId, {
       itemId: n3,
       x: 500,
       y: 600,
@@ -446,7 +439,6 @@ describe('captureGameMapSnapshot', () => {
         mapId,
         editHistoryId,
         campaignId: ctx.campaignId,
-        createdBy: ctx.dm.profile._id,
       })
     })
 

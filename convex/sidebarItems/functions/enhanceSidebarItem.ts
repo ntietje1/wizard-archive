@@ -27,7 +27,6 @@ export async function enhanceBase<T extends AnySidebarItemFromDb>(
       .withIndex('by_campaign_item_member', (q) =>
         q.eq('campaignId', item.campaignId).eq('sidebarItemId', item._id),
       )
-      .filter((q) => q.eq(q.field('deletionTime'), null))
       .collect(),
     ctx.db
       .query('bookmarks')
@@ -37,7 +36,6 @@ export async function enhanceBase<T extends AnySidebarItemFromDb>(
           .eq('campaignMemberId', membership._id)
           .eq('sidebarItemId', item._id),
       )
-      .filter((q) => q.eq(q.field('deletionTime'), null))
       .unique(),
     getSidebarItemPermissionLevel(ctx, { item }),
     item.previewStorageId ? ctx.storage.getUrl(item.previewStorageId) : null,

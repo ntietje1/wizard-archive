@@ -2,7 +2,7 @@ import { customQuery, customMutation, customCtx } from 'convex-helpers/server/cu
 import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import { triggers } from './triggers'
-import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from './campaigns/types'
+import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS, CAMPAIGN_STATUS } from './campaigns/types'
 import { ERROR_CODE, throwClientError } from './errors'
 import { getUserProfileById } from './users/functions/getUserProfile'
 import type { CustomCtx } from 'convex-helpers/server/customFunctions'
@@ -49,9 +49,8 @@ async function checkMembership(
     .unique()
   if (
     !campaign ||
-    campaign.deletionTime !== null ||
+    campaign.status === CAMPAIGN_STATUS.Deleted ||
     !member ||
-    member.deletionTime !== null ||
     member.status !== CAMPAIGN_MEMBER_STATUS.Accepted
   )
     throwClientError(ERROR_CODE.PERMISSION_DENIED, "You don't have access to this campaign")

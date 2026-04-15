@@ -8,7 +8,7 @@ import type {
   inlineContentSchema,
   tableContentSchema,
 } from './blockSchemas'
-import type { CommonValidatorFields } from '../common/types'
+import type { ConvexValidatorFields } from '../common/types'
 
 export type FlatBlockContent = z.infer<typeof flatBlockContentSchema>
 
@@ -37,7 +37,7 @@ export type Heading = {
   normalizedText: string
 }
 
-export type Block = CommonValidatorFields<'blocks'> & {
+export type Block = ConvexValidatorFields<'blocks'> & {
   noteId: Id<'sidebarItems'>
   blockNoteId: BlockNoteId
   position: number | null

@@ -1,4 +1,5 @@
 import { asyncMap } from 'convex-helpers'
+import { CAMPAIGN_MEMBER_STATUS, CAMPAIGN_STATUS } from '../../campaigns/types'
 import type { MutationCtx } from '../../_generated/server'
 
 type AuthUserDoc = {
@@ -14,7 +15,6 @@ export async function onDeleteUser(ctx: MutationCtx, user: AuthUserDoc): Promise
   if (!profile) return
 
   const profileId = profile._id
-  const now = Date.now()
 
   const [prefs, editors, files] = await Promise.all([
     ctx.db
@@ -44,17 +44,14 @@ export async function onDeleteUser(ctx: MutationCtx, user: AuthUserDoc): Promise
     .collect()
 
   for (const member of memberships) {
-    if (member.deletionTime) continue
+    if (member.status === CAMPAIGN_MEMBER_STATUS.Removed) continue
 
     const campaignId = member.campaignId
 
     const campaign = await ctx.db.get('campaigns', campaignId)
-    if (campaign && !campaign.deletionTime && campaign.dmUserId === profileId) {
+    if (campaign && campaign.status !== CAMPAIGN_STATUS.Deleted && campaign.dmUserId === profileId) {
       await ctx.db.patch('campaigns', campaign._id, {
-        deletionTime: now,
-        deletedBy: profileId,
-        updatedTime: now,
-        updatedBy: profileId,
+        status: CAMPAIGN_STATUS.Deleted,
       })
     }
 
@@ -64,27 +61,20 @@ export async function onDeleteUser(ctx: MutationCtx, user: AuthUserDoc): Promise
         .withIndex('by_campaign_member', (q) =>
           q.eq('campaignId', campaignId).eq('campaignMemberId', member._id),
         )
-        .filter((q) => q.eq(q.field('deletionTime'), null))
         .collect(),
       ctx.db
         .query('blockShares')
         .withIndex('by_campaign_member', (q) =>
           q.eq('campaignId', campaignId).eq('campaignMemberId', member._id),
         )
-        .filter((q) => q.eq(q.field('deletionTime'), null))
         .collect(),
     ])
 
-    const softDelete = {
-      deletionTime: now,
-      deletedBy: profileId,
-      updatedTime: now,
-      updatedBy: profileId,
-    }
-
-    await asyncMap(sidebarShares, (s) => ctx.db.patch('sidebarItemShares', s._id, softDelete))
-    await asyncMap(blockShares, (s) => ctx.db.patch('blockShares', s._id, softDelete))
-    await ctx.db.patch('campaignMembers', member._id, softDelete)
+    await asyncMap(sidebarShares, (s) => ctx.db.delete('sidebarItemShares', s._id))
+    await asyncMap(blockShares, (s) => ctx.db.delete('blockShares', s._id))
+    await ctx.db.patch('campaignMembers', member._id, {
+      status: CAMPAIGN_MEMBER_STATUS.Removed,
+    })
   }
 
   await ctx.db.delete('userProfiles', profileId)

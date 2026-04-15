@@ -1,33 +1,30 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
-import { commonTableFields, commonValidatorFields } from '../common/schema'
+import { convexValidatorFields } from '../common/schema'
 import {
   permissionLevelValidator,
-  sidebarItemIdValidator,
   sidebarItemTypeValidator,
-} from '../sidebarItems/schema/baseValidators'
+} from '../sidebarItems/schema/validators'
 
 const sidebarItemShareTableFields = {
   campaignId: v.id('campaigns'),
-  sidebarItemId: sidebarItemIdValidator,
+  sidebarItemId: v.id('sidebarItems'),
   sidebarItemType: sidebarItemTypeValidator,
   campaignMemberId: v.id('campaignMembers'),
   sessionId: v.nullable(v.id('sessions')),
   permissionLevel: v.nullable(permissionLevelValidator),
-  ...commonTableFields,
 }
 
 export const sidebarShareTables = {
   sidebarItemShares: defineTable({
     ...sidebarItemShareTableFields,
   })
-    .index('by_campaign_session', ['campaignId', 'sessionId'])
     .index('by_campaign_member', ['campaignId', 'campaignMemberId'])
     .index('by_campaign_item_member', ['campaignId', 'sidebarItemId', 'campaignMemberId']),
 }
 
 const sidebarItemShareValidatorFields = {
-  ...commonValidatorFields('sidebarItemShares'),
+  ...convexValidatorFields('sidebarItemShares'),
   ...sidebarItemShareTableFields,
 }
 

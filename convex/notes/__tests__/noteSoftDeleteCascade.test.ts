@@ -10,20 +10,20 @@ import {
 import { api } from '../../_generated/api'
 import { makeYjsUpdateWithBlocks } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
 
-describe('note soft-delete cascade to blocks and blockShares', () => {
+describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
   const t = createTestContext()
 
-  it('soft-deleting a note cascades deletionTime to all blocks including nested', async () => {
+  it('soft-deleting a note does not touch blocks', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('root'),
       depth: 0,
       parentBlockId: null,
     })
-    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('child'),
       depth: 1,
       parentBlockId: testBlockNoteId('root'),
@@ -43,21 +43,21 @@ describe('note soft-delete cascade to blocks and blockShares', () => {
 
       expect(blocks).toHaveLength(2)
       for (const block of blocks) {
-        expect(block.deletionTime).toBeTypeOf('number')
+        expect(block).not.toHaveProperty('deletionTime')
       }
     })
   })
 
-  it('soft-deleting a note cascades deletionTime to blockShares', async () => {
+  it('soft-deleting a note does not touch blockShares', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('shared'),
       shareStatus: 'individually_shared',
     })
-    await createBlockShare(t, ctx.dm.profile._id, {
+    await createBlockShare(t, {
       campaignId: ctx.campaignId,
       noteId,
       blockId: blockDbId,
@@ -77,30 +77,25 @@ describe('note soft-delete cascade to blocks and blockShares', () => {
         .collect()
 
       expect(shares).toHaveLength(1)
-      expect(shares[0].deletionTime).toBeTypeOf('number')
+      expect(shares[0]).not.toHaveProperty('deletionTime')
     })
   })
 
-  it('restoring a note restores all blocks and blockShares', async () => {
+  it('restoring a note does not need to touch blocks or blockShares', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('root'),
       depth: 0,
       parentBlockId: null,
     })
-    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      blockNoteId: testBlockNoteId('child'),
-      depth: 1,
-      parentBlockId: testBlockNoteId('root'),
-    })
-    const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('shared'),
       shareStatus: 'individually_shared',
     })
-    await createBlockShare(t, ctx.dm.profile._id, {
+    await createBlockShare(t, {
       campaignId: ctx.campaignId,
       noteId,
       blockId: blockDbId,
@@ -111,24 +106,6 @@ describe('note soft-delete cascade to blocks and blockShares', () => {
       campaignId: ctx.campaignId,
       itemId: noteId,
       location: 'trash',
-    })
-
-    await t.run(async (dbCtx) => {
-      const blocks = await dbCtx.db
-        .query('blocks')
-        .filter((q) => q.eq(q.field('noteId'), noteId))
-        .collect()
-      expect(blocks).toHaveLength(3)
-      for (const block of blocks) {
-        expect(block.deletionTime).toBeTypeOf('number')
-      }
-
-      const shares = await dbCtx.db
-        .query('blockShares')
-        .filter((q) => q.eq(q.field('noteId'), noteId))
-        .collect()
-      expect(shares).toHaveLength(1)
-      expect(shares[0].deletionTime).toBeTypeOf('number')
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
@@ -142,17 +119,13 @@ describe('note soft-delete cascade to blocks and blockShares', () => {
         .query('blocks')
         .filter((q) => q.eq(q.field('noteId'), noteId))
         .collect()
-      expect(blocks).toHaveLength(3)
-      for (const block of blocks) {
-        expect(block.deletionTime).toBeNull()
-      }
+      expect(blocks).toHaveLength(2)
 
       const shares = await dbCtx.db
         .query('blockShares')
         .filter((q) => q.eq(q.field('noteId'), noteId))
         .collect()
       expect(shares).toHaveLength(1)
-      expect(shares[0].deletionTime).toBeNull()
     })
   })
 
@@ -200,9 +173,6 @@ describe('note soft-delete cascade to blocks and blockShares', () => {
         .query('blocks')
         .filter((q) => q.eq(q.field('noteId'), noteId))
         .collect()
-
-      const nonDeleted = blocks.filter((b) => b.deletionTime === null)
-      expect(nonDeleted).toHaveLength(0)
 
       const blockB = blocks.find((b) => b.blockNoteId === testBlockNoteId('block-b'))
       expect(blockB).toBeUndefined()

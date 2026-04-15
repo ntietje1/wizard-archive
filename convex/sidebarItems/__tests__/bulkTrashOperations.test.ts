@@ -49,21 +49,21 @@ describe('bulk trash operations', () => {
       name: 'Sub2 Map',
     })
 
-    const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, dmId, {
+    const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('bulk-b1'),
     })
-    const { shareId } = await createSidebarShare(t, dmId, {
+    const { shareId } = await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',
       campaignMemberId: ctx.player.memberId,
     })
-    const { bookmarkId } = await createBookmark(t, ctx.player.profile._id, {
+    const { bookmarkId } = await createBookmark(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       campaignMemberId: ctx.player.memberId,
     })
-    const { pinId } = await createMapPin(t, mapId, dmId, {
+    const { pinId } = await createMapPin(t, mapId, {
       itemId: noteId,
     })
 
@@ -218,10 +218,10 @@ describe('bulk trash operations', () => {
       leafType: 'note',
     })
 
-    const { blockDbId } = await createBlock(t, leafId, ctx.campaignId, dmId, {
+    const { blockDbId } = await createBlock(t, leafId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('deep-block'),
     })
-    const { shareId } = await createSidebarShare(t, dmId, {
+    const { shareId } = await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: leafId,
       sidebarItemType: 'note',

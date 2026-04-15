@@ -17,8 +17,6 @@ export async function setCurrentEditor(
 ): Promise<Id<'editor'>> {
   const campaignId = ctx.campaign._id
   const userId = ctx.membership.userId
-  const now = Date.now()
-
   const editor = await ctx.db
     .query('editor')
     .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaignId).eq('userId', userId))
@@ -31,11 +29,6 @@ export async function setCurrentEditor(
       sortOrder: sortOrder ?? SORT_ORDERS.DateCreated,
       sortDirection: sortDirection ?? SORT_DIRECTIONS.Ascending,
       editorMode: editorMode ?? EDITOR_MODE.EDITOR,
-      deletionTime: null,
-      deletedBy: null,
-      updatedTime: null,
-      updatedBy: null,
-      createdBy: userId,
     })
   }
 
@@ -43,8 +36,6 @@ export async function setCurrentEditor(
     ...(sortOrder !== undefined && { sortOrder }),
     ...(sortDirection !== undefined && { sortDirection }),
     ...(editorMode !== undefined && { editorMode }),
-    updatedTime: now,
-    updatedBy: userId,
   })
 
   return editor._id

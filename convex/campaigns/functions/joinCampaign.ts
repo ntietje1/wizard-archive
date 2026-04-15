@@ -22,7 +22,7 @@ export async function joinCampaign(
     )
     .unique()
 
-  if (existingMember && existingMember.deletionTime === null) {
+  if (existingMember) {
     return existingMember.status
   }
 
@@ -31,11 +31,6 @@ export async function joinCampaign(
     campaignId: campaign._id,
     role: CAMPAIGN_MEMBER_ROLE.Player,
     status: CAMPAIGN_MEMBER_STATUS.Pending,
-    deletionTime: null,
-    deletedBy: null,
-    updatedTime: null,
-    updatedBy: null,
-    createdBy: profile._id,
   })
 
   return CAMPAIGN_MEMBER_STATUS.Pending

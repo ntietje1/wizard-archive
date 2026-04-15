@@ -121,7 +121,7 @@ describe('updateFile', () => {
 
     const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: fileId,
       sidebarItemType: 'file',
@@ -144,7 +144,7 @@ describe('updateFile', () => {
 
     const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: fileId,
       sidebarItemType: 'file',
@@ -221,7 +221,7 @@ describe('getFile', () => {
       name: 'Shared Then Deleted',
     })
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: fileId,
       sidebarItemType: 'file',
