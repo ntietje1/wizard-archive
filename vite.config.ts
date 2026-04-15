@@ -57,6 +57,7 @@ export default defineConfig({
     singleQuote: true,
     trailingComma: 'all',
     ignorePatterns: [
+      'LICENSE.md',
       '.nitro/',
       '.output/',
       '.tanstack/',
