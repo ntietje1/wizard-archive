@@ -5,7 +5,7 @@ type SignInSearch = {
   view?: 'form' | 'picker'
 }
 
-export const Route = createFileRoute('/sign-in')({
+export const Route = createFileRoute('/_app/sign-in')({
   component: RouteComponent,
   validateSearch: (search: Record<string, unknown>): SignInSearch => ({
     view: search.view === 'form' ? 'form' : search.view === 'picker' ? 'picker' : undefined,

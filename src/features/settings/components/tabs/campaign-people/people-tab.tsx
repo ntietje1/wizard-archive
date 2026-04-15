@@ -11,7 +11,7 @@ import { getOrigin } from '~/shared/utils/origin'
 
 export function PeopleTab() {
   const { dmUsername, campaignSlug } = useParams({
-    from: '/_authed/campaigns/$dmUsername/$campaignSlug',
+    from: '/_app/_authed/campaigns/$dmUsername/$campaignSlug',
   })
 
   const campaign = useAuthQuery(api.campaigns.queries.getCampaignBySlug, {

@@ -8,7 +8,7 @@ import { addRecentItem } from '~/features/search/hooks/use-recent-items'
 
 export function useSelectedItemSync() {
   const editorMatch = useMatch({
-    from: '/_authed/campaigns/$dmUsername/$campaignSlug/editor',
+    from: '/_app/_authed/campaigns/$dmUsername/$campaignSlug/editor',
     shouldThrow: false,
   })
   const editorSearch = editorMatch?.search ?? {}
