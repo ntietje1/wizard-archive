@@ -29,6 +29,15 @@ export function applyThemeClass(resolved: 'dark' | 'light') {
   root.classList.remove('no-transitions')
 }
 
+export function getThemeCookie(): Theme | null {
+  if (typeof document === 'undefined') return null
+  const match = document.cookie.match(/(?:^|; )theme=([^;]*)/)
+  if (!match) return null
+  const value = match[1]
+  if (value === 'dark' || value === 'light' || value === 'system') return value
+  return null
+}
+
 export const useTheme = () => {
   const context = useContext(ThemeProviderContext)
   if (context === undefined) throw new Error('useTheme must be used within a ThemeProvider')

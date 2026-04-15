@@ -9,6 +9,7 @@ import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import {
   ThemeProviderContext,
   applyThemeClass,
+  getThemeCookie,
   resolveTheme,
 } from '~/features/settings/hooks/useTheme'
 import { userPreferencesQueryOptions } from '~/features/settings/hooks/useUserPreferences'
@@ -61,7 +62,7 @@ export function ThemeProvider({
     },
   })
 
-  const theme: Theme = prefs?.theme ?? initialTheme ?? 'system'
+  const theme: Theme = prefs?.theme ?? initialTheme ?? getThemeCookie() ?? 'system'
   const resolved = resolveTheme(theme)
 
   const setTheme = (newTheme: Theme) => {
@@ -70,7 +71,8 @@ export function ThemeProvider({
 
   useEffect(() => {
     applyThemeClass(resolved)
-  }, [resolved])
+    document.cookie = `theme=${theme}; path=/; max-age=31536000; SameSite=Lax`
+  }, [resolved, theme])
 
   useEffect(() => {
     if (theme !== 'system') return

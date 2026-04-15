@@ -1,8 +1,16 @@
-import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from '@tanstack/react-router'
+import {
+  HeadContent,
+  Outlet,
+  Scripts,
+  createRootRouteWithContext,
+  useMatches,
+} from '@tanstack/react-router'
 import * as React from 'react'
 import type { ConvexReactClient } from 'convex/react'
 import type { ConvexQueryClient } from '@convex-dev/react-query'
 import type { QueryClient } from '@tanstack/react-query'
+import { getThemeCookie, resolveTheme } from '~/features/settings/hooks/useTheme'
+import type { Theme } from '~/features/settings/hooks/useTheme'
 import appCss from '~/styles/app.css?url'
 
 export const Route = createRootRouteWithContext<{
@@ -58,8 +66,17 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const matches = useMatches()
+  const appMatch = matches.find((m) => m.routeId === '/_app')
+
+  let themeClass: 'dark' | 'light' = 'dark'
+  if (appMatch) {
+    const initialTheme = (appMatch.context as { initialTheme?: Theme | null }).initialTheme
+    themeClass = resolveTheme(initialTheme ?? getThemeCookie() ?? 'system')
+  }
+
   return (
-    <html lang="en">
+    <html lang="en" className={themeClass} suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
