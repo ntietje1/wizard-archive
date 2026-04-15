@@ -69,7 +69,6 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       expect(blocks).toHaveLength(1)
       const block = blocks[0]
       expect(block._id).toBe(originalBlock._id)
-      expect(block.updatedTime).not.toBe(originalBlock.updatedTime)
     })
   })
 
@@ -82,15 +81,9 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       parentId: null,
     })
 
-    const { blockDbId: removedBlockId } = await createBlock(
-      t,
-      noteId,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      {
-        blockNoteId: testBlockNoteId('remove'),
-      },
-    )
+    const { blockDbId: removedBlockId } = await createBlock(t, noteId, ctx.campaignId, {
+      blockNoteId: testBlockNoteId('remove'),
+    })
 
     await pushAndPersist(dmAuth, ctx.campaignId, noteId, [
       { id: testBlockNoteId('keep'), type: 'paragraph', props: {}, children: [] },
@@ -117,7 +110,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       parentId: null,
     })
 
-    const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('shared-block'),
       shareStatus: 'individually_shared',
     })
@@ -129,11 +122,6 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
         blockId: blockDbId,
         campaignMemberId: ctx.player.memberId,
         sessionId: null,
-        deletionTime: null,
-        deletedBy: null,
-        updatedTime: null,
-        updatedBy: null,
-        createdBy: ctx.dm.profile._id,
       })
     })
 
@@ -228,10 +216,8 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
         .query('blocks')
         .filter((q) => q.eq(q.field('noteId'), noteId))
         .collect()
-      const nonDeleted = blocks.filter((b) => b.deletionTime === null)
-      expect(nonDeleted).toHaveLength(0)
-      const blockB = blocks.find((b) => b.blockNoteId === testBlockNoteId('block-b'))
-      expect(blockB).toBeUndefined()
+      expect(blocks).toHaveLength(1)
+      expect(blocks[0].blockNoteId).toBe(testBlockNoteId('block-a'))
     })
   })
 
@@ -244,10 +230,10 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       parentId: null,
     })
 
-    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('a'),
     })
-    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('b'),
     })
 
@@ -341,7 +327,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       parentId: null,
     })
 
-    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('existing'),
     })
 
@@ -360,12 +346,11 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
         .query('blocks')
         .filter((q) => q.eq(q.field('noteId'), noteId))
         .collect()
-      const nonDeleted = blocks.filter((b) => b.deletionTime === null)
-      const newBlock = nonDeleted.find((b) => b.blockNoteId === testBlockNoteId('new-block'))
+      const newBlock = blocks.find((b) => b.blockNoteId === testBlockNoteId('new-block'))
       expect(newBlock).toBeDefined()
       expect(newBlock!.type).toBe('heading')
       expect(newBlock!.plainText).toBe('New')
-      const existing = nonDeleted.find((b) => b.blockNoteId === testBlockNoteId('existing'))
+      const existing = blocks.find((b) => b.blockNoteId === testBlockNoteId('existing'))
       expect(existing).toBeUndefined()
     })
   })
@@ -446,19 +431,13 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       parentId: null,
     })
 
-    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('will-update'),
       shareStatus: 'all_shared',
     })
-    const { blockDbId: deleteId } = await createBlock(
-      t,
-      noteId,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      {
-        blockNoteId: testBlockNoteId('will-delete'),
-      },
-    )
+    const { blockDbId: deleteId } = await createBlock(t, noteId, ctx.campaignId, {
+      blockNoteId: testBlockNoteId('will-delete'),
+    })
 
     await pushAndPersist(dmAuth, ctx.campaignId, noteId, [
       {
@@ -482,15 +461,13 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
         .query('blocks')
         .filter((q) => q.eq(q.field('noteId'), noteId))
         .collect()
-      const nonDeleted = blocks.filter((b) => b.deletionTime === null)
-      expect(nonDeleted).toHaveLength(2)
+      expect(blocks).toHaveLength(2)
 
-      const updated = nonDeleted.find((b) => b.blockNoteId === testBlockNoteId('will-update'))!
+      const updated = blocks.find((b) => b.blockNoteId === testBlockNoteId('will-update'))!
       expect(updated.type).toBe('heading')
       expect(updated.shareStatus).toBe('all_shared')
-      expect(updated.updatedTime).not.toBeNull()
 
-      const inserted = nonDeleted.find((b) => b.blockNoteId === testBlockNoteId('will-insert'))!
+      const inserted = blocks.find((b) => b.blockNoteId === testBlockNoteId('will-insert'))!
       expect(inserted.type).toBe('paragraph')
       expect(inserted.plainText).toBe('New')
       expect(inserted.shareStatus).toBe('not_shared')

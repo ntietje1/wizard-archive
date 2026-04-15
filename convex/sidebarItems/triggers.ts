@@ -19,38 +19,6 @@ const handlers: Record<SidebarItemType, SidebarItemTriggerHandlers> = {
   [SIDEBAR_ITEM_TYPES.folders]: folderTriggers,
 }
 
-async function cascadeSoftDelete(
-  db: DatabaseWriter,
-  item: {
-    id: Id<'sidebarItems'>
-    type: SidebarItemType
-    campaignId: Id<'campaigns'>
-    deletionTime: number
-    deletedBy: Id<'userProfiles'> | null
-  },
-) {
-  const deletion = { deletionTime: item.deletionTime, deletedBy: item.deletedBy }
-
-  await cascadeSharedDependents(db, item.id, item.campaignId, (id, table) =>
-    db.patch(table, id, deletion),
-  )
-
-  await handlers[item.type].onSoftDelete(db, item, deletion)
-}
-
-async function cascadeRestore(
-  db: DatabaseWriter,
-  item: { id: Id<'sidebarItems'>; type: SidebarItemType; campaignId: Id<'campaigns'> },
-) {
-  const cleared = { deletionTime: null as null, deletedBy: null as null }
-
-  await cascadeSharedDependents(db, item.id, item.campaignId, (id, table) =>
-    db.patch(table, id, cleared),
-  )
-
-  await handlers[item.type].onRestore(db, item, cleared)
-}
-
 async function cascadeHardDelete(
   db: DatabaseWriter,
   storage: MutationCtx['storage'],
@@ -61,7 +29,7 @@ async function cascadeHardDelete(
     previewStorageId: Id<'_storage'> | null
   },
 ) {
-  await cascadeSharedDependents(db, item.id, item.campaignId, (id, table) => db.delete(table, id))
+  await cascadeSharedDependents(db, item.id, item.campaignId)
 
   const deletedStorageId = await handlers[item.type].onHardDelete(db, storage, item)
 
@@ -74,7 +42,6 @@ async function cascadeSharedDependents(
   db: DatabaseWriter,
   sidebarItemId: Id<'sidebarItems'>,
   campaignId: Id<'campaigns'>,
-  operation: (id: any, table: any) => Promise<void>,
 ) {
   const [shares, bookmarks] = await Promise.all([
     db
@@ -91,39 +58,15 @@ async function cascadeSharedDependents(
       .collect(),
   ])
 
-  await asyncMap(shares, (s) => operation(s._id, 'sidebarItemShares'))
-  await asyncMap(bookmarks, (b) => operation(b._id, 'bookmarks'))
+  await asyncMap(shares, (s) => db.delete('sidebarItemShares', s._id))
+  await asyncMap(bookmarks, (b) => db.delete('bookmarks', b._id))
 }
 
 export function registerSidebarItemTriggers(triggers: Triggers<DataModel, MutationCtx>) {
   triggers.register('sidebarItems', async (ctx, change) => {
-    const db = ctx.innerDb
-
-    if (change.operation === 'update') {
-      const { oldDoc, newDoc } = change
-      const wasTrashed = oldDoc.deletionTime === null && newDoc.deletionTime !== null
-      const wasRestored = oldDoc.deletionTime !== null && newDoc.deletionTime === null
-
-      if (wasTrashed) {
-        await cascadeSoftDelete(db, {
-          id: newDoc._id,
-          type: newDoc.type,
-          campaignId: newDoc.campaignId,
-          deletionTime: newDoc.deletionTime!,
-          deletedBy: newDoc.deletedBy,
-        })
-      } else if (wasRestored) {
-        await cascadeRestore(db, {
-          id: newDoc._id,
-          type: newDoc.type,
-          campaignId: newDoc.campaignId,
-        })
-      }
-    }
-
     if (change.operation === 'delete') {
       const { oldDoc } = change
-      await cascadeHardDelete(db, ctx.storage, {
+      await cascadeHardDelete(ctx.innerDb, ctx.storage, {
         id: oldDoc._id,
         type: oldDoc.type,
         campaignId: oldDoc.campaignId,

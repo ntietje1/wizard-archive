@@ -68,11 +68,6 @@ export async function createNote(
 
   await ctx.db.insert('notes', {
     sidebarItemId: noteId,
-    deletionTime: null,
-    deletedBy: null,
-    updatedTime: null,
-    updatedBy: null,
-    createdBy: userId,
   })
 
   let initialState: ArrayBuffer | undefined

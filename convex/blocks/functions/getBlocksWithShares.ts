@@ -40,7 +40,6 @@ export const getBlocksWithShares = async (
       .withIndex('by_campaign_note', (q) =>
         q.eq('campaignId', note.campaignId).eq('noteId', noteId),
       )
-      .filter((q) => q.eq(q.field('deletionTime'), null))
       .collect(),
   ])
 

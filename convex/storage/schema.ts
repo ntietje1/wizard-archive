@@ -1,7 +1,7 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { literals } from 'convex-helpers/validators'
-import { commonTableFields, commonValidatorFields } from '../common/schema'
+import { convexValidatorFields } from '../common/schema'
 
 export const fileStorageStatusValidator = literals('uncommitted', 'committed')
 
@@ -14,15 +14,12 @@ const fileStorageTableFields = {
 
 export const fileStorageTables = {
   fileStorage: defineTable({
-    ...commonTableFields,
     ...fileStorageTableFields,
-  })
-    .index('by_user_storage', ['userId', 'storageId'])
-    .index('by_status', ['status']),
+  }).index('by_user_storage', ['userId', 'storageId']),
 }
 
 const fileStorageValidatorFields = {
-  ...commonValidatorFields('fileStorage'),
+  ...convexValidatorFields('fileStorage'),
   ...fileStorageTableFields,
 }
 

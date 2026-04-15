@@ -1,10 +1,7 @@
-import { asyncMap } from 'convex-helpers'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
-import { getSidebarItem } from './getSidebarItem'
 import type { SidebarItemLocation } from '../types/baseTypes'
-import type { Id } from '../../_generated/dataModel'
+import type { Doc, Id } from '../../_generated/dataModel'
 import type { QueryCtx } from '../../_generated/server'
-import type { AnySidebarItemFromDb } from '../types/types'
 
 export async function collectDescendants(
   ctx: QueryCtx,
@@ -17,8 +14,8 @@ export async function collectDescendants(
     location: SidebarItemLocation
     folderId: Id<'sidebarItems'>
   },
-): Promise<Array<AnySidebarItemFromDb>> {
-  const result: Array<AnySidebarItemFromDb> = []
+): Promise<Array<Doc<'sidebarItems'>>> {
+  const result: Array<Doc<'sidebarItems'>> = []
 
   async function collectFromFolder(parentId: Id<'sidebarItems'>) {
     const children = await ctx.db
@@ -31,14 +28,10 @@ export async function collectDescendants(
     const childFolders = children.filter((c) => c.type === SIDEBAR_ITEM_TYPES.folders)
     const nonFolders = children.filter((c) => c.type !== SIDEBAR_ITEM_TYPES.folders)
 
-    const enhanced = await asyncMap(nonFolders, (raw) => getSidebarItem(ctx, raw._id))
-    for (const item of enhanced) {
-      if (item) result.push(item)
-    }
+    result.push(...nonFolders)
 
     for (const folder of childFolders) {
-      const enhancedFolder = await getSidebarItem(ctx, folder._id)
-      if (enhancedFolder) result.push(enhancedFolder)
+      result.push(folder)
       await collectFromFolder(folder._id)
     }
   }

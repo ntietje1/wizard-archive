@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import { campaignMutation, dmMutation } from '../functions'
-import { sidebarItemIdValidator, sidebarItemLocationValidator } from './schema/baseValidators'
+import { sidebarItemLocationValidator } from './schema/validators'
 import { moveSidebarItem as moveSidebarItemFn } from './functions/moveSidebarItem'
 import { permanentlyDeleteSidebarItem as permanentlyDeleteSidebarItemFn } from './functions/permanentlyDeleteSidebarItem'
 import { emptyTrashBin as emptyTrashBinFn } from './functions/emptyTrashBin'
@@ -10,11 +10,11 @@ import type { Id } from '../_generated/dataModel'
 
 export const moveSidebarItem = campaignMutation({
   args: {
-    itemId: sidebarItemIdValidator,
+    itemId: v.id('sidebarItems'),
     parentId: v.optional(v.nullable(v.id('sidebarItems'))),
     location: v.optional(sidebarItemLocationValidator),
   },
-  returns: sidebarItemIdValidator,
+  returns: v.id('sidebarItems'),
   handler: async (ctx, args): Promise<Id<'sidebarItems'>> => {
     return await moveSidebarItemFn(ctx, {
       itemId: args.itemId,
@@ -26,7 +26,7 @@ export const moveSidebarItem = campaignMutation({
 
 export const permanentlyDeleteSidebarItem = campaignMutation({
   args: {
-    itemId: sidebarItemIdValidator,
+    itemId: v.id('sidebarItems'),
   },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
@@ -46,7 +46,7 @@ export const emptyTrashBin = dmMutation({
 
 export const claimPreviewGeneration = campaignMutation({
   args: {
-    itemId: sidebarItemIdValidator,
+    itemId: v.id('sidebarItems'),
   },
   returns: v.object({
     claimed: v.boolean(),
@@ -59,7 +59,7 @@ export const claimPreviewGeneration = campaignMutation({
 
 export const setPreviewImage = campaignMutation({
   args: {
-    itemId: sidebarItemIdValidator,
+    itemId: v.id('sidebarItems'),
     previewStorageId: v.id('_storage'),
     claimToken: v.string(),
   },

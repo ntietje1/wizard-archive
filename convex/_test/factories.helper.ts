@@ -100,7 +100,6 @@ export async function createCampaignWithDm(
     slug: `campaign-${n}`,
     status: 'Active' as const,
     currentSessionId: null,
-    ...commonFields(dmProfile._id),
   }
   const campaignData = { ...defaults, ...overrides, dmUserId: dmProfile._id }
   const campaignId = await t.run(async (ctx) => {
@@ -113,7 +112,6 @@ export async function createCampaignWithDm(
       campaignId,
       role: CAMPAIGN_MEMBER_ROLE.DM,
       status: CAMPAIGN_MEMBER_STATUS.Accepted,
-      ...commonFields(dmProfile._id),
     })
   })
 
@@ -128,13 +126,11 @@ export async function addPlayerToCampaign(
     status: 'Pending' | 'Accepted' | 'Rejected' | 'Removed'
   }>,
 ) {
-  const creatorId = playerProfile._id
   const defaults = {
     userId: playerProfile._id,
     campaignId,
     role: CAMPAIGN_MEMBER_ROLE.Player,
     status: CAMPAIGN_MEMBER_STATUS.Accepted,
-    ...commonFields(creatorId),
   }
   const data = { ...defaults, ...overrides }
   const memberId = await t.run(async (ctx) => {
@@ -227,7 +223,6 @@ async function insertSidebarItem(
     const itemId = await ctx.db.insert('sidebarItems', sharedData)
     await ctx.db.insert(extensionTable, {
       sidebarItemId: itemId,
-      ...commonFields(creatorProfileId),
       ...extensionDefaults,
       ...extensionFields,
     })
@@ -334,13 +329,10 @@ export async function createCanvas(
 export async function createSession(
   t: T,
   campaignId: Id<'campaigns'>,
-  creatorProfileId: Id<'userProfiles'>,
   overrides?: Partial<{
     name: string | null
     startedAt: number
     endedAt: number | null
-    deletionTime: number | null
-    deletedBy: Id<'userProfiles'> | null
   }>,
 ) {
   const defaults = {
@@ -348,7 +340,6 @@ export async function createSession(
     name: null,
     startedAt: Date.now(),
     endedAt: null,
-    ...commonFields(creatorProfileId),
   }
   const data = { ...defaults, ...overrides }
   const sessionId = await t.run(async (ctx) => {
@@ -361,7 +352,6 @@ export async function createBlock(
   t: T,
   noteId: Id<'sidebarItems'>,
   campaignId: Id<'campaigns'>,
-  creatorProfileId: Id<'userProfiles'>,
   overrides?: Partial<{
     blockNoteId: BlockNoteId
     position: number | null
@@ -372,8 +362,6 @@ export async function createBlock(
     inlineContent: InlineContent | null
     plainText: string
     shareStatus: ShareStatus | null
-    deletionTime: number | null
-    deletedBy: Id<'userProfiles'> | null
   }>,
 ) {
   const n = nextId()
@@ -390,7 +378,6 @@ export async function createBlock(
     plainText: '',
     campaignId,
     shareStatus,
-    ...commonFields(creatorProfileId),
   }
   const data = { ...defaults, ...overrides }
   if (data.parentBlockId !== null && overrides?.depth === undefined) {
@@ -404,7 +391,6 @@ export async function createBlock(
 
 export async function createSidebarShare(
   t: T,
-  creatorProfileId: Id<'userProfiles'>,
   overrides: {
     campaignId: Id<'campaigns'>
     sidebarItemId: Id<'sidebarItems'>
@@ -412,8 +398,6 @@ export async function createSidebarShare(
     campaignMemberId: Id<'campaignMembers'>
     permissionLevel?: PermissionLevel | null
     sessionId?: Id<'sessions'> | null
-    deletionTime?: number | null
-    deletedBy?: Id<'userProfiles'> | null
   },
 ) {
   const permissionLevel: PermissionLevel | null = 'view'
@@ -421,7 +405,6 @@ export async function createSidebarShare(
   const defaults = {
     permissionLevel,
     sessionId,
-    ...commonFields(creatorProfileId),
   }
   const data = { ...defaults, ...overrides }
   const shareId = await t.run(async (ctx) => {
@@ -432,21 +415,17 @@ export async function createSidebarShare(
 
 export async function createBlockShare(
   t: T,
-  creatorProfileId: Id<'userProfiles'>,
   overrides: {
     campaignId: Id<'campaigns'>
     noteId: Id<'sidebarItems'>
     blockId: Id<'blocks'>
     campaignMemberId: Id<'campaignMembers'>
     sessionId?: Id<'sessions'> | null
-    deletionTime?: number | null
-    deletedBy?: Id<'userProfiles'> | null
   },
 ) {
   const sessionId: Id<'sessions'> | null = null
   const defaults = {
     sessionId,
-    ...commonFields(creatorProfileId),
   }
   const data = { ...defaults, ...overrides }
   const blockShareId = await t.run(async (ctx) => {
@@ -457,36 +436,26 @@ export async function createBlockShare(
 
 export async function createBookmark(
   t: T,
-  creatorProfileId: Id<'userProfiles'>,
   overrides: {
     campaignId: Id<'campaigns'>
     sidebarItemId: Id<'sidebarItems'>
     campaignMemberId: Id<'campaignMembers'>
-    deletionTime?: number | null
-    deletedBy?: Id<'userProfiles'> | null
   },
 ) {
-  const defaults = {
-    ...commonFields(creatorProfileId),
-  }
-  const data = { ...defaults, ...overrides }
   const bookmarkId = await t.run(async (ctx) => {
-    return await ctx.db.insert('bookmarks', data)
+    return await ctx.db.insert('bookmarks', overrides)
   })
-  return { bookmarkId, ...data }
+  return { bookmarkId, ...overrides }
 }
 
 export async function createMapPin(
   t: T,
   mapId: Id<'sidebarItems'>,
-  creatorProfileId: Id<'userProfiles'>,
   overrides: {
     itemId: Id<'sidebarItems'>
     x?: number
     y?: number
     visible?: boolean
-    deletionTime?: number | null
-    deletedBy?: Id<'userProfiles'> | null
   },
 ) {
   const defaults = {
@@ -494,7 +463,6 @@ export async function createMapPin(
     x: 0,
     y: 0,
     visible: true,
-    ...commonFields(creatorProfileId),
   }
   const data = { ...defaults, ...overrides }
   const pinId = await t.run(async (ctx) => {

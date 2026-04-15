@@ -84,11 +84,6 @@ describe('getDownloadUrl', () => {
         userId: profile._id,
         status: 'committed',
         originalFileName: 'test.txt',
-        createdBy: profile._id,
-        updatedTime: null,
-        updatedBy: null,
-        deletionTime: null,
-        deletedBy: null,
       })
     })
     const url = await authed.query(api.storage.queries.getDownloadUrl, {

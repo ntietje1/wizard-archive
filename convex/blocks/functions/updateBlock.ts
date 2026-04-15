@@ -33,10 +33,6 @@ export async function updateBlock(
   if (fields.shareStatus !== undefined) updates.shareStatus = fields.shareStatus
 
   if (Object.keys(updates).length > 0) {
-    await ctx.db.patch('blocks', blockDbId, {
-      ...updates,
-      updatedTime: Date.now(),
-      updatedBy: ctx.membership.userId,
-    })
+    await ctx.db.patch('blocks', blockDbId, updates)
   }
 }

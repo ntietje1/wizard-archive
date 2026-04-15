@@ -18,7 +18,7 @@ export async function searchBlocks(
   const results = await ctx.db
     .query('blocks')
     .withSearchIndex('search_plainText', (q) =>
-      q.search('plainText', query).eq('campaignId', ctx.campaign._id).eq('deletionTime', null),
+      q.search('plainText', query).eq('campaignId', ctx.campaign._id),
     )
     .take(50)
 

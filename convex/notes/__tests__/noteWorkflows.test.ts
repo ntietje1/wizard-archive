@@ -28,20 +28,20 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Secrets',
     })
-    const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
+    const block = await createBlock(t, note.noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('secret-block'),
     })
     await syncBlocksToYjs(t, note.noteId, [
       { id: testBlockNoteId('secret-block'), type: 'paragraph' },
     ])
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: note.noteId,
       sidebarItemType: 'note',
       campaignMemberId: p1.memberId,
     })
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: note.noteId,
       sidebarItemType: 'note',
@@ -93,14 +93,14 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     const playerAuth = asPlayer(ctx)
 
     const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
+    const block = await createBlock(t, note.noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('revocable-block'),
     })
     await syncBlocksToYjs(t, note.noteId, [
       { id: testBlockNoteId('revocable-block'), type: 'paragraph' },
     ])
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: note.noteId,
       sidebarItemType: 'note',
@@ -144,7 +144,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
       inheritShares: true,
     })
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: folderId,
       sidebarItemType: 'folder',
@@ -165,7 +165,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     expect(playerNote).not.toBeNull()
     expect(playerNote!.name).toBe('Nested Note')
 
-    const block = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    const block = await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('nested-block'),
     })
     await syncBlocksToYjs(t, noteId, [{ id: testBlockNoteId('nested-block'), type: 'paragraph' }])
@@ -196,11 +196,11 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     const playerAuth = asPlayer(ctx)
 
     const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
+    const block = await createBlock(t, note.noteId, ctx.campaignId, {
       shareStatus: 'all_shared',
     })
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: note.noteId,
       sidebarItemType: 'note',
@@ -233,14 +233,14 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     const playerAuth = asPlayer(ctx)
 
     const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
+    const block = await createBlock(t, note.noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('transition-block'),
     })
     await syncBlocksToYjs(t, note.noteId, [
       { id: testBlockNoteId('transition-block'), type: 'paragraph' },
     ])
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: note.noteId,
       sidebarItemType: 'note',
@@ -297,19 +297,19 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
 
     const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
+    await createBlock(t, note.noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('root'),
       depth: 0,
       parentBlockId: null,
       position: 0,
     })
-    await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
+    await createBlock(t, note.noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('shared-child'),
       depth: 1,
       parentBlockId: testBlockNoteId('root'),
       position: 0,
     })
-    await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id, {
+    await createBlock(t, note.noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('unshared-child'),
       depth: 1,
       parentBlockId: testBlockNoteId('root'),
@@ -326,7 +326,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
       },
     ])
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: note.noteId,
       sidebarItemType: 'note',

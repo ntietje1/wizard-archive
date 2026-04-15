@@ -5,7 +5,6 @@ import type { DmMutationCtx } from '../../functions'
 
 export async function endCurrentSession(ctx: DmMutationCtx): Promise<Id<'sessions'>> {
   const campaignId = ctx.campaign._id
-  const userId = ctx.membership.userId
 
   const currentSession = await getCurrentSession(ctx)
   if (!currentSession) {
@@ -17,13 +16,9 @@ export async function endCurrentSession(ctx: DmMutationCtx): Promise<Id<'session
   await Promise.all([
     ctx.db.patch('sessions', currentSession._id, {
       endedAt: now,
-      updatedTime: now,
-      updatedBy: userId,
     }),
     ctx.db.patch('campaigns', campaignId, {
       currentSessionId: null,
-      updatedTime: now,
-      updatedBy: userId,
     }),
   ])
   return currentSession._id

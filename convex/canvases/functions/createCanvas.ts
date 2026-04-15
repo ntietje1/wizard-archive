@@ -63,11 +63,6 @@ export async function createCanvas(
 
   await ctx.db.insert('canvases', {
     sidebarItemId: canvasId,
-    deletionTime: null,
-    deletedBy: null,
-    updatedTime: null,
-    updatedBy: null,
-    createdBy: userId,
   })
 
   const doc = new Y.Doc()

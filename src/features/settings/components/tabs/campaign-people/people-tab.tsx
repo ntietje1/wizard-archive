@@ -23,27 +23,27 @@ export function PeopleTab() {
     ? campaignData.myMembership?.role === CAMPAIGN_MEMBER_ROLE.DM
     : undefined
 
-  const players = useAuthQuery(
-    api.campaigns.queries.getPlayersByCampaign,
+  const members = useAuthQuery(
+    api.campaigns.queries.getMembersByCampaign,
     campaignData?._id ? { campaignId: campaignData._id } : 'skip',
   )
 
-  const dmMember = players.data?.find(
-    (p) => p.role === CAMPAIGN_MEMBER_ROLE.DM && p.status === CAMPAIGN_MEMBER_STATUS.Accepted,
+  const requests = useAuthQuery(
+    api.campaigns.queries.getCampaignRequests,
+    campaignData?._id && isDm ? { campaignId: campaignData._id } : 'skip',
   )
 
-  const acceptedPlayers =
-    players.data?.filter(
-      (p) => p.role === CAMPAIGN_MEMBER_ROLE.Player && p.status === CAMPAIGN_MEMBER_STATUS.Accepted,
-    ) ?? []
+  const dmMember = members.data?.find((p) => p.role === CAMPAIGN_MEMBER_ROLE.DM)
+
+  const acceptedPlayers = members.data?.filter((p) => p.role === CAMPAIGN_MEMBER_ROLE.Player) ?? []
 
   const pendingPlayers =
-    players.data?.filter(
+    requests.data?.filter(
       (p) => p.role === CAMPAIGN_MEMBER_ROLE.Player && p.status === CAMPAIGN_MEMBER_STATUS.Pending,
     ) ?? []
 
   const rejectedOrRemoved =
-    players.data?.filter(
+    requests.data?.filter(
       (p) =>
         p.role === CAMPAIGN_MEMBER_ROLE.Player &&
         (p.status === CAMPAIGN_MEMBER_STATUS.Rejected ||
@@ -51,6 +51,10 @@ export function PeopleTab() {
     ) ?? []
 
   const joinUrl = `${getOrigin()}/join/${dmUsername}/${campaignSlug}`
+
+  const isLoading = campaign.isLoading || members.isLoading || (isDm && requests.isLoading)
+  const isError = campaign.isError || members.isError || (isDm && requests.isError)
+  const isReady = campaignData && members.data && (!isDm || requests.data)
 
   return (
     <div className="flex flex-col gap-6">
@@ -64,17 +68,15 @@ export function PeopleTab() {
         </p>
       </div>
 
-      {(campaign.isLoading || players.isLoading) && (
+      {isLoading && (
         <div className="flex items-center justify-center py-8">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       )}
 
-      {(campaign.isError || players.isError) && (
-        <p className="text-sm text-destructive">Failed to load players</p>
-      )}
+      {isError && <p className="text-sm text-destructive">Failed to load campaign data</p>}
 
-      {players.data && campaignData && (
+      {isReady && (
         <>
           {isDm && <InviteLinkSection joinUrl={joinUrl} />}
 

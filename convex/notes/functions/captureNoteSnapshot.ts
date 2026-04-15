@@ -9,12 +9,10 @@ export async function captureNoteSnapshot(
     noteId,
     editHistoryId,
     campaignId,
-    createdBy,
   }: {
     noteId: Id<'sidebarItems'>
     editHistoryId: Id<'editHistory'>
     campaignId: Id<'campaigns'>
-    createdBy: Id<'userProfiles'>
   },
 ): Promise<void> {
   await captureYjsState(ctx, {
@@ -22,6 +20,5 @@ export async function captureNoteSnapshot(
     snapshotType: NOTE_SNAPSHOT_TYPE,
     editHistoryId,
     campaignId,
-    createdBy,
   })
 }

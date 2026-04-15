@@ -9,12 +9,10 @@ export async function captureCanvasSnapshot(
     canvasId,
     editHistoryId,
     campaignId,
-    createdBy,
   }: {
     canvasId: Id<'sidebarItems'>
     editHistoryId: Id<'editHistory'>
     campaignId: Id<'campaigns'>
-    createdBy: Id<'userProfiles'>
   },
 ): Promise<void> {
   await captureYjsState(ctx, {
@@ -22,6 +20,5 @@ export async function captureCanvasSnapshot(
     snapshotType: CANVAS_SNAPSHOT_TYPE,
     editHistoryId,
     campaignId,
-    createdBy,
   })
 }

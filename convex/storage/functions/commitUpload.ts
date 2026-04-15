@@ -37,12 +37,8 @@ export async function commitUpload(
     throwClientError(ERROR_CODE.VALIDATION_FAILED, validation.error)
   }
 
-  const now = Date.now()
-
   await ctx.db.patch('fileStorage', fileStorage._id, {
     status: FILE_STORAGE_STATUS.Committed,
-    updatedTime: now,
-    updatedBy: ctx.user.profile._id,
   })
   return fileStorage._id
 }

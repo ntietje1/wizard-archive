@@ -17,6 +17,7 @@ export default defineConfig({
       typeCheck: true,
     },
     ignorePatterns: [
+      'LICENSE.md',
       '.output/**',
       '.nitro/**',
       'convex/_generated/**',
@@ -56,6 +57,7 @@ export default defineConfig({
     singleQuote: true,
     trailingComma: 'all',
     ignorePatterns: [
+      'LICENSE.md',
       '.nitro/',
       '.output/',
       '.tanstack/',

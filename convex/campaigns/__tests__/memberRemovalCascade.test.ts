@@ -22,13 +22,13 @@ describe('multi-player share + membership removal cascade', () => {
     const p2 = players[1]
 
     const { noteId } = await createNote(t, campaignId, dm.profile._id)
-    await createSidebarShare(t, dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',
       campaignMemberId: p1.memberId,
     })
-    await createSidebarShare(t, dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',
@@ -57,13 +57,13 @@ describe('multi-player share + membership removal cascade', () => {
     const p1 = players[0]
 
     const { noteId } = await createNote(t, campaignId, dm.profile._id)
-    const { shareId } = await createSidebarShare(t, dm.profile._id, {
+    const { shareId } = await createSidebarShare(t, {
       campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',
       campaignMemberId: p1.memberId,
     })
-    const { bookmarkId } = await createBookmark(t, p1.profile._id, {
+    const { bookmarkId } = await createBookmark(t, {
       campaignId,
       sidebarItemId: noteId,
       campaignMemberId: p1.memberId,
@@ -109,17 +109,17 @@ describe('multi-player share + membership removal cascade', () => {
     const p1 = players[0]
 
     const { noteId } = await createNote(t, campaignId, dm.profile._id)
-    const { blockDbId } = await createBlock(t, noteId, campaignId, dm.profile._id, {
+    const { blockDbId } = await createBlock(t, noteId, campaignId, {
       blockNoteId: testBlockNoteId('secret'),
       shareStatus: 'individually_shared',
     })
-    const { blockShareId } = await createBlockShare(t, dm.profile._id, {
+    const { blockShareId } = await createBlockShare(t, {
       campaignId,
       noteId,
       blockId: blockDbId,
       campaignMemberId: p1.memberId,
     })
-    await createSidebarShare(t, dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',

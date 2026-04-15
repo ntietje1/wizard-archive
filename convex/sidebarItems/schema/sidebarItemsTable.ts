@@ -1,11 +1,12 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
-import { commonTableFields } from '../../common/schema'
 import {
   permissionLevelValidator,
   sidebarItemLocationValidator,
   sidebarItemTypeValidator,
-} from './baseValidators'
+} from './validators'
+import { sidebarItemShareValidator } from '../../sidebarShares/schema'
+import { convexValidatorFields } from '../../common/schema'
 
 const sidebarItemTableFields = {
   name: v.string(),
@@ -21,20 +22,37 @@ const sidebarItemTableFields = {
   previewLockedUntil: v.nullable(v.number()),
   previewClaimToken: v.nullable(v.string()),
   previewUpdatedAt: v.nullable(v.number()),
-  ...commonTableFields,
+  updatedTime: v.nullable(v.number()),
+  updatedBy: v.nullable(v.id('userProfiles')),
+  createdBy: v.id('userProfiles'),
+  deletionTime: v.nullable(v.number()),
+  deletedBy: v.nullable(v.id('userProfiles')),
+}
+
+export const sidebarItemValidatorFields = {
+  ...convexValidatorFields('sidebarItems'),
+  ...sidebarItemTableFields,
+  shares: v.array(sidebarItemShareValidator),
+  isBookmarked: v.boolean(),
+  myPermissionLevel: permissionLevelValidator,
+  previewUrl: v.nullable(v.string()),
 }
 
 const extensionBaseFields = {
   sidebarItemId: v.id('sidebarItems'),
-  ...commonTableFields,
 }
 
 export const sidebarItemsTables = {
   sidebarItems: defineTable(sidebarItemTableFields)
-    .index('by_campaign_location_parent_name', ['campaignId', 'location', 'parentId', 'name'])
-    .index('by_campaign_slug', ['campaignId', 'slug'])
-    .index('by_campaign_deletionTime', ['campaignId', 'deletionTime'])
-    .index('by_campaign_type', ['campaignId', 'type']),
+    .index('by_campaign_location_parent_name', [
+      'campaignId',
+      'location',
+      'parentId',
+      'name',
+      'deletionTime',
+    ])
+    .index('by_campaign_slug', ['campaignId', 'slug', 'deletionTime'])
+    .index('by_campaign', ['campaignId', 'deletionTime']),
 
   notes: defineTable({
     ...extensionBaseFields,

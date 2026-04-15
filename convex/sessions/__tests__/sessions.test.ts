@@ -337,24 +337,21 @@ describe('getSessionsByCampaign', () => {
     expect(sessions[0]).toHaveProperty('endedAt')
   })
 
-  it('excludes soft-deleted sessions', async () => {
+  it('ended sessions still appear in list', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const sessionId = await dmAuth.mutation(api.sessions.mutations.startSession, {
+    await dmAuth.mutation(api.sessions.mutations.startSession, {
       campaignId: ctx.campaignId,
     })
 
-    await t.run(async (dbCtx) => {
-      await dbCtx.db.patch('sessions', sessionId, {
-        deletionTime: Date.now(),
-        deletedBy: ctx.dm.profile._id,
-      })
+    await dmAuth.mutation(api.sessions.mutations.endCurrentSession, {
+      campaignId: ctx.campaignId,
     })
 
     const sessions = await dmAuth.query(api.sessions.queries.getSessionsByCampaign, {
       campaignId: ctx.campaignId,
     })
-    expect(sessions.length).toBe(0)
+    expect(sessions.length).toBe(1)
   })
 })

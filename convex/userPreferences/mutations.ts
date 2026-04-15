@@ -10,7 +10,6 @@ export const setUserPreferences = authMutation({
   },
   returns: v.id('userPreferences'),
   handler: async (ctx, args) => {
-    const now = Date.now()
     const userId = ctx.user.profile._id
 
     const existing = await ctx.db
@@ -23,18 +22,9 @@ export const setUserPreferences = authMutation({
         userId,
         theme: args.theme ?? null,
         panelPreferences: null,
-        deletionTime: null,
-        deletedBy: null,
-        updatedTime: null,
-        updatedBy: null,
-        createdBy: userId,
       })
     } else {
-      await ctx.db.patch('userPreferences', existing._id, {
-        ...args,
-        updatedTime: now,
-        updatedBy: userId,
-      })
+      await ctx.db.patch('userPreferences', existing._id, args)
 
       return existing._id
     }
@@ -53,7 +43,6 @@ export const setPanelPreference = authMutation({
       throw new Error(`Invalid panelId: ${args.panelId}`)
     }
 
-    const now = Date.now()
     const userId = ctx.user.profile._id
 
     const existing = await ctx.db
@@ -83,17 +72,10 @@ export const setPanelPreference = authMutation({
         userId,
         theme: null,
         panelPreferences: updatedPrefs,
-        deletionTime: null,
-        deletedBy: null,
-        updatedTime: null,
-        updatedBy: null,
-        createdBy: userId,
       })
     } else {
       await ctx.db.patch('userPreferences', existing._id, {
         panelPreferences: updatedPrefs,
-        updatedTime: now,
-        updatedBy: userId,
       })
 
       return existing._id

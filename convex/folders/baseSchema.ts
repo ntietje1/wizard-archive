@@ -1,11 +1,9 @@
 import { v } from 'convex/values'
-import { commonSidebarItemValidatorFields } from '../sidebarItems/schema/baseFields'
-import { commonValidatorFields } from '../common/schema'
+import { sidebarItemValidatorFields } from '../sidebarItems/schema/sidebarItemsTable'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 
 const folderValidatorFields = {
-  ...commonValidatorFields('sidebarItems'),
-  ...commonSidebarItemValidatorFields,
+  ...sidebarItemValidatorFields,
   type: v.literal(SIDEBAR_ITEM_TYPES.folders),
   inheritShares: v.boolean(),
 }

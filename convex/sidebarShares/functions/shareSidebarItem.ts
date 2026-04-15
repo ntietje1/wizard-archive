@@ -34,8 +34,7 @@ export const shareSidebarItem = async (
         .eq('campaignMemberId', campaignMemberId),
     )
     .unique()
-  const previousLevel =
-    existingShare && existingShare.deletionTime === null ? existingShare.permissionLevel : null
+  const previousLevel = existingShare ? existingShare.permissionLevel : null
 
   const result = await shareSidebarItemWithMember(ctx, {
     sidebarItemId,

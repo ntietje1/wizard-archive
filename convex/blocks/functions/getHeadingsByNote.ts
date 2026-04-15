@@ -14,8 +14,9 @@ export async function getHeadingsByNote(
 
   const blocks = await ctx.db
     .query('blocks')
-    .withIndex('by_campaign_note', (q) => q.eq('campaignId', note.campaignId).eq('noteId', noteId))
-    .filter((q) => q.and(q.eq(q.field('deletionTime'), null), q.eq(q.field('type'), 'heading')))
+    .withIndex('by_campaign_note_type', (q) =>
+      q.eq('campaignId', note.campaignId).eq('noteId', noteId).eq('type', 'heading'),
+    )
     .collect()
 
   blocks.sort((a, b) => (a.position ?? 0) - (b.position ?? 0))

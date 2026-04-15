@@ -1,11 +1,9 @@
 import { v } from 'convex/values'
-import { commonSidebarItemValidatorFields } from '../sidebarItems/schema/baseFields'
-import { commonValidatorFields } from '../common/schema'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
+import { sidebarItemValidatorFields } from '../sidebarItems/schema/sidebarItemsTable'
 
 export const canvasValidatorFields = {
-  ...commonValidatorFields('sidebarItems'),
-  ...commonSidebarItemValidatorFields,
+  ...sidebarItemValidatorFields,
   type: v.literal(SIDEBAR_ITEM_TYPES.canvases),
 }
 

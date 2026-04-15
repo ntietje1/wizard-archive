@@ -1,17 +1,15 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
-import { commonTableFields, commonValidatorFields } from '../common/schema'
-import { sidebarItemIdValidator } from '../sidebarItems/schema/baseValidators'
+import { convexValidatorFields } from '../common/schema'
 
 const bookmarkTableFields = {
   campaignId: v.id('campaigns'),
-  sidebarItemId: sidebarItemIdValidator,
+  sidebarItemId: v.id('sidebarItems'),
   campaignMemberId: v.id('campaignMembers'),
 }
 
 export const bookmarkTables = {
   bookmarks: defineTable({
-    ...commonTableFields,
     ...bookmarkTableFields,
   })
     .index('by_campaign_member_item', ['campaignId', 'campaignMemberId', 'sidebarItemId'])
@@ -19,7 +17,7 @@ export const bookmarkTables = {
 }
 
 const bookmarkValidatorFields = {
-  ...commonValidatorFields('bookmarks'),
+  ...convexValidatorFields('bookmarks'),
   ...bookmarkTableFields,
 }
 

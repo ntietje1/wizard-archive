@@ -6,7 +6,7 @@ export function useCampaignMembers() {
   const { campaignId } = useCampaign()
 
   return useAuthQuery(
-    api.campaigns.queries.getPlayersByCampaign,
+    api.campaigns.queries.getMembersByCampaign,
     campaignId ? { campaignId } : 'skip',
   )
 }

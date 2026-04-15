@@ -1,6 +1,5 @@
 import { v } from 'convex/values'
 import { campaignMutation } from '../functions'
-import { sidebarItemIdValidator } from '../sidebarItems/schema/baseValidators'
 import { createMap as createMapFn } from './functions/createMap'
 import { updateMap as updateMapFn } from './functions/updateMap'
 import { createItemPin as createItemPinFn } from './functions/createItemPin'
@@ -60,7 +59,7 @@ export const createItemPin = campaignMutation({
     mapId: v.id('sidebarItems'),
     x: v.number(),
     y: v.number(),
-    itemId: sidebarItemIdValidator,
+    itemId: v.id('sidebarItems'),
   },
   returns: v.id('mapPins'),
   handler: async (ctx, args): Promise<Id<'mapPins'>> => {

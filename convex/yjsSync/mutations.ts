@@ -42,7 +42,7 @@ export const pushUpdate = campaignMutation({
         triggerSeq: seq,
         campaignId: ctx.campaign._id,
         campaignMemberId: ctx.membership._id,
-        createdBy: ctx.membership.userId,
+        userId: ctx.membership.userId,
       },
     )
 

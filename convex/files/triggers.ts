@@ -1,10 +1,6 @@
 import type { SidebarItemTriggerHandlers } from '../sidebarItems/triggerTypes'
 
 export const fileTriggers: SidebarItemTriggerHandlers = {
-  onSoftDelete: async () => {},
-
-  onRestore: async () => {},
-
   onHardDelete: async (db, storage, item) => {
     const ext = await db
       .query('files')

@@ -48,6 +48,7 @@ import type * as campaigns_functions_createCampaign from "../campaigns/functions
 import type * as campaigns_functions_deleteCampaign from "../campaigns/functions/deleteCampaign.js";
 import type * as campaigns_functions_getCampaign from "../campaigns/functions/getCampaign.js";
 import type * as campaigns_functions_getCampaignMembers from "../campaigns/functions/getCampaignMembers.js";
+import type * as campaigns_functions_getCampaignRequests from "../campaigns/functions/getCampaignRequests.js";
 import type * as campaigns_functions_getUserCampaigns from "../campaigns/functions/getUserCampaigns.js";
 import type * as campaigns_functions_joinCampaign from "../campaigns/functions/joinCampaign.js";
 import type * as campaigns_functions_updateCampaign from "../campaigns/functions/updateCampaign.js";
@@ -144,7 +145,6 @@ import type * as sessions_functions_updateSession from "../sessions/functions/up
 import type * as sessions_mutations from "../sessions/mutations.js";
 import type * as sessions_queries from "../sessions/queries.js";
 import type * as sessions_types from "../sessions/types.js";
-import type * as sidebarItems_functions_applyToTree from "../sidebarItems/functions/applyToTree.js";
 import type * as sidebarItems_functions_claimPreviewGeneration from "../sidebarItems/functions/claimPreviewGeneration.js";
 import type * as sidebarItems_functions_collectDescendants from "../sidebarItems/functions/collectDescendants.js";
 import type * as sidebarItems_functions_defaultItemName from "../sidebarItems/functions/defaultItemName.js";
@@ -164,10 +164,10 @@ import type * as sidebarItems_functions_treeOperations from "../sidebarItems/fun
 import type * as sidebarItems_internalMutations from "../sidebarItems/internalMutations.js";
 import type * as sidebarItems_mutations from "../sidebarItems/mutations.js";
 import type * as sidebarItems_queries from "../sidebarItems/queries.js";
-import type * as sidebarItems_schema_baseFields from "../sidebarItems/schema/baseFields.js";
-import type * as sidebarItems_schema_baseValidators from "../sidebarItems/schema/baseValidators.js";
-import type * as sidebarItems_schema_contentSchema from "../sidebarItems/schema/contentSchema.js";
+import type * as sidebarItems_schema_anySidebarItemValidator from "../sidebarItems/schema/anySidebarItemValidator.js";
+import type * as sidebarItems_schema_anySidebarItemWithContentValidator from "../sidebarItems/schema/anySidebarItemWithContentValidator.js";
 import type * as sidebarItems_schema_sidebarItemsTable from "../sidebarItems/schema/sidebarItemsTable.js";
+import type * as sidebarItems_schema_validators from "../sidebarItems/schema/validators.js";
 import type * as sidebarItems_sharedValidation from "../sidebarItems/sharedValidation.js";
 import type * as sidebarItems_triggerTypes from "../sidebarItems/triggerTypes.js";
 import type * as sidebarItems_triggers from "../sidebarItems/triggers.js";
@@ -266,6 +266,7 @@ declare const fullApi: ApiFromModules<{
   "campaigns/functions/deleteCampaign": typeof campaigns_functions_deleteCampaign;
   "campaigns/functions/getCampaign": typeof campaigns_functions_getCampaign;
   "campaigns/functions/getCampaignMembers": typeof campaigns_functions_getCampaignMembers;
+  "campaigns/functions/getCampaignRequests": typeof campaigns_functions_getCampaignRequests;
   "campaigns/functions/getUserCampaigns": typeof campaigns_functions_getUserCampaigns;
   "campaigns/functions/joinCampaign": typeof campaigns_functions_joinCampaign;
   "campaigns/functions/updateCampaign": typeof campaigns_functions_updateCampaign;
@@ -362,7 +363,6 @@ declare const fullApi: ApiFromModules<{
   "sessions/mutations": typeof sessions_mutations;
   "sessions/queries": typeof sessions_queries;
   "sessions/types": typeof sessions_types;
-  "sidebarItems/functions/applyToTree": typeof sidebarItems_functions_applyToTree;
   "sidebarItems/functions/claimPreviewGeneration": typeof sidebarItems_functions_claimPreviewGeneration;
   "sidebarItems/functions/collectDescendants": typeof sidebarItems_functions_collectDescendants;
   "sidebarItems/functions/defaultItemName": typeof sidebarItems_functions_defaultItemName;
@@ -382,10 +382,10 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/internalMutations": typeof sidebarItems_internalMutations;
   "sidebarItems/mutations": typeof sidebarItems_mutations;
   "sidebarItems/queries": typeof sidebarItems_queries;
-  "sidebarItems/schema/baseFields": typeof sidebarItems_schema_baseFields;
-  "sidebarItems/schema/baseValidators": typeof sidebarItems_schema_baseValidators;
-  "sidebarItems/schema/contentSchema": typeof sidebarItems_schema_contentSchema;
+  "sidebarItems/schema/anySidebarItemValidator": typeof sidebarItems_schema_anySidebarItemValidator;
+  "sidebarItems/schema/anySidebarItemWithContentValidator": typeof sidebarItems_schema_anySidebarItemWithContentValidator;
   "sidebarItems/schema/sidebarItemsTable": typeof sidebarItems_schema_sidebarItemsTable;
+  "sidebarItems/schema/validators": typeof sidebarItems_schema_validators;
   "sidebarItems/sharedValidation": typeof sidebarItems_sharedValidation;
   "sidebarItems/triggerTypes": typeof sidebarItems_triggerTypes;
   "sidebarItems/triggers": typeof sidebarItems_triggers;

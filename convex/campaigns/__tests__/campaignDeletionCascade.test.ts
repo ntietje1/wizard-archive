@@ -41,42 +41,42 @@ describe('campaign deletion cascade', () => {
       name: 'Battle Map',
     })
 
-    const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, dmId, {
+    const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('b1'),
     })
-    const { blockShareId } = await createBlockShare(t, dmId, {
+    const { blockShareId } = await createBlockShare(t, {
       campaignId: ctx.campaignId,
       noteId,
       blockId: blockDbId,
       campaignMemberId: p1.memberId,
     })
 
-    const { shareId: folderShareId } = await createSidebarShare(t, dmId, {
+    const { shareId: folderShareId } = await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: folderId,
       sidebarItemType: 'folder',
       campaignMemberId: p1.memberId,
     })
-    const { shareId: noteShareId } = await createSidebarShare(t, dmId, {
+    const { shareId: noteShareId } = await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',
       campaignMemberId: p2.memberId,
     })
 
-    const { bookmarkId } = await createBookmark(t, p1.profile._id, {
+    const { bookmarkId } = await createBookmark(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       campaignMemberId: p1.memberId,
     })
 
-    const { pinId } = await createMapPin(t, mapId, dmId, {
+    const { pinId } = await createMapPin(t, mapId, {
       itemId: noteId,
       x: 10,
       y: 20,
     })
 
-    const { sessionId } = await createSession(t, ctx.campaignId, dmId)
+    const { sessionId } = await createSession(t, ctx.campaignId)
 
     await dmAuth.mutation(api.campaigns.mutations.deleteCampaign, {
       campaignId: ctx.campaignId,
@@ -100,6 +100,7 @@ describe('campaign deletion cascade', () => {
       }
     })
 
+    expect(results.campaign).toBeNull()
     expect(results.folder).toBeNull()
     expect(results.note).toBeNull()
     expect(results.file).toBeNull()

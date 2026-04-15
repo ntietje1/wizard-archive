@@ -11,7 +11,7 @@ export async function requirePinAccess(
   { mapPinId }: { mapPinId: Id<'mapPins'> },
 ): Promise<{ pin: MapPin; map: GameMapFromDb }> {
   const pin = await ctx.db.get('mapPins', mapPinId)
-  if (!pin || pin.deletionTime !== null) {
+  if (!pin) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Pin not found')
   }
 

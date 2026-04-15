@@ -12,10 +12,7 @@ export async function getUserCampaigns(ctx: AuthQueryCtx): Promise<Array<Campaig
     .withIndex('by_user', (q) => q.eq('userId', profile._id))
     .collect()
     .then((memberships) =>
-      memberships.filter(
-        (membership) =>
-          membership.deletionTime === null && membership.status === CAMPAIGN_MEMBER_STATUS.Accepted,
-      ),
+      memberships.filter((membership) => membership.status === CAMPAIGN_MEMBER_STATUS.Accepted),
     )
 
   const results = await asyncMap(campaignMemberships, (membership) =>

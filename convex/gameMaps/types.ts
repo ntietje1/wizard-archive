@@ -1,5 +1,5 @@
 import type { Id } from '../_generated/dataModel'
-import type { CommonValidatorFields } from '../common/types'
+import type { ConvexValidatorFields } from '../common/types'
 import type {
   SIDEBAR_ITEM_TYPES,
   SidebarItem,
@@ -24,7 +24,7 @@ export type GameMapWithContent = SidebarItemWithContent<typeof SIDEBAR_ITEM_TYPE
   pins: Array<MapPinWithItem>
 }
 
-export type MapPin = CommonValidatorFields<'mapPins'> & {
+export type MapPin = ConvexValidatorFields<'mapPins'> & {
   mapId: Id<'sidebarItems'>
   itemId: Id<'sidebarItems'>
   x: number

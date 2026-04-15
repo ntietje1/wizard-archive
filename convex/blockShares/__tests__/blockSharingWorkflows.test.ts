@@ -20,20 +20,20 @@ describe('block sharing workflows', () => {
       const p2 = ctx.players[1]
 
       const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-      const block1 = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id)
-      const block2 = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id)
+      const block1 = await createBlock(t, note.noteId, ctx.campaignId)
+      const block2 = await createBlock(t, note.noteId, ctx.campaignId)
       await syncBlocksToYjs(t, note.noteId, [
         { id: block1.blockNoteId, type: 'paragraph' },
         { id: block2.blockNoteId, type: 'paragraph' },
       ])
 
-      await createSidebarShare(t, ctx.dm.profile._id, {
+      await createSidebarShare(t, {
         campaignId: ctx.campaignId,
         sidebarItemId: note.noteId,
         sidebarItemType: 'note',
         campaignMemberId: p1.memberId,
       })
-      await createSidebarShare(t, ctx.dm.profile._id, {
+      await createSidebarShare(t, {
         campaignId: ctx.campaignId,
         sidebarItemId: note.noteId,
         sidebarItemType: 'note',
@@ -107,16 +107,16 @@ describe('block sharing workflows', () => {
   })
 
   describe('block cleanup on unshare', () => {
-    it('soft-deletes block shares and resets status when last share is removed', async () => {
+    it('hard-deletes block shares and resets status when last share is removed', async () => {
       const ctx = await setupMultiPlayerContext(t, 1)
       const dmAuth = asDm(ctx)
       const p1 = ctx.players[0]
 
       const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-      const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id)
+      const block = await createBlock(t, note.noteId, ctx.campaignId)
       await syncBlocksToYjs(t, note.noteId, [{ id: block.blockNoteId, type: 'paragraph' }])
 
-      await createSidebarShare(t, ctx.dm.profile._id, {
+      await createSidebarShare(t, {
         campaignId: ctx.campaignId,
         sidebarItemId: note.noteId,
         sidebarItemType: 'note',
@@ -149,7 +149,6 @@ describe('block sharing workflows', () => {
           .unique()
       })
       expect(beforeUnshare).not.toBeNull()
-      expect(beforeUnshare!.deletionTime).toBeNull()
 
       await dmAuth.mutation(api.blockShares.mutations.unshareBlocks, {
         campaignId: ctx.campaignId,
@@ -169,8 +168,7 @@ describe('block sharing workflows', () => {
           )
           .unique()
       })
-      expect(afterUnshare).not.toBeNull()
-      expect(afterUnshare!.deletionTime).not.toBeNull()
+      expect(afterUnshare).toBeNull()
 
       const blockAfter = await t.run(async (dbCtx) => dbCtx.db.get('blocks', block.blockDbId))
       expect(blockAfter!.shareStatus).toBe('not_shared')
@@ -184,9 +182,9 @@ describe('block sharing workflows', () => {
       const p1 = ctx.players[0]
 
       const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-      const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id)
+      const block = await createBlock(t, note.noteId, ctx.campaignId)
 
-      await createSidebarShare(t, ctx.dm.profile._id, {
+      await createSidebarShare(t, {
         campaignId: ctx.campaignId,
         sidebarItemId: note.noteId,
         sidebarItemType: 'note',
@@ -225,10 +223,10 @@ describe('block sharing workflows', () => {
       const p1 = ctx.players[0]
 
       const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-      const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id)
+      const block = await createBlock(t, note.noteId, ctx.campaignId)
       await syncBlocksToYjs(t, note.noteId, [{ id: block.blockNoteId, type: 'paragraph' }])
 
-      await createSidebarShare(t, ctx.dm.profile._id, {
+      await createSidebarShare(t, {
         campaignId: ctx.campaignId,
         sidebarItemId: note.noteId,
         sidebarItemType: 'note',
@@ -267,8 +265,7 @@ describe('block sharing workflows', () => {
           )
           .collect()
       })
-      const activeShares = allShares.filter((s) => s.deletionTime === null)
-      expect(activeShares).toHaveLength(1)
+      expect(allShares).toHaveLength(1)
 
       const result = await dmAuth.query(api.blocks.queries.getBlocksWithShares, {
         campaignId: ctx.campaignId,
@@ -288,7 +285,7 @@ describe('block sharing workflows', () => {
       const p1 = ctx.players[0]
 
       const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-      const block = await createBlock(t, note.noteId, ctx.campaignId, ctx.dm.profile._id)
+      const block = await createBlock(t, note.noteId, ctx.campaignId)
       await syncBlocksToYjs(t, note.noteId, [{ id: block.blockNoteId, type: 'paragraph' }])
 
       await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {

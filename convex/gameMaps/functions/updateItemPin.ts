@@ -24,8 +24,6 @@ export async function updateItemPin(
   await ctx.db.patch('mapPins', mapPinId, {
     x,
     y,
-    updatedTime: Date.now(),
-    updatedBy: ctx.membership.userId,
   })
 
   const pinnedItem = await ctx.db.get('sidebarItems', pin.itemId)
@@ -48,7 +46,6 @@ export async function updateItemPin(
     mapId: map._id,
     editHistoryId,
     campaignId: map.campaignId,
-    createdBy: ctx.membership.userId,
   })
 
   return mapPinId

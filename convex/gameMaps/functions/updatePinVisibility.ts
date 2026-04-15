@@ -24,8 +24,6 @@ export async function updatePinVisibility(
   const now = Date.now()
   await ctx.db.patch('mapPins', mapPinId, {
     visible,
-    updatedTime: now,
-    updatedBy: ctx.membership.userId,
   })
 
   await ctx.db.patch('sidebarItems', map._id, {
@@ -48,7 +46,6 @@ export async function updatePinVisibility(
     mapId: map._id,
     editHistoryId,
     campaignId: map.campaignId,
-    createdBy: ctx.membership.userId,
   })
 
   return mapPinId

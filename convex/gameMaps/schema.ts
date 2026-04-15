@@ -1,22 +1,19 @@
 import { v } from 'convex/values'
 import { folderValidator } from '../folders/baseSchema'
-import { anySidebarItemValidator } from '../sidebarItems/schema/schema'
-import { commonSidebarItemValidatorFields } from '../sidebarItems/schema/baseFields'
-import { commonValidatorFields } from '../common/schema'
+import { anySidebarItemValidator } from '../sidebarItems/schema/anySidebarItemValidator'
+import { sidebarItemValidatorFields } from '../sidebarItems/schema/sidebarItemsTable'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
-import { mapPinTableFields } from './baseSchema'
+import { mapPinValidatorFields } from './baseSchema'
 
 const mapWithContentValidatorFields = {
-  ...commonValidatorFields('sidebarItems'),
-  ...commonSidebarItemValidatorFields,
+  ...sidebarItemValidatorFields,
   imageStorageId: v.nullable(v.id('_storage')),
   type: v.literal(SIDEBAR_ITEM_TYPES.gameMaps),
   imageUrl: v.nullable(v.string()),
 }
 
 const mapPinWithItemValidatorFields = {
-  ...commonValidatorFields('mapPins'),
-  ...mapPinTableFields,
+  ...mapPinValidatorFields,
   item: v.nullable(anySidebarItemValidator),
 }
 

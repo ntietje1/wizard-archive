@@ -1,11 +1,10 @@
 import { v } from 'convex/values'
 import { campaignMutation } from '../functions'
-import { sidebarItemIdValidator } from '../sidebarItems/schema/baseValidators'
 import { toggleItemBookmark } from './functions/toggleItemBookmark'
 
 export const toggleBookmark = campaignMutation({
   args: {
-    sidebarItemId: sidebarItemIdValidator,
+    sidebarItemId: v.id('sidebarItems'),
   },
   returns: v.object({ isBookmarked: v.boolean() }),
   handler: async (ctx, args): Promise<{ isBookmarked: boolean }> => {

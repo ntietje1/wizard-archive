@@ -35,12 +35,12 @@ describe('searchBlocks', () => {
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('block-1'),
       plainText: 'The ancient dragon sleeps',
       type: 'paragraph',
     })
-    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('block-2'),
       plainText: 'A goblin attacks',
       type: 'paragraph',
@@ -62,7 +62,7 @@ describe('searchBlocks', () => {
     const ctx1 = await setupCampaignContext(t)
     const dm1 = asDm(ctx1)
     const { noteId: note1 } = await createNote(t, ctx1.campaignId, ctx1.dm.profile._id)
-    await createBlock(t, note1, ctx1.campaignId, ctx1.dm.profile._id, {
+    await createBlock(t, note1, ctx1.campaignId, {
       plainText: 'dragon in campaign one',
       type: 'paragraph',
     })
@@ -70,7 +70,7 @@ describe('searchBlocks', () => {
     const ctx2 = await setupCampaignContext(t)
     const dm2 = asDm(ctx2)
     const { noteId: note2 } = await createNote(t, ctx2.campaignId, ctx2.dm.profile._id)
-    await createBlock(t, note2, ctx2.campaignId, ctx2.dm.profile._id, {
+    await createBlock(t, note2, ctx2.campaignId, {
       plainText: 'dragon in campaign two',
       type: 'paragraph',
     })
@@ -90,20 +90,14 @@ describe('searchBlocks', () => {
     expect(results2[0].plainText).toBe('dragon in campaign two')
   })
 
-  it('excludes soft-deleted blocks', async () => {
+  it('only returns existing blocks', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    await createBlock(t, noteId, ctx.campaignId, {
       plainText: 'visible dragon',
       type: 'paragraph',
-    })
-    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
-      plainText: 'deleted dragon',
-      type: 'paragraph',
-      deletionTime: Date.now(),
-      deletedBy: ctx.dm.profile._id,
     })
 
     const result = await dmAuth.query(api.blocks.queries.searchBlocks, {
@@ -121,11 +115,11 @@ describe('searchBlocks', () => {
     const { noteId: noteA } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId: noteB } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createBlock(t, noteA, ctx.campaignId, ctx.dm.profile._id, {
+    await createBlock(t, noteA, ctx.campaignId, {
       plainText: 'dragon in note A',
       type: 'paragraph',
     })
-    await createBlock(t, noteB, ctx.campaignId, ctx.dm.profile._id, {
+    await createBlock(t, noteB, ctx.campaignId, {
       plainText: 'dragon in note B',
       type: 'paragraph',
     })
@@ -147,7 +141,7 @@ describe('searchBlocks', () => {
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('shape-check'),
       plainText: 'checking result shape',
       type: 'heading',
@@ -172,7 +166,7 @@ describe('searchBlocks', () => {
     const playerAuth = asPlayer(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    await createBlock(t, noteId, ctx.campaignId, {
       plainText: 'player searchable content',
       type: 'paragraph',
     })

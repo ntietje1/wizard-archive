@@ -10,5 +10,5 @@ export async function getSessionsByCampaign(ctx: CampaignQueryCtx): Promise<Arra
     .order('desc')
     .collect()
 
-  return sessions.filter((s) => s.deletionTime === null)
+  return sessions
 }

@@ -1,10 +1,7 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
-import {
-  sidebarItemIdValidator,
-  sidebarItemTypeValidator,
-} from '../sidebarItems/schema/baseValidators'
-import { commonTableFields, commonValidatorFields } from '../common/schema'
+import { sidebarItemTypeValidator } from '../sidebarItems/schema/validators'
+import { convexValidatorFields } from '../common/schema'
 import { NOTE_SNAPSHOT_TYPE } from '../notes/types'
 import { GAME_MAP_SNAPSHOT_TYPE } from '../gameMaps/types'
 
@@ -19,17 +16,16 @@ export const snapshotTypeValidator = v.union(
 )
 
 const documentSnapshotTableFields = {
-  itemId: sidebarItemIdValidator,
+  itemId: v.id('sidebarItems'),
   itemType: sidebarItemTypeValidator,
   editHistoryId: v.id('editHistory'),
   campaignId: v.id('campaigns'),
   snapshotType: snapshotTypeValidator,
   data: v.bytes(),
-  ...commonTableFields,
 }
 
 const documentSnapshotValidatorFields = {
-  ...commonValidatorFields('documentSnapshots'),
+  ...convexValidatorFields('documentSnapshots'),
   ...documentSnapshotTableFields,
 }
 
@@ -40,7 +36,5 @@ export const documentSnapshotsTables = {
     ...documentSnapshotTableFields,
   })
     .index('by_editHistory', ['editHistoryId'])
-    .index('by_item', ['itemId'])
-    .index('by_campaign', ['campaignId'])
-    .index('by_item_and_type', ['itemId', 'itemType']),
+    .index('by_item', ['itemId']),
 }

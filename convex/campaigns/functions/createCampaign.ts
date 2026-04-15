@@ -44,11 +44,6 @@ export async function createCampaign(
     slug,
     status: CAMPAIGN_STATUS.Active,
     currentSessionId: null,
-    deletionTime: null,
-    deletedBy: null,
-    updatedTime: null,
-    updatedBy: null,
-    createdBy: profile._id,
   })
 
   await ctx.db.insert('campaignMembers', {
@@ -56,11 +51,6 @@ export async function createCampaign(
     campaignId,
     role: CAMPAIGN_MEMBER_ROLE.DM,
     status: CAMPAIGN_MEMBER_STATUS.Accepted,
-    deletionTime: null,
-    deletedBy: null,
-    updatedTime: null,
-    updatedBy: null,
-    createdBy: profile._id,
   })
 
   return campaignId

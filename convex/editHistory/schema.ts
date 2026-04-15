@@ -1,9 +1,6 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
-import {
-  sidebarItemIdValidator,
-  sidebarItemTypeValidator,
-} from '../sidebarItems/schema/baseValidators'
+import { sidebarItemTypeValidator } from '../sidebarItems/schema/validators'
 import { EDIT_HISTORY_ACTION } from './types'
 
 const actions = Object.values(EDIT_HISTORY_ACTION).map((a) => v.literal(a))
@@ -15,7 +12,7 @@ const editHistoryActionValidator =
 
 export const editHistoryTables = {
   editHistory: defineTable({
-    itemId: sidebarItemIdValidator,
+    itemId: v.id('sidebarItems'),
     itemType: sidebarItemTypeValidator,
     campaignId: v.id('campaigns'),
     campaignMemberId: v.id('campaignMembers'),
@@ -24,6 +21,5 @@ export const editHistoryTables = {
     hasSnapshot: v.boolean(),
   })
     .index('by_item', ['itemId'])
-    .index('by_item_action', ['itemId', 'action'])
-    .index('by_campaign', ['campaignId']),
+    .index('by_item_action', ['itemId', 'action']),
 }

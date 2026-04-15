@@ -1,21 +1,17 @@
-import { asyncMap } from 'convex-helpers'
 import { hardDeleteItem } from '../../sidebarItems/functions/hardDeleteItem'
-import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { Id } from '../../_generated/dataModel'
 import type { DmMutationCtx } from '../../functions'
 
 export async function deleteCampaign(ctx: DmMutationCtx): Promise<Id<'campaigns'>> {
   const campaignId = ctx.campaign._id
 
-  const rawItems = await ctx.db
+  const allItems = await ctx.db
     .query('sidebarItems')
     .withIndex('by_campaign_location_parent_name', (q) => q.eq('campaignId', campaignId))
     .collect()
 
-  const items = await asyncMap(rawItems, (raw) => getSidebarItem(ctx, raw._id))
-
-  for (const item of items) {
-    if (item) await hardDeleteItem(ctx, item)
+  for (const item of allItems) {
+    await hardDeleteItem(ctx, item)
   }
 
   const sessions = await ctx.db

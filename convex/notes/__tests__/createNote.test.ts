@@ -93,7 +93,7 @@ describe('createNote', () => {
 
     const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: folderId,
       sidebarItemType: 'folder',
@@ -115,7 +115,7 @@ describe('createNote', () => {
 
     const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: folderId,
       sidebarItemType: 'folder',

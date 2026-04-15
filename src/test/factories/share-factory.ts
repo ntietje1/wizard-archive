@@ -16,11 +16,6 @@ export function createSidebarItemShare(overrides?: Partial<SidebarItemShare>): S
     campaignMemberId: testId('member_1'),
     sessionId: null,
     permissionLevel: PERMISSION_LEVEL.VIEW,
-    updatedTime: null,
-    updatedBy: null,
-    createdBy: testId('user_1'),
-    deletionTime: null,
-    deletedBy: null,
     ...overrides,
   }
 }

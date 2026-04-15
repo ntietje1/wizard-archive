@@ -15,6 +15,7 @@ import {
   testBlockNoteId,
 } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
+import type { Id } from '../../_generated/dataModel'
 
 describe('bulk trash operations', () => {
   const t = createTestContext()
@@ -49,21 +50,21 @@ describe('bulk trash operations', () => {
       name: 'Sub2 Map',
     })
 
-    const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, dmId, {
+    const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('bulk-b1'),
     })
-    const { shareId } = await createSidebarShare(t, dmId, {
+    const { shareId } = await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',
       campaignMemberId: ctx.player.memberId,
     })
-    const { bookmarkId } = await createBookmark(t, ctx.player.profile._id, {
+    const { bookmarkId } = await createBookmark(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       campaignMemberId: ctx.player.memberId,
     })
-    const { pinId } = await createMapPin(t, mapId, dmId, {
+    const { pinId } = await createMapPin(t, mapId, {
       itemId: noteId,
     })
 
@@ -100,7 +101,7 @@ describe('bulk trash operations', () => {
     const dmAuth = asDm(ctx)
     const dmId = ctx.dm.profile._id
 
-    const items: Array<{ id: unknown }> = []
+    const items: Array<{ id: Id<'sidebarItems'> }> = []
     for (let i = 0; i < 5; i++) {
       const { noteId } = await createNote(t, ctx.campaignId, dmId, {
         name: `Note ${i}`,
@@ -117,7 +118,7 @@ describe('bulk trash operations', () => {
     for (const item of items) {
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
         campaignId: ctx.campaignId,
-        itemId: item.id as never,
+        itemId: item.id,
         location: 'trash',
       })
     }
@@ -127,8 +128,7 @@ describe('bulk trash operations', () => {
     })
 
     for (const item of items) {
-      // eslint-disable-next-line @convex-dev/explicit-table-ids
-      const result = await t.run(async (dbCtx) => dbCtx.db.get(item.id as never))
+      const result = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', item.id))
       expect(result).toBeNull()
     }
   })
@@ -218,10 +218,10 @@ describe('bulk trash operations', () => {
       leafType: 'note',
     })
 
-    const { blockDbId } = await createBlock(t, leafId, ctx.campaignId, dmId, {
+    const { blockDbId } = await createBlock(t, leafId, ctx.campaignId, {
       blockNoteId: testBlockNoteId('deep-block'),
     })
-    const { shareId } = await createSidebarShare(t, dmId, {
+    const { shareId } = await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: leafId,
       sidebarItemType: 'note',

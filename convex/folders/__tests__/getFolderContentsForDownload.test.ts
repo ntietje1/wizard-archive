@@ -50,7 +50,7 @@ describe('getFolderContentsForDownload — collectItemsRecursively', () => {
       parentId: folderId,
       name: 'Session Log',
     })
-    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    await createBlock(t, noteId, ctx.campaignId, {
       position: 0,
       inlineContent: [{ type: 'text', text: 'Hello', styles: {} }],
       plainText: 'Hello',
@@ -82,12 +82,12 @@ describe('getFolderContentsForDownload — collectItemsRecursively', () => {
       parentId: folderId,
       name: 'Nested Note',
     })
-    const parent = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    const parent = await createBlock(t, noteId, ctx.campaignId, {
       position: 0,
       inlineContent: [{ type: 'text', text: 'Parent', styles: {} }],
       plainText: 'Parent',
     })
-    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    await createBlock(t, noteId, ctx.campaignId, {
       position: 0,
       parentBlockId: parent.blockNoteId,
       depth: 1,
@@ -325,12 +325,12 @@ describe('getFolderContentsForDownload — collectItemsRecursively', () => {
       name: 'Ordered Note',
     })
 
-    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    await createBlock(t, noteId, ctx.campaignId, {
       position: 2,
       inlineContent: [{ type: 'text', text: 'Second', styles: {} }],
       plainText: 'Second',
     })
-    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    await createBlock(t, noteId, ctx.campaignId, {
       position: 1,
       inlineContent: [{ type: 'text', text: 'First', styles: {} }],
       plainText: 'First',
@@ -363,24 +363,24 @@ describe('getFolderContentsForDownload — collectItemsRecursively', () => {
       name: 'Ordered Nested Note',
     })
 
-    const parentBlock = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    const parentBlock = await createBlock(t, noteId, ctx.campaignId, {
       position: 0,
       inlineContent: [{ type: 'text', text: 'Parent', styles: {} }],
       plainText: 'Parent',
     })
-    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    await createBlock(t, noteId, ctx.campaignId, {
       position: 0,
       parentBlockId: parentBlock.blockNoteId,
       depth: 1,
       inlineContent: [{ type: 'text', text: 'Nested child', styles: {} }],
       plainText: 'Nested child',
     })
-    const parentBlock2 = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    const parentBlock2 = await createBlock(t, noteId, ctx.campaignId, {
       position: 1,
       inlineContent: [{ type: 'text', text: 'Parent 2', styles: {} }],
       plainText: 'Parent 2',
     })
-    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    await createBlock(t, noteId, ctx.campaignId, {
       position: 0,
       parentBlockId: parentBlock2.blockNoteId,
       depth: 1,

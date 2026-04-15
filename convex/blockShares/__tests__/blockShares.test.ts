@@ -24,7 +24,7 @@ describe('setBlocksShareStatus', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id)
+    const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId)
     await syncBlocksToYjs(t, noteId, [{ id: blockNoteId, type: 'paragraph' }])
 
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
@@ -47,7 +47,7 @@ describe('setBlocksShareStatus', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId, {
       shareStatus: 'all_shared',
     })
     await syncBlocksToYjs(t, noteId, [{ id: blockNoteId, type: 'paragraph' }])
@@ -72,7 +72,7 @@ describe('setBlocksShareStatus', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id)
+    const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId)
     await syncBlocksToYjs(t, noteId, [{ id: blockNoteId, type: 'paragraph' }])
 
     await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
@@ -129,7 +129,7 @@ describe('shareBlocks', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id)
+    const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId)
     await syncBlocksToYjs(t, noteId, [{ id: blockNoteId, type: 'paragraph' }])
 
     await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
@@ -188,15 +188,11 @@ describe('unshareBlocks', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    const { blockDbId, blockNoteId } = await createBlock(
-      t,
-      noteId,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      { shareStatus: 'individually_shared' },
-    )
+    const { blockDbId, blockNoteId } = await createBlock(t, noteId, ctx.campaignId, {
+      shareStatus: 'individually_shared',
+    })
 
-    await createBlockShare(t, ctx.dm.profile._id, {
+    await createBlockShare(t, {
       campaignId: ctx.campaignId,
       noteId,
       blockId: blockDbId,
@@ -222,15 +218,11 @@ describe('unshareBlocks', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    const { blockDbId, blockNoteId } = await createBlock(
-      t,
-      noteId,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      { shareStatus: 'individually_shared' },
-    )
+    const { blockDbId, blockNoteId } = await createBlock(t, noteId, ctx.campaignId, {
+      shareStatus: 'individually_shared',
+    })
 
-    await createBlockShare(t, ctx.dm.profile._id, {
+    await createBlockShare(t, {
       campaignId: ctx.campaignId,
       noteId,
       blockId: blockDbId,
@@ -257,7 +249,7 @@ describe('unshareBlocks', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id)
+    const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId)
 
     await dmAuth.mutation(api.blockShares.mutations.unshareBlocks, {
       campaignId: ctx.campaignId,
@@ -298,11 +290,11 @@ describe('getBlockShares', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, {
       shareStatus: 'individually_shared',
     })
 
-    await createBlockShare(t, ctx.dm.profile._id, {
+    await createBlockShare(t, {
       campaignId: ctx.campaignId,
       noteId,
       blockId: blockDbId,
@@ -321,11 +313,11 @@ describe('getBlockShares', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, {
       shareStatus: 'individually_shared',
     })
 
-    await createBlockShare(t, ctx.dm.profile._id, {
+    await createBlockShare(t, {
       campaignId: ctx.campaignId,
       noteId,
       blockId: blockDbId,
@@ -343,20 +335,11 @@ describe('getBlockShares', () => {
     expect(shares[0]).toHaveProperty('campaignMemberId')
   })
 
-  it('excludes soft-deleted shares', async () => {
+  it('returns empty when no shares exist', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id)
-
-    await createBlockShare(t, ctx.dm.profile._id, {
-      campaignId: ctx.campaignId,
-      noteId,
-      blockId: blockDbId,
-      campaignMemberId: ctx.player.memberId,
-      deletionTime: Date.now(),
-      deletedBy: ctx.dm.profile._id,
-    })
+    const { blockDbId } = await createBlock(t, noteId, ctx.campaignId)
 
     const shares = await dmAuth.query(api.blockShares.queries.getBlockShares, {
       campaignId: ctx.campaignId,
@@ -373,7 +356,7 @@ describe('block permission resolution', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId, {
       shareStatus: 'not_shared',
     })
 
@@ -391,7 +374,7 @@ describe('block permission resolution', () => {
     const playerAuth = asPlayer(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',
@@ -399,7 +382,7 @@ describe('block permission resolution', () => {
       permissionLevel: 'view',
     })
 
-    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    await createBlock(t, noteId, ctx.campaignId, {
       shareStatus: 'all_shared',
     })
 
@@ -418,7 +401,7 @@ describe('block permission resolution', () => {
       allPermissionLevel: 'view',
     })
 
-    const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id, {
+    const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId, {
       shareStatus: 'not_shared',
     })
 
@@ -434,7 +417,7 @@ describe('block permission resolution', () => {
     const ctx = await setupCampaignContext(t)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',
@@ -442,15 +425,11 @@ describe('block permission resolution', () => {
       permissionLevel: 'view',
     })
 
-    const { blockDbId, blockNoteId } = await createBlock(
-      t,
-      noteId,
-      ctx.campaignId,
-      ctx.dm.profile._id,
-      { shareStatus: 'individually_shared' },
-    )
+    const { blockDbId, blockNoteId } = await createBlock(t, noteId, ctx.campaignId, {
+      shareStatus: 'individually_shared',
+    })
 
-    await createBlockShare(t, ctx.dm.profile._id, {
+    await createBlockShare(t, {
       campaignId: ctx.campaignId,
       noteId,
       blockId: blockDbId,
@@ -470,7 +449,7 @@ describe('block permission resolution', () => {
     const mCtx = await setupMultiPlayerContext(t, 2)
     const { noteId } = await createNote(t, mCtx.campaignId, mCtx.dm.profile._id)
 
-    await createSidebarShare(t, mCtx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: mCtx.campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',
@@ -478,7 +457,7 @@ describe('block permission resolution', () => {
       permissionLevel: 'view',
     })
 
-    await createSidebarShare(t, mCtx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: mCtx.campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',
@@ -486,15 +465,11 @@ describe('block permission resolution', () => {
       permissionLevel: 'view',
     })
 
-    const { blockDbId, blockNoteId } = await createBlock(
-      t,
-      noteId,
-      mCtx.campaignId,
-      mCtx.dm.profile._id,
-      { shareStatus: 'individually_shared' },
-    )
+    const { blockDbId, blockNoteId } = await createBlock(t, noteId, mCtx.campaignId, {
+      shareStatus: 'individually_shared',
+    })
 
-    await createBlockShare(t, mCtx.dm.profile._id, {
+    await createBlockShare(t, {
       campaignId: mCtx.campaignId,
       noteId,
       blockId: blockDbId,

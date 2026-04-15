@@ -71,7 +71,7 @@ describe('getSidebarItemsByLocation', () => {
     const { noteId: sharedNote } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId: unsharedNote } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: sharedNote,
       sidebarItemType: 'note',
@@ -384,7 +384,7 @@ describe('moveSidebarItem', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',
@@ -513,7 +513,7 @@ describe('permanentlyDeleteSidebarItem', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',

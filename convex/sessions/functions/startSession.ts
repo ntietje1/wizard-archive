@@ -7,7 +7,6 @@ export async function startSession(
 ): Promise<Id<'sessions'>> {
   const campaign = ctx.campaign
   const campaignId = campaign._id
-  const userId = ctx.membership.userId
   const now = Date.now()
 
   const endPrevious = async () => {
@@ -16,8 +15,6 @@ export async function startSession(
       if (existingSession) {
         await ctx.db.patch('sessions', campaign.currentSessionId, {
           endedAt: now,
-          updatedTime: now,
-          updatedBy: userId,
         })
       }
     }
@@ -29,19 +26,12 @@ export async function startSession(
       name: name ?? null,
       startedAt: now,
       endedAt: null,
-      deletionTime: null,
-      deletedBy: null,
-      updatedTime: null,
-      updatedBy: null,
-      createdBy: userId,
     })
 
   const [, sessionId] = await Promise.all([endPrevious(), insertNew()])
 
   await ctx.db.patch('campaigns', campaignId, {
     currentSessionId: sessionId,
-    updatedTime: now,
-    updatedBy: userId,
   })
 
   return sessionId

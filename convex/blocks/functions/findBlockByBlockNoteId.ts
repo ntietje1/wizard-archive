@@ -17,7 +17,6 @@ export const findBlockByBlockNoteId = async (
     .withIndex('by_campaign_note_block', (q) =>
       q.eq('campaignId', note.campaignId).eq('noteId', noteId).eq('blockNoteId', blockNoteId),
     )
-    .filter((q) => q.eq(q.field('deletionTime'), null))
     .first()
 
   return block

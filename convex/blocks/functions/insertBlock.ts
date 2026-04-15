@@ -38,10 +38,5 @@ export async function insertBlock(
     inlineContent: params.inlineContent,
     plainText: params.plainText,
     shareStatus: params.shareStatus,
-    deletionTime: null,
-    deletedBy: null,
-    updatedTime: null,
-    updatedBy: null,
-    createdBy: ctx.membership.userId,
   })
 }

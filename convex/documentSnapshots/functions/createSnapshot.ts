@@ -12,7 +12,6 @@ export async function createSnapshot(
     campaignId,
     snapshotType,
     data,
-    createdBy,
   }: {
     itemId: Id<'sidebarItems'>
     itemType: SidebarItemType
@@ -20,7 +19,6 @@ export async function createSnapshot(
     campaignId: Id<'campaigns'>
     snapshotType: SnapshotType
     data: ArrayBuffer
-    createdBy: Id<'userProfiles'>
   },
 ): Promise<Id<'documentSnapshots'>> {
   return ctx.db.insert('documentSnapshots', {
@@ -30,10 +28,5 @@ export async function createSnapshot(
     campaignId,
     snapshotType,
     data,
-    createdBy,
-    updatedTime: null,
-    updatedBy: null,
-    deletionTime: null,
-    deletedBy: null,
   })
 }

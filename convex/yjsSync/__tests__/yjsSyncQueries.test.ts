@@ -117,7 +117,7 @@ describe('getUpdates', () => {
       parentId: null,
     })
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',
@@ -263,7 +263,7 @@ describe('getAwareness', () => {
       parentId: null,
     })
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',

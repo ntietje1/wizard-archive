@@ -19,7 +19,7 @@ describe('getNote', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Test Note',
     })
-    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id)
+    await createBlock(t, noteId, ctx.campaignId)
 
     const result = await dmAuth.query(api.notes.queries.getNote, {
       campaignId: ctx.campaignId,
@@ -59,9 +59,9 @@ describe('getNote', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Shared Note',
     })
-    await createBlock(t, noteId, ctx.campaignId, ctx.dm.profile._id)
+    await createBlock(t, noteId, ctx.campaignId)
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',
@@ -200,7 +200,7 @@ describe('updateNote', () => {
       name: 'Shared Note',
     })
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',
@@ -229,7 +229,7 @@ describe('updateNote', () => {
       name: 'Edit Only Note',
     })
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',
@@ -254,7 +254,7 @@ describe('updateNote', () => {
       name: 'View Only Note',
     })
 
-    await createSidebarShare(t, ctx.dm.profile._id, {
+    await createSidebarShare(t, {
       campaignId: ctx.campaignId,
       sidebarItemId: noteId,
       sidebarItemType: 'note',

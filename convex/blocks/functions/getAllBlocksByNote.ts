@@ -12,7 +12,8 @@ export async function getAllBlocksByNote(
 
   return await ctx.db
     .query('blocks')
-    .withIndex('by_campaign_note', (q) => q.eq('campaignId', note.campaignId).eq('noteId', noteId))
-    .filter((q) => q.eq(q.field('deletionTime'), null))
+    .withIndex('by_campaign_note_block', (q) =>
+      q.eq('campaignId', note.campaignId).eq('noteId', noteId),
+    )
     .collect()
 }

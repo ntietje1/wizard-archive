@@ -28,8 +28,8 @@ describe('folder cascade hierarchy', () => {
       const { folderId } = await createFolder(t, ctx.campaignId, dmId, { name: 'Mixed' })
 
       const { noteId } = await createNote(t, ctx.campaignId, dmId, { parentId: folderId })
-      const block = await createBlock(t, noteId, ctx.campaignId, dmId)
-      const blockShare = await createBlockShare(t, dmId, {
+      const block = await createBlock(t, noteId, ctx.campaignId)
+      const blockShare = await createBlockShare(t, {
         campaignId: ctx.campaignId,
         noteId,
         blockId: block.blockDbId,
@@ -47,17 +47,17 @@ describe('folder cascade hierarchy', () => {
       )
 
       const { mapId } = await createGameMap(t, ctx.campaignId, dmId, { parentId: folderId })
-      const pin = await createMapPin(t, mapId, dmId, { itemId: noteId })
+      const pin = await createMapPin(t, mapId, { itemId: noteId })
 
       const { fileId } = await createFile(t, ctx.campaignId, dmId, { parentId: folderId })
 
-      const share = await createSidebarShare(t, dmId, {
+      const share = await createSidebarShare(t, {
         campaignId: ctx.campaignId,
         sidebarItemId: noteId,
         sidebarItemType: 'note',
         campaignMemberId: ctx.player.memberId,
       })
-      const bookmark = await createBookmark(t, ctx.player.profile._id, {
+      const bookmark = await createBookmark(t, {
         campaignId: ctx.campaignId,
         sidebarItemId: canvasId,
         campaignMemberId: ctx.player.memberId,
@@ -93,12 +93,13 @@ describe('folder cascade hierarchy', () => {
       expect(afterTrash.map!.deletionTime).not.toBeNull()
       expect(afterTrash.file!.location).toBe('trash')
       expect(afterTrash.file!.deletionTime).not.toBeNull()
-      expect(afterTrash.block!.deletionTime).not.toBeNull()
-      expect(afterTrash.blockShare!.deletionTime).not.toBeNull()
+      // Dependent records are NOT soft-deleted — they remain untouched when the parent is trashed
+      expect(afterTrash.block).not.toBeNull()
+      expect(afterTrash.blockShare).not.toBeNull()
       expect(afterTrash.canvasYjs).not.toBeNull()
-      expect(afterTrash.pin!.deletionTime).not.toBeNull()
-      expect(afterTrash.share!.deletionTime).not.toBeNull()
-      expect(afterTrash.bookmark!.deletionTime).not.toBeNull()
+      expect(afterTrash.pin).not.toBeNull()
+      expect(afterTrash.share).not.toBeNull()
+      expect(afterTrash.bookmark).not.toBeNull()
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
         campaignId: ctx.campaignId,
@@ -131,12 +132,12 @@ describe('folder cascade hierarchy', () => {
       expect(afterRestore.map!.deletionTime).toBeNull()
       expect(afterRestore.file!.location).toBe('sidebar')
       expect(afterRestore.file!.deletionTime).toBeNull()
-      expect(afterRestore.block!.deletionTime).toBeNull()
-      expect(afterRestore.blockShare!.deletionTime).toBeNull()
+      expect(afterRestore.block).not.toBeNull()
+      expect(afterRestore.blockShare).not.toBeNull()
       expect(afterRestore.canvasYjs).not.toBeNull()
-      expect(afterRestore.pin!.deletionTime).toBeNull()
-      expect(afterRestore.share!.deletionTime).toBeNull()
-      expect(afterRestore.bookmark!.deletionTime).toBeNull()
+      expect(afterRestore.pin).not.toBeNull()
+      expect(afterRestore.share).not.toBeNull()
+      expect(afterRestore.bookmark).not.toBeNull()
     })
 
     it('hard-delete cleans up all child types and their dependents', async () => {
@@ -147,7 +148,7 @@ describe('folder cascade hierarchy', () => {
       const { folderId } = await createFolder(t, ctx.campaignId, dmId, { name: 'ToDelete' })
 
       const { noteId } = await createNote(t, ctx.campaignId, dmId, { parentId: folderId })
-      const block = await createBlock(t, noteId, ctx.campaignId, dmId)
+      const block = await createBlock(t, noteId, ctx.campaignId)
       const noteYjsId = await t.run(async (dbCtx) =>
         dbCtx.db.insert('yjsUpdates', {
           documentId: noteId,
@@ -168,23 +169,23 @@ describe('folder cascade hierarchy', () => {
       )
 
       const { mapId } = await createGameMap(t, ctx.campaignId, dmId, { parentId: folderId })
-      const pin = await createMapPin(t, mapId, dmId, { itemId: noteId })
+      const pin = await createMapPin(t, mapId, { itemId: noteId })
 
       const { fileId } = await createFile(t, ctx.campaignId, dmId, { parentId: folderId })
 
-      const blockShare = await createBlockShare(t, dmId, {
+      const blockShare = await createBlockShare(t, {
         campaignId: ctx.campaignId,
         noteId,
         blockId: block.blockDbId,
         campaignMemberId: ctx.player.memberId,
       })
-      const share = await createSidebarShare(t, dmId, {
+      const share = await createSidebarShare(t, {
         campaignId: ctx.campaignId,
         sidebarItemId: noteId,
         sidebarItemType: 'note',
         campaignMemberId: ctx.player.memberId,
       })
-      const bookmark = await createBookmark(t, ctx.player.profile._id, {
+      const bookmark = await createBookmark(t, {
         campaignId: ctx.campaignId,
         sidebarItemId: canvasId,
         campaignMemberId: ctx.player.memberId,
@@ -291,7 +292,7 @@ describe('folder cascade hierarchy', () => {
         name: 'DeepNote',
         parentId: grandchild,
       })
-      const block = await createBlock(t, leaf, ctx.campaignId, dmId)
+      const block = await createBlock(t, leaf, ctx.campaignId)
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
         campaignId: ctx.campaignId,
@@ -315,7 +316,7 @@ describe('folder cascade hierarchy', () => {
       expect(afterTrash.grandchild!.deletionTime).not.toBeNull()
       expect(afterTrash.leaf!.location).toBe('trash')
       expect(afterTrash.leaf!.deletionTime).not.toBeNull()
-      expect(afterTrash.block!.deletionTime).not.toBeNull()
+      expect(afterTrash.block).not.toBeNull()
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
         campaignId: ctx.campaignId,
@@ -342,7 +343,7 @@ describe('folder cascade hierarchy', () => {
       expect(afterRestore.leaf!.location).toBe('sidebar')
       expect(afterRestore.leaf!.deletionTime).toBeNull()
       expect(afterRestore.leaf!.parentId).toBe(grandchild)
-      expect(afterRestore.block!.deletionTime).toBeNull()
+      expect(afterRestore.block).not.toBeNull()
     })
 
     it('hard-delete removes all levels and dependents', async () => {
@@ -365,10 +366,10 @@ describe('folder cascade hierarchy', () => {
       const { mapId: leafMap } = await createGameMap(t, ctx.campaignId, dmId, {
         parentId: grandchild,
       })
-      const block = await createBlock(t, leafNote, ctx.campaignId, dmId)
-      const pin = await createMapPin(t, leafMap, dmId, { itemId: leafNote })
+      const block = await createBlock(t, leafNote, ctx.campaignId)
+      const pin = await createMapPin(t, leafMap, { itemId: leafNote })
 
-      const share = await createSidebarShare(t, dmId, {
+      const share = await createSidebarShare(t, {
         campaignId: ctx.campaignId,
         sidebarItemId: leafNote,
         sidebarItemType: 'note',
