@@ -104,7 +104,9 @@ describe('trash workflows', () => {
       expect(trashedNoteB!.deletionTime).not.toBeNull()
       // Shares and bookmarks have no deletionTime — they are preserved unchanged when parent is trashed
       expect(trashedShare).not.toBeNull()
+      expect(trashedShare!.sidebarItemId).toBe(noteA.noteId)
       expect(trashedBookmark).not.toBeNull()
+      expect(trashedBookmark!.sidebarItemId).toBe(noteA.noteId)
 
       await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
         campaignId: ctx.campaignId,
@@ -133,7 +135,11 @@ describe('trash workflows', () => {
       expect(restoredNoteB!.parentId).toBe(folder.folderId)
       // Shares and bookmarks were never touched, still present after restore
       expect(restoredShare).not.toBeNull()
+      expect(restoredShare!.sidebarItemId).toBe(noteA.noteId)
+      expect(restoredShare!.campaignMemberId).toBe(ctx.player.memberId)
       expect(restoredBookmark).not.toBeNull()
+      expect(restoredBookmark!.sidebarItemId).toBe(noteA.noteId)
+      expect(restoredBookmark!.campaignMemberId).toBe(ctx.player.memberId)
     })
   })
 

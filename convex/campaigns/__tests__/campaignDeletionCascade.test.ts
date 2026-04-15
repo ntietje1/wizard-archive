@@ -100,6 +100,7 @@ describe('campaign deletion cascade', () => {
       }
     })
 
+    expect(results.campaign).toBeNull()
     expect(results.folder).toBeNull()
     expect(results.note).toBeNull()
     expect(results.file).toBeNull()

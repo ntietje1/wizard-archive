@@ -12,7 +12,7 @@ export const getUserCampaigns = authQuery({
   args: {},
   returns: v.array(campaignValidator),
   handler: async (ctx): Promise<Array<Campaign>> => {
-    return getUserCampaignsFn(ctx)
+    return await getUserCampaignsFn(ctx)
   },
 })
 
@@ -30,7 +30,7 @@ export const getCampaignBySlug = authQuery({
   },
 })
 
-export const getPlayersByCampaign = campaignQuery({
+export const getMembersByCampaign = campaignQuery({
   args: {},
   returns: v.array(campaignMemberValidator),
   handler: async (ctx): Promise<Array<CampaignMember>> => {

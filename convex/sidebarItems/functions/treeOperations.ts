@@ -1,16 +1,41 @@
-import { SIDEBAR_ITEM_LOCATION } from '../types/baseTypes'
+import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { findUniqueSidebarItemSlug } from '../validation'
-import { applyToTree } from './applyToTree'
+import { collectDescendants } from './collectDescendants'
 import { hardDeleteItem } from './hardDeleteItem'
 import type { SidebarItemLocation } from '../types/baseTypes'
-import type { AnySidebarItemFromDb } from '../types/types'
 import type { CampaignMutationCtx } from '../../functions'
+import type { Doc, Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
-import type { Id } from '../../_generated/dataModel'
+
+type ItemOperation = (ctx: MutationCtx, item: Doc<'sidebarItems'>) => Promise<void>
+
+async function applyToTree(
+  ctx: MutationCtx,
+  item: Doc<'sidebarItems'>,
+  operation: ItemOperation,
+): Promise<number> {
+  if (item.type === SIDEBAR_ITEM_TYPES.folders) {
+    const descendants = await collectDescendants(ctx, {
+      campaignId: item.campaignId,
+      location: item.location,
+      folderId: item._id,
+    })
+
+    for (const descendant of descendants) {
+      await operation(ctx, descendant)
+    }
+
+    await operation(ctx, item)
+    return descendants.length + 1
+  }
+
+  await operation(ctx, item)
+  return 1
+}
 
 export async function trashTree(
   ctx: MutationCtx,
-  item: AnySidebarItemFromDb,
+  item: Doc<'sidebarItems'>,
   deletion: { deletionTime: number; deletedBy: Id<'userProfiles'> },
 ): Promise<number> {
   return applyToTree(ctx, item, async (_, i) => {
@@ -25,7 +50,7 @@ export async function trashTree(
 
 export async function restoreTreeDescendants(
   ctx: CampaignMutationCtx,
-  item: AnySidebarItemFromDb,
+  item: Doc<'sidebarItems'>,
   location: SidebarItemLocation,
 ): Promise<void> {
   await applyToTree(ctx, item, async (_, i) => {
@@ -45,9 +70,6 @@ export async function restoreTreeDescendants(
   })
 }
 
-export async function hardDeleteTree(
-  ctx: MutationCtx,
-  item: AnySidebarItemFromDb,
-): Promise<number> {
+export async function hardDeleteTree(ctx: MutationCtx, item: Doc<'sidebarItems'>): Promise<number> {
   return applyToTree(ctx, item, hardDeleteItem)
 }

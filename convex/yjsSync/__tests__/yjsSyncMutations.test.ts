@@ -215,7 +215,7 @@ describe('pushUpdate', () => {
       parentId: null,
     })
 
-    for (let i = 1; i <= 19; i++) {
+    for (let i = 1; i < COMPACT_INTERVAL; i++) {
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
         campaignId: ctx.campaignId,
         documentId: noteId,

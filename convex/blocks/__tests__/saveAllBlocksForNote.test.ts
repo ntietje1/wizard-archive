@@ -81,14 +81,9 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       parentId: null,
     })
 
-    const { blockDbId: removedBlockId } = await createBlock(
-      t,
-      noteId,
-      ctx.campaignId,
-      {
-        blockNoteId: testBlockNoteId('remove'),
-      },
-    )
+    const { blockDbId: removedBlockId } = await createBlock(t, noteId, ctx.campaignId, {
+      blockNoteId: testBlockNoteId('remove'),
+    })
 
     await pushAndPersist(dmAuth, ctx.campaignId, noteId, [
       { id: testBlockNoteId('keep'), type: 'paragraph', props: {}, children: [] },
@@ -440,14 +435,9 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       blockNoteId: testBlockNoteId('will-update'),
       shareStatus: 'all_shared',
     })
-    const { blockDbId: deleteId } = await createBlock(
-      t,
-      noteId,
-      ctx.campaignId,
-      {
-        blockNoteId: testBlockNoteId('will-delete'),
-      },
-    )
+    const { blockDbId: deleteId } = await createBlock(t, noteId, ctx.campaignId, {
+      blockNoteId: testBlockNoteId('will-delete'),
+    })
 
     await pushAndPersist(dmAuth, ctx.campaignId, noteId, [
       {

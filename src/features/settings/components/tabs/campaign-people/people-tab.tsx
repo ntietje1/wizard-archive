@@ -23,8 +23,8 @@ export function PeopleTab() {
     ? campaignData.myMembership?.role === CAMPAIGN_MEMBER_ROLE.DM
     : undefined
 
-  const players = useAuthQuery(
-    api.campaigns.queries.getPlayersByCampaign,
+  const members = useAuthQuery(
+    api.campaigns.queries.getMembersByCampaign,
     campaignData?._id ? { campaignId: campaignData._id } : 'skip',
   )
 
@@ -33,14 +33,13 @@ export function PeopleTab() {
     campaignData?._id && isDm ? { campaignId: campaignData._id } : 'skip',
   )
 
-  const dmMember = players.data?.find((p) => p.role === CAMPAIGN_MEMBER_ROLE.DM)
+  const dmMember = members.data?.find((p) => p.role === CAMPAIGN_MEMBER_ROLE.DM)
 
-  const acceptedPlayers = players.data?.filter((p) => p.role === CAMPAIGN_MEMBER_ROLE.Player) ?? []
+  const acceptedPlayers = members.data?.filter((p) => p.role === CAMPAIGN_MEMBER_ROLE.Player) ?? []
 
   const pendingPlayers =
     requests.data?.filter(
-      (p) =>
-        p.role === CAMPAIGN_MEMBER_ROLE.Player && p.status === CAMPAIGN_MEMBER_STATUS.Pending,
+      (p) => p.role === CAMPAIGN_MEMBER_ROLE.Player && p.status === CAMPAIGN_MEMBER_STATUS.Pending,
     ) ?? []
 
   const rejectedOrRemoved =
@@ -53,9 +52,9 @@ export function PeopleTab() {
 
   const joinUrl = `${getOrigin()}/join/${dmUsername}/${campaignSlug}`
 
-  const isLoading = campaign.isLoading || players.isLoading || (isDm && requests.isLoading)
-  const isError = campaign.isError || players.isError || (isDm && requests.isError)
-  const isReady = campaignData && players.data && (!isDm || requests.data)
+  const isLoading = campaign.isLoading || members.isLoading || (isDm && requests.isLoading)
+  const isError = campaign.isError || members.isError || (isDm && requests.isError)
+  const isReady = campaignData && members.data && (!isDm || requests.data)
 
   return (
     <div className="flex flex-col gap-6">
@@ -75,7 +74,7 @@ export function PeopleTab() {
         </div>
       )}
 
-      {isError && <p className="text-sm text-destructive">Failed to load players</p>}
+      {isError && <p className="text-sm text-destructive">Failed to load campaign data</p>}
 
       {isReady && (
         <>

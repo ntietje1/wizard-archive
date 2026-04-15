@@ -188,12 +188,9 @@ describe('unshareBlocks', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    const { blockDbId, blockNoteId } = await createBlock(
-      t,
-      noteId,
-      ctx.campaignId,
-      { shareStatus: 'individually_shared' },
-    )
+    const { blockDbId, blockNoteId } = await createBlock(t, noteId, ctx.campaignId, {
+      shareStatus: 'individually_shared',
+    })
 
     await createBlockShare(t, {
       campaignId: ctx.campaignId,
@@ -221,12 +218,9 @@ describe('unshareBlocks', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-    const { blockDbId, blockNoteId } = await createBlock(
-      t,
-      noteId,
-      ctx.campaignId,
-      { shareStatus: 'individually_shared' },
-    )
+    const { blockDbId, blockNoteId } = await createBlock(t, noteId, ctx.campaignId, {
+      shareStatus: 'individually_shared',
+    })
 
     await createBlockShare(t, {
       campaignId: ctx.campaignId,
@@ -431,12 +425,9 @@ describe('block permission resolution', () => {
       permissionLevel: 'view',
     })
 
-    const { blockDbId, blockNoteId } = await createBlock(
-      t,
-      noteId,
-      ctx.campaignId,
-      { shareStatus: 'individually_shared' },
-    )
+    const { blockDbId, blockNoteId } = await createBlock(t, noteId, ctx.campaignId, {
+      shareStatus: 'individually_shared',
+    })
 
     await createBlockShare(t, {
       campaignId: ctx.campaignId,
@@ -474,12 +465,9 @@ describe('block permission resolution', () => {
       permissionLevel: 'view',
     })
 
-    const { blockDbId, blockNoteId } = await createBlock(
-      t,
-      noteId,
-      mCtx.campaignId,
-      { shareStatus: 'individually_shared' },
-    )
+    const { blockDbId, blockNoteId } = await createBlock(t, noteId, mCtx.campaignId, {
+      shareStatus: 'individually_shared',
+    })
 
     await createBlockShare(t, {
       campaignId: mCtx.campaignId,

@@ -494,13 +494,13 @@ describe('map rollback with deleted pin targets', () => {
       })
 
       await t.run(async (dbCtx) => {
-        const activePins = await dbCtx.db
+        const pins = await dbCtx.db
           .query('mapPins')
           .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
           .collect()
 
-        expect(activePins).toHaveLength(1)
-        expect(activePins[0].itemId).toBe(n2)
+        expect(pins).toHaveLength(1)
+        expect(pins[0].itemId).toBe(n2)
       })
     } finally {
       vi.useRealTimers()

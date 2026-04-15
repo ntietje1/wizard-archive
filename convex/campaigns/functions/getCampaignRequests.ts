@@ -15,9 +15,7 @@ export async function getCampaignRequests(ctx: DmQueryCtx): Promise<Array<Campai
     .withIndex('by_campaign_user', (q) => q.eq('campaignId', campaignId))
     .collect()
 
-  const nonAcceptedMembers = members.filter(
-    (m) => m.status !== CAMPAIGN_MEMBER_STATUS.Accepted,
-  )
+  const nonAcceptedMembers = members.filter((m) => m.status !== CAMPAIGN_MEMBER_STATUS.Accepted)
 
   const profilesByUserId = new Map<Id<'userProfiles'>, UserProfile>()
   await asyncMap(nonAcceptedMembers, async (member) => {
@@ -28,7 +26,7 @@ export async function getCampaignRequests(ctx: DmQueryCtx): Promise<Array<Campai
   return nonAcceptedMembers.flatMap((member) => {
     const profile = profilesByUserId.get(member.userId)
     if (!profile) {
-      logger.warn(`User profile not found for userId: ${member.userId}`)
+      logger.error(`User profile not found for userId: ${member.userId}`)
       return []
     }
     return [{ ...member, userProfile: profile }]

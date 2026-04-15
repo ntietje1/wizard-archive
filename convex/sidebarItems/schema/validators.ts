@@ -1,5 +1,6 @@
 import { v } from 'convex/values'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
+import { PERMISSION_LEVEL } from '../../permissions/types'
 
 export const sidebarItemLocationValidator = v.union(
   v.literal(SIDEBAR_ITEM_LOCATION.sidebar),
@@ -15,8 +16,8 @@ export const sidebarItemTypeValidator = v.union(
 )
 
 export const permissionLevelValidator = v.union(
-  v.literal('none'),
-  v.literal('view'),
-  v.literal('edit'),
-  v.literal('full_access'),
+  v.literal(PERMISSION_LEVEL.NONE),
+  v.literal(PERMISSION_LEVEL.VIEW),
+  v.literal(PERMISSION_LEVEL.EDIT),
+  v.literal(PERMISSION_LEVEL.FULL_ACCESS),
 )

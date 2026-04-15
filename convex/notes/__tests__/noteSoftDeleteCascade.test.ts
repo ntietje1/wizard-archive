@@ -120,12 +120,16 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
         .filter((q) => q.eq(q.field('noteId'), noteId))
         .collect()
       expect(blocks).toHaveLength(2)
+      for (const block of blocks) {
+        expect(block).not.toHaveProperty('deletionTime')
+      }
 
       const shares = await dbCtx.db
         .query('blockShares')
         .filter((q) => q.eq(q.field('noteId'), noteId))
         .collect()
       expect(shares).toHaveLength(1)
+      expect(shares[0]).not.toHaveProperty('deletionTime')
     })
   })
 

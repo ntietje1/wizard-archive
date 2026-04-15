@@ -49,7 +49,11 @@ export async function onDeleteUser(ctx: MutationCtx, user: AuthUserDoc): Promise
     const campaignId = member.campaignId
 
     const campaign = await ctx.db.get('campaigns', campaignId)
-    if (campaign && campaign.status !== CAMPAIGN_STATUS.Deleted && campaign.dmUserId === profileId) {
+    if (
+      campaign &&
+      campaign.status !== CAMPAIGN_STATUS.Deleted &&
+      campaign.dmUserId === profileId
+    ) {
       await ctx.db.patch('campaigns', campaign._id, {
         status: CAMPAIGN_STATUS.Deleted,
       })

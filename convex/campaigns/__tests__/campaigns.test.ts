@@ -274,14 +274,14 @@ describe('getCampaignBySlug', () => {
   })
 })
 
-describe('getPlayersByCampaign', () => {
+describe('getMembersByCampaign', () => {
   const t = createTestContext()
 
   it('returns only Accepted members with profiles', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const members = await dmAuth.query(api.campaigns.queries.getPlayersByCampaign, {
+    const members = await dmAuth.query(api.campaigns.queries.getMembersByCampaign, {
       campaignId: ctx.campaignId,
     })
 
@@ -299,7 +299,7 @@ describe('getPlayersByCampaign', () => {
     const newPlayer = await setupUser(t)
     await addPlayerToCampaign(t, ctx.campaignId, newPlayer.profile, { status: 'Pending' })
 
-    const members = await dmAuth.query(api.campaigns.queries.getPlayersByCampaign, {
+    const members = await dmAuth.query(api.campaigns.queries.getMembersByCampaign, {
       campaignId: ctx.campaignId,
     })
 
@@ -312,7 +312,7 @@ describe('getPlayersByCampaign', () => {
     const newPlayer = await setupUser(t)
     await addPlayerToCampaign(t, ctx.campaignId, newPlayer.profile, { status: 'Rejected' })
 
-    const members = await dmAuth.query(api.campaigns.queries.getPlayersByCampaign, {
+    const members = await dmAuth.query(api.campaigns.queries.getMembersByCampaign, {
       campaignId: ctx.campaignId,
     })
 
@@ -325,7 +325,7 @@ describe('getPlayersByCampaign', () => {
     const newPlayer = await setupUser(t)
     await addPlayerToCampaign(t, ctx.campaignId, newPlayer.profile, { status: 'Removed' })
 
-    const members = await dmAuth.query(api.campaigns.queries.getPlayersByCampaign, {
+    const members = await dmAuth.query(api.campaigns.queries.getMembersByCampaign, {
       campaignId: ctx.campaignId,
     })
 
@@ -337,7 +337,7 @@ describe('getPlayersByCampaign', () => {
     const outsider = await setupUser(t)
 
     await expectPermissionDenied(
-      outsider.authed.query(api.campaigns.queries.getPlayersByCampaign, {
+      outsider.authed.query(api.campaigns.queries.getMembersByCampaign, {
         campaignId: ctx.campaignId,
       }),
     )
@@ -346,7 +346,7 @@ describe('getPlayersByCampaign', () => {
   it('requires authentication', async () => {
     const ctx = await setupCampaignContext(t)
     await expectNotAuthenticated(
-      t.query(api.campaigns.queries.getPlayersByCampaign, {
+      t.query(api.campaigns.queries.getMembersByCampaign, {
         campaignId: ctx.campaignId,
       }),
     )
@@ -370,6 +370,7 @@ describe('getCampaignRequests', () => {
       campaignId: ctx.campaignId,
     })
 
+    expect(members).toHaveLength(3)
     for (const member of members) {
       expect(member.userProfile).toBeDefined()
     }

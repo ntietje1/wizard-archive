@@ -53,7 +53,7 @@ export async function resolveInheritedPermissions(
         .withIndex('by_campaign_item_member', (q) =>
           q.eq('campaignId', campaignId).eq('sidebarItemId', currentParentId!),
         )
-            .collect()
+        .collect()
       for (const share of folderShares) {
         if (unresolvedMembers.has(share.campaignMemberId)) {
           result.members[share.campaignMemberId] = {

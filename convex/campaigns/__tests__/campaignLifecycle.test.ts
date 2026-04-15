@@ -195,7 +195,7 @@ describe('campaign lifecycle', () => {
     expect(p3Final!.status).toBe('Pending')
     expect(finalRequests.find((m) => m.userId === p2.profile._id)).toBeUndefined()
 
-    const finalPlayers = await dm.authed.query(api.campaigns.queries.getPlayersByCampaign, {
+    const finalPlayers = await dm.authed.query(api.campaigns.queries.getMembersByCampaign, {
       campaignId,
     })
     const p2Final = finalPlayers.find((m) => m.userId === p2.profile._id)

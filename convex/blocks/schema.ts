@@ -51,6 +51,7 @@ export const blocksTables = {
     ...blockTableFields,
   })
     .index('by_campaign_note_block', ['campaignId', 'noteId', 'blockNoteId'])
+    .index('by_campaign_note_type', ['campaignId', 'noteId', 'type'])
     .searchIndex('search_plainText', {
       searchField: 'plainText',
       filterFields: ['campaignId', 'noteId', 'type'],

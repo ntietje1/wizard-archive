@@ -185,17 +185,12 @@ describe('share mutations with nested blocks', () => {
       depth: 0,
       parentBlockId: null,
     })
-    const { blockDbId: childDbId } = await createBlock(
-      t,
-      noteId,
-      ctx.campaignId,
-      {
-        blockNoteId: testBlockNoteId('child'),
-        depth: 1,
-        parentBlockId: testBlockNoteId('root'),
-        shareStatus: 'individually_shared',
-      },
-    )
+    const { blockDbId: childDbId } = await createBlock(t, noteId, ctx.campaignId, {
+      blockNoteId: testBlockNoteId('child'),
+      depth: 1,
+      parentBlockId: testBlockNoteId('root'),
+      shareStatus: 'individually_shared',
+    })
 
     const shareId = await t.run(async (dbCtx) => {
       return await dbCtx.db.insert('blockShares', {

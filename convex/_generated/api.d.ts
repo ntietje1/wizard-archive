@@ -145,7 +145,6 @@ import type * as sessions_functions_updateSession from "../sessions/functions/up
 import type * as sessions_mutations from "../sessions/mutations.js";
 import type * as sessions_queries from "../sessions/queries.js";
 import type * as sessions_types from "../sessions/types.js";
-import type * as sidebarItems_functions_applyToTree from "../sidebarItems/functions/applyToTree.js";
 import type * as sidebarItems_functions_claimPreviewGeneration from "../sidebarItems/functions/claimPreviewGeneration.js";
 import type * as sidebarItems_functions_collectDescendants from "../sidebarItems/functions/collectDescendants.js";
 import type * as sidebarItems_functions_defaultItemName from "../sidebarItems/functions/defaultItemName.js";
@@ -364,7 +363,6 @@ declare const fullApi: ApiFromModules<{
   "sessions/mutations": typeof sessions_mutations;
   "sessions/queries": typeof sessions_queries;
   "sessions/types": typeof sessions_types;
-  "sidebarItems/functions/applyToTree": typeof sidebarItems_functions_applyToTree;
   "sidebarItems/functions/claimPreviewGeneration": typeof sidebarItems_functions_claimPreviewGeneration;
   "sidebarItems/functions/collectDescendants": typeof sidebarItems_functions_collectDescendants;
   "sidebarItems/functions/defaultItemName": typeof sidebarItems_functions_defaultItemName;

@@ -120,8 +120,10 @@ describe('moveSidebarItem cross-module effects', () => {
       folder: await dbCtx.db.get('sidebarItems', folderId),
       note: await dbCtx.db.get('sidebarItems', noteId),
     }))
-    expect(afterTrash.folder!.parentId).toBeNull()
-    expect(afterTrash.note!.parentId).toBe(folderId)
+    expect(afterTrash.folder).toBeDefined()
+    expect(afterTrash.folder?.parentId).toBeNull()
+    expect(afterTrash.note).toBeDefined()
+    expect(afterTrash.note?.parentId).toBe(folderId)
   })
 
   it('moving folder into its own descendant is rejected', async () => {
