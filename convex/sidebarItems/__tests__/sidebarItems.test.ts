@@ -443,6 +443,104 @@ describe('moveSidebarItem', () => {
   })
 })
 
+describe('create item with parentPath', () => {
+  const t = createTestContext()
+
+  it('creates missing parent folders transactionally for notes', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const result = await dmAuth.mutation(api.notes.mutations.createNote, {
+      campaignId: ctx.campaignId,
+      name: 'Leaf Note',
+      parentId: null,
+      parentPath: ['Arc One', 'Arc Two'],
+    })
+
+    const rootItems = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
+      campaignId: ctx.campaignId,
+      parentId: null,
+    })
+    const arcOne = rootItems.find((item) => item.name === 'Arc One')
+
+    expect(arcOne?.type).toBe('folder')
+
+    const arcOneChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
+      campaignId: ctx.campaignId,
+      parentId: arcOne!._id,
+    })
+    const arcTwo = arcOneChildren.find((item) => item.name === 'Arc Two')
+
+    expect(arcTwo?.type).toBe('folder')
+
+    const arcTwoChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
+      campaignId: ctx.campaignId,
+      parentId: arcTwo!._id,
+    })
+    const createdNote = arcTwoChildren.find((item) => item._id === result.noteId)
+
+    expect(createdNote?.name).toBe('Leaf Note')
+  })
+
+  it('reuses existing parentPath folders for folder creation', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { folderId: arcOneId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Arc One',
+    })
+    await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Arc Two',
+      parentId: arcOneId,
+    })
+
+    await dmAuth.mutation(api.folders.mutations.createFolder, {
+      campaignId: ctx.campaignId,
+      name: 'Leaf Folder',
+      parentId: null,
+      parentPath: ['Arc One', 'Arc Two'],
+    })
+
+    const rootItems = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
+      campaignId: ctx.campaignId,
+      parentId: null,
+    })
+    expect(rootItems.filter((item) => item.name === 'Arc One')).toHaveLength(1)
+
+    const arcOneChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
+      campaignId: ctx.campaignId,
+      parentId: arcOneId,
+    })
+    const arcTwo = arcOneChildren.find((item) => item.name === 'Arc Two')
+
+    expect(arcOneChildren.filter((item) => item.name === 'Arc Two')).toHaveLength(1)
+
+    const arcTwoChildren = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
+      campaignId: ctx.campaignId,
+      parentId: arcTwo!._id,
+    })
+    expect(arcTwoChildren.some((item) => item.name === 'Leaf Folder')).toBe(true)
+  })
+
+  it('rejects parentPath segments that collide with non-folder items', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Arc One',
+    })
+
+    await expectValidationFailed(
+      dmAuth.mutation(api.notes.mutations.createNote, {
+        campaignId: ctx.campaignId,
+        name: 'Leaf Note',
+        parentId: null,
+        parentPath: ['Arc One', 'Arc Two'],
+      }),
+    )
+  })
+})
+
 describe('permanentlyDeleteSidebarItem', () => {
   const t = createTestContext()
 

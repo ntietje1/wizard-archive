@@ -9,6 +9,7 @@ export const createFile = campaignMutation({
     name: v.string(),
     storageId: v.optional(v.id('_storage')),
     parentId: v.nullable(v.id('sidebarItems')),
+    parentPath: v.optional(v.array(v.string())),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
   },
@@ -21,6 +22,7 @@ export const createFile = campaignMutation({
       name: args.name,
       storageId: args.storageId,
       parentId: args.parentId,
+      parentPath: args.parentPath,
       iconName: args.iconName,
       color: args.color,
     })

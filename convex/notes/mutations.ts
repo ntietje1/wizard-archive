@@ -32,6 +32,7 @@ export const createNote = campaignMutation({
   args: {
     name: v.string(),
     parentId: v.nullable(v.id('sidebarItems')),
+    parentPath: v.optional(v.array(v.string())),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
     content: v.optional(v.array(customBlockValidator)),
@@ -44,6 +45,7 @@ export const createNote = campaignMutation({
     return await createNoteFn(ctx, {
       name: args.name,
       parentId: args.parentId,
+      parentPath: args.parentPath,
       iconName: args.iconName,
       color: args.color,
       content: args.content,

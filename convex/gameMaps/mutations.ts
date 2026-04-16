@@ -13,6 +13,7 @@ export const createMap = campaignMutation({
     name: v.string(),
     imageStorageId: v.optional(v.id('_storage')),
     parentId: v.nullable(v.id('sidebarItems')),
+    parentPath: v.optional(v.array(v.string())),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
   },
@@ -25,6 +26,7 @@ export const createMap = campaignMutation({
       name: args.name,
       imageStorageId: args.imageStorageId,
       parentId: args.parentId,
+      parentPath: args.parentPath,
       iconName: args.iconName,
       color: args.color,
     })

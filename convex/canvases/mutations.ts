@@ -7,6 +7,7 @@ export const createCanvas = campaignMutation({
   args: {
     name: v.string(),
     parentId: v.nullable(v.id('sidebarItems')),
+    parentPath: v.optional(v.array(v.string())),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
   },
@@ -18,6 +19,7 @@ export const createCanvas = campaignMutation({
     return await createCanvasFn(ctx, {
       name: args.name,
       parentId: args.parentId,
+      parentPath: args.parentPath,
       iconName: args.iconName,
       color: args.color,
     })

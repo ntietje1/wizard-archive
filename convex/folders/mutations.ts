@@ -29,6 +29,7 @@ export const createFolder = campaignMutation({
   args: {
     name: v.string(),
     parentId: v.nullable(v.id('sidebarItems')),
+    parentPath: v.optional(v.array(v.string())),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
   },
@@ -40,6 +41,7 @@ export const createFolder = campaignMutation({
     return await createFolderFn(ctx, {
       name: args.name,
       parentId: args.parentId,
+      parentPath: args.parentPath,
       iconName: args.iconName,
       color: args.color,
     })

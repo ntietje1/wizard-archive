@@ -6,6 +6,7 @@ import {
   validateSidebarCreateParent,
   validateSidebarItemName,
 } from '../../sidebarItems/validation'
+import { resolveOrCreateSidebarParentPath } from '../../folders/functions/createFolder'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { createYjsDocument } from '../../yjsSync/functions/createYjsDocument'
 import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
@@ -21,18 +22,21 @@ export async function createNote(
   {
     name,
     parentId,
+    parentPath,
     iconName,
     color,
     content,
   }: {
     name: string
     parentId: Id<'sidebarItems'> | null
+    parentPath?: Array<string>
     iconName?: string
     color?: string
     content?: Array<CustomBlock>
   },
 ): Promise<{ noteId: Id<'sidebarItems'>; slug: string }> {
   name = name.trim()
+  parentId = await resolveOrCreateSidebarParentPath(ctx, { parentId, parentPath })
 
   await validateSidebarCreateParent(ctx, { parentId })
   await validateSidebarItemName(ctx, {

@@ -3,6 +3,7 @@ import {
   validateSidebarCreateParent,
   validateSidebarItemName,
 } from '../../sidebarItems/validation'
+import { resolveOrCreateSidebarParentPath } from '../../folders/functions/createFolder'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
@@ -15,17 +16,20 @@ export async function createMap(
     name,
     imageStorageId,
     parentId,
+    parentPath,
     iconName,
     color,
   }: {
     name: string
     imageStorageId?: Id<'_storage'>
     parentId: Id<'sidebarItems'> | null
+    parentPath?: Array<string>
     iconName?: string
     color?: string
   },
 ): Promise<{ mapId: Id<'sidebarItems'>; slug: string }> {
   name = name.trim()
+  parentId = await resolveOrCreateSidebarParentPath(ctx, { parentId, parentPath })
 
   await validateSidebarCreateParent(ctx, { parentId })
   await validateSidebarItemName(ctx, {
