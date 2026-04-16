@@ -1,7 +1,5 @@
 import { BlockNoteView } from '@blocknote/shadcn'
 import { SideMenuController } from '@blocknote/react'
-import { WikiLinkClickHandler } from './extensions/wiki-link/wiki-link-click-handler'
-import { MdLinkClickHandler } from './extensions/md-link/md-link-click-handler'
 import { PreventExternalDrop } from './extensions/prevent-external-drop/prevent-external-drop'
 import { SideMenuRenderer } from './extensions/side-menu/side-menu'
 import { SlashMenu } from './extensions/slash-menu/slash-menu'
@@ -13,18 +11,20 @@ import { useWikiLinkExtension } from '~/features/editor/hooks/useWikiLinkExtensi
 import { useMdLinkExtension } from '~/features/editor/hooks/useMdLinkExtension'
 import { useDisableAutolink } from '~/features/editor/hooks/useDisableAutolink'
 import { useResolvedTheme } from '~/features/settings/hooks/useTheme'
+import type { LinkResolver } from '~/features/editor/hooks/useLinkResolver'
 
 interface NoteViewProps {
   editor: CustomBlockNoteEditor
   editable: boolean
+  linkResolver: LinkResolver
   className?: string
   children?: ReactNode
 }
 
-export function NoteView({ editor, editable, className, children }: NoteViewProps) {
+export function NoteView({ editor, editable, linkResolver, className, children }: NoteViewProps) {
   const resolvedTheme = useResolvedTheme()
-  useWikiLinkExtension(editor)
-  useMdLinkExtension(editor)
+  useWikiLinkExtension(editor, linkResolver)
+  useMdLinkExtension(editor, linkResolver)
   useDisableAutolink(editor)
 
   return (
@@ -39,8 +39,6 @@ export function NoteView({ editor, editable, className, children }: NoteViewProp
       linkToolbar={false}
     >
       <PreventExternalDrop />
-      <WikiLinkClickHandler editor={editor} />
-      <MdLinkClickHandler editor={editor} />
       <SideMenuController sideMenu={SideMenuRenderer} />
       <SlashMenu editor={editor} />
       {children}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
@@ -11,7 +11,6 @@ import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useEditorDomElement } from '~/features/editor/hooks/useEditorDomElement'
 import { validateSidebarItemName } from '~/features/sidebar/utils/sidebar-validation'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import './wiki-link.css'
 
 interface TooltipState {
   show: boolean
@@ -22,20 +21,24 @@ interface TooltipState {
 
 const HIDDEN_TOOLTIP: TooltipState = { show: false, text: '', x: 0, y: 0 }
 
-/** Extract wiki link data from an element at a position */
-function getWikiLinkAt(x: number, y: number) {
-  const el = document.elementFromPoint(x, y)?.closest('.wiki-link-content')
-  if (!el) return null
+function parseLinkElement(linkEl: Element) {
   return {
-    element: el,
-    exists: el.getAttribute('data-wiki-link-exists') === 'true',
-    itemName: el.getAttribute('data-wiki-link-item-name') || el.getAttribute('data-wiki-link'),
-    href: el.getAttribute('data-href'),
-    heading: el.getAttribute('data-wiki-link-heading'),
+    element: linkEl,
+    exists: linkEl.getAttribute('data-link-exists') === 'true',
+    itemName: linkEl.getAttribute('data-link-item-name'),
+    href: linkEl.getAttribute('data-link-href'),
+    heading: linkEl.getAttribute('data-link-heading'),
+    type: linkEl.getAttribute('data-link-type') as 'wiki' | 'md-internal' | 'md-external' | null,
   }
 }
 
-export function WikiLinkClickHandler({ editor }: { editor: CustomBlockNoteEditor | undefined }) {
+function getLinkAt(x: number, y: number) {
+  const el = document.elementFromPoint(x, y)
+  const linkEl = el?.closest('.wiki-link-content') || el?.closest('.md-link-display')
+  return linkEl ? parseLinkElement(linkEl) : null
+}
+
+export function LinkClickHandler({ editor }: { editor: CustomBlockNoteEditor | undefined }) {
   const navigate = useNavigate()
   const { navigateToItem } = useEditorNavigation()
   const { campaign } = useCampaign()
@@ -47,30 +50,35 @@ export function WikiLinkClickHandler({ editor }: { editor: CustomBlockNoteEditor
   const [tooltip, setTooltip] = useState<TooltipState>(HIDDEN_TOOLTIP)
   const [ctrlHeld, setCtrlHeld] = useState(false)
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null)
+  const isCreatingRef = useRef(false)
 
   const { mutateAsync: createNote } = useAppMutation(api.notes.mutations.createNote)
 
   const hideTooltip = useCallback(() => setTooltip(HIDDEN_TOOLTIP), [])
 
-  const showTooltipFor = useCallback((link: ReturnType<typeof getWikiLinkAt>) => {
-    if (!link || link.exists || !link.itemName) return
+  const showTooltipFor = useCallback((link: ReturnType<typeof getLinkAt>) => {
+    if (!link) return
+    if (link.type === 'md-external') return
+
+    const isGhost = !link.exists
+    if (!isGhost) return
+    if (!link.itemName) return
+
     const rect = link.element.getBoundingClientRect()
     setTooltip({
       show: true,
-      text: link.itemName,
+      text: link.itemName!,
       x: rect.left,
       y: rect.bottom + 4,
     })
   }, [])
 
-  // Track ctrl key - show tooltip when held over ghost link
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Control' || e.key === 'Meta') {
         setCtrlHeld(true)
-        // Check if already hovering over a ghost link
         if (mousePos) {
-          const link = getWikiLinkAt(mousePos.x, mousePos.y)
+          const link = getLinkAt(mousePos.x, mousePos.y)
           if (link && !link.exists) {
             showTooltipFor(link)
           }
@@ -98,20 +106,14 @@ export function WikiLinkClickHandler({ editor }: { editor: CustomBlockNoteEditor
     }
   }, [hideTooltip, mousePos, showTooltipFor])
 
-  // Mouse tracking for ghost link tooltips
   useEffect(() => {
     if (!editorEl) return
 
     const onMouseMove = (e: MouseEvent) => {
-      // Always track mouse position
       setMousePos({ x: e.clientX, y: e.clientY })
 
-      if (!ctrlHeld) {
-        hideTooltip()
-        return
-      }
-      const link = getWikiLinkAt(e.clientX, e.clientY)
-      if (!link || link.exists) {
+      const link = getLinkAt(e.clientX, e.clientY)
+      if (!ctrlHeld || !link || link.exists) {
         hideTooltip()
         return
       }
@@ -131,15 +133,22 @@ export function WikiLinkClickHandler({ editor }: { editor: CustomBlockNoteEditor
     }
   }, [editorEl, ctrlHeld, hideTooltip, showTooltipFor])
 
-  // Click handling
   useEffect(() => {
     if (!editorEl) return
 
     const onMouseDown = async (e: MouseEvent) => {
-      const link = getWikiLinkAt(e.clientX, e.clientY)
+      const link = getLinkAt(e.clientX, e.clientY)
       if (!link) return
 
       const isCtrlClick = e.ctrlKey || e.metaKey
+
+      if (link.type === 'md-external' && link.href) {
+        if (editorMode === 'editor' && !isCtrlClick) return
+        e.preventDefault()
+        e.stopPropagation()
+        window.open(link.href, '_blank', 'noopener,noreferrer')
+        return
+      }
 
       if (link.exists && link.href) {
         const url = new URL(link.href, window.location.origin)
@@ -150,13 +159,11 @@ export function WikiLinkClickHandler({ editor }: { editor: CustomBlockNoteEditor
         if (link.heading) searchParams.heading = link.heading
 
         if (editorMode === 'editor') {
-          // Editor: ctrl+click navigates, regular click positions cursor
           if (!isCtrlClick) return
           e.preventDefault()
           e.stopPropagation()
           void navigate({ to: url.pathname, search: searchParams })
         } else {
-          // Viewer: click navigates, ctrl+click opens new tab
           e.preventDefault()
           e.stopPropagation()
           if (isCtrlClick) {
@@ -169,11 +176,12 @@ export function WikiLinkClickHandler({ editor }: { editor: CustomBlockNoteEditor
         return
       }
 
-      // Ghost link: ctrl+click creates note
       if (!link.exists && isCtrlClick && link.itemName && campaignData?._id) {
         e.preventDefault()
         e.stopPropagation()
         hideTooltip()
+
+        if (isCreatingRef.current) return
 
         const validation = validateSidebarItemName({
           name: link.itemName,
@@ -183,6 +191,7 @@ export function WikiLinkClickHandler({ editor }: { editor: CustomBlockNoteEditor
           toast.error(validation.error)
           return
         }
+        isCreatingRef.current = true
         try {
           const result = await createNote({
             campaignId: campaignData._id,
@@ -192,6 +201,8 @@ export function WikiLinkClickHandler({ editor }: { editor: CustomBlockNoteEditor
           if (result) void navigateToItem(result.slug)
         } catch (error) {
           handleError(error, 'Failed to create note')
+        } finally {
+          isCreatingRef.current = false
         }
       }
     }
@@ -200,6 +211,7 @@ export function WikiLinkClickHandler({ editor }: { editor: CustomBlockNoteEditor
     return () => editorEl.removeEventListener('mousedown', onMouseDown, true)
   }, [
     editorEl,
+    editor,
     navigate,
     campaignData?._id,
     createNote,
@@ -209,19 +221,21 @@ export function WikiLinkClickHandler({ editor }: { editor: CustomBlockNoteEditor
     hideTooltip,
   ])
 
-  if (!tooltip.show) return null
-
   return (
-    <div
-      className="wiki-link-tooltip"
-      style={{
-        position: 'fixed',
-        top: tooltip.y,
-        left: tooltip.x,
-        zIndex: 9999,
-      }}
-    >
-      Click to create "{tooltip.text}"
-    </div>
+    <>
+      {tooltip.show && (
+        <div
+          className="wiki-link-tooltip"
+          style={{
+            position: 'fixed',
+            top: tooltip.y,
+            left: tooltip.x,
+            zIndex: 9999,
+          }}
+        >
+          {`Click to create "${tooltip.text}"`}
+        </div>
+      )}
+    </>
   )
 }

@@ -7,14 +7,15 @@ import { updateBlock } from './updateBlock'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 import type { CustomBlock } from '../../notes/editorSpecs'
+import type { PersistedBlockRecord } from '../types'
 
 export async function saveAllBlocksForNote(
   ctx: CampaignMutationCtx,
   { noteId, content }: { noteId: Id<'sidebarItems'>; content: Array<CustomBlock> },
-): Promise<void> {
+): Promise<Array<PersistedBlockRecord>> {
   const note = await ctx.db.get('sidebarItems', noteId)
   if (!note) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
-  if (note.deletionTime !== null) return
+  if (note.deletionTime !== null) return []
   const campaignId = note.campaignId
 
   const existingBlocks = await ctx.db
@@ -37,6 +38,7 @@ export async function saveAllBlocksForNote(
   }
   const flatBlocks = [...deduped.values()]
   const incomingBlockIds = new Set(flatBlocks.map((b) => b.blockNoteId))
+  const persistedBlocks: Array<PersistedBlockRecord> = []
 
   await asyncMap(flatBlocks, async (flat) => {
     const existing = existingBlocksMap.get(flat.blockNoteId)
@@ -51,8 +53,36 @@ export async function saveAllBlocksForNote(
         inlineContent: flat.inlineContent,
         plainText: flat.plainText,
       })
+      persistedBlocks.push({
+        _id: existing._id,
+        noteId,
+        campaignId,
+        blockNoteId: flat.blockNoteId,
+        parentBlockId: flat.parentBlockId,
+        depth: flat.depth,
+        position: flat.position,
+        type: flat.type,
+        props: flat.props,
+        inlineContent: flat.inlineContent,
+        plainText: flat.plainText,
+        shareStatus: existing.shareStatus,
+      })
     } else {
-      await insertBlock(ctx, {
+      const blockId = await insertBlock(ctx, {
+        noteId,
+        campaignId,
+        blockNoteId: flat.blockNoteId,
+        parentBlockId: flat.parentBlockId,
+        depth: flat.depth,
+        position: flat.position,
+        type: flat.type,
+        props: flat.props,
+        inlineContent: flat.inlineContent,
+        plainText: flat.plainText,
+        shareStatus: SHARE_STATUS.NOT_SHARED,
+      })
+      persistedBlocks.push({
+        _id: blockId,
         noteId,
         campaignId,
         blockNoteId: flat.blockNoteId,
@@ -81,4 +111,6 @@ export async function saveAllBlocksForNote(
     await asyncMap(blockShares, (share) => ctx.db.delete('blockShares', share._id))
     await ctx.db.delete('blocks', block._id)
   })
+
+  return persistedBlocks
 }

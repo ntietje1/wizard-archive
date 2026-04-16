@@ -3,7 +3,9 @@ import { useEffect, useRef, useState } from 'react'
 import { editorSchema } from 'convex/notes/editorSpecs'
 import { api } from 'convex/_generated/api'
 import { NoteView } from './note-view'
+import { LinkClickHandler } from './extensions/link-click-handler'
 import { WikiLinkAutocomplete } from './extensions/wiki-link/wiki-link-autocomplete'
+import { useLinkResolver } from '~/features/editor/hooks/useLinkResolver'
 import type { Doc } from 'yjs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CustomBlock, CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
@@ -109,6 +111,7 @@ function StaticEditorInner({
   onEditorChange?: (editor: CustomBlockNoteEditor | null, doc: Doc | null) => void
 }) {
   const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
+  const linkResolver = useLinkResolver()
   const onEditorChangeRef = useRef(onEditorChange)
   onEditorChangeRef.current = onEditorChange
   const hasInitializedRef = useRef(false)
@@ -142,9 +145,12 @@ function StaticEditorInner({
   if (!editor) return null
 
   return (
-    <NoteView editor={editor} editable={false}>
-      {children}
-    </NoteView>
+    <>
+      <NoteView editor={editor} editable={false} linkResolver={linkResolver}>
+        {children}
+      </NoteView>
+      <LinkClickHandler editor={editor} />
+    </>
   )
 }
 
@@ -162,6 +168,7 @@ function CollaborativeEditorInner({
   onEditorChange?: (editor: CustomBlockNoteEditor | null, doc: Doc | null) => void
 }) {
   const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
+  const linkResolver = useLinkResolver()
   const onEditorChangeRef = useRef(onEditorChange)
   onEditorChangeRef.current = onEditorChange
 
@@ -207,14 +214,17 @@ function CollaborativeEditorInner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc, provider])
 
+  const forceOpenLinkPopover = useRef<(() => void) | null>(null)
+
   if (!editor) return null
 
   return (
     <>
-      <NoteView editor={editor} editable={true}>
+      <NoteView editor={editor} editable={true} linkResolver={linkResolver}>
         {children}
       </NoteView>
-      <WikiLinkAutocomplete editor={editor} />
+      <LinkClickHandler editor={editor} />
+      <WikiLinkAutocomplete editor={editor} onForceOpenRef={forceOpenLinkPopover} />
     </>
   )
 }

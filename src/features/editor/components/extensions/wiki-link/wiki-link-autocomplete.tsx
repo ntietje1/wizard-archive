@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import { getWikiLinkContext } from './wiki-link-utils'
+import { getWikiLinkContext, splitWikiLinkTargetAndDisplayName } from './wiki-link-utils'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { Heading, HeadingLevel } from 'convex/blocks/types'
@@ -17,8 +17,9 @@ import {
   getItemPath,
   getMinDisambiguationPath,
   resolveItemByPath,
-} from '~/features/editor/hooks/useWikiLinkExtension'
+} from 'convex/links/linkResolution'
 import { filterSuggestionItems } from '~/features/editor/utils/filter-suggestion-items'
+import { useEditorDomElement } from '~/features/editor/hooks/useEditorDomElement'
 
 type AutocompleteMode = 'file' | 'heading' | 'display-name'
 
@@ -189,8 +190,15 @@ function buildHeadingItems(
   return items
 }
 
-export function WikiLinkAutocomplete({ editor }: { editor: CustomBlockNoteEditor | undefined }) {
+export function WikiLinkAutocomplete({
+  editor,
+  onForceOpenRef,
+}: {
+  editor: CustomBlockNoteEditor | undefined
+  onForceOpenRef?: React.RefObject<(() => void) | null>
+}) {
   const { data: sidebarItems, itemsMap } = useActiveSidebarItems()
+  const editorEl = useEditorDomElement(editor)
 
   const [menu, setMenu] = useState<{
     show: boolean
@@ -204,6 +212,7 @@ export function WikiLinkAutocomplete({ editor }: { editor: CustomBlockNoteEditor
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const hasEditedRef = useRef(false)
+  const preservedDisplayNameRef = useRef<string | null>(null)
   const selectedItemRef = useRef<HTMLDivElement>(null)
 
   const context = menu.show ? getAutocompleteContext(menu.query, sidebarItems, itemsMap) : null
@@ -291,10 +300,10 @@ export function WikiLinkAutocomplete({ editor }: { editor: CustomBlockNoteEditor
   }, [selectedIndex])
 
   useEffect(() => {
-    const editorEl = editor?.domElement
     if (!editorEl) return
     const onDown = () => {
       setIsDragging(true)
+      preservedDisplayNameRef.current = null
       setMenu({ show: false, query: '', pos: null })
     }
     const onUp = () => setIsDragging(false)
@@ -304,7 +313,7 @@ export function WikiLinkAutocomplete({ editor }: { editor: CustomBlockNoteEditor
       editorEl.removeEventListener('mousedown', onDown)
       document.removeEventListener('mouseup', onUp)
     }
-  }, [editor])
+  }, [editorEl])
 
   useEffect(() => {
     const tiptap = editor?._tiptapEditor
@@ -320,9 +329,16 @@ export function WikiLinkAutocomplete({ editor }: { editor: CustomBlockNoteEditor
         const pos = coords
           ? new DOMRect(coords.left, coords.top, 0, coords.bottom - coords.top)
           : null
-        setMenu({ show: true, query: ctx.query, pos })
+        if (preservedDisplayNameRef.current !== null) {
+          const { targetQuery, displayName } = splitWikiLinkTargetAndDisplayName(ctx.query)
+          if (displayName !== null) preservedDisplayNameRef.current = displayName
+          setMenu({ show: true, query: targetQuery, pos })
+        } else {
+          setMenu({ show: true, query: ctx.query, pos })
+        }
       } else {
         hasEditedRef.current = false
+        preservedDisplayNameRef.current = null
         setMenu({ show: false, query: '', pos: null })
       }
     }
@@ -332,6 +348,52 @@ export function WikiLinkAutocomplete({ editor }: { editor: CustomBlockNoteEditor
       tiptap.off('transaction', onTransaction)
     }
   }, [editor, isDragging])
+
+  const forceOpen = useCallback(() => {
+    if (!editor) return
+    const tiptap = editor._tiptapEditor
+    if (!tiptap) return
+    const ctx = getWikiLinkContext(editor)
+    if (!ctx) return
+    const { targetQuery, displayName } = splitWikiLinkTargetAndDisplayName(ctx.query)
+    hasEditedRef.current = true
+    preservedDisplayNameRef.current = displayName
+    const coords = tiptap.view?.coordsAtPos(ctx.startPos)
+    const pos = coords ? new DOMRect(coords.left, coords.top, 0, coords.bottom - coords.top) : null
+    setMenu({
+      show: true,
+      query: ctx.query.includes('|') ? targetQuery : ctx.query,
+      pos,
+    })
+  }, [editor])
+
+  const closeMenu = useCallback(() => {
+    preservedDisplayNameRef.current = null
+    setMenu({ show: false, query: '', pos: null })
+  }, [])
+
+  useEffect(() => {
+    if (onForceOpenRef) onForceOpenRef.current = forceOpen
+    return () => {
+      if (onForceOpenRef) onForceOpenRef.current = null
+    }
+  }, [onForceOpenRef, forceOpen])
+
+  useEffect(() => {
+    if (!editor || !editorEl || menu.show) return
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter') return
+      const ctx = getWikiLinkContext(editor)
+      if (!ctx) return
+      e.preventDefault()
+      e.stopPropagation()
+      forceOpen()
+    }
+
+    editorEl.addEventListener('keydown', onKeyDown, true)
+    return () => editorEl.removeEventListener('keydown', onKeyDown, true)
+  }, [editor, editorEl, menu.show, forceOpen])
 
   const insertLink = useCallback(
     (item: FileItem | HeadingItem, ctx: AutocompleteContext | null) => {
@@ -352,18 +414,23 @@ export function WikiLinkAutocomplete({ editor }: { editor: CustomBlockNoteEditor
             ? [...ctx.completedFolderPath, fileItem.title]
             : fileItem.linkPath
         const path = pathParts.join('/')
-        linkText = pathParts.length > 1 ? `${path}|${fileItem.title}` : path
+        const displayName =
+          preservedDisplayNameRef.current ?? (pathParts.length > 1 ? fileItem.title : null)
+        linkText = displayName ? `${path}|${displayName}` : path
       } else {
         const headingPath = [...ctx.completedHeadingPath, ...(item as HeadingItem).fullPath].join(
           '#',
         )
-        linkText = `${ctx.fileQuery}#${headingPath}`
+        const headingTarget = `${ctx.fileQuery}#${headingPath}`
+        linkText = preservedDisplayNameRef.current
+          ? `${headingTarget}|${preservedDisplayNameRef.current}`
+          : headingTarget
       }
 
       tiptap.chain().focus().insertContentAt({ from, to }, `[[${linkText}]]`).run()
-      setMenu({ show: false, query: '', pos: null })
+      closeMenu()
     },
-    [editor],
+    [editor, closeMenu],
   )
 
   const continueLink = useCallback(
@@ -413,7 +480,6 @@ export function WikiLinkAutocomplete({ editor }: { editor: CustomBlockNoteEditor
   )
 
   useEffect(() => {
-    const editorEl = editor?.domElement
     if (!editorEl || !menu.show) return
 
     const onKeyDown = (e: KeyboardEvent) => {
@@ -445,12 +511,12 @@ export function WikiLinkAutocomplete({ editor }: { editor: CustomBlockNoteEditor
           } else if (context?.mode === 'heading' && headingItems[selectedIndex]) {
             continueLink(headingItems[selectedIndex], context)
           } else {
-            setMenu({ show: false, query: '', pos: null })
+            closeMenu()
           }
           break
         case 'Escape':
           e.preventDefault()
-          setMenu({ show: false, query: '', pos: null })
+          closeMenu()
           break
       }
     }
@@ -459,12 +525,14 @@ export function WikiLinkAutocomplete({ editor }: { editor: CustomBlockNoteEditor
     return () => editorEl.removeEventListener('keydown', onKeyDown, true)
   }, [
     editor,
+    editorEl,
     menu.show,
     items,
     selectedIndex,
     insertLink,
     continueLink,
     continueFolderPath,
+    closeMenu,
     context,
     fileItems,
     headingItems,

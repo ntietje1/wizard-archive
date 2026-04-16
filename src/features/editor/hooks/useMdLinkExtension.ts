@@ -1,15 +1,12 @@
 import { useEffect, useRef } from 'react'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
-import { resolveItemByPath } from './useWikiLinkExtension'
+import { MD_LINK_REGEX, parseMdLinkTarget } from 'convex/links/linkParsers'
+import type { ParsedMdLinkFields } from 'convex/links/linkParsers'
+import type { ResolvedLink } from 'convex/links/types'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type { Id } from 'convex/_generated/dataModel'
-import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
-import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import { validateHexColorOrDefault } from '~/features/sidebar/utils/sidebar-item-utils'
+import type { LinkResolver } from './useLinkResolver'
 import {
   overlapsSelection,
   registerLinkPlugins,
@@ -18,110 +15,19 @@ import {
 const PLUGIN_KEY = new PluginKey('mdLinkDecoration')
 const SELECTION_STABILIZER_KEY = new PluginKey('mdLinkSelectionStabilizer')
 
-export interface MdLinkItemInfo {
-  item: AnySidebarItem
-  href: string
-}
-
-export interface ParsedMdLink {
-  displayText: string
-  target: string
-  isExternal: boolean
-  itemPath: Array<string>
-  itemName: string
-  headingPath: Array<string>
-}
-
-function isExternalUrl(str: string): boolean {
-  const lower = str.toLowerCase()
-  return lower.startsWith('http://') || lower.startsWith('https://')
-}
-
-function parseMdLinkTarget(target: string): Omit<ParsedMdLink, 'displayText'> {
-  if (isExternalUrl(target)) {
-    return {
-      target,
-      isExternal: true,
-      itemPath: [],
-      itemName: '',
-      headingPath: [],
-    }
-  }
-
-  const parts = target.split('#')
-  const itemPathStr = parts[0].trim()
-  const headingPath = parts
-    .slice(1)
-    .map((h) => h.trim())
-    .filter(Boolean)
-  const itemPath = itemPathStr
-    .split('/')
-    .map((s) => s.trim())
-    .filter(Boolean)
-  const itemName = itemPath.at(-1) || ''
-
-  return { target, isExternal: false, itemPath, itemName, headingPath }
-}
-
 interface MdLinkMatch {
   from: number
   to: number
   displayText: string
   target: string
-  parsed: ParsedMdLink
-  itemInfo: MdLinkItemInfo | undefined
+  parsed: ParsedMdLinkFields & { displayText: string }
+  resolved: ResolvedLink
 }
 
 interface PluginState {
   decorations: DecorationSet
   selFrom: number
   selTo: number
-}
-
-export const MD_LINK_REGEX = /(?<!!)\[([^\]]+)\]\(([^)]+)\)/g
-
-export interface MdLinkResolver {
-  resolve: (pathSegments: Array<string>) => MdLinkItemInfo | undefined
-  allItems: Array<AnySidebarItem>
-  itemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>
-}
-
-export function useMdLinkExtension(editor: CustomBlockNoteEditor | undefined) {
-  const { data: sidebarItems, itemsMap } = useActiveSidebarItems()
-  const { dmUsername, campaignSlug } = useCampaign()
-  const { editorMode, viewAsPlayerId } = useEditorMode()
-  const pluginRef = useRef<Plugin | null>(null)
-  const isViewerMode = editorMode === 'viewer' || viewAsPlayerId !== undefined
-
-  const allItems = sidebarItems || []
-
-  const resolve = (pathSegments: Array<string>): MdLinkItemInfo | undefined => {
-    if (!dmUsername || !campaignSlug || pathSegments.length === 0) return undefined
-
-    const item = resolveItemByPath(pathSegments, allItems, itemsMap)
-    if (!item) return undefined
-
-    const href = `/campaigns/${dmUsername}/${campaignSlug}/editor?item=${item.slug}`
-    return { item, href }
-  }
-
-  const resolver: MdLinkResolver = { resolve, allItems, itemsMap }
-
-  useEffect(() => {
-    const tiptapEditor = editor?._tiptapEditor
-    if (!tiptapEditor) return
-
-    return registerLinkPlugins({
-      tiptapEditor,
-      pluginKey: PLUGIN_KEY,
-      stabilizerKey: SELECTION_STABILIZER_KEY,
-      createDecorationPlugin: () => createMdLinkPlugin(resolver, isViewerMode),
-      pluginRef,
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor, resolver, isViewerMode])
-
-  return { resolver }
 }
 
 const TEXT_BLOCK_TYPES = new Set([
@@ -133,7 +39,27 @@ const TEXT_BLOCK_TYPES = new Set([
   'toggleListItem',
 ])
 
-function findMdLinks(doc: ProseMirrorNode, resolver: MdLinkResolver): Array<MdLinkMatch> {
+export function useMdLinkExtension(
+  editor: CustomBlockNoteEditor | undefined,
+  resolver: LinkResolver,
+) {
+  const pluginRef = useRef<Plugin | null>(null)
+
+  useEffect(() => {
+    const tiptapEditor = editor?._tiptapEditor
+    if (!tiptapEditor) return
+
+    return registerLinkPlugins({
+      tiptapEditor,
+      pluginKey: PLUGIN_KEY,
+      stabilizerKey: SELECTION_STABILIZER_KEY,
+      createDecorationPlugin: () => createMdLinkPlugin(resolver, resolver.isViewerMode),
+      pluginRef,
+    })
+  }, [editor, resolver, resolver.isViewerMode])
+}
+
+function findMdLinks(doc: ProseMirrorNode, resolver: LinkResolver): Array<MdLinkMatch> {
   const matches: Array<MdLinkMatch> = []
   const regex = new RegExp(MD_LINK_REGEX.source, 'g')
 
@@ -152,16 +78,24 @@ function findMdLinks(doc: ProseMirrorNode, resolver: MdLinkResolver): Array<MdLi
       const to = nodeStart + 1 + match.index + match[0].length
       const displayText = match[1]
       const target = match[2]
-      const parsed: ParsedMdLink = { displayText, ...parseMdLinkTarget(target) }
-      const itemInfo = parsed.isExternal ? undefined : resolver.resolve(parsed.itemPath)
-      matches.push({ from, to, displayText, target, parsed, itemInfo })
+      const parsed = { displayText, ...parseMdLinkTarget(target) }
+      const resolved = resolver.resolveLink({
+        syntax: 'md',
+        itemPath: parsed.itemPath,
+        itemName: parsed.itemName,
+        headingPath: parsed.headingPath,
+        displayName: displayText,
+        rawTarget: target,
+        isExternal: parsed.isExternal,
+      })
+      matches.push({ from, to, displayText, target, parsed, resolved })
     }
   })
 
   return matches
 }
 
-function createMdLinkPlugin(resolver: MdLinkResolver, isViewerMode: boolean): Plugin<PluginState> {
+function createMdLinkPlugin(resolver: LinkResolver, isViewerMode: boolean): Plugin<PluginState> {
   return new Plugin<PluginState>({
     key: PLUGIN_KEY,
     state: {
@@ -246,29 +180,23 @@ function buildDecorations(
 ): DecorationSet {
   const decorations: Array<Decoration> = []
 
-  for (const { from, to, displayText, target, parsed, itemInfo } of matches) {
+  for (const { from, to, displayText, target, parsed, resolved } of matches) {
     const baseClass = parsed.isExternal
       ? 'md-link-external'
-      : itemInfo
+      : resolved.resolved
         ? 'md-link-exists'
         : 'md-link-ghost'
-    const color =
-      !parsed.isExternal && itemInfo ? validateHexColorOrDefault(itemInfo.item.color) : undefined
+    const color = resolved.color ?? undefined
     const isActive = !isViewerMode && overlapsSelection(from, to, selFrom, selTo)
     const classes = `${baseClass}${isViewerMode ? ' md-link-viewer' : ''}${isActive ? ' md-link-active' : ''}`
 
-    let href = parsed.isExternal ? target : itemInfo?.href
-    if (href && !parsed.isExternal && parsed.headingPath.length > 0) {
-      href = `${href}&heading=${encodeURIComponent(parsed.headingPath.join('#'))}`
-    }
+    const linkType = parsed.isExternal ? 'md-external' : 'md-internal'
 
-    // Positions: [displayText](target)
     const openBracketEnd = from + 1
     const displayEnd = from + 1 + displayText.length
     const middleBracketEnd = displayEnd + 2
     const targetEnd = middleBracketEnd + target.length
 
-    // Opening bracket [
     decorations.push(
       Decoration.inline(from, openBracketEnd, {
         nodeName: 'span',
@@ -277,7 +205,6 @@ function buildDecorations(
       }),
     )
 
-    // Display text
     decorations.push(
       Decoration.inline(openBracketEnd, displayEnd, {
         nodeName: 'span',
@@ -285,17 +212,26 @@ function buildDecorations(
         style: color ? `color: ${color}` : undefined,
         'data-md-link-type': parsed.isExternal ? 'external' : 'internal',
         'data-md-link-target': target,
-        'data-md-link-exists': parsed.isExternal || itemInfo ? 'true' : 'false',
-        ...(href && { 'data-href': href }),
-        ...(!parsed.isExternal && parsed.itemName && { 'data-md-link-item-name': parsed.itemName }),
+        'data-md-link-exists': parsed.isExternal || resolved.resolved ? 'true' : 'false',
+        'data-link-exists': parsed.isExternal || resolved.resolved ? 'true' : 'false',
+        'data-link-type': linkType,
+        ...(resolved.href && {
+          'data-href': resolved.href,
+          'data-link-href': resolved.href,
+        }),
+        ...(!parsed.isExternal &&
+          parsed.itemName && {
+            'data-md-link-item-name': parsed.itemName,
+            'data-link-item-name': parsed.itemName,
+          }),
         ...(!parsed.isExternal &&
           parsed.headingPath.length > 0 && {
             'data-md-link-heading': parsed.headingPath.join('#'),
+            'data-link-heading': parsed.headingPath.join('#'),
           }),
       }),
     )
 
-    // Middle bracket ](
     decorations.push(
       Decoration.inline(displayEnd, middleBracketEnd, {
         nodeName: 'span',
@@ -304,7 +240,6 @@ function buildDecorations(
       }),
     )
 
-    // Target
     decorations.push(
       Decoration.inline(middleBracketEnd, targetEnd, {
         nodeName: 'span',
@@ -313,7 +248,6 @@ function buildDecorations(
       }),
     )
 
-    // Closing bracket )
     decorations.push(
       Decoration.inline(targetEnd, to, {
         nodeName: 'span',

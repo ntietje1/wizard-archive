@@ -14,9 +14,11 @@ import { editHistoryTables } from './editHistory/schema'
 import { documentSnapshotsTables } from './documentSnapshots/schema'
 import { sidebarItemsTables } from './sidebarItems/schema/sidebarItemsTable'
 import { blocksTables } from './blocks/schema'
+import { noteLinksTables } from './links/schema'
 
 export default defineSchema({
   ...blocksTables,
+  ...noteLinksTables,
   ...editorTables,
   ...campaignTables,
   ...userTables,

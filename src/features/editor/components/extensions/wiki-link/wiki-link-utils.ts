@@ -7,6 +7,24 @@ export function isInsideWikiLink(editor: CustomBlockNoteEditor): boolean {
   return getWikiLinkContext(editor) !== null
 }
 
+export function splitWikiLinkTargetAndDisplayName(query: string): {
+  targetQuery: string
+  displayName: string | null
+} {
+  const lastPipeIndex = query.lastIndexOf('|')
+  if (lastPipeIndex === -1) {
+    return {
+      targetQuery: query,
+      displayName: null,
+    }
+  }
+
+  return {
+    targetQuery: query.slice(0, lastPipeIndex),
+    displayName: query.slice(lastPipeIndex + 1).trim() || null,
+  }
+}
+
 /**
  * Get the wikilink context at the cursor position.
  * Returns the full query text (before AND after cursor) and start position.
