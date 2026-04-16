@@ -16,7 +16,7 @@ export function FinalCtaSection() {
           to="/sign-up"
           className={buttonVariants({ size: 'lg', className: 'mt-8 text-base px-8' })}
         >
-          Start free trial
+          Trey for free
         </Link>
       </LandingContainer>
     </section>
