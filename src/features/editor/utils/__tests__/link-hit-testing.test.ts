@@ -126,6 +126,18 @@ describe('getLinkAt', () => {
     expect(getLinkAt(6, 6)).toBeNull()
   })
 
+  it('returns null when a matched element has an unrecognized link type', () => {
+    const linkEl = document.createElement('span')
+    linkEl.setAttribute('data-link-role', 'content')
+    linkEl.setAttribute('data-link-type', 'broken-link')
+    linkEl.setAttribute('data-link-exists', 'true')
+    document.body.appendChild(linkEl)
+
+    mockElementFromPoint(linkEl)
+
+    expect(getLinkAt(7, 7)).toBeNull()
+  })
+
   it('falls back to the legacy wiki-link content class when data-link-role is absent', () => {
     const linkEl = document.createElement('span')
     linkEl.className = 'wiki-link-content'

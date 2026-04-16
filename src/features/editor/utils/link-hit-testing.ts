@@ -8,7 +8,7 @@ export interface ParsedLinkElement {
   itemName: string | null
   href: string | null
   heading: string | null
-  type: LinkType | null
+  type: LinkType
 }
 
 const GENERIC_LINK_SELECTOR = [
@@ -29,7 +29,10 @@ function getValidLinkType(type: string | null): LinkType | null {
   }
 }
 
-export function parseLinkElement(linkEl: Element): ParsedLinkElement {
+export function parseLinkElement(linkEl: Element): ParsedLinkElement | null {
+  const type = getValidLinkType(linkEl.getAttribute('data-link-type'))
+  if (!type) return null
+
   const itemPath = linkEl
     .getAttribute('data-link-path')
     ?.split('/')
@@ -43,7 +46,7 @@ export function parseLinkElement(linkEl: Element): ParsedLinkElement {
     itemName: linkEl.getAttribute('data-link-item-name'),
     href: linkEl.getAttribute('data-link-href'),
     heading: linkEl.getAttribute('data-link-heading'),
-    type: getValidLinkType(linkEl.getAttribute('data-link-type')),
+    type,
   }
 }
 
