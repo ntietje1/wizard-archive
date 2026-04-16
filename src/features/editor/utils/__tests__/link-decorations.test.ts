@@ -9,9 +9,13 @@ function getDecorationAttrs(decoration: Decoration) {
 }
 
 function getRoleSequence(decorations: Array<Decoration>) {
-  return decorations.map(
-    (decoration) => getDecorationAttrs(decoration)['data-link-role'] ?? 'untyped',
-  )
+  return decorations
+    .map((decoration) => getDecorationAttrs(decoration)['data-link-role'])
+    .filter((role): role is string => typeof role === 'string')
+}
+
+function findDecorationByRole(decorations: Array<Decoration>, role: string) {
+  return decorations.find((decoration) => getDecorationAttrs(decoration)['data-link-role'] === role)
 }
 
 describe('link decoration entries', () => {
@@ -47,18 +51,18 @@ describe('link decoration entries', () => {
       'content',
       'bracket-close',
     ])
-    expect(getDecorationAttrs(decorations[1])).toEqual(
+    expect(getDecorationAttrs(findDecorationByRole(decorations, 'prefix')!)).toEqual(
       expect.objectContaining({
-        class: 'wiki-link-hidden-prefix',
+        class: 'wiki-link wiki-link-hidden-prefix',
         'data-link-role': 'prefix',
         'data-link-type': 'wiki',
         'data-link-status': 'exists',
         'data-link-item-name': 'Capital',
       }),
     )
-    expect(getDecorationAttrs(decorations[2])).toEqual(
+    expect(getDecorationAttrs(findDecorationByRole(decorations, 'content')!)).toEqual(
       expect.objectContaining({
-        class: 'wiki-link-content',
+        class: 'wiki-link wiki-link-content',
         'data-link-role': 'content',
         'data-link-type': 'wiki',
         'data-link-path': 'Lore/Capital',
@@ -95,9 +99,9 @@ describe('link decoration entries', () => {
 
     expect(decorations).toHaveLength(3)
     expect(getRoleSequence(decorations)).toEqual(['bracket-open', 'content', 'bracket-close'])
-    expect(getDecorationAttrs(decorations[1])).toEqual(
+    expect(getDecorationAttrs(findDecorationByRole(decorations, 'content')!)).toEqual(
       expect.objectContaining({
-        class: 'wiki-link-content',
+        class: 'wiki-link wiki-link-content',
         'data-link-role': 'content',
         'data-link-status': 'ghost',
         'data-link-viewer': 'true',

@@ -31,22 +31,9 @@
 }
 
 .wiki-link-bracket[data-link-active='true'],
-.wiki-link-bracket-open:hover,
-.wiki-link-bracket-close:hover,
-.wiki-link-bracket-open:has(+ [data-link-role='content']:hover),
-.wiki-link-bracket-open:has(+ [data-link-role='prefix']:hover),
-.wiki-link-bracket-open:has(+ [data-link-role='prefix'] + [data-link-role='content']:hover),
-.wiki-link-bracket-open:has(+ [data-link-role='content'] + [data-link-role='bracket-close']:hover),
-.wiki-link-bracket-open:has(
-  + [data-link-role='prefix'] + [data-link-role='content'] + [data-link-role='bracket-close']:hover
-),
-[data-link-role='content']:hover + .wiki-link-bracket-close,
-[data-link-role='prefix']:hover + [data-link-role='content'] + .wiki-link-bracket-close,
-.wiki-link-bracket-open:hover + [data-link-role='content'] + .wiki-link-bracket-close,
-.wiki-link-bracket-open:hover
-  + [data-link-role='prefix']
-  + [data-link-role='content']
-  + .wiki-link-bracket-close {
+.wiki-link-bracket:hover,
+.wiki-link-bracket-open:has(~ .wiki-link:hover),
+.wiki-link:hover ~ .wiki-link-bracket-close {
   font-size: inherit;
   opacity: 0.5;
 }
@@ -58,12 +45,8 @@
 
 .wiki-link-hidden-prefix[data-link-viewer='false'][data-link-active='true'],
 .wiki-link-hidden-prefix[data-link-viewer='false']:hover,
-.wiki-link-hidden-prefix[data-link-viewer='false']:has(+ [data-link-role='content']:hover),
-.wiki-link-bracket-open[data-link-viewer='false']:hover
-  + .wiki-link-hidden-prefix[data-link-viewer='false'],
-.wiki-link-hidden-prefix[data-link-viewer='false']:has(
-    + [data-link-role='content'] + [data-link-role='bracket-close']:hover
-  ) {
+.wiki-link-hidden-prefix[data-link-viewer='false']:has(~ .wiki-link:hover),
+.wiki-link:hover ~ .wiki-link-hidden-prefix[data-link-viewer='false'] {
   display: inline;
 }
 

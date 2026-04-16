@@ -18,6 +18,16 @@ interface BuildWikiLinkDecorationEntriesOptions {
   isActive: boolean
 }
 
+function appendDecoration(
+  decorations: Array<Decoration>,
+  from: number,
+  to: number,
+  attrs: Record<string, string | undefined>,
+) {
+  if (from >= to) return
+  decorations.push(Decoration.inline(from, to, attrs))
+}
+
 export function buildWikiLinkDecorationEntries(
   { from, to, innerText, parsed, resolved }: WikiLinkDecorationMatch,
   { isViewerMode, isActive }: BuildWikiLinkDecorationEntriesOptions,
@@ -36,50 +46,43 @@ export function buildWikiLinkDecorationEntries(
   const contentStart = from + 2
   const contentEnd = to - 2
 
-  const decorations = [
-    Decoration.inline(from, from + 2, {
-      nodeName: 'span',
-      class: 'wiki-link-bracket wiki-link-bracket-open',
-      style: state.style,
-      ...state.createPartAttrs(LINK_ROLE.bracketOpen),
-    }),
-  ]
+  const decorations: Array<Decoration> = []
+  appendDecoration(decorations, from, from + 2, {
+    nodeName: 'span',
+    class: 'wiki-link wiki-link-bracket wiki-link-bracket-open',
+    style: state.style,
+    ...state.createPartAttrs(LINK_ROLE.bracketOpen),
+  })
 
   let visibleContentStart = contentStart
   if (parsed.displayName) {
     const pipeIndex = innerText.lastIndexOf('|')
     visibleContentStart = Math.min(contentEnd, contentStart + pipeIndex + 1)
     if (contentStart < visibleContentStart) {
-      decorations.push(
-        Decoration.inline(contentStart, visibleContentStart, {
-          nodeName: 'span',
-          class: 'wiki-link-hidden-prefix',
-          style: state.style,
-          ...state.createPartAttrs(LINK_ROLE.prefix, true),
-        }),
-      )
+      appendDecoration(decorations, contentStart, visibleContentStart, {
+        nodeName: 'span',
+        class: 'wiki-link wiki-link-hidden-prefix',
+        style: state.style,
+        ...state.createPartAttrs(LINK_ROLE.prefix, true),
+      })
     }
   }
 
   if (visibleContentStart < contentEnd) {
-    decorations.push(
-      Decoration.inline(visibleContentStart, contentEnd, {
-        nodeName: 'span',
-        class: 'wiki-link-content',
-        style: state.style,
-        ...state.createPartAttrs(LINK_ROLE.content, true),
-      }),
-    )
+    appendDecoration(decorations, visibleContentStart, contentEnd, {
+      nodeName: 'span',
+      class: 'wiki-link wiki-link-content',
+      style: state.style,
+      ...state.createPartAttrs(LINK_ROLE.content, true),
+    })
   }
 
-  decorations.push(
-    Decoration.inline(to - 2, to, {
-      nodeName: 'span',
-      class: 'wiki-link-bracket wiki-link-bracket-close',
-      style: state.style,
-      ...state.createPartAttrs(LINK_ROLE.bracketClose),
-    }),
-  )
+  appendDecoration(decorations, to - 2, to, {
+    nodeName: 'span',
+    class: 'wiki-link wiki-link-bracket wiki-link-bracket-close',
+    style: state.style,
+    ...state.createPartAttrs(LINK_ROLE.bracketClose),
+  })
 
   return decorations
 }
