@@ -1,16 +1,15 @@
+import { Link } from '@tanstack/react-router'
 import { LandingContainer } from '~/features/landing/components/landing-container'
 import { SectionLabel } from '~/features/landing/components/section-label'
 import { AssetPlaceholder } from '~/features/landing/components/asset-placeholder'
+import { buttonVariants } from '~/features/shadcn/components/button'
 
 export function FeatureCanvases() {
   return (
     <section className="py-24">
       <LandingContainer>
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
-          <div className="order-2 lg:order-1">
-            <AssetPlaceholder label="Canvas with sticky notes, connecting lines, and embedded note nodes showing campaign content — a DM's planning board" />
-          </div>
-          <div className="order-1 lg:order-2">
+          <div>
             <SectionLabel>Canvases</SectionLabel>
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
               Plan visually when a page is too rigid.
@@ -37,6 +36,15 @@ export function FeatureCanvases() {
               <li>→ Snapshot history with rollback</li>
               <li>→ Pan, zoom, and minimap navigation</li>
             </ul>
+            <Link
+              to="/sign-up"
+              className={buttonVariants({ size: 'lg', className: 'mt-8 px-6 text-base' })}
+            >
+              Start Planning
+            </Link>
+          </div>
+          <div>
+            <AssetPlaceholder label="Canvas with sticky notes, connecting lines, and embedded note nodes showing campaign content — a DM's planning board" />
           </div>
         </div>
       </LandingContainer>

@@ -1,13 +1,18 @@
+import { Link } from '@tanstack/react-router'
 import { LandingContainer } from '~/features/landing/components/landing-container'
 import { SectionLabel } from '~/features/landing/components/section-label'
 import { AssetPlaceholder } from '~/features/landing/components/asset-placeholder'
+import { buttonVariants } from '~/features/shadcn/components/button'
 
 export function FeatureSharing() {
   return (
     <section id="features" className="py-24">
       <LandingContainer>
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
-          <div>
+          <div className="order-2 lg:order-1">
+            <AssetPlaceholder label="Split view: DM view (all blocks visible with sharing indicators) vs. Player view (hidden blocks absent). Labels: 'DM view' / 'Player view'" />
+          </div>
+          <div className="order-1 lg:order-2">
             <SectionLabel>Block-Level Sharing</SectionLabel>
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
               Control what each player sees.
@@ -33,8 +38,13 @@ export function FeatureSharing() {
               <li>→ Share with one player or the whole group</li>
               <li>→ DM always retains full access</li>
             </ul>
+            <Link
+              to="/sign-up"
+              className={buttonVariants({ size: 'lg', className: 'mt-8 px-6 text-base' })}
+            >
+              Start Sharing
+            </Link>
           </div>
-          <AssetPlaceholder label="Split view: DM view (all blocks visible with sharing indicators) vs. Player view (hidden blocks absent). Labels: 'DM view' / 'Player view'" />
         </div>
       </LandingContainer>
     </section>

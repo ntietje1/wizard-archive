@@ -58,7 +58,7 @@ export function NavBar() {
             Log in
           </Link>
           <Link to="/sign-up" className={buttonVariants()}>
-            Start free trial
+            Try for Free
           </Link>
         </div>
         <button
@@ -105,7 +105,7 @@ export function NavBar() {
               Log in
             </Link>
             <Link to="/sign-up" className={buttonVariants({ className: 'mt-1' })}>
-              Start free trial
+              Try for Free
             </Link>
           </div>
         </div>

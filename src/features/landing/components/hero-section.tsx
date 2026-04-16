@@ -27,7 +27,7 @@ export function HeroSection() {
             to="/sign-up"
             className={buttonVariants({ size: 'lg', className: 'text-base px-6' })}
           >
-            Start free trial
+            Try for Free
           </Link>
           <Link
             to="/demo"
