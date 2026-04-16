@@ -136,15 +136,15 @@ describe('resolveItemByPath', () => {
   })
 
   it('does not match collapsed paths through unnamed ancestors', () => {
-    const items = [
+    const unnamedAncestorItems = [
       makeItem('a', 'A'),
       makeItem('b', '', 'a'),
       makeItem('c', 'C', 'b'),
       makeItem('d', 'C', 'a'),
     ]
-    const map = buildMap(items)
+    const unnamedAncestorMap = buildMap(unnamedAncestorItems)
 
-    expect(resolveItemByPath(['A', 'C'], items, map)?._id).toBe('d')
+    expect(resolveItemByPath(['A', 'C'], unnamedAncestorItems, unnamedAncestorMap)?._id).toBe('d')
   })
 })
 
@@ -236,13 +236,15 @@ describe('getMinDisambiguationPath', () => {
   })
 
   it('falls back to the item name when the full path is invalid', () => {
-    const items = [
+    const invalidPathItems = [
       makeItem('a', 'Root'),
       makeItem('b', '', 'a'),
       makeItem('c', 'Leaf', 'b'),
     ]
-    const map = buildMap(items)
+    const invalidPathMap = buildMap(invalidPathItems)
 
-    expect(getMinDisambiguationPath(items[2], items, map)).toEqual(['Leaf'])
+    expect(getMinDisambiguationPath(invalidPathItems[2], invalidPathItems, invalidPathMap)).toEqual(
+      ['Leaf'],
+    )
   })
 })

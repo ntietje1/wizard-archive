@@ -4,7 +4,14 @@ export const WIKI_LINK_REGEX = /\[\[((?:(?!\[\[)(?!\]\][^\]]).)+?)\]\](?=$|[^\]]
 
 export const MD_LINK_REGEX = /(?<!!)\[([^\]]+)\]\(([^()]*(?:\([^()]*\)[^()]*)*)\)/g
 
-const SAFE_EXTERNAL_URL_PREFIXES = ['//', 'http://', 'https://', 'mailto:', 'tel:', 'ftp://'] as const
+const SAFE_EXTERNAL_URL_PREFIXES = [
+  '//',
+  'http://',
+  'https://',
+  'mailto:',
+  'tel:',
+  'ftp://',
+] as const
 
 const DANGEROUS_URL_PREFIXES = [
   'javascript:',

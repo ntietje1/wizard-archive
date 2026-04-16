@@ -46,15 +46,18 @@ describe('createNote', () => {
         id: 'block-a',
         type: 'paragraph',
         props: {},
-        content: [{ type: 'text', text: 'See [[Target Note]]', styles: {} }] as CustomBlock['content'],
+        content: [
+          { type: 'text', text: 'See [[Target Note]]', styles: {} },
+        ] as CustomBlock['content'],
         children: [],
       },
       {
         id: 'block-b',
         type: 'paragraph',
         props: {},
-        content:
-          [{ type: 'text', text: 'And [Alias](Target Note)', styles: {} }] as CustomBlock['content'],
+        content: [
+          { type: 'text', text: 'And [Alias](Target Note)', styles: {} },
+        ] as CustomBlock['content'],
         children: [],
       },
     ]
