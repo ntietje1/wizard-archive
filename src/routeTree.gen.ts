@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as DemoRouteImport } from './routes/demo'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppSignUpRouteRouteImport } from './routes/_app/sign-up/route'
@@ -28,6 +29,11 @@ import { Route as AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteImport
 import { Route as AppAuthedCampaignsDmUsernameCampaignSlugSceneIndexRouteImport } from './routes/_app/_authed/campaigns/$dmUsername.$campaignSlug/scene/index'
 import { Route as AppAuthedCampaignsDmUsernameCampaignSlugEditorIndexRouteImport } from './routes/_app/_authed/campaigns/$dmUsername.$campaignSlug/editor/index'
 
+const DemoRoute = DemoRouteImport.update({
+  id: '/demo',
+  path: '/demo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
@@ -128,6 +134,7 @@ const AppAuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/demo': typeof DemoRoute
   '/auth-redirect': typeof AppAuthRedirectRouteRoute
   '/forgot-password': typeof AppForgotPasswordRouteRoute
   '/reset-password': typeof AppResetPasswordRouteRoute
@@ -146,6 +153,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/demo': typeof DemoRoute
   '/auth-redirect': typeof AppAuthRedirectRouteRoute
   '/forgot-password': typeof AppForgotPasswordRouteRoute
   '/reset-password': typeof AppResetPasswordRouteRoute
@@ -162,6 +170,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
+  '/demo': typeof DemoRoute
   '/_app/_authed': typeof AppAuthedRouteRouteWithChildren
   '/_app/auth-redirect': typeof AppAuthRedirectRouteRoute
   '/_app/forgot-password': typeof AppForgotPasswordRouteRoute
@@ -183,6 +192,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/demo'
     | '/auth-redirect'
     | '/forgot-password'
     | '/reset-password'
@@ -201,6 +211,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/demo'
     | '/auth-redirect'
     | '/forgot-password'
     | '/reset-password'
@@ -216,6 +227,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_app'
+    | '/demo'
     | '/_app/_authed'
     | '/_app/auth-redirect'
     | '/_app/forgot-password'
@@ -237,11 +249,19 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
+  DemoRoute: typeof DemoRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/demo': {
+      id: '/demo'
+      path: '/demo'
+      fullPath: '/demo'
+      preLoaderRoute: typeof DemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app': {
       id: '/_app'
       path: ''
@@ -477,6 +497,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
+  DemoRoute: DemoRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

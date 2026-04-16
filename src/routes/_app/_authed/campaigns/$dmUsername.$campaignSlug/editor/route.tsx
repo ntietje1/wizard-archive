@@ -6,5 +6,5 @@ import { EditorPage } from '~/features/editor/pages/editor-page'
 
 export const Route = createFileRoute('/_app/_authed/campaigns/$dmUsername/$campaignSlug/editor')({
   component: EditorPage,
-  validateSearch: (search: Record<string, unknown>) => validateSearch(search),
+  validateSearch,
 })

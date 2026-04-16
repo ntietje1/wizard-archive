@@ -10,7 +10,7 @@ import { SearchDialog } from '~/features/search/components/search-dialog'
 
 export function CampaignLayout() {
   const { initialPanelPreferences } = useRouteContext({
-    from: '__root__',
+    from: '/_app',
   })
 
   return (

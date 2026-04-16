@@ -24,7 +24,7 @@ export const Route = createFileRoute('/_app')({
   beforeLoad: async (ctx) => {
     if (typeof window !== 'undefined') {
       return {
-        token: null,
+        token: undefined,
         initialTheme: null,
         initialPanelPreferences: null as Record<string, PanelPreference> | null,
       }

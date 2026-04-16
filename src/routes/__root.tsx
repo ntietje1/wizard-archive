@@ -32,6 +32,16 @@ export const Route = createRootRouteWithContext<{
       },
     ],
     links: [
+      { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+      {
+        rel: 'preconnect',
+        href: 'https://fonts.gstatic.com',
+        crossOrigin: 'anonymous',
+      },
+      {
+        rel: 'stylesheet',
+        href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
+      },
       { rel: 'stylesheet', href: appCss },
       {
         rel: 'apple-touch-icon',
@@ -71,8 +81,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
   let themeClass: 'dark' | 'light' = 'dark'
   if (appMatch) {
-    const initialTheme = (appMatch.context as { initialTheme?: Theme | null }).initialTheme
+    const context = appMatch.context
+    const initialTheme =
+      context && typeof context === 'object' && 'initialTheme' in context
+        ? (context as { initialTheme?: Theme | null }).initialTheme
+        : null
     themeClass = resolveTheme(initialTheme ?? getThemeCookie() ?? 'system')
+  } else {
+    themeClass = resolveTheme(getThemeCookie() ?? 'system')
   }
 
   return (

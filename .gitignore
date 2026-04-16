@@ -37,6 +37,8 @@ playwright-report/
 coverage/
 
 .claude/
+AGENTS.md
+.codex/
 
 
 # wrangler files
