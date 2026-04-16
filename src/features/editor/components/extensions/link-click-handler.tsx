@@ -49,7 +49,7 @@ export function LinkClickHandler({ editor }: { editor: CustomBlockNoteEditor | u
 
   const [tooltip, setTooltip] = useState<TooltipState>(HIDDEN_TOOLTIP)
   const [ctrlHeld, setCtrlHeld] = useState(false)
-  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null)
+  const mousePosRef = useRef<{ x: number; y: number } | null>(null)
   const isCreatingRef = useRef(false)
 
   const { mutateAsync: createNote } = useAppMutation(api.notes.mutations.createNote)
@@ -77,6 +77,7 @@ export function LinkClickHandler({ editor }: { editor: CustomBlockNoteEditor | u
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Control' || e.key === 'Meta') {
         setCtrlHeld(true)
+        const mousePos = mousePosRef.current
         if (mousePos) {
           const link = getLinkAt(mousePos.x, mousePos.y)
           if (link && !link.exists) {
@@ -104,13 +105,13 @@ export function LinkClickHandler({ editor }: { editor: CustomBlockNoteEditor | u
       document.removeEventListener('keyup', onKeyUp)
       window.removeEventListener('blur', onBlur)
     }
-  }, [hideTooltip, mousePos, showTooltipFor])
+  }, [hideTooltip, showTooltipFor])
 
   useEffect(() => {
     if (!editorEl) return
 
     const onMouseMove = (e: MouseEvent) => {
-      setMousePos({ x: e.clientX, y: e.clientY })
+      mousePosRef.current = { x: e.clientX, y: e.clientY }
 
       const link = getLinkAt(e.clientX, e.clientY)
       if (!ctrlHeld || !link || link.exists) {
@@ -121,7 +122,7 @@ export function LinkClickHandler({ editor }: { editor: CustomBlockNoteEditor | u
     }
 
     const onMouseLeave = () => {
-      setMousePos(null)
+      mousePosRef.current = null
       hideTooltip()
     }
 
