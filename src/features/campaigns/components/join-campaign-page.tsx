@@ -18,7 +18,7 @@ import { Header } from '~/shared/components/header'
 import { SignInForm } from '~/features/auth/components/sign-in-form'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { StatusIcon } from '~/features/campaigns/components/status-icon'
-import { Route } from '~/routes/join.$dmUsername.$campaignSlug'
+import { Route } from '~/routes/_app/join.$dmUsername.$campaignSlug'
 
 export function JoinCampaignPage() {
   const navigate = useNavigate()

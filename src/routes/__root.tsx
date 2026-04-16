@@ -3,76 +3,21 @@ import {
   Outlet,
   Scripts,
   createRootRouteWithContext,
-  useRouteContext,
+  useMatches,
 } from '@tanstack/react-router'
-import { ConvexBetterAuthProvider } from '@convex-dev/better-auth/react'
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
-import { createServerFn } from '@tanstack/react-start'
-import { LazyMotion, domAnimation } from 'motion/react'
 import * as React from 'react'
-import { Toaster } from 'sonner'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import type { ConvexReactClient } from 'convex/react'
 import type { ConvexQueryClient } from '@convex-dev/react-query'
 import type { QueryClient } from '@tanstack/react-query'
+import { getThemeCookie, resolveTheme } from '~/features/settings/hooks/useTheme'
 import type { Theme } from '~/features/settings/hooks/useTheme'
-import type { PanelPreference } from 'convex/userPreferences/types'
-import { NavigationProgress } from '~/shared/components/navigation-progress'
-import { PreviewBanner } from '~/shared/components/preview-banner'
-import { isPreview } from '~/shared/utils/preview'
-import { ThemeProvider } from '~/shared/components/theme-provider'
-import { resolveTheme } from '~/features/settings/hooks/useTheme'
-import { prefetchUserPreferences } from '~/features/settings/hooks/useUserPreferences'
-import { authClient } from '~/features/auth/utils/auth-client'
-import { getToken } from '~/features/auth/utils/auth-server'
 import appCss from '~/styles/app.css?url'
-import { logger } from '~/shared/utils/logger'
-
-const fetchAuthToken = createServerFn({ method: 'GET' }).handler(async () => {
-  return await getToken()
-})
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient
   convexClient: ConvexReactClient
   convexQueryClient: ConvexQueryClient
 }>()({
-  beforeLoad: async (ctx) => {
-    if (typeof window !== 'undefined') {
-      return {
-        token: null,
-        initialTheme: null,
-        initialPanelPreferences: null as Record<string, PanelPreference> | null,
-      }
-    }
-
-    let token: string | undefined = undefined
-    try {
-      token = await fetchAuthToken()
-    } catch (error) {
-      logger.debug('[auth] fetchAuthToken failed, falling back to client-side auth:', error)
-    }
-    let initialTheme: Theme | null = null
-    let initialPanelPreferences: Record<string, PanelPreference> | null = null
-    if (token) {
-      ctx.context.convexQueryClient.serverHttpClient?.setAuth(token)
-      try {
-        const prefs = await prefetchUserPreferences(ctx.context.queryClient)
-        initialTheme = prefs?.theme ?? null
-        initialPanelPreferences = prefs?.panelPreferences ?? null
-      } catch (error) {
-        logger.debug(
-          '[preferences] prefetchUserPreferences failed, falling back to defaults:',
-          error,
-        )
-      }
-    }
-    return {
-      token,
-      initialTheme,
-      initialPanelPreferences,
-    }
-  },
   head: () => ({
     meta: [
       {
@@ -87,6 +32,20 @@ export const Route = createRootRouteWithContext<{
       },
     ],
     links: [
+      {
+        rel: 'preload',
+        href: '/fonts/inter-400.woff2',
+        as: 'font',
+        type: 'font/woff2',
+        crossOrigin: 'anonymous',
+      },
+      {
+        rel: 'preload',
+        href: '/fonts/inter-600.woff2',
+        as: 'font',
+        type: 'font/woff2',
+        crossOrigin: 'anonymous',
+      },
       { rel: 'stylesheet', href: appCss },
       {
         rel: 'apple-touch-icon',
@@ -113,44 +72,35 @@ export const Route = createRootRouteWithContext<{
 })
 
 function RootComponent() {
-  const context = useRouteContext({ from: Route.id })
-
   return (
-    <ConvexBetterAuthProvider
-      client={context.convexClient}
-      authClient={authClient}
-      initialToken={context.token}
-    >
-      <ThemeProvider initialTheme={context.initialTheme}>
-        <RootDocument initialTheme={context.initialTheme}>
-          <Outlet />
-        </RootDocument>
-      </ThemeProvider>
-    </ConvexBetterAuthProvider>
+    <RootDocument>
+      <Outlet />
+    </RootDocument>
   )
 }
 
-function RootDocument({
-  children,
-  initialTheme,
-}: {
-  children: React.ReactNode
-  initialTheme: Theme | null
-}) {
+function RootDocument({ children }: { children: React.ReactNode }) {
+  const matches = useMatches()
+  const appMatch = matches.find((m) => m.routeId === '/_app')
+
+  const themeClass: 'dark' | 'light' = appMatch
+    ? (() => {
+        const context = appMatch.context
+        const initialTheme =
+          context && typeof context === 'object' && 'initialTheme' in context
+            ? (context as { initialTheme?: Theme | null }).initialTheme
+            : null
+        return resolveTheme(initialTheme ?? getThemeCookie() ?? 'system')
+      })()
+    : resolveTheme(getThemeCookie() ?? 'system')
+
   return (
-    <html lang="en" className={resolveTheme(initialTheme ?? 'system')}>
+    <html lang="en" className={themeClass} suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
-      <body className="flex flex-col h-dvh overflow-hidden">
-        <LazyMotion features={domAnimation}>
-          <NavigationProgress />
-          {isPreview && <PreviewBanner />}
-          {children}
-          <Toaster />
-          <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" />
-          <TanStackRouterDevtools position="bottom-right" />
-        </LazyMotion>
+      <body className="flex flex-col min-h-screen">
+        {children}
         <Scripts />
       </body>
     </html>

@@ -12,7 +12,7 @@ const EDITOR_ROUTE = '/campaigns/$dmUsername/$campaignSlug/editor' as const
 
 export function useScrollToHeading(content: Array<CustomBlock> | undefined) {
   const editorMatch = useMatch({
-    from: '/_authed/campaigns/$dmUsername/$campaignSlug/editor',
+    from: '/_app/_authed/campaigns/$dmUsername/$campaignSlug/editor',
     shouldThrow: false,
   })
   const heading = editorMatch?.search?.heading

@@ -9,51 +9,33 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SignUpRouteRouteImport } from './routes/sign-up/route'
-import { Route as SignInRouteRouteImport } from './routes/sign-in/route'
-import { Route as ResetPasswordRouteRouteImport } from './routes/reset-password/route'
-import { Route as ForgotPasswordRouteRouteImport } from './routes/forgot-password/route'
-import { Route as AuthRedirectRouteRouteImport } from './routes/auth-redirect/route'
-import { Route as AuthedRouteRouteImport } from './routes/_authed/route'
+import { Route as DemoRouteImport } from './routes/demo'
+import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthedCampaignsRouteRouteImport } from './routes/_authed/campaigns/route'
-import { Route as AuthedCampaignsIndexRouteImport } from './routes/_authed/campaigns/index'
+import { Route as AppSignUpRouteRouteImport } from './routes/_app/sign-up/route'
+import { Route as AppSignInRouteRouteImport } from './routes/_app/sign-in/route'
+import { Route as AppResetPasswordRouteRouteImport } from './routes/_app/reset-password/route'
+import { Route as AppForgotPasswordRouteRouteImport } from './routes/_app/forgot-password/route'
+import { Route as AppAuthRedirectRouteRouteImport } from './routes/_app/auth-redirect/route'
+import { Route as AppAuthedRouteRouteImport } from './routes/_app/_authed/route'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
-import { Route as JoinDmUsernameCampaignSlugIndexRouteImport } from './routes/join.$dmUsername.$campaignSlug/index'
-import { Route as AuthedCampaignsDmUsernameCampaignSlugRouteRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/route'
-import { Route as AuthedCampaignsDmUsernameCampaignSlugIndexRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/index'
-import { Route as AuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/scene/route'
-import { Route as AuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/editor/route'
-import { Route as AuthedCampaignsDmUsernameCampaignSlugSceneIndexRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/scene/index'
-import { Route as AuthedCampaignsDmUsernameCampaignSlugEditorIndexRouteImport } from './routes/_authed/campaigns/$dmUsername.$campaignSlug/editor/index'
+import { Route as AppAuthedCampaignsRouteRouteImport } from './routes/_app/_authed/campaigns/route'
+import { Route as AppAuthedCampaignsIndexRouteImport } from './routes/_app/_authed/campaigns/index'
+import { Route as AppJoinDmUsernameCampaignSlugIndexRouteImport } from './routes/_app/join.$dmUsername.$campaignSlug/index'
+import { Route as AppAuthedCampaignsDmUsernameCampaignSlugRouteRouteImport } from './routes/_app/_authed/campaigns/$dmUsername.$campaignSlug/route'
+import { Route as AppAuthedCampaignsDmUsernameCampaignSlugIndexRouteImport } from './routes/_app/_authed/campaigns/$dmUsername.$campaignSlug/index'
+import { Route as AppAuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteImport } from './routes/_app/_authed/campaigns/$dmUsername.$campaignSlug/scene/route'
+import { Route as AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteImport } from './routes/_app/_authed/campaigns/$dmUsername.$campaignSlug/editor/route'
+import { Route as AppAuthedCampaignsDmUsernameCampaignSlugSceneIndexRouteImport } from './routes/_app/_authed/campaigns/$dmUsername.$campaignSlug/scene/index'
+import { Route as AppAuthedCampaignsDmUsernameCampaignSlugEditorIndexRouteImport } from './routes/_app/_authed/campaigns/$dmUsername.$campaignSlug/editor/index'
 
-const SignUpRouteRoute = SignUpRouteRouteImport.update({
-  id: '/sign-up',
-  path: '/sign-up',
+const DemoRoute = DemoRouteImport.update({
+  id: '/demo',
+  path: '/demo',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SignInRouteRoute = SignInRouteRouteImport.update({
-  id: '/sign-in',
-  path: '/sign-in',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResetPasswordRouteRoute = ResetPasswordRouteRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ForgotPasswordRouteRoute = ForgotPasswordRouteRouteImport.update({
-  id: '/forgot-password',
-  path: '/forgot-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRedirectRouteRoute = AuthRedirectRouteRouteImport.update({
-  id: '/auth-redirect',
-  path: '/auth-redirect',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthedRouteRoute = AuthedRouteRouteImport.update({
-  id: '/_authed',
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -61,120 +43,156 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthedCampaignsRouteRoute = AuthedCampaignsRouteRouteImport.update({
-  id: '/campaigns',
-  path: '/campaigns',
-  getParentRoute: () => AuthedRouteRoute,
+const AppSignUpRouteRoute = AppSignUpRouteRouteImport.update({
+  id: '/sign-up',
+  path: '/sign-up',
+  getParentRoute: () => AppRoute,
 } as any)
-const AuthedCampaignsIndexRoute = AuthedCampaignsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AuthedCampaignsRouteRoute,
+const AppSignInRouteRoute = AppSignInRouteRouteImport.update({
+  id: '/sign-in',
+  path: '/sign-in',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppResetPasswordRouteRoute = AppResetPasswordRouteRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppForgotPasswordRouteRoute = AppForgotPasswordRouteRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAuthRedirectRouteRoute = AppAuthRedirectRouteRouteImport.update({
+  id: '/auth-redirect',
+  path: '/auth-redirect',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAuthedRouteRoute = AppAuthedRouteRouteImport.update({
+  id: '/_authed',
+  getParentRoute: () => AppRoute,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const JoinDmUsernameCampaignSlugIndexRoute =
-  JoinDmUsernameCampaignSlugIndexRouteImport.update({
+const AppAuthedCampaignsRouteRoute = AppAuthedCampaignsRouteRouteImport.update({
+  id: '/campaigns',
+  path: '/campaigns',
+  getParentRoute: () => AppAuthedRouteRoute,
+} as any)
+const AppAuthedCampaignsIndexRoute = AppAuthedCampaignsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppAuthedCampaignsRouteRoute,
+} as any)
+const AppJoinDmUsernameCampaignSlugIndexRoute =
+  AppJoinDmUsernameCampaignSlugIndexRouteImport.update({
     id: '/join/$dmUsername/$campaignSlug/',
     path: '/join/$dmUsername/$campaignSlug/',
-    getParentRoute: () => rootRouteImport,
+    getParentRoute: () => AppRoute,
   } as any)
-const AuthedCampaignsDmUsernameCampaignSlugRouteRoute =
-  AuthedCampaignsDmUsernameCampaignSlugRouteRouteImport.update({
+const AppAuthedCampaignsDmUsernameCampaignSlugRouteRoute =
+  AppAuthedCampaignsDmUsernameCampaignSlugRouteRouteImport.update({
     id: '/$dmUsername/$campaignSlug',
     path: '/$dmUsername/$campaignSlug',
-    getParentRoute: () => AuthedCampaignsRouteRoute,
+    getParentRoute: () => AppAuthedCampaignsRouteRoute,
   } as any)
-const AuthedCampaignsDmUsernameCampaignSlugIndexRoute =
-  AuthedCampaignsDmUsernameCampaignSlugIndexRouteImport.update({
+const AppAuthedCampaignsDmUsernameCampaignSlugIndexRoute =
+  AppAuthedCampaignsDmUsernameCampaignSlugIndexRouteImport.update({
     id: '/',
     path: '/',
-    getParentRoute: () => AuthedCampaignsDmUsernameCampaignSlugRouteRoute,
+    getParentRoute: () => AppAuthedCampaignsDmUsernameCampaignSlugRouteRoute,
   } as any)
-const AuthedCampaignsDmUsernameCampaignSlugSceneRouteRoute =
-  AuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteImport.update({
+const AppAuthedCampaignsDmUsernameCampaignSlugSceneRouteRoute =
+  AppAuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteImport.update({
     id: '/scene',
     path: '/scene',
-    getParentRoute: () => AuthedCampaignsDmUsernameCampaignSlugRouteRoute,
+    getParentRoute: () => AppAuthedCampaignsDmUsernameCampaignSlugRouteRoute,
   } as any)
-const AuthedCampaignsDmUsernameCampaignSlugEditorRouteRoute =
-  AuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteImport.update({
+const AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRoute =
+  AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteImport.update({
     id: '/editor',
     path: '/editor',
-    getParentRoute: () => AuthedCampaignsDmUsernameCampaignSlugRouteRoute,
+    getParentRoute: () => AppAuthedCampaignsDmUsernameCampaignSlugRouteRoute,
   } as any)
-const AuthedCampaignsDmUsernameCampaignSlugSceneIndexRoute =
-  AuthedCampaignsDmUsernameCampaignSlugSceneIndexRouteImport.update({
+const AppAuthedCampaignsDmUsernameCampaignSlugSceneIndexRoute =
+  AppAuthedCampaignsDmUsernameCampaignSlugSceneIndexRouteImport.update({
     id: '/',
     path: '/',
-    getParentRoute: () => AuthedCampaignsDmUsernameCampaignSlugSceneRouteRoute,
+    getParentRoute: () =>
+      AppAuthedCampaignsDmUsernameCampaignSlugSceneRouteRoute,
   } as any)
-const AuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute =
-  AuthedCampaignsDmUsernameCampaignSlugEditorIndexRouteImport.update({
+const AppAuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute =
+  AppAuthedCampaignsDmUsernameCampaignSlugEditorIndexRouteImport.update({
     id: '/',
     path: '/',
-    getParentRoute: () => AuthedCampaignsDmUsernameCampaignSlugEditorRouteRoute,
+    getParentRoute: () =>
+      AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/auth-redirect': typeof AuthRedirectRouteRoute
-  '/forgot-password': typeof ForgotPasswordRouteRoute
-  '/reset-password': typeof ResetPasswordRouteRoute
-  '/sign-in': typeof SignInRouteRoute
-  '/sign-up': typeof SignUpRouteRoute
-  '/campaigns': typeof AuthedCampaignsRouteRouteWithChildren
+  '/demo': typeof DemoRoute
+  '/auth-redirect': typeof AppAuthRedirectRouteRoute
+  '/forgot-password': typeof AppForgotPasswordRouteRoute
+  '/reset-password': typeof AppResetPasswordRouteRoute
+  '/sign-in': typeof AppSignInRouteRoute
+  '/sign-up': typeof AppSignUpRouteRoute
+  '/campaigns': typeof AppAuthedCampaignsRouteRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/campaigns/': typeof AuthedCampaignsIndexRoute
-  '/campaigns/$dmUsername/$campaignSlug': typeof AuthedCampaignsDmUsernameCampaignSlugRouteRouteWithChildren
-  '/join/$dmUsername/$campaignSlug/': typeof JoinDmUsernameCampaignSlugIndexRoute
-  '/campaigns/$dmUsername/$campaignSlug/editor': typeof AuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteWithChildren
-  '/campaigns/$dmUsername/$campaignSlug/scene': typeof AuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteWithChildren
-  '/campaigns/$dmUsername/$campaignSlug/': typeof AuthedCampaignsDmUsernameCampaignSlugIndexRoute
-  '/campaigns/$dmUsername/$campaignSlug/editor/': typeof AuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute
-  '/campaigns/$dmUsername/$campaignSlug/scene/': typeof AuthedCampaignsDmUsernameCampaignSlugSceneIndexRoute
+  '/campaigns/': typeof AppAuthedCampaignsIndexRoute
+  '/campaigns/$dmUsername/$campaignSlug': typeof AppAuthedCampaignsDmUsernameCampaignSlugRouteRouteWithChildren
+  '/join/$dmUsername/$campaignSlug/': typeof AppJoinDmUsernameCampaignSlugIndexRoute
+  '/campaigns/$dmUsername/$campaignSlug/editor': typeof AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteWithChildren
+  '/campaigns/$dmUsername/$campaignSlug/scene': typeof AppAuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteWithChildren
+  '/campaigns/$dmUsername/$campaignSlug/': typeof AppAuthedCampaignsDmUsernameCampaignSlugIndexRoute
+  '/campaigns/$dmUsername/$campaignSlug/editor/': typeof AppAuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute
+  '/campaigns/$dmUsername/$campaignSlug/scene/': typeof AppAuthedCampaignsDmUsernameCampaignSlugSceneIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/auth-redirect': typeof AuthRedirectRouteRoute
-  '/forgot-password': typeof ForgotPasswordRouteRoute
-  '/reset-password': typeof ResetPasswordRouteRoute
-  '/sign-in': typeof SignInRouteRoute
-  '/sign-up': typeof SignUpRouteRoute
+  '/demo': typeof DemoRoute
+  '/auth-redirect': typeof AppAuthRedirectRouteRoute
+  '/forgot-password': typeof AppForgotPasswordRouteRoute
+  '/reset-password': typeof AppResetPasswordRouteRoute
+  '/sign-in': typeof AppSignInRouteRoute
+  '/sign-up': typeof AppSignUpRouteRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/campaigns': typeof AuthedCampaignsIndexRoute
-  '/join/$dmUsername/$campaignSlug': typeof JoinDmUsernameCampaignSlugIndexRoute
-  '/campaigns/$dmUsername/$campaignSlug': typeof AuthedCampaignsDmUsernameCampaignSlugIndexRoute
-  '/campaigns/$dmUsername/$campaignSlug/editor': typeof AuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute
-  '/campaigns/$dmUsername/$campaignSlug/scene': typeof AuthedCampaignsDmUsernameCampaignSlugSceneIndexRoute
+  '/campaigns': typeof AppAuthedCampaignsIndexRoute
+  '/join/$dmUsername/$campaignSlug': typeof AppJoinDmUsernameCampaignSlugIndexRoute
+  '/campaigns/$dmUsername/$campaignSlug': typeof AppAuthedCampaignsDmUsernameCampaignSlugIndexRoute
+  '/campaigns/$dmUsername/$campaignSlug/editor': typeof AppAuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute
+  '/campaigns/$dmUsername/$campaignSlug/scene': typeof AppAuthedCampaignsDmUsernameCampaignSlugSceneIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/_authed': typeof AuthedRouteRouteWithChildren
-  '/auth-redirect': typeof AuthRedirectRouteRoute
-  '/forgot-password': typeof ForgotPasswordRouteRoute
-  '/reset-password': typeof ResetPasswordRouteRoute
-  '/sign-in': typeof SignInRouteRoute
-  '/sign-up': typeof SignUpRouteRoute
-  '/_authed/campaigns': typeof AuthedCampaignsRouteRouteWithChildren
+  '/_app': typeof AppRouteWithChildren
+  '/demo': typeof DemoRoute
+  '/_app/_authed': typeof AppAuthedRouteRouteWithChildren
+  '/_app/auth-redirect': typeof AppAuthRedirectRouteRoute
+  '/_app/forgot-password': typeof AppForgotPasswordRouteRoute
+  '/_app/reset-password': typeof AppResetPasswordRouteRoute
+  '/_app/sign-in': typeof AppSignInRouteRoute
+  '/_app/sign-up': typeof AppSignUpRouteRoute
+  '/_app/_authed/campaigns': typeof AppAuthedCampaignsRouteRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/_authed/campaigns/': typeof AuthedCampaignsIndexRoute
-  '/_authed/campaigns/$dmUsername/$campaignSlug': typeof AuthedCampaignsDmUsernameCampaignSlugRouteRouteWithChildren
-  '/join/$dmUsername/$campaignSlug/': typeof JoinDmUsernameCampaignSlugIndexRoute
-  '/_authed/campaigns/$dmUsername/$campaignSlug/editor': typeof AuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteWithChildren
-  '/_authed/campaigns/$dmUsername/$campaignSlug/scene': typeof AuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteWithChildren
-  '/_authed/campaigns/$dmUsername/$campaignSlug/': typeof AuthedCampaignsDmUsernameCampaignSlugIndexRoute
-  '/_authed/campaigns/$dmUsername/$campaignSlug/editor/': typeof AuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute
-  '/_authed/campaigns/$dmUsername/$campaignSlug/scene/': typeof AuthedCampaignsDmUsernameCampaignSlugSceneIndexRoute
+  '/_app/_authed/campaigns/': typeof AppAuthedCampaignsIndexRoute
+  '/_app/_authed/campaigns/$dmUsername/$campaignSlug': typeof AppAuthedCampaignsDmUsernameCampaignSlugRouteRouteWithChildren
+  '/_app/join/$dmUsername/$campaignSlug/': typeof AppJoinDmUsernameCampaignSlugIndexRoute
+  '/_app/_authed/campaigns/$dmUsername/$campaignSlug/editor': typeof AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteWithChildren
+  '/_app/_authed/campaigns/$dmUsername/$campaignSlug/scene': typeof AppAuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteWithChildren
+  '/_app/_authed/campaigns/$dmUsername/$campaignSlug/': typeof AppAuthedCampaignsDmUsernameCampaignSlugIndexRoute
+  '/_app/_authed/campaigns/$dmUsername/$campaignSlug/editor/': typeof AppAuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute
+  '/_app/_authed/campaigns/$dmUsername/$campaignSlug/scene/': typeof AppAuthedCampaignsDmUsernameCampaignSlugSceneIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/demo'
     | '/auth-redirect'
     | '/forgot-password'
     | '/reset-password'
@@ -193,6 +211,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/demo'
     | '/auth-redirect'
     | '/forgot-password'
     | '/reset-password'
@@ -207,78 +226,47 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/_authed'
-    | '/auth-redirect'
-    | '/forgot-password'
-    | '/reset-password'
-    | '/sign-in'
-    | '/sign-up'
-    | '/_authed/campaigns'
+    | '/_app'
+    | '/demo'
+    | '/_app/_authed'
+    | '/_app/auth-redirect'
+    | '/_app/forgot-password'
+    | '/_app/reset-password'
+    | '/_app/sign-in'
+    | '/_app/sign-up'
+    | '/_app/_authed/campaigns'
     | '/api/auth/$'
-    | '/_authed/campaigns/'
-    | '/_authed/campaigns/$dmUsername/$campaignSlug'
-    | '/join/$dmUsername/$campaignSlug/'
-    | '/_authed/campaigns/$dmUsername/$campaignSlug/editor'
-    | '/_authed/campaigns/$dmUsername/$campaignSlug/scene'
-    | '/_authed/campaigns/$dmUsername/$campaignSlug/'
-    | '/_authed/campaigns/$dmUsername/$campaignSlug/editor/'
-    | '/_authed/campaigns/$dmUsername/$campaignSlug/scene/'
+    | '/_app/_authed/campaigns/'
+    | '/_app/_authed/campaigns/$dmUsername/$campaignSlug'
+    | '/_app/join/$dmUsername/$campaignSlug/'
+    | '/_app/_authed/campaigns/$dmUsername/$campaignSlug/editor'
+    | '/_app/_authed/campaigns/$dmUsername/$campaignSlug/scene'
+    | '/_app/_authed/campaigns/$dmUsername/$campaignSlug/'
+    | '/_app/_authed/campaigns/$dmUsername/$campaignSlug/editor/'
+    | '/_app/_authed/campaigns/$dmUsername/$campaignSlug/scene/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AuthedRouteRoute: typeof AuthedRouteRouteWithChildren
-  AuthRedirectRouteRoute: typeof AuthRedirectRouteRoute
-  ForgotPasswordRouteRoute: typeof ForgotPasswordRouteRoute
-  ResetPasswordRouteRoute: typeof ResetPasswordRouteRoute
-  SignInRouteRoute: typeof SignInRouteRoute
-  SignUpRouteRoute: typeof SignUpRouteRoute
+  AppRoute: typeof AppRouteWithChildren
+  DemoRoute: typeof DemoRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
-  JoinDmUsernameCampaignSlugIndexRoute: typeof JoinDmUsernameCampaignSlugIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/sign-up': {
-      id: '/sign-up'
-      path: '/sign-up'
-      fullPath: '/sign-up'
-      preLoaderRoute: typeof SignUpRouteRouteImport
+    '/demo': {
+      id: '/demo'
+      path: '/demo'
+      fullPath: '/demo'
+      preLoaderRoute: typeof DemoRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/sign-in': {
-      id: '/sign-in'
-      path: '/sign-in'
-      fullPath: '/sign-in'
-      preLoaderRoute: typeof SignInRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/forgot-password': {
-      id: '/forgot-password'
-      path: '/forgot-password'
-      fullPath: '/forgot-password'
-      preLoaderRoute: typeof ForgotPasswordRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth-redirect': {
-      id: '/auth-redirect'
-      path: '/auth-redirect'
-      fullPath: '/auth-redirect'
-      preLoaderRoute: typeof AuthRedirectRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authed': {
-      id: '/_authed'
+    '/_app': {
+      id: '/_app'
       path: ''
       fullPath: '/'
-      preLoaderRoute: typeof AuthedRouteRouteImport
+      preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -288,19 +276,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authed/campaigns': {
-      id: '/_authed/campaigns'
-      path: '/campaigns'
-      fullPath: '/campaigns'
-      preLoaderRoute: typeof AuthedCampaignsRouteRouteImport
-      parentRoute: typeof AuthedRouteRoute
+    '/_app/sign-up': {
+      id: '/_app/sign-up'
+      path: '/sign-up'
+      fullPath: '/sign-up'
+      preLoaderRoute: typeof AppSignUpRouteRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/_authed/campaigns/': {
-      id: '/_authed/campaigns/'
-      path: '/'
-      fullPath: '/campaigns/'
-      preLoaderRoute: typeof AuthedCampaignsIndexRouteImport
-      parentRoute: typeof AuthedCampaignsRouteRoute
+    '/_app/sign-in': {
+      id: '/_app/sign-in'
+      path: '/sign-in'
+      fullPath: '/sign-in'
+      preLoaderRoute: typeof AppSignInRouteRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/reset-password': {
+      id: '/_app/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof AppResetPasswordRouteRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/forgot-password': {
+      id: '/_app/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof AppForgotPasswordRouteRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/auth-redirect': {
+      id: '/_app/auth-redirect'
+      path: '/auth-redirect'
+      fullPath: '/auth-redirect'
+      preLoaderRoute: typeof AppAuthRedirectRouteRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/_authed': {
+      id: '/_app/_authed'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppAuthedRouteRouteImport
+      parentRoute: typeof AppRoute
     }
     '/api/auth/$': {
       id: '/api/auth/$'
@@ -309,145 +325,180 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/join/$dmUsername/$campaignSlug/': {
-      id: '/join/$dmUsername/$campaignSlug/'
+    '/_app/_authed/campaigns': {
+      id: '/_app/_authed/campaigns'
+      path: '/campaigns'
+      fullPath: '/campaigns'
+      preLoaderRoute: typeof AppAuthedCampaignsRouteRouteImport
+      parentRoute: typeof AppAuthedRouteRoute
+    }
+    '/_app/_authed/campaigns/': {
+      id: '/_app/_authed/campaigns/'
+      path: '/'
+      fullPath: '/campaigns/'
+      preLoaderRoute: typeof AppAuthedCampaignsIndexRouteImport
+      parentRoute: typeof AppAuthedCampaignsRouteRoute
+    }
+    '/_app/join/$dmUsername/$campaignSlug/': {
+      id: '/_app/join/$dmUsername/$campaignSlug/'
       path: '/join/$dmUsername/$campaignSlug'
       fullPath: '/join/$dmUsername/$campaignSlug/'
-      preLoaderRoute: typeof JoinDmUsernameCampaignSlugIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AppJoinDmUsernameCampaignSlugIndexRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/_authed/campaigns/$dmUsername/$campaignSlug': {
-      id: '/_authed/campaigns/$dmUsername/$campaignSlug'
+    '/_app/_authed/campaigns/$dmUsername/$campaignSlug': {
+      id: '/_app/_authed/campaigns/$dmUsername/$campaignSlug'
       path: '/$dmUsername/$campaignSlug'
       fullPath: '/campaigns/$dmUsername/$campaignSlug'
-      preLoaderRoute: typeof AuthedCampaignsDmUsernameCampaignSlugRouteRouteImport
-      parentRoute: typeof AuthedCampaignsRouteRoute
+      preLoaderRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugRouteRouteImport
+      parentRoute: typeof AppAuthedCampaignsRouteRoute
     }
-    '/_authed/campaigns/$dmUsername/$campaignSlug/': {
-      id: '/_authed/campaigns/$dmUsername/$campaignSlug/'
+    '/_app/_authed/campaigns/$dmUsername/$campaignSlug/': {
+      id: '/_app/_authed/campaigns/$dmUsername/$campaignSlug/'
       path: '/'
       fullPath: '/campaigns/$dmUsername/$campaignSlug/'
-      preLoaderRoute: typeof AuthedCampaignsDmUsernameCampaignSlugIndexRouteImport
-      parentRoute: typeof AuthedCampaignsDmUsernameCampaignSlugRouteRoute
+      preLoaderRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugIndexRouteImport
+      parentRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugRouteRoute
     }
-    '/_authed/campaigns/$dmUsername/$campaignSlug/scene': {
-      id: '/_authed/campaigns/$dmUsername/$campaignSlug/scene'
+    '/_app/_authed/campaigns/$dmUsername/$campaignSlug/scene': {
+      id: '/_app/_authed/campaigns/$dmUsername/$campaignSlug/scene'
       path: '/scene'
       fullPath: '/campaigns/$dmUsername/$campaignSlug/scene'
-      preLoaderRoute: typeof AuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteImport
-      parentRoute: typeof AuthedCampaignsDmUsernameCampaignSlugRouteRoute
+      preLoaderRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteImport
+      parentRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugRouteRoute
     }
-    '/_authed/campaigns/$dmUsername/$campaignSlug/editor': {
-      id: '/_authed/campaigns/$dmUsername/$campaignSlug/editor'
+    '/_app/_authed/campaigns/$dmUsername/$campaignSlug/editor': {
+      id: '/_app/_authed/campaigns/$dmUsername/$campaignSlug/editor'
       path: '/editor'
       fullPath: '/campaigns/$dmUsername/$campaignSlug/editor'
-      preLoaderRoute: typeof AuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteImport
-      parentRoute: typeof AuthedCampaignsDmUsernameCampaignSlugRouteRoute
+      preLoaderRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteImport
+      parentRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugRouteRoute
     }
-    '/_authed/campaigns/$dmUsername/$campaignSlug/scene/': {
-      id: '/_authed/campaigns/$dmUsername/$campaignSlug/scene/'
+    '/_app/_authed/campaigns/$dmUsername/$campaignSlug/scene/': {
+      id: '/_app/_authed/campaigns/$dmUsername/$campaignSlug/scene/'
       path: '/'
       fullPath: '/campaigns/$dmUsername/$campaignSlug/scene/'
-      preLoaderRoute: typeof AuthedCampaignsDmUsernameCampaignSlugSceneIndexRouteImport
-      parentRoute: typeof AuthedCampaignsDmUsernameCampaignSlugSceneRouteRoute
+      preLoaderRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugSceneIndexRouteImport
+      parentRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugSceneRouteRoute
     }
-    '/_authed/campaigns/$dmUsername/$campaignSlug/editor/': {
-      id: '/_authed/campaigns/$dmUsername/$campaignSlug/editor/'
+    '/_app/_authed/campaigns/$dmUsername/$campaignSlug/editor/': {
+      id: '/_app/_authed/campaigns/$dmUsername/$campaignSlug/editor/'
       path: '/'
       fullPath: '/campaigns/$dmUsername/$campaignSlug/editor/'
-      preLoaderRoute: typeof AuthedCampaignsDmUsernameCampaignSlugEditorIndexRouteImport
-      parentRoute: typeof AuthedCampaignsDmUsernameCampaignSlugEditorRouteRoute
+      preLoaderRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugEditorIndexRouteImport
+      parentRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRoute
     }
   }
 }
 
-interface AuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteChildren {
-  AuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute: typeof AuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute
+interface AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteChildren {
+  AppAuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute
 }
 
-const AuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteChildren: AuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteChildren =
+const AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteChildren: AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteChildren =
   {
-    AuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute:
-      AuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute,
+    AppAuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute:
+      AppAuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute,
   }
 
-const AuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteWithChildren =
-  AuthedCampaignsDmUsernameCampaignSlugEditorRouteRoute._addFileChildren(
-    AuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteChildren,
+const AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteWithChildren =
+  AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRoute._addFileChildren(
+    AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteChildren,
   )
 
-interface AuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteChildren {
-  AuthedCampaignsDmUsernameCampaignSlugSceneIndexRoute: typeof AuthedCampaignsDmUsernameCampaignSlugSceneIndexRoute
+interface AppAuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteChildren {
+  AppAuthedCampaignsDmUsernameCampaignSlugSceneIndexRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugSceneIndexRoute
 }
 
-const AuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteChildren: AuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteChildren =
+const AppAuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteChildren: AppAuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteChildren =
   {
-    AuthedCampaignsDmUsernameCampaignSlugSceneIndexRoute:
-      AuthedCampaignsDmUsernameCampaignSlugSceneIndexRoute,
+    AppAuthedCampaignsDmUsernameCampaignSlugSceneIndexRoute:
+      AppAuthedCampaignsDmUsernameCampaignSlugSceneIndexRoute,
   }
 
-const AuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteWithChildren =
-  AuthedCampaignsDmUsernameCampaignSlugSceneRouteRoute._addFileChildren(
-    AuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteChildren,
+const AppAuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteWithChildren =
+  AppAuthedCampaignsDmUsernameCampaignSlugSceneRouteRoute._addFileChildren(
+    AppAuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteChildren,
   )
 
-interface AuthedCampaignsDmUsernameCampaignSlugRouteRouteChildren {
-  AuthedCampaignsDmUsernameCampaignSlugEditorRouteRoute: typeof AuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteWithChildren
-  AuthedCampaignsDmUsernameCampaignSlugSceneRouteRoute: typeof AuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteWithChildren
-  AuthedCampaignsDmUsernameCampaignSlugIndexRoute: typeof AuthedCampaignsDmUsernameCampaignSlugIndexRoute
+interface AppAuthedCampaignsDmUsernameCampaignSlugRouteRouteChildren {
+  AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteWithChildren
+  AppAuthedCampaignsDmUsernameCampaignSlugSceneRouteRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteWithChildren
+  AppAuthedCampaignsDmUsernameCampaignSlugIndexRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugIndexRoute
 }
 
-const AuthedCampaignsDmUsernameCampaignSlugRouteRouteChildren: AuthedCampaignsDmUsernameCampaignSlugRouteRouteChildren =
+const AppAuthedCampaignsDmUsernameCampaignSlugRouteRouteChildren: AppAuthedCampaignsDmUsernameCampaignSlugRouteRouteChildren =
   {
-    AuthedCampaignsDmUsernameCampaignSlugEditorRouteRoute:
-      AuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteWithChildren,
-    AuthedCampaignsDmUsernameCampaignSlugSceneRouteRoute:
-      AuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteWithChildren,
-    AuthedCampaignsDmUsernameCampaignSlugIndexRoute:
-      AuthedCampaignsDmUsernameCampaignSlugIndexRoute,
+    AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRoute:
+      AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteWithChildren,
+    AppAuthedCampaignsDmUsernameCampaignSlugSceneRouteRoute:
+      AppAuthedCampaignsDmUsernameCampaignSlugSceneRouteRouteWithChildren,
+    AppAuthedCampaignsDmUsernameCampaignSlugIndexRoute:
+      AppAuthedCampaignsDmUsernameCampaignSlugIndexRoute,
   }
 
-const AuthedCampaignsDmUsernameCampaignSlugRouteRouteWithChildren =
-  AuthedCampaignsDmUsernameCampaignSlugRouteRoute._addFileChildren(
-    AuthedCampaignsDmUsernameCampaignSlugRouteRouteChildren,
+const AppAuthedCampaignsDmUsernameCampaignSlugRouteRouteWithChildren =
+  AppAuthedCampaignsDmUsernameCampaignSlugRouteRoute._addFileChildren(
+    AppAuthedCampaignsDmUsernameCampaignSlugRouteRouteChildren,
   )
 
-interface AuthedCampaignsRouteRouteChildren {
-  AuthedCampaignsIndexRoute: typeof AuthedCampaignsIndexRoute
-  AuthedCampaignsDmUsernameCampaignSlugRouteRoute: typeof AuthedCampaignsDmUsernameCampaignSlugRouteRouteWithChildren
+interface AppAuthedCampaignsRouteRouteChildren {
+  AppAuthedCampaignsIndexRoute: typeof AppAuthedCampaignsIndexRoute
+  AppAuthedCampaignsDmUsernameCampaignSlugRouteRoute: typeof AppAuthedCampaignsDmUsernameCampaignSlugRouteRouteWithChildren
 }
 
-const AuthedCampaignsRouteRouteChildren: AuthedCampaignsRouteRouteChildren = {
-  AuthedCampaignsIndexRoute: AuthedCampaignsIndexRoute,
-  AuthedCampaignsDmUsernameCampaignSlugRouteRoute:
-    AuthedCampaignsDmUsernameCampaignSlugRouteRouteWithChildren,
+const AppAuthedCampaignsRouteRouteChildren: AppAuthedCampaignsRouteRouteChildren =
+  {
+    AppAuthedCampaignsIndexRoute: AppAuthedCampaignsIndexRoute,
+    AppAuthedCampaignsDmUsernameCampaignSlugRouteRoute:
+      AppAuthedCampaignsDmUsernameCampaignSlugRouteRouteWithChildren,
+  }
+
+const AppAuthedCampaignsRouteRouteWithChildren =
+  AppAuthedCampaignsRouteRoute._addFileChildren(
+    AppAuthedCampaignsRouteRouteChildren,
+  )
+
+interface AppAuthedRouteRouteChildren {
+  AppAuthedCampaignsRouteRoute: typeof AppAuthedCampaignsRouteRouteWithChildren
 }
 
-const AuthedCampaignsRouteRouteWithChildren =
-  AuthedCampaignsRouteRoute._addFileChildren(AuthedCampaignsRouteRouteChildren)
-
-interface AuthedRouteRouteChildren {
-  AuthedCampaignsRouteRoute: typeof AuthedCampaignsRouteRouteWithChildren
+const AppAuthedRouteRouteChildren: AppAuthedRouteRouteChildren = {
+  AppAuthedCampaignsRouteRoute: AppAuthedCampaignsRouteRouteWithChildren,
 }
 
-const AuthedRouteRouteChildren: AuthedRouteRouteChildren = {
-  AuthedCampaignsRouteRoute: AuthedCampaignsRouteRouteWithChildren,
-}
-
-const AuthedRouteRouteWithChildren = AuthedRouteRoute._addFileChildren(
-  AuthedRouteRouteChildren,
+const AppAuthedRouteRouteWithChildren = AppAuthedRouteRoute._addFileChildren(
+  AppAuthedRouteRouteChildren,
 )
+
+interface AppRouteChildren {
+  AppAuthedRouteRoute: typeof AppAuthedRouteRouteWithChildren
+  AppAuthRedirectRouteRoute: typeof AppAuthRedirectRouteRoute
+  AppForgotPasswordRouteRoute: typeof AppForgotPasswordRouteRoute
+  AppResetPasswordRouteRoute: typeof AppResetPasswordRouteRoute
+  AppSignInRouteRoute: typeof AppSignInRouteRoute
+  AppSignUpRouteRoute: typeof AppSignUpRouteRoute
+  AppJoinDmUsernameCampaignSlugIndexRoute: typeof AppJoinDmUsernameCampaignSlugIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppAuthedRouteRoute: AppAuthedRouteRouteWithChildren,
+  AppAuthRedirectRouteRoute: AppAuthRedirectRouteRoute,
+  AppForgotPasswordRouteRoute: AppForgotPasswordRouteRoute,
+  AppResetPasswordRouteRoute: AppResetPasswordRouteRoute,
+  AppSignInRouteRoute: AppSignInRouteRoute,
+  AppSignUpRouteRoute: AppSignUpRouteRoute,
+  AppJoinDmUsernameCampaignSlugIndexRoute:
+    AppJoinDmUsernameCampaignSlugIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AuthedRouteRoute: AuthedRouteRouteWithChildren,
-  AuthRedirectRouteRoute: AuthRedirectRouteRoute,
-  ForgotPasswordRouteRoute: ForgotPasswordRouteRoute,
-  ResetPasswordRouteRoute: ResetPasswordRouteRoute,
-  SignInRouteRoute: SignInRouteRoute,
-  SignUpRouteRoute: SignUpRouteRoute,
+  AppRoute: AppRouteWithChildren,
+  DemoRoute: DemoRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
-  JoinDmUsernameCampaignSlugIndexRoute: JoinDmUsernameCampaignSlugIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

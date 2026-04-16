@@ -8,7 +8,7 @@ import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 
 export function CampaignProvider({ children }: { children: React.ReactNode }) {
   const { dmUsername, campaignSlug } = useParams({
-    from: '/_authed/campaigns/$dmUsername/$campaignSlug',
+    from: '/_app/_authed/campaigns/$dmUsername/$campaignSlug',
   })
 
   const campaign = useAuthQuery(api.campaigns.queries.getCampaignBySlug, {
