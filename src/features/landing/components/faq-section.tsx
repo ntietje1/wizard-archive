@@ -79,6 +79,17 @@ export function FaqSection() {
             </div>
           ))}
         </div>
+        <div className="mt-10 text-center">
+          <p className="text-sm text-muted-foreground">Have another question?</p>
+          <a
+            href="https://discord.gg/VhfzjsaXTD"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 inline-block text-base font-medium text-foreground hover:text-primary underline"
+          >
+            Ask in our Discord
+          </a>
+        </div>
       </LandingContainer>
     </section>
   )
