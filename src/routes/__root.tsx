@@ -83,17 +83,16 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const matches = useMatches()
   const appMatch = matches.find((m) => m.routeId === '/_app')
 
-  let themeClass: 'dark' | 'light' = 'dark'
-  if (appMatch) {
-    const context = appMatch.context
-    const initialTheme =
-      context && typeof context === 'object' && 'initialTheme' in context
-        ? (context as { initialTheme?: Theme | null }).initialTheme
-        : null
-    themeClass = resolveTheme(initialTheme ?? getThemeCookie() ?? 'system')
-  } else {
-    themeClass = resolveTheme(getThemeCookie() ?? 'system')
-  }
+  const themeClass: 'dark' | 'light' = appMatch
+    ? (() => {
+        const context = appMatch.context
+        const initialTheme =
+          context && typeof context === 'object' && 'initialTheme' in context
+            ? (context as { initialTheme?: Theme | null }).initialTheme
+            : null
+        return resolveTheme(initialTheme ?? getThemeCookie() ?? 'system')
+      })()
+    : resolveTheme(getThemeCookie() ?? 'system')
 
   return (
     <html lang="en" className={themeClass} suppressHydrationWarning>
