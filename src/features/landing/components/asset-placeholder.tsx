@@ -23,7 +23,7 @@ export function AssetPlaceholder({
           </div>
         </div>
       )}
-      <p className="text-sm text-muted-foreground px-8 text-center z-0">{label}</p>
+      <p className="text-sm text-muted-foreground px-8 text-center">{label}</p>
     </div>
   )
 }

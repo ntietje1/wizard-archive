@@ -71,8 +71,11 @@ export function ThemeProvider({
 
   useEffect(() => {
     applyThemeClass(resolved)
+  }, [resolved])
+
+  useEffect(() => {
     document.cookie = `theme=${theme}; path=/; max-age=31536000; SameSite=Lax; Secure`
-  }, [resolved, theme])
+  }, [theme])
 
   useEffect(() => {
     if (theme !== 'system') return

@@ -37,6 +37,7 @@ playwright-report/
 coverage/
 
 .claude/
+CLAUDE.md
 AGENTS.md
 .codex/
 
