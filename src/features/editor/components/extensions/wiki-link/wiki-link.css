@@ -1,5 +1,7 @@
 /* Wiki-link content styles */
-.wiki-link-content {
+.wiki-link-content,
+.wiki-link-hidden-prefix.wiki-link-active,
+.wiki-link-hidden-prefix:hover {
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 4px;
@@ -9,31 +11,18 @@
   text-decoration-thickness: 2px;
 }
 
-.wiki-link-content.wiki-link-ghost {
+.wiki-link-content.wiki-link-ghost,
+.wiki-link-hidden-prefix.wiki-link-ghost {
   color: var(--muted-foreground);
 }
 
-.wiki-link-content.wiki-link-ghost:hover {
+.wiki-link-content.wiki-link-ghost:hover,
+.wiki-link-hidden-prefix.wiki-link-ghost:hover {
   color: var(--foreground);
 }
 
 .wiki-link-hidden-prefix {
   display: none;
-}
-
-.wiki-link-hidden-prefix.wiki-link-active,
-.wiki-link-hidden-prefix:hover {
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 4px;
-}
-
-.wiki-link-hidden-prefix.wiki-link-ghost {
-  color: var(--muted-foreground);
-}
-
-.wiki-link-hidden-prefix.wiki-link-ghost:hover {
-  color: var(--foreground);
 }
 
 /* Brackets hidden by default */
@@ -55,11 +44,7 @@
 ),
 .wiki-link-content:hover + .wiki-link-bracket-close,
 .wiki-link-hidden-prefix:hover + .wiki-link-content + .wiki-link-bracket-close,
-.wiki-link-bracket-open:hover + .wiki-link-content + .wiki-link-bracket-close {
-  font-size: inherit;
-  opacity: 0.5;
-}
-
+.wiki-link-bracket-open:hover + .wiki-link-content + .wiki-link-bracket-close,
 .wiki-link-bracket-open:hover
   + .wiki-link-hidden-prefix
   + .wiki-link-content

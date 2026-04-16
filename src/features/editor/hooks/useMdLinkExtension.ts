@@ -210,9 +210,6 @@ function buildDecorations(
         nodeName: 'span',
         class: `md-link-display ${classes}`,
         style: color ? `color: ${color}` : undefined,
-        'data-md-link-type': parsed.isExternal ? 'external' : 'internal',
-        'data-md-link-target': target,
-        'data-md-link-exists': parsed.isExternal || resolved.resolved ? 'true' : 'false',
         'data-link-exists': parsed.isExternal || resolved.resolved ? 'true' : 'false',
         'data-link-type': linkType,
         ...(resolved.href && {
@@ -221,12 +218,10 @@ function buildDecorations(
         }),
         ...(!parsed.isExternal &&
           parsed.itemName && {
-            'data-md-link-item-name': parsed.itemName,
             'data-link-item-name': parsed.itemName,
           }),
         ...(!parsed.isExternal &&
           parsed.headingPath.length > 0 && {
-            'data-md-link-heading': parsed.headingPath.join('#'),
             'data-link-heading': parsed.headingPath.join('#'),
           }),
       }),

@@ -165,15 +165,15 @@ function buildDecorations(
   const decorations: Array<Decoration> = []
 
   for (const { from, to, innerText, parsed, resolved } of matches) {
-    const color = resolved.color ?? undefined
+    const style = resolved.color ? `color: ${resolved.color}` : undefined
     const baseClass = resolved.resolved ? 'wiki-link-exists' : 'wiki-link-ghost'
     const isActive = !isViewerMode && overlapsSelection(from, to, selFrom, selTo)
-    const classes = `${baseClass}${isViewerMode ? ' wiki-link-viewer' : ''}${isActive ? ' wiki-link-active' : ''}`
+    const interactionClasses = `${isViewerMode ? ' wiki-link-viewer' : ''}${isActive ? ' wiki-link-active' : ''}`
+    const contentClasses = `${baseClass}${interactionClasses}`
+    const contentStart = from + 2
+    const contentEnd = to - 2
 
     const contentAttrs: Record<string, string | undefined> = {
-      'data-wiki-link': innerText,
-      'data-wiki-link-item-name': parsed.itemName,
-      'data-wiki-link-exists': resolved.resolved ? 'true' : 'false',
       'data-link-exists': resolved.resolved ? 'true' : 'false',
       'data-link-item-name': parsed.itemName,
       'data-link-type': 'wiki',
@@ -182,7 +182,6 @@ function buildDecorations(
         'data-link-href': resolved.href,
       }),
       ...(parsed.headingPath.length > 0 && {
-        'data-wiki-link-heading': parsed.headingPath.join('#'),
         'data-link-heading': parsed.headingPath.join('#'),
       }),
     }
@@ -190,47 +189,39 @@ function buildDecorations(
     decorations.push(
       Decoration.inline(from, from + 2, {
         nodeName: 'span',
-        class: `wiki-link-bracket wiki-link-bracket-open ${classes}`,
-        style: color ? `color: ${color}` : undefined,
+        class: `wiki-link-bracket wiki-link-bracket-open${interactionClasses}`,
+        style,
       }),
     )
 
+    let visibleContentStart = contentStart
     if (parsed.displayName) {
       const pipeIndex = innerText.lastIndexOf('|')
-      const prefixEnd = from + 2 + pipeIndex + 1
+      visibleContentStart = contentStart + pipeIndex + 1
 
       decorations.push(
-        Decoration.inline(from + 2, prefixEnd, {
+        Decoration.inline(contentStart, visibleContentStart, {
           nodeName: 'span',
-          class: `wiki-link-hidden-prefix ${classes}`,
-          style: color ? `color: ${color}` : undefined,
-        }),
-      )
-      decorations.push(
-        Decoration.inline(prefixEnd, to - 2, {
-          nodeName: 'span',
-          class: `wiki-link-content ${classes}`,
-          style: color ? `color: ${color}` : undefined,
-          ...contentAttrs,
-          'data-display-name': parsed.displayName,
-        }),
-      )
-    } else {
-      decorations.push(
-        Decoration.inline(from + 2, to - 2, {
-          nodeName: 'span',
-          class: `wiki-link-content ${classes}`,
-          style: color ? `color: ${color}` : undefined,
-          ...contentAttrs,
+          class: `wiki-link-hidden-prefix ${contentClasses}`,
+          style,
         }),
       )
     }
 
     decorations.push(
+      Decoration.inline(visibleContentStart, contentEnd, {
+        nodeName: 'span',
+        class: `wiki-link-content ${contentClasses}`,
+        style,
+        ...contentAttrs,
+      }),
+    )
+
+    decorations.push(
       Decoration.inline(to - 2, to, {
         nodeName: 'span',
-        class: `wiki-link-bracket wiki-link-bracket-close ${classes}`,
-        style: color ? `color: ${color}` : undefined,
+        class: `wiki-link-bracket wiki-link-bracket-close${interactionClasses}`,
+        style,
       }),
     )
   }
