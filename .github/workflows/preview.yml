@@ -76,11 +76,19 @@ jobs:
 
       - name: Deploy Cloudflare Workers Preview
         run: |
+          cp dist/server/.dev.vars .deploy-secrets.env
           npx wrangler deploy \
+            --keep-vars \
+            --secrets-file .deploy-secrets.env \
             --name ${{ env.WORKER_NAME }} \
             --route "preview-${{ github.event.pull_request.number }}.wizardarchive.com/*"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          VITE_CONVEX_SITE_URL: ${{ secrets.VITE_CONVEX_SITE_URL }}
+          VITE_SITE_URL: ${{ env.PREVIEW_URL }}
+          VITE_IS_PREVIEW: 'true'
+          VITE_PR_NUMBER: ${{ github.event.pull_request.number }}
+          VITE_GITHUB_REPOSITORY: ${{ github.repository }}
 
       - name: Comment Preview URL
         uses: marocchino/sticky-pull-request-comment@v2
