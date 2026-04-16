@@ -32,15 +32,19 @@ export const Route = createRootRouteWithContext<{
       },
     ],
     links: [
-      { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
       {
-        rel: 'preconnect',
-        href: 'https://fonts.gstatic.com',
+        rel: 'preload',
+        href: '/fonts/inter-400.woff2',
+        as: 'font',
+        type: 'font/woff2',
         crossOrigin: 'anonymous',
       },
       {
-        rel: 'stylesheet',
-        href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
+        rel: 'preload',
+        href: '/fonts/inter-600.woff2',
+        as: 'font',
+        type: 'font/woff2',
+        crossOrigin: 'anonymous',
       },
       { rel: 'stylesheet', href: appCss },
       {

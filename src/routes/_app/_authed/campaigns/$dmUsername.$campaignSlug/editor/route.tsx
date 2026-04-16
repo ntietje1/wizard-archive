@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import '@blocknote/core/fonts/inter.css'
 import '@blocknote/shadcn/style.css'
 import { validateSearch } from '~/features/sidebar/utils/validate-search'
 import { EditorPage } from '~/features/editor/pages/editor-page'
