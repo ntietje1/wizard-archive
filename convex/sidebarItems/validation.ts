@@ -7,6 +7,7 @@ import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { getSidebarItemsByParent } from './functions/getSidebarItemsByParent'
 import { enhanceSidebarItem } from './functions/enhanceSidebarItem'
 import { checkNameConflict, validateItemName } from './sharedValidation'
+import { SIDEBAR_ITEM_TYPES } from './types/baseTypes'
 import type { ValidationResult } from './sharedValidation'
 import type { PermissionLevel } from '../permissions/types'
 import type { CampaignQueryCtx } from '../functions'
@@ -137,7 +138,7 @@ export async function validateSidebarParentChange(
   }
   if (newParentId) {
     const parentFromDb = await ctx.db.get('sidebarItems', newParentId)
-    if (parentFromDb && parentFromDb.type !== 'folder') {
+    if (parentFromDb && parentFromDb.type !== SIDEBAR_ITEM_TYPES.folders) {
       throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Parent must be a folder')
     }
     if (parentFromDb && parentFromDb.location !== item.location) {
@@ -167,6 +168,9 @@ export async function validateSidebarCreateParent(
     const parentItem = await getSidebarItemWithContent(ctx, parentId)
     if (!parentItem) {
       throwClientError(ERROR_CODE.NOT_FOUND, 'Parent not found')
+    }
+    if (parentItem.type !== SIDEBAR_ITEM_TYPES.folders) {
+      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Parent must be a folder')
     }
     const level = await getSidebarItemPermissionLevel(ctx, { item: parentItem })
     if (!hasAtLeastPermissionLevel(level, PERMISSION_LEVEL.FULL_ACCESS)) {

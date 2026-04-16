@@ -1,16 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { api } from 'convex/_generated/api'
-import { toast } from 'sonner'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
-import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { handleError } from '~/shared/utils/logger'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
+import { getLinkAt } from '~/features/editor/utils/link-hit-testing'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useEditorDomElement } from '~/features/editor/hooks/useEditorDomElement'
-import { validateSidebarItemName } from '~/features/sidebar/utils/sidebar-validation'
-import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 
 interface TooltipState {
   show: boolean
@@ -21,21 +19,18 @@ interface TooltipState {
 
 const HIDDEN_TOOLTIP: TooltipState = { show: false, text: '', x: 0, y: 0 }
 
-function parseLinkElement(linkEl: Element) {
-  return {
-    element: linkEl,
-    exists: linkEl.getAttribute('data-link-exists') === 'true',
-    itemName: linkEl.getAttribute('data-link-item-name'),
-    href: linkEl.getAttribute('data-link-href'),
-    heading: linkEl.getAttribute('data-link-heading'),
-    type: linkEl.getAttribute('data-link-type') as 'wiki' | 'md-internal' | 'md-external' | null,
+function getTooltipState(link: ReturnType<typeof getLinkAt>): TooltipState | null {
+  if (!link || link.type === 'md-external' || link.exists || !link.itemName) {
+    return null
   }
-}
 
-function getLinkAt(x: number, y: number) {
-  const el = document.elementFromPoint(x, y)
-  const linkEl = el?.closest('.wiki-link-content') || el?.closest('.md-link-display')
-  return linkEl ? parseLinkElement(linkEl) : null
+  const rect = link.element.getBoundingClientRect()
+  return {
+    show: true,
+    text: link.itemName,
+    x: rect.left,
+    y: rect.bottom + 4,
+  }
 }
 
 export function LinkClickHandler({ editor }: { editor: CustomBlockNoteEditor | undefined }) {
@@ -44,34 +39,13 @@ export function LinkClickHandler({ editor }: { editor: CustomBlockNoteEditor | u
   const { campaign } = useCampaign()
   const campaignData = campaign.data
   const { editorMode } = useEditorMode()
-  const { parentItemsMap } = useActiveSidebarItems()
+  const { createItem } = useCreateSidebarItem()
   const editorEl = useEditorDomElement(editor)
 
   const [tooltip, setTooltip] = useState<TooltipState>(HIDDEN_TOOLTIP)
   const [ctrlHeld, setCtrlHeld] = useState(false)
   const mousePosRef = useRef<{ x: number; y: number } | null>(null)
   const isCreatingRef = useRef(false)
-
-  const { mutateAsync: createNote } = useAppMutation(api.notes.mutations.createNote)
-
-  const hideTooltip = useCallback(() => setTooltip(HIDDEN_TOOLTIP), [])
-
-  const showTooltipFor = useCallback((link: ReturnType<typeof getLinkAt>) => {
-    if (!link) return
-    if (link.type === 'md-external') return
-
-    const isGhost = !link.exists
-    if (!isGhost) return
-    if (!link.itemName) return
-
-    const rect = link.element.getBoundingClientRect()
-    setTooltip({
-      show: true,
-      text: link.itemName!,
-      x: rect.left,
-      y: rect.bottom + 4,
-    })
-  }, [])
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -80,21 +54,20 @@ export function LinkClickHandler({ editor }: { editor: CustomBlockNoteEditor | u
         const mousePos = mousePosRef.current
         if (mousePos) {
           const link = getLinkAt(mousePos.x, mousePos.y)
-          if (link && !link.exists) {
-            showTooltipFor(link)
-          }
+          const nextTooltip = getTooltipState(link)
+          setTooltip(nextTooltip ?? HIDDEN_TOOLTIP)
         }
       }
     }
     const onKeyUp = (e: KeyboardEvent) => {
       if (e.key === 'Control' || e.key === 'Meta') {
         setCtrlHeld(false)
-        hideTooltip()
+        setTooltip(HIDDEN_TOOLTIP)
       }
     }
     const onBlur = () => {
       setCtrlHeld(false)
-      hideTooltip()
+      setTooltip(HIDDEN_TOOLTIP)
     }
 
     document.addEventListener('keydown', onKeyDown)
@@ -105,7 +78,7 @@ export function LinkClickHandler({ editor }: { editor: CustomBlockNoteEditor | u
       document.removeEventListener('keyup', onKeyUp)
       window.removeEventListener('blur', onBlur)
     }
-  }, [hideTooltip, showTooltipFor])
+  }, [])
 
   useEffect(() => {
     if (!editorEl) return
@@ -114,16 +87,18 @@ export function LinkClickHandler({ editor }: { editor: CustomBlockNoteEditor | u
       mousePosRef.current = { x: e.clientX, y: e.clientY }
 
       const link = getLinkAt(e.clientX, e.clientY)
-      if (!ctrlHeld || !link || link.exists) {
-        hideTooltip()
+      if (!ctrlHeld) {
+        setTooltip(HIDDEN_TOOLTIP)
         return
       }
-      showTooltipFor(link)
+
+      const nextTooltip = getTooltipState(link)
+      setTooltip(nextTooltip ?? HIDDEN_TOOLTIP)
     }
 
     const onMouseLeave = () => {
       mousePosRef.current = null
-      hideTooltip()
+      setTooltip(HIDDEN_TOOLTIP)
     }
 
     editorEl.addEventListener('mousemove', onMouseMove)
@@ -132,7 +107,7 @@ export function LinkClickHandler({ editor }: { editor: CustomBlockNoteEditor | u
       editorEl.removeEventListener('mousemove', onMouseMove)
       editorEl.removeEventListener('mouseleave', onMouseLeave)
     }
-  }, [editorEl, ctrlHeld, hideTooltip, showTooltipFor])
+  }, [ctrlHeld, editorEl])
 
   useEffect(() => {
     if (!editorEl) return
@@ -180,24 +155,18 @@ export function LinkClickHandler({ editor }: { editor: CustomBlockNoteEditor | u
       if (!link.exists && isCtrlClick && link.itemName && campaignData?._id) {
         e.preventDefault()
         e.stopPropagation()
-        hideTooltip()
+        setTooltip(HIDDEN_TOOLTIP)
 
         if (isCreatingRef.current) return
 
-        const validation = validateSidebarItemName({
-          name: link.itemName,
-          siblings: parentItemsMap.get(null),
-        })
-        if (!validation.valid) {
-          toast.error(validation.error)
-          return
-        }
         isCreatingRef.current = true
         try {
-          const result = await createNote({
+          const result = await createItem({
             campaignId: campaignData._id,
+            type: SIDEBAR_ITEM_TYPES.notes,
             name: link.itemName,
             parentId: null,
+            parentPath: link.itemPath.slice(0, -1),
           })
           if (result) void navigateToItem(result.slug)
         } catch (error) {
@@ -210,17 +179,7 @@ export function LinkClickHandler({ editor }: { editor: CustomBlockNoteEditor | u
 
     editorEl.addEventListener('mousedown', onMouseDown, true)
     return () => editorEl.removeEventListener('mousedown', onMouseDown, true)
-  }, [
-    editorEl,
-    editor,
-    navigate,
-    campaignData?._id,
-    createNote,
-    navigateToItem,
-    editorMode,
-    parentItemsMap,
-    hideTooltip,
-  ])
+  }, [campaignData?._id, createItem, editorEl, editorMode, navigate, navigateToItem])
 
   return (
     <>
@@ -234,7 +193,7 @@ export function LinkClickHandler({ editor }: { editor: CustomBlockNoteEditor | u
             zIndex: 9999,
           }}
         >
-          {`Click to create "${tooltip.text}"`}
+          {`Click to create note: "${tooltip.text}"`}
         </div>
       )}
     </>

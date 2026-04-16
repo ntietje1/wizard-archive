@@ -1,32 +1,152 @@
-import { describe, expect, it } from 'vitest'
-import { overlapsSelection } from '~/features/editor/utils/link-extension-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { PluginKey } from '@tiptap/pm/state'
+import type { Plugin } from '@tiptap/pm/state'
+import { registerLinkPlugins } from '../link-extension-utils'
 
-describe('overlapsSelection', () => {
-  it('detects overlap when selection is inside match', () => {
-    expect(overlapsSelection(0, 10, 3, 7)).toBe(true)
+const { mockCreateSelectionStabilizerPlugin } = vi.hoisted(() => ({
+  mockCreateSelectionStabilizerPlugin: vi.fn(),
+}))
+
+vi.mock('../selection-stabilizer', () => ({
+  createSelectionStabilizerPlugin: (...args: Array<unknown>) =>
+    mockCreateSelectionStabilizerPlugin(...args),
+}))
+
+describe('registerLinkPlugins', () => {
+  const pluginKey = new PluginKey('linkDecoration')
+  const stabilizerKey = new PluginKey('selectionStabilizer')
+  let requestAnimationFrameSpy: ReturnType<typeof vi.fn>
+  let cancelAnimationFrameSpy: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    requestAnimationFrameSpy = vi.fn()
+    cancelAnimationFrameSpy = vi.fn()
+    vi.stubGlobal('requestAnimationFrame', requestAnimationFrameSpy)
+    vi.stubGlobal('cancelAnimationFrame', cancelAnimationFrameSpy)
+    mockCreateSelectionStabilizerPlugin.mockReset()
   })
 
-  it('detects overlap when selection starts before match', () => {
-    expect(overlapsSelection(5, 10, 3, 7)).toBe(true)
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
-  it('detects overlap when selection ends after match', () => {
-    expect(overlapsSelection(0, 5, 3, 7)).toBe(true)
+  it('registers synchronously when the editor view is already ready', () => {
+    const registerPlugin = vi.fn()
+    const unregisterPlugin = vi.fn()
+    const decorationPlugin = { name: 'decoration' } as unknown as Plugin
+    const stabilizerPlugin = { name: 'stabilizer' } as unknown as Plugin
+    const pluginRef = { current: null }
+    const setMeta = vi.fn().mockReturnValue('meta-tr')
+    const dispatch = vi.fn()
+
+    mockCreateSelectionStabilizerPlugin.mockReturnValue(stabilizerPlugin)
+
+    const cleanup = registerLinkPlugins({
+      tiptapEditor: {
+        view: {
+          state: { tr: { setMeta } },
+          dispatch,
+        } as never,
+        registerPlugin,
+        unregisterPlugin,
+      },
+      pluginKey,
+      stabilizerKey,
+      createDecorationPlugin: () => decorationPlugin,
+      pluginRef,
+    })
+
+    expect(requestAnimationFrameSpy).not.toHaveBeenCalled()
+    expect(unregisterPlugin).toHaveBeenNthCalledWith(1, stabilizerKey)
+    expect(unregisterPlugin).toHaveBeenNthCalledWith(2, pluginKey)
+    expect(registerPlugin).toHaveBeenNthCalledWith(1, stabilizerPlugin)
+    expect(registerPlugin).toHaveBeenNthCalledWith(2, decorationPlugin)
+    expect(pluginRef.current).toBe(decorationPlugin)
+    expect(mockCreateSelectionStabilizerPlugin).toHaveBeenCalledWith(stabilizerKey)
+    expect(setMeta).toHaveBeenCalledWith(pluginKey, true)
+    expect(dispatch).toHaveBeenCalledWith('meta-tr')
+
+    cleanup()
+
+    expect(unregisterPlugin).toHaveBeenNthCalledWith(3, stabilizerKey)
+    expect(unregisterPlugin).toHaveBeenNthCalledWith(4, pluginKey)
   })
 
-  it('detects overlap at exact boundaries', () => {
-    expect(overlapsSelection(0, 5, 5, 10)).toBe(true)
+  it('waits for the editor view before registering plugins', () => {
+    const registerPlugin = vi.fn()
+    const unregisterPlugin = vi.fn()
+    const decorationPlugin = { name: 'decoration' } as unknown as Plugin
+    const stabilizerPlugin = { name: 'stabilizer' } as unknown as Plugin
+    const pluginRef = { current: null }
+    let queuedFrame: ((time: number) => void) | undefined
+
+    requestAnimationFrameSpy.mockImplementation((cb: FrameRequestCallback) => {
+      queuedFrame = (time: number) => cb(time)
+      return 7
+    })
+    mockCreateSelectionStabilizerPlugin.mockReturnValue(stabilizerPlugin)
+
+    const tiptapEditor = {
+      view: undefined,
+      registerPlugin,
+      unregisterPlugin,
+    }
+
+    registerLinkPlugins({
+      tiptapEditor,
+      pluginKey,
+      stabilizerKey,
+      createDecorationPlugin: () => decorationPlugin,
+      pluginRef,
+    })
+
+    expect(registerPlugin).not.toHaveBeenCalled()
+    expect(requestAnimationFrameSpy).toHaveBeenCalledTimes(1)
+
+    const dispatch = vi.fn()
+    const setMeta = vi.fn().mockReturnValue('meta-tr')
+    tiptapEditor.view = {
+      state: { tr: { setMeta } },
+      dispatch,
+    } as never
+    queuedFrame?.(0)
+
+    expect(unregisterPlugin).toHaveBeenNthCalledWith(1, stabilizerKey)
+    expect(unregisterPlugin).toHaveBeenNthCalledWith(2, pluginKey)
+    expect(registerPlugin).toHaveBeenNthCalledWith(1, stabilizerPlugin)
+    expect(registerPlugin).toHaveBeenNthCalledWith(2, decorationPlugin)
+    expect(pluginRef.current).toBe(decorationPlugin)
+    expect(mockCreateSelectionStabilizerPlugin).toHaveBeenCalledWith(stabilizerKey)
+    expect(setMeta).toHaveBeenCalledWith(pluginKey, true)
+    expect(dispatch).toHaveBeenCalledWith('meta-tr')
   })
 
-  it('returns false for adjacent but non-touching ranges', () => {
-    expect(overlapsSelection(0, 4, 5, 10)).toBe(false)
-  })
+  it('cleans up pending frames and unregisters plugins on teardown', () => {
+    const registerPlugin = vi.fn()
+    const unregisterPlugin = vi.fn()
+    const decorationPlugin = { name: 'decoration' } as unknown as Plugin
+    const pluginRef = { current: null as Plugin | null }
 
-  it('returns false when no overlap', () => {
-    expect(overlapsSelection(0, 3, 5, 10)).toBe(false)
-  })
+    requestAnimationFrameSpy.mockReturnValue(9)
 
-  it('returns true for identical ranges', () => {
-    expect(overlapsSelection(5, 10, 5, 10)).toBe(true)
+    const cleanup = registerLinkPlugins({
+      tiptapEditor: {
+        view: undefined,
+        registerPlugin,
+        unregisterPlugin,
+      },
+      pluginKey,
+      stabilizerKey,
+      createDecorationPlugin: () => decorationPlugin,
+      pluginRef,
+    })
+
+    cleanup()
+
+    expect(cancelAnimationFrameSpy).toHaveBeenCalledWith(9)
+    expect(unregisterPlugin).toHaveBeenNthCalledWith(1, stabilizerKey)
+    expect(unregisterPlugin).toHaveBeenNthCalledWith(2, pluginKey)
+    expect(pluginRef.current).toBeNull()
+    expect(registerPlugin).not.toHaveBeenCalled()
   })
 })

@@ -1,55 +1,45 @@
-/* ==========================================================================
-   DISPLAY TEXT STYLES
-   ========================================================================== */
-
+/* Display text styles */
 .md-link-display {
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 4px;
 }
 
-.md-link-display.md-link-exists:hover {
+.md-link-display[data-link-status='exists']:hover {
   text-decoration-thickness: 2px;
 }
 
-.md-link-display.md-link-ghost {
+.md-link-display[data-link-status='ghost'] {
   color: var(--muted-foreground) !important;
 }
 
-.md-link-display.md-link-ghost:hover {
+.md-link-display[data-link-status='ghost']:hover {
   color: var(--foreground) !important;
 }
 
-.md-link-display.md-link-external {
+.md-link-display[data-link-status='external'] {
   color: var(--primary) !important;
 }
 
-.md-link-display.md-link-external:hover {
+.md-link-display[data-link-status='external']:hover {
   color: var(--accent-foreground) !important;
   text-decoration-thickness: 2px;
 }
 
-/* External link brackets and target */
-.md-link-bracket-open:has(~ .md-link-display.md-link-external),
-.md-link-display.md-link-external ~ .md-link-bracket-middle,
-.md-link-display.md-link-external ~ .md-link-bracket-close {
+.md-link-bracket-open:has(~ .md-link-display[data-link-status='external']),
+.md-link-display[data-link-status='external']
+  ~ :is(.md-link-bracket-middle, .md-link-bracket-close) {
   color: var(--accent-foreground) !important;
 }
 
-/* External link target - underlined */
-.md-link-display.md-link-external ~ .md-link-target,
-.md-link-display.md-link-external ~ a .md-link-target {
+.md-link-display[data-link-status='external'] ~ .md-link-target,
+.md-link-display[data-link-status='external'] ~ a .md-link-target {
   color: var(--accent-foreground) !important;
   text-decoration: underline;
   text-underline-offset: 4px;
 }
 
-/* ==========================================================================
-   BRACKET AND TARGET STYLES (hidden by default)
-   ========================================================================== */
-
-.md-link-bracket,
-.md-link-target {
+:is(.md-link-bracket, .md-link-target) {
   font-size: 0;
   width: 0;
   opacity: 0;
@@ -58,9 +48,7 @@
     font-size 0s ease 0s;
 }
 
-/* Show when cursor is inside (active state from decoration plugin) */
-.md-link-bracket.md-link-active,
-.md-link-target.md-link-active {
+:is(.md-link-bracket, .md-link-target)[data-link-active='true'] {
   font-size: inherit;
   width: auto;
   opacity: 0.5;
@@ -69,107 +57,55 @@
     font-size 0s ease;
 }
 
-/* In viewer mode, always hidden */
-.md-link-bracket.md-link-viewer,
-.md-link-target.md-link-viewer {
+:is(.md-link-bracket, .md-link-target)[data-link-viewer='true'] {
   display: none;
 }
 
-/* ==========================================================================
-   HOVER STATES - Show ALL parts when ANY part is hovered
-   Following the same pattern as wiki-links
-   ========================================================================== */
-
-/* --- Opening bracket [ --- */
 .md-link-bracket-open:hover,
-.md-link-bracket-open:has(~ .md-link-display:hover),
+.md-link-bracket-open:has(~ [data-link-role='content']:hover),
 .md-link-bracket-open:has(~ .md-link-bracket-middle:hover),
-.md-link-bracket-open:has(~ .md-link-target:hover),
+.md-link-bracket-open:has(~ [data-link-role='target']:hover),
 .md-link-bracket-open:has(~ a:hover),
-.md-link-bracket-open:has(~ .md-link-bracket-close:hover) {
-  font-size: inherit;
-  width: auto;
-  opacity: 0.5;
-  transition:
-    opacity 0s ease,
-    font-size 0s ease;
-}
-
-/* --- Middle bracket ]( --- */
+.md-link-bracket-open:has(~ .md-link-bracket-close:hover),
 .md-link-bracket-middle:hover,
 .md-link-bracket-open:hover ~ .md-link-bracket-middle,
-.md-link-display:hover ~ .md-link-bracket-middle,
-.md-link-bracket-middle:has(~ .md-link-target:hover),
+[data-link-role='content']:hover ~ .md-link-bracket-middle,
+.md-link-bracket-middle:has(~ [data-link-role='target']:hover),
 .md-link-bracket-middle:has(~ a:hover),
-.md-link-bracket-middle:has(~ .md-link-bracket-close:hover) {
-  font-size: inherit;
-  width: auto;
-  opacity: 0.5;
-  transition:
-    opacity 0s ease,
-    font-size 0s ease;
-}
-
-/* --- Target URL/path --- */
-.md-link-target:hover,
+.md-link-bracket-middle:has(~ .md-link-bracket-close:hover),
+[data-link-role='target']:hover,
 .md-link-bracket-open:hover ~ .md-link-target,
-.md-link-display:hover ~ .md-link-target,
+[data-link-role='content']:hover ~ .md-link-target,
 .md-link-bracket-middle:hover ~ .md-link-target,
 .md-link-target:has(~ .md-link-bracket-close:hover),
-/* Handle when target is inside an <a> tag */
 a:hover .md-link-target,
 .md-link-bracket-open:hover ~ a .md-link-target,
-.md-link-display:hover ~ a .md-link-target,
-.md-link-bracket-middle:hover ~ a .md-link-target {
-  font-size: inherit;
-  width: auto;
-  opacity: 0.5;
-  transition:
-    opacity 0s ease,
-    font-size 0s ease;
-}
-
-/* --- Closing bracket ) --- */
+[data-link-role='content']:hover ~ a .md-link-target,
+.md-link-bracket-middle:hover ~ a .md-link-target,
 .md-link-bracket-close:hover,
 .md-link-bracket-open:hover ~ .md-link-bracket-close,
-.md-link-display:hover ~ .md-link-bracket-close,
+[data-link-role='content']:hover ~ .md-link-bracket-close,
 .md-link-bracket-middle:hover ~ .md-link-bracket-close,
-.md-link-target:hover ~ .md-link-bracket-close,
-a:hover ~ .md-link-bracket-close {
-  font-size: inherit;
-  width: auto;
-  opacity: 0.5;
-  transition:
-    opacity 0s ease,
-    font-size 0s ease;
-}
-
-/* Handle <a> tags that wrap md-link parts - show all siblings when <a> is hovered */
+[data-link-role='target']:hover ~ .md-link-bracket-close,
+a:hover ~ .md-link-bracket-close,
 a:has(.md-link-target):hover ~ .md-link-bracket-close,
 a:has(.md-link-bracket):hover ~ .md-link-bracket-close {
   font-size: inherit;
   width: auto;
   opacity: 0.5;
+  transition:
+    opacity 0s ease,
+    font-size 0s ease;
 }
 
-/* ==========================================================================
-   REMOVE ALL LINK STYLING
-   ========================================================================== */
-
-/* Remove styling from BlockNote/TipTap links */
 .bn-editor a,
 .bn-editor [data-content-type='link'],
 .bn-block-content a {
   color: inherit !important;
   text-decoration: none !important;
   cursor: text !important;
-  /* Keep pointer-events so hover works for md-link parts inside <a> tags */
   pointer-events: auto !important;
 }
-
-/* ==========================================================================
-   TOOLTIP
-   ========================================================================== */
 
 .md-link-tooltip {
   background-color: var(--popover);

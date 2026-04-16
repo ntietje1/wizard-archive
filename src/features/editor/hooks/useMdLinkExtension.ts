@@ -1,28 +1,16 @@
 import { useEffect, useRef } from 'react'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
-import { Decoration, DecorationSet } from '@tiptap/pm/view'
+import { DecorationSet } from '@tiptap/pm/view'
 import { MD_LINK_REGEX, parseMdLinkTarget } from 'convex/links/linkParsers'
-import type { ParsedMdLinkFields } from 'convex/links/linkParsers'
-import type { ResolvedLink } from 'convex/links/types'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { LinkResolver } from './useLinkResolver'
-import {
-  overlapsSelection,
-  registerLinkPlugins,
-} from '~/features/editor/utils/link-extension-utils'
+import type { MdLinkDecorationMatch } from '~/features/editor/utils/md-link-decorations'
+import { registerLinkPlugins } from '~/features/editor/utils/link-extension-utils'
+import { buildMdLinkDecorations } from '~/features/editor/utils/md-link-decorations'
 
 const PLUGIN_KEY = new PluginKey('mdLinkDecoration')
 const SELECTION_STABILIZER_KEY = new PluginKey('mdLinkSelectionStabilizer')
-
-interface MdLinkMatch {
-  from: number
-  to: number
-  displayText: string
-  target: string
-  parsed: ParsedMdLinkFields & { displayText: string }
-  resolved: ResolvedLink
-}
 
 interface PluginState {
   decorations: DecorationSet
@@ -59,8 +47,8 @@ export function useMdLinkExtension(
   }, [editor, resolver, resolver.isViewerMode])
 }
 
-function findMdLinks(doc: ProseMirrorNode, resolver: LinkResolver): Array<MdLinkMatch> {
-  const matches: Array<MdLinkMatch> = []
+function findMdLinks(doc: ProseMirrorNode, resolver: LinkResolver): Array<MdLinkDecorationMatch> {
+  const matches: Array<MdLinkDecorationMatch> = []
   const regex = new RegExp(MD_LINK_REGEX.source, 'g')
 
   doc.descendants((node, pos) => {
@@ -102,7 +90,13 @@ function createMdLinkPlugin(resolver: LinkResolver, isViewerMode: boolean): Plug
       init(_, { doc, selection }) {
         const matches = findMdLinks(doc, resolver)
         return {
-          decorations: buildDecorations(doc, matches, isViewerMode, selection.from, selection.to),
+          decorations: buildMdLinkDecorations(
+            doc,
+            matches,
+            isViewerMode,
+            selection.from,
+            selection.to,
+          ),
           selFrom: selection.from,
           selTo: selection.to,
         }
@@ -114,7 +108,7 @@ function createMdLinkPlugin(resolver: LinkResolver, isViewerMode: boolean): Plug
         if (tr.docChanged || forceRebuild) {
           const matches = findMdLinks(newEditorState.doc, resolver)
           return {
-            decorations: buildDecorations(
+            decorations: buildMdLinkDecorations(
               newEditorState.doc,
               matches,
               isViewerMode,
@@ -128,13 +122,10 @@ function createMdLinkPlugin(resolver: LinkResolver, isViewerMode: boolean): Plug
 
         if (tr.selectionSet && !isViewerMode) {
           const matches = findMdLinks(newEditorState.doc, resolver)
-          const oldOverlapping = matches.filter((m) =>
-            overlapsSelection(m.from, m.to, oldState.selFrom, oldState.selTo),
+          const oldOverlapping = matches.filter(
+            (m) => oldState.selFrom <= m.to && oldState.selTo >= m.from,
           )
-          const newOverlapping = matches.filter((m) =>
-            overlapsSelection(m.from, m.to, selFrom, selTo),
-          )
-
+          const newOverlapping = matches.filter((m) => selFrom <= m.to && selTo >= m.from)
           const overlappingChanged =
             oldOverlapping.length !== newOverlapping.length ||
             oldOverlapping.some(
@@ -143,7 +134,7 @@ function createMdLinkPlugin(resolver: LinkResolver, isViewerMode: boolean): Plug
 
           if (overlappingChanged) {
             return {
-              decorations: buildDecorations(
+              decorations: buildMdLinkDecorations(
                 newEditorState.doc,
                 matches,
                 isViewerMode,
@@ -169,88 +160,4 @@ function createMdLinkPlugin(resolver: LinkResolver, isViewerMode: boolean): Plug
       },
     },
   })
-}
-
-function buildDecorations(
-  doc: ProseMirrorNode,
-  matches: Array<MdLinkMatch>,
-  isViewerMode: boolean,
-  selFrom: number,
-  selTo: number,
-): DecorationSet {
-  const decorations: Array<Decoration> = []
-
-  for (const { from, to, displayText, target, parsed, resolved } of matches) {
-    const baseClass = parsed.isExternal
-      ? 'md-link-external'
-      : resolved.resolved
-        ? 'md-link-exists'
-        : 'md-link-ghost'
-    const color = resolved.color ?? undefined
-    const isActive = !isViewerMode && overlapsSelection(from, to, selFrom, selTo)
-    const classes = `${baseClass}${isViewerMode ? ' md-link-viewer' : ''}${isActive ? ' md-link-active' : ''}`
-
-    const linkType = parsed.isExternal ? 'md-external' : 'md-internal'
-
-    const openBracketEnd = from + 1
-    const displayEnd = from + 1 + displayText.length
-    const middleBracketEnd = displayEnd + 2
-    const targetEnd = middleBracketEnd + target.length
-
-    decorations.push(
-      Decoration.inline(from, openBracketEnd, {
-        nodeName: 'span',
-        class: `md-link-bracket md-link-bracket-open ${classes}`,
-        style: color ? `color: ${color}` : undefined,
-      }),
-    )
-
-    decorations.push(
-      Decoration.inline(openBracketEnd, displayEnd, {
-        nodeName: 'span',
-        class: `md-link-display ${classes}`,
-        style: color ? `color: ${color}` : undefined,
-        'data-link-exists': parsed.isExternal || resolved.resolved ? 'true' : 'false',
-        'data-link-type': linkType,
-        ...(resolved.href && {
-          'data-href': resolved.href,
-          'data-link-href': resolved.href,
-        }),
-        ...(!parsed.isExternal &&
-          parsed.itemName && {
-            'data-link-item-name': parsed.itemName,
-          }),
-        ...(!parsed.isExternal &&
-          parsed.headingPath.length > 0 && {
-            'data-link-heading': parsed.headingPath.join('#'),
-          }),
-      }),
-    )
-
-    decorations.push(
-      Decoration.inline(displayEnd, middleBracketEnd, {
-        nodeName: 'span',
-        class: `md-link-bracket md-link-bracket-middle ${classes}`,
-        style: color ? `color: ${color}` : undefined,
-      }),
-    )
-
-    decorations.push(
-      Decoration.inline(middleBracketEnd, targetEnd, {
-        nodeName: 'span',
-        class: `md-link-target ${classes}`,
-        style: color ? `color: ${color}` : undefined,
-      }),
-    )
-
-    decorations.push(
-      Decoration.inline(targetEnd, to, {
-        nodeName: 'span',
-        class: `md-link-bracket md-link-bracket-close ${classes}`,
-        style: color ? `color: ${color}` : undefined,
-      }),
-    )
-  }
-
-  return DecorationSet.create(doc, decorations)
 }

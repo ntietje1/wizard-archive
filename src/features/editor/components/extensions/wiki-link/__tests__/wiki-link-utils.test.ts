@@ -9,6 +9,13 @@ describe('splitWikiLinkTargetAndDisplayName', () => {
     })
   })
 
+  it('returns an empty target and null display name for empty input', () => {
+    expect(splitWikiLinkTargetAndDisplayName('')).toEqual({
+      targetQuery: '',
+      displayName: null,
+    })
+  })
+
   it('separates a display name from the target query', () => {
     expect(splitWikiLinkTargetAndDisplayName('World/City#District|Capital')).toEqual({
       targetQuery: 'World/City#District',
@@ -20,6 +27,20 @@ describe('splitWikiLinkTargetAndDisplayName', () => {
     expect(splitWikiLinkTargetAndDisplayName('World/City|Capital|Alias')).toEqual({
       targetQuery: 'World/City|Capital',
       displayName: 'Alias',
+    })
+  })
+
+  it('preserves an empty display name after a trailing pipe', () => {
+    expect(splitWikiLinkTargetAndDisplayName('Target|')).toEqual({
+      targetQuery: 'Target',
+      displayName: '',
+    })
+  })
+
+  it('allows an empty target before the display name', () => {
+    expect(splitWikiLinkTargetAndDisplayName('|DisplayOnly')).toEqual({
+      targetQuery: '',
+      displayName: 'DisplayOnly',
     })
   })
 })

@@ -17,8 +17,11 @@ export function getItemPath<T extends LinkResolvableItem>(
 
   while (current && !seen.has(current._id)) {
     seen.add(current._id)
-    if (!current.name) logger.warn('[getItemPath] Encountered item with empty name')
-    path.unshift(current.name)
+    if (!current.name) {
+      logger.warn('[getItemPath] Encountered item with empty name')
+    } else {
+      path.unshift(current.name)
+    }
     current = current.parentId ? itemsMap.get(current.parentId) : undefined
   }
 
@@ -50,8 +53,10 @@ function forEachMatchingItem<T extends LinkResolvableItem>(
   onMatch: (item: T) => boolean | void,
 ): void {
   const normalizedPath = normalizePathSegments(pathSegments)
+  const leaf = normalizedPath[normalizedPath.length - 1]
 
   for (const item of allItems) {
+    if (leaf && item.name.trim().toLowerCase() !== leaf) continue
     const fullPath = getItemPath(item, itemsMap)
     if (!matchesPathSuffix(fullPath, normalizedPath)) continue
     if (onMatch(item) === false) return

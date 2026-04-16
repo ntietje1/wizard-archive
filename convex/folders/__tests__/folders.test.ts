@@ -14,6 +14,7 @@ import {
   expectValidationFailed,
 } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
+import { getClientErrorMessage } from '../../errors'
 
 describe('createFolder', () => {
   const t = createTestContext()
@@ -163,6 +164,25 @@ describe('createFolder', () => {
         parentId: null,
       }),
     )
+  })
+
+  it('rejects non-folder parents', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Parent Note',
+    })
+
+    const error = await expectValidationFailed(
+      dmAuth.mutation(api.folders.mutations.createFolder, {
+        campaignId: ctx.campaignId,
+        name: 'Child Folder',
+        parentId: noteId,
+      }),
+    )
+
+    expect(getClientErrorMessage(error)).toBe('Parent must be a folder')
   })
 
   it('requires authentication', async () => {

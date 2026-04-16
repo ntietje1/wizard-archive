@@ -1,27 +1,16 @@
 import { useEffect, useRef } from 'react'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
-import { Decoration, DecorationSet } from '@tiptap/pm/view'
+import { DecorationSet } from '@tiptap/pm/view'
 import { WIKI_LINK_REGEX, parseWikiLinkText } from 'convex/links/linkParsers'
-import type { ParsedWikiLinkFields } from 'convex/links/linkParsers'
-import type { ResolvedLink } from 'convex/links/types'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { LinkResolver } from './useLinkResolver'
-import {
-  overlapsSelection,
-  registerLinkPlugins,
-} from '~/features/editor/utils/link-extension-utils'
+import type { WikiLinkDecorationMatch } from '~/features/editor/utils/wiki-link-decorations'
+import { registerLinkPlugins } from '~/features/editor/utils/link-extension-utils'
+import { buildWikiLinkDecorations } from '~/features/editor/utils/wiki-link-decorations'
 
 const PLUGIN_KEY = new PluginKey('wikiLinkDecoration')
 const SELECTION_STABILIZER_KEY = new PluginKey('wikiLinkSelectionStabilizer')
-
-interface WikiLinkMatch {
-  from: number
-  to: number
-  innerText: string
-  parsed: ParsedWikiLinkFields
-  resolved: ResolvedLink
-}
 
 interface PluginState {
   decorations: DecorationSet
@@ -50,8 +39,11 @@ export function useWikiLinkExtension(
   }, [editor, resolver, resolver.isViewerMode])
 }
 
-function findWikiLinks(doc: ProseMirrorNode, resolver: LinkResolver): Array<WikiLinkMatch> {
-  const matches: Array<WikiLinkMatch> = []
+function findWikiLinks(
+  doc: ProseMirrorNode,
+  resolver: LinkResolver,
+): Array<WikiLinkDecorationMatch> {
+  const matches: Array<WikiLinkDecorationMatch> = []
   const regex = new RegExp(WIKI_LINK_REGEX.source, 'g')
 
   doc.descendants((node, pos) => {
@@ -86,7 +78,13 @@ function createWikiLinkPlugin(resolver: LinkResolver, isViewerMode: boolean): Pl
       init(_, { doc, selection }) {
         const matches = findWikiLinks(doc, resolver)
         return {
-          decorations: buildDecorations(doc, matches, isViewerMode, selection.from, selection.to),
+          decorations: buildWikiLinkDecorations(
+            doc,
+            matches,
+            isViewerMode,
+            selection.from,
+            selection.to,
+          ),
           selFrom: selection.from,
           selTo: selection.to,
         }
@@ -98,7 +96,7 @@ function createWikiLinkPlugin(resolver: LinkResolver, isViewerMode: boolean): Pl
         if (tr.docChanged || forceRebuild) {
           const matches = findWikiLinks(newEditorState.doc, resolver)
           return {
-            decorations: buildDecorations(
+            decorations: buildWikiLinkDecorations(
               newEditorState.doc,
               matches,
               isViewerMode,
@@ -112,13 +110,10 @@ function createWikiLinkPlugin(resolver: LinkResolver, isViewerMode: boolean): Pl
 
         if (tr.selectionSet && !isViewerMode) {
           const matches = findWikiLinks(newEditorState.doc, resolver)
-          const oldOverlapping = matches.filter((m) =>
-            overlapsSelection(m.from, m.to, oldState.selFrom, oldState.selTo),
+          const oldOverlapping = matches.filter(
+            (m) => oldState.selFrom <= m.to && oldState.selTo >= m.from,
           )
-          const newOverlapping = matches.filter((m) =>
-            overlapsSelection(m.from, m.to, selFrom, selTo),
-          )
-
+          const newOverlapping = matches.filter((m) => selFrom <= m.to && selTo >= m.from)
           const overlappingChanged =
             oldOverlapping.length !== newOverlapping.length ||
             oldOverlapping.some(
@@ -127,7 +122,7 @@ function createWikiLinkPlugin(resolver: LinkResolver, isViewerMode: boolean): Pl
 
           if (overlappingChanged) {
             return {
-              decorations: buildDecorations(
+              decorations: buildWikiLinkDecorations(
                 newEditorState.doc,
                 matches,
                 isViewerMode,
@@ -153,78 +148,4 @@ function createWikiLinkPlugin(resolver: LinkResolver, isViewerMode: boolean): Pl
       },
     },
   })
-}
-
-function buildDecorations(
-  doc: ProseMirrorNode,
-  matches: Array<WikiLinkMatch>,
-  isViewerMode: boolean,
-  selFrom: number,
-  selTo: number,
-): DecorationSet {
-  const decorations: Array<Decoration> = []
-
-  for (const { from, to, innerText, parsed, resolved } of matches) {
-    const style = resolved.color ? `color: ${resolved.color}` : undefined
-    const baseClass = resolved.resolved ? 'wiki-link-exists' : 'wiki-link-ghost'
-    const isActive = !isViewerMode && overlapsSelection(from, to, selFrom, selTo)
-    const interactionClasses = `${isViewerMode ? ' wiki-link-viewer' : ''}${isActive ? ' wiki-link-active' : ''}`
-    const contentClasses = `${baseClass}${interactionClasses}`
-    const contentStart = from + 2
-    const contentEnd = to - 2
-
-    const contentAttrs: Record<string, string | undefined> = {
-      'data-link-exists': resolved.resolved ? 'true' : 'false',
-      'data-link-item-name': parsed.itemName,
-      'data-link-type': 'wiki',
-      ...(resolved.href && {
-        'data-href': resolved.href,
-        'data-link-href': resolved.href,
-      }),
-      ...(parsed.headingPath.length > 0 && {
-        'data-link-heading': parsed.headingPath.join('#'),
-      }),
-    }
-
-    decorations.push(
-      Decoration.inline(from, from + 2, {
-        nodeName: 'span',
-        class: `wiki-link-bracket wiki-link-bracket-open${interactionClasses}`,
-        style,
-      }),
-    )
-
-    let visibleContentStart = contentStart
-    if (parsed.displayName) {
-      const pipeIndex = innerText.lastIndexOf('|')
-      visibleContentStart = contentStart + pipeIndex + 1
-
-      decorations.push(
-        Decoration.inline(contentStart, visibleContentStart, {
-          nodeName: 'span',
-          class: `wiki-link-hidden-prefix ${contentClasses}`,
-          style,
-        }),
-      )
-    }
-
-    decorations.push(
-      Decoration.inline(visibleContentStart, contentEnd, {
-        nodeName: 'span',
-        class: `wiki-link-content ${contentClasses}`,
-        style,
-        ...contentAttrs,
-      }),
-    )
-
-    decorations.push(
-      Decoration.inline(to - 2, to, {
-        nodeName: 'span',
-        class: `wiki-link-bracket wiki-link-bracket-close${interactionClasses}`,
-        style,
-      }),
-    )
-  }
-
-  return DecorationSet.create(doc, decorations)
 }

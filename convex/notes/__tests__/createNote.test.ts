@@ -8,6 +8,7 @@ import {
   expectValidationFailed,
 } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
+import { getClientErrorMessage } from '../../errors'
 
 describe('createNote', () => {
   const t = createTestContext()
@@ -53,6 +54,27 @@ describe('createNote', () => {
       const note = await dbCtx.db.get('sidebarItems', result.noteId)
       expect(note!.parentId).toBe(folderId)
     })
+  })
+
+  it('rejects non-folder parents', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { noteId: parentId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      campaignId: ctx.campaignId,
+      name: 'Parent Note',
+      parentId: null,
+    })
+
+    const error = await expectValidationFailed(
+      dmAuth.mutation(api.notes.mutations.createNote, {
+        campaignId: ctx.campaignId,
+        name: 'Child Note',
+        parentId,
+      }),
+    )
+
+    expect(getClientErrorMessage(error)).toBe('Parent must be a folder')
   })
 
   it('sets optional iconName and color', async () => {

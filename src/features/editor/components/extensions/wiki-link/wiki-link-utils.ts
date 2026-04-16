@@ -14,14 +14,14 @@ export function splitWikiLinkTargetAndDisplayName(query: string): {
   const lastPipeIndex = query.lastIndexOf('|')
   if (lastPipeIndex === -1) {
     return {
-      targetQuery: query,
+      targetQuery: query.trim(),
       displayName: null,
     }
   }
 
   return {
-    targetQuery: query.slice(0, lastPipeIndex),
-    displayName: query.slice(lastPipeIndex + 1).trim() || null,
+    targetQuery: query.slice(0, lastPipeIndex).trim(),
+    displayName: query.slice(lastPipeIndex + 1).trim(),
   }
 }
 
