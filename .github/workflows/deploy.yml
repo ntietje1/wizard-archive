@@ -30,8 +30,13 @@ jobs:
           CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_DEPLOY_KEY }}'
       - name: Deploy Cloudflare Workers
         run: |
+          cat <<EOF > .deploy-secrets.env
+          VITE_CONVEX_URL=${VITE_CONVEX_URL}
+          VITE_CONVEX_SITE_URL=${VITE_CONVEX_SITE_URL}
+          VITE_SITE_URL=${VITE_SITE_URL}
+          EOF
+
           vp build --mode production
-          cp dist/server/.dev.vars .deploy-secrets.env
           npx wrangler deploy --keep-vars --secrets-file .deploy-secrets.env
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

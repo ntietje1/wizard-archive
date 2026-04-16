@@ -34,7 +34,7 @@ jobs:
         run: |
           npx convex deploy \
             --preview-create "pr-${{ github.event.pull_request.number }}" \
-            --cmd 'vp build' \
+            --cmd 'printf "VITE_CONVEX_URL=%s\nVITE_CONVEX_SITE_URL=%s\nVITE_SITE_URL=%s\nVITE_IS_PREVIEW=%s\nVITE_PR_NUMBER=%s\nVITE_GITHUB_REPOSITORY=%s\n" "$VITE_CONVEX_URL" "$VITE_CONVEX_SITE_URL" "$VITE_SITE_URL" "$VITE_IS_PREVIEW" "$VITE_PR_NUMBER" "$VITE_GITHUB_REPOSITORY" > .preview-deploy-secrets.env && vp build' \
             --cmd-url-env-var-name VITE_CONVEX_URL
         env:
           CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}'
@@ -49,7 +49,7 @@ jobs:
         run: |
           npx convex deploy \
             --preview-create "pr-${{ github.event.pull_request.number }}" \
-            --cmd 'vp build' \
+            --cmd 'printf "VITE_CONVEX_URL=%s\nVITE_CONVEX_SITE_URL=%s\nVITE_SITE_URL=%s\nVITE_IS_PREVIEW=%s\nVITE_PR_NUMBER=%s\nVITE_GITHUB_REPOSITORY=%s\n" "$VITE_CONVEX_URL" "$VITE_CONVEX_SITE_URL" "$VITE_SITE_URL" "$VITE_IS_PREVIEW" "$VITE_PR_NUMBER" "$VITE_GITHUB_REPOSITORY" > .preview-deploy-secrets.env && vp build' \
             --cmd-url-env-var-name VITE_CONVEX_URL
         env:
           CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}'
@@ -76,7 +76,7 @@ jobs:
 
       - name: Deploy Cloudflare Workers Preview
         run: |
-          cp dist/server/.dev.vars .deploy-secrets.env
+          cp .preview-deploy-secrets.env .deploy-secrets.env
           npx wrangler deploy \
             --keep-vars \
             --secrets-file .deploy-secrets.env \

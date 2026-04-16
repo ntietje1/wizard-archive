@@ -28,10 +28,7 @@ async function pushAndPersist(
 
 type FactoryBlock = Awaited<ReturnType<typeof createBlock>>
 
-function toPersistedBlock(
-  noteId: Id<'sidebarItems'>,
-  block: FactoryBlock,
-): PersistedBlockRecord {
+function toPersistedBlock(noteId: Id<'sidebarItems'>, block: FactoryBlock): PersistedBlockRecord {
   return {
     _id: block.blockDbId,
     noteId,
