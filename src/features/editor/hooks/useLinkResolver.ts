@@ -15,12 +15,14 @@ export interface LinkResolver {
   isViewerMode: boolean
 }
 
+const EMPTY_ITEMS: Array<AnySidebarItem> = []
+
 export function useLinkResolver(): LinkResolver {
   const { data: sidebarItems, itemsMap } = useActiveSidebarItems()
   const { dmUsername, campaignSlug } = useCampaign()
   const { editorMode, viewAsPlayerId } = useEditorMode()
 
-  const allItems = sidebarItems || []
+  const allItems = sidebarItems ?? EMPTY_ITEMS
   const isViewerMode = editorMode === 'viewer' || viewAsPlayerId !== undefined
 
   const resolveLink = (parsed: ParsedLinkData): ResolvedLink => {

@@ -38,36 +38,37 @@ export async function saveAllBlocksForNote(
   }
   const flatBlocks = [...deduped.values()]
   const incomingBlockIds = new Set(flatBlocks.map((b) => b.blockNoteId))
-  const persistedBlocks: Array<PersistedBlockRecord> = []
+  const persistedBlocks = await asyncMap(
+    flatBlocks,
+    async (flat): Promise<PersistedBlockRecord> => {
+      const existing = existingBlocksMap.get(flat.blockNoteId)
+      if (existing) {
+        await updateBlock(ctx, {
+          blockDbId: existing._id,
+          parentBlockId: flat.parentBlockId,
+          depth: flat.depth,
+          position: flat.position,
+          type: flat.type,
+          props: flat.props,
+          inlineContent: flat.inlineContent,
+          plainText: flat.plainText,
+        })
+        return {
+          _id: existing._id,
+          noteId,
+          campaignId,
+          blockNoteId: flat.blockNoteId,
+          parentBlockId: flat.parentBlockId,
+          depth: flat.depth,
+          position: flat.position,
+          type: flat.type,
+          props: flat.props,
+          inlineContent: flat.inlineContent,
+          plainText: flat.plainText,
+          shareStatus: existing.shareStatus,
+        }
+      }
 
-  await asyncMap(flatBlocks, async (flat) => {
-    const existing = existingBlocksMap.get(flat.blockNoteId)
-    if (existing) {
-      await updateBlock(ctx, {
-        blockDbId: existing._id,
-        parentBlockId: flat.parentBlockId,
-        depth: flat.depth,
-        position: flat.position,
-        type: flat.type,
-        props: flat.props,
-        inlineContent: flat.inlineContent,
-        plainText: flat.plainText,
-      })
-      persistedBlocks.push({
-        _id: existing._id,
-        noteId,
-        campaignId,
-        blockNoteId: flat.blockNoteId,
-        parentBlockId: flat.parentBlockId,
-        depth: flat.depth,
-        position: flat.position,
-        type: flat.type,
-        props: flat.props,
-        inlineContent: flat.inlineContent,
-        plainText: flat.plainText,
-        shareStatus: existing.shareStatus,
-      })
-    } else {
       const blockId = await insertBlock(ctx, {
         noteId,
         campaignId,
@@ -81,7 +82,8 @@ export async function saveAllBlocksForNote(
         plainText: flat.plainText,
         shareStatus: SHARE_STATUS.NOT_SHARED,
       })
-      persistedBlocks.push({
+
+      return {
         _id: blockId,
         noteId,
         campaignId,
@@ -94,9 +96,9 @@ export async function saveAllBlocksForNote(
         inlineContent: flat.inlineContent,
         plainText: flat.plainText,
         shareStatus: SHARE_STATUS.NOT_SHARED,
-      })
-    }
-  })
+      }
+    },
+  )
 
   // hard delete blocks that don't exist in the document anymore
   const blocksToDelete = existingBlocks.filter((b) => !incomingBlockIds.has(b.blockNoteId))
