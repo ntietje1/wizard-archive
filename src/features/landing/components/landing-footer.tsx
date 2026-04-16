@@ -63,7 +63,6 @@ export function LandingFooter() {
                 href: 'https://github.com/ntietje1/wizard-archive',
                 external: true,
               },
-              { label: 'Blog', href: '#' },
             ]}
           />
 
