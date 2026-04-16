@@ -169,7 +169,7 @@ function getLinkDedupKey(
 ): string {
   return row.targetItemId === null
     ? `unresolved:${row.blockId}:${row.query}`
-    : `resolved:${row.blockId}:${row.targetItemId}`
+    : `resolved:${row.blockId}:${row.targetItemId}:${row.query}`
 }
 
 function getLinkQuery(link: ParsedLinkData): string {

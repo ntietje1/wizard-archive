@@ -33,6 +33,12 @@ function getTooltipState(link: ReturnType<typeof getLinkAt>): TooltipState | nul
   }
 }
 
+function getLinkCreationKey(link: ReturnType<typeof getLinkAt>): string | null {
+  if (!link?.itemName) return null
+
+  return link.itemPath.join('/') || link.itemName
+}
+
 export function LinkClickHandler({ editor }: { editor: CustomBlockNoteEditor | undefined }) {
   const navigate = useNavigate()
   const { navigateToItem } = useEditorNavigation()
@@ -45,7 +51,7 @@ export function LinkClickHandler({ editor }: { editor: CustomBlockNoteEditor | u
   const [tooltip, setTooltip] = useState<TooltipState>(HIDDEN_TOOLTIP)
   const [ctrlHeld, setCtrlHeld] = useState(false)
   const mousePosRef = useRef<{ x: number; y: number } | null>(null)
-  const isCreatingRef = useRef(false)
+  const creatingLinksRef = useRef(new Set<string>())
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -157,9 +163,10 @@ export function LinkClickHandler({ editor }: { editor: CustomBlockNoteEditor | u
         e.stopPropagation()
         setTooltip(HIDDEN_TOOLTIP)
 
-        if (isCreatingRef.current) return
+        const creationKey = getLinkCreationKey(link)
+        if (!creationKey || creatingLinksRef.current.has(creationKey)) return
 
-        isCreatingRef.current = true
+        creatingLinksRef.current.add(creationKey)
         try {
           const result = await createItem({
             campaignId: campaignData._id,
@@ -172,7 +179,7 @@ export function LinkClickHandler({ editor }: { editor: CustomBlockNoteEditor | u
         } catch (error) {
           handleError(error, 'Failed to create note')
         } finally {
-          isCreatingRef.current = false
+          creatingLinksRef.current.delete(creationKey)
         }
       }
     }

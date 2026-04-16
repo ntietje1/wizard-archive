@@ -110,18 +110,11 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       },
     ])
 
-    await t.run(async (dbCtx) => {
-      const links = await dbCtx.db
-        .query('noteLinks')
-        .withIndex('by_campaign_source', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceId),
-        )
-        .collect()
+    const links = await listLinksForNote(t, ctx.campaignId, sourceId)
 
-      expect(links).toHaveLength(2)
-      expect(links.every((link) => link.targetItemId === targetId)).toBe(true)
-      expect(new Set(links.map((link) => link.blockId)).size).toBe(2)
-    })
+    expect(links).toHaveLength(2)
+    expect(links.every((link) => link.targetItemId === targetId)).toBe(true)
+    expect(new Set(links.map((link) => link.blockId)).size).toBe(2)
   })
 
   it('deduplicates resolved links in a block by target item id', async () => {
@@ -165,6 +158,51 @@ describe('persistNoteBlocks — note link reconciliation', () => {
 
       expect(links).toHaveLength(1)
       expect(links[0].query).toBe('Target Note')
+    })
+  })
+
+  it('keeps resolved links with different heading anchors as separate rows', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { noteId: targetId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      campaignId: ctx.campaignId,
+      name: 'Capital',
+      parentId: null,
+    })
+    const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      campaignId: ctx.campaignId,
+      name: 'Source Note',
+      parentId: null,
+    })
+
+    await pushAndPersist(dmAuth, ctx.campaignId, sourceId, [
+      {
+        id: 'block-a',
+        type: 'paragraph',
+        props: {},
+        content: [
+          {
+            type: 'text',
+            text: '[[Capital]] and [[Capital#Geography]]',
+            styles: {},
+          },
+        ],
+        children: [],
+      },
+    ])
+
+    await t.run(async (dbCtx) => {
+      const links = await dbCtx.db
+        .query('noteLinks')
+        .withIndex('by_campaign_source', (q) =>
+          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceId),
+        )
+        .collect()
+
+      expect(links).toHaveLength(2)
+      expect(links.every((link) => link.targetItemId === targetId)).toBe(true)
+      expect(links.map((link) => link.query).sort()).toEqual(['Capital', 'Capital#Geography'])
     })
   })
 
@@ -352,22 +390,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       await syncNoteLinks(dbCtx as unknown as CampaignMutationCtx, {
         noteId: sourceId,
         campaignId: ctx.campaignId,
-        blocks: [
-          {
-            _id: originalBlock.blockDbId,
-            noteId: sourceId,
-            blockNoteId: originalBlock.blockNoteId,
-            position: originalBlock.position,
-            parentBlockId: originalBlock.parentBlockId,
-            depth: originalBlock.depth,
-            type: originalBlock.type,
-            props: originalBlock.props,
-            inlineContent: originalBlock.inlineContent,
-            plainText: originalBlock.plainText,
-            campaignId: originalBlock.campaignId,
-            shareStatus: originalBlock.shareStatus,
-          },
-        ],
+        blocks: [toPersistedBlock(sourceId, originalBlock)],
       })
     })
 
@@ -387,18 +410,8 @@ describe('persistNoteBlocks — note link reconciliation', () => {
         campaignId: ctx.campaignId,
         blocks: [
           {
-            _id: originalBlock.blockDbId,
-            noteId: sourceId,
-            blockNoteId: originalBlock.blockNoteId,
-            position: originalBlock.position,
-            parentBlockId: originalBlock.parentBlockId,
-            depth: originalBlock.depth,
-            type: originalBlock.type,
-            props: originalBlock.props,
-            inlineContent: originalBlock.inlineContent,
+            ...toPersistedBlock(sourceId, originalBlock),
             plainText: '[New Label](Target Note)',
-            campaignId: originalBlock.campaignId,
-            shareStatus: originalBlock.shareStatus,
           },
         ],
       })
@@ -451,36 +464,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       await syncNoteLinks(dbCtx as unknown as CampaignMutationCtx, {
         noteId: sourceId,
         campaignId: ctx.campaignId,
-        blocks: [
-          {
-            _id: blockA.blockDbId,
-            noteId: sourceId,
-            blockNoteId: blockA.blockNoteId,
-            position: blockA.position,
-            parentBlockId: blockA.parentBlockId,
-            depth: blockA.depth,
-            type: blockA.type,
-            props: blockA.props,
-            inlineContent: blockA.inlineContent,
-            plainText: blockA.plainText,
-            campaignId: blockA.campaignId,
-            shareStatus: blockA.shareStatus,
-          },
-          {
-            _id: blockB.blockDbId,
-            noteId: sourceId,
-            blockNoteId: blockB.blockNoteId,
-            position: blockB.position,
-            parentBlockId: blockB.parentBlockId,
-            depth: blockB.depth,
-            type: blockB.type,
-            props: blockB.props,
-            inlineContent: blockB.inlineContent,
-            plainText: blockB.plainText,
-            campaignId: blockB.campaignId,
-            shareStatus: blockB.shareStatus,
-          },
-        ],
+        blocks: [toPersistedBlock(sourceId, blockA), toPersistedBlock(sourceId, blockB)],
       })
     })
 
@@ -497,22 +481,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       await syncNoteLinks(dbCtx as unknown as CampaignMutationCtx, {
         noteId: sourceId,
         campaignId: ctx.campaignId,
-        blocks: [
-          {
-            _id: blockB.blockDbId,
-            noteId: sourceId,
-            blockNoteId: blockB.blockNoteId,
-            position: blockB.position,
-            parentBlockId: blockB.parentBlockId,
-            depth: blockB.depth,
-            type: blockB.type,
-            props: blockB.props,
-            inlineContent: blockB.inlineContent,
-            plainText: blockB.plainText,
-            campaignId: blockB.campaignId,
-            shareStatus: blockB.shareStatus,
-          },
-        ],
+        blocks: [toPersistedBlock(sourceId, blockB)],
       })
     })
 

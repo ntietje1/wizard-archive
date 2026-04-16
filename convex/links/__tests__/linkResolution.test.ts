@@ -58,6 +58,26 @@ describe('getItemPath', () => {
     const map = buildMap([root, mid, leaf])
     expect(getItemPath(leaf, map)).toEqual(['Root', 'Mid', 'Leaf'])
   })
+
+  it('breaks parent cycles instead of hanging', () => {
+    const a = makeItem('a', 'A', 'b')
+    const b = makeItem('b', 'B', 'a')
+    const map = buildMap([a, b])
+
+    const path = getItemPath(a, map)
+
+    expect(path).toContain('A')
+    expect(path.length).toBeLessThanOrEqual(2)
+  })
+
+  it('returns an empty path when an ancestor has an empty name', () => {
+    const root = makeItem('a', 'Root')
+    const unnamed = makeItem('b', '', 'a')
+    const leaf = makeItem('c', 'Leaf', 'b')
+    const map = buildMap([root, unnamed, leaf])
+
+    expect(getItemPath(leaf, map)).toEqual([])
+  })
 })
 
 describe('resolveItemByPath', () => {
@@ -113,6 +133,18 @@ describe('resolveItemByPath', () => {
     const tiedMap = buildMap(tiedItems)
 
     expect(resolveItemByPath(['Guild'], tiedItems, tiedMap)?._id).toBe('d')
+  })
+
+  it('does not match collapsed paths through unnamed ancestors', () => {
+    const items = [
+      makeItem('a', 'A'),
+      makeItem('b', '', 'a'),
+      makeItem('c', 'C', 'b'),
+      makeItem('d', 'C', 'a'),
+    ]
+    const map = buildMap(items)
+
+    expect(resolveItemByPath(['A', 'C'], items, map)?._id).toBe('d')
   })
 })
 
@@ -201,5 +233,16 @@ describe('getMinDisambiguationPath', () => {
 
     const path = getMinDisambiguationPath(deepItems[2], deepItems, deepMap)
     expect(path).toEqual(['World', 'Places', 'Tavern'])
+  })
+
+  it('falls back to the item name when the full path is invalid', () => {
+    const items = [
+      makeItem('a', 'Root'),
+      makeItem('b', '', 'a'),
+      makeItem('c', 'Leaf', 'b'),
+    ]
+    const map = buildMap(items)
+
+    expect(getMinDisambiguationPath(items[2], items, map)).toEqual(['Leaf'])
   })
 })

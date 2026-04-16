@@ -9,6 +9,7 @@ import {
 } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 import { getClientErrorMessage } from '../../errors'
+import type { CustomBlock } from '../editorSpecs'
 
 describe('createNote', () => {
   const t = createTestContext()
@@ -33,6 +34,55 @@ describe('createNote', () => {
       expect(note!.parentId).toBeNull()
       expect(note!.campaignId).toBe(ctx.campaignId)
       expect(note!.type).toBe('note')
+    })
+  })
+
+  it('creates noteLinks immediately for initial content links', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const initialContent: Array<CustomBlock> = [
+      {
+        id: 'block-a',
+        type: 'paragraph',
+        props: {},
+        content: [{ type: 'text', text: 'See [[Target Note]]', styles: {} }] as CustomBlock['content'],
+        children: [],
+      },
+      {
+        id: 'block-b',
+        type: 'paragraph',
+        props: {},
+        content:
+          [{ type: 'text', text: 'And [Alias](Target Note)', styles: {} }] as CustomBlock['content'],
+        children: [],
+      },
+    ]
+
+    const { noteId: targetId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      campaignId: ctx.campaignId,
+      name: 'Target Note',
+      parentId: null,
+    })
+
+    const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      campaignId: ctx.campaignId,
+      name: 'Source Note',
+      parentId: null,
+      content: initialContent,
+    })
+
+    await t.run(async (dbCtx) => {
+      const links = await dbCtx.db
+        .query('noteLinks')
+        .withIndex('by_campaign_source', (q) =>
+          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceId),
+        )
+        .collect()
+
+      expect(links).toHaveLength(2)
+      expect(links.every((link) => link.targetItemId === targetId)).toBe(true)
+      expect(links.map((link) => link.query).sort()).toEqual(['Target Note', 'Target Note'])
     })
   })
 

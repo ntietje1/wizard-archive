@@ -355,6 +355,60 @@ describe('LinkClickHandler', () => {
     })
   })
 
+  it('allows concurrent ghost note creation for different link targets', async () => {
+    const resolvers = new Map<string, (value: { slug: string }) => void>()
+    createNoteMock.mockImplementation(
+      ({ parentId }: { parentId: string | null }) =>
+        new Promise((resolve) => {
+          resolvers.set(parentId ?? 'root', resolve)
+        }),
+    )
+    getLinkAtMock
+      .mockReturnValueOnce(
+        createLink({
+          exists: false,
+          type: 'wiki',
+          itemPath: ['Lore', 'Capital', 'Districts', 'Ghost Note'],
+          itemName: 'Ghost Note',
+        }),
+      )
+      .mockReturnValueOnce(
+        createLink({
+          exists: false,
+          type: 'wiki',
+          itemPath: ['Worldbuilding', 'Regions', 'North', 'Ghost Note'],
+          itemName: 'Ghost Note',
+        }),
+      )
+
+    render(<LinkClickHandler editor={{} as CustomBlockNoteEditor} />)
+
+    fireEvent.mouseDown(editorEl, { clientX: 10, clientY: 20, ctrlKey: true })
+    fireEvent.mouseDown(editorEl, { clientX: 30, clientY: 40, ctrlKey: true })
+
+    await waitFor(() => {
+      expect(createNoteMock).toHaveBeenCalledTimes(2)
+    })
+    expect(createNoteMock).toHaveBeenNthCalledWith(1, {
+      campaignId: 'campaign-1',
+      name: 'Ghost Note',
+      parentId: 'created-districts',
+    })
+    expect(createNoteMock).toHaveBeenNthCalledWith(2, {
+      campaignId: 'campaign-1',
+      name: 'Ghost Note',
+      parentId: 'created-north',
+    })
+
+    resolvers.get('created-districts')?.({ slug: 'districts-ghost-note' })
+    resolvers.get('created-north')?.({ slug: 'north-ghost-note' })
+
+    await waitFor(() => {
+      expect(navigateToItemMock).toHaveBeenCalledWith('districts-ghost-note')
+      expect(navigateToItemMock).toHaveBeenCalledWith('north-ghost-note')
+    })
+  })
+
   it('requires ctrl/cmd for md external links in editor mode and opens directly in viewer mode', () => {
     getLinkAtMock.mockReturnValue(
       createLink({ exists: true, type: 'md-external', href: 'https://example.com/docs' }),

@@ -1,5 +1,6 @@
 import * as Y from 'yjs'
 import { saveAllBlocksForNote } from '../../blocks/functions/saveAllBlocksForNote'
+import { syncNoteLinks } from '../../links/functions/syncNoteLinks'
 import {
   findUniqueSidebarItemSlug,
   validateSidebarCreateParent,
@@ -72,7 +73,12 @@ export async function createNote(
 
   let initialState: ArrayBuffer | undefined
   if (content && content.length > 0) {
-    await saveAllBlocksForNote(ctx, { noteId, content })
+    const persistedBlocks = await saveAllBlocksForNote(ctx, { noteId, content })
+    await syncNoteLinks(ctx, {
+      noteId,
+      campaignId: ctx.campaign._id,
+      blocks: persistedBlocks,
+    })
 
     const doc = blocksToYDoc(content, 'document')
     try {

@@ -3,6 +3,7 @@ import {
   parseWikiLinkText,
   parseMdLinkTarget,
   isExternalUrl,
+  isDangerousUrl,
   extractWikiLinksFromText,
   extractMdLinksFromText,
   WIKI_LINK_REGEX,
@@ -181,6 +182,83 @@ describe('isExternalUrl', () => {
   it('is case insensitive', () => {
     expect(isExternalUrl('HTTPS://example.com')).toBe(true)
   })
+
+  it('returns true for protocol-relative urls', () => {
+    expect(isExternalUrl('//evil.com/x')).toBe(true)
+  })
+
+  it('returns false for dangerous schemes handled separately', () => {
+    expect(isExternalUrl('javascript:alert(1)')).toBe(false)
+    expect(isExternalUrl('data:text/html,<script>')).toBe(false)
+    expect(isExternalUrl('vbscript:msgbox(1)')).toBe(false)
+    expect(isExternalUrl('file:///etc/passwd')).toBe(false)
+    expect(isExternalUrl('blob:https://example.com/uuid')).toBe(false)
+  })
+})
+
+describe('isDangerousUrl', () => {
+  it('returns true for dangerous or non-navigable schemes', () => {
+    expect(isDangerousUrl('javascript:alert(1)')).toBe(true)
+    expect(isDangerousUrl('data:text/html,<script>')).toBe(true)
+    expect(isDangerousUrl('vbscript:msgbox(1)')).toBe(true)
+    expect(isDangerousUrl('file:///etc/passwd')).toBe(true)
+    expect(isDangerousUrl('blob:https://example.com/uuid')).toBe(true)
+    expect(isDangerousUrl('about:blank')).toBe(true)
+    expect(isDangerousUrl('filesystem:https://example.com/temporary/file')).toBe(true)
+  })
+
+  it('returns false for safe external and internal targets', () => {
+    expect(isDangerousUrl('https://example.com')).toBe(false)
+    expect(isDangerousUrl('//example.com/docs')).toBe(false)
+    expect(isDangerousUrl('Lore/Capital')).toBe(false)
+  })
+})
+
+describe('parseMdLinkTarget safety', () => {
+  it('does not treat dangerous or protocol-relative urls as internal paths', () => {
+    expect(parseMdLinkTarget('javascript:alert(1)')).toEqual({
+      target: 'javascript:alert(1)',
+      isExternal: true,
+      itemPath: [],
+      itemName: '',
+      headingPath: [],
+    })
+    expect(parseMdLinkTarget('data:text/html,<script>')).toEqual({
+      target: 'data:text/html,<script>',
+      isExternal: true,
+      itemPath: [],
+      itemName: '',
+      headingPath: [],
+    })
+    expect(parseMdLinkTarget('file:///etc/passwd')).toEqual({
+      target: 'file:///etc/passwd',
+      isExternal: true,
+      itemPath: [],
+      itemName: '',
+      headingPath: [],
+    })
+    expect(parseMdLinkTarget('blob:https://example.com/uuid')).toEqual({
+      target: 'blob:https://example.com/uuid',
+      isExternal: true,
+      itemPath: [],
+      itemName: '',
+      headingPath: [],
+    })
+    expect(parseMdLinkTarget('vbscript:msgbox(1)')).toEqual({
+      target: 'vbscript:msgbox(1)',
+      isExternal: true,
+      itemPath: [],
+      itemName: '',
+      headingPath: [],
+    })
+    expect(parseMdLinkTarget('//evil.com/x')).toEqual({
+      target: '//evil.com/x',
+      isExternal: true,
+      itemPath: [],
+      itemName: '',
+      headingPath: [],
+    })
+  })
 })
 
 describe('extractWikiLinksFromText', () => {
@@ -213,6 +291,11 @@ describe('extractWikiLinksFromText', () => {
     const result = extractWikiLinksFromText('See [[Note|Custom Name]]')
     expect(result[0].displayName).toBe('Custom Name')
   })
+
+  it('does not leak regex iteration state across calls', () => {
+    expect(extractWikiLinksFromText('See [[Note A]]')).toHaveLength(1)
+    expect(extractWikiLinksFromText('See [[Note B]]')).toHaveLength(1)
+  })
 })
 
 describe('extractMdLinksFromText', () => {
@@ -240,6 +323,11 @@ describe('extractMdLinksFromText', () => {
   it('does not match image syntax', () => {
     const result = extractMdLinksFromText('![alt](image.png)')
     expect(result).toEqual([])
+  })
+
+  it('does not leak regex iteration state across calls', () => {
+    expect(extractMdLinksFromText('See [A](Note A)')).toHaveLength(1)
+    expect(extractMdLinksFromText('See [B](Note B)')).toHaveLength(1)
   })
 })
 

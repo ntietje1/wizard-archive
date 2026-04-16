@@ -1,3 +1,4 @@
+import { isDangerousUrl } from 'convex/links/linkParsers'
 import { resolveItemByPath } from 'convex/links/linkResolution'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
@@ -24,11 +25,12 @@ export function useLinkResolver(): LinkResolver {
 
   const resolveLink = (parsed: ParsedLinkData): ResolvedLink => {
     if (parsed.isExternal) {
+      const href = isDangerousUrl(parsed.rawTarget) ? null : parsed.rawTarget
       return {
         ...parsed,
         resolved: true,
         itemId: null,
-        href: parsed.rawTarget,
+        href,
         color: null,
       }
     }

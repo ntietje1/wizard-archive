@@ -19,9 +19,9 @@ export function getItemPath<T extends LinkResolvableItem>(
     seen.add(current._id)
     if (!current.name) {
       logger.warn('[getItemPath] Encountered item with empty name')
-    } else {
-      path.unshift(current.name)
+      return []
     }
+    path.unshift(current.name)
     current = current.parentId ? itemsMap.get(current.parentId) : undefined
   }
 
@@ -136,7 +136,7 @@ export function getMinDisambiguationPath<T extends LinkResolvableItem>(
   itemsMap: Map<Id<'sidebarItems'>, T>,
 ): Array<string> {
   const fullPath = getItemPath(item, itemsMap)
-  if (fullPath.length === 0) return []
+  if (fullPath.length === 0) return item.name ? [item.name] : []
 
   for (let i = fullPath.length - 1; i >= 0; i--) {
     const partialPath = fullPath.slice(i)

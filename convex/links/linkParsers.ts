@@ -4,15 +4,26 @@ export const WIKI_LINK_REGEX = /\[\[((?:(?!\[\[)(?!\]\][^\]]).)+?)\]\](?=$|[^\]]
 
 export const MD_LINK_REGEX = /(?<!!)\[([^\]]+)\]\(([^()]*(?:\([^()]*\)[^()]*)*)\)/g
 
+const SAFE_EXTERNAL_URL_PREFIXES = ['//', 'http://', 'https://', 'mailto:', 'tel:', 'ftp://'] as const
+
+const DANGEROUS_URL_PREFIXES = [
+  'javascript:',
+  'data:',
+  'vbscript:',
+  'file:',
+  'blob:',
+  'filesystem:',
+  'about:',
+] as const
+
 export function isExternalUrl(str: string): boolean {
-  const lower = str.toLowerCase()
-  return (
-    lower.startsWith('http://') ||
-    lower.startsWith('https://') ||
-    lower.startsWith('mailto:') ||
-    lower.startsWith('tel:') ||
-    lower.startsWith('ftp://')
-  )
+  const lower = str.trim().toLowerCase()
+  return SAFE_EXTERNAL_URL_PREFIXES.some((prefix) => lower.startsWith(prefix))
+}
+
+export function isDangerousUrl(str: string): boolean {
+  const lower = str.trim().toLowerCase()
+  return DANGEROUS_URL_PREFIXES.some((prefix) => lower.startsWith(prefix))
 }
 
 export interface ParsedWikiLinkFields {
@@ -62,7 +73,7 @@ export interface ParsedMdLinkFields {
 }
 
 export function parseMdLinkTarget(target: string): ParsedMdLinkFields {
-  if (isExternalUrl(target)) {
+  if (isExternalUrl(target) || isDangerousUrl(target)) {
     return {
       target,
       isExternal: true,
@@ -79,10 +90,7 @@ export function parseMdLinkTarget(target: string): ParsedMdLinkFields {
 
 export function extractWikiLinksFromText(text: string): Array<ParsedLinkData> {
   const links: Array<ParsedLinkData> = []
-  const regex = new RegExp(WIKI_LINK_REGEX.source, 'g')
-
-  let match
-  while ((match = regex.exec(text)) !== null) {
+  for (const match of text.matchAll(WIKI_LINK_REGEX)) {
     const innerText = match[1]
     const parsed = parseWikiLinkText(innerText)
     links.push({
@@ -101,10 +109,7 @@ export function extractWikiLinksFromText(text: string): Array<ParsedLinkData> {
 
 export function extractMdLinksFromText(text: string): Array<ParsedLinkData> {
   const links: Array<ParsedLinkData> = []
-  const regex = new RegExp(MD_LINK_REGEX.source, 'g')
-
-  let match
-  while ((match = regex.exec(text)) !== null) {
+  for (const match of text.matchAll(MD_LINK_REGEX)) {
     const displayText = match[1]
     const target = match[2]
     const parsed = parseMdLinkTarget(target)
