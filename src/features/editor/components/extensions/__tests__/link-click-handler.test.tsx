@@ -218,7 +218,7 @@ describe('LinkClickHandler', () => {
       ]),
     })
     createNoteMock.mockReset()
-    createNoteMock.mockResolvedValue({ slug: 'new-note' })
+    createNoteMock.mockResolvedValue({ noteId: 'note-1', slug: 'new-note' })
     createFolderMock.mockReset()
     createFolderMock.mockImplementation(({ name }: { name: string }) => ({
       folderId: `created-${name.toLowerCase().replace(/\s+/g, '-')}`,
@@ -284,7 +284,7 @@ describe('LinkClickHandler', () => {
     )
   })
 
-  it('creates missing ancestor folders before creating a ghost note', async () => {
+  it('passes the missing ancestor path when creating a ghost note', async () => {
     getLinkAtMock.mockReturnValue(
       createLink({
         exists: false,
@@ -299,22 +299,21 @@ describe('LinkClickHandler', () => {
     fireEvent.mouseDown(editorEl, { clientX: 10, clientY: 20, ctrlKey: true })
 
     await waitFor(() => {
-      expect(createFolderMock).toHaveBeenCalledTimes(1)
+      expect(createNoteMock).toHaveBeenCalledTimes(1)
     })
-    expect(createFolderMock).toHaveBeenCalledWith({
-      campaignId: 'campaign-1',
-      name: 'Districts',
-      parentId: 'folder-2',
-    })
-    expect(createNoteMock).toHaveBeenCalledWith({
-      campaignId: 'campaign-1',
-      name: 'Ghost Note',
-      parentId: 'created-districts',
-    })
+    expect(createFolderMock).not.toHaveBeenCalled()
+    expect(createNoteMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        campaignId: 'campaign-1',
+        name: 'Ghost Note',
+        parentId: null,
+        parentPath: ['Lore', 'Capital', 'Districts'],
+      }),
+    )
   })
 
   it('shows the ghost tooltip and ignores duplicate create clicks while a creation is in flight', async () => {
-    let resolveCreate: ((value: { slug: string }) => void) | undefined
+    let resolveCreate: ((value: { noteId: string; slug: string }) => void) | undefined
     createNoteMock.mockImplementation(
       () =>
         new Promise((resolve) => {
@@ -340,27 +339,30 @@ describe('LinkClickHandler', () => {
     fireEvent.mouseDown(editorEl, { clientX: 10, clientY: 20, ctrlKey: true })
     fireEvent.mouseDown(editorEl, { clientX: 10, clientY: 20, ctrlKey: true })
     await waitFor(() => {
-      expect(createFolderMock).toHaveBeenCalledTimes(1)
+      expect(createNoteMock).toHaveBeenCalledTimes(1)
     })
-    expect(createNoteMock).toHaveBeenCalledTimes(1)
-    expect(createNoteMock).toHaveBeenCalledWith({
-      campaignId: 'campaign-1',
-      name: 'Ghost Note',
-      parentId: 'created-districts',
-    })
+    expect(createFolderMock).not.toHaveBeenCalled()
+    expect(createNoteMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        campaignId: 'campaign-1',
+        name: 'Ghost Note',
+        parentId: null,
+        parentPath: ['Lore', 'Capital', 'Districts'],
+      }),
+    )
 
-    resolveCreate?.({ slug: 'ghost-note' })
+    resolveCreate?.({ noteId: 'note-1', slug: 'ghost-note' })
     await waitFor(() => {
       expect(navigateToItemMock).toHaveBeenCalledWith('ghost-note')
     })
   })
 
   it('allows concurrent ghost note creation for different link targets', async () => {
-    const resolvers = new Map<string, (value: { slug: string }) => void>()
+    const resolvers = new Map<string, (value: { noteId: string; slug: string }) => void>()
     createNoteMock.mockImplementation(
-      ({ parentId }: { parentId: string | null }) =>
+      ({ parentPath }: { parentPath?: Array<string> }) =>
         new Promise((resolve) => {
-          resolvers.set(parentId ?? 'root', resolve)
+          resolvers.set(parentPath?.join('/') ?? 'root', resolve)
         }),
     )
     getLinkAtMock
@@ -389,24 +391,125 @@ describe('LinkClickHandler', () => {
     await waitFor(() => {
       expect(createNoteMock).toHaveBeenCalledTimes(2)
     })
-    expect(createNoteMock).toHaveBeenNthCalledWith(1, {
-      campaignId: 'campaign-1',
-      name: 'Ghost Note',
-      parentId: 'created-districts',
-    })
-    expect(createNoteMock).toHaveBeenNthCalledWith(2, {
-      campaignId: 'campaign-1',
-      name: 'Ghost Note',
-      parentId: 'created-north',
-    })
+    expect(createNoteMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        campaignId: 'campaign-1',
+        name: 'Ghost Note',
+        parentId: null,
+        parentPath: ['Lore', 'Capital', 'Districts'],
+      }),
+    )
+    expect(createNoteMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        campaignId: 'campaign-1',
+        name: 'Ghost Note',
+        parentId: null,
+        parentPath: ['Worldbuilding', 'Regions', 'North'],
+      }),
+    )
 
-    resolvers.get('created-districts')?.({ slug: 'districts-ghost-note' })
-    resolvers.get('created-north')?.({ slug: 'north-ghost-note' })
+    resolvers.get('Lore/Capital/Districts')?.({ noteId: 'note-1', slug: 'districts-ghost-note' })
+    resolvers.get('Worldbuilding/Regions/North')?.({
+      noteId: 'note-2',
+      slug: 'north-ghost-note',
+    })
 
     await waitFor(() => {
       expect(navigateToItemMock).toHaveBeenCalledWith('districts-ghost-note')
       expect(navigateToItemMock).toHaveBeenCalledWith('north-ghost-note')
     })
+  })
+
+  it('routes create-note failures through handleError', async () => {
+    const error = new Error('creation failed')
+    createNoteMock.mockRejectedValue(error)
+    getLinkAtMock.mockReturnValue(
+      createLink({
+        exists: false,
+        type: 'wiki',
+        itemPath: ['Lore', 'Capital', 'Districts', 'Ghost Note'],
+        itemName: 'Ghost Note',
+      }),
+    )
+
+    render(<LinkClickHandler editor={{} as CustomBlockNoteEditor} />)
+
+    fireEvent.mouseDown(editorEl, { clientX: 10, clientY: 20, ctrlKey: true })
+
+    await waitFor(() => {
+      expect(handleErrorMock).toHaveBeenCalledWith(error, 'Failed to create note')
+    })
+    expect(createNoteMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        campaignId: 'campaign-1',
+        name: 'Ghost Note',
+        parentId: null,
+        parentPath: ['Lore', 'Capital', 'Districts'],
+      }),
+    )
+    expect(createFolderMock).not.toHaveBeenCalled()
+    expect(moveSidebarItemMock).not.toHaveBeenCalled()
+    expect(deleteSidebarItemMock).not.toHaveBeenCalled()
+  })
+
+  it('passes the full missing folder chain when creating the note', async () => {
+    getLinkAtMock.mockReturnValue(
+      createLink({
+        exists: false,
+        type: 'wiki',
+        itemPath: ['Worldbuilding', 'Regions', 'North', 'Ghost Note'],
+        itemName: 'Ghost Note',
+      }),
+    )
+
+    render(<LinkClickHandler editor={{} as CustomBlockNoteEditor} />)
+
+    fireEvent.mouseDown(editorEl, { clientX: 10, clientY: 20, ctrlKey: true })
+
+    await waitFor(() => {
+      expect(createNoteMock).toHaveBeenCalledTimes(1)
+    })
+    expect(createFolderMock).not.toHaveBeenCalled()
+    expect(createNoteMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        campaignId: 'campaign-1',
+        name: 'Ghost Note',
+        parentId: null,
+        parentPath: ['Worldbuilding', 'Regions', 'North'],
+      }),
+    )
+  })
+
+  it('routes parent-path conflicts through handleError', async () => {
+    const error = new Error('"Test" already exists here and is not a folder')
+    createNoteMock.mockRejectedValue(error)
+    getLinkAtMock.mockReturnValue(
+      createLink({
+        exists: false,
+        type: 'wiki',
+        itemPath: ['Test', 'Child', 'Ghost Note'],
+        itemName: 'Ghost Note',
+      }),
+    )
+
+    render(<LinkClickHandler editor={{} as CustomBlockNoteEditor} />)
+
+    fireEvent.mouseDown(editorEl, { clientX: 10, clientY: 20, ctrlKey: true })
+
+    await waitFor(() => {
+      expect(handleErrorMock).toHaveBeenCalledWith(error, 'Failed to create note')
+    })
+    expect(createFolderMock).not.toHaveBeenCalled()
+    expect(createNoteMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        campaignId: 'campaign-1',
+        name: 'Ghost Note',
+        parentId: null,
+        parentPath: ['Test', 'Child'],
+      }),
+    )
   })
 
   it('requires ctrl/cmd for md external links in editor mode and opens directly in viewer mode', () => {
@@ -438,132 +541,5 @@ describe('LinkClickHandler', () => {
       '_blank',
       'noopener,noreferrer',
     )
-  })
-
-  it('routes create-note failures through handleError', async () => {
-    const error = new Error('creation failed')
-    createNoteMock.mockRejectedValue(error)
-    getLinkAtMock.mockReturnValue(
-      createLink({
-        exists: false,
-        type: 'wiki',
-        itemPath: ['Lore', 'Capital', 'Districts', 'Ghost Note'],
-        itemName: 'Ghost Note',
-      }),
-    )
-
-    render(<LinkClickHandler editor={{} as CustomBlockNoteEditor} />)
-
-    fireEvent.mouseDown(editorEl, { clientX: 10, clientY: 20, ctrlKey: true })
-
-    await waitFor(() => {
-      expect(handleErrorMock).toHaveBeenCalledWith(error, 'Failed to create note')
-    })
-    expect(moveSidebarItemMock).toHaveBeenCalledWith({
-      campaignId: 'campaign-1',
-      itemId: 'created-districts',
-      location: 'trash',
-    })
-    expect(deleteSidebarItemMock).toHaveBeenCalledWith({
-      campaignId: 'campaign-1',
-      itemId: 'created-districts',
-    })
-  })
-
-  it('creates an entire missing folder chain before creating the note', async () => {
-    getLinkAtMock.mockReturnValue(
-      createLink({
-        exists: false,
-        type: 'wiki',
-        itemPath: ['Worldbuilding', 'Regions', 'North', 'Ghost Note'],
-        itemName: 'Ghost Note',
-      }),
-    )
-
-    render(<LinkClickHandler editor={{} as CustomBlockNoteEditor} />)
-
-    fireEvent.mouseDown(editorEl, { clientX: 10, clientY: 20, ctrlKey: true })
-
-    await waitFor(() => {
-      expect(createNoteMock).toHaveBeenCalledTimes(1)
-    })
-    expect(createFolderMock).toHaveBeenNthCalledWith(1, {
-      campaignId: 'campaign-1',
-      name: 'Worldbuilding',
-      parentId: null,
-    })
-    expect(createFolderMock).toHaveBeenNthCalledWith(2, {
-      campaignId: 'campaign-1',
-      name: 'Regions',
-      parentId: 'created-worldbuilding',
-    })
-    expect(createFolderMock).toHaveBeenNthCalledWith(3, {
-      campaignId: 'campaign-1',
-      name: 'North',
-      parentId: 'created-regions',
-    })
-    expect(createNoteMock).toHaveBeenCalledWith({
-      campaignId: 'campaign-1',
-      name: 'Ghost Note',
-      parentId: 'created-north',
-    })
-  })
-
-  it('rejects a path segment when a non-folder item already uses that name', async () => {
-    useActiveSidebarItemsMock.mockReturnValue({
-      data: [
-        {
-          _id: 'note-1',
-          name: 'Test',
-          parentId: null,
-          type: SIDEBAR_ITEM_TYPES.notes,
-        },
-      ],
-      itemsMap: new Map([
-        [
-          'note-1',
-          {
-            _id: 'note-1',
-            name: 'Test',
-            parentId: null,
-            type: SIDEBAR_ITEM_TYPES.notes,
-          },
-        ],
-      ]),
-      parentItemsMap: new Map([
-        [
-          null,
-          [
-            {
-              _id: 'note-1',
-              name: 'Test',
-              parentId: null,
-              type: SIDEBAR_ITEM_TYPES.notes,
-            },
-          ],
-        ],
-      ]),
-    })
-    getLinkAtMock.mockReturnValue(
-      createLink({
-        exists: false,
-        type: 'wiki',
-        itemPath: ['Test', 'Child', 'Ghost Note'],
-        itemName: 'Ghost Note',
-      }),
-    )
-
-    render(<LinkClickHandler editor={{} as CustomBlockNoteEditor} />)
-
-    fireEvent.mouseDown(editorEl, { clientX: 10, clientY: 20, ctrlKey: true })
-
-    await waitFor(() => {
-      expect(handleErrorMock).toHaveBeenCalled()
-    })
-    expect(createFolderMock).not.toHaveBeenCalled()
-    expect(createNoteMock).not.toHaveBeenCalled()
-    expect(handleErrorMock.mock.calls[0]?.[0]).toMatchObject({
-      message: '"Test" already exists here and is not a folder',
-    })
   })
 })

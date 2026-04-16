@@ -35,13 +35,15 @@ function comparePathSegments(a: Array<string>, b: Array<string>): number {
 }
 
 function normalizePathSegments(pathSegments: Array<string>): Array<string> {
-  return pathSegments.map((segment) => segment.toLowerCase())
+  return pathSegments.map((segment) => segment.trim().toLowerCase())
 }
 
-function matchesPathSuffix(fullPath: Array<string>, normalizedPath: Array<string>): boolean {
-  if (fullPath.length < normalizedPath.length) return false
+function matchesPathSuffix(
+  normalizedFullPath: Array<string>,
+  normalizedPath: Array<string>,
+): boolean {
+  if (normalizedFullPath.length < normalizedPath.length) return false
 
-  const normalizedFullPath = normalizePathSegments(fullPath)
   const startIdx = normalizedFullPath.length - normalizedPath.length
   return normalizedPath.every((segment, i) => normalizedFullPath[startIdx + i] === segment)
 }
@@ -56,9 +58,10 @@ function forEachMatchingItem<T extends LinkResolvableItem>(
   const leaf = normalizedPath[normalizedPath.length - 1]
 
   for (const item of allItems) {
-    if (leaf && item.name.trim().toLowerCase() !== leaf) continue
-    const fullPath = getItemPath(item, itemsMap)
-    if (!matchesPathSuffix(fullPath, normalizedPath)) continue
+    const normalizedItemPath = normalizePathSegments(getItemPath(item, itemsMap))
+    const normalizedLeaf = normalizedItemPath[normalizedItemPath.length - 1]
+    if (leaf && normalizedLeaf !== leaf) continue
+    if (!matchesPathSuffix(normalizedItemPath, normalizedPath)) continue
     if (onMatch(item) === false) return
   }
 }

@@ -77,4 +77,46 @@ describe('useLinkResolver', () => {
       isExternal: true,
     })
   })
+
+  it('neutralizes data urls', () => {
+    const { result } = renderHook(() => useLinkResolver())
+
+    const resolved = result.current.resolveLink({
+      syntax: 'md',
+      itemPath: [],
+      itemName: '',
+      headingPath: [],
+      displayName: 'Bad',
+      rawTarget: 'data:text/html,<script>alert(1)</script>',
+      isExternal: true,
+    })
+
+    expect(resolved).toMatchObject({
+      resolved: true,
+      itemId: null,
+      href: null,
+      isExternal: true,
+    })
+  })
+
+  it('neutralizes vbscript urls', () => {
+    const { result } = renderHook(() => useLinkResolver())
+
+    const resolved = result.current.resolveLink({
+      syntax: 'md',
+      itemPath: [],
+      itemName: '',
+      headingPath: [],
+      displayName: 'Bad',
+      rawTarget: 'vbscript:msgbox("x")',
+      isExternal: true,
+    })
+
+    expect(resolved).toMatchObject({
+      resolved: true,
+      itemId: null,
+      href: null,
+      isExternal: true,
+    })
+  })
 })

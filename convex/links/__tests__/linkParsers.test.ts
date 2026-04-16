@@ -333,31 +333,27 @@ describe('extractMdLinksFromText', () => {
 
 describe('WIKI_LINK_REGEX', () => {
   it('matches basic wiki links', () => {
-    const regex = new RegExp(WIKI_LINK_REGEX.source, 'g')
-    const matches = [...'See [[Note]] here'.matchAll(regex)]
+    const matches = [...'See [[Note]] here'.matchAll(WIKI_LINK_REGEX)]
     expect(matches).toHaveLength(1)
     expect(matches[0][1]).toBe('Note')
   })
 
   it('does not match nested brackets', () => {
-    const regex = new RegExp(WIKI_LINK_REGEX.source, 'g')
-    const matches = [...'[[outer [[inner]] ]]'.matchAll(regex)]
+    const matches = [...'[[outer [[inner]] ]]'.matchAll(WIKI_LINK_REGEX)]
     expect(matches.some((m) => m[1] === 'outer [[inner')).toBe(false)
   })
 })
 
 describe('MD_LINK_REGEX', () => {
   it('matches markdown links', () => {
-    const regex = new RegExp(MD_LINK_REGEX.source, 'g')
-    const matches = [...'[text](target)'.matchAll(regex)]
+    const matches = [...'[text](target)'.matchAll(MD_LINK_REGEX)]
     expect(matches).toHaveLength(1)
     expect(matches[0][1]).toBe('text')
     expect(matches[0][2]).toBe('target')
   })
 
   it('does not match image links', () => {
-    const regex = new RegExp(MD_LINK_REGEX.source, 'g')
-    const matches = [...'![alt](img.png)'.matchAll(regex)]
+    const matches = [...'![alt](img.png)'.matchAll(MD_LINK_REGEX)]
     expect(matches).toHaveLength(0)
   })
 })

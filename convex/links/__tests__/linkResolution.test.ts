@@ -106,6 +106,10 @@ describe('resolveItemByPath', () => {
     expect(resolveItemByPath(['the guild'], items, map)?._id).toBe('b')
   })
 
+  it('ignores surrounding whitespace in path segments', () => {
+    expect(resolveItemByPath(['  factions  ', '  the guild  '], items, map)?._id).toBe('b')
+  })
+
   it('prefers the alphabetically earlier full path for ambiguous names', () => {
     const result = resolveItemByPath(['Design'], items, map)
     expect(result?._id).toBe('e')
@@ -192,6 +196,10 @@ describe('isPathUnique', () => {
     expect(isPathUnique(['Factions', 'Design'], items, map)).toBe(true)
   })
 
+  it('treats surrounding whitespace in path segments as insignificant', () => {
+    expect(isPathUnique(['  Factions  ', '  Design  '], items, map)).toBe(true)
+  })
+
   it('returns true for unique name', () => {
     expect(isPathUnique(['Unique'], items, map)).toBe(true)
   })
@@ -240,6 +248,20 @@ describe('getMinDisambiguationPath', () => {
       makeItem('a', 'Root'),
       makeItem('b', '', 'a'),
       makeItem('c', 'Leaf', 'b'),
+    ]
+    const invalidPathMap = buildMap(invalidPathItems)
+
+    expect(getMinDisambiguationPath(invalidPathItems[2], invalidPathItems, invalidPathMap)).toEqual(
+      ['Leaf'],
+    )
+  })
+
+  it('falls back to the item name even when the invalid-path fallback is ambiguous', () => {
+    const invalidPathItems = [
+      makeItem('a', 'Root'),
+      makeItem('b', '', 'a'),
+      makeItem('c', 'Leaf', 'b'),
+      makeItem('d', 'Leaf'),
     ]
     const invalidPathMap = buildMap(invalidPathItems)
 

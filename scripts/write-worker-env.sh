@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-output_path="${1:-.deploy-secrets.env}"
+output_path="${1:?Missing output path}"
 
 escape_env_value() {
   local value="${1//$'\\'/\\\\}"
