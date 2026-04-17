@@ -39,26 +39,18 @@ jobs:
       - run: vp run lint:convex # TODO: remove this once plugins exist for oxlint
 
   fallow:
+    if: github.event_name == 'pull_request'
     name: Fallow
     runs-on: ubuntu-latest
-    needs: [setup]
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: voidzero-dev/setup-vp@v1
+      - uses: fallow-rs/fallow@v2
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: true
-      - run: vp install --frozen-lockfile
-      - name: Run Fallow
-        continue-on-error: true
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            vp run fallow audit --base origin/main --format json --quiet > fallow-report.json
-          else
-            vp run fallow --format json --quiet > fallow-report.json
-          fi
+          annotations: true
+          fail-on-issues: false
+          format: json
 
   react-compiler:
     name: React Compiler Health
