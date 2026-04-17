@@ -1,5 +1,5 @@
 import * as Y from 'yjs'
-import { prepareSidebarItemCreate } from '../../sidebarItems/validation/validation'
+import { prepareSidebarItemCreate } from '../../sidebarItems/validation/orchestration'
 import type { ParsedCreateParentTarget } from '../../sidebarItems/validation/parent'
 import { resolveOrCreateFolderPath } from '../../folders/functions/resolveOrCreateFolderPath'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'

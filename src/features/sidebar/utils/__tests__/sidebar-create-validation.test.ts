@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { CREATE_PARENT_TARGET_KIND } from 'convex/sidebarItems/validation/parent'
+import {
+  CREATE_PARENT_TARGET_KIND,
+  validateCreateItemLocally,
+  validateCreateParentTarget,
+} from 'convex/sidebarItems/validation/parent'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
-import {
-  validateCreateItemLocally,
-  validateCreateParentTarget,
-} from '~/features/sidebar/utils/sidebar-create-validation'
 
 function buildItemsMap(items: Array<AnySidebarItem>) {
   return new Map(items.map((item) => [item._id, item]))

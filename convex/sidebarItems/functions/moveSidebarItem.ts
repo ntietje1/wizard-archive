@@ -4,10 +4,10 @@ import { PERMISSION_LEVEL } from '../../permissions/types'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import {
   findUniqueSidebarItemSlug,
-  requireItemAccess,
   validateSidebarMove,
   validateSidebarParentChange,
-} from '../validation/validation'
+} from '../validation/orchestration'
+import { requireItemAccess } from '../validation/access'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { resyncNoteLinksForNotes } from '../../links/functions/resyncNoteLinksForNotes'

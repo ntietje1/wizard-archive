@@ -1,4 +1,4 @@
-import { prepareSidebarItemCreate } from '../../sidebarItems/validation/validation'
+import { prepareSidebarItemCreate } from '../../sidebarItems/validation/orchestration'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import type { SidebarItemName } from '../../sidebarItems/validation/name'
 import type { SidebarItemColor } from '../../sidebarItems/validation/color'

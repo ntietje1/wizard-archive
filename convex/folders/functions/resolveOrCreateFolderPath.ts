@@ -5,7 +5,7 @@ import { CREATE_PARENT_TARGET_KIND } from '../../sidebarItems/validation/parent'
 import type { ParsedCreateParentTarget } from '../../sidebarItems/validation/parent'
 import type { SidebarItemName } from '../../sidebarItems/validation/name'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
-import { validateSidebarCreateParent } from '../../sidebarItems/validation/validation'
+import { validateSidebarCreateParent } from '../../sidebarItems/validation/orchestration'
 import { findSidebarChildByName, insertFolder } from './folderHelpers'
 
 async function getParentFolderId(

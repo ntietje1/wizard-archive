@@ -7,7 +7,7 @@ import { testId } from '../../_test/test-id.helper'
 import { parseSidebarItemColor, validateSidebarItemColor } from '../validation/color'
 import { parseSidebarItemIconName, validateSidebarItemIconName } from '../validation/icon'
 import { checkNameConflict, validateItemName } from '../validation/name'
-import { validateNoCircularParent } from '../validation/parent'
+import { validateNoCircularParent, validateNoCircularParentAsync } from '../validation/parent'
 import { validateItemSlug } from '../validation/slug'
 import type { Id } from '../../_generated/dataModel'
 
@@ -241,6 +241,19 @@ describe('validateNoCircularParent', () => {
       (id) => tree[id],
     )
     expect(result).toEqual({ valid: true })
+  })
+
+  it('supports async parent lookups with the same behavior', async () => {
+    const tree: Record<string, { parentId: Id<'sidebarItems'> | null }> = {
+      f2: folder('f2', 'f3'),
+      f3: folder('f3', 'f1'),
+    }
+    const result = await validateNoCircularParentAsync(
+      testId<'sidebarItems'>('f1'),
+      testId<'sidebarItems'>('f2'),
+      (id) => Promise.resolve(tree[id]),
+    )
+    expect(result.valid).toBe(false)
   })
 })
 

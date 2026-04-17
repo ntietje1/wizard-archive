@@ -1,5 +1,5 @@
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
-import { findUniqueSidebarItemSlug } from '../validation/validation'
+import { findUniqueSidebarItemSlug } from '../validation/orchestration'
 import { collectDescendants } from './collectDescendants'
 import { hardDeleteItem } from './hardDeleteItem'
 import { assertSidebarItemName } from '../validation/name'

@@ -1,4 +1,4 @@
-import { prepareSidebarItemCreate } from '../../sidebarItems/validation/validation'
+import { prepareSidebarItemCreate } from '../../sidebarItems/validation/orchestration'
 import type { ParsedCreateParentTarget } from '../../sidebarItems/validation/parent'
 import type { SidebarItemName } from '../../sidebarItems/validation/name'
 import type { SidebarItemColor } from '../../sidebarItems/validation/color'

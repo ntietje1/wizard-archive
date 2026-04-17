@@ -1,8 +1,6 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
-import {
-  prepareSidebarItemRename,
-  requireItemAccess,
-} from '../../sidebarItems/validation/validation'
+import { prepareSidebarItemRename } from '../../sidebarItems/validation/orchestration'
+import { requireItemAccess } from '../../sidebarItems/validation/access'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { logEditHistory } from '../../editHistory/log'

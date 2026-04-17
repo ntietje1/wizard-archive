@@ -15,7 +15,7 @@ import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CustomBlock } from 'convex/notes/editorSpecs'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import { validateCreateItemLocally } from '~/features/sidebar/utils/sidebar-create-validation'
+import { validateCreateItemLocally } from 'convex/sidebarItems/validation/parent'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { assertNever } from '~/shared/utils/utils'
 

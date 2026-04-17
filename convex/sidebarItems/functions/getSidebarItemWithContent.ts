@@ -1,6 +1,6 @@
 import { getSidebarItem } from './getSidebarItem'
 import { enhanceSidebarItemWithContent } from './enhanceSidebarItem'
-import { checkItemAccess } from '../validation/validation'
+import { checkItemAccess } from '../validation/access'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'

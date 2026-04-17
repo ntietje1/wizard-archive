@@ -1,5 +1,5 @@
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { checkItemAccess } from '../validation/validation'
+import { checkItemAccess } from '../validation/access'
 import { enhanceSidebarItemWithContent } from './enhanceSidebarItem'
 import { getSidebarItem } from './getSidebarItem'
 import type { SidebarItemSlug } from '../validation/slug'
