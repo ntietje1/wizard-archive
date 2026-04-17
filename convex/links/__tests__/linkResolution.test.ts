@@ -182,10 +182,23 @@ describe('resolveRelativeItemByPath', () => {
     expect(resolveRelativeItemByPath(['..', 'Capital'], items, map, sidebarId('north'))?._id).toBe(
       'capital',
     )
+    expect(resolveRelativeItemByPath(['..', '..'], items, map, sidebarId('north'))?._id).toBe(
+      'world',
+    )
   })
 
   it('returns undefined when traversal escapes root', () => {
     expect(resolveRelativeItemByPath(['..', 'Atlas'], items, map, null)).toBeUndefined()
+  })
+
+  it('returns undefined when the source parent does not exist in the map', () => {
+    expect(
+      resolveRelativeItemByPath(['..', 'Capital'], items, map, sidebarId('missing')),
+    ).toBeUndefined()
+  })
+
+  it('returns undefined for an empty relative path', () => {
+    expect(resolveRelativeItemByPath([], items, map, sidebarId('north'))).toBeUndefined()
   })
 })
 
