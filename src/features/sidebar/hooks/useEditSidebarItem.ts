@@ -2,14 +2,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import type { SidebarItemColor } from 'convex/sidebarItems/validation/color'
-import {
-  parseSidebarItemColor,
-  validateSidebarItemColor,
-} from 'convex/sidebarItems/validation/color'
-import {
-  parseSidebarItemIconName,
-  validateSidebarItemIconName,
-} from 'convex/sidebarItems/validation/icon'
+import { coerceSidebarItemColorForInput } from 'convex/sidebarItems/validation/color'
+import { coerceSidebarItemIconNameForInput } from 'convex/sidebarItems/validation/icon'
 import type { SidebarItemIconName } from 'convex/sidebarItems/validation/icon'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { assertSidebarItemSlug } from 'convex/sidebarItems/validation/slug'
@@ -111,24 +105,10 @@ export function useEditSidebarItem() {
     const normalizedIconName =
       iconName === undefined || iconName === null
         ? iconName
-        : (() => {
-            const parsed = parseSidebarItemIconName(iconName)
-            if (!parsed) {
-              throw new Error(validateSidebarItemIconName(iconName) ?? 'Invalid icon')
-            }
-            return parsed
-          })()
+        : coerceSidebarItemIconNameForInput(iconName)
 
     const normalizedColor =
-      color === undefined || color === null
-        ? color
-        : (() => {
-            const parsed = parseSidebarItemColor(color)
-            if (!parsed) {
-              throw new Error(validateSidebarItemColor(color) ?? 'Invalid color')
-            }
-            return parsed
-          })()
+      color === undefined || color === null ? color : coerceSidebarItemColorForInput(color)
 
     const currentSlug = getSelectedSlug()
     const isCurrentItem = item.slug === currentSlug

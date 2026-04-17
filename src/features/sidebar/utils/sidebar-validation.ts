@@ -1,5 +1,8 @@
-import { checkNameConflict, validateItemName } from 'convex/sidebarItems/validation/name'
-import { validateNoCircularParent as validateNoCircularParentShared } from 'convex/sidebarItems/validation/parent'
+import { validateSidebarItemNameWithSiblings } from 'convex/sidebarItems/validation/name'
+import {
+  getAncestorIds as getAncestorIdsShared,
+  validateNoCircularParent as validateNoCircularParentShared,
+} from 'convex/sidebarItems/validation/parent'
 import type { ValidationResult } from 'convex/sidebarItems/validation/name'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
@@ -26,21 +29,7 @@ export function getAncestorIds(
   itemId: Id<'sidebarItems'>,
   itemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>,
 ): Array<Id<'sidebarItems'>> {
-  const item = itemsMap.get(itemId)
-  if (!item) return []
-
-  const ancestors: Array<Id<'sidebarItems'>> = []
-  const seen = new Set<Id<'sidebarItems'>>()
-  let currentId = item.parentId
-
-  while (currentId && !seen.has(currentId)) {
-    seen.add(currentId)
-    ancestors.push(currentId)
-    const current = itemsMap.get(currentId)
-    currentId = current?.parentId ?? null
-  }
-
-  return ancestors
+  return getAncestorIdsShared(itemId, (id) => itemsMap.get(id))
 }
 
 export interface SidebarItemValidationOptions {
@@ -60,20 +49,7 @@ export function validateSidebarItemName(
   options: Pick<SidebarItemValidationOptions, 'name' | 'siblings' | 'itemId'>,
 ): ValidationResult {
   const { name, siblings, itemId } = options
-
-  const nameResult = validateItemName(name)
-  if (!nameResult.valid) {
-    return nameResult
-  }
-
-  if (siblings) {
-    const conflictResult = checkNameConflict(name, siblings, itemId)
-    if (!conflictResult.valid) {
-      return conflictResult
-    }
-  }
-
-  return { valid: true }
+  return validateSidebarItemNameWithSiblings(name, siblings, itemId)
 }
 
 /**

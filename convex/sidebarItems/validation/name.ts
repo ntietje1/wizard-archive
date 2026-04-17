@@ -105,3 +105,21 @@ export function checkNameConflict(
   }
   return { valid: true }
 }
+
+export function validateSidebarItemNameWithSiblings(
+  name: string,
+  siblings?: Array<{ _id: Id<'sidebarItems'>; name: string }>,
+  excludeId?: Id<'sidebarItems'>,
+): ValidationResult {
+  const trimmedName = name.trim()
+  const nameResult = validateItemName(trimmedName)
+  if (!nameResult.valid) {
+    return nameResult
+  }
+
+  if (!siblings) {
+    return { valid: true }
+  }
+
+  return checkNameConflict(trimmedName, siblings, excludeId)
+}

@@ -66,6 +66,7 @@ import type * as canvases_functions_updateCanvas from "../canvases/functions/upd
 import type * as canvases_mutations from "../canvases/mutations.js";
 import type * as canvases_triggers from "../canvases/triggers.js";
 import type * as canvases_types from "../canvases/types.js";
+import type * as common_async from "../common/async.js";
 import type * as common_constants from "../common/constants.js";
 import type * as common_logger from "../common/logger.js";
 import type * as common_slug from "../common/slug.js";
@@ -186,6 +187,7 @@ import type * as sidebarItems_types_types from "../sidebarItems/types/types.js";
 import type * as sidebarItems_validation_access from "../sidebarItems/validation/access.js";
 import type * as sidebarItems_validation_color from "../sidebarItems/validation/color.js";
 import type * as sidebarItems_validation_icon from "../sidebarItems/validation/icon.js";
+import type * as sidebarItems_validation_move from "../sidebarItems/validation/move.js";
 import type * as sidebarItems_validation_name from "../sidebarItems/validation/name.js";
 import type * as sidebarItems_validation_orchestration from "../sidebarItems/validation/orchestration.js";
 import type * as sidebarItems_validation_parent from "../sidebarItems/validation/parent.js";
@@ -300,6 +302,7 @@ declare const fullApi: ApiFromModules<{
   "canvases/mutations": typeof canvases_mutations;
   "canvases/triggers": typeof canvases_triggers;
   "canvases/types": typeof canvases_types;
+  "common/async": typeof common_async;
   "common/constants": typeof common_constants;
   "common/logger": typeof common_logger;
   "common/slug": typeof common_slug;
@@ -420,6 +423,7 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/validation/access": typeof sidebarItems_validation_access;
   "sidebarItems/validation/color": typeof sidebarItems_validation_color;
   "sidebarItems/validation/icon": typeof sidebarItems_validation_icon;
+  "sidebarItems/validation/move": typeof sidebarItems_validation_move;
   "sidebarItems/validation/name": typeof sidebarItems_validation_name;
   "sidebarItems/validation/orchestration": typeof sidebarItems_validation_orchestration;
   "sidebarItems/validation/parent": typeof sidebarItems_validation_parent;

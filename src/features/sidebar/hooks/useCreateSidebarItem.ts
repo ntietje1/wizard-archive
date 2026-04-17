@@ -1,13 +1,7 @@
 import { api } from 'convex/_generated/api'
 import type { CreateParentTarget } from 'convex/sidebarItems/validation/parent'
-import {
-  parseSidebarItemColor,
-  validateSidebarItemColor,
-} from 'convex/sidebarItems/validation/color'
-import {
-  parseSidebarItemIconName,
-  validateSidebarItemIconName,
-} from 'convex/sidebarItems/validation/icon'
+import { coerceSidebarItemColorForInput } from 'convex/sidebarItems/validation/color'
+import { coerceSidebarItemIconNameForInput } from 'convex/sidebarItems/validation/icon'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { assertSidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
@@ -90,26 +84,9 @@ export function useCreateSidebarItem() {
     }
 
     const iconName =
-      args.iconName === undefined
-        ? undefined
-        : (() => {
-            const parsed = parseSidebarItemIconName(args.iconName)
-            if (!parsed) {
-              throw new Error(validateSidebarItemIconName(args.iconName) ?? 'Invalid icon')
-            }
-            return parsed
-          })()
+      args.iconName === undefined ? undefined : coerceSidebarItemIconNameForInput(args.iconName)
 
-    const color =
-      args.color === undefined
-        ? undefined
-        : (() => {
-            const parsed = parseSidebarItemColor(args.color)
-            if (!parsed) {
-              throw new Error(validateSidebarItemColor(args.color) ?? 'Invalid color')
-            }
-            return parsed
-          })()
+    const color = args.color === undefined ? undefined : coerceSidebarItemColorForInput(args.color)
 
     switch (args.type) {
       case SIDEBAR_ITEM_TYPES.notes: {

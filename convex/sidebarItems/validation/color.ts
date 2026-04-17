@@ -51,6 +51,24 @@ export function requireOptionalSidebarItemColor(
   return requireSidebarItemColor(color)
 }
 
+export function coerceSidebarItemColorForInput(color: string): SidebarItemColor
+export function coerceSidebarItemColorForInput(color: null): null
+export function coerceSidebarItemColorForInput(color: undefined): undefined
+export function coerceSidebarItemColorForInput(
+  color: string | null | undefined,
+): SidebarItemColor | null | undefined {
+  if (color === undefined || color === null) {
+    return color
+  }
+
+  const parsed = parseSidebarItemColor(color)
+  if (!parsed) {
+    throw new Error(validateSidebarItemColor(color) ?? 'Invalid color')
+  }
+
+  return parsed
+}
+
 export function isValidSidebarItemColor(color: string | null | undefined): boolean {
   return typeof color === 'string' && parseSidebarItemColor(color) !== null
 }

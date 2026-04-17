@@ -1,4 +1,4 @@
-import { checkNameConflict, validateItemName } from 'convex/sidebarItems/validation/name'
+import { validateSidebarItemNameWithSiblings } from 'convex/sidebarItems/validation/name'
 import { validateNoCircularParent } from 'convex/sidebarItems/validation/parent'
 import { findUniqueDefaultName } from 'convex/sidebarItems/functions/defaultItemName'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
@@ -30,10 +30,7 @@ export function useSidebarValidation(): SidebarValidation {
     parentId: Id<'sidebarItems'> | null,
     excludeId?: Id<'sidebarItems'>,
   ) => {
-    const trimmed = name.trim()
-    const nameResult = validateItemName(trimmed)
-    if (!nameResult.valid) return nameResult
-    return checkNameConflict(trimmed, getSiblings(parentId), excludeId)
+    return validateSidebarItemNameWithSiblings(name, getSiblings(parentId), excludeId)
   }
 
   const canMoveToParent = (itemId: Id<'sidebarItems'>, newParentId: Id<'sidebarItems'> | null) => {

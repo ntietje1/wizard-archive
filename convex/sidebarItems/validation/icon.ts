@@ -98,3 +98,21 @@ export function requireOptionalSidebarItemIconName(
 
   return requireSidebarItemIconName(iconName)
 }
+
+export function coerceSidebarItemIconNameForInput(iconName: string): SidebarItemIconName
+export function coerceSidebarItemIconNameForInput(iconName: null): null
+export function coerceSidebarItemIconNameForInput(iconName: undefined): undefined
+export function coerceSidebarItemIconNameForInput(
+  iconName: string | null | undefined,
+): SidebarItemIconName | null | undefined {
+  if (iconName === undefined || iconName === null) {
+    return iconName
+  }
+
+  const parsed = parseSidebarItemIconName(iconName)
+  if (!parsed) {
+    throw new Error(validateSidebarItemIconName(iconName) ?? 'Invalid icon')
+  }
+
+  return parsed
+}

@@ -1,3 +1,5 @@
+import { isPromiseLike } from '../../common/async'
+import type { MaybePromise } from '../../common/async'
 import { v } from 'convex/values'
 import type { Id } from '../../_generated/dataModel'
 import { ERROR_CODE, throwClientError } from '../../errors'
@@ -52,7 +54,6 @@ const VIRTUAL_PARENT = Symbol('virtual-parent')
 
 type ParentRef = Id<'sidebarItems'> | null | typeof VIRTUAL_PARENT
 type ParentLookup = { parentId: Id<'sidebarItems'> | null } | null | undefined
-type MaybePromise<T> = T | Promise<T>
 type ParentTargetValidationResult =
   | {
       valid: true
@@ -60,10 +61,6 @@ type ParentTargetValidationResult =
       siblings: Array<Pick<AnySidebarItem, '_id' | 'name'>>
     }
   | ({ valid: false } & Pick<Exclude<ValidationResult, { valid: true }>, 'error'>)
-
-function isPromiseLike<T>(value: MaybePromise<T>): value is Promise<T> {
-  return typeof value === 'object' && value !== null && 'then' in value
-}
 
 function requireParentPathSegment(segment: string): ParentPathSegment {
   const trimmedSegment = segment.trim()
@@ -158,6 +155,23 @@ export async function validateNoCircularParentAsync(
   getParent: (id: Id<'sidebarItems'>) => MaybePromise<ParentLookup>,
 ): Promise<ValidationResult> {
   return await validateNoCircularParentInternal(itemId, newParentId, getParent)
+}
+
+export function getAncestorIds(
+  itemId: Id<'sidebarItems'>,
+  getParent: (id: Id<'sidebarItems'>) => ParentLookup,
+): Array<Id<'sidebarItems'>> {
+  const ancestors: Array<Id<'sidebarItems'>> = []
+  const seen = new Set<Id<'sidebarItems'>>()
+  let currentId = getParent(itemId)?.parentId ?? null
+
+  while (currentId && !seen.has(currentId)) {
+    seen.add(currentId)
+    ancestors.push(currentId)
+    currentId = getParent(currentId)?.parentId ?? null
+  }
+
+  return ancestors
 }
 
 function buildParentStack(

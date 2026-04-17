@@ -4,10 +4,27 @@ import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createFolder, createNote } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 import { testId } from '../../_test/test-id.helper'
-import { parseSidebarItemColor, validateSidebarItemColor } from '../validation/color'
-import { parseSidebarItemIconName, validateSidebarItemIconName } from '../validation/icon'
-import { checkNameConflict, validateItemName } from '../validation/name'
-import { validateNoCircularParent, validateNoCircularParentAsync } from '../validation/parent'
+import {
+  coerceSidebarItemColorForInput,
+  parseSidebarItemColor,
+  validateSidebarItemColor,
+} from '../validation/color'
+import {
+  coerceSidebarItemIconNameForInput,
+  parseSidebarItemIconName,
+  validateSidebarItemIconName,
+} from '../validation/icon'
+import {
+  checkNameConflict,
+  validateItemName,
+  validateSidebarItemNameWithSiblings,
+} from '../validation/name'
+import {
+  getAncestorIds,
+  validateNoCircularParent,
+  validateNoCircularParentAsync,
+} from '../validation/parent'
+import { validateLocalSidebarMove } from '../validation/move'
 import { validateItemSlug } from '../validation/slug'
 import type { Id } from '../../_generated/dataModel'
 
@@ -184,6 +201,28 @@ describe('checkNameConflict', () => {
   })
 })
 
+describe('validateSidebarItemNameWithSiblings', () => {
+  const siblings = [
+    { _id: testId<'sidebarItems'>('id1'), name: 'Alpha' },
+    { _id: testId<'sidebarItems'>('id2'), name: 'Beta' },
+  ]
+
+  it('validates format-only names when no siblings are provided', () => {
+    expect(validateSidebarItemNameWithSiblings('Gamma')).toEqual({ valid: true })
+  })
+
+  it('checks sibling conflicts after trimming', () => {
+    const result = validateSidebarItemNameWithSiblings(' alpha ', siblings)
+    expect(result.valid).toBe(false)
+  })
+
+  it('ignores the excluded item when checking conflicts', () => {
+    expect(
+      validateSidebarItemNameWithSiblings('Alpha', siblings, testId<'sidebarItems'>('id1')),
+    ).toEqual({ valid: true })
+  })
+})
+
 describe('validateNoCircularParent', () => {
   const folder = (_id: string, parentId: string | null) => ({
     parentId: parentId ? testId<'sidebarItems'>(parentId) : null,
@@ -253,6 +292,103 @@ describe('validateNoCircularParent', () => {
       testId<'sidebarItems'>('f2'),
       (id) => Promise.resolve(tree[id]),
     )
+    expect(result.valid).toBe(false)
+  })
+})
+
+describe('getAncestorIds', () => {
+  const folder = (_id: string, parentId: string | null) => ({
+    parentId: parentId ? testId<'sidebarItems'>(parentId) : null,
+  })
+
+  it('returns ancestors in nearest-first order', () => {
+    const tree: Record<string, { parentId: Id<'sidebarItems'> | null }> = {
+      note: folder('note', 'f2'),
+      f2: folder('f2', 'f3'),
+      f3: folder('f3', null),
+    }
+    expect(getAncestorIds(testId<'sidebarItems'>('note'), (id) => tree[id])).toEqual([
+      testId<'sidebarItems'>('f2'),
+      testId<'sidebarItems'>('f3'),
+    ])
+  })
+
+  it('returns empty when the item is missing', () => {
+    expect(getAncestorIds(testId<'sidebarItems'>('missing'), () => undefined)).toEqual([])
+  })
+})
+
+describe('validateLocalSidebarMove', () => {
+  it('skips validation when moving to trash', () => {
+    const result = validateLocalSidebarMove(
+      {
+        itemId: testId<'sidebarItems'>('note'),
+        name: 'Alpha',
+        parentId: testId<'sidebarItems'>('folder'),
+        isTrashing: true,
+      },
+      {
+        getParent: () => undefined,
+        getSiblings: () => [{ _id: testId<'sidebarItems'>('other'), name: 'Alpha' }],
+      },
+    )
+
+    expect(result).toEqual({ valid: true })
+  })
+
+  it('returns the existing circular move error message', () => {
+    const tree: Record<string, { parentId: Id<'sidebarItems'> | null }> = {
+      child: { parentId: testId<'sidebarItems'>('item') },
+    }
+
+    const result = validateLocalSidebarMove(
+      {
+        itemId: testId<'sidebarItems'>('item'),
+        name: 'Alpha',
+        parentId: testId<'sidebarItems'>('child'),
+      },
+      {
+        getParent: (id) => tree[id],
+        getSiblings: () => [],
+      },
+    )
+
+    expect(result).toEqual({
+      valid: false,
+      error: 'Cannot move item: circular reference detected',
+    })
+  })
+
+  it('skips sibling conflicts when restoring from trash', () => {
+    const result = validateLocalSidebarMove(
+      {
+        itemId: testId<'sidebarItems'>('item'),
+        name: 'Alpha',
+        parentId: null,
+        isRestoring: true,
+      },
+      {
+        getParent: () => undefined,
+        getSiblings: () => [{ _id: testId<'sidebarItems'>('other'), name: 'Alpha' }],
+      },
+    )
+
+    expect(result).toEqual({ valid: true })
+  })
+
+  it('checks sibling conflicts for regular moves', () => {
+    const result = validateLocalSidebarMove(
+      {
+        itemId: testId<'sidebarItems'>('item'),
+        name: 'Alpha',
+        parentId: null,
+      },
+      {
+        getParent: () => undefined,
+        getSiblings: () => [{ _id: testId<'sidebarItems'>('other'), name: 'Alpha' }],
+      },
+    )
+
     expect(result.valid).toBe(false)
   })
 })
@@ -483,5 +619,21 @@ describe('cross-table slug uniqueness', () => {
         color: '#12',
       }),
     ).rejects.toThrow('Color must be a 6- or 8-digit hex value')
+  })
+})
+
+describe('input coercion helpers', () => {
+  it('coerces valid icon and color inputs', () => {
+    expect(coerceSidebarItemIconNameForInput('Shield')).toBe('Shield')
+    expect(coerceSidebarItemColorForInput('#ABCDEF')).toBe('#abcdef')
+    expect(coerceSidebarItemIconNameForInput(null)).toBeNull()
+    expect(coerceSidebarItemColorForInput(undefined)).toBeUndefined()
+  })
+
+  it('throws the same validation errors for invalid icon and color inputs', () => {
+    expect(() => coerceSidebarItemIconNameForInput('Nope')).toThrow('Icon is not supported')
+    expect(() => coerceSidebarItemColorForInput('#FFF')).toThrow(
+      'Color must be a 6- or 8-digit hex value',
+    )
   })
 })
