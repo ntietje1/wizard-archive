@@ -1,8 +1,9 @@
 import * as Y from 'yjs'
 import { prepareSidebarItemCreate } from '../../sidebarItems/validation'
-import type { CreateParentTarget } from '../../sidebarItems/createParentTarget'
+import type { ParsedCreateParentTarget } from '../../sidebarItems/createParentTarget'
 import { resolveOrCreateFolderPath } from '../../folders/functions/resolveOrCreateFolderPath'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import type { SidebarItemName } from '../../sidebarItems/sharedValidation'
 import { createYjsDocument } from '../../yjsSync/functions/createYjsDocument'
 import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
 import { logEditHistory } from '../../editHistory/log'
@@ -18,8 +19,8 @@ export async function createCanvas(
     iconName,
     color,
   }: {
-    name: string
-    parentTarget: CreateParentTarget
+    name: SidebarItemName
+    parentTarget: ParsedCreateParentTarget
     iconName?: string
     color?: string
   },

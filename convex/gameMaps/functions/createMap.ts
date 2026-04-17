@@ -1,7 +1,8 @@
 import { prepareSidebarItemCreate } from '../../sidebarItems/validation'
-import type { CreateParentTarget } from '../../sidebarItems/createParentTarget'
+import type { ParsedCreateParentTarget } from '../../sidebarItems/createParentTarget'
 import { resolveOrCreateFolderPath } from '../../folders/functions/resolveOrCreateFolderPath'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import type { SidebarItemName } from '../../sidebarItems/sharedValidation'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import type { CampaignMutationCtx } from '../../functions'
@@ -16,9 +17,9 @@ export async function createMap(
     iconName,
     color,
   }: {
-    name: string
+    name: SidebarItemName
     imageStorageId?: Id<'_storage'>
-    parentTarget: CreateParentTarget
+    parentTarget: ParsedCreateParentTarget
     iconName?: string
     color?: string
   },

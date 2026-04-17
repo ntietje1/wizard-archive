@@ -1,10 +1,14 @@
 import { v } from 'convex/values'
 import { campaignMutation } from '../functions'
-import { createItemParentArgsValidator } from '../sidebarItems/createParentTarget'
+import {
+  createItemParentArgsValidator,
+  requireCreateParentTarget,
+} from '../sidebarItems/createParentTarget'
 import {
   sidebarItemNameValidator,
   sidebarItemSlugValidator,
 } from '../sidebarItems/schema/validators'
+import { requireSidebarItemName } from '../sidebarItems/sharedValidation'
 import { createMap as createMapFn } from './functions/createMap'
 import { updateMap as updateMapFn } from './functions/updateMap'
 import { createItemPin as createItemPinFn } from './functions/createItemPin'
@@ -26,10 +30,12 @@ export const createMap = campaignMutation({
     slug: sidebarItemSlugValidator,
   }),
   handler: async (ctx, args): Promise<{ mapId: Id<'sidebarItems'>; slug: string }> => {
+    const name = requireSidebarItemName(args.name)
+    const parentTarget = requireCreateParentTarget(args.parentTarget)
     return await createMapFn(ctx, {
-      name: args.name,
+      name,
       imageStorageId: args.imageStorageId,
-      parentTarget: args.parentTarget,
+      parentTarget,
       iconName: args.iconName,
       color: args.color,
     })
@@ -49,9 +55,10 @@ export const updateMap = campaignMutation({
     slug: sidebarItemSlugValidator,
   }),
   handler: async (ctx, args): Promise<{ mapId: Id<'sidebarItems'>; slug: string }> => {
+    const name = args.name ? requireSidebarItemName(args.name) : undefined
     return await updateMapFn(ctx, {
       mapId: args.mapId,
-      name: args.name,
+      name,
       imageStorageId: args.imageStorageId,
       iconName: args.iconName,
       color: args.color,

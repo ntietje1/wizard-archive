@@ -10,8 +10,7 @@ import { anySidebarItemWithContentValidator } from './schema/anySidebarItemWithC
 import type { AnySidebarItem, AnySidebarItemWithContent } from './types/types'
 import { getSidebarItemWithContent } from './functions/getSidebarItemWithContent'
 import { ERROR_CODE, throwClientError } from '../errors'
-import { assertSidebarItemSlug } from './slug'
-import { assertValidSidebarItemSlug } from './validation'
+import { requireSidebarItemSlug } from './slug'
 
 export const getSidebarItemsByLocation = campaignQuery({
   args: {
@@ -61,9 +60,9 @@ export const getSidebarItemBySlug = campaignQuery({
   },
   returns: v.nullable(anySidebarItemWithContentValidator),
   handler: async (ctx, args): Promise<AnySidebarItemWithContent | null> => {
-    assertValidSidebarItemSlug(args.slug)
+    const slug = requireSidebarItemSlug(args.slug)
     return await getSidebarItemBySlugFn(ctx, {
-      slug: assertSidebarItemSlug(args.slug),
+      slug,
     })
   },
 })

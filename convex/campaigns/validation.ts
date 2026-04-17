@@ -5,6 +5,7 @@ import {
   CAMPAIGN_SLUG_MIN_LENGTH,
 } from './constants'
 import { createCanonicalSlugHelpers } from '../common/slug'
+import { parseOrThrowClientValidation } from '../common/zod'
 import type { BrandedString } from '../common/slug'
 import { ERROR_CODE, throwClientError } from '../errors'
 import { requireUsername } from '../users/validation'
@@ -50,23 +51,8 @@ export function prepareCampaignDescription(description?: string): string | undef
   return description?.trim()
 }
 
-export function prepareCampaignSlug(slug: CampaignSlug): CampaignSlug {
-  const error = validateCampaignSlug(slug)
-  if (error) {
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, error)
-  }
-  return slug
-}
-
 export function requireCampaignSlug(slug: string): CampaignSlug {
-  const parsed = parseCampaignSlug(slug)
-  if (!parsed) {
-    throwClientError(
-      ERROR_CODE.VALIDATION_FAILED,
-      validateCampaignSlug(slug) ?? 'Invalid campaign link',
-    )
-  }
-  return parsed
+  return parseOrThrowClientValidation(campaignSlugSchema, slug, 'Invalid campaign link')
 }
 
 export function requireCampaignUsername(username: string): Username {

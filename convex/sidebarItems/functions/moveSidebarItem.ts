@@ -16,6 +16,7 @@ import { deduplicateName } from './defaultItemName'
 import { trashTree, restoreTreeDescendants } from './treeOperations'
 import { getSidebarItem } from './getSidebarItem'
 import { collectDescendants } from './collectDescendants'
+import { assertSidebarItemName } from '../sharedValidation'
 import type { SidebarItemLocation } from '../types/baseTypes'
 import type { AnySidebarItemFromDb } from '../types/types'
 import type { CampaignMutationCtx } from '../../functions'
@@ -67,7 +68,7 @@ async function resolveRestoreConflicts(
   })
   const otherNames = siblings.filter((s) => s._id !== item._id).map((s) => s.name)
 
-  const uniqueName = deduplicateName(item.name, otherNames)
+  const uniqueName = assertSidebarItemName(deduplicateName(item.name, otherNames))
   const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
     itemId: item._id,
     name: uniqueName,

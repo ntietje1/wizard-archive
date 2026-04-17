@@ -6,10 +6,13 @@ import { findUniqueSlug } from '../common/slug'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { getSidebarItemsByParent } from './functions/getSidebarItemsByParent'
 import { enhanceSidebarItem } from './functions/enhanceSidebarItem'
-import { checkNameConflict, validateItemName, validateItemSlug } from './sharedValidation'
+import {
+  assertSidebarItemName,
+  checkNameConflict,
+} from './sharedValidation'
 import { assertSidebarItemSlug, validateSidebarItemSlug } from './slug'
 import { SIDEBAR_ITEM_TYPES } from './types/baseTypes'
-import type { ValidationResult } from './sharedValidation'
+import type { SidebarItemName, ValidationResult } from './sharedValidation'
 import type { PermissionLevel } from '../permissions/types'
 import type { CampaignQueryCtx } from '../functions'
 import type { Doc, Id } from '../_generated/dataModel'
@@ -35,6 +38,27 @@ export async function checkUniqueNameUnderParent(
 ): Promise<ValidationResult> {
   const siblings = await getSidebarItemsByParent(ctx, { parentId })
   return checkNameConflict(name, siblings, excludeId)
+}
+
+async function ensureSidebarItemNameAvailable(
+  ctx: CampaignQueryCtx,
+  {
+    parentId,
+    name,
+    excludeId,
+  }: {
+    parentId: Id<'sidebarItems'> | null
+    name: SidebarItemName
+    excludeId?: Id<'sidebarItems'>
+  },
+): Promise<{ siblings: Array<AnySidebarItem> }> {
+  const siblings = await getSidebarItemsByParent(ctx, { parentId })
+  const uniqueResult = checkNameConflict(name, siblings, excludeId)
+  if (!uniqueResult.valid) {
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, uniqueResult.error)
+  }
+
+  return { siblings }
 }
 
 /**
@@ -90,39 +114,6 @@ export async function validateNoCircularParent(
  * Throws an error if validation fails.
  * Returns siblings so callers can reuse them (e.g. for default name generation).
  */
-export async function validateSidebarItemName(
-  ctx: CampaignQueryCtx,
-  {
-    parentId,
-    name,
-    excludeId,
-  }: {
-    parentId: Id<'sidebarItems'> | null
-    name: string
-    excludeId?: Id<'sidebarItems'>
-  },
-): Promise<{ siblings: Array<AnySidebarItem> }> {
-  const nameResult = validateItemName(name)
-  if (!nameResult.valid) {
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, nameResult.error)
-  }
-
-  const siblings = await getSidebarItemsByParent(ctx, { parentId })
-  const uniqueResult = checkNameConflict(name, siblings, excludeId)
-  if (!uniqueResult.valid) {
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, uniqueResult.error)
-  }
-
-  return { siblings }
-}
-
-export function assertValidSidebarItemSlug(slug: string): void {
-  const result = validateItemSlug(slug)
-  if (!result.valid) {
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, result.error)
-  }
-}
-
 /**
  * Validates that a parent change won't create a circular reference
  * and that the user has full access to the target folder.
@@ -215,9 +206,9 @@ export async function validateSidebarMove(
 ): Promise<void> {
   await validateSidebarParentChange(ctx, { item, newParentId })
 
-  await validateSidebarItemName(ctx, {
+  await ensureSidebarItemNameAvailable(ctx, {
     parentId: newParentId,
-    name: item.name,
+    name: assertSidebarItemName(item.name),
     excludeId: item._id,
   })
 }
@@ -299,19 +290,14 @@ export async function findUniqueSidebarItemSlug(
     name,
   }: {
     itemId?: Id<'sidebarItems'>
-    name: string
+    name: SidebarItemName
   },
 ): Promise<SidebarItemSlug> {
-  const nameResult = validateItemName(name)
-  if (!nameResult.valid) {
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, nameResult.error)
-  }
-
   try {
     const candidateSlug = await findUniqueSlug(name, (candidate) =>
       checkSlugConflict(ctx, { campaignId: ctx.campaign._id, slug: candidate, excludeId: itemId }), {
-      isValidCandidate: (candidate) => validateSidebarItemSlug(candidate) === null,
-    })
+        isValidCandidate: (candidate) => validateSidebarItemSlug(candidate) === null,
+      })
     return assertSidebarItemSlug(candidateSlug)
   } catch {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Failed to generate a valid slug for this item')
@@ -325,21 +311,20 @@ export async function prepareSidebarItemCreate(
     name,
   }: {
     parentId: Id<'sidebarItems'> | null
-    name: string
+    name: SidebarItemName
   },
 ): Promise<{ name: string; slug: SidebarItemSlug }> {
-  const trimmedName = name.trim()
   await validateSidebarCreateParent(ctx, { parentId })
-  await validateSidebarItemName(ctx, {
+  await ensureSidebarItemNameAvailable(ctx, {
     parentId,
-    name: trimmedName,
+    name,
   })
 
   const slug = await findUniqueSidebarItemSlug(ctx, {
-    name: trimmedName,
+    name,
   })
 
-  return { name: trimmedName, slug }
+  return { name, slug }
 }
 
 /**
@@ -354,24 +339,23 @@ export async function prepareSidebarItemRename(
     newName,
   }: {
     item: AnySidebarItem
-    newName: string
+    newName: SidebarItemName
   },
 ): Promise<{ name: string; slug: SidebarItemSlug } | null> {
-  const trimmedName = newName.trim()
-  if (trimmedName === item.name) {
+  if (newName === item.name) {
     return null
   }
 
-  await validateSidebarItemName(ctx, {
+  await ensureSidebarItemNameAvailable(ctx, {
     parentId: item.parentId,
-    name: trimmedName,
+    name: newName,
     excludeId: item._id,
   })
 
   const slug = await findUniqueSidebarItemSlug(ctx, {
     itemId: item._id,
-    name: trimmedName,
+    name: newName,
   })
 
-  return { name: trimmedName, slug }
+  return { name: newName, slug }
 }

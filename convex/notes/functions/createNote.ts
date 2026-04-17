@@ -1,10 +1,11 @@
 import * as Y from 'yjs'
 import { saveAllBlocksForNote } from '../../blocks/functions/saveAllBlocksForNote'
 import { syncNoteLinks } from '../../links/functions/syncNoteLinks'
+import type { ParsedCreateParentTarget } from '../../sidebarItems/createParentTarget'
 import { prepareSidebarItemCreate } from '../../sidebarItems/validation'
 import { resolveOrCreateFolderPath } from '../../folders/functions/resolveOrCreateFolderPath'
-import type { CreateParentTarget } from '../../sidebarItems/createParentTarget'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import type { SidebarItemName } from '../../sidebarItems/sharedValidation'
 import { createYjsDocument } from '../../yjsSync/functions/createYjsDocument'
 import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
 import { blocksToYDoc } from '../blocknote'
@@ -23,8 +24,8 @@ export async function createNote(
     color,
     content,
   }: {
-    name: string
-    parentTarget: CreateParentTarget
+    name: SidebarItemName
+    parentTarget: ParsedCreateParentTarget
     iconName?: string
     color?: string
     content?: Array<CustomBlock>

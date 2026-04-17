@@ -4,7 +4,6 @@ import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS, CAMPAIGN_STATUS } from '.
 import {
   prepareCampaignDescription,
   prepareCampaignName,
-  prepareCampaignSlug,
 } from '../validation'
 import type { Id } from '../../_generated/dataModel'
 import type { AuthMutationCtx } from '../../functions'
@@ -23,13 +22,12 @@ export async function createCampaign(
 ): Promise<Id<'campaigns'>> {
   const preparedName = prepareCampaignName(name)
   const preparedDescription = prepareCampaignDescription(description)
-  const preparedSlug = prepareCampaignSlug(slug)
 
   const profile = ctx.user.profile
 
   const conflict = await ctx.db
     .query('campaigns')
-    .withIndex('by_slug_dm', (q) => q.eq('slug', preparedSlug).eq('dmUserId', profile._id))
+    .withIndex('by_slug_dm', (q) => q.eq('slug', slug).eq('dmUserId', profile._id))
     .unique()
 
   if (conflict) {
@@ -40,7 +38,7 @@ export async function createCampaign(
     name: preparedName,
     description: preparedDescription ?? '',
     dmUserId: profile._id,
-    slug: preparedSlug,
+    slug,
     status: CAMPAIGN_STATUS.Active,
     currentSessionId: null,
   })

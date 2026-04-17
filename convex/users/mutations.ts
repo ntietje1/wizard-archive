@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import { authMutation } from '../functions'
-import { usernameValidator, validateUsername } from './validation'
+import { requireUsername, usernameValidator } from './validation'
 import { ERROR_CODE, throwClientError } from '../errors'
 
 export const updateUsername = authMutation({
@@ -9,11 +9,7 @@ export const updateUsername = authMutation({
   },
   returns: usernameValidator,
   handler: async (ctx, args) => {
-    const username = args.username
-    const validationError = validateUsername(username)
-    if (validationError) {
-      throwClientError(ERROR_CODE.VALIDATION_FAILED, validationError)
-    }
+    const username = requireUsername(args.username)
 
     if (username === ctx.user.profile.username) {
       return username

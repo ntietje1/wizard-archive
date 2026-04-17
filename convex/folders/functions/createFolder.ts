@@ -1,4 +1,5 @@
-import type { CreateParentTarget } from '../../sidebarItems/createParentTarget'
+import type { ParsedCreateParentTarget } from '../../sidebarItems/createParentTarget'
+import type { SidebarItemName } from '../../sidebarItems/sharedValidation'
 import type { SidebarItemSlug } from '../../sidebarItems/slug'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
@@ -13,17 +14,16 @@ export async function createFolder(
     iconName,
     color,
   }: {
-    name: string
-    parentTarget: CreateParentTarget
+    name: SidebarItemName
+    parentTarget: ParsedCreateParentTarget
     iconName?: string
     color?: string
   },
 ): Promise<{ folderId: Id<'sidebarItems'>; slug: SidebarItemSlug }> {
-  const trimmedName = name.trim()
   const resolvedParentId = await resolveOrCreateFolderPath(ctx, { parentTarget })
 
   return await insertFolder(ctx, {
-    name: trimmedName,
+    name,
     parentId: resolvedParentId,
     iconName,
     color,

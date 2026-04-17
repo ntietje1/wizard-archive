@@ -8,6 +8,7 @@ import { ERROR_CODE, throwClientError } from '../../errors'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import type { SidebarItemName } from '../../sidebarItems/sharedValidation'
 import type { SidebarItemSlug } from '../../sidebarItems/slug'
 import type { EditHistoryChange } from '../../editHistory/types'
 import type { CampaignMutationCtx } from '../../functions'
@@ -23,7 +24,7 @@ export async function updateNote(
     color,
   }: {
     noteId: Id<'sidebarItems'>
-    name?: string
+    name?: SidebarItemName
     iconName?: string | null
     color?: string | null
   },

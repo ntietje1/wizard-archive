@@ -1,3 +1,5 @@
+import type { BrandedString } from '../common/slug'
+import { parseOrThrowClientValidation } from '../common/zod'
 import { z } from 'zod'
 import { slugify } from '../common/slug'
 import { parseSidebarItemSlug, validateSidebarItemSlug } from './slug'
@@ -11,7 +13,9 @@ import type { Id } from '../_generated/dataModel'
 
 export type ValidationResult = { valid: true } | { valid: false; error: string }
 
-export const sidebarItemNameSchema = z
+export type SidebarItemName = BrandedString<'SidebarItemName'>
+
+export const sidebarItemNameValueSchema = z
   .string()
   .refine((value) => value.trim().length > 0, 'Name is required')
   .refine((value) => value === value.trim(), 'Name cannot start or end with whitespace')
@@ -33,6 +37,10 @@ export const sidebarItemNameSchema = z
     'Name must contain at least one letter or number',
   )
 
+export const sidebarItemNameSchema = sidebarItemNameValueSchema.transform(
+  (value) => value as SidebarItemName,
+)
+
 function zodResultToValidationResult(result: z.ZodSafeParseResult<string>): ValidationResult {
   if (result.success) {
     return { valid: true }
@@ -45,7 +53,25 @@ function zodResultToValidationResult(result: z.ZodSafeParseResult<string>): Vali
 }
 
 export function validateItemName(name: string): ValidationResult {
-  return zodResultToValidationResult(sidebarItemNameSchema.safeParse(name))
+  return zodResultToValidationResult(sidebarItemNameValueSchema.safeParse(name))
+}
+
+export function parseSidebarItemName(name: string): SidebarItemName | null {
+  const result = sidebarItemNameSchema.safeParse(name)
+  return result.success ? result.data : null
+}
+
+export function assertSidebarItemName(name: string): SidebarItemName {
+  const parsed = parseSidebarItemName(name)
+  if (!parsed) {
+    const result = validateItemName(name)
+    throw new Error(result.valid ? 'Invalid sidebar item name' : result.error)
+  }
+  return parsed
+}
+
+export function requireSidebarItemName(name: string): SidebarItemName {
+  return parseOrThrowClientValidation(sidebarItemNameSchema, name, 'Invalid sidebar item name')
 }
 
 export function validateItemSlug(slug: string): ValidationResult {

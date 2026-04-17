@@ -1,5 +1,6 @@
 import { prepareSidebarItemCreate } from '../../sidebarItems/validation'
-import type { CreateParentTarget } from '../../sidebarItems/createParentTarget'
+import type { ParsedCreateParentTarget } from '../../sidebarItems/createParentTarget'
+import type { SidebarItemName } from '../../sidebarItems/sharedValidation'
 import type { SidebarItemSlug } from '../../sidebarItems/slug'
 import { resolveOrCreateFolderPath } from '../../folders/functions/resolveOrCreateFolderPath'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
@@ -17,9 +18,9 @@ export async function createFile(
     iconName,
     color,
   }: {
-    name: string
+    name: SidebarItemName
     storageId?: Id<'_storage'>
-    parentTarget: CreateParentTarget
+    parentTarget: ParsedCreateParentTarget
     iconName?: string
     color?: string
   },

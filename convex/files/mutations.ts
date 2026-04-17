@@ -1,10 +1,14 @@
 import { v } from 'convex/values'
 import { campaignMutation } from '../functions'
-import { createItemParentArgsValidator } from '../sidebarItems/createParentTarget'
+import {
+  createItemParentArgsValidator,
+  requireCreateParentTarget,
+} from '../sidebarItems/createParentTarget'
 import {
   sidebarItemNameValidator,
   sidebarItemSlugValidator,
 } from '../sidebarItems/schema/validators'
+import { requireSidebarItemName } from '../sidebarItems/sharedValidation'
 import { createFile as createFileFn } from './functions/createFile'
 import { updateFile as updateFileFn } from './functions/updateFile'
 import type { Id } from '../_generated/dataModel'
@@ -22,10 +26,12 @@ export const createFile = campaignMutation({
     slug: sidebarItemSlugValidator,
   }),
   handler: async (ctx, args): Promise<{ fileId: Id<'sidebarItems'>; slug: string }> => {
+    const name = requireSidebarItemName(args.name)
+    const parentTarget = requireCreateParentTarget(args.parentTarget)
     return await createFileFn(ctx, {
-      name: args.name,
+      name,
       storageId: args.storageId,
-      parentTarget: args.parentTarget,
+      parentTarget,
       iconName: args.iconName,
       color: args.color,
     })
@@ -45,9 +51,10 @@ export const updateFile = campaignMutation({
     slug: sidebarItemSlugValidator,
   }),
   handler: async (ctx, args): Promise<{ fileId: Id<'sidebarItems'>; slug: string }> => {
+    const name = args.name ? requireSidebarItemName(args.name) : undefined
     return await updateFileFn(ctx, {
       fileId: args.fileId,
-      name: args.name,
+      name,
       storageId: args.storageId,
       iconName: args.iconName,
       color: args.color,

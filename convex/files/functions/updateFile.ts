@@ -8,6 +8,7 @@ import { PERMISSION_LEVEL } from '../../permissions/types'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import type { SidebarItemName } from '../../sidebarItems/sharedValidation'
 import type { EditHistoryChange } from '../../editHistory/types'
 import type { WithoutSystemFields } from 'convex/server'
 import type { CampaignMutationCtx } from '../../functions'
@@ -23,7 +24,7 @@ export async function updateFile(
     color,
   }: {
     fileId: Id<'sidebarItems'>
-    name?: string
+    name?: SidebarItemName
     storageId?: Id<'_storage'> | null
     iconName?: string | null
     color?: string | null

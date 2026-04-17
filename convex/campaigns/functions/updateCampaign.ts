@@ -3,7 +3,6 @@ import { ERROR_CODE, throwClientError } from '../../errors'
 import {
   prepareCampaignDescription,
   prepareCampaignName,
-  prepareCampaignSlug,
 } from '../validation'
 import type { WithoutSystemFields } from 'convex/server'
 import type { Doc, Id } from '../../_generated/dataModel'
@@ -34,15 +33,14 @@ export async function updateCampaign(
   }
 
   if (slug !== undefined && slug !== campaign.slug) {
-    const preparedSlug = prepareCampaignSlug(slug)
     const conflict = await ctx.db
       .query('campaigns')
-      .withIndex('by_slug_dm', (q) => q.eq('slug', preparedSlug).eq('dmUserId', userId))
+      .withIndex('by_slug_dm', (q) => q.eq('slug', slug).eq('dmUserId', userId))
       .unique()
     if (conflict && conflict._id !== campaign._id) {
       throwClientError(ERROR_CODE.CONFLICT, 'A campaign with this slug already exists')
     }
-    updates.slug = preparedSlug
+    updates.slug = slug
   }
 
   if (Object.keys(updates).length === 0) {

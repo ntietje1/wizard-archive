@@ -70,6 +70,7 @@ import type * as common_constants from "../common/constants.js";
 import type * as common_logger from "../common/logger.js";
 import type * as common_slug from "../common/slug.js";
 import type * as common_types from "../common/types.js";
+import type * as common_zod from "../common/zod.js";
 import type * as crons from "../crons.js";
 import type * as documentSnapshots_functions_createSnapshot from "../documentSnapshots/functions/createSnapshot.js";
 import type * as documentSnapshots_functions_getSnapshot from "../documentSnapshots/functions/getSnapshot.js";
@@ -301,6 +302,7 @@ declare const fullApi: ApiFromModules<{
   "common/logger": typeof common_logger;
   "common/slug": typeof common_slug;
   "common/types": typeof common_types;
+  "common/zod": typeof common_zod;
   crons: typeof crons;
   "documentSnapshots/functions/createSnapshot": typeof documentSnapshots_functions_createSnapshot;
   "documentSnapshots/functions/getSnapshot": typeof documentSnapshots_functions_getSnapshot;

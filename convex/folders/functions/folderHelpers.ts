@@ -1,5 +1,6 @@
 import { prepareSidebarItemCreate } from '../../sidebarItems/validation'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import type { SidebarItemName } from '../../sidebarItems/sharedValidation'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import type { SidebarItemSlug } from '../../sidebarItems/slug'
@@ -13,10 +14,10 @@ export async function findSidebarChildByName(
     name,
   }: {
     parentId: Id<'sidebarItems'> | null
-    name: string
+    name: SidebarItemName
   },
 ): Promise<Doc<'sidebarItems'> | null> {
-  const normalizedName = name.trim().toLowerCase()
+  const normalizedName = name.toLowerCase()
   const siblings = await ctx.db
     .query('sidebarItems')
     .withIndex('by_campaign_location_parent_name', (q) =>
@@ -42,7 +43,7 @@ export async function insertFolder(
     iconName,
     color,
   }: {
-    name: string
+    name: SidebarItemName
     parentId: Id<'sidebarItems'> | null
     iconName?: string
     color?: string
