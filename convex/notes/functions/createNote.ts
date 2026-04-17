@@ -6,7 +6,7 @@ import {
   validateSidebarCreateParent,
   validateSidebarItemName,
 } from '../../sidebarItems/validation'
-import { resolveOrCreateSidebarParentPath } from '../../folders/functions/createFolder'
+import { resolveOrCreateFolderPath } from '../../folders/functions/resolveOrCreateFolderPath'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { createYjsDocument } from '../../yjsSync/functions/createYjsDocument'
 import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
@@ -35,25 +35,25 @@ export async function createNote(
     content?: Array<CustomBlock>
   },
 ): Promise<{ noteId: Id<'sidebarItems'>; slug: string }> {
-  name = name.trim()
-  parentId = await resolveOrCreateSidebarParentPath(ctx, { parentId, parentPath })
+  const trimmedName = name.trim()
+  const resolvedParentId = await resolveOrCreateFolderPath(ctx, { parentId, parentPath })
 
-  await validateSidebarCreateParent(ctx, { parentId })
+  await validateSidebarCreateParent(ctx, { parentId: resolvedParentId })
   await validateSidebarItemName(ctx, {
-    parentId,
-    name,
+    parentId: resolvedParentId,
+    name: trimmedName,
   })
 
   const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
-    name,
+    name: trimmedName,
   })
 
   const userId = ctx.membership.userId
 
   const noteId = await ctx.db.insert('sidebarItems', {
-    name,
+    name: trimmedName,
     slug: uniqueSlug,
-    parentId,
+    parentId: resolvedParentId,
     iconName: iconName ?? null,
     color: color ?? null,
     allPermissionLevel: null,

@@ -83,22 +83,23 @@ vi.mock('convex/_generated/api', () => ({
   },
 }))
 
+const mutationMap = {
+  createFolder: createFolderMock,
+  createMap: createMapMock,
+  createFile: createFileMock,
+  createCanvas: createCanvasMock,
+  moveSidebarItem: moveSidebarItemMock,
+  permanentlyDeleteSidebarItem: deleteSidebarItemMock,
+  createNote: createNoteMock,
+} satisfies Record<string, ReturnType<typeof vi.fn>>
+
 vi.mock('~/shared/hooks/useAppMutation', () => ({
   useAppMutation: (mutation: string) => ({
     mutateAsync:
-      mutation === 'createFolder'
-        ? createFolderMock
-        : mutation === 'createMap'
-          ? createMapMock
-          : mutation === 'createFile'
-            ? createFileMock
-            : mutation === 'createCanvas'
-              ? createCanvasMock
-              : mutation === 'moveSidebarItem'
-                ? moveSidebarItemMock
-                : mutation === 'permanentlyDeleteSidebarItem'
-                  ? deleteSidebarItemMock
-                  : createNoteMock,
+      mutationMap[mutation as keyof typeof mutationMap] ??
+      (() => {
+        throw new Error(`Unexpected mutation: ${mutation}`)
+      }),
   }),
 }))
 

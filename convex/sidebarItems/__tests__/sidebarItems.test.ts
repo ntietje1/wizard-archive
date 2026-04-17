@@ -502,15 +502,6 @@ describe('create item with parentPath', () => {
     const arcOne = rootItems.find((item) => item.name === 'Arc One')
 
     expect(arcOne).toBeUndefined()
-
-    const arcOneChildren = arcOne
-      ? await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
-          campaignId: ctx.campaignId,
-          parentId: arcOne._id,
-        })
-      : []
-
-    expect(arcOneChildren.some((item) => item.name === 'Arc Two')).toBe(false)
   })
 
   it('creates missing parentPath folders under a provided parentId for notes', async () => {

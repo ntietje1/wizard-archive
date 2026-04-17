@@ -4,7 +4,7 @@ import {
   validateSidebarCreateParent,
   validateSidebarItemName,
 } from '../../sidebarItems/validation'
-import { resolveOrCreateSidebarParentPath } from '../../folders/functions/createFolder'
+import { resolveOrCreateFolderPath } from '../../folders/functions/resolveOrCreateFolderPath'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { createYjsDocument } from '../../yjsSync/functions/createYjsDocument'
 import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
@@ -30,11 +30,11 @@ export async function createCanvas(
   },
 ): Promise<{ canvasId: Id<'sidebarItems'>; slug: string }> {
   const trimmedName = name.trim()
-  parentId = await resolveOrCreateSidebarParentPath(ctx, { parentId, parentPath })
+  const resolvedParentId = await resolveOrCreateFolderPath(ctx, { parentId, parentPath })
 
-  await validateSidebarCreateParent(ctx, { parentId })
+  await validateSidebarCreateParent(ctx, { parentId: resolvedParentId })
   await validateSidebarItemName(ctx, {
-    parentId,
+    parentId: resolvedParentId,
     name: trimmedName,
   })
 
@@ -50,7 +50,7 @@ export async function createCanvas(
     slug: uniqueSlug,
     iconName: iconName ?? null,
     color: color ?? null,
-    parentId,
+    parentId: resolvedParentId,
     allPermissionLevel: null,
     type: SIDEBAR_ITEM_TYPES.canvases,
     location: SIDEBAR_ITEM_LOCATION.sidebar,

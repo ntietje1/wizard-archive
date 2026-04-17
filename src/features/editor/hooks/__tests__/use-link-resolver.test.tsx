@@ -57,7 +57,11 @@ describe('useLinkResolver', () => {
     })
   })
 
-  it('neutralizes dangerous external urls', () => {
+  it.each([
+    ['javascript', 'javascript:alert(1)'],
+    ['data', 'data:text/html,<script>alert(1)</script>'],
+    ['vbscript', 'vbscript:msgbox("x")'],
+  ])('neutralizes %s urls', (_, rawTarget) => {
     const { result } = renderHook(() => useLinkResolver())
 
     const resolved = result.current.resolveLink({
@@ -66,49 +70,7 @@ describe('useLinkResolver', () => {
       itemName: '',
       headingPath: [],
       displayName: 'Bad',
-      rawTarget: 'javascript:alert(1)',
-      isExternal: true,
-    })
-
-    expect(resolved).toMatchObject({
-      resolved: true,
-      itemId: null,
-      href: null,
-      isExternal: true,
-    })
-  })
-
-  it('neutralizes data urls', () => {
-    const { result } = renderHook(() => useLinkResolver())
-
-    const resolved = result.current.resolveLink({
-      syntax: 'md',
-      itemPath: [],
-      itemName: '',
-      headingPath: [],
-      displayName: 'Bad',
-      rawTarget: 'data:text/html,<script>alert(1)</script>',
-      isExternal: true,
-    })
-
-    expect(resolved).toMatchObject({
-      resolved: true,
-      itemId: null,
-      href: null,
-      isExternal: true,
-    })
-  })
-
-  it('neutralizes vbscript urls', () => {
-    const { result } = renderHook(() => useLinkResolver())
-
-    const resolved = result.current.resolveLink({
-      syntax: 'md',
-      itemPath: [],
-      itemName: '',
-      headingPath: [],
-      displayName: 'Bad',
-      rawTarget: 'vbscript:msgbox("x")',
+      rawTarget,
       isExternal: true,
     })
 

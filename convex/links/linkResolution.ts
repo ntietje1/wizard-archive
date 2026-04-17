@@ -139,7 +139,7 @@ export function getMinDisambiguationPath<T extends LinkResolvableItem>(
   itemsMap: Map<Id<'sidebarItems'>, T>,
 ): Array<string> {
   const fullPath = getItemPath(item, itemsMap)
-  if (fullPath.length === 0) return item.name ? [item.name] : []
+  if (fullPath.length === 0) return item.name ? [item.name.trim()] : []
 
   for (let i = fullPath.length - 1; i >= 0; i--) {
     const partialPath = fullPath.slice(i)

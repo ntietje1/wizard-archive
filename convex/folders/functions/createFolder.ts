@@ -3,15 +3,14 @@ import {
   validateSidebarCreateParent,
   validateSidebarItemName,
 } from '../../sidebarItems/validation'
-import { validateItemName } from '../../sidebarItems/sharedValidation'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
-import { ERROR_CODE, throwClientError } from '../../errors'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
+import { resolveOrCreateFolderPath } from './resolveOrCreateFolderPath'
 
-async function findSidebarChildByName(
+export async function findSidebarChildByName(
   ctx: CampaignMutationCtx,
   {
     parentId,
@@ -39,7 +38,7 @@ async function findSidebarChildByName(
   )
 }
 
-async function insertFolder(
+export async function insertFolder(
   ctx: CampaignMutationCtx,
   {
     name,
@@ -100,53 +99,6 @@ async function insertFolder(
   return { folderId, slug: uniqueSlug }
 }
 
-export async function resolveOrCreateSidebarParentPath(
-  ctx: CampaignMutationCtx,
-  {
-    parentId,
-    parentPath,
-  }: {
-    parentId: Id<'sidebarItems'> | null
-    parentPath?: Array<string>
-  },
-): Promise<Id<'sidebarItems'> | null> {
-  let resolvedParentId = parentId
-
-  for (const segment of parentPath ?? []) {
-    await validateSidebarCreateParent(ctx, { parentId: resolvedParentId })
-
-    const trimmedSegment = segment.trim()
-    const nameResult = validateItemName(trimmedSegment)
-    if (!nameResult.valid) {
-      throwClientError(ERROR_CODE.VALIDATION_FAILED, nameResult.error)
-    }
-
-    const existing = await findSidebarChildByName(ctx, {
-      parentId: resolvedParentId,
-      name: trimmedSegment,
-    })
-
-    if (existing) {
-      if (existing.type !== SIDEBAR_ITEM_TYPES.folders) {
-        throwClientError(
-          ERROR_CODE.VALIDATION_FAILED,
-          `"${trimmedSegment}" already exists here and is not a folder`,
-        )
-      }
-      resolvedParentId = existing._id
-      continue
-    }
-
-    const { folderId } = await insertFolder(ctx, {
-      name: trimmedSegment,
-      parentId: resolvedParentId,
-    })
-    resolvedParentId = folderId
-  }
-
-  return resolvedParentId
-}
-
 export async function createFolder(
   ctx: CampaignMutationCtx,
   {
@@ -163,12 +115,12 @@ export async function createFolder(
     color?: string
   },
 ): Promise<{ folderId: Id<'sidebarItems'>; slug: string }> {
-  name = name.trim()
-  parentId = await resolveOrCreateSidebarParentPath(ctx, { parentId, parentPath })
+  const trimmedName = name.trim()
+  const resolvedParentId = await resolveOrCreateFolderPath(ctx, { parentId, parentPath })
 
   return await insertFolder(ctx, {
-    name,
-    parentId,
+    name: trimmedName,
+    parentId: resolvedParentId,
     iconName,
     color,
   })

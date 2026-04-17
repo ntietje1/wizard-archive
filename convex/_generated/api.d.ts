@@ -99,6 +99,7 @@ import type * as folders_functions_createFolder from "../folders/functions/creat
 import type * as folders_functions_enhanceFolder from "../folders/functions/enhanceFolder.js";
 import type * as folders_functions_getFolderContentsForDownload from "../folders/functions/getFolderContentsForDownload.js";
 import type * as folders_functions_getSidebarItemAncestors from "../folders/functions/getSidebarItemAncestors.js";
+import type * as folders_functions_resolveOrCreateFolderPath from "../folders/functions/resolveOrCreateFolderPath.js";
 import type * as folders_functions_updateFolder from "../folders/functions/updateFolder.js";
 import type * as folders_mutations from "../folders/mutations.js";
 import type * as folders_queries from "../folders/queries.js";
@@ -324,6 +325,7 @@ declare const fullApi: ApiFromModules<{
   "folders/functions/enhanceFolder": typeof folders_functions_enhanceFolder;
   "folders/functions/getFolderContentsForDownload": typeof folders_functions_getFolderContentsForDownload;
   "folders/functions/getSidebarItemAncestors": typeof folders_functions_getSidebarItemAncestors;
+  "folders/functions/resolveOrCreateFolderPath": typeof folders_functions_resolveOrCreateFolderPath;
   "folders/functions/updateFolder": typeof folders_functions_updateFolder;
   "folders/mutations": typeof folders_mutations;
   "folders/queries": typeof folders_queries;

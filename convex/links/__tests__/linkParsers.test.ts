@@ -193,6 +193,8 @@ describe('isExternalUrl', () => {
     expect(isExternalUrl('vbscript:msgbox(1)')).toBe(false)
     expect(isExternalUrl('file:///etc/passwd')).toBe(false)
     expect(isExternalUrl('blob:https://example.com/uuid')).toBe(false)
+    expect(isExternalUrl('about:blank')).toBe(false)
+    expect(isExternalUrl('filesystem:some/path')).toBe(false)
   })
 })
 
@@ -246,6 +248,20 @@ describe('parseMdLinkTarget safety', () => {
     })
     expect(parseMdLinkTarget('vbscript:msgbox(1)')).toEqual({
       target: 'vbscript:msgbox(1)',
+      isExternal: true,
+      itemPath: [],
+      itemName: '',
+      headingPath: [],
+    })
+    expect(parseMdLinkTarget('about:blank')).toEqual({
+      target: 'about:blank',
+      isExternal: true,
+      itemPath: [],
+      itemName: '',
+      headingPath: [],
+    })
+    expect(parseMdLinkTarget('filesystem:https://example.com/')).toEqual({
+      target: 'filesystem:https://example.com/',
       isExternal: true,
       itemPath: [],
       itemName: '',
