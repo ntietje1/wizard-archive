@@ -60,7 +60,7 @@ export function PeopleTab() {
     )
   }
 
-  const joinUrl = `${getOrigin()}/join/${dmUsername}/${campaignSlug}`
+  const joinUrl = isDm ? `${getOrigin()}/join/${dmUsername}/${campaignSlug}` : null
 
   const isLoading = campaign.isLoading || members.isLoading || (isDm && requests.isLoading)
   const isError = campaign.isError || members.isError || (isDm && requests.isError)
@@ -88,7 +88,7 @@ export function PeopleTab() {
 
       {isReady && (
         <>
-          {isDm && <InviteLinkSection joinUrl={joinUrl} />}
+          {isDm && joinUrl && <InviteLinkSection joinUrl={joinUrl} />}
 
           <MembersSection
             dmMember={dmMember}

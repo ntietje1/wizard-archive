@@ -11,6 +11,7 @@ concurrency:
 
 env:
   NODE_VERSION: 22
+  VITE_SITE_URL: 'http://localhost:3000'
 
 jobs:
   setup:
@@ -98,6 +99,8 @@ jobs:
           cache: true
       - run: vp install --frozen-lockfile
       - run: vp test run --config vitest.config.ts --reporter=verbose
+        env:
+          VITE_SITE_URL: ${{ env.VITE_SITE_URL }}
 
   backend-test:
     name: Backend Tests
