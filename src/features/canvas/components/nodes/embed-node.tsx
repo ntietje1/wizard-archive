@@ -1,9 +1,10 @@
-import { useContext, useRef } from 'react'
+import { useContext } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { AlertTriangle, ExternalLinkIcon } from 'lucide-react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { CanvasContext } from '../../utils/canvas-context'
-import { useEmbedNoteActivation } from '../../hooks/useEmbedNoteActivation'
+import { useRichEmbedActivation } from '../../hooks/useRichEmbedLifecycle'
+import type { RichEmbedLifecycleController } from '../../hooks/useRichEmbedLifecycle'
 import { ResizableNodeWrapper } from './resizable-node-wrapper'
 import { EmbedNoteContent } from './embed-note-content'
 import { ItemPreviewContent } from '~/features/editor/components/item-preview-content'
@@ -27,8 +28,7 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
   const { editingEmbedId, setEditingEmbedId, canEdit } = useContext(CanvasContext)
   const isEditing = editingEmbedId === id && !!selected
 
-  const scrollTopRef = useRef(0)
-  const { clickCoordsRef, handleDoubleClick } = useEmbedNoteActivation({
+  const { lifecycle, handleDoubleClick } = useRichEmbedActivation({
     canEdit,
     embedId: id,
     setEditingEmbedId,
@@ -92,8 +92,7 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
               contentItem={contentItem}
               isEditing={isEditing}
               selected={!!selected}
-              scrollTopRef={scrollTopRef}
-              clickCoordsRef={clickCoordsRef}
+              lifecycle={lifecycle}
             />
           </div>
         )}
@@ -108,14 +107,12 @@ function EmbedRichContent({
   contentItem,
   isEditing,
   selected,
-  scrollTopRef,
-  clickCoordsRef,
+  lifecycle,
 }: {
   contentItem: AnySidebarItemWithContent | undefined
   isEditing: boolean
   selected: boolean
-  scrollTopRef: React.RefObject<number>
-  clickCoordsRef: React.RefObject<{ x: number; y: number } | null>
+  lifecycle: RichEmbedLifecycleController
 }): React.ReactElement | null {
   if (!contentItem) {
     return (
@@ -132,8 +129,7 @@ function EmbedRichContent({
         content={contentItem.content}
         editable={isEditing}
         selected={selected}
-        scrollTopRef={scrollTopRef}
-        clickCoordsRef={clickCoordsRef}
+        lifecycle={lifecycle}
       />
     )
   }

@@ -4,8 +4,8 @@
   "editor.formatOnSave": false,
   "editor.formatOnSaveMode": "file",
   "editor.codeActionsOnSave": {
-    "source.fixAll.oxc": "never",
-    "source.fixAll.eslint": "never"
+    "source.fixAll.oxc": "explicit",
+    "source.fixAll.eslint": "explicit"
   },
 
   "eslint.enable": true,
