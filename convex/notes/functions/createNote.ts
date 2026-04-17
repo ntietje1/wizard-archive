@@ -1,10 +1,13 @@
 import * as Y from 'yjs'
 import { saveAllBlocksForNote } from '../../blocks/functions/saveAllBlocksForNote'
+import { syncNoteLinks } from '../../links/functions/syncNoteLinks'
 import {
   findUniqueSidebarItemSlug,
   validateSidebarCreateParent,
   validateSidebarItemName,
 } from '../../sidebarItems/validation'
+import { resolveOrCreateFolderPath } from '../../folders/functions/resolveOrCreateFolderPath'
+import type { CreateParentTarget } from '../../sidebarItems/createParentTarget'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { createYjsDocument } from '../../yjsSync/functions/createYjsDocument'
 import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
@@ -19,36 +22,37 @@ export async function createNote(
   ctx: CampaignMutationCtx,
   {
     name,
-    parentId,
+    parentTarget,
     iconName,
     color,
     content,
   }: {
     name: string
-    parentId: Id<'sidebarItems'> | null
+    parentTarget: CreateParentTarget
     iconName?: string
     color?: string
     content?: Array<CustomBlock>
   },
 ): Promise<{ noteId: Id<'sidebarItems'>; slug: string }> {
-  name = name.trim()
+  const trimmedName = name.trim()
+  const resolvedParentId = await resolveOrCreateFolderPath(ctx, { parentTarget })
 
-  await validateSidebarCreateParent(ctx, { parentId })
+  await validateSidebarCreateParent(ctx, { parentId: resolvedParentId })
   await validateSidebarItemName(ctx, {
-    parentId,
-    name,
+    parentId: resolvedParentId,
+    name: trimmedName,
   })
 
   const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
-    name,
+    name: trimmedName,
   })
 
   const userId = ctx.membership.userId
 
   const noteId = await ctx.db.insert('sidebarItems', {
-    name,
+    name: trimmedName,
     slug: uniqueSlug,
-    parentId,
+    parentId: resolvedParentId,
     iconName: iconName ?? null,
     color: color ?? null,
     allPermissionLevel: null,
@@ -72,7 +76,12 @@ export async function createNote(
 
   let initialState: ArrayBuffer | undefined
   if (content && content.length > 0) {
-    await saveAllBlocksForNote(ctx, { noteId, content })
+    const persistedBlocks = await saveAllBlocksForNote(ctx, { noteId, content })
+    await syncNoteLinks(ctx, {
+      noteId,
+      campaignId: ctx.campaign._id,
+      blocks: persistedBlocks,
+    })
 
     const doc = blocksToYDoc(content, 'document')
     try {

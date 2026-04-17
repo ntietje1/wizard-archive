@@ -8,6 +8,8 @@ import {
   expectValidationFailed,
 } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
+import { getClientErrorMessage } from '../../errors'
+import type { CustomBlock } from '../editorSpecs'
 
 describe('createNote', () => {
   const t = createTestContext()
@@ -19,7 +21,7 @@ describe('createNote', () => {
     const result = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'My Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     expect(result.noteId).toBeDefined()
@@ -35,6 +37,58 @@ describe('createNote', () => {
     })
   })
 
+  it('creates noteLinks immediately for initial content links', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const initialContent: Array<CustomBlock> = [
+      {
+        id: 'block-a',
+        type: 'paragraph',
+        props: {},
+        content: [
+          { type: 'text', text: 'See [[Target Note]]', styles: {} },
+        ] as CustomBlock['content'],
+        children: [],
+      },
+      {
+        id: 'block-b',
+        type: 'paragraph',
+        props: {},
+        content: [
+          { type: 'text', text: 'And [Alias](Target Note)', styles: {} },
+        ] as CustomBlock['content'],
+        children: [],
+      },
+    ]
+
+    const { noteId: targetId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      campaignId: ctx.campaignId,
+      name: 'Target Note',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+
+    const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      campaignId: ctx.campaignId,
+      name: 'Source Note',
+      parentTarget: { kind: 'direct', parentId: null },
+      content: initialContent,
+    })
+
+    await t.run(async (dbCtx) => {
+      const links = await dbCtx.db
+        .query('noteLinks')
+        .withIndex('by_campaign_source', (q) =>
+          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceId),
+        )
+        .collect()
+
+      expect(links).toHaveLength(2)
+      expect(links.every((link) => link.targetItemId === targetId)).toBe(true)
+      expect(links.map((link) => link.query).sort()).toEqual(['Target Note', 'Target Note'])
+    })
+  })
+
   it('creates a note inside a folder', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
@@ -44,7 +98,7 @@ describe('createNote', () => {
     const result = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Child Note',
-      parentId: folderId,
+      parentTarget: { kind: 'direct', parentId: folderId },
     })
 
     expect(result.noteId).toBeDefined()
@@ -55,6 +109,27 @@ describe('createNote', () => {
     })
   })
 
+  it('rejects non-folder parents', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { noteId: parentId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      campaignId: ctx.campaignId,
+      name: 'Parent Note',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+
+    const error = await expectValidationFailed(
+      dmAuth.mutation(api.notes.mutations.createNote, {
+        campaignId: ctx.campaignId,
+        name: 'Child Note',
+        parentTarget: { kind: 'direct', parentId },
+      }),
+    )
+
+    expect(getClientErrorMessage(error)).toBe('Parent must be a folder')
+  })
+
   it('sets optional iconName and color', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
@@ -62,7 +137,7 @@ describe('createNote', () => {
     const result = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Styled Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
       iconName: 'scroll',
       color: '#ff0000',
     })
@@ -82,7 +157,7 @@ describe('createNote', () => {
       playerAuth.mutation(api.notes.mutations.createNote, {
         campaignId: ctx.campaignId,
         name: 'Player Note',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       }),
     )
   })
@@ -104,7 +179,7 @@ describe('createNote', () => {
     const result = await playerAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Player Child Note',
-      parentId: folderId,
+      parentTarget: { kind: 'direct', parentId: folderId },
     })
     expect(result.noteId).toBeDefined()
   })
@@ -127,7 +202,7 @@ describe('createNote', () => {
       playerAuth.mutation(api.notes.mutations.createNote, {
         campaignId: ctx.campaignId,
         name: 'Child Note',
-        parentId: folderId,
+        parentTarget: { kind: 'direct', parentId: folderId },
       }),
     )
   })
@@ -140,7 +215,7 @@ describe('createNote', () => {
       dmAuth.mutation(api.notes.mutations.createNote, {
         campaignId: ctx.campaignId,
         name: '',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       }),
     )
   })
@@ -153,7 +228,7 @@ describe('createNote', () => {
       dmAuth.mutation(api.notes.mutations.createNote, {
         campaignId: ctx.campaignId,
         name: '   ',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       }),
     )
   })
@@ -165,14 +240,14 @@ describe('createNote', () => {
     await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Duplicate',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await expectValidationFailed(
       dmAuth.mutation(api.notes.mutations.createNote, {
         campaignId: ctx.campaignId,
         name: 'Duplicate',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       }),
     )
   })
@@ -184,14 +259,14 @@ describe('createNote', () => {
     await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Duplicate',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await expectValidationFailed(
       dmAuth.mutation(api.notes.mutations.createNote, {
         campaignId: ctx.campaignId,
         name: 'duplicate',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       }),
     )
   })
@@ -205,13 +280,13 @@ describe('createNote', () => {
     await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Same Name',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     const result = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Same Name',
-      parentId: folderId,
+      parentTarget: { kind: 'direct', parentId: folderId },
     })
     expect(result.noteId).toBeDefined()
   })
@@ -223,7 +298,7 @@ describe('createNote', () => {
     const result = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: '  Padded Name  ',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await t.run(async (dbCtx) => {
@@ -239,7 +314,7 @@ describe('createNote', () => {
       t.mutation(api.notes.mutations.createNote, {
         campaignId: ctx.campaignId,
         name: 'Nope',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       }),
     )
   })

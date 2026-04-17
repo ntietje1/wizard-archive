@@ -112,7 +112,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         const result = await createItem({
           type: SIDEBAR_ITEM_TYPES.notes,
           campaignId,
-          parentId: ctx.item?._id ?? null,
+          parentTarget: { kind: 'direct', parentId: ctx.item?._id ?? null },
           name: getDefaultName(SIDEBAR_ITEM_TYPES.notes, ctx.item?._id ?? null),
         })
         openParentFolders(result.id)
@@ -132,7 +132,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         const result = await createItem({
           type: SIDEBAR_ITEM_TYPES.folders,
           campaignId,
-          parentId: ctx.item?._id ?? null,
+          parentTarget: { kind: 'direct', parentId: ctx.item?._id ?? null },
           name: getDefaultName(SIDEBAR_ITEM_TYPES.folders, ctx.item?._id ?? null),
         })
         openParentFolders(result.id)
@@ -152,7 +152,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         const result = await createItem({
           type: SIDEBAR_ITEM_TYPES.gameMaps,
           campaignId,
-          parentId: ctx.item?._id ?? null,
+          parentTarget: { kind: 'direct', parentId: ctx.item?._id ?? null },
           name: getDefaultName(SIDEBAR_ITEM_TYPES.gameMaps, ctx.item?._id ?? null),
         })
         openParentFolders(result.id)
@@ -172,7 +172,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         const result = await createItem({
           type: SIDEBAR_ITEM_TYPES.files,
           campaignId,
-          parentId: ctx.item?._id ?? null,
+          parentTarget: { kind: 'direct', parentId: ctx.item?._id ?? null },
           name: getDefaultName(SIDEBAR_ITEM_TYPES.files, ctx.item?._id ?? null),
         })
         openParentFolders(result.id)
@@ -192,7 +192,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         const result = await createItem({
           type: SIDEBAR_ITEM_TYPES.canvases,
           campaignId,
-          parentId: ctx.item?._id ?? null,
+          parentTarget: { kind: 'direct', parentId: ctx.item?._id ?? null },
           name: getDefaultName(SIDEBAR_ITEM_TYPES.canvases, ctx.item?._id ?? null),
         })
         openParentFolders(result.id)
@@ -452,6 +452,8 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         const zip = new JSZip()
 
         const downloadPromises: Array<Promise<void>> = items.map(async (item) => {
+          // TODO: pull this out to shared utility, also use in campaign export
+          // combine downloadFolder and downloadAll
           try {
             switch (item.type) {
               case SIDEBAR_ITEM_TYPES.files:

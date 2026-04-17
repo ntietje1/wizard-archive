@@ -139,7 +139,7 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Persist Guard',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {

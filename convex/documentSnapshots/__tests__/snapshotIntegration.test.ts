@@ -21,7 +21,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
         campaignId: ctx.campaignId,
         name: 'Snapshot Note',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
@@ -56,7 +56,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
         campaignId: ctx.campaignId,
         name: 'History Entry Note',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
@@ -90,7 +90,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
         campaignId: ctx.campaignId,
         name: 'Rapid Edit Note',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
@@ -139,7 +139,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
         campaignId: ctx.campaignId,
         name: 'Interval Note',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       })
 
       // First push — will create snapshot after idle
@@ -213,7 +213,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
         campaignId: ctx.campaignId,
         name: 'Burst Note',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       })
 
       for (let i = 0; i < 5; i++) {
@@ -255,7 +255,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
         campaignId: ctx.campaignId,
         name: 'Updated Time Note',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       })
 
       const beforeNote = await t.run(async (dbCtx) => {
@@ -290,7 +290,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       const { canvasId } = await dmAuth.mutation(api.canvases.mutations.createCanvas, {
         campaignId: ctx.campaignId,
         name: 'Snapshot Canvas',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
@@ -335,7 +335,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
         campaignId: ctx.campaignId,
         name: 'Deleted Note',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
@@ -622,7 +622,7 @@ describe('game map pin mutations — snapshot scheduling', () => {
       const result = await dmAuth.mutation(api.gameMaps.mutations.createMap, {
         campaignId: ctx.campaignId,
         name: 'Test Map',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
         imageStorageId: storageId,
       })
 

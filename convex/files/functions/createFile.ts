@@ -3,6 +3,8 @@ import {
   validateSidebarCreateParent,
   validateSidebarItemName,
 } from '../../sidebarItems/validation'
+import type { CreateParentTarget } from '../../sidebarItems/createParentTarget'
+import { resolveOrCreateFolderPath } from '../../folders/functions/resolveOrCreateFolderPath'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
@@ -14,27 +16,28 @@ export async function createFile(
   {
     name,
     storageId,
-    parentId,
+    parentTarget,
     iconName,
     color,
   }: {
     name: string
     storageId?: Id<'_storage'>
-    parentId: Id<'sidebarItems'> | null
+    parentTarget: CreateParentTarget
     iconName?: string
     color?: string
   },
 ): Promise<{ fileId: Id<'sidebarItems'>; slug: string }> {
-  name = name.trim()
+  const trimmedName = name.trim()
+  const resolvedParentId = await resolveOrCreateFolderPath(ctx, { parentTarget })
 
-  await validateSidebarCreateParent(ctx, { parentId })
+  await validateSidebarCreateParent(ctx, { parentId: resolvedParentId })
   await validateSidebarItemName(ctx, {
-    parentId,
-    name,
+    parentId: resolvedParentId,
+    name: trimmedName,
   })
 
   const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
-    name,
+    name: trimmedName,
   })
 
   const userId = ctx.membership.userId
@@ -49,11 +52,11 @@ export async function createFile(
 
   const fileId = await ctx.db.insert('sidebarItems', {
     campaignId: ctx.campaign._id,
-    name,
+    name: trimmedName,
     slug: uniqueSlug,
     iconName: iconName ?? null,
     color: color ?? null,
-    parentId,
+    parentId: resolvedParentId,
     allPermissionLevel: null,
     type: SIDEBAR_ITEM_TYPES.files,
     location: SIDEBAR_ITEM_LOCATION.sidebar,

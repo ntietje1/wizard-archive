@@ -32,7 +32,7 @@ describe('persistBlocks', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Write Access Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await createSidebarShare(t, {
@@ -58,7 +58,7 @@ describe('persistBlocks', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Empty Doc Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     const result = await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
@@ -85,7 +85,7 @@ describe('persistBlocks', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Persist Blocks Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
@@ -118,7 +118,7 @@ describe('persistBlocks', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Content Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     const blockIds = {

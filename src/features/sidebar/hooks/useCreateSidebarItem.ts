@@ -1,16 +1,18 @@
 import { api } from 'convex/_generated/api'
+import type { CreateParentTarget } from 'convex/sidebarItems/createParentTarget'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CustomBlock } from 'convex/notes/editorSpecs'
-import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
+import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { validateCreateItemLocally } from '~/features/sidebar/utils/sidebar-create-validation'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { assertNever } from '~/shared/utils/utils'
 
 interface CreateItemBase {
   campaignId: Id<'campaigns'>
   name: string
-  parentId: Id<'sidebarItems'> | null
+  parentTarget: CreateParentTarget
   iconName?: string
   color?: string
 }
@@ -52,24 +54,37 @@ export type CreateItemResult = {
 }
 
 export function useCreateSidebarItem() {
-  const validation = useSidebarValidation()
+  const { itemsMap, parentItemsMap } = useActiveSidebarItems()
   const createNoteMutation = useAppMutation(api.notes.mutations.createNote)
   const createFolderMutation = useAppMutation(api.folders.mutations.createFolder)
   const createMapMutation = useAppMutation(api.gameMaps.mutations.createMap)
   const createFileMutation = useAppMutation(api.files.mutations.createFile)
   const createCanvasMutation = useAppMutation(api.canvases.mutations.createCanvas)
 
+  const validateCreateItem = (args: CreateItemArgs) => {
+    return validateCreateItemLocally(
+      {
+        name: args.name,
+        parentTarget: args.parentTarget,
+      },
+      itemsMap,
+      parentItemsMap,
+    )
+  }
+
   const createItem = async (args: CreateItemArgs): Promise<CreateItemResult> => {
     const trimmedName = args.name.trim()
-    const nameResult = validation.validateName(trimmedName, args.parentId)
-    if (!nameResult.valid) throw new Error(nameResult.error)
+    const nameResult = validateCreateItem(args)
+    if (!nameResult.valid) {
+      throw new Error(nameResult.error)
+    }
 
     switch (args.type) {
       case SIDEBAR_ITEM_TYPES.notes: {
         const { noteId, slug } = await createNoteMutation.mutateAsync({
           campaignId: args.campaignId,
           name: trimmedName,
-          parentId: args.parentId,
+          parentTarget: args.parentTarget,
           iconName: args.iconName,
           color: args.color,
           content: args.content,
@@ -80,7 +95,7 @@ export function useCreateSidebarItem() {
         const { folderId, slug } = await createFolderMutation.mutateAsync({
           campaignId: args.campaignId,
           name: trimmedName,
-          parentId: args.parentId,
+          parentTarget: args.parentTarget,
           iconName: args.iconName,
           color: args.color,
         })
@@ -90,7 +105,7 @@ export function useCreateSidebarItem() {
         const { mapId, slug } = await createMapMutation.mutateAsync({
           campaignId: args.campaignId,
           name: trimmedName,
-          parentId: args.parentId,
+          parentTarget: args.parentTarget,
           imageStorageId: args.imageStorageId,
           iconName: args.iconName,
           color: args.color,
@@ -101,7 +116,7 @@ export function useCreateSidebarItem() {
         const { fileId, slug } = await createFileMutation.mutateAsync({
           campaignId: args.campaignId,
           name: trimmedName,
-          parentId: args.parentId,
+          parentTarget: args.parentTarget,
           storageId: args.storageId,
           iconName: args.iconName,
           color: args.color,
@@ -112,7 +127,7 @@ export function useCreateSidebarItem() {
         const { canvasId, slug } = await createCanvasMutation.mutateAsync({
           campaignId: args.campaignId,
           name: trimmedName,
-          parentId: args.parentId,
+          parentTarget: args.parentTarget,
           iconName: args.iconName,
           color: args.color,
         })
@@ -123,5 +138,5 @@ export function useCreateSidebarItem() {
     }
   }
 
-  return { createItem }
+  return { createItem, validateCreateItem }
 }

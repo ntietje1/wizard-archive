@@ -74,7 +74,12 @@ export function CreateNewDashboard({ parentId, folderPath }: CreateNewDashboardP
 
     try {
       const name = pendingItemName.trim() || getDefaultName(type, parentId)
-      const result = await createItem({ type, campaignId, parentId, name })
+      const result = await createItem({
+        type,
+        campaignId,
+        parentTarget: { kind: 'direct', parentId },
+        name,
+      })
       openParentFolders(result.id)
       await navigateToItem(result.slug)
     } catch (error) {

@@ -19,7 +19,7 @@ describe('createMap', () => {
     const result = await dmAuth.mutation(api.gameMaps.mutations.createMap, {
       campaignId: ctx.campaignId,
       name: 'World Map',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     expect(result.mapId).toBeDefined()
@@ -46,7 +46,7 @@ describe('createMap', () => {
       playerAuth.mutation(api.gameMaps.mutations.createMap, {
         campaignId: ctx.campaignId,
         name: 'Player Map',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       }),
     )
   })
@@ -59,7 +59,7 @@ describe('createMap', () => {
       dmAuth.mutation(api.gameMaps.mutations.createMap, {
         campaignId: ctx.campaignId,
         name: '',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       }),
     )
   })
@@ -71,7 +71,7 @@ describe('createMap', () => {
       t.mutation(api.gameMaps.mutations.createMap, {
         campaignId: ctx.campaignId,
         name: 'Nope',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       }),
     )
   })

@@ -7,6 +7,8 @@ import type { ValidationResult } from 'convex/sidebarItems/sharedValidation'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 
+type SidebarNameConflictItem = Pick<AnySidebarItem, '_id' | 'name'>
+
 /**
  * Checks if setting a new parent would create a circular reference.
  * Client version using itemsMap for synchronous parent chain lookup.
@@ -48,7 +50,7 @@ export interface SidebarItemValidationOptions {
   name: string
   parentId: Id<'sidebarItems'> | null
   itemId?: Id<'sidebarItems'>
-  siblings?: Array<AnySidebarItem>
+  siblings?: Array<SidebarNameConflictItem>
   itemsMap?: Map<Id<'sidebarItems'>, AnySidebarItem>
   isMove?: boolean
 }

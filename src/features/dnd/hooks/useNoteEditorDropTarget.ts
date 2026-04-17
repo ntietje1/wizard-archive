@@ -5,7 +5,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import { NOTE_EDITOR_DROP_TYPE, getDragItemId } from '~/features/dnd/utils/dnd-registry'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import { getMinDisambiguationPath } from '~/features/editor/hooks/useWikiLinkExtension'
+import { getMinDisambiguationPath } from 'convex/links/linkResolution'
 import { useNoteEditorStore } from '~/features/editor/stores/note-editor-store'
 
 export function useNoteEditorDropTarget({

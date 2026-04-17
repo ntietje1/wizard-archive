@@ -48,7 +48,7 @@ export function useCanvasFileUpload() {
           type: SIDEBAR_ITEM_TYPES.notes,
           campaignId,
           name: file.name,
-          parentId: null,
+          parentTarget: { kind: 'direct', parentId: null },
           content: blocks,
         })
         toast.dismiss(toastId)
@@ -78,7 +78,7 @@ export function useCanvasFileUpload() {
           campaignId,
           name: file.name,
           storageId,
-          parentId: null,
+          parentTarget: { kind: 'direct', parentId: null },
         })
         await commitUpload.mutateAsync({ storageId })
         toast.dismiss(toastId)

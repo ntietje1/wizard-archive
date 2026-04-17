@@ -19,7 +19,7 @@ describe('createFile', () => {
     const result = await dmAuth.mutation(api.files.mutations.createFile, {
       campaignId: ctx.campaignId,
       name: 'My File',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     expect(result.fileId).toBeDefined()
@@ -45,7 +45,7 @@ describe('createFile', () => {
     const result = await dmAuth.mutation(api.files.mutations.createFile, {
       campaignId: ctx.campaignId,
       name: 'Root File',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
     expect(result.fileId).toBeDefined()
   })
@@ -58,7 +58,7 @@ describe('createFile', () => {
       playerAuth.mutation(api.files.mutations.createFile, {
         campaignId: ctx.campaignId,
         name: 'Player File',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       }),
     )
   })
@@ -71,7 +71,7 @@ describe('createFile', () => {
       dmAuth.mutation(api.files.mutations.createFile, {
         campaignId: ctx.campaignId,
         name: '',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       }),
     )
   })
@@ -83,7 +83,7 @@ describe('createFile', () => {
       t.mutation(api.files.mutations.createFile, {
         campaignId: ctx.campaignId,
         name: 'Nope',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       }),
     )
   })

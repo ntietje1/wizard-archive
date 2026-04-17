@@ -158,7 +158,7 @@ export function MapForm({ mapId, campaignId, parentId, onClose, onSuccess }: Map
           campaignId,
           name: values.name,
           imageStorageId: finalImageStorageId,
-          parentId: parentId ?? null,
+          parentTarget: { kind: 'direct', parentId: parentId ?? null }, // TODO: pass iconName and color
         })
         openParentFolders(newMapId)
         void navigateToItem(newMapSlug)
@@ -295,7 +295,7 @@ export function MapForm({ mapId, campaignId, parentId, onClose, onSuccess }: Map
         })}
       >
         {({ name, canSubmit }) => {
-          const isSubmitDisabled = !name || !hasImage || isDisabled || (mapId && !canSubmit)
+          const isSubmitDisabled = !name || !hasImage || isDisabled || !canSubmit
           return (
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={onClose} disabled={isDisabled}>

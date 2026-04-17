@@ -185,7 +185,7 @@ describe('cross-table slug uniqueness', () => {
     const result = await dmAuth.mutation(api.folders.mutations.createFolder, {
       campaignId: ctx.campaignId,
       name: 'test',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     expect(result.slug).toBe('test-2')
@@ -235,7 +235,7 @@ describe('cross-table slug uniqueness', () => {
     const result = await dmAuth.mutation(api.folders.mutations.createFolder, {
       campaignId: ctx.campaignId,
       name: 'deleted-item',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     expect(result.slug).toBe('deleted-item-2')

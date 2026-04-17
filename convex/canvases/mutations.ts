@@ -1,12 +1,13 @@
 import { v } from 'convex/values'
 import { campaignMutation } from '../functions'
+import { createItemParentArgsValidator } from '../sidebarItems/createParentTarget'
 import { createCanvas as createCanvasFn } from './functions/createCanvas'
 import { updateCanvas as updateCanvasFn } from './functions/updateCanvas'
 
 export const createCanvas = campaignMutation({
   args: {
+    ...createItemParentArgsValidator,
     name: v.string(),
-    parentId: v.nullable(v.id('sidebarItems')),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
   },
@@ -17,7 +18,7 @@ export const createCanvas = campaignMutation({
   handler: async (ctx, args) => {
     return await createCanvasFn(ctx, {
       name: args.name,
-      parentId: args.parentId,
+      parentTarget: args.parentTarget,
       iconName: args.iconName,
       color: args.color,
     })

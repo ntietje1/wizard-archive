@@ -1,14 +1,15 @@
 import { v } from 'convex/values'
 import { campaignMutation } from '../functions'
+import { createItemParentArgsValidator } from '../sidebarItems/createParentTarget'
 import { createFile as createFileFn } from './functions/createFile'
 import { updateFile as updateFileFn } from './functions/updateFile'
 import type { Id } from '../_generated/dataModel'
 
 export const createFile = campaignMutation({
   args: {
+    ...createItemParentArgsValidator,
     name: v.string(),
     storageId: v.optional(v.id('_storage')),
-    parentId: v.nullable(v.id('sidebarItems')),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
   },
@@ -20,7 +21,7 @@ export const createFile = campaignMutation({
     return await createFileFn(ctx, {
       name: args.name,
       storageId: args.storageId,
-      parentId: args.parentId,
+      parentTarget: args.parentTarget,
       iconName: args.iconName,
       color: args.color,
     })

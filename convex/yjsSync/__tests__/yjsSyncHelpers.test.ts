@@ -70,7 +70,7 @@ describe('createYjsDocument', () => {
     const result = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Test Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await t.run(async (dbCtx) => {

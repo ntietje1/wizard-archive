@@ -22,7 +22,7 @@ describe('cross-action debounce independence on game maps', () => {
       const result = await dmAuth.mutation(api.gameMaps.mutations.createMap, {
         campaignId: ctx.campaignId,
         name: 'Cross Action Map',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       })
 
       // Change the image — property changes don't create snapshots
@@ -75,7 +75,7 @@ describe('updateMap creates correct number of history entries', () => {
     const result = await dmAuth.mutation(api.gameMaps.mutations.createMap, {
       campaignId: ctx.campaignId,
       name: 'Single Entry Map',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
       imageStorageId: storageId,
     })
 
@@ -121,7 +121,7 @@ describe('updateMap creates correct number of history entries', () => {
     const result = await dmAuth.mutation(api.gameMaps.mutations.createMap, {
       campaignId: ctx.campaignId,
       name: 'Multi Update Map',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
       imageStorageId: storageId,
     })
 
@@ -320,7 +320,7 @@ describe('canvas snapshot uses yjs_state format', () => {
       const { canvasId } = await dmAuth.mutation(api.canvases.mutations.createCanvas, {
         campaignId: ctx.campaignId,
         name: 'Test Canvas',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
@@ -358,7 +358,7 @@ describe('Note snapshots use yjs_state format', () => {
       const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
         campaignId: ctx.campaignId,
         name: 'Snapshot Type Check',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {

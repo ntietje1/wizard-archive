@@ -170,11 +170,11 @@ export function FileForm({ fileId, campaignId, parentId, onClose, onSuccess }: F
           campaignId,
           name: finalName,
           storageId: finalStorageId,
-          parentId: parentId ?? null,
+          parentTarget: { kind: 'direct', parentId: parentId ?? null },
         })
         if (fileUpload.file) {
-          generatePdfPreviewIfNeeded(fileUpload.file, newFileId as Id<'sidebarItems'>).catch(
-            (err: unknown) => handleError(err, 'PDF preview generation failed'),
+          generatePdfPreviewIfNeeded(fileUpload.file, newFileId).catch((err: unknown) =>
+            handleError(err, 'PDF preview generation failed'),
           )
         }
 

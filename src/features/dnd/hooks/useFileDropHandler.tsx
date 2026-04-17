@@ -103,7 +103,7 @@ export function useFileDropHandler() {
           type: SIDEBAR_ITEM_TYPES.notes,
           campaignId,
           name: fileName,
-          parentId,
+          parentTarget: { kind: 'direct', parentId },
           content: blocks,
         })
 
@@ -147,7 +147,7 @@ export function useFileDropHandler() {
           campaignId,
           name: fileName,
           storageId,
-          parentId,
+          parentTarget: { kind: 'direct', parentId },
         })
 
         generatePdfPreviewIfNeeded(file, result.id as Id<'sidebarItems'>).catch((err: unknown) =>
@@ -199,7 +199,7 @@ export function useFileDropHandler() {
       type: SIDEBAR_ITEM_TYPES.folders,
       campaignId,
       name: folder.name,
-      parentId,
+      parentTarget: { kind: 'direct', parentId },
     })
     const folderId = result.id as Id<'sidebarItems'>
 

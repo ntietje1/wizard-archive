@@ -14,7 +14,7 @@ describe('createNote YJS integration', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Test Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     const updates = await t.run(async (dbCtx) => {
@@ -36,7 +36,7 @@ describe('createNote YJS integration', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Empty Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     const updates = await t.run(async (dbCtx) => {

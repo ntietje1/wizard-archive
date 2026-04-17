@@ -7,14 +7,15 @@ import { updateBlock } from './updateBlock'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 import type { CustomBlock } from '../../notes/editorSpecs'
+import type { Block } from '../types'
 
 export async function saveAllBlocksForNote(
   ctx: CampaignMutationCtx,
   { noteId, content }: { noteId: Id<'sidebarItems'>; content: Array<CustomBlock> },
-): Promise<void> {
+): Promise<Array<Block>> {
   const note = await ctx.db.get('sidebarItems', noteId)
   if (!note) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
-  if (note.deletionTime !== null) return
+  if (note.deletionTime !== null) return []
   const campaignId = note.campaignId
 
   const existingBlocks = await ctx.db
@@ -37,8 +38,7 @@ export async function saveAllBlocksForNote(
   }
   const flatBlocks = [...deduped.values()]
   const incomingBlockIds = new Set(flatBlocks.map((b) => b.blockNoteId))
-
-  await asyncMap(flatBlocks, async (flat) => {
+  await asyncMap(flatBlocks, async (flat): Promise<void> => {
     const existing = existingBlocksMap.get(flat.blockNoteId)
     if (existing) {
       await updateBlock(ctx, {
@@ -51,21 +51,22 @@ export async function saveAllBlocksForNote(
         inlineContent: flat.inlineContent,
         plainText: flat.plainText,
       })
-    } else {
-      await insertBlock(ctx, {
-        noteId,
-        campaignId,
-        blockNoteId: flat.blockNoteId,
-        parentBlockId: flat.parentBlockId,
-        depth: flat.depth,
-        position: flat.position,
-        type: flat.type,
-        props: flat.props,
-        inlineContent: flat.inlineContent,
-        plainText: flat.plainText,
-        shareStatus: SHARE_STATUS.NOT_SHARED,
-      })
+      return
     }
+
+    await insertBlock(ctx, {
+      noteId,
+      campaignId,
+      blockNoteId: flat.blockNoteId,
+      parentBlockId: flat.parentBlockId,
+      depth: flat.depth,
+      position: flat.position,
+      type: flat.type,
+      props: flat.props,
+      inlineContent: flat.inlineContent,
+      plainText: flat.plainText,
+      shareStatus: SHARE_STATUS.NOT_SHARED,
+    })
   })
 
   // hard delete blocks that don't exist in the document anymore
@@ -80,5 +81,17 @@ export async function saveAllBlocksForNote(
 
     await asyncMap(blockShares, (share) => ctx.db.delete('blockShares', share._id))
     await ctx.db.delete('blocks', block._id)
+  })
+
+  const finalBlocks = await ctx.db
+    .query('blocks')
+    .withIndex('by_campaign_note_block', (q) => q.eq('campaignId', campaignId).eq('noteId', noteId))
+    .collect()
+  const finalBlocksMap = new Map(finalBlocks.map((block) => [block.blockNoteId, block]))
+
+  return flatBlocks.map((flat) => {
+    const block = finalBlocksMap.get(flat.blockNoteId)
+    if (!block) throw new Error(`Block ${flat.blockNoteId} missing after saveAllBlocksForNote`)
+    return block
   })
 }

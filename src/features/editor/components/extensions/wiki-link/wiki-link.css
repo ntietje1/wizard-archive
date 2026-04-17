@@ -1,75 +1,55 @@
 /* Wiki-link content styles */
-.wiki-link-content {
+:is(
+  .wiki-link-content,
+  .wiki-link-hidden-prefix[data-link-active='true'],
+  .wiki-link-hidden-prefix:hover
+) {
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 4px;
 }
 
-.wiki-link-content.wiki-link-exists:hover {
+.wiki-link-content[data-link-status='exists']:hover {
   text-decoration-thickness: 2px;
 }
 
-.wiki-link-content.wiki-link-ghost {
+:is(.wiki-link-content, .wiki-link-hidden-prefix)[data-link-status='ghost'] {
   color: var(--muted-foreground);
 }
 
-.wiki-link-content.wiki-link-ghost:hover {
+:is(.wiki-link-content, .wiki-link-hidden-prefix)[data-link-status='ghost']:hover {
   color: var(--foreground);
 }
 
-/* Brackets hidden by default */
+.wiki-link-hidden-prefix {
+  display: none;
+}
+
 .wiki-link-bracket {
   font-size: 0;
   opacity: 0;
 }
 
-/* Show brackets when active or hovered */
-.wiki-link-bracket.wiki-link-active,
-.wiki-link-bracket-open:hover,
-.wiki-link-bracket-close:hover,
-.wiki-link-bracket-open:has(+ .wiki-link-content:hover),
-.wiki-link-bracket-open:has(+ .wiki-link-content + .wiki-link-bracket-close:hover),
-.wiki-link-content:hover + .wiki-link-bracket-close,
-.wiki-link-bracket-open:hover + .wiki-link-content + .wiki-link-bracket-close {
+.wiki-link-bracket[data-link-active='true'],
+.wiki-link-bracket:hover,
+.wiki-link-bracket-open:has(~ .wiki-link:hover),
+.wiki-link:hover ~ .wiki-link-bracket-close {
   font-size: inherit;
   opacity: 0.5;
 }
 
-/* Viewer mode: brackets and prefix always hidden */
-.wiki-link-bracket.wiki-link-viewer,
-.wiki-link-hidden-prefix {
+.wiki-link-bracket[data-link-viewer='true'],
+.wiki-link-hidden-prefix[data-link-viewer='true'] {
   display: none;
 }
 
-/* Display name in editor mode: hide text, show via ::before */
-.wiki-link-content[data-display-name] {
-  font-size: 0;
+.wiki-link-hidden-prefix[data-link-viewer='false'][data-link-active='true'],
+.wiki-link-hidden-prefix[data-link-viewer='false']:hover,
+.wiki-link-hidden-prefix[data-link-viewer='false']:has(~ .wiki-link:hover),
+.wiki-link:hover ~ .wiki-link-hidden-prefix[data-link-viewer='false'] {
+  display: inline;
 }
 
-.wiki-link-content[data-display-name]::before {
-  content: attr(data-display-name);
-  font-size: 1rem;
-}
-
-/* Reveal full text on active/hover in editor mode */
-.wiki-link-content.wiki-link-active[data-display-name],
-.wiki-link-content[data-display-name]:not(.wiki-link-viewer):hover,
-.wiki-link-bracket-open:not(.wiki-link-viewer):hover + .wiki-link-content[data-display-name],
-.wiki-link-content[data-display-name]:has(+ .wiki-link-bracket-close:not(.wiki-link-viewer):hover) {
-  font-size: inherit;
-}
-
-.wiki-link-content.wiki-link-active[data-display-name]::before,
-.wiki-link-content[data-display-name]:not(.wiki-link-viewer):hover::before,
-.wiki-link-bracket-open:not(.wiki-link-viewer):hover
-  + .wiki-link-content[data-display-name]::before,
-.wiki-link-content[data-display-name]:has(
-    + .wiki-link-bracket-close:not(.wiki-link-viewer):hover
-  )::before {
-  content: none;
-}
-
-/* Tooltip */
 .wiki-link-tooltip {
   background-color: var(--popover);
   color: var(--popover-foreground);

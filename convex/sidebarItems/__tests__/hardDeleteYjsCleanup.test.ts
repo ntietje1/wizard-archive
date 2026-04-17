@@ -33,7 +33,7 @@ describe('hard delete YJS cleanup', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Doomed Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     expect(await queryYjsUpdates(noteId)).toHaveLength(1)
@@ -58,7 +58,7 @@ describe('hard delete YJS cleanup', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Awareness Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
@@ -92,7 +92,7 @@ describe('hard delete YJS cleanup', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Nested Note',
-      parentId: folderId,
+      parentTarget: { kind: 'direct', parentId: folderId },
     })
 
     expect(await queryYjsUpdates(noteId)).toHaveLength(1)
