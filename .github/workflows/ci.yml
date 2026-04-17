@@ -83,7 +83,6 @@ jobs:
         if: github.event_name == 'pull_request'
         run: npx -y react-doctor@latest . --verbose --fail-on error --diff=${{ github.event.pull_request.base.ref }}
       - name: Run React Doctor (main)
-        id: doctor
         if: github.ref == 'refs/heads/main'
         run: npx -y react-doctor@latest . --verbose --fail-on error
 
@@ -99,8 +98,6 @@ jobs:
           cache: true
       - run: vp install --frozen-lockfile
       - run: vp test run --config vitest.config.ts --reporter=verbose
-        env:
-          VITE_SITE_URL: ${{ env.VITE_SITE_URL }}
 
   backend-test:
     name: Backend Tests

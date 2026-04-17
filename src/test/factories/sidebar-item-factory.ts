@@ -2,6 +2,8 @@ import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/t
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import type { SidebarItemColor } from 'convex/sidebarItems/validation/color'
 import type { SidebarItemIconName } from 'convex/sidebarItems/validation/icon'
+import { assertSidebarItemName } from 'convex/sidebarItems/validation/name'
+import type { SidebarItemName } from 'convex/sidebarItems/validation/name'
 import { assertSidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import type { Note } from 'convex/notes/types'
 import type { Folder } from 'convex/folders/types'
@@ -17,7 +19,7 @@ let itemCounter = 0
 
 interface BaseFields {
   _creationTime: number
-  name: string
+  name: SidebarItemName
   iconName: SidebarItemIconName | null
   color: SidebarItemColor | null
   slug: Note['slug']
@@ -44,7 +46,7 @@ function baseFields(): BaseFields {
   itemCounter++
   return {
     _creationTime: Date.now(),
-    name: `Test Item ${itemCounter}`,
+    name: assertSidebarItemName(`Test Item ${itemCounter}`),
     iconName: null,
     color: null,
     slug: assertSidebarItemSlug(`test-item-${itemCounter}`),
@@ -68,52 +70,59 @@ function baseFields(): BaseFields {
   }
 }
 
-type SidebarItemOverrides<T extends { slug: unknown }> = Omit<Partial<T>, 'slug'> & {
+type SidebarItemOverrides<T extends { slug: unknown; name: unknown }> = Omit<
+  Partial<T>,
+  'slug' | 'name'
+> & {
+  name?: string
   slug?: string
 }
 
 export function createNote(overrides?: SidebarItemOverrides<Note>): Note {
   const base = baseFields()
-  const { slug, ...rest } = overrides ?? {}
+  const { slug, name, ...rest } = overrides ?? {}
   return {
     ...base,
     _id: testId<'sidebarItems'>(`note_${itemCounter}`),
     type: SIDEBAR_ITEM_TYPES.notes,
-    ...(slug ? { slug: assertSidebarItemSlug(slug) } : {}),
+    ...(name !== undefined ? { name: assertSidebarItemName(name) } : {}),
+    ...(slug !== undefined ? { slug: assertSidebarItemSlug(slug) } : {}),
     ...rest,
   }
 }
 
 export function createFolder(overrides?: SidebarItemOverrides<Folder>): Folder {
   const base = baseFields()
-  const { slug, ...rest } = overrides ?? {}
+  const { slug, name, ...rest } = overrides ?? {}
   return {
     ...base,
     _id: testId<'sidebarItems'>(`folder_${itemCounter}`),
     type: SIDEBAR_ITEM_TYPES.folders,
     inheritShares: true,
-    ...(slug ? { slug: assertSidebarItemSlug(slug) } : {}),
+    ...(name !== undefined ? { name: assertSidebarItemName(name) } : {}),
+    ...(slug !== undefined ? { slug: assertSidebarItemSlug(slug) } : {}),
     ...rest,
   }
 }
 
 export function createGameMap(overrides?: SidebarItemOverrides<GameMap>): GameMap {
   const base = baseFields()
-  const { slug, ...rest } = overrides ?? {}
+  const { slug, name, ...rest } = overrides ?? {}
   return {
     ...base,
     _id: testId<'sidebarItems'>(`map_${itemCounter}`),
     type: SIDEBAR_ITEM_TYPES.gameMaps,
     imageStorageId: null,
     imageUrl: null,
-    ...(slug ? { slug: assertSidebarItemSlug(slug) } : {}),
+    ...(name !== undefined ? { name: assertSidebarItemName(name) } : {}),
+    ...(slug !== undefined ? { slug: assertSidebarItemSlug(slug) } : {}),
     ...rest,
   }
 }
 
 export function createFile(overrides?: SidebarItemOverrides<SidebarFile>): SidebarFile {
   const base = baseFields()
-  const { slug, ...rest } = overrides ?? {}
+  const { slug, name, ...rest } = overrides ?? {}
   return {
     ...base,
     _id: testId<'sidebarItems'>(`file_${itemCounter}`),
@@ -121,7 +130,8 @@ export function createFile(overrides?: SidebarItemOverrides<SidebarFile>): Sideb
     storageId: null,
     downloadUrl: null,
     contentType: null,
-    ...(slug ? { slug: assertSidebarItemSlug(slug) } : {}),
+    ...(name !== undefined ? { name: assertSidebarItemName(name) } : {}),
+    ...(slug !== undefined ? { slug: assertSidebarItemSlug(slug) } : {}),
     ...rest,
   }
 }

@@ -1,28 +1,19 @@
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { findUniqueSidebarItemSlug } from '../validation/orchestration'
+import { assertSidebarItemName } from '../validation/name'
 import { collectDescendants } from './collectDescendants'
 import { hardDeleteItem } from './hardDeleteItem'
-import { assertSidebarItemName } from '../validation/name'
 import type { SidebarItemLocation } from '../types/baseTypes'
-import type { SidebarTreeItemCore } from './hardDeleteItem'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
+import type { AnySidebarItemRow } from '../types/types'
 
-type SidebarTreeBranchItem = SidebarTreeItemCore & {
-  _id: Id<'sidebarItems'>
-  type: string
-  campaignId: Id<'campaigns'>
-  location: SidebarItemLocation
-  parentId: Id<'sidebarItems'> | null
-  name: string
-}
-
-type ItemOperation = (ctx: MutationCtx, item: SidebarTreeBranchItem) => Promise<void>
+type ItemOperation = (ctx: MutationCtx, item: AnySidebarItemRow) => Promise<void>
 
 async function applyToTree(
   ctx: MutationCtx,
-  item: SidebarTreeBranchItem,
+  item: AnySidebarItemRow,
   operation: ItemOperation,
 ): Promise<number> {
   if (item.type === SIDEBAR_ITEM_TYPES.folders) {
@@ -46,7 +37,7 @@ async function applyToTree(
 
 export async function trashTree(
   ctx: MutationCtx,
-  item: SidebarTreeBranchItem,
+  item: AnySidebarItemRow,
   deletion: { deletionTime: number; deletedBy: Id<'userProfiles'> },
 ): Promise<number> {
   return applyToTree(ctx, item, async (_, i) => {
@@ -61,16 +52,17 @@ export async function trashTree(
 
 export async function restoreTreeDescendants(
   ctx: CampaignMutationCtx,
-  item: SidebarTreeBranchItem,
+  item: AnySidebarItemRow,
   location: SidebarItemLocation,
 ): Promise<void> {
   await applyToTree(ctx, item, async (_, i) => {
     if (i._id === item._id) return
     if (i.location !== SIDEBAR_ITEM_LOCATION.trash) return
 
+    const name = assertSidebarItemName(i.name)
     const slug = await findUniqueSidebarItemSlug(ctx, {
       itemId: i._id,
-      name: assertSidebarItemName(i.name),
+      name,
     })
     await ctx.db.patch('sidebarItems', i._id, {
       deletionTime: null,
@@ -81,9 +73,6 @@ export async function restoreTreeDescendants(
   })
 }
 
-export async function hardDeleteTree(
-  ctx: MutationCtx,
-  item: SidebarTreeBranchItem,
-): Promise<number> {
+export async function hardDeleteTree(ctx: MutationCtx, item: AnySidebarItemRow): Promise<number> {
   return applyToTree(ctx, item, hardDeleteItem)
 }

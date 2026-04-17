@@ -1,5 +1,5 @@
 import { createElement } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import { assertUsername } from 'convex/users/validation'
@@ -103,8 +103,13 @@ describe('useCampaign', () => {
 })
 
 describe('useOptionalCampaign', () => {
+  beforeEach(() => {
+    mockUseMatch.mockReset()
+    vi.mocked(useAuthQuery).mockReset()
+  })
+
   it('returns null when there is no provider or campaign route', () => {
-    mockUseMatch.mockReturnValue(false)
+    mockUseMatch.mockReturnValue(undefined)
     vi.mocked(useAuthQuery).mockReturnValue(mockAuthQuery(undefined))
 
     const { result } = renderHook(() => useOptionalCampaign())
@@ -127,9 +132,15 @@ describe('useOptionalCampaign', () => {
 
     const { result } = renderHook(() => useOptionalCampaign())
 
-    expect(result.current?.dmUsername).toBe('testdm')
-    expect(result.current?.campaignSlug).toBe(campaign.slug)
-    expect(result.current?.campaignId).toBe(campaign._id)
-    expect(result.current?.isDm).toBe(true)
+    expect(result.current).toBeDefined()
+    expect(result.current).not.toBeNull()
+    const campaignContext = result.current
+    if (!campaignContext) {
+      throw new Error('Expected campaign context')
+    }
+    expect(campaignContext.dmUsername).toBe('testdm')
+    expect(campaignContext.campaignSlug).toBe(campaign.slug)
+    expect(campaignContext.campaignId).toBe(campaign._id)
+    expect(campaignContext.isDm).toBe(true)
   })
 })

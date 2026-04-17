@@ -6,10 +6,11 @@ import { PERMISSION_LEVEL } from '../../permissions/types'
 import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sidebarItemPermissions'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
+import { getSidebarItem } from '../functions/getSidebarItem'
 import { getSidebarItemWithContent } from '../functions/getSidebarItemWithContent'
 import { getSidebarItemsByParent } from '../functions/getSidebarItemsByParent'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
-import type { AnySidebarItem, AnySidebarItemFromDb } from '../types/types'
+import type { AnySidebarItem } from '../types/types'
 import { requireItemAccess } from './access'
 import { assertSidebarItemName, checkNameConflict } from './name'
 import { validateNoCircularParentAsync } from './parent'
@@ -70,7 +71,7 @@ export async function validateSidebarParentChange(
   }
 
   if (newParentId) {
-    const parentFromDb = await ctx.db.get('sidebarItems', newParentId)
+    const parentFromDb = await getSidebarItem(ctx, newParentId)
     if (!parentFromDb) {
       throwClientError(ERROR_CODE.NOT_FOUND, 'Parent not found')
     }
@@ -84,7 +85,7 @@ export async function validateSidebarParentChange(
       )
     }
     await requireItemAccess(ctx, {
-      rawItem: parentFromDb as AnySidebarItemFromDb | null,
+      rawItem: parentFromDb,
       requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
     })
   }
@@ -161,7 +162,7 @@ export async function findUniqueSidebarItemSlug(
     name,
   }: {
     itemId?: Id<'sidebarItems'>
-    name: SidebarItemName
+    name: string
   },
 ): Promise<SidebarItemSlug> {
   try {
@@ -193,7 +194,7 @@ export async function prepareSidebarItemCreate(
     parentId: Id<'sidebarItems'> | null
     name: SidebarItemName
   },
-): Promise<{ name: string; slug: SidebarItemSlug }> {
+): Promise<{ name: SidebarItemName; slug: SidebarItemSlug }> {
   await validateSidebarCreateParent(ctx, { parentId })
   await ensureSidebarItemNameAvailable(ctx, { parentId, name })
 
@@ -211,7 +212,7 @@ export async function prepareSidebarItemRename(
     item: AnySidebarItem
     newName: SidebarItemName
   },
-): Promise<{ name: string; slug: SidebarItemSlug } | null> {
+): Promise<{ name: SidebarItemName; slug: SidebarItemSlug } | null> {
   if (newName === item.name) {
     return null
   }

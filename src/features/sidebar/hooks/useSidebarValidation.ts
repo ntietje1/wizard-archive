@@ -4,7 +4,7 @@ import { findUniqueDefaultName } from 'convex/sidebarItems/functions/defaultItem
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { ValidationResult } from 'convex/sidebarItems/validation/name'
+import type { SidebarItemName, ValidationResult } from 'convex/sidebarItems/validation/name'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 
 export interface SidebarValidation {
@@ -15,7 +15,7 @@ export interface SidebarValidation {
     excludeId?: Id<'sidebarItems'>,
   ) => ValidationResult
   canMoveToParent: (itemId: Id<'sidebarItems'>, newParentId: Id<'sidebarItems'> | null) => boolean
-  getDefaultName: (type: SidebarItemType, parentId: Id<'sidebarItems'> | null) => string
+  getDefaultName: (type: SidebarItemType, parentId: Id<'sidebarItems'> | null) => SidebarItemName
 }
 
 export function useSidebarValidation(): SidebarValidation {

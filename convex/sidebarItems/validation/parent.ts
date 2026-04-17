@@ -58,7 +58,7 @@ type ParentTargetValidationResult =
   | {
       valid: true
       parentId: Id<'sidebarItems'> | null
-      siblings: Array<Pick<AnySidebarItem, '_id' | 'name'>>
+      siblings: Array<{ _id: Id<'sidebarItems'>; name: string }>
     }
   | ({ valid: false } & Pick<Exclude<ValidationResult, { valid: true }>, 'error'>)
 

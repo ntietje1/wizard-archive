@@ -1,13 +1,14 @@
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
-import { SIDEBAR_ITEM_NAME_MAX_LENGTH } from '../validation/name'
 import type { SidebarItemType } from '../types/baseTypes'
+import { assertSidebarItemName, SIDEBAR_ITEM_NAME_MAX_LENGTH } from '../validation/name'
+import type { SidebarItemName } from '../validation/name'
 
-export const defaultNameMap: Record<SidebarItemType, string> = {
-  [SIDEBAR_ITEM_TYPES.folders]: 'Untitled Folder',
-  [SIDEBAR_ITEM_TYPES.notes]: 'Untitled Note',
-  [SIDEBAR_ITEM_TYPES.gameMaps]: 'Untitled Map',
-  [SIDEBAR_ITEM_TYPES.files]: 'Untitled File',
-  [SIDEBAR_ITEM_TYPES.canvases]: 'Untitled Canvas',
+export const defaultNameMap: Record<SidebarItemType, SidebarItemName> = {
+  [SIDEBAR_ITEM_TYPES.folders]: assertSidebarItemName('Untitled Folder'),
+  [SIDEBAR_ITEM_TYPES.notes]: assertSidebarItemName('Untitled Note'),
+  [SIDEBAR_ITEM_TYPES.gameMaps]: assertSidebarItemName('Untitled Map'),
+  [SIDEBAR_ITEM_TYPES.files]: assertSidebarItemName('Untitled File'),
+  [SIDEBAR_ITEM_TYPES.canvases]: assertSidebarItemName('Untitled Canvas'),
 }
 
 /**
@@ -38,10 +39,12 @@ export function deduplicateName(base: string, siblingNames: Array<string>): stri
  */
 export function findUniqueDefaultName(
   type: SidebarItemType,
-  siblings: Array<{ name: string }>,
-): string {
-  return deduplicateName(
-    defaultNameMap[type],
-    siblings.map((s) => s.name),
+  siblings: Array<{ name: SidebarItemName }>,
+): SidebarItemName {
+  return assertSidebarItemName(
+    deduplicateName(
+      defaultNameMap[type],
+      siblings.map((s) => s.name),
+    ),
   )
 }

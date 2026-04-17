@@ -69,11 +69,11 @@ export function createCanonicalSlugHelpers<Kind extends string>({
   }
 
   const assert = (value: string): BrandedString<Kind> => {
-    const parsed = parse(value)
-    if (!parsed) {
-      throw new Error(validate(value) ?? fallbackMessage)
+    const result = valueSchema.safeParse(value)
+    if (!result.success) {
+      throw new Error(getFirstIssueMessage(result, fallbackMessage))
     }
-    return parsed
+    return brandString<Kind>(result.data)
   }
 
   return {

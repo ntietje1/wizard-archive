@@ -5,7 +5,7 @@ import { validateNoCircularParent } from './parent'
 import type { ValidationResult } from './name'
 
 type ParentLookup = Pick<AnySidebarItem, 'parentId'> | null | undefined
-type SiblingLookup = Array<Pick<AnySidebarItem, '_id' | 'name'>>
+type SiblingLookup = Array<{ _id: Id<'sidebarItems'>; name: string }>
 
 export function validateLocalSidebarMove(
   {

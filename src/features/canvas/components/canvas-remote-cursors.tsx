@@ -22,6 +22,8 @@ function CursorIcon({ color }: { color: string }) {
 }
 
 const PIN_LERP_DURATION = 200
+// Clear the GPU hint shortly after cursor updates stop so it matches the drag lerp timing.
+const WILL_CHANGE_IDLE_TIMEOUT = 150
 
 function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
   const elementRef = useRef<HTMLDivElement>(null)
@@ -94,7 +96,7 @@ function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
         }
         willChangeTimeoutRef.current = null
       },
-      isDragging ? PIN_LERP_DURATION : 150,
+      isDragging ? PIN_LERP_DURATION : WILL_CHANGE_IDLE_TIMEOUT,
     )
 
     return () => {
@@ -139,19 +141,6 @@ function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
     return () => cancelAnimationFrame(rafIdRef.current)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remoteUser.cursor?.x, remoteUser.cursor?.y, isDragging])
-
-  useEffect(() => {
-    const element = elementRef.current
-
-    return () => {
-      if (willChangeTimeoutRef.current) {
-        clearTimeout(willChangeTimeoutRef.current)
-      }
-      if (element) {
-        element.style.willChange = ''
-      }
-    }
-  }, [])
 
   if (!remoteUser.cursor) return null
 

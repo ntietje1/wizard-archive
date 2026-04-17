@@ -11,10 +11,7 @@ import { getOrigin } from '~/shared/utils/origin'
 
 export function PeopleTab() {
   const campaignContext = useOptionalCampaign()
-  const dmUsername = campaignContext?.dmUsername
-  const campaignSlug = campaignContext?.campaignSlug
-  const campaign = campaignContext?.campaign
-  const campaignData = campaign?.data
+  const campaignData = campaignContext?.campaign.data
   const isDm = campaignContext?.isDm
 
   const members = useAuthQuery(
@@ -44,7 +41,7 @@ export function PeopleTab() {
           p.status === CAMPAIGN_MEMBER_STATUS.Removed),
     ) ?? []
 
-  if (!campaignContext || !dmUsername || !campaignSlug || !campaign) {
+  if (!campaignContext) {
     return (
       <div className="flex flex-col gap-2">
         <div>
@@ -60,10 +57,13 @@ export function PeopleTab() {
     )
   }
 
-  const joinUrl = isDm ? `${getOrigin()}/join/${dmUsername}/${campaignSlug}` : null
+  const joinUrl = isDm
+    ? `${getOrigin()}/join/${campaignContext.dmUsername}/${campaignContext.campaignSlug}`
+    : null
 
-  const isLoading = campaign.isLoading || members.isLoading || (isDm && requests.isLoading)
-  const isError = campaign.isError || members.isError || (isDm && requests.isError)
+  const isLoading =
+    campaignContext.campaign.isLoading || members.isLoading || (isDm && requests.isLoading)
+  const isError = campaignContext.campaign.isError || members.isError || (isDm && requests.isError)
   const isReady = campaignData && members.data && (!isDm || requests.data)
 
   return (

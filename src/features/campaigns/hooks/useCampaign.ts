@@ -54,6 +54,15 @@ export function useOptionalCampaignRoute(): CampaignRouteIdentity | null {
   return { dmUsername, campaignSlug }
 }
 
+/**
+ * Returns the active campaign context when available without surfacing CampaignNotFound.
+ *
+ * This hook always calls useAuthQuery, but passes 'skip' when CampaignProvider already
+ * supplies context or when no campaign route identity is available. Unlike CampaignProvider,
+ * it never throws or renders CampaignNotFound on query errors; if the lookup fails it returns
+ * buildCampaignContextValue(identity, campaign), leaving isCampaignLoaded false while callers
+ * inspect campaign.isError for not-found or other failure states.
+ */
 export function useOptionalCampaign(): CampaignContextType | null {
   const context = useContext(CampaignContext)
   const identity = useOptionalCampaignRoute()

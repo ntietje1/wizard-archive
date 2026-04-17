@@ -20,7 +20,7 @@ export async function checkItemAccess<T extends AnySidebarItemFromDb>(
   if (!hasAtLeastPermissionLevel(item.myPermissionLevel, requiredLevel)) {
     return null
   }
-  return item
+  return item as EnhancedSidebarItem<T>
 }
 
 export async function requireItemAccess<T extends AnySidebarItemFromDb>(

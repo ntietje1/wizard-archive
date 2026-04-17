@@ -5,6 +5,7 @@ import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../sidebarItems/types
 import { SHARE_STATUS } from '../blockShares/types'
 import { slugify } from '../common/slug'
 import { assertCampaignSlug } from '../campaigns/validation'
+import { assertSidebarItemName } from '../sidebarItems/validation/name'
 import { assertSidebarItemSlug } from '../sidebarItems/validation/slug'
 import { assertUsername } from '../users/validation'
 import { makeYjsUpdateWithBlocks } from '../yjsSync/__tests__/makeYjsUpdate.helper'
@@ -17,6 +18,7 @@ import type { PermissionLevel } from '../permissions/types'
 import type { ShareStatus } from '../blockShares/types'
 import type { BlockNoteId, BlockProps, BlockType, InlineContent } from '../blocks/types'
 import type { CustomBlock } from '../notes/editorSpecs'
+import type { SidebarItemName } from '../sidebarItems/validation/name'
 import { createHash } from 'crypto'
 
 type T = TestConvex<typeof schema>
@@ -158,9 +160,9 @@ export async function addPlayerToCampaign(
 const sidebarItemBase = (
   campaignId: Id<'campaigns'>,
   creatorProfileId: Id<'userProfiles'>,
-  name: string,
+  name: SidebarItemName,
 ): {
-  name: string
+  name: SidebarItemName
   slug: string
   campaignId: Id<'campaigns'>
   iconName: null
@@ -217,9 +219,16 @@ async function insertSidebarItem(
   overrides?: CommonSidebarItemOverrides & Record<string, unknown>,
 ) {
   const n = nextId()
-  const name = overrides?.name ?? `${label} ${n}`
+  const name = assertSidebarItemName(overrides?.name ?? `${label} ${n}`)
 
-  const { inheritShares, imageStorageId, storageId, slug, ...sidebarOverrides } = overrides ?? {}
+  const {
+    inheritShares,
+    imageStorageId,
+    storageId,
+    slug,
+    name: _name,
+    ...sidebarOverrides
+  } = overrides ?? {}
   const validatedSlug = slug ? assertSidebarItemSlug(slug) : assertSidebarItemSlug(slugify(name))
 
   const sharedData = {

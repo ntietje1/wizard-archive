@@ -18,9 +18,10 @@ import { getSidebarItem } from './getSidebarItem'
 import { collectDescendants } from './collectDescendants'
 import { assertSidebarItemName } from '../validation/name'
 import type { SidebarItemLocation } from '../types/baseTypes'
-import type { AnySidebarItemFromDb } from '../types/types'
+import type { AnySidebarItemRow } from '../types/types'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
+import type { SidebarItemName } from '../validation/name'
 
 const clearDeletion = { deletionTime: null, deletedBy: null }
 
@@ -30,7 +31,7 @@ async function resyncRelativeLinksForMovedItems(
     item,
     location,
   }: {
-    item: AnySidebarItemFromDb
+    item: AnySidebarItemRow
     location: SidebarItemLocation
   },
 ): Promise<void> {
@@ -61,8 +62,8 @@ async function resyncRelativeLinksForMovedItems(
  */
 async function resolveRestoreConflicts(
   ctx: CampaignMutationCtx,
-  item: AnySidebarItemFromDb,
-): Promise<{ name?: string; slug?: string }> {
+  item: AnySidebarItemRow,
+): Promise<{ name?: SidebarItemName; slug?: string }> {
   const siblings = await getSidebarItemsByParent(ctx, {
     parentId: item.parentId,
   })
@@ -74,7 +75,7 @@ async function resolveRestoreConflicts(
     name: uniqueName,
   })
 
-  const patch: { name?: string; slug?: string } = {}
+  const patch: { name?: SidebarItemName; slug?: string } = {}
   if (uniqueName !== item.name) patch.name = uniqueName
   if (uniqueSlug !== item.slug) patch.slug = uniqueSlug
   return patch

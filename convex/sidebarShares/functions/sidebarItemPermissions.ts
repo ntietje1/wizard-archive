@@ -4,8 +4,8 @@ import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { AnySidebarItem, AnySidebarItemFromDb } from '../../sidebarItems/types/types'
 import type { PermissionLevel } from '../../permissions/types'
+import type { AnySidebarItemFromDb } from '../../sidebarItems/types/types'
 
 export async function resolveInheritedPermissions(
   ctx: CampaignQueryCtx,
@@ -100,7 +100,9 @@ export async function resolveInheritedPermissions(
 
 export async function getSidebarItemPermissionLevel(
   ctx: CampaignQueryCtx,
-  { item }: { item: AnySidebarItem | AnySidebarItemFromDb },
+  {
+    item,
+  }: { item: Pick<AnySidebarItemFromDb, '_id' | 'campaignId' | 'allPermissionLevel' | 'parentId'> },
 ): Promise<PermissionLevel> {
   const campaignId = item.campaignId
   const { membership } = ctx

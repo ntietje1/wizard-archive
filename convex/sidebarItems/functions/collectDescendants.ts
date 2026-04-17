@@ -1,7 +1,8 @@
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import type { SidebarItemLocation } from '../types/baseTypes'
-import type { Doc, Id } from '../../_generated/dataModel'
+import type { Id } from '../../_generated/dataModel'
 import type { MutationCtx, QueryCtx } from '../../_generated/server'
+import type { AnySidebarItemRow } from '../types/types'
 
 export async function collectDescendants(
   ctx: QueryCtx | MutationCtx,
@@ -14,11 +15,11 @@ export async function collectDescendants(
     location: SidebarItemLocation
     folderId: Id<'sidebarItems'>
   },
-): Promise<Array<Doc<'sidebarItems'>>> {
-  const result: Array<Doc<'sidebarItems'>> = []
+): Promise<Array<AnySidebarItemRow>> {
+  const result: Array<AnySidebarItemRow> = []
 
   async function collectFromFolder(parentId: Id<'sidebarItems'>) {
-    const children = await ctx.db
+    const children: Array<AnySidebarItemRow> = await ctx.db
       .query('sidebarItems')
       .withIndex('by_campaign_location_parent_name', (q) =>
         q.eq('campaignId', campaignId).eq('location', location).eq('parentId', parentId),
