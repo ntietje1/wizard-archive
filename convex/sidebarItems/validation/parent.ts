@@ -239,6 +239,15 @@ export function validateCreateParentTarget(
   if (!parentStack) {
     return { valid: false, error: 'Parent not found' }
   }
+  if (parentTarget.baseParentId !== null) {
+    const baseParent = itemsMap.get(parentTarget.baseParentId)
+    if (!baseParent) {
+      return { valid: false, error: 'Parent not found' }
+    }
+    if (baseParent.type !== SIDEBAR_ITEM_TYPES.folders) {
+      return { valid: false, error: 'Parent is not a folder' }
+    }
+  }
 
   const traversalStack: Array<ParentRef> = [...parentStack]
 

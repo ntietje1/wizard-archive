@@ -11,7 +11,7 @@ import type { CampaignSlug } from 'convex/campaigns/validation'
 import type { Username } from 'convex/users/validation'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 
-export type CampaignRouteIdentity = {
+type CampaignRouteIdentity = {
   dmUsername: Username
   campaignSlug: CampaignSlug
 }

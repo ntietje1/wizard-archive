@@ -51,7 +51,7 @@ jobs:
         with:
           annotations: true
           fail-on-issues: false
-          format: json
+          format: sarif
 
   react-compiler:
     name: React Compiler Health

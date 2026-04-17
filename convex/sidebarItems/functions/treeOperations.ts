@@ -1,6 +1,5 @@
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { findUniqueSidebarItemSlug } from '../validation/orchestration'
-import { assertSidebarItemName } from '../validation/name'
 import { collectDescendants } from './collectDescendants'
 import { hardDeleteItem } from './hardDeleteItem'
 import type { SidebarItemLocation } from '../types/baseTypes'
@@ -8,6 +7,7 @@ import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
 import type { AnySidebarItemRow } from '../types/types'
+import type { SidebarItemName } from '../validation/name'
 
 type ItemOperation = (ctx: MutationCtx, item: AnySidebarItemRow) => Promise<void>
 
@@ -59,7 +59,7 @@ export async function restoreTreeDescendants(
     if (i._id === item._id) return
     if (i.location !== SIDEBAR_ITEM_LOCATION.trash) return
 
-    const name = assertSidebarItemName(i.name)
+    const name = i.name as SidebarItemName
     const slug = await findUniqueSidebarItemSlug(ctx, {
       itemId: i._id,
       name,

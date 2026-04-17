@@ -21,12 +21,15 @@ import {
 } from '../validation/name'
 import {
   getAncestorIds,
+  validateCreateParentTarget,
   validateNoCircularParent,
   validateNoCircularParentAsync,
 } from '../validation/parent'
 import { validateLocalSidebarMove } from '../validation/move'
 import { validateItemSlug } from '../validation/slug'
 import type { Id } from '../../_generated/dataModel'
+import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
+import type { AnySidebarItem } from '../types/types'
 
 describe('validateItemName', () => {
   it('accepts a valid name', () => {
@@ -376,6 +379,25 @@ describe('validateLocalSidebarMove', () => {
     expect(result).toEqual({ valid: true })
   })
 
+  it('rejects missing target parents before other move validation', () => {
+    const result = validateLocalSidebarMove(
+      {
+        itemId: testId<'sidebarItems'>('item'),
+        name: 'Alpha',
+        parentId: testId<'sidebarItems'>('missing-parent'),
+      },
+      {
+        getParent: () => undefined,
+        getSiblings: () => [],
+      },
+    )
+
+    expect(result).toEqual({
+      valid: false,
+      error: 'Cannot move item: target parent does not exist',
+    })
+  })
+
   it('checks sibling conflicts for regular moves', () => {
     const result = validateLocalSidebarMove(
       {
@@ -390,6 +412,33 @@ describe('validateLocalSidebarMove', () => {
     )
 
     expect(result.valid).toBe(false)
+  })
+})
+
+describe('validateCreateParentTarget', () => {
+  it('rejects path targets whose base parent is not a folder', () => {
+    const noteId = testId<'sidebarItems'>('note-parent')
+    const noteParent = {
+      _id: noteId,
+      type: SIDEBAR_ITEM_TYPES.notes,
+      parentId: null,
+      name: 'Leaf Note',
+    } as unknown as AnySidebarItem
+
+    const result = validateCreateParentTarget(
+      {
+        kind: 'path',
+        baseParentId: noteId,
+        pathSegments: [],
+      },
+      new Map([[noteId, noteParent]]),
+      new Map([[null, [noteParent]]]),
+    )
+
+    expect(result).toEqual({
+      valid: false,
+      error: 'Parent is not a folder',
+    })
   })
 })
 

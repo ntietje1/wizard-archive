@@ -37,6 +37,13 @@ export function validateLocalSidebarMove(
     return { valid: true }
   }
 
+  if (parentId !== null && !getParent(parentId)) {
+    return {
+      valid: false,
+      error: 'Cannot move item: target parent does not exist',
+    }
+  }
+
   const parentResult = validateNoCircularParent(itemId, parentId, getParent)
   if (!parentResult.valid) {
     return {

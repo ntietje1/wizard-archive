@@ -1,13 +1,10 @@
 import { findUniqueSlug } from '../../common/slug'
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { ERROR_CODE, throwClientError } from '../../errors'
-import { hasAtLeastPermissionLevel } from '../../permissions/hasAtLeastPermissionLevel'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sidebarItemPermissions'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import { getSidebarItem } from '../functions/getSidebarItem'
-import { getSidebarItemWithContent } from '../functions/getSidebarItemWithContent'
 import { getSidebarItemsByParent } from '../functions/getSidebarItemsByParent'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import type { AnySidebarItem } from '../types/types'
@@ -75,10 +72,10 @@ export async function validateSidebarParentChange(
     if (!parentFromDb) {
       throwClientError(ERROR_CODE.NOT_FOUND, 'Parent not found')
     }
-    if (parentFromDb && parentFromDb.type !== SIDEBAR_ITEM_TYPES.folders) {
+    if (parentFromDb.type !== SIDEBAR_ITEM_TYPES.folders) {
       throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Parent must be a folder')
     }
-    if (parentFromDb && parentFromDb.location !== item.location) {
+    if (parentFromDb.location !== item.location) {
       throwClientError(
         ERROR_CODE.VALIDATION_FAILED,
         'Cannot move items into a folder in a different location',
@@ -97,20 +94,17 @@ export async function validateSidebarCreateParent(
 ): Promise<void> {
   const { membership } = ctx
   if (parentId) {
-    const parentItem = await getSidebarItemWithContent(ctx, parentId)
+    const parentItem = await getSidebarItem(ctx, parentId)
     if (!parentItem) {
       throwClientError(ERROR_CODE.NOT_FOUND, 'Parent not found')
     }
     if (parentItem.type !== SIDEBAR_ITEM_TYPES.folders) {
       throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Parent must be a folder')
     }
-    const level = await getSidebarItemPermissionLevel(ctx, { item: parentItem })
-    if (!hasAtLeastPermissionLevel(level, PERMISSION_LEVEL.FULL_ACCESS)) {
-      throwClientError(
-        ERROR_CODE.PERMISSION_DENIED,
-        'You do not have sufficient permission for this item',
-      )
-    }
+    await requireItemAccess(ctx, {
+      rawItem: parentItem,
+      requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
+    })
   } else if (membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
     throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Only the DM can create items at the root level')
   }

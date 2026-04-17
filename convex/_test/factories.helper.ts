@@ -85,7 +85,7 @@ export async function createUserProfile(
   const data = {
     ...defaults,
     ...rest,
-    ...(username ? { username: assertUsername(username) } : {}),
+    ...(username !== undefined ? { username: assertUsername(username) } : {}),
   }
   const id = await t.run(async (ctx) => {
     return await ctx.db.insert('userProfiles', data)
@@ -118,7 +118,7 @@ export async function createCampaignWithDm(
     ...defaults,
     ...rest,
     dmUserId: dmProfile._id,
-    ...(slug ? { slug: assertCampaignSlug(slug) } : {}),
+    ...(slug !== undefined ? { slug: assertCampaignSlug(slug) } : {}),
   }
   const campaignId = await t.run(async (ctx) => {
     return await ctx.db.insert('campaigns', campaignData)
@@ -229,7 +229,8 @@ async function insertSidebarItem(
     name: _name,
     ...sidebarOverrides
   } = overrides ?? {}
-  const validatedSlug = slug ? assertSidebarItemSlug(slug) : assertSidebarItemSlug(slugify(name))
+  const validatedSlug =
+    slug !== undefined ? assertSidebarItemSlug(slug) : assertSidebarItemSlug(slugify(name))
 
   const sharedData = {
     ...sidebarItemBase(campaignId, creatorProfileId, name),

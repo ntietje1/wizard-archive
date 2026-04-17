@@ -8,6 +8,7 @@ import { createCampaign, createCampaignMember } from '~/test/factories/campaign-
 import { mockAuthQuery } from '~/test/mocks/convex-mocks'
 import { TestWrapper } from '~/test/test-wrapper'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+import { getOrigin } from '~/shared/utils/origin'
 
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
   useOptionalCampaign: vi.fn(),
@@ -44,10 +45,15 @@ vi.mock('~/shared/hooks/useAuthQuery', () => ({
   useAuthQuery: vi.fn(),
 }))
 
+vi.mock('~/shared/utils/origin', () => ({
+  getOrigin: vi.fn(),
+}))
+
 describe('PeopleTab', () => {
   beforeEach(() => {
     vi.mocked(useOptionalCampaign).mockReset()
     vi.mocked(useAuthQuery).mockReset()
+    vi.mocked(getOrigin).mockReset()
   })
 
   it('renders on campaign routes without requiring CampaignProvider', () => {
@@ -106,6 +112,7 @@ describe('PeopleTab', () => {
       isCampaignLoaded: true,
       campaignId: campaign._id,
     })
+    vi.mocked(getOrigin).mockReturnValue('https://example.test')
     const readyMembers = [
       createCampaignMember({
         campaignId: campaign._id,
@@ -127,7 +134,7 @@ describe('PeopleTab', () => {
     )
 
     expect(screen.getByTestId('invite-link-section')).toHaveTextContent(
-      `${import.meta.env.VITE_SITE_URL}/join/testdm/${campaign.slug}`,
+      `https://example.test/join/testdm/${campaign.slug}`,
     )
     expect(screen.getByTestId('members-section')).toBeInTheDocument()
     expect(screen.getByTestId('pending-requests-section')).toBeInTheDocument()

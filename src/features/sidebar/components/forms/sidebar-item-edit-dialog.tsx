@@ -76,7 +76,7 @@ export function SidebarItemEditDialog({ item, isOpen, onClose }: SidebarItemEdit
       iconName: item.iconName ?? null,
       color: item.color ?? null,
     })
-  }, [form, item.color, item.iconName, item.name])
+  }, [form, isOpen, item._id, item.color, item.iconName, item.name])
 
   const handleClose = () => {
     if (form.state.isSubmitting) return
