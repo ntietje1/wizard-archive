@@ -2,6 +2,7 @@ import type { Folder } from '../../folders/types'
 import type { Id } from '../../_generated/dataModel'
 import type { PermissionLevel } from '../../permissions/types'
 import type { SidebarItemShare } from '../../sidebarShares/types'
+import type { SidebarItemSlug } from '../slug'
 import type { ConvexValidatorFields } from '../../common/types'
 
 export const SIDEBAR_ITEM_LOCATION = {
@@ -25,7 +26,7 @@ export type SidebarItemFromDb<T extends SidebarItemType> = ConvexValidatorFields
   name: string
   iconName: string | null
   color: string | null
-  slug: string
+  slug: SidebarItemSlug
   campaignId: Id<'campaigns'>
   parentId: Id<'sidebarItems'> | null
   type: T

@@ -155,6 +155,7 @@ import type * as sessions_functions_updateSession from "../sessions/functions/up
 import type * as sessions_mutations from "../sessions/mutations.js";
 import type * as sessions_queries from "../sessions/queries.js";
 import type * as sessions_types from "../sessions/types.js";
+import type * as sidebarItems_constants from "../sidebarItems/constants.js";
 import type * as sidebarItems_createParentTarget from "../sidebarItems/createParentTarget.js";
 import type * as sidebarItems_functions_claimPreviewGeneration from "../sidebarItems/functions/claimPreviewGeneration.js";
 import type * as sidebarItems_functions_collectDescendants from "../sidebarItems/functions/collectDescendants.js";
@@ -180,6 +181,7 @@ import type * as sidebarItems_schema_anySidebarItemWithContentValidator from "..
 import type * as sidebarItems_schema_sidebarItemsTable from "../sidebarItems/schema/sidebarItemsTable.js";
 import type * as sidebarItems_schema_validators from "../sidebarItems/schema/validators.js";
 import type * as sidebarItems_sharedValidation from "../sidebarItems/sharedValidation.js";
+import type * as sidebarItems_slug from "../sidebarItems/slug.js";
 import type * as sidebarItems_triggerTypes from "../sidebarItems/triggerTypes.js";
 import type * as sidebarItems_triggers from "../sidebarItems/triggers.js";
 import type * as sidebarItems_types_baseTypes from "../sidebarItems/types/baseTypes.js";
@@ -384,6 +386,7 @@ declare const fullApi: ApiFromModules<{
   "sessions/mutations": typeof sessions_mutations;
   "sessions/queries": typeof sessions_queries;
   "sessions/types": typeof sessions_types;
+  "sidebarItems/constants": typeof sidebarItems_constants;
   "sidebarItems/createParentTarget": typeof sidebarItems_createParentTarget;
   "sidebarItems/functions/claimPreviewGeneration": typeof sidebarItems_functions_claimPreviewGeneration;
   "sidebarItems/functions/collectDescendants": typeof sidebarItems_functions_collectDescendants;
@@ -409,6 +412,7 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/schema/sidebarItemsTable": typeof sidebarItems_schema_sidebarItemsTable;
   "sidebarItems/schema/validators": typeof sidebarItems_schema_validators;
   "sidebarItems/sharedValidation": typeof sidebarItems_sharedValidation;
+  "sidebarItems/slug": typeof sidebarItems_slug;
   "sidebarItems/triggerTypes": typeof sidebarItems_triggerTypes;
   "sidebarItems/triggers": typeof sidebarItems_triggers;
   "sidebarItems/types/baseTypes": typeof sidebarItems_types_baseTypes;

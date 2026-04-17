@@ -1,6 +1,7 @@
 import { v } from 'convex/values'
 import { query } from '../_generated/server'
 import { authQuery } from '../functions'
+import { requireUsername, usernameValidator } from './validation'
 import { userProfileValidator } from './schema'
 import { getUserProfileByUserId } from './functions/getUserProfile'
 import { checkUsernameExists as checkUsernameExistsFn } from './functions/checkUsernameExists'
@@ -18,10 +19,10 @@ export const getUserProfile = query({
 
 export const checkUsernameExists = authQuery({
   args: {
-    username: v.string(),
+    username: usernameValidator,
   },
   returns: v.boolean(),
   handler: async (ctx, args) => {
-    return await checkUsernameExistsFn(ctx, { username: args.username })
+    return await checkUsernameExistsFn(ctx, { username: requireUsername(args.username) })
   },
 })

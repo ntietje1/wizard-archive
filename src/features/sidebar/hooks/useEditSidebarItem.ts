@@ -2,6 +2,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { assertSidebarItemSlug } from 'convex/sidebarItems/slug'
+import type { SidebarItemSlug } from 'convex/sidebarItems/slug'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { GameMap } from 'convex/gameMaps/types'
@@ -51,7 +53,7 @@ export type EditItemArgs =
   | EditFileArgs
   | EditCanvasArgs
 
-export type EditItemResult = { slug: string }
+export type EditItemResult = { slug: SidebarItemSlug }
 
 interface EditItemFn {
   (args: EditNoteArgs): Promise<EditItemResult>
@@ -111,7 +113,7 @@ export function useEditSidebarItem() {
     }
 
     try {
-      let slug: string
+      let slug: SidebarItemSlug
 
       switch (item.type) {
         case SIDEBAR_ITEM_TYPES.notes: {
@@ -121,7 +123,7 @@ export function useEditSidebarItem() {
             iconName,
             color,
           })
-          slug = res.slug
+          slug = assertSidebarItemSlug(res.slug)
           break
         }
         case SIDEBAR_ITEM_TYPES.folders: {
@@ -131,7 +133,7 @@ export function useEditSidebarItem() {
             iconName,
             color,
           })
-          slug = res.slug
+          slug = assertSidebarItemSlug(res.slug)
           break
         }
         case SIDEBAR_ITEM_TYPES.gameMaps: {
@@ -143,7 +145,7 @@ export function useEditSidebarItem() {
             color,
             imageStorageId,
           })
-          slug = res.slug
+          slug = assertSidebarItemSlug(res.slug)
           break
         }
         case SIDEBAR_ITEM_TYPES.files: {
@@ -155,7 +157,7 @@ export function useEditSidebarItem() {
             color,
             storageId,
           })
-          slug = res.slug
+          slug = assertSidebarItemSlug(res.slug)
           break
         }
         case SIDEBAR_ITEM_TYPES.canvases: {
@@ -165,7 +167,7 @@ export function useEditSidebarItem() {
             iconName,
             color,
           })
-          slug = res.slug
+          slug = assertSidebarItemSlug(res.slug)
           break
         }
         default:

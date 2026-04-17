@@ -1,11 +1,8 @@
-import {
-  findUniqueSidebarItemSlug,
-  validateSidebarCreateParent,
-  validateSidebarItemName,
-} from '../../sidebarItems/validation'
+import { prepareSidebarItemCreate } from '../../sidebarItems/validation'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
+import type { SidebarItemSlug } from '../../sidebarItems/slug'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 
@@ -50,22 +47,17 @@ export async function insertFolder(
     iconName?: string
     color?: string
   },
-): Promise<{ folderId: Id<'sidebarItems'>; slug: string }> {
-  await validateSidebarCreateParent(ctx, { parentId })
-  await validateSidebarItemName(ctx, {
+): Promise<{ folderId: Id<'sidebarItems'>; slug: SidebarItemSlug }> {
+  const prepared = await prepareSidebarItemCreate(ctx, {
     parentId,
-    name,
-  })
-
-  const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
     name,
   })
 
   const userId = ctx.membership.userId
 
   const folderId = await ctx.db.insert('sidebarItems', {
-    name,
-    slug: uniqueSlug,
+    name: prepared.name,
+    slug: prepared.slug,
     iconName: iconName ?? null,
     color: color ?? null,
     parentId,
@@ -95,5 +87,5 @@ export async function insertFolder(
     action: EDIT_HISTORY_ACTION.created,
   })
 
-  return { folderId, slug: uniqueSlug }
+  return { folderId, slug: prepared.slug }
 }

@@ -1,5 +1,10 @@
+import type { CampaignSlug } from '../validation'
 import { ERROR_CODE, throwClientError } from '../../errors'
-import { validateCampaignName, validateCampaignSlug } from '../validation'
+import {
+  prepareCampaignDescription,
+  prepareCampaignName,
+  prepareCampaignSlug,
+} from '../validation'
 import type { WithoutSystemFields } from 'convex/server'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { DmMutationCtx } from '../../functions'
@@ -13,7 +18,7 @@ export async function updateCampaign(
   }: {
     name?: string
     description?: string
-    slug?: string
+    slug?: CampaignSlug
   },
 ): Promise<Id<'campaigns'>> {
   const campaign = ctx.campaign
@@ -22,30 +27,22 @@ export async function updateCampaign(
   const updates: Partial<WithoutSystemFields<Doc<'campaigns'>>> = {}
 
   if (name !== undefined) {
-    const trimmedName = name.trim()
-    if (trimmedName.length === 0) {
-      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Campaign name cannot be empty')
-    }
-    const nameError = validateCampaignName(trimmedName)
-    if (nameError) throwClientError(ERROR_CODE.VALIDATION_FAILED, nameError)
-    updates.name = trimmedName
+    updates.name = prepareCampaignName(name)
   }
   if (description !== undefined) {
-    updates.description = description.trim()
+    updates.description = prepareCampaignDescription(description) ?? ''
   }
 
-  if (slug !== undefined && slug.trim().length > 0 && slug.trim() !== campaign.slug) {
-    const trimmedSlug = slug.trim()
-    const slugError = validateCampaignSlug(trimmedSlug)
-    if (slugError) throwClientError(ERROR_CODE.VALIDATION_FAILED, slugError)
+  if (slug !== undefined && slug !== campaign.slug) {
+    const preparedSlug = prepareCampaignSlug(slug)
     const conflict = await ctx.db
       .query('campaigns')
-      .withIndex('by_slug_dm', (q) => q.eq('slug', trimmedSlug).eq('dmUserId', userId))
+      .withIndex('by_slug_dm', (q) => q.eq('slug', preparedSlug).eq('dmUserId', userId))
       .unique()
     if (conflict && conflict._id !== campaign._id) {
       throwClientError(ERROR_CODE.CONFLICT, 'A campaign with this slug already exists')
     }
-    updates.slug = trimmedSlug
+    updates.slug = preparedSlug
   }
 
   if (Object.keys(updates).length === 0) {

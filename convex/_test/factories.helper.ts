@@ -2,6 +2,9 @@ import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../campaigns/types
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 import { SHARE_STATUS } from '../blockShares/types'
 import { slugify } from '../common/slug'
+import { assertCampaignSlug } from '../campaigns/validation'
+import { assertSidebarItemSlug } from '../sidebarItems/slug'
+import { assertUsername } from '../users/validation'
 import { makeYjsUpdateWithBlocks } from '../yjsSync/__tests__/makeYjsUpdate.helper'
 import type { TestBlock } from '../yjsSync/__tests__/makeYjsUpdate.helper'
 import type { TestConvex } from 'convex-test'
@@ -65,16 +68,21 @@ export async function createUserProfile(
   }>,
 ) {
   const n = nextId()
+  const { username, ...rest } = overrides ?? {}
   const defaults = {
     authUserId: `auth-user-${n}`,
-    username: `user-${n}`,
+    username: assertUsername(`user-${n}`),
     email: `user-${n}@test.com`,
     emailVerified: null,
     name: `Test User ${n}`,
     profileImage: null,
     twoFactorEnabled: null,
   }
-  const data = { ...defaults, ...overrides }
+  const data = {
+    ...defaults,
+    ...rest,
+    ...(username ? { username: assertUsername(username) } : {}),
+  }
   const id = await t.run(async (ctx) => {
     return await ctx.db.insert('userProfiles', data)
   })
@@ -93,15 +101,21 @@ export async function createCampaignWithDm(
   }>,
 ) {
   const n = nextId()
+  const { slug, ...rest } = overrides ?? {}
   const defaults = {
     name: `Campaign ${n}`,
     description: '',
     dmUserId: dmProfile._id,
-    slug: `campaign-${n}`,
+    slug: assertCampaignSlug(`campaign-${n}`),
     status: 'Active' as const,
     currentSessionId: null,
   }
-  const campaignData = { ...defaults, ...overrides, dmUserId: dmProfile._id }
+  const campaignData = {
+    ...defaults,
+    ...rest,
+    dmUserId: dmProfile._id,
+    ...(slug ? { slug: assertCampaignSlug(slug) } : {}),
+  }
   const campaignId = await t.run(async (ctx) => {
     return await ctx.db.insert('campaigns', campaignData)
   })
@@ -158,7 +172,7 @@ const sidebarItemBase = (
   previewUpdatedAt: null
 } & ReturnType<typeof commonFields> => ({
   name,
-  slug: slugify(name),
+  slug: assertSidebarItemSlug(slugify(name)),
   campaignId,
   iconName: null,
   color: null,
@@ -209,7 +223,7 @@ async function insertSidebarItem(
     ...sidebarItemBase(campaignId, creatorProfileId, name),
     type,
     ...sidebarOverrides,
-    slug: overrides?.slug ?? slugify(name),
+    slug: overrides?.slug ? assertSidebarItemSlug(overrides.slug) : assertSidebarItemSlug(slugify(name)),
   }
 
   const extensionFields: Record<string, unknown> = {}

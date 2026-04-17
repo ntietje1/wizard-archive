@@ -1,6 +1,10 @@
 import { v } from 'convex/values'
 import { campaignMutation } from '../functions'
 import { createItemParentArgsValidator } from '../sidebarItems/createParentTarget'
+import {
+  sidebarItemNameValidator,
+  sidebarItemSlugValidator,
+} from '../sidebarItems/schema/validators'
 import { createFolder as createFolderFn } from './functions/createFolder'
 import { updateFolder as updateFolderFn } from './functions/updateFolder'
 import type { Id } from '../_generated/dataModel'
@@ -8,13 +12,13 @@ import type { Id } from '../_generated/dataModel'
 export const updateFolder = campaignMutation({
   args: {
     folderId: v.id('sidebarItems'),
-    name: v.optional(v.string()),
+    name: v.optional(sidebarItemNameValidator),
     iconName: v.optional(v.nullable(v.string())),
     color: v.optional(v.nullable(v.string())),
   },
   returns: v.object({
     folderId: v.id('sidebarItems'),
-    slug: v.string(),
+    slug: sidebarItemSlugValidator,
   }),
   handler: async (ctx, args): Promise<{ folderId: Id<'sidebarItems'>; slug: string }> => {
     return await updateFolderFn(ctx, {
@@ -29,13 +33,13 @@ export const updateFolder = campaignMutation({
 export const createFolder = campaignMutation({
   args: {
     ...createItemParentArgsValidator,
-    name: v.string(),
+    name: sidebarItemNameValidator,
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
   },
   returns: v.object({
     folderId: v.id('sidebarItems'),
-    slug: v.string(),
+    slug: sidebarItemSlugValidator,
   }),
   handler: async (ctx, args): Promise<{ folderId: Id<'sidebarItems'>; slug: string }> => {
     return await createFolderFn(ctx, {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { assertSidebarItemSlug } from 'convex/sidebarItems/slug'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import {
@@ -80,7 +81,7 @@ describe('getSidebarItemAs', () => {
 
 describe('getSlug', () => {
   it('returns item slug from search params', () => {
-    expect(getSlug({ item: 'my-note' })).toBe('my-note')
+    expect(getSlug({ item: assertSidebarItemSlug('my-note') })).toBe('my-note')
   })
 
   it('returns null when item is undefined', () => {

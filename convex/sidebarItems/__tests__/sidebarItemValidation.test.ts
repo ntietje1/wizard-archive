@@ -2,9 +2,14 @@ import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createFolder, createNote } from '../../_test/factories.helper'
-import { testId } from '../../_test/test-id.helper'
-import { checkNameConflict, validateItemName, validateNoCircularParent } from '../sharedValidation'
 import { api } from '../../_generated/api'
+import { testId } from '../../_test/test-id.helper'
+import {
+  checkNameConflict,
+  validateItemName,
+  validateItemSlug,
+  validateNoCircularParent,
+} from '../sharedValidation'
 import type { Id } from '../../_generated/dataModel'
 
 describe('validateItemName', () => {
@@ -81,6 +86,56 @@ describe('validateItemName', () => {
 
   it('rejects trailing dot', () => {
     expect(validateItemName('file.').valid).toBe(false)
+  })
+
+  it('rejects names that start or end with whitespace', () => {
+    expect(validateItemName(' name').valid).toBe(false)
+    expect(validateItemName('name ').valid).toBe(false)
+  })
+
+  it('rejects control characters', () => {
+    expect(validateItemName('line\nbreak').valid).toBe(false)
+  })
+
+  it('rejects names that would produce an empty slug', () => {
+    expect(validateItemName('🎉🎊').valid).toBe(false)
+  })
+})
+
+describe('validateItemSlug', () => {
+  it('accepts a valid slug', () => {
+    expect(validateItemSlug('my-note')).toEqual({ valid: true })
+  })
+
+  it('rejects empty string', () => {
+    expect(validateItemSlug('').valid).toBe(false)
+  })
+
+  it('rejects uppercase letters', () => {
+    expect(validateItemSlug('My-Note').valid).toBe(false)
+  })
+
+  it('rejects spaces', () => {
+    expect(validateItemSlug('my note').valid).toBe(false)
+  })
+
+  it('rejects consecutive hyphens', () => {
+    expect(validateItemSlug('my--note').valid).toBe(false)
+  })
+
+  it('rejects leading or trailing hyphens', () => {
+    expect(validateItemSlug('-note').valid).toBe(false)
+    expect(validateItemSlug('note-').valid).toBe(false)
+  })
+
+  it('accepts exactly 255 characters', () => {
+    const slug = 'a'.repeat(255)
+    expect(validateItemSlug(slug)).toEqual({ valid: true })
+  })
+
+  it('rejects 256 characters', () => {
+    const slug = 'a'.repeat(256)
+    expect(validateItemSlug(slug).valid).toBe(false)
   })
 })
 
@@ -239,5 +294,57 @@ describe('cross-table slug uniqueness', () => {
     })
 
     expect(result.slug).toBe('deleted-item-2')
+  })
+
+  it('rejects invalid slugs at the query boundary', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    await expect(
+      dmAuth.query(api.sidebarItems.queries.getSidebarItemBySlug, {
+        campaignId: ctx.campaignId,
+        slug: 'bad slug',
+      }),
+    ).rejects.toThrow('Slug can only contain lowercase letters, numbers, and single hyphens')
+  })
+
+  it('rejects create requests whose names cannot produce a valid slug', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    await expect(
+      dmAuth.mutation(api.notes.mutations.createNote, {
+        campaignId: ctx.campaignId,
+        name: '🎉🎊',
+        parentTarget: { kind: 'direct', parentId: null },
+        content: [],
+      }),
+    ).rejects.toThrow('Name must contain at least one letter or number')
+  })
+
+  it('keeps generated slugs valid for max-length names', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const firstName = 'a'.repeat(255)
+    const secondName = `${'a'.repeat(253)} 2`
+
+    const first = await dmAuth.mutation(api.notes.mutations.createNote, {
+      campaignId: ctx.campaignId,
+      name: firstName,
+      parentTarget: { kind: 'direct', parentId: null },
+      content: [],
+    })
+
+    const second = await dmAuth.mutation(api.notes.mutations.createNote, {
+      campaignId: ctx.campaignId,
+      name: secondName,
+      parentTarget: { kind: 'direct', parentId: null },
+      content: [],
+    })
+
+    expect(validateItemSlug(first.slug)).toEqual({ valid: true })
+    expect(validateItemSlug(second.slug)).toEqual({ valid: true })
+    expect(first.slug.length).toBeLessThanOrEqual(255)
+    expect(second.slug.length).toBeLessThanOrEqual(255)
   })
 })

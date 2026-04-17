@@ -1,5 +1,6 @@
 import type { UserIdentity } from 'convex/server'
 import type { Id } from '../_generated/dataModel'
+import type { Username } from './validation'
 
 export type ProfileImage =
   | { type: 'external'; url: string }
@@ -10,7 +11,7 @@ export type UserProfileFromDb = {
   _creationTime: number
 
   authUserId: string
-  username: string
+  username: Username
   email: string | null
   emailVerified: boolean | null
   name: string | null

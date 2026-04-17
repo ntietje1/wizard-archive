@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
+import { assertUsername } from 'convex/users/validation'
 import type { ReactNode } from 'react'
 import type { CampaignContextType } from '~/features/campaigns/hooks/useCampaign'
 import { CampaignContext, useCampaign } from '~/features/campaigns/hooks/useCampaign'
@@ -23,7 +24,7 @@ describe('useCampaign', () => {
   it('returns context value when inside provider', () => {
     const campaign = createCampaign()
     const value: CampaignContextType = {
-      dmUsername: 'testdm',
+      dmUsername: assertUsername('testdm'),
       campaignSlug: campaign.slug,
       campaign: mockAuthQuery(campaign),
       isDm: true,
@@ -44,7 +45,7 @@ describe('useCampaign', () => {
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
     })
     const value: CampaignContextType = {
-      dmUsername: 'dm',
+      dmUsername: assertUsername('dm'),
       campaignSlug: campaign.slug,
       campaign: mockAuthQuery(campaign),
       isDm: true,
@@ -63,7 +64,7 @@ describe('useCampaign', () => {
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.Player },
     })
     const value: CampaignContextType = {
-      dmUsername: 'dm',
+      dmUsername: assertUsername('dm'),
       campaignSlug: campaign.slug,
       campaign: mockAuthQuery(campaign),
       isDm: false,

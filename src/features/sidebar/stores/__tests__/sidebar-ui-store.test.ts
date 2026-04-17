@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { assertSidebarItemSlug } from 'convex/sidebarItems/slug'
 import {
   useCampaignSidebarActions,
   useSidebarUIStore,
@@ -86,20 +87,21 @@ describe('bookmarksOnlyMode', () => {
 
 describe('selection', () => {
   it('setSelected updates selectedSlug', () => {
-    useSidebarUIStore.getState().setSelected('my-note')
+    useSidebarUIStore.getState().setSelected(assertSidebarItemSlug('my-note'))
     expect(useSidebarUIStore.getState().selectedSlug).toBe('my-note')
   })
 
   it('setSelected no-ops for same slug', () => {
-    useSidebarUIStore.getState().setSelected('my-note')
+    const slug = assertSidebarItemSlug('my-note')
+    useSidebarUIStore.getState().setSelected(slug)
     const stateBefore = useSidebarUIStore.getState()
-    useSidebarUIStore.getState().setSelected('my-note')
+    useSidebarUIStore.getState().setSelected(slug)
     const stateAfter = useSidebarUIStore.getState()
     expect(stateBefore).toBe(stateAfter)
   })
 
   it('setSelected to null clears selection', () => {
-    useSidebarUIStore.getState().setSelected('my-note')
+    useSidebarUIStore.getState().setSelected(assertSidebarItemSlug('my-note'))
     useSidebarUIStore.getState().setSelected(null)
     expect(useSidebarUIStore.getState().selectedSlug).toBeNull()
   })

@@ -1,4 +1,7 @@
-import { requireItemAccess, validateSidebarItemRename } from '../../sidebarItems/validation'
+import {
+  prepareSidebarItemRename,
+  requireItemAccess,
+} from '../../sidebarItems/validation'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { PERMISSION_LEVEL } from '../../permissions/types'
@@ -39,17 +42,17 @@ export async function updateMap(
   const changes: Array<EditHistoryChange> = []
 
   if (name !== undefined) {
-    const trimmedName = name.trim()
-    if (trimmedName !== map.name) {
-      updates.name = trimmedName
-      newSlug = await validateSidebarItemRename(ctx, {
-        item: map,
-        newName: trimmedName,
-      })
-      updates.slug = newSlug
+    const rename = await prepareSidebarItemRename(ctx, {
+      item: map,
+      newName: name,
+    })
+    if (rename) {
+      updates.name = rename.name
+      newSlug = rename.slug
+      updates.slug = rename.slug
       changes.push({
         action: EDIT_HISTORY_ACTION.renamed,
-        metadata: { from: map.name, to: trimmedName },
+        metadata: { from: map.name, to: rename.name },
       })
     }
   }

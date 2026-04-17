@@ -1,4 +1,5 @@
 import type { CreateParentTarget } from '../../sidebarItems/createParentTarget'
+import type { SidebarItemSlug } from '../../sidebarItems/slug'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import { resolveOrCreateFolderPath } from './resolveOrCreateFolderPath'
@@ -17,7 +18,7 @@ export async function createFolder(
     iconName?: string
     color?: string
   },
-): Promise<{ folderId: Id<'sidebarItems'>; slug: string }> {
+): Promise<{ folderId: Id<'sidebarItems'>; slug: SidebarItemSlug }> {
   const trimmedName = name.trim()
   const resolvedParentId = await resolveOrCreateFolderPath(ctx, { parentTarget })
 

@@ -3,14 +3,16 @@ import { v } from 'convex/values'
 import {
   permissionLevelValidator,
   sidebarItemLocationValidator,
+  sidebarItemNameValidator,
+  sidebarItemSlugValidator,
   sidebarItemTypeValidator,
 } from './validators'
 import { sidebarItemShareValidator } from '../../sidebarShares/schema'
 import { convexValidatorFields } from '../../common/schema'
 
 const sidebarItemTableFields = {
-  name: v.string(),
-  slug: v.string(),
+  name: sidebarItemNameValidator,
+  slug: sidebarItemSlugValidator,
   campaignId: v.id('campaigns'),
   iconName: v.nullable(v.string()),
   color: v.nullable(v.string()),

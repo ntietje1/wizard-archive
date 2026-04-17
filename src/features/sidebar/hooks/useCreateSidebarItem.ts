@@ -1,6 +1,8 @@
 import { api } from 'convex/_generated/api'
 import type { CreateParentTarget } from 'convex/sidebarItems/createParentTarget'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { assertSidebarItemSlug } from 'convex/sidebarItems/slug'
+import type { SidebarItemSlug } from 'convex/sidebarItems/slug'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CustomBlock } from 'convex/notes/editorSpecs'
@@ -49,7 +51,7 @@ export type CreateItemArgs =
 
 export type CreateItemResult = {
   id: Id<'sidebarItems'>
-  slug: string
+  slug: SidebarItemSlug
   type: SidebarItemType
 }
 
@@ -89,7 +91,7 @@ export function useCreateSidebarItem() {
           color: args.color,
           content: args.content,
         })
-        return { id: noteId, slug, type: args.type }
+        return { id: noteId, slug: assertSidebarItemSlug(slug), type: args.type }
       }
       case SIDEBAR_ITEM_TYPES.folders: {
         const { folderId, slug } = await createFolderMutation.mutateAsync({
@@ -99,7 +101,7 @@ export function useCreateSidebarItem() {
           iconName: args.iconName,
           color: args.color,
         })
-        return { id: folderId, slug, type: args.type }
+        return { id: folderId, slug: assertSidebarItemSlug(slug), type: args.type }
       }
       case SIDEBAR_ITEM_TYPES.gameMaps: {
         const { mapId, slug } = await createMapMutation.mutateAsync({
@@ -110,7 +112,7 @@ export function useCreateSidebarItem() {
           iconName: args.iconName,
           color: args.color,
         })
-        return { id: mapId, slug, type: args.type }
+        return { id: mapId, slug: assertSidebarItemSlug(slug), type: args.type }
       }
       case SIDEBAR_ITEM_TYPES.files: {
         const { fileId, slug } = await createFileMutation.mutateAsync({
@@ -121,7 +123,7 @@ export function useCreateSidebarItem() {
           iconName: args.iconName,
           color: args.color,
         })
-        return { id: fileId, slug, type: args.type }
+        return { id: fileId, slug: assertSidebarItemSlug(slug), type: args.type }
       }
       case SIDEBAR_ITEM_TYPES.canvases: {
         const { canvasId, slug } = await createCanvasMutation.mutateAsync({
@@ -131,7 +133,7 @@ export function useCreateSidebarItem() {
           iconName: args.iconName,
           color: args.color,
         })
-        return { id: canvasId, slug, type: args.type }
+        return { id: canvasId, slug: assertSidebarItemSlug(slug), type: args.type }
       }
       default:
         return assertNever(args)

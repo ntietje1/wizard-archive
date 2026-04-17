@@ -1,5 +1,6 @@
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { assertSidebarItemSlug } from 'convex/sidebarItems/slug'
 import type { Note } from 'convex/notes/types'
 import type { Folder } from 'convex/folders/types'
 import type { GameMap } from 'convex/gameMaps/types'
@@ -17,7 +18,7 @@ interface BaseFields {
   name: string
   iconName: string | null
   color: string | null
-  slug: string
+  slug: Note['slug']
   campaignId: Id<'campaigns'>
   parentId: Id<'sidebarItems'> | null
   allPermissionLevel: PermissionLevel | null
@@ -44,7 +45,7 @@ function baseFields(): BaseFields {
     name: `Test Item ${itemCounter}`,
     iconName: null,
     color: null,
-    slug: `test-item-${itemCounter}`,
+    slug: assertSidebarItemSlug(`test-item-${itemCounter}`),
     campaignId: testId('campaign_1'),
     parentId: null,
     allPermissionLevel: null,
@@ -65,41 +66,52 @@ function baseFields(): BaseFields {
   }
 }
 
-export function createNote(overrides?: Partial<Note>): Note {
+type SidebarItemOverrides<T extends { slug: unknown }> = Omit<Partial<T>, 'slug'> & {
+  slug?: string
+}
+
+export function createNote(overrides?: SidebarItemOverrides<Note>): Note {
   const base = baseFields()
+  const { slug, ...rest } = overrides ?? {}
   return {
     ...base,
     _id: testId<'sidebarItems'>(`note_${itemCounter}`),
     type: SIDEBAR_ITEM_TYPES.notes,
-    ...overrides,
+    ...(slug ? { slug: assertSidebarItemSlug(slug) } : {}),
+    ...rest,
   }
 }
 
-export function createFolder(overrides?: Partial<Folder>): Folder {
+export function createFolder(overrides?: SidebarItemOverrides<Folder>): Folder {
   const base = baseFields()
+  const { slug, ...rest } = overrides ?? {}
   return {
     ...base,
     _id: testId<'sidebarItems'>(`folder_${itemCounter}`),
     type: SIDEBAR_ITEM_TYPES.folders,
     inheritShares: true,
-    ...overrides,
+    ...(slug ? { slug: assertSidebarItemSlug(slug) } : {}),
+    ...rest,
   }
 }
 
-export function createGameMap(overrides?: Partial<GameMap>): GameMap {
+export function createGameMap(overrides?: SidebarItemOverrides<GameMap>): GameMap {
   const base = baseFields()
+  const { slug, ...rest } = overrides ?? {}
   return {
     ...base,
     _id: testId<'sidebarItems'>(`map_${itemCounter}`),
     type: SIDEBAR_ITEM_TYPES.gameMaps,
     imageStorageId: null,
     imageUrl: null,
-    ...overrides,
+    ...(slug ? { slug: assertSidebarItemSlug(slug) } : {}),
+    ...rest,
   }
 }
 
-export function createFile(overrides?: Partial<SidebarFile>): SidebarFile {
+export function createFile(overrides?: SidebarItemOverrides<SidebarFile>): SidebarFile {
   const base = baseFields()
+  const { slug, ...rest } = overrides ?? {}
   return {
     ...base,
     _id: testId<'sidebarItems'>(`file_${itemCounter}`),
@@ -107,6 +119,7 @@ export function createFile(overrides?: Partial<SidebarFile>): SidebarFile {
     storageId: null,
     downloadUrl: null,
     contentType: null,
-    ...overrides,
+    ...(slug ? { slug: assertSidebarItemSlug(slug) } : {}),
+    ...rest,
   }
 }

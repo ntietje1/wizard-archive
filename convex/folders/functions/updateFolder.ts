@@ -1,5 +1,8 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
-import { requireItemAccess, validateSidebarItemRename } from '../../sidebarItems/validation'
+import {
+  prepareSidebarItemRename,
+  requireItemAccess,
+} from '../../sidebarItems/validation'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { logEditHistory } from '../../editHistory/log'
@@ -36,17 +39,17 @@ export async function updateFolder(
   const changes: Array<EditHistoryChange> = []
 
   if (name !== undefined) {
-    const trimmedName = name.trim()
-    if (trimmedName !== folder.name) {
-      updates.name = trimmedName
-      newSlug = await validateSidebarItemRename(ctx, {
-        item: folder,
-        newName: trimmedName,
-      })
-      updates.slug = newSlug
+    const rename = await prepareSidebarItemRename(ctx, {
+      item: folder,
+      newName: name,
+    })
+    if (rename) {
+      updates.name = rename.name
+      newSlug = rename.slug
+      updates.slug = rename.slug
       changes.push({
         action: EDIT_HISTORY_ACTION.renamed,
-        metadata: { from: folder.name, to: trimmedName },
+        metadata: { from: folder.name, to: rename.name },
       })
     }
   }

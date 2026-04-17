@@ -6,12 +6,14 @@ import { findUniqueSlug } from '../common/slug'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { getSidebarItemsByParent } from './functions/getSidebarItemsByParent'
 import { enhanceSidebarItem } from './functions/enhanceSidebarItem'
-import { checkNameConflict, validateItemName } from './sharedValidation'
+import { checkNameConflict, validateItemName, validateItemSlug } from './sharedValidation'
+import { assertSidebarItemSlug, validateSidebarItemSlug } from './slug'
 import { SIDEBAR_ITEM_TYPES } from './types/baseTypes'
 import type { ValidationResult } from './sharedValidation'
 import type { PermissionLevel } from '../permissions/types'
 import type { CampaignQueryCtx } from '../functions'
 import type { Doc, Id } from '../_generated/dataModel'
+import type { SidebarItemSlug } from './slug'
 import type { AnySidebarItem, AnySidebarItemFromDb, EnhancedSidebarItem } from './types/types'
 import { getSidebarItemWithContent } from './functions/getSidebarItemWithContent'
 
@@ -112,6 +114,13 @@ export async function validateSidebarItemName(
   }
 
   return { siblings }
+}
+
+export function assertValidSidebarItemSlug(slug: string): void {
+  const result = validateItemSlug(slug)
+  if (!result.valid) {
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, result.error)
+  }
 }
 
 /**
@@ -292,18 +301,53 @@ export async function findUniqueSidebarItemSlug(
     itemId?: Id<'sidebarItems'>
     name: string
   },
-): Promise<string> {
-  return findUniqueSlug(name, (slug) =>
-    checkSlugConflict(ctx, { campaignId: ctx.campaign._id, slug, excludeId: itemId }),
-  )
+): Promise<SidebarItemSlug> {
+  const nameResult = validateItemName(name)
+  if (!nameResult.valid) {
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, nameResult.error)
+  }
+
+  try {
+    const candidateSlug = await findUniqueSlug(name, (candidate) =>
+      checkSlugConflict(ctx, { campaignId: ctx.campaign._id, slug: candidate, excludeId: itemId }), {
+      isValidCandidate: (candidate) => validateSidebarItemSlug(candidate) === null,
+    })
+    return assertSidebarItemSlug(candidateSlug)
+  } catch {
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Failed to generate a valid slug for this item')
+  }
+}
+
+export async function prepareSidebarItemCreate(
+  ctx: CampaignQueryCtx,
+  {
+    parentId,
+    name,
+  }: {
+    parentId: Id<'sidebarItems'> | null
+    name: string
+  },
+): Promise<{ name: string; slug: SidebarItemSlug }> {
+  const trimmedName = name.trim()
+  await validateSidebarCreateParent(ctx, { parentId })
+  await validateSidebarItemName(ctx, {
+    parentId,
+    name: trimmedName,
+  })
+
+  const slug = await findUniqueSidebarItemSlug(ctx, {
+    name: trimmedName,
+  })
+
+  return { name: trimmedName, slug }
 }
 
 /**
  * Validates a name change and generates a new unique slug.
  * Combines name validation (wiki-link + uniqueness) with slug generation.
- * Returns the new slug.
+ * Returns null when the trimmed name is unchanged.
  */
-export async function validateSidebarItemRename(
+export async function prepareSidebarItemRename(
   ctx: CampaignQueryCtx,
   {
     item,
@@ -312,16 +356,22 @@ export async function validateSidebarItemRename(
     item: AnySidebarItem
     newName: string
   },
-): Promise<string> {
+): Promise<{ name: string; slug: SidebarItemSlug } | null> {
   const trimmedName = newName.trim()
+  if (trimmedName === item.name) {
+    return null
+  }
+
   await validateSidebarItemName(ctx, {
     parentId: item.parentId,
     name: trimmedName,
     excludeId: item._id,
   })
 
-  return findUniqueSidebarItemSlug(ctx, {
+  const slug = await findUniqueSidebarItemSlug(ctx, {
     itemId: item._id,
     name: trimmedName,
   })
+
+  return { name: trimmedName, slug }
 }

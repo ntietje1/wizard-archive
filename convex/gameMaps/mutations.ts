@@ -1,6 +1,10 @@
 import { v } from 'convex/values'
 import { campaignMutation } from '../functions'
 import { createItemParentArgsValidator } from '../sidebarItems/createParentTarget'
+import {
+  sidebarItemNameValidator,
+  sidebarItemSlugValidator,
+} from '../sidebarItems/schema/validators'
 import { createMap as createMapFn } from './functions/createMap'
 import { updateMap as updateMapFn } from './functions/updateMap'
 import { createItemPin as createItemPinFn } from './functions/createItemPin'
@@ -12,14 +16,14 @@ import type { Id } from '../_generated/dataModel'
 export const createMap = campaignMutation({
   args: {
     ...createItemParentArgsValidator,
-    name: v.string(),
+    name: sidebarItemNameValidator,
     imageStorageId: v.optional(v.id('_storage')),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
   },
   returns: v.object({
     mapId: v.id('sidebarItems'),
-    slug: v.string(),
+    slug: sidebarItemSlugValidator,
   }),
   handler: async (ctx, args): Promise<{ mapId: Id<'sidebarItems'>; slug: string }> => {
     return await createMapFn(ctx, {
@@ -35,14 +39,14 @@ export const createMap = campaignMutation({
 export const updateMap = campaignMutation({
   args: {
     mapId: v.id('sidebarItems'),
-    name: v.optional(v.string()),
+    name: v.optional(sidebarItemNameValidator),
     imageStorageId: v.optional(v.nullable(v.id('_storage'))),
     iconName: v.optional(v.nullable(v.string())),
     color: v.optional(v.nullable(v.string())),
   },
   returns: v.object({
     mapId: v.id('sidebarItems'),
-    slug: v.string(),
+    slug: sidebarItemSlugValidator,
   }),
   handler: async (ctx, args): Promise<{ mapId: Id<'sidebarItems'>; slug: string }> => {
     return await updateMapFn(ctx, {

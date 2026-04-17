@@ -2,6 +2,7 @@ import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { literals } from 'convex-helpers/validators'
 import { convexValidatorFields } from '../common/schema'
+import { campaignSlugValidator } from './validation'
 import { userProfileValidator } from '../users/schema'
 
 export const campaignStatusValidator = literals('Active', 'Inactive', 'Deleted')
@@ -14,7 +15,7 @@ const campaignTableFields = {
   name: v.string(),
   description: v.string(),
   dmUserId: v.id('userProfiles'),
-  slug: v.string(),
+  slug: campaignSlugValidator,
   status: campaignStatusValidator,
   currentSessionId: v.nullable(v.id('sessions')),
 }

@@ -1,6 +1,11 @@
 import { v } from 'convex/values'
+import { zodToConvex } from 'convex-helpers/server/zod4'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { PERMISSION_LEVEL } from '../../permissions/types'
+import { sidebarItemNameSchema } from '../sharedValidation'
+export { sidebarItemSlugValidator } from '../slug'
+
+export const sidebarItemNameValidator = zodToConvex(sidebarItemNameSchema)
 
 export const sidebarItemLocationValidator = v.union(
   v.literal(SIDEBAR_ITEM_LOCATION.sidebar),

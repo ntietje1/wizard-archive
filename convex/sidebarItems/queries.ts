@@ -5,11 +5,13 @@ import { fetchCampaignSidebarItems } from './functions/fetchCampaignSidebarItems
 import { getSidebarItemsByParent as getSidebarItemsByParentFn } from './functions/getSidebarItemsByParent'
 import { getSidebarItemBySlug as getSidebarItemBySlugFn } from './functions/getSidebarItemBySlug'
 import { anySidebarItemValidator } from './schema/anySidebarItemValidator'
-import { sidebarItemLocationValidator } from './schema/validators'
+import { sidebarItemLocationValidator, sidebarItemSlugValidator } from './schema/validators'
 import { anySidebarItemWithContentValidator } from './schema/anySidebarItemWithContentValidator'
 import type { AnySidebarItem, AnySidebarItemWithContent } from './types/types'
 import { getSidebarItemWithContent } from './functions/getSidebarItemWithContent'
 import { ERROR_CODE, throwClientError } from '../errors'
+import { assertSidebarItemSlug } from './slug'
+import { assertValidSidebarItemSlug } from './validation'
 
 export const getSidebarItemsByLocation = campaignQuery({
   args: {
@@ -55,12 +57,13 @@ export const getSidebarItem = campaignQuery({
 
 export const getSidebarItemBySlug = campaignQuery({
   args: {
-    slug: v.string(),
+    slug: sidebarItemSlugValidator,
   },
   returns: v.nullable(anySidebarItemWithContentValidator),
   handler: async (ctx, args): Promise<AnySidebarItemWithContent | null> => {
+    assertValidSidebarItemSlug(args.slug)
     return await getSidebarItemBySlugFn(ctx, {
-      slug: args.slug,
+      slug: assertSidebarItemSlug(args.slug),
     })
   },
 })

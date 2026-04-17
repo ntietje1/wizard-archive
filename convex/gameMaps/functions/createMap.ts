@@ -1,8 +1,4 @@
-import {
-  findUniqueSidebarItemSlug,
-  validateSidebarCreateParent,
-  validateSidebarItemName,
-} from '../../sidebarItems/validation'
+import { prepareSidebarItemCreate } from '../../sidebarItems/validation'
 import type { CreateParentTarget } from '../../sidebarItems/createParentTarget'
 import { resolveOrCreateFolderPath } from '../../folders/functions/resolveOrCreateFolderPath'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
@@ -27,17 +23,10 @@ export async function createMap(
     color?: string
   },
 ): Promise<{ mapId: Id<'sidebarItems'>; slug: string }> {
-  const trimmedName = name.trim()
   const resolvedParentId = await resolveOrCreateFolderPath(ctx, { parentTarget })
-
-  await validateSidebarCreateParent(ctx, { parentId: resolvedParentId })
-  await validateSidebarItemName(ctx, {
+  const prepared = await prepareSidebarItemCreate(ctx, {
     parentId: resolvedParentId,
-    name: trimmedName,
-  })
-
-  const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
-    name: trimmedName,
+    name,
   })
 
   const campaignId = ctx.campaign._id
@@ -45,8 +34,8 @@ export async function createMap(
 
   const mapId = await ctx.db.insert('sidebarItems', {
     campaignId,
-    name: trimmedName,
-    slug: uniqueSlug,
+    name: prepared.name,
+    slug: prepared.slug,
     iconName: iconName ?? null,
     color: color ?? null,
     parentId: resolvedParentId,
@@ -75,5 +64,5 @@ export async function createMap(
     action: EDIT_HISTORY_ACTION.created,
   })
 
-  return { mapId, slug: uniqueSlug }
+  return { mapId, slug: prepared.slug }
 }

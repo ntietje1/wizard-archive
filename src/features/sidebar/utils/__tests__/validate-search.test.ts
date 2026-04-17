@@ -43,6 +43,15 @@ describe('validateSearch', () => {
     expect(validateSearch({ heading: '' })).toEqual({})
   })
 
+  it('ignores invalid item slugs', () => {
+    expect(validateSearch({ item: 'bad slug' })).toEqual({})
+    expect(validateSearch({ item: 'Bad-Slug' })).toEqual({})
+    expect(validateSearch({ item: '-leading-hyphen' })).toEqual({})
+    expect(validateSearch({ item: 'trailing-hyphen-' })).toEqual({})
+    expect(validateSearch({ item: 'double--hyphen' })).toEqual({})
+    expect(validateSearch({ item: 'special@char' })).toEqual({})
+  })
+
   it('ignores non-string item/heading values', () => {
     expect(validateSearch({ item: 123, heading: true })).toEqual({})
   })

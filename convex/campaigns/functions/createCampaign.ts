@@ -1,6 +1,11 @@
+import type { CampaignSlug } from '../validation'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS, CAMPAIGN_STATUS } from '../types'
-import { validateCampaignName, validateCampaignSlug } from '../validation'
+import {
+  prepareCampaignDescription,
+  prepareCampaignName,
+  prepareCampaignSlug,
+} from '../validation'
 import type { Id } from '../../_generated/dataModel'
 import type { AuthMutationCtx } from '../../functions'
 
@@ -12,25 +17,19 @@ export async function createCampaign(
     description,
   }: {
     name: string
-    slug: string
+    slug: CampaignSlug
     description?: string
   },
 ): Promise<Id<'campaigns'>> {
-  name = name.trim()
-  slug = slug.trim()
-  description = description?.trim()
-
-  const nameError = validateCampaignName(name)
-  if (nameError) throwClientError(ERROR_CODE.VALIDATION_FAILED, nameError)
-
-  const slugError = validateCampaignSlug(slug)
-  if (slugError) throwClientError(ERROR_CODE.VALIDATION_FAILED, slugError)
+  const preparedName = prepareCampaignName(name)
+  const preparedDescription = prepareCampaignDescription(description)
+  const preparedSlug = prepareCampaignSlug(slug)
 
   const profile = ctx.user.profile
 
   const conflict = await ctx.db
     .query('campaigns')
-    .withIndex('by_slug_dm', (q) => q.eq('slug', slug).eq('dmUserId', profile._id))
+    .withIndex('by_slug_dm', (q) => q.eq('slug', preparedSlug).eq('dmUserId', profile._id))
     .unique()
 
   if (conflict) {
@@ -38,10 +37,10 @@ export async function createCampaign(
   }
 
   const campaignId = await ctx.db.insert('campaigns', {
-    name,
-    description: description ?? '',
+    name: preparedName,
+    description: preparedDescription ?? '',
     dmUserId: profile._id,
-    slug,
+    slug: preparedSlug,
     status: CAMPAIGN_STATUS.Active,
     currentSessionId: null,
   })

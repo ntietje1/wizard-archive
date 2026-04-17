@@ -1,9 +1,5 @@
 import * as Y from 'yjs'
-import {
-  findUniqueSidebarItemSlug,
-  validateSidebarCreateParent,
-  validateSidebarItemName,
-} from '../../sidebarItems/validation'
+import { prepareSidebarItemCreate } from '../../sidebarItems/validation'
 import type { CreateParentTarget } from '../../sidebarItems/createParentTarget'
 import { resolveOrCreateFolderPath } from '../../folders/functions/resolveOrCreateFolderPath'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
@@ -28,25 +24,18 @@ export async function createCanvas(
     color?: string
   },
 ): Promise<{ canvasId: Id<'sidebarItems'>; slug: string }> {
-  const trimmedName = name.trim()
   const resolvedParentId = await resolveOrCreateFolderPath(ctx, { parentTarget })
-
-  await validateSidebarCreateParent(ctx, { parentId: resolvedParentId })
-  await validateSidebarItemName(ctx, {
+  const prepared = await prepareSidebarItemCreate(ctx, {
     parentId: resolvedParentId,
-    name: trimmedName,
-  })
-
-  const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
-    name: trimmedName,
+    name,
   })
 
   const userId = ctx.membership.userId
 
   const canvasId = await ctx.db.insert('sidebarItems', {
     campaignId: ctx.campaign._id,
-    name: trimmedName,
-    slug: uniqueSlug,
+    name: prepared.name,
+    slug: prepared.slug,
     iconName: iconName ?? null,
     color: color ?? null,
     parentId: resolvedParentId,
@@ -83,5 +72,5 @@ export async function createCanvas(
     action: EDIT_HISTORY_ACTION.created,
   })
 
-  return { canvasId, slug: uniqueSlug }
+  return { canvasId, slug: prepared.slug }
 }

@@ -1,5 +1,6 @@
 import type { Id } from '../_generated/dataModel'
 import type { ConvexValidatorFields } from '../common/types'
+import type { CampaignSlug } from './validation'
 import type { UserProfile } from '../users/types'
 
 export const CAMPAIGN_STATUS = {
@@ -31,7 +32,7 @@ export type CampaignFromDb = ConvexValidatorFields<'campaigns'> & {
   dmUserId: Id<'userProfiles'>
   name: string
   description: string
-  slug: string
+  slug: CampaignSlug
   status: CampaignStatus
   currentSessionId: Id<'sessions'> | null
 }

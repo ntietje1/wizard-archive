@@ -1,4 +1,6 @@
 import { findUniqueSlug } from '../../common/slug'
+import { parseUsername } from '../../users/validation'
+import { USERNAME_MAX_LENGTH } from '../../users/constants'
 import type { MutationCtx } from '../../_generated/server'
 
 type AuthUserDoc = {
@@ -23,6 +25,9 @@ export async function onCreateUser(ctx: MutationCtx, user: AuthUserDoc): Promise
       .withIndex('by_username', (q) => q.eq('username', slug))
       .unique()
     return conflict !== null
+  }, {
+    maxLength: USERNAME_MAX_LENGTH,
+    isValidCandidate: (slug) => parseUsername(slug) !== null,
   })
 
   await ctx.db.insert('userProfiles', {

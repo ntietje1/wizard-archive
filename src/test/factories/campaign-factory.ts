@@ -3,13 +3,15 @@ import {
   CAMPAIGN_MEMBER_STATUS,
   CAMPAIGN_STATUS,
 } from 'convex/campaigns/types'
+import { assertCampaignSlug } from 'convex/campaigns/validation'
 import { createUser } from './user-factory'
 import type { Campaign, CampaignMember } from 'convex/campaigns/types'
 import { testId } from '~/test/helpers/test-id'
 
 let campaignCounter = 0
 
-type CreateCampaignOverrides = Omit<Partial<Campaign>, 'myMembership'> & {
+type CreateCampaignOverrides = Omit<Partial<Campaign>, 'myMembership' | 'slug'> & {
+  slug?: string
   myMembership?: Partial<CampaignMember> | null
 }
 
@@ -17,14 +19,14 @@ export function createCampaign(overrides?: CreateCampaignOverrides): Campaign {
   campaignCounter++
   const dmUser = createUser()
   const campaignId = overrides?._id ?? testId(`campaign_${campaignCounter}`)
-  const { myMembership: memberOverrides, ...rest } = overrides ?? {}
+  const { myMembership: memberOverrides, slug, ...rest } = overrides ?? {}
   const campaign: Campaign = {
     _id: campaignId,
     _creationTime: Date.now(),
     dmUserId: dmUser._id,
     name: `Test Campaign ${campaignCounter}`,
     description: '',
-    slug: `test-campaign-${campaignCounter}`,
+    slug: assertCampaignSlug(slug ?? `test-campaign-${campaignCounter}`),
     status: CAMPAIGN_STATUS.Active,
     currentSessionId: null,
     dmUserProfile: dmUser,

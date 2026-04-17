@@ -1,18 +1,16 @@
 import { Loader2 } from 'lucide-react'
 import { api } from 'convex/_generated/api'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'convex/campaigns/types'
-import { useParams } from '@tanstack/react-router'
 import { InviteLinkSection } from './components/invite-link-section'
 import { MembersSection } from './components/members-section'
 import { PendingRequestsSection } from './components/pending-requests-section'
 import { RejectedRemovedSection } from './components/rejected-removed-section'
+import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { getOrigin } from '~/shared/utils/origin'
 
 export function PeopleTab() {
-  const { dmUsername, campaignSlug } = useParams({
-    from: '/_app/_authed/campaigns/$dmUsername/$campaignSlug',
-  })
+  const { dmUsername, campaignSlug } = useCampaign()
 
   const campaign = useAuthQuery(api.campaigns.queries.getCampaignBySlug, {
     dmUsername,

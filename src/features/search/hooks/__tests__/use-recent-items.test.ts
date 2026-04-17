@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { assertSidebarItemSlug } from 'convex/sidebarItems/slug'
 import { addRecentItem } from '~/features/search/hooks/use-recent-items'
 
 describe('addRecentItem', () => {
@@ -24,7 +25,7 @@ describe('addRecentItem', () => {
   })
 
   it('adds a new entry to empty storage', () => {
-    addRecentItem('campaign-1', 'my-note')
+    addRecentItem('campaign-1', assertSidebarItemSlug('my-note'))
 
     const stored = JSON.parse(storage['recent-items-campaign-1'])
     expect(stored).toHaveLength(1)
@@ -38,7 +39,7 @@ describe('addRecentItem', () => {
       { slug: 'second', timestamp: 2 },
     ])
 
-    addRecentItem('campaign-1', 'second')
+    addRecentItem('campaign-1', assertSidebarItemSlug('second'))
 
     const stored = JSON.parse(storage['recent-items-campaign-1'])
     expect(stored[0].slug).toBe('second')
@@ -53,7 +54,7 @@ describe('addRecentItem', () => {
     }))
     storage['recent-items-campaign-1'] = JSON.stringify(entries)
 
-    addRecentItem('campaign-1', 'new-note')
+    addRecentItem('campaign-1', assertSidebarItemSlug('new-note'))
 
     const stored = JSON.parse(storage['recent-items-campaign-1'])
     expect(stored).toHaveLength(100)
@@ -62,14 +63,14 @@ describe('addRecentItem', () => {
   })
 
   it('does nothing when campaignId is empty', () => {
-    addRecentItem('', 'my-note')
+    addRecentItem('', assertSidebarItemSlug('my-note'))
 
     expect(getItemSpy).not.toHaveBeenCalled()
     expect(setItemSpy).not.toHaveBeenCalled()
   })
 
   it('dispatches a localStorageChange event', () => {
-    addRecentItem('campaign-1', 'my-note')
+    addRecentItem('campaign-1', assertSidebarItemSlug('my-note'))
 
     expect(window.dispatchEvent).toHaveBeenCalledOnce()
     const event = vi.mocked(window.dispatchEvent).mock.calls[0][0] as CustomEvent
@@ -80,7 +81,7 @@ describe('addRecentItem', () => {
   it('handles corrupt JSON in localStorage', () => {
     storage['recent-items-campaign-1'] = '{not valid json'
 
-    addRecentItem('campaign-1', 'my-note')
+    addRecentItem('campaign-1', assertSidebarItemSlug('my-note'))
 
     const stored = JSON.parse(storage['recent-items-campaign-1'])
     expect(stored).toHaveLength(1)
@@ -90,7 +91,7 @@ describe('addRecentItem', () => {
   it('handles non-array JSON in localStorage', () => {
     storage['recent-items-campaign-1'] = '42'
 
-    addRecentItem('campaign-1', 'my-note')
+    addRecentItem('campaign-1', assertSidebarItemSlug('my-note'))
 
     const stored = JSON.parse(storage['recent-items-campaign-1'])
     expect(stored).toHaveLength(1)
@@ -105,7 +106,7 @@ describe('addRecentItem', () => {
       'string',
     ])
 
-    addRecentItem('campaign-1', 'new-note')
+    addRecentItem('campaign-1', assertSidebarItemSlug('new-note'))
 
     const stored = JSON.parse(storage['recent-items-campaign-1'])
     expect(stored).toHaveLength(2)
@@ -113,12 +114,18 @@ describe('addRecentItem', () => {
     expect(stored[1].slug).toBe('valid')
   })
 
-  it('stores an empty string slug without error', () => {
-    addRecentItem('campaign-1', '')
+  it('drops invalid stored slugs when rewriting recent items', () => {
+    storage['recent-items-campaign-1'] = JSON.stringify([
+      { slug: '', timestamp: 1 },
+      { slug: 'valid-note', timestamp: 2 },
+    ])
+
+    addRecentItem('campaign-1', assertSidebarItemSlug('new-note'))
 
     const stored = JSON.parse(storage['recent-items-campaign-1'])
-    expect(stored).toHaveLength(1)
-    expect(stored[0].slug).toBe('')
+    expect(stored).toHaveLength(2)
+    expect(stored[0].slug).toBe('new-note')
+    expect(stored[1].slug).toBe('valid-note')
   })
 
   it('does not throw when localStorage.setItem throws', () => {
@@ -126,6 +133,6 @@ describe('addRecentItem', () => {
       throw new Error('QuotaExceededError')
     })
 
-    expect(() => addRecentItem('campaign-1', 'my-note')).not.toThrow()
+    expect(() => addRecentItem('campaign-1', assertSidebarItemSlug('my-note'))).not.toThrow()
   })
 })

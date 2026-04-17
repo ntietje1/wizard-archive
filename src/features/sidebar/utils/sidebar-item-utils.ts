@@ -1,6 +1,7 @@
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
+import type { SidebarItemSlug } from 'convex/sidebarItems/slug'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Note } from 'convex/notes/types'
 import type { Folder } from 'convex/folders/types'
@@ -12,7 +13,7 @@ import { assertNever } from '~/shared/utils/utils'
 
 export const DEFAULT_ITEM_COLOR = '#14b8a6'
 
-export const getSlug = (search: EditorSearch): string | null => {
+export const getSlug = (search: EditorSearch): SidebarItemSlug | null => {
   return search.item ?? null
 }
 

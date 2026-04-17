@@ -56,6 +56,18 @@ describe('validateSidebarItemName', () => {
     expect(validateSidebarItemName({ name: 'file.' }).valid).toBe(false)
   })
 
+  it('rejects names that would generate an empty slug', () => {
+    expect(validateSidebarItemName({ name: '🎉🎊' }).valid).toBe(false)
+  })
+
+  it('rejects names with control characters', () => {
+    expect(validateSidebarItemName({ name: 'line\nbreak' }).valid).toBe(false)
+    expect(validateSidebarItemName({ name: 'line\rbreak' }).valid).toBe(false)
+    expect(validateSidebarItemName({ name: 'line\tbreak' }).valid).toBe(false)
+    expect(validateSidebarItemName({ name: 'line\0break' }).valid).toBe(false)
+    expect(validateSidebarItemName({ name: 'line\u0085break' }).valid).toBe(false)
+  })
+
   it('detects sibling name conflicts (case-insensitive)', () => {
     const existing = createNote({ name: 'My Note' })
     const result = validateSidebarItemName({

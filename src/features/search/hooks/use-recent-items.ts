@@ -3,10 +3,12 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useFilteredSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { logger } from '~/shared/utils/logger'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import { parseSidebarItemSlug } from 'convex/sidebarItems/slug'
+import type { SidebarItemSlug } from 'convex/sidebarItems/slug'
 import type { SearchResult } from '../utils/merge-search-results'
 
 interface RecentEntry {
-  slug: string
+  slug: SidebarItemSlug
   timestamp: number
 }
 
@@ -17,12 +19,22 @@ function storageKey(campaignId: string) {
 }
 
 function isRecentEntry(e: unknown): e is RecentEntry {
-  return (
-    typeof e === 'object' &&
-    e !== null &&
-    typeof (e as RecentEntry).slug === 'string' &&
-    typeof (e as RecentEntry).timestamp === 'number'
-  )
+  if (typeof e !== 'object' || e === null) return false
+  const rawSlug = (e as { slug?: unknown }).slug
+  const slug = typeof rawSlug === 'string' ? parseSidebarItemSlug(rawSlug) : null
+  return slug !== null && typeof (e as { timestamp?: unknown }).timestamp === 'number'
+}
+
+function parseRecentEntry(entry: unknown): RecentEntry | null {
+  if (typeof entry !== 'object' || entry === null) return null
+  const rawSlug = (entry as { slug?: unknown }).slug
+  const timestamp = (entry as { timestamp?: unknown }).timestamp
+  if (typeof rawSlug !== 'string' || typeof timestamp !== 'number') return null
+
+  const slug = parseSidebarItemSlug(rawSlug)
+  if (!slug) return null
+
+  return { slug, timestamp }
 }
 
 function parseEntries(raw: string | null, key: string): Array<RecentEntry> {
@@ -30,14 +42,17 @@ function parseEntries(raw: string | null, key: string): Array<RecentEntry> {
   try {
     const parsed: unknown = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
-    return parsed.filter(isRecentEntry)
+    return parsed.flatMap((entry) => {
+      const parsedEntry = parseRecentEntry(entry)
+      return parsedEntry ? [parsedEntry] : []
+    })
   } catch (error) {
     logger.debug('Failed to parse recent items for key', key, error)
     return []
   }
 }
 
-export function addRecentItem(campaignId: string, slug: string) {
+export function addRecentItem(campaignId: string, slug: SidebarItemSlug) {
   if (!campaignId) return
   const key = storageKey(campaignId)
   try {
@@ -67,7 +82,7 @@ export function useRecentItems(): Array<SearchResult> {
   )
 
   const safeItems = items ?? []
-  const slugToItem = new Map<string, AnySidebarItem>()
+  const slugToItem = new Map<SidebarItemSlug, AnySidebarItem>()
   for (const item of safeItems) {
     slugToItem.set(item.slug, item)
   }

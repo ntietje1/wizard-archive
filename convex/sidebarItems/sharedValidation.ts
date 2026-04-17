@@ -1,41 +1,56 @@
+import { z } from 'zod'
+import { slugify } from '../common/slug'
+import { parseSidebarItemSlug, validateSidebarItemSlug } from './slug'
+import {
+  SIDEBAR_ITEM_FORBIDDEN_NAME_CHARS,
+  SIDEBAR_ITEM_FORBIDDEN_NAME_CHARS_DISPLAY,
+  SIDEBAR_ITEM_NAME_MAX_LENGTH,
+  hasSidebarItemControlChars,
+} from './constants'
 import type { Id } from '../_generated/dataModel'
 
 export type ValidationResult = { valid: true } | { valid: false; error: string }
 
-const FORBIDDEN_CHARS = /[/\\:*?"<>[\]#|]/
-const FORBIDDEN_CHARS_DISPLAY = '/ \\ : * ? " < > [ ] # |'
+export const sidebarItemNameSchema = z
+  .string()
+  .refine((value) => value.trim().length > 0, 'Name is required')
+  .refine((value) => value === value.trim(), 'Name cannot start or end with whitespace')
+  .max(
+    SIDEBAR_ITEM_NAME_MAX_LENGTH,
+    `Name must be ${SIDEBAR_ITEM_NAME_MAX_LENGTH} characters or fewer`,
+  )
+  .refine(
+    (value) => !SIDEBAR_ITEM_FORBIDDEN_NAME_CHARS.test(value),
+    `Name cannot contain any of: ${SIDEBAR_ITEM_FORBIDDEN_NAME_CHARS_DISPLAY}`,
+  )
+  .refine((value) => !hasSidebarItemControlChars(value), 'Name cannot contain control characters')
+  .refine(
+    (value) => !value.startsWith('.') && !value.endsWith('.'),
+    'Name cannot start or end with a dot',
+  )
+  .refine(
+    (value) => parseSidebarItemSlug(slugify(value)) !== null,
+    'Name must contain at least one letter or number',
+  )
 
-/**
- * Validates that a name is a valid filesystem-safe item name.
- * Rules:
- * 1. Required & non-empty (after trim)
- * 2. Max 255 characters (after trim)
- * 3. No forbidden characters: / \ : * ? " < > [ ] # |
- * 4. No leading/trailing dots
- */
+function zodResultToValidationResult(result: z.ZodSafeParseResult<string>): ValidationResult {
+  if (result.success) {
+    return { valid: true }
+  }
+
+  return {
+    valid: false,
+    error: result.error.issues[0]?.message ?? 'Invalid value',
+  }
+}
+
 export function validateItemName(name: string): ValidationResult {
-  const trimmed = name.trim()
+  return zodResultToValidationResult(sidebarItemNameSchema.safeParse(name))
+}
 
-  if (!trimmed) {
-    return { valid: false, error: 'Name is required' }
-  }
-
-  if (trimmed.length > 255) {
-    return { valid: false, error: 'Name must be 255 characters or fewer' }
-  }
-
-  if (FORBIDDEN_CHARS.test(trimmed)) {
-    return {
-      valid: false,
-      error: `Name cannot contain any of: ${FORBIDDEN_CHARS_DISPLAY}`,
-    }
-  }
-
-  if (trimmed.startsWith('.') || trimmed.endsWith('.')) {
-    return { valid: false, error: 'Name cannot start or end with a dot' }
-  }
-
-  return { valid: true }
+export function validateItemSlug(slug: string): ValidationResult {
+  const error = validateSidebarItemSlug(slug)
+  return error ? { valid: false, error } : { valid: true }
 }
 
 /**

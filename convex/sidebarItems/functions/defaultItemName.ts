@@ -1,4 +1,5 @@
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
+import { SIDEBAR_ITEM_NAME_MAX_LENGTH } from '../constants'
 import type { SidebarItemType } from '../types/baseTypes'
 
 export const defaultNameMap: Record<SidebarItemType, string> = {
@@ -19,12 +20,16 @@ export function deduplicateName(base: string, siblingNames: Array<string>): stri
     return base
   }
   for (let i = 2; i <= 1000; i++) {
-    const candidate = `${base} ${i}`
+    const suffix = ` ${i}`
+    const maxBaseLength = SIDEBAR_ITEM_NAME_MAX_LENGTH - suffix.length
+    const candidate = `${base.slice(0, maxBaseLength)}${suffix}`
     if (!lowerNames.has(candidate.toLowerCase())) {
       return candidate
     }
   }
-  return `${base} ${Date.now()}`
+  const fallbackSuffix = ` ${Date.now()}`
+  const maxBaseLength = SIDEBAR_ITEM_NAME_MAX_LENGTH - fallbackSuffix.length
+  return `${base.slice(0, maxBaseLength)}${fallbackSuffix}`
 }
 
 /**
