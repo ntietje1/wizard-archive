@@ -10,11 +10,13 @@ export const LINK_ROLE = {
 export type LinkRole = (typeof LINK_ROLE)[keyof typeof LINK_ROLE]
 export type LinkType = 'wiki' | 'md-internal' | 'md-external'
 export type LinkStatus = 'exists' | 'ghost' | 'external'
+export type LinkPathKind = 'global' | 'relative'
 
 interface CreateLinkDecorationStateOptions {
   type: LinkType
   exists: boolean
   href?: string | null
+  pathKind?: LinkPathKind | null
   itemPath?: Array<string> | null
   itemName?: string | null
   heading?: string | null
@@ -39,6 +41,7 @@ export function createLinkDecorationState({
   type,
   exists,
   href,
+  pathKind,
   itemPath,
   itemName,
   heading,
@@ -54,6 +57,9 @@ export function createLinkDecorationState({
 
   if (href) {
     linkAttrs['data-link-href'] = href
+  }
+  if (pathKind) {
+    linkAttrs['data-link-path-kind'] = pathKind
   }
   if (itemPath && itemPath.length > 0) {
     linkAttrs['data-link-path'] = itemPath.join('/')

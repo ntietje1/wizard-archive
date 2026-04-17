@@ -7,7 +7,7 @@ import type { Id } from '../../_generated/dataModel'
 import { makeYjsUpdateWithBlocks } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
 import { syncNoteLinks } from '../../links/functions/syncNoteLinks'
 import type { CampaignMutationCtx } from '../../functions'
-import type { PersistedBlockRecord } from '../../blocks/types'
+import type { Block } from '../../blocks/types'
 
 async function pushAndPersist(
   dmAuth: ReturnType<typeof asDm>,
@@ -28,9 +28,10 @@ async function pushAndPersist(
 
 type FactoryBlock = Awaited<ReturnType<typeof createBlock>>
 
-function toPersistedBlock(noteId: Id<'sidebarItems'>, block: FactoryBlock): PersistedBlockRecord {
+function toBlock(noteId: Id<'sidebarItems'>, block: FactoryBlock): Block {
   return {
     _id: block.blockDbId,
+    _creationTime: 0,
     noteId,
     blockNoteId: block.blockNoteId,
     position: block.position,
@@ -49,7 +50,7 @@ async function runSync(
   t: ReturnType<typeof createTestContext>,
   campaignId: Id<'campaigns'>,
   noteId: Id<'sidebarItems'>,
-  blocks: Array<PersistedBlockRecord>,
+  blocks: Array<Block>,
 ) {
   await t.run(async (dbCtx) => {
     await syncNoteLinks(dbCtx as unknown as CampaignMutationCtx, {
@@ -85,12 +86,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const { noteId: targetId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Target Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
     const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await pushAndPersist(dmAuth, ctx.campaignId, sourceId, [
@@ -124,12 +125,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Target Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
     const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await pushAndPersist(dmAuth, ctx.campaignId, sourceId, [
@@ -168,12 +169,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const { noteId: targetId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Capital',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
     const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await pushAndPersist(dmAuth, ctx.campaignId, sourceId, [
@@ -213,7 +214,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await pushAndPersist(dmAuth, ctx.campaignId, sourceId, [
@@ -253,7 +254,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await pushAndPersist(dmAuth, ctx.campaignId, sourceId, [
@@ -284,7 +285,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await pushAndPersist(dmAuth, ctx.campaignId, sourceId, [
@@ -321,12 +322,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Target Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
     const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     const blocks = [
@@ -373,12 +374,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const { noteId: targetId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Target Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
     const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     const originalBlock = await createBlock(t, sourceId, ctx.campaignId, {
@@ -390,7 +391,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       await syncNoteLinks(dbCtx as unknown as CampaignMutationCtx, {
         noteId: sourceId,
         campaignId: ctx.campaignId,
-        blocks: [toPersistedBlock(sourceId, originalBlock)],
+        blocks: [toBlock(sourceId, originalBlock)],
       })
     })
 
@@ -410,7 +411,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
         campaignId: ctx.campaignId,
         blocks: [
           {
-            ...toPersistedBlock(sourceId, originalBlock),
+            ...toBlock(sourceId, originalBlock),
             plainText: '[New Label](Target Note)',
           },
         ],
@@ -443,12 +444,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Target Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
     const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     const blockA = await createBlock(t, sourceId, ctx.campaignId, {
@@ -464,7 +465,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       await syncNoteLinks(dbCtx as unknown as CampaignMutationCtx, {
         noteId: sourceId,
         campaignId: ctx.campaignId,
-        blocks: [toPersistedBlock(sourceId, blockA), toPersistedBlock(sourceId, blockB)],
+        blocks: [toBlock(sourceId, blockA), toBlock(sourceId, blockB)],
       })
     })
 
@@ -481,7 +482,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       await syncNoteLinks(dbCtx as unknown as CampaignMutationCtx, {
         noteId: sourceId,
         campaignId: ctx.campaignId,
-        blocks: [toPersistedBlock(sourceId, blockB)],
+        blocks: [toBlock(sourceId, blockB)],
       })
     })
 
@@ -508,12 +509,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const { noteId: targetId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Target Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
     const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     const block = await createBlock(t, sourceId, ctx.campaignId, {
@@ -544,7 +545,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       ])
     })
 
-    await runSync(t, ctx.campaignId, sourceId, [toPersistedBlock(sourceId, block)])
+    await runSync(t, ctx.campaignId, sourceId, [toBlock(sourceId, block)])
 
     const links = await listLinksForNote(t, ctx.campaignId, sourceId)
     expect(links).toHaveLength(1)
@@ -558,12 +559,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const { noteId: targetId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Target Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
     const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     const block = await createBlock(t, sourceId, ctx.campaignId, {
@@ -571,7 +572,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       plainText: '[First Label](Target Note) then [[Target Note|Second Label]]',
     })
 
-    await runSync(t, ctx.campaignId, sourceId, [toPersistedBlock(sourceId, block)])
+    await runSync(t, ctx.campaignId, sourceId, [toBlock(sourceId, block)])
 
     const links = await listLinksForNote(t, ctx.campaignId, sourceId)
     expect(links).toHaveLength(1)
@@ -590,7 +591,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     const block = await createBlock(t, sourceId, ctx.campaignId, {
@@ -598,7 +599,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       plainText: '[First Label](Missing Note#Lore) then [[Missing Note#Lore|Second Label]]',
     })
 
-    await runSync(t, ctx.campaignId, sourceId, [toPersistedBlock(sourceId, block)])
+    await runSync(t, ctx.campaignId, sourceId, [toBlock(sourceId, block)])
 
     const links = await listLinksForNote(t, ctx.campaignId, sourceId)
     expect(links).toHaveLength(1)
@@ -617,7 +618,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     const block = await createBlock(t, sourceId, ctx.campaignId, {
@@ -625,7 +626,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       plainText: '[[Future Target#Section|Alias]]',
     })
 
-    await runSync(t, ctx.campaignId, sourceId, [toPersistedBlock(sourceId, block)])
+    await runSync(t, ctx.campaignId, sourceId, [toBlock(sourceId, block)])
 
     const unresolvedLink = (await listLinksForNote(t, ctx.campaignId, sourceId))[0]
     expect(unresolvedLink).toMatchObject({
@@ -638,10 +639,10 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const { noteId: targetId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Future Target',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
-    await runSync(t, ctx.campaignId, sourceId, [toPersistedBlock(sourceId, block)])
+    await runSync(t, ctx.campaignId, sourceId, [toBlock(sourceId, block)])
 
     const links = await listLinksForNote(t, ctx.campaignId, sourceId)
     expect(links).toHaveLength(1)
@@ -661,12 +662,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const { noteId: targetId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Target Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
     const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     const block = await createBlock(t, sourceId, ctx.campaignId, {
@@ -674,7 +675,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       plainText: '[[Target Note#Section|Alias]]',
     })
 
-    await runSync(t, ctx.campaignId, sourceId, [toPersistedBlock(sourceId, block)])
+    await runSync(t, ctx.campaignId, sourceId, [toBlock(sourceId, block)])
 
     const resolvedLink = (await listLinksForNote(t, ctx.campaignId, sourceId))[0]
     expect(resolvedLink.targetItemId).toBe(targetId)
@@ -685,7 +686,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       })
     })
 
-    await runSync(t, ctx.campaignId, sourceId, [toPersistedBlock(sourceId, block)])
+    await runSync(t, ctx.campaignId, sourceId, [toBlock(sourceId, block)])
 
     const links = await listLinksForNote(t, ctx.campaignId, sourceId)
     expect(links).toHaveLength(1)
@@ -694,6 +695,42 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       targetItemId: null,
       query: 'Target Note#Section',
       displayName: 'Alias',
+      syntax: 'wiki',
+    })
+  })
+
+  it('resolves relative wiki links from the source note parent folder', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { folderId: worldId } = await dmAuth.mutation(api.folders.mutations.createFolder, {
+      campaignId: ctx.campaignId,
+      name: 'World',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+    const { noteId: targetId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      campaignId: ctx.campaignId,
+      name: 'Capital',
+      parentTarget: { kind: 'direct', parentId: worldId },
+    })
+    const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      campaignId: ctx.campaignId,
+      name: 'Source Note',
+      parentTarget: { kind: 'direct', parentId: worldId },
+    })
+
+    const block = await createBlock(t, sourceId, ctx.campaignId, {
+      blockNoteId: 'block-a',
+      plainText: '[[./Capital]]',
+    })
+
+    await runSync(t, ctx.campaignId, sourceId, [toBlock(sourceId, block)])
+
+    const links = await listLinksForNote(t, ctx.campaignId, sourceId)
+    expect(links).toHaveLength(1)
+    expect(links[0]).toMatchObject({
+      targetItemId: targetId,
+      query: './Capital',
       syntax: 'wiki',
     })
   })

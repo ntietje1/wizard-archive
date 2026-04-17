@@ -1,10 +1,10 @@
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import type { SidebarItemLocation } from '../types/baseTypes'
 import type { Doc, Id } from '../../_generated/dataModel'
-import type { QueryCtx } from '../../_generated/server'
+import type { MutationCtx, QueryCtx } from '../../_generated/server'
 
 export async function collectDescendants(
-  ctx: QueryCtx,
+  ctx: QueryCtx | MutationCtx,
   {
     campaignId,
     location,

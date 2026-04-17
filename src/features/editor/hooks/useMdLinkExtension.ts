@@ -69,6 +69,7 @@ function findMdLinks(doc: ProseMirrorNode, resolver: LinkResolver): Array<MdLink
       const parsed = { displayText, ...parseMdLinkTarget(target) }
       const resolved = resolver.resolveLink({
         syntax: 'md',
+        pathKind: parsed.pathKind,
         itemPath: parsed.itemPath,
         itemName: parsed.itemName,
         headingPath: parsed.headingPath,

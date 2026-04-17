@@ -52,7 +52,7 @@ describe('pushUpdate', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Test Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     const result = await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
@@ -71,7 +71,7 @@ describe('pushUpdate', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Test Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     const r1 = await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
@@ -103,7 +103,7 @@ describe('pushUpdate', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Shared Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await createSidebarShare(t, {
@@ -131,7 +131,7 @@ describe('pushUpdate', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'View Only Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await createSidebarShare(t, {
@@ -178,7 +178,7 @@ describe('pushUpdate', () => {
       const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
         campaignId: ctx.campaignId,
         name: 'Compact Note',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       })
 
       for (let i = 1; i <= COMPACT_INTERVAL; i++) {
@@ -212,7 +212,7 @@ describe('pushUpdate', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'No Compact Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     for (let i = 1; i < COMPACT_INTERVAL; i++) {
@@ -273,7 +273,7 @@ describe('pushAwareness', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Awareness Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     const state = makeAwarenessState()
@@ -305,7 +305,7 @@ describe('pushAwareness', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Upsert Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
@@ -340,7 +340,7 @@ describe('pushAwareness', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Multi Client Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
@@ -375,7 +375,7 @@ describe('pushAwareness', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'View Share Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await createSidebarShare(t, {
@@ -428,7 +428,7 @@ describe('removeAwareness', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Remove Awareness Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
@@ -461,7 +461,7 @@ describe('removeAwareness', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'No-op Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     const result = await dmAuth.mutation(api.yjsSync.mutations.removeAwareness, {
@@ -480,7 +480,7 @@ describe('removeAwareness', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Selective Remove Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {

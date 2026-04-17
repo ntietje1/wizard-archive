@@ -48,7 +48,7 @@ export function NoteContent({
             {children}
           </CollaborativeEditorLoader>
         ) : (
-          <StaticEditorInner content={content} onEditorChange={onEditorChange}>
+          <StaticEditorInner noteId={noteId} content={content} onEditorChange={onEditorChange}>
             {children}
           </StaticEditorInner>
         )}
@@ -91,6 +91,7 @@ function CollaborativeEditorLoader({
   return (
     <CollaborativeEditorInner
       key={instanceId}
+      noteId={noteId}
       doc={doc}
       provider={provider}
       user={{ name: userName, color: userColor }}
@@ -102,16 +103,18 @@ function CollaborativeEditorLoader({
 }
 
 function StaticEditorInner({
+  noteId,
   content,
   children,
   onEditorChange,
 }: {
+  noteId?: Id<'sidebarItems'>
   content: Array<CustomBlock>
   children?: React.ReactNode
   onEditorChange?: (editor: CustomBlockNoteEditor | null, doc: Doc | null) => void
 }) {
   const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
-  const linkResolver = useLinkResolver()
+  const linkResolver = useLinkResolver(noteId)
   const onEditorChangeRef = useRef(onEditorChange)
   onEditorChangeRef.current = onEditorChange
   const hasInitializedRef = useRef(false)
@@ -149,18 +152,20 @@ function StaticEditorInner({
       <NoteView editor={editor} editable={false} linkResolver={linkResolver}>
         {children}
       </NoteView>
-      <LinkClickHandler editor={editor} />
+      <LinkClickHandler editor={editor} sourceNoteId={noteId} />
     </>
   )
 }
 
 function CollaborativeEditorInner({
+  noteId,
   doc,
   provider,
   user,
   children,
   onEditorChange,
 }: {
+  noteId: Id<'sidebarItems'>
   doc: Doc
   provider: ConvexYjsProvider
   user: { name: string; color: string }
@@ -168,7 +173,7 @@ function CollaborativeEditorInner({
   onEditorChange?: (editor: CustomBlockNoteEditor | null, doc: Doc | null) => void
 }) {
   const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
-  const linkResolver = useLinkResolver()
+  const linkResolver = useLinkResolver(noteId)
   const onEditorChangeRef = useRef(onEditorChange)
   onEditorChangeRef.current = onEditorChange
 
@@ -223,8 +228,12 @@ function CollaborativeEditorInner({
       <NoteView editor={editor} editable={true} linkResolver={linkResolver}>
         {children}
       </NoteView>
-      <LinkClickHandler editor={editor} />
-      <WikiLinkAutocomplete editor={editor} onForceOpenRef={forceOpenLinkPopover} />
+      <LinkClickHandler editor={editor} sourceNoteId={noteId} />
+      <WikiLinkAutocomplete
+        editor={editor}
+        onForceOpenRef={forceOpenLinkPopover}
+        sourceNoteId={noteId}
+      />
     </>
   )
 }

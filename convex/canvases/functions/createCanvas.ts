@@ -4,6 +4,7 @@ import {
   validateSidebarCreateParent,
   validateSidebarItemName,
 } from '../../sidebarItems/validation'
+import type { CreateParentTarget } from '../../sidebarItems/createParentTarget'
 import { resolveOrCreateFolderPath } from '../../folders/functions/resolveOrCreateFolderPath'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { createYjsDocument } from '../../yjsSync/functions/createYjsDocument'
@@ -17,20 +18,18 @@ export async function createCanvas(
   ctx: CampaignMutationCtx,
   {
     name,
-    parentId,
-    parentPath,
+    parentTarget,
     iconName,
     color,
   }: {
     name: string
-    parentId: Id<'sidebarItems'> | null
-    parentPath?: Array<string>
+    parentTarget: CreateParentTarget
     iconName?: string
     color?: string
   },
 ): Promise<{ canvasId: Id<'sidebarItems'>; slug: string }> {
   const trimmedName = name.trim()
-  const resolvedParentId = await resolveOrCreateFolderPath(ctx, { parentId, parentPath })
+  const resolvedParentId = await resolveOrCreateFolderPath(ctx, { parentTarget })
 
   await validateSidebarCreateParent(ctx, { parentId: resolvedParentId })
   await validateSidebarItemName(ctx, {

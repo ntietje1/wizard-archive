@@ -4,11 +4,11 @@ import {
   parseMdLinkTarget,
   parseWikiLinkText,
 } from '../linkParsers'
-import { resolveItemByPath } from '../linkResolution'
+import { resolveParsedItemPath } from '../linkResolution'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { ParsedLinkData, LinkSyntax } from '../types'
-import type { PersistedBlockRecord } from '../../blocks/types'
+import type { Block } from '../../blocks/types'
 
 interface NoteLinkRow {
   sourceNoteId: Id<'sidebarItems'>
@@ -29,7 +29,7 @@ export async function syncNoteLinks(
   }: {
     noteId: Id<'sidebarItems'>
     campaignId: Id<'campaigns'>
-    blocks: Array<PersistedBlockRecord>
+    blocks: Array<Block>
   },
 ): Promise<void> {
   const [allItems, existingLinks] = await Promise.all([
@@ -46,6 +46,8 @@ export async function syncNoteLinks(
   ])
 
   const itemsMap = new Map(allItems.map((item) => [item._id, item]))
+  const sourceNote = itemsMap.get(noteId)
+  const sourceParentId = sourceNote?.parentId
   const desiredRowsByKey = new Map<string, NoteLinkRow>()
 
   for (const block of blocks) {
@@ -53,7 +55,13 @@ export async function syncNoteLinks(
     for (const link of parsedLinks) {
       if (link.isExternal) continue
 
-      const resolved = resolveItemByPath(link.itemPath, allItems, itemsMap)
+      const resolved = resolveParsedItemPath(
+        link.pathKind,
+        link.itemPath,
+        allItems,
+        itemsMap,
+        sourceParentId,
+      )
       const row: NoteLinkRow = {
         sourceNoteId: noteId,
         targetItemId: resolved?._id ?? null,
@@ -131,6 +139,7 @@ function extractLinksFromText(text: string): Array<ParsedLinkData> {
       index: wikiMatch.index,
       link: {
         syntax: 'wiki',
+        pathKind: parsed.pathKind,
         itemPath: parsed.itemPath,
         itemName: parsed.itemName,
         headingPath: parsed.headingPath,
@@ -151,6 +160,7 @@ function extractLinksFromText(text: string): Array<ParsedLinkData> {
       index: mdMatch.index,
       link: {
         syntax: 'md',
+        pathKind: parsed.pathKind,
         itemPath: parsed.itemPath,
         itemName: parsed.itemName,
         headingPath: parsed.headingPath,

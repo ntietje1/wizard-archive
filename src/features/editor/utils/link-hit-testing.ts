@@ -1,9 +1,10 @@
 import { LINK_ROLE } from './link-decoration'
-import type { LinkType } from './link-decoration'
+import type { LinkPathKind, LinkType } from './link-decoration'
 
 export interface ParsedLinkElement {
   element: Element
   exists: boolean
+  pathKind: LinkPathKind
   itemPath: Array<string>
   itemName: string | null
   href: string | null
@@ -42,6 +43,7 @@ export function parseLinkElement(linkEl: Element): ParsedLinkElement | null {
   return {
     element: linkEl,
     exists: linkEl.getAttribute('data-link-exists') === 'true',
+    pathKind: linkEl.getAttribute('data-link-path-kind') === 'relative' ? 'relative' : 'global',
     itemPath: itemPath ?? [],
     itemName: linkEl.getAttribute('data-link-item-name'),
     href: linkEl.getAttribute('data-link-href'),

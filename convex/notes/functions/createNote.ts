@@ -7,6 +7,7 @@ import {
   validateSidebarItemName,
 } from '../../sidebarItems/validation'
 import { resolveOrCreateFolderPath } from '../../folders/functions/resolveOrCreateFolderPath'
+import type { CreateParentTarget } from '../../sidebarItems/createParentTarget'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { createYjsDocument } from '../../yjsSync/functions/createYjsDocument'
 import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
@@ -21,22 +22,20 @@ export async function createNote(
   ctx: CampaignMutationCtx,
   {
     name,
-    parentId,
-    parentPath,
+    parentTarget,
     iconName,
     color,
     content,
   }: {
     name: string
-    parentId: Id<'sidebarItems'> | null
-    parentPath?: Array<string>
+    parentTarget: CreateParentTarget
     iconName?: string
     color?: string
     content?: Array<CustomBlock>
   },
 ): Promise<{ noteId: Id<'sidebarItems'>; slug: string }> {
   const trimmedName = name.trim()
-  const resolvedParentId = await resolveOrCreateFolderPath(ctx, { parentId, parentPath })
+  const resolvedParentId = await resolveOrCreateFolderPath(ctx, { parentTarget })
 
   await validateSidebarCreateParent(ctx, { parentId: resolvedParentId })
   await validateSidebarItemName(ctx, {

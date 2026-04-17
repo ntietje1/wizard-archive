@@ -3,6 +3,7 @@ import { campaignMutation } from '../functions'
 import { customBlockValidator } from '../blocks/schema'
 import { ensureBlocksPersisted } from '../blocks/functions/ensureBlocksPersisted'
 import { checkYjsWriteAccess } from '../yjsSync/functions/checkYjsAccess'
+import { createItemParentArgsValidator } from '../sidebarItems/createParentTarget'
 import { createNote as createNoteFn } from './functions/createNote'
 import { updateNote as updateNoteFn } from './functions/updateNote'
 import type { Id } from '../_generated/dataModel'
@@ -30,9 +31,8 @@ export const updateNote = campaignMutation({
 
 export const createNote = campaignMutation({
   args: {
+    ...createItemParentArgsValidator,
     name: v.string(),
-    parentId: v.nullable(v.id('sidebarItems')),
-    parentPath: v.optional(v.array(v.string())),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
     content: v.optional(v.array(customBlockValidator)),
@@ -44,8 +44,7 @@ export const createNote = campaignMutation({
   handler: async (ctx, args): Promise<{ noteId: Id<'sidebarItems'>; slug: string }> => {
     return await createNoteFn(ctx, {
       name: args.name,
-      parentId: args.parentId,
-      parentPath: args.parentPath,
+      parentTarget: args.parentTarget,
       iconName: args.iconName,
       color: args.color,
       content: args.content,

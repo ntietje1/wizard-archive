@@ -148,7 +148,7 @@ function NotSharedContent() {
       const result = await createItem({
         type: SIDEBAR_ITEM_TYPES.notes,
         campaignId,
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
         name: getDefaultName(SIDEBAR_ITEM_TYPES.notes, null),
       })
       openParentFolders(result.id)

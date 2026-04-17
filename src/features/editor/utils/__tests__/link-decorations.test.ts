@@ -29,6 +29,7 @@ describe('link decoration entries', () => {
         parsed,
         resolved: {
           syntax: 'wiki',
+          pathKind: parsed.pathKind,
           itemPath: parsed.itemPath,
           itemName: parsed.itemName,
           headingPath: parsed.headingPath,
@@ -82,6 +83,7 @@ describe('link decoration entries', () => {
         parsed,
         resolved: {
           syntax: 'wiki',
+          pathKind: parsed.pathKind,
           itemPath: parsed.itemPath,
           itemName: parsed.itemName,
           headingPath: parsed.headingPath,
@@ -122,6 +124,7 @@ describe('link decoration entries', () => {
         parsed,
         resolved: {
           syntax: 'md',
+          pathKind: parsed.pathKind,
           itemPath: parsed.itemPath,
           itemName: parsed.itemName,
           headingPath: parsed.headingPath,
@@ -175,6 +178,7 @@ describe('link decoration entries', () => {
         parsed,
         resolved: {
           syntax: 'md',
+          pathKind: parsed.pathKind,
           itemPath: parsed.itemPath,
           itemName: parsed.itemName,
           headingPath: parsed.headingPath,

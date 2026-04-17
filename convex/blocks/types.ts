@@ -50,5 +50,3 @@ export type Block = ConvexValidatorFields<'blocks'> & {
   campaignId: Id<'campaigns'>
   shareStatus: ShareStatus | null
 }
-
-export type PersistedBlockRecord = Omit<Block, '_creationTime'>

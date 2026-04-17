@@ -36,6 +36,7 @@ export function buildWikiLinkDecorationEntries(
     type: 'wiki',
     exists: resolved.resolved,
     href: resolved.href,
+    pathKind: parsed.pathKind,
     itemPath: parsed.itemPath,
     itemName: parsed.itemName,
     heading: parsed.headingPath.length > 0 ? parsed.headingPath.join('#') : null,

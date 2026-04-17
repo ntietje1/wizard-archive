@@ -97,6 +97,7 @@ import type * as files_types from "../files/types.js";
 import type * as folders_baseSchema from "../folders/baseSchema.js";
 import type * as folders_functions_createFolder from "../folders/functions/createFolder.js";
 import type * as folders_functions_enhanceFolder from "../folders/functions/enhanceFolder.js";
+import type * as folders_functions_folderHelpers from "../folders/functions/folderHelpers.js";
 import type * as folders_functions_getFolderContentsForDownload from "../folders/functions/getFolderContentsForDownload.js";
 import type * as folders_functions_getSidebarItemAncestors from "../folders/functions/getSidebarItemAncestors.js";
 import type * as folders_functions_resolveOrCreateFolderPath from "../folders/functions/resolveOrCreateFolderPath.js";
@@ -125,6 +126,7 @@ import type * as gameMaps_validation from "../gameMaps/validation.js";
 import type * as http from "../http.js";
 import type * as links_functions_getBacklinksForItem from "../links/functions/getBacklinksForItem.js";
 import type * as links_functions_getOutgoingLinksForNote from "../links/functions/getOutgoingLinksForNote.js";
+import type * as links_functions_resyncNoteLinksForNotes from "../links/functions/resyncNoteLinksForNotes.js";
 import type * as links_functions_syncNoteLinks from "../links/functions/syncNoteLinks.js";
 import type * as links_linkParsers from "../links/linkParsers.js";
 import type * as links_linkResolution from "../links/linkResolution.js";
@@ -153,6 +155,7 @@ import type * as sessions_functions_updateSession from "../sessions/functions/up
 import type * as sessions_mutations from "../sessions/mutations.js";
 import type * as sessions_queries from "../sessions/queries.js";
 import type * as sessions_types from "../sessions/types.js";
+import type * as sidebarItems_createParentTarget from "../sidebarItems/createParentTarget.js";
 import type * as sidebarItems_functions_claimPreviewGeneration from "../sidebarItems/functions/claimPreviewGeneration.js";
 import type * as sidebarItems_functions_collectDescendants from "../sidebarItems/functions/collectDescendants.js";
 import type * as sidebarItems_functions_defaultItemName from "../sidebarItems/functions/defaultItemName.js";
@@ -323,6 +326,7 @@ declare const fullApi: ApiFromModules<{
   "folders/baseSchema": typeof folders_baseSchema;
   "folders/functions/createFolder": typeof folders_functions_createFolder;
   "folders/functions/enhanceFolder": typeof folders_functions_enhanceFolder;
+  "folders/functions/folderHelpers": typeof folders_functions_folderHelpers;
   "folders/functions/getFolderContentsForDownload": typeof folders_functions_getFolderContentsForDownload;
   "folders/functions/getSidebarItemAncestors": typeof folders_functions_getSidebarItemAncestors;
   "folders/functions/resolveOrCreateFolderPath": typeof folders_functions_resolveOrCreateFolderPath;
@@ -351,6 +355,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "links/functions/getBacklinksForItem": typeof links_functions_getBacklinksForItem;
   "links/functions/getOutgoingLinksForNote": typeof links_functions_getOutgoingLinksForNote;
+  "links/functions/resyncNoteLinksForNotes": typeof links_functions_resyncNoteLinksForNotes;
   "links/functions/syncNoteLinks": typeof links_functions_syncNoteLinks;
   "links/linkParsers": typeof links_linkParsers;
   "links/linkResolution": typeof links_linkResolution;
@@ -379,6 +384,7 @@ declare const fullApi: ApiFromModules<{
   "sessions/mutations": typeof sessions_mutations;
   "sessions/queries": typeof sessions_queries;
   "sessions/types": typeof sessions_types;
+  "sidebarItems/createParentTarget": typeof sidebarItems_createParentTarget;
   "sidebarItems/functions/claimPreviewGeneration": typeof sidebarItems_functions_claimPreviewGeneration;
   "sidebarItems/functions/collectDescendants": typeof sidebarItems_functions_collectDescendants;
   "sidebarItems/functions/defaultItemName": typeof sidebarItems_functions_defaultItemName;

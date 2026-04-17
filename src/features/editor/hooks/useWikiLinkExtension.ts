@@ -57,6 +57,7 @@ function findWikiLinks(
       const parsed = parseWikiLinkText(innerText)
       const resolved = resolver.resolveLink({
         syntax: 'wiki',
+        pathKind: parsed.pathKind,
         itemPath: parsed.itemPath,
         itemName: parsed.itemName,
         headingPath: parsed.headingPath,

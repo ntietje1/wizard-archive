@@ -1,4 +1,4 @@
-import type { ParsedLinkData } from './types'
+import type { LinkPathKind, ParsedLinkData } from './types'
 
 export const WIKI_LINK_REGEX = /\[\[((?:(?!\[\[)(?!\]\][^\]]).)+?)\]\](?=$|[^\]])/g
 
@@ -34,6 +34,7 @@ export function isDangerousUrl(str: string): boolean {
 }
 
 export interface ParsedWikiLinkFields {
+  pathKind: LinkPathKind
   itemPath: Array<string>
   itemName: string
   headingPath: Array<string>
@@ -51,9 +52,10 @@ function parsePathAndHeading(text: string): Omit<ParsedWikiLinkFields, 'displayN
     .split('/')
     .map((segment) => segment.trim())
     .filter(Boolean)
+  const pathKind: LinkPathKind = itemPath[0] === '.' || itemPath[0] === '..' ? 'relative' : 'global'
   const itemName = itemPath[itemPath.length - 1] || ''
 
-  return { itemPath, itemName, headingPath }
+  return { pathKind, itemPath, itemName, headingPath }
 }
 
 export function parseWikiLinkText(text: string): ParsedWikiLinkFields {
@@ -66,14 +68,15 @@ export function parseWikiLinkText(text: string): ParsedWikiLinkFields {
     remainingText = text.slice(0, lastPipeIndex)
   }
 
-  const { itemPath, itemName, headingPath } = parsePathAndHeading(remainingText)
+  const { pathKind, itemPath, itemName, headingPath } = parsePathAndHeading(remainingText)
 
-  return { itemPath, itemName, headingPath, displayName }
+  return { pathKind, itemPath, itemName, headingPath, displayName }
 }
 
 export interface ParsedMdLinkFields {
   target: string
   isExternal: boolean
+  pathKind: LinkPathKind
   itemPath: Array<string>
   itemName: string
   headingPath: Array<string>
@@ -84,15 +87,16 @@ export function parseMdLinkTarget(target: string): ParsedMdLinkFields {
     return {
       target,
       isExternal: true,
+      pathKind: 'global',
       itemPath: [],
       itemName: '',
       headingPath: [],
     }
   }
 
-  const { itemPath, itemName, headingPath } = parsePathAndHeading(target)
+  const { pathKind, itemPath, itemName, headingPath } = parsePathAndHeading(target)
 
-  return { target, isExternal: false, itemPath, itemName, headingPath }
+  return { target, isExternal: false, pathKind, itemPath, itemName, headingPath }
 }
 
 export function extractWikiLinksFromText(text: string): Array<ParsedLinkData> {
@@ -102,6 +106,7 @@ export function extractWikiLinksFromText(text: string): Array<ParsedLinkData> {
     const parsed = parseWikiLinkText(innerText)
     links.push({
       syntax: 'wiki',
+      pathKind: parsed.pathKind,
       itemPath: parsed.itemPath,
       itemName: parsed.itemName,
       headingPath: parsed.headingPath,
@@ -122,6 +127,7 @@ export function extractMdLinksFromText(text: string): Array<ParsedLinkData> {
     const parsed = parseMdLinkTarget(target)
     links.push({
       syntax: 'md',
+      pathKind: parsed.pathKind,
       itemPath: parsed.itemPath,
       itemName: parsed.itemName,
       headingPath: parsed.headingPath,

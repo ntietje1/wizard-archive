@@ -155,7 +155,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Nested Note',
-      parentId: folderId,
+      parentTarget: { kind: 'direct', parentId: folderId },
     })
 
     const playerNote = await playerAuth.query(api.notes.queries.getNote, {

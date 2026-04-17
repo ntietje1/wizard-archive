@@ -1,5 +1,5 @@
 import { isDangerousUrl } from 'convex/links/linkParsers'
-import { resolveItemByPath } from 'convex/links/linkResolution'
+import { resolveParsedItemPath } from 'convex/links/linkResolution'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
@@ -17,13 +17,14 @@ export interface LinkResolver {
 
 const EMPTY_ITEMS: Array<AnySidebarItem> = []
 
-export function useLinkResolver(): LinkResolver {
+export function useLinkResolver(sourceNoteId?: Id<'sidebarItems'>): LinkResolver {
   const { data: sidebarItems, itemsMap } = useActiveSidebarItems()
   const { dmUsername, campaignSlug } = useCampaign()
   const { editorMode, viewAsPlayerId } = useEditorMode()
 
   const allItems = sidebarItems ?? EMPTY_ITEMS
   const isViewerMode = editorMode === 'viewer' || viewAsPlayerId !== undefined
+  const sourceParentId = sourceNoteId ? itemsMap.get(sourceNoteId)?.parentId : undefined
 
   const resolveLink = (parsed: ParsedLinkData): ResolvedLink => {
     if (parsed.isExternal) {
@@ -47,7 +48,13 @@ export function useLinkResolver(): LinkResolver {
       }
     }
 
-    const item = resolveItemByPath(parsed.itemPath, allItems, itemsMap)
+    const item = resolveParsedItemPath(
+      parsed.pathKind,
+      parsed.itemPath,
+      allItems,
+      itemsMap,
+      sourceParentId,
+    )
     if (!item) {
       return {
         ...parsed,

@@ -38,6 +38,7 @@ export function buildMdLinkDecorationEntries(
     type: linkType,
     exists: parsed.isExternal || resolved.resolved,
     href: resolved.href,
+    pathKind: parsed.isExternal ? null : parsed.pathKind,
     itemPath: parsed.isExternal ? null : parsed.itemPath,
     itemName: parsed.isExternal ? null : parsed.itemName,
     heading:

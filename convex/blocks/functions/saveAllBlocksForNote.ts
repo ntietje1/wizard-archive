@@ -7,12 +7,12 @@ import { updateBlock } from './updateBlock'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 import type { CustomBlock } from '../../notes/editorSpecs'
-import type { PersistedBlockRecord } from '../types'
+import type { Block } from '../types'
 
 export async function saveAllBlocksForNote(
   ctx: CampaignMutationCtx,
   { noteId, content }: { noteId: Id<'sidebarItems'>; content: Array<CustomBlock> },
-): Promise<Array<PersistedBlockRecord>> {
+): Promise<Array<Block>> {
   const note = await ctx.db.get('sidebarItems', noteId)
   if (!note) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
   if (note.deletionTime !== null) return []
@@ -38,9 +38,9 @@ export async function saveAllBlocksForNote(
   }
   const flatBlocks = [...deduped.values()]
   const incomingBlockIds = new Set(flatBlocks.map((b) => b.blockNoteId))
-  const persistedBlocks = await asyncMap(
+  await asyncMap(
     flatBlocks,
-    async (flat): Promise<PersistedBlockRecord> => {
+    async (flat): Promise<void> => {
       const existing = existingBlocksMap.get(flat.blockNoteId)
       if (existing) {
         await updateBlock(ctx, {
@@ -53,23 +53,10 @@ export async function saveAllBlocksForNote(
           inlineContent: flat.inlineContent,
           plainText: flat.plainText,
         })
-        return {
-          _id: existing._id,
-          noteId,
-          campaignId,
-          blockNoteId: flat.blockNoteId,
-          parentBlockId: flat.parentBlockId,
-          depth: flat.depth,
-          position: flat.position,
-          type: flat.type,
-          props: flat.props,
-          inlineContent: flat.inlineContent,
-          plainText: flat.plainText,
-          shareStatus: existing.shareStatus,
-        }
+        return
       }
 
-      const blockId = await insertBlock(ctx, {
+      await insertBlock(ctx, {
         noteId,
         campaignId,
         blockNoteId: flat.blockNoteId,
@@ -82,21 +69,6 @@ export async function saveAllBlocksForNote(
         plainText: flat.plainText,
         shareStatus: SHARE_STATUS.NOT_SHARED,
       })
-
-      return {
-        _id: blockId,
-        noteId,
-        campaignId,
-        blockNoteId: flat.blockNoteId,
-        parentBlockId: flat.parentBlockId,
-        depth: flat.depth,
-        position: flat.position,
-        type: flat.type,
-        props: flat.props,
-        inlineContent: flat.inlineContent,
-        plainText: flat.plainText,
-        shareStatus: SHARE_STATUS.NOT_SHARED,
-      }
     },
   )
 
@@ -114,5 +86,15 @@ export async function saveAllBlocksForNote(
     await ctx.db.delete('blocks', block._id)
   })
 
-  return persistedBlocks
+  const finalBlocks = await ctx.db
+    .query('blocks')
+    .withIndex('by_campaign_note_block', (q) => q.eq('campaignId', campaignId).eq('noteId', noteId))
+    .collect()
+  const finalBlocksMap = new Map(finalBlocks.map((block) => [block.blockNoteId, block]))
+
+  return flatBlocks.map((flat) => {
+    const block = finalBlocksMap.get(flat.blockNoteId)
+    if (!block) throw new Error(`Block ${flat.blockNoteId} missing after saveAllBlocksForNote`)
+    return block
+  })
 }

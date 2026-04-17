@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { parseWikiLinkText } from 'convex/links/linkParsers'
 import { getWikiLinkContext, splitWikiLinkTargetAndDisplayName } from './wiki-link-utils'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
@@ -14,8 +15,8 @@ import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { SearchResultItem } from '~/features/search/components/search-result-item'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import {
-  getItemPath,
   getMinDisambiguationPath,
+  resolveParsedItemPath,
   resolveItemByPath,
 } from 'convex/links/linkResolution'
 import { filterSuggestionItems } from '~/features/editor/utils/filter-suggestion-items'
@@ -42,25 +43,122 @@ interface HeadingItem {
 
 interface AutocompleteContext {
   mode: AutocompleteMode
+  pathKind: 'global' | 'relative'
   fileQuery: string
   completedFolderPath: Array<string>
-  resolvedParentFolder: AnySidebarItem | null
+  resolvedParentId: Id<'sidebarItems'> | null | undefined
   headingQuery: string
   completedHeadingPath: Array<string>
   resolvedItem: AnySidebarItem | null
+}
+
+function parseAutocompleteFileQuery(query: string): {
+  pathKind: 'global' | 'relative'
+  completedFolderPath: Array<string>
+  fileQuery: string
+} {
+  const trimmedQuery = query.trim()
+  if (!trimmedQuery) {
+    return {
+      pathKind: 'global',
+      completedFolderPath: [],
+      fileQuery: '',
+    }
+  }
+
+  const hasTrailingSlash = trimmedQuery.endsWith('/')
+  const segments = trimmedQuery.split('/').map((segment) => segment.trim())
+  const pathKind =
+    segments[0] === '.' || segments[0] === '..' ? ('relative' as const) : ('global' as const)
+
+  if (hasTrailingSlash) {
+    return {
+      pathKind,
+      completedFolderPath: segments.slice(0, -1).filter(Boolean),
+      fileQuery: '',
+    }
+  }
+
+  return {
+    pathKind,
+    completedFolderPath: segments.slice(0, -1).filter(Boolean),
+    fileQuery: segments.at(-1) ?? '',
+  }
+}
+
+function resolveCompletedFolderPath(
+  pathKind: 'global' | 'relative',
+  completedFolderPath: Array<string>,
+  sourceParentId: Id<'sidebarItems'> | null | undefined,
+  allItems: Array<AnySidebarItem>,
+  itemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>,
+): Id<'sidebarItems'> | null | undefined {
+  if (completedFolderPath.length === 0) {
+    return pathKind === 'relative' ? sourceParentId : null
+  }
+
+  if (pathKind === 'global') {
+    const folder = resolveItemByPath(completedFolderPath, allItems, itemsMap)
+    return folder?._id
+  }
+
+  if (sourceParentId === undefined) {
+    return undefined
+  }
+
+  let currentParentId = sourceParentId
+  for (const segment of completedFolderPath) {
+    const normalizedSegment = segment.trim().toLowerCase()
+    if (!normalizedSegment) return undefined
+
+    if (normalizedSegment === '.') {
+      continue
+    }
+
+    if (normalizedSegment === '..') {
+      if (currentParentId === null) {
+        return undefined
+      }
+
+      const currentFolder = itemsMap.get(currentParentId)
+      if (!currentFolder) {
+        return undefined
+      }
+
+      currentParentId = currentFolder.parentId
+      continue
+    }
+
+    const nextFolder = allItems.find((item) => {
+      return (
+        item.parentId === currentParentId &&
+        item.type === SIDEBAR_ITEM_TYPES.folders &&
+        item.name.trim().toLowerCase() === normalizedSegment
+      )
+    })
+    if (!nextFolder) {
+      return undefined
+    }
+
+    currentParentId = nextFolder._id
+  }
+
+  return currentParentId
 }
 
 function getAutocompleteContext(
   query: string,
   allItems: Array<AnySidebarItem>,
   itemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>,
+  sourceParentId: Id<'sidebarItems'> | null | undefined,
 ): AutocompleteContext {
   if (query.includes('|')) {
     return {
       mode: 'display-name',
+      pathKind: 'global',
       fileQuery: '',
       completedFolderPath: [],
-      resolvedParentFolder: null,
+      resolvedParentId: undefined,
       headingQuery: '',
       completedHeadingPath: [],
       resolvedItem: null,
@@ -69,23 +167,21 @@ function getAutocompleteContext(
 
   const hashIdx = query.indexOf('#')
   if (hashIdx === -1) {
-    const segments = query.split('/')
-    const currentQuery = segments.at(-1) || ''
-    const completedFolderPath = segments
-      .slice(0, -1)
-      .map((s) => s.trim())
-      .filter(Boolean)
-
-    const resolvedParentFolder =
-      completedFolderPath.length > 0
-        ? (resolveItemByPath(completedFolderPath, allItems, itemsMap) ?? null)
-        : null
+    const { pathKind, completedFolderPath, fileQuery } = parseAutocompleteFileQuery(query)
+    const resolvedParentId = resolveCompletedFolderPath(
+      pathKind,
+      completedFolderPath,
+      sourceParentId,
+      allItems,
+      itemsMap,
+    )
 
     return {
       mode: 'file',
-      fileQuery: currentQuery,
+      pathKind,
+      fileQuery,
       completedFolderPath,
-      resolvedParentFolder,
+      resolvedParentId,
       headingQuery: '',
       completedHeadingPath: [],
       resolvedItem: null,
@@ -93,30 +189,34 @@ function getAutocompleteContext(
   }
 
   const filePath = query.slice(0, hashIdx)
-  const filePathSegments = filePath
-    .split('/')
-    .map((s) => s.trim())
-    .filter(Boolean)
+  const parsedFilePath = parseWikiLinkText(filePath)
+  const filePathSegments = parsedFilePath.itemPath
 
-  const item = resolveItemByPath(filePathSegments, allItems, itemsMap)
+  const item = resolveParsedItemPath(
+    parsedFilePath.pathKind,
+    filePathSegments,
+    allItems,
+    itemsMap,
+    sourceParentId,
+  )
 
   if (!item || item.type !== SIDEBAR_ITEM_TYPES.notes) {
-    const segments = query.split('/')
-    const currentQuery = segments.at(-1) || ''
-    const completedFolderPath = segments
-      .slice(0, -1)
-      .map((s) => s.trim())
-      .filter(Boolean)
-    const resolvedParentFolder =
-      completedFolderPath.length > 0
-        ? (resolveItemByPath(completedFolderPath, allItems, itemsMap) ?? null)
-        : null
+    const currentQuery = filePathSegments.at(-1) || ''
+    const completedFolderPath = filePathSegments.slice(0, -1)
+    const resolvedParentId = resolveCompletedFolderPath(
+      parsedFilePath.pathKind,
+      completedFolderPath,
+      sourceParentId,
+      allItems,
+      itemsMap,
+    )
 
     return {
       mode: 'file',
+      pathKind: parsedFilePath.pathKind,
       fileQuery: currentQuery,
       completedFolderPath,
-      resolvedParentFolder,
+      resolvedParentId,
       headingQuery: '',
       completedHeadingPath: [],
       resolvedItem: null,
@@ -126,9 +226,10 @@ function getAutocompleteContext(
   const parts = query.slice(hashIdx + 1).split('#')
   return {
     mode: 'heading',
+    pathKind: parsedFilePath.pathKind,
     fileQuery: filePath,
     completedFolderPath: filePathSegments.slice(0, -1),
-    resolvedParentFolder: null,
+    resolvedParentId: undefined,
     headingQuery: parts.at(-1) || '',
     completedHeadingPath: parts.slice(0, -1),
     resolvedItem: item,
@@ -193,9 +294,11 @@ function buildHeadingItems(
 export function WikiLinkAutocomplete({
   editor,
   onForceOpenRef,
+  sourceNoteId,
 }: {
   editor: CustomBlockNoteEditor | undefined
   onForceOpenRef?: React.RefObject<(() => void) | null>
+  sourceNoteId?: Id<'sidebarItems'>
 }) {
   const { data: sidebarItems, itemsMap } = useActiveSidebarItems()
   const editorEl = useEditorDomElement(editor)
@@ -215,7 +318,11 @@ export function WikiLinkAutocomplete({
   const preservedDisplayNameRef = useRef<string | null>(null)
   const selectedItemRef = useRef<HTMLDivElement>(null)
 
-  const context = menu.show ? getAutocompleteContext(menu.query, sidebarItems, itemsMap) : null
+  const sourceParentId = sourceNoteId ? itemsMap.get(sourceNoteId)?.parentId : undefined
+
+  const context = menu.show
+    ? getAutocompleteContext(menu.query, sidebarItems, itemsMap, sourceParentId)
+    : null
 
   const headingsQuery = useCampaignQuery(
     api.blocks.queries.getHeadingsByNote,
@@ -234,18 +341,10 @@ export function WikiLinkAutocomplete({
 
     let itemsToShow = sidebarItems
     if (context.completedFolderPath.length > 0) {
-      if (context.resolvedParentFolder) {
-        itemsToShow = sidebarItems.filter(
-          (item) => item.parentId === context.resolvedParentFolder?._id,
-        )
-      } else {
-        const normalizedPath = context.completedFolderPath.map((s) => s.toLowerCase())
-        itemsToShow = sidebarItems.filter((item) => {
-          const itemPath = getItemPath(item, itemsMap).map((s) => s.toLowerCase())
-          if (itemPath.length <= normalizedPath.length) return false
-          return normalizedPath.every((segment, i) => itemPath[i] === segment)
-        })
-      }
+      itemsToShow =
+        context.resolvedParentId === undefined
+          ? []
+          : sidebarItems.filter((item) => item.parentId === context.resolvedParentId)
     }
 
     const all = itemsToShow.map((item) => ({
@@ -410,7 +509,7 @@ export function WikiLinkAutocomplete({
       if (ctx.mode === 'file') {
         const fileItem = item as FileItem
         const pathParts =
-          ctx.completedFolderPath.length > 0
+          ctx.pathKind === 'relative' || ctx.completedFolderPath.length > 0
             ? [...ctx.completedFolderPath, fileItem.title]
             : fileItem.linkPath
         const path = pathParts.join('/')
@@ -472,7 +571,11 @@ export function WikiLinkAutocomplete({
       const from = wikiCtx.startPos
       const to = wikiCtx.endPos
 
-      const folderPath = item.linkPath.join('/')
+      const pathParts =
+        ctx.pathKind === 'relative' || ctx.completedFolderPath.length > 0
+          ? [...ctx.completedFolderPath, item.title]
+          : item.linkPath
+      const folderPath = pathParts.join('/')
 
       tiptap.chain().focus().insertContentAt({ from, to }, `[[${folderPath}/`).run()
     },

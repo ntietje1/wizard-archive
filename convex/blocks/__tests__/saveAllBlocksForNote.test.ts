@@ -92,7 +92,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Update Test',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await pushAndPersist(dmAuth, ctx.campaignId, noteId, [
@@ -135,7 +135,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Delete Test',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     const { blockDbId: removedBlockId } = await createBlock(t, noteId, ctx.campaignId, {
@@ -164,7 +164,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Share Cascade Test',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     const { blockDbId } = await createBlock(t, noteId, ctx.campaignId, {
@@ -200,7 +200,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Preserve Share Test',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await pushAndPersist(dmAuth, ctx.campaignId, noteId, [
@@ -242,7 +242,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Soft Delete Guard',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await pushAndPersist(dmAuth, ctx.campaignId, noteId, [
@@ -284,7 +284,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Empty Content Test',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await createBlock(t, noteId, ctx.campaignId, {
@@ -319,7 +319,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Nested Test',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await pushAndPersist(dmAuth, ctx.campaignId, noteId, [
@@ -381,7 +381,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Coexist Test',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await createBlock(t, noteId, ctx.campaignId, {
@@ -418,7 +418,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Deep Nesting',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await pushAndPersist(dmAuth, ctx.campaignId, noteId, [
@@ -485,7 +485,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Mixed Ops',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await createBlock(t, noteId, ctx.campaignId, {

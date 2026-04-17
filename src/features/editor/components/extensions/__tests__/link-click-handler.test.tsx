@@ -137,6 +137,7 @@ vi.mock('~/features/editor/utils/link-hit-testing', () => ({
 function createLink({
   exists,
   type,
+  pathKind = 'global',
   href = null,
   itemPath = [],
   itemName = null,
@@ -144,6 +145,7 @@ function createLink({
 }: {
   exists: boolean
   type: LinkType
+  pathKind?: 'global' | 'relative'
   href?: string | null
   itemPath?: Array<string>
   itemName?: string | null
@@ -157,6 +159,7 @@ function createLink({
   return {
     element,
     exists,
+    pathKind,
     itemPath,
     itemName,
     href,
@@ -263,6 +266,19 @@ describe('LinkClickHandler', () => {
     })
   })
 
+  it('shows a click-to-open tooltip for existing wiki links on ctrl hover in editor mode', () => {
+    getLinkAtMock.mockReturnValue(
+      createLink({ exists: true, type: 'wiki', href: '/dest?item=lore' }),
+    )
+
+    render(<LinkClickHandler editor={{} as CustomBlockNoteEditor} />)
+
+    fireEvent.mouseMove(editorEl, { clientX: 10, clientY: 20 })
+    fireEvent.keyDown(document, { key: 'Control' })
+
+    expect(screen.getByText('Click to open')).toBeInTheDocument()
+  })
+
   it('navigates on plain click and opens a new tab on ctrl/cmd click in viewer mode', () => {
     useEditorModeMock.mockReturnValue({ editorMode: 'viewer' })
     getLinkAtMock.mockReturnValue(
@@ -283,6 +299,20 @@ describe('LinkClickHandler', () => {
       '_blank',
       'noopener,noreferrer',
     )
+  })
+
+  it('does not show a click-to-open tooltip for existing links in viewer mode', () => {
+    useEditorModeMock.mockReturnValue({ editorMode: 'viewer' })
+    getLinkAtMock.mockReturnValue(
+      createLink({ exists: true, type: 'wiki', href: '/dest?item=lore' }),
+    )
+
+    render(<LinkClickHandler editor={{} as CustomBlockNoteEditor} />)
+
+    fireEvent.mouseMove(editorEl, { clientX: 10, clientY: 20 })
+    fireEvent.keyDown(document, { key: 'Control' })
+
+    expect(screen.queryByText('Click to open')).not.toBeInTheDocument()
   })
 
   it('passes the missing ancestor path when creating a ghost note', async () => {
@@ -307,8 +337,11 @@ describe('LinkClickHandler', () => {
       expect.objectContaining({
         campaignId: 'campaign-1',
         name: 'Ghost Note',
-        parentId: null,
-        parentPath: ['Lore', 'Capital', 'Districts'],
+        parentTarget: {
+          kind: 'path',
+          baseParentId: null,
+          pathSegments: ['Lore', 'Capital', 'Districts'],
+        },
       }),
     )
   })
@@ -347,8 +380,11 @@ describe('LinkClickHandler', () => {
       expect.objectContaining({
         campaignId: 'campaign-1',
         name: 'Ghost Note',
-        parentId: null,
-        parentPath: ['Lore', 'Capital', 'Districts'],
+        parentTarget: {
+          kind: 'path',
+          baseParentId: null,
+          pathSegments: ['Lore', 'Capital', 'Districts'],
+        },
       }),
     )
 
@@ -361,9 +397,9 @@ describe('LinkClickHandler', () => {
   it('allows concurrent ghost note creation for different link targets', async () => {
     const resolvers = new Map<string, (value: { noteId: string; slug: string }) => void>()
     createNoteMock.mockImplementation(
-      ({ parentPath }: { parentPath?: Array<string> }) =>
+      ({ parentTarget }: { parentTarget?: { pathSegments?: Array<string> } }) =>
         new Promise((resolve) => {
-          resolvers.set(parentPath?.join('/') ?? 'root', resolve)
+          resolvers.set(parentTarget?.pathSegments?.join('/') ?? 'root', resolve)
         }),
     )
     getLinkAtMock
@@ -397,8 +433,11 @@ describe('LinkClickHandler', () => {
       expect.objectContaining({
         campaignId: 'campaign-1',
         name: 'Ghost Note',
-        parentId: null,
-        parentPath: ['Lore', 'Capital', 'Districts'],
+        parentTarget: {
+          kind: 'path',
+          baseParentId: null,
+          pathSegments: ['Lore', 'Capital', 'Districts'],
+        },
       }),
     )
     expect(createNoteMock).toHaveBeenNthCalledWith(
@@ -406,8 +445,11 @@ describe('LinkClickHandler', () => {
       expect.objectContaining({
         campaignId: 'campaign-1',
         name: 'Ghost Note',
-        parentId: null,
-        parentPath: ['Worldbuilding', 'Regions', 'North'],
+        parentTarget: {
+          kind: 'path',
+          baseParentId: null,
+          pathSegments: ['Worldbuilding', 'Regions', 'North'],
+        },
       }),
     )
 
@@ -446,8 +488,11 @@ describe('LinkClickHandler', () => {
       expect.objectContaining({
         campaignId: 'campaign-1',
         name: 'Ghost Note',
-        parentId: null,
-        parentPath: ['Lore', 'Capital', 'Districts'],
+        parentTarget: {
+          kind: 'path',
+          baseParentId: null,
+          pathSegments: ['Lore', 'Capital', 'Districts'],
+        },
       }),
     )
     expect(createFolderMock).not.toHaveBeenCalled()
@@ -477,8 +522,11 @@ describe('LinkClickHandler', () => {
       expect.objectContaining({
         campaignId: 'campaign-1',
         name: 'Ghost Note',
-        parentId: null,
-        parentPath: ['Worldbuilding', 'Regions', 'North'],
+        parentTarget: {
+          kind: 'path',
+          baseParentId: null,
+          pathSegments: ['Worldbuilding', 'Regions', 'North'],
+        },
       }),
     )
   })
@@ -507,10 +555,158 @@ describe('LinkClickHandler', () => {
       expect.objectContaining({
         campaignId: 'campaign-1',
         name: 'Ghost Note',
-        parentId: null,
-        parentPath: ['Test', 'Child'],
+        parentTarget: {
+          kind: 'path',
+          baseParentId: null,
+          pathSegments: ['Test', 'Child'],
+        },
       }),
     )
+  })
+
+  it('creates relative ghost notes from the source note parent folder', async () => {
+    useActiveSidebarItemsMock.mockReturnValue({
+      data: [
+        { _id: 'folder-1', name: 'Lore', parentId: null, type: SIDEBAR_ITEM_TYPES.folders },
+        {
+          _id: 'folder-2',
+          name: 'Capital',
+          parentId: 'folder-1',
+          type: SIDEBAR_ITEM_TYPES.folders,
+        },
+        {
+          _id: 'note-source',
+          name: 'Source Note',
+          parentId: 'folder-2',
+          type: SIDEBAR_ITEM_TYPES.notes,
+        },
+      ],
+      itemsMap: new Map([
+        [
+          'folder-1',
+          { _id: 'folder-1', name: 'Lore', parentId: null, type: SIDEBAR_ITEM_TYPES.folders },
+        ],
+        [
+          'folder-2',
+          {
+            _id: 'folder-2',
+            name: 'Capital',
+            parentId: 'folder-1',
+            type: SIDEBAR_ITEM_TYPES.folders,
+          },
+        ],
+        [
+          'note-source',
+          {
+            _id: 'note-source',
+            name: 'Source Note',
+            parentId: 'folder-2',
+            type: SIDEBAR_ITEM_TYPES.notes,
+          },
+        ],
+      ]),
+      parentItemsMap: new Map(),
+    })
+    getLinkAtMock.mockReturnValue(
+      createLink({
+        exists: false,
+        type: 'wiki',
+        pathKind: 'relative',
+        itemPath: ['..', 'Districts', 'Ghost Note'],
+        itemName: 'Ghost Note',
+      }),
+    )
+
+    render(
+      <LinkClickHandler
+        editor={{} as CustomBlockNoteEditor}
+        sourceNoteId={'note-source' as never}
+      />,
+    )
+
+    fireEvent.mouseDown(editorEl, { clientX: 10, clientY: 20, ctrlKey: true })
+
+    await waitFor(() => {
+      expect(createNoteMock).toHaveBeenCalledTimes(1)
+    })
+    expect(createNoteMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        campaignId: 'campaign-1',
+        name: 'Ghost Note',
+        parentTarget: {
+          kind: 'path',
+          baseParentId: 'folder-2',
+          pathSegments: ['..', 'Districts'],
+        },
+      }),
+    )
+  })
+
+  it('shows validation feedback and does not create for traversal-only relative paths', async () => {
+    getLinkAtMock.mockReturnValue(
+      createLink({
+        exists: false,
+        type: 'wiki',
+        pathKind: 'relative',
+        itemPath: ['..', '..', '..'],
+        itemName: '..',
+      }),
+    )
+
+    render(<LinkClickHandler editor={{} as CustomBlockNoteEditor} />)
+
+    fireEvent.mouseMove(editorEl, { clientX: 10, clientY: 20 })
+    fireEvent.keyDown(document, { key: 'Control' })
+
+    expect(screen.getByText('Path cannot traverse above the campaign root')).toBeInTheDocument()
+
+    fireEvent.mouseDown(editorEl, { clientX: 10, clientY: 20, ctrlKey: true })
+
+    await waitFor(() => {
+      expect(createNoteMock).not.toHaveBeenCalled()
+    })
+  })
+
+  it('shows sibling conflict validation feedback on ctrl hover', async () => {
+    getLinkAtMock.mockReturnValue(
+      createLink({
+        exists: false,
+        type: 'wiki',
+        itemPath: ['Lore', 'Capital'],
+        itemName: 'Capital',
+      }),
+    )
+
+    render(<LinkClickHandler editor={{} as CustomBlockNoteEditor} />)
+
+    fireEvent.mouseMove(editorEl, { clientX: 10, clientY: 20 })
+    fireEvent.keyDown(document, { key: 'Control' })
+
+    expect(screen.getByText('An item with this name already exists here')).toBeInTheDocument()
+    fireEvent.mouseDown(editorEl, { clientX: 10, clientY: 20, ctrlKey: true })
+
+    await waitFor(() => {
+      expect(createNoteMock).not.toHaveBeenCalled()
+    })
+  })
+
+  it('does not show ghost-link validation feedback on ctrl hover in viewer mode', () => {
+    useEditorModeMock.mockReturnValue({ editorMode: 'viewer' })
+    getLinkAtMock.mockReturnValue(
+      createLink({
+        exists: false,
+        type: 'wiki',
+        itemPath: ['Lore', 'Capital'],
+        itemName: 'Capital',
+      }),
+    )
+
+    render(<LinkClickHandler editor={{} as CustomBlockNoteEditor} />)
+
+    fireEvent.mouseMove(editorEl, { clientX: 10, clientY: 20 })
+    fireEvent.keyDown(document, { key: 'Control' })
+
+    expect(screen.queryByText('An item with this name already exists here')).not.toBeInTheDocument()
   })
 
   it('requires ctrl/cmd for md external links in editor mode and opens directly in viewer mode', () => {
@@ -542,5 +738,18 @@ describe('LinkClickHandler', () => {
       '_blank',
       'noopener,noreferrer',
     )
+  })
+
+  it('shows a click-to-open tooltip for existing external links on ctrl hover in editor mode', () => {
+    getLinkAtMock.mockReturnValue(
+      createLink({ exists: true, type: 'md-external', href: 'https://example.com/docs' }),
+    )
+
+    render(<LinkClickHandler editor={{} as CustomBlockNoteEditor} />)
+
+    fireEvent.mouseMove(editorEl, { clientX: 10, clientY: 20 })
+    fireEvent.keyDown(document, { key: 'Control' })
+
+    expect(screen.getByText('Click to open')).toBeInTheDocument()
   })
 })

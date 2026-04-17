@@ -24,7 +24,7 @@ describe('rollback permission checks', () => {
       const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
         campaignId: ctx.campaignId,
         name: 'Protected Note',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       })
 
       await createSidebarShare(t, {
@@ -70,7 +70,7 @@ describe('rollback permission checks', () => {
       const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
         campaignId: ctx.campaignId,
         name: 'Private Note',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
@@ -139,7 +139,7 @@ describe('rollback error handling', () => {
       const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
         campaignId: ctx.campaignId,
         name: 'No Snapshot Note',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       })
 
       const historyEntry = await t.run(async (dbCtx) => {
@@ -176,7 +176,7 @@ describe('note rollback data integrity', () => {
       const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
         campaignId: ctx.campaignId,
         name: 'Rollback Content Note',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       })
 
       const originalBlocks = [
@@ -265,7 +265,7 @@ describe('canvas rollback data integrity', () => {
       const { canvasId } = await dmAuth.mutation(api.canvases.mutations.createCanvas, {
         campaignId: ctx.campaignId,
         name: 'Rollback Canvas',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
@@ -405,7 +405,7 @@ describe('rollback metadata integrity', () => {
       const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
         campaignId: ctx.campaignId,
         name: 'Timestamp Note',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {

@@ -1,5 +1,6 @@
 import type { Id } from '../_generated/dataModel'
 import { logger } from '../common/logger'
+import type { LinkPathKind } from './types'
 
 export interface LinkResolvableItem {
   _id: Id<'sidebarItems'>
@@ -35,7 +36,23 @@ function comparePathSegments(a: Array<string>, b: Array<string>): number {
 }
 
 function normalizePathSegments(pathSegments: Array<string>): Array<string> {
-  return pathSegments.map((segment) => segment.trim().toLowerCase())
+  return pathSegments.map(normalizePathSegment)
+}
+
+function normalizePathSegment(pathSegment: string): string {
+  return pathSegment.trim().toLowerCase()
+}
+
+function findChildByName<T extends LinkResolvableItem>(
+  parentId: Id<'sidebarItems'> | null,
+  name: string,
+  allItems: Array<T>,
+): T | undefined {
+  const normalizedName = normalizePathSegment(name)
+
+  return allItems.find((item) => {
+    return item.parentId === parentId && normalizePathSegment(item.name) === normalizedName
+  })
 }
 
 function matchesPathSuffix(
@@ -100,6 +117,62 @@ export function resolveItemByPath<T extends LinkResolvableItem>(
   if (pathSegments.length === 0) return undefined
 
   return resolveAllByPath(pathSegments, allItems, itemsMap)[0]
+}
+
+export function resolveRelativeItemByPath<T extends LinkResolvableItem>(
+  pathSegments: Array<string>,
+  allItems: Array<T>,
+  itemsMap: Map<Id<'sidebarItems'>, T>,
+  sourceParentId: Id<'sidebarItems'> | null | undefined,
+): T | undefined {
+  if (pathSegments.length === 0 || sourceParentId === undefined) return undefined
+
+  let currentParentId = sourceParentId
+
+  for (let i = 0; i < pathSegments.length; i++) {
+    const normalizedSegment = normalizePathSegment(pathSegments[i])
+    if (!normalizedSegment) return undefined
+
+    if (normalizedSegment === '.') {
+      continue
+    }
+
+    if (normalizedSegment === '..') {
+      if (currentParentId === null) {
+        return undefined
+      }
+
+      const currentItem = itemsMap.get(currentParentId)
+      if (!currentItem) {
+        return undefined
+      }
+      currentParentId = currentItem.parentId
+      continue
+    }
+
+    const child = findChildByName(currentParentId, pathSegments[i], allItems)
+    if (!child) return undefined
+
+    if (i === pathSegments.length - 1) {
+      return child
+    }
+
+    currentParentId = child._id
+  }
+
+  return currentParentId ? itemsMap.get(currentParentId) : undefined
+}
+
+export function resolveParsedItemPath<T extends LinkResolvableItem>(
+  pathKind: LinkPathKind,
+  pathSegments: Array<string>,
+  allItems: Array<T>,
+  itemsMap: Map<Id<'sidebarItems'>, T>,
+  sourceParentId?: Id<'sidebarItems'> | null,
+): T | undefined {
+  return pathKind === 'relative'
+    ? resolveRelativeItemByPath(pathSegments, allItems, itemsMap, sourceParentId)
+    : resolveItemByPath(pathSegments, allItems, itemsMap)
 }
 
 export function resolveAllByPath<T extends LinkResolvableItem>(

@@ -8,6 +8,7 @@ import {
   expectValidationFailed,
 } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
+import { makeYjsUpdateWithBlocks } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
 
 describe('moveSidebarItem cross-module effects', () => {
   const t = createTestContext()
@@ -203,5 +204,146 @@ describe('moveSidebarItem cross-module effects', () => {
         location: 'sidebar',
       }),
     )
+  })
+
+  it('moving a note re-syncs relative outgoing links', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const dmId = ctx.dm.profile._id
+
+    const { folderId: folderA } = await createFolder(t, ctx.campaignId, dmId, {
+      name: 'Folder A',
+    })
+    const { folderId: folderB } = await createFolder(t, ctx.campaignId, dmId, {
+      name: 'Folder B',
+    })
+    const { noteId: targetId } = await createNote(t, ctx.campaignId, dmId, {
+      name: 'Target',
+      parentId: folderA,
+    })
+    const { noteId: sourceId } = await createNote(t, ctx.campaignId, dmId, {
+      name: 'Source',
+      parentId: folderA,
+    })
+
+    await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+      campaignId: ctx.campaignId,
+      documentId: sourceId,
+      update: makeYjsUpdateWithBlocks([
+        {
+          id: 'block-a',
+          type: 'paragraph',
+          props: {},
+          content: [{ type: 'text', text: '[[./Target]]', styles: {} }],
+          children: [],
+        },
+      ]),
+    })
+    await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+      campaignId: ctx.campaignId,
+      documentId: sourceId,
+    })
+
+    let links = await t.run(async (dbCtx) => {
+      return await dbCtx.db
+        .query('noteLinks')
+        .withIndex('by_campaign_source', (q) =>
+          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceId),
+        )
+        .collect()
+    })
+    expect(links).toHaveLength(1)
+    expect(links[0].targetItemId).toBe(targetId)
+    expect(links[0].query).toBe('./Target')
+
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
+      itemId: sourceId,
+      parentId: folderB,
+    })
+
+    links = await t.run(async (dbCtx) => {
+      return await dbCtx.db
+        .query('noteLinks')
+        .withIndex('by_campaign_source', (q) =>
+          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceId),
+        )
+        .collect()
+    })
+    expect(links).toHaveLength(1)
+    expect(links[0].targetItemId).toBeNull()
+    expect(links[0].query).toBe('./Target')
+  })
+
+  it('moving a folder re-syncs descendant notes with relative links', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const dmId = ctx.dm.profile._id
+
+    const { folderId: worldId } = await createFolder(t, ctx.campaignId, dmId, {
+      name: 'World',
+    })
+    const { folderId: districtId } = await createFolder(t, ctx.campaignId, dmId, {
+      name: 'District',
+      parentId: worldId,
+    })
+    const { folderId: elsewhereId } = await createFolder(t, ctx.campaignId, dmId, {
+      name: 'Elsewhere',
+    })
+    const { noteId: targetId } = await createNote(t, ctx.campaignId, dmId, {
+      name: 'Target',
+      parentId: worldId,
+    })
+    const { noteId: sourceId } = await createNote(t, ctx.campaignId, dmId, {
+      name: 'Source',
+      parentId: districtId,
+    })
+
+    await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+      campaignId: ctx.campaignId,
+      documentId: sourceId,
+      update: makeYjsUpdateWithBlocks([
+        {
+          id: 'block-a',
+          type: 'paragraph',
+          props: {},
+          content: [{ type: 'text', text: '[[../Target]]', styles: {} }],
+          children: [],
+        },
+      ]),
+    })
+    await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+      campaignId: ctx.campaignId,
+      documentId: sourceId,
+    })
+
+    let links = await t.run(async (dbCtx) => {
+      return await dbCtx.db
+        .query('noteLinks')
+        .withIndex('by_campaign_source', (q) =>
+          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceId),
+        )
+        .collect()
+    })
+    expect(links).toHaveLength(1)
+    expect(links[0].targetItemId).toBe(targetId)
+
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      campaignId: ctx.campaignId,
+      itemId: districtId,
+      parentId: elsewhereId,
+    })
+
+    links = await t.run(async (dbCtx) => {
+      return await dbCtx.db
+        .query('noteLinks')
+        .withIndex('by_campaign_source', (q) =>
+          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceId),
+        )
+        .collect()
+    })
+    expect(links).toHaveLength(1)
+    expect(links[0].targetItemId).toBeNull()
+    expect(links[0].query).toBe('../Target')
   })
 })

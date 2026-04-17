@@ -57,7 +57,7 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
       const result = await createItem({
         type,
         campaignId,
-        parentId,
+        parentTarget: { kind: 'direct', parentId },
         name: getDefaultName(type, parentId),
       })
       openParentFolders(result.id)

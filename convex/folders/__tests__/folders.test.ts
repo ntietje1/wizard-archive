@@ -26,7 +26,7 @@ describe('createFolder', () => {
     const result = await dmAuth.mutation(api.folders.mutations.createFolder, {
       campaignId: ctx.campaignId,
       name: 'My Folder',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     expect(result.folderId).toBeDefined()
@@ -48,7 +48,7 @@ describe('createFolder', () => {
     const result = await dmAuth.mutation(api.folders.mutations.createFolder, {
       campaignId: ctx.campaignId,
       name: 'Root Folder',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
     expect(result.folderId).toBeDefined()
   })
@@ -61,7 +61,7 @@ describe('createFolder', () => {
       playerAuth.mutation(api.folders.mutations.createFolder, {
         campaignId: ctx.campaignId,
         name: 'Player Root',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       }),
     )
   })
@@ -84,7 +84,7 @@ describe('createFolder', () => {
       playerAuth.mutation(api.folders.mutations.createFolder, {
         campaignId: ctx.campaignId,
         name: 'Child Folder',
-        parentId,
+        parentTarget: { kind: 'direct', parentId },
       }),
     )
   })
@@ -107,7 +107,7 @@ describe('createFolder', () => {
       playerAuth.mutation(api.folders.mutations.createFolder, {
         campaignId: ctx.campaignId,
         name: 'Child Folder',
-        parentId,
+        parentTarget: { kind: 'direct', parentId },
       }),
     )
   })
@@ -129,7 +129,7 @@ describe('createFolder', () => {
     const result = await playerAuth.mutation(api.folders.mutations.createFolder, {
       campaignId: ctx.campaignId,
       name: 'Child Folder',
-      parentId,
+      parentTarget: { kind: 'direct', parentId },
     })
     expect(result.folderId).toBeDefined()
   })
@@ -142,7 +142,7 @@ describe('createFolder', () => {
       dmAuth.mutation(api.folders.mutations.createFolder, {
         campaignId: ctx.campaignId,
         name: '',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       }),
     )
   })
@@ -154,14 +154,14 @@ describe('createFolder', () => {
     await dmAuth.mutation(api.folders.mutations.createFolder, {
       campaignId: ctx.campaignId,
       name: 'Duplicate',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await expectValidationFailed(
       dmAuth.mutation(api.folders.mutations.createFolder, {
         campaignId: ctx.campaignId,
         name: 'Duplicate',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       }),
     )
   })
@@ -178,7 +178,7 @@ describe('createFolder', () => {
       dmAuth.mutation(api.folders.mutations.createFolder, {
         campaignId: ctx.campaignId,
         name: 'Child Folder',
-        parentId: noteId,
+        parentTarget: { kind: 'direct', parentId: noteId },
       }),
     )
 
@@ -192,7 +192,7 @@ describe('createFolder', () => {
       t.mutation(api.folders.mutations.createFolder, {
         campaignId: ctx.campaignId,
         name: 'Nope',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       }),
     )
   })

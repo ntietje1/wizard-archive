@@ -10,16 +10,49 @@ import {
 } from '../validation'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
+import { resyncNoteLinksForNotes } from '../../links/functions/resyncNoteLinksForNotes'
 import { getSidebarItemsByParent } from './getSidebarItemsByParent'
 import { deduplicateName } from './defaultItemName'
 import { trashTree, restoreTreeDescendants } from './treeOperations'
 import { getSidebarItem } from './getSidebarItem'
+import { collectDescendants } from './collectDescendants'
 import type { SidebarItemLocation } from '../types/baseTypes'
 import type { AnySidebarItemFromDb } from '../types/types'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 const clearDeletion = { deletionTime: null, deletedBy: null }
+
+async function resyncRelativeLinksForMovedItems(
+  ctx: CampaignMutationCtx,
+  {
+    item,
+    location,
+  }: {
+    item: AnySidebarItemFromDb
+    location: SidebarItemLocation
+  },
+): Promise<void> {
+  if (item.type === SIDEBAR_ITEM_TYPES.notes) {
+    await resyncNoteLinksForNotes(ctx, { noteIds: [item._id] })
+    return
+  }
+
+  if (item.type !== SIDEBAR_ITEM_TYPES.folders) {
+    return
+  }
+
+  const descendants = await collectDescendants(ctx, {
+    campaignId: item.campaignId,
+    location,
+    folderId: item._id,
+  })
+  const descendantNoteIds = descendants
+    .filter((descendant) => descendant.type === SIDEBAR_ITEM_TYPES.notes)
+    .map((descendant) => descendant._id)
+
+  await resyncNoteLinksForNotes(ctx, { noteIds: descendantNoteIds })
+}
 
 /**
  * Resolves name/slug conflicts for an item being restored.
@@ -131,6 +164,11 @@ export async function moveSidebarItem(
       itemType: item.type,
       action: EDIT_HISTORY_ACTION.restored,
     })
+
+    await resyncRelativeLinksForMovedItems(ctx, {
+      item,
+      location,
+    })
   }
 
   // --- Move (within same location) ---
@@ -154,6 +192,11 @@ export async function moveSidebarItem(
         from: oldParent?.name ?? null,
         to: newParent?.name ?? null,
       },
+    })
+
+    await resyncRelativeLinksForMovedItems(ctx, {
+      item,
+      location: item.location,
     })
   }
 

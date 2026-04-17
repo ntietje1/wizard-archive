@@ -25,7 +25,7 @@ export function NewFolderButton() {
       const result = await createItem({
         type: SIDEBAR_ITEM_TYPES.folders,
         campaignId,
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
         name: getDefaultName(SIDEBAR_ITEM_TYPES.folders, null),
       })
       openParentFolders(result.id)

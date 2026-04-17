@@ -16,7 +16,7 @@ describe('getUpdates', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Auth Test Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await expectNotAuthenticated(
@@ -43,7 +43,7 @@ describe('getUpdates', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Ordered Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
@@ -75,7 +75,7 @@ describe('getUpdates', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Fields Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     const results = await dmAuth.query(api.yjsSync.queries.getUpdates, {
@@ -96,7 +96,7 @@ describe('getUpdates', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'DM Read Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     const results = await dmAuth.query(api.yjsSync.queries.getUpdates, {
@@ -114,7 +114,7 @@ describe('getUpdates', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Shared Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await createSidebarShare(t, {
@@ -158,7 +158,7 @@ describe('getAwareness', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Auth Awareness Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await expectNotAuthenticated(
@@ -185,7 +185,7 @@ describe('getAwareness', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'No Awareness Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     const results = await dmAuth.query(api.yjsSync.queries.getAwareness, {
@@ -203,7 +203,7 @@ describe('getAwareness', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Awareness Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     const state = new ArrayBuffer(4)
@@ -232,7 +232,7 @@ describe('getAwareness', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'DM Awareness Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushAwareness, {
@@ -260,7 +260,7 @@ describe('getAwareness', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Shared Awareness Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await createSidebarShare(t, {
@@ -297,7 +297,7 @@ describe('getAwareness', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Fields Awareness Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     const state = new ArrayBuffer(4)

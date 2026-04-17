@@ -177,7 +177,7 @@ describe('share mutations with nested blocks', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'Cascade Test',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     await createBlock(t, noteId, ctx.campaignId, {

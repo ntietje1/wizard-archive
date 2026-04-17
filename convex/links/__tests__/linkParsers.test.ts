@@ -14,6 +14,7 @@ describe('parseWikiLinkText', () => {
   it('parses a simple name', () => {
     const result = parseWikiLinkText('My Note')
     expect(result).toEqual({
+      pathKind: 'global',
       itemPath: ['My Note'],
       itemName: 'My Note',
       headingPath: [],
@@ -24,6 +25,7 @@ describe('parseWikiLinkText', () => {
   it('parses a path with folders', () => {
     const result = parseWikiLinkText('Factions/The Guild')
     expect(result).toEqual({
+      pathKind: 'global',
       itemPath: ['Factions', 'The Guild'],
       itemName: 'The Guild',
       headingPath: [],
@@ -34,6 +36,7 @@ describe('parseWikiLinkText', () => {
   it('parses heading path', () => {
     const result = parseWikiLinkText('My Note#Section#Subsection')
     expect(result).toEqual({
+      pathKind: 'global',
       itemPath: ['My Note'],
       itemName: 'My Note',
       headingPath: ['Section', 'Subsection'],
@@ -44,6 +47,7 @@ describe('parseWikiLinkText', () => {
   it('parses display name', () => {
     const result = parseWikiLinkText('Factions/The Guild|The Guild')
     expect(result).toEqual({
+      pathKind: 'global',
       itemPath: ['Factions', 'The Guild'],
       itemName: 'The Guild',
       headingPath: [],
@@ -54,6 +58,7 @@ describe('parseWikiLinkText', () => {
   it('parses path + heading + display name', () => {
     const result = parseWikiLinkText('Factions/The Guild#Leaders|Guild Leaders')
     expect(result).toEqual({
+      pathKind: 'global',
       itemPath: ['Factions', 'The Guild'],
       itemName: 'The Guild',
       headingPath: ['Leaders'],
@@ -64,6 +69,7 @@ describe('parseWikiLinkText', () => {
   it('handles empty string', () => {
     const result = parseWikiLinkText('')
     expect(result).toEqual({
+      pathKind: 'global',
       itemPath: [],
       itemName: '',
       headingPath: [],
@@ -74,10 +80,22 @@ describe('parseWikiLinkText', () => {
   it('trims whitespace from segments', () => {
     const result = parseWikiLinkText(' Factions / The Guild # Leaders ')
     expect(result).toEqual({
+      pathKind: 'global',
       itemPath: ['Factions', 'The Guild'],
       itemName: 'The Guild',
       headingPath: ['Leaders'],
       displayName: null,
+    })
+  })
+
+  it('parses relative wiki paths', () => {
+    const result = parseWikiLinkText('../../World/Atlas#Region|Atlas')
+    expect(result).toEqual({
+      pathKind: 'relative',
+      itemPath: ['..', '..', 'World', 'Atlas'],
+      itemName: 'Atlas',
+      headingPath: ['Region'],
+      displayName: 'Atlas',
     })
   })
 })
@@ -88,6 +106,7 @@ describe('parseMdLinkTarget', () => {
     expect(result).toEqual({
       target: '',
       isExternal: false,
+      pathKind: 'global',
       itemPath: [],
       itemName: '',
       headingPath: [],
@@ -99,6 +118,7 @@ describe('parseMdLinkTarget', () => {
     expect(result).toEqual({
       target: 'Factions/The Guild',
       isExternal: false,
+      pathKind: 'global',
       itemPath: ['Factions', 'The Guild'],
       itemName: 'The Guild',
       headingPath: [],
@@ -110,6 +130,7 @@ describe('parseMdLinkTarget', () => {
     expect(result).toEqual({
       target: 'My Note#Section',
       isExternal: false,
+      pathKind: 'global',
       itemPath: ['My Note'],
       itemName: 'My Note',
       headingPath: ['Section'],
@@ -121,9 +142,22 @@ describe('parseMdLinkTarget', () => {
     expect(result).toEqual({
       target: 'My Note#H1#H2',
       isExternal: false,
+      pathKind: 'global',
       itemPath: ['My Note'],
       itemName: 'My Note',
       headingPath: ['H1', 'H2'],
+    })
+  })
+
+  it('parses relative internal paths', () => {
+    const result = parseMdLinkTarget('../World/Atlas')
+    expect(result).toEqual({
+      target: '../World/Atlas',
+      isExternal: false,
+      pathKind: 'relative',
+      itemPath: ['..', 'World', 'Atlas'],
+      itemName: 'Atlas',
+      headingPath: [],
     })
   })
 
@@ -132,6 +166,7 @@ describe('parseMdLinkTarget', () => {
     expect(result).toEqual({
       target: 'https://example.com',
       isExternal: true,
+      pathKind: 'global',
       itemPath: [],
       itemName: '',
       headingPath: [],
@@ -148,6 +183,7 @@ describe('parseMdLinkTarget', () => {
     expect(result).toEqual({
       target: 'mailto:someone@example.com',
       isExternal: true,
+      pathKind: 'global',
       itemPath: [],
       itemName: '',
       headingPath: [],
@@ -159,6 +195,7 @@ describe('parseMdLinkTarget', () => {
     expect(result).toEqual({
       target: 'ftp://example.com',
       isExternal: true,
+      pathKind: 'global',
       itemPath: [],
       itemName: '',
       headingPath: [],
@@ -221,6 +258,7 @@ describe('parseMdLinkTarget safety', () => {
     expect(parseMdLinkTarget('javascript:alert(1)')).toEqual({
       target: 'javascript:alert(1)',
       isExternal: true,
+      pathKind: 'global',
       itemPath: [],
       itemName: '',
       headingPath: [],
@@ -228,6 +266,7 @@ describe('parseMdLinkTarget safety', () => {
     expect(parseMdLinkTarget('data:text/html,<script>')).toEqual({
       target: 'data:text/html,<script>',
       isExternal: true,
+      pathKind: 'global',
       itemPath: [],
       itemName: '',
       headingPath: [],
@@ -235,6 +274,7 @@ describe('parseMdLinkTarget safety', () => {
     expect(parseMdLinkTarget('file:///etc/passwd')).toEqual({
       target: 'file:///etc/passwd',
       isExternal: true,
+      pathKind: 'global',
       itemPath: [],
       itemName: '',
       headingPath: [],
@@ -242,6 +282,7 @@ describe('parseMdLinkTarget safety', () => {
     expect(parseMdLinkTarget('blob:https://example.com/uuid')).toEqual({
       target: 'blob:https://example.com/uuid',
       isExternal: true,
+      pathKind: 'global',
       itemPath: [],
       itemName: '',
       headingPath: [],
@@ -249,6 +290,7 @@ describe('parseMdLinkTarget safety', () => {
     expect(parseMdLinkTarget('vbscript:msgbox(1)')).toEqual({
       target: 'vbscript:msgbox(1)',
       isExternal: true,
+      pathKind: 'global',
       itemPath: [],
       itemName: '',
       headingPath: [],
@@ -256,6 +298,7 @@ describe('parseMdLinkTarget safety', () => {
     expect(parseMdLinkTarget('about:blank')).toEqual({
       target: 'about:blank',
       isExternal: true,
+      pathKind: 'global',
       itemPath: [],
       itemName: '',
       headingPath: [],
@@ -263,6 +306,7 @@ describe('parseMdLinkTarget safety', () => {
     expect(parseMdLinkTarget('filesystem:https://example.com/')).toEqual({
       target: 'filesystem:https://example.com/',
       isExternal: true,
+      pathKind: 'global',
       itemPath: [],
       itemName: '',
       headingPath: [],
@@ -270,6 +314,7 @@ describe('parseMdLinkTarget safety', () => {
     expect(parseMdLinkTarget('//evil.com/x')).toEqual({
       target: '//evil.com/x',
       isExternal: true,
+      pathKind: 'global',
       itemPath: [],
       itemName: '',
       headingPath: [],
@@ -283,6 +328,7 @@ describe('extractWikiLinksFromText', () => {
     expect(result).toHaveLength(1)
     expect(result[0]).toEqual({
       syntax: 'wiki',
+      pathKind: 'global',
       itemPath: ['My Note'],
       itemName: 'My Note',
       headingPath: [],
@@ -320,6 +366,7 @@ describe('extractMdLinksFromText', () => {
     expect(result).toHaveLength(1)
     expect(result[0]).toEqual({
       syntax: 'md',
+      pathKind: 'global',
       itemPath: ['My Note'],
       itemName: 'My Note',
       headingPath: [],

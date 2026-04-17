@@ -1,5 +1,6 @@
 import { v } from 'convex/values'
 import { campaignMutation } from '../functions'
+import { createItemParentArgsValidator } from '../sidebarItems/createParentTarget'
 import { createMap as createMapFn } from './functions/createMap'
 import { updateMap as updateMapFn } from './functions/updateMap'
 import { createItemPin as createItemPinFn } from './functions/createItemPin'
@@ -10,10 +11,9 @@ import type { Id } from '../_generated/dataModel'
 
 export const createMap = campaignMutation({
   args: {
+    ...createItemParentArgsValidator,
     name: v.string(),
     imageStorageId: v.optional(v.id('_storage')),
-    parentId: v.nullable(v.id('sidebarItems')),
-    parentPath: v.optional(v.array(v.string())),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
   },
@@ -25,8 +25,7 @@ export const createMap = campaignMutation({
     return await createMapFn(ctx, {
       name: args.name,
       imageStorageId: args.imageStorageId,
-      parentId: args.parentId,
-      parentPath: args.parentPath,
+      parentTarget: args.parentTarget,
       iconName: args.iconName,
       color: args.color,
     })

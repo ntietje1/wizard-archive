@@ -24,7 +24,7 @@ describe('note snapshots capture Y.Doc state directly', () => {
       const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
         campaignId: ctx.campaignId,
         name: 'Content Test Note',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       })
 
       const blocks = [
@@ -360,7 +360,7 @@ describe('snapshot exists when history entry claims hasSnapshot=true', () => {
       const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
         campaignId: ctx.campaignId,
         name: 'Async Race Note',
-        parentId: null,
+        parentTarget: { kind: 'direct', parentId: null },
       })
 
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
@@ -500,7 +500,7 @@ describe('rollback edge cases', () => {
     const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
       campaignId: ctx.campaignId,
       name: 'No Snapshot Note',
-      parentId: null,
+      parentTarget: { kind: 'direct', parentId: null },
     })
 
     const historyEntry = await t.run(async (dbCtx) => {

@@ -1,5 +1,6 @@
 import { v } from 'convex/values'
 import { campaignMutation } from '../functions'
+import { createItemParentArgsValidator } from '../sidebarItems/createParentTarget'
 import { createFolder as createFolderFn } from './functions/createFolder'
 import { updateFolder as updateFolderFn } from './functions/updateFolder'
 import type { Id } from '../_generated/dataModel'
@@ -27,9 +28,8 @@ export const updateFolder = campaignMutation({
 
 export const createFolder = campaignMutation({
   args: {
+    ...createItemParentArgsValidator,
     name: v.string(),
-    parentId: v.nullable(v.id('sidebarItems')),
-    parentPath: v.optional(v.array(v.string())),
     iconName: v.optional(v.string()),
     color: v.optional(v.string()),
   },
@@ -40,8 +40,7 @@ export const createFolder = campaignMutation({
   handler: async (ctx, args): Promise<{ folderId: Id<'sidebarItems'>; slug: string }> => {
     return await createFolderFn(ctx, {
       name: args.name,
-      parentId: args.parentId,
-      parentPath: args.parentPath,
+      parentTarget: args.parentTarget,
       iconName: args.iconName,
       color: args.color,
     })

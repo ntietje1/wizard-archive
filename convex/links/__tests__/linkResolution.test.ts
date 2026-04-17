@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vite-plus/test'
 import {
   getItemPath,
+  resolveParsedItemPath,
+  resolveRelativeItemByPath,
   resolveItemByPath,
   resolveAllByPath,
   isPathUnique,
@@ -35,6 +37,10 @@ function makeItem(id: string, name: string, parentId: string | null = null): Any
 
 function buildMap(items: Array<AnySidebarItem>) {
   return new Map(items.map((i) => [i._id, i]))
+}
+
+function sidebarId(id: string): Id<'sidebarItems'> {
+  return id as Id<'sidebarItems'>
 }
 
 describe('getItemPath', () => {
@@ -149,6 +155,58 @@ describe('resolveItemByPath', () => {
     const unnamedAncestorMap = buildMap(unnamedAncestorItems)
 
     expect(resolveItemByPath(['A', 'C'], unnamedAncestorItems, unnamedAncestorMap)?._id).toBe('d')
+  })
+})
+
+describe('resolveRelativeItemByPath', () => {
+  const items = [
+    makeItem('world', 'World'),
+    makeItem('regions', 'Regions', 'world'),
+    makeItem('north', 'North', 'regions'),
+    makeItem('atlas', 'Atlas', 'north'),
+    makeItem('sibling', 'Sibling', 'north'),
+    makeItem('capital', 'Capital', 'regions'),
+  ]
+  const map = buildMap(items)
+
+  it('resolves relative child paths from the source parent', () => {
+    expect(resolveRelativeItemByPath(['Sibling'], items, map, sidebarId('north'))?._id).toBe(
+      'sibling',
+    )
+  })
+
+  it('supports dot and dotdot traversal', () => {
+    expect(resolveRelativeItemByPath(['.', 'Sibling'], items, map, sidebarId('north'))?._id).toBe(
+      'sibling',
+    )
+    expect(resolveRelativeItemByPath(['..', 'Capital'], items, map, sidebarId('north'))?._id).toBe(
+      'capital',
+    )
+  })
+
+  it('returns undefined when traversal escapes root', () => {
+    expect(resolveRelativeItemByPath(['..', 'Atlas'], items, map, null)).toBeUndefined()
+  })
+})
+
+describe('resolveParsedItemPath', () => {
+  const items = [
+    makeItem('world', 'World'),
+    makeItem('regions', 'Regions', 'world'),
+    makeItem('north', 'North', 'regions'),
+    makeItem('atlas', 'Atlas', 'north'),
+  ]
+  const map = buildMap(items)
+
+  it('uses global resolution for bare paths', () => {
+    expect(resolveParsedItemPath('global', ['Atlas'], items, map)?._id).toBe('atlas')
+  })
+
+  it('uses relative resolution when requested', () => {
+    expect(
+      resolveParsedItemPath('relative', ['..', 'North', 'Atlas'], items, map, sidebarId('north'))
+        ?._id,
+    ).toBe('atlas')
   })
 })
 
