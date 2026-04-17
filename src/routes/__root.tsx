@@ -34,14 +34,7 @@ export const Route = createRootRouteWithContext<{
     links: [
       {
         rel: 'preload',
-        href: '/fonts/inter-400.woff2',
-        as: 'font',
-        type: 'font/woff2',
-        crossOrigin: 'anonymous',
-      },
-      {
-        rel: 'preload',
-        href: '/fonts/inter-600.woff2',
+        href: '/fonts/inter-variable.woff2',
         as: 'font',
         type: 'font/woff2',
         crossOrigin: 'anonymous',
