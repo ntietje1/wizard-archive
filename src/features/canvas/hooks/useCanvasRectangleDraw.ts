@@ -111,10 +111,13 @@ export function useCanvasRectangleDraw({ nodesMap }: { nodesMap: Y.Map<Node> }) 
       position: { x: rect.x, y: rect.y },
       width: rect.width,
       height: rect.height,
+      selected: true,
+      draggable: true,
       data: { color: store.strokeColor, opacity: store.strokeOpacity },
     }
 
     nodesMap.set(id, node)
+    store.completeActiveToolAction()
   }, [reactFlow, nodesMap])
 
   return { onPointerDown, onPointerMove, onPointerUp }

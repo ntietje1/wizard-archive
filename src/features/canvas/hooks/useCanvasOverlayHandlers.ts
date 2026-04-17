@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { getToolCursor, useCanvasToolStore } from '../stores/canvas-tool-store'
+import { useCanvasToolStore } from '../stores/canvas-tool-store'
+import { getToolCursor } from '../utils/canvas-toolbar-utils'
 
 type PointerHandlers = {
   onPointerDown: (e: React.PointerEvent) => void

@@ -7,6 +7,7 @@ import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
 import { ResizableSidebar } from '~/features/sidebar/components/resizable-sidebar'
 import { Button } from '~/features/shadcn/components/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 
 export function RightSidebarContainer() {
   const { item } = useCurrentItem()
@@ -20,7 +21,7 @@ export function RightSidebarContainer() {
     }
   }, [sidebar, item?._id])
 
-  if (!item) return null
+  if (!item || item.type !== SIDEBAR_ITEM_TYPES.notes) return null
 
   return (
     <>

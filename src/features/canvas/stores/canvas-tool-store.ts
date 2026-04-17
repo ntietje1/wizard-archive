@@ -1,21 +1,8 @@
 import { create } from 'zustand'
 import type { DrawingState, Point2D } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-stroke-utils'
-
-export type CanvasTool = 'select' | 'hand' | 'draw' | 'erase' | 'lasso' | 'rectangle'
-
-const TOOL_CURSORS: Record<CanvasTool, string | undefined> = {
-  select: undefined,
-  hand: 'grab',
-  draw: 'crosshair',
-  erase: 'cell',
-  lasso: 'crosshair',
-  rectangle: 'crosshair',
-}
-
-export function getToolCursor(tool: CanvasTool): string | undefined {
-  return TOOL_CURSORS[tool]
-}
+import type { CanvasTool } from '../utils/canvas-toolbar-utils'
+import { shouldResetToolAfterAction } from '../utils/canvas-toolbar-utils'
 
 interface CanvasToolState {
   activeTool: CanvasTool
@@ -35,6 +22,7 @@ interface CanvasToolState {
 
 interface CanvasToolActions {
   setActiveTool: (tool: CanvasTool) => void
+  completeActiveToolAction: () => void
   setStrokeColor: (color: string) => void
   setStrokeSize: (size: number) => void
   setStrokeOpacity: (opacity: number) => void
@@ -80,6 +68,20 @@ export const useCanvasToolStore = create<CanvasToolState & CanvasToolActions>((s
       lassoPath: [],
       selectionRect: null,
     }),
+
+  completeActiveToolAction: () =>
+    set((state) =>
+      shouldResetToolAfterAction(state.activeTool)
+        ? {
+            activeTool: 'select',
+            erasingStrokeIds: new Set(),
+            rectDeselectedIds: new Set(),
+            localDrawing: null,
+            lassoPath: [],
+            selectionRect: null,
+          }
+        : {},
+    ),
 
   setStrokeColor: (color) => set({ strokeColor: color }),
   setStrokeSize: (size) => set({ strokeSize: size }),

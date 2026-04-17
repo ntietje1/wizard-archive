@@ -20,6 +20,7 @@ import { useCanvasDropTarget } from '../hooks/useCanvasDropTarget'
 import { useCanvasDrawing } from '../hooks/useCanvasDrawing'
 import { useCanvasEraser } from '../hooks/useCanvasEraser'
 import { useCanvasLassoSelection } from '../hooks/useCanvasLassoSelection'
+import { useCanvasPlacementTool } from '../hooks/useCanvasPlacementTool'
 import { useCanvasRectangleDraw } from '../hooks/useCanvasRectangleDraw'
 import { useCanvasHistory } from '../hooks/useCanvasHistory'
 import { useCanvasSelectionRect } from '../hooks/useCanvasSelectionRect'
@@ -29,10 +30,10 @@ import { useCanvasKeyboardShortcuts } from '../hooks/useCanvasKeyboardShortcuts'
 import { useCanvasOverlayHandlers } from '../hooks/useCanvasOverlayHandlers'
 import { useCanvasStrokeClick } from '../hooks/useCanvasStrokeClick'
 import { MiniMapNode } from './canvas-minimap-node'
+import { CanvasConditionalToolbar } from './canvas-conditional-toolbar'
 import { CanvasStrokes } from './canvas-strokes'
 import { CanvasRemoteCursors } from './canvas-remote-cursors'
 import { CanvasToolbar } from './canvas-toolbar'
-import { CanvasColorPanel } from './canvas-color-panel'
 import { canvasNodeTypes } from './nodes/canvas-node-types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { RemoteHighlight } from '../utils/canvas-context'
@@ -169,6 +170,7 @@ function CanvasFlow({
 }) {
   const reactFlowInstance = useReactFlow()
   const [editingEmbedId, setEditingEmbedId] = useState<string | null>(null)
+  const [pendingEditNodeId, setPendingEditNodeId] = useState<string | null>(null)
   const {
     remoteUsers,
     setLocalCursor,
@@ -182,6 +184,7 @@ function CanvasFlow({
   const activeTool = useCanvasToolStore((s) => s.activeTool)
   const lassoPath = useCanvasToolStore((s) => s.lassoPath)
   const selectionRect = useCanvasToolStore((s) => s.selectionRect)
+  const completeActiveToolAction = useCanvasToolStore((s) => s.completeActiveToolAction)
 
   const isSelectMode = activeTool === 'select'
   const isHandMode = activeTool === 'hand'
@@ -237,6 +240,16 @@ function CanvasFlow({
   const eraser = useCanvasEraser({ nodesMap })
   const lasso = useCanvasLassoSelection({ setLocalSelecting })
   const rectangleDraw = useCanvasRectangleDraw({ nodesMap })
+  const placeTextNode = useCanvasPlacementTool({
+    nodesMap,
+    type: 'text',
+    setPendingEditNodeId,
+  })
+  const placeStickyNode = useCanvasPlacementTool({
+    nodesMap,
+    type: 'sticky',
+    setPendingEditNodeId,
+  })
 
   useCanvasSelectionRect({
     setLocalSelecting,
@@ -338,6 +351,23 @@ function CanvasFlow({
     setLocalCursor(null)
   }, [setLocalCursor])
 
+  const handlePaneClick = useCallback(
+    (event: React.MouseEvent) => {
+      if (activeTool === 'select') {
+        onStrokePaneClick(event)
+        return
+      }
+      if (activeTool === 'text') {
+        placeTextNode(event)
+        return
+      }
+      if (activeTool === 'sticky') {
+        placeStickyNode(event)
+      }
+    },
+    [activeTool, onStrokePaneClick, placeStickyNode, placeTextNode],
+  )
+
   const updateNodeData = useCallback(
     (nodeId: string, data: Record<string, unknown>) => {
       const existing = nodesMap.get(nodeId)
@@ -432,6 +462,8 @@ function CanvasFlow({
       user: canvasUser,
       editingEmbedId,
       setEditingEmbedId,
+      pendingEditNodeId,
+      setPendingEditNodeId,
     }),
     [
       updateNodeData,
@@ -442,6 +474,8 @@ function CanvasFlow({
       canvasUser,
       editingEmbedId,
       setEditingEmbedId,
+      pendingEditNodeId,
+      setPendingEditNodeId,
     ],
   )
 
@@ -449,6 +483,27 @@ function CanvasFlow({
   const nodesDraggable = false
   const nodesConnectable = canEdit && isSelectMode
   const elementsSelectable = canEdit && isSelectMode
+  const handGestureActiveRef = useRef(false)
+
+  useEffect(() => {
+    if (activeTool !== 'hand') {
+      handGestureActiveRef.current = false
+    }
+  }, [activeTool])
+
+  const handleMoveStart = useCallback(
+    (event: MouseEvent | TouchEvent | null) => {
+      if (activeTool !== 'hand' || !event) return
+      handGestureActiveRef.current = true
+    },
+    [activeTool],
+  )
+
+  const handleMoveEnd = useCallback(() => {
+    if (!handGestureActiveRef.current || activeTool !== 'hand') return
+    handGestureActiveRef.current = false
+    completeActiveToolAction()
+  }, [activeTool, completeActiveToolAction])
 
   return (
     <CanvasContext value={canvasContextValue}>
@@ -457,8 +512,8 @@ function CanvasFlow({
         className="flex-1 min-h-0 relative allow-motion"
         style={{ cursor: toolCursor }}
       >
-        <CanvasToolbar nodesMap={nodesMap} canEdit={canEdit} />
-        <CanvasColorPanel canEdit={canEdit} />
+        <CanvasToolbar canEdit={canEdit} />
+        <CanvasConditionalToolbar canEdit={canEdit} />
         <ReactFlow
           defaultNodes={EMPTY_NODES}
           defaultEdges={EMPTY_EDGES}
@@ -468,7 +523,13 @@ function CanvasFlow({
           onNodesDelete={isSelectMode ? onNodesDelete : undefined}
           onEdgesDelete={isSelectMode ? onEdgesDelete : undefined}
           onConnect={isSelectMode ? onConnect : undefined}
-          onPaneClick={isSelectMode ? onStrokePaneClick : undefined}
+          onMoveStart={handleMoveStart}
+          onMoveEnd={handleMoveEnd}
+          onPaneClick={
+            isSelectMode || activeTool === 'text' || activeTool === 'sticky'
+              ? handlePaneClick
+              : undefined
+          }
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
           nodeTypes={canvasNodeTypes}
@@ -486,7 +547,6 @@ function CanvasFlow({
           zoomOnScroll={false}
           panOnScroll={false}
           preventScrolling={false}
-          fitView
           proOptions={PRO_OPTIONS}
         >
           <Background bgColor="var(--background)" />

@@ -14,6 +14,8 @@ export interface CanvasContextValue {
   user: RemoteHighlight
   editingEmbedId: string | null
   setEditingEmbedId: (id: string | null) => void
+  pendingEditNodeId: string | null
+  setPendingEditNodeId: (id: string | null) => void
 }
 
 const EMPTY_HIGHLIGHTS = new Map<string, RemoteHighlight>()
@@ -28,5 +30,7 @@ export const CanvasContext = createContext<CanvasContextValue>({
   user: DEFAULT_USER,
   editingEmbedId: null,
   setEditingEmbedId: () => {},
+  pendingEditNodeId: null,
+  setPendingEditNodeId: () => {},
 })
 CanvasContext.displayName = 'CanvasContext'

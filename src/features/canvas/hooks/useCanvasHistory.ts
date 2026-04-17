@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react';
+import type { RefObject } from 'react';
 import { useReactFlow } from '@xyflow/react'
 import { UndoManager } from 'yjs'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
@@ -27,6 +28,20 @@ export function useCanvasHistory({ nodesMap, edgesMap }: UseCanvasHistoryOptions
   const undoManagerRef = useRef<UndoManager | null>(null)
   const undoFnRef = useRef<() => void>(() => {})
   const redoFnRef = useRef<() => void>(() => {})
+
+  const pushHistoryEntry = useCallback(
+    (stackRef: RefObject<Array<ActionEntry>>, entry: ActionEntry) => {
+      stackRef.current.push(entry)
+      if (stackRef.current.length > MAX_HISTORY_SIZE) {
+        stackRef.current = stackRef.current.slice(-MAX_HISTORY_SIZE)
+      }
+    },
+    [],
+  )
+
+  const stopCapturing = useCallback(() => {
+    undoManagerRef.current?.stopCapturing()
+  }, [])
 
   const syncStore = useCallback(() => {
     const { setHistory } = useCanvasToolStore.getState()
@@ -61,19 +76,20 @@ export function useCanvasHistory({ nodesMap, edgesMap }: UseCanvasHistoryOptions
           stackItem.meta.set('selection-after', selectionRef.current.slice())
           um.undo()
           if (selBefore) restoreSelection(selBefore)
-          redoStackRef.current.push({ type: 'doc' })
+          pushHistoryEntry(redoStackRef, { type: 'doc' })
+          stopCapturing()
         } else {
           logger.warn('Discarding orphaned doc undo entry (no matching Yjs stack item)')
         }
       } else {
         restoreSelection(entry.before)
-        redoStackRef.current.push(entry)
+        pushHistoryEntry(redoStackRef, entry)
       }
     } finally {
       isUndoRedoingRef.current = false
     }
     syncStore()
-  }, [restoreSelection, syncStore])
+  }, [pushHistoryEntry, restoreSelection, stopCapturing, syncStore])
 
   const redo = useCallback(() => {
     const entry = redoStackRef.current.pop()
@@ -88,20 +104,21 @@ export function useCanvasHistory({ nodesMap, edgesMap }: UseCanvasHistoryOptions
           const selAfter = stackItem.meta.get('selection-after') as Array<string> | undefined
           um.redo()
           if (selAfter) restoreSelection(selAfter)
-          undoStackRef.current.push({ type: 'doc' })
+          pushHistoryEntry(undoStackRef, { type: 'doc' })
+          stopCapturing()
         } else {
-          redoStackRef.current.push(entry)
+          pushHistoryEntry(redoStackRef, entry)
           return
         }
       } else {
         restoreSelection(entry.after)
-        undoStackRef.current.push(entry)
+        pushHistoryEntry(undoStackRef, entry)
       }
     } finally {
       isUndoRedoingRef.current = false
     }
     syncStore()
-  }, [restoreSelection, syncStore])
+  }, [pushHistoryEntry, restoreSelection, stopCapturing, syncStore])
 
   undoFnRef.current = undo
   redoFnRef.current = redo
@@ -120,11 +137,9 @@ export function useCanvasHistory({ nodesMap, edgesMap }: UseCanvasHistoryOptions
     const onAdded = (event: { stackItem: { meta: Map<string, unknown> } }) => {
       if (isUndoRedoingRef.current) return
       event.stackItem.meta.set('selection-before', selectionRef.current.slice())
-      undoStackRef.current.push({ type: 'doc' })
-      if (undoStackRef.current.length > MAX_HISTORY_SIZE) {
-        undoStackRef.current = undoStackRef.current.slice(-MAX_HISTORY_SIZE)
-      }
+      pushHistoryEntry(undoStackRef, { type: 'doc' })
       redoStackRef.current = []
+      stopCapturing()
 
       // Prevents selection changes caused as side-effects of doc mutations
       // from being recorded as separate undo entries
@@ -142,7 +157,7 @@ export function useCanvasHistory({ nodesMap, edgesMap }: UseCanvasHistoryOptions
       um.destroy()
       undoManagerRef.current = null
     }
-  }, [nodesMap, edgesMap, syncStore])
+  }, [nodesMap, edgesMap, pushHistoryEntry, stopCapturing, syncStore])
 
   useEffect(() => {
     syncStore()
@@ -160,18 +175,15 @@ export function useCanvasHistory({ nodesMap, edgesMap }: UseCanvasHistoryOptions
       const same = prev.length === nodeIds.length && prev.every((id) => nodeIdSet.has(id))
       if (same) return
 
-      undoStackRef.current.push({
+      pushHistoryEntry(undoStackRef, {
         type: 'selection',
         before: prev,
         after: nodeIds,
       })
-      if (undoStackRef.current.length > MAX_HISTORY_SIZE) {
-        undoStackRef.current = undoStackRef.current.slice(-MAX_HISTORY_SIZE)
-      }
       redoStackRef.current = []
       syncStore()
     },
-    [syncStore],
+    [pushHistoryEntry, syncStore],
   )
 
   return { onSelectionChange }

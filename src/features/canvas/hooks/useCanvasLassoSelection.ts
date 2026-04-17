@@ -75,6 +75,8 @@ export function useCanvasLassoSelection({ setLocalSelecting }: UseCanvasLassoSel
 
     if (polygon.length < 3) {
       store.setLassoPath([])
+      pointsRef.current = []
+      store.completeActiveToolAction()
       return
     }
 
@@ -128,6 +130,7 @@ export function useCanvasLassoSelection({ setLocalSelecting }: UseCanvasLassoSel
 
     store.setLassoPath([])
     pointsRef.current = []
+    store.completeActiveToolAction()
   }, [reactFlow, storeApi, setLocalSelecting])
 
   return { onPointerDown, onPointerMove, onPointerUp }
