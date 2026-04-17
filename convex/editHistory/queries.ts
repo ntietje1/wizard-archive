@@ -2,7 +2,7 @@ import { v } from 'convex/values'
 import { literals } from 'convex-helpers/validators'
 import { paginationOptsValidator } from 'convex/server'
 import { campaignQuery } from '../functions'
-import { requireItemAccess } from '../sidebarItems/validation'
+import { requireItemAccess } from '../sidebarItems/validation/access'
 import { PERMISSION_LEVEL } from '../permissions/types'
 import { getSidebarItem } from '../sidebarItems/functions/getSidebarItem'
 

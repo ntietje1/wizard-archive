@@ -1,3 +1,6 @@
+import { assertCampaignSlug } from '../validation'
+import type { CampaignSlug } from '../validation'
+import type { Username } from '../../users/validation'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { CAMPAIGN_MEMBER_STATUS, CAMPAIGN_STATUS } from '../types'
 import {
@@ -7,8 +10,15 @@ import {
 } from '../../users/functions/getUserProfile'
 import type { AuthQueryCtx } from '../../functions'
 import type { Campaign, CampaignFromDb, CampaignMember, CampaignMemberFromDb } from '../types'
-import type { Id } from '../../_generated/dataModel'
+import type { Doc, Id } from '../../_generated/dataModel'
 import type { QueryCtx } from '../../_generated/server'
+
+function toCampaignFromDb(campaign: Doc<'campaigns'>): CampaignFromDb {
+  return {
+    ...campaign,
+    slug: assertCampaignSlug(campaign.slug),
+  }
+}
 
 async function countAcceptedPlayers(
   ctx: QueryCtx,
@@ -61,13 +71,13 @@ export async function getCampaign(
 ): Promise<Campaign | null> {
   const campaign = await ctx.db.get('campaigns', campaignId)
   if (!campaign || campaign.status === CAMPAIGN_STATUS.Deleted) return null
-  return enhanceCampaign(ctx, { campaign })
+  return enhanceCampaign(ctx, { campaign: toCampaignFromDb(campaign) })
 }
 
 // is public for the join campaign screen
 export async function getCampaignBySlug(
   ctx: QueryCtx,
-  { dmUsername, slug }: { dmUsername: string; slug: string },
+  { dmUsername, slug }: { dmUsername: Username; slug: CampaignSlug },
 ): Promise<Campaign> {
   const dmUserProfile = await getUserProfileByUsername(ctx, {
     username: dmUsername,
@@ -79,5 +89,5 @@ export async function getCampaignBySlug(
     .unique()
   if (!campaign || campaign.status === CAMPAIGN_STATUS.Deleted)
     throwClientError(ERROR_CODE.NOT_FOUND, 'Campaign not found')
-  return enhanceCampaign(ctx, { campaign })
+  return enhanceCampaign(ctx, { campaign: toCampaignFromDb(campaign) })
 }

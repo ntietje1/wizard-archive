@@ -3,13 +3,15 @@ import { mergeSearchResults } from '~/features/search/utils/merge-search-results
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { BlockSearchResult } from 'convex/blocks/functions/searchBlocks'
 import type { Id } from 'convex/_generated/dataModel'
+import { assertSidebarItemName } from 'convex/sidebarItems/validation/name'
+import { assertSidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 
 function mockItem(id: string, name: string): AnySidebarItem {
   return {
     _id: id as Id<'sidebarItems'>,
     _creationTime: 0,
-    name,
-    slug: name.toLowerCase().replace(/\s+/g, '-'),
+    name: assertSidebarItemName(name),
+    slug: assertSidebarItemSlug(name.toLowerCase().replace(/\s+/g, '-')),
     parentId: null,
     campaignId: 'campaign-1' as Id<'campaigns'>,
     type: 'note',

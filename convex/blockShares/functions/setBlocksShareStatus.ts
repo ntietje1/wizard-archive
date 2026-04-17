@@ -1,5 +1,5 @@
 import { asyncMap } from 'convex-helpers'
-import { requireItemAccess } from '../../sidebarItems/validation'
+import { requireItemAccess } from '../../sidebarItems/validation/access'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'

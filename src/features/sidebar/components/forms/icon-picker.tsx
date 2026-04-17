@@ -1,13 +1,14 @@
 import { useState } from 'react'
+import type { SidebarItemIconName } from 'convex/sidebarItems/validation/icon'
 import { Button } from '~/features/shadcn/components/button'
 import { Popover, PopoverContent, PopoverTrigger } from '~/features/shadcn/components/popover'
 import { getAvailableIconNames, getIconByName } from '~/shared/utils/category-icons'
 import { cn } from '~/features/shadcn/lib/utils'
 
 interface IconPickerProps {
-  value: string | undefined
-  onChange: (iconName: string | null) => void
-  defaultIcon?: string
+  value: SidebarItemIconName | undefined
+  onChange: (iconName: SidebarItemIconName | null) => void
+  defaultIcon?: SidebarItemIconName
 }
 
 export function IconPicker({ value, onChange, defaultIcon }: IconPickerProps) {

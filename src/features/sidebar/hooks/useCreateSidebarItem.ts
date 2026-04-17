@@ -1,11 +1,16 @@
 import { api } from 'convex/_generated/api'
-import type { CreateParentTarget } from 'convex/sidebarItems/createParentTarget'
+import type { CreateParentTarget } from 'convex/sidebarItems/validation/parent'
+import { coerceSidebarItemColorForInput } from 'convex/sidebarItems/validation/color'
+import { coerceSidebarItemIconNameForInput } from 'convex/sidebarItems/validation/icon'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { assertSidebarItemName } from 'convex/sidebarItems/validation/name'
+import { assertSidebarItemSlug } from 'convex/sidebarItems/validation/slug'
+import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CustomBlock } from 'convex/notes/editorSpecs'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import { validateCreateItemLocally } from '~/features/sidebar/utils/sidebar-create-validation'
+import { validateCreateItemLocally } from 'convex/sidebarItems/validation/parent'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { assertNever } from '~/shared/utils/utils'
 
@@ -49,7 +54,7 @@ export type CreateItemArgs =
 
 export type CreateItemResult = {
   id: Id<'sidebarItems'>
-  slug: string
+  slug: SidebarItemSlug
   type: SidebarItemType
 }
 
@@ -74,64 +79,73 @@ export function useCreateSidebarItem() {
 
   const createItem = async (args: CreateItemArgs): Promise<CreateItemResult> => {
     const trimmedName = args.name.trim()
-    const nameResult = validateCreateItem(args)
+    const nameResult = validateCreateItem({
+      ...args,
+      name: trimmedName,
+    })
     if (!nameResult.valid) {
       throw new Error(nameResult.error)
     }
+    const normalizedName = assertSidebarItemName(trimmedName)
+
+    const iconName =
+      args.iconName === undefined ? undefined : coerceSidebarItemIconNameForInput(args.iconName)
+
+    const color = args.color === undefined ? undefined : coerceSidebarItemColorForInput(args.color)
 
     switch (args.type) {
       case SIDEBAR_ITEM_TYPES.notes: {
         const { noteId, slug } = await createNoteMutation.mutateAsync({
           campaignId: args.campaignId,
-          name: trimmedName,
+          name: normalizedName,
           parentTarget: args.parentTarget,
-          iconName: args.iconName,
-          color: args.color,
+          iconName,
+          color,
           content: args.content,
         })
-        return { id: noteId, slug, type: args.type }
+        return { id: noteId, slug: assertSidebarItemSlug(slug), type: args.type }
       }
       case SIDEBAR_ITEM_TYPES.folders: {
         const { folderId, slug } = await createFolderMutation.mutateAsync({
           campaignId: args.campaignId,
-          name: trimmedName,
+          name: normalizedName,
           parentTarget: args.parentTarget,
-          iconName: args.iconName,
-          color: args.color,
+          iconName,
+          color,
         })
-        return { id: folderId, slug, type: args.type }
+        return { id: folderId, slug: assertSidebarItemSlug(slug), type: args.type }
       }
       case SIDEBAR_ITEM_TYPES.gameMaps: {
         const { mapId, slug } = await createMapMutation.mutateAsync({
           campaignId: args.campaignId,
-          name: trimmedName,
+          name: normalizedName,
           parentTarget: args.parentTarget,
           imageStorageId: args.imageStorageId,
-          iconName: args.iconName,
-          color: args.color,
+          iconName,
+          color,
         })
-        return { id: mapId, slug, type: args.type }
+        return { id: mapId, slug: assertSidebarItemSlug(slug), type: args.type }
       }
       case SIDEBAR_ITEM_TYPES.files: {
         const { fileId, slug } = await createFileMutation.mutateAsync({
           campaignId: args.campaignId,
-          name: trimmedName,
+          name: normalizedName,
           parentTarget: args.parentTarget,
           storageId: args.storageId,
-          iconName: args.iconName,
-          color: args.color,
+          iconName,
+          color,
         })
-        return { id: fileId, slug, type: args.type }
+        return { id: fileId, slug: assertSidebarItemSlug(slug), type: args.type }
       }
       case SIDEBAR_ITEM_TYPES.canvases: {
         const { canvasId, slug } = await createCanvasMutation.mutateAsync({
           campaignId: args.campaignId,
-          name: trimmedName,
+          name: normalizedName,
           parentTarget: args.parentTarget,
-          iconName: args.iconName,
-          color: args.color,
+          iconName,
+          color,
         })
-        return { id: canvasId, slug, type: args.type }
+        return { id: canvasId, slug: assertSidebarItemSlug(slug), type: args.type }
       }
       default:
         return assertNever(args)

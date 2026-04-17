@@ -103,11 +103,11 @@ describe('checkUsernameExists', () => {
 describe('updateUsername', () => {
   const t = createTestContext()
 
-  it('lowercases and updates username', async () => {
+  it('updates a canonical username', async () => {
     const { authed } = await setupAuthedUser(t)
 
     const result = await authed.mutation(api.users.mutations.updateUsername, {
-      username: 'MyNewName',
+      username: 'mynewname',
     })
 
     expect(result).toBe('mynewname')
@@ -166,6 +166,16 @@ describe('updateUsername', () => {
     )
   })
 
+  it('rejects uppercase usernames', async () => {
+    const { authed } = await setupAuthedUser(t)
+
+    await expectValidationFailed(
+      authed.mutation(api.users.mutations.updateUsername, {
+        username: 'MyNewName',
+      }),
+    )
+  })
+
   it('rejects duplicate username', async () => {
     const { authed } = await setupAuthedUser(t)
     await createUserProfile(t, { username: 'taken' })
@@ -177,11 +187,11 @@ describe('updateUsername', () => {
     )
   })
 
-  it('rejects duplicate username case-insensitively', async () => {
+  it('rejects uppercase usernames before duplicate checks', async () => {
     const { authed } = await setupAuthedUser(t)
     await createUserProfile(t, { username: 'reserved' })
 
-    await expectConflict(
+    await expectValidationFailed(
       authed.mutation(api.users.mutations.updateUsername, {
         username: 'RESERVED',
       }),

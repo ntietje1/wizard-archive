@@ -1,11 +1,11 @@
 import type { Id } from '../../_generated/dataModel'
 import { throwClientError, ERROR_CODE } from '../../errors'
 import type { CampaignMutationCtx } from '../../functions'
-import { validateItemName } from '../../sidebarItems/sharedValidation'
-import { CREATE_PARENT_TARGET_KIND } from '../../sidebarItems/createParentTarget'
-import type { CreateParentTarget } from '../../sidebarItems/createParentTarget'
+import { CREATE_PARENT_TARGET_KIND } from '../../sidebarItems/validation/parent'
+import type { ParsedCreateParentTarget } from '../../sidebarItems/validation/parent'
+import type { SidebarItemName } from '../../sidebarItems/validation/name'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
-import { validateSidebarCreateParent } from '../../sidebarItems/validation'
+import { validateSidebarCreateParent } from '../../sidebarItems/validation/orchestration'
 import { findSidebarChildByName, insertFolder } from './folderHelpers'
 
 async function getParentFolderId(
@@ -27,14 +27,9 @@ async function resolveOrCreateChildFolder(
     segment,
   }: {
     parentId: Id<'sidebarItems'> | null
-    segment: string
+    segment: SidebarItemName
   },
 ): Promise<Id<'sidebarItems'>> {
-  const nameResult = validateItemName(segment)
-  if (!nameResult.valid) {
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, nameResult.error)
-  }
-
   const existing = await findSidebarChildByName(ctx, {
     parentId,
     name: segment,
@@ -64,7 +59,7 @@ export async function resolveOrCreateFolderPath(
   {
     parentTarget,
   }: {
-    parentTarget: CreateParentTarget
+    parentTarget: ParsedCreateParentTarget
   },
 ): Promise<Id<'sidebarItems'> | null> {
   if (parentTarget.kind === CREATE_PARENT_TARGET_KIND.direct) {
@@ -75,17 +70,11 @@ export async function resolveOrCreateFolderPath(
   await validateSidebarCreateParent(ctx, { parentId: currentParentId })
 
   for (const segment of parentTarget.pathSegments) {
-    const trimmedSegment = segment.trim()
-
-    if (!trimmedSegment) {
-      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Path segments cannot be empty')
-    }
-
-    if (trimmedSegment === '.') {
+    if (segment === '.') {
       continue
     }
 
-    if (trimmedSegment === '..') {
+    if (segment === '..') {
       if (currentParentId === null) {
         throwClientError(
           ERROR_CODE.VALIDATION_FAILED,
@@ -100,7 +89,7 @@ export async function resolveOrCreateFolderPath(
 
     currentParentId = await resolveOrCreateChildFolder(ctx, {
       parentId: currentParentId,
-      segment: trimmedSegment,
+      segment,
     })
   }
 

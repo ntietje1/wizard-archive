@@ -1,5 +1,5 @@
 import { createElement } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import type { ReactNode } from 'react'
@@ -11,11 +11,14 @@ import { TestWrapper } from '~/test/test-wrapper'
 
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 
+const mockUseMatch = vi.fn()
+
 vi.mock('~/shared/hooks/useAuthQuery', () => ({
   useAuthQuery: vi.fn(),
 }))
 
 vi.mock('@tanstack/react-router', () => ({
+  useMatch: (...args: Array<unknown>) => mockUseMatch(...args),
   useNavigate: () => vi.fn(),
   useParams: () => ({
     dmUsername: 'testdm',
@@ -41,6 +44,15 @@ function CampaignConsumer() {
 }
 
 describe('CampaignProvider', () => {
+  beforeEach(() => {
+    mockUseMatch.mockReturnValue({
+      params: {
+        dmUsername: 'testdm',
+        campaignSlug: 'my-campaign',
+      },
+    })
+  })
+
   it('provides campaign data to children', () => {
     const campaign = createCampaign({
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },

@@ -1,5 +1,7 @@
 import { useEffect } from 'react'
 import { useForm } from '@tanstack/react-form'
+import type { SidebarItemColor } from 'convex/sidebarItems/validation/color'
+import type { SidebarItemIconName } from 'convex/sidebarItems/validation/icon'
 import { toast } from 'sonner'
 import { FileEdit, Loader } from 'lucide-react'
 import { getDefaultIconName, getTypeName } from '../../utils/sidebar-item-utils'
@@ -22,8 +24,8 @@ import {
 
 interface SidebarItemEditFormValues {
   name: string
-  iconName: string | null
-  color: string | null
+  iconName: SidebarItemIconName | null
+  color: SidebarItemColor | null
 }
 
 interface SidebarItemEditDialogProps {
@@ -34,13 +36,14 @@ interface SidebarItemEditDialogProps {
 
 export function SidebarItemEditDialog({ item, isOpen, onClose }: SidebarItemEditDialogProps) {
   const { editItem } = useEditSidebarItem()
+  const defaultValues: SidebarItemEditFormValues = {
+    name: item.name ?? '',
+    iconName: item.iconName ?? null,
+    color: item.color ?? null,
+  }
 
   const form = useForm({
-    defaultValues: {
-      name: item.name ?? '',
-      iconName: item.iconName ?? null,
-      color: item.color ?? null,
-    } satisfies SidebarItemEditFormValues,
+    defaultValues,
     onSubmit: async ({ value }) => {
       try {
         await editItem({
@@ -60,7 +63,7 @@ export function SidebarItemEditDialog({ item, isOpen, onClose }: SidebarItemEdit
 
   const { checkNameUnique } = useNameValidation({
     name: form.state.values.name,
-    initialName: item.name ?? '',
+    initialName: defaultValues.name,
     isActive: isOpen,
     campaignId: item.campaignId,
     parentId: item.parentId,
@@ -73,7 +76,7 @@ export function SidebarItemEditDialog({ item, isOpen, onClose }: SidebarItemEdit
       iconName: item.iconName ?? null,
       color: item.color ?? null,
     })
-  }, [item._id, item.name, item.iconName, item.color, form])
+  }, [form, isOpen, item._id, item.color, item.iconName, item.name])
 
   const handleClose = () => {
     if (form.state.isSubmitting) return

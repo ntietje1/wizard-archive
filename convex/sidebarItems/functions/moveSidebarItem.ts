@@ -4,10 +4,10 @@ import { PERMISSION_LEVEL } from '../../permissions/types'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import {
   findUniqueSidebarItemSlug,
-  requireItemAccess,
   validateSidebarMove,
   validateSidebarParentChange,
-} from '../validation'
+} from '../validation/orchestration'
+import { requireItemAccess } from '../validation/access'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { resyncNoteLinksForNotes } from '../../links/functions/resyncNoteLinksForNotes'
@@ -17,9 +17,11 @@ import { trashTree, restoreTreeDescendants } from './treeOperations'
 import { getSidebarItem } from './getSidebarItem'
 import { collectDescendants } from './collectDescendants'
 import type { SidebarItemLocation } from '../types/baseTypes'
-import type { AnySidebarItemFromDb } from '../types/types'
+import type { AnySidebarItemRow } from '../types/types'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
+import type { SidebarItemName } from '../validation/name'
+import type { SidebarItemSlug } from '../validation/slug'
 
 const clearDeletion = { deletionTime: null, deletedBy: null }
 
@@ -29,7 +31,7 @@ async function resyncRelativeLinksForMovedItems(
     item,
     location,
   }: {
-    item: AnySidebarItemFromDb
+    item: AnySidebarItemRow
     location: SidebarItemLocation
   },
 ): Promise<void> {
@@ -60,20 +62,20 @@ async function resyncRelativeLinksForMovedItems(
  */
 async function resolveRestoreConflicts(
   ctx: CampaignMutationCtx,
-  item: AnySidebarItemFromDb,
-): Promise<{ name?: string; slug?: string }> {
+  item: AnySidebarItemRow,
+): Promise<{ name?: SidebarItemName; slug?: SidebarItemSlug }> {
   const siblings = await getSidebarItemsByParent(ctx, {
     parentId: item.parentId,
   })
   const otherNames = siblings.filter((s) => s._id !== item._id).map((s) => s.name)
 
-  const uniqueName = deduplicateName(item.name, otherNames)
+  const uniqueName = deduplicateName(item.name, otherNames) as SidebarItemName
   const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
     itemId: item._id,
     name: uniqueName,
   })
 
-  const patch: { name?: string; slug?: string } = {}
+  const patch: { name?: SidebarItemName; slug?: SidebarItemSlug } = {}
   if (uniqueName !== item.name) patch.name = uniqueName
   if (uniqueSlug !== item.slug) patch.slug = uniqueSlug
   return patch

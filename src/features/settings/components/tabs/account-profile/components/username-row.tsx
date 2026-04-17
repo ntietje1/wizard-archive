@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { api } from 'convex/_generated/api'
-import { USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH } from 'convex/users/constants'
+import { USERNAME_MAX_LENGTH } from 'convex/users/constants'
 import { getClientErrorMessage } from 'convex/errors'
-import { slugify, validateUsername } from 'convex/common/slug'
+import { normalizeUsernameInput, parseUsername, validateUsername } from 'convex/users/validation'
 import { AlertTriangle, Loader2 } from 'lucide-react'
 import { SettingsRow } from './settings-row'
 import type { UserProfile } from 'convex/users/types'
@@ -31,38 +31,39 @@ function useDebouncedValue<T>(value: T, delay: number): T {
 }
 
 function useUsernameValidation(raw: string, currentUsername: string) {
-  const slugified = slugify(raw)
-  const isUnchanged = slugified === currentUsername
+  const normalizedUsername = normalizeUsernameInput(raw)
+  const isUnchanged = normalizedUsername === currentUsername
 
-  const localError = validateUsername(slugified, raw, USERNAME_MIN_LENGTH, USERNAME_MAX_LENGTH)
+  const localError = validateUsername(normalizedUsername)
 
-  const shouldCheckRemote = !localError && !isUnchanged && slugified.length >= USERNAME_MIN_LENGTH
-  const debouncedSlug = useDebouncedValue(shouldCheckRemote ? slugified : '', 300)
-  const isWaitingForDebounce = shouldCheckRemote && debouncedSlug !== slugified
+  const shouldCheckRemote = !localError && !isUnchanged
+  const debouncedUsername = useDebouncedValue(shouldCheckRemote ? normalizedUsername : '', 300)
+  const isWaitingForDebounce = shouldCheckRemote && debouncedUsername !== normalizedUsername
+  const parsedDebouncedUsername = debouncedUsername ? parseUsername(debouncedUsername) : null
 
   const existsQuery = useAuthQuery(
     api.users.queries.checkUsernameExists,
-    debouncedSlug ? { username: debouncedSlug } : 'skip',
+    parsedDebouncedUsername ? { username: parsedDebouncedUsername } : 'skip',
   )
 
   const isTaken = existsQuery.data === true
   const isChecking = shouldCheckRemote && (isWaitingForDebounce || existsQuery.isLoading)
 
   const error = localError ?? (isTaken ? 'Username is already taken' : null)
-  const canSubmit = !error && !isUnchanged && !isChecking && slugified.length >= USERNAME_MIN_LENGTH
+  const canSubmit = !error && !isUnchanged && !isChecking
 
-  return { slugified, error, canSubmit, isChecking }
+  return { normalizedUsername, error, canSubmit, isChecking }
 }
 
 function UsernameChangeDialog({ profile, onClose }: { profile: UserProfile; onClose: () => void }) {
   const navigate = useNavigate()
   const location = useLocation()
-  const [username, setUsername] = useState(profile.username)
+  const [username, setUsername] = useState<string>(profile.username)
   const [isLoading, setIsLoading] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
   const {
-    slugified,
+    normalizedUsername,
     error: validationError,
     canSubmit,
     isChecking,
@@ -76,7 +77,7 @@ function UsernameChangeDialog({ profile, onClose }: { profile: UserProfile; onCl
     setIsLoading(true)
     try {
       const newUsername = await updateUsername.mutateAsync({
-        username: slugified,
+        username: normalizedUsername,
       })
       toast.success('Username updated')
       onClose()
@@ -111,10 +112,11 @@ function UsernameChangeDialog({ profile, onClose }: { profile: UserProfile; onCl
           <Input
             id="edit-username"
             value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            onChange={(e) => setUsername(normalizeUsernameInput(e.target.value))}
             disabled={isLoading}
             onKeyDown={(e) => e.key === 'Enter' && handleSave()}
             className="pr-8"
+            maxLength={USERNAME_MAX_LENGTH}
           />
           {isChecking && (
             <div className="absolute right-2.5 top-1/2 -translate-y-1/2">

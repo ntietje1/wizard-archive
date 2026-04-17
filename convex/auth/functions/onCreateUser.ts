@@ -1,4 +1,6 @@
 import { findUniqueSlug } from '../../common/slug'
+import { parseUsername } from '../../users/validation'
+import { USERNAME_MAX_LENGTH } from '../../users/constants'
 import type { MutationCtx } from '../../_generated/server'
 
 type AuthUserDoc = {
@@ -17,13 +19,20 @@ export async function onCreateUser(ctx: MutationCtx, user: AuthUserDoc): Promise
     user.name?.toLowerCase().replace(/\s+/g, '') ||
     `user${String(user._id).slice(-8)}`
 
-  const username = await findUniqueSlug(baseUsername, async (slug) => {
-    const conflict = await ctx.db
-      .query('userProfiles')
-      .withIndex('by_username', (q) => q.eq('username', slug))
-      .unique()
-    return conflict !== null
-  })
+  const username = await findUniqueSlug(
+    baseUsername,
+    async (slug) => {
+      const conflict = await ctx.db
+        .query('userProfiles')
+        .withIndex('by_username', (q) => q.eq('username', slug))
+        .unique()
+      return conflict !== null
+    },
+    {
+      maxLength: USERNAME_MAX_LENGTH,
+      isValidCandidate: (slug) => parseUsername(slug) !== null,
+    },
+  )
 
   await ctx.db.insert('userProfiles', {
     authUserId: String(user._id),

@@ -106,7 +106,7 @@
     "concurrently": "~9.2.0",
     "convex-test": "^0.0.44",
     "eslint": "^10.2.0",
-    "fallow": "^2.26.0",
+    "fallow": "^2.40.1",
     "jsdom": "^29.0.1",
     "tailwindcss": "^4.1.12",
     "tw-animate-css": "^1.3.7",

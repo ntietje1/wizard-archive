@@ -1,6 +1,10 @@
+import { getDefaultSidebarItemIconName } from 'convex/sidebarItems/validation/icon'
+import type { SidebarItemIconName } from 'convex/sidebarItems/validation/icon'
+import { DEFAULT_SIDEBAR_ITEM_COLOR } from 'convex/sidebarItems/validation/color'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
+import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Note } from 'convex/notes/types'
 import type { Folder } from 'convex/folders/types'
@@ -10,9 +14,9 @@ import type { Canvas } from 'convex/canvases/types'
 import type { EditorSearch } from '~/features/sidebar/utils/validate-search'
 import { assertNever } from '~/shared/utils/utils'
 
-export const DEFAULT_ITEM_COLOR = '#14b8a6'
+export const DEFAULT_ITEM_COLOR = DEFAULT_SIDEBAR_ITEM_COLOR
 
-export const getSlug = (search: EditorSearch): string | null => {
+export const getSlug = (search: EditorSearch): SidebarItemSlug | null => {
   return search.item ?? null
 }
 
@@ -91,23 +95,6 @@ export function getItemTypeLabel(type: SidebarItemType): string {
   }
 }
 
-export function isValidHexColor(color: string | undefined | null): boolean {
-  if (!color) return false
-  // Check if it's a valid hex color (#RRGGBB or #RRGGBBAA)
-  return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$/.test(color)
-}
-
-export const validateHexColorOrDefault = (
-  colorValue: string | undefined | null,
-  defaultColor: string = DEFAULT_ITEM_COLOR,
-): string => {
-  if (!colorValue) return defaultColor
-
-  const isValidHex = isValidHexColor(colorValue)
-
-  return isValidHex ? colorValue : defaultColor
-}
-
 export function buildBreadcrumbs(
   item: AnySidebarItem,
   itemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>,
@@ -143,19 +130,6 @@ export function getTypeName(type: SidebarItemType): string {
   }
 }
 
-export function getDefaultIconName(type: SidebarItemType): string {
-  switch (type) {
-    case SIDEBAR_ITEM_TYPES.notes:
-      return 'FileText'
-    case SIDEBAR_ITEM_TYPES.folders:
-      return 'Folder'
-    case SIDEBAR_ITEM_TYPES.gameMaps:
-      return 'MapPin'
-    case SIDEBAR_ITEM_TYPES.files:
-      return 'File'
-    case SIDEBAR_ITEM_TYPES.canvases:
-      return 'Grid2x2Plus'
-    default:
-      return assertNever(type)
-  }
+export function getDefaultIconName(type: SidebarItemType): SidebarItemIconName {
+  return getDefaultSidebarItemIconName(type)
 }

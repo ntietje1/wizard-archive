@@ -1,13 +1,14 @@
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { checkItemAccess } from '../validation'
+import { checkItemAccess } from '../validation/access'
 import { enhanceSidebarItemWithContent } from './enhanceSidebarItem'
 import { getSidebarItem } from './getSidebarItem'
+import type { SidebarItemSlug } from '../validation/slug'
 import type { AnySidebarItemWithContent } from '../types/types'
 import type { CampaignQueryCtx } from '../../functions'
 
 export const getSidebarItemBySlug = async (
   ctx: CampaignQueryCtx,
-  { slug }: { slug: string },
+  { slug }: { slug: SidebarItemSlug },
 ): Promise<AnySidebarItemWithContent | null> => {
   const raw = await ctx.db
     .query('sidebarItems')

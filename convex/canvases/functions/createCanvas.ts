@@ -1,12 +1,12 @@
 import * as Y from 'yjs'
-import {
-  findUniqueSidebarItemSlug,
-  validateSidebarCreateParent,
-  validateSidebarItemName,
-} from '../../sidebarItems/validation'
-import type { CreateParentTarget } from '../../sidebarItems/createParentTarget'
+import { prepareSidebarItemCreate } from '../../sidebarItems/validation/orchestration'
+import type { ParsedCreateParentTarget } from '../../sidebarItems/validation/parent'
 import { resolveOrCreateFolderPath } from '../../folders/functions/resolveOrCreateFolderPath'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import type { SidebarItemName } from '../../sidebarItems/validation/name'
+import type { SidebarItemColor } from '../../sidebarItems/validation/color'
+import type { SidebarItemIconName } from '../../sidebarItems/validation/icon'
+import type { SidebarItemSlug } from '../../sidebarItems/validation/slug'
 import { createYjsDocument } from '../../yjsSync/functions/createYjsDocument'
 import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
 import { logEditHistory } from '../../editHistory/log'
@@ -22,31 +22,24 @@ export async function createCanvas(
     iconName,
     color,
   }: {
-    name: string
-    parentTarget: CreateParentTarget
-    iconName?: string
-    color?: string
+    name: SidebarItemName
+    parentTarget: ParsedCreateParentTarget
+    iconName?: SidebarItemIconName
+    color?: SidebarItemColor
   },
-): Promise<{ canvasId: Id<'sidebarItems'>; slug: string }> {
-  const trimmedName = name.trim()
+): Promise<{ canvasId: Id<'sidebarItems'>; slug: SidebarItemSlug }> {
   const resolvedParentId = await resolveOrCreateFolderPath(ctx, { parentTarget })
-
-  await validateSidebarCreateParent(ctx, { parentId: resolvedParentId })
-  await validateSidebarItemName(ctx, {
+  const prepared = await prepareSidebarItemCreate(ctx, {
     parentId: resolvedParentId,
-    name: trimmedName,
-  })
-
-  const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
-    name: trimmedName,
+    name,
   })
 
   const userId = ctx.membership.userId
 
   const canvasId = await ctx.db.insert('sidebarItems', {
     campaignId: ctx.campaign._id,
-    name: trimmedName,
-    slug: uniqueSlug,
+    name: prepared.name,
+    slug: prepared.slug,
     iconName: iconName ?? null,
     color: color ?? null,
     parentId: resolvedParentId,
@@ -83,5 +76,5 @@ export async function createCanvas(
     action: EDIT_HISTORY_ACTION.created,
   })
 
-  return { canvasId, slug: uniqueSlug }
+  return { canvasId, slug: prepared.slug }
 }

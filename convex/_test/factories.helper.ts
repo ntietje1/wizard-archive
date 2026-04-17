@@ -1,7 +1,13 @@
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../campaigns/types'
+import type { SidebarItemColor } from '../sidebarItems/validation/color'
+import type { SidebarItemIconName } from '../sidebarItems/validation/icon'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 import { SHARE_STATUS } from '../blockShares/types'
 import { slugify } from '../common/slug'
+import { assertCampaignSlug } from '../campaigns/validation'
+import { assertSidebarItemName } from '../sidebarItems/validation/name'
+import { assertSidebarItemSlug } from '../sidebarItems/validation/slug'
+import { assertUsername } from '../users/validation'
 import { makeYjsUpdateWithBlocks } from '../yjsSync/__tests__/makeYjsUpdate.helper'
 import type { TestBlock } from '../yjsSync/__tests__/makeYjsUpdate.helper'
 import type { TestConvex } from 'convex-test'
@@ -12,6 +18,7 @@ import type { PermissionLevel } from '../permissions/types'
 import type { ShareStatus } from '../blockShares/types'
 import type { BlockNoteId, BlockProps, BlockType, InlineContent } from '../blocks/types'
 import type { CustomBlock } from '../notes/editorSpecs'
+import type { SidebarItemName } from '../sidebarItems/validation/name'
 import { createHash } from 'crypto'
 
 type T = TestConvex<typeof schema>
@@ -65,16 +72,21 @@ export async function createUserProfile(
   }>,
 ) {
   const n = nextId()
+  const { username, ...rest } = overrides ?? {}
   const defaults = {
     authUserId: `auth-user-${n}`,
-    username: `user-${n}`,
+    username: assertUsername(`user-${n}`),
     email: `user-${n}@test.com`,
     emailVerified: null,
     name: `Test User ${n}`,
     profileImage: null,
     twoFactorEnabled: null,
   }
-  const data = { ...defaults, ...overrides }
+  const data = {
+    ...defaults,
+    ...rest,
+    ...(username !== undefined ? { username: assertUsername(username) } : {}),
+  }
   const id = await t.run(async (ctx) => {
     return await ctx.db.insert('userProfiles', data)
   })
@@ -93,15 +105,21 @@ export async function createCampaignWithDm(
   }>,
 ) {
   const n = nextId()
+  const { slug, ...rest } = overrides ?? {}
   const defaults = {
     name: `Campaign ${n}`,
     description: '',
     dmUserId: dmProfile._id,
-    slug: `campaign-${n}`,
+    slug: assertCampaignSlug(`campaign-${n}`),
     status: 'Active' as const,
     currentSessionId: null,
   }
-  const campaignData = { ...defaults, ...overrides, dmUserId: dmProfile._id }
+  const campaignData = {
+    ...defaults,
+    ...rest,
+    dmUserId: dmProfile._id,
+    ...(slug !== undefined ? { slug: assertCampaignSlug(slug) } : {}),
+  }
   const campaignId = await t.run(async (ctx) => {
     return await ctx.db.insert('campaigns', campaignData)
   })
@@ -142,9 +160,9 @@ export async function addPlayerToCampaign(
 const sidebarItemBase = (
   campaignId: Id<'campaigns'>,
   creatorProfileId: Id<'userProfiles'>,
-  name: string,
+  name: SidebarItemName,
 ): {
-  name: string
+  name: SidebarItemName
   slug: string
   campaignId: Id<'campaigns'>
   iconName: null
@@ -158,7 +176,7 @@ const sidebarItemBase = (
   previewUpdatedAt: null
 } & ReturnType<typeof commonFields> => ({
   name,
-  slug: slugify(name),
+  slug: assertSidebarItemSlug(slugify(name)),
   campaignId,
   iconName: null,
   color: null,
@@ -178,8 +196,8 @@ type CommonSidebarItemOverrides = Partial<{
   parentId: Id<'sidebarItems'> | null
   allPermissionLevel: PermissionLevel | null
   location: SidebarItemLocation
-  iconName: string | null
-  color: string | null
+  iconName: SidebarItemIconName | null
+  color: SidebarItemColor | null
   deletionTime: number | null
   deletedBy: Id<'userProfiles'> | null
   previewStorageId: Id<'_storage'> | null
@@ -201,15 +219,24 @@ async function insertSidebarItem(
   overrides?: CommonSidebarItemOverrides & Record<string, unknown>,
 ) {
   const n = nextId()
-  const name = overrides?.name ?? `${label} ${n}`
+  const name = assertSidebarItemName(overrides?.name ?? `${label} ${n}`)
 
-  const { inheritShares, imageStorageId, storageId, ...sidebarOverrides } = overrides ?? {}
+  const {
+    inheritShares,
+    imageStorageId,
+    storageId,
+    slug,
+    name: _name,
+    ...sidebarOverrides
+  } = overrides ?? {}
+  const validatedSlug =
+    slug !== undefined ? assertSidebarItemSlug(slug) : assertSidebarItemSlug(slugify(name))
 
   const sharedData = {
     ...sidebarItemBase(campaignId, creatorProfileId, name),
     type,
     ...sidebarOverrides,
-    slug: overrides?.slug ?? slugify(name),
+    slug: validatedSlug,
   }
 
   const extensionFields: Record<string, unknown> = {}

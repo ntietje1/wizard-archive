@@ -9,6 +9,7 @@ import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { ParsedLinkData, LinkSyntax } from '../types'
 import type { Block } from '../../blocks/types'
+import type { AnySidebarItemRow } from '../../sidebarItems/types/types'
 
 interface NoteLinkRow {
   sourceNoteId: Id<'sidebarItems'>
@@ -32,7 +33,7 @@ export async function syncNoteLinks(
     blocks: Array<Block>
   },
 ): Promise<void> {
-  const [allItems, existingLinks] = await Promise.all([
+  const [sidebarItems, existingLinks] = await Promise.all([
     ctx.db
       .query('sidebarItems')
       .withIndex('by_campaign', (q) => q.eq('campaignId', campaignId).eq('deletionTime', null))
@@ -45,6 +46,7 @@ export async function syncNoteLinks(
       .collect(),
   ])
 
+  const allItems: Array<AnySidebarItemRow> = sidebarItems
   const itemsMap = new Map(allItems.map((item) => [item._id, item]))
   const sourceNote = itemsMap.get(noteId)
   const sourceParentId = sourceNote?.parentId

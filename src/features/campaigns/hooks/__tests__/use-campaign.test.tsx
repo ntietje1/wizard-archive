@@ -1,11 +1,35 @@
-import { describe, expect, it } from 'vitest'
+import { createElement } from 'react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
+import { assertUsername } from 'convex/users/validation'
 import type { ReactNode } from 'react'
 import type { CampaignContextType } from '~/features/campaigns/hooks/useCampaign'
-import { CampaignContext, useCampaign } from '~/features/campaigns/hooks/useCampaign'
+import {
+  CampaignContext,
+  useCampaign,
+  useOptionalCampaign,
+} from '~/features/campaigns/hooks/useCampaign'
 import { mockAuthQuery } from '~/test/mocks/convex-mocks'
 import { createCampaign } from '~/test/factories/campaign-factory'
+import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+
+const mockUseMatch = vi.fn()
+
+vi.mock('@tanstack/react-router', () => ({
+  useMatch: (...args: Array<unknown>) => mockUseMatch(...args),
+  useNavigate: () => vi.fn(),
+  useParams: () => ({}),
+  useSearch: () => ({}),
+  useLocation: () => ({ pathname: '/', search: '', hash: '' }),
+  Link: ({ children, ...props }: Record<string, unknown> & { children?: ReactNode }) =>
+    createElement('a', { href: props.to, ...props }, children),
+  useRouter: () => ({ navigate: vi.fn() }),
+}))
+
+vi.mock('~/shared/hooks/useAuthQuery', () => ({
+  useAuthQuery: vi.fn(),
+}))
 
 function createWrapper(value: CampaignContextType) {
   return function Wrapper({ children }: { children: ReactNode }) {
@@ -23,7 +47,7 @@ describe('useCampaign', () => {
   it('returns context value when inside provider', () => {
     const campaign = createCampaign()
     const value: CampaignContextType = {
-      dmUsername: 'testdm',
+      dmUsername: assertUsername('testdm'),
       campaignSlug: campaign.slug,
       campaign: mockAuthQuery(campaign),
       isDm: true,
@@ -44,7 +68,7 @@ describe('useCampaign', () => {
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
     })
     const value: CampaignContextType = {
-      dmUsername: 'dm',
+      dmUsername: assertUsername('dm'),
       campaignSlug: campaign.slug,
       campaign: mockAuthQuery(campaign),
       isDm: true,
@@ -63,7 +87,7 @@ describe('useCampaign', () => {
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.Player },
     })
     const value: CampaignContextType = {
-      dmUsername: 'dm',
+      dmUsername: assertUsername('dm'),
       campaignSlug: campaign.slug,
       campaign: mockAuthQuery(campaign),
       isDm: false,
@@ -75,5 +99,48 @@ describe('useCampaign', () => {
       wrapper: createWrapper(value),
     })
     expect(result.current.isDm).toBe(false)
+  })
+})
+
+describe('useOptionalCampaign', () => {
+  beforeEach(() => {
+    mockUseMatch.mockReset()
+    vi.mocked(useAuthQuery).mockReset()
+  })
+
+  it('returns null when there is no provider or campaign route', () => {
+    mockUseMatch.mockReturnValue(undefined)
+    vi.mocked(useAuthQuery).mockReturnValue(mockAuthQuery(undefined))
+
+    const { result } = renderHook(() => useOptionalCampaign())
+
+    expect(result.current).toBeNull()
+  })
+
+  it('returns derived campaign state from the active campaign route', () => {
+    const campaign = createCampaign({
+      myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
+      slug: 'my-campaign',
+    })
+    mockUseMatch.mockReturnValue({
+      params: {
+        dmUsername: 'testdm',
+        campaignSlug: 'my-campaign',
+      },
+    })
+    vi.mocked(useAuthQuery).mockReturnValue(mockAuthQuery(campaign))
+
+    const { result } = renderHook(() => useOptionalCampaign())
+
+    expect(result.current).toBeDefined()
+    expect(result.current).not.toBeNull()
+    const campaignContext = result.current
+    if (!campaignContext) {
+      throw new Error('Expected campaign context')
+    }
+    expect(campaignContext.dmUsername).toBe('testdm')
+    expect(campaignContext.campaignSlug).toBe(campaign.slug)
+    expect(campaignContext.campaignId).toBe(campaign._id)
+    expect(campaignContext.isDm).toBe(true)
   })
 })

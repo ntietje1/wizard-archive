@@ -1,6 +1,7 @@
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { validatePinTarget } from 'convex/gameMaps/validation'
+import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import { toast } from 'sonner'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { SidebarItemLocation, SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
@@ -134,7 +135,7 @@ export interface DndContext {
       location?: SidebarItemLocation
     },
   ) => Promise<unknown>
-  navigateToItem: (slug: string, replace?: boolean) => Promise<void>
+  navigateToItem: (slug: SidebarItemSlug, replace?: boolean) => Promise<void>
   campaignId: Id<'campaigns'> | null
   campaignName: string | undefined
   isDm: boolean

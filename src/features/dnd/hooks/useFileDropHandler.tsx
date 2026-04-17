@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { api } from 'convex/_generated/api'
 import { isMediaFile, isTextFile, validateFileForUpload } from 'convex/storage/validation'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import { deduplicateName } from 'convex/sidebarItems/functions/defaultItemName'
 import type { Id } from 'convex/_generated/dataModel'
 import type { DropResult, FolderStructure } from '~/features/file-upload/utils/folder-reader'
@@ -34,7 +35,7 @@ interface UploadSingleFileOptions {
 
 export interface UploadSingleFileResult {
   id: Id<'sidebarItems'>
-  slug: string
+  slug: SidebarItemSlug
 }
 
 export interface UploadProgress {
@@ -150,7 +151,7 @@ export function useFileDropHandler() {
           parentTarget: { kind: 'direct', parentId },
         })
 
-        generatePdfPreviewIfNeeded(file, result.id as Id<'sidebarItems'>).catch((err: unknown) =>
+        generatePdfPreviewIfNeeded(file, result.id).catch((err: unknown) =>
           logger.error('PDF preview generation failed', err),
         )
 

@@ -22,6 +22,8 @@ function CursorIcon({ color }: { color: string }) {
 }
 
 const PIN_LERP_DURATION = 200
+// Clear the GPU hint shortly after cursor updates stop so it matches the drag lerp timing.
+const WILL_CHANGE_IDLE_TIMEOUT = 150
 
 function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
   const elementRef = useRef<HTMLDivElement>(null)
@@ -35,6 +37,7 @@ function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
   const pinnedRef = useRef<{ x: number; y: number } | null>(null)
   const rafIdRef = useRef<number>(0)
   const animatedPosRef = useRef<{ x: number; y: number } | null>(null)
+  const willChangeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   let pinnedPosition: { x: number; y: number } | null = null
   if (isDragging && remoteUser.cursor && remoteUser.dragging) {
@@ -70,6 +73,41 @@ function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
   useSpringPosition(isDragging ? null : remoteUser.cursor, elementRef)
 
   useEffect(() => {
+    const element = elementRef.current
+    if (!element || !remoteUser.cursor) {
+      if (willChangeTimeoutRef.current) {
+        clearTimeout(willChangeTimeoutRef.current)
+        willChangeTimeoutRef.current = null
+      }
+      if (element) {
+        element.style.willChange = ''
+      }
+      return
+    }
+
+    element.style.willChange = 'transform'
+    if (willChangeTimeoutRef.current) {
+      clearTimeout(willChangeTimeoutRef.current)
+    }
+    willChangeTimeoutRef.current = setTimeout(
+      () => {
+        if (elementRef.current) {
+          elementRef.current.style.willChange = ''
+        }
+        willChangeTimeoutRef.current = null
+      },
+      isDragging ? PIN_LERP_DURATION : WILL_CHANGE_IDLE_TIMEOUT,
+    )
+
+    return () => {
+      if (willChangeTimeoutRef.current) {
+        clearTimeout(willChangeTimeoutRef.current)
+        willChangeTimeoutRef.current = null
+      }
+    }
+  }, [remoteUser.cursor, isDragging])
+
+  useEffect(() => {
     if (!isDragging || !remoteUser.cursor) {
       lerpRef.current = null
       return
@@ -77,8 +115,8 @@ function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
 
     const animate = () => {
       const pinned = pinnedRef.current
-      const el = elementRef.current
-      if (!pinned || !el) return
+      const currentElement = elementRef.current
+      if (!pinned || !currentElement) return
 
       const lerp = lerpRef.current
       let x: number
@@ -94,7 +132,7 @@ function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
         y = pinned.y
       }
       animatedPosRef.current = { x, y }
-      el.style.transform = `translate(${x}px, ${y}px)`
+      currentElement.style.transform = `translate(${x}px, ${y}px)`
 
       rafIdRef.current = requestAnimationFrame(animate)
     }
@@ -102,7 +140,7 @@ function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
     rafIdRef.current = requestAnimationFrame(animate)
     return () => cancelAnimationFrame(rafIdRef.current)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDragging, remoteUser.cursor?.x, remoteUser.cursor?.y])
+  }, [remoteUser.cursor?.x, remoteUser.cursor?.y, isDragging])
 
   if (!remoteUser.cursor) return null
 
@@ -115,7 +153,6 @@ function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
         top: 0,
         pointerEvents: 'none',
         zIndex: 1000,
-        willChange: 'transform',
       }}
     >
       <CursorIcon color={remoteUser.user.color} />
@@ -134,7 +171,7 @@ export function NameLabel({ name, color }: { name: string; color: string }) {
         borderRadius: 4,
         backgroundColor: color,
         color: getContrastColor(color),
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: 500,
         lineHeight: '16px',
         whiteSpace: 'nowrap',

@@ -1,7 +1,12 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
+import { coerceSidebarItemColorForInput } from 'convex/sidebarItems/validation/color'
+import { coerceSidebarItemIconNameForInput } from 'convex/sidebarItems/validation/icon'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { assertSidebarItemName } from 'convex/sidebarItems/validation/name'
+import { assertSidebarItemSlug } from 'convex/sidebarItems/validation/slug'
+import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { GameMap } from 'convex/gameMaps/types'
@@ -51,7 +56,7 @@ export type EditItemArgs =
   | EditFileArgs
   | EditCanvasArgs
 
-export type EditItemResult = { slug: string }
+export type EditItemResult = { slug: SidebarItemSlug }
 
 interface EditItemFn {
   (args: EditNoteArgs): Promise<EditItemResult>
@@ -90,19 +95,29 @@ export function useEditSidebarItem() {
   ): Promise<EditItemResult> => {
     const { item, name, iconName, color } = args
 
-    const trimmedName = name?.trim()
+    const trimmedName = name === undefined ? undefined : name.trim()
     if (trimmedName !== undefined) {
       const result = validation.validateName(trimmedName, item.parentId, item._id)
       if (!result.valid) throw new Error(result.error)
     }
+    const normalizedName =
+      trimmedName === undefined ? undefined : assertSidebarItemName(trimmedName)
+
+    const normalizedIconName =
+      iconName === undefined || iconName === null
+        ? iconName
+        : coerceSidebarItemIconNameForInput(iconName)
+
+    const normalizedColor =
+      color === undefined || color === null ? color : coerceSidebarItemColorForInput(color)
 
     const currentSlug = getSelectedSlug()
     const isCurrentItem = item.slug === currentSlug
 
-    const optimisticFields: Partial<EditItemBase> = {}
-    if (trimmedName !== undefined) optimisticFields.name = trimmedName
-    if (iconName !== undefined) optimisticFields.iconName = iconName
-    if (color !== undefined) optimisticFields.color = color
+    const optimisticFields: Partial<Pick<AnySidebarItem, 'name' | 'iconName' | 'color'>> = {}
+    if (normalizedName !== undefined) optimisticFields.name = normalizedName
+    if (normalizedIconName !== undefined) optimisticFields.iconName = normalizedIconName
+    if (normalizedColor !== undefined) optimisticFields.color = normalizedColor
 
     if (Object.keys(optimisticFields).length > 0) {
       optimisticUpdate((prev) =>
@@ -111,61 +126,61 @@ export function useEditSidebarItem() {
     }
 
     try {
-      let slug: string
+      let slug: SidebarItemSlug
 
       switch (item.type) {
         case SIDEBAR_ITEM_TYPES.notes: {
           const res = await updateNoteMutation.mutateAsync({
             noteId: item._id,
-            name: trimmedName,
-            iconName,
-            color,
+            name: normalizedName,
+            iconName: normalizedIconName,
+            color: normalizedColor,
           })
-          slug = res.slug
+          slug = assertSidebarItemSlug(res.slug)
           break
         }
         case SIDEBAR_ITEM_TYPES.folders: {
           const res = await updateFolderMutation.mutateAsync({
             folderId: item._id,
-            name: trimmedName,
-            iconName,
-            color,
+            name: normalizedName,
+            iconName: normalizedIconName,
+            color: normalizedColor,
           })
-          slug = res.slug
+          slug = assertSidebarItemSlug(res.slug)
           break
         }
         case SIDEBAR_ITEM_TYPES.gameMaps: {
           const { imageStorageId } = args as EditMapArgs
           const res = await updateMapMutation.mutateAsync({
             mapId: item._id,
-            name: trimmedName,
-            iconName,
-            color,
+            name: normalizedName,
+            iconName: normalizedIconName,
+            color: normalizedColor,
             imageStorageId,
           })
-          slug = res.slug
+          slug = assertSidebarItemSlug(res.slug)
           break
         }
         case SIDEBAR_ITEM_TYPES.files: {
           const { storageId } = args as EditFileArgs
           const res = await updateFileMutation.mutateAsync({
             fileId: item._id,
-            name: trimmedName,
-            iconName,
-            color,
+            name: normalizedName,
+            iconName: normalizedIconName,
+            color: normalizedColor,
             storageId,
           })
-          slug = res.slug
+          slug = assertSidebarItemSlug(res.slug)
           break
         }
         case SIDEBAR_ITEM_TYPES.canvases: {
           const res = await updateCanvasMutation.mutateAsync({
             canvasId: item._id,
-            name: trimmedName,
-            iconName,
-            color,
+            name: normalizedName,
+            iconName: normalizedIconName,
+            color: normalizedColor,
           })
-          slug = res.slug
+          slug = assertSidebarItemSlug(res.slug)
           break
         }
         default:

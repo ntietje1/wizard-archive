@@ -2,10 +2,34 @@ import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createFolder, createNote } from '../../_test/factories.helper'
-import { testId } from '../../_test/test-id.helper'
-import { checkNameConflict, validateItemName, validateNoCircularParent } from '../sharedValidation'
 import { api } from '../../_generated/api'
+import { testId } from '../../_test/test-id.helper'
+import {
+  coerceSidebarItemColorForInput,
+  parseSidebarItemColor,
+  validateSidebarItemColor,
+} from '../validation/color'
+import {
+  coerceSidebarItemIconNameForInput,
+  parseSidebarItemIconName,
+  validateSidebarItemIconName,
+} from '../validation/icon'
+import {
+  checkNameConflict,
+  validateItemName,
+  validateSidebarItemNameWithSiblings,
+} from '../validation/name'
+import {
+  getAncestorIds,
+  validateCreateParentTarget,
+  validateNoCircularParent,
+  validateNoCircularParentAsync,
+} from '../validation/parent'
+import { validateLocalSidebarMove } from '../validation/move'
+import { validateItemSlug } from '../validation/slug'
 import type { Id } from '../../_generated/dataModel'
+import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
+import type { AnySidebarItem } from '../types/types'
 
 describe('validateItemName', () => {
   it('accepts a valid name', () => {
@@ -82,6 +106,81 @@ describe('validateItemName', () => {
   it('rejects trailing dot', () => {
     expect(validateItemName('file.').valid).toBe(false)
   })
+
+  it('rejects names that start or end with whitespace', () => {
+    expect(validateItemName(' name').valid).toBe(false)
+    expect(validateItemName('name ').valid).toBe(false)
+  })
+
+  it('rejects control characters', () => {
+    expect(validateItemName('line\nbreak').valid).toBe(false)
+  })
+
+  it('rejects names that would produce an empty slug', () => {
+    expect(validateItemName('🎉🎊').valid).toBe(false)
+  })
+})
+
+describe('validateItemSlug', () => {
+  it('accepts a valid slug', () => {
+    expect(validateItemSlug('my-note')).toEqual({ valid: true })
+  })
+
+  it('rejects empty string', () => {
+    expect(validateItemSlug('').valid).toBe(false)
+  })
+
+  it('rejects uppercase letters', () => {
+    expect(validateItemSlug('My-Note').valid).toBe(false)
+  })
+
+  it('rejects spaces', () => {
+    expect(validateItemSlug('my note').valid).toBe(false)
+  })
+
+  it('rejects consecutive hyphens', () => {
+    expect(validateItemSlug('my--note').valid).toBe(false)
+  })
+
+  it('rejects leading or trailing hyphens', () => {
+    expect(validateItemSlug('-note').valid).toBe(false)
+    expect(validateItemSlug('note-').valid).toBe(false)
+  })
+
+  it('accepts exactly 255 characters', () => {
+    const slug = 'a'.repeat(255)
+    expect(validateItemSlug(slug)).toEqual({ valid: true })
+  })
+
+  it('rejects 256 characters', () => {
+    const slug = 'a'.repeat(256)
+    expect(validateItemSlug(slug).valid).toBe(false)
+  })
+})
+
+describe('sidebar item color validation', () => {
+  it('parses valid colors and normalizes them to lowercase', () => {
+    expect(parseSidebarItemColor('#ABCDEF')).toBe('#abcdef')
+    expect(parseSidebarItemColor('#ABCDEF80')).toBe('#abcdef80')
+  })
+
+  it('rejects invalid colors', () => {
+    expect(parseSidebarItemColor('abcdef')).toBeNull()
+    expect(validateSidebarItemColor('#FFF')).toBe('Color must be a 6- or 8-digit hex value')
+    expect(validateSidebarItemColor('')).toBe('Color must be a 6- or 8-digit hex value')
+  })
+})
+
+describe('sidebar item icon validation', () => {
+  it('accepts supported icon names', () => {
+    expect(parseSidebarItemIconName('Shield')).toBe('Shield')
+    expect(parseSidebarItemIconName('Grid2x2Plus')).toBe('Grid2x2Plus')
+  })
+
+  it('rejects unsupported icon names', () => {
+    expect(parseSidebarItemIconName('Nope')).toBeNull()
+    expect(validateSidebarItemIconName('Nope')).toBe('Icon is not supported')
+  })
 })
 
 describe('checkNameConflict', () => {
@@ -102,6 +201,28 @@ describe('checkNameConflict', () => {
   it('excludes self from conflict check', () => {
     const result = checkNameConflict('Alpha', siblings, testId<'sidebarItems'>('id1'))
     expect(result).toEqual({ valid: true })
+  })
+})
+
+describe('validateSidebarItemNameWithSiblings', () => {
+  const siblings = [
+    { _id: testId<'sidebarItems'>('id1'), name: 'Alpha' },
+    { _id: testId<'sidebarItems'>('id2'), name: 'Beta' },
+  ]
+
+  it('validates format-only names when no siblings are provided', () => {
+    expect(validateSidebarItemNameWithSiblings('Gamma')).toEqual({ valid: true })
+  })
+
+  it('checks sibling conflicts after trimming', () => {
+    const result = validateSidebarItemNameWithSiblings(' alpha ', siblings)
+    expect(result.valid).toBe(false)
+  })
+
+  it('ignores the excluded item when checking conflicts', () => {
+    expect(
+      validateSidebarItemNameWithSiblings('Alpha', siblings, testId<'sidebarItems'>('id1')),
+    ).toEqual({ valid: true })
   })
 })
 
@@ -162,6 +283,162 @@ describe('validateNoCircularParent', () => {
       (id) => tree[id],
     )
     expect(result).toEqual({ valid: true })
+  })
+
+  it('supports async parent lookups with the same behavior', async () => {
+    const tree: Record<string, { parentId: Id<'sidebarItems'> | null }> = {
+      f2: folder('f2', 'f3'),
+      f3: folder('f3', 'f1'),
+    }
+    const result = await validateNoCircularParentAsync(
+      testId<'sidebarItems'>('f1'),
+      testId<'sidebarItems'>('f2'),
+      (id) => Promise.resolve(tree[id]),
+    )
+    expect(result.valid).toBe(false)
+  })
+})
+
+describe('getAncestorIds', () => {
+  const folder = (_id: string, parentId: string | null) => ({
+    parentId: parentId ? testId<'sidebarItems'>(parentId) : null,
+  })
+
+  it('returns ancestors in nearest-first order', () => {
+    const tree: Record<string, { parentId: Id<'sidebarItems'> | null }> = {
+      note: folder('note', 'f2'),
+      f2: folder('f2', 'f3'),
+      f3: folder('f3', null),
+    }
+    expect(getAncestorIds(testId<'sidebarItems'>('note'), (id) => tree[id])).toEqual([
+      testId<'sidebarItems'>('f2'),
+      testId<'sidebarItems'>('f3'),
+    ])
+  })
+
+  it('returns empty when the item is missing', () => {
+    expect(getAncestorIds(testId<'sidebarItems'>('missing'), () => undefined)).toEqual([])
+  })
+})
+
+describe('validateLocalSidebarMove', () => {
+  it('skips validation when moving to trash', () => {
+    const result = validateLocalSidebarMove(
+      {
+        itemId: testId<'sidebarItems'>('note'),
+        name: 'Alpha',
+        parentId: testId<'sidebarItems'>('folder'),
+        isTrashing: true,
+      },
+      {
+        getParent: () => undefined,
+        getSiblings: () => [{ _id: testId<'sidebarItems'>('other'), name: 'Alpha' }],
+      },
+    )
+
+    expect(result).toEqual({ valid: true })
+  })
+
+  it('returns the existing circular move error message', () => {
+    const tree: Record<string, { parentId: Id<'sidebarItems'> | null }> = {
+      child: { parentId: testId<'sidebarItems'>('item') },
+    }
+
+    const result = validateLocalSidebarMove(
+      {
+        itemId: testId<'sidebarItems'>('item'),
+        name: 'Alpha',
+        parentId: testId<'sidebarItems'>('child'),
+      },
+      {
+        getParent: (id) => tree[id],
+        getSiblings: () => [],
+      },
+    )
+
+    expect(result).toEqual({
+      valid: false,
+      error: 'Cannot move item: circular reference detected',
+    })
+  })
+
+  it('skips sibling conflicts when restoring from trash', () => {
+    const result = validateLocalSidebarMove(
+      {
+        itemId: testId<'sidebarItems'>('item'),
+        name: 'Alpha',
+        parentId: null,
+        isRestoring: true,
+      },
+      {
+        getParent: () => undefined,
+        getSiblings: () => [{ _id: testId<'sidebarItems'>('other'), name: 'Alpha' }],
+      },
+    )
+
+    expect(result).toEqual({ valid: true })
+  })
+
+  it('rejects missing target parents before other move validation', () => {
+    const result = validateLocalSidebarMove(
+      {
+        itemId: testId<'sidebarItems'>('item'),
+        name: 'Alpha',
+        parentId: testId<'sidebarItems'>('missing-parent'),
+      },
+      {
+        getParent: () => undefined,
+        getSiblings: () => [],
+      },
+    )
+
+    expect(result).toEqual({
+      valid: false,
+      error: 'Cannot move item: target parent does not exist',
+    })
+  })
+
+  it('checks sibling conflicts for regular moves', () => {
+    const result = validateLocalSidebarMove(
+      {
+        itemId: testId<'sidebarItems'>('item'),
+        name: 'Alpha',
+        parentId: null,
+      },
+      {
+        getParent: () => undefined,
+        getSiblings: () => [{ _id: testId<'sidebarItems'>('other'), name: 'Alpha' }],
+      },
+    )
+
+    expect(result.valid).toBe(false)
+  })
+})
+
+describe('validateCreateParentTarget', () => {
+  it('rejects path targets whose base parent is not a folder', () => {
+    const noteId = testId<'sidebarItems'>('note-parent')
+    const noteParent = {
+      _id: noteId,
+      type: SIDEBAR_ITEM_TYPES.notes,
+      parentId: null,
+      name: 'Leaf Note',
+    } as unknown as AnySidebarItem
+
+    const result = validateCreateParentTarget(
+      {
+        kind: 'path',
+        baseParentId: noteId,
+        pathSegments: [],
+      },
+      new Map([[noteId, noteParent]]),
+      new Map([[null, [noteParent]]]),
+    )
+
+    expect(result).toEqual({
+      valid: false,
+      error: 'Parent is not a folder',
+    })
   })
 })
 
@@ -239,5 +516,173 @@ describe('cross-table slug uniqueness', () => {
     })
 
     expect(result.slug).toBe('deleted-item-2')
+  })
+
+  it('rejects invalid slugs at the query boundary', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    await expect(
+      dmAuth.query(api.sidebarItems.queries.getSidebarItemBySlug, {
+        campaignId: ctx.campaignId,
+        slug: 'bad slug',
+      }),
+    ).rejects.toThrow('Slug can only contain lowercase letters, numbers, and single hyphens')
+  })
+
+  it('rejects create requests whose names cannot produce a valid slug', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    await expect(
+      dmAuth.mutation(api.notes.mutations.createNote, {
+        campaignId: ctx.campaignId,
+        name: '🎉🎊',
+        parentTarget: { kind: 'direct', parentId: null },
+        content: [],
+      }),
+    ).rejects.toThrow('Name must contain at least one letter or number')
+  })
+
+  it('keeps generated slugs valid for max-length names', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const firstName = 'a'.repeat(255)
+    const secondName = `${'a'.repeat(253)} 2`
+
+    const first = await dmAuth.mutation(api.notes.mutations.createNote, {
+      campaignId: ctx.campaignId,
+      name: firstName,
+      parentTarget: { kind: 'direct', parentId: null },
+      content: [],
+    })
+
+    const second = await dmAuth.mutation(api.notes.mutations.createNote, {
+      campaignId: ctx.campaignId,
+      name: secondName,
+      parentTarget: { kind: 'direct', parentId: null },
+      content: [],
+    })
+
+    expect(validateItemSlug(first.slug)).toEqual({ valid: true })
+    expect(validateItemSlug(second.slug)).toEqual({ valid: true })
+    expect(first.slug.length).toBeLessThanOrEqual(255)
+    expect(second.slug.length).toBeLessThanOrEqual(255)
+  })
+
+  it('rejects invalid note colors at the mutation boundary', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    await expect(
+      dmAuth.mutation(api.notes.mutations.createNote, {
+        campaignId: ctx.campaignId,
+        name: 'bad-color-note',
+        parentTarget: { kind: 'direct', parentId: null },
+        color: 'red',
+        content: [],
+      }),
+    ).rejects.toThrow('Color must be a 6- or 8-digit hex value')
+  })
+
+  it('rejects invalid folder icons at the mutation boundary', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const folder = await dmAuth.mutation(api.folders.mutations.createFolder, {
+      campaignId: ctx.campaignId,
+      name: 'folder-to-update',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+
+    await expect(
+      dmAuth.mutation(api.folders.mutations.updateFolder, {
+        campaignId: ctx.campaignId,
+        folderId: folder.folderId,
+        iconName: 'InvalidIcon' as never,
+      }),
+    ).rejects.toThrow('Icon is not supported')
+  })
+
+  it('stores file colors in lowercase canonical form', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const result = await dmAuth.mutation(api.files.mutations.createFile, {
+      campaignId: ctx.campaignId,
+      name: 'file-with-color',
+      parentTarget: { kind: 'direct', parentId: null },
+      iconName: 'Shield',
+      color: '#ABCDEF',
+    })
+
+    const item = await dmAuth.query(api.sidebarItems.queries.getSidebarItemBySlug, {
+      campaignId: ctx.campaignId,
+      slug: result.slug,
+    })
+
+    expect(item?.iconName).toBe('Shield')
+    expect(item?.color).toBe('#abcdef')
+  })
+
+  it('stores updated map colors in lowercase canonical form', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const map = await dmAuth.mutation(api.gameMaps.mutations.createMap, {
+      campaignId: ctx.campaignId,
+      name: 'map-color',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+
+    await dmAuth.mutation(api.gameMaps.mutations.updateMap, {
+      campaignId: ctx.campaignId,
+      mapId: map.mapId,
+      iconName: 'Grid2x2Plus',
+      color: '#ABCDEF80',
+    })
+
+    const item = await dmAuth.query(api.sidebarItems.queries.getSidebarItemBySlug, {
+      campaignId: ctx.campaignId,
+      slug: map.slug,
+    })
+
+    expect(item?.iconName).toBe('Grid2x2Plus')
+    expect(item?.color).toBe('#abcdef80')
+  })
+
+  it('rejects invalid canvas colors at the mutation boundary', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const canvas = await dmAuth.mutation(api.canvases.mutations.createCanvas, {
+      campaignId: ctx.campaignId,
+      name: 'canvas-to-update',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+
+    await expect(
+      dmAuth.mutation(api.canvases.mutations.updateCanvas, {
+        campaignId: ctx.campaignId,
+        canvasId: canvas.canvasId,
+        color: '#12',
+      }),
+    ).rejects.toThrow('Color must be a 6- or 8-digit hex value')
+  })
+})
+
+describe('input coercion helpers', () => {
+  it('coerces valid icon and color inputs', () => {
+    expect(coerceSidebarItemIconNameForInput('Shield')).toBe('Shield')
+    expect(coerceSidebarItemColorForInput('#ABCDEF')).toBe('#abcdef')
+    expect(coerceSidebarItemIconNameForInput(null)).toBeNull()
+    expect(coerceSidebarItemColorForInput(undefined)).toBeUndefined()
+  })
+
+  it('throws the same validation errors for invalid icon and color inputs', () => {
+    expect(() => coerceSidebarItemIconNameForInput('Nope')).toThrow('Icon is not supported')
+    expect(() => coerceSidebarItemColorForInput('#FFF')).toThrow(
+      'Color must be a 6- or 8-digit hex value',
+    )
   })
 })

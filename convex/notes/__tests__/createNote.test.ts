@@ -138,13 +138,13 @@ describe('createNote', () => {
       campaignId: ctx.campaignId,
       name: 'Styled Note',
       parentTarget: { kind: 'direct', parentId: null },
-      iconName: 'scroll',
+      iconName: 'Notebook',
       color: '#ff0000',
     })
 
     await t.run(async (dbCtx) => {
       const note = await dbCtx.db.get('sidebarItems', result.noteId)
-      expect(note!.iconName).toBe('scroll')
+      expect(note!.iconName).toBe('Notebook')
       expect(note!.color).toBe('#ff0000')
     })
   })
@@ -291,20 +291,43 @@ describe('createNote', () => {
     expect(result.noteId).toBeDefined()
   })
 
-  it('trims whitespace from name', async () => {
+  it('rejects names with leading or trailing whitespace', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const result = await dmAuth.mutation(api.notes.mutations.createNote, {
-      campaignId: ctx.campaignId,
-      name: '  Padded Name  ',
-      parentTarget: { kind: 'direct', parentId: null },
-    })
+    await expectValidationFailed(
+      dmAuth.mutation(api.notes.mutations.createNote, {
+        campaignId: ctx.campaignId,
+        name: '  Padded Name  ',
+        parentTarget: { kind: 'direct', parentId: null },
+      }),
+    )
+  })
 
-    await t.run(async (dbCtx) => {
-      const note = await dbCtx.db.get('sidebarItems', result.noteId)
-      expect(note!.name).toBe('Padded Name')
-    })
+  it('rejects names with leading whitespace only', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    await expectValidationFailed(
+      dmAuth.mutation(api.notes.mutations.createNote, {
+        campaignId: ctx.campaignId,
+        name: '  Leading',
+        parentTarget: { kind: 'direct', parentId: null },
+      }),
+    )
+  })
+
+  it('rejects names with trailing whitespace only', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    await expectValidationFailed(
+      dmAuth.mutation(api.notes.mutations.createNote, {
+        campaignId: ctx.campaignId,
+        name: 'Trailing  ',
+        parentTarget: { kind: 'direct', parentId: null },
+      }),
+    )
   })
 
   it('requires authentication', async () => {

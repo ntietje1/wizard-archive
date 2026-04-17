@@ -1,4 +1,4 @@
-import { requireItemAccess } from '../../sidebarItems/validation'
+import { requireItemAccess } from '../../sidebarItems/validation/access'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'

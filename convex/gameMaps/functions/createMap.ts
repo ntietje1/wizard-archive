@@ -1,11 +1,11 @@
-import {
-  findUniqueSidebarItemSlug,
-  validateSidebarCreateParent,
-  validateSidebarItemName,
-} from '../../sidebarItems/validation'
-import type { CreateParentTarget } from '../../sidebarItems/createParentTarget'
+import { prepareSidebarItemCreate } from '../../sidebarItems/validation/orchestration'
+import type { ParsedCreateParentTarget } from '../../sidebarItems/validation/parent'
 import { resolveOrCreateFolderPath } from '../../folders/functions/resolveOrCreateFolderPath'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import type { SidebarItemName } from '../../sidebarItems/validation/name'
+import type { SidebarItemColor } from '../../sidebarItems/validation/color'
+import type { SidebarItemIconName } from '../../sidebarItems/validation/icon'
+import type { SidebarItemSlug } from '../../sidebarItems/validation/slug'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import type { CampaignMutationCtx } from '../../functions'
@@ -20,24 +20,17 @@ export async function createMap(
     iconName,
     color,
   }: {
-    name: string
+    name: SidebarItemName
     imageStorageId?: Id<'_storage'>
-    parentTarget: CreateParentTarget
-    iconName?: string
-    color?: string
+    parentTarget: ParsedCreateParentTarget
+    iconName?: SidebarItemIconName
+    color?: SidebarItemColor
   },
-): Promise<{ mapId: Id<'sidebarItems'>; slug: string }> {
-  const trimmedName = name.trim()
+): Promise<{ mapId: Id<'sidebarItems'>; slug: SidebarItemSlug }> {
   const resolvedParentId = await resolveOrCreateFolderPath(ctx, { parentTarget })
-
-  await validateSidebarCreateParent(ctx, { parentId: resolvedParentId })
-  await validateSidebarItemName(ctx, {
+  const prepared = await prepareSidebarItemCreate(ctx, {
     parentId: resolvedParentId,
-    name: trimmedName,
-  })
-
-  const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
-    name: trimmedName,
+    name,
   })
 
   const campaignId = ctx.campaign._id
@@ -45,8 +38,8 @@ export async function createMap(
 
   const mapId = await ctx.db.insert('sidebarItems', {
     campaignId,
-    name: trimmedName,
-    slug: uniqueSlug,
+    name: prepared.name,
+    slug: prepared.slug,
     iconName: iconName ?? null,
     color: color ?? null,
     parentId: resolvedParentId,
@@ -75,5 +68,5 @@ export async function createMap(
     action: EDIT_HISTORY_ACTION.created,
   })
 
-  return { mapId, slug: uniqueSlug }
+  return { mapId, slug: prepared.slug }
 }

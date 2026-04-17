@@ -4,6 +4,7 @@ import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { hardDeleteItem } from './hardDeleteItem'
 import { hardDeleteTree } from './treeOperations'
 import type { MutationCtx } from '../../_generated/server'
+import type { AnySidebarItemRow } from '../types/types'
 
 const TRASH_RETENTION_MS = TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000
 
@@ -38,10 +39,13 @@ export async function purgeExpiredTrash(ctx: MutationCtx): Promise<void> {
 
       for (const folder of expiredFolders) {
         if (deleted >= BATCH_SIZE) break
-        const currentFolder = await ctx.db.get('sidebarItems', folder._id)
+        const currentFolder: AnySidebarItemRow | null = await ctx.db.get('sidebarItems', folder._id)
         if (!currentFolder) continue
         if (currentFolder.parentId) {
-          const parent = await ctx.db.get('sidebarItems', currentFolder.parentId)
+          const parent: AnySidebarItemRow | null = await ctx.db.get(
+            'sidebarItems',
+            currentFolder.parentId,
+          )
           if (parent?.deletionTime && parent.deletionTime < cutoff) continue
         }
         const count = await hardDeleteTree(ctx, currentFolder)
@@ -50,7 +54,7 @@ export async function purgeExpiredTrash(ctx: MutationCtx): Promise<void> {
 
       for (const leaf of expiredLeaves) {
         if (deleted >= BATCH_SIZE) break
-        const current = await ctx.db.get('sidebarItems', leaf._id)
+        const current: AnySidebarItemRow | null = await ctx.db.get('sidebarItems', leaf._id)
         if (!current) continue
         await hardDeleteItem(ctx, current)
         deleted++

@@ -1,4 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
+import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import { useLastEditorItem } from './useLastEditorItem'
 import { EDITOR_ROUTE } from './useEditorLinkProps'
 import type { EditorSearch } from '~/features/sidebar/utils/validate-search'
@@ -23,7 +24,7 @@ export const useEditorNavigation = () => {
     })
   }
 
-  const navigateToItem = async (slug: string, replace?: boolean) => {
+  const navigateToItem = async (slug: SidebarItemSlug, replace?: boolean) => {
     setLastSelectedItem(slug)
     await navigateToEditor({ item: slug }, replace)
   }

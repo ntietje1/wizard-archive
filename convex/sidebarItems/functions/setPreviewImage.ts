@@ -1,5 +1,5 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
-import { requireItemAccess } from '../validation'
+import { requireItemAccess } from '../validation/access'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { logger } from '../../common/logger'

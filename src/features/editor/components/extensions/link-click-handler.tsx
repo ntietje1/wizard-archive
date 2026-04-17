@@ -11,9 +11,9 @@ import { useEditorDomElement } from '~/features/editor/hooks/useEditorDomElement
 import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import { CREATE_PARENT_TARGET_KIND } from 'convex/sidebarItems/createParentTarget'
+import { CREATE_PARENT_TARGET_KIND } from 'convex/sidebarItems/validation/parent'
 import type { CreateItemArgs } from '~/features/sidebar/hooks/useCreateSidebarItem'
-import type { ValidationResult } from 'convex/sidebarItems/sharedValidation'
+import type { ValidationResult } from 'convex/sidebarItems/validation/name'
 
 interface TooltipState {
   show: boolean

@@ -1,5 +1,5 @@
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
-import { requireItemAccess } from '../../sidebarItems/validation'
+import { requireItemAccess } from '../../sidebarItems/validation/access'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { resolveInheritedPermissions } from './sidebarItemPermissions'

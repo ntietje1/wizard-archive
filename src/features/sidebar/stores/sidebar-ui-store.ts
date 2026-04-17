@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { useShallow } from 'zustand/shallow'
 import type { Id } from 'convex/_generated/dataModel'
+import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 
 interface CampaignState {
   folderStates: Record<string, boolean>
@@ -13,7 +14,7 @@ interface SidebarUIState {
   campaignStates: Record<string, CampaignState>
   renamingId: Id<'sidebarItems'> | null
   pendingItemName: string
-  selectedSlug: string | null
+  selectedSlug: SidebarItemSlug | null
   viewAsPlayerId: Id<'campaignMembers'> | null
 }
 
@@ -26,7 +27,7 @@ interface SidebarUIActions {
   exitCloseAllMode: (campaignId: string) => void
   toggleBookmarksOnlyMode: (campaignId: string) => void
   setPendingItemName: (name: string) => void
-  setSelected: (slug: string | null) => void
+  setSelected: (slug: SidebarItemSlug | null) => void
   setViewAsPlayerId: (id: Id<'campaignMembers'> | null) => void
 }
 

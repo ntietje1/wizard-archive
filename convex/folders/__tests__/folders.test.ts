@@ -233,12 +233,12 @@ describe('updateFolder', () => {
     await dmAuth.mutation(api.folders.mutations.updateFolder, {
       campaignId: ctx.campaignId,
       folderId,
-      iconName: 'treasure-chest',
+      iconName: 'Box',
     })
 
     await t.run(async (dbCtx) => {
       const folder = await dbCtx.db.get('sidebarItems', folderId)
-      expect(folder!.iconName).toBe('treasure-chest')
+      expect(folder!.iconName).toBe('Box')
     })
   })
 
@@ -365,7 +365,7 @@ describe('updateFolder', () => {
     const result = await dmAuth.mutation(api.folders.mutations.updateFolder, {
       campaignId: ctx.campaignId,
       folderId,
-      iconName: 'test',
+      iconName: 'Gem',
     })
 
     expect(result).toHaveProperty('folderId')

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
+import { slugify } from 'convex/common/slug'
 import { validateCampaignName, validateCampaignSlug } from 'convex/campaigns/validation'
 import { Link, Sword } from 'lucide-react'
 import type { RefObject } from 'react'
@@ -79,7 +80,7 @@ function CampaignForm({ mode, onClose, campaign, campaigns }: Omit<CampaignDialo
           await createCampaign.mutateAsync({
             name: value.name.trim(),
             description: value.description.trim(),
-            slug: value.slug.trim(),
+            slug: slugify(value.slug),
           })
 
           toast.success('Campaign created successfully')
@@ -89,7 +90,7 @@ function CampaignForm({ mode, onClose, campaign, campaigns }: Omit<CampaignDialo
             campaignId: campaign._id,
             name: value.name.trim(),
             description: value.description.trim() || undefined,
-            slug: value.slug.trim(),
+            slug: slugify(value.slug),
           })
 
           toast.success('Campaign updated successfully')
@@ -168,11 +169,12 @@ function CampaignForm({ mode, onClose, campaign, campaigns }: Omit<CampaignDialo
           onMount: ({ value }) => validateCampaignSlug(value),
           onBlur: ({ value }) => validateCampaignSlug(value),
           onChange: ({ value }) => {
-            const syncError = validateCampaignSlug(value)
+            const normalized = slugify(value)
+            const syncError = validateCampaignSlug(normalized)
             if (syncError) return syncError
             const excludeId = mode === 'edit' ? campaign?._id : undefined
             const slugTaken = campaignsRef.current.some(
-              (c) => c.slug === value && c._id !== excludeId,
+              (c) => c.slug === normalized && c._id !== excludeId,
             )
             return slugTaken ? 'This link is already taken.' : null
           },
@@ -187,7 +189,7 @@ function CampaignForm({ mode, onClose, campaign, campaigns }: Omit<CampaignDialo
             <Input
               id="campaign-slug"
               value={field.state.value}
-              onChange={(e) => field.handleChange(e.target.value)}
+              onChange={(e) => field.handleChange(slugify(e.target.value))}
               onBlur={field.handleBlur}
               placeholder="campaign-link"
               maxLength={30}

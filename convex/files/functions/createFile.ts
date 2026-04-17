@@ -1,9 +1,9 @@
-import {
-  findUniqueSidebarItemSlug,
-  validateSidebarCreateParent,
-  validateSidebarItemName,
-} from '../../sidebarItems/validation'
-import type { CreateParentTarget } from '../../sidebarItems/createParentTarget'
+import { prepareSidebarItemCreate } from '../../sidebarItems/validation/orchestration'
+import type { ParsedCreateParentTarget } from '../../sidebarItems/validation/parent'
+import type { SidebarItemName } from '../../sidebarItems/validation/name'
+import type { SidebarItemColor } from '../../sidebarItems/validation/color'
+import type { SidebarItemIconName } from '../../sidebarItems/validation/icon'
+import type { SidebarItemSlug } from '../../sidebarItems/validation/slug'
 import { resolveOrCreateFolderPath } from '../../folders/functions/resolveOrCreateFolderPath'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { logEditHistory } from '../../editHistory/log'
@@ -20,24 +20,17 @@ export async function createFile(
     iconName,
     color,
   }: {
-    name: string
+    name: SidebarItemName
     storageId?: Id<'_storage'>
-    parentTarget: CreateParentTarget
-    iconName?: string
-    color?: string
+    parentTarget: ParsedCreateParentTarget
+    iconName?: SidebarItemIconName
+    color?: SidebarItemColor
   },
-): Promise<{ fileId: Id<'sidebarItems'>; slug: string }> {
-  const trimmedName = name.trim()
+): Promise<{ fileId: Id<'sidebarItems'>; slug: SidebarItemSlug }> {
   const resolvedParentId = await resolveOrCreateFolderPath(ctx, { parentTarget })
-
-  await validateSidebarCreateParent(ctx, { parentId: resolvedParentId })
-  await validateSidebarItemName(ctx, {
+  const prepared = await prepareSidebarItemCreate(ctx, {
     parentId: resolvedParentId,
-    name: trimmedName,
-  })
-
-  const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
-    name: trimmedName,
+    name,
   })
 
   const userId = ctx.membership.userId
@@ -52,8 +45,8 @@ export async function createFile(
 
   const fileId = await ctx.db.insert('sidebarItems', {
     campaignId: ctx.campaign._id,
-    name: trimmedName,
-    slug: uniqueSlug,
+    name: prepared.name,
+    slug: prepared.slug,
     iconName: iconName ?? null,
     color: color ?? null,
     parentId: resolvedParentId,
@@ -82,5 +75,5 @@ export async function createFile(
     action: EDIT_HISTORY_ACTION.created,
   })
 
-  return { fileId, slug: uniqueSlug }
+  return { fileId, slug: prepared.slug }
 }

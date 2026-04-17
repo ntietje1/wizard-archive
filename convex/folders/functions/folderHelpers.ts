@@ -1,11 +1,11 @@
-import {
-  findUniqueSidebarItemSlug,
-  validateSidebarCreateParent,
-  validateSidebarItemName,
-} from '../../sidebarItems/validation'
+import { prepareSidebarItemCreate } from '../../sidebarItems/validation/orchestration'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import type { SidebarItemName } from '../../sidebarItems/validation/name'
+import type { SidebarItemColor } from '../../sidebarItems/validation/color'
+import type { SidebarItemIconName } from '../../sidebarItems/validation/icon'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
+import type { SidebarItemSlug } from '../../sidebarItems/validation/slug'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 
@@ -16,10 +16,10 @@ export async function findSidebarChildByName(
     name,
   }: {
     parentId: Id<'sidebarItems'> | null
-    name: string
+    name: SidebarItemName
   },
 ): Promise<Doc<'sidebarItems'> | null> {
-  const normalizedName = name.trim().toLowerCase()
+  const normalizedName = name.toLowerCase()
   const siblings = await ctx.db
     .query('sidebarItems')
     .withIndex('by_campaign_location_parent_name', (q) =>
@@ -45,27 +45,22 @@ export async function insertFolder(
     iconName,
     color,
   }: {
-    name: string
+    name: SidebarItemName
     parentId: Id<'sidebarItems'> | null
-    iconName?: string
-    color?: string
+    iconName?: SidebarItemIconName
+    color?: SidebarItemColor
   },
-): Promise<{ folderId: Id<'sidebarItems'>; slug: string }> {
-  await validateSidebarCreateParent(ctx, { parentId })
-  await validateSidebarItemName(ctx, {
+): Promise<{ folderId: Id<'sidebarItems'>; slug: SidebarItemSlug }> {
+  const prepared = await prepareSidebarItemCreate(ctx, {
     parentId,
-    name,
-  })
-
-  const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
     name,
   })
 
   const userId = ctx.membership.userId
 
   const folderId = await ctx.db.insert('sidebarItems', {
-    name,
-    slug: uniqueSlug,
+    name: prepared.name,
+    slug: prepared.slug,
     iconName: iconName ?? null,
     color: color ?? null,
     parentId,
@@ -95,5 +90,5 @@ export async function insertFolder(
     action: EDIT_HISTORY_ACTION.created,
   })
 
-  return { folderId, slug: uniqueSlug }
+  return { folderId, slug: prepared.slug }
 }

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
+import {
+  DEFAULT_SIDEBAR_ITEM_COLOR,
+  isValidSidebarItemColor,
+  normalizeSidebarItemColorOrDefault,
+} from 'convex/sidebarItems/validation/color'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { assertSidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import {
@@ -13,8 +19,6 @@ import {
   isGameMap,
   isNote,
   isSidebarItemType,
-  isValidHexColor,
-  validateHexColorOrDefault,
 } from '~/features/sidebar/utils/sidebar-item-utils'
 import {
   createFile,
@@ -80,7 +84,7 @@ describe('getSidebarItemAs', () => {
 
 describe('getSlug', () => {
   it('returns item slug from search params', () => {
-    expect(getSlug({ item: 'my-note' })).toBe('my-note')
+    expect(getSlug({ item: assertSidebarItemSlug('my-note') })).toBe('my-note')
   })
 
   it('returns null when item is undefined', () => {
@@ -94,6 +98,7 @@ describe('getDefaultIconName', () => {
     expect(getDefaultIconName(SIDEBAR_ITEM_TYPES.folders)).toBe('Folder')
     expect(getDefaultIconName(SIDEBAR_ITEM_TYPES.gameMaps)).toBe('MapPin')
     expect(getDefaultIconName(SIDEBAR_ITEM_TYPES.files)).toBe('File')
+    expect(getDefaultIconName(SIDEBAR_ITEM_TYPES.canvases)).toBe('Grid2x2Plus')
   })
 })
 
@@ -106,55 +111,55 @@ describe('getItemTypeLabel', () => {
   })
 })
 
-describe('isValidHexColor', () => {
+describe('isValidSidebarItemColor', () => {
   it('accepts valid 6-digit hex colors', () => {
-    expect(isValidHexColor('#FF0000')).toBe(true)
-    expect(isValidHexColor('#14b8a6')).toBe(true)
+    expect(isValidSidebarItemColor('#FF0000')).toBe(true)
+    expect(isValidSidebarItemColor('#14b8a6')).toBe(true)
   })
 
   it('accepts valid 8-digit hex colors', () => {
-    expect(isValidHexColor('#FF000080')).toBe(true)
+    expect(isValidSidebarItemColor('#FF000080')).toBe(true)
   })
 
   it('rejects invalid colors', () => {
-    expect(isValidHexColor('#FFF')).toBe(false)
-    expect(isValidHexColor('red')).toBe(false)
-    expect(isValidHexColor('')).toBe(false)
-    expect(isValidHexColor(null)).toBe(false)
-    expect(isValidHexColor(undefined)).toBe(false)
+    expect(isValidSidebarItemColor('#FFF')).toBe(false)
+    expect(isValidSidebarItemColor('red')).toBe(false)
+    expect(isValidSidebarItemColor('')).toBe(false)
+    expect(isValidSidebarItemColor(null)).toBe(false)
+    expect(isValidSidebarItemColor(undefined)).toBe(false)
   })
 
   it('rejects hex without # prefix', () => {
-    expect(isValidHexColor('FF0000')).toBe(false)
+    expect(isValidSidebarItemColor('FF0000')).toBe(false)
   })
 
   it('rejects 5-digit and 7-digit hex', () => {
-    expect(isValidHexColor('#12345')).toBe(false)
-    expect(isValidHexColor('#1234567')).toBe(false)
+    expect(isValidSidebarItemColor('#12345')).toBe(false)
+    expect(isValidSidebarItemColor('#1234567')).toBe(false)
   })
 
   it('rejects non-hex characters', () => {
-    expect(isValidHexColor('#GGGGGG')).toBe(false)
-    expect(isValidHexColor('#ZZZZZZ')).toBe(false)
+    expect(isValidSidebarItemColor('#GGGGGG')).toBe(false)
+    expect(isValidSidebarItemColor('#ZZZZZZ')).toBe(false)
   })
 })
 
-describe('validateHexColorOrDefault', () => {
+describe('normalizeSidebarItemColorOrDefault', () => {
   it('returns color when valid', () => {
-    expect(validateHexColorOrDefault('#FF0000')).toBe('#FF0000')
+    expect(normalizeSidebarItemColorOrDefault('#FF0000')).toBe('#ff0000')
   })
 
   it('returns default when invalid', () => {
-    expect(validateHexColorOrDefault('invalid')).toBe('#14b8a6')
+    expect(normalizeSidebarItemColorOrDefault('invalid')).toBe(DEFAULT_SIDEBAR_ITEM_COLOR)
   })
 
   it('returns default when null/undefined', () => {
-    expect(validateHexColorOrDefault(null)).toBe('#14b8a6')
-    expect(validateHexColorOrDefault(undefined)).toBe('#14b8a6')
+    expect(normalizeSidebarItemColorOrDefault(null)).toBe(DEFAULT_SIDEBAR_ITEM_COLOR)
+    expect(normalizeSidebarItemColorOrDefault(undefined)).toBe(DEFAULT_SIDEBAR_ITEM_COLOR)
   })
 
   it('uses custom default', () => {
-    expect(validateHexColorOrDefault(null, '#000000')).toBe('#000000')
+    expect(normalizeSidebarItemColorOrDefault(null, '#000000')).toBe('#000000')
   })
 })
 

@@ -1,26 +1,15 @@
 import { v } from 'convex/values'
 import { authMutation } from '../functions'
-import { slugify, validateUsername } from '../common/slug'
+import { requireUsername, usernameValidator } from './validation'
 import { ERROR_CODE, throwClientError } from '../errors'
-import { USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH } from './constants'
 
 export const updateUsername = authMutation({
   args: {
-    username: v.string(),
+    username: usernameValidator,
   },
-  returns: v.string(),
+  returns: usernameValidator,
   handler: async (ctx, args) => {
-    const username = slugify(args.username)
-
-    const validationError = validateUsername(
-      username,
-      args.username,
-      USERNAME_MIN_LENGTH,
-      USERNAME_MAX_LENGTH,
-    )
-    if (validationError) {
-      throwClientError(ERROR_CODE.VALIDATION_FAILED, validationError)
-    }
+    const username = requireUsername(args.username)
 
     if (username === ctx.user.profile.username) {
       return username

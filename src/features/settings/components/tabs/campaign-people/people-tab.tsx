@@ -1,27 +1,18 @@
 import { Loader2 } from 'lucide-react'
 import { api } from 'convex/_generated/api'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'convex/campaigns/types'
-import { useParams } from '@tanstack/react-router'
 import { InviteLinkSection } from './components/invite-link-section'
 import { MembersSection } from './components/members-section'
 import { PendingRequestsSection } from './components/pending-requests-section'
 import { RejectedRemovedSection } from './components/rejected-removed-section'
+import { useOptionalCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { getOrigin } from '~/shared/utils/origin'
 
 export function PeopleTab() {
-  const { dmUsername, campaignSlug } = useParams({
-    from: '/_app/_authed/campaigns/$dmUsername/$campaignSlug',
-  })
-
-  const campaign = useAuthQuery(api.campaigns.queries.getCampaignBySlug, {
-    dmUsername,
-    slug: campaignSlug,
-  })
-  const campaignData = campaign.data
-  const isDm = campaignData
-    ? campaignData.myMembership?.role === CAMPAIGN_MEMBER_ROLE.DM
-    : undefined
+  const campaignContext = useOptionalCampaign()
+  const campaignData = campaignContext?.campaign.data
+  const isDm = campaignContext?.isDm
 
   const members = useAuthQuery(
     api.campaigns.queries.getMembersByCampaign,
@@ -50,10 +41,29 @@ export function PeopleTab() {
           p.status === CAMPAIGN_MEMBER_STATUS.Removed),
     ) ?? []
 
-  const joinUrl = `${getOrigin()}/join/${dmUsername}/${campaignSlug}`
+  if (!campaignContext) {
+    return (
+      <div className="flex flex-col gap-2">
+        <div>
+          <p className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground/60">
+            Campaign
+          </p>
+          <h2 className="text-lg font-semibold">People</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Open a campaign to manage players, invitations, and role assignments.
+        </p>
+      </div>
+    )
+  }
 
-  const isLoading = campaign.isLoading || members.isLoading || (isDm && requests.isLoading)
-  const isError = campaign.isError || members.isError || (isDm && requests.isError)
+  const joinUrl = isDm
+    ? `${getOrigin()}/join/${campaignContext.dmUsername}/${campaignContext.campaignSlug}`
+    : null
+
+  const isLoading =
+    campaignContext.campaign.isLoading || members.isLoading || (isDm && requests.isLoading)
+  const isError = campaignContext.campaign.isError || members.isError || (isDm && requests.isError)
   const isReady = campaignData && members.data && (!isDm || requests.data)
 
   return (
@@ -78,7 +88,7 @@ export function PeopleTab() {
 
       {isReady && (
         <>
-          {isDm && <InviteLinkSection joinUrl={joinUrl} />}
+          {isDm && joinUrl && <InviteLinkSection joinUrl={joinUrl} />}
 
           <MembersSection
             dmMember={dmMember}

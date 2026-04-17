@@ -1,5 +1,8 @@
+import { parseSidebarItemSlug } from 'convex/sidebarItems/validation/slug'
+import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
+
 export type EditorSearch = {
-  item?: string
+  item?: SidebarItemSlug
   heading?: string
   trash?: boolean
 }
@@ -13,7 +16,10 @@ export const validateSearch = (search: Record<string, unknown>): EditorSearch =>
       : undefined
 
   if (item) {
-    result.item = item
+    const parsedItem = parseSidebarItemSlug(item)
+    if (parsedItem) {
+      result.item = parsedItem
+    }
   }
 
   const heading =

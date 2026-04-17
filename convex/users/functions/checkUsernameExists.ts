@@ -1,8 +1,9 @@
+import type { Username } from '../validation'
 import type { AuthQueryCtx } from '../../functions'
 
 export async function checkUsernameExists(
   ctx: AuthQueryCtx,
-  args: { username: string },
+  args: { username: Username },
 ): Promise<boolean> {
   const existing = await ctx.db
     .query('userProfiles')

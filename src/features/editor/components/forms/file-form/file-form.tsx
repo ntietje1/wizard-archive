@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { api } from 'convex/_generated/api'
+import type { SidebarItemColor } from 'convex/sidebarItems/validation/color'
+import type { SidebarItemIconName } from 'convex/sidebarItems/validation/icon'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { toast } from 'sonner'
 import { Loader } from 'lucide-react'
@@ -30,8 +32,8 @@ import {
 
 export interface FileFormValues {
   name: string
-  iconName: string | null
-  color: string | null
+  iconName: SidebarItemIconName | null
+  color: SidebarItemColor | null
 }
 
 interface FileFormProps {
@@ -170,6 +172,8 @@ export function FileForm({ fileId, campaignId, parentId, onClose, onSuccess }: F
           campaignId,
           name: finalName,
           storageId: finalStorageId,
+          iconName: values.iconName ?? undefined,
+          color: values.color ?? undefined,
           parentTarget: { kind: 'direct', parentId: parentId ?? null },
         })
         if (fileUpload.file) {

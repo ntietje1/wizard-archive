@@ -1,3 +1,5 @@
+import type { CampaignSlug } from '../validation'
+import type { Username } from '../../users/validation'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS, CAMPAIGN_STATUS } from '../types'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { getCampaignBySlug } from './getCampaign'
@@ -6,7 +8,7 @@ import type { AuthMutationCtx } from '../../functions'
 
 export async function joinCampaign(
   ctx: AuthMutationCtx,
-  { dmUsername, slug }: { dmUsername: string; slug: string },
+  { dmUsername, slug }: { dmUsername: Username; slug: CampaignSlug },
 ): Promise<CampaignMemberStatus> {
   const profile = ctx.user.profile
   const campaign = await getCampaignBySlug(ctx, { dmUsername, slug })

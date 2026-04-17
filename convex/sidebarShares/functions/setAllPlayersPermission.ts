@@ -1,4 +1,4 @@
-import { requireItemAccess } from '../../sidebarItems/validation'
+import { requireItemAccess } from '../../sidebarItems/validation/access'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
@@ -16,7 +16,7 @@ export const setAllPlayersPermission = async (
     sidebarItemId: Id<'sidebarItems'>
     permissionLevel: PermissionLevel | null
   },
-): Promise<null> => {
+): Promise<void> => {
   const itemFromDb = await getSidebarItem(ctx, sidebarItemId)
   const item = await requireItemAccess(ctx, {
     rawItem: itemFromDb,
@@ -38,6 +38,4 @@ export const setAllPlayersPermission = async (
       previousLevel: item.allPermissionLevel ?? null,
     },
   })
-
-  return null
 }

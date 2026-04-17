@@ -1,9 +1,10 @@
 import { api } from 'convex/_generated/api'
+import { validateLocalSidebarMove } from 'convex/sidebarItems/validation/move'
 import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { SidebarItemLocation } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
-import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
+import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { isFolder } from '~/features/sidebar/utils/sidebar-item-utils'
 import { collectDescendantIds } from '~/features/sidebar/utils/sidebar-item-maps'
@@ -11,7 +12,7 @@ import { useSidebarItemsCache } from '~/features/sidebar/hooks/useSidebarItemsCa
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 
 export function useMoveSidebarItem() {
-  const validation = useSidebarValidation()
+  const { itemsMap, parentItemsMap } = useActiveSidebarItems()
   const { campaignId, campaign } = useCampaign()
   const cache = useSidebarItemsCache()
 
@@ -33,14 +34,21 @@ export function useMoveSidebarItem() {
       location !== SIDEBAR_ITEM_LOCATION.trash &&
       item.location === SIDEBAR_ITEM_LOCATION.trash
 
-    if (parentId !== undefined && !isTrashing) {
-      if (!validation.canMoveToParent(item._id, parentId)) {
-        throw new Error('Cannot move item: circular reference detected')
-      }
-      if (!isRestoring) {
-        const nameResult = validation.validateName(item.name, parentId, item._id)
-        if (!nameResult.valid) throw new Error(nameResult.error)
-      }
+    const moveValidation = validateLocalSidebarMove(
+      {
+        itemId: item._id,
+        name: item.name,
+        parentId,
+        isTrashing,
+        isRestoring,
+      },
+      {
+        getParent: (id) => itemsMap.get(id),
+        getSiblings: (nextParentId) => parentItemsMap.get(nextParentId) ?? [],
+      },
+    )
+    if (!moveValidation.valid) {
+      throw new Error(moveValidation.error)
     }
 
     const previousSidebar = cache.get(SIDEBAR_ITEM_LOCATION.sidebar)
@@ -61,13 +69,13 @@ export function useMoveSidebarItem() {
         {
           ...item,
           parentId: parentId ?? item.parentId ?? null,
-          location: location,
+          location,
           deletionTime: null,
           deletedBy: null,
         },
         ...trashedDescendants.map((i) => ({
           ...i,
-          location: location,
+          location,
           deletionTime: null,
           deletedBy: null,
         })),

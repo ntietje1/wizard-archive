@@ -1,6 +1,7 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { convexValidatorFields } from '../common/schema'
+import { usernameValidator } from './validation'
 
 const profileImageValidator = v.nullable(
   v.union(
@@ -11,7 +12,7 @@ const profileImageValidator = v.nullable(
 
 const userProfileTableFields = {
   authUserId: v.string(),
-  username: v.string(),
+  username: usernameValidator,
   email: v.nullable(v.string()),
   emailVerified: v.nullable(v.boolean()),
   name: v.nullable(v.string()),
@@ -33,7 +34,7 @@ export const userTables = {
 const userProfileValidatorFields = {
   ...convexValidatorFields('userProfiles'),
   authUserId: v.string(),
-  username: v.string(),
+  username: usernameValidator,
   email: v.nullable(v.string()),
   emailVerified: v.nullable(v.boolean()),
   name: v.nullable(v.string()),

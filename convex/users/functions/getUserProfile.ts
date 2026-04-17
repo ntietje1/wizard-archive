@@ -1,6 +1,15 @@
+import { assertUsername } from '../validation'
+import type { Username } from '../validation'
 import type { QueryCtx } from '../../_generated/server'
-import type { Id } from '../../_generated/dataModel'
+import type { Doc, Id } from '../../_generated/dataModel'
 import type { UserProfile, UserProfileFromDb } from '../types'
+
+function toUserProfileFromDb(profile: Doc<'userProfiles'>): UserProfileFromDb {
+  return {
+    ...profile,
+    username: assertUsername(profile.username),
+  }
+}
 
 async function enhanceProfile(ctx: QueryCtx, profile: UserProfileFromDb): Promise<UserProfile> {
   let imageUrl: string | null = null
@@ -24,19 +33,19 @@ export async function getUserProfileByUserId(
     .withIndex('by_user', (q) => q.eq('authUserId', userId))
     .unique()
   if (!profile) return null
-  return enhanceProfile(ctx, profile)
+  return enhanceProfile(ctx, toUserProfileFromDb(profile))
 }
 
 export async function getUserProfileByUsername(
   ctx: QueryCtx,
-  { username }: { username: string },
+  { username }: { username: Username },
 ): Promise<UserProfile | null> {
   const profile = await ctx.db
     .query('userProfiles')
     .withIndex('by_username', (q) => q.eq('username', username))
     .unique()
   if (!profile) return null
-  return enhanceProfile(ctx, profile)
+  return enhanceProfile(ctx, toUserProfileFromDb(profile))
 }
 
 export async function getUserProfileById(
@@ -45,5 +54,5 @@ export async function getUserProfileById(
 ): Promise<UserProfile | null> {
   const profile = await ctx.db.get('userProfiles', profileId)
   if (!profile) return null
-  return enhanceProfile(ctx, profile)
+  return enhanceProfile(ctx, toUserProfileFromDb(profile))
 }

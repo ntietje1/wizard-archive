@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type { Id } from 'convex/_generated/dataModel'
+import type { SidebarItemName } from 'convex/sidebarItems/validation/name'
 import { handleError } from '~/shared/utils/logger'
 import { useNameValidation } from '~/shared/hooks/useNameValidation'
 import { NameValidationFeedback } from '~/features/sidebar/components/name-validation-feedback'
 import { cn } from '~/features/shadcn/lib/utils'
 
 interface EditableNameProps {
-  initialName: string
+  initialName: SidebarItemName
   isRenaming: boolean
   onFinishRename: (name: string) => Promise<void>
   onCancelRename: () => void
@@ -25,7 +26,7 @@ export function EditableName({
   parentId,
   excludeId,
 }: EditableNameProps) {
-  const [name, setName] = useState(initialName)
+  const [name, setName] = useState<string>(initialName)
   const prevKeyRef = useRef({ isRenaming, initialName })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)

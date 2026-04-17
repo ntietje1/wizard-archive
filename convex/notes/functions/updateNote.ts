@@ -1,10 +1,15 @@
-import { requireItemAccess, validateSidebarItemRename } from '../../sidebarItems/validation'
+import { prepareSidebarItemRename } from '../../sidebarItems/validation/orchestration'
+import { requireItemAccess } from '../../sidebarItems/validation/access'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import type { SidebarItemName } from '../../sidebarItems/validation/name'
+import type { SidebarItemColor } from '../../sidebarItems/validation/color'
+import type { SidebarItemIconName } from '../../sidebarItems/validation/icon'
+import type { SidebarItemSlug } from '../../sidebarItems/validation/slug'
 import type { EditHistoryChange } from '../../editHistory/types'
 import type { CampaignMutationCtx } from '../../functions'
 import type { WithoutSystemFields } from 'convex/server'
@@ -19,11 +24,11 @@ export async function updateNote(
     color,
   }: {
     noteId: Id<'sidebarItems'>
-    name?: string
-    iconName?: string | null
-    color?: string | null
+    name?: SidebarItemName
+    iconName?: SidebarItemIconName | null
+    color?: SidebarItemColor | null
   },
-): Promise<{ noteId: Id<'sidebarItems'>; slug: string }> {
+): Promise<{ noteId: Id<'sidebarItems'>; slug: SidebarItemSlug }> {
   const rawItem = await getSidebarItem(ctx, noteId)
   if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
   const note = await requireItemAccess(ctx, {
@@ -31,22 +36,22 @@ export async function updateNote(
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 
-  let newSlug: string | undefined
+  let newSlug: SidebarItemSlug | undefined
   const updates: Partial<WithoutSystemFields<Doc<'sidebarItems'>>> = {}
   const changes: Array<EditHistoryChange> = []
 
   if (name !== undefined) {
-    const trimmedName = name.trim()
-    if (trimmedName !== note.name) {
-      updates.name = trimmedName
-      newSlug = await validateSidebarItemRename(ctx, {
-        item: note,
-        newName: trimmedName,
-      })
-      updates.slug = newSlug
+    const rename = await prepareSidebarItemRename(ctx, {
+      item: note,
+      newName: name,
+    })
+    if (rename) {
+      updates.name = rename.name
+      newSlug = rename.slug
+      updates.slug = rename.slug
       changes.push({
         action: EDIT_HISTORY_ACTION.renamed,
-        metadata: { from: note.name, to: trimmedName },
+        metadata: { from: note.name, to: rename.name },
       })
     }
   }

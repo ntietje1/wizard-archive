@@ -2,8 +2,10 @@ import { useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
+import { parseCampaignSlug } from 'convex/campaigns/validation'
 import { useConvexAuth } from 'convex/react'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'convex/campaigns/types'
+import { parseUsername } from 'convex/users/validation'
 import { useEffect, useState } from 'react'
 import { Loader2, Users } from 'lucide-react'
 import {
@@ -20,9 +22,16 @@ import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { StatusIcon } from '~/features/campaigns/components/status-icon'
 import { Route } from '~/routes/_app/join.$dmUsername.$campaignSlug'
 
+const PLACEHOLDER_USERNAME = parseUsername('placeholder')!
+const PLACEHOLDER_SLUG = parseCampaignSlug('placeholder')!
+
 export function JoinCampaignPage() {
   const navigate = useNavigate()
-  const { dmUsername, campaignSlug } = Route.useParams()
+  const { dmUsername: rawDmUsername, campaignSlug: rawCampaignSlug } = Route.useParams()
+  const dmUsername = parseUsername(rawDmUsername)
+  const campaignSlug = parseCampaignSlug(rawCampaignSlug)
+  const queryDmUsername = dmUsername ?? PLACEHOLDER_USERNAME
+  const queryCampaignSlug = campaignSlug ?? PLACEHOLDER_SLUG
   const { isAuthenticated, isLoading: isAuthLoading } = useConvexAuth()
   const [showSignIn, setShowSignIn] = useState(false)
 
@@ -32,12 +41,13 @@ export function JoinCampaignPage() {
     }
   }, [isAuthLoading, isAuthenticated])
 
-  const campaignQuery = useQuery(
-    convexQuery(api.campaigns.queries.getCampaignBySlug, {
-      dmUsername,
-      slug: campaignSlug,
+  const campaignQuery = useQuery({
+    ...convexQuery(api.campaigns.queries.getCampaignBySlug, {
+      dmUsername: queryDmUsername,
+      slug: queryCampaignSlug,
     }),
-  )
+    enabled: dmUsername !== null && campaignSlug !== null,
+  })
 
   const campaign = campaignQuery.data
   const campaignMember = campaign?.myMembership
@@ -45,7 +55,7 @@ export function JoinCampaignPage() {
   const joinCampaign = useAppMutation(api.campaigns.mutations.joinCampaign)
 
   const handleJoinCampaign = async () => {
-    if (!campaign) return
+    if (!campaign || !dmUsername || !campaignSlug) return
 
     try {
       await joinCampaign.mutateAsync({
@@ -62,17 +72,37 @@ export function JoinCampaignPage() {
   }
 
   const goToCampaignHome = () => {
+    if (!dmUsername || !campaignSlug) return
     void navigate({
       to: '/campaigns/$dmUsername/$campaignSlug',
       params: { dmUsername, campaignSlug },
     })
   }
 
-  const goToPlayers = () => {
-    void navigate({
-      to: '/campaigns/$dmUsername/$campaignSlug',
-      params: { dmUsername, campaignSlug },
-    })
+  if (!dmUsername || !campaignSlug) {
+    return (
+      <div className="min-h-screen bg-muted flex items-center justify-center p-4">
+        <Card className="w-full max-w-lg bg-card">
+          <CardHeader className="text-center pb-6 pt-8">
+            <StatusIcon variant="error" />
+            <CardTitle className="text-2xl font-bold text-destructive mb-3 tracking-tight">
+              Invalid Invitation Link
+            </CardTitle>
+            <CardDescription className="text-muted-foreground text-base leading-relaxed px-2">
+              This campaign invite URL is malformed.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center pb-8 px-8 min-h-[120px] flex flex-col justify-center">
+            <Button
+              onClick={goToHome}
+              className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+            >
+              Browse Campaigns
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   const getCardContent = () => {
@@ -192,13 +222,6 @@ export function JoinCampaignPage() {
               className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
             >
               Go to Campaign
-            </Button>
-            <Button
-              onClick={goToPlayers}
-              variant="outline"
-              className="w-full h-12 border border-border hover:border-primary/50 bg-card hover:bg-muted text-foreground font-semibold"
-            >
-              Manage Players
             </Button>
           </div>
         ),

@@ -113,39 +113,34 @@ function StaticEditorInner({
   children?: React.ReactNode
   onEditorChange?: (editor: CustomBlockNoteEditor | null, doc: Doc | null) => void
 }) {
-  const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
+  const [editor] = useState<CustomBlockNoteEditor>(() => {
+    const initialContent = content.length > 0 ? content : undefined
+    return BlockNoteEditor.create({
+      schema: editorSchema,
+      initialContent,
+    }) as CustomBlockNoteEditor
+  })
   const linkResolver = useLinkResolver(noteId)
   const onEditorChangeRef = useRef(onEditorChange)
   onEditorChangeRef.current = onEditorChange
   const hasInitializedRef = useRef(false)
 
   useEffect(() => {
-    const initialContent = content.length > 0 ? content : undefined
-    const instance = BlockNoteEditor.create({
-      schema: editorSchema,
-      initialContent,
-    }) as CustomBlockNoteEditor
-
-    setEditor(instance)
-    onEditorChangeRef.current?.(instance, null)
+    onEditorChangeRef.current?.(editor, null)
 
     return () => {
-      instance._tiptapEditor.destroy()
+      editor._tiptapEditor.destroy()
       onEditorChangeRef.current?.(null, null)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [editor])
 
   useEffect(() => {
-    if (!editor) return
     if (!hasInitializedRef.current) {
       hasInitializedRef.current = true
       return
     }
     editor.replaceBlocks(editor.document, content)
   }, [editor, content])
-
-  if (!editor) return null
 
   return (
     <>
@@ -172,31 +167,31 @@ function CollaborativeEditorInner({
   children?: React.ReactNode
   onEditorChange?: (editor: CustomBlockNoteEditor | null, doc: Doc | null) => void
 }) {
-  const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
+  const [editor] = useState<CustomBlockNoteEditor>(
+    () =>
+      BlockNoteEditor.create({
+        schema: editorSchema,
+        collaboration: {
+          provider,
+          fragment: doc.getXmlFragment('document'),
+          user: { name: user.name, color: user.color },
+          showCursorLabels: 'activity',
+        },
+      }) as CustomBlockNoteEditor,
+  )
   const linkResolver = useLinkResolver(noteId)
   const onEditorChangeRef = useRef(onEditorChange)
   onEditorChangeRef.current = onEditorChange
 
   useEffect(() => {
-    const instance = BlockNoteEditor.create({
-      schema: editorSchema,
-      collaboration: {
-        provider,
-        fragment: doc.getXmlFragment('document'),
-        user: { name: user.name, color: user.color },
-        showCursorLabels: 'activity',
-      },
-    }) as CustomBlockNoteEditor
-
-    setEditor(instance)
-    onEditorChangeRef.current?.(instance, doc)
+    onEditorChangeRef.current?.(editor, doc)
 
     let cancelled = false
     let retries = 0
     const MAX_RETRIES = 30
     const tryPatch = () => {
       if (cancelled) return
-      if (instance._tiptapEditor.view.state.plugins.length === 0) {
+      if (editor._tiptapEditor.view.state.plugins.length === 0) {
         if (++retries >= MAX_RETRIES) {
           logger.error('Failed to patch Yjs plugins', {
             maxRetries: MAX_RETRIES,
@@ -206,22 +201,19 @@ function CollaborativeEditorInner({
         setTimeout(tryPatch, 50)
         return
       }
-      patchYUndoPluginDestroy(instance._tiptapEditor.view)
-      patchYSyncAfterTypeChanged(instance._tiptapEditor.view)
+      patchYUndoPluginDestroy(editor._tiptapEditor.view)
+      patchYSyncAfterTypeChanged(editor._tiptapEditor.view)
     }
     setTimeout(tryPatch, 50)
 
     return () => {
       cancelled = true
-      instance._tiptapEditor.destroy()
+      editor._tiptapEditor.destroy()
       onEditorChangeRef.current?.(null, null)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc, provider])
+  }, [doc, editor])
 
   const forceOpenLinkPopover = useRef<(() => void) | null>(null)
-
-  if (!editor) return null
 
   return (
     <>

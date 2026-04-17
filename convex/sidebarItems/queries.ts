@@ -5,18 +5,18 @@ import { fetchCampaignSidebarItems } from './functions/fetchCampaignSidebarItems
 import { getSidebarItemsByParent as getSidebarItemsByParentFn } from './functions/getSidebarItemsByParent'
 import { getSidebarItemBySlug as getSidebarItemBySlugFn } from './functions/getSidebarItemBySlug'
 import { anySidebarItemValidator } from './schema/anySidebarItemValidator'
-import { sidebarItemLocationValidator } from './schema/validators'
+import { sidebarItemLocationValidator, sidebarItemSlugValidator } from './schema/validators'
 import { anySidebarItemWithContentValidator } from './schema/anySidebarItemWithContentValidator'
-import type { AnySidebarItem, AnySidebarItemWithContent } from './types/types'
 import { getSidebarItemWithContent } from './functions/getSidebarItemWithContent'
 import { ERROR_CODE, throwClientError } from '../errors'
+import { requireSidebarItemSlug } from './validation/slug'
 
 export const getSidebarItemsByLocation = campaignQuery({
   args: {
     location: sidebarItemLocationValidator,
   },
   returns: v.array(anySidebarItemValidator),
-  handler: async (ctx, args): Promise<Array<AnySidebarItem>> => {
+  handler: async (ctx, args) => {
     const items = await fetchCampaignSidebarItems(ctx, {
       location: args.location,
     })
@@ -32,7 +32,7 @@ export const getSidebarItemsByParent = campaignQuery({
     parentId: v.nullable(v.id('sidebarItems')),
   },
   returns: v.array(anySidebarItemValidator),
-  handler: async (ctx, args): Promise<Array<AnySidebarItem>> => {
+  handler: async (ctx, args) => {
     return await getSidebarItemsByParentFn(ctx, {
       parentId: args.parentId,
     })
@@ -44,7 +44,7 @@ export const getSidebarItem = campaignQuery({
     id: v.id('sidebarItems'),
   },
   returns: anySidebarItemWithContentValidator,
-  handler: async (ctx, args): Promise<AnySidebarItemWithContent> => {
+  handler: async (ctx, args) => {
     const res = await getSidebarItemWithContent(ctx, args.id)
     if (!res) {
       throwClientError(ERROR_CODE.NOT_FOUND, 'This item could not be found')
@@ -55,12 +55,13 @@ export const getSidebarItem = campaignQuery({
 
 export const getSidebarItemBySlug = campaignQuery({
   args: {
-    slug: v.string(),
+    slug: sidebarItemSlugValidator,
   },
   returns: v.nullable(anySidebarItemWithContentValidator),
-  handler: async (ctx, args): Promise<AnySidebarItemWithContent | null> => {
+  handler: async (ctx, args) => {
+    const slug = requireSidebarItemSlug(args.slug)
     return await getSidebarItemBySlugFn(ctx, {
-      slug: args.slug,
+      slug,
     })
   },
 })

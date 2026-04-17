@@ -3,15 +3,31 @@ import { v } from 'convex/values'
 import { query, mutation } from './_generated/server'
 import { triggers } from './triggers'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS, CAMPAIGN_STATUS } from './campaigns/types'
+import { assertCampaignSlug } from './campaigns/validation'
 import { ERROR_CODE, throwClientError } from './errors'
+import { assertUsername } from './users/validation'
 import { getUserProfileById } from './users/functions/getUserProfile'
 import type { CustomCtx } from 'convex-helpers/server/customFunctions'
 import type { MutationCtx, QueryCtx } from './_generated/server'
-import type { Id } from './_generated/dataModel'
+import type { Doc, Id } from './_generated/dataModel'
 import type { AuthUser } from './users/types'
 import type { CampaignFromDb, CampaignMember } from './campaigns/types'
 
 // --- Context enrichment ---
+
+function toAuthenticatedProfile(profile: Doc<'userProfiles'>): AuthUser['profile'] {
+  return {
+    ...profile,
+    username: assertUsername(profile.username),
+  }
+}
+
+function toCampaignFromDb(campaign: Doc<'campaigns'>): CampaignFromDb {
+  return {
+    ...campaign,
+    slug: assertCampaignSlug(campaign.slug),
+  }
+}
 
 export async function authenticate(ctx: QueryCtx | MutationCtx): Promise<AuthUser> {
   const identity = await ctx.auth.getUserIdentity()
@@ -21,7 +37,7 @@ export async function authenticate(ctx: QueryCtx | MutationCtx): Promise<AuthUse
     .withIndex('by_user', (q) => q.eq('authUserId', identity.subject))
     .unique()
   if (!profile) throwClientError(ERROR_CODE.NOT_AUTHENTICATED, 'No profile found')
-  return { identity, profile }
+  return { identity, profile: toAuthenticatedProfile(profile) }
 }
 
 // convex-helpers does not propagate enriched ctx types through chained
@@ -59,7 +75,7 @@ async function checkMembership(
   })
   if (!userProfile) throwClientError(ERROR_CODE.NOT_AUTHENTICATED, 'No profile found')
   return {
-    campaign,
+    campaign: toCampaignFromDb(campaign),
     membership: { ...member, userProfile },
   }
 }

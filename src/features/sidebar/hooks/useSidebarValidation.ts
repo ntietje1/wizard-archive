@@ -1,13 +1,10 @@
-import {
-  checkNameConflict,
-  validateItemName,
-  validateNoCircularParent,
-} from 'convex/sidebarItems/sharedValidation'
+import { validateSidebarItemNameWithSiblings } from 'convex/sidebarItems/validation/name'
+import { validateNoCircularParent } from 'convex/sidebarItems/validation/parent'
 import { findUniqueDefaultName } from 'convex/sidebarItems/functions/defaultItemName'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { ValidationResult } from 'convex/sidebarItems/sharedValidation'
+import type { SidebarItemName, ValidationResult } from 'convex/sidebarItems/validation/name'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 
 export interface SidebarValidation {
@@ -18,7 +15,7 @@ export interface SidebarValidation {
     excludeId?: Id<'sidebarItems'>,
   ) => ValidationResult
   canMoveToParent: (itemId: Id<'sidebarItems'>, newParentId: Id<'sidebarItems'> | null) => boolean
-  getDefaultName: (type: SidebarItemType, parentId: Id<'sidebarItems'> | null) => string
+  getDefaultName: (type: SidebarItemType, parentId: Id<'sidebarItems'> | null) => SidebarItemName
 }
 
 export function useSidebarValidation(): SidebarValidation {
@@ -33,10 +30,7 @@ export function useSidebarValidation(): SidebarValidation {
     parentId: Id<'sidebarItems'> | null,
     excludeId?: Id<'sidebarItems'>,
   ) => {
-    const trimmed = name.trim()
-    const nameResult = validateItemName(trimmed)
-    if (!nameResult.valid) return nameResult
-    return checkNameConflict(trimmed, getSiblings(parentId), excludeId)
+    return validateSidebarItemNameWithSiblings(name, getSiblings(parentId), excludeId)
   }
 
   const canMoveToParent = (itemId: Id<'sidebarItems'>, newParentId: Id<'sidebarItems'> | null) => {
