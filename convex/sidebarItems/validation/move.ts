@@ -29,6 +29,10 @@ export function validateLocalSidebarMove(
     getSiblings: (parentId: Id<'sidebarItems'> | null) => SiblingLookup
   },
 ): ValidationResult {
+  if (isTrashing && isRestoring) {
+    throw new Error('Cannot both trash and restore in the same operation')
+  }
+
   if (parentId === undefined || isTrashing) {
     return { valid: true }
   }

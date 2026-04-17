@@ -304,6 +304,32 @@ describe('createNote', () => {
     )
   })
 
+  it('rejects names with leading whitespace only', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    await expectValidationFailed(
+      dmAuth.mutation(api.notes.mutations.createNote, {
+        campaignId: ctx.campaignId,
+        name: '  Leading',
+        parentTarget: { kind: 'direct', parentId: null },
+      }),
+    )
+  })
+
+  it('rejects names with trailing whitespace only', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    await expectValidationFailed(
+      dmAuth.mutation(api.notes.mutations.createNote, {
+        campaignId: ctx.campaignId,
+        name: 'Trailing  ',
+        parentTarget: { kind: 'direct', parentId: null },
+      }),
+    )
+  })
+
   it('requires authentication', async () => {
     const ctx = await setupCampaignContext(t)
 

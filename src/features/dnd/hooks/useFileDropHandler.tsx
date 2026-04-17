@@ -151,7 +151,7 @@ export function useFileDropHandler() {
           parentTarget: { kind: 'direct', parentId },
         })
 
-        generatePdfPreviewIfNeeded(file, result.id as Id<'sidebarItems'>).catch((err: unknown) =>
+        generatePdfPreviewIfNeeded(file, result.id).catch((err: unknown) =>
           logger.error('PDF preview generation failed', err),
         )
 

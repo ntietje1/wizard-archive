@@ -22,16 +22,8 @@ import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { StatusIcon } from '~/features/campaigns/components/status-icon'
 import { Route } from '~/routes/_app/join.$dmUsername.$campaignSlug'
 
-const PLACEHOLDER_USERNAME =
-  parseUsername('placeholder') ??
-  (() => {
-    throw new Error('Invalid placeholder username')
-  })()
-const PLACEHOLDER_SLUG =
-  parseCampaignSlug('placeholder') ??
-  (() => {
-    throw new Error('Invalid placeholder slug')
-  })()
+const PLACEHOLDER_USERNAME = parseUsername('placeholder')!
+const PLACEHOLDER_SLUG = parseCampaignSlug('placeholder')!
 
 export function JoinCampaignPage() {
   const navigate = useNavigate()

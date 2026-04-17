@@ -4,21 +4,18 @@ import {
   createItemParentArgsValidator,
   requireCreateParentTarget,
 } from '../sidebarItems/validation/parent'
-import {
-  requireSidebarItemColor,
-  requireOptionalSidebarItemColor,
-} from '../sidebarItems/validation/color'
-import {
-  requireOptionalSidebarItemIconName,
-  requireSidebarItemIconName,
-} from '../sidebarItems/validation/icon'
+import { requireOptionalSidebarItemColor } from '../sidebarItems/validation/color'
+import { requireOptionalSidebarItemIconName } from '../sidebarItems/validation/icon'
 import {
   sidebarItemColorValidator,
   sidebarItemIconNameValidator,
   sidebarItemNameValidator,
   sidebarItemSlugValidator,
 } from '../sidebarItems/schema/validators'
-import { requireSidebarItemName } from '../sidebarItems/validation/name'
+import {
+  requireOptionalSidebarItemName,
+  requireSidebarItemName,
+} from '../sidebarItems/validation/name'
 import { createCanvas as createCanvasFn } from './functions/createCanvas'
 import { updateCanvas as updateCanvasFn } from './functions/updateCanvas'
 
@@ -36,9 +33,8 @@ export const createCanvas = campaignMutation({
   handler: async (ctx, args) => {
     const name = requireSidebarItemName(args.name)
     const parentTarget = requireCreateParentTarget(args.parentTarget)
-    const iconName =
-      args.iconName === undefined ? undefined : requireSidebarItemIconName(args.iconName)
-    const color = args.color === undefined ? undefined : requireSidebarItemColor(args.color)
+    const iconName = requireOptionalSidebarItemIconName(args.iconName) ?? undefined
+    const color = requireOptionalSidebarItemColor(args.color) ?? undefined
     return await createCanvasFn(ctx, {
       name,
       parentTarget,
@@ -60,7 +56,7 @@ export const updateCanvas = campaignMutation({
     slug: sidebarItemSlugValidator,
   }),
   handler: async (ctx, args) => {
-    const name = args.name ? requireSidebarItemName(args.name) : undefined
+    const name = requireOptionalSidebarItemName(args.name)
     const iconName = requireOptionalSidebarItemIconName(args.iconName)
     const color = requireOptionalSidebarItemColor(args.color)
     return await updateCanvasFn(ctx, {

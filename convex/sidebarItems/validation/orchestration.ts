@@ -71,6 +71,9 @@ export async function validateSidebarParentChange(
 
   if (newParentId) {
     const parentFromDb = await ctx.db.get('sidebarItems', newParentId)
+    if (!parentFromDb) {
+      throwClientError(ERROR_CODE.NOT_FOUND, 'Parent not found')
+    }
     if (parentFromDb && parentFromDb.type !== SIDEBAR_ITEM_TYPES.folders) {
       throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Parent must be a folder')
     }
@@ -175,7 +178,8 @@ export async function findUniqueSidebarItemSlug(
       },
     )
     return assertSidebarItemSlug(candidateSlug)
-  } catch {
+  } catch (error) {
+    console.error('Failed to generate unique slug:', error)
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Failed to generate a valid slug for this item')
   }
 }

@@ -3,6 +3,7 @@ import type { CreateParentTarget } from 'convex/sidebarItems/validation/parent'
 import { coerceSidebarItemColorForInput } from 'convex/sidebarItems/validation/color'
 import { coerceSidebarItemIconNameForInput } from 'convex/sidebarItems/validation/icon'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { assertSidebarItemName } from 'convex/sidebarItems/validation/name'
 import { assertSidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
@@ -77,8 +78,11 @@ export function useCreateSidebarItem() {
   }
 
   const createItem = async (args: CreateItemArgs): Promise<CreateItemResult> => {
-    const trimmedName = args.name.trim()
-    const nameResult = validateCreateItem(args)
+    const normalizedName = assertSidebarItemName(args.name.trim())
+    const nameResult = validateCreateItem({
+      ...args,
+      name: normalizedName,
+    })
     if (!nameResult.valid) {
       throw new Error(nameResult.error)
     }
@@ -92,7 +96,7 @@ export function useCreateSidebarItem() {
       case SIDEBAR_ITEM_TYPES.notes: {
         const { noteId, slug } = await createNoteMutation.mutateAsync({
           campaignId: args.campaignId,
-          name: trimmedName,
+          name: normalizedName,
           parentTarget: args.parentTarget,
           iconName,
           color,
@@ -103,7 +107,7 @@ export function useCreateSidebarItem() {
       case SIDEBAR_ITEM_TYPES.folders: {
         const { folderId, slug } = await createFolderMutation.mutateAsync({
           campaignId: args.campaignId,
-          name: trimmedName,
+          name: normalizedName,
           parentTarget: args.parentTarget,
           iconName,
           color,
@@ -113,7 +117,7 @@ export function useCreateSidebarItem() {
       case SIDEBAR_ITEM_TYPES.gameMaps: {
         const { mapId, slug } = await createMapMutation.mutateAsync({
           campaignId: args.campaignId,
-          name: trimmedName,
+          name: normalizedName,
           parentTarget: args.parentTarget,
           imageStorageId: args.imageStorageId,
           iconName,
@@ -124,7 +128,7 @@ export function useCreateSidebarItem() {
       case SIDEBAR_ITEM_TYPES.files: {
         const { fileId, slug } = await createFileMutation.mutateAsync({
           campaignId: args.campaignId,
-          name: trimmedName,
+          name: normalizedName,
           parentTarget: args.parentTarget,
           storageId: args.storageId,
           iconName,
@@ -135,7 +139,7 @@ export function useCreateSidebarItem() {
       case SIDEBAR_ITEM_TYPES.canvases: {
         const { canvasId, slug } = await createCanvasMutation.mutateAsync({
           campaignId: args.campaignId,
-          name: trimmedName,
+          name: normalizedName,
           parentTarget: args.parentTarget,
           iconName,
           color,

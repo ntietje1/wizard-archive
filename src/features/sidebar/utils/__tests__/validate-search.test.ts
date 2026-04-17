@@ -51,6 +51,11 @@ describe('validateSearch', () => {
     expect(validateSearch({ item: 'double--hyphen' })).toEqual({})
     expect(validateSearch({ item: 'special@char' })).toEqual({})
   })
+  it('accepts valid slugs with numbers and single characters', () => {
+    expect(validateSearch({ item: 'item-123' })).toEqual({ item: 'item-123' })
+    expect(validateSearch({ item: 'a' })).toEqual({ item: 'a' })
+    expect(validateSearch({ item: 'a-b-c' })).toEqual({ item: 'a-b-c' })
+  })
 
   it('ignores non-string item/heading values', () => {
     expect(validateSearch({ item: 123, heading: true })).toEqual({})

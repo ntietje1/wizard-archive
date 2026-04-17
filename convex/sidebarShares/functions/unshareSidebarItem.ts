@@ -17,13 +17,30 @@ export const unshareSidebarItem = async (
     campaignMemberId: Id<'campaignMembers'>
   },
 ): Promise<null> => {
-  const itemFromDb = await getSidebarItem(ctx, sidebarItemId)
+  const [itemFromDb, member] = await Promise.all([
+    getSidebarItem(ctx, sidebarItemId),
+    ctx.db.get('campaignMembers', campaignMemberId),
+  ])
   const item = await requireItemAccess(ctx, {
     rawItem: itemFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
-  const member = await ctx.db.get('campaignMembers', campaignMemberId)
-  const memberProfile = member ? await ctx.db.get('userProfiles', member.userId) : null
+  if (!member) {
+    throw new Error(`Campaign member ${campaignMemberId} not found`)
+  }
+
+  const [memberProfile, existingShare] = await Promise.all([
+    ctx.db.get('userProfiles', member.userId),
+    ctx.db
+      .query('sidebarItemShares')
+      .withIndex('by_campaign_item_member', (q) =>
+        q
+          .eq('campaignId', item.campaignId)
+          .eq('sidebarItemId', sidebarItemId)
+          .eq('campaignMemberId', campaignMemberId),
+      )
+      .unique(),
+  ])
 
   await unshareSidebarItemFromMember(ctx, {
     sidebarItemId,
@@ -37,7 +54,7 @@ export const unshareSidebarItem = async (
     metadata: {
       memberName: memberProfile?.name ?? 'Unknown',
       level: null,
-      previousLevel: null,
+      previousLevel: existingShare?.permissionLevel ?? null,
     },
   })
 

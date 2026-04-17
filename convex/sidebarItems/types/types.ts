@@ -3,7 +3,7 @@ import type { Note, NoteFromDb, NoteWithContent } from '../../notes/types'
 import type { Folder, FolderFromDb, FolderWithContent } from '../../folders/types'
 import type { FileFromDb, FileWithContent, SidebarFile } from '../../files/types'
 import type { Canvas, CanvasFromDb, CanvasWithContent } from '../../canvases/types'
-import type { SIDEBAR_ITEM_TYPES } from './baseTypes'
+import type { SIDEBAR_ITEM_TYPES, SidebarItemType } from './baseTypes'
 
 export type SidebarItemTypeKey = keyof typeof SIDEBAR_ITEM_TYPES
 
@@ -37,6 +37,11 @@ export type AnySidebarItem = EnhancedByType[SidebarItemTypeKey]
 
 export type AnySidebarItemWithContent = WithContentByType[SidebarItemTypeKey]
 
+export type WithContentBySidebarItemType<T extends SidebarItemType> = Extract<
+  AnySidebarItemWithContent,
+  { type: T }
+>
+
 export type EnhancedSidebarItem<T extends AnySidebarItemFromDb> = T extends NoteFromDb
   ? Note
   : T extends FolderFromDb
@@ -47,4 +52,16 @@ export type EnhancedSidebarItem<T extends AnySidebarItemFromDb> = T extends Note
         ? SidebarFile
         : T extends CanvasFromDb
           ? Canvas
+          : never
+
+export type WithContentSidebarItem<T extends AnySidebarItem> = T extends Note
+  ? NoteWithContent
+  : T extends Folder
+    ? FolderWithContent
+    : T extends GameMap
+      ? GameMapWithContent
+      : T extends SidebarFile
+        ? FileWithContent
+        : T extends Canvas
+          ? CanvasWithContent
           : never

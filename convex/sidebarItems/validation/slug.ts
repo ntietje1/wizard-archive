@@ -7,11 +7,13 @@ export const SIDEBAR_ITEM_SLUG_MAX_LENGTH = 255
 
 export type SidebarItemSlug = BrandedString<'SidebarItemSlug'>
 
+const INVALID_SLUG_MESSAGE = 'Invalid slug'
+
 const sidebarItemSlugHelpers = createCanonicalSlugHelpers({
   brand: 'SidebarItemSlug',
   label: 'Slug',
   maxLength: SIDEBAR_ITEM_SLUG_MAX_LENGTH,
-  fallbackMessage: 'Invalid slug',
+  fallbackMessage: INVALID_SLUG_MESSAGE,
 })
 
 export const sidebarItemSlugValueSchema = sidebarItemSlugHelpers.valueSchema
@@ -27,5 +29,5 @@ export function validateItemSlug(slug: string): ValidationResult {
 }
 
 export function requireSidebarItemSlug(slug: string): SidebarItemSlug {
-  return parseOrThrowClientValidation(sidebarItemSlugSchema, slug, 'Invalid slug')
+  return parseOrThrowClientValidation(sidebarItemSlugSchema, slug, INVALID_SLUG_MESSAGE)
 }

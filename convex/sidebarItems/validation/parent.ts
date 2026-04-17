@@ -218,8 +218,14 @@ export function validateCreateParentTarget(
   parentItemsMap: Map<Id<'sidebarItems'> | null, Array<AnySidebarItem>>,
 ): ParentTargetValidationResult {
   if (parentTarget.kind === CREATE_PARENT_TARGET_KIND.direct) {
-    if (parentTarget.parentId !== null && !itemsMap.has(parentTarget.parentId)) {
-      return { valid: false, error: 'Parent not found' }
+    if (parentTarget.parentId !== null) {
+      const parentItem = itemsMap.get(parentTarget.parentId)
+      if (!parentItem) {
+        return { valid: false, error: 'Parent not found' }
+      }
+      if (parentItem.type !== SIDEBAR_ITEM_TYPES.folders) {
+        return { valid: false, error: 'Parent must be a folder' }
+      }
     }
 
     return {

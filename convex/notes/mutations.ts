@@ -7,21 +7,18 @@ import {
   createItemParentArgsValidator,
   requireCreateParentTarget,
 } from '../sidebarItems/validation/parent'
-import {
-  requireSidebarItemColor,
-  requireOptionalSidebarItemColor,
-} from '../sidebarItems/validation/color'
-import {
-  requireOptionalSidebarItemIconName,
-  requireSidebarItemIconName,
-} from '../sidebarItems/validation/icon'
+import { requireOptionalSidebarItemColor } from '../sidebarItems/validation/color'
+import { requireOptionalSidebarItemIconName } from '../sidebarItems/validation/icon'
 import {
   sidebarItemColorValidator,
   sidebarItemIconNameValidator,
   sidebarItemNameValidator,
   sidebarItemSlugValidator,
 } from '../sidebarItems/schema/validators'
-import { requireSidebarItemName } from '../sidebarItems/validation/name'
+import {
+  requireOptionalSidebarItemName,
+  requireSidebarItemName,
+} from '../sidebarItems/validation/name'
 import { createNote as createNoteFn } from './functions/createNote'
 import { updateNote as updateNoteFn } from './functions/updateNote'
 import type { Id } from '../_generated/dataModel'
@@ -38,7 +35,7 @@ export const updateNote = campaignMutation({
     slug: sidebarItemSlugValidator,
   }),
   handler: async (ctx, args): Promise<{ noteId: Id<'sidebarItems'>; slug: string }> => {
-    const name = args.name ? requireSidebarItemName(args.name) : undefined
+    const name = requireOptionalSidebarItemName(args.name)
     const iconName = requireOptionalSidebarItemIconName(args.iconName)
     const color = requireOptionalSidebarItemColor(args.color)
     return await updateNoteFn(ctx, {
@@ -65,9 +62,8 @@ export const createNote = campaignMutation({
   handler: async (ctx, args): Promise<{ noteId: Id<'sidebarItems'>; slug: string }> => {
     const name = requireSidebarItemName(args.name)
     const parentTarget = requireCreateParentTarget(args.parentTarget)
-    const iconName =
-      args.iconName === undefined ? undefined : requireSidebarItemIconName(args.iconName)
-    const color = args.color === undefined ? undefined : requireSidebarItemColor(args.color)
+    const iconName = requireOptionalSidebarItemIconName(args.iconName) ?? undefined
+    const color = requireOptionalSidebarItemColor(args.color) ?? undefined
     return await createNoteFn(ctx, {
       name,
       parentTarget,

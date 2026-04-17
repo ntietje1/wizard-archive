@@ -4,21 +4,18 @@ import {
   createItemParentArgsValidator,
   requireCreateParentTarget,
 } from '../sidebarItems/validation/parent'
-import {
-  requireSidebarItemColor,
-  requireOptionalSidebarItemColor,
-} from '../sidebarItems/validation/color'
-import {
-  requireOptionalSidebarItemIconName,
-  requireSidebarItemIconName,
-} from '../sidebarItems/validation/icon'
+import { requireOptionalSidebarItemColor } from '../sidebarItems/validation/color'
+import { requireOptionalSidebarItemIconName } from '../sidebarItems/validation/icon'
 import {
   sidebarItemColorValidator,
   sidebarItemIconNameValidator,
   sidebarItemNameValidator,
   sidebarItemSlugValidator,
 } from '../sidebarItems/schema/validators'
-import { requireSidebarItemName } from '../sidebarItems/validation/name'
+import {
+  requireOptionalSidebarItemName,
+  requireSidebarItemName,
+} from '../sidebarItems/validation/name'
 import { createMap as createMapFn } from './functions/createMap'
 import { updateMap as updateMapFn } from './functions/updateMap'
 import { createItemPin as createItemPinFn } from './functions/createItemPin'
@@ -42,9 +39,8 @@ export const createMap = campaignMutation({
   handler: async (ctx, args): Promise<{ mapId: Id<'sidebarItems'>; slug: string }> => {
     const name = requireSidebarItemName(args.name)
     const parentTarget = requireCreateParentTarget(args.parentTarget)
-    const iconName =
-      args.iconName === undefined ? undefined : requireSidebarItemIconName(args.iconName)
-    const color = args.color === undefined ? undefined : requireSidebarItemColor(args.color)
+    const iconName = requireOptionalSidebarItemIconName(args.iconName) ?? undefined
+    const color = requireOptionalSidebarItemColor(args.color) ?? undefined
     return await createMapFn(ctx, {
       name,
       imageStorageId: args.imageStorageId,
@@ -68,7 +64,7 @@ export const updateMap = campaignMutation({
     slug: sidebarItemSlugValidator,
   }),
   handler: async (ctx, args): Promise<{ mapId: Id<'sidebarItems'>; slug: string }> => {
-    const name = args.name ? requireSidebarItemName(args.name) : undefined
+    const name = requireOptionalSidebarItemName(args.name)
     const iconName = requireOptionalSidebarItemIconName(args.iconName)
     const color = requireOptionalSidebarItemColor(args.color)
     return await updateMapFn(ctx, {

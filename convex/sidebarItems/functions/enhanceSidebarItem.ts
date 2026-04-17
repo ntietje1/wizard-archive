@@ -8,10 +8,9 @@ import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sid
 import { assertNever } from '../../common/types'
 import type {
   AnySidebarItemFromDb,
-  EnhancedByType,
+  AnySidebarItem,
   EnhancedSidebarItem,
-  SidebarItemTypeKey,
-  WithContentByType,
+  WithContentSidebarItem,
 } from '../types/types'
 import type { CampaignQueryCtx } from '../../functions'
 
@@ -70,23 +69,21 @@ export async function enhanceSidebarItem<T extends AnySidebarItemFromDb>(
   }
 }
 
-export async function enhanceSidebarItemWithContent<
-  K extends SidebarItemTypeKey = SidebarItemTypeKey,
->(
+export async function enhanceSidebarItemWithContent<T extends AnySidebarItem>(
   ctx: CampaignQueryCtx,
-  { item }: { item: EnhancedByType[SidebarItemTypeKey] },
-): Promise<WithContentByType[K]> {
+  { item }: { item: T },
+): Promise<WithContentSidebarItem<T>> {
   switch (item.type) {
     case SIDEBAR_ITEM_TYPES.notes:
-      return enhanceNoteWithContent(ctx, { note: item }) as Promise<WithContentByType[K]>
+      return enhanceNoteWithContent(ctx, { note: item }) as Promise<WithContentSidebarItem<T>>
     case SIDEBAR_ITEM_TYPES.folders:
-      return enhanceFolderWithContent(ctx, { folder: item }) as Promise<WithContentByType[K]>
+      return enhanceFolderWithContent(ctx, { folder: item }) as Promise<WithContentSidebarItem<T>>
     case SIDEBAR_ITEM_TYPES.gameMaps:
-      return enhanceGameMapWithContent(ctx, { gameMap: item }) as Promise<WithContentByType[K]>
+      return enhanceGameMapWithContent(ctx, { gameMap: item }) as Promise<WithContentSidebarItem<T>>
     case SIDEBAR_ITEM_TYPES.files:
-      return enhanceFileWithContent(ctx, { file: item }) as Promise<WithContentByType[K]>
+      return enhanceFileWithContent(ctx, { file: item }) as Promise<WithContentSidebarItem<T>>
     case SIDEBAR_ITEM_TYPES.canvases:
-      return enhanceCanvasWithContent(ctx, { canvas: item }) as Promise<WithContentByType[K]>
+      return enhanceCanvasWithContent(ctx, { canvas: item }) as Promise<WithContentSidebarItem<T>>
     default:
       return assertNever(item)
   }

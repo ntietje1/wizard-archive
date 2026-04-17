@@ -9,18 +9,17 @@ export const DEFAULT_SIDEBAR_ITEM_COLOR = '#14b8a6' as const
 
 const SIDEBAR_ITEM_HEX_COLOR_REGEX = /^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
 
-export const sidebarItemColorValueSchema = z
+export const sidebarItemColorSchema = z
   .string()
   .regex(SIDEBAR_ITEM_HEX_COLOR_REGEX, 'Color must be a 6- or 8-digit hex value')
+  .transform(
+    (value) => value.toLowerCase() as SidebarItemColor,
+  )
 
-export const sidebarItemColorSchema = sidebarItemColorValueSchema.transform(
-  (value) => value.toLowerCase() as SidebarItemColor,
-)
-
-export const sidebarItemColorValidator = zodToConvex(sidebarItemColorValueSchema)
+export const sidebarItemColorValidator = zodToConvex(sidebarItemColorSchema)
 
 export function validateSidebarItemColor(color: string): string | null {
-  const result = sidebarItemColorValueSchema.safeParse(color)
+  const result = sidebarItemColorSchema.safeParse(color)
   return result.success ? null : (result.error.issues[0]?.message ?? 'Invalid color')
 }
 
@@ -61,12 +60,7 @@ export function coerceSidebarItemColorForInput(
     return color
   }
 
-  const parsed = parseSidebarItemColor(color)
-  if (!parsed) {
-    throw new Error(validateSidebarItemColor(color) ?? 'Invalid color')
-  }
-
-  return parsed
+  return assertSidebarItemColor(color)
 }
 
 export function isValidSidebarItemColor(color: string | null | undefined): boolean {
@@ -76,6 +70,6 @@ export function isValidSidebarItemColor(color: string | null | undefined): boole
 export function normalizeSidebarItemColorOrDefault(
   color: string | null | undefined,
   defaultColor: string = DEFAULT_SIDEBAR_ITEM_COLOR,
-): string {
+): SidebarItemColor {
   return parseSidebarItemColor(color ?? '') ?? assertSidebarItemColor(defaultColor)
 }

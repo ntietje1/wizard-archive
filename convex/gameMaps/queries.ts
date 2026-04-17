@@ -2,7 +2,7 @@ import { v } from 'convex/values'
 import { campaignQuery } from '../functions'
 import { mapWithContentValidator } from './schema'
 import { getSidebarItemWithContent } from '../sidebarItems/functions/getSidebarItemWithContent'
-import type { GameMapWithContent } from './types'
+import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 
 export const getMap = campaignQuery({
   args: {
@@ -10,6 +10,6 @@ export const getMap = campaignQuery({
   },
   returns: v.nullable(mapWithContentValidator),
   handler: async (ctx, args) => {
-    return (await getSidebarItemWithContent(ctx, args.mapId)) as GameMapWithContent | null
+    return await getSidebarItemWithContent(ctx, args.mapId, SIDEBAR_ITEM_TYPES.gameMaps)
   },
 })

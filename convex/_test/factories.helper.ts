@@ -219,15 +219,14 @@ async function insertSidebarItem(
   const n = nextId()
   const name = overrides?.name ?? `${label} ${n}`
 
-  const { inheritShares, imageStorageId, storageId, ...sidebarOverrides } = overrides ?? {}
+  const { inheritShares, imageStorageId, storageId, slug, ...sidebarOverrides } = overrides ?? {}
+  const validatedSlug = slug ? assertSidebarItemSlug(slug) : assertSidebarItemSlug(slugify(name))
 
   const sharedData = {
     ...sidebarItemBase(campaignId, creatorProfileId, name),
     type,
     ...sidebarOverrides,
-    slug: overrides?.slug
-      ? assertSidebarItemSlug(overrides.slug)
-      : assertSidebarItemSlug(slugify(name)),
+    slug: validatedSlug,
   }
 
   const extensionFields: Record<string, unknown> = {}

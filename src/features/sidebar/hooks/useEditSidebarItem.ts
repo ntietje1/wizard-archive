@@ -1,11 +1,10 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import type { SidebarItemColor } from 'convex/sidebarItems/validation/color'
 import { coerceSidebarItemColorForInput } from 'convex/sidebarItems/validation/color'
 import { coerceSidebarItemIconNameForInput } from 'convex/sidebarItems/validation/icon'
-import type { SidebarItemIconName } from 'convex/sidebarItems/validation/icon'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { assertSidebarItemName } from 'convex/sidebarItems/validation/name'
 import { assertSidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import type { Id } from 'convex/_generated/dataModel'
@@ -96,9 +95,9 @@ export function useEditSidebarItem() {
   ): Promise<EditItemResult> => {
     const { item, name, iconName, color } = args
 
-    const trimmedName = name?.trim()
-    if (trimmedName !== undefined) {
-      const result = validation.validateName(trimmedName, item.parentId, item._id)
+    const normalizedName = name === undefined ? undefined : assertSidebarItemName(name.trim())
+    if (normalizedName !== undefined) {
+      const result = validation.validateName(normalizedName, item.parentId, item._id)
       if (!result.valid) throw new Error(result.error)
     }
 
@@ -113,12 +112,8 @@ export function useEditSidebarItem() {
     const currentSlug = getSelectedSlug()
     const isCurrentItem = item.slug === currentSlug
 
-    const optimisticFields: Partial<{
-      name: string
-      iconName: SidebarItemIconName | null
-      color: SidebarItemColor | null
-    }> = {}
-    if (trimmedName !== undefined) optimisticFields.name = trimmedName
+    const optimisticFields: Partial<Pick<AnySidebarItem, 'name' | 'iconName' | 'color'>> = {}
+    if (normalizedName !== undefined) optimisticFields.name = normalizedName
     if (normalizedIconName !== undefined) optimisticFields.iconName = normalizedIconName
     if (normalizedColor !== undefined) optimisticFields.color = normalizedColor
 
@@ -135,7 +130,7 @@ export function useEditSidebarItem() {
         case SIDEBAR_ITEM_TYPES.notes: {
           const res = await updateNoteMutation.mutateAsync({
             noteId: item._id,
-            name: trimmedName,
+            name: normalizedName,
             iconName: normalizedIconName,
             color: normalizedColor,
           })
@@ -145,7 +140,7 @@ export function useEditSidebarItem() {
         case SIDEBAR_ITEM_TYPES.folders: {
           const res = await updateFolderMutation.mutateAsync({
             folderId: item._id,
-            name: trimmedName,
+            name: normalizedName,
             iconName: normalizedIconName,
             color: normalizedColor,
           })
@@ -156,7 +151,7 @@ export function useEditSidebarItem() {
           const { imageStorageId } = args as EditMapArgs
           const res = await updateMapMutation.mutateAsync({
             mapId: item._id,
-            name: trimmedName,
+            name: normalizedName,
             iconName: normalizedIconName,
             color: normalizedColor,
             imageStorageId,
@@ -168,7 +163,7 @@ export function useEditSidebarItem() {
           const { storageId } = args as EditFileArgs
           const res = await updateFileMutation.mutateAsync({
             fileId: item._id,
-            name: trimmedName,
+            name: normalizedName,
             iconName: normalizedIconName,
             color: normalizedColor,
             storageId,
@@ -179,7 +174,7 @@ export function useEditSidebarItem() {
         case SIDEBAR_ITEM_TYPES.canvases: {
           const res = await updateCanvasMutation.mutateAsync({
             canvasId: item._id,
-            name: trimmedName,
+            name: normalizedName,
             iconName: normalizedIconName,
             color: normalizedColor,
           })

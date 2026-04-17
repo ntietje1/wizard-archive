@@ -75,16 +75,31 @@ export function parseSidebarItemName(name: string): SidebarItemName | null {
 }
 
 export function assertSidebarItemName(name: string): SidebarItemName {
+  const result = validateItemName(name)
+  if (!result.valid) {
+    throw new Error(result.error)
+  }
+
   const parsed = parseSidebarItemName(name)
   if (!parsed) {
-    const result = validateItemName(name)
-    throw new Error(result.valid ? 'Invalid sidebar item name' : result.error)
+    throw new Error('Validated sidebar item name could not be parsed')
   }
+
   return parsed
 }
 
 export function requireSidebarItemName(name: string): SidebarItemName {
   return parseOrThrowClientValidation(sidebarItemNameSchema, name, 'Invalid sidebar item name')
+}
+
+export function requireOptionalSidebarItemName(
+  name: string | undefined,
+): SidebarItemName | undefined {
+  if (name === undefined) {
+    return undefined
+  }
+
+  return requireSidebarItemName(name)
 }
 
 export function checkNameConflict(
@@ -111,8 +126,7 @@ export function validateSidebarItemNameWithSiblings(
   siblings?: Array<{ _id: Id<'sidebarItems'>; name: string }>,
   excludeId?: Id<'sidebarItems'>,
 ): ValidationResult {
-  const trimmedName = name.trim()
-  const nameResult = validateItemName(trimmedName)
+  const nameResult = validateItemName(name)
   if (!nameResult.valid) {
     return nameResult
   }
@@ -121,5 +135,5 @@ export function validateSidebarItemNameWithSiblings(
     return { valid: true }
   }
 
-  return checkNameConflict(trimmedName, siblings, excludeId)
+  return checkNameConflict(name, siblings, excludeId)
 }

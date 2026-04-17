@@ -43,16 +43,13 @@ export type SidebarItemIconName = (typeof SIDEBAR_ITEM_ICON_NAMES)[number]
 
 const SIDEBAR_ITEM_ICON_NAME_SET = new Set<string>(SIDEBAR_ITEM_ICON_NAMES)
 
-export const sidebarItemIconNameValueSchema = z
+export const sidebarItemIconNameSchema = z
   .string()
   .refine((value): value is SidebarItemIconName => SIDEBAR_ITEM_ICON_NAME_SET.has(value), {
     message: 'Icon is not supported',
   })
 
-export const sidebarItemIconNameSchema = sidebarItemIconNameValueSchema.transform(
-  (value) => value as SidebarItemIconName,
-)
-export const sidebarItemIconNameValidator = zodToConvex(sidebarItemIconNameValueSchema)
+export const sidebarItemIconNameValidator = zodToConvex(sidebarItemIconNameSchema)
 
 export const DEFAULT_SIDEBAR_ITEM_ICON_NAME_BY_TYPE: Record<SidebarItemType, SidebarItemIconName> =
   {
@@ -68,7 +65,7 @@ export function getDefaultSidebarItemIconName(type: SidebarItemType): SidebarIte
 }
 
 export function validateSidebarItemIconName(iconName: string): string | null {
-  const result = sidebarItemIconNameValueSchema.safeParse(iconName)
+  const result = sidebarItemIconNameSchema.safeParse(iconName)
   return result.success ? null : (result.error.issues[0]?.message ?? 'Invalid icon')
 }
 
@@ -78,11 +75,11 @@ export function parseSidebarItemIconName(iconName: string): SidebarItemIconName 
 }
 
 export function assertSidebarItemIconName(iconName: string): SidebarItemIconName {
-  const parsed = parseSidebarItemIconName(iconName)
-  if (!parsed) {
-    throw new Error(validateSidebarItemIconName(iconName) ?? 'Invalid icon')
+  const result = sidebarItemIconNameSchema.safeParse(iconName)
+  if (!result.success) {
+    throw new Error(result.error.issues[0]?.message ?? 'Invalid icon')
   }
-  return parsed
+  return result.data
 }
 
 export function requireSidebarItemIconName(iconName: string): SidebarItemIconName {
@@ -109,10 +106,5 @@ export function coerceSidebarItemIconNameForInput(
     return iconName
   }
 
-  const parsed = parseSidebarItemIconName(iconName)
-  if (!parsed) {
-    throw new Error(validateSidebarItemIconName(iconName) ?? 'Invalid icon')
-  }
-
-  return parsed
+  return assertSidebarItemIconName(iconName)
 }
