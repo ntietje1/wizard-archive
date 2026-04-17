@@ -1,10 +1,16 @@
 import { api } from 'convex/_generated/api'
-import type { CreateParentTarget } from 'convex/sidebarItems/createParentTarget'
-import { parseSidebarItemColor, validateSidebarItemColor } from 'convex/sidebarItems/color'
-import { parseSidebarItemIconName, validateSidebarItemIconName } from 'convex/sidebarItems/icon'
+import type { CreateParentTarget } from 'convex/sidebarItems/validation/parent'
+import {
+  parseSidebarItemColor,
+  validateSidebarItemColor,
+} from 'convex/sidebarItems/validation/color'
+import {
+  parseSidebarItemIconName,
+  validateSidebarItemIconName,
+} from 'convex/sidebarItems/validation/icon'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import { assertSidebarItemSlug } from 'convex/sidebarItems/slug'
-import type { SidebarItemSlug } from 'convex/sidebarItems/slug'
+import { assertSidebarItemSlug } from 'convex/sidebarItems/validation/slug'
+import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CustomBlock } from 'convex/notes/editorSpecs'

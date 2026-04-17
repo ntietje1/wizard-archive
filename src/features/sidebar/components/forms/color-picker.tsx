@@ -2,9 +2,9 @@ import {
   assertSidebarItemColor,
   DEFAULT_SIDEBAR_ITEM_COLOR,
   normalizeSidebarItemColorOrDefault,
-} from 'convex/sidebarItems/color'
+} from 'convex/sidebarItems/validation/color'
 import { useState } from 'react'
-import type { SidebarItemColor } from 'convex/sidebarItems/color'
+import type { SidebarItemColor } from 'convex/sidebarItems/validation/color'
 import { Palette } from 'lucide-react'
 import { Button } from '~/features/shadcn/components/button'
 import { Popover, PopoverContent, PopoverTrigger } from '~/features/shadcn/components/popover'

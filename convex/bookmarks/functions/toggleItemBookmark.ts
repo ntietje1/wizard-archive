@@ -1,5 +1,5 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
-import { checkItemAccess } from '../../sidebarItems/validation'
+import { checkItemAccess } from '../../sidebarItems/validation/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { CampaignMutationCtx } from '../../functions'

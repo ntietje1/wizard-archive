@@ -7,7 +7,7 @@ import {
   requireItemAccess,
   validateSidebarMove,
   validateSidebarParentChange,
-} from '../validation'
+} from '../validation/validation'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { resyncNoteLinksForNotes } from '../../links/functions/resyncNoteLinksForNotes'
@@ -16,7 +16,7 @@ import { deduplicateName } from './defaultItemName'
 import { trashTree, restoreTreeDescendants } from './treeOperations'
 import { getSidebarItem } from './getSidebarItem'
 import { collectDescendants } from './collectDescendants'
-import { assertSidebarItemName } from '../sharedValidation'
+import { assertSidebarItemName } from '../validation/name'
 import type { SidebarItemLocation } from '../types/baseTypes'
 import type { AnySidebarItemFromDb } from '../types/types'
 import type { CampaignMutationCtx } from '../../functions'

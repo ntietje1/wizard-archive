@@ -4,14 +4,11 @@ import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createFolder, createNote } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 import { testId } from '../../_test/test-id.helper'
-import { parseSidebarItemColor, validateSidebarItemColor } from '../color'
-import { parseSidebarItemIconName, validateSidebarItemIconName } from '../icon'
-import {
-  checkNameConflict,
-  validateItemName,
-  validateItemSlug,
-  validateNoCircularParent,
-} from '../sharedValidation'
+import { parseSidebarItemColor, validateSidebarItemColor } from '../validation/color'
+import { parseSidebarItemIconName, validateSidebarItemIconName } from '../validation/icon'
+import { checkNameConflict, validateItemName } from '../validation/name'
+import { validateNoCircularParent } from '../validation/parent'
+import { validateItemSlug } from '../validation/slug'
 import type { Id } from '../../_generated/dataModel'
 
 describe('validateItemName', () => {

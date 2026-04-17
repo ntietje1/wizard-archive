@@ -1,7 +1,7 @@
 import {
   DEFAULT_SIDEBAR_ITEM_ICON_NAME_BY_TYPE,
   SIDEBAR_ITEM_ICON_NAMES,
-} from 'convex/sidebarItems/icon'
+} from 'convex/sidebarItems/validation/icon'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import {
   Apple,
@@ -39,7 +39,7 @@ import {
   User,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import type { SidebarItemIconName } from 'convex/sidebarItems/icon'
+import type { SidebarItemIconName } from 'convex/sidebarItems/validation/icon'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 

@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { useShallow } from 'zustand/shallow'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemSlug } from 'convex/sidebarItems/slug'
+import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 
 interface CampaignState {
   folderStates: Record<string, boolean>

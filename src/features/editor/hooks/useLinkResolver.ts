@@ -1,4 +1,4 @@
-import { normalizeSidebarItemColorOrDefault } from 'convex/sidebarItems/color'
+import { normalizeSidebarItemColorOrDefault } from 'convex/sidebarItems/validation/color'
 import { isDangerousUrl } from 'convex/links/linkParsers'
 import { resolveParsedItemPath } from 'convex/links/linkResolution'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'

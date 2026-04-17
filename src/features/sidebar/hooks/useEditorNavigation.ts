@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
-import type { SidebarItemSlug } from 'convex/sidebarItems/slug'
+import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import { useLastEditorItem } from './useLastEditorItem'
 import { EDITOR_ROUTE } from './useEditorLinkProps'
 import type { EditorSearch } from '~/features/sidebar/utils/validate-search'

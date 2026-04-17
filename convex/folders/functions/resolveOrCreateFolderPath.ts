@@ -1,11 +1,11 @@
 import type { Id } from '../../_generated/dataModel'
 import { throwClientError, ERROR_CODE } from '../../errors'
 import type { CampaignMutationCtx } from '../../functions'
-import { CREATE_PARENT_TARGET_KIND } from '../../sidebarItems/createParentTarget'
-import type { ParsedCreateParentTarget } from '../../sidebarItems/createParentTarget'
-import type { SidebarItemName } from '../../sidebarItems/sharedValidation'
+import { CREATE_PARENT_TARGET_KIND } from '../../sidebarItems/validation/parent'
+import type { ParsedCreateParentTarget } from '../../sidebarItems/validation/parent'
+import type { SidebarItemName } from '../../sidebarItems/validation/name'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
-import { validateSidebarCreateParent } from '../../sidebarItems/validation'
+import { validateSidebarCreateParent } from '../../sidebarItems/validation/validation'
 import { findSidebarChildByName, insertFolder } from './folderHelpers'
 
 async function getParentFolderId(

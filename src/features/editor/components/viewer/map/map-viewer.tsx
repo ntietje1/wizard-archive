@@ -6,7 +6,7 @@ import { api } from 'convex/_generated/api'
 import {
   DEFAULT_SIDEBAR_ITEM_COLOR,
   normalizeSidebarItemColorOrDefault,
-} from 'convex/sidebarItems/color'
+} from 'convex/sidebarItems/validation/color'
 import { Ban, Image } from 'lucide-react'
 import { toast } from 'sonner'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'

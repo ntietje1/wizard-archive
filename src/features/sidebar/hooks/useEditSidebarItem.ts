@@ -1,13 +1,19 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import type { SidebarItemColor } from 'convex/sidebarItems/color'
-import { parseSidebarItemColor, validateSidebarItemColor } from 'convex/sidebarItems/color'
-import { parseSidebarItemIconName, validateSidebarItemIconName } from 'convex/sidebarItems/icon'
-import type { SidebarItemIconName } from 'convex/sidebarItems/icon'
+import type { SidebarItemColor } from 'convex/sidebarItems/validation/color'
+import {
+  parseSidebarItemColor,
+  validateSidebarItemColor,
+} from 'convex/sidebarItems/validation/color'
+import {
+  parseSidebarItemIconName,
+  validateSidebarItemIconName,
+} from 'convex/sidebarItems/validation/icon'
+import type { SidebarItemIconName } from 'convex/sidebarItems/validation/icon'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import { assertSidebarItemSlug } from 'convex/sidebarItems/slug'
-import type { SidebarItemSlug } from 'convex/sidebarItems/slug'
+import { assertSidebarItemSlug } from 'convex/sidebarItems/validation/slug'
+import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { GameMap } from 'convex/gameMaps/types'

@@ -1,5 +1,5 @@
-import { parseSidebarItemSlug } from 'convex/sidebarItems/slug'
-import type { SidebarItemSlug } from 'convex/sidebarItems/slug'
+import { parseSidebarItemSlug } from 'convex/sidebarItems/validation/slug'
+import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import type { EditorSearch } from '~/features/sidebar/utils/validate-search'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import usePersistedState from '~/shared/hooks/usePersistedState'

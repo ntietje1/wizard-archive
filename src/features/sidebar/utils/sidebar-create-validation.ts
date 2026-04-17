@@ -1,10 +1,10 @@
-import { checkNameConflict, validateItemName } from 'convex/sidebarItems/sharedValidation'
-import { CREATE_PARENT_TARGET_KIND } from 'convex/sidebarItems/createParentTarget'
+import { checkNameConflict, validateItemName } from 'convex/sidebarItems/validation/name'
+import { CREATE_PARENT_TARGET_KIND } from 'convex/sidebarItems/validation/parent'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import type { CreateParentTarget } from 'convex/sidebarItems/createParentTarget'
+import type { CreateParentTarget } from 'convex/sidebarItems/validation/parent'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { ValidationResult } from 'convex/sidebarItems/sharedValidation'
+import type { ValidationResult } from 'convex/sidebarItems/validation/name'
 
 const VIRTUAL_PARENT = Symbol('virtual-parent')
 

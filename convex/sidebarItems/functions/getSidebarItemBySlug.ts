@@ -1,8 +1,8 @@
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { checkItemAccess } from '../validation'
+import { checkItemAccess } from '../validation/validation'
 import { enhanceSidebarItemWithContent } from './enhanceSidebarItem'
 import { getSidebarItem } from './getSidebarItem'
-import type { SidebarItemSlug } from '../slug'
+import type { SidebarItemSlug } from '../validation/slug'
 import type { AnySidebarItemWithContent } from '../types/types'
 import type { CampaignQueryCtx } from '../../functions'
 

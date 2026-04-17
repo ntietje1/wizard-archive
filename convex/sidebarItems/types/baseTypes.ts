@@ -2,9 +2,9 @@ import type { Folder } from '../../folders/types'
 import type { Id } from '../../_generated/dataModel'
 import type { PermissionLevel } from '../../permissions/types'
 import type { SidebarItemShare } from '../../sidebarShares/types'
-import type { SidebarItemColor } from '../color'
-import type { SidebarItemIconName } from '../icon'
-import type { SidebarItemSlug } from '../slug'
+import type { SidebarItemColor } from '../validation/color'
+import type { SidebarItemIconName } from '../validation/icon'
+import type { SidebarItemSlug } from '../validation/slug'
 import type { ConvexValidatorFields } from '../../common/types'
 
 export const SIDEBAR_ITEM_LOCATION = {

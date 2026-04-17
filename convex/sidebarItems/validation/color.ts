@@ -1,7 +1,7 @@
 import { zodToConvex } from 'convex-helpers/server/zod4'
 import { z } from 'zod'
-import type { BrandedString } from '../common/slug'
-import { parseOrThrowClientValidation } from '../common/zod'
+import type { BrandedString } from '../../common/slug'
+import { parseOrThrowClientValidation } from '../../common/zod'
 
 export type SidebarItemColor = BrandedString<'SidebarItemColor'>
 

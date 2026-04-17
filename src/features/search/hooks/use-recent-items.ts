@@ -3,8 +3,8 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useFilteredSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { logger } from '~/shared/utils/logger'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import { parseSidebarItemSlug } from 'convex/sidebarItems/slug'
-import type { SidebarItemSlug } from 'convex/sidebarItems/slug'
+import { parseSidebarItemSlug } from 'convex/sidebarItems/validation/slug'
+import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import type { SearchResult } from '../utils/merge-search-results'
 
 interface RecentEntry {

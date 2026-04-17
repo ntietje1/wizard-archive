@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useMatch } from '@tanstack/react-router'
-import type { SidebarItemSlug } from 'convex/sidebarItems/slug'
+import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { getSlug } from '~/features/sidebar/utils/sidebar-item-utils'

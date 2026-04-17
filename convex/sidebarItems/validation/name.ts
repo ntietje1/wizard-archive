@@ -1,15 +1,28 @@
-import type { BrandedString } from '../common/slug'
-import { parseOrThrowClientValidation } from '../common/zod'
+import type { BrandedString } from '../../common/slug'
+import { parseOrThrowClientValidation } from '../../common/zod'
 import { z } from 'zod'
-import { slugify } from '../common/slug'
-import { parseSidebarItemSlug, validateSidebarItemSlug } from './slug'
-import {
-  SIDEBAR_ITEM_FORBIDDEN_NAME_CHARS,
-  SIDEBAR_ITEM_FORBIDDEN_NAME_CHARS_DISPLAY,
-  SIDEBAR_ITEM_NAME_MAX_LENGTH,
-  hasSidebarItemControlChars,
-} from './constants'
-import type { Id } from '../_generated/dataModel'
+import { slugify } from '../../common/slug'
+import { parseSidebarItemSlug } from './slug'
+import type { Id } from '../../_generated/dataModel'
+
+export const SIDEBAR_ITEM_NAME_MAX_LENGTH = 255
+
+export const SIDEBAR_ITEM_FORBIDDEN_NAME_CHARS = /[/\\:*?"<>[\]#|]/
+export const SIDEBAR_ITEM_FORBIDDEN_NAME_CHARS_DISPLAY = '/ \\ : * ? " < > [ ] # |'
+
+export function hasSidebarItemControlChars(value: string): boolean {
+  for (const char of value) {
+    const codePoint = char.codePointAt(0)
+    if (
+      codePoint !== undefined &&
+      (codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f))
+    ) {
+      return true
+    }
+  }
+
+  return false
+}
 
 export type ValidationResult = { valid: true } | { valid: false; error: string }
 
@@ -74,17 +87,6 @@ export function requireSidebarItemName(name: string): SidebarItemName {
   return parseOrThrowClientValidation(sidebarItemNameSchema, name, 'Invalid sidebar item name')
 }
 
-export function validateItemSlug(slug: string): ValidationResult {
-  const error = validateSidebarItemSlug(slug)
-  return error ? { valid: false, error } : { valid: true }
-}
-
-/**
- * Checks if a name conflicts with existing siblings (case-insensitive).
- * @param name - The name to check
- * @param siblings - All items under the same parent
- * @param excludeId - Optional ID to exclude from conflict check (for updates)
- */
 export function checkNameConflict(
   name: string,
   siblings: Array<{ _id: Id<'sidebarItems'>; name: string }>,
@@ -101,50 +103,5 @@ export function checkNameConflict(
       error: 'An item with this name already exists here',
     }
   }
-  return { valid: true }
-}
-
-/**
- * Checks if setting a new parent would create a circular reference.
- * @param itemId - The item being moved
- * @param newParentId - The proposed new parent
- * @param getParent - Callback to look up a parent item by ID
- */
-export function validateNoCircularParent(
-  itemId: Id<'sidebarItems'>,
-  newParentId: Id<'sidebarItems'> | null,
-  getParent: (id: Id<'sidebarItems'>) => { parentId: Id<'sidebarItems'> | null } | undefined,
-): ValidationResult {
-  if (!newParentId) {
-    return { valid: true }
-  }
-
-  if (newParentId === itemId) {
-    return {
-      valid: false,
-      error: 'An item cannot be its own parent',
-    }
-  }
-
-  const seen = new Set<Id<'sidebarItems'>>()
-  let currentId: Id<'sidebarItems'> | null = newParentId
-
-  while (currentId) {
-    if (seen.has(currentId)) {
-      break
-    }
-    seen.add(currentId)
-
-    if (currentId === itemId) {
-      return {
-        valid: false,
-        error: 'This move would create a circular reference',
-      }
-    }
-
-    const current = getParent(currentId)
-    currentId = current?.parentId ?? null
-  }
-
   return { valid: true }
 }

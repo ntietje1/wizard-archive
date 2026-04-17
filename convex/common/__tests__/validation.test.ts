@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseCampaignSlug, validateCampaignSlug } from '../../campaigns/validation'
-import { parseSidebarItemSlug, validateSidebarItemSlug } from '../../sidebarItems/slug'
+import { parseSidebarItemSlug, validateSidebarItemSlug } from '../../sidebarItems/validation/slug'
 import { parseUsername, validateUsername } from '../../users/validation'
 import { appendSuffix, findUniqueSlug, slugify } from '../slug'
 

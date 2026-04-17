@@ -1,13 +1,10 @@
-import {
-  checkNameConflict,
-  validateItemName,
-  validateNoCircularParent,
-} from 'convex/sidebarItems/sharedValidation'
+import { checkNameConflict, validateItemName } from 'convex/sidebarItems/validation/name'
+import { validateNoCircularParent } from 'convex/sidebarItems/validation/parent'
 import { findUniqueDefaultName } from 'convex/sidebarItems/functions/defaultItemName'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { ValidationResult } from 'convex/sidebarItems/sharedValidation'
+import type { ValidationResult } from 'convex/sidebarItems/validation/name'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 
 export interface SidebarValidation {

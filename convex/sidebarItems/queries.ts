@@ -9,7 +9,7 @@ import { sidebarItemLocationValidator, sidebarItemSlugValidator } from './schema
 import { anySidebarItemWithContentValidator } from './schema/anySidebarItemWithContentValidator'
 import { getSidebarItemWithContent } from './functions/getSidebarItemWithContent'
 import { ERROR_CODE, throwClientError } from '../errors'
-import { requireSidebarItemSlug } from './slug'
+import { requireSidebarItemSlug } from './validation/slug'
 
 export const getSidebarItemsByLocation = campaignQuery({
   args: {

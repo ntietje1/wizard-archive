@@ -4,7 +4,7 @@ import { getCampaignMembers } from '../../campaigns/functions/getCampaignMembers
 import { getBlockSharesByBlock } from '../../blockShares/functions/getBlockSharesForBlock'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { SHARE_STATUS } from '../../blockShares/types'
-import { checkItemAccess } from '../../sidebarItems/validation'
+import { checkItemAccess } from '../../sidebarItems/validation/validation'
 import { findBlockByBlockNoteId } from './findBlockByBlockNoteId'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { DmQueryCtx } from '../../functions'

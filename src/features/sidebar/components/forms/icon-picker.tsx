@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { SidebarItemIconName } from 'convex/sidebarItems/icon'
+import type { SidebarItemIconName } from 'convex/sidebarItems/validation/icon'
 import { Button } from '~/features/shadcn/components/button'
 import { Popover, PopoverContent, PopoverTrigger } from '~/features/shadcn/components/popover'
 import { getAvailableIconNames, getIconByName } from '~/shared/utils/category-icons'

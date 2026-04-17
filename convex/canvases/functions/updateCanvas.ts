@@ -1,15 +1,18 @@
-import { prepareSidebarItemRename, requireItemAccess } from '../../sidebarItems/validation'
+import {
+  prepareSidebarItemRename,
+  requireItemAccess,
+} from '../../sidebarItems/validation/validation'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
-import type { SidebarItemName } from '../../sidebarItems/sharedValidation'
-import type { SidebarItemColor } from '../../sidebarItems/color'
-import type { SidebarItemIconName } from '../../sidebarItems/icon'
+import type { SidebarItemName } from '../../sidebarItems/validation/name'
+import type { SidebarItemColor } from '../../sidebarItems/validation/color'
+import type { SidebarItemIconName } from '../../sidebarItems/validation/icon'
 import type { EditHistoryChange } from '../../editHistory/types'
-import type { SidebarItemSlug } from '../../sidebarItems/slug'
+import type { SidebarItemSlug } from '../../sidebarItems/validation/slug'
 import type { WithoutSystemFields } from 'convex/server'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'

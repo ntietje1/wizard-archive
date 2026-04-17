@@ -3,9 +3,9 @@ import {
   DEFAULT_SIDEBAR_ITEM_COLOR,
   isValidSidebarItemColor,
   normalizeSidebarItemColorOrDefault,
-} from 'convex/sidebarItems/color'
+} from 'convex/sidebarItems/validation/color'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import { assertSidebarItemSlug } from 'convex/sidebarItems/slug'
+import { assertSidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import {

@@ -1,5 +1,5 @@
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { requireItemAccess } from '../../sidebarItems/validation'
+import { requireItemAccess } from '../../sidebarItems/validation/validation'
 import { getSidebarItemSharesForItem } from './getSidebarItemSharesForItem'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { CampaignQueryCtx } from '../../functions'

@@ -1,7 +1,7 @@
 import {
   DEFAULT_SIDEBAR_ITEM_COLOR,
   normalizeSidebarItemColorOrDefault,
-} from 'convex/sidebarItems/color'
+} from 'convex/sidebarItems/validation/color'
 import type { LucideIcon } from 'lucide-react'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import { DEFAULT_SIDEBAR_ITEM_ICONS, getIconByName } from '~/shared/utils/category-icons'

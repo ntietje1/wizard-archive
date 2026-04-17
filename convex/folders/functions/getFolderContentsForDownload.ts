@@ -4,7 +4,7 @@ import { getSidebarItemsByParent } from '../../sidebarItems/functions/getSidebar
 import { getAllBlocksByNote } from '../../blocks/functions/getAllBlocksByNote'
 import { reconstructBlockTree } from '../../blocks/functions/reconstructBlockTree'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
-import { requireItemAccess } from '../../sidebarItems/validation'
+import { requireItemAccess } from '../../sidebarItems/validation/validation'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sidebarItemPermissions'
 import { hasAtLeastPermissionLevel } from '../../permissions/hasAtLeastPermissionLevel'

@@ -1,8 +1,8 @@
 import { zodToConvex } from 'convex-helpers/server/zod4'
 import { z } from 'zod'
-import { SIDEBAR_ITEM_TYPES } from './types/baseTypes'
-import type { SidebarItemType } from './types/baseTypes'
-import { parseOrThrowClientValidation } from '../common/zod'
+import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
+import type { SidebarItemType } from '../types/baseTypes'
+import { parseOrThrowClientValidation } from '../../common/zod'
 
 export const SIDEBAR_ITEM_ICON_NAMES = [
   'Apple',

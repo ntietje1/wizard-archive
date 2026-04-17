@@ -1,5 +1,5 @@
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
-import { SIDEBAR_ITEM_NAME_MAX_LENGTH } from '../constants'
+import { SIDEBAR_ITEM_NAME_MAX_LENGTH } from '../validation/name'
 import type { SidebarItemType } from '../types/baseTypes'
 
 export const defaultNameMap: Record<SidebarItemType, string> = {

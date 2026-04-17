@@ -1,5 +1,5 @@
-import { parseSidebarItemSlug } from 'convex/sidebarItems/slug'
-import type { SidebarItemSlug } from 'convex/sidebarItems/slug'
+import { parseSidebarItemSlug } from 'convex/sidebarItems/validation/slug'
+import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 
 export type EditorSearch = {
   item?: SidebarItemSlug

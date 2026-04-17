@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CREATE_PARENT_TARGET_KIND } from 'convex/sidebarItems/createParentTarget'
+import { CREATE_PARENT_TARGET_KIND } from 'convex/sidebarItems/validation/parent'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'

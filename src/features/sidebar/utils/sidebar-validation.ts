@@ -1,9 +1,6 @@
-import {
-  checkNameConflict,
-  validateItemName,
-  validateNoCircularParent as validateNoCircularParentShared,
-} from 'convex/sidebarItems/sharedValidation'
-import type { ValidationResult } from 'convex/sidebarItems/sharedValidation'
+import { checkNameConflict, validateItemName } from 'convex/sidebarItems/validation/name'
+import { validateNoCircularParent as validateNoCircularParentShared } from 'convex/sidebarItems/validation/parent'
+import type { ValidationResult } from 'convex/sidebarItems/validation/name'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 

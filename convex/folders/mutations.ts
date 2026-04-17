@@ -3,19 +3,22 @@ import { campaignMutation } from '../functions'
 import {
   createItemParentArgsValidator,
   requireCreateParentTarget,
-} from '../sidebarItems/createParentTarget'
-import { requireSidebarItemColor, requireOptionalSidebarItemColor } from '../sidebarItems/color'
+} from '../sidebarItems/validation/parent'
+import {
+  requireSidebarItemColor,
+  requireOptionalSidebarItemColor,
+} from '../sidebarItems/validation/color'
 import {
   requireOptionalSidebarItemIconName,
   requireSidebarItemIconName,
-} from '../sidebarItems/icon'
+} from '../sidebarItems/validation/icon'
 import {
   sidebarItemColorValidator,
   sidebarItemIconNameValidator,
   sidebarItemNameValidator,
   sidebarItemSlugValidator,
 } from '../sidebarItems/schema/validators'
-import { requireSidebarItemName } from '../sidebarItems/sharedValidation'
+import { requireSidebarItemName } from '../sidebarItems/validation/name'
 import { createFolder as createFolderFn } from './functions/createFolder'
 import { updateFolder as updateFolderFn } from './functions/updateFolder'
 import type { Id } from '../_generated/dataModel'

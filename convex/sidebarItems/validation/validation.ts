@@ -1,21 +1,21 @@
-import { ERROR_CODE, throwClientError } from '../errors'
-import { getSidebarItemPermissionLevel } from '../sidebarShares/functions/sidebarItemPermissions'
-import { hasAtLeastPermissionLevel } from '../permissions/hasAtLeastPermissionLevel'
-import { PERMISSION_LEVEL } from '../permissions/types'
-import { findUniqueSlug } from '../common/slug'
-import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
-import { getSidebarItemsByParent } from './functions/getSidebarItemsByParent'
-import { enhanceSidebarItem } from './functions/enhanceSidebarItem'
-import { assertSidebarItemName, checkNameConflict } from './sharedValidation'
+import { ERROR_CODE, throwClientError } from '../../errors'
+import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sidebarItemPermissions'
+import { hasAtLeastPermissionLevel } from '../../permissions/hasAtLeastPermissionLevel'
+import { PERMISSION_LEVEL } from '../../permissions/types'
+import { findUniqueSlug } from '../../common/slug'
+import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
+import { getSidebarItemsByParent } from '../functions/getSidebarItemsByParent'
+import { enhanceSidebarItem } from '../functions/enhanceSidebarItem'
+import { assertSidebarItemName, checkNameConflict } from './name'
 import { assertSidebarItemSlug, validateSidebarItemSlug } from './slug'
-import { SIDEBAR_ITEM_TYPES } from './types/baseTypes'
-import type { SidebarItemName, ValidationResult } from './sharedValidation'
-import type { PermissionLevel } from '../permissions/types'
-import type { CampaignQueryCtx } from '../functions'
-import type { Doc, Id } from '../_generated/dataModel'
+import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
+import type { SidebarItemName, ValidationResult } from './name'
+import type { PermissionLevel } from '../../permissions/types'
+import type { CampaignQueryCtx } from '../../functions'
+import type { Doc, Id } from '../../_generated/dataModel'
 import type { SidebarItemSlug } from './slug'
-import type { AnySidebarItem, AnySidebarItemFromDb, EnhancedSidebarItem } from './types/types'
-import { getSidebarItemWithContent } from './functions/getSidebarItemWithContent'
+import type { AnySidebarItem, AnySidebarItemFromDb, EnhancedSidebarItem } from '../types/types'
+import { getSidebarItemWithContent } from '../functions/getSidebarItemWithContent'
 
 /**
  * Checks if a name is unique under a parent (case-insensitive).
@@ -62,7 +62,7 @@ async function ensureSidebarItemNameAvailable(
  * Walks up the parent chain to check if setting newParentId would create a cycle.
  * Server version uses async ctx.db.get lookups.
  */
-export async function validateNoCircularParent(
+async function validateNoCircularParentInDb(
   ctx: CampaignQueryCtx,
   {
     itemId,
@@ -126,7 +126,7 @@ export async function validateSidebarParentChange(
     newParentId: Id<'sidebarItems'> | null
   },
 ): Promise<void> {
-  const result = await validateNoCircularParent(ctx, {
+  const result = await validateNoCircularParentInDb(ctx, {
     itemId: item._id,
     newParentId,
   })

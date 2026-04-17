@@ -1,6 +1,6 @@
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { ERROR_CODE, throwClientError } from '../../errors'
-import { requireItemAccess } from '../validation'
+import { requireItemAccess } from '../validation/validation'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { getSidebarItem } from './getSidebarItem'
 import type { CampaignMutationCtx } from '../../functions'
