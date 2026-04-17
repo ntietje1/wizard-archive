@@ -22,15 +22,15 @@ export async function resyncNoteLinksForNotes(
         return
       }
 
-    const blocks: Array<Block> = await ctx.db
-      .query('blocks')
-      .withIndex('by_campaign_note_block', (q) =>
-        q.eq('campaignId', note.campaignId).eq('noteId', noteId),
-      )
-      .collect()
+      const blocks: Array<Block> = await ctx.db
+        .query('blocks')
+        .withIndex('by_campaign_note_block', (q) =>
+          q.eq('campaignId', note.campaignId).eq('noteId', noteId),
+        )
+        .collect()
 
-    await syncNoteLinks(ctx, {
-      noteId,
+      await syncNoteLinks(ctx, {
+        noteId,
         campaignId: note.campaignId,
         blocks,
       })

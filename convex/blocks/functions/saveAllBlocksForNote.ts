@@ -38,28 +38,11 @@ export async function saveAllBlocksForNote(
   }
   const flatBlocks = [...deduped.values()]
   const incomingBlockIds = new Set(flatBlocks.map((b) => b.blockNoteId))
-  await asyncMap(
-    flatBlocks,
-    async (flat): Promise<void> => {
-      const existing = existingBlocksMap.get(flat.blockNoteId)
-      if (existing) {
-        await updateBlock(ctx, {
-          blockDbId: existing._id,
-          parentBlockId: flat.parentBlockId,
-          depth: flat.depth,
-          position: flat.position,
-          type: flat.type,
-          props: flat.props,
-          inlineContent: flat.inlineContent,
-          plainText: flat.plainText,
-        })
-        return
-      }
-
-      await insertBlock(ctx, {
-        noteId,
-        campaignId,
-        blockNoteId: flat.blockNoteId,
+  await asyncMap(flatBlocks, async (flat): Promise<void> => {
+    const existing = existingBlocksMap.get(flat.blockNoteId)
+    if (existing) {
+      await updateBlock(ctx, {
+        blockDbId: existing._id,
         parentBlockId: flat.parentBlockId,
         depth: flat.depth,
         position: flat.position,
@@ -67,10 +50,24 @@ export async function saveAllBlocksForNote(
         props: flat.props,
         inlineContent: flat.inlineContent,
         plainText: flat.plainText,
-        shareStatus: SHARE_STATUS.NOT_SHARED,
       })
-    },
-  )
+      return
+    }
+
+    await insertBlock(ctx, {
+      noteId,
+      campaignId,
+      blockNoteId: flat.blockNoteId,
+      parentBlockId: flat.parentBlockId,
+      depth: flat.depth,
+      position: flat.position,
+      type: flat.type,
+      props: flat.props,
+      inlineContent: flat.inlineContent,
+      plainText: flat.plainText,
+      shareStatus: SHARE_STATUS.NOT_SHARED,
+    })
+  })
 
   // hard delete blocks that don't exist in the document anymore
   const blocksToDelete = existingBlocks.filter((b) => !incomingBlockIds.has(b.blockNoteId))

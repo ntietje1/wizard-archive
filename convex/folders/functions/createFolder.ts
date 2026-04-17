@@ -1,9 +1,4 @@
-import {
-  findUniqueSidebarItemSlug,
-  validateSidebarItemName,
-} from '../../sidebarItems/validation'
 import type { CreateParentTarget } from '../../sidebarItems/createParentTarget'
-import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import { resolveOrCreateFolderPath } from './resolveOrCreateFolderPath'
