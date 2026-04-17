@@ -98,6 +98,10 @@ describe('appendSuffix', () => {
   it('truncates the base before applying a suffix when needed', () => {
     expect(appendSuffix('hello-world', 12, 10)).toBe('hello-w-12')
   })
+
+  it('throws when the suffix cannot fit within the max length', () => {
+    expect(() => appendSuffix('hello', 10, 3)).toThrow('Cannot append suffix 10')
+  })
 })
 
 describe('findUniqueSlug', () => {
@@ -139,6 +143,12 @@ describe('findUniqueSlug', () => {
       },
     )
     expect(slug).toBe('a-very-lon-2')
+  })
+
+  it('fails fast when the input normalizes to an empty slug', async () => {
+    await expect(findUniqueSlug('🎉🎊', () => Promise.resolve(false))).rejects.toThrow(
+      'Cannot generate slug: input normalized to empty',
+    )
   })
 })
 

@@ -78,14 +78,15 @@ export function useCreateSidebarItem() {
   }
 
   const createItem = async (args: CreateItemArgs): Promise<CreateItemResult> => {
-    const normalizedName = assertSidebarItemName(args.name.trim())
+    const trimmedName = args.name.trim()
     const nameResult = validateCreateItem({
       ...args,
-      name: normalizedName,
+      name: trimmedName,
     })
     if (!nameResult.valid) {
       throw new Error(nameResult.error)
     }
+    const normalizedName = assertSidebarItemName(trimmedName)
 
     const iconName =
       args.iconName === undefined ? undefined : coerceSidebarItemIconNameForInput(args.iconName)

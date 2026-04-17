@@ -34,7 +34,7 @@ export async function updateCampaign(
       .query('campaigns')
       .withIndex('by_slug_dm', (q) => q.eq('slug', slug).eq('dmUserId', userId))
       .unique()
-    if (conflict && conflict._id !== campaign._id) {
+    if (conflict) {
       throwClientError(ERROR_CODE.CONFLICT, 'A campaign with this slug already exists')
     }
     updates.slug = slug

@@ -23,6 +23,7 @@ import { updateItemPin as updateItemPinFn } from './functions/updateItemPin'
 import { updatePinVisibility as updatePinVisibilityFn } from './functions/updatePinVisibility'
 import { removeItemPin as removeItemPinFn } from './functions/removeItemPin'
 import type { Id } from '../_generated/dataModel'
+import type { SidebarItemSlug } from '../sidebarItems/validation/slug'
 
 export const createMap = campaignMutation({
   args: {
@@ -36,7 +37,7 @@ export const createMap = campaignMutation({
     mapId: v.id('sidebarItems'),
     slug: sidebarItemSlugValidator,
   }),
-  handler: async (ctx, args): Promise<{ mapId: Id<'sidebarItems'>; slug: string }> => {
+  handler: async (ctx, args): Promise<{ mapId: Id<'sidebarItems'>; slug: SidebarItemSlug }> => {
     const name = requireSidebarItemName(args.name)
     const parentTarget = requireCreateParentTarget(args.parentTarget)
     const iconName = requireOptionalSidebarItemIconName(args.iconName) ?? undefined
@@ -63,7 +64,7 @@ export const updateMap = campaignMutation({
     mapId: v.id('sidebarItems'),
     slug: sidebarItemSlugValidator,
   }),
-  handler: async (ctx, args): Promise<{ mapId: Id<'sidebarItems'>; slug: string }> => {
+  handler: async (ctx, args): Promise<{ mapId: Id<'sidebarItems'>; slug: SidebarItemSlug }> => {
     const name = requireOptionalSidebarItemName(args.name)
     const iconName = requireOptionalSidebarItemIconName(args.iconName)
     const color = requireOptionalSidebarItemColor(args.color)

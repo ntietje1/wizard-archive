@@ -95,11 +95,13 @@ export function useEditSidebarItem() {
   ): Promise<EditItemResult> => {
     const { item, name, iconName, color } = args
 
-    const normalizedName = name === undefined ? undefined : assertSidebarItemName(name.trim())
-    if (normalizedName !== undefined) {
-      const result = validation.validateName(normalizedName, item.parentId, item._id)
+    const trimmedName = name === undefined ? undefined : name.trim()
+    if (trimmedName !== undefined) {
+      const result = validation.validateName(trimmedName, item.parentId, item._id)
       if (!result.valid) throw new Error(result.error)
     }
+    const normalizedName =
+      trimmedName === undefined ? undefined : assertSidebarItemName(trimmedName)
 
     const normalizedIconName =
       iconName === undefined || iconName === null

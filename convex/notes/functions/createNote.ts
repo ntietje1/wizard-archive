@@ -16,6 +16,7 @@ import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { CustomBlock } from '../editorSpecs'
+import type { SidebarItemSlug } from '../../sidebarItems/validation/slug'
 
 export async function createNote(
   ctx: CampaignMutationCtx,
@@ -32,7 +33,7 @@ export async function createNote(
     color?: SidebarItemColor
     content?: Array<CustomBlock>
   },
-): Promise<{ noteId: Id<'sidebarItems'>; slug: string }> {
+): Promise<{ noteId: Id<'sidebarItems'>; slug: SidebarItemSlug }> {
   const resolvedParentId = await resolveOrCreateFolderPath(ctx, { parentTarget })
   const prepared = await prepareSidebarItemCreate(ctx, {
     parentId: resolvedParentId,

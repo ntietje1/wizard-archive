@@ -102,7 +102,9 @@ export function appendSuffix(base: string, suffixNumber: number, maxLength: numb
 
   const suffix = `-${suffixNumber}`
   if (suffix.length >= maxLength) {
-    return ''
+    throw new Error(
+      `Cannot append suffix ${suffixNumber}: suffix length ${suffix.length} exceeds max length ${maxLength}`,
+    )
   }
   const truncatedBase = base.slice(0, Math.max(0, maxLength - suffix.length)).replace(/-+$/, '')
   return `${truncatedBase}${suffix}`
@@ -120,12 +122,12 @@ export async function findUniqueSlug(
   } = {},
 ): Promise<string> {
   const normalized = slugify(name)
+  if (!normalized) {
+    throw new Error(`Cannot generate slug: input normalized to empty for "${name}"`)
+  }
 
   for (let suffix = 1; suffix <= MAX_UNIQUE_SLUG_ATTEMPTS; suffix++) {
     const candidate = appendSuffix(normalized, suffix, maxLength)
-    if (!candidate) {
-      continue
-    }
     if (isValidCandidate && !isValidCandidate(candidate)) {
       continue
     }

@@ -19,6 +19,7 @@ import {
   requireOptionalSidebarItemName,
   requireSidebarItemName,
 } from '../sidebarItems/validation/name'
+import type { SidebarItemSlug } from '../sidebarItems/validation/slug'
 import { createNote as createNoteFn } from './functions/createNote'
 import { updateNote as updateNoteFn } from './functions/updateNote'
 import type { Id } from '../_generated/dataModel'
@@ -34,7 +35,7 @@ export const updateNote = campaignMutation({
     noteId: v.id('sidebarItems'),
     slug: sidebarItemSlugValidator,
   }),
-  handler: async (ctx, args): Promise<{ noteId: Id<'sidebarItems'>; slug: string }> => {
+  handler: async (ctx, args): Promise<{ noteId: Id<'sidebarItems'>; slug: SidebarItemSlug }> => {
     const name = requireOptionalSidebarItemName(args.name)
     const iconName = requireOptionalSidebarItemIconName(args.iconName)
     const color = requireOptionalSidebarItemColor(args.color)
@@ -59,7 +60,7 @@ export const createNote = campaignMutation({
     noteId: v.id('sidebarItems'),
     slug: sidebarItemSlugValidator,
   }),
-  handler: async (ctx, args): Promise<{ noteId: Id<'sidebarItems'>; slug: string }> => {
+  handler: async (ctx, args): Promise<{ noteId: Id<'sidebarItems'>; slug: SidebarItemSlug }> => {
     const name = requireSidebarItemName(args.name)
     const parentTarget = requireCreateParentTarget(args.parentTarget)
     const iconName = requireOptionalSidebarItemIconName(args.iconName) ?? undefined
