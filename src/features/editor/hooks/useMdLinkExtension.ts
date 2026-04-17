@@ -30,8 +30,13 @@ const TEXT_BLOCK_TYPES = new Set([
 export function useMdLinkExtension(
   editor: CustomBlockNoteEditor | undefined,
   resolver: LinkResolver,
+  isViewerMode = resolver.isViewerMode,
 ) {
   const pluginRef = useRef<Plugin | null>(null)
+  const resolverRef = useRef(resolver)
+  const isViewerModeRef = useRef(isViewerMode)
+  resolverRef.current = resolver
+  isViewerModeRef.current = isViewerMode
 
   useEffect(() => {
     const tiptapEditor = editor?._tiptapEditor
@@ -41,10 +46,21 @@ export function useMdLinkExtension(
       tiptapEditor,
       pluginKey: PLUGIN_KEY,
       stabilizerKey: SELECTION_STABILIZER_KEY,
-      createDecorationPlugin: () => createMdLinkPlugin(resolver, resolver.isViewerMode),
+      createDecorationPlugin: () =>
+        createMdLinkPlugin(
+          () => resolverRef.current,
+          () => isViewerModeRef.current,
+        ),
       pluginRef,
     })
-  }, [editor, resolver, resolver.isViewerMode])
+  }, [editor])
+
+  useEffect(() => {
+    const view = editor?._tiptapEditor?.view
+    if (!view) return
+
+    view.dispatch(view.state.tr.setMeta(PLUGIN_KEY, true))
+  }, [editor, resolver, isViewerMode])
 }
 
 function findMdLinks(doc: ProseMirrorNode, resolver: LinkResolver): Array<MdLinkDecorationMatch> {
@@ -84,17 +100,21 @@ function findMdLinks(doc: ProseMirrorNode, resolver: LinkResolver): Array<MdLink
   return matches
 }
 
-function createMdLinkPlugin(resolver: LinkResolver, isViewerMode: boolean): Plugin<PluginState> {
+function createMdLinkPlugin(
+  getResolver: () => LinkResolver,
+  getIsViewerMode: () => boolean,
+): Plugin<PluginState> {
   return new Plugin<PluginState>({
     key: PLUGIN_KEY,
     state: {
       init(_, { doc, selection }) {
+        const resolver = getResolver()
         const matches = findMdLinks(doc, resolver)
         return {
           decorations: buildMdLinkDecorations(
             doc,
             matches,
-            isViewerMode,
+            getIsViewerMode(),
             selection.from,
             selection.to,
           ),
@@ -103,6 +123,8 @@ function createMdLinkPlugin(resolver: LinkResolver, isViewerMode: boolean): Plug
         }
       },
       apply(tr, oldState, _, newEditorState) {
+        const resolver = getResolver()
+        const isViewerMode = getIsViewerMode()
         const forceRebuild = tr.getMeta(PLUGIN_KEY)
         const { from: selFrom, to: selTo } = newEditorState.selection
 

@@ -18,7 +18,10 @@ export function overlapsSelection(
 /** Minimal interface for the tiptap editor methods we use */
 interface TiptapEditorLike {
   view: EditorView | undefined
-  registerPlugin: (plugin: Plugin) => void
+  registerPlugin: (
+    plugin: Plugin,
+    handlePlugins?: (newPlugin: Plugin, plugins: Array<Plugin>) => Array<Plugin>,
+  ) => void
   unregisterPlugin: (keyOrName: PluginKey | string) => void
 }
 
@@ -28,6 +31,33 @@ interface RegisterPluginsOptions {
   stabilizerKey: PluginKey
   createDecorationPlugin: () => Plugin
   pluginRef: RefObject<Plugin | null>
+}
+
+function replacePlugin(
+  plugins: Array<Plugin>,
+  pluginToAdd: Plugin,
+  keyOrName: PluginKey | string,
+): Array<Plugin> {
+  const name = (() => {
+    if (typeof keyOrName === 'string') {
+      return `${keyOrName}$`
+    }
+
+    const pluginKey = (keyOrName as unknown as { key?: string }).key
+    if (!pluginKey) {
+      throw new Error('replacePlugin expected a PluginKey with a defined key value')
+    }
+
+    return pluginKey
+  })()
+
+  return [
+    ...plugins.filter((plugin) => {
+      const pluginKey = (plugin as unknown as { key?: string }).key
+      return typeof pluginKey !== 'string' || !pluginKey.startsWith(name)
+    }),
+    pluginToAdd,
+  ]
 }
 
 /**
@@ -55,19 +85,12 @@ export function registerLinkPlugins({
     const stabilizerPlugin = createSelectionStabilizerPlugin(stabilizerKey)
     const decorationPlugin = createDecorationPlugin()
 
-    try {
-      tiptapEditor.unregisterPlugin(stabilizerKey)
-    } catch {
-      // Plugin might not be registered
-    }
-    try {
-      tiptapEditor.unregisterPlugin(pluginKey)
-    } catch {
-      // Plugin might not be registered
-    }
-
-    tiptapEditor.registerPlugin(stabilizerPlugin)
-    tiptapEditor.registerPlugin(decorationPlugin)
+    tiptapEditor.registerPlugin(stabilizerPlugin, (newPlugin, plugins) =>
+      replacePlugin(plugins, newPlugin, stabilizerKey),
+    )
+    tiptapEditor.registerPlugin(decorationPlugin, (newPlugin, plugins) =>
+      replacePlugin(plugins, newPlugin, pluginKey),
+    )
     pluginRef.current = decorationPlugin
 
     try {

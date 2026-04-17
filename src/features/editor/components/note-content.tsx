@@ -10,7 +10,6 @@ import type { Doc } from 'yjs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CustomBlock, CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
-import { logger } from '~/shared/utils/logger'
 import { useNoteYjsCollaboration } from '~/features/editor/hooks/useNoteYjsCollaboration'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { getCursorColor } from '~/features/editor/utils/cursor-colors'
@@ -113,34 +112,44 @@ function StaticEditorInner({
   children?: React.ReactNode
   onEditorChange?: (editor: CustomBlockNoteEditor | null, doc: Doc | null) => void
 }) {
-  const [editor] = useState<CustomBlockNoteEditor>(() => {
-    const initialContent = content.length > 0 ? content : undefined
-    return BlockNoteEditor.create({
-      schema: editorSchema,
-      initialContent,
-    }) as CustomBlockNoteEditor
-  })
+  const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
+  const editorRef = useRef<CustomBlockNoteEditor | null>(null)
+  editorRef.current = editor
+  const initialContentRef = useRef(content)
   const linkResolver = useLinkResolver(noteId)
   const onEditorChangeRef = useRef(onEditorChange)
   onEditorChangeRef.current = onEditorChange
   const hasInitializedRef = useRef(false)
 
   useEffect(() => {
-    onEditorChangeRef.current?.(editor, null)
+    const nextEditor = BlockNoteEditor.create({
+      schema: editorSchema,
+      initialContent: initialContentRef.current.length > 0 ? initialContentRef.current : undefined,
+    }) as CustomBlockNoteEditor
+
+    setEditor(nextEditor)
+    onEditorChangeRef.current?.(nextEditor, null)
 
     return () => {
-      editor._tiptapEditor.destroy()
-      onEditorChangeRef.current?.(null, null)
+      const shouldClearEditor = editorRef.current === nextEditor
+      if (shouldClearEditor) {
+        setEditor(null)
+        onEditorChangeRef.current?.(null, null)
+      }
+      nextEditor._tiptapEditor.destroy()
     }
-  }, [editor])
+  }, [])
 
   useEffect(() => {
+    if (!editor) return
     if (!hasInitializedRef.current) {
       hasInitializedRef.current = true
       return
     }
     editor.replaceBlocks(editor.document, content)
   }, [editor, content])
+
+  if (!editor) return null
 
   return (
     <>
@@ -149,8 +158,7 @@ function StaticEditorInner({
       </NoteView>
       <LinkClickHandler editor={editor} sourceNoteId={noteId} />
     </>
-  )
-}
+  )}
 
 function CollaborativeEditorInner({
   noteId,
@@ -167,53 +175,42 @@ function CollaborativeEditorInner({
   children?: React.ReactNode
   onEditorChange?: (editor: CustomBlockNoteEditor | null, doc: Doc | null) => void
 }) {
-  const [editor] = useState<CustomBlockNoteEditor>(
-    () =>
-      BlockNoteEditor.create({
-        schema: editorSchema,
-        collaboration: {
-          provider,
-          fragment: doc.getXmlFragment('document'),
-          user: { name: user.name, color: user.color },
-          showCursorLabels: 'activity',
-        },
-      }) as CustomBlockNoteEditor,
-  )
+  const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
+  const editorRef = useRef<CustomBlockNoteEditor | null>(null)
+  editorRef.current = editor
   const linkResolver = useLinkResolver(noteId)
   const onEditorChangeRef = useRef(onEditorChange)
   onEditorChangeRef.current = onEditorChange
 
   useEffect(() => {
-    onEditorChangeRef.current?.(editor, doc)
+    const nextEditor = BlockNoteEditor.create({
+      schema: editorSchema,
+      collaboration: {
+        provider,
+        fragment: doc.getXmlFragment('document'),
+        user: { name: user.name, color: user.color },
+        showCursorLabels: 'activity',
+      },
+    }) as CustomBlockNoteEditor
+    patchYUndoPluginDestroy(nextEditor._tiptapEditor.view)
+    patchYSyncAfterTypeChanged(nextEditor._tiptapEditor.view)
 
-    let cancelled = false
-    let retries = 0
-    const MAX_RETRIES = 30
-    const tryPatch = () => {
-      if (cancelled) return
-      if (editor._tiptapEditor.view.state.plugins.length === 0) {
-        if (++retries >= MAX_RETRIES) {
-          logger.error('Failed to patch Yjs plugins', {
-            maxRetries: MAX_RETRIES,
-          })
-          return
-        }
-        setTimeout(tryPatch, 50)
-        return
-      }
-      patchYUndoPluginDestroy(editor._tiptapEditor.view)
-      patchYSyncAfterTypeChanged(editor._tiptapEditor.view)
-    }
-    setTimeout(tryPatch, 50)
+    setEditor(nextEditor)
+    onEditorChangeRef.current?.(nextEditor, doc)
 
     return () => {
-      cancelled = true
-      editor._tiptapEditor.destroy()
-      onEditorChangeRef.current?.(null, null)
+      const shouldClearEditor = editorRef.current === nextEditor
+      if (shouldClearEditor) {
+        setEditor(null)
+        onEditorChangeRef.current?.(null, null)
+      }
+      nextEditor._tiptapEditor.destroy()
     }
-  }, [doc, editor])
+  }, [doc, provider, user.color, user.name])
 
   const forceOpenLinkPopover = useRef<(() => void) | null>(null)
+
+  if (!editor) return null
 
   return (
     <>

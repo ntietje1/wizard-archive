@@ -3,6 +3,7 @@ import { Handle, Position } from '@xyflow/react'
 import { AlertTriangle, ExternalLinkIcon } from 'lucide-react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { CanvasContext } from '../../utils/canvas-context'
+import { useEmbedNoteActivation } from '../../hooks/useEmbedNoteActivation'
 import { ResizableNodeWrapper } from './resizable-node-wrapper'
 import { EmbedNoteContent } from './embed-note-content'
 import { ItemPreviewContent } from '~/features/editor/components/item-preview-content'
@@ -27,14 +28,11 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
   const isEditing = editingEmbedId === id && !!selected
 
   const scrollTopRef = useRef(0)
-  const clickCoordsRef = useRef<{ x: number; y: number } | null>(null)
-
-  const handleDoubleClick = (e: React.MouseEvent) => {
-    if (canEdit) {
-      clickCoordsRef.current = { x: e.clientX, y: e.clientY }
-      setEditingEmbedId(id)
-    }
-  }
+  const { clickCoordsRef, handleDoubleClick } = useEmbedNoteActivation({
+    canEdit,
+    embedId: id,
+    setEditingEmbedId,
+  })
 
   const { navigateToItem } = useEditorNavigation()
 

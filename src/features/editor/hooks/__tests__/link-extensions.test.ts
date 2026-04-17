@@ -132,13 +132,14 @@ describe('link extension hooks', () => {
     expect(contentDecorations).toHaveLength(2)
   })
 
-  it('registers the md link plugin with the expected keys and recreates when viewer mode changes', () => {
+  it('registers the md link plugin with the expected keys and updates viewer mode without re-registering', () => {
     const editor = {
       _tiptapEditor: {},
     } as CustomBlockNoteEditor
     const { rerender } = renderHook(
-      ({ resolver }: { resolver: LinkResolver }) => useMdLinkExtension(editor, resolver),
-      { initialProps: { resolver: createResolver(false) } },
+      ({ resolver, isViewerMode }: { resolver: LinkResolver; isViewerMode?: boolean }) =>
+        useMdLinkExtension(editor, resolver, isViewerMode),
+      { initialProps: { resolver: createResolver(false), isViewerMode: false } },
     )
 
     expect(mockRegisterLinkPlugins).toHaveBeenCalledTimes(1)
@@ -154,10 +155,9 @@ describe('link extension hooks', () => {
     const contentDecorations = getContentDecorations(plugin, state)
     expect(contentDecorations).toHaveLength(2)
 
-    rerender({ resolver: createResolver(true) })
+    rerender({ resolver: createResolver(true), isViewerMode: true })
 
-    expect(mockRegisterLinkPlugins).toHaveBeenCalledTimes(2)
-    options = mockRegisterLinkPlugins.mock.calls[1][0]
+    expect(mockRegisterLinkPlugins).toHaveBeenCalledTimes(1)
     plugin = options.createDecorationPlugin()
     state = createEditorState(plugin, 'See [Capital](Lore/Capital)')
     expect(getContentDecoration(state).type.attrs['data-link-viewer']).toBe('true')

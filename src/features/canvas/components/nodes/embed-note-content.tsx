@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { TextSelection } from '@tiptap/pm/state'
 import type { CustomBlock, CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
-import type { Doc } from 'yjs'
 import type { Id } from 'convex/_generated/dataModel'
+import type { Doc } from 'yjs'
+import { useEmbedNoteFocusSync } from '../../hooks/useEmbedNoteFocusSync'
 import { NoteContent } from '~/features/editor/components/note-content'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { cn } from '~/features/shadcn/lib/utils'
@@ -34,6 +34,13 @@ export function EmbedNoteContent({
     [],
   )
 
+  useEmbedNoteFocusSync({
+    editor,
+    editable,
+    doc,
+    clickCoordsRef,
+  })
+
   useEffect(() => {
     const el = scrollAreaRef.current?.querySelector(
       '[data-slot="scroll-area-viewport"]',
@@ -59,31 +66,6 @@ export function EmbedNoteContent({
       el.removeEventListener('scroll', onScroll)
     }
   }, [editor, editable, scrollTopRef])
-
-  useEffect(() => {
-    if (!editor || !editable || !doc) return
-
-    const rafId = requestAnimationFrame(() => {
-      const view = editor._tiptapEditor?.view
-      if (!view?.dom?.isConnected) return
-
-      const coords = clickCoordsRef.current
-
-      if (coords) {
-        const pos = view.posAtCoords({ left: coords.x, top: coords.y })
-        if (pos) {
-          const tr = view.state.tr.setSelection(TextSelection.create(view.state.doc, pos.pos))
-          view.dispatch(tr)
-        }
-        clickCoordsRef.current = null
-      }
-
-      view.focus()
-    })
-
-    return () => cancelAnimationFrame(rafId)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor, editable, doc])
 
   return (
     <div className={cn('h-full', editable && 'nodrag nopan', selected && 'nowheel')}>
