@@ -256,13 +256,11 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
   const mapRef = useRef(map)
   mapRef.current = map
   const [hoveredPinId, setHoveredPinId] = useState<Id<'mapPins'> | null>(null)
-  const [imageLoaded, setImageLoaded] = useState(false)
-  const [imageError, setImageError] = useState(false)
-
-  useEffect(() => {
-    setImageLoaded(false)
-    setImageError(false)
-  }, [map.imageUrl])
+  const mapImageKey = map.imageUrl ? `${map._id}:${map.imageUrl}` : null
+  const [loadedImageKey, setLoadedImageKey] = useState<string | null>(null)
+  const [erroredImageKey, setErroredImageKey] = useState<string | null>(null)
+  const imageLoaded = mapImageKey !== null && loadedImageKey === mapImageKey
+  const imageError = mapImageKey !== null && erroredImageKey === mapImageKey
 
   const { isDm } = useCampaign()
   const { viewAsPlayerId } = useEditorMode()
@@ -658,6 +656,18 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
     lastMousePositionRef.current = { clientX: e.clientX, clientY: e.clientY }
   }
 
+  const handleImageLoad = () => {
+    if (!mapImageKey) return
+    setLoadedImageKey(mapImageKey)
+    setErroredImageKey((current) => (current === mapImageKey ? null : current))
+  }
+
+  const handleImageError = () => {
+    if (!mapImageKey) return
+    setErroredImageKey(mapImageKey)
+    setLoadedImageKey((current) => (current === mapImageKey ? null : current))
+  }
+
   const shouldDisablePanning = !!pendingPinItem || !!pendingPinMove || !!draggingPin
 
   return (
@@ -759,8 +769,8 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
                       alt={map.name || 'Map'}
                       className="select-none pointer-events-auto"
                       draggable={false}
-                      onLoad={() => setImageLoaded(true)}
-                      onError={() => setImageError(true)}
+                      onLoad={handleImageLoad}
+                      onError={handleImageError}
                       style={{
                         cursor:
                           pendingPinItem || pendingPinMove

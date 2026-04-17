@@ -5,21 +5,17 @@ import { InviteLinkSection } from './components/invite-link-section'
 import { MembersSection } from './components/members-section'
 import { PendingRequestsSection } from './components/pending-requests-section'
 import { RejectedRemovedSection } from './components/rejected-removed-section'
-import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
+import { useOptionalCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { getOrigin } from '~/shared/utils/origin'
 
 export function PeopleTab() {
-  const { dmUsername, campaignSlug } = useCampaign()
-
-  const campaign = useAuthQuery(api.campaigns.queries.getCampaignBySlug, {
-    dmUsername,
-    slug: campaignSlug,
-  })
-  const campaignData = campaign.data
-  const isDm = campaignData
-    ? campaignData.myMembership?.role === CAMPAIGN_MEMBER_ROLE.DM
-    : undefined
+  const campaignContext = useOptionalCampaign()
+  const dmUsername = campaignContext?.dmUsername
+  const campaignSlug = campaignContext?.campaignSlug
+  const campaign = campaignContext?.campaign
+  const campaignData = campaign?.data
+  const isDm = campaignContext?.isDm
 
   const members = useAuthQuery(
     api.campaigns.queries.getMembersByCampaign,
@@ -47,6 +43,22 @@ export function PeopleTab() {
         (p.status === CAMPAIGN_MEMBER_STATUS.Rejected ||
           p.status === CAMPAIGN_MEMBER_STATUS.Removed),
     ) ?? []
+
+  if (!campaignContext || !dmUsername || !campaignSlug || !campaign) {
+    return (
+      <div className="flex flex-col gap-2">
+        <div>
+          <p className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground/60">
+            Campaign
+          </p>
+          <h2 className="text-lg font-semibold">People</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Open a campaign to manage players, invitations, and role assignments.
+        </p>
+      </div>
+    )
+  }
 
   const joinUrl = `${getOrigin()}/join/${dmUsername}/${campaignSlug}`
 

@@ -12,9 +12,7 @@ const SIDEBAR_ITEM_HEX_COLOR_REGEX = /^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
 export const sidebarItemColorSchema = z
   .string()
   .regex(SIDEBAR_ITEM_HEX_COLOR_REGEX, 'Color must be a 6- or 8-digit hex value')
-  .transform(
-    (value) => value.toLowerCase() as SidebarItemColor,
-  )
+  .transform((value) => value.toLowerCase() as SidebarItemColor)
 
 export const sidebarItemColorValidator = zodToConvex(sidebarItemColorSchema)
 

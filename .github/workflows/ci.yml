@@ -55,9 +55,9 @@ jobs:
         continue-on-error: true
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            vp run fallow audit --base origin/main --format annotations --format json > fallow-report.json
+            vp run fallow audit --base origin/main --format json --quiet > fallow-report.json
           else
-            vp run fallow --format json > fallow-report.json
+            vp run fallow --format json --quiet > fallow-report.json
           fi
 
   react-compiler:
