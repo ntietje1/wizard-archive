@@ -2,6 +2,8 @@ import type { Folder } from '../../folders/types'
 import type { Id } from '../../_generated/dataModel'
 import type { PermissionLevel } from '../../permissions/types'
 import type { SidebarItemShare } from '../../sidebarShares/types'
+import type { SidebarItemColor } from '../color'
+import type { SidebarItemIconName } from '../icon'
 import type { SidebarItemSlug } from '../slug'
 import type { ConvexValidatorFields } from '../../common/types'
 
@@ -24,8 +26,8 @@ export type SidebarItemType = (typeof SIDEBAR_ITEM_TYPES)[keyof typeof SIDEBAR_I
 
 export type SidebarItemFromDb<T extends SidebarItemType> = ConvexValidatorFields<'sidebarItems'> & {
   name: string
-  iconName: string | null
-  color: string | null
+  iconName: SidebarItemIconName | null
+  color: SidebarItemColor | null
   slug: SidebarItemSlug
   campaignId: Id<'campaigns'>
   parentId: Id<'sidebarItems'> | null

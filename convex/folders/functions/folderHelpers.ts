@@ -1,6 +1,8 @@
 import { prepareSidebarItemCreate } from '../../sidebarItems/validation'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import type { SidebarItemName } from '../../sidebarItems/sharedValidation'
+import type { SidebarItemColor } from '../../sidebarItems/color'
+import type { SidebarItemIconName } from '../../sidebarItems/icon'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import type { SidebarItemSlug } from '../../sidebarItems/slug'
@@ -45,8 +47,8 @@ export async function insertFolder(
   }: {
     name: SidebarItemName
     parentId: Id<'sidebarItems'> | null
-    iconName?: string
-    color?: string
+    iconName?: SidebarItemIconName
+    color?: SidebarItemColor
   },
 ): Promise<{ folderId: Id<'sidebarItems'>; slug: SidebarItemSlug }> {
   const prepared = await prepareSidebarItemCreate(ctx, {

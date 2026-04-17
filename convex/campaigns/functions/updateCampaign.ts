@@ -1,9 +1,6 @@
 import type { CampaignSlug } from '../validation'
 import { ERROR_CODE, throwClientError } from '../../errors'
-import {
-  prepareCampaignDescription,
-  prepareCampaignName,
-} from '../validation'
+import { prepareCampaignDescription, prepareCampaignName } from '../validation'
 import type { WithoutSystemFields } from 'convex/server'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { DmMutationCtx } from '../../functions'

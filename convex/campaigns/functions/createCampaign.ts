@@ -1,10 +1,7 @@
 import type { CampaignSlug } from '../validation'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS, CAMPAIGN_STATUS } from '../types'
-import {
-  prepareCampaignDescription,
-  prepareCampaignName,
-} from '../validation'
+import { prepareCampaignDescription, prepareCampaignName } from '../validation'
 import type { Id } from '../../_generated/dataModel'
 import type { AuthMutationCtx } from '../../functions'
 

@@ -9,7 +9,7 @@ export const getNote = campaignQuery({
     noteId: v.id('sidebarItems'),
   },
   returns: v.nullable(noteWithContentValidator),
-  handler: async (ctx, args): Promise<NoteWithContent | null> => {
+  handler: async (ctx, args) => {
     return (await getSidebarItemWithContent(ctx, args.noteId)) as NoteWithContent | null
   },
 })

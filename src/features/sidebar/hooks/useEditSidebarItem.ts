@@ -1,6 +1,10 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
+import type { SidebarItemColor } from 'convex/sidebarItems/color'
+import { parseSidebarItemColor, validateSidebarItemColor } from 'convex/sidebarItems/color'
+import { parseSidebarItemIconName, validateSidebarItemIconName } from 'convex/sidebarItems/icon'
+import type { SidebarItemIconName } from 'convex/sidebarItems/icon'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { assertSidebarItemSlug } from 'convex/sidebarItems/slug'
 import type { SidebarItemSlug } from 'convex/sidebarItems/slug'
@@ -98,13 +102,39 @@ export function useEditSidebarItem() {
       if (!result.valid) throw new Error(result.error)
     }
 
+    const normalizedIconName =
+      iconName === undefined || iconName === null
+        ? iconName
+        : (() => {
+            const parsed = parseSidebarItemIconName(iconName)
+            if (!parsed) {
+              throw new Error(validateSidebarItemIconName(iconName) ?? 'Invalid icon')
+            }
+            return parsed
+          })()
+
+    const normalizedColor =
+      color === undefined || color === null
+        ? color
+        : (() => {
+            const parsed = parseSidebarItemColor(color)
+            if (!parsed) {
+              throw new Error(validateSidebarItemColor(color) ?? 'Invalid color')
+            }
+            return parsed
+          })()
+
     const currentSlug = getSelectedSlug()
     const isCurrentItem = item.slug === currentSlug
 
-    const optimisticFields: Partial<EditItemBase> = {}
+    const optimisticFields: Partial<{
+      name: string
+      iconName: SidebarItemIconName | null
+      color: SidebarItemColor | null
+    }> = {}
     if (trimmedName !== undefined) optimisticFields.name = trimmedName
-    if (iconName !== undefined) optimisticFields.iconName = iconName
-    if (color !== undefined) optimisticFields.color = color
+    if (normalizedIconName !== undefined) optimisticFields.iconName = normalizedIconName
+    if (normalizedColor !== undefined) optimisticFields.color = normalizedColor
 
     if (Object.keys(optimisticFields).length > 0) {
       optimisticUpdate((prev) =>
@@ -120,8 +150,8 @@ export function useEditSidebarItem() {
           const res = await updateNoteMutation.mutateAsync({
             noteId: item._id,
             name: trimmedName,
-            iconName,
-            color,
+            iconName: normalizedIconName,
+            color: normalizedColor,
           })
           slug = assertSidebarItemSlug(res.slug)
           break
@@ -130,8 +160,8 @@ export function useEditSidebarItem() {
           const res = await updateFolderMutation.mutateAsync({
             folderId: item._id,
             name: trimmedName,
-            iconName,
-            color,
+            iconName: normalizedIconName,
+            color: normalizedColor,
           })
           slug = assertSidebarItemSlug(res.slug)
           break
@@ -141,8 +171,8 @@ export function useEditSidebarItem() {
           const res = await updateMapMutation.mutateAsync({
             mapId: item._id,
             name: trimmedName,
-            iconName,
-            color,
+            iconName: normalizedIconName,
+            color: normalizedColor,
             imageStorageId,
           })
           slug = assertSidebarItemSlug(res.slug)
@@ -153,8 +183,8 @@ export function useEditSidebarItem() {
           const res = await updateFileMutation.mutateAsync({
             fileId: item._id,
             name: trimmedName,
-            iconName,
-            color,
+            iconName: normalizedIconName,
+            color: normalizedColor,
             storageId,
           })
           slug = assertSidebarItemSlug(res.slug)
@@ -164,8 +194,8 @@ export function useEditSidebarItem() {
           const res = await updateCanvasMutation.mutateAsync({
             canvasId: item._id,
             name: trimmedName,
-            iconName,
-            color,
+            iconName: normalizedIconName,
+            color: normalizedColor,
           })
           slug = assertSidebarItemSlug(res.slug)
           break

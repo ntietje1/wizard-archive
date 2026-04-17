@@ -1,4 +1,6 @@
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../campaigns/types'
+import type { SidebarItemColor } from '../sidebarItems/color'
+import type { SidebarItemIconName } from '../sidebarItems/icon'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 import { SHARE_STATUS } from '../blockShares/types'
 import { slugify } from '../common/slug'
@@ -192,8 +194,8 @@ type CommonSidebarItemOverrides = Partial<{
   parentId: Id<'sidebarItems'> | null
   allPermissionLevel: PermissionLevel | null
   location: SidebarItemLocation
-  iconName: string | null
-  color: string | null
+  iconName: SidebarItemIconName | null
+  color: SidebarItemColor | null
   deletionTime: number | null
   deletedBy: Id<'userProfiles'> | null
   previewStorageId: Id<'_storage'> | null
@@ -223,7 +225,9 @@ async function insertSidebarItem(
     ...sidebarItemBase(campaignId, creatorProfileId, name),
     type,
     ...sidebarOverrides,
-    slug: overrides?.slug ? assertSidebarItemSlug(overrides.slug) : assertSidebarItemSlug(slugify(name)),
+    slug: overrides?.slug
+      ? assertSidebarItemSlug(overrides.slug)
+      : assertSidebarItemSlug(slugify(name)),
   }
 
   const extensionFields: Record<string, unknown> = {}

@@ -1,7 +1,4 @@
-import {
-  prepareSidebarItemRename,
-  requireItemAccess,
-} from '../../sidebarItems/validation'
+import { prepareSidebarItemRename, requireItemAccess } from '../../sidebarItems/validation'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { PERMISSION_LEVEL } from '../../permissions/types'
@@ -9,7 +6,10 @@ import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import type { SidebarItemName } from '../../sidebarItems/sharedValidation'
+import type { SidebarItemColor } from '../../sidebarItems/color'
+import type { SidebarItemIconName } from '../../sidebarItems/icon'
 import type { EditHistoryChange } from '../../editHistory/types'
+import type { SidebarItemSlug } from '../../sidebarItems/slug'
 import type { WithoutSystemFields } from 'convex/server'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
@@ -26,10 +26,10 @@ export async function updateMap(
     mapId: Id<'sidebarItems'>
     name?: SidebarItemName
     imageStorageId?: Id<'_storage'> | null
-    iconName?: string | null
-    color?: string | null
+    iconName?: SidebarItemIconName | null
+    color?: SidebarItemColor | null
   },
-): Promise<{ mapId: Id<'sidebarItems'>; slug: string }> {
+): Promise<{ mapId: Id<'sidebarItems'>; slug: SidebarItemSlug }> {
   const rawItem = await getSidebarItem(ctx, mapId)
   if (!rawItem || rawItem.type !== SIDEBAR_ITEM_TYPES.gameMaps)
     throwClientError(ERROR_CODE.NOT_FOUND, 'Map not found')
@@ -38,7 +38,7 @@ export async function updateMap(
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
 
-  let newSlug: string | undefined
+  let newSlug: SidebarItemSlug | undefined
   const updates: Partial<WithoutSystemFields<Doc<'sidebarItems'>>> = {}
   const changes: Array<EditHistoryChange> = []
 

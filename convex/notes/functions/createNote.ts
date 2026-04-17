@@ -6,6 +6,8 @@ import { prepareSidebarItemCreate } from '../../sidebarItems/validation'
 import { resolveOrCreateFolderPath } from '../../folders/functions/resolveOrCreateFolderPath'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import type { SidebarItemName } from '../../sidebarItems/sharedValidation'
+import type { SidebarItemColor } from '../../sidebarItems/color'
+import type { SidebarItemIconName } from '../../sidebarItems/icon'
 import { createYjsDocument } from '../../yjsSync/functions/createYjsDocument'
 import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
 import { blocksToYDoc } from '../blocknote'
@@ -26,8 +28,8 @@ export async function createNote(
   }: {
     name: SidebarItemName
     parentTarget: ParsedCreateParentTarget
-    iconName?: string
-    color?: string
+    iconName?: SidebarItemIconName
+    color?: SidebarItemColor
     content?: Array<CustomBlock>
   },
 ): Promise<{ noteId: Id<'sidebarItems'>; slug: string }> {

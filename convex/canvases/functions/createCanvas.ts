@@ -4,6 +4,9 @@ import type { ParsedCreateParentTarget } from '../../sidebarItems/createParentTa
 import { resolveOrCreateFolderPath } from '../../folders/functions/resolveOrCreateFolderPath'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import type { SidebarItemName } from '../../sidebarItems/sharedValidation'
+import type { SidebarItemColor } from '../../sidebarItems/color'
+import type { SidebarItemIconName } from '../../sidebarItems/icon'
+import type { SidebarItemSlug } from '../../sidebarItems/slug'
 import { createYjsDocument } from '../../yjsSync/functions/createYjsDocument'
 import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
 import { logEditHistory } from '../../editHistory/log'
@@ -21,10 +24,10 @@ export async function createCanvas(
   }: {
     name: SidebarItemName
     parentTarget: ParsedCreateParentTarget
-    iconName?: string
-    color?: string
+    iconName?: SidebarItemIconName
+    color?: SidebarItemColor
   },
-): Promise<{ canvasId: Id<'sidebarItems'>; slug: string }> {
+): Promise<{ canvasId: Id<'sidebarItems'>; slug: SidebarItemSlug }> {
   const resolvedParentId = await resolveOrCreateFolderPath(ctx, { parentTarget })
   const prepared = await prepareSidebarItemCreate(ctx, {
     parentId: resolvedParentId,

@@ -1,9 +1,7 @@
 import { v } from 'convex/values'
 import type { Id } from '../_generated/dataModel'
 import { ERROR_CODE, throwClientError } from '../errors'
-import {
-  requireSidebarItemName,
-} from './sharedValidation'
+import { requireSidebarItemName } from './sharedValidation'
 import type { SidebarItemName } from './sharedValidation'
 
 export const CREATE_PARENT_TARGET_KIND = {
@@ -62,7 +60,9 @@ function requireParentPathSegment(segment: string): ParentPathSegment {
   return requireSidebarItemName(trimmedSegment)
 }
 
-export function requireCreateParentTarget(parentTarget: CreateParentTarget): ParsedCreateParentTarget {
+export function requireCreateParentTarget(
+  parentTarget: CreateParentTarget,
+): ParsedCreateParentTarget {
   if (parentTarget.kind === CREATE_PARENT_TARGET_KIND.direct) {
     return parentTarget
   }

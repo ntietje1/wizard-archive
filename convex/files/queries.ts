@@ -9,7 +9,7 @@ export const getFile = campaignQuery({
     fileId: v.id('sidebarItems'),
   },
   returns: v.nullable(fileWithContentValidator),
-  handler: async (ctx, args): Promise<FileWithContent | null> => {
+  handler: async (ctx, args) => {
     return (await getSidebarItemWithContent(ctx, args.fileId)) as FileWithContent | null
   },
 })

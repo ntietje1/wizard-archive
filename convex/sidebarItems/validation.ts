@@ -6,10 +6,7 @@ import { findUniqueSlug } from '../common/slug'
 import { CAMPAIGN_MEMBER_ROLE } from '../campaigns/types'
 import { getSidebarItemsByParent } from './functions/getSidebarItemsByParent'
 import { enhanceSidebarItem } from './functions/enhanceSidebarItem'
-import {
-  assertSidebarItemName,
-  checkNameConflict,
-} from './sharedValidation'
+import { assertSidebarItemName, checkNameConflict } from './sharedValidation'
 import { assertSidebarItemSlug, validateSidebarItemSlug } from './slug'
 import { SIDEBAR_ITEM_TYPES } from './types/baseTypes'
 import type { SidebarItemName, ValidationResult } from './sharedValidation'
@@ -294,10 +291,18 @@ export async function findUniqueSidebarItemSlug(
   },
 ): Promise<SidebarItemSlug> {
   try {
-    const candidateSlug = await findUniqueSlug(name, (candidate) =>
-      checkSlugConflict(ctx, { campaignId: ctx.campaign._id, slug: candidate, excludeId: itemId }), {
+    const candidateSlug = await findUniqueSlug(
+      name,
+      (candidate) =>
+        checkSlugConflict(ctx, {
+          campaignId: ctx.campaign._id,
+          slug: candidate,
+          excludeId: itemId,
+        }),
+      {
         isValidCandidate: (candidate) => validateSidebarItemSlug(candidate) === null,
-      })
+      },
+    )
     return assertSidebarItemSlug(candidateSlug)
   } catch {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Failed to generate a valid slug for this item')

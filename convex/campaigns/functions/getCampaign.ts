@@ -13,9 +13,7 @@ import type { Campaign, CampaignFromDb, CampaignMember, CampaignMemberFromDb } f
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { QueryCtx } from '../../_generated/server'
 
-function toCampaignFromDb(
-  campaign: Doc<'campaigns'>,
-): CampaignFromDb {
+function toCampaignFromDb(campaign: Doc<'campaigns'>): CampaignFromDb {
   return {
     ...campaign,
     slug: assertCampaignSlug(campaign.slug),

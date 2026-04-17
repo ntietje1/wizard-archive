@@ -1,9 +1,9 @@
+import { normalizeSidebarItemColorOrDefault } from 'convex/sidebarItems/color'
 import { isDangerousUrl } from 'convex/links/linkParsers'
 import { resolveParsedItemPath } from 'convex/links/linkResolution'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import { validateHexColorOrDefault } from '~/features/sidebar/utils/sidebar-item-utils'
 import type { ParsedLinkData, ResolvedLink } from 'convex/links/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
@@ -75,7 +75,7 @@ export function useLinkResolver(sourceNoteId?: Id<'sidebarItems'>): LinkResolver
       resolved: true,
       itemId: item._id,
       href,
-      color: validateHexColorOrDefault(item.color),
+      color: normalizeSidebarItemColorOrDefault(item.color),
     }
   }
 

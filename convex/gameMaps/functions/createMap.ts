@@ -3,6 +3,9 @@ import type { ParsedCreateParentTarget } from '../../sidebarItems/createParentTa
 import { resolveOrCreateFolderPath } from '../../folders/functions/resolveOrCreateFolderPath'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import type { SidebarItemName } from '../../sidebarItems/sharedValidation'
+import type { SidebarItemColor } from '../../sidebarItems/color'
+import type { SidebarItemIconName } from '../../sidebarItems/icon'
+import type { SidebarItemSlug } from '../../sidebarItems/slug'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import type { CampaignMutationCtx } from '../../functions'
@@ -20,10 +23,10 @@ export async function createMap(
     name: SidebarItemName
     imageStorageId?: Id<'_storage'>
     parentTarget: ParsedCreateParentTarget
-    iconName?: string
-    color?: string
+    iconName?: SidebarItemIconName
+    color?: SidebarItemColor
   },
-): Promise<{ mapId: Id<'sidebarItems'>; slug: string }> {
+): Promise<{ mapId: Id<'sidebarItems'>; slug: SidebarItemSlug }> {
   const resolvedParentId = await resolveOrCreateFolderPath(ctx, { parentTarget })
   const prepared = await prepareSidebarItemCreate(ctx, {
     parentId: resolvedParentId,

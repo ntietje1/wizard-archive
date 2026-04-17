@@ -4,9 +4,7 @@ import type { QueryCtx } from '../../_generated/server'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { UserProfile, UserProfileFromDb } from '../types'
 
-function toUserProfileFromDb(
-  profile: Doc<'userProfiles'>,
-): UserProfileFromDb {
+function toUserProfileFromDb(profile: Doc<'userProfiles'>): UserProfileFromDb {
   return {
     ...profile,
     username: assertUsername(profile.username),

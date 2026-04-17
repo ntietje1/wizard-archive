@@ -1,5 +1,7 @@
 import { useEffect } from 'react'
 import { useForm } from '@tanstack/react-form'
+import type { SidebarItemColor } from 'convex/sidebarItems/color'
+import type { SidebarItemIconName } from 'convex/sidebarItems/icon'
 import { toast } from 'sonner'
 import { FileEdit, Loader } from 'lucide-react'
 import { getDefaultIconName, getTypeName } from '../../utils/sidebar-item-utils'
@@ -22,8 +24,8 @@ import {
 
 interface SidebarItemEditFormValues {
   name: string
-  iconName: string | null
-  color: string | null
+  iconName: SidebarItemIconName | null
+  color: SidebarItemColor | null
 }
 
 interface SidebarItemEditDialogProps {

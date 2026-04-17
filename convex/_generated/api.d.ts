@@ -156,6 +156,7 @@ import type * as sessions_functions_updateSession from "../sessions/functions/up
 import type * as sessions_mutations from "../sessions/mutations.js";
 import type * as sessions_queries from "../sessions/queries.js";
 import type * as sessions_types from "../sessions/types.js";
+import type * as sidebarItems_color from "../sidebarItems/color.js";
 import type * as sidebarItems_constants from "../sidebarItems/constants.js";
 import type * as sidebarItems_createParentTarget from "../sidebarItems/createParentTarget.js";
 import type * as sidebarItems_functions_claimPreviewGeneration from "../sidebarItems/functions/claimPreviewGeneration.js";
@@ -174,6 +175,7 @@ import type * as sidebarItems_functions_permanentlyDeleteSidebarItem from "../si
 import type * as sidebarItems_functions_purgeExpiredTrash from "../sidebarItems/functions/purgeExpiredTrash.js";
 import type * as sidebarItems_functions_setPreviewImage from "../sidebarItems/functions/setPreviewImage.js";
 import type * as sidebarItems_functions_treeOperations from "../sidebarItems/functions/treeOperations.js";
+import type * as sidebarItems_icon from "../sidebarItems/icon.js";
 import type * as sidebarItems_internalMutations from "../sidebarItems/internalMutations.js";
 import type * as sidebarItems_mutations from "../sidebarItems/mutations.js";
 import type * as sidebarItems_queries from "../sidebarItems/queries.js";
@@ -388,6 +390,7 @@ declare const fullApi: ApiFromModules<{
   "sessions/mutations": typeof sessions_mutations;
   "sessions/queries": typeof sessions_queries;
   "sessions/types": typeof sessions_types;
+  "sidebarItems/color": typeof sidebarItems_color;
   "sidebarItems/constants": typeof sidebarItems_constants;
   "sidebarItems/createParentTarget": typeof sidebarItems_createParentTarget;
   "sidebarItems/functions/claimPreviewGeneration": typeof sidebarItems_functions_claimPreviewGeneration;
@@ -406,6 +409,7 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/functions/purgeExpiredTrash": typeof sidebarItems_functions_purgeExpiredTrash;
   "sidebarItems/functions/setPreviewImage": typeof sidebarItems_functions_setPreviewImage;
   "sidebarItems/functions/treeOperations": typeof sidebarItems_functions_treeOperations;
+  "sidebarItems/icon": typeof sidebarItems_icon;
   "sidebarItems/internalMutations": typeof sidebarItems_internalMutations;
   "sidebarItems/mutations": typeof sidebarItems_mutations;
   "sidebarItems/queries": typeof sidebarItems_queries;

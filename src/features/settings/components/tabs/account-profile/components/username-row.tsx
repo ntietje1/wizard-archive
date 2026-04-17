@@ -4,11 +4,7 @@ import { toast } from 'sonner'
 import { api } from 'convex/_generated/api'
 import { USERNAME_MAX_LENGTH } from 'convex/users/constants'
 import { getClientErrorMessage } from 'convex/errors'
-import {
-  normalizeUsernameInput,
-  parseUsername,
-  validateUsername,
-} from 'convex/users/validation'
+import { normalizeUsernameInput, parseUsername, validateUsername } from 'convex/users/validation'
 import { AlertTriangle, Loader2 } from 'lucide-react'
 import { SettingsRow } from './settings-row'
 import type { UserProfile } from 'convex/users/types'

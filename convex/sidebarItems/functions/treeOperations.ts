@@ -4,15 +4,25 @@ import { collectDescendants } from './collectDescendants'
 import { hardDeleteItem } from './hardDeleteItem'
 import { assertSidebarItemName } from '../sharedValidation'
 import type { SidebarItemLocation } from '../types/baseTypes'
+import type { SidebarTreeItemCore } from './hardDeleteItem'
 import type { CampaignMutationCtx } from '../../functions'
-import type { Doc, Id } from '../../_generated/dataModel'
+import type { Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
 
-type ItemOperation = (ctx: MutationCtx, item: Doc<'sidebarItems'>) => Promise<void>
+type SidebarTreeBranchItem = SidebarTreeItemCore & {
+  _id: Id<'sidebarItems'>
+  type: string
+  campaignId: Id<'campaigns'>
+  location: SidebarItemLocation
+  parentId: Id<'sidebarItems'> | null
+  name: string
+}
+
+type ItemOperation = (ctx: MutationCtx, item: SidebarTreeBranchItem) => Promise<void>
 
 async function applyToTree(
   ctx: MutationCtx,
-  item: Doc<'sidebarItems'>,
+  item: SidebarTreeBranchItem,
   operation: ItemOperation,
 ): Promise<number> {
   if (item.type === SIDEBAR_ITEM_TYPES.folders) {
@@ -36,7 +46,7 @@ async function applyToTree(
 
 export async function trashTree(
   ctx: MutationCtx,
-  item: Doc<'sidebarItems'>,
+  item: SidebarTreeBranchItem,
   deletion: { deletionTime: number; deletedBy: Id<'userProfiles'> },
 ): Promise<number> {
   return applyToTree(ctx, item, async (_, i) => {
@@ -51,7 +61,7 @@ export async function trashTree(
 
 export async function restoreTreeDescendants(
   ctx: CampaignMutationCtx,
-  item: Doc<'sidebarItems'>,
+  item: SidebarTreeBranchItem,
   location: SidebarItemLocation,
 ): Promise<void> {
   await applyToTree(ctx, item, async (_, i) => {
@@ -71,6 +81,9 @@ export async function restoreTreeDescendants(
   })
 }
 
-export async function hardDeleteTree(ctx: MutationCtx, item: Doc<'sidebarItems'>): Promise<number> {
+export async function hardDeleteTree(
+  ctx: MutationCtx,
+  item: SidebarTreeBranchItem,
+): Promise<number> {
   return applyToTree(ctx, item, hardDeleteItem)
 }

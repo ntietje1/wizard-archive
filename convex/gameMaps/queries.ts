@@ -9,7 +9,7 @@ export const getMap = campaignQuery({
     mapId: v.id('sidebarItems'),
   },
   returns: v.nullable(mapWithContentValidator),
-  handler: async (ctx, args): Promise<GameMapWithContent | null> => {
+  handler: async (ctx, args) => {
     return (await getSidebarItemWithContent(ctx, args.mapId)) as GameMapWithContent | null
   },
 })

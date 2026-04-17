@@ -1,3 +1,7 @@
+import {
+  DEFAULT_SIDEBAR_ITEM_ICON_NAME_BY_TYPE,
+  SIDEBAR_ITEM_ICON_NAMES,
+} from 'convex/sidebarItems/icon'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import {
   Apple,
@@ -15,6 +19,7 @@ import {
   Flame,
   Folder,
   Gem,
+  Grid2x2Plus,
   Heart,
   HelpCircle,
   Locate,
@@ -34,10 +39,12 @@ import {
   User,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import type { SidebarItemIconName } from 'convex/sidebarItems/icon'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 
 // Map of icon names to LucideIcon components
-const iconNameMap: Record<string, LucideIcon> = {
+const iconNameMap = {
   User,
   MapPin,
   Calendar,
@@ -56,6 +63,7 @@ const iconNameMap: Record<string, LucideIcon> = {
   Dog,
   Flame,
   Gem,
+  Grid2x2Plus,
   Heart,
   Locate,
   MessageCircleWarning,
@@ -69,23 +77,29 @@ const iconNameMap: Record<string, LucideIcon> = {
   File,
   FileText,
   Folder,
-}
+} satisfies Record<SidebarItemIconName, LucideIcon>
 
 export const getIconByName = (iconName?: string): LucideIcon => {
   if (!iconName) return FileText
-  return iconNameMap[iconName] ?? FileText
+  return iconNameMap[iconName as SidebarItemIconName] ?? FileText
 }
 
-export const getAvailableIconNames = (): Array<string> => {
-  return Object.keys(iconNameMap)
+export const getAvailableIconNames = (): Array<SidebarItemIconName> => {
+  return [...SIDEBAR_ITEM_ICON_NAMES]
 }
 
 // Default icons for each sidebar item type
-export const DEFAULT_SIDEBAR_ITEM_ICONS: Record<string, LucideIcon> = {
-  [SIDEBAR_ITEM_TYPES.folders]: Folder,
-  [SIDEBAR_ITEM_TYPES.notes]: FileText,
-  [SIDEBAR_ITEM_TYPES.gameMaps]: MapPin,
-  [SIDEBAR_ITEM_TYPES.files]: File,
+export const DEFAULT_SIDEBAR_ITEM_ICONS: Record<SidebarItemType, LucideIcon> = {
+  [SIDEBAR_ITEM_TYPES.notes]:
+    iconNameMap[DEFAULT_SIDEBAR_ITEM_ICON_NAME_BY_TYPE[SIDEBAR_ITEM_TYPES.notes]],
+  [SIDEBAR_ITEM_TYPES.folders]:
+    iconNameMap[DEFAULT_SIDEBAR_ITEM_ICON_NAME_BY_TYPE[SIDEBAR_ITEM_TYPES.folders]],
+  [SIDEBAR_ITEM_TYPES.gameMaps]:
+    iconNameMap[DEFAULT_SIDEBAR_ITEM_ICON_NAME_BY_TYPE[SIDEBAR_ITEM_TYPES.gameMaps]],
+  [SIDEBAR_ITEM_TYPES.files]:
+    iconNameMap[DEFAULT_SIDEBAR_ITEM_ICON_NAME_BY_TYPE[SIDEBAR_ITEM_TYPES.files]],
+  [SIDEBAR_ITEM_TYPES.canvases]:
+    iconNameMap[DEFAULT_SIDEBAR_ITEM_ICON_NAME_BY_TYPE[SIDEBAR_ITEM_TYPES.canvases]],
 }
 
 export const getSidebarItemIcon = (item: AnySidebarItem | undefined): LucideIcon => {

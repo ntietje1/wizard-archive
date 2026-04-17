@@ -1,6 +1,8 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import {
+  sidebarItemColorValidator,
+  sidebarItemIconNameValidator,
   permissionLevelValidator,
   sidebarItemLocationValidator,
   sidebarItemNameValidator,
@@ -14,8 +16,8 @@ const sidebarItemTableFields = {
   name: sidebarItemNameValidator,
   slug: sidebarItemSlugValidator,
   campaignId: v.id('campaigns'),
-  iconName: v.nullable(v.string()),
-  color: v.nullable(v.string()),
+  iconName: v.nullable(sidebarItemIconNameValidator),
+  color: v.nullable(sidebarItemColorValidator),
   type: sidebarItemTypeValidator,
   parentId: v.nullable(v.id('sidebarItems')),
   allPermissionLevel: v.nullable(permissionLevelValidator),

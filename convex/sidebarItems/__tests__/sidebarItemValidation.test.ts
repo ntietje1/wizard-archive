@@ -4,6 +4,8 @@ import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createFolder, createNote } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 import { testId } from '../../_test/test-id.helper'
+import { parseSidebarItemColor, validateSidebarItemColor } from '../color'
+import { parseSidebarItemIconName, validateSidebarItemIconName } from '../icon'
 import {
   checkNameConflict,
   validateItemName,
@@ -136,6 +138,31 @@ describe('validateItemSlug', () => {
   it('rejects 256 characters', () => {
     const slug = 'a'.repeat(256)
     expect(validateItemSlug(slug).valid).toBe(false)
+  })
+})
+
+describe('sidebar item color validation', () => {
+  it('parses valid colors and normalizes them to lowercase', () => {
+    expect(parseSidebarItemColor('#ABCDEF')).toBe('#abcdef')
+    expect(parseSidebarItemColor('#ABCDEF80')).toBe('#abcdef80')
+  })
+
+  it('rejects invalid colors', () => {
+    expect(parseSidebarItemColor('abcdef')).toBeNull()
+    expect(validateSidebarItemColor('#FFF')).toBe('Color must be a 6- or 8-digit hex value')
+    expect(validateSidebarItemColor('')).toBe('Color must be a 6- or 8-digit hex value')
+  })
+})
+
+describe('sidebar item icon validation', () => {
+  it('accepts supported icon names', () => {
+    expect(parseSidebarItemIconName('Shield')).toBe('Shield')
+    expect(parseSidebarItemIconName('Grid2x2Plus')).toBe('Grid2x2Plus')
+  })
+
+  it('rejects unsupported icon names', () => {
+    expect(parseSidebarItemIconName('Nope')).toBeNull()
+    expect(validateSidebarItemIconName('Nope')).toBe('Icon is not supported')
   })
 })
 
@@ -346,5 +373,105 @@ describe('cross-table slug uniqueness', () => {
     expect(validateItemSlug(second.slug)).toEqual({ valid: true })
     expect(first.slug.length).toBeLessThanOrEqual(255)
     expect(second.slug.length).toBeLessThanOrEqual(255)
+  })
+
+  it('rejects invalid note colors at the mutation boundary', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    await expect(
+      dmAuth.mutation(api.notes.mutations.createNote, {
+        campaignId: ctx.campaignId,
+        name: 'bad-color-note',
+        parentTarget: { kind: 'direct', parentId: null },
+        color: 'red',
+        content: [],
+      }),
+    ).rejects.toThrow('Color must be a 6- or 8-digit hex value')
+  })
+
+  it('rejects invalid folder icons at the mutation boundary', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const folder = await dmAuth.mutation(api.folders.mutations.createFolder, {
+      campaignId: ctx.campaignId,
+      name: 'folder-to-update',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+
+    await expect(
+      dmAuth.mutation(api.folders.mutations.updateFolder, {
+        campaignId: ctx.campaignId,
+        folderId: folder.folderId,
+        iconName: 'InvalidIcon' as never,
+      }),
+    ).rejects.toThrow('Icon is not supported')
+  })
+
+  it('stores file colors in lowercase canonical form', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const result = await dmAuth.mutation(api.files.mutations.createFile, {
+      campaignId: ctx.campaignId,
+      name: 'file-with-color',
+      parentTarget: { kind: 'direct', parentId: null },
+      iconName: 'Shield',
+      color: '#ABCDEF',
+    })
+
+    const item = await dmAuth.query(api.sidebarItems.queries.getSidebarItemBySlug, {
+      campaignId: ctx.campaignId,
+      slug: result.slug,
+    })
+
+    expect(item?.iconName).toBe('Shield')
+    expect(item?.color).toBe('#abcdef')
+  })
+
+  it('stores updated map colors in lowercase canonical form', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const map = await dmAuth.mutation(api.gameMaps.mutations.createMap, {
+      campaignId: ctx.campaignId,
+      name: 'map-color',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+
+    await dmAuth.mutation(api.gameMaps.mutations.updateMap, {
+      campaignId: ctx.campaignId,
+      mapId: map.mapId,
+      iconName: 'Grid2x2Plus',
+      color: '#ABCDEF80',
+    })
+
+    const item = await dmAuth.query(api.sidebarItems.queries.getSidebarItemBySlug, {
+      campaignId: ctx.campaignId,
+      slug: map.slug,
+    })
+
+    expect(item?.iconName).toBe('Grid2x2Plus')
+    expect(item?.color).toBe('#abcdef80')
+  })
+
+  it('rejects invalid canvas colors at the mutation boundary', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const canvas = await dmAuth.mutation(api.canvases.mutations.createCanvas, {
+      campaignId: ctx.campaignId,
+      name: 'canvas-to-update',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+
+    await expect(
+      dmAuth.mutation(api.canvases.mutations.updateCanvas, {
+        campaignId: ctx.campaignId,
+        canvasId: canvas.canvasId,
+        color: '#12',
+      }),
+    ).rejects.toThrow('Color must be a 6- or 8-digit hex value')
   })
 })

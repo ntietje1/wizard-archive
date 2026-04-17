@@ -4,6 +4,8 @@ import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { sidebarItemNameValueSchema } from '../sharedValidation'
 export { sidebarItemSlugValidator } from '../slug'
+export { sidebarItemColorValidator } from '../color'
+export { sidebarItemIconNameValidator } from '../icon'
 
 export const sidebarItemNameValidator = zodToConvex(sidebarItemNameValueSchema)
 

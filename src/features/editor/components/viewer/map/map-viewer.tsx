@@ -3,6 +3,10 @@ import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { ClientOnly } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
+import {
+  DEFAULT_SIDEBAR_ITEM_COLOR,
+  normalizeSidebarItemColorOrDefault,
+} from 'convex/sidebarItems/color'
 import { Ban, Image } from 'lucide-react'
 import { toast } from 'sonner'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
@@ -13,10 +17,6 @@ import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { EditorContextMenuRef } from '~/features/context-menu/components/editor-context-menu'
-import {
-  DEFAULT_ITEM_COLOR,
-  validateHexColorOrDefault,
-} from '~/features/sidebar/utils/sidebar-item-utils'
 import { PinMarker } from '~/features/editor/components/viewer/map/pin-marker'
 import {
   MAP_DROP_ZONE_TYPE,
@@ -166,7 +166,7 @@ function MapPin({
   const icon = getSidebarItemIcon(visibleItem)
   const color = ghost
     ? getComputedStyle(document.documentElement).getPropertyValue('--muted-foreground').trim()
-    : validateHexColorOrDefault(visibleItem?.color, DEFAULT_ITEM_COLOR)
+    : normalizeSidebarItemColorOrDefault(visibleItem?.color, DEFAULT_SIDEBAR_ITEM_COLOR)
   const isHidden = pin.visible !== true
   const baseName = ghost ? '???' : (visibleItem?.name ?? '')
   const itemName = isHidden ? `${baseName} (hidden)` : baseName

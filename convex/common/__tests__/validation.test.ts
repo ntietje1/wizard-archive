@@ -131,8 +131,9 @@ describe('findUniqueSlug', () => {
   })
 
   it('truncates long slugs before trying uniqueness suffixes', async () => {
-    const slug = await findUniqueSlug('A Very Long Sidebar Item Name', (candidate) =>
-      Promise.resolve(candidate === 'a-very-long'),
+    const slug = await findUniqueSlug(
+      'A Very Long Sidebar Item Name',
+      (candidate) => Promise.resolve(candidate === 'a-very-long'),
       {
         maxLength: 12,
       },

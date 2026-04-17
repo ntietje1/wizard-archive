@@ -145,12 +145,12 @@ describe('updateNote', () => {
     await dmAuth.mutation(api.notes.mutations.updateNote, {
       campaignId: ctx.campaignId,
       noteId,
-      iconName: 'scroll',
+      iconName: 'Notebook',
     })
 
     await t.run(async (dbCtx) => {
       const note = await dbCtx.db.get('sidebarItems', noteId)
-      expect(note!.iconName).toBe('scroll')
+      expect(note!.iconName).toBe('Notebook')
     })
   })
 

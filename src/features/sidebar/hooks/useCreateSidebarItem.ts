@@ -1,5 +1,7 @@
 import { api } from 'convex/_generated/api'
 import type { CreateParentTarget } from 'convex/sidebarItems/createParentTarget'
+import { parseSidebarItemColor, validateSidebarItemColor } from 'convex/sidebarItems/color'
+import { parseSidebarItemIconName, validateSidebarItemIconName } from 'convex/sidebarItems/icon'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { assertSidebarItemSlug } from 'convex/sidebarItems/slug'
 import type { SidebarItemSlug } from 'convex/sidebarItems/slug'
@@ -81,14 +83,36 @@ export function useCreateSidebarItem() {
       throw new Error(nameResult.error)
     }
 
+    const iconName =
+      args.iconName === undefined
+        ? undefined
+        : (() => {
+            const parsed = parseSidebarItemIconName(args.iconName)
+            if (!parsed) {
+              throw new Error(validateSidebarItemIconName(args.iconName) ?? 'Invalid icon')
+            }
+            return parsed
+          })()
+
+    const color =
+      args.color === undefined
+        ? undefined
+        : (() => {
+            const parsed = parseSidebarItemColor(args.color)
+            if (!parsed) {
+              throw new Error(validateSidebarItemColor(args.color) ?? 'Invalid color')
+            }
+            return parsed
+          })()
+
     switch (args.type) {
       case SIDEBAR_ITEM_TYPES.notes: {
         const { noteId, slug } = await createNoteMutation.mutateAsync({
           campaignId: args.campaignId,
           name: trimmedName,
           parentTarget: args.parentTarget,
-          iconName: args.iconName,
-          color: args.color,
+          iconName,
+          color,
           content: args.content,
         })
         return { id: noteId, slug: assertSidebarItemSlug(slug), type: args.type }
@@ -98,8 +122,8 @@ export function useCreateSidebarItem() {
           campaignId: args.campaignId,
           name: trimmedName,
           parentTarget: args.parentTarget,
-          iconName: args.iconName,
-          color: args.color,
+          iconName,
+          color,
         })
         return { id: folderId, slug: assertSidebarItemSlug(slug), type: args.type }
       }
@@ -109,8 +133,8 @@ export function useCreateSidebarItem() {
           name: trimmedName,
           parentTarget: args.parentTarget,
           imageStorageId: args.imageStorageId,
-          iconName: args.iconName,
-          color: args.color,
+          iconName,
+          color,
         })
         return { id: mapId, slug: assertSidebarItemSlug(slug), type: args.type }
       }
@@ -120,8 +144,8 @@ export function useCreateSidebarItem() {
           name: trimmedName,
           parentTarget: args.parentTarget,
           storageId: args.storageId,
-          iconName: args.iconName,
-          color: args.color,
+          iconName,
+          color,
         })
         return { id: fileId, slug: assertSidebarItemSlug(slug), type: args.type }
       }
@@ -130,8 +154,8 @@ export function useCreateSidebarItem() {
           campaignId: args.campaignId,
           name: trimmedName,
           parentTarget: args.parentTarget,
-          iconName: args.iconName,
-          color: args.color,
+          iconName,
+          color,
         })
         return { id: canvasId, slug: assertSidebarItemSlug(slug), type: args.type }
       }

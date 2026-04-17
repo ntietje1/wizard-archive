@@ -4,7 +4,14 @@ import {
   createItemParentArgsValidator,
   requireCreateParentTarget,
 } from '../sidebarItems/createParentTarget'
+import { requireSidebarItemColor, requireOptionalSidebarItemColor } from '../sidebarItems/color'
 import {
+  requireOptionalSidebarItemIconName,
+  requireSidebarItemIconName,
+} from '../sidebarItems/icon'
+import {
+  sidebarItemColorValidator,
+  sidebarItemIconNameValidator,
   sidebarItemNameValidator,
   sidebarItemSlugValidator,
 } from '../sidebarItems/schema/validators'
@@ -22,8 +29,8 @@ export const createMap = campaignMutation({
     ...createItemParentArgsValidator,
     name: sidebarItemNameValidator,
     imageStorageId: v.optional(v.id('_storage')),
-    iconName: v.optional(v.string()),
-    color: v.optional(v.string()),
+    iconName: v.optional(sidebarItemIconNameValidator),
+    color: v.optional(sidebarItemColorValidator),
   },
   returns: v.object({
     mapId: v.id('sidebarItems'),
@@ -32,12 +39,15 @@ export const createMap = campaignMutation({
   handler: async (ctx, args): Promise<{ mapId: Id<'sidebarItems'>; slug: string }> => {
     const name = requireSidebarItemName(args.name)
     const parentTarget = requireCreateParentTarget(args.parentTarget)
+    const iconName =
+      args.iconName === undefined ? undefined : requireSidebarItemIconName(args.iconName)
+    const color = args.color === undefined ? undefined : requireSidebarItemColor(args.color)
     return await createMapFn(ctx, {
       name,
       imageStorageId: args.imageStorageId,
       parentTarget,
-      iconName: args.iconName,
-      color: args.color,
+      iconName,
+      color,
     })
   },
 })
@@ -47,8 +57,8 @@ export const updateMap = campaignMutation({
     mapId: v.id('sidebarItems'),
     name: v.optional(sidebarItemNameValidator),
     imageStorageId: v.optional(v.nullable(v.id('_storage'))),
-    iconName: v.optional(v.nullable(v.string())),
-    color: v.optional(v.nullable(v.string())),
+    iconName: v.optional(v.nullable(sidebarItemIconNameValidator)),
+    color: v.optional(v.nullable(sidebarItemColorValidator)),
   },
   returns: v.object({
     mapId: v.id('sidebarItems'),
@@ -56,12 +66,14 @@ export const updateMap = campaignMutation({
   }),
   handler: async (ctx, args): Promise<{ mapId: Id<'sidebarItems'>; slug: string }> => {
     const name = args.name ? requireSidebarItemName(args.name) : undefined
+    const iconName = requireOptionalSidebarItemIconName(args.iconName)
+    const color = requireOptionalSidebarItemColor(args.color)
     return await updateMapFn(ctx, {
       mapId: args.mapId,
       name,
       imageStorageId: args.imageStorageId,
-      iconName: args.iconName,
-      color: args.color,
+      iconName,
+      color,
     })
   },
 })

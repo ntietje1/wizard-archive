@@ -15,18 +15,14 @@ import type { CampaignFromDb, CampaignMember } from './campaigns/types'
 
 // --- Context enrichment ---
 
-function toAuthenticatedProfile(
-  profile: Doc<'userProfiles'>,
-): AuthUser['profile'] {
+function toAuthenticatedProfile(profile: Doc<'userProfiles'>): AuthUser['profile'] {
   return {
     ...profile,
     username: assertUsername(profile.username),
   }
 }
 
-function toCampaignFromDb(
-  campaign: Doc<'campaigns'>,
-): CampaignFromDb {
+function toCampaignFromDb(campaign: Doc<'campaigns'>): CampaignFromDb {
   return {
     ...campaign,
     slug: assertCampaignSlug(campaign.slug),

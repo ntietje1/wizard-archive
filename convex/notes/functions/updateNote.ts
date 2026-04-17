@@ -1,7 +1,4 @@
-import {
-  prepareSidebarItemRename,
-  requireItemAccess,
-} from '../../sidebarItems/validation'
+import { prepareSidebarItemRename, requireItemAccess } from '../../sidebarItems/validation'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { ERROR_CODE, throwClientError } from '../../errors'
@@ -9,6 +6,8 @@ import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import type { SidebarItemName } from '../../sidebarItems/sharedValidation'
+import type { SidebarItemColor } from '../../sidebarItems/color'
+import type { SidebarItemIconName } from '../../sidebarItems/icon'
 import type { SidebarItemSlug } from '../../sidebarItems/slug'
 import type { EditHistoryChange } from '../../editHistory/types'
 import type { CampaignMutationCtx } from '../../functions'
@@ -25,8 +24,8 @@ export async function updateNote(
   }: {
     noteId: Id<'sidebarItems'>
     name?: SidebarItemName
-    iconName?: string | null
-    color?: string | null
+    iconName?: SidebarItemIconName | null
+    color?: SidebarItemColor | null
   },
 ): Promise<{ noteId: Id<'sidebarItems'>; slug: SidebarItemSlug }> {
   const rawItem = await getSidebarItem(ctx, noteId)

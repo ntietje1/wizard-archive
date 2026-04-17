@@ -4,7 +4,14 @@ import {
   createItemParentArgsValidator,
   requireCreateParentTarget,
 } from '../sidebarItems/createParentTarget'
+import { requireSidebarItemColor, requireOptionalSidebarItemColor } from '../sidebarItems/color'
 import {
+  requireOptionalSidebarItemIconName,
+  requireSidebarItemIconName,
+} from '../sidebarItems/icon'
+import {
+  sidebarItemColorValidator,
+  sidebarItemIconNameValidator,
   sidebarItemNameValidator,
   sidebarItemSlugValidator,
 } from '../sidebarItems/schema/validators'
@@ -16,8 +23,8 @@ export const createCanvas = campaignMutation({
   args: {
     ...createItemParentArgsValidator,
     name: sidebarItemNameValidator,
-    iconName: v.optional(v.string()),
-    color: v.optional(v.string()),
+    iconName: v.optional(sidebarItemIconNameValidator),
+    color: v.optional(sidebarItemColorValidator),
   },
   returns: v.object({
     canvasId: v.id('sidebarItems'),
@@ -26,11 +33,14 @@ export const createCanvas = campaignMutation({
   handler: async (ctx, args) => {
     const name = requireSidebarItemName(args.name)
     const parentTarget = requireCreateParentTarget(args.parentTarget)
+    const iconName =
+      args.iconName === undefined ? undefined : requireSidebarItemIconName(args.iconName)
+    const color = args.color === undefined ? undefined : requireSidebarItemColor(args.color)
     return await createCanvasFn(ctx, {
       name,
       parentTarget,
-      iconName: args.iconName,
-      color: args.color,
+      iconName,
+      color,
     })
   },
 })
@@ -39,8 +49,8 @@ export const updateCanvas = campaignMutation({
   args: {
     canvasId: v.id('sidebarItems'),
     name: v.optional(sidebarItemNameValidator),
-    iconName: v.optional(v.nullable(v.string())),
-    color: v.optional(v.nullable(v.string())),
+    iconName: v.optional(v.nullable(sidebarItemIconNameValidator)),
+    color: v.optional(v.nullable(sidebarItemColorValidator)),
   },
   returns: v.object({
     canvasId: v.id('sidebarItems'),
@@ -48,11 +58,13 @@ export const updateCanvas = campaignMutation({
   }),
   handler: async (ctx, args) => {
     const name = args.name ? requireSidebarItemName(args.name) : undefined
+    const iconName = requireOptionalSidebarItemIconName(args.iconName)
+    const color = requireOptionalSidebarItemColor(args.color)
     return await updateCanvasFn(ctx, {
       canvasId: args.canvasId,
       name,
-      iconName: args.iconName,
-      color: args.color,
+      iconName,
+      color,
     })
   },
 })

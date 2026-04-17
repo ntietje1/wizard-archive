@@ -1,5 +1,7 @@
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import type { SidebarItemColor } from 'convex/sidebarItems/color'
+import type { SidebarItemIconName } from 'convex/sidebarItems/icon'
 import { assertSidebarItemSlug } from 'convex/sidebarItems/slug'
 import type { Note } from 'convex/notes/types'
 import type { Folder } from 'convex/folders/types'
@@ -16,8 +18,8 @@ let itemCounter = 0
 interface BaseFields {
   _creationTime: number
   name: string
-  iconName: string | null
-  color: string | null
+  iconName: SidebarItemIconName | null
+  color: SidebarItemColor | null
   slug: Note['slug']
   campaignId: Id<'campaigns'>
   parentId: Id<'sidebarItems'> | null

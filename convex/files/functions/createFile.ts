@@ -1,6 +1,8 @@
 import { prepareSidebarItemCreate } from '../../sidebarItems/validation'
 import type { ParsedCreateParentTarget } from '../../sidebarItems/createParentTarget'
 import type { SidebarItemName } from '../../sidebarItems/sharedValidation'
+import type { SidebarItemColor } from '../../sidebarItems/color'
+import type { SidebarItemIconName } from '../../sidebarItems/icon'
 import type { SidebarItemSlug } from '../../sidebarItems/slug'
 import { resolveOrCreateFolderPath } from '../../folders/functions/resolveOrCreateFolderPath'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
@@ -21,8 +23,8 @@ export async function createFile(
     name: SidebarItemName
     storageId?: Id<'_storage'>
     parentTarget: ParsedCreateParentTarget
-    iconName?: string
-    color?: string
+    iconName?: SidebarItemIconName
+    color?: SidebarItemColor
   },
 ): Promise<{ fileId: Id<'sidebarItems'>; slug: SidebarItemSlug }> {
   const resolvedParentId = await resolveOrCreateFolderPath(ctx, { parentTarget })

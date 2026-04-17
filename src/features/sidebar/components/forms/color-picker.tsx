@@ -1,33 +1,35 @@
+import {
+  assertSidebarItemColor,
+  DEFAULT_SIDEBAR_ITEM_COLOR,
+  normalizeSidebarItemColorOrDefault,
+} from 'convex/sidebarItems/color'
 import { useState } from 'react'
+import type { SidebarItemColor } from 'convex/sidebarItems/color'
 import { Palette } from 'lucide-react'
 import { Button } from '~/features/shadcn/components/button'
 import { Popover, PopoverContent, PopoverTrigger } from '~/features/shadcn/components/popover'
 import { cn } from '~/features/shadcn/lib/utils'
-import {
-  DEFAULT_ITEM_COLOR,
-  validateHexColorOrDefault,
-} from '~/features/sidebar/utils/sidebar-item-utils'
 
 const COLOR_OPTIONS = [
-  { name: 'Default', hex: DEFAULT_ITEM_COLOR },
-  { name: 'Red', hex: '#ef4444' },
-  { name: 'Orange', hex: '#f97316' },
-  { name: 'Yellow', hex: '#eab308' },
-  { name: 'Green', hex: '#22c55e' },
-  { name: 'Blue', hex: '#3b82f6' },
-  { name: 'Purple', hex: '#a855f7' },
-  { name: 'Pink', hex: '#ec4899' },
-  { name: 'Gray', hex: '#6b7280' },
+  { name: 'Default', hex: assertSidebarItemColor(DEFAULT_SIDEBAR_ITEM_COLOR) },
+  { name: 'Red', hex: assertSidebarItemColor('#ef4444') },
+  { name: 'Orange', hex: assertSidebarItemColor('#f97316') },
+  { name: 'Yellow', hex: assertSidebarItemColor('#eab308') },
+  { name: 'Green', hex: assertSidebarItemColor('#22c55e') },
+  { name: 'Blue', hex: assertSidebarItemColor('#3b82f6') },
+  { name: 'Purple', hex: assertSidebarItemColor('#a855f7') },
+  { name: 'Pink', hex: assertSidebarItemColor('#ec4899') },
+  { name: 'Gray', hex: assertSidebarItemColor('#6b7280') },
 ] as const
 
 interface ColorPickerProps {
-  value: string | undefined | null
-  onChange: (color: string | null) => void
+  value: SidebarItemColor | undefined | null
+  onChange: (color: SidebarItemColor | null) => void
 }
 
 export function ColorPicker({ value, onChange }: ColorPickerProps) {
   const [open, setOpen] = useState(false)
-  const currentColorHex = validateHexColorOrDefault(value, DEFAULT_ITEM_COLOR)
+  const currentColorHex = normalizeSidebarItemColorOrDefault(value, DEFAULT_SIDEBAR_ITEM_COLOR)
 
   return (
     <div className="h-9 w-9 flex-shrink-0">
