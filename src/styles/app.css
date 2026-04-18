@@ -208,10 +208,16 @@
   display: none !important;
 }
 
-/* Style React Flow's multi-node selection bounding box */
+/* Hide React Flow's multi-node selection bounding box */
 .react-flow__nodesselection-rect {
-  border: 1px dotted var(--primary) !important;
-  background: oklch(from var(--primary) l c h / 0.08) !important;
+  display: none !important;
+  /* border: 1px dotted var(--primary) !important;
+  background: oklch(from var(--primary) l c h / 0.08) !important; */
+}
+
+.canvas-flow-shell .react-flow__nodesselection,
+.canvas-flow-shell .react-flow__nodesselection-rect {
+  pointer-events: none;
 }
 
 /* Hide native multi-select box on pointerdown to match per-node indicator timing */

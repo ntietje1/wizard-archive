@@ -98,7 +98,7 @@ export function useCanvasSelectionRect({
         }
         lastFlowRectRef.current = null
         const store = useCanvasInteractionStore.getState()
-        store.setSelectionRect(null)
+        store.setSelectionDragRect(null)
         store.setRectDeselectedIds(new Set())
         setLocalSelectingRef.current(null)
         return
@@ -117,7 +117,7 @@ export function useCanvasSelectionRect({
 
         const store = useCanvasInteractionStore.getState()
         lastFlowRectRef.current = flowRect
-        store.setSelectionRect(flowRect)
+        store.setSelectionDragRect(flowRect)
         setLocalSelectingRef.current({ type: 'rect', ...flowRect })
 
         const deselected = new Set<string>()
@@ -140,7 +140,7 @@ export function useCanvasSelectionRect({
         rafRef.current = 0
       }
       const store = useCanvasInteractionStore.getState()
-      store.setSelectionRect(null)
+      store.setSelectionDragRect(null)
       store.setRectDeselectedIds(new Set())
       setLocalSelectingRef.current(null)
     }

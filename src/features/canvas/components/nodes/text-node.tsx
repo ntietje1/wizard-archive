@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react'
+import { useCallback } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { usePendingNodeEdit } from '../../hooks/usePendingNodeEdit'
+import { useInlineCanvasNodeEdit } from '../../hooks/useInlineCanvasNodeEdit'
 import { ResizableNodeWrapper } from './resizable-node-wrapper'
 import type { Node, NodeProps } from '@xyflow/react'
 import { useCanvasRuntimeContext } from '../../hooks/canvas-runtime-context'
@@ -21,25 +21,22 @@ export function TextNode({ id, data, selected, dragging }: NodeProps<Node<TextNo
   const {
     nodeActions: { updateNodeData },
   } = useCanvasRuntimeContext()
-  const label = (data.label as string) || 'Text'
-  const [isEditing, setIsEditing] = useState(false)
-  const [editValue, setEditValue] = useState(label)
-  const commitBlockedRef = useRef(false)
-
-  const startEditing = () => {
-    commitBlockedRef.current = false
-    setEditValue(label)
-    setIsEditing(true)
-  }
-
-  const commitEdit = (value: string) => {
-    setIsEditing(false)
-    if (value !== label) {
-      updateNodeData(id, { label: value })
-    }
-  }
-
-  usePendingNodeEdit({ id, selected: !!selected, isEditing, startEditing })
+  const label = data.label || 'Text'
+  const handleCommit = useCallback(
+    (nextValue: string) => {
+      updateNodeData(id, { label: nextValue })
+    },
+    [id, updateNodeData],
+  )
+  const { isEditing, editValue, setEditValue, startEditing, handleBlur, handleInputKeyDown } =
+    useInlineCanvasNodeEdit<HTMLInputElement>({
+      id,
+      selected: !!selected,
+      value: label,
+      onCommit: handleCommit,
+      shouldCommit: (event) => event.key === 'Enter' && !event.shiftKey,
+      shouldCancel: (event) => event.key === 'Escape',
+    })
 
   return (
     <ResizableNodeWrapper
@@ -51,6 +48,8 @@ export function TextNode({ id, data, selected, dragging }: NodeProps<Node<TextNo
     >
       <div
         className={TEXT_CONTAINER_CLASS}
+        role="group"
+        aria-label={data.label || 'Empty text node'}
         tabIndex={0}
         onDoubleClick={startEditing}
         onKeyDown={(event) => {
@@ -68,27 +67,8 @@ export function TextNode({ id, data, selected, dragging }: NodeProps<Node<TextNo
             aria-label="Text node content"
             value={editValue}
             onChange={(event) => setEditValue(event.currentTarget.value)}
-            onBlur={(event) => {
-              if (commitBlockedRef.current) {
-                commitBlockedRef.current = false
-                return
-              }
-              commitEdit(event.currentTarget.value)
-            }}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault()
-                event.stopPropagation()
-                commitBlockedRef.current = true
-                commitEdit(editValue)
-              } else if (event.key === 'Escape') {
-                event.preventDefault()
-                event.stopPropagation()
-                commitBlockedRef.current = true
-                setIsEditing(false)
-                setEditValue(label)
-              }
-            }}
+            onBlur={handleBlur}
+            onKeyDown={handleInputKeyDown}
             autoFocus
           />
         ) : (

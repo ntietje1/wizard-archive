@@ -11,7 +11,7 @@ import {
 } from './tool-module-utils'
 import type { CanvasToolModule } from './canvas-tool-types'
 
-export const lassoToolModule: CanvasToolModule = {
+export const lassoToolModule: CanvasToolModule<'lasso'> = {
   id: 'lasso',
   label: 'Lasso select',
   group: 'selection',
@@ -28,8 +28,8 @@ export const lassoToolModule: CanvasToolModule = {
     const reset = () => {
       active = false
       points = []
-      runtime.interaction.setLassoPath([])
-      runtime.awareness.setLocalSelecting(null)
+      runtime.setLassoPath([])
+      runtime.setLocalSelecting(null)
       releasePointerCapture(captureTarget, pointerId)
       captureTarget = null
       pointerId = null
@@ -44,17 +44,17 @@ export const lassoToolModule: CanvasToolModule = {
         active = true
         const pos = screenEventToFlowPosition(runtime, event)
         points = [pos]
-        runtime.interaction.setLassoPath([pos])
-        runtime.awareness.setLocalSelecting({ type: 'lasso', points: [pos] })
-        runtime.document.clearSelection()
+        runtime.setLassoPath(points)
+        runtime.setLocalSelecting({ type: 'lasso', points })
+        runtime.clearSelection()
       },
       onPointerMove: (event) => {
         if (!active || (event.buttons & 1) !== 1) return
 
         const pos = screenEventToFlowPosition(runtime, event)
-        points = [...points, pos]
-        runtime.interaction.setLassoPath(points)
-        runtime.awareness.setLocalSelecting({ type: 'lasso', points })
+        points.push(pos)
+        runtime.setLassoPath(points)
+        runtime.setLocalSelecting({ type: 'lasso', points })
       },
       onPointerUp: () => {
         if (!active) return
@@ -65,8 +65,8 @@ export const lassoToolModule: CanvasToolModule = {
           return
         }
 
-        const selectedNodeIds = runtime.document
-          .getNodes()
+        const selectedNodeIds = runtime
+          .getMeasuredNodes()
           .filter((node) => {
             if (isStrokeNode(node)) {
               return strokeNodeIntersectsPolygon(node, points)
@@ -85,7 +85,7 @@ export const lassoToolModule: CanvasToolModule = {
           })
           .map((node) => node.id)
 
-        runtime.document.setNodeSelection(selectedNodeIds)
+        runtime.setNodeSelection(selectedNodeIds)
         reset()
         runtime.completeActiveToolAction()
       },

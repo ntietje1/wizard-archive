@@ -45,6 +45,21 @@ function isCustomBlockNoteEditor(editor: unknown): editor is CustomBlockNoteEdit
   )
 }
 
+function destroyNoteEditor(
+  editor: CustomBlockNoteEditor,
+  noteId: Id<'sidebarItems'> | undefined,
+  mode: 'static' | 'collaborative',
+) {
+  try {
+    editor._tiptapEditor.destroy()
+  } catch (error) {
+    console.error(`Error destroying BlockNoteEditor for ${mode} note content`, {
+      noteId,
+      error,
+    })
+  }
+}
+
 export function NoteContent({
   noteId,
   content,
@@ -166,12 +181,7 @@ function StaticEditorInner({
       const shouldClearEditor = editorRef.current === nextEditor
 
       try {
-        nextEditor._tiptapEditor.destroy()
-      } catch (error) {
-        console.error('Error destroying BlockNoteEditor for static note content', {
-          noteId,
-          error,
-        })
+        destroyNoteEditor(nextEditor, noteId, 'static')
       } finally {
         if (shouldClearEditor) {
           setEditor(null)
@@ -249,8 +259,14 @@ function CollaborativeEditorInner({
       }
 
       nextEditor = createdEditor
-      patchYUndoPluginDestroy(nextEditor._tiptapEditor.view)
-      patchYSyncAfterTypeChanged(nextEditor._tiptapEditor.view)
+      try {
+        patchYUndoPluginDestroy(nextEditor._tiptapEditor.view)
+        patchYSyncAfterTypeChanged(nextEditor._tiptapEditor.view)
+      } catch (error) {
+        destroyNoteEditor(nextEditor, noteId, 'collaborative')
+        nextEditor = null
+        throw error
+      }
 
       setEditor(nextEditor)
       onEditorChangeRef.current?.(nextEditor, doc)
@@ -267,12 +283,7 @@ function CollaborativeEditorInner({
       const shouldClearEditor = editorRef.current === nextEditor
 
       try {
-        nextEditor._tiptapEditor.destroy()
-      } catch (error) {
-        console.error('Error destroying BlockNoteEditor for collaborative note content', {
-          noteId,
-          error,
-        })
+        destroyNoteEditor(nextEditor, noteId, 'collaborative')
       } finally {
         if (shouldClearEditor) {
           setEditor(null)

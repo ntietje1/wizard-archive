@@ -145,16 +145,7 @@ function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
   if (!remoteUser.cursor) return null
 
   return (
-    <div
-      ref={elementRef}
-      style={{
-        position: 'absolute',
-        left: 0,
-        top: 0,
-        pointerEvents: 'none',
-        zIndex: 1000,
-      }}
-    >
+    <div ref={elementRef} className="pointer-events-none absolute left-0 top-0 z-[1000]">
       <CursorIcon color={remoteUser.user.color} />
       <NameLabel name={remoteUser.user.name} color={remoteUser.user.color} />
     </div>
@@ -164,18 +155,10 @@ function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
 function NameLabel({ name, color }: { name: string; color: string }) {
   return (
     <div
+      className="ml-3 -mt-0.5 w-fit whitespace-nowrap rounded px-1.5 py-0.5 text-[12px] leading-4 font-medium"
       style={{
-        marginLeft: 12,
-        marginTop: -2,
-        padding: '2px 6px',
-        borderRadius: 4,
         backgroundColor: color,
         color: getContrastColor(color),
-        fontSize: 12,
-        fontWeight: 500,
-        lineHeight: '16px',
-        whiteSpace: 'nowrap',
-        width: 'fit-content',
       }}
     >
       {name}

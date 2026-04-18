@@ -10,7 +10,7 @@ import type { CanvasToolModule } from './canvas-tool-types'
 
 const MIN_RECT_SIZE = 10
 
-export const rectangleToolModule: CanvasToolModule = {
+export const rectangleToolModule: CanvasToolModule<'rectangle'> = {
   id: 'rectangle',
   label: 'Rectangle',
   group: 'creation',
@@ -29,7 +29,7 @@ export const rectangleToolModule: CanvasToolModule = {
     const reset = () => {
       active = false
       start = null
-      runtime.interaction.setSelectionRect(null)
+      runtime.setSelectionDragRect(null)
       if (rafId) {
         cancelAnimationFrame(rafId)
         rafId = 0
@@ -48,7 +48,7 @@ export const rectangleToolModule: CanvasToolModule = {
         active = true
         start = screenEventToFlowPosition(runtime, event)
         lastClientPos = { x: event.clientX, y: event.clientY }
-        runtime.interaction.setSelectionRect(null)
+        runtime.setSelectionDragRect(null)
       },
       onPointerMove: (event) => {
         if (!active || (event.buttons & 1) !== 1 || !start) return
@@ -60,7 +60,7 @@ export const rectangleToolModule: CanvasToolModule = {
           rafId = 0
           if (!start) return
           const pos = runtime.screenToFlowPosition(lastClientPos)
-          runtime.interaction.setSelectionRect(rectFromPoints(start, pos))
+          runtime.setSelectionDragRect(rectFromPoints(start, pos))
         })
       },
       onPointerUp: () => {
@@ -75,8 +75,8 @@ export const rectangleToolModule: CanvasToolModule = {
 
         try {
           if (rect.width >= MIN_RECT_SIZE && rect.height >= MIN_RECT_SIZE) {
-            runtime.document.createNode(
-              createRectangleNode(crypto.randomUUID(), rect, {
+            runtime.createNode(
+              createRectangleNode(rect, {
                 color: strokeColor,
                 opacity: strokeOpacity,
               }),

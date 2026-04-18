@@ -2,7 +2,7 @@ import { Type } from 'lucide-react'
 import { createTextNode } from '../utils/canvas-node-factories'
 import type { CanvasToolModule } from './canvas-tool-types'
 
-export const textToolModule: CanvasToolModule = {
+export const textToolModule: CanvasToolModule<'text'> = {
   id: 'text',
   label: 'Text',
   group: 'creation',
@@ -13,14 +13,16 @@ export const textToolModule: CanvasToolModule = {
   create: (runtime) => ({
     onPaneClick: (event) => {
       try {
-        const node = createTextNode(
+        const placement = createTextNode(
           runtime.screenToFlowPosition({
             x: event.clientX,
             y: event.clientY,
           }),
         )
-        runtime.document.createNode(node)
-        runtime.editSession.setPendingEditNodeId(node.id)
+        runtime.createNode(placement.node)
+        if (placement.startEditing) {
+          runtime.setPendingEditNodeId(placement.node.id)
+        }
       } finally {
         runtime.completeActiveToolAction()
       }

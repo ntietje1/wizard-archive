@@ -2,7 +2,7 @@ import { StickyNote } from 'lucide-react'
 import { createStickyNode } from '../utils/canvas-node-factories'
 import type { CanvasToolModule } from './canvas-tool-types'
 
-export const stickyToolModule: CanvasToolModule = {
+export const stickyToolModule: CanvasToolModule<'sticky'> = {
   id: 'sticky',
   label: 'Post-it',
   group: 'creation',
@@ -12,14 +12,16 @@ export const stickyToolModule: CanvasToolModule = {
   showsStyleControls: false,
   create: (runtime) => ({
     onPaneClick: (event) => {
-      const node = createStickyNode(
+      const placement = createStickyNode(
         runtime.screenToFlowPosition({
           x: event.clientX,
           y: event.clientY,
         }),
       )
-      runtime.document.createNode(node)
-      runtime.editSession.setPendingEditNodeId(node.id)
+      runtime.createNode(placement.node)
+      if (placement.startEditing) {
+        runtime.setPendingEditNodeId(placement.node.id)
+      }
       runtime.completeActiveToolAction()
     },
   }),

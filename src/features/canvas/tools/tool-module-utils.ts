@@ -1,12 +1,12 @@
-import { pointNearStrokeNode } from '../utils/canvas-stroke-utils'
-import type { CanvasToolRuntime } from './canvas-tool-types'
+import { getStrokeSelectionPadding, pointHitsStrokeSelection } from '../utils/canvas-stroke-utils'
+import type { CanvasDocumentReader, CanvasViewportTools } from './canvas-tool-types'
 import type { Node } from '@xyflow/react'
 
 export function screenEventToFlowPosition(
-  runtime: CanvasToolRuntime,
+  context: Pick<CanvasViewportTools, 'screenToFlowPosition'>,
   event: Pick<PointerEvent, 'clientX' | 'clientY'>,
 ) {
-  return runtime.screenToFlowPosition({
+  return context.screenToFlowPosition({
     x: event.clientX,
     y: event.clientY,
   })
@@ -32,12 +32,12 @@ export function releasePointerCapture(target: Element | null, pointerId: number 
 }
 
 export function hitTestStrokeNode(
-  runtime: CanvasToolRuntime,
+  context: CanvasDocumentReader & CanvasViewportTools,
   event: React.MouseEvent,
 ): string | null {
-  const flowPos = screenEventToFlowPosition(runtime, event)
-  const threshold = 12 / runtime.getZoom()
-  const strokeNodes = runtime.document.getNodes().filter((node) => node.type === 'stroke')
+  const flowPos = screenEventToFlowPosition(context, event)
+  const threshold = getStrokeSelectionPadding(context.getZoom())
+  const strokeNodes = context.getNodes().filter((node) => node.type === 'stroke')
 
   for (let i = strokeNodes.length - 1; i >= 0; i--) {
     const node = strokeNodes[i]
@@ -58,7 +58,7 @@ export function hitTestStrokeNode(
       continue
     }
 
-    if (pointNearStrokeNode(flowPos, node, threshold)) {
+    if (pointHitsStrokeSelection(flowPos, node, context.getZoom())) {
       return node.id
     }
   }

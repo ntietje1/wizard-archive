@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react'
+import { useCallback } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { usePendingNodeEdit } from '../../hooks/usePendingNodeEdit'
+import { useInlineCanvasNodeEdit } from '../../hooks/useInlineCanvasNodeEdit'
 import { STICKY_DEFAULT_COLOR } from './sticky-node-constants'
 import { ResizableNodeWrapper } from './resizable-node-wrapper'
 import type { Node, NodeProps } from '@xyflow/react'
@@ -32,7 +32,6 @@ export function StickyPreview({
 }
 
 export function StickyNode({ id, data, selected, dragging }: NodeProps<Node<StickyNodeData>>) {
-  const [editValue, setEditValue] = useState('')
   const {
     nodeActions: { updateNodeData },
   } = useCanvasRuntimeContext()
@@ -40,23 +39,15 @@ export function StickyNode({ id, data, selected, dragging }: NodeProps<Node<Stic
   const color = data.color || STICKY_DEFAULT_COLOR
   const opacity = (data.opacity ?? 100) / 100
 
-  const cancelledRef = useRef(false)
-  const [isEditing, setIsEditing] = useState(false)
-
-  const startEditing = () => {
-    cancelledRef.current = false
-    setEditValue(label)
-    setIsEditing(true)
-  }
-
-  const commitEdit = (value: string) => {
-    setIsEditing(false)
-    if (value !== label) {
-      updateNodeData(id, { label: value })
-    }
-  }
-
-  usePendingNodeEdit({ id, selected: !!selected, isEditing, startEditing })
+  const { isEditing, editValue, setEditValue, startEditing, handleBlur, handleInputKeyDown } =
+    useInlineCanvasNodeEdit<HTMLTextAreaElement>({
+      id,
+      selected: !!selected,
+      value: label,
+      onCommit: (nextValue) => updateNodeData(id, { label: nextValue }),
+      shouldCommit: (event) => event.key === 'Enter' && (event.metaKey || event.ctrlKey),
+      shouldCancel: (event) => event.key === 'Escape',
+    })
 
   return (
     <ResizableNodeWrapper
@@ -87,26 +78,8 @@ export function StickyNode({ id, data, selected, dragging }: NodeProps<Node<Stic
             aria-label="Sticky note text"
             value={editValue}
             onChange={(e) => setEditValue(e.currentTarget.value)}
-            onBlur={() => {
-              if (cancelledRef.current) {
-                cancelledRef.current = false
-                return
-              }
-              commitEdit(editValue)
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                e.preventDefault()
-                e.stopPropagation()
-                cancelledRef.current = true
-                setIsEditing(false)
-                setEditValue(label)
-              } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                e.preventDefault()
-                cancelledRef.current = true
-                commitEdit(editValue)
-              }
-            }}
+            onBlur={handleBlur}
+            onKeyDown={handleInputKeyDown}
             autoFocus
           />
         ) : (

@@ -6,7 +6,8 @@ import { rectangleToolModule } from './rectangle-tool-module'
 import { selectToolModule } from './select-tool-module'
 import { stickyToolModule } from './sticky-tool-module'
 import { textToolModule } from './text-tool-module'
-import type { CanvasToolId, CanvasToolModule } from './canvas-tool-types'
+import { canEditCanvasNodeStyle } from '../components/nodes/canvas-node-registry'
+import type { AnyCanvasToolModule, CanvasToolId } from './canvas-tool-types'
 import type { Node } from '@xyflow/react'
 
 export const canvasToolModules = [
@@ -18,21 +19,19 @@ export const canvasToolModules = [
   textToolModule,
   stickyToolModule,
   rectangleToolModule,
-] as const satisfies ReadonlyArray<CanvasToolModule>
+] as const satisfies ReadonlyArray<AnyCanvasToolModule>
 
-const canvasToolModuleMap: Partial<Record<CanvasToolId, CanvasToolModule>> = Object.fromEntries(
+const canvasToolModuleMap: Partial<Record<CanvasToolId, AnyCanvasToolModule>> = Object.fromEntries(
   canvasToolModules.map((module) => [module.id, module] as const),
 )
 
-export function getCanvasToolModule(toolId: CanvasToolId): CanvasToolModule | undefined {
+export function getCanvasToolModule(toolId: CanvasToolId): AnyCanvasToolModule | undefined {
   return canvasToolModuleMap[toolId]
 }
 
-const COLOR_EDITABLE_NODE_TYPES = new Set(['sticky', 'rectangle', 'stroke'])
-
 type CanvasConditionalToolbarState =
   | { kind: 'hidden' }
-  | { kind: 'tool'; tool: CanvasToolModule }
+  | { kind: 'tool'; tool: AnyCanvasToolModule }
   | { kind: 'selection'; node: Node }
 
 export function getCanvasConditionalToolbarState(
@@ -41,7 +40,7 @@ export function getCanvasConditionalToolbarState(
 ): CanvasConditionalToolbarState {
   if (selectedNodes.length === 1) {
     const [node] = selectedNodes
-    if (COLOR_EDITABLE_NODE_TYPES.has(node.type ?? '') && node.data?.color) {
+    if (canEditCanvasNodeStyle(node.type)) {
       return { kind: 'selection', node }
     }
 

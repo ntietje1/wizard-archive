@@ -1,5 +1,6 @@
 import { useCallback, useRef } from 'react'
 import { useOnSelectionChange, useReactFlow } from '@xyflow/react'
+import { isExclusivelySelectedNode } from '../utils/canvas-selection-utils'
 import type { Node } from '@xyflow/react'
 
 interface UseCanvasSelectionSyncOptions {
@@ -35,7 +36,10 @@ export function useCanvasSelectionSync({
         setLocalSelection(nodeIds.length > 0 ? nodeIds : null)
         onHistorySelectionChange(nodeIds)
 
-        if (editingEmbedIdRef.current && !nodeIds.includes(editingEmbedIdRef.current)) {
+        if (
+          editingEmbedIdRef.current &&
+          !isExclusivelySelectedNode(nodeIds, editingEmbedIdRef.current)
+        ) {
           setEditingEmbedId(null)
         }
 

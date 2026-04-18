@@ -5,10 +5,10 @@ import type { RectangleNodeData } from './rectangle-node'
 import { StickyNode, StickyPreview } from './sticky-node'
 import type { StickyNodeData } from './sticky-node'
 import { StrokeNode, StrokePreview } from './stroke-node'
-import type { StrokeNodeData } from './stroke-node'
+import type { StrokeNodeData, StrokeNodeType } from './stroke-node'
 import { TextNode, TextPreview } from './text-node'
 import type { TextNodeData } from './text-node'
-import type { Node, NodeProps, NodeTypes } from '@xyflow/react'
+import type { Node, NodeProps, NodeTypes, XYPosition } from '@xyflow/react'
 
 interface CanvasNodePreviewOptions {
   width: number
@@ -17,25 +17,57 @@ interface CanvasNodePreviewOptions {
 
 type CanvasNodeData = Record<string, unknown>
 
-interface CanvasNodeDescriptor<TPreviewData extends CanvasNodeData = CanvasNodeData> {
-  component: React.ComponentType<NodeProps<Node<TPreviewData>>>
+type CanvasNodeType = 'embed' | 'rectangle' | 'sticky' | 'stroke' | 'text'
+
+interface CanvasNodePlacementBehavior {
+  anchor: 'center' | 'top-left'
+  selectOnCreate: boolean
+  startEditingOnCreate: boolean
+}
+
+interface CanvasNodeDefinition<
+  TPreviewData extends CanvasNodeData = CanvasNodeData,
+  TNode extends Node<TPreviewData> = Node<TPreviewData>,
+> {
+  component: React.ComponentType<NodeProps<TNode>>
   renderPreview: (data: TPreviewData, options?: CanvasNodePreviewOptions) => React.ReactNode
   readPreviewData: (data: CanvasNodeData) => TPreviewData | null
+  styleControls: {
+    color: boolean
+    opacity: boolean
+  }
+  defaultSize?: { width: number; height: number }
+  buildDefaultData?: () => TPreviewData
+  placement?: CanvasNodePlacementBehavior
 }
 
-function createCanvasNodeDescriptor<TPreviewData extends CanvasNodeData>(
-  descriptor: CanvasNodeDescriptor<TPreviewData>,
-): CanvasNodeDescriptor<TPreviewData> {
-  return descriptor
+function createCanvasNodeDefinition<
+  TPreviewData extends CanvasNodeData,
+  TNode extends Node<TPreviewData> = Node<TPreviewData>,
+>(definition: CanvasNodeDefinition<TPreviewData, TNode>): CanvasNodeDefinition<TPreviewData, TNode> {
+  return definition
 }
 
-const canvasNodeDescriptors = {
-  embed: createCanvasNodeDescriptor<EmbedNodeData>({
+const EMBED_SIDEBAR_SIZE = { width: 320, height: 240 } as const
+
+const canvasNodeDefinitions = {
+  embed: createCanvasNodeDefinition<EmbedNodeData>({
     component: EmbedNode,
     renderPreview: () => <EmbedPreview />,
     readPreviewData: () => ({}),
+    styleControls: {
+      color: false,
+      opacity: false,
+    },
+    defaultSize: EMBED_SIDEBAR_SIZE,
+    buildDefaultData: () => ({}),
+    placement: {
+      anchor: 'top-left',
+      selectOnCreate: false,
+      startEditingOnCreate: false,
+    },
   }),
-  rectangle: createCanvasNodeDescriptor<RectangleNodeData>({
+  rectangle: createCanvasNodeDefinition<RectangleNodeData>({
     component: RectangleNode,
     renderPreview: (data) => {
       return <RectanglePreview color={data.color ?? 'transparent'} opacity={data.opacity} />
@@ -44,8 +76,21 @@ const canvasNodeDescriptors = {
       color: readString(data, 'color'),
       opacity: readNumber(data, 'opacity'),
     }),
+    styleControls: {
+      color: true,
+      opacity: true,
+    },
+    buildDefaultData: () => ({
+      color: 'var(--foreground)',
+      opacity: 100,
+    }),
+    placement: {
+      anchor: 'top-left',
+      selectOnCreate: true,
+      startEditingOnCreate: false,
+    },
   }),
-  sticky: createCanvasNodeDescriptor<StickyNodeData>({
+  sticky: createCanvasNodeDefinition<StickyNodeData>({
     component: StickyNode,
     renderPreview: (data) => {
       return (
@@ -61,31 +106,71 @@ const canvasNodeDescriptors = {
       color: readString(data, 'color'),
       opacity: readNumber(data, 'opacity'),
     }),
+    styleControls: {
+      color: true,
+      opacity: true,
+    },
+    defaultSize: { width: 160, height: 160 },
+    buildDefaultData: () => ({
+      label: '',
+      color: '#FFEBA1',
+      opacity: 100,
+    }),
+    placement: {
+      anchor: 'center',
+      selectOnCreate: true,
+      startEditingOnCreate: true,
+    },
   }),
-  stroke: createCanvasNodeDescriptor<StrokeNodeData>({
+  stroke: createCanvasNodeDefinition<StrokeNodeData, StrokeNodeType>({
     component: StrokeNode,
     renderPreview: (data, options) => (
       <StrokePreview data={data} width={options?.width} height={options?.height} />
     ),
     readPreviewData: (data) => (isStrokeNodeData(data) ? data : null),
+    styleControls: {
+      color: true,
+      opacity: true,
+    },
   }),
-  text: createCanvasNodeDescriptor<TextNodeData>({
+  text: createCanvasNodeDefinition<TextNodeData>({
     component: TextNode,
     renderPreview: (data) => <TextPreview label={data.label ?? ''} />,
     readPreviewData: (data) => ({
       label: readString(data, 'label'),
     }),
+    styleControls: {
+      color: false,
+      opacity: false,
+    },
+    defaultSize: { width: 120, height: 36 },
+    buildDefaultData: () => ({
+      label: 'New text',
+    }),
+    placement: {
+      anchor: 'center',
+      selectOnCreate: true,
+      startEditingOnCreate: true,
+    },
   }),
 } as const
 
 export const canvasNodeTypes = Object.fromEntries(
-  Object.entries(canvasNodeDescriptors).map(([type, descriptor]) => [type, descriptor.component]),
+  Object.entries(canvasNodeDefinitions).map(([type, definition]) => [type, definition.component]),
 ) satisfies NodeTypes
 
-type CanvasNodeType = keyof typeof canvasNodeDescriptors
-
 function isCanvasNodeType(type: string): type is CanvasNodeType {
-  return type in canvasNodeDescriptors
+  return type in canvasNodeDefinitions
+}
+
+export function getCanvasNodeDefinition(type: CanvasNodeType) {
+  return canvasNodeDefinitions[type]
+}
+
+export function canEditCanvasNodeStyle(type: string | undefined): boolean {
+  if (!type || !isCanvasNodeType(type)) return false
+  const { color, opacity } = canvasNodeDefinitions[type].styleControls
+  return color || opacity
 }
 
 export function renderCanvasNodePreview(
@@ -94,9 +179,56 @@ export function renderCanvasNodePreview(
   options?: CanvasNodePreviewOptions,
 ): React.ReactNode {
   if (!type || !isCanvasNodeType(type)) return null
-  const descriptor = canvasNodeDescriptors[type] as CanvasNodeDescriptor<CanvasNodeData>
-  const previewData = descriptor.readPreviewData(data)
-  return previewData ? descriptor.renderPreview(previewData, options) : null
+  const definition = canvasNodeDefinitions[type] as CanvasNodeDefinition<CanvasNodeData>
+  const previewData = definition.readPreviewData(data)
+  return previewData ? definition.renderPreview(previewData, options) : null
+}
+
+export function createCanvasNode(
+  type: CanvasNodeType,
+  {
+    position,
+    size,
+    data,
+  }: {
+    position: XYPosition
+    size?: { width: number; height: number }
+    data?: CanvasNodeData
+  },
+): Node {
+  const definition = canvasNodeDefinitions[type]
+  const resolvedSize = size ?? definition.defaultSize
+  if (!resolvedSize) {
+    throw new Error(`Missing default canvas node size for "${type}"`)
+  }
+
+  const resolvedPosition =
+    definition.placement?.anchor === 'center'
+      ? {
+          x: position.x - resolvedSize.width / 2,
+          y: position.y - resolvedSize.height / 2,
+        }
+      : position
+  const resolvedData = data ?? definition.buildDefaultData?.()
+  if (!resolvedData) {
+    throw new Error(`Missing default canvas node data for "${type}"`)
+  }
+
+  const node: Node = {
+    id: crypto.randomUUID(),
+    type,
+    position: resolvedPosition,
+    width: resolvedSize.width,
+    height: resolvedSize.height,
+    data: resolvedData,
+  }
+
+  if (definition.placement?.selectOnCreate) {
+    node.selected = true
+    node.draggable = true
+  }
+
+  return node
 }
 
 function readString(data: Record<string, unknown>, key: string): string | undefined {

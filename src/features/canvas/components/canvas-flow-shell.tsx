@@ -27,7 +27,7 @@ export interface CanvasFlowShellProps {
   wrapperRef: (node: HTMLDivElement | null) => void
   remoteUsers: Array<RemoteUser>
   lassoPath: Array<Point2D>
-  selectionRect: Bounds | null
+  selectionDragRect: Bounds | null
   activeTool: string
   onNodeDragStart?: OnNodeDrag
   onNodeDrag?: OnNodeDrag
@@ -35,8 +35,9 @@ export interface CanvasFlowShellProps {
   onNodesDelete?: OnNodesDelete
   onEdgesDelete?: OnEdgesDelete
   onConnect?: OnConnect
-  onMoveStart: (event: MouseEvent | TouchEvent | null) => void
-  onMoveEnd: () => void
+  onMoveStart?: (event: MouseEvent | TouchEvent | null) => void
+  onMoveEnd?: () => void
+  onNodeClick?: (event: React.MouseEvent, node: Node) => void
   onPaneClick?: (event: React.MouseEvent) => void
   onMouseMove: (event: React.MouseEvent) => void
   onMouseLeave: () => void
@@ -57,7 +58,7 @@ export function CanvasFlowShell({
   wrapperRef,
   remoteUsers,
   lassoPath,
-  selectionRect,
+  selectionDragRect,
   activeTool,
   onNodeDragStart,
   onNodeDrag,
@@ -67,6 +68,7 @@ export function CanvasFlowShell({
   onConnect,
   onMoveStart,
   onMoveEnd,
+  onNodeClick,
   onPaneClick,
   onMouseMove,
   onMouseLeave,
@@ -79,7 +81,7 @@ export function CanvasFlowShell({
   return (
     <div
       ref={wrapperRef}
-      className="relative flex-1 min-h-0 allow-motion"
+      className="canvas-flow-shell relative flex-1 min-h-0 allow-motion"
       style={{ cursor: toolCursor }}
     >
       <CanvasToolbar canEdit={canEdit} />
@@ -95,6 +97,7 @@ export function CanvasFlowShell({
         onConnect={onConnect}
         onMoveStart={onMoveStart}
         onMoveEnd={onMoveEnd}
+        onNodeClick={onNodeClick}
         onPaneClick={onPaneClick}
         onMouseMove={onMouseMove}
         onMouseLeave={onMouseLeave}
@@ -122,7 +125,7 @@ export function CanvasFlowShell({
           <CanvasRemoteCursors remoteUsers={remoteUsers} />
           <CanvasSelectionOverlays
             lassoPath={lassoPath}
-            selectionRect={selectionRect}
+            selectionDragRect={selectionDragRect}
             remoteUsers={remoteUsers}
           />
         </ViewportPortal>
@@ -171,11 +174,11 @@ const SELECTION_STYLE = {
 
 function CanvasSelectionOverlays({
   lassoPath,
-  selectionRect,
+  selectionDragRect,
   remoteUsers,
 }: {
   lassoPath: Array<Point2D>
-  selectionRect: Bounds | null
+  selectionDragRect: Bounds | null
   remoteUsers: Array<RemoteUser>
 }) {
   return (
@@ -195,12 +198,12 @@ function CanvasSelectionOverlays({
         />
       )}
 
-      {selectionRect && (
+      {selectionDragRect && (
         <rect
-          x={selectionRect.x}
-          y={selectionRect.y}
-          width={selectionRect.width}
-          height={selectionRect.height}
+          x={selectionDragRect.x}
+          y={selectionDragRect.y}
+          width={selectionDragRect.width}
+          height={selectionDragRect.height}
           {...SELECTION_STYLE}
         />
       )}

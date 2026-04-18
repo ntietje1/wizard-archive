@@ -32,6 +32,9 @@ const STROKE_OPTIONS_BASE = {
   streamline: 0.5,
 }
 
+const STROKE_SELECTION_PADDING_PX = 12
+const MIN_ZOOM = 1e-6
+
 export function rectFromPoints(a: XYPosition, b: XYPosition): Bounds {
   return {
     x: Math.min(a.x, b.x),
@@ -318,6 +321,19 @@ export function pointNearStrokeNode(
   )
 }
 
+export function getStrokeSelectionPadding(zoom: number): number {
+  const safeZoom = Number.isFinite(zoom) && zoom > MIN_ZOOM ? zoom : MIN_ZOOM
+  return STROKE_SELECTION_PADDING_PX / safeZoom
+}
+
+export function pointHitsStrokeSelection(
+  point: Point2D,
+  node: StrokeNodeLike,
+  zoom: number,
+): boolean {
+  return pointNearStrokeNode(point, node, getStrokeSelectionPadding(zoom))
+}
+
 function strokePathIntersectsPolygon(
   points: Array<[number, number, number]>,
   polygon: Array<{ x: number; y: number }>,
@@ -417,8 +433,6 @@ export function strokeNodeIntersectsPolygon(
 }
 
 const MINI_MAP_STROKE_PADDING = 12
-
-const MIN_ZOOM = 1e-6
 
 export function getMiniMapStrokePath(
   points: Array<[number, number, number]>,

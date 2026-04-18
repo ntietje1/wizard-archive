@@ -1,13 +1,11 @@
 import type {
   DrawingState,
   Point2D,
-  RemoteUser,
   ResizingState,
   SelectingState,
 } from '../utils/canvas-awareness-types'
-import type { Bounds } from '../utils/canvas-stroke-utils'
-import type { Id } from 'convex/_generated/dataModel'
 import type { Connection, Edge, Node, XYPosition } from '@xyflow/react'
+import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react'
 
 export type CanvasToolId =
   | 'select'
@@ -50,12 +48,7 @@ export interface CanvasNodeActions {
   onResizeEnd: (nodeId: string, width: number, height: number, position: XYPosition) => void
 }
 
-/**
- * Document-level canvas operations for tool modules and sync layers. Prefer this interface for
- * persisted or canvas-wide updates; its `updateNodeData` writes through the document layer, and
- * `resizeNode` commits the final resize rather than handling the transient drag-preview path.
- */
-export interface CanvasDocumentActions {
+export interface CanvasDocumentWriter {
   createNode: (node: Node) => void
   updateNode: (nodeId: string, updater: (node: Node) => Node) => void
   updateNodeData: (nodeId: string, data: Record<string, unknown>) => void
@@ -64,61 +57,141 @@ export interface CanvasDocumentActions {
   createEdge: (connection: Connection) => void
   deleteEdges: (edgeIds: Array<string>) => void
   setNodePosition: (nodeId: string, position: XYPosition) => void
-  setNodeSelection: (nodeIds: Array<string>) => void
-  clearSelection: () => void
+}
+
+export interface CanvasDocumentReader {
   getNodes: () => Array<Node>
   getEdges: () => Array<Edge>
 }
 
-export interface CanvasToolRuntime {
-  canvasId: Id<'sidebarItems'>
-  canEdit: boolean
+export type CanvasMeasuredNode = Node & {
+  width: number
+  height: number
+}
+
+export interface CanvasMeasuredNodeReader {
+  getMeasuredNodes: () => Array<CanvasMeasuredNode>
+}
+
+export interface CanvasSelectionActions {
+  setNodeSelection: (nodeIds: Array<string>) => void
+  clearSelection: () => void
+}
+
+export interface CanvasSelectionSnapshotReader {
+  getSelectionSnapshot: () => Array<string>
+}
+
+export interface CanvasViewportTools {
+  screenToFlowPosition: (position: XYPosition) => XYPosition
+  getZoom: () => number
+}
+
+type CanvasFlowPositionTools = Pick<CanvasViewportTools, 'screenToFlowPosition'>
+
+export interface CanvasToolStateControls {
   getSettings: () => CanvasToolSettings
   getActiveTool: () => CanvasToolId
   setActiveTool: (tool: CanvasToolId) => void
   completeActiveToolAction: () => void
-  screenToFlowPosition: (position: XYPosition) => XYPosition
-  getZoom: () => number
-  document: CanvasDocumentActions
-  interaction: {
-    getLocalDrawing: () => DrawingState | null
-    setLocalDrawing: (drawing: DrawingState | null) => void
-    getLassoPath: () => Array<Point2D>
-    setLassoPath: (path: Array<Point2D>) => void
-    getSelectionRect: () => Bounds | null
-    setSelectionRect: (rect: Bounds | null) => void
-    setErasingStrokeIds: (ids: Set<string>) => void
-    setRectDeselectedIds: (ids: Set<string>) => void
-  }
-  awareness: {
-    setLocalCursor: (position: Point2D | null) => void
-    setLocalDragging: (positions: Record<string, Point2D> | null) => void
-    setLocalResizing: (resizing: ResizingState | null) => void
-    setLocalSelection: (nodeIds: Array<string> | null) => void
-    broadcastLocalDrawing: (drawing: DrawingState | null) => void
-    setLocalSelecting: (selecting: SelectingState | null) => void
-    remoteUsers: Array<RemoteUser>
-  }
-  editSession: CanvasEditSessionState
 }
 
-interface CanvasToolController {
+interface CanvasInteractionOverlayControls {
+  setLocalDrawing: (drawing: DrawingState | null) => void
+  setLassoPath: (path: Array<Point2D>) => void
+  setSelectionDragRect: (
+    rect: {
+      x: number
+      y: number
+      width: number
+      height: number
+    } | null,
+  ) => void
+  setErasingStrokeIds: (ids: Set<string>) => void
+  setRectDeselectedIds: (ids: Set<string>) => void
+}
+
+export interface CanvasAwarenessWriter {
+  setLocalCursor: (position: Point2D | null) => void
+  setLocalDragging: (positions: Record<string, Point2D> | null) => void
+  setLocalResizing: (resizing: ResizingState | null) => void
+  setLocalSelection: (nodeIds: Array<string> | null) => void
+  setLocalDrawing: (drawing: DrawingState | null) => void
+  setLocalSelecting: (selecting: SelectingState | null) => void
+}
+
+type SelectCanvasToolContext = CanvasViewportTools &
+  CanvasDocumentReader &
+  CanvasSelectionActions &
+  CanvasSelectionSnapshotReader
+
+type HandCanvasToolContext = Pick<
+  CanvasToolStateControls,
+  'getActiveTool' | 'completeActiveToolAction'
+>
+
+type DrawCanvasToolContext = CanvasFlowPositionTools &
+  Pick<CanvasToolStateControls, 'getSettings'> &
+  Pick<CanvasDocumentWriter, 'createNode'> &
+  Pick<CanvasInteractionOverlayControls, 'setLocalDrawing'>
+
+type EraseCanvasToolContext = CanvasFlowPositionTools &
+  CanvasDocumentReader &
+  Pick<CanvasDocumentWriter, 'deleteNodes'> &
+  Pick<CanvasInteractionOverlayControls, 'setErasingStrokeIds'>
+
+type LassoCanvasToolContext = CanvasFlowPositionTools &
+  CanvasMeasuredNodeReader &
+  CanvasSelectionActions &
+  Pick<CanvasToolStateControls, 'completeActiveToolAction'> &
+  Pick<CanvasInteractionOverlayControls, 'setLassoPath'> &
+  Pick<CanvasAwarenessWriter, 'setLocalSelecting'>
+
+type RectangleCanvasToolContext = CanvasFlowPositionTools &
+  Pick<CanvasToolStateControls, 'getSettings' | 'completeActiveToolAction'> &
+  Pick<CanvasDocumentWriter, 'createNode'> &
+  Pick<CanvasInteractionOverlayControls, 'setSelectionDragRect'>
+
+type TextCanvasToolContext = CanvasFlowPositionTools &
+  Pick<CanvasDocumentWriter, 'createNode'> &
+  Pick<CanvasToolStateControls, 'completeActiveToolAction'> &
+  Pick<CanvasEditSessionState, 'setPendingEditNodeId'>
+
+type StickyCanvasToolContext = TextCanvasToolContext
+
+export interface CanvasToolContextById {
+  select: SelectCanvasToolContext
+  hand: HandCanvasToolContext
+  draw: DrawCanvasToolContext
+  erase: EraseCanvasToolContext
+  lasso: LassoCanvasToolContext
+  rectangle: RectangleCanvasToolContext
+  text: TextCanvasToolContext
+  sticky: StickyCanvasToolContext
+}
+
+export interface CanvasToolController {
   onPointerDown?: (event: PointerEvent) => void
   onPointerMove?: (event: PointerEvent) => void
   onPointerUp?: (event: PointerEvent) => void
   onPointerCancel?: (event: PointerEvent) => void
-  onPaneClick?: (event: React.MouseEvent) => void
+  onNodeClick?: (event: ReactMouseEvent, node: Node) => void
+  onPaneClick?: (event: ReactMouseEvent) => void
   onMoveStart?: (event: MouseEvent | TouchEvent | null) => void
   onMoveEnd?: () => void
 }
 
-export interface CanvasToolModule {
-  id: CanvasToolId
+export interface CanvasToolModule<TId extends CanvasToolId = CanvasToolId> {
+  id: TId
   label: string
   group: 'selection' | 'creation'
-  icon: React.ReactNode
+  icon: ReactNode
   cursor?: string
   oneShot: boolean
   showsStyleControls: boolean
-  create: (runtime: CanvasToolRuntime) => CanvasToolController
+  create: (context: CanvasToolContextById[TId]) => CanvasToolController
 }
+
+export type AnyCanvasToolModule = {
+  [TId in CanvasToolId]: CanvasToolModule<TId>
+}[CanvasToolId]

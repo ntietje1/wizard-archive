@@ -7,7 +7,7 @@ interface CanvasInteractionState {
   rectDeselectedIds: Set<string>
   localDrawing: DrawingState | null
   lassoPath: Array<Point2D>
-  selectionRect: Bounds | null
+  selectionDragRect: Bounds | null
 }
 
 interface CanvasInteractionActions {
@@ -15,7 +15,7 @@ interface CanvasInteractionActions {
   setRectDeselectedIds: (ids: Set<string>) => void
   setLocalDrawing: (drawing: DrawingState | null) => void
   setLassoPath: (path: Array<Point2D>) => void
-  setSelectionRect: (rect: Bounds | null) => void
+  setSelectionDragRect: (rect: Bounds | null) => void
   reset: () => void
 }
 
@@ -25,7 +25,7 @@ function createInitialCanvasInteractionState(): CanvasInteractionState {
     rectDeselectedIds: new Set(),
     localDrawing: null,
     lassoPath: [],
-    selectionRect: null,
+    selectionDragRect: null,
   }
 }
 
@@ -40,7 +40,7 @@ export const useCanvasInteractionStore = create<CanvasInteractionState & CanvasI
     setRectDeselectedIds: (ids) => set({ rectDeselectedIds: ids }),
     setLocalDrawing: (drawing) => set({ localDrawing: drawing }),
     setLassoPath: (path) => set({ lassoPath: path }),
-    setSelectionRect: (rect) => set({ selectionRect: rect }),
+    setSelectionDragRect: (rect) => set({ selectionDragRect: rect }),
     reset: () => set(createInitialCanvasInteractionState()),
   }),
 )

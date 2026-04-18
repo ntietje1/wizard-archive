@@ -9,7 +9,7 @@ import type {
 import { logger } from '~/shared/utils/logger'
 
 // getMountedView checks editor._tiptapEditor?.view and its internal docView so we only touch a fully mounted EditorView; this relies on TipTap 3.18.0 / ProseMirror 1.38.1 internals.
-export function getMountedView(editor: CustomBlockNoteEditor) {
+function getMountedView(editor: CustomBlockNoteEditor) {
   const view = editor._tiptapEditor?.view
   const docView = (view as unknown as { docView?: object | null })?.docView
   if (!view?.dom?.isConnected || !docView) {

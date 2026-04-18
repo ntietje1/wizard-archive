@@ -21,6 +21,21 @@ function resolveSvgDimension(value: number | undefined, fallback: number): numbe
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback
 }
 
+function resolveViewBox(bounds: Bounds, fallbackWidth: number, fallbackHeight: number) {
+  const width = resolveSvgDimension(bounds.width, fallbackWidth)
+  const height = resolveSvgDimension(bounds.height, fallbackHeight)
+  if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) {
+    return null
+  }
+
+  return {
+    x: Number.isFinite(bounds.x) ? bounds.x : 0,
+    y: Number.isFinite(bounds.y) ? bounds.y : 0,
+    width,
+    height,
+  }
+}
+
 export function StrokePreview({
   data,
   width,
@@ -39,11 +54,13 @@ export function StrokePreview({
   const normalizedOpacity = opacityOverride ?? (data.opacity ?? 100) / 100
   const svgWidth = resolveSvgDimension(width, bounds.width)
   const svgHeight = resolveSvgDimension(height, bounds.height)
+  const viewBox = resolveViewBox(bounds, svgWidth, svgHeight)
   if (
     !Number.isFinite(svgWidth) ||
     svgWidth <= 0 ||
     !Number.isFinite(svgHeight) ||
-    svgHeight <= 0
+    svgHeight <= 0 ||
+    !viewBox
   ) {
     return null
   }
@@ -52,7 +69,7 @@ export function StrokePreview({
     <svg
       width={svgWidth}
       height={svgHeight}
-      viewBox={`${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`}
+      viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
       preserveAspectRatio="none"
       style={{ overflow: 'visible' }}
     >
@@ -68,21 +85,22 @@ export function StrokeNode({
   dragging,
   width,
   height,
-}: NodeProps<Node<StrokeNodeData>>) {
+}: NodeProps<StrokeNodeType>) {
   const { points, size, bounds } = data
   const isErasing = useCanvasInteractionStore((s) => s.erasingStrokeIds.has(id))
   const isRectDeselected = useCanvasInteractionStore((s) => s.rectDeselectedIds.has(id))
 
   const svgWidth = width ?? bounds.width
   const svgHeight = height ?? bounds.height
+  const viewBox = resolveViewBox(bounds, svgWidth, svgHeight)
 
   const highlightD =
     selected && !isRectDeselected ? pointsToPathD(points, size * HIGHLIGHT_SCALE) : null
-  const highlightPath = highlightD ? (
+  const highlightPath = highlightD && viewBox ? (
     <svg
       width={svgWidth}
       height={svgHeight}
-      viewBox={`${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`}
+      viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
       preserveAspectRatio="none"
       style={{
         overflow: 'visible',

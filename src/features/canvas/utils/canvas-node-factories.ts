@@ -1,99 +1,60 @@
-import {
-  STICKY_DEFAULT_COLOR,
-  STICKY_DEFAULT_HEIGHT,
-  STICKY_DEFAULT_OPACITY,
-  STICKY_DEFAULT_WIDTH,
-  TEXT_NODE_DEFAULT_HEIGHT,
-  TEXT_NODE_DEFAULT_WIDTH,
-} from '../components/nodes/sticky-node-constants'
+import { createCanvasNode, getCanvasNodeDefinition } from '../components/nodes/canvas-node-registry'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Node, XYPosition } from '@xyflow/react'
 
-const EMBED_SIDEBAR_WIDTH = 320
-const EMBED_SIDEBAR_HEIGHT = 240
-const EMBED_FILE_WIDTH = 200
-const EMBED_FILE_HEIGHT = 52
-
-export function createTextNode(position: XYPosition): Node {
-  const id = crypto.randomUUID()
-
-  return {
-    id,
-    type: 'text',
-    position: {
-      x: position.x - TEXT_NODE_DEFAULT_WIDTH / 2,
-      y: position.y - TEXT_NODE_DEFAULT_HEIGHT / 2,
-    },
-    width: TEXT_NODE_DEFAULT_WIDTH,
-    height: TEXT_NODE_DEFAULT_HEIGHT,
-    selected: true,
-    draggable: true,
-    data: {
-      label: 'New text',
-    },
-  }
+export interface CanvasPlacementResult {
+  node: Node
+  startEditing: boolean
 }
 
-export function createStickyNode(position: XYPosition): Node {
-  const id = crypto.randomUUID()
+const EMBED_SIDEBAR_SIZE = { width: 320, height: 240 } as const
+const EMBED_FILE_SIZE = { width: 200, height: 52 } as const
 
-  return {
-    id,
-    type: 'sticky',
-    position: {
-      x: position.x - STICKY_DEFAULT_WIDTH / 2,
-      y: position.y - STICKY_DEFAULT_HEIGHT / 2,
-    },
-    width: STICKY_DEFAULT_WIDTH,
-    height: STICKY_DEFAULT_HEIGHT,
-    selected: true,
-    draggable: true,
-    data: {
-      label: '',
-      color: STICKY_DEFAULT_COLOR,
-      opacity: STICKY_DEFAULT_OPACITY,
-    },
-  }
+export function createTextNode(position: XYPosition): CanvasPlacementResult {
+  return createPlacementResult('text', position)
+}
+
+export function createStickyNode(position: XYPosition): CanvasPlacementResult {
+  return createPlacementResult('sticky', position)
 }
 
 export function createRectangleNode(
-  id: string,
   rect: { x: number; y: number; width: number; height: number },
   style: { color: string; opacity: number },
 ): Node {
-  return {
-    id,
-    type: 'rectangle',
+  return createCanvasNode('rectangle', {
     position: { x: rect.x, y: rect.y },
-    width: rect.width,
-    height: rect.height,
-    selected: true,
-    draggable: true,
+    size: { width: rect.width, height: rect.height },
     data: style,
-  }
+  })
 }
 
 export function createEmbedSidebarItemNode(
   sidebarItemId: Id<'sidebarItems'>,
   position: XYPosition,
 ): Node {
-  return {
-    id: crypto.randomUUID(),
-    type: 'embed',
+  return createCanvasNode('embed', {
     position,
-    width: EMBED_SIDEBAR_WIDTH,
-    height: EMBED_SIDEBAR_HEIGHT,
+    size: EMBED_SIDEBAR_SIZE,
     data: { sidebarItemId },
-  }
+  })
 }
 
 export function createEmbedFileNode(sidebarItemId: Id<'sidebarItems'>, position: XYPosition): Node {
-  return {
-    id: crypto.randomUUID(),
-    type: 'embed',
+  return createCanvasNode('embed', {
     position,
-    width: EMBED_FILE_WIDTH,
-    height: EMBED_FILE_HEIGHT,
+    size: EMBED_FILE_SIZE,
     data: { sidebarItemId },
+  })
+}
+
+function createPlacementResult(
+  type: 'text' | 'sticky',
+  position: XYPosition,
+): CanvasPlacementResult {
+  const definition = getCanvasNodeDefinition(type)
+  return {
+    node: createCanvasNode(type, { position }),
+    startEditing: definition.placement?.startEditingOnCreate ?? false,
   }
 }

@@ -11,7 +11,7 @@ import {
 } from './tool-module-utils'
 import type { CanvasToolModule } from './canvas-tool-types'
 
-export const eraseToolModule: CanvasToolModule = {
+export const eraseToolModule: CanvasToolModule<'erase'> = {
   id: 'erase',
   label: 'Eraser',
   group: 'creation',
@@ -30,7 +30,7 @@ export const eraseToolModule: CanvasToolModule = {
     const testIntersections = () => {
       if (trail.length < 2) return
 
-      const strokeNodes = runtime.document.getNodes().filter(isStrokeNode)
+      const strokeNodes = runtime.getNodes().filter(isStrokeNode)
       let changed = false
       for (const node of strokeNodes) {
         if (marked.has(node.id)) continue
@@ -50,7 +50,7 @@ export const eraseToolModule: CanvasToolModule = {
       }
 
       if (changed) {
-        runtime.interaction.setErasingStrokeIds(new Set(marked))
+        runtime.setErasingStrokeIds(new Set(marked))
       }
     }
 
@@ -58,7 +58,7 @@ export const eraseToolModule: CanvasToolModule = {
       erasing = false
       marked = new Set()
       trail = []
-      runtime.interaction.setErasingStrokeIds(new Set())
+      runtime.setErasingStrokeIds(new Set())
       if (rafId) {
         cancelAnimationFrame(rafId)
         rafId = 0
@@ -78,7 +78,7 @@ export const eraseToolModule: CanvasToolModule = {
         marked = new Set()
         const pos = screenEventToFlowPosition(runtime, event)
         trail = [pos]
-        runtime.interaction.setErasingStrokeIds(new Set())
+        runtime.setErasingStrokeIds(new Set())
       },
       onPointerMove: (event) => {
         if (!erasing || (event.buttons & 1) !== 1) return
@@ -100,7 +100,7 @@ export const eraseToolModule: CanvasToolModule = {
         }
         testIntersections()
         if (marked.size > 0) {
-          runtime.document.deleteNodes(Array.from(marked))
+          runtime.deleteNodes(Array.from(marked))
         }
         reset()
       },

@@ -1,7 +1,7 @@
 import { Hand } from 'lucide-react'
 import type { CanvasToolModule } from './canvas-tool-types'
 
-export const handToolModule: CanvasToolModule = {
+export const handToolModule: CanvasToolModule<'hand'> = {
   id: 'hand',
   label: 'Panning',
   group: 'selection',

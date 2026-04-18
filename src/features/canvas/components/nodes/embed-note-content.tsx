@@ -12,13 +12,13 @@ export function EmbedNoteContent({
   noteId,
   content,
   editable,
-  selected,
+  isExclusivelySelected,
   lifecycle,
 }: {
   noteId: Id<'sidebarItems'>
   content: Array<CustomBlock>
   editable: boolean
-  selected: boolean
+  isExclusivelySelected: boolean
   lifecycle: RichEmbedLifecycleController
 }) {
   const viewportRef = useRef<HTMLDivElement>(null)
@@ -64,7 +64,7 @@ export function EmbedNoteContent({
   }, [doc, editable, editor])
 
   return (
-    <div className={cn('h-full', editable && 'nodrag nopan', selected && 'nowheel')}>
+    <div className={cn('h-full', editable && 'nodrag nopan', isExclusivelySelected && 'nowheel')}>
       <ScrollArea viewportRef={viewportRef} className="h-full">
         <NoteContent
           noteId={noteId}

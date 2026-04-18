@@ -1,8 +1,9 @@
-import { Handle, Position } from '@xyflow/react'
+import { Handle, Position, useStore } from '@xyflow/react'
 import { AlertTriangle, ExternalLinkIcon } from 'lucide-react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { useRichEmbedActivation } from '../../hooks/useRichEmbedLifecycle'
 import type { RichEmbedLifecycleController } from '../../hooks/useRichEmbedLifecycle'
+import { isExclusivelySelectedNode } from '../../utils/canvas-selection-utils'
 import { ResizableNodeWrapper } from './resizable-node-wrapper'
 import { EmbedNoteContent } from './embed-note-content'
 import { ItemPreviewContent } from '~/features/editor/components/item-preview-content'
@@ -36,10 +37,16 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps<Node<Embed
 
   const { editSession, canEdit } = useCanvasRuntimeContext()
   const { editingEmbedId, setEditingEmbedId } = editSession
-  const isEditing = editingEmbedId === id && !!selected
+  const isExclusivelySelected = useStore((state) =>
+    isExclusivelySelectedNode(
+      state.nodes.filter((node) => node.selected).map((node) => node.id),
+      selected ? id : null,
+    ),
+  )
+  const isEditing = editingEmbedId === id && isExclusivelySelected
 
   const { lifecycle, handleDoubleClick } = useRichEmbedActivation({
-    canEdit,
+    canEdit: canEdit && isExclusivelySelected,
     embedId: id,
     setEditingEmbedId,
   })
@@ -101,7 +108,7 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps<Node<Embed
             <EmbedRichContent
               contentItem={contentItem}
               isEditing={isEditing}
-              selected={!!selected}
+              isExclusivelySelected={isExclusivelySelected}
               lifecycle={lifecycle}
             />
           </div>
@@ -116,12 +123,12 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps<Node<Embed
 function EmbedRichContent({
   contentItem,
   isEditing,
-  selected,
+  isExclusivelySelected,
   lifecycle,
 }: {
   contentItem: AnySidebarItemWithContent | undefined
   isEditing: boolean
-  selected: boolean
+  isExclusivelySelected: boolean
   lifecycle: RichEmbedLifecycleController
 }): React.ReactElement | null {
   if (!contentItem) {
@@ -138,7 +145,7 @@ function EmbedRichContent({
         noteId={contentItem._id}
         content={contentItem.content}
         editable={isEditing}
-        selected={selected}
+        isExclusivelySelected={isExclusivelySelected}
         lifecycle={lifecycle}
       />
     )
@@ -147,7 +154,12 @@ function EmbedRichContent({
   const hasScrollableContent = contentItem.type === SIDEBAR_ITEM_TYPES.folders
 
   return (
-    <div className={cn('h-full overflow-hidden', hasScrollableContent && selected && 'nowheel')}>
+    <div
+      className={cn(
+        'h-full overflow-hidden',
+        hasScrollableContent && isExclusivelySelected && 'nowheel',
+      )}
+    >
       <ItemPreviewContent item={contentItem} />
     </div>
   )

@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useReactFlow } from '@xyflow/react'
-import { useCanvasDocumentSync } from './useCanvasDocumentSync'
+import { useCanvasDocumentProjection } from './useCanvasDocumentProjection'
+import { useCanvasDocumentWriter } from './useCanvasDocumentWriter'
 import { useCanvasDropTarget } from './useCanvasDropTarget'
 import { useCanvasHistory } from './useCanvasHistory'
 import { useCanvasInteractionStore } from './useCanvasInteractionStore'
 import { useCanvasKeyboardShortcuts } from './useCanvasKeyboardShortcuts'
+import { useCanvasRemoteDragAnimation } from './useCanvasRemoteDragAnimation'
+import { useCanvasSelectionActions } from './useCanvasSelectionActions'
 import { useCanvasSelectionRect } from './useCanvasSelectionRect'
 import { useCanvasSelectionSync } from './useCanvasSelectionSync'
 import { useCanvasSessionState } from './useCanvasSessionState'
@@ -12,14 +15,13 @@ import { useCanvasToolRuntime } from './useCanvasToolRuntime'
 import { useCanvasWheel } from './useCanvasWheel'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import { useCanvasPreview } from '~/features/previews/hooks/use-canvas-preview'
+import { logger } from '~/shared/utils/logger'
 import type { CanvasFlowShellProps } from '../components/canvas-flow-shell'
 import type { CanvasRuntimeContextValue } from './canvas-runtime-context'
 import type { Id } from 'convex/_generated/dataModel'
-import type { Edge, Node, OnNodeDrag } from '@xyflow/react'
+import type { Edge, Node, OnConnect, OnEdgesDelete, OnNodeDrag, OnNodesDelete } from '@xyflow/react'
 import type * as Y from 'yjs'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
-
-const NOOP = () => {}
 
 interface UseCanvasFlowControllerOptions {
   nodesMap: Y.Map<Node>
@@ -48,14 +50,24 @@ export function useCanvasFlowController({
   const reactFlowInstance = useReactFlow()
   const session = useCanvasSessionState({ provider, user })
   const lassoPath = useCanvasInteractionStore((state) => state.lassoPath)
-  const selectionRect = useCanvasInteractionStore((state) => state.selectionRect)
+  const selectionDragRect = useCanvasInteractionStore((state) => state.selectionDragRect)
   const activeToolId = useCanvasToolStore((state) => state.activeTool)
 
-  const { documentActions, reactFlowHandlers } = useCanvasDocumentSync({
+  const documentWriter = useCanvasDocumentWriter({ nodesMap, edgesMap })
+  const selectionActions = useCanvasSelectionActions()
+  const localDraggingIdsRef = useRef(new Set<string>())
+  const selectionSnapshotRef = useRef<Array<string>>([])
+  const remoteDragAnimation = useCanvasRemoteDragAnimation({
+    localDraggingIdsRef,
+    remoteDragPositions: session.remoteDragPositions,
+  })
+
+  useCanvasDocumentProjection({
     nodesMap,
     edgesMap,
-    remoteDragPositions: session.remoteDragPositions,
+    localDraggingIdsRef,
     remoteResizeDimensions: session.remoteResizeDimensions,
+    remoteDragAnimation,
   })
 
   const history = useCanvasHistory({ nodesMap, edgesMap })
@@ -74,9 +86,10 @@ export function useCanvasFlowController({
   })
 
   const { activeToolController, activeToolModule } = useCanvasToolRuntime({
-    canvasId,
-    canEdit,
-    documentActions,
+    documentWriter,
+    documentReader: selectionActions,
+    selectionActions,
+    getSelectionSnapshot: () => selectionSnapshotRef.current,
     awareness: session.awareness,
     editSession: session.editSession,
   })
@@ -94,6 +107,11 @@ export function useCanvasFlowController({
     if (!wrapperElement) return
 
     const onPointerDown = (event: PointerEvent) => {
+      selectionSnapshotRef.current = reactFlowInstance
+        .getNodes()
+        .filter((node) => node.selected)
+        .map((node) => node.id)
+
       const controller = toolControllerRef.current
       if (!controller.onPointerDown || event.button !== 0) return
       if (
@@ -127,7 +145,7 @@ export function useCanvasFlowController({
       wrapperElement.removeEventListener('pointerup', onPointerUp)
       wrapperElement.removeEventListener('pointercancel', onPointerCancel)
     }
-  }, [wrapperElement])
+  }, [reactFlowInstance, wrapperElement])
 
   useCanvasWheel(wrapperRef)
   const canvasContainerRef = useRef<HTMLElement | null>(null)
@@ -165,14 +183,20 @@ export function useCanvasFlowController({
     canvasId,
     canEdit,
     isSelectMode,
-    createNode: documentActions.createNode,
+    createNode: documentWriter.createNode,
     screenToFlowPosition: reactFlowInstance.screenToFlowPosition,
   })
+
+  const handleNodeDragStart: OnNodeDrag = useCallback((_event, _node, nodes) => {
+    for (const draggedNode of nodes) {
+      localDraggingIdsRef.current.add(draggedNode.id)
+    }
+  }, [])
 
   const handleNodeDrag: OnNodeDrag = useCallback(
     (event, _node, nodes) => {
       session.awareness.setLocalDragging(
-        Object.fromEntries(nodes.map((node) => [node.id, node.position])),
+        Object.fromEntries(nodes.map((draggedNode) => [draggedNode.id, draggedNode.position])),
       )
       const position = reactFlowInstance.screenToFlowPosition({
         x: event.clientX,
@@ -184,11 +208,50 @@ export function useCanvasFlowController({
   )
 
   const handleNodeDragStop: OnNodeDrag = useCallback(
-    (event, node, nodes) => {
-      reactFlowHandlers.onNodeDragStop(event, node, nodes)
+    (_event, _node, nodes) => {
+      for (const draggedNode of nodes) {
+        localDraggingIdsRef.current.delete(draggedNode.id)
+      }
+      remoteDragAnimation.clearNodeSprings(nodes.map((draggedNode) => draggedNode.id))
+
+      const nodesDoc = nodesMap.doc
+      if (!nodesDoc) {
+        logger.warn(
+          'useCanvasFlowController: missing Yjs doc during node drag stop; positions were not persisted',
+        )
+        session.awareness.setLocalDragging(null)
+        return
+      }
+
+      nodesDoc.transact(() => {
+        for (const draggedNode of nodes) {
+          documentWriter.setNodePosition(draggedNode.id, draggedNode.position)
+        }
+      })
       session.awareness.setLocalDragging(null)
     },
-    [reactFlowHandlers, session.awareness],
+    [documentWriter, nodesMap.doc, remoteDragAnimation, session.awareness],
+  )
+
+  const handleNodesDelete: OnNodesDelete = useCallback(
+    (deleted) => {
+      documentWriter.deleteNodes(deleted.map((node) => node.id))
+    },
+    [documentWriter],
+  )
+
+  const handleEdgesDelete: OnEdgesDelete = useCallback(
+    (deleted) => {
+      documentWriter.deleteEdges(deleted.map((edge) => edge.id))
+    },
+    [documentWriter],
+  )
+
+  const handleConnect: OnConnect = useCallback(
+    (connection) => {
+      documentWriter.createEdge(connection)
+    },
+    [documentWriter],
   )
 
   const handleMouseMove = useCallback(
@@ -208,7 +271,7 @@ export function useCanvasFlowController({
 
   const nodeActions = useMemo(
     () => ({
-      updateNodeData: documentActions.updateNodeData,
+      updateNodeData: documentWriter.updateNodeData,
       onResize: (
         nodeId: string,
         width: number,
@@ -226,10 +289,10 @@ export function useCanvasFlowController({
         position: { x: number; y: number },
       ) => {
         session.awareness.setLocalResizing(null)
-        documentActions.resizeNode(nodeId, width, height, position)
+        documentWriter.resizeNode(nodeId, width, height, position)
       },
     }),
-    [documentActions, session.awareness],
+    [documentWriter, session.awareness],
   )
 
   const runtime: CanvasRuntimeContextValue = useMemo(
@@ -249,17 +312,18 @@ export function useCanvasFlowController({
     wrapperRef: wrapperCallbackRef,
     remoteUsers: session.remoteUsers,
     lassoPath,
-    selectionRect,
+    selectionDragRect,
     activeTool: activeToolId,
-    onNodeDragStart: isSelectMode ? reactFlowHandlers.onNodeDragStart : undefined,
+    onNodeDragStart: isSelectMode ? handleNodeDragStart : undefined,
     onNodeDrag: isSelectMode ? handleNodeDrag : undefined,
     onNodeDragStop: isSelectMode ? handleNodeDragStop : undefined,
-    onNodesDelete: isSelectMode ? reactFlowHandlers.onNodesDelete : undefined,
-    onEdgesDelete: isSelectMode ? reactFlowHandlers.onEdgesDelete : undefined,
-    onConnect: isSelectMode ? reactFlowHandlers.onConnect : undefined,
-    onMoveStart: activeToolController.onMoveStart ?? NOOP,
-    onMoveEnd: activeToolController.onMoveEnd ?? NOOP,
-    onPaneClick: activeToolController.onPaneClick ?? NOOP,
+    onNodesDelete: isSelectMode ? handleNodesDelete : undefined,
+    onEdgesDelete: isSelectMode ? handleEdgesDelete : undefined,
+    onConnect: isSelectMode ? handleConnect : undefined,
+    onMoveStart: activeToolController.onMoveStart,
+    onMoveEnd: activeToolController.onMoveEnd,
+    onNodeClick: activeToolController.onNodeClick,
+    onPaneClick: activeToolController.onPaneClick,
     onMouseMove: handleMouseMove,
     onMouseLeave: handleMouseLeave,
     dropOverlayRef,

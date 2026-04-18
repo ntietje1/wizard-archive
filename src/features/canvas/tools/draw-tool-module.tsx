@@ -8,7 +8,7 @@ import {
 import type { CanvasToolModule } from './canvas-tool-types'
 import type { Node } from '@xyflow/react'
 
-export const drawToolModule: CanvasToolModule = {
+export const drawToolModule: CanvasToolModule<'draw'> = {
   id: 'draw',
   label: 'Draw',
   group: 'creation',
@@ -23,8 +23,7 @@ export const drawToolModule: CanvasToolModule = {
 
     const clearDrawing = () => {
       points = []
-      runtime.interaction.setLocalDrawing(null)
-      runtime.awareness.broadcastLocalDrawing(null)
+      runtime.setLocalDrawing(null)
       releasePointerCapture(captureTarget, pointerId)
       captureTarget = null
       pointerId = null
@@ -48,8 +47,7 @@ export const drawToolModule: CanvasToolModule = {
           opacity: strokeOpacity,
         }
 
-        runtime.interaction.setLocalDrawing(drawing)
-        runtime.awareness.broadcastLocalDrawing(drawing)
+        runtime.setLocalDrawing(drawing)
       },
       onPointerMove: (event) => {
         if ((event.buttons & 1) !== 1 || points.length === 0) return
@@ -60,14 +58,13 @@ export const drawToolModule: CanvasToolModule = {
         points.push(point)
 
         const drawing = {
-          points,
+          points: [...points],
           color: strokeColor,
           size: strokeSize,
           opacity: strokeOpacity,
         }
 
-        runtime.interaction.setLocalDrawing(drawing)
-        runtime.awareness.broadcastLocalDrawing(drawing)
+        runtime.setLocalDrawing(drawing)
       },
       onPointerUp: (event) => {
         if (event.pointerId !== pointerId) return
@@ -89,7 +86,7 @@ export const drawToolModule: CanvasToolModule = {
               bounds,
             },
           }
-          runtime.document.createNode(node)
+          runtime.createNode(node)
         }
 
         clearDrawing()
