@@ -1,9 +1,7 @@
 import { TextSelection } from '@tiptap/pm/state'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { Doc } from 'yjs'
-import {
-  useRichEmbedLifecycle,
-} from './useRichEmbedLifecycle'
+import { useRichEmbedLifecycle } from './useRichEmbedLifecycle'
 import type {
   RichEmbedActivationPayload,
   RichEmbedLifecycleController,
@@ -11,7 +9,7 @@ import type {
 import { logger } from '~/shared/utils/logger'
 
 // getMountedView checks editor._tiptapEditor?.view and its internal docView so we only touch a fully mounted EditorView; this relies on TipTap 3.18.0 / ProseMirror 1.38.1 internals.
-function getMountedView(editor: CustomBlockNoteEditor) {
+export function getMountedView(editor: CustomBlockNoteEditor) {
   const view = editor._tiptapEditor?.view
   const docView = (view as unknown as { docView?: object | null })?.docView
   if (!view?.dom?.isConnected || !docView) {

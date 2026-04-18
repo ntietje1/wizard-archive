@@ -1,5 +1,8 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
+import { isStrokeNode, resizeStrokeNode } from '../utils/canvas-stroke-utils'
+import type { CanvasDocumentActions } from '../tools/canvas-tool-types'
+import type { ResizingState } from '../utils/canvas-awareness-types'
 import type {
   Connection,
   Edge,
@@ -9,7 +12,6 @@ import type {
   OnNodeDrag,
   OnNodesDelete,
 } from '@xyflow/react'
-import type { ResizingState } from '../utils/canvas-awareness-types'
 import type * as Y from 'yjs'
 import type { SpringState } from '~/shared/hooks/useSpringPosition'
 import { SPRING_DEFAULTS, stepSpring } from '~/shared/hooks/useSpringPosition'
@@ -20,12 +22,19 @@ function yMapToArray<T>(map: Y.Map<T>): Array<T> {
   return items
 }
 
-export function useCanvasReactFlowSync(
-  nodesMap: Y.Map<Node> | null,
-  edgesMap: Y.Map<Edge> | null,
-  remoteDragPositions: Record<string, { x: number; y: number }>,
-  remoteResizeDimensions: ResizingState = {},
-) {
+interface UseCanvasDocumentSyncOptions {
+  nodesMap: Y.Map<Node>
+  edgesMap: Y.Map<Edge>
+  remoteDragPositions: Record<string, { x: number; y: number }>
+  remoteResizeDimensions: ResizingState
+}
+
+export function useCanvasDocumentSync({
+  nodesMap,
+  edgesMap,
+  remoteDragPositions,
+  remoteResizeDimensions,
+}: UseCanvasDocumentSyncOptions) {
   const reactFlow = useReactFlow()
   const draggingIds = useRef(new Set<string>())
   const suppressNodeObserver = useRef(false)
@@ -40,6 +49,38 @@ export function useCanvasReactFlowSync(
   )
   const springActiveIds = useRef(new Set<string>())
 
+  const withNodeTransaction = useCallback(
+    (fn: () => void) => {
+      suppressNodeObserver.current = true
+      try {
+        if (nodesMap.doc) {
+          nodesMap.doc.transact(fn)
+        } else {
+          fn()
+        }
+      } finally {
+        suppressNodeObserver.current = false
+      }
+    },
+    [nodesMap],
+  )
+
+  const withEdgeTransaction = useCallback(
+    (fn: () => void) => {
+      suppressEdgeObserver.current = true
+      try {
+        if (edgesMap.doc) {
+          edgesMap.doc.transact(fn)
+        } else {
+          fn()
+        }
+      } finally {
+        suppressEdgeObserver.current = false
+      }
+    },
+    [edgesMap],
+  )
+
   const clearNodeSprings = useCallback((nodeIds: Array<string>) => {
     for (const nodeId of nodeIds) {
       springStates.current.delete(nodeId)
@@ -53,8 +94,6 @@ export function useCanvasReactFlowSync(
   }, [])
 
   useEffect(() => {
-    if (!nodesMap) return
-
     reactFlow.setNodes(yMapToArray(nodesMap))
 
     const handler = () => {
@@ -96,8 +135,6 @@ export function useCanvasReactFlowSync(
   }, [nodesMap, reactFlow])
 
   useEffect(() => {
-    if (!edgesMap) return
-
     reactFlow.setEdges(yMapToArray(edgesMap))
 
     const handler = () => {
@@ -122,13 +159,6 @@ export function useCanvasReactFlowSync(
   const startSpringLoopRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
-    const startLoop = () => {
-      if (springRunningRef.current) return
-      springRunningRef.current = true
-      prevTimeRef.current = 0
-      springRafIdRef.current = requestAnimationFrame(animate)
-    }
-
     const animate = (time: number) => {
       const dt = Math.min((time - (prevTimeRef.current || time)) / 1000, SPRING_DEFAULTS.maxDt)
       prevTimeRef.current = time
@@ -197,6 +227,13 @@ export function useCanvasReactFlowSync(
       springRafIdRef.current = requestAnimationFrame(animate)
     }
 
+    const startLoop = () => {
+      if (springRunningRef.current) return
+      springRunningRef.current = true
+      prevTimeRef.current = 0
+      springRafIdRef.current = requestAnimationFrame(animate)
+    }
+
     startSpringLoopRef.current = startLoop
     return () => {
       springRunningRef.current = false
@@ -227,6 +264,127 @@ export function useCanvasReactFlowSync(
     )
   }, [reactFlow, remoteResizeDimensions])
 
+  const createNode = useCallback(
+    (node: Node) => {
+      withNodeTransaction(() => {
+        nodesMap.set(node.id, node)
+      })
+    },
+    [nodesMap, withNodeTransaction],
+  )
+
+  const updateNode = useCallback(
+    (nodeId: string, updater: (node: Node) => Node) => {
+      withNodeTransaction(() => {
+        const existing = nodesMap.get(nodeId)
+        if (!existing) return
+        nodesMap.set(nodeId, updater(existing))
+      })
+    },
+    [nodesMap, withNodeTransaction],
+  )
+
+  const updateNodeData = useCallback(
+    (nodeId: string, data: Record<string, unknown>) => {
+      updateNode(nodeId, (existing) => ({
+        ...existing,
+        data: { ...existing.data, ...data },
+      }))
+    },
+    [updateNode],
+  )
+
+  const resizeNode = useCallback(
+    (nodeId: string, width: number, height: number, position: { x: number; y: number }) => {
+      updateNode(nodeId, (existing) => {
+        if (isStrokeNode(existing)) {
+          return resizeStrokeNode(existing, { width, height, position })
+        }
+
+        return { ...existing, width, height, position }
+      })
+    },
+    [updateNode],
+  )
+
+  const deleteNodes = useCallback(
+    (nodeIds: Array<string>) => {
+      if (nodeIds.length === 0) return
+      withNodeTransaction(() => {
+        for (const nodeId of nodeIds) {
+          nodesMap.delete(nodeId)
+        }
+      })
+    },
+    [nodesMap, withNodeTransaction],
+  )
+
+  const deleteEdges = useCallback(
+    (edgeIds: Array<string>) => {
+      if (edgeIds.length === 0) return
+      withEdgeTransaction(() => {
+        for (const edgeId of edgeIds) {
+          edgesMap.delete(edgeId)
+        }
+      })
+    },
+    [edgesMap, withEdgeTransaction],
+  )
+
+  const setNodePosition = useCallback(
+    (nodeId: string, position: { x: number; y: number }) => {
+      updateNode(nodeId, (existing) => ({ ...existing, position }))
+    },
+    [updateNode],
+  )
+
+  const setNodeSelection = useCallback(
+    (nodeIds: Array<string>) => {
+      const nodeIdSet = new Set(nodeIds)
+      reactFlow.setNodes((nodes) =>
+        nodes.map((node) => {
+          const selected = nodeIdSet.has(node.id)
+          const draggable = node.draggable ?? true
+          if (node.selected === selected && draggable === selected) {
+            return node
+          }
+          return { ...node, selected, draggable: selected }
+        }),
+      )
+      reactFlow.setEdges((edges) =>
+        edges.map((edge) => {
+          const selected = nodeIdSet.has(edge.source) && nodeIdSet.has(edge.target)
+          return edge.selected === selected ? edge : { ...edge, selected }
+        }),
+      )
+    },
+    [reactFlow],
+  )
+
+  const clearSelection = useCallback(() => {
+    setNodeSelection([])
+  }, [setNodeSelection])
+
+  const createEdge = useCallback(
+    (connection: Connection) => {
+      const id = `e-${connection.source}-${connection.target}-${crypto.randomUUID()}`
+      const edge: Edge = { id, ...connection }
+
+      try {
+        reactFlow.addEdges(edge)
+        withEdgeTransaction(() => {
+          edgesMap.set(id, edge)
+        })
+      } catch (error) {
+        withEdgeTransaction(() => {
+          edgesMap.delete(id)
+        })
+        throw error
+      }
+    },
+    [edgesMap, reactFlow, withEdgeTransaction],
+  )
+
   const onNodeDragStart: OnNodeDrag = useCallback((_event, _node, nodes) => {
     for (const node of nodes) {
       draggingIds.current.add(node.id)
@@ -239,97 +397,82 @@ export function useCanvasReactFlowSync(
         draggingIds.current.delete(node.id)
       }
       clearNodeSprings(nodes.map((node) => node.id))
-      if (!nodesMap?.doc) return
-
-      suppressNodeObserver.current = true
-      try {
-        nodesMap.doc.transact(() => {
-          for (const node of nodes) {
-            const existing = nodesMap.get(node.id)
-            if (existing) {
-              nodesMap.set(node.id, { ...existing, position: node.position })
-            }
+      withNodeTransaction(() => {
+        for (const node of nodes) {
+          const existing = nodesMap.get(node.id)
+          if (existing) {
+            nodesMap.set(node.id, { ...existing, position: node.position })
           }
-        })
-      } finally {
-        suppressNodeObserver.current = false
-      }
+        }
+      })
     },
-    [clearNodeSprings, nodesMap],
+    [clearNodeSprings, nodesMap, withNodeTransaction],
   )
 
   const onNodesDelete: OnNodesDelete = useCallback(
     (deleted) => {
-      if (!nodesMap?.doc) return
-
-      suppressNodeObserver.current = true
-      try {
-        nodesMap.doc.transact(() => {
-          for (const node of deleted) {
-            nodesMap.delete(node.id)
-          }
-        })
-      } finally {
-        suppressNodeObserver.current = false
-      }
+      deleteNodes(deleted.map((node) => node.id))
     },
-    [nodesMap],
+    [deleteNodes],
   )
 
   const onEdgesDelete: OnEdgesDelete = useCallback(
     (deleted) => {
-      if (!edgesMap?.doc) return
-
-      suppressEdgeObserver.current = true
-      try {
-        edgesMap.doc.transact(() => {
-          for (const edge of deleted) {
-            edgesMap.delete(edge.id)
-          }
-        })
-      } finally {
-        suppressEdgeObserver.current = false
-      }
+      deleteEdges(deleted.map((edge) => edge.id))
     },
-    [edgesMap],
+    [deleteEdges],
   )
 
   const onConnect: OnConnect = useCallback(
-    (connection: Connection) => {
-      if (!edgesMap?.doc) return
-
-      const id = `e-${connection.source}-${connection.target}-${crypto.randomUUID()}`
-      const edge: Edge = { id, ...connection }
-
-      suppressEdgeObserver.current = true
-      try {
-        edgesMap.doc.transact(() => {
-          edgesMap.set(id, edge)
-        })
-        try {
-          reactFlow.addEdges(edge)
-        } catch (error) {
-          try {
-            edgesMap.doc.transact(() => {
-              edgesMap.delete(id)
-            })
-          } catch (rollbackError) {
-            console.error('Failed to rollback edge creation:', rollbackError)
-          }
-          throw error
-        }
-      } finally {
-        suppressEdgeObserver.current = false
-      }
+    (connection) => {
+      createEdge(connection)
     },
-    [edgesMap, reactFlow],
+    [createEdge],
+  )
+
+  const documentActions = useMemo<CanvasDocumentActions>(
+    () => ({
+      createNode,
+      updateNode,
+      updateNodeData,
+      resizeNode,
+      deleteNodes,
+      createEdge,
+      deleteEdges,
+      setNodePosition,
+      setNodeSelection,
+      clearSelection,
+      getNodes: () => reactFlow.getNodes(),
+      getEdges: () => reactFlow.getEdges(),
+    }),
+    [
+      clearSelection,
+      createEdge,
+      createNode,
+      deleteEdges,
+      deleteNodes,
+      reactFlow,
+      resizeNode,
+      setNodePosition,
+      setNodeSelection,
+      updateNode,
+      updateNodeData,
+    ],
+  )
+
+  const reactFlowHandlers = useMemo(
+    () => ({
+      onNodeDragStart,
+      onNodeDragStop,
+      onNodesDelete,
+      onEdgesDelete,
+      onConnect,
+    }),
+    [onConnect, onEdgesDelete, onNodeDragStart, onNodeDragStop, onNodesDelete],
   )
 
   return {
-    onNodeDragStart,
-    onNodeDragStop,
-    onNodesDelete,
-    onEdgesDelete,
-    onConnect,
+    documentActions,
+    reactFlowHandlers,
   }
 }

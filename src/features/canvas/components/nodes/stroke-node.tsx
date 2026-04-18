@@ -17,6 +17,10 @@ export type StrokeNodeData = {
 
 export type StrokeNodeType = Node<StrokeNodeData, 'stroke'>
 
+function resolveSvgDimension(value: number | undefined, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback
+}
+
 export function StrokePreview({
   data,
   width,
@@ -24,8 +28,8 @@ export function StrokePreview({
   opacityOverride,
 }: {
   data: StrokeNodeData
-  width: number
-  height: number
+  width?: number
+  height?: number
   opacityOverride?: number
 }) {
   const { points, color, size, bounds } = data
@@ -33,11 +37,21 @@ export function StrokePreview({
   if (!d) return null
 
   const normalizedOpacity = opacityOverride ?? (data.opacity ?? 100) / 100
+  const svgWidth = resolveSvgDimension(width, bounds.width)
+  const svgHeight = resolveSvgDimension(height, bounds.height)
+  if (
+    !Number.isFinite(svgWidth) ||
+    svgWidth <= 0 ||
+    !Number.isFinite(svgHeight) ||
+    svgHeight <= 0
+  ) {
+    return null
+  }
 
   return (
     <svg
-      width={width}
-      height={height}
+      width={svgWidth}
+      height={svgHeight}
       viewBox={`${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`}
       preserveAspectRatio="none"
       style={{ overflow: 'visible' }}
@@ -54,7 +68,7 @@ export function StrokeNode({
   dragging,
   width,
   height,
-}: NodeProps<StrokeNodeType>) {
+}: NodeProps<Node<StrokeNodeData>>) {
   const { points, size, bounds } = data
   const isErasing = useCanvasInteractionStore((s) => s.erasingStrokeIds.has(id))
   const isRectDeselected = useCanvasInteractionStore((s) => s.rectDeselectedIds.has(id))

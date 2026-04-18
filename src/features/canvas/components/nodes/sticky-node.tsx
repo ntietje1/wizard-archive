@@ -1,13 +1,12 @@
 import { useRef, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { useCanvasNodeActions } from '../../hooks/useCanvasContext'
-import { useNodeEditing } from '../../hooks/useNodeEditing'
 import { usePendingNodeEdit } from '../../hooks/usePendingNodeEdit'
 import { STICKY_DEFAULT_COLOR } from './sticky-node-constants'
 import { ResizableNodeWrapper } from './resizable-node-wrapper'
 import type { Node, NodeProps } from '@xyflow/react'
+import { useCanvasRuntimeContext } from '../../hooks/canvas-runtime-context'
 
-export type StickyNodeType = Node<{ label: string; color: string; opacity?: number }, 'sticky'>
+export type StickyNodeData = { label?: string; color?: string; opacity?: number }
 
 export function StickyPreview({
   label,
@@ -32,24 +31,29 @@ export function StickyPreview({
   )
 }
 
-export function StickyNode({ id, data, selected, dragging }: NodeProps<StickyNodeType>) {
+export function StickyNode({ id, data, selected, dragging }: NodeProps<Node<StickyNodeData>>) {
   const [editValue, setEditValue] = useState('')
-  const { updateNodeData } = useCanvasNodeActions()
+  const {
+    nodeActions: { updateNodeData },
+  } = useCanvasRuntimeContext()
   const label = data.label || ''
   const color = data.color || STICKY_DEFAULT_COLOR
   const opacity = (data.opacity ?? 100) / 100
 
   const cancelledRef = useRef(false)
-  const {
-    isEditing,
-    startEditing: baseStartEditing,
-    handleBlur,
-  } = useNodeEditing({ id, currentValue: label, updateNodeData })
+  const [isEditing, setIsEditing] = useState(false)
 
   const startEditing = () => {
     cancelledRef.current = false
     setEditValue(label)
-    baseStartEditing()
+    setIsEditing(true)
+  }
+
+  const commitEdit = (value: string) => {
+    setIsEditing(false)
+    if (value !== label) {
+      updateNodeData(id, { label: value })
+    }
   }
 
   usePendingNodeEdit({ id, selected: !!selected, isEditing, startEditing })
@@ -88,18 +92,19 @@ export function StickyNode({ id, data, selected, dragging }: NodeProps<StickyNod
                 cancelledRef.current = false
                 return
               }
-              handleBlur(editValue)
+              commitEdit(editValue)
             }}
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
                 e.preventDefault()
                 e.stopPropagation()
                 cancelledRef.current = true
-                handleBlur(label)
+                setIsEditing(false)
+                setEditValue(label)
               } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault()
                 cancelledRef.current = true
-                handleBlur(editValue)
+                commitEdit(editValue)
               }
             }}
             autoFocus

@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasToolbar } from '../canvas-toolbar'
-import { useCanvasHistoryStore } from '../../stores/canvas-history-store'
+import { CanvasProviders } from '../../hooks/useCanvasContext'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 
 const reactFlowMock = vi.hoisted(() => ({
@@ -15,22 +15,52 @@ vi.mock('@xyflow/react', () => ({
 }))
 
 describe('CanvasToolbar', () => {
+  const history = {
+    canUndo: false,
+    canRedo: true,
+    undo: vi.fn(),
+    redo: vi.fn(),
+  }
+
   beforeEach(() => {
     useCanvasToolStore.getState().reset()
-    useCanvasHistoryStore.getState().reset()
     reactFlowMock.fitView.mockReset()
     reactFlowMock.zoomIn.mockReset()
     reactFlowMock.zoomOut.mockReset()
-    useCanvasHistoryStore.getState().setHistory({
-      canUndo: false,
-      canRedo: true,
-      undo: vi.fn(),
-      redo: vi.fn(),
-    })
+    history.canUndo = false
+    history.canRedo = true
+    history.undo = vi.fn()
+    history.redo = vi.fn()
   })
 
+  function renderToolbar(canEdit = true) {
+    return render(
+      <CanvasProviders
+        runtime={{
+          canEdit,
+          user: { name: 'Tester', color: '#fff' },
+          remoteHighlights: new Map(),
+          history,
+          editSession: {
+            editingEmbedId: null,
+            setEditingEmbedId: vi.fn(),
+            pendingEditNodeId: null,
+            setPendingEditNodeId: vi.fn(),
+          },
+          nodeActions: {
+            updateNodeData: vi.fn(),
+            onResize: vi.fn(),
+            onResizeEnd: vi.fn(),
+          },
+        }}
+      >
+        <CanvasToolbar canEdit={canEdit} />
+      </CanvasProviders>,
+    )
+  }
+
   it('renders the requested main toolbar order', () => {
-    render(<CanvasToolbar canEdit />)
+    renderToolbar()
 
     const toolbar = screen.getByRole('toolbar', { name: 'Canvas main toolbar' })
     const labels = within(toolbar)
@@ -50,7 +80,7 @@ describe('CanvasToolbar', () => {
   })
 
   it('renders top-right controls in the requested order', () => {
-    render(<CanvasToolbar canEdit />)
+    renderToolbar()
 
     const toolbar = screen.getByRole('toolbar', { name: 'Canvas viewport controls' })
     const buttons = within(toolbar).getAllByRole('button')
@@ -67,7 +97,7 @@ describe('CanvasToolbar', () => {
   })
 
   it('shows only viewport controls in read-only mode', () => {
-    render(<CanvasToolbar canEdit={false} />)
+    renderToolbar(false)
 
     expect(screen.queryByRole('toolbar', { name: 'Canvas main toolbar' })).not.toBeInTheDocument()
 

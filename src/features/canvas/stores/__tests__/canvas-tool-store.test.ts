@@ -10,9 +10,10 @@ describe('useCanvasToolStore', () => {
     const persistentTools = ['draw', 'hand', 'erase'] as const
 
     for (const tool of persistentTools) {
-      useCanvasToolStore.getState().setActiveTool(tool)
+      const { setActiveTool, completeActiveToolAction } = useCanvasToolStore.getState()
+      setActiveTool(tool)
       expect(useCanvasToolStore.getState().activeTool).toBe(tool)
-      useCanvasToolStore.getState().completeActiveToolAction()
+      completeActiveToolAction()
       expect(useCanvasToolStore.getState().activeTool).toBe(tool)
     }
   })

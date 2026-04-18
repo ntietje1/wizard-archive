@@ -27,6 +27,24 @@ type NoteContentProps = {
   onEditorChange?: (editor: CustomBlockNoteEditor | null, doc: Doc | null) => void
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object'
+}
+
+function isCustomBlockNoteEditor(editor: unknown): editor is CustomBlockNoteEditor {
+  if (!isRecord(editor)) return false
+
+  const tiptapEditor = editor._tiptapEditor
+
+  return (
+    Array.isArray(editor.document) &&
+    typeof editor.replaceBlocks === 'function' &&
+    isRecord(tiptapEditor) &&
+    typeof tiptapEditor.destroy === 'function' &&
+    'view' in tiptapEditor
+  )
+}
+
 export function NoteContent({
   noteId,
   content,
@@ -81,7 +99,7 @@ function CollaborativeEditorLoader({
 
   if (isLoading || !doc || !provider) {
     return (
-      <StaticEditorInner content={content} onEditorChange={onEditorChange}>
+      <StaticEditorInner noteId={noteId} content={content} onEditorChange={onEditorChange}>
         {children}
       </StaticEditorInner>
     )
@@ -122,23 +140,46 @@ function StaticEditorInner({
   const hasInitializedRef = useRef(false)
 
   useEffect(() => {
-    const nextEditor = BlockNoteEditor.create({
-      schema: editorSchema,
-      initialContent: initialContentRef.current.length > 0 ? initialContentRef.current : undefined,
-    }) as CustomBlockNoteEditor
+    let nextEditor: CustomBlockNoteEditor | null = null
 
-    setEditor(nextEditor)
-    onEditorChangeRef.current?.(nextEditor, null)
+    try {
+      const createdEditor = BlockNoteEditor.create({
+        schema: editorSchema,
+        initialContent:
+          initialContentRef.current.length > 0 ? initialContentRef.current : undefined,
+      })
+
+      if (!isCustomBlockNoteEditor(createdEditor)) {
+        throw new Error('Created editor does not match CustomBlockNoteEditor')
+      }
+
+      nextEditor = createdEditor
+      setEditor(nextEditor)
+      onEditorChangeRef.current?.(nextEditor, null)
+    } catch (error) {
+      console.error('Error creating BlockNoteEditor for static note content', { noteId, error })
+    }
+
+    if (!nextEditor) return
 
     return () => {
       const shouldClearEditor = editorRef.current === nextEditor
-      if (shouldClearEditor) {
-        setEditor(null)
-        onEditorChangeRef.current?.(null, null)
+
+      try {
+        nextEditor._tiptapEditor.destroy()
+      } catch (error) {
+        console.error('Error destroying BlockNoteEditor for static note content', {
+          noteId,
+          error,
+        })
+      } finally {
+        if (shouldClearEditor) {
+          setEditor(null)
+          onEditorChangeRef.current?.(null, null)
+        }
       }
-      nextEditor._tiptapEditor.destroy()
     }
-  }, [])
+  }, [noteId])
 
   useEffect(() => {
     if (!editor) return
@@ -158,7 +199,8 @@ function StaticEditorInner({
       </NoteView>
       <LinkClickHandler editor={editor} sourceNoteId={noteId} />
     </>
-  )}
+  )
+}
 
 function CollaborativeEditorInner({
   noteId,
@@ -181,32 +223,64 @@ function CollaborativeEditorInner({
   const linkResolver = useLinkResolver(noteId)
   const onEditorChangeRef = useRef(onEditorChange)
   onEditorChangeRef.current = onEditorChange
+  const userRef = useRef(user)
+  userRef.current = user
 
   useEffect(() => {
-    const nextEditor = BlockNoteEditor.create({
-      schema: editorSchema,
-      collaboration: {
-        provider,
-        fragment: doc.getXmlFragment('document'),
-        user: { name: user.name, color: user.color },
-        showCursorLabels: 'activity',
-      },
-    }) as CustomBlockNoteEditor
-    patchYUndoPluginDestroy(nextEditor._tiptapEditor.view)
-    patchYSyncAfterTypeChanged(nextEditor._tiptapEditor.view)
+    provider.setUser({ name: user.name, color: user.color })
+  }, [provider, user.color, user.name])
 
-    setEditor(nextEditor)
-    onEditorChangeRef.current?.(nextEditor, doc)
+  useEffect(() => {
+    let nextEditor: CustomBlockNoteEditor | null = null
+
+    try {
+      const createdEditor = BlockNoteEditor.create({
+        schema: editorSchema,
+        collaboration: {
+          provider,
+          fragment: doc.getXmlFragment('document'),
+          user: { name: userRef.current.name, color: userRef.current.color },
+          showCursorLabels: 'activity',
+        },
+      })
+
+      if (!isCustomBlockNoteEditor(createdEditor)) {
+        throw new Error('Created editor does not match CustomBlockNoteEditor')
+      }
+
+      nextEditor = createdEditor
+      patchYUndoPluginDestroy(nextEditor._tiptapEditor.view)
+      patchYSyncAfterTypeChanged(nextEditor._tiptapEditor.view)
+
+      setEditor(nextEditor)
+      onEditorChangeRef.current?.(nextEditor, doc)
+    } catch (error) {
+      console.error('Error creating BlockNoteEditor for collaborative note content', {
+        noteId,
+        error,
+      })
+    }
+
+    if (!nextEditor) return
 
     return () => {
       const shouldClearEditor = editorRef.current === nextEditor
-      if (shouldClearEditor) {
-        setEditor(null)
-        onEditorChangeRef.current?.(null, null)
+
+      try {
+        nextEditor._tiptapEditor.destroy()
+      } catch (error) {
+        console.error('Error destroying BlockNoteEditor for collaborative note content', {
+          noteId,
+          error,
+        })
+      } finally {
+        if (shouldClearEditor) {
+          setEditor(null)
+          onEditorChangeRef.current?.(null, null)
+        }
       }
-      nextEditor._tiptapEditor.destroy()
     }
-  }, [doc, provider, user.color, user.name])
+  }, [doc, noteId, provider])
 
   const forceOpenLinkPopover = useRef<(() => void) | null>(null)
 

@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { useOnSelectionChange } from '@xyflow/react'
-import { useCanvasNodeActions } from '../hooks/useCanvasContext'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
-import { getCanvasConditionalToolbarState } from '../utils/canvas-toolbar-utils'
+import { getCanvasConditionalToolbarState } from '../tools/canvas-tool-modules'
 import type { Node } from '@xyflow/react'
 import { Button } from '~/features/shadcn/components/button'
 import { ColorPickerPopover } from '~/shared/components/color-picker-popover'
 import { BASE_TEXT_COLORS } from '~/shared/utils/color'
+import { useCanvasRuntimeContext } from '../hooks/canvas-runtime-context'
 
 interface CanvasConditionalToolbarProps {
   canEdit: boolean
@@ -26,7 +26,9 @@ const COLOR_NAMES: Record<string, string> = {
 }
 
 export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarProps) {
-  const { updateNodeData } = useCanvasNodeActions()
+  const {
+    nodeActions: { updateNodeData },
+  } = useCanvasRuntimeContext()
   const [selectedNodes, setSelectedNodes] = useState<Array<Node>>([])
 
   const activeTool = useCanvasToolStore((s) => s.activeTool)
@@ -62,7 +64,7 @@ export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarPr
       updateNodeData(selectedNode.id, { opacity })
     }
   }
-  
+
   return (
     <div
       className="absolute top-4 left-4 z-10 flex items-center gap-1 rounded-lg border bg-background/80 p-2 shadow-sm backdrop-blur-sm"
@@ -91,7 +93,7 @@ export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarPr
         opacity={activeOpacity}
         onOpacityChange={handleOpacityChange}
       />
-      {toolbarState.kind === 'tool' && toolbarState.tool === 'draw' && (
+      {toolbarState.kind === 'tool' && toolbarState.tool.id === 'draw' && (
         <>
           <div className="mx-1 h-6 w-px bg-border" />
           <div className="flex items-center gap-0.5">

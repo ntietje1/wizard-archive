@@ -90,7 +90,7 @@ export function useCanvasAwareness(provider: ConvexYjsProvider | null) {
     awarenessRef.current?.setLocalStateField('selectedNodeIds', nodeIds)
   }
 
-  const setLocalDrawing = (drawing: DrawingState | null) => {
+  const broadcastLocalDrawing = (drawing: DrawingState | null) => {
     awarenessRef.current?.setLocalStateField('drawing', drawing)
   }
 
@@ -108,7 +108,7 @@ export function useCanvasAwareness(provider: ConvexYjsProvider | null) {
     setLocalDragging,
     setLocalResizing,
     setLocalSelection,
-    setLocalDrawing,
+    broadcastLocalDrawing,
     setLocalSelecting,
   }
 }

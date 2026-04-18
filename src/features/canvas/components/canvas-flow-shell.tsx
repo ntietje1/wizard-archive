@@ -1,10 +1,4 @@
-import {
-  Background,
-  MiniMap,
-  ReactFlow,
-  SelectionMode,
-  ViewportPortal,
-} from '@xyflow/react'
+import { Background, MiniMap, ReactFlow, SelectionMode, ViewportPortal } from '@xyflow/react'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { cn } from '~/features/shadcn/lib/utils'
 import { CanvasConditionalToolbar } from './canvas-conditional-toolbar'
@@ -15,14 +9,7 @@ import { CanvasToolbar } from './canvas-toolbar'
 import { canvasNodeTypes } from './nodes/canvas-node-registry'
 import type { Point2D, RemoteUser } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-stroke-utils'
-import type {
-  Edge,
-  Node,
-  OnConnect,
-  OnEdgesDelete,
-  OnNodeDrag,
-  OnNodesDelete,
-} from '@xyflow/react'
+import type { Edge, Node, OnConnect, OnEdgesDelete, OnNodeDrag, OnNodesDelete } from '@xyflow/react'
 
 const PRO_OPTIONS = { hideAttribution: true }
 const DELETE_KEYS = ['Backspace', 'Delete']
@@ -35,9 +22,7 @@ const SELECTION_KEY_DISABLED: Array<string> = []
 const MAX_ZOOM = 4
 const MIN_ZOOM = 0.1
 
-interface CanvasFlowShellProps {
-  canEdit: boolean
-  colorMode: 'light' | 'dark'
+export interface CanvasFlowShellProps {
   toolCursor: string | undefined
   wrapperRef: (node: HTMLDivElement | null) => void
   remoteUsers: Array<RemoteUser>
@@ -58,6 +43,11 @@ interface CanvasFlowShellProps {
   dropOverlayRef: React.Ref<HTMLDivElement>
   isDropTarget: boolean
   isFileDropTarget: boolean
+}
+
+interface CanvasFlowShellComponentProps extends CanvasFlowShellProps {
+  canEdit: boolean
+  colorMode: 'light' | 'dark'
 }
 
 export function CanvasFlowShell({
@@ -83,11 +73,15 @@ export function CanvasFlowShell({
   dropOverlayRef,
   isDropTarget,
   isFileDropTarget,
-}: CanvasFlowShellProps) {
+}: CanvasFlowShellComponentProps) {
   const isSelectMode = activeTool === 'select'
 
   return (
-    <div ref={wrapperRef} className="relative flex-1 min-h-0 allow-motion" style={{ cursor: toolCursor }}>
+    <div
+      ref={wrapperRef}
+      className="relative flex-1 min-h-0 allow-motion"
+      style={{ cursor: toolCursor }}
+    >
       <CanvasToolbar canEdit={canEdit} />
       <CanvasConditionalToolbar canEdit={canEdit} />
       <ReactFlow

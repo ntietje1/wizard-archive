@@ -28,21 +28,27 @@ function emitSelection(nodes: Array<Node>) {
 function renderToolbar() {
   return render(
     <CanvasProviders
-      nodeActions={{
-        updateNodeData: vi.fn(),
-        onResize: vi.fn(),
-        onResizeEnd: vi.fn(),
-      }}
-      editSession={{
-        editingEmbedId: null,
-        setEditingEmbedId: vi.fn(),
-        pendingEditNodeId: null,
-        setPendingEditNodeId: vi.fn(),
-      }}
-      viewState={{
+      runtime={{
+        nodeActions: {
+          updateNodeData: vi.fn(),
+          onResize: vi.fn(),
+          onResizeEnd: vi.fn(),
+        },
+        editSession: {
+          editingEmbedId: null,
+          setEditingEmbedId: vi.fn(),
+          pendingEditNodeId: null,
+          setPendingEditNodeId: vi.fn(),
+        },
         remoteHighlights: new Map(),
         canEdit: true,
         user: { name: 'Tester', color: '#fff' },
+        history: {
+          canUndo: false,
+          canRedo: false,
+          undo: vi.fn(),
+          redo: vi.fn(),
+        },
       }}
     >
       <CanvasConditionalToolbar canEdit />

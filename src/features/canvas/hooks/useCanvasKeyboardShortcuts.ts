@@ -1,9 +1,14 @@
 import { useReactFlow } from '@xyflow/react'
-import { useEffect } from 'react'
-import { useCanvasHistoryStore } from '../stores/canvas-history-store'
+import { useEffect, useRef } from 'react'
+import type { CanvasHistoryController } from '../tools/canvas-tool-types'
 
-export function useCanvasKeyboardShortcuts() {
+export function useCanvasKeyboardShortcuts({
+  undo,
+  redo,
+}: Pick<CanvasHistoryController, 'undo' | 'redo'>) {
   const reactFlow = useReactFlow()
+  const reactFlowRef = useRef(reactFlow)
+  reactFlowRef.current = reactFlow
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -20,10 +25,10 @@ export function useCanvasKeyboardShortcuts() {
 
       if (e.key === 'Escape') {
         e.preventDefault()
-        reactFlow.setNodes((nodes) =>
+        reactFlowRef.current.setNodes((nodes) =>
           nodes.map((node) => (node.selected ? { ...node, selected: false } : node)),
         )
-        reactFlow.setEdges((edges) =>
+        reactFlowRef.current.setEdges((edges) =>
           edges.map((edge) => (edge.selected ? { ...edge, selected: false } : edge)),
         )
         return
@@ -32,7 +37,6 @@ export function useCanvasKeyboardShortcuts() {
       const mod = e.metaKey || e.ctrlKey
       if (!mod) return
 
-      const { undo, redo } = useCanvasHistoryStore.getState()
       const key = e.key.toLowerCase()
       if (key === 'z' && !e.shiftKey) {
         e.preventDefault()
@@ -47,5 +51,5 @@ export function useCanvasKeyboardShortcuts() {
     }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
-  }, [reactFlow])
+  }, [undo, redo])
 }

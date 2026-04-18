@@ -1,22 +1,9 @@
 import { useReactFlow } from '@xyflow/react'
-import {
-  Eraser,
-  Hand,
-  Lasso,
-  Maximize2,
-  Minus,
-  MousePointer2,
-  Pencil,
-  Plus,
-  RectangleHorizontal,
-  Redo2,
-  StickyNote,
-  Type,
-  Undo2,
-} from 'lucide-react'
+import { Maximize2, Minus, Plus, Redo2, Undo2 } from 'lucide-react'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
-import { useCanvasHistoryStore } from '../stores/canvas-history-store'
+import { canvasToolModules } from '../tools/canvas-tool-modules'
 import { Button } from '~/features/shadcn/components/button'
+import { useCanvasRuntimeContext } from '../hooks/canvas-runtime-context'
 
 interface CanvasToolbarProps {
   canEdit: boolean
@@ -24,13 +11,10 @@ interface CanvasToolbarProps {
 
 export function CanvasToolbar({ canEdit }: CanvasToolbarProps) {
   const { fitView, zoomIn, zoomOut } = useReactFlow()
+  const { history } = useCanvasRuntimeContext()
 
   const activeTool = useCanvasToolStore((s) => s.activeTool)
   const setActiveTool = useCanvasToolStore((s) => s.setActiveTool)
-  const canUndo = useCanvasHistoryStore((s) => s.canUndo)
-  const canRedo = useCanvasHistoryStore((s) => s.canRedo)
-  const undo = useCanvasHistoryStore((s) => s.undo)
-  const redo = useCanvasHistoryStore((s) => s.redo)
 
   return (
     <>
@@ -40,55 +24,20 @@ export function CanvasToolbar({ canEdit }: CanvasToolbarProps) {
           role="toolbar"
           aria-label="Canvas main toolbar"
         >
-          <ToolButton
-            active={activeTool === 'select'}
-            onClick={() => setActiveTool('select')}
-            label="Pointer"
-            icon={<MousePointer2 className="h-4 w-4" />}
-          />
-          <ToolButton
-            active={activeTool === 'hand'}
-            onClick={() => setActiveTool('hand')}
-            label="Panning"
-            icon={<Hand className="h-4 w-4" />}
-          />
-          <ToolButton
-            active={activeTool === 'lasso'}
-            onClick={() => setActiveTool('lasso')}
-            label="Lasso select"
-            icon={<Lasso className="h-4 w-4" />}
-          />
-          <div className="mx-1 h-6 w-px bg-border" aria-hidden="true" />
-          <ToolButton
-            active={activeTool === 'draw'}
-            onClick={() => setActiveTool('draw')}
-            label="Draw"
-            icon={<Pencil className="h-4 w-4" />}
-          />
-          <ToolButton
-            active={activeTool === 'erase'}
-            onClick={() => setActiveTool('erase')}
-            label="Eraser"
-            icon={<Eraser className="h-4 w-4" />}
-          />
-          <ToolButton
-            active={activeTool === 'text'}
-            onClick={() => setActiveTool('text')}
-            label="Text"
-            icon={<Type className="h-4 w-4" />}
-          />
-          <ToolButton
-            active={activeTool === 'sticky'}
-            onClick={() => setActiveTool('sticky')}
-            label="Post-it"
-            icon={<StickyNote className="h-4 w-4" />}
-          />
-          <ToolButton
-            active={activeTool === 'rectangle'}
-            onClick={() => setActiveTool('rectangle')}
-            label="Rectangle"
-            icon={<RectangleHorizontal className="h-4 w-4" />}
-          />
+          {canvasToolModules.map((tool, index) => {
+            const previousTool = canvasToolModules[index - 1]
+
+            return (
+              <ToolGroupButton
+                key={tool.id}
+                active={activeTool === tool.id}
+                onClick={() => setActiveTool(tool.id)}
+                label={tool.label}
+                icon={tool.icon}
+                showDivider={previousTool?.group !== undefined && previousTool.group !== tool.group}
+              />
+            )
+          })}
         </div>
       )}
 
@@ -134,8 +83,8 @@ export function CanvasToolbar({ canEdit }: CanvasToolbarProps) {
               variant="ghost"
               size="icon"
               className="h-8 w-8"
-              onClick={undo}
-              disabled={!canUndo}
+              onClick={history.undo}
+              disabled={!history.canUndo}
               aria-label="Undo"
               title="Undo (Ctrl+Z)"
             >
@@ -145,8 +94,8 @@ export function CanvasToolbar({ canEdit }: CanvasToolbarProps) {
               variant="ghost"
               size="icon"
               className="h-8 w-8"
-              onClick={redo}
-              disabled={!canRedo}
+              onClick={history.redo}
+              disabled={!history.canRedo}
               aria-label="Redo"
               title="Redo (Ctrl+Shift+Z)"
             >
@@ -159,27 +108,32 @@ export function CanvasToolbar({ canEdit }: CanvasToolbarProps) {
   )
 }
 
-function ToolButton({
+function ToolGroupButton({
   active,
   icon,
   label,
   onClick,
+  showDivider,
 }: {
   active: boolean
   icon: React.ReactNode
   label: string
   onClick: () => void
+  showDivider: boolean
 }) {
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className={`h-8 w-8 ${active ? 'bg-accent' : ''}`}
-      onClick={onClick}
-      aria-label={label}
-      title={label}
-    >
-      {icon}
-    </Button>
+    <>
+      {showDivider ? <div className="mx-1 h-6 w-px bg-border" aria-hidden="true" /> : null}
+      <Button
+        variant="ghost"
+        size="icon"
+        className={`h-8 w-8 ${active ? 'bg-accent' : ''}`}
+        onClick={onClick}
+        aria-label={label}
+        title={label}
+      >
+        {icon}
+      </Button>
+    </>
   )
 }

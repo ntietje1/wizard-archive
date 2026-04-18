@@ -58,7 +58,7 @@ function CanvasFlow({
   nodesMap,
   edgesMap,
 }: ReadyCanvasSession) {
-  const { nodeActions, editSession, viewState, shellProps } = useCanvasFlowController({
+  const { runtime, shellProps } = useCanvasFlowController({
     nodesMap,
     edgesMap,
     canvasId,
@@ -69,7 +69,7 @@ function CanvasFlow({
   })
 
   return (
-    <CanvasProviders nodeActions={nodeActions} editSession={editSession} viewState={viewState}>
+    <CanvasProviders runtime={runtime}>
       <CanvasFlowShell {...shellProps} canEdit={canEdit} colorMode={colorMode} />
     </CanvasProviders>
   )

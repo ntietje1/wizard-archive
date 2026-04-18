@@ -17,7 +17,7 @@ vi.mock('~/shared/utils/logger', () => ({
 }))
 
 describe('useRichEmbedLifecycle', () => {
-  let queuedFrames: Array<FrameRequestCallback>
+  let queuedFrames: Array<FrameRequestCallback | undefined>
   let requestAnimationFrameSpy: ReturnType<typeof vi.fn>
   let cancelAnimationFrameSpy: ReturnType<typeof vi.fn>
 
@@ -28,7 +28,9 @@ describe('useRichEmbedLifecycle', () => {
       queuedFrames.push(cb)
       return queuedFrames.length
     })
-    cancelAnimationFrameSpy = vi.fn()
+    cancelAnimationFrameSpy = vi.fn((id: number) => {
+      queuedFrames[id - 1] = undefined
+    })
     vi.stubGlobal('requestAnimationFrame', requestAnimationFrameSpy)
     vi.stubGlobal('cancelAnimationFrame', cancelAnimationFrameSpy)
   })

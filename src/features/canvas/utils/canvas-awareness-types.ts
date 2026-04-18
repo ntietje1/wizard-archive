@@ -28,7 +28,7 @@ export type SelectingState =
  * Tracks cursor position, active drag/resize/draw/select operations.
  * All operation states are nullable when inactive.
  */
-export type CanvasAwarenessState = {
+type CanvasAwarenessState = {
   user: { name: string; color: string }
   cursor: Point2D | null
   /** Map of element IDs to their current drag positions */

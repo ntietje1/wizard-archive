@@ -1,7 +1,18 @@
 import getStroke from 'perfect-freehand'
-import type { XYPosition } from '@xyflow/react'
+import type { Node, XYPosition } from '@xyflow/react'
+import type { Point2D } from './canvas-awareness-types'
+import type { StrokeNodeType } from '../components/nodes/stroke-node'
 
-export type StrokeData = {
+type StrokeNodeLike = {
+  position: XYPosition
+  data: {
+    points: Array<[number, number, number]>
+    size: number
+    bounds: Bounds
+  }
+}
+
+type StrokeData = {
   id: string
   points: Array<[number, number, number]>
   color: string
@@ -73,7 +84,67 @@ export function getStrokeBounds(
   return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
 }
 
-export function rectIntersectsBounds(rect: Bounds, bounds: Bounds): boolean {
+export function isStrokeNode(node: Node): node is StrokeNodeType {
+  return node.type === 'stroke'
+}
+
+function getAbsoluteStrokePoints(
+  points: Array<[number, number, number]>,
+  bounds: Bounds,
+  position: XYPosition,
+): Array<[number, number, number]> {
+  const offsetX = position.x - bounds.x
+  const offsetY = position.y - bounds.y
+  return points.map(
+    ([x, y, pressure]) => [x + offsetX, y + offsetY, pressure] as [number, number, number],
+  )
+}
+
+export function getAbsoluteStrokePointsForNode(node: StrokeNodeLike) {
+  return getAbsoluteStrokePoints(node.data.points, node.data.bounds, node.position)
+}
+
+export function resizeStrokeNode<TNode extends StrokeNodeLike>(
+  node: TNode,
+  {
+    width,
+    height,
+    position,
+  }: {
+    width: number
+    height: number
+    position: XYPosition
+  },
+): TNode {
+  const { bounds, points, size } = node.data
+  const safeBoundsWidth = Math.max(bounds.width, 1)
+  const safeBoundsHeight = Math.max(bounds.height, 1)
+  const scaleX = width / safeBoundsWidth
+  const scaleY = height / safeBoundsHeight
+  const scaledPoints = points.map(
+    ([x, y, pressure]) =>
+      [bounds.x + (x - bounds.x) * scaleX, bounds.y + (y - bounds.y) * scaleY, pressure] as [
+        number,
+        number,
+        number,
+      ],
+  )
+
+  return {
+    ...node,
+    width,
+    height,
+    position,
+    data: {
+      ...node.data,
+      points: scaledPoints,
+      bounds: { ...bounds, width, height },
+      size: size * Math.min(scaleX, scaleY),
+    },
+  }
+}
+
+function rectIntersectsBounds(rect: Bounds, bounds: Bounds): boolean {
   return (
     rect.x < bounds.x + bounds.width &&
     rect.x + rect.width > bounds.x &&
@@ -82,7 +153,7 @@ export function rectIntersectsBounds(rect: Bounds, bounds: Bounds): boolean {
   )
 }
 
-export function segmentsIntersect(
+function segmentsIntersect(
   ax: number,
   ay: number,
   bx: number,
@@ -182,27 +253,6 @@ export function pointInPolygon(
   return inside
 }
 
-export function strokeInsidePolygon(
-  stroke: StrokeData,
-  polygon: Array<{ x: number; y: number }>,
-): boolean {
-  if (stroke.points.length === 0) return false
-  for (const [px, py] of stroke.points) {
-    if (!pointInPolygon(px, py, polygon)) return false
-  }
-  return true
-}
-
-export function strokeInsideRect(stroke: StrokeData, rect: Bounds): boolean {
-  if (stroke.points.length === 0) return false
-  for (const [px, py] of stroke.points) {
-    if (px < rect.x || px > rect.x + rect.width || py < rect.y || py > rect.y + rect.height) {
-      return false
-    }
-  }
-  return true
-}
-
 function pointToSegmentDistSq(
   px: number,
   py: number,
@@ -227,7 +277,7 @@ function pointToSegmentDistSq(
   return ex * ex + ey * ey
 }
 
-export function pointNearStrokePath(
+function pointNearStrokePath(
   px: number,
   py: number,
   points: Array<[number, number, number]>,
@@ -254,7 +304,21 @@ export function pointNearStrokePath(
   return false
 }
 
-export function strokePathIntersectsPolygon(
+export function pointNearStrokeNode(
+  point: Point2D,
+  node: StrokeNodeLike,
+  threshold: number = 20,
+): boolean {
+  return pointNearStrokePath(
+    point.x,
+    point.y,
+    getAbsoluteStrokePointsForNode(node),
+    node.data.size,
+    threshold,
+  )
+}
+
+function strokePathIntersectsPolygon(
   points: Array<[number, number, number]>,
   polygon: Array<{ x: number; y: number }>,
 ): boolean {
@@ -285,7 +349,7 @@ export function strokePathIntersectsPolygon(
   return false
 }
 
-export function strokePathIntersectsRect(
+function strokePathIntersectsRect(
   points: Array<[number, number, number]>,
   size: number,
   rect: Bounds,
@@ -341,7 +405,18 @@ export function strokePathIntersectsRect(
   return false
 }
 
-export const MINI_MAP_STROKE_PADDING = 12
+export function strokeNodeIntersectsRect(node: StrokeNodeLike, rect: Bounds): boolean {
+  return strokePathIntersectsRect(getAbsoluteStrokePointsForNode(node), node.data.size, rect)
+}
+
+export function strokeNodeIntersectsPolygon(
+  node: StrokeNodeLike,
+  polygon: Array<Point2D>,
+): boolean {
+  return strokePathIntersectsPolygon(getAbsoluteStrokePointsForNode(node), polygon)
+}
+
+const MINI_MAP_STROKE_PADDING = 12
 
 const MIN_ZOOM = 1e-6
 

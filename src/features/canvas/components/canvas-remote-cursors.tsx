@@ -161,7 +161,7 @@ function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
   )
 }
 
-export function NameLabel({ name, color }: { name: string; color: string }) {
+function NameLabel({ name, color }: { name: string; color: string }) {
   return (
     <div
       style={{

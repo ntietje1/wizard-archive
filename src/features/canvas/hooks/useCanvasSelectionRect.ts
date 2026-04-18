@@ -1,18 +1,11 @@
 import { useEffect, useRef } from 'react'
 import { useReactFlow, useStoreApi } from '@xyflow/react'
 import { useCanvasInteractionStore } from './useCanvasInteractionStore'
-import { strokePathIntersectsRect } from '../utils/canvas-stroke-utils'
+import { isStrokeNode, strokeNodeIntersectsRect } from '../utils/canvas-stroke-utils'
 import type { ReactFlowInstance } from '@xyflow/react'
 import type { Bounds } from '../utils/canvas-stroke-utils'
 import type { SelectingState } from '../utils/canvas-awareness-types'
-import type { StrokeNodeData } from '../components/nodes/stroke-node'
-
-function translateStrokePoints(
-  points: Array<[number, number, number]>,
-  offset: { x: number; y: number },
-): Array<[number, number, number]> {
-  return points.map(([x, y, p]) => [x + offset.x, y + offset.y, p] as [number, number, number])
-}
+import type { StrokeNodeType } from '../components/nodes/stroke-node'
 
 function screenToFlowRect(
   screenRect: { x: number; y: number; width: number; height: number },
@@ -94,14 +87,8 @@ export function useCanvasSelectionRect({
           if (selRect) {
             reactFlow.setNodes((nodes) =>
               nodes.map((n) => {
-                if (!n.selected || n.type !== 'stroke') return n
-                const strokeData = n.data as StrokeNodeData
-                const offset = {
-                  x: n.position.x - strokeData.bounds.x,
-                  y: n.position.y - strokeData.bounds.y,
-                }
-                const adjustedPoints = translateStrokePoints(strokeData.points, offset)
-                if (!strokePathIntersectsRect(adjustedPoints, strokeData.size, selRect)) {
+                if (!n.selected || !isStrokeNode(n)) return n
+                if (!strokeNodeIntersectsRect(n, selRect)) {
                   return { ...n, selected: false }
                 }
                 return n
@@ -136,15 +123,9 @@ export function useCanvasSelectionRect({
         const deselected = new Set<string>()
         const selectedStrokes = reactFlow
           .getNodes()
-          .filter((n) => n.selected && n.type === 'stroke')
+          .filter((n): n is StrokeNodeType => !!n.selected && isStrokeNode(n))
         for (const n of selectedStrokes) {
-          const strokeData = n.data as StrokeNodeData
-          const offset = {
-            x: n.position.x - strokeData.bounds.x,
-            y: n.position.y - strokeData.bounds.y,
-          }
-          const adjustedPoints = translateStrokePoints(strokeData.points, offset)
-          if (!strokePathIntersectsRect(adjustedPoints, strokeData.size, flowRect)) {
+          if (!strokeNodeIntersectsRect(n, flowRect)) {
             deselected.add(n.id)
           }
         }

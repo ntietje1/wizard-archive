@@ -1,7 +1,7 @@
 import { useEffect, useSyncExternalStore, useState, useRef } from 'react'
 import { api } from 'convex/_generated/api'
 import * as Y from 'yjs'
-import { renderCanvasNodePreview, toCanvasNodePreview } from './nodes/canvas-node-registry'
+import { renderCanvasNodePreview } from './nodes/canvas-node-registry'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Edge, Node } from '@xyflow/react'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
@@ -158,8 +158,7 @@ function renderNodePreview(
   w: number,
   h: number,
 ): React.ReactNode {
-  const preview = toCanvasNodePreview(type, data)
-  return preview ? renderCanvasNodePreview(preview, { width: w, height: h }) : null
+  return renderCanvasNodePreview(type, data, { width: w, height: h })
 }
 
 function getNodesBounds(nodes: Array<Node>) {

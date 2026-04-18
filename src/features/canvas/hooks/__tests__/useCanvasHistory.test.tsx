@@ -2,7 +2,6 @@ import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as Y from 'yjs'
 import { useCanvasHistory } from '../useCanvasHistory'
-import { useCanvasHistoryStore } from '../../stores/canvas-history-store'
 import type { RenderHookResult } from '@testing-library/react'
 import type { Edge, Node } from '@xyflow/react'
 
@@ -43,7 +42,6 @@ describe('useCanvasHistory', () => {
     docs = []
     hooks = []
     reactFlowMock.reset()
-    useCanvasHistoryStore.getState().reset()
   })
 
   afterEach(() => {
@@ -72,12 +70,12 @@ describe('useCanvasHistory', () => {
     })
 
     act(() => {
-      useCanvasHistoryStore.getState().undo()
+      hook.result.current.undo()
     })
     expect(Array.from(nodesMap.keys())).toEqual(['a'])
 
     act(() => {
-      useCanvasHistoryStore.getState().redo()
+      hook.result.current.redo()
     })
     expect(Array.from(nodesMap.keys())).toEqual(['a', 'b'])
 
@@ -87,12 +85,12 @@ describe('useCanvasHistory', () => {
     expect(Array.from(nodesMap.keys())).toEqual(['a', 'b', 'c'])
 
     act(() => {
-      useCanvasHistoryStore.getState().undo()
+      hook.result.current.undo()
     })
     expect(Array.from(nodesMap.keys())).toEqual(['a', 'b'])
 
     act(() => {
-      useCanvasHistoryStore.getState().undo()
+      hook.result.current.undo()
     })
     expect(Array.from(nodesMap.keys())).toEqual(['a'])
   })
@@ -117,31 +115,62 @@ describe('useCanvasHistory', () => {
     })
 
     act(() => {
-      useCanvasHistoryStore.getState().undo()
+      hook.result.current.undo()
     })
     act(() => {
-      useCanvasHistoryStore.getState().undo()
+      hook.result.current.undo()
     })
     expect(Array.from(nodesMap.keys())).toEqual(['a'])
 
     act(() => {
-      useCanvasHistoryStore.getState().redo()
+      hook.result.current.redo()
     })
     expect(Array.from(nodesMap.keys())).toEqual(['a', 'b'])
 
     act(() => {
-      useCanvasHistoryStore.getState().redo()
+      hook.result.current.redo()
     })
     expect(Array.from(nodesMap.keys())).toEqual(['a', 'b', 'c'])
 
     act(() => {
-      useCanvasHistoryStore.getState().undo()
+      hook.result.current.undo()
     })
     expect(Array.from(nodesMap.keys())).toEqual(['a', 'b'])
 
     act(() => {
-      useCanvasHistoryStore.getState().undo()
+      hook.result.current.undo()
     })
     expect(Array.from(nodesMap.keys())).toEqual(['a'])
+  })
+
+  it('keeps canUndo and canRedo aligned with the actual stacks', () => {
+    const doc = new Y.Doc()
+    docs.push(doc)
+    const nodesMap = doc.getMap<Node>('nodes')
+    const edgesMap = doc.getMap<Edge>('edges')
+
+    const hook = renderHook(() => useCanvasHistory({ nodesMap, edgesMap }))
+    hooks.push(hook)
+
+    expect(hook.result.current.canUndo).toBe(false)
+    expect(hook.result.current.canRedo).toBe(false)
+
+    act(() => {
+      nodesMap.set('a', createNode('a'))
+    })
+    expect(hook.result.current.canUndo).toBe(true)
+    expect(hook.result.current.canRedo).toBe(false)
+
+    act(() => {
+      hook.result.current.undo()
+    })
+    expect(hook.result.current.canUndo).toBe(false)
+    expect(hook.result.current.canRedo).toBe(true)
+
+    act(() => {
+      hook.result.current.redo()
+    })
+    expect(hook.result.current.canUndo).toBe(true)
+    expect(hook.result.current.canRedo).toBe(false)
   })
 })

@@ -1,13 +1,12 @@
 import { Handle, Position } from '@xyflow/react'
 import { AlertTriangle, ExternalLinkIcon } from 'lucide-react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import { useCanvasEditSession, useCanvasViewState } from '../../hooks/useCanvasContext'
 import { useRichEmbedActivation } from '../../hooks/useRichEmbedLifecycle'
 import type { RichEmbedLifecycleController } from '../../hooks/useRichEmbedLifecycle'
 import { ResizableNodeWrapper } from './resizable-node-wrapper'
 import { EmbedNoteContent } from './embed-note-content'
 import { ItemPreviewContent } from '~/features/editor/components/item-preview-content'
-import type { NodeProps } from '@xyflow/react'
+import type { Node, NodeProps } from '@xyflow/react'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
 import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
@@ -16,6 +15,9 @@ import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigatio
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { Button } from '~/features/shadcn/components/button'
 import { cn } from '~/features/shadcn/lib/utils'
+import { useCanvasRuntimeContext } from '../../hooks/canvas-runtime-context'
+
+export type EmbedNodeData = { sidebarItemId?: Id<'sidebarItems'> }
 
 export function EmbedPreview() {
   return (
@@ -25,15 +27,15 @@ export function EmbedPreview() {
   )
 }
 
-export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
-  const sidebarItemId = data.sidebarItemId as Id<'sidebarItems'> | undefined
+export function EmbedNode({ id, data, selected, dragging }: NodeProps<Node<EmbedNodeData>>) {
+  const sidebarItemId = data.sidebarItemId
   const { itemsMap } = useActiveSidebarItems()
   const item = sidebarItemId ? itemsMap.get(sidebarItemId) : undefined
 
   const { data: contentItem } = useSidebarItemById(sidebarItemId)
 
-  const { editingEmbedId, setEditingEmbedId } = useCanvasEditSession()
-  const { canEdit } = useCanvasViewState()
+  const { editSession, canEdit } = useCanvasRuntimeContext()
+  const { editingEmbedId, setEditingEmbedId } = editSession
   const isEditing = editingEmbedId === id && !!selected
 
   const { lifecycle, handleDoubleClick } = useRichEmbedActivation({
