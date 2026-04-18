@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import { getToolCursor } from '../utils/canvas-toolbar-utils'
 
@@ -24,15 +24,13 @@ export function useCanvasOverlayHandlers(wrapper: HTMLDivElement | null, tools: 
   const activeTool = useCanvasToolStore((s) => s.activeTool)
   const handlersRef = useRef<PointerHandlers | null>(null)
 
-  const resolved = useMemo(() => {
-    const toolMap: Record<string, PointerHandlers | undefined> = {
-      draw: tools.drawing,
-      erase: tools.eraser,
-      lasso: tools.lasso,
-      rectangle: tools.rectangleDraw,
-    }
-    return toolMap[activeTool] ?? null
-  }, [activeTool, tools])
+  const toolMap: Record<string, PointerHandlers | undefined> = {
+    draw: tools.drawing,
+    erase: tools.eraser,
+    lasso: tools.lasso,
+    rectangle: tools.rectangleDraw,
+  }
+  const resolved = toolMap[activeTool] ?? null
 
   handlersRef.current = resolved
 

@@ -14,6 +14,11 @@ export type DrawingState = {
 
 export type ResizingState = Record<string, { width: number; height: number; x: number; y: number }>
 
+export type RemoteHighlight = {
+  color: string
+  name: string
+}
+
 export type SelectingState =
   | { type: 'rect'; x: number; y: number; width: number; height: number }
   | { type: 'lasso'; points: Array<Point2D> }

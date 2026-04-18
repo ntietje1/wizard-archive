@@ -1,7 +1,7 @@
-import { useContext, useEffect } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { CanvasContext } from '../../utils/canvas-context'
+import { useCanvasNodeActions } from '../../hooks/useCanvasContext'
 import { useNodeEditing } from '../../hooks/useNodeEditing'
+import { usePendingNodeEdit } from '../../hooks/usePendingNodeEdit'
 import { ResizableNodeWrapper } from './resizable-node-wrapper'
 import type { NodeProps } from '@xyflow/react'
 
@@ -16,7 +16,7 @@ export function TextPreview({ label }: { label: string }) {
 }
 
 export function TextNode({ id, data, selected, dragging }: NodeProps) {
-  const { pendingEditNodeId, setPendingEditNodeId, updateNodeData } = useContext(CanvasContext)
+  const { updateNodeData } = useCanvasNodeActions()
   const label = (data.label as string) || 'Text'
 
   const { isEditing, startEditing, handleBlur, handleKeyDown, containerKeyDown } = useNodeEditing({
@@ -25,11 +25,7 @@ export function TextNode({ id, data, selected, dragging }: NodeProps) {
     updateNodeData,
   })
 
-  useEffect(() => {
-    if (!selected || isEditing || pendingEditNodeId !== id) return
-    startEditing()
-    setPendingEditNodeId(null)
-  }, [id, isEditing, pendingEditNodeId, selected, setPendingEditNodeId, startEditing])
+  usePendingNodeEdit({ id, selected: !!selected, isEditing, startEditing })
 
   return (
     <ResizableNodeWrapper

@@ -23,11 +23,8 @@ vi.mock('@xyflow/react', () => ({
 
 describe('useCanvasPlacementTool', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     useCanvasToolStore.getState().reset()
-    reactFlowMock.screenToFlowPosition.mockImplementation(({ x, y }: { x: number; y: number }) => ({
-      x,
-      y,
-    }))
   })
 
   it('places a text node, requests editing, and returns to pointer', () => {
@@ -89,5 +86,7 @@ describe('useCanvasPlacementTool', () => {
       opacity: STICKY_DEFAULT_OPACITY,
       label: '',
     })
+    expect(setPendingEditNodeId).toHaveBeenCalledWith(node.id)
+    expect(useCanvasToolStore.getState().activeTool).toBe('select')
   })
 })

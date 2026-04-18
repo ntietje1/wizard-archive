@@ -1,6 +1,6 @@
-import { useContext, useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useOnSelectionChange } from '@xyflow/react'
-import { CanvasContext } from '../utils/canvas-context'
+import { useCanvasNodeActions } from '../hooks/useCanvasContext'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import { getCanvasConditionalToolbarState } from '../utils/canvas-toolbar-utils'
 import type { Node } from '@xyflow/react'
@@ -26,7 +26,7 @@ const COLOR_NAMES: Record<string, string> = {
 }
 
 export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarProps) {
-  const { updateNodeData } = useContext(CanvasContext)
+  const { updateNodeData } = useCanvasNodeActions()
   const [selectedNodes, setSelectedNodes] = useState<Array<Node>>([])
 
   const activeTool = useCanvasToolStore((s) => s.activeTool)
@@ -41,10 +41,7 @@ export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarPr
     onChange: ({ nodes }) => setSelectedNodes(nodes),
   })
 
-  const toolbarState = useMemo(
-    () => getCanvasConditionalToolbarState(activeTool, selectedNodes),
-    [activeTool, selectedNodes],
-  )
+  const toolbarState = getCanvasConditionalToolbarState(activeTool, selectedNodes)
 
   if (!canEdit || toolbarState.kind === 'hidden') return null
 
@@ -65,7 +62,7 @@ export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarPr
       updateNodeData(selectedNode.id, { opacity })
     }
   }
-
+  
   return (
     <div
       className="absolute top-4 left-4 z-10 flex items-center gap-1 rounded-lg border bg-background/80 p-2 shadow-sm backdrop-blur-sm"
@@ -108,10 +105,7 @@ export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarPr
                 aria-label={`Stroke size ${size}`}
                 title={`Size ${size}`}
               >
-                <div
-                  className="rounded-full bg-foreground"
-                  style={{ width: size, height: size }}
-                />
+                <div className="rounded-full bg-foreground" style={{ width: size, height: size }} />
               </Button>
             ))}
           </div>

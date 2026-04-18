@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
+import { useCanvasInteractionStore } from './useCanvasInteractionStore'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import { rectFromPoints } from '../utils/canvas-stroke-utils'
 import type { Node, XYPosition } from '@xyflow/react'
@@ -36,44 +37,38 @@ export function useCanvasRectangleDraw({ nodesMap }: { nodesMap: Y.Map<Node> }) 
     }
   }, [])
 
-  const onPointerDown = useCallback(
-    (e: React.PointerEvent) => {
-      if (e.button !== 0) return
-      const target = e.target as HTMLElement
-      target.setPointerCapture(e.pointerId)
-      captureTargetRef.current = target
-      pointerIdRef.current = e.pointerId
-      activeRef.current = true
-      const pos = reactFlow.screenToFlowPosition({
-        x: e.clientX,
-        y: e.clientY,
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (e.button !== 0) return
+    const target = e.target as HTMLElement
+    target.setPointerCapture(e.pointerId)
+    captureTargetRef.current = target
+    pointerIdRef.current = e.pointerId
+    activeRef.current = true
+    const pos = reactFlow.screenToFlowPosition({
+      x: e.clientX,
+      y: e.clientY,
+    })
+    startRef.current = pos
+    lastClientPos.current = { x: e.clientX, y: e.clientY }
+    useCanvasInteractionStore.getState().setSelectionRect(null)
+  }
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!activeRef.current || e.buttons !== 1) return
+    lastClientPos.current = { x: e.clientX, y: e.clientY }
+
+    if (!rafRef.current) {
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = 0
+        const s = startRef.current
+        if (!s) return
+        const pos = reactFlow.screenToFlowPosition(lastClientPos.current)
+        useCanvasInteractionStore.getState().setSelectionRect(rectFromPoints(s, pos))
       })
-      startRef.current = pos
-      lastClientPos.current = { x: e.clientX, y: e.clientY }
-      useCanvasToolStore.getState().setSelectionRect(null)
-    },
-    [reactFlow],
-  )
+    }
+  }
 
-  const onPointerMove = useCallback(
-    (e: React.PointerEvent) => {
-      if (!activeRef.current || e.buttons !== 1) return
-      lastClientPos.current = { x: e.clientX, y: e.clientY }
-
-      if (!rafRef.current) {
-        rafRef.current = requestAnimationFrame(() => {
-          rafRef.current = 0
-          const s = startRef.current
-          if (!s) return
-          const pos = reactFlow.screenToFlowPosition(lastClientPos.current)
-          useCanvasToolStore.getState().setSelectionRect(rectFromPoints(s, pos))
-        })
-      }
-    },
-    [reactFlow],
-  )
-
-  const onPointerUp = useCallback(() => {
+  const onPointerUp = () => {
     if (!activeRef.current) return
     activeRef.current = false
 
@@ -97,7 +92,7 @@ export function useCanvasRectangleDraw({ nodesMap }: { nodesMap: Y.Map<Node> }) 
 
     const pos = reactFlow.screenToFlowPosition(lastClientPos.current)
     const store = useCanvasToolStore.getState()
-    store.setSelectionRect(null)
+    useCanvasInteractionStore.getState().setSelectionRect(null)
 
     if (!s) return
 
@@ -118,7 +113,7 @@ export function useCanvasRectangleDraw({ nodesMap }: { nodesMap: Y.Map<Node> }) 
 
     nodesMap.set(id, node)
     store.completeActiveToolAction()
-  }, [reactFlow, nodesMap])
+  }
 
   return { onPointerDown, onPointerMove, onPointerUp }
 }

@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef } from 'react';
-import type { RefObject } from 'react';
+import { useCallback, useEffect, useRef } from 'react'
+import type { MutableRefObject } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { UndoManager } from 'yjs'
-import { useCanvasToolStore } from '../stores/canvas-tool-store'
+import { useCanvasHistoryStore } from '../stores/canvas-history-store'
 import type { Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 import { logger } from '~/shared/utils/logger'
@@ -30,7 +30,7 @@ export function useCanvasHistory({ nodesMap, edgesMap }: UseCanvasHistoryOptions
   const redoFnRef = useRef<() => void>(() => {})
 
   const pushHistoryEntry = useCallback(
-    (stackRef: RefObject<Array<ActionEntry>>, entry: ActionEntry) => {
+    (stackRef: MutableRefObject<Array<ActionEntry>>, entry: ActionEntry) => {
       stackRef.current.push(entry)
       if (stackRef.current.length > MAX_HISTORY_SIZE) {
         stackRef.current = stackRef.current.slice(-MAX_HISTORY_SIZE)
@@ -44,7 +44,7 @@ export function useCanvasHistory({ nodesMap, edgesMap }: UseCanvasHistoryOptions
   }, [])
 
   const syncStore = useCallback(() => {
-    const { setHistory } = useCanvasToolStore.getState()
+    const { setHistory } = useCanvasHistoryStore.getState()
     setHistory({
       canUndo: undoStackRef.current.length > 0,
       canRedo: redoStackRef.current.length > 0,
@@ -107,7 +107,8 @@ export function useCanvasHistory({ nodesMap, edgesMap }: UseCanvasHistoryOptions
           pushHistoryEntry(undoStackRef, { type: 'doc' })
           stopCapturing()
         } else {
-          pushHistoryEntry(redoStackRef, entry)
+          logger.warn('Discarding orphaned doc redo entry (no matching Yjs redo stack item)')
+          syncStore()
           return
         }
       } else {

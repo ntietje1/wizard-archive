@@ -1,13 +1,9 @@
 import { useEffect, useSyncExternalStore, useState, useRef } from 'react'
 import { api } from 'convex/_generated/api'
 import * as Y from 'yjs'
-import { StrokePreview } from './nodes/stroke-node'
-import { TextPreview } from './nodes/text-node'
-import { StickyPreview } from './nodes/sticky-node'
-import { RectanglePreview } from './nodes/rectangle-node'
+import { renderCanvasNodePreview, toCanvasNodePreview } from './nodes/canvas-node-registry'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Edge, Node } from '@xyflow/react'
-import type { StrokeNodeData } from './nodes/stroke-node'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 
@@ -162,37 +158,8 @@ function renderNodePreview(
   w: number,
   h: number,
 ): React.ReactNode {
-  switch (type) {
-    case 'stroke': {
-      const d = data as unknown as StrokeNodeData
-      return <StrokePreview data={d} width={w} height={h} />
-    }
-    case 'text':
-      return <TextPreview label={(data.label as string) ?? ''} />
-    case 'sticky':
-      return (
-        <StickyPreview
-          label={(data.label as string) ?? ''}
-          color={(data.color as string) ?? ''}
-          opacity={data.opacity as number | undefined}
-        />
-      )
-    case 'rectangle':
-      return (
-        <RectanglePreview
-          color={(data.color as string) ?? 'transparent'}
-          opacity={data.opacity as number | undefined}
-        />
-      )
-    case 'embed':
-      return (
-        <div className="h-full w-full rounded-lg border bg-card shadow-sm px-3 py-2 text-sm text-muted-foreground">
-          Embedded item
-        </div>
-      )
-    default:
-      return null
-  }
+  const preview = toCanvasNodePreview(type, data)
+  return preview ? renderCanvasNodePreview(preview, { width: w, height: h }) : null
 }
 
 function getNodesBounds(nodes: Array<Node>) {

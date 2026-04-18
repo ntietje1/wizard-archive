@@ -15,6 +15,7 @@ import {
   Undo2,
 } from 'lucide-react'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
+import { useCanvasHistoryStore } from '../stores/canvas-history-store'
 import { Button } from '~/features/shadcn/components/button'
 
 interface CanvasToolbarProps {
@@ -25,11 +26,11 @@ export function CanvasToolbar({ canEdit }: CanvasToolbarProps) {
   const { fitView, zoomIn, zoomOut } = useReactFlow()
 
   const activeTool = useCanvasToolStore((s) => s.activeTool)
-  const canUndo = useCanvasToolStore((s) => s.canUndo)
-  const canRedo = useCanvasToolStore((s) => s.canRedo)
-  const redo = useCanvasToolStore((s) => s.redo)
   const setActiveTool = useCanvasToolStore((s) => s.setActiveTool)
-  const undo = useCanvasToolStore((s) => s.undo)
+  const canUndo = useCanvasHistoryStore((s) => s.canUndo)
+  const canRedo = useCanvasHistoryStore((s) => s.canRedo)
+  const undo = useCanvasHistoryStore((s) => s.undo)
+  const redo = useCanvasHistoryStore((s) => s.redo)
 
   return (
     <>

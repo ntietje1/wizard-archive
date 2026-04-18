@@ -1,7 +1,7 @@
 import { act, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasConditionalToolbar } from '../canvas-conditional-toolbar'
-import { CanvasContext } from '../../utils/canvas-context'
+import { CanvasProviders } from '../../hooks/useCanvasContext'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import type { Node } from '@xyflow/react'
 
@@ -10,11 +10,7 @@ const selectionMock = vi.hoisted(() => ({
 }))
 
 vi.mock('@xyflow/react', () => ({
-  useOnSelectionChange: ({
-    onChange,
-  }: {
-    onChange: (params: { nodes: Array<Node> }) => void
-  }) => {
+  useOnSelectionChange: ({ onChange }: { onChange: (params: { nodes: Array<Node> }) => void }) => {
     selectionMock.onChange = onChange
   },
 }))
@@ -31,38 +27,53 @@ function emitSelection(nodes: Array<Node>) {
 
 function renderToolbar() {
   return render(
-    <CanvasContext
-      value={{
+    <CanvasProviders
+      nodeActions={{
         updateNodeData: vi.fn(),
         onResize: vi.fn(),
         onResizeEnd: vi.fn(),
-        remoteHighlights: new Map(),
-        canEdit: true,
-        user: { name: 'Tester', color: '#fff' },
+      }}
+      editSession={{
         editingEmbedId: null,
         setEditingEmbedId: vi.fn(),
         pendingEditNodeId: null,
         setPendingEditNodeId: vi.fn(),
       }}
+      viewState={{
+        remoteHighlights: new Map(),
+        canEdit: true,
+        user: { name: 'Tester', color: '#fff' },
+      }}
     >
       <CanvasConditionalToolbar canEdit />
-    </CanvasContext>,
+    </CanvasProviders>,
   )
 }
 
+let nodeIdCounter = 0
+
 function createNode(type: string, color?: string): Node {
   return {
-    id: `${type}-${Math.random()}`,
+    id: `${type}-${nodeIdCounter++}`,
     type,
     position: { x: 0, y: 0 },
+    selected: false,
+    dragging: false,
+    draggable: true,
+    deletable: true,
+    selectable: true,
+    connectable: true,
+    width: 100,
+    height: 100,
     data: color ? { color, opacity: 75 } : {},
-  } as Node
+  }
 }
 
 describe('CanvasConditionalToolbar', () => {
   beforeEach(() => {
     useCanvasToolStore.getState().reset()
     selectionMock.onChange = null
+    nodeIdCounter = 0
   })
 
   it('shows draw controls with stroke sizes when nothing is selected', () => {

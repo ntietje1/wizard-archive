@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useReactFlow, useStoreApi } from '@xyflow/react'
-import { useCanvasToolStore } from '../stores/canvas-tool-store'
+import { useCanvasInteractionStore } from './useCanvasInteractionStore'
 import { strokePathIntersectsRect } from '../utils/canvas-stroke-utils'
 import type { ReactFlowInstance } from '@xyflow/react'
 import type { Bounds } from '../utils/canvas-stroke-utils'
@@ -110,7 +110,7 @@ export function useCanvasSelectionRect({
           }
         }
         lastFlowRectRef.current = null
-        const store = useCanvasToolStore.getState()
+        const store = useCanvasInteractionStore.getState()
         store.setSelectionRect(null)
         store.setRectDeselectedIds(new Set())
         setLocalSelectingRef.current(null)
@@ -128,9 +128,9 @@ export function useCanvasSelectionRect({
           reactFlow,
         )
 
-        const toolStore = useCanvasToolStore.getState()
+        const store = useCanvasInteractionStore.getState()
         lastFlowRectRef.current = flowRect
-        toolStore.setSelectionRect(flowRect)
+        store.setSelectionRect(flowRect)
         setLocalSelectingRef.current({ type: 'rect', ...flowRect })
 
         const deselected = new Set<string>()
@@ -148,7 +148,7 @@ export function useCanvasSelectionRect({
             deselected.add(n.id)
           }
         }
-        toolStore.setRectDeselectedIds(deselected)
+        store.setRectDeselectedIds(deselected)
       })
     })
 
@@ -158,7 +158,7 @@ export function useCanvasSelectionRect({
         cancelAnimationFrame(rafRef.current)
         rafRef.current = 0
       }
-      const store = useCanvasToolStore.getState()
+      const store = useCanvasInteractionStore.getState()
       store.setSelectionRect(null)
       store.setRectDeselectedIds(new Set())
       setLocalSelectingRef.current(null)

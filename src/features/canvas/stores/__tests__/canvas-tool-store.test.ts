@@ -6,25 +6,25 @@ describe('useCanvasToolStore', () => {
     useCanvasToolStore.getState().reset()
   })
 
-  it('keeps draw and erase active after completion', () => {
-    const store = useCanvasToolStore.getState()
+  it('keeps persistent tools active after completion', () => {
+    const persistentTools = ['draw', 'hand', 'erase'] as const
 
-    store.setActiveTool('draw')
-    store.completeActiveToolAction()
-    expect(useCanvasToolStore.getState().activeTool).toBe('draw')
-
-    useCanvasToolStore.getState().setActiveTool('erase')
-    useCanvasToolStore.getState().completeActiveToolAction()
-    expect(useCanvasToolStore.getState().activeTool).toBe('erase')
+    for (const tool of persistentTools) {
+      useCanvasToolStore.getState().setActiveTool(tool)
+      expect(useCanvasToolStore.getState().activeTool).toBe(tool)
+      useCanvasToolStore.getState().completeActiveToolAction()
+      expect(useCanvasToolStore.getState().activeTool).toBe(tool)
+    }
   })
 
-  it('returns one-shot tools to pointer after completion', () => {
-    const oneShotTools = ['hand', 'lasso', 'text', 'sticky', 'rectangle'] as const
+  it('returns one-shot tools to select after completion', () => {
+    const store = useCanvasToolStore
+    const oneShotTools = ['lasso', 'text', 'sticky', 'rectangle'] as const
 
     for (const tool of oneShotTools) {
-      useCanvasToolStore.getState().setActiveTool(tool)
-      useCanvasToolStore.getState().completeActiveToolAction()
-      expect(useCanvasToolStore.getState().activeTool).toBe('select')
+      store.getState().setActiveTool(tool)
+      store.getState().completeActiveToolAction()
+      expect(store.getState().activeTool).toBe('select')
     }
   })
 })

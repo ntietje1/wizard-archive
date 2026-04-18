@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Awareness } from 'y-protocols/awareness'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
 import type {
@@ -78,32 +78,29 @@ export function useCanvasAwareness(provider: ConvexYjsProvider | null) {
     }
   }, [provider])
 
-  const setLocalCursor = useCallback((pos: { x: number; y: number } | null) => {
+  const setLocalCursor = (pos: { x: number; y: number } | null) => {
     awarenessRef.current?.setLocalStateField('cursor', pos)
-  }, [])
+  }
 
-  const setLocalDragging = useCallback(
-    (positions: Record<string, { x: number; y: number }> | null) => {
-      awarenessRef.current?.setLocalStateField('dragging', positions)
-    },
-    [],
-  )
+  const setLocalDragging = (positions: Record<string, { x: number; y: number }> | null) => {
+    awarenessRef.current?.setLocalStateField('dragging', positions)
+  }
 
-  const setLocalSelection = useCallback((nodeIds: Array<string> | null) => {
+  const setLocalSelection = (nodeIds: Array<string> | null) => {
     awarenessRef.current?.setLocalStateField('selectedNodeIds', nodeIds)
-  }, [])
+  }
 
-  const setLocalDrawing = useCallback((drawing: DrawingState | null) => {
+  const setLocalDrawing = (drawing: DrawingState | null) => {
     awarenessRef.current?.setLocalStateField('drawing', drawing)
-  }, [])
+  }
 
-  const setLocalResizing = useCallback((resizing: ResizingState | null) => {
+  const setLocalResizing = (resizing: ResizingState | null) => {
     awarenessRef.current?.setLocalStateField('resizing', resizing)
-  }, [])
+  }
 
-  const setLocalSelecting = useCallback((selecting: SelectingState | null) => {
+  const setLocalSelecting = (selecting: SelectingState | null) => {
     awarenessRef.current?.setLocalStateField('selecting', selecting)
-  }, [])
+  }
 
   return {
     remoteUsers,

@@ -1,8 +1,7 @@
-import { useContext } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { AlertTriangle, ExternalLinkIcon } from 'lucide-react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import { CanvasContext } from '../../utils/canvas-context'
+import { useCanvasEditSession, useCanvasViewState } from '../../hooks/useCanvasContext'
 import { useRichEmbedActivation } from '../../hooks/useRichEmbedLifecycle'
 import type { RichEmbedLifecycleController } from '../../hooks/useRichEmbedLifecycle'
 import { ResizableNodeWrapper } from './resizable-node-wrapper'
@@ -18,6 +17,14 @@ import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { Button } from '~/features/shadcn/components/button'
 import { cn } from '~/features/shadcn/lib/utils'
 
+export function EmbedPreview() {
+  return (
+    <div className="h-full w-full rounded-lg border bg-card px-3 py-2 text-sm text-muted-foreground shadow-sm">
+      Embedded item
+    </div>
+  )
+}
+
 export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
   const sidebarItemId = data.sidebarItemId as Id<'sidebarItems'> | undefined
   const { itemsMap } = useActiveSidebarItems()
@@ -25,7 +32,8 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps) {
 
   const { data: contentItem } = useSidebarItemById(sidebarItemId)
 
-  const { editingEmbedId, setEditingEmbedId, canEdit } = useContext(CanvasContext)
+  const { editingEmbedId, setEditingEmbedId } = useCanvasEditSession()
+  const { canEdit } = useCanvasViewState()
   const isEditing = editingEmbedId === id && !!selected
 
   const { lifecycle, handleDoubleClick } = useRichEmbedActivation({

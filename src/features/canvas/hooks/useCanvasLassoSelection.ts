@@ -1,5 +1,6 @@
-import { useCallback, useRef } from 'react'
+import { useRef } from 'react'
 import { useReactFlow, useStoreApi } from '@xyflow/react'
+import { useCanvasInteractionStore } from './useCanvasInteractionStore'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import { pointInPolygon, strokePathIntersectsPolygon } from '../utils/canvas-stroke-utils'
 import type { StrokeNodeData } from '../components/nodes/stroke-node'
@@ -19,46 +20,40 @@ export function useCanvasLassoSelection({ setLocalSelecting }: UseCanvasLassoSel
   const reactFlow = useReactFlow()
   const storeApi = useStoreApi()
 
-  const onPointerDown = useCallback(
-    (e: React.PointerEvent) => {
-      if (e.button !== 0) return
-      const target = e.target as HTMLElement
-      target.setPointerCapture(e.pointerId)
-      capturedRef.current = { element: target, pointerId: e.pointerId }
-      activeRef.current = true
-      const pos = reactFlow.screenToFlowPosition({
-        x: e.clientX,
-        y: e.clientY,
-      })
-      pointsRef.current = [pos]
-      useCanvasToolStore.getState().setLassoPath([pos])
-      setLocalSelecting({ type: 'lasso', points: [pos] })
-      reactFlow.setNodes((nodes) =>
-        nodes.map((node) => (node.selected ? { ...node, selected: false } : node)),
-      )
-      reactFlow.setEdges((edges) =>
-        edges.map((edge) => (edge.selected ? { ...edge, selected: false } : edge)),
-      )
-    },
-    [reactFlow, setLocalSelecting],
-  )
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (e.button !== 0) return
+    const target = e.target as HTMLElement
+    target.setPointerCapture(e.pointerId)
+    capturedRef.current = { element: target, pointerId: e.pointerId }
+    activeRef.current = true
+    const pos = reactFlow.screenToFlowPosition({
+      x: e.clientX,
+      y: e.clientY,
+    })
+    pointsRef.current = [pos]
+    useCanvasInteractionStore.getState().setLassoPath([pos])
+    setLocalSelecting({ type: 'lasso', points: [pos] })
+    reactFlow.setNodes((nodes) =>
+      nodes.map((node) => (node.selected ? { ...node, selected: false } : node)),
+    )
+    reactFlow.setEdges((edges) =>
+      edges.map((edge) => (edge.selected ? { ...edge, selected: false } : edge)),
+    )
+  }
 
-  const onPointerMove = useCallback(
-    (e: React.PointerEvent) => {
-      if (!activeRef.current || e.buttons !== 1) return
-      const pos = reactFlow.screenToFlowPosition({
-        x: e.clientX,
-        y: e.clientY,
-      })
-      pointsRef.current.push(pos)
-      const path = [...pointsRef.current]
-      useCanvasToolStore.getState().setLassoPath(path)
-      setLocalSelecting({ type: 'lasso', points: path })
-    },
-    [reactFlow, setLocalSelecting],
-  )
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!activeRef.current || e.buttons !== 1) return
+    const pos = reactFlow.screenToFlowPosition({
+      x: e.clientX,
+      y: e.clientY,
+    })
+    pointsRef.current.push(pos)
+    const path = [...pointsRef.current]
+    useCanvasInteractionStore.getState().setLassoPath(path)
+    setLocalSelecting({ type: 'lasso', points: path })
+  }
 
-  const onPointerUp = useCallback(() => {
+  const onPointerUp = () => {
     if (!activeRef.current) return
     activeRef.current = false
     if (capturedRef.current) {
@@ -71,12 +66,13 @@ export function useCanvasLassoSelection({ setLocalSelecting }: UseCanvasLassoSel
     }
     setLocalSelecting(null)
     const polygon = pointsRef.current
-    const store = useCanvasToolStore.getState()
+    const toolStore = useCanvasToolStore.getState()
+    const interactionStore = useCanvasInteractionStore.getState()
 
     if (polygon.length < 3) {
-      store.setLassoPath([])
+      interactionStore.setLassoPath([])
       pointsRef.current = []
-      store.completeActiveToolAction()
+      toolStore.completeActiveToolAction()
       return
     }
 
@@ -128,10 +124,10 @@ export function useCanvasLassoSelection({ setLocalSelecting }: UseCanvasLassoSel
       }),
     )
 
-    store.setLassoPath([])
+    interactionStore.setLassoPath([])
     pointsRef.current = []
-    store.completeActiveToolAction()
-  }, [reactFlow, storeApi, setLocalSelecting])
+    toolStore.completeActiveToolAction()
+  }
 
   return { onPointerDown, onPointerMove, onPointerUp }
 }

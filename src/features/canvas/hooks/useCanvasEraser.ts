@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
-import { useCanvasToolStore } from '../stores/canvas-tool-store'
+import { useCanvasInteractionStore } from './useCanvasInteractionStore'
 import { polylineIntersectsStroke } from '../utils/canvas-stroke-utils'
 import type { StrokeNodeData } from '../components/nodes/stroke-node'
 import type { Node } from '@xyflow/react'
@@ -17,7 +17,7 @@ export function useCanvasEraser({ nodesMap }: UseCanvasEraserOptions) {
   const eraserRafRef = useRef(0)
   const reactFlow = useReactFlow()
 
-  const testIntersections = useCallback(() => {
+  const testIntersections = () => {
     const trail = trailRef.current
     if (trail.length < 2) return
 
@@ -48,93 +48,84 @@ export function useCanvasEraser({ nodesMap }: UseCanvasEraserOptions) {
       }
     }
     if (changed) {
-      useCanvasToolStore.getState().setErasingStrokeIds(new Set(markedRef.current))
+      useCanvasInteractionStore.getState().setErasingStrokeIds(new Set(markedRef.current))
     }
-  }, [reactFlow])
+  }
 
   const pointerIdRef = useRef<number | null>(null)
 
-  const onPointerDown = useCallback(
-    (e: React.PointerEvent) => {
-      if (e.button !== 0) return
-      ;(e.currentTarget as Element).setPointerCapture(e.pointerId)
-      pointerIdRef.current = e.pointerId
-      erasingRef.current = true
-      markedRef.current = new Set()
-      const pos = reactFlow.screenToFlowPosition({
-        x: e.clientX,
-        y: e.clientY,
-      })
-      trailRef.current = [pos]
-      useCanvasToolStore.getState().setErasingStrokeIds(new Set())
-    },
-    [reactFlow],
-  )
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (e.button !== 0) return
+    ;(e.currentTarget as Element).setPointerCapture(e.pointerId)
+    pointerIdRef.current = e.pointerId
+    erasingRef.current = true
+    markedRef.current = new Set()
+    const pos = reactFlow.screenToFlowPosition({
+      x: e.clientX,
+      y: e.clientY,
+    })
+    trailRef.current = [pos]
+    useCanvasInteractionStore.getState().setErasingStrokeIds(new Set())
+  }
 
-  const onPointerMove = useCallback(
-    (e: React.PointerEvent) => {
-      if (!erasingRef.current || e.buttons !== 1) return
-      const pos = reactFlow.screenToFlowPosition({
-        x: e.clientX,
-        y: e.clientY,
-      })
-      trailRef.current.push(pos)
-      if (trailRef.current.length > 300) {
-        trailRef.current = trailRef.current.slice(-200)
-      }
-      if (!eraserRafRef.current) {
-        eraserRafRef.current = requestAnimationFrame(() => {
-          eraserRafRef.current = 0
-          testIntersections()
-        })
-      }
-    },
-    [reactFlow, testIntersections],
-  )
-
-  const onPointerUp = useCallback(
-    (e: React.PointerEvent) => {
-      if (pointerIdRef.current !== null) {
-        try {
-          ;(e.currentTarget as Element).releasePointerCapture(pointerIdRef.current)
-        } catch {
-          /* already released */
-        }
-        pointerIdRef.current = null
-      }
-      erasingRef.current = false
-      if (eraserRafRef.current) {
-        cancelAnimationFrame(eraserRafRef.current)
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!erasingRef.current || e.buttons !== 1) return
+    const pos = reactFlow.screenToFlowPosition({
+      x: e.clientX,
+      y: e.clientY,
+    })
+    trailRef.current.push(pos)
+    if (trailRef.current.length > 300) {
+      trailRef.current = trailRef.current.slice(-200)
+    }
+    if (!eraserRafRef.current) {
+      eraserRafRef.current = requestAnimationFrame(() => {
         eraserRafRef.current = 0
+        testIntersections()
+      })
+    }
+  }
+
+  const onPointerUp = (e: React.PointerEvent) => {
+    if (pointerIdRef.current !== null) {
+      try {
+        ;(e.currentTarget as Element).releasePointerCapture(pointerIdRef.current)
+      } catch {
+        /* already released */
       }
-      testIntersections()
-      const marked = markedRef.current
-      if (marked.size > 0) {
-        if (nodesMap.doc) {
-          nodesMap.doc.transact(() => {
-            for (const id of marked) {
-              nodesMap.delete(id)
-            }
-          })
-        } else {
+      pointerIdRef.current = null
+    }
+    erasingRef.current = false
+    if (eraserRafRef.current) {
+      cancelAnimationFrame(eraserRafRef.current)
+      eraserRafRef.current = 0
+    }
+    testIntersections()
+    const marked = markedRef.current
+    if (marked.size > 0) {
+      if (nodesMap.doc) {
+        nodesMap.doc.transact(() => {
           for (const id of marked) {
             nodesMap.delete(id)
           }
+        })
+      } else {
+        for (const id of marked) {
+          nodesMap.delete(id)
         }
       }
-      markedRef.current = new Set()
-      trailRef.current = []
-      useCanvasToolStore.getState().setErasingStrokeIds(new Set())
-    },
-    [nodesMap, testIntersections],
-  )
+    }
+    markedRef.current = new Set()
+    trailRef.current = []
+    useCanvasInteractionStore.getState().setErasingStrokeIds(new Set())
+  }
 
   useEffect(() => {
     return () => {
       if (eraserRafRef.current) {
         cancelAnimationFrame(eraserRafRef.current)
       }
-      useCanvasToolStore.getState().setErasingStrokeIds(new Set())
+      useCanvasInteractionStore.getState().setErasingStrokeIds(new Set())
     }
   }, [])
 

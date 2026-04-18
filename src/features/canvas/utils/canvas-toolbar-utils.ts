@@ -10,7 +10,9 @@ export type CanvasTool =
   | 'text'
   | 'sticky'
 
-export type CanvasToolWithSettings = 'draw' | 'rectangle'
+export const TOOL_SETTINGS_TOOLS = ['draw', 'rectangle'] as const satisfies ReadonlyArray<CanvasTool>
+
+export type CanvasToolWithSettings = (typeof TOOL_SETTINGS_TOOLS)[number]
 
 export const MAIN_TOOLBAR_ORDER = [
   'select',
@@ -31,7 +33,6 @@ export const VIEWPORT_HISTORY_ORDER = [
   'redo',
 ] as const
 
-const TOOL_SETTINGS_TOOLS = ['draw', 'rectangle'] as const satisfies ReadonlyArray<CanvasToolWithSettings>
 const ONE_SHOT_TOOLS = ['lasso', 'text', 'sticky', 'rectangle'] as const satisfies ReadonlyArray<CanvasTool>
 const COLOR_EDITABLE_NODE_TYPES = new Set(['sticky', 'rectangle', 'stroke'])
 

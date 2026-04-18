@@ -1,6 +1,6 @@
 import { useReactFlow } from '@xyflow/react'
 import { useEffect } from 'react'
-import { useCanvasToolStore } from '../stores/canvas-tool-store'
+import { useCanvasHistoryStore } from '../stores/canvas-history-store'
 
 export function useCanvasKeyboardShortcuts() {
   const reactFlow = useReactFlow()
@@ -32,7 +32,7 @@ export function useCanvasKeyboardShortcuts() {
       const mod = e.metaKey || e.ctrlKey
       if (!mod) return
 
-      const { undo, redo } = useCanvasToolStore.getState()
+      const { undo, redo } = useCanvasHistoryStore.getState()
       const key = e.key.toLowerCase()
       if (key === 'z' && !e.shiftKey) {
         e.preventDefault()

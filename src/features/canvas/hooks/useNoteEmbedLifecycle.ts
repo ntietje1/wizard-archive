@@ -1,4 +1,3 @@
-import { useCallback } from 'react'
 import { TextSelection } from '@tiptap/pm/state'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { Doc } from 'yjs'
@@ -34,37 +33,34 @@ export function useNoteEmbedLifecycle({
   editor,
   doc,
 }: UseNoteEmbedLifecycleOptions) {
-  const isReady = useCallback(() => {
+  const isReady = () => {
     return !!editor && !!doc && !!getMountedView(editor)
-  }, [doc, editor])
+  }
 
-  const onActivate = useCallback(
-    (payload: RichEmbedActivationPayload | null) => {
-      if (!editor) return
+  const onActivate = (payload: RichEmbedActivationPayload | null) => {
+    if (!editor) return
 
-      const view = getMountedView(editor)
-      if (!view) return
+    const view = getMountedView(editor)
+    if (!view) return
 
-      const point = payload?.point
-      if (point) {
-        try {
-          const pos = view.posAtCoords({ left: point.x, top: point.y })
-          if (pos) {
-            const tr = view.state.tr.setSelection(TextSelection.create(view.state.doc, pos.pos))
-            view.dispatch(tr)
-          }
-        } catch (error) {
-          logger.warn(
-            'useNoteEmbedLifecycle: failed to compute selection from posAtCoords/TextSelection.create',
-            error,
-          )
+    const point = payload?.point
+    if (point) {
+      try {
+        const pos = view.posAtCoords({ left: point.x, top: point.y })
+        if (pos && pos.inside !== -1) {
+          const tr = view.state.tr.setSelection(TextSelection.create(view.state.doc, pos.pos))
+          view.dispatch(tr)
         }
+      } catch (error) {
+        logger.warn(
+          'useNoteEmbedLifecycle: failed to compute selection from posAtCoords/TextSelection.create',
+          error,
+        )
       }
+    }
 
-      view.focus()
-    },
-    [editor],
-  )
+    view.focus()
+  }
 
   useRichEmbedLifecycle({
     lifecycle,

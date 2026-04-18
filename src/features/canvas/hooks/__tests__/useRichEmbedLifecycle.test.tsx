@@ -1,10 +1,9 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  useRichEmbedActivation,
-  useRichEmbedLifecycle,
-  type RichEmbedActivationPayload,
-  type RichEmbedLifecycleController,
+import { useRichEmbedActivation, useRichEmbedLifecycle } from '../useRichEmbedLifecycle'
+import type {
+  RichEmbedActivationPayload,
+  RichEmbedLifecycleController,
 } from '../useRichEmbedLifecycle'
 
 const { mockLoggerWarn } = vi.hoisted(() => ({
@@ -67,7 +66,42 @@ describe('useRichEmbedLifecycle', () => {
     expect(result.current.lifecycle.pendingActivationRef.current).toBeNull()
   })
 
-  it('waits for readiness and preserves pending activation until it can activate', () => {
+  it('logs a retry-limit warning and preserves pending activation when readiness never arrives', () => {
+    const lifecycle: RichEmbedLifecycleController = {
+      pendingActivationRef: {
+        current: { point: { x: 30, y: 40 } } satisfies RichEmbedActivationPayload,
+      },
+    }
+    const onActivate = vi.fn()
+
+    let ready = false
+    renderHook(
+      ({ editable }: { editable: boolean }) =>
+        useRichEmbedLifecycle({
+          lifecycle,
+          editable,
+          isReady: () => ready,
+          onActivate,
+        }),
+      { initialProps: { editable: true } },
+    )
+
+    act(() => {
+      for (let i = 0; i <= 10; i += 1) {
+        queuedFrames.shift()?.(i)
+      }
+    })
+
+    expect(onActivate).not.toHaveBeenCalled()
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      'useRichEmbedLifecycle: rich embed did not become ready within retry limit',
+    )
+    expect(lifecycle.pendingActivationRef.current).toEqual({
+      point: { x: 30, y: 40 },
+    })
+  })
+
+  it('activates once readiness becomes available and clears pending activation', () => {
     const lifecycle: RichEmbedLifecycleController = {
       pendingActivationRef: {
         current: { point: { x: 30, y: 40 } } satisfies RichEmbedActivationPayload,
@@ -93,13 +127,8 @@ describe('useRichEmbedLifecycle', () => {
       }
     })
 
-    expect(onActivate).not.toHaveBeenCalled()
-    expect(mockLoggerWarn).toHaveBeenCalledWith(
-      'useRichEmbedLifecycle: rich embed did not become ready within retry limit',
-    )
-    expect(lifecycle.pendingActivationRef.current).toEqual({
-      point: { x: 30, y: 40 },
-    })
+    expect(mockLoggerWarn).toHaveBeenCalled()
+    mockLoggerWarn.mockClear()
 
     ready = true
     rerender({ editable: true })
@@ -110,8 +139,29 @@ describe('useRichEmbedLifecycle', () => {
 
     expect(onActivate).toHaveBeenCalledWith({ point: { x: 30, y: 40 } })
     expect(lifecycle.pendingActivationRef.current).toBeNull()
+  })
+
+  it('clears pending activation when editing becomes disabled', () => {
+    const lifecycle: RichEmbedLifecycleController = {
+      pendingActivationRef: {
+        current: { point: { x: 30, y: 40 } } satisfies RichEmbedActivationPayload,
+      },
+    }
+    const onActivate = vi.fn()
+
+    const { rerender } = renderHook(
+      ({ editable }: { editable: boolean }) =>
+        useRichEmbedLifecycle({
+          lifecycle,
+          editable,
+          isReady: () => false,
+          onActivate,
+        }),
+      { initialProps: { editable: true } },
+    )
 
     rerender({ editable: false })
     expect(lifecycle.pendingActivationRef.current).toBeNull()
+    expect(onActivate).not.toHaveBeenCalled()
   })
 })

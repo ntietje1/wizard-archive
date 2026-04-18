@@ -1,7 +1,8 @@
-import { useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { Handle, Position } from '@xyflow/react'
-import { CanvasContext } from '../../utils/canvas-context'
+import { useCanvasNodeActions } from '../../hooks/useCanvasContext'
 import { useNodeEditing } from '../../hooks/useNodeEditing'
+import { usePendingNodeEdit } from '../../hooks/usePendingNodeEdit'
 import { STICKY_DEFAULT_COLOR } from './sticky-node-constants'
 import { ResizableNodeWrapper } from './resizable-node-wrapper'
 import type { Node, NodeProps } from '@xyflow/react'
@@ -33,7 +34,7 @@ export function StickyPreview({
 
 export function StickyNode({ id, data, selected, dragging }: NodeProps<StickyNodeType>) {
   const [editValue, setEditValue] = useState('')
-  const { pendingEditNodeId, setPendingEditNodeId, updateNodeData } = useContext(CanvasContext)
+  const { updateNodeData } = useCanvasNodeActions()
   const label = data.label || ''
   const color = data.color || STICKY_DEFAULT_COLOR
   const opacity = (data.opacity ?? 100) / 100
@@ -45,17 +46,13 @@ export function StickyNode({ id, data, selected, dragging }: NodeProps<StickyNod
     handleBlur,
   } = useNodeEditing({ id, currentValue: label, updateNodeData })
 
-  const startEditing = useCallback(() => {
+  const startEditing = () => {
     cancelledRef.current = false
     setEditValue(label)
     baseStartEditing()
-  }, [label, baseStartEditing])
+  }
 
-  useEffect(() => {
-    if (!selected || isEditing || pendingEditNodeId !== id) return
-    startEditing()
-    setPendingEditNodeId(null)
-  }, [id, isEditing, pendingEditNodeId, selected, setPendingEditNodeId, startEditing])
+  usePendingNodeEdit({ id, selected: !!selected, isEditing, startEditing })
 
   return (
     <ResizableNodeWrapper

@@ -1,5 +1,5 @@
 import { pointsToPathD } from '../utils/canvas-stroke-utils'
-import { useCanvasToolStore } from '../stores/canvas-tool-store'
+import { useCanvasInteractionStore } from '../hooks/useCanvasInteractionStore'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
 
 const REMOTE_STROKE_OPACITY_MULTIPLIER = 0.7
@@ -9,7 +9,7 @@ interface CanvasStrokesProps {
 }
 
 export function CanvasStrokes({ remoteUsers }: CanvasStrokesProps) {
-  const localDrawing = useCanvasToolStore((s) => s.localDrawing)
+  const localDrawing = useCanvasInteractionStore((s) => s.localDrawing)
 
   const localPathD =
     localDrawing && localDrawing.points.length >= 2

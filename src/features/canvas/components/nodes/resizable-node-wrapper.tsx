@@ -1,6 +1,7 @@
-import { useContext, useSyncExternalStore } from 'react'
+import { useCallback } from 'react'
 import { NodeResizeControl } from '@xyflow/react'
-import { CanvasContext } from '../../utils/canvas-context'
+import { useCanvasNodeActions, useCanvasViewState } from '../../hooks/useCanvasContext'
+import { useShiftKeyPressed } from '../../hooks/useShiftKeyPressed'
 import type { ControlPosition, OnResize, OnResizeEnd } from '@xyflow/react'
 
 const HANDLE_SIZE = 4
@@ -33,55 +34,6 @@ const CONTROL_STYLE: React.CSSProperties = {
   zIndex: 10,
 }
 
-let shiftPressed = false
-const shiftSubscribers = new Set<() => void>()
-
-function notifyShiftSubscribers() {
-  for (const cb of shiftSubscribers) cb()
-}
-
-function onShiftDown(e: KeyboardEvent) {
-  if (e.key === 'Shift' && !shiftPressed) {
-    shiftPressed = true
-    notifyShiftSubscribers()
-  }
-}
-
-function onShiftUp(e: KeyboardEvent) {
-  if (e.key === 'Shift' && shiftPressed) {
-    shiftPressed = false
-    notifyShiftSubscribers()
-  }
-}
-
-function onWindowBlur() {
-  if (shiftPressed) {
-    shiftPressed = false
-    notifyShiftSubscribers()
-  }
-}
-
-function subscribeShift(cb: () => void) {
-  if (shiftSubscribers.size === 0) {
-    window.addEventListener('keydown', onShiftDown)
-    window.addEventListener('keyup', onShiftUp)
-    window.addEventListener('blur', onWindowBlur)
-  }
-  shiftSubscribers.add(cb)
-  return () => {
-    shiftSubscribers.delete(cb)
-    if (shiftSubscribers.size === 0) {
-      window.removeEventListener('keydown', onShiftDown)
-      window.removeEventListener('keyup', onShiftUp)
-      window.removeEventListener('blur', onWindowBlur)
-    }
-  }
-}
-
-function getShift() {
-  return shiftPressed
-}
-
 interface ResizableNodeWrapperProps {
   id: string
   selected: boolean
@@ -101,18 +53,25 @@ export function ResizableNodeWrapper({
   minHeight = 30,
   isRectDeselected = false,
 }: ResizableNodeWrapperProps) {
-  const { remoteHighlights, onResize, onResizeEnd } = useContext(CanvasContext)
+  const { remoteHighlights } = useCanvasViewState()
+  const { onResize, onResizeEnd } = useCanvasNodeActions()
   const highlight = remoteHighlights.get(id)
   const showHandles = selected && !dragging && !isRectDeselected
-  const keepAspectRatio = useSyncExternalStore(subscribeShift, getShift, getShift)
+  const keepAspectRatio = useShiftKeyPressed()
 
-  const handleResize: OnResize = (_event, params) => {
-    onResize(id, params.width, params.height, { x: params.x, y: params.y })
-  }
+  const handleResize: OnResize = useCallback(
+    (_event, params) => {
+      onResize(id, params.width, params.height, { x: params.x, y: params.y })
+    },
+    [id, onResize],
+  )
 
-  const handleResizeEnd: OnResizeEnd = (_event, params) => {
-    onResizeEnd(id, params.width, params.height, { x: params.x, y: params.y })
-  }
+  const handleResizeEnd: OnResizeEnd = useCallback(
+    (_event, params) => {
+      onResizeEnd(id, params.width, params.height, { x: params.x, y: params.y })
+    },
+    [id, onResizeEnd],
+  )
 
   return (
     <div className="relative h-full w-full">

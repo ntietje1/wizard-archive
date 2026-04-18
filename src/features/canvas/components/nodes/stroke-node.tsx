@@ -1,5 +1,5 @@
 import { pointsToPathD } from '../../utils/canvas-stroke-utils'
-import { useCanvasToolStore } from '../../stores/canvas-tool-store'
+import { useCanvasInteractionStore } from '../../hooks/useCanvasInteractionStore'
 import { ResizableNodeWrapper } from './resizable-node-wrapper'
 import type { Bounds } from '../../utils/canvas-stroke-utils'
 import type { Node, NodeProps } from '@xyflow/react'
@@ -56,8 +56,8 @@ export function StrokeNode({
   height,
 }: NodeProps<StrokeNodeType>) {
   const { points, size, bounds } = data
-  const isErasing = useCanvasToolStore((s) => s.erasingStrokeIds.has(id))
-  const isRectDeselected = useCanvasToolStore((s) => s.rectDeselectedIds.has(id))
+  const isErasing = useCanvasInteractionStore((s) => s.erasingStrokeIds.has(id))
+  const isRectDeselected = useCanvasInteractionStore((s) => s.rectDeselectedIds.has(id))
 
   const svgWidth = width ?? bounds.width
   const svgHeight = height ?? bounds.height

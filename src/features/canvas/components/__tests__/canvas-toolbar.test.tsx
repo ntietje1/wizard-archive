@@ -1,6 +1,7 @@
 import { render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasToolbar } from '../canvas-toolbar'
+import { useCanvasHistoryStore } from '../../stores/canvas-history-store'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 
 const reactFlowMock = vi.hoisted(() => ({
@@ -16,7 +17,11 @@ vi.mock('@xyflow/react', () => ({
 describe('CanvasToolbar', () => {
   beforeEach(() => {
     useCanvasToolStore.getState().reset()
-    useCanvasToolStore.getState().setHistory({
+    useCanvasHistoryStore.getState().reset()
+    reactFlowMock.fitView.mockReset()
+    reactFlowMock.zoomIn.mockReset()
+    reactFlowMock.zoomOut.mockReset()
+    useCanvasHistoryStore.getState().setHistory({
       canUndo: false,
       canRedo: true,
       undo: vi.fn(),
@@ -64,7 +69,7 @@ describe('CanvasToolbar', () => {
   it('shows only viewport controls in read-only mode', () => {
     render(<CanvasToolbar canEdit={false} />)
 
-    expect(screen.queryByRole('toolbar', { name: 'Canvas main toolbar' })).toBeNull()
+    expect(screen.queryByRole('toolbar', { name: 'Canvas main toolbar' })).not.toBeInTheDocument()
 
     const toolbar = screen.getByRole('toolbar', { name: 'Canvas viewport controls' })
     expect(
