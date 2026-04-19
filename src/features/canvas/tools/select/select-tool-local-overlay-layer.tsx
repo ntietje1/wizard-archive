@@ -8,6 +8,7 @@ export function SelectToolLocalOverlayLayer() {
 
   return (
     <svg
+      data-testid="canvas-marquee-overlay"
       aria-hidden="true"
       width="100%"
       height="100%"

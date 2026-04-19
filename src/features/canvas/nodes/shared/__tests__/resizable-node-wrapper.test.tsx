@@ -38,7 +38,12 @@ describe('ResizableNodeWrapper', () => {
 function renderWrapper({ selected }: { selected: boolean }) {
   return render(
     <CanvasRuntimeProviders value={createProviderValues()}>
-      <ResizableNodeWrapper id="node-1" selected={selected} dragging={false}>
+      <ResizableNodeWrapper
+        id="node-1"
+        nodeType="test"
+        selected={selected}
+        dragging={false}
+      >
         <div>node body</div>
       </ResizableNodeWrapper>
     </CanvasRuntimeProviders>,

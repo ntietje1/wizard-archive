@@ -37,6 +37,7 @@ export function TextNode({ id, data, selected, dragging }: NodeProps<Node<TextNo
   return (
     <ResizableNodeWrapper
       id={id}
+      nodeType="text"
       selected={!!selected}
       dragging={!!dragging}
       minWidth={80}

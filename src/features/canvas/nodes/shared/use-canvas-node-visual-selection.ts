@@ -6,10 +6,12 @@ export function useCanvasNodeVisualSelection(id: string, selected: boolean) {
     useShallow((state) => {
       const pendingNodeIds = state.pendingNodeIds
       const pendingPreviewActive = pendingNodeIds !== null
+      const pendingSelected = pendingPreviewActive && pendingNodeIds.has(id)
 
       return {
         pendingPreviewActive,
-        visuallySelected: pendingPreviewActive ? pendingNodeIds.has(id) : selected,
+        pendingSelected,
+        visuallySelected: pendingPreviewActive ? pendingSelected : selected,
       }
     }),
   )

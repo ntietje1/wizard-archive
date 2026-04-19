@@ -39,6 +39,7 @@ const CONTROL_STYLE: React.CSSProperties = {
 
 interface ResizableNodeWrapperProps {
   id: string
+  nodeType: string
   selected: boolean
   dragging: boolean
   children: React.ReactNode
@@ -48,6 +49,7 @@ interface ResizableNodeWrapperProps {
 
 export function ResizableNodeWrapper({
   id,
+  nodeType,
   selected,
   dragging,
   children,
@@ -56,7 +58,10 @@ export function ResizableNodeWrapper({
 }: ResizableNodeWrapperProps) {
   const remoteHighlights = useCanvasRemoteHighlightsContext()
   const { onResize, onResizeEnd } = useCanvasNodeActionsContext()
-  const { visuallySelected } = useCanvasNodeVisualSelection(id, selected)
+  const { visuallySelected, pendingPreviewActive, pendingSelected } = useCanvasNodeVisualSelection(
+    id,
+    selected,
+  )
   const highlight = remoteHighlights.get(id)
   const showHandles = selected && !dragging
   const keepAspectRatio = useShiftKeyPressed()
@@ -70,12 +75,23 @@ export function ResizableNodeWrapper({
   }
 
   return (
-    <div className="relative h-full w-full">
+    <div
+      className="relative h-full w-full"
+      data-testid="canvas-node"
+      data-node-id={id}
+      data-node-type={nodeType}
+      data-node-selected={selected ? 'true' : 'false'}
+      data-node-visual-selected={visuallySelected ? 'true' : 'false'}
+      data-node-pending-preview-active={pendingPreviewActive ? 'true' : 'false'}
+      data-node-pending-selected={pendingSelected ? 'true' : 'false'}
+    >
       {(visuallySelected || highlight) && (
         <div
           className="absolute -inset-0.5 rounded-sm pointer-events-none"
           style={{
             border: `1px solid ${highlight?.color ?? 'var(--primary)'}`,
+            borderStyle: !highlight && pendingPreviewActive ? 'dashed' : 'solid',
+            opacity: !highlight && pendingPreviewActive ? 0.85 : 1,
           }}
         />
       )}
@@ -93,6 +109,8 @@ export function ResizableNodeWrapper({
             onResizeEnd={handleResizeEnd}
           >
             <div
+              data-testid={`canvas-node-resize-handle-${position}`}
+              data-resize-handle-position={position}
               style={{
                 position: 'absolute',
                 width: HANDLE_SIZE,

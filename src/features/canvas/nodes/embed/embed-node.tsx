@@ -58,6 +58,7 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps<Node<Embed
   return (
     <ResizableNodeWrapper
       id={id}
+      nodeType="embed"
       selected={!!selected}
       dragging={!!dragging}
       minWidth={240}

@@ -222,7 +222,7 @@
 
 /* Hide native multi-select box on pointerdown to match per-node indicator timing */
 .react-flow__renderer:active .react-flow__nodesselection-rect {
-  opacity: 0 !important;
+  display: none !important;
 }
 
 /* Stroke nodes: only the filled path receives pointer events, not the bounding box */

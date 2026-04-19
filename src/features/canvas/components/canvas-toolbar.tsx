@@ -131,6 +131,7 @@ function ToolGroupButton({
         className={`h-8 w-8 ${active ? 'bg-accent' : ''}`}
         onClick={onClick}
         aria-label={label}
+        aria-pressed={active}
         title={label}
       >
         {icon}

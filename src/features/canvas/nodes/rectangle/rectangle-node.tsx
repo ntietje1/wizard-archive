@@ -26,6 +26,7 @@ export function RectangleNode({
   return (
     <ResizableNodeWrapper
       id={id}
+      nodeType="rectangle"
       selected={!!selected}
       dragging={!!dragging}
       minWidth={20}

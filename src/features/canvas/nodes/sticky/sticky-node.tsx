@@ -49,6 +49,7 @@ export function StickyNode({ id, data, selected, dragging }: NodeProps<Node<Stic
   return (
     <ResizableNodeWrapper
       id={id}
+      nodeType="sticky"
       selected={!!selected}
       dragging={!!dragging}
       minWidth={100}

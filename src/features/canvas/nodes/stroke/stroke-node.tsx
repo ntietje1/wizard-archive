@@ -111,6 +111,7 @@ export function StrokeNode({
   return (
     <ResizableNodeWrapper
       id={id}
+      nodeType="stroke"
       selected={!!selected}
       dragging={!!dragging}
       minWidth={20}

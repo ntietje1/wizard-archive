@@ -7,6 +7,7 @@ import { CanvasLocalOverlaysHost } from './canvas-local-overlays-host'
 import { MiniMapNode } from './canvas-minimap-node'
 import { CanvasToolbar } from './canvas-toolbar'
 import { canvasNodeTypes } from '../nodes/canvas-node-types'
+import { useCanvasPendingSelectionPreviewStore } from '../runtime/selection/use-canvas-pending-selection-preview'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
 import type { Edge, Node, OnConnect, OnEdgesDelete, OnNodeDrag, OnNodesDelete } from '@xyflow/react'
 
@@ -72,15 +73,25 @@ export function CanvasFlowShell({
   isFileDropTarget,
 }: CanvasFlowShellComponentProps) {
   const isSelectMode = activeTool === 'select'
+  const pendingSelectionCount = useCanvasPendingSelectionPreviewStore(
+    (state) => state.pendingNodeIds?.size ?? null,
+  )
 
   return (
     <div
       className="canvas-flow-shell relative flex-1 min-h-0 allow-motion"
       style={{ cursor: toolCursor }}
+      data-testid="canvas-flow-shell"
     >
       <CanvasToolbar canEdit={canEdit} />
       <CanvasConditionalToolbar canEdit={canEdit} />
-      <div ref={canvasSurfaceRef} className="relative h-full w-full">
+      <div
+        ref={canvasSurfaceRef}
+        className="relative h-full w-full"
+        data-testid="canvas-surface"
+        role="region"
+        aria-label="Canvas surface"
+      >
         <ReactFlow
           defaultNodes={EMPTY_NODES}
           defaultEdges={EMPTY_EDGES}
@@ -121,12 +132,28 @@ export function CanvasFlowShell({
           <CanvasAwarenessHost remoteUsers={remoteUsers} />
         </ReactFlow>
 
+        {pendingSelectionCount !== null && (
+          <CanvasPendingSelectionStatus count={pendingSelectionCount} />
+        )}
+
         <CanvasDropOverlay
           ref={dropOverlayRef}
           isDropTarget={isDropTarget}
           isFileDropTarget={isFileDropTarget}
         />
       </div>
+    </div>
+  )
+}
+
+function CanvasPendingSelectionStatus({ count }: { count: number }) {
+  return (
+    <div
+      className="pointer-events-none absolute top-4 right-4 z-10 rounded-full border bg-background/90 px-3 py-1 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm"
+      role="status"
+      aria-live="polite"
+    >
+      {`Selecting ${count} node${count === 1 ? '' : 's'}`}
     </div>
   )
 }

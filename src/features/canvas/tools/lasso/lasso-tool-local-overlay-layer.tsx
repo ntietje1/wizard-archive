@@ -7,6 +7,7 @@ export function LassoToolLocalOverlayLayer() {
 
   return (
     <svg
+      data-testid="canvas-lasso-overlay"
       aria-hidden="true"
       style={{
         position: 'absolute',
