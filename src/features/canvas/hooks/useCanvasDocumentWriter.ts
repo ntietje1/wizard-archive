@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react'
-import { getCanvasNodeModuleByType } from '../components/nodes/canvas-node-registry'
-import type { CanvasNodeData, CanvasNodeType } from '../components/nodes/canvas-node-module-types'
+import { getCanvasNodeModuleByType } from '../nodes/canvas-node-registry'
+import type { CanvasNodeData, CanvasNodeType } from '../nodes/canvas-node-module-types'
 import type { CanvasDocumentWriter } from '../tools/canvas-tool-types'
 import { stripEphemeralCanvasNodeState } from '../utils/canvas-node-persistence'
 import type { Connection, Edge, Node } from '@xyflow/react'

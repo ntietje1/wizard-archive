@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
-import { createEmbedCanvasNode } from '../components/nodes/embed-node-creation'
+import { createEmbedCanvasNode } from '../nodes/embed/embed-node-creation'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Node } from '@xyflow/react'
 import type { CanvasDropZoneData } from '~/features/dnd/utils/dnd-registry'

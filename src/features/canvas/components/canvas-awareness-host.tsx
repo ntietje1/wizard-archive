@@ -1,6 +1,6 @@
 import { useViewport } from '@xyflow/react'
 import { CanvasRemoteCursors } from './canvas-remote-cursors'
-import { canvasNodeModules } from './nodes/canvas-node-registry'
+import { canvasNodeModules } from '../nodes/canvas-node-registry'
 import { canvasToolModules } from '../tools/canvas-tool-modules'
 import type { CanvasAwarenessCapability } from '../tools/canvas-tool-types'
 import type { RemoteUser } from '../utils/canvas-awareness-types'

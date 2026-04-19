@@ -1,5 +1,5 @@
 import { useInternalNode } from '@xyflow/react'
-import { getCanvasNodeModuleByType } from './nodes/canvas-node-registry'
+import { getCanvasNodeModuleByType } from '../nodes/canvas-node-registry'
 
 interface MiniMapNodeProps {
   id: string

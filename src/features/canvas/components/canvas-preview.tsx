@@ -1,7 +1,7 @@
 import { useEffect, useSyncExternalStore, useState, useRef } from 'react'
 import { api } from 'convex/_generated/api'
 import * as Y from 'yjs'
-import { renderCanvasNodePreview } from './nodes/canvas-node-registry'
+import { renderCanvasNodePreview } from '../nodes/canvas-node-registry'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Edge, Node } from '@xyflow/react'
 import { yMapToArray } from '../utils/canvas-yjs-utils'

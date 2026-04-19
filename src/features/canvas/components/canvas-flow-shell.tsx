@@ -5,7 +5,7 @@ import { CanvasAwarenessHost } from './canvas-awareness-host'
 import { CanvasConditionalToolbar } from './canvas-conditional-toolbar'
 import { MiniMapNode } from './canvas-minimap-node'
 import { CanvasToolbar } from './canvas-toolbar'
-import { canvasNodeTypes } from './nodes/canvas-node-types'
+import { canvasNodeTypes } from '../nodes/canvas-node-types'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
 import type { Edge, Node, OnConnect, OnEdgesDelete, OnNodeDrag, OnNodesDelete } from '@xyflow/react'
 
@@ -73,7 +73,10 @@ export function CanvasFlowShell({
   const isSelectMode = activeTool === 'select'
 
   return (
-    <div className="canvas-flow-shell relative flex-1 min-h-0 allow-motion" style={{ cursor: toolCursor }}>
+    <div
+      className="canvas-flow-shell relative flex-1 min-h-0 allow-motion"
+      style={{ cursor: toolCursor }}
+    >
       <CanvasToolbar canEdit={canEdit} />
       <CanvasConditionalToolbar canEdit={canEdit} />
       <div ref={canvasSurfaceRef} className="relative h-full w-full">
