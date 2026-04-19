@@ -10,11 +10,11 @@ const DEBOUNCE_MS = 5_000
 export function useCanvasPreview({
   canvasId,
   doc,
-  container,
+  containerRef,
 }: {
   canvasId: Id<'sidebarItems'>
   doc: Y.Doc
-  container: HTMLElement | null
+  containerRef: React.RefObject<HTMLElement | null>
 }) {
   const isGeneratingRef = useRef(false)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -26,6 +26,7 @@ export function useCanvasPreview({
   claimAndUploadRef.current = claimAndUpload
 
   useEffect(() => {
+    const container = containerRef.current
     if (!container) {
       return
     }
@@ -56,5 +57,5 @@ export function useCanvasPreview({
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canvasId, container, doc])
+  }, [canvasId, containerRef, doc])
 }

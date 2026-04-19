@@ -161,7 +161,6 @@ export function useCanvasAwareness(provider: ConvexYjsProvider | null) {
 
   return {
     remoteUsers,
-    setLocalPresence,
     setLocalCursor,
     setLocalDragging,
     setLocalResizing,

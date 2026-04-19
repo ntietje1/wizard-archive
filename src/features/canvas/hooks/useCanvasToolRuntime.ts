@@ -79,8 +79,6 @@ export function useCanvasToolRuntime({
 
   const awarenessWriter = useMemo<CanvasAwarenessWriter>(
     () => ({
-      setLocalPresence: (namespace, value) =>
-        awarenessRef.current.setLocalPresence(namespace, value),
       setLocalCursor: (position) => awarenessRef.current.setLocalCursor(position),
       setLocalDragging: (positions) => awarenessRef.current.setLocalDragging(positions),
       setLocalResizing: (resizing) => awarenessRef.current.setLocalResizing(resizing),

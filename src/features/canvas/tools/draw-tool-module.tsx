@@ -40,7 +40,6 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
     }
   },
   awareness: {
-    namespace: 'tool.draw',
     Layer: DrawAwarenessLayer,
   },
   create: (environment) => {

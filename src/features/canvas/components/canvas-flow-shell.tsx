@@ -5,7 +5,7 @@ import { CanvasAwarenessHost } from './canvas-awareness-host'
 import { CanvasConditionalToolbar } from './canvas-conditional-toolbar'
 import { MiniMapNode } from './canvas-minimap-node'
 import { CanvasToolbar } from './canvas-toolbar'
-import { canvasNodeTypes } from './nodes/canvas-node-registry'
+import { canvasNodeTypes } from './nodes/canvas-node-types'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
 import type { Edge, Node, OnConnect, OnEdgesDelete, OnNodeDrag, OnNodesDelete } from '@xyflow/react'
 
@@ -22,7 +22,7 @@ const MIN_ZOOM = 0.1
 
 export interface CanvasFlowShellProps {
   toolCursor: string | undefined
-  wrapperRef: (node: HTMLDivElement | null) => void
+  canvasSurfaceRef: React.RefObject<HTMLDivElement | null>
   remoteUsers: Array<RemoteUser>
   activeTool: string
   onNodeDragStart?: OnNodeDrag
@@ -51,7 +51,7 @@ export function CanvasFlowShell({
   canEdit,
   colorMode,
   toolCursor,
-  wrapperRef,
+  canvasSurfaceRef,
   remoteUsers,
   activeTool,
   onNodeDragStart,
@@ -73,55 +73,53 @@ export function CanvasFlowShell({
   const isSelectMode = activeTool === 'select'
 
   return (
-    <div
-      ref={wrapperRef}
-      className="canvas-flow-shell relative flex-1 min-h-0 allow-motion"
-      style={{ cursor: toolCursor }}
-    >
+    <div className="canvas-flow-shell relative flex-1 min-h-0 allow-motion" style={{ cursor: toolCursor }}>
       <CanvasToolbar canEdit={canEdit} />
       <CanvasConditionalToolbar canEdit={canEdit} />
-      <ReactFlow
-        defaultNodes={EMPTY_NODES}
-        defaultEdges={EMPTY_EDGES}
-        onNodeDragStart={onNodeDragStart}
-        onNodeDrag={onNodeDrag}
-        onNodeDragStop={onNodeDragStop}
-        onNodesDelete={onNodesDelete}
-        onEdgesDelete={onEdgesDelete}
-        onConnect={onConnect}
-        onMoveStart={onMoveStart}
-        onMoveEnd={onMoveEnd}
-        onNodeClick={onNodeClick}
-        onPaneClick={onPaneClick}
-        onMouseMove={onMouseMove}
-        onMouseLeave={onMouseLeave}
-        nodeTypes={canvasNodeTypes}
-        nodesDraggable={false}
-        nodesConnectable={canEdit && isSelectMode}
-        elementsSelectable={canEdit && isSelectMode}
-        selectionOnDrag={canEdit && isSelectMode}
-        selectionMode={SelectionMode.Partial}
-        selectionKeyCode={SELECTION_KEY_DISABLED}
-        panOnDrag={activeTool === 'hand' ? PAN_BOTH : PAN_MIDDLE_ONLY}
-        deleteKeyCode={canEdit && isSelectMode ? DELETE_KEYS : DELETE_KEYS_NONE}
-        colorMode={colorMode}
-        minZoom={MIN_ZOOM}
-        maxZoom={MAX_ZOOM}
-        zoomOnScroll={false}
-        panOnScroll={false}
-        preventScrolling={false}
-        proOptions={PRO_OPTIONS}
-      >
-        <Background bgColor="var(--background)" />
-        <MiniMap zoomable={false} pannable={false} nodeComponent={MiniMapNode} />
-        <CanvasAwarenessHost remoteUsers={remoteUsers} />
-      </ReactFlow>
+      <div ref={canvasSurfaceRef} className="relative h-full w-full">
+        <ReactFlow
+          defaultNodes={EMPTY_NODES}
+          defaultEdges={EMPTY_EDGES}
+          onNodeDragStart={onNodeDragStart}
+          onNodeDrag={onNodeDrag}
+          onNodeDragStop={onNodeDragStop}
+          onNodesDelete={onNodesDelete}
+          onEdgesDelete={onEdgesDelete}
+          onConnect={onConnect}
+          onMoveStart={onMoveStart}
+          onMoveEnd={onMoveEnd}
+          onNodeClick={onNodeClick}
+          onPaneClick={onPaneClick}
+          onMouseMove={onMouseMove}
+          onMouseLeave={onMouseLeave}
+          nodeTypes={canvasNodeTypes}
+          nodesDraggable={false}
+          nodesConnectable={canEdit && isSelectMode}
+          elementsSelectable={canEdit && isSelectMode}
+          selectionOnDrag={canEdit && isSelectMode}
+          selectionMode={SelectionMode.Partial}
+          selectionKeyCode={SELECTION_KEY_DISABLED}
+          panOnDrag={activeTool === 'hand' ? PAN_BOTH : PAN_MIDDLE_ONLY}
+          deleteKeyCode={canEdit && isSelectMode ? DELETE_KEYS : DELETE_KEYS_NONE}
+          colorMode={colorMode}
+          minZoom={MIN_ZOOM}
+          maxZoom={MAX_ZOOM}
+          zoomOnScroll={false}
+          panOnScroll={false}
+          preventScrolling={false}
+          proOptions={PRO_OPTIONS}
+        >
+          <Background bgColor="var(--background)" />
+          <MiniMap zoomable={false} pannable={false} nodeComponent={MiniMapNode} />
+          <CanvasAwarenessHost remoteUsers={remoteUsers} />
+        </ReactFlow>
 
-      <CanvasDropOverlay
-        ref={dropOverlayRef}
-        isDropTarget={isDropTarget}
-        isFileDropTarget={isFileDropTarget}
-      />
+        <CanvasDropOverlay
+          ref={dropOverlayRef}
+          isDropTarget={isDropTarget}
+          isFileDropTarget={isFileDropTarget}
+        />
+      </div>
     </div>
   )
 }

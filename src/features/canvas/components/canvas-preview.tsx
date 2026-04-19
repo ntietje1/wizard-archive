@@ -1,9 +1,10 @@
 import { useEffect, useSyncExternalStore, useState, useRef } from 'react'
 import { api } from 'convex/_generated/api'
 import * as Y from 'yjs'
-import { renderCanvasNodePreview } from './nodes/canvas-node-preview-registry'
+import { renderCanvasNodePreview } from './nodes/canvas-node-registry'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Edge, Node } from '@xyflow/react'
+import { yMapToArray } from '../utils/canvas-yjs-utils'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 
@@ -142,7 +143,7 @@ function StaticNode({ node }: { node: Node }) {
   const { position, type, data } = node
   const { w, h } = getNodeDimensions(node)
 
-  const content = renderNodePreview(type, data, w, h)
+  const content = renderCanvasNodePreview(type, data, { width: w, height: h })
   if (!content) return null
 
   return (
@@ -150,15 +151,6 @@ function StaticNode({ node }: { node: Node }) {
       {content}
     </div>
   )
-}
-
-function renderNodePreview(
-  type: string | undefined,
-  data: Record<string, unknown>,
-  w: number,
-  h: number,
-): React.ReactNode {
-  return renderCanvasNodePreview(type, data, { width: w, height: h })
 }
 
 function getNodesBounds(nodes: Array<Node>) {
@@ -177,12 +169,6 @@ function getNodesBounds(nodes: Array<Node>) {
 
   if (!isFinite(minX)) return null
   return { minX, minY, maxX, maxY }
-}
-
-function yMapToArray<T>(map: Y.Map<T>): Array<T> {
-  const items: Array<T> = []
-  map.forEach((value) => items.push(value))
-  return items
 }
 
 function useYMapAsArray<T>(doc: Y.Doc, mapName: string): Array<T> {

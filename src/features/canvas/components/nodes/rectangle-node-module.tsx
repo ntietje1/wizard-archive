@@ -1,5 +1,5 @@
 import { createCanvasNodeModule, readNumber } from './canvas-node-module-types'
-import { RectangleNode, RectanglePreview } from './rectangle-node'
+import { RectanglePreview } from './rectangle-node'
 import type { RectangleNodeData } from './rectangle-node'
 import { rectangularCanvasNodeSelection } from './canvas-node-selection'
 import { paintCanvasProperty } from '../../properties/canvas-property-definitions'
@@ -7,7 +7,6 @@ import { bindCanvasPaintProperty } from '../../properties/canvas-property-types'
 
 export const rectangleNodeModule = createCanvasNodeModule<RectangleNodeData, 'rectangle'>({
   type: 'rectangle',
-  Component: RectangleNode,
   renderPreview: (data) => (
     <RectanglePreview color={data.color ?? 'var(--foreground)'} opacity={data.opacity} />
   ),

@@ -1,5 +1,5 @@
 import { createCanvasNodeModule, readNumber, readString } from './canvas-node-module-types'
-import { StickyNode, StickyPreview } from './sticky-node'
+import { StickyPreview } from './sticky-node'
 import type { StickyNodeData } from './sticky-node'
 import { rectangularCanvasNodeSelection } from './canvas-node-selection'
 import {
@@ -13,7 +13,6 @@ import { bindCanvasPaintProperty } from '../../properties/canvas-property-types'
 
 export const stickyNodeModule = createCanvasNodeModule<StickyNodeData, 'sticky'>({
   type: 'sticky',
-  Component: StickyNode,
   renderPreview: (data) => (
     <StickyPreview
       label={data.label ?? ''}

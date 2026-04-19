@@ -1,7 +1,6 @@
 import { render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import {
-  canEditCanvasNodeStyle,
   createCanvasNode,
   findCanvasNodeAtPoint,
   getCanvasNodesMatchingLasso,
@@ -40,16 +39,6 @@ describe('canvas node registry', () => {
         size: { width: 20, height: 10 },
       }),
     ).toThrow('Missing default canvas node data for "stroke"')
-  })
-
-  describe('canEditCanvasNodeStyle', () => {
-    it('returns true for nodes with style support', () => {
-      expect(canEditCanvasNodeStyle('sticky')).toBe(true)
-    })
-
-    it('returns false for nodes without style support', () => {
-      expect(canEditCanvasNodeStyle('text')).toBe(false)
-    })
   })
 
   describe('renderCanvasNodePreview', () => {

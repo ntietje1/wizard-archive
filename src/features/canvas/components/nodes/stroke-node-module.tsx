@@ -1,5 +1,5 @@
 import { createCanvasNodeModule } from './canvas-node-module-types'
-import { StrokeMinimapNode, StrokeNode, StrokePreview } from './stroke-node'
+import { StrokeMinimapNode, StrokePreview } from './stroke-node'
 import type { StrokeNodeData } from './stroke-node-model'
 import { resizeStrokeNode } from './stroke-node-model'
 import {
@@ -55,7 +55,6 @@ function isStrokeNodeData(data: Record<string, unknown>): data is StrokeNodeData
 
 export const strokeNodeModule = createCanvasNodeModule<StrokeNodeData, 'stroke'>({
   type: 'stroke',
-  Component: StrokeNode,
   renderPreview: (data, options) => (
     <StrokePreview data={data} width={options?.width} height={options?.height} />
   ),

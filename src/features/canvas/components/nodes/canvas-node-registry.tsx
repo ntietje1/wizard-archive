@@ -8,7 +8,6 @@ import type {
   CanvasNodeSelectionContext,
   CanvasNodeType,
 } from './canvas-node-module-types'
-import { buildCanvasNodeTypes } from './canvas-node-module-types'
 import type { Node } from '@xyflow/react'
 import type { Point2D } from '../../utils/canvas-awareness-types'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
@@ -28,8 +27,6 @@ export const canvasNodeModules = [
 const canvasNodeModuleMap: Partial<Record<CanvasNodeType, AnyCanvasNodeModule>> =
   Object.fromEntries(canvasNodeModules.map((module) => [module.type, module] as const))
 
-export const canvasNodeTypes = buildCanvasNodeTypes(canvasNodeModules)
-
 function isCanvasNodeType(type: string): type is CanvasNodeType {
   return type in canvasNodeModuleMap
 }
@@ -46,10 +43,6 @@ export function getCanvasNodeModule(type: CanvasNodeType): CanvasNodeModule {
 export function getCanvasNodeModuleByType(type: string | undefined): CanvasNodeModule | null {
   if (!type || !isCanvasNodeType(type)) return null
   return getCanvasNodeModule(type)
-}
-
-export function canEditCanvasNodeStyle(type: string | undefined): boolean {
-  return !!getCanvasNodeModuleByType(type)?.properties
 }
 
 export function renderCanvasNodePreview(

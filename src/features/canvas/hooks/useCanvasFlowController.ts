@@ -8,7 +8,6 @@ import { useCanvasHistory } from './useCanvasHistory'
 import { useCanvasKeyboardShortcuts } from './useCanvasKeyboardShortcuts'
 import { useCanvasNodeDragHandlers } from './useCanvasNodeDragHandlers'
 import { useCanvasPointerBridge } from './useCanvasPointerBridge'
-import { useCanvasPreviewContainer } from './useCanvasPreviewContainer'
 import { useCanvasRemoteDragAnimation } from './useCanvasRemoteDragAnimation'
 import { useCanvasSelectionActions } from './useCanvasSelectionActions'
 import { useCanvasSelectionRect } from './useCanvasSelectionRect'
@@ -24,6 +23,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { Edge, Node, OnConnect, OnEdgesDelete, OnNodesDelete } from '@xyflow/react'
 import type * as Y from 'yjs'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
+import { useCanvasPreview } from '~/features/previews/hooks/use-canvas-preview'
 import type { UseCanvasDropIntegrationOptions } from './useCanvasDropIntegration'
 
 interface UseCanvasFlowControllerOptions {
@@ -53,6 +53,7 @@ export function useCanvasFlowController({
   const reactFlowInstance = useReactFlow()
   const session = useCanvasSessionState({ provider, user })
   const activeToolId = useCanvasToolStore((state) => state.activeTool)
+  const canvasSurfaceRef = useRef<HTMLDivElement>(null)
 
   const documentWriter = useCanvasDocumentWriter({ nodesMap, edgesMap })
   const selectionActions = useCanvasSelectionActions()
@@ -96,17 +97,18 @@ export function useCanvasFlowController({
     editSession: session.editSession,
   })
 
-  const { wrapperRef, wrapperElement, wrapperCallbackRef } = useCanvasPreviewContainer({
+  useCanvasPreview({
     canvasId,
     doc,
+    containerRef: canvasSurfaceRef,
   })
 
   useCanvasPointerBridge({
-    wrapperElement,
+    surfaceRef: canvasSurfaceRef,
     activeToolController,
   })
 
-  useCanvasWheel(wrapperRef)
+  useCanvasWheel(canvasSurfaceRef)
 
   const isSelectMode = activeToolId === 'select'
   const dropIntegrationOptions: UseCanvasDropIntegrationOptions = {
@@ -194,7 +196,7 @@ export function useCanvasFlowController({
 
   const shellProps: CanvasFlowShellProps = {
     toolCursor: activeToolModule.cursor,
-    wrapperRef: wrapperCallbackRef,
+    canvasSurfaceRef,
     remoteUsers: session.remoteUsers,
     activeTool: activeToolId,
     onNodeDragStart: isSelectMode ? onNodeDragStart : undefined,

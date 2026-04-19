@@ -8,19 +8,20 @@ interface CanvasToolController {
 }
 
 interface UseCanvasPointerBridgeOptions {
-  wrapperElement: HTMLDivElement | null
+  surfaceRef: React.RefObject<HTMLDivElement | null>
   activeToolController: CanvasToolController
 }
 
 export function useCanvasPointerBridge({
-  wrapperElement,
+  surfaceRef,
   activeToolController,
 }: UseCanvasPointerBridgeOptions) {
   const toolControllerRef = useRef(activeToolController)
   toolControllerRef.current = activeToolController
 
   useEffect(() => {
-    if (!wrapperElement) return
+    const surfaceElement = surfaceRef.current
+    if (!surfaceElement) return
 
     const onPointerDown = (event: PointerEvent) => {
       const controller = toolControllerRef.current
@@ -48,16 +49,16 @@ export function useCanvasPointerBridge({
       toolControllerRef.current.onPointerCancel?.(event)
     }
 
-    wrapperElement.addEventListener('pointerdown', onPointerDown)
-    wrapperElement.addEventListener('pointermove', onPointerMove)
-    wrapperElement.addEventListener('pointerup', onPointerUp)
-    wrapperElement.addEventListener('pointercancel', onPointerCancel)
+    surfaceElement.addEventListener('pointerdown', onPointerDown)
+    surfaceElement.addEventListener('pointermove', onPointerMove)
+    surfaceElement.addEventListener('pointerup', onPointerUp)
+    surfaceElement.addEventListener('pointercancel', onPointerCancel)
 
     return () => {
-      wrapperElement.removeEventListener('pointerdown', onPointerDown)
-      wrapperElement.removeEventListener('pointermove', onPointerMove)
-      wrapperElement.removeEventListener('pointerup', onPointerUp)
-      wrapperElement.removeEventListener('pointercancel', onPointerCancel)
+      surfaceElement.removeEventListener('pointerdown', onPointerDown)
+      surfaceElement.removeEventListener('pointermove', onPointerMove)
+      surfaceElement.removeEventListener('pointerup', onPointerUp)
+      surfaceElement.removeEventListener('pointercancel', onPointerCancel)
     }
-  }, [wrapperElement])
+  }, [surfaceRef])
 }

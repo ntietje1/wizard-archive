@@ -1,12 +1,11 @@
 import { createCanvasNodeModule, readString } from './canvas-node-module-types'
 import { rectangularCanvasNodeSelection } from './canvas-node-selection'
-import { TextNode, TextPreview } from './text-node'
+import { TextPreview } from './text-node'
 import type { TextNodeData } from './text-node'
 import { TEXT_NODE_DEFAULT_HEIGHT, TEXT_NODE_DEFAULT_WIDTH } from './sticky-node-constants'
 
 export const textNodeModule = createCanvasNodeModule<TextNodeData, 'text'>({
   type: 'text',
-  Component: TextNode,
   renderPreview: (data) => <TextPreview label={data.label ?? ''} />,
   parseData: (data): TextNodeData => ({
     label: readString(data, 'label'),

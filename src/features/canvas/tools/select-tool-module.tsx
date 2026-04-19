@@ -10,7 +10,6 @@ export const selectToolModule: CanvasToolModule<'select'> = {
   group: 'selection',
   icon: <MousePointer2 className="h-4 w-4" />,
   awareness: {
-    namespace: 'tool.select',
     Layer: SelectAwarenessLayer,
   },
   create: (environment) => {

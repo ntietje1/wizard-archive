@@ -194,7 +194,6 @@ function createSelectEnvironment({
       setRectDeselectedIds: () => undefined,
     },
     awareness: {
-      setLocalPresence: () => undefined,
       setLocalCursor: () => undefined,
       setLocalDragging: () => undefined,
       setLocalResizing: () => undefined,

@@ -1,5 +1,4 @@
 import type {
-  CanvasAwarenessNamespace,
   DrawingState,
   Point2D,
   ResizingState,
@@ -119,7 +118,6 @@ interface CanvasInteractionOverlayControls {
 }
 
 export interface CanvasAwarenessWriter {
-  setLocalPresence: (namespace: CanvasAwarenessNamespace, value: unknown) => void
   setLocalCursor: (position: Point2D | null) => void
   setLocalDragging: (positions: Record<string, Point2D> | null) => void
   setLocalResizing: (resizing: ResizingState | null) => void
@@ -129,7 +127,6 @@ export interface CanvasAwarenessWriter {
 }
 
 export interface CanvasAwarenessCapability {
-  namespace: CanvasAwarenessNamespace
   Layer?: ComponentType<{ remoteUsers: Array<RemoteUser> }>
 }
 

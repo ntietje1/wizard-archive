@@ -23,7 +23,6 @@ vi.mock('@xyflow/react', () => ({
 
 function createAwarenessMock() {
   return {
-    setLocalPresence: vi.fn(),
     setLocalCursor: vi.fn(),
     setLocalDragging: vi.fn(),
     setLocalResizing: vi.fn(),

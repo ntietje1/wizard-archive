@@ -52,7 +52,6 @@ export interface CanvasNodeModule<
   TType extends CanvasNodeType = CanvasNodeType,
 > {
   type: TType
-  Component: ComponentType<NodeProps<Node<TData>>>
   renderPreview: (data: TData, options?: CanvasNodePreviewOptions) => ReactNode
   parseData: (data: CanvasNodeData) => TData | null
   create: (args: CanvasNodeCreateArgs) => { node: Node<TData, TType>; startEditing: boolean }
@@ -77,7 +76,6 @@ interface CreateCanvasNodeModuleDefinition<
   TType extends CanvasNodeType = CanvasNodeType,
 > {
   type: TType
-  Component: ComponentType<NodeProps<Node<TData>>>
   renderPreview: (data: TData, options?: CanvasNodePreviewOptions) => ReactNode
   parseData: (data: CanvasNodeData) => TData | null
   defaultSize?: { width: number; height: number }
@@ -142,20 +140,22 @@ export function createCanvasNodeModule<
   }
 }
 
-export function buildCanvasNodeTypes(modules: ReadonlyArray<AnyCanvasNodeModule>): NodeTypes {
+export function buildCanvasNodeTypes(
+  components: ReadonlyArray<readonly [CanvasNodeType, ComponentType<NodeProps<Node>>]>,
+): NodeTypes {
   const seen = new Map<CanvasNodeType, Array<string>>()
-  const entries: Array<readonly [CanvasNodeType, AnyCanvasNodeModule['Component']]> = []
+  const entries: Array<readonly [CanvasNodeType, ComponentType<NodeProps<Node>>]> = []
 
-  for (const module of modules) {
-    const componentName = module.Component.displayName || module.Component.name || 'anonymous'
-    const existing = seen.get(module.type)
+  for (const [type, Component] of components) {
+    const componentName = Component.displayName || Component.name || 'anonymous'
+    const existing = seen.get(type)
     if (existing) {
       existing.push(componentName)
       continue
     }
 
-    seen.set(module.type, [componentName])
-    entries.push([module.type, module.Component] as const)
+    seen.set(type, [componentName])
+    entries.push([type, Component] as const)
   }
 
   const duplicates = Array.from(seen.entries()).filter(
