@@ -1,5 +1,6 @@
 import type { Point2D } from '../../utils/canvas-awareness-types'
 import {
+  boundsFromPoints,
   pointInPolygon,
   pointToSegmentDistSq,
   rectIntersectsBounds,
@@ -28,21 +29,7 @@ const STROKE_SELECTION_PADDING_PX = 12
 const MIN_ZOOM = 1e-6
 
 function getPolylineBounds(points: Array<{ x: number; y: number }>): Bounds {
-  if (points.length === 0) return { x: 0, y: 0, width: 0, height: 0 }
-
-  let minX = Infinity
-  let minY = Infinity
-  let maxX = -Infinity
-  let maxY = -Infinity
-
-  for (const p of points) {
-    if (p.x < minX) minX = p.x
-    if (p.y < minY) minY = p.y
-    if (p.x > maxX) maxX = p.x
-    if (p.y > maxY) maxY = p.y
-  }
-
-  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
+  return boundsFromPoints(points) ?? { x: 0, y: 0, width: 0, height: 0 }
 }
 
 export function polylineIntersectsStroke(
@@ -113,6 +100,18 @@ export function getStrokeSelectionPadding(zoom: number): number {
   return STROKE_SELECTION_PADDING_PX / safeZoom
 }
 
+export function getStrokeSelectionBounds(node: StrokeNodeLike, zoom: number): Bounds {
+  const threshold = getStrokeSelectionPadding(zoom)
+  const bounds = node.data.bounds
+
+  return {
+    x: node.position.x - threshold,
+    y: node.position.y - threshold,
+    width: bounds.width + threshold * 2,
+    height: bounds.height + threshold * 2,
+  }
+}
+
 function pointHitsStrokeSelection(point: Point2D, node: StrokeNodeLike, zoom: number): boolean {
   return pointNearStrokePath(
     point.x,
@@ -127,7 +126,7 @@ export function strokeNodeContainsPoint(
   point: Point2D,
   zoom: number,
 ): boolean {
-  const bounds = strokeNodePointBounds(node, zoom)
+  const bounds = getStrokeSelectionBounds(node, zoom)
   if (
     point.x < bounds.x ||
     point.x > bounds.x + bounds.width ||
@@ -144,6 +143,17 @@ function strokePathIntersectsPolygon(
   points: Array<[number, number, number]>,
   polygon: Array<{ x: number; y: number }>,
 ): boolean {
+  const polygonBounds = boundsFromPoints(polygon)
+  const pathBounds = boundsFromPoints(points.map(([x, y]) => ({ x, y }))) ?? {
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+  }
+  if (polygonBounds && !rectIntersectsBounds(pathBounds, polygonBounds)) {
+    return false
+  }
+
   for (const [px, py] of points) {
     if (pointInPolygon(px, py, polygon)) return true
   }
@@ -243,16 +253,4 @@ export function strokeNodeIntersectsPolygon(
   polygon: Array<Point2D>,
 ): boolean {
   return strokePathIntersectsPolygon(getAbsoluteStrokePointsForNode(node), polygon)
-}
-
-function strokeNodePointBounds(node: StrokeNodeLike, zoom: number): Bounds {
-  const threshold = getStrokeSelectionPadding(zoom)
-  const bounds = node.data.bounds
-
-  return {
-    x: node.position.x - threshold,
-    y: node.position.y - threshold,
-    width: bounds.width + threshold * 2,
-    height: bounds.height + threshold * 2,
-  }
 }

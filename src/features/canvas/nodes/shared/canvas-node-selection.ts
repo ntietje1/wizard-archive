@@ -1,4 +1,8 @@
-import { pointInPolygon, rectIntersectsBounds } from '../../utils/canvas-geometry-utils'
+import {
+  boundsFromPoints,
+  pointInPolygon,
+  rectIntersectsBounds,
+} from '../../utils/canvas-geometry-utils'
 import type { CanvasNodeSelection } from '../canvas-node-module-types'
 import type { Point2D } from '../../utils/canvas-awareness-types'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
@@ -19,7 +23,7 @@ function isBoundsLike(value: unknown): value is BoundsLike {
   )
 }
 
-function getCanvasNodeBounds(node: Node): Bounds | null {
+export function getCanvasNodeBounds(node: Node): Bounds | null {
   const fallbackBounds =
     typeof node.data === 'object' && node.data !== null && 'bounds' in node.data
       ? node.data.bounds
@@ -58,6 +62,10 @@ export const rectangularCanvasNodeSelection: CanvasNodeSelection = {
   lasso: (node, polygon) => {
     const bounds = getCanvasNodeBounds(node)
     if (!bounds) return false
+    const polygonBounds = boundsFromPoints(polygon)
+    if (polygonBounds && !rectIntersectsBounds(polygonBounds, bounds)) {
+      return false
+    }
 
     const corners: Array<Point2D> = [
       { x: bounds.x, y: bounds.y },

@@ -33,6 +33,10 @@ function clientRectToFlowRect(
   }
 }
 
+function boundsEqual(a: Bounds | null, b: Bounds | null): boolean {
+  return a?.x === b?.x && a?.y === b?.y && a?.width === b?.width && a?.height === b?.height
+}
+
 interface UseCanvasSelectionRectOptions {
   surfaceRef: RefObject<HTMLDivElement | null>
   awareness: CanvasAwarenessPresenceWriter
@@ -65,14 +69,31 @@ export function useCanvasSelectionRect({
     if (!pane) return
 
     let selectionStartClientPoint: { x: number; y: number } | null = null
+    let latestClientPoint: { x: number; y: number } | null = null
     let selectionActive = false
+    let previewRafId = 0
+    let lastPublishedRect: Bounds | null = null
+
+    function publishSelectToolAwareness(rect: Bounds | null) {
+      if (boundsEqual(lastPublishedRect, rect)) return
+      lastPublishedRect = rect
+      setSelectToolAwareness(awarenessRef.current, rect)
+    }
+
+    function cancelSelectionPreviewFrame() {
+      if (!previewRafId) return
+      cancelAnimationFrame(previewRafId)
+      previewRafId = 0
+    }
 
     function clearLocalSelectionGesture() {
+      cancelSelectionPreviewFrame()
       lastFlowRectRef.current = null
+      latestClientPoint = null
       setSelectToolSelectionDragRect(null)
       clearCanvasPendingSelectionPreview()
       selectionRef.current.endGesture()
-      setSelectToolAwareness(awarenessRef.current, null)
+      publishSelectToolAwareness(null)
     }
 
     function updateSelectionRect(currentClientPoint: { x: number; y: number }) {
@@ -94,7 +115,7 @@ export function useCanvasSelectionRect({
         selectionActive = true
         selectionRef.current.beginGesture('marquee')
       }
-      setSelectToolAwareness(awarenessRef.current, flowRect)
+      publishSelectToolAwareness(flowRect)
       const current = storeApi.getState()
       const pendingNodeIds = getCanvasNodesMatchingRectangle(
         getMeasuredCanvasNodesFromLookup(current.nodeLookup),
@@ -104,10 +125,38 @@ export function useCanvasSelectionRect({
       setCanvasPendingSelectionPreview(pendingNodeIds)
     }
 
+    function scheduleSelectionPreviewUpdate() {
+      if (previewRafId) return
+
+      previewRafId = requestAnimationFrame(() => {
+        previewRafId = 0
+        if (!latestClientPoint) return
+        updateSelectionRect(latestClientPoint)
+      })
+    }
+
+    function tryActivateSelection(currentClientPoint: { x: number; y: number }) {
+      if (!selectionStartClientPoint) return false
+
+      const distance = Math.hypot(
+        currentClientPoint.x - selectionStartClientPoint.x,
+        currentClientPoint.y - selectionStartClientPoint.y,
+      )
+      if (!selectionActive && distance <= MIN_SELECTION_DRAG_DISTANCE_PX) {
+        return false
+      }
+
+      return true
+    }
+
     function stopTrackingSelection(commit: boolean) {
       window.removeEventListener('pointermove', handlePointerMove)
       window.removeEventListener('pointerup', handlePointerUp)
       window.removeEventListener('pointercancel', handlePointerCancel)
+
+      if (commit && latestClientPoint && tryActivateSelection(latestClientPoint)) {
+        updateSelectionRect(latestClientPoint)
+      }
 
       if (commit && selectionActive && lastFlowRectRef.current) {
         const current = storeApi.getState()
@@ -128,15 +177,12 @@ export function useCanvasSelectionRect({
     function handlePointerMove(event: PointerEvent) {
       if (!selectionStartClientPoint) return
 
-      const distance = Math.hypot(
-        event.clientX - selectionStartClientPoint.x,
-        event.clientY - selectionStartClientPoint.y,
-      )
-      if (!selectionActive && distance <= MIN_SELECTION_DRAG_DISTANCE_PX) {
+      latestClientPoint = { x: event.clientX, y: event.clientY }
+      if (!tryActivateSelection(latestClientPoint)) {
         return
       }
 
-      updateSelectionRect({ x: event.clientX, y: event.clientY })
+      scheduleSelectionPreviewUpdate()
     }
 
     function handlePointerUp() {
@@ -156,6 +202,7 @@ export function useCanvasSelectionRect({
         x: event.clientX,
         y: event.clientY,
       }
+      latestClientPoint = selectionStartClientPoint
       selectionActive = false
       window.addEventListener('pointermove', handlePointerMove)
       window.addEventListener('pointerup', handlePointerUp)

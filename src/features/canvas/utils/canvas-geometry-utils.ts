@@ -7,6 +7,11 @@ export type Bounds = {
   height: number
 }
 
+export type PointLike = {
+  x: number
+  y: number
+}
+
 export function rectFromPoints(a: XYPosition, b: XYPosition): Bounds {
   return {
     x: Math.min(a.x, b.x),
@@ -32,6 +37,29 @@ export function rectContainsBounds(rect: Bounds, bounds: Bounds): boolean {
     bounds.x + bounds.width <= rect.x + rect.width &&
     bounds.y + bounds.height <= rect.y + rect.height
   )
+}
+
+export function boundsFromPoints(points: Array<PointLike>): Bounds | null {
+  if (points.length === 0) return null
+
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+
+  for (const point of points) {
+    if (point.x < minX) minX = point.x
+    if (point.y < minY) minY = point.y
+    if (point.x > maxX) maxX = point.x
+    if (point.y > maxY) maxY = point.y
+  }
+
+  return {
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY,
+  }
 }
 
 export function segmentsIntersect(

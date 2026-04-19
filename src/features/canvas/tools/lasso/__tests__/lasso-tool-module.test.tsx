@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { lassoToolModule } from '../lasso-tool-module'
 import {
   clearCanvasPendingSelectionPreview,
@@ -40,12 +40,45 @@ function createPointerEvent(
 }
 
 describe('lassoToolModule', () => {
+  const rafCallbacks = new Map<number, FrameRequestCallback>()
+  let nextRafId = 1
+
   beforeEach(() => {
     clearLassoToolLocalOverlay()
     clearCanvasPendingSelectionPreview()
+    rafCallbacks.clear()
+    nextRafId = 1
+    vi.stubGlobal(
+      'requestAnimationFrame',
+      vi.fn((callback: FrameRequestCallback) => {
+        const rafId = nextRafId
+        nextRafId += 1
+        rafCallbacks.set(rafId, callback)
+        return rafId
+      }),
+    )
+    vi.stubGlobal(
+      'cancelAnimationFrame',
+      vi.fn((rafId: number) => {
+        rafCallbacks.delete(rafId)
+      }),
+    )
   })
 
-  it('selects measured nodes enclosed by the lasso path', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  function flushAnimationFrame() {
+    const callbacks = Array.from(rafCallbacks.values())
+    rafCallbacks.clear()
+
+    for (const callback of callbacks) {
+      callback(performance.now())
+    }
+  }
+
+  it('coalesces lasso preview updates to one animation frame and still commits the latest polygon', () => {
     const clear = vi.fn()
     const commitGestureSelection = vi.fn()
     const beginGesture = vi.fn()
@@ -81,9 +114,19 @@ describe('lassoToolModule', () => {
     controller.onPointerMove?.(createPointerEvent(target, { clientX: 100, clientY: 100 }))
     controller.onPointerMove?.(createPointerEvent(target, { clientX: 0, clientY: 100 }))
 
+    expect(requestAnimationFrame).toHaveBeenCalledTimes(1)
+    expect(setPresence).not.toHaveBeenCalled()
+    expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toBeNull()
+
+    flushAnimationFrame()
+
     expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toEqual(
       new Set(['embed-1']),
     )
+    expect(setPresence).toHaveBeenCalledTimes(1)
+
+    controller.onPointerMove?.(createPointerEvent(target, { clientX: -20, clientY: 50 }))
+    expect(requestAnimationFrame).toHaveBeenCalledTimes(2)
 
     controller.onPointerUp?.(createPointerEvent(target, { clientX: 0, clientY: 0 }))
 
@@ -125,6 +168,8 @@ describe('lassoToolModule', () => {
     const secondPath = useLassoToolLocalOverlayStore.getState().points
     controller.onPointerMove?.(createPointerEvent(target, { clientX: 100, clientY: 100 }))
     const thirdPath = useLassoToolLocalOverlayStore.getState().points
+
+    flushAnimationFrame()
 
     expect(firstPath).toEqual([{ x: 0, y: 0 }])
     expect(secondPath).toEqual([
@@ -170,6 +215,7 @@ describe('lassoToolModule', () => {
     controller.onPointerMove?.(createPointerEvent(target, { clientX: 100, clientY: 0 }))
     controller.onPointerMove?.(createPointerEvent(target, { clientX: 100, clientY: 100 }))
     controller.onPointerMove?.(createPointerEvent(target, { clientX: 0, clientY: 100 }))
+    flushAnimationFrame()
     controller.onPointerUp?.(createPointerEvent(target, { clientX: 0, clientY: 0 }))
 
     expect(commitGestureSelection).toHaveBeenCalledWith([])
@@ -222,6 +268,7 @@ describe('lassoToolModule', () => {
     controller.onPointerMove?.(createPointerEvent(target, { clientX: 100, clientY: 0 }))
     controller.onPointerMove?.(createPointerEvent(target, { clientX: 100, clientY: 100 }))
     controller.onPointerMove?.(createPointerEvent(target, { clientX: 0, clientY: 100 }))
+    flushAnimationFrame()
     controller.onPointerUp?.(createPointerEvent(target, { clientX: 0, clientY: 0 }))
 
     expect(commitGestureSelection).toHaveBeenCalledWith(['inside-node'])

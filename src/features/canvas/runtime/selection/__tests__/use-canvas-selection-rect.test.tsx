@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   clearCanvasPendingSelectionPreview,
   useCanvasPendingSelectionPreviewStore,
@@ -31,13 +31,46 @@ vi.mock('@xyflow/react', () => ({
 }))
 
 describe('useCanvasSelectionRect', () => {
+  const rafCallbacks = new Map<number, FrameRequestCallback>()
+  let nextRafId = 1
+
   beforeEach(() => {
     clearSelectToolLocalOverlay()
     clearCanvasPendingSelectionPreview()
     storeApiMock.reset()
+    rafCallbacks.clear()
+    nextRafId = 1
+    vi.stubGlobal(
+      'requestAnimationFrame',
+      vi.fn((callback: FrameRequestCallback) => {
+        const rafId = nextRafId
+        nextRafId += 1
+        rafCallbacks.set(rafId, callback)
+        return rafId
+      }),
+    )
+    vi.stubGlobal(
+      'cancelAnimationFrame',
+      vi.fn((rafId: number) => {
+        rafCallbacks.delete(rafId)
+      }),
+    )
   })
 
-  it('publishes pending selection ids while marquee selection is active and clears them after commit', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  function flushAnimationFrame() {
+    const callbacks = Array.from(rafCallbacks.entries())
+    rafCallbacks.clear()
+
+    for (const [, callback] of callbacks) {
+      callback(performance.now())
+    }
+  }
+
+  it('coalesces marquee preview updates to one animation frame and still commits the latest rectangle', () => {
     const setPresence = vi.fn()
     const suppressNextSurfaceClick = vi.fn()
     const selection = {
@@ -85,22 +118,49 @@ describe('useCanvasSelectionRect', () => {
       window.dispatchEvent(
         new MouseEvent('pointermove', { bubbles: true, clientX: 40, clientY: 60 }),
       )
+      window.dispatchEvent(
+        new MouseEvent('pointermove', { bubbles: true, clientX: 90, clientY: 90 }),
+      )
     })
 
+    expect(requestAnimationFrame).toHaveBeenCalledTimes(1)
+    expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toBeNull()
+    expect(setPresence).not.toHaveBeenCalled()
+
+    act(() => {
+      flushAnimationFrame()
+    })
     expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toEqual(
       new Set(['sticky-1']),
     )
-
-    act(() => {
-      window.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 40, clientY: 60 }))
-    })
-
     expect(setPresence).toHaveBeenCalledWith('tool.select', {
       type: 'rect',
       x: 10,
       y: 20,
-      width: 30,
-      height: 40,
+      width: 80,
+      height: 70,
+    })
+
+    act(() => {
+      window.dispatchEvent(
+        new MouseEvent('pointermove', { bubbles: true, clientX: 100, clientY: 100 }),
+      )
+    })
+
+    expect(requestAnimationFrame).toHaveBeenCalledTimes(2)
+
+    act(() => {
+      window.dispatchEvent(
+        new MouseEvent('pointerup', { bubbles: true, clientX: 100, clientY: 100 }),
+      )
+    })
+
+    expect(setPresence).toHaveBeenNthCalledWith(2, 'tool.select', {
+      type: 'rect',
+      x: 10,
+      y: 20,
+      width: 90,
+      height: 80,
     })
     expect(setPresence).toHaveBeenLastCalledWith('tool.select', null)
     expect(selection.beginGesture).toHaveBeenCalledWith('marquee')

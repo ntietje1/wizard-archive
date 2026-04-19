@@ -31,21 +31,69 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
   create: (environment) => {
     let points: Array<{ x: number; y: number }> = []
     let active = false
+    let previewRafId = 0
     let captureTarget: Element | null = null
     let pointerId: number | null = null
+    let lastPublishedPoints: Array<{ x: number; y: number }> | null = null
 
-    const publishLassoPoints = () => {
-      const nextPoints = [...points]
-      setLassoToolLocalPoints(nextPoints)
-      setLassoToolAwareness(environment.awareness.presence, { type: 'lasso', points: nextPoints })
+    const pointsEqual = (
+      a: Array<{ x: number; y: number }> | null,
+      b: Array<{ x: number; y: number }> | null,
+    ) => {
+      if (a === b) return true
+      if (a === null || b === null) return false
+      if (a.length !== b.length) return false
+
+      for (let index = 0; index < a.length; index += 1) {
+        if (a[index].x !== b[index].x || a[index].y !== b[index].y) {
+          return false
+        }
+      }
+
+      return true
+    }
+
+    const publishLassoAwareness = (nextPoints: Array<{ x: number; y: number }> | null) => {
+      if (pointsEqual(lastPublishedPoints, nextPoints)) return
+
+      lastPublishedPoints = nextPoints
+      setLassoToolAwareness(
+        environment.awareness.presence,
+        nextPoints ? { type: 'lasso', points: nextPoints } : null,
+      )
+    }
+
+    const publishPreview = () => {
+      previewRafId = 0
+
+      publishLassoAwareness(points)
+      if (points.length < 3) {
+        clearCanvasPendingSelectionPreview()
+        return
+      }
+
+      setCanvasPendingSelectionPreview(
+        getCanvasNodesMatchingLasso(environment.document.getMeasuredNodes(), points, {
+          zoom: environment.viewport.getZoom(),
+        }),
+      )
+    }
+
+    const schedulePreview = () => {
+      if (previewRafId) return
+      previewRafId = requestAnimationFrame(publishPreview)
     }
 
     const reset = () => {
       active = false
       points = []
+      if (previewRafId) {
+        cancelAnimationFrame(previewRafId)
+        previewRafId = 0
+      }
       setLassoToolLocalPoints([])
       clearCanvasPendingSelectionPreview()
-      setLassoToolAwareness(environment.awareness.presence, null)
+      publishLassoAwareness(null)
       environment.selection.endGesture()
       releasePointerCapture(captureTarget, pointerId)
       captureTarget = null
@@ -62,29 +110,25 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
         const pos = screenEventToFlowPosition(environment.viewport, event)
         points = [pos]
         environment.selection.beginGesture('lasso')
-        publishLassoPoints()
+        setLassoToolLocalPoints(points)
+        schedulePreview()
         environment.selection.clear()
       },
       onPointerMove: (event) => {
         if (!active || (event.buttons & 1) !== 1) return
 
         const pos = screenEventToFlowPosition(environment.viewport, event)
-        points.push(pos)
-        publishLassoPoints()
-
-        if (points.length < 3) {
-          clearCanvasPendingSelectionPreview()
-          return
-        }
-
-        setCanvasPendingSelectionPreview(
-          getCanvasNodesMatchingLasso(environment.document.getMeasuredNodes(), points, {
-            zoom: environment.viewport.getZoom(),
-          }),
-        )
+        points = [...points, pos]
+        setLassoToolLocalPoints(points)
+        schedulePreview()
       },
       onPointerUp: () => {
         if (!active) return
+
+        if (previewRafId) {
+          cancelAnimationFrame(previewRafId)
+          previewRafId = 0
+        }
 
         if (points.length < 3) {
           reset()

@@ -28,4 +28,15 @@ describe('useCanvasPendingSelectionPreviewStore', () => {
     expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toEqual(new Set())
     expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).not.toBeNull()
   })
+
+  it('keeps the existing set reference when the effective preview ids are unchanged', () => {
+    setCanvasPendingSelectionPreview(['node-1', 'node-2'])
+    const initialPendingNodeIds = useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds
+
+    setCanvasPendingSelectionPreview(['node-2', 'node-1'])
+
+    expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toBe(
+      initialPendingNodeIds,
+    )
+  })
 })

@@ -1,4 +1,6 @@
 import { embedNodeModule } from './embed/embed-node-module'
+import { getStrokeSelectionBounds } from './stroke/stroke-node-interactions'
+import { getCanvasNodeBounds } from './shared/canvas-node-selection'
 import type {
   AnyCanvasNodeModule,
   CanvasNodeCreateArgs,
@@ -14,6 +16,7 @@ import type { CanvasAwarenessCapability, CanvasDocumentWriter } from '../tools/c
 import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
 import type { Point2D } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-geometry-utils'
+import { boundsFromPoints, rectIntersectsBounds } from '../utils/canvas-geometry-utils'
 import { rectangleNodeModule } from './rectangle/rectangle-node-module'
 import { strokeNodeModule } from './stroke/stroke-node-module'
 import { textNodeModule } from './text/text-node-module'
@@ -35,6 +38,15 @@ type CanvasAwarenessLayer = NonNullable<CanvasAwarenessCapability['Layer']>
 const canvasNodeAwarenessLayers = canvasNodeModules.flatMap((module) =>
   module.awareness?.Layer ? [{ key: module.type, Layer: module.awareness.Layer }] : [],
 )
+
+type StrokeSelectionNode = Node<
+  {
+    points: Array<[number, number, number]>
+    size: number
+    bounds: Bounds
+  },
+  'stroke'
+>
 
 function isCanvasNodeType(type: string): type is CanvasNodeType {
   return type in canvasNodeModuleMap
@@ -113,12 +125,48 @@ export function findCanvasNodeAtPoint(
   return null
 }
 
+function getCanvasRectangleCandidateBounds(
+  node: Node,
+  context: CanvasNodeSelectionContext,
+): Bounds | null {
+  if (isStrokeSelectionNode(node)) {
+    return getStrokeSelectionBounds(node, context.zoom)
+  }
+
+  return getCanvasNodeBounds(node)
+}
+
+function isStrokeSelectionNode(node: Node): node is StrokeSelectionNode {
+  return (
+    node.type === 'stroke' &&
+    Array.isArray(node.data.points) &&
+    typeof node.data.size === 'number' &&
+    typeof node.data.bounds === 'object' &&
+    node.data.bounds !== null
+  )
+}
+
+function filterCanvasSelectionCandidates(
+  nodes: Array<Node>,
+  candidateBounds: Bounds | null,
+  getBounds: (node: Node) => Bounds | null,
+): Array<Node> {
+  if (!candidateBounds) return nodes
+
+  return nodes.filter((node) => {
+    const bounds = getBounds(node)
+    return !bounds || rectIntersectsBounds(candidateBounds, bounds)
+  })
+}
+
 export function getCanvasNodesMatchingRectangle(
   nodes: Array<Node>,
   rect: Bounds,
   context: CanvasNodeSelectionContext,
 ): Array<string> {
-  return nodes
+  return filterCanvasSelectionCandidates(nodes, rect, (node) =>
+    getCanvasRectangleCandidateBounds(node, context),
+  )
     .filter((node) =>
       getCanvasNodeModuleByType(node.type)?.selection?.rectangle?.(node, rect, context),
     )
@@ -130,7 +178,9 @@ export function getCanvasNodesMatchingLasso(
   polygon: Array<Point2D>,
   context: CanvasNodeSelectionContext,
 ): Array<string> {
-  return nodes
+  const polygonBounds = boundsFromPoints(polygon)
+
+  return filterCanvasSelectionCandidates(nodes, polygonBounds, getCanvasNodeBounds)
     .filter((node) =>
       getCanvasNodeModuleByType(node.type)?.selection?.lasso?.(node, polygon, context),
     )
