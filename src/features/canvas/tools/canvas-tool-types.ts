@@ -140,7 +140,7 @@ export interface CanvasToolEnvironment {
   awareness: CanvasAwarenessWriter
 }
 
-interface CanvasToolController {
+export interface CanvasToolController {
   onPointerDown?: (event: PointerEvent) => void
   onPointerMove?: (event: PointerEvent) => void
   onPointerUp?: (event: PointerEvent) => void

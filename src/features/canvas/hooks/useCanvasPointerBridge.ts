@@ -1,11 +1,5 @@
 import { useEffect, useRef } from 'react'
-
-interface CanvasToolController {
-  onPointerDown?: (event: PointerEvent) => void
-  onPointerMove?: (event: PointerEvent) => void
-  onPointerUp?: (event: PointerEvent) => void
-  onPointerCancel?: (event: PointerEvent) => void
-}
+import type { CanvasToolController } from '../tools/canvas-tool-types'
 
 interface UseCanvasPointerBridgeOptions {
   surfaceRef: React.RefObject<HTMLDivElement | null>

@@ -68,9 +68,9 @@ describe('useCanvasToolRuntime', () => {
     const { result, rerender } = renderHook(
       ({ awareness }) =>
         useCanvasToolRuntime({
-          documentWriter,
-          documentReader,
-          selectionActions,
+          documentRead: documentReader,
+          documentWrite: documentWriter,
+          selection: selectionActions,
           awareness,
           editSession,
         }),
@@ -88,6 +88,8 @@ describe('useCanvasToolRuntime', () => {
     })
 
     expect(result.current.activeTool).toBe('lasso')
+    expect(result.current.toolCursor).toBe('crosshair')
     expect(result.current.activeToolController).toBe(initialController)
+    expect('activeToolModule' in result.current).toBe(false)
   })
 })

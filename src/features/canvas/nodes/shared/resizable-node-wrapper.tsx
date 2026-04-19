@@ -1,4 +1,3 @@
-import { useCallback } from 'react'
 import { NodeResizeControl } from '@xyflow/react'
 import type { ControlPosition, OnResize, OnResizeEnd } from '@xyflow/react'
 import { useCanvasRuntimeContext } from '../../hooks/canvas-runtime-context'
@@ -59,19 +58,13 @@ export function ResizableNodeWrapper({
   const showHandles = selected && !dragging && !isRectDeselected
   const keepAspectRatio = useShiftKeyPressed()
 
-  const handleResize: OnResize = useCallback(
-    (_event, params) => {
-      onResize(id, params.width, params.height, { x: params.x, y: params.y })
-    },
-    [id, onResize],
-  )
+  const handleResize: OnResize = (_event, params) => {
+    onResize(id, params.width, params.height, { x: params.x, y: params.y })
+  }
 
-  const handleResizeEnd: OnResizeEnd = useCallback(
-    (_event, params) => {
-      onResizeEnd(id, params.width, params.height, { x: params.x, y: params.y })
-    },
-    [id, onResizeEnd],
-  )
+  const handleResizeEnd: OnResizeEnd = (_event, params) => {
+    onResizeEnd(id, params.width, params.height, { x: params.x, y: params.y })
+  }
 
   return (
     <div className="relative h-full w-full">

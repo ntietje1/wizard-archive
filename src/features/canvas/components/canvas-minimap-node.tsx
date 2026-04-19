@@ -1,5 +1,5 @@
 import { useInternalNode } from '@xyflow/react'
-import { getCanvasNodeModuleByType } from '../nodes/canvas-node-registry'
+import { renderCanvasNodeMinimap } from '../nodes/canvas-node-registry'
 
 interface MiniMapNodeProps {
   id: string
@@ -24,19 +24,18 @@ export function MiniMapNode({
 }: MiniMapNodeProps) {
   const node = useInternalNode(id)
   if (!node) return null
-  const module = getCanvasNodeModuleByType(node.type)
-  if (module?.renderMinimap) {
-    return module.renderMinimap({
-      id,
-      x,
-      y,
-      width,
-      height,
-      color,
-      borderRadius,
-      shapeRendering,
-    })
-  }
+
+  const minimapNode = renderCanvasNodeMinimap(node.type, {
+    id,
+    x,
+    y,
+    width,
+    height,
+    color,
+    borderRadius,
+    shapeRendering,
+  })
+  if (minimapNode) return minimapNode
 
   return (
     <rect

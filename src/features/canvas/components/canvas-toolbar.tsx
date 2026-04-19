@@ -1,7 +1,7 @@
 import { useReactFlow } from '@xyflow/react'
 import { Maximize2, Minus, Plus, Redo2, Undo2 } from 'lucide-react'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
-import { canvasToolModules } from '../tools/canvas-tool-modules'
+import { getCanvasToolbarTools } from '../tools/canvas-tool-modules'
 import { Button } from '~/features/shadcn/components/button'
 import { useCanvasRuntimeContext } from '../hooks/canvas-runtime-context'
 
@@ -12,6 +12,7 @@ interface CanvasToolbarProps {
 export function CanvasToolbar({ canEdit }: CanvasToolbarProps) {
   const { fitView, zoomIn, zoomOut } = useReactFlow()
   const { history } = useCanvasRuntimeContext()
+  const toolbarTools = getCanvasToolbarTools()
 
   const activeTool = useCanvasToolStore((s) => s.activeTool)
   const setActiveTool = useCanvasToolStore((s) => s.setActiveTool)
@@ -24,8 +25,8 @@ export function CanvasToolbar({ canEdit }: CanvasToolbarProps) {
           role="toolbar"
           aria-label="Canvas main toolbar"
         >
-          {canvasToolModules.map((tool, index) => {
-            const previousTool = canvasToolModules[index - 1]
+          {toolbarTools.map((tool, index) => {
+            const previousTool = toolbarTools[index - 1]
 
             return (
               <ToolGroupButton

@@ -3,12 +3,15 @@ import type {
   AnyCanvasNodeModule,
   CanvasNodeCreateArgs,
   CanvasNodeData,
+  CanvasNodeMinimapProps,
   CanvasNodeModule,
   CanvasNodePreviewOptions,
   CanvasNodeSelectionContext,
   CanvasNodeType,
 } from './canvas-node-module-types'
 import type { Node } from '@xyflow/react'
+import type { CanvasAwarenessCapability, CanvasDocumentWriter } from '../tools/canvas-tool-types'
+import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
 import type { Point2D } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-geometry-utils'
 import { rectangleNodeModule } from './rectangle/rectangle-node-module'
@@ -16,7 +19,7 @@ import { strokeNodeModule } from './stroke/stroke-node-module'
 import { textNodeModule } from './text/text-node-module'
 import { stickyNodeModule } from './sticky/sticky-node-module'
 
-export const canvasNodeModules = [
+const canvasNodeModules = [
   embedNodeModule,
   rectangleNodeModule,
   stickyNodeModule,
@@ -26,6 +29,12 @@ export const canvasNodeModules = [
 
 const canvasNodeModuleMap: Partial<Record<CanvasNodeType, AnyCanvasNodeModule>> =
   Object.fromEntries(canvasNodeModules.map((module) => [module.type, module] as const))
+
+type CanvasAwarenessLayer = NonNullable<CanvasAwarenessCapability['Layer']>
+
+const canvasNodeAwarenessLayers = canvasNodeModules.flatMap((module) =>
+  module.awareness?.Layer ? [{ key: module.type, Layer: module.awareness.Layer }] : [],
+)
 
 function isCanvasNodeType(type: string): type is CanvasNodeType {
   return type in canvasNodeModuleMap
@@ -55,6 +64,27 @@ export function renderCanvasNodePreview(
 
   const previewData = module.parseData(data)
   return previewData ? module.renderPreview(previewData, options) : null
+}
+
+export function renderCanvasNodeMinimap(
+  type: string | undefined,
+  props: CanvasNodeMinimapProps,
+): React.ReactNode | null {
+  return getCanvasNodeModuleByType(type)?.renderMinimap?.(props) ?? null
+}
+
+export function getCanvasNodeProperties(
+  node: Node,
+  updateNodeData: CanvasDocumentWriter['updateNodeData'],
+): CanvasInspectableProperties | null {
+  return getCanvasNodeModuleByType(node.type)?.properties?.({ node, updateNodeData }) ?? null
+}
+
+export function getCanvasNodeAwarenessLayers(): ReadonlyArray<{
+  key: CanvasNodeType
+  Layer: CanvasAwarenessLayer
+}> {
+  return canvasNodeAwarenessLayers
 }
 
 export function createCanvasNodePlacement(

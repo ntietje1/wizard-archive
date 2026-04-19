@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useMemo } from 'react'
 import { getCanvasNodeModuleByType } from '../nodes/canvas-node-registry'
 import type { CanvasNodeData, CanvasNodeType } from '../nodes/canvas-node-module-types'
 import type { CanvasDocumentWriter } from '../tools/canvas-tool-types'
@@ -93,27 +93,20 @@ export function useCanvasDocumentWriter({
   nodesMap,
   edgesMap,
 }: UseCanvasDocumentWriterOptions): CanvasDocumentWriter {
-  const withTransaction = useCallback(<TValue>(map: Y.Map<TValue>, fn: () => void) => {
-    if (map.doc) {
-      map.doc.transact(fn)
-      return
+  return useMemo(() => {
+    const withTransaction = <TValue,>(map: Y.Map<TValue>, fn: () => void) => {
+      if (map.doc) {
+        map.doc.transact(fn)
+        return
+      }
+
+      fn()
     }
 
-    fn()
-  }, [])
+    const withNodeTransaction = (fn: () => void) => withTransaction(nodesMap, fn)
+    const withEdgeTransaction = (fn: () => void) => withTransaction(edgesMap, fn)
 
-  const withNodeTransaction = useCallback(
-    (fn: () => void) => withTransaction(nodesMap, fn),
-    [nodesMap, withTransaction],
-  )
-
-  const withEdgeTransaction = useCallback(
-    (fn: () => void) => withTransaction(edgesMap, fn),
-    [edgesMap, withTransaction],
-  )
-
-  return useMemo(
-    () => ({
+    return {
       createNode: (node) => {
         withNodeTransaction(() => {
           if (nodesMap.has(node.id)) {
@@ -199,9 +192,8 @@ export function useCanvasDocumentWriter({
           )
         })
       },
-    }),
-    [edgesMap, nodesMap, withEdgeTransaction, withNodeTransaction],
-  )
+    }
+  }, [edgesMap, nodesMap])
 }
 
 function createCanvasEdgeId(connection: Connection): string {

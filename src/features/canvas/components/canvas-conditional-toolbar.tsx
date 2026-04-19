@@ -1,8 +1,8 @@
 import { useNodes } from '@xyflow/react'
 import { useCanvasSelectionPhase, useSelectedCanvasNodeIds } from '../hooks/useCanvasSelectionState'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
-import { getCanvasNodeModuleByType } from '../nodes/canvas-node-registry'
-import { getCanvasToolModule } from '../tools/canvas-tool-modules'
+import { getCanvasNodeProperties } from '../nodes/canvas-node-registry'
+import { getCanvasToolProperties } from '../tools/canvas-tool-modules'
 import type { Node } from '@xyflow/react'
 import { ColorPickerPopover } from '~/shared/components/color-picker-popover'
 import { useCanvasRuntimeContext } from '../hooks/canvas-runtime-context'
@@ -15,7 +15,6 @@ import type {
   CanvasResolvedProperty,
   CanvasStrokeSizeResolvedProperty,
 } from '../properties/canvas-property-types'
-import { logger } from '~/shared/utils/logger'
 
 interface CanvasConditionalToolbarProps {
   canEdit: boolean
@@ -98,28 +97,17 @@ function resolveProperties(
   updateNodeData: (nodeId: string, data: Record<string, unknown>) => void,
 ): Array<CanvasResolvedProperty> {
   if (selectedNodes.length > 0) {
-    const selectedNodeProperties = selectedNodes.flatMap<CanvasInspectableProperties>((node) => {
-      if (!node.type) {
-        logger.warn('CanvasConditionalToolbar: selected node is missing a type', node)
-        return []
-      }
-
-      const nodeModule = getCanvasNodeModuleByType(node.type)
-      if (!nodeModule) {
-        logger.warn(`CanvasConditionalToolbar: unknown selected node type "${node.type}"`, node)
-        return []
-      }
-
-      return [nodeModule.properties?.({ node, updateNodeData }) ?? { bindings: [] }]
-    })
+    const selectedNodeProperties = selectedNodes.flatMap<CanvasInspectableProperties>((node) => [
+      getCanvasNodeProperties(node, updateNodeData) ?? { bindings: [] },
+    ])
 
     return resolveCanvasProperties(selectedNodeProperties)
   }
 
-  const tool = getCanvasToolModule(activeTool)
-  if (!tool?.properties) return []
+  const toolProperties = getCanvasToolProperties(activeTool, createToolPropertyContext())
+  if (!toolProperties) return []
 
-  return resolveCanvasProperties([tool.properties(createToolPropertyContext())])
+  return resolveCanvasProperties([toolProperties])
 }
 
 function CanvasPropertyControls({ properties }: { properties: Array<CanvasResolvedProperty> }) {

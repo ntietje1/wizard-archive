@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { useCanvasDocumentProjection } from './useCanvasDocumentProjection'
 import { useCanvasDocumentWriter } from './useCanvasDocumentWriter'
@@ -54,6 +54,10 @@ export function useCanvasFlowController({
   const session = useCanvasSessionState({ provider, user })
   const activeToolId = useCanvasToolStore((state) => state.activeTool)
   const canvasSurfaceRef = useRef<HTMLDivElement>(null)
+  const documentRead = {
+    getNodes: () => reactFlowInstance.getNodes(),
+    getEdges: () => reactFlowInstance.getEdges(),
+  }
 
   const documentWriter = useCanvasDocumentWriter({ nodesMap, edgesMap })
   const selectionActions = useCanvasSelectionActions()
@@ -89,10 +93,10 @@ export function useCanvasFlowController({
     onHistorySelectionChange: history.onSelectionChange,
   })
 
-  const { activeToolController, activeToolModule } = useCanvasToolRuntime({
-    documentWriter,
-    documentReader: selectionActions,
-    selectionActions,
+  const { activeToolController, toolCursor } = useCanvasToolRuntime({
+    documentRead,
+    documentWrite: documentWriter,
+    selection: selectionActions,
     awareness: session.awareness,
     editSession: session.editSession,
   })
@@ -130,26 +134,17 @@ export function useCanvasFlowController({
     localDraggingIdsRef,
   })
 
-  const handleNodesDelete: OnNodesDelete = useCallback(
-    (deleted) => {
-      documentWriter.deleteNodes(deleted.map((node) => node.id))
-    },
-    [documentWriter],
-  )
+  const handleNodesDelete: OnNodesDelete = (deleted) => {
+    documentWriter.deleteNodes(deleted.map((node) => node.id))
+  }
 
-  const handleEdgesDelete: OnEdgesDelete = useCallback(
-    (deleted) => {
-      documentWriter.deleteEdges(deleted.map((edge) => edge.id))
-    },
-    [documentWriter],
-  )
+  const handleEdgesDelete: OnEdgesDelete = (deleted) => {
+    documentWriter.deleteEdges(deleted.map((edge) => edge.id))
+  }
 
-  const handleConnect: OnConnect = useCallback(
-    (connection) => {
-      documentWriter.createEdge(connection)
-    },
-    [documentWriter],
-  )
+  const handleConnect: OnConnect = (connection) => {
+    documentWriter.createEdge(connection)
+  }
 
   const { onMouseMove: handleMouseMove, onMouseLeave: handleMouseLeave } = useCanvasCursorPresence({
     reactFlowInstance,
@@ -195,7 +190,7 @@ export function useCanvasFlowController({
   )
 
   const shellProps: CanvasFlowShellProps = {
-    toolCursor: activeToolModule.cursor,
+    toolCursor,
     canvasSurfaceRef,
     remoteUsers: session.remoteUsers,
     activeTool: activeToolId,

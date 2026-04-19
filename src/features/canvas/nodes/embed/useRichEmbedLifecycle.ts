@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { logger } from '~/shared/utils/logger'
 
 export interface RichEmbedActivationPayload {
@@ -32,7 +32,7 @@ export function useRichEmbedActivation({
   const pendingActivationRef = useRef<RichEmbedActivationPayload | null>(null)
   const activateEditFrameRef = useRef<number | null>(null)
 
-  const lifecycle = useMemo<RichEmbedLifecycleController>(() => ({ pendingActivationRef }), [])
+  const lifecycle: RichEmbedLifecycleController = { pendingActivationRef }
 
   useEffect(() => {
     return () => {
