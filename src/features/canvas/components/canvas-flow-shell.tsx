@@ -149,7 +149,7 @@ export function CanvasFlowShell({
 function CanvasPendingSelectionStatus({ count }: { count: number }) {
   return (
     <div
-      className="pointer-events-none absolute top-4 right-4 z-10 rounded-full border bg-background/90 px-3 py-1 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm"
+      className="pointer-events-none absolute bottom-4 left-4 z-10 rounded-full border bg-background/90 px-3 py-1 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm"
       role="status"
       aria-live="polite"
     >

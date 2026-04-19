@@ -54,6 +54,19 @@ export function pointsToPathD(points: Array<[number, number, number]>, size: num
   return d
 }
 
+export function pointsToCenterlinePathD(points: Array<[number, number, number]>): string {
+  if (points.length < 2) return ''
+
+  const [first, ...rest] = points
+  let d = `M ${first[0]} ${first[1]}`
+
+  for (const [x, y] of rest) {
+    d += ` L ${x} ${y}`
+  }
+
+  return d
+}
+
 export function getStrokeBounds(
   points: Array<[number, number, number]>,
   size: number,

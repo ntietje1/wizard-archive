@@ -90,9 +90,6 @@ function pointNearStrokePath(
 ): boolean {
   if (points.length < 2) return false
 
-  const poly = points.map(([x, y]) => ({ x, y }))
-  if (pointInPolygon(px, py, poly)) return true
-
   const thresholdSq = threshold * threshold
   for (let i = 0; i < points.length - 1; i++) {
     if (
@@ -111,7 +108,7 @@ function pointNearStrokePath(
   return false
 }
 
-function getStrokeSelectionPadding(zoom: number): number {
+export function getStrokeSelectionPadding(zoom: number): number {
   const safeZoom = Number.isFinite(zoom) && zoom > MIN_ZOOM ? zoom : MIN_ZOOM
   return STROKE_SELECTION_PADDING_PX / safeZoom
 }

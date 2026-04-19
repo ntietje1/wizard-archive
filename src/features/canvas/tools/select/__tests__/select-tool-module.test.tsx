@@ -57,6 +57,26 @@ function createOffsetStrokeNode(id: string): CanvasMeasuredNode {
   }
 }
 
+function createConcaveStrokeNode(id: string): CanvasMeasuredNode {
+  return {
+    id,
+    type: 'stroke',
+    position: { x: 0, y: 0 },
+    width: 100,
+    height: 100,
+    data: {
+      bounds: { x: 0, y: 0, width: 100, height: 100 },
+      points: [
+        [20, 20, 0.5],
+        [20, 80, 0.5],
+        [80, 80, 0.5],
+        [80, 20, 0.5],
+      ],
+      size: 4,
+    },
+  }
+}
+
 describe('selectToolModule', () => {
   it('preserves multi-selection on modifier-click empty canvas', () => {
     const toggleFromTarget = vi.fn()
@@ -101,6 +121,21 @@ describe('selectToolModule', () => {
     controller.onPaneClick?.(createMouseEvent(470, 250))
 
     expect(toggleFromTarget).toHaveBeenCalledWith('stroke-1', false)
+  })
+
+  it('does not select a concave stroke from clicks in its open interior gap', () => {
+    const toggleFromTarget = vi.fn()
+    const strokeNode = createConcaveStrokeNode('stroke-1')
+    const controller = selectToolModule.create(
+      createSelectEnvironment({
+        getNodes: () => [strokeNode],
+        toggleFromTarget,
+      }),
+    )
+
+    controller.onPaneClick?.(createMouseEvent(50, 40))
+
+    expect(toggleFromTarget).toHaveBeenCalledWith(null, false)
   })
 
   it('routes regular node ctrl-click through strict toggle behavior', () => {

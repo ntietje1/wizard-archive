@@ -208,5 +208,31 @@ describe('canvas node registry', () => {
 
       expect(findCanvasNodeAtPoint(nodes, { x: 470, y: 250 }, { zoom: 1 })).toBe('stroke-1')
     })
+
+    it('does not treat the open interior of a concave stroke as clickable', () => {
+      const nodes: Array<Node> = [
+        {
+          id: 'stroke-u',
+          type: 'stroke',
+          position: { x: 0, y: 0 },
+          width: 100,
+          height: 100,
+          data: {
+            bounds: { x: 0, y: 0, width: 100, height: 100 },
+            points: [
+              [20, 20, 0.5],
+              [20, 80, 0.5],
+              [80, 80, 0.5],
+              [80, 20, 0.5],
+            ],
+            color: 'var(--foreground)',
+            size: 4,
+          },
+        },
+      ]
+
+      expect(findCanvasNodeAtPoint(nodes, { x: 50, y: 40 }, { zoom: 1 })).toBeNull()
+      expect(findCanvasNodeAtPoint(nodes, { x: 20, y: 50 }, { zoom: 1 })).toBe('stroke-u')
+    })
   })
 })

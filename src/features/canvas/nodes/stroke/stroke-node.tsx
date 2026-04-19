@@ -3,10 +3,11 @@ import type { CanvasNodeMinimapProps } from '../canvas-node-module-types'
 import { ResizableNodeWrapper } from '../shared/resizable-node-wrapper'
 import type { Node, NodeProps } from '@xyflow/react'
 import type { StrokeNodeData, StrokeNodeType } from './stroke-node-model'
-import { getMiniMapStrokePath, pointsToPathD } from './stroke-node-model'
+import { getMiniMapStrokePath, pointsToCenterlinePathD, pointsToPathD } from './stroke-node-model'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
 import { useEraseToolLocalOverlayStore } from '../../tools/erase/erase-tool-local-overlay'
 import { useCanvasNodeVisualSelection } from '../shared/use-canvas-node-visual-selection'
+import { getStrokeSelectionPadding } from './stroke-node-interactions'
 
 const HIGHLIGHT_SCALE = 0.3
 const ERASING_OPACITY = 0.3
@@ -81,14 +82,52 @@ export function StrokeNode({
   height,
 }: NodeProps<Node<StrokeNodeData>>) {
   const { points, size, bounds } = data
+  const { zoom } = useViewport()
   const isErasing = useEraseToolLocalOverlayStore((state) => state.erasingStrokeIds.has(id))
   const { visuallySelected } = useCanvasNodeVisualSelection(id, !!selected)
 
   const svgWidth = width ?? bounds.width
   const svgHeight = height ?? bounds.height
   const viewBox = resolveViewBox(bounds, svgWidth, svgHeight)
+  const hitPadding = getStrokeSelectionPadding(zoom)
+  const hitTargetD = pointsToCenterlinePathD(points)
+  const hitTargetViewBox = viewBox
+    ? {
+        x: viewBox.x - hitPadding,
+        y: viewBox.y - hitPadding,
+        width: viewBox.width + hitPadding * 2,
+        height: viewBox.height + hitPadding * 2,
+      }
+    : null
 
   const highlightD = visuallySelected ? pointsToPathD(points, size * HIGHLIGHT_SCALE) : null
+  const hitTarget =
+    hitTargetD && hitTargetViewBox ? (
+      <svg
+        width={svgWidth + hitPadding * 2}
+        height={svgHeight + hitPadding * 2}
+        viewBox={`${hitTargetViewBox.x} ${hitTargetViewBox.y} ${hitTargetViewBox.width} ${hitTargetViewBox.height}`}
+        preserveAspectRatio="none"
+        style={{
+          overflow: 'visible',
+          position: 'absolute',
+          top: -hitPadding,
+          left: -hitPadding,
+        }}
+      >
+        <path
+          d={hitTargetD}
+          fill="none"
+          stroke="currentColor"
+          strokeOpacity={0.001}
+          strokeWidth={hitPadding * 2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          pointerEvents="stroke"
+          data-testid="stroke-hit-target"
+        />
+      </svg>
+    ) : null
   const highlightPath =
     highlightD && viewBox ? (
       <svg
@@ -117,6 +156,7 @@ export function StrokeNode({
       minWidth={20}
       minHeight={20}
     >
+      {hitTarget}
       <StrokePreview
         data={data}
         width={svgWidth}
