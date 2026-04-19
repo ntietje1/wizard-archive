@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
-import { Handle, Position } from '@xyflow/react'
 import { ResizableNodeWrapper } from '../shared/resizable-node-wrapper'
+import { CanvasNodeConnectionHandles } from '../shared/canvas-node-connection-handles'
 import { useInlineCanvasNodeEdit } from '../shared/use-inline-canvas-node-edit'
 import type { Node, NodeProps } from '@xyflow/react'
 import { useCanvasNodeActionsContext } from '../../runtime/providers/canvas-runtime-context'
@@ -66,7 +66,7 @@ export function TextNode({ id, data, selected, dragging }: NodeProps<Node<TextNo
           }
         }}
       >
-        <Handle type="target" position={Position.Top} className="!bg-primary" />
+        <CanvasNodeConnectionHandles selected={!!selected} />
         {isEditing ? (
           <input
             ref={inputRef}
@@ -81,7 +81,6 @@ export function TextNode({ id, data, selected, dragging }: NodeProps<Node<TextNo
         ) : (
           <p className="text-sm select-none">{label}</p>
         )}
-        <Handle type="source" position={Position.Bottom} className="!bg-primary" />
       </div>
     </ResizableNodeWrapper>
   )

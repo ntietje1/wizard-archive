@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import { Handle, Position } from '@xyflow/react'
 import { AlertTriangle, ExternalLinkIcon } from 'lucide-react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { RichEmbedLifecycleController } from './use-rich-embed-lifecycle'
@@ -18,6 +17,7 @@ import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigatio
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { Button } from '~/features/shadcn/components/button'
 import { cn } from '~/features/shadcn/lib/utils'
+import { CanvasNodeConnectionHandles } from '../shared/canvas-node-connection-handles'
 import {
   useCanvasEditSessionContext,
   useCanvasPermissions,
@@ -68,7 +68,7 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps<Node<Embed
         className="h-full w-full rounded-lg border bg-card shadow-sm flex flex-col overflow-hidden"
         onDoubleClick={handleDoubleClick}
       >
-        <Handle type="target" position={Position.Top} className="!bg-primary" />
+        <CanvasNodeConnectionHandles selected={!!selected} />
 
         <div className="flex items-center gap-2 min-w-0 px-3 py-2">
           {isMissing ? (
@@ -112,8 +112,6 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps<Node<Embed
             />
           </div>
         )}
-
-        <Handle type="source" position={Position.Bottom} className="!bg-primary" />
       </div>
     </ResizableNodeWrapper>
   )

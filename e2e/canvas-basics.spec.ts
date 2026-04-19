@@ -5,6 +5,7 @@ import {
   clickCanvasNode,
   createCanvas,
   DEFAULT_CANVAS_NAME,
+  getCanvasNodeHandle,
   dragOnCanvas,
   getCanvasNodesByType,
   getCanvasSurface,
@@ -148,5 +149,53 @@ test.describe.serial('canvas basics', () => {
 
     await viewport.redo.click()
     await expect.poll(() => getCanvasNodesByType(page, 'text').count()).toBe(0)
+  })
+
+  test('create an edge from one node handle to another', async ({ page }) => {
+    await page.goto('/campaigns')
+    await navigateToCampaign(page, campaignName)
+    await openCanvas(page, canvasName)
+
+    await selectCanvasTool(page, 'Text')
+    await clickCanvasAt(page, { x: 120, y: 420 })
+    const textInput = page.getByLabel('Text node content')
+    await expect(textInput).toBeVisible()
+    await textInput.fill('Edge source')
+    await textInput.press('Enter')
+
+    await selectCanvasTool(page, 'Post-it')
+    await clickCanvasAt(page, { x: 360, y: 420 })
+    const stickyInput = page.getByLabel('Sticky note text')
+    await expect(stickyInput).toBeVisible()
+    await stickyInput.fill('Edge target')
+    await stickyInput.press(`${mod}+Enter`)
+
+    await selectCanvasTool(page, 'Pointer')
+    const sourceNode = getCanvasNodesByType(page, 'text').last()
+    const targetNode = getCanvasNodesByType(page, 'sticky').last()
+    const edgeCountBefore = await page.locator('.react-flow__edge').count()
+    await clickCanvasNode(page, sourceNode)
+
+    const sourceHandle = getCanvasNodeHandle(sourceNode, 'right')
+    const targetHandle = getCanvasNodeHandle(targetNode, 'left')
+    const sourceBox = await sourceHandle.boundingBox()
+    const targetBox = await targetHandle.boundingBox()
+
+    if (!sourceBox || !targetBox) {
+      throw new Error('Canvas connection handles are not visible')
+    }
+
+    await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, {
+      steps: 12,
+    })
+
+    await expect
+      .poll(async () => (await targetHandle.getAttribute('class')) ?? '')
+      .toContain('connectionindicator')
+
+    await page.mouse.up()
+    await expect.poll(() => page.locator('.react-flow__edge').count()).toBe(edgeCountBefore + 1)
   })
 })

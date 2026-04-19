@@ -74,6 +74,7 @@ function createNode(
   options: {
     color?: string
     opacity?: number
+    size?: number
   } = {},
 ): Node {
   return {
@@ -91,6 +92,7 @@ function createNode(
     data: {
       ...(options.color !== undefined ? { color: options.color } : {}),
       ...(options.opacity !== undefined ? { opacity: options.opacity } : {}),
+      ...(options.size !== undefined ? { size: options.size } : {}),
     },
   }
 }
@@ -162,6 +164,27 @@ describe('CanvasConditionalToolbar', () => {
 
     emitSelection([createNode('text')])
     expect(screen.queryByRole('toolbar', { name: 'Canvas conditional toolbar' })).toBeNull()
+  })
+
+  it('shows stroke size controls for a selected stroke and updates the node size', () => {
+    const { updateNodeData } = renderToolbar()
+
+    const stroke = createNode('stroke', {
+      color: 'var(--foreground)',
+      opacity: 75,
+      size: 4,
+    })
+    emitSelection([stroke])
+
+    const mediumStrokeButton = screen.getByRole('button', { name: 'Stroke size 4' })
+    const largeStrokeButton = screen.getByRole('button', { name: 'Stroke size 8' })
+
+    expect(mediumStrokeButton).toHaveAttribute('aria-pressed', 'true')
+    expect(largeStrokeButton).toHaveAttribute('aria-pressed', 'false')
+
+    fireEvent.click(largeStrokeButton)
+
+    expect(updateNodeData).toHaveBeenCalledWith(stroke.id, { size: 8 })
   })
 
   it('shows shared properties for compatible multi-select and hides tool-only controls', () => {

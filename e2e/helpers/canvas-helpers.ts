@@ -104,6 +104,10 @@ export function getCanvasNodeById(page: Page, nodeId: string) {
   return page.locator(`[data-testid="canvas-node"][data-node-id="${nodeId}"]`)
 }
 
+export function getCanvasNodeHandle(node: Locator, side: 'top' | 'right' | 'bottom' | 'left') {
+  return node.getByTestId(`canvas-node-handle-${side}`)
+}
+
 async function getCanvasNodeIdsForLocator(locator: Locator) {
   return locator.evaluateAll((nodes) =>
     nodes

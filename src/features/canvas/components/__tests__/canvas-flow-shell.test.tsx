@@ -9,10 +9,20 @@ const reactFlowMock = vi.hoisted(() => ({
 
 vi.mock('@xyflow/react', () => ({
   Background: () => null,
+  Handle: () => null,
   MiniMap: () => null,
+  Position: {
+    Top: 'top',
+    Right: 'right',
+    Bottom: 'bottom',
+    Left: 'left',
+  },
   ReactFlow: (props: Record<string, unknown>) => {
     reactFlowMock.props = props
     return <div data-testid="react-flow">{props.children as React.ReactNode}</div>
+  },
+  ConnectionMode: {
+    Loose: 'loose',
   },
   SelectionMode: {
     Partial: 'partial',
@@ -58,5 +68,25 @@ describe('CanvasFlowShell', () => {
     )
 
     expect(reactFlowMock.props?.zoomOnDoubleClick).toBe(false)
+  })
+
+  it('uses loose connection mode so each side handle can both start and end edges', () => {
+    render(
+      <CanvasFlowShell
+        canEdit
+        colorMode="light"
+        toolCursor={undefined}
+        canvasSurfaceRef={{ current: null }}
+        remoteUsers={[]}
+        activeTool="select"
+        onMouseMove={vi.fn()}
+        onMouseLeave={vi.fn()}
+        dropOverlayRef={createRef<HTMLDivElement>()}
+        isDropTarget={false}
+        isFileDropTarget={false}
+      />,
+    )
+
+    expect(reactFlowMock.props?.connectionMode).toBe('loose')
   })
 })

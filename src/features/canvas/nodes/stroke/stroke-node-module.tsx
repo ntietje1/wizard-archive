@@ -7,8 +7,14 @@ import {
   strokeNodeIntersectsPolygon,
   strokeNodeIntersectsRect,
 } from './stroke-node-interactions'
-import { paintCanvasProperty } from '../../properties/canvas-property-definitions'
-import { bindCanvasPaintProperty } from '../../properties/canvas-property-types'
+import {
+  paintCanvasProperty,
+  strokeSizeCanvasProperty,
+} from '../../properties/canvas-property-definitions'
+import {
+  bindCanvasPaintProperty,
+  bindCanvasStrokeSizeProperty,
+} from '../../properties/canvas-property-types'
 
 function hasFiniteNumber(
   data: Record<string, unknown>,
@@ -72,6 +78,11 @@ export const strokeNodeModule = createCanvasNodeModule<StrokeNodeData, 'stroke'>
         getOpacity: () => node.data.opacity ?? 100,
         setOpacity: (opacity) => updateNodeData(node.id, { opacity }),
       }),
+      bindCanvasStrokeSizeProperty(
+        strokeSizeCanvasProperty,
+        () => node.data.size,
+        (size) => updateNodeData(node.id, { size }),
+      ),
     ],
   }),
   renderMinimap: (props) => <StrokeMinimapNode {...props} />,

@@ -88,7 +88,7 @@ export function ResizableNodeWrapper({
       {(visuallySelected || highlight) && (
         <div
           data-testid="selection-border"
-          className="absolute -inset-0.5 rounded-sm pointer-events-none"
+          className="absolute -inset-0.25 rounded-sm pointer-events-none"
           style={{
             border: `1px solid ${highlight?.color ?? 'var(--primary)'}`,
             borderStyle: !highlight && pendingPreviewActive ? 'dashed' : 'solid',

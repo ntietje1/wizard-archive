@@ -1,6 +1,6 @@
-import { Handle, Position } from '@xyflow/react'
 import { STICKY_DEFAULT_COLOR } from './sticky-node-constants'
 import { ResizableNodeWrapper } from '../shared/resizable-node-wrapper'
+import { CanvasNodeConnectionHandles } from '../shared/canvas-node-connection-handles'
 import { useInlineCanvasNodeEdit } from '../shared/use-inline-canvas-node-edit'
 import type { Node, NodeProps } from '@xyflow/react'
 import { useCanvasNodeActionsContext } from '../../runtime/providers/canvas-runtime-context'
@@ -69,7 +69,7 @@ export function StickyNode({ id, data, selected, dragging }: NodeProps<Node<Stic
           }
         }}
       >
-        <Handle type="target" position={Position.Top} className="!bg-primary" />
+        <CanvasNodeConnectionHandles selected={!!selected} />
         {isEditing ? (
           <textarea
             className="bg-transparent outline-none text-sm w-full h-full min-h-[80px] resize-none nowheel"
@@ -85,7 +85,6 @@ export function StickyNode({ id, data, selected, dragging }: NodeProps<Node<Stic
             {label || 'Double-click to edit'}
           </p>
         )}
-        <Handle type="source" position={Position.Bottom} className="!bg-primary" />
       </div>
     </ResizableNodeWrapper>
   )

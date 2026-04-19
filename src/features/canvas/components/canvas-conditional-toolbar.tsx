@@ -108,7 +108,7 @@ export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarPr
 
   return (
     <div
-      className="absolute top-4 left-4 z-10 flex items-center gap-1 rounded-lg border bg-background/80 p-2 shadow-sm backdrop-blur-sm"
+      className="absolute top-4 left-4 z-10 flex flex-col gap-1 rounded-lg border bg-background/80 p-2 shadow-sm backdrop-blur-sm"
       role="toolbar"
       aria-label="Canvas conditional toolbar"
     >
@@ -148,24 +148,23 @@ function CanvasPropertyControls({ properties }: { properties: Array<CanvasResolv
 
   return (
     <>
-      {paintProperty &&
-        paintProperty.definition.colors.map((color) => (
-          <button
-            type="button"
-            key={color}
-            className="h-6 w-6 rounded-sm border border-border transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
-            style={{
-              backgroundColor: color,
-              outline: colorValue === color ? '2px solid var(--primary)' : 'none',
-              outlineOffset: '1px',
-            }}
-            onClick={() => paintProperty.setColor(color)}
-            aria-label={`Select ${COLOR_NAMES[color] ?? 'custom'} color`}
-            aria-pressed={colorValue === color}
-          />
-        ))}
       {paintProperty && (
-        <>
+        <div className="flex items-center gap-1">
+          {paintProperty.definition.colors.map((color) => (
+            <button
+              type="button"
+              key={color}
+              className="h-6 w-6 rounded-sm border border-border transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+              style={{
+                backgroundColor: color,
+                outline: colorValue === color ? '2px solid var(--primary)' : 'none',
+                outlineOffset: '1px',
+              }}
+              onClick={() => paintProperty.setColor(color)}
+              aria-label={`Select ${COLOR_NAMES[color] ?? 'custom'} color`}
+              aria-pressed={colorValue === color}
+            />
+          ))}
           <div className="mx-1 h-6 w-px bg-border" />
           <ColorPickerPopover
             value={colorValue}
@@ -175,11 +174,10 @@ function CanvasPropertyControls({ properties }: { properties: Array<CanvasResolv
             colorMixed={paintProperty.color.kind === 'mixed'}
             opacityMixed={paintProperty.opacity.kind === 'mixed'}
           />
-        </>
+        </div>
       )}
       {strokeSizeProperty && (
-        <>
-          <div className="mx-1 h-6 w-px bg-border" />
+        <div className="flex items-center gap-0.5">
           <div className="flex items-center gap-0.5">
             {strokeSizeProperty.definition.options.map((size) => (
               <button
@@ -197,7 +195,7 @@ function CanvasPropertyControls({ properties }: { properties: Array<CanvasResolv
               </button>
             ))}
           </div>
-        </>
+        </div>
       )}
     </>
   )

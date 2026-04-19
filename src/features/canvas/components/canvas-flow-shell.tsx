@@ -1,4 +1,4 @@
-import { Background, MiniMap, ReactFlow, SelectionMode } from '@xyflow/react'
+import { Background, ConnectionMode, MiniMap, ReactFlow, SelectionMode } from '@xyflow/react'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { cn } from '~/features/shadcn/lib/utils'
 import { CanvasAwarenessHost } from './canvas-awareness-host'
@@ -115,6 +115,7 @@ export function CanvasFlowShell({
           // React Flow's default bounds-based drag selection.
           selectionOnDrag={false}
           selectionMode={SelectionMode.Partial}
+          connectionMode={ConnectionMode.Loose}
           selectionKeyCode={SELECTION_KEY_DISABLED}
           panOnDrag={activeTool === 'hand' ? PAN_BOTH : PAN_MIDDLE_ONLY}
           deleteKeyCode={canEdit && isSelectMode ? DELETE_KEYS : DELETE_KEYS_NONE}
