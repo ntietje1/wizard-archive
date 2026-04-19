@@ -6,10 +6,10 @@ import {
   getCanvasToolCursor,
 } from '../tools/canvas-tool-modules'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
-import { useCanvasInteractionStore } from './useCanvasInteractionStore'
 import { getMeasuredCanvasNodesFromLookup } from './canvas-measured-nodes'
 import type {
   CanvasAwarenessWriter,
+  CanvasCoreAwarenessWriter,
   CanvasDocumentReader,
   CanvasDocumentWriter,
   CanvasEditSessionState,
@@ -18,7 +18,6 @@ import type {
   CanvasToolStateControls,
   CanvasViewportTools,
 } from '../tools/canvas-tool-types'
-import type { DrawingState, Point2D } from '../utils/canvas-awareness-types'
 
 interface UseCanvasToolRuntimeOptions {
   documentRead: CanvasDocumentReader
@@ -67,11 +66,6 @@ export function useCanvasToolRuntime({
     [awarenessRef],
   )
 
-  const interactionOverlays = useMemo(
-    () => createCanvasInteractionOverlays(awarenessRef),
-    [awarenessRef],
-  )
-
   const environment = useMemo<CanvasToolEnvironment>(
     () => ({
       viewport: viewportTools,
@@ -79,7 +73,6 @@ export function useCanvasToolRuntime({
       selection: createCanvasSelectionAccess(selectionRef),
       editSession: createCanvasEditSessionAccess(editSessionRef),
       toolState: toolStateControls,
-      interaction: interactionOverlays,
       awareness: awarenessWriter,
     }),
     [
@@ -87,7 +80,6 @@ export function useCanvasToolRuntime({
       documentReadRef,
       documentWriteRef,
       editSessionRef,
-      interactionOverlays,
       selectionRef,
       storeApi,
       toolStateControls,
@@ -189,33 +181,24 @@ function createCanvasEditSessionAccess(
   }
 }
 
-function createCanvasInteractionOverlays(
-  awarenessRef: RefObject<CanvasAwarenessWriter>,
-): CanvasToolEnvironment['interaction'] {
-  return {
-    setLocalDrawing: (drawing: DrawingState | null) => {
-      useCanvasInteractionStore.getState().setLocalDrawing(drawing)
-      awarenessRef.current.setLocalDrawing(drawing)
-    },
-    setLassoPath: (path: Array<Point2D>) => useCanvasInteractionStore.getState().setLassoPath(path),
-    setSelectionDragRect: (rect) =>
-      useCanvasInteractionStore.getState().setSelectionDragRect(rect),
-    setErasingStrokeIds: (ids: Set<string>) =>
-      useCanvasInteractionStore.getState().setErasingStrokeIds(ids),
-    setRectDeselectedIds: (ids: Set<string>) =>
-      useCanvasInteractionStore.getState().setRectDeselectedIds(ids),
-  }
-}
-
 function createCanvasAwarenessCommands(
   awarenessRef: RefObject<CanvasAwarenessWriter>,
 ): CanvasAwarenessWriter {
   return {
-    setLocalCursor: (position) => awarenessRef.current.setLocalCursor(position),
-    setLocalDragging: (positions) => awarenessRef.current.setLocalDragging(positions),
-    setLocalResizing: (resizing) => awarenessRef.current.setLocalResizing(resizing),
-    setLocalSelection: (nodeIds) => awarenessRef.current.setLocalSelection(nodeIds),
-    setLocalDrawing: (drawing) => awarenessRef.current.setLocalDrawing(drawing),
-    setLocalSelecting: (selecting) => awarenessRef.current.setLocalSelecting(selecting),
+    core: createCanvasCoreAwarenessCommands(awarenessRef),
+    presence: {
+      setPresence: (namespace, value) => awarenessRef.current.presence.setPresence(namespace, value),
+    },
+  }
+}
+
+function createCanvasCoreAwarenessCommands(
+  awarenessRef: RefObject<CanvasAwarenessWriter>,
+): CanvasCoreAwarenessWriter {
+  return {
+    setLocalCursor: (position) => awarenessRef.current.core.setLocalCursor(position),
+    setLocalDragging: (positions) => awarenessRef.current.core.setLocalDragging(positions),
+    setLocalResizing: (resizing) => awarenessRef.current.core.setLocalResizing(resizing),
+    setLocalSelection: (nodeIds) => awarenessRef.current.core.setLocalSelection(nodeIds),
   }
 }

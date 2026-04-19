@@ -3,7 +3,7 @@ import { STICKY_DEFAULT_COLOR } from './sticky-node-constants'
 import { ResizableNodeWrapper } from '../shared/resizable-node-wrapper'
 import { useInlineCanvasNodeEdit } from '../shared/useInlineCanvasNodeEdit'
 import type { Node, NodeProps } from '@xyflow/react'
-import { useCanvasRuntimeContext } from '../../hooks/canvas-runtime-context'
+import { useCanvasNodeActionsContext } from '../../hooks/canvas-runtime-context'
 
 export type StickyNodeData = { label?: string; color?: string; opacity?: number }
 
@@ -31,9 +31,7 @@ export function StickyPreview({
 }
 
 export function StickyNode({ id, data, selected, dragging }: NodeProps<Node<StickyNodeData>>) {
-  const {
-    nodeActions: { updateNodeData },
-  } = useCanvasRuntimeContext()
+  const { updateNodeData } = useCanvasNodeActionsContext()
   const label = data.label || ''
   const color = data.color || STICKY_DEFAULT_COLOR
   const opacity = (data.opacity ?? 100) / 100

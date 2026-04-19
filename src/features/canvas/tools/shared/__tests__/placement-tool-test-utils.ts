@@ -62,20 +62,16 @@ export function createPlacementEnvironment({
       setStrokeSize: () => undefined,
       setStrokeOpacity: () => undefined,
     },
-    interaction: {
-      setLocalDrawing: () => undefined,
-      setLassoPath: () => undefined,
-      setSelectionDragRect: () => undefined,
-      setErasingStrokeIds: () => undefined,
-      setRectDeselectedIds: () => undefined,
-    },
     awareness: {
-      setLocalCursor: () => undefined,
-      setLocalDragging: () => undefined,
-      setLocalResizing: () => undefined,
-      setLocalSelection: () => undefined,
-      setLocalDrawing: () => undefined,
-      setLocalSelecting: () => undefined,
+      core: {
+        setLocalCursor: () => undefined,
+        setLocalDragging: () => undefined,
+        setLocalResizing: () => undefined,
+        setLocalSelection: () => undefined,
+      },
+      presence: {
+        setPresence: () => undefined,
+      },
     },
   }
 }

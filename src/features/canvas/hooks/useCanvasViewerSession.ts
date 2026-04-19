@@ -2,7 +2,6 @@ import { useEffect } from 'react'
 import { api } from 'convex/_generated/api'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
-import { useCanvasInteractionStore } from './useCanvasInteractionStore'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import type { Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
@@ -67,7 +66,6 @@ export function useCanvasViewerSession(canvas: CanvasWithContent): CanvasViewerS
   useEffect(() => {
     return () => {
       useCanvasToolStore.getState().reset()
-      useCanvasInteractionStore.getState().reset()
     }
   }, [canvas._id])
 

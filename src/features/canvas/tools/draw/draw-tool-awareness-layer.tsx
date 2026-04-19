@@ -1,15 +1,8 @@
-import { useCanvasInteractionStore } from '../../hooks/useCanvasInteractionStore'
 import { pointsToPathD } from '../../nodes/stroke/stroke-node-model'
 import type { RemoteUser } from '../../utils/canvas-awareness-types'
+import { readRemoteDrawState } from './draw-tool-awareness'
 
 export function DrawAwarenessLayer({ remoteUsers }: { remoteUsers: Array<RemoteUser> }) {
-  const localDrawing = useCanvasInteractionStore((state) => state.localDrawing)
-
-  const localPathD =
-    localDrawing && localDrawing.points.length >= 2
-      ? pointsToPathD(localDrawing.points, localDrawing.size)
-      : null
-
   return (
     <svg
       aria-hidden="true"
@@ -24,26 +17,19 @@ export function DrawAwarenessLayer({ remoteUsers }: { remoteUsers: Array<RemoteU
       }}
     >
       {remoteUsers.map((user) => {
-        if (!user.drawing || user.drawing.points.length < 2) return null
-        const d = pointsToPathD(user.drawing.points, user.drawing.size)
+        const drawing = readRemoteDrawState(user)
+        if (!drawing || drawing.points.length < 2) return null
+        const d = pointsToPathD(drawing.points, drawing.size)
         if (!d) return null
         return (
           <path
             key={`remote-${user.clientId}`}
             d={d}
-            fill={user.drawing.color}
-            opacity={((user.drawing.opacity ?? 100) / 100) * 0.7}
+            fill={drawing.color}
+            opacity={((drawing.opacity ?? 100) / 100) * 0.7}
           />
         )
       })}
-
-      {localPathD && localDrawing && (
-        <path
-          d={localPathD}
-          fill={localDrawing.color}
-          opacity={(localDrawing.opacity ?? 100) / 100}
-        />
-      )}
     </svg>
   )
 }

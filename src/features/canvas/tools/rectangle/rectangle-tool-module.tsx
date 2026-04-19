@@ -9,6 +9,11 @@ import type { CanvasToolModule } from '../canvas-tool-types'
 import { rectFromPoints } from '../../utils/canvas-geometry-utils'
 import { paintCanvasProperty } from '../../properties/canvas-property-definitions'
 import { bindCanvasPaintProperty } from '../../properties/canvas-property-types'
+import {
+  clearRectangleToolLocalOverlay,
+  setRectangleToolDragRect,
+} from './rectangle-tool-local-overlay'
+import { RectangleToolLocalOverlayLayer } from './rectangle-tool-local-overlay-layer'
 
 const MIN_RECT_SIZE = 10
 
@@ -18,6 +23,10 @@ export const rectangleToolModule: CanvasToolModule<'rectangle'> = {
   group: 'creation',
   icon: <RectangleHorizontal className="h-4 w-4" />,
   cursor: 'crosshair',
+  localOverlay: {
+    Layer: RectangleToolLocalOverlayLayer,
+    clear: clearRectangleToolLocalOverlay,
+  },
   properties: (context) => {
     return {
       bindings: [
@@ -41,7 +50,7 @@ export const rectangleToolModule: CanvasToolModule<'rectangle'> = {
     const reset = () => {
       active = false
       start = null
-      environment.interaction.setSelectionDragRect(null)
+      setRectangleToolDragRect(null)
       if (rafId) {
         cancelAnimationFrame(rafId)
         rafId = 0
@@ -60,7 +69,7 @@ export const rectangleToolModule: CanvasToolModule<'rectangle'> = {
         active = true
         start = screenEventToFlowPosition(environment.viewport, event)
         lastClientPos = { x: event.clientX, y: event.clientY }
-        environment.interaction.setSelectionDragRect(null)
+        setRectangleToolDragRect(null)
       },
       onPointerMove: (event) => {
         if (!active || (event.buttons & 1) !== 1 || !start) return
@@ -72,7 +81,7 @@ export const rectangleToolModule: CanvasToolModule<'rectangle'> = {
           rafId = 0
           if (!start) return
           const pos = environment.viewport.screenToFlowPosition(lastClientPos)
-          environment.interaction.setSelectionDragRect(rectFromPoints(start, pos))
+          setRectangleToolDragRect(rectFromPoints(start, pos))
         })
       },
       onPointerUp: () => {

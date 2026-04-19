@@ -3,7 +3,7 @@ import { Maximize2, Minus, Plus, Redo2, Undo2 } from 'lucide-react'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import { getCanvasToolbarTools } from '../tools/canvas-tool-modules'
 import { Button } from '~/features/shadcn/components/button'
-import { useCanvasRuntimeContext } from '../hooks/canvas-runtime-context'
+import { useCanvasHistoryContext } from '../hooks/canvas-runtime-context'
 
 interface CanvasToolbarProps {
   canEdit: boolean
@@ -11,7 +11,7 @@ interface CanvasToolbarProps {
 
 export function CanvasToolbar({ canEdit }: CanvasToolbarProps) {
   const { fitView, zoomIn, zoomOut } = useReactFlow()
-  const { history } = useCanvasRuntimeContext()
+  const history = useCanvasHistoryContext()
   const toolbarTools = getCanvasToolbarTools()
 
   const activeTool = useCanvasToolStore((s) => s.activeTool)

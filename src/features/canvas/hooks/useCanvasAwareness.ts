@@ -4,10 +4,8 @@ import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-p
 import type {
   CanvasAwarenessNamespace,
   CanvasAwarenessPresence,
-  DrawingState,
   RemoteUser,
   ResizingState,
-  SelectingState,
 } from '../utils/canvas-awareness-types'
 
 function buildRemoteUsers(awareness: Awareness, localClientId: number): Array<RemoteUser> {
@@ -35,9 +33,6 @@ function buildRemoteUsers(awareness: Awareness, localClientId: number): Array<Re
         (presence['core.dragging'] as Record<string, { x: number; y: number }> | undefined) ?? null,
       resizing: (presence['core.resizing'] as ResizingState | undefined) ?? null,
       selectedNodeIds: (presence['core.selection'] as Array<string> | undefined) ?? null,
-      drawing: (presence['tool.draw'] as DrawingState | undefined) ?? null,
-      selecting:
-        ((presence['tool.select'] ?? presence['tool.lasso']) as SelectingState | undefined) ?? null,
     })
   })
   return users
@@ -129,43 +124,20 @@ export function useCanvasAwareness(provider: ConvexYjsProvider | null) {
     setLocalPresence('core.selection', nodeIds)
   }
 
-  const setLocalDrawing = (drawing: DrawingState | null) => {
-    setLocalPresence('tool.draw', drawing)
-  }
-
   const setLocalResizing = (resizing: ResizingState | null) => {
     setLocalPresence('core.resizing', resizing)
   }
 
-  const setLocalSelecting = (selecting: SelectingState | null) => {
-    updateLocalPresence((currentPresence) => {
-      const nextPresence = { ...currentPresence }
-
-      if (selecting?.type === 'lasso') {
-        nextPresence['tool.lasso'] = selecting
-        delete nextPresence['tool.select']
-        return nextPresence
-      }
-
-      if (selecting?.type === 'rect') {
-        nextPresence['tool.select'] = selecting
-        delete nextPresence['tool.lasso']
-        return nextPresence
-      }
-
-      delete nextPresence['tool.select']
-      delete nextPresence['tool.lasso']
-      return nextPresence
-    })
-  }
-
   return {
     remoteUsers,
-    setLocalCursor,
-    setLocalDragging,
-    setLocalResizing,
-    setLocalSelection,
-    setLocalDrawing,
-    setLocalSelecting,
+    core: {
+      setLocalCursor,
+      setLocalDragging,
+      setLocalResizing,
+      setLocalSelection,
+    },
+    presence: {
+      setPresence: setLocalPresence,
+    },
   }
 }

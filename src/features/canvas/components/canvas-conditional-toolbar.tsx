@@ -5,7 +5,7 @@ import { getCanvasNodeProperties } from '../nodes/canvas-node-registry'
 import { getCanvasToolProperties } from '../tools/canvas-tool-modules'
 import type { Node } from '@xyflow/react'
 import { ColorPickerPopover } from '~/shared/components/color-picker-popover'
-import { useCanvasRuntimeContext } from '../hooks/canvas-runtime-context'
+import { useCanvasNodeActionsContext } from '../hooks/canvas-runtime-context'
 import type { CanvasToolId, CanvasToolPropertyContext } from '../tools/canvas-tool-types'
 import { resolveCanvasProperties } from '../properties/resolve-canvas-properties'
 import { readResolvedPropertyValue } from '../properties/canvas-property-types'
@@ -62,9 +62,7 @@ function isStrokeSizeProperty(
 }
 
 export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarProps) {
-  const {
-    nodeActions: { updateNodeData },
-  } = useCanvasRuntimeContext()
+  const { updateNodeData } = useCanvasNodeActionsContext()
   const nodes = useNodes()
   const selectedNodeIds = useSelectedCanvasNodeIds()
   const selectionPhase = useCanvasSelectionPhase()

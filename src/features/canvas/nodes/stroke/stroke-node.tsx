@@ -1,11 +1,12 @@
 import { useInternalNode, useViewport } from '@xyflow/react'
-import { useCanvasInteractionStore } from '../../hooks/useCanvasInteractionStore'
 import type { CanvasNodeMinimapProps } from '../canvas-node-module-types'
 import { ResizableNodeWrapper } from '../shared/resizable-node-wrapper'
 import type { Node, NodeProps } from '@xyflow/react'
 import type { StrokeNodeData, StrokeNodeType } from './stroke-node-model'
 import { getMiniMapStrokePath, pointsToPathD } from './stroke-node-model'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
+import { useEraseToolLocalOverlayStore } from '../../tools/erase/erase-tool-local-overlay'
+import { useSelectToolLocalOverlayStore } from '../../tools/select/select-tool-local-overlay'
 
 const HIGHLIGHT_SCALE = 0.3
 const ERASING_OPACITY = 0.3
@@ -80,8 +81,10 @@ export function StrokeNode({
   height,
 }: NodeProps<Node<StrokeNodeData>>) {
   const { points, size, bounds } = data
-  const isErasing = useCanvasInteractionStore((s) => s.erasingStrokeIds.has(id))
-  const isRectDeselected = useCanvasInteractionStore((s) => s.rectDeselectedIds.has(id))
+  const isErasing = useEraseToolLocalOverlayStore((state) => state.erasingStrokeIds.has(id))
+  const isRectDeselected = useSelectToolLocalOverlayStore((state) =>
+    state.rectDeselectedIds.has(id),
+  )
 
   const svgWidth = width ?? bounds.width
   const svgHeight = height ?? bounds.height

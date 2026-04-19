@@ -1,9 +1,8 @@
 import type {
-  DrawingState,
+  CanvasAwarenessNamespace,
   Point2D,
   ResizingState,
   RemoteUser,
-  SelectingState,
 } from '../utils/canvas-awareness-types'
 import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
 import type { Connection, Edge, Node, XYPosition } from '@xyflow/react'
@@ -102,32 +101,29 @@ export interface CanvasToolPropertyContext {
   >
 }
 
-interface CanvasInteractionOverlayControls {
-  setLocalDrawing: (drawing: DrawingState | null) => void
-  setLassoPath: (path: Array<Point2D>) => void
-  setSelectionDragRect: (
-    rect: {
-      x: number
-      y: number
-      width: number
-      height: number
-    } | null,
-  ) => void
-  setErasingStrokeIds: (ids: Set<string>) => void
-  setRectDeselectedIds: (ids: Set<string>) => void
-}
-
-export interface CanvasAwarenessWriter {
+export interface CanvasCoreAwarenessWriter {
   setLocalCursor: (position: Point2D | null) => void
   setLocalDragging: (positions: Record<string, Point2D> | null) => void
   setLocalResizing: (resizing: ResizingState | null) => void
   setLocalSelection: (nodeIds: Array<string> | null) => void
-  setLocalDrawing: (drawing: DrawingState | null) => void
-  setLocalSelecting: (selecting: SelectingState | null) => void
+}
+
+export interface CanvasAwarenessPresenceWriter {
+  setPresence: (namespace: CanvasAwarenessNamespace, value: unknown | null) => void
+}
+
+export interface CanvasAwarenessWriter {
+  core: CanvasCoreAwarenessWriter
+  presence: CanvasAwarenessPresenceWriter
 }
 
 export interface CanvasAwarenessCapability {
   Layer?: ComponentType<{ remoteUsers: Array<RemoteUser> }>
+}
+
+export interface CanvasLocalOverlayCapability {
+  Layer?: ComponentType
+  clear: () => void
 }
 
 export interface CanvasToolEnvironment {
@@ -136,7 +132,6 @@ export interface CanvasToolEnvironment {
   selection: CanvasSelectionActions
   editSession: CanvasEditSessionState
   toolState: CanvasToolStateControls
-  interaction: CanvasInteractionOverlayControls
   awareness: CanvasAwarenessWriter
 }
 
@@ -159,6 +154,7 @@ export interface CanvasToolModule<TId extends CanvasToolId = CanvasToolId> {
   cursor?: string
   properties?: (context: CanvasToolPropertyContext) => CanvasInspectableProperties
   awareness?: CanvasAwarenessCapability
+  localOverlay?: CanvasLocalOverlayCapability
   create: (environment: CanvasToolEnvironment) => CanvasToolController
 }
 

@@ -44,6 +44,4 @@ export type RemoteUser = CanvasAwarenessState & {
   dragging: Record<string, Point2D> | null
   resizing: ResizingState | null
   selectedNodeIds: Array<string> | null
-  drawing: DrawingState | null
-  selecting: SelectingState | null
 }

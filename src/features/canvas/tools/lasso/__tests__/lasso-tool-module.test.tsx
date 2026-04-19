@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import { lassoToolModule } from '../lasso-tool-module'
+import {
+  clearLassoToolLocalOverlay,
+  useLassoToolLocalOverlayStore,
+} from '../lasso-tool-local-overlay'
 import type { CanvasMeasuredNode, CanvasToolEnvironment, CanvasToolId } from '../../canvas-tool-types'
-import type { SelectingState } from '../../../utils/canvas-awareness-types'
 
 type MockPointerTarget = HTMLDivElement & {
   setPointerCapture: (pointerId: number) => void
@@ -33,8 +36,8 @@ describe('lassoToolModule', () => {
     const clearSelection = vi.fn()
     const setNodeSelection = vi.fn()
     const setActiveTool = vi.fn()
-    const setLassoPath = vi.fn()
-    const setLocalSelecting = vi.fn()
+    const setPresence = vi.fn()
+    clearLassoToolLocalOverlay()
 
     const runtime = createLassoEnvironment({
       getMeasuredNodes: () => [
@@ -49,8 +52,7 @@ describe('lassoToolModule', () => {
       ],
       setNodeSelection,
       clearSelection,
-      setLassoPath,
-      setLocalSelecting,
+      setPresence,
       setActiveTool,
     })
 
@@ -64,10 +66,9 @@ describe('lassoToolModule', () => {
     controller.onPointerUp?.(createPointerEvent(target, { clientX: 0, clientY: 0 }))
 
     expect(clearSelection).toHaveBeenCalledTimes(1)
-    expect(setLassoPath).toHaveBeenCalledTimes(5)
-    expect(setLassoPath).toHaveBeenLastCalledWith([])
-    expect(setLocalSelecting).toHaveBeenCalledWith(expect.objectContaining({ type: 'lasso' }))
-    expect(setLocalSelecting).toHaveBeenLastCalledWith(null)
+    expect(useLassoToolLocalOverlayStore.getState().points).toEqual([])
+    expect(setPresence).toHaveBeenCalledWith('tool.lasso', expect.objectContaining({ type: 'lasso' }))
+    expect(setPresence).toHaveBeenLastCalledWith('tool.lasso', null)
     expect(setNodeSelection).toHaveBeenCalledWith(['embed-1'])
     expect(setActiveTool).toHaveBeenCalledWith('select')
     expect(target.setPointerCapture).toHaveBeenCalledWith(1)
@@ -75,26 +76,24 @@ describe('lassoToolModule', () => {
   })
 
   it('publishes a fresh local lasso path array on each pointer update so the local overlay rerenders', () => {
-    const setLassoPath = vi.fn()
+    clearLassoToolLocalOverlay()
     const controller = lassoToolModule.create(
       createLassoEnvironment({
         getMeasuredNodes: () => [],
         clearSelection: vi.fn(),
         setNodeSelection: vi.fn(),
-        setLassoPath,
-        setLocalSelecting: vi.fn(),
+        setPresence: vi.fn(),
         setActiveTool: vi.fn(),
       }),
     )
     const target = createPointerTarget()
 
     controller.onPointerDown?.(createPointerEvent(target, { clientX: 0, clientY: 0 }))
+    const firstPath = useLassoToolLocalOverlayStore.getState().points
     controller.onPointerMove?.(createPointerEvent(target, { clientX: 100, clientY: 0 }))
+    const secondPath = useLassoToolLocalOverlayStore.getState().points
     controller.onPointerMove?.(createPointerEvent(target, { clientX: 100, clientY: 100 }))
-
-    const firstPath = setLassoPath.mock.calls[0]?.[0]
-    const secondPath = setLassoPath.mock.calls[1]?.[0]
-    const thirdPath = setLassoPath.mock.calls[2]?.[0]
+    const thirdPath = useLassoToolLocalOverlayStore.getState().points
 
     expect(firstPath).toEqual([{ x: 0, y: 0 }])
     expect(secondPath).toEqual([
@@ -126,8 +125,7 @@ describe('lassoToolModule', () => {
         ],
         clearSelection: vi.fn(),
         setNodeSelection,
-        setLassoPath: vi.fn(),
-        setLocalSelecting: vi.fn(),
+        setPresence: vi.fn(),
         setActiveTool: vi.fn(),
       }),
     )
@@ -174,8 +172,7 @@ describe('lassoToolModule', () => {
         ],
         clearSelection: vi.fn(),
         setNodeSelection,
-        setLassoPath: vi.fn(),
-        setLocalSelecting: vi.fn(),
+        setPresence: vi.fn(),
         setActiveTool: vi.fn(),
       }),
     )
@@ -195,15 +192,13 @@ function createLassoEnvironment({
   getMeasuredNodes,
   clearSelection,
   setNodeSelection,
-  setLassoPath,
-  setLocalSelecting,
+  setPresence,
   setActiveTool,
 }: {
   getMeasuredNodes: () => Array<CanvasMeasuredNode>
   clearSelection: () => void
   setNodeSelection: (nodeIds: Array<string>) => void
-  setLassoPath: (path: Array<{ x: number; y: number }>) => void
-  setLocalSelecting: (selecting: SelectingState | null) => void
+  setPresence: (namespace: string, value: unknown) => void
   setActiveTool: (tool: CanvasToolId) => void
 }): CanvasToolEnvironment {
   return {
@@ -247,20 +242,16 @@ function createLassoEnvironment({
       setStrokeSize: () => undefined,
       setStrokeOpacity: () => undefined,
     },
-    interaction: {
-      setLocalDrawing: () => undefined,
-      setLassoPath,
-      setSelectionDragRect: () => undefined,
-      setErasingStrokeIds: () => undefined,
-      setRectDeselectedIds: () => undefined,
-    },
     awareness: {
-      setLocalCursor: () => undefined,
-      setLocalDragging: () => undefined,
-      setLocalResizing: () => undefined,
-      setLocalSelection: () => undefined,
-      setLocalDrawing: () => undefined,
-      setLocalSelecting,
+      core: {
+        setLocalCursor: () => undefined,
+        setLocalDragging: () => undefined,
+        setLocalResizing: () => undefined,
+        setLocalSelection: () => undefined,
+      },
+      presence: {
+        setPresence,
+      },
     },
   }
 }

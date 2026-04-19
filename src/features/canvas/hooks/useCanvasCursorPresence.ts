@@ -1,6 +1,6 @@
 import throttle from 'lodash-es/throttle'
 import { useEffect, useRef } from 'react'
-import type { CanvasAwarenessWriter } from '../tools/canvas-tool-types'
+import type { CanvasCoreAwarenessWriter } from '../tools/canvas-tool-types'
 import type { ReactFlowInstance } from '@xyflow/react'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 
@@ -8,7 +8,7 @@ const CURSOR_UPDATE_THROTTLE_MS = 75
 
 interface UseCanvasCursorPresenceOptions {
   reactFlowInstance: ReactFlowInstance
-  awareness: CanvasAwarenessWriter
+  awareness: CanvasCoreAwarenessWriter
 }
 
 export function useCanvasCursorPresence({

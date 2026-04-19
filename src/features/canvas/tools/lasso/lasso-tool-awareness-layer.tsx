@@ -1,5 +1,5 @@
-import { useCanvasInteractionStore } from "../../hooks/useCanvasInteractionStore";
-import type { RemoteUser } from "../../utils/canvas-awareness-types";
+import type { RemoteUser } from '../../utils/canvas-awareness-types'
+import { readRemoteLassoState } from './lasso-tool-awareness'
 
 function renderLassoShape({
   key,
@@ -35,8 +35,6 @@ function renderLassoShape({
 }
 
 export function LassoAwarenessLayer({ remoteUsers }: { remoteUsers: ReadonlyArray<RemoteUser> }) {
-  const lassoPath = useCanvasInteractionStore((state) => state.lassoPath)
-
   return (
     <svg
       aria-hidden="true"
@@ -50,17 +48,10 @@ export function LassoAwarenessLayer({ remoteUsers }: { remoteUsers: ReadonlyArra
         pointerEvents: 'none',
       }}
     >
-      {lassoPath.length >= 2 &&
-        renderLassoShape({
-          key: 'local-lasso',
-          points: lassoPath,
-          color: 'var(--primary)',
-          fillOpacity: 0.08,
-        })}
-
       {remoteUsers.map((remoteUser) => {
-        if (!remoteUser.selecting || remoteUser.selecting.type !== 'lasso') return null
-        const points = remoteUser.selecting.points
+        const selecting = readRemoteLassoState(remoteUser)
+        if (!selecting) return null
+        const points = selecting.points
         if (points.length < 2) return null
 
         return renderLassoShape({

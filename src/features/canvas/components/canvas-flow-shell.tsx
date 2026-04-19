@@ -3,6 +3,7 @@ import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { cn } from '~/features/shadcn/lib/utils'
 import { CanvasAwarenessHost } from './canvas-awareness-host'
 import { CanvasConditionalToolbar } from './canvas-conditional-toolbar'
+import { CanvasLocalOverlaysHost } from './canvas-local-overlays-host'
 import { MiniMapNode } from './canvas-minimap-node'
 import { CanvasToolbar } from './canvas-toolbar'
 import { canvasNodeTypes } from '../nodes/canvas-node-types'
@@ -114,6 +115,7 @@ export function CanvasFlowShell({
         >
           <Background bgColor="var(--background)" />
           <MiniMap zoomable={false} pannable={false} nodeComponent={MiniMapNode} />
+          <CanvasLocalOverlaysHost />
           <CanvasAwarenessHost remoteUsers={remoteUsers} />
         </ReactFlow>
 

@@ -49,7 +49,6 @@ function renderToolbar(updateNodeData = vi.fn()) {
         },
         remoteHighlights: new Map(),
         canEdit: true,
-        user: { name: 'Tester', color: '#fff' },
         history: {
           canUndo: false,
           canRedo: false,

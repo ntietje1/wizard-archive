@@ -10,6 +10,10 @@ import {
   screenEventToFlowPosition,
 } from '../shared/tool-module-utils'
 import type { CanvasToolModule } from '../canvas-tool-types'
+import {
+  clearEraseToolLocalOverlay,
+  setEraseToolErasingStrokeIds,
+} from './erase-tool-local-overlay'
 
 export const eraseToolModule: CanvasToolModule<'erase'> = {
   id: 'erase',
@@ -17,6 +21,9 @@ export const eraseToolModule: CanvasToolModule<'erase'> = {
   group: 'creation',
   icon: <Eraser className="h-4 w-4" />,
   cursor: 'cell',
+  localOverlay: {
+    clear: clearEraseToolLocalOverlay,
+  },
   create: (environment) => {
     let trail: Array<{ x: number; y: number }> = []
     let marked = new Set<string>()
@@ -48,7 +55,7 @@ export const eraseToolModule: CanvasToolModule<'erase'> = {
       }
 
       if (changed) {
-        environment.interaction.setErasingStrokeIds(new Set(marked))
+        setEraseToolErasingStrokeIds(new Set(marked))
       }
     }
 
@@ -56,7 +63,7 @@ export const eraseToolModule: CanvasToolModule<'erase'> = {
       erasing = false
       marked = new Set()
       trail = []
-      environment.interaction.setErasingStrokeIds(new Set())
+      setEraseToolErasingStrokeIds(new Set())
       if (rafId) {
         cancelAnimationFrame(rafId)
         rafId = 0
@@ -76,7 +83,7 @@ export const eraseToolModule: CanvasToolModule<'erase'> = {
         marked = new Set()
         const pos = screenEventToFlowPosition(environment.viewport, event)
         trail = [pos]
-        environment.interaction.setErasingStrokeIds(new Set())
+        setEraseToolErasingStrokeIds(new Set())
       },
       onPointerMove: (event) => {
         if (!erasing || (event.buttons & 1) !== 1) return

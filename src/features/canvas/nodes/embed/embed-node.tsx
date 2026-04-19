@@ -18,7 +18,10 @@ import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigatio
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { Button } from '~/features/shadcn/components/button'
 import { cn } from '~/features/shadcn/lib/utils'
-import { useCanvasRuntimeContext } from '../../hooks/canvas-runtime-context'
+import {
+  useCanvasEditSessionContext,
+  useCanvasPermissions,
+} from '../../hooks/canvas-runtime-context'
 
 export function EmbedNode({ id, data, selected, dragging }: NodeProps<Node<EmbedNodeData>>) {
   const sidebarItemId = data.sidebarItemId
@@ -27,7 +30,8 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps<Node<Embed
 
   const { data: contentItem } = useSidebarItemById(sidebarItemId)
 
-  const { editSession, canEdit } = useCanvasRuntimeContext()
+  const editSession = useCanvasEditSessionContext()
+  const canEdit = useCanvasPermissions()
   const { editingEmbedId, setEditingEmbedId } = editSession
   const selectedNodeIds = useSelectedCanvasNodeIds()
   const isExclusivelySelected = isExclusivelySelectedNode(selectedNodeIds, id)

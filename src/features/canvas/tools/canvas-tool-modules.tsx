@@ -10,6 +10,7 @@ import type { CanvasInspectableProperties } from '../properties/canvas-property-
 import type {
   AnyCanvasToolModule,
   CanvasAwarenessCapability,
+  CanvasLocalOverlayCapability,
   CanvasToolController,
   CanvasToolEnvironment,
   CanvasToolId,
@@ -33,6 +34,7 @@ const canvasToolModuleMap: Partial<Record<CanvasToolId, AnyCanvasToolModule>> = 
 
 type CanvasToolbarTool = Pick<AnyCanvasToolModule, 'id' | 'label' | 'group' | 'icon'>
 type CanvasAwarenessLayer = NonNullable<CanvasAwarenessCapability['Layer']>
+type CanvasLocalOverlayLayer = NonNullable<CanvasLocalOverlayCapability['Layer']>
 
 const canvasToolbarTools = canvasToolModules.map<CanvasToolbarTool>(
   ({ id, label, group, icon }) => ({ id, label, group, icon }),
@@ -40,6 +42,10 @@ const canvasToolbarTools = canvasToolModules.map<CanvasToolbarTool>(
 
 const canvasToolAwarenessLayers = canvasToolModules.flatMap((module) =>
   module.awareness?.Layer ? [{ key: module.id, Layer: module.awareness.Layer }] : [],
+)
+
+const canvasToolLocalOverlayLayers = canvasToolModules.flatMap((module) =>
+  module.localOverlay?.Layer ? [{ key: module.id, Layer: module.localOverlay.Layer }] : [],
 )
 
 function getCanvasToolModule(toolId: CanvasToolId): AnyCanvasToolModule {
@@ -73,9 +79,22 @@ export function getCanvasToolAwarenessLayers(): ReadonlyArray<{
   return canvasToolAwarenessLayers
 }
 
+export function getCanvasToolLocalOverlayLayers(): ReadonlyArray<{
+  key: CanvasToolId
+  Layer: CanvasLocalOverlayLayer
+}> {
+  return canvasToolLocalOverlayLayers
+}
+
 export function createCanvasToolController(
   toolId: CanvasToolId,
   environment: CanvasToolEnvironment,
 ): CanvasToolController {
   return getCanvasToolModule(toolId).create(environment)
+}
+
+export function clearCanvasToolLocalOverlays() {
+  for (const module of canvasToolModules) {
+    module.localOverlay?.clear()
+  }
 }

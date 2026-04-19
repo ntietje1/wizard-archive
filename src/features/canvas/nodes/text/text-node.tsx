@@ -2,7 +2,7 @@ import { Handle, Position } from '@xyflow/react'
 import { ResizableNodeWrapper } from '../shared/resizable-node-wrapper'
 import { useInlineCanvasNodeEdit } from '../shared/useInlineCanvasNodeEdit'
 import type { Node, NodeProps } from '@xyflow/react'
-import { useCanvasRuntimeContext } from '../../hooks/canvas-runtime-context'
+import { useCanvasNodeActionsContext } from '../../hooks/canvas-runtime-context'
 
 const TEXT_CONTAINER_CLASS = 'px-4 py-2 rounded-lg border bg-background shadow-sm h-full w-full'
 
@@ -17,9 +17,7 @@ export function TextPreview({ label }: { label: string }) {
 }
 
 export function TextNode({ id, data, selected, dragging }: NodeProps<Node<TextNodeData>>) {
-  const {
-    nodeActions: { updateNodeData },
-  } = useCanvasRuntimeContext()
+  const { updateNodeData } = useCanvasNodeActionsContext()
   const trimmedLabel = typeof data.label === 'string' ? data.label.trim() : ''
   const hasLabel = trimmedLabel.length > 0
   const label = hasLabel ? trimmedLabel : 'Text'

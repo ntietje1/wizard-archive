@@ -1,7 +1,7 @@
 import { create } from 'zustand'
-import { clearCanvasInteractionState } from '../hooks/useCanvasInteractionStore'
 import { STROKE_SIZE_OPTIONS } from '../properties/canvas-property-definitions'
 import type { CanvasToolId } from '../tools/canvas-tool-types'
+import { clearCanvasToolLocalOverlays } from '../tools/canvas-tool-modules'
 
 interface CanvasToolState {
   activeTool: CanvasToolId
@@ -29,7 +29,7 @@ export const useCanvasToolStore = create<CanvasToolState & CanvasToolActions>((s
   ...INITIAL_STATE,
 
   setActiveTool: (tool) => {
-    clearCanvasInteractionState()
+    clearCanvasToolLocalOverlays()
     set({ activeTool: tool })
   },
 
@@ -38,7 +38,7 @@ export const useCanvasToolStore = create<CanvasToolState & CanvasToolActions>((s
   setStrokeOpacity: (opacity) => set({ strokeOpacity: opacity }),
 
   reset: () => {
-    clearCanvasInteractionState()
+    clearCanvasToolLocalOverlays()
     set(INITIAL_STATE)
   },
 }))

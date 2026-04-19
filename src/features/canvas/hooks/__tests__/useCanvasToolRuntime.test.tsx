@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useCanvasToolRuntime } from '../useCanvasToolRuntime'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import type { CanvasEditSessionState } from '../../tools/canvas-tool-types'
-import type { SelectingState } from '../../utils/canvas-awareness-types'
 
 const reactFlowMock = vi.hoisted(() => ({
   screenToFlowPosition: ({ x, y }: { x: number; y: number }) => ({ x, y }),
@@ -23,12 +22,15 @@ vi.mock('@xyflow/react', () => ({
 
 function createAwarenessMock() {
   return {
-    setLocalCursor: vi.fn(),
-    setLocalDragging: vi.fn(),
-    setLocalResizing: vi.fn(),
-    setLocalSelection: vi.fn(),
-    setLocalDrawing: vi.fn(),
-    setLocalSelecting: vi.fn<(selecting: SelectingState | null) => void>(),
+    core: {
+      setLocalCursor: vi.fn(),
+      setLocalDragging: vi.fn(),
+      setLocalResizing: vi.fn(),
+      setLocalSelection: vi.fn(),
+    },
+    presence: {
+      setPresence: vi.fn(),
+    },
   }
 }
 

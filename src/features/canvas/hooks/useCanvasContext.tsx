@@ -1,12 +1,12 @@
-import { CanvasRuntimeContext } from './canvas-runtime-context'
-import type { CanvasRuntimeContextValue } from './canvas-runtime-context'
+import { CanvasRuntimeProviders } from './canvas-runtime-context'
+import type { CanvasProviderValues } from './canvas-runtime-context'
 
 export function CanvasProviders({
   runtime,
   children,
 }: {
-  runtime: CanvasRuntimeContextValue
+  runtime: CanvasProviderValues
   children: React.ReactNode
 }) {
-  return <CanvasRuntimeContext value={runtime}>{children}</CanvasRuntimeContext>
+  return <CanvasRuntimeProviders value={runtime}>{children}</CanvasRuntimeProviders>
 }

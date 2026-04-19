@@ -1,6 +1,9 @@
 import { NodeResizeControl } from '@xyflow/react'
 import type { ControlPosition, OnResize, OnResizeEnd } from '@xyflow/react'
-import { useCanvasRuntimeContext } from '../../hooks/canvas-runtime-context'
+import {
+  useCanvasNodeActionsContext,
+  useCanvasRemoteHighlightsContext,
+} from '../../hooks/canvas-runtime-context'
 import { useShiftKeyPressed } from './useShiftKeyPressed'
 
 const HANDLE_SIZE = 4
@@ -52,8 +55,8 @@ export function ResizableNodeWrapper({
   minHeight = 30,
   isRectDeselected = false,
 }: ResizableNodeWrapperProps) {
-  const { remoteHighlights, nodeActions } = useCanvasRuntimeContext()
-  const { onResize, onResizeEnd } = nodeActions
+  const remoteHighlights = useCanvasRemoteHighlightsContext()
+  const { onResize, onResizeEnd } = useCanvasNodeActionsContext()
   const highlight = remoteHighlights.get(id)
   const showHandles = selected && !dragging && !isRectDeselected
   const keepAspectRatio = useShiftKeyPressed()

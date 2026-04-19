@@ -6,6 +6,9 @@ import {
 } from '../shared/tool-module-utils'
 import type { CanvasToolModule } from '../canvas-tool-types'
 import { DrawAwarenessLayer } from './draw-tool-awareness-layer'
+import { setDrawToolAwareness } from './draw-tool-awareness'
+import { clearDrawToolLocalOverlay, setDrawToolLocalDrawing } from './draw-tool-local-overlay'
+import { DrawToolLocalOverlayLayer } from './draw-tool-local-overlay-layer'
 import { getStrokeBounds } from '../../nodes/stroke/stroke-node-model'
 import {
   paintCanvasProperty,
@@ -42,6 +45,10 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
   awareness: {
     Layer: DrawAwarenessLayer,
   },
+  localOverlay: {
+    Layer: DrawToolLocalOverlayLayer,
+    clear: clearDrawToolLocalOverlay,
+  },
   create: (environment) => {
     let points: Array<[number, number, number]> = []
     let captureTarget: Element | null = null
@@ -49,7 +56,8 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
 
     const clearDrawing = () => {
       points = []
-      environment.interaction.setLocalDrawing(null)
+      setDrawToolLocalDrawing(null)
+      setDrawToolAwareness(environment.awareness.presence, null)
       releasePointerCapture(captureTarget, pointerId)
       captureTarget = null
       pointerId = null
@@ -73,7 +81,8 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
           opacity: strokeOpacity,
         }
 
-        environment.interaction.setLocalDrawing(drawing)
+        setDrawToolLocalDrawing(drawing)
+        setDrawToolAwareness(environment.awareness.presence, drawing)
       },
       onPointerMove: (event) => {
         if ((event.buttons & 1) !== 1 || points.length === 0) return
@@ -90,7 +99,8 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
           opacity: strokeOpacity,
         }
 
-        environment.interaction.setLocalDrawing(drawing)
+        setDrawToolLocalDrawing(drawing)
+        setDrawToolAwareness(environment.awareness.presence, drawing)
       },
       onPointerUp: (event) => {
         if (event.pointerId !== pointerId) return

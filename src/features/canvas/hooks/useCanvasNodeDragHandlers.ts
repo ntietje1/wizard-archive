@@ -1,8 +1,8 @@
 import { useCallback } from 'react'
 import { logger } from '~/shared/utils/logger'
 import type { OnNodeDrag, ReactFlowInstance } from '@xyflow/react'
-import type { MutableRefObject } from 'react'
-import type { CanvasAwarenessWriter, CanvasDocumentWriter } from '../tools/canvas-tool-types'
+import type { RefObject } from 'react'
+import type { CanvasCoreAwarenessWriter, CanvasDocumentWriter } from '../tools/canvas-tool-types'
 import type { CanvasRemoteDragAnimation } from './useCanvasRemoteDragAnimation'
 import type * as Y from 'yjs'
 
@@ -10,9 +10,9 @@ interface UseCanvasNodeDragHandlersOptions {
   documentWriter: CanvasDocumentWriter
   nodesDoc: Y.Doc | null | undefined
   remoteDragAnimation: CanvasRemoteDragAnimation
-  awareness: CanvasAwarenessWriter
+  awareness: CanvasCoreAwarenessWriter
   reactFlowInstance: ReactFlowInstance
-  localDraggingIdsRef: MutableRefObject<Set<string>>
+  localDraggingIdsRef: RefObject<Set<string>>
 }
 
 export function useCanvasNodeDragHandlers({

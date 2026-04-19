@@ -8,6 +8,9 @@ import {
 import { useCanvasSelectionState } from '../../hooks/useCanvasSelectionState'
 import type { CanvasToolModule } from '../canvas-tool-types'
 import { LassoAwarenessLayer } from './lasso-tool-awareness-layer'
+import { setLassoToolAwareness } from './lasso-tool-awareness'
+import { clearLassoToolLocalOverlay, setLassoToolLocalPoints } from './lasso-tool-local-overlay'
+import { LassoToolLocalOverlayLayer } from './lasso-tool-local-overlay-layer'
 
 export const lassoToolModule: CanvasToolModule<'lasso'> = {
   id: 'lasso',
@@ -18,6 +21,10 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
   awareness: {
     Layer: LassoAwarenessLayer,
   },
+  localOverlay: {
+    Layer: LassoToolLocalOverlayLayer,
+    clear: clearLassoToolLocalOverlay,
+  },
   create: (environment) => {
     let points: Array<{ x: number; y: number }> = []
     let active = false
@@ -26,15 +33,15 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
 
     const publishLassoPoints = () => {
       const nextPoints = [...points]
-      environment.interaction.setLassoPath(nextPoints)
-      environment.awareness.setLocalSelecting({ type: 'lasso', points: nextPoints })
+      setLassoToolLocalPoints(nextPoints)
+      setLassoToolAwareness(environment.awareness.presence, { type: 'lasso', points: nextPoints })
     }
 
     const reset = () => {
       active = false
       points = []
-      environment.interaction.setLassoPath([])
-      environment.awareness.setLocalSelecting(null)
+      setLassoToolLocalPoints([])
+      setLassoToolAwareness(environment.awareness.presence, null)
       useCanvasSelectionState.getState().setSelectionPhase('idle')
       releasePointerCapture(captureTarget, pointerId)
       captureTarget = null

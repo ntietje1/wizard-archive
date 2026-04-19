@@ -1,12 +1,16 @@
 import { useEffect, useRef } from 'react'
 import { useReactFlow, useStoreApi } from '@xyflow/react'
-import { useCanvasInteractionStore } from './useCanvasInteractionStore'
 import { getMeasuredCanvasNodesFromLookup } from './canvas-measured-nodes'
 import { useCanvasSelectionState } from './useCanvasSelectionState'
 import { getCanvasNodesMatchingRectangle } from '../nodes/canvas-node-registry'
+import { setSelectToolAwareness } from '../tools/select/select-tool-awareness'
+import {
+  setSelectToolRectDeselectedIds,
+  setSelectToolSelectionDragRect,
+} from '../tools/select/select-tool-local-overlay'
+import type { CanvasAwarenessPresenceWriter } from '../tools/canvas-tool-types'
 import type { ReactFlowInstance } from '@xyflow/react'
 import type { Bounds } from '../utils/canvas-geometry-utils'
-import type { SelectingState } from '../utils/canvas-awareness-types'
 
 function screenToFlowRect(
   screenRect: { x: number; y: number; width: number; height: number },
@@ -30,13 +34,13 @@ function screenToFlowRect(
 }
 
 interface UseCanvasSelectionRectOptions {
-  setLocalSelecting: (selecting: SelectingState | null) => void
+  awareness: CanvasAwarenessPresenceWriter
   setNodeSelection: (nodeIds: Array<string>) => void
   enabled: boolean
 }
 
 export function useCanvasSelectionRect({
-  setLocalSelecting,
+  awareness,
   setNodeSelection,
   enabled,
 }: UseCanvasSelectionRectOptions) {
@@ -44,8 +48,8 @@ export function useCanvasSelectionRect({
   const storeApi = useStoreApi()
   const rafRef = useRef(0)
   const lastFlowRectRef = useRef<Bounds | null>(null)
-  const setLocalSelectingRef = useRef(setLocalSelecting)
-  setLocalSelectingRef.current = setLocalSelecting
+  const awarenessRef = useRef(awareness)
+  awarenessRef.current = awareness
 
   useEffect(() => {
     if (!enabled) return
@@ -97,11 +101,10 @@ export function useCanvasSelectionRect({
           }
         }
         lastFlowRectRef.current = null
-        const store = useCanvasInteractionStore.getState()
-        store.setSelectionDragRect(null)
-        store.setRectDeselectedIds(new Set())
+        setSelectToolSelectionDragRect(null)
+        setSelectToolRectDeselectedIds(new Set())
         useCanvasSelectionState.getState().setSelectionPhase('idle')
-        setLocalSelectingRef.current(null)
+        setSelectToolAwareness(awarenessRef.current, null)
         return
       }
 
@@ -116,11 +119,10 @@ export function useCanvasSelectionRect({
           reactFlow,
         )
 
-        const store = useCanvasInteractionStore.getState()
         lastFlowRectRef.current = flowRect
-        store.setSelectionDragRect(flowRect)
+        setSelectToolSelectionDragRect(flowRect)
         useCanvasSelectionState.getState().setSelectionPhase('marquee')
-        setLocalSelectingRef.current({ type: 'rect', ...flowRect })
+        setSelectToolAwareness(awarenessRef.current, flowRect)
 
         const deselected = new Set<string>()
         const selectedNodeIds = new Set(useCanvasSelectionState.getState().selectedNodeIds)
@@ -135,7 +137,7 @@ export function useCanvasSelectionRect({
             deselected.add(n.id)
           }
         }
-        store.setRectDeselectedIds(deselected)
+        setSelectToolRectDeselectedIds(deselected)
       })
     })
 
@@ -145,11 +147,10 @@ export function useCanvasSelectionRect({
         cancelAnimationFrame(rafRef.current)
         rafRef.current = 0
       }
-      const store = useCanvasInteractionStore.getState()
-      store.setSelectionDragRect(null)
-      store.setRectDeselectedIds(new Set())
+      setSelectToolSelectionDragRect(null)
+      setSelectToolRectDeselectedIds(new Set())
       useCanvasSelectionState.getState().setSelectionPhase('idle')
-      setLocalSelectingRef.current(null)
+      setSelectToolAwareness(awarenessRef.current, null)
     }
   }, [enabled, reactFlow, setNodeSelection, storeApi])
 }

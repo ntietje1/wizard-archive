@@ -38,7 +38,6 @@ describe('CanvasToolbar', () => {
       <CanvasProviders
         runtime={{
           canEdit,
-          user: { name: 'Tester', color: '#fff' },
           remoteHighlights: new Map(),
           history,
           editSession: {
