@@ -10,9 +10,7 @@ describe('useCanvasSurfaceClickGuard', () => {
     surfaceElement.appendChild(childElement)
     surfaceElement.addEventListener('click', bubbleSpy)
 
-    const { result } = renderHook(() =>
-      useCanvasSurfaceClickGuard({ current: surfaceElement }),
-    )
+    const { result } = renderHook(() => useCanvasSurfaceClickGuard({ current: surfaceElement }))
 
     act(() => {
       result.current.suppressNextSurfaceClick()

@@ -62,6 +62,10 @@ function getSnapshot() {
   return shiftPressed
 }
 
+function getServerSnapshot() {
+  return false
+}
+
 export function useShiftKeyPressed() {
-  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 }

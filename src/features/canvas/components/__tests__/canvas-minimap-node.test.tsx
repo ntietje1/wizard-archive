@@ -59,9 +59,11 @@ describe('MiniMapNode', () => {
       </svg>,
     )
 
-    expect(container.querySelector('rect')).toHaveAttribute('x', '1')
-    expect(container.querySelector('rect')).toHaveAttribute('y', '2')
-    expect(container.querySelector('rect')).toHaveAttribute('width', '30')
-    expect(container.querySelector('rect')).toHaveAttribute('height', '40')
+    const rectEl = container.querySelector('rect')
+    expect(rectEl).not.toBeNull()
+    expect(rectEl).toHaveAttribute('x', '1')
+    expect(rectEl).toHaveAttribute('y', '2')
+    expect(rectEl).toHaveAttribute('width', '30')
+    expect(rectEl).toHaveAttribute('height', '40')
   })
 })

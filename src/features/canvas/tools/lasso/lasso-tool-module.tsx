@@ -78,11 +78,9 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
         }
 
         setCanvasPendingSelectionPreview(
-          getCanvasNodesMatchingLasso(
-            environment.document.getMeasuredNodes(),
-            points,
-            { zoom: environment.viewport.getZoom() },
-          ),
+          getCanvasNodesMatchingLasso(environment.document.getMeasuredNodes(), points, {
+            zoom: environment.viewport.getZoom(),
+          }),
         )
       },
       onPointerUp: () => {

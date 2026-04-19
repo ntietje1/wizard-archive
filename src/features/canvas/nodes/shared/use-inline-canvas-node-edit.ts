@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePendingNodeEdit } from './use-pending-node-edit'
 
 interface UseInlineCanvasNodeEditOptions<TElement extends HTMLInputElement | HTMLTextAreaElement> {
@@ -75,6 +75,14 @@ export function useInlineCanvasNodeEdit<TElement extends HTMLInputElement | HTML
     },
     [cancelEdit, commitEdit, shouldCancel, shouldCommit],
   )
+
+  useEffect(() => {
+    if (selected || !isEditing) return
+
+    suppressBlurCommitRef.current = false
+    setIsEditing(false)
+    setEditValue(value)
+  }, [isEditing, selected, value])
 
   usePendingNodeEdit({ id, selected, isEditing, startEditing })
 

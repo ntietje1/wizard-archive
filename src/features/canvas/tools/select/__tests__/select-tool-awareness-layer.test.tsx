@@ -36,7 +36,19 @@ describe('SelectAwarenessLayer', () => {
 
     const { container } = render(<SelectAwarenessLayer remoteUsers={remoteUsers} />)
 
-    expect(container.querySelector('rect')).toBeInTheDocument()
+    const rect = container.querySelector('rect')
+    expect(rect).toBeInTheDocument()
+    expect(rect).toHaveAttribute('x', '10')
+    expect(rect).toHaveAttribute('y', '20')
+    expect(rect).toHaveAttribute('width', '30')
+    expect(rect).toHaveAttribute('height', '40')
+    expect(rect).toHaveAttribute('fill', '#00f')
+  })
+})
+
+describe('SelectToolLocalOverlayLayer', () => {
+  beforeEach(() => {
+    clearSelectToolLocalOverlay()
   })
 
   it('renders the local marquee overlay from the select slice store', () => {
@@ -44,6 +56,11 @@ describe('SelectAwarenessLayer', () => {
 
     const { container } = render(<SelectToolLocalOverlayLayer />)
 
-    expect(container.querySelector('rect')).toBeInTheDocument()
+    const rect = container.querySelector('rect')
+    expect(rect).toBeInTheDocument()
+    expect(rect).toHaveAttribute('x', '10')
+    expect(rect).toHaveAttribute('y', '20')
+    expect(rect).toHaveAttribute('width', '30')
+    expect(rect).toHaveAttribute('height', '40')
   })
 })

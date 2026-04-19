@@ -38,7 +38,6 @@ describe('useCanvasSessionState', () => {
     const { result } = renderHook(() =>
       useCanvasSessionState({
         provider: null,
-        user: { name: 'Local', color: '#00f' },
       }),
     )
 

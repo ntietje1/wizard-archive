@@ -37,7 +37,7 @@ function createNode(id: string): Node {
 describe('useCanvasHistory', () => {
   let docs: Array<Y.Doc>
   let hooks: Array<RenderHookResult<ReturnType<typeof useCanvasHistory>, unknown>>
-  let selectionController: { replace: ReturnType<typeof vi.fn> }
+  let selectionController: Pick<Parameters<typeof useCanvasHistory>[0]['selection'], 'replace'>
 
   beforeEach(() => {
     docs = []

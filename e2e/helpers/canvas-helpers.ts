@@ -38,7 +38,7 @@ export async function createCanvas(page: Page, name: string = DEFAULT_CANVAS_NAM
 
   const textbox = page.getByRole('textbox', { name: 'Item name' })
   await expect(page).not.toHaveURL(prevUrl, { timeout: 10000 })
-  await expect(textbox).toHaveValue(DEFAULT_CANVAS_NAME, { timeout: 10000 })
+  await expect(textbox).toHaveValue(name, { timeout: 10000 })
 
   const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
   await expect(sidebar.getByRole('link', { name, exact: true })).toBeVisible({
@@ -53,7 +53,9 @@ export async function openCanvas(page: Page, name: string) {
 }
 
 export function getCanvasSurface(page: Page) {
-  return page.locator('[data-testid="canvas-surface"], [aria-label="Canvas surface"], .react-flow').first()
+  return page
+    .locator('[data-testid="canvas-surface"], [aria-label="Canvas surface"], .react-flow')
+    .first()
 }
 
 export function getCanvasPane(page: Page) {
@@ -76,8 +78,10 @@ export function getCanvasNodes(page: Page) {
   return page.getByTestId('canvas-node')
 }
 
-export function getCanvasToolButton(page: Page, label: keyof typeof TOOL_NAME_PATTERNS | string) {
-  return page.getByRole('button', { name: TOOL_NAME_PATTERNS[label] ?? new RegExp(`^${label}$`, 'i') })
+export function getCanvasToolButton(page: Page, label: keyof typeof TOOL_NAME_PATTERNS) {
+  return page.getByRole('button', {
+    name: TOOL_NAME_PATTERNS[label] ?? new RegExp(`^${label}$`, 'i'),
+  })
 }
 
 export function getCommittedSelectedCanvasNodes(page: Page) {
@@ -92,38 +96,30 @@ export function getCanvasNodesByType(page: Page, nodeType: string) {
   return page.locator(`[data-testid="canvas-node"][data-node-type="${nodeType}"]`)
 }
 
+export function getCanvasPendingPreviewActiveNodes(page: Page) {
+  return page.locator('[data-testid="canvas-node"][data-node-pending-preview-active="true"]')
+}
+
 export function getCanvasNodeById(page: Page, nodeId: string) {
   return page.locator(`[data-testid="canvas-node"][data-node-id="${nodeId}"]`)
 }
 
+async function getCanvasNodeIdsForLocator(locator: Locator) {
+  return locator.evaluateAll((nodes) =>
+    nodes
+      .map((node) => node.getAttribute('data-node-id'))
+      .filter((nodeId): nodeId is string => nodeId !== null),
+  )
+}
+
 export async function getCanvasNodeIds(page: Page) {
-  const nodes = getCanvasNodes(page)
-  const count = await nodes.count()
-  const ids: Array<string> = []
-
-  for (let index = 0; index < count; index += 1) {
-    const nodeId = await nodes.nth(index).getAttribute('data-node-id')
-    if (nodeId) {
-      ids.push(nodeId)
-    }
-  }
-
-  return ids
+  return getCanvasNodeIdsForLocator(getCanvasNodes(page))
 }
 
 export async function getCanvasPendingSelectionNodeIds(page: Page) {
-  const pendingNodes = page.locator('[data-testid="canvas-node"][data-node-pending-selected="true"]')
-  const count = await pendingNodes.count()
-  const ids: Array<string> = []
-
-  for (let index = 0; index < count; index += 1) {
-    const nodeId = await pendingNodes.nth(index).getAttribute('data-node-id')
-    if (nodeId) {
-      ids.push(nodeId)
-    }
-  }
-
-  return ids
+  return getCanvasNodeIdsForLocator(
+    page.locator('[data-testid="canvas-node"][data-node-pending-selected="true"]'),
+  )
 }
 
 export async function getCanvasNodeBoundingBox(locator: Locator) {
@@ -147,7 +143,7 @@ export function getViewportControls(page: Page) {
 
 export async function selectCanvasTool(page: Page, label: string) {
   const button = getCanvasToolButton(page, label)
-  await button.click({ force: true })
+  await button.click()
 }
 
 export async function clickCanvasAt(page: Page, point: CanvasPoint) {

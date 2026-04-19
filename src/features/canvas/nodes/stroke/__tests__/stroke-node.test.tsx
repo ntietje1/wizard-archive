@@ -1,4 +1,5 @@
 import { render } from '@testing-library/react'
+import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   clearCanvasPendingSelectionPreview,
@@ -7,7 +8,7 @@ import {
 import { StrokeNode } from '../stroke-node'
 
 vi.mock('../../shared/resizable-node-wrapper', () => ({
-  ResizableNodeWrapper: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  ResizableNodeWrapper: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }))
 
 afterEach(() => {
@@ -28,6 +29,20 @@ describe('StrokeNode', () => {
 
     expect(container.querySelectorAll('path')).toHaveLength(1)
   })
+
+  it('keeps a single stroke path when a pending preview is active but excludes an unselected stroke', () => {
+    setCanvasPendingSelectionPreview([])
+    const { container } = render(<StrokeNode {...createStrokeNodeProps({ selected: false })} />)
+
+    expect(container.querySelectorAll('path')).toHaveLength(1)
+  })
+
+  it('keeps the highlight path when a pending preview includes an already selected stroke', () => {
+    setCanvasPendingSelectionPreview(['stroke-1'])
+    const { container } = render(<StrokeNode {...createStrokeNodeProps({ selected: true })} />)
+
+    expect(container.querySelectorAll('path')).toHaveLength(2)
+  })
 })
 
 function createStrokeNodeProps({ selected }: { selected: boolean }) {
@@ -40,6 +55,9 @@ function createStrokeNodeProps({ selected }: { selected: boolean }) {
     positionAbsoluteX: 0,
     positionAbsoluteY: 0,
     isConnectable: false,
+    draggable: true,
+    selectable: true,
+    deletable: true,
     zIndex: 1,
     type: 'stroke',
     data: {

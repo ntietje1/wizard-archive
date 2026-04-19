@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { CanvasRuntimeProviders } from '../../../runtime/providers/canvas-runtime-context'
 import {
@@ -8,7 +9,7 @@ import {
 import { ResizableNodeWrapper } from '../resizable-node-wrapper'
 
 vi.mock('@xyflow/react', () => ({
-  NodeResizeControl: ({ children }: { children: React.ReactNode }) => (
+  NodeResizeControl: ({ children }: { children: ReactNode }) => (
     <div data-testid="resize-control">{children}</div>
   ),
 }))
@@ -20,17 +21,17 @@ afterEach(() => {
 describe('ResizableNodeWrapper', () => {
   it('renders the normal selection border for pending-only preview nodes without resize handles', () => {
     setCanvasPendingSelectionPreview(['node-1'])
-    const { container } = renderWrapper({ selected: false })
+    renderWrapper({ selected: false })
 
-    expect(container.querySelector('.pointer-events-none.rounded-sm')).not.toBeNull()
+    expect(screen.getByTestId('selection-border')).toBeInTheDocument()
     expect(screen.queryAllByTestId('resize-control')).toHaveLength(0)
   })
 
   it('hides the local selection border for excluded committed nodes while keeping committed resize handles', () => {
     setCanvasPendingSelectionPreview(['other-node'])
-    const { container } = renderWrapper({ selected: true })
+    renderWrapper({ selected: true })
 
-    expect(container.querySelector('.pointer-events-none.rounded-sm')).toBeNull()
+    expect(screen.queryByTestId('selection-border')).toBeNull()
     expect(screen.queryAllByTestId('resize-control')).toHaveLength(4)
   })
 })
@@ -38,12 +39,7 @@ describe('ResizableNodeWrapper', () => {
 function renderWrapper({ selected }: { selected: boolean }) {
   return render(
     <CanvasRuntimeProviders value={createProviderValues()}>
-      <ResizableNodeWrapper
-        id="node-1"
-        nodeType="test"
-        selected={selected}
-        dragging={false}
-      >
+      <ResizableNodeWrapper id="node-1" nodeType="test" selected={selected} dragging={false}>
         <div>node body</div>
       </ResizableNodeWrapper>
     </CanvasRuntimeProviders>,

@@ -5,14 +5,14 @@ import type { Node } from '@xyflow/react'
 export function screenEventToFlowPosition(
   context: Pick<CanvasViewportTools, 'screenToFlowPosition'>,
   event: Pick<PointerEvent, 'clientX' | 'clientY'>,
-) {
+): ReturnType<CanvasViewportTools['screenToFlowPosition']> {
   return context.screenToFlowPosition({
     x: event.clientX,
     y: event.clientY,
   })
 }
 
-export function setPointerCapture(event: PointerEvent) {
+export function setPointerCapture(event: PointerEvent): Element | null {
   if (event.target instanceof Element) {
     event.target.setPointerCapture(event.pointerId)
     return event.target

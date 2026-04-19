@@ -1,9 +1,6 @@
 import { Eraser } from 'lucide-react'
 import { polylineIntersectsStroke } from '../../nodes/stroke/stroke-node-interactions'
-import {
-  getAbsoluteStrokePointsForNode,
-  isStrokeNode,
-} from '../../nodes/stroke/stroke-node-model'
+import { getAbsoluteStrokePointsForNode, isStrokeNode } from '../../nodes/stroke/stroke-node-model'
 import {
   setPointerCapture,
   releasePointerCapture,

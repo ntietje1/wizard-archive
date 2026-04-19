@@ -19,7 +19,6 @@ interface UseCanvasFlowControllerOptions {
   canvasId: Id<'sidebarItems'>
   canEdit: boolean
   provider: ConvexYjsProvider | null
-  user: { name: string; color: string }
   doc: Y.Doc
 }
 
@@ -34,10 +33,9 @@ export function useCanvasFlowController({
   canvasId,
   canEdit,
   provider,
-  user,
   doc,
 }: UseCanvasFlowControllerOptions): CanvasFlowControllerResult {
-  const session = useCanvasSessionState({ provider, user })
+  const session = useCanvasSessionState({ provider })
   const activeToolId = useCanvasToolStore((state) => state.activeTool)
   const canvasSurfaceRef = useRef<HTMLDivElement>(null)
   const selectionController = useCanvasSelectionActions()

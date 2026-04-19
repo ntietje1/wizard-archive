@@ -11,7 +11,6 @@ import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-p
 
 interface UseCanvasSessionStateOptions {
   provider: ConvexYjsProvider | null
-  user: { name: string; color: string }
 }
 
 export interface CanvasSessionRuntime {
@@ -23,7 +22,7 @@ export interface CanvasSessionRuntime {
   remoteHighlights: Map<string, RemoteHighlight>
 }
 
-export function useCanvasSessionState({ provider, user }: UseCanvasSessionStateOptions) {
+export function useCanvasSessionState({ provider }: UseCanvasSessionStateOptions) {
   const [editingEmbedId, setEditingEmbedId] = useState<string | null>(null)
   const [pendingEditNodeId, setPendingEditNodeId] = useState<string | null>(null)
   const awareness = useCanvasAwareness(provider)

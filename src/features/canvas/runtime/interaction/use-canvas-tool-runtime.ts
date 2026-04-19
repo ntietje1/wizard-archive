@@ -1,10 +1,7 @@
 import { useMemo, useRef } from 'react'
 import type { RefObject } from 'react'
 import { useReactFlow, useStoreApi } from '@xyflow/react'
-import {
-  createCanvasToolController,
-  getCanvasToolCursor,
-} from '../../tools/canvas-tool-modules'
+import { createCanvasToolController, getCanvasToolCursor } from '../../tools/canvas-tool-modules'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import { getMeasuredCanvasNodesFromLookup } from '../document/canvas-measured-nodes'
 import type {
@@ -54,12 +51,7 @@ export function useCanvasToolRuntime({
 
   const toolStateControls = useMemo(
     () =>
-      createCanvasToolStateControls(
-        setActiveTool,
-        setStrokeColor,
-        setStrokeOpacity,
-        setStrokeSize,
-      ),
+      createCanvasToolStateControls(setActiveTool, setStrokeColor, setStrokeOpacity, setStrokeSize),
     [setActiveTool, setStrokeColor, setStrokeOpacity, setStrokeSize],
   )
 
@@ -205,7 +197,8 @@ function createCanvasAwarenessCommands(
   return {
     core: createCanvasCoreAwarenessCommands(awarenessRef),
     presence: {
-      setPresence: (namespace, value) => awarenessRef.current.presence.setPresence(namespace, value),
+      setPresence: (namespace, value) =>
+        awarenessRef.current.presence.setPresence(namespace, value),
     },
   }
 }

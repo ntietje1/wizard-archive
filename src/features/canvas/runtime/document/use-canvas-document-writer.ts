@@ -94,7 +94,7 @@ export function useCanvasDocumentWriter({
   edgesMap,
 }: UseCanvasDocumentWriterOptions): CanvasDocumentWriter {
   return useMemo(() => {
-    const withTransaction = <TValue,>(map: Y.Map<TValue>, fn: () => void) => {
+    const withTransaction = <TValue>(map: Y.Map<TValue>, fn: () => void) => {
       if (map.doc) {
         map.doc.transact(fn)
         return

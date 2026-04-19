@@ -37,7 +37,10 @@ interface UseCanvasSelectionRectOptions {
   surfaceRef: RefObject<HTMLDivElement | null>
   awareness: CanvasAwarenessPresenceWriter
   interaction: Pick<CanvasInteractionTools, 'suppressNextSurfaceClick'>
-  selection: Pick<CanvasSelectionController, 'beginGesture' | 'commitGestureSelection' | 'endGesture'>
+  selection: Pick<
+    CanvasSelectionController,
+    'beginGesture' | 'commitGestureSelection' | 'endGesture'
+  >
   enabled: boolean
 }
 

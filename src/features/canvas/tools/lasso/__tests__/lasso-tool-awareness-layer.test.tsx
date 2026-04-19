@@ -2,13 +2,10 @@ import { render } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { LassoAwarenessLayer } from '../lasso-tool-awareness-layer'
 import { LassoToolLocalOverlayLayer } from '../lasso-tool-local-overlay-layer'
-import {
-  clearLassoToolLocalOverlay,
-  setLassoToolLocalPoints,
-} from '../lasso-tool-local-overlay'
+import { clearLassoToolLocalOverlay, setLassoToolLocalPoints } from '../lasso-tool-local-overlay'
 import type { RemoteUser } from '../../../utils/canvas-awareness-types'
 
-describe('LassoAwarenessLayer', () => {
+describe('Lasso layers', () => {
   beforeEach(() => {
     clearLassoToolLocalOverlay()
   })
@@ -37,7 +34,10 @@ describe('LassoAwarenessLayer', () => {
 
     const { container } = render(<LassoAwarenessLayer remoteUsers={remoteUsers} />)
 
-    expect(container.querySelector('polygon')).toBeInTheDocument()
+    const polygon = container.querySelector('polygon')
+    expect(polygon).toBeInTheDocument()
+    expect(polygon).toHaveAttribute('points', '0,0 40,0 40,40')
+    expect(polygon).toHaveAttribute('fill', '#0f0')
   })
 
   it('renders the local lasso overlay from the lasso slice store', () => {
@@ -49,6 +49,8 @@ describe('LassoAwarenessLayer', () => {
 
     const { container } = render(<LassoToolLocalOverlayLayer />)
 
-    expect(container.querySelector('polygon')).toBeInTheDocument()
+    const polygon = container.querySelector('polygon')
+    expect(polygon).toBeInTheDocument()
+    expect(polygon).toHaveAttribute('points', '0,0 40,0 40,40')
   })
 })

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { ResizableNodeWrapper } from '../shared/resizable-node-wrapper'
 import { useInlineCanvasNodeEdit } from '../shared/use-inline-canvas-node-edit'
@@ -22,17 +23,25 @@ export function TextNode({ id, data, selected, dragging }: NodeProps<Node<TextNo
   const hasLabel = trimmedLabel.length > 0
   const label = hasLabel ? trimmedLabel : 'Text'
   const ariaLabel = hasLabel ? `${trimmedLabel} node` : 'Empty text node'
+  const inputRef = useRef<HTMLInputElement>(null)
   const { isEditing, editValue, setEditValue, startEditing, handleBlur, handleInputKeyDown } =
     useInlineCanvasNodeEdit<HTMLInputElement>({
       id,
       selected: !!selected,
-      value: label,
+      value: trimmedLabel,
       onCommit: (nextValue) => {
-        updateNodeData(id, { label: nextValue })
+        updateNodeData(id, { label: nextValue.trim() })
       },
       shouldCommit: (event) => event.key === 'Enter' && !event.shiftKey,
       shouldCancel: (event) => event.key === 'Escape',
     })
+
+  useEffect(() => {
+    if (!isEditing) return
+
+    inputRef.current?.focus()
+    inputRef.current?.select()
+  }, [isEditing])
 
   return (
     <ResizableNodeWrapper
@@ -60,13 +69,14 @@ export function TextNode({ id, data, selected, dragging }: NodeProps<Node<TextNo
         <Handle type="target" position={Position.Top} className="!bg-primary" />
         {isEditing ? (
           <input
+            ref={inputRef}
             className="bg-transparent outline-none text-sm w-full"
             aria-label="Text node content"
+            placeholder="Text"
             value={editValue}
             onChange={(event) => setEditValue(event.currentTarget.value)}
             onBlur={handleBlur}
             onKeyDown={handleInputKeyDown}
-            autoFocus
           />
         ) : (
           <p className="text-sm select-none">{label}</p>

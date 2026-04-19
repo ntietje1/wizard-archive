@@ -8,7 +8,11 @@ import {
   clearLassoToolLocalOverlay,
   useLassoToolLocalOverlayStore,
 } from '../lasso-tool-local-overlay'
-import type { CanvasMeasuredNode, CanvasToolEnvironment, CanvasToolId } from '../../canvas-tool-types'
+import type {
+  CanvasMeasuredNode,
+  CanvasToolEnvironment,
+  CanvasToolId,
+} from '../../canvas-tool-types'
 
 type MockPointerTarget = HTMLDivElement & {
   setPointerCapture: (pointerId: number) => void
@@ -86,7 +90,10 @@ describe('lassoToolModule', () => {
     expect(beginGesture).toHaveBeenCalledWith('lasso')
     expect(clear).toHaveBeenCalledTimes(1)
     expect(useLassoToolLocalOverlayStore.getState().points).toEqual([])
-    expect(setPresence).toHaveBeenCalledWith('tool.lasso', expect.objectContaining({ type: 'lasso' }))
+    expect(setPresence).toHaveBeenCalledWith(
+      'tool.lasso',
+      expect.objectContaining({ type: 'lasso' }),
+    )
     expect(setPresence).toHaveBeenLastCalledWith('tool.lasso', null)
     expect(suppressNextSurfaceClick).toHaveBeenCalledTimes(1)
     expect(commitGestureSelection).toHaveBeenCalledWith(['embed-1'])

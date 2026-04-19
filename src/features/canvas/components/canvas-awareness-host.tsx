@@ -12,6 +12,7 @@ export function CanvasAwarenessHost({ remoteUsers }: { remoteUsers: Array<Remote
   return (
     <div className="pointer-events-none absolute inset-0" style={{ zIndex: 5 }}>
       <div
+        data-testid="awareness-layer-container"
         className="absolute inset-0"
         style={{
           transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,

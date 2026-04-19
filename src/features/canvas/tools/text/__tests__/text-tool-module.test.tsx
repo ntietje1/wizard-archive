@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 import { textToolModule } from '../text-tool-module'
-import { createMouseEvent, createPlacementEnvironment } from '../../shared/__tests__/placement-tool-test-utils'
+import {
+  createMouseEvent,
+  createPlacementEnvironment,
+} from '../../shared/__tests__/placement-tool-test-utils'
 import type { Node } from '@xyflow/react'
 
 describe('textToolModule', () => {
@@ -24,6 +27,8 @@ describe('textToolModule', () => {
     controller.onPaneClick?.(createMouseEvent(100, 200))
 
     expect(createdNodes).toHaveLength(1)
+    // Text placement centers the default 120x36 node around the click, so (100, 200) becomes
+    // (40, 182) after subtracting the half-size offsets of 60 and 18.
     expect(createdNodes[0]).toMatchObject({
       type: 'text',
       position: { x: 40, y: 182 },

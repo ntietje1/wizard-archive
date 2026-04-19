@@ -21,8 +21,11 @@ function isDrawingState(value: unknown): value is DrawingState {
     typeof drawing.color === 'string' &&
     typeof drawing.size === 'number' &&
     Number.isFinite(drawing.size) &&
+    drawing.size > 0 &&
     typeof drawing.opacity === 'number' &&
     Number.isFinite(drawing.opacity) &&
+    drawing.opacity >= 0 &&
+    drawing.opacity <= 100 &&
     Array.isArray(drawing.points) &&
     drawing.points.every(isDrawingPoint)
   )
@@ -37,5 +40,15 @@ export function setDrawToolAwareness(
   writer: CanvasAwarenessPresenceWriter,
   drawing: DrawingState | null,
 ) {
-  writer.setPresence(DRAW_TOOL_AWARENESS_NAMESPACE, drawing)
+  if (drawing === null) {
+    writer.setPresence(DRAW_TOOL_AWARENESS_NAMESPACE, null)
+    return
+  }
+
+  if (isDrawingState(drawing)) {
+    writer.setPresence(DRAW_TOOL_AWARENESS_NAMESPACE, drawing)
+    return
+  }
+
+  console.warn('Ignoring invalid draw tool awareness payload', drawing)
 }

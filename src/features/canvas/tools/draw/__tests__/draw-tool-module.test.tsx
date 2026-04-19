@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { drawToolModule } from '../draw-tool-module'
-import {
-  clearDrawToolLocalOverlay,
-  useDrawToolLocalOverlayStore,
-} from '../draw-tool-local-overlay'
+import { clearDrawToolLocalOverlay, useDrawToolLocalOverlayStore } from '../draw-tool-local-overlay'
 import type { CanvasToolEnvironment } from '../../canvas-tool-types'
 
 type MockPointerTarget = HTMLDivElement & {

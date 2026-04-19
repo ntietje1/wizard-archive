@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 import { stickyToolModule } from '../sticky-tool-module'
-import { createMouseEvent, createPlacementEnvironment } from '../../shared/__tests__/placement-tool-test-utils'
+import {
+  createMouseEvent,
+  createPlacementEnvironment,
+} from '../../shared/__tests__/placement-tool-test-utils'
 import type { Node } from '@xyflow/react'
 
 describe('stickyToolModule', () => {
@@ -21,7 +24,8 @@ describe('stickyToolModule', () => {
       }),
     )
 
-    controller.onPaneClick?.(createMouseEvent(40, 60))
+    expect(controller.onPaneClick).toBeDefined()
+    controller.onPaneClick!(createMouseEvent(40, 60))
 
     expect(createdNodes).toHaveLength(1)
     expect(createdNodes[0]).toMatchObject({
@@ -37,6 +41,64 @@ describe('stickyToolModule', () => {
     })
     expect(replaceSelection).toHaveBeenCalledWith([createdNodes[0].id])
     expect(setPendingEditNodeId).toHaveBeenCalledWith(createdNodes[0].id)
+    expect(setActiveTool).toHaveBeenCalledWith('select')
+    expect(createdNodes[0].id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+    )
+  })
+
+  it('supports placing a sticky node at the canvas origin', () => {
+    const createdNodes: Array<Node> = []
+    const setPendingEditNodeId = vi.fn()
+    const setActiveTool = vi.fn()
+    const replaceSelection = vi.fn()
+    const controller = stickyToolModule.create(
+      createPlacementEnvironment({
+        activeTool: 'sticky',
+        createNode: (node) => {
+          createdNodes.push(node)
+        },
+        replaceSelection,
+        setPendingEditNodeId,
+        setActiveTool,
+      }),
+    )
+
+    expect(controller.onPaneClick).toBeDefined()
+    controller.onPaneClick!(createMouseEvent(0, 0))
+
+    expect(createdNodes).toHaveLength(1)
+    expect(createdNodes[0]).toMatchObject({
+      position: { x: -80, y: -80 },
+    })
+    expect(replaceSelection).toHaveBeenCalledWith([createdNodes[0].id])
+    expect(setPendingEditNodeId).toHaveBeenCalledWith(createdNodes[0].id)
+    expect(setActiveTool).toHaveBeenCalledWith('select')
+  })
+
+  it('does nothing when sticky is not the active tool', () => {
+    const createdNodes: Array<Node> = []
+    const setPendingEditNodeId = vi.fn()
+    const setActiveTool = vi.fn()
+    const replaceSelection = vi.fn()
+    const controller = stickyToolModule.create(
+      createPlacementEnvironment({
+        activeTool: 'select',
+        createNode: (node) => {
+          createdNodes.push(node)
+        },
+        replaceSelection,
+        setPendingEditNodeId,
+        setActiveTool,
+      }),
+    )
+
+    expect(controller.onPaneClick).toBeDefined()
+    controller.onPaneClick!(createMouseEvent(40, 60))
+
+    expect(createdNodes).toHaveLength(0)
+    expect(replaceSelection).not.toHaveBeenCalled()
+    expect(setPendingEditNodeId).not.toHaveBeenCalled()
     expect(setActiveTool).toHaveBeenCalledWith('select')
   })
 })

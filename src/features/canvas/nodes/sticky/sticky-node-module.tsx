@@ -16,7 +16,7 @@ export const stickyNodeModule = createCanvasNodeModule<StickyNodeData, 'sticky'>
   renderPreview: (data) => (
     <StickyPreview
       label={data.label ?? ''}
-      color={data.color ?? 'transparent'}
+      color={data.color ?? STICKY_DEFAULT_COLOR}
       opacity={data.opacity ?? STICKY_DEFAULT_OPACITY}
     />
   ),

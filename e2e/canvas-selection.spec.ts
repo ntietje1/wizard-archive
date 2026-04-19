@@ -11,7 +11,6 @@ import {
   getCanvasNodesByType,
   getCanvasPendingSelectionNodeIds,
   getCanvasPendingSelectionStatus,
-  getCanvasToolButton,
   getCommittedSelectedCanvasNodes,
   getVisuallySelectedCanvasNodes,
   lassoOnCanvas,
@@ -21,6 +20,7 @@ import {
   startCanvasPointerGesture,
 } from './helpers/canvas-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
+import type { Page } from '@playwright/test'
 
 const campaignName = testName('Cnv Select')
 const canvasName = DEFAULT_CANVAS_NAME
@@ -52,8 +52,11 @@ test.describe.serial('canvas selection', () => {
     await page.goto('/campaigns')
     try {
       await deleteCampaign(page, campaignName)
-    } catch {
-      /* best-effort */
+    } catch (error) {
+      console.debug('Failed to delete canvas selection campaign during teardown', {
+        campaignName,
+        error,
+      })
     }
     await page.close()
     await context.close()
@@ -89,15 +92,28 @@ test.describe.serial('canvas selection', () => {
     const pendingStatus = getCanvasPendingSelectionStatus(page)
     await expect(getCanvasMarqueeOverlay(page)).toBeVisible()
     await expect(pendingStatus).toHaveText('Selecting 2 nodes')
-    await expect.poll(() => getCanvasPendingSelectionNodeIds(page).then((ids) => ids.length)).toBe(2)
+    await expect
+      .poll(() => getCanvasPendingSelectionNodeIds(page).then((ids) => ids.length))
+      .toBe(2)
     await expect.poll(() => getVisuallySelectedCanvasNodes(page).count()).toBe(2)
 
     await endCanvasPointerGesture(page)
 
     await expect(pendingStatus).toHaveCount(0)
     await expect.poll(() => getCommittedSelectedCanvasNodes(page).count()).toBe(2)
-    await page.waitForTimeout(150)
-    await expect.poll(() => getCommittedSelectedCanvasNodes(page).count()).toBe(2)
+    await expect
+      .poll(async () => {
+        const firstCount = await getCommittedSelectedCanvasNodes(page).count()
+        await page.evaluate(
+          () =>
+            new Promise<void>((resolve) => {
+              requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+            }),
+        )
+        const secondCount = await getCommittedSelectedCanvasNodes(page).count()
+        return firstCount === 2 && secondCount === 2
+      })
+      .toBe(true)
   })
 
   test('lasso selects enclosed nodes even when pointer up is outside the target and ignores short lassos', async ({
@@ -160,13 +176,13 @@ test.describe.serial('canvas selection', () => {
   })
 })
 
-async function openSelectionCanvas(page: Parameters<typeof createCanvas>[0]) {
+async function openSelectionCanvas(page: Page) {
   await page.goto('/campaigns')
   await navigateToCampaign(page, campaignName)
   await openCanvas(page, canvasName)
 }
 
-async function seedSelectionCanvas(page: Parameters<typeof createCanvas>[0]) {
+async function seedSelectionCanvas(page: Page) {
   await selectCanvasTool(page, 'Text')
   await clickCanvasAt(page, { x: 120, y: 120 })
   await page.getByLabel('Text node content').fill('Alpha')

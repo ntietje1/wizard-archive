@@ -2,10 +2,7 @@ import { render } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DrawAwarenessLayer } from '../draw-tool-awareness-layer'
 import { DrawToolLocalOverlayLayer } from '../draw-tool-local-overlay-layer'
-import {
-  clearDrawToolLocalOverlay,
-  setDrawToolLocalDrawing,
-} from '../draw-tool-local-overlay'
+import { clearDrawToolLocalOverlay, setDrawToolLocalDrawing } from '../draw-tool-local-overlay'
 import type { RemoteUser } from '../../../utils/canvas-awareness-types'
 
 describe('DrawAwarenessLayer', () => {

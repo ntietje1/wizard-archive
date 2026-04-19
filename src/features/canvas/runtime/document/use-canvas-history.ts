@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { UndoManager } from 'yjs'
-import type { CanvasHistoryController, CanvasSelectionController } from '../../tools/canvas-tool-types'
+import type {
+  CanvasHistoryController,
+  CanvasSelectionController,
+} from '../../tools/canvas-tool-types'
 import type { Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 import { logger } from '~/shared/utils/logger'

@@ -9,14 +9,12 @@ interface EraseToolLocalOverlayActions {
   reset: () => void
 }
 
-const EMPTY_ERASING_STROKE_IDS = new Set<string>()
-
 export const useEraseToolLocalOverlayStore = create<
   EraseToolLocalOverlayState & EraseToolLocalOverlayActions
 >((set) => ({
-  erasingStrokeIds: EMPTY_ERASING_STROKE_IDS,
+  erasingStrokeIds: new Set<string>(),
   setErasingStrokeIds: (ids) => set({ erasingStrokeIds: ids }),
-  reset: () => set({ erasingStrokeIds: EMPTY_ERASING_STROKE_IDS }),
+  reset: () => set({ erasingStrokeIds: new Set<string>() }),
 }))
 
 export function setEraseToolErasingStrokeIds(ids: Set<string>) {

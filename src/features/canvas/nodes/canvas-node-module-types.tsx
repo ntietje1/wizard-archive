@@ -90,7 +90,15 @@ export function createCanvasNodeModule<
   TType extends CanvasNodeType = CanvasNodeType,
 >(definition: CreateCanvasNodeModuleDefinition<TData, TType>): CanvasNodeModule<TData, TType> {
   return {
-    ...definition,
+    type: definition.type,
+    renderPreview: definition.renderPreview,
+    parseData: definition.parseData,
+    placement: definition.placement,
+    properties: definition.properties,
+    selection: definition.selection,
+    renderMinimap: definition.renderMinimap,
+    awareness: definition.awareness,
+    resize: definition.resize,
     create: ({ position, size, data }) => {
       const resolvedSize = size ?? definition.defaultSize
       if (!resolvedSize) {
@@ -169,5 +177,5 @@ export function readString(data: Record<string, unknown>, key: string): string |
 
 export function readNumber(data: Record<string, unknown>, key: string): number | undefined {
   const value = data[key]
-  return typeof value === 'number' && !Number.isNaN(value) ? value : undefined
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined
 }

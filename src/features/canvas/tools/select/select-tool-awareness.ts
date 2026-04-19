@@ -11,6 +11,9 @@ function isFiniteNumber(value: unknown): value is number {
 }
 
 function isRectSelectingState(value: unknown): value is RectSelectingState {
+  const width = (value as { width?: unknown }).width
+  const height = (value as { height?: unknown }).height
+
   return (
     typeof value === 'object' &&
     value !== null &&
@@ -18,8 +21,10 @@ function isRectSelectingState(value: unknown): value is RectSelectingState {
     (value as { type?: unknown }).type === 'rect' &&
     isFiniteNumber((value as { x?: unknown }).x) &&
     isFiniteNumber((value as { y?: unknown }).y) &&
-    isFiniteNumber((value as { width?: unknown }).width) &&
-    isFiniteNumber((value as { height?: unknown }).height)
+    isFiniteNumber(width) &&
+    width >= 0 &&
+    isFiniteNumber(height) &&
+    height >= 0
   )
 }
 
@@ -28,12 +33,6 @@ export function readRemoteSelectRectState(remoteUser: RemoteUser): RectSelecting
   return isRectSelectingState(selecting) ? selecting : null
 }
 
-export function setSelectToolAwareness(
-  writer: CanvasAwarenessPresenceWriter,
-  rect: Bounds | null,
-) {
-  writer.setPresence(
-    SELECT_TOOL_AWARENESS_NAMESPACE,
-    rect ? { type: 'rect', ...rect } : null,
-  )
+export function setSelectToolAwareness(writer: CanvasAwarenessPresenceWriter, rect: Bounds | null) {
+  writer.setPresence(SELECT_TOOL_AWARENESS_NAMESPACE, rect ? { type: 'rect', ...rect } : null)
 }

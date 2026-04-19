@@ -50,6 +50,9 @@ describe('canvas node registry', () => {
       })
 
       expect(preview).not.toBeNull()
+      if (!preview) {
+        throw new Error('Expected sticky preview to render')
+      }
       const { container } = render(preview)
       expect(container.textContent).toContain('Note')
     })
@@ -179,11 +182,7 @@ describe('canvas node registry', () => {
 
       expect(findCanvasNodeAtPoint(nodes, { x: 50, y: 20 }, { zoom: 1 })).toBe('stroke-1')
       expect(
-        getCanvasNodesMatchingRectangle(
-          nodes,
-          { x: 40, y: 20, width: 20, height: 1 },
-          { zoom: 1 },
-        ),
+        getCanvasNodesMatchingRectangle(nodes, { x: 40, y: 20, width: 20, height: 1 }, { zoom: 1 }),
       ).toEqual(['stroke-1'])
     })
 

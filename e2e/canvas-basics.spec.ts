@@ -40,8 +40,11 @@ test.describe.serial('canvas basics', () => {
     await page.goto('/campaigns')
     try {
       await deleteCampaign(page, campaignName)
-    } catch {
-      /* best-effort */
+    } catch (error) {
+      console.debug('Failed to delete canvas basics campaign during teardown', {
+        campaignName,
+        error,
+      })
     }
     await page.close()
     await context.close()
@@ -97,6 +100,8 @@ test.describe.serial('canvas basics', () => {
     await expect.poll(() => getCanvasNodesByType(page, 'rectangle').count()).toBe(1)
 
     await selectCanvasTool(page, 'Rectangle')
+    // A 6px drag from {x:320,y:260} to {x:326,y:266} stays below the rectangle minimum size
+    // threshold, so the gesture should create zero additional rectangle nodes.
     await dragOnCanvas(page, { x: 320, y: 260 }, { x: 326, y: 266 })
     await expect.poll(() => getCanvasNodesByType(page, 'rectangle').count()).toBe(1)
 

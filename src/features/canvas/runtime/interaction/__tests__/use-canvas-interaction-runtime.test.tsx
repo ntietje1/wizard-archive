@@ -109,6 +109,7 @@ vi.mock('../use-canvas-surface-click-guard', () => ({
 describe('useCanvasInteractionRuntime', () => {
   it('composes shell wiring and node actions around the thinner runtime dependencies', () => {
     const awareness = {
+      remoteUsers: [],
       core: {
         setLocalCursor: vi.fn(),
         setLocalDragging: vi.fn(),

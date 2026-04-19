@@ -10,20 +10,30 @@ export const stickyToolModule: CanvasToolModule<'sticky'> = {
   cursor: 'copy',
   create: (environment) => ({
     onPaneClick: (event) => {
-      const placement = createCanvasNodePlacement('sticky', {
-        position: environment.viewport.screenToFlowPosition({
-          x: event.clientX,
-          y: event.clientY,
-        }),
-      })
-      environment.document.createNode(placement.node)
-      if (placement.node.selected) {
-        environment.selection.replace([placement.node.id])
+      try {
+        if (environment.toolState.getActiveTool() !== 'sticky') {
+          return
+        }
+
+        const placement = createCanvasNodePlacement('sticky', {
+          position: environment.viewport.screenToFlowPosition({
+            x: event.clientX,
+            y: event.clientY,
+          }),
+        })
+        environment.document.createNode(placement.node)
+        if (placement.node.selected) {
+          environment.selection.replace([placement.node.id])
+        }
+        if (placement.startEditing) {
+          environment.editSession.setPendingEditNodeId(placement.node.id)
+        }
+      } catch (error) {
+        console.error('Sticky tool placement failed', error)
+        throw error
+      } finally {
+        environment.toolState.setActiveTool('select')
       }
-      if (placement.startEditing) {
-        environment.editSession.setPendingEditNodeId(placement.node.id)
-      }
-      environment.toolState.setActiveTool('select')
     },
   }),
 }

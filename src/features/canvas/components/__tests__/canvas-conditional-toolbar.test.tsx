@@ -116,6 +116,31 @@ describe('CanvasConditionalToolbar', () => {
     expect(screen.getByTestId('color-picker-popover')).toBeVisible()
   })
 
+  it('updates tool property button state after changing tool color and stroke size', () => {
+    useCanvasToolStore.getState().setActiveTool('draw')
+
+    renderToolbar()
+    emitSelection([])
+
+    const defaultColorButton = screen.getByRole('button', { name: 'Select Default color' })
+    const redColorButton = screen.getByRole('button', { name: 'Select Red color' })
+    const mediumStrokeButton = screen.getByRole('button', { name: 'Stroke size 4' })
+    const largeStrokeButton = screen.getByRole('button', { name: 'Stroke size 8' })
+
+    expect(defaultColorButton).toHaveAttribute('aria-pressed', 'true')
+    expect(redColorButton).toHaveAttribute('aria-pressed', 'false')
+    expect(mediumStrokeButton).toHaveAttribute('aria-pressed', 'true')
+    expect(largeStrokeButton).toHaveAttribute('aria-pressed', 'false')
+
+    fireEvent.click(redColorButton)
+    fireEvent.click(largeStrokeButton)
+
+    expect(defaultColorButton).toHaveAttribute('aria-pressed', 'false')
+    expect(redColorButton).toHaveAttribute('aria-pressed', 'true')
+    expect(mediumStrokeButton).toHaveAttribute('aria-pressed', 'false')
+    expect(largeStrokeButton).toHaveAttribute('aria-pressed', 'true')
+  })
+
   it('shows rectangle tool properties without stroke size when nothing is selected', () => {
     useCanvasToolStore.getState().setActiveTool('rectangle')
 

@@ -53,7 +53,6 @@ function CanvasFlow({
   canEdit,
   colorMode,
   provider,
-  user,
   doc,
   nodesMap,
   edgesMap,
@@ -64,7 +63,6 @@ function CanvasFlow({
     canvasId,
     canEdit,
     provider,
-    user,
     doc,
   })
 

@@ -203,28 +203,6 @@
   transition-duration: 0s !important;
 }
 
-/* Hide React Flow's selection box since we render our own */
-.react-flow__selection {
-  display: none !important;
-}
-
-/* Hide React Flow's multi-node selection bounding box */
-.react-flow__nodesselection-rect {
-  display: none !important;
-  /* border: 1px dotted var(--primary) !important;
-  background: oklch(from var(--primary) l c h / 0.08) !important; */
-}
-
-.canvas-flow-shell .react-flow__nodesselection,
-.canvas-flow-shell .react-flow__nodesselection-rect {
-  pointer-events: none;
-}
-
-/* Hide native multi-select box on pointerdown to match per-node indicator timing */
-.react-flow__renderer:active .react-flow__nodesselection-rect {
-  display: none !important;
-}
-
 /* Stroke nodes: only the filled path receives pointer events, not the bounding box */
 .react-flow__node-stroke {
   pointer-events: none !important;
