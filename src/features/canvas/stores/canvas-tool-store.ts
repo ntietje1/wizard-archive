@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { clearCanvasInteractionState } from '../hooks/useCanvasInteractionStore'
-import { getCanvasToolModule } from '../tools/canvas-tool-modules'
+import { STROKE_SIZE_OPTIONS } from '../properties/canvas-property-definitions'
 import type { CanvasToolId } from '../tools/canvas-tool-types'
 
 interface CanvasToolState {
@@ -12,7 +12,6 @@ interface CanvasToolState {
 
 interface CanvasToolActions {
   setActiveTool: (tool: CanvasToolId) => void
-  completeActiveToolAction: () => void
   setStrokeColor: (color: string) => void
   setStrokeSize: (size: number) => void
   setStrokeOpacity: (opacity: number) => void
@@ -22,7 +21,7 @@ interface CanvasToolActions {
 const INITIAL_STATE: CanvasToolState = {
   activeTool: 'select',
   strokeColor: 'var(--foreground)',
-  strokeSize: 4,
+  strokeSize: STROKE_SIZE_OPTIONS[1],
   strokeOpacity: 100,
 }
 
@@ -32,11 +31,6 @@ export const useCanvasToolStore = create<CanvasToolState & CanvasToolActions>((s
   setActiveTool: (tool) => {
     clearCanvasInteractionState()
     set({ activeTool: tool })
-  },
-
-  completeActiveToolAction: () => {
-    clearCanvasInteractionState()
-    set((state) => (getCanvasToolModule(state.activeTool)?.oneShot ? { activeTool: 'select' } : {}))
   },
 
   setStrokeColor: (color) => set({ strokeColor: color }),

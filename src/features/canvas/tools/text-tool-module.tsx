@@ -1,5 +1,5 @@
 import { Type } from 'lucide-react'
-import { createTextNode } from '../utils/canvas-node-factories'
+import { createCanvasNodePlacement } from '../components/nodes/canvas-node-registry'
 import type { CanvasToolModule } from './canvas-tool-types'
 
 export const textToolModule: CanvasToolModule<'text'> = {
@@ -8,23 +8,24 @@ export const textToolModule: CanvasToolModule<'text'> = {
   group: 'creation',
   icon: <Type className="h-4 w-4" />,
   cursor: 'copy',
-  oneShot: true,
-  showsStyleControls: false,
-  create: (runtime) => ({
+  create: (environment) => ({
     onPaneClick: (event) => {
       try {
-        const placement = createTextNode(
-          runtime.screenToFlowPosition({
+        const placement = createCanvasNodePlacement('text', {
+          position: environment.viewport.screenToFlowPosition({
             x: event.clientX,
             y: event.clientY,
           }),
-        )
-        runtime.createNode(placement.node)
+        })
+        environment.document.createNode(placement.node)
+        if (placement.node.selected) {
+          environment.selection.setNodeSelection([placement.node.id])
+        }
         if (placement.startEditing) {
-          runtime.setPendingEditNodeId(placement.node.id)
+          environment.editSession.setPendingEditNodeId(placement.node.id)
         }
       } finally {
-        runtime.completeActiveToolAction()
+        environment.toolState.setActiveTool('select')
       }
     },
   }),

@@ -1,0 +1,96 @@
+import type { XYPosition } from '@xyflow/react'
+
+export type Bounds = {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+export function rectFromPoints(a: XYPosition, b: XYPosition): Bounds {
+  return {
+    x: Math.min(a.x, b.x),
+    y: Math.min(a.y, b.y),
+    width: Math.abs(b.x - a.x),
+    height: Math.abs(b.y - a.y),
+  }
+}
+
+export function rectIntersectsBounds(rect: Bounds, bounds: Bounds): boolean {
+  return (
+    rect.x < bounds.x + bounds.width &&
+    rect.x + rect.width > bounds.x &&
+    rect.y < bounds.y + bounds.height &&
+    rect.y + rect.height > bounds.y
+  )
+}
+
+export function rectContainsBounds(rect: Bounds, bounds: Bounds): boolean {
+  return (
+    bounds.x >= rect.x &&
+    bounds.y >= rect.y &&
+    bounds.x + bounds.width <= rect.x + rect.width &&
+    bounds.y + bounds.height <= rect.y + rect.height
+  )
+}
+
+export function segmentsIntersect(
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+  cx: number,
+  cy: number,
+  dx: number,
+  dy: number,
+): boolean {
+  const denom = (bx - ax) * (dy - cy) - (by - ay) * (dx - cx)
+  if (Math.abs(denom) < 1e-10) return false
+
+  const t = ((cx - ax) * (dy - cy) - (cy - ay) * (dx - cx)) / denom
+  const u = ((cx - ax) * (by - ay) - (cy - ay) * (bx - ax)) / denom
+  return t >= 0 && t <= 1 && u >= 0 && u <= 1
+}
+
+export function pointInPolygon(
+  px: number,
+  py: number,
+  polygon: Array<{ x: number; y: number }>,
+): boolean {
+  let inside = false
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].x
+    const yi = polygon[i].y
+    const xj = polygon[j].x
+    const yj = polygon[j].y
+
+    if (yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) {
+      inside = !inside
+    }
+  }
+  return inside
+}
+
+export function pointToSegmentDistSq(
+  px: number,
+  py: number,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+): number {
+  const dx = bx - ax
+  const dy = by - ay
+  const lenSq = dx * dx + dy * dy
+  if (lenSq < 1e-10) {
+    const ex = px - ax
+    const ey = py - ay
+    return ex * ex + ey * ey
+  }
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq))
+  const projX = ax + t * dx
+  const projY = ay + t * dy
+  const ex = px - projX
+  const ey = py - projY
+  return ex * ex + ey * ey
+}

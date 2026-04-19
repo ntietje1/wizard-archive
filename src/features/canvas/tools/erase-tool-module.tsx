@@ -1,9 +1,6 @@
 import { Eraser } from 'lucide-react'
-import {
-  polylineIntersectsStroke,
-  getAbsoluteStrokePointsForNode,
-  isStrokeNode,
-} from '../utils/canvas-stroke-utils'
+import { polylineIntersectsStroke } from '../components/nodes/stroke-node-interactions'
+import { getAbsoluteStrokePointsForNode, isStrokeNode } from '../components/nodes/stroke-node-model'
 import {
   setPointerCapture,
   releasePointerCapture,
@@ -17,9 +14,7 @@ export const eraseToolModule: CanvasToolModule<'erase'> = {
   group: 'creation',
   icon: <Eraser className="h-4 w-4" />,
   cursor: 'cell',
-  oneShot: false,
-  showsStyleControls: false,
-  create: (runtime) => {
+  create: (environment) => {
     let trail: Array<{ x: number; y: number }> = []
     let marked = new Set<string>()
     let erasing = false
@@ -30,7 +25,7 @@ export const eraseToolModule: CanvasToolModule<'erase'> = {
     const testIntersections = () => {
       if (trail.length < 2) return
 
-      const strokeNodes = runtime.getNodes().filter(isStrokeNode)
+      const strokeNodes = environment.document.getNodes().filter(isStrokeNode)
       let changed = false
       for (const node of strokeNodes) {
         if (marked.has(node.id)) continue
@@ -50,7 +45,7 @@ export const eraseToolModule: CanvasToolModule<'erase'> = {
       }
 
       if (changed) {
-        runtime.setErasingStrokeIds(new Set(marked))
+        environment.interaction.setErasingStrokeIds(new Set(marked))
       }
     }
 
@@ -58,7 +53,7 @@ export const eraseToolModule: CanvasToolModule<'erase'> = {
       erasing = false
       marked = new Set()
       trail = []
-      runtime.setErasingStrokeIds(new Set())
+      environment.interaction.setErasingStrokeIds(new Set())
       if (rafId) {
         cancelAnimationFrame(rafId)
         rafId = 0
@@ -76,14 +71,14 @@ export const eraseToolModule: CanvasToolModule<'erase'> = {
         pointerId = event.pointerId
         erasing = true
         marked = new Set()
-        const pos = screenEventToFlowPosition(runtime, event)
+        const pos = screenEventToFlowPosition(environment.viewport, event)
         trail = [pos]
-        runtime.setErasingStrokeIds(new Set())
+        environment.interaction.setErasingStrokeIds(new Set())
       },
       onPointerMove: (event) => {
         if (!erasing || (event.buttons & 1) !== 1) return
 
-        trail = [...trail.slice(-199), screenEventToFlowPosition(runtime, event)]
+        trail = [...trail.slice(-199), screenEventToFlowPosition(environment.viewport, event)]
         if (rafId) return
 
         rafId = requestAnimationFrame(() => {
@@ -100,7 +95,7 @@ export const eraseToolModule: CanvasToolModule<'erase'> = {
         }
         testIntersections()
         if (marked.size > 0) {
-          runtime.deleteNodes(Array.from(marked))
+          environment.document.deleteNodes(Array.from(marked))
         }
         reset()
       },

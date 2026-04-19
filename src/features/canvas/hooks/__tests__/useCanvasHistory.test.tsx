@@ -170,12 +170,14 @@ describe('useCanvasHistory', () => {
     act(() => {
       nodesMap.set('b', createNode('b'))
     })
+    expect(Array.from(nodesMap.keys())).toEqual(['b'])
     expect(hook.result.current.canUndo).toBe(true)
     expect(hook.result.current.canRedo).toBe(false)
 
     act(() => {
       hook.result.current.undo()
     })
+    expect(Array.from(nodesMap.keys())).toEqual([])
     expect(hook.result.current.canUndo).toBe(false)
     expect(hook.result.current.canRedo).toBe(true)
 

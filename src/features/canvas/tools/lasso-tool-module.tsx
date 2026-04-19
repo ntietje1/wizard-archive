@@ -1,15 +1,13 @@
 import { Lasso } from 'lucide-react'
-import {
-  isStrokeNode,
-  pointInPolygon,
-  strokeNodeIntersectsPolygon,
-} from '../utils/canvas-stroke-utils'
+import { getCanvasNodesMatchingLasso } from '../components/nodes/canvas-node-registry'
 import {
   setPointerCapture,
   releasePointerCapture,
   screenEventToFlowPosition,
 } from './tool-module-utils'
+import { useCanvasSelectionState } from '../hooks/useCanvasSelectionState'
 import type { CanvasToolModule } from './canvas-tool-types'
+import { LassoAwarenessLayer } from './lasso-tool-awareness-layer'
 
 export const lassoToolModule: CanvasToolModule<'lasso'> = {
   id: 'lasso',
@@ -17,19 +15,28 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
   group: 'selection',
   icon: <Lasso className="h-4 w-4" />,
   cursor: 'crosshair',
-  oneShot: true,
-  showsStyleControls: false,
-  create: (runtime) => {
+  awareness: {
+    namespace: 'tool.lasso',
+    Layer: LassoAwarenessLayer,
+  },
+  create: (environment) => {
     let points: Array<{ x: number; y: number }> = []
     let active = false
     let captureTarget: Element | null = null
     let pointerId: number | null = null
 
+    const publishLassoPoints = () => {
+      const nextPoints = [...points]
+      environment.interaction.setLassoPath(nextPoints)
+      environment.awareness.setLocalSelecting({ type: 'lasso', points: nextPoints })
+    }
+
     const reset = () => {
       active = false
       points = []
-      runtime.setLassoPath([])
-      runtime.setLocalSelecting(null)
+      environment.interaction.setLassoPath([])
+      environment.awareness.setLocalSelecting(null)
+      useCanvasSelectionState.getState().setSelectionPhase('idle')
       releasePointerCapture(captureTarget, pointerId)
       captureTarget = null
       pointerId = null
@@ -42,52 +49,37 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
         captureTarget = setPointerCapture(event)
         pointerId = event.pointerId
         active = true
-        const pos = screenEventToFlowPosition(runtime, event)
+        const pos = screenEventToFlowPosition(environment.viewport, event)
         points = [pos]
-        runtime.setLassoPath(points)
-        runtime.setLocalSelecting({ type: 'lasso', points })
-        runtime.clearSelection()
+        useCanvasSelectionState.getState().setSelectionPhase('lasso')
+        publishLassoPoints()
+        environment.selection.clearSelection()
       },
       onPointerMove: (event) => {
         if (!active || (event.buttons & 1) !== 1) return
 
-        const pos = screenEventToFlowPosition(runtime, event)
+        const pos = screenEventToFlowPosition(environment.viewport, event)
         points.push(pos)
-        runtime.setLassoPath(points)
-        runtime.setLocalSelecting({ type: 'lasso', points })
+        publishLassoPoints()
       },
       onPointerUp: () => {
         if (!active) return
 
         if (points.length < 3) {
           reset()
-          runtime.completeActiveToolAction()
+          environment.toolState.setActiveTool('select')
           return
         }
 
-        const selectedNodeIds = runtime
-          .getMeasuredNodes()
-          .filter((node) => {
-            if (isStrokeNode(node)) {
-              return strokeNodeIntersectsPolygon(node, points)
-            }
+        const selectedNodeIds = getCanvasNodesMatchingLasso(
+          environment.document.getMeasuredNodes(),
+          points,
+          { zoom: environment.viewport.getZoom() },
+        )
 
-            const width = node.width ?? 0
-            const height = node.height ?? 0
-            const corners = [
-              { x: node.position.x, y: node.position.y },
-              { x: node.position.x + width, y: node.position.y },
-              { x: node.position.x + width, y: node.position.y + height },
-              { x: node.position.x, y: node.position.y + height },
-            ]
-
-            return corners.every((corner) => pointInPolygon(corner.x, corner.y, points))
-          })
-          .map((node) => node.id)
-
-        runtime.setNodeSelection(selectedNodeIds)
+        environment.selection.setNodeSelection(selectedNodeIds)
         reset()
-        runtime.completeActiveToolAction()
+        environment.toolState.setActiveTool('select')
       },
       onPointerCancel: () => {
         reset()

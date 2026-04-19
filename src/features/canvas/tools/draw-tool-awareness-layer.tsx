@@ -1,15 +1,9 @@
-import { pointsToPathD } from '../utils/canvas-stroke-utils'
 import { useCanvasInteractionStore } from '../hooks/useCanvasInteractionStore'
+import { pointsToPathD } from '../components/nodes/stroke-node-model'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
 
-const REMOTE_STROKE_OPACITY_MULTIPLIER = 0.7
-
-interface CanvasStrokesProps {
-  remoteUsers: Array<RemoteUser>
-}
-
-export function CanvasStrokes({ remoteUsers }: CanvasStrokesProps) {
-  const localDrawing = useCanvasInteractionStore((s) => s.localDrawing)
+export function DrawAwarenessLayer({ remoteUsers }: { remoteUsers: Array<RemoteUser> }) {
+  const localDrawing = useCanvasInteractionStore((state) => state.localDrawing)
 
   const localPathD =
     localDrawing && localDrawing.points.length >= 2
@@ -38,7 +32,7 @@ export function CanvasStrokes({ remoteUsers }: CanvasStrokesProps) {
             key={`remote-${user.clientId}`}
             d={d}
             fill={user.drawing.color}
-            opacity={((user.drawing.opacity ?? 100) / 100) * REMOTE_STROKE_OPACITY_MULTIPLIER}
+            opacity={((user.drawing.opacity ?? 100) / 100) * 0.7}
           />
         )
       })}

@@ -1,12 +1,20 @@
 import { Pencil } from 'lucide-react'
-import { getStrokeBounds } from '../utils/canvas-stroke-utils'
 import {
   setPointerCapture,
   releasePointerCapture,
   screenEventToFlowPosition,
 } from './tool-module-utils'
 import type { CanvasToolModule } from './canvas-tool-types'
-import type { Node } from '@xyflow/react'
+import { DrawAwarenessLayer } from './draw-tool-awareness-layer'
+import { getStrokeBounds } from '../components/nodes/stroke-node-model'
+import {
+  paintCanvasProperty,
+  strokeSizeCanvasProperty,
+} from '../properties/canvas-property-definitions'
+import {
+  bindCanvasPaintProperty,
+  bindCanvasStrokeSizeProperty,
+} from '../properties/canvas-property-types'
 
 export const drawToolModule: CanvasToolModule<'draw'> = {
   id: 'draw',
@@ -14,16 +22,35 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
   group: 'creation',
   icon: <Pencil className="h-4 w-4" />,
   cursor: 'crosshair',
-  oneShot: false,
-  showsStyleControls: true,
-  create: (runtime) => {
+  properties: (context) => {
+    return {
+      bindings: [
+        bindCanvasPaintProperty(paintCanvasProperty, {
+          getColor: () => context.toolState.getSettings().strokeColor,
+          setColor: context.toolState.setStrokeColor,
+          getOpacity: () => context.toolState.getSettings().strokeOpacity,
+          setOpacity: context.toolState.setStrokeOpacity,
+        }),
+        bindCanvasStrokeSizeProperty(
+          strokeSizeCanvasProperty,
+          () => context.toolState.getSettings().strokeSize,
+          context.toolState.setStrokeSize,
+        ),
+      ],
+    }
+  },
+  awareness: {
+    namespace: 'tool.draw',
+    Layer: DrawAwarenessLayer,
+  },
+  create: (environment) => {
     let points: Array<[number, number, number]> = []
     let captureTarget: Element | null = null
     let pointerId: number | null = null
 
     const clearDrawing = () => {
       points = []
-      runtime.setLocalDrawing(null)
+      environment.interaction.setLocalDrawing(null)
       releasePointerCapture(captureTarget, pointerId)
       captureTarget = null
       pointerId = null
@@ -35,8 +62,8 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
 
         captureTarget = setPointerCapture(event)
         pointerId = event.pointerId
-        const { strokeColor, strokeOpacity, strokeSize } = runtime.getSettings()
-        const pos = screenEventToFlowPosition(runtime, event)
+        const { strokeColor, strokeOpacity, strokeSize } = environment.toolState.getSettings()
+        const pos = screenEventToFlowPosition(environment.viewport, event)
         const point: [number, number, number] = [pos.x, pos.y, event.pressure || 0.5]
         points = [point]
 
@@ -47,13 +74,13 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
           opacity: strokeOpacity,
         }
 
-        runtime.setLocalDrawing(drawing)
+        environment.interaction.setLocalDrawing(drawing)
       },
       onPointerMove: (event) => {
         if ((event.buttons & 1) !== 1 || points.length === 0) return
 
-        const { strokeColor, strokeOpacity, strokeSize } = runtime.getSettings()
-        const pos = screenEventToFlowPosition(runtime, event)
+        const { strokeColor, strokeOpacity, strokeSize } = environment.toolState.getSettings()
+        const pos = screenEventToFlowPosition(environment.viewport, event)
         const point: [number, number, number] = [pos.x, pos.y, event.pressure || 0.5]
         points.push(point)
 
@@ -64,15 +91,15 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
           opacity: strokeOpacity,
         }
 
-        runtime.setLocalDrawing(drawing)
+        environment.interaction.setLocalDrawing(drawing)
       },
       onPointerUp: (event) => {
         if (event.pointerId !== pointerId) return
 
-        const { strokeColor, strokeOpacity, strokeSize } = runtime.getSettings()
+        const { strokeColor, strokeOpacity, strokeSize } = environment.toolState.getSettings()
         if (points.length >= 2) {
           const bounds = getStrokeBounds(points, strokeSize)
-          const node: Node = {
+          environment.document.createNode({
             id: crypto.randomUUID(),
             type: 'stroke',
             position: { x: bounds.x, y: bounds.y },
@@ -85,8 +112,7 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
               opacity: strokeOpacity,
               bounds,
             },
-          }
-          runtime.createNode(node)
+          })
         }
 
         clearDrawing()

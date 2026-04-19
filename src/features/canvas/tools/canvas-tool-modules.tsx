@@ -6,9 +6,7 @@ import { rectangleToolModule } from './rectangle-tool-module'
 import { selectToolModule } from './select-tool-module'
 import { stickyToolModule } from './sticky-tool-module'
 import { textToolModule } from './text-tool-module'
-import { canEditCanvasNodeStyle } from '../components/nodes/canvas-node-registry'
 import type { AnyCanvasToolModule, CanvasToolId } from './canvas-tool-types'
-import type { Node } from '@xyflow/react'
 
 export const canvasToolModules = [
   selectToolModule,
@@ -27,34 +25,4 @@ const canvasToolModuleMap: Partial<Record<CanvasToolId, AnyCanvasToolModule>> = 
 
 export function getCanvasToolModule(toolId: CanvasToolId): AnyCanvasToolModule | undefined {
   return canvasToolModuleMap[toolId]
-}
-
-type CanvasConditionalToolbarState =
-  | { kind: 'hidden' }
-  | { kind: 'tool'; tool: AnyCanvasToolModule }
-  | { kind: 'selection'; node: Node }
-
-export function getCanvasConditionalToolbarState(
-  toolId: CanvasToolId,
-  selectedNodes: Array<Node>,
-): CanvasConditionalToolbarState {
-  if (selectedNodes.length === 1) {
-    const [node] = selectedNodes
-    if (canEditCanvasNodeStyle(node.type)) {
-      return { kind: 'selection', node }
-    }
-
-    return { kind: 'hidden' }
-  }
-
-  if (selectedNodes.length > 1) {
-    return { kind: 'hidden' }
-  }
-
-  const tool = getCanvasToolModule(toolId)
-  if (tool?.showsStyleControls) {
-    return { kind: 'tool', tool }
-  }
-
-  return { kind: 'hidden' }
 }

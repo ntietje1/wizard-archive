@@ -1,11 +1,12 @@
 import { useEffect, useRef } from 'react'
 import { useReactFlow, useStoreApi } from '@xyflow/react'
 import { useCanvasInteractionStore } from './useCanvasInteractionStore'
-import { isStrokeNode, strokeNodeIntersectsRect } from '../utils/canvas-stroke-utils'
+import { getMeasuredCanvasNodesFromLookup } from './canvas-measured-nodes'
+import { useCanvasSelectionState } from './useCanvasSelectionState'
+import { getCanvasNodesMatchingRectangle } from '../components/nodes/canvas-node-registry'
 import type { ReactFlowInstance } from '@xyflow/react'
-import type { Bounds } from '../utils/canvas-stroke-utils'
+import type { Bounds } from '../utils/canvas-geometry-utils'
 import type { SelectingState } from '../utils/canvas-awareness-types'
-import type { StrokeNodeType } from '../components/nodes/stroke-node'
 
 function screenToFlowRect(
   screenRect: { x: number; y: number; width: number; height: number },
@@ -30,11 +31,13 @@ function screenToFlowRect(
 
 interface UseCanvasSelectionRectOptions {
   setLocalSelecting: (selecting: SelectingState | null) => void
+  setNodeSelection: (nodeIds: Array<string>) => void
   enabled: boolean
 }
 
 export function useCanvasSelectionRect({
   setLocalSelecting,
+  setNodeSelection,
   enabled,
 }: UseCanvasSelectionRectOptions) {
   const reactFlow = useReactFlow()
@@ -85,21 +88,19 @@ export function useCanvasSelectionRect({
             ? screenToFlowRect(lastScreenRect, current.domNode.getBoundingClientRect(), reactFlow)
             : lastFlowRectRef.current
           if (selRect) {
-            reactFlow.setNodes((nodes) =>
-              nodes.map((n) => {
-                if (!n.selected || !isStrokeNode(n)) return n
-                if (!strokeNodeIntersectsRect(n, selRect)) {
-                  return { ...n, selected: false }
-                }
-                return n
-              }),
+            const selectedNodeIds = getCanvasNodesMatchingRectangle(
+              getMeasuredCanvasNodesFromLookup(current.nodeLookup),
+              selRect,
+              { zoom: reactFlow.getZoom() },
             )
+            setNodeSelection(selectedNodeIds)
           }
         }
         lastFlowRectRef.current = null
         const store = useCanvasInteractionStore.getState()
         store.setSelectionDragRect(null)
         store.setRectDeselectedIds(new Set())
+        useCanvasSelectionState.getState().setSelectionPhase('idle')
         setLocalSelectingRef.current(null)
         return
       }
@@ -118,14 +119,19 @@ export function useCanvasSelectionRect({
         const store = useCanvasInteractionStore.getState()
         lastFlowRectRef.current = flowRect
         store.setSelectionDragRect(flowRect)
+        useCanvasSelectionState.getState().setSelectionPhase('marquee')
         setLocalSelectingRef.current({ type: 'rect', ...flowRect })
 
         const deselected = new Set<string>()
-        const selectedStrokes = reactFlow
-          .getNodes()
-          .filter((n): n is StrokeNodeType => !!n.selected && isStrokeNode(n))
-        for (const n of selectedStrokes) {
-          if (!strokeNodeIntersectsRect(n, flowRect)) {
+        const selectedNodeIds = new Set(useCanvasSelectionState.getState().selectedNodeIds)
+        const selectedNodes = getMeasuredCanvasNodesFromLookup(current.nodeLookup).filter((node) =>
+          selectedNodeIds.has(node.id),
+        )
+        const matchingIds = new Set(
+          getCanvasNodesMatchingRectangle(selectedNodes, flowRect, { zoom: reactFlow.getZoom() }),
+        )
+        for (const n of selectedNodes) {
+          if (!matchingIds.has(n.id)) {
             deselected.add(n.id)
           }
         }
@@ -142,7 +148,8 @@ export function useCanvasSelectionRect({
       const store = useCanvasInteractionStore.getState()
       store.setSelectionDragRect(null)
       store.setRectDeselectedIds(new Set())
+      useCanvasSelectionState.getState().setSelectionPhase('idle')
       setLocalSelectingRef.current(null)
     }
-  }, [enabled, reactFlow, storeApi])
+  }, [enabled, reactFlow, setNodeSelection, storeApi])
 }

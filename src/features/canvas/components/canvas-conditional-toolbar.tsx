@@ -1,18 +1,26 @@
-import { useState } from 'react'
-import { useOnSelectionChange } from '@xyflow/react'
+import { useMemo } from 'react'
+import { useNodes } from '@xyflow/react'
+import { useCanvasSelectionPhase, useSelectedCanvasNodeIds } from '../hooks/useCanvasSelectionState'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
-import { getCanvasConditionalToolbarState } from '../tools/canvas-tool-modules'
+import { getCanvasNodeModuleByType } from './nodes/canvas-node-registry'
+import { getCanvasToolModule } from '../tools/canvas-tool-modules'
 import type { Node } from '@xyflow/react'
-import { Button } from '~/features/shadcn/components/button'
 import { ColorPickerPopover } from '~/shared/components/color-picker-popover'
-import { BASE_TEXT_COLORS } from '~/shared/utils/color'
 import { useCanvasRuntimeContext } from '../hooks/canvas-runtime-context'
+import type { CanvasToolId, CanvasToolPropertyContext } from '../tools/canvas-tool-types'
+import { resolveCanvasProperties } from '../properties/resolve-canvas-properties'
+import { readResolvedPropertyValue } from '../properties/canvas-property-types'
+import type {
+  CanvasInspectableProperties,
+  CanvasPaintResolvedProperty,
+  CanvasResolvedProperty,
+  CanvasStrokeSizeResolvedProperty,
+} from '../properties/canvas-property-types'
+import { logger } from '~/shared/utils/logger'
 
 interface CanvasConditionalToolbarProps {
   canEdit: boolean
 }
-
-const STROKE_SIZES = [2, 4, 8, 16]
 
 const COLOR_NAMES: Record<string, string> = {
   'var(--foreground)': 'Default',
@@ -25,45 +33,54 @@ const COLOR_NAMES: Record<string, string> = {
   'var(--t-pink)': 'Pink',
 }
 
+function createToolPropertyContext(): CanvasToolPropertyContext {
+  return {
+    toolState: {
+      getSettings: () => {
+        const state = useCanvasToolStore.getState()
+        return {
+          strokeColor: state.strokeColor,
+          strokeOpacity: state.strokeOpacity,
+          strokeSize: state.strokeSize,
+        }
+      },
+      setStrokeColor: useCanvasToolStore.getState().setStrokeColor,
+      setStrokeSize: useCanvasToolStore.getState().setStrokeSize,
+      setStrokeOpacity: useCanvasToolStore.getState().setStrokeOpacity,
+    },
+  }
+}
+
+function isPaintProperty(
+  property: CanvasResolvedProperty,
+): property is CanvasPaintResolvedProperty {
+  return property.definition.kind === 'paint'
+}
+
+function isStrokeSizeProperty(
+  property: CanvasResolvedProperty,
+): property is CanvasStrokeSizeResolvedProperty {
+  return property.definition.kind === 'strokeSize'
+}
+
 export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarProps) {
   const {
     nodeActions: { updateNodeData },
   } = useCanvasRuntimeContext()
-  const [selectedNodes, setSelectedNodes] = useState<Array<Node>>([])
+  const nodes = useNodes()
+  const selectedNodeIds = useSelectedCanvasNodeIds()
+  const selectionPhase = useCanvasSelectionPhase()
+  const activeTool = useCanvasToolStore((state) => state.activeTool)
 
-  const activeTool = useCanvasToolStore((s) => s.activeTool)
-  const strokeColor = useCanvasToolStore((s) => s.strokeColor)
-  const strokeOpacity = useCanvasToolStore((s) => s.strokeOpacity)
-  const strokeSize = useCanvasToolStore((s) => s.strokeSize)
-  const setStrokeColor = useCanvasToolStore((s) => s.setStrokeColor)
-  const setStrokeOpacity = useCanvasToolStore((s) => s.setStrokeOpacity)
-  const setStrokeSize = useCanvasToolStore((s) => s.setStrokeSize)
+  const selectedNodeIdSet = new Set(selectedNodeIds)
+  const selectedNodes = nodes.filter((node) => selectedNodeIdSet.has(node.id))
 
-  useOnSelectionChange({
-    onChange: ({ nodes }) => setSelectedNodes(nodes),
-  })
-
-  const toolbarState = getCanvasConditionalToolbarState(activeTool, selectedNodes)
-
-  if (!canEdit || toolbarState.kind === 'hidden') return null
-
-  const selectedNode = toolbarState.kind === 'selection' ? toolbarState.node : null
-  const activeColor = (selectedNode?.data?.color as string | undefined) ?? strokeColor
-  const activeOpacity = (selectedNode?.data?.opacity as number | undefined) ?? strokeOpacity
-
-  const handleColorChange = (color: string) => {
-    setStrokeColor(color)
-    if (selectedNode) {
-      updateNodeData(selectedNode.id, { color })
-    }
-  }
-
-  const handleOpacityChange = (opacity: number) => {
-    setStrokeOpacity(opacity)
-    if (selectedNode) {
-      updateNodeData(selectedNode.id, { opacity })
-    }
-  }
+  const properties = resolveProperties(
+    activeTool,
+    selectionPhase === 'idle' ? selectedNodes : [],
+    updateNodeData,
+  )
+  if (!canEdit || properties.length === 0) return null
 
   return (
     <div
@@ -71,48 +88,102 @@ export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarPr
       role="toolbar"
       aria-label="Canvas conditional toolbar"
     >
-      {BASE_TEXT_COLORS.map((color) => (
-        <button
-          type="button"
-          key={color}
-          className="h-6 w-6 rounded-sm border border-border transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
-          style={{
-            backgroundColor: color,
-            outline: activeColor === color ? '2px solid var(--primary)' : 'none',
-            outlineOffset: '1px',
-          }}
-          onClick={() => handleColorChange(color)}
-          aria-label={`Select ${COLOR_NAMES[color] ?? 'custom'} color`}
-          aria-pressed={activeColor === color}
-        />
-      ))}
-      <div className="mx-1 h-6 w-px bg-border" />
-      <ColorPickerPopover
-        value={activeColor}
-        onChange={handleColorChange}
-        opacity={activeOpacity}
-        onOpacityChange={handleOpacityChange}
-      />
-      {toolbarState.kind === 'tool' && toolbarState.tool.id === 'draw' && (
+      <CanvasPropertyControls properties={properties} />
+    </div>
+  )
+}
+
+function resolveProperties(
+  activeTool: CanvasToolId,
+  selectedNodes: Array<Node>,
+  updateNodeData: (nodeId: string, data: Record<string, unknown>) => void,
+): Array<CanvasResolvedProperty> {
+  if (selectedNodes.length > 0) {
+    const selectedNodeProperties = selectedNodes.flatMap<CanvasInspectableProperties>((node) => {
+      if (!node.type) {
+        logger.warn('CanvasConditionalToolbar: selected node is missing a type', node)
+        return []
+      }
+
+      const nodeModule = getCanvasNodeModuleByType(node.type)
+      if (!nodeModule) {
+        logger.warn(`CanvasConditionalToolbar: unknown selected node type "${node.type}"`, node)
+        return []
+      }
+
+      return [nodeModule.properties?.({ node, updateNodeData }) ?? { bindings: [] }]
+    })
+
+    return resolveCanvasProperties(selectedNodeProperties)
+  }
+
+  const tool = getCanvasToolModule(activeTool)
+  if (!tool?.properties) return []
+
+  return resolveCanvasProperties([tool.properties(createToolPropertyContext())])
+}
+
+function CanvasPropertyControls({ properties }: { properties: Array<CanvasResolvedProperty> }) {
+  const paintProperty = properties.find(isPaintProperty)
+  const strokeSizeProperty = properties.find(isStrokeSizeProperty)
+
+  const strokeSizeValue = readResolvedPropertyValue(strokeSizeProperty)
+  const colorValue = paintProperty?.color.kind === 'value' ? paintProperty.color.value : undefined
+  const opacityValue =
+    paintProperty?.opacity.kind === 'value' ? paintProperty.opacity.value : undefined
+
+  return (
+    <>
+      {paintProperty &&
+        paintProperty.definition.colors.map((color) => (
+          <button
+            type="button"
+            key={color}
+            className="h-6 w-6 rounded-sm border border-border transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+            style={{
+              backgroundColor: color,
+              outline: colorValue === color ? '2px solid var(--primary)' : 'none',
+              outlineOffset: '1px',
+            }}
+            onClick={() => paintProperty.setColor(color)}
+            aria-label={`Select ${COLOR_NAMES[color] ?? 'custom'} color`}
+            aria-pressed={colorValue === color}
+          />
+        ))}
+      {paintProperty && (
+        <>
+          <div className="mx-1 h-6 w-px bg-border" />
+          <ColorPickerPopover
+            value={colorValue}
+            onChange={(color) => paintProperty.setColor(color)}
+            opacity={opacityValue}
+            onOpacityChange={(opacity) => paintProperty.setOpacity(opacity)}
+            colorMixed={paintProperty.color.kind === 'mixed'}
+            opacityMixed={paintProperty.opacity.kind === 'mixed'}
+          />
+        </>
+      )}
+      {strokeSizeProperty && (
         <>
           <div className="mx-1 h-6 w-px bg-border" />
           <div className="flex items-center gap-0.5">
-            {STROKE_SIZES.map((size) => (
-              <Button
+            {strokeSizeProperty.definition.options.map((size) => (
+              <button
+                type="button"
                 key={size}
-                variant="ghost"
-                size="icon"
-                className={`h-8 w-8 ${strokeSize === size ? 'bg-accent' : ''}`}
-                onClick={() => setStrokeSize(size)}
+                className={`flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent ${
+                  strokeSizeValue === size ? 'bg-accent' : ''
+                }`}
+                onClick={() => strokeSizeProperty.setValue(size)}
                 aria-label={`Stroke size ${size}`}
                 title={`Size ${size}`}
               >
                 <div className="rounded-full bg-foreground" style={{ width: size, height: size }} />
-              </Button>
+              </button>
             ))}
           </div>
         </>
       )}
-    </div>
+    </>
   )
 }

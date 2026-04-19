@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { DrawingState, Point2D } from '../utils/canvas-awareness-types'
-import type { Bounds } from '../utils/canvas-stroke-utils'
+import type { Bounds } from '../utils/canvas-geometry-utils'
 
 interface CanvasInteractionState {
   erasingStrokeIds: Set<string>

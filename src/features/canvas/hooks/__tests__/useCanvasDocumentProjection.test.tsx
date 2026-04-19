@@ -105,4 +105,75 @@ describe('useCanvasDocumentProjection', () => {
       }),
     ])
   })
+
+  it('ignores stale persisted selection flags when document updates rerender nodes', () => {
+    const doc = new Y.Doc()
+    const nodesMap = doc.getMap<Node>('nodes')
+    const edgesMap = doc.getMap<Edge>('edges')
+    nodesMap.set('node-1', {
+      ...createTextNode('node-1'),
+      selected: true,
+      draggable: true,
+    })
+    nodesMap.set('node-2', {
+      ...createTextNode('node-2'),
+      position: { x: 220, y: 40 },
+      selected: true,
+      draggable: true,
+    })
+
+    const localDraggingIdsRef = { current: new Set<string>() }
+
+    renderHook(() =>
+      useCanvasDocumentProjection({
+        nodesMap,
+        edgesMap,
+        localDraggingIdsRef,
+        remoteResizeDimensions: {},
+        remoteDragAnimation: createRemoteDragAnimation(),
+      }),
+    )
+
+    expect(reactFlowMock.nodes).toHaveLength(2)
+    expect(reactFlowMock.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'node-1',
+          position: { x: 20, y: 40 },
+        }),
+        expect.objectContaining({
+          id: 'node-2',
+          position: { x: 220, y: 40 },
+        }),
+      ]),
+    )
+    expect(reactFlowMock.nodes.find((node) => node.id === 'node-1')?.selected).toBeUndefined()
+    expect(reactFlowMock.edges).toEqual([])
+
+    act(() => {
+      reactFlowMock.setNodes((current) =>
+        current.map((node) => ({ ...node, selected: node.id === 'node-1' })),
+      )
+    })
+
+    act(() => {
+      const existing = nodesMap.get('node-1')
+      if (!existing) {
+        throw new Error('missing node-1')
+      }
+
+      nodesMap.set('node-1', {
+        ...existing,
+        data: { ...existing.data, label: 'Updated' },
+      })
+    })
+
+    expect(reactFlowMock.nodes).toHaveLength(2)
+    expect(reactFlowMock.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'node-1', selected: true }),
+        expect.objectContaining({ id: 'node-2', selected: false }),
+      ]),
+    )
+  })
 })

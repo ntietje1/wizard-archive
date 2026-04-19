@@ -7,20 +7,17 @@ export const handToolModule: CanvasToolModule<'hand'> = {
   group: 'selection',
   icon: <Hand className="h-4 w-4" />,
   cursor: 'grab',
-  oneShot: false,
-  showsStyleControls: false,
-  create: (runtime) => {
+  create: (environment) => {
     let gestureActive = false
 
     return {
       onMoveStart: (event) => {
-        if (!event || runtime.getActiveTool() !== 'hand') return
+        if (!event || environment.toolState.getActiveTool() !== 'hand') return
         gestureActive = true
       },
       onMoveEnd: () => {
-        if (!gestureActive || runtime.getActiveTool() !== 'hand') return
+        if (!gestureActive || environment.toolState.getActiveTool() !== 'hand') return
         gestureActive = false
-        runtime.completeActiveToolAction()
       },
     }
   },

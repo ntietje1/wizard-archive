@@ -23,6 +23,7 @@ vi.mock('@xyflow/react', () => ({
 
 function createAwarenessMock() {
   return {
+    setLocalPresence: vi.fn(),
     setLocalCursor: vi.fn(),
     setLocalDragging: vi.fn(),
     setLocalResizing: vi.fn(),
@@ -56,6 +57,7 @@ describe('useCanvasToolRuntime', () => {
     const selectionActions = {
       setNodeSelection: vi.fn(),
       clearSelection: vi.fn(),
+      getSelectedNodeIds: vi.fn(() => []),
     }
     const editSession: CanvasEditSessionState = {
       editingEmbedId: null,
@@ -70,7 +72,6 @@ describe('useCanvasToolRuntime', () => {
           documentWriter,
           documentReader,
           selectionActions,
-          getSelectionSnapshot: () => [],
           awareness,
           editSession,
         }),

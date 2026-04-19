@@ -46,6 +46,26 @@ export default defineConfig({
       'typescript/prefer-for-of': 'warn',
       'typescript/require-await': 'warn',
     },
+    overrides: [
+      {
+        files: ['src/features/canvas/**/*.{ts,tsx}'],
+        rules: {
+          'no-restricted-imports': [
+            'error',
+            {
+              paths: [
+                {
+                  name: '@xyflow/react',
+                  importNames: ['useOnSelectionChange', 'useStore'],
+                  message:
+                    'Use the canvas selection state/hooks instead of raw React Flow selection subscriptions.',
+                },
+              ],
+            },
+          ],
+        },
+      },
+    ],
   },
   staged: {
     '*.{ts,tsx}': 'vp check --fix',

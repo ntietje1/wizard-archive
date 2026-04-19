@@ -1,4 +1,3 @@
-import { useCallback } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { useInlineCanvasNodeEdit } from '../../hooks/useInlineCanvasNodeEdit'
 import { STICKY_DEFAULT_COLOR } from './sticky-node-constants'

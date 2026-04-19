@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { yMapToArray } from '../utils/canvas-yjs-utils'
+import { stripEphemeralCanvasNodeState } from '../utils/canvas-node-persistence'
 import type { ResizingState } from '../utils/canvas-awareness-types'
 import type { CanvasRemoteDragAnimation } from './useCanvasRemoteDragAnimation'
 import type { Edge, Node } from '@xyflow/react'
@@ -31,12 +32,13 @@ export function useCanvasDocumentProjection({
   }, [remoteDragAnimation, remoteResizeDimensions])
 
   useEffect(() => {
-    reactFlow.setNodes(yMapToArray(nodesMap))
+    reactFlow.setNodes(yMapToArray(nodesMap).map(stripEphemeralCanvasNodeState))
 
     const handler = () => {
       reactFlow.setNodes((current) => {
         const currentById = new Map(current.map((node) => [node.id, node]))
-        return yMapToArray(nodesMap).map((remote) => {
+        return yMapToArray(nodesMap).map((remoteNode) => {
+          const remote = stripEphemeralCanvasNodeState(remoteNode)
           const local = currentById.get(remote.id)
           if (!local) return remote
 

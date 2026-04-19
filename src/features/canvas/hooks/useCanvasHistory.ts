@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { UndoManager } from 'yjs'
+import { setCanvasSelection } from './canvas-selection-projection'
 import type { CanvasHistoryController } from '../tools/canvas-tool-types'
 import type { Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
@@ -51,8 +52,7 @@ export function useCanvasHistory({ nodesMap, edgesMap }: UseCanvasHistoryOptions
 
   const restoreSelection = useCallback(
     (nodeIds: Array<string>) => {
-      const idSet = new Set(nodeIds)
-      reactFlow.setNodes((nodes) => nodes.map((n) => ({ ...n, selected: idSet.has(n.id) })))
+      setCanvasSelection(reactFlow, nodeIds)
       selectionRef.current = nodeIds
     },
     [reactFlow],

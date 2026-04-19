@@ -1,11 +1,14 @@
 import type {
+  CanvasAwarenessNamespace,
   DrawingState,
   Point2D,
   ResizingState,
+  RemoteUser,
   SelectingState,
 } from '../utils/canvas-awareness-types'
+import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
 import type { Connection, Edge, Node, XYPosition } from '@xyflow/react'
-import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react'
+import type { ComponentType, MouseEvent as ReactMouseEvent, ReactNode } from 'react'
 
 export type CanvasToolId =
   | 'select'
@@ -69,17 +72,14 @@ export type CanvasMeasuredNode = Node & {
   height: number
 }
 
-export interface CanvasMeasuredNodeReader {
+interface CanvasMeasuredNodeReader {
   getMeasuredNodes: () => Array<CanvasMeasuredNode>
 }
 
 export interface CanvasSelectionActions {
   setNodeSelection: (nodeIds: Array<string>) => void
   clearSelection: () => void
-}
-
-export interface CanvasSelectionSnapshotReader {
-  getSelectionSnapshot: () => Array<string>
+  getSelectedNodeIds: () => Array<string>
 }
 
 export interface CanvasViewportTools {
@@ -87,13 +87,20 @@ export interface CanvasViewportTools {
   getZoom: () => number
 }
 
-type CanvasFlowPositionTools = Pick<CanvasViewportTools, 'screenToFlowPosition'>
-
 export interface CanvasToolStateControls {
   getSettings: () => CanvasToolSettings
   getActiveTool: () => CanvasToolId
   setActiveTool: (tool: CanvasToolId) => void
-  completeActiveToolAction: () => void
+  setStrokeColor: (color: string) => void
+  setStrokeSize: (size: number) => void
+  setStrokeOpacity: (opacity: number) => void
+}
+
+export interface CanvasToolPropertyContext {
+  toolState: Pick<
+    CanvasToolStateControls,
+    'getSettings' | 'setStrokeColor' | 'setStrokeSize' | 'setStrokeOpacity'
+  >
 }
 
 interface CanvasInteractionOverlayControls {
@@ -112,6 +119,7 @@ interface CanvasInteractionOverlayControls {
 }
 
 export interface CanvasAwarenessWriter {
+  setLocalPresence: (namespace: CanvasAwarenessNamespace, value: unknown) => void
   setLocalCursor: (position: Point2D | null) => void
   setLocalDragging: (positions: Record<string, Point2D> | null) => void
   setLocalResizing: (resizing: ResizingState | null) => void
@@ -120,57 +128,22 @@ export interface CanvasAwarenessWriter {
   setLocalSelecting: (selecting: SelectingState | null) => void
 }
 
-type SelectCanvasToolContext = CanvasViewportTools &
-  CanvasDocumentReader &
-  CanvasSelectionActions &
-  CanvasSelectionSnapshotReader
-
-type HandCanvasToolContext = Pick<
-  CanvasToolStateControls,
-  'getActiveTool' | 'completeActiveToolAction'
->
-
-type DrawCanvasToolContext = CanvasFlowPositionTools &
-  Pick<CanvasToolStateControls, 'getSettings'> &
-  Pick<CanvasDocumentWriter, 'createNode'> &
-  Pick<CanvasInteractionOverlayControls, 'setLocalDrawing'>
-
-type EraseCanvasToolContext = CanvasFlowPositionTools &
-  CanvasDocumentReader &
-  Pick<CanvasDocumentWriter, 'deleteNodes'> &
-  Pick<CanvasInteractionOverlayControls, 'setErasingStrokeIds'>
-
-type LassoCanvasToolContext = CanvasFlowPositionTools &
-  CanvasMeasuredNodeReader &
-  CanvasSelectionActions &
-  Pick<CanvasToolStateControls, 'completeActiveToolAction'> &
-  Pick<CanvasInteractionOverlayControls, 'setLassoPath'> &
-  Pick<CanvasAwarenessWriter, 'setLocalSelecting'>
-
-type RectangleCanvasToolContext = CanvasFlowPositionTools &
-  Pick<CanvasToolStateControls, 'getSettings' | 'completeActiveToolAction'> &
-  Pick<CanvasDocumentWriter, 'createNode'> &
-  Pick<CanvasInteractionOverlayControls, 'setSelectionDragRect'>
-
-type TextCanvasToolContext = CanvasFlowPositionTools &
-  Pick<CanvasDocumentWriter, 'createNode'> &
-  Pick<CanvasToolStateControls, 'completeActiveToolAction'> &
-  Pick<CanvasEditSessionState, 'setPendingEditNodeId'>
-
-type StickyCanvasToolContext = TextCanvasToolContext
-
-export interface CanvasToolContextById {
-  select: SelectCanvasToolContext
-  hand: HandCanvasToolContext
-  draw: DrawCanvasToolContext
-  erase: EraseCanvasToolContext
-  lasso: LassoCanvasToolContext
-  rectangle: RectangleCanvasToolContext
-  text: TextCanvasToolContext
-  sticky: StickyCanvasToolContext
+export interface CanvasAwarenessCapability {
+  namespace: CanvasAwarenessNamespace
+  Layer?: ComponentType<{ remoteUsers: Array<RemoteUser> }>
 }
 
-export interface CanvasToolController {
+export interface CanvasToolEnvironment {
+  viewport: CanvasViewportTools
+  document: CanvasDocumentWriter & CanvasDocumentReader & CanvasMeasuredNodeReader
+  selection: CanvasSelectionActions
+  editSession: CanvasEditSessionState
+  toolState: CanvasToolStateControls
+  interaction: CanvasInteractionOverlayControls
+  awareness: CanvasAwarenessWriter
+}
+
+interface CanvasToolController {
   onPointerDown?: (event: PointerEvent) => void
   onPointerMove?: (event: PointerEvent) => void
   onPointerUp?: (event: PointerEvent) => void
@@ -187,9 +160,9 @@ export interface CanvasToolModule<TId extends CanvasToolId = CanvasToolId> {
   group: 'selection' | 'creation'
   icon: ReactNode
   cursor?: string
-  oneShot: boolean
-  showsStyleControls: boolean
-  create: (context: CanvasToolContextById[TId]) => CanvasToolController
+  properties?: (context: CanvasToolPropertyContext) => CanvasInspectableProperties
+  awareness?: CanvasAwarenessCapability
+  create: (environment: CanvasToolEnvironment) => CanvasToolController
 }
 
 export type AnyCanvasToolModule = {

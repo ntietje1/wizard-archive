@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
-import { createEmbedFileNode, createEmbedSidebarItemNode } from '../utils/canvas-node-factories'
+import { createEmbedCanvasNode } from '../components/nodes/embed-node-creation'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Node } from '@xyflow/react'
 import type { CanvasDropZoneData } from '~/features/dnd/utils/dnd-registry'
@@ -16,16 +16,14 @@ const STACK_OFFSET = 20
 
 interface UseCanvasDropTargetOptions {
   canvasId: Id<'sidebarItems'>
-  canEdit: boolean
-  isSelectMode: boolean
+  enabled: boolean
   createNode: (node: Node) => void
   screenToFlowPosition: (position: { x: number; y: number }) => { x: number; y: number }
 }
 
 export function useCanvasDropTarget({
   canvasId,
-  canEdit,
-  isSelectMode,
+  enabled,
   createNode,
   screenToFlowPosition,
 }: UseCanvasDropTargetOptions) {
@@ -41,7 +39,6 @@ export function useCanvasDropTarget({
     highlightId: `canvas:${canvasId}`,
   })
 
-  const enabled = canEdit && isSelectMode
   const { isFileDropTarget } = useExternalDropTarget({
     ref: dropOverlayRef,
     parentId: null,
@@ -78,7 +75,7 @@ export function useCanvasDropTarget({
           y: clientY,
         })
 
-        createNodeRef.current(createEmbedSidebarItemNode(sidebarItemId, position))
+        createNodeRef.current(createEmbedCanvasNode(sidebarItemId, position))
       },
     })
   }, [])
@@ -104,7 +101,7 @@ export function useCanvasDropTarget({
           }
           if (!result.value) return
           createNodeRef.current(
-            createEmbedFileNode(result.value.id, {
+            createEmbedCanvasNode(result.value.id, {
               x: basePosition.x + i * STACK_OFFSET,
               y: basePosition.y + i * STACK_OFFSET,
             }),

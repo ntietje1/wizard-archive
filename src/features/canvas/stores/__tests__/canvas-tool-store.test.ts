@@ -6,26 +6,29 @@ describe('useCanvasToolStore', () => {
     useCanvasToolStore.getState().reset()
   })
 
-  it('keeps persistent tools active after completion', () => {
-    const persistentTools = ['draw', 'hand', 'erase'] as const
+  it('changes active tools only when set explicitly', () => {
+    const tools = ['draw', 'hand', 'erase', 'lasso', 'text', 'sticky', 'rectangle'] as const
 
-    for (const tool of persistentTools) {
-      const { setActiveTool, completeActiveToolAction } = useCanvasToolStore.getState()
-      setActiveTool(tool)
-      expect(useCanvasToolStore.getState().activeTool).toBe(tool)
-      completeActiveToolAction()
+    for (const tool of tools) {
+      useCanvasToolStore.getState().setActiveTool(tool)
       expect(useCanvasToolStore.getState().activeTool).toBe(tool)
     }
   })
 
-  it('returns one-shot tools to select after completion', () => {
+  it('resets tool state back to defaults', () => {
     const store = useCanvasToolStore
-    const oneShotTools = ['lasso', 'text', 'sticky', 'rectangle'] as const
 
-    for (const tool of oneShotTools) {
-      store.getState().setActiveTool(tool)
-      store.getState().completeActiveToolAction()
-      expect(store.getState().activeTool).toBe('select')
-    }
+    store.getState().setActiveTool('rectangle')
+    store.getState().setStrokeColor('#fff')
+    store.getState().setStrokeOpacity(30)
+    store.getState().setStrokeSize(16)
+    store.getState().reset()
+
+    expect(store.getState()).toMatchObject({
+      activeTool: 'select',
+      strokeColor: 'var(--foreground)',
+      strokeOpacity: 100,
+      strokeSize: 4,
+    })
   })
 })

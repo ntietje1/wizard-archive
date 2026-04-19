@@ -1,4 +1,3 @@
-import { useCallback } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { useInlineCanvasNodeEdit } from '../../hooks/useInlineCanvasNodeEdit'
 import { ResizableNodeWrapper } from './resizable-node-wrapper'
@@ -21,19 +20,18 @@ export function TextNode({ id, data, selected, dragging }: NodeProps<Node<TextNo
   const {
     nodeActions: { updateNodeData },
   } = useCanvasRuntimeContext()
-  const label = data.label || 'Text'
-  const handleCommit = useCallback(
-    (nextValue: string) => {
-      updateNodeData(id, { label: nextValue })
-    },
-    [id, updateNodeData],
-  )
+  const trimmedLabel = typeof data.label === 'string' ? data.label.trim() : ''
+  const hasLabel = trimmedLabel.length > 0
+  const label = hasLabel ? trimmedLabel : 'Text'
+  const ariaLabel = hasLabel ? `${trimmedLabel} node` : 'Empty text node'
   const { isEditing, editValue, setEditValue, startEditing, handleBlur, handleInputKeyDown } =
     useInlineCanvasNodeEdit<HTMLInputElement>({
       id,
       selected: !!selected,
       value: label,
-      onCommit: handleCommit,
+      onCommit: (nextValue) => {
+        updateNodeData(id, { label: nextValue })
+      },
       shouldCommit: (event) => event.key === 'Enter' && !event.shiftKey,
       shouldCancel: (event) => event.key === 'Escape',
     })
@@ -49,7 +47,7 @@ export function TextNode({ id, data, selected, dragging }: NodeProps<Node<TextNo
       <div
         className={TEXT_CONTAINER_CLASS}
         role="group"
-        aria-label={data.label || 'Empty text node'}
+        aria-label={ariaLabel}
         tabIndex={0}
         onDoubleClick={startEditing}
         onKeyDown={(event) => {

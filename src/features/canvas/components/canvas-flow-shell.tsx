@@ -1,14 +1,12 @@
-import { Background, MiniMap, ReactFlow, SelectionMode, ViewportPortal } from '@xyflow/react'
+import { Background, MiniMap, ReactFlow, SelectionMode } from '@xyflow/react'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { cn } from '~/features/shadcn/lib/utils'
+import { CanvasAwarenessHost } from './canvas-awareness-host'
 import { CanvasConditionalToolbar } from './canvas-conditional-toolbar'
 import { MiniMapNode } from './canvas-minimap-node'
-import { CanvasRemoteCursors } from './canvas-remote-cursors'
-import { CanvasStrokes } from './canvas-strokes'
 import { CanvasToolbar } from './canvas-toolbar'
 import { canvasNodeTypes } from './nodes/canvas-node-registry'
-import type { Point2D, RemoteUser } from '../utils/canvas-awareness-types'
-import type { Bounds } from '../utils/canvas-stroke-utils'
+import type { RemoteUser } from '../utils/canvas-awareness-types'
 import type { Edge, Node, OnConnect, OnEdgesDelete, OnNodeDrag, OnNodesDelete } from '@xyflow/react'
 
 const PRO_OPTIONS = { hideAttribution: true }
@@ -26,8 +24,6 @@ export interface CanvasFlowShellProps {
   toolCursor: string | undefined
   wrapperRef: (node: HTMLDivElement | null) => void
   remoteUsers: Array<RemoteUser>
-  lassoPath: Array<Point2D>
-  selectionDragRect: Bounds | null
   activeTool: string
   onNodeDragStart?: OnNodeDrag
   onNodeDrag?: OnNodeDrag
@@ -57,8 +53,6 @@ export function CanvasFlowShell({
   toolCursor,
   wrapperRef,
   remoteUsers,
-  lassoPath,
-  selectionDragRect,
   activeTool,
   onNodeDragStart,
   onNodeDrag,
@@ -120,15 +114,7 @@ export function CanvasFlowShell({
       >
         <Background bgColor="var(--background)" />
         <MiniMap zoomable={false} pannable={false} nodeComponent={MiniMapNode} />
-        <ViewportPortal>
-          <CanvasStrokes remoteUsers={remoteUsers} />
-          <CanvasRemoteCursors remoteUsers={remoteUsers} />
-          <CanvasSelectionOverlays
-            lassoPath={lassoPath}
-            selectionDragRect={selectionDragRect}
-            remoteUsers={remoteUsers}
-          />
-        </ViewportPortal>
+        <CanvasAwarenessHost remoteUsers={remoteUsers} />
       </ReactFlow>
 
       <CanvasDropOverlay
@@ -161,90 +147,5 @@ function CanvasDropOverlay({
         active && 'bg-ring/5 ring-2 ring-inset ring-ring/60',
       )}
     />
-  )
-}
-
-const SELECTION_STYLE = {
-  fill: 'var(--primary)',
-  fillOpacity: 0.08,
-  stroke: 'var(--primary)',
-  strokeWidth: 1,
-  strokeDasharray: '3 3',
-} as const
-
-function CanvasSelectionOverlays({
-  lassoPath,
-  selectionDragRect,
-  remoteUsers,
-}: {
-  lassoPath: Array<Point2D>
-  selectionDragRect: Bounds | null
-  remoteUsers: Array<RemoteUser>
-}) {
-  return (
-    <svg
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        overflow: 'visible',
-        pointerEvents: 'none',
-      }}
-    >
-      {lassoPath.length >= 2 && (
-        <polyline
-          points={lassoPath.map((point) => `${point.x},${point.y}`).join(' ')}
-          {...SELECTION_STYLE}
-        />
-      )}
-
-      {selectionDragRect && (
-        <rect
-          x={selectionDragRect.x}
-          y={selectionDragRect.y}
-          width={selectionDragRect.width}
-          height={selectionDragRect.height}
-          {...SELECTION_STYLE}
-        />
-      )}
-
-      {remoteUsers.map((remoteUser) => {
-        if (!remoteUser.selecting) return null
-        const selecting = remoteUser.selecting
-
-        if (selecting.type === 'rect') {
-          return (
-            <rect
-              key={`selection-${remoteUser.clientId}`}
-              x={selecting.x}
-              y={selecting.y}
-              width={selecting.width}
-              height={selecting.height}
-              fill={remoteUser.user.color}
-              fillOpacity={0.06}
-              stroke={remoteUser.user.color}
-              strokeWidth={1}
-              strokeDasharray="3 3"
-            />
-          )
-        }
-
-        if (selecting.type === 'lasso' && selecting.points.length >= 2) {
-          return (
-            <polyline
-              key={`selection-${remoteUser.clientId}`}
-              points={selecting.points.map((point) => `${point.x},${point.y}`).join(' ')}
-              fill={remoteUser.user.color}
-              fillOpacity={0.06}
-              stroke={remoteUser.user.color}
-              strokeWidth={1}
-              strokeDasharray="3 3"
-            />
-          )
-        }
-
-        return null
-      })}
-    </svg>
   )
 }

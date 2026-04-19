@@ -1,14 +1,14 @@
-import { useReactFlow } from '@xyflow/react'
 import { useEffect, useRef } from 'react'
 import type { CanvasHistoryController } from '../tools/canvas-tool-types'
+import { useCanvasSelectionActions } from './useCanvasSelectionActions'
 
 export function useCanvasKeyboardShortcuts({
   undo,
   redo,
 }: Pick<CanvasHistoryController, 'undo' | 'redo'>) {
-  const reactFlow = useReactFlow()
-  const reactFlowRef = useRef(reactFlow)
-  reactFlowRef.current = reactFlow
+  const selectionActions = useCanvasSelectionActions()
+  const selectionActionsRef = useRef(selectionActions)
+  selectionActionsRef.current = selectionActions
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -25,12 +25,7 @@ export function useCanvasKeyboardShortcuts({
 
       if (e.key === 'Escape') {
         e.preventDefault()
-        reactFlowRef.current.setNodes((nodes) =>
-          nodes.map((node) => (node.selected ? { ...node, selected: false } : node)),
-        )
-        reactFlowRef.current.setEdges((edges) =>
-          edges.map((edge) => (edge.selected ? { ...edge, selected: false } : edge)),
-        )
+        selectionActionsRef.current.clearSelection()
         return
       }
 

@@ -10,11 +10,11 @@ const DEBOUNCE_MS = 5_000
 export function useCanvasPreview({
   canvasId,
   doc,
-  containerRef,
+  container,
 }: {
   canvasId: Id<'sidebarItems'>
   doc: Y.Doc
-  containerRef: React.RefObject<HTMLElement | null>
+  container: HTMLElement | null
 }) {
   const isGeneratingRef = useRef(false)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -26,14 +26,16 @@ export function useCanvasPreview({
   claimAndUploadRef.current = claimAndUpload
 
   useEffect(() => {
+    if (!container) {
+      return
+    }
+
     const generate = async () => {
       if (isGeneratingRef.current) return
-      const el = containerRef.current
-      if (!el) return
 
       isGeneratingRef.current = true
       try {
-        await claimAndUploadRef.current(canvasIdRef.current, () => captureElementPreview(el))
+        await claimAndUploadRef.current(canvasIdRef.current, () => captureElementPreview(container))
       } catch (error) {
         logger.error(`Canvas preview generation failed for ${canvasIdRef.current}:`, error)
       } finally {
@@ -54,5 +56,5 @@ export function useCanvasPreview({
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc, canvasId])
+  }, [canvasId, container, doc])
 }

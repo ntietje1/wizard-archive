@@ -1,5 +1,5 @@
 import { StickyNote } from 'lucide-react'
-import { createStickyNode } from '../utils/canvas-node-factories'
+import { createCanvasNodePlacement } from '../components/nodes/canvas-node-registry'
 import type { CanvasToolModule } from './canvas-tool-types'
 
 export const stickyToolModule: CanvasToolModule<'sticky'> = {
@@ -8,21 +8,22 @@ export const stickyToolModule: CanvasToolModule<'sticky'> = {
   group: 'creation',
   icon: <StickyNote className="h-4 w-4" />,
   cursor: 'copy',
-  oneShot: true,
-  showsStyleControls: false,
-  create: (runtime) => ({
+  create: (environment) => ({
     onPaneClick: (event) => {
-      const placement = createStickyNode(
-        runtime.screenToFlowPosition({
+      const placement = createCanvasNodePlacement('sticky', {
+        position: environment.viewport.screenToFlowPosition({
           x: event.clientX,
           y: event.clientY,
         }),
-      )
-      runtime.createNode(placement.node)
-      if (placement.startEditing) {
-        runtime.setPendingEditNodeId(placement.node.id)
+      })
+      environment.document.createNode(placement.node)
+      if (placement.node.selected) {
+        environment.selection.setNodeSelection([placement.node.id])
       }
-      runtime.completeActiveToolAction()
+      if (placement.startEditing) {
+        environment.editSession.setPendingEditNodeId(placement.node.id)
+      }
+      environment.toolState.setActiveTool('select')
     },
   }),
 }

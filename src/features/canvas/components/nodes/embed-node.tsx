@@ -1,14 +1,16 @@
-import { Handle, Position, useStore } from '@xyflow/react'
+import { useEffect } from 'react'
+import { Handle, Position } from '@xyflow/react'
 import { AlertTriangle, ExternalLinkIcon } from 'lucide-react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { useRichEmbedActivation } from '../../hooks/useRichEmbedLifecycle'
+import { useSelectedCanvasNodeIds } from '../../hooks/useCanvasSelectionState'
 import type { RichEmbedLifecycleController } from '../../hooks/useRichEmbedLifecycle'
 import { isExclusivelySelectedNode } from '../../utils/canvas-selection-utils'
 import { ResizableNodeWrapper } from './resizable-node-wrapper'
+import type { EmbedNodeData } from './embed-node-data'
 import { EmbedNoteContent } from './embed-note-content'
 import { ItemPreviewContent } from '~/features/editor/components/item-preview-content'
 import type { Node, NodeProps } from '@xyflow/react'
-import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
 import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
@@ -17,17 +19,6 @@ import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { Button } from '~/features/shadcn/components/button'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useCanvasRuntimeContext } from '../../hooks/canvas-runtime-context'
-
-export type EmbedNodeData = { sidebarItemId?: Id<'sidebarItems'> }
-
-export function EmbedPreview() {
-  return (
-    <div className="h-full w-full rounded-lg border bg-card px-3 py-2 text-sm text-muted-foreground shadow-sm">
-      Embedded item
-    </div>
-  )
-}
-
 export function EmbedNode({ id, data, selected, dragging }: NodeProps<Node<EmbedNodeData>>) {
   const sidebarItemId = data.sidebarItemId
   const { itemsMap } = useActiveSidebarItems()
@@ -37,13 +28,15 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps<Node<Embed
 
   const { editSession, canEdit } = useCanvasRuntimeContext()
   const { editingEmbedId, setEditingEmbedId } = editSession
-  const isExclusivelySelected = useStore((state) =>
-    isExclusivelySelectedNode(
-      state.nodes.filter((node) => node.selected).map((node) => node.id),
-      selected ? id : null,
-    ),
-  )
+  const selectedNodeIds = useSelectedCanvasNodeIds()
+  const isExclusivelySelected = isExclusivelySelectedNode(selectedNodeIds, id)
   const isEditing = editingEmbedId === id && isExclusivelySelected
+
+  useEffect(() => {
+    if (editingEmbedId === id && !isExclusivelySelected) {
+      setEditingEmbedId(null)
+    }
+  }, [editingEmbedId, id, isExclusivelySelected, setEditingEmbedId])
 
   const { lifecycle, handleDoubleClick } = useRichEmbedActivation({
     canEdit: canEdit && isExclusivelySelected,

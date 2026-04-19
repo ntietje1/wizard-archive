@@ -3,37 +3,23 @@ import { useReactFlow, useStoreApi } from '@xyflow/react'
 import { getCanvasToolModule } from '../tools/canvas-tool-modules'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import { useCanvasInteractionStore } from './useCanvasInteractionStore'
-import { assertNever } from '~/shared/utils/utils'
+import { getMeasuredCanvasNodesFromLookup } from './canvas-measured-nodes'
 import type {
   CanvasAwarenessWriter,
   CanvasDocumentReader,
   CanvasDocumentWriter,
   CanvasEditSessionState,
-  CanvasMeasuredNode,
+  CanvasToolEnvironment,
   CanvasSelectionActions,
-  CanvasToolContextById,
   CanvasToolStateControls,
 } from '../tools/canvas-tool-types'
-import type {
-  DrawingState,
-  Point2D,
-  ResizingState,
-  SelectingState,
-} from '../utils/canvas-awareness-types'
+import type { DrawingState, Point2D } from '../utils/canvas-awareness-types'
 
 interface UseCanvasToolRuntimeOptions {
   documentWriter: CanvasDocumentWriter
   documentReader: CanvasDocumentReader
   selectionActions: CanvasSelectionActions
-  getSelectionSnapshot: () => Array<string>
-  awareness: {
-    setLocalCursor: (position: Point2D | null) => void
-    setLocalDragging: (positions: Record<string, Point2D> | null) => void
-    setLocalResizing: (resizing: ResizingState | null) => void
-    setLocalSelection: (nodeIds: Array<string> | null) => void
-    setLocalDrawing: (drawing: DrawingState | null) => void
-    setLocalSelecting: (selecting: SelectingState | null) => void
-  }
+  awareness: CanvasAwarenessWriter
   editSession: CanvasEditSessionState
 }
 
@@ -41,7 +27,6 @@ export function useCanvasToolRuntime({
   documentWriter,
   documentReader,
   selectionActions,
-  getSelectionSnapshot,
   awareness,
   editSession,
 }: UseCanvasToolRuntimeOptions) {
@@ -49,7 +34,9 @@ export function useCanvasToolRuntime({
   const storeApi = useStoreApi()
   const activeTool = useCanvasToolStore((state) => state.activeTool)
   const setActiveTool = useCanvasToolStore((state) => state.setActiveTool)
-  const completeActiveToolAction = useCanvasToolStore((state) => state.completeActiveToolAction)
+  const setStrokeColor = useCanvasToolStore((state) => state.setStrokeColor)
+  const setStrokeOpacity = useCanvasToolStore((state) => state.setStrokeOpacity)
+  const setStrokeSize = useCanvasToolStore((state) => state.setStrokeSize)
 
   const documentWriterRef = useRef(documentWriter)
   documentWriterRef.current = documentWriter
@@ -57,8 +44,6 @@ export function useCanvasToolRuntime({
   documentReaderRef.current = documentReader
   const selectionActionsRef = useRef(selectionActions)
   selectionActionsRef.current = selectionActions
-  const getSelectionSnapshotRef = useRef(getSelectionSnapshot)
-  getSelectionSnapshotRef.current = getSelectionSnapshot
   const awarenessRef = useRef(awareness)
   awarenessRef.current = awareness
   const editSessionRef = useRef(editSession)
@@ -76,9 +61,11 @@ export function useCanvasToolRuntime({
       },
       getActiveTool: () => useCanvasToolStore.getState().activeTool,
       setActiveTool,
-      completeActiveToolAction,
+      setStrokeColor,
+      setStrokeOpacity,
+      setStrokeSize,
     }),
-    [completeActiveToolAction, setActiveTool],
+    [setActiveTool, setStrokeColor, setStrokeOpacity, setStrokeSize],
   )
 
   const viewportTools = useMemo(
@@ -92,6 +79,8 @@ export function useCanvasToolRuntime({
 
   const awarenessWriter = useMemo<CanvasAwarenessWriter>(
     () => ({
+      setLocalPresence: (namespace, value) =>
+        awarenessRef.current.setLocalPresence(namespace, value),
       setLocalCursor: (position) => awarenessRef.current.setLocalCursor(position),
       setLocalDragging: (positions) => awarenessRef.current.setLocalDragging(positions),
       setLocalResizing: (resizing) => awarenessRef.current.setLocalResizing(resizing),
@@ -115,6 +104,8 @@ export function useCanvasToolRuntime({
       ) => useCanvasInteractionStore.getState().setSelectionDragRect(rect),
       setErasingStrokeIds: (ids: Set<string>) =>
         useCanvasInteractionStore.getState().setErasingStrokeIds(ids),
+      setRectDeselectedIds: (ids: Set<string>) =>
+        useCanvasInteractionStore.getState().setRectDeselectedIds(ids),
     }),
     [],
   )
@@ -126,129 +117,51 @@ export function useCanvasToolRuntime({
     )
   }
 
+  const environment = useMemo<CanvasToolEnvironment>(
+    () => ({
+      viewport: viewportTools,
+      document: {
+        createNode: (node) => documentWriterRef.current.createNode(node),
+        updateNode: (nodeId, updater) => documentWriterRef.current.updateNode(nodeId, updater),
+        updateNodeData: (nodeId, data) => documentWriterRef.current.updateNodeData(nodeId, data),
+        resizeNode: (nodeId, width, height, position) =>
+          documentWriterRef.current.resizeNode(nodeId, width, height, position),
+        deleteNodes: (nodeIds) => documentWriterRef.current.deleteNodes(nodeIds),
+        createEdge: (connection) => documentWriterRef.current.createEdge(connection),
+        deleteEdges: (edgeIds) => documentWriterRef.current.deleteEdges(edgeIds),
+        setNodePosition: (nodeId, position) =>
+          documentWriterRef.current.setNodePosition(nodeId, position),
+        getNodes: () => documentReaderRef.current.getNodes(),
+        getEdges: () => documentReaderRef.current.getEdges(),
+        getMeasuredNodes: () => getMeasuredCanvasNodesFromLookup(storeApi.getState().nodeLookup),
+      },
+      selection: {
+        setNodeSelection: (nodeIds) => selectionActionsRef.current.setNodeSelection(nodeIds),
+        clearSelection: () => selectionActionsRef.current.clearSelection(),
+        getSelectedNodeIds: () => selectionActionsRef.current.getSelectedNodeIds(),
+      },
+      editSession: {
+        get editingEmbedId() {
+          return editSessionRef.current.editingEmbedId
+        },
+        setEditingEmbedId: (id) => editSessionRef.current.setEditingEmbedId(id),
+        get pendingEditNodeId() {
+          return editSessionRef.current.pendingEditNodeId
+        },
+        setPendingEditNodeId: (id) => editSessionRef.current.setPendingEditNodeId(id),
+      },
+      toolState: toolStateControls,
+      interaction: interactionOverlays,
+      awareness: awarenessWriter,
+    }),
+    [awarenessWriter, interactionOverlays, storeApi, toolStateControls, viewportTools],
+  )
+
   return useMemo(() => {
-    switch (activeToolModule.id) {
-      case 'select':
-        return {
-          activeTool,
-          activeToolModule,
-          activeToolController: activeToolModule.create({
-            ...viewportTools,
-            getNodes: () => documentReaderRef.current.getNodes(),
-            getEdges: () => documentReaderRef.current.getEdges(),
-            setNodeSelection: (nodeIds) => selectionActionsRef.current.setNodeSelection(nodeIds),
-            clearSelection: () => selectionActionsRef.current.clearSelection(),
-            getSelectionSnapshot: () => getSelectionSnapshotRef.current(),
-          } satisfies CanvasToolContextById['select']),
-        }
-      case 'hand':
-        return {
-          activeTool,
-          activeToolModule,
-          activeToolController: activeToolModule.create({
-            getActiveTool: toolStateControls.getActiveTool,
-            completeActiveToolAction: toolStateControls.completeActiveToolAction,
-          } satisfies CanvasToolContextById['hand']),
-        }
-      case 'draw':
-        return {
-          activeTool,
-          activeToolModule,
-          activeToolController: activeToolModule.create({
-            ...viewportTools,
-            getSettings: toolStateControls.getSettings,
-            createNode: (node) => documentWriterRef.current.createNode(node),
-            setLocalDrawing: interactionOverlays.setLocalDrawing,
-          } satisfies CanvasToolContextById['draw']),
-        }
-      case 'erase':
-        return {
-          activeTool,
-          activeToolModule,
-          activeToolController: activeToolModule.create({
-            ...viewportTools,
-            getNodes: () => documentReaderRef.current.getNodes(),
-            getEdges: () => documentReaderRef.current.getEdges(),
-            deleteNodes: (nodeIds) => documentWriterRef.current.deleteNodes(nodeIds),
-            setErasingStrokeIds: interactionOverlays.setErasingStrokeIds,
-          } satisfies CanvasToolContextById['erase']),
-        }
-      case 'lasso':
-        return {
-          activeTool,
-          activeToolModule,
-          activeToolController: activeToolModule.create({
-            ...viewportTools,
-            setNodeSelection: (nodeIds) => selectionActionsRef.current.setNodeSelection(nodeIds),
-            clearSelection: () => selectionActionsRef.current.clearSelection(),
-            completeActiveToolAction: toolStateControls.completeActiveToolAction,
-            getMeasuredNodes: () =>
-              Array.from(storeApi.getState().nodeLookup.values()).flatMap((internalNode) => {
-                const width = internalNode.measured?.width
-                const height = internalNode.measured?.height
-                if (width === undefined || height === undefined) {
-                  return []
-                }
-
-                const measuredNode = {
-                  id: internalNode.id,
-                  type: internalNode.type,
-                  data: internalNode.data,
-                  position: internalNode.position,
-                  width,
-                  height,
-                } satisfies CanvasMeasuredNode
-
-                return [measuredNode]
-              }),
-            setLassoPath: interactionOverlays.setLassoPath,
-            setLocalSelecting: awarenessWriter.setLocalSelecting,
-          } satisfies CanvasToolContextById['lasso']),
-        }
-      case 'rectangle':
-        return {
-          activeTool,
-          activeToolModule,
-          activeToolController: activeToolModule.create({
-            ...viewportTools,
-            getSettings: toolStateControls.getSettings,
-            completeActiveToolAction: toolStateControls.completeActiveToolAction,
-            createNode: (node) => documentWriterRef.current.createNode(node),
-            setSelectionDragRect: interactionOverlays.setSelectionDragRect,
-          } satisfies CanvasToolContextById['rectangle']),
-        }
-      case 'text':
-        return {
-          activeTool,
-          activeToolModule,
-          activeToolController: activeToolModule.create({
-            ...viewportTools,
-            createNode: (node) => documentWriterRef.current.createNode(node),
-            completeActiveToolAction: toolStateControls.completeActiveToolAction,
-            setPendingEditNodeId: (nodeId) => editSessionRef.current.setPendingEditNodeId(nodeId),
-          } satisfies CanvasToolContextById['text']),
-        }
-      case 'sticky':
-        return {
-          activeTool,
-          activeToolModule,
-          activeToolController: activeToolModule.create({
-            ...viewportTools,
-            createNode: (node) => documentWriterRef.current.createNode(node),
-            completeActiveToolAction: toolStateControls.completeActiveToolAction,
-            setPendingEditNodeId: (nodeId) => editSessionRef.current.setPendingEditNodeId(nodeId),
-          } satisfies CanvasToolContextById['sticky']),
-        }
-      default:
-        return assertNever(activeToolModule)
+    return {
+      activeTool,
+      activeToolModule,
+      activeToolController: activeToolModule.create(environment),
     }
-  }, [
-    activeTool,
-    activeToolModule,
-    awarenessWriter,
-    interactionOverlays,
-    storeApi,
-    toolStateControls,
-    viewportTools,
-  ])
+  }, [activeTool, activeToolModule, environment])
 }
