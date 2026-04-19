@@ -1,8 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasConditionalToolbar } from '../canvas-conditional-toolbar'
-import { CanvasProviders } from '../../hooks/useCanvasContext'
-import { useCanvasSelectionState } from '../../hooks/useCanvasSelectionState'
+import { CanvasProviders } from '../../runtime/providers/use-canvas-context'
+import { useCanvasSelectionState } from '../../runtime/selection/use-canvas-selection-state'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import type { Node } from '@xyflow/react'
 

@@ -1,8 +1,8 @@
 import { Handle, Position } from '@xyflow/react'
 import { ResizableNodeWrapper } from '../shared/resizable-node-wrapper'
-import { useInlineCanvasNodeEdit } from '../shared/useInlineCanvasNodeEdit'
+import { useInlineCanvasNodeEdit } from '../shared/use-inline-canvas-node-edit'
 import type { Node, NodeProps } from '@xyflow/react'
-import { useCanvasNodeActionsContext } from '../../hooks/canvas-runtime-context'
+import { useCanvasNodeActionsContext } from '../../runtime/providers/canvas-runtime-context'
 
 const TEXT_CONTAINER_CLASS = 'px-4 py-2 rounded-lg border bg-background shadow-sm h-full w-full'
 

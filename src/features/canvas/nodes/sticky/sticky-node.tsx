@@ -1,9 +1,9 @@
 import { Handle, Position } from '@xyflow/react'
 import { STICKY_DEFAULT_COLOR } from './sticky-node-constants'
 import { ResizableNodeWrapper } from '../shared/resizable-node-wrapper'
-import { useInlineCanvasNodeEdit } from '../shared/useInlineCanvasNodeEdit'
+import { useInlineCanvasNodeEdit } from '../shared/use-inline-canvas-node-edit'
 import type { Node, NodeProps } from '@xyflow/react'
-import { useCanvasNodeActionsContext } from '../../hooks/canvas-runtime-context'
+import { useCanvasNodeActionsContext } from '../../runtime/providers/canvas-runtime-context'
 
 export type StickyNodeData = { label?: string; color?: string; opacity?: number }
 

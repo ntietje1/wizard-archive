@@ -2,9 +2,9 @@ import { useEffect } from 'react'
 import { Handle, Position } from '@xyflow/react'
 import { AlertTriangle, ExternalLinkIcon } from 'lucide-react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import type { RichEmbedLifecycleController } from './useRichEmbedLifecycle'
-import { useRichEmbedActivation } from './useRichEmbedLifecycle'
-import { useSelectedCanvasNodeIds } from '../../hooks/useCanvasSelectionState'
+import type { RichEmbedLifecycleController } from './use-rich-embed-lifecycle'
+import { useRichEmbedActivation } from './use-rich-embed-lifecycle'
+import { useSelectedCanvasNodeIds } from '../../runtime/selection/use-canvas-selection-state'
 import { isExclusivelySelectedNode } from '../../utils/canvas-selection-utils'
 import { ResizableNodeWrapper } from '../shared/resizable-node-wrapper'
 import type { EmbedNodeData } from './embed-node-data'
@@ -21,7 +21,7 @@ import { cn } from '~/features/shadcn/lib/utils'
 import {
   useCanvasEditSessionContext,
   useCanvasPermissions,
-} from '../../hooks/canvas-runtime-context'
+} from '../../runtime/providers/canvas-runtime-context'
 
 export function EmbedNode({ id, data, selected, dragging }: NodeProps<Node<EmbedNodeData>>) {
   const sidebarItemId = data.sidebarItemId

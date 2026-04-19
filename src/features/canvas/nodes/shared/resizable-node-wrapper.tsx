@@ -3,8 +3,8 @@ import type { ControlPosition, OnResize, OnResizeEnd } from '@xyflow/react'
 import {
   useCanvasNodeActionsContext,
   useCanvasRemoteHighlightsContext,
-} from '../../hooks/canvas-runtime-context'
-import { useShiftKeyPressed } from './useShiftKeyPressed'
+} from '../../runtime/providers/canvas-runtime-context'
+import { useShiftKeyPressed } from './use-shift-key-pressed'
 
 const HANDLE_SIZE = 4
 

@@ -5,7 +5,7 @@ import {
   releasePointerCapture,
   screenEventToFlowPosition,
 } from '../shared/tool-module-utils'
-import { useCanvasSelectionState } from '../../hooks/useCanvasSelectionState'
+import { useCanvasSelectionState } from '../../runtime/selection/use-canvas-selection-state'
 import type { CanvasToolModule } from '../canvas-tool-types'
 import { LassoAwarenessLayer } from './lasso-tool-awareness-layer'
 import { setLassoToolAwareness } from './lasso-tool-awareness'

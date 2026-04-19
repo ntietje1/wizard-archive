@@ -1,7 +1,7 @@
 import { File, FileText, Image, Music, Upload, Video } from 'lucide-react'
 import type { UseFileWithPreviewReturn } from '~/features/file-upload/hooks/useFileWithPreview'
 import { Label } from '~/features/shadcn/components/label'
-import { Button } from '~/features/shadcn/components/button.tsx'
+import { Button } from '~/features/shadcn/components/button'
 import { Card, CardContent } from '~/features/shadcn/components/card'
 import { Badge } from '~/features/shadcn/components/badge'
 import { Progress } from '~/features/shadcn/components/progress'
