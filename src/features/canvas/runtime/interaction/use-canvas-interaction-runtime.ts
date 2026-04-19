@@ -3,17 +3,18 @@ import type { RefObject } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { useCanvasCursorPresence } from './use-canvas-cursor-presence'
 import { useCanvasDropIntegration } from './use-canvas-drop-integration'
-import { useCanvasHistory } from '../document/use-canvas-history'
+import type { useCanvasHistory } from '../document/use-canvas-history'
 import { useCanvasNodeDragHandlers } from './use-canvas-node-drag-handlers'
 import { useCanvasPointerBridge } from './use-canvas-pointer-bridge'
 import { useCanvasSelectionRect } from '../selection/use-canvas-selection-rect'
+import { useCanvasSurfaceClickGuard } from './use-canvas-surface-click-guard'
 import { useCanvasSelectionSync } from '../selection/use-canvas-selection-sync'
 import { useCanvasToolRuntime } from './use-canvas-tool-runtime'
 import { useCanvasWheel } from './use-canvas-wheel'
 import { useCanvasPreview } from '~/features/previews/hooks/use-canvas-preview'
 import type { CanvasFlowShellProps } from '../../components/canvas-flow-shell'
 import type { Id } from 'convex/_generated/dataModel'
-import type { CanvasDocumentWriter, CanvasSelectionActions } from '../../tools/canvas-tool-types'
+import type { CanvasDocumentWriter, CanvasSelectionController } from '../../tools/canvas-tool-types'
 import type { CanvasSessionRuntime } from '../session/use-canvas-session-state'
 import type { UseCanvasDropIntegrationOptions } from './use-canvas-drop-integration'
 import type { CanvasRemoteDragAnimation } from './use-canvas-remote-drag-animation'
@@ -27,7 +28,7 @@ interface UseCanvasInteractionRuntimeOptions {
   doc: Y.Doc
   canvasSurfaceRef: RefObject<HTMLDivElement | null>
   session: CanvasSessionRuntime
-  selectionActions: CanvasSelectionActions
+  selectionController: CanvasSelectionController
   documentWriter: CanvasDocumentWriter
   history: ReturnType<typeof useCanvasHistory>
   localDraggingIdsRef: RefObject<Set<string>>
@@ -41,7 +42,7 @@ export function useCanvasInteractionRuntime({
   doc,
   canvasSurfaceRef,
   session,
-  selectionActions,
+  selectionController,
   documentWriter,
   history,
   localDraggingIdsRef,
@@ -53,10 +54,13 @@ export function useCanvasInteractionRuntime({
     getNodes: () => reactFlowInstance.getNodes(),
     getEdges: () => reactFlowInstance.getEdges(),
   }
+  const interaction = useCanvasSurfaceClickGuard(canvasSurfaceRef)
 
   useCanvasSelectionRect({
+    surfaceRef: canvasSurfaceRef,
     awareness: session.awareness.presence,
-    setNodeSelection: selectionActions.setNodeSelection,
+    selection: selectionController,
+    interaction,
     enabled: canEdit && isSelectMode,
   })
 
@@ -68,7 +72,8 @@ export function useCanvasInteractionRuntime({
   const { activeToolController, toolCursor } = useCanvasToolRuntime({
     documentRead,
     documentWrite: documentWriter,
-    selection: selectionActions,
+    selection: selectionController,
+    interaction,
     awareness: session.awareness,
     editSession: session.editSession,
   })

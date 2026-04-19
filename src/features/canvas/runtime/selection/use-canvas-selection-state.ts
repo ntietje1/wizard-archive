@@ -1,23 +1,23 @@
 import { create } from 'zustand'
 import { useShallow } from 'zustand/shallow'
-
-type CanvasSelectionPhase = 'idle' | 'marquee' | 'lasso'
+import type { CanvasSelectionGestureKind } from '../../tools/canvas-tool-types'
 
 interface CanvasSelectionState {
   selectedNodeIds: Array<string>
-  selectionPhase: CanvasSelectionPhase
+  gestureKind: CanvasSelectionGestureKind | null
 }
 
-interface CanvasSelectionActions {
+interface CanvasSelectionStateActions {
   setSelectedNodeIds: (nodeIds: Array<string>) => void
-  setSelectionPhase: (phase: CanvasSelectionPhase) => void
+  beginGesture: (kind: CanvasSelectionGestureKind) => void
+  endGesture: () => void
   reset: () => void
 }
 
 function createInitialCanvasSelectionState(): CanvasSelectionState {
   return {
     selectedNodeIds: [],
-    selectionPhase: 'idle',
+    gestureKind: null,
   }
 }
 
@@ -25,11 +25,12 @@ export function clearCanvasSelectionState() {
   useCanvasSelectionState.getState().reset()
 }
 
-export const useCanvasSelectionState = create<CanvasSelectionState & CanvasSelectionActions>(
+export const useCanvasSelectionState = create<CanvasSelectionState & CanvasSelectionStateActions>(
   (set) => ({
     ...createInitialCanvasSelectionState(),
     setSelectedNodeIds: (selectedNodeIds) => set({ selectedNodeIds }),
-    setSelectionPhase: (selectionPhase) => set({ selectionPhase }),
+    beginGesture: (gestureKind) => set({ gestureKind }),
+    endGesture: () => set({ gestureKind: null }),
     reset: () => set(createInitialCanvasSelectionState()),
   }),
 )
@@ -38,6 +39,6 @@ export function useSelectedCanvasNodeIds() {
   return useCanvasSelectionState(useShallow((state) => state.selectedNodeIds))
 }
 
-export function useCanvasSelectionPhase() {
-  return useCanvasSelectionState((state) => state.selectionPhase)
+export function useIsCanvasSelectionGestureActive() {
+  return useCanvasSelectionState((state) => state.gestureKind !== null)
 }

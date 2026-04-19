@@ -13,8 +13,9 @@ import type {
   CanvasDocumentReader,
   CanvasDocumentWriter,
   CanvasEditSessionState,
+  CanvasInteractionTools,
+  CanvasSelectionController,
   CanvasToolEnvironment,
-  CanvasSelectionActions,
   CanvasToolStateControls,
   CanvasViewportTools,
 } from '../../tools/canvas-tool-types'
@@ -22,7 +23,8 @@ import type {
 interface UseCanvasToolRuntimeOptions {
   documentRead: CanvasDocumentReader
   documentWrite: CanvasDocumentWriter
-  selection: CanvasSelectionActions
+  selection: CanvasSelectionController
+  interaction: CanvasInteractionTools
   awareness: CanvasAwarenessWriter
   editSession: CanvasEditSessionState
 }
@@ -31,6 +33,7 @@ export function useCanvasToolRuntime({
   documentRead,
   documentWrite,
   selection,
+  interaction,
   awareness,
   editSession,
 }: UseCanvasToolRuntimeOptions) {
@@ -45,6 +48,7 @@ export function useCanvasToolRuntime({
   const documentWriteRef = useCurrentValue(documentWrite)
   const documentReadRef = useCurrentValue(documentRead)
   const selectionRef = useCurrentValue(selection)
+  const interactionRef = useCurrentValue(interaction)
   const awarenessRef = useCurrentValue(awareness)
   const editSessionRef = useCurrentValue(editSession)
 
@@ -71,6 +75,7 @@ export function useCanvasToolRuntime({
       viewport: viewportTools,
       document: createCanvasDocumentAccess(documentWriteRef, documentReadRef, storeApi),
       selection: createCanvasSelectionAccess(selectionRef),
+      interaction: createCanvasInteractionAccess(interactionRef),
       editSession: createCanvasEditSessionAccess(editSessionRef),
       toolState: toolStateControls,
       awareness: awarenessWriter,
@@ -80,6 +85,7 @@ export function useCanvasToolRuntime({
       documentReadRef,
       documentWriteRef,
       editSessionRef,
+      interactionRef,
       selectionRef,
       storeApi,
       toolStateControls,
@@ -157,12 +163,24 @@ function createCanvasDocumentAccess(
 }
 
 function createCanvasSelectionAccess(
-  selectionRef: RefObject<CanvasSelectionActions>,
-): CanvasSelectionActions {
+  selectionRef: RefObject<CanvasSelectionController>,
+): CanvasSelectionController {
   return {
-    setNodeSelection: (nodeIds) => selectionRef.current.setNodeSelection(nodeIds),
-    clearSelection: () => selectionRef.current.clearSelection(),
+    replace: (nodeIds) => selectionRef.current.replace(nodeIds),
+    clear: () => selectionRef.current.clear(),
     getSelectedNodeIds: () => selectionRef.current.getSelectedNodeIds(),
+    toggleFromTarget: (targetId, toggle) => selectionRef.current.toggleFromTarget(targetId, toggle),
+    beginGesture: (kind) => selectionRef.current.beginGesture(kind),
+    commitGestureSelection: (nodeIds) => selectionRef.current.commitGestureSelection(nodeIds),
+    endGesture: () => selectionRef.current.endGesture(),
+  }
+}
+
+function createCanvasInteractionAccess(
+  interactionRef: RefObject<CanvasInteractionTools>,
+): CanvasInteractionTools {
+  return {
+    suppressNextSurfaceClick: () => interactionRef.current.suppressNextSurfaceClick(),
   }
 }
 

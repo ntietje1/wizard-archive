@@ -56,9 +56,16 @@ describe('useCanvasToolRuntime', () => {
       getEdges: vi.fn(() => []),
     }
     const selectionActions = {
-      setNodeSelection: vi.fn(),
-      clearSelection: vi.fn(),
+      replace: vi.fn(),
+      clear: vi.fn(),
       getSelectedNodeIds: vi.fn(() => []),
+      toggleFromTarget: vi.fn(),
+      beginGesture: vi.fn(),
+      commitGestureSelection: vi.fn(),
+      endGesture: vi.fn(),
+    }
+    const interaction = {
+      suppressNextSurfaceClick: vi.fn(),
     }
     const editSession: CanvasEditSessionState = {
       editingEmbedId: null,
@@ -73,6 +80,7 @@ describe('useCanvasToolRuntime', () => {
           documentRead: documentReader,
           documentWrite: documentWriter,
           selection: selectionActions,
+          interaction,
           awareness,
           editSession,
         }),

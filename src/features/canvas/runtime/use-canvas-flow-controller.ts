@@ -40,7 +40,7 @@ export function useCanvasFlowController({
   const session = useCanvasSessionState({ provider, user })
   const activeToolId = useCanvasToolStore((state) => state.activeTool)
   const canvasSurfaceRef = useRef<HTMLDivElement>(null)
-  const selectionActions = useCanvasSelectionActions()
+  const selectionController = useCanvasSelectionActions()
   const localDraggingIdsRef = useRef(new Set<string>())
   const remoteDragAnimation = useCanvasRemoteDragAnimation({
     localDraggingIdsRef,
@@ -54,6 +54,7 @@ export function useCanvasFlowController({
   const { documentWriter, history } = useCanvasDocumentRuntime({
     nodesMap,
     edgesMap,
+    selection: selectionController,
     localDraggingIdsRef,
     remoteResizeDimensions: session.remoteResizeDimensions,
     remoteDragAnimation,
@@ -66,7 +67,7 @@ export function useCanvasFlowController({
     doc,
     canvasSurfaceRef,
     session,
-    selectionActions,
+    selectionController,
     documentWriter,
     history,
     localDraggingIdsRef,

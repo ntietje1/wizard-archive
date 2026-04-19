@@ -111,9 +111,16 @@ function createDrawEnvironment({
       getMeasuredNodes: () => [],
     },
     selection: {
-      setNodeSelection: () => undefined,
-      clearSelection: () => undefined,
+      replace: () => undefined,
+      clear: () => undefined,
       getSelectedNodeIds: () => [],
+      toggleFromTarget: () => undefined,
+      beginGesture: () => undefined,
+      commitGestureSelection: () => undefined,
+      endGesture: () => undefined,
+    },
+    interaction: {
+      suppressNextSurfaceClick: () => undefined,
     },
     editSession: {
       editingEmbedId: null,

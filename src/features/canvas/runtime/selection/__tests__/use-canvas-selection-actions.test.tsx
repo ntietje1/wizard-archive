@@ -1,7 +1,10 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useCanvasSelectionActions } from '../use-canvas-selection-actions'
-import { useCanvasSelectionState } from '../use-canvas-selection-state'
+import {
+  useCanvasSelectionState,
+  useIsCanvasSelectionGestureActive,
+} from '../use-canvas-selection-state'
 import type { Edge, Node } from '@xyflow/react'
 
 const reactFlowMock = vi.hoisted(() => {
@@ -55,7 +58,7 @@ describe('useCanvasSelectionActions', () => {
     const { result } = renderHook(() => useCanvasSelectionActions())
 
     act(() => {
-      result.current.setNodeSelection(['a', 'b'])
+      result.current.replace(['a', 'b'])
     })
 
     expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(['a', 'b'])
@@ -72,14 +75,14 @@ describe('useCanvasSelectionActions', () => {
     const { result } = renderHook(() => useCanvasSelectionActions())
 
     act(() => {
-      result.current.setNodeSelection(['a'])
+      result.current.replace(['a'])
     })
 
     expect(result.current.getSelectedNodeIds()).toEqual(['a'])
     expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(['a'])
 
     act(() => {
-      result.current.clearSelection()
+      result.current.clear()
     })
 
     expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual([])
@@ -96,7 +99,7 @@ describe('useCanvasSelectionActions', () => {
     const { result } = renderHook(() => useCanvasSelectionActions())
 
     act(() => {
-      result.current.setNodeSelection(['z'])
+      result.current.replace(['z'])
     })
 
     expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(['z'])
@@ -109,11 +112,11 @@ describe('useCanvasSelectionActions', () => {
     ])
   })
 
-  it('keeps the projected selection empty when clearSelection runs with nothing selected', () => {
+  it('keeps the projected selection empty when clear runs with nothing selected', () => {
     const { result } = renderHook(() => useCanvasSelectionActions())
 
     act(() => {
-      result.current.clearSelection()
+      result.current.clear()
     })
 
     expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual([])
@@ -130,7 +133,7 @@ describe('useCanvasSelectionActions', () => {
     const { result } = renderHook(() => useCanvasSelectionActions())
 
     act(() => {
-      result.current.setNodeSelection(['a'])
+      result.current.replace(['a'])
     })
 
     expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(['a'])
@@ -141,5 +144,34 @@ describe('useCanvasSelectionActions', () => {
     expect(reactFlowMock.getEdges()).toEqual([
       expect.objectContaining({ id: 'e-a-b', selected: false }),
     ])
+  })
+
+  it('defers toggle-based selection updates through the controller and keeps gesture activity derived', async () => {
+    const { result } = renderHook(() => ({
+      selection: useCanvasSelectionActions(),
+      isGestureActive: useIsCanvasSelectionGestureActive(),
+    }))
+
+    act(() => {
+      result.current.selection.beginGesture('marquee')
+    })
+    expect(result.current.isGestureActive).toBe(true)
+
+    act(() => {
+      result.current.selection.endGesture()
+    })
+    expect(result.current.isGestureActive).toBe(false)
+
+    act(() => {
+      result.current.selection.toggleFromTarget('a', false)
+    })
+
+    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual([])
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(['a'])
   })
 })

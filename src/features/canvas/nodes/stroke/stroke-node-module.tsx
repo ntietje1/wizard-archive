@@ -61,7 +61,7 @@ export const strokeNodeModule = createCanvasNodeModule<StrokeNodeData, 'stroke'>
   parseData: (data) => (isStrokeNodeData(data) ? data : null),
   selection: {
     point: (node, point, context) => strokeNodeContainsPoint(node, point, context.zoom),
-    rectangle: (node, rect) => strokeNodeIntersectsRect(node, rect),
+    rectangle: (node, rect, context) => strokeNodeIntersectsRect(node, rect, context.zoom),
     lasso: (node, polygon) => strokeNodeIntersectsPolygon(node, polygon),
   },
   properties: ({ node, updateNodeData }) => ({

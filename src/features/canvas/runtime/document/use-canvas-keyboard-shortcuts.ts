@@ -25,7 +25,7 @@ export function useCanvasKeyboardShortcuts({
 
       if (e.key === 'Escape') {
         e.preventDefault()
-        selectionActionsRef.current.clearSelection()
+        selectionActionsRef.current.clear()
         return
       }
 

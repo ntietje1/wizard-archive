@@ -4,6 +4,7 @@ import {
   useCanvasNodeActionsContext,
   useCanvasRemoteHighlightsContext,
 } from '../../runtime/providers/canvas-runtime-context'
+import { useCanvasNodeVisualSelection } from './use-canvas-node-visual-selection'
 import { useShiftKeyPressed } from './use-shift-key-pressed'
 
 const HANDLE_SIZE = 4
@@ -43,7 +44,6 @@ interface ResizableNodeWrapperProps {
   children: React.ReactNode
   minWidth?: number
   minHeight?: number
-  isRectDeselected?: boolean
 }
 
 export function ResizableNodeWrapper({
@@ -53,12 +53,12 @@ export function ResizableNodeWrapper({
   children,
   minWidth = 50,
   minHeight = 30,
-  isRectDeselected = false,
 }: ResizableNodeWrapperProps) {
   const remoteHighlights = useCanvasRemoteHighlightsContext()
   const { onResize, onResizeEnd } = useCanvasNodeActionsContext()
+  const { visuallySelected } = useCanvasNodeVisualSelection(id, selected)
   const highlight = remoteHighlights.get(id)
-  const showHandles = selected && !dragging && !isRectDeselected
+  const showHandles = selected && !dragging
   const keepAspectRatio = useShiftKeyPressed()
 
   const handleResize: OnResize = (_event, params) => {
@@ -71,7 +71,7 @@ export function ResizableNodeWrapper({
 
   return (
     <div className="relative h-full w-full">
-      {((selected && !isRectDeselected) || highlight) && (
+      {(visuallySelected || highlight) && (
         <div
           className="absolute -inset-0.5 rounded-sm pointer-events-none"
           style={{

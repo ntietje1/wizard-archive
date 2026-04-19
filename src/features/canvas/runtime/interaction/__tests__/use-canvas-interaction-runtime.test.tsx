@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { useCanvasInteractionRuntime } from '../use-canvas-interaction-runtime'
 import type { CanvasRemoteDragAnimation } from '../use-canvas-remote-drag-animation'
 import type { CanvasSessionRuntime } from '../../session/use-canvas-session-state'
-import type { CanvasSelectionActions } from '../../../tools/canvas-tool-types'
+import type { CanvasSelectionController } from '../../../tools/canvas-tool-types'
 import type * as Y from 'yjs'
 
 const reactFlowMock = vi.hoisted(() => ({
@@ -22,6 +22,8 @@ const dropIntegrationSpy = vi.hoisted(() => vi.fn())
 const dragHandlersSpy = vi.hoisted(() => vi.fn())
 const cursorPresenceSpy = vi.hoisted(() => vi.fn())
 const toolRuntimeSpy = vi.hoisted(() => vi.fn())
+const surfaceClickGuardSpy = vi.hoisted(() => vi.fn())
+const suppressNextSurfaceClick = vi.hoisted(() => vi.fn())
 
 vi.mock('@xyflow/react', () => ({
   useReactFlow: () => reactFlowMock,
@@ -95,6 +97,15 @@ vi.mock('../use-canvas-tool-runtime', () => ({
   },
 }))
 
+vi.mock('../use-canvas-surface-click-guard', () => ({
+  useCanvasSurfaceClickGuard: (...args: Array<unknown>) => {
+    surfaceClickGuardSpy(...args)
+    return {
+      suppressNextSurfaceClick,
+    }
+  },
+}))
+
 describe('useCanvasInteractionRuntime', () => {
   it('composes shell wiring and node actions around the thinner runtime dependencies', () => {
     const awareness = {
@@ -121,10 +132,14 @@ describe('useCanvasInteractionRuntime', () => {
       remoteResizeDimensions: {},
       remoteHighlights: new Map(),
     }
-    const selectionActions: CanvasSelectionActions = {
-      setNodeSelection: vi.fn(),
-      clearSelection: vi.fn(),
+    const selectionController: CanvasSelectionController = {
+      replace: vi.fn(),
+      clear: vi.fn(),
       getSelectedNodeIds: vi.fn(() => []),
+      toggleFromTarget: vi.fn(),
+      beginGesture: vi.fn(),
+      commitGestureSelection: vi.fn(),
+      endGesture: vi.fn(),
     }
     const documentWriter = {
       createNode: vi.fn(),
@@ -159,7 +174,7 @@ describe('useCanvasInteractionRuntime', () => {
         doc: {} as Y.Doc,
         canvasSurfaceRef,
         session,
-        selectionActions,
+        selectionController,
         documentWriter,
         history,
         localDraggingIdsRef,
@@ -168,17 +183,32 @@ describe('useCanvasInteractionRuntime', () => {
     )
 
     expect(selectionRectSpy).toHaveBeenCalled()
+    expect(selectionRectSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        interaction: {
+          suppressNextSurfaceClick,
+        },
+      }),
+    )
     expect(selectionSyncSpy).toHaveBeenCalledWith({
       setLocalSelection: awareness.core.setLocalSelection,
       onHistorySelectionChange: history.onSelectionChange,
     })
     expect(toolRuntimeSpy).toHaveBeenCalled()
+    expect(toolRuntimeSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        interaction: {
+          suppressNextSurfaceClick,
+        },
+      }),
+    )
     expect(previewSpy).toHaveBeenCalled()
     expect(pointerBridgeSpy).toHaveBeenCalled()
     expect(wheelSpy).toHaveBeenCalledWith(canvasSurfaceRef)
     expect(dropIntegrationSpy).toHaveBeenCalled()
     expect(dragHandlersSpy).toHaveBeenCalled()
     expect(cursorPresenceSpy).toHaveBeenCalled()
+    expect(surfaceClickGuardSpy).toHaveBeenCalledWith(canvasSurfaceRef)
     expect(result.current.shellProps.toolCursor).toBe('crosshair')
     expect(result.current.shellProps.activeTool).toBe('select')
 

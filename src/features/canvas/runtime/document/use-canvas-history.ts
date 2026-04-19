@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useReactFlow } from '@xyflow/react'
 import { UndoManager } from 'yjs'
-import { setCanvasSelection } from '../selection/canvas-selection-projection'
-import type { CanvasHistoryController } from '../../tools/canvas-tool-types'
+import type { CanvasHistoryController, CanvasSelectionController } from '../../tools/canvas-tool-types'
 import type { Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 import { logger } from '~/shared/utils/logger'
@@ -17,10 +15,10 @@ type ActionEntry =
 interface UseCanvasHistoryOptions {
   nodesMap: Y.Map<Node>
   edgesMap: Y.Map<Edge>
+  selection: Pick<CanvasSelectionController, 'replace'>
 }
 
-export function useCanvasHistory({ nodesMap, edgesMap }: UseCanvasHistoryOptions) {
-  const reactFlow = useReactFlow()
+export function useCanvasHistory({ nodesMap, edgesMap, selection }: UseCanvasHistoryOptions) {
   const undoStackRef = useRef<Array<ActionEntry>>([])
   const redoStackRef = useRef<Array<ActionEntry>>([])
   const isUndoRedoingRef = useRef(false)
@@ -52,10 +50,10 @@ export function useCanvasHistory({ nodesMap, edgesMap }: UseCanvasHistoryOptions
 
   const restoreSelection = useCallback(
     (nodeIds: Array<string>) => {
-      setCanvasSelection(reactFlow, nodeIds)
+      selection.replace(nodeIds)
       selectionRef.current = nodeIds
     },
-    [reactFlow],
+    [selection],
   )
 
   const undo = useCallback(() => {

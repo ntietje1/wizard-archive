@@ -1,11 +1,14 @@
 import { Lasso } from 'lucide-react'
 import { getCanvasNodesMatchingLasso } from '../../nodes/canvas-node-registry'
 import {
+  clearCanvasPendingSelectionPreview,
+  setCanvasPendingSelectionPreview,
+} from '../../runtime/selection/use-canvas-pending-selection-preview'
+import {
   setPointerCapture,
   releasePointerCapture,
   screenEventToFlowPosition,
 } from '../shared/tool-module-utils'
-import { useCanvasSelectionState } from '../../runtime/selection/use-canvas-selection-state'
 import type { CanvasToolModule } from '../canvas-tool-types'
 import { LassoAwarenessLayer } from './lasso-tool-awareness-layer'
 import { setLassoToolAwareness } from './lasso-tool-awareness'
@@ -41,8 +44,9 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
       active = false
       points = []
       setLassoToolLocalPoints([])
+      clearCanvasPendingSelectionPreview()
       setLassoToolAwareness(environment.awareness.presence, null)
-      useCanvasSelectionState.getState().setSelectionPhase('idle')
+      environment.selection.endGesture()
       releasePointerCapture(captureTarget, pointerId)
       captureTarget = null
       pointerId = null
@@ -57,9 +61,9 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
         active = true
         const pos = screenEventToFlowPosition(environment.viewport, event)
         points = [pos]
-        useCanvasSelectionState.getState().setSelectionPhase('lasso')
+        environment.selection.beginGesture('lasso')
         publishLassoPoints()
-        environment.selection.clearSelection()
+        environment.selection.clear()
       },
       onPointerMove: (event) => {
         if (!active || (event.buttons & 1) !== 1) return
@@ -67,6 +71,19 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
         const pos = screenEventToFlowPosition(environment.viewport, event)
         points.push(pos)
         publishLassoPoints()
+
+        if (points.length < 3) {
+          clearCanvasPendingSelectionPreview()
+          return
+        }
+
+        setCanvasPendingSelectionPreview(
+          getCanvasNodesMatchingLasso(
+            environment.document.getMeasuredNodes(),
+            points,
+            { zoom: environment.viewport.getZoom() },
+          ),
+        )
       },
       onPointerUp: () => {
         if (!active) return
@@ -83,7 +100,8 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
           { zoom: environment.viewport.getZoom() },
         )
 
-        environment.selection.setNodeSelection(selectedNodeIds)
+        environment.interaction.suppressNextSurfaceClick()
+        environment.selection.commitGestureSelection(selectedNodeIds)
         reset()
         environment.toolState.setActiveTool('select')
       },

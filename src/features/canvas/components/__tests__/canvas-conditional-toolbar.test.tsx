@@ -212,14 +212,14 @@ describe('CanvasConditionalToolbar', () => {
     renderToolbar()
 
     act(() => {
-      useCanvasSelectionState.getState().setSelectionPhase('marquee')
+      useCanvasSelectionState.getState().beginGesture('marquee')
     })
     emitSelection([createNode('stroke', { color: 'var(--foreground)', opacity: 75 })])
 
     expect(screen.queryByRole('toolbar', { name: 'Canvas conditional toolbar' })).toBeNull()
 
     act(() => {
-      useCanvasSelectionState.getState().setSelectionPhase('idle')
+      useCanvasSelectionState.getState().endGesture()
     })
 
     expect(screen.getByRole('toolbar', { name: 'Canvas conditional toolbar' })).toBeVisible()

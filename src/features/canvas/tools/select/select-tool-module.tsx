@@ -1,7 +1,7 @@
 import { MousePointer2 } from 'lucide-react'
 import { hitTestCanvasNode } from '../shared/tool-module-utils'
 import type { CanvasToolModule } from '../canvas-tool-types'
-import { getNextSelectedNodeIds, isSelectionToggleModifier } from '../../utils/canvas-selection-utils'
+import { isSelectionToggleModifier } from '../../utils/canvas-selection-utils'
 import { SelectAwarenessLayer } from './select-tool-awareness-layer'
 import { clearSelectToolLocalOverlay } from './select-tool-local-overlay'
 import { SelectToolLocalOverlayLayer } from './select-tool-local-overlay-layer'
@@ -18,38 +18,22 @@ export const selectToolModule: CanvasToolModule<'select'> = {
     Layer: SelectToolLocalOverlayLayer,
     clear: clearSelectToolLocalOverlay,
   },
-  create: (environment) => {
-    const applySelectionFromClick = (event: React.MouseEvent, targetId: string | null) => {
-      const nextIds = getNextSelectedNodeIds({
-        selectedNodeIds: environment.selection.getSelectedNodeIds(),
-        targetId,
-        toggle: isSelectionToggleModifier(event),
-      })
-
-      // Defer until after React Flow finishes its internal click handling so our
-      // selection state becomes the single source of truth for plain and modifier clicks.
-      queueMicrotask(() => {
-        environment.selection.setNodeSelection(nextIds)
-      })
-    }
-
-    return {
-      onNodeClick: (event, node) => {
-        applySelectionFromClick(event, node.id)
-      },
-      onPaneClick: (event) => {
-        applySelectionFromClick(
+  create: (environment) => ({
+    onNodeClick: (event, node) => {
+      environment.selection.toggleFromTarget(node.id, isSelectionToggleModifier(event))
+    },
+    onPaneClick: (event) => {
+      environment.selection.toggleFromTarget(
+        hitTestCanvasNode(
+          {
+            getMeasuredNodes: environment.document.getMeasuredNodes,
+            getZoom: environment.viewport.getZoom,
+            screenToFlowPosition: environment.viewport.screenToFlowPosition,
+          },
           event,
-          hitTestCanvasNode(
-            {
-              getMeasuredNodes: environment.document.getMeasuredNodes,
-              getZoom: environment.viewport.getZoom,
-              screenToFlowPosition: environment.viewport.screenToFlowPosition,
-            },
-            event,
-          ),
-        )
-      },
-    }
-  },
+        ),
+        isSelectionToggleModifier(event),
+      )
+    },
+  }),
 }

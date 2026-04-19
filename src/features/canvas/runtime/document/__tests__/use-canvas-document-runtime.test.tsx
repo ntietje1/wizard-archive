@@ -53,11 +53,13 @@ describe('useCanvasDocumentRuntime', () => {
     }
     const nodesMap = {} as Y.Map<Node>
     const edgesMap = {} as Y.Map<Edge>
+    const selection = { replace: vi.fn() }
 
     const { result } = renderHook(() =>
       useCanvasDocumentRuntime({
         nodesMap,
         edgesMap,
+        selection,
         localDraggingIdsRef,
         remoteResizeDimensions: {},
         remoteDragAnimation,

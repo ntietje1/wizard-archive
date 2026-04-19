@@ -37,11 +37,15 @@ function createNode(id: string): Node {
 describe('useCanvasHistory', () => {
   let docs: Array<Y.Doc>
   let hooks: Array<RenderHookResult<ReturnType<typeof useCanvasHistory>, unknown>>
+  let selectionController: { replace: ReturnType<typeof vi.fn> }
 
   beforeEach(() => {
     docs = []
     hooks = []
     reactFlowMock.reset()
+    selectionController = {
+      replace: vi.fn(),
+    }
   })
 
   afterEach(() => {
@@ -59,7 +63,9 @@ describe('useCanvasHistory', () => {
     const nodesMap = doc.getMap<Node>('nodes')
     const edgesMap = doc.getMap<Edge>('edges')
 
-    const hook = renderHook(() => useCanvasHistory({ nodesMap, edgesMap }))
+    const hook = renderHook(() =>
+      useCanvasHistory({ nodesMap, edgesMap, selection: selectionController }),
+    )
     hooks.push(hook)
 
     act(() => {
@@ -101,7 +107,9 @@ describe('useCanvasHistory', () => {
     const nodesMap = doc.getMap<Node>('nodes')
     const edgesMap = doc.getMap<Edge>('edges')
 
-    const hook = renderHook(() => useCanvasHistory({ nodesMap, edgesMap }))
+    const hook = renderHook(() =>
+      useCanvasHistory({ nodesMap, edgesMap, selection: selectionController }),
+    )
     hooks.push(hook)
 
     act(() => {
@@ -149,7 +157,9 @@ describe('useCanvasHistory', () => {
     const nodesMap = doc.getMap<Node>('nodes')
     const edgesMap = doc.getMap<Edge>('edges')
 
-    const hook = renderHook(() => useCanvasHistory({ nodesMap, edgesMap }))
+    const hook = renderHook(() =>
+      useCanvasHistory({ nodesMap, edgesMap, selection: selectionController }),
+    )
     hooks.push(hook)
 
     expect(hook.result.current.canUndo).toBe(false)
@@ -186,5 +196,34 @@ describe('useCanvasHistory', () => {
     })
     expect(hook.result.current.canUndo).toBe(true)
     expect(hook.result.current.canRedo).toBe(false)
+  })
+
+  it('restores selection through the authoritative selection controller during undo and redo', () => {
+    const doc = new Y.Doc()
+    docs.push(doc)
+    const nodesMap = doc.getMap<Node>('nodes')
+    const edgesMap = doc.getMap<Edge>('edges')
+
+    const hook = renderHook(() =>
+      useCanvasHistory({ nodesMap, edgesMap, selection: selectionController }),
+    )
+    hooks.push(hook)
+
+    act(() => {
+      hook.result.current.onSelectionChange(['a'])
+      hook.result.current.onSelectionChange(['a', 'b'])
+    })
+
+    act(() => {
+      hook.result.current.undo()
+    })
+
+    expect(selectionController.replace).toHaveBeenLastCalledWith(['a'])
+
+    act(() => {
+      hook.result.current.redo()
+    })
+
+    expect(selectionController.replace).toHaveBeenLastCalledWith(['a', 'b'])
   })
 })

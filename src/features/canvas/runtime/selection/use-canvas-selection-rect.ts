@@ -1,30 +1,30 @@
 import { useEffect, useRef } from 'react'
+import type { RefObject } from 'react'
 import { useReactFlow, useStoreApi } from '@xyflow/react'
 import { getMeasuredCanvasNodesFromLookup } from '../document/canvas-measured-nodes'
-import { useCanvasSelectionState } from './use-canvas-selection-state'
 import { getCanvasNodesMatchingRectangle } from '../../nodes/canvas-node-registry'
-import { setSelectToolAwareness } from '../../tools/select/select-tool-awareness'
 import {
-  setSelectToolRectDeselectedIds,
-  setSelectToolSelectionDragRect,
-} from '../../tools/select/select-tool-local-overlay'
-import type { CanvasAwarenessPresenceWriter } from '../../tools/canvas-tool-types'
+  clearCanvasPendingSelectionPreview,
+  setCanvasPendingSelectionPreview,
+} from './use-canvas-pending-selection-preview'
+import { setSelectToolAwareness } from '../../tools/select/select-tool-awareness'
+import { setSelectToolSelectionDragRect } from '../../tools/select/select-tool-local-overlay'
+import type {
+  CanvasAwarenessPresenceWriter,
+  CanvasInteractionTools,
+  CanvasSelectionController,
+} from '../../tools/canvas-tool-types'
 import type { ReactFlowInstance } from '@xyflow/react'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
 
-function screenToFlowRect(
-  screenRect: { x: number; y: number; width: number; height: number },
-  domBounds: DOMRect,
+const MIN_SELECTION_DRAG_DISTANCE_PX = 1
+
+function clientRectToFlowRect(
+  clientRect: { left: number; top: number; right: number; bottom: number },
   flow: ReactFlowInstance,
 ): Bounds {
-  const topLeft = flow.screenToFlowPosition({
-    x: screenRect.x + domBounds.left,
-    y: screenRect.y + domBounds.top,
-  })
-  const bottomRight = flow.screenToFlowPosition({
-    x: screenRect.x + screenRect.width + domBounds.left,
-    y: screenRect.y + screenRect.height + domBounds.top,
-  })
+  const topLeft = flow.screenToFlowPosition({ x: clientRect.left, y: clientRect.top })
+  const bottomRight = flow.screenToFlowPosition({ x: clientRect.right, y: clientRect.bottom })
   return {
     x: topLeft.x,
     y: topLeft.y,
@@ -34,123 +34,136 @@ function screenToFlowRect(
 }
 
 interface UseCanvasSelectionRectOptions {
+  surfaceRef: RefObject<HTMLDivElement | null>
   awareness: CanvasAwarenessPresenceWriter
-  setNodeSelection: (nodeIds: Array<string>) => void
+  interaction: Pick<CanvasInteractionTools, 'suppressNextSurfaceClick'>
+  selection: Pick<CanvasSelectionController, 'beginGesture' | 'commitGestureSelection' | 'endGesture'>
   enabled: boolean
 }
 
 export function useCanvasSelectionRect({
+  surfaceRef,
   awareness,
-  setNodeSelection,
+  interaction,
+  selection,
   enabled,
 }: UseCanvasSelectionRectOptions) {
   const reactFlow = useReactFlow()
   const storeApi = useStoreApi()
-  const rafRef = useRef(0)
   const lastFlowRectRef = useRef<Bounds | null>(null)
   const awarenessRef = useRef(awareness)
   awarenessRef.current = awareness
+  const selectionRef = useRef(selection)
+  selectionRef.current = selection
 
   useEffect(() => {
     if (!enabled) return
+    const pane = surfaceRef.current?.querySelector<HTMLDivElement>('.react-flow__pane')
+    if (!pane) return
 
-    let prevRect: {
-      x: number
-      y: number
-      width: number
-      height: number
-    } | null = null
+    let selectionStartClientPoint: { x: number; y: number } | null = null
+    let selectionActive = false
 
-    const unsubscribe = storeApi.subscribe(() => {
-      const state = storeApi.getState()
-      const { userSelectionRect } = state
-
-      if (userSelectionRect === prevRect) return
-      if (
-        userSelectionRect &&
-        prevRect &&
-        userSelectionRect.x === prevRect.x &&
-        userSelectionRect.y === prevRect.y &&
-        userSelectionRect.width === prevRect.width &&
-        userSelectionRect.height === prevRect.height
-      ) {
-        return
-      }
-      const wasActive = prevRect !== null
-      const lastScreenRect = prevRect
-      prevRect = userSelectionRect
-
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current)
-        rafRef.current = 0
-      }
-
-      if (!userSelectionRect) {
-        if (wasActive && lastScreenRect) {
-          const current = storeApi.getState()
-          const selRect = current.domNode
-            ? screenToFlowRect(lastScreenRect, current.domNode.getBoundingClientRect(), reactFlow)
-            : lastFlowRectRef.current
-          if (selRect) {
-            const selectedNodeIds = getCanvasNodesMatchingRectangle(
-              getMeasuredCanvasNodesFromLookup(current.nodeLookup),
-              selRect,
-              { zoom: reactFlow.getZoom() },
-            )
-            setNodeSelection(selectedNodeIds)
-          }
-        }
-        lastFlowRectRef.current = null
-        setSelectToolSelectionDragRect(null)
-        setSelectToolRectDeselectedIds(new Set())
-        useCanvasSelectionState.getState().setSelectionPhase('idle')
-        setSelectToolAwareness(awarenessRef.current, null)
-        return
-      }
-
-      rafRef.current = requestAnimationFrame(() => {
-        rafRef.current = 0
-        const current = storeApi.getState()
-        if (!current.userSelectionRect || !current.domNode) return
-
-        const flowRect = screenToFlowRect(
-          current.userSelectionRect,
-          current.domNode.getBoundingClientRect(),
-          reactFlow,
-        )
-
-        lastFlowRectRef.current = flowRect
-        setSelectToolSelectionDragRect(flowRect)
-        useCanvasSelectionState.getState().setSelectionPhase('marquee')
-        setSelectToolAwareness(awarenessRef.current, flowRect)
-
-        const deselected = new Set<string>()
-        const selectedNodeIds = new Set(useCanvasSelectionState.getState().selectedNodeIds)
-        const selectedNodes = getMeasuredCanvasNodesFromLookup(current.nodeLookup).filter((node) =>
-          selectedNodeIds.has(node.id),
-        )
-        const matchingIds = new Set(
-          getCanvasNodesMatchingRectangle(selectedNodes, flowRect, { zoom: reactFlow.getZoom() }),
-        )
-        for (const n of selectedNodes) {
-          if (!matchingIds.has(n.id)) {
-            deselected.add(n.id)
-          }
-        }
-        setSelectToolRectDeselectedIds(deselected)
-      })
-    })
-
-    return () => {
-      unsubscribe()
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current)
-        rafRef.current = 0
-      }
+    function clearLocalSelectionGesture() {
+      lastFlowRectRef.current = null
       setSelectToolSelectionDragRect(null)
-      setSelectToolRectDeselectedIds(new Set())
-      useCanvasSelectionState.getState().setSelectionPhase('idle')
+      clearCanvasPendingSelectionPreview()
+      selectionRef.current.endGesture()
       setSelectToolAwareness(awarenessRef.current, null)
     }
-  }, [enabled, reactFlow, setNodeSelection, storeApi])
+
+    function updateSelectionRect(currentClientPoint: { x: number; y: number }) {
+      if (!selectionStartClientPoint) return
+
+      const flowRect = clientRectToFlowRect(
+        {
+          left: Math.min(selectionStartClientPoint.x, currentClientPoint.x),
+          top: Math.min(selectionStartClientPoint.y, currentClientPoint.y),
+          right: Math.max(selectionStartClientPoint.x, currentClientPoint.x),
+          bottom: Math.max(selectionStartClientPoint.y, currentClientPoint.y),
+        },
+        reactFlow,
+      )
+
+      lastFlowRectRef.current = flowRect
+      setSelectToolSelectionDragRect(flowRect)
+      if (!selectionActive) {
+        selectionActive = true
+        selectionRef.current.beginGesture('marquee')
+      }
+      setSelectToolAwareness(awarenessRef.current, flowRect)
+      const current = storeApi.getState()
+      const pendingNodeIds = getCanvasNodesMatchingRectangle(
+        getMeasuredCanvasNodesFromLookup(current.nodeLookup),
+        flowRect,
+        { zoom: reactFlow.getZoom() },
+      )
+      setCanvasPendingSelectionPreview(pendingNodeIds)
+    }
+
+    function stopTrackingSelection(commit: boolean) {
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', handlePointerUp)
+      window.removeEventListener('pointercancel', handlePointerCancel)
+
+      if (commit && selectionActive && lastFlowRectRef.current) {
+        const current = storeApi.getState()
+        const selectedNodeIds = getCanvasNodesMatchingRectangle(
+          getMeasuredCanvasNodesFromLookup(current.nodeLookup),
+          lastFlowRectRef.current,
+          { zoom: reactFlow.getZoom() },
+        )
+        interaction.suppressNextSurfaceClick()
+        selectionRef.current.commitGestureSelection(selectedNodeIds)
+      }
+
+      selectionStartClientPoint = null
+      selectionActive = false
+      clearLocalSelectionGesture()
+    }
+
+    function handlePointerMove(event: PointerEvent) {
+      if (!selectionStartClientPoint) return
+
+      const distance = Math.hypot(
+        event.clientX - selectionStartClientPoint.x,
+        event.clientY - selectionStartClientPoint.y,
+      )
+      if (!selectionActive && distance <= MIN_SELECTION_DRAG_DISTANCE_PX) {
+        return
+      }
+
+      updateSelectionRect({ x: event.clientX, y: event.clientY })
+    }
+
+    function handlePointerUp() {
+      if (!selectionStartClientPoint) return
+      stopTrackingSelection(true)
+    }
+
+    function handlePointerCancel() {
+      if (!selectionStartClientPoint) return
+      stopTrackingSelection(false)
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (event.button !== 0 || event.target !== pane) return
+
+      selectionStartClientPoint = {
+        x: event.clientX,
+        y: event.clientY,
+      }
+      selectionActive = false
+      window.addEventListener('pointermove', handlePointerMove)
+      window.addEventListener('pointerup', handlePointerUp)
+      window.addEventListener('pointercancel', handlePointerCancel)
+    }
+
+    pane.addEventListener('pointerdown', handlePointerDown)
+
+    return () => {
+      pane.removeEventListener('pointerdown', handlePointerDown)
+      stopTrackingSelection(false)
+    }
+  }, [enabled, interaction, reactFlow, storeApi, surfaceRef])
 }

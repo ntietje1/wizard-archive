@@ -11,13 +11,13 @@ export function createMouseEvent(x: number, y: number): React.MouseEvent {
 export function createPlacementEnvironment({
   activeTool,
   createNode,
-  setNodeSelection,
+  replaceSelection,
   setPendingEditNodeId,
   setActiveTool,
 }: {
   activeTool: CanvasToolId
   createNode: (node: Node) => void
-  setNodeSelection: (nodeIds: Array<string>) => void
+  replaceSelection: (nodeIds: Array<string>) => void
   setPendingEditNodeId: (nodeId: string | null) => void
   setActiveTool: (tool: CanvasToolId) => void
 }): CanvasToolEnvironment {
@@ -40,9 +40,16 @@ export function createPlacementEnvironment({
       getMeasuredNodes: () => [],
     },
     selection: {
-      setNodeSelection,
-      clearSelection: () => undefined,
+      replace: replaceSelection,
+      clear: () => undefined,
       getSelectedNodeIds: () => [],
+      toggleFromTarget: () => undefined,
+      beginGesture: () => undefined,
+      commitGestureSelection: () => undefined,
+      endGesture: () => undefined,
+    },
+    interaction: {
+      suppressNextSurfaceClick: () => undefined,
     },
     editSession: {
       editingEmbedId: null,

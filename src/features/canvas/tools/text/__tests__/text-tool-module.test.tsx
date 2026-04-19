@@ -8,14 +8,14 @@ describe('textToolModule', () => {
     const createdNodes: Array<Node> = []
     const setPendingEditNodeId = vi.fn()
     const setActiveTool = vi.fn()
-    const setNodeSelection = vi.fn()
+    const replaceSelection = vi.fn()
     const controller = textToolModule.create(
       createPlacementEnvironment({
         activeTool: 'text',
         createNode: (node) => {
           createdNodes.push(node)
         },
-        setNodeSelection,
+        replaceSelection,
         setPendingEditNodeId,
         setActiveTool,
       }),
@@ -30,7 +30,7 @@ describe('textToolModule', () => {
       selected: true,
       draggable: true,
     })
-    expect(setNodeSelection).toHaveBeenCalledWith([createdNodes[0].id])
+    expect(replaceSelection).toHaveBeenCalledWith([createdNodes[0].id])
     expect(setPendingEditNodeId).toHaveBeenCalledWith(createdNodes[0].id)
     expect(setActiveTool).toHaveBeenCalledWith('select')
   })

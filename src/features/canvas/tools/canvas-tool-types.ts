@@ -18,6 +18,8 @@ export type CanvasToolId =
   | 'text'
   | 'sticky'
 
+export type CanvasSelectionGestureKind = 'marquee' | 'lasso'
+
 interface CanvasToolSettings {
   strokeColor: string
   strokeOpacity: number
@@ -74,10 +76,18 @@ interface CanvasMeasuredNodeReader {
   getMeasuredNodes: () => Array<CanvasMeasuredNode>
 }
 
-export interface CanvasSelectionActions {
-  setNodeSelection: (nodeIds: Array<string>) => void
-  clearSelection: () => void
+export interface CanvasSelectionController {
+  replace: (nodeIds: Array<string>) => void
+  clear: () => void
   getSelectedNodeIds: () => Array<string>
+  toggleFromTarget: (targetId: string | null, toggle: boolean) => void
+  beginGesture: (kind: CanvasSelectionGestureKind) => void
+  commitGestureSelection: (nodeIds: Array<string>) => void
+  endGesture: () => void
+}
+
+export interface CanvasInteractionTools {
+  suppressNextSurfaceClick: () => void
 }
 
 export interface CanvasViewportTools {
@@ -129,7 +139,8 @@ export interface CanvasLocalOverlayCapability {
 export interface CanvasToolEnvironment {
   viewport: CanvasViewportTools
   document: CanvasDocumentWriter & CanvasDocumentReader & CanvasMeasuredNodeReader
-  selection: CanvasSelectionActions
+  selection: CanvasSelectionController
+  interaction: CanvasInteractionTools
   editSession: CanvasEditSessionState
   toolState: CanvasToolStateControls
   awareness: CanvasAwarenessWriter

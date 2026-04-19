@@ -176,16 +176,15 @@ function strokePathIntersectsPolygon(
 
 function strokePathIntersectsRect(
   points: Array<[number, number, number]>,
-  size: number,
+  threshold: number,
   rect: Bounds,
 ): boolean {
   if (points.length === 0) return false
-  const half = size / 2
   const expanded = {
-    x: rect.x - half,
-    y: rect.y - half,
-    width: rect.width + size,
-    height: rect.height + size,
+    x: rect.x - threshold,
+    y: rect.y - threshold,
+    width: rect.width + threshold * 2,
+    height: rect.height + threshold * 2,
   }
   for (const [px, py] of points) {
     if (
@@ -230,8 +229,16 @@ function strokePathIntersectsRect(
   return false
 }
 
-export function strokeNodeIntersectsRect(node: StrokeNodeLike, rect: Bounds): boolean {
-  return strokePathIntersectsRect(getAbsoluteStrokePointsForNode(node), node.data.size, rect)
+export function strokeNodeIntersectsRect(
+  node: StrokeNodeLike,
+  rect: Bounds,
+  zoom: number,
+): boolean {
+  return strokePathIntersectsRect(
+    getAbsoluteStrokePointsForNode(node),
+    Math.max(node.data.size / 2, getStrokeSelectionPadding(zoom)),
+    rect,
+  )
 }
 
 export function strokeNodeIntersectsPolygon(

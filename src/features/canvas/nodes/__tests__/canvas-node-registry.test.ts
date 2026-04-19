@@ -157,6 +157,36 @@ describe('canvas node registry', () => {
       ).toEqual(['stroke-1'])
     })
 
+    it('uses the same padded stroke hit detection for rectangle selection as point selection', () => {
+      const nodes: Array<Node> = [
+        {
+          id: 'stroke-1',
+          type: 'stroke',
+          position: { x: 0, y: 0 },
+          width: 100,
+          height: 20,
+          data: {
+            bounds: { x: 0, y: 0, width: 100, height: 20 },
+            points: [
+              [0, 10, 0.5],
+              [100, 10, 0.5],
+            ],
+            color: 'var(--foreground)',
+            size: 4,
+          },
+        },
+      ]
+
+      expect(findCanvasNodeAtPoint(nodes, { x: 50, y: 20 }, { zoom: 1 })).toBe('stroke-1')
+      expect(
+        getCanvasNodesMatchingRectangle(
+          nodes,
+          { x: 40, y: 20, width: 20, height: 1 },
+          { zoom: 1 },
+        ),
+      ).toEqual(['stroke-1'])
+    })
+
     it('hit-tests moved strokes using their rendered position', () => {
       const nodes: Array<Node> = [
         {

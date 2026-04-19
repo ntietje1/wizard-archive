@@ -6,7 +6,7 @@ import type { StrokeNodeData, StrokeNodeType } from './stroke-node-model'
 import { getMiniMapStrokePath, pointsToPathD } from './stroke-node-model'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
 import { useEraseToolLocalOverlayStore } from '../../tools/erase/erase-tool-local-overlay'
-import { useSelectToolLocalOverlayStore } from '../../tools/select/select-tool-local-overlay'
+import { useCanvasNodeVisualSelection } from '../shared/use-canvas-node-visual-selection'
 
 const HIGHLIGHT_SCALE = 0.3
 const ERASING_OPACITY = 0.3
@@ -82,16 +82,13 @@ export function StrokeNode({
 }: NodeProps<Node<StrokeNodeData>>) {
   const { points, size, bounds } = data
   const isErasing = useEraseToolLocalOverlayStore((state) => state.erasingStrokeIds.has(id))
-  const isRectDeselected = useSelectToolLocalOverlayStore((state) =>
-    state.rectDeselectedIds.has(id),
-  )
+  const { visuallySelected } = useCanvasNodeVisualSelection(id, !!selected)
 
   const svgWidth = width ?? bounds.width
   const svgHeight = height ?? bounds.height
   const viewBox = resolveViewBox(bounds, svgWidth, svgHeight)
 
-  const highlightD =
-    selected && !isRectDeselected ? pointsToPathD(points, size * HIGHLIGHT_SCALE) : null
+  const highlightD = visuallySelected ? pointsToPathD(points, size * HIGHLIGHT_SCALE) : null
   const highlightPath =
     highlightD && viewBox ? (
       <svg
@@ -116,7 +113,6 @@ export function StrokeNode({
       id={id}
       selected={!!selected}
       dragging={!!dragging}
-      isRectDeselected={isRectDeselected}
       minWidth={20}
       minHeight={20}
     >

@@ -100,7 +100,9 @@ export function CanvasFlowShell({
           nodesDraggable={false}
           nodesConnectable={canEdit && isSelectMode}
           elementsSelectable={canEdit && isSelectMode}
-          selectionOnDrag={canEdit && isSelectMode}
+          // Marquee selection is handled in canvas runtime so node-owned hit testing can override
+          // React Flow's default bounds-based drag selection.
+          selectionOnDrag={false}
           selectionMode={SelectionMode.Partial}
           selectionKeyCode={SELECTION_KEY_DISABLED}
           panOnDrag={activeTool === 'hand' ? PAN_BOTH : PAN_MIDDLE_ONLY}

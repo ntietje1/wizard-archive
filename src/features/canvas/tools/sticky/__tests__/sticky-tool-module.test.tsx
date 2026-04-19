@@ -8,14 +8,14 @@ describe('stickyToolModule', () => {
     const createdNodes: Array<Node> = []
     const setPendingEditNodeId = vi.fn()
     const setActiveTool = vi.fn()
-    const setNodeSelection = vi.fn()
+    const replaceSelection = vi.fn()
     const controller = stickyToolModule.create(
       createPlacementEnvironment({
         activeTool: 'sticky',
         createNode: (node) => {
           createdNodes.push(node)
         },
-        setNodeSelection,
+        replaceSelection,
         setPendingEditNodeId,
         setActiveTool,
       }),
@@ -35,7 +35,7 @@ describe('stickyToolModule', () => {
         opacity: 100,
       },
     })
-    expect(setNodeSelection).toHaveBeenCalledWith([createdNodes[0].id])
+    expect(replaceSelection).toHaveBeenCalledWith([createdNodes[0].id])
     expect(setPendingEditNodeId).toHaveBeenCalledWith(createdNodes[0].id)
     expect(setActiveTool).toHaveBeenCalledWith('select')
   })

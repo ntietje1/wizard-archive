@@ -58,59 +58,53 @@ function createOffsetStrokeNode(id: string): CanvasMeasuredNode {
 }
 
 describe('selectToolModule', () => {
-  it('preserves multi-selection on modifier-click empty canvas', async () => {
-    const setNodeSelection = vi.fn()
+  it('preserves multi-selection on modifier-click empty canvas', () => {
+    const toggleFromTarget = vi.fn()
     const controller = selectToolModule.create(
       createSelectEnvironment({
         getNodes: () => [],
-        getSelectedNodeIds: () => ['a', 'b'],
-        setNodeSelection,
+        toggleFromTarget,
       }),
     )
 
     controller.onPaneClick?.(createMouseEvent(500, 500, { ctrlKey: true }))
-    await Promise.resolve()
 
-    expect(setNodeSelection).toHaveBeenCalledWith(['a', 'b'])
+    expect(toggleFromTarget).toHaveBeenCalledWith(null, true)
   })
 
-  it('uses the same padded stroke hit test for modifier deselection as for selection', async () => {
-    const setNodeSelection = vi.fn()
+  it('uses the same padded stroke hit test for modifier deselection as for selection', () => {
+    const toggleFromTarget = vi.fn()
     const strokeNode = createStrokeNode('stroke-1')
     const controller = selectToolModule.create(
       createSelectEnvironment({
         getNodes: () => [strokeNode],
-        getSelectedNodeIds: () => ['stroke-1', 'embed-1'],
-        setNodeSelection,
+        toggleFromTarget,
       }),
     )
 
     controller.onPaneClick?.(createMouseEvent(50, 20, { ctrlKey: true }))
-    await Promise.resolve()
 
-    expect(setNodeSelection).toHaveBeenCalledWith(['embed-1'])
+    expect(toggleFromTarget).toHaveBeenCalledWith('stroke-1', true)
   })
 
-  it('hit-tests moved strokes using their current measured position instead of assuming origin placement', async () => {
-    const setNodeSelection = vi.fn()
+  it('hit-tests moved strokes using their current measured position instead of assuming origin placement', () => {
+    const toggleFromTarget = vi.fn()
     const strokeNode = createOffsetStrokeNode('stroke-1')
     const controller = selectToolModule.create(
       createSelectEnvironment({
         getNodes: () => [createStrokeNode('stale-stroke')],
         getMeasuredNodes: () => [strokeNode],
-        getSelectedNodeIds: () => [],
-        setNodeSelection,
+        toggleFromTarget,
       }),
     )
 
     controller.onPaneClick?.(createMouseEvent(470, 250))
-    await Promise.resolve()
 
-    expect(setNodeSelection).toHaveBeenCalledWith(['stroke-1'])
+    expect(toggleFromTarget).toHaveBeenCalledWith('stroke-1', false)
   })
 
-  it('routes regular node ctrl-click through strict toggle behavior', async () => {
-    const setNodeSelection = vi.fn()
+  it('routes regular node ctrl-click through strict toggle behavior', () => {
+    const toggleFromTarget = vi.fn()
     const clickedNode = {
       id: 'c',
       type: 'text',
@@ -120,15 +114,13 @@ describe('selectToolModule', () => {
     const controller = selectToolModule.create(
       createSelectEnvironment({
         getNodes: () => [clickedNode],
-        getSelectedNodeIds: () => ['a', 'b'],
-        setNodeSelection,
+        toggleFromTarget,
       }),
     )
 
     controller.onNodeClick?.(createMouseEvent(0, 0, { ctrlKey: true }), clickedNode)
-    await Promise.resolve()
 
-    expect(setNodeSelection).toHaveBeenCalledWith(['a', 'b', 'c'])
+    expect(toggleFromTarget).toHaveBeenCalledWith('c', true)
   })
 })
 
@@ -137,13 +129,11 @@ function createSelectEnvironment({
   // Intentional compatibility cast: plain React Flow nodes lack measured dimensions, so tests that
   // depend on width/height should override `getMeasuredNodes` or supply measured node objects.
   getMeasuredNodes = () => getNodes() as Array<CanvasMeasuredNode>,
-  getSelectedNodeIds,
-  setNodeSelection,
+  toggleFromTarget,
 }: {
   getNodes: () => Array<Node>
   getMeasuredNodes?: () => Array<CanvasMeasuredNode>
-  getSelectedNodeIds: () => Array<string>
-  setNodeSelection: (nodeIds: Array<string>) => void
+  toggleFromTarget: (targetId: string | null, toggle: boolean) => void
 }): CanvasToolEnvironment {
   return {
     viewport: {
@@ -164,9 +154,16 @@ function createSelectEnvironment({
       getMeasuredNodes,
     },
     selection: {
-      setNodeSelection,
-      clearSelection: vi.fn(),
-      getSelectedNodeIds,
+      replace: vi.fn(),
+      clear: vi.fn(),
+      getSelectedNodeIds: () => [],
+      toggleFromTarget,
+      beginGesture: vi.fn(),
+      commitGestureSelection: vi.fn(),
+      endGesture: vi.fn(),
+    },
+    interaction: {
+      suppressNextSurfaceClick: vi.fn(),
     },
     editSession: {
       editingEmbedId: null,

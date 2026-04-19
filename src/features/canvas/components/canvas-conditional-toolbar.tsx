@@ -1,5 +1,8 @@
 import { useNodes } from '@xyflow/react'
-import { useCanvasSelectionPhase, useSelectedCanvasNodeIds } from '../runtime/selection/use-canvas-selection-state'
+import {
+  useIsCanvasSelectionGestureActive,
+  useSelectedCanvasNodeIds,
+} from '../runtime/selection/use-canvas-selection-state'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import { getCanvasNodeProperties } from '../nodes/canvas-node-registry'
 import { getCanvasToolProperties } from '../tools/canvas-tool-modules'
@@ -65,7 +68,7 @@ export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarPr
   const { updateNodeData } = useCanvasNodeActionsContext()
   const nodes = useNodes()
   const selectedNodeIds = useSelectedCanvasNodeIds()
-  const selectionPhase = useCanvasSelectionPhase()
+  const isSelectionGestureActive = useIsCanvasSelectionGestureActive()
   const activeTool = useCanvasToolStore((state) => state.activeTool)
 
   const selectedNodeIdSet = new Set(selectedNodeIds)
@@ -73,7 +76,7 @@ export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarPr
 
   const properties = resolveProperties(
     activeTool,
-    selectionPhase === 'idle' ? selectedNodes : [],
+    isSelectionGestureActive ? [] : selectedNodes,
     updateNodeData,
   )
   if (!canEdit || properties.length === 0) return null
