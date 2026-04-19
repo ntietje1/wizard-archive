@@ -122,6 +122,7 @@ export function CanvasFlowShell({
           minZoom={MIN_ZOOM}
           maxZoom={MAX_ZOOM}
           zoomOnScroll={false}
+          zoomOnDoubleClick={false}
           panOnScroll={false}
           preventScrolling={false}
           proOptions={PRO_OPTIONS}
