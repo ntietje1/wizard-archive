@@ -1,3 +1,5 @@
+import Color from 'color'
+
 export function getContrastColor(hexColor: string): string {
   let hex = hexColor.trim().replace('#', '')
   if (hex.length === 3) {
@@ -35,3 +37,39 @@ export const BASE_BG_COLORS = [
   'var(--bg-purple)',
   'var(--bg-pink)',
 ]
+
+const CSS_VARIABLE_REFERENCE_PATTERN = /^var\(\s*(--[^),\s]+)\s*(?:,\s*[^)]+)?\)$/
+
+function resolveDocumentCssVariable(variableName: string): string | null {
+  if (typeof document === 'undefined') {
+    return null
+  }
+
+  const resolvedValue = getComputedStyle(document.documentElement)
+    .getPropertyValue(variableName)
+    .trim()
+
+  return resolvedValue || null
+}
+
+export function normalizePickerColor(
+  value: string | undefined,
+  resolveCssVariable: (variableName: string) => string | null = resolveDocumentCssVariable,
+): string {
+  const normalizedValue = value?.trim()
+  if (!normalizedValue) {
+    return '#000000'
+  }
+
+  const cssVariableMatch = normalizedValue.match(CSS_VARIABLE_REFERENCE_PATTERN)
+  const resolvedValue = cssVariableMatch
+    ? (resolveCssVariable(cssVariableMatch[1]) ?? '#000000')
+    : normalizedValue
+
+  try {
+    Color(resolvedValue)
+    return resolvedValue
+  } catch {
+    return '#000000'
+  }
+}

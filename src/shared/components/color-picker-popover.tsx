@@ -7,23 +7,10 @@ import {
   ColorPickerSelection,
 } from '~/features/shadcn/components/color-picker'
 import { Popover, PopoverContent, PopoverTrigger } from '~/features/shadcn/components/popover'
+import { normalizePickerColor } from '~/shared/utils/color'
 
 const CHECKERBOARD_PATTERN =
   'url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMUlEQVQ4T2NkYGAQYcAP3uCTZhw1gGGYhAGBZIA/nYDCgBDAm9BGDWAAJyRCgLaBCAAgXwixzAS0pgAAAABJRU5ErkJggg==") left center'
-
-function normalizePickerColor(value: string | undefined): string {
-  const normalizedValue = value?.trim()
-  if (!normalizedValue || normalizedValue.startsWith('var(')) {
-    return '#000000'
-  }
-
-  try {
-    Color(normalizedValue)
-    return normalizedValue
-  } catch {
-    return '#000000'
-  }
-}
 
 interface ColorPickerPopoverProps {
   value?: string
@@ -87,7 +74,7 @@ export function ColorPickerPopover({
             style={{ background: opacityGradient }}
           />
         </SliderPrimitive.Track>
-        <SliderPrimitive.Thumb className="block h-4 w-4 rounded-full border border-primary/50 bg-background shadow focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+        <SliderPrimitive.Thumb className="block h-4 w-4 rounded-full border-2 border-white bg-transparent shadow-[0_0_0_1px_rgba(0,0,0,0.5)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
       </SliderPrimitive.Control>
     </SliderPrimitive.Root>
   ) : null
