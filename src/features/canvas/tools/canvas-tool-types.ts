@@ -19,6 +19,7 @@ export type CanvasToolId =
   | 'sticky'
 
 export type CanvasSelectionGestureKind = 'marquee' | 'lasso'
+export type CanvasSelectionCommitMode = 'replace' | 'add'
 
 export interface CanvasSelectionSnapshot {
   nodeIds: Array<string>
@@ -91,7 +92,10 @@ export interface CanvasSelectionController {
   toggleNodeFromTarget: (targetId: string | null, toggle: boolean) => void
   toggleEdgeFromTarget: (targetId: string | null, toggle: boolean) => void
   beginGesture: (kind: CanvasSelectionGestureKind) => void
-  commitGestureSelection: (selection: CanvasSelectionSnapshot) => void
+  commitGestureSelection: (
+    selection: CanvasSelectionSnapshot,
+    mode?: CanvasSelectionCommitMode,
+  ) => void
   endGesture: () => void
 }
 

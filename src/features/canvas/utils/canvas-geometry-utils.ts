@@ -87,6 +87,68 @@ export function pointInPolygon(
   return inside
 }
 
+export function polygonIntersectsBounds(
+  polygon: Array<{ x: number; y: number }>,
+  bounds: Bounds,
+): boolean {
+  const polygonBounds = boundsFromPoints(polygon)
+  if (polygonBounds && !rectIntersectsBounds(polygonBounds, bounds)) {
+    return false
+  }
+
+  const corners = [
+    { x: bounds.x, y: bounds.y },
+    { x: bounds.x + bounds.width, y: bounds.y },
+    { x: bounds.x + bounds.width, y: bounds.y + bounds.height },
+    { x: bounds.x, y: bounds.y + bounds.height },
+  ]
+
+  if (corners.some((corner) => pointInPolygon(corner.x, corner.y, polygon))) {
+    return true
+  }
+
+  if (
+    polygon.some(
+      (point) =>
+        point.x >= bounds.x &&
+        point.x <= bounds.x + bounds.width &&
+        point.y >= bounds.y &&
+        point.y <= bounds.y + bounds.height,
+    )
+  ) {
+    return true
+  }
+
+  const boundsEdges: Array<[number, number, number, number]> = [
+    [bounds.x, bounds.y, bounds.x + bounds.width, bounds.y],
+    [bounds.x + bounds.width, bounds.y, bounds.x + bounds.width, bounds.y + bounds.height],
+    [bounds.x + bounds.width, bounds.y + bounds.height, bounds.x, bounds.y + bounds.height],
+    [bounds.x, bounds.y + bounds.height, bounds.x, bounds.y],
+  ]
+
+  for (let polygonIndex = 0; polygonIndex < polygon.length; polygonIndex += 1) {
+    const nextPolygonIndex = (polygonIndex + 1) % polygon.length
+    for (const [ax, ay, bx, by] of boundsEdges) {
+      if (
+        segmentsIntersect(
+          polygon[polygonIndex].x,
+          polygon[polygonIndex].y,
+          polygon[nextPolygonIndex].x,
+          polygon[nextPolygonIndex].y,
+          ax,
+          ay,
+          bx,
+          by,
+        )
+      ) {
+        return true
+      }
+    }
+  }
+
+  return false
+}
+
 export function pointToSegmentDistSq(
   px: number,
   py: number,

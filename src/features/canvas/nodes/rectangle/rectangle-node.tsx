@@ -4,9 +4,7 @@ import type { Node, NodeProps } from '@xyflow/react'
 export type RectangleNodeData = { color?: string; opacity?: number }
 
 export function RectanglePreview({ color, opacity }: { color: string; opacity?: number }) {
-  const normalizedOpacity = Number.isFinite(opacity)
-    ? Math.min(Math.max(opacity, 0), 100)
-    : 100
+  const normalizedOpacity = Number.isFinite(opacity) ? Math.min(Math.max(opacity, 0), 100) : 100
 
   return (
     <div className="flex h-full w-full items-center justify-center">
@@ -21,11 +19,7 @@ export function RectanglePreview({ color, opacity }: { color: string; opacity?: 
   )
 }
 
-export function RectangleNode({
-  id,
-  dragging,
-  data,
-}: NodeProps<Node<RectangleNodeData>>) {
+export function RectangleNode({ id, dragging, data }: NodeProps<Node<RectangleNodeData>>) {
   return (
     <ResizableNodeWrapper
       id={id}

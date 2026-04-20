@@ -1,15 +1,9 @@
 import { transactCanvasMaps } from '../document/canvas-yjs-transactions'
 import { useCanvasClipboardStore } from './use-canvas-clipboard-store'
-import {
-  createCanvasClipboardEntry,
-  materializeCanvasPaste,
-} from './canvas-context-menu-clipboard'
+import { createCanvasClipboardEntry, materializeCanvasPaste } from './canvas-context-menu-clipboard'
 import { createCanvasReorderUpdates } from './canvas-context-menu-reorder'
 import { getCanvasDeletionSelection } from './canvas-context-menu-selection'
-import type {
-  CanvasClipboardEntry,
-  CanvasContextMenuServices,
-} from './canvas-context-menu-types'
+import type { CanvasClipboardEntry, CanvasContextMenuServices } from './canvas-context-menu-types'
 import type {
   CanvasSelectionController,
   CanvasSelectionSnapshot,
@@ -38,7 +32,8 @@ export function useCanvasContextMenuServices({
 
   return {
     canPaste,
-    canCopySnapshot: (snapshot) => createCanvasClipboardEntry(nodesMap, edgesMap, snapshot) !== null,
+    canCopySnapshot: (snapshot) =>
+      createCanvasClipboardEntry(nodesMap, edgesMap, snapshot) !== null,
     copySnapshot: (snapshot) => {
       const nextClipboard = createCanvasClipboardEntry(nodesMap, edgesMap, snapshot)
       if (!nextClipboard) {

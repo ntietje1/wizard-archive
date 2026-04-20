@@ -3,6 +3,7 @@ import type { RefObject } from 'react'
 import { useReactFlow, useStoreApi } from '@xyflow/react'
 import { getMeasuredCanvasNodesFromLookup } from '../document/canvas-measured-nodes'
 import { createCanvasSelectionGestureController } from './canvas-selection-gesture-controller'
+import { isPrimarySelectionModifier } from '../../utils/canvas-selection-utils'
 import type {
   CanvasAwarenessPresenceWriter,
   CanvasInteractionTools,
@@ -15,7 +16,11 @@ interface UseCanvasSelectionRectOptions {
   interaction: Pick<CanvasInteractionTools, 'suppressNextSurfaceClick'>
   selection: Pick<
     CanvasSelectionController,
-    'beginGesture' | 'commitGestureSelection' | 'endGesture'
+    | 'beginGesture'
+    | 'commitGestureSelection'
+    | 'endGesture'
+    | 'getSelectedNodeIds'
+    | 'getSelectedEdgeIds'
   >
   enabled: boolean
 }
@@ -74,10 +79,13 @@ export function useCanvasSelectionRect({
     function handlePointerDown(event: PointerEvent) {
       if (event.button !== 0 || event.target !== pane) return
 
-      gestureController.begin({
-        x: event.clientX,
-        y: event.clientY,
-      })
+      gestureController.begin(
+        {
+          x: event.clientX,
+          y: event.clientY,
+        },
+        isPrimarySelectionModifier(event) ? 'add' : 'replace',
+      )
       window.addEventListener('pointermove', handlePointerMove)
       window.addEventListener('pointerup', handlePointerUp)
       window.addEventListener('pointercancel', handlePointerCancel)

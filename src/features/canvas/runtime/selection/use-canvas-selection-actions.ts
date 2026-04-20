@@ -1,11 +1,15 @@
 import { useReactFlow } from '@xyflow/react'
-import { getNextSelectedIds } from '../../utils/canvas-selection-utils'
+import {
+  applyCanvasSelectionCommitMode,
+  getNextSelectedIds,
+} from '../../utils/canvas-selection-utils'
 import {
   getCanvasSelectionSnapshot,
   setCanvasSelectionSnapshot,
   useCanvasSelectionState,
 } from './use-canvas-selection-state'
 import type {
+  CanvasSelectionCommitMode,
   CanvasSelectionController,
   CanvasSelectionSnapshot,
 } from '../../tools/canvas-tool-types'
@@ -95,8 +99,15 @@ export function useCanvasSelectionActions(): CanvasSelectionController {
     beginGesture: (kind) => {
       useCanvasSelectionState.getState().beginGesture(kind)
     },
-    commitGestureSelection: (selection) => {
-      replaceCanvasSelection(reactFlow, selection)
+    commitGestureSelection: (selection, mode = 'replace') => {
+      replaceCanvasSelection(
+        reactFlow,
+        applyCanvasSelectionCommitMode({
+          currentSelection: getCanvasSelectionSnapshot(),
+          nextSelection: selection,
+          mode,
+        }),
+      )
     },
     endGesture: () => {
       useCanvasSelectionState.getState().endGesture()

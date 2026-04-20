@@ -6,16 +6,23 @@ import {
   setCanvasPendingSelectionPreview,
 } from '../../runtime/selection/use-canvas-pending-selection-preview'
 import {
+  applyCanvasSelectionCommitMode,
+  isPrimarySelectionModifier,
+} from '../../utils/canvas-selection-utils'
+import {
   setPointerCapture,
   releasePointerCapture,
   screenEventToFlowPosition,
 } from '../shared/tool-module-utils'
-import type { CanvasToolModule } from '../canvas-tool-types'
+import type {
+  CanvasToolModule,
+  CanvasSelectionCommitMode,
+  CanvasSelectionSnapshot,
+} from '../canvas-tool-types'
 import { LassoAwarenessLayer } from './lasso-tool-awareness-layer'
 import { setLassoToolAwareness } from './lasso-tool-awareness'
 import { clearLassoToolLocalOverlay, setLassoToolLocalPoints } from './lasso-tool-local-overlay'
 import { LassoToolLocalOverlayLayer } from './lasso-tool-local-overlay-layer'
-
 export const lassoToolModule: CanvasToolModule<'lasso'> = {
   id: 'lasso',
   label: 'Lasso select',
@@ -36,6 +43,8 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
     let captureTarget: Element | null = null
     let pointerId: number | null = null
     let lastPublishedPoints: Array<{ x: number; y: number }> | null = null
+    let selectionCommitMode: CanvasSelectionCommitMode = 'replace'
+    let gestureStartSelection: CanvasSelectionSnapshot = { nodeIds: [], edgeIds: [] }
 
     const pointsEqual = (
       a: Array<{ x: number; y: number }> | null,
@@ -87,7 +96,13 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
         { zoom: services.viewport.getZoom() },
       )
 
-      setCanvasPendingSelectionPreview({ nodeIds: pendingNodeIds, edgeIds: pendingEdgeIds })
+      setCanvasPendingSelectionPreview(
+        applyCanvasSelectionCommitMode({
+          currentSelection: gestureStartSelection,
+          nextSelection: { nodeIds: pendingNodeIds, edgeIds: pendingEdgeIds },
+          mode: selectionCommitMode,
+        }),
+      )
     }
 
     const schedulePreview = () => {
@@ -109,6 +124,8 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
       releasePointerCapture(captureTarget, pointerId)
       captureTarget = null
       pointerId = null
+      selectionCommitMode = 'replace'
+      gestureStartSelection = { nodeIds: [], edgeIds: [] }
     }
 
     return {
@@ -118,12 +135,16 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
         captureTarget = setPointerCapture(event)
         pointerId = event.pointerId
         active = true
+        selectionCommitMode = isPrimarySelectionModifier(event) ? 'add' : 'replace'
+        gestureStartSelection = {
+          nodeIds: services.selection.getSelectedNodeIds(),
+          edgeIds: services.selection.getSelectedEdgeIds(),
+        }
         const pos = screenEventToFlowPosition(services.viewport, event)
         points = [pos]
         services.selection.beginGesture('lasso')
         setLassoToolLocalPoints(points)
         schedulePreview()
-        services.selection.clear()
       },
       onPointerMove: (event) => {
         if (!active || (event.buttons & 1) !== 1) return
@@ -143,7 +164,6 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
 
         if (points.length < 3) {
           reset()
-          services.toolState.setActiveTool('select')
           return
         }
 
@@ -159,12 +179,14 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
         )
 
         services.interaction.suppressNextSurfaceClick()
-        services.selection.commitGestureSelection({
-          nodeIds: selectedNodeIds,
-          edgeIds: selectedEdgeIds,
-        })
+        services.selection.commitGestureSelection(
+          {
+            nodeIds: selectedNodeIds,
+            edgeIds: selectedEdgeIds,
+          },
+          selectionCommitMode,
+        )
         reset()
-        services.toolState.setActiveTool('select')
       },
       onPointerCancel: () => {
         reset()

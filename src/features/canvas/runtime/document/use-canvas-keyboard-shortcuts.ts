@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useHotkey } from '@tanstack/react-hotkeys'
 import type { CanvasHistoryController } from '../../tools/canvas-tool-types'
 import { useCanvasSelectionActions } from '../selection/use-canvas-selection-actions'
 
@@ -7,44 +7,44 @@ export function useCanvasKeyboardShortcuts({
   redo,
 }: Pick<CanvasHistoryController, 'undo' | 'redo'>) {
   const selectionActions = useCanvasSelectionActions()
-  const selectionActionsRef = useRef(selectionActions)
-  selectionActionsRef.current = selectionActions
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.repeat) return
+  const hotkeyOptions = {
+    ignoreInputs: true,
+  } as const
 
-      const el = document.activeElement
-      if (
-        el instanceof HTMLInputElement ||
-        el instanceof HTMLTextAreaElement ||
-        (el instanceof HTMLElement && el.isContentEditable)
-      ) {
-        return
-      }
+  useHotkey(
+    'Escape',
+    (event) => {
+      if (event.repeat) return
+      selectionActions.clear()
+    },
+    hotkeyOptions,
+  )
 
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        selectionActionsRef.current.clear()
-        return
-      }
+  useHotkey(
+    'Mod+Z',
+    (event) => {
+      if (event.repeat) return
+      undo()
+    },
+    hotkeyOptions,
+  )
 
-      const mod = e.metaKey || e.ctrlKey
-      if (!mod) return
+  useHotkey(
+    'Mod+Shift+Z',
+    (event) => {
+      if (event.repeat) return
+      redo()
+    },
+    hotkeyOptions,
+  )
 
-      const key = e.key.toLowerCase()
-      if (key === 'z' && !e.shiftKey) {
-        e.preventDefault()
-        undo()
-      } else if (key === 'z' && e.shiftKey) {
-        e.preventDefault()
-        redo()
-      } else if (key === 'y') {
-        e.preventDefault()
-        redo()
-      }
-    }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [undo, redo])
+  useHotkey(
+    'Mod+Y',
+    (event) => {
+      if (event.repeat) return
+      redo()
+    },
+    hotkeyOptions,
+  )
 }

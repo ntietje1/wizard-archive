@@ -9,15 +9,31 @@ import {
 } from '../../../runtime/selection/use-canvas-pending-selection-preview'
 import { ResizableNodeWrapper } from '../resizable-node-wrapper'
 
+const useKeyHoldMock = vi.hoisted(() => vi.fn(() => false))
+const resizeControlProps = vi.hoisted(() => [] as Array<{ keepAspectRatio: boolean }>)
+
+vi.mock('@tanstack/react-hotkeys', () => ({
+  useKeyHold: useKeyHoldMock,
+}))
+
 vi.mock('@xyflow/react', () => ({
-  NodeResizeControl: ({ children }: { children: ReactNode }) => (
-    <div data-testid="resize-control">{children}</div>
-  ),
+  NodeResizeControl: ({
+    children,
+    keepAspectRatio,
+  }: {
+    children: ReactNode
+    keepAspectRatio: boolean
+  }) => {
+    resizeControlProps.push({ keepAspectRatio })
+    return <div data-testid="resize-control">{children}</div>
+  },
 }))
 
 afterEach(() => {
   clearCanvasPendingSelectionPreview()
   useCanvasSelectionState.getState().reset()
+  resizeControlProps.length = 0
+  useKeyHoldMock.mockReturnValue(false)
 })
 
 describe('ResizableNodeWrapper', () => {
@@ -35,6 +51,19 @@ describe('ResizableNodeWrapper', () => {
 
     expect(screen.queryByTestId('selection-border')).toBeNull()
     expect(screen.queryAllByTestId('resize-control')).toHaveLength(4)
+  })
+
+  it('uses TanStack held-key tracking for shift-constrained resize handles', () => {
+    useKeyHoldMock.mockReturnValue(true)
+    renderWrapper({ selected: true })
+
+    expect(useKeyHoldMock).toHaveBeenCalledWith('Shift')
+    expect(resizeControlProps).toEqual([
+      { keepAspectRatio: true },
+      { keepAspectRatio: true },
+      { keepAspectRatio: true },
+      { keepAspectRatio: true },
+    ])
   })
 })
 

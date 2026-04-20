@@ -162,12 +162,13 @@ export function CanvasFlowShell({
           selectionController={contextMenu.selectionController}
         />
 
-        {pendingSelectionPreview.active && (pendingSelectionPreview.nodeCount + pendingSelectionPreview.edgeCount > 0) && (
-          <CanvasPendingSelectionStatus
-            nodeCount={pendingSelectionPreview.nodeCount}
-            edgeCount={pendingSelectionPreview.edgeCount}
-          />
-        )}
+        {pendingSelectionPreview.active &&
+          pendingSelectionPreview.nodeCount + pendingSelectionPreview.edgeCount > 0 && (
+            <CanvasPendingSelectionStatus
+              nodeCount={pendingSelectionPreview.nodeCount}
+              edgeCount={pendingSelectionPreview.edgeCount}
+            />
+          )}
 
         <CanvasDropOverlay
           ref={chrome.dropTarget.overlayRef}

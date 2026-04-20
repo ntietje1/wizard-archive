@@ -1,7 +1,61 @@
-type SelectionModifierEvent = Pick<React.MouseEvent, 'ctrlKey' | 'metaKey' | 'shiftKey'>
+import type { CanvasSelectionCommitMode, CanvasSelectionSnapshot } from '../tools/canvas-tool-types'
 
-export function isSelectionToggleModifier(event: SelectionModifierEvent): boolean {
-  return event.shiftKey || event.ctrlKey || event.metaKey
+type PrimarySelectionModifierEvent = {
+  ctrlKey: boolean
+  metaKey: boolean
+}
+
+type CanvasPlatform = 'mac' | 'windows' | 'linux'
+
+function detectCanvasPlatform(): CanvasPlatform {
+  if (typeof navigator === 'undefined') {
+    return 'linux'
+  }
+
+  const platform = navigator.platform.toLowerCase()
+  const userAgent = navigator.userAgent.toLowerCase()
+
+  if (platform.includes('mac') || userAgent.includes('mac')) {
+    return 'mac'
+  }
+  if (platform.includes('win')) {
+    return 'windows'
+  }
+
+  return 'linux'
+}
+
+export function isPrimarySelectionModifier(
+  event: PrimarySelectionModifierEvent,
+  platform: CanvasPlatform = detectCanvasPlatform(),
+): boolean {
+  return platform === 'mac' ? event.metaKey : event.ctrlKey
+}
+
+export function mergeSelectedIds(
+  selectedIds: Array<string>,
+  incomingIds: Array<string>,
+): Array<string> {
+  return Array.from(new Set([...selectedIds, ...incomingIds]))
+}
+
+export function applyCanvasSelectionCommitMode({
+  currentSelection,
+  nextSelection,
+  mode,
+}: {
+  currentSelection: CanvasSelectionSnapshot
+  nextSelection: CanvasSelectionSnapshot
+  mode: CanvasSelectionCommitMode
+}): CanvasSelectionSnapshot {
+  if (mode === 'replace') {
+    return nextSelection
+  }
+
+  return {
+    nodeIds: mergeSelectedIds(currentSelection.nodeIds, nextSelection.nodeIds),
+    edgeIds: mergeSelectedIds(currentSelection.edgeIds, nextSelection.edgeIds),
+  }
 }
 
 export function getNextSelectedIds({

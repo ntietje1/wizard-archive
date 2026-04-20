@@ -1,8 +1,5 @@
 import { useCanvasToolStore } from './canvas-tool-store'
-import type {
-  CanvasToolPropertyContext,
-  CanvasToolStateControls,
-} from '../tools/canvas-tool-types'
+import type { CanvasToolPropertyContext, CanvasToolStateControls } from '../tools/canvas-tool-types'
 
 function getCanvasToolSettings() {
   const state = useCanvasToolStore.getState()

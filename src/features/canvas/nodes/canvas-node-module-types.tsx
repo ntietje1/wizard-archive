@@ -144,9 +144,7 @@ export function createCanvasNodeModule<
   }
 }
 
-export function buildCanvasNodeTypes(
-  modules: ReadonlyArray<AnyCanvasNodeModule>,
-): NodeTypes {
+export function buildCanvasNodeTypes(modules: ReadonlyArray<AnyCanvasNodeModule>): NodeTypes {
   const seen = new Map<CanvasNodeType, Array<string>>()
   const entries: Array<readonly [CanvasNodeType, NodeTypes[string]]> = []
 

@@ -98,14 +98,13 @@ export function useCanvasInteractionRuntime({
 
   useCanvasWheel(canvasSurfaceRef)
 
-  const { dropOverlayRef, isDropTarget, isFileDropTarget } =
-    useCanvasDropIntegration({
-      canvasId,
-      canEdit,
-      isSelectMode,
-      createNode: documentWriter.createNode,
-      screenToFlowPosition: reactFlowInstance.screenToFlowPosition,
-    })
+  const { dropOverlayRef, isDropTarget, isFileDropTarget } = useCanvasDropIntegration({
+    canvasId,
+    canEdit,
+    isSelectMode,
+    createNode: documentWriter.createNode,
+    screenToFlowPosition: reactFlowInstance.screenToFlowPosition,
+  })
 
   const { onNodeDragStart, onNodeDrag, onNodeDragStop } = useCanvasNodeDragHandlers({
     documentWriter,

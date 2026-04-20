@@ -39,10 +39,7 @@ describe('BezierCanvasEdge', () => {
       'data-edge-pending-preview-active',
       'false',
     )
-    expect(screen.getByTestId('canvas-edge')).toHaveAttribute(
-      'data-edge-pending-selected',
-      'false',
-    )
+    expect(screen.getByTestId('canvas-edge')).toHaveAttribute('data-edge-pending-selected', 'false')
     expect(baseEdgeSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         style: undefined,
@@ -61,10 +58,7 @@ describe('BezierCanvasEdge', () => {
       'data-edge-pending-preview-active',
       'true',
     )
-    expect(screen.getByTestId('canvas-edge')).toHaveAttribute(
-      'data-edge-pending-selected',
-      'false',
-    )
+    expect(screen.getByTestId('canvas-edge')).toHaveAttribute('data-edge-pending-selected', 'false')
     expect(baseEdgeSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         style: undefined,

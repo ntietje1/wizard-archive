@@ -1,7 +1,7 @@
 import { MousePointer2 } from 'lucide-react'
 import { hitTestCanvasNode } from '../shared/tool-module-utils'
 import type { CanvasToolModule } from '../canvas-tool-types'
-import { isSelectionToggleModifier } from '../../utils/canvas-selection-utils'
+import { isPrimarySelectionModifier } from '../../utils/canvas-selection-utils'
 import { SelectAwarenessLayer } from './select-tool-awareness-layer'
 import { clearSelectToolLocalOverlay } from './select-tool-local-overlay'
 import { SelectToolLocalOverlayLayer } from './select-tool-local-overlay-layer'
@@ -20,10 +20,10 @@ export const selectToolModule: CanvasToolModule<'select'> = {
   },
   create: (services) => ({
     onNodeClick: (event, node) => {
-      services.selection.toggleNodeFromTarget(node.id, isSelectionToggleModifier(event))
+      services.selection.toggleNodeFromTarget(node.id, isPrimarySelectionModifier(event))
     },
     onEdgeClick: (event, edge) => {
-      services.selection.toggleEdgeFromTarget(edge.id, isSelectionToggleModifier(event))
+      services.selection.toggleEdgeFromTarget(edge.id, isPrimarySelectionModifier(event))
     },
     onPaneClick: (event) => {
       services.selection.toggleNodeFromTarget(
@@ -35,7 +35,7 @@ export const selectToolModule: CanvasToolModule<'select'> = {
           },
           event,
         ),
-        isSelectionToggleModifier(event),
+        isPrimarySelectionModifier(event),
       )
     },
   }),

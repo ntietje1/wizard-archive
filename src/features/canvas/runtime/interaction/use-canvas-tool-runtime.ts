@@ -96,13 +96,15 @@ function createCanvasDocumentService(
 ): CanvasToolServices['document'] {
   return {
     createNode: (node) => getRuntimeState(runtimeStateRef).documentWrite.createNode(node),
-    updateNode: (nodeId, updater) => getRuntimeState(runtimeStateRef).documentWrite.updateNode(nodeId, updater),
+    updateNode: (nodeId, updater) =>
+      getRuntimeState(runtimeStateRef).documentWrite.updateNode(nodeId, updater),
     updateNodeData: (nodeId, data) =>
       getRuntimeState(runtimeStateRef).documentWrite.updateNodeData(nodeId, data),
     resizeNode: (nodeId, width, height, position) =>
       getRuntimeState(runtimeStateRef).documentWrite.resizeNode(nodeId, width, height, position),
     deleteNodes: (nodeIds) => getRuntimeState(runtimeStateRef).documentWrite.deleteNodes(nodeIds),
-    createEdge: (connection) => getRuntimeState(runtimeStateRef).documentWrite.createEdge(connection),
+    createEdge: (connection) =>
+      getRuntimeState(runtimeStateRef).documentWrite.createEdge(connection),
     deleteEdges: (edgeIds) => getRuntimeState(runtimeStateRef).documentWrite.deleteEdges(edgeIds),
     setNodePosition: (nodeId, position) =>
       getRuntimeState(runtimeStateRef).documentWrite.setNodePosition(nodeId, position),
@@ -127,8 +129,8 @@ function createCanvasSelectionService(
     toggleEdgeFromTarget: (targetId, toggle) =>
       getRuntimeState(runtimeStateRef).selection.toggleEdgeFromTarget(targetId, toggle),
     beginGesture: (kind) => getRuntimeState(runtimeStateRef).selection.beginGesture(kind),
-    commitGestureSelection: (selection) =>
-      getRuntimeState(runtimeStateRef).selection.commitGestureSelection(selection),
+    commitGestureSelection: (selection, mode) =>
+      getRuntimeState(runtimeStateRef).selection.commitGestureSelection(selection, mode),
     endGesture: () => getRuntimeState(runtimeStateRef).selection.endGesture(),
   }
 }

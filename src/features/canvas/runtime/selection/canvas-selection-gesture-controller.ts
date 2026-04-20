@@ -2,7 +2,8 @@ import { getCanvasEdgesMatchingRectangle } from '../../edges/canvas-edge-registr
 import { getCanvasNodesMatchingRectangle } from '../../nodes/canvas-node-registry'
 import { setSelectToolAwareness } from '../../tools/select/select-tool-awareness'
 import { setSelectToolSelectionDragRect } from '../../tools/select/select-tool-local-overlay'
-import { getMeasuredCanvasNodesFromLookup } from '../document/canvas-measured-nodes'
+import { applyCanvasSelectionCommitMode } from '../../utils/canvas-selection-utils'
+import type { getMeasuredCanvasNodesFromLookup } from '../document/canvas-measured-nodes'
 import {
   clearCanvasPendingSelectionPreview,
   setCanvasPendingSelectionPreview,
@@ -10,6 +11,7 @@ import {
 import type {
   CanvasAwarenessPresenceWriter,
   CanvasInteractionTools,
+  CanvasSelectionCommitMode,
   CanvasSelectionController,
   CanvasSelectionSnapshot,
 } from '../../tools/canvas-tool-types'
@@ -21,23 +23,24 @@ const MIN_SELECTION_DRAG_DISTANCE_PX = 1
 type ClientPoint = { x: number; y: number }
 
 interface CanvasSelectionGestureControllerOptions {
-  reactFlow: Pick<
-    ReactFlowInstance,
-    'getEdges' | 'getNodes' | 'getZoom' | 'screenToFlowPosition'
-  >
+  reactFlow: Pick<ReactFlowInstance, 'getEdges' | 'getNodes' | 'getZoom' | 'screenToFlowPosition'>
   getMeasuredNodes: () => ReturnType<typeof getMeasuredCanvasNodesFromLookup>
   getAwareness: () => CanvasAwarenessPresenceWriter
   interaction: Pick<CanvasInteractionTools, 'suppressNextSurfaceClick'>
   getSelection: () => Pick<
     CanvasSelectionController,
-    'beginGesture' | 'commitGestureSelection' | 'endGesture'
+    | 'beginGesture'
+    | 'commitGestureSelection'
+    | 'endGesture'
+    | 'getSelectedNodeIds'
+    | 'getSelectedEdgeIds'
   >
   requestAnimationFrame: typeof requestAnimationFrame
   cancelAnimationFrame: typeof cancelAnimationFrame
 }
 
 export interface CanvasSelectionGestureController {
-  begin: (point: ClientPoint) => void
+  begin: (point: ClientPoint, mode: CanvasSelectionCommitMode) => void
   update: (point: ClientPoint) => void
   commit: () => void
   cancel: () => void
@@ -76,6 +79,8 @@ export function createCanvasSelectionGestureController({
   let latestClientPoint: ClientPoint | null = null
   let selectionActive = false
   let previewRafId = 0
+  let selectionCommitMode: CanvasSelectionCommitMode = 'replace'
+  let gestureStartSelection: CanvasSelectionSnapshot = { nodeIds: [], edgeIds: [] }
   let lastPublishedRect: Bounds | null = null
   let lastFlowRect: Bounds | null = null
   let lastFlowSelection: CanvasSelectionSnapshot = { nodeIds: [], edgeIds: [] }
@@ -96,6 +101,8 @@ export function createCanvasSelectionGestureController({
     cancelSelectionPreviewFrame()
     lastFlowRect = null
     lastFlowSelection = { nodeIds: [], edgeIds: [] }
+    gestureStartSelection = { nodeIds: [], edgeIds: [] }
+    selectionCommitMode = 'replace'
     latestClientPoint = null
     setSelectToolSelectionDragRect(null)
     clearCanvasPendingSelectionPreview()
@@ -149,7 +156,13 @@ export function createCanvasSelectionGestureController({
         { zoom: reactFlow.getZoom() },
       ),
     }
-    setCanvasPendingSelectionPreview(lastFlowSelection)
+    setCanvasPendingSelectionPreview(
+      applyCanvasSelectionCommitMode({
+        currentSelection: gestureStartSelection,
+        nextSelection: lastFlowSelection,
+        mode: selectionCommitMode,
+      }),
+    )
   }
 
   function scheduleSelectionPreviewUpdate() {
@@ -163,10 +176,16 @@ export function createCanvasSelectionGestureController({
   }
 
   return {
-    begin: (point) => {
+    begin: (point, mode) => {
+      const selection = getSelection()
       selectionStartClientPoint = point
       latestClientPoint = point
       selectionActive = false
+      selectionCommitMode = mode
+      gestureStartSelection = {
+        nodeIds: selection.getSelectedNodeIds(),
+        edgeIds: selection.getSelectedEdgeIds(),
+      }
     },
     update: (point) => {
       if (!selectionStartClientPoint) return
@@ -187,7 +206,7 @@ export function createCanvasSelectionGestureController({
 
       if (selectionActive && lastFlowRect) {
         interaction.suppressNextSurfaceClick()
-        getSelection().commitGestureSelection(lastFlowSelection)
+        getSelection().commitGestureSelection(lastFlowSelection, selectionCommitMode)
       }
 
       selectionStartClientPoint = null

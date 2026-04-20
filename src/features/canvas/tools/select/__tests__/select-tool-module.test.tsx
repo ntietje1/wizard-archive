@@ -158,6 +158,26 @@ describe('selectToolModule', () => {
     expect(toggleNodeFromTarget).toHaveBeenCalledWith('c', true)
   })
 
+  it('treats shift-only clicks as non-modified point selection', () => {
+    const toggleNodeFromTarget = vi.fn()
+    const clickedNode = {
+      id: 'c',
+      type: 'text',
+      position: { x: 0, y: 0 },
+      data: {},
+    } as Node
+    const controller = selectToolModule.create(
+      createSelectEnvironment({
+        getNodes: () => [clickedNode],
+        toggleNodeFromTarget,
+      }),
+    )
+
+    controller.onNodeClick?.(createMouseEvent(0, 0, { shiftKey: true }), clickedNode)
+
+    expect(toggleNodeFromTarget).toHaveBeenCalledWith('c', false)
+  })
+
   it('routes edge clicks through explicit edge selection control', () => {
     const toggleNodeFromTarget = vi.fn()
     const toggleEdgeFromTarget = vi.fn()

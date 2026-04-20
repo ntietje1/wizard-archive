@@ -86,6 +86,8 @@ describe('useCanvasSelectionRect', () => {
       beginGesture: vi.fn(),
       commitGestureSelection: vi.fn(),
       endGesture: vi.fn(),
+      getSelectedNodeIds: vi.fn(() => []),
+      getSelectedEdgeIds: vi.fn(() => []),
     }
     storeState.nodeLookup = new Map([
       [
@@ -212,14 +214,116 @@ describe('useCanvasSelectionRect', () => {
     })
     expect(setPresence).toHaveBeenLastCalledWith('tool.select', null)
     expect(selection.beginGesture).toHaveBeenCalledWith('marquee')
-    expect(selection.commitGestureSelection).toHaveBeenCalledWith({
-      nodeIds: ['sticky-1'],
-      edgeIds: ['edge-1'],
-    })
+    expect(selection.commitGestureSelection).toHaveBeenCalledWith(
+      {
+        nodeIds: ['sticky-1'],
+        edgeIds: ['edge-1'],
+      },
+      'replace',
+    )
     expect(suppressNextSurfaceClick).toHaveBeenCalledTimes(1)
     expect(selection.endGesture).toHaveBeenCalled()
     expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toBeNull()
     expect(useCanvasPendingSelectionPreviewStore.getState().pendingEdgeIds).toEqual(new Set())
+
+    unmount()
+    surface.remove()
+    getNodesSpy.mockRestore()
+    getEdgesSpy.mockRestore()
+  })
+
+  it('commits additive marquee selection when the primary modifier is held at drag start', () => {
+    const selection = {
+      beginGesture: vi.fn(),
+      commitGestureSelection: vi.fn(),
+      endGesture: vi.fn(),
+      getSelectedNodeIds: vi.fn(() => ['sticky-existing']),
+      getSelectedEdgeIds: vi.fn(() => ['edge-existing']),
+    }
+    storeState.nodeLookup = new Map([
+      [
+        'sticky-1',
+        {
+          id: 'sticky-1',
+          type: 'sticky',
+          data: {},
+          position: { x: 10, y: 10 },
+          measured: { width: 80, height: 80 },
+        },
+      ],
+    ])
+    const getNodesSpy = vi.spyOn(reactFlowMock, 'getNodes').mockReturnValue([
+      {
+        id: 'sticky-1',
+        type: 'sticky',
+        data: {},
+        position: { x: 10, y: 10 },
+        width: 80,
+        height: 80,
+      },
+    ])
+    const getEdgesSpy = vi.spyOn(reactFlowMock, 'getEdges').mockReturnValue([])
+    const surface = document.createElement('div')
+    const pane = document.createElement('div')
+    pane.className = 'react-flow__pane'
+    surface.appendChild(pane)
+    document.body.appendChild(surface)
+    const surfaceRef = { current: surface }
+
+    const { unmount } = renderHook(() =>
+      useCanvasSelectionRect({
+        surfaceRef,
+        awareness: {
+          setPresence: vi.fn(),
+        },
+        interaction: {
+          suppressNextSurfaceClick: vi.fn(),
+        },
+        selection,
+        enabled: true,
+      }),
+    )
+
+    act(() => {
+      pane.dispatchEvent(
+        new MouseEvent('pointerdown', {
+          bubbles: true,
+          button: 0,
+          clientX: 10,
+          clientY: 20,
+          ctrlKey: true,
+        }),
+      )
+      window.dispatchEvent(
+        new MouseEvent('pointermove', { bubbles: true, clientX: 50, clientY: 60 }),
+      )
+    })
+
+    act(() => {
+      flushAnimationFrame()
+    })
+
+    expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toEqual(
+      new Set(['sticky-existing', 'sticky-1']),
+    )
+    expect(useCanvasPendingSelectionPreviewStore.getState().pendingEdgeIds).toEqual(
+      new Set(['edge-existing']),
+    )
+
+    act(() => {
+      window.dispatchEvent(
+        new MouseEvent('pointermove', { bubbles: true, clientX: 90, clientY: 90 }),
+      )
+      window.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 90, clientY: 90 }))
+    })
+
+    expect(selection.commitGestureSelection).toHaveBeenCalledWith(
+      {
+        nodeIds: ['sticky-1'],
+        edgeIds: [],
+      },
+      'add',
+    )
 
     unmount()
     surface.remove()

@@ -208,4 +208,23 @@ describe('useCanvasSelectionActions', () => {
       expect.objectContaining({ id: 'e-a-b', selected: false }),
     ])
   })
+
+  it('unions committed gesture selection with the existing committed ids in additive mode', () => {
+    const { result } = renderHook(() => useCanvasSelectionActions())
+
+    act(() => {
+      result.current.replace({ nodeIds: ['a'], edgeIds: [] })
+      result.current.commitGestureSelection({ nodeIds: ['b'], edgeIds: ['e-a-b'] }, 'add')
+    })
+
+    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(['a', 'b'])
+    expect(useCanvasSelectionState.getState().selectedEdgeIds).toEqual(['e-a-b'])
+    expect(reactFlowMock.getNodes()).toEqual([
+      expect.objectContaining({ id: 'a', selected: true, draggable: true }),
+      expect.objectContaining({ id: 'b', selected: true, draggable: true }),
+    ])
+    expect(reactFlowMock.getEdges()).toEqual([
+      expect.objectContaining({ id: 'e-a-b', selected: true }),
+    ])
+  })
 })

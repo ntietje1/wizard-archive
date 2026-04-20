@@ -74,13 +74,7 @@ export function StrokePreview({
   )
 }
 
-export function StrokeNode({
-  id,
-  data,
-  dragging,
-  width,
-  height,
-}: NodeProps<Node<StrokeNodeData>>) {
+export function StrokeNode({ id, data, dragging, width, height }: NodeProps<Node<StrokeNodeData>>) {
   const { points, size, bounds } = data
   const { zoom } = useViewport()
   const isErasing = useEraseToolLocalOverlayStore((state) => state.erasingStrokeIds.has(id))

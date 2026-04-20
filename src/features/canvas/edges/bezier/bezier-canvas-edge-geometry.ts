@@ -34,10 +34,7 @@ type EdgeEndpoints = {
   targetPosition: Position
 }
 
-function handleIdToPosition(
-  handleId: string | null | undefined,
-  fallback: Position,
-): Position {
+function handleIdToPosition(handleId: string | null | undefined, fallback: Position): Position {
   switch (handleId) {
     case 'top':
       return Position.Top

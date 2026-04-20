@@ -2,26 +2,27 @@ import { describe, expect, it } from 'vitest'
 import {
   getNextSelectedIds,
   isExclusivelySelectedNode,
-  isSelectionToggleModifier,
+  isPrimarySelectionModifier,
+  mergeSelectedIds,
 } from '../canvas-selection-utils'
 
 describe('canvas-selection-utils', () => {
-  it('treats shift, ctrl, and meta as selection toggle modifiers', () => {
-    expect(isSelectionToggleModifier({ shiftKey: true, ctrlKey: false, metaKey: false })).toBe(true)
-    expect(isSelectionToggleModifier({ shiftKey: false, ctrlKey: true, metaKey: false })).toBe(true)
-    expect(isSelectionToggleModifier({ shiftKey: false, ctrlKey: false, metaKey: true })).toBe(true)
-    expect(isSelectionToggleModifier({ shiftKey: true, ctrlKey: true, metaKey: false })).toBe(true)
-    expect(isSelectionToggleModifier({ shiftKey: true, ctrlKey: false, metaKey: true })).toBe(true)
-    expect(isSelectionToggleModifier({ shiftKey: false, ctrlKey: true, metaKey: true })).toBe(true)
-    expect(isSelectionToggleModifier({ shiftKey: false, ctrlKey: false, metaKey: false })).toBe(
-      false,
-    )
+  it('treats ctrl as the primary selection modifier on windows and linux', () => {
+    expect(isPrimarySelectionModifier({ ctrlKey: true, metaKey: false }, 'windows')).toBe(true)
+    expect(isPrimarySelectionModifier({ ctrlKey: true, metaKey: false }, 'linux')).toBe(true)
+    expect(isPrimarySelectionModifier({ ctrlKey: false, metaKey: true }, 'windows')).toBe(false)
+    expect(isPrimarySelectionModifier({ ctrlKey: false, metaKey: false }, 'linux')).toBe(false)
   })
 
-  it('does not treat alt as a selection toggle modifier', () => {
-    const altOnly = { shiftKey: false, ctrlKey: false, metaKey: false, altKey: true }
+  it('treats meta as the primary selection modifier on mac', () => {
+    expect(isPrimarySelectionModifier({ ctrlKey: false, metaKey: true }, 'mac')).toBe(true)
+    expect(isPrimarySelectionModifier({ ctrlKey: true, metaKey: false }, 'mac')).toBe(false)
+    expect(isPrimarySelectionModifier({ ctrlKey: false, metaKey: false }, 'mac')).toBe(false)
+  })
 
-    expect(isSelectionToggleModifier(altOnly)).toBe(false)
+  it('unions committed selection ids without duplicates when additive gestures merge', () => {
+    expect(mergeSelectedIds(['a', 'b'], ['b', 'c'])).toEqual(['a', 'b', 'c'])
+    expect(mergeSelectedIds([], ['b', 'c'])).toEqual(['b', 'c'])
   })
 
   it('keeps modifier-click on empty canvas from clearing selection', () => {

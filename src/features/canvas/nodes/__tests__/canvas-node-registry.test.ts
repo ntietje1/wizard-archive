@@ -91,9 +91,9 @@ describe('canvas node registry', () => {
           nodes,
           [
             { x: 0, y: 0 },
-            { x: 120, y: 0 },
-            { x: 120, y: 120 },
-            { x: 0, y: 120 },
+            { x: 30, y: 0 },
+            { x: 30, y: 30 },
+            { x: 0, y: 30 },
           ],
           { zoom: 1 },
         ),
