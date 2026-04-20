@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { drawToolModule } from '../draw-tool-module'
-import { clearDrawToolLocalOverlay, useDrawToolLocalOverlayStore } from '../draw-tool-local-overlay'
+import { rectangleToolModule } from '../rectangle-tool-module'
 import type { CanvasToolServices } from '../../canvas-tool-types'
 
 type MockPointerTarget = HTMLDivElement & {
@@ -23,100 +22,48 @@ function createPointerEvent(
     button: 0,
     buttons: 1,
     pointerId: 1,
-    pressure: 0.5,
     target,
     ...overrides,
   } as PointerEvent
 }
 
-describe('drawToolModule', () => {
-  it('publishes and clears tool.draw awareness while drawing', () => {
+describe('rectangleToolModule', () => {
+  it('creates a square when shift is held during rectangle creation', () => {
     const createNode = vi.fn()
-    const setPresence = vi.fn()
-    clearDrawToolLocalOverlay()
-    const controller = drawToolModule.create(
-      createDrawEnvironment({
+    const replaceNodes = vi.fn()
+    const controller = rectangleToolModule.create(
+      createRectangleEnvironment({
         createNode,
-        setPresence,
-      }),
-    )
-    const target = createPointerTarget()
-
-    controller.onPointerDown?.(createPointerEvent(target, { clientX: 0, clientY: 0 }))
-    expect(useDrawToolLocalOverlayStore.getState().localDrawing).toEqual(
-      expect.objectContaining({
-        points: [[0, 0, 0.5]],
-      }),
-    )
-
-    controller.onPointerMove?.(createPointerEvent(target, { clientX: 20, clientY: 20 }))
-    expect(useDrawToolLocalOverlayStore.getState().localDrawing).toEqual(
-      expect.objectContaining({
-        points: [
-          [0, 0, 0.5],
-          [20, 20, 0.5],
-        ],
-      }),
-    )
-
-    controller.onPointerUp?.(createPointerEvent(target, { clientX: 20, clientY: 20 }))
-
-    expect(setPresence).toHaveBeenCalledWith(
-      'tool.draw',
-      expect.objectContaining({
-        points: [[0, 0, 0.5]],
-      }),
-    )
-    expect(setPresence).toHaveBeenCalledWith(
-      'tool.draw',
-      expect.objectContaining({
-        points: [
-          [0, 0, 0.5],
-          [20, 20, 0.5],
-        ],
-      }),
-    )
-    expect(setPresence).toHaveBeenLastCalledWith('tool.draw', null)
-    expect(useDrawToolLocalOverlayStore.getState().localDrawing).toBeNull()
-    expect(createNode).toHaveBeenCalledTimes(1)
-  })
-
-  it('locks stroke creation to a straight axis-aligned line while shift is held', () => {
-    const createNode = vi.fn()
-    const controller = drawToolModule.create(
-      createDrawEnvironment({
-        createNode,
-        setPresence: vi.fn(),
+        replaceNodes,
         getShiftPressed: () => true,
       }),
     )
     const target = createPointerTarget()
 
-    controller.onPointerDown?.(createPointerEvent(target, { clientX: 0, clientY: 0 }))
-    controller.onPointerMove?.(createPointerEvent(target, { clientX: 20, clientY: 8 }))
-    controller.onPointerUp?.(createPointerEvent(target, { clientX: 20, clientY: 8 }))
+    controller.onPointerDown?.(createPointerEvent(target, { clientX: 10, clientY: 10 }))
+    controller.onPointerMove?.(createPointerEvent(target, { clientX: 50, clientY: 20 }))
+    controller.onPointerUp?.(createPointerEvent(target, { clientX: 50, clientY: 20 }))
 
     expect(createNode).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({
-          points: [
-            [0, 0, 0.5],
-            [20, 0, 0.5],
-          ],
-        }),
+        type: 'rectangle',
+        position: { x: 10, y: 10 },
+        width: 10,
+        height: 10,
       }),
     )
+    expect(replaceNodes).toHaveBeenCalledTimes(1)
   })
 })
 
-function createDrawEnvironment({
+function createRectangleEnvironment({
   createNode,
-  setPresence,
-  getShiftPressed = () => false,
+  replaceNodes,
+  getShiftPressed,
 }: {
   createNode: (node: unknown) => void
-  setPresence: (namespace: string, value: unknown) => void
-  getShiftPressed?: () => boolean
+  replaceNodes: (nodeIds: Array<string>) => void
+  getShiftPressed: () => boolean
 }): CanvasToolServices {
   return {
     viewport: {
@@ -138,7 +85,7 @@ function createDrawEnvironment({
     },
     selection: {
       replace: () => undefined,
-      replaceNodes: () => undefined,
+      replaceNodes,
       replaceEdges: () => undefined,
       clear: () => undefined,
       getSelectedNodeIds: () => [],
@@ -168,7 +115,7 @@ function createDrawEnvironment({
         strokeOpacity: 100,
         strokeSize: 4,
       }),
-      getActiveTool: () => 'draw',
+      getActiveTool: () => 'rectangle',
       setActiveTool: () => undefined,
       setStrokeColor: () => undefined,
       setStrokeSize: () => undefined,
@@ -182,7 +129,7 @@ function createDrawEnvironment({
         setLocalSelection: () => undefined,
       },
       presence: {
-        setPresence,
+        setPresence: () => undefined,
       },
     },
   }

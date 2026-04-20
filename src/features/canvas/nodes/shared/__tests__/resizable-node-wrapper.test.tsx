@@ -1,6 +1,5 @@
-import { render, screen } from '@testing-library/react'
-import type { ReactNode } from 'react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { act, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { CanvasProviders } from '../../../runtime/providers/canvas-runtime-context'
 import { useCanvasSelectionState } from '../../../runtime/selection/use-canvas-selection-state'
 import {
@@ -9,31 +8,49 @@ import {
 } from '../../../runtime/selection/use-canvas-pending-selection-preview'
 import { ResizableNodeWrapper } from '../resizable-node-wrapper'
 
-const useKeyHoldMock = vi.hoisted(() => vi.fn(() => false))
-const resizeControlProps = vi.hoisted(() => [] as Array<{ keepAspectRatio: boolean }>)
+const useCanvasModifierKeysMock = vi.hoisted(() =>
+  vi.fn(() => ({
+    shiftPressed: false,
+  })),
+)
+const useInternalNodeMock = vi.hoisted(() =>
+  vi.fn(() => ({
+    id: 'node-1',
+    position: { x: 10, y: 20 },
+    measured: { width: 80, height: 40 },
+    internals: { positionAbsolute: { x: 10, y: 20 } },
+  })),
+)
+const screenToFlowPositionMock = vi.hoisted(() =>
+  vi.fn(({ x, y }: { x: number; y: number }) => ({ x, y })),
+)
 
-vi.mock('@tanstack/react-hotkeys', () => ({
-  useKeyHold: useKeyHoldMock,
+vi.mock('../../../runtime/interaction/use-canvas-modifier-keys', () => ({
+  useCanvasModifierKeys: () => useCanvasModifierKeysMock(),
 }))
 
 vi.mock('@xyflow/react', () => ({
-  NodeResizeControl: ({
-    children,
-    keepAspectRatio,
-  }: {
-    children: ReactNode
-    keepAspectRatio: boolean
-  }) => {
-    resizeControlProps.push({ keepAspectRatio })
-    return <div data-testid="resize-control">{children}</div>
-  },
+  useInternalNode: () => useInternalNodeMock(),
+  useReactFlow: () => ({
+    screenToFlowPosition: screenToFlowPositionMock,
+  }),
 }))
 
 afterEach(() => {
   clearCanvasPendingSelectionPreview()
   useCanvasSelectionState.getState().reset()
-  resizeControlProps.length = 0
-  useKeyHoldMock.mockReturnValue(false)
+  useCanvasModifierKeysMock.mockReturnValue({ shiftPressed: false })
+})
+
+beforeAll(() => {
+  Object.defineProperty(HTMLElement.prototype, 'setPointerCapture', {
+    configurable: true,
+    value: vi.fn(),
+  })
+  Object.defineProperty(HTMLElement.prototype, 'releasePointerCapture', {
+    configurable: true,
+    value: vi.fn(),
+  })
 })
 
 describe('ResizableNodeWrapper', () => {
@@ -42,7 +59,7 @@ describe('ResizableNodeWrapper', () => {
     renderWrapper({ selected: false })
 
     expect(screen.getByTestId('selection-border')).toBeInTheDocument()
-    expect(screen.queryAllByTestId('resize-control')).toHaveLength(0)
+    expect(screen.queryAllByTestId(/canvas-node-resize-handle-/)).toHaveLength(0)
   })
 
   it('hides the local selection border for excluded committed nodes while keeping committed resize handles', () => {
@@ -50,20 +67,81 @@ describe('ResizableNodeWrapper', () => {
     renderWrapper({ selected: true })
 
     expect(screen.queryByTestId('selection-border')).toBeNull()
-    expect(screen.queryAllByTestId('resize-control')).toHaveLength(4)
+    expect(screen.queryAllByTestId(/canvas-node-resize-handle-/)).toHaveLength(4)
   })
 
-  it('uses TanStack held-key tracking for shift-constrained resize handles', () => {
-    useKeyHoldMock.mockReturnValue(true)
-    renderWrapper({ selected: true })
+  it('resizes to a square while shift is held', () => {
+    useCanvasModifierKeysMock.mockReturnValue({ shiftPressed: true })
+    const providerValues = createProviderValues()
+    useCanvasSelectionState.getState().setSelection({
+      nodeIds: ['node-1'],
+      edgeIds: [],
+    })
 
-    expect(useKeyHoldMock).toHaveBeenCalledWith('Shift')
-    expect(resizeControlProps).toEqual([
-      { keepAspectRatio: true },
-      { keepAspectRatio: true },
-      { keepAspectRatio: true },
-      { keepAspectRatio: true },
-    ])
+    render(
+      <CanvasProviders runtime={providerValues}>
+        <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
+          <div>node body</div>
+        </ResizableNodeWrapper>
+      </CanvasProviders>,
+    )
+
+    const handle = screen.getByTestId('canvas-node-resize-handle-bottom-right')
+    act(() => {
+      fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 90, clientY: 60 })
+      fireEvent.pointerMove(window, { pointerId: 1, clientX: 110, clientY: 65, shiftKey: true })
+      fireEvent.pointerUp(window, { pointerId: 1, clientX: 110, clientY: 65, shiftKey: true })
+    })
+
+    expect(providerValues.nodeActions.onResize).toHaveBeenCalledWith('node-1', 50, 50, {
+      x: 10,
+      y: 20,
+    })
+    expect(providerValues.nodeActions.onResizeEnd).toHaveBeenCalledWith('node-1', 50, 50, {
+      x: 10,
+      y: 20,
+    })
+  })
+
+  it('keeps resize handles above overlay children such as stroke hit targets', () => {
+    const providerValues = createProviderValues()
+    useCanvasSelectionState.getState().setSelection({
+      nodeIds: ['node-1'],
+      edgeIds: [],
+    })
+
+    render(
+      <CanvasProviders runtime={providerValues}>
+        <ResizableNodeWrapper id="node-1" nodeType="stroke" dragging={false}>
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'auto',
+            }}
+          >
+            overlay
+          </div>
+        </ResizableNodeWrapper>
+      </CanvasProviders>,
+    )
+
+    const handle = screen.getByTestId('canvas-node-resize-handle-bottom-right')
+
+    expect(handle).toHaveClass('canvas-node-resize-handle')
+    expect(handle).toHaveStyle({
+      width: '16px',
+      height: '16px',
+    })
+
+    act(() => {
+      fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 90, clientY: 60 })
+      fireEvent.pointerMove(window, { pointerId: 1, clientX: 110, clientY: 75 })
+      fireEvent.pointerUp(window, { pointerId: 1, clientX: 110, clientY: 75 })
+    })
+
+    expect(providerValues.nodeActions.onResize).toHaveBeenCalled()
+    expect(providerValues.nodeActions.onResizeEnd).toHaveBeenCalled()
   })
 })
 
@@ -100,8 +178,8 @@ function createProviderValues() {
     },
     nodeActions: {
       updateNodeData: () => undefined,
-      onResize: () => undefined,
-      onResizeEnd: () => undefined,
+      onResize: vi.fn(),
+      onResizeEnd: vi.fn(),
     },
   }
 }

@@ -1,4 +1,5 @@
 import { useViewport } from '@xyflow/react'
+import { CanvasDragSnapOverlay } from './canvas-drag-snap-overlay'
 import { getCanvasToolLocalOverlayLayers } from '../tools/canvas-tool-modules'
 
 export function CanvasLocalOverlaysHost() {
@@ -17,6 +18,7 @@ export function CanvasLocalOverlaysHost() {
         {localOverlayLayers.map(({ key, Layer }) => (
           <Layer key={key} />
         ))}
+        <CanvasDragSnapOverlay />
       </div>
     </div>
   )

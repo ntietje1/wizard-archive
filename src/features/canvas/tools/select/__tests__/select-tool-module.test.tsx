@@ -247,6 +247,10 @@ function createSelectEnvironment({
     interaction: {
       suppressNextSurfaceClick: vi.fn(),
     },
+    modifiers: {
+      getShiftPressed: () => false,
+      getPrimaryPressed: () => false,
+    },
     editSession: {
       editingEmbedId: null,
       setEditingEmbedId: () => undefined,

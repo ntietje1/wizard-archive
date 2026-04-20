@@ -5,12 +5,14 @@ import { createCanvasToolController, getCanvasToolCursor } from '../../tools/can
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import { canvasToolStateControls } from '../../stores/canvas-tool-state-controls'
 import { getMeasuredCanvasNodesFromLookup } from '../document/canvas-measured-nodes'
+import { useCanvasModifierKeys } from './use-canvas-modifier-keys'
 import type {
   CanvasAwarenessWriter,
   CanvasDocumentReader,
   CanvasDocumentWriter,
   CanvasEditSessionState,
   CanvasInteractionTools,
+  CanvasModifierKeyReader,
   CanvasSelectionController,
   CanvasToolStateControls,
   CanvasToolServices,
@@ -39,8 +41,10 @@ export function useCanvasToolRuntime({
   const reactFlow = useReactFlow()
   const storeApi = useStoreApi()
   const activeTool = useCanvasToolStore((state) => state.activeTool)
+  const modifiers = useCanvasModifierKeys()
 
   const runtimeStateRef = useRef<CanvasToolRuntimeState | null>(null)
+  const modifierStateRef = useRef(modifiers)
   runtimeStateRef.current = {
     documentRead,
     documentWrite,
@@ -49,9 +53,17 @@ export function useCanvasToolRuntime({
     awareness,
     editSession,
   }
+  modifierStateRef.current = modifiers
 
   const services = useMemo<CanvasToolServices>(
-    () => createCanvasToolServices(runtimeStateRef, reactFlow, storeApi, canvasToolStateControls),
+    () =>
+      createCanvasToolServices(
+        runtimeStateRef,
+        modifierStateRef,
+        reactFlow,
+        storeApi,
+        canvasToolStateControls,
+      ),
     [reactFlow, storeApi],
   )
 
@@ -66,6 +78,7 @@ export function useCanvasToolRuntime({
 
 function createCanvasToolServices(
   runtimeStateRef: RefObject<CanvasToolRuntimeState | null>,
+  modifierStateRef: RefObject<{ shiftPressed: boolean; primaryPressed: boolean }>,
   reactFlow: ReturnType<typeof useReactFlow>,
   storeApi: ReturnType<typeof useStoreApi>,
   toolState: CanvasToolStateControls,
@@ -75,6 +88,7 @@ function createCanvasToolServices(
     document: createCanvasDocumentService(runtimeStateRef, storeApi),
     selection: createCanvasSelectionService(runtimeStateRef),
     interaction: createCanvasInteractionService(runtimeStateRef),
+    modifiers: createCanvasModifierService(modifierStateRef),
     editSession: createCanvasEditSessionService(runtimeStateRef),
     toolState,
     awareness: createCanvasAwarenessService(runtimeStateRef),
@@ -141,6 +155,15 @@ function createCanvasInteractionService(
   return {
     suppressNextSurfaceClick: () =>
       getRuntimeState(runtimeStateRef).interaction.suppressNextSurfaceClick(),
+  }
+}
+
+function createCanvasModifierService(
+  modifierStateRef: RefObject<{ shiftPressed: boolean; primaryPressed: boolean }>,
+): CanvasModifierKeyReader {
+  return {
+    getShiftPressed: () => modifierStateRef.current.shiftPressed,
+    getPrimaryPressed: () => modifierStateRef.current.primaryPressed,
   }
 }
 

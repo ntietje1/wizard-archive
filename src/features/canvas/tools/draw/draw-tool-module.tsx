@@ -18,6 +18,7 @@ import {
   bindCanvasPaintProperty,
   bindCanvasStrokeSizeProperty,
 } from '../../properties/canvas-property-types'
+import { constrainPointToAxis } from '../../utils/canvas-constraint-utils'
 
 export const drawToolModule: CanvasToolModule<'draw'> = {
   id: 'draw',
@@ -50,12 +51,31 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
     clear: clearDrawToolLocalOverlay,
   },
   create: (services) => {
-    let points: Array<[number, number, number]> = []
+    let rawPoints: Array<[number, number, number]> = []
     let captureTarget: Element | null = null
     let pointerId: number | null = null
 
+    const getRenderedPoints = () => {
+      if (rawPoints.length === 0) {
+        return []
+      }
+
+      if (!services.modifiers.getShiftPressed() || rawPoints.length < 2) {
+        return rawPoints
+      }
+
+      const [startX, startY, startPressure] = rawPoints[0]
+      const [endX, endY, endPressure] = rawPoints[rawPoints.length - 1]
+      const constrainedEnd = constrainPointToAxis({ x: startX, y: startY }, { x: endX, y: endY })
+
+      return [
+        [startX, startY, startPressure],
+        [constrainedEnd.x, constrainedEnd.y, endPressure],
+      ] satisfies Array<[number, number, number]>
+    }
+
     const clearDrawing = () => {
-      points = []
+      rawPoints = []
       setDrawToolLocalDrawing(null)
       setDrawToolAwareness(services.awareness.presence, null)
       releasePointerCapture(captureTarget, pointerId)
@@ -72,7 +92,7 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
         const { strokeColor, strokeOpacity, strokeSize } = services.toolState.getSettings()
         const pos = screenEventToFlowPosition(services.viewport, event)
         const point: [number, number, number] = [pos.x, pos.y, event.pressure || 0.5]
-        points = [point]
+        rawPoints = [point]
 
         const drawing = {
           points: [point],
@@ -85,15 +105,16 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
         setDrawToolAwareness(services.awareness.presence, drawing)
       },
       onPointerMove: (event) => {
-        if ((event.buttons & 1) !== 1 || points.length === 0) return
+        if ((event.buttons & 1) !== 1 || rawPoints.length === 0) return
 
         const { strokeColor, strokeOpacity, strokeSize } = services.toolState.getSettings()
         const pos = screenEventToFlowPosition(services.viewport, event)
         const point: [number, number, number] = [pos.x, pos.y, event.pressure || 0.5]
-        points.push(point)
+        rawPoints.push(point)
+        const renderedPoints = getRenderedPoints()
 
         const drawing = {
-          points: [...points],
+          points: [...renderedPoints],
           color: strokeColor,
           size: strokeSize,
           opacity: strokeOpacity,
@@ -106,8 +127,9 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
         if (event.pointerId !== pointerId) return
 
         const { strokeColor, strokeOpacity, strokeSize } = services.toolState.getSettings()
-        if (points.length >= 2) {
-          const bounds = getStrokeBounds(points, strokeSize)
+        const renderedPoints = getRenderedPoints()
+        if (renderedPoints.length >= 2) {
+          const bounds = getStrokeBounds(renderedPoints, strokeSize)
           services.document.createNode({
             id: crypto.randomUUID(),
             type: 'stroke',
@@ -115,7 +137,7 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
             width: bounds.width,
             height: bounds.height,
             data: {
-              points: [...points],
+              points: [...renderedPoints],
               color: strokeColor,
               size: strokeSize,
               opacity: strokeOpacity,

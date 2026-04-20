@@ -2,6 +2,7 @@ import { getCanvasEdgesMatchingRectangle } from '../../edges/canvas-edge-registr
 import { getCanvasNodesMatchingRectangle } from '../../nodes/canvas-node-registry'
 import { setSelectToolAwareness } from '../../tools/select/select-tool-awareness'
 import { setSelectToolSelectionDragRect } from '../../tools/select/select-tool-local-overlay'
+import { getConstrainedRectFromPoints } from '../../utils/canvas-constraint-utils'
 import { applyCanvasSelectionCommitMode } from '../../utils/canvas-selection-utils'
 import type { getMeasuredCanvasNodesFromLookup } from '../document/canvas-measured-nodes'
 import {
@@ -41,25 +42,12 @@ interface CanvasSelectionGestureControllerOptions {
 
 export interface CanvasSelectionGestureController {
   begin: (point: ClientPoint, mode: CanvasSelectionCommitMode) => void
-  update: (point: ClientPoint) => void
-  commit: () => void
+  update: (point: ClientPoint, options?: { square: boolean }) => void
+  refresh: (options?: { square: boolean }) => void
+  commit: (options?: { square: boolean }) => void
   cancel: () => void
   dispose: () => void
   isTracking: () => boolean
-}
-
-function clientRectToFlowRect(
-  clientRect: { left: number; top: number; right: number; bottom: number },
-  flow: Pick<ReactFlowInstance, 'screenToFlowPosition'>,
-): Bounds {
-  const topLeft = flow.screenToFlowPosition({ x: clientRect.left, y: clientRect.top })
-  const bottomRight = flow.screenToFlowPosition({ x: clientRect.right, y: clientRect.bottom })
-  return {
-    x: topLeft.x,
-    y: topLeft.y,
-    width: bottomRight.x - topLeft.x,
-    height: bottomRight.y - topLeft.y,
-  }
 }
 
 function boundsEqual(a: Bounds | null, b: Bounds | null): boolean {
@@ -76,7 +64,7 @@ export function createCanvasSelectionGestureController({
   cancelAnimationFrame,
 }: CanvasSelectionGestureControllerOptions): CanvasSelectionGestureController {
   let selectionStartClientPoint: ClientPoint | null = null
-  let latestClientPoint: ClientPoint | null = null
+  let latestGestureState: { point: ClientPoint; square: boolean } | null = null
   let selectionActive = false
   let previewRafId = 0
   let selectionCommitMode: CanvasSelectionCommitMode = 'replace'
@@ -103,7 +91,7 @@ export function createCanvasSelectionGestureController({
     lastFlowSelection = { nodeIds: [], edgeIds: [] }
     gestureStartSelection = { nodeIds: [], edgeIds: [] }
     selectionCommitMode = 'replace'
-    latestClientPoint = null
+    latestGestureState = null
     setSelectToolSelectionDragRect(null)
     clearCanvasPendingSelectionPreview()
     getSelection().endGesture()
@@ -124,17 +112,13 @@ export function createCanvasSelectionGestureController({
     return true
   }
 
-  function updateSelectionRect(currentClientPoint: ClientPoint) {
+  function updateSelectionRect(currentClientPoint: ClientPoint, { square }: { square: boolean }) {
     if (!selectionStartClientPoint) return
 
-    const flowRect = clientRectToFlowRect(
-      {
-        left: Math.min(selectionStartClientPoint.x, currentClientPoint.x),
-        top: Math.min(selectionStartClientPoint.y, currentClientPoint.y),
-        right: Math.max(selectionStartClientPoint.x, currentClientPoint.x),
-        bottom: Math.max(selectionStartClientPoint.y, currentClientPoint.y),
-      },
-      reactFlow,
+    const flowRect = getConstrainedRectFromPoints(
+      reactFlow.screenToFlowPosition(selectionStartClientPoint),
+      reactFlow.screenToFlowPosition(currentClientPoint),
+      { square },
     )
 
     lastFlowRect = flowRect
@@ -170,8 +154,8 @@ export function createCanvasSelectionGestureController({
 
     previewRafId = requestAnimationFrame(() => {
       previewRafId = 0
-      if (!latestClientPoint) return
-      updateSelectionRect(latestClientPoint)
+      if (!latestGestureState) return
+      updateSelectionRect(latestGestureState.point, { square: latestGestureState.square })
     })
   }
 
@@ -179,7 +163,7 @@ export function createCanvasSelectionGestureController({
     begin: (point, mode) => {
       const selection = getSelection()
       selectionStartClientPoint = point
-      latestClientPoint = point
+      latestGestureState = { point, square: false }
       selectionActive = false
       selectionCommitMode = mode
       gestureStartSelection = {
@@ -187,21 +171,36 @@ export function createCanvasSelectionGestureController({
         edgeIds: selection.getSelectedEdgeIds(),
       }
     },
-    update: (point) => {
+    update: (point, options = { square: false }) => {
       if (!selectionStartClientPoint) return
 
-      latestClientPoint = point
-      if (!tryActivateSelection(point)) {
+      latestGestureState = { point, square: options.square }
+      const currentPoint = latestGestureState.point
+      if (!tryActivateSelection(currentPoint)) {
         return
       }
 
       scheduleSelectionPreviewUpdate()
     },
-    commit: () => {
+    refresh: (options = { square: false }) => {
+      if (!selectionStartClientPoint || !latestGestureState) return
+
+      latestGestureState = {
+        ...latestGestureState,
+        square: options.square,
+      }
+      if (!tryActivateSelection(latestGestureState.point)) {
+        return
+      }
+
+      scheduleSelectionPreviewUpdate()
+    },
+    commit: (options = { square: false }) => {
       if (!selectionStartClientPoint) return
 
-      if (latestClientPoint && tryActivateSelection(latestClientPoint)) {
-        updateSelectionRect(latestClientPoint)
+      const currentPoint = latestGestureState?.point
+      if (currentPoint && tryActivateSelection(currentPoint)) {
+        updateSelectionRect(currentPoint, options)
       }
 
       if (selectionActive && lastFlowRect) {

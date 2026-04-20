@@ -129,6 +129,9 @@ export function useCanvasInteractionRuntime({
         height: number,
         position: { x: number; y: number },
       ) => {
+        reactFlowInstance.setNodes((current) =>
+          current.map((node) => (node.id === nodeId ? { ...node, width, height, position } : node)),
+        )
         session.awareness.core.setLocalResizing({
           [nodeId]: { width, height, x: position.x, y: position.y },
         })
@@ -143,7 +146,7 @@ export function useCanvasInteractionRuntime({
         documentWriter.resizeNode(nodeId, width, height, position)
       },
     }),
-    [documentWriter, session.awareness.core],
+    [documentWriter, reactFlowInstance, session.awareness.core],
   )
 
   const shellProps: CanvasFlowShellProps = {

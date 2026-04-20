@@ -10,6 +10,7 @@ const reactFlowMock = vi.hoisted(() => ({
   getNodes: vi.fn(() => []),
   getEdges: vi.fn(() => []),
   getZoom: vi.fn(() => 1),
+  setNodes: vi.fn(),
   screenToFlowPosition: vi.fn(({ x, y }: { x: number; y: number }) => ({ x, y })),
 }))
 
@@ -112,6 +113,7 @@ describe('useCanvasInteractionRuntime', () => {
   afterEach(() => {
     doc?.destroy()
     doc = null
+    reactFlowMock.setNodes.mockReset()
   })
 
   it('composes shell wiring and node actions around the thinner runtime dependencies', () => {
@@ -229,6 +231,7 @@ describe('useCanvasInteractionRuntime', () => {
     expect(result.current.shellProps.chrome.activeTool).toBe('select')
 
     result.current.nodeActions.onResize('node-1', 120, 80, { x: 10, y: 20 })
+    expect(reactFlowMock.setNodes).toHaveBeenCalledWith(expect.any(Function))
     expect(awareness.core.setLocalResizing).toHaveBeenCalledWith({
       'node-1': { width: 120, height: 80, x: 10, y: 20 },
     })

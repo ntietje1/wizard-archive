@@ -55,6 +55,10 @@ export function createPlacementEnvironment({
     interaction: {
       suppressNextSurfaceClick: () => undefined,
     },
+    modifiers: {
+      getShiftPressed: () => false,
+      getPrimaryPressed: () => false,
+    },
     editSession: {
       editingEmbedId: null,
       setEditingEmbedId: () => undefined,

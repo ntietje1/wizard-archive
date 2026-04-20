@@ -6,7 +6,7 @@ import {
   screenEventToFlowPosition,
 } from '../shared/tool-module-utils'
 import type { CanvasToolModule } from '../canvas-tool-types'
-import { rectFromPoints } from '../../utils/canvas-geometry-utils'
+import { getConstrainedRectFromPoints } from '../../utils/canvas-constraint-utils'
 import { paintCanvasProperty } from '../../properties/canvas-property-definitions'
 import { bindCanvasPaintProperty } from '../../properties/canvas-property-types'
 import {
@@ -81,7 +81,11 @@ export const rectangleToolModule: CanvasToolModule<'rectangle'> = {
           rafId = 0
           if (!start) return
           const pos = services.viewport.screenToFlowPosition(lastClientPos)
-          setRectangleToolDragRect(rectFromPoints(start, pos))
+          setRectangleToolDragRect(
+            getConstrainedRectFromPoints(start, pos, {
+              square: services.modifiers.getShiftPressed(),
+            }),
+          )
         })
       },
       onPointerUp: () => {
@@ -91,7 +95,9 @@ export const rectangleToolModule: CanvasToolModule<'rectangle'> = {
         }
 
         const pos = services.viewport.screenToFlowPosition(lastClientPos)
-        const rect = rectFromPoints(start, pos)
+        const rect = getConstrainedRectFromPoints(start, pos, {
+          square: services.modifiers.getShiftPressed(),
+        })
         const { strokeColor, strokeOpacity } = services.toolState.getSettings()
 
         try {

@@ -4,6 +4,7 @@ import { useReactFlow, useStoreApi } from '@xyflow/react'
 import { getMeasuredCanvasNodesFromLookup } from '../document/canvas-measured-nodes'
 import { createCanvasSelectionGestureController } from './canvas-selection-gesture-controller'
 import { isPrimarySelectionModifier } from '../../utils/canvas-selection-utils'
+import { useCanvasModifierKeys } from '../interaction/use-canvas-modifier-keys'
 import type {
   CanvasAwarenessPresenceWriter,
   CanvasInteractionTools,
@@ -34,10 +35,20 @@ export function useCanvasSelectionRect({
 }: UseCanvasSelectionRectOptions) {
   const reactFlow = useReactFlow()
   const storeApi = useStoreApi()
+  const { shiftPressed } = useCanvasModifierKeys()
   const awarenessRef = useRef(awareness)
   awarenessRef.current = awareness
   const selectionRef = useRef(selection)
   selectionRef.current = selection
+  const shiftPressedRef = useRef(shiftPressed)
+  shiftPressedRef.current = shiftPressed
+  const gestureControllerRef = useRef<ReturnType<
+    typeof createCanvasSelectionGestureController
+  > | null>(null)
+
+  useEffect(() => {
+    gestureControllerRef.current?.refresh({ square: shiftPressed })
+  }, [shiftPressed])
 
   useEffect(() => {
     if (!enabled) return
@@ -53,9 +64,13 @@ export function useCanvasSelectionRect({
       requestAnimationFrame,
       cancelAnimationFrame,
     })
+    gestureControllerRef.current = gestureController
 
     function handlePointerMove(event: PointerEvent) {
-      gestureController.update({ x: event.clientX, y: event.clientY })
+      gestureController.update(
+        { x: event.clientX, y: event.clientY },
+        { square: shiftPressedRef.current },
+      )
     }
 
     function handlePointerUp() {
@@ -63,7 +78,7 @@ export function useCanvasSelectionRect({
       window.removeEventListener('pointerup', handlePointerUp)
       window.removeEventListener('pointercancel', handlePointerCancel)
       if (gestureController.isTracking()) {
-        gestureController.commit()
+        gestureController.commit({ square: shiftPressedRef.current })
       }
     }
 
@@ -98,6 +113,9 @@ export function useCanvasSelectionRect({
       window.removeEventListener('pointermove', handlePointerMove)
       window.removeEventListener('pointerup', handlePointerUp)
       window.removeEventListener('pointercancel', handlePointerCancel)
+      if (gestureControllerRef.current === gestureController) {
+        gestureControllerRef.current = null
+      }
       gestureController.dispose()
     }
   }, [enabled, interaction, reactFlow, storeApi, surfaceRef])

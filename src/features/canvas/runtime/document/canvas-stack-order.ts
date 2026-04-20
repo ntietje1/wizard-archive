@@ -1,4 +1,4 @@
-import { assertNever } from "~/shared/utils/utils"
+import { assertNever } from '~/shared/utils/utils'
 
 export type OrderableCanvasElement = {
   id: string

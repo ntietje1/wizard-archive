@@ -103,6 +103,11 @@ export interface CanvasInteractionTools {
   suppressNextSurfaceClick: () => void
 }
 
+export interface CanvasModifierKeyReader {
+  getShiftPressed: () => boolean
+  getPrimaryPressed: () => boolean
+}
+
 export interface CanvasViewportTools {
   screenToFlowPosition: (position: XYPosition) => XYPosition
   getZoom: () => number
@@ -154,6 +159,7 @@ export interface CanvasToolServices {
   document: CanvasDocumentWriter & CanvasDocumentReader & CanvasMeasuredNodeReader
   selection: CanvasSelectionController
   interaction: CanvasInteractionTools
+  modifiers: CanvasModifierKeyReader
   editSession: CanvasEditSessionState
   toolState: CanvasToolStateControls
   awareness: CanvasAwarenessWriter

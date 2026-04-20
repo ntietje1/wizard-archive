@@ -463,6 +463,10 @@ function createLassoEnvironment({
     interaction: {
       suppressNextSurfaceClick,
     },
+    modifiers: {
+      getShiftPressed: () => false,
+      getPrimaryPressed: () => false,
+    },
     editSession: {
       editingEmbedId: null,
       setEditingEmbedId: () => undefined,

@@ -209,7 +209,8 @@
 }
 
 .react-flow__node-stroke path,
-.react-flow__node-stroke .react-flow__resize-control {
+.react-flow__node-stroke .react-flow__resize-control,
+.react-flow__node-stroke .canvas-node-resize-handle {
   pointer-events: auto !important;
 }
 
