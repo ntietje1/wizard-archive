@@ -20,6 +20,7 @@ vi.mock('@xyflow/react', () => ({
     'data-selected'?: string
     'data-connection-in-progress'?: string
     className?: string
+    style?: React.CSSProperties
   }) => <div {...props}>{children}</div>,
   Position: {
     Top: 'top',

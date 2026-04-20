@@ -8,6 +8,13 @@ const HANDLE_POSITIONS = [
   { id: 'bottom', position: 'bottom' as Position },
   { id: 'left', position: 'left' as Position },
 ] as const
+const CONNECTION_HANDLE_OUTSET_PX = 1
+const HANDLE_POSITION_STYLES = {
+  top: { top: -CONNECTION_HANDLE_OUTSET_PX },
+  right: { right: -CONNECTION_HANDLE_OUTSET_PX },
+  bottom: { bottom: -CONNECTION_HANDLE_OUTSET_PX },
+  left: { left: -CONNECTION_HANDLE_OUTSET_PX },
+} as const
 
 interface CanvasNodeConnectionHandlesProps {
   selected: boolean
@@ -28,6 +35,7 @@ export function CanvasNodeConnectionHandles({ selected }: CanvasNodeConnectionHa
       id={id}
       type="source"
       position={position}
+      style={HANDLE_POSITION_STYLES[position]}
       isConnectableStart
       isConnectableEnd
       className={cn(

@@ -132,6 +132,8 @@ describe('ResizableNodeWrapper', () => {
     expect(handle).toHaveStyle({
       width: '16px',
       height: '16px',
+      right: '-8px',
+      bottom: '-8px',
     })
 
     act(() => {

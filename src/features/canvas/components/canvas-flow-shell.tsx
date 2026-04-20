@@ -128,6 +128,8 @@ export function CanvasFlowShell({
           nodeTypes={canvasNodeTypes}
           nodesDraggable={false}
           nodesConnectable={canEdit && isSelectMode}
+          elevateNodesOnSelect={false}
+          elevateEdgesOnSelect={false}
           // Canvas selection is owned by runtime selection state for both nodes and edges.
           elementsSelectable={false}
           // Marquee selection is handled in canvas runtime so node-owned hit testing can override

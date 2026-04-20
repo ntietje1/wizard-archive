@@ -12,6 +12,8 @@ import { useCanvasNodeVisualSelection } from './use-canvas-node-visual-selection
 
 const HANDLE_SIZE = 4
 const HANDLE_HIT_SIZE = 16
+const SELECTION_BORDER_OUTSET_PX = 1
+const RESIZE_HANDLE_OUTSET_PX = SELECTION_BORDER_OUTSET_PX
 
 const CORNERS: Array<{
   position: ControlPosition
@@ -24,8 +26,8 @@ const CORNERS: Array<{
     cursor: 'nwse-resize',
     cursorClassName: 'cursor-nwse-resize',
     style: {
-      left: -HANDLE_SIZE / 2 + 1 - (HANDLE_HIT_SIZE - HANDLE_SIZE) / 2,
-      top: -HANDLE_SIZE / 2 + 1 - (HANDLE_HIT_SIZE - HANDLE_SIZE) / 2,
+      left: -HANDLE_SIZE / 2 + 1 - (HANDLE_HIT_SIZE - HANDLE_SIZE) / 2 - RESIZE_HANDLE_OUTSET_PX,
+      top: -HANDLE_SIZE / 2 + 1 - (HANDLE_HIT_SIZE - HANDLE_SIZE) / 2 - RESIZE_HANDLE_OUTSET_PX,
     },
   },
   {
@@ -33,8 +35,8 @@ const CORNERS: Array<{
     cursor: 'nesw-resize',
     cursorClassName: 'cursor-nesw-resize',
     style: {
-      right: -HANDLE_SIZE / 2 + 1 - (HANDLE_HIT_SIZE - HANDLE_SIZE) / 2,
-      top: -HANDLE_SIZE / 2 + 1 - (HANDLE_HIT_SIZE - HANDLE_SIZE) / 2,
+      right: -HANDLE_SIZE / 2 + 1 - (HANDLE_HIT_SIZE - HANDLE_SIZE) / 2 - RESIZE_HANDLE_OUTSET_PX,
+      top: -HANDLE_SIZE / 2 + 1 - (HANDLE_HIT_SIZE - HANDLE_SIZE) / 2 - RESIZE_HANDLE_OUTSET_PX,
     },
   },
   {
@@ -42,8 +44,8 @@ const CORNERS: Array<{
     cursor: 'nesw-resize',
     cursorClassName: 'cursor-nesw-resize',
     style: {
-      left: -HANDLE_SIZE / 2 + 1 - (HANDLE_HIT_SIZE - HANDLE_SIZE) / 2,
-      bottom: -HANDLE_SIZE / 2 + 1 - (HANDLE_HIT_SIZE - HANDLE_SIZE) / 2,
+      left: -HANDLE_SIZE / 2 + 1 - (HANDLE_HIT_SIZE - HANDLE_SIZE) / 2 - RESIZE_HANDLE_OUTSET_PX,
+      bottom: -HANDLE_SIZE / 2 + 1 - (HANDLE_HIT_SIZE - HANDLE_SIZE) / 2 - RESIZE_HANDLE_OUTSET_PX,
     },
   },
   {
@@ -51,8 +53,8 @@ const CORNERS: Array<{
     cursor: 'nwse-resize',
     cursorClassName: 'cursor-nwse-resize',
     style: {
-      right: -HANDLE_SIZE / 2 + 1 - (HANDLE_HIT_SIZE - HANDLE_SIZE) / 2,
-      bottom: -HANDLE_SIZE / 2 + 1 - (HANDLE_HIT_SIZE - HANDLE_SIZE) / 2,
+      right: -HANDLE_SIZE / 2 + 1 - (HANDLE_HIT_SIZE - HANDLE_SIZE) / 2 - RESIZE_HANDLE_OUTSET_PX,
+      bottom: -HANDLE_SIZE / 2 + 1 - (HANDLE_HIT_SIZE - HANDLE_SIZE) / 2 - RESIZE_HANDLE_OUTSET_PX,
     },
   },
 ]

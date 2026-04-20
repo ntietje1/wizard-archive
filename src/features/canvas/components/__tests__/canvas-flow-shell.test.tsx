@@ -81,6 +81,13 @@ describe('CanvasFlowShell', () => {
       }),
     )
   })
+
+  it('keeps persisted canvas order instead of elevating selected nodes and edges', () => {
+    renderCanvasFlowShell()
+
+    expect(reactFlowMock.props?.elevateNodesOnSelect).toBe(false)
+    expect(reactFlowMock.props?.elevateEdgesOnSelect).toBe(false)
+  })
 })
 
 function createContextMenu(): CanvasFlowShellProps['contextMenu'] {
