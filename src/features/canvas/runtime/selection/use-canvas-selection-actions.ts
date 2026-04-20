@@ -9,7 +9,6 @@ import {
   useCanvasSelectionState,
 } from './use-canvas-selection-state'
 import type {
-  CanvasSelectionCommitMode,
   CanvasSelectionController,
   CanvasSelectionSnapshot,
 } from '../../tools/canvas-tool-types'

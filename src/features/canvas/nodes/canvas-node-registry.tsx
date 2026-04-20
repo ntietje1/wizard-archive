@@ -16,7 +16,6 @@ import type { CanvasAwarenessCapability, CanvasDocumentWriter } from '../tools/c
 import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
 import type { Point2D } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-geometry-utils'
-import type { CanvasContextMenuContributor } from '../runtime/context-menu/canvas-context-menu-types'
 import { boundsFromPoints, rectIntersectsBounds } from '../utils/canvas-geometry-utils'
 import { buildCanvasNodeTypes } from './canvas-node-module-types'
 import { rectangleNodeModule } from './rectangle/rectangle-node-module'

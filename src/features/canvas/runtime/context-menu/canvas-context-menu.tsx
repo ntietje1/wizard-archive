@@ -87,25 +87,27 @@ export const CanvasContextMenu = forwardRef<CanvasContextMenuRef, CanvasContextM
     })
     const [menuContext, setMenuContext] = useState<CanvasContextMenuContext | null>(null)
     const latestSelectionRef = useRef(selection)
+    const activeToolRef = useRef(activeTool)
+    const canEditRef = useRef(canEdit)
     const pendingOpenPositionRef = useRef<PointerPosition | null>(null)
     latestSelectionRef.current = selection
+    activeToolRef.current = activeTool
+    canEditRef.current = canEdit
+    const openMenuRef = useRef(
+      (position: PointerPosition, nextSelection: CanvasContextMenuContext['selection']) => {
+        if (activeToolRef.current !== 'select') {
+          return
+        }
 
-    const openMenu = (
-      position: PointerPosition,
-      nextSelection: CanvasContextMenuContext['selection'],
-    ) => {
-      if (activeTool !== 'select') {
-        return
-      }
-
-      pendingOpenPositionRef.current = position
-      setMenuContext({
-        surface: 'canvas',
-        pointerPosition: position,
-        selection: nextSelection,
-        canEdit,
-      })
-    }
+        pendingOpenPositionRef.current = position
+        setMenuContext({
+          surface: 'canvas',
+          pointerPosition: position,
+          selection: nextSelection,
+          canEdit: canEditRef.current,
+        })
+      },
+    )
 
     useLayoutEffect(() => {
       if (!menuContext || !pendingOpenPositionRef.current) {
@@ -126,7 +128,7 @@ export const CanvasContextMenu = forwardRef<CanvasContextMenuRef, CanvasContextM
           const position = normalizeContextMenuEvent(event)
           const nextSelection = { nodeIds: [], edgeIds: [] }
           selectionController.clear()
-          openMenu(position, nextSelection)
+          openMenuRef.current(position, nextSelection)
         },
         onNodeContextMenu: (event, node) => {
           const position = normalizeContextMenuEvent(event)
@@ -139,7 +141,7 @@ export const CanvasContextMenu = forwardRef<CanvasContextMenuRef, CanvasContextM
             selectionController.replace(nextSelection)
           }
 
-          openMenu(position, nextSelection)
+          openMenuRef.current(position, nextSelection)
         },
         onEdgeContextMenu: (event, edge) => {
           const position = normalizeContextMenuEvent(event)
@@ -152,10 +154,10 @@ export const CanvasContextMenu = forwardRef<CanvasContextMenuRef, CanvasContextM
             selectionController.replace(nextSelection)
           }
 
-          openMenu(position, nextSelection)
+          openMenuRef.current(position, nextSelection)
         },
       }),
-      [activeTool, canEdit, selectionController],
+      [selectionController],
     )
 
     const selectionType =

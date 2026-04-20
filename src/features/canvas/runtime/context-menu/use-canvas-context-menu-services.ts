@@ -3,11 +3,8 @@ import { useCanvasClipboardStore } from './use-canvas-clipboard-store'
 import { createCanvasClipboardEntry, materializeCanvasPaste } from './canvas-context-menu-clipboard'
 import { createCanvasReorderUpdates } from './canvas-context-menu-reorder'
 import { getCanvasDeletionSelection } from './canvas-context-menu-selection'
-import type { CanvasClipboardEntry, CanvasContextMenuServices } from './canvas-context-menu-types'
-import type {
-  CanvasSelectionController,
-  CanvasSelectionSnapshot,
-} from '../../tools/canvas-tool-types'
+import type { CanvasContextMenuServices } from './canvas-context-menu-types'
+import type { CanvasSelectionController } from '../../tools/canvas-tool-types'
 import type { Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 

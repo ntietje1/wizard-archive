@@ -3,7 +3,7 @@ import { ResizableNodeWrapper } from '../shared/resizable-node-wrapper'
 import { CanvasNodeConnectionHandles } from '../shared/canvas-node-connection-handles'
 import { useInlineCanvasNodeEdit } from '../shared/use-inline-canvas-node-edit'
 import type { Node, NodeProps } from '@xyflow/react'
-import { useCanvasNodeActionsContext } from '../../runtime/providers/canvas-runtime-context'
+import { useCanvasNodeActionsContext } from '../../runtime/providers/canvas-runtime-hooks'
 import { useIsCanvasNodeSelected } from '../../runtime/selection/use-canvas-selection-state'
 
 const TEXT_CONTAINER_CLASS = 'px-4 py-2 rounded-lg border bg-background shadow-sm h-full w-full'

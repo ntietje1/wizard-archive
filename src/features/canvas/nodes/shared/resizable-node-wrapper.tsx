@@ -4,7 +4,7 @@ import type { ControlPosition, OnResize, OnResizeEnd } from '@xyflow/react'
 import {
   useCanvasNodeActionsContext,
   useCanvasRemoteHighlightsContext,
-} from '../../runtime/providers/canvas-runtime-context'
+} from '../../runtime/providers/canvas-runtime-hooks'
 import { useCanvasNodeVisualSelection } from './use-canvas-node-visual-selection'
 
 const HANDLE_SIZE = 4

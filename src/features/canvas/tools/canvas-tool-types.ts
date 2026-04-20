@@ -132,7 +132,7 @@ export interface CanvasCoreAwarenessWriter {
 }
 
 export interface CanvasAwarenessPresenceWriter {
-  setPresence: (namespace: CanvasAwarenessNamespace, value: unknown | null) => void
+  setPresence: (namespace: CanvasAwarenessNamespace, value: unknown) => void
 }
 
 export interface CanvasAwarenessWriter {

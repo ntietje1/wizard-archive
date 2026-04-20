@@ -6,7 +6,7 @@ import type { Edge, EdgeProps, EdgeTypes, Node } from '@xyflow/react'
 export type CanvasEdgeType = 'bezier'
 
 export type CanvasEdgeRendererProps<
-  TData = Record<string, unknown>,
+  TData extends Record<string, unknown> = Record<string, unknown>,
   TType extends CanvasEdgeType = CanvasEdgeType,
 > = EdgeProps<Edge<TData, TType>>
 

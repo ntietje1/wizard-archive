@@ -24,7 +24,7 @@ import { CanvasNodeConnectionHandles } from '../shared/canvas-node-connection-ha
 import {
   useCanvasEditSessionContext,
   useCanvasPermissionsContext,
-} from '../../runtime/providers/canvas-runtime-context'
+} from '../../runtime/providers/canvas-runtime-hooks'
 
 export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>) {
   const sidebarItemId = data.sidebarItemId

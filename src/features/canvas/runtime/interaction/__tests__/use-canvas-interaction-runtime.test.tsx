@@ -115,7 +115,8 @@ describe('useCanvasInteractionRuntime', () => {
   })
 
   it('composes shell wiring and node actions around the thinner runtime dependencies', () => {
-    doc = new Y.Doc()
+    const canvasDoc = new Y.Doc()
+    doc = canvasDoc
     const awareness = {
       remoteUsers: [],
       core: {
@@ -184,7 +185,7 @@ describe('useCanvasInteractionRuntime', () => {
         canvasId: 'canvas-id' as never,
         canEdit: true,
         activeToolId: 'select',
-        doc,
+        doc: canvasDoc,
         nodesMap: new Y.Map(),
         edgesMap: new Y.Map(),
         canvasSurfaceRef,

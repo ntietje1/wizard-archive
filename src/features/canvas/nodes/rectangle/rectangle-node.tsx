@@ -4,7 +4,10 @@ import type { Node, NodeProps } from '@xyflow/react'
 export type RectangleNodeData = { color?: string; opacity?: number }
 
 export function RectanglePreview({ color, opacity }: { color: string; opacity?: number }) {
-  const normalizedOpacity = Number.isFinite(opacity) ? Math.min(Math.max(opacity, 0), 100) : 100
+  const normalizedOpacity =
+    typeof opacity === 'number' && Number.isFinite(opacity)
+      ? Math.min(Math.max(opacity, 0), 100)
+      : 100
 
   return (
     <div className="flex h-full w-full items-center justify-center">

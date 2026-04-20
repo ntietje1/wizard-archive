@@ -1,6 +1,5 @@
 import { polygonIntersectsBounds, rectIntersectsBounds } from '../../utils/canvas-geometry-utils'
 import type { CanvasNodeSelection } from '../canvas-node-module-types'
-import type { Point2D } from '../../utils/canvas-awareness-types'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
 import type { Node } from '@xyflow/react'
 

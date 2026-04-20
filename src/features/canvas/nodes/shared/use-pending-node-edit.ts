@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useCanvasEditSessionContext } from '../../runtime/providers/canvas-runtime-context'
+import { useCanvasEditSessionContext } from '../../runtime/providers/canvas-runtime-hooks'
 
 interface UsePendingNodeEditOptions {
   id: string

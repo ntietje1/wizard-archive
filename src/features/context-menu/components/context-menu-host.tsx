@@ -1,7 +1,7 @@
 import React, { forwardRef, useImperativeHandle, useRef } from 'react'
 import { CheckIcon } from 'lucide-react'
 import type { BuiltContextMenu, ResolvedContextMenuItem } from '../types'
-import { handleError, logger } from '~/shared/utils/logger'
+import { handleError } from '~/shared/utils/logger'
 import {
   ContextMenu,
   ContextMenuContent,

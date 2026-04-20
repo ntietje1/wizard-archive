@@ -1,3 +1,5 @@
+import { assertNever } from "~/shared/utils/utils"
+
 export type OrderableCanvasElement = {
   id: string
   zIndex?: number
@@ -76,9 +78,7 @@ export function reorderCanvasElements<T extends OrderableCanvasElement>(
       }
       return normalizeZIndex(moved)
     }
-    default: {
-      const exhaustiveDirection: never = direction
-      throw new Error(`Unhandled direction: ${exhaustiveDirection}`)
-    }
+    default:
+      return assertNever(direction)
   }
 }

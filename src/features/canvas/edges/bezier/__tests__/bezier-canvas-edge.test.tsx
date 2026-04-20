@@ -118,7 +118,6 @@ function createEdgeProps(
     targetY: 20,
     sourcePosition: Position.Right,
     targetPosition: Position.Left,
-    selected,
     animated: false,
     data: {},
     selectable: true,
