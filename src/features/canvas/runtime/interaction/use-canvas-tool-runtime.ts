@@ -158,12 +158,18 @@ function createCanvasSelectionAccess(
   selectionRef: RefObject<CanvasSelectionController>,
 ): CanvasSelectionController {
   return {
-    replace: (nodeIds) => selectionRef.current.replace(nodeIds),
+    replace: (selection) => selectionRef.current.replace(selection),
+    replaceNodes: (nodeIds) => selectionRef.current.replaceNodes(nodeIds),
+    replaceEdges: (edgeIds) => selectionRef.current.replaceEdges(edgeIds),
     clear: () => selectionRef.current.clear(),
     getSelectedNodeIds: () => selectionRef.current.getSelectedNodeIds(),
-    toggleFromTarget: (targetId, toggle) => selectionRef.current.toggleFromTarget(targetId, toggle),
+    getSelectedEdgeIds: () => selectionRef.current.getSelectedEdgeIds(),
+    toggleNodeFromTarget: (targetId, toggle) =>
+      selectionRef.current.toggleNodeFromTarget(targetId, toggle),
+    toggleEdgeFromTarget: (targetId, toggle) =>
+      selectionRef.current.toggleEdgeFromTarget(targetId, toggle),
     beginGesture: (kind) => selectionRef.current.beginGesture(kind),
-    commitGestureSelection: (nodeIds) => selectionRef.current.commitGestureSelection(nodeIds),
+    commitGestureSelection: (selection) => selectionRef.current.commitGestureSelection(selection),
     endGesture: () => selectionRef.current.endGesture(),
   }
 }

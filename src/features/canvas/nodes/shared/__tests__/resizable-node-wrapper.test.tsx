@@ -20,7 +20,7 @@ afterEach(() => {
 
 describe('ResizableNodeWrapper', () => {
   it('renders the normal selection border for pending-only preview nodes without resize handles', () => {
-    setCanvasPendingSelectionPreview(['node-1'])
+    setCanvasPendingSelectionPreview({ nodeIds: ['node-1'], edgeIds: [] })
     renderWrapper({ selected: false })
 
     expect(screen.getByTestId('selection-border')).toBeInTheDocument()
@@ -28,7 +28,7 @@ describe('ResizableNodeWrapper', () => {
   })
 
   it('hides the local selection border for excluded committed nodes while keeping committed resize handles', () => {
-    setCanvasPendingSelectionPreview(['other-node'])
+    setCanvasPendingSelectionPreview({ nodeIds: ['other-node'], edgeIds: [] })
     renderWrapper({ selected: true })
 
     expect(screen.queryByTestId('selection-border')).toBeNull()

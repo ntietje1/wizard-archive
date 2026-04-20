@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  getNextSelectedNodeIds,
+  getNextSelectedIds,
   isExclusivelySelectedNode,
   isSelectionToggleModifier,
 } from '../canvas-selection-utils'
@@ -26,16 +26,16 @@ describe('canvas-selection-utils', () => {
 
   it('keeps modifier-click on empty canvas from clearing selection', () => {
     expect(
-      getNextSelectedNodeIds({
-        selectedNodeIds: ['a', 'b'],
+      getNextSelectedIds({
+        selectedIds: ['a', 'b'],
         targetId: null,
         toggle: true,
       }),
     ).toEqual(['a', 'b'])
 
     expect(
-      getNextSelectedNodeIds({
-        selectedNodeIds: ['a', 'b'],
+      getNextSelectedIds({
+        selectedIds: ['a', 'b'],
         targetId: null,
         toggle: false,
       }),
@@ -44,32 +44,32 @@ describe('canvas-selection-utils', () => {
 
   it('toggles only the clicked node when a modifier is pressed', () => {
     expect(
-      getNextSelectedNodeIds({
-        selectedNodeIds: ['a', 'b'],
+      getNextSelectedIds({
+        selectedIds: ['a', 'b'],
         targetId: 'c',
         toggle: true,
       }),
     ).toEqual(['a', 'b', 'c'])
 
     expect(
-      getNextSelectedNodeIds({
-        selectedNodeIds: ['a', 'b'],
+      getNextSelectedIds({
+        selectedIds: ['a', 'b'],
         targetId: 'b',
         toggle: true,
       }),
     ).toEqual(['a'])
 
     expect(
-      getNextSelectedNodeIds({
-        selectedNodeIds: ['a', 'b'],
+      getNextSelectedIds({
+        selectedIds: ['a', 'b'],
         targetId: 'b',
         toggle: false,
       }),
     ).toEqual(['b'])
 
     expect(
-      getNextSelectedNodeIds({
-        selectedNodeIds: ['a', 'b'],
+      getNextSelectedIds({
+        selectedIds: ['a', 'b'],
         targetId: 'c',
         toggle: false,
       }),

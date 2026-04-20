@@ -39,7 +39,7 @@ describe('stickyToolModule', () => {
         opacity: 100,
       },
     })
-    expect(replaceSelection).toHaveBeenCalledWith([createdNodes[0].id])
+    expect(replaceSelection).toHaveBeenCalledWith({ nodeIds: [createdNodes[0].id], edgeIds: [] })
     expect(setPendingEditNodeId).toHaveBeenCalledWith(createdNodes[0].id)
     expect(setActiveTool).toHaveBeenCalledWith('select')
     expect(createdNodes[0].id).toMatch(
@@ -71,7 +71,7 @@ describe('stickyToolModule', () => {
     expect(createdNodes[0]).toMatchObject({
       position: { x: -80, y: -80 },
     })
-    expect(replaceSelection).toHaveBeenCalledWith([createdNodes[0].id])
+    expect(replaceSelection).toHaveBeenCalledWith({ nodeIds: [createdNodes[0].id], edgeIds: [] })
     expect(setPendingEditNodeId).toHaveBeenCalledWith(createdNodes[0].id)
     expect(setActiveTool).toHaveBeenCalledWith('select')
   })

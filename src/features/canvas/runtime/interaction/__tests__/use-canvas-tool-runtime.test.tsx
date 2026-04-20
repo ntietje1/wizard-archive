@@ -57,9 +57,13 @@ describe('useCanvasToolRuntime', () => {
     }
     const selectionActions = {
       replace: vi.fn(),
+      replaceNodes: vi.fn(),
+      replaceEdges: vi.fn(),
       clear: vi.fn(),
       getSelectedNodeIds: vi.fn(() => []),
-      toggleFromTarget: vi.fn(),
+      getSelectedEdgeIds: vi.fn(() => []),
+      toggleNodeFromTarget: vi.fn(),
+      toggleEdgeFromTarget: vi.fn(),
       beginGesture: vi.fn(),
       commitGestureSelection: vi.fn(),
       endGesture: vi.fn(),

@@ -91,6 +91,7 @@ vi.mock('../use-canvas-tool-runtime', () => ({
         onMoveStart: vi.fn(),
         onMoveEnd: vi.fn(),
         onNodeClick: vi.fn(),
+        onEdgeClick: vi.fn(),
         onPaneClick: vi.fn(),
       },
     }
@@ -135,9 +136,13 @@ describe('useCanvasInteractionRuntime', () => {
     }
     const selectionController: CanvasSelectionController = {
       replace: vi.fn(),
+      replaceNodes: vi.fn(),
+      replaceEdges: vi.fn(),
       clear: vi.fn(),
       getSelectedNodeIds: vi.fn(() => []),
-      toggleFromTarget: vi.fn(),
+      getSelectedEdgeIds: vi.fn(() => []),
+      toggleNodeFromTarget: vi.fn(),
+      toggleEdgeFromTarget: vi.fn(),
       beginGesture: vi.fn(),
       commitGestureSelection: vi.fn(),
       endGesture: vi.fn(),

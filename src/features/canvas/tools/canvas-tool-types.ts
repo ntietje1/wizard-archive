@@ -20,6 +20,11 @@ export type CanvasToolId =
 
 export type CanvasSelectionGestureKind = 'marquee' | 'lasso'
 
+export interface CanvasSelectionSnapshot {
+  nodeIds: Array<string>
+  edgeIds: Array<string>
+}
+
 interface CanvasToolSettings {
   strokeColor: string
   strokeOpacity: number
@@ -77,12 +82,16 @@ interface CanvasMeasuredNodeReader {
 }
 
 export interface CanvasSelectionController {
-  replace: (nodeIds: Array<string>) => void
+  replace: (selection: CanvasSelectionSnapshot) => void
+  replaceNodes: (nodeIds: Array<string>) => void
+  replaceEdges: (edgeIds: Array<string>) => void
   clear: () => void
   getSelectedNodeIds: () => Array<string>
-  toggleFromTarget: (targetId: string | null, toggle: boolean) => void
+  getSelectedEdgeIds: () => Array<string>
+  toggleNodeFromTarget: (targetId: string | null, toggle: boolean) => void
+  toggleEdgeFromTarget: (targetId: string | null, toggle: boolean) => void
   beginGesture: (kind: CanvasSelectionGestureKind) => void
-  commitGestureSelection: (nodeIds: Array<string>) => void
+  commitGestureSelection: (selection: CanvasSelectionSnapshot) => void
   endGesture: () => void
 }
 
@@ -152,6 +161,7 @@ export interface CanvasToolController {
   onPointerUp?: (event: PointerEvent) => void
   onPointerCancel?: (event: PointerEvent) => void
   onNodeClick?: (event: ReactMouseEvent, node: Node) => void
+  onEdgeClick?: (event: ReactMouseEvent, edge: Edge) => void
   onPaneClick?: (event: ReactMouseEvent) => void
   onMoveStart?: (event: MouseEvent | TouchEvent | null) => void
   onMoveEnd?: () => void

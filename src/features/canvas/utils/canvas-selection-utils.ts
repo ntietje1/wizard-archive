@@ -4,28 +4,28 @@ export function isSelectionToggleModifier(event: SelectionModifierEvent): boolea
   return event.shiftKey || event.ctrlKey || event.metaKey
 }
 
-export function getNextSelectedNodeIds({
-  selectedNodeIds,
+export function getNextSelectedIds({
+  selectedIds,
   targetId,
   toggle,
 }: {
-  selectedNodeIds: Array<string>
+  selectedIds: Array<string>
   targetId: string | null
   toggle: boolean
 }): Array<string> {
   if (!targetId) {
-    return toggle ? selectedNodeIds : []
+    return toggle ? selectedIds : []
   }
 
   if (!toggle) {
     return [targetId]
   }
 
-  if (selectedNodeIds.includes(targetId)) {
-    return selectedNodeIds.filter((id) => id !== targetId)
+  if (selectedIds.includes(targetId)) {
+    return selectedIds.filter((id) => id !== targetId)
   }
 
-  return [...selectedNodeIds, targetId]
+  return [...selectedIds, targetId]
 }
 
 export function isExclusivelySelectedNode(

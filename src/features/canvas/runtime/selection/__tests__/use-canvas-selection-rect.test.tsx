@@ -6,10 +6,13 @@ import {
 } from '../use-canvas-pending-selection-preview'
 import { useCanvasSelectionRect } from '../use-canvas-selection-rect'
 import { clearSelectToolLocalOverlay } from '../../../tools/select/select-tool-local-overlay'
+import type { Edge, Node } from '@xyflow/react'
 
 const reactFlowMock = vi.hoisted(() => ({
   screenToFlowPosition: ({ x, y }: { x: number; y: number }) => ({ x, y }),
   getZoom: () => 1,
+  getNodes: (): Array<Node> => [],
+  getEdges: (): Array<Edge> => [],
 }))
 
 const storeState = vi.hoisted(() => ({
@@ -25,10 +28,15 @@ const storeApiMock = vi.hoisted(() => {
   }
 })
 
-vi.mock('@xyflow/react', () => ({
-  useReactFlow: () => reactFlowMock,
-  useStoreApi: () => storeApiMock,
-}))
+vi.mock('@xyflow/react', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>
+
+  return {
+    ...actual,
+    useReactFlow: () => reactFlowMock,
+    useStoreApi: () => storeApiMock,
+  }
+})
 
 describe('useCanvasSelectionRect', () => {
   const rafCallbacks = new Map<number, FrameRequestCallback>()
@@ -89,6 +97,44 @@ describe('useCanvasSelectionRect', () => {
           measured: { width: 80, height: 80 },
         },
       ],
+      [
+        'sticky-2',
+        {
+          id: 'sticky-2',
+          type: 'sticky',
+          data: {},
+          position: { x: 120, y: 10 },
+          measured: { width: 80, height: 80 },
+        },
+      ],
+    ])
+    const getNodesSpy = vi.spyOn(reactFlowMock, 'getNodes').mockReturnValue([
+      {
+        id: 'sticky-1',
+        type: 'sticky',
+        data: {},
+        position: { x: 10, y: 10 },
+        width: 80,
+        height: 80,
+      },
+      {
+        id: 'sticky-2',
+        type: 'sticky',
+        data: {},
+        position: { x: 120, y: 10 },
+        width: 80,
+        height: 80,
+      },
+    ])
+    const getEdgesSpy = vi.spyOn(reactFlowMock, 'getEdges').mockReturnValue([
+      {
+        id: 'edge-1',
+        type: 'bezier',
+        source: 'sticky-1',
+        target: 'sticky-2',
+        sourceHandle: 'right',
+        targetHandle: 'left',
+      },
     ])
     const surface = document.createElement('div')
     const pane = document.createElement('div')
@@ -133,6 +179,7 @@ describe('useCanvasSelectionRect', () => {
     expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toEqual(
       new Set(['sticky-1']),
     )
+    expect(useCanvasPendingSelectionPreviewStore.getState().pendingEdgeIds).toEqual(new Set())
     expect(setPresence).toHaveBeenCalledWith('tool.select', {
       type: 'rect',
       x: 10,
@@ -164,12 +211,18 @@ describe('useCanvasSelectionRect', () => {
     })
     expect(setPresence).toHaveBeenLastCalledWith('tool.select', null)
     expect(selection.beginGesture).toHaveBeenCalledWith('marquee')
-    expect(selection.commitGestureSelection).toHaveBeenCalledWith(['sticky-1'])
+    expect(selection.commitGestureSelection).toHaveBeenCalledWith({
+      nodeIds: ['sticky-1'],
+      edgeIds: ['edge-1'],
+    })
     expect(suppressNextSurfaceClick).toHaveBeenCalledTimes(1)
     expect(selection.endGesture).toHaveBeenCalled()
     expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toBeNull()
+    expect(useCanvasPendingSelectionPreviewStore.getState().pendingEdgeIds).toEqual(new Set())
 
     unmount()
     surface.remove()
+    getNodesSpy.mockRestore()
+    getEdgesSpy.mockRestore()
   })
 })

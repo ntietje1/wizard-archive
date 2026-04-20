@@ -23,7 +23,7 @@ export const stickyToolModule: CanvasToolModule<'sticky'> = {
         })
         environment.document.createNode(placement.node)
         if (placement.node.selected) {
-          environment.selection.replace([placement.node.id])
+          environment.selection.replaceNodes([placement.node.id])
         }
         if (placement.startEditing) {
           environment.editSession.setPendingEditNodeId(placement.node.id)

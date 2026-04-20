@@ -105,7 +105,7 @@ export const rectangleToolModule: CanvasToolModule<'rectangle'> = {
               },
             })
             environment.document.createNode(node)
-            environment.selection.replace([node.id])
+            environment.selection.replaceNodes([node.id])
           }
         } finally {
           reset()

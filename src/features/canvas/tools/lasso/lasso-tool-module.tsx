@@ -1,4 +1,5 @@
 import { Lasso } from 'lucide-react'
+import { getCanvasEdgesMatchingLasso } from '../../edges/canvas-edge-registry'
 import { getCanvasNodesMatchingLasso } from '../../nodes/canvas-node-registry'
 import {
   clearCanvasPendingSelectionPreview,
@@ -72,11 +73,21 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
         return
       }
 
-      setCanvasPendingSelectionPreview(
-        getCanvasNodesMatchingLasso(environment.document.getMeasuredNodes(), points, {
+      const pendingNodeIds = getCanvasNodesMatchingLasso(
+        environment.document.getMeasuredNodes(),
+        points,
+        {
           zoom: environment.viewport.getZoom(),
-        }),
+        },
       )
+      const pendingEdgeIds = getCanvasEdgesMatchingLasso(
+        environment.document.getNodes(),
+        environment.document.getEdges(),
+        points,
+        { zoom: environment.viewport.getZoom() },
+      )
+
+      setCanvasPendingSelectionPreview({ nodeIds: pendingNodeIds, edgeIds: pendingEdgeIds })
     }
 
     const schedulePreview = () => {
@@ -136,14 +147,22 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
           return
         }
 
-        const selectedNodeIds = getCanvasNodesMatchingLasso(
-          environment.document.getMeasuredNodes(),
+        const measuredNodes = environment.document.getMeasuredNodes()
+        const selectedNodeIds = getCanvasNodesMatchingLasso(measuredNodes, points, {
+          zoom: environment.viewport.getZoom(),
+        })
+        const selectedEdgeIds = getCanvasEdgesMatchingLasso(
+          environment.document.getNodes(),
+          environment.document.getEdges(),
           points,
           { zoom: environment.viewport.getZoom() },
         )
 
         environment.interaction.suppressNextSurfaceClick()
-        environment.selection.commitGestureSelection(selectedNodeIds)
+        environment.selection.commitGestureSelection({
+          nodeIds: selectedNodeIds,
+          edgeIds: selectedEdgeIds,
+        })
         reset()
         environment.toolState.setActiveTool('select')
       },

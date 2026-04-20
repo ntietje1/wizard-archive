@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { selectToolModule } from '../select-tool-module'
 import type { CanvasMeasuredNode, CanvasToolEnvironment } from '../../canvas-tool-types'
-import type { Node } from '@xyflow/react'
+import type { Edge, Node } from '@xyflow/react'
 
 function createMouseEvent(
   x: number,
@@ -79,67 +79,67 @@ function createConcaveStrokeNode(id: string): CanvasMeasuredNode {
 
 describe('selectToolModule', () => {
   it('preserves multi-selection on modifier-click empty canvas', () => {
-    const toggleFromTarget = vi.fn()
+    const toggleNodeFromTarget = vi.fn()
     const controller = selectToolModule.create(
       createSelectEnvironment({
         getNodes: () => [],
-        toggleFromTarget,
+        toggleNodeFromTarget,
       }),
     )
 
     controller.onPaneClick?.(createMouseEvent(500, 500, { ctrlKey: true }))
 
-    expect(toggleFromTarget).toHaveBeenCalledWith(null, true)
+    expect(toggleNodeFromTarget).toHaveBeenCalledWith(null, true)
   })
 
   it('uses the same padded stroke hit test for modifier deselection as for selection', () => {
-    const toggleFromTarget = vi.fn()
+    const toggleNodeFromTarget = vi.fn()
     const strokeNode = createStrokeNode('stroke-1')
     const controller = selectToolModule.create(
       createSelectEnvironment({
         getNodes: () => [strokeNode],
-        toggleFromTarget,
+        toggleNodeFromTarget,
       }),
     )
 
     controller.onPaneClick?.(createMouseEvent(50, 20, { ctrlKey: true }))
 
-    expect(toggleFromTarget).toHaveBeenCalledWith('stroke-1', true)
+    expect(toggleNodeFromTarget).toHaveBeenCalledWith('stroke-1', true)
   })
 
   it('hit-tests moved strokes using their current measured position instead of assuming origin placement', () => {
-    const toggleFromTarget = vi.fn()
+    const toggleNodeFromTarget = vi.fn()
     const strokeNode = createOffsetStrokeNode('stroke-1')
     const controller = selectToolModule.create(
       createSelectEnvironment({
         getNodes: () => [createStrokeNode('stale-stroke')],
         getMeasuredNodes: () => [strokeNode],
-        toggleFromTarget,
+        toggleNodeFromTarget,
       }),
     )
 
     controller.onPaneClick?.(createMouseEvent(470, 250))
 
-    expect(toggleFromTarget).toHaveBeenCalledWith('stroke-1', false)
+    expect(toggleNodeFromTarget).toHaveBeenCalledWith('stroke-1', false)
   })
 
   it('does not select a concave stroke from clicks in its open interior gap', () => {
-    const toggleFromTarget = vi.fn()
+    const toggleNodeFromTarget = vi.fn()
     const strokeNode = createConcaveStrokeNode('stroke-1')
     const controller = selectToolModule.create(
       createSelectEnvironment({
         getNodes: () => [strokeNode],
-        toggleFromTarget,
+        toggleNodeFromTarget,
       }),
     )
 
     controller.onPaneClick?.(createMouseEvent(50, 40))
 
-    expect(toggleFromTarget).toHaveBeenCalledWith(null, false)
+    expect(toggleNodeFromTarget).toHaveBeenCalledWith(null, false)
   })
 
   it('routes regular node ctrl-click through strict toggle behavior', () => {
-    const toggleFromTarget = vi.fn()
+    const toggleNodeFromTarget = vi.fn()
     const clickedNode = {
       id: 'c',
       type: 'text',
@@ -149,13 +149,32 @@ describe('selectToolModule', () => {
     const controller = selectToolModule.create(
       createSelectEnvironment({
         getNodes: () => [clickedNode],
-        toggleFromTarget,
+        toggleNodeFromTarget,
       }),
     )
 
     controller.onNodeClick?.(createMouseEvent(0, 0, { ctrlKey: true }), clickedNode)
 
-    expect(toggleFromTarget).toHaveBeenCalledWith('c', true)
+    expect(toggleNodeFromTarget).toHaveBeenCalledWith('c', true)
+  })
+
+  it('routes edge clicks through explicit edge selection control', () => {
+    const toggleEdgeFromTarget = vi.fn()
+    const controller = selectToolModule.create(
+      createSelectEnvironment({
+        getNodes: () => [],
+        toggleNodeFromTarget: vi.fn(),
+        toggleEdgeFromTarget,
+      }),
+    )
+
+    controller.onEdgeClick?.(createMouseEvent(0, 0, { ctrlKey: true }), {
+      id: 'edge-1',
+      source: 'a',
+      target: 'b',
+    } as Edge)
+
+    expect(toggleEdgeFromTarget).toHaveBeenCalledWith('edge-1', true)
   })
 })
 
@@ -164,11 +183,13 @@ function createSelectEnvironment({
   // Intentional compatibility cast: plain React Flow nodes lack measured dimensions, so tests that
   // depend on width/height should override `getMeasuredNodes` or supply measured node objects.
   getMeasuredNodes = () => getNodes() as Array<CanvasMeasuredNode>,
-  toggleFromTarget,
+  toggleNodeFromTarget,
+  toggleEdgeFromTarget = vi.fn(),
 }: {
   getNodes: () => Array<Node>
   getMeasuredNodes?: () => Array<CanvasMeasuredNode>
-  toggleFromTarget: (targetId: string | null, toggle: boolean) => void
+  toggleNodeFromTarget: (targetId: string | null, toggle: boolean) => void
+  toggleEdgeFromTarget?: (targetId: string | null, toggle: boolean) => void
 }): CanvasToolEnvironment {
   return {
     viewport: {
@@ -190,9 +211,13 @@ function createSelectEnvironment({
     },
     selection: {
       replace: vi.fn(),
+      replaceNodes: vi.fn(),
+      replaceEdges: vi.fn(),
       clear: vi.fn(),
       getSelectedNodeIds: () => [],
-      toggleFromTarget,
+      getSelectedEdgeIds: () => [],
+      toggleNodeFromTarget,
+      toggleEdgeFromTarget,
       beginGesture: vi.fn(),
       commitGestureSelection: vi.fn(),
       endGesture: vi.fn(),

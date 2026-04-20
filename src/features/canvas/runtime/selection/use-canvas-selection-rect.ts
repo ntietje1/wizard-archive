@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { RefObject } from 'react'
 import { useReactFlow, useStoreApi } from '@xyflow/react'
+import { getCanvasEdgesMatchingRectangle } from '../../edges/canvas-edge-registry'
 import { getMeasuredCanvasNodesFromLookup } from '../document/canvas-measured-nodes'
 import { getCanvasNodesMatchingRectangle } from '../../nodes/canvas-node-registry'
 import {
@@ -122,7 +123,13 @@ export function useCanvasSelectionRect({
         flowRect,
         { zoom: reactFlow.getZoom() },
       )
-      setCanvasPendingSelectionPreview(pendingNodeIds)
+      const pendingEdgeIds = getCanvasEdgesMatchingRectangle(
+        reactFlow.getNodes(),
+        reactFlow.getEdges(),
+        flowRect,
+        { zoom: reactFlow.getZoom() },
+      )
+      setCanvasPendingSelectionPreview({ nodeIds: pendingNodeIds, edgeIds: pendingEdgeIds })
     }
 
     function scheduleSelectionPreviewUpdate() {
@@ -160,13 +167,23 @@ export function useCanvasSelectionRect({
 
       if (commit && selectionActive && lastFlowRectRef.current) {
         const current = storeApi.getState()
+        const measuredNodes = getMeasuredCanvasNodesFromLookup(current.nodeLookup)
         const selectedNodeIds = getCanvasNodesMatchingRectangle(
-          getMeasuredCanvasNodesFromLookup(current.nodeLookup),
+          measuredNodes,
+          lastFlowRectRef.current,
+          { zoom: reactFlow.getZoom() },
+        )
+        const selectedEdgeIds = getCanvasEdgesMatchingRectangle(
+          reactFlow.getNodes(),
+          reactFlow.getEdges(),
           lastFlowRectRef.current,
           { zoom: reactFlow.getZoom() },
         )
         interaction.suppressNextSurfaceClick()
-        selectionRef.current.commitGestureSelection(selectedNodeIds)
+        selectionRef.current.commitGestureSelection({
+          nodeIds: selectedNodeIds,
+          edgeIds: selectedEdgeIds,
+        })
       }
 
       selectionStartClientPoint = null

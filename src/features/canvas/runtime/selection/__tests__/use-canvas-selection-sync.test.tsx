@@ -20,11 +20,17 @@ describe('useCanvasSelectionSync', () => {
     )
 
     act(() => {
-      useCanvasSelectionState.getState().setSelectedNodeIds(['embed-1', 'text-1'])
+      useCanvasSelectionState.getState().setSelection({
+        nodeIds: ['embed-1', 'text-1'],
+        edgeIds: ['edge-1'],
+      })
     })
 
     expect(setLocalSelection).toHaveBeenCalledWith(['embed-1', 'text-1'])
-    expect(onHistorySelectionChange).toHaveBeenCalledWith(['embed-1', 'text-1'])
+    expect(onHistorySelectionChange).toHaveBeenCalledWith({
+      nodeIds: ['embed-1', 'text-1'],
+      edgeIds: ['edge-1'],
+    })
   })
 
   it('clears local selection and history when the authoritative selection is cleared', () => {
@@ -39,14 +45,17 @@ describe('useCanvasSelectionSync', () => {
     )
 
     act(() => {
-      useCanvasSelectionState.getState().setSelectedNodeIds(['embed-1'])
+      useCanvasSelectionState.getState().setSelection({
+        nodeIds: ['embed-1'],
+        edgeIds: ['edge-1'],
+      })
     })
 
     act(() => {
-      useCanvasSelectionState.getState().setSelectedNodeIds([])
+      useCanvasSelectionState.getState().setSelection({ nodeIds: [], edgeIds: [] })
     })
 
     expect(setLocalSelection).toHaveBeenLastCalledWith(null)
-    expect(onHistorySelectionChange).toHaveBeenLastCalledWith([])
+    expect(onHistorySelectionChange).toHaveBeenLastCalledWith({ nodeIds: [], edgeIds: [] })
   })
 })

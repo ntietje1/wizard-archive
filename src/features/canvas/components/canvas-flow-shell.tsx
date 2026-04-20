@@ -1,4 +1,5 @@
 import { Background, ConnectionMode, MiniMap, ReactFlow, SelectionMode } from '@xyflow/react'
+import { useShallow } from 'zustand/shallow'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { cn } from '~/features/shadcn/lib/utils'
 import { CanvasAwarenessHost } from './canvas-awareness-host'
@@ -6,6 +7,7 @@ import { CanvasConditionalToolbar } from './canvas-conditional-toolbar'
 import { CanvasLocalOverlaysHost } from './canvas-local-overlays-host'
 import { MiniMapNode } from './canvas-minimap-node'
 import { CanvasToolbar } from './canvas-toolbar'
+import { canvasEdgeTypes } from '../edges/canvas-edge-registry'
 import { canvasNodeTypes } from '../nodes/canvas-node-types'
 import { useCanvasPendingSelectionPreviewStore } from '../runtime/selection/use-canvas-pending-selection-preview'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
@@ -36,6 +38,7 @@ export interface CanvasFlowShellProps {
   onMoveStart?: (event: MouseEvent | TouchEvent | null) => void
   onMoveEnd?: () => void
   onNodeClick?: (event: React.MouseEvent, node: Node) => void
+  onEdgeClick?: (event: React.MouseEvent, edge: Edge) => void
   onPaneClick?: (event: React.MouseEvent) => void
   onMouseMove: (event: React.MouseEvent) => void
   onMouseLeave: () => void
@@ -65,6 +68,7 @@ export function CanvasFlowShell({
   onMoveStart,
   onMoveEnd,
   onNodeClick,
+  onEdgeClick,
   onPaneClick,
   onMouseMove,
   onMouseLeave,
@@ -73,8 +77,12 @@ export function CanvasFlowShell({
   isFileDropTarget,
 }: CanvasFlowShellComponentProps) {
   const isSelectMode = activeTool === 'select'
-  const pendingSelectionCount = useCanvasPendingSelectionPreviewStore(
-    (state) => state.pendingNodeIds?.size ?? null,
+  const pendingSelectionPreview = useCanvasPendingSelectionPreviewStore(
+    useShallow((state) => ({
+      active: state.pendingNodeIds !== null,
+      nodeCount: state.pendingNodeIds?.size ?? 0,
+      edgeCount: state.pendingEdgeIds?.size ?? 0,
+    })),
   )
 
   return (
@@ -104,13 +112,16 @@ export function CanvasFlowShell({
           onMoveStart={onMoveStart}
           onMoveEnd={onMoveEnd}
           onNodeClick={onNodeClick}
+          onEdgeClick={onEdgeClick}
           onPaneClick={onPaneClick}
           onMouseMove={onMouseMove}
           onMouseLeave={onMouseLeave}
+          edgeTypes={canvasEdgeTypes}
           nodeTypes={canvasNodeTypes}
           nodesDraggable={false}
           nodesConnectable={canEdit && isSelectMode}
-          elementsSelectable={canEdit && isSelectMode}
+          // Canvas selection is owned by runtime selection state for both nodes and edges.
+          elementsSelectable={false}
           // Marquee selection is handled in canvas runtime so node-owned hit testing can override
           // React Flow's default bounds-based drag selection.
           selectionOnDrag={false}
@@ -134,8 +145,11 @@ export function CanvasFlowShell({
           <CanvasAwarenessHost remoteUsers={remoteUsers} />
         </ReactFlow>
 
-        {pendingSelectionCount !== null && (
-          <CanvasPendingSelectionStatus count={pendingSelectionCount} />
+        {pendingSelectionPreview.active && (
+          <CanvasPendingSelectionStatus
+            nodeCount={pendingSelectionPreview.nodeCount}
+            edgeCount={pendingSelectionPreview.edgeCount}
+          />
         )}
 
         <CanvasDropOverlay
@@ -148,14 +162,25 @@ export function CanvasFlowShell({
   )
 }
 
-function CanvasPendingSelectionStatus({ count }: { count: number }) {
+function CanvasPendingSelectionStatus({
+  nodeCount,
+  edgeCount,
+}: {
+  nodeCount: number
+  edgeCount: number
+}) {
+  const parts = [
+    nodeCount > 0 ? `${nodeCount} node${nodeCount === 1 ? '' : 's'}` : null,
+    edgeCount > 0 ? `${edgeCount} edge${edgeCount === 1 ? '' : 's'}` : null,
+  ].filter(Boolean)
+
   return (
     <div
       className="pointer-events-none absolute bottom-4 left-4 z-10 rounded-full border bg-background/90 px-3 py-1 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm"
       role="status"
       aria-live="polite"
     >
-      {`Selecting ${count} node${count === 1 ? '' : 's'}`}
+      {`Selecting ${parts.length > 0 ? parts.join(', ') : '0 items'}`}
     </div>
   )
 }

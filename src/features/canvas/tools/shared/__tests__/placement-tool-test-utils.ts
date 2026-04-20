@@ -17,7 +17,7 @@ export function createPlacementEnvironment({
 }: {
   activeTool: CanvasToolId
   createNode: (node: Node) => void
-  replaceSelection: (nodeIds: Array<string>) => void
+  replaceSelection: (selection: { nodeIds: Array<string>; edgeIds: Array<string> }) => void
   setPendingEditNodeId: (nodeId: string | null) => void
   setActiveTool: (tool: CanvasToolId) => void
 }): CanvasToolEnvironment {
@@ -41,9 +41,13 @@ export function createPlacementEnvironment({
     },
     selection: {
       replace: replaceSelection,
+      replaceNodes: (nodeIds) => replaceSelection({ nodeIds, edgeIds: [] }),
+      replaceEdges: (edgeIds) => replaceSelection({ nodeIds: [], edgeIds }),
       clear: () => undefined,
       getSelectedNodeIds: () => [],
-      toggleFromTarget: () => undefined,
+      getSelectedEdgeIds: () => [],
+      toggleNodeFromTarget: () => undefined,
+      toggleEdgeFromTarget: () => undefined,
       beginGesture: () => undefined,
       commitGestureSelection: () => undefined,
       endGesture: () => undefined,

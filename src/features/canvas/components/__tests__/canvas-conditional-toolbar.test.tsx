@@ -28,7 +28,10 @@ vi.mock('~/shared/components/color-picker-popover', () => ({
 function emitSelection(nodes: Array<Node>) {
   act(() => {
     nodesMock.nodes = nodes
-    useCanvasSelectionState.getState().setSelectedNodeIds(nodes.map((node) => node.id))
+    useCanvasSelectionState.getState().setSelection({
+      nodeIds: nodes.map((node) => node.id),
+      edgeIds: [],
+    })
   })
 }
 

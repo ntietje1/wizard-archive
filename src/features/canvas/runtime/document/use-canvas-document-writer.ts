@@ -169,7 +169,7 @@ export function useCanvasDocumentWriter({
       },
       createEdge: (connection) => {
         const id = createCanvasEdgeId(connection)
-        const edge: Edge = { id, ...connection }
+        const edge: Edge = { id, type: 'bezier', ...connection }
         withEdgeTransaction(() => {
           edgesMap.set(id, edge)
         })

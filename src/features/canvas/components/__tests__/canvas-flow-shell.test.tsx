@@ -89,4 +89,28 @@ describe('CanvasFlowShell', () => {
 
     expect(reactFlowMock.props?.connectionMode).toBe('loose')
   })
+
+  it('provides canvas-owned custom edge types to React Flow', () => {
+    render(
+      <CanvasFlowShell
+        canEdit
+        colorMode="light"
+        toolCursor={undefined}
+        canvasSurfaceRef={{ current: null }}
+        remoteUsers={[]}
+        activeTool="select"
+        onMouseMove={vi.fn()}
+        onMouseLeave={vi.fn()}
+        dropOverlayRef={createRef<HTMLDivElement>()}
+        isDropTarget={false}
+        isFileDropTarget={false}
+      />,
+    )
+
+    expect(reactFlowMock.props?.edgeTypes).toEqual(
+      expect.objectContaining({
+        bezier: expect.any(Function),
+      }),
+    )
+  })
 })

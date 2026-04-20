@@ -21,7 +21,7 @@ afterEach(() => {
 
 describe('StrokeNode', () => {
   it('renders the local stroke highlight for pending-selected strokes', () => {
-    setCanvasPendingSelectionPreview(['stroke-1'])
+    setCanvasPendingSelectionPreview({ nodeIds: ['stroke-1'], edgeIds: [] })
     const { container, getByTestId } = render(
       <StrokeNode {...createStrokeNodeProps({ selected: false })} />,
     )
@@ -31,7 +31,7 @@ describe('StrokeNode', () => {
   })
 
   it('drops the local stroke highlight when a pending preview excludes the committed stroke', () => {
-    setCanvasPendingSelectionPreview(['other-node'])
+    setCanvasPendingSelectionPreview({ nodeIds: ['other-node'], edgeIds: [] })
     const { container, getByTestId } = render(
       <StrokeNode {...createStrokeNodeProps({ selected: true })} />,
     )
@@ -41,7 +41,7 @@ describe('StrokeNode', () => {
   })
 
   it('keeps a single stroke path when a pending preview is active but excludes an unselected stroke', () => {
-    setCanvasPendingSelectionPreview([])
+    setCanvasPendingSelectionPreview({ nodeIds: [], edgeIds: [] })
     const { container, getByTestId } = render(
       <StrokeNode {...createStrokeNodeProps({ selected: false })} />,
     )
@@ -51,7 +51,7 @@ describe('StrokeNode', () => {
   })
 
   it('keeps the highlight path when a pending preview includes an already selected stroke', () => {
-    setCanvasPendingSelectionPreview(['stroke-1'])
+    setCanvasPendingSelectionPreview({ nodeIds: ['stroke-1'], edgeIds: [] })
     const { container, getByTestId } = render(
       <StrokeNode {...createStrokeNodeProps({ selected: true })} />,
     )

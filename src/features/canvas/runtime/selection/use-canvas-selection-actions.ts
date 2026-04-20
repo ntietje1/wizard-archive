@@ -1,7 +1,10 @@
 import { useReactFlow } from '@xyflow/react'
-import { getNextSelectedNodeIds } from '../../utils/canvas-selection-utils'
+import { getNextSelectedIds } from '../../utils/canvas-selection-utils'
 import { useCanvasSelectionState } from './use-canvas-selection-state'
-import type { CanvasSelectionController } from '../../tools/canvas-tool-types'
+import type {
+  CanvasSelectionController,
+  CanvasSelectionSnapshot,
+} from '../../tools/canvas-tool-types'
 import type { ReactFlowInstance } from '@xyflow/react'
 
 type SelectionProjectionReactFlow = Pick<ReactFlowInstance, 'setNodes'> &
@@ -9,9 +12,10 @@ type SelectionProjectionReactFlow = Pick<ReactFlowInstance, 'setNodes'> &
 
 function projectCanvasSelectionToReactFlow(
   reactFlow: SelectionProjectionReactFlow,
-  selectedNodeIds: Array<string>,
+  selection: CanvasSelectionSnapshot,
 ) {
-  const nodeIdSet = new Set(selectedNodeIds)
+  const nodeIdSet = new Set(selection.nodeIds)
+  const edgeIdSet = new Set(selection.edgeIds)
   reactFlow.setNodes((nodes) =>
     nodes.map((node) => {
       const selected = nodeIdSet.has(node.id)
@@ -24,7 +28,7 @@ function projectCanvasSelectionToReactFlow(
   )
   reactFlow.setEdges?.((edges) =>
     edges.map((edge) => {
-      const selected = nodeIdSet.has(edge.source) && nodeIdSet.has(edge.target)
+      const selected = edgeIdSet.has(edge.id)
       return edge.selected === selected ? edge : { ...edge, selected }
     }),
   )
@@ -32,38 +36,71 @@ function projectCanvasSelectionToReactFlow(
 
 function replaceCanvasSelection(
   reactFlow: SelectionProjectionReactFlow,
-  selectedNodeIds: Array<string>,
+  selection: CanvasSelectionSnapshot,
 ) {
-  useCanvasSelectionState.getState().setSelectedNodeIds(selectedNodeIds)
-  projectCanvasSelectionToReactFlow(reactFlow, selectedNodeIds)
+  useCanvasSelectionState.getState().setSelection(selection)
+  projectCanvasSelectionToReactFlow(reactFlow, selection)
+}
+
+function getCurrentSelectionSnapshot(): CanvasSelectionSnapshot {
+  const state = useCanvasSelectionState.getState()
+  return {
+    nodeIds: state.selectedNodeIds,
+    edgeIds: state.selectedEdgeIds,
+  }
 }
 
 export function useCanvasSelectionActions(): CanvasSelectionController {
   const reactFlow = useReactFlow()
 
   return {
-    replace: (nodeIds) => {
-      replaceCanvasSelection(reactFlow, nodeIds)
+    replace: (selection) => {
+      replaceCanvasSelection(reactFlow, selection)
+    },
+    replaceNodes: (nodeIds) => {
+      replaceCanvasSelection(reactFlow, { nodeIds, edgeIds: [] })
+    },
+    replaceEdges: (edgeIds) => {
+      replaceCanvasSelection(reactFlow, { nodeIds: [], edgeIds })
     },
     clear: () => {
-      replaceCanvasSelection(reactFlow, [])
+      replaceCanvasSelection(reactFlow, { nodeIds: [], edgeIds: [] })
     },
     getSelectedNodeIds: () => useCanvasSelectionState.getState().selectedNodeIds,
-    toggleFromTarget: (targetId, toggle) => {
-      const nextIds = getNextSelectedNodeIds({
-        selectedNodeIds: useCanvasSelectionState.getState().selectedNodeIds,
+    getSelectedEdgeIds: () => useCanvasSelectionState.getState().selectedEdgeIds,
+    toggleNodeFromTarget: (targetId, toggle) => {
+      const currentSelection = getCurrentSelectionSnapshot()
+      const nextIds = getNextSelectedIds({
+        selectedIds: currentSelection.nodeIds,
         targetId,
         toggle,
       })
       queueMicrotask(() => {
-        replaceCanvasSelection(reactFlow, nextIds)
+        replaceCanvasSelection(reactFlow, {
+          nodeIds: nextIds,
+          edgeIds: toggle ? currentSelection.edgeIds : [],
+        })
+      })
+    },
+    toggleEdgeFromTarget: (targetId, toggle) => {
+      const currentSelection = getCurrentSelectionSnapshot()
+      const nextIds = getNextSelectedIds({
+        selectedIds: currentSelection.edgeIds,
+        targetId,
+        toggle,
+      })
+      queueMicrotask(() => {
+        replaceCanvasSelection(reactFlow, {
+          nodeIds: toggle ? currentSelection.nodeIds : [],
+          edgeIds: nextIds,
+        })
       })
     },
     beginGesture: (kind) => {
       useCanvasSelectionState.getState().beginGesture(kind)
     },
-    commitGestureSelection: (nodeIds) => {
-      replaceCanvasSelection(reactFlow, nodeIds)
+    commitGestureSelection: (selection) => {
+      replaceCanvasSelection(reactFlow, selection)
     },
     endGesture: () => {
       useCanvasSelectionState.getState().endGesture()

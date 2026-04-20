@@ -8,6 +8,7 @@ import {
   clearLassoToolLocalOverlay,
   useLassoToolLocalOverlayStore,
 } from '../lasso-tool-local-overlay'
+import type { Edge, Node } from '@xyflow/react'
 import type {
   CanvasMeasuredNode,
   CanvasToolEnvironment,
@@ -96,6 +97,42 @@ describe('lassoToolModule', () => {
           height: 40,
           data: {},
         },
+        {
+          id: 'embed-2',
+          type: 'embed',
+          position: { x: 120, y: 20 },
+          width: 40,
+          height: 40,
+          data: {},
+        },
+      ],
+      getNodes: () => [
+        {
+          id: 'embed-1',
+          type: 'embed',
+          position: { x: 20, y: 20 },
+          width: 40,
+          height: 40,
+          data: {},
+        },
+        {
+          id: 'embed-2',
+          type: 'embed',
+          position: { x: 120, y: 20 },
+          width: 40,
+          height: 40,
+          data: {},
+        },
+      ],
+      getEdges: () => [
+        {
+          id: 'edge-1',
+          type: 'bezier',
+          source: 'embed-1',
+          target: 'embed-2',
+          sourceHandle: 'right',
+          targetHandle: 'left',
+        },
       ],
       commitGestureSelection,
       clear,
@@ -123,6 +160,9 @@ describe('lassoToolModule', () => {
     expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toEqual(
       new Set(['embed-1']),
     )
+    expect(useCanvasPendingSelectionPreviewStore.getState().pendingEdgeIds).toEqual(
+      new Set(['edge-1']),
+    )
     expect(setPresence).toHaveBeenCalledTimes(1)
 
     controller.onPointerMove?.(createPointerEvent(target, { clientX: -20, clientY: 50 }))
@@ -139,18 +179,24 @@ describe('lassoToolModule', () => {
     )
     expect(setPresence).toHaveBeenLastCalledWith('tool.lasso', null)
     expect(suppressNextSurfaceClick).toHaveBeenCalledTimes(1)
-    expect(commitGestureSelection).toHaveBeenCalledWith(['embed-1'])
+    expect(commitGestureSelection).toHaveBeenCalledWith({
+      nodeIds: ['embed-1'],
+      edgeIds: ['edge-1'],
+    })
     expect(endGesture).toHaveBeenCalled()
     expect(setActiveTool).toHaveBeenCalledWith('select')
     expect(target.setPointerCapture).toHaveBeenCalledWith(1)
     expect(target.releasePointerCapture).toHaveBeenCalledWith(1)
     expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toBeNull()
+    expect(useCanvasPendingSelectionPreviewStore.getState().pendingEdgeIds).toEqual(new Set())
   })
 
   it('publishes a fresh local lasso path array on each pointer update so the local overlay rerenders', () => {
     const controller = lassoToolModule.create(
       createLassoEnvironment({
         getMeasuredNodes: () => [],
+        getNodes: () => [],
+        getEdges: () => [],
         clear: vi.fn(),
         commitGestureSelection: vi.fn(),
         beginGesture: vi.fn(),
@@ -184,6 +230,7 @@ describe('lassoToolModule', () => {
     expect(secondPath).not.toBe(firstPath)
     expect(thirdPath).not.toBe(secondPath)
     expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toEqual(new Set())
+    expect(useCanvasPendingSelectionPreviewStore.getState().pendingEdgeIds).toEqual(new Set())
   })
 
   it('clears selection when no measured nodes fall inside the lasso', () => {
@@ -200,6 +247,17 @@ describe('lassoToolModule', () => {
             data: {},
           },
         ],
+        getNodes: () => [
+          {
+            id: 'outside-node',
+            type: 'embed',
+            position: { x: 200, y: 200 },
+            width: 40,
+            height: 40,
+            data: {},
+          },
+        ],
+        getEdges: () => [],
         clear: vi.fn(),
         commitGestureSelection,
         beginGesture: vi.fn(),
@@ -218,8 +276,9 @@ describe('lassoToolModule', () => {
     flushAnimationFrame()
     controller.onPointerUp?.(createPointerEvent(target, { clientX: 0, clientY: 0 }))
 
-    expect(commitGestureSelection).toHaveBeenCalledWith([])
+    expect(commitGestureSelection).toHaveBeenCalledWith({ nodeIds: [], edgeIds: [] })
     expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toBeNull()
+    expect(useCanvasPendingSelectionPreviewStore.getState().pendingEdgeIds).toEqual(new Set())
   })
 
   it('selects only the measured nodes that are fully enclosed by the lasso', () => {
@@ -253,6 +312,50 @@ describe('lassoToolModule', () => {
             data: {},
           },
         ],
+        getNodes: () => [
+          {
+            id: 'inside-node',
+            type: 'embed',
+            position: { x: 20, y: 20 },
+            width: 40,
+            height: 40,
+            data: {},
+          },
+          {
+            id: 'outside-node',
+            type: 'embed',
+            position: { x: 200, y: 200 },
+            width: 40,
+            height: 40,
+            data: {},
+          },
+          {
+            id: 'partially-outside-node',
+            type: 'embed',
+            position: { x: 80, y: 80 },
+            width: 40,
+            height: 40,
+            data: {},
+          },
+          {
+            id: 'edge-node',
+            type: 'embed',
+            position: { x: 120, y: 20 },
+            width: 40,
+            height: 40,
+            data: {},
+          },
+        ],
+        getEdges: () => [
+          {
+            id: 'edge-1',
+            type: 'bezier',
+            source: 'inside-node',
+            target: 'edge-node',
+            sourceHandle: 'right',
+            targetHandle: 'left',
+          },
+        ],
         clear: vi.fn(),
         commitGestureSelection,
         beginGesture: vi.fn(),
@@ -271,13 +374,18 @@ describe('lassoToolModule', () => {
     flushAnimationFrame()
     controller.onPointerUp?.(createPointerEvent(target, { clientX: 0, clientY: 0 }))
 
-    expect(commitGestureSelection).toHaveBeenCalledWith(['inside-node'])
+    expect(commitGestureSelection).toHaveBeenCalledWith({
+      nodeIds: ['inside-node'],
+      edgeIds: ['edge-1'],
+    })
     expect(suppressNextSurfaceClick).toHaveBeenCalledTimes(1)
   })
 })
 
 function createLassoEnvironment({
   getMeasuredNodes,
+  getNodes,
+  getEdges,
   clear,
   commitGestureSelection,
   beginGesture,
@@ -287,8 +395,10 @@ function createLassoEnvironment({
   setActiveTool,
 }: {
   getMeasuredNodes: () => Array<CanvasMeasuredNode>
+  getNodes: () => Array<Node>
+  getEdges: () => Array<Edge>
   clear: () => void
-  commitGestureSelection: (nodeIds: Array<string>) => void
+  commitGestureSelection: (selection: { nodeIds: Array<string>; edgeIds: Array<string> }) => void
   beginGesture: (kind: 'marquee' | 'lasso') => void
   endGesture: () => void
   suppressNextSurfaceClick: () => void
@@ -309,15 +419,19 @@ function createLassoEnvironment({
       createEdge: () => undefined,
       deleteEdges: () => undefined,
       setNodePosition: () => undefined,
-      getNodes: () => [],
-      getEdges: () => [],
+      getNodes,
+      getEdges,
       getMeasuredNodes,
     },
     selection: {
       replace: vi.fn(),
+      replaceNodes: vi.fn(),
+      replaceEdges: vi.fn(),
       clear,
       getSelectedNodeIds: () => [],
-      toggleFromTarget: vi.fn(),
+      getSelectedEdgeIds: () => [],
+      toggleNodeFromTarget: vi.fn(),
+      toggleEdgeFromTarget: vi.fn(),
       beginGesture,
       commitGestureSelection,
       endGesture,

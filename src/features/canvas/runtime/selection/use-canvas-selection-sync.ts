@@ -1,29 +1,34 @@
 import { useEffect, useRef } from 'react'
-import { useSelectedCanvasNodeIds } from './use-canvas-selection-state'
+import { useCanvasSelectionSnapshot } from './use-canvas-selection-state'
+import type { CanvasSelectionSnapshot } from '../../tools/canvas-tool-types'
 
 interface UseCanvasSelectionSyncOptions {
   setLocalSelection: (nodeIds: Array<string> | null) => void
-  onHistorySelectionChange: (nodeIds: Array<string>) => void
+  onHistorySelectionChange: (selection: CanvasSelectionSnapshot) => void
+}
+
+function hasSameIds(nextIds: Array<string>, prevIds: Array<string>) {
+  if (nextIds.length !== prevIds.length) return false
+  const prevIdSet = new Set(prevIds)
+  return nextIds.every((id) => prevIdSet.has(id))
 }
 
 export function useCanvasSelectionSync({
   setLocalSelection,
   onHistorySelectionChange,
 }: UseCanvasSelectionSyncOptions) {
-  const selectedNodeIds = useSelectedCanvasNodeIds()
-  const prevSelectionRef = useRef<Array<string>>([])
+  const selection = useCanvasSelectionSnapshot()
+  const prevSelectionRef = useRef<CanvasSelectionSnapshot>({ nodeIds: [], edgeIds: [] })
 
   useEffect(() => {
-    const prevIds = prevSelectionRef.current
-    let changed = selectedNodeIds.length !== prevIds.length
-    if (!changed) {
-      const prevSet = new Set(prevIds)
-      changed = selectedNodeIds.some((id) => !prevSet.has(id))
-    }
+    const prevSelection = prevSelectionRef.current
+    const changed =
+      !hasSameIds(selection.nodeIds, prevSelection.nodeIds) ||
+      !hasSameIds(selection.edgeIds, prevSelection.edgeIds)
     if (!changed) return
 
-    prevSelectionRef.current = selectedNodeIds
-    setLocalSelection(selectedNodeIds.length > 0 ? selectedNodeIds : null)
-    onHistorySelectionChange(selectedNodeIds)
-  }, [onHistorySelectionChange, selectedNodeIds, setLocalSelection])
+    prevSelectionRef.current = selection
+    setLocalSelection(selection.nodeIds.length > 0 ? selection.nodeIds : null)
+    onHistorySelectionChange(selection)
+  }, [onHistorySelectionChange, selection, setLocalSelection])
 }

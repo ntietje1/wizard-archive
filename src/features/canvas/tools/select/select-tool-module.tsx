@@ -20,10 +20,13 @@ export const selectToolModule: CanvasToolModule<'select'> = {
   },
   create: (environment) => ({
     onNodeClick: (event, node) => {
-      environment.selection.toggleFromTarget(node.id, isSelectionToggleModifier(event))
+      environment.selection.toggleNodeFromTarget(node.id, isSelectionToggleModifier(event))
+    },
+    onEdgeClick: (event, edge) => {
+      environment.selection.toggleEdgeFromTarget(edge.id, isSelectionToggleModifier(event))
     },
     onPaneClick: (event) => {
-      environment.selection.toggleFromTarget(
+      environment.selection.toggleNodeFromTarget(
         hitTestCanvasNode(
           {
             getMeasuredNodes: environment.document.getMeasuredNodes,

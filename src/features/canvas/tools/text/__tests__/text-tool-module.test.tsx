@@ -35,7 +35,7 @@ describe('textToolModule', () => {
       selected: true,
       draggable: true,
     })
-    expect(replaceSelection).toHaveBeenCalledWith([createdNodes[0].id])
+    expect(replaceSelection).toHaveBeenCalledWith({ nodeIds: [createdNodes[0].id], edgeIds: [] })
     expect(setPendingEditNodeId).toHaveBeenCalledWith(createdNodes[0].id)
     expect(setActiveTool).toHaveBeenCalledWith('select')
   })

@@ -167,6 +167,7 @@ export function useCanvasInteractionRuntime({
     onMoveStart: activeToolController.onMoveStart,
     onMoveEnd: activeToolController.onMoveEnd,
     onNodeClick: activeToolController.onNodeClick,
+    onEdgeClick: activeToolController.onEdgeClick,
     onPaneClick: activeToolController.onPaneClick,
     onMouseMove: handleMouseMove,
     onMouseLeave: handleMouseLeave,
