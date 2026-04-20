@@ -8,11 +8,9 @@ import {
 } from '../../../runtime/selection/use-canvas-pending-selection-preview'
 import { ResizableNodeWrapper } from '../resizable-node-wrapper'
 
-const useCanvasModifierKeysMock = vi.hoisted(() =>
-  vi.fn(() => ({
-    shiftPressed: false,
-  })),
-)
+const modifierState = vi.hoisted(() => ({
+  shiftPressed: false,
+}))
 const useInternalNodeMock = vi.hoisted(() =>
   vi.fn(() => ({
     id: 'node-1',
@@ -26,7 +24,7 @@ const screenToFlowPositionMock = vi.hoisted(() =>
 )
 
 vi.mock('../../../runtime/interaction/use-canvas-modifier-keys', () => ({
-  useCanvasModifierKeys: () => useCanvasModifierKeysMock(),
+  useCanvasModifierKeys: () => modifierState,
 }))
 
 vi.mock('@xyflow/react', () => ({
@@ -39,7 +37,7 @@ vi.mock('@xyflow/react', () => ({
 afterEach(() => {
   clearCanvasPendingSelectionPreview()
   useCanvasSelectionState.getState().reset()
-  useCanvasModifierKeysMock.mockReturnValue({ shiftPressed: false })
+  modifierState.shiftPressed = false
 })
 
 beforeAll(() => {
@@ -71,7 +69,7 @@ describe('ResizableNodeWrapper', () => {
   })
 
   it('resizes to a square while shift is held', () => {
-    useCanvasModifierKeysMock.mockReturnValue({ shiftPressed: true })
+    modifierState.shiftPressed = true
     const providerValues = createProviderValues()
     useCanvasSelectionState.getState().setSelection({
       nodeIds: ['node-1'],
@@ -98,6 +96,51 @@ describe('ResizableNodeWrapper', () => {
       y: 20,
     })
     expect(providerValues.nodeActions.onResizeEnd).toHaveBeenCalledWith('node-1', 50, 50, {
+      x: 10,
+      y: 20,
+    })
+  })
+
+  it('recomputes the live resize immediately when shift is pressed and released mid-drag', () => {
+    const providerValues = createProviderValues()
+    useCanvasSelectionState.getState().setSelection({
+      nodeIds: ['node-1'],
+      edgeIds: [],
+    })
+
+    render(
+      <CanvasProviders runtime={providerValues}>
+        <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
+          <div>node body</div>
+        </ResizableNodeWrapper>
+      </CanvasProviders>,
+    )
+
+    const handle = screen.getByTestId('canvas-node-resize-handle-bottom-right')
+    act(() => {
+      fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 90, clientY: 60 })
+      fireEvent.pointerMove(window, { pointerId: 1, clientX: 110, clientY: 65 })
+    })
+
+    expect(providerValues.nodeActions.onResize).toHaveBeenLastCalledWith('node-1', 100, 45, {
+      x: 10,
+      y: 20,
+    })
+
+    act(() => {
+      fireEvent.keyDown(window, { key: 'Shift' })
+    })
+
+    expect(providerValues.nodeActions.onResize).toHaveBeenLastCalledWith('node-1', 50, 50, {
+      x: 10,
+      y: 20,
+    })
+
+    act(() => {
+      fireEvent.keyUp(window, { key: 'Shift' })
+    })
+
+    expect(providerValues.nodeActions.onResize).toHaveBeenLastCalledWith('node-1', 100, 45, {
       x: 10,
       y: 20,
     })

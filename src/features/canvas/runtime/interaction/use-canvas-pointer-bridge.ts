@@ -43,16 +43,28 @@ export function useCanvasPointerBridge({
       toolControllerRef.current.onPointerCancel?.(event)
     }
 
+    const onKeyDown = (event: KeyboardEvent) => {
+      toolControllerRef.current.onKeyDown?.(event)
+    }
+
+    const onKeyUp = (event: KeyboardEvent) => {
+      toolControllerRef.current.onKeyUp?.(event)
+    }
+
     surfaceElement.addEventListener('pointerdown', onPointerDown)
     surfaceElement.addEventListener('pointermove', onPointerMove)
     surfaceElement.addEventListener('pointerup', onPointerUp)
     surfaceElement.addEventListener('pointercancel', onPointerCancel)
+    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('keyup', onKeyUp)
 
     return () => {
       surfaceElement.removeEventListener('pointerdown', onPointerDown)
       surfaceElement.removeEventListener('pointermove', onPointerMove)
       surfaceElement.removeEventListener('pointerup', onPointerUp)
       surfaceElement.removeEventListener('pointercancel', onPointerCancel)
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('keyup', onKeyUp)
     }
   }, [surfaceRef])
 }

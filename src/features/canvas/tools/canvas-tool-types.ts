@@ -170,6 +170,8 @@ export interface CanvasToolController {
   onPointerMove?: (event: PointerEvent) => void
   onPointerUp?: (event: PointerEvent) => void
   onPointerCancel?: (event: PointerEvent) => void
+  onKeyDown?: (event: KeyboardEvent) => void
+  onKeyUp?: (event: KeyboardEvent) => void
   onNodeClick?: (event: ReactMouseEvent, node: Node) => void
   onEdgeClick?: (event: ReactMouseEvent, edge: Edge) => void
   onPaneClick?: (event: ReactMouseEvent) => void

@@ -47,6 +47,30 @@ export const rectangleToolModule: CanvasToolModule<'rectangle'> = {
     let captureTarget: Element | null = null
     let pointerId: number | null = null
 
+    const updateDragRect = () => {
+      if (!active || !start) {
+        return
+      }
+
+      const pos = services.viewport.screenToFlowPosition(lastClientPos)
+      setRectangleToolDragRect(
+        getConstrainedRectFromPoints(start, pos, {
+          square: services.modifiers.getShiftPressed(),
+        }),
+      )
+    }
+
+    const scheduleDragRectUpdate = () => {
+      if (rafId) {
+        return
+      }
+
+      rafId = requestAnimationFrame(() => {
+        rafId = 0
+        updateDragRect()
+      })
+    }
+
     const reset = () => {
       active = false
       start = null
@@ -75,18 +99,17 @@ export const rectangleToolModule: CanvasToolModule<'rectangle'> = {
         if (!active || (event.buttons & 1) !== 1 || !start) return
 
         lastClientPos = { x: event.clientX, y: event.clientY }
-        if (rafId) return
-
-        rafId = requestAnimationFrame(() => {
-          rafId = 0
-          if (!start) return
-          const pos = services.viewport.screenToFlowPosition(lastClientPos)
-          setRectangleToolDragRect(
-            getConstrainedRectFromPoints(start, pos, {
-              square: services.modifiers.getShiftPressed(),
-            }),
-          )
-        })
+        scheduleDragRectUpdate()
+      },
+      onKeyDown: (event) => {
+        if (event.key === 'Shift') {
+          updateDragRect()
+        }
+      },
+      onKeyUp: (event) => {
+        if (event.key === 'Shift') {
+          updateDragRect()
+        }
       },
       onPointerUp: () => {
         if (!start) {

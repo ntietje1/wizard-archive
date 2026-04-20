@@ -73,6 +73,7 @@ type ResizeSession = {
   target: Element | null
   handlePosition: CornerHandlePosition
   startBounds: ResizeBounds
+  currentPoint: { x: number; y: number } | null
 }
 
 interface ResizableNodeWrapperProps {
@@ -110,6 +111,27 @@ export function ResizableNodeWrapper({
   onResizeEndRef.current = onResizeEnd
 
   useEffect(() => {
+    const updateResizeForSession = (square: boolean) => {
+      const session = resizeSessionRef.current
+      if (!session?.currentPoint) {
+        return
+      }
+
+      const nextBounds = resolveResizeBounds({
+        handlePosition: session.handlePosition,
+        startBounds: session.startBounds,
+        currentPoint: session.currentPoint,
+        minWidth,
+        minHeight,
+        square,
+      })
+
+      onResizeRef.current(id, nextBounds.width, nextBounds.height, {
+        x: nextBounds.x,
+        y: nextBounds.y,
+      })
+    }
+
     const updateResize = (event: PointerEvent, commit: boolean) => {
       const session = resizeSessionRef.current
       if (!session || event.pointerId !== session.pointerId) {
@@ -120,6 +142,7 @@ export function ResizableNodeWrapper({
         x: event.clientX,
         y: event.clientY,
       })
+      session.currentPoint = currentPoint
       const nextBounds = resolveResizeBounds({
         handlePosition: session.handlePosition,
         startBounds: session.startBounds,
@@ -165,14 +188,30 @@ export function ResizableNodeWrapper({
       endResize(event, false)
     }
 
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Shift') {
+        updateResizeForSession(true)
+      }
+    }
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (event.key === 'Shift') {
+        updateResizeForSession(false)
+      }
+    }
+
     window.addEventListener('pointermove', handlePointerMove)
     window.addEventListener('pointerup', handlePointerUp)
     window.addEventListener('pointercancel', handlePointerCancel)
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
 
     return () => {
       window.removeEventListener('pointermove', handlePointerMove)
       window.removeEventListener('pointerup', handlePointerUp)
       window.removeEventListener('pointercancel', handlePointerCancel)
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
 
       const session = resizeSessionRef.current
       if (session) {
@@ -234,6 +273,7 @@ export function ResizableNodeWrapper({
                 target: event.currentTarget,
                 handlePosition: position as CornerHandlePosition,
                 startBounds: currentBounds,
+                currentPoint: null,
               }
             }}
           >

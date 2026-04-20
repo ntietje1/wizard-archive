@@ -1,6 +1,7 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { rectangleToolModule } from '../rectangle-tool-module'
 import type { CanvasToolServices } from '../../canvas-tool-types'
+import { useRectangleToolLocalOverlayStore } from '../rectangle-tool-local-overlay'
 
 type MockPointerTarget = HTMLDivElement & {
   setPointerCapture: (pointerId: number) => void
@@ -28,6 +29,20 @@ function createPointerEvent(
 }
 
 describe('rectangleToolModule', () => {
+  beforeEach(() => {
+    vi.stubGlobal('requestAnimationFrame', ((callback: FrameRequestCallback) => {
+      callback(0)
+      return 1
+    }) as typeof requestAnimationFrame)
+    vi.stubGlobal('cancelAnimationFrame', vi.fn())
+    useRectangleToolLocalOverlayStore.getState().reset()
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    useRectangleToolLocalOverlayStore.getState().reset()
+  })
+
   it('creates a square when shift is held during rectangle creation', () => {
     const createNode = vi.fn()
     const replaceNodes = vi.fn()
@@ -53,6 +68,48 @@ describe('rectangleToolModule', () => {
       }),
     )
     expect(replaceNodes).toHaveBeenCalledTimes(1)
+  })
+
+  it('updates the live rectangle immediately when shift is pressed and released mid-drag', () => {
+    let shiftPressed = false
+    const controller = rectangleToolModule.create(
+      createRectangleEnvironment({
+        createNode: vi.fn(),
+        replaceNodes: vi.fn(),
+        getShiftPressed: () => shiftPressed,
+      }),
+    )
+    const target = createPointerTarget()
+
+    controller.onPointerDown?.(createPointerEvent(target, { clientX: 10, clientY: 10 }))
+    controller.onPointerMove?.(createPointerEvent(target, { clientX: 50, clientY: 20 }))
+
+    expect(useRectangleToolLocalOverlayStore.getState().dragRect).toEqual({
+      x: 10,
+      y: 10,
+      width: 40,
+      height: 10,
+    })
+
+    shiftPressed = true
+    controller.onKeyDown?.(new KeyboardEvent('keydown', { key: 'Shift' }))
+
+    expect(useRectangleToolLocalOverlayStore.getState().dragRect).toEqual({
+      x: 10,
+      y: 10,
+      width: 10,
+      height: 10,
+    })
+
+    shiftPressed = false
+    controller.onKeyUp?.(new KeyboardEvent('keyup', { key: 'Shift' }))
+
+    expect(useRectangleToolLocalOverlayStore.getState().dragRect).toEqual({
+      x: 10,
+      y: 10,
+      width: 40,
+      height: 10,
+    })
   })
 })
 
