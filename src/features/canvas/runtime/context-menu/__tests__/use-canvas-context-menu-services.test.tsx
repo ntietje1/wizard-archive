@@ -3,8 +3,24 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as Y from 'yjs'
 import { useCanvasContextMenuServices } from '../use-canvas-context-menu-services'
 import { useCanvasClipboardStore } from '../use-canvas-clipboard-store'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { Edge, Node } from '@xyflow/react'
 import type { CanvasSelectionSnapshot } from '../../../tools/canvas-tool-types'
+
+const createItemMock = vi.hoisted(() => vi.fn())
+const getDefaultNameMock = vi.hoisted(() => vi.fn())
+
+vi.mock('~/features/sidebar/hooks/useCreateSidebarItem', () => ({
+  useCreateSidebarItem: () => ({
+    createItem: createItemMock,
+  }),
+}))
+
+vi.mock('~/features/sidebar/hooks/useSidebarValidation', () => ({
+  useSidebarValidation: () => ({
+    getDefaultName: getDefaultNameMock,
+  }),
+}))
 
 function createNode(id: string, x: number, zIndex: number): Node {
   return {
@@ -31,6 +47,8 @@ function createEdge(id: string, source: string, target: string, zIndex: number):
 describe('useCanvasContextMenuServices', () => {
   beforeEach(() => {
     useCanvasClipboardStore.getState().setClipboard(null)
+    createItemMock.mockReset()
+    getDefaultNameMock.mockReset()
   })
 
   it('copies selected nodes with only fully-contained edges and pastes a new selected graph', () => {
@@ -48,8 +66,12 @@ describe('useCanvasContextMenuServices', () => {
     const { result } = renderHook(() =>
       useCanvasContextMenuServices({
         canEdit: true,
+        campaignId: 'campaign-1' as never,
+        canvasParentId: null,
         nodesMap,
         edgesMap,
+        createNode: vi.fn(),
+        screenToFlowPosition: ({ x, y }) => ({ x, y }),
         selection: { replace, clear: vi.fn() },
       }),
     )
@@ -104,8 +126,12 @@ describe('useCanvasContextMenuServices', () => {
     const { result } = renderHook(() =>
       useCanvasContextMenuServices({
         canEdit: true,
+        campaignId: 'campaign-1' as never,
+        canvasParentId: null,
         nodesMap,
         edgesMap,
+        createNode: vi.fn(),
+        screenToFlowPosition: ({ x, y }) => ({ x, y }),
         selection: { replace, clear },
       }),
     )
@@ -136,8 +162,12 @@ describe('useCanvasContextMenuServices', () => {
     const { result } = renderHook(() =>
       useCanvasContextMenuServices({
         canEdit: true,
+        campaignId: 'campaign-1' as never,
+        canvasParentId: null,
         nodesMap,
         edgesMap,
+        createNode: vi.fn(),
+        screenToFlowPosition: ({ x, y }) => ({ x, y }),
         selection: { replace: vi.fn(), clear: vi.fn() },
       }),
     )
@@ -173,8 +203,12 @@ describe('useCanvasContextMenuServices', () => {
     const { result } = renderHook(() =>
       useCanvasContextMenuServices({
         canEdit: true,
+        campaignId: 'campaign-1' as never,
+        canvasParentId: null,
         nodesMap,
         edgesMap,
+        createNode: vi.fn(),
+        screenToFlowPosition: ({ x, y }) => ({ x, y }),
         selection: { replace: vi.fn(), clear: vi.fn() },
       }),
     )
@@ -196,5 +230,61 @@ describe('useCanvasContextMenuServices', () => {
     expect(nodesMap.get('node-3')?.zIndex).toBe(2)
     expect(edgesMap.get('edge-1')?.zIndex).toBe(2)
     expect(edgesMap.get('edge-2')?.zIndex).toBe(1)
+  })
+
+  it('creates a new sidebar item beside the current canvas and embeds it at the clicked position', async () => {
+    const createNodeMock = vi.fn()
+    const replace = vi.fn()
+
+    getDefaultNameMock.mockReturnValue('Untitled Note')
+    createItemMock.mockResolvedValue({
+      id: 'note-1',
+      slug: 'untitled-note',
+      type: SIDEBAR_ITEM_TYPES.notes,
+    })
+    vi.spyOn(crypto, 'randomUUID').mockReturnValue('00000000-0000-4000-8000-000000000001')
+
+    const doc = new Y.Doc()
+    const nodesMap = doc.getMap<Node>('nodes')
+    const edgesMap = doc.getMap<Edge>('edges')
+
+    const { result } = renderHook(() =>
+      useCanvasContextMenuServices({
+        canEdit: true,
+        campaignId: 'campaign-1' as never,
+        canvasParentId: 'folder-1' as never,
+        nodesMap,
+        edgesMap,
+        createNode: createNodeMock,
+        screenToFlowPosition: ({ x, y }) => ({ x: x - 4, y: y + 8 }),
+        selection: { replace, clear: vi.fn() },
+      }),
+    )
+
+    await act(async () => {
+      await result.current.createAndEmbedSidebarItem(SIDEBAR_ITEM_TYPES.notes, { x: 100, y: 200 })
+    })
+
+    expect(getDefaultNameMock).toHaveBeenCalledWith(SIDEBAR_ITEM_TYPES.notes, 'folder-1')
+    expect(createItemMock).toHaveBeenCalledWith({
+      type: SIDEBAR_ITEM_TYPES.notes,
+      campaignId: 'campaign-1',
+      parentTarget: { kind: 'direct', parentId: 'folder-1' },
+      name: 'Untitled Note',
+    })
+    expect(createNodeMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: '00000000-0000-4000-8000-000000000001',
+        type: 'embed',
+        position: { x: 96, y: 208 },
+        data: { sidebarItemId: 'note-1' },
+        width: 320,
+        height: 240,
+      }),
+    )
+    expect(replace).toHaveBeenCalledWith({
+      nodeIds: ['00000000-0000-4000-8000-000000000001'],
+      edgeIds: [],
+    })
   })
 })

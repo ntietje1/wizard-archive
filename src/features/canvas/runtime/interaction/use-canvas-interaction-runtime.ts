@@ -26,6 +26,8 @@ import type * as Y from 'yjs'
 
 interface UseCanvasInteractionRuntimeOptions {
   canvasId: Id<'sidebarItems'>
+  campaignId: Id<'campaigns'>
+  canvasParentId: Id<'sidebarItems'> | null
   canEdit: boolean
   activeToolId: CanvasToolId
   doc: Y.Doc
@@ -42,6 +44,8 @@ interface UseCanvasInteractionRuntimeOptions {
 
 export function useCanvasInteractionRuntime({
   canvasId,
+  campaignId,
+  canvasParentId,
   canEdit,
   activeToolId,
   doc,
@@ -162,8 +166,12 @@ export function useCanvasInteractionRuntime({
     },
     canvasSurfaceRef,
     contextMenu: {
+      campaignId,
+      canvasParentId,
       nodesMap,
       edgesMap,
+      createNode: documentWriter.createNode,
+      screenToFlowPosition: reactFlowInstance.screenToFlowPosition,
       selectionController,
     },
     flowHandlers: {

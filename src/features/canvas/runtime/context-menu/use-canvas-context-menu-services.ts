@@ -1,29 +1,43 @@
+import { createEmbedCanvasNode } from '../../nodes/embed/embed-node-creation'
 import { transactCanvasMaps } from '../document/canvas-yjs-transactions'
 import { useCanvasClipboardStore } from './use-canvas-clipboard-store'
 import { createCanvasClipboardEntry, materializeCanvasPaste } from './canvas-context-menu-clipboard'
 import { createCanvasReorderUpdates } from './canvas-context-menu-reorder'
 import { getCanvasDeletionSelection } from './canvas-context-menu-selection'
-import type { CanvasContextMenuServices } from './canvas-context-menu-types'
+import type { CanvasContextMenuPoint, CanvasContextMenuServices } from './canvas-context-menu-types'
 import type { CanvasSelectionController } from '../../tools/canvas-tool-types'
+import type { Id } from 'convex/_generated/dataModel'
 import type { Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
+import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
+import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 
 interface UseCanvasContextMenuServicesOptions {
   canEdit: boolean
+  campaignId: Id<'campaigns'>
+  canvasParentId: Id<'sidebarItems'> | null
   nodesMap: Y.Map<Node>
   edgesMap: Y.Map<Edge>
+  createNode: (node: Node) => void
+  screenToFlowPosition: (position: CanvasContextMenuPoint) => { x: number; y: number }
   selection: Pick<CanvasSelectionController, 'replace' | 'clear'>
 }
 
 export function useCanvasContextMenuServices({
   canEdit,
+  campaignId,
+  canvasParentId,
   nodesMap,
   edgesMap,
+  createNode,
+  screenToFlowPosition,
   selection,
 }: UseCanvasContextMenuServicesOptions): CanvasContextMenuServices {
   const clipboard = useCanvasClipboardStore((state) => state.clipboard)
   const setClipboard = useCanvasClipboardStore((state) => state.setClipboard)
   const incrementPasteCount = useCanvasClipboardStore((state) => state.incrementPasteCount)
+  const { createItem } = useCreateSidebarItem()
+  const { getDefaultName } = useSidebarValidation()
 
   const canPaste = () => canEdit && clipboard !== null && clipboard.nodes.length > 0
 
@@ -149,6 +163,25 @@ export function useCanvasContextMenuServices({
       })
 
       return true
+    },
+    createAndEmbedSidebarItem: async (type, pointerPosition) => {
+      if (!canEdit) {
+        return null
+      }
+
+      const result = await createItem({
+        type,
+        campaignId,
+        parentTarget: { kind: 'direct', parentId: canvasParentId },
+        name: getDefaultName(type, canvasParentId),
+      })
+
+      const embedNode = createEmbedCanvasNode(result.id, screenToFlowPosition(pointerPosition))
+      createNode(embedNode)
+
+      const nextSelection = { nodeIds: [embedNode.id], edgeIds: [] }
+      selection.replace(nextSelection)
+      return nextSelection
     },
   } satisfies CanvasContextMenuServices
 }

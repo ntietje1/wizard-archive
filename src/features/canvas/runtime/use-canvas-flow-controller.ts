@@ -17,6 +17,8 @@ interface UseCanvasFlowControllerOptions {
   nodesMap: Y.Map<Node>
   edgesMap: Y.Map<Edge>
   canvasId: Id<'sidebarItems'>
+  campaignId: Id<'campaigns'>
+  canvasParentId: Id<'sidebarItems'> | null
   canEdit: boolean
   provider: ConvexYjsProvider | null
   doc: Y.Doc
@@ -31,6 +33,8 @@ export function useCanvasFlowController({
   nodesMap,
   edgesMap,
   canvasId,
+  campaignId,
+  canvasParentId,
   canEdit,
   provider,
   doc,
@@ -61,6 +65,8 @@ export function useCanvasFlowController({
 
   const { shellProps, nodeActions } = useCanvasInteractionRuntime({
     canvasId,
+    campaignId,
+    canvasParentId,
     canEdit,
     activeToolId,
     doc,

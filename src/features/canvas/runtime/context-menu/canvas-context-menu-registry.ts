@@ -5,10 +5,17 @@ import {
   Copy,
   CopyPlus,
   CornerDownLeft,
+  File,
+  FilePlus,
+  FolderPlus,
+  Grid2x2Plus,
+  MapPin,
+  Plus,
   Scissors,
   SendToBack,
   Trash2,
 } from 'lucide-react'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { CanvasReorderDirection } from '../document/canvas-stack-order'
 import type {
   CanvasContextMenuContext,
@@ -97,7 +104,81 @@ const canvasReorderSubmenuItems = () =>
     },
   ] satisfies Array<ContextMenuItemSpec<CanvasContextMenuContext, CanvasContextMenuServices>>
 
+const canvasCreateSubmenuItems = () =>
+  [
+    {
+      id: 'canvas-pane-create-note',
+      commandId: 'create.note',
+      label: 'Note',
+      icon: FilePlus,
+      group: 'create',
+      priority: 10,
+    },
+    {
+      id: 'canvas-pane-create-folder',
+      commandId: 'create.folder',
+      label: 'Folder',
+      icon: FolderPlus,
+      group: 'create',
+      priority: 11,
+    },
+    {
+      id: 'canvas-pane-create-map',
+      commandId: 'create.map',
+      label: 'Map',
+      icon: MapPin,
+      group: 'create',
+      priority: 12,
+    },
+    {
+      id: 'canvas-pane-create-canvas',
+      commandId: 'create.canvas',
+      label: 'Canvas',
+      icon: Grid2x2Plus,
+      group: 'create',
+      priority: 13,
+    },
+    {
+      id: 'canvas-pane-create-file',
+      commandId: 'create.file',
+      label: 'File',
+      icon: File,
+      group: 'create',
+      priority: 14,
+    },
+  ] satisfies Array<ContextMenuItemSpec<CanvasContextMenuContext, CanvasContextMenuServices>>
+
 export const canvasContextMenuCommands = {
+  'create.note': {
+    id: 'create.note',
+    run: async (context, services) => {
+      await services.createAndEmbedSidebarItem(SIDEBAR_ITEM_TYPES.notes, context.pointerPosition)
+    },
+  },
+  'create.folder': {
+    id: 'create.folder',
+    run: async (context, services) => {
+      await services.createAndEmbedSidebarItem(SIDEBAR_ITEM_TYPES.folders, context.pointerPosition)
+    },
+  },
+  'create.map': {
+    id: 'create.map',
+    run: async (context, services) => {
+      await services.createAndEmbedSidebarItem(SIDEBAR_ITEM_TYPES.gameMaps, context.pointerPosition)
+    },
+  },
+  'create.canvas': {
+    id: 'create.canvas',
+    run: async (context, services) => {
+      await services.createAndEmbedSidebarItem(SIDEBAR_ITEM_TYPES.canvases, context.pointerPosition)
+    },
+  },
+  'create.file': {
+    id: 'create.file',
+    run: async (context, services) => {
+      await services.createAndEmbedSidebarItem(SIDEBAR_ITEM_TYPES.files, context.pointerPosition)
+    },
+  },
   'edit.copy': createCanvasCommand<CanvasSelectionPayload>('edit.copy', (context, services) => {
     services.copySnapshot(context.selection)
   }),
@@ -149,12 +230,21 @@ const canvasPaneContributor: CanvasContextMenuContributor = {
       ? []
       : [
           {
+            id: 'canvas-pane-create-submenu',
+            label: 'New...',
+            icon: Plus,
+            group: 'create',
+            priority: 0,
+            applies: (ctx) => ctx.canEdit,
+            children: () => canvasCreateSubmenuItems(),
+          },
+          {
             id: 'canvas-pane-paste',
             commandId: 'edit.paste',
             label: 'Paste',
             icon: CornerDownLeft,
             group: 'edit',
-            priority: 0,
+            priority: 1,
             applies: (ctx) => ctx.canEdit,
           },
         ],
@@ -233,6 +323,7 @@ export const canvasContextMenuContributors = [
 
 export const canvasContextMenuGroupConfig: ContextMenuGroupConfig = {
   reorder: { label: null, priority: 0 },
-  edit: { label: null, priority: 1 },
+  create: { label: null, priority: 1 },
+  edit: { label: null, priority: 2 },
   danger: { label: null, priority: 99 },
 }

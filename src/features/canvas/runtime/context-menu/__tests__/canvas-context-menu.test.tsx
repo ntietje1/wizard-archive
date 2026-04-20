@@ -15,6 +15,9 @@ const hostMock = vi.hoisted(() => ({
   menu: null as BuiltContextMenu | null,
 }))
 
+const createItemMock = vi.hoisted(() => vi.fn())
+const getDefaultNameMock = vi.hoisted(() => vi.fn())
+
 vi.mock('~/features/context-menu/components/context-menu-host', () => ({
   ContextMenuHost: forwardRef((props: { menu: BuiltContextMenu }, ref) => {
     hostMock.menu = props.menu
@@ -23,6 +26,18 @@ vi.mock('~/features/context-menu/components/context-menu-host', () => ({
       close: hostMock.close,
     }))
     return null
+  }),
+}))
+
+vi.mock('~/features/sidebar/hooks/useCreateSidebarItem', () => ({
+  useCreateSidebarItem: () => ({
+    createItem: createItemMock,
+  }),
+}))
+
+vi.mock('~/features/sidebar/hooks/useSidebarValidation', () => ({
+  useSidebarValidation: () => ({
+    getDefaultName: getDefaultNameMock,
   }),
 }))
 
@@ -52,6 +67,8 @@ describe('CanvasContextMenu', () => {
     hostMock.open.mockReset()
     hostMock.close.mockReset()
     hostMock.menu = null
+    createItemMock.mockReset()
+    getDefaultNameMock.mockReset()
     useCanvasClipboardStore.getState().setClipboard(null)
     useCanvasSelectionState.getState().reset()
     vi.spyOn(window, 'requestAnimationFrame').mockImplementation(
@@ -80,8 +97,12 @@ describe('CanvasContextMenu', () => {
         ref={ref}
         activeTool="draw"
         canEdit={true}
+        campaignId={'campaign-1' as never}
+        canvasParentId={null}
         nodesMap={nodesMap}
         edgesMap={edgesMap}
+        createNode={vi.fn()}
+        screenToFlowPosition={({ x, y }) => ({ x, y })}
         selectionController={selectionController}
       />,
     )
@@ -112,8 +133,12 @@ describe('CanvasContextMenu', () => {
         ref={ref}
         activeTool="select"
         canEdit={true}
+        campaignId={'campaign-1' as never}
+        canvasParentId={null}
         nodesMap={nodesMap}
         edgesMap={edgesMap}
+        createNode={vi.fn()}
+        screenToFlowPosition={({ x, y }) => ({ x, y })}
         selectionController={selectionController}
       />,
     )
@@ -163,8 +188,12 @@ describe('CanvasContextMenu', () => {
         ref={ref}
         activeTool="select"
         canEdit={true}
+        campaignId={'campaign-1' as never}
+        canvasParentId={null}
         nodesMap={nodesMap}
         edgesMap={edgesMap}
+        createNode={vi.fn()}
+        screenToFlowPosition={({ x, y }) => ({ x, y })}
         selectionController={selectionController}
       />,
     )
@@ -185,7 +214,9 @@ describe('CanvasContextMenu', () => {
     })
 
     expect(selectionController.clear).toHaveBeenCalledTimes(1)
-    expect(hostMock.menu?.flatItems.map((item) => item.id)).toEqual(['canvas-pane-paste'])
+    expect(hostMock.menu?.flatItems.map((item) => item.id)).toEqual(
+      expect.arrayContaining(['canvas-pane-create-submenu', 'canvas-pane-paste']),
+    )
   })
 
   it('selects an unselected target before opening a selection-driven menu', async () => {
@@ -204,8 +235,12 @@ describe('CanvasContextMenu', () => {
         ref={ref}
         activeTool="select"
         canEdit={true}
+        campaignId={'campaign-1' as never}
+        canvasParentId={null}
         nodesMap={nodesMap}
         edgesMap={edgesMap}
+        createNode={vi.fn()}
+        screenToFlowPosition={({ x, y }) => ({ x, y })}
         selectionController={selectionController}
       />,
     )
@@ -238,6 +273,9 @@ describe('CanvasContextMenu', () => {
         'canvas-selection-delete',
       ]),
     )
+    expect(hostMock.menu?.flatItems.map((item) => item.id)).not.toContain(
+      'canvas-pane-create-submenu',
+    )
 
     const reorderItems = hostMock.menu?.flatItems.filter((item) => item.label === 'Reorder') ?? []
     expect(reorderItems).toHaveLength(1)
@@ -264,8 +302,12 @@ describe('CanvasContextMenu', () => {
         ref={ref}
         activeTool="select"
         canEdit={true}
+        campaignId={'campaign-1' as never}
+        canvasParentId={null}
         nodesMap={nodesMap}
         edgesMap={edgesMap}
+        createNode={vi.fn()}
+        screenToFlowPosition={({ x, y }) => ({ x, y })}
         selectionController={selectionController}
       />,
     )

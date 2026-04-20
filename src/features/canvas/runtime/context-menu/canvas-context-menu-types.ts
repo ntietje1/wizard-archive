@@ -1,6 +1,7 @@
 import type { CanvasReorderDirection } from '../document/canvas-stack-order'
 import type { CanvasSelectionSnapshot } from '../../tools/canvas-tool-types'
 import type { ContextMenuContributor } from '~/features/context-menu/types'
+import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { Edge, Node } from '@xyflow/react'
 
 export interface CanvasContextMenuPoint {
@@ -33,6 +34,10 @@ export interface CanvasContextMenuServices {
     selection: CanvasSelectionSnapshot,
     direction: CanvasReorderDirection,
   ) => boolean
+  createAndEmbedSidebarItem: (
+    type: SidebarItemType,
+    pointerPosition: CanvasContextMenuPoint,
+  ) => Promise<CanvasSelectionSnapshot | null>
 }
 
 export type CanvasContextMenuContributor = ContextMenuContributor<

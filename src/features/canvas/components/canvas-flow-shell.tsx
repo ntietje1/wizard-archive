@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { Background, ConnectionMode, MiniMap, ReactFlow, SelectionMode } from '@xyflow/react'
 import { useShallow } from 'zustand/shallow'
+import type { Id } from 'convex/_generated/dataModel'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { cn } from '~/features/shadcn/lib/utils'
 import { CanvasAwarenessHost } from './canvas-awareness-host'
@@ -42,8 +43,12 @@ export interface CanvasFlowShellProps {
   }
   canvasSurfaceRef: React.RefObject<HTMLDivElement | null>
   contextMenu: {
+    campaignId: Id<'campaigns'>
+    canvasParentId: Id<'sidebarItems'> | null
     nodesMap: Y.Map<Node>
     edgesMap: Y.Map<Edge>
+    createNode: (node: Node) => void
+    screenToFlowPosition: (position: { x: number; y: number }) => { x: number; y: number }
     selectionController: Pick<CanvasSelectionController, 'replace' | 'clear'>
   }
   flowHandlers: {
@@ -159,8 +164,12 @@ export function CanvasFlowShell({
           ref={contextMenuRef}
           activeTool={chrome.activeTool}
           canEdit={canEdit}
+          campaignId={contextMenu.campaignId}
+          canvasParentId={contextMenu.canvasParentId}
           nodesMap={contextMenu.nodesMap}
           edgesMap={contextMenu.edgesMap}
+          createNode={contextMenu.createNode}
+          screenToFlowPosition={contextMenu.screenToFlowPosition}
           selectionController={contextMenu.selectionController}
         />
 

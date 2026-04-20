@@ -92,8 +92,12 @@ describe('CanvasFlowShell', () => {
 
 function createContextMenu(): CanvasFlowShellProps['contextMenu'] {
   return {
+    campaignId: 'campaign-1' as never,
+    canvasParentId: null,
     nodesMap: new Y.Map(),
     edgesMap: new Y.Map(),
+    createNode: vi.fn(),
+    screenToFlowPosition: ({ x, y }) => ({ x, y }),
     selectionController: {
       replace: vi.fn(),
       clear: vi.fn(),

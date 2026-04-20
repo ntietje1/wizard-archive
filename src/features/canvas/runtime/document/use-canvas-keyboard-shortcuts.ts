@@ -2,6 +2,7 @@ import { useHotkey } from '@tanstack/react-hotkeys'
 import { useCanvasContextMenuServices } from '../context-menu/use-canvas-context-menu-services'
 import { getCanvasSelectionSnapshot } from '../selection/use-canvas-selection-state'
 import { useCanvasSelectionActions } from '../selection/use-canvas-selection-actions'
+import type { Id } from 'convex/_generated/dataModel'
 import type {
   CanvasHistoryController,
   CanvasSelectionController,
@@ -27,8 +28,12 @@ export function useCanvasKeyboardShortcuts({
   const selectionActions = useCanvasSelectionActions()
   const contextMenuServices = useCanvasContextMenuServices({
     canEdit,
+    campaignId: 'canvas-shortcuts-campaign' as Id<'campaigns'>,
+    canvasParentId: null,
     nodesMap,
     edgesMap,
+    createNode: () => undefined,
+    screenToFlowPosition: ({ x, y }) => ({ x, y }),
     selection,
   })
 

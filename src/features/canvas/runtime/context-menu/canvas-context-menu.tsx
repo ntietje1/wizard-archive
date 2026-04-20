@@ -13,14 +13,19 @@ import {
 import { useCanvasContextMenuServices } from './use-canvas-context-menu-services'
 import type { CanvasSelectionController } from '../../tools/canvas-tool-types'
 import type { CanvasContextMenuContext } from './canvas-context-menu-types'
+import type { Id } from 'convex/_generated/dataModel'
 import type { Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 
 interface CanvasContextMenuProps {
   activeTool: string
   canEdit: boolean
+  campaignId: Id<'campaigns'>
+  canvasParentId: Id<'sidebarItems'> | null
   nodesMap: Y.Map<Node>
   edgesMap: Y.Map<Edge>
+  createNode: (node: Node) => void
+  screenToFlowPosition: (position: PointerPosition) => { x: number; y: number }
   selectionController: Pick<CanvasSelectionController, 'replace' | 'clear'>
 }
 
@@ -76,13 +81,30 @@ function normalizeContextMenuEvent(event: MouseEvent | React.MouseEvent) {
 }
 
 export const CanvasContextMenu = forwardRef<CanvasContextMenuRef, CanvasContextMenuProps>(
-  ({ activeTool, canEdit, nodesMap, edgesMap, selectionController }, ref) => {
+  (
+    {
+      activeTool,
+      canEdit,
+      campaignId,
+      canvasParentId,
+      nodesMap,
+      edgesMap,
+      createNode,
+      screenToFlowPosition,
+      selectionController,
+    },
+    ref,
+  ) => {
     const hostRef = useRef<ContextMenuHostRef>(null)
     const selection = useCanvasSelectionSnapshot()
     const services = useCanvasContextMenuServices({
       canEdit,
+      campaignId,
+      canvasParentId,
       nodesMap,
       edgesMap,
+      createNode,
+      screenToFlowPosition,
       selection: selectionController,
     })
     const [menuContext, setMenuContext] = useState<CanvasContextMenuContext | null>(null)

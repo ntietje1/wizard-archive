@@ -50,8 +50,10 @@ type ReadyCanvasSession = Extract<CanvasViewerSession, { status: 'ready' }>
 
 function CanvasFlow({
   canvasId,
+  campaignId,
   canEdit,
   colorMode,
+  parentId,
   provider,
   doc,
   nodesMap,
@@ -61,6 +63,8 @@ function CanvasFlow({
     nodesMap,
     edgesMap,
     canvasId,
+    campaignId,
+    canvasParentId: parentId,
     canEdit,
     provider,
     doc,

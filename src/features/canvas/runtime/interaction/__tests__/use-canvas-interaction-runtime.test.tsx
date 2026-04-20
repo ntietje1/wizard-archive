@@ -185,6 +185,8 @@ describe('useCanvasInteractionRuntime', () => {
     const { result } = renderHook(() =>
       useCanvasInteractionRuntime({
         canvasId: 'canvas-id' as never,
+        campaignId: 'campaign-id' as never,
+        canvasParentId: null,
         canEdit: true,
         activeToolId: 'select',
         doc: canvasDoc,

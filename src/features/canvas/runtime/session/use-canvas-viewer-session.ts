@@ -35,8 +35,10 @@ export type CanvasViewerSession =
   | {
       status: 'ready'
       canvasId: CanvasWithContent['_id']
+      campaignId: CanvasWithContent['campaignId']
       canEdit: boolean
       colorMode: 'light' | 'dark'
+      parentId: CanvasWithContent['parentId']
       provider: ReturnType<typeof useConvexYjsCollaboration>['provider']
       user: { name: string; color: string }
       doc: Y.Doc
@@ -83,8 +85,10 @@ export function useCanvasViewerSession(canvas: CanvasWithContent): CanvasViewerS
   return {
     status: 'ready',
     canvasId: canvas._id,
+    campaignId: canvas.campaignId,
     canEdit,
     colorMode: resolvedTheme,
+    parentId: canvas.parentId,
     provider,
     user,
     doc,
