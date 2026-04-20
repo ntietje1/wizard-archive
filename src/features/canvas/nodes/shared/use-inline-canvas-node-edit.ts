@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { usePendingNodeEdit } from './use-pending-node-edit'
 
 interface UseInlineCanvasNodeEditOptions<TElement extends HTMLInputElement | HTMLTextAreaElement> {
@@ -22,64 +22,55 @@ export function useInlineCanvasNodeEdit<TElement extends HTMLInputElement | HTML
   const [editValue, setEditValue] = useState(value)
   const suppressBlurCommitRef = useRef(false)
 
-  const startEditing = useCallback(() => {
+  const startEditing = () => {
     if (isEditing) return
     suppressBlurCommitRef.current = false
     setEditValue(value)
     setIsEditing(true)
-  }, [isEditing, value])
+  }
 
-  const commitEdit = useCallback(
-    (nextValue: string) => {
-      setIsEditing(false)
-      if (nextValue !== value) {
-        onCommit(nextValue)
-      }
-    },
-    [onCommit, value],
-  )
+  const commitEdit = (nextValue: string) => {
+    setIsEditing(false)
+    if (nextValue !== value) {
+      onCommit(nextValue)
+    }
+  }
 
-  const cancelEdit = useCallback(() => {
+  const cancelEdit = () => {
     suppressBlurCommitRef.current = true
     setIsEditing(false)
     setEditValue(value)
-  }, [value])
+  }
 
-  const handleBlur = useCallback(
-    (event: React.FocusEvent<TElement>) => {
-      if (suppressBlurCommitRef.current) {
-        suppressBlurCommitRef.current = false
-        return
-      }
+  const handleBlur = (event: React.FocusEvent<TElement>) => {
+    if (suppressBlurCommitRef.current) {
+      suppressBlurCommitRef.current = false
+      return
+    }
 
+    commitEdit(event.currentTarget.value)
+  }
+
+  const handleInputKeyDown = (event: React.KeyboardEvent<TElement>) => {
+    if (shouldCancel(event)) {
+      event.preventDefault()
+      event.stopPropagation()
+      cancelEdit()
+      return
+    }
+
+    if (shouldCommit(event)) {
+      event.preventDefault()
+      event.stopPropagation()
+      suppressBlurCommitRef.current = true
       commitEdit(event.currentTarget.value)
-    },
-    [commitEdit],
-  )
-
-  const handleInputKeyDown = useCallback(
-    (event: React.KeyboardEvent<TElement>) => {
-      if (shouldCancel(event)) {
-        event.preventDefault()
-        event.stopPropagation()
-        cancelEdit()
-        return
-      }
-
-      if (shouldCommit(event)) {
-        event.preventDefault()
-        event.stopPropagation()
-        suppressBlurCommitRef.current = true
-        commitEdit(event.currentTarget.value)
-      }
-    },
-    [cancelEdit, commitEdit, shouldCancel, shouldCommit],
-  )
+    }
+  }
 
   useEffect(() => {
     if (selected || !isEditing) return
 
-    suppressBlurCommitRef.current = false
+    suppressBlurCommitRef.current = true
     setIsEditing(false)
     setEditValue(value)
   }, [isEditing, selected, value])

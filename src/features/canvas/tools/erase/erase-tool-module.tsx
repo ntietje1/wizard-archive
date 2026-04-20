@@ -21,7 +21,7 @@ export const eraseToolModule: CanvasToolModule<'erase'> = {
   localOverlay: {
     clear: clearEraseToolLocalOverlay,
   },
-  create: (environment) => {
+  create: (services) => {
     let trail: Array<{ x: number; y: number }> = []
     let marked = new Set<string>()
     let erasing = false
@@ -32,7 +32,7 @@ export const eraseToolModule: CanvasToolModule<'erase'> = {
     const testIntersections = () => {
       if (trail.length < 2) return
 
-      const strokeNodes = environment.document.getNodes().filter(isStrokeNode)
+      const strokeNodes = services.document.getNodes().filter(isStrokeNode)
       let changed = false
       for (const node of strokeNodes) {
         if (marked.has(node.id)) continue
@@ -78,14 +78,14 @@ export const eraseToolModule: CanvasToolModule<'erase'> = {
         pointerId = event.pointerId
         erasing = true
         marked = new Set()
-        const pos = screenEventToFlowPosition(environment.viewport, event)
+        const pos = screenEventToFlowPosition(services.viewport, event)
         trail = [pos]
         setEraseToolErasingStrokeIds(new Set())
       },
       onPointerMove: (event) => {
         if (!erasing || (event.buttons & 1) !== 1) return
 
-        trail = [...trail.slice(-199), screenEventToFlowPosition(environment.viewport, event)]
+        trail = [...trail.slice(-199), screenEventToFlowPosition(services.viewport, event)]
         if (rafId) return
 
         rafId = requestAnimationFrame(() => {
@@ -102,7 +102,7 @@ export const eraseToolModule: CanvasToolModule<'erase'> = {
         }
         testIntersections()
         if (marked.size > 0) {
-          environment.document.deleteNodes(Array.from(marked))
+          services.document.deleteNodes(Array.from(marked))
         }
         reset()
       },

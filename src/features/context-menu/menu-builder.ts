@@ -80,8 +80,8 @@ function resolveContextMenuItem<
       : command?.shortcut
         ? resolveValue(command.shortcut, context, services, payload)
         : undefined,
-    disabled: item.isDisabled
-      ? item.isDisabled(context, services, payload)
+    disabled: item.isEnabled
+      ? !item.isEnabled(context, services, payload)
       : command?.isEnabled
         ? !command.isEnabled(context, services, payload)
         : false,
@@ -91,17 +91,18 @@ function resolveContextMenuItem<
         ? command.isChecked(context, services, payload)
         : false,
     group: item.group,
-    priority: item.priority,
+    priority: item.priority ?? 0,
     scope: item.scope ?? 'base',
     variant: item.variant,
     className: item.className,
     children: children && children.length > 0 ? children : undefined,
-    onSelect: () => {
+    onSelect: async () => {
       if (item.onSelect) {
-        return item.onSelect(context, services, payload)
+        await item.onSelect(context, services, payload)
+        return
       }
       if (!command) return
-      return command.run(context, services, payload)
+      await command.run(context, services, payload)
     },
   }
 }
@@ -164,7 +165,7 @@ export function buildMenu<TContext extends { surface: ContextMenuSurfaceId }, TS
 
   return {
     groups,
-    flatItems: resolvedItems,
+    flatItems: groups.flatMap((group) => group.items),
     isEmpty: false,
   }
 }

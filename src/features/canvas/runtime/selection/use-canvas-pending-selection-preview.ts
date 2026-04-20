@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 
 interface CanvasPendingSelectionPreviewState {
+  // `null` means no preview is active; edges stay as an empty Set when a preview has no edge hits.
   pendingNodeIds: Set<string> | null
   pendingEdgeIds: Set<string>
 }
@@ -22,31 +23,32 @@ function areStringSetsEqual(a: Set<string> | null, b: Set<string> | null): boole
   return true
 }
 
+function getNextPendingSelectionState(
+  state: CanvasPendingSelectionPreviewState,
+  preview: { nodeIds: Set<string>; edgeIds: Set<string> } | null,
+) {
+  if (preview === null) {
+    return state.pendingNodeIds === null && state.pendingEdgeIds.size === 0
+      ? state
+      : { pendingNodeIds: null, pendingEdgeIds: new Set<string>() }
+  }
+
+  return areStringSetsEqual(state.pendingNodeIds, preview.nodeIds) &&
+    areStringSetsEqual(state.pendingEdgeIds, preview.edgeIds)
+    ? state
+    : {
+        pendingNodeIds: preview.nodeIds,
+        pendingEdgeIds: preview.edgeIds,
+      }
+}
+
 export const useCanvasPendingSelectionPreviewStore = create<
   CanvasPendingSelectionPreviewState & CanvasPendingSelectionPreviewActions
 >((set) => ({
   pendingNodeIds: null,
   pendingEdgeIds: new Set(),
-  setPendingSelection: (preview) =>
-    set((state) =>
-      preview === null
-        ? state.pendingNodeIds === null && state.pendingEdgeIds.size === 0
-          ? state
-          : { pendingNodeIds: null, pendingEdgeIds: new Set() }
-        : areStringSetsEqual(state.pendingNodeIds, preview.nodeIds) &&
-            areStringSetsEqual(state.pendingEdgeIds, preview.edgeIds)
-          ? state
-          : {
-              pendingNodeIds: preview.nodeIds,
-              pendingEdgeIds: preview.edgeIds,
-            },
-    ),
-  reset: () =>
-    set((state) =>
-      state.pendingNodeIds === null && state.pendingEdgeIds.size === 0
-        ? state
-        : { pendingNodeIds: null, pendingEdgeIds: new Set() },
-    ),
+  setPendingSelection: (preview) => set((state) => getNextPendingSelectionState(state, preview)),
+  reset: () => set((state) => getNextPendingSelectionState(state, null)),
 }))
 
 export function setCanvasPendingSelectionPreview(

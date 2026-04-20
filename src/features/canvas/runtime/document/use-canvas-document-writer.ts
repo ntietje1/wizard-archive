@@ -4,6 +4,7 @@ import type { CanvasNodeData, CanvasNodeType } from '../../nodes/canvas-node-mod
 import type { CanvasDocumentWriter } from '../../tools/canvas-tool-types'
 import { stripEphemeralCanvasNodeState } from '../../utils/canvas-node-persistence'
 import { getNextCanvasElementZIndex } from './canvas-stack-order'
+import { transactCanvasMap } from './canvas-yjs-transactions'
 import type { Connection, Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 import { logger } from '~/shared/utils/logger'
@@ -95,17 +96,8 @@ export function useCanvasDocumentWriter({
   edgesMap,
 }: UseCanvasDocumentWriterOptions): CanvasDocumentWriter {
   return useMemo(() => {
-    const withTransaction = <TValue>(map: Y.Map<TValue>, fn: () => void) => {
-      if (map.doc) {
-        map.doc.transact(fn)
-        return
-      }
-
-      fn()
-    }
-
-    const withNodeTransaction = (fn: () => void) => withTransaction(nodesMap, fn)
-    const withEdgeTransaction = (fn: () => void) => withTransaction(edgesMap, fn)
+    const withNodeTransaction = (fn: () => void) => transactCanvasMap(nodesMap, fn)
+    const withEdgeTransaction = (fn: () => void) => transactCanvasMap(edgesMap, fn)
 
     return {
       createNode: (node) => {

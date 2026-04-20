@@ -18,6 +18,7 @@ import type { Point2D } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-geometry-utils'
 import type { CanvasContextMenuContributor } from '../runtime/context-menu/canvas-context-menu-types'
 import { boundsFromPoints, rectIntersectsBounds } from '../utils/canvas-geometry-utils'
+import { buildCanvasNodeTypes } from './canvas-node-module-types'
 import { rectangleNodeModule } from './rectangle/rectangle-node-module'
 import { strokeNodeModule } from './stroke/stroke-node-module'
 import { textNodeModule } from './text/text-node-module'
@@ -33,6 +34,7 @@ const canvasNodeModules = [
 
 const canvasNodeModuleMap: Partial<Record<CanvasNodeType, AnyCanvasNodeModule>> =
   Object.fromEntries(canvasNodeModules.map((module) => [module.type, module] as const))
+export const canvasNodeTypes = buildCanvasNodeTypes(canvasNodeModules)
 
 type CanvasAwarenessLayer = NonNullable<CanvasAwarenessCapability['Layer']>
 
@@ -101,8 +103,7 @@ export function getCanvasNodeAwarenessLayers(): ReadonlyArray<{
 }
 
 export function getCanvasNodeContextMenuContributors(type: string | undefined) {
-  return (getCanvasNodeModuleByType(type)?.contextMenu?.contributors ??
-    []) as ReadonlyArray<CanvasContextMenuContributor>
+  return getCanvasNodeModuleByType(type)?.contextMenu?.contributors ?? []
 }
 
 export function createCanvasNodePlacement(
@@ -143,12 +144,26 @@ function getCanvasRectangleCandidateBounds(
 }
 
 function isStrokeSelectionNode(node: Node): node is StrokeSelectionNode {
+  const bounds = node.data.bounds
+
   return (
     node.type === 'stroke' &&
     Array.isArray(node.data.points) &&
     typeof node.data.size === 'number' &&
-    typeof node.data.bounds === 'object' &&
-    node.data.bounds !== null
+    typeof bounds === 'object' &&
+    bounds !== null &&
+    'x' in bounds &&
+    typeof bounds.x === 'number' &&
+    Number.isFinite(bounds.x) &&
+    'y' in bounds &&
+    typeof bounds.y === 'number' &&
+    Number.isFinite(bounds.y) &&
+    'width' in bounds &&
+    typeof bounds.width === 'number' &&
+    Number.isFinite(bounds.width) &&
+    'height' in bounds &&
+    typeof bounds.height === 'number' &&
+    Number.isFinite(bounds.height)
   )
 }
 

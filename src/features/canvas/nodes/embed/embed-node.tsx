@@ -3,7 +3,10 @@ import { AlertTriangle, ExternalLinkIcon } from 'lucide-react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { RichEmbedLifecycleController } from './use-rich-embed-lifecycle'
 import { useRichEmbedActivation } from './use-rich-embed-lifecycle'
-import { useSelectedCanvasNodeIds } from '../../runtime/selection/use-canvas-selection-state'
+import {
+  useIsCanvasNodeSelected,
+  useSelectedCanvasNodeIds,
+} from '../../runtime/selection/use-canvas-selection-state'
 import { isExclusivelySelectedNode } from '../../utils/canvas-selection-utils'
 import { ResizableNodeWrapper } from '../shared/resizable-node-wrapper'
 import type { EmbedNodeData } from './embed-node-data'
@@ -20,18 +23,19 @@ import { cn } from '~/features/shadcn/lib/utils'
 import { CanvasNodeConnectionHandles } from '../shared/canvas-node-connection-handles'
 import {
   useCanvasEditSessionContext,
-  useCanvasPermissions,
+  useCanvasPermissionsContext,
 } from '../../runtime/providers/canvas-runtime-context'
 
-export function EmbedNode({ id, data, selected, dragging }: NodeProps<Node<EmbedNodeData>>) {
+export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>) {
   const sidebarItemId = data.sidebarItemId
   const { itemsMap } = useActiveSidebarItems()
   const item = sidebarItemId ? itemsMap.get(sidebarItemId) : undefined
+  const isSelected = useIsCanvasNodeSelected(id)
 
   const { data: contentItem } = useSidebarItemById(sidebarItemId)
 
   const editSession = useCanvasEditSessionContext()
-  const canEdit = useCanvasPermissions()
+  const canEdit = useCanvasPermissionsContext()
   const { editingEmbedId, setEditingEmbedId } = editSession
   const selectedNodeIds = useSelectedCanvasNodeIds()
   const isExclusivelySelected = isExclusivelySelectedNode(selectedNodeIds, id)
@@ -59,7 +63,6 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps<Node<Embed
     <ResizableNodeWrapper
       id={id}
       nodeType="embed"
-      selected={!!selected}
       dragging={!!dragging}
       minWidth={240}
       minHeight={180}
@@ -68,7 +71,7 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps<Node<Embed
         className="h-full w-full rounded-lg border bg-card shadow-sm flex flex-col overflow-hidden"
         onDoubleClick={handleDoubleClick}
       >
-        <CanvasNodeConnectionHandles selected={!!selected} />
+        <CanvasNodeConnectionHandles selected={isSelected} />
 
         <div className="flex items-center gap-2 min-w-0 px-3 py-2">
           {isMissing ? (
@@ -83,7 +86,7 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps<Node<Embed
             <div
               className={cn(
                 'shrink-0 overflow-hidden',
-                selected ? 'w-auto opacity-100' : 'w-0 opacity-0',
+                isSelected ? 'w-auto opacity-100' : 'w-0 opacity-0',
               )}
             >
               <Button
@@ -94,7 +97,7 @@ export function EmbedNode({ id, data, selected, dragging }: NodeProps<Node<Embed
                   void navigateToItem(item.slug)
                 }}
                 aria-label="Open item"
-                tabIndex={selected ? 0 : -1}
+                tabIndex={isSelected ? 0 : -1}
               >
                 <ExternalLinkIcon className="size-3.5" />
               </Button>

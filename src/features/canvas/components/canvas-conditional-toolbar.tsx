@@ -4,6 +4,7 @@ import {
   useSelectedCanvasNodeIds,
 } from '../runtime/selection/use-canvas-selection-state'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
+import { useCanvasToolPropertyContext } from '../stores/canvas-tool-state-controls'
 import { getCanvasNodeProperties } from '../nodes/canvas-node-registry'
 import { getCanvasToolProperties } from '../tools/canvas-tool-modules'
 import type { Node } from '@xyflow/react'
@@ -34,35 +35,6 @@ const COLOR_NAMES: Record<string, string> = {
   'var(--t-pink)': 'Pink',
 }
 
-function createToolPropertyContext({
-  strokeColor,
-  strokeOpacity,
-  strokeSize,
-  setStrokeColor,
-  setStrokeOpacity,
-  setStrokeSize,
-}: {
-  strokeColor: string
-  strokeOpacity: number
-  strokeSize: number
-  setStrokeColor: (color: string) => void
-  setStrokeOpacity: (opacity: number) => void
-  setStrokeSize: (size: number) => void
-}): CanvasToolPropertyContext {
-  return {
-    toolState: {
-      getSettings: () => ({
-        strokeColor,
-        strokeOpacity,
-        strokeSize,
-      }),
-      setStrokeColor,
-      setStrokeSize,
-      setStrokeOpacity,
-    },
-  }
-}
-
 function isPaintProperty(
   property: CanvasResolvedProperty,
 ): property is CanvasPaintResolvedProperty {
@@ -81,12 +53,7 @@ export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarPr
   const selectedNodeIds = useSelectedCanvasNodeIds()
   const isSelectionGestureActive = useIsCanvasSelectionGestureActive()
   const activeTool = useCanvasToolStore((state) => state.activeTool)
-  const strokeColor = useCanvasToolStore((state) => state.strokeColor)
-  const strokeOpacity = useCanvasToolStore((state) => state.strokeOpacity)
-  const strokeSize = useCanvasToolStore((state) => state.strokeSize)
-  const setStrokeColor = useCanvasToolStore((state) => state.setStrokeColor)
-  const setStrokeOpacity = useCanvasToolStore((state) => state.setStrokeOpacity)
-  const setStrokeSize = useCanvasToolStore((state) => state.setStrokeSize)
+  const toolPropertyContext = useCanvasToolPropertyContext()
 
   const selectedNodeIdSet = new Set(selectedNodeIds)
   const selectedNodes = nodes.filter((node) => selectedNodeIdSet.has(node.id))
@@ -95,14 +62,7 @@ export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarPr
     activeTool,
     isSelectionGestureActive ? [] : selectedNodes,
     updateNodeData,
-    createToolPropertyContext({
-      strokeColor,
-      strokeOpacity,
-      strokeSize,
-      setStrokeColor,
-      setStrokeOpacity,
-      setStrokeSize,
-    }),
+    toolPropertyContext,
   )
   if (!canEdit || properties.length === 0) return null
 

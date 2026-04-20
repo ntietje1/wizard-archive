@@ -179,6 +179,9 @@ function ContextMenuTrigger({
   const triggerElement = render ?? children
 
   if (!React.isValidElement<ContextMenuTriggerElementProps>(triggerElement)) {
+    if (import.meta.env.DEV) {
+      console.warn('ContextMenu received an invalid trigger element', triggerElement)
+    }
     return null
   }
 

@@ -218,7 +218,7 @@ describe('buildMenu', () => {
 
     const menu = buildMenu({
       context: sidebarCtx(),
-      services: {},
+      services,
       contributors,
       commands,
       groupConfig,

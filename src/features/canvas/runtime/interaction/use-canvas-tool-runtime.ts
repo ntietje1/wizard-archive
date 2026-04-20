@@ -3,17 +3,17 @@ import type { RefObject } from 'react'
 import { useReactFlow, useStoreApi } from '@xyflow/react'
 import { createCanvasToolController, getCanvasToolCursor } from '../../tools/canvas-tool-modules'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
+import { canvasToolStateControls } from '../../stores/canvas-tool-state-controls'
 import { getMeasuredCanvasNodesFromLookup } from '../document/canvas-measured-nodes'
 import type {
   CanvasAwarenessWriter,
-  CanvasCoreAwarenessWriter,
   CanvasDocumentReader,
   CanvasDocumentWriter,
   CanvasEditSessionState,
   CanvasInteractionTools,
   CanvasSelectionController,
-  CanvasToolEnvironment,
   CanvasToolStateControls,
+  CanvasToolServices,
   CanvasViewportTools,
 } from '../../tools/canvas-tool-types'
 
@@ -26,6 +26,8 @@ interface UseCanvasToolRuntimeOptions {
   editSession: CanvasEditSessionState
 }
 
+type CanvasToolRuntimeState = UseCanvasToolRuntimeOptions
+
 export function useCanvasToolRuntime({
   documentRead,
   documentWrite,
@@ -37,93 +39,49 @@ export function useCanvasToolRuntime({
   const reactFlow = useReactFlow()
   const storeApi = useStoreApi()
   const activeTool = useCanvasToolStore((state) => state.activeTool)
-  const setActiveTool = useCanvasToolStore((state) => state.setActiveTool)
-  const setStrokeColor = useCanvasToolStore((state) => state.setStrokeColor)
-  const setStrokeOpacity = useCanvasToolStore((state) => state.setStrokeOpacity)
-  const setStrokeSize = useCanvasToolStore((state) => state.setStrokeSize)
 
-  const documentWriteRef = useCurrentValue(documentWrite)
-  const documentReadRef = useCurrentValue(documentRead)
-  const selectionRef = useCurrentValue(selection)
-  const interactionRef = useCurrentValue(interaction)
-  const awarenessRef = useCurrentValue(awareness)
-  const editSessionRef = useCurrentValue(editSession)
+  const runtimeStateRef = useRef<CanvasToolRuntimeState | null>(null)
+  runtimeStateRef.current = {
+    documentRead,
+    documentWrite,
+    selection,
+    interaction,
+    awareness,
+    editSession,
+  }
 
-  const toolStateControls = useMemo(
-    () =>
-      createCanvasToolStateControls(setActiveTool, setStrokeColor, setStrokeOpacity, setStrokeSize),
-    [setActiveTool, setStrokeColor, setStrokeOpacity, setStrokeSize],
-  )
-
-  const viewportTools = useMemo(() => createCanvasViewportTools(reactFlow), [reactFlow])
-
-  const awarenessWriter = useMemo<CanvasAwarenessWriter>(
-    () => createCanvasAwarenessCommands(awarenessRef),
-    [awarenessRef],
-  )
-
-  const environment = useMemo<CanvasToolEnvironment>(
-    () => ({
-      viewport: viewportTools,
-      document: createCanvasDocumentAccess(documentWriteRef, documentReadRef, storeApi),
-      selection: createCanvasSelectionAccess(selectionRef),
-      interaction: createCanvasInteractionAccess(interactionRef),
-      editSession: createCanvasEditSessionAccess(editSessionRef),
-      toolState: toolStateControls,
-      awareness: awarenessWriter,
-    }),
-    [
-      awarenessWriter,
-      documentReadRef,
-      documentWriteRef,
-      editSessionRef,
-      interactionRef,
-      selectionRef,
-      storeApi,
-      toolStateControls,
-      viewportTools,
-    ],
+  const services = useMemo<CanvasToolServices>(
+    () => createCanvasToolServices(runtimeStateRef, reactFlow, storeApi, canvasToolStateControls),
+    [reactFlow, storeApi],
   )
 
   return useMemo(() => {
     return {
       activeTool,
       toolCursor: getCanvasToolCursor(activeTool),
-      activeToolController: createCanvasToolController(activeTool, environment),
+      activeToolController: createCanvasToolController(activeTool, services),
     }
-  }, [activeTool, environment])
+  }, [activeTool, services])
 }
 
-function useCurrentValue<TValue>(value: TValue): RefObject<TValue> {
-  const ref = useRef(value)
-  ref.current = value
-  return ref
-}
-
-function createCanvasToolStateControls(
-  setActiveTool: CanvasToolStateControls['setActiveTool'],
-  setStrokeColor: CanvasToolStateControls['setStrokeColor'],
-  setStrokeOpacity: CanvasToolStateControls['setStrokeOpacity'],
-  setStrokeSize: CanvasToolStateControls['setStrokeSize'],
-): CanvasToolStateControls {
+function createCanvasToolServices(
+  runtimeStateRef: RefObject<CanvasToolRuntimeState | null>,
+  reactFlow: ReturnType<typeof useReactFlow>,
+  storeApi: ReturnType<typeof useStoreApi>,
+  toolState: CanvasToolStateControls,
+): CanvasToolServices {
   return {
-    getSettings: () => {
-      const state = useCanvasToolStore.getState()
-      return {
-        strokeColor: state.strokeColor,
-        strokeOpacity: state.strokeOpacity,
-        strokeSize: state.strokeSize,
-      }
-    },
-    getActiveTool: () => useCanvasToolStore.getState().activeTool,
-    setActiveTool,
-    setStrokeColor,
-    setStrokeOpacity,
-    setStrokeSize,
+    viewport: createCanvasViewportService(reactFlow),
+    document: createCanvasDocumentService(runtimeStateRef, storeApi),
+    selection: createCanvasSelectionService(runtimeStateRef),
+    interaction: createCanvasInteractionService(runtimeStateRef),
+    editSession: createCanvasEditSessionService(runtimeStateRef),
+    toolState,
+    awareness: createCanvasAwarenessService(runtimeStateRef),
   }
 }
 
-function createCanvasViewportTools(
+function createCanvasViewportService(
   reactFlow: ReturnType<typeof useReactFlow>,
 ): CanvasViewportTools {
   return {
@@ -132,90 +90,102 @@ function createCanvasViewportTools(
   }
 }
 
-function createCanvasDocumentAccess(
-  documentWriteRef: RefObject<CanvasDocumentWriter>,
-  documentReadRef: RefObject<CanvasDocumentReader>,
+function createCanvasDocumentService(
+  runtimeStateRef: RefObject<CanvasToolRuntimeState | null>,
   storeApi: ReturnType<typeof useStoreApi>,
-): CanvasToolEnvironment['document'] {
+): CanvasToolServices['document'] {
   return {
-    createNode: (node) => documentWriteRef.current.createNode(node),
-    updateNode: (nodeId, updater) => documentWriteRef.current.updateNode(nodeId, updater),
-    updateNodeData: (nodeId, data) => documentWriteRef.current.updateNodeData(nodeId, data),
+    createNode: (node) => getRuntimeState(runtimeStateRef).documentWrite.createNode(node),
+    updateNode: (nodeId, updater) => getRuntimeState(runtimeStateRef).documentWrite.updateNode(nodeId, updater),
+    updateNodeData: (nodeId, data) =>
+      getRuntimeState(runtimeStateRef).documentWrite.updateNodeData(nodeId, data),
     resizeNode: (nodeId, width, height, position) =>
-      documentWriteRef.current.resizeNode(nodeId, width, height, position),
-    deleteNodes: (nodeIds) => documentWriteRef.current.deleteNodes(nodeIds),
-    createEdge: (connection) => documentWriteRef.current.createEdge(connection),
-    deleteEdges: (edgeIds) => documentWriteRef.current.deleteEdges(edgeIds),
+      getRuntimeState(runtimeStateRef).documentWrite.resizeNode(nodeId, width, height, position),
+    deleteNodes: (nodeIds) => getRuntimeState(runtimeStateRef).documentWrite.deleteNodes(nodeIds),
+    createEdge: (connection) => getRuntimeState(runtimeStateRef).documentWrite.createEdge(connection),
+    deleteEdges: (edgeIds) => getRuntimeState(runtimeStateRef).documentWrite.deleteEdges(edgeIds),
     setNodePosition: (nodeId, position) =>
-      documentWriteRef.current.setNodePosition(nodeId, position),
-    getNodes: () => documentReadRef.current.getNodes(),
-    getEdges: () => documentReadRef.current.getEdges(),
+      getRuntimeState(runtimeStateRef).documentWrite.setNodePosition(nodeId, position),
+    getNodes: () => getRuntimeState(runtimeStateRef).documentRead.getNodes(),
+    getEdges: () => getRuntimeState(runtimeStateRef).documentRead.getEdges(),
     getMeasuredNodes: () => getMeasuredCanvasNodesFromLookup(storeApi.getState().nodeLookup),
   }
 }
 
-function createCanvasSelectionAccess(
-  selectionRef: RefObject<CanvasSelectionController>,
+function createCanvasSelectionService(
+  runtimeStateRef: RefObject<CanvasToolRuntimeState | null>,
 ): CanvasSelectionController {
   return {
-    replace: (selection) => selectionRef.current.replace(selection),
-    replaceNodes: (nodeIds) => selectionRef.current.replaceNodes(nodeIds),
-    replaceEdges: (edgeIds) => selectionRef.current.replaceEdges(edgeIds),
-    clear: () => selectionRef.current.clear(),
-    getSelectedNodeIds: () => selectionRef.current.getSelectedNodeIds(),
-    getSelectedEdgeIds: () => selectionRef.current.getSelectedEdgeIds(),
+    replace: (selection) => getRuntimeState(runtimeStateRef).selection.replace(selection),
+    replaceNodes: (nodeIds) => getRuntimeState(runtimeStateRef).selection.replaceNodes(nodeIds),
+    replaceEdges: (edgeIds) => getRuntimeState(runtimeStateRef).selection.replaceEdges(edgeIds),
+    clear: () => getRuntimeState(runtimeStateRef).selection.clear(),
+    getSelectedNodeIds: () => getRuntimeState(runtimeStateRef).selection.getSelectedNodeIds(),
+    getSelectedEdgeIds: () => getRuntimeState(runtimeStateRef).selection.getSelectedEdgeIds(),
     toggleNodeFromTarget: (targetId, toggle) =>
-      selectionRef.current.toggleNodeFromTarget(targetId, toggle),
+      getRuntimeState(runtimeStateRef).selection.toggleNodeFromTarget(targetId, toggle),
     toggleEdgeFromTarget: (targetId, toggle) =>
-      selectionRef.current.toggleEdgeFromTarget(targetId, toggle),
-    beginGesture: (kind) => selectionRef.current.beginGesture(kind),
-    commitGestureSelection: (selection) => selectionRef.current.commitGestureSelection(selection),
-    endGesture: () => selectionRef.current.endGesture(),
+      getRuntimeState(runtimeStateRef).selection.toggleEdgeFromTarget(targetId, toggle),
+    beginGesture: (kind) => getRuntimeState(runtimeStateRef).selection.beginGesture(kind),
+    commitGestureSelection: (selection) =>
+      getRuntimeState(runtimeStateRef).selection.commitGestureSelection(selection),
+    endGesture: () => getRuntimeState(runtimeStateRef).selection.endGesture(),
   }
 }
 
-function createCanvasInteractionAccess(
-  interactionRef: RefObject<CanvasInteractionTools>,
+function createCanvasInteractionService(
+  runtimeStateRef: RefObject<CanvasToolRuntimeState | null>,
 ): CanvasInteractionTools {
   return {
-    suppressNextSurfaceClick: () => interactionRef.current.suppressNextSurfaceClick(),
+    suppressNextSurfaceClick: () =>
+      getRuntimeState(runtimeStateRef).interaction.suppressNextSurfaceClick(),
   }
 }
 
-function createCanvasEditSessionAccess(
-  editSessionRef: RefObject<CanvasEditSessionState>,
+function createCanvasEditSessionService(
+  runtimeStateRef: RefObject<CanvasToolRuntimeState | null>,
 ): CanvasEditSessionState {
   return {
     get editingEmbedId() {
-      return editSessionRef.current.editingEmbedId
+      return getRuntimeState(runtimeStateRef).editSession.editingEmbedId
     },
-    setEditingEmbedId: (id) => editSessionRef.current.setEditingEmbedId(id),
+    setEditingEmbedId: (id) => getRuntimeState(runtimeStateRef).editSession.setEditingEmbedId(id),
     get pendingEditNodeId() {
-      return editSessionRef.current.pendingEditNodeId
+      return getRuntimeState(runtimeStateRef).editSession.pendingEditNodeId
     },
-    setPendingEditNodeId: (id) => editSessionRef.current.setPendingEditNodeId(id),
+    setPendingEditNodeId: (id) =>
+      getRuntimeState(runtimeStateRef).editSession.setPendingEditNodeId(id),
   }
 }
 
-function createCanvasAwarenessCommands(
-  awarenessRef: RefObject<CanvasAwarenessWriter>,
+function createCanvasAwarenessService(
+  runtimeStateRef: RefObject<CanvasToolRuntimeState | null>,
 ): CanvasAwarenessWriter {
   return {
-    core: createCanvasCoreAwarenessCommands(awarenessRef),
+    core: {
+      setLocalCursor: (position) =>
+        getRuntimeState(runtimeStateRef).awareness.core.setLocalCursor(position),
+      setLocalDragging: (positions) =>
+        getRuntimeState(runtimeStateRef).awareness.core.setLocalDragging(positions),
+      setLocalResizing: (resizing) =>
+        getRuntimeState(runtimeStateRef).awareness.core.setLocalResizing(resizing),
+      setLocalSelection: (nodeIds) =>
+        getRuntimeState(runtimeStateRef).awareness.core.setLocalSelection(nodeIds),
+    },
     presence: {
       setPresence: (namespace, value) =>
-        awarenessRef.current.presence.setPresence(namespace, value),
+        getRuntimeState(runtimeStateRef).awareness.presence.setPresence(namespace, value),
     },
   }
 }
 
-function createCanvasCoreAwarenessCommands(
-  awarenessRef: RefObject<CanvasAwarenessWriter>,
-): CanvasCoreAwarenessWriter {
-  return {
-    setLocalCursor: (position) => awarenessRef.current.core.setLocalCursor(position),
-    setLocalDragging: (positions) => awarenessRef.current.core.setLocalDragging(positions),
-    setLocalResizing: (resizing) => awarenessRef.current.core.setLocalResizing(resizing),
-    setLocalSelection: (nodeIds) => awarenessRef.current.core.setLocalSelection(nodeIds),
+function getRuntimeState(
+  runtimeStateRef: RefObject<CanvasToolRuntimeState | null>,
+): CanvasToolRuntimeState {
+  const runtimeState = runtimeStateRef.current
+  if (!runtimeState) {
+    throw new Error('Canvas tool runtime services were used before initialization')
   }
+
+  return runtimeState
 }

@@ -4,6 +4,7 @@ import { CanvasNodeConnectionHandles } from '../shared/canvas-node-connection-ha
 import { useInlineCanvasNodeEdit } from '../shared/use-inline-canvas-node-edit'
 import type { Node, NodeProps } from '@xyflow/react'
 import { useCanvasNodeActionsContext } from '../../runtime/providers/canvas-runtime-context'
+import { useIsCanvasNodeSelected } from '../../runtime/selection/use-canvas-selection-state'
 
 const TEXT_CONTAINER_CLASS = 'px-4 py-2 rounded-lg border bg-background shadow-sm h-full w-full'
 
@@ -17,8 +18,9 @@ export function TextPreview({ label }: { label: string }) {
   )
 }
 
-export function TextNode({ id, data, selected, dragging }: NodeProps<Node<TextNodeData>>) {
+export function TextNode({ id, data, dragging }: NodeProps<Node<TextNodeData>>) {
   const { updateNodeData } = useCanvasNodeActionsContext()
+  const isSelected = useIsCanvasNodeSelected(id)
   const trimmedLabel = typeof data.label === 'string' ? data.label.trim() : ''
   const hasLabel = trimmedLabel.length > 0
   const label = hasLabel ? trimmedLabel : 'Text'
@@ -27,7 +29,7 @@ export function TextNode({ id, data, selected, dragging }: NodeProps<Node<TextNo
   const { isEditing, editValue, setEditValue, startEditing, handleBlur, handleInputKeyDown } =
     useInlineCanvasNodeEdit<HTMLInputElement>({
       id,
-      selected: !!selected,
+      selected: isSelected,
       value: trimmedLabel,
       onCommit: (nextValue) => {
         updateNodeData(id, { label: nextValue.trim() })
@@ -47,7 +49,6 @@ export function TextNode({ id, data, selected, dragging }: NodeProps<Node<TextNo
     <ResizableNodeWrapper
       id={id}
       nodeType="text"
-      selected={!!selected}
       dragging={!!dragging}
       minWidth={80}
       minHeight={30}
@@ -66,7 +67,7 @@ export function TextNode({ id, data, selected, dragging }: NodeProps<Node<TextNo
           }
         }}
       >
-        <CanvasNodeConnectionHandles selected={!!selected} />
+        <CanvasNodeConnectionHandles selected={isSelected} />
         {isEditing ? (
           <input
             ref={inputRef}

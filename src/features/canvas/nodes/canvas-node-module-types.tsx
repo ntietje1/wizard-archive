@@ -53,6 +53,7 @@ interface CanvasNodeModuleDefinitionBase<
   TType extends CanvasNodeType = CanvasNodeType,
 > {
   type: TType
+  NodeComponent: NodeTypes[string]
   renderPreview: (data: TData, options?: CanvasNodePreviewOptions) => ReactNode
   parseData: (data: CanvasNodeData) => TData | null
   placement?: CanvasNodePlacementBehavior
@@ -93,6 +94,7 @@ export function createCanvasNodeModule<
 >(definition: CreateCanvasNodeModuleDefinition<TData, TType>): CanvasNodeModule<TData, TType> {
   return {
     type: definition.type,
+    NodeComponent: definition.NodeComponent,
     renderPreview: definition.renderPreview,
     parseData: definition.parseData,
     placement: definition.placement,
@@ -143,13 +145,14 @@ export function createCanvasNodeModule<
 }
 
 export function buildCanvasNodeTypes(
-  components: ReadonlyArray<readonly [CanvasNodeType, NodeTypes[string]]>,
+  modules: ReadonlyArray<AnyCanvasNodeModule>,
 ): NodeTypes {
   const seen = new Map<CanvasNodeType, Array<string>>()
   const entries: Array<readonly [CanvasNodeType, NodeTypes[string]]> = []
 
-  for (const [type, Component] of components) {
-    const componentName = Component.displayName || Component.name || 'anonymous'
+  for (const module of modules) {
+    const { type, NodeComponent } = module
+    const componentName = NodeComponent.displayName || NodeComponent.name || 'anonymous'
     const existing = seen.get(type)
     if (existing) {
       existing.push(componentName)
@@ -157,7 +160,7 @@ export function buildCanvasNodeTypes(
     }
 
     seen.set(type, [componentName])
-    entries.push([type, Component] as const)
+    entries.push([type, NodeComponent] as const)
   }
 
   const duplicates = Array.from(seen.entries()).filter(

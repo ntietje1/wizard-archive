@@ -23,7 +23,7 @@ export const useCanvasClipboardStore = create<CanvasClipboardState & CanvasClipb
                 pasteCount: state.clipboard.pasteCount + 1,
               },
             }
-          : state,
+          : {},
       ),
   }),
 )

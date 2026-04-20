@@ -13,7 +13,7 @@ interface CanvasDragOptions {
   steps?: number
 }
 
-const TOOL_NAME_PATTERNS: Record<string, RegExp> = {
+const TOOL_NAME_PATTERNS = {
   Pointer: /^(Pointer|Select)$/i,
   Panning: /^(Panning|Hand)$/i,
   'Lasso select': /^Lasso select$/i,
@@ -22,7 +22,7 @@ const TOOL_NAME_PATTERNS: Record<string, RegExp> = {
   Text: /^(Text|Add text node)$/i,
   'Post-it': /^(Post-it|Add sticky note)$/i,
   Rectangle: /^Rectangle$/i,
-}
+} as const satisfies Record<string, RegExp>
 
 const VIEWPORT_CONTROL_PATTERNS = {
   zoomIn: /^Zoom in$/i,
@@ -78,9 +78,13 @@ export function getCanvasNodes(page: Page) {
   return page.getByTestId('canvas-node')
 }
 
+export function getCanvasEdges(page: Page) {
+  return page.locator('.react-flow__edge')
+}
+
 export function getCanvasToolButton(page: Page, label: keyof typeof TOOL_NAME_PATTERNS) {
   return page.getByRole('button', {
-    name: TOOL_NAME_PATTERNS[label] ?? new RegExp(`^${label}$`, 'i'),
+    name: TOOL_NAME_PATTERNS[label],
   })
 }
 
@@ -145,7 +149,7 @@ export function getViewportControls(page: Page) {
   }
 }
 
-export async function selectCanvasTool(page: Page, label: string) {
+export async function selectCanvasTool(page: Page, label: keyof typeof TOOL_NAME_PATTERNS) {
   const button = getCanvasToolButton(page, label)
   await button.click()
 }

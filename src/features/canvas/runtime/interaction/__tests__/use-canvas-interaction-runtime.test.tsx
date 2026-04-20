@@ -1,10 +1,10 @@
 import { renderHook } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import * as Y from 'yjs'
 import { useCanvasInteractionRuntime } from '../use-canvas-interaction-runtime'
 import type { CanvasRemoteDragAnimation } from '../use-canvas-remote-drag-animation'
 import type { CanvasSessionRuntime } from '../../session/use-canvas-session-state'
 import type { CanvasSelectionController } from '../../../tools/canvas-tool-types'
-import type * as Y from 'yjs'
 
 const reactFlowMock = vi.hoisted(() => ({
   getNodes: vi.fn(() => []),
@@ -24,6 +24,7 @@ const cursorPresenceSpy = vi.hoisted(() => vi.fn())
 const toolRuntimeSpy = vi.hoisted(() => vi.fn())
 const surfaceClickGuardSpy = vi.hoisted(() => vi.fn())
 const suppressNextSurfaceClick = vi.hoisted(() => vi.fn())
+let doc: Y.Doc | null = null
 
 vi.mock('@xyflow/react', () => ({
   useReactFlow: () => reactFlowMock,
@@ -108,7 +109,13 @@ vi.mock('../use-canvas-surface-click-guard', () => ({
 }))
 
 describe('useCanvasInteractionRuntime', () => {
+  afterEach(() => {
+    doc?.destroy()
+    doc = null
+  })
+
   it('composes shell wiring and node actions around the thinner runtime dependencies', () => {
+    doc = new Y.Doc()
     const awareness = {
       remoteUsers: [],
       core: {
@@ -177,9 +184,9 @@ describe('useCanvasInteractionRuntime', () => {
         canvasId: 'canvas-id' as never,
         canEdit: true,
         activeToolId: 'select',
-        doc: {} as Y.Doc,
-        nodesMap: {} as Y.Map<any>,
-        edgesMap: {} as Y.Map<any>,
+        doc,
+        nodesMap: new Y.Map(),
+        edgesMap: new Y.Map(),
         canvasSurfaceRef,
         session,
         selectionController,
@@ -217,8 +224,8 @@ describe('useCanvasInteractionRuntime', () => {
     expect(dragHandlersSpy).toHaveBeenCalled()
     expect(cursorPresenceSpy).toHaveBeenCalled()
     expect(surfaceClickGuardSpy).toHaveBeenCalledWith(canvasSurfaceRef)
-    expect(result.current.shellProps.toolCursor).toBe('crosshair')
-    expect(result.current.shellProps.activeTool).toBe('select')
+    expect(result.current.shellProps.chrome.toolCursor).toBe('crosshair')
+    expect(result.current.shellProps.chrome.activeTool).toBe('select')
 
     result.current.nodeActions.onResize('node-1', 120, 80, { x: 10, y: 20 })
     expect(awareness.core.setLocalResizing).toHaveBeenCalledWith({

@@ -48,6 +48,7 @@ function createEdge(id: string, source: string, target: string): Edge {
 
 describe('CanvasContextMenu', () => {
   beforeEach(() => {
+    let nextRafId = 1
     hostMock.open.mockReset()
     hostMock.close.mockReset()
     hostMock.menu = null
@@ -56,7 +57,9 @@ describe('CanvasContextMenu', () => {
     vi.spyOn(window, 'requestAnimationFrame').mockImplementation(
       (callback: FrameRequestCallback) => {
         callback(0)
-        return 1
+        const rafId = nextRafId
+        nextRafId += 1
+        return rafId
       },
     )
   })

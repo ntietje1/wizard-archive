@@ -204,5 +204,8 @@ describe('useCanvasSelectionActions', () => {
     })
 
     expect(useCanvasSelectionState.getState().selectedEdgeIds).toEqual([])
+    expect(reactFlowMock.getEdges()).toEqual([
+      expect.objectContaining({ id: 'e-a-b', selected: false }),
+    ])
   })
 })

@@ -38,7 +38,6 @@ describe('useCanvasContextMenuServices', () => {
     const nodesMap = doc.getMap<Node>('nodes')
     const edgesMap = doc.getMap<Edge>('edges')
     const replace = vi.fn()
-    const clear = vi.fn()
 
     nodesMap.set('node-1', createNode('node-1', 0, 1))
     nodesMap.set('node-2', createNode('node-2', 120, 2))
@@ -51,7 +50,7 @@ describe('useCanvasContextMenuServices', () => {
         canEdit: true,
         nodesMap,
         edgesMap,
-        selection: { replace, clear },
+        selection: { replace, clear: vi.fn() },
       }),
     )
 
@@ -156,6 +155,7 @@ describe('useCanvasContextMenuServices', () => {
     })
 
     expect(nodesMap.get('node-1')?.zIndex).toBe(3)
+    expect(nodesMap.get('node-2')?.zIndex).toBe(1)
     expect(nodesMap.get('node-3')?.zIndex).toBe(2)
   })
 
@@ -192,6 +192,7 @@ describe('useCanvasContextMenuServices', () => {
     })
 
     expect(nodesMap.get('node-1')?.zIndex).toBe(3)
+    expect(nodesMap.get('node-2')?.zIndex).toBe(1)
     expect(nodesMap.get('node-3')?.zIndex).toBe(2)
     expect(edgesMap.get('edge-1')?.zIndex).toBe(2)
     expect(edgesMap.get('edge-2')?.zIndex).toBe(1)

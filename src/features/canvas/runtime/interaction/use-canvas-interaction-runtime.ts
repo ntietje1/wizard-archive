@@ -14,17 +14,20 @@ import { useCanvasWheel } from './use-canvas-wheel'
 import { useCanvasPreview } from '~/features/previews/hooks/use-canvas-preview'
 import type { CanvasFlowShellProps } from '../../components/canvas-flow-shell'
 import type { Id } from 'convex/_generated/dataModel'
-import type { CanvasDocumentWriter, CanvasSelectionController } from '../../tools/canvas-tool-types'
+import type {
+  CanvasDocumentWriter,
+  CanvasSelectionController,
+  CanvasToolId,
+} from '../../tools/canvas-tool-types'
 import type { CanvasSessionRuntime } from '../session/use-canvas-session-state'
-import type { UseCanvasDropIntegrationOptions } from './use-canvas-drop-integration'
 import type { CanvasRemoteDragAnimation } from './use-canvas-remote-drag-animation'
-import type { Edge, Node, OnConnect, OnEdgesDelete, OnNodesDelete } from '@xyflow/react'
+import type { Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 
 interface UseCanvasInteractionRuntimeOptions {
   canvasId: Id<'sidebarItems'>
   canEdit: boolean
-  activeToolId: CanvasFlowShellProps['activeTool']
+  activeToolId: CanvasToolId
   doc: Y.Doc
   nodesMap: Y.Map<Node>
   edgesMap: Y.Map<Edge>
@@ -95,15 +98,14 @@ export function useCanvasInteractionRuntime({
 
   useCanvasWheel(canvasSurfaceRef)
 
-  const dropIntegrationOptions: UseCanvasDropIntegrationOptions = {
-    canvasId,
-    canEdit,
-    isSelectMode,
-    createNode: documentWriter.createNode,
-    screenToFlowPosition: reactFlowInstance.screenToFlowPosition,
-  }
   const { dropOverlayRef, isDropTarget, isFileDropTarget } =
-    useCanvasDropIntegration(dropIntegrationOptions)
+    useCanvasDropIntegration({
+      canvasId,
+      canEdit,
+      isSelectMode,
+      createNode: documentWriter.createNode,
+      screenToFlowPosition: reactFlowInstance.screenToFlowPosition,
+    })
 
   const { onNodeDragStart, onNodeDrag, onNodeDragStop } = useCanvasNodeDragHandlers({
     documentWriter,
@@ -113,18 +115,6 @@ export function useCanvasInteractionRuntime({
     reactFlowInstance,
     localDraggingIdsRef,
   })
-
-  const handleNodesDelete: OnNodesDelete = (deleted) => {
-    documentWriter.deleteNodes(deleted.map((node) => node.id))
-  }
-
-  const handleEdgesDelete: OnEdgesDelete = (deleted) => {
-    documentWriter.deleteEdges(deleted.map((edge) => edge.id))
-  }
-
-  const handleConnect: OnConnect = (connection) => {
-    documentWriter.createEdge(connection)
-  }
 
   const { onMouseMove: handleMouseMove, onMouseLeave: handleMouseLeave } = useCanvasCursorPresence({
     reactFlowInstance,
@@ -158,31 +148,49 @@ export function useCanvasInteractionRuntime({
   )
 
   const shellProps: CanvasFlowShellProps = {
-    toolCursor,
+    chrome: {
+      toolCursor,
+      remoteUsers: session.remoteUsers,
+      activeTool: activeToolId,
+      dropTarget: {
+        overlayRef: dropOverlayRef,
+        isTarget: isDropTarget,
+        isFileTarget: isFileDropTarget,
+      },
+    },
     canvasSurfaceRef,
-    remoteUsers: session.remoteUsers,
-    activeTool: activeToolId,
     contextMenu: {
       nodesMap,
       edgesMap,
       selectionController,
     },
-    onNodeDragStart: isSelectMode ? onNodeDragStart : undefined,
-    onNodeDrag: isSelectMode ? onNodeDrag : undefined,
-    onNodeDragStop: isSelectMode ? onNodeDragStop : undefined,
-    onNodesDelete: isSelectMode ? handleNodesDelete : undefined,
-    onEdgesDelete: isSelectMode ? handleEdgesDelete : undefined,
-    onConnect: isSelectMode ? handleConnect : undefined,
-    onMoveStart: activeToolController.onMoveStart,
-    onMoveEnd: activeToolController.onMoveEnd,
-    onNodeClick: activeToolController.onNodeClick,
-    onEdgeClick: activeToolController.onEdgeClick,
-    onPaneClick: activeToolController.onPaneClick,
-    onMouseMove: handleMouseMove,
-    onMouseLeave: handleMouseLeave,
-    dropOverlayRef,
-    isDropTarget,
-    isFileDropTarget,
+    flowHandlers: {
+      onNodeDragStart: isSelectMode ? onNodeDragStart : undefined,
+      onNodeDrag: isSelectMode ? onNodeDrag : undefined,
+      onNodeDragStop: isSelectMode ? onNodeDragStop : undefined,
+      onNodesDelete: isSelectMode
+        ? (deleted) => {
+            documentWriter.deleteNodes(deleted.map((node) => node.id))
+          }
+        : undefined,
+      onEdgesDelete: isSelectMode
+        ? (deleted) => {
+            documentWriter.deleteEdges(deleted.map((edge) => edge.id))
+          }
+        : undefined,
+      onConnect: isSelectMode
+        ? (connection) => {
+            documentWriter.createEdge(connection)
+          }
+        : undefined,
+      onMoveStart: activeToolController.onMoveStart,
+      onMoveEnd: activeToolController.onMoveEnd,
+      onNodeClick: activeToolController.onNodeClick,
+      onEdgeClick: activeToolController.onEdgeClick,
+      onPaneClick: activeToolController.onPaneClick,
+      onMouseMove: handleMouseMove,
+      onMouseLeave: handleMouseLeave,
+    },
   }
 
   return {

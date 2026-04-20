@@ -30,6 +30,18 @@ export function clearCanvasSelectionState() {
   useCanvasSelectionState.getState().reset()
 }
 
+export function getCanvasSelectionSnapshot(): CanvasSelectionSnapshot {
+  const state = useCanvasSelectionState.getState()
+  return {
+    nodeIds: state.selectedNodeIds,
+    edgeIds: state.selectedEdgeIds,
+  }
+}
+
+export function setCanvasSelectionSnapshot(selection: CanvasSelectionSnapshot) {
+  useCanvasSelectionState.getState().setSelection(selection)
+}
+
 export const useCanvasSelectionState = create<CanvasSelectionState & CanvasSelectionStateActions>(
   (set) => ({
     ...createInitialCanvasSelectionState(),
@@ -43,6 +55,14 @@ export const useCanvasSelectionState = create<CanvasSelectionState & CanvasSelec
 
 export function useSelectedCanvasNodeIds() {
   return useCanvasSelectionState(useShallow((state) => state.selectedNodeIds))
+}
+
+export function useIsCanvasNodeSelected(id: string) {
+  return useCanvasSelectionState((state) => state.selectedNodeIds.includes(id))
+}
+
+export function useIsCanvasEdgeSelected(id: string) {
+  return useCanvasSelectionState((state) => state.selectedEdgeIds.includes(id))
 }
 
 export function useCanvasSelectionSnapshot() {

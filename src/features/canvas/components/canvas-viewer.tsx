@@ -1,7 +1,7 @@
 import { ReactFlowProvider } from '@xyflow/react'
 import { ClientOnly } from '@tanstack/react-router'
 import '@xyflow/react/dist/style.css'
-import { CanvasProviders } from '../runtime/providers/use-canvas-context'
+import { CanvasProviders } from '../runtime/providers/canvas-runtime-context'
 import { useCanvasFlowController } from '../runtime/use-canvas-flow-controller'
 import { useCanvasViewerSession } from '../runtime/session/use-canvas-viewer-session'
 import type { CanvasViewerSession } from '../runtime/session/use-canvas-viewer-session'

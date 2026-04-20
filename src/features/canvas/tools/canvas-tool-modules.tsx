@@ -12,9 +12,9 @@ import type {
   CanvasAwarenessCapability,
   CanvasLocalOverlayCapability,
   CanvasToolController,
-  CanvasToolEnvironment,
   CanvasToolId,
   CanvasToolPropertyContext,
+  CanvasToolServices,
 } from './canvas-tool-types'
 
 const canvasToolModules = [
@@ -88,9 +88,9 @@ export function getCanvasToolLocalOverlayLayers(): ReadonlyArray<{
 
 export function createCanvasToolController(
   toolId: CanvasToolId,
-  environment: CanvasToolEnvironment,
+  services: CanvasToolServices,
 ): CanvasToolController {
-  return getCanvasToolModule(toolId).create(environment)
+  return getCanvasToolModule(toolId).create(services)
 }
 
 export function clearCanvasToolLocalOverlays() {

@@ -5,10 +5,10 @@ import type { Edge, EdgeProps, EdgeTypes, Node } from '@xyflow/react'
 
 export type CanvasEdgeType = 'bezier'
 
-export type CanvasEdgeRendererProps = EdgeProps & {
-  data: any
-  type: any
-}
+export type CanvasEdgeRendererProps<
+  TData = Record<string, unknown>,
+  TType extends CanvasEdgeType = CanvasEdgeType,
+> = EdgeProps<Edge<TData, TType>>
 
 type CanvasEdgeRenderer = EdgeTypes[string]
 
@@ -17,7 +17,7 @@ export interface CanvasEdgeSelectionContext {
   zoom: number
 }
 
-interface CanvasEdgeSelection {
+export interface CanvasEdgeSelection {
   getBounds: (edge: Edge, context: CanvasEdgeSelectionContext) => Bounds | null
   point: (edge: Edge, point: Point2D, context: CanvasEdgeSelectionContext) => boolean
   rectangle: (edge: Edge, rect: Bounds, context: CanvasEdgeSelectionContext) => boolean

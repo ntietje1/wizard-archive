@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasNodeConnectionHandles } from '../canvas-node-connection-handles'
 
 const reactFlowMock = vi.hoisted(() => ({
@@ -32,8 +32,11 @@ vi.mock('@xyflow/react', () => ({
 }))
 
 describe('CanvasNodeConnectionHandles', () => {
-  it('renders one bidirectional handle on all four sides when selected', () => {
+  beforeEach(() => {
     reactFlowMock.connectionInProgress = false
+  })
+
+  it('renders one bidirectional handle on all four sides when selected', () => {
     render(<CanvasNodeConnectionHandles selected />)
 
     expect(screen.getAllByTestId(/canvas-node-handle-/)).toHaveLength(4)
@@ -44,7 +47,6 @@ describe('CanvasNodeConnectionHandles', () => {
   })
 
   it('keeps handles mounted but visually hidden when not selected', () => {
-    reactFlowMock.connectionInProgress = false
     render(<CanvasNodeConnectionHandles selected={false} />)
 
     expect(screen.getAllByTestId(/canvas-node-handle-/)).toHaveLength(4)

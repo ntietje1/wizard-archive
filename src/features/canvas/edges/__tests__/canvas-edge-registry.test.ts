@@ -33,6 +33,8 @@ describe('canvas-edge-registry', () => {
   const nodes = [createNode('source', 0, 0), createNode('target', 160, 0)]
 
   it('matches the bezier edge on point hits using the rendered bezier geometry', () => {
+    // findCanvasEdgeAtPoint samples the createBezierEdge curve between these nodes, so
+    // {x:100,y:20} lands near the rendered arc while {x:100,y:70} stays well outside it.
     expect(findCanvasEdgeAtPoint(nodes, [createBezierEdge()], { x: 100, y: 20 }, { zoom: 1 })).toBe(
       'edge-1',
     )

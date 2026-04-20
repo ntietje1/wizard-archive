@@ -54,8 +54,9 @@ export function useCanvasHistory({ nodesMap, edgesMap, selection }: UseCanvasHis
 
   const restoreSelection = useCallback(
     (selectionSnapshot: CanvasSelectionSnapshot) => {
-      selection.replace(selectionSnapshot)
-      selectionRef.current = selectionSnapshot
+      const nextSelection = structuredClone(selectionSnapshot)
+      selection.replace(nextSelection)
+      selectionRef.current = nextSelection
     },
     [selection],
   )
@@ -178,8 +179,8 @@ export function useCanvasHistory({ nodesMap, edgesMap, selection }: UseCanvasHis
 
       pushHistoryEntry(undoStackRef.current, {
         type: 'selection',
-        before: prev,
-        after: selectionSnapshot,
+        before: structuredClone(prev),
+        after: structuredClone(selectionSnapshot),
       })
       redoStackRef.current = []
       syncStore()

@@ -1,4 +1,4 @@
-import { forwardRef, useMemo } from 'react'
+import { forwardRef } from 'react'
 import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import { useMenuActions } from '../actions'
 import { VIEW_CONTEXT } from '../constants'
@@ -18,7 +18,7 @@ import { useMapViewOptional } from '~/features/editor/hooks/useMapView'
 import { useBlockNoteContextMenuOptional } from '~/features/editor/hooks/useBlockNoteContextMenu'
 import { useSession } from '~/features/sidebar/hooks/useGameSession'
 
-export interface EditorContextMenuRef extends ContextMenuHostRef {}
+export type EditorContextMenuRef = ContextMenuHostRef
 
 interface EditorContextMenuProps {
   viewContext: ViewContext
@@ -53,46 +53,28 @@ export const EditorContextMenu = forwardRef<EditorContextMenuRef, EditorContextM
     const mapView = useMapViewOptional()
     const blockNoteContext = useBlockNoteContextMenuOptional()
 
-    const menuContext = useMemo(
-      () => ({
-        surface: viewContext,
-        item,
-        isItemTrashed: item?.location === SIDEBAR_ITEM_LOCATION.trash,
-        isTrashView: isTrashView || viewContext === VIEW_CONTEXT.TRASH_VIEW,
-        currentUserId: campaign.data?.myMembership?.userId,
-        memberRole: campaign.data?.myMembership?.role,
-        permissionLevel: item?.myPermissionLevel,
-        activeMap: mapView?.activeMap ?? undefined,
-        activePin: mapView?.activePin ?? undefined,
-        hasActiveSession: !!currentSession.data,
-        editor: blockNoteContext?.editor ?? undefined,
-        blockNoteId: blockNoteContext?.blockNoteId,
-      }),
-      [
-        blockNoteContext?.blockNoteId,
-        blockNoteContext?.editor,
-        campaign.data?.myMembership?.role,
-        campaign.data?.myMembership?.userId,
-        currentSession.data,
-        isTrashView,
-        item,
-        mapView?.activeMap,
-        mapView?.activePin,
-        viewContext,
-      ],
-    )
+    const menuContext = {
+      surface: viewContext,
+      item,
+      isItemTrashed: item?.location === SIDEBAR_ITEM_LOCATION.trash,
+      isTrashView: isTrashView || viewContext === VIEW_CONTEXT.TRASH_VIEW,
+      currentUserId: campaign.data?.myMembership?.userId,
+      memberRole: campaign.data?.myMembership?.role,
+      permissionLevel: item?.myPermissionLevel,
+      activeMap: mapView?.activeMap ?? undefined,
+      activePin: mapView?.activePin ?? undefined,
+      hasActiveSession: !!currentSession.data,
+      editor: blockNoteContext?.editor ?? undefined,
+      blockNoteId: blockNoteContext?.blockNoteId,
+    }
 
-    const menu = useMemo(
-      () =>
-        buildMenu({
-          context: menuContext,
-          services: { actions: menuActions.actions },
-          contributors: editorContextMenuContributors,
-          commands: editorContextMenuCommands,
-          groupConfig,
-        }),
-      [menuActions.actions, menuContext],
-    )
+    const menu = buildMenu({
+      context: menuContext,
+      services: { actions: menuActions.actions },
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
 
     return (
       <>

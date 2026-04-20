@@ -58,13 +58,13 @@ export function pointsToCenterlinePathD(points: Array<[number, number, number]>)
   if (points.length < 2) return ''
 
   const [first, ...rest] = points
-  let d = `M ${first[0]} ${first[1]}`
+  const segments = [`M ${first[0]} ${first[1]}`]
 
   for (const [x, y] of rest) {
-    d += ` L ${x} ${y}`
+    segments.push(`L ${x} ${y}`)
   }
 
-  return d
+  return segments.join(' ')
 }
 
 export function getStrokeBounds(

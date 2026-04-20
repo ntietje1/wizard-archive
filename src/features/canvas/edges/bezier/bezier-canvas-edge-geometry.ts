@@ -9,7 +9,7 @@ import {
 import { getBezierPath, Position } from '@xyflow/react'
 import type { Point2D } from '../../utils/canvas-awareness-types'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
-import type { Edge, EdgeProps, Position as CanvasHandlePosition, Node } from '@xyflow/react'
+import type { Edge, EdgeProps, Node } from '@xyflow/react'
 
 const DEFAULT_CANVAS_EDGE_INTERACTION_WIDTH = 20
 const MIN_ZOOM = 1e-6
@@ -30,14 +30,14 @@ type EdgeEndpoints = {
   sourceY: number
   targetX: number
   targetY: number
-  sourcePosition: CanvasHandlePosition
-  targetPosition: CanvasHandlePosition
+  sourcePosition: Position
+  targetPosition: Position
 }
 
 function handleIdToPosition(
   handleId: string | null | undefined,
-  fallback: CanvasHandlePosition,
-): CanvasHandlePosition {
+  fallback: Position,
+): Position {
   switch (handleId) {
     case 'top':
       return Position.Top
@@ -86,7 +86,7 @@ function inferEdgePositions(sourceNode: Node, targetNode: Node) {
     : { sourcePosition: Position.Top, targetPosition: Position.Bottom }
 }
 
-function getNodeAnchorPoint(node: Node, position: CanvasHandlePosition): Point2D | null {
+function getNodeAnchorPoint(node: Node, position: Position): Point2D | null {
   const bounds = getCanvasNodeBounds(node)
   if (!bounds) return null
 
@@ -105,8 +105,15 @@ function getNodeAnchorPoint(node: Node, position: CanvasHandlePosition): Point2D
 }
 
 function parseBezierPath(path: string, labelX: number, labelY: number): BezierCurve | null {
-  const values = path.match(/-?\d*\.?\d+(?:e[-+]?\d+)?/gi)?.map(Number)
-  if (!values || values.length < 8) return null
+  const match = path
+    .trim()
+    .match(
+      /^M\s*([-+]?\d*\.?\d+(?:e[-+]?\d+)?)\s*,?\s*([-+]?\d*\.?\d+(?:e[-+]?\d+)?)\s*C\s*([-+]?\d*\.?\d+(?:e[-+]?\d+)?)\s*,?\s*([-+]?\d*\.?\d+(?:e[-+]?\d+)?)\s+([-+]?\d*\.?\d+(?:e[-+]?\d+)?)\s*,?\s*([-+]?\d*\.?\d+(?:e[-+]?\d+)?)\s+([-+]?\d*\.?\d+(?:e[-+]?\d+)?)\s*,?\s*([-+]?\d*\.?\d+(?:e[-+]?\d+)?)$/i,
+    )
+  if (!match) return null
+
+  const values = match.slice(1).map(Number)
+  if (values.some((value) => !Number.isFinite(value))) return null
 
   return {
     path,
@@ -327,7 +334,8 @@ export function bezierCanvasEdgeContainsPoint(
   const geometry = buildBezierCanvasEdgeGeometry(edge, nodesById)
   if (!geometry) return false
 
-  const bounds = boundsFromPoints(sampleBezierCurve(geometry))
+  const sampledCurve = sampleBezierCurve(geometry)
+  const bounds = boundsFromPoints(sampledCurve)
   const threshold = getBezierCanvasEdgePointThreshold(zoom)
 
   if (
@@ -342,7 +350,7 @@ export function bezierCanvasEdgeContainsPoint(
     return false
   }
 
-  return pointNearPolyline(point, sampleBezierCurve(geometry), threshold)
+  return pointNearPolyline(point, sampledCurve, threshold)
 }
 
 export function bezierCanvasEdgeIntersectsRectangle(

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { selectToolModule } from '../select-tool-module'
-import type { CanvasMeasuredNode, CanvasToolEnvironment } from '../../canvas-tool-types'
+import type { CanvasMeasuredNode, CanvasToolServices } from '../../canvas-tool-types'
 import type { Edge, Node } from '@xyflow/react'
 
 function createMouseEvent(
@@ -159,11 +159,12 @@ describe('selectToolModule', () => {
   })
 
   it('routes edge clicks through explicit edge selection control', () => {
+    const toggleNodeFromTarget = vi.fn()
     const toggleEdgeFromTarget = vi.fn()
     const controller = selectToolModule.create(
       createSelectEnvironment({
         getNodes: () => [],
-        toggleNodeFromTarget: vi.fn(),
+        toggleNodeFromTarget,
         toggleEdgeFromTarget,
       }),
     )
@@ -175,6 +176,7 @@ describe('selectToolModule', () => {
     } as Edge)
 
     expect(toggleEdgeFromTarget).toHaveBeenCalledWith('edge-1', true)
+    expect(toggleNodeFromTarget).not.toHaveBeenCalled()
   })
 })
 
@@ -190,7 +192,7 @@ function createSelectEnvironment({
   getMeasuredNodes?: () => Array<CanvasMeasuredNode>
   toggleNodeFromTarget: (targetId: string | null, toggle: boolean) => void
   toggleEdgeFromTarget?: (targetId: string | null, toggle: boolean) => void
-}): CanvasToolEnvironment {
+}): CanvasToolServices {
   return {
     viewport: {
       screenToFlowPosition: ({ x, y }) => ({ x, y }),

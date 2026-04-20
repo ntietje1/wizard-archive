@@ -1,6 +1,7 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import { Position } from '@xyflow/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { useCanvasSelectionState } from '../../../runtime/selection/use-canvas-selection-state'
 import {
   clearCanvasPendingSelectionPreview,
   setCanvasPendingSelectionPreview,
@@ -23,12 +24,56 @@ vi.mock('@xyflow/react', async () => {
 })
 
 afterEach(() => {
-  clearCanvasPendingSelectionPreview()
+  act(() => {
+    clearCanvasPendingSelectionPreview()
+    useCanvasSelectionState.getState().reset()
+  })
   baseEdgeSpy.mockReset()
 })
 
 describe('BezierCanvasEdge', () => {
+  it('keeps baseline styling when no pending preview is active', () => {
+    render(<BezierCanvasEdge {...createEdgeProps({ selected: false })} />)
+
+    expect(screen.getByTestId('canvas-edge')).toHaveAttribute(
+      'data-edge-pending-preview-active',
+      'false',
+    )
+    expect(screen.getByTestId('canvas-edge')).toHaveAttribute(
+      'data-edge-pending-selected',
+      'false',
+    )
+    expect(baseEdgeSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        style: undefined,
+      }),
+    )
+  })
+
+  it('keeps baseline styling when another edge owns the pending preview', () => {
+    act(() => {
+      setCanvasPendingSelectionPreview({ nodeIds: [], edgeIds: ['other-edge'] })
+    })
+
+    render(<BezierCanvasEdge {...createEdgeProps({ selected: false })} />)
+
+    expect(screen.getByTestId('canvas-edge')).toHaveAttribute(
+      'data-edge-pending-preview-active',
+      'true',
+    )
+    expect(screen.getByTestId('canvas-edge')).toHaveAttribute(
+      'data-edge-pending-selected',
+      'false',
+    )
+    expect(baseEdgeSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        style: undefined,
+      }),
+    )
+  })
+
   it('shows committed selected styling from authoritative edge selection', () => {
+    useCanvasSelectionState.getState().setSelection({ nodeIds: [], edgeIds: ['edge-1'] })
     render(<BezierCanvasEdge {...createEdgeProps({ selected: true })} />)
 
     expect(screen.getByTestId('canvas-edge')).toHaveAttribute('data-edge-visual-selected', 'true')
@@ -43,7 +88,9 @@ describe('BezierCanvasEdge', () => {
   })
 
   it('shows lower-opacity local preview styling for pending-selected edges', () => {
-    setCanvasPendingSelectionPreview({ nodeIds: [], edgeIds: ['edge-1'] })
+    act(() => {
+      setCanvasPendingSelectionPreview({ nodeIds: [], edgeIds: ['edge-1'] })
+    })
 
     render(<BezierCanvasEdge {...createEdgeProps({ selected: false })} />)
 
@@ -62,7 +109,10 @@ describe('BezierCanvasEdge', () => {
   })
 })
 
-function createEdgeProps({ selected }: { selected: boolean }): CanvasEdgeRendererProps {
+function createEdgeProps(
+  { selected }: { selected: boolean },
+  overrides: Partial<CanvasEdgeRendererProps> = {},
+): CanvasEdgeRendererProps {
   return {
     id: 'edge-1',
     type: 'bezier',
@@ -90,5 +140,7 @@ function createEdgeProps({ selected }: { selected: boolean }): CanvasEdgeRendere
     labelBgBorderRadius: undefined,
     markerStart: undefined,
     markerEnd: undefined,
+    ...overrides,
+    selected: overrides.selected ?? selected,
   }
 }

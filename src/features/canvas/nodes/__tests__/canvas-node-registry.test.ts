@@ -1,6 +1,7 @@
 import { render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import {
+  canvasNodeTypes,
   createCanvasNode,
   findCanvasNodeAtPoint,
   getCanvasNodesMatchingLasso,
@@ -32,6 +33,11 @@ describe('canvas node registry', () => {
     expect(getCanvasNodeModule('text').placement?.startEditingOnCreate).toBe(true)
   })
 
+  it('derives React Flow node renderers from the node modules', () => {
+    expect(canvasNodeTypes.text).toBe(getCanvasNodeModule('text').NodeComponent)
+    expect(canvasNodeTypes.sticky).toBe(getCanvasNodeModule('sticky').NodeComponent)
+  })
+
   it('throws when a node definition has no default data and none is provided', () => {
     expect(() =>
       createCanvasNode('stroke', {
@@ -50,10 +56,7 @@ describe('canvas node registry', () => {
       })
 
       expect(preview).not.toBeNull()
-      if (!preview) {
-        throw new Error('Expected sticky preview to render')
-      }
-      const { container } = render(preview)
+      const { container } = render(preview!)
       expect(container.textContent).toContain('Note')
     })
 

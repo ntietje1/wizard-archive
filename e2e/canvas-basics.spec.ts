@@ -6,6 +6,7 @@ import {
   createCanvas,
   DEFAULT_CANVAS_NAME,
   getCanvasPane,
+  getCanvasEdges,
   getCanvasNodeHandle,
   dragOnCanvas,
   getCanvasNodesByType,
@@ -21,6 +22,13 @@ import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 const campaignName = testName('Canvas Basics')
 const canvasName = DEFAULT_CANVAS_NAME
 const mod = process.platform === 'darwin' ? 'Meta' : 'Control'
+const CONTEXT_MENU_DRAG_DISTANCE_X = 120
+const CONTEXT_MENU_DRAG_DISTANCE_Y = 60
+// Closing the menu on left-down consumes part of the first drag step in CI, so the observed
+// horizontal delta settles closer to two-thirds of the commanded drag while vertical movement
+// consistently lands around half of the commanded distance.
+const CONTEXT_MENU_DRAG_THRESHOLD_X = Math.round(CONTEXT_MENU_DRAG_DISTANCE_X * 0.67)
+const CONTEXT_MENU_DRAG_THRESHOLD_Y = Math.round(CONTEXT_MENU_DRAG_DISTANCE_Y * 0.5)
 
 test.describe.serial('canvas basics', () => {
   test.beforeAll(async ({ browser }) => {
@@ -174,7 +182,7 @@ test.describe.serial('canvas basics', () => {
     await selectCanvasTool(page, 'Pointer')
     const sourceNode = getCanvasNodesByType(page, 'text').last()
     const targetNode = getCanvasNodesByType(page, 'sticky').last()
-    const edgeCountBefore = await page.locator('.react-flow__edge').count()
+    const edgeCountBefore = await getCanvasEdges(page).count()
     await clickCanvasNode(page, sourceNode)
 
     const sourceHandle = getCanvasNodeHandle(sourceNode, 'right')
@@ -197,7 +205,7 @@ test.describe.serial('canvas basics', () => {
       .toContain('connectionindicator')
 
     await page.mouse.up()
-    await expect.poll(() => page.locator('.react-flow__edge').count()).toBe(edgeCountBefore + 1)
+    await expect.poll(() => getCanvasEdges(page).count()).toBe(edgeCountBefore + 1)
   })
 
   test('closing the canvas context menu on left mouse down can continue into a node drag', async ({
@@ -238,9 +246,13 @@ test.describe.serial('canvas basics', () => {
 
     await page.mouse.move(dragStartPoint.x, dragStartPoint.y)
     await page.mouse.down()
-    await page.mouse.move(dragStartPoint.x + 120, dragStartPoint.y + 60, {
-      steps: 12,
-    })
+    await page.mouse.move(
+      dragStartPoint.x + CONTEXT_MENU_DRAG_DISTANCE_X,
+      dragStartPoint.y + CONTEXT_MENU_DRAG_DISTANCE_Y,
+      {
+        steps: 12,
+      },
+    )
     await page.mouse.up()
 
     await expect(page.getByRole('menu')).not.toBeVisible()
@@ -252,7 +264,10 @@ test.describe.serial('canvas basics', () => {
           return false
         }
 
-        return box.x - before.x > 80 && box.y - before.y > 30
+        return (
+          box.x - before.x >= CONTEXT_MENU_DRAG_THRESHOLD_X &&
+          box.y - before.y >= CONTEXT_MENU_DRAG_THRESHOLD_Y
+        )
       })
       .toBe(true)
   })

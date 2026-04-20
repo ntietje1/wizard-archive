@@ -29,7 +29,7 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
     Layer: LassoToolLocalOverlayLayer,
     clear: clearLassoToolLocalOverlay,
   },
-  create: (environment) => {
+  create: (services) => {
     let points: Array<{ x: number; y: number }> = []
     let active = false
     let previewRafId = 0
@@ -59,7 +59,7 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
 
       lastPublishedPoints = nextPoints
       setLassoToolAwareness(
-        environment.awareness.presence,
+        services.awareness.presence,
         nextPoints ? { type: 'lasso', points: nextPoints } : null,
       )
     }
@@ -74,17 +74,17 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
       }
 
       const pendingNodeIds = getCanvasNodesMatchingLasso(
-        environment.document.getMeasuredNodes(),
+        services.document.getMeasuredNodes(),
         points,
         {
-          zoom: environment.viewport.getZoom(),
+          zoom: services.viewport.getZoom(),
         },
       )
       const pendingEdgeIds = getCanvasEdgesMatchingLasso(
-        environment.document.getNodes(),
-        environment.document.getEdges(),
+        services.document.getNodes(),
+        services.document.getEdges(),
         points,
-        { zoom: environment.viewport.getZoom() },
+        { zoom: services.viewport.getZoom() },
       )
 
       setCanvasPendingSelectionPreview({ nodeIds: pendingNodeIds, edgeIds: pendingEdgeIds })
@@ -105,7 +105,7 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
       setLassoToolLocalPoints([])
       clearCanvasPendingSelectionPreview()
       publishLassoAwareness(null)
-      environment.selection.endGesture()
+      services.selection.endGesture()
       releasePointerCapture(captureTarget, pointerId)
       captureTarget = null
       pointerId = null
@@ -118,17 +118,17 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
         captureTarget = setPointerCapture(event)
         pointerId = event.pointerId
         active = true
-        const pos = screenEventToFlowPosition(environment.viewport, event)
+        const pos = screenEventToFlowPosition(services.viewport, event)
         points = [pos]
-        environment.selection.beginGesture('lasso')
+        services.selection.beginGesture('lasso')
         setLassoToolLocalPoints(points)
         schedulePreview()
-        environment.selection.clear()
+        services.selection.clear()
       },
       onPointerMove: (event) => {
         if (!active || (event.buttons & 1) !== 1) return
 
-        const pos = screenEventToFlowPosition(environment.viewport, event)
+        const pos = screenEventToFlowPosition(services.viewport, event)
         points = [...points, pos]
         setLassoToolLocalPoints(points)
         schedulePreview()
@@ -143,28 +143,28 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
 
         if (points.length < 3) {
           reset()
-          environment.toolState.setActiveTool('select')
+          services.toolState.setActiveTool('select')
           return
         }
 
-        const measuredNodes = environment.document.getMeasuredNodes()
+        const measuredNodes = services.document.getMeasuredNodes()
         const selectedNodeIds = getCanvasNodesMatchingLasso(measuredNodes, points, {
-          zoom: environment.viewport.getZoom(),
+          zoom: services.viewport.getZoom(),
         })
         const selectedEdgeIds = getCanvasEdgesMatchingLasso(
-          environment.document.getNodes(),
-          environment.document.getEdges(),
+          services.document.getNodes(),
+          services.document.getEdges(),
           points,
-          { zoom: environment.viewport.getZoom() },
+          { zoom: services.viewport.getZoom() },
         )
 
-        environment.interaction.suppressNextSurfaceClick()
-        environment.selection.commitGestureSelection({
+        services.interaction.suppressNextSurfaceClick()
+        services.selection.commitGestureSelection({
           nodeIds: selectedNodeIds,
           edgeIds: selectedEdgeIds,
         })
         reset()
-        environment.toolState.setActiveTool('select')
+        services.toolState.setActiveTool('select')
       },
       onPointerCancel: () => {
         reset()

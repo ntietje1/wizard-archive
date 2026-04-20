@@ -2,7 +2,7 @@ import { paintCanvasProperty } from '~/features/canvas/properties/canvas-propert
 import { bindCanvasPaintProperty } from '~/features/canvas/properties/canvas-property-types'
 import { createCanvasNodeModule, readString, readNumber } from '../canvas-node-module-types'
 import { rectangularCanvasNodeSelection } from '../shared/canvas-node-selection'
-import { StickyPreview } from './sticky-node'
+import { StickyNode, StickyPreview } from './sticky-node'
 import type { StickyNodeData } from './sticky-node'
 import {
   STICKY_DEFAULT_COLOR,
@@ -13,6 +13,7 @@ import {
 
 export const stickyNodeModule = createCanvasNodeModule<StickyNodeData, 'sticky'>({
   type: 'sticky',
+  NodeComponent: StickyNode,
   renderPreview: (data) => (
     <StickyPreview
       label={data.label ?? ''}

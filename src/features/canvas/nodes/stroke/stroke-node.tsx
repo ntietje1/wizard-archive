@@ -11,6 +11,7 @@ import { getStrokeSelectionPadding } from './stroke-node-interactions'
 
 const HIGHLIGHT_SCALE = 0.3
 const ERASING_OPACITY = 0.3
+const MIN_HIT_STROKE_OPACITY = 0.001
 
 function resolveSvgDimension(value: number | undefined, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback
@@ -76,7 +77,6 @@ export function StrokePreview({
 export function StrokeNode({
   id,
   data,
-  selected,
   dragging,
   width,
   height,
@@ -84,7 +84,7 @@ export function StrokeNode({
   const { points, size, bounds } = data
   const { zoom } = useViewport()
   const isErasing = useEraseToolLocalOverlayStore((state) => state.erasingStrokeIds.has(id))
-  const { visuallySelected } = useCanvasNodeVisualSelection(id, !!selected)
+  const { visuallySelected } = useCanvasNodeVisualSelection(id)
 
   const svgWidth = width ?? bounds.width
   const svgHeight = height ?? bounds.height
@@ -119,7 +119,7 @@ export function StrokeNode({
           d={hitTargetD}
           fill="none"
           stroke="currentColor"
-          strokeOpacity={0.001}
+          strokeOpacity={MIN_HIT_STROKE_OPACITY}
           strokeWidth={hitPadding * 2}
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -151,7 +151,6 @@ export function StrokeNode({
     <ResizableNodeWrapper
       id={id}
       nodeType="stroke"
-      selected={!!selected}
       dragging={!!dragging}
       minWidth={20}
       minHeight={20}

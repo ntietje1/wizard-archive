@@ -29,6 +29,19 @@ interface CanvasReorderPayload extends CanvasSelectionPayload {
   direction: CanvasReorderDirection
 }
 
+function hasSelection(context: CanvasContextMenuContext): boolean {
+  return context.selection.nodeIds.length > 0 || context.selection.edgeIds.length > 0
+}
+
+function handleReorder(
+  context: CanvasContextMenuContext,
+  services: CanvasContextMenuServices,
+  payload: CanvasReorderPayload | undefined,
+) {
+  if (!payload) return
+  services.reorderSnapshot(context.selection, payload.direction)
+}
+
 function createCanvasCommand<TPayload extends CanvasSelectionPayload | undefined = undefined>(
   id: string,
   run: (
@@ -109,31 +122,19 @@ export const canvasContextMenuCommands = {
   },
   'reorder.sendToBack': createCanvasCommand<CanvasReorderPayload>(
     'reorder.sendToBack',
-    (context, services, payload) => {
-      if (!payload) return
-      services.reorderSnapshot(context.selection, payload.direction)
-    },
+    handleReorder,
   ),
   'reorder.sendBackward': createCanvasCommand<CanvasReorderPayload>(
     'reorder.sendBackward',
-    (context, services, payload) => {
-      if (!payload) return
-      services.reorderSnapshot(context.selection, payload.direction)
-    },
+    handleReorder,
   ),
   'reorder.bringForward': createCanvasCommand<CanvasReorderPayload>(
     'reorder.bringForward',
-    (context, services, payload) => {
-      if (!payload) return
-      services.reorderSnapshot(context.selection, payload.direction)
-    },
+    handleReorder,
   ),
   'reorder.bringToFront': createCanvasCommand<CanvasReorderPayload>(
     'reorder.bringToFront',
-    (context, services, payload) => {
-      if (!payload) return
-      services.reorderSnapshot(context.selection, payload.direction)
-    },
+    handleReorder,
   ),
 } satisfies Record<
   string,
@@ -144,7 +145,7 @@ const canvasPaneContributor: CanvasContextMenuContributor = {
   id: 'canvas-pane',
   surfaces: ['canvas'],
   getItems: (context) =>
-    context.selection.nodeIds.length > 0 || context.selection.edgeIds.length > 0
+    hasSelection(context)
       ? []
       : [
           {
@@ -162,8 +163,7 @@ const canvasPaneContributor: CanvasContextMenuContributor = {
 const canvasSelectionContributor: CanvasContextMenuContributor = {
   id: 'canvas-selection',
   surfaces: ['canvas'],
-  applies: (context) =>
-    context.selection.nodeIds.length > 0 || context.selection.edgeIds.length > 0,
+  applies: (context) => hasSelection(context),
   getItems: (context, services) => {
     const canCopy = services.canCopySnapshot(context.selection)
 
@@ -187,7 +187,7 @@ const canvasSelectionContributor: CanvasContextMenuContributor = {
         group: 'edit',
         priority: 1,
         scope: 'selection',
-        applies: () => canCopy && context.canEdit,
+        applies: (ctx) => canCopy && ctx.canEdit,
       },
       {
         id: 'canvas-selection-copy',
@@ -209,7 +209,7 @@ const canvasSelectionContributor: CanvasContextMenuContributor = {
         group: 'edit',
         priority: 3,
         scope: 'selection',
-        applies: () => canCopy && context.canEdit,
+        applies: (ctx) => canCopy && ctx.canEdit,
       },
       {
         id: 'canvas-selection-delete',

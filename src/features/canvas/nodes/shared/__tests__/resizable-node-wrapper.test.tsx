@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { CanvasRuntimeProviders } from '../../../runtime/providers/canvas-runtime-context'
+import { CanvasProviders } from '../../../runtime/providers/canvas-runtime-context'
+import { useCanvasSelectionState } from '../../../runtime/selection/use-canvas-selection-state'
 import {
   clearCanvasPendingSelectionPreview,
   setCanvasPendingSelectionPreview,
@@ -16,6 +17,7 @@ vi.mock('@xyflow/react', () => ({
 
 afterEach(() => {
   clearCanvasPendingSelectionPreview()
+  useCanvasSelectionState.getState().reset()
 })
 
 describe('ResizableNodeWrapper', () => {
@@ -37,12 +39,17 @@ describe('ResizableNodeWrapper', () => {
 })
 
 function renderWrapper({ selected }: { selected: boolean }) {
+  useCanvasSelectionState.getState().setSelection({
+    nodeIds: selected ? ['node-1'] : [],
+    edgeIds: [],
+  })
+
   return render(
-    <CanvasRuntimeProviders value={createProviderValues()}>
-      <ResizableNodeWrapper id="node-1" nodeType="test" selected={selected} dragging={false}>
+    <CanvasProviders runtime={createProviderValues()}>
+      <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
         <div>node body</div>
       </ResizableNodeWrapper>
-    </CanvasRuntimeProviders>,
+    </CanvasProviders>,
   )
 }
 

@@ -13,10 +13,12 @@ const SELECTED_EDGE_STYLE: CSSProperties = {
 }
 
 export function BezierCanvasEdge(props: CanvasEdgeRendererProps) {
-  const { visuallySelected, pendingPreviewActive, pendingSelected } = useCanvasEdgeVisualSelection(
-    props.id,
-    !!props.selected,
-  )
+  const {
+    visuallySelected,
+    pendingPreviewActive,
+    pendingSelected,
+    selected,
+  } = useCanvasEdgeVisualSelection(props.id)
   const geometry = buildBezierCanvasEdgeGeometryFromRenderProps(props)
   if (!geometry) return null
 
@@ -33,7 +35,7 @@ export function BezierCanvasEdge(props: CanvasEdgeRendererProps) {
       data-testid="canvas-edge"
       data-edge-id={props.id}
       data-edge-type={props.type}
-      data-edge-selected={props.selected ? 'true' : 'false'}
+      data-edge-selected={selected ? 'true' : 'false'}
       data-edge-visual-selected={visuallySelected ? 'true' : 'false'}
       data-edge-pending-preview-active={pendingPreviewActive ? 'true' : 'false'}
       data-edge-pending-selected={pendingSelected ? 'true' : 'false'}

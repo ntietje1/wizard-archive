@@ -49,7 +49,7 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
     Layer: DrawToolLocalOverlayLayer,
     clear: clearDrawToolLocalOverlay,
   },
-  create: (environment) => {
+  create: (services) => {
     let points: Array<[number, number, number]> = []
     let captureTarget: Element | null = null
     let pointerId: number | null = null
@@ -57,7 +57,7 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
     const clearDrawing = () => {
       points = []
       setDrawToolLocalDrawing(null)
-      setDrawToolAwareness(environment.awareness.presence, null)
+      setDrawToolAwareness(services.awareness.presence, null)
       releasePointerCapture(captureTarget, pointerId)
       captureTarget = null
       pointerId = null
@@ -69,8 +69,8 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
 
         captureTarget = setPointerCapture(event)
         pointerId = event.pointerId
-        const { strokeColor, strokeOpacity, strokeSize } = environment.toolState.getSettings()
-        const pos = screenEventToFlowPosition(environment.viewport, event)
+        const { strokeColor, strokeOpacity, strokeSize } = services.toolState.getSettings()
+        const pos = screenEventToFlowPosition(services.viewport, event)
         const point: [number, number, number] = [pos.x, pos.y, event.pressure || 0.5]
         points = [point]
 
@@ -82,13 +82,13 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
         }
 
         setDrawToolLocalDrawing(drawing)
-        setDrawToolAwareness(environment.awareness.presence, drawing)
+        setDrawToolAwareness(services.awareness.presence, drawing)
       },
       onPointerMove: (event) => {
         if ((event.buttons & 1) !== 1 || points.length === 0) return
 
-        const { strokeColor, strokeOpacity, strokeSize } = environment.toolState.getSettings()
-        const pos = screenEventToFlowPosition(environment.viewport, event)
+        const { strokeColor, strokeOpacity, strokeSize } = services.toolState.getSettings()
+        const pos = screenEventToFlowPosition(services.viewport, event)
         const point: [number, number, number] = [pos.x, pos.y, event.pressure || 0.5]
         points.push(point)
 
@@ -100,15 +100,15 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
         }
 
         setDrawToolLocalDrawing(drawing)
-        setDrawToolAwareness(environment.awareness.presence, drawing)
+        setDrawToolAwareness(services.awareness.presence, drawing)
       },
       onPointerUp: (event) => {
         if (event.pointerId !== pointerId) return
 
-        const { strokeColor, strokeOpacity, strokeSize } = environment.toolState.getSettings()
+        const { strokeColor, strokeOpacity, strokeSize } = services.toolState.getSettings()
         if (points.length >= 2) {
           const bounds = getStrokeBounds(points, strokeSize)
-          environment.document.createNode({
+          services.document.createNode({
             id: crypto.randomUUID(),
             type: 'stroke',
             position: { x: bounds.x, y: bounds.y },

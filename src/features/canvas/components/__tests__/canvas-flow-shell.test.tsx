@@ -1,7 +1,9 @@
 import { render } from '@testing-library/react'
 import { createRef } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import * as Y from 'yjs'
 import { CanvasFlowShell } from '../canvas-flow-shell'
+import type { CanvasFlowShellProps } from '../canvas-flow-shell'
 
 const reactFlowMock = vi.hoisted(() => ({
   props: null as Record<string, unknown> | null,
@@ -53,75 +55,25 @@ vi.mock('../canvas-minimap-node', () => ({
   MiniMapNode: () => null,
 }))
 
-const contextMenu = {
-  nodesMap: {} as never,
-  edgesMap: {} as never,
-  selectionController: {
-    replace: vi.fn(),
-    clear: vi.fn(),
-  },
-}
-
 describe('CanvasFlowShell', () => {
+  beforeEach(() => {
+    reactFlowMock.props = null
+  })
+
   it('disables React Flow double click zoom', () => {
-    render(
-      <CanvasFlowShell
-        canEdit
-        colorMode="light"
-        toolCursor={undefined}
-        canvasSurfaceRef={{ current: null }}
-        remoteUsers={[]}
-        activeTool="select"
-        contextMenu={contextMenu}
-        onMouseMove={vi.fn()}
-        onMouseLeave={vi.fn()}
-        dropOverlayRef={createRef<HTMLDivElement>()}
-        isDropTarget={false}
-        isFileDropTarget={false}
-      />,
-    )
+    renderCanvasFlowShell()
 
     expect(reactFlowMock.props?.zoomOnDoubleClick).toBe(false)
   })
 
   it('uses loose connection mode so each side handle can both start and end edges', () => {
-    render(
-      <CanvasFlowShell
-        canEdit
-        colorMode="light"
-        toolCursor={undefined}
-        canvasSurfaceRef={{ current: null }}
-        remoteUsers={[]}
-        activeTool="select"
-        contextMenu={contextMenu}
-        onMouseMove={vi.fn()}
-        onMouseLeave={vi.fn()}
-        dropOverlayRef={createRef<HTMLDivElement>()}
-        isDropTarget={false}
-        isFileDropTarget={false}
-      />,
-    )
+    renderCanvasFlowShell()
 
     expect(reactFlowMock.props?.connectionMode).toBe('loose')
   })
 
   it('provides canvas-owned custom edge types to React Flow', () => {
-    render(
-      <CanvasFlowShell
-        canEdit
-        colorMode="light"
-        toolCursor={undefined}
-        canvasSurfaceRef={{ current: null }}
-        remoteUsers={[]}
-        activeTool="select"
-        contextMenu={contextMenu}
-        onMouseMove={vi.fn()}
-        onMouseLeave={vi.fn()}
-        dropOverlayRef={createRef<HTMLDivElement>()}
-        isDropTarget={false}
-        isFileDropTarget={false}
-      />,
-    )
+    renderCanvasFlowShell()
 
     expect(reactFlowMock.props?.edgeTypes).toEqual(
       expect.objectContaining({
@@ -130,3 +82,39 @@ describe('CanvasFlowShell', () => {
     )
   })
 })
+
+function createContextMenu(): CanvasFlowShellProps['contextMenu'] {
+  return {
+    nodesMap: new Y.Map(),
+    edgesMap: new Y.Map(),
+    selectionController: {
+      replace: vi.fn(),
+      clear: vi.fn(),
+    },
+  }
+}
+
+function renderCanvasFlowShell() {
+  return render(
+    <CanvasFlowShell
+      canEdit
+      colorMode="light"
+      chrome={{
+        toolCursor: undefined,
+        remoteUsers: [],
+        activeTool: 'select',
+        dropTarget: {
+          overlayRef: createRef<HTMLDivElement>(),
+          isTarget: false,
+          isFileTarget: false,
+        },
+      }}
+      canvasSurfaceRef={{ current: null }}
+      contextMenu={createContextMenu()}
+      flowHandlers={{
+        onMouseMove: vi.fn(),
+        onMouseLeave: vi.fn(),
+      }}
+    />,
+  )
+}

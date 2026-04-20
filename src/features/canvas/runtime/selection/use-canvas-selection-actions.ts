@@ -1,6 +1,10 @@
 import { useReactFlow } from '@xyflow/react'
 import { getNextSelectedIds } from '../../utils/canvas-selection-utils'
-import { useCanvasSelectionState } from './use-canvas-selection-state'
+import {
+  getCanvasSelectionSnapshot,
+  setCanvasSelectionSnapshot,
+  useCanvasSelectionState,
+} from './use-canvas-selection-state'
 import type {
   CanvasSelectionController,
   CanvasSelectionSnapshot,
@@ -38,16 +42,8 @@ function replaceCanvasSelection(
   reactFlow: SelectionProjectionReactFlow,
   selection: CanvasSelectionSnapshot,
 ) {
-  useCanvasSelectionState.getState().setSelection(selection)
+  setCanvasSelectionSnapshot(selection)
   projectCanvasSelectionToReactFlow(reactFlow, selection)
-}
-
-function getCurrentSelectionSnapshot(): CanvasSelectionSnapshot {
-  const state = useCanvasSelectionState.getState()
-  return {
-    nodeIds: state.selectedNodeIds,
-    edgeIds: state.selectedEdgeIds,
-  }
 }
 
 export function useCanvasSelectionActions(): CanvasSelectionController {
@@ -69,13 +65,13 @@ export function useCanvasSelectionActions(): CanvasSelectionController {
     getSelectedNodeIds: () => useCanvasSelectionState.getState().selectedNodeIds,
     getSelectedEdgeIds: () => useCanvasSelectionState.getState().selectedEdgeIds,
     toggleNodeFromTarget: (targetId, toggle) => {
-      const currentSelection = getCurrentSelectionSnapshot()
-      const nextIds = getNextSelectedIds({
-        selectedIds: currentSelection.nodeIds,
-        targetId,
-        toggle,
-      })
       queueMicrotask(() => {
+        const currentSelection = getCanvasSelectionSnapshot()
+        const nextIds = getNextSelectedIds({
+          selectedIds: currentSelection.nodeIds,
+          targetId,
+          toggle,
+        })
         replaceCanvasSelection(reactFlow, {
           nodeIds: nextIds,
           edgeIds: toggle ? currentSelection.edgeIds : [],
@@ -83,13 +79,13 @@ export function useCanvasSelectionActions(): CanvasSelectionController {
       })
     },
     toggleEdgeFromTarget: (targetId, toggle) => {
-      const currentSelection = getCurrentSelectionSnapshot()
-      const nextIds = getNextSelectedIds({
-        selectedIds: currentSelection.edgeIds,
-        targetId,
-        toggle,
-      })
       queueMicrotask(() => {
+        const currentSelection = getCanvasSelectionSnapshot()
+        const nextIds = getNextSelectedIds({
+          selectedIds: currentSelection.edgeIds,
+          targetId,
+          toggle,
+        })
         replaceCanvasSelection(reactFlow, {
           nodeIds: toggle ? currentSelection.nodeIds : [],
           edgeIds: nextIds,

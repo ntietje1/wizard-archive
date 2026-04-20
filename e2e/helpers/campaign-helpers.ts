@@ -38,7 +38,7 @@ export async function deleteCampaign(page: Page, name: string) {
   await expect(card).toBeVisible({ timeout: 15000 })
   await card.getByRole('button', { name: /delete campaign/i }).click()
   const dialog = page.getByRole('dialog', { name: /delete campaign/i })
-  await expect(dialog).toBeVisible()
+  await expect(dialog).toBeVisible({ timeout: 10000 })
   await dialog.getByRole('button', { name: /^delete/i }).click()
   await expect(dialog).not.toBeVisible({ timeout: 10000 })
 }

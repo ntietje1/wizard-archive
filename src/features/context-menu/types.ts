@@ -45,7 +45,7 @@ export interface ContextMenuItemSpec<TContext, TServices, TPayload = unknown> {
   icon?: LucideIcon
   shortcut?: ContextMenuResolver<string | undefined, TContext, TServices, TPayload>
   applies?: ContextMenuPredicate<TContext, TServices, TPayload>
-  isDisabled?: ContextMenuPredicate<TContext, TServices, TPayload>
+  isEnabled?: ContextMenuPredicate<TContext, TServices, TPayload>
   isChecked?: ContextMenuPredicate<TContext, TServices, TPayload>
   onSelect?: (
     context: TContext,
@@ -113,7 +113,7 @@ export type ContextMenuGroupConfig = Record<string, ContextMenuGroupConfigEntry>
 
 export interface EditorMenuContext {
   surface: ViewContext
-  item: AnySidebarItem | undefined
+  item?: AnySidebarItem
   currentUserId?: string
   memberRole?: CampaignMemberRole
   permissionLevel?: PermissionLevel

@@ -64,6 +64,7 @@ const submenuMenu: BuiltContextMenu = {
 
 describe('ContextMenuHost', () => {
   afterEach(() => {
+    vi.clearAllMocks()
     vi.restoreAllMocks()
   })
 

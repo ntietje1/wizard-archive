@@ -128,7 +128,7 @@ export interface CanvasCoreAwarenessWriter {
 }
 
 export interface CanvasAwarenessPresenceWriter {
-  setPresence: (namespace: CanvasAwarenessNamespace, value: unknown) => void
+  setPresence: (namespace: CanvasAwarenessNamespace, value: unknown | null) => void
 }
 
 export interface CanvasAwarenessWriter {
@@ -145,7 +145,7 @@ export interface CanvasLocalOverlayCapability {
   clear: () => void
 }
 
-export interface CanvasToolEnvironment {
+export interface CanvasToolServices {
   viewport: CanvasViewportTools
   document: CanvasDocumentWriter & CanvasDocumentReader & CanvasMeasuredNodeReader
   selection: CanvasSelectionController
@@ -176,7 +176,7 @@ export interface CanvasToolModule<TId extends CanvasToolId = CanvasToolId> {
   properties?: (context: CanvasToolPropertyContext) => CanvasInspectableProperties
   awareness?: CanvasAwarenessCapability
   localOverlay?: CanvasLocalOverlayCapability
-  create: (environment: CanvasToolEnvironment) => CanvasToolController
+  create: (services: CanvasToolServices) => CanvasToolController
 }
 
 export type AnyCanvasToolModule = {

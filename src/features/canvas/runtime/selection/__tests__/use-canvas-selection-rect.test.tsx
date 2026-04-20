@@ -39,6 +39,7 @@ vi.mock('@xyflow/react', async (importOriginal) => {
 })
 
 describe('useCanvasSelectionRect', () => {
+  const FIXED_RAF_TIMESTAMP = 1000
   const rafCallbacks = new Map<number, FrameRequestCallback>()
   let nextRafId = 1
 
@@ -74,7 +75,7 @@ describe('useCanvasSelectionRect', () => {
     rafCallbacks.clear()
 
     for (const [, callback] of callbacks) {
-      callback(performance.now())
+      callback(FIXED_RAF_TIMESTAMP)
     }
   }
 

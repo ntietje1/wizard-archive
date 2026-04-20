@@ -9,12 +9,12 @@ import { CanvasLocalOverlaysHost } from './canvas-local-overlays-host'
 import { MiniMapNode } from './canvas-minimap-node'
 import { CanvasToolbar } from './canvas-toolbar'
 import { canvasEdgeTypes } from '../edges/canvas-edge-registry'
-import { canvasNodeTypes } from '../nodes/canvas-node-types'
+import { canvasNodeTypes } from '../nodes/canvas-node-registry'
 import { CanvasContextMenu } from '../runtime/context-menu/canvas-context-menu'
 import type { CanvasContextMenuRef } from '../runtime/context-menu/canvas-context-menu'
 import { useCanvasPendingSelectionPreviewStore } from '../runtime/selection/use-canvas-pending-selection-preview'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
-import type { CanvasSelectionController } from '../tools/canvas-tool-types'
+import type { CanvasSelectionController, CanvasToolId } from '../tools/canvas-tool-types'
 import type { Edge, Node, OnConnect, OnEdgesDelete, OnNodeDrag, OnNodesDelete } from '@xyflow/react'
 import type * as Y from 'yjs'
 
@@ -30,31 +30,37 @@ const MAX_ZOOM = 4
 const MIN_ZOOM = 0.1
 
 export interface CanvasFlowShellProps {
-  toolCursor: string | undefined
+  chrome: {
+    toolCursor: string | undefined
+    remoteUsers: Array<RemoteUser>
+    activeTool: CanvasToolId
+    dropTarget: {
+      overlayRef: React.Ref<HTMLDivElement>
+      isTarget: boolean
+      isFileTarget: boolean
+    }
+  }
   canvasSurfaceRef: React.RefObject<HTMLDivElement | null>
-  remoteUsers: Array<RemoteUser>
-  activeTool: string
   contextMenu: {
     nodesMap: Y.Map<Node>
     edgesMap: Y.Map<Edge>
     selectionController: Pick<CanvasSelectionController, 'replace' | 'clear'>
   }
-  onNodeDragStart?: OnNodeDrag
-  onNodeDrag?: OnNodeDrag
-  onNodeDragStop?: OnNodeDrag
-  onNodesDelete?: OnNodesDelete
-  onEdgesDelete?: OnEdgesDelete
-  onConnect?: OnConnect
-  onMoveStart?: (event: MouseEvent | TouchEvent | null) => void
-  onMoveEnd?: () => void
-  onNodeClick?: (event: React.MouseEvent, node: Node) => void
-  onEdgeClick?: (event: React.MouseEvent, edge: Edge) => void
-  onPaneClick?: (event: React.MouseEvent) => void
-  onMouseMove: (event: React.MouseEvent) => void
-  onMouseLeave: () => void
-  dropOverlayRef: React.Ref<HTMLDivElement>
-  isDropTarget: boolean
-  isFileDropTarget: boolean
+  flowHandlers: {
+    onNodeDragStart?: OnNodeDrag
+    onNodeDrag?: OnNodeDrag
+    onNodeDragStop?: OnNodeDrag
+    onNodesDelete?: OnNodesDelete
+    onEdgesDelete?: OnEdgesDelete
+    onConnect?: OnConnect
+    onMoveStart?: (event: MouseEvent | TouchEvent | null) => void
+    onMoveEnd?: () => void
+    onNodeClick?: (event: React.MouseEvent, node: Node) => void
+    onEdgeClick?: (event: React.MouseEvent, edge: Edge) => void
+    onPaneClick?: (event: React.MouseEvent) => void
+    onMouseMove: (event: React.MouseEvent) => void
+    onMouseLeave: () => void
+  }
 }
 
 interface CanvasFlowShellComponentProps extends CanvasFlowShellProps {
@@ -65,29 +71,12 @@ interface CanvasFlowShellComponentProps extends CanvasFlowShellProps {
 export function CanvasFlowShell({
   canEdit,
   colorMode,
-  toolCursor,
+  chrome,
   canvasSurfaceRef,
-  remoteUsers,
-  activeTool,
   contextMenu,
-  onNodeDragStart,
-  onNodeDrag,
-  onNodeDragStop,
-  onNodesDelete,
-  onEdgesDelete,
-  onConnect,
-  onMoveStart,
-  onMoveEnd,
-  onNodeClick,
-  onEdgeClick,
-  onPaneClick,
-  onMouseMove,
-  onMouseLeave,
-  dropOverlayRef,
-  isDropTarget,
-  isFileDropTarget,
+  flowHandlers,
 }: CanvasFlowShellComponentProps) {
-  const isSelectMode = activeTool === 'select'
+  const isSelectMode = chrome.activeTool === 'select'
   const contextMenuRef = useRef<CanvasContextMenuRef>(null)
   const pendingSelectionPreview = useCanvasPendingSelectionPreviewStore(
     useShallow((state) => ({
@@ -100,7 +89,7 @@ export function CanvasFlowShell({
   return (
     <div
       className="canvas-flow-shell relative flex-1 min-h-0 allow-motion"
-      style={{ cursor: toolCursor }}
+      style={{ cursor: chrome.toolCursor }}
       data-testid="canvas-flow-shell"
     >
       <CanvasToolbar canEdit={canEdit} />
@@ -115,17 +104,17 @@ export function CanvasFlowShell({
         <ReactFlow
           defaultNodes={EMPTY_NODES}
           defaultEdges={EMPTY_EDGES}
-          onNodeDragStart={onNodeDragStart}
-          onNodeDrag={onNodeDrag}
-          onNodeDragStop={onNodeDragStop}
-          onNodesDelete={onNodesDelete}
-          onEdgesDelete={onEdgesDelete}
-          onConnect={onConnect}
-          onMoveStart={onMoveStart}
-          onMoveEnd={onMoveEnd}
-          onNodeClick={onNodeClick}
-          onEdgeClick={onEdgeClick}
-          onPaneClick={onPaneClick}
+          onNodeDragStart={flowHandlers.onNodeDragStart}
+          onNodeDrag={flowHandlers.onNodeDrag}
+          onNodeDragStop={flowHandlers.onNodeDragStop}
+          onNodesDelete={flowHandlers.onNodesDelete}
+          onEdgesDelete={flowHandlers.onEdgesDelete}
+          onConnect={flowHandlers.onConnect}
+          onMoveStart={flowHandlers.onMoveStart}
+          onMoveEnd={flowHandlers.onMoveEnd}
+          onNodeClick={flowHandlers.onNodeClick}
+          onEdgeClick={flowHandlers.onEdgeClick}
+          onPaneClick={flowHandlers.onPaneClick}
           onNodeContextMenu={(event, node) =>
             contextMenuRef.current?.onNodeContextMenu(event, node)
           }
@@ -133,8 +122,8 @@ export function CanvasFlowShell({
             contextMenuRef.current?.onEdgeContextMenu(event, edge)
           }
           onPaneContextMenu={(event) => contextMenuRef.current?.onPaneContextMenu(event)}
-          onMouseMove={onMouseMove}
-          onMouseLeave={onMouseLeave}
+          onMouseMove={flowHandlers.onMouseMove}
+          onMouseLeave={flowHandlers.onMouseLeave}
           edgeTypes={canvasEdgeTypes}
           nodeTypes={canvasNodeTypes}
           nodesDraggable={false}
@@ -147,7 +136,7 @@ export function CanvasFlowShell({
           selectionMode={SelectionMode.Partial}
           connectionMode={ConnectionMode.Loose}
           selectionKeyCode={SELECTION_KEY_DISABLED}
-          panOnDrag={activeTool === 'hand' ? PAN_BOTH : PAN_MIDDLE_ONLY}
+          panOnDrag={chrome.activeTool === 'hand' ? PAN_BOTH : PAN_MIDDLE_ONLY}
           deleteKeyCode={canEdit && isSelectMode ? DELETE_KEYS : DELETE_KEYS_NONE}
           colorMode={colorMode}
           minZoom={MIN_ZOOM}
@@ -161,19 +150,19 @@ export function CanvasFlowShell({
           <Background bgColor="var(--background)" />
           <MiniMap zoomable={false} pannable={false} nodeComponent={MiniMapNode} />
           <CanvasLocalOverlaysHost />
-          <CanvasAwarenessHost remoteUsers={remoteUsers} />
+          <CanvasAwarenessHost remoteUsers={chrome.remoteUsers} />
         </ReactFlow>
 
         <CanvasContextMenu
           ref={contextMenuRef}
-          activeTool={activeTool}
+          activeTool={chrome.activeTool}
           canEdit={canEdit}
           nodesMap={contextMenu.nodesMap}
           edgesMap={contextMenu.edgesMap}
           selectionController={contextMenu.selectionController}
         />
 
-        {pendingSelectionPreview.active && (
+        {pendingSelectionPreview.active && (pendingSelectionPreview.nodeCount + pendingSelectionPreview.edgeCount > 0) && (
           <CanvasPendingSelectionStatus
             nodeCount={pendingSelectionPreview.nodeCount}
             edgeCount={pendingSelectionPreview.edgeCount}
@@ -181,9 +170,9 @@ export function CanvasFlowShell({
         )}
 
         <CanvasDropOverlay
-          ref={dropOverlayRef}
-          isDropTarget={isDropTarget}
-          isFileDropTarget={isFileDropTarget}
+          ref={chrome.dropTarget.overlayRef}
+          isDropTarget={chrome.dropTarget.isTarget}
+          isFileDropTarget={chrome.dropTarget.isFileTarget}
         />
       </div>
     </div>
@@ -197,6 +186,10 @@ function CanvasPendingSelectionStatus({
   nodeCount: number
   edgeCount: number
 }) {
+  if (nodeCount === 0 && edgeCount === 0) {
+    return null
+  }
+
   const parts = [
     nodeCount > 0 ? `${nodeCount} node${nodeCount === 1 ? '' : 's'}` : null,
     edgeCount > 0 ? `${edgeCount} edge${edgeCount === 1 ? '' : 's'}` : null,

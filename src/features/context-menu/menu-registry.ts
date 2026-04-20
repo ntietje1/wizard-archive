@@ -164,6 +164,7 @@ export const editorContextMenuCommands = {
     id: 'activatePanel',
     run: (_context, _services, payload) => {
       if (typeof payload !== 'string') {
+        logger.warn('activatePanel received invalid payload', payload)
         return
       }
       activatePanelContent(payload)

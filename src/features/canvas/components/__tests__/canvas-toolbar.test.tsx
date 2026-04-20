@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasToolbar } from '../canvas-toolbar'
-import { CanvasProviders } from '../../runtime/providers/use-canvas-context'
+import { CanvasProviders } from '../../runtime/providers/canvas-runtime-context'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 
 const reactFlowMock = vi.hoisted(() => ({

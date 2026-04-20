@@ -2,7 +2,7 @@ import { useCanvasDropTarget } from './use-canvas-drop-target'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Node } from '@xyflow/react'
 
-export interface UseCanvasDropIntegrationOptions {
+interface UseCanvasDropIntegrationOptions {
   canvasId: Id<'sidebarItems'>
   canEdit: boolean
   isSelectMode: boolean

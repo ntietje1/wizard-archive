@@ -1,4 +1,4 @@
-type OrderableCanvasElement = {
+export type OrderableCanvasElement = {
   id: string
   zIndex?: number
 }
@@ -32,7 +32,7 @@ export function getNextCanvasElementZIndex<T extends OrderableCanvasElement>(ele
     return 1
   }
 
-  return Math.max(...elements.map((element, index) => element.zIndex ?? index + 1)) + 1
+  return Math.max(...elements.map((element, index) => element.zIndex ?? index)) + 1
 }
 
 export function reorderCanvasElements<T extends OrderableCanvasElement>(
@@ -75,6 +75,10 @@ export function reorderCanvasElements<T extends OrderableCanvasElement>(
         }
       }
       return normalizeZIndex(moved)
+    }
+    default: {
+      const exhaustiveDirection: never = direction
+      throw new Error(`Unhandled direction: ${exhaustiveDirection}`)
     }
   }
 }

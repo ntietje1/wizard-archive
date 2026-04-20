@@ -1,7 +1,7 @@
 import React, { forwardRef, useImperativeHandle, useRef } from 'react'
 import { CheckIcon } from 'lucide-react'
 import type { BuiltContextMenu, ResolvedContextMenuItem } from '../types'
-import { logger } from '~/shared/utils/logger'
+import { handleError, logger } from '~/shared/utils/logger'
 import {
   ContextMenu,
   ContextMenuContent,
@@ -16,7 +16,7 @@ import type { ContextMenuRef } from '~/features/shadcn/components/context-menu'
 import { cn } from '~/features/shadcn/lib/utils'
 
 export interface ContextMenuHostRef {
-  open: (position?: { x: number; y: number }) => void
+  open: (position: { x: number; y: number }) => void
   close: () => void
 }
 
@@ -33,18 +33,22 @@ export const ContextMenuHost = forwardRef<ContextMenuHostRef, ContextMenuHostPro
     const menuRef = useRef<ContextMenuRef>(null)
     const actionInProgressRef = useRef(false)
 
-    useImperativeHandle(ref, () => ({
-      open: (position) => {
-        if (!position || menu.isEmpty) {
-          return
-        }
+    useImperativeHandle(
+      ref,
+      () => ({
+        open: (position) => {
+          if (menu.isEmpty) {
+            return
+          }
 
-        menuRef.current?.openAt(position)
-      },
-      close: () => {
-        menuRef.current?.close()
-      },
-    }))
+          menuRef.current?.openAt(position)
+        },
+        close: () => {
+          menuRef.current?.close()
+        },
+      }),
+      [menu.isEmpty],
+    )
 
     const handleAction = async (menuItem: ResolvedContextMenuItem) => {
       if (actionInProgressRef.current) {
@@ -55,10 +59,11 @@ export const ContextMenuHost = forwardRef<ContextMenuHostRef, ContextMenuHostPro
       try {
         await menuItem.onSelect()
       } catch (error) {
-        logger.error(error)
+        handleError(error, 'Menu action failed')
+      } finally {
+        actionInProgressRef.current = false
+        menuRef.current?.close()
       }
-      actionInProgressRef.current = false
-      menuRef.current?.close()
     }
 
     const renderMenuItem = (menuItem: ResolvedContextMenuItem): React.ReactNode => {
@@ -129,7 +134,7 @@ export const ContextMenuHost = forwardRef<ContextMenuHostRef, ContextMenuHostPro
           ) : null}
           {!menu.isEmpty ? (
             <ContextMenuContent
-              className={cn(menuClassName, 'z-[9999]')}
+              className={cn(menuClassName)}
               side="bottom"
               align="start"
               sideOffset={4}

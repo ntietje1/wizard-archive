@@ -116,43 +116,47 @@ export const CanvasContextMenu = forwardRef<CanvasContextMenuRef, CanvasContextM
       pendingOpenPositionRef.current = null
     }, [menuContext])
 
-    useImperativeHandle(ref, () => ({
-      close: () => {
-        hostRef.current?.close()
-      },
-      onPaneContextMenu: (event) => {
-        const position = normalizeContextMenuEvent(event)
-        const nextSelection = { nodeIds: [], edgeIds: [] }
-        selectionController.clear()
-        openMenu(position, nextSelection)
-      },
-      onNodeContextMenu: (event, node) => {
-        const position = normalizeContextMenuEvent(event)
-        const currentSelection = latestSelectionRef.current
-        const nextSelection = currentSelection.nodeIds.includes(node.id)
-          ? currentSelection
-          : { nodeIds: [node.id], edgeIds: [] }
+    useImperativeHandle(
+      ref,
+      () => ({
+        close: () => {
+          hostRef.current?.close()
+        },
+        onPaneContextMenu: (event) => {
+          const position = normalizeContextMenuEvent(event)
+          const nextSelection = { nodeIds: [], edgeIds: [] }
+          selectionController.clear()
+          openMenu(position, nextSelection)
+        },
+        onNodeContextMenu: (event, node) => {
+          const position = normalizeContextMenuEvent(event)
+          const currentSelection = latestSelectionRef.current
+          const nextSelection = currentSelection.nodeIds.includes(node.id)
+            ? currentSelection
+            : { nodeIds: [node.id], edgeIds: [] }
 
-        if (nextSelection !== currentSelection) {
-          selectionController.replace(nextSelection)
-        }
+          if (nextSelection !== currentSelection) {
+            selectionController.replace(nextSelection)
+          }
 
-        openMenu(position, nextSelection)
-      },
-      onEdgeContextMenu: (event, edge) => {
-        const position = normalizeContextMenuEvent(event)
-        const currentSelection = latestSelectionRef.current
-        const nextSelection = currentSelection.edgeIds.includes(edge.id)
-          ? currentSelection
-          : { nodeIds: [], edgeIds: [edge.id] }
+          openMenu(position, nextSelection)
+        },
+        onEdgeContextMenu: (event, edge) => {
+          const position = normalizeContextMenuEvent(event)
+          const currentSelection = latestSelectionRef.current
+          const nextSelection = currentSelection.edgeIds.includes(edge.id)
+            ? currentSelection
+            : { nodeIds: [], edgeIds: [edge.id] }
 
-        if (nextSelection !== currentSelection) {
-          selectionController.replace(nextSelection)
-        }
+          if (nextSelection !== currentSelection) {
+            selectionController.replace(nextSelection)
+          }
 
-        openMenu(position, nextSelection)
-      },
-    }))
+          openMenu(position, nextSelection)
+        },
+      }),
+      [activeTool, canEdit, selectionController],
+    )
 
     const selectionType =
       menuContext && getSelectionItemCount(menuContext.selection) > 0

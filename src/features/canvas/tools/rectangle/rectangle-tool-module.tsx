@@ -39,7 +39,7 @@ export const rectangleToolModule: CanvasToolModule<'rectangle'> = {
       ],
     }
   },
-  create: (environment) => {
+  create: (services) => {
     let start: { x: number; y: number } | null = null
     let lastClientPos = { x: 0, y: 0 }
     let active = false
@@ -67,7 +67,7 @@ export const rectangleToolModule: CanvasToolModule<'rectangle'> = {
         captureTarget = setPointerCapture(event)
         pointerId = event.pointerId
         active = true
-        start = screenEventToFlowPosition(environment.viewport, event)
+        start = screenEventToFlowPosition(services.viewport, event)
         lastClientPos = { x: event.clientX, y: event.clientY }
         setRectangleToolDragRect(null)
       },
@@ -80,7 +80,7 @@ export const rectangleToolModule: CanvasToolModule<'rectangle'> = {
         rafId = requestAnimationFrame(() => {
           rafId = 0
           if (!start) return
-          const pos = environment.viewport.screenToFlowPosition(lastClientPos)
+          const pos = services.viewport.screenToFlowPosition(lastClientPos)
           setRectangleToolDragRect(rectFromPoints(start, pos))
         })
       },
@@ -90,9 +90,9 @@ export const rectangleToolModule: CanvasToolModule<'rectangle'> = {
           return
         }
 
-        const pos = environment.viewport.screenToFlowPosition(lastClientPos)
+        const pos = services.viewport.screenToFlowPosition(lastClientPos)
         const rect = rectFromPoints(start, pos)
-        const { strokeColor, strokeOpacity } = environment.toolState.getSettings()
+        const { strokeColor, strokeOpacity } = services.toolState.getSettings()
 
         try {
           if (rect.width >= MIN_RECT_SIZE && rect.height >= MIN_RECT_SIZE) {
@@ -104,12 +104,12 @@ export const rectangleToolModule: CanvasToolModule<'rectangle'> = {
                 opacity: strokeOpacity,
               },
             })
-            environment.document.createNode(node)
-            environment.selection.replaceNodes([node.id])
+            services.document.createNode(node)
+            services.selection.replaceNodes([node.id])
           }
         } finally {
           reset()
-          environment.toolState.setActiveTool('select')
+          services.toolState.setActiveTool('select')
         }
       },
       onPointerCancel: () => {

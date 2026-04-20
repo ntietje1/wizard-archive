@@ -11,7 +11,7 @@ import {
 import type { Edge, Node } from '@xyflow/react'
 import type {
   CanvasMeasuredNode,
-  CanvasToolEnvironment,
+  CanvasToolServices,
   CanvasToolId,
 } from '../../canvas-tool-types'
 
@@ -404,7 +404,7 @@ function createLassoEnvironment({
   suppressNextSurfaceClick: () => void
   setPresence: (namespace: string, value: unknown) => void
   setActiveTool: (tool: CanvasToolId) => void
-}): CanvasToolEnvironment {
+}): CanvasToolServices {
   return {
     viewport: {
       screenToFlowPosition: ({ x, y }) => ({ x, y }),

@@ -1,6 +1,7 @@
 import { render } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { useCanvasSelectionState } from '../../../runtime/selection/use-canvas-selection-state'
 import {
   clearCanvasPendingSelectionPreview,
   setCanvasPendingSelectionPreview,
@@ -17,13 +18,14 @@ vi.mock('../../shared/resizable-node-wrapper', () => ({
 
 afterEach(() => {
   clearCanvasPendingSelectionPreview()
+  useCanvasSelectionState.getState().reset()
 })
 
 describe('StrokeNode', () => {
   it('renders the local stroke highlight for pending-selected strokes', () => {
     setCanvasPendingSelectionPreview({ nodeIds: ['stroke-1'], edgeIds: [] })
     const { container, getByTestId } = render(
-      <StrokeNode {...createStrokeNodeProps({ selected: false })} />,
+      <StrokeNode {...setupStrokeNodeProps({ selected: false })} />,
     )
 
     expect(getByTestId('stroke-hit-target')).toBeInTheDocument()
@@ -33,17 +35,17 @@ describe('StrokeNode', () => {
   it('drops the local stroke highlight when a pending preview excludes the committed stroke', () => {
     setCanvasPendingSelectionPreview({ nodeIds: ['other-node'], edgeIds: [] })
     const { container, getByTestId } = render(
-      <StrokeNode {...createStrokeNodeProps({ selected: true })} />,
+      <StrokeNode {...setupStrokeNodeProps({ selected: true })} />,
     )
 
     expect(getByTestId('stroke-hit-target')).toBeInTheDocument()
     expect(container.querySelectorAll('path')).toHaveLength(2)
   })
 
-  it('keeps a single stroke path when a pending preview is active but excludes an unselected stroke', () => {
+  it('keeps two paths (stroke and hit target) when a pending preview excludes an unselected stroke', () => {
     setCanvasPendingSelectionPreview({ nodeIds: [], edgeIds: [] })
     const { container, getByTestId } = render(
-      <StrokeNode {...createStrokeNodeProps({ selected: false })} />,
+      <StrokeNode {...setupStrokeNodeProps({ selected: false })} />,
     )
 
     expect(getByTestId('stroke-hit-target')).toBeInTheDocument()
@@ -53,7 +55,7 @@ describe('StrokeNode', () => {
   it('keeps the highlight path when a pending preview includes an already selected stroke', () => {
     setCanvasPendingSelectionPreview({ nodeIds: ['stroke-1'], edgeIds: [] })
     const { container, getByTestId } = render(
-      <StrokeNode {...createStrokeNodeProps({ selected: true })} />,
+      <StrokeNode {...setupStrokeNodeProps({ selected: true })} />,
     )
 
     expect(getByTestId('stroke-hit-target')).toBeInTheDocument()
@@ -61,7 +63,12 @@ describe('StrokeNode', () => {
   })
 })
 
-function createStrokeNodeProps({ selected }: { selected: boolean }) {
+function setupStrokeNodeProps({ selected }: { selected: boolean }) {
+  useCanvasSelectionState.getState().setSelection({
+    nodeIds: selected ? ['stroke-1'] : [],
+    edgeIds: [],
+  })
+
   return {
     id: 'stroke-1',
     selected,

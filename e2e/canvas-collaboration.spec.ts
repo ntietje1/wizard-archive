@@ -51,7 +51,7 @@ test.describe.serial('canvas collaboration', () => {
     try {
       await deleteCampaign(page, campaignName)
     } catch (error) {
-      console.debug('Failed to delete canvas collaboration campaign during teardown', {
+      console.warn('Failed to delete canvas collaboration campaign during teardown', {
         campaignName,
         error,
       })
@@ -177,15 +177,24 @@ async function createCollabContexts(browser: Browser) {
   const context1 = await browser.newContext({
     storageState: AUTH_STORAGE_PATH,
   })
-  const context2 = await browser.newContext({
-    storageState: AUTH_STORAGE_PATH,
-  })
+  let context2: BrowserContext | null = null
 
-  return {
-    context1,
-    context2,
-    page1: await context1.newPage(),
-    page2: await context2.newPage(),
+  try {
+    context2 = await browser.newContext({
+      storageState: AUTH_STORAGE_PATH,
+    })
+    return {
+      context1,
+      context2,
+      page1: await context1.newPage(),
+      page2: await context2.newPage(),
+    }
+  } catch (error) {
+    if (context2) {
+      await context2.close()
+    }
+    await context1.close()
+    throw error
   }
 }
 

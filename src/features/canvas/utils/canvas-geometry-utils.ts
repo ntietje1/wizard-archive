@@ -7,10 +7,7 @@ export type Bounds = {
   height: number
 }
 
-export type PointLike = {
-  x: number
-  y: number
-}
+export type PointLike = XYPosition
 
 export function rectFromPoints(a: XYPosition, b: XYPosition): Bounds {
   return {
@@ -27,15 +24,6 @@ export function rectIntersectsBounds(rect: Bounds, bounds: Bounds): boolean {
     rect.x + rect.width > bounds.x &&
     rect.y < bounds.y + bounds.height &&
     rect.y + rect.height > bounds.y
-  )
-}
-
-export function rectContainsBounds(rect: Bounds, bounds: Bounds): boolean {
-  return (
-    bounds.x >= rect.x &&
-    bounds.y >= rect.y &&
-    bounds.x + bounds.width <= rect.x + rect.width &&
-    bounds.y + bounds.height <= rect.y + rect.height
   )
 }
 

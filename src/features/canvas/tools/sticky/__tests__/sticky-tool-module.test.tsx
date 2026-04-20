@@ -8,21 +8,8 @@ import type { Node } from '@xyflow/react'
 
 describe('stickyToolModule', () => {
   it('places a sticky node with defaults through the production tool path', () => {
-    const createdNodes: Array<Node> = []
-    const setPendingEditNodeId = vi.fn()
-    const setActiveTool = vi.fn()
-    const replaceSelection = vi.fn()
-    const controller = stickyToolModule.create(
-      createPlacementEnvironment({
-        activeTool: 'sticky',
-        createNode: (node) => {
-          createdNodes.push(node)
-        },
-        replaceSelection,
-        setPendingEditNodeId,
-        setActiveTool,
-      }),
-    )
+    const { createdNodes, setPendingEditNodeId, setActiveTool, replaceSelection, controller } =
+      setupStickyToolTest('sticky')
 
     expect(controller.onPaneClick).toBeDefined()
     controller.onPaneClick!(createMouseEvent(40, 60))
@@ -48,21 +35,8 @@ describe('stickyToolModule', () => {
   })
 
   it('supports placing a sticky node at the canvas origin', () => {
-    const createdNodes: Array<Node> = []
-    const setPendingEditNodeId = vi.fn()
-    const setActiveTool = vi.fn()
-    const replaceSelection = vi.fn()
-    const controller = stickyToolModule.create(
-      createPlacementEnvironment({
-        activeTool: 'sticky',
-        createNode: (node) => {
-          createdNodes.push(node)
-        },
-        replaceSelection,
-        setPendingEditNodeId,
-        setActiveTool,
-      }),
-    )
+    const { createdNodes, setPendingEditNodeId, setActiveTool, replaceSelection, controller } =
+      setupStickyToolTest('sticky')
 
     expect(controller.onPaneClick).toBeDefined()
     controller.onPaneClick!(createMouseEvent(0, 0))
@@ -77,21 +51,8 @@ describe('stickyToolModule', () => {
   })
 
   it('does nothing when sticky is not the active tool', () => {
-    const createdNodes: Array<Node> = []
-    const setPendingEditNodeId = vi.fn()
-    const setActiveTool = vi.fn()
-    const replaceSelection = vi.fn()
-    const controller = stickyToolModule.create(
-      createPlacementEnvironment({
-        activeTool: 'select',
-        createNode: (node) => {
-          createdNodes.push(node)
-        },
-        replaceSelection,
-        setPendingEditNodeId,
-        setActiveTool,
-      }),
-    )
+    const { createdNodes, setPendingEditNodeId, setActiveTool, replaceSelection, controller } =
+      setupStickyToolTest('select')
 
     expect(controller.onPaneClick).toBeDefined()
     controller.onPaneClick!(createMouseEvent(40, 60))
@@ -99,6 +60,32 @@ describe('stickyToolModule', () => {
     expect(createdNodes).toHaveLength(0)
     expect(replaceSelection).not.toHaveBeenCalled()
     expect(setPendingEditNodeId).not.toHaveBeenCalled()
-    expect(setActiveTool).toHaveBeenCalledWith('select')
+    expect(setActiveTool).not.toHaveBeenCalled()
   })
 })
+
+function setupStickyToolTest(activeTool: 'select' | 'sticky') {
+  const createdNodes: Array<Node> = []
+  const setPendingEditNodeId = vi.fn()
+  const setActiveTool = vi.fn()
+  const replaceSelection = vi.fn()
+  const controller = stickyToolModule.create(
+    createPlacementEnvironment({
+      activeTool,
+      createNode: (node) => {
+        createdNodes.push(node)
+      },
+      replaceSelection,
+      setPendingEditNodeId,
+      setActiveTool,
+    }),
+  )
+
+  return {
+    createdNodes,
+    setPendingEditNodeId,
+    setActiveTool,
+    replaceSelection,
+    controller,
+  }
+}

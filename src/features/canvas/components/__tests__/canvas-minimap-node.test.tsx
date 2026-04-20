@@ -61,9 +61,9 @@ describe('MiniMapNode', () => {
 
     const rectEl = container.querySelector('rect')
     expect(rectEl).not.toBeNull()
-    expect(rectEl).toHaveAttribute('x', '1')
-    expect(rectEl).toHaveAttribute('y', '2')
-    expect(rectEl).toHaveAttribute('width', '30')
-    expect(rectEl).toHaveAttribute('height', '40')
+    expect(rectEl!).toHaveAttribute('x', '1')
+    expect(rectEl!).toHaveAttribute('y', '2')
+    expect(rectEl!).toHaveAttribute('width', '30')
+    expect(rectEl!).toHaveAttribute('height', '40')
   })
 })

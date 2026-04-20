@@ -40,7 +40,6 @@ const CONTROL_STYLE: React.CSSProperties = {
 interface ResizableNodeWrapperProps {
   id: string
   nodeType: string
-  selected: boolean
   dragging: boolean
   children: React.ReactNode
   minWidth?: number
@@ -50,7 +49,6 @@ interface ResizableNodeWrapperProps {
 export function ResizableNodeWrapper({
   id,
   nodeType,
-  selected,
   dragging,
   children,
   minWidth = 50,
@@ -58,10 +56,8 @@ export function ResizableNodeWrapper({
 }: ResizableNodeWrapperProps) {
   const remoteHighlights = useCanvasRemoteHighlightsContext()
   const { onResize, onResizeEnd } = useCanvasNodeActionsContext()
-  const { visuallySelected, pendingPreviewActive, pendingSelected } = useCanvasNodeVisualSelection(
-    id,
-    selected,
-  )
+  const { visuallySelected, pendingPreviewActive, pendingSelected, selected } =
+    useCanvasNodeVisualSelection(id)
   const highlight = remoteHighlights.get(id)
   const showHandles = selected && !dragging
   const keepAspectRatio = useShiftKeyPressed()

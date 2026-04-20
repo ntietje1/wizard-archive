@@ -43,9 +43,9 @@ describe('CanvasAwarenessHost', () => {
     vi.spyOn(canvasToolModules, 'getCanvasToolAwarenessLayers').mockReturnValue([])
     vi.spyOn(canvasNodeRegistry, 'getCanvasNodeAwarenessLayers').mockReturnValue([])
 
-    const { getByTestId } = render(<CanvasAwarenessHost remoteUsers={[]} />)
+    render(<CanvasAwarenessHost remoteUsers={[]} />)
 
-    const transformedLayerContainer = getByTestId('awareness-layer-container')
+    const transformedLayerContainer = screen.getByTestId('awareness-layer-container')
     expect(transformedLayerContainer).toHaveStyle({
       transform: 'translate(12px, 34px) scale(2)',
       transformOrigin: '0 0',

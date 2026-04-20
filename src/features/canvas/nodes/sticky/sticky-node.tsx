@@ -4,6 +4,7 @@ import { CanvasNodeConnectionHandles } from '../shared/canvas-node-connection-ha
 import { useInlineCanvasNodeEdit } from '../shared/use-inline-canvas-node-edit'
 import type { Node, NodeProps } from '@xyflow/react'
 import { useCanvasNodeActionsContext } from '../../runtime/providers/canvas-runtime-context'
+import { useIsCanvasNodeSelected } from '../../runtime/selection/use-canvas-selection-state'
 
 export type StickyNodeData = { label?: string; color?: string; opacity?: number }
 
@@ -30,8 +31,9 @@ export function StickyPreview({
   )
 }
 
-export function StickyNode({ id, data, selected, dragging }: NodeProps<Node<StickyNodeData>>) {
+export function StickyNode({ id, data, dragging }: NodeProps<Node<StickyNodeData>>) {
   const { updateNodeData } = useCanvasNodeActionsContext()
+  const isSelected = useIsCanvasNodeSelected(id)
   const label = data.label || ''
   const color = data.color || STICKY_DEFAULT_COLOR
   const opacity = (data.opacity ?? 100) / 100
@@ -39,7 +41,7 @@ export function StickyNode({ id, data, selected, dragging }: NodeProps<Node<Stic
   const { isEditing, editValue, setEditValue, startEditing, handleBlur, handleInputKeyDown } =
     useInlineCanvasNodeEdit<HTMLTextAreaElement>({
       id,
-      selected: !!selected,
+      selected: isSelected,
       value: label,
       onCommit: (nextValue) => updateNodeData(id, { label: nextValue }),
       shouldCommit: (event) => event.key === 'Enter' && (event.metaKey || event.ctrlKey),
@@ -50,7 +52,6 @@ export function StickyNode({ id, data, selected, dragging }: NodeProps<Node<Stic
     <ResizableNodeWrapper
       id={id}
       nodeType="sticky"
-      selected={!!selected}
       dragging={!!dragging}
       minWidth={100}
       minHeight={100}
@@ -69,7 +70,7 @@ export function StickyNode({ id, data, selected, dragging }: NodeProps<Node<Stic
           }
         }}
       >
-        <CanvasNodeConnectionHandles selected={!!selected} />
+        <CanvasNodeConnectionHandles selected={isSelected} />
         {isEditing ? (
           <textarea
             className="bg-transparent outline-none text-sm w-full h-full min-h-[80px] resize-none nowheel"

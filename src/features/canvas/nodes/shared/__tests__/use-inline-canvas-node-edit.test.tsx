@@ -106,6 +106,7 @@ describe('useInlineCanvasNodeEdit', () => {
     act(() => {
       result.current.handleInputKeyDown({
         key: 'Escape',
+        currentTarget: { value: 'Draft' },
         preventDefault: vi.fn(),
         stopPropagation: vi.fn(),
       } as unknown as KeyboardEvent<HTMLInputElement>)

@@ -18,20 +18,20 @@ export const selectToolModule: CanvasToolModule<'select'> = {
     Layer: SelectToolLocalOverlayLayer,
     clear: clearSelectToolLocalOverlay,
   },
-  create: (environment) => ({
+  create: (services) => ({
     onNodeClick: (event, node) => {
-      environment.selection.toggleNodeFromTarget(node.id, isSelectionToggleModifier(event))
+      services.selection.toggleNodeFromTarget(node.id, isSelectionToggleModifier(event))
     },
     onEdgeClick: (event, edge) => {
-      environment.selection.toggleEdgeFromTarget(edge.id, isSelectionToggleModifier(event))
+      services.selection.toggleEdgeFromTarget(edge.id, isSelectionToggleModifier(event))
     },
     onPaneClick: (event) => {
-      environment.selection.toggleNodeFromTarget(
+      services.selection.toggleNodeFromTarget(
         hitTestCanvasNode(
           {
-            getMeasuredNodes: environment.document.getMeasuredNodes,
-            getZoom: environment.viewport.getZoom,
-            screenToFlowPosition: environment.viewport.screenToFlowPosition,
+            getMeasuredNodes: services.document.getMeasuredNodes,
+            getZoom: services.viewport.getZoom,
+            screenToFlowPosition: services.viewport.screenToFlowPosition,
           },
           event,
         ),

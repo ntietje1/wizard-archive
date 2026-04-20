@@ -3,9 +3,14 @@ import type { CanvasSelectionSnapshot } from '../../tools/canvas-tool-types'
 import type { ContextMenuContributor } from '~/features/context-menu/types'
 import type { Edge, Node } from '@xyflow/react'
 
+export interface CanvasContextMenuPoint {
+  x: number
+  y: number
+}
+
 export interface CanvasContextMenuContext {
   surface: 'canvas'
-  pointerPosition: { x: number; y: number }
+  pointerPosition: CanvasContextMenuPoint
   selection: CanvasSelectionSnapshot
   canEdit: boolean
 }

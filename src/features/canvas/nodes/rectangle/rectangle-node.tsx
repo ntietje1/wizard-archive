@@ -5,7 +5,7 @@ export type RectangleNodeData = { color?: string; opacity?: number }
 
 export function RectanglePreview({ color, opacity }: { color: string; opacity?: number }) {
   const normalizedOpacity = Number.isFinite(opacity)
-    ? Math.min(Math.max(opacity ?? 100, 0), 100)
+    ? Math.min(Math.max(opacity, 0), 100)
     : 100
 
   return (
@@ -23,7 +23,6 @@ export function RectanglePreview({ color, opacity }: { color: string; opacity?: 
 
 export function RectangleNode({
   id,
-  selected,
   dragging,
   data,
 }: NodeProps<Node<RectangleNodeData>>) {
@@ -31,7 +30,6 @@ export function RectangleNode({
     <ResizableNodeWrapper
       id={id}
       nodeType="rectangle"
-      selected={!!selected}
       dragging={!!dragging}
       minWidth={20}
       minHeight={20}

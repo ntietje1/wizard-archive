@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { drawToolModule } from '../draw-tool-module'
 import { clearDrawToolLocalOverlay, useDrawToolLocalOverlayStore } from '../draw-tool-local-overlay'
-import type { CanvasToolEnvironment } from '../../canvas-tool-types'
+import type { CanvasToolServices } from '../../canvas-tool-types'
 
 type MockPointerTarget = HTMLDivElement & {
   setPointerCapture: (pointerId: number) => void
@@ -88,7 +88,7 @@ function createDrawEnvironment({
 }: {
   createNode: (node: unknown) => void
   setPresence: (namespace: string, value: unknown) => void
-}): CanvasToolEnvironment {
+}): CanvasToolServices {
   return {
     viewport: {
       screenToFlowPosition: ({ x, y }) => ({ x, y }),

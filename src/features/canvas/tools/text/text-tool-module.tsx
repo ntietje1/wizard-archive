@@ -8,24 +8,24 @@ export const textToolModule: CanvasToolModule<'text'> = {
   group: 'creation',
   icon: <Type className="h-4 w-4" />,
   cursor: 'copy',
-  create: (environment) => ({
+  create: (services) => ({
     onPaneClick: (event) => {
       try {
         const placement = createCanvasNodePlacement('text', {
-          position: environment.viewport.screenToFlowPosition({
+          position: services.viewport.screenToFlowPosition({
             x: event.clientX,
             y: event.clientY,
           }),
         })
-        environment.document.createNode(placement.node)
+        services.document.createNode(placement.node)
         if (placement.node.selected) {
-          environment.selection.replaceNodes([placement.node.id])
+          services.selection.replaceNodes([placement.node.id])
         }
         if (placement.startEditing) {
-          environment.editSession.setPendingEditNodeId(placement.node.id)
+          services.editSession.setPendingEditNodeId(placement.node.id)
         }
       } finally {
-        environment.toolState.setActiveTool('select')
+        services.toolState.setActiveTool('select')
       }
     },
   }),
