@@ -95,7 +95,7 @@ export function ColorPickerPopover({
   return (
     <Popover>
       <PopoverTrigger
-        nativeButton
+        nativeButton={false}
         render={(props) => (
           <span
             {...props}
