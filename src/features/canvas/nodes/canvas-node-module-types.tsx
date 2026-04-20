@@ -4,6 +4,7 @@ import type { CanvasAwarenessCapability, CanvasDocumentWriter } from '../tools/c
 import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
 import type { Point2D } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-geometry-utils'
+import type { CanvasContextMenuCapability } from '../runtime/context-menu/canvas-context-menu-types'
 
 export interface CanvasNodePreviewOptions {
   width: number
@@ -62,6 +63,7 @@ interface CanvasNodeModuleDefinitionBase<
   selection?: CanvasNodeSelection<TData>
   renderMinimap?: (props: CanvasNodeMinimapProps) => ReactNode
   awareness?: CanvasAwarenessCapability
+  contextMenu?: CanvasContextMenuCapability
   resize?: (
     node: Node<TData>,
     resize: { width: number; height: number; position: XYPosition },
@@ -98,6 +100,7 @@ export function createCanvasNodeModule<
     selection: definition.selection,
     renderMinimap: definition.renderMinimap,
     awareness: definition.awareness,
+    contextMenu: definition.contextMenu,
     resize: definition.resize,
     create: ({ position, size, data }) => {
       const resolvedSize = size ?? definition.defaultSize

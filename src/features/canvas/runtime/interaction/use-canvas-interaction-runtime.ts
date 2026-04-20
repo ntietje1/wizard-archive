@@ -18,7 +18,7 @@ import type { CanvasDocumentWriter, CanvasSelectionController } from '../../tool
 import type { CanvasSessionRuntime } from '../session/use-canvas-session-state'
 import type { UseCanvasDropIntegrationOptions } from './use-canvas-drop-integration'
 import type { CanvasRemoteDragAnimation } from './use-canvas-remote-drag-animation'
-import type { OnConnect, OnEdgesDelete, OnNodesDelete } from '@xyflow/react'
+import type { Edge, Node, OnConnect, OnEdgesDelete, OnNodesDelete } from '@xyflow/react'
 import type * as Y from 'yjs'
 
 interface UseCanvasInteractionRuntimeOptions {
@@ -26,6 +26,8 @@ interface UseCanvasInteractionRuntimeOptions {
   canEdit: boolean
   activeToolId: CanvasFlowShellProps['activeTool']
   doc: Y.Doc
+  nodesMap: Y.Map<Node>
+  edgesMap: Y.Map<Edge>
   canvasSurfaceRef: RefObject<HTMLDivElement | null>
   session: CanvasSessionRuntime
   selectionController: CanvasSelectionController
@@ -40,6 +42,8 @@ export function useCanvasInteractionRuntime({
   canEdit,
   activeToolId,
   doc,
+  nodesMap,
+  edgesMap,
   canvasSurfaceRef,
   session,
   selectionController,
@@ -158,6 +162,11 @@ export function useCanvasInteractionRuntime({
     canvasSurfaceRef,
     remoteUsers: session.remoteUsers,
     activeTool: activeToolId,
+    contextMenu: {
+      nodesMap,
+      edgesMap,
+      selectionController,
+    },
     onNodeDragStart: isSelectMode ? onNodeDragStart : undefined,
     onNodeDrag: isSelectMode ? onNodeDrag : undefined,
     onNodeDragStop: isSelectMode ? onNodeDragStop : undefined,

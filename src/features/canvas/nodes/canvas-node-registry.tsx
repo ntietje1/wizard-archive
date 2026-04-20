@@ -16,6 +16,7 @@ import type { CanvasAwarenessCapability, CanvasDocumentWriter } from '../tools/c
 import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
 import type { Point2D } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-geometry-utils'
+import type { CanvasContextMenuContributor } from '../runtime/context-menu/canvas-context-menu-types'
 import { boundsFromPoints, rectIntersectsBounds } from '../utils/canvas-geometry-utils'
 import { rectangleNodeModule } from './rectangle/rectangle-node-module'
 import { strokeNodeModule } from './stroke/stroke-node-module'
@@ -97,6 +98,11 @@ export function getCanvasNodeAwarenessLayers(): ReadonlyArray<{
   Layer: CanvasAwarenessLayer
 }> {
   return canvasNodeAwarenessLayers
+}
+
+export function getCanvasNodeContextMenuContributors(type: string | undefined) {
+  return (getCanvasNodeModuleByType(type)?.contextMenu?.contributors ??
+    []) as ReadonlyArray<CanvasContextMenuContributor>
 }
 
 export function createCanvasNodePlacement(

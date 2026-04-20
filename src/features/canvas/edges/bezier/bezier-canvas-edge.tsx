@@ -32,6 +32,7 @@ export function BezierCanvasEdge(props: CanvasEdgeRendererProps) {
     <g
       data-testid="canvas-edge"
       data-edge-id={props.id}
+      data-edge-type={props.type}
       data-edge-selected={props.selected ? 'true' : 'false'}
       data-edge-visual-selected={visuallySelected ? 'true' : 'false'}
       data-edge-pending-preview-active={pendingPreviewActive ? 'true' : 'false'}

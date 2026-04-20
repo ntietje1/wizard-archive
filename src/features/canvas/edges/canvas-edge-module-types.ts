@@ -1,5 +1,6 @@
 import type { Point2D } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-geometry-utils'
+import type { CanvasContextMenuCapability } from '../runtime/context-menu/canvas-context-menu-types'
 import type { Edge, EdgeProps, EdgeTypes, Node } from '@xyflow/react'
 
 export type CanvasEdgeType = 'bezier'
@@ -27,6 +28,7 @@ export interface CanvasEdgeModule<TType extends CanvasEdgeType = CanvasEdgeType>
   type: TType
   EdgeComponent: CanvasEdgeRenderer
   selection: CanvasEdgeSelection
+  contextMenu?: CanvasContextMenuCapability
 }
 
 export type AnyCanvasEdgeModule = {

@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { Background, ConnectionMode, MiniMap, ReactFlow, SelectionMode } from '@xyflow/react'
 import { useShallow } from 'zustand/shallow'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
@@ -9,9 +10,13 @@ import { MiniMapNode } from './canvas-minimap-node'
 import { CanvasToolbar } from './canvas-toolbar'
 import { canvasEdgeTypes } from '../edges/canvas-edge-registry'
 import { canvasNodeTypes } from '../nodes/canvas-node-types'
+import { CanvasContextMenu } from '../runtime/context-menu/canvas-context-menu'
+import type { CanvasContextMenuRef } from '../runtime/context-menu/canvas-context-menu'
 import { useCanvasPendingSelectionPreviewStore } from '../runtime/selection/use-canvas-pending-selection-preview'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
+import type { CanvasSelectionController } from '../tools/canvas-tool-types'
 import type { Edge, Node, OnConnect, OnEdgesDelete, OnNodeDrag, OnNodesDelete } from '@xyflow/react'
+import type * as Y from 'yjs'
 
 const PRO_OPTIONS = { hideAttribution: true }
 const DELETE_KEYS = ['Backspace', 'Delete']
@@ -29,6 +34,11 @@ export interface CanvasFlowShellProps {
   canvasSurfaceRef: React.RefObject<HTMLDivElement | null>
   remoteUsers: Array<RemoteUser>
   activeTool: string
+  contextMenu: {
+    nodesMap: Y.Map<Node>
+    edgesMap: Y.Map<Edge>
+    selectionController: Pick<CanvasSelectionController, 'replace' | 'clear'>
+  }
   onNodeDragStart?: OnNodeDrag
   onNodeDrag?: OnNodeDrag
   onNodeDragStop?: OnNodeDrag
@@ -59,6 +69,7 @@ export function CanvasFlowShell({
   canvasSurfaceRef,
   remoteUsers,
   activeTool,
+  contextMenu,
   onNodeDragStart,
   onNodeDrag,
   onNodeDragStop,
@@ -77,6 +88,7 @@ export function CanvasFlowShell({
   isFileDropTarget,
 }: CanvasFlowShellComponentProps) {
   const isSelectMode = activeTool === 'select'
+  const contextMenuRef = useRef<CanvasContextMenuRef>(null)
   const pendingSelectionPreview = useCanvasPendingSelectionPreviewStore(
     useShallow((state) => ({
       active: state.pendingNodeIds !== null,
@@ -114,6 +126,13 @@ export function CanvasFlowShell({
           onNodeClick={onNodeClick}
           onEdgeClick={onEdgeClick}
           onPaneClick={onPaneClick}
+          onNodeContextMenu={(event, node) =>
+            contextMenuRef.current?.onNodeContextMenu(event, node)
+          }
+          onEdgeContextMenu={(event, edge) =>
+            contextMenuRef.current?.onEdgeContextMenu(event, edge)
+          }
+          onPaneContextMenu={(event) => contextMenuRef.current?.onPaneContextMenu(event)}
           onMouseMove={onMouseMove}
           onMouseLeave={onMouseLeave}
           edgeTypes={canvasEdgeTypes}
@@ -144,6 +163,15 @@ export function CanvasFlowShell({
           <CanvasLocalOverlaysHost />
           <CanvasAwarenessHost remoteUsers={remoteUsers} />
         </ReactFlow>
+
+        <CanvasContextMenu
+          ref={contextMenuRef}
+          activeTool={activeTool}
+          canEdit={canEdit}
+          nodesMap={contextMenu.nodesMap}
+          edgesMap={contextMenu.edgesMap}
+          selectionController={contextMenu.selectionController}
+        />
 
         {pendingSelectionPreview.active && (
           <CanvasPendingSelectionStatus

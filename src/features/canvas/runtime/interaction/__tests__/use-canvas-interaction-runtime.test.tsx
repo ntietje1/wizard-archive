@@ -178,6 +178,8 @@ describe('useCanvasInteractionRuntime', () => {
         canEdit: true,
         activeToolId: 'select',
         doc: {} as Y.Doc,
+        nodesMap: {} as Y.Map<any>,
+        edgesMap: {} as Y.Map<any>,
         canvasSurfaceRef,
         session,
         selectionController,

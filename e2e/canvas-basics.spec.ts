@@ -5,6 +5,7 @@ import {
   clickCanvasNode,
   createCanvas,
   DEFAULT_CANVAS_NAME,
+  getCanvasPane,
   getCanvasNodeHandle,
   dragOnCanvas,
   getCanvasNodesByType,
@@ -197,5 +198,122 @@ test.describe.serial('canvas basics', () => {
 
     await page.mouse.up()
     await expect.poll(() => page.locator('.react-flow__edge').count()).toBe(edgeCountBefore + 1)
+  })
+
+  test('closing the canvas context menu on left mouse down can continue into a node drag', async ({
+    page,
+  }) => {
+    await page.goto('/campaigns')
+    await navigateToCampaign(page, campaignName)
+    await openCanvas(page, canvasName)
+
+    await selectCanvasTool(page, 'Post-it')
+    await clickCanvasAt(page, { x: 520, y: 420 })
+    const stickyInput = page.getByLabel('Sticky note text')
+    await expect(stickyInput).toBeVisible()
+    await stickyInput.fill('Drag after context menu')
+    await stickyInput.press(`${mod}+Enter`)
+
+    await selectCanvasTool(page, 'Pointer')
+    const stickyNode = page
+      .locator('[data-testid="canvas-node"][data-node-type="sticky"]')
+      .filter({ has: page.getByText('Drag after context menu', { exact: true }) })
+      .first()
+    await clickCanvasNode(page, stickyNode)
+
+    const before = await stickyNode.boundingBox()
+    if (!before) {
+      throw new Error('Sticky node is not visible before context menu drag test')
+    }
+
+    const dragStartPoint = {
+      x: before.x + 24,
+      y: before.y + 24,
+    }
+
+    await page.mouse.click(dragStartPoint.x, dragStartPoint.y, {
+      button: 'right',
+    })
+    await expect(page.getByRole('menu')).toBeVisible()
+
+    await page.mouse.move(dragStartPoint.x, dragStartPoint.y)
+    await page.mouse.down()
+    await page.mouse.move(dragStartPoint.x + 120, dragStartPoint.y + 60, {
+      steps: 12,
+    })
+    await page.mouse.up()
+
+    await expect(page.getByRole('menu')).not.toBeVisible()
+
+    await expect
+      .poll(async () => {
+        const box = await stickyNode.boundingBox()
+        if (!box) {
+          return false
+        }
+
+        return box.x - before.x > 80 && box.y - before.y > 30
+      })
+      .toBe(true)
+  })
+
+  test('canvas context menu stays open while hovering paste and reorder items', async ({
+    page,
+  }) => {
+    await page.goto('/campaigns')
+    await navigateToCampaign(page, campaignName)
+    await openCanvas(page, canvasName)
+
+    const pane = getCanvasPane(page)
+    const paneBox = await pane.boundingBox()
+    if (!paneBox) {
+      throw new Error('Canvas pane is not visible before context menu hover test')
+    }
+
+    await selectCanvasTool(page, 'Pointer')
+    await page.mouse.click(paneBox.x + 80, paneBox.y + 80, { button: 'right' })
+
+    const pasteItem = page.getByRole('menuitem', { name: 'Paste' })
+    await expect(pasteItem).toBeVisible()
+    const pasteBox = await pasteItem.boundingBox()
+    if (!pasteBox) {
+      throw new Error('Paste menu item is not visible during context menu hover test')
+    }
+    await page.mouse.move(pasteBox.x + pasteBox.width / 2, pasteBox.y + pasteBox.height / 2)
+    await page.mouse.move(paneBox.x + 220, paneBox.y + 80)
+    await expect(pasteItem).toBeVisible()
+
+    await page.mouse.click(paneBox.x + 240, paneBox.y + 240)
+
+    await selectCanvasTool(page, 'Post-it')
+    await clickCanvasAt(page, { x: 640, y: 180 })
+    const stickyInput = page.getByLabel('Sticky note text')
+    await expect(stickyInput).toBeVisible()
+    await stickyInput.fill('Context menu reorder hover')
+    await stickyInput.press(`${mod}+Enter`)
+
+    await selectCanvasTool(page, 'Pointer')
+    const stickyNode = page
+      .locator('[data-testid="canvas-node"][data-node-type="sticky"]')
+      .filter({ has: page.getByText('Context menu reorder hover', { exact: true }) })
+      .first()
+
+    const stickyBox = await stickyNode.boundingBox()
+    if (!stickyBox) {
+      throw new Error('Sticky node is not visible before reorder hover test')
+    }
+
+    await page.mouse.click(stickyBox.x + stickyBox.width / 2, stickyBox.y + stickyBox.height / 2, {
+      button: 'right',
+    })
+
+    const reorderItem = page.getByRole('menuitem', { name: 'Reorder' })
+    await expect(reorderItem).toBeVisible()
+    const reorderBox = await reorderItem.boundingBox()
+    if (!reorderBox) {
+      throw new Error('Reorder menu item is not visible during context menu hover test')
+    }
+    await page.mouse.move(reorderBox.x + reorderBox.width / 2, reorderBox.y + reorderBox.height / 2)
+    await expect(page.getByRole('menuitem', { name: 'Send to back' })).toBeVisible()
   })
 })

@@ -3,6 +3,7 @@ import { getCanvasNodeModuleByType } from '../../nodes/canvas-node-registry'
 import type { CanvasNodeData, CanvasNodeType } from '../../nodes/canvas-node-module-types'
 import type { CanvasDocumentWriter } from '../../tools/canvas-tool-types'
 import { stripEphemeralCanvasNodeState } from '../../utils/canvas-node-persistence'
+import { getNextCanvasElementZIndex } from './canvas-stack-order'
 import type { Connection, Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 import { logger } from '~/shared/utils/logger'
@@ -112,7 +113,16 @@ export function useCanvasDocumentWriter({
           if (nodesMap.has(node.id)) {
             throw new Error(`Canvas node "${node.id}" already exists`)
           }
-          nodesMap.set(node.id, sanitizeNodeForPersistence(node, 'createNode'))
+          nodesMap.set(
+            node.id,
+            sanitizeNodeForPersistence(
+              {
+                ...node,
+                zIndex: node.zIndex ?? getNextCanvasElementZIndex(Array.from(nodesMap.values())),
+              },
+              'createNode',
+            ),
+          )
         })
       },
       updateNode: (nodeId, updater) => {
@@ -169,7 +179,12 @@ export function useCanvasDocumentWriter({
       },
       createEdge: (connection) => {
         const id = createCanvasEdgeId(connection)
-        const edge: Edge = { id, type: 'bezier', ...connection }
+        const edge: Edge = {
+          id,
+          type: 'bezier',
+          zIndex: getNextCanvasElementZIndex(Array.from(edgesMap.values())),
+          ...connection,
+        }
         withEdgeTransaction(() => {
           edgesMap.set(id, edge)
         })

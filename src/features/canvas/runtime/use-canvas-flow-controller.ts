@@ -63,6 +63,8 @@ export function useCanvasFlowController({
     canEdit,
     activeToolId,
     doc,
+    nodesMap,
+    edgesMap,
     canvasSurfaceRef,
     session,
     selectionController,

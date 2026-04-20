@@ -5,6 +5,7 @@ import type {
   CanvasEdgeSelectionContext,
   CanvasEdgeType,
 } from './canvas-edge-module-types'
+import type { CanvasContextMenuContributor } from '../runtime/context-menu/canvas-context-menu-types'
 import type { Point2D } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-geometry-utils'
 import type { Edge, EdgeTypes, Node } from '@xyflow/react'
@@ -47,6 +48,11 @@ function getCanvasEdgeModuleByType(type: string | undefined): AnyCanvasEdgeModul
   if (!type) return bezierCanvasEdgeModule
   if (!isCanvasEdgeType(type)) return bezierCanvasEdgeModule
   return getCanvasEdgeModule(type)
+}
+
+export function getCanvasEdgeContextMenuContributors(type: string | undefined) {
+  return (getCanvasEdgeModuleByType(type).contextMenu?.contributors ??
+    []) as ReadonlyArray<CanvasContextMenuContributor>
 }
 
 function filterCanvasEdgeSelectionCandidates(

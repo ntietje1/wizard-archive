@@ -45,9 +45,22 @@ vi.mock('../canvas-awareness-host', () => ({
   CanvasAwarenessHost: () => null,
 }))
 
+vi.mock('../../runtime/context-menu/canvas-context-menu', () => ({
+  CanvasContextMenu: () => null,
+}))
+
 vi.mock('../canvas-minimap-node', () => ({
   MiniMapNode: () => null,
 }))
+
+const contextMenu = {
+  nodesMap: {} as never,
+  edgesMap: {} as never,
+  selectionController: {
+    replace: vi.fn(),
+    clear: vi.fn(),
+  },
+}
 
 describe('CanvasFlowShell', () => {
   it('disables React Flow double click zoom', () => {
@@ -59,6 +72,7 @@ describe('CanvasFlowShell', () => {
         canvasSurfaceRef={{ current: null }}
         remoteUsers={[]}
         activeTool="select"
+        contextMenu={contextMenu}
         onMouseMove={vi.fn()}
         onMouseLeave={vi.fn()}
         dropOverlayRef={createRef<HTMLDivElement>()}
@@ -79,6 +93,7 @@ describe('CanvasFlowShell', () => {
         canvasSurfaceRef={{ current: null }}
         remoteUsers={[]}
         activeTool="select"
+        contextMenu={contextMenu}
         onMouseMove={vi.fn()}
         onMouseLeave={vi.fn()}
         dropOverlayRef={createRef<HTMLDivElement>()}
@@ -99,6 +114,7 @@ describe('CanvasFlowShell', () => {
         canvasSurfaceRef={{ current: null }}
         remoteUsers={[]}
         activeTool="select"
+        contextMenu={contextMenu}
         onMouseMove={vi.fn()}
         onMouseLeave={vi.fn()}
         dropOverlayRef={createRef<HTMLDivElement>()}

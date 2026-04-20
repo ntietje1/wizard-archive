@@ -22,24 +22,24 @@ export const isNotType =
 export const inView =
   (...views: Array<ViewContext>): Predicate =>
   (ctx) =>
-    views.includes(ctx.viewContext)
+    views.includes(ctx.surface)
 
 export const notInView =
   (...views: Array<ViewContext>): Predicate =>
   (ctx) =>
-    !views.includes(ctx.viewContext)
+    !views.includes(ctx.surface)
 
-export const inSidebar: Predicate = (ctx) => ctx.viewContext === VIEW_CONTEXT.SIDEBAR
+export const inSidebar: Predicate = (ctx) => ctx.surface === VIEW_CONTEXT.SIDEBAR
 
-export const notInSidebar: Predicate = (ctx) => ctx.viewContext !== VIEW_CONTEXT.SIDEBAR
+export const notInSidebar: Predicate = (ctx) => ctx.surface !== VIEW_CONTEXT.SIDEBAR
 
-export const inNoteView: Predicate = (ctx) => ctx.viewContext === VIEW_CONTEXT.NOTE_VIEW
+export const inNoteView: Predicate = (ctx) => ctx.surface === VIEW_CONTEXT.NOTE_VIEW
 
 export const hasBlockNoteEditor: Predicate = (ctx) => ctx.editor !== undefined
 
 export const hasBlockNoteId: Predicate = (ctx) => ctx.blockNoteId !== undefined
 
-export const viewingCanvas: Predicate = (ctx) => ctx.viewContext === VIEW_CONTEXT.CANVAS_VIEW
+export const viewingCanvas: Predicate = (ctx) => ctx.surface === VIEW_CONTEXT.CANVAS_VIEW
 
 export const atRoot: Predicate = (ctx) => !isSidebarItem(ctx)
 
