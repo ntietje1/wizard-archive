@@ -50,6 +50,7 @@ export function useCanvasFlowController({
   }, [canvasId])
 
   const { documentWriter, history } = useCanvasDocumentRuntime({
+    canEdit,
     nodesMap,
     edgesMap,
     selection: selectionController,

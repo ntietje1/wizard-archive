@@ -10,15 +10,17 @@ import type { Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 
 interface UseCanvasDocumentRuntimeOptions {
+  canEdit: boolean
   nodesMap: Y.Map<Node>
   edgesMap: Y.Map<Edge>
-  selection: Pick<CanvasSelectionController, 'replace'>
+  selection: Pick<CanvasSelectionController, 'replace' | 'clear'>
   localDraggingIdsRef: RefObject<Set<string>>
   remoteResizeDimensions: ResizingState
   remoteDragAnimation: CanvasRemoteDragAnimation
 }
 
 export function useCanvasDocumentRuntime({
+  canEdit,
   nodesMap,
   edgesMap,
   selection,
@@ -37,7 +39,13 @@ export function useCanvasDocumentRuntime({
   })
 
   const history = useCanvasHistory({ nodesMap, edgesMap, selection })
-  useCanvasKeyboardShortcuts(history)
+  useCanvasKeyboardShortcuts({
+    ...history,
+    canEdit,
+    nodesMap,
+    edgesMap,
+    selection,
+  })
 
   return {
     documentWriter,

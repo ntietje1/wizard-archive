@@ -11,6 +11,12 @@ const hotkeyRegistrations = vi.hoisted(
     }>,
 )
 const clearSelectionSpy = vi.hoisted(() => vi.fn())
+const copySnapshotSpy = vi.hoisted(() => vi.fn(() => true))
+const cutSnapshotSpy = vi.hoisted(() => vi.fn(() => true))
+const pasteClipboardSpy = vi.hoisted(() => vi.fn(() => ({ nodeIds: ['node-2'], edgeIds: [] })))
+const getCanvasSelectionSnapshotSpy = vi.hoisted(() =>
+  vi.fn(() => ({ nodeIds: ['node-1'], edgeIds: [] })),
+)
 
 vi.mock('@tanstack/react-hotkeys', () => ({
   useHotkey: (
@@ -20,6 +26,18 @@ vi.mock('@tanstack/react-hotkeys', () => ({
   ) => {
     hotkeyRegistrations.push({ hotkey, callback, options })
   },
+}))
+
+vi.mock('../../context-menu/use-canvas-context-menu-services', () => ({
+  useCanvasContextMenuServices: () => ({
+    copySnapshot: copySnapshotSpy,
+    cutSnapshot: cutSnapshotSpy,
+    pasteClipboard: pasteClipboardSpy,
+  }),
+}))
+
+vi.mock('../../selection/use-canvas-selection-state', () => ({
+  getCanvasSelectionSnapshot: () => getCanvasSelectionSnapshotSpy(),
 }))
 
 vi.mock('../../selection/use-canvas-selection-actions', () => ({
@@ -41,6 +59,10 @@ describe('useCanvasKeyboardShortcuts', () => {
   beforeEach(() => {
     hotkeyRegistrations.length = 0
     clearSelectionSpy.mockReset()
+    copySnapshotSpy.mockClear()
+    cutSnapshotSpy.mockClear()
+    pasteClipboardSpy.mockClear()
+    getCanvasSelectionSnapshotSpy.mockClear()
   })
 
   it('registers the canvas shortcuts through TanStack Hotkeys with input filtering enabled', () => {
@@ -49,15 +71,29 @@ describe('useCanvasKeyboardShortcuts', () => {
       redo: vi.fn(),
     }
 
-    renderHook(() => useCanvasKeyboardShortcuts(history))
+    renderHook(() =>
+      useCanvasKeyboardShortcuts({
+        ...history,
+        canEdit: true,
+        nodesMap: {} as never,
+        edgesMap: {} as never,
+        selection: { replace: vi.fn(), clear: vi.fn() },
+      }),
+    )
 
     expect(hotkeyRegistrations.map((entry) => entry.hotkey)).toEqual([
       'Escape',
       'Mod+Z',
       'Mod+Shift+Z',
       'Mod+Y',
+      'Mod+C',
+      'Mod+X',
+      'Mod+V',
     ])
     expect(hotkeyRegistrations.map((entry) => entry.options)).toEqual([
+      { ignoreInputs: true },
+      { ignoreInputs: true },
+      { ignoreInputs: true },
       { ignoreInputs: true },
       { ignoreInputs: true },
       { ignoreInputs: true },
@@ -65,13 +101,21 @@ describe('useCanvasKeyboardShortcuts', () => {
     ])
   })
 
-  it('routes Escape, undo, and redo through the expected canvas actions while ignoring repeated key events', () => {
+  it('routes Escape, undo, redo, copy, cut, and paste through the expected canvas actions while ignoring repeated key events', () => {
     const history = {
       undo: vi.fn(),
       redo: vi.fn(),
     }
 
-    renderHook(() => useCanvasKeyboardShortcuts(history))
+    renderHook(() =>
+      useCanvasKeyboardShortcuts({
+        ...history,
+        canEdit: true,
+        nodesMap: {} as never,
+        edgesMap: {} as never,
+        selection: { replace: vi.fn(), clear: vi.fn() },
+      }),
+    )
 
     getRegistration('Escape').callback(new KeyboardEvent('keydown', { key: 'Escape' }))
     getRegistration('Mod+Z').callback(new KeyboardEvent('keydown', { key: 'z' }))
@@ -79,10 +123,16 @@ describe('useCanvasKeyboardShortcuts', () => {
       new KeyboardEvent('keydown', { key: 'Z', shiftKey: true }),
     )
     getRegistration('Mod+Y').callback(new KeyboardEvent('keydown', { key: 'y' }))
+    getRegistration('Mod+C').callback(new KeyboardEvent('keydown', { key: 'c', ctrlKey: true }))
+    getRegistration('Mod+X').callback(new KeyboardEvent('keydown', { key: 'x', ctrlKey: true }))
+    getRegistration('Mod+V').callback(new KeyboardEvent('keydown', { key: 'v', ctrlKey: true }))
     getRegistration('Mod+Z').callback(new KeyboardEvent('keydown', { key: 'z', repeat: true }))
 
     expect(clearSelectionSpy).toHaveBeenCalledTimes(1)
     expect(history.undo).toHaveBeenCalledTimes(1)
     expect(history.redo).toHaveBeenCalledTimes(2)
+    expect(copySnapshotSpy).toHaveBeenCalledWith({ nodeIds: ['node-1'], edgeIds: [] })
+    expect(cutSnapshotSpy).toHaveBeenCalledWith({ nodeIds: ['node-1'], edgeIds: [] })
+    expect(pasteClipboardSpy).toHaveBeenCalledTimes(1)
   })
 })

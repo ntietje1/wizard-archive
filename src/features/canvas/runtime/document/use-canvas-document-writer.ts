@@ -1,10 +1,11 @@
 import { useMemo } from 'react'
 import { getCanvasNodeModuleByType } from '../../nodes/canvas-node-registry'
+import { getCanvasDeletionSelection } from '../context-menu/canvas-context-menu-selection'
 import type { CanvasNodeData, CanvasNodeType } from '../../nodes/canvas-node-module-types'
 import type { CanvasDocumentWriter } from '../../tools/canvas-tool-types'
 import { stripEphemeralCanvasNodeState } from '../../utils/canvas-node-persistence'
 import { getNextCanvasElementZIndex } from './canvas-stack-order'
-import { transactCanvasMap } from './canvas-yjs-transactions'
+import { transactCanvasMap, transactCanvasMaps } from './canvas-yjs-transactions'
 import type { Connection, Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 import { logger } from '~/shared/utils/logger'
@@ -163,8 +164,12 @@ export function useCanvasDocumentWriter({
       },
       deleteNodes: (nodeIds) => {
         if (nodeIds.length === 0) return
-        withNodeTransaction(() => {
-          for (const nodeId of nodeIds) {
+        const deletionSelection = getCanvasDeletionSelection(edgesMap, { nodeIds, edgeIds: [] })
+        transactCanvasMaps(nodesMap, edgesMap, () => {
+          for (const edgeId of deletionSelection.edgeIds) {
+            edgesMap.delete(edgeId)
+          }
+          for (const nodeId of deletionSelection.nodeIds) {
             nodesMap.delete(nodeId)
           }
         })

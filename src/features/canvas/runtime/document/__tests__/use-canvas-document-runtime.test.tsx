@@ -53,10 +53,11 @@ describe('useCanvasDocumentRuntime', () => {
     }
     const nodesMap = {} as Y.Map<Node>
     const edgesMap = {} as Y.Map<Edge>
-    const selection = { replace: vi.fn() }
+    const selection = { replace: vi.fn(), clear: vi.fn() }
 
     const { result } = renderHook(() =>
       useCanvasDocumentRuntime({
+        canEdit: true,
         nodesMap,
         edgesMap,
         selection,
@@ -73,7 +74,13 @@ describe('useCanvasDocumentRuntime', () => {
       remoteResizeDimensions: {},
       remoteDragAnimation,
     })
-    expect(keyboardSpy).toHaveBeenCalledWith(historyMock)
+    expect(keyboardSpy).toHaveBeenCalledWith({
+      ...historyMock,
+      canEdit: true,
+      nodesMap,
+      edgesMap,
+      selection,
+    })
     expect(result.current.documentWriter).toBe(documentWriterMock)
     expect(result.current.history).toBe(historyMock)
   })

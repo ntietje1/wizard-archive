@@ -229,4 +229,46 @@ describe('useCanvasHistory', () => {
       edgeIds: ['edge-1'],
     })
   })
+
+  it('restores connected edges when a node deletion removed both in one document change', () => {
+    const doc = new Y.Doc()
+    docs.push(doc)
+    const nodesMap = doc.getMap<Node>('nodes')
+    const edgesMap = doc.getMap<Edge>('edges')
+
+    const hook = renderHook(() =>
+      useCanvasHistory({ nodesMap, edgesMap, selection: selectionController }),
+    )
+    hooks.push(hook)
+
+    act(() => {
+      doc.transact(() => {
+        nodesMap.set('a', createNode('a'))
+        nodesMap.set('b', createNode('b'))
+        edgesMap.set('edge-1', {
+          id: 'edge-1',
+          type: 'bezier',
+          source: 'a',
+          target: 'b',
+        })
+      })
+    })
+
+    act(() => {
+      doc.transact(() => {
+        edgesMap.delete('edge-1')
+        nodesMap.delete('a')
+      })
+    })
+
+    expect(nodesMap.has('a')).toBe(false)
+    expect(edgesMap.has('edge-1')).toBe(false)
+
+    act(() => {
+      hook.result.current.undo()
+    })
+
+    expect(nodesMap.has('a')).toBe(true)
+    expect(edgesMap.has('edge-1')).toBe(true)
+  })
 })

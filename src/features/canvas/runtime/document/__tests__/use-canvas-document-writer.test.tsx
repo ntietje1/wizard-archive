@@ -112,6 +112,25 @@ describe('useCanvasDocumentWriter', () => {
     expect(stroke?.selected).toBeUndefined()
   })
 
+  it('deletes edges connected to removed nodes in the same document change', () => {
+    nodesMap.set('node-1', createTextNode('node-1'))
+    nodesMap.set('node-2', createTextNode('node-2'))
+    edgesMap.set('edge-1', {
+      id: 'edge-1',
+      type: 'bezier',
+      source: 'node-1',
+      target: 'node-2',
+    })
+    const { result } = renderHook(() => useCanvasDocumentWriter({ nodesMap, edgesMap }))
+
+    act(() => {
+      result.current.deleteNodes(['node-1'])
+    })
+
+    expect(nodesMap.has('node-1')).toBe(false)
+    expect(edgesMap.has('edge-1')).toBe(false)
+  })
+
   it('throws when createNode is called with a duplicate node id', () => {
     nodesMap.set('node-1', createTextNode('node-1'))
     const { result } = renderHook(() => useCanvasDocumentWriter({ nodesMap, edgesMap }))

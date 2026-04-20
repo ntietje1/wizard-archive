@@ -1,12 +1,36 @@
 import { useHotkey } from '@tanstack/react-hotkeys'
-import type { CanvasHistoryController } from '../../tools/canvas-tool-types'
+import { useCanvasContextMenuServices } from '../context-menu/use-canvas-context-menu-services'
+import { getCanvasSelectionSnapshot } from '../selection/use-canvas-selection-state'
 import { useCanvasSelectionActions } from '../selection/use-canvas-selection-actions'
+import type {
+  CanvasHistoryController,
+  CanvasSelectionController,
+} from '../../tools/canvas-tool-types'
+import type { Edge, Node } from '@xyflow/react'
+import type * as Y from 'yjs'
+
+interface UseCanvasKeyboardShortcutsOptions extends Pick<CanvasHistoryController, 'undo' | 'redo'> {
+  canEdit: boolean
+  nodesMap: Y.Map<Node>
+  edgesMap: Y.Map<Edge>
+  selection: Pick<CanvasSelectionController, 'replace' | 'clear'>
+}
 
 export function useCanvasKeyboardShortcuts({
   undo,
   redo,
-}: Pick<CanvasHistoryController, 'undo' | 'redo'>) {
+  canEdit,
+  nodesMap,
+  edgesMap,
+  selection,
+}: UseCanvasKeyboardShortcutsOptions) {
   const selectionActions = useCanvasSelectionActions()
+  const contextMenuServices = useCanvasContextMenuServices({
+    canEdit,
+    nodesMap,
+    edgesMap,
+    selection,
+  })
 
   const hotkeyOptions = {
     ignoreInputs: true,
@@ -44,6 +68,39 @@ export function useCanvasKeyboardShortcuts({
     (event) => {
       if (event.repeat) return
       redo()
+    },
+    hotkeyOptions,
+  )
+
+  useHotkey(
+    'Mod+C',
+    (event) => {
+      if (event.repeat) return
+      if (contextMenuServices.copySnapshot(getCanvasSelectionSnapshot())) {
+        event.preventDefault()
+      }
+    },
+    hotkeyOptions,
+  )
+
+  useHotkey(
+    'Mod+X',
+    (event) => {
+      if (event.repeat) return
+      if (contextMenuServices.cutSnapshot(getCanvasSelectionSnapshot())) {
+        event.preventDefault()
+      }
+    },
+    hotkeyOptions,
+  )
+
+  useHotkey(
+    'Mod+V',
+    (event) => {
+      if (event.repeat) return
+      if (contextMenuServices.pasteClipboard()) {
+        event.preventDefault()
+      }
     },
     hotkeyOptions,
   )
