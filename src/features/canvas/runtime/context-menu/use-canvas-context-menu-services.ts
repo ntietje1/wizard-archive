@@ -48,6 +48,39 @@ export function useCanvasContextMenuServices({
   const { itemsMap } = useActiveSidebarItems()
 
   const canPaste = () => canEdit && clipboard !== null && clipboard.nodes.length > 0
+  const getClipboardEntry = (snapshot: CanvasSelectionSnapshot) =>
+    createCanvasClipboardEntry(nodesMap, edgesMap, snapshot)
+  const applyPaste = (paste: ReturnType<typeof materializeCanvasPaste>) => {
+    transactCanvasMaps(nodesMap, edgesMap, () => {
+      for (const node of paste.nodes) {
+        nodesMap.set(node.id, node)
+      }
+      for (const edge of paste.edges) {
+        edgesMap.set(edge.id, edge)
+      }
+      incrementPasteCount()
+    })
+
+    selection.replace(paste.selection)
+    return paste.selection
+  }
+  const deleteSnapshotFromMaps = (snapshot: CanvasSelectionSnapshot) => {
+    const deletionSelection = getCanvasDeletionSelection(edgesMap, snapshot)
+    if (deletionSelection.nodeIds.length === 0 && deletionSelection.edgeIds.length === 0) {
+      return false
+    }
+
+    transactCanvasMaps(nodesMap, edgesMap, () => {
+      for (const edgeId of deletionSelection.edgeIds) {
+        edgesMap.delete(edgeId)
+      }
+      for (const nodeId of deletionSelection.nodeIds) {
+        nodesMap.delete(nodeId)
+      }
+    })
+
+    return true
+  }
   const resolveSelectedEmbedItem = (selectionSnapshot: CanvasSelectionSnapshot) => {
     if (selectionSnapshot.edgeIds.length > 0 || selectionSnapshot.nodeIds.length !== 1) {
       return null
@@ -68,12 +101,11 @@ export function useCanvasContextMenuServices({
 
   return {
     canPaste,
-    canCopySnapshot: (snapshot) =>
-      createCanvasClipboardEntry(nodesMap, edgesMap, snapshot) !== null,
+    canCopySnapshot: (snapshot) => getClipboardEntry(snapshot) !== null,
     canOpenEmbedSelection: (selectionSnapshot) =>
       resolveSelectedEmbedItem(selectionSnapshot) !== null,
     copySnapshot: (snapshot) => {
-      const nextClipboard = createCanvasClipboardEntry(nodesMap, edgesMap, snapshot)
+      const nextClipboard = getClipboardEntry(snapshot)
       if (!nextClipboard) {
         return false
       }
@@ -86,14 +118,14 @@ export function useCanvasContextMenuServices({
         return false
       }
 
-      const copied = createCanvasClipboardEntry(nodesMap, edgesMap, snapshot)
+      const copied = getClipboardEntry(snapshot)
       if (!copied) {
         return false
       }
 
-      const deletionSelection = getCanvasDeletionSelection(edgesMap, snapshot)
       transactCanvasMaps(nodesMap, edgesMap, () => {
         setClipboard(copied)
+        const deletionSelection = getCanvasDeletionSelection(edgesMap, snapshot)
         for (const edgeId of deletionSelection.edgeIds) {
           edgesMap.delete(edgeId)
         }
@@ -105,49 +137,24 @@ export function useCanvasContextMenuServices({
       return true
     },
     pasteClipboard: () => {
-      if (!canEdit || !clipboard || clipboard.nodes.length === 0) {
+      if (!canPaste() || !clipboard) {
         return null
       }
 
-      const paste = materializeCanvasPaste(nodesMap, edgesMap, clipboard)
-      transactCanvasMaps(nodesMap, edgesMap, () => {
-        for (const node of paste.nodes) {
-          nodesMap.set(node.id, node)
-        }
-        for (const edge of paste.edges) {
-          edgesMap.set(edge.id, edge)
-        }
-        incrementPasteCount()
-      })
-
-      selection.replace(paste.selection)
-      return paste.selection
+      return applyPaste(materializeCanvasPaste(nodesMap, edgesMap, clipboard))
     },
     duplicateSnapshot: (snapshot) => {
       if (!canEdit) {
         return null
       }
 
-      const nextClipboard = createCanvasClipboardEntry(nodesMap, edgesMap, snapshot)
+      const nextClipboard = getClipboardEntry(snapshot)
       if (!nextClipboard) {
         return null
       }
 
       setClipboard(nextClipboard)
-
-      const paste = materializeCanvasPaste(nodesMap, edgesMap, nextClipboard)
-      transactCanvasMaps(nodesMap, edgesMap, () => {
-        for (const node of paste.nodes) {
-          nodesMap.set(node.id, node)
-        }
-        for (const edge of paste.edges) {
-          edgesMap.set(edge.id, edge)
-        }
-        incrementPasteCount()
-      })
-
-      selection.replace(paste.selection)
-      return paste.selection
+      return applyPaste(materializeCanvasPaste(nodesMap, edgesMap, nextClipboard))
     },
     openEmbedSelection: async (selectionSnapshot) => {
       const item = resolveSelectedEmbedItem(selectionSnapshot)
@@ -163,19 +170,10 @@ export function useCanvasContextMenuServices({
         return false
       }
 
-      const deletionSelection = getCanvasDeletionSelection(edgesMap, snapshot)
-      if (deletionSelection.nodeIds.length === 0 && deletionSelection.edgeIds.length === 0) {
+      if (!deleteSnapshotFromMaps(snapshot)) {
         return false
       }
 
-      transactCanvasMaps(nodesMap, edgesMap, () => {
-        for (const edgeId of deletionSelection.edgeIds) {
-          edgesMap.delete(edgeId)
-        }
-        for (const nodeId of deletionSelection.nodeIds) {
-          nodesMap.delete(nodeId)
-        }
-      })
       selection.clear()
       return true
     },
