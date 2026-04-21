@@ -1,6 +1,6 @@
 import { BlockNoteEditor } from '@blocknote/core'
 import { TextSelection } from '@tiptap/pm/state'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { Node, NodeProps } from '@xyflow/react'
 import { CanvasNodeConnectionHandles } from './canvas-node-connection-handles'
@@ -13,6 +13,7 @@ import {
   serializeCanvasRichTextContent,
 } from './canvas-rich-text-editor'
 import type { CanvasRichTextEditor, CanvasRichTextPartialBlock } from './canvas-rich-text-editor'
+import { CanvasFloatingFormattingToolbar } from './canvas-floating-formatting-toolbar'
 import { CanvasRichTextView } from './canvas-rich-text-view'
 import { useRichEmbedLifecycle } from '../embed/use-rich-embed-lifecycle'
 import type {
@@ -95,6 +96,7 @@ export function CanvasRichTextNode({
   const lifecycle = useRef<RichEmbedLifecycleController>({ pendingActivationRef }).current
   const wrapperRef = useRef<HTMLDivElement | null>(null)
   const editFrameRef = useRef<number | null>(null)
+  const [editor, setEditor] = useState<CanvasRichTextEditor | null>(null)
   const content = normalizeCanvasRichTextContent(data.content)
   const plainText = extractCanvasRichTextPlainText(content)
   const ariaLabel = plainText || variant.emptyAriaLabel
@@ -165,7 +167,9 @@ export function CanvasRichTextNode({
       dragging={!!dragging}
       minWidth={variant.minWidth}
       minHeight={variant.minHeight}
+      editing={isEditing}
     >
+      <CanvasFloatingFormattingToolbar editor={editor} visible={isEditing} />
       <div
         ref={wrapperRef}
         className={cn('h-full w-full overflow-hidden', variant.containerClassName)}
@@ -203,6 +207,7 @@ export function CanvasRichTextNode({
             editable={isEditing}
             contentClassName={variant.contentClassName}
             textClassName={variant.textClassName}
+            onEditorChange={setEditor}
             onPersistContent={handlePersistContent}
             lifecycle={lifecycle}
           />
@@ -212,23 +217,27 @@ export function CanvasRichTextNode({
   )
 }
 
-function CanvasRichTextContent({
-  ariaLabel,
-  content,
-  editable,
-  contentClassName,
-  textClassName,
-  onPersistContent,
-  lifecycle,
-}: {
+interface CanvasRichTextContentProps {
   ariaLabel: string
   content: Array<CanvasRichTextPartialBlock>
   editable: boolean
   contentClassName: string
   textClassName: string
+  onEditorChange: (editor: CanvasRichTextEditor | null) => void
   onPersistContent: (content: Array<CanvasRichTextPartialBlock>) => void
   lifecycle: RichEmbedLifecycleController
-}) {
+}
+
+const CanvasRichTextContent = memo(function CanvasRichTextContent({
+  ariaLabel,
+  content,
+  editable,
+  contentClassName,
+  textClassName,
+  onEditorChange,
+  onPersistContent,
+  lifecycle,
+}: CanvasRichTextContentProps) {
   const [editor, setEditor] = useState<CanvasRichTextEditor | null>(null)
   const contentKey = useMemo(() => serializeCanvasRichTextContent(content), [content])
   const persistedContentKeyRef = useRef(contentKey)
@@ -290,7 +299,20 @@ function CanvasRichTextContent({
   }, [ariaLabel])
 
   useEffect(() => {
+    onEditorChange(editor)
+
+    return () => {
+      onEditorChange(null)
+    }
+  }, [editor, onEditorChange])
+
+  useEffect(() => {
     if (!editor) {
+      return
+    }
+
+    if (editable) {
+      lastExternalContentKeyRef.current = contentKey
       return
     }
 
@@ -308,7 +330,7 @@ function CanvasRichTextContent({
 
     editor.replaceBlocks(editor.document, cloneCanvasRichTextContent(latestContentRef.current))
     persistedContentKeyRef.current = contentKey
-  }, [contentKey, editor])
+  }, [contentKey, editable, editor])
 
   useCanvasRichTextLifecycle({
     lifecycle,
@@ -351,11 +373,38 @@ function CanvasRichTextContent({
         editable={editable}
         className={cn(
           'h-full w-full bg-transparent',
-          '[&_.bn-container]:h-full [&_.bn-editor]:h-full [&_.bn-editor]:bg-transparent',
+          '[&_.bn-container]:h-full [&_.bn-container]:bg-transparent',
+          '[&_.bn-editor]:h-full [&_.bn-editor]:bg-transparent',
           '[&_.bn-editor]:outline-none [&_.bn-editor]:px-0 [&_.bn-editor]:py-0',
         )}
       />
     </div>
+  )
+}, areCanvasRichTextContentPropsEqual)
+
+function areCanvasRichTextContentPropsEqual(
+  previous: CanvasRichTextContentProps,
+  next: CanvasRichTextContentProps,
+) {
+  if (
+    previous.ariaLabel !== next.ariaLabel ||
+    previous.editable !== next.editable ||
+    previous.contentClassName !== next.contentClassName ||
+    previous.textClassName !== next.textClassName ||
+    previous.onEditorChange !== next.onEditorChange ||
+    previous.onPersistContent !== next.onPersistContent ||
+    previous.lifecycle !== next.lifecycle
+  ) {
+    return false
+  }
+
+  if (previous.editable && next.editable) {
+    return true
+  }
+
+  return (
+    serializeCanvasRichTextContent(previous.content) ===
+    serializeCanvasRichTextContent(next.content)
   )
 }
 

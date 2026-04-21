@@ -14,12 +14,14 @@ export function EmbedNoteContent({
   editable,
   isExclusivelySelected,
   lifecycle,
+  onCanvasEditorChange,
 }: {
   noteId: Id<'sidebarItems'>
   content: Array<CustomBlock>
   editable: boolean
   isExclusivelySelected: boolean
   lifecycle: RichEmbedLifecycleController
+  onCanvasEditorChange?: (editor: CustomBlockNoteEditor | null) => void
 }) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const scrollTopRef = useRef(0)
@@ -29,6 +31,7 @@ export function EmbedNoteContent({
   const onEditorChange = (newEditor: CustomBlockNoteEditor | null, newDoc: Doc | null) => {
     setEditor(newEditor)
     setDoc(newDoc)
+    onCanvasEditorChange?.(newEditor)
   }
 
   useNoteEmbedLifecycle({

@@ -1,7 +1,6 @@
 import { BlockNoteView } from '@blocknote/shadcn'
 import { PreventExternalDrop } from '~/features/editor/components/extensions/prevent-external-drop/prevent-external-drop'
 import { useResolvedTheme } from '~/features/settings/hooks/useTheme'
-import { CanvasRichTextSelectionToolbar } from './canvas-rich-text-selection-toolbar'
 import type { CanvasRichTextEditor } from './canvas-rich-text-editor'
 
 interface CanvasRichTextViewProps {
@@ -34,7 +33,6 @@ export function CanvasRichTextView({
       {editable && (
         <>
           <PreventExternalDrop />
-          <CanvasRichTextSelectionToolbar />
         </>
       )}
     </BlockNoteView>

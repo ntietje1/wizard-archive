@@ -30,7 +30,7 @@ export function TextNode(props: NodeProps<Node<TextNodeData>>) {
         minWidth: 80,
         minHeight: 30,
         containerClassName: 'rounded-lg shadow-sm',
-        contentClassName: 'h-full w-full px-4 py-2 overflow-hidden',
+        contentClassName: 'h-full w-full overflow-hidden',
         textClassName: 'text-sm',
         textColor: 'inherit',
       }}

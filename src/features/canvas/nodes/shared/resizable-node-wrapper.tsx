@@ -83,6 +83,7 @@ interface ResizableNodeWrapperProps {
   children: React.ReactNode
   minWidth?: number
   minHeight?: number
+  editing?: boolean
 }
 
 export function ResizableNodeWrapper({
@@ -92,6 +93,7 @@ export function ResizableNodeWrapper({
   children,
   minWidth = 50,
   minHeight = 30,
+  editing = false,
 }: ResizableNodeWrapperProps) {
   const reactFlow = useReactFlow()
   const internalNode = useInternalNode(id)
@@ -233,6 +235,7 @@ export function ResizableNodeWrapper({
       data-node-visual-selected={visuallySelected ? 'true' : 'false'}
       data-node-pending-preview-active={pendingPreviewActive ? 'true' : 'false'}
       data-node-pending-selected={pendingSelected ? 'true' : 'false'}
+      data-node-editing={editing ? 'true' : 'false'}
     >
       {(visuallySelected || highlight) && (
         <div

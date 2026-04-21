@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { AlertTriangle, ExternalLinkIcon } from 'lucide-react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { RichEmbedLifecycleController } from './use-rich-embed-lifecycle'
@@ -11,6 +11,7 @@ import { isExclusivelySelectedNode } from '../../utils/canvas-selection-utils'
 import { ResizableNodeWrapper } from '../shared/resizable-node-wrapper'
 import type { EmbedNodeData } from './embed-node-data'
 import { EmbedNoteContent } from './embed-note-content'
+import { CanvasFloatingFormattingToolbar } from '../shared/canvas-floating-formatting-toolbar'
 import { ItemPreviewContent } from '~/features/editor/components/item-preview-content'
 import type { Node, NodeProps } from '@xyflow/react'
 import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
@@ -25,12 +26,14 @@ import {
   useCanvasEditSessionContext,
   useCanvasPermissionsContext,
 } from '../../runtime/providers/canvas-runtime-hooks'
+import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 
 export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>) {
   const sidebarItemId = data.sidebarItemId
   const { itemsMap } = useActiveSidebarItems()
   const item = sidebarItemId ? itemsMap.get(sidebarItemId) : undefined
   const isSelected = useIsCanvasNodeSelected(id)
+  const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
 
   const { data: contentItem } = useSidebarItemById(sidebarItemId)
 
@@ -40,6 +43,8 @@ export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>
   const selectedNodeIds = useSelectedCanvasNodeIds()
   const isExclusivelySelected = isExclusivelySelectedNode(selectedNodeIds, id)
   const isEditing = editingEmbedId === id && isExclusivelySelected
+  const noteEditor = contentItem?.type === SIDEBAR_ITEM_TYPES.notes ? editor : null
+  const showsFormattingToolbar = isEditing && noteEditor !== null
 
   useEffect(() => {
     if (editingEmbedId === id && !isExclusivelySelected) {
@@ -66,7 +71,9 @@ export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>
       dragging={!!dragging}
       minWidth={240}
       minHeight={180}
+      editing={showsFormattingToolbar}
     >
+      <CanvasFloatingFormattingToolbar editor={noteEditor} visible={showsFormattingToolbar} />
       <div
         className="h-full w-full rounded-lg border bg-card shadow-sm flex flex-col overflow-hidden"
         onDoubleClick={handleDoubleClick}
@@ -112,6 +119,7 @@ export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>
               isEditing={isEditing}
               isExclusivelySelected={isExclusivelySelected}
               lifecycle={lifecycle}
+              onEditorChange={setEditor}
             />
           </div>
         )}
@@ -125,11 +133,13 @@ function EmbedRichContent({
   isEditing,
   isExclusivelySelected,
   lifecycle,
+  onEditorChange,
 }: {
   contentItem: AnySidebarItemWithContent | undefined
   isEditing: boolean
   isExclusivelySelected: boolean
   lifecycle: RichEmbedLifecycleController
+  onEditorChange: (editor: CustomBlockNoteEditor | null) => void
 }): React.ReactElement | null {
   if (!contentItem) {
     return (
@@ -147,6 +157,7 @@ function EmbedRichContent({
         editable={isEditing}
         isExclusivelySelected={isExclusivelySelected}
         lifecycle={lifecycle}
+        onCanvasEditorChange={onEditorChange}
       />
     )
   }

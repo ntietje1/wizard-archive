@@ -214,6 +214,10 @@
   pointer-events: auto !important;
 }
 
+.react-flow__node:has([data-node-editing='true']) {
+  z-index: 1000 !important;
+}
+
 @layer base {
   *:focus:not(:focus-visible) {
     outline: none;
@@ -362,6 +366,11 @@
   display: flex;
   flex-direction: column;
   border-radius: 0;
+}
+
+:root .canvas-rich-text-editor {
+  --bn-colors-editor-background: transparent;
+  background-color: transparent;
 }
 
 @layer utilities {
