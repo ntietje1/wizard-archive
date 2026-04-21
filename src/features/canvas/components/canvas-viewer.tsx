@@ -6,6 +6,7 @@ import { useCanvasFlowController } from '../runtime/use-canvas-flow-controller'
 import { useCanvasViewerSession } from '../runtime/session/use-canvas-viewer-session'
 import type { CanvasViewerSession } from '../runtime/session/use-canvas-viewer-session'
 import { CanvasFlowShell } from './canvas-flow-shell'
+import { loadPersistedCanvasViewport } from '../runtime/interaction/canvas-viewport-storage'
 import type { EditorViewerProps } from '~/features/editor/components/viewer/sidebar-item-editor'
 import type { CanvasWithContent } from 'convex/canvases/types'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
@@ -59,6 +60,7 @@ function CanvasFlow({
   nodesMap,
   edgesMap,
 }: ReadyCanvasSession) {
+  const initialViewport = loadPersistedCanvasViewport(canvasId)
   const { runtime, shellProps } = useCanvasFlowController({
     nodesMap,
     edgesMap,
@@ -72,7 +74,15 @@ function CanvasFlow({
 
   return (
     <CanvasProviders runtime={runtime}>
-      <CanvasFlowShell {...shellProps} canEdit={canEdit} colorMode={colorMode} />
+      <CanvasFlowShell
+        {...shellProps}
+        canEdit={canEdit}
+        colorMode={colorMode}
+        viewportPersistence={{
+          canvasId,
+          initialViewport,
+        }}
+      />
     </CanvasProviders>
   )
 }

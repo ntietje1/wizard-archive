@@ -13,6 +13,8 @@ import { canvasEdgeTypes } from '../edges/canvas-edge-registry'
 import { canvasNodeTypes } from '../nodes/canvas-node-registry'
 import { CanvasContextMenu } from '../runtime/context-menu/canvas-context-menu'
 import type { CanvasContextMenuRef } from '../runtime/context-menu/canvas-context-menu'
+import { CanvasViewportPersistence } from '../runtime/interaction/canvas-viewport-persistence'
+import type { PersistedCanvasViewport } from '../runtime/interaction/canvas-viewport-storage'
 import { useCanvasPendingSelectionPreviewStore } from '../runtime/selection/use-canvas-pending-selection-preview'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
 import type { CanvasSelectionController, CanvasToolId } from '../tools/canvas-tool-types'
@@ -51,6 +53,10 @@ export interface CanvasFlowShellProps {
     screenToFlowPosition: (position: { x: number; y: number }) => { x: number; y: number }
     selectionController: Pick<CanvasSelectionController, 'replace' | 'clear'>
   }
+  viewportPersistence: {
+    canvasId: Id<'sidebarItems'>
+    initialViewport: PersistedCanvasViewport
+  }
   flowHandlers: {
     onNodeDragStart?: OnNodeDrag
     onNodeDrag?: OnNodeDrag
@@ -79,6 +85,7 @@ export function CanvasFlowShell({
   chrome,
   canvasSurfaceRef,
   contextMenu,
+  viewportPersistence,
   flowHandlers,
 }: CanvasFlowShellComponentProps) {
   const isSelectMode = chrome.activeTool === 'select'
@@ -109,6 +116,7 @@ export function CanvasFlowShell({
         <ReactFlow
           defaultNodes={EMPTY_NODES}
           defaultEdges={EMPTY_EDGES}
+          defaultViewport={viewportPersistence.initialViewport}
           onNodeDragStart={flowHandlers.onNodeDragStart}
           onNodeDrag={flowHandlers.onNodeDrag}
           onNodeDragStop={flowHandlers.onNodeDragStop}
@@ -154,6 +162,11 @@ export function CanvasFlowShell({
           preventScrolling={false}
           proOptions={PRO_OPTIONS}
         >
+          <CanvasViewportPersistence
+            key={viewportPersistence.canvasId}
+            canvasId={viewportPersistence.canvasId}
+            initialViewport={viewportPersistence.initialViewport}
+          />
           <Background bgColor="var(--background)" />
           <MiniMap zoomable={false} pannable={false} nodeComponent={MiniMapNode} />
           <CanvasLocalOverlaysHost />

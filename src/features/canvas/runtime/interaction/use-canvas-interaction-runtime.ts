@@ -24,6 +24,8 @@ import type { CanvasRemoteDragAnimation } from './use-canvas-remote-drag-animati
 import type { Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 
+type CanvasFlowRuntimeShellProps = Omit<CanvasFlowShellProps, 'viewportPersistence'>
+
 interface UseCanvasInteractionRuntimeOptions {
   canvasId: Id<'sidebarItems'>
   campaignId: Id<'campaigns'>
@@ -153,7 +155,7 @@ export function useCanvasInteractionRuntime({
     [documentWriter, reactFlowInstance, session.awareness.core],
   )
 
-  const shellProps: CanvasFlowShellProps = {
+  const shellProps: CanvasFlowRuntimeShellProps = {
     chrome: {
       toolCursor,
       remoteUsers: session.remoteUsers,

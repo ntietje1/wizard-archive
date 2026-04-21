@@ -13,6 +13,8 @@ import type { Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
 
+type CanvasFlowRuntimeShellProps = Omit<CanvasFlowShellProps, 'viewportPersistence'>
+
 interface UseCanvasFlowControllerOptions {
   nodesMap: Y.Map<Node>
   edgesMap: Y.Map<Edge>
@@ -26,7 +28,7 @@ interface UseCanvasFlowControllerOptions {
 
 interface CanvasFlowControllerResult {
   runtime: CanvasProviderValues
-  shellProps: CanvasFlowShellProps
+  shellProps: CanvasFlowRuntimeShellProps
 }
 
 export function useCanvasFlowController({

@@ -29,6 +29,7 @@ vi.mock('@xyflow/react', () => ({
   SelectionMode: {
     Partial: 'partial',
   },
+  useViewport: () => ({ x: 0, y: 0, zoom: 1 }),
 }))
 
 vi.mock('../canvas-toolbar', () => ({
@@ -49,6 +50,10 @@ vi.mock('../canvas-awareness-host', () => ({
 
 vi.mock('../../runtime/context-menu/canvas-context-menu', () => ({
   CanvasContextMenu: () => null,
+}))
+
+vi.mock('../../runtime/interaction/canvas-viewport-persistence', () => ({
+  CanvasViewportPersistence: () => null,
 }))
 
 vi.mock('../canvas-minimap-node', () => ({
@@ -88,6 +93,16 @@ describe('CanvasFlowShell', () => {
     expect(reactFlowMock.props?.elevateNodesOnSelect).toBe(false)
     expect(reactFlowMock.props?.elevateEdgesOnSelect).toBe(false)
   })
+
+  it('passes the persisted viewport into React Flow as the default viewport', () => {
+    renderCanvasFlowShell()
+
+    expect(reactFlowMock.props?.defaultViewport).toEqual({
+      x: 120,
+      y: -45,
+      zoom: 1.5,
+    })
+  })
 })
 
 function createContextMenu(): CanvasFlowShellProps['contextMenu'] {
@@ -122,6 +137,14 @@ function renderCanvasFlowShell() {
       }}
       canvasSurfaceRef={{ current: null }}
       contextMenu={createContextMenu()}
+      viewportPersistence={{
+        canvasId: 'canvas-1' as never,
+        initialViewport: {
+          x: 120,
+          y: -45,
+          zoom: 1.5,
+        },
+      }}
       flowHandlers={{
         onMouseMove: vi.fn(),
         onMouseLeave: vi.fn(),
