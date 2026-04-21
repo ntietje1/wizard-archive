@@ -11,20 +11,26 @@ function isFiniteNumber(value: unknown): value is number {
 }
 
 function isRectSelectingState(value: unknown): value is RectSelectingState {
-  const width = (value as { width?: unknown }).width
-  const height = (value as { height?: unknown }).height
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false
+  }
+
+  const candidate = value as {
+    type?: unknown
+    x?: unknown
+    y?: unknown
+    width?: unknown
+    height?: unknown
+  }
 
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    !Array.isArray(value) &&
-    (value as { type?: unknown }).type === 'rect' &&
-    isFiniteNumber((value as { x?: unknown }).x) &&
-    isFiniteNumber((value as { y?: unknown }).y) &&
-    isFiniteNumber(width) &&
-    width >= 0 &&
-    isFiniteNumber(height) &&
-    height >= 0
+    candidate.type === 'rect' &&
+    isFiniteNumber(candidate.x) &&
+    isFiniteNumber(candidate.y) &&
+    isFiniteNumber(candidate.width) &&
+    candidate.width >= 0 &&
+    isFiniteNumber(candidate.height) &&
+    candidate.height >= 0
   )
 }
 

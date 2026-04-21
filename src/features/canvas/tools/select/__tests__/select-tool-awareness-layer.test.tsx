@@ -13,6 +13,39 @@ describe('SelectAwarenessLayer', () => {
     clearSelectToolLocalOverlay()
   })
 
+  it('ignores remote users without a valid marquee awareness payload', () => {
+    const remoteUsers: Array<RemoteUser> = [
+      {
+        clientId: 1,
+        user: { name: 'Idle tester', color: '#00f' },
+        presence: {},
+        cursor: null,
+        dragging: null,
+        resizing: null,
+        selectedNodeIds: null,
+      },
+      {
+        clientId: 2,
+        user: { name: 'Legacy tester', color: '#0f0' },
+        presence: {
+          'tool.select': {
+            type: 'rect',
+            x: 10,
+            y: 20,
+          },
+        },
+        cursor: null,
+        dragging: null,
+        resizing: null,
+        selectedNodeIds: null,
+      },
+    ]
+
+    const { container } = render(<SelectAwarenessLayer remoteUsers={remoteUsers} />)
+
+    expect(container.querySelector('rect')).not.toBeInTheDocument()
+  })
+
   it('renders remote marquee overlays from raw presence', () => {
     const remoteUsers: Array<RemoteUser> = [
       {
