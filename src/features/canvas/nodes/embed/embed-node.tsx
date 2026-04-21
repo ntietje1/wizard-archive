@@ -68,6 +68,7 @@ export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>
       editing={showsFormattingToolbar}
     >
       <CanvasFloatingFormattingToolbar editor={noteEditor} visible={showsFormattingToolbar} />
+      <CanvasNodeConnectionHandles selected={isSelected} />
       {showFloatingLabel && (
         <div className="pointer-events-none absolute left-3 top-0 z-20 max-w-[calc(100%-1.5rem)] -translate-y-[calc(100%+0.375rem)]">
           <span className="block truncate text-xs font-medium text-muted-foreground">
@@ -79,8 +80,6 @@ export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>
         className="relative h-full w-full overflow-hidden rounded-lg border bg-card shadow-sm"
         onDoubleClick={handleDoubleClick}
       >
-        <CanvasNodeConnectionHandles selected={isSelected} />
-
         {!isMissing && (
           <div className="h-full">
             <EmbedRichContent

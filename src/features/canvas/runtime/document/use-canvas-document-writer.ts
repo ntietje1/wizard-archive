@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { getCanvasNodeModuleByType } from '../../nodes/canvas-node-registry'
+import { getCanvasNodeModuleByType } from '../../nodes/canvas-node-modules'
 import { getCanvasDeletionSelection } from '../context-menu/canvas-context-menu-selection'
 import type { CanvasNodeData, CanvasNodeType } from '../../nodes/canvas-node-module-types'
 import type { CanvasDocumentWriter } from '../../tools/canvas-tool-types'

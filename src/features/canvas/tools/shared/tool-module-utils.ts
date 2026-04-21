@@ -1,6 +1,4 @@
-import { findCanvasNodeAtPoint } from '../../nodes/canvas-node-registry'
 import type { CanvasViewportTools } from '../canvas-tool-types'
-import type { Node } from '@xyflow/react'
 
 export function screenEventToFlowPosition(
   context: Pick<CanvasViewportTools, 'screenToFlowPosition'>,
@@ -29,19 +27,4 @@ export function releasePointerCapture(target: Element | null, pointerId: number 
   } catch {
     // releasePointerCapture throws if the pointer is not captured; safe to ignore.
   }
-}
-
-export function hitTestCanvasNode(
-  context: Pick<CanvasViewportTools, 'screenToFlowPosition' | 'getZoom'> & {
-    getMeasuredNodes: () => Array<Node>
-  },
-  event: React.MouseEvent,
-): string | null {
-  return findCanvasNodeAtPoint(
-    context.getMeasuredNodes(),
-    screenEventToFlowPosition(context, event),
-    {
-      zoom: context.getZoom(),
-    },
-  )
 }

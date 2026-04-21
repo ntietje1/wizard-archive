@@ -10,7 +10,7 @@ import { CanvasLocalOverlaysHost } from './canvas-local-overlays-host'
 import { MiniMapNode } from './canvas-minimap-node'
 import { CanvasToolbar } from './canvas-toolbar'
 import { canvasEdgeTypes } from '../edges/canvas-edge-registry'
-import { canvasNodeTypes } from '../nodes/canvas-node-registry'
+import { getCanvasNodeTypes } from '../nodes/canvas-node-registry'
 import { CanvasContextMenu } from '../runtime/context-menu/canvas-context-menu'
 import type { CanvasContextMenuRef } from '../runtime/context-menu/canvas-context-menu'
 import { CanvasViewportPersistence } from '../runtime/interaction/canvas-viewport-persistence'
@@ -31,6 +31,7 @@ const PAN_BOTH: Array<number> = [0, 1]
 const SELECTION_KEY_DISABLED: Array<string> = []
 const MAX_ZOOM = 4
 const MIN_ZOOM = 0.1
+const canvasNodeTypes = getCanvasNodeTypes()
 
 export interface CanvasFlowShellProps {
   chrome: {

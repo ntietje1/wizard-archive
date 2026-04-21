@@ -1,28 +1,19 @@
 import { Lasso } from 'lucide-react'
 import { getCanvasEdgesMatchingLasso } from '../../edges/canvas-edge-registry'
-import { getCanvasNodesMatchingLasso } from '../../nodes/canvas-node-registry'
-import {
-  clearCanvasPendingSelectionPreview,
-  setCanvasPendingSelectionPreview,
-} from '../../runtime/selection/use-canvas-pending-selection-preview'
-import {
-  applyCanvasSelectionCommitMode,
-  isPrimarySelectionModifier,
-} from '../../utils/canvas-selection-utils'
+import { getCanvasNodesMatchingLasso } from '../../nodes/canvas-node-selection-queries'
+import { createCanvasSelectionGestureSession } from '../../runtime/selection/canvas-selection-gesture-session'
+import { isPrimarySelectionModifier } from '../../utils/canvas-selection-utils'
 import {
   setPointerCapture,
   releasePointerCapture,
   screenEventToFlowPosition,
 } from '../shared/tool-module-utils'
-import type {
-  CanvasToolModule,
-  CanvasSelectionCommitMode,
-  CanvasSelectionSnapshot,
-} from '../canvas-tool-types'
+import type { CanvasToolModule } from '../canvas-tool-types'
 import { LassoAwarenessLayer } from './lasso-tool-awareness-layer'
 import { setLassoToolAwareness } from './lasso-tool-awareness'
 import { clearLassoToolLocalOverlay, setLassoToolLocalPoints } from './lasso-tool-local-overlay'
 import { LassoToolLocalOverlayLayer } from './lasso-tool-local-overlay-layer'
+
 export const lassoToolModule: CanvasToolModule<'lasso'> = {
   id: 'lasso',
   label: 'Lasso select',
@@ -39,12 +30,9 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
   create: (services) => {
     let points: Array<{ x: number; y: number }> = []
     let active = false
-    let previewRafId = 0
     let captureTarget: Element | null = null
     let pointerId: number | null = null
     let lastPublishedPoints: Array<{ x: number; y: number }> | null = null
-    let selectionCommitMode: CanvasSelectionCommitMode = 'replace'
-    let gestureStartSelection: CanvasSelectionSnapshot = { nodeIds: [], edgeIds: [] }
 
     const pointsEqual = (
       a: Array<{ x: number; y: number }> | null,
@@ -73,18 +61,15 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
       )
     }
 
-    const publishPreview = () => {
-      previewRafId = 0
-
-      publishLassoAwareness(points)
-      if (points.length < 3) {
-        clearCanvasPendingSelectionPreview()
-        return
+    const previewSelection = (nextPoints: Array<{ x: number; y: number }>) => {
+      publishLassoAwareness(nextPoints)
+      if (nextPoints.length < 3) {
+        return null
       }
 
       const pendingNodeIds = getCanvasNodesMatchingLasso(
         services.document.getMeasuredNodes(),
-        points,
+        nextPoints,
         {
           zoom: services.viewport.getZoom(),
         },
@@ -92,40 +77,43 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
       const pendingEdgeIds = getCanvasEdgesMatchingLasso(
         services.document.getNodes(),
         services.document.getEdges(),
-        points,
+        nextPoints,
         { zoom: services.viewport.getZoom() },
       )
 
-      setCanvasPendingSelectionPreview(
-        applyCanvasSelectionCommitMode({
-          currentSelection: gestureStartSelection,
-          nextSelection: { nodeIds: pendingNodeIds, edgeIds: pendingEdgeIds },
-          mode: selectionCommitMode,
-        }),
-      )
+      return {
+        nodeIds: pendingNodeIds,
+        edgeIds: pendingEdgeIds,
+      }
     }
 
-    const schedulePreview = () => {
-      if (previewRafId) return
-      previewRafId = requestAnimationFrame(publishPreview)
-    }
+    const session = createCanvasSelectionGestureSession({
+      adapter: {
+        kind: 'lasso',
+        startGestureOnBegin: true,
+        sync: ({ points: nextPoints }: { points: Array<{ x: number; y: number }> }) => {
+          setLassoToolLocalPoints(nextPoints)
+        },
+        preview: ({ points: nextPoints }: { points: Array<{ x: number; y: number }> }) =>
+          previewSelection(nextPoints) ?? null,
+        clear: () => {
+          setLassoToolLocalPoints([])
+          publishLassoAwareness(null)
+        },
+      },
+      getSelection: () => services.selection,
+      interaction: services.interaction,
+      requestAnimationFrame,
+      cancelAnimationFrame,
+    })
 
     const reset = () => {
       active = false
       points = []
-      if (previewRafId) {
-        cancelAnimationFrame(previewRafId)
-        previewRafId = 0
-      }
-      setLassoToolLocalPoints([])
-      clearCanvasPendingSelectionPreview()
-      publishLassoAwareness(null)
-      services.selection.endGesture()
+      session.cancel()
       releasePointerCapture(captureTarget, pointerId)
       captureTarget = null
       pointerId = null
-      selectionCommitMode = 'replace'
-      gestureStartSelection = { nodeIds: [], edgeIds: [] }
     }
 
     return {
@@ -135,57 +123,21 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
         captureTarget = setPointerCapture(event)
         pointerId = event.pointerId
         active = true
-        selectionCommitMode = isPrimarySelectionModifier(event) ? 'add' : 'replace'
-        gestureStartSelection = {
-          nodeIds: services.selection.getSelectedNodeIds(),
-          edgeIds: services.selection.getSelectedEdgeIds(),
-        }
         const pos = screenEventToFlowPosition(services.viewport, event)
         points = [pos]
-        services.selection.beginGesture('lasso')
-        setLassoToolLocalPoints(points)
-        schedulePreview()
+        session.begin({ points }, isPrimarySelectionModifier(event) ? 'add' : 'replace')
       },
       onPointerMove: (event) => {
         if (!active || (event.buttons & 1) !== 1) return
 
         const pos = screenEventToFlowPosition(services.viewport, event)
         points = [...points, pos]
-        setLassoToolLocalPoints(points)
-        schedulePreview()
+        session.update({ points })
       },
       onPointerUp: () => {
         if (!active) return
 
-        if (previewRafId) {
-          cancelAnimationFrame(previewRafId)
-          previewRafId = 0
-        }
-
-        if (points.length < 3) {
-          reset()
-          return
-        }
-
-        const measuredNodes = services.document.getMeasuredNodes()
-        const selectedNodeIds = getCanvasNodesMatchingLasso(measuredNodes, points, {
-          zoom: services.viewport.getZoom(),
-        })
-        const selectedEdgeIds = getCanvasEdgesMatchingLasso(
-          services.document.getNodes(),
-          services.document.getEdges(),
-          points,
-          { zoom: services.viewport.getZoom() },
-        )
-
-        services.interaction.suppressNextSurfaceClick()
-        services.selection.commitGestureSelection(
-          {
-            nodeIds: selectedNodeIds,
-            edgeIds: selectedEdgeIds,
-          },
-          selectionCommitMode,
-        )
+        session.commit({ points })
         reset()
       },
       onPointerCancel: () => {

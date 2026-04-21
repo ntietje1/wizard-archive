@@ -1,5 +1,5 @@
 import { MousePointer2 } from 'lucide-react'
-import { hitTestCanvasNode } from '../shared/tool-module-utils'
+import { hitTestCanvasNode } from '../../nodes/canvas-node-selection-queries'
 import type { CanvasToolModule } from '../canvas-tool-types'
 import { isPrimarySelectionModifier } from '../../utils/canvas-selection-utils'
 import { SelectAwarenessLayer } from './select-tool-awareness-layer'

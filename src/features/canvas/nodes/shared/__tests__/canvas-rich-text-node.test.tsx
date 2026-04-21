@@ -27,7 +27,7 @@ vi.mock('../../../runtime/interaction/use-canvas-modifier-keys', () => ({
 }))
 
 vi.mock('../canvas-node-connection-handles', () => ({
-  CanvasNodeConnectionHandles: () => null,
+  CanvasNodeConnectionHandles: () => <div data-testid="connection-handles" />,
 }))
 
 vi.mock('../canvas-floating-formatting-toolbar', () => ({
@@ -79,6 +79,12 @@ describe('CanvasRichTextNode', () => {
 
     expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(['text-1'])
     expect(getCanvasNode()).toHaveAttribute('data-node-selected', 'true')
+  })
+
+  it('renders connection handles at the wrapper layer instead of inside the clipped content shell', () => {
+    render(<CanvasRichTextNodeHarness />)
+
+    expect(screen.getByTestId('connection-handles').parentElement).toBe(getCanvasNode())
   })
 })
 

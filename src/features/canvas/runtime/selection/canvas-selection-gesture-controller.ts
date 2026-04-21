@@ -1,20 +1,15 @@
 import { getCanvasEdgesMatchingRectangle } from '../../edges/canvas-edge-registry'
-import { getCanvasNodesMatchingRectangle } from '../../nodes/canvas-node-registry'
+import { getCanvasNodesMatchingRectangle } from '../../nodes/canvas-node-selection-queries'
 import { setSelectToolAwareness } from '../../tools/select/select-tool-awareness'
 import { setSelectToolSelectionDragRect } from '../../tools/select/select-tool-local-overlay'
 import { getConstrainedRectFromPoints } from '../../utils/canvas-constraint-utils'
-import { applyCanvasSelectionCommitMode } from '../../utils/canvas-selection-utils'
+import { createCanvasSelectionGestureSession } from './canvas-selection-gesture-session'
 import type { getMeasuredCanvasNodesFromLookup } from '../document/canvas-measured-nodes'
-import {
-  clearCanvasPendingSelectionPreview,
-  setCanvasPendingSelectionPreview,
-} from './use-canvas-pending-selection-preview'
 import type {
   CanvasAwarenessPresenceWriter,
   CanvasInteractionTools,
   CanvasSelectionCommitMode,
   CanvasSelectionController,
-  CanvasSelectionSnapshot,
 } from '../../tools/canvas-tool-types'
 import type { ReactFlowInstance } from '@xyflow/react'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
@@ -22,6 +17,11 @@ import type { Bounds } from '../../utils/canvas-geometry-utils'
 const MIN_SELECTION_DRAG_DISTANCE_PX = 1
 
 type ClientPoint = { x: number; y: number }
+type MarqueeGestureState = {
+  currentClientPoint: ClientPoint
+  square: boolean
+  startClientPoint: ClientPoint
+}
 
 interface CanvasSelectionGestureControllerOptions {
   reactFlow: Pick<ReactFlowInstance, 'getEdges' | 'getNodes' | 'getZoom' | 'screenToFlowPosition'>
@@ -54,6 +54,17 @@ function boundsEqual(a: Bounds | null, b: Bounds | null): boolean {
   return a?.x === b?.x && a?.y === b?.y && a?.width === b?.width && a?.height === b?.height
 }
 
+function getFlowRect(
+  reactFlow: Pick<ReactFlowInstance, 'screenToFlowPosition'>,
+  state: MarqueeGestureState,
+): Bounds {
+  return getConstrainedRectFromPoints(
+    reactFlow.screenToFlowPosition(state.startClientPoint),
+    reactFlow.screenToFlowPosition(state.currentClientPoint),
+    { square: state.square },
+  )
+}
+
 export function createCanvasSelectionGestureController({
   reactFlow,
   getMeasuredNodes,
@@ -63,167 +74,110 @@ export function createCanvasSelectionGestureController({
   requestAnimationFrame,
   cancelAnimationFrame,
 }: CanvasSelectionGestureControllerOptions): CanvasSelectionGestureController {
-  let selectionStartClientPoint: ClientPoint | null = null
-  let latestGestureState: { point: ClientPoint; square: boolean } | null = null
-  let selectionActive = false
-  let previewRafId = 0
-  let selectionCommitMode: CanvasSelectionCommitMode = 'replace'
-  let gestureStartSelection: CanvasSelectionSnapshot = { nodeIds: [], edgeIds: [] }
+  let latestState: MarqueeGestureState | null = null
   let lastPublishedRect: Bounds | null = null
-  let lastFlowRect: Bounds | null = null
-  let lastFlowSelection: CanvasSelectionSnapshot = { nodeIds: [], edgeIds: [] }
 
-  function publishSelectToolAwareness(rect: Bounds | null) {
-    if (boundsEqual(lastPublishedRect, rect)) return
+  const publishSelectToolAwareness = (rect: Bounds | null) => {
+    if (boundsEqual(lastPublishedRect, rect)) {
+      return
+    }
+
     lastPublishedRect = rect
     setSelectToolAwareness(getAwareness(), rect)
   }
 
-  function cancelSelectionPreviewFrame() {
-    if (!previewRafId) return
-    cancelAnimationFrame(previewRafId)
-    previewRafId = 0
-  }
+  const session = createCanvasSelectionGestureSession<MarqueeGestureState>({
+    adapter: {
+      kind: 'marquee',
+      isActivated: (startState, currentState) =>
+        Math.hypot(
+          currentState.currentClientPoint.x - startState.startClientPoint.x,
+          currentState.currentClientPoint.y - startState.startClientPoint.y,
+        ) > MIN_SELECTION_DRAG_DISTANCE_PX,
+      preview: (state) => {
+        const flowRect = getFlowRect(reactFlow, state)
+        setSelectToolSelectionDragRect(flowRect)
+        publishSelectToolAwareness(flowRect)
 
-  function clearLocalSelectionGesture() {
-    cancelSelectionPreviewFrame()
-    lastFlowRect = null
-    lastFlowSelection = { nodeIds: [], edgeIds: [] }
-    gestureStartSelection = { nodeIds: [], edgeIds: [] }
-    selectionCommitMode = 'replace'
-    latestGestureState = null
-    setSelectToolSelectionDragRect(null)
-    clearCanvasPendingSelectionPreview()
-    getSelection().endGesture()
-    publishSelectToolAwareness(null)
-  }
+        return {
+          nodeIds: getCanvasNodesMatchingRectangle(getMeasuredNodes(), flowRect, {
+            zoom: reactFlow.getZoom(),
+          }),
+          edgeIds: getCanvasEdgesMatchingRectangle(
+            reactFlow.getNodes(),
+            reactFlow.getEdges(),
+            flowRect,
+            { zoom: reactFlow.getZoom() },
+          ),
+        }
+      },
+      clear: () => {
+        setSelectToolSelectionDragRect(null)
+        publishSelectToolAwareness(null)
+      },
+    },
+    getSelection,
+    interaction,
+    requestAnimationFrame,
+    cancelAnimationFrame,
+  })
 
-  function tryActivateSelection(currentClientPoint: ClientPoint) {
-    if (!selectionStartClientPoint) return false
-
-    const distance = Math.hypot(
-      currentClientPoint.x - selectionStartClientPoint.x,
-      currentClientPoint.y - selectionStartClientPoint.y,
-    )
-    if (!selectionActive && distance <= MIN_SELECTION_DRAG_DISTANCE_PX) {
-      return false
-    }
-
-    return true
-  }
-
-  function updateSelectionRect(currentClientPoint: ClientPoint, { square }: { square: boolean }) {
-    if (!selectionStartClientPoint) return
-
-    const flowRect = getConstrainedRectFromPoints(
-      reactFlow.screenToFlowPosition(selectionStartClientPoint),
-      reactFlow.screenToFlowPosition(currentClientPoint),
-      { square },
-    )
-
-    lastFlowRect = flowRect
-    setSelectToolSelectionDragRect(flowRect)
-    if (!selectionActive) {
-      selectionActive = true
-      getSelection().beginGesture('marquee')
-    }
-    publishSelectToolAwareness(flowRect)
-
-    lastFlowSelection = {
-      nodeIds: getCanvasNodesMatchingRectangle(getMeasuredNodes(), flowRect, {
-        zoom: reactFlow.getZoom(),
-      }),
-      edgeIds: getCanvasEdgesMatchingRectangle(
-        reactFlow.getNodes(),
-        reactFlow.getEdges(),
-        flowRect,
-        { zoom: reactFlow.getZoom() },
-      ),
-    }
-    setCanvasPendingSelectionPreview(
-      applyCanvasSelectionCommitMode({
-        currentSelection: gestureStartSelection,
-        nextSelection: lastFlowSelection,
-        mode: selectionCommitMode,
-      }),
-    )
-  }
-
-  function scheduleSelectionPreviewUpdate() {
-    if (previewRafId) return
-
-    previewRafId = requestAnimationFrame(() => {
-      previewRafId = 0
-      if (!latestGestureState) return
-      updateSelectionRect(latestGestureState.point, { square: latestGestureState.square })
-    })
-  }
+  const createState = (
+    startClientPoint: ClientPoint,
+    currentClientPoint: ClientPoint,
+    square: boolean,
+  ): MarqueeGestureState => ({
+    currentClientPoint,
+    square,
+    startClientPoint,
+  })
 
   return {
     begin: (point, mode) => {
-      const selection = getSelection()
-      selectionStartClientPoint = point
-      latestGestureState = { point, square: false }
-      selectionActive = false
-      selectionCommitMode = mode
-      gestureStartSelection = {
-        nodeIds: selection.getSelectedNodeIds(),
-        edgeIds: selection.getSelectedEdgeIds(),
-      }
+      latestState = createState(point, point, false)
+      session.begin(latestState, mode)
     },
     update: (point, options = { square: false }) => {
-      if (!selectionStartClientPoint) return
-
-      latestGestureState = { point, square: options.square }
-      const currentPoint = latestGestureState.point
-      if (!tryActivateSelection(currentPoint)) {
+      if (!latestState) {
         return
       }
 
-      scheduleSelectionPreviewUpdate()
+      latestState = createState(latestState.startClientPoint, point, options.square)
+      session.update(latestState)
     },
     refresh: (options = { square: false }) => {
-      if (!selectionStartClientPoint || !latestGestureState) return
-
-      latestGestureState = {
-        ...latestGestureState,
-        square: options.square,
-      }
-      if (!tryActivateSelection(latestGestureState.point)) {
+      if (!latestState) {
         return
       }
 
-      scheduleSelectionPreviewUpdate()
+      latestState = createState(
+        latestState.startClientPoint,
+        latestState.currentClientPoint,
+        options.square,
+      )
+      session.refresh(latestState)
     },
     commit: (options = { square: false }) => {
-      if (!selectionStartClientPoint) return
-
-      const currentPoint = latestGestureState?.point
-      if (currentPoint && tryActivateSelection(currentPoint)) {
-        updateSelectionRect(currentPoint, options)
+      if (!latestState) {
+        return
       }
 
-      if (selectionActive && lastFlowRect) {
-        interaction.suppressNextSurfaceClick()
-        getSelection().commitGestureSelection(lastFlowSelection, selectionCommitMode)
-      }
-
-      selectionStartClientPoint = null
-      selectionActive = false
-      clearLocalSelectionGesture()
+      latestState = createState(
+        latestState.startClientPoint,
+        latestState.currentClientPoint,
+        options.square,
+      )
+      session.commit(latestState)
+      latestState = null
     },
     cancel: () => {
-      if (!selectionStartClientPoint) return
-
-      selectionStartClientPoint = null
-      selectionActive = false
-      clearLocalSelectionGesture()
+      session.cancel()
+      latestState = null
     },
     dispose: () => {
-      selectionStartClientPoint = null
-      selectionActive = false
-      clearLocalSelectionGesture()
+      session.dispose()
+      latestState = null
     },
-    isTracking: () => selectionStartClientPoint !== null,
+    isTracking: () => session.isTracking(),
   }
 }

@@ -16,13 +16,15 @@ import type { Edge, Node } from '@xyflow/react'
 import type { GameMapSnapshotData } from 'convex/gameMaps/types'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
-import { canvasNodeTypes } from '~/features/canvas/nodes/canvas-node-registry'
+import { getCanvasNodeTypes } from '~/features/canvas/nodes/canvas-node-registry'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { NoteContent } from '~/features/editor/components/note-content'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { PinMarker } from '~/features/editor/components/viewer/map/pin-marker'
 import { resolvePinColor, resolvePinIcon } from '~/features/editor/components/viewer/map/pin-utils'
 import { logger } from '~/shared/utils/logger'
+
+const canvasNodeTypes = getCanvasNodeTypes()
 
 export function HistoryPreviewViewer({ entryId }: { entryId: Id<'editHistory'> }) {
   const snapshotQuery = useCampaignQuery(api.documentSnapshots.queries.getSnapshotForHistoryEntry, {

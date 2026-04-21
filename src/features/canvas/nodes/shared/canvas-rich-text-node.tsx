@@ -236,6 +236,7 @@ export function CanvasRichTextNode({
       editing={isEditing}
     >
       <CanvasFloatingFormattingToolbar editor={editor} visible={isEditing} />
+      <CanvasNodeConnectionHandles selected={isSelected} />
       <div
         ref={wrapperRef}
         className={cn('h-full w-full overflow-hidden', variant.containerClassName)}
@@ -264,7 +265,6 @@ export function CanvasRichTextNode({
           }
         }}
       >
-        <CanvasNodeConnectionHandles selected={isSelected} />
         <div
           className={cn('h-full', isEditing && 'nodrag nopan', isExclusivelySelected && 'nowheel')}
         >

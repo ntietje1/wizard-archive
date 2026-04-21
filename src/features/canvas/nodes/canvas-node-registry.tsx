@@ -1,67 +1,32 @@
-import { embedNodeModule } from './embed/embed-node-module'
-import { getStrokeSelectionBounds } from './stroke/stroke-node-interactions'
-import { getCanvasNodeBounds } from './shared/canvas-node-selection'
+import {
+  canvasNodeModules,
+  getCanvasNodeModule,
+  getCanvasNodeModuleByType,
+} from './canvas-node-modules'
 import type {
   AnyCanvasNodeModule,
   CanvasNodeCreateArgs,
   CanvasNodeData,
   CanvasNodeMinimapProps,
-  CanvasNodeModule,
   CanvasNodePreviewOptions,
-  CanvasNodeSelectionContext,
   CanvasNodeType,
 } from './canvas-node-module-types'
 import type { Node } from '@xyflow/react'
 import type { CanvasAwarenessCapability, CanvasDocumentWriter } from '../tools/canvas-tool-types'
 import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
-import type { Point2D } from '../utils/canvas-awareness-types'
-import type { Bounds } from '../utils/canvas-geometry-utils'
-import { boundsFromPoints, rectIntersectsBounds } from '../utils/canvas-geometry-utils'
 import { buildCanvasNodeTypes } from './canvas-node-module-types'
-import { strokeNodeModule } from './stroke/stroke-node-module'
-import { textNodeModule } from './text/text-node-module'
-
-const canvasNodeModules = [
-  embedNodeModule,
-  strokeNodeModule,
-  textNodeModule,
-] as const satisfies ReadonlyArray<AnyCanvasNodeModule>
-
-const canvasNodeModuleMap: Partial<Record<CanvasNodeType, AnyCanvasNodeModule>> =
-  Object.fromEntries(canvasNodeModules.map((module) => [module.type, module] as const))
-export const canvasNodeTypes = buildCanvasNodeTypes(canvasNodeModules)
 
 type CanvasAwarenessLayer = NonNullable<CanvasAwarenessCapability['Layer']>
 
-const canvasNodeAwarenessLayers = canvasNodeModules.flatMap((module) =>
-  module.awareness?.Layer ? [{ key: module.type, Layer: module.awareness.Layer }] : [],
-)
+let cachedCanvasNodeTypes: ReturnType<typeof buildCanvasNodeTypes> | null = null
+let cachedCanvasNodeAwarenessLayers: ReadonlyArray<{
+  key: AnyCanvasNodeModule['type']
+  Layer: CanvasAwarenessLayer
+}> | null = null
 
-type StrokeSelectionNode = Node<
-  {
-    points: Array<[number, number, number]>
-    size: number
-    bounds: Bounds
-  },
-  'stroke'
->
-
-function isCanvasNodeType(type: string): type is CanvasNodeType {
-  return type in canvasNodeModuleMap
-}
-
-export function getCanvasNodeModule(type: CanvasNodeType): CanvasNodeModule {
-  const module = canvasNodeModuleMap[type]
-  if (!module) {
-    throw new Error(`Missing canvas node module for "${type}"`)
-  }
-
-  return module
-}
-
-export function getCanvasNodeModuleByType(type: string | undefined): CanvasNodeModule | null {
-  if (!type || !isCanvasNodeType(type)) return null
-  return getCanvasNodeModule(type)
+export function getCanvasNodeTypes() {
+  cachedCanvasNodeTypes ??= buildCanvasNodeTypes(canvasNodeModules)
+  return cachedCanvasNodeTypes
 }
 
 export function renderCanvasNodePreview(
@@ -94,7 +59,11 @@ export function getCanvasNodeAwarenessLayers(): ReadonlyArray<{
   key: CanvasNodeType
   Layer: CanvasAwarenessLayer
 }> {
-  return canvasNodeAwarenessLayers
+  cachedCanvasNodeAwarenessLayers ??= canvasNodeModules.flatMap((module) =>
+    module.awareness?.Layer ? [{ key: module.type, Layer: module.awareness.Layer }] : [],
+  )
+
+  return cachedCanvasNodeAwarenessLayers
 }
 
 export function getCanvasNodeContextMenuContributors(type: string | undefined) {
@@ -110,95 +79,4 @@ export function createCanvasNodePlacement(
 
 export function createCanvasNode(type: CanvasNodeType, args: CanvasNodeCreateArgs): Node {
   return createCanvasNodePlacement(type, args).node
-}
-
-export function findCanvasNodeAtPoint(
-  nodes: Array<Node>,
-  point: Point2D,
-  context: CanvasNodeSelectionContext,
-): string | null {
-  for (let index = nodes.length - 1; index >= 0; index -= 1) {
-    const node = nodes[index]
-    if (getCanvasNodeModuleByType(node.type)?.selection?.point?.(node, point, context)) {
-      return node.id
-    }
-  }
-
-  return null
-}
-
-function getCanvasRectangleCandidateBounds(
-  node: Node,
-  context: CanvasNodeSelectionContext,
-): Bounds | null {
-  if (isStrokeSelectionNode(node)) {
-    return getStrokeSelectionBounds(node, context.zoom)
-  }
-
-  return getCanvasNodeBounds(node)
-}
-
-function isStrokeSelectionNode(node: Node): node is StrokeSelectionNode {
-  const bounds = node.data.bounds
-
-  return (
-    node.type === 'stroke' &&
-    Array.isArray(node.data.points) &&
-    typeof node.data.size === 'number' &&
-    typeof bounds === 'object' &&
-    bounds !== null &&
-    'x' in bounds &&
-    typeof bounds.x === 'number' &&
-    Number.isFinite(bounds.x) &&
-    'y' in bounds &&
-    typeof bounds.y === 'number' &&
-    Number.isFinite(bounds.y) &&
-    'width' in bounds &&
-    typeof bounds.width === 'number' &&
-    Number.isFinite(bounds.width) &&
-    'height' in bounds &&
-    typeof bounds.height === 'number' &&
-    Number.isFinite(bounds.height)
-  )
-}
-
-function filterCanvasSelectionCandidates(
-  nodes: Array<Node>,
-  candidateBounds: Bounds | null,
-  getBounds: (node: Node) => Bounds | null,
-): Array<Node> {
-  if (!candidateBounds) return nodes
-
-  return nodes.filter((node) => {
-    const bounds = getBounds(node)
-    return !bounds || rectIntersectsBounds(candidateBounds, bounds)
-  })
-}
-
-export function getCanvasNodesMatchingRectangle(
-  nodes: Array<Node>,
-  rect: Bounds,
-  context: CanvasNodeSelectionContext,
-): Array<string> {
-  return filterCanvasSelectionCandidates(nodes, rect, (node) =>
-    getCanvasRectangleCandidateBounds(node, context),
-  )
-    .filter((node) =>
-      getCanvasNodeModuleByType(node.type)?.selection?.rectangle?.(node, rect, context),
-    )
-    .map((node) => node.id)
-}
-
-export function getCanvasNodesMatchingLasso(
-  nodes: Array<Node>,
-  polygon: Array<Point2D>,
-  context: CanvasNodeSelectionContext,
-): Array<string> {
-  const polygonBounds = boundsFromPoints(polygon)
-
-  return filterCanvasSelectionCandidates(nodes, polygonBounds, getCanvasNodeBounds)
-    .filter((node) =>
-      getCanvasNodeModuleByType(node.type)?.selection?.lasso?.(node, polygon, context),
-    )
-    .map((node) => node.id)
 }
