@@ -173,13 +173,3 @@ export function buildCanvasNodeTypes(modules: ReadonlyArray<AnyCanvasNodeModule>
 
   return Object.fromEntries(entries) as NodeTypes
 }
-
-export function readString(data: Record<string, unknown>, key: string): string | undefined {
-  const value = data[key]
-  return typeof value === 'string' ? value : undefined
-}
-
-export function readNumber(data: Record<string, unknown>, key: string): number | undefined {
-  const value = data[key]
-  return typeof value === 'number' && Number.isFinite(value) ? value : undefined
-}

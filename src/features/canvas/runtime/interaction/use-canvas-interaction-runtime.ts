@@ -1,9 +1,11 @@
-import { useMemo } from 'react'
 import type { RefObject } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { useCanvasCursorPresence } from './use-canvas-cursor-presence'
 import { useCanvasDropIntegration } from './use-canvas-drop-integration'
 import type { useCanvasHistory } from '../document/use-canvas-history'
+import { useCanvasFlowHandlers } from './use-canvas-flow-handlers'
+import { getCanvasInteractionChrome } from './use-canvas-interaction-chrome'
+import { useCanvasNodeActions } from './use-canvas-node-actions'
 import { useCanvasNodeDragHandlers } from './use-canvas-node-drag-handlers'
 import { useCanvasPointerBridge } from './use-canvas-pointer-bridge'
 import { useCanvasSelectionRect } from '../selection/use-canvas-selection-rect'
@@ -63,7 +65,7 @@ export function useCanvasInteractionRuntime({
 }: UseCanvasInteractionRuntimeOptions) {
   const reactFlowInstance = useReactFlow()
   const isSelectMode = activeToolId === 'select'
-  const documentRead = {
+  const query = {
     getNodes: () => reactFlowInstance.getNodes(),
     getEdges: () => reactFlowInstance.getEdges(),
   }
@@ -83,8 +85,8 @@ export function useCanvasInteractionRuntime({
   })
 
   const { activeToolController, toolCursor } = useCanvasToolRuntime({
-    documentRead,
-    documentWrite: documentWriter,
+    commands: documentWriter,
+    query,
     selection: selectionController,
     interaction,
     awareness: session.awareness,
@@ -126,46 +128,35 @@ export function useCanvasInteractionRuntime({
     awareness: session.awareness.core,
   })
 
-  const nodeActions = useMemo(
-    () => ({
-      updateNodeData: documentWriter.updateNodeData,
-      onResize: (
-        nodeId: string,
-        width: number,
-        height: number,
-        position: { x: number; y: number },
-      ) => {
-        reactFlowInstance.setNodes((current) =>
-          current.map((node) => (node.id === nodeId ? { ...node, width, height, position } : node)),
-        )
-        session.awareness.core.setLocalResizing({
-          [nodeId]: { width, height, x: position.x, y: position.y },
-        })
-      },
-      onResizeEnd: (
-        nodeId: string,
-        width: number,
-        height: number,
-        position: { x: number; y: number },
-      ) => {
-        session.awareness.core.setLocalResizing(null)
-        documentWriter.resizeNode(nodeId, width, height, position)
-      },
-    }),
-    [documentWriter, reactFlowInstance, session.awareness.core],
-  )
+  const nodeActions = useCanvasNodeActions({
+    documentWriter,
+    reactFlowInstance,
+    session,
+  })
+
+  const flowHandlers = useCanvasFlowHandlers({
+    activeToolController,
+    canEdit,
+    cursorPresence: {
+      onMouseMove: handleMouseMove,
+      onMouseLeave: handleMouseLeave,
+    },
+    documentWriter,
+    dragHandlers: { onNodeDragStart, onNodeDrag, onNodeDragStop },
+    isSelectMode,
+  })
 
   const shellProps: CanvasFlowRuntimeShellProps = {
-    chrome: {
-      toolCursor,
-      remoteUsers: session.remoteUsers,
+    chrome: getCanvasInteractionChrome({
       activeTool: activeToolId,
       dropTarget: {
         overlayRef: dropOverlayRef,
         isTarget: isDropTarget,
         isFileTarget: isFileDropTarget,
       },
-    },
+      remoteUsers: session.remoteUsers,
+      toolCursor,
+    }),
     canvasSurfaceRef,
     contextMenu: {
       campaignId,
@@ -176,33 +167,7 @@ export function useCanvasInteractionRuntime({
       screenToFlowPosition: reactFlowInstance.screenToFlowPosition,
       selectionController,
     },
-    flowHandlers: {
-      onNodeDragStart: isSelectMode ? onNodeDragStart : undefined,
-      onNodeDrag: isSelectMode ? onNodeDrag : undefined,
-      onNodeDragStop: isSelectMode ? onNodeDragStop : undefined,
-      onNodesDelete: isSelectMode
-        ? (deleted) => {
-            documentWriter.deleteNodes(deleted.map((node) => node.id))
-          }
-        : undefined,
-      onEdgesDelete: isSelectMode
-        ? (deleted) => {
-            documentWriter.deleteEdges(deleted.map((edge) => edge.id))
-          }
-        : undefined,
-      onConnect: isSelectMode
-        ? (connection) => {
-            documentWriter.createEdge(connection)
-          }
-        : undefined,
-      onMoveStart: activeToolController.onMoveStart,
-      onMoveEnd: activeToolController.onMoveEnd,
-      onNodeClick: activeToolController.onNodeClick,
-      onEdgeClick: activeToolController.onEdgeClick,
-      onPaneClick: activeToolController.onPaneClick,
-      onMouseMove: handleMouseMove,
-      onMouseLeave: handleMouseLeave,
-    },
+    flowHandlers,
   }
 
   return {

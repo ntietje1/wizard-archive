@@ -32,9 +32,9 @@ describe('textToolModule', () => {
     expect(createdNodes).toHaveLength(1)
     expect(createdNodes[0]).toMatchObject({
       type: 'text',
-      position: { x: 40, y: 182 },
-      width: 120,
-      height: 36,
+      position: { x: -60, y: 80 },
+      width: 320,
+      height: 240,
       selected: true,
       draggable: true,
     })

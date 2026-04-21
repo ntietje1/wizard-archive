@@ -1,4 +1,4 @@
-import { getCanvasNodeBounds } from '../../nodes/shared/canvas-node-selection'
+import { getCanvasNodeBounds } from '../../nodes/shared/canvas-node-bounds'
 import {
   boundsFromPoints,
   pointInPolygon,

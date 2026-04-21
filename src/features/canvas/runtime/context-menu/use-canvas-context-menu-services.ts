@@ -1,10 +1,15 @@
-import { createEmbedCanvasNode } from '../../nodes/embed/embed-node-creation'
 import { parseEmbedNodeData } from '../../nodes/embed/embed-node-data'
+import {
+  applyCanvasPasteCommand,
+  applyCanvasReorderCommand,
+  createAndSelectEmbeddedCanvasNode,
+  deleteCanvasSelectionCommand,
+} from '../document/canvas-document-commands'
+import { sanitizeNodeForPersistence } from '../document/canvas-node-persistence-sanitizer'
 import { transactCanvasMaps } from '../document/canvas-yjs-transactions'
 import { useCanvasClipboardStore } from './use-canvas-clipboard-store'
 import { createCanvasClipboardEntry, materializeCanvasPaste } from './canvas-context-menu-clipboard'
 import { createCanvasReorderUpdates } from './canvas-context-menu-reorder'
-import { getCanvasDeletionSelection } from './canvas-context-menu-selection'
 import type { CanvasContextMenuPoint, CanvasContextMenuServices } from './canvas-context-menu-types'
 import type {
   CanvasSelectionController,
@@ -52,34 +57,26 @@ export function useCanvasContextMenuServices({
     createCanvasClipboardEntry(nodesMap, edgesMap, snapshot)
   const applyPaste = (paste: ReturnType<typeof materializeCanvasPaste>) => {
     transactCanvasMaps(nodesMap, edgesMap, () => {
-      for (const node of paste.nodes) {
-        nodesMap.set(node.id, node)
-      }
-      for (const edge of paste.edges) {
-        edgesMap.set(edge.id, edge)
-      }
-      incrementPasteCount()
+      applyCanvasPasteCommand({
+        nodesMap,
+        edgesMap,
+        paste,
+        sanitizeNode: sanitizeNodeForPersistence,
+        onApplied: incrementPasteCount,
+      })
     })
 
     selection.replace(paste.selection)
     return paste.selection
   }
   const deleteSnapshotFromMaps = (snapshot: CanvasSelectionSnapshot) => {
-    const deletionSelection = getCanvasDeletionSelection(edgesMap, snapshot)
-    if (deletionSelection.nodeIds.length === 0 && deletionSelection.edgeIds.length === 0) {
-      return false
-    }
+    let deleted = false
 
     transactCanvasMaps(nodesMap, edgesMap, () => {
-      for (const edgeId of deletionSelection.edgeIds) {
-        edgesMap.delete(edgeId)
-      }
-      for (const nodeId of deletionSelection.nodeIds) {
-        nodesMap.delete(nodeId)
-      }
+      deleted = deleteCanvasSelectionCommand({ nodesMap, edgesMap, selection: snapshot })
     })
 
-    return true
+    return deleted
   }
   const resolveSelectedEmbedItem = (selectionSnapshot: CanvasSelectionSnapshot) => {
     if (selectionSnapshot.edgeIds.length > 0 || selectionSnapshot.nodeIds.length !== 1) {
@@ -123,15 +120,9 @@ export function useCanvasContextMenuServices({
         return false
       }
 
+      setClipboard(copied)
       transactCanvasMaps(nodesMap, edgesMap, () => {
-        setClipboard(copied)
-        const deletionSelection = getCanvasDeletionSelection(edgesMap, snapshot)
-        for (const edgeId of deletionSelection.edgeIds) {
-          edgesMap.delete(edgeId)
-        }
-        for (const nodeId of deletionSelection.nodeIds) {
-          nodesMap.delete(nodeId)
-        }
+        deleteCanvasSelectionCommand({ nodesMap, edgesMap, selection: snapshot })
       })
       selection.clear()
       return true
@@ -188,12 +179,7 @@ export function useCanvasContextMenuServices({
       }
 
       transactCanvasMaps(nodesMap, edgesMap, () => {
-        reorderUpdates.nodes?.forEach((node) => {
-          nodesMap.set(node.id, node)
-        })
-        reorderUpdates.edges?.forEach((edge) => {
-          edgesMap.set(edge.id, edge)
-        })
+        applyCanvasReorderCommand({ nodesMap, edgesMap, reorderUpdates })
       })
 
       return true
@@ -210,12 +196,13 @@ export function useCanvasContextMenuServices({
         name: getDefaultName(type, canvasParentId),
       })
 
-      const embedNode = createEmbedCanvasNode(result.id, screenToFlowPosition(pointerPosition))
-      createNode(embedNode)
-
-      const nextSelection = { nodeIds: [embedNode.id], edgeIds: [] }
-      selection.replace(nextSelection)
-      return nextSelection
+      return createAndSelectEmbeddedCanvasNode({
+        sidebarItemId: result.id,
+        pointerPosition,
+        screenToFlowPosition,
+        createNode,
+        replaceSelection: selection.replace,
+      })
     },
   } satisfies CanvasContextMenuServices
 }

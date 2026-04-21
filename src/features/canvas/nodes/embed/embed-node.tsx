@@ -1,16 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { RichEmbedLifecycleController } from './use-rich-embed-lifecycle'
-import { useRichEmbedActivation } from './use-rich-embed-lifecycle'
 import {
-  useIsCanvasNodeSelected,
-  useSelectedCanvasNodeIds,
-} from '../../runtime/selection/use-canvas-selection-state'
-import { isExclusivelySelectedNode } from '../../utils/canvas-selection-utils'
+  useCanvasEditSessionContext,
+  useCanvasPermissionsContext,
+} from '../../runtime/providers/canvas-runtime-hooks'
 import { ResizableNodeWrapper } from '../shared/resizable-node-wrapper'
 import type { EmbedNodeData } from './embed-node-data'
 import { EmbedNoteContent } from './embed-note-content'
 import { CanvasFloatingFormattingToolbar } from '../shared/canvas-floating-formatting-toolbar'
+import { useCanvasEditableNodeSession } from '../shared/use-canvas-editable-node-session'
 import { ItemPreviewContent } from '~/features/editor/components/item-preview-content'
 import type { Node, NodeProps } from '@xyflow/react'
 import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
@@ -18,41 +17,25 @@ import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { cn } from '~/features/shadcn/lib/utils'
 import { CanvasNodeConnectionHandles } from '../shared/canvas-node-connection-handles'
-import {
-  useCanvasEditSessionContext,
-  useCanvasPermissionsContext,
-} from '../../runtime/providers/canvas-runtime-hooks'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 
 export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>) {
   const sidebarItemId = data.sidebarItemId
   const { itemsMap } = useActiveSidebarItems()
   const item = sidebarItemId ? itemsMap.get(sidebarItemId) : undefined
-  const isSelected = useIsCanvasNodeSelected(id)
   const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
-
   const { data: contentItem } = useSidebarItemById(sidebarItemId)
-
   const editSession = useCanvasEditSessionContext()
   const canEdit = useCanvasPermissionsContext()
-  const { editingEmbedId, setEditingEmbedId } = editSession
-  const selectedNodeIds = useSelectedCanvasNodeIds()
-  const isExclusivelySelected = isExclusivelySelectedNode(selectedNodeIds, id)
-  const isEditing = editingEmbedId === id && isExclusivelySelected
+  const editableSession = useCanvasEditableNodeSession({
+    id,
+    canEdit,
+    editing: editSession.editingEmbedId === id,
+    setEditing: (editing) => editSession.setEditingEmbedId(editing ? id : null),
+  })
+  const isEditing = editableSession.editable && contentItem?.type === SIDEBAR_ITEM_TYPES.notes
   const noteEditor = contentItem?.type === SIDEBAR_ITEM_TYPES.notes ? editor : null
   const showsFormattingToolbar = isEditing && noteEditor !== null
-
-  useEffect(() => {
-    if (editingEmbedId === id && !isExclusivelySelected) {
-      setEditingEmbedId(null)
-    }
-  }, [editingEmbedId, id, isExclusivelySelected, setEditingEmbedId])
-
-  const { lifecycle, handleDoubleClick } = useRichEmbedActivation({
-    canEdit: canEdit && isExclusivelySelected,
-    embedId: id,
-    setEditingEmbedId,
-  })
 
   const label = item?.name ?? 'Missing item'
   const isMissing = !item
@@ -66,27 +49,40 @@ export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>
       minWidth={240}
       minHeight={180}
       editing={showsFormattingToolbar}
+      chrome={
+        <>
+          <CanvasFloatingFormattingToolbar editor={noteEditor} visible={showsFormattingToolbar} />
+          <CanvasNodeConnectionHandles selected={editableSession.isSelected} />
+          {showFloatingLabel && (
+            <div className="pointer-events-none absolute left-3 top-0 z-20 max-w-[calc(100%-1.5rem)] -translate-y-[calc(100%+0.375rem)]">
+              <span className="block truncate text-xs font-medium text-muted-foreground">
+                {isMissing ? `Warning: ${label}` : label}
+              </span>
+            </div>
+          )}
+        </>
+      }
     >
-      <CanvasFloatingFormattingToolbar editor={noteEditor} visible={showsFormattingToolbar} />
-      <CanvasNodeConnectionHandles selected={isSelected} />
-      {showFloatingLabel && (
-        <div className="pointer-events-none absolute left-3 top-0 z-20 max-w-[calc(100%-1.5rem)] -translate-y-[calc(100%+0.375rem)]">
-          <span className="block truncate text-xs font-medium text-muted-foreground">
-            {isMissing ? `Warning: ${label}` : label}
-          </span>
-        </div>
-      )}
       <div
         className="relative h-full w-full overflow-hidden rounded-lg border bg-card shadow-sm"
-        onDoubleClick={handleDoubleClick}
+        onDoubleClick={(event) => {
+          if (contentItem?.type !== SIDEBAR_ITEM_TYPES.notes) {
+            return
+          }
+
+          event.preventDefault()
+          event.stopPropagation()
+          editableSession.handleDoubleClick(event)
+        }}
       >
         {!isMissing && (
           <div className="h-full">
             <EmbedRichContent
               contentItem={contentItem}
               isEditing={isEditing}
-              isExclusivelySelected={isExclusivelySelected}
-              lifecycle={lifecycle}
+              isExclusivelySelected={editableSession.isExclusivelySelected}
+              lifecycle={editableSession.lifecycle}
+              onActivated={editableSession.handleActivated}
               onEditorChange={setEditor}
             />
           </div>
@@ -101,12 +97,14 @@ function EmbedRichContent({
   isEditing,
   isExclusivelySelected,
   lifecycle,
+  onActivated,
   onEditorChange,
 }: {
   contentItem: AnySidebarItemWithContent | undefined
   isEditing: boolean
   isExclusivelySelected: boolean
   lifecycle: RichEmbedLifecycleController
+  onActivated: () => void
   onEditorChange: (editor: CustomBlockNoteEditor | null) => void
 }): React.ReactElement | null {
   if (!contentItem) {
@@ -125,6 +123,7 @@ function EmbedRichContent({
         editable={isEditing}
         isExclusivelySelected={isExclusivelySelected}
         lifecycle={lifecycle}
+        onActivated={onActivated}
         onCanvasEditorChange={onEditorChange}
       />
     )

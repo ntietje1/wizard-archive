@@ -41,7 +41,7 @@ describe('useCanvasToolRuntime', () => {
   })
 
   it('keeps the active lasso controller stable across rerenders', () => {
-    const documentWriter = {
+    const commands = {
       createNode: vi.fn(),
       updateNode: vi.fn(),
       updateNodeData: vi.fn(),
@@ -51,7 +51,7 @@ describe('useCanvasToolRuntime', () => {
       deleteEdges: vi.fn(),
       setNodePosition: vi.fn(),
     }
-    const documentReader = {
+    const query = {
       getNodes: vi.fn(() => []),
       getEdges: vi.fn(() => []),
     }
@@ -83,8 +83,8 @@ describe('useCanvasToolRuntime', () => {
     const { result, rerender } = renderHook(
       ({ awareness }) =>
         useCanvasToolRuntime({
-          documentRead: documentReader,
-          documentWrite: documentWriter,
+          commands,
+          query,
           selection: selectionActions,
           interaction,
           awareness,

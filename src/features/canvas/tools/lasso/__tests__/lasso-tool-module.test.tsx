@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { lassoToolModule } from '../lasso-tool-module'
 import {
   clearCanvasPendingSelectionPreview,
-  useCanvasPendingSelectionPreviewStore,
+  getCanvasPendingSelectionPreview,
 } from '../../../runtime/selection/use-canvas-pending-selection-preview'
 import {
   clearLassoToolLocalOverlay,
@@ -140,16 +140,15 @@ describe('lassoToolModule', () => {
 
     expect(requestAnimationFrame).toHaveBeenCalledTimes(1)
     expect(setPresence).not.toHaveBeenCalled()
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toBeNull()
+    expect(getCanvasPendingSelectionPreview()).toEqual({ kind: 'inactive' })
 
     flushAnimationFrame()
 
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toEqual(
-      new Set(['embed-1']),
-    )
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingEdgeIds).toEqual(
-      new Set(['edge-1']),
-    )
+    expect(getCanvasPendingSelectionPreview()).toEqual({
+      kind: 'active',
+      nodeIds: new Set(['embed-1']),
+      edgeIds: new Set(['edge-1']),
+    })
     expect(setPresence).toHaveBeenCalledTimes(1)
 
     controller.onPointerMove?.(createPointerEvent(target, { clientX: -20, clientY: 50 }))
@@ -175,8 +174,7 @@ describe('lassoToolModule', () => {
     expect(endGesture).toHaveBeenCalled()
     expect(target.setPointerCapture).toHaveBeenCalledWith(1)
     expect(target.releasePointerCapture).toHaveBeenCalledWith(1)
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toBeNull()
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingEdgeIds).toEqual(new Set())
+    expect(getCanvasPendingSelectionPreview()).toEqual({ kind: 'inactive' })
   })
 
   it('publishes a fresh local lasso path array on each pointer update so the local overlay rerenders', () => {
@@ -215,8 +213,11 @@ describe('lassoToolModule', () => {
     ])
     expect(secondPath).not.toBe(firstPath)
     expect(thirdPath).not.toBe(secondPath)
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toEqual(new Set())
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingEdgeIds).toEqual(new Set())
+    expect(getCanvasPendingSelectionPreview()).toEqual({
+      kind: 'active',
+      nodeIds: new Set(),
+      edgeIds: new Set(),
+    })
   })
 
   it('clears selection when no measured nodes fall inside the lasso', () => {
@@ -240,8 +241,7 @@ describe('lassoToolModule', () => {
     controller.onPointerUp?.(createPointerEvent(target, { clientX: 0, clientY: 0 }))
 
     expect(commitGestureSelection).toHaveBeenCalledWith({ nodeIds: [], edgeIds: [] }, 'replace')
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toBeNull()
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingEdgeIds).toEqual(new Set())
+    expect(getCanvasPendingSelectionPreview()).toEqual({ kind: 'inactive' })
   })
 
   it('selects nodes and edges when the lasso contacts them', () => {
@@ -342,12 +342,11 @@ describe('lassoToolModule', () => {
     drawRectangleLasso(controller, target, { ctrlKey: true })
     flushAnimationFrame()
 
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toEqual(
-      new Set(['existing-node', 'inside-node']),
-    )
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingEdgeIds).toEqual(
-      new Set(['existing-edge']),
-    )
+    expect(getCanvasPendingSelectionPreview()).toEqual({
+      kind: 'active',
+      nodeIds: new Set(['existing-node', 'inside-node']),
+      edgeIds: new Set(['existing-edge']),
+    })
   })
 
   it('keeps lasso active after successful commit and after too-small gestures', () => {
@@ -434,7 +433,7 @@ function createLassoEnvironment({
       screenToFlowPosition: ({ x, y }) => ({ x, y }),
       getZoom: () => 1,
     },
-    document: {
+    commands: {
       createNode: () => undefined,
       updateNode: () => undefined,
       updateNodeData: () => undefined,
@@ -443,6 +442,8 @@ function createLassoEnvironment({
       createEdge: () => undefined,
       deleteEdges: () => undefined,
       setNodePosition: () => undefined,
+    },
+    query: {
       getNodes,
       getEdges,
       getMeasuredNodes,

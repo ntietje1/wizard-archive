@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createCanvasSelectionGestureSession } from '../canvas-selection-gesture-session'
 import {
   clearCanvasPendingSelectionPreview,
-  useCanvasPendingSelectionPreviewStore,
+  getCanvasPendingSelectionPreview,
 } from '../use-canvas-pending-selection-preview'
 
 describe('createCanvasSelectionGestureSession', () => {
@@ -59,12 +59,11 @@ describe('createCanvasSelectionGestureSession', () => {
     session.update({ value: 'updated' })
     flushAnimationFrame()
 
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toEqual(
-      new Set(['existing-node', 'next-node']),
-    )
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingEdgeIds).toEqual(
-      new Set(['existing-edge']),
-    )
+    expect(getCanvasPendingSelectionPreview()).toEqual({
+      kind: 'active',
+      nodeIds: new Set(['existing-node', 'next-node']),
+      edgeIds: new Set(['existing-edge']),
+    })
   })
 
   it('commits the last preview, clears pending preview state, and ends the gesture', () => {
@@ -90,9 +89,11 @@ describe('createCanvasSelectionGestureSession', () => {
     session.update({ value: 'updated' })
     flushAnimationFrame()
 
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toEqual(
-      new Set(['node-1']),
-    )
+    expect(getCanvasPendingSelectionPreview()).toEqual({
+      kind: 'active',
+      nodeIds: new Set(['node-1']),
+      edgeIds: new Set(['edge-1']),
+    })
 
     session.commit({ value: 'final' })
 
@@ -106,8 +107,7 @@ describe('createCanvasSelectionGestureSession', () => {
     expect(suppressNextSurfaceClick).toHaveBeenCalledTimes(1)
     expect(endGesture).toHaveBeenCalledTimes(1)
     expect(clear).toHaveBeenCalledTimes(1)
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toBeNull()
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingEdgeIds).toEqual(new Set())
+    expect(getCanvasPendingSelectionPreview()).toEqual({ kind: 'inactive' })
   })
 
   it('clears local state on cancel and dispose without committing selection', () => {
@@ -135,7 +135,7 @@ describe('createCanvasSelectionGestureSession', () => {
     expect(commitGestureSelection).not.toHaveBeenCalled()
     expect(endGesture).toHaveBeenCalledTimes(1)
     expect(clear).toHaveBeenCalledTimes(1)
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toBeNull()
+    expect(getCanvasPendingSelectionPreview()).toEqual({ kind: 'inactive' })
 
     session.begin({ value: 'start-again' }, 'replace')
     session.dispose()

@@ -1,5 +1,5 @@
 import { getStrokeSelectionBounds } from './stroke/stroke-node-interactions'
-import { getCanvasNodeBounds } from './shared/canvas-node-selection'
+import { getCanvasNodeBounds } from './shared/canvas-node-bounds'
 import { getCanvasNodeModuleByType } from './canvas-node-modules'
 import { boundsFromPoints, rectIntersectsBounds } from '../utils/canvas-geometry-utils'
 import type { CanvasViewportTools } from '../tools/canvas-tool-types'

@@ -1,6 +1,7 @@
-import { reorderCanvasElements } from '../document/canvas-stack-order'
+import { reorderCanvasElementIds } from '../document/canvas-reorder'
+import { applyCanvasZOrder } from '../document/canvas-z-order'
 import { getCurrentCanvasEdges, getCurrentCanvasNodes } from './canvas-context-menu-elements'
-import type { CanvasReorderDirection } from '../document/canvas-stack-order'
+import type { CanvasReorderDirection } from '../document/canvas-reorder'
 import type { CanvasSelectionSnapshot } from '../../tools/canvas-tool-types'
 import type { Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
@@ -22,12 +23,25 @@ export function createCanvasReorderUpdates(
     return null
   }
 
+  const currentNodes = hasNodes ? getCurrentCanvasNodes(nodesMap) : null
+  const currentEdges = hasEdges ? getCurrentCanvasEdges(edgesMap) : null
+  const currentNodesArray = currentNodes ?? []
+  const currentEdgesArray = currentEdges ?? []
+  const currentNodeIds = currentNodesArray.map((node) => node.id)
+  const currentEdgeIds = currentEdgesArray.map((edge) => edge.id)
+
   return {
     nodes: hasNodes
-      ? reorderCanvasElements(getCurrentCanvasNodes(nodesMap), selection.nodeIds, direction)
+      ? applyCanvasZOrder(
+          currentNodesArray,
+          reorderCanvasElementIds(currentNodeIds, selection.nodeIds, direction),
+        )
       : null,
     edges: hasEdges
-      ? reorderCanvasElements(getCurrentCanvasEdges(edgesMap), selection.edgeIds, direction)
+      ? applyCanvasZOrder(
+          currentEdgesArray,
+          reorderCanvasElementIds(currentEdgeIds, selection.edgeIds, direction),
+        )
       : null,
   }
 }

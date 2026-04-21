@@ -123,7 +123,7 @@ function createDrawEnvironment({
       screenToFlowPosition: ({ x, y }) => ({ x, y }),
       getZoom: () => 1,
     },
-    document: {
+    commands: {
       createNode,
       updateNode: () => undefined,
       updateNodeData: () => undefined,
@@ -132,6 +132,8 @@ function createDrawEnvironment({
       createEdge: () => undefined,
       deleteEdges: () => undefined,
       setNodePosition: () => undefined,
+    },
+    query: {
       getNodes: () => [],
       getEdges: () => [],
       getMeasuredNodes: () => [],

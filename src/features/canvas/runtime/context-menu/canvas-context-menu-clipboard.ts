@@ -1,4 +1,4 @@
-import { getNextCanvasElementZIndex } from '../document/canvas-stack-order'
+import { getNextCanvasElementZIndex } from '../document/canvas-z-index'
 import {
   cloneCanvasEdge,
   cloneCanvasNode,

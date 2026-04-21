@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   clearCanvasPendingSelectionPreview,
-  useCanvasPendingSelectionPreviewStore,
+  getCanvasPendingSelectionPreview,
 } from '../use-canvas-pending-selection-preview'
 import { useCanvasSelectionRect } from '../use-canvas-selection-rect'
 import { clearSelectToolLocalOverlay } from '../../../tools/select/select-tool-local-overlay'
@@ -180,16 +180,17 @@ describe('useCanvasSelectionRect', () => {
     })
 
     expect(requestAnimationFrame).toHaveBeenCalledTimes(1)
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toBeNull()
+    expect(getCanvasPendingSelectionPreview()).toEqual({ kind: 'inactive' })
     expect(setPresence).not.toHaveBeenCalled()
 
     act(() => {
       flushAnimationFrame()
     })
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toEqual(
-      new Set(['text-1']),
-    )
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingEdgeIds).toEqual(new Set())
+    expect(getCanvasPendingSelectionPreview()).toEqual({
+      kind: 'active',
+      nodeIds: new Set(['text-1']),
+      edgeIds: new Set(),
+    })
     expect(setPresence).toHaveBeenCalledWith('tool.select', {
       type: 'rect',
       x: 10,
@@ -230,8 +231,7 @@ describe('useCanvasSelectionRect', () => {
     )
     expect(suppressNextSurfaceClick).toHaveBeenCalledTimes(1)
     expect(selection.endGesture).toHaveBeenCalled()
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toBeNull()
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingEdgeIds).toEqual(new Set())
+    expect(getCanvasPendingSelectionPreview()).toEqual({ kind: 'inactive' })
 
     unmount()
     surface.remove()
@@ -310,12 +310,11 @@ describe('useCanvasSelectionRect', () => {
       flushAnimationFrame()
     })
 
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toEqual(
-      new Set(['text-existing', 'text-1']),
-    )
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingEdgeIds).toEqual(
-      new Set(['edge-existing']),
-    )
+    expect(getCanvasPendingSelectionPreview()).toEqual({
+      kind: 'active',
+      nodeIds: new Set(['text-existing', 'text-1']),
+      edgeIds: new Set(['edge-existing']),
+    })
 
     act(() => {
       window.dispatchEvent(

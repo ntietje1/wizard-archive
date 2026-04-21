@@ -1,5 +1,5 @@
 import { stripEphemeralCanvasNodeState } from '../../utils/canvas-node-persistence'
-import { getOrderedCanvasElements } from '../document/canvas-stack-order'
+import { sortCanvasElementsByZIndex } from '../document/canvas-z-order'
 import type { Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 
@@ -12,9 +12,11 @@ export function cloneCanvasEdge(edge: Edge): Edge {
 }
 
 export function getCurrentCanvasNodes(nodesMap: Y.Map<Node>): Array<Node> {
-  return getOrderedCanvasElements(Array.from(nodesMap.values()).map(stripEphemeralCanvasNodeState))
+  return sortCanvasElementsByZIndex(
+    Array.from(nodesMap.values()).map(stripEphemeralCanvasNodeState),
+  )
 }
 
 export function getCurrentCanvasEdges(edgesMap: Y.Map<Edge>): Array<Edge> {
-  return getOrderedCanvasElements(Array.from(edgesMap.values()))
+  return sortCanvasElementsByZIndex(Array.from(edgesMap.values()))
 }

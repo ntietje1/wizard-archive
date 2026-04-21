@@ -1,6 +1,5 @@
 import { useRef } from 'react'
 import { Background, ConnectionMode, MiniMap, ReactFlow, SelectionMode } from '@xyflow/react'
-import { useShallow } from 'zustand/shallow'
 import type { Id } from 'convex/_generated/dataModel'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { cn } from '~/features/shadcn/lib/utils'
@@ -15,7 +14,7 @@ import { CanvasContextMenu } from '../runtime/context-menu/canvas-context-menu'
 import type { CanvasContextMenuRef } from '../runtime/context-menu/canvas-context-menu'
 import { CanvasViewportPersistence } from '../runtime/interaction/canvas-viewport-persistence'
 import type { PersistedCanvasViewport } from '../runtime/interaction/canvas-viewport-storage'
-import { useCanvasPendingSelectionPreviewStore } from '../runtime/selection/use-canvas-pending-selection-preview'
+import { useCanvasPendingSelectionPreviewSummary } from '../runtime/selection/use-canvas-pending-selection-preview'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
 import type { CanvasSelectionController, CanvasToolId } from '../tools/canvas-tool-types'
 import type { Edge, Node, OnConnect, OnEdgesDelete, OnNodeDrag, OnNodesDelete } from '@xyflow/react'
@@ -91,13 +90,7 @@ export function CanvasFlowShell({
 }: CanvasFlowShellComponentProps) {
   const isSelectMode = chrome.activeTool === 'select'
   const contextMenuRef = useRef<CanvasContextMenuRef>(null)
-  const pendingSelectionPreview = useCanvasPendingSelectionPreviewStore(
-    useShallow((state) => ({
-      active: state.pendingNodeIds !== null,
-      nodeCount: state.pendingNodeIds?.size ?? 0,
-      edgeCount: state.pendingEdgeIds?.size ?? 0,
-    })),
-  )
+  const pendingSelectionPreview = useCanvasPendingSelectionPreviewSummary()
 
   return (
     <div

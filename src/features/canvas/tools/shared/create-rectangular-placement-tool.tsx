@@ -6,14 +6,14 @@ import {
   setPointerCapture,
 } from './tool-module-utils'
 import { setRectCreationDragRect } from './rect-creation-local-overlay'
-import type { CanvasToolController, CanvasToolServices } from '../canvas-tool-types'
+import type { CanvasTextToolServices, CanvasToolController } from '../canvas-tool-types'
 import type { CanvasNodeType } from '../../nodes/canvas-node-module-types'
 
 const MIN_DRAG_RECT_SIZE = 10
 
 export function createRectangularPlacementToolController<
   TNodeType extends Extract<CanvasNodeType, 'text'>,
->(nodeType: TNodeType, services: CanvasToolServices): CanvasToolController {
+>(nodeType: TNodeType, services: CanvasTextToolServices): CanvasToolController {
   let start: { x: number; y: number } | null = null
   let lastClientPos = { x: 0, y: 0 }
   let active = false
@@ -63,7 +63,7 @@ export function createRectangularPlacementToolController<
     point: { x: number; y: number },
   ) => {
     const placement = createCanvasNodePlacement(nodeType, { position })
-    services.document.createNode(placement.node)
+    services.commands.createNode(placement.node)
     if (placement.node.selected) {
       services.selection.replaceNodes([placement.node.id])
     }
@@ -84,7 +84,7 @@ export function createRectangularPlacementToolController<
       },
       size: { width: rect.width, height: rect.height },
     })
-    services.document.createNode(placement.node)
+    services.commands.createNode(placement.node)
     if (placement.node.selected) {
       services.selection.replaceNodes([placement.node.id])
     }

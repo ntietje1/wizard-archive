@@ -5,14 +5,21 @@ import { lassoToolModule } from './lasso/lasso-tool-module'
 import { selectToolModule } from './select/select-tool-module'
 import { textToolModule } from './text/text-tool-module'
 import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
+import { assertNever } from '~/shared/utils/utils'
 import type {
   AnyCanvasToolModule,
   CanvasAwarenessCapability,
+  CanvasDrawToolServices,
+  CanvasEraseToolServices,
+  CanvasHandToolServices,
+  CanvasLassoToolServices,
   CanvasLocalOverlayCapability,
+  CanvasSelectToolServices,
   CanvasToolController,
   CanvasToolId,
   CanvasToolPropertyContext,
   CanvasToolServices,
+  CanvasTextToolServices,
 } from './canvas-tool-types'
 
 const canvasToolModules = [
@@ -86,7 +93,51 @@ export function createCanvasToolController(
   toolId: CanvasToolId,
   services: CanvasToolServices,
 ): CanvasToolController {
-  return getCanvasToolModule(toolId).create(services)
+  switch (toolId) {
+    case 'select':
+      return selectToolModule.create({
+        viewport: services.viewport,
+        query: services.query,
+        selection: services.selection,
+      } satisfies CanvasSelectToolServices)
+    case 'hand':
+      return handToolModule.create({
+        toolState: services.toolState,
+      } satisfies CanvasHandToolServices)
+    case 'draw':
+      return drawToolModule.create({
+        viewport: services.viewport,
+        commands: services.commands,
+        modifiers: services.modifiers,
+        toolState: services.toolState,
+        awareness: services.awareness,
+      } satisfies CanvasDrawToolServices)
+    case 'erase':
+      return eraseToolModule.create({
+        viewport: services.viewport,
+        commands: services.commands,
+        query: services.query,
+      } satisfies CanvasEraseToolServices)
+    case 'lasso':
+      return lassoToolModule.create({
+        viewport: services.viewport,
+        query: services.query,
+        selection: services.selection,
+        interaction: services.interaction,
+        awareness: services.awareness,
+      } satisfies CanvasLassoToolServices)
+    case 'text':
+      return textToolModule.create({
+        viewport: services.viewport,
+        commands: services.commands,
+        selection: services.selection,
+        editSession: services.editSession,
+        toolState: services.toolState,
+        modifiers: services.modifiers,
+      } satisfies CanvasTextToolServices)
+    default:
+      return assertNever(toolId)
+  }
 }
 
 export function clearCanvasToolLocalOverlays() {

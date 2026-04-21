@@ -8,13 +8,13 @@ import {
   releasePointerCapture,
   screenEventToFlowPosition,
 } from '../shared/tool-module-utils'
-import type { CanvasToolModule } from '../canvas-tool-types'
+import type { CanvasLassoToolServices, CanvasToolModule } from '../canvas-tool-types'
 import { LassoAwarenessLayer } from './lasso-tool-awareness-layer'
 import { setLassoToolAwareness } from './lasso-tool-awareness'
 import { clearLassoToolLocalOverlay, setLassoToolLocalPoints } from './lasso-tool-local-overlay'
 import { LassoToolLocalOverlayLayer } from './lasso-tool-local-overlay-layer'
 
-export const lassoToolModule: CanvasToolModule<'lasso'> = {
+export const lassoToolModule: CanvasToolModule<'lasso', CanvasLassoToolServices> = {
   id: 'lasso',
   label: 'Lasso select',
   group: 'selection',
@@ -68,15 +68,15 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
       }
 
       const pendingNodeIds = getCanvasNodesMatchingLasso(
-        services.document.getMeasuredNodes(),
+        services.query.getMeasuredNodes(),
         nextPoints,
         {
           zoom: services.viewport.getZoom(),
         },
       )
       const pendingEdgeIds = getCanvasEdgesMatchingLasso(
-        services.document.getNodes(),
-        services.document.getEdges(),
+        services.query.getNodes(),
+        services.query.getEdges(),
         nextPoints,
         { zoom: services.viewport.getZoom() },
       )

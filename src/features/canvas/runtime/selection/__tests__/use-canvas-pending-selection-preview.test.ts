@@ -1,11 +1,15 @@
+import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
   clearCanvasPendingSelectionPreview,
+  getCanvasPendingSelectionPreview,
   setCanvasPendingSelectionPreview,
-  useCanvasPendingSelectionPreviewStore,
+  useCanvasEdgePendingPreview,
+  useCanvasNodePendingPreview,
+  useCanvasPendingPreviewActive,
 } from '../use-canvas-pending-selection-preview'
 
-describe('useCanvasPendingSelectionPreviewStore', () => {
+describe('useCanvasPendingSelectionPreview', () => {
   beforeEach(() => {
     clearCanvasPendingSelectionPreview()
   })
@@ -16,45 +20,66 @@ describe('useCanvasPendingSelectionPreviewStore', () => {
       edgeIds: ['edge-1'],
     })
 
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toEqual(
-      new Set(['node-1', 'node-2']),
-    )
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingEdgeIds).toEqual(
-      new Set(['edge-1']),
-    )
+    expect(getCanvasPendingSelectionPreview()).toEqual({
+      kind: 'active',
+      nodeIds: new Set(['node-1', 'node-2']),
+      edgeIds: new Set(['edge-1']),
+    })
 
     clearCanvasPendingSelectionPreview()
 
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toBeNull()
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingEdgeIds).toEqual(new Set())
+    expect(getCanvasPendingSelectionPreview()).toEqual({ kind: 'inactive' })
   })
 
   it('distinguishes an active empty preview from an inactive preview', () => {
     setCanvasPendingSelectionPreview({ nodeIds: [], edgeIds: [] })
 
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toEqual(new Set())
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingEdgeIds).toEqual(new Set())
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).not.toBeNull()
+    expect(getCanvasPendingSelectionPreview()).toEqual({
+      kind: 'active',
+      nodeIds: new Set(),
+      edgeIds: new Set(),
+    })
   })
 
-  it('keeps the existing set reference when the effective preview ids are unchanged', () => {
+  it('keeps the existing preview reference when the effective preview ids are unchanged', () => {
     setCanvasPendingSelectionPreview({
       nodeIds: ['node-1', 'node-2'],
       edgeIds: ['edge-1'],
     })
-    const initialPendingNodeIds = useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds
-    const initialPendingEdgeIds = useCanvasPendingSelectionPreviewStore.getState().pendingEdgeIds
+    const initialPreview = getCanvasPendingSelectionPreview()
 
     setCanvasPendingSelectionPreview({
       nodeIds: ['node-2', 'node-1'],
       edgeIds: ['edge-1'],
     })
 
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toBe(
-      initialPendingNodeIds,
-    )
-    expect(useCanvasPendingSelectionPreviewStore.getState().pendingEdgeIds).toBe(
-      initialPendingEdgeIds,
-    )
+    expect(getCanvasPendingSelectionPreview()).toBe(initialPreview)
+  })
+
+  it('exposes semantic selector hooks instead of requiring callers to read store shape', () => {
+    const { result } = renderHook(() => ({
+      active: useCanvasPendingPreviewActive(),
+      nodeSelected: useCanvasNodePendingPreview('node-1'),
+      edgeSelected: useCanvasEdgePendingPreview('edge-1'),
+    }))
+
+    expect(result.current).toEqual({
+      active: false,
+      nodeSelected: false,
+      edgeSelected: false,
+    })
+
+    act(() => {
+      setCanvasPendingSelectionPreview({
+        nodeIds: ['node-1'],
+        edgeIds: ['edge-1'],
+      })
+    })
+
+    expect(result.current).toEqual({
+      active: true,
+      nodeSelected: true,
+      edgeSelected: true,
+    })
   })
 })

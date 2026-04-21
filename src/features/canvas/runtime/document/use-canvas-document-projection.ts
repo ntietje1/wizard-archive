@@ -4,7 +4,7 @@ import { yMapToArray } from '../../utils/canvas-yjs-utils'
 import { stripEphemeralCanvasNodeState } from '../../utils/canvas-node-persistence'
 import type { ResizingState } from '../../utils/canvas-awareness-types'
 import type { CanvasRemoteDragAnimation } from '../interaction/use-canvas-remote-drag-animation'
-import { getOrderedCanvasElements } from './canvas-stack-order'
+import { sortCanvasElementsByZIndex } from './canvas-z-order'
 import type { Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 
@@ -34,13 +34,13 @@ export function useCanvasDocumentProjection({
 
   useEffect(() => {
     reactFlow.setNodes(
-      getOrderedCanvasElements(yMapToArray(nodesMap).map(stripEphemeralCanvasNodeState)),
+      sortCanvasElementsByZIndex(yMapToArray(nodesMap).map(stripEphemeralCanvasNodeState)),
     )
 
     const handler = () => {
       reactFlow.setNodes((current) => {
         const currentById = new Map(current.map((node) => [node.id, node]))
-        return getOrderedCanvasElements(
+        return sortCanvasElementsByZIndex(
           yMapToArray(nodesMap).map(stripEphemeralCanvasNodeState),
         ).map((remote) => {
           const local = currentById.get(remote.id)
@@ -76,12 +76,12 @@ export function useCanvasDocumentProjection({
   }, [localDraggingIdsRef, nodesMap, reactFlow])
 
   useEffect(() => {
-    reactFlow.setEdges(getOrderedCanvasElements(yMapToArray(edgesMap)))
+    reactFlow.setEdges(sortCanvasElementsByZIndex(yMapToArray(edgesMap)))
 
     const handler = () => {
       reactFlow.setEdges((current) => {
         const currentById = new Map(current.map((edge) => [edge.id, edge]))
-        return getOrderedCanvasElements(yMapToArray(edgesMap)).map((remote) => {
+        return sortCanvasElementsByZIndex(yMapToArray(edgesMap)).map((remote) => {
           const local = currentById.get(remote.id)
           return local ? { ...local, ...remote } : remote
         })

@@ -14,6 +14,7 @@ export function EmbedNoteContent({
   editable,
   isExclusivelySelected,
   lifecycle,
+  onActivated,
   onCanvasEditorChange,
 }: {
   noteId: Id<'sidebarItems'>
@@ -21,6 +22,7 @@ export function EmbedNoteContent({
   editable: boolean
   isExclusivelySelected: boolean
   lifecycle: RichEmbedLifecycleController
+  onActivated?: () => void
   onCanvasEditorChange?: (editor: CustomBlockNoteEditor | null) => void
 }) {
   const viewportRef = useRef<HTMLDivElement>(null)
@@ -45,6 +47,7 @@ export function EmbedNoteContent({
     isReady,
     onActivationErrorMessage:
       'useNoteEmbedLifecycle: failed to compute selection from posAtCoords/TextSelection.create',
+    onActivated,
   })
 
   useEffect(() => {

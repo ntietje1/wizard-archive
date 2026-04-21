@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react'
-import { getCanvasNodeBounds } from '../../nodes/shared/canvas-node-selection'
+import { getCanvasNodeBounds } from '../../nodes/shared/canvas-node-bounds'
 import { clearCanvasDragSnapGuides, setCanvasDragSnapGuides } from './canvas-drag-snap-overlay'
 import {
   getSnapThresholdForZoom,

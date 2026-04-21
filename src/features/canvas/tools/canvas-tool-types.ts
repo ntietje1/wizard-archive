@@ -62,7 +62,7 @@ export interface CanvasDocumentWriter {
   setNodePosition: (nodeId: string, position: XYPosition) => void
 }
 
-export interface CanvasDocumentReader {
+interface CanvasDocumentReader {
   getNodes: () => Array<Node>
   getEdges: () => Array<Edge>
 }
@@ -74,6 +74,12 @@ export type CanvasMeasuredNode = Node & {
 
 interface CanvasMeasuredNodeReader {
   getMeasuredNodes: () => Array<CanvasMeasuredNode>
+}
+
+export interface CanvasDocumentQuery {
+  getNodes: CanvasDocumentReader['getNodes']
+  getEdges: CanvasDocumentReader['getEdges']
+  getMeasuredNodes: CanvasMeasuredNodeReader['getMeasuredNodes']
 }
 
 export interface CanvasSelectionController {
@@ -97,7 +103,7 @@ export interface CanvasInteractionTools {
   suppressNextSurfaceClick: () => void
 }
 
-export interface CanvasModifierKeyReader {
+interface CanvasModifierKeyReader {
   getShiftPressed: () => boolean
   getPrimaryPressed: () => boolean
 }
@@ -150,7 +156,8 @@ export interface CanvasLocalOverlayCapability {
 
 export interface CanvasToolServices {
   viewport: CanvasViewportTools
-  document: CanvasDocumentWriter & CanvasDocumentReader & CanvasMeasuredNodeReader
+  commands: CanvasDocumentWriter
+  query: CanvasDocumentQuery
   selection: CanvasSelectionController
   interaction: CanvasInteractionTools
   modifiers: CanvasModifierKeyReader
@@ -158,6 +165,27 @@ export interface CanvasToolServices {
   toolState: CanvasToolStateControls
   awareness: CanvasAwarenessWriter
 }
+
+export type CanvasSelectToolServices = Pick<CanvasToolServices, 'viewport' | 'query' | 'selection'>
+
+export type CanvasHandToolServices = Pick<CanvasToolServices, 'toolState'>
+
+export type CanvasDrawToolServices = Pick<
+  CanvasToolServices,
+  'viewport' | 'commands' | 'modifiers' | 'toolState' | 'awareness'
+>
+
+export type CanvasEraseToolServices = Pick<CanvasToolServices, 'viewport' | 'commands' | 'query'>
+
+export type CanvasLassoToolServices = Pick<
+  CanvasToolServices,
+  'viewport' | 'query' | 'selection' | 'interaction' | 'awareness'
+>
+
+export type CanvasTextToolServices = Pick<
+  CanvasToolServices,
+  'viewport' | 'commands' | 'selection' | 'editSession' | 'toolState' | 'modifiers'
+>
 
 export interface CanvasToolController {
   onPointerDown?: (event: PointerEvent) => void
@@ -173,7 +201,10 @@ export interface CanvasToolController {
   onMoveEnd?: () => void
 }
 
-export interface CanvasToolModule<TId extends CanvasToolId = CanvasToolId> {
+export interface CanvasToolModule<
+  TId extends CanvasToolId = CanvasToolId,
+  TServices = CanvasToolServices,
+> {
   id: TId
   label: string
   group: 'selection' | 'creation'
@@ -182,9 +213,14 @@ export interface CanvasToolModule<TId extends CanvasToolId = CanvasToolId> {
   properties?: (context: CanvasToolPropertyContext) => CanvasInspectableProperties
   awareness?: CanvasAwarenessCapability
   localOverlay?: CanvasLocalOverlayCapability
-  create: (services: CanvasToolServices) => CanvasToolController
+  create: (services: TServices) => CanvasToolController
 }
 
 export type AnyCanvasToolModule = {
-  [TId in CanvasToolId]: CanvasToolModule<TId>
+  select: CanvasToolModule<'select', CanvasSelectToolServices>
+  hand: CanvasToolModule<'hand', CanvasHandToolServices>
+  draw: CanvasToolModule<'draw', CanvasDrawToolServices>
+  erase: CanvasToolModule<'erase', CanvasEraseToolServices>
+  lasso: CanvasToolModule<'lasso', CanvasLassoToolServices>
+  text: CanvasToolModule<'text', CanvasTextToolServices>
 }[CanvasToolId]

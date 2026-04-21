@@ -218,7 +218,7 @@ function createSelectEnvironment({
       screenToFlowPosition: ({ x, y }) => ({ x, y }),
       getZoom: () => 1,
     },
-    document: {
+    commands: {
       createNode: () => undefined,
       updateNode: () => undefined,
       updateNodeData: () => undefined,
@@ -227,6 +227,8 @@ function createSelectEnvironment({
       createEdge: () => undefined,
       deleteEdges: () => undefined,
       setNodePosition: () => undefined,
+    },
+    query: {
       getNodes,
       getEdges: () => [],
       getMeasuredNodes,

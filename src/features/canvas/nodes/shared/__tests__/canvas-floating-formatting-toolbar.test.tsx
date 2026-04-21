@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { CanvasFloatingFormattingToolbar } from '../canvas-floating-formatting-toolbar'
+import { getNextBlockTypeMenuState } from '../canvas-floating-formatting-toolbar-state'
 
 type TestBlock = {
   content?: Array<unknown>
@@ -84,6 +85,67 @@ describe('CanvasFloatingFormattingToolbar', () => {
     expect(editor.updateBlock).toHaveBeenNthCalledWith(2, secondParagraph, {
       type: 'heading',
       props: { level: 2, isToggleable: false },
+    })
+  })
+
+  it('opens and closes the block type dropdown when the trigger is pressed repeatedly', () => {
+    const editor = createEditor({
+      activeStyles: {},
+      selectedBlocks: [createParagraphBlock('paragraph-1', { textAlignment: 'left' })],
+    })
+
+    render(<CanvasFloatingFormattingToolbar editor={editor as never} visible />)
+
+    const trigger = screen.getByRole('button', { name: 'Block type' })
+
+    fireEvent.click(trigger)
+    expect(screen.getByRole('menu')).toBeInTheDocument()
+
+    fireEvent.click(trigger)
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
+  it('ignores only the click-close from the same opening mouse gesture', () => {
+    const openedState = getNextBlockTypeMenuState({
+      ignoreOpeningClickClose: false,
+      nextOpen: true,
+      details: {
+        reason: 'trigger-press',
+        event: new MouseEvent('mousedown'),
+      },
+    })
+
+    expect(openedState).toEqual({
+      open: true,
+      ignoreOpeningClickClose: true,
+    })
+
+    const releasedState = getNextBlockTypeMenuState({
+      ignoreOpeningClickClose: openedState.ignoreOpeningClickClose,
+      nextOpen: false,
+      details: {
+        reason: 'trigger-press',
+        event: new MouseEvent('click'),
+      },
+    })
+
+    expect(releasedState).toEqual({
+      open: true,
+      ignoreOpeningClickClose: false,
+    })
+
+    const intentionalCloseState = getNextBlockTypeMenuState({
+      ignoreOpeningClickClose: releasedState.ignoreOpeningClickClose,
+      nextOpen: false,
+      details: {
+        reason: 'trigger-press',
+        event: new MouseEvent('mousedown'),
+      },
+    })
+
+    expect(intentionalCloseState).toEqual({
+      open: false,
+      ignoreOpeningClickClose: false,
     })
   })
 

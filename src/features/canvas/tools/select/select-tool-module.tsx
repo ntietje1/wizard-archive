@@ -1,12 +1,12 @@
 import { MousePointer2 } from 'lucide-react'
 import { hitTestCanvasNode } from '../../nodes/canvas-node-selection-queries'
-import type { CanvasToolModule } from '../canvas-tool-types'
+import type { CanvasSelectToolServices, CanvasToolModule } from '../canvas-tool-types'
 import { isPrimarySelectionModifier } from '../../utils/canvas-selection-utils'
 import { SelectAwarenessLayer } from './select-tool-awareness-layer'
 import { clearSelectToolLocalOverlay } from './select-tool-local-overlay'
 import { SelectToolLocalOverlayLayer } from './select-tool-local-overlay-layer'
 
-export const selectToolModule: CanvasToolModule<'select'> = {
+export const selectToolModule: CanvasToolModule<'select', CanvasSelectToolServices> = {
   id: 'select',
   label: 'Pointer',
   group: 'selection',
@@ -29,7 +29,7 @@ export const selectToolModule: CanvasToolModule<'select'> = {
       services.selection.toggleNodeFromTarget(
         hitTestCanvasNode(
           {
-            getMeasuredNodes: services.document.getMeasuredNodes,
+            getMeasuredNodes: services.query.getMeasuredNodes,
             getZoom: services.viewport.getZoom,
             screenToFlowPosition: services.viewport.screenToFlowPosition,
           },

@@ -1,21 +1,18 @@
-import { useShallow } from 'zustand/shallow'
-import { useCanvasPendingSelectionPreviewStore } from '../../runtime/selection/use-canvas-pending-selection-preview'
+import { getCanvasVisualSelectionState } from '../../runtime/selection/canvas-visual-selection'
+import {
+  useCanvasEdgePendingPreview,
+  useCanvasPendingPreviewActive,
+} from '../../runtime/selection/use-canvas-pending-selection-preview'
 import { useIsCanvasEdgeSelected } from '../../runtime/selection/use-canvas-selection-state'
 
 export function useCanvasEdgeVisualSelection(id: string) {
   const selected = useIsCanvasEdgeSelected(id)
+  const pendingPreviewActive = useCanvasPendingPreviewActive()
+  const pendingSelected = useCanvasEdgePendingPreview(id)
 
-  return useCanvasPendingSelectionPreviewStore(
-    useShallow((state) => {
-      const pendingPreviewActive = state.pendingNodeIds !== null
-      const pendingSelected = pendingPreviewActive && state.pendingEdgeIds.has(id)
-
-      return {
-        selected,
-        pendingPreviewActive,
-        pendingSelected,
-        visuallySelected: pendingPreviewActive ? pendingSelected : selected,
-      }
-    }),
-  )
+  return getCanvasVisualSelectionState({
+    selected,
+    pendingPreviewActive,
+    pendingSelected,
+  })
 }

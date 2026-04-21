@@ -47,7 +47,7 @@ export function createPlacementEnvironment({
       screenToFlowPosition: ({ x, y }) => ({ x, y }),
       getZoom: () => 1,
     },
-    document: {
+    commands: {
       createNode,
       updateNode: () => undefined,
       updateNodeData: () => undefined,
@@ -56,6 +56,8 @@ export function createPlacementEnvironment({
       createEdge: () => undefined,
       deleteEdges: () => undefined,
       setNodePosition: () => undefined,
+    },
+    query: {
       getNodes: () => [],
       getEdges: () => [],
       getMeasuredNodes: () => [],

@@ -6,13 +6,13 @@ import {
   releasePointerCapture,
   screenEventToFlowPosition,
 } from '../shared/tool-module-utils'
-import type { CanvasToolModule } from '../canvas-tool-types'
+import type { CanvasEraseToolServices, CanvasToolModule } from '../canvas-tool-types'
 import {
   clearEraseToolLocalOverlay,
   setEraseToolErasingStrokeIds,
 } from './erase-tool-local-overlay'
 
-export const eraseToolModule: CanvasToolModule<'erase'> = {
+export const eraseToolModule: CanvasToolModule<'erase', CanvasEraseToolServices> = {
   id: 'erase',
   label: 'Eraser',
   group: 'creation',
@@ -32,7 +32,7 @@ export const eraseToolModule: CanvasToolModule<'erase'> = {
     const testIntersections = () => {
       if (trail.length < 2) return
 
-      const strokeNodes = services.document.getNodes().filter(isStrokeNode)
+      const strokeNodes = services.query.getNodes().filter(isStrokeNode)
       let changed = false
       for (const node of strokeNodes) {
         if (marked.has(node.id)) continue
@@ -102,7 +102,7 @@ export const eraseToolModule: CanvasToolModule<'erase'> = {
         }
         testIntersections()
         if (marked.size > 0) {
-          services.document.deleteNodes(Array.from(marked))
+          services.commands.deleteNodes(Array.from(marked))
         }
         reset()
       },

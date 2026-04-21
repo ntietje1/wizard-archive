@@ -35,6 +35,8 @@ import {
 } from '~/features/shadcn/components/dropdown-menu'
 import { Separator } from '~/features/shadcn/components/separator'
 import { cn } from '~/features/shadcn/lib/utils'
+import { getNextBlockTypeMenuState } from './canvas-floating-formatting-toolbar-state'
+import type { BlockTypeMenuChangeDetails } from './canvas-floating-formatting-toolbar-state'
 
 type SupportedBlockType =
   | 'paragraph'
@@ -217,27 +219,21 @@ export function CanvasFloatingFormattingToolbar({
   visible,
 }: CanvasFloatingFormattingToolbarProps) {
   const snapshotRef = useRef<ToolbarSnapshot>(EMPTY_SNAPSHOT)
-  const ignoreNextTriggerPressCloseRef = useRef(false)
+  const ignoreOpeningClickCloseRef = useRef(false)
   const selectionSnapshotRef = useRef<Record<string, unknown> | null>(null)
   const [blockTypeMenuOpen, setBlockTypeMenuOpen] = useState(false)
   const captureSelection = useCallback(() => {
     selectionSnapshotRef.current = getSelectionSnapshot(editor)
   }, [editor])
   const handleBlockTypeMenuOpenChange = useCallback(
-    (nextOpen: boolean, details: { reason: string }) => {
-      if (nextOpen) {
-        ignoreNextTriggerPressCloseRef.current = details.reason === 'trigger-press'
-        setBlockTypeMenuOpen(true)
-        return
-      }
-
-      if (details.reason === 'trigger-press' && ignoreNextTriggerPressCloseRef.current) {
-        ignoreNextTriggerPressCloseRef.current = false
-        return
-      }
-
-      ignoreNextTriggerPressCloseRef.current = false
-      setBlockTypeMenuOpen(false)
+    (nextOpen: boolean, details: BlockTypeMenuChangeDetails) => {
+      const nextState = getNextBlockTypeMenuState({
+        ignoreOpeningClickClose: ignoreOpeningClickCloseRef.current,
+        nextOpen,
+        details,
+      })
+      ignoreOpeningClickCloseRef.current = nextState.ignoreOpeningClickClose
+      setBlockTypeMenuOpen(nextState.open)
     },
     [],
   )

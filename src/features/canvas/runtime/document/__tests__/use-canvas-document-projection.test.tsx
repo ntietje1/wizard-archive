@@ -44,6 +44,13 @@ function createTextNode(id: string): Node {
   }
 }
 
+function createOrderedTextNode(id: string, zIndex: number): Node {
+  return {
+    ...createTextNode(id),
+    zIndex,
+  }
+}
+
 function createRemoteDragAnimation(): CanvasRemoteDragAnimation {
   return {
     hasSpring: () => false,
@@ -175,5 +182,26 @@ describe('useCanvasDocumentProjection', () => {
         expect.objectContaining({ id: 'node-2', selected: false }),
       ]),
     )
+  })
+
+  it('sorts projected nodes by persisted zIndex without renormalizing their stored values', () => {
+    const doc = new Y.Doc()
+    const nodesMap = doc.getMap<Node>('nodes')
+    const edgesMap = doc.getMap<Edge>('edges')
+    nodesMap.set('node-2', createOrderedTextNode('node-2', 10))
+    nodesMap.set('node-1', createOrderedTextNode('node-1', 4))
+
+    renderHook(() =>
+      useCanvasDocumentProjection({
+        nodesMap,
+        edgesMap,
+        localDraggingIdsRef: { current: new Set<string>() },
+        remoteResizeDimensions: {},
+        remoteDragAnimation: createRemoteDragAnimation(),
+      }),
+    )
+
+    expect(reactFlowMock.nodes.map((node) => node.id)).toEqual(['node-1', 'node-2'])
+    expect(reactFlowMock.nodes.map((node) => node.zIndex)).toEqual([4, 10])
   })
 })

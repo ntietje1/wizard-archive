@@ -1,95 +1,24 @@
 import { useMemo } from 'react'
-import { getCanvasNodeModuleByType } from '../../nodes/canvas-node-modules'
-import { getCanvasDeletionSelection } from '../context-menu/canvas-context-menu-selection'
-import type { CanvasNodeData, CanvasNodeType } from '../../nodes/canvas-node-module-types'
 import type { CanvasDocumentWriter } from '../../tools/canvas-tool-types'
-import { stripEphemeralCanvasNodeState } from '../../utils/canvas-node-persistence'
-import { getNextCanvasElementZIndex } from './canvas-stack-order'
+import { getNextCanvasElementZIndex } from './canvas-z-index'
+import {
+  createCanvasEdgeCommand,
+  createCanvasNodeCommand,
+  deleteCanvasEdgesCommand,
+  deleteCanvasSelectionCommand,
+  resizeCanvasNodeCommand,
+  setCanvasNodePositionCommand,
+  updateCanvasNodeCommand,
+  updateCanvasNodeDataCommand,
+} from './canvas-document-commands'
+import { sanitizeNodeForPersistence } from './canvas-node-persistence-sanitizer'
 import { transactCanvasMap, transactCanvasMaps } from './canvas-yjs-transactions'
-import type { Connection, Edge, Node } from '@xyflow/react'
+import type { Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
-import { logger } from '~/shared/utils/logger'
 
 interface UseCanvasDocumentWriterOptions {
   nodesMap: Y.Map<Node>
   edgesMap: Y.Map<Edge>
-}
-
-type ResizableCanvasNode = Node<CanvasNodeData, CanvasNodeType>
-type PersistedCanvasNode = Omit<Node, 'selected' | 'draggable' | 'dragging' | 'resizing'>
-
-function isResizableCanvasNode(node: Node | undefined): node is ResizableCanvasNode {
-  if (!node || !node.type || typeof node.data !== 'object' || node.data === null) {
-    return false
-  }
-
-  return getCanvasNodeModuleByType(node.type) !== null
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value)
-}
-
-function isCanvasPosition(value: unknown): value is { x: number; y: number } {
-  return isRecord(value) && isFiniteNumber(value.x) && isFiniteNumber(value.y)
-}
-
-function isPersistedCanvasNode(node: unknown): node is PersistedCanvasNode {
-  return (
-    isRecord(node) &&
-    typeof node.id === 'string' &&
-    (node.type === undefined || typeof node.type === 'string') &&
-    isCanvasPosition(node.position) &&
-    isRecord(node.data) &&
-    (node.width === undefined || isFiniteNumber(node.width)) &&
-    (node.height === undefined || isFiniteNumber(node.height))
-  )
-}
-
-function buildSafePersistedCanvasNode(node: Node): PersistedCanvasNode {
-  const safeNode: PersistedCanvasNode = {
-    id: node.id,
-    position: isCanvasPosition(node.position) ? node.position : { x: 0, y: 0 },
-    data: isRecord(node.data) ? node.data : {},
-  }
-
-  if (typeof node.type === 'string') {
-    safeNode.type = node.type
-  }
-  if (isFiniteNumber(node.width)) {
-    safeNode.width = node.width
-  }
-  if (isFiniteNumber(node.height)) {
-    safeNode.height = node.height
-  }
-
-  return safeNode
-}
-
-function sanitizeNodeForPersistence(
-  node: Node,
-  operation: string,
-  fallbackNode: Node = node,
-): PersistedCanvasNode {
-  try {
-    const persistedNode = stripEphemeralCanvasNodeState(node)
-    if (!isPersistedCanvasNode(persistedNode)) {
-      throw new TypeError('stripEphemeralCanvasNodeState returned an invalid canvas node shape')
-    }
-    return persistedNode
-  } catch (error) {
-    logger.error('useCanvasDocumentWriter: failed to sanitize canvas node', {
-      operation,
-      nodeId: node.id,
-      nodeType: node.type,
-      error,
-    })
-    return buildSafePersistedCanvasNode(fallbackNode)
-  }
 }
 
 export function useCanvasDocumentWriter({
@@ -103,111 +32,81 @@ export function useCanvasDocumentWriter({
     return {
       createNode: (node) => {
         withNodeTransaction(() => {
-          if (nodesMap.has(node.id)) {
-            throw new Error(`Canvas node "${node.id}" already exists`)
-          }
-          nodesMap.set(
-            node.id,
-            sanitizeNodeForPersistence(
-              {
-                ...node,
-                zIndex: node.zIndex ?? getNextCanvasElementZIndex(Array.from(nodesMap.values())),
-              },
-              'createNode',
-            ),
-          )
+          createCanvasNodeCommand({
+            nodesMap,
+            node,
+            sanitizeNode: sanitizeNodeForPersistence,
+            nextZIndex: getNextCanvasElementZIndex(Array.from(nodesMap.values())),
+          })
         })
       },
       updateNode: (nodeId, updater) => {
         withNodeTransaction(() => {
-          const existing = nodesMap.get(nodeId)
-          if (!existing) return
-          nodesMap.set(
+          updateCanvasNodeCommand({
+            nodesMap,
             nodeId,
-            sanitizeNodeForPersistence(updater(existing), 'updateNode', existing),
-          )
+            updater,
+            sanitizeNode: sanitizeNodeForPersistence,
+          })
         })
       },
       updateNodeData: (nodeId, data) => {
         withNodeTransaction(() => {
-          const existing = nodesMap.get(nodeId)
-          if (!existing) return
-          nodesMap.set(
+          updateCanvasNodeDataCommand({
+            nodesMap,
             nodeId,
-            sanitizeNodeForPersistence(
-              {
-                ...existing,
-                data: { ...existing.data, ...data },
-              },
-              'updateNodeData',
-              existing,
-            ),
-          )
+            data,
+            sanitizeNode: sanitizeNodeForPersistence,
+          })
         })
       },
       resizeNode: (nodeId, width, height, position) => {
         withNodeTransaction(() => {
-          const existing = nodesMap.get(nodeId)
-          if (!existing) return
-          const nodeModule = getCanvasNodeModuleByType(existing.type)
-          nodesMap.set(
+          resizeCanvasNodeCommand({
+            nodesMap,
             nodeId,
-            sanitizeNodeForPersistence(
-              nodeModule?.resize && isResizableCanvasNode(existing)
-                ? nodeModule.resize(existing, { width, height, position })
-                : { ...existing, width, height, position },
-              'resizeNode',
-              existing,
-            ),
-          )
+            width,
+            height,
+            position,
+            sanitizeNode: sanitizeNodeForPersistence,
+          })
         })
       },
       deleteNodes: (nodeIds) => {
         if (nodeIds.length === 0) return
-        const deletionSelection = getCanvasDeletionSelection(edgesMap, { nodeIds, edgeIds: [] })
         transactCanvasMaps(nodesMap, edgesMap, () => {
-          for (const edgeId of deletionSelection.edgeIds) {
-            edgesMap.delete(edgeId)
-          }
-          for (const nodeId of deletionSelection.nodeIds) {
-            nodesMap.delete(nodeId)
-          }
+          deleteCanvasSelectionCommand({
+            nodesMap,
+            edgesMap,
+            selection: { nodeIds, edgeIds: [] },
+          })
         })
       },
       createEdge: (connection) => {
-        const id = createCanvasEdgeId(connection)
-        const edge: Edge = {
-          id,
-          type: 'bezier',
-          zIndex: getNextCanvasElementZIndex(Array.from(edgesMap.values())),
-          ...connection,
-        }
         withEdgeTransaction(() => {
-          edgesMap.set(id, edge)
+          createCanvasEdgeCommand({
+            edgesMap,
+            connection,
+            nextZIndex: getNextCanvasElementZIndex(Array.from(edgesMap.values())),
+          })
         })
       },
       deleteEdges: (edgeIds) => {
         if (edgeIds.length === 0) return
         withEdgeTransaction(() => {
-          for (const edgeId of edgeIds) {
-            edgesMap.delete(edgeId)
-          }
+          deleteCanvasEdgesCommand({ edgesMap, edgeIds })
         })
       },
       setNodePosition: (nodeId, position) => {
         withNodeTransaction(() => {
-          const existing = nodesMap.get(nodeId)
-          if (!existing) return
-          nodesMap.set(
+          setCanvasNodePositionCommand({
+            nodesMap,
             nodeId,
-            sanitizeNodeForPersistence({ ...existing, position }, 'setNodePosition', existing),
-          )
+            position,
+            sanitizeNode: sanitizeNodeForPersistence,
+          })
         })
       },
     }
   }, [edgesMap, nodesMap])
-}
-
-function createCanvasEdgeId(connection: Connection): string {
-  return `e-${connection.source}-${connection.target}-${crypto.randomUUID()}`
 }

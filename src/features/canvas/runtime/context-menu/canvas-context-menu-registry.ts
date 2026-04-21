@@ -16,7 +16,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import type { CanvasReorderDirection } from '../document/canvas-stack-order'
+import type { CanvasReorderDirection } from '../document/canvas-reorder'
 import type {
   CanvasContextMenuContext,
   CanvasContextMenuContributor,

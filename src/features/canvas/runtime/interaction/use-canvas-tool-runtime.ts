@@ -8,7 +8,7 @@ import { getMeasuredCanvasNodesFromLookup } from '../document/canvas-measured-no
 import { useCanvasModifierKeys } from './use-canvas-modifier-keys'
 import type {
   CanvasAwarenessWriter,
-  CanvasDocumentReader,
+  CanvasDocumentQuery,
   CanvasDocumentWriter,
   CanvasEditSessionState,
   CanvasInteractionTools,
@@ -19,8 +19,8 @@ import type {
 } from '../../tools/canvas-tool-types'
 
 interface UseCanvasToolRuntimeOptions {
-  documentRead: CanvasDocumentReader
-  documentWrite: CanvasDocumentWriter
+  commands: CanvasDocumentWriter
+  query: Pick<CanvasDocumentQuery, 'getNodes' | 'getEdges'>
   selection: CanvasSelectionController
   interaction: CanvasInteractionTools
   awareness: CanvasAwarenessWriter
@@ -35,8 +35,8 @@ type CanvasToolRuntimeState = UseCanvasToolRuntimeOptions & {
 }
 
 export function useCanvasToolRuntime({
-  documentRead,
-  documentWrite,
+  commands,
+  query,
   selection,
   interaction,
   awareness,
@@ -49,8 +49,8 @@ export function useCanvasToolRuntime({
 
   const runtimeStateRef = useRef<CanvasToolRuntimeState | null>(null)
   runtimeStateRef.current = {
-    documentRead,
-    documentWrite,
+    commands,
+    query,
     selection,
     interaction,
     awareness,
@@ -99,20 +99,21 @@ function createCanvasToolServices(
       screenToFlowPosition: (position) => reactFlow.screenToFlowPosition(position),
       getZoom: () => reactFlow.getZoom(),
     },
-    document: {
-      createNode: (node) => getRuntimeState().documentWrite.createNode(node),
-      updateNode: (nodeId, updater) => getRuntimeState().documentWrite.updateNode(nodeId, updater),
-      updateNodeData: (nodeId, data) =>
-        getRuntimeState().documentWrite.updateNodeData(nodeId, data),
+    commands: {
+      createNode: (node) => getRuntimeState().commands.createNode(node),
+      updateNode: (nodeId, updater) => getRuntimeState().commands.updateNode(nodeId, updater),
+      updateNodeData: (nodeId, data) => getRuntimeState().commands.updateNodeData(nodeId, data),
       resizeNode: (nodeId, width, height, position) =>
-        getRuntimeState().documentWrite.resizeNode(nodeId, width, height, position),
-      deleteNodes: (nodeIds) => getRuntimeState().documentWrite.deleteNodes(nodeIds),
-      createEdge: (connection) => getRuntimeState().documentWrite.createEdge(connection),
-      deleteEdges: (edgeIds) => getRuntimeState().documentWrite.deleteEdges(edgeIds),
+        getRuntimeState().commands.resizeNode(nodeId, width, height, position),
+      deleteNodes: (nodeIds) => getRuntimeState().commands.deleteNodes(nodeIds),
+      createEdge: (connection) => getRuntimeState().commands.createEdge(connection),
+      deleteEdges: (edgeIds) => getRuntimeState().commands.deleteEdges(edgeIds),
       setNodePosition: (nodeId, position) =>
-        getRuntimeState().documentWrite.setNodePosition(nodeId, position),
-      getNodes: () => getRuntimeState().documentRead.getNodes(),
-      getEdges: () => getRuntimeState().documentRead.getEdges(),
+        getRuntimeState().commands.setNodePosition(nodeId, position),
+    },
+    query: {
+      getNodes: () => getRuntimeState().query.getNodes(),
+      getEdges: () => getRuntimeState().query.getEdges(),
       getMeasuredNodes: () => getMeasuredCanvasNodesFromLookup(storeApi.getState().nodeLookup),
     },
     selection: {

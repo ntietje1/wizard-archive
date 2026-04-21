@@ -13,12 +13,12 @@ describe('canvas node registry', () => {
       position: { x: 100, y: 200 },
     })
 
-    // Center placement subtracts half the default text node size: 120 / 2 = 60 and 36 / 2 = 18.
+    // Center placement subtracts half the default text node size: 320 / 2 = 160 and 240 / 2 = 120.
     expect(textNode).toMatchObject({
       type: 'text',
-      position: { x: 40, y: 182 },
-      width: 120,
-      height: 36,
+      position: { x: -60, y: 80 },
+      width: 320,
+      height: 240,
       selected: true,
       draggable: true,
       data: {

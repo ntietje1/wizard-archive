@@ -1,4 +1,4 @@
-import type { CanvasReorderDirection } from '../document/canvas-stack-order'
+import type { CanvasReorderDirection } from '../document/canvas-reorder'
 import type { CanvasSelectionSnapshot } from '../../tools/canvas-tool-types'
 import type { ContextMenuContributor } from '~/features/context-menu/types'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
