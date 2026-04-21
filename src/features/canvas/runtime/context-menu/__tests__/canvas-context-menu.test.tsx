@@ -17,6 +17,10 @@ const hostMock = vi.hoisted(() => ({
 
 const createItemMock = vi.hoisted(() => vi.fn())
 const getDefaultNameMock = vi.hoisted(() => vi.fn())
+const navigateToItemMock = vi.hoisted(() => vi.fn())
+const itemsMapState = vi.hoisted(() => ({
+  itemsMap: new Map(),
+}))
 
 vi.mock('~/features/context-menu/components/context-menu-host', () => ({
   ContextMenuHost: forwardRef((props: { menu: BuiltContextMenu }, ref) => {
@@ -41,12 +45,26 @@ vi.mock('~/features/sidebar/hooks/useSidebarValidation', () => ({
   }),
 }))
 
-function createNode(id: string, type = 'text'): Node {
+vi.mock('~/features/sidebar/hooks/useEditorNavigation', () => ({
+  useEditorNavigation: () => ({
+    navigateToItem: navigateToItemMock,
+  }),
+}))
+
+vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
+  useActiveSidebarItems: () => itemsMapState,
+}))
+
+function createNode(
+  id: string,
+  type = 'text',
+  data: Record<string, unknown> = { label: id },
+): Node {
   return {
     id,
     type,
     position: { x: 0, y: 0 },
-    data: { label: id },
+    data,
     zIndex: 1,
   }
 }
@@ -69,6 +87,8 @@ describe('CanvasContextMenu', () => {
     hostMock.menu = null
     createItemMock.mockReset()
     getDefaultNameMock.mockReset()
+    navigateToItemMock.mockReset()
+    itemsMapState.itemsMap = new Map()
     useCanvasClipboardStore.getState().setClipboard(null)
     useCanvasSelectionState.getState().reset()
     vi.spyOn(window, 'requestAnimationFrame').mockImplementation(
@@ -332,5 +352,64 @@ describe('CanvasContextMenu', () => {
     expect(reorderItems).toHaveLength(1)
     expect(reorderItems[0]?.id).toBe('canvas-selection-reorder')
     expect(reorderItems[0]?.scope).toBe('selection')
+  })
+
+  it('adds an Open action for a single embedded sidebar item selection', async () => {
+    const doc = new Y.Doc()
+    const nodesMap = doc.getMap<Node>('nodes')
+    const edgesMap = doc.getMap<Edge>('edges')
+    nodesMap.set('embed-1', createNode('embed-1', 'embed', { sidebarItemId: 'note-1' }))
+    itemsMapState.itemsMap = new Map([
+      [
+        'note-1',
+        {
+          _id: 'note-1',
+          slug: 'note-slug',
+        },
+      ],
+    ])
+
+    const selectionController = { replace: vi.fn(), clear: vi.fn() }
+    const ref = createRef<CanvasContextMenuRef>()
+
+    render(
+      <CanvasContextMenu
+        ref={ref}
+        activeTool="select"
+        canEdit={true}
+        campaignId={'campaign-1' as never}
+        canvasParentId={null}
+        nodesMap={nodesMap}
+        edgesMap={edgesMap}
+        createNode={vi.fn()}
+        screenToFlowPosition={({ x, y }) => ({ x, y })}
+        selectionController={selectionController}
+      />,
+    )
+
+    act(() => {
+      ref.current?.onNodeContextMenu(
+        new MouseEvent('contextmenu', {
+          bubbles: true,
+          cancelable: true,
+          clientX: 24,
+          clientY: 48,
+        }) as unknown as React.MouseEvent,
+        createNode('embed-1', 'embed', { sidebarItemId: 'note-1' }),
+      )
+    })
+
+    await waitFor(() => {
+      expect(hostMock.open).toHaveBeenCalledWith({ x: 24, y: 48 })
+    })
+
+    const openItem = hostMock.menu?.flatItems.find((item) => item.id === 'embed-node-open')
+    expect(openItem?.label).toBe('Open')
+
+    await act(async () => {
+      await openItem?.onSelect()
+    })
+
+    expect(navigateToItemMock).toHaveBeenCalledWith('note-slug')
   })
 })

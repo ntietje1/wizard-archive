@@ -1,15 +1,21 @@
 import { createEmbedCanvasNode } from '../../nodes/embed/embed-node-creation'
+import { parseEmbedNodeData } from '../../nodes/embed/embed-node-data'
 import { transactCanvasMaps } from '../document/canvas-yjs-transactions'
 import { useCanvasClipboardStore } from './use-canvas-clipboard-store'
 import { createCanvasClipboardEntry, materializeCanvasPaste } from './canvas-context-menu-clipboard'
 import { createCanvasReorderUpdates } from './canvas-context-menu-reorder'
 import { getCanvasDeletionSelection } from './canvas-context-menu-selection'
 import type { CanvasContextMenuPoint, CanvasContextMenuServices } from './canvas-context-menu-types'
-import type { CanvasSelectionController } from '../../tools/canvas-tool-types'
+import type {
+  CanvasSelectionController,
+  CanvasSelectionSnapshot,
+} from '../../tools/canvas-tool-types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
+import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
+import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 
 interface UseCanvasContextMenuServicesOptions {
@@ -38,13 +44,34 @@ export function useCanvasContextMenuServices({
   const incrementPasteCount = useCanvasClipboardStore((state) => state.incrementPasteCount)
   const { createItem } = useCreateSidebarItem()
   const { getDefaultName } = useSidebarValidation()
+  const { navigateToItem } = useEditorNavigation()
+  const { itemsMap } = useActiveSidebarItems()
 
   const canPaste = () => canEdit && clipboard !== null && clipboard.nodes.length > 0
+  const resolveSelectedEmbedItem = (selectionSnapshot: CanvasSelectionSnapshot) => {
+    if (selectionSnapshot.edgeIds.length > 0 || selectionSnapshot.nodeIds.length !== 1) {
+      return null
+    }
+
+    const selectedNode = nodesMap.get(selectionSnapshot.nodeIds[0])
+    if (selectedNode?.type !== 'embed') {
+      return null
+    }
+
+    const sidebarItemId = parseEmbedNodeData(selectedNode.data).sidebarItemId
+    if (!sidebarItemId) {
+      return null
+    }
+
+    return itemsMap.get(sidebarItemId) ?? null
+  }
 
   return {
     canPaste,
     canCopySnapshot: (snapshot) =>
       createCanvasClipboardEntry(nodesMap, edgesMap, snapshot) !== null,
+    canOpenEmbedSelection: (selectionSnapshot) =>
+      resolveSelectedEmbedItem(selectionSnapshot) !== null,
     copySnapshot: (snapshot) => {
       const nextClipboard = createCanvasClipboardEntry(nodesMap, edgesMap, snapshot)
       if (!nextClipboard) {
@@ -121,6 +148,15 @@ export function useCanvasContextMenuServices({
 
       selection.replace(paste.selection)
       return paste.selection
+    },
+    openEmbedSelection: async (selectionSnapshot) => {
+      const item = resolveSelectedEmbedItem(selectionSnapshot)
+      if (!item) {
+        return false
+      }
+
+      await navigateToItem(item.slug)
+      return true
     },
     deleteSnapshot: (snapshot) => {
       if (!canEdit) {

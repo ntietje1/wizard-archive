@@ -149,6 +149,12 @@ const canvasCreateSubmenuItems = () =>
   ] satisfies Array<ContextMenuItemSpec<CanvasContextMenuContext, CanvasContextMenuServices>>
 
 export const canvasContextMenuCommands = {
+  'selection.open': createCanvasCommand<CanvasSelectionPayload>(
+    'selection.open',
+    async (context, services) => {
+      await services.openEmbedSelection(context.selection)
+    },
+  ),
   'create.note': {
     id: 'create.note',
     run: async (context, services) => {
@@ -322,8 +328,9 @@ export const canvasContextMenuContributors = [
 ] satisfies ReadonlyArray<CanvasContextMenuContributor>
 
 export const canvasContextMenuGroupConfig: ContextMenuGroupConfig = {
-  reorder: { label: null, priority: 0 },
-  create: { label: null, priority: 1 },
-  edit: { label: null, priority: 2 },
+  navigation: { label: null, priority: 0 },
+  reorder: { label: null, priority: 1 },
+  create: { label: null, priority: 2 },
+  edit: { label: null, priority: 3 },
   danger: { label: null, priority: 99 },
 }

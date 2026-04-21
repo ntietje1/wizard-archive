@@ -1,5 +1,6 @@
 import { createCanvasNodeModule } from '../canvas-node-module-types'
 import { EmbedNode } from './embed-node'
+import { embedNodeContextMenuContributors } from './embed-node-context-menu'
 import { EmbedPreview } from './embed-node-preview'
 import { parseEmbedNodeData } from './embed-node-data'
 import type { EmbedNodeData } from './embed-node-data'
@@ -13,6 +14,9 @@ export const embedNodeModule = createCanvasNodeModule<EmbedNodeData, 'embed'>({
   defaultSize: { width: 320, height: 240 },
   buildDefaultData: (): EmbedNodeData => ({}),
   selection: rectangularCanvasNodeSelection,
+  contextMenu: {
+    contributors: embedNodeContextMenuContributors,
+  },
   placement: {
     anchor: 'top-left',
     selectOnCreate: false,

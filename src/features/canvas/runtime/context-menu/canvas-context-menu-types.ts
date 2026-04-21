@@ -25,8 +25,10 @@ export interface CanvasClipboardEntry {
 export interface CanvasContextMenuServices {
   canPaste: () => boolean
   canCopySnapshot: (selection: CanvasSelectionSnapshot) => boolean
+  canOpenEmbedSelection: (selection: CanvasSelectionSnapshot) => boolean
   copySnapshot: (selection: CanvasSelectionSnapshot) => boolean
   cutSnapshot: (selection: CanvasSelectionSnapshot) => boolean
+  openEmbedSelection: (selection: CanvasSelectionSnapshot) => Promise<boolean>
   pasteClipboard: () => CanvasSelectionSnapshot | null
   duplicateSnapshot: (selection: CanvasSelectionSnapshot) => CanvasSelectionSnapshot | null
   deleteSnapshot: (selection: CanvasSelectionSnapshot) => boolean

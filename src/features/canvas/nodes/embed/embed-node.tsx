@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, ExternalLinkIcon } from 'lucide-react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { RichEmbedLifecycleController } from './use-rich-embed-lifecycle'
 import { useRichEmbedActivation } from './use-rich-embed-lifecycle'
@@ -17,9 +16,6 @@ import type { Node, NodeProps } from '@xyflow/react'
 import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
 import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
-import { getSidebarItemIcon } from '~/shared/utils/category-icons'
-import { Button } from '~/features/shadcn/components/button'
 import { cn } from '~/features/shadcn/lib/utils'
 import { CanvasNodeConnectionHandles } from '../shared/canvas-node-connection-handles'
 import {
@@ -58,11 +54,9 @@ export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>
     setEditingEmbedId,
   })
 
-  const { navigateToItem } = useEditorNavigation()
-
-  const Icon = getSidebarItemIcon(item)
   const label = item?.name ?? 'Missing item'
   const isMissing = !item
+  const showFloatingLabel = !showsFormattingToolbar
 
   return (
     <ResizableNodeWrapper
@@ -74,46 +68,21 @@ export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>
       editing={showsFormattingToolbar}
     >
       <CanvasFloatingFormattingToolbar editor={noteEditor} visible={showsFormattingToolbar} />
+      {showFloatingLabel && (
+        <div className="pointer-events-none absolute left-3 top-0 z-20 max-w-[calc(100%-1.5rem)] -translate-y-[calc(100%+0.375rem)]">
+          <span className="block truncate text-xs font-medium text-muted-foreground">
+            {isMissing ? `Warning: ${label}` : label}
+          </span>
+        </div>
+      )}
       <div
-        className="h-full w-full rounded-lg border bg-card shadow-sm flex flex-col overflow-hidden"
+        className="relative h-full w-full overflow-hidden rounded-lg border bg-card shadow-sm"
         onDoubleClick={handleDoubleClick}
       >
         <CanvasNodeConnectionHandles selected={isSelected} />
 
-        <div className="flex items-center gap-2 min-w-0 px-3 py-2">
-          {isMissing ? (
-            <AlertTriangle className="h-4 w-4 shrink-0 text-muted-foreground" />
-          ) : (
-            <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-          )}
-          <div className="min-w-0 flex-1">
-            <p className="text-sm truncate select-none">{label}</p>
-          </div>
-          {item && (
-            <div
-              className={cn(
-                'shrink-0 overflow-hidden',
-                isSelected ? 'w-auto opacity-100' : 'w-0 opacity-0',
-              )}
-            >
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  void navigateToItem(item.slug)
-                }}
-                aria-label="Open item"
-                tabIndex={isSelected ? 0 : -1}
-              >
-                <ExternalLinkIcon className="size-3.5" />
-              </Button>
-            </div>
-          )}
-        </div>
-
         {!isMissing && (
-          <div className="flex-1 min-h-0 border-t">
+          <div className="h-full">
             <EmbedRichContent
               contentItem={contentItem}
               isEditing={isEditing}

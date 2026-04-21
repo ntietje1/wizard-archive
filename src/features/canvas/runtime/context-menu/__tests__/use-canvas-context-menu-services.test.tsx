@@ -9,6 +9,10 @@ import type { CanvasSelectionSnapshot } from '../../../tools/canvas-tool-types'
 
 const createItemMock = vi.hoisted(() => vi.fn())
 const getDefaultNameMock = vi.hoisted(() => vi.fn())
+const navigateToItemMock = vi.hoisted(() => vi.fn())
+const itemsMapState = vi.hoisted(() => ({
+  itemsMap: new Map(),
+}))
 
 vi.mock('~/features/sidebar/hooks/useCreateSidebarItem', () => ({
   useCreateSidebarItem: () => ({
@@ -20,6 +24,16 @@ vi.mock('~/features/sidebar/hooks/useSidebarValidation', () => ({
   useSidebarValidation: () => ({
     getDefaultName: getDefaultNameMock,
   }),
+}))
+
+vi.mock('~/features/sidebar/hooks/useEditorNavigation', () => ({
+  useEditorNavigation: () => ({
+    navigateToItem: navigateToItemMock,
+  }),
+}))
+
+vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
+  useActiveSidebarItems: () => itemsMapState,
 }))
 
 function createNode(id: string, x: number, zIndex: number): Node {
@@ -49,6 +63,8 @@ describe('useCanvasContextMenuServices', () => {
     useCanvasClipboardStore.getState().setClipboard(null)
     createItemMock.mockReset()
     getDefaultNameMock.mockReset()
+    navigateToItemMock.mockReset()
+    itemsMapState.itemsMap = new Map()
   })
 
   it('copies selected nodes with only fully-contained edges and pastes a new selected graph', () => {
@@ -286,5 +302,58 @@ describe('useCanvasContextMenuServices', () => {
       nodeIds: ['00000000-0000-4000-8000-000000000001'],
       edgeIds: [],
     })
+  })
+
+  it('opens a selected embedded sidebar item in the current tab', async () => {
+    const doc = new Y.Doc()
+    const nodesMap = doc.getMap<Node>('nodes')
+    const edgesMap = doc.getMap<Edge>('edges')
+    nodesMap.set('embed-1', {
+      id: 'embed-1',
+      type: 'embed',
+      position: { x: 0, y: 0 },
+      data: { sidebarItemId: 'note-1' },
+      width: 120,
+      height: 80,
+      zIndex: 1,
+    })
+    itemsMapState.itemsMap = new Map([
+      [
+        'note-1',
+        {
+          _id: 'note-1',
+          slug: 'note-slug',
+        },
+      ],
+    ])
+
+    const { result } = renderHook(() =>
+      useCanvasContextMenuServices({
+        canEdit: true,
+        campaignId: 'campaign-1' as never,
+        canvasParentId: null,
+        nodesMap,
+        edgesMap,
+        createNode: vi.fn(),
+        screenToFlowPosition: ({ x, y }) => ({ x, y }),
+        selection: { replace: vi.fn(), clear: vi.fn() },
+      }),
+    )
+
+    expect(
+      result.current.canOpenEmbedSelection({
+        nodeIds: ['embed-1'],
+        edgeIds: [],
+      }),
+    ).toBe(true)
+
+    await act(async () => {
+      await result.current.openEmbedSelection({
+        nodeIds: ['embed-1'],
+        edgeIds: [],
+      })
+    })
+
+    expect(navigateToItemMock).toHaveBeenCalledWith('note-slug')
   })
 })
