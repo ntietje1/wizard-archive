@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CustomBlock, CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Doc } from 'yjs'
 import type { RichEmbedLifecycleController } from './use-rich-embed-lifecycle'
-import { useNoteEmbedLifecycle } from './use-note-embed-lifecycle'
 import { NoteContent } from '~/features/editor/components/note-content'
+import { useBlockNoteActivationLifecycle } from '../shared/use-blocknote-activation-lifecycle'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { cn } from '~/features/shadcn/lib/utils'
 
@@ -28,17 +28,23 @@ export function EmbedNoteContent({
   const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
   const [doc, setDoc] = useState<Doc | null>(null)
 
+  const isReady = useCallback(() => {
+    return !!doc
+  }, [doc])
+
   const onEditorChange = (newEditor: CustomBlockNoteEditor | null, newDoc: Doc | null) => {
     setEditor(newEditor)
     setDoc(newDoc)
     onCanvasEditorChange?.(newEditor)
   }
 
-  useNoteEmbedLifecycle({
+  useBlockNoteActivationLifecycle({
     lifecycle,
     editor,
     editable,
-    doc,
+    isReady,
+    onActivationErrorMessage:
+      'useNoteEmbedLifecycle: failed to compute selection from posAtCoords/TextSelection.create',
   })
 
   useEffect(() => {

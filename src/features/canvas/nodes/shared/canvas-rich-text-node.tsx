@@ -1,6 +1,5 @@
 import { BlockNoteEditor } from '@blocknote/core'
-import { TextSelection } from '@tiptap/pm/state'
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { Node, NodeProps } from '@xyflow/react'
 import { CanvasNodeConnectionHandles } from './canvas-node-connection-handles'
@@ -15,7 +14,7 @@ import {
 import type { CanvasRichTextEditor, CanvasRichTextPartialBlock } from './canvas-rich-text-editor'
 import { CanvasFloatingFormattingToolbar } from './canvas-floating-formatting-toolbar'
 import { CanvasRichTextView } from './canvas-rich-text-view'
-import { useRichEmbedLifecycle } from '../embed/use-rich-embed-lifecycle'
+import { useBlockNoteActivationLifecycle } from './use-blocknote-activation-lifecycle'
 import type {
   RichEmbedActivationPayload,
   RichEmbedLifecycleController,
@@ -30,6 +29,8 @@ import {
   useSelectedCanvasNodeIds,
 } from '../../runtime/selection/use-canvas-selection-state'
 import { isExclusivelySelectedNode } from '../../utils/canvas-selection-utils'
+import { useOwnedBlockNoteEditor } from '~/features/editor/hooks/useOwnedBlockNoteEditor'
+import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { cn } from '~/features/shadcn/lib/utils'
 
 export interface CanvasRichTextNodeData extends Record<string, unknown> {
@@ -95,6 +96,8 @@ export function CanvasRichTextNode({
   const pendingActivationRef = useRef<RichEmbedActivationPayload | null>(null)
   const lifecycle = useRef<RichEmbedLifecycleController>({ pendingActivationRef }).current
   const wrapperRef = useRef<HTMLDivElement | null>(null)
+  const viewportRef = useRef<HTMLDivElement>(null)
+  const scrollTopRef = useRef(0)
   const editFrameRef = useRef<number | null>(null)
   const [editor, setEditor] = useState<CanvasRichTextEditor | null>(null)
   const content = normalizeCanvasRichTextContent(data.content)
@@ -120,6 +123,28 @@ export function CanvasRichTextNode({
       }
     }
   }, [])
+
+  useEffect(() => {
+    const viewport = viewportRef.current
+    if (!viewport) return
+
+    const onScroll = () => {
+      scrollTopRef.current = viewport.scrollTop
+    }
+
+    viewport.addEventListener('scroll', onScroll, { passive: true })
+
+    return () => {
+      viewport.removeEventListener('scroll', onScroll)
+    }
+  }, [])
+
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current
+    if (!viewport) return
+
+    viewport.scrollTop = scrollTopRef.current
+  }, [editor, isEditing])
 
   useEffect(() => {
     if (isEditing && !isExclusivelySelected) {
@@ -199,18 +224,22 @@ export function CanvasRichTextNode({
         }}
       >
         <CanvasNodeConnectionHandles selected={isSelected} />
-        <div className={cn('h-full w-full', isEditing && 'nodrag nopan nowheel')}>
-          <CanvasRichTextContent
-            key={id}
-            ariaLabel={variant.editAriaLabel}
-            content={content}
-            editable={isEditing}
-            contentClassName={variant.contentClassName}
-            textClassName={variant.textClassName}
-            onEditorChange={setEditor}
-            onPersistContent={handlePersistContent}
-            lifecycle={lifecycle}
-          />
+        <div
+          className={cn('h-full', isEditing && 'nodrag nopan', isExclusivelySelected && 'nowheel')}
+        >
+          <ScrollArea viewportRef={viewportRef} className="h-full">
+            <CanvasRichTextContent
+              key={id}
+              ariaLabel={variant.editAriaLabel}
+              content={content}
+              editable={isEditing}
+              contentClassName={variant.contentClassName}
+              textClassName={variant.textClassName}
+              onEditorChange={setEditor}
+              onPersistContent={handlePersistContent}
+              lifecycle={lifecycle}
+            />
+          </ScrollArea>
         </div>
       </div>
     </ResizableNodeWrapper>
@@ -238,20 +267,19 @@ const CanvasRichTextContent = memo(function CanvasRichTextContent({
   onPersistContent,
   lifecycle,
 }: CanvasRichTextContentProps) {
-  const [editor, setEditor] = useState<CanvasRichTextEditor | null>(null)
   const contentKey = useMemo(() => serializeCanvasRichTextContent(content), [content])
   const persistedContentKeyRef = useRef(contentKey)
   const initialContentRef = useRef(content)
   const latestContentRef = useRef(content)
   const lastExternalContentKeyRef = useRef(contentKey)
+  const pendingExitContentKeyRef = useRef<string | null>(null)
+  const wasEditableRef = useRef(editable)
 
   latestContentRef.current = content
 
-  useEffect(() => {
-    let nextEditor: CanvasRichTextEditor | null = null
-
+  const createEditor = useCallback(() => {
     try {
-      nextEditor = BlockNoteEditor.create({
+      return BlockNoteEditor.create({
         schema: canvasRichTextEditorSchema,
         initialContent: cloneCanvasRichTextContent(initialContentRef.current),
         placeholders: {
@@ -272,19 +300,17 @@ const CanvasRichTextContent = memo(function CanvasRichTextContent({
           },
         },
       }) as CanvasRichTextEditor
-      setEditor(nextEditor)
     } catch (error) {
       console.error('Error creating BlockNoteEditor for canvas rich text node', {
         ariaLabel,
         error,
       })
+      return null
     }
+  }, [ariaLabel])
 
-    return () => {
-      if (!nextEditor) {
-        return
-      }
-
+  const destroyEditor = useCallback(
+    (nextEditor: CanvasRichTextEditor) => {
       try {
         nextEditor._tiptapEditor.destroy()
       } catch (error) {
@@ -292,19 +318,49 @@ const CanvasRichTextContent = memo(function CanvasRichTextContent({
           ariaLabel,
           error,
         })
-      } finally {
-        setEditor((current) => (current === nextEditor ? null : current))
       }
-    }
-  }, [ariaLabel])
+    },
+    [ariaLabel],
+  )
+
+  const editor = useOwnedBlockNoteEditor({
+    createEditor,
+    destroyEditor,
+    onEditorChange,
+  })
+
+  useBlockNoteActivationLifecycle({
+    lifecycle,
+    editable,
+    editor,
+    onActivationErrorMessage:
+      'Canvas rich text node failed to compute selection from pointer position',
+  })
 
   useEffect(() => {
-    onEditorChange(editor)
-
-    return () => {
-      onEditorChange(null)
+    if (!editor) {
+      wasEditableRef.current = editable
+      return
     }
-  }, [editor, onEditorChange])
+
+    const wasEditable = wasEditableRef.current
+    wasEditableRef.current = editable
+
+    if (wasEditable && !editable) {
+      const finalContent = cloneCanvasRichTextContent(editor.document)
+      const finalContentKey = serializeCanvasRichTextContent(finalContent)
+
+      persistedContentKeyRef.current = finalContentKey
+      lastExternalContentKeyRef.current = finalContentKey
+
+      if (finalContentKey !== contentKey) {
+        pendingExitContentKeyRef.current = finalContentKey
+        onPersistContent(finalContent)
+      } else {
+        pendingExitContentKeyRef.current = null
+      }
+    }
+  }, [contentKey, editable, editor, onPersistContent])
 
   useEffect(() => {
     if (!editor) {
@@ -312,7 +368,17 @@ const CanvasRichTextContent = memo(function CanvasRichTextContent({
     }
 
     if (editable) {
+      pendingExitContentKeyRef.current = null
       lastExternalContentKeyRef.current = contentKey
+      return
+    }
+
+    const pendingExitContentKey = pendingExitContentKeyRef.current
+    if (pendingExitContentKey) {
+      if (contentKey === pendingExitContentKey) {
+        pendingExitContentKeyRef.current = null
+        lastExternalContentKeyRef.current = contentKey
+      }
       return
     }
 
@@ -331,12 +397,6 @@ const CanvasRichTextContent = memo(function CanvasRichTextContent({
     editor.replaceBlocks(editor.document, cloneCanvasRichTextContent(latestContentRef.current))
     persistedContentKeyRef.current = contentKey
   }, [contentKey, editable, editor])
-
-  useCanvasRichTextLifecycle({
-    lifecycle,
-    editable,
-    editor,
-  })
 
   const handleChange = useCallback(
     (currentEditor: CanvasRichTextEditor) => {
@@ -406,66 +466,6 @@ function areCanvasRichTextContentPropsEqual(
     serializeCanvasRichTextContent(previous.content) ===
     serializeCanvasRichTextContent(next.content)
   )
-}
-
-function useCanvasRichTextLifecycle({
-  lifecycle,
-  editable,
-  editor,
-}: {
-  lifecycle: RichEmbedLifecycleController
-  editable: boolean
-  editor: CanvasRichTextEditor | null
-}) {
-  const isReady = useCallback(() => {
-    return !!editor && !!getMountedView(editor)
-  }, [editor])
-
-  const onActivate = useCallback(
-    (payload: { point: { x: number; y: number } } | null) => {
-      if (!editor) {
-        return
-      }
-
-      const view = getMountedView(editor)
-      if (!view) {
-        return
-      }
-
-      if (payload?.point) {
-        try {
-          const pos = view.posAtCoords({ left: payload.point.x, top: payload.point.y })
-          if (pos && pos.inside !== -1) {
-            view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, pos.pos)))
-          }
-        } catch (error) {
-          console.warn('Canvas rich text node failed to compute selection from pointer position', {
-            error,
-          })
-        }
-      }
-
-      view.focus()
-    },
-    [editor],
-  )
-
-  useRichEmbedLifecycle({
-    lifecycle,
-    editable,
-    isReady,
-    onActivate,
-  })
-}
-
-function getMountedView(editor: CanvasRichTextEditor) {
-  const view = editor._tiptapEditor?.view
-  const docView = (view as unknown as { docView?: object | null })?.docView
-  if (!view?.dom?.isConnected || !docView) {
-    return null
-  }
-
-  return view
 }
 
 function getContainerStyle(data: CanvasRichTextNodeData, textColor: string): CSSProperties {

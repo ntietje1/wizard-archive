@@ -1,5 +1,5 @@
 import { BlockNoteEditor } from '@blocknote/core'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { editorSchema } from 'convex/notes/editorSpecs'
 import { api } from 'convex/_generated/api'
 import { NoteView } from './note-view'
@@ -11,6 +11,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { CustomBlock, CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
 import { useNoteYjsCollaboration } from '~/features/editor/hooks/useNoteYjsCollaboration'
+import { useOwnedBlockNoteEditor } from '~/features/editor/hooks/useOwnedBlockNoteEditor'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { getCursorColor } from '~/features/editor/utils/cursor-colors'
 import {
@@ -145,18 +146,11 @@ function StaticEditorInner({
   children?: React.ReactNode
   onEditorChange?: (editor: CustomBlockNoteEditor | null, doc: Doc | null) => void
 }) {
-  const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
-  const editorRef = useRef<CustomBlockNoteEditor | null>(null)
-  editorRef.current = editor
   const initialContentRef = useRef(content)
   const linkResolver = useLinkResolver(noteId)
-  const onEditorChangeRef = useRef(onEditorChange)
-  onEditorChangeRef.current = onEditorChange
   const hasInitializedRef = useRef(false)
 
-  useEffect(() => {
-    let nextEditor: CustomBlockNoteEditor | null = null
-
+  const createEditor = useCallback(() => {
     try {
       const createdEditor = BlockNoteEditor.create({
         schema: editorSchema,
@@ -168,28 +162,27 @@ function StaticEditorInner({
         throw new Error('Created editor does not match CustomBlockNoteEditor')
       }
 
-      nextEditor = createdEditor
-      setEditor(nextEditor)
-      onEditorChangeRef.current?.(nextEditor, null)
+      return createdEditor
     } catch (error) {
       console.error('Error creating BlockNoteEditor for static note content', { noteId, error })
-    }
-
-    if (!nextEditor) return
-
-    return () => {
-      const shouldClearEditor = editorRef.current === nextEditor
-
-      try {
-        destroyNoteEditor(nextEditor, noteId, 'static')
-      } finally {
-        if (shouldClearEditor) {
-          setEditor(null)
-          onEditorChangeRef.current?.(null, null)
-        }
-      }
+      return null
     }
   }, [noteId])
+
+  const destroyEditor = useCallback(
+    (editor: CustomBlockNoteEditor) => {
+      destroyNoteEditor(editor, noteId, 'static')
+    },
+    [noteId],
+  )
+
+  const editor = useOwnedBlockNoteEditor({
+    createEditor,
+    destroyEditor,
+    onEditorChange: (nextEditor) => {
+      onEditorChange?.(nextEditor, null)
+    },
+  })
 
   useEffect(() => {
     if (!editor) return
@@ -227,12 +220,7 @@ function CollaborativeEditorInner({
   children?: React.ReactNode
   onEditorChange?: (editor: CustomBlockNoteEditor | null, doc: Doc | null) => void
 }) {
-  const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
-  const editorRef = useRef<CustomBlockNoteEditor | null>(null)
-  editorRef.current = editor
   const linkResolver = useLinkResolver(noteId)
-  const onEditorChangeRef = useRef(onEditorChange)
-  onEditorChangeRef.current = onEditorChange
   const userRef = useRef(user)
   userRef.current = user
 
@@ -240,9 +228,7 @@ function CollaborativeEditorInner({
     provider.setUser({ name: user.name, color: user.color })
   }, [provider, user.color, user.name])
 
-  useEffect(() => {
-    let nextEditor: CustomBlockNoteEditor | null = null
-
+  const createEditor = useCallback(() => {
     try {
       const createdEditor = BlockNoteEditor.create({
         schema: editorSchema,
@@ -258,40 +244,38 @@ function CollaborativeEditorInner({
         throw new Error('Created editor does not match CustomBlockNoteEditor')
       }
 
-      nextEditor = createdEditor
       try {
-        patchYUndoPluginDestroy(nextEditor._tiptapEditor.view)
-        patchYSyncAfterTypeChanged(nextEditor._tiptapEditor.view)
+        patchYUndoPluginDestroy(createdEditor._tiptapEditor.view)
+        patchYSyncAfterTypeChanged(createdEditor._tiptapEditor.view)
       } catch (error) {
-        destroyNoteEditor(nextEditor, noteId, 'collaborative')
-        nextEditor = null
+        destroyNoteEditor(createdEditor, noteId, 'collaborative')
         throw error
       }
 
-      setEditor(nextEditor)
-      onEditorChangeRef.current?.(nextEditor, doc)
+      return createdEditor
     } catch (error) {
       console.error('Error creating BlockNoteEditor for collaborative note content', {
         noteId,
         error,
       })
-    }
-
-    if (!nextEditor) return
-
-    return () => {
-      const shouldClearEditor = editorRef.current === nextEditor
-
-      try {
-        destroyNoteEditor(nextEditor, noteId, 'collaborative')
-      } finally {
-        if (shouldClearEditor) {
-          setEditor(null)
-          onEditorChangeRef.current?.(null, null)
-        }
-      }
+      return null
     }
   }, [doc, noteId, provider])
+
+  const destroyEditor = useCallback(
+    (editor: CustomBlockNoteEditor) => {
+      destroyNoteEditor(editor, noteId, 'collaborative')
+    },
+    [noteId],
+  )
+
+  const editor = useOwnedBlockNoteEditor({
+    createEditor,
+    destroyEditor,
+    onEditorChange: (nextEditor) => {
+      onEditorChange?.(nextEditor, doc)
+    },
+  })
 
   const forceOpenLinkPopover = useRef<(() => void) | null>(null)
 
