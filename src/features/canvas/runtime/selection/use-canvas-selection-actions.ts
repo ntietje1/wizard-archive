@@ -41,7 +41,7 @@ function projectCanvasSelectionToReactFlow(
   )
 }
 
-function replaceCanvasSelection(
+export function replaceCanvasSelection(
   reactFlow: SelectionProjectionReactFlow,
   selection: CanvasSelectionSnapshot,
 ) {

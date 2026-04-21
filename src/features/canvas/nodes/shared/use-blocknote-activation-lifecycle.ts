@@ -34,12 +34,14 @@ export function useBlockNoteActivationLifecycle<TEditor extends BlockNoteEditorW
   editor,
   isReady,
   onActivationErrorMessage,
+  onActivated,
 }: {
   lifecycle: RichEmbedLifecycleController
   editable: boolean
   editor: TEditor | null
   isReady?: (editor: TEditor) => boolean
   onActivationErrorMessage: string
+  onActivated?: () => void
 }) {
   const isEditorReady = useCallback(() => {
     if (!editor || !getMountedBlockNoteView(editor)) {
@@ -74,8 +76,9 @@ export function useBlockNoteActivationLifecycle<TEditor extends BlockNoteEditorW
       }
 
       view.focus()
+      onActivated?.()
     },
-    [editor, onActivationErrorMessage],
+    [editor, onActivated, onActivationErrorMessage],
   )
 
   useRichEmbedLifecycle({

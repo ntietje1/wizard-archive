@@ -1,4 +1,5 @@
 import { BlockNoteEditor } from '@blocknote/core'
+import { useReactFlow } from '@xyflow/react'
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { Node, NodeProps } from '@xyflow/react'
@@ -28,6 +29,7 @@ import {
   useIsCanvasNodeSelected,
   useSelectedCanvasNodeIds,
 } from '../../runtime/selection/use-canvas-selection-state'
+import { replaceCanvasSelection } from '../../runtime/selection/use-canvas-selection-actions'
 import { isExclusivelySelectedNode } from '../../utils/canvas-selection-utils'
 import { useOwnedBlockNoteEditor } from '~/features/editor/hooks/useOwnedBlockNoteEditor'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
@@ -86,6 +88,7 @@ export function CanvasRichTextNode({
   dragging,
   variant,
 }: CanvasRichTextNodeComponentProps) {
+  const reactFlow = useReactFlow()
   const { updateNodeData } = useCanvasNodeActionsContext()
   const canEdit = useCanvasPermissionsContext()
   const editSession = useCanvasEditSessionContext()
@@ -103,6 +106,7 @@ export function CanvasRichTextNode({
   const content = normalizeCanvasRichTextContent(data.content)
   const plainText = extractCanvasRichTextPlainText(content)
   const ariaLabel = plainText || variant.emptyAriaLabel
+  const hasPendingAutoEdit = editSession.pendingEditNodeId === id
 
   const scheduleEditingChange = useCallback((nextEditing: boolean, onCommit?: () => void) => {
     if (editFrameRef.current !== null) {
@@ -147,24 +151,52 @@ export function CanvasRichTextNode({
   }, [editor, isEditing])
 
   useEffect(() => {
-    if (isEditing && !isExclusivelySelected) {
+    if (isEditing && !isExclusivelySelected && !hasPendingAutoEdit) {
       scheduleEditingChange(false)
     }
-  }, [isEditing, isExclusivelySelected, scheduleEditingChange])
+  }, [hasPendingAutoEdit, isEditing, isExclusivelySelected, scheduleEditingChange])
 
   useEffect(() => {
-    if (!canEdit || !isExclusivelySelected || isEditing || editSession.pendingEditNodeId !== id) {
+    if (!canEdit || isEditing || !hasPendingAutoEdit) {
+      return
+    }
+
+    if (!isSelected) {
+      replaceCanvasSelection(reactFlow, { nodeIds: [id], edgeIds: [] })
       return
     }
 
     pendingActivationRef.current = editSession.pendingEditNodePoint
       ? { point: editSession.pendingEditNodePoint }
       : null
-    scheduleEditingChange(true, () => {
-      editSession.setPendingEditNodeId(null)
-      editSession.setPendingEditNodePoint(null)
-    })
-  }, [canEdit, editSession, id, isEditing, isExclusivelySelected, scheduleEditingChange])
+    scheduleEditingChange(true)
+  }, [
+    canEdit,
+    editSession.pendingEditNodePoint,
+    hasPendingAutoEdit,
+    id,
+    isEditing,
+    isSelected,
+    reactFlow,
+    scheduleEditingChange,
+  ])
+
+  useEffect(() => {
+    if (!isEditing || !hasPendingAutoEdit || selectedNodeIds.length === 0 || isSelected) {
+      return
+    }
+
+    editSession.setPendingEditNodeId(null)
+    editSession.setPendingEditNodePoint(null)
+    scheduleEditingChange(false)
+  }, [
+    editSession,
+    hasPendingAutoEdit,
+    isEditing,
+    isSelected,
+    scheduleEditingChange,
+    selectedNodeIds.length,
+  ])
 
   const startEditing = useCallback(
     (point?: { x: number; y: number } | null) => {
@@ -184,6 +216,15 @@ export function CanvasRichTextNode({
     },
     [id, updateNodeData],
   )
+
+  const handleAutoEditActivated = useCallback(() => {
+    if (editSession.pendingEditNodeId !== id) {
+      return
+    }
+
+    editSession.setPendingEditNodeId(null)
+    editSession.setPendingEditNodePoint(null)
+  }, [editSession, id])
 
   return (
     <ResizableNodeWrapper
@@ -238,6 +279,7 @@ export function CanvasRichTextNode({
               onEditorChange={setEditor}
               onPersistContent={handlePersistContent}
               lifecycle={lifecycle}
+              onActivated={handleAutoEditActivated}
             />
           </ScrollArea>
         </div>
@@ -255,6 +297,7 @@ interface CanvasRichTextContentProps {
   onEditorChange: (editor: CanvasRichTextEditor | null) => void
   onPersistContent: (content: Array<CanvasRichTextPartialBlock>) => void
   lifecycle: RichEmbedLifecycleController
+  onActivated: () => void
 }
 
 const CanvasRichTextContent = memo(function CanvasRichTextContent({
@@ -266,6 +309,7 @@ const CanvasRichTextContent = memo(function CanvasRichTextContent({
   onEditorChange,
   onPersistContent,
   lifecycle,
+  onActivated,
 }: CanvasRichTextContentProps) {
   const contentKey = useMemo(() => serializeCanvasRichTextContent(content), [content])
   const persistedContentKeyRef = useRef(contentKey)
@@ -335,6 +379,7 @@ const CanvasRichTextContent = memo(function CanvasRichTextContent({
     editor,
     onActivationErrorMessage:
       'Canvas rich text node failed to compute selection from pointer position',
+    onActivated,
   })
 
   useEffect(() => {
@@ -453,7 +498,8 @@ function areCanvasRichTextContentPropsEqual(
     previous.textClassName !== next.textClassName ||
     previous.onEditorChange !== next.onEditorChange ||
     previous.onPersistContent !== next.onPersistContent ||
-    previous.lifecycle !== next.lifecycle
+    previous.lifecycle !== next.lifecycle ||
+    previous.onActivated !== next.onActivated
   ) {
     return false
   }
