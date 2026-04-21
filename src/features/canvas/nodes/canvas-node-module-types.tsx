@@ -13,7 +13,7 @@ export interface CanvasNodePreviewOptions {
 
 export type CanvasNodeData = Record<string, unknown>
 
-export type CanvasNodeType = 'embed' | 'rectangle' | 'sticky' | 'stroke' | 'text'
+export type CanvasNodeType = 'embed' | 'stroke' | 'text'
 
 interface CanvasNodePlacementBehavior {
   anchor: 'center' | 'top-left'

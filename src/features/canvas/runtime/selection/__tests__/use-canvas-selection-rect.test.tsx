@@ -98,20 +98,20 @@ describe('useCanvasSelectionRect', () => {
     }
     storeState.nodeLookup = new Map([
       [
-        'sticky-1',
+        'text-1',
         {
-          id: 'sticky-1',
-          type: 'sticky',
+          id: 'text-1',
+          type: 'text',
           data: {},
           position: { x: 10, y: 10 },
           measured: { width: 80, height: 80 },
         },
       ],
       [
-        'sticky-2',
+        'text-2',
         {
-          id: 'sticky-2',
-          type: 'sticky',
+          id: 'text-2',
+          type: 'text',
           data: {},
           position: { x: 120, y: 10 },
           measured: { width: 80, height: 80 },
@@ -120,16 +120,16 @@ describe('useCanvasSelectionRect', () => {
     ])
     const getNodesSpy = vi.spyOn(reactFlowMock, 'getNodes').mockReturnValue([
       {
-        id: 'sticky-1',
-        type: 'sticky',
+        id: 'text-1',
+        type: 'text',
         data: {},
         position: { x: 10, y: 10 },
         width: 80,
         height: 80,
       },
       {
-        id: 'sticky-2',
-        type: 'sticky',
+        id: 'text-2',
+        type: 'text',
         data: {},
         position: { x: 120, y: 10 },
         width: 80,
@@ -140,8 +140,8 @@ describe('useCanvasSelectionRect', () => {
       {
         id: 'edge-1',
         type: 'bezier',
-        source: 'sticky-1',
-        target: 'sticky-2',
+        source: 'text-1',
+        target: 'text-2',
         sourceHandle: 'right',
         targetHandle: 'left',
       },
@@ -187,7 +187,7 @@ describe('useCanvasSelectionRect', () => {
       flushAnimationFrame()
     })
     expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toEqual(
-      new Set(['sticky-1']),
+      new Set(['text-1']),
     )
     expect(useCanvasPendingSelectionPreviewStore.getState().pendingEdgeIds).toEqual(new Set())
     expect(setPresence).toHaveBeenCalledWith('tool.select', {
@@ -223,7 +223,7 @@ describe('useCanvasSelectionRect', () => {
     expect(selection.beginGesture).toHaveBeenCalledWith('marquee')
     expect(selection.commitGestureSelection).toHaveBeenCalledWith(
       {
-        nodeIds: ['sticky-1'],
+        nodeIds: ['text-1'],
         edgeIds: ['edge-1'],
       },
       'replace',
@@ -244,15 +244,15 @@ describe('useCanvasSelectionRect', () => {
       beginGesture: vi.fn(),
       commitGestureSelection: vi.fn(),
       endGesture: vi.fn(),
-      getSelectedNodeIds: vi.fn(() => ['sticky-existing']),
+      getSelectedNodeIds: vi.fn(() => ['text-existing']),
       getSelectedEdgeIds: vi.fn(() => ['edge-existing']),
     }
     storeState.nodeLookup = new Map([
       [
-        'sticky-1',
+        'text-1',
         {
-          id: 'sticky-1',
-          type: 'sticky',
+          id: 'text-1',
+          type: 'text',
           data: {},
           position: { x: 10, y: 10 },
           measured: { width: 80, height: 80 },
@@ -261,8 +261,8 @@ describe('useCanvasSelectionRect', () => {
     ])
     const getNodesSpy = vi.spyOn(reactFlowMock, 'getNodes').mockReturnValue([
       {
-        id: 'sticky-1',
-        type: 'sticky',
+        id: 'text-1',
+        type: 'text',
         data: {},
         position: { x: 10, y: 10 },
         width: 80,
@@ -311,7 +311,7 @@ describe('useCanvasSelectionRect', () => {
     })
 
     expect(useCanvasPendingSelectionPreviewStore.getState().pendingNodeIds).toEqual(
-      new Set(['sticky-existing', 'sticky-1']),
+      new Set(['text-existing', 'text-1']),
     )
     expect(useCanvasPendingSelectionPreviewStore.getState().pendingEdgeIds).toEqual(
       new Set(['edge-existing']),
@@ -326,7 +326,7 @@ describe('useCanvasSelectionRect', () => {
 
     expect(selection.commitGestureSelection).toHaveBeenCalledWith(
       {
-        nodeIds: ['sticky-1'],
+        nodeIds: ['text-1'],
         edgeIds: [],
       },
       'add',
@@ -349,10 +349,10 @@ describe('useCanvasSelectionRect', () => {
     }
     storeState.nodeLookup = new Map([
       [
-        'sticky-1',
+        'text-1',
         {
-          id: 'sticky-1',
-          type: 'sticky',
+          id: 'text-1',
+          type: 'text',
           data: {},
           position: { x: 10, y: 10 },
           measured: { width: 80, height: 80 },
@@ -361,8 +361,8 @@ describe('useCanvasSelectionRect', () => {
     ])
     const getNodesSpy = vi.spyOn(reactFlowMock, 'getNodes').mockReturnValue([
       {
-        id: 'sticky-1',
-        type: 'sticky',
+        id: 'text-1',
+        type: 'text',
         data: {},
         position: { x: 10, y: 10 },
         width: 80,
@@ -404,7 +404,7 @@ describe('useCanvasSelectionRect', () => {
 
     expect(selection.commitGestureSelection).toHaveBeenCalledWith(
       {
-        nodeIds: ['sticky-1'],
+        nodeIds: ['text-1'],
         edgeIds: [],
       },
       'replace',
@@ -427,10 +427,10 @@ describe('useCanvasSelectionRect', () => {
     }
     storeState.nodeLookup = new Map([
       [
-        'sticky-1',
+        'text-1',
         {
-          id: 'sticky-1',
-          type: 'sticky',
+          id: 'text-1',
+          type: 'text',
           data: {},
           position: { x: 10, y: 10 },
           measured: { width: 80, height: 80 },
@@ -439,8 +439,8 @@ describe('useCanvasSelectionRect', () => {
     ])
     const getNodesSpy = vi.spyOn(reactFlowMock, 'getNodes').mockReturnValue([
       {
-        id: 'sticky-1',
-        type: 'sticky',
+        id: 'text-1',
+        type: 'text',
         data: {},
         position: { x: 10, y: 10 },
         width: 80,
@@ -504,7 +504,7 @@ describe('useCanvasSelectionRect', () => {
     })
     expect(selection.commitGestureSelection).toHaveBeenCalledWith(
       {
-        nodeIds: ['sticky-1'],
+        nodeIds: ['text-1'],
         edgeIds: [],
       },
       'replace',
@@ -527,10 +527,10 @@ describe('useCanvasSelectionRect', () => {
     }
     storeState.nodeLookup = new Map([
       [
-        'sticky-1',
+        'text-1',
         {
-          id: 'sticky-1',
-          type: 'sticky',
+          id: 'text-1',
+          type: 'text',
           data: {},
           position: { x: 10, y: 10 },
           measured: { width: 80, height: 80 },
@@ -539,8 +539,8 @@ describe('useCanvasSelectionRect', () => {
     ])
     const getNodesSpy = vi.spyOn(reactFlowMock, 'getNodes').mockReturnValue([
       {
-        id: 'sticky-1',
-        type: 'sticky',
+        id: 'text-1',
+        type: 'text',
         data: {},
         position: { x: 10, y: 10 },
         width: 80,
@@ -616,7 +616,7 @@ describe('useCanvasSelectionRect', () => {
 
     expect(selection.commitGestureSelection).toHaveBeenCalledWith(
       {
-        nodeIds: ['sticky-1'],
+        nodeIds: ['text-1'],
         edgeIds: [],
       },
       'replace',

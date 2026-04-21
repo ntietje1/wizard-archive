@@ -70,7 +70,7 @@ test.describe.serial('canvas selection', () => {
     await expect.poll(() => getCommittedSelectedCanvasNodes(page).count()).toBe(1)
 
     await page.keyboard.down(mod)
-    await clickCanvasNode(page, getCanvasNodesByType(page, 'sticky').first())
+    await clickCanvasNode(page, getCanvasNodesByType(page, 'text').nth(1))
     await page.keyboard.up(mod)
     await expect.poll(() => getCommittedSelectedCanvasNodes(page).count()).toBe(2)
 
@@ -186,14 +186,10 @@ async function seedSelectionCanvas(page: Page) {
   await selectCanvasTool(page, 'Text')
   await clickCanvasAt(page, { x: 120, y: 120 })
   await page.getByLabel('Text node content').fill('Alpha')
-  await page.getByLabel('Text node content').press('Enter')
+  await clickCanvasAt(page, { x: 40, y: 40 })
 
-  await selectCanvasTool(page, 'Post-it')
+  await selectCanvasTool(page, 'Text')
   await clickCanvasAt(page, { x: 320, y: 130 })
-  await page.getByLabel('Sticky note text').fill('Beta')
-  await page.getByLabel('Sticky note text').press(`${mod}+Enter`)
-
-  await selectCanvasTool(page, 'Rectangle')
-  await dragOnCanvas(page, { x: 110, y: 300 }, { x: 270, y: 395 })
-  await expect.poll(() => getCanvasNodesByType(page, 'rectangle').count()).toBe(1)
+  await page.getByLabel('Text node content').fill('Beta')
+  await clickCanvasAt(page, { x: 40, y: 40 })
 }

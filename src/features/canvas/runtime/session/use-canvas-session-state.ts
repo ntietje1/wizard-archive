@@ -25,6 +25,9 @@ export interface CanvasSessionRuntime {
 export function useCanvasSessionState({ provider }: UseCanvasSessionStateOptions) {
   const [editingEmbedId, setEditingEmbedId] = useState<string | null>(null)
   const [pendingEditNodeId, setPendingEditNodeId] = useState<string | null>(null)
+  const [pendingEditNodePoint, setPendingEditNodePoint] = useState<{ x: number; y: number } | null>(
+    null,
+  )
   const awareness = useCanvasAwareness(provider)
 
   const editSession = useMemo<CanvasEditSessionState>(
@@ -32,9 +35,11 @@ export function useCanvasSessionState({ provider }: UseCanvasSessionStateOptions
       editingEmbedId,
       setEditingEmbedId,
       pendingEditNodeId,
+      pendingEditNodePoint,
       setPendingEditNodeId,
+      setPendingEditNodePoint,
     }),
-    [editingEmbedId, pendingEditNodeId],
+    [editingEmbedId, pendingEditNodeId, pendingEditNodePoint],
   )
 
   const remoteDragPositions = useMemo(

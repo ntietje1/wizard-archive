@@ -75,7 +75,7 @@ export const strokeNodeModule = createCanvasNodeModule<StrokeNodeData, 'stroke'>
     bindings: [
       bindCanvasPaintProperty(paintCanvasProperty, {
         getColor: () => node.data.color,
-        setColor: (color) => updateNodeData(node.id, { color }),
+        setColor: (color) => updateNodeData(node.id, { color: color ?? node.data.color }),
         getOpacity: () => node.data.opacity ?? 100,
         setOpacity: (opacity) => updateNodeData(node.id, { opacity }),
       }),

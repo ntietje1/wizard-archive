@@ -44,7 +44,9 @@ describe('CanvasToolbar', () => {
             editingEmbedId: null,
             setEditingEmbedId: vi.fn(),
             pendingEditNodeId: null,
+            pendingEditNodePoint: null,
             setPendingEditNodeId: vi.fn(),
+            setPendingEditNodePoint: vi.fn(),
           },
           nodeActions: {
             updateNodeData: vi.fn(),
@@ -66,16 +68,7 @@ describe('CanvasToolbar', () => {
       .getAllByRole('button')
       .map((button) => button.getAttribute('aria-label'))
 
-    expect(labels).toEqual([
-      'Pointer',
-      'Panning',
-      'Lasso select',
-      'Draw',
-      'Eraser',
-      'Text',
-      'Post-it',
-      'Rectangle',
-    ])
+    expect(labels).toEqual(['Pointer', 'Panning', 'Lasso select', 'Draw', 'Eraser', 'Text'])
   })
 
   it('renders top-right controls in the requested order', () => {

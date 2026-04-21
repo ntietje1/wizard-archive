@@ -25,7 +25,11 @@ describe('canvas node registry', () => {
       height: 36,
       selected: true,
       draggable: true,
-      data: { label: 'New text' },
+      data: {
+        content: [{ type: 'paragraph' }],
+        backgroundColor: 'var(--background)',
+        borderStroke: 'var(--border)',
+      },
     })
   })
 
@@ -35,7 +39,6 @@ describe('canvas node registry', () => {
 
   it('derives React Flow node renderers from the node modules', () => {
     expect(canvasNodeTypes.text).toBe(getCanvasNodeModule('text').NodeComponent)
-    expect(canvasNodeTypes.sticky).toBe(getCanvasNodeModule('sticky').NodeComponent)
   })
 
   it('throws when a node definition has no default data and none is provided', () => {
@@ -49,10 +52,15 @@ describe('canvas node registry', () => {
 
   describe('renderCanvasNodePreview', () => {
     it('renders a preview for known node types', () => {
-      const preview = renderCanvasNodePreview('sticky', {
-        label: 'Note',
-        color: '#fff',
-        opacity: 80,
+      const preview = renderCanvasNodePreview('text', {
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: 'Note' }],
+          },
+        ],
+        backgroundColor: '#fff',
+        borderStroke: null,
       })
 
       expect(preview).not.toBeNull()
@@ -69,8 +77,8 @@ describe('canvas node registry', () => {
     it('uses default rectangular selection behavior for rectangle-shaped nodes', () => {
       const nodes: Array<Node> = [
         {
-          id: 'sticky-1',
-          type: 'sticky',
+          id: 'text-1',
+          type: 'text',
           position: { x: 10, y: 10 },
           width: 80,
           height: 80,
@@ -78,14 +86,14 @@ describe('canvas node registry', () => {
         },
       ]
 
-      expect(findCanvasNodeAtPoint(nodes, { x: 20, y: 20 }, { zoom: 1 })).toBe('sticky-1')
+      expect(findCanvasNodeAtPoint(nodes, { x: 20, y: 20 }, { zoom: 1 })).toBe('text-1')
       expect(
         getCanvasNodesMatchingRectangle(
           nodes,
           { x: 0, y: 0, width: 100, height: 100 },
           { zoom: 1 },
         ),
-      ).toEqual(['sticky-1'])
+      ).toEqual(['text-1'])
       expect(
         getCanvasNodesMatchingLasso(
           nodes,
@@ -97,14 +105,14 @@ describe('canvas node registry', () => {
           ],
           { zoom: 1 },
         ),
-      ).toEqual(['sticky-1'])
+      ).toEqual(['text-1'])
     })
 
-    it('selects rectangle-shaped nodes when the drag rectangle only partially overlaps them', () => {
+    it('selects text nodes when the drag rectangle only partially overlaps them', () => {
       const nodes: Array<Node> = [
         {
-          id: 'rectangle-1',
-          type: 'rectangle',
+          id: 'text-1',
+          type: 'text',
           position: { x: 10, y: 10 },
           width: 80,
           height: 80,
@@ -114,7 +122,7 @@ describe('canvas node registry', () => {
 
       expect(
         getCanvasNodesMatchingRectangle(nodes, { x: 0, y: 0, width: 30, height: 30 }, { zoom: 1 }),
-      ).toEqual(['rectangle-1'])
+      ).toEqual(['text-1'])
     })
 
     it('uses bespoke stroke selection behavior and safely ignores unknown node types', () => {

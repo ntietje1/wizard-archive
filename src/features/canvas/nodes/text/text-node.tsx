@@ -1,88 +1,39 @@
-import { useEffect, useRef } from 'react'
-import { ResizableNodeWrapper } from '../shared/resizable-node-wrapper'
-import { CanvasNodeConnectionHandles } from '../shared/canvas-node-connection-handles'
-import { useInlineCanvasNodeEdit } from '../shared/use-inline-canvas-node-edit'
 import type { Node, NodeProps } from '@xyflow/react'
-import { useCanvasNodeActionsContext } from '../../runtime/providers/canvas-runtime-hooks'
-import { useIsCanvasNodeSelected } from '../../runtime/selection/use-canvas-selection-state'
+import { CanvasRichTextNode, CanvasRichTextPreview } from '../shared/canvas-rich-text-node'
+import type { CanvasRichTextNodeData } from '../shared/canvas-rich-text-node'
 
-const TEXT_CONTAINER_CLASS = 'px-4 py-2 rounded-lg border bg-background shadow-sm h-full w-full'
+export type TextNodeData = CanvasRichTextNodeData
 
-export type TextNodeData = { label?: string }
-
-export function TextPreview({ label }: { label: string }) {
+export function TextPreview(data: TextNodeData) {
   return (
-    <div className={TEXT_CONTAINER_CLASS}>
-      <p className="text-sm select-none">{label || 'Text'}</p>
-    </div>
+    <CanvasRichTextPreview
+      data={data}
+      variant={{
+        containerClassName: 'rounded-lg shadow-sm',
+        contentClassName: 'h-full w-full px-4 py-2 overflow-hidden',
+        textClassName: 'text-sm select-none',
+        textColor: 'inherit',
+        emptyAriaLabel: 'Empty text node',
+      }}
+    />
   )
 }
 
-export function TextNode({ id, data, dragging }: NodeProps<Node<TextNodeData>>) {
-  const { updateNodeData } = useCanvasNodeActionsContext()
-  const isSelected = useIsCanvasNodeSelected(id)
-  const trimmedLabel = typeof data.label === 'string' ? data.label.trim() : ''
-  const hasLabel = trimmedLabel.length > 0
-  const label = hasLabel ? trimmedLabel : 'Text'
-  const ariaLabel = hasLabel ? `${trimmedLabel} node` : 'Empty text node'
-  const inputRef = useRef<HTMLInputElement>(null)
-  const { isEditing, editValue, setEditValue, startEditing, handleBlur, handleInputKeyDown } =
-    useInlineCanvasNodeEdit<HTMLInputElement>({
-      id,
-      selected: isSelected,
-      value: trimmedLabel,
-      onCommit: (nextValue) => {
-        updateNodeData(id, { label: nextValue.trim() })
-      },
-      shouldCommit: (event) => event.key === 'Enter' && !event.shiftKey,
-      shouldCancel: (event) => event.key === 'Escape',
-    })
-
-  useEffect(() => {
-    if (!isEditing) return
-
-    inputRef.current?.focus()
-    inputRef.current?.select()
-  }, [isEditing])
-
+export function TextNode(props: NodeProps<Node<TextNodeData>>) {
   return (
-    <ResizableNodeWrapper
-      id={id}
-      nodeType="text"
-      dragging={!!dragging}
-      minWidth={80}
-      minHeight={30}
-    >
-      <div
-        className={TEXT_CONTAINER_CLASS}
-        role="group"
-        aria-label={ariaLabel}
-        tabIndex={0}
-        onDoubleClick={startEditing}
-        onKeyDown={(event) => {
-          if ((event.key === 'Enter' || event.key === 'F2') && !isEditing) {
-            event.preventDefault()
-            event.stopPropagation()
-            startEditing()
-          }
-        }}
-      >
-        <CanvasNodeConnectionHandles selected={isSelected} />
-        {isEditing ? (
-          <input
-            ref={inputRef}
-            className="bg-transparent outline-none text-sm w-full"
-            aria-label="Text node content"
-            placeholder="Text"
-            value={editValue}
-            onChange={(event) => setEditValue(event.currentTarget.value)}
-            onBlur={handleBlur}
-            onKeyDown={handleInputKeyDown}
-          />
-        ) : (
-          <p className="text-sm select-none">{label}</p>
-        )}
-      </div>
-    </ResizableNodeWrapper>
+    <CanvasRichTextNode
+      {...props}
+      variant={{
+        nodeType: 'text',
+        editAriaLabel: 'Text node content',
+        emptyAriaLabel: 'Empty text node',
+        minWidth: 80,
+        minHeight: 30,
+        containerClassName: 'rounded-lg shadow-sm',
+        contentClassName: 'h-full w-full px-4 py-2 overflow-hidden',
+        textClassName: 'text-sm',
+        textColor: 'inherit',
+      }}
+    />
   )
 }

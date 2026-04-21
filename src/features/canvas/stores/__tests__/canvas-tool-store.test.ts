@@ -7,7 +7,7 @@ describe('useCanvasToolStore', () => {
   })
 
   it('changes active tools only when set explicitly', () => {
-    const tools = ['draw', 'hand', 'erase', 'lasso', 'text', 'sticky', 'rectangle'] as const
+    const tools = ['draw', 'hand', 'erase', 'lasso', 'text'] as const
 
     for (const tool of tools) {
       useCanvasToolStore.getState().setActiveTool(tool)
@@ -18,7 +18,7 @@ describe('useCanvasToolStore', () => {
   it('resets tool state back to defaults', () => {
     const store = useCanvasToolStore
 
-    store.getState().setActiveTool('rectangle')
+    store.getState().setActiveTool('text')
     store.getState().setStrokeColor('#fff')
     store.getState().setStrokeOpacity(30)
     store.getState().setStrokeSize(16)

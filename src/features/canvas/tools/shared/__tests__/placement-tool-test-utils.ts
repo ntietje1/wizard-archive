@@ -8,17 +8,38 @@ export function createMouseEvent(x: number, y: number): React.MouseEvent {
   } as React.MouseEvent
 }
 
+export function createPointerEvent(
+  x: number,
+  y: number,
+  options: Partial<PointerEvent> = {},
+): PointerEvent {
+  return {
+    button: 0,
+    buttons: 1,
+    clientX: x,
+    clientY: y,
+    pointerId: 1,
+    currentTarget: {
+      setPointerCapture: () => undefined,
+      releasePointerCapture: () => undefined,
+    },
+    ...options,
+  } as PointerEvent
+}
+
 export function createPlacementEnvironment({
   activeTool,
   createNode,
   replaceSelection,
   setPendingEditNodeId,
+  setPendingEditNodePoint = () => undefined,
   setActiveTool,
 }: {
   activeTool: CanvasToolId
   createNode: (node: Node) => void
   replaceSelection: (selection: { nodeIds: Array<string>; edgeIds: Array<string> }) => void
   setPendingEditNodeId: (nodeId: string | null) => void
+  setPendingEditNodePoint?: (point: { x: number; y: number } | null) => void
   setActiveTool: (tool: CanvasToolId) => void
 }): CanvasToolServices {
   return {
@@ -63,7 +84,9 @@ export function createPlacementEnvironment({
       editingEmbedId: null,
       setEditingEmbedId: () => undefined,
       pendingEditNodeId: null,
+      pendingEditNodePoint: null,
       setPendingEditNodeId,
+      setPendingEditNodePoint,
     },
     toolState: {
       getSettings: () => ({

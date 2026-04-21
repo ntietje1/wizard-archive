@@ -8,15 +8,7 @@ import type { CanvasInspectableProperties } from '../properties/canvas-property-
 import type { Connection, Edge, Node, XYPosition } from '@xyflow/react'
 import type { ComponentType, MouseEvent as ReactMouseEvent, ReactNode } from 'react'
 
-export type CanvasToolId =
-  | 'select'
-  | 'hand'
-  | 'draw'
-  | 'erase'
-  | 'lasso'
-  | 'rectangle'
-  | 'text'
-  | 'sticky'
+export type CanvasToolId = 'select' | 'hand' | 'draw' | 'erase' | 'lasso' | 'text'
 
 export type CanvasSelectionGestureKind = 'marquee' | 'lasso'
 export type CanvasSelectionCommitMode = 'replace' | 'add'
@@ -43,7 +35,9 @@ export interface CanvasEditSessionState {
   editingEmbedId: string | null
   setEditingEmbedId: (id: string | null) => void
   pendingEditNodeId: string | null
+  pendingEditNodePoint: Point2D | null
   setPendingEditNodeId: (id: string | null) => void
+  setPendingEditNodePoint: (point: Point2D | null) => void
 }
 
 /**

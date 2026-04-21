@@ -79,18 +79,32 @@ function createResolvedProperty(
         restColors.some((value) => !Object.is(value, firstColor)),
         firstColor,
       )
-      const opacity = createNumericValue(paintMatches.map((match) => match.getOpacity()))
+      const opacityMatches = paintMatches.filter(
+        (
+          match,
+        ): match is CanvasPaintPropertyBinding & {
+          getOpacity: NonNullable<CanvasPaintPropertyBinding['getOpacity']>
+          setOpacity: NonNullable<CanvasPaintPropertyBinding['setOpacity']>
+        } => typeof match.getOpacity === 'function' && typeof match.setOpacity === 'function',
+      )
+      const opacity =
+        opacityMatches.length === paintMatches.length
+          ? createNumericValue(opacityMatches.map((match) => match.getOpacity()))
+          : undefined
 
       return {
         definition: binding.definition,
         color,
         opacity,
-        setColor: (nextColor: string) => {
+        setColor: (nextColor: string | null) => {
           paintMatches.forEach((match) => match.setColor(nextColor))
         },
-        setOpacity: (nextOpacity: number) => {
-          paintMatches.forEach((match) => match.setOpacity(nextOpacity))
-        },
+        setOpacity:
+          opacityMatches.length === paintMatches.length
+            ? (nextOpacity: number) => {
+                opacityMatches.forEach((match) => match.setOpacity(nextOpacity))
+              }
+            : undefined,
       }
     }
     case 'strokeSize': {

@@ -30,7 +30,7 @@ export function FeatureCanvases() {
               </p>
             </div>
             <ul className="mt-6 space-y-2 text-sm text-muted-foreground">
-              <li>→ Drawing tools, shapes, sticky notes, text</li>
+              <li>→ Drawing tools and rich text blocks</li>
               <li>→ Embed notes, folders, and canvases as interactive nodes</li>
               <li>→ Multiple collaborators can work in the same board together</li>
               <li>→ Snapshot history with rollback</li>
@@ -44,7 +44,7 @@ export function FeatureCanvases() {
             </Link>
           </div>
           <div>
-            <AssetPlaceholder label="Canvas with sticky notes, connecting lines, and embedded note nodes showing campaign content — a DM's planning board" />
+            <AssetPlaceholder label="Canvas with text blocks, connecting lines, and embedded note nodes showing campaign content — a DM's planning board" />
           </div>
         </div>
       </LandingContainer>

@@ -471,7 +471,9 @@ function createLassoEnvironment({
       editingEmbedId: null,
       setEditingEmbedId: () => undefined,
       pendingEditNodeId: null,
+      pendingEditNodePoint: null,
       setPendingEditNodeId: () => undefined,
+      setPendingEditNodePoint: () => undefined,
     },
     toolState: {
       getSettings: () => ({

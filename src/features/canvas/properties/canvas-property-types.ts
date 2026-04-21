@@ -6,7 +6,10 @@ type CanvasPropertyBase<TKind extends CanvasPropertyKind> = {
 }
 
 export type CanvasPaintPropertyDefinition = CanvasPropertyBase<'paint'> & {
+  label: string
   colors: ReadonlyArray<string>
+  allowNone?: boolean
+  noneLabel?: string
 }
 
 export type CanvasStrokeSizePropertyDefinition = CanvasPropertyBase<'strokeSize'> & {
@@ -18,10 +21,10 @@ export type CanvasPropertyValue<TValue> = { kind: 'value'; value: TValue } | { k
 
 export interface CanvasPaintPropertyBinding {
   definition: CanvasPaintPropertyDefinition
-  getColor: () => string
-  setColor: (color: string) => void
-  getOpacity: () => number
-  setOpacity: (opacity: number) => void
+  getColor: () => string | null
+  setColor: (color: string | null) => void
+  getOpacity?: () => number
+  setOpacity?: (opacity: number) => void
 }
 
 export interface CanvasStrokeSizePropertyBinding {
@@ -34,10 +37,10 @@ export type CanvasPropertyBinding = CanvasPaintPropertyBinding | CanvasStrokeSiz
 
 export interface CanvasPaintResolvedProperty {
   definition: CanvasPaintPropertyDefinition
-  color: CanvasPropertyValue<string>
-  opacity: CanvasPropertyValue<number>
-  setColor: (color: string) => void
-  setOpacity: (opacity: number) => void
+  color: CanvasPropertyValue<string | null>
+  opacity?: CanvasPropertyValue<number>
+  setColor: (color: string | null) => void
+  setOpacity?: (opacity: number) => void
 }
 
 export interface CanvasStrokeSizeResolvedProperty {

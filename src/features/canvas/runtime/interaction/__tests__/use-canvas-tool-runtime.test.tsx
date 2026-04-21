@@ -75,7 +75,9 @@ describe('useCanvasToolRuntime', () => {
       editingEmbedId: null,
       setEditingEmbedId: vi.fn(),
       pendingEditNodeId: null,
+      pendingEditNodePoint: null,
       setPendingEditNodeId: vi.fn(),
+      setPendingEditNodePoint: vi.fn(),
     }
 
     const { result, rerender } = renderHook(

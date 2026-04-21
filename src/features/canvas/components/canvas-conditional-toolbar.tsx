@@ -98,44 +98,71 @@ function resolveProperties(
 }
 
 function CanvasPropertyControls({ properties }: { properties: Array<CanvasResolvedProperty> }) {
-  const paintProperty = properties.find(isPaintProperty)
+  const paintProperties = properties.filter(isPaintProperty)
   const strokeSizeProperty = properties.find(isStrokeSizeProperty)
 
   const strokeSizeValue = readResolvedPropertyValue(strokeSizeProperty)
-  const colorValue = paintProperty?.color.kind === 'value' ? paintProperty.color.value : undefined
-  const opacityValue =
-    paintProperty?.opacity.kind === 'value' ? paintProperty.opacity.value : undefined
 
   return (
     <>
-      {paintProperty && (
-        <div className="flex items-center gap-1">
-          {paintProperty.definition.colors.map((color) => (
-            <button
-              type="button"
-              key={color}
-              className="h-6 w-6 rounded-sm border border-border transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
-              style={{
-                backgroundColor: color,
-                outline: colorValue === color ? '2px solid var(--primary)' : 'none',
-                outlineOffset: '1px',
-              }}
-              onClick={() => paintProperty.setColor(color)}
-              aria-label={`Select ${COLOR_NAMES[color] ?? 'custom'} color`}
-              aria-pressed={colorValue === color}
-            />
-          ))}
-          <div className="mx-1 h-6 w-px bg-border" />
-          <ColorPickerPopover
-            value={colorValue}
-            onChange={(color) => paintProperty.setColor(color)}
-            opacity={opacityValue}
-            onOpacityChange={(opacity) => paintProperty.setOpacity(opacity)}
-            colorMixed={paintProperty.color.kind === 'mixed'}
-            opacityMixed={paintProperty.opacity.kind === 'mixed'}
-          />
-        </div>
-      )}
+      {paintProperties.map((paintProperty) => {
+        const colorValue =
+          paintProperty.color.kind === 'value' ? paintProperty.color.value : undefined
+        const opacityValue =
+          paintProperty.opacity?.kind === 'value' ? paintProperty.opacity.value : undefined
+
+        return (
+          <div key={paintProperty.definition.id} className="flex flex-col gap-1">
+            <p className="text-[11px] font-medium text-muted-foreground">
+              {paintProperty.definition.label}
+            </p>
+            <div className="flex items-center gap-1">
+              {paintProperty.definition.allowNone && (
+                <button
+                  type="button"
+                  className="flex h-6 items-center rounded-sm border border-border px-2 text-[11px] transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+                  onClick={() => paintProperty.setColor(null)}
+                  aria-label={
+                    paintProperty.definition.noneLabel ??
+                    `No ${paintProperty.definition.label.toLowerCase()}`
+                  }
+                  aria-pressed={
+                    paintProperty.color.kind === 'value' && paintProperty.color.value === null
+                  }
+                >
+                  None
+                </button>
+              )}
+              {paintProperty.definition.colors.map((color) => (
+                <button
+                  type="button"
+                  key={color}
+                  className="h-6 w-6 rounded-sm border border-border transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+                  style={{
+                    backgroundColor: color,
+                    outline: colorValue === color ? '2px solid var(--primary)' : 'none',
+                    outlineOffset: '1px',
+                  }}
+                  onClick={() => paintProperty.setColor(color)}
+                  aria-label={`Select ${COLOR_NAMES[color] ?? 'custom'} color`}
+                  aria-pressed={colorValue === color}
+                />
+              ))}
+              <div className="mx-1 h-6 w-px bg-border" />
+              <ColorPickerPopover
+                value={colorValue}
+                onChange={(color) => paintProperty.setColor(color)}
+                opacity={opacityValue}
+                onOpacityChange={paintProperty.setOpacity}
+                colorMixed={paintProperty.color.kind === 'mixed'}
+                opacityMixed={paintProperty.opacity?.kind === 'mixed'}
+                allowClear={paintProperty.definition.allowNone}
+                clearLabel={paintProperty.definition.noneLabel}
+              />
+            </div>
+          </div>
+        )
+      })}
       {strokeSizeProperty && (
         <div className="flex items-center gap-0.5">
           <div className="flex items-center gap-0.5">

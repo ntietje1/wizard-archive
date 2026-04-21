@@ -13,12 +13,14 @@ const CHECKERBOARD_PATTERN =
   'url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMUlEQVQ4T2NkYGAQYcAP3uCTZhw1gGGYhAGBZIA/nYDCgBDAm9BGDWAAJyRCgLaBCAAgXwixzAS0pgAAAABJRU5ErkJggg==") left center'
 
 interface ColorPickerPopoverProps {
-  value?: string
-  onChange?: (color: string) => void
+  value?: string | null
+  onChange?: (color: string | null) => void
   opacity?: number
   onOpacityChange?: (opacity: number) => void
   colorMixed?: boolean
   opacityMixed?: boolean
+  allowClear?: boolean
+  clearLabel?: string
 }
 
 export function ColorPickerPopover({
@@ -28,8 +30,10 @@ export function ColorPickerPopover({
   onOpacityChange,
   colorMixed = false,
   opacityMixed = false,
+  allowClear = false,
+  clearLabel = 'Clear color',
 }: ColorPickerPopoverProps) {
-  const resolvedValue = value ?? 'var(--foreground)'
+  const resolvedValue = value === null ? 'transparent' : (value ?? 'var(--foreground)')
   const normalizedValue = normalizePickerColor(resolvedValue)
   const resolvedOpacity = opacity ?? 100
   const canEditColor = typeof onChange === 'function'
@@ -96,7 +100,7 @@ export function ColorPickerPopover({
               style={{
                 backgroundColor: colorMixed ? 'transparent' : resolvedValue,
                 backgroundImage:
-                  colorMixed || opacityMixed
+                  colorMixed || opacityMixed || value === null
                     ? 'repeating-linear-gradient(135deg, var(--muted-foreground) 0 2px, transparent 2px 6px)'
                     : undefined,
                 opacity: opacityMixed ? 1 : resolvedOpacity / 100,
@@ -108,6 +112,15 @@ export function ColorPickerPopover({
       <PopoverContent side="bottom" align="end" className="w-56 p-3 allow-motion">
         {(colorMixed || opacityMixed) && (
           <p className="mb-2 text-xs text-muted-foreground">Mixed values</p>
+        )}
+        {allowClear && (
+          <button
+            type="button"
+            className="mb-2 rounded-md border border-border px-2 py-1 text-xs transition-colors hover:bg-accent"
+            onClick={() => onChange?.(null)}
+          >
+            {clearLabel}
+          </button>
         )}
         {canEditColor ? (
           <ColorPicker value={normalizedValue} onChange={onChange}>

@@ -178,8 +178,13 @@ function createCanvasEditSessionService(
     get pendingEditNodeId() {
       return getRuntimeState(runtimeStateRef).editSession.pendingEditNodeId
     },
+    get pendingEditNodePoint() {
+      return getRuntimeState(runtimeStateRef).editSession.pendingEditNodePoint
+    },
     setPendingEditNodeId: (id) =>
       getRuntimeState(runtimeStateRef).editSession.setPendingEditNodeId(id),
+    setPendingEditNodePoint: (point) =>
+      getRuntimeState(runtimeStateRef).editSession.setPendingEditNodePoint(point),
   }
 }
 

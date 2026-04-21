@@ -18,15 +18,11 @@ import type { Point2D } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-geometry-utils'
 import { boundsFromPoints, rectIntersectsBounds } from '../utils/canvas-geometry-utils'
 import { buildCanvasNodeTypes } from './canvas-node-module-types'
-import { rectangleNodeModule } from './rectangle/rectangle-node-module'
 import { strokeNodeModule } from './stroke/stroke-node-module'
 import { textNodeModule } from './text/text-node-module'
-import { stickyNodeModule } from './sticky/sticky-node-module'
 
 const canvasNodeModules = [
   embedNodeModule,
-  rectangleNodeModule,
-  stickyNodeModule,
   strokeNodeModule,
   textNodeModule,
 ] as const satisfies ReadonlyArray<AnyCanvasNodeModule>

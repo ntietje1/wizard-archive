@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasConditionalToolbar } from '../canvas-conditional-toolbar'
 import { CanvasProviders } from '../../runtime/providers/canvas-runtime-context'
@@ -48,7 +48,9 @@ function renderToolbar(updateNodeData = vi.fn()) {
           editingEmbedId: null,
           setEditingEmbedId: vi.fn(),
           pendingEditNodeId: null,
+          pendingEditNodePoint: null,
           setPendingEditNodeId: vi.fn(),
+          setPendingEditNodePoint: vi.fn(),
         },
         remoteHighlights: new Map(),
         canEdit: true,
@@ -78,6 +80,8 @@ function createNode(
     color?: string
     opacity?: number
     size?: number
+    backgroundColor?: string | null
+    borderStroke?: string | null
   } = {},
 ): Node {
   return {
@@ -96,6 +100,10 @@ function createNode(
       ...(options.color !== undefined ? { color: options.color } : {}),
       ...(options.opacity !== undefined ? { opacity: options.opacity } : {}),
       ...(options.size !== undefined ? { size: options.size } : {}),
+      ...(options.backgroundColor !== undefined
+        ? { backgroundColor: options.backgroundColor }
+        : {}),
+      ...(options.borderStroke !== undefined ? { borderStroke: options.borderStroke } : {}),
     },
   }
 }
@@ -146,27 +154,27 @@ describe('CanvasConditionalToolbar', () => {
     expect(largeStrokeButton).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it('shows rectangle tool properties without stroke size when nothing is selected', () => {
-    useCanvasToolStore.getState().setActiveTool('rectangle')
-
-    renderToolbar()
-    emitSelection([])
-
-    expect(screen.getByRole('toolbar', { name: 'Canvas conditional toolbar' })).toBeVisible()
-    expect(screen.queryByRole('button', { name: 'Stroke size 2' })).toBeNull()
-  })
-
   it('shows single-node properties for editable nodes only', () => {
     useCanvasToolStore.getState().setActiveTool('draw')
 
     renderToolbar()
-    emitSelection([createNode('sticky', { color: 'var(--foreground)', opacity: 75 })])
+    emitSelection([
+      createNode('text', {
+        backgroundColor: '#FFEBA1',
+        borderStroke: null,
+      }),
+    ])
 
     expect(screen.getByRole('toolbar', { name: 'Canvas conditional toolbar' })).toBeVisible()
     expect(screen.queryByRole('button', { name: 'Stroke size 2' })).toBeNull()
 
-    emitSelection([createNode('text')])
-    expect(screen.queryByRole('toolbar', { name: 'Canvas conditional toolbar' })).toBeNull()
+    emitSelection([
+      createNode('text', {
+        backgroundColor: 'var(--background)',
+        borderStroke: 'var(--border)',
+      }),
+    ])
+    expect(screen.getByRole('toolbar', { name: 'Canvas conditional toolbar' })).toBeVisible()
   })
 
   it('shows stroke size controls for a selected stroke and updates the node size', () => {
@@ -195,8 +203,8 @@ describe('CanvasConditionalToolbar', () => {
 
     renderToolbar()
     emitSelection([
-      createNode('sticky', { color: 'var(--foreground)', opacity: 75 }),
-      createNode('rectangle', { color: 'var(--foreground)', opacity: 75 }),
+      createNode('text', { backgroundColor: '#FFEBA1', borderStroke: null }),
+      createNode('text', { backgroundColor: '#FFEBA1', borderStroke: null }),
     ])
 
     expect(screen.getByRole('toolbar', { name: 'Canvas conditional toolbar' })).toBeVisible()
@@ -206,55 +214,76 @@ describe('CanvasConditionalToolbar', () => {
   it('fans out shared color updates to every selected node', () => {
     const { updateNodeData } = renderToolbar()
 
-    const sticky = createNode('sticky', { color: 'var(--foreground)', opacity: 75 })
-    const rectangle = createNode('rectangle', { color: 'var(--foreground)', opacity: 75 })
-    emitSelection([sticky, rectangle])
+    const firstText = createNode('text', { backgroundColor: '#FFEBA1', borderStroke: null })
+    const secondText = createNode('text', { backgroundColor: '#FFEBA1', borderStroke: null })
+    emitSelection([firstText, secondText])
 
-    fireEvent.click(screen.getByRole('button', { name: 'Select Red color' }))
+    const fillGroup = screen.getByText('Fill').parentElement
+    expect(fillGroup).not.toBeNull()
 
-    expect(updateNodeData).toHaveBeenCalledWith(sticky.id, { color: 'var(--t-red)' })
-    expect(updateNodeData).toHaveBeenCalledWith(rectangle.id, { color: 'var(--t-red)' })
+    fireEvent.click(within(fillGroup!).getByRole('button', { name: 'Select Red color' }))
+
+    expect(updateNodeData).toHaveBeenCalledWith(firstText.id, { backgroundColor: 'var(--t-red)' })
+    expect(updateNodeData).toHaveBeenCalledWith(secondText.id, { backgroundColor: 'var(--t-red)' })
+  })
+
+  it('supports clearing the selected border stroke', () => {
+    const { updateNodeData } = renderToolbar()
+
+    const text = createNode('text', {
+      backgroundColor: 'var(--background)',
+      borderStroke: 'var(--border)',
+    })
+    emitSelection([text])
+
+    fireEvent.click(screen.getByRole('button', { name: 'No stroke' }))
+
+    expect(updateNodeData).toHaveBeenCalledWith(text.id, { borderStroke: null })
   })
 
   it('fans out shared opacity updates to every selected node', () => {
     const { updateNodeData } = renderToolbar()
 
-    const stroke = createNode('stroke', { color: 'var(--foreground)', opacity: 20 })
-    const rectangle = createNode('rectangle', { color: 'var(--foreground)', opacity: 20 })
-    emitSelection([stroke, rectangle])
+    const firstStroke = createNode('stroke', { color: 'var(--foreground)', opacity: 20 })
+    const secondStroke = createNode('stroke', { color: 'var(--foreground)', opacity: 20 })
+    emitSelection([firstStroke, secondStroke])
 
     act(() => {
       ;(colorPickerMock.lastProps?.onOpacityChange as ((opacity: number) => void) | undefined)?.(42)
     })
 
-    expect(updateNodeData).toHaveBeenCalledWith(stroke.id, { opacity: 42 })
-    expect(updateNodeData).toHaveBeenCalledWith(rectangle.id, { opacity: 42 })
+    expect(updateNodeData).toHaveBeenCalledWith(firstStroke.id, { opacity: 42 })
+    expect(updateNodeData).toHaveBeenCalledWith(secondStroke.id, { opacity: 42 })
   })
 
   it('renders mixed state for shared properties with different values', () => {
     renderToolbar()
 
     emitSelection([
-      createNode('sticky', { color: 'var(--foreground)', opacity: 30 }),
-      createNode('rectangle', { color: 'var(--t-red)', opacity: 90 }),
+      createNode('text', { backgroundColor: '#FFEBA1', borderStroke: null }),
+      createNode('text', { backgroundColor: 'var(--t-red)', borderStroke: null }),
     ])
 
-    expect(screen.getByRole('button', { name: 'Select Default color' })).toHaveAttribute(
+    const fillGroup = screen.getByText('Fill').parentElement
+    expect(fillGroup).not.toBeNull()
+
+    expect(
+      within(fillGroup!).getByRole('button', { name: 'Select Default color' }),
+    ).toHaveAttribute('aria-pressed', 'false')
+    expect(within(fillGroup!).getByRole('button', { name: 'Select Red color' })).toHaveAttribute(
       'aria-pressed',
       'false',
     )
-    expect(screen.getByRole('button', { name: 'Select Red color' })).toHaveAttribute(
-      'aria-pressed',
-      'false',
-    )
-    expect(colorPickerMock.lastProps?.colorMixed).toBe(true)
-    expect(colorPickerMock.lastProps?.opacityMixed).toBe(true)
+    expect(screen.getAllByTestId('color-picker-popover')).toHaveLength(2)
   })
 
   it('hides the toolbar when the selection has no shared properties', () => {
     renderToolbar()
 
-    emitSelection([createNode('text'), createNode('sticky', { color: 'var(--foreground)' })])
+    emitSelection([
+      createNode('text', { backgroundColor: 'var(--background)', borderStroke: 'var(--border)' }),
+      createNode('stroke', { color: 'var(--foreground)' }),
+    ])
 
     expect(screen.queryByRole('toolbar', { name: 'Canvas conditional toolbar' })).toBeNull()
   })

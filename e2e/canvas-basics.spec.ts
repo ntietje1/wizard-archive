@@ -21,7 +21,6 @@ import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
 const campaignName = testName('Canvas Basics')
 const canvasName = DEFAULT_CANVAS_NAME
-const mod = process.platform === 'darwin' ? 'Meta' : 'Control'
 const CONTEXT_MENU_DRAG_DISTANCE_X = 120
 const CONTEXT_MENU_DRAG_DISTANCE_Y = 60
 // Closing the menu on left-down consumes part of the first drag step in CI, so the observed
@@ -69,8 +68,6 @@ test.describe.serial('canvas basics', () => {
     await expect(getCanvasToolButton(page, 'Lasso select')).toBeVisible()
     await expect(getCanvasToolButton(page, 'Draw')).toBeVisible()
     await expect(getCanvasToolButton(page, 'Text')).toBeVisible()
-    await expect(getCanvasToolButton(page, 'Post-it')).toBeVisible()
-    await expect(getCanvasToolButton(page, 'Rectangle')).toBeVisible()
 
     const viewport = getViewportControls(page)
     await expect(viewport.zoomIn).toBeVisible()
@@ -86,7 +83,7 @@ test.describe.serial('canvas basics', () => {
     await expect(getCanvasSurface(page)).toBeVisible()
   })
 
-  test('place and edit text, sticky, and rectangle nodes', async ({ page }) => {
+  test('place and edit click-created and drag-created text nodes', async ({ page }) => {
     await page.goto('/campaigns')
     await navigateToCampaign(page, campaignName)
     await openCanvas(page, canvasName)
@@ -96,35 +93,42 @@ test.describe.serial('canvas basics', () => {
     const textInput = page.getByLabel('Text node content')
     await expect(textInput).toBeVisible()
     await textInput.fill('Canvas text')
-    await textInput.press('Enter')
+    await clickCanvasAt(page, { x: 40, y: 40 })
 
-    await selectCanvasTool(page, 'Post-it')
+    await selectCanvasTool(page, 'Text')
     await clickCanvasAt(page, { x: 320, y: 120 })
-    const stickyInput = page.getByLabel('Sticky note text')
-    await expect(stickyInput).toBeVisible()
-    await stickyInput.fill('Sticky body')
-    await stickyInput.press(`${mod}+Enter`)
+    const secondTextInput = page.getByLabel('Text node content')
+    await expect(secondTextInput).toBeVisible()
+    await secondTextInput.fill('Second text')
+    await clickCanvasAt(page, { x: 40, y: 40 })
 
-    await selectCanvasTool(page, 'Rectangle')
+    await selectCanvasTool(page, 'Text')
     await dragOnCanvas(page, { x: 120, y: 260 }, { x: 280, y: 360 })
-    await expect.poll(() => getCanvasNodesByType(page, 'rectangle').count()).toBe(1)
+    const draggedTextInput = page.getByLabel('Text node content')
+    await expect(draggedTextInput).toBeVisible()
+    await draggedTextInput.fill('Dragged text')
+    await clickCanvasAt(page, { x: 40, y: 40 })
 
-    await selectCanvasTool(page, 'Rectangle')
-    // A 6px drag from {x:320,y:260} to {x:326,y:266} stays below the rectangle minimum size
-    // threshold, so the gesture should create zero additional rectangle nodes.
-    await dragOnCanvas(page, { x: 320, y: 260 }, { x: 326, y: 266 })
-    await expect.poll(() => getCanvasNodesByType(page, 'rectangle').count()).toBe(1)
+    await selectCanvasTool(page, 'Text')
+    await dragOnCanvas(page, { x: 340, y: 260 }, { x: 500, y: 420 })
+    const secondDraggedTextInput = page.getByLabel('Text node content')
+    await expect(secondDraggedTextInput).toBeVisible()
+    await secondDraggedTextInput.fill('Dragged second text')
+    await clickCanvasAt(page, { x: 40, y: 40 })
 
-    await expect.poll(() => getCanvasNodesByType(page, 'text').count()).toBe(1)
-    await expect.poll(() => getCanvasNodesByType(page, 'sticky').count()).toBe(1)
+    await expect.poll(() => getCanvasNodesByType(page, 'text').count()).toBe(4)
     await expect(page.getByText('Canvas text', { exact: true })).toBeVisible()
-    await expect(page.getByText('Sticky body', { exact: true })).toBeVisible()
+    await expect(page.getByText('Second text', { exact: true })).toBeVisible()
+    await expect(page.getByText('Dragged text', { exact: true })).toBeVisible()
+    await expect(page.getByText('Dragged second text', { exact: true })).toBeVisible()
 
     await page.reload()
     await expect(getCanvasSurface(page)).toBeVisible()
     await expect(page.getByText('Canvas text', { exact: true })).toBeVisible()
-    await expect(page.getByText('Sticky body', { exact: true })).toBeVisible()
-    await expect.poll(() => getCanvasNodesByType(page, 'rectangle').count()).toBe(1)
+    await expect(page.getByText('Second text', { exact: true })).toBeVisible()
+    await expect(page.getByText('Dragged text', { exact: true })).toBeVisible()
+    await expect(page.getByText('Dragged second text', { exact: true })).toBeVisible()
+    await expect.poll(() => getCanvasNodesByType(page, 'text').count()).toBe(4)
   })
 
   test('draw, select, clear, delete, and undo or redo', async ({ page }) => {
@@ -139,15 +143,15 @@ test.describe.serial('canvas basics', () => {
     await page.reload()
     await expect(getCanvasSurface(page)).toBeVisible()
     await selectCanvasTool(page, 'Pointer')
-    const stickyNode = getCanvasNodesByType(page, 'sticky').first()
-    await clickCanvasNode(page, stickyNode)
+    const firstTextNode = getCanvasNodesByType(page, 'text').first()
+    await clickCanvasNode(page, firstTextNode)
     await expect.poll(() => getCommittedSelectedCanvasNodes(page).count()).toBe(1)
 
     await clickCanvasAt(page, { x: 700, y: 520 })
     await expect.poll(() => getCommittedSelectedCanvasNodes(page).count()).toBe(0)
 
-    const textNode = getCanvasNodesByType(page, 'text').first()
-    await clickCanvasNode(page, textNode)
+    const selectedTextNode = getCanvasNodesByType(page, 'text').first()
+    await clickCanvasNode(page, selectedTextNode)
     await expect.poll(() => getCommittedSelectedCanvasNodes(page).count()).toBe(1)
     await page.keyboard.press('Delete')
     await expect.poll(() => getCanvasNodesByType(page, 'text').count()).toBe(0)
@@ -170,18 +174,22 @@ test.describe.serial('canvas basics', () => {
     const textInput = page.getByLabel('Text node content')
     await expect(textInput).toBeVisible()
     await textInput.fill('Edge source')
-    await textInput.press('Enter')
+    await clickCanvasAt(page, { x: 40, y: 40 })
 
-    await selectCanvasTool(page, 'Post-it')
+    await selectCanvasTool(page, 'Text')
     await clickCanvasAt(page, { x: 360, y: 420 })
-    const stickyInput = page.getByLabel('Sticky note text')
-    await expect(stickyInput).toBeVisible()
-    await stickyInput.fill('Edge target')
-    await stickyInput.press(`${mod}+Enter`)
+    const targetTextInput = page.getByLabel('Text node content')
+    await expect(targetTextInput).toBeVisible()
+    await targetTextInput.fill('Edge target')
+    await clickCanvasAt(page, { x: 40, y: 40 })
 
     await selectCanvasTool(page, 'Pointer')
-    const sourceNode = getCanvasNodesByType(page, 'text').last()
-    const targetNode = getCanvasNodesByType(page, 'sticky').last()
+    const sourceNode = page.getByTestId('canvas-node').filter({
+      has: page.getByText('Edge source', { exact: true }),
+    })
+    const targetNode = page.getByTestId('canvas-node').filter({
+      has: page.getByText('Edge target', { exact: true }),
+    })
     const edgeCountBefore = await getCanvasEdges(page).count()
     await clickCanvasNode(page, sourceNode)
 
@@ -215,23 +223,23 @@ test.describe.serial('canvas basics', () => {
     await navigateToCampaign(page, campaignName)
     await openCanvas(page, canvasName)
 
-    await selectCanvasTool(page, 'Post-it')
+    await selectCanvasTool(page, 'Text')
     await clickCanvasAt(page, { x: 520, y: 420 })
-    const stickyInput = page.getByLabel('Sticky note text')
-    await expect(stickyInput).toBeVisible()
-    await stickyInput.fill('Drag after context menu')
-    await stickyInput.press(`${mod}+Enter`)
+    const textInput = page.getByLabel('Text node content')
+    await expect(textInput).toBeVisible()
+    await textInput.fill('Drag after context menu')
+    await clickCanvasAt(page, { x: 40, y: 40 })
 
     await selectCanvasTool(page, 'Pointer')
-    const stickyNode = page
-      .locator('[data-testid="canvas-node"][data-node-type="sticky"]')
+    const textNode = page
+      .locator('[data-testid="canvas-node"][data-node-type="text"]')
       .filter({ has: page.getByText('Drag after context menu', { exact: true }) })
       .first()
-    await clickCanvasNode(page, stickyNode)
+    await clickCanvasNode(page, textNode)
 
-    const before = await stickyNode.boundingBox()
+    const before = await textNode.boundingBox()
     if (!before) {
-      throw new Error('Sticky node is not visible before context menu drag test')
+      throw new Error('Text node is not visible before context menu drag test')
     }
 
     const dragStartPoint = {
@@ -259,7 +267,7 @@ test.describe.serial('canvas basics', () => {
 
     await expect
       .poll(async () => {
-        const box = await stickyNode.boundingBox()
+        const box = await textNode.boundingBox()
         if (!box) {
           return false
         }
@@ -300,25 +308,25 @@ test.describe.serial('canvas basics', () => {
 
     await page.mouse.click(paneBox.x + 240, paneBox.y + 240)
 
-    await selectCanvasTool(page, 'Post-it')
+    await selectCanvasTool(page, 'Text')
     await clickCanvasAt(page, { x: 640, y: 180 })
-    const stickyInput = page.getByLabel('Sticky note text')
-    await expect(stickyInput).toBeVisible()
-    await stickyInput.fill('Context menu reorder hover')
-    await stickyInput.press(`${mod}+Enter`)
+    const textInput = page.getByLabel('Text node content')
+    await expect(textInput).toBeVisible()
+    await textInput.fill('Context menu reorder hover')
+    await clickCanvasAt(page, { x: 40, y: 40 })
 
     await selectCanvasTool(page, 'Pointer')
-    const stickyNode = page
-      .locator('[data-testid="canvas-node"][data-node-type="sticky"]')
+    const textNode = page
+      .locator('[data-testid="canvas-node"][data-node-type="text"]')
       .filter({ has: page.getByText('Context menu reorder hover', { exact: true }) })
       .first()
 
-    const stickyBox = await stickyNode.boundingBox()
-    if (!stickyBox) {
-      throw new Error('Sticky node is not visible before reorder hover test')
+    const textBox = await textNode.boundingBox()
+    if (!textBox) {
+      throw new Error('Text node is not visible before reorder hover test')
     }
 
-    await page.mouse.click(stickyBox.x + stickyBox.width / 2, stickyBox.y + stickyBox.height / 2, {
+    await page.mouse.click(textBox.x + textBox.width / 2, textBox.y + textBox.height / 2, {
       button: 'right',
     })
 

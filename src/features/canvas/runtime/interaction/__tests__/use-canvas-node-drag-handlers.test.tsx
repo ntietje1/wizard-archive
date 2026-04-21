@@ -36,7 +36,7 @@ describe('useCanvasNodeDragHandlers', () => {
     dragState.currentNodes = [
       {
         id: 'dragged',
-        type: 'sticky',
+        type: 'text',
         position: { x: 10, y: 10 },
         width: 40,
         height: 40,
@@ -90,7 +90,7 @@ describe('useCanvasNodeDragHandlers', () => {
     dragState.currentNodes = [
       {
         id: 'dragged',
-        type: 'sticky',
+        type: 'text',
         position: { x: 10, y: 10 },
         width: 40,
         height: 40,
@@ -98,7 +98,7 @@ describe('useCanvasNodeDragHandlers', () => {
       },
       {
         id: 'target',
-        type: 'sticky',
+        type: 'text',
         position: { x: 80, y: 10 },
         width: 40,
         height: 40,

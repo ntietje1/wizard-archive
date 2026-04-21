@@ -20,8 +20,6 @@ const TOOL_NAME_PATTERNS = {
   Draw: /^Draw$/i,
   Eraser: /^(Eraser|Erase)$/i,
   Text: /^(Text|Add text node)$/i,
-  'Post-it': /^(Post-it|Add sticky note)$/i,
-  Rectangle: /^Rectangle$/i,
 } as const satisfies Record<string, RegExp>
 
 const VIEWPORT_CONTROL_PATTERNS = {
