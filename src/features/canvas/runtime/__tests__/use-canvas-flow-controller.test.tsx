@@ -1,6 +1,8 @@
 import { renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { useCanvasFlowController } from '../use-canvas-flow-controller'
+import type { CanvasFlowShellProps } from '../../components/canvas-flow-shell'
+import type { Id } from 'convex/_generated/dataModel'
 import type { CanvasRemoteDragAnimation } from '../interaction/use-canvas-remote-drag-animation'
 import type { CanvasSessionRuntime } from '../session/use-canvas-session-state'
 import type { Edge, Node, ReactFlowInstance } from '@xyflow/react'
@@ -33,6 +35,8 @@ const nodeActionsMock = vi.hoisted(() => ({
   onResizeEnd: vi.fn(),
 }))
 
+type CanvasFlowRuntimeShellProps = Omit<CanvasFlowShellProps, 'viewportPersistence'>
+
 const shellPropsMock = vi.hoisted(
   () =>
     ({
@@ -48,7 +52,7 @@ const shellPropsMock = vi.hoisted(
       },
       canvasSurfaceRef: { current: null },
       contextMenu: {
-        campaignId: 'campaign-id',
+        campaignId: 'campaign-id' as Id<'campaigns'>,
         canvasParentId: null,
         nodesMap: {} as Y.Map<Node>,
         edgesMap: {} as Y.Map<Edge>,
@@ -65,14 +69,15 @@ const shellPropsMock = vi.hoisted(
         onNodeClick: vi.fn(),
         onEdgeClick: vi.fn(),
         onPaneClick: vi.fn(),
+        onMouseMove: vi.fn(),
+        onMouseLeave: vi.fn(),
       },
-    }) as const,
+    }) satisfies CanvasFlowRuntimeShellProps,
 )
 
 const projectionSpy = vi.hoisted(() => vi.fn())
 const keyboardSpy = vi.hoisted(() => vi.fn())
-const shellRuntimeSpy = vi.hoisted(() => vi.fn())
-const surfaceRuntimeSpy = vi.hoisted(() => vi.fn())
+const interactionRuntimeSpy = vi.hoisted(() => vi.fn())
 const clearSelectionSpy = vi.hoisted(() => vi.fn())
 const reactFlowMock = vi.hoisted(
   () =>
@@ -152,38 +157,14 @@ vi.mock('../document/use-canvas-keyboard-shortcuts', () => ({
   useCanvasKeyboardShortcuts: keyboardSpy,
 }))
 
-vi.mock('../interaction/use-canvas-shell-runtime', () => ({
-  useCanvasShellRuntime: (...args: Array<unknown>) => {
-    shellRuntimeSpy(...args)
+vi.mock('../interaction/use-canvas-interaction-runtime', () => ({
+  useCanvasInteractionRuntime: (...args: Array<unknown>) => {
+    interactionRuntimeSpy(...args)
     return {
-      contextMenu: shellPropsMock.contextMenu,
-      cursorPresence: {
-        onMouseMove: vi.fn(),
-        onMouseLeave: vi.fn(),
-      },
-      dragHandlers: {
-        onNodeDragStart: vi.fn(),
-        onNodeDrag: vi.fn(),
-        onNodeDragStop: vi.fn(),
-      },
+      shellProps: shellPropsMock,
       nodeActions: nodeActionsMock,
     }
   },
-}))
-
-vi.mock('../interaction/use-canvas-surface-runtime', () => ({
-  useCanvasSurfaceRuntime: (...args: Array<unknown>) => {
-    surfaceRuntimeSpy(...args)
-    return {
-      dropTarget: shellPropsMock.chrome.dropTarget,
-      flowHandlers: shellPropsMock.flowHandlers,
-      toolCursor: shellPropsMock.chrome.toolCursor,
-    }
-  },
-}))
-
-vi.mock('../interaction/use-canvas-interaction-chrome', () => ({
-  getCanvasInteractionChrome: () => shellPropsMock.chrome,
 }))
 
 vi.mock('../interaction/use-canvas-remote-drag-animation', () => ({
@@ -208,7 +189,7 @@ vi.mock('../../stores/canvas-tool-store', () => ({
 }))
 
 describe('useCanvasFlowController', () => {
-  it('owns document wiring and composes shell and surface slices directly', () => {
+  it('owns document wiring and delegates interaction details to one runtime boundary', () => {
     const nodesMap = {} as Y.Map<Node>
     const edgesMap = {} as Y.Map<Edge>
     const doc = {} as Y.Doc
@@ -239,17 +220,16 @@ describe('useCanvasFlowController', () => {
       edgesMap,
       selection: selectionController,
     })
-    expect(shellRuntimeSpy).toHaveBeenCalledWith(
+    expect(interactionRuntimeSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        documentWriter: documentWriterMock,
-        selectionController,
-        reactFlowInstance: reactFlowMock,
-      }),
-    )
-    expect(surfaceRuntimeSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
+        activeToolId: 'select',
+        canEdit: true,
+        doc,
         documentWriter: documentWriterMock,
         history: historyMock,
+        nodesMap,
+        edgesMap,
+        remoteDragAnimation,
         selectionController,
         reactFlowInstance: reactFlowMock,
       }),

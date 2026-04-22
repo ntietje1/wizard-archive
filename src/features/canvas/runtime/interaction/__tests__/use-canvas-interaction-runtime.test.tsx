@@ -1,13 +1,20 @@
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { useCanvasSurfaceRuntime } from '../use-canvas-surface-runtime'
+import { useCanvasInteractionRuntime } from '../use-canvas-interaction-runtime'
 import {
   createCanvasDocumentWriter,
+  createCanvasRemoteDragAnimation,
   createCanvasSelectionController,
   createCanvasSessionRuntime,
 } from '../../__tests__/canvas-runtime-test-utils'
+import type { Edge, Node, ReactFlowInstance } from '@xyflow/react'
+import type * as Y from 'yjs'
 import { testId } from '~/test/helpers/test-id'
 
+const previewSpy = vi.hoisted(() => vi.fn())
+const dragHandlersSpy = vi.hoisted(() => vi.fn())
+const cursorPresenceSpy = vi.hoisted(() => vi.fn())
+const nodeActionsSpy = vi.hoisted(() => vi.fn())
 const selectionRectSpy = vi.hoisted(() => vi.fn())
 const selectionSyncSpy = vi.hoisted(() => vi.fn())
 const toolRuntimeSpy = vi.hoisted(() => vi.fn())
@@ -17,6 +24,24 @@ const dropIntegrationSpy = vi.hoisted(() => vi.fn())
 const flowHandlersSpy = vi.hoisted(() => vi.fn())
 const surfaceClickGuardSpy = vi.hoisted(() => vi.fn())
 const suppressNextSurfaceClick = vi.hoisted(() => vi.fn())
+
+const dragHandlersMock = vi.hoisted(() => ({
+  onNodeDragStart: vi.fn(),
+  onNodeDrag: vi.fn(),
+  onNodeDragStop: vi.fn(),
+}))
+
+const cursorPresenceMock = vi.hoisted(() => ({
+  onMouseMove: vi.fn(),
+  onMouseLeave: vi.fn(),
+}))
+
+const nodeActionsMock = vi.hoisted(() => ({
+  updateNodeData: vi.fn(),
+  transact: vi.fn(),
+  onResize: vi.fn(),
+  onResizeEnd: vi.fn(),
+}))
 
 const flowHandlersMock = vi.hoisted(
   () =>
@@ -36,6 +61,31 @@ const flowHandlersMock = vi.hoisted(
       onMouseLeave: vi.fn(),
     }) as const,
 )
+
+vi.mock('~/features/previews/hooks/use-yjs-preview-upload', () => ({
+  useYjsPreviewUpload: previewSpy,
+}))
+
+vi.mock('../use-canvas-node-drag-handlers', () => ({
+  useCanvasNodeDragHandlers: (...args: Array<unknown>) => {
+    dragHandlersSpy(...args)
+    return dragHandlersMock
+  },
+}))
+
+vi.mock('../use-canvas-cursor-presence', () => ({
+  useCanvasCursorPresence: (...args: Array<unknown>) => {
+    cursorPresenceSpy(...args)
+    return cursorPresenceMock
+  },
+}))
+
+vi.mock('../use-canvas-node-actions', () => ({
+  useCanvasNodeActions: (...args: Array<unknown>) => {
+    nodeActionsSpy(...args)
+    return nodeActionsMock
+  },
+}))
 
 vi.mock('../../selection/use-canvas-selection-rect', () => ({
   useCanvasSelectionRect: selectionRectSpy,
@@ -96,8 +146,12 @@ vi.mock('../use-canvas-surface-click-guard', () => ({
   },
 }))
 
-describe('useCanvasSurfaceRuntime', () => {
+describe('useCanvasInteractionRuntime', () => {
   beforeEach(() => {
+    previewSpy.mockReset()
+    dragHandlersSpy.mockReset()
+    cursorPresenceSpy.mockReset()
+    nodeActionsSpy.mockReset()
     selectionRectSpy.mockReset()
     selectionSyncSpy.mockReset()
     toolRuntimeSpy.mockReset()
@@ -108,10 +162,20 @@ describe('useCanvasSurfaceRuntime', () => {
     surfaceClickGuardSpy.mockReset()
   })
 
-  it('owns surface interaction wiring without carrying shell-only dependencies', () => {
-    const session = createCanvasSessionRuntime()
+  it('owns the full interaction boundary instead of splitting shell and surface facades', () => {
+    const reactFlowInstance = {
+      getEdges: vi.fn(() => []),
+      getNodes: vi.fn(() => []),
+      getZoom: vi.fn(() => 1),
+      setNodes: vi.fn(),
+      screenToFlowPosition: vi.fn(({ x, y }: { x: number; y: number }) => ({ x, y })),
+    } as unknown as ReactFlowInstance
     const selectionController = createCanvasSelectionController()
     const documentWriter = createCanvasDocumentWriter()
+    const session = createCanvasSessionRuntime()
+    const remoteDragAnimation = createCanvasRemoteDragAnimation()
+    const nodesMap = {} as Y.Map<Node>
+    const edgesMap = {} as Y.Map<Edge>
     const history = {
       canUndo: false,
       canRedo: false,
@@ -119,39 +183,53 @@ describe('useCanvasSurfaceRuntime', () => {
       redo: vi.fn(),
       onSelectionChange: vi.fn(),
     }
-    const dragHandlers = {
-      onNodeDragStart: vi.fn(),
-      onNodeDrag: vi.fn(),
-      onNodeDragStop: vi.fn(),
-    }
-    const cursorPresence = {
-      onMouseMove: vi.fn(),
-      onMouseLeave: vi.fn(),
-    }
-    const reactFlowInstance = {
-      getNodes: vi.fn(() => []),
-      getEdges: vi.fn(() => []),
-      screenToFlowPosition: vi.fn(({ x, y }: { x: number; y: number }) => ({ x, y })),
-    }
-    const canvasSurfaceRef = { current: document.createElement('div') }
 
     const { result } = renderHook(() =>
-      useCanvasSurfaceRuntime({
+      useCanvasInteractionRuntime({
         canvasId: testId<'sidebarItems'>('canvas-id'),
+        campaignId: testId<'campaigns'>('campaign-id'),
+        canvasParentId: testId<'sidebarItems'>('parent-id'),
         canEdit: true,
         activeToolId: 'select',
-        canvasSurfaceRef,
+        doc: {} as Y.Doc,
+        nodesMap,
+        edgesMap,
         session,
         selectionController,
         documentWriter,
         history,
+        localDraggingIdsRef: { current: new Set<string>() },
+        remoteDragAnimation,
         reactFlowInstance,
-        dragHandlers,
-        cursorPresence,
       }),
     )
 
-    expect(surfaceClickGuardSpy).toHaveBeenCalledWith(canvasSurfaceRef)
+    expect(previewSpy).toHaveBeenCalledWith({
+      itemId: 'canvas-id',
+      doc: {},
+      containerRef: expect.any(Object),
+      resolveElement: expect.any(Function),
+    })
+    expect(dragHandlersSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        documentWriter,
+        awareness: session.awareness.core,
+        reactFlowInstance,
+      }),
+    )
+    expect(cursorPresenceSpy).toHaveBeenCalledWith({
+      reactFlowInstance,
+      awareness: session.awareness.core,
+    })
+    expect(nodeActionsSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        documentWriter,
+        reactFlowInstance,
+        session,
+        transact: expect.any(Function),
+      }),
+    )
+    expect(surfaceClickGuardSpy).toHaveBeenCalledWith(expect.any(Object))
     expect(selectionRectSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         interaction: {
@@ -173,7 +251,7 @@ describe('useCanvasSurfaceRuntime', () => {
       }),
     )
     expect(pointerBridgeSpy).toHaveBeenCalled()
-    expect(wheelSpy).toHaveBeenCalledWith(canvasSurfaceRef)
+    expect(wheelSpy).toHaveBeenCalledWith(expect.any(Object))
     expect(dropIntegrationSpy).toHaveBeenCalledWith({
       canvasId: 'canvas-id',
       canEdit: true,
@@ -184,48 +262,40 @@ describe('useCanvasSurfaceRuntime', () => {
     expect(flowHandlersSpy).toHaveBeenCalledWith({
       activeToolController: expect.any(Object),
       canEdit: true,
-      cursorPresence,
+      cursorPresence: cursorPresenceMock,
       documentWriter,
-      dragHandlers,
+      dragHandlers: dragHandlersMock,
       isSelectMode: true,
     })
-    expect(result.current.toolCursor).toBe('crosshair')
-    expect(result.current.flowHandlers).toBe(flowHandlersMock)
-    expect(result.current.dropTarget).toEqual({
-      overlayRef: { current: null },
-      isTarget: true,
-      isFileTarget: false,
+    expect(result.current.nodeActions).toBe(nodeActionsMock)
+    expect(result.current.shellProps).toEqual({
+      chrome: {
+        activeTool: 'select',
+        dropTarget: {
+          overlayRef: { current: null },
+          isTarget: true,
+          isFileTarget: false,
+        },
+        remoteUsers: [],
+        toolCursor: 'crosshair',
+      },
+      canvasSurfaceRef: expect.any(Object),
+      contextMenu: {
+        campaignId: 'campaign-id',
+        canvasParentId: 'parent-id',
+        nodesMap: {},
+        edgesMap: {},
+        createNode: documentWriter.createNode,
+        screenToFlowPosition: reactFlowInstance.screenToFlowPosition,
+        selectionController,
+      },
+      flowHandlers: flowHandlersMock,
     })
-  })
-
-  it('disables selection editing behavior when the user cannot edit', () => {
-    const { result } = renderHook(() =>
-      useCanvasSurfaceRuntime(createSurfaceRuntimeOptions({ canEdit: false })),
-    )
-
-    expect(selectionRectSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        enabled: false,
-      }),
-    )
-    expect(dropIntegrationSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        canEdit: false,
-        isSelectMode: true,
-      }),
-    )
-    expect(flowHandlersSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        canEdit: false,
-        isSelectMode: true,
-      }),
-    )
-    expect(result.current.toolCursor).toBe('crosshair')
   })
 
   it('treats non-select tools as non-selection mode even when editing is allowed', () => {
-    const { result } = renderHook(() =>
-      useCanvasSurfaceRuntime(createSurfaceRuntimeOptions({ activeToolId: 'draw' })),
+    renderHook(() =>
+      useCanvasInteractionRuntime(createInteractionRuntimeOptions({ activeToolId: 'draw' })),
     )
 
     expect(selectionRectSpy).toHaveBeenCalledWith(
@@ -245,13 +315,36 @@ describe('useCanvasSurfaceRuntime', () => {
         isSelectMode: false,
       }),
     )
-    expect(result.current.flowHandlers).toBe(flowHandlersMock)
+  })
+
+  it('disables selection editing behavior when the user cannot edit', () => {
+    renderHook(() =>
+      useCanvasInteractionRuntime(createInteractionRuntimeOptions({ canEdit: false })),
+    )
+
+    expect(selectionRectSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        enabled: false,
+      }),
+    )
+    expect(dropIntegrationSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        canEdit: false,
+        isSelectMode: true,
+      }),
+    )
+    expect(flowHandlersSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        canEdit: false,
+        isSelectMode: true,
+      }),
+    )
   })
 })
 
-function createSurfaceRuntimeOptions(
-  overrides: Partial<Parameters<typeof useCanvasSurfaceRuntime>[0]> = {},
-): Parameters<typeof useCanvasSurfaceRuntime>[0] {
+function createInteractionRuntimeOptions(
+  overrides: Partial<Parameters<typeof useCanvasInteractionRuntime>[0]> = {},
+): Parameters<typeof useCanvasInteractionRuntime>[0] {
   const session = createCanvasSessionRuntime()
   const selectionController = createCanvasSelectionController()
   const documentWriter = createCanvasDocumentWriter()
@@ -262,33 +355,30 @@ function createSurfaceRuntimeOptions(
     redo: vi.fn(),
     onSelectionChange: vi.fn(),
   }
-  const dragHandlers = {
-    onNodeDragStart: vi.fn(),
-    onNodeDrag: vi.fn(),
-    onNodeDragStop: vi.fn(),
-  }
-  const cursorPresence = {
-    onMouseMove: vi.fn(),
-    onMouseLeave: vi.fn(),
-  }
   const reactFlowInstance = {
     getNodes: vi.fn(() => []),
     getEdges: vi.fn(() => []),
+    getZoom: vi.fn(() => 1),
+    setNodes: vi.fn(),
     screenToFlowPosition: vi.fn(({ x, y }: { x: number; y: number }) => ({ x, y })),
-  }
+  } as unknown as ReactFlowInstance
 
   return {
     canvasId: testId<'sidebarItems'>('canvas-id'),
+    campaignId: testId<'campaigns'>('campaign-id'),
+    canvasParentId: null,
     canEdit: true,
     activeToolId: 'select',
-    canvasSurfaceRef: { current: document.createElement('div') },
+    doc: {} as Y.Doc,
+    nodesMap: {} as Y.Map<Node>,
+    edgesMap: {} as Y.Map<Edge>,
     session,
     selectionController,
     documentWriter,
     history,
+    localDraggingIdsRef: { current: new Set<string>() },
+    remoteDragAnimation: createCanvasRemoteDragAnimation(),
     reactFlowInstance,
-    dragHandlers,
-    cursorPresence,
     ...overrides,
   }
 }

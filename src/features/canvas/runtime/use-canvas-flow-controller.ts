@@ -8,10 +8,8 @@ import { useCanvasDocumentProjection } from './document/use-canvas-document-proj
 import { useCanvasDocumentWriter } from './document/use-canvas-document-writer'
 import { useCanvasHistory } from './document/use-canvas-history'
 import { useCanvasKeyboardShortcuts } from './document/use-canvas-keyboard-shortcuts'
-import { getCanvasInteractionChrome } from './interaction/use-canvas-interaction-chrome'
+import { useCanvasInteractionRuntime } from './interaction/use-canvas-interaction-runtime'
 import { useCanvasRemoteDragAnimation } from './interaction/use-canvas-remote-drag-animation'
-import { useCanvasShellRuntime } from './interaction/use-canvas-shell-runtime'
-import { useCanvasSurfaceRuntime } from './interaction/use-canvas-surface-runtime'
 import { useCanvasSelectionActions } from './selection/use-canvas-selection-actions'
 import { clearCanvasSelectionState } from './selection/use-canvas-selection-state'
 import { useCanvasSessionState } from './session/use-canvas-session-state'
@@ -36,7 +34,7 @@ interface CanvasFlowControllerResult {
   canEdit: boolean
   history: ReturnType<typeof useCanvasHistory>
   editSession: ReturnType<typeof useCanvasSessionState>['editSession']
-  nodeActions: ReturnType<typeof useCanvasShellRuntime>['nodeActions']
+  nodeActions: ReturnType<typeof useCanvasInteractionRuntime>['nodeActions']
   remoteHighlights: ReturnType<typeof useCanvasSessionState>['remoteHighlights']
 }
 
@@ -53,7 +51,6 @@ export function useCanvasFlowController({
   const session = useCanvasSessionState({ provider })
   const activeToolId = useCanvasToolStore((state) => state.activeTool)
   const reactFlowInstance = useReactFlow()
-  const canvasSurfaceRef = useRef<HTMLDivElement>(null)
   const selectionController = useCanvasSelectionActions()
   const localDraggingIdsRef = useRef(new Set<string>())
   const remoteDragAnimation = useCanvasRemoteDragAnimation({
@@ -92,53 +89,30 @@ export function useCanvasFlowController({
     selection: selectionController,
   })
 
-  const shellRuntime = useCanvasShellRuntime({
+  const interactionRuntime = useCanvasInteractionRuntime({
     canvasId,
     campaignId,
     canvasParentId,
+    canEdit,
+    activeToolId,
     doc,
     nodesMap,
     edgesMap,
-    canvasSurfaceRef,
     session,
     selectionController,
     documentWriter,
+    history,
     localDraggingIdsRef,
     remoteDragAnimation,
     reactFlowInstance,
   })
-  const surfaceRuntime = useCanvasSurfaceRuntime({
-    canvasId,
-    canEdit,
-    activeToolId,
-    canvasSurfaceRef,
-    session,
-    selectionController,
-    documentWriter,
-    history,
-    reactFlowInstance,
-    dragHandlers: shellRuntime.dragHandlers,
-    cursorPresence: shellRuntime.cursorPresence,
-  })
-
-  const shellProps: CanvasFlowRuntimeShellProps = {
-    chrome: getCanvasInteractionChrome({
-      activeTool: activeToolId,
-      dropTarget: surfaceRuntime.dropTarget,
-      remoteUsers: session.remoteUsers,
-      toolCursor: surfaceRuntime.toolCursor,
-    }),
-    canvasSurfaceRef,
-    contextMenu: shellRuntime.contextMenu,
-    flowHandlers: surfaceRuntime.flowHandlers,
-  }
 
   return {
-    shellProps,
+    shellProps: interactionRuntime.shellProps,
     canEdit,
     history,
     editSession: session.editSession,
-    nodeActions: shellRuntime.nodeActions,
+    nodeActions: interactionRuntime.nodeActions,
     remoteHighlights: session.remoteHighlights,
   }
 }
