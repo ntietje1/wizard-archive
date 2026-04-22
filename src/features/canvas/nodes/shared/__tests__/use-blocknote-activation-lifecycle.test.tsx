@@ -137,6 +137,12 @@ describe('getMountedBlockNoteView', () => {
     ).toBeNull()
     expect(getMountedBlockNoteView(createEditor(createMountedView({ docView: null })))).toBeNull()
   })
+
+  it('returns null when reading docView throws before the editor mounts', () => {
+    expect(
+      getMountedBlockNoteView(createEditor(createMountedView({ throwsOnDocViewAccess: true }))),
+    ).toBeNull()
+  })
 })
 
 function createLifecycle(): RichEmbedLifecycleController {
@@ -158,11 +164,13 @@ function createEditor(view: ReturnType<typeof createMountedView>): BlockNoteEdit
 function createMountedView({
   connected = true,
   docView = {},
+  throwsOnDocViewAccess = false,
 }: {
   connected?: boolean
   docView?: object | null
+  throwsOnDocViewAccess?: boolean
 } = {}) {
-  return {
+  const view = {
     dispatch: vi.fn(),
     focus: vi.fn(),
     posAtCoords: vi.fn(() => ({ inside: 0, pos: 14 })),
@@ -175,6 +183,19 @@ function createMountedView({
     dom: {
       isConnected: connected,
     },
+  }
+
+  if (throwsOnDocViewAccess) {
+    Object.defineProperty(view, 'docView', {
+      get() {
+        throw new Error('[tiptap error]: The editor view is not available.')
+      },
+    })
+    return view
+  }
+
+  return {
+    ...view,
     docView,
   }
 }

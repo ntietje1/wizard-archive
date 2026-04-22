@@ -21,7 +21,6 @@ import type { Edge, Node, OnConnect, OnEdgesDelete, OnNodeDrag, OnNodesDelete } 
 import type * as Y from 'yjs'
 
 const PRO_OPTIONS = { hideAttribution: true }
-const DELETE_KEYS = ['Backspace', 'Delete']
 const DELETE_KEYS_NONE: Array<string> = []
 const EMPTY_NODES: Array<Node> = []
 const EMPTY_EDGES: Array<Edge> = []
@@ -146,7 +145,7 @@ export function CanvasFlowShell({
           connectionMode={ConnectionMode.Loose}
           selectionKeyCode={SELECTION_KEY_DISABLED}
           panOnDrag={chrome.activeTool === 'hand' ? PAN_BOTH : PAN_MIDDLE_ONLY}
-          deleteKeyCode={canEdit && isSelectMode ? DELETE_KEYS : DELETE_KEYS_NONE}
+          deleteKeyCode={DELETE_KEYS_NONE}
           colorMode={colorMode}
           minZoom={MIN_ZOOM}
           maxZoom={MAX_ZOOM}

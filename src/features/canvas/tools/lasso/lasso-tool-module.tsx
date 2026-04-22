@@ -137,6 +137,12 @@ export const lassoToolModule: CanvasToolModule<'lasso', CanvasLassoToolServices>
       onPointerUp: () => {
         if (!active) return
 
+        if (points.length === 1) {
+          services.selection.clear()
+          reset()
+          return
+        }
+
         session.commit({ points })
         reset()
       },

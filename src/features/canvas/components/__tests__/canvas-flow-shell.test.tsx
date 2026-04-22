@@ -103,6 +103,12 @@ describe('CanvasFlowShell', () => {
       zoom: 1.5,
     })
   })
+
+  it('disables React Flow delete key handling so canvas shortcuts own deletion', () => {
+    renderCanvasFlowShell()
+
+    expect(reactFlowMock.props?.deleteKeyCode).toEqual([])
+  })
 })
 
 function createContextMenu(): CanvasFlowShellProps['contextMenu'] {

@@ -19,6 +19,20 @@ interface UseCanvasKeyboardShortcutsOptions extends Pick<CanvasHistoryController
   selection: Pick<CanvasSelectionController, 'replace' | 'clear'>
 }
 
+function isEditableKeyboardTarget(target: EventTarget | null) {
+  if (!(target instanceof Element)) {
+    return false
+  }
+
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement ||
+    target.matches('[contenteditable="true"]') ||
+    target.closest('[contenteditable="true"]') !== null
+  )
+}
+
 const TOOL_SHORTCUT_BINDINGS = [
   { key: '1', toolId: 'select' },
   { key: '2', toolId: 'hand' },
@@ -86,11 +100,35 @@ export function useCanvasKeyboardShortcuts({
     'Escape',
     (event) => {
       if (event.repeat) return
-      if (canEdit && selectTool && useCanvasToolStore.getState().activeTool !== selectTool.id) {
-        useCanvasToolStore.getState().setActiveTool(selectTool.id)
+      selection.clear()
+    },
+    hotkeyOptions,
+  )
+
+  useHotkey(
+    'Backspace',
+    (event) => {
+      if (event.repeat || !canEdit || isEditableKeyboardTarget(event.target)) {
         return
       }
-      selection.clear()
+
+      if (contextMenuServices.deleteSnapshot(getCanvasSelectionSnapshot())) {
+        event.preventDefault()
+      }
+    },
+    hotkeyOptions,
+  )
+
+  useHotkey(
+    'Delete',
+    (event) => {
+      if (event.repeat || !canEdit || isEditableKeyboardTarget(event.target)) {
+        return
+      }
+
+      if (contextMenuServices.deleteSnapshot(getCanvasSelectionSnapshot())) {
+        event.preventDefault()
+      }
     },
     hotkeyOptions,
   )

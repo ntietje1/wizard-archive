@@ -18,10 +18,17 @@ export function getMountedBlockNoteView(
   editor: BlockNoteEditorWithMountedView | null | undefined,
 ): EditorView | null {
   const view = editor?._tiptapEditor?.view
-  const docView = (view as (EditorView & { docView?: object | null }) | null | undefined)?.docView
 
   // BlockNote does not expose mount readiness directly, so we gate on the connected ProseMirror view.
-  if (!view?.dom?.isConnected || !docView) {
+  if (!view?.dom?.isConnected) {
+    return null
+  }
+
+  try {
+    if (!(view as EditorView & { docView?: object | null }).docView) {
+      return null
+    }
+  } catch {
     return null
   }
 

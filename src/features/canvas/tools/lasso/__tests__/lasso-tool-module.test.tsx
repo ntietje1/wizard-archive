@@ -222,6 +222,7 @@ describe('lassoToolModule', () => {
 
   it('clears selection when no measured nodes fall inside the lasso', () => {
     const commitGestureSelection = vi.fn()
+    const clear = vi.fn()
     const controller = lassoToolModule.create(
       createLassoEnvironment({
         getMeasuredNodes: () => [createEmbedNode('outside-node', 200, 200)],
@@ -230,6 +231,7 @@ describe('lassoToolModule', () => {
         commitGestureSelection,
         beginGesture: vi.fn(),
         endGesture: vi.fn(),
+        clearSelection: clear,
         suppressNextSurfaceClick: vi.fn(),
         setPresence: vi.fn(),
       }),
@@ -241,6 +243,36 @@ describe('lassoToolModule', () => {
     controller.onPointerUp?.(createPointerEvent(target, { clientX: 0, clientY: 0 }))
 
     expect(commitGestureSelection).toHaveBeenCalledWith({ nodeIds: [], edgeIds: [] }, 'replace')
+    expect(clear).not.toHaveBeenCalled()
+    expect(getCanvasPendingSelectionPreview()).toEqual({ kind: 'inactive' })
+  })
+
+  it('clears selection on a point click without committing a lasso selection', () => {
+    const clear = vi.fn()
+    const commitGestureSelection = vi.fn()
+    const endGesture = vi.fn()
+    const controller = lassoToolModule.create(
+      createLassoEnvironment({
+        getMeasuredNodes: () => [],
+        getNodes: () => [],
+        getEdges: () => [],
+        commitGestureSelection,
+        beginGesture: vi.fn(),
+        endGesture,
+        clearSelection: clear,
+        suppressNextSurfaceClick: vi.fn(),
+        setPresence: vi.fn(),
+      }),
+    )
+    const target = createPointerTarget()
+
+    controller.onPointerDown?.(createPointerEvent(target, { clientX: 0, clientY: 0 }))
+    controller.onPointerUp?.(createPointerEvent(target, { clientX: 0, clientY: 0 }))
+
+    expect(clear).toHaveBeenCalledTimes(1)
+    expect(commitGestureSelection).not.toHaveBeenCalled()
+    expect(endGesture).toHaveBeenCalledTimes(1)
+    expect(target.releasePointerCapture).toHaveBeenCalledWith(1)
     expect(getCanvasPendingSelectionPreview()).toEqual({ kind: 'inactive' })
   })
 
@@ -410,6 +442,7 @@ function createLassoEnvironment({
   suppressNextSurfaceClick,
   setPresence,
   setActiveTool,
+  clearSelection,
   selectedNodeIds = [],
   selectedEdgeIds = [],
 }: {
@@ -425,6 +458,7 @@ function createLassoEnvironment({
   suppressNextSurfaceClick: () => void
   setPresence: (namespace: string, value: unknown) => void
   setActiveTool?: (tool: CanvasToolId) => void
+  clearSelection?: () => void
   selectedNodeIds?: Array<string>
   selectedEdgeIds?: Array<string>
 }): CanvasToolServices {
@@ -452,7 +486,7 @@ function createLassoEnvironment({
       replace: vi.fn(),
       replaceNodes: vi.fn(),
       replaceEdges: vi.fn(),
-      clear: vi.fn(),
+      clear: clearSelection ?? vi.fn(),
       getSelectedNodeIds: () => selectedNodeIds,
       getSelectedEdgeIds: () => selectedEdgeIds,
       toggleNodeFromTarget: vi.fn(),

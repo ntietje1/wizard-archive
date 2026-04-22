@@ -13,6 +13,7 @@ const hotkeyRegistrations = vi.hoisted(
 )
 const copySnapshotSpy = vi.hoisted(() => vi.fn(() => true))
 const cutSnapshotSpy = vi.hoisted(() => vi.fn(() => true))
+const deleteSnapshotSpy = vi.hoisted(() => vi.fn(() => true))
 const pasteClipboardSpy = vi.hoisted(() => vi.fn(() => ({ nodeIds: ['node-2'], edgeIds: [] })))
 const getCanvasSelectionSnapshotSpy = vi.hoisted(() =>
   vi.fn(() => ({ nodeIds: ['node-1'], edgeIds: [] })),
@@ -32,6 +33,7 @@ vi.mock('../../context-menu/use-canvas-context-menu-services', () => ({
   useCanvasContextMenuServices: () => ({
     copySnapshot: copySnapshotSpy,
     cutSnapshot: cutSnapshotSpy,
+    deleteSnapshot: deleteSnapshotSpy,
     pasteClipboard: pasteClipboardSpy,
   }),
 }))
@@ -55,6 +57,7 @@ describe('useCanvasKeyboardShortcuts', () => {
     useCanvasToolStore.getState().reset()
     copySnapshotSpy.mockClear()
     cutSnapshotSpy.mockClear()
+    deleteSnapshotSpy.mockClear()
     pasteClipboardSpy.mockClear()
     getCanvasSelectionSnapshotSpy.mockClear()
   })
@@ -81,6 +84,8 @@ describe('useCanvasKeyboardShortcuts', () => {
 
     expect(hotkeyRegistrations.map((entry) => entry.hotkey)).toEqual([
       'Escape',
+      'Backspace',
+      'Delete',
       '1',
       '2',
       '3',
@@ -95,25 +100,10 @@ describe('useCanvasKeyboardShortcuts', () => {
       'Mod+X',
       'Mod+V',
     ])
-    expect(hotkeyRegistrations.map((entry) => entry.options)).toEqual([
-      { ignoreInputs: true },
-      { ignoreInputs: true },
-      { ignoreInputs: true },
-      { ignoreInputs: true },
-      { ignoreInputs: true },
-      { ignoreInputs: true },
-      { ignoreInputs: true },
-      { ignoreInputs: true },
-      { ignoreInputs: true },
-      { ignoreInputs: true },
-      { ignoreInputs: true },
-      { ignoreInputs: true },
-      { ignoreInputs: true },
-      { ignoreInputs: true },
-    ])
+    expect(hotkeyRegistrations.every((entry) => entry.options.ignoreInputs)).toBe(true)
   })
 
-  it('routes tool shortcuts, Escape, undo, redo, copy, cut, and paste through the expected canvas actions while ignoring repeated key events', () => {
+  it('routes tool shortcuts, deletion, Escape, undo, redo, copy, cut, and paste through the expected canvas actions while ignoring repeated key events', () => {
     const history = {
       undo: vi.fn(),
       redo: vi.fn(),
@@ -138,11 +128,18 @@ describe('useCanvasKeyboardShortcuts', () => {
 
     useCanvasToolStore.getState().setActiveTool('draw')
     getRegistration('Escape').callback(new KeyboardEvent('keydown', { key: 'Escape' }))
-    expect(selection.clear).toHaveBeenCalledTimes(0)
-    expect(useCanvasToolStore.getState().activeTool).toBe('select')
+    expect(selection.clear).toHaveBeenCalledTimes(1)
+    expect(useCanvasToolStore.getState().activeTool).toBe('draw')
 
     getRegistration('Escape').callback(new KeyboardEvent('keydown', { key: 'Escape' }))
     getRegistration('5').callback(new KeyboardEvent('keydown', { key: '5' }))
+    const deletePreventDefaultSpy = vi.fn()
+    const deleteEvent = {
+      repeat: false,
+      preventDefault: deletePreventDefaultSpy,
+      target: document.createElement('div'),
+    } as unknown as KeyboardEvent
+    getRegistration('Delete').callback(deleteEvent)
     const preventDefaultSpy = vi.fn()
     const selectAllEvent = {
       repeat: false,
@@ -159,7 +156,9 @@ describe('useCanvasKeyboardShortcuts', () => {
     getRegistration('Mod+V').callback(new KeyboardEvent('keydown', { key: 'v', ctrlKey: true }))
     getRegistration('Mod+Z').callback(new KeyboardEvent('keydown', { key: 'z', repeat: true }))
 
-    expect(selection.clear).toHaveBeenCalledTimes(1)
+    expect(selection.clear).toHaveBeenCalledTimes(2)
+    expect(deleteSnapshotSpy).toHaveBeenCalledWith({ nodeIds: ['node-1'], edgeIds: [] })
+    expect(deletePreventDefaultSpy).toHaveBeenCalledTimes(1)
     expect(selection.replace).toHaveBeenCalledWith({
       nodeIds: ['node-1', 'node-2'],
       edgeIds: ['edge-1'],
@@ -171,5 +170,32 @@ describe('useCanvasKeyboardShortcuts', () => {
     expect(copySnapshotSpy).toHaveBeenCalledWith({ nodeIds: ['node-1'], edgeIds: [] })
     expect(cutSnapshotSpy).toHaveBeenCalledWith({ nodeIds: ['node-1'], edgeIds: [] })
     expect(pasteClipboardSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not delete the current selection when Backspace comes from an editable target', () => {
+    renderHook(() =>
+      useCanvasKeyboardShortcuts({
+        undo: vi.fn(),
+        redo: vi.fn(),
+        canEdit: true,
+        nodesMap: new Map() as never,
+        edgesMap: new Map() as never,
+        selection: {
+          replace: vi.fn(),
+          clear: vi.fn(),
+        },
+      }),
+    )
+
+    const editableTarget = document.createElement('div')
+    editableTarget.setAttribute('contenteditable', 'true')
+
+    getRegistration('Backspace').callback({
+      repeat: false,
+      preventDefault: vi.fn(),
+      target: editableTarget,
+    } as unknown as KeyboardEvent)
+
+    expect(deleteSnapshotSpy).not.toHaveBeenCalled()
   })
 })

@@ -117,7 +117,9 @@ export function createCanvasNodeModule<
               y: position.y - resolvedSize.height / 2,
             }
           : position
-      const resolvedData = data ?? definition.buildDefaultData?.()
+      const defaultData = definition.buildDefaultData?.()
+      const resolvedData =
+        defaultData && data ? ({ ...defaultData, ...data } as TData) : (data ?? defaultData)
       if (!resolvedData) {
         throw new Error(`Missing default canvas node data for "${definition.type}"`)
       }
