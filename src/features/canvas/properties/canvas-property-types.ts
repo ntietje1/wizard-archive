@@ -5,15 +5,28 @@ type CanvasPropertyBase<TKind extends CanvasPropertyKind> = {
   kind: TKind
 }
 
+export interface CanvasPaintValue {
+  color: string
+  opacity: number
+}
+
+export interface CanvasPaintPreset {
+  label: string
+  value: CanvasPaintValue
+}
+
 export type CanvasPaintPropertyDefinition = CanvasPropertyBase<'paint'> & {
   label: string
-  colors: ReadonlyArray<string>
-  allowNone?: boolean
-  noneLabel?: string
+  defaultValue: CanvasPaintValue
+  options: ReadonlyArray<CanvasPaintPreset>
 }
 
 export type CanvasStrokeSizePropertyDefinition = CanvasPropertyBase<'strokeSize'> & {
+  label: string
   options: ReadonlyArray<number>
+  min: number
+  max: number
+  step?: number
   equals?: (left: unknown, right: unknown) => boolean
 }
 
@@ -22,9 +35,9 @@ export type CanvasPropertyValue<TValue> = { kind: 'value'; value: TValue } | { k
 export interface CanvasPaintPropertyBinding {
   definition: CanvasPaintPropertyDefinition
   getColor: () => string | null
-  setColor: (color: string | null) => void
-  getOpacity?: () => number
-  setOpacity?: (opacity: number) => void
+  setColor: (color: string) => void
+  getOpacity: () => number
+  setOpacity: (opacity: number) => void
 }
 
 export interface CanvasStrokeSizePropertyBinding {
@@ -37,10 +50,10 @@ export type CanvasPropertyBinding = CanvasPaintPropertyBinding | CanvasStrokeSiz
 
 export interface CanvasPaintResolvedProperty {
   definition: CanvasPaintPropertyDefinition
-  color: CanvasPropertyValue<string | null>
-  opacity?: CanvasPropertyValue<number>
-  setColor: (color: string | null) => void
-  setOpacity?: (opacity: number) => void
+  value: CanvasPropertyValue<CanvasPaintValue>
+  setValue: (value: CanvasPaintValue) => void
+  setColor: (color: string) => void
+  setOpacity: (opacity: number) => void
 }
 
 export interface CanvasStrokeSizeResolvedProperty {

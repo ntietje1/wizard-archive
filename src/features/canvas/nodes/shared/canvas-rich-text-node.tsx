@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import type { Node, NodeProps } from '@xyflow/react'
 import { CanvasNodeConnectionHandles } from './canvas-node-connection-handles'
@@ -12,6 +12,8 @@ import { CanvasFloatingFormattingToolbar } from './canvas-floating-formatting-to
 import { CanvasRichTextView } from './canvas-rich-text-view'
 import { useCanvasEditableNodeSession } from './use-canvas-editable-node-session'
 import { useCanvasRichTextEditorSession } from './use-canvas-rich-text-editor-session'
+import { getCanvasNodeSurfaceStyle } from './canvas-node-surface-style'
+import type { CanvasNodeSurfaceStyleData } from './canvas-node-surface-style'
 import {
   useCanvasNodeActionsContext,
   useCanvasPermissionsContext,
@@ -19,10 +21,9 @@ import {
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { cn } from '~/features/shadcn/lib/utils'
 
-export interface CanvasRichTextNodeData extends Record<string, unknown> {
+export interface CanvasRichTextNodeData
+  extends Record<string, unknown>, CanvasNodeSurfaceStyleData {
   content?: Array<CanvasRichTextPartialBlock>
-  backgroundColor?: string | null
-  borderStroke?: string | null
 }
 
 interface CanvasRichTextNodeVariant {
@@ -86,20 +87,15 @@ export function CanvasRichTextNode({
     setEditing: setIsEditing,
   })
 
-  const handlePersistContent = useCallback(
-    (nextContent: Array<CanvasRichTextPartialBlock>) => {
-      updateNodeData(id, { content: nextContent })
-    },
-    [id, updateNodeData],
-  )
-
   const editorSession = useCanvasRichTextEditorSession({
     ariaLabel: variant.editAriaLabel,
     content,
     editable: editableSession.editable,
     lifecycle: editableSession.lifecycle,
     onActivated: editableSession.handleActivated,
-    onPersistContent: handlePersistContent,
+    onPersistContent: (nextContent) => {
+      updateNodeData(id, { content: nextContent })
+    },
   })
   const showsFormattingToolbar = editableSession.editable && editorSession.editor !== null
 
@@ -182,8 +178,7 @@ export function CanvasRichTextNode({
 
 function getContainerStyle(data: CanvasRichTextNodeData, textColor: string): CSSProperties {
   return {
-    backgroundColor: data.backgroundColor ?? 'transparent',
-    border: data.borderStroke ? `1px solid ${data.borderStroke}` : 'none',
+    ...getCanvasNodeSurfaceStyle(data),
     color: textColor,
   }
 }

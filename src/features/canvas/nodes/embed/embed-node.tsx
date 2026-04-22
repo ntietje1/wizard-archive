@@ -18,6 +18,7 @@ import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { cn } from '~/features/shadcn/lib/utils'
 import { CanvasNodeConnectionHandles } from '../shared/canvas-node-connection-handles'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import { getCanvasNodeSurfaceStyle } from '../shared/canvas-node-surface-style'
 
 export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>) {
   const sidebarItemId = data.sidebarItemId
@@ -64,7 +65,8 @@ export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>
       }
     >
       <div
-        className="relative h-full w-full overflow-hidden rounded-lg border bg-card shadow-sm"
+        className="relative h-full w-full overflow-hidden rounded-lg shadow-sm"
+        style={getCanvasNodeSurfaceStyle(data)}
         onDoubleClick={(event) => {
           if (contentItem?.type !== SIDEBAR_ITEM_TYPES.notes) {
             return

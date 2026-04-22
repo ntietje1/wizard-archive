@@ -31,7 +31,7 @@ export const drawToolModule: CanvasToolModule<'draw', CanvasDrawToolServices> = 
       bindings: [
         bindCanvasPaintProperty(paintCanvasProperty, {
           getColor: () => context.toolState.getSettings().strokeColor,
-          setColor: (color) => context.toolState.setStrokeColor(color ?? 'var(--foreground)'),
+          setColor: context.toolState.setStrokeColor,
           getOpacity: () => context.toolState.getSettings().strokeOpacity,
           setOpacity: context.toolState.setStrokeOpacity,
         }),

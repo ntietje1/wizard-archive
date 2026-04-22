@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import { STROKE_SIZE_OPTIONS } from '../properties/canvas-property-definitions'
 import type { CanvasToolId } from '../tools/canvas-tool-types'
+import { STROKE_SIZE_OPTIONS } from '../properties/canvas-property-definitions'
 import { clearCanvasToolLocalOverlays } from '../tools/canvas-tool-modules'
 
 interface CanvasToolState {
@@ -21,7 +21,7 @@ interface CanvasToolActions {
 const INITIAL_STATE: CanvasToolState = {
   activeTool: 'select',
   strokeColor: 'var(--foreground)',
-  strokeSize: STROKE_SIZE_OPTIONS[1],
+  strokeSize: STROKE_SIZE_OPTIONS[2],
   strokeOpacity: 100,
 }
 

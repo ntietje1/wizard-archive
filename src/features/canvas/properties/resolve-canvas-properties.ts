@@ -1,11 +1,13 @@
 import type {
   CanvasInspectableProperties,
   CanvasPaintPropertyBinding,
+  CanvasPaintValue,
   CanvasPropertyBinding,
   CanvasPropertyValue,
   CanvasResolvedProperty,
   CanvasStrokeSizePropertyBinding,
 } from './canvas-property-types'
+import { areCanvasPaintValuesEqual, readCanvasPaintBindingValue } from './canvas-paint-values'
 import { assertNever } from '~/shared/utils/utils'
 
 function createValue<TValue>(isMixed: boolean, value: TValue): CanvasPropertyValue<TValue> {
@@ -74,37 +76,31 @@ function createResolvedProperty(
   switch (binding.definition.kind) {
     case 'paint': {
       const paintMatches = matches as Array<CanvasPaintPropertyBinding>
-      const [firstColor, ...restColors] = paintMatches.map((match) => match.getColor())
-      const color = createValue(
-        restColors.some((value) => !Object.is(value, firstColor)),
-        firstColor,
+      if (paintMatches.length === 0) {
+        throw new RangeError('createResolvedProperty: paint matches must be a non-empty array')
+      }
+
+      const [firstValue, ...restValues] = paintMatches.map(readCanvasPaintBindingValue)
+      const value = createValue(
+        restValues.some((candidate) => !areCanvasPaintValuesEqual(candidate, firstValue)),
+        firstValue,
       )
-      const opacityMatches = paintMatches.filter(
-        (
-          match,
-        ): match is CanvasPaintPropertyBinding & {
-          getOpacity: NonNullable<CanvasPaintPropertyBinding['getOpacity']>
-          setOpacity: NonNullable<CanvasPaintPropertyBinding['setOpacity']>
-        } => typeof match.getOpacity === 'function' && typeof match.setOpacity === 'function',
-      )
-      const opacity =
-        opacityMatches.length === paintMatches.length
-          ? createNumericValue(opacityMatches.map((match) => match.getOpacity()))
-          : undefined
 
       return {
         definition: binding.definition,
-        color,
-        opacity,
-        setColor: (nextColor: string | null) => {
+        value,
+        setValue: (nextValue: CanvasPaintValue) => {
+          paintMatches.forEach((match) => {
+            match.setColor(nextValue.color)
+            match.setOpacity(nextValue.opacity)
+          })
+        },
+        setColor: (nextColor: string) => {
           paintMatches.forEach((match) => match.setColor(nextColor))
         },
-        setOpacity:
-          opacityMatches.length === paintMatches.length
-            ? (nextOpacity: number) => {
-                opacityMatches.forEach((match) => match.setOpacity(nextOpacity))
-              }
-            : undefined,
+        setOpacity: (nextOpacity: number) => {
+          paintMatches.forEach((match) => match.setOpacity(nextOpacity))
+        },
       }
     }
     case 'strokeSize': {
