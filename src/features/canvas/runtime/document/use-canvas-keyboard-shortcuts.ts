@@ -2,10 +2,13 @@ import { useHotkey } from '@tanstack/react-hotkeys'
 import { useCanvasContextMenuServices } from '../context-menu/use-canvas-context-menu-services'
 import { getCanvasSelectionSnapshot } from '../selection/use-canvas-selection-state'
 import { useCanvasSelectionActions } from '../selection/use-canvas-selection-actions'
+import { useCanvasToolStore } from '../../stores/canvas-tool-store'
+import { getCanvasToolbarTools } from '../../tools/canvas-tool-modules'
 import type { Id } from 'convex/_generated/dataModel'
 import type {
   CanvasHistoryController,
   CanvasSelectionController,
+  CanvasToolId,
 } from '../../tools/canvas-tool-types'
 import type { Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
@@ -17,6 +20,31 @@ interface UseCanvasKeyboardShortcutsOptions extends Pick<CanvasHistoryController
   selection: Pick<CanvasSelectionController, 'replace' | 'clear'>
 }
 
+const TOOL_SHORTCUT_BINDINGS = [
+  { key: '1', toolId: 'select' },
+  { key: '2', toolId: 'hand' },
+  { key: '3', toolId: 'lasso' },
+  { key: '4', toolId: 'draw' },
+  { key: '5', toolId: 'erase' },
+  { key: '6', toolId: 'text' },
+] as const
+
+function useCanvasToolHotkey(
+  hotkey: (typeof TOOL_SHORTCUT_BINDINGS)[number]['key'],
+  tool: { id: CanvasToolId } | undefined,
+  canEdit: boolean,
+  hotkeyOptions: { ignoreInputs: true },
+) {
+  useHotkey(
+    hotkey,
+    (event) => {
+      if (event.repeat || !canEdit || !tool) return
+      useCanvasToolStore.getState().setActiveTool(tool.id)
+    },
+    hotkeyOptions,
+  )
+}
+
 export function useCanvasKeyboardShortcuts({
   undo,
   redo,
@@ -26,6 +54,21 @@ export function useCanvasKeyboardShortcuts({
   selection,
 }: UseCanvasKeyboardShortcutsOptions) {
   const selectionActions = useCanvasSelectionActions()
+  const toolbarTools = getCanvasToolbarTools()
+  const selectTool = toolbarTools.find((tool) => tool.id === 'select')
+  const handTool = toolbarTools.find((tool) => tool.id === 'hand')
+  const lassoTool = toolbarTools.find((tool) => tool.id === 'lasso')
+  const drawTool = toolbarTools.find((tool) => tool.id === 'draw')
+  const eraseTool = toolbarTools.find((tool) => tool.id === 'erase')
+  const textTool = toolbarTools.find((tool) => tool.id === 'text')
+  const toolLookup = {
+    select: selectTool,
+    hand: handTool,
+    lasso: lassoTool,
+    draw: drawTool,
+    erase: eraseTool,
+    text: textTool,
+  } as const
   const contextMenuServices = useCanvasContextMenuServices({
     canEdit,
     campaignId: 'canvas-shortcuts-campaign' as Id<'campaigns'>,
@@ -45,8 +88,49 @@ export function useCanvasKeyboardShortcuts({
     'Escape',
     (event) => {
       if (event.repeat) return
+      if (canEdit && selectTool && useCanvasToolStore.getState().activeTool !== selectTool.id) {
+        useCanvasToolStore.getState().setActiveTool(selectTool.id)
+        return
+      }
       selectionActions.clear()
     },
+    hotkeyOptions,
+  )
+
+  useCanvasToolHotkey(
+    TOOL_SHORTCUT_BINDINGS[0].key,
+    toolLookup[TOOL_SHORTCUT_BINDINGS[0].toolId],
+    canEdit,
+    hotkeyOptions,
+  )
+  useCanvasToolHotkey(
+    TOOL_SHORTCUT_BINDINGS[1].key,
+    toolLookup[TOOL_SHORTCUT_BINDINGS[1].toolId],
+    canEdit,
+    hotkeyOptions,
+  )
+  useCanvasToolHotkey(
+    TOOL_SHORTCUT_BINDINGS[2].key,
+    toolLookup[TOOL_SHORTCUT_BINDINGS[2].toolId],
+    canEdit,
+    hotkeyOptions,
+  )
+  useCanvasToolHotkey(
+    TOOL_SHORTCUT_BINDINGS[3].key,
+    toolLookup[TOOL_SHORTCUT_BINDINGS[3].toolId],
+    canEdit,
+    hotkeyOptions,
+  )
+  useCanvasToolHotkey(
+    TOOL_SHORTCUT_BINDINGS[4].key,
+    toolLookup[TOOL_SHORTCUT_BINDINGS[4].toolId],
+    canEdit,
+    hotkeyOptions,
+  )
+  useCanvasToolHotkey(
+    TOOL_SHORTCUT_BINDINGS[5].key,
+    toolLookup[TOOL_SHORTCUT_BINDINGS[5].toolId],
+    canEdit,
     hotkeyOptions,
   )
 

@@ -35,6 +35,7 @@ export function CanvasToolbar({ canEdit }: CanvasToolbarProps) {
                 onClick={() => setActiveTool(tool.id)}
                 label={tool.label}
                 icon={tool.icon}
+                shortcut={tool.shortcut}
                 showDivider={previousTool?.group !== undefined && previousTool.group !== tool.group}
               />
             )
@@ -114,12 +115,14 @@ function ToolGroupButton({
   icon,
   label,
   onClick,
+  shortcut,
   showDivider,
 }: {
   active: boolean
   icon: React.ReactNode
   label: string
   onClick: () => void
+  shortcut: number
   showDivider: boolean
 }) {
   return (
@@ -128,13 +131,16 @@ function ToolGroupButton({
       <Button
         variant="ghost"
         size="icon"
-        className={`h-8 w-8 ${active ? 'bg-accent' : ''}`}
+        className={`relative h-8 w-8 ${active ? 'bg-accent' : ''}`}
         onClick={onClick}
         aria-label={label}
         aria-pressed={active}
-        title={label}
+        title={`${label} (${shortcut})`}
       >
         {icon}
+        <span className="pointer-events-none absolute right-[1px] bottom-0.5 text-[8px] leading-none text-muted-foreground">
+          {shortcut}
+        </span>
       </Button>
     </>
   )

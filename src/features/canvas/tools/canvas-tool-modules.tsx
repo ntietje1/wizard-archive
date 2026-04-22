@@ -35,12 +35,20 @@ const canvasToolModuleMap: Partial<Record<CanvasToolId, AnyCanvasToolModule>> = 
   canvasToolModules.map((module) => [module.id, module] as const),
 )
 
-type CanvasToolbarTool = Pick<AnyCanvasToolModule, 'id' | 'label' | 'group' | 'icon'>
+type CanvasToolbarTool = Pick<AnyCanvasToolModule, 'id' | 'label' | 'group' | 'icon'> & {
+  shortcut: number
+}
 type CanvasAwarenessLayer = NonNullable<CanvasAwarenessCapability['Layer']>
 type CanvasLocalOverlayLayer = NonNullable<CanvasLocalOverlayCapability['Layer']>
 
 const canvasToolbarTools = canvasToolModules.map<CanvasToolbarTool>(
-  ({ id, label, group, icon }) => ({ id, label, group, icon }),
+  ({ id, label, group, icon }, index) => ({
+    id,
+    label,
+    group,
+    icon,
+    shortcut: index + 1,
+  }),
 )
 
 const canvasToolAwarenessLayers = canvasToolModules.flatMap((module) =>

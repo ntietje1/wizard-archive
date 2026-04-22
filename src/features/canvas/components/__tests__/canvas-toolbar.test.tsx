@@ -64,11 +64,19 @@ describe('CanvasToolbar', () => {
     renderToolbar()
 
     const toolbar = screen.getByRole('toolbar', { name: 'Canvas main toolbar' })
-    const labels = within(toolbar)
-      .getAllByRole('button')
-      .map((button) => button.getAttribute('aria-label'))
+    const buttons = within(toolbar).getAllByRole('button')
+    const labels = buttons.map((button) => button.getAttribute('aria-label'))
 
     expect(labels).toEqual(['Pointer', 'Panning', 'Lasso select', 'Draw', 'Eraser', 'Text'])
+    expect(buttons.map((button) => button.textContent)).toEqual(['1', '2', '3', '4', '5', '6'])
+    expect(buttons.map((button) => button.getAttribute('title'))).toEqual([
+      'Pointer (1)',
+      'Panning (2)',
+      'Lasso select (3)',
+      'Draw (4)',
+      'Eraser (5)',
+      'Text (6)',
+    ])
   })
 
   it('renders top-right controls in the requested order', () => {

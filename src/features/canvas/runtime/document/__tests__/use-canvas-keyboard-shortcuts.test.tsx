@@ -1,6 +1,7 @@
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useCanvasKeyboardShortcuts } from '../use-canvas-keyboard-shortcuts'
+import { useCanvasToolStore } from '../../../stores/canvas-tool-store'
 
 const hotkeyRegistrations = vi.hoisted(
   () =>
@@ -58,6 +59,7 @@ function getRegistration(hotkey: string) {
 describe('useCanvasKeyboardShortcuts', () => {
   beforeEach(() => {
     hotkeyRegistrations.length = 0
+    useCanvasToolStore.getState().reset()
     clearSelectionSpy.mockReset()
     copySnapshotSpy.mockClear()
     cutSnapshotSpy.mockClear()
@@ -83,6 +85,12 @@ describe('useCanvasKeyboardShortcuts', () => {
 
     expect(hotkeyRegistrations.map((entry) => entry.hotkey)).toEqual([
       'Escape',
+      '1',
+      '2',
+      '3',
+      '4',
+      '5',
+      '6',
       'Mod+Z',
       'Mod+Shift+Z',
       'Mod+Y',
@@ -98,10 +106,16 @@ describe('useCanvasKeyboardShortcuts', () => {
       { ignoreInputs: true },
       { ignoreInputs: true },
       { ignoreInputs: true },
+      { ignoreInputs: true },
+      { ignoreInputs: true },
+      { ignoreInputs: true },
+      { ignoreInputs: true },
+      { ignoreInputs: true },
+      { ignoreInputs: true },
     ])
   })
 
-  it('routes Escape, undo, redo, copy, cut, and paste through the expected canvas actions while ignoring repeated key events', () => {
+  it('routes tool shortcuts, Escape, undo, redo, copy, cut, and paste through the expected canvas actions while ignoring repeated key events', () => {
     const history = {
       undo: vi.fn(),
       redo: vi.fn(),
@@ -117,7 +131,13 @@ describe('useCanvasKeyboardShortcuts', () => {
       }),
     )
 
+    useCanvasToolStore.getState().setActiveTool('draw')
     getRegistration('Escape').callback(new KeyboardEvent('keydown', { key: 'Escape' }))
+    expect(clearSelectionSpy).toHaveBeenCalledTimes(0)
+    expect(useCanvasToolStore.getState().activeTool).toBe('select')
+
+    getRegistration('Escape').callback(new KeyboardEvent('keydown', { key: 'Escape' }))
+    getRegistration('5').callback(new KeyboardEvent('keydown', { key: '5' }))
     getRegistration('Mod+Z').callback(new KeyboardEvent('keydown', { key: 'z' }))
     getRegistration('Mod+Shift+Z').callback(
       new KeyboardEvent('keydown', { key: 'Z', shiftKey: true }),
@@ -129,6 +149,7 @@ describe('useCanvasKeyboardShortcuts', () => {
     getRegistration('Mod+Z').callback(new KeyboardEvent('keydown', { key: 'z', repeat: true }))
 
     expect(clearSelectionSpy).toHaveBeenCalledTimes(1)
+    expect(useCanvasToolStore.getState().activeTool).toBe('erase')
     expect(history.undo).toHaveBeenCalledTimes(1)
     expect(history.redo).toHaveBeenCalledTimes(2)
     expect(copySnapshotSpy).toHaveBeenCalledWith({ nodeIds: ['node-1'], edgeIds: [] })

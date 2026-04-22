@@ -203,6 +203,14 @@
   transition-duration: 0s !important;
 }
 
+.canvas-flow-shell .react-flow__node,
+.canvas-flow-shell .react-flow__node-stroke path,
+.canvas-flow-shell .react-flow__edge,
+.canvas-flow-shell .react-flow__edge-path,
+.canvas-flow-shell .react-flow__edge-interaction {
+  cursor: pointer !important;
+}
+
 /* Stroke nodes: only the filled path receives pointer events, not the bounding box */
 .react-flow__node-stroke {
   pointer-events: none !important;
