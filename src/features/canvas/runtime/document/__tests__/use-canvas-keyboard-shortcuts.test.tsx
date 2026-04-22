@@ -11,7 +11,6 @@ const hotkeyRegistrations = vi.hoisted(
       options: { ignoreInputs: boolean }
     }>,
 )
-const clearSelectionSpy = vi.hoisted(() => vi.fn())
 const copySnapshotSpy = vi.hoisted(() => vi.fn(() => true))
 const cutSnapshotSpy = vi.hoisted(() => vi.fn(() => true))
 const pasteClipboardSpy = vi.hoisted(() => vi.fn(() => ({ nodeIds: ['node-2'], edgeIds: [] })))
@@ -41,12 +40,6 @@ vi.mock('../../selection/use-canvas-selection-state', () => ({
   getCanvasSelectionSnapshot: () => getCanvasSelectionSnapshotSpy(),
 }))
 
-vi.mock('../../selection/use-canvas-selection-actions', () => ({
-  useCanvasSelectionActions: () => ({
-    clear: clearSelectionSpy,
-  }),
-}))
-
 function getRegistration(hotkey: string) {
   const registration = hotkeyRegistrations.find((entry) => entry.hotkey === hotkey)
   if (!registration) {
@@ -60,7 +53,6 @@ describe('useCanvasKeyboardShortcuts', () => {
   beforeEach(() => {
     hotkeyRegistrations.length = 0
     useCanvasToolStore.getState().reset()
-    clearSelectionSpy.mockReset()
     copySnapshotSpy.mockClear()
     cutSnapshotSpy.mockClear()
     pasteClipboardSpy.mockClear()
@@ -72,14 +64,18 @@ describe('useCanvasKeyboardShortcuts', () => {
       undo: vi.fn(),
       redo: vi.fn(),
     }
+    const selection = {
+      replace: vi.fn(),
+      clear: vi.fn(),
+    }
 
     renderHook(() =>
       useCanvasKeyboardShortcuts({
         ...history,
         canEdit: true,
-        nodesMap: {} as never,
-        edgesMap: {} as never,
-        selection: { replace: vi.fn(), clear: vi.fn() },
+        nodesMap: new Map() as never,
+        edgesMap: new Map() as never,
+        selection,
       }),
     )
 
@@ -91,6 +87,7 @@ describe('useCanvasKeyboardShortcuts', () => {
       '4',
       '5',
       '6',
+      'Mod+A',
       'Mod+Z',
       'Mod+Shift+Z',
       'Mod+Y',
@@ -112,6 +109,7 @@ describe('useCanvasKeyboardShortcuts', () => {
       { ignoreInputs: true },
       { ignoreInputs: true },
       { ignoreInputs: true },
+      { ignoreInputs: true },
     ])
   })
 
@@ -120,24 +118,37 @@ describe('useCanvasKeyboardShortcuts', () => {
       undo: vi.fn(),
       redo: vi.fn(),
     }
+    const selection = {
+      replace: vi.fn(),
+      clear: vi.fn(),
+    }
 
     renderHook(() =>
       useCanvasKeyboardShortcuts({
         ...history,
         canEdit: true,
-        nodesMap: {} as never,
-        edgesMap: {} as never,
-        selection: { replace: vi.fn(), clear: vi.fn() },
+        nodesMap: new Map([
+          ['node-1', {}],
+          ['node-2', {}],
+        ]) as never,
+        edgesMap: new Map([['edge-1', {}]]) as never,
+        selection,
       }),
     )
 
     useCanvasToolStore.getState().setActiveTool('draw')
     getRegistration('Escape').callback(new KeyboardEvent('keydown', { key: 'Escape' }))
-    expect(clearSelectionSpy).toHaveBeenCalledTimes(0)
+    expect(selection.clear).toHaveBeenCalledTimes(0)
     expect(useCanvasToolStore.getState().activeTool).toBe('select')
 
     getRegistration('Escape').callback(new KeyboardEvent('keydown', { key: 'Escape' }))
     getRegistration('5').callback(new KeyboardEvent('keydown', { key: '5' }))
+    const preventDefaultSpy = vi.fn()
+    const selectAllEvent = {
+      repeat: false,
+      preventDefault: preventDefaultSpy,
+    } as unknown as KeyboardEvent
+    getRegistration('Mod+A').callback(selectAllEvent)
     getRegistration('Mod+Z').callback(new KeyboardEvent('keydown', { key: 'z' }))
     getRegistration('Mod+Shift+Z').callback(
       new KeyboardEvent('keydown', { key: 'Z', shiftKey: true }),
@@ -148,7 +159,12 @@ describe('useCanvasKeyboardShortcuts', () => {
     getRegistration('Mod+V').callback(new KeyboardEvent('keydown', { key: 'v', ctrlKey: true }))
     getRegistration('Mod+Z').callback(new KeyboardEvent('keydown', { key: 'z', repeat: true }))
 
-    expect(clearSelectionSpy).toHaveBeenCalledTimes(1)
+    expect(selection.clear).toHaveBeenCalledTimes(1)
+    expect(selection.replace).toHaveBeenCalledWith({
+      nodeIds: ['node-1', 'node-2'],
+      edgeIds: ['edge-1'],
+    })
+    expect(preventDefaultSpy).toHaveBeenCalledTimes(1)
     expect(useCanvasToolStore.getState().activeTool).toBe('erase')
     expect(history.undo).toHaveBeenCalledTimes(1)
     expect(history.redo).toHaveBeenCalledTimes(2)

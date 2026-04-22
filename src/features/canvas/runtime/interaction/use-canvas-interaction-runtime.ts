@@ -13,6 +13,7 @@ import { useCanvasSurfaceClickGuard } from './use-canvas-surface-click-guard'
 import { useCanvasSelectionSync } from '../selection/use-canvas-selection-sync'
 import { useCanvasToolRuntime } from './use-canvas-tool-runtime'
 import { useCanvasWheel } from './use-canvas-wheel'
+import { transactCanvasMaps } from '../document/canvas-yjs-transactions'
 import { useCanvasPreview } from '~/features/previews/hooks/use-canvas-preview'
 import type { CanvasFlowShellProps } from '../../components/canvas-flow-shell'
 import type { Id } from 'convex/_generated/dataModel'
@@ -132,6 +133,7 @@ export function useCanvasInteractionRuntime({
     documentWriter,
     reactFlowInstance,
     session,
+    transact: (fn) => transactCanvasMaps(nodesMap, edgesMap, fn),
   })
 
   const flowHandlers = useCanvasFlowHandlers({

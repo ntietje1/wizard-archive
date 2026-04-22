@@ -47,6 +47,7 @@ export interface CanvasEditSessionState {
  */
 export interface CanvasNodeActions {
   updateNodeData: (nodeId: string, data: Record<string, unknown>) => void
+  transact?: (fn: () => void) => void
   onResize: (nodeId: string, width: number, height: number, position: XYPosition) => void
   onResizeEnd: (nodeId: string, width: number, height: number, position: XYPosition) => void
 }

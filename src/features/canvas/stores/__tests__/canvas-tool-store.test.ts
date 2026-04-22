@@ -28,7 +28,7 @@ describe('useCanvasToolStore', () => {
       activeTool: 'select',
       strokeColor: 'var(--foreground)',
       strokeOpacity: 100,
-      strokeSize: 4,
+      strokeSize: 6,
     })
   })
 })

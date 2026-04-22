@@ -271,4 +271,38 @@ describe('useCanvasHistory', () => {
     expect(nodesMap.has('a')).toBe(true)
     expect(edgesMap.has('edge-1')).toBe(true)
   })
+
+  it('undoes a batched multi-node update in a single step', () => {
+    const doc = new Y.Doc()
+    docs.push(doc)
+    const nodesMap = doc.getMap<Node>('nodes')
+    const edgesMap = doc.getMap<Edge>('edges')
+
+    nodesMap.set('a', createNode('a'))
+    nodesMap.set('b', createNode('b'))
+
+    const hook = renderHook(() =>
+      useCanvasHistory({ nodesMap, edgesMap, selection: selectionController }),
+    )
+    hooks.push(hook)
+
+    act(() => {
+      doc.transact(() => {
+        nodesMap.set('a', { ...createNode('a'), data: { label: 'updated-a' } })
+        nodesMap.set('b', { ...createNode('b'), data: { label: 'updated-b' } })
+      })
+    })
+
+    expect(nodesMap.get('a')?.data).toMatchObject({ label: 'updated-a' })
+    expect(nodesMap.get('b')?.data).toMatchObject({ label: 'updated-b' })
+
+    act(() => {
+      hook.result.current.undo()
+    })
+
+    expect(nodesMap.get('a')?.data).toMatchObject({ label: 'a' })
+    expect(nodesMap.get('b')?.data).toMatchObject({ label: 'b' })
+    expect(hook.result.current.canUndo).toBe(false)
+    expect(hook.result.current.canRedo).toBe(true)
+  })
 })

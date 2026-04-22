@@ -43,7 +43,7 @@ function isStrokeSizeProperty(
 }
 
 export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarProps) {
-  const { updateNodeData } = useCanvasNodeActionsContext()
+  const { updateNodeData, transact } = useCanvasNodeActionsContext()
   const nodes = useNodes()
   const selectedNodeIds = useSelectedCanvasNodeIds()
   const isSelectionGestureActive = useIsCanvasSelectionGestureActive()
@@ -59,15 +59,23 @@ export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarPr
     updateNodeData,
     toolPropertyContext,
   )
+  const runPropertyChange = (applyChange: () => void) => {
+    if (selectedNodes.length === 0 || !transact) {
+      applyChange()
+      return
+    }
+
+    transact(applyChange)
+  }
   if (!canEdit || properties.length === 0) return null
 
   return (
     <div
-      className="absolute top-4 left-4 z-10 flex flex-col gap-1 rounded-lg border bg-background/80 p-2 shadow-sm backdrop-blur-sm"
+      className="absolute top-4 left-4 z-10 flex select-none flex-col gap-1 rounded-lg border bg-background/80 p-2 shadow-sm backdrop-blur-sm"
       role="toolbar"
       aria-label="Canvas conditional toolbar"
     >
-      <CanvasPropertyControls properties={properties} />
+      <CanvasPropertyControls properties={properties} onPropertyChange={runPropertyChange} />
     </div>
   )
 }
@@ -92,7 +100,13 @@ function resolveProperties(
   return resolveCanvasProperties([toolProperties])
 }
 
-function CanvasPropertyControls({ properties }: { properties: Array<CanvasResolvedProperty> }) {
+function CanvasPropertyControls({
+  properties,
+  onPropertyChange,
+}: {
+  properties: Array<CanvasResolvedProperty>
+  onPropertyChange: (applyChange: () => void) => void
+}) {
   const paintProperties = properties.filter(isPaintProperty)
   const strokeSizeProperty = properties.find(isStrokeSizeProperty)
 
@@ -124,7 +138,7 @@ function CanvasPropertyControls({ properties }: { properties: Array<CanvasResolv
                         : 'none',
                     outlineOffset: '1px',
                   }}
-                  onClick={() => paintProperty.setValue(preset.value)}
+                  onClick={() => onPropertyChange(() => paintProperty.setValue(preset.value))}
                   aria-label={`Select ${preset.label} color`}
                   aria-pressed={
                     paintValue ? areCanvasPaintValuesEqual(paintValue, preset.value) : false
@@ -143,7 +157,7 @@ function CanvasPropertyControls({ properties }: { properties: Array<CanvasResolv
               <div className="mx-1 h-6 w-px bg-border" />
               <ColorPickerPopover
                 value={paintValue ?? paintProperty.definition.defaultValue}
-                onChange={paintProperty.setValue}
+                onChange={(value) => onPropertyChange(() => paintProperty.setValue(value))}
                 mixed={paintProperty.value.kind === 'mixed'}
               />
             </div>
@@ -155,14 +169,20 @@ function CanvasPropertyControls({ properties }: { properties: Array<CanvasResolv
           <p className="text-[11px] font-medium text-muted-foreground">
             {strokeSizeProperty.definition.label}
           </p>
-          <StrokeSizeControl property={strokeSizeProperty} />
+          <StrokeSizeControl property={strokeSizeProperty} onPropertyChange={onPropertyChange} />
         </div>
       )}
     </>
   )
 }
 
-function StrokeSizeControl({ property }: { property: CanvasStrokeSizeResolvedProperty }) {
+function StrokeSizeControl({
+  property,
+  onPropertyChange,
+}: {
+  property: CanvasStrokeSizeResolvedProperty
+  onPropertyChange: (applyChange: () => void) => void
+}) {
   const strokeSizeValue = readResolvedPropertyValue(property)
 
   return (
@@ -174,7 +194,7 @@ function StrokeSizeControl({ property }: { property: CanvasStrokeSizeResolvedPro
           className={`flex h-8 w-full items-center justify-center rounded-md hover:bg-accent ${
             strokeSizeValue === size ? 'bg-accent' : ''
           }`}
-          onClick={() => property.setValue(size)}
+          onClick={() => onPropertyChange(() => property.setValue(size))}
           aria-label={`Stroke size ${size}`}
           aria-pressed={strokeSizeValue === size}
           title={`Size ${size}`}

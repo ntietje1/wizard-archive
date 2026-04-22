@@ -1,7 +1,6 @@
 import { useHotkey } from '@tanstack/react-hotkeys'
 import { useCanvasContextMenuServices } from '../context-menu/use-canvas-context-menu-services'
 import { getCanvasSelectionSnapshot } from '../selection/use-canvas-selection-state'
-import { useCanvasSelectionActions } from '../selection/use-canvas-selection-actions'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import { getCanvasToolbarTools } from '../../tools/canvas-tool-modules'
 import type { Id } from 'convex/_generated/dataModel'
@@ -53,7 +52,6 @@ export function useCanvasKeyboardShortcuts({
   edgesMap,
   selection,
 }: UseCanvasKeyboardShortcutsOptions) {
-  const selectionActions = useCanvasSelectionActions()
   const toolbarTools = getCanvasToolbarTools()
   const selectTool = toolbarTools.find((tool) => tool.id === 'select')
   const handTool = toolbarTools.find((tool) => tool.id === 'hand')
@@ -92,7 +90,7 @@ export function useCanvasKeyboardShortcuts({
         useCanvasToolStore.getState().setActiveTool(selectTool.id)
         return
       }
-      selectionActions.clear()
+      selection.clear()
     },
     hotkeyOptions,
   )
@@ -131,6 +129,19 @@ export function useCanvasKeyboardShortcuts({
     TOOL_SHORTCUT_BINDINGS[5].key,
     toolLookup[TOOL_SHORTCUT_BINDINGS[5].toolId],
     canEdit,
+    hotkeyOptions,
+  )
+
+  useHotkey(
+    'Mod+A',
+    (event) => {
+      if (event.repeat) return
+      selection.replace({
+        nodeIds: Array.from(nodesMap.keys()),
+        edgeIds: Array.from(edgesMap.keys()),
+      })
+      event.preventDefault()
+    },
     hotkeyOptions,
   )
 

@@ -7,14 +7,17 @@ export function useCanvasNodeActions({
   documentWriter,
   reactFlowInstance,
   session,
+  transact,
 }: {
   documentWriter: CanvasDocumentWriter
   reactFlowInstance: Pick<ReactFlowInstance, 'setNodes'>
   session: CanvasSessionRuntime
+  transact: (fn: () => void) => void
 }) {
   return useMemo<CanvasNodeActions>(
     () => ({
       updateNodeData: documentWriter.updateNodeData,
+      transact,
       onResize: (nodeId, width, height, position) => {
         reactFlowInstance.setNodes((current) =>
           current.map((node) => (node.id === nodeId ? { ...node, width, height, position } : node)),
@@ -28,6 +31,6 @@ export function useCanvasNodeActions({
         documentWriter.resizeNode(nodeId, width, height, position)
       },
     }),
-    [documentWriter, reactFlowInstance, session.awareness.core],
+    [documentWriter, reactFlowInstance, session.awareness.core, transact],
   )
 }

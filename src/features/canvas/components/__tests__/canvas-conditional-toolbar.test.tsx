@@ -14,10 +14,6 @@ const colorPickerMock = vi.hoisted(() => ({
   props: [] as Array<Record<string, unknown>>,
 }))
 
-const sliderMock = vi.hoisted(() => ({
-  props: [] as Array<Record<string, unknown>>,
-}))
-
 vi.mock('@xyflow/react', () => ({
   useNodes: () => nodesMock.nodes,
 }))
@@ -29,17 +25,9 @@ vi.mock('~/shared/components/color-picker-popover', () => ({
   },
 }))
 
-vi.mock('~/features/shadcn/components/slider', () => ({
-  Slider: (props: Record<string, unknown>) => {
-    sliderMock.props.push(props)
-    return <div data-testid="stroke-size-slider" />
-  },
-}))
-
 function emitSelection(nodes: Array<Node>) {
   act(() => {
     colorPickerMock.props = []
-    sliderMock.props = []
     nodesMock.nodes = nodes
     useCanvasSelectionState.getState().setSelection({
       nodeIds: nodes.map((node) => node.id),
@@ -48,12 +36,19 @@ function emitSelection(nodes: Array<Node>) {
   })
 }
 
-function renderToolbar(updateNodeData = vi.fn()) {
+function renderToolbar({
+  updateNodeData = vi.fn(),
+  transact = vi.fn((fn: () => void) => fn()),
+}: {
+  updateNodeData?: (nodeId: string, data: Record<string, unknown>) => void
+  transact?: (fn: () => void) => void
+} = {}) {
   const view = render(
     <CanvasProviders
       runtime={{
         nodeActions: {
-          updateNodeData,
+          updateNodeData: updateNodeData as (nodeId: string, data: Record<string, unknown>) => void,
+          transact: transact as (fn: () => void) => void,
           onResize: vi.fn(),
           onResizeEnd: vi.fn(),
         },
@@ -82,6 +77,7 @@ function renderToolbar(updateNodeData = vi.fn()) {
   return {
     ...view,
     updateNodeData,
+    transact,
   }
 }
 
@@ -137,7 +133,6 @@ describe('CanvasConditionalToolbar', () => {
     useCanvasSelectionState.getState().reset()
     nodesMock.nodes = []
     colorPickerMock.props = []
-    sliderMock.props = []
     nodeIdCounter = 0
   })
 
@@ -147,8 +142,10 @@ describe('CanvasConditionalToolbar', () => {
     renderToolbar()
     emitSelection([])
 
-    expect(screen.getByRole('toolbar', { name: 'Canvas conditional toolbar' })).toBeVisible()
-    expect(screen.getByTestId('stroke-size-slider')).toBeVisible()
+    expect(screen.getByRole('toolbar', { name: 'Canvas conditional toolbar' })).toHaveClass(
+      'select-none',
+    )
+    expect(screen.getByRole('button', { name: 'Stroke size 6' })).toBeVisible()
     expect(screen.getByTestId('color-picker-popover')).toBeVisible()
   })
 
@@ -165,13 +162,13 @@ describe('CanvasConditionalToolbar', () => {
 
     expect(reversePrimaryColorButton).toHaveAttribute('aria-pressed', 'true')
     expect(redColorButton).toHaveAttribute('aria-pressed', 'false')
-    expect(sliderMock.props[0]?.value).toEqual([4])
+    expect(screen.getByRole('button', { name: 'Stroke size 6' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
 
     fireEvent.click(redColorButton)
-    act(() => {
-      // props[0] is the only stroke-size slider for the active draw tool.
-      ;(sliderMock.props[0]?.onValueChange as ((value: Array<number>) => void) | undefined)?.([8])
-    })
+    fireEvent.click(screen.getByRole('button', { name: 'Stroke size 8' }))
 
     expect(reversePrimaryColorButton).toHaveAttribute('aria-pressed', 'false')
     expect(redColorButton).toHaveAttribute('aria-pressed', 'true')
@@ -190,7 +187,7 @@ describe('CanvasConditionalToolbar', () => {
     ])
 
     expect(screen.getByRole('toolbar', { name: 'Canvas conditional toolbar' })).toBeVisible()
-    expect(screen.getByTestId('stroke-size-slider')).toBeVisible()
+    expect(screen.getByText('Stroke size')).toBeVisible()
 
     emitSelection([
       createNode('text', {
@@ -211,11 +208,11 @@ describe('CanvasConditionalToolbar', () => {
     })
     emitSelection([stroke])
 
-    expect(sliderMock.props[0]?.value).toEqual([4])
-    act(() => {
-      // props[0] is the only stroke-size slider for the selected stroke node.
-      ;(sliderMock.props[0]?.onValueChange as ((value: Array<number>) => void) | undefined)?.([8])
-    })
+    expect(screen.getByRole('button', { name: 'Stroke size 4' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Stroke size 8' }))
 
     expect(updateNodeData).toHaveBeenCalledWith(stroke.id, { size: 8 })
   })
@@ -230,11 +227,11 @@ describe('CanvasConditionalToolbar', () => {
     ])
 
     expect(screen.getByRole('toolbar', { name: 'Canvas conditional toolbar' })).toBeVisible()
-    expect(screen.getByTestId('stroke-size-slider')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Stroke size 6' })).toBeVisible()
   })
 
   it('fans out shared color updates to every selected node', () => {
-    const { updateNodeData } = renderToolbar()
+    const { transact, updateNodeData } = renderToolbar()
 
     const firstText = createNode('text', { backgroundColor: '#FFEBA1', borderStroke: null })
     const secondText = createNode('text', { backgroundColor: '#FFEBA1', borderStroke: null })
@@ -249,6 +246,7 @@ describe('CanvasConditionalToolbar', () => {
     expect(updateNodeData).toHaveBeenCalledWith(firstText.id, { backgroundOpacity: 100 })
     expect(updateNodeData).toHaveBeenCalledWith(secondText.id, { backgroundColor: 'var(--t-red)' })
     expect(updateNodeData).toHaveBeenCalledWith(secondText.id, { backgroundOpacity: 100 })
+    expect(transact).toHaveBeenCalledTimes(1)
   })
 
   it('supports clearing the selected border stroke by setting opacity to zero', () => {
@@ -270,7 +268,7 @@ describe('CanvasConditionalToolbar', () => {
   })
 
   it('fans out shared opacity updates to every selected node', () => {
-    const { updateNodeData } = renderToolbar()
+    const { transact, updateNodeData } = renderToolbar()
 
     const firstStroke = createNode('stroke', { color: 'var(--foreground)', opacity: 20 })
     const secondStroke = createNode('stroke', { color: 'var(--foreground)', opacity: 20 })
@@ -290,6 +288,7 @@ describe('CanvasConditionalToolbar', () => {
 
     expect(updateNodeData).toHaveBeenCalledWith(firstStroke.id, { opacity: 42 })
     expect(updateNodeData).toHaveBeenCalledWith(secondStroke.id, { opacity: 42 })
+    expect(transact).toHaveBeenCalledTimes(1)
   })
 
   it('fans out shared fill opacity updates to every selected node', () => {
@@ -462,7 +461,7 @@ describe('CanvasConditionalToolbar', () => {
 
     expect(screen.getByRole('toolbar', { name: 'Canvas conditional toolbar' })).toBeVisible()
     expect(screen.getByText('Stroke size')).toBeVisible()
-    expect(screen.getByTestId('stroke-size-slider')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Stroke size 2' })).toBeVisible()
     expect(screen.queryByText('Fill')).toBeNull()
     expect(screen.queryByText('Border')).toBeNull()
     expect(screen.queryByText('Stroke')).toBeNull()
@@ -483,5 +482,16 @@ describe('CanvasConditionalToolbar', () => {
     })
 
     expect(screen.getByRole('toolbar', { name: 'Canvas conditional toolbar' })).toBeVisible()
+  })
+
+  it('marks the toolbar content as non-selectable', () => {
+    useCanvasToolStore.getState().setActiveTool('draw')
+
+    renderToolbar()
+    emitSelection([])
+
+    expect(screen.getByRole('toolbar', { name: 'Canvas conditional toolbar' })).toHaveClass(
+      'select-none',
+    )
   })
 })
