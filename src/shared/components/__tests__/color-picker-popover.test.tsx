@@ -11,17 +11,16 @@ vi.mock('~/features/shadcn/components/color-picker', () => ({
 }))
 
 describe('ColorPickerPopover', () => {
-  it('shows a striped semi-transparent trigger preview for partially transparent colors', () => {
+  it('shows a checkerboard-backed semi-transparent trigger preview for partially transparent colors', () => {
     render(<ColorPickerPopover value={{ color: 'var(--t-red)', opacity: 50 }} onChange={vi.fn()} />)
 
     const trigger = screen.getByRole('button', { name: 'Open color picker' })
     const preview = within(trigger).getByTestId('color-preview')
 
+    expect(trigger.getAttribute('style')).toContain('linear-gradient(45deg, currentcolor 25%')
     expect(preview.getAttribute('style')).toContain('background-color: var(--t-red)')
     expect(preview.getAttribute('style')).toContain('opacity: 0.5')
-    expect(preview.getAttribute('style')).toContain(
-      'background-image: repeating-linear-gradient(135deg, var(--muted-foreground) 0 2px, transparent 2px 6px)',
-    )
+    expect(preview.getAttribute('style')).not.toContain('repeating-linear-gradient')
   })
 
   it('renders the opacity track with a checkerboard under the gradient', () => {

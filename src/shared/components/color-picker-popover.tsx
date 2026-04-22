@@ -66,7 +66,7 @@ export function ColorPickerPopover({ value, onChange, mixed = false }: ColorPick
               className="block h-full w-full rounded-sm"
               style={{
                 backgroundColor: mixed ? 'transparent' : value.color,
-                backgroundImage: mixed || value.opacity < 100 ? STRIPE_PATTERN : undefined,
+                backgroundImage: mixed ? STRIPE_PATTERN : undefined,
                 opacity: mixed ? 1 : value.opacity / 100,
               }}
             />

@@ -20,15 +20,15 @@ import type {
   CanvasStrokeSizeResolvedProperty,
 } from '../properties/canvas-property-types'
 import { areCanvasPaintValuesEqual } from '../properties/canvas-paint-values'
-import { Popover, PopoverContent, PopoverTrigger } from '~/features/shadcn/components/popover'
-import { Slider } from '~/features/shadcn/components/slider'
 
 interface CanvasConditionalToolbarProps {
   canEdit: boolean
 }
 
-const CLEAR_SWATCH_PATTERN =
-  'repeating-linear-gradient(135deg, var(--muted-foreground) 0 2px, transparent 2px 6px)'
+const CHECKERBOARD_PATTERN = [
+  'linear-gradient(45deg, currentColor 25%, transparent 25%, transparent 75%, currentColor 75%, currentColor)',
+  'linear-gradient(45deg, currentColor 25%, transparent 25%, transparent 75%, currentColor 75%, currentColor)',
+].join(', ')
 
 function isPaintProperty(
   property: CanvasResolvedProperty,
@@ -112,10 +112,12 @@ function CanvasPropertyControls({ properties }: { properties: Array<CanvasResolv
                 <button
                   type="button"
                   key={`${preset.label}-${preset.value.color}-${preset.value.opacity}`}
-                  className="h-6 w-6 rounded-sm border border-border transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+                  className="h-6 w-6 rounded-sm border border-border text-foreground/15 transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
                   style={{
-                    backgroundColor: 'transparent',
-                    backgroundImage: CLEAR_SWATCH_PATTERN,
+                    backgroundColor: 'var(--background)',
+                    backgroundImage: CHECKERBOARD_PATTERN,
+                    backgroundPosition: '0 0, 4px 4px',
+                    backgroundSize: '8px 8px',
                     outline:
                       paintValue && areCanvasPaintValuesEqual(paintValue, preset.value)
                         ? '2px solid var(--primary)'
@@ -162,68 +164,24 @@ function CanvasPropertyControls({ properties }: { properties: Array<CanvasResolv
 
 function StrokeSizeControl({ property }: { property: CanvasStrokeSizeResolvedProperty }) {
   const strokeSizeValue = readResolvedPropertyValue(property)
-  const previewSize = strokeSizeValue ?? property.definition.min
 
   return (
-    <div className="flex items-center gap-1">
-      <div className="flex items-center gap-0.5">
-        {property.definition.options.map((size) => (
-          <button
-            type="button"
-            key={size}
-            className={`flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent ${
-              strokeSizeValue === size ? 'bg-accent' : ''
-            }`}
-            onClick={() => property.setValue(size)}
-            aria-label={`Stroke size ${size}`}
-            aria-pressed={strokeSizeValue === size}
-            title={`Size ${size}`}
-          >
-            <div className="rounded-full bg-foreground" style={{ width: size, height: size }} />
-          </button>
-        ))}
-      </div>
-      <div className="mx-1 h-6 w-px bg-border" />
-      <Popover>
-        <PopoverTrigger
-          nativeButton={false}
-          render={(props) => (
-            <button
-              {...props}
-              type="button"
-              className="flex h-8 w-11 items-center justify-center rounded-md border border-border bg-background transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
-              aria-label={
-                strokeSizeValue === undefined
-                  ? 'Adjust stroke size (mixed values)'
-                  : `Adjust stroke size ${strokeSizeValue}`
-              }
-              title="Adjust stroke size"
-            >
-              <div
-                className="w-6 rounded-full bg-foreground"
-                style={{ height: Math.min(Math.max(previewSize, 1), 18) }}
-              />
-            </button>
-          )}
-        />
-        <PopoverContent side="bottom" align="end" className="w-44 p-3 allow-motion">
-          <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
-            <span>{property.definition.label}</span>
-            <span>{strokeSizeValue ?? 'Mixed'}</span>
-          </div>
-          <Slider
-            min={property.definition.min}
-            max={property.definition.max}
-            step={property.definition.step}
-            value={[previewSize]}
-            onValueChange={(value) => {
-              const nextValue = (value as ReadonlyArray<number>)[0] ?? property.definition.min
-              property.setValue(nextValue)
-            }}
-            aria-label={property.definition.label}
-          />
-        </PopoverContent>
-      </Popover>
+    <div className="grid w-full min-w-[17rem] grid-cols-10 gap-0.5">
+      {property.definition.options.map((size) => (
+        <button
+          type="button"
+          key={size}
+          className={`flex h-8 w-full items-center justify-center rounded-md hover:bg-accent ${
+            strokeSizeValue === size ? 'bg-accent' : ''
+          }`}
+          onClick={() => property.setValue(size)}
+          aria-label={`Stroke size ${size}`}
+          aria-pressed={strokeSizeValue === size}
+          title={`Size ${size}`}
+        >
+          <div className="rounded-full bg-foreground" style={{ width: size, height: size }} />
+        </button>
+      ))}
     </div>
   )
 }

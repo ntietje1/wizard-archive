@@ -19,16 +19,21 @@ export const canvasToolStateControls: CanvasToolStateControls = {
   setStrokeOpacity: (opacity) => useCanvasToolStore.getState().setStrokeOpacity(opacity),
 }
 
-const canvasToolPropertyContext: CanvasToolPropertyContext = {
-  toolState: canvasToolStateControls,
-}
-
 export function useCanvasToolPropertyContext(): CanvasToolPropertyContext {
-  // These selectors intentionally subscribe without using their return values so consumers rerender
-  // when tool settings change while the shared context object stays referentially stable.
-  useCanvasToolStore((state) => state.activeTool)
-  useCanvasToolStore((state) => state.strokeColor)
-  useCanvasToolStore((state) => state.strokeOpacity)
-  useCanvasToolStore((state) => state.strokeSize)
-  return canvasToolPropertyContext
+  const strokeColor = useCanvasToolStore((state) => state.strokeColor)
+  const strokeOpacity = useCanvasToolStore((state) => state.strokeOpacity)
+  const strokeSize = useCanvasToolStore((state) => state.strokeSize)
+
+  return {
+    toolState: {
+      getSettings: () => ({
+        strokeColor,
+        strokeOpacity,
+        strokeSize,
+      }),
+      setStrokeColor: canvasToolStateControls.setStrokeColor,
+      setStrokeOpacity: canvasToolStateControls.setStrokeOpacity,
+      setStrokeSize: canvasToolStateControls.setStrokeSize,
+    },
+  }
 }

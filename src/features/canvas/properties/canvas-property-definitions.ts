@@ -6,65 +6,35 @@ import type {
   CanvasStrokeSizePropertyDefinition,
 } from './canvas-property-types'
 
-export const STROKE_SIZE_OPTIONS = [1, 2, 4, 8, 12, 16, 24, 32] as const
+export const STROKE_SIZE_OPTIONS = [2, 4, 6, 8, 10, 12, 14, 16, 20, 24] as const
 const FULL_OPACITY = 100 as const
 
 function createPaintValue(color: string, opacity: number = FULL_OPACITY): CanvasPaintValue {
   return { color, opacity }
 }
 
-function createColorPresets(colors: ReadonlyArray<string>): Array<CanvasPaintPreset> {
-  return colors.map((color) => ({
-    label: colorLabel(color),
+function createColorPresets(
+  colors: ReadonlyArray<{ color: string; label: string }>,
+): Array<CanvasPaintPreset> {
+  return colors.map(({ color, label }) => ({
+    label,
     value: createPaintValue(color),
   }))
 }
 
-function colorLabel(color: string): string {
-  switch (color) {
-    case 'var(--t-red)':
-    case 'var(--bg-red)':
-      return 'Red'
-    case 'var(--t-orange)':
-    case 'var(--bg-orange)':
-      return 'Orange'
-    case 'var(--t-yellow)':
-    case 'var(--bg-yellow)':
-      return 'Yellow'
-    case 'var(--t-green)':
-    case 'var(--bg-green)':
-      return 'Green'
-    case 'var(--t-blue)':
-    case 'var(--bg-blue)':
-      return 'Blue'
-    case 'var(--t-purple)':
-    case 'var(--bg-purple)':
-      return 'Purple'
-    case 'var(--t-pink)':
-    case 'var(--bg-pink)':
-      return 'Pink'
-    case 'var(--foreground)':
-    case 'var(--background)':
-    case 'var(--border)':
-      return 'Primary'
-    default:
-      return 'Custom'
-  }
-}
-
 function createPaintOptions(
   defaultValue: CanvasPaintValue,
-  colors: ReadonlyArray<string>,
-  extras: ReadonlyArray<CanvasPaintPreset>,
-  includeDefault = true,
+  colors: ReadonlyArray<{ color: string; label: string }>,
 ): Array<CanvasPaintPreset> {
+  const [primaryPreset, ...remainingColors] = createColorPresets(colors)
+  if (!primaryPreset) {
+    throw new Error('Paint swatch colors must include at least one preset.')
+  }
+
   return [
-    ...(includeDefault ? [{ label: 'Default', value: defaultValue }] : []),
-    ...extras,
-    ...createColorPresets(colors).filter(
-      (preset) =>
-        preset.value.color !== defaultValue.color || preset.value.opacity !== defaultValue.opacity,
-    ),
+    primaryPreset,
+    { label: 'Clear', value: createPaintValue(defaultValue.color, 0) },
+    ...remainingColors,
   ]
 }
 
@@ -77,10 +47,7 @@ export const paintCanvasProperty: CanvasPaintPropertyDefinition = {
   kind: 'paint',
   label: 'Stroke',
   defaultValue: DEFAULT_STROKE_VALUE,
-  options: createPaintOptions(DEFAULT_STROKE_VALUE, BASE_TEXT_COLORS, [
-    { label: 'Clear', value: createPaintValue(DEFAULT_STROKE_VALUE.color, 0) },
-    { label: 'Reverse primary', value: createPaintValue('var(--background)') },
-  ]),
+  options: createPaintOptions(DEFAULT_STROKE_VALUE, BASE_TEXT_COLORS),
 }
 
 export const fillCanvasProperty: CanvasPaintPropertyDefinition = {
@@ -88,10 +55,7 @@ export const fillCanvasProperty: CanvasPaintPropertyDefinition = {
   kind: 'paint',
   label: 'Fill',
   defaultValue: DEFAULT_FILL_VALUE,
-  options: createPaintOptions(DEFAULT_FILL_VALUE, BASE_BG_COLORS, [
-    { label: 'Clear', value: createPaintValue(DEFAULT_FILL_VALUE.color, 0) },
-    { label: 'Reverse primary', value: createPaintValue('var(--foreground)') },
-  ]),
+  options: createPaintOptions(DEFAULT_FILL_VALUE, BASE_BG_COLORS),
 }
 
 export const borderStrokeCanvasProperty: CanvasPaintPropertyDefinition = {
@@ -99,15 +63,7 @@ export const borderStrokeCanvasProperty: CanvasPaintPropertyDefinition = {
   kind: 'paint',
   label: 'Border',
   defaultValue: DEFAULT_BORDER_VALUE,
-  options: createPaintOptions(
-    DEFAULT_BORDER_VALUE,
-    BASE_TEXT_COLORS,
-    [
-      { label: 'Clear', value: createPaintValue(DEFAULT_BORDER_VALUE.color, 0) },
-      { label: 'Reverse primary', value: createPaintValue('var(--background)') },
-    ],
-    false,
-  ),
+  options: createPaintOptions(DEFAULT_BORDER_VALUE, BASE_TEXT_COLORS),
 }
 
 export const strokeSizeCanvasProperty: CanvasStrokeSizePropertyDefinition = {

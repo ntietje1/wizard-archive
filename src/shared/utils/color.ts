@@ -1,5 +1,10 @@
 import Color from 'color'
 
+export interface NamedColorOption {
+  color: string
+  label: string
+}
+
 export function getContrastColor(hexColor: string): string {
   let hex = hexColor.trim().replace('#', '')
   if (hex.length === 3) {
@@ -16,26 +21,28 @@ export function getContrastColor(hexColor: string): string {
   return luminance > 0.179 ? '#000000' : '#ffffff'
 }
 
-export const BASE_TEXT_COLORS = [
-  'var(--foreground)',
-  'var(--t-red)',
-  'var(--t-orange)',
-  'var(--t-yellow)',
-  'var(--t-green)',
-  'var(--t-blue)',
-  'var(--t-purple)',
-  'var(--t-pink)',
+export const BASE_TEXT_COLORS: ReadonlyArray<NamedColorOption> = [
+  { color: 'var(--background)', label: 'Primary' },
+  { color: 'var(--foreground)', label: 'Reverse primary' },
+  { color: 'var(--t-red)', label: 'Red' },
+  { color: 'var(--t-orange)', label: 'Orange' },
+  { color: 'var(--t-yellow)', label: 'Yellow' },
+  { color: 'var(--t-green)', label: 'Green' },
+  { color: 'var(--t-blue)', label: 'Blue' },
+  { color: 'var(--t-purple)', label: 'Purple' },
+  { color: 'var(--t-pink)', label: 'Pink' },
 ]
 
-export const BASE_BG_COLORS = [
-  'var(--background)',
-  'var(--bg-red)',
-  'var(--bg-orange)',
-  'var(--bg-yellow)',
-  'var(--bg-green)',
-  'var(--bg-blue)',
-  'var(--bg-purple)',
-  'var(--bg-pink)',
+export const BASE_BG_COLORS: ReadonlyArray<NamedColorOption> = [
+  { color: 'var(--background)', label: 'Primary' },
+  { color: 'var(--foreground)', label: 'Reverse primary' },
+  { color: 'var(--t-red)', label: 'Red' },
+  { color: 'var(--t-orange)', label: 'Orange' },
+  { color: 'var(--t-yellow)', label: 'Yellow' },
+  { color: 'var(--t-green)', label: 'Green' },
+  { color: 'var(--t-blue)', label: 'Blue' },
+  { color: 'var(--t-purple)', label: 'Purple' },
+  { color: 'var(--t-pink)', label: 'Pink' },
 ]
 
 const CSS_VARIABLE_REFERENCE_PATTERN = /^var\(\s*(--[^),\s]+)\s*(?:,\s*[^)]+)?\)$/
