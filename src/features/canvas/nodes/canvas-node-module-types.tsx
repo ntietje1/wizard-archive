@@ -6,11 +6,6 @@ import type { Point2D } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-geometry-utils'
 import type { CanvasContextMenuCapability } from '../runtime/context-menu/canvas-context-menu-types'
 
-export interface CanvasNodePreviewOptions {
-  width: number
-  height: number
-}
-
 export type CanvasNodeData = Record<string, unknown>
 
 export type CanvasNodeType = 'embed' | 'stroke' | 'text'
@@ -54,7 +49,6 @@ interface CanvasNodeModuleDefinitionBase<
 > {
   type: TType
   NodeComponent: NodeTypes[string]
-  renderPreview: (data: TData, options?: CanvasNodePreviewOptions) => ReactNode
   parseData: (data: CanvasNodeData) => TData | null
   placement?: CanvasNodePlacementBehavior
   properties?: (context: {
@@ -95,7 +89,6 @@ export function createCanvasNodeModule<
   return {
     type: definition.type,
     NodeComponent: definition.NodeComponent,
-    renderPreview: definition.renderPreview,
     parseData: definition.parseData,
     placement: definition.placement,
     properties: definition.properties,

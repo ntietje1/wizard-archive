@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { useInternalNode, useReactFlow } from '@xyflow/react'
 import type { ControlPosition } from '@xyflow/react'
 import { useCanvasNodeActionsContext } from '../../runtime/providers/canvas-runtime-hooks'
+import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 import { useCanvasModifierKeys } from '../../runtime/interaction/use-canvas-modifier-keys'
 import { useIsCanvasNodeSelected } from '../../runtime/selection/use-canvas-selection-state'
 import { constrainPointToSquare } from '../../utils/canvas-constraint-utils'
@@ -75,12 +76,15 @@ export function useCanvasResizeSession({
   dragging,
   minWidth = 50,
   minHeight = 30,
+  lockedAspectRatio,
 }: {
   id: string
   dragging: boolean
   minWidth?: number
   minHeight?: number
+  lockedAspectRatio?: number
 }): ReadonlyArray<CanvasNodeResizeHandleDescriptor> {
+  const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
   const reactFlow = useReactFlow()
   const internalNode = useInternalNode(id)
   const { onResize, onResizeEnd } = useCanvasNodeActionsContext()
@@ -94,10 +98,12 @@ export function useCanvasResizeSession({
   const idRef = useRef(id)
   const minWidthRef = useRef(minWidth)
   const minHeightRef = useRef(minHeight)
+  const lockedAspectRatioRef = useRef(lockedAspectRatio)
   const reactFlowRef = useRef(reactFlow)
   idRef.current = id
   minWidthRef.current = minWidth
   minHeightRef.current = minHeight
+  lockedAspectRatioRef.current = lockedAspectRatio
   reactFlowRef.current = reactFlow
   shiftPressedRef.current = shiftPressed
   onResizeRef.current = onResize
@@ -115,6 +121,7 @@ export function useCanvasResizeSession({
       currentPoint: session.currentPoint,
       minWidth: minWidthRef.current,
       minHeight: minHeightRef.current,
+      lockedAspectRatio: lockedAspectRatioRef.current,
       square,
     })
 
@@ -141,6 +148,7 @@ export function useCanvasResizeSession({
       currentPoint,
       minWidth: minWidthRef.current,
       minHeight: minHeightRef.current,
+      lockedAspectRatio: lockedAspectRatioRef.current,
       square: event.shiftKey || shiftPressedRef.current,
     })
 
@@ -243,7 +251,7 @@ export function useCanvasResizeSession({
 
   const currentBounds = getCurrentResizeBounds(internalNode, minWidth, minHeight)
 
-  if (!selected || dragging) {
+  if (!interactiveRenderMode || !selected || dragging) {
     return []
   }
 
@@ -300,6 +308,7 @@ function resolveResizeBounds({
   currentPoint,
   minWidth,
   minHeight,
+  lockedAspectRatio,
   square,
 }: {
   handlePosition: CornerHandlePosition
@@ -307,10 +316,24 @@ function resolveResizeBounds({
   currentPoint: { x: number; y: number }
   minWidth: number
   minHeight: number
+  lockedAspectRatio?: number
   square: boolean
 }): ResizeBounds {
   const anchor = getOppositeCorner(startBounds, handlePosition)
   const minimumSquareSize = Math.max(minWidth, minHeight)
+
+  if (lockedAspectRatio) {
+    const signedPoint = applyLockedAspectRatioSize({
+      anchor,
+      point: currentPoint,
+      handlePosition,
+      minWidth,
+      minHeight,
+      lockedAspectRatio,
+    })
+
+    return normalizeResizeBounds(anchor, signedPoint)
+  }
 
   if (square) {
     const constrainedPoint = constrainPointToSquare(anchor, currentPoint)
@@ -333,6 +356,55 @@ function resolveResizeBounds({
   })
 
   return normalizeResizeBounds(anchor, signedPoint)
+}
+
+function applyLockedAspectRatioSize({
+  anchor,
+  point,
+  handlePosition,
+  minWidth,
+  minHeight,
+  lockedAspectRatio,
+}: {
+  anchor: { x: number; y: number }
+  point: { x: number; y: number }
+  handlePosition: CornerHandlePosition
+  minWidth: number
+  minHeight: number
+  lockedAspectRatio: number
+}) {
+  const direction = getHandleDirection(handlePosition)
+  const deltaX = Math.abs(point.x - anchor.x)
+  const deltaY = Math.abs(point.y - anchor.y)
+  const minimumWidth = Math.max(minWidth, minHeight * lockedAspectRatio)
+  const widthFromX = Math.max(deltaX, minimumWidth)
+  const widthFromY = Math.max(deltaY * lockedAspectRatio, minimumWidth)
+  const candidateFromX = {
+    width: widthFromX,
+    height: widthFromX / lockedAspectRatio,
+  }
+  const candidateFromY = {
+    width: widthFromY,
+    height: widthFromY / lockedAspectRatio,
+  }
+  const chosenCandidate =
+    getCandidateDistance(candidateFromX, deltaX, deltaY) <=
+    getCandidateDistance(candidateFromY, deltaX, deltaY)
+      ? candidateFromX
+      : candidateFromY
+
+  return {
+    x: anchor.x + direction.x * chosenCandidate.width,
+    y: anchor.y + direction.y * chosenCandidate.height,
+  }
+}
+
+function getCandidateDistance(
+  candidate: { width: number; height: number },
+  targetWidth: number,
+  targetHeight: number,
+) {
+  return Math.abs(candidate.width - targetWidth) + Math.abs(candidate.height - targetHeight)
 }
 
 function getOppositeCorner(bounds: ResizeBounds, handlePosition: CornerHandlePosition) {

@@ -18,6 +18,7 @@ import {
   useCanvasNodeActionsContext,
   useCanvasPermissionsContext,
 } from '../../runtime/providers/canvas-runtime-hooks'
+import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { cn } from '~/features/shadcn/lib/utils'
 
@@ -42,7 +43,7 @@ interface CanvasRichTextNodeComponentProps extends NodeProps<Node<CanvasRichText
   variant: CanvasRichTextNodeVariant
 }
 
-export function CanvasRichTextPreview({
+function CanvasRichTextPreview({
   data,
   variant,
 }: {
@@ -73,6 +74,7 @@ export function CanvasRichTextNode({
   dragging,
   variant,
 }: CanvasRichTextNodeComponentProps) {
+  const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
   const { updateNodeData } = useCanvasNodeActionsContext()
   const canEdit = useCanvasPermissionsContext()
   const [isEditing, setIsEditing] = useState(false)
@@ -82,7 +84,7 @@ export function CanvasRichTextNode({
   const ariaLabel = plainText || variant.emptyAriaLabel
   const editableSession = useCanvasEditableNodeSession({
     id,
-    canEdit,
+    canEdit: canEdit && interactiveRenderMode,
     editing: isEditing,
     setEditing: setIsEditing,
   })
@@ -113,7 +115,10 @@ export function CanvasRichTextNode({
             editor={editorSession.editor}
             visible={showsFormattingToolbar}
           />
-          <CanvasNodeConnectionHandles selected={editableSession.isSelected} />
+          <CanvasNodeConnectionHandles
+            selected={editableSession.isSelected}
+            preserveAnchors={!interactiveRenderMode}
+          />
         </>
       }
     >
@@ -123,33 +128,41 @@ export function CanvasRichTextNode({
         style={getContainerStyle(data, variant.textColor)}
         role="group"
         aria-label={ariaLabel}
-        tabIndex={0}
-        onDoubleClick={(event) => {
-          event.preventDefault()
-          event.stopPropagation()
-          editableSession.handleDoubleClick(event)
-        }}
-        onKeyDown={(event) => {
-          if (!editableSession.editable && (event.key === 'Enter' || event.key === 'F2')) {
-            event.preventDefault()
-            event.stopPropagation()
-            editableSession.startEditing()
-            return
-          }
+        tabIndex={interactiveRenderMode ? 0 : -1}
+        onDoubleClick={
+          interactiveRenderMode
+            ? (event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                editableSession.handleDoubleClick(event)
+              }
+            : undefined
+        }
+        onKeyDown={
+          interactiveRenderMode
+            ? (event) => {
+                if (!editableSession.editable && (event.key === 'Enter' || event.key === 'F2')) {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  editableSession.startEditing()
+                  return
+                }
 
-          if (editableSession.editable && event.key === 'Escape') {
-            event.preventDefault()
-            event.stopPropagation()
-            editableSession.stopEditing()
-            wrapperRef.current?.focus()
-          }
-        }}
+                if (editableSession.editable && event.key === 'Escape') {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  editableSession.stopEditing()
+                  wrapperRef.current?.focus()
+                }
+              }
+            : undefined
+        }
       >
         <div
           className={cn(
             'h-full',
             editableSession.editable && 'nodrag nopan',
-            editableSession.isExclusivelySelected && 'nowheel',
+            interactiveRenderMode && editableSession.isExclusivelySelected && 'nowheel',
           )}
         >
           <ScrollArea viewportRef={editorSession.viewportRef} className="h-full">

@@ -1,5 +1,5 @@
 import { useInternalNode } from '@xyflow/react'
-import { renderCanvasNodeMinimap } from '../nodes/canvas-node-registry'
+import { renderCanvasNodeMinimap } from '../nodes/canvas-node-modules'
 
 interface MiniMapNodeProps {
   id: string

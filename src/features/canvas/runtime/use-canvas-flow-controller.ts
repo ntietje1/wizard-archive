@@ -1,16 +1,21 @@
-import { useEffect, useMemo, useRef } from 'react'
-import { useCanvasDocumentRuntime } from './document/use-canvas-document-runtime'
-import { useCanvasInteractionRuntime } from './interaction/use-canvas-interaction-runtime'
+import { useReactFlow } from '@xyflow/react'
+import type { CanvasFlowShellProps } from '../components/canvas-flow-shell'
+import type { Id } from 'convex/_generated/dataModel'
+import type { Edge, Node } from '@xyflow/react'
+import { useEffect, useRef } from 'react'
+import type * as Y from 'yjs'
+import { useCanvasDocumentProjection } from './document/use-canvas-document-projection'
+import { useCanvasDocumentWriter } from './document/use-canvas-document-writer'
+import { useCanvasHistory } from './document/use-canvas-history'
+import { useCanvasKeyboardShortcuts } from './document/use-canvas-keyboard-shortcuts'
+import { getCanvasInteractionChrome } from './interaction/use-canvas-interaction-chrome'
 import { useCanvasRemoteDragAnimation } from './interaction/use-canvas-remote-drag-animation'
+import { useCanvasShellRuntime } from './interaction/use-canvas-shell-runtime'
+import { useCanvasSurfaceRuntime } from './interaction/use-canvas-surface-runtime'
 import { useCanvasSelectionActions } from './selection/use-canvas-selection-actions'
 import { clearCanvasSelectionState } from './selection/use-canvas-selection-state'
 import { useCanvasSessionState } from './session/use-canvas-session-state'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
-import type { CanvasFlowShellProps } from '../components/canvas-flow-shell'
-import type { CanvasProviderValues } from './providers/canvas-runtime-context'
-import type { Id } from 'convex/_generated/dataModel'
-import type { Edge, Node } from '@xyflow/react'
-import type * as Y from 'yjs'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
 
 type CanvasFlowRuntimeShellProps = Omit<CanvasFlowShellProps, 'viewportPersistence'>
@@ -27,8 +32,12 @@ interface UseCanvasFlowControllerOptions {
 }
 
 interface CanvasFlowControllerResult {
-  runtime: CanvasProviderValues
   shellProps: CanvasFlowRuntimeShellProps
+  canEdit: boolean
+  history: ReturnType<typeof useCanvasHistory>
+  editSession: ReturnType<typeof useCanvasSessionState>['editSession']
+  nodeActions: ReturnType<typeof useCanvasShellRuntime>['nodeActions']
+  remoteHighlights: ReturnType<typeof useCanvasSessionState>['remoteHighlights']
 }
 
 export function useCanvasFlowController({
@@ -43,6 +52,7 @@ export function useCanvasFlowController({
 }: UseCanvasFlowControllerOptions): CanvasFlowControllerResult {
   const session = useCanvasSessionState({ provider })
   const activeToolId = useCanvasToolStore((state) => state.activeTool)
+  const reactFlowInstance = useReactFlow()
   const canvasSurfaceRef = useRef<HTMLDivElement>(null)
   const selectionController = useCanvasSelectionActions()
   const localDraggingIdsRef = useRef(new Set<string>())
@@ -55,22 +65,37 @@ export function useCanvasFlowController({
     return () => clearCanvasSelectionState()
   }, [canvasId])
 
-  const { documentWriter, history } = useCanvasDocumentRuntime({
-    canEdit,
+  const documentWriter = useCanvasDocumentWriter({
     nodesMap,
     edgesMap,
-    selection: selectionController,
+  })
+
+  useCanvasDocumentProjection({
+    nodesMap,
+    edgesMap,
     localDraggingIdsRef,
     remoteResizeDimensions: session.remoteResizeDimensions,
     remoteDragAnimation,
   })
 
-  const { shellProps, nodeActions } = useCanvasInteractionRuntime({
+  const history = useCanvasHistory({
+    nodesMap,
+    edgesMap,
+    selection: selectionController,
+  })
+
+  useCanvasKeyboardShortcuts({
+    ...history,
+    canEdit,
+    nodesMap,
+    edgesMap,
+    selection: selectionController,
+  })
+
+  const shellRuntime = useCanvasShellRuntime({
     canvasId,
     campaignId,
     canvasParentId,
-    canEdit,
-    activeToolId,
     doc,
     nodesMap,
     edgesMap,
@@ -78,24 +103,42 @@ export function useCanvasFlowController({
     session,
     selectionController,
     documentWriter,
-    history,
     localDraggingIdsRef,
     remoteDragAnimation,
+    reactFlowInstance,
+  })
+  const surfaceRuntime = useCanvasSurfaceRuntime({
+    canvasId,
+    canEdit,
+    activeToolId,
+    canvasSurfaceRef,
+    session,
+    selectionController,
+    documentWriter,
+    history,
+    reactFlowInstance,
+    dragHandlers: shellRuntime.dragHandlers,
+    cursorPresence: shellRuntime.cursorPresence,
   })
 
-  const runtime: CanvasProviderValues = useMemo(
-    () => ({
-      canEdit,
-      remoteHighlights: session.remoteHighlights,
-      history,
-      editSession: session.editSession,
-      nodeActions,
+  const shellProps: CanvasFlowRuntimeShellProps = {
+    chrome: getCanvasInteractionChrome({
+      activeTool: activeToolId,
+      dropTarget: surfaceRuntime.dropTarget,
+      remoteUsers: session.remoteUsers,
+      toolCursor: surfaceRuntime.toolCursor,
     }),
-    [canEdit, history, nodeActions, session.editSession, session.remoteHighlights],
-  )
+    canvasSurfaceRef,
+    contextMenu: shellRuntime.contextMenu,
+    flowHandlers: surfaceRuntime.flowHandlers,
+  }
 
   return {
-    runtime,
     shellProps,
+    canEdit,
+    history,
+    editSession: session.editSession,
+    nodeActions: shellRuntime.nodeActions,
+    remoteHighlights: session.remoteHighlights,
   }
 }

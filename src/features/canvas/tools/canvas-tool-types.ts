@@ -167,27 +167,6 @@ export interface CanvasToolServices {
   awareness: CanvasAwarenessWriter
 }
 
-export type CanvasSelectToolServices = Pick<CanvasToolServices, 'viewport' | 'query' | 'selection'>
-
-export type CanvasHandToolServices = Pick<CanvasToolServices, 'toolState'>
-
-export type CanvasDrawToolServices = Pick<
-  CanvasToolServices,
-  'viewport' | 'commands' | 'modifiers' | 'toolState' | 'awareness'
->
-
-export type CanvasEraseToolServices = Pick<CanvasToolServices, 'viewport' | 'commands' | 'query'>
-
-export type CanvasLassoToolServices = Pick<
-  CanvasToolServices,
-  'viewport' | 'query' | 'selection' | 'interaction' | 'awareness'
->
-
-export type CanvasTextToolServices = Pick<
-  CanvasToolServices,
-  'viewport' | 'commands' | 'selection' | 'editSession' | 'toolState' | 'modifiers'
->
-
 export interface CanvasToolController {
   onPointerDown?: (event: PointerEvent) => void
   onPointerMove?: (event: PointerEvent) => void
@@ -202,10 +181,7 @@ export interface CanvasToolController {
   onMoveEnd?: () => void
 }
 
-export interface CanvasToolModule<
-  TId extends CanvasToolId = CanvasToolId,
-  TServices = CanvasToolServices,
-> {
+export interface CanvasToolModule<TId extends CanvasToolId = CanvasToolId> {
   id: TId
   label: string
   group: 'selection' | 'creation'
@@ -214,14 +190,9 @@ export interface CanvasToolModule<
   properties?: (context: CanvasToolPropertyContext) => CanvasInspectableProperties
   awareness?: CanvasAwarenessCapability
   localOverlay?: CanvasLocalOverlayCapability
-  create: (services: TServices) => CanvasToolController
+  create: (services: CanvasToolServices) => CanvasToolController
 }
 
 export type AnyCanvasToolModule = {
-  select: CanvasToolModule<'select', CanvasSelectToolServices>
-  hand: CanvasToolModule<'hand', CanvasHandToolServices>
-  draw: CanvasToolModule<'draw', CanvasDrawToolServices>
-  erase: CanvasToolModule<'erase', CanvasEraseToolServices>
-  lasso: CanvasToolModule<'lasso', CanvasLassoToolServices>
-  text: CanvasToolModule<'text', CanvasTextToolServices>
+  [TId in CanvasToolId]: CanvasToolModule<TId>
 }[CanvasToolId]

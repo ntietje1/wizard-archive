@@ -1,6 +1,7 @@
 import { act, render, screen } from '@testing-library/react'
 import { Position } from '@xyflow/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { CanvasRenderModeProvider } from '../../../runtime/providers/canvas-render-mode-context'
 import { useCanvasSelectionState } from '../../../runtime/selection/use-canvas-selection-state'
 import {
   clearCanvasPendingSelectionPreview,
@@ -98,6 +99,24 @@ describe('BezierCanvasEdge', () => {
         style: expect.objectContaining({
           opacity: 0.45,
         }),
+      }),
+    )
+  })
+
+  it('suppresses edge interaction chrome in embedded read-only mode', () => {
+    useCanvasSelectionState.getState().setSelection({ nodeIds: [], edgeIds: ['edge-1'] })
+
+    render(
+      <CanvasRenderModeProvider mode="embedded-readonly">
+        <BezierCanvasEdge {...createEdgeProps({ selected: true })} />
+      </CanvasRenderModeProvider>,
+    )
+
+    expect(screen.getByTestId('canvas-edge')).toHaveAttribute('data-edge-visual-selected', 'false')
+    expect(baseEdgeSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        interactionWidth: 0,
+        style: undefined,
       }),
     )
   })

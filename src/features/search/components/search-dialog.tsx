@@ -12,7 +12,7 @@ import {
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { Button } from '~/features/shadcn/components/button'
 import { Separator } from '~/features/shadcn/components/separator'
-import { ItemPreviewContent } from '~/features/editor/components/item-preview-content'
+import { SidebarItemPreviewContent } from '~/features/previews/components/sidebar-item-preview-content'
 import { useSearchStore } from '../stores/search-store'
 import { useFilteredSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
@@ -251,7 +251,7 @@ export function SearchDialog() {
                         Loading preview...
                       </div>
                     ) : selectedContentItem ? (
-                      <ItemPreviewContent item={selectedContentItem} />
+                      <SidebarItemPreviewContent item={selectedContentItem} />
                     ) : (
                       <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
                         Failed to load preview

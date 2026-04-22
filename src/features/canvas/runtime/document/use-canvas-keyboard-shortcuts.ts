@@ -1,9 +1,8 @@
 import { useHotkey } from '@tanstack/react-hotkeys'
-import { useCanvasContextMenuServices } from '../context-menu/use-canvas-context-menu-services'
 import { getCanvasSelectionSnapshot } from '../selection/use-canvas-selection-state'
+import { useCanvasSelectionOperations } from './use-canvas-selection-operations'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import { getCanvasToolbarTools } from '../../tools/canvas-tool-modules'
-import type { Id } from 'convex/_generated/dataModel'
 import type {
   CanvasHistoryController,
   CanvasSelectionController,
@@ -66,6 +65,12 @@ export function useCanvasKeyboardShortcuts({
   edgesMap,
   selection,
 }: UseCanvasKeyboardShortcutsOptions) {
+  const selectionOperations = useCanvasSelectionOperations({
+    canEdit,
+    nodesMap,
+    edgesMap,
+    selection,
+  })
   const toolbarTools = getCanvasToolbarTools()
   const selectTool = toolbarTools.find((tool) => tool.id === 'select')
   const handTool = toolbarTools.find((tool) => tool.id === 'hand')
@@ -81,16 +86,6 @@ export function useCanvasKeyboardShortcuts({
     erase: eraseTool,
     text: textTool,
   } as const
-  const contextMenuServices = useCanvasContextMenuServices({
-    canEdit,
-    campaignId: 'canvas-shortcuts-campaign' as Id<'campaigns'>,
-    canvasParentId: null,
-    nodesMap,
-    edgesMap,
-    createNode: () => undefined,
-    screenToFlowPosition: ({ x, y }) => ({ x, y }),
-    selection,
-  })
 
   const hotkeyOptions = {
     ignoreInputs: true,
@@ -112,7 +107,7 @@ export function useCanvasKeyboardShortcuts({
         return
       }
 
-      if (contextMenuServices.deleteSnapshot(getCanvasSelectionSnapshot())) {
+      if (selectionOperations.deleteSnapshot(getCanvasSelectionSnapshot())) {
         event.preventDefault()
       }
     },
@@ -126,7 +121,7 @@ export function useCanvasKeyboardShortcuts({
         return
       }
 
-      if (contextMenuServices.deleteSnapshot(getCanvasSelectionSnapshot())) {
+      if (selectionOperations.deleteSnapshot(getCanvasSelectionSnapshot())) {
         event.preventDefault()
       }
     },
@@ -214,7 +209,7 @@ export function useCanvasKeyboardShortcuts({
     'Mod+C',
     (event) => {
       if (event.repeat) return
-      if (contextMenuServices.copySnapshot(getCanvasSelectionSnapshot())) {
+      if (selectionOperations.copySnapshot(getCanvasSelectionSnapshot())) {
         event.preventDefault()
       }
     },
@@ -225,7 +220,7 @@ export function useCanvasKeyboardShortcuts({
     'Mod+X',
     (event) => {
       if (event.repeat) return
-      if (contextMenuServices.cutSnapshot(getCanvasSelectionSnapshot())) {
+      if (selectionOperations.cutSnapshot(getCanvasSelectionSnapshot())) {
         event.preventDefault()
       }
     },
@@ -236,7 +231,7 @@ export function useCanvasKeyboardShortcuts({
     'Mod+V',
     (event) => {
       if (event.repeat) return
-      if (contextMenuServices.pasteClipboard()) {
+      if (selectionOperations.pasteClipboard()) {
         event.preventDefault()
       }
     },

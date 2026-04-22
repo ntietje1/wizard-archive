@@ -1,4 +1,4 @@
-import { createCanvasNode } from '../canvas-node-registry'
+import { createCanvasNode } from '../canvas-node-modules'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Node, XYPosition } from '@xyflow/react'
 

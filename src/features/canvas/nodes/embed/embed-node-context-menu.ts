@@ -6,15 +6,17 @@ export const embedNodeContextMenuContributors = [
     id: 'embed-node-open',
     surfaces: ['canvas'],
     applies: (context, services) => services.canOpenEmbedSelection(context.selection),
-    getItems: () => [
+    getItems: (context, services) => [
       {
         id: 'embed-node-open',
-        commandId: 'selection.open',
         label: 'Open',
         icon: SquareArrowOutUpRight,
         group: 'navigation',
         priority: 0,
         scope: 'selection',
+        onSelect: async () => {
+          await services.openEmbedSelection(context.selection)
+        },
       },
     ],
   },

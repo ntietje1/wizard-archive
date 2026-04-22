@@ -2,8 +2,14 @@ import { act, render, screen } from '@testing-library/react'
 import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasRichTextNode } from '../canvas-rich-text-node'
+import { createCanvasProviderProps } from '../../../runtime/__tests__/canvas-runtime-test-utils'
 import { CanvasProviders } from '../../../runtime/providers/canvas-runtime-context'
+import { CanvasRenderModeProvider } from '../../../runtime/providers/canvas-render-mode-context'
 import { useCanvasSelectionState } from '../../../runtime/selection/use-canvas-selection-state'
+
+const renderModeState = vi.hoisted(() => ({
+  interactive: true,
+}))
 
 vi.mock('@xyflow/react', () => ({
   useInternalNode: () => ({
@@ -22,12 +28,19 @@ vi.mock('@xyflow/react', () => ({
   }),
 }))
 
+// This mock bypasses CanvasRenderModeProvider, so the harness mode prop and
+// renderModeState.interactive must stay aligned when changing test render mode.
+vi.mock('../../../runtime/providers/use-canvas-render-mode', () => ({
+  useIsInteractiveCanvasRenderMode: () => renderModeState.interactive,
+}))
+
 vi.mock('../../../runtime/interaction/use-canvas-modifier-keys', () => ({
   useCanvasModifierKeys: () => ({ shiftPressed: false }),
 }))
 
 vi.mock('../canvas-node-connection-handles', () => ({
-  CanvasNodeConnectionHandles: () => <div data-testid="connection-handles" />,
+  CanvasNodeConnectionHandles: () =>
+    renderModeState.interactive ? <div data-testid="connection-handles" /> : null,
 }))
 
 vi.mock('../canvas-floating-formatting-toolbar', () => ({
@@ -60,6 +73,7 @@ vi.mock('~/features/shadcn/components/scroll-area', () => ({
 
 describe('CanvasRichTextNode', () => {
   beforeEach(() => {
+    renderModeState.interactive = true
     useCanvasSelectionState.getState().setSelection({
       nodeIds: [],
       edgeIds: [],
@@ -86,9 +100,26 @@ describe('CanvasRichTextNode', () => {
 
     expect(screen.getByTestId('connection-handles').parentElement).toBe(getCanvasNode())
   })
+
+  it('suppresses editable chrome in embedded read-only mode', async () => {
+    renderModeState.interactive = false
+    render(<CanvasRichTextNodeHarness mode="embedded-readonly" />)
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(screen.queryByTestId('connection-handles')).toBeNull()
+    expect(screen.getByRole('group', { name: 'Empty text node' })).toHaveAttribute('tabindex', '-1')
+    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual([])
+  })
 })
 
-function CanvasRichTextNodeHarness() {
+function CanvasRichTextNodeHarness({
+  mode = 'interactive',
+}: {
+  mode?: 'interactive' | 'embedded-readonly'
+}) {
   const [pendingEditNodeId, setPendingEditNodeId] = useState<string | null>('text-1')
   const [pendingEditNodePoint, setPendingEditNodePoint] = useState<{ x: number; y: number } | null>(
     { x: 100, y: 120 },
@@ -111,33 +142,22 @@ function CanvasRichTextNodeHarness() {
   } as unknown as Parameters<typeof CanvasRichTextNode>[0]
 
   return (
-    <CanvasProviders
-      runtime={{
-        canEdit: true,
-        remoteHighlights: new Map(),
-        history: {
-          canUndo: false,
-          canRedo: false,
-          undo: () => undefined,
-          redo: () => undefined,
-        },
-        editSession: {
-          editingEmbedId: null,
-          setEditingEmbedId: () => undefined,
-          pendingEditNodeId,
-          pendingEditNodePoint,
-          setPendingEditNodeId,
-          setPendingEditNodePoint,
-        },
-        nodeActions: {
-          updateNodeData: () => undefined,
-          onResize: () => undefined,
-          onResizeEnd: () => undefined,
-        },
-      }}
-    >
-      <CanvasRichTextNode {...nodeProps} />
-    </CanvasProviders>
+    <CanvasRenderModeProvider mode={mode}>
+      <CanvasProviders
+        {...createCanvasProviderProps({
+          editSession: {
+            editingEmbedId: null,
+            setEditingEmbedId: () => undefined,
+            pendingEditNodeId,
+            pendingEditNodePoint,
+            setPendingEditNodeId,
+            setPendingEditNodePoint,
+          },
+        })}
+      >
+        <CanvasRichTextNode {...nodeProps} />
+      </CanvasProviders>
+    </CanvasRenderModeProvider>
   )
 }
 

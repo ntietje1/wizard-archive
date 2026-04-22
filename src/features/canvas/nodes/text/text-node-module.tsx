@@ -1,7 +1,7 @@
 import { createCanvasNodeModule } from '../canvas-node-module-types'
 import { rectangularCanvasNodeSelection } from '../shared/canvas-node-selection'
 import { TEXT_NODE_DEFAULT_HEIGHT, TEXT_NODE_DEFAULT_WIDTH } from './text-node-constants'
-import { TextNode, TextPreview } from './text-node'
+import { TextNode } from './text-node'
 import type { TextNodeData } from './text-node'
 import {
   createEmptyCanvasRichTextContent,
@@ -30,7 +30,6 @@ import {
 export const textNodeModule = createCanvasNodeModule<TextNodeData, 'text'>({
   type: 'text',
   NodeComponent: TextNode,
-  renderPreview: (data) => <TextPreview {...data} />,
   parseData: (data): TextNodeData => ({
     content: normalizeCanvasRichTextContent(data.content),
     backgroundColor: readCanvasNodeSurfaceColor(data.backgroundColor),

@@ -61,19 +61,26 @@ function CanvasFlow({
   edgesMap,
 }: ReadyCanvasSession) {
   const initialViewport = loadPersistedCanvasViewport(canvasId)
-  const { runtime, shellProps } = useCanvasFlowController({
-    nodesMap,
-    edgesMap,
-    canvasId,
-    campaignId,
-    canvasParentId: parentId,
-    canEdit,
-    provider,
-    doc,
-  })
+  const { shellProps, history, editSession, nodeActions, remoteHighlights } =
+    useCanvasFlowController({
+      nodesMap,
+      edgesMap,
+      canvasId,
+      campaignId,
+      canvasParentId: parentId,
+      canEdit,
+      provider,
+      doc,
+    })
 
   return (
-    <CanvasProviders runtime={runtime}>
+    <CanvasProviders
+      canEdit={canEdit}
+      history={history}
+      editSession={editSession}
+      nodeActions={nodeActions}
+      remoteHighlights={remoteHighlights}
+    >
       <CanvasFlowShell
         {...shellProps}
         canEdit={canEdit}

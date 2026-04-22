@@ -9,7 +9,7 @@ import {
 import type { CanvasRichTextEditor, CanvasRichTextPartialBlock } from './canvas-rich-text-editor'
 import { useBlockNoteActivationLifecycle } from './use-blocknote-activation-lifecycle'
 import { useOwnedBlockNoteEditor } from '~/features/editor/hooks/useOwnedBlockNoteEditor'
-import { logger } from '~/shared/utils/logger'
+import { destroyBlockNoteEditor } from '~/features/editor/utils/destroy-blocknote-editor'
 
 export function useCanvasRichTextEditorSession({
   ariaLabel,
@@ -73,15 +73,7 @@ export function useCanvasRichTextEditorSession({
   const destroyEditor = useCallback(
     (editor: CanvasRichTextEditor) => {
       try {
-        if ('destroy' in editor && typeof editor.destroy === 'function') {
-          editor.destroy()
-          return
-        }
-
-        logger.warn('Canvas rich text editor is falling back to BlockNote internal destroy API', {
-          ariaLabel,
-        })
-        editor._tiptapEditor.destroy()
+        destroyBlockNoteEditor(editor)
       } catch (error) {
         console.error('Error destroying BlockNoteEditor for canvas rich text node', {
           ariaLabel,

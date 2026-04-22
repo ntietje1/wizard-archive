@@ -1,6 +1,7 @@
 import { render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasToolbar } from '../canvas-toolbar'
+import { createCanvasProviderProps } from '../../runtime/__tests__/canvas-runtime-test-utils'
 import { CanvasProviders } from '../../runtime/providers/canvas-runtime-context'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 
@@ -34,27 +35,26 @@ describe('CanvasToolbar', () => {
   })
 
   function renderToolbar(canEdit = true) {
+    const providerProps = createCanvasProviderProps({
+      canEdit,
+      history,
+      editSession: {
+        editingEmbedId: null,
+        setEditingEmbedId: vi.fn(),
+        pendingEditNodeId: null,
+        pendingEditNodePoint: null,
+        setPendingEditNodeId: vi.fn(),
+        setPendingEditNodePoint: vi.fn(),
+      },
+      nodeActions: {
+        updateNodeData: vi.fn(),
+        onResize: vi.fn(),
+        onResizeEnd: vi.fn(),
+      },
+    })
+
     return render(
-      <CanvasProviders
-        runtime={{
-          canEdit,
-          remoteHighlights: new Map(),
-          history,
-          editSession: {
-            editingEmbedId: null,
-            setEditingEmbedId: vi.fn(),
-            pendingEditNodeId: null,
-            pendingEditNodePoint: null,
-            setPendingEditNodeId: vi.fn(),
-            setPendingEditNodePoint: vi.fn(),
-          },
-          nodeActions: {
-            updateNodeData: vi.fn(),
-            onResize: vi.fn(),
-            onResizeEnd: vi.fn(),
-          },
-        }}
-      >
+      <CanvasProviders {...providerProps}>
         <CanvasToolbar canEdit={canEdit} />
       </CanvasProviders>,
     )

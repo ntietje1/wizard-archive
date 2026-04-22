@@ -10,7 +10,6 @@ import type { EmbedNodeData } from './embed-node-data'
 import { EmbedNoteContent } from './embed-note-content'
 import { CanvasFloatingFormattingToolbar } from '../shared/canvas-floating-formatting-toolbar'
 import { useCanvasEditableNodeSession } from '../shared/use-canvas-editable-node-session'
-import { ItemPreviewContent } from '~/features/editor/components/item-preview-content'
 import type { Node, NodeProps } from '@xyflow/react'
 import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
 import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
@@ -19,8 +18,15 @@ import { cn } from '~/features/shadcn/lib/utils'
 import { CanvasNodeConnectionHandles } from '../shared/canvas-node-connection-handles'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import { getCanvasNodeSurfaceStyle } from '../shared/canvas-node-surface-style'
+import { SidebarItemPreviewContent } from '~/features/previews/components/sidebar-item-preview-content'
+import { resolveFilePreviewImageUrl } from '~/features/editor/components/viewer/file/file-preview-source'
+import { EmbeddedCanvasContent } from './embedded-canvas-content'
+import { EmbeddedFileContent } from './embedded-file-content'
+import { EmbeddedMapContent } from './embedded-map-content'
+import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 
 export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>) {
+  const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
   const sidebarItemId = data.sidebarItemId
   const { itemsMap } = useActiveSidebarItems()
   const item = sidebarItemId ? itemsMap.get(sidebarItemId) : undefined
@@ -30,7 +36,7 @@ export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>
   const canEdit = useCanvasPermissionsContext()
   const editableSession = useCanvasEditableNodeSession({
     id,
-    canEdit,
+    canEdit: canEdit && interactiveRenderMode,
     editing: editSession.editingEmbedId === id,
     setEditing: (editing) => editSession.setEditingEmbedId(editing ? id : null),
   })
@@ -49,11 +55,15 @@ export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>
       dragging={!!dragging}
       minWidth={240}
       minHeight={180}
+      lockedAspectRatio={getLockedAspectRatio(contentItem, data.lockedAspectRatio)}
       editing={showsFormattingToolbar}
       chrome={
         <>
           <CanvasFloatingFormattingToolbar editor={noteEditor} visible={showsFormattingToolbar} />
-          <CanvasNodeConnectionHandles selected={editableSession.isSelected} />
+          <CanvasNodeConnectionHandles
+            selected={editableSession.isSelected}
+            preserveAnchors={!interactiveRenderMode}
+          />
           {showFloatingLabel && (
             <div className="pointer-events-none absolute left-3 top-0 z-20 max-w-[calc(100%-1.5rem)] -translate-y-[calc(100%+0.375rem)]">
               <span className="block truncate text-xs font-medium text-muted-foreground">
@@ -68,7 +78,7 @@ export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>
         className="relative h-full w-full overflow-hidden rounded-lg shadow-sm"
         style={getCanvasNodeSurfaceStyle(data)}
         onDoubleClick={(event) => {
-          if (contentItem?.type !== SIDEBAR_ITEM_TYPES.notes) {
+          if (!interactiveRenderMode || contentItem?.type !== SIDEBAR_ITEM_TYPES.notes) {
             return
           }
 
@@ -78,11 +88,13 @@ export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>
         }}
       >
         {!isMissing && (
-          <div className="h-full">
+          <div className="h-full w-full min-h-0 min-w-0">
             <EmbedRichContent
+              nodeId={id}
               contentItem={contentItem}
               isEditing={isEditing}
               isExclusivelySelected={editableSession.isExclusivelySelected}
+              interactiveRenderMode={interactiveRenderMode}
               lifecycle={editableSession.lifecycle}
               onActivated={editableSession.handleActivated}
               onEditorChange={setEditor}
@@ -95,16 +107,20 @@ export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>
 }
 
 function EmbedRichContent({
+  nodeId,
   contentItem,
   isEditing,
   isExclusivelySelected,
+  interactiveRenderMode,
   lifecycle,
   onActivated,
   onEditorChange,
 }: {
+  nodeId: string
   contentItem: AnySidebarItemWithContent | undefined
   isEditing: boolean
   isExclusivelySelected: boolean
+  interactiveRenderMode: boolean
   lifecycle: RichEmbedLifecycleController
   onActivated: () => void
   onEditorChange: (editor: CustomBlockNoteEditor | null) => void
@@ -131,16 +147,67 @@ function EmbedRichContent({
     )
   }
 
+  if (contentItem.type === SIDEBAR_ITEM_TYPES.canvases) {
+    return interactiveRenderMode ? (
+      <EmbeddedCanvasContent
+        nodeId={nodeId}
+        canvasId={contentItem._id}
+        previewUrl={contentItem.previewUrl}
+        alt={contentItem.name}
+      />
+    ) : (
+      <SidebarItemPreviewContent item={contentItem} />
+    )
+  }
+
+  if (contentItem.type === SIDEBAR_ITEM_TYPES.gameMaps) {
+    return interactiveRenderMode ? (
+      <EmbeddedMapContent nodeId={nodeId} map={contentItem} />
+    ) : (
+      <SidebarItemPreviewContent item={contentItem} />
+    )
+  }
+
+  if (contentItem.type === SIDEBAR_ITEM_TYPES.files) {
+    return interactiveRenderMode ? (
+      <EmbeddedFileContent nodeId={nodeId} file={contentItem} />
+    ) : (
+      <SidebarItemPreviewContent item={contentItem} />
+    )
+  }
+
   const hasScrollableContent = contentItem.type === SIDEBAR_ITEM_TYPES.folders
 
   return (
     <div
       className={cn(
         'h-full overflow-hidden',
-        hasScrollableContent && isExclusivelySelected && 'nowheel',
+        hasScrollableContent && interactiveRenderMode && isExclusivelySelected && 'nowheel',
       )}
     >
-      <ItemPreviewContent item={contentItem} />
+      <SidebarItemPreviewContent item={contentItem} />
     </div>
   )
+}
+
+function getLockedAspectRatio(
+  contentItem: AnySidebarItemWithContent | undefined,
+  lockedAspectRatio: number | undefined,
+) {
+  if (contentItem?.type === SIDEBAR_ITEM_TYPES.gameMaps) {
+    return lockedAspectRatio
+  }
+
+  if (contentItem?.type === SIDEBAR_ITEM_TYPES.files) {
+    const hasVisualPreview =
+      resolveFilePreviewImageUrl({
+        downloadUrl: contentItem.downloadUrl,
+        contentType: contentItem.contentType,
+        previewUrl: contentItem.previewUrl,
+      }) !== null
+
+    return hasVisualPreview ? lockedAspectRatio : undefined
+  }
+
+  return undefined
 }

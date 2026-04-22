@@ -1,6 +1,7 @@
 import { Handle, useConnection } from '@xyflow/react'
 import type { Position } from '@xyflow/react'
 import { cn } from '~/features/shadcn/lib/utils'
+import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 
 const HANDLE_POSITIONS = [
   { id: 'top', position: 'top' as Position },
@@ -18,6 +19,7 @@ const HANDLE_POSITION_STYLES = {
 
 interface CanvasNodeConnectionHandlesProps {
   selected: boolean
+  preserveAnchors?: boolean
 }
 
 const BASE_HANDLE_CLASS =
@@ -26,8 +28,16 @@ const BASE_HANDLE_CLASS =
 const ACTIVE_CONNECTION_HANDLE_CLASS =
   '[&.connectionindicator]:opacity-100 [&.connectionindicator]:scale-100 [&.connectionindicator]:pointer-events-auto'
 
-export function CanvasNodeConnectionHandles({ selected }: CanvasNodeConnectionHandlesProps) {
+export function CanvasNodeConnectionHandles({
+  selected,
+  preserveAnchors = false,
+}: CanvasNodeConnectionHandlesProps) {
+  const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
   const connectionInProgress = useConnection((connection) => connection.inProgress)
+
+  if (!interactiveRenderMode && !preserveAnchors) {
+    return null
+  }
 
   return HANDLE_POSITIONS.map(({ id, position }) => (
     <Handle
@@ -40,12 +50,13 @@ export function CanvasNodeConnectionHandles({ selected }: CanvasNodeConnectionHa
       isConnectableEnd
       className={cn(
         BASE_HANDLE_CLASS,
-        selected && 'opacity-100 scale-100 pointer-events-auto',
-        connectionInProgress && ACTIVE_CONNECTION_HANDLE_CLASS,
+        interactiveRenderMode && selected && 'opacity-100 scale-100 pointer-events-auto',
+        interactiveRenderMode && connectionInProgress && ACTIVE_CONNECTION_HANDLE_CLASS,
       )}
       data-testid={`canvas-node-handle-${id}`}
       data-selected={selected ? 'true' : 'false'}
       data-connection-in-progress={connectionInProgress ? 'true' : 'false'}
+      data-anchor-only={!interactiveRenderMode ? 'true' : 'false'}
     />
   ))
 }

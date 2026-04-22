@@ -1,10 +1,10 @@
 import { Type } from 'lucide-react'
-import type { CanvasTextToolServices, CanvasToolModule } from '../canvas-tool-types'
+import type { CanvasToolModule } from '../canvas-tool-types'
 import { clearRectCreationLocalOverlay } from '../shared/rect-creation-local-overlay'
 import { RectCreationLocalOverlayLayer } from '../shared/rect-creation-local-overlay-layer'
 import { createRectangularPlacementToolController } from '../shared/create-rectangular-placement-tool'
 
-export const textToolModule: CanvasToolModule<'text', CanvasTextToolServices> = {
+export const textToolModule: CanvasToolModule<'text'> = {
   id: 'text',
   label: 'Text',
   group: 'creation',

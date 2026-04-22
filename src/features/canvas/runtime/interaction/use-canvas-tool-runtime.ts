@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react'
+import { useRef } from 'react'
 import type { RefObject } from 'react'
 import { useReactFlow, useStoreApi } from '@xyflow/react'
 import { createCanvasToolController, getCanvasToolCursor } from '../../tools/canvas-tool-modules'
@@ -48,6 +48,8 @@ export function useCanvasToolRuntime({
   const modifiers = useCanvasModifierKeys()
 
   const runtimeStateRef = useRef<CanvasToolRuntimeState | null>(null)
+  const reactFlowRef = useRef<ReturnType<typeof useReactFlow> | null>(reactFlow)
+  const storeApiRef = useRef<ReturnType<typeof useStoreApi> | null>(storeApi)
   runtimeStateRef.current = {
     commands,
     query,
@@ -57,11 +59,12 @@ export function useCanvasToolRuntime({
     editSession,
     modifiers,
   }
+  reactFlowRef.current = reactFlow
+  storeApiRef.current = storeApi
 
-  const services = useMemo<CanvasToolServices>(
-    () => createCanvasToolServices(runtimeStateRef, reactFlow, storeApi),
-    [reactFlow, storeApi],
-  )
+  const servicesRef = useRef<CanvasToolServices | null>(null)
+  servicesRef.current ??= createCanvasToolServices(runtimeStateRef, reactFlowRef, storeApiRef)
+  const services = servicesRef.current
   const controllerRef = useRef<{
     toolId: CanvasToolId
     services: CanvasToolServices
@@ -89,15 +92,17 @@ export function useCanvasToolRuntime({
 
 function createCanvasToolServices(
   runtimeStateRef: RefObject<CanvasToolRuntimeState | null>,
-  reactFlow: ReturnType<typeof useReactFlow>,
-  storeApi: ReturnType<typeof useStoreApi>,
+  reactFlowRef: RefObject<ReturnType<typeof useReactFlow> | null>,
+  storeApiRef: RefObject<ReturnType<typeof useStoreApi> | null>,
 ): CanvasToolServices {
   const getRuntimeState = () => readCanvasToolRuntimeState(runtimeStateRef)
+  const getReactFlow = () => readCanvasToolRef(reactFlowRef, 'reactFlow')
+  const getStoreApi = () => readCanvasToolRef(storeApiRef, 'storeApi')
 
   return {
     viewport: {
-      screenToFlowPosition: (position) => reactFlow.screenToFlowPosition(position),
-      getZoom: () => reactFlow.getZoom(),
+      screenToFlowPosition: (position) => getReactFlow().screenToFlowPosition(position),
+      getZoom: () => getReactFlow().getZoom(),
     },
     commands: {
       createNode: (node) => getRuntimeState().commands.createNode(node),
@@ -114,7 +119,7 @@ function createCanvasToolServices(
     query: {
       getNodes: () => getRuntimeState().query.getNodes(),
       getEdges: () => getRuntimeState().query.getEdges(),
-      getMeasuredNodes: () => getMeasuredCanvasNodesFromLookup(storeApi.getState().nodeLookup),
+      getMeasuredNodes: () => getMeasuredCanvasNodesFromLookup(getStoreApi().getState().nodeLookup),
     },
     selection: {
       replace: (selection) => getRuntimeState().selection.replace(selection),
@@ -180,4 +185,13 @@ function readCanvasToolRuntimeState(
   }
 
   return runtimeState
+}
+
+function readCanvasToolRef<T>(ref: RefObject<T | null>, label: string): T {
+  const current = ref.current
+  if (!current) {
+    throw new Error(`Canvas tool ${label} was used before initialization`)
+  }
+
+  return current
 }

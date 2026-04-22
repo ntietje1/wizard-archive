@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasAwarenessHost } from '../canvas-awareness-host'
-import * as canvasNodeRegistry from '../../nodes/canvas-node-registry'
+import * as canvasNodeModules from '../../nodes/canvas-node-modules'
 import * as canvasToolModules from '../../tools/canvas-tool-modules'
 
 const viewportMock = vi.hoisted(() => ({
@@ -26,7 +26,7 @@ describe('CanvasAwarenessHost', () => {
         Layer: () => <div data-testid="tool-awareness-layer" />,
       },
     ])
-    vi.spyOn(canvasNodeRegistry, 'getCanvasNodeAwarenessLayers').mockReturnValue([
+    vi.spyOn(canvasNodeModules, 'getCanvasNodeAwarenessLayers').mockReturnValue([
       {
         key: 'text',
         Layer: () => <div data-testid="node-awareness-layer" />,
@@ -41,7 +41,7 @@ describe('CanvasAwarenessHost', () => {
 
   it('applies the current viewport transform to the awareness layer container', () => {
     vi.spyOn(canvasToolModules, 'getCanvasToolAwarenessLayers').mockReturnValue([])
-    vi.spyOn(canvasNodeRegistry, 'getCanvasNodeAwarenessLayers').mockReturnValue([])
+    vi.spyOn(canvasNodeModules, 'getCanvasNodeAwarenessLayers').mockReturnValue([])
 
     render(<CanvasAwarenessHost remoteUsers={[]} />)
 

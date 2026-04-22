@@ -1,6 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { createCanvasProviderProps } from '../../../runtime/__tests__/canvas-runtime-test-utils'
 import { CanvasProviders } from '../../../runtime/providers/canvas-runtime-context'
+import { CanvasRenderModeProvider } from '../../../runtime/providers/canvas-render-mode-context'
 import { useCanvasSelectionState } from '../../../runtime/selection/use-canvas-selection-state'
 import {
   clearCanvasPendingSelectionPreview,
@@ -77,7 +79,7 @@ describe('ResizableNodeWrapper', () => {
     })
 
     render(
-      <CanvasProviders runtime={providerValues}>
+      <CanvasProviders {...providerValues}>
         <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
           <div>node body</div>
         </ResizableNodeWrapper>
@@ -109,7 +111,7 @@ describe('ResizableNodeWrapper', () => {
     })
 
     render(
-      <CanvasProviders runtime={providerValues}>
+      <CanvasProviders {...providerValues}>
         <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
           <div>node body</div>
         </ResizableNodeWrapper>
@@ -154,7 +156,7 @@ describe('ResizableNodeWrapper', () => {
     })
 
     render(
-      <CanvasProviders runtime={providerValues}>
+      <CanvasProviders {...providerValues}>
         <ResizableNodeWrapper id="node-1" nodeType="stroke" dragging={false}>
           <div
             style={{
@@ -188,6 +190,58 @@ describe('ResizableNodeWrapper', () => {
     expect(providerValues.nodeActions.onResize).toHaveBeenCalled()
     expect(providerValues.nodeActions.onResizeEnd).toHaveBeenCalled()
   })
+
+  it('suppresses selection chrome and resize handles in embedded read-only mode', () => {
+    useCanvasSelectionState.getState().setSelection({
+      nodeIds: ['node-1'],
+      edgeIds: [],
+    })
+
+    render(
+      <CanvasRenderModeProvider mode="embedded-readonly">
+        <CanvasProviders {...createProviderValues()}>
+          <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
+            <div>node body</div>
+          </ResizableNodeWrapper>
+        </CanvasProviders>
+      </CanvasRenderModeProvider>,
+    )
+
+    expect(screen.queryByTestId('selection-border')).toBeNull()
+    expect(screen.queryAllByTestId(/canvas-node-resize-handle-/)).toHaveLength(0)
+  })
+
+  it('locks resizing to the provided aspect ratio', () => {
+    const providerValues = createProviderValues()
+    useCanvasSelectionState.getState().setSelection({
+      nodeIds: ['node-1'],
+      edgeIds: [],
+    })
+
+    render(
+      <CanvasProviders {...providerValues}>
+        <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false} lockedAspectRatio={2}>
+          <div>node body</div>
+        </ResizableNodeWrapper>
+      </CanvasProviders>,
+    )
+
+    const handle = screen.getByTestId('canvas-node-resize-handle-bottom-right')
+    act(() => {
+      fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 90, clientY: 60 })
+      fireEvent.pointerMove(window, { pointerId: 1, clientX: 110, clientY: 65 })
+      fireEvent.pointerUp(window, { pointerId: 1, clientX: 110, clientY: 65 })
+    })
+
+    expect(providerValues.nodeActions.onResize).toHaveBeenLastCalledWith('node-1', 100, 50, {
+      x: 10,
+      y: 20,
+    })
+    expect(providerValues.nodeActions.onResizeEnd).toHaveBeenLastCalledWith('node-1', 100, 50, {
+      x: 10,
+      y: 20,
+    })
+  })
 })
 
 function renderWrapper({ selected }: { selected: boolean }) {
@@ -197,7 +251,7 @@ function renderWrapper({ selected }: { selected: boolean }) {
   })
 
   return render(
-    <CanvasProviders runtime={createProviderValues()}>
+    <CanvasProviders {...createProviderValues()}>
       <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
         <div>node body</div>
       </ResizableNodeWrapper>
@@ -206,27 +260,11 @@ function renderWrapper({ selected }: { selected: boolean }) {
 }
 
 function createProviderValues() {
-  return {
-    canEdit: true,
-    remoteHighlights: new Map(),
-    history: {
-      canUndo: false,
-      canRedo: false,
-      undo: () => undefined,
-      redo: () => undefined,
-    },
-    editSession: {
-      editingEmbedId: null,
-      setEditingEmbedId: () => undefined,
-      pendingEditNodeId: null,
-      pendingEditNodePoint: null,
-      setPendingEditNodeId: () => undefined,
-      setPendingEditNodePoint: () => undefined,
-    },
+  return createCanvasProviderProps({
     nodeActions: {
       updateNodeData: () => undefined,
       onResize: vi.fn(),
       onResizeEnd: vi.fn(),
     },
-  }
+  })
 }

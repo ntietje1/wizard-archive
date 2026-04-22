@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MiniMapNode } from '../canvas-minimap-node'
-import * as canvasNodeRegistry from '../../nodes/canvas-node-registry'
+import * as canvasNodeModules from '../../nodes/canvas-node-modules'
 
 const useInternalNodeMock = vi.hoisted(() => vi.fn())
 
@@ -19,7 +19,7 @@ describe('MiniMapNode', () => {
   })
 
   it('renders a custom minimap node when the registry provides one', () => {
-    vi.spyOn(canvasNodeRegistry, 'renderCanvasNodeMinimap').mockReturnValue(
+    vi.spyOn(canvasNodeModules, 'renderCanvasNodeMinimap').mockReturnValue(
       <circle data-testid="custom-minimap-node" cx="5" cy="5" r="5" />,
     )
 
@@ -42,7 +42,7 @@ describe('MiniMapNode', () => {
   })
 
   it('falls back to the default rectangle when the registry has no custom minimap renderer', () => {
-    vi.spyOn(canvasNodeRegistry, 'renderCanvasNodeMinimap').mockReturnValue(null)
+    vi.spyOn(canvasNodeModules, 'renderCanvasNodeMinimap').mockReturnValue(null)
 
     const { container } = render(
       <svg>

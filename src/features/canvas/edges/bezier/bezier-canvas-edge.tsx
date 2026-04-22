@@ -6,6 +6,7 @@ import {
 import { useCanvasEdgeVisualSelection } from '../shared/use-canvas-edge-visual-selection'
 import type { CanvasEdgeRendererProps } from '../canvas-edge-module-types'
 import type { CSSProperties } from 'react'
+import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 
 const SELECTED_EDGE_STYLE: CSSProperties = {
   stroke: 'var(--primary)',
@@ -13,6 +14,7 @@ const SELECTED_EDGE_STYLE: CSSProperties = {
 }
 
 export function BezierCanvasEdge(props: CanvasEdgeRendererProps) {
+  const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
   const { visuallySelected, pendingPreviewActive, pendingSelected, selected } =
     useCanvasEdgeVisualSelection(props.id)
   const geometry = buildBezierCanvasEdgeGeometryFromRenderProps(props)
@@ -49,7 +51,11 @@ export function BezierCanvasEdge(props: CanvasEdgeRendererProps) {
         labelBgBorderRadius={props.labelBgBorderRadius}
         markerStart={props.markerStart}
         markerEnd={props.markerEnd}
-        interactionWidth={props.interactionWidth ?? getBezierCanvasEdgeInteractionWidth()}
+        interactionWidth={
+          interactiveRenderMode
+            ? (props.interactionWidth ?? getBezierCanvasEdgeInteractionWidth())
+            : 0
+        }
         style={style}
       />
     </g>

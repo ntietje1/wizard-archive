@@ -7,7 +7,9 @@ import { getMiniMapStrokePath, pointsToCenterlinePathD, pointsToPathD } from './
 import type { Bounds } from '../../utils/canvas-geometry-utils'
 import { useEraseToolLocalOverlayStore } from '../../tools/erase/erase-tool-local-overlay'
 import { useCanvasNodeVisualSelection } from '../shared/use-canvas-node-visual-selection'
+import { CanvasNodeConnectionHandles } from '../shared/canvas-node-connection-handles'
 import { getStrokeSelectionPadding } from './stroke-node-interactions'
+import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 
 const HIGHLIGHT_SCALE = 0.3
 const ERASING_OPACITY = 0.3
@@ -32,7 +34,7 @@ function resolveViewBox(bounds: Bounds, fallbackWidth: number, fallbackHeight: n
   }
 }
 
-export function StrokePreview({
+function StrokePreview({
   data,
   width,
   height,
@@ -75,6 +77,7 @@ export function StrokePreview({
 }
 
 export function StrokeNode({ id, data, dragging, width, height }: NodeProps<Node<StrokeNodeData>>) {
+  const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
   const { points, size, bounds } = data
   const { zoom } = useViewport()
   const isErasing = useEraseToolLocalOverlayStore((state) => state.erasingStrokeIds.has(id))
@@ -96,7 +99,7 @@ export function StrokeNode({ id, data, dragging, width, height }: NodeProps<Node
 
   const highlightD = visuallySelected ? pointsToPathD(points, size * HIGHLIGHT_SCALE) : null
   const hitTarget =
-    hitTargetD && hitTargetViewBox ? (
+    interactiveRenderMode && hitTargetD && hitTargetViewBox ? (
       <svg
         width={svgWidth + hitPadding * 2}
         height={svgHeight + hitPadding * 2}
@@ -123,7 +126,7 @@ export function StrokeNode({ id, data, dragging, width, height }: NodeProps<Node
       </svg>
     ) : null
   const highlightPath =
-    highlightD && viewBox ? (
+    interactiveRenderMode && highlightD && viewBox ? (
       <svg
         width={svgWidth}
         height={svgHeight}
@@ -148,13 +151,18 @@ export function StrokeNode({ id, data, dragging, width, height }: NodeProps<Node
       dragging={!!dragging}
       minWidth={20}
       minHeight={20}
+      chrome={
+        !interactiveRenderMode ? (
+          <CanvasNodeConnectionHandles selected={false} preserveAnchors />
+        ) : undefined
+      }
     >
       {hitTarget}
       <StrokePreview
         data={data}
         width={svgWidth}
         height={svgHeight}
-        opacityOverride={isErasing ? ERASING_OPACITY : undefined}
+        opacityOverride={interactiveRenderMode && isErasing ? ERASING_OPACITY : undefined}
       />
       {highlightPath}
     </ResizableNodeWrapper>

@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasConditionalToolbar } from '../canvas-conditional-toolbar'
+import { createCanvasProviderProps } from '../../runtime/__tests__/canvas-runtime-test-utils'
 import { CanvasProviders } from '../../runtime/providers/canvas-runtime-context'
 import { useCanvasSelectionState } from '../../runtime/selection/use-canvas-selection-state'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
@@ -43,33 +44,31 @@ function renderToolbar({
   updateNodeData?: (nodeId: string, data: Record<string, unknown>) => void
   transact?: (fn: () => void) => void
 } = {}) {
+  const providerProps = createCanvasProviderProps({
+    nodeActions: {
+      updateNodeData,
+      transact,
+      onResize: vi.fn(),
+      onResizeEnd: vi.fn(),
+    },
+    editSession: {
+      editingEmbedId: null,
+      setEditingEmbedId: vi.fn(),
+      pendingEditNodeId: null,
+      pendingEditNodePoint: null,
+      setPendingEditNodeId: vi.fn(),
+      setPendingEditNodePoint: vi.fn(),
+    },
+    history: {
+      canUndo: false,
+      canRedo: false,
+      undo: vi.fn(),
+      redo: vi.fn(),
+    },
+  })
+
   const view = render(
-    <CanvasProviders
-      runtime={{
-        nodeActions: {
-          updateNodeData: updateNodeData as (nodeId: string, data: Record<string, unknown>) => void,
-          transact: transact as (fn: () => void) => void,
-          onResize: vi.fn(),
-          onResizeEnd: vi.fn(),
-        },
-        editSession: {
-          editingEmbedId: null,
-          setEditingEmbedId: vi.fn(),
-          pendingEditNodeId: null,
-          pendingEditNodePoint: null,
-          setPendingEditNodeId: vi.fn(),
-          setPendingEditNodePoint: vi.fn(),
-        },
-        remoteHighlights: new Map(),
-        canEdit: true,
-        history: {
-          canUndo: false,
-          canRedo: false,
-          undo: vi.fn(),
-          redo: vi.fn(),
-        },
-      }}
-    >
+    <CanvasProviders {...providerProps}>
       <CanvasConditionalToolbar canEdit />
     </CanvasProviders>,
   )

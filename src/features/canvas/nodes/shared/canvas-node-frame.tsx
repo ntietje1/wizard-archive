@@ -1,5 +1,6 @@
 import { useCanvasRemoteHighlightsContext } from '../../runtime/providers/canvas-runtime-hooks'
 import { useCanvasNodeVisualSelection } from './use-canvas-node-visual-selection'
+import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 
 interface CanvasNodeFrameProps {
   id: string
@@ -18,10 +19,11 @@ export function CanvasNodeFrame({
   chrome,
   children,
 }: CanvasNodeFrameProps) {
+  const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
   const remoteHighlights = useCanvasRemoteHighlightsContext()
   const { visuallySelected, pendingPreviewActive, pendingSelected, selected } =
     useCanvasNodeVisualSelection(id)
-  const highlight = remoteHighlights.get(id)
+  const highlight = interactiveRenderMode ? remoteHighlights.get(id) : undefined
 
   return (
     <div
@@ -36,7 +38,7 @@ export function CanvasNodeFrame({
       data-node-editing={editing ? 'true' : 'false'}
       data-node-dragging={dragging ? 'true' : 'false'}
     >
-      {(visuallySelected || highlight) && (
+      {interactiveRenderMode && (visuallySelected || highlight) && (
         <div
           data-testid="selection-border"
           className="absolute -inset-0.25 rounded-sm pointer-events-none"

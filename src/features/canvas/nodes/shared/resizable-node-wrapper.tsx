@@ -10,6 +10,7 @@ interface ResizableNodeWrapperProps {
   chrome?: React.ReactNode
   minWidth?: number
   minHeight?: number
+  lockedAspectRatio?: number
   editing?: boolean
 }
 
@@ -21,6 +22,7 @@ export function ResizableNodeWrapper({
   chrome,
   minWidth = 50,
   minHeight = 30,
+  lockedAspectRatio,
   editing = false,
 }: ResizableNodeWrapperProps) {
   const resizeHandles = useCanvasResizeSession({
@@ -28,6 +30,7 @@ export function ResizableNodeWrapper({
     dragging,
     minWidth,
     minHeight,
+    lockedAspectRatio,
   })
 
   return (

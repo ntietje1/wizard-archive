@@ -1,15 +1,10 @@
 import { forwardRef, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react'
 import { getCanvasEdgeContextMenuContributors } from '../../edges/canvas-edge-registry'
-import { getCanvasNodeContextMenuContributors } from '../../nodes/canvas-node-registry'
+import { getCanvasNodeContextMenuContributors } from '../../nodes/canvas-node-modules'
 import { useCanvasSelectionSnapshot } from '../selection/use-canvas-selection-state'
-import { buildMenu } from '~/features/context-menu/menu-builder'
 import { ContextMenuHost } from '~/features/context-menu/components/context-menu-host'
 import type { ContextMenuHostRef } from '~/features/context-menu/components/context-menu-host'
-import {
-  canvasContextMenuCommands,
-  canvasContextMenuContributors,
-  canvasContextMenuGroupConfig,
-} from './canvas-context-menu-registry'
+import { buildCanvasContextMenu } from './canvas-context-menu-registry'
 import { useCanvasContextMenuServices } from './use-canvas-context-menu-services'
 import type { CanvasSelectionController } from '../../tools/canvas-tool-types'
 import type { CanvasContextMenuContext } from './canvas-context-menu-types'
@@ -192,15 +187,12 @@ export const CanvasContextMenu = forwardRef<CanvasContextMenuRef, CanvasContextM
         : selectionType?.kind === 'edge'
           ? getCanvasEdgeContextMenuContributors(selectionType.type)
           : []
-    const contributors = [...canvasContextMenuContributors, ...selectionContributors]
 
     const menu = menuContext
-      ? buildMenu({
+      ? buildCanvasContextMenu({
           context: menuContext,
           services,
-          contributors,
-          commands: canvasContextMenuCommands,
-          groupConfig: canvasContextMenuGroupConfig,
+          contributors: selectionContributors,
         })
       : { groups: [], flatItems: [], isEmpty: true }
 

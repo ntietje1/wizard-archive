@@ -6,13 +6,13 @@ import {
   releasePointerCapture,
   screenEventToFlowPosition,
 } from '../shared/tool-module-utils'
-import type { CanvasEraseToolServices, CanvasToolModule } from '../canvas-tool-types'
+import type { CanvasToolModule } from '../canvas-tool-types'
 import {
   clearEraseToolLocalOverlay,
   setEraseToolErasingStrokeIds,
 } from './erase-tool-local-overlay'
 
-export const eraseToolModule: CanvasToolModule<'erase', CanvasEraseToolServices> = {
+export const eraseToolModule: CanvasToolModule<'erase'> = {
   id: 'erase',
   label: 'Eraser',
   group: 'creation',

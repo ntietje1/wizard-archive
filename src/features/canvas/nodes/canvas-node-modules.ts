@@ -3,11 +3,19 @@ import { strokeNodeModule } from './stroke/stroke-node-module'
 import { textNodeModule } from './text/text-node-module'
 import type {
   AnyCanvasNodeModule,
-  CanvasNodeModule,
+  CanvasNodeCreateArgs,
   CanvasNodeType,
+  CanvasNodeMinimapProps,
+  CanvasNodeModule,
 } from './canvas-node-module-types'
+import type { Node } from '@xyflow/react'
+import type { ReactNode } from 'react'
+import type { CanvasAwarenessCapability, CanvasDocumentWriter } from '../tools/canvas-tool-types'
+import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
+import type { CanvasContextMenuContributor } from '../runtime/context-menu/canvas-context-menu-types'
+import { buildCanvasNodeTypes } from './canvas-node-module-types'
 
-export const canvasNodeModules = [
+const canvasNodeModules = [
   embedNodeModule,
   strokeNodeModule,
   textNodeModule,
@@ -15,6 +23,13 @@ export const canvasNodeModules = [
 
 const canvasNodeModuleMap: Partial<Record<CanvasNodeType, AnyCanvasNodeModule>> =
   Object.fromEntries(canvasNodeModules.map((module) => [module.type, module] as const))
+type CanvasAwarenessLayer = NonNullable<CanvasAwarenessCapability['Layer']>
+
+let cachedCanvasNodeTypes: ReturnType<typeof buildCanvasNodeTypes> | null = null
+let cachedCanvasNodeAwarenessLayers: ReadonlyArray<{
+  key: CanvasNodeType
+  Layer: CanvasAwarenessLayer
+}> | null = null
 
 function isCanvasNodeType(type: string): type is CanvasNodeType {
   return type in canvasNodeModuleMap
@@ -35,4 +50,51 @@ export function getCanvasNodeModuleByType(type: string | undefined): CanvasNodeM
   }
 
   return getCanvasNodeModule(type)
+}
+
+export function getCanvasNodeTypes() {
+  cachedCanvasNodeTypes ??= buildCanvasNodeTypes(canvasNodeModules)
+  return cachedCanvasNodeTypes
+}
+
+export function renderCanvasNodeMinimap(
+  type: string | undefined,
+  props: CanvasNodeMinimapProps,
+): ReactNode | null {
+  return getCanvasNodeModuleByType(type)?.renderMinimap?.(props) ?? null
+}
+
+export function getCanvasNodeProperties(
+  node: Node,
+  updateNodeData: CanvasDocumentWriter['updateNodeData'],
+): CanvasInspectableProperties | null {
+  return getCanvasNodeModuleByType(node.type)?.properties?.({ node, updateNodeData }) ?? null
+}
+
+export function getCanvasNodeAwarenessLayers(): ReadonlyArray<{
+  key: CanvasNodeType
+  Layer: CanvasAwarenessLayer
+}> {
+  cachedCanvasNodeAwarenessLayers ??= canvasNodeModules.flatMap((module) =>
+    module.awareness?.Layer ? [{ key: module.type, Layer: module.awareness.Layer }] : [],
+  )
+
+  return cachedCanvasNodeAwarenessLayers
+}
+
+export function getCanvasNodeContextMenuContributors(
+  type: string | undefined,
+): ReadonlyArray<CanvasContextMenuContributor> {
+  return getCanvasNodeModuleByType(type)?.contextMenu?.contributors ?? []
+}
+
+export function createCanvasNodePlacement(
+  type: CanvasNodeType,
+  args: CanvasNodeCreateArgs,
+): { node: Node; startEditing: boolean } {
+  return getCanvasNodeModule(type).create(args)
+}
+
+export function createCanvasNode(type: CanvasNodeType, args: CanvasNodeCreateArgs): Node {
+  return createCanvasNodePlacement(type, args).node
 }

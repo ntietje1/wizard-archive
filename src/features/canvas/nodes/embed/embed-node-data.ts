@@ -10,10 +10,15 @@ import type { CanvasNodeSurfaceStyleData } from '../shared/canvas-node-surface-s
 
 export interface EmbedNodeData extends Record<string, unknown>, CanvasNodeSurfaceStyleData {
   sidebarItemId?: Id<'sidebarItems'>
+  lockedAspectRatio?: number
 }
 
 function readSidebarItemId(value: unknown): Id<'sidebarItems'> | undefined {
   return typeof value === 'string' && value.length > 0 ? (value as Id<'sidebarItems'>) : undefined
+}
+
+function readLockedAspectRatio(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : undefined
 }
 
 export function parseEmbedNodeData(data: Record<string, unknown>): EmbedNodeData {
@@ -22,6 +27,7 @@ export function parseEmbedNodeData(data: Record<string, unknown>): EmbedNodeData
 
   return {
     sidebarItemId: readSidebarItemId(data.sidebarItemId),
+    lockedAspectRatio: readLockedAspectRatio(data.lockedAspectRatio),
     backgroundColor: backgroundColor ?? DEFAULT_CANVAS_NODE_BACKGROUND_COLOR,
     backgroundOpacity: readCanvasNodeSurfaceOpacity(data.backgroundOpacity),
     borderStroke: borderStroke ?? DEFAULT_CANVAS_NODE_BORDER_STROKE,

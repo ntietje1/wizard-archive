@@ -3,10 +3,6 @@ import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { ClientOnly } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
-import {
-  DEFAULT_SIDEBAR_ITEM_COLOR,
-  normalizeSidebarItemColorOrDefault,
-} from 'convex/sidebarItems/validation/color'
 import { Ban, Image } from 'lucide-react'
 import { toast } from 'sonner'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
@@ -17,7 +13,6 @@ import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { EditorContextMenuRef } from '~/features/context-menu/components/editor-context-menu'
-import { PinMarker } from '~/features/editor/components/viewer/map/pin-marker'
 import {
   MAP_DROP_ZONE_TYPE,
   getDragItemId,
@@ -26,21 +21,19 @@ import {
 import { handleError } from '~/shared/utils/logger'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
-import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
-import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { useMapView } from '~/features/editor/hooks/useMapView'
 import { MapViewProvider } from '~/features/editor/contexts/map-view-context'
 import { ZoomControls } from '~/features/editor/components/viewer/zoom-controls'
-import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { cn } from '~/features/shadcn/lib/utils'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import usePersistedState from '~/shared/hooks/usePersistedState'
 import { useFileWithPreview } from '~/features/file-upload/hooks/useFileWithPreview'
 import { FileUploadSection } from '~/features/file-upload/components/file-upload-section'
+import { MapPinsLayer } from './map-pins-layer'
+import { useMapImageStatus } from './use-map-image-status'
+import { useMapRenderPins } from './use-map-render-pins'
 
 interface PinPosition {
   x: number
@@ -138,103 +131,6 @@ function MapImageContextMenuWrapper({ contextMenuRef, map }: MapImageContextMenu
   )
 }
 
-interface MapPinProps {
-  pin: MapPinWithItem
-  isGhost: boolean
-  isHovered: boolean
-  isDragging: boolean
-  isInMoveMode: boolean
-  onHover: (pinId: Id<'mapPins'> | null) => void
-  onClick: (e: React.MouseEvent | React.KeyboardEvent, pin: MapPinWithItem) => void
-  onContextMenu: (e: React.MouseEvent, pin: MapPinWithItem) => void
-  onDragStart: (e: React.MouseEvent, pin: MapPinWithItem) => void
-}
-
-function MapPin({
-  pin,
-  isGhost,
-  isHovered,
-  isDragging,
-  isInMoveMode,
-  onHover,
-  onClick,
-  onContextMenu,
-  onDragStart,
-}: MapPinProps) {
-  const ghost = isGhost
-  const visibleItem = ghost ? undefined : (pin.item ?? undefined)
-  const icon = getSidebarItemIcon(visibleItem)
-  const color = ghost
-    ? getComputedStyle(document.documentElement).getPropertyValue('--muted-foreground').trim()
-    : normalizeSidebarItemColorOrDefault(visibleItem?.color, DEFAULT_SIDEBAR_ITEM_COLOR)
-  const isHidden = pin.visible !== true
-  const baseName = ghost ? '???' : (visibleItem?.name ?? '')
-  const itemName = isHidden ? `${baseName} (hidden)` : baseName
-
-  const hoverScale = isHovered && !isDragging ? 1.2 : 1
-
-  return (
-    <div
-      data-pin-id={pin._id}
-      role="button"
-      tabIndex={0}
-      aria-label={itemName}
-      className={cn(
-        'absolute pointer-events-auto cursor-pointer',
-        isHovered && !isDragging && 'z-20',
-        isDragging && 'z-30 opacity-70',
-        isHidden && !isDragging && 'opacity-60',
-      )}
-      style={{
-        left: `${pin.x}%`,
-        top: `${pin.y}%`,
-        transform: 'translate(-50%, -100%) scale(var(--pin-scale, 1))',
-        transformOrigin: 'bottom center',
-      }}
-      onMouseEnter={() => onHover(pin._id)}
-      onMouseLeave={() => onHover(null)}
-      onClick={(e) => onClick(e, pin)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onClick(e, pin)
-        }
-      }}
-      onContextMenu={(e) => onContextMenu(e, pin)}
-      onMouseDown={(e) => {
-        if (e.ctrlKey || e.metaKey || isInMoveMode) {
-          e.preventDefault()
-          e.stopPropagation()
-          onDragStart(e, pin)
-        }
-      }}
-    >
-      <div
-        className="transition-transform duration-100 ease-out"
-        style={{
-          transform: `scale(${hoverScale})`,
-          transformOrigin: 'bottom center',
-        }}
-      >
-        <PinMarker color={color} icon={icon} />
-      </div>
-
-      <div
-        className={cn(
-          'absolute left-1/2 -translate-x-1/2 bottom-full mb-1',
-          'bg-popover text-popover-foreground px-2 py-1 rounded-md shadow-md',
-          'text-xs font-medium whitespace-nowrap',
-          'transition-all duration-100 ease-out pointer-events-none',
-          isHovered && !isDragging ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1',
-        )}
-      >
-        {itemName}
-        <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-popover" />
-      </div>
-    </div>
-  )
-}
-
 interface MapTransformState {
   scale: number
   positionX: number
@@ -256,15 +152,10 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
   const mapRef = useRef(map)
   mapRef.current = map
   const [hoveredPinId, setHoveredPinId] = useState<Id<'mapPins'> | null>(null)
-  const mapImageKey = map.imageUrl ? `${map._id}:${map.imageUrl}` : null
-  const [loadedImageKey, setLoadedImageKey] = useState<string | null>(null)
-  const [erroredImageKey, setErroredImageKey] = useState<string | null>(null)
-  const imageLoaded = mapImageKey !== null && loadedImageKey === mapImageKey
-  const imageError = mapImageKey !== null && erroredImageKey === mapImageKey
-
-  const { isDm } = useCampaign()
-  const { viewAsPlayerId } = useEditorMode()
-  const { itemsMap: allItemsMap } = useActiveSidebarItems()
+  const { imageLoaded, imageError, handleImageLoad, handleImageError } = useMapImageStatus(
+    map._id,
+    map.imageUrl,
+  )
 
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapDropData = {
@@ -279,18 +170,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
     highlightId: `map:${map._id}`,
   })
   const mapDragOutcome = useDndStore((s) => (isMapDropTarget ? s.dragOutcome : null))
-
-  const permOpts = { isDm, viewAsPlayerId, allItemsMap }
-
-  // Users with edit access see all pins (hidden ones are dimmed); view-only users only see visible pins
-  const canEditMap = effectiveHasAtLeastPermission(map, PERMISSION_LEVEL.EDIT, permOpts)
-
-  const pins = canEditMap ? map.pins : map.pins.filter((pin) => pin.visible === true)
-
-  const isPinGhost = (pin: MapPinWithItem): boolean => {
-    if (!pin.item) return true
-    return !effectiveHasAtLeastPermission(pin.item, PERMISSION_LEVEL.VIEW, permOpts)
-  }
+  const { pins, isPinGhost } = useMapRenderPins(map)
 
   const [savedTransform, setSavedTransform] = usePersistedState<MapTransformState>(
     `map-transform-${map._id}`,
@@ -656,18 +536,6 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
     lastMousePositionRef.current = { clientX: e.clientX, clientY: e.clientY }
   }
 
-  const handleImageLoad = () => {
-    if (!mapImageKey) return
-    setLoadedImageKey(mapImageKey)
-    setErroredImageKey((current) => (current === mapImageKey ? null : current))
-  }
-
-  const handleImageError = () => {
-    if (!mapImageKey) return
-    setErroredImageKey(mapImageKey)
-    setLoadedImageKey((current) => (current === mapImageKey ? null : current))
-  }
-
   const shouldDisablePanning = !!pendingPinItem || !!pendingPinMove || !!draggingPin
 
   return (
@@ -785,27 +653,19 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
                     {/* Pins container — only render after the image has loaded so
                         percentage-based positions resolve correctly */}
                     {imageLoaded && (
-                      <div ref={pinsContainerRef} className="absolute inset-0 pointer-events-none">
-                        {pins.map((pin) => {
-                          const isDraggingThis = draggingPin?.pin._id === pin._id
-                          const isInMoveMode = pendingPinMove?.pinId === pin._id
-
-                          return (
-                            <MapPin
-                              key={pin._id}
-                              pin={pin}
-                              isGhost={isPinGhost(pin)}
-                              isHovered={hoveredPinId === pin._id}
-                              isDragging={isDraggingThis}
-                              isInMoveMode={isInMoveMode}
-                              onHover={setHoveredPinId}
-                              onClick={handlePinClick}
-                              onContextMenu={handlePinContextMenu}
-                              onDragStart={handlePinDragStart}
-                            />
-                          )
-                        })}
-                      </div>
+                      <MapPinsLayer
+                        ref={pinsContainerRef}
+                        pins={pins}
+                        isPinGhost={isPinGhost}
+                        hoveredPinId={hoveredPinId}
+                        draggingPinId={draggingPin?.pin._id ?? null}
+                        moveModePinId={pendingPinMove?.pinId ?? null}
+                        interactive={true}
+                        onHover={setHoveredPinId}
+                        onClick={handlePinClick}
+                        onContextMenu={handlePinContextMenu}
+                        onDragStart={handlePinDragStart}
+                      />
                     )}
                   </div>
                 </TransformComponent>

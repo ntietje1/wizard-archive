@@ -16,12 +16,15 @@ import type { Edge, Node } from '@xyflow/react'
 import type { GameMapSnapshotData } from 'convex/gameMaps/types'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
-import { getCanvasNodeTypes } from '~/features/canvas/nodes/canvas-node-registry'
+import { getCanvasNodeTypes } from '~/features/canvas/nodes/canvas-node-modules'
+import { canvasEdgeTypes } from '~/features/canvas/edges/canvas-edge-registry'
+import { CanvasReadOnlyProviders } from '~/features/canvas/runtime/providers/canvas-read-only-providers'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { NoteContent } from '~/features/editor/components/note-content'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { PinMarker } from '~/features/editor/components/viewer/map/pin-marker'
 import { resolvePinColor, resolvePinIcon } from '~/features/editor/components/viewer/map/pin-utils'
+import { destroyBlockNoteEditor } from '~/features/editor/utils/destroy-blocknote-editor'
 import { logger } from '~/shared/utils/logger'
 
 const canvasNodeTypes = getCanvasNodeTypes()
@@ -108,7 +111,7 @@ function NoteYjsSnapshotPreview({ data }: { data: ArrayBuffer }) {
       try {
         return yDocToBlocks(editor, doc, 'document') as Array<CustomBlock>
       } finally {
-        editor._tiptapEditor.destroy()
+        destroyBlockNoteEditor(editor)
       }
     } catch (error) {
       logger.error('Failed to parse note snapshot:', error)
@@ -148,21 +151,24 @@ function CanvasSnapshotPreview({ data }: { data: ArrayBuffer }) {
 
   return (
     <div className="flex-1 min-h-0">
-      <ReactFlowProvider>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={canvasNodeTypes}
-          nodesDraggable={false}
-          nodesConnectable={false}
-          elementsSelectable={false}
-          panOnDrag
-          zoomOnScroll
-          fitView
-        >
-          <Background />
-        </ReactFlow>
-      </ReactFlowProvider>
+      <CanvasReadOnlyProviders>
+        <ReactFlowProvider>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={canvasNodeTypes}
+            edgeTypes={canvasEdgeTypes}
+            nodesDraggable={false}
+            nodesConnectable={false}
+            elementsSelectable={false}
+            panOnDrag
+            zoomOnScroll
+            fitView
+          >
+            <Background />
+          </ReactFlow>
+        </ReactFlowProvider>
+      </CanvasReadOnlyProviders>
     </div>
   )
 }

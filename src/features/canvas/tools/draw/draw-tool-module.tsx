@@ -4,7 +4,7 @@ import {
   releasePointerCapture,
   screenEventToFlowPosition,
 } from '../shared/tool-module-utils'
-import type { CanvasDrawToolServices, CanvasToolModule } from '../canvas-tool-types'
+import type { CanvasToolModule } from '../canvas-tool-types'
 import { DrawAwarenessLayer } from './draw-tool-awareness-layer'
 import { setDrawToolAwareness } from './draw-tool-awareness'
 import { clearDrawToolLocalOverlay, setDrawToolLocalDrawing } from './draw-tool-local-overlay'
@@ -20,7 +20,7 @@ import {
 } from '../../properties/canvas-property-types'
 import { constrainPointToAxis } from '../../utils/canvas-constraint-utils'
 
-export const drawToolModule: CanvasToolModule<'draw', CanvasDrawToolServices> = {
+export const drawToolModule: CanvasToolModule<'draw'> = {
   id: 'draw',
   label: 'Draw',
   group: 'creation',

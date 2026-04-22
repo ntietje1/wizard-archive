@@ -12,27 +12,29 @@ import {
   CanvasRemoteHighlightsContext,
 } from './canvas-runtime-hooks'
 
-export interface CanvasProviderValues {
+interface CanvasProvidersProps {
   canEdit: boolean
   remoteHighlights: Map<string, RemoteHighlight>
   history: CanvasHistoryController
   editSession: CanvasEditSessionState
   nodeActions: CanvasNodeActions
+  children: React.ReactNode
 }
 
 export function CanvasProviders({
-  runtime,
+  canEdit,
+  remoteHighlights,
+  history,
+  editSession,
+  nodeActions,
   children,
-}: {
-  runtime: CanvasProviderValues
-  children: React.ReactNode
-}) {
+}: CanvasProvidersProps) {
   return (
-    <CanvasPermissionsContext value={runtime.canEdit}>
-      <CanvasHistoryContext value={runtime.history}>
-        <CanvasEditSessionContext value={runtime.editSession}>
-          <CanvasNodeActionsContext value={runtime.nodeActions}>
-            <CanvasRemoteHighlightsContext value={runtime.remoteHighlights}>
+    <CanvasPermissionsContext value={canEdit}>
+      <CanvasHistoryContext value={history}>
+        <CanvasEditSessionContext value={editSession}>
+          <CanvasNodeActionsContext value={nodeActions}>
+            <CanvasRemoteHighlightsContext value={remoteHighlights}>
               {children}
             </CanvasRemoteHighlightsContext>
           </CanvasNodeActionsContext>

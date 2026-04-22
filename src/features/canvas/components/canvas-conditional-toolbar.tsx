@@ -6,7 +6,7 @@ import {
 } from '../runtime/selection/use-canvas-selection-state'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import { useCanvasToolPropertyContext } from '../stores/canvas-tool-state-controls'
-import { getCanvasNodeProperties } from '../nodes/canvas-node-registry'
+import { getCanvasNodeProperties } from '../nodes/canvas-node-modules'
 import { getCanvasToolProperties } from '../tools/canvas-tool-modules'
 import { ColorPickerPopover } from '~/shared/components/color-picker-popover'
 import { useCanvasNodeActionsContext } from '../runtime/providers/canvas-runtime-hooks'

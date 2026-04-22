@@ -29,8 +29,8 @@ vi.mock('@tanstack/react-hotkeys', () => ({
   },
 }))
 
-vi.mock('../../context-menu/use-canvas-context-menu-services', () => ({
-  useCanvasContextMenuServices: () => ({
+vi.mock('../use-canvas-selection-operations', () => ({
+  useCanvasSelectionOperations: () => ({
     copySnapshot: copySnapshotSpy,
     cutSnapshot: cutSnapshotSpy,
     deleteSnapshot: deleteSnapshotSpy,

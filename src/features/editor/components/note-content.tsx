@@ -14,6 +14,7 @@ import { useNoteYjsCollaboration } from '~/features/editor/hooks/useNoteYjsColla
 import { useOwnedBlockNoteEditor } from '~/features/editor/hooks/useOwnedBlockNoteEditor'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { getCursorColor } from '~/features/editor/utils/cursor-colors'
+import { destroyBlockNoteEditor } from '~/features/editor/utils/destroy-blocknote-editor'
 import {
   patchYSyncAfterTypeChanged,
   patchYUndoPluginDestroy,
@@ -52,7 +53,7 @@ function destroyNoteEditor(
   mode: 'static' | 'collaborative',
 ) {
   try {
-    editor._tiptapEditor.destroy()
+    destroyBlockNoteEditor(editor)
   } catch (error) {
     console.error(`Error destroying BlockNoteEditor for ${mode} note content`, {
       noteId,

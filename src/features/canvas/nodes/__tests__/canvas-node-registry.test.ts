@@ -1,11 +1,5 @@
-import { render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { getCanvasNodeModule } from '../canvas-node-modules'
-import {
-  createCanvasNode,
-  getCanvasNodeTypes,
-  renderCanvasNodePreview,
-} from '../canvas-node-registry'
+import { createCanvasNode, getCanvasNodeModule, getCanvasNodeTypes } from '../canvas-node-modules'
 
 describe('canvas node registry', () => {
   it('creates default text nodes from the text node definition', () => {
@@ -63,28 +57,5 @@ describe('canvas node registry', () => {
         size: { width: 20, height: 10 },
       }),
     ).toThrow('Missing default canvas node data for "stroke"')
-  })
-
-  describe('renderCanvasNodePreview', () => {
-    it('renders a preview for known node types', () => {
-      const preview = renderCanvasNodePreview('text', {
-        content: [
-          {
-            type: 'paragraph',
-            content: [{ type: 'text', text: 'Note' }],
-          },
-        ],
-        backgroundColor: '#fff',
-        borderStroke: null,
-      })
-
-      expect(preview).not.toBeNull()
-      const { container } = render(preview!)
-      expect(container.textContent).toContain('Note')
-    })
-
-    it('returns null for unknown node types', () => {
-      expect(renderCanvasNodePreview('unknown', {})).toBeNull()
-    })
   })
 })
