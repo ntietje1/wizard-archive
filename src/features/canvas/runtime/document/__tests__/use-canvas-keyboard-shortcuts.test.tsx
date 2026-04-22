@@ -15,7 +15,7 @@ const copySnapshotSpy = vi.hoisted(() => vi.fn(() => true))
 const cutSnapshotSpy = vi.hoisted(() => vi.fn(() => true))
 const deleteSnapshotSpy = vi.hoisted(() => vi.fn(() => true))
 const pasteClipboardSpy = vi.hoisted(() => vi.fn(() => ({ nodeIds: ['node-2'], edgeIds: [] })))
-const getCanvasSelectionSnapshotSpy = vi.hoisted(() =>
+const getSelectionSnapshotSpy = vi.hoisted(() =>
   vi.fn(() => ({ nodeIds: ['node-1'], edgeIds: [] })),
 )
 
@@ -38,10 +38,6 @@ vi.mock('../use-canvas-selection-operations', () => ({
   }),
 }))
 
-vi.mock('../../selection/use-canvas-selection-state', () => ({
-  getCanvasSelectionSnapshot: () => getCanvasSelectionSnapshotSpy(),
-}))
-
 function getRegistration(hotkey: string) {
   const registration = hotkeyRegistrations.find((entry) => entry.hotkey === hotkey)
   if (!registration) {
@@ -59,7 +55,7 @@ describe('useCanvasKeyboardShortcuts', () => {
     cutSnapshotSpy.mockClear()
     deleteSnapshotSpy.mockClear()
     pasteClipboardSpy.mockClear()
-    getCanvasSelectionSnapshotSpy.mockClear()
+    getSelectionSnapshotSpy.mockClear()
   })
 
   it('registers the canvas shortcuts through TanStack Hotkeys with input filtering enabled', () => {
@@ -68,6 +64,7 @@ describe('useCanvasKeyboardShortcuts', () => {
       redo: vi.fn(),
     }
     const selection = {
+      getSnapshot: getSelectionSnapshotSpy,
       replace: vi.fn(),
       clear: vi.fn(),
     }
@@ -109,6 +106,7 @@ describe('useCanvasKeyboardShortcuts', () => {
       redo: vi.fn(),
     }
     const selection = {
+      getSnapshot: getSelectionSnapshotSpy,
       replace: vi.fn(),
       clear: vi.fn(),
     }
@@ -181,6 +179,7 @@ describe('useCanvasKeyboardShortcuts', () => {
         nodesMap: new Map() as never,
         edgesMap: new Map() as never,
         selection: {
+          getSnapshot: getSelectionSnapshotSpy,
           replace: vi.fn(),
           clear: vi.fn(),
         },

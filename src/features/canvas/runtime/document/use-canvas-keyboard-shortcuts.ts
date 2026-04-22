@@ -1,5 +1,4 @@
 import { useHotkey } from '@tanstack/react-hotkeys'
-import { getCanvasSelectionSnapshot } from '../selection/use-canvas-selection-state'
 import { useCanvasSelectionOperations } from './use-canvas-selection-operations'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import { getCanvasToolbarTools } from '../../tools/canvas-tool-modules'
@@ -15,7 +14,7 @@ interface UseCanvasKeyboardShortcutsOptions extends Pick<CanvasHistoryController
   canEdit: boolean
   nodesMap: Y.Map<Node>
   edgesMap: Y.Map<Edge>
-  selection: Pick<CanvasSelectionController, 'replace' | 'clear'>
+  selection: Pick<CanvasSelectionController, 'getSnapshot' | 'replace' | 'clear'>
 }
 
 function isEditableKeyboardTarget(target: EventTarget | null) {
@@ -107,7 +106,7 @@ export function useCanvasKeyboardShortcuts({
         return
       }
 
-      if (selectionOperations.deleteSnapshot(getCanvasSelectionSnapshot())) {
+      if (selectionOperations.deleteSnapshot(selection.getSnapshot())) {
         event.preventDefault()
       }
     },
@@ -121,7 +120,7 @@ export function useCanvasKeyboardShortcuts({
         return
       }
 
-      if (selectionOperations.deleteSnapshot(getCanvasSelectionSnapshot())) {
+      if (selectionOperations.deleteSnapshot(selection.getSnapshot())) {
         event.preventDefault()
       }
     },
@@ -209,7 +208,7 @@ export function useCanvasKeyboardShortcuts({
     'Mod+C',
     (event) => {
       if (event.repeat) return
-      if (selectionOperations.copySnapshot(getCanvasSelectionSnapshot())) {
+      if (selectionOperations.copySnapshot(selection.getSnapshot())) {
         event.preventDefault()
       }
     },
@@ -220,7 +219,7 @@ export function useCanvasKeyboardShortcuts({
     'Mod+X',
     (event) => {
       if (event.repeat) return
-      if (selectionOperations.cutSnapshot(getCanvasSelectionSnapshot())) {
+      if (selectionOperations.cutSnapshot(selection.getSnapshot())) {
         event.preventDefault()
       }
     },

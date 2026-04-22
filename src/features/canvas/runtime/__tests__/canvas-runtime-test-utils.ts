@@ -1,40 +1,11 @@
 import { vi } from 'vitest'
-import type { CanvasDocumentWriter, CanvasSelectionController } from '../../tools/canvas-tool-types'
+import type { CanvasSelectionController } from '../../tools/canvas-tool-types'
 import type { RemoteHighlight } from '../../utils/canvas-awareness-types'
-import type { CanvasRemoteDragAnimation } from '../interaction/use-canvas-remote-drag-animation'
 import type { CanvasSessionRuntime } from '../session/use-canvas-session-state'
 
-export function createCanvasSessionRuntime(): CanvasSessionRuntime {
+function createCanvasSelectionController(): CanvasSelectionController {
   return {
-    editSession: {
-      editingEmbedId: null,
-      setEditingEmbedId: vi.fn(),
-      pendingEditNodeId: null,
-      pendingEditNodePoint: null,
-      setPendingEditNodeId: vi.fn(),
-      setPendingEditNodePoint: vi.fn(),
-    },
-    awareness: {
-      remoteUsers: [],
-      core: {
-        setLocalCursor: vi.fn(),
-        setLocalDragging: vi.fn(),
-        setLocalResizing: vi.fn(),
-        setLocalSelection: vi.fn(),
-      },
-      presence: {
-        setPresence: vi.fn(),
-      },
-    },
-    remoteUsers: [],
-    remoteDragPositions: {},
-    remoteResizeDimensions: {},
-    remoteHighlights: new Map(),
-  }
-}
-
-export function createCanvasSelectionController(): CanvasSelectionController {
-  return {
+    getSnapshot: vi.fn(() => ({ nodeIds: [], edgeIds: [] })),
     replace: vi.fn(),
     replaceNodes: vi.fn(),
     replaceEdges: vi.fn(),
@@ -46,27 +17,6 @@ export function createCanvasSelectionController(): CanvasSelectionController {
     beginGesture: vi.fn(),
     commitGestureSelection: vi.fn(),
     endGesture: vi.fn(),
-  }
-}
-
-export function createCanvasDocumentWriter(): CanvasDocumentWriter {
-  return {
-    createNode: vi.fn(),
-    updateNode: vi.fn(),
-    updateNodeData: vi.fn(),
-    resizeNode: vi.fn(),
-    deleteNodes: vi.fn(),
-    createEdge: vi.fn(),
-    deleteEdges: vi.fn(),
-    setNodePosition: vi.fn(),
-  }
-}
-
-export function createCanvasRemoteDragAnimation(): CanvasRemoteDragAnimation {
-  return {
-    hasSpring: vi.fn(() => false),
-    setTarget: vi.fn(),
-    clearNodeSprings: vi.fn(),
   }
 }
 
@@ -97,12 +47,14 @@ export function createCanvasProviderProps(
         position: { x: number; y: number },
       ) => void
     }
+    selection: CanvasSelectionController
   }> = {},
 ) {
   const {
     history: historyOverrides,
     editSession: editSessionOverrides,
     nodeActions: nodeActionsOverrides,
+    selection: selectionOverrides,
     ...restOverrides
   } = overrides
 
@@ -130,6 +82,10 @@ export function createCanvasProviderProps(
       onResize: () => undefined,
       onResizeEnd: () => undefined,
       ...nodeActionsOverrides,
+    },
+    selection: {
+      ...createCanvasSelectionController(),
+      ...selectionOverrides,
     },
     ...restOverrides,
   }

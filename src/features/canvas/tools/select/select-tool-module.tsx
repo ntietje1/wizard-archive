@@ -5,6 +5,7 @@ import { isPrimarySelectionModifier } from '../../utils/canvas-selection-utils'
 import { SelectAwarenessLayer } from './select-tool-awareness-layer'
 import { clearSelectToolLocalOverlay } from './select-tool-local-overlay'
 import { SelectToolLocalOverlayLayer } from './select-tool-local-overlay-layer'
+import { setSelectToolAwareness } from './select-tool-awareness'
 
 export const selectToolModule: CanvasToolModule<'select'> = {
   id: 'select',
@@ -13,12 +14,13 @@ export const selectToolModule: CanvasToolModule<'select'> = {
   icon: <MousePointer2 className="h-4 w-4" />,
   awareness: {
     Layer: SelectAwarenessLayer,
+    clear: (presence) => setSelectToolAwareness(presence, null),
   },
   localOverlay: {
     Layer: SelectToolLocalOverlayLayer,
     clear: clearSelectToolLocalOverlay,
   },
-  create: (services) => ({
+  createHandlers: (services) => ({
     onNodeClick: (event, node) => {
       services.selection.toggleNodeFromTarget(node.id, isPrimarySelectionModifier(event))
     },

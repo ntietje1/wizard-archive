@@ -77,13 +77,14 @@ interface CanvasMeasuredNodeReader {
   getMeasuredNodes: () => Array<CanvasMeasuredNode>
 }
 
-export interface CanvasDocumentQuery {
+interface CanvasDocumentQuery {
   getNodes: CanvasDocumentReader['getNodes']
   getEdges: CanvasDocumentReader['getEdges']
   getMeasuredNodes: CanvasMeasuredNodeReader['getMeasuredNodes']
 }
 
 export interface CanvasSelectionController {
+  getSnapshot: () => CanvasSelectionSnapshot
   replace: (selection: CanvasSelectionSnapshot) => void
   replaceNodes: (nodeIds: Array<string>) => void
   replaceEdges: (edgeIds: Array<string>) => void
@@ -114,7 +115,7 @@ export interface CanvasViewportTools {
   getZoom: () => number
 }
 
-export interface CanvasToolStateControls {
+interface CanvasToolStateControls {
   getSettings: () => CanvasToolSettings
   getActiveTool: () => CanvasToolId
   setActiveTool: (tool: CanvasToolId) => void
@@ -141,7 +142,7 @@ export interface CanvasAwarenessPresenceWriter {
   setPresence: (namespace: CanvasAwarenessNamespace, value: unknown) => void
 }
 
-export interface CanvasAwarenessWriter {
+interface CanvasAwarenessWriter {
   core: CanvasCoreAwarenessWriter
   presence: CanvasAwarenessPresenceWriter
 }
@@ -155,7 +156,7 @@ export interface CanvasLocalOverlayCapability {
   clear: () => void
 }
 
-export interface CanvasToolServices {
+export interface CanvasToolRuntime {
   viewport: CanvasViewportTools
   commands: CanvasDocumentWriter
   query: CanvasDocumentQuery
@@ -167,7 +168,7 @@ export interface CanvasToolServices {
   awareness: CanvasAwarenessWriter
 }
 
-export interface CanvasToolController {
+export interface CanvasToolHandlers {
   onPointerDown?: (event: PointerEvent) => void
   onPointerMove?: (event: PointerEvent) => void
   onPointerUp?: (event: PointerEvent) => void
@@ -188,9 +189,11 @@ export interface CanvasToolModule<TId extends CanvasToolId = CanvasToolId> {
   icon: ReactNode
   cursor?: string
   properties?: (context: CanvasToolPropertyContext) => CanvasInspectableProperties
-  awareness?: CanvasAwarenessCapability
+  awareness?: CanvasAwarenessCapability & {
+    clear?: (presence: CanvasAwarenessPresenceWriter) => void
+  }
   localOverlay?: CanvasLocalOverlayCapability
-  create: (services: CanvasToolServices) => CanvasToolController
+  createHandlers: (runtime: CanvasToolRuntime) => CanvasToolHandlers
 }
 
 export type AnyCanvasToolModule = {

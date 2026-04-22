@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useRef } from 'react'
-import { useReactFlow } from '@xyflow/react'
 import type {
   RichEmbedActivationPayload,
   RichEmbedLifecycleController,
 } from '../embed/use-rich-embed-lifecycle'
-import { useCanvasEditSessionContext } from '../../runtime/providers/canvas-runtime-hooks'
+import {
+  useCanvasEditSessionContext,
+  useCanvasSelectionContext,
+} from '../../runtime/providers/canvas-runtime-hooks'
 import {
   useIsCanvasNodeSelected,
   useSelectedCanvasNodeIds,
 } from '../../runtime/selection/use-canvas-selection-state'
-import { replaceCanvasSelection } from '../../runtime/selection/use-canvas-selection-actions'
 import { isExclusivelySelectedNode } from '../../utils/canvas-selection-utils'
 
 interface UseCanvasEditableNodeSessionOptions {
@@ -25,8 +26,8 @@ export function useCanvasEditableNodeSession({
   editing,
   setEditing,
 }: UseCanvasEditableNodeSessionOptions) {
-  const reactFlow = useReactFlow()
   const editSession = useCanvasEditSessionContext()
+  const selection = useCanvasSelectionContext()
   const selectedNodeIds = useSelectedCanvasNodeIds()
   const isSelected = useIsCanvasNodeSelected(id)
   const isExclusivelySelected = isExclusivelySelectedNode(selectedNodeIds, id)
@@ -70,7 +71,7 @@ export function useCanvasEditableNodeSession({
     }
 
     if (!isSelected) {
-      replaceCanvasSelection(reactFlow, { nodeIds: [id], edgeIds: [] })
+      selection.replace({ nodeIds: [id], edgeIds: [] })
       return
     }
 
@@ -85,8 +86,8 @@ export function useCanvasEditableNodeSession({
     hasPendingAutoEdit,
     id,
     isSelected,
-    reactFlow,
     scheduleEditingChange,
+    selection,
   ])
 
   useEffect(() => {

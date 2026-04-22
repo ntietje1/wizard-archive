@@ -4,6 +4,7 @@ import type {
   CanvasEditSessionState,
   CanvasHistoryController,
   CanvasNodeActions,
+  CanvasSelectionController,
 } from '../../tools/canvas-tool-types'
 
 function createRequiredCanvasContext<TValue>(name: string) {
@@ -33,6 +34,9 @@ export const [CanvasEditSessionContext, useCanvasEditSessionContext] =
 
 export const [CanvasNodeActionsContext, useCanvasNodeActionsContext] =
   createRequiredCanvasContext<CanvasNodeActions>('CanvasNodeActionsContext')
+
+export const [CanvasSelectionContext, useCanvasSelectionContext] =
+  createRequiredCanvasContext<CanvasSelectionController>('CanvasSelectionContext')
 
 export const [CanvasRemoteHighlightsContext, useCanvasRemoteHighlightsContext] =
   createRequiredCanvasContext<Map<string, RemoteHighlight>>('CanvasRemoteHighlightsContext')

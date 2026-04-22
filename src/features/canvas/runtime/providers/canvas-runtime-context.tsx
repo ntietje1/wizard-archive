@@ -3,6 +3,7 @@ import type {
   CanvasEditSessionState,
   CanvasHistoryController,
   CanvasNodeActions,
+  CanvasSelectionController,
 } from '../../tools/canvas-tool-types'
 import {
   CanvasEditSessionContext,
@@ -10,6 +11,7 @@ import {
   CanvasNodeActionsContext,
   CanvasPermissionsContext,
   CanvasRemoteHighlightsContext,
+  CanvasSelectionContext,
 } from './canvas-runtime-hooks'
 
 interface CanvasProvidersProps {
@@ -18,6 +20,7 @@ interface CanvasProvidersProps {
   history: CanvasHistoryController
   editSession: CanvasEditSessionState
   nodeActions: CanvasNodeActions
+  selection: CanvasSelectionController
   children: React.ReactNode
 }
 
@@ -27,17 +30,20 @@ export function CanvasProviders({
   history,
   editSession,
   nodeActions,
+  selection,
   children,
 }: CanvasProvidersProps) {
   return (
     <CanvasPermissionsContext value={canEdit}>
       <CanvasHistoryContext value={history}>
         <CanvasEditSessionContext value={editSession}>
-          <CanvasNodeActionsContext value={nodeActions}>
-            <CanvasRemoteHighlightsContext value={remoteHighlights}>
-              {children}
-            </CanvasRemoteHighlightsContext>
-          </CanvasNodeActionsContext>
+          <CanvasSelectionContext value={selection}>
+            <CanvasNodeActionsContext value={nodeActions}>
+              <CanvasRemoteHighlightsContext value={remoteHighlights}>
+                {children}
+              </CanvasRemoteHighlightsContext>
+            </CanvasNodeActionsContext>
+          </CanvasSelectionContext>
         </CanvasEditSessionContext>
       </CanvasHistoryContext>
     </CanvasPermissionsContext>

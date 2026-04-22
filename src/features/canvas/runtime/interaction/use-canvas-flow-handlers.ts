@@ -1,17 +1,40 @@
-import type { CanvasFlowShellProps } from '../../components/canvas-flow-shell'
-import type { CanvasDocumentWriter, CanvasToolController } from '../../tools/canvas-tool-types'
-import type { Connection, Edge, Node } from '@xyflow/react'
+import type { CanvasDocumentWriter, CanvasToolHandlers } from '../../tools/canvas-tool-types'
+import type {
+  Connection,
+  Edge,
+  Node,
+  OnConnect,
+  OnEdgesDelete,
+  OnNodeDrag,
+  OnNodesDelete,
+} from '@xyflow/react'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 
+export interface CanvasFlowHandlers {
+  onNodeDragStart?: OnNodeDrag
+  onNodeDrag?: OnNodeDrag
+  onNodeDragStop?: OnNodeDrag
+  onNodesDelete?: OnNodesDelete
+  onEdgesDelete?: OnEdgesDelete
+  onConnect?: OnConnect
+  onMoveStart?: (event: MouseEvent | TouchEvent | null) => void
+  onMoveEnd?: () => void
+  onNodeClick?: (event: ReactMouseEvent, node: Node) => void
+  onEdgeClick?: (event: ReactMouseEvent, edge: Edge) => void
+  onPaneClick?: (event: ReactMouseEvent) => void
+  onMouseMove: (event: ReactMouseEvent) => void
+  onMouseLeave: () => void
+}
+
 export function useCanvasFlowHandlers({
-  activeToolController,
+  activeToolHandlers,
   canEdit,
   cursorPresence,
   documentWriter,
   dragHandlers,
   isSelectMode,
 }: {
-  activeToolController: CanvasToolController
+  activeToolHandlers: CanvasToolHandlers
   canEdit: boolean
   isSelectMode: boolean
   cursorPresence: {
@@ -20,9 +43,9 @@ export function useCanvasFlowHandlers({
   }
   documentWriter: CanvasDocumentWriter
   dragHandlers: {
-    onNodeDragStart: NonNullable<CanvasFlowShellProps['flowHandlers']['onNodeDragStart']>
-    onNodeDrag: NonNullable<CanvasFlowShellProps['flowHandlers']['onNodeDrag']>
-    onNodeDragStop: NonNullable<CanvasFlowShellProps['flowHandlers']['onNodeDragStop']>
+    onNodeDragStart: NonNullable<CanvasFlowHandlers['onNodeDragStart']>
+    onNodeDrag: NonNullable<CanvasFlowHandlers['onNodeDrag']>
+    onNodeDragStop: NonNullable<CanvasFlowHandlers['onNodeDragStop']>
   }
 }) {
   return {
@@ -47,12 +70,12 @@ export function useCanvasFlowHandlers({
             documentWriter.createEdge(connection)
           }
         : undefined,
-    onMoveStart: activeToolController.onMoveStart,
-    onMoveEnd: activeToolController.onMoveEnd,
-    onNodeClick: activeToolController.onNodeClick,
-    onEdgeClick: activeToolController.onEdgeClick,
-    onPaneClick: activeToolController.onPaneClick,
+    onMoveStart: activeToolHandlers.onMoveStart,
+    onMoveEnd: activeToolHandlers.onMoveEnd,
+    onNodeClick: activeToolHandlers.onNodeClick,
+    onEdgeClick: activeToolHandlers.onEdgeClick,
+    onPaneClick: activeToolHandlers.onPaneClick,
     onMouseMove: cursorPresence.onMouseMove,
     onMouseLeave: cursorPresence.onMouseLeave,
-  } satisfies CanvasFlowShellProps['flowHandlers']
+  } satisfies CanvasFlowHandlers
 }

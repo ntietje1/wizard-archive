@@ -22,12 +22,13 @@ export const lassoToolModule: CanvasToolModule<'lasso'> = {
   cursor: 'crosshair',
   awareness: {
     Layer: LassoAwarenessLayer,
+    clear: (presence) => setLassoToolAwareness(presence, null),
   },
   localOverlay: {
     Layer: LassoToolLocalOverlayLayer,
     clear: clearLassoToolLocalOverlay,
   },
-  create: (services) => {
+  createHandlers: (services) => {
     let points: Array<{ x: number; y: number }> = []
     let active = false
     let captureTarget: Element | null = null

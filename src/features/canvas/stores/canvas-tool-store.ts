@@ -1,7 +1,7 @@
 import { create } from 'zustand'
-import type { CanvasToolId } from '../tools/canvas-tool-types'
+import { useShallow } from 'zustand/shallow'
 import { STROKE_SIZE_OPTIONS } from '../properties/canvas-property-definitions'
-import { clearCanvasToolLocalOverlays } from '../tools/canvas-tool-modules'
+import type { CanvasToolId, CanvasToolPropertyContext } from '../tools/canvas-tool-types'
 
 interface CanvasToolState {
   activeTool: CanvasToolId
@@ -28,17 +28,38 @@ const INITIAL_STATE: CanvasToolState = {
 export const useCanvasToolStore = create<CanvasToolState & CanvasToolActions>((set) => ({
   ...INITIAL_STATE,
 
-  setActiveTool: (tool) => {
-    clearCanvasToolLocalOverlays()
-    set({ activeTool: tool })
-  },
+  setActiveTool: (tool) => set({ activeTool: tool }),
 
   setStrokeColor: (color) => set({ strokeColor: color }),
   setStrokeSize: (size) => set({ strokeSize: size }),
   setStrokeOpacity: (opacity) => set({ strokeOpacity: opacity }),
 
-  reset: () => {
-    clearCanvasToolLocalOverlays()
-    set(INITIAL_STATE)
-  },
+  reset: () => set(INITIAL_STATE),
 }))
+
+export function useCanvasToolPropertyContext(): CanvasToolPropertyContext {
+  const subscribedSettings = useCanvasToolStore(
+    useShallow((state) => ({
+      strokeColor: state.strokeColor,
+      strokeOpacity: state.strokeOpacity,
+      strokeSize: state.strokeSize,
+    })),
+  )
+  void subscribedSettings
+
+  return {
+    toolState: {
+      getSettings: () => {
+        const { strokeColor, strokeOpacity, strokeSize } = useCanvasToolStore.getState()
+        return {
+          strokeColor,
+          strokeOpacity,
+          strokeSize,
+        }
+      },
+      setStrokeColor: (color) => useCanvasToolStore.getState().setStrokeColor(color),
+      setStrokeOpacity: (opacity) => useCanvasToolStore.getState().setStrokeOpacity(opacity),
+      setStrokeSize: (size) => useCanvasToolStore.getState().setStrokeSize(size),
+    },
+  }
+}

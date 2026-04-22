@@ -45,12 +45,13 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
   },
   awareness: {
     Layer: DrawAwarenessLayer,
+    clear: (presence) => setDrawToolAwareness(presence, null),
   },
   localOverlay: {
     Layer: DrawToolLocalOverlayLayer,
     clear: clearDrawToolLocalOverlay,
   },
-  create: (services) => {
+  createHandlers: (services) => {
     let rawPoints: Array<[number, number, number]> = []
     let captureTarget: Element | null = null
     let pointerId: number | null = null

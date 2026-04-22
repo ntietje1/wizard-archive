@@ -6,14 +6,14 @@ import {
   setPointerCapture,
 } from './tool-module-utils'
 import { setRectCreationDragRect } from './rect-creation-local-overlay'
-import type { CanvasToolController, CanvasToolServices } from '../canvas-tool-types'
+import type { CanvasToolHandlers, CanvasToolRuntime } from '../canvas-tool-types'
 import type { CanvasNodeType } from '../../nodes/canvas-node-module-types'
 
 const MIN_DRAG_RECT_SIZE = 10
 
 export function createRectangularPlacementToolController<
   TNodeType extends Extract<CanvasNodeType, 'text'>,
->(nodeType: TNodeType, services: CanvasToolServices): CanvasToolController {
+>(nodeType: TNodeType, services: CanvasToolRuntime): CanvasToolHandlers {
   let start: { x: number; y: number } | null = null
   let lastClientPos = { x: 0, y: 0 }
   let active = false

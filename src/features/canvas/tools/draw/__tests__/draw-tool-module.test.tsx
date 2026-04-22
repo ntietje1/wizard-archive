@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { drawToolModule } from '../draw-tool-module'
 import { clearDrawToolLocalOverlay, useDrawToolLocalOverlayStore } from '../draw-tool-local-overlay'
-import type { CanvasToolServices } from '../../canvas-tool-types'
+import type { CanvasToolRuntime } from '../../canvas-tool-types'
 
 type MockPointerTarget = HTMLDivElement & {
   setPointerCapture: (pointerId: number) => void
@@ -34,7 +34,7 @@ describe('drawToolModule', () => {
     const createNode = vi.fn()
     const setPresence = vi.fn()
     clearDrawToolLocalOverlay()
-    const controller = drawToolModule.create(
+    const controller = drawToolModule.createHandlers(
       createDrawEnvironment({
         createNode,
         setPresence,
@@ -83,7 +83,7 @@ describe('drawToolModule', () => {
 
   it('locks stroke creation to a straight axis-aligned line while shift is held', () => {
     const createNode = vi.fn()
-    const controller = drawToolModule.create(
+    const controller = drawToolModule.createHandlers(
       createDrawEnvironment({
         createNode,
         setPresence: vi.fn(),
@@ -117,7 +117,7 @@ function createDrawEnvironment({
   createNode: (node: unknown) => void
   setPresence: (namespace: string, value: unknown) => void
   getShiftPressed?: () => boolean
-}): CanvasToolServices {
+}): CanvasToolRuntime {
   return {
     viewport: {
       screenToFlowPosition: ({ x, y }) => ({ x, y }),
@@ -139,6 +139,7 @@ function createDrawEnvironment({
       getMeasuredNodes: () => [],
     },
     selection: {
+      getSnapshot: () => ({ nodeIds: [], edgeIds: [] }),
       replace: () => undefined,
       replaceNodes: () => undefined,
       replaceEdges: () => undefined,

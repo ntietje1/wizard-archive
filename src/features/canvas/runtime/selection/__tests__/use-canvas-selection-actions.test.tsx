@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { useCanvasSelectionActions } from '../use-canvas-selection-actions'
+import { useCanvasSelectionController } from '../use-canvas-selection-actions'
 import {
   useCanvasSelectionState,
   useIsCanvasSelectionGestureActive,
@@ -48,14 +48,14 @@ vi.mock('@xyflow/react', () => ({
   useReactFlow: () => reactFlowMock,
 }))
 
-describe('useCanvasSelectionActions', () => {
+describe('useCanvasSelectionController', () => {
   beforeEach(() => {
     reactFlowMock.reset()
     useCanvasSelectionState.getState().reset()
   })
 
   it('sets authoritative selected ids and projects them onto React Flow nodes and edges', () => {
-    const { result } = renderHook(() => useCanvasSelectionActions())
+    const { result } = renderHook(() => useCanvasSelectionController())
 
     act(() => {
       result.current.replace({ nodeIds: ['a', 'b'], edgeIds: ['e-a-b'] })
@@ -73,7 +73,7 @@ describe('useCanvasSelectionActions', () => {
   })
 
   it('clears authoritative selected ids and the projected React Flow selection together', () => {
-    const { result } = renderHook(() => useCanvasSelectionActions())
+    const { result } = renderHook(() => useCanvasSelectionController())
 
     act(() => {
       result.current.replaceNodes(['a'])
@@ -100,7 +100,7 @@ describe('useCanvasSelectionActions', () => {
   })
 
   it('tracks unknown ids without projecting selection onto React Flow nodes or edges', () => {
-    const { result } = renderHook(() => useCanvasSelectionActions())
+    const { result } = renderHook(() => useCanvasSelectionController())
 
     act(() => {
       result.current.replaceNodes(['z'])
@@ -118,7 +118,7 @@ describe('useCanvasSelectionActions', () => {
   })
 
   it('keeps the projected selection empty when clear runs with nothing selected', () => {
-    const { result } = renderHook(() => useCanvasSelectionActions())
+    const { result } = renderHook(() => useCanvasSelectionController())
 
     act(() => {
       result.current.clear()
@@ -136,7 +136,7 @@ describe('useCanvasSelectionActions', () => {
   })
 
   it('does not select edges when only nodes are selected', () => {
-    const { result } = renderHook(() => useCanvasSelectionActions())
+    const { result } = renderHook(() => useCanvasSelectionController())
 
     act(() => {
       result.current.replaceNodes(['a'])
@@ -153,9 +153,9 @@ describe('useCanvasSelectionActions', () => {
     ])
   })
 
-  it('defers node toggle selection updates through the controller and keeps gesture activity derived', async () => {
+  it('updates node toggle selection synchronously and keeps gesture activity derived', () => {
     const { result } = renderHook(() => ({
-      selection: useCanvasSelectionActions(),
+      selection: useCanvasSelectionController(),
       isGestureActive: useIsCanvasSelectionGestureActive(),
     }))
 
@@ -173,17 +173,11 @@ describe('useCanvasSelectionActions', () => {
       result.current.selection.toggleNodeFromTarget('a', false)
     })
 
-    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual([])
-
-    await act(async () => {
-      await Promise.resolve()
-    })
-
     expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(['a'])
   })
 
-  it('supports edge-only selection snapshots and edge toggle selection', async () => {
-    const { result } = renderHook(() => useCanvasSelectionActions())
+  it('supports edge-only selection snapshots and edge toggle selection', () => {
+    const { result } = renderHook(() => useCanvasSelectionController())
 
     act(() => {
       result.current.replaceEdges(['e-a-b'])
@@ -199,10 +193,6 @@ describe('useCanvasSelectionActions', () => {
       result.current.toggleEdgeFromTarget('e-a-b', true)
     })
 
-    await act(async () => {
-      await Promise.resolve()
-    })
-
     expect(useCanvasSelectionState.getState().selectedEdgeIds).toEqual([])
     expect(reactFlowMock.getEdges()).toEqual([
       expect.objectContaining({ id: 'e-a-b', selected: false }),
@@ -210,7 +200,7 @@ describe('useCanvasSelectionActions', () => {
   })
 
   it('unions committed gesture selection with the existing committed ids in additive mode', () => {
-    const { result } = renderHook(() => useCanvasSelectionActions())
+    const { result } = renderHook(() => useCanvasSelectionController())
 
     act(() => {
       result.current.replace({ nodeIds: ['a'], edgeIds: [] })

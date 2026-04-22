@@ -5,7 +5,6 @@ import {
   defaultStyleSpecs,
 } from '@blocknote/core'
 import type {
-  Block,
   BlockNoteEditor,
   BlockSpecs,
   InlineContentSpecs,
@@ -26,15 +25,15 @@ const {
 
 const { link: _link, ...canvasInlineContentSpecs } = defaultInlineContentSpecs
 
-export const canvasRichTextBlockSpecs = {
+const canvasRichTextBlockSpecs = {
   ...canvasBlockSpecs,
 } as BlockSpecs
 
-export const canvasRichTextInlineContentSpecs = {
+const canvasRichTextInlineContentSpecs = {
   ...canvasInlineContentSpecs,
 } as InlineContentSpecs
 
-export const canvasRichTextStyleSpecs = {
+const canvasRichTextStyleSpecs = {
   ...defaultStyleSpecs,
 } satisfies StyleSpecs
 
@@ -44,16 +43,9 @@ export const canvasRichTextEditorSchema = BlockNoteSchema.create({
   styleSpecs: canvasRichTextStyleSpecs,
 })
 
-export type CanvasRichTextBlockSchema = typeof canvasRichTextEditorSchema.blockSchema
-export type CanvasRichTextInlineContentSchema =
-  typeof canvasRichTextEditorSchema.inlineContentSchema
-export type CanvasRichTextStyleSchema = typeof canvasRichTextEditorSchema.styleSchema
-
-export type CanvasRichTextBlock = Block<
-  CanvasRichTextBlockSchema,
-  CanvasRichTextInlineContentSchema,
-  CanvasRichTextStyleSchema
->
+type CanvasRichTextBlockSchema = typeof canvasRichTextEditorSchema.blockSchema
+type CanvasRichTextInlineContentSchema = typeof canvasRichTextEditorSchema.inlineContentSchema
+type CanvasRichTextStyleSchema = typeof canvasRichTextEditorSchema.styleSchema
 
 export type CanvasRichTextPartialBlock = PartialBlock<
   CanvasRichTextBlockSchema,

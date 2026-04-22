@@ -13,7 +13,7 @@ describe('textToolModule', () => {
     const setPendingEditNodePoint = vi.fn()
     const setActiveTool = vi.fn()
     const replaceSelection = vi.fn()
-    const controller = textToolModule.create(
+    const controller = textToolModule.createHandlers(
       createPlacementEnvironment({
         activeTool: 'text',
         createNode: (node) => {
@@ -46,7 +46,7 @@ describe('textToolModule', () => {
 
   it('creates a custom-sized text node on drag', () => {
     const createdNodes: Array<Node> = []
-    const controller = textToolModule.create(
+    const controller = textToolModule.createHandlers(
       createPlacementEnvironment({
         activeTool: 'text',
         createNode: (node) => {

@@ -7,7 +7,7 @@ export const handToolModule: CanvasToolModule<'hand'> = {
   group: 'selection',
   icon: <Hand className="h-4 w-4" />,
   cursor: 'grab',
-  create: (services) => {
+  createHandlers: (services) => {
     let gestureActive = false
 
     return {

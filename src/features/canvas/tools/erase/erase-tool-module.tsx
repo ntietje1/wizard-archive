@@ -21,7 +21,7 @@ export const eraseToolModule: CanvasToolModule<'erase'> = {
   localOverlay: {
     clear: clearEraseToolLocalOverlay,
   },
-  create: (services) => {
+  createHandlers: (services) => {
     let trail: Array<{ x: number; y: number }> = []
     let marked = new Set<string>()
     let erasing = false

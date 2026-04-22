@@ -14,5 +14,5 @@ export const textToolModule: CanvasToolModule<'text'> = {
     Layer: RectCreationLocalOverlayLayer,
     clear: clearRectCreationLocalOverlay,
   },
-  create: (services) => createRectangularPlacementToolController('text', services),
+  createHandlers: (services) => createRectangularPlacementToolController('text', services),
 }

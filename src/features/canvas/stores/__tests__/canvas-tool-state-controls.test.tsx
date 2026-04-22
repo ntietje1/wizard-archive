@@ -1,7 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { useCanvasToolPropertyContext } from '../canvas-tool-state-controls'
-import { useCanvasToolStore } from '../canvas-tool-store'
+import { useCanvasToolPropertyContext, useCanvasToolStore } from '../canvas-tool-store'
 
 describe('useCanvasToolPropertyContext', () => {
   beforeEach(() => {

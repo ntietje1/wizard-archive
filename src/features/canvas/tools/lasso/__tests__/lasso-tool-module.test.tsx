@@ -12,7 +12,7 @@ import type { Edge, Node } from '@xyflow/react'
 import type {
   CanvasMeasuredNode,
   CanvasToolId,
-  CanvasToolServices,
+  CanvasToolRuntime,
   CanvasSelectionCommitMode,
 } from '../../canvas-tool-types'
 
@@ -53,7 +53,7 @@ function createEmbedNode(id: string, x: number, y: number): CanvasMeasuredNode {
 }
 
 function drawRectangleLasso(
-  controller: ReturnType<typeof lassoToolModule.create>,
+  controller: ReturnType<typeof lassoToolModule.createHandlers>,
   target: Element,
   pointerDownOverrides: Partial<PointerEvent> = {},
 ) {
@@ -133,7 +133,7 @@ describe('lassoToolModule', () => {
       setPresence,
     })
 
-    const controller = lassoToolModule.create(runtime)
+    const controller = lassoToolModule.createHandlers(runtime)
     const target = createPointerTarget()
 
     drawRectangleLasso(controller, target)
@@ -178,7 +178,7 @@ describe('lassoToolModule', () => {
   })
 
   it('publishes a fresh local lasso path array on each pointer update so the local overlay rerenders', () => {
-    const controller = lassoToolModule.create(
+    const controller = lassoToolModule.createHandlers(
       createLassoEnvironment({
         getMeasuredNodes: () => [],
         getNodes: () => [],
@@ -223,7 +223,7 @@ describe('lassoToolModule', () => {
   it('clears selection when no measured nodes fall inside the lasso', () => {
     const commitGestureSelection = vi.fn()
     const clear = vi.fn()
-    const controller = lassoToolModule.create(
+    const controller = lassoToolModule.createHandlers(
       createLassoEnvironment({
         getMeasuredNodes: () => [createEmbedNode('outside-node', 200, 200)],
         getNodes: () => [createEmbedNode('outside-node', 200, 200)],
@@ -251,7 +251,7 @@ describe('lassoToolModule', () => {
     const clear = vi.fn()
     const commitGestureSelection = vi.fn()
     const endGesture = vi.fn()
-    const controller = lassoToolModule.create(
+    const controller = lassoToolModule.createHandlers(
       createLassoEnvironment({
         getMeasuredNodes: () => [],
         getNodes: () => [],
@@ -279,7 +279,7 @@ describe('lassoToolModule', () => {
   it('selects nodes and edges when the lasso contacts them', () => {
     const commitGestureSelection = vi.fn()
     const suppressNextSurfaceClick = vi.fn()
-    const controller = lassoToolModule.create(
+    const controller = lassoToolModule.createHandlers(
       createLassoEnvironment({
         getMeasuredNodes: () => [
           createEmbedNode('inside-node', 20, 20),
@@ -327,7 +327,7 @@ describe('lassoToolModule', () => {
 
   it('commits additive lasso selection when the primary modifier is held at gesture start', () => {
     const commitGestureSelection = vi.fn()
-    const controller = lassoToolModule.create(
+    const controller = lassoToolModule.createHandlers(
       createLassoEnvironment({
         getMeasuredNodes: () => [createEmbedNode('inside-node', 20, 20)],
         getNodes: () => [createEmbedNode('inside-node', 20, 20)],
@@ -355,7 +355,7 @@ describe('lassoToolModule', () => {
   })
 
   it('keeps already-selected items in the additive lasso preview', () => {
-    const controller = lassoToolModule.create(
+    const controller = lassoToolModule.createHandlers(
       createLassoEnvironment({
         getMeasuredNodes: () => [createEmbedNode('inside-node', 20, 20)],
         getNodes: () => [createEmbedNode('inside-node', 20, 20)],
@@ -383,7 +383,7 @@ describe('lassoToolModule', () => {
 
   it('keeps lasso active after successful commit and after too-small gestures', () => {
     const setActiveTool = vi.fn()
-    const controller = lassoToolModule.create(
+    const controller = lassoToolModule.createHandlers(
       createLassoEnvironment({
         getMeasuredNodes: () => [],
         getNodes: () => [],
@@ -410,7 +410,7 @@ describe('lassoToolModule', () => {
 
   it('keeps lasso active after pointer cancellation', () => {
     const setActiveTool = vi.fn()
-    const controller = lassoToolModule.create(
+    const controller = lassoToolModule.createHandlers(
       createLassoEnvironment({
         getMeasuredNodes: () => [],
         getNodes: () => [],
@@ -461,7 +461,7 @@ function createLassoEnvironment({
   clearSelection?: () => void
   selectedNodeIds?: Array<string>
   selectedEdgeIds?: Array<string>
-}): CanvasToolServices {
+}): CanvasToolRuntime {
   return {
     viewport: {
       screenToFlowPosition: ({ x, y }) => ({ x, y }),
@@ -483,6 +483,7 @@ function createLassoEnvironment({
       getMeasuredNodes,
     },
     selection: {
+      getSnapshot: () => ({ nodeIds: selectedNodeIds, edgeIds: selectedEdgeIds }),
       replace: vi.fn(),
       replaceNodes: vi.fn(),
       replaceEdges: vi.fn(),

@@ -1,25 +1,25 @@
 import { useEffect, useRef } from 'react'
-import type { CanvasToolController } from '../../tools/canvas-tool-types'
+import type { CanvasToolHandlers } from '../../tools/canvas-tool-types'
 
 interface UseCanvasPointerBridgeOptions {
   surfaceRef: React.RefObject<HTMLDivElement | null>
-  activeToolController: CanvasToolController
+  activeToolHandlers: CanvasToolHandlers
 }
 
 export function useCanvasPointerBridge({
   surfaceRef,
-  activeToolController,
+  activeToolHandlers,
 }: UseCanvasPointerBridgeOptions) {
-  const toolControllerRef = useRef(activeToolController)
-  toolControllerRef.current = activeToolController
+  const toolHandlersRef = useRef(activeToolHandlers)
+  toolHandlersRef.current = activeToolHandlers
 
   useEffect(() => {
     const surfaceElement = surfaceRef.current
     if (!surfaceElement) return
 
     const onPointerDown = (event: PointerEvent) => {
-      const controller = toolControllerRef.current
-      if (!controller.onPointerDown || event.button !== 0) return
+      const handlers = toolHandlersRef.current
+      if (!handlers.onPointerDown || event.button !== 0) return
       if (
         !event.target ||
         !(event.target instanceof Element) ||
@@ -28,27 +28,27 @@ export function useCanvasPointerBridge({
         return
       }
 
-      controller.onPointerDown(event)
+      handlers.onPointerDown(event)
     }
 
     const onPointerMove = (event: PointerEvent) => {
-      toolControllerRef.current.onPointerMove?.(event)
+      toolHandlersRef.current.onPointerMove?.(event)
     }
 
     const onPointerUp = (event: PointerEvent) => {
-      toolControllerRef.current.onPointerUp?.(event)
+      toolHandlersRef.current.onPointerUp?.(event)
     }
 
     const onPointerCancel = (event: PointerEvent) => {
-      toolControllerRef.current.onPointerCancel?.(event)
+      toolHandlersRef.current.onPointerCancel?.(event)
     }
 
     const onKeyDown = (event: KeyboardEvent) => {
-      toolControllerRef.current.onKeyDown?.(event)
+      toolHandlersRef.current.onKeyDown?.(event)
     }
 
     const onKeyUp = (event: KeyboardEvent) => {
-      toolControllerRef.current.onKeyUp?.(event)
+      toolHandlersRef.current.onKeyUp?.(event)
     }
 
     surfaceElement.addEventListener('pointerdown', onPointerDown)

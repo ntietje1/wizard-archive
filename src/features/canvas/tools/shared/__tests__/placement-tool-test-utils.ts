@@ -1,12 +1,5 @@
-import type { CanvasToolId, CanvasToolServices } from '../../canvas-tool-types'
+import type { CanvasToolId, CanvasToolRuntime } from '../../canvas-tool-types'
 import type { Node } from '@xyflow/react'
-
-export function createMouseEvent(x: number, y: number): React.MouseEvent {
-  return {
-    clientX: x,
-    clientY: y,
-  } as React.MouseEvent
-}
 
 export function createPointerEvent(
   x: number,
@@ -41,7 +34,7 @@ export function createPlacementEnvironment({
   setPendingEditNodeId: (nodeId: string | null) => void
   setPendingEditNodePoint?: (point: { x: number; y: number } | null) => void
   setActiveTool: (tool: CanvasToolId) => void
-}): CanvasToolServices {
+}): CanvasToolRuntime {
   return {
     viewport: {
       screenToFlowPosition: ({ x, y }) => ({ x, y }),
@@ -63,6 +56,7 @@ export function createPlacementEnvironment({
       getMeasuredNodes: () => [],
     },
     selection: {
+      getSnapshot: () => ({ nodeIds: [], edgeIds: [] }),
       replace: replaceSelection,
       replaceNodes: (nodeIds) => replaceSelection({ nodeIds, edgeIds: [] }),
       replaceEdges: (edgeIds) => replaceSelection({ nodeIds: [], edgeIds }),

@@ -120,6 +120,7 @@ function CanvasRichTextNodeHarness({
 }: {
   mode?: 'interactive' | 'embedded-readonly'
 }) {
+  const baseProps = createCanvasProviderProps()
   const [pendingEditNodeId, setPendingEditNodeId] = useState<string | null>('text-1')
   const [pendingEditNodePoint, setPendingEditNodePoint] = useState<{ x: number; y: number } | null>(
     { x: 100, y: 120 },
@@ -152,6 +153,10 @@ function CanvasRichTextNodeHarness({
             pendingEditNodePoint,
             setPendingEditNodeId,
             setPendingEditNodePoint,
+          },
+          selection: {
+            ...baseProps.selection,
+            replace: (selection) => useCanvasSelectionState.getState().setSelection(selection),
           },
         })}
       >

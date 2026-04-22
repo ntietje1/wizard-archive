@@ -5,6 +5,7 @@ import type {
   CanvasEditSessionState,
   CanvasHistoryController,
   CanvasNodeActions,
+  CanvasSelectionController,
 } from '../../tools/canvas-tool-types'
 
 const READ_ONLY_HISTORY: CanvasHistoryController = {
@@ -30,6 +31,21 @@ const READ_ONLY_NODE_ACTIONS: CanvasNodeActions = {
   onResizeEnd: () => undefined,
 }
 
+const READ_ONLY_SELECTION: CanvasSelectionController = {
+  getSnapshot: () => ({ nodeIds: [], edgeIds: [] }),
+  replace: () => undefined,
+  replaceNodes: () => undefined,
+  replaceEdges: () => undefined,
+  clear: () => undefined,
+  getSelectedNodeIds: () => [],
+  getSelectedEdgeIds: () => [],
+  toggleNodeFromTarget: () => undefined,
+  toggleEdgeFromTarget: () => undefined,
+  beginGesture: () => undefined,
+  commitGestureSelection: () => undefined,
+  endGesture: () => undefined,
+}
+
 const EMPTY_REMOTE_HIGHLIGHTS = new Map<string, never>()
 
 export function CanvasReadOnlyProviders({
@@ -47,6 +63,7 @@ export function CanvasReadOnlyProviders({
         editSession={READ_ONLY_EDIT_SESSION}
         nodeActions={READ_ONLY_NODE_ACTIONS}
         remoteHighlights={EMPTY_REMOTE_HIGHLIGHTS}
+        selection={READ_ONLY_SELECTION}
       >
         {children}
       </CanvasProviders>

@@ -9,10 +9,9 @@ import type {
   AnyCanvasToolModule,
   CanvasAwarenessCapability,
   CanvasLocalOverlayCapability,
-  CanvasToolController,
   CanvasToolId,
   CanvasToolPropertyContext,
-  CanvasToolServices,
+  CanvasToolRuntime,
 } from './canvas-tool-types'
 
 const canvasToolModules = [
@@ -90,15 +89,17 @@ export function getCanvasToolLocalOverlayLayers(): ReadonlyArray<{
   return canvasToolLocalOverlayLayers
 }
 
-export function createCanvasToolController(
-  toolId: CanvasToolId,
-  services: CanvasToolServices,
-): CanvasToolController {
-  return getCanvasToolModule(toolId).create(services)
+export function createCanvasToolHandlers(toolId: CanvasToolId, runtime: CanvasToolRuntime) {
+  return getCanvasToolModule(toolId).createHandlers(runtime)
 }
 
-export function clearCanvasToolLocalOverlays() {
-  for (const module of canvasToolModules) {
-    module.localOverlay?.clear()
+export function clearCanvasToolTransientState(
+  toolId: CanvasToolId,
+  presence?: CanvasToolRuntime['awareness']['presence'],
+) {
+  const module = getCanvasToolModule(toolId)
+  module.localOverlay?.clear()
+  if (presence) {
+    module.awareness?.clear?.(presence)
   }
 }
