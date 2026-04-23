@@ -1,17 +1,23 @@
 import { bezierCanvasEdgeModule } from './bezier/bezier-canvas-edge-module'
+import { stepCanvasEdgeModule } from './step/step-canvas-edge-module'
+import { straightCanvasEdgeModule } from './straight/straight-canvas-edge-module'
 import { boundsFromPoints, rectIntersectsBounds } from '../utils/canvas-geometry-utils'
 import type {
   AnyCanvasEdgeModule,
   CanvasEdgeSelectionContext,
   CanvasEdgeType,
 } from './canvas-edge-module-types'
+import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
 import type { CanvasContextMenuContributor } from '../runtime/context-menu/canvas-context-menu-types'
+import type { CanvasDocumentWriter } from '../tools/canvas-tool-types'
 import type { Point2D } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-geometry-utils'
 import type { Edge, EdgeTypes, Node } from '@xyflow/react'
 
 const canvasEdgeModules = [
   bezierCanvasEdgeModule,
+  straightCanvasEdgeModule,
+  stepCanvasEdgeModule,
 ] as const satisfies ReadonlyArray<AnyCanvasEdgeModule>
 
 const canvasEdgeModuleMap: Partial<Record<CanvasEdgeType, AnyCanvasEdgeModule>> =
@@ -23,6 +29,12 @@ export const canvasEdgeTypes = Object.fromEntries(
 
 function isCanvasEdgeType(type: string): type is CanvasEdgeType {
   return type in canvasEdgeModuleMap
+}
+
+export function resolveCanvasEdgeType(type: string | undefined): CanvasEdgeType {
+  if (!type) return 'bezier'
+  if (!isCanvasEdgeType(type)) return 'bezier'
+  return type
 }
 
 function createCanvasEdgeSelectionContext(
@@ -45,14 +57,24 @@ function getCanvasEdgeModule(type: CanvasEdgeType): AnyCanvasEdgeModule {
 }
 
 function getCanvasEdgeModuleByType(type: string | undefined): AnyCanvasEdgeModule {
-  if (!type) return bezierCanvasEdgeModule
-  if (!isCanvasEdgeType(type)) return bezierCanvasEdgeModule
-  return getCanvasEdgeModule(type)
+  return getCanvasEdgeModule(resolveCanvasEdgeType(type))
 }
 
 export function getCanvasEdgeContextMenuContributors(type: string | undefined) {
   return (getCanvasEdgeModuleByType(type).contextMenu?.contributors ??
     []) as ReadonlyArray<CanvasContextMenuContributor>
+}
+
+export function getCanvasEdgeProperties(
+  edge: Edge,
+  updateEdge: CanvasDocumentWriter['updateEdge'],
+): CanvasInspectableProperties | null {
+  return (
+    getCanvasEdgeModuleByType(edge.type).properties?.({
+      edge,
+      updateEdge,
+    }) ?? null
+  )
 }
 
 function filterCanvasEdgeSelectionCandidates(

@@ -4,11 +4,12 @@ import type {
   ResizingState,
   RemoteUser,
 } from '../utils/canvas-awareness-types'
+import type { CanvasEdgeType } from '../edges/canvas-edge-module-types'
 import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
 import type { Connection, Edge, Node, XYPosition } from '@xyflow/react'
-import type { ComponentType, MouseEvent as ReactMouseEvent, ReactNode } from 'react'
+import type { ComponentType, CSSProperties, MouseEvent as ReactMouseEvent, ReactNode } from 'react'
 
-export type CanvasToolId = 'select' | 'hand' | 'draw' | 'erase' | 'lasso' | 'text'
+export type CanvasToolId = 'select' | 'hand' | 'draw' | 'erase' | 'lasso' | 'text' | 'edge'
 
 export type CanvasSelectionGestureKind = 'marquee' | 'lasso'
 export type CanvasSelectionCommitMode = 'replace' | 'add'
@@ -22,6 +23,12 @@ interface CanvasToolSettings {
   strokeColor: string
   strokeOpacity: number
   strokeSize: number
+  edgeType: CanvasEdgeType
+}
+
+export interface CanvasEdgeCreationDefaults {
+  type: CanvasEdgeType
+  style?: CSSProperties
 }
 
 export interface CanvasHistoryController {
@@ -56,9 +63,10 @@ export interface CanvasDocumentWriter {
   createNode: (node: Node) => void
   updateNode: (nodeId: string, updater: (node: Node) => Node) => void
   updateNodeData: (nodeId: string, data: Record<string, unknown>) => void
+  updateEdge: (edgeId: string, updater: (edge: Edge) => Edge) => void
   resizeNode: (nodeId: string, width: number, height: number, position: XYPosition) => void
   deleteNodes: (nodeIds: Array<string>) => void
-  createEdge: (connection: Connection) => void
+  createEdge: (connection: Connection, defaults?: CanvasEdgeCreationDefaults) => void
   deleteEdges: (edgeIds: Array<string>) => void
   setNodePosition: (nodeId: string, position: XYPosition) => void
 }
@@ -119,6 +127,7 @@ interface CanvasToolStateControls {
   getSettings: () => CanvasToolSettings
   getActiveTool: () => CanvasToolId
   setActiveTool: (tool: CanvasToolId) => void
+  setEdgeType: (type: CanvasEdgeType) => void
   setStrokeColor: (color: string) => void
   setStrokeSize: (size: number) => void
   setStrokeOpacity: (opacity: number) => void
@@ -127,7 +136,7 @@ interface CanvasToolStateControls {
 export interface CanvasToolPropertyContext {
   toolState: Pick<
     CanvasToolStateControls,
-    'getSettings' | 'setStrokeColor' | 'setStrokeSize' | 'setStrokeOpacity'
+    'getSettings' | 'setEdgeType' | 'setStrokeColor' | 'setStrokeSize' | 'setStrokeOpacity'
   >
 }
 

@@ -8,6 +8,7 @@ import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 
 vi.mock('@xyflow/react', () => ({
   useNodes: () => [],
+  useEdges: () => [],
 }))
 
 vi.mock('~/shared/components/color-picker-popover', () => ({

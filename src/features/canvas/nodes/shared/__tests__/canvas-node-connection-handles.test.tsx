@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasNodeConnectionHandles } from '../canvas-node-connection-handles'
+import { useCanvasToolStore } from '../../../stores/canvas-tool-store'
 
 const reactFlowMock = vi.hoisted(() => ({
   connectionInProgress: false,
@@ -35,30 +36,23 @@ vi.mock('@xyflow/react', () => ({
 describe('CanvasNodeConnectionHandles', () => {
   beforeEach(() => {
     reactFlowMock.connectionInProgress = false
+    useCanvasToolStore.getState().reset()
   })
 
-  it('renders one bidirectional handle on all four sides when selected', () => {
-    render(<CanvasNodeConnectionHandles selected />)
+  it('keeps handles mounted but inert when the edge tool is inactive', () => {
+    render(<CanvasNodeConnectionHandles />)
 
     expect(screen.getAllByTestId(/canvas-node-handle-/)).toHaveLength(4)
-    expect(screen.getByTestId('canvas-node-handle-top')).toHaveAttribute('data-selected', 'true')
-    expect(screen.getByTestId('canvas-node-handle-right')).toHaveClass('pointer-events-auto')
-    expect(screen.getByTestId('canvas-node-handle-bottom')).toHaveClass('opacity-100')
-    expect(screen.getByTestId('canvas-node-handle-left')).toBeInTheDocument()
-  })
-
-  it('keeps handles mounted but visually hidden when not selected', () => {
-    render(<CanvasNodeConnectionHandles selected={false} />)
-
-    expect(screen.getAllByTestId(/canvas-node-handle-/)).toHaveLength(4)
-    expect(screen.getByTestId('canvas-node-handle-top')).toHaveAttribute('data-selected', 'false')
     expect(screen.getByTestId('canvas-node-handle-top')).toHaveClass('opacity-0')
     expect(screen.getByTestId('canvas-node-handle-top')).toHaveClass('pointer-events-none')
+    expect(screen.getByTestId('canvas-node-handle-top')).toHaveClass('duration-0')
   })
 
-  it('shows connection-indicator styling only during an active connection', () => {
+  it('shows connection-indicator styling during an active edge-tool connection', () => {
     reactFlowMock.connectionInProgress = true
-    render(<CanvasNodeConnectionHandles selected={false} />)
+    useCanvasToolStore.getState().setActiveTool('edge')
+
+    render(<CanvasNodeConnectionHandles />)
 
     expect(screen.getByTestId('canvas-node-handle-top')).toHaveAttribute(
       'data-connection-in-progress',
@@ -67,5 +61,23 @@ describe('CanvasNodeConnectionHandles', () => {
     expect(screen.getByTestId('canvas-node-handle-top')).toHaveClass(
       '[&.connectionindicator]:opacity-100',
     )
+    expect(screen.getByTestId('canvas-node-handle-top')).toHaveClass('duration-150')
+  })
+
+  it('shows all handles while the edge tool is active even without node selection', () => {
+    useCanvasToolStore.getState().setActiveTool('edge')
+
+    render(<CanvasNodeConnectionHandles />)
+
+    expect(screen.getByTestId('canvas-node-handle-top')).toHaveAttribute(
+      'data-edge-tool-active',
+      'true',
+    )
+    expect(screen.getByTestId('canvas-node-handle-top')).toHaveClass(
+      'canvas-node-connection-handle',
+    )
+    expect(screen.getByTestId('canvas-node-handle-top')).toHaveClass('pointer-events-auto')
+    expect(screen.getByTestId('canvas-node-handle-top')).toHaveClass('opacity-100')
+    expect(screen.getByTestId('canvas-node-handle-top')).toHaveClass('duration-150')
   })
 })

@@ -57,19 +57,42 @@ describe('useCanvasDocumentWriter', () => {
     act(() => {
       result.current.createNode(createTextNode('node-1'))
       result.current.createNode(createTextNode('node-2'))
-      result.current.createEdge({
-        source: 'node-1',
-        target: 'node-2',
-        sourceHandle: null,
-        targetHandle: null,
-      })
+      result.current.createEdge(
+        {
+          source: 'node-1',
+          target: 'node-2',
+          sourceHandle: null,
+          targetHandle: null,
+        },
+        {
+          type: 'step',
+          style: {
+            stroke: 'var(--t-red)',
+            strokeWidth: 8,
+            opacity: 0.5,
+          },
+        },
+      )
     })
 
     expect(nodesMap.get('node-1')).toMatchObject({
       type: 'text',
       data: { label: 'Hello' },
     })
-    expect(Array.from(edgesMap.values())).toHaveLength(1)
+    expect(Array.from(edgesMap.values())).toEqual([
+      expect.objectContaining({
+        source: 'node-1',
+        target: 'node-2',
+        sourceHandle: null,
+        targetHandle: null,
+        type: 'step',
+        style: {
+          stroke: 'var(--t-red)',
+          strokeWidth: 8,
+          opacity: 0.5,
+        },
+      }),
+    ])
 
     act(() => {
       result.current.updateNodeData('node-1', { label: 'Updated', color: 'red' })
@@ -82,6 +105,17 @@ describe('useCanvasDocumentWriter', () => {
     })
 
     const [edgeId] = Array.from(edgesMap.keys())
+    act(() => {
+      result.current.updateEdge(edgeId, (edge) => ({
+        ...edge,
+        style: { ...edge.style, stroke: 'var(--t-blue)', strokeWidth: 4 },
+      }))
+    })
+
+    expect(edgesMap.get(edgeId)).toMatchObject({
+      style: { stroke: 'var(--t-blue)', strokeWidth: 4 },
+    })
+
     act(() => {
       result.current.deleteEdges([edgeId])
       result.current.deleteNodes(['node-1'])

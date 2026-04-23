@@ -5,6 +5,7 @@ import type { CanvasToolId, CanvasToolPropertyContext } from '../tools/canvas-to
 
 interface CanvasToolState {
   activeTool: CanvasToolId
+  edgeType: 'bezier' | 'straight' | 'step'
   strokeColor: string
   strokeSize: number
   strokeOpacity: number
@@ -12,6 +13,7 @@ interface CanvasToolState {
 
 interface CanvasToolActions {
   setActiveTool: (tool: CanvasToolId) => void
+  setEdgeType: (type: CanvasToolState['edgeType']) => void
   setStrokeColor: (color: string) => void
   setStrokeSize: (size: number) => void
   setStrokeOpacity: (opacity: number) => void
@@ -20,6 +22,7 @@ interface CanvasToolActions {
 
 const INITIAL_STATE: CanvasToolState = {
   activeTool: 'select',
+  edgeType: 'bezier',
   strokeColor: 'var(--foreground)',
   strokeSize: STROKE_SIZE_OPTIONS[2],
   strokeOpacity: 100,
@@ -29,6 +32,7 @@ export const useCanvasToolStore = create<CanvasToolState & CanvasToolActions>((s
   ...INITIAL_STATE,
 
   setActiveTool: (tool) => set({ activeTool: tool }),
+  setEdgeType: (edgeType) => set({ edgeType }),
 
   setStrokeColor: (color) => set({ strokeColor: color }),
   setStrokeSize: (size) => set({ strokeSize: size }),
@@ -40,6 +44,7 @@ export const useCanvasToolStore = create<CanvasToolState & CanvasToolActions>((s
 export function useCanvasToolPropertyContext(): CanvasToolPropertyContext {
   const subscribedSettings = useCanvasToolStore(
     useShallow((state) => ({
+      edgeType: state.edgeType,
       strokeColor: state.strokeColor,
       strokeOpacity: state.strokeOpacity,
       strokeSize: state.strokeSize,
@@ -50,13 +55,15 @@ export function useCanvasToolPropertyContext(): CanvasToolPropertyContext {
   return {
     toolState: {
       getSettings: () => {
-        const { strokeColor, strokeOpacity, strokeSize } = useCanvasToolStore.getState()
+        const { edgeType, strokeColor, strokeOpacity, strokeSize } = useCanvasToolStore.getState()
         return {
+          edgeType,
           strokeColor,
           strokeOpacity,
           strokeSize,
         }
       },
+      setEdgeType: (type) => useCanvasToolStore.getState().setEdgeType(type),
       setStrokeColor: (color) => useCanvasToolStore.getState().setStrokeColor(color),
       setStrokeOpacity: (opacity) => useCanvasToolStore.getState().setStrokeOpacity(opacity),
       setStrokeSize: (size) => useCanvasToolStore.getState().setStrokeSize(size),

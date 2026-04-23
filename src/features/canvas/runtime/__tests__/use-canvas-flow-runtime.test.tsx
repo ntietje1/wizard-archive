@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useCanvasFlowRuntime } from '../use-canvas-flow-runtime'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import type { Edge, Node, ReactFlowInstance } from '@xyflow/react'
+import type { CanvasCommands } from '../document/use-canvas-commands'
 import * as Y from 'yjs'
 import { testId } from '~/test/helpers/test-id'
 
@@ -23,11 +24,13 @@ const surfaceClickGuardSpy = vi.hoisted(() => vi.fn())
 const toolHandlersSpy = vi.hoisted(() => vi.fn())
 const clearSelectionSpy = vi.hoisted(() => vi.fn())
 const clearToolTransientStateSpy = vi.hoisted(() => vi.fn())
+const cancelConnectionSpy = vi.hoisted(() => vi.fn())
 
 const documentWriterMock = vi.hoisted(() => ({
   createNode: vi.fn(),
   updateNode: vi.fn(),
   updateNodeData: vi.fn(),
+  updateEdge: vi.fn(),
   resizeNode: vi.fn(),
   deleteNodes: vi.fn(),
   createEdge: vi.fn(),
@@ -55,6 +58,16 @@ const selectionControllerMock = vi.hoisted(() => ({
   commitGestureSelection: vi.fn(),
   endGesture: vi.fn(),
 }))
+const commandsMock = vi.hoisted(
+  (): Pick<CanvasCommands, 'copy' | 'cut' | 'paste' | 'duplicate' | 'delete' | 'reorder'> => ({
+    copy: { id: 'copy', canRun: vi.fn(() => true), run: vi.fn(() => true) },
+    cut: { id: 'cut', canRun: vi.fn(() => true), run: vi.fn(() => true) },
+    paste: { id: 'paste', canRun: vi.fn(() => false), run: vi.fn(() => null) },
+    duplicate: { id: 'duplicate', canRun: vi.fn(() => true), run: vi.fn(() => null) },
+    delete: { id: 'delete', canRun: vi.fn(() => true), run: vi.fn(() => true) },
+    reorder: { id: 'reorder', canRun: vi.fn(() => true), run: vi.fn(() => true) },
+  }),
+)
 const dragHandlersMock = vi.hoisted(() => ({
   onNodeDragStart: vi.fn(),
   onNodeDrag: vi.fn(),
@@ -123,8 +136,10 @@ const reactFlowMock = vi.hoisted(
 )
 const storeApiMock = vi.hoisted(() => ({
   getState: () => ({
+    cancelConnection: cancelConnectionSpy,
     nodeLookup: new Map(),
   }),
+  setState: vi.fn(),
 }))
 const session = vi.hoisted(() => ({
   editSession: {
@@ -181,6 +196,10 @@ vi.mock('../document/use-canvas-history', () => ({
 
 vi.mock('../document/use-canvas-keyboard-shortcuts', () => ({
   useCanvasKeyboardShortcuts: keyboardSpy,
+}))
+
+vi.mock('../document/use-canvas-commands', () => ({
+  useCanvasCommands: () => commandsMock,
 }))
 
 vi.mock('../selection/use-canvas-selection-actions', () => ({
@@ -314,6 +333,12 @@ describe('useCanvasFlowRuntime', () => {
     toolHandlersSpy.mockReset()
     clearSelectionSpy.mockReset()
     clearToolTransientStateSpy.mockReset()
+    cancelConnectionSpy.mockReset()
+    storeApiMock.setState.mockReset()
+    selectionControllerMock.clear.mockReset()
+    session.editSession.setEditingEmbedId.mockReset()
+    session.editSession.setPendingEditNodeId.mockReset()
+    session.editSession.setPendingEditNodePoint.mockReset()
   })
 
   afterEach(() => {
@@ -356,10 +381,12 @@ describe('useCanvasFlowRuntime', () => {
     expect(keyboardSpy).toHaveBeenCalledWith({
       undo: historyMock.undo,
       redo: historyMock.redo,
+      cancelConnectionDraft: expect.any(Function),
       canEdit: true,
       nodesMap,
       edgesMap,
       selection: selectionControllerMock,
+      commands: commandsMock,
     })
     expect(nodeActionsSpy).toHaveBeenCalledWith({
       documentWriter: documentWriterMock,
@@ -399,11 +426,14 @@ describe('useCanvasFlowRuntime', () => {
       createNode: documentWriterMock.createNode,
       screenToFlowPosition: reactFlowMock.screenToFlowPosition,
       selection: selectionControllerMock,
+      commands: commandsMock,
     })
     expect(result.current).toEqual(
       expect.objectContaining({
         activeTool: 'select',
+        commands: commandsMock,
         contextMenu: contextMenuMock,
+        documentWriter: documentWriterMock,
         dropTarget: {
           dropOverlayRef: { current: null },
           isDropTarget: true,
@@ -450,6 +480,43 @@ describe('useCanvasFlowRuntime', () => {
 
     expect(clearToolTransientStateSpy).toHaveBeenCalledWith('select', session.awareness.presence)
     expect(toolHandlersSpy).toHaveBeenCalledWith('draw', expect.any(Object))
+    expect(cancelConnectionSpy).toHaveBeenCalledTimes(1)
+    expect(storeApiMock.setState).toHaveBeenCalledWith({ connectionClickStartHandle: null })
+    expect(selectionControllerMock.clear).toHaveBeenCalledTimes(1)
+    expect(session.editSession.setEditingEmbedId).toHaveBeenCalledWith(null)
+    expect(session.editSession.setPendingEditNodeId).toHaveBeenCalledWith(null)
+    expect(session.editSession.setPendingEditNodePoint).toHaveBeenCalledWith(null)
+
+    doc.destroy()
+  })
+
+  it('keeps selection state when switching to a selection-compatible tool', () => {
+    const { doc, nodesMap, edgesMap } = createTestCanvasDoc()
+    const { rerender } = renderHook(() =>
+      useCanvasFlowRuntime({
+        nodesMap,
+        edgesMap,
+        canvasId: testId<'sidebarItems'>('canvas-id'),
+        campaignId: testId<'campaigns'>('campaign-id'),
+        canvasParentId: null,
+        canEdit: true,
+        provider: null,
+        doc,
+      }),
+    )
+
+    act(() => {
+      useCanvasToolStore.getState().setActiveTool('hand')
+    })
+
+    rerender()
+
+    expect(cancelConnectionSpy).toHaveBeenCalledTimes(1)
+    expect(storeApiMock.setState).toHaveBeenCalledWith({ connectionClickStartHandle: null })
+    expect(selectionControllerMock.clear).not.toHaveBeenCalled()
+    expect(session.editSession.setEditingEmbedId).not.toHaveBeenCalled()
+    expect(session.editSession.setPendingEditNodeId).not.toHaveBeenCalled()
+    expect(session.editSession.setPendingEditNodePoint).not.toHaveBeenCalled()
 
     doc.destroy()
   })

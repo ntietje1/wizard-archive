@@ -5,11 +5,13 @@ import {
   bezierCanvasEdgeIntersectsRectangle,
   getBezierCanvasEdgeBounds,
 } from './bezier-canvas-edge-geometry'
+import { getCanvasStrokeEdgeProperties } from '../shared/canvas-edge-properties'
 import type { CanvasEdgeModule } from '../canvas-edge-module-types'
 
 export const bezierCanvasEdgeModule: CanvasEdgeModule<'bezier'> = {
   type: 'bezier',
   EdgeComponent: BezierCanvasEdge,
+  properties: ({ edge, updateEdge }) => getCanvasStrokeEdgeProperties(edge, updateEdge),
   selection: {
     getBounds: (edge, context) => getBezierCanvasEdgeBounds(edge, context.nodesById),
     point: (edge, point, context) =>

@@ -8,8 +8,8 @@ import {
   normalizeCanvasRichTextContent,
 } from '../shared/canvas-rich-text-editor'
 import {
-  borderStrokeCanvasProperty,
   fillCanvasProperty,
+  linePaintCanvasProperty,
   strokeSizeCanvasProperty,
 } from '../../properties/canvas-property-definitions'
 import {
@@ -61,7 +61,7 @@ export const textNodeModule = createCanvasNodeModule<TextNodeData, 'text'>({
         getOpacity: () => node.data.backgroundOpacity ?? DEFAULT_CANVAS_NODE_BACKGROUND_OPACITY,
         setOpacity: (backgroundOpacity) => updateNodeData(node.id, { backgroundOpacity }),
       }),
-      bindCanvasPaintProperty(borderStrokeCanvasProperty, {
+      bindCanvasPaintProperty(linePaintCanvasProperty, {
         getColor: () => node.data.borderStroke ?? null,
         setColor: (borderStroke) => updateNodeData(node.id, { borderStroke }),
         getOpacity: () => node.data.borderOpacity ?? DEFAULT_CANVAS_NODE_BORDER_OPACITY,

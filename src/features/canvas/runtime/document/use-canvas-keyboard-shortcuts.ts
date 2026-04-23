@@ -1,7 +1,7 @@
 import { useHotkey } from '@tanstack/react-hotkeys'
-import { useCanvasSelectionOperations } from './use-canvas-selection-operations'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import { getCanvasToolbarTools } from '../../tools/canvas-tool-modules'
+import type { CanvasCommands } from './use-canvas-commands'
 import type {
   CanvasHistoryController,
   CanvasSelectionController,
@@ -11,10 +11,12 @@ import type { Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 
 interface UseCanvasKeyboardShortcutsOptions extends Pick<CanvasHistoryController, 'undo' | 'redo'> {
+  cancelConnectionDraft: () => void
   canEdit: boolean
   nodesMap: Y.Map<Node>
   edgesMap: Y.Map<Edge>
   selection: Pick<CanvasSelectionController, 'getSnapshot' | 'replace' | 'clear'>
+  commands: Pick<CanvasCommands, 'copy' | 'cut' | 'paste' | 'delete'>
 }
 
 function isEditableKeyboardTarget(target: EventTarget | null) {
@@ -38,6 +40,7 @@ const TOOL_SHORTCUT_BINDINGS = [
   { key: '4', toolId: 'draw' },
   { key: '5', toolId: 'erase' },
   { key: '6', toolId: 'text' },
+  { key: '7', toolId: 'edge' },
 ] as const
 
 function useCanvasToolHotkey(
@@ -59,17 +62,13 @@ function useCanvasToolHotkey(
 export function useCanvasKeyboardShortcuts({
   undo,
   redo,
+  cancelConnectionDraft,
   canEdit,
   nodesMap,
   edgesMap,
   selection,
+  commands,
 }: UseCanvasKeyboardShortcutsOptions) {
-  const selectionOperations = useCanvasSelectionOperations({
-    canEdit,
-    nodesMap,
-    edgesMap,
-    selection,
-  })
   const toolbarTools = getCanvasToolbarTools()
   const selectTool = toolbarTools.find((tool) => tool.id === 'select')
   const handTool = toolbarTools.find((tool) => tool.id === 'hand')
@@ -77,6 +76,7 @@ export function useCanvasKeyboardShortcuts({
   const drawTool = toolbarTools.find((tool) => tool.id === 'draw')
   const eraseTool = toolbarTools.find((tool) => tool.id === 'erase')
   const textTool = toolbarTools.find((tool) => tool.id === 'text')
+  const edgeTool = toolbarTools.find((tool) => tool.id === 'edge')
   const toolLookup = {
     select: selectTool,
     hand: handTool,
@@ -84,6 +84,7 @@ export function useCanvasKeyboardShortcuts({
     draw: drawTool,
     erase: eraseTool,
     text: textTool,
+    edge: edgeTool,
   } as const
 
   const hotkeyOptions = {
@@ -95,6 +96,7 @@ export function useCanvasKeyboardShortcuts({
     (event) => {
       if (event.repeat) return
       selection.clear()
+      cancelConnectionDraft()
     },
     hotkeyOptions,
   )
@@ -106,7 +108,11 @@ export function useCanvasKeyboardShortcuts({
         return
       }
 
-      if (selectionOperations.deleteSnapshot(selection.getSnapshot())) {
+      if (!commands.delete.canRun()) {
+        return
+      }
+
+      if (commands.delete.run()) {
         event.preventDefault()
       }
     },
@@ -120,7 +126,11 @@ export function useCanvasKeyboardShortcuts({
         return
       }
 
-      if (selectionOperations.deleteSnapshot(selection.getSnapshot())) {
+      if (!commands.delete.canRun()) {
+        return
+      }
+
+      if (commands.delete.run()) {
         event.preventDefault()
       }
     },
@@ -160,6 +170,12 @@ export function useCanvasKeyboardShortcuts({
   useCanvasToolHotkey(
     TOOL_SHORTCUT_BINDINGS[5].key,
     toolLookup[TOOL_SHORTCUT_BINDINGS[5].toolId],
+    canEdit,
+    hotkeyOptions,
+  )
+  useCanvasToolHotkey(
+    TOOL_SHORTCUT_BINDINGS[6].key,
+    toolLookup[TOOL_SHORTCUT_BINDINGS[6].toolId],
     canEdit,
     hotkeyOptions,
   )
@@ -208,7 +224,8 @@ export function useCanvasKeyboardShortcuts({
     'Mod+C',
     (event) => {
       if (event.repeat) return
-      if (selectionOperations.copySnapshot(selection.getSnapshot())) {
+      if (!commands.copy.canRun()) return
+      if (commands.copy.run()) {
         event.preventDefault()
       }
     },
@@ -219,7 +236,8 @@ export function useCanvasKeyboardShortcuts({
     'Mod+X',
     (event) => {
       if (event.repeat) return
-      if (selectionOperations.cutSnapshot(selection.getSnapshot())) {
+      if (!commands.cut.canRun()) return
+      if (commands.cut.run()) {
         event.preventDefault()
       }
     },
@@ -230,7 +248,8 @@ export function useCanvasKeyboardShortcuts({
     'Mod+V',
     (event) => {
       if (event.repeat) return
-      if (selectionOperations.pasteClipboard()) {
+      if (!commands.paste.canRun()) return
+      if (commands.paste.run()) {
         event.preventDefault()
       }
     },

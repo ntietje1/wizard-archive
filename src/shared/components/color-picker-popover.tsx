@@ -25,9 +25,15 @@ interface ColorPickerPopoverProps {
   value: PaintPickerValue
   onChange: (value: PaintPickerValue) => void
   mixed?: boolean
+  showOpacity?: boolean
 }
 
-export function ColorPickerPopover({ value, onChange, mixed = false }: ColorPickerPopoverProps) {
+export function ColorPickerPopover({
+  value,
+  onChange,
+  mixed = false,
+  showOpacity = true,
+}: ColorPickerPopoverProps) {
   const normalizedValue = normalizePickerColor(value.color)
 
   let opacityGradient = 'linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%)'
@@ -86,35 +92,37 @@ export function ColorPickerPopover({ value, onChange, mixed = false }: ColorPick
         >
           <ColorPickerSelection className="h-32 rounded-md" />
           <ColorPickerHue />
-          <SliderPrimitive.Root
-            className="relative flex h-4 w-full touch-none"
-            aria-label="Opacity"
-            min={0}
-            max={100}
-            step={1}
-            value={[value.opacity]}
-            onValueChange={(val) => {
-              const nextOpacity = Array.isArray(val) ? val[0] : val
-              onChange({
-                color: value.color,
-                opacity: nextOpacity,
-              })
-            }}
-          >
-            <SliderPrimitive.Control className="relative flex w-full touch-none items-center">
-              <SliderPrimitive.Track
-                data-testid="opacity-track"
-                className="relative my-0.5 h-3 w-full grow overflow-hidden rounded-full text-foreground/15"
-                style={{
-                  backgroundColor: 'var(--background)',
-                  backgroundImage: `${opacityGradient}, ${CHECKERBOARD_PATTERN}`,
-                  backgroundPosition: '0 0, 0 0, 4px 4px',
-                  backgroundSize: '100% 100%, 8px 8px, 8px 8px',
-                }}
-              />
-              <SliderPrimitive.Thumb className="block h-4 w-4 rounded-full border-2 border-white bg-transparent shadow-[0_0_0_1px_rgba(0,0,0,0.5)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
-            </SliderPrimitive.Control>
-          </SliderPrimitive.Root>
+          {showOpacity ? (
+            <SliderPrimitive.Root
+              className="relative flex h-4 w-full touch-none"
+              aria-label="Opacity"
+              min={0}
+              max={100}
+              step={1}
+              value={[value.opacity]}
+              onValueChange={(val) => {
+                const nextOpacity = Array.isArray(val) ? val[0] : val
+                onChange({
+                  color: value.color,
+                  opacity: nextOpacity,
+                })
+              }}
+            >
+              <SliderPrimitive.Control className="relative flex w-full touch-none items-center">
+                <SliderPrimitive.Track
+                  data-testid="opacity-track"
+                  className="relative my-0.5 h-3 w-full grow overflow-hidden rounded-full text-foreground/15"
+                  style={{
+                    backgroundColor: 'var(--background)',
+                    backgroundImage: `${opacityGradient}, ${CHECKERBOARD_PATTERN}`,
+                    backgroundPosition: '0 0, 0 0, 4px 4px',
+                    backgroundSize: '100% 100%, 8px 8px, 8px 8px',
+                  }}
+                />
+                <SliderPrimitive.Thumb className="block h-4 w-4 rounded-full border-2 border-white bg-transparent shadow-[0_0_0_1px_rgba(0,0,0,0.5)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+              </SliderPrimitive.Control>
+            </SliderPrimitive.Root>
+          ) : null}
         </ColorPicker>
       </PopoverContent>
     </Popover>

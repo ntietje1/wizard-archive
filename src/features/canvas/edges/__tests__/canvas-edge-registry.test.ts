@@ -29,6 +29,30 @@ function createBezierEdge(overrides?: Partial<Edge>): Edge {
   }
 }
 
+function createStraightEdge(overrides?: Partial<Edge>): Edge {
+  return {
+    id: 'straight-edge',
+    source: 'source',
+    target: 'target',
+    sourceHandle: 'right',
+    targetHandle: 'left',
+    type: 'straight',
+    ...overrides,
+  }
+}
+
+function createStepEdge(overrides?: Partial<Edge>): Edge {
+  return {
+    id: 'step-edge',
+    source: 'source',
+    target: 'target',
+    sourceHandle: 'bottom',
+    targetHandle: 'top',
+    type: 'step',
+    ...overrides,
+  }
+}
+
 describe('canvas-edge-registry', () => {
   const nodes = [createNode('source', 0, 0), createNode('target', 160, 0)]
 
@@ -100,5 +124,66 @@ describe('canvas-edge-registry', () => {
         { zoom: 1 },
       ),
     ).toEqual(['crossing-edge'])
+  })
+
+  it('matches straight edges on point, rectangle, and lasso hit testing', () => {
+    const edge = createStraightEdge()
+
+    expect(findCanvasEdgeAtPoint(nodes, [edge], { x: 100, y: 20 }, { zoom: 1 })).toBe(
+      'straight-edge',
+    )
+    expect(findCanvasEdgeAtPoint(nodes, [edge], { x: 100, y: 55 }, { zoom: 1 })).toBeNull()
+    expect(
+      getCanvasEdgesMatchingRectangle(
+        nodes,
+        [edge],
+        { x: 80, y: 10, width: 40, height: 20 },
+        { zoom: 1 },
+      ),
+    ).toEqual(['straight-edge'])
+    expect(
+      getCanvasEdgesMatchingLasso(
+        nodes,
+        [edge],
+        [
+          { x: 80, y: 5 },
+          { x: 120, y: 5 },
+          { x: 120, y: 35 },
+          { x: 80, y: 35 },
+        ],
+        { zoom: 1 },
+      ),
+    ).toEqual(['straight-edge'])
+  })
+
+  it('matches step edges on point, rectangle, and lasso hit testing', () => {
+    const stepNodes = [createNode('source', 0, 0), createNode('target', 80, 120)]
+    const edge = createStepEdge({ target: 'target' })
+
+    expect(findCanvasEdgeAtPoint(stepNodes, [edge], { x: 20, y: 80 }, { zoom: 1 })).toBe(
+      'step-edge',
+    )
+    expect(findCanvasEdgeAtPoint(stepNodes, [edge], { x: 70, y: 60 }, { zoom: 1 })).toBeNull()
+    expect(
+      getCanvasEdgesMatchingRectangle(
+        stepNodes,
+        [edge],
+        { x: 10, y: 60, width: 20, height: 40 },
+        { zoom: 1 },
+      ),
+    ).toEqual(['step-edge'])
+    expect(
+      getCanvasEdgesMatchingLasso(
+        stepNodes,
+        [edge],
+        [
+          { x: 10, y: 55 },
+          { x: 30, y: 55 },
+          { x: 30, y: 105 },
+          { x: 10, y: 105 },
+        ],
+        { zoom: 1 },
+      ),
+    ).toEqual(['step-edge'])
   })
 })

@@ -1,7 +1,9 @@
 import { CanvasProviders } from './canvas-runtime-context'
 import { CanvasRenderModeProvider } from './canvas-render-mode-context'
 import type { CanvasRenderMode } from './canvas-render-mode-context'
+import type { CanvasCommands } from '../document/use-canvas-commands'
 import type {
+  CanvasDocumentWriter,
   CanvasEditSessionState,
   CanvasHistoryController,
   CanvasNodeActions,
@@ -31,6 +33,18 @@ const READ_ONLY_NODE_ACTIONS: CanvasNodeActions = {
   onResizeEnd: () => undefined,
 }
 
+const READ_ONLY_DOCUMENT_WRITER: CanvasDocumentWriter = {
+  createNode: () => undefined,
+  updateNode: () => undefined,
+  updateNodeData: () => undefined,
+  updateEdge: () => undefined,
+  resizeNode: () => undefined,
+  deleteNodes: () => undefined,
+  createEdge: () => undefined,
+  deleteEdges: () => undefined,
+  setNodePosition: () => undefined,
+}
+
 const READ_ONLY_SELECTION: CanvasSelectionController = {
   getSnapshot: () => ({ nodeIds: [], edgeIds: [] }),
   replace: () => undefined,
@@ -47,6 +61,38 @@ const READ_ONLY_SELECTION: CanvasSelectionController = {
 }
 
 const EMPTY_REMOTE_HIGHLIGHTS = new Map<string, never>()
+const READ_ONLY_COMMANDS: CanvasCommands = {
+  copy: {
+    id: 'copy',
+    canRun: () => false,
+    run: () => false,
+  },
+  cut: {
+    id: 'cut',
+    canRun: () => false,
+    run: () => false,
+  },
+  paste: {
+    id: 'paste',
+    canRun: () => false,
+    run: () => null,
+  },
+  duplicate: {
+    id: 'duplicate',
+    canRun: () => false,
+    run: () => null,
+  },
+  delete: {
+    id: 'delete',
+    canRun: () => false,
+    run: () => false,
+  },
+  reorder: {
+    id: 'reorder',
+    canRun: () => false,
+    run: () => false,
+  },
+}
 
 export function CanvasReadOnlyProviders({
   mode = 'embedded-readonly',
@@ -60,6 +106,8 @@ export function CanvasReadOnlyProviders({
       <CanvasProviders
         canEdit={false}
         history={READ_ONLY_HISTORY}
+        commands={READ_ONLY_COMMANDS}
+        documentWriter={READ_ONLY_DOCUMENT_WRITER}
         editSession={READ_ONLY_EDIT_SESSION}
         nodeActions={READ_ONLY_NODE_ACTIONS}
         remoteHighlights={EMPTY_REMOTE_HIGHLIGHTS}

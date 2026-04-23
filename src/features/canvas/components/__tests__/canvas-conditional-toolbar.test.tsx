@@ -5,10 +5,16 @@ import { createCanvasProviderProps } from '../../runtime/__tests__/canvas-runtim
 import { CanvasProviders } from '../../runtime/providers/canvas-runtime-context'
 import { useCanvasSelectionState } from '../../runtime/selection/use-canvas-selection-state'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
-import type { Node } from '@xyflow/react'
+import type { Edge, Node } from '@xyflow/react'
+import type { CanvasEdgeType } from '../../edges/canvas-edge-module-types'
+import type { CanvasCommands } from '../../runtime/document/use-canvas-commands'
 
 const nodesMock = vi.hoisted(() => ({
   nodes: [] as Array<Node>,
+}))
+
+const edgesMock = vi.hoisted(() => ({
+  edges: [] as Array<Edge>,
 }))
 
 const colorPickerMock = vi.hoisted(() => ({
@@ -17,6 +23,7 @@ const colorPickerMock = vi.hoisted(() => ({
 
 vi.mock('@xyflow/react', () => ({
   useNodes: () => nodesMock.nodes,
+  useEdges: () => edgesMock.edges,
 }))
 
 vi.mock('~/shared/components/color-picker-popover', () => ({
@@ -37,19 +44,35 @@ function emitSelection(nodes: Array<Node>) {
   })
 }
 
+function emitSelectionState(selection: { nodeIds: Array<string>; edgeIds: Array<string> }) {
+  act(() => {
+    colorPickerMock.props = []
+    useCanvasSelectionState.getState().setSelection(selection)
+  })
+}
+
 function renderToolbar({
   updateNodeData = vi.fn(),
+  updateEdge = vi.fn(),
   transact = vi.fn((fn: () => void) => fn()),
+  commands,
 }: {
   updateNodeData?: (nodeId: string, data: Record<string, unknown>) => void
+  updateEdge?: (edgeId: string, updater: (edge: Edge) => Edge) => void
   transact?: (fn: () => void) => void
+  commands?: CanvasCommands
 } = {}) {
+  const baseProps = createCanvasProviderProps()
   const providerProps = createCanvasProviderProps({
     nodeActions: {
       updateNodeData,
       transact,
       onResize: vi.fn(),
       onResizeEnd: vi.fn(),
+    },
+    documentWriter: {
+      ...baseProps.documentWriter,
+      updateEdge,
     },
     editSession: {
       editingEmbedId: null,
@@ -65,6 +88,7 @@ function renderToolbar({
       undo: vi.fn(),
       redo: vi.fn(),
     },
+    commands,
   })
 
   const view = render(
@@ -76,11 +100,13 @@ function renderToolbar({
   return {
     ...view,
     updateNodeData,
+    updateEdge,
     transact,
   }
 }
 
 let nodeIdCounter = 0
+let edgeIdCounter = 0
 
 function createNode(
   type: string,
@@ -126,13 +152,39 @@ function createNode(
   }
 }
 
+function createEdge(
+  options: {
+    stroke?: string
+    strokeWidth?: number
+    source?: string
+    target?: string
+    type?: CanvasEdgeType
+  } = {},
+): Edge {
+  return {
+    id: `edge-${edgeIdCounter++}`,
+    type: options.type ?? 'bezier',
+    source: options.source ?? 'source-node',
+    target: options.target ?? 'target-node',
+    style:
+      options.stroke !== undefined || options.strokeWidth !== undefined
+        ? {
+            ...(options.stroke !== undefined ? { stroke: options.stroke } : {}),
+            ...(options.strokeWidth !== undefined ? { strokeWidth: options.strokeWidth } : {}),
+          }
+        : undefined,
+  }
+}
+
 describe('CanvasConditionalToolbar', () => {
   beforeEach(() => {
     useCanvasToolStore.getState().reset()
     useCanvasSelectionState.getState().reset()
     nodesMock.nodes = []
+    edgesMock.edges = []
     colorPickerMock.props = []
     nodeIdCounter = 0
+    edgeIdCounter = 0
   })
 
   it('shows draw tool properties when nothing is selected', () => {
@@ -148,6 +200,23 @@ describe('CanvasConditionalToolbar', () => {
     expect(screen.getByTestId('color-picker-popover')).toBeVisible()
   })
 
+  it('shows edge tool defaults when nothing is selected and updates the tool edge type', () => {
+    useCanvasToolStore.getState().setActiveTool('edge')
+
+    renderToolbar()
+    emitSelection([])
+
+    expect(screen.getByText('Edge type')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Change edge type to Bezier' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Change edge type to Step' }))
+
+    expect(useCanvasToolStore.getState().edgeType).toBe('step')
+  })
+
   it('updates tool property button state after changing tool color and stroke size', () => {
     useCanvasToolStore.getState().setActiveTool('draw')
 
@@ -161,7 +230,7 @@ describe('CanvasConditionalToolbar', () => {
 
     expect(reversePrimaryColorButton).toHaveAttribute('aria-pressed', 'true')
     expect(redColorButton).toHaveAttribute('aria-pressed', 'false')
-    expect(screen.getByRole('button', { name: 'Stroke size 6' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Stroke size 4' })).toHaveAttribute(
       'aria-pressed',
       'true',
     )
@@ -258,10 +327,10 @@ describe('CanvasConditionalToolbar', () => {
     })
     emitSelection([text])
 
-    const borderGroup = screen.getByText('Border').parentElement
-    expect(borderGroup).not.toBeNull()
+    const strokeGroup = screen.getByText('Stroke').parentElement
+    expect(strokeGroup).not.toBeNull()
 
-    fireEvent.click(within(borderGroup!).getByRole('button', { name: 'Select Clear color' }))
+    fireEvent.click(within(strokeGroup!).getByRole('button', { name: 'Select Clear color' }))
 
     expect(updateNodeData).toHaveBeenCalledWith(text.id, { borderOpacity: 0 })
   })
@@ -361,11 +430,11 @@ describe('CanvasConditionalToolbar', () => {
       }),
     ])
 
-    const borderGroup = screen.getByText('Border').parentElement
-    expect(borderGroup).not.toBeNull()
+    const strokeGroup = screen.getByText('Stroke').parentElement
+    expect(strokeGroup).not.toBeNull()
 
-    expect(within(borderGroup!).queryByRole('button', { name: 'Select Default color' })).toBeNull()
-    expect(within(borderGroup!).getByRole('button', { name: 'Select Primary color' })).toBeVisible()
+    expect(within(strokeGroup!).queryByRole('button', { name: 'Select Default color' })).toBeNull()
+    expect(within(strokeGroup!).getByRole('button', { name: 'Select Primary color' })).toBeVisible()
   })
 
   it('shows fill, border, and stroke size controls for embed nodes', () => {
@@ -383,7 +452,7 @@ describe('CanvasConditionalToolbar', () => {
     ])
 
     expect(screen.getByText('Fill')).toBeVisible()
-    expect(screen.getByText('Border')).toBeVisible()
+    expect(screen.getAllByText('Stroke')).toHaveLength(1)
     expect(screen.getByText('Stroke size')).toBeVisible()
   })
 
@@ -462,8 +531,195 @@ describe('CanvasConditionalToolbar', () => {
     expect(screen.getByText('Stroke size')).toBeVisible()
     expect(screen.getByRole('button', { name: 'Stroke size 2' })).toBeVisible()
     expect(screen.queryByText('Fill')).toBeNull()
-    expect(screen.queryByText('Border')).toBeNull()
-    expect(screen.queryByText('Stroke')).toBeNull()
+    expect(screen.getByText('Stroke')).toBeVisible()
+  })
+
+  it('shows edge stroke controls for an edge-only selection', () => {
+    useCanvasToolStore.getState().setActiveTool('draw')
+
+    renderToolbar()
+    const edge = createEdge()
+    edgesMock.edges = [edge]
+    emitSelectionState({ nodeIds: [], edgeIds: [edge.id] })
+
+    expect(screen.getByRole('toolbar', { name: 'Canvas conditional toolbar' })).toBeVisible()
+    expect(screen.getByText('Stroke')).toBeVisible()
+    expect(screen.getByText('Stroke size')).toBeVisible()
+    expect(screen.getByText('Reorder')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Send to back' })).toBeVisible()
+    expect(screen.queryByText('Fill')).toBeNull()
+  })
+
+  it('updates selected edge stroke color and width through the document writer', () => {
+    const updateEdge = vi.fn()
+    renderToolbar({ updateEdge })
+    const edge = createEdge({ stroke: 'var(--foreground)', strokeWidth: 1.5 })
+    edgesMock.edges = [edge]
+    emitSelectionState({ nodeIds: [], edgeIds: [edge.id] })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select Red color' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Stroke size 8' }))
+
+    expect(updateEdge).toHaveBeenNthCalledWith(1, edge.id, expect.any(Function))
+    expect(updateEdge).toHaveBeenNthCalledWith(2, edge.id, expect.any(Function))
+    expect(updateEdge).toHaveBeenNthCalledWith(3, edge.id, expect.any(Function))
+
+    const updateStroke = updateEdge.mock.calls[0][1] as (edge: Edge) => Edge
+    const updateOpacity = updateEdge.mock.calls[1][1] as (edge: Edge) => Edge
+    const updateStrokeWidth = updateEdge.mock.calls[2][1] as (edge: Edge) => Edge
+
+    expect(updateStroke(edge)).toMatchObject({
+      style: {
+        stroke: 'var(--t-red)',
+        strokeWidth: 1.5,
+      },
+    })
+    expect(updateOpacity(edge)).toMatchObject({
+      style: {
+        stroke: 'var(--foreground)',
+        strokeWidth: 1.5,
+        opacity: undefined,
+      },
+    })
+    expect(updateStrokeWidth(edge)).toMatchObject({
+      style: {
+        stroke: 'var(--foreground)',
+        strokeWidth: 8,
+      },
+    })
+  })
+
+  it('shows one shared stroke row for mixed line selections across nodes and edges', () => {
+    renderToolbar()
+    const text = createNode('text', {
+      backgroundColor: 'var(--background)',
+      backgroundOpacity: 100,
+      borderStroke: 'var(--border)',
+      borderOpacity: 100,
+      borderWidth: 1,
+    })
+    const stroke = createNode('stroke', { color: 'var(--foreground)', opacity: 100, size: 4 })
+    const edge = createEdge({ stroke: 'var(--foreground)', strokeWidth: 2 })
+    nodesMock.nodes = [text, stroke]
+    edgesMock.edges = [edge]
+    emitSelectionState({ nodeIds: [text.id, stroke.id], edgeIds: [edge.id] })
+
+    expect(screen.queryByText('Fill')).toBeNull()
+    expect(screen.getByText('Stroke')).toBeVisible()
+    expect(screen.getAllByText('Stroke')).toHaveLength(1)
+    expect(screen.getByText('Stroke size')).toBeVisible()
+  })
+
+  it('shows edge type controls for selected edges and updates every selected edge type', () => {
+    const transact = vi.fn((fn: () => void) => fn())
+    const updateEdge = vi.fn()
+    renderToolbar({ updateEdge, transact })
+    const firstEdge = createEdge({ type: 'bezier' })
+    const secondEdge = createEdge({ type: 'straight' })
+    edgesMock.edges = [firstEdge, secondEdge]
+    emitSelectionState({ nodeIds: [], edgeIds: [firstEdge.id, secondEdge.id] })
+
+    expect(screen.getByText('Edge type')).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Change edge type to Bezier' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+    expect(screen.getByRole('button', { name: 'Change edge type to Straight' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+    expect(screen.getByRole('button', { name: 'Change edge type to Step' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Change edge type to Step' }))
+
+    expect(transact).toHaveBeenCalledTimes(1)
+    expect(updateEdge).toHaveBeenCalledTimes(2)
+    expect(updateEdge).toHaveBeenNthCalledWith(1, firstEdge.id, expect.any(Function))
+    expect(updateEdge).toHaveBeenNthCalledWith(2, secondEdge.id, expect.any(Function))
+
+    const updateFirstEdge = updateEdge.mock.calls[0][1] as (edge: Edge) => Edge
+    const updateSecondEdge = updateEdge.mock.calls[1][1] as (edge: Edge) => Edge
+
+    expect(updateFirstEdge(firstEdge)).toMatchObject({ type: 'step' })
+    expect(updateSecondEdge(secondEdge)).toMatchObject({ type: 'step' })
+  })
+
+  it('shows the active edge type when all selected edges match', () => {
+    renderToolbar()
+    const firstEdge = createEdge({ type: 'straight' })
+    const secondEdge = createEdge({ type: 'straight' })
+    edgesMock.edges = [firstEdge, secondEdge]
+    emitSelectionState({ nodeIds: [], edgeIds: [firstEdge.id, secondEdge.id] })
+
+    expect(screen.getByRole('button', { name: 'Change edge type to Straight' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: 'Change edge type to Bezier' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+  })
+
+  it('hides edge type controls for mixed node and edge selections', () => {
+    renderToolbar()
+    const node = createNode('stroke', { color: 'var(--foreground)', opacity: 100, size: 4 })
+    const edge = createEdge({ type: 'straight' })
+    nodesMock.nodes = [node]
+    edgesMock.edges = [edge]
+    emitSelectionState({ nodeIds: [node.id], edgeIds: [edge.id] })
+
+    expect(screen.queryByText('Edge type')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Change edge type to Straight' })).toBeNull()
+    expect(screen.getByText('Reorder')).toBeVisible()
+  })
+
+  it('runs the shared reorder command from the toolbar for mixed selections', () => {
+    const reorderRun = vi.fn(() => true)
+    const reorderCanRun = vi.fn(() => true)
+    renderToolbar({
+      commands: {
+        ...createCanvasProviderProps().commands,
+        reorder: {
+          id: 'reorder',
+          canRun: reorderCanRun,
+          run: reorderRun,
+        },
+      },
+    })
+
+    const node = createNode('stroke', { color: 'var(--foreground)', opacity: 100, size: 4 })
+    const edge = createEdge()
+    nodesMock.nodes = [node]
+    edgesMock.edges = [edge]
+    emitSelectionState({ nodeIds: [node.id], edgeIds: [edge.id] })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Bring to front' }))
+
+    expect(reorderCanRun).toHaveBeenCalledWith({
+      selection: { nodeIds: [node.id], edgeIds: [edge.id] },
+      direction: 'sendToBack',
+    })
+    expect(reorderCanRun).toHaveBeenCalledWith({
+      selection: { nodeIds: [node.id], edgeIds: [edge.id] },
+      direction: 'sendBackward',
+    })
+    expect(reorderCanRun).toHaveBeenCalledWith({
+      selection: { nodeIds: [node.id], edgeIds: [edge.id] },
+      direction: 'bringForward',
+    })
+    expect(reorderCanRun).toHaveBeenCalledWith({
+      selection: { nodeIds: [node.id], edgeIds: [edge.id] },
+      direction: 'bringToFront',
+    })
+    expect(reorderRun).toHaveBeenCalledWith({
+      selection: { nodeIds: [node.id], edgeIds: [edge.id] },
+      direction: 'bringToFront',
+    })
+    expect(screen.getByText('Reorder')).toBeVisible()
   })
 
   it('hides the toolbar while marquee selection is still provisional', () => {

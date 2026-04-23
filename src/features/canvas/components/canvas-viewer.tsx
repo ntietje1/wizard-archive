@@ -8,11 +8,13 @@ import {
 } from '@xyflow/react'
 import { ClientOnly } from '@tanstack/react-router'
 import '@xyflow/react/dist/style.css'
+import { useMemo } from 'react'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { ContextMenuHost } from '~/features/context-menu/components/context-menu-host'
 import { cn } from '~/features/shadcn/lib/utils'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import { canvasEdgeTypes } from '../edges/canvas-edge-registry'
+import { CanvasConnectionPreview } from '../edges/shared/canvas-connection-preview'
 import { getCanvasNodeTypes } from '../nodes/canvas-node-modules'
 import { CanvasProviders } from '../runtime/providers/canvas-runtime-context'
 import { CanvasViewportPersistence } from '../runtime/interaction/canvas-viewport-persistence'
@@ -90,7 +92,7 @@ export function CanvasFlow({
   nodesMap,
   edgesMap,
 }: ReadyCanvasSession) {
-  const initialViewport = loadPersistedCanvasViewport(canvasId)
+  const initialViewport = useMemo(() => loadPersistedCanvasViewport(canvasId), [canvasId])
   const runtime = useCanvasFlowRuntime({
     nodesMap,
     edgesMap,
@@ -102,11 +104,14 @@ export function CanvasFlow({
     doc,
   })
   const pendingSelectionPreview = useCanvasPendingSelectionPreviewSummary()
+  const edgeToolActive = runtime.activeTool === 'edge'
 
   return (
     <CanvasProviders
       canEdit={canEdit}
       history={runtime.history}
+      commands={runtime.commands}
+      documentWriter={runtime.documentWriter}
       editSession={runtime.editSession}
       nodeActions={runtime.nodeActions}
       remoteHighlights={runtime.remoteHighlights}
@@ -148,8 +153,10 @@ export function CanvasFlow({
             onMouseLeave={runtime.flowHandlers.onMouseLeave}
             edgeTypes={canvasEdgeTypes}
             nodeTypes={canvasNodeTypes}
+            connectionLineComponent={CanvasConnectionPreview}
             nodesDraggable={false}
-            nodesConnectable={canEdit && runtime.activeTool === 'select'}
+            nodesConnectable={canEdit && edgeToolActive}
+            connectOnClick={false}
             elevateNodesOnSelect={false}
             elevateEdgesOnSelect={false}
             elementsSelectable={false}

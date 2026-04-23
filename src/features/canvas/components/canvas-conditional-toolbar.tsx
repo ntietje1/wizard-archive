@@ -1,14 +1,22 @@
-import { useNodes } from '@xyflow/react'
-import type { Node } from '@xyflow/react'
+import { useEdges, useNodes } from '@xyflow/react'
+import type { Edge, Node } from '@xyflow/react'
+import { getCanvasEdgeProperties, resolveCanvasEdgeType } from '../edges/canvas-edge-registry'
 import {
   useIsCanvasSelectionGestureActive,
-  useSelectedCanvasNodeIds,
+  useCanvasSelectionState,
 } from '../runtime/selection/use-canvas-selection-state'
 import { useCanvasToolPropertyContext, useCanvasToolStore } from '../stores/canvas-tool-store'
 import { getCanvasNodeProperties } from '../nodes/canvas-node-modules'
+import { CANVAS_REORDER_ACTIONS } from '../runtime/document/canvas-reorder-actions'
 import { getCanvasToolProperties } from '../tools/canvas-tool-modules'
 import { ColorPickerPopover } from '~/shared/components/color-picker-popover'
-import { useCanvasNodeActionsContext } from '../runtime/providers/canvas-runtime-hooks'
+import {
+  useCanvasCommandsContext,
+  useCanvasDocumentWriterContext,
+  useCanvasNodeActionsContext,
+} from '../runtime/providers/canvas-runtime-hooks'
+import type { CanvasEdgeType } from '../edges/canvas-edge-module-types'
+import type { CanvasCommands } from '../runtime/document/use-canvas-commands'
 import type { CanvasToolId, CanvasToolPropertyContext } from '../tools/canvas-tool-types'
 import { resolveCanvasProperties } from '../properties/resolve-canvas-properties'
 import { readResolvedPropertyValue } from '../properties/canvas-property-types'
@@ -19,6 +27,7 @@ import type {
   CanvasStrokeSizeResolvedProperty,
 } from '../properties/canvas-property-types'
 import { areCanvasPaintValuesEqual } from '../properties/canvas-paint-values'
+import { useShallow } from 'zustand/shallow'
 
 interface CanvasConditionalToolbarProps {
   canEdit: boolean
@@ -28,6 +37,11 @@ const CHECKERBOARD_PATTERN = [
   'linear-gradient(45deg, currentColor 25%, transparent 25%, transparent 75%, currentColor 75%, currentColor)',
   'linear-gradient(45deg, currentColor 25%, transparent 25%, transparent 75%, currentColor 75%, currentColor)',
 ].join(', ')
+const CANVAS_EDGE_TYPE_OPTIONS: Array<{ type: CanvasEdgeType; label: string }> = [
+  { type: 'bezier', label: 'Bezier' },
+  { type: 'straight', label: 'Straight' },
+  { type: 'step', label: 'Step' },
+]
 
 function isPaintProperty(
   property: CanvasResolvedProperty,
@@ -43,30 +57,58 @@ function isStrokeSizeProperty(
 
 export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarProps) {
   const { updateNodeData, transact } = useCanvasNodeActionsContext()
+  const commands = useCanvasCommandsContext()
+  const documentWriter = useCanvasDocumentWriterContext()
   const nodes = useNodes()
-  const selectedNodeIds = useSelectedCanvasNodeIds()
+  const edges = useEdges()
+  const selectionSnapshot = useCanvasSelectionState(
+    useShallow((state) => ({
+      nodeIds: state.selectedNodeIds,
+      edgeIds: state.selectedEdgeIds,
+    })),
+  )
   const isSelectionGestureActive = useIsCanvasSelectionGestureActive()
-  const activeTool = useCanvasToolStore((state) => state.activeTool)
+  const { activeTool, edgeType, setEdgeType } = useCanvasToolStore(
+    useShallow((state) => ({
+      activeTool: state.activeTool,
+      edgeType: state.edgeType,
+      setEdgeType: state.setEdgeType,
+    })),
+  )
   const toolPropertyContext = useCanvasToolPropertyContext()
 
-  const selectedNodeIdSet = new Set(selectedNodeIds)
+  const selectedNodeIdSet = new Set(selectionSnapshot.nodeIds)
+  const selectedEdgeIdSet = new Set(selectionSnapshot.edgeIds)
   const selectedNodes = nodes.filter((node) => selectedNodeIdSet.has(node.id))
+  const selectedEdges = edges.filter((edge) => selectedEdgeIdSet.has(edge.id))
+  const hasSelection = selectedNodes.length > 0 || selectedEdges.length > 0
+  const hasOnlySelectedEdges = selectedNodes.length === 0 && selectedEdges.length > 0
+  const showsEdgeToolDefaults = !hasSelection && activeTool === 'edge'
 
   const properties = resolveProperties(
     activeTool,
-    isSelectionGestureActive ? [] : selectedNodes,
+    selectedNodes,
+    selectedEdges,
     updateNodeData,
+    documentWriter.updateEdge,
     toolPropertyContext,
   )
   const runPropertyChange = (applyChange: () => void) => {
-    if (selectedNodes.length === 0 || !transact) {
+    if (selectedNodes.length === 0 && selectedEdges.length === 0) {
+      applyChange()
+      return
+    }
+
+    if (!transact) {
       applyChange()
       return
     }
 
     transact(applyChange)
   }
-  if (!canEdit || properties.length === 0) return null
+  if (!canEdit || isSelectionGestureActive || (properties.length === 0 && !hasSelection)) {
+    return null
+  }
 
   return (
     <div
@@ -74,7 +116,76 @@ export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarPr
       role="toolbar"
       aria-label="Canvas conditional toolbar"
     >
-      <CanvasPropertyControls properties={properties} onPropertyChange={runPropertyChange} />
+      {properties.length > 0 ? (
+        <CanvasPropertyControls properties={properties} onPropertyChange={runPropertyChange} />
+      ) : null}
+      {properties.length > 0 && (hasOnlySelectedEdges || showsEdgeToolDefaults) ? (
+        <div className="my-1 h-px w-full bg-border" aria-hidden="true" />
+      ) : null}
+      {hasOnlySelectedEdges ? (
+        <CanvasEdgeTypeControls
+          selectedType={getSharedSelectedEdgeType(selectedEdges)}
+          onSelectType={(type) =>
+            runPropertyChange(() => {
+              selectedEdges.forEach((edge) => {
+                if (resolveCanvasEdgeType(edge.type) === type) return
+
+                documentWriter.updateEdge(edge.id, (currentEdge) => ({
+                  ...currentEdge,
+                  type,
+                }))
+              })
+            })
+          }
+        />
+      ) : null}
+      {showsEdgeToolDefaults ? (
+        <CanvasEdgeTypeControls selectedType={edgeType} onSelectType={setEdgeType} />
+      ) : null}
+      {(properties.length > 0 || hasOnlySelectedEdges || showsEdgeToolDefaults) && hasSelection ? (
+        <div className="my-1 h-px w-full bg-border" aria-hidden="true" />
+      ) : null}
+      {hasSelection ? (
+        <CanvasReorderControls commands={commands} selection={selectionSnapshot} />
+      ) : null}
+    </div>
+  )
+}
+
+function getSharedSelectedEdgeType(edges: Array<Edge>) {
+  const firstEdgeType = edges[0] ? resolveCanvasEdgeType(edges[0].type) : null
+  return firstEdgeType && edges.every((edge) => resolveCanvasEdgeType(edge.type) === firstEdgeType)
+    ? firstEdgeType
+    : null
+}
+
+function CanvasEdgeTypeControls({
+  selectedType,
+  onSelectType,
+}: {
+  selectedType: CanvasEdgeType | null
+  onSelectType: (type: CanvasEdgeType) => void
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <p className="text-[11px] font-medium text-muted-foreground">Edge type</p>
+      <div className="flex items-center gap-1">
+        {CANVAS_EDGE_TYPE_OPTIONS.map((option) => (
+          <button
+            type="button"
+            key={option.type}
+            className={`flex h-8 items-center justify-center rounded-md px-2 text-xs font-medium hover:bg-accent ${
+              selectedType === option.type ? 'bg-accent' : ''
+            }`}
+            onClick={() => onSelectType(option.type)}
+            aria-label={`Change edge type to ${option.label}`}
+            aria-pressed={selectedType === option.type}
+            title={option.label}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
@@ -82,15 +193,22 @@ export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarPr
 function resolveProperties(
   activeTool: CanvasToolId,
   selectedNodes: Array<Node>,
+  selectedEdges: Array<Edge>,
   updateNodeData: (nodeId: string, data: Record<string, unknown>) => void,
+  updateEdge: (edgeId: string, updater: (edge: Edge) => Edge) => void,
   toolPropertyContext: CanvasToolPropertyContext,
 ): Array<CanvasResolvedProperty> {
-  if (selectedNodes.length > 0) {
-    const selectedNodeProperties = selectedNodes.map<CanvasInspectableProperties>(
-      (node) => getCanvasNodeProperties(node, updateNodeData) ?? { bindings: [] },
-    )
+  if (selectedNodes.length > 0 || selectedEdges.length > 0) {
+    const selectedProperties = [
+      ...selectedNodes.map<CanvasInspectableProperties>(
+        (node) => getCanvasNodeProperties(node, updateNodeData) ?? { bindings: [] },
+      ),
+      ...selectedEdges.map<CanvasInspectableProperties>(
+        (edge) => getCanvasEdgeProperties(edge, updateEdge) ?? { bindings: [] },
+      ),
+    ]
 
-    return resolveCanvasProperties(selectedNodeProperties)
+    return resolveCanvasProperties(selectedProperties)
   }
 
   const toolProperties = getCanvasToolProperties(activeTool, toolPropertyContext)
@@ -201,6 +319,48 @@ function StrokeSizeControl({
           <div className="rounded-full bg-foreground" style={{ width: size, height: size }} />
         </button>
       ))}
+    </div>
+  )
+}
+
+function CanvasReorderControls({
+  commands,
+  selection,
+}: {
+  commands: CanvasCommands
+  selection: { nodeIds: Array<string>; edgeIds: Array<string> }
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <p className="text-[11px] font-medium text-muted-foreground">Reorder</p>
+      <div className="flex items-center gap-1">
+        {CANVAS_REORDER_ACTIONS.map((action) => {
+          const Icon = action.icon
+          const disabled = !commands.reorder.canRun({
+            selection,
+            direction: action.direction,
+          })
+
+          return (
+            <button
+              type="button"
+              key={action.id}
+              className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() =>
+                commands.reorder.run({
+                  selection,
+                  direction: action.direction,
+                })
+              }
+              disabled={disabled}
+              aria-label={action.label}
+              title={action.label}
+            >
+              <Icon className="h-4 w-4" />
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }

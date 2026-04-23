@@ -211,6 +211,27 @@
   cursor: pointer !important;
 }
 
+.canvas-flow-shell svg.react-flow__connectionline {
+  z-index: 1 !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .canvas-node-connection-handle::after {
+    animation: canvas-node-connection-handle-pulse 1.8s ease-in-out infinite;
+  }
+
+  @keyframes canvas-node-connection-handle-pulse {
+    0%,
+    100% {
+      background-color: var(--background);
+    }
+
+    50% {
+      background-color: var(--primary);
+    }
+  }
+}
+
 /* Stroke nodes: only the filled path receives pointer events, not the bounding box */
 .react-flow__node-stroke {
   pointer-events: none !important;

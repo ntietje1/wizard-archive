@@ -5,8 +5,8 @@ import { parseEmbedNodeData } from './embed-node-data'
 import type { EmbedNodeData } from './embed-node-data'
 import { rectangularCanvasNodeSelection } from '../shared/canvas-node-selection'
 import {
-  borderStrokeCanvasProperty,
   fillCanvasProperty,
+  linePaintCanvasProperty,
   strokeSizeCanvasProperty,
 } from '../../properties/canvas-property-definitions'
 import {
@@ -42,7 +42,7 @@ export const embedNodeModule = createCanvasNodeModule<EmbedNodeData, 'embed'>({
         getOpacity: () => node.data.backgroundOpacity ?? DEFAULT_CANVAS_NODE_BACKGROUND_OPACITY,
         setOpacity: (backgroundOpacity) => updateNodeData(node.id, { backgroundOpacity }),
       }),
-      bindCanvasPaintProperty(borderStrokeCanvasProperty, {
+      bindCanvasPaintProperty(linePaintCanvasProperty, {
         getColor: () => node.data.borderStroke ?? null,
         setColor: (borderStroke) => updateNodeData(node.id, { borderStroke }),
         getOpacity: () => node.data.borderOpacity ?? DEFAULT_CANVAS_NODE_BORDER_OPACITY,

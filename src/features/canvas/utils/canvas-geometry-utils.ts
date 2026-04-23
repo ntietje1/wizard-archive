@@ -27,7 +27,7 @@ export function rectIntersectsBounds(rect: Bounds, bounds: Bounds): boolean {
   )
 }
 
-export function boundsFromPoints(points: Array<PointLike>): Bounds | null {
+export function boundsFromPoints(points: ReadonlyArray<PointLike>): Bounds | null {
   if (points.length === 0) return null
 
   let minX = Infinity
@@ -71,7 +71,7 @@ export function segmentsIntersect(
 export function pointInPolygon(
   px: number,
   py: number,
-  polygon: Array<{ x: number; y: number }>,
+  polygon: ReadonlyArray<{ x: number; y: number }>,
 ): boolean {
   let inside = false
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
@@ -88,7 +88,7 @@ export function pointInPolygon(
 }
 
 export function polygonIntersectsBounds(
-  polygon: Array<{ x: number; y: number }>,
+  polygon: ReadonlyArray<{ x: number; y: number }>,
   bounds: Bounds,
 ): boolean {
   const polygonBounds = boundsFromPoints(polygon)

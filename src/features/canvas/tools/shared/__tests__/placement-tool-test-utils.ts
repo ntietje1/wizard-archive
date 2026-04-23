@@ -44,6 +44,7 @@ export function createPlacementEnvironment({
       createNode,
       updateNode: () => undefined,
       updateNodeData: () => undefined,
+      updateEdge: () => undefined,
       resizeNode: () => undefined,
       deleteNodes: () => undefined,
       createEdge: () => undefined,
@@ -86,12 +87,14 @@ export function createPlacementEnvironment({
     },
     toolState: {
       getSettings: () => ({
+        edgeType: 'bezier',
         strokeColor: 'var(--foreground)',
         strokeOpacity: 100,
         strokeSize: 4,
       }),
       getActiveTool: () => activeTool,
       setActiveTool,
+      setEdgeType: () => undefined,
       setStrokeColor: () => undefined,
       setStrokeSize: () => undefined,
       setStrokeOpacity: () => undefined,

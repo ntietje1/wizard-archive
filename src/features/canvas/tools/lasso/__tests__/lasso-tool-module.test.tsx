@@ -471,6 +471,7 @@ function createLassoEnvironment({
       createNode: () => undefined,
       updateNode: () => undefined,
       updateNodeData: () => undefined,
+      updateEdge: () => undefined,
       resizeNode: () => undefined,
       deleteNodes: () => undefined,
       createEdge: () => undefined,
@@ -513,12 +514,14 @@ function createLassoEnvironment({
     },
     toolState: {
       getSettings: () => ({
+        edgeType: 'bezier',
         strokeColor: 'var(--foreground)',
         strokeOpacity: 100,
         strokeSize: 4,
       }),
       getActiveTool: () => 'lasso',
       setActiveTool: setActiveTool ?? (() => undefined),
+      setEdgeType: () => undefined,
       setStrokeColor: () => undefined,
       setStrokeSize: () => undefined,
       setStrokeOpacity: () => undefined,

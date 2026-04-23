@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { getCanvasNodeContextMenuContributors } from '../../../nodes/canvas-node-modules'
 import { buildCanvasContextMenu } from '../canvas-context-menu-registry'
 import type {
+  CanvasContextMenuCommands,
   CanvasContextMenuContext,
   CanvasContextMenuServices,
 } from '../canvas-context-menu-types'
@@ -10,17 +11,47 @@ function createServices(
   overrides: Partial<CanvasContextMenuServices> = {},
 ): CanvasContextMenuServices {
   return {
-    canPaste: () => false,
-    canCopySnapshot: () => true,
     canOpenEmbedSelection: () => false,
-    copySnapshot: vi.fn(() => true),
-    cutSnapshot: vi.fn(() => true),
     openEmbedSelection: vi.fn(() => Promise.resolve(true)),
-    pasteClipboard: vi.fn(() => null),
-    duplicateSnapshot: vi.fn(() => null),
-    deleteSnapshot: vi.fn(() => true),
-    reorderSnapshot: vi.fn(() => true),
     createAndEmbedSidebarItem: vi.fn(() => Promise.resolve(null)),
+    ...overrides,
+  }
+}
+
+function createCommands(
+  overrides: Partial<CanvasContextMenuCommands> = {},
+): CanvasContextMenuCommands {
+  return {
+    copy: {
+      id: 'copy',
+      canRun: vi.fn(() => true),
+      run: vi.fn(() => true),
+    },
+    cut: {
+      id: 'cut',
+      canRun: vi.fn(() => true),
+      run: vi.fn(() => true),
+    },
+    paste: {
+      id: 'paste',
+      canRun: vi.fn(() => false),
+      run: vi.fn(() => null),
+    },
+    duplicate: {
+      id: 'duplicate',
+      canRun: vi.fn(() => true),
+      run: vi.fn(() => null),
+    },
+    delete: {
+      id: 'delete',
+      canRun: vi.fn(() => true),
+      run: vi.fn(() => true),
+    },
+    reorder: {
+      id: 'reorder',
+      canRun: vi.fn(() => true),
+      run: vi.fn(() => true),
+    },
     ...overrides,
   }
 }
@@ -39,10 +70,10 @@ function createContext(
 
 describe('buildCanvasContextMenu', () => {
   it('builds the base pane menu with direct submenu actions and disabled paste state', () => {
-    const services = createServices({ canPaste: () => false })
     const menu = buildCanvasContextMenu({
       context: createContext(),
-      services,
+      services: createServices(),
+      commands: createCommands(),
     })
 
     expect(menu.flatItems.map((item) => item.id)).toEqual([
@@ -59,13 +90,17 @@ describe('buildCanvasContextMenu', () => {
     expect(menu.flatItems[1]?.disabled).toBe(true)
   })
 
-  it('builds selection actions in order and runs services directly from onSelect', async () => {
-    const copySnapshot = vi.fn(() => true)
-    const services = createServices({ copySnapshot })
+  it('builds selection actions in order and runs shared commands from onSelect', async () => {
+    const copyCommand = {
+      id: 'copy',
+      canRun: vi.fn(() => true),
+      run: vi.fn(() => true),
+    }
     const selection = { nodeIds: ['node-1'], edgeIds: [] }
     const menu = buildCanvasContextMenu({
       context: createContext({ selection }),
-      services,
+      services: createServices(),
+      commands: createCommands({ copy: copyCommand }),
     })
 
     expect(menu.flatItems.map((item) => item.id)).toEqual([
@@ -80,7 +115,7 @@ describe('buildCanvasContextMenu', () => {
     expect(copyItem).toBeDefined()
 
     await copyItem!.onSelect()
-    expect(copySnapshot).toHaveBeenCalledWith(selection)
+    expect(copyCommand.run).toHaveBeenCalledWith({ selection })
   })
 
   it('merges node contributors that now expose direct actions instead of command ids', async () => {
@@ -94,6 +129,7 @@ describe('buildCanvasContextMenu', () => {
     const menu = buildCanvasContextMenu({
       context: createContext({ selection }),
       services,
+      commands: createCommands(),
       contributors,
     })
 

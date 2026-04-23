@@ -67,8 +67,16 @@ describe('CanvasToolbar', () => {
     const buttons = within(toolbar).getAllByRole('button')
     const labels = buttons.map((button) => button.getAttribute('aria-label'))
 
-    expect(labels).toEqual(['Pointer', 'Panning', 'Lasso select', 'Draw', 'Eraser', 'Text'])
-    expect(buttons.map((button) => button.textContent)).toEqual(['1', '2', '3', '4', '5', '6'])
+    expect(labels).toEqual([
+      'Pointer',
+      'Panning',
+      'Lasso select',
+      'Draw',
+      'Eraser',
+      'Text',
+      'Edges',
+    ])
+    expect(buttons.map((button) => button.textContent)).toEqual(['1', '2', '3', '4', '5', '6', '7'])
     expect(buttons.map((button) => button.getAttribute('title'))).toEqual([
       'Pointer (1)',
       'Panning (2)',
@@ -76,6 +84,7 @@ describe('CanvasToolbar', () => {
       'Draw (4)',
       'Eraser (5)',
       'Text (6)',
+      'Edges (7)',
     ])
   })
 

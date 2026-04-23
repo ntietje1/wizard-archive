@@ -1,4 +1,5 @@
 import { drawToolModule } from './draw/draw-tool-module'
+import { edgeToolModule } from './edge/edge-tool-module'
 import { eraseToolModule } from './erase/erase-tool-module'
 import { handToolModule } from './hand/hand-tool-module'
 import { lassoToolModule } from './lasso/lasso-tool-module'
@@ -21,6 +22,7 @@ const canvasToolModules = [
   drawToolModule,
   eraseToolModule,
   textToolModule,
+  edgeToolModule,
 ] as const satisfies ReadonlyArray<AnyCanvasToolModule>
 
 const canvasToolModuleMap: Partial<Record<CanvasToolId, AnyCanvasToolModule>> = Object.fromEntries(

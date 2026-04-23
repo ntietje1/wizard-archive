@@ -1,9 +1,10 @@
 import { useReactFlow, useStoreApi } from '@xyflow/react'
 import type { Id } from 'convex/_generated/dataModel'
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import type { Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 import { getMeasuredCanvasNodesFromLookup } from './document/canvas-measured-nodes'
+import { useCanvasCommands } from './document/use-canvas-commands'
 import { useCanvasDocumentProjection } from './document/use-canvas-document-projection'
 import { useCanvasDocumentWriter } from './document/use-canvas-document-writer'
 import { useCanvasHistory } from './document/use-canvas-history'
@@ -30,7 +31,11 @@ import {
   createCanvasToolHandlers,
   getCanvasToolCursor,
 } from '../tools/canvas-tool-modules'
-import type { CanvasToolHandlers, CanvasToolRuntime } from '../tools/canvas-tool-types'
+import type {
+  CanvasEdgeCreationDefaults,
+  CanvasToolId,
+  CanvasToolRuntime,
+} from '../tools/canvas-tool-types'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
 import { useYjsPreviewUpload } from '~/features/previews/hooks/use-yjs-preview-upload'
 
@@ -44,6 +49,8 @@ interface UseCanvasFlowRuntimeOptions {
   provider: ConvexYjsProvider | null
   doc: Y.Doc
 }
+
+const SELECTION_INCOMPATIBLE_TOOLS = new Set<CanvasToolId>(['draw', 'erase', 'text', 'edge'])
 
 export function useCanvasFlowRuntime({
   nodesMap,
@@ -61,6 +68,7 @@ export function useCanvasFlowRuntime({
   const storeApi = useStoreApi()
   const canvasSurfaceRef = useRef<HTMLDivElement>(null)
   const localDraggingIdsRef = useRef(new Set<string>())
+  const previousActiveToolRef = useRef<CanvasToolId | null>(null)
   const historySelectionChangeRef = useRef<
     (selection: { nodeIds: Array<string>; edgeIds: Array<string> }) => void
   >(() => undefined)
@@ -84,6 +92,31 @@ export function useCanvasFlowRuntime({
       clearCanvasToolTransientState(activeTool, session.awareness.presence)
     }
   }, [activeTool, session.awareness.presence])
+
+  const cancelConnectionDraft = useCallback(() => {
+    storeApi.getState().cancelConnection?.()
+    storeApi.setState({ connectionClickStartHandle: null })
+  }, [storeApi])
+
+  useEffect(() => {
+    const previousTool = previousActiveToolRef.current
+    previousActiveToolRef.current = activeTool
+
+    if (previousTool === null || previousTool === activeTool) {
+      return
+    }
+
+    cancelConnectionDraft()
+
+    if (!canEdit || !SELECTION_INCOMPATIBLE_TOOLS.has(activeTool)) {
+      return
+    }
+
+    selection.clear()
+    session.editSession.setEditingEmbedId(null)
+    session.editSession.setPendingEditNodeId(null)
+    session.editSession.setPendingEditNodePoint(null)
+  }, [activeTool, canEdit, cancelConnectionDraft, selection, session.editSession])
 
   useYjsPreviewUpload({
     itemId: canvasId,
@@ -111,14 +144,22 @@ export function useCanvasFlowRuntime({
     selection,
   })
   historySelectionChangeRef.current = history.onSelectionChange
-
-  useCanvasKeyboardShortcuts({
-    undo: history.undo,
-    redo: history.redo,
+  const commands = useCanvasCommands({
     canEdit,
     nodesMap,
     edgesMap,
     selection,
+  })
+
+  useCanvasKeyboardShortcuts({
+    undo: history.undo,
+    redo: history.redo,
+    cancelConnectionDraft,
+    canEdit,
+    nodesMap,
+    edgesMap,
+    selection,
+    commands,
   })
 
   const dragHandlers = useCanvasNodeDragHandlers({
@@ -144,6 +185,7 @@ export function useCanvasFlowRuntime({
 
   const interaction = useCanvasSurfaceClickGuard(canvasSurfaceRef)
   const isSelectMode = activeTool === 'select'
+  const isEdgeMode = activeTool === 'edge'
   const modifiers = useCanvasModifierKeys()
 
   useCanvasSelectionRect({
@@ -175,12 +217,14 @@ export function useCanvasFlowRuntime({
     editSession: session.editSession,
     toolState: {
       getSettings: () => ({
+        edgeType: useCanvasToolStore.getState().edgeType,
         strokeColor: useCanvasToolStore.getState().strokeColor,
         strokeOpacity: useCanvasToolStore.getState().strokeOpacity,
         strokeSize: useCanvasToolStore.getState().strokeSize,
       }),
       getActiveTool: () => useCanvasToolStore.getState().activeTool,
       setActiveTool: (tool) => useCanvasToolStore.getState().setActiveTool(tool),
+      setEdgeType: (type) => useCanvasToolStore.getState().setEdgeType(type),
       setStrokeColor: (color) => useCanvasToolStore.getState().setStrokeColor(color),
       setStrokeSize: (size) => useCanvasToolStore.getState().setStrokeSize(size),
       setStrokeOpacity: (opacity) => useCanvasToolStore.getState().setStrokeOpacity(opacity),
@@ -205,18 +249,9 @@ export function useCanvasFlowRuntime({
   }
   toolRuntimeRef.current.editSession = session.editSession
   toolRuntimeRef.current.awareness = session.awareness
+  const toolRuntime = toolRuntimeRef.current
 
-  const activeToolHandlersRef = useRef<{
-    toolId: typeof activeTool
-    handlers: CanvasToolHandlers
-  } | null>(null)
-  if (!activeToolHandlersRef.current || activeToolHandlersRef.current.toolId !== activeTool) {
-    activeToolHandlersRef.current = {
-      toolId: activeTool,
-      handlers: createCanvasToolHandlers(activeTool, toolRuntimeRef.current),
-    }
-  }
-  const activeToolHandlers = activeToolHandlersRef.current.handlers
+  const activeToolHandlers = createCanvasToolHandlers(activeTool, toolRuntime)
 
   useCanvasPointerBridge({
     surfaceRef: canvasSurfaceRef,
@@ -233,12 +268,28 @@ export function useCanvasFlowRuntime({
     screenToFlowPosition: reactFlow.screenToFlowPosition,
   })
 
+  const getEdgeCreationDefaults = (): CanvasEdgeCreationDefaults => {
+    const { edgeType, strokeColor, strokeOpacity, strokeSize } = useCanvasToolStore.getState()
+
+    return {
+      type: edgeType,
+      style: {
+        stroke: strokeColor,
+        strokeWidth: strokeSize,
+        opacity: strokeOpacity >= 100 ? undefined : strokeOpacity / 100,
+      },
+    }
+  }
+
   const flowHandlers = useCanvasFlowHandlers({
     activeToolHandlers,
+    cancelConnectionDraft,
     canEdit,
     cursorPresence,
     documentWriter,
     dragHandlers,
+    getEdgeCreationDefaults,
+    isEdgeMode,
     isSelectMode,
   })
 
@@ -252,12 +303,15 @@ export function useCanvasFlowRuntime({
     createNode: documentWriter.createNode,
     screenToFlowPosition: reactFlow.screenToFlowPosition,
     selection,
+    commands,
   })
 
   return {
     activeTool,
     canvasSurfaceRef,
+    commands,
     contextMenu,
+    documentWriter,
     dropTarget,
     editSession: session.editSession,
     flowHandlers,

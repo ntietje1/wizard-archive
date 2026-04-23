@@ -12,12 +12,14 @@ describe('useCanvasToolPropertyContext', () => {
 
     act(() => {
       useCanvasToolStore.getState().setActiveTool('draw')
+      useCanvasToolStore.getState().setEdgeType('straight')
       useCanvasToolStore.getState().setStrokeColor('var(--t-red)')
       useCanvasToolStore.getState().setStrokeOpacity(42)
       useCanvasToolStore.getState().setStrokeSize(8)
     })
 
     expect(result.current.toolState.getSettings()).toEqual({
+      edgeType: 'straight',
       strokeColor: 'var(--t-red)',
       strokeOpacity: 42,
       strokeSize: 8,

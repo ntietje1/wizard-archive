@@ -8,7 +8,7 @@ import {
   strokeNodeIntersectsRect,
 } from './stroke-node-interactions'
 import {
-  paintCanvasProperty,
+  linePaintCanvasProperty,
   strokeSizeCanvasProperty,
 } from '../../properties/canvas-property-definitions'
 import {
@@ -70,7 +70,7 @@ export const strokeNodeModule = createCanvasNodeModule<StrokeNodeData, 'stroke'>
   },
   properties: ({ node, updateNodeData }) => ({
     bindings: [
-      bindCanvasPaintProperty(paintCanvasProperty, {
+      bindCanvasPaintProperty(linePaintCanvasProperty, {
         getColor: () => node.data.color,
         setColor: (color) =>
           updateNodeData(node.id, {

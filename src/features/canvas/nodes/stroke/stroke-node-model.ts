@@ -1,5 +1,7 @@
 import getStroke from 'perfect-freehand'
+import { Position } from '@xyflow/react'
 import type { Node, XYPosition } from '@xyflow/react'
+import type { Point2D } from '../../utils/canvas-awareness-types'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
 
 export type StrokeNodeData = {
@@ -20,6 +22,8 @@ type StrokeNodeLike = {
     bounds: Bounds
   }
 }
+
+export type StrokeEndpoint = 'start' | 'end'
 
 const STROKE_OPTIONS_BASE = {
   thinning: 0.5,
@@ -104,6 +108,55 @@ function getAbsoluteStrokePoints(
 
 export function getAbsoluteStrokePointsForNode(node: StrokeNodeLike) {
   return getAbsoluteStrokePoints(node.data.points, node.data.bounds, node.position)
+}
+
+type AbsoluteStrokePoint = [number, number, number]
+
+function getStrokeEndpointPair(
+  endpoint: StrokeEndpoint,
+  absolutePoints: ReadonlyArray<AbsoluteStrokePoint>,
+) {
+  return endpoint === 'start'
+    ? { endpointPoint: absolutePoints[0], interiorPoint: absolutePoints[1] }
+    : {
+        endpointPoint: absolutePoints[absolutePoints.length - 1],
+        interiorPoint: absolutePoints[absolutePoints.length - 2],
+      }
+}
+
+export function getStrokeEndpointPoint(
+  node: StrokeNodeLike,
+  endpoint: StrokeEndpoint,
+  absolutePoints: ReadonlyArray<AbsoluteStrokePoint> = getAbsoluteStrokePointsForNode(node),
+): Point2D | null {
+  if (absolutePoints.length === 0) {
+    return null
+  }
+
+  const { endpointPoint } = getStrokeEndpointPair(endpoint, absolutePoints)
+  const [x, y] = endpointPoint
+
+  return { x, y }
+}
+
+export function getStrokeEndpointConnectionPosition(
+  node: StrokeNodeLike,
+  endpoint: StrokeEndpoint,
+  absolutePoints: ReadonlyArray<AbsoluteStrokePoint> = getAbsoluteStrokePointsForNode(node),
+): Position {
+  if (absolutePoints.length < 2) {
+    return endpoint === 'start' ? Position.Left : Position.Right
+  }
+
+  const { endpointPoint, interiorPoint } = getStrokeEndpointPair(endpoint, absolutePoints)
+  const dx = interiorPoint[0] - endpointPoint[0]
+  const dy = interiorPoint[1] - endpointPoint[1]
+
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    return dx >= 0 ? Position.Left : Position.Right
+  }
+
+  return dy >= 0 ? Position.Top : Position.Bottom
 }
 
 export function resizeStrokeNode<TNode extends StrokeNodeLike>(

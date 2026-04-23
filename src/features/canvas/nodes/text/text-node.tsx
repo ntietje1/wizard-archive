@@ -14,7 +14,7 @@ export function TextNode(props: NodeProps<Node<TextNodeData>>) {
         emptyAriaLabel: 'Empty text node',
         minWidth: 80,
         minHeight: 30,
-        containerClassName: 'rounded-lg shadow-sm',
+        containerClassName: 'rounded-lg',
         contentClassName: 'h-full w-full overflow-hidden',
         textClassName: 'text-sm',
         textColor: 'inherit',

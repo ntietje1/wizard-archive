@@ -67,6 +67,7 @@ export function createRectangularPlacementToolController<
     if (placement.node.selected) {
       services.selection.replaceNodes([placement.node.id])
     }
+    services.toolState.setActiveTool('select')
     if (placement.startEditing) {
       services.editSession.setPendingEditNodePoint(point)
       services.editSession.setPendingEditNodeId(placement.node.id)
@@ -88,6 +89,7 @@ export function createRectangularPlacementToolController<
     if (placement.node.selected) {
       services.selection.replaceNodes([placement.node.id])
     }
+    services.toolState.setActiveTool('select')
     if (placement.startEditing) {
       services.editSession.setPendingEditNodePoint(point)
       services.editSession.setPendingEditNodeId(placement.node.id)
@@ -146,7 +148,6 @@ export function createRectangularPlacementToolController<
         }
       } finally {
         reset()
-        services.toolState.setActiveTool('select')
       }
     },
     onPointerCancel: () => {

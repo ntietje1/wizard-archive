@@ -8,17 +8,38 @@ import {
 } from '../../../runtime/selection/use-canvas-pending-selection-preview'
 import { StrokeNode } from '../stroke-node'
 
+const connectionHandlesSpy = vi.hoisted(() => vi.fn())
+
 vi.mock('@xyflow/react', () => ({
   useViewport: () => ({ zoom: 1 }),
+  Position: {
+    Top: 'top',
+    Right: 'right',
+    Bottom: 'bottom',
+    Left: 'left',
+  },
 }))
 
 vi.mock('../../shared/resizable-node-wrapper', () => ({
-  ResizableNodeWrapper: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  ResizableNodeWrapper: ({ children, chrome }: { children: ReactNode; chrome?: ReactNode }) => (
+    <div>
+      {chrome}
+      {children}
+    </div>
+  ),
+}))
+
+vi.mock('../../shared/canvas-node-connection-handles', () => ({
+  CanvasNodeConnectionHandles: (props: unknown) => {
+    connectionHandlesSpy(props)
+    return <div data-testid="stroke-connection-handles" />
+  },
 }))
 
 afterEach(() => {
   clearCanvasPendingSelectionPreview()
   useCanvasSelectionState.getState().reset()
+  connectionHandlesSpy.mockReset()
 })
 
 describe('StrokeNode', () => {
@@ -60,6 +81,27 @@ describe('StrokeNode', () => {
 
     expect(getByTestId('stroke-hit-target')).toBeInTheDocument()
     expect(container.querySelectorAll('path')).toHaveLength(3)
+  })
+
+  it('passes only start and end connection handles at the stroke endpoints', () => {
+    render(<StrokeNode {...setupStrokeNodeProps({ selected: false })} />)
+
+    expect(connectionHandlesSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        handles: [
+          expect.objectContaining({
+            id: 'start',
+            position: 'left',
+            style: expect.objectContaining({ left: 0, top: 10 }),
+          }),
+          expect.objectContaining({
+            id: 'end',
+            position: 'right',
+            style: expect.objectContaining({ left: 100, top: 10 }),
+          }),
+        ],
+      }),
+    )
   })
 })
 

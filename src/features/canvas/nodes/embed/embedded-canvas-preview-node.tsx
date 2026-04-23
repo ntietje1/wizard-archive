@@ -16,10 +16,10 @@ export function EmbeddedCanvasPreviewNode({ id, data, dragging }: NodeProps<Node
       dragging={!!dragging}
       minWidth={240}
       minHeight={180}
-      chrome={<CanvasNodeConnectionHandles selected={false} preserveAnchors />}
+      chrome={<CanvasNodeConnectionHandles />}
     >
       <div
-        className="relative h-full w-full overflow-hidden rounded-lg shadow-sm"
+        className="relative h-full w-full overflow-hidden rounded-lg"
         style={getCanvasNodeSurfaceStyle(data)}
       >
         {contentItem ? <SidebarItemPreviewContent item={contentItem} /> : null}

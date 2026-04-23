@@ -1,9 +1,11 @@
 import type { Point2D } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-geometry-utils'
 import type { CanvasContextMenuCapability } from '../runtime/context-menu/canvas-context-menu-types'
+import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
+import type { CanvasDocumentWriter } from '../tools/canvas-tool-types'
 import type { Edge, EdgeProps, EdgeTypes, Node } from '@xyflow/react'
 
-export type CanvasEdgeType = 'bezier'
+export type CanvasEdgeType = 'bezier' | 'straight' | 'step'
 
 export type CanvasEdgeRendererProps<
   TData extends Record<string, unknown> = Record<string, unknown>,
@@ -27,6 +29,10 @@ export interface CanvasEdgeSelection {
 export interface CanvasEdgeModule<TType extends CanvasEdgeType = CanvasEdgeType> {
   type: TType
   EdgeComponent: CanvasEdgeRenderer
+  properties?: (context: {
+    edge: Edge
+    updateEdge: CanvasDocumentWriter['updateEdge']
+  }) => CanvasInspectableProperties
   selection: CanvasEdgeSelection
   contextMenu?: CanvasContextMenuCapability
 }

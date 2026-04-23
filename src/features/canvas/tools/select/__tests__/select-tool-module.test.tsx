@@ -222,6 +222,7 @@ function createSelectEnvironment({
       createNode: () => undefined,
       updateNode: () => undefined,
       updateNodeData: () => undefined,
+      updateEdge: () => undefined,
       resizeNode: () => undefined,
       deleteNodes: () => undefined,
       createEdge: () => undefined,
@@ -264,12 +265,14 @@ function createSelectEnvironment({
     },
     toolState: {
       getSettings: () => ({
+        edgeType: 'bezier',
         strokeColor: 'var(--foreground)',
         strokeOpacity: 100,
         strokeSize: 4,
       }),
       getActiveTool: () => 'select',
       setActiveTool: () => undefined,
+      setEdgeType: () => undefined,
       setStrokeColor: () => undefined,
       setStrokeSize: () => undefined,
       setStrokeOpacity: () => undefined,

@@ -3,10 +3,10 @@ import { getCanvasEdgeContextMenuContributors } from '../../edges/canvas-edge-re
 import { getCanvasNodeContextMenuContributors } from '../../nodes/canvas-node-modules'
 import { parseEmbedNodeData } from '../../nodes/embed/embed-node-data'
 import { createAndSelectEmbeddedCanvasNode } from '../document/canvas-document-commands'
-import { useCanvasSelectionOperations } from '../document/use-canvas-selection-operations'
 import { buildCanvasContextMenu } from './canvas-context-menu-registry'
 import type { CanvasSelectionController } from '../../tools/canvas-tool-types'
 import type {
+  CanvasContextMenuCommands,
   CanvasContextMenuContext,
   CanvasContextMenuPoint,
   CanvasContextMenuServices,
@@ -30,6 +30,7 @@ interface UseCanvasContextMenuOptions {
   createNode: (node: Node) => void
   screenToFlowPosition: (position: CanvasContextMenuPoint) => { x: number; y: number }
   selection: Pick<CanvasSelectionController, 'clear' | 'getSnapshot' | 'replace'>
+  commands: CanvasContextMenuCommands
 }
 
 type PointerPosition = { x: number; y: number }
@@ -86,16 +87,11 @@ export function useCanvasContextMenu({
   createNode,
   screenToFlowPosition,
   selection,
+  commands,
 }: UseCanvasContextMenuOptions) {
   const hostRef = useRef<ContextMenuHostRef>(null)
   const pendingOpenPositionRef = useRef<PointerPosition | null>(null)
   const [menuContext, setMenuContext] = useState<CanvasContextMenuContext | null>(null)
-  const selectionOperations = useCanvasSelectionOperations({
-    canEdit,
-    nodesMap,
-    edgesMap,
-    selection,
-  })
   const { createItem } = useCreateSidebarItem()
   const { getDefaultName } = useSidebarValidation()
   const { navigateToItem } = useEditorNavigation()
@@ -120,7 +116,6 @@ export function useCanvasContextMenu({
   }
 
   const services = {
-    ...selectionOperations,
     canOpenEmbedSelection: (selectionSnapshot) =>
       resolveSelectedEmbedItem(selectionSnapshot) !== null,
     openEmbedSelection: async (selectionSnapshot) => {
@@ -251,6 +246,7 @@ export function useCanvasContextMenu({
       ? buildCanvasContextMenu({
           context: menuContext,
           services,
+          commands,
           contributors: selectionContributors,
         })
       : { groups: [], flatItems: [], isEmpty: true },

@@ -1,4 +1,8 @@
-import type { CanvasDocumentWriter, CanvasToolHandlers } from '../../tools/canvas-tool-types'
+import type {
+  CanvasDocumentWriter,
+  CanvasEdgeCreationDefaults,
+  CanvasToolHandlers,
+} from '../../tools/canvas-tool-types'
 import type {
   Connection,
   Edge,
@@ -28,14 +32,20 @@ export interface CanvasFlowHandlers {
 
 export function useCanvasFlowHandlers({
   activeToolHandlers,
+  cancelConnectionDraft,
   canEdit,
   cursorPresence,
   documentWriter,
   dragHandlers,
+  getEdgeCreationDefaults,
+  isEdgeMode,
   isSelectMode,
 }: {
   activeToolHandlers: CanvasToolHandlers
+  cancelConnectionDraft: () => void
   canEdit: boolean
+  getEdgeCreationDefaults: () => CanvasEdgeCreationDefaults
+  isEdgeMode: boolean
   isSelectMode: boolean
   cursorPresence: {
     onMouseLeave: () => void
@@ -65,16 +75,22 @@ export function useCanvasFlowHandlers({
           }
         : undefined,
     onConnect:
-      canEdit && isSelectMode
+      canEdit && isEdgeMode
         ? (connection: Connection) => {
-            documentWriter.createEdge(connection)
+            documentWriter.createEdge(connection, getEdgeCreationDefaults())
           }
         : undefined,
     onMoveStart: activeToolHandlers.onMoveStart,
     onMoveEnd: activeToolHandlers.onMoveEnd,
     onNodeClick: activeToolHandlers.onNodeClick,
     onEdgeClick: activeToolHandlers.onEdgeClick,
-    onPaneClick: activeToolHandlers.onPaneClick,
+    onPaneClick: (event: ReactMouseEvent) => {
+      if (canEdit && isEdgeMode) {
+        cancelConnectionDraft()
+      }
+
+      activeToolHandlers.onPaneClick?.(event)
+    },
     onMouseMove: cursorPresence.onMouseMove,
     onMouseLeave: cursorPresence.onMouseLeave,
   } satisfies CanvasFlowHandlers

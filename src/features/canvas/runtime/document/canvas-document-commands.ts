@@ -1,6 +1,9 @@
 import { createEmbedCanvasNode } from '../../nodes/embed/embed-node-creation'
 import { getCanvasNodeModuleByType } from '../../nodes/canvas-node-modules'
-import type { CanvasSelectionSnapshot } from '../../tools/canvas-tool-types'
+import type {
+  CanvasEdgeCreationDefaults,
+  CanvasSelectionSnapshot,
+} from '../../tools/canvas-tool-types'
 import { getCanvasDeletionSelection } from '../context-menu/canvas-context-menu-selection'
 import type { CanvasReorderUpdates } from '../context-menu/canvas-context-menu-reorder'
 import type { CanvasContextMenuPoint } from '../context-menu/canvas-context-menu-types'
@@ -85,6 +88,23 @@ export function updateCanvasNodeDataCommand({
   )
 }
 
+export function updateCanvasEdgeCommand({
+  edgesMap,
+  edgeId,
+  updater,
+}: {
+  edgesMap: Y.Map<Edge>
+  edgeId: string
+  updater: (edge: Edge) => Edge
+}) {
+  const existing = edgesMap.get(edgeId)
+  if (!existing) {
+    return
+  }
+
+  edgesMap.set(edgeId, updater(existing))
+}
+
 export function resizeCanvasNodeCommand({
   nodesMap,
   nodeId,
@@ -164,17 +184,20 @@ export function deleteCanvasSelectionCommand({
 export function createCanvasEdgeCommand({
   edgesMap,
   connection,
+  defaults,
   nextZIndex,
 }: {
   edgesMap: Y.Map<Edge>
   connection: Connection
+  defaults?: CanvasEdgeCreationDefaults
   nextZIndex: number
 }) {
   const id = `e-${connection.source}-${connection.target}-${crypto.randomUUID()}`
   edgesMap.set(id, {
     ...connection,
     id,
-    type: 'bezier',
+    type: defaults?.type ?? 'bezier',
+    style: defaults?.style,
     zIndex: nextZIndex,
   })
 }

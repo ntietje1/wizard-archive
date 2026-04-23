@@ -1,11 +1,13 @@
 import { createContext, useContext } from 'react'
 import type { RemoteHighlight } from '../../utils/canvas-awareness-types'
 import type {
+  CanvasDocumentWriter,
   CanvasEditSessionState,
   CanvasHistoryController,
   CanvasNodeActions,
   CanvasSelectionController,
 } from '../../tools/canvas-tool-types'
+import type { CanvasCommands } from '../document/use-canvas-commands'
 
 function createRequiredCanvasContext<TValue>(name: string) {
   const context = createContext<TValue | null>(null)
@@ -40,3 +42,9 @@ export const [CanvasSelectionContext, useCanvasSelectionContext] =
 
 export const [CanvasRemoteHighlightsContext, useCanvasRemoteHighlightsContext] =
   createRequiredCanvasContext<Map<string, RemoteHighlight>>('CanvasRemoteHighlightsContext')
+
+export const [CanvasCommandsContext, useCanvasCommandsContext] =
+  createRequiredCanvasContext<CanvasCommands>('CanvasCommandsContext')
+
+export const [CanvasDocumentWriterContext, useCanvasDocumentWriterContext] =
+  createRequiredCanvasContext<CanvasDocumentWriter>('CanvasDocumentWriterContext')

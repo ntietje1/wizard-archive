@@ -11,7 +11,7 @@ import { clearDrawToolLocalOverlay, setDrawToolLocalDrawing } from './draw-tool-
 import { DrawToolLocalOverlayLayer } from './draw-tool-local-overlay-layer'
 import { getStrokeBounds } from '../../nodes/stroke/stroke-node-model'
 import {
-  paintCanvasProperty,
+  linePaintCanvasProperty,
   strokeSizeCanvasProperty,
 } from '../../properties/canvas-property-definitions'
 import {
@@ -29,7 +29,7 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
   properties: (context) => {
     return {
       bindings: [
-        bindCanvasPaintProperty(paintCanvasProperty, {
+        bindCanvasPaintProperty(linePaintCanvasProperty, {
           getColor: () => context.toolState.getSettings().strokeColor,
           setColor: context.toolState.setStrokeColor,
           getOpacity: () => context.toolState.getSettings().strokeOpacity,

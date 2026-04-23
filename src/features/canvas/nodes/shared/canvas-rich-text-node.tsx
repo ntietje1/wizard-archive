@@ -115,10 +115,7 @@ export function CanvasRichTextNode({
             editor={editorSession.editor}
             visible={showsFormattingToolbar}
           />
-          <CanvasNodeConnectionHandles
-            selected={editableSession.isSelected}
-            preserveAnchors={!interactiveRenderMode}
-          />
+          <CanvasNodeConnectionHandles />
         </>
       }
     >

@@ -127,6 +127,7 @@ function createDrawEnvironment({
       createNode,
       updateNode: () => undefined,
       updateNodeData: () => undefined,
+      updateEdge: () => undefined,
       resizeNode: () => undefined,
       deleteNodes: () => undefined,
       createEdge: () => undefined,
@@ -169,12 +170,14 @@ function createDrawEnvironment({
     },
     toolState: {
       getSettings: () => ({
+        edgeType: 'bezier',
         strokeColor: 'var(--foreground)',
         strokeOpacity: 100,
         strokeSize: 4,
       }),
       getActiveTool: () => 'draw',
       setActiveTool: () => undefined,
+      setEdgeType: () => undefined,
       setStrokeColor: () => undefined,
       setStrokeSize: () => undefined,
       setStrokeOpacity: () => undefined,

@@ -8,6 +8,7 @@ import {
   deleteCanvasSelectionCommand,
   resizeCanvasNodeCommand,
   setCanvasNodePositionCommand,
+  updateCanvasEdgeCommand,
   updateCanvasNodeCommand,
   updateCanvasNodeDataCommand,
 } from './canvas-document-commands'
@@ -60,6 +61,15 @@ export function useCanvasDocumentWriter({
           })
         })
       },
+      updateEdge: (edgeId, updater) => {
+        withEdgeTransaction(() => {
+          updateCanvasEdgeCommand({
+            edgesMap,
+            edgeId,
+            updater,
+          })
+        })
+      },
       resizeNode: (nodeId, width, height, position) => {
         withNodeTransaction(() => {
           resizeCanvasNodeCommand({
@@ -82,11 +92,12 @@ export function useCanvasDocumentWriter({
           })
         })
       },
-      createEdge: (connection) => {
+      createEdge: (connection, defaults) => {
         withEdgeTransaction(() => {
           createCanvasEdgeCommand({
             edgesMap,
             connection,
+            defaults,
             nextZIndex: getNextCanvasElementZIndex(Array.from(edgesMap.values())),
           })
         })

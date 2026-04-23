@@ -2,6 +2,7 @@ import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useCanvasKeyboardShortcuts } from '../use-canvas-keyboard-shortcuts'
 import { useCanvasToolStore } from '../../../stores/canvas-tool-store'
+import type { CanvasCommands } from '../use-canvas-commands'
 
 const hotkeyRegistrations = vi.hoisted(
   () =>
@@ -29,15 +30,6 @@ vi.mock('@tanstack/react-hotkeys', () => ({
   },
 }))
 
-vi.mock('../use-canvas-selection-operations', () => ({
-  useCanvasSelectionOperations: () => ({
-    copySnapshot: copySnapshotSpy,
-    cutSnapshot: cutSnapshotSpy,
-    deleteSnapshot: deleteSnapshotSpy,
-    pasteClipboard: pasteClipboardSpy,
-  }),
-}))
-
 function getRegistration(hotkey: string) {
   const registration = hotkeyRegistrations.find((entry) => entry.hotkey === hotkey)
   if (!registration) {
@@ -45,6 +37,36 @@ function getRegistration(hotkey: string) {
   }
 
   return registration
+}
+
+type KeyboardShortcutCommands = Pick<CanvasCommands, 'copy' | 'cut' | 'paste' | 'delete'>
+
+function createCommands(
+  overrides: Partial<KeyboardShortcutCommands> = {},
+): KeyboardShortcutCommands {
+  return {
+    copy: {
+      id: 'copy',
+      canRun: vi.fn(() => true),
+      run: copySnapshotSpy,
+    },
+    cut: {
+      id: 'cut',
+      canRun: vi.fn(() => true),
+      run: cutSnapshotSpy,
+    },
+    paste: {
+      id: 'paste',
+      canRun: vi.fn(() => true),
+      run: pasteClipboardSpy,
+    },
+    delete: {
+      id: 'delete',
+      canRun: vi.fn(() => true),
+      run: deleteSnapshotSpy,
+    },
+    ...overrides,
+  }
 }
 
 describe('useCanvasKeyboardShortcuts', () => {
@@ -72,10 +94,12 @@ describe('useCanvasKeyboardShortcuts', () => {
     renderHook(() =>
       useCanvasKeyboardShortcuts({
         ...history,
+        cancelConnectionDraft: vi.fn(),
         canEdit: true,
         nodesMap: new Map() as never,
         edgesMap: new Map() as never,
         selection,
+        commands: createCommands(),
       }),
     )
 
@@ -89,6 +113,7 @@ describe('useCanvasKeyboardShortcuts', () => {
       '4',
       '5',
       '6',
+      '7',
       'Mod+A',
       'Mod+Z',
       'Mod+Shift+Z',
@@ -105,6 +130,7 @@ describe('useCanvasKeyboardShortcuts', () => {
       undo: vi.fn(),
       redo: vi.fn(),
     }
+    const cancelConnectionDraft = vi.fn()
     const selection = {
       getSnapshot: getSelectionSnapshotSpy,
       replace: vi.fn(),
@@ -114,6 +140,7 @@ describe('useCanvasKeyboardShortcuts', () => {
     renderHook(() =>
       useCanvasKeyboardShortcuts({
         ...history,
+        cancelConnectionDraft,
         canEdit: true,
         nodesMap: new Map([
           ['node-1', {}],
@@ -121,16 +148,18 @@ describe('useCanvasKeyboardShortcuts', () => {
         ]) as never,
         edgesMap: new Map([['edge-1', {}]]) as never,
         selection,
+        commands: createCommands(),
       }),
     )
 
     useCanvasToolStore.getState().setActiveTool('draw')
     getRegistration('Escape').callback(new KeyboardEvent('keydown', { key: 'Escape' }))
     expect(selection.clear).toHaveBeenCalledTimes(1)
+    expect(cancelConnectionDraft).toHaveBeenCalledTimes(1)
     expect(useCanvasToolStore.getState().activeTool).toBe('draw')
 
     getRegistration('Escape').callback(new KeyboardEvent('keydown', { key: 'Escape' }))
-    getRegistration('5').callback(new KeyboardEvent('keydown', { key: '5' }))
+    getRegistration('7').callback(new KeyboardEvent('keydown', { key: '7' }))
     const deletePreventDefaultSpy = vi.fn()
     const deleteEvent = {
       repeat: false,
@@ -155,18 +184,18 @@ describe('useCanvasKeyboardShortcuts', () => {
     getRegistration('Mod+Z').callback(new KeyboardEvent('keydown', { key: 'z', repeat: true }))
 
     expect(selection.clear).toHaveBeenCalledTimes(2)
-    expect(deleteSnapshotSpy).toHaveBeenCalledWith({ nodeIds: ['node-1'], edgeIds: [] })
+    expect(deleteSnapshotSpy).toHaveBeenCalledWith()
     expect(deletePreventDefaultSpy).toHaveBeenCalledTimes(1)
     expect(selection.replace).toHaveBeenCalledWith({
       nodeIds: ['node-1', 'node-2'],
       edgeIds: ['edge-1'],
     })
     expect(preventDefaultSpy).toHaveBeenCalledTimes(1)
-    expect(useCanvasToolStore.getState().activeTool).toBe('erase')
+    expect(useCanvasToolStore.getState().activeTool).toBe('edge')
     expect(history.undo).toHaveBeenCalledTimes(1)
     expect(history.redo).toHaveBeenCalledTimes(2)
-    expect(copySnapshotSpy).toHaveBeenCalledWith({ nodeIds: ['node-1'], edgeIds: [] })
-    expect(cutSnapshotSpy).toHaveBeenCalledWith({ nodeIds: ['node-1'], edgeIds: [] })
+    expect(copySnapshotSpy).toHaveBeenCalledWith()
+    expect(cutSnapshotSpy).toHaveBeenCalledWith()
     expect(pasteClipboardSpy).toHaveBeenCalledTimes(1)
   })
 
@@ -175,6 +204,7 @@ describe('useCanvasKeyboardShortcuts', () => {
       useCanvasKeyboardShortcuts({
         undo: vi.fn(),
         redo: vi.fn(),
+        cancelConnectionDraft: vi.fn(),
         canEdit: true,
         nodesMap: new Map() as never,
         edgesMap: new Map() as never,
@@ -183,6 +213,7 @@ describe('useCanvasKeyboardShortcuts', () => {
           replace: vi.fn(),
           clear: vi.fn(),
         },
+        commands: createCommands(),
       }),
     )
 
@@ -196,5 +227,42 @@ describe('useCanvasKeyboardShortcuts', () => {
     } as unknown as KeyboardEvent)
 
     expect(deleteSnapshotSpy).not.toHaveBeenCalled()
+  })
+
+  it('does not run commands when canRun returns false', () => {
+    const copyCanRun = vi.fn(() => false)
+
+    renderHook(() =>
+      useCanvasKeyboardShortcuts({
+        undo: vi.fn(),
+        redo: vi.fn(),
+        cancelConnectionDraft: vi.fn(),
+        canEdit: true,
+        nodesMap: new Map() as never,
+        edgesMap: new Map() as never,
+        selection: {
+          getSnapshot: getSelectionSnapshotSpy,
+          replace: vi.fn(),
+          clear: vi.fn(),
+        },
+        commands: createCommands({
+          copy: {
+            id: 'copy',
+            canRun: copyCanRun,
+            run: copySnapshotSpy,
+          },
+        }),
+      }),
+    )
+
+    const preventDefaultSpy = vi.fn()
+    getRegistration('Mod+C').callback({
+      repeat: false,
+      preventDefault: preventDefaultSpy,
+    } as unknown as KeyboardEvent)
+
+    expect(copyCanRun).toHaveBeenCalledTimes(1)
+    expect(copySnapshotSpy).not.toHaveBeenCalled()
+    expect(preventDefaultSpy).not.toHaveBeenCalled()
   })
 })

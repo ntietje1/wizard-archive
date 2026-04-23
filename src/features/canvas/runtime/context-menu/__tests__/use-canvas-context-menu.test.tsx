@@ -5,21 +5,7 @@ import type { Edge, Node } from '@xyflow/react'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import * as Y from 'yjs'
 import { testId } from '~/test/helpers/test-id'
-
-const selectionOperationsMock = vi.hoisted(() => ({
-  canPaste: vi.fn(() => false),
-  canCopySnapshot: vi.fn(() => true),
-  copySnapshot: vi.fn(() => true),
-  cutSnapshot: vi.fn(() => true),
-  pasteClipboard: vi.fn(() => null),
-  duplicateSnapshot: vi.fn(() => null),
-  deleteSnapshot: vi.fn(() => true),
-  reorderSnapshot: vi.fn(() => true),
-}))
-
-vi.mock('../../document/use-canvas-selection-operations', () => ({
-  useCanvasSelectionOperations: () => selectionOperationsMock,
-}))
+import type { CanvasContextMenuCommands } from '../canvas-context-menu-types'
 
 vi.mock('~/features/sidebar/hooks/useCreateSidebarItem', () => ({
   useCreateSidebarItem: () => ({
@@ -78,9 +64,47 @@ function createContextMenuEvent(clientX: number, clientY: number) {
   return new MouseEvent('contextmenu', { clientX, clientY }) as unknown as ReactMouseEvent
 }
 
+function createCommands(
+  overrides: Partial<CanvasContextMenuCommands> = {},
+): CanvasContextMenuCommands {
+  return {
+    copy: {
+      id: 'copy',
+      canRun: vi.fn(() => true),
+      run: vi.fn(() => true),
+    },
+    cut: {
+      id: 'cut',
+      canRun: vi.fn(() => true),
+      run: vi.fn(() => true),
+    },
+    paste: {
+      id: 'paste',
+      canRun: vi.fn(() => false),
+      run: vi.fn(() => null),
+    },
+    duplicate: {
+      id: 'duplicate',
+      canRun: vi.fn(() => true),
+      run: vi.fn(() => null),
+    },
+    delete: {
+      id: 'delete',
+      canRun: vi.fn(() => true),
+      run: vi.fn(() => true),
+    },
+    reorder: {
+      id: 'reorder',
+      canRun: vi.fn(() => true),
+      run: vi.fn(() => true),
+    },
+    ...overrides,
+  }
+}
+
 describe('useCanvasContextMenu', () => {
   beforeEach(() => {
-    Object.values(selectionOperationsMock).forEach((value) => value.mockClear?.())
+    vi.clearAllMocks()
   })
 
   afterEach(() => {
@@ -101,6 +125,7 @@ describe('useCanvasContextMenu', () => {
         createNode: vi.fn(),
         screenToFlowPosition: ({ x, y }) => ({ x, y }),
         selection,
+        commands: createCommands(),
       }),
     )
 
@@ -139,6 +164,7 @@ describe('useCanvasContextMenu', () => {
         createNode: vi.fn(),
         screenToFlowPosition: ({ x, y }) => ({ x, y }),
         selection,
+        commands: createCommands(),
       }),
     )
 
@@ -171,6 +197,7 @@ describe('useCanvasContextMenu', () => {
         createNode: vi.fn(),
         screenToFlowPosition: ({ x, y }) => ({ x, y }),
         selection,
+        commands: createCommands(),
       }),
     )
 

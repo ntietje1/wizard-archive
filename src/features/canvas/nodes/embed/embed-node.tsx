@@ -60,10 +60,7 @@ export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>
       chrome={
         <>
           <CanvasFloatingFormattingToolbar editor={noteEditor} visible={showsFormattingToolbar} />
-          <CanvasNodeConnectionHandles
-            selected={editableSession.isSelected}
-            preserveAnchors={!interactiveRenderMode}
-          />
+          <CanvasNodeConnectionHandles />
           {showFloatingLabel && (
             <div className="pointer-events-none absolute left-3 top-0 z-20 max-w-[calc(100%-1.5rem)] -translate-y-[calc(100%+0.375rem)]">
               <span className="block truncate text-xs font-medium text-muted-foreground">
@@ -75,7 +72,7 @@ export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>
       }
     >
       <div
-        className="relative h-full w-full overflow-hidden rounded-lg shadow-sm"
+        className="relative h-full w-full overflow-hidden rounded-lg"
         style={getCanvasNodeSurfaceStyle(data)}
         onDoubleClick={(event) => {
           if (!interactiveRenderMode || contentItem?.type !== SIDEBAR_ITEM_TYPES.notes) {

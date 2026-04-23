@@ -1,6 +1,7 @@
 import { vi } from 'vitest'
-import type { CanvasSelectionController } from '../../tools/canvas-tool-types'
+import type { CanvasDocumentWriter, CanvasSelectionController } from '../../tools/canvas-tool-types'
 import type { RemoteHighlight } from '../../utils/canvas-awareness-types'
+import type { CanvasCommands } from '../document/use-canvas-commands'
 import type { CanvasSessionRuntime } from '../session/use-canvas-session-state'
 
 function createCanvasSelectionController(): CanvasSelectionController {
@@ -17,6 +18,55 @@ function createCanvasSelectionController(): CanvasSelectionController {
     beginGesture: vi.fn(),
     commitGestureSelection: vi.fn(),
     endGesture: vi.fn(),
+  }
+}
+
+function createCanvasCommands(): CanvasCommands {
+  return {
+    copy: {
+      id: 'copy',
+      canRun: vi.fn(() => true),
+      run: vi.fn(() => true),
+    },
+    cut: {
+      id: 'cut',
+      canRun: vi.fn(() => true),
+      run: vi.fn(() => true),
+    },
+    paste: {
+      id: 'paste',
+      canRun: vi.fn(() => false),
+      run: vi.fn(() => null),
+    },
+    duplicate: {
+      id: 'duplicate',
+      canRun: vi.fn(() => true),
+      run: vi.fn(() => null),
+    },
+    delete: {
+      id: 'delete',
+      canRun: vi.fn(() => true),
+      run: vi.fn(() => true),
+    },
+    reorder: {
+      id: 'reorder',
+      canRun: vi.fn(() => true),
+      run: vi.fn(() => true),
+    },
+  }
+}
+
+function createCanvasDocumentWriter(): CanvasDocumentWriter {
+  return {
+    createNode: vi.fn(),
+    updateNode: vi.fn(),
+    updateNodeData: vi.fn(),
+    updateEdge: vi.fn(),
+    resizeNode: vi.fn(),
+    deleteNodes: vi.fn(),
+    createEdge: vi.fn(),
+    deleteEdges: vi.fn(),
+    setNodePosition: vi.fn(),
   }
 }
 
@@ -47,14 +97,18 @@ export function createCanvasProviderProps(
         position: { x: number; y: number },
       ) => void
     }
+    documentWriter: CanvasDocumentWriter
     selection: CanvasSelectionController
+    commands: CanvasCommands
   }> = {},
 ) {
   const {
     history: historyOverrides,
     editSession: editSessionOverrides,
     nodeActions: nodeActionsOverrides,
+    documentWriter: documentWriterOverrides,
     selection: selectionOverrides,
+    commands: commandsOverrides,
     ...restOverrides
   } = overrides
 
@@ -83,9 +137,17 @@ export function createCanvasProviderProps(
       onResizeEnd: () => undefined,
       ...nodeActionsOverrides,
     },
+    documentWriter: {
+      ...createCanvasDocumentWriter(),
+      ...documentWriterOverrides,
+    },
     selection: {
       ...createCanvasSelectionController(),
       ...selectionOverrides,
+    },
+    commands: {
+      ...createCanvasCommands(),
+      ...commandsOverrides,
     },
     ...restOverrides,
   }

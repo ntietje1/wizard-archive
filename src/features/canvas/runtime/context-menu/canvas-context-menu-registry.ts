@@ -1,7 +1,4 @@
 import {
-  BringToFront,
-  ChevronsDown,
-  ChevronsUp,
   Copy,
   CopyPlus,
   CornerDownLeft,
@@ -12,14 +9,18 @@ import {
   MapPin,
   Plus,
   Scissors,
-  SendToBack,
   Trash2,
 } from 'lucide-react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import {
+  CANVAS_REORDER_ACTIONS,
+  CANVAS_REORDER_SUBMENU_ICON,
+} from '../document/canvas-reorder-actions'
 import { buildMenu } from '~/features/context-menu/menu-builder'
 import type { ContextMenuGroupConfig } from '~/features/context-menu/types'
 import type { CanvasReorderDirection } from '../document/canvas-reorder'
 import type {
+  CanvasContextMenuCommands,
   CanvasContextMenuContext,
   CanvasContextMenuContributor,
   CanvasContextMenuItem,
@@ -31,54 +32,27 @@ function hasSelection(context: CanvasContextMenuContext): boolean {
 }
 
 function buildCanvasReorderItems(): Array<CanvasContextMenuItem> {
-  const createReorderItem = (
-    id: string,
-    label: string,
-    icon: CanvasContextMenuItem['icon'],
-    priority: number,
-    direction: CanvasReorderDirection,
-  ): CanvasContextMenuItem => ({
-    id,
-    label,
-    icon,
+  return CANVAS_REORDER_ACTIONS.map((action, priority) => ({
+    id: `reorder-${action.id}-selection`,
+    commandId: 'canvas-selection-reorder',
+    label: action.label,
+    icon: action.icon,
     group: 'reorder',
     priority,
     scope: 'selection',
-    onSelect: (context, services) => {
-      services.reorderSnapshot(context.selection, direction)
-    },
-  })
+    payload: { direction: action.direction },
+  }))
+}
 
-  return [
-    createReorderItem(
-      'reorder-send-to-back-selection',
-      'Send to back',
-      SendToBack,
-      0,
-      'sendToBack',
-    ),
-    createReorderItem(
-      'reorder-send-backward-selection',
-      'Send backward',
-      ChevronsDown,
-      1,
-      'sendBackward',
-    ),
-    createReorderItem(
-      'reorder-bring-forward-selection',
-      'Bring forward',
-      ChevronsUp,
-      2,
-      'bringForward',
-    ),
-    createReorderItem(
-      'reorder-bring-to-front-selection',
-      'Bring to front',
-      BringToFront,
-      3,
-      'bringToFront',
-    ),
-  ]
+function getCanvasReorderDirection(payload: unknown): CanvasReorderDirection | null {
+  if (!payload || typeof payload !== 'object' || !('direction' in payload)) {
+    return null
+  }
+
+  const { direction } = payload
+  return CANVAS_REORDER_ACTIONS.some((action) => action.direction === direction)
+    ? (direction as CanvasReorderDirection)
+    : null
 }
 
 function buildCanvasCreateItems(): Array<CanvasContextMenuItem> {
@@ -126,15 +100,10 @@ const canvasPaneContributor: CanvasContextMenuContributor = {
           },
           {
             id: 'canvas-pane-paste',
-            label: 'Paste',
-            icon: CornerDownLeft,
+            commandId: 'canvas-pane-paste',
             group: 'edit',
             priority: 1,
             applies: (ctx) => ctx.canEdit,
-            isEnabled: (_ctx, nextServices) => nextServices.canPaste(),
-            onSelect: (_ctx, nextServices) => {
-              nextServices.pasteClipboard()
-            },
           },
         ],
 }
@@ -143,70 +112,49 @@ const canvasSelectionContributor: CanvasContextMenuContributor = {
   id: 'canvas-selection',
   surfaces: ['canvas'],
   applies: (context) => hasSelection(context),
-  getItems: (context, services) => {
-    const canCopy = services.canCopySnapshot(context.selection)
-
-    return [
-      {
-        id: 'canvas-selection-reorder',
-        label: 'Reorder',
-        icon: BringToFront,
-        group: 'reorder',
-        priority: 0,
-        scope: 'selection',
-        applies: (ctx) => ctx.canEdit,
-        children: () => buildCanvasReorderItems(),
-      },
-      {
-        id: 'canvas-selection-cut',
-        label: 'Cut',
-        icon: Scissors,
-        group: 'edit',
-        priority: 1,
-        scope: 'selection',
-        applies: (ctx) => canCopy && ctx.canEdit,
-        onSelect: (ctx, nextServices) => {
-          nextServices.cutSnapshot(ctx.selection)
-        },
-      },
-      {
-        id: 'canvas-selection-copy',
-        label: 'Copy',
-        icon: Copy,
-        group: 'edit',
-        priority: 2,
-        scope: 'selection',
-        applies: () => canCopy,
-        onSelect: (ctx, nextServices) => {
-          nextServices.copySnapshot(ctx.selection)
-        },
-      },
-      {
-        id: 'canvas-selection-duplicate',
-        label: 'Duplicate',
-        icon: CopyPlus,
-        group: 'edit',
-        priority: 3,
-        scope: 'selection',
-        applies: (ctx) => canCopy && ctx.canEdit,
-        onSelect: (ctx, nextServices) => {
-          nextServices.duplicateSnapshot(ctx.selection)
-        },
-      },
-      {
-        id: 'canvas-selection-delete',
-        label: 'Delete',
-        icon: Trash2,
-        group: 'danger',
-        priority: 99,
-        scope: 'selection',
-        applies: (ctx) => ctx.canEdit,
-        onSelect: (ctx, nextServices) => {
-          nextServices.deleteSnapshot(ctx.selection)
-        },
-      },
-    ]
-  },
+  getItems: (_context, _services) => [
+    {
+      id: 'canvas-selection-reorder',
+      label: 'Reorder',
+      icon: CANVAS_REORDER_SUBMENU_ICON,
+      group: 'reorder',
+      priority: 0,
+      scope: 'selection',
+      applies: (ctx) => ctx.canEdit,
+      children: () => buildCanvasReorderItems(),
+    },
+    {
+      id: 'canvas-selection-cut',
+      commandId: 'canvas-selection-cut',
+      group: 'edit',
+      priority: 1,
+      scope: 'selection',
+      applies: (ctx, _nextServices, _payload) => ctx.canEdit,
+    },
+    {
+      id: 'canvas-selection-copy',
+      commandId: 'canvas-selection-copy',
+      group: 'edit',
+      priority: 2,
+      scope: 'selection',
+    },
+    {
+      id: 'canvas-selection-duplicate',
+      commandId: 'canvas-selection-duplicate',
+      group: 'edit',
+      priority: 3,
+      scope: 'selection',
+      applies: (ctx) => ctx.canEdit,
+    },
+    {
+      id: 'canvas-selection-delete',
+      commandId: 'canvas-selection-delete',
+      group: 'danger',
+      priority: 99,
+      scope: 'selection',
+      applies: (ctx) => ctx.canEdit,
+    },
+  ],
 }
 
 const canvasContextMenuContributors = [
@@ -225,17 +173,89 @@ const canvasContextMenuGroupConfig: ContextMenuGroupConfig = {
 export function buildCanvasContextMenu({
   context,
   services,
+  commands,
   contributors = [],
 }: {
   context: CanvasContextMenuContext
   services: CanvasContextMenuServices
+  commands: CanvasContextMenuCommands
   contributors?: ReadonlyArray<CanvasContextMenuContributor>
 }) {
   return buildMenu({
     context,
     services,
     contributors: [...canvasContextMenuContributors, ...contributors],
-    commands: {},
+    commands: {
+      'canvas-pane-paste': {
+        id: 'canvas-pane-paste',
+        label: 'Paste',
+        icon: CornerDownLeft,
+        isEnabled: () => commands.paste.canRun(),
+        run: () => {
+          commands.paste.run()
+        },
+      },
+      'canvas-selection-cut': {
+        id: 'canvas-selection-cut',
+        label: 'Cut',
+        icon: Scissors,
+        isEnabled: (nextContext) => commands.cut.canRun({ selection: nextContext.selection }),
+        run: (nextContext) => {
+          commands.cut.run({ selection: nextContext.selection })
+        },
+      },
+      'canvas-selection-copy': {
+        id: 'canvas-selection-copy',
+        label: 'Copy',
+        icon: Copy,
+        isEnabled: (nextContext) => commands.copy.canRun({ selection: nextContext.selection }),
+        run: (nextContext) => {
+          commands.copy.run({ selection: nextContext.selection })
+        },
+      },
+      'canvas-selection-duplicate': {
+        id: 'canvas-selection-duplicate',
+        label: 'Duplicate',
+        icon: CopyPlus,
+        isEnabled: (nextContext) => commands.duplicate.canRun({ selection: nextContext.selection }),
+        run: (nextContext) => {
+          commands.duplicate.run({ selection: nextContext.selection })
+        },
+      },
+      'canvas-selection-delete': {
+        id: 'canvas-selection-delete',
+        label: 'Delete',
+        icon: Trash2,
+        isEnabled: (nextContext) => commands.delete.canRun({ selection: nextContext.selection }),
+        run: (nextContext) => {
+          commands.delete.run({ selection: nextContext.selection })
+        },
+      },
+      'canvas-selection-reorder': {
+        id: 'canvas-selection-reorder',
+        isEnabled: (nextContext, _services, payload) => {
+          const direction = getCanvasReorderDirection(payload)
+          return (
+            direction !== null &&
+            commands.reorder.canRun({
+              selection: nextContext.selection,
+              direction,
+            })
+          )
+        },
+        run: (nextContext, _services, payload) => {
+          const direction = getCanvasReorderDirection(payload)
+          if (!direction) {
+            return
+          }
+
+          commands.reorder.run({
+            selection: nextContext.selection,
+            direction,
+          })
+        },
+      },
+    },
     groupConfig: canvasContextMenuGroupConfig,
   })
 }
