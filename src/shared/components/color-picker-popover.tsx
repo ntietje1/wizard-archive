@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Slider as SliderPrimitive } from '@base-ui/react/slider'
 import Color from 'color'
 import {
@@ -6,6 +7,7 @@ import {
   ColorPickerSelection,
 } from '~/features/shadcn/components/color-picker'
 import { Popover, PopoverContent, PopoverTrigger } from '~/features/shadcn/components/popover'
+import { cn } from '~/features/shadcn/lib/utils'
 import { logger } from '~/shared/utils/logger'
 import { normalizePickerColor } from '~/shared/utils/color'
 
@@ -26,6 +28,7 @@ interface ColorPickerPopoverProps {
   onChange: (value: PaintPickerValue) => void
   mixed?: boolean
   showOpacity?: boolean
+  disabled?: boolean
 }
 
 export function ColorPickerPopover({
@@ -33,7 +36,9 @@ export function ColorPickerPopover({
   onChange,
   mixed = false,
   showOpacity = true,
+  disabled = false,
 }: ColorPickerPopoverProps) {
+  const [open, setOpen] = useState(false)
   const normalizedValue = normalizePickerColor(value.color)
 
   let opacityGradient = 'linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%)'
@@ -51,34 +56,41 @@ export function ColorPickerPopover({
   }
 
   return (
-    <Popover>
+    <Popover
+      open={disabled ? false : open}
+      onOpenChange={(nextOpen) => {
+        if (disabled) return
+        setOpen(nextOpen)
+      }}
+    >
       <PopoverTrigger
-        nativeButton={false}
-        render={(props) => (
-          <span
-            {...props}
-            role="button"
-            aria-label={`Open color picker${mixed ? ' (mixed values)' : ''}`}
-            className="inline-block h-6 w-6 rounded-sm border border-border text-foreground/15 transition-transform hover:scale-110"
-            style={{
-              backgroundColor: 'var(--background)',
-              backgroundImage: CHECKERBOARD_PATTERN,
-              backgroundPosition: '0 0, 4px 4px',
-              backgroundSize: '8px 8px',
-            }}
-          >
-            <span
-              data-testid="color-preview"
-              className="block h-full w-full rounded-sm"
-              style={{
-                backgroundColor: mixed ? 'transparent' : value.color,
-                backgroundImage: mixed ? STRIPE_PATTERN : undefined,
-                opacity: mixed ? 1 : value.opacity / 100,
-              }}
-            />
-          </span>
+        aria-label={`Open color picker${mixed ? ' (mixed values)' : ''}`}
+        className={cn(
+          'inline-flex h-6 w-6 items-center justify-center rounded-sm border border-border text-foreground/15 enabled:cursor-pointer transition-transform enabled:hover:scale-110 disabled:cursor-not-allowed disabled:opacity-50',
         )}
-      />
+        disabled={disabled}
+        type="button"
+      >
+        <span
+          className="block h-full w-full rounded-sm"
+          style={{
+            backgroundColor: 'var(--background)',
+            backgroundImage: CHECKERBOARD_PATTERN,
+            backgroundPosition: '0 0, 4px 4px',
+            backgroundSize: '8px 8px',
+          }}
+        >
+          <span
+            data-testid="color-preview"
+            className="block h-full w-full rounded-sm"
+            style={{
+              backgroundColor: mixed ? 'transparent' : value.color,
+              backgroundImage: mixed ? STRIPE_PATTERN : undefined,
+              opacity: mixed ? 1 : value.opacity / 100,
+            }}
+          />
+        </span>
+      </PopoverTrigger>
       <PopoverContent side="bottom" align="end" className="w-56 p-3 allow-motion">
         {mixed && <p className="mb-2 text-xs text-muted-foreground">Mixed values</p>}
         <ColorPicker

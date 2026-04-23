@@ -33,13 +33,18 @@ const STROKE_OPTIONS_BASE = {
 
 const MINI_MAP_STROKE_PADDING = 12
 const MIN_ZOOM = 1e-6
+const MIN_STROKE_NODE_SIZE = 1
+
+export function clampStrokeNodeSize(size: number): number {
+  return Number.isFinite(size) ? Math.max(size, MIN_STROKE_NODE_SIZE) : MIN_STROKE_NODE_SIZE
+}
 
 export function isStrokeNode(node: Node): node is StrokeNodeType {
   return node.type === 'stroke'
 }
 
 export function pointsToPathD(points: Array<[number, number, number]>, size: number): string {
-  const outline = getStroke(points, { ...STROKE_OPTIONS_BASE, size })
+  const outline = getStroke(points, { ...STROKE_OPTIONS_BASE, size: clampStrokeNodeSize(size) })
   if (outline.length < 2) return ''
 
   const [first, ...rest] = outline
@@ -76,7 +81,9 @@ export function getStrokeBounds(
   size: number,
   precomputedOutline?: Array<Array<number>>,
 ): Bounds {
-  const outline = precomputedOutline ?? getStroke(points, { ...STROKE_OPTIONS_BASE, size })
+  const outline =
+    precomputedOutline ??
+    getStroke(points, { ...STROKE_OPTIONS_BASE, size: clampStrokeNodeSize(size) })
   if (outline.length === 0) return { x: 0, y: 0, width: 0, height: 0 }
 
   let minX = Infinity
@@ -194,7 +201,7 @@ export function resizeStrokeNode<TNode extends StrokeNodeLike>(
       ...node.data,
       points: scaledPoints,
       bounds: { ...bounds, width, height },
-      size: size * Math.min(scaleX, scaleY),
+      size: clampStrokeNodeSize(size * Math.min(scaleX, scaleY)),
     },
   }
 }
@@ -205,5 +212,5 @@ export function getMiniMapStrokePath(
   zoom: number,
 ): string {
   const safeZoom = Number.isFinite(zoom) && zoom > MIN_ZOOM ? zoom : MIN_ZOOM
-  return pointsToPathD(points, (size + MINI_MAP_STROKE_PADDING) / safeZoom)
+  return pointsToPathD(points, (clampStrokeNodeSize(size) + MINI_MAP_STROKE_PADDING) / safeZoom)
 }

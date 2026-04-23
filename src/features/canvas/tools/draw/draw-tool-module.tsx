@@ -9,10 +9,10 @@ import { DrawAwarenessLayer } from './draw-tool-awareness-layer'
 import { setDrawToolAwareness } from './draw-tool-awareness'
 import { clearDrawToolLocalOverlay, setDrawToolLocalDrawing } from './draw-tool-local-overlay'
 import { DrawToolLocalOverlayLayer } from './draw-tool-local-overlay-layer'
-import { getStrokeBounds } from '../../nodes/stroke/stroke-node-model'
+import { clampStrokeNodeSize, getStrokeBounds } from '../../nodes/stroke/stroke-node-model'
 import {
+  freehandStrokeSizeCanvasProperty,
   linePaintCanvasProperty,
-  strokeSizeCanvasProperty,
 } from '../../properties/canvas-property-definitions'
 import {
   bindCanvasPaintProperty,
@@ -36,9 +36,9 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
           setOpacity: context.toolState.setStrokeOpacity,
         }),
         bindCanvasStrokeSizeProperty(
-          strokeSizeCanvasProperty,
-          () => context.toolState.getSettings().strokeSize,
-          context.toolState.setStrokeSize,
+          freehandStrokeSizeCanvasProperty,
+          () => clampStrokeNodeSize(context.toolState.getSettings().strokeSize),
+          (size) => context.toolState.setStrokeSize(clampStrokeNodeSize(size)),
         ),
       ],
     }
@@ -91,6 +91,7 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
         captureTarget = setPointerCapture(event)
         pointerId = event.pointerId
         const { strokeColor, strokeOpacity, strokeSize } = services.toolState.getSettings()
+        const normalizedStrokeSize = clampStrokeNodeSize(strokeSize)
         const pos = screenEventToFlowPosition(services.viewport, event)
         const point: [number, number, number] = [pos.x, pos.y, event.pressure || 0.5]
         rawPoints = [point]
@@ -98,7 +99,7 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
         const drawing = {
           points: [point],
           color: strokeColor,
-          size: strokeSize,
+          size: normalizedStrokeSize,
           opacity: strokeOpacity,
         }
 
@@ -109,6 +110,7 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
         if ((event.buttons & 1) !== 1 || rawPoints.length === 0) return
 
         const { strokeColor, strokeOpacity, strokeSize } = services.toolState.getSettings()
+        const normalizedStrokeSize = clampStrokeNodeSize(strokeSize)
         const pos = screenEventToFlowPosition(services.viewport, event)
         const point: [number, number, number] = [pos.x, pos.y, event.pressure || 0.5]
         rawPoints.push(point)
@@ -117,7 +119,7 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
         const drawing = {
           points: [...renderedPoints],
           color: strokeColor,
-          size: strokeSize,
+          size: normalizedStrokeSize,
           opacity: strokeOpacity,
         }
 
@@ -128,9 +130,10 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
         if (event.pointerId !== pointerId) return
 
         const { strokeColor, strokeOpacity, strokeSize } = services.toolState.getSettings()
+        const normalizedStrokeSize = clampStrokeNodeSize(strokeSize)
         const renderedPoints = getRenderedPoints()
         if (renderedPoints.length >= 2) {
-          const bounds = getStrokeBounds(renderedPoints, strokeSize)
+          const bounds = getStrokeBounds(renderedPoints, normalizedStrokeSize)
           services.commands.createNode({
             id: crypto.randomUUID(),
             type: 'stroke',
@@ -140,7 +143,7 @@ export const drawToolModule: CanvasToolModule<'draw'> = {
             data: {
               points: [...renderedPoints],
               color: strokeColor,
-              size: strokeSize,
+              size: normalizedStrokeSize,
               opacity: strokeOpacity,
               bounds,
             },

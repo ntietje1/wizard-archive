@@ -1,15 +1,15 @@
 import { createCanvasNodeModule } from '../canvas-node-module-types'
 import { StrokeMinimapNode, StrokeNode } from './stroke-node'
 import type { StrokeNodeData } from './stroke-node-model'
-import { resizeStrokeNode } from './stroke-node-model'
+import { clampStrokeNodeSize, resizeStrokeNode } from './stroke-node-model'
 import {
   strokeNodeContainsPoint,
   strokeNodeIntersectsPolygon,
   strokeNodeIntersectsRect,
 } from './stroke-node-interactions'
 import {
+  freehandStrokeSizeCanvasProperty,
   linePaintCanvasProperty,
-  strokeSizeCanvasProperty,
 } from '../../properties/canvas-property-definitions'
 import {
   bindCanvasPaintProperty,
@@ -62,7 +62,13 @@ function isStrokeNodeData(data: Record<string, unknown>): data is StrokeNodeData
 export const strokeNodeModule = createCanvasNodeModule<StrokeNodeData, 'stroke'>({
   type: 'stroke',
   NodeComponent: StrokeNode,
-  parseData: (data) => (isStrokeNodeData(data) ? data : null),
+  parseData: (data) =>
+    isStrokeNodeData(data)
+      ? {
+          ...data,
+          size: clampStrokeNodeSize(data.size),
+        }
+      : null,
   selection: {
     point: (node, point, context) => strokeNodeContainsPoint(node, point, context.zoom),
     rectangle: (node, rect, context) => strokeNodeIntersectsRect(node, rect, context.zoom),
@@ -80,9 +86,9 @@ export const strokeNodeModule = createCanvasNodeModule<StrokeNodeData, 'stroke'>
         setOpacity: (opacity) => updateNodeData(node.id, { opacity }),
       }),
       bindCanvasStrokeSizeProperty(
-        strokeSizeCanvasProperty,
-        () => node.data.size,
-        (size) => updateNodeData(node.id, { size }),
+        freehandStrokeSizeCanvasProperty,
+        () => clampStrokeNodeSize(node.data.size),
+        (size) => updateNodeData(node.id, { size: clampStrokeNodeSize(size) }),
       ),
     ],
   }),

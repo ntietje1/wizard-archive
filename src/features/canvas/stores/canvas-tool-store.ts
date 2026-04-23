@@ -50,19 +50,10 @@ export function useCanvasToolPropertyContext(): CanvasToolPropertyContext {
       strokeSize: state.strokeSize,
     })),
   )
-  void subscribedSettings
 
   return {
     toolState: {
-      getSettings: () => {
-        const { edgeType, strokeColor, strokeOpacity, strokeSize } = useCanvasToolStore.getState()
-        return {
-          edgeType,
-          strokeColor,
-          strokeOpacity,
-          strokeSize,
-        }
-      },
+      getSettings: () => subscribedSettings,
       setEdgeType: (type) => useCanvasToolStore.getState().setEdgeType(type),
       setStrokeColor: (color) => useCanvasToolStore.getState().setStrokeColor(color),
       setStrokeOpacity: (opacity) => useCanvasToolStore.getState().setStrokeOpacity(opacity),

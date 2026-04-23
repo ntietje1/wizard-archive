@@ -31,4 +31,10 @@ describe('useCanvasToolStore', () => {
       strokeSize: 4,
     })
   })
+
+  it('still allows zero in the shared stroke size state for non-freehand tools', () => {
+    useCanvasToolStore.getState().setStrokeSize(0)
+
+    expect(useCanvasToolStore.getState().strokeSize).toBe(0)
+  })
 })

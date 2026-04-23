@@ -86,6 +86,7 @@ describe('CanvasToolbar', () => {
       'Text (6)',
       'Edges (7)',
     ])
+    expect(toolbar).toHaveClass('cursor-default')
   })
 
   it('renders top-right controls in the requested order', () => {
@@ -103,6 +104,10 @@ describe('CanvasToolbar', () => {
     ])
     expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Redo' })).toBeEnabled()
+    expect(toolbar).toHaveClass('cursor-default')
+    buttons.forEach((button) => {
+      expect(button).toHaveClass('cursor-pointer')
+    })
   })
 
   it('shows only viewport controls in read-only mode', () => {

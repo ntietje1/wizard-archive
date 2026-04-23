@@ -26,10 +26,45 @@ vi.mock('@xyflow/react', () => ({
   useEdges: () => edgesMock.edges,
 }))
 
+vi.mock('~/features/shadcn/components/slider', () => ({
+  Slider: ({
+    value,
+    min,
+    max,
+    step,
+    onValueChange,
+    ...props
+  }: {
+    value?: Array<number>
+    min?: number
+    max?: number
+    step?: number
+    onValueChange?: (value: Array<number>) => void
+    'aria-label'?: string
+  }) => (
+    <input
+      type="range"
+      aria-label={props['aria-label']}
+      max={max}
+      min={min}
+      onChange={(event) => onValueChange?.([Number(event.currentTarget.value)])}
+      step={step}
+      value={value?.[0] ?? min ?? 0}
+    />
+  ),
+}))
+
 vi.mock('~/shared/components/color-picker-popover', () => ({
   ColorPickerPopover: (props: Record<string, unknown>) => {
     colorPickerMock.props.push(props)
-    return <div data-testid="color-picker-popover" />
+    return (
+      <button
+        type="button"
+        aria-label="Open color picker"
+        data-testid="color-picker-popover"
+        disabled={Boolean(props.disabled)}
+      />
+    )
   },
 }))
 
@@ -176,6 +211,14 @@ function createEdge(
   }
 }
 
+function getStrokeSizeSlider() {
+  return screen.getByRole('slider', { name: 'Stroke size' })
+}
+
+function getStrokeSizeInput() {
+  return screen.getByRole('textbox', { name: 'Stroke size input' })
+}
+
 describe('CanvasConditionalToolbar', () => {
   beforeEach(() => {
     useCanvasToolStore.getState().reset()
@@ -196,7 +239,17 @@ describe('CanvasConditionalToolbar', () => {
     expect(screen.getByRole('toolbar', { name: 'Canvas conditional toolbar' })).toHaveClass(
       'select-none',
     )
-    expect(screen.getByRole('button', { name: 'Stroke size 6' })).toBeVisible()
+    expect(screen.getByRole('toolbar', { name: 'Canvas conditional toolbar' })).toHaveClass(
+      'cursor-default',
+    )
+    expect(getStrokeSizeSlider()).toBeVisible()
+    expect(getStrokeSizeSlider()).toHaveAttribute('min', '1')
+    expect(getStrokeSizeSlider()).toHaveAttribute('max', '50')
+    expect(getStrokeSizeInput()).toHaveValue('4')
+    expect(getStrokeSizeInput()).toHaveClass('cursor-text')
+    expect(screen.getByRole('button', { name: 'Select Reverse primary color' })).toHaveClass(
+      'cursor-pointer',
+    )
     expect(screen.getByTestId('color-picker-popover')).toBeVisible()
   })
 
@@ -211,13 +264,16 @@ describe('CanvasConditionalToolbar', () => {
       'aria-pressed',
       'true',
     )
+    expect(screen.getByRole('button', { name: 'Change edge type to Step' })).toHaveClass(
+      'cursor-pointer',
+    )
 
     fireEvent.click(screen.getByRole('button', { name: 'Change edge type to Step' }))
 
     expect(useCanvasToolStore.getState().edgeType).toBe('step')
   })
 
-  it('updates tool property button state after changing tool color and stroke size', () => {
+  it('updates tool property state after changing tool color and stroke size', () => {
     useCanvasToolStore.getState().setActiveTool('draw')
 
     renderToolbar()
@@ -230,17 +286,39 @@ describe('CanvasConditionalToolbar', () => {
 
     expect(reversePrimaryColorButton).toHaveAttribute('aria-pressed', 'true')
     expect(redColorButton).toHaveAttribute('aria-pressed', 'false')
-    expect(screen.getByRole('button', { name: 'Stroke size 4' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
+    expect(getStrokeSizeInput()).toHaveValue('4')
 
     fireEvent.click(redColorButton)
-    fireEvent.click(screen.getByRole('button', { name: 'Stroke size 8' }))
+    fireEvent.change(getStrokeSizeSlider(), { target: { value: '8' } })
 
     expect(reversePrimaryColorButton).toHaveAttribute('aria-pressed', 'false')
     expect(redColorButton).toHaveAttribute('aria-pressed', 'true')
     expect(useCanvasToolStore.getState().strokeSize).toBe(8)
+    expect(getStrokeSizeInput()).toHaveValue('8')
+  })
+
+  it('refreshes draw tool defaults immediately when the tool store changes externally', () => {
+    useCanvasToolStore.getState().setActiveTool('draw')
+
+    renderToolbar()
+    emitSelection([])
+
+    expect(getStrokeSizeInput()).toHaveValue('4')
+    expect(screen.getByRole('button', { name: 'Select Reverse primary color' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+
+    act(() => {
+      useCanvasToolStore.getState().setStrokeColor('var(--t-red)')
+      useCanvasToolStore.getState().setStrokeSize(12)
+    })
+
+    expect(getStrokeSizeInput()).toHaveValue('12')
+    expect(screen.getByRole('button', { name: 'Select Red color' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
   })
 
   it('shows single-node properties for editable nodes only', () => {
@@ -276,11 +354,9 @@ describe('CanvasConditionalToolbar', () => {
     })
     emitSelection([stroke])
 
-    expect(screen.getByRole('button', { name: 'Stroke size 4' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
-    fireEvent.click(screen.getByRole('button', { name: 'Stroke size 8' }))
+    expect(getStrokeSizeInput()).toHaveValue('4')
+    expect(getStrokeSizeSlider()).toHaveAttribute('min', '1')
+    fireEvent.change(getStrokeSizeSlider(), { target: { value: '8' } })
 
     expect(updateNodeData).toHaveBeenCalledWith(stroke.id, { size: 8 })
   })
@@ -295,7 +371,7 @@ describe('CanvasConditionalToolbar', () => {
     ])
 
     expect(screen.getByRole('toolbar', { name: 'Canvas conditional toolbar' })).toBeVisible()
-    expect(screen.getByRole('button', { name: 'Stroke size 6' })).toBeVisible()
+    expect(getStrokeSizeSlider()).toBeVisible()
   })
 
   it('fans out shared color updates to every selected node', () => {
@@ -456,6 +532,29 @@ describe('CanvasConditionalToolbar', () => {
     expect(screen.getByText('Stroke size')).toBeVisible()
   })
 
+  it('fans out shared border width updates to selected text and embed nodes', () => {
+    const { transact, updateNodeData } = renderToolbar()
+
+    const text = createNode('text', {
+      backgroundColor: 'var(--background)',
+      borderStroke: 'var(--border)',
+      borderWidth: 1,
+    })
+    const embed = createNode('embed', {
+      sidebarItemId: 'sidebar-item-1',
+      backgroundColor: 'var(--background)',
+      borderStroke: 'var(--border)',
+      borderWidth: 1,
+    })
+    emitSelection([text, embed])
+
+    fireEvent.change(getStrokeSizeSlider(), { target: { value: '7' } })
+
+    expect(updateNodeData).toHaveBeenCalledWith(text.id, { borderWidth: 7 })
+    expect(updateNodeData).toHaveBeenCalledWith(embed.id, { borderWidth: 7 })
+    expect(transact).toHaveBeenCalledTimes(1)
+  })
+
   it('renders mixed state for shared properties with different values', () => {
     renderToolbar()
 
@@ -529,7 +628,7 @@ describe('CanvasConditionalToolbar', () => {
 
     expect(screen.getByRole('toolbar', { name: 'Canvas conditional toolbar' })).toBeVisible()
     expect(screen.getByText('Stroke size')).toBeVisible()
-    expect(screen.getByRole('button', { name: 'Stroke size 2' })).toBeVisible()
+    expect(getStrokeSizeSlider()).toBeVisible()
     expect(screen.queryByText('Fill')).toBeNull()
     expect(screen.getByText('Stroke')).toBeVisible()
   })
@@ -545,8 +644,10 @@ describe('CanvasConditionalToolbar', () => {
     expect(screen.getByRole('toolbar', { name: 'Canvas conditional toolbar' })).toBeVisible()
     expect(screen.getByText('Stroke')).toBeVisible()
     expect(screen.getByText('Stroke size')).toBeVisible()
+    expect(getStrokeSizeSlider()).toHaveAttribute('min', '0')
     expect(screen.getByText('Reorder')).toBeVisible()
     expect(screen.getByRole('button', { name: 'Send to back' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Bring to front' })).toHaveClass('cursor-pointer')
     expect(screen.queryByText('Fill')).toBeNull()
   })
 
@@ -558,7 +659,7 @@ describe('CanvasConditionalToolbar', () => {
     emitSelectionState({ nodeIds: [], edgeIds: [edge.id] })
 
     fireEvent.click(screen.getByRole('button', { name: 'Select Red color' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Stroke size 8' }))
+    fireEvent.change(getStrokeSizeSlider(), { target: { value: '8' } })
 
     expect(updateEdge).toHaveBeenNthCalledWith(1, edge.id, expect.any(Function))
     expect(updateEdge).toHaveBeenNthCalledWith(2, edge.id, expect.any(Function))
@@ -587,6 +688,124 @@ describe('CanvasConditionalToolbar', () => {
         strokeWidth: 8,
       },
     })
+  })
+
+  it('commits one-digit and two-digit stroke sizes from the numeric input', () => {
+    useCanvasToolStore.getState().setActiveTool('draw')
+
+    renderToolbar()
+    emitSelection([])
+
+    let input = getStrokeSizeInput()
+
+    fireEvent.change(input, { target: { value: '9' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(useCanvasToolStore.getState().strokeSize).toBe(9)
+    expect(getStrokeSizeInput()).toHaveValue('9')
+
+    input = getStrokeSizeInput()
+    fireEvent.change(input, { target: { value: '99' } })
+    fireEvent.blur(input)
+    expect(useCanvasToolStore.getState().strokeSize).toBe(99)
+    expect(getStrokeSizeInput()).toHaveValue('99')
+  })
+
+  it('clamps the draw tool stroke size to one when the shared store contains zero', () => {
+    useCanvasToolStore.getState().setActiveTool('draw')
+    useCanvasToolStore.getState().setStrokeSize(0)
+
+    renderToolbar()
+    emitSelection([])
+
+    expect(getStrokeSizeSlider()).toHaveAttribute('min', '1')
+    expect(getStrokeSizeInput()).toHaveValue('1')
+  })
+
+  it('rejects invalid numeric input drafts and restores the current stroke size', () => {
+    useCanvasToolStore.getState().setActiveTool('draw')
+
+    renderToolbar()
+    emitSelection([])
+
+    const input = getStrokeSizeInput()
+
+    fireEvent.change(input, { target: { value: '7a8' } })
+    expect(input).toHaveValue('78')
+
+    fireEvent.change(input, { target: { value: '' } })
+    fireEvent.blur(input)
+    expect(useCanvasToolStore.getState().strokeSize).toBe(4)
+    expect(input).toHaveValue('4')
+
+    fireEvent.change(input, { target: { value: '123' } })
+    expect(input).toHaveValue('12')
+  })
+
+  it('disables stroke color controls when a zero-width edge selection resolves stroke size to zero', () => {
+    const updateEdge = vi.fn((edgeId: string, updater: (edge: Edge) => Edge) => {
+      edgesMock.edges = edgesMock.edges.map((edge) => (edge.id === edgeId ? updater(edge) : edge))
+    })
+    renderToolbar({ updateEdge })
+    const edge = createEdge({ stroke: 'var(--foreground)', strokeWidth: 2 })
+    edgesMock.edges = [edge]
+    emitSelectionState({ nodeIds: [], edgeIds: [edge.id] })
+
+    const strokeGroup = screen.getByText('Stroke').parentElement
+    expect(strokeGroup).not.toBeNull()
+
+    fireEvent.change(getStrokeSizeSlider(), { target: { value: '0' } })
+    emitSelectionState({ nodeIds: [], edgeIds: [edge.id] })
+
+    const clearButton = within(strokeGroup!).getByRole('button', { name: 'Select Clear color' })
+    const colorPickerButton = within(strokeGroup!).getByRole('button', {
+      name: 'Open color picker',
+    })
+
+    expect(clearButton).toBeDisabled()
+    expect(colorPickerButton).toBeDisabled()
+
+    fireEvent.change(getStrokeSizeSlider(), { target: { value: '6' } })
+    emitSelectionState({ nodeIds: [], edgeIds: [edge.id] })
+
+    expect(within(strokeGroup!).getByRole('button', { name: 'Select Clear color' })).toBeEnabled()
+    expect(
+      within(strokeGroup!).getByRole('button', {
+        name: 'Open color picker',
+      }),
+    ).toBeEnabled()
+  })
+
+  it('shows an empty mixed stroke size input until a concrete shared value is chosen', () => {
+    const firstNode = createNode('text', {
+      backgroundColor: 'var(--background)',
+      borderStroke: 'var(--border)',
+      borderWidth: 2,
+    })
+    const secondNode = createNode('text', {
+      backgroundColor: 'var(--background)',
+      borderStroke: 'var(--border)',
+      borderWidth: 8,
+    })
+    const updateNodeData = vi.fn((nodeId: string, data: Record<string, unknown>) => {
+      nodesMock.nodes = nodesMock.nodes.map((node) =>
+        node.id === nodeId ? { ...node, data: { ...node.data, ...data } } : node,
+      )
+    })
+
+    renderToolbar({ updateNodeData })
+
+    emitSelection([firstNode, secondNode])
+
+    const input = getStrokeSizeInput()
+    expect(input).toHaveValue('')
+    expect(input).toHaveAttribute('placeholder', '--')
+
+    fireEvent.change(getStrokeSizeSlider(), { target: { value: '11' } })
+    emitSelectionState({ nodeIds: [firstNode.id, secondNode.id], edgeIds: [] })
+
+    expect(updateNodeData).toHaveBeenCalledWith(firstNode.id, { borderWidth: 11 })
+    expect(updateNodeData).toHaveBeenCalledWith(secondNode.id, { borderWidth: 11 })
+    expect(getStrokeSizeInput()).toHaveValue('11')
   })
 
   it('shows one shared stroke row for mixed line selections across nodes and edges', () => {

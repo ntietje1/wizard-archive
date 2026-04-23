@@ -15,9 +15,12 @@ describe('ColorPickerPopover', () => {
     render(<ColorPickerPopover value={{ color: 'var(--t-red)', opacity: 50 }} onChange={vi.fn()} />)
 
     const trigger = screen.getByRole('button', { name: 'Open color picker' })
+    const triggerBackground = trigger.firstElementChild
     const preview = within(trigger).getByTestId('color-preview')
 
-    expect(trigger.getAttribute('style')).toContain('linear-gradient(45deg, currentcolor 25%')
+    expect(triggerBackground?.getAttribute('style')).toContain(
+      'linear-gradient(45deg, currentcolor 25%',
+    )
     expect(preview.getAttribute('style')).toContain('background-color: var(--t-red)')
     expect(preview.getAttribute('style')).toContain('opacity: 0.5')
     expect(preview.getAttribute('style')).not.toContain('repeating-linear-gradient')
@@ -35,5 +38,23 @@ describe('ColorPickerPopover', () => {
     expect(style).toContain('linear-gradient')
     expect(style).toContain('background-position: 0px 0px, 0px 0px, 4px 4px')
     expect(style).toContain('background-size: 100% 100%, 8px 8px, 8px 8px')
+  })
+
+  it('renders a disabled trigger that does not open the popover', () => {
+    render(
+      <ColorPickerPopover
+        value={{ color: 'var(--t-red)', opacity: 50 }}
+        onChange={vi.fn()}
+        disabled
+      />,
+    )
+
+    const trigger = screen.getByRole('button', { name: 'Open color picker' })
+    expect((trigger as HTMLButtonElement).disabled).toBe(true)
+
+    fireEvent.click(trigger)
+
+    expect(screen.queryByTestId('color-picker-selection')).toBeNull()
+    expect(screen.queryByTestId('color-picker-hue')).toBeNull()
   })
 })

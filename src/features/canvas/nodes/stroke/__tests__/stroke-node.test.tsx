@@ -103,9 +103,18 @@ describe('StrokeNode', () => {
       }),
     )
   })
+
+  it('still renders a visible stroke path when legacy stroke data has size zero', () => {
+    const { container, getByTestId } = render(
+      <StrokeNode {...setupStrokeNodeProps({ selected: false, size: 0 })} />,
+    )
+
+    expect(getByTestId('stroke-hit-target')).toBeInTheDocument()
+    expect(container.querySelectorAll('path')).toHaveLength(2)
+  })
 })
 
-function setupStrokeNodeProps({ selected }: { selected: boolean }) {
+function setupStrokeNodeProps({ selected, size = 4 }: { selected: boolean; size?: number }) {
   useCanvasSelectionState.getState().setSelection({
     nodeIds: selected ? ['stroke-1'] : [],
     edgeIds: [],
@@ -132,7 +141,7 @@ function setupStrokeNodeProps({ selected }: { selected: boolean }) {
         [100, 10, 0.5],
       ] as Array<[number, number, number]>,
       color: 'var(--foreground)',
-      size: 4,
+      size,
     },
   }
 }

@@ -107,16 +107,91 @@ describe('drawToolModule', () => {
       }),
     )
   })
+
+  it('uses the latest tool color and stroke size for the next stroke gesture', () => {
+    const createNode = vi.fn()
+    const settings = {
+      edgeType: 'bezier' as const,
+      strokeColor: 'var(--foreground)',
+      strokeOpacity: 100,
+      strokeSize: 4,
+    }
+    const controller = drawToolModule.createHandlers(
+      createDrawEnvironment({
+        createNode,
+        setPresence: vi.fn(),
+        getSettings: () => settings,
+      }),
+    )
+    const target = createPointerTarget()
+
+    settings.strokeColor = 'var(--t-red)'
+    settings.strokeSize = 9
+
+    controller.onPointerDown?.(createPointerEvent(target, { clientX: 0, clientY: 0 }))
+    controller.onPointerMove?.(createPointerEvent(target, { clientX: 20, clientY: 20 }))
+    controller.onPointerUp?.(createPointerEvent(target, { clientX: 20, clientY: 20 }))
+
+    expect(createNode).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          color: 'var(--t-red)',
+          size: 9,
+        }),
+      }),
+    )
+  })
+
+  it('clamps freehand strokes to a minimum size of 1 even if tool state falls to zero', () => {
+    const createNode = vi.fn()
+    const controller = drawToolModule.createHandlers(
+      createDrawEnvironment({
+        createNode,
+        setPresence: vi.fn(),
+        getSettings: () => ({
+          edgeType: 'bezier',
+          strokeColor: 'var(--foreground)',
+          strokeOpacity: 100,
+          strokeSize: 0,
+        }),
+      }),
+    )
+    const target = createPointerTarget()
+
+    controller.onPointerDown?.(createPointerEvent(target, { clientX: 0, clientY: 0 }))
+    controller.onPointerMove?.(createPointerEvent(target, { clientX: 20, clientY: 20 }))
+    controller.onPointerUp?.(createPointerEvent(target, { clientX: 20, clientY: 20 }))
+
+    expect(createNode).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          size: 1,
+        }),
+      }),
+    )
+  })
 })
 
 function createDrawEnvironment({
   createNode,
   setPresence,
   getShiftPressed = () => false,
+  getSettings = () => ({
+    edgeType: 'bezier' as const,
+    strokeColor: 'var(--foreground)',
+    strokeOpacity: 100,
+    strokeSize: 4,
+  }),
 }: {
   createNode: (node: unknown) => void
   setPresence: (namespace: string, value: unknown) => void
   getShiftPressed?: () => boolean
+  getSettings?: () => {
+    edgeType: 'bezier'
+    strokeColor: string
+    strokeOpacity: number
+    strokeSize: number
+  }
 }): CanvasToolRuntime {
   return {
     viewport: {
@@ -169,12 +244,7 @@ function createDrawEnvironment({
       setPendingEditNodePoint: () => undefined,
     },
     toolState: {
-      getSettings: () => ({
-        edgeType: 'bezier',
-        strokeColor: 'var(--foreground)',
-        strokeOpacity: 100,
-        strokeSize: 4,
-      }),
+      getSettings,
       getActiveTool: () => 'draw',
       setActiveTool: () => undefined,
       setEdgeType: () => undefined,

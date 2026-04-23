@@ -37,7 +37,7 @@ export function readCanvasNodeSurfaceOpacity(value: unknown): number {
 }
 
 export function readCanvasNodeBorderWidth(value: unknown): number {
-  return readNumber(value, DEFAULT_CANVAS_NODE_BORDER_WIDTH, 1, 32)
+  return readNumber(value, DEFAULT_CANVAS_NODE_BORDER_WIDTH, 0, 99)
 }
 
 function resolveCanvasNodePaint(color: string | null | undefined, opacity: number): string {

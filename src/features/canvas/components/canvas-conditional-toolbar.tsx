@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useEdges, useNodes } from '@xyflow/react'
 import type { Edge, Node } from '@xyflow/react'
 import { getCanvasEdgeProperties, resolveCanvasEdgeType } from '../edges/canvas-edge-registry'
@@ -18,6 +19,7 @@ import {
 import type { CanvasEdgeType } from '../edges/canvas-edge-module-types'
 import type { CanvasCommands } from '../runtime/document/use-canvas-commands'
 import type { CanvasToolId, CanvasToolPropertyContext } from '../tools/canvas-tool-types'
+import { linePaintCanvasProperty } from '../properties/canvas-property-definitions'
 import { resolveCanvasProperties } from '../properties/resolve-canvas-properties'
 import { readResolvedPropertyValue } from '../properties/canvas-property-types'
 import type {
@@ -27,6 +29,7 @@ import type {
   CanvasStrokeSizeResolvedProperty,
 } from '../properties/canvas-property-types'
 import { areCanvasPaintValuesEqual } from '../properties/canvas-paint-values'
+import { Slider } from '~/features/shadcn/components/slider'
 import { useShallow } from 'zustand/shallow'
 
 interface CanvasConditionalToolbarProps {
@@ -42,6 +45,10 @@ const CANVAS_EDGE_TYPE_OPTIONS: Array<{ type: CanvasEdgeType; label: string }> =
   { type: 'straight', label: 'Straight' },
   { type: 'step', label: 'Step' },
 ]
+const STROKE_SIZE_SLIDER_MAX = 50
+const PAINT_SWATCH_STRIP_WIDTH = `calc(${linePaintCanvasProperty.options.length} * 1.5rem + ${
+  linePaintCanvasProperty.options.length - 1
+} * 0.25rem)`
 
 function isPaintProperty(
   property: CanvasResolvedProperty,
@@ -112,7 +119,7 @@ export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarPr
 
   return (
     <div
-      className="absolute top-4 left-4 z-10 flex select-none flex-col gap-1 rounded-lg border bg-background/80 p-2 shadow-sm backdrop-blur-sm"
+      className="absolute top-4 left-4 z-10 flex cursor-default select-none flex-col gap-1 rounded-lg border bg-background/80 p-2 shadow-sm backdrop-blur-sm"
       role="toolbar"
       aria-label="Canvas conditional toolbar"
     >
@@ -174,7 +181,7 @@ function CanvasEdgeTypeControls({
           <button
             type="button"
             key={option.type}
-            className={`flex h-8 items-center justify-center rounded-md px-2 text-xs font-medium hover:bg-accent ${
+            className={`flex h-8 cursor-pointer items-center justify-center rounded-md px-2 text-xs font-medium hover:bg-accent ${
               selectedType === option.type ? 'bg-accent' : ''
             }`}
             onClick={() => onSelectType(option.type)}
@@ -226,24 +233,30 @@ function CanvasPropertyControls({
 }) {
   const paintProperties = properties.filter(isPaintProperty)
   const strokeSizeProperty = properties.find(isStrokeSizeProperty)
+  const strokeSizeValue = readResolvedPropertyValue(strokeSizeProperty)
 
   return (
     <>
       {paintProperties.map((paintProperty) => {
         const paintValue =
           paintProperty.value.kind === 'value' ? paintProperty.value.value : undefined
+        const disabled = paintProperty.definition.id === 'linePaint' && strokeSizeValue === 0
 
         return (
           <div key={paintProperty.definition.id} className="flex flex-col gap-1">
             <p className="text-[11px] font-medium text-muted-foreground">
               {paintProperty.definition.label}
             </p>
-            <div className="flex items-center gap-1">
+            <div className={`flex items-center gap-1 ${disabled ? 'opacity-50' : ''}`}>
               {paintProperty.definition.options.map((preset) => (
                 <button
                   type="button"
                   key={`${preset.label}-${preset.value.color}-${preset.value.opacity}`}
-                  className="h-6 w-6 rounded-sm border border-border text-foreground/15 transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+                  className={`h-6 w-6 rounded-sm border border-border text-foreground/15 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 ${
+                    disabled
+                      ? 'cursor-not-allowed opacity-50'
+                      : 'cursor-pointer transition-transform hover:scale-110'
+                  }`}
                   style={{
                     backgroundColor: 'var(--background)',
                     backgroundImage: CHECKERBOARD_PATTERN,
@@ -260,6 +273,7 @@ function CanvasPropertyControls({
                   aria-pressed={
                     paintValue ? areCanvasPaintValuesEqual(paintValue, preset.value) : false
                   }
+                  disabled={disabled}
                   title={preset.label}
                 >
                   <span
@@ -275,6 +289,7 @@ function CanvasPropertyControls({
               <ColorPickerPopover
                 value={paintValue ?? paintProperty.definition.defaultValue}
                 onChange={(value) => onPropertyChange(() => paintProperty.setValue(value))}
+                disabled={disabled}
                 mixed={paintProperty.value.kind === 'mixed'}
               />
             </div>
@@ -301,24 +316,88 @@ function StrokeSizeControl({
   onPropertyChange: (applyChange: () => void) => void
 }) {
   const strokeSizeValue = readResolvedPropertyValue(property)
+  const sliderMax = Math.min(property.definition.max, STROKE_SIZE_SLIDER_MAX)
+  const sliderValue = Math.min(strokeSizeValue ?? property.definition.min, sliderMax)
+  const [draftValue, setDraftValue] = useState<string | null>(null)
+  const inputValue = draftValue ?? strokeSizeValue?.toString() ?? ''
+
+  const resetDraftValue = () => {
+    setDraftValue(null)
+  }
+
+  const commitDraftValue = () => {
+    if (draftValue === null) {
+      return
+    }
+
+    if (draftValue.length === 0) {
+      resetDraftValue()
+      return
+    }
+
+    const nextValue = Number.parseInt(draftValue, 10)
+    if (
+      !Number.isFinite(nextValue) ||
+      nextValue < property.definition.min ||
+      nextValue > property.definition.max
+    ) {
+      resetDraftValue()
+      return
+    }
+
+    onPropertyChange(() => property.setValue(nextValue))
+  }
 
   return (
-    <div className="grid w-full min-w-[17rem] grid-cols-10 gap-0.5">
-      {property.definition.options.map((size) => (
-        <button
-          type="button"
-          key={size}
-          className={`flex h-8 w-full items-center justify-center rounded-md hover:bg-accent ${
-            strokeSizeValue === size ? 'bg-accent' : ''
-          }`}
-          onClick={() => onPropertyChange(() => property.setValue(size))}
-          aria-label={`Stroke size ${size}`}
-          aria-pressed={strokeSizeValue === size}
-          title={`Size ${size}`}
-        >
-          <div className="rounded-full bg-foreground" style={{ width: size, height: size }} />
-        </button>
-      ))}
+    <div className="flex min-w-[19.8125rem] items-center gap-1">
+      <div className="min-w-0 shrink-0" style={{ width: PAINT_SWATCH_STRIP_WIDTH }}>
+        <Slider
+          aria-label="Stroke size"
+          className="[&_[data-slot=slider-range]]:bg-primary [&_[data-slot=slider-thumb]]:border-primary/40 [&_[data-slot=slider-track]]:bg-primary/25"
+          max={sliderMax}
+          min={property.definition.min}
+          onValueChange={(values) => {
+            const nextValue = Array.isArray(values) ? values[0] : values
+            if (typeof nextValue !== 'number' || !Number.isFinite(nextValue)) {
+              return
+            }
+
+            setDraftValue(null)
+            onPropertyChange(() => property.setValue(nextValue))
+          }}
+          step={property.definition.step ?? 1}
+          value={[sliderValue]}
+        />
+      </div>
+      <div className="mx-1 h-6 w-px bg-border" aria-hidden="true" />
+      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm border border-border focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-1">
+        <input
+          aria-label="Stroke size input"
+          className="block h-full w-full appearance-none cursor-text bg-transparent p-0 text-center text-xs leading-6 tabular-nums outline-none placeholder:text-muted-foreground"
+          inputMode="numeric"
+          maxLength={2}
+          onBlur={commitDraftValue}
+          onChange={(event) => {
+            const sanitizedValue = event.currentTarget.value.replace(/\D/g, '').slice(0, 2)
+            setDraftValue(sanitizedValue)
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault()
+              commitDraftValue()
+            }
+
+            if (event.key === 'Escape') {
+              event.preventDefault()
+              resetDraftValue()
+              event.currentTarget.blur()
+            }
+          }}
+          placeholder={property.value.kind === 'mixed' ? '--' : undefined}
+          type="text"
+          value={inputValue}
+        />
+      </div>
     </div>
   )
 }
@@ -345,7 +424,7 @@ function CanvasReorderControls({
             <button
               type="button"
               key={action.id}
-              className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() =>
                 commands.reorder.run({
                   selection,

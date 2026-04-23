@@ -62,7 +62,12 @@ export const strokeSizeCanvasProperty: CanvasStrokeSizePropertyDefinition = {
   kind: 'strokeSize',
   label: 'Stroke size',
   options: STROKE_SIZE_OPTIONS,
-  min: 1,
-  max: 32,
+  min: 0,
+  max: 99,
   step: 1,
+}
+
+export const freehandStrokeSizeCanvasProperty: CanvasStrokeSizePropertyDefinition = {
+  ...strokeSizeCanvasProperty,
+  min: 1,
 }

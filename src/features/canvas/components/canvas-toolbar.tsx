@@ -21,7 +21,7 @@ export function CanvasToolbar({ canEdit }: CanvasToolbarProps) {
     <>
       {canEdit && (
         <div
-          className="absolute top-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 rounded-lg border bg-background/80 p-1 shadow-sm backdrop-blur-sm"
+          className="absolute top-4 left-1/2 z-10 flex -translate-x-1/2 cursor-default items-center gap-1 rounded-lg border bg-background/80 p-1 shadow-sm backdrop-blur-sm"
           role="toolbar"
           aria-label="Canvas main toolbar"
         >
@@ -44,7 +44,7 @@ export function CanvasToolbar({ canEdit }: CanvasToolbarProps) {
       )}
 
       <div
-        className="absolute top-4 right-4 z-10 flex flex-col gap-1 rounded-lg border bg-background/80 p-1 shadow-sm backdrop-blur-sm"
+        className="absolute top-4 right-4 z-10 flex cursor-default flex-col gap-1 rounded-lg border bg-background/80 p-1 shadow-sm backdrop-blur-sm"
         role="toolbar"
         aria-label="Canvas viewport controls"
       >

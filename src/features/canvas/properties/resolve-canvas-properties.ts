@@ -34,8 +34,15 @@ function createNumericProperty(
   binding: CanvasStrokeSizePropertyBinding,
   matches: Array<CanvasStrokeSizePropertyBinding>,
 ): CanvasResolvedProperty {
+  const min = Math.max(...matches.map((match) => match.definition.min))
+  const max = Math.min(...matches.map((match) => match.definition.max))
+
   return {
-    definition: binding.definition,
+    definition: {
+      ...binding.definition,
+      min,
+      max,
+    },
     value: createNumericValue(
       matches.map((match) => match.getValue()),
       binding.definition.equals,
