@@ -37,9 +37,16 @@ function createSelectionController(initialSelection: CanvasSelectionSnapshot) {
       selection = nextSelection
     }),
     clear: vi.fn(() => {
-      selection = { nodeIds: [], edgeIds: [] }
+      selection = selectionSnapshot()
     }),
   }
+}
+
+function selectionSnapshot(
+  nodeIds: ReadonlySet<string> = new Set<string>(),
+  edgeIds: ReadonlySet<string> = new Set<string>(),
+): CanvasSelectionSnapshot {
+  return { nodeIds, edgeIds }
 }
 
 function createCanvasMaps() {
@@ -75,7 +82,7 @@ afterEach(() => {
 describe('useCanvasCommands', () => {
   it('copies the live selection snapshot into the shared clipboard', () => {
     const { doc, nodesMap, edgesMap } = createCanvasMaps()
-    const selection = createSelectionController({ nodeIds: ['node-1', 'node-2'], edgeIds: [] })
+    const selection = createSelectionController(selectionSnapshot(new Set(['node-1', 'node-2'])))
 
     const { result, unmount } = renderHook(() =>
       useCanvasCommands({
@@ -104,7 +111,7 @@ describe('useCanvasCommands', () => {
 
   it('cuts an override selection, clears selection, and deletes the selected content', () => {
     const { doc, nodesMap, edgesMap } = createCanvasMaps()
-    const selection = createSelectionController({ nodeIds: ['node-3'], edgeIds: [] })
+    const selection = createSelectionController(selectionSnapshot(new Set(['node-3'])))
 
     const { result, unmount } = renderHook(() =>
       useCanvasCommands({
@@ -118,7 +125,7 @@ describe('useCanvasCommands', () => {
     act(() => {
       expect(
         result.current.cut.run({
-          selection: { nodeIds: ['node-1', 'node-2'], edgeIds: [] },
+          selection: selectionSnapshot(new Set(['node-1', 'node-2'])),
         }),
       ).toBe(true)
     })
@@ -141,7 +148,7 @@ describe('useCanvasCommands', () => {
       .spyOn(canvasDocumentCommands, 'deleteCanvasSelectionCommand')
       .mockReturnValue(false)
     const { doc, nodesMap, edgesMap } = createCanvasMaps()
-    const selection = createSelectionController({ nodeIds: ['node-1', 'node-2'], edgeIds: [] })
+    const selection = createSelectionController(selectionSnapshot(new Set(['node-1', 'node-2'])))
 
     const { result, unmount } = renderHook(() =>
       useCanvasCommands({
@@ -173,7 +180,7 @@ describe('useCanvasCommands', () => {
       .mockReturnValueOnce('00000000-0000-4000-8000-000000000002')
       .mockReturnValueOnce('00000000-0000-4000-8000-000000000003')
     const { doc, nodesMap, edgesMap } = createCanvasMaps()
-    const selection = createSelectionController({ nodeIds: ['node-1'], edgeIds: [] })
+    const selection = createSelectionController(selectionSnapshot(new Set(['node-1'])))
 
     useCanvasClipboardStore.getState().setClipboard({
       nodes: [nodesMap.get('node-1')!, nodesMap.get('node-2')!],
@@ -196,10 +203,13 @@ describe('useCanvasCommands', () => {
     })
 
     expect(pastedSelection).toEqual({
-      nodeIds: ['00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002'],
-      edgeIds: [
+      nodeIds: new Set([
+        '00000000-0000-4000-8000-000000000001',
+        '00000000-0000-4000-8000-000000000002',
+      ]),
+      edgeIds: new Set([
         'e-00000000-0000-4000-8000-000000000001-00000000-0000-4000-8000-000000000002-00000000-0000-4000-8000-000000000003',
-      ],
+      ]),
     })
     expect(selection.replace).toHaveBeenCalledWith(pastedSelection)
     expect(useCanvasClipboardStore.getState().clipboard?.pasteCount).toBe(1)
@@ -211,7 +221,7 @@ describe('useCanvasCommands', () => {
 
   it('deletes the live selection and clears it when content was removed', () => {
     const { doc, nodesMap, edgesMap } = createCanvasMaps()
-    const selection = createSelectionController({ nodeIds: ['node-1', 'node-2'], edgeIds: [] })
+    const selection = createSelectionController(selectionSnapshot(new Set(['node-1', 'node-2'])))
 
     const { result, unmount } = renderHook(() =>
       useCanvasCommands({
@@ -242,7 +252,7 @@ describe('useCanvasCommands', () => {
       .mockReturnValueOnce('00000000-0000-4000-8000-000000000012')
       .mockReturnValueOnce('00000000-0000-4000-8000-000000000013')
     const { doc, nodesMap, edgesMap } = createCanvasMaps()
-    const selection = createSelectionController({ nodeIds: ['node-1', 'node-2'], edgeIds: [] })
+    const selection = createSelectionController(selectionSnapshot(new Set(['node-1', 'node-2'])))
 
     const { result, unmount } = renderHook(() =>
       useCanvasCommands({
@@ -259,10 +269,13 @@ describe('useCanvasCommands', () => {
     })
 
     expect(duplicateSelection).toEqual({
-      nodeIds: ['00000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-000000000012'],
-      edgeIds: [
+      nodeIds: new Set([
+        '00000000-0000-4000-8000-000000000011',
+        '00000000-0000-4000-8000-000000000012',
+      ]),
+      edgeIds: new Set([
         'e-00000000-0000-4000-8000-000000000011-00000000-0000-4000-8000-000000000012-00000000-0000-4000-8000-000000000013',
-      ],
+      ]),
     })
     expect(selection.replace).toHaveBeenCalledWith(duplicateSelection)
     expect(useCanvasClipboardStore.getState().clipboard).toMatchObject({
@@ -310,7 +323,7 @@ describe('useCanvasCommands', () => {
     ]
   >)('reorders node selections with %s', (direction, firstNode, secondNode, thirdNode) => {
     const { doc, nodesMap, edgesMap } = createCanvasMaps()
-    const selection = createSelectionController({ nodeIds: ['node-2'], edgeIds: [] })
+    const selection = createSelectionController(selectionSnapshot(new Set(['node-2'])))
 
     const { result, unmount } = renderHook(() =>
       useCanvasCommands({
@@ -333,7 +346,7 @@ describe('useCanvasCommands', () => {
 
   it('returns false when reorder is requested without any selected nodes or edges', () => {
     const { doc, nodesMap, edgesMap } = createCanvasMaps()
-    const selection = createSelectionController({ nodeIds: [], edgeIds: [] })
+    const selection = createSelectionController(selectionSnapshot())
 
     const { result, unmount } = renderHook(() =>
       useCanvasCommands({
@@ -356,7 +369,9 @@ describe('useCanvasCommands', () => {
 
   it('reorders edge selections with the same plan used by canRun', () => {
     const { doc, nodesMap, edgesMap } = createCanvasMaps()
-    const selection = createSelectionController({ nodeIds: [], edgeIds: ['edge-1'] })
+    const selection = createSelectionController(
+      selectionSnapshot(new Set<string>(), new Set(['edge-1'])),
+    )
 
     const { result, unmount } = renderHook(() =>
       useCanvasCommands({

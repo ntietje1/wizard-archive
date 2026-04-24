@@ -36,8 +36,9 @@ export function createCanvasClipboardEntry(
   edgesMap: Y.Map<Edge>,
   selection: CanvasSelectionSnapshot,
 ): CanvasClipboardEntry | null {
-  const nodeIdSet = new Set(selection.nodeIds)
-  const selectedNodes = getCurrentCanvasNodes(nodesMap).filter((node) => nodeIdSet.has(node.id))
+  const selectedNodes = getCurrentCanvasNodes(nodesMap).filter((node) =>
+    selection.nodeIds.has(node.id),
+  )
   if (selectedNodes.length === 0) {
     return null
   }
@@ -100,8 +101,8 @@ export function materializeCanvasPaste(
     nodes,
     edges,
     selection: {
-      nodeIds: nodes.map((node) => node.id),
-      edgeIds: edges.map((edge) => edge.id),
+      nodeIds: new Set(nodes.map((node) => node.id)),
+      edgeIds: new Set(edges.map((edge) => edge.id)),
     },
   }
 }

@@ -1,4 +1,8 @@
-import type { CanvasToolId, CanvasToolRuntime } from '../../canvas-tool-types'
+import type {
+  CanvasSelectionSnapshot,
+  CanvasToolId,
+  CanvasToolRuntime,
+} from '../../canvas-tool-types'
 import type { Node } from '@xyflow/react'
 
 export function createPointerEvent(
@@ -30,7 +34,7 @@ export function createPlacementEnvironment({
 }: {
   activeTool: CanvasToolId
   createNode: (node: Node) => void
-  replaceSelection: (selection: { nodeIds: Array<string>; edgeIds: Array<string> }) => void
+  replaceSelection: (selection: CanvasSelectionSnapshot) => void
   setPendingEditNodeId: (nodeId: string | null) => void
   setPendingEditNodePoint?: (point: { x: number; y: number } | null) => void
   setActiveTool: (tool: CanvasToolId) => void
@@ -57,13 +61,13 @@ export function createPlacementEnvironment({
       getMeasuredNodes: () => [],
     },
     selection: {
-      getSnapshot: () => ({ nodeIds: [], edgeIds: [] }),
+      getSnapshot: () => ({ nodeIds: new Set<string>(), edgeIds: new Set<string>() }),
       replace: replaceSelection,
-      replaceNodes: (nodeIds) => replaceSelection({ nodeIds, edgeIds: [] }),
-      replaceEdges: (edgeIds) => replaceSelection({ nodeIds: [], edgeIds }),
+      replaceNodes: (nodeIds) => replaceSelection({ nodeIds, edgeIds: new Set<string>() }),
+      replaceEdges: (edgeIds) => replaceSelection({ nodeIds: new Set<string>(), edgeIds }),
       clear: () => undefined,
-      getSelectedNodeIds: () => [],
-      getSelectedEdgeIds: () => [],
+      getSelectedNodeIds: () => new Set<string>(),
+      getSelectedEdgeIds: () => new Set<string>(),
       toggleNodeFromTarget: () => undefined,
       toggleEdgeFromTarget: () => undefined,
       beginGesture: () => undefined,

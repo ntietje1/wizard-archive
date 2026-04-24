@@ -270,7 +270,7 @@ describe('useCanvasAwareness', () => {
       result.current.core.setLocalDragging({
         'node-1': { x: 30, y: 40 },
       })
-      result.current.core.setLocalSelection(['node-1'])
+      result.current.core.setLocalSelection(new Set(['node-1']))
       result.current.core.setLocalResizing({
         'node-1': { x: 10, y: 20, width: 30, height: 40 },
       })
@@ -292,7 +292,7 @@ describe('useCanvasAwareness', () => {
       result.current.core.setLocalDragging({
         'node-1': { x: Number.NaN, y: 40 },
       } as unknown as Record<string, { x: number; y: number }>)
-      result.current.core.setLocalSelection(['node-1', 2] as unknown as Array<string>)
+      result.current.core.setLocalSelection(new Set(['node-1', 2]) as unknown as Set<string>)
       result.current.core.setLocalResizing({
         'node-1': { x: 10, y: 20, width: -1, height: 40 },
       } as unknown as ResizingState)

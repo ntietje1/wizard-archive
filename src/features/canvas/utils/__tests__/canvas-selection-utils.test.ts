@@ -21,67 +21,69 @@ describe('canvas-selection-utils', () => {
   })
 
   it('unions committed selection ids without duplicates when additive gestures merge', () => {
-    expect(mergeSelectedIds(['a', 'b'], ['b', 'c'])).toEqual(['a', 'b', 'c'])
-    expect(mergeSelectedIds([], ['b', 'c'])).toEqual(['b', 'c'])
+    expect(mergeSelectedIds(new Set(['a', 'b']), new Set(['b', 'c']))).toEqual(
+      new Set(['a', 'b', 'c']),
+    )
+    expect(mergeSelectedIds(new Set(), new Set(['b', 'c']))).toEqual(new Set(['b', 'c']))
   })
 
   it('keeps modifier-click on empty canvas from clearing selection', () => {
     expect(
       getNextSelectedIds({
-        selectedIds: ['a', 'b'],
+        selectedIds: new Set(['a', 'b']),
         targetId: null,
         toggle: true,
       }),
-    ).toEqual(['a', 'b'])
+    ).toEqual(new Set(['a', 'b']))
 
     expect(
       getNextSelectedIds({
-        selectedIds: ['a', 'b'],
+        selectedIds: new Set(['a', 'b']),
         targetId: null,
         toggle: false,
       }),
-    ).toEqual([])
+    ).toEqual(new Set())
   })
 
   it('toggles only the clicked node when a modifier is pressed', () => {
     expect(
       getNextSelectedIds({
-        selectedIds: ['a', 'b'],
+        selectedIds: new Set(['a', 'b']),
         targetId: 'c',
         toggle: true,
       }),
-    ).toEqual(['a', 'b', 'c'])
+    ).toEqual(new Set(['a', 'b', 'c']))
 
     expect(
       getNextSelectedIds({
-        selectedIds: ['a', 'b'],
+        selectedIds: new Set(['a', 'b']),
         targetId: 'b',
         toggle: true,
       }),
-    ).toEqual(['a'])
+    ).toEqual(new Set(['a']))
 
     expect(
       getNextSelectedIds({
-        selectedIds: ['a', 'b'],
+        selectedIds: new Set(['a', 'b']),
         targetId: 'b',
         toggle: false,
       }),
-    ).toEqual(['b'])
+    ).toEqual(new Set(['b']))
 
     expect(
       getNextSelectedIds({
-        selectedIds: ['a', 'b'],
+        selectedIds: new Set(['a', 'b']),
         targetId: 'c',
         toggle: false,
       }),
-    ).toEqual(['c'])
+    ).toEqual(new Set(['c']))
   })
 
   it('treats a node as exclusively selected only when it is the sole selection', () => {
-    expect(isExclusivelySelectedNode(['embed-1'], 'embed-1')).toBe(true)
-    expect(isExclusivelySelectedNode(['embed-1', 'text-1'], 'embed-1')).toBe(false)
-    expect(isExclusivelySelectedNode(['text-1'], 'embed-1')).toBe(false)
-    expect(isExclusivelySelectedNode([], 'embed-1')).toBe(false)
-    expect(isExclusivelySelectedNode(['embed-1'], null)).toBe(false)
+    expect(isExclusivelySelectedNode(new Set(['embed-1']), 'embed-1')).toBe(true)
+    expect(isExclusivelySelectedNode(new Set(['embed-1', 'text-1']), 'embed-1')).toBe(false)
+    expect(isExclusivelySelectedNode(new Set(['text-1']), 'embed-1')).toBe(false)
+    expect(isExclusivelySelectedNode(new Set(), 'embed-1')).toBe(false)
+    expect(isExclusivelySelectedNode(new Set(['embed-1']), null)).toBe(false)
   })
 })

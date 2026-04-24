@@ -76,7 +76,7 @@ describe('canvas z-order helpers', () => {
 
     const orderedIds = reorderCanvasElementIds(
       elements.map((element) => element.id),
-      ['node-1'],
+      new Set(['node-1']),
       'bringToFront',
     )
 
@@ -95,7 +95,12 @@ describe('canvas z-order helpers', () => {
       const edgesMap = doc.getMap<Edge>('edges')
 
       expect(
-        createCanvasReorderPlan(nodesMap, edgesMap, { nodeIds: [], edgeIds: [] }, 'bringToFront'),
+        createCanvasReorderPlan(
+          nodesMap,
+          edgesMap,
+          { nodeIds: new Set<string>(), edgeIds: new Set<string>() },
+          'bringToFront',
+        ),
       ).toBeNull()
     } finally {
       doc.destroy()
@@ -116,7 +121,7 @@ describe('canvas z-order helpers', () => {
         createCanvasReorderPlan(
           nodesMap,
           edgesMap,
-          { nodeIds: ['node-1'], edgeIds: ['edge-1'] },
+          { nodeIds: new Set(['node-1']), edgeIds: new Set(['edge-1']) },
           'bringToFront',
         ),
       ).toEqual({

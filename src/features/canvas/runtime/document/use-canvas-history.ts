@@ -10,6 +10,10 @@ import type * as Y from 'yjs'
 import { logger } from '~/shared/utils/logger'
 
 const MAX_HISTORY_SIZE = 100
+const EMPTY_CANVAS_SELECTION: CanvasSelectionSnapshot = {
+  nodeIds: new Set(),
+  edgeIds: new Set(),
+}
 type CanvasHistoryState = Pick<CanvasHistoryController, 'canUndo' | 'canRedo'>
 
 type ActionEntry =
@@ -27,7 +31,7 @@ export function useCanvasHistory({ nodesMap, edgesMap, selection }: UseCanvasHis
   const redoStackRef = useRef<Array<ActionEntry>>([])
   const isUndoRedoingRef = useRef(false)
   const docMutatedRef = useRef(false)
-  const selectionRef = useRef<CanvasSelectionSnapshot>({ nodeIds: [], edgeIds: [] })
+  const selectionRef = useRef<CanvasSelectionSnapshot>(EMPTY_CANVAS_SELECTION)
   const undoManagerRef = useRef<UndoManager | null>(null)
   const [historyState, setHistoryState] = useState<CanvasHistoryState>({
     canUndo: false,
@@ -168,13 +172,11 @@ export function useCanvasHistory({ nodesMap, edgesMap, selection }: UseCanvasHis
       if (isUndoRedoingRef.current) return
       if (docMutatedRef.current) return
 
-      const nextNodeIdSet = new Set(selectionSnapshot.nodeIds)
-      const nextEdgeIdSet = new Set(selectionSnapshot.edgeIds)
       const same =
-        prev.nodeIds.length === selectionSnapshot.nodeIds.length &&
-        prev.edgeIds.length === selectionSnapshot.edgeIds.length &&
-        prev.nodeIds.every((id) => nextNodeIdSet.has(id)) &&
-        prev.edgeIds.every((id) => nextEdgeIdSet.has(id))
+        prev.nodeIds.size === selectionSnapshot.nodeIds.size &&
+        prev.edgeIds.size === selectionSnapshot.edgeIds.size &&
+        [...prev.nodeIds].every((id) => selectionSnapshot.nodeIds.has(id)) &&
+        [...prev.edgeIds].every((id) => selectionSnapshot.edgeIds.has(id))
       if (same) return
 
       pushHistoryEntry(undoStackRef.current, {

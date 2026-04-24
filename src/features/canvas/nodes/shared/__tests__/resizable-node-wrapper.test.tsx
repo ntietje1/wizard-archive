@@ -88,7 +88,7 @@ beforeAll(() => {
 
 describe('ResizableNodeWrapper', () => {
   it('renders the normal selection border for pending-only preview nodes without resize handles', () => {
-    setCanvasPendingSelectionPreview({ nodeIds: ['node-1'], edgeIds: [] })
+    setCanvasPendingSelectionPreview({ nodeIds: new Set(['node-1']), edgeIds: new Set() })
     renderWrapper({ selected: false })
 
     expect(screen.getByTestId('selection-border')).toBeInTheDocument()
@@ -96,7 +96,7 @@ describe('ResizableNodeWrapper', () => {
   })
 
   it('hides the local selection border for excluded committed nodes while keeping committed resize handles', () => {
-    setCanvasPendingSelectionPreview({ nodeIds: ['other-node'], edgeIds: [] })
+    setCanvasPendingSelectionPreview({ nodeIds: new Set(['other-node']), edgeIds: new Set() })
     renderWrapper({ selected: true })
 
     expect(screen.queryByTestId('selection-border')).toBeNull()
@@ -107,8 +107,8 @@ describe('ResizableNodeWrapper', () => {
     modifierState.shiftPressed = true
     const providerValues = createProviderValues()
     useCanvasSelectionState.getState().setSelection({
-      nodeIds: ['node-1'],
-      edgeIds: [],
+      nodeIds: new Set(['node-1']),
+      edgeIds: new Set<string>(),
     })
 
     render(
@@ -139,8 +139,8 @@ describe('ResizableNodeWrapper', () => {
   it('recomputes the live resize immediately when shift is pressed and released mid-drag', () => {
     const providerValues = createProviderValues()
     useCanvasSelectionState.getState().setSelection({
-      nodeIds: ['node-1'],
-      edgeIds: [],
+      nodeIds: new Set(['node-1']),
+      edgeIds: new Set<string>(),
     })
 
     render(
@@ -184,8 +184,8 @@ describe('ResizableNodeWrapper', () => {
   it('snaps ctrl-resizing to nearby node edges and centers', () => {
     const providerValues = createProviderValues()
     useCanvasSelectionState.getState().setSelection({
-      nodeIds: ['node-1'],
-      edgeIds: [],
+      nodeIds: new Set(['node-1']),
+      edgeIds: new Set<string>(),
     })
     getNodesMock.mockReturnValue([
       {
@@ -240,8 +240,8 @@ describe('ResizableNodeWrapper', () => {
   it('snaps shift-resizing to nearby node edges while staying square', () => {
     const providerValues = createProviderValues()
     useCanvasSelectionState.getState().setSelection({
-      nodeIds: ['node-1'],
-      edgeIds: [],
+      nodeIds: new Set(['node-1']),
+      edgeIds: new Set<string>(),
     })
     setResizeSnapTargets([
       {
@@ -301,8 +301,8 @@ describe('ResizableNodeWrapper', () => {
   it('recomputes the live resize immediately when the primary snap modifier is pressed and released mid-drag', () => {
     const providerValues = createProviderValues()
     useCanvasSelectionState.getState().setSelection({
-      nodeIds: ['node-1'],
-      edgeIds: [],
+      nodeIds: new Set(['node-1']),
+      edgeIds: new Set<string>(),
     })
     setResizeSnapTargets([
       {
@@ -360,8 +360,8 @@ describe('ResizableNodeWrapper', () => {
   it('keeps resize handles above overlay children such as stroke hit targets', () => {
     const providerValues = createProviderValues()
     useCanvasSelectionState.getState().setSelection({
-      nodeIds: ['node-1'],
-      edgeIds: [],
+      nodeIds: new Set(['node-1']),
+      edgeIds: new Set<string>(),
     })
 
     render(
@@ -402,8 +402,8 @@ describe('ResizableNodeWrapper', () => {
 
   it('suppresses selection chrome and resize handles in embedded read-only mode', () => {
     useCanvasSelectionState.getState().setSelection({
-      nodeIds: ['node-1'],
-      edgeIds: [],
+      nodeIds: new Set(['node-1']),
+      edgeIds: new Set<string>(),
     })
 
     render(
@@ -423,8 +423,8 @@ describe('ResizableNodeWrapper', () => {
   it('locks resizing to the provided aspect ratio', () => {
     const providerValues = createProviderValues()
     useCanvasSelectionState.getState().setSelection({
-      nodeIds: ['node-1'],
-      edgeIds: [],
+      nodeIds: new Set(['node-1']),
+      edgeIds: new Set<string>(),
     })
 
     render(
@@ -455,8 +455,8 @@ describe('ResizableNodeWrapper', () => {
   it('snaps aspect-locked resizing on a single axis while preserving the ratio', () => {
     const providerValues = createProviderValues()
     useCanvasSelectionState.getState().setSelection({
-      nodeIds: ['node-1'],
-      edgeIds: [],
+      nodeIds: new Set(['node-1']),
+      edgeIds: new Set<string>(),
     })
     setResizeSnapTargets([
       {
@@ -506,8 +506,8 @@ describe('ResizableNodeWrapper', () => {
     modifierState.primaryPressed = true
     const providerValues = createProviderValues()
     useCanvasSelectionState.getState().setSelection({
-      nodeIds: ['node-1'],
-      edgeIds: [],
+      nodeIds: new Set(['node-1']),
+      edgeIds: new Set<string>(),
     })
     setResizeSnapTargets([
       {
@@ -560,8 +560,8 @@ describe('ResizableNodeWrapper', () => {
 
 function renderWrapper({ selected }: { selected: boolean }) {
   useCanvasSelectionState.getState().setSelection({
-    nodeIds: selected ? ['node-1'] : [],
-    edgeIds: [],
+    nodeIds: selected ? new Set(['node-1']) : new Set<string>(),
+    edgeIds: new Set<string>(),
   })
 
   return render(

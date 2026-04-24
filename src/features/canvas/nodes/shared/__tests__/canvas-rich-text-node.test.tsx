@@ -76,8 +76,8 @@ describe('CanvasRichTextNode', () => {
   beforeEach(() => {
     renderModeState.interactive = true
     useCanvasSelectionState.getState().setSelection({
-      nodeIds: [],
-      edgeIds: [],
+      nodeIds: new Set<string>(),
+      edgeIds: new Set<string>(),
     })
   })
 
@@ -92,7 +92,7 @@ describe('CanvasRichTextNode', () => {
       await Promise.resolve()
     })
 
-    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(['text-1'])
+    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(new Set(['text-1']))
     expect(getCanvasNode()).toHaveAttribute('data-node-selected', 'true')
   })
 
@@ -112,7 +112,7 @@ describe('CanvasRichTextNode', () => {
 
     expect(screen.queryByTestId('connection-handles')).toBeNull()
     expect(screen.getByRole('group', { name: 'Empty text node' })).toHaveAttribute('tabindex', '-1')
-    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual([])
+    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(new Set())
   })
 
   it('renders an invalid-content placeholder and does not enter editing for malformed content', async () => {
@@ -124,7 +124,7 @@ describe('CanvasRichTextNode', () => {
 
     expect(screen.getByText('Invalid text content')).toBeInTheDocument()
     expect(screen.getByRole('group', { name: 'Invalid text node' })).toBeInTheDocument()
-    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual([])
+    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(new Set())
     expect(screen.queryByText('Empty text node')).toBeNull()
   })
 })

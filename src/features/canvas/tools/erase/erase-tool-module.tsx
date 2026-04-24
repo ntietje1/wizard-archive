@@ -102,7 +102,7 @@ export const eraseToolSpec: CanvasToolSpec<'erase'> = {
         }
         testIntersections()
         if (marked.size > 0) {
-          services.commands.deleteNodes(Array.from(marked))
+          services.commands.deleteNodes(marked)
         }
         reset()
       },

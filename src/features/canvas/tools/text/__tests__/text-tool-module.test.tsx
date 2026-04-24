@@ -38,7 +38,10 @@ describe('textToolSpec', () => {
       selected: true,
       draggable: true,
     })
-    expect(replaceSelection).toHaveBeenCalledWith({ nodeIds: [createdNodes[0].id], edgeIds: [] })
+    expect(replaceSelection).toHaveBeenCalledWith({
+      nodeIds: new Set([createdNodes[0].id]),
+      edgeIds: new Set<string>(),
+    })
     expect(setPendingEditNodeId).toHaveBeenCalledWith(createdNodes[0].id)
     expect(setPendingEditNodePoint).toHaveBeenCalledWith({ x: 100, y: 200 })
     expect(setActiveTool).toHaveBeenCalledWith('select')

@@ -66,7 +66,7 @@ function createContext(
   return {
     surface: 'canvas',
     pointerPosition: { x: 100, y: 200 },
-    selection: { nodeIds: [], edgeIds: [] },
+    selection: { nodeIds: new Set<string>(), edgeIds: new Set<string>() },
     target: { kind: 'pane' },
     canEdit: true,
     ...overrides,
@@ -101,11 +101,11 @@ describe('buildCanvasContextMenu', () => {
       canRun: vi.fn(() => true),
       run: vi.fn(() => true),
     }
-    const selection = { nodeIds: ['node-1'], edgeIds: [] }
+    const selection = { nodeIds: new Set(['node-1']), edgeIds: new Set<string>() }
     const menu = buildCanvasContextMenu({
       context: createContext({
         selection,
-        target: { kind: 'node-selection', nodeIds: selection.nodeIds, nodeType: 'text' },
+        target: { kind: 'node-selection', nodeIds: ['node-1'], nodeType: 'text' },
       }),
       services: createServices(),
       commands: createCommands({ copy: copyCommand }),
@@ -132,7 +132,7 @@ describe('buildCanvasContextMenu', () => {
       canOpenEmbedTarget: () => true,
       openEmbedTarget,
     })
-    const selection = { nodeIds: ['embed-1'], edgeIds: [] }
+    const selection = { nodeIds: new Set(['embed-1']), edgeIds: new Set<string>() }
     const contributors = canvasNodeSpecs.embed.contextMenuContributors
     const menu = buildCanvasContextMenu({
       context: createContext({

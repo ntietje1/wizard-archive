@@ -100,14 +100,15 @@ export function createCanvasSelectionGestureController({
         publishSelectToolAwareness(flowRect)
 
         return {
-          nodeIds: getCanvasNodesMatchingRectangle(getMeasuredNodes(), flowRect, {
-            zoom: reactFlow.getZoom(),
-          }),
-          edgeIds: getCanvasEdgesMatchingRectangle(
-            reactFlow.getNodes(),
-            reactFlow.getEdges(),
-            flowRect,
-            { zoom: reactFlow.getZoom() },
+          nodeIds: new Set(
+            getCanvasNodesMatchingRectangle(getMeasuredNodes(), flowRect, {
+              zoom: reactFlow.getZoom(),
+            }),
+          ),
+          edgeIds: new Set(
+            getCanvasEdgesMatchingRectangle(reactFlow.getNodes(), reactFlow.getEdges(), flowRect, {
+              zoom: reactFlow.getZoom(),
+            }),
           ),
         }
       },

@@ -67,12 +67,12 @@ export function createCanvasFlowHandlers({
     onNodeDragStop: canEditSelection ? dragHandlers.onNodeDragStop : undefined,
     onNodesDelete: canEditSelection
       ? (deleted: Array<Node>) => {
-          documentWriter.deleteNodes(deleted.map((node) => node.id))
+          documentWriter.deleteNodes(new Set(deleted.map((node) => node.id)))
         }
       : undefined,
     onEdgesDelete: canEditSelection
       ? (deleted: Array<Edge>) => {
-          documentWriter.deleteEdges(deleted.map((edge) => edge.id))
+          documentWriter.deleteEdges(new Set(deleted.map((edge) => edge.id)))
         }
       : undefined,
     onConnect: canCreateEdges

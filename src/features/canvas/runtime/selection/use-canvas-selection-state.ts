@@ -6,8 +6,8 @@ import type {
 } from '../../tools/canvas-tool-types'
 
 interface CanvasSelectionState {
-  selectedNodeIds: Array<string>
-  selectedEdgeIds: Array<string>
+  selectedNodeIds: ReadonlySet<string>
+  selectedEdgeIds: ReadonlySet<string>
   gestureKind: CanvasSelectionGestureKind | null
 }
 
@@ -20,8 +20,8 @@ interface CanvasSelectionStateActions {
 
 function createInitialCanvasSelectionState(): CanvasSelectionState {
   return {
-    selectedNodeIds: [],
-    selectedEdgeIds: [],
+    selectedNodeIds: new Set(),
+    selectedEdgeIds: new Set(),
     gestureKind: null,
   }
 }
@@ -46,11 +46,11 @@ export function useSelectedCanvasNodeIds() {
 }
 
 export function useIsCanvasNodeSelected(id: string) {
-  return useCanvasSelectionState((state) => state.selectedNodeIds.includes(id))
+  return useCanvasSelectionState((state) => state.selectedNodeIds.has(id))
 }
 
 export function useIsCanvasEdgeSelected(id: string) {
-  return useCanvasSelectionState((state) => state.selectedEdgeIds.includes(id))
+  return useCanvasSelectionState((state) => state.selectedEdgeIds.has(id))
 }
 
 export function useIsCanvasSelectionGestureActive() {

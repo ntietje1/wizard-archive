@@ -13,22 +13,22 @@ type CanvasResolvedContextMenuTarget = {
   contributors: ReadonlyArray<CanvasContextMenuContributor>
 }
 
-function getNormalizedSelectedNodes(
-  nodeIds: Array<string>,
+function getOrderedNormalizedSelectedNodes(
+  nodeIds: ReadonlySet<string>,
   nodesMap: Y.Map<Node>,
 ): Array<NonNullable<ReturnType<typeof normalizeCanvasNode>>> {
-  return nodeIds
+  return Array.from(nodeIds)
     .map((nodeId) => nodesMap.get(nodeId))
     .filter((node): node is Node => node !== undefined)
     .map((node) => normalizeCanvasNode(node))
     .filter((node): node is NonNullable<ReturnType<typeof normalizeCanvasNode>> => node !== null)
 }
 
-function getNormalizedSelectedEdges(
-  edgeIds: Array<string>,
+function getOrderedNormalizedSelectedEdges(
+  edgeIds: ReadonlySet<string>,
   edgesMap: Y.Map<Edge>,
 ): Array<NonNullable<ReturnType<typeof normalizeCanvasEdge>>> {
-  return edgeIds
+  return Array.from(edgeIds)
     .map((edgeId) => edgesMap.get(edgeId))
     .filter((edge): edge is Edge => edge !== undefined)
     .map((edge) => normalizeCanvasEdge(edge))
@@ -39,7 +39,7 @@ function resolveNodeSelectionTarget(
   selection: CanvasSelectionSnapshot,
   nodesMap: Y.Map<Node>,
 ): CanvasResolvedContextMenuTarget {
-  const selectedNodes = getNormalizedSelectedNodes(selection.nodeIds, nodesMap)
+  const selectedNodes = getOrderedNormalizedSelectedNodes(selection.nodeIds, nodesMap)
 
   if (selectedNodes.length === 1) {
     const [selectedNode] = selectedNodes
@@ -72,7 +72,7 @@ function resolveEdgeSelectionTarget(
   selection: CanvasSelectionSnapshot,
   edgesMap: Y.Map<Edge>,
 ): CanvasResolvedContextMenuTarget {
-  const selectedEdges = getNormalizedSelectedEdges(selection.edgeIds, edgesMap)
+  const selectedEdges = getOrderedNormalizedSelectedEdges(selection.edgeIds, edgesMap)
   const edgeTypes = new Set(selectedEdges.map((edge) => edge.type))
   const edgeType = edgeTypes.size === 1 ? (Array.from(edgeTypes)[0] ?? null) : null
 
@@ -91,18 +91,24 @@ export function resolveCanvasContextMenuTarget(
   nodesMap: Y.Map<Node>,
   edgesMap: Y.Map<Edge>,
 ): CanvasResolvedContextMenuTarget {
-  if (selection.nodeIds.length === 0 && selection.edgeIds.length === 0) {
+  if (selection.nodeIds.size === 0 && selection.edgeIds.size === 0) {
     return { target: { kind: 'pane' }, contributors: [] }
   }
 
-  if (selection.nodeIds.length > 0 && selection.edgeIds.length > 0) {
+  if (selection.nodeIds.size > 0 && selection.edgeIds.size > 0) {
+    const selectedNodes = getOrderedNormalizedSelectedNodes(selection.nodeIds, nodesMap)
+    const selectedEdges = getOrderedNormalizedSelectedEdges(selection.edgeIds, edgesMap)
     return {
-      target: { kind: 'mixed-selection', nodeIds: selection.nodeIds, edgeIds: selection.edgeIds },
+      target: {
+        kind: 'mixed-selection',
+        nodeIds: selectedNodes.map((node) => node.id),
+        edgeIds: selectedEdges.map((edge) => edge.id),
+      },
       contributors: [],
     }
   }
 
-  if (selection.nodeIds.length > 0) {
+  if (selection.nodeIds.size > 0) {
     return resolveNodeSelectionTarget(selection, nodesMap)
   }
 

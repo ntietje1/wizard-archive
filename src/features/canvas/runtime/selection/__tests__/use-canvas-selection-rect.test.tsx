@@ -93,8 +93,8 @@ describe('useCanvasSelectionRect', () => {
       beginGesture: vi.fn(),
       commitGestureSelection: vi.fn(),
       endGesture: vi.fn(),
-      getSelectedNodeIds: vi.fn(() => []),
-      getSelectedEdgeIds: vi.fn(() => []),
+      getSelectedNodeIds: vi.fn(() => new Set<string>()),
+      getSelectedEdgeIds: vi.fn(() => new Set<string>()),
     }
     storeState.nodeLookup = new Map([
       [
@@ -224,8 +224,8 @@ describe('useCanvasSelectionRect', () => {
     expect(selection.beginGesture).toHaveBeenCalledWith('marquee')
     expect(selection.commitGestureSelection).toHaveBeenCalledWith(
       {
-        nodeIds: ['text-1'],
-        edgeIds: ['edge-1'],
+        nodeIds: new Set(['text-1']),
+        edgeIds: new Set(['edge-1']),
       },
       'replace',
     )
@@ -244,8 +244,8 @@ describe('useCanvasSelectionRect', () => {
       beginGesture: vi.fn(),
       commitGestureSelection: vi.fn(),
       endGesture: vi.fn(),
-      getSelectedNodeIds: vi.fn(() => ['text-existing']),
-      getSelectedEdgeIds: vi.fn(() => ['edge-existing']),
+      getSelectedNodeIds: vi.fn(() => new Set(['text-existing'])),
+      getSelectedEdgeIds: vi.fn(() => new Set(['edge-existing'])),
     }
     storeState.nodeLookup = new Map([
       [
@@ -325,8 +325,8 @@ describe('useCanvasSelectionRect', () => {
 
     expect(selection.commitGestureSelection).toHaveBeenCalledWith(
       {
-        nodeIds: ['text-1'],
-        edgeIds: [],
+        nodeIds: new Set(['text-1']),
+        edgeIds: new Set<string>(),
       },
       'add',
     )
@@ -343,8 +343,8 @@ describe('useCanvasSelectionRect', () => {
       beginGesture: vi.fn(),
       commitGestureSelection: vi.fn(),
       endGesture: vi.fn(),
-      getSelectedNodeIds: vi.fn(() => []),
-      getSelectedEdgeIds: vi.fn(() => []),
+      getSelectedNodeIds: vi.fn(() => new Set<string>()),
+      getSelectedEdgeIds: vi.fn(() => new Set<string>()),
     }
     storeState.nodeLookup = new Map([
       [
@@ -403,8 +403,8 @@ describe('useCanvasSelectionRect', () => {
 
     expect(selection.commitGestureSelection).toHaveBeenCalledWith(
       {
-        nodeIds: ['text-1'],
-        edgeIds: [],
+        nodeIds: new Set(['text-1']),
+        edgeIds: new Set<string>(),
       },
       'replace',
     )
@@ -421,8 +421,8 @@ describe('useCanvasSelectionRect', () => {
       beginGesture: vi.fn(),
       commitGestureSelection: vi.fn(),
       endGesture: vi.fn(),
-      getSelectedNodeIds: vi.fn(() => []),
-      getSelectedEdgeIds: vi.fn(() => []),
+      getSelectedNodeIds: vi.fn(() => new Set<string>()),
+      getSelectedEdgeIds: vi.fn(() => new Set<string>()),
     }
     storeState.nodeLookup = new Map([
       [
@@ -503,8 +503,8 @@ describe('useCanvasSelectionRect', () => {
     })
     expect(selection.commitGestureSelection).toHaveBeenCalledWith(
       {
-        nodeIds: ['text-1'],
-        edgeIds: [],
+        nodeIds: new Set(['text-1']),
+        edgeIds: new Set<string>(),
       },
       'replace',
     )
@@ -521,8 +521,8 @@ describe('useCanvasSelectionRect', () => {
       beginGesture: vi.fn(),
       commitGestureSelection: vi.fn(),
       endGesture: vi.fn(),
-      getSelectedNodeIds: vi.fn(() => []),
-      getSelectedEdgeIds: vi.fn(() => []),
+      getSelectedNodeIds: vi.fn(() => new Set<string>()),
+      getSelectedEdgeIds: vi.fn(() => new Set<string>()),
     }
     storeState.nodeLookup = new Map([
       [
@@ -615,8 +615,8 @@ describe('useCanvasSelectionRect', () => {
 
     expect(selection.commitGestureSelection).toHaveBeenCalledWith(
       {
-        nodeIds: ['text-1'],
-        edgeIds: [],
+        nodeIds: new Set(['text-1']),
+        edgeIds: new Set<string>(),
       },
       'replace',
     )

@@ -164,18 +164,19 @@ export function useCanvasAwareness(provider: ConvexYjsProvider | null) {
     setLocalPresence('core.dragging', parsedPositions)
   }
 
-  const setLocalSelection = (nodeIds: Array<string> | null) => {
+  const setLocalSelection = (nodeIds: ReadonlySet<string> | null) => {
     if (nodeIds === null) {
       setLocalPresence('core.selection', null)
       return
     }
 
-    const parsedNodeIds = parseCanvasSelectionAwarenessState(nodeIds)
+    const orderedNodeIds = Array.from(nodeIds)
+    const parsedNodeIds = parseCanvasSelectionAwarenessState(orderedNodeIds)
     if (!parsedNodeIds) {
       warnInvalidLocalPresenceUpdate(
         'setLocalSelection',
         'parseCanvasSelectionAwarenessState',
-        nodeIds,
+        orderedNodeIds,
       )
       return
     }

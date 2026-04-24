@@ -13,7 +13,7 @@ import type { ReactFlowInstance } from '@xyflow/react'
 
 interface UseCanvasSelectionControllerOptions {
   onSelectionChange?: (selection: CanvasSelectionSnapshot) => void
-  setLocalSelection?: (nodeIds: Array<string> | null) => void
+  setLocalSelection?: (nodeIds: ReadonlySet<string> | null) => void
 }
 
 type SelectionProjectionReactFlow = Pick<ReactFlowInstance, 'setNodes'> &
@@ -27,13 +27,17 @@ function getCanvasSelectionSnapshot(): CanvasSelectionSnapshot {
   }
 }
 
-function hasSameIds(nextIds: Array<string>, prevIds: Array<string>) {
-  if (nextIds.length !== prevIds.length) {
+function hasSameIds(nextIds: ReadonlySet<string>, prevIds: ReadonlySet<string>) {
+  if (nextIds.size !== prevIds.size) {
     return false
   }
 
-  const prevIdSet = new Set(prevIds)
-  return nextIds.every((id) => prevIdSet.has(id))
+  for (const id of nextIds) {
+    if (!prevIds.has(id)) {
+      return false
+    }
+  }
+  return true
 }
 
 function hasSameSelection(
@@ -50,11 +54,9 @@ function projectCanvasSelectionToReactFlow(
   reactFlow: SelectionProjectionReactFlow,
   selection: CanvasSelectionSnapshot,
 ) {
-  const nodeIdSet = new Set(selection.nodeIds)
-  const edgeIdSet = new Set(selection.edgeIds)
   reactFlow.setNodes((nodes) =>
     nodes.map((node) => {
-      const selected = nodeIdSet.has(node.id)
+      const selected = selection.nodeIds.has(node.id)
       const draggable = selected
       if (node.selected === selected && (node.draggable ?? false) === draggable) {
         return node
@@ -65,7 +67,7 @@ function projectCanvasSelectionToReactFlow(
   )
   reactFlow.setEdges?.((edges) =>
     edges.map((edge) => {
-      const selected = edgeIdSet.has(edge.id)
+      const selected = selection.edgeIds.has(edge.id)
       return edge.selected === selected ? edge : { ...edge, selected }
     }),
   )
@@ -100,7 +102,7 @@ function createCanvasSelectionController({
 }: {
   getReactFlow: () => SelectionProjectionReactFlow
   onSelectionChange: (selection: CanvasSelectionSnapshot) => void
-  setLocalSelection: (nodeIds: Array<string> | null) => void
+  setLocalSelection: (nodeIds: ReadonlySet<string> | null) => void
 }): CanvasSelectionController {
   const applySelection = (selection: CanvasSelectionSnapshot) => {
     const prevSelection = getCanvasSelectionSnapshot()
@@ -111,7 +113,7 @@ function createCanvasSelectionController({
 
     projectCanvasSelectionToReactFlow(getReactFlow(), selection)
     useCanvasSelectionState.getState().setSelection(selection)
-    setLocalSelection(selection.nodeIds.length > 0 ? selection.nodeIds : null)
+    setLocalSelection(selection.nodeIds.size > 0 ? selection.nodeIds : null)
     onSelectionChange(selection)
   }
 
@@ -121,13 +123,13 @@ function createCanvasSelectionController({
       applySelection(selection)
     },
     replaceNodes: (nodeIds) => {
-      applySelection({ nodeIds, edgeIds: [] })
+      applySelection({ nodeIds, edgeIds: new Set() })
     },
     replaceEdges: (edgeIds) => {
-      applySelection({ nodeIds: [], edgeIds })
+      applySelection({ nodeIds: new Set(), edgeIds })
     },
     clear: () => {
-      applySelection({ nodeIds: [], edgeIds: [] })
+      applySelection({ nodeIds: new Set(), edgeIds: new Set() })
     },
     getSelectedNodeIds: () => useCanvasSelectionState.getState().selectedNodeIds,
     getSelectedEdgeIds: () => useCanvasSelectionState.getState().selectedEdgeIds,
@@ -139,13 +141,13 @@ function createCanvasSelectionController({
           targetId,
           toggle,
         }),
-        edgeIds: toggle ? currentSelection.edgeIds : [],
+        edgeIds: toggle ? currentSelection.edgeIds : new Set(),
       })
     },
     toggleEdgeFromTarget: (targetId, toggle) => {
       const currentSelection = getCanvasSelectionSnapshot()
       applySelection({
-        nodeIds: toggle ? currentSelection.nodeIds : [],
+        nodeIds: toggle ? currentSelection.nodeIds : new Set(),
         edgeIds: getNextSelectedIds({
           selectedIds: currentSelection.edgeIds,
           targetId,

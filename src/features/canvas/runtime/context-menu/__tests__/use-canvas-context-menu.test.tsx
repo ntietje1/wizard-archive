@@ -9,6 +9,7 @@ import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import * as Y from 'yjs'
 import { testId } from '~/test/helpers/test-id'
 import type { CanvasContextMenuCommands } from '../canvas-context-menu-types'
+import type { CanvasSelectionSnapshot } from '../../../tools/canvas-tool-types'
 
 const sidebarItemsState = vi.hoisted(() => ({
   itemsMap: new Map(),
@@ -39,13 +40,13 @@ vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
 }))
 
 function createSelectionController(
-  snapshot: { nodeIds: Array<string>; edgeIds: Array<string> } = { nodeIds: [], edgeIds: [] },
+  snapshot: CanvasSelectionSnapshot = { nodeIds: new Set<string>(), edgeIds: new Set<string>() },
 ) {
   let currentSelection = snapshot
 
   return {
     clear: vi.fn(() => {
-      currentSelection = { nodeIds: [], edgeIds: [] }
+      currentSelection = { nodeIds: new Set<string>(), edgeIds: new Set<string>() }
     }),
     getSnapshot: vi.fn(() => currentSelection),
     replace: vi.fn((nextSelection) => {
@@ -150,7 +151,10 @@ describe('useCanvasContextMenu', () => {
   })
 
   it('opens the pane menu, clears selection, and derives a non-empty menu in select mode', () => {
-    const selection = createSelectionController({ nodeIds: ['node-1'], edgeIds: [] })
+    const selection = createSelectionController({
+      nodeIds: new Set(['node-1']),
+      edgeIds: new Set<string>(),
+    })
     const { nodesMap, edgesMap } = createContextMenuDoc()
     const { result } = renderHook(() =>
       useCanvasContextMenu({
@@ -183,7 +187,7 @@ describe('useCanvasContextMenu', () => {
   })
 
   it('selects the right-clicked node before opening the menu', () => {
-    const selection = createSelectionController({ nodeIds: [], edgeIds: [] })
+    const selection = createSelectionController()
     const { nodesMap, edgesMap } = createContextMenuDoc()
     nodesMap.set('node-1', {
       id: 'node-1',
@@ -216,7 +220,10 @@ describe('useCanvasContextMenu', () => {
       result.current.openForNode(createContextMenuEvent(10, 15), nodesMap.get('node-1')!)
     })
 
-    expect(selection.replace).toHaveBeenCalledWith({ nodeIds: ['node-1'], edgeIds: [] })
+    expect(selection.replace).toHaveBeenCalledWith({
+      nodeIds: new Set(['node-1']),
+      edgeIds: new Set<string>(),
+    })
     expect(open).toHaveBeenCalledWith({ x: 10, y: 15 })
     expect(result.current.menu.isEmpty).toBe(false)
   })
@@ -254,7 +261,10 @@ describe('useCanvasContextMenu', () => {
   })
 
   it('adds embed-node contributors for a single selected embed node', () => {
-    const selection = createSelectionController({ nodeIds: ['embed-1'], edgeIds: [] })
+    const selection = createSelectionController({
+      nodeIds: new Set(['embed-1']),
+      edgeIds: new Set<string>(),
+    })
     const { nodesMap, edgesMap } = createContextMenuDoc()
     sidebarItemsState.itemsMap.set(
       'note-1',
@@ -302,7 +312,10 @@ describe('useCanvasContextMenu', () => {
   })
 
   it('keeps mixed (node+edge) selections on the shared selection menu without crashing on malformed items', () => {
-    const selection = createSelectionController({ nodeIds: ['bad-node'], edgeIds: ['edge-1'] })
+    const selection = createSelectionController({
+      nodeIds: new Set(['bad-node']),
+      edgeIds: new Set(['edge-1']),
+    })
     const { nodesMap, edgesMap } = createContextMenuDoc()
     // Intentionally corrupt node data to simulate unexpected persisted runtime state.
     nodesMap.set('bad-node', {

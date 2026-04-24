@@ -187,7 +187,7 @@ export function deleteCanvasSelectionCommand({
   selection: CanvasSelectionSnapshot
 }) {
   const deletionSelection = getCanvasDeletionSelection(edgesMap, selection)
-  if (deletionSelection.nodeIds.length === 0 && deletionSelection.edgeIds.length === 0) {
+  if (deletionSelection.nodeIds.size === 0 && deletionSelection.edgeIds.size === 0) {
     return false
   }
 
@@ -227,7 +227,7 @@ export function deleteCanvasEdgesCommand({
   edgeIds,
 }: {
   edgesMap: Y.Map<Edge>
-  edgeIds: Array<string>
+  edgeIds: ReadonlySet<string>
 }) {
   for (const edgeId of edgeIds) {
     edgesMap.delete(edgeId)
@@ -302,7 +302,7 @@ export function createAndSelectEmbeddedCanvasNode({
   const embedNode = createEmbedCanvasNode(sidebarItemId, screenToFlowPosition(pointerPosition))
   createNode(embedNode)
 
-  const nextSelection = { nodeIds: [embedNode.id], edgeIds: [] }
+  const nextSelection = { nodeIds: new Set([embedNode.id]), edgeIds: new Set<string>() }
   replaceSelection(nextSelection)
   return nextSelection
 }

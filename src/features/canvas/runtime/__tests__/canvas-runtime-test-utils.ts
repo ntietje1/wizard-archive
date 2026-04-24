@@ -7,13 +7,13 @@ import type { CanvasSessionRuntime } from '../session/use-canvas-session-state'
 
 function createCanvasSelectionController(): CanvasSelectionController {
   return {
-    getSnapshot: vi.fn(() => ({ nodeIds: [], edgeIds: [] })),
+    getSnapshot: vi.fn(() => ({ nodeIds: new Set<string>(), edgeIds: new Set<string>() })),
     replace: vi.fn(),
     replaceNodes: vi.fn(),
     replaceEdges: vi.fn(),
     clear: vi.fn(),
-    getSelectedNodeIds: vi.fn(() => []),
-    getSelectedEdgeIds: vi.fn(() => []),
+    getSelectedNodeIds: vi.fn(() => new Set<string>()),
+    getSelectedEdgeIds: vi.fn(() => new Set<string>()),
     toggleNodeFromTarget: vi.fn(),
     toggleEdgeFromTarget: vi.fn(),
     beginGesture: vi.fn(),

@@ -66,8 +66,8 @@ describe('createCanvasFlowHandlers', () => {
     expect(dragHandlers.onNodeDragStart).toHaveBeenCalledTimes(1)
     expect(dragHandlers.onNodeDrag).toHaveBeenCalledTimes(1)
     expect(dragHandlers.onNodeDragStop).toHaveBeenCalledTimes(1)
-    expect(documentWriter.deleteNodes).toHaveBeenCalledWith(['node-1'])
-    expect(documentWriter.deleteEdges).toHaveBeenCalledWith(['edge-1'])
+    expect(documentWriter.deleteNodes).toHaveBeenCalledWith(new Set(['node-1']))
+    expect(documentWriter.deleteEdges).toHaveBeenCalledWith(new Set(['edge-1']))
   })
 
   it('omits selection handlers when the surface is not editable select mode', () => {

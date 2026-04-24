@@ -15,8 +15,8 @@ export type CanvasSelectionGestureKind = 'marquee' | 'lasso'
 export type CanvasSelectionCommitMode = 'replace' | 'add'
 
 export interface CanvasSelectionSnapshot {
-  nodeIds: Array<string>
-  edgeIds: Array<string>
+  nodeIds: ReadonlySet<string>
+  edgeIds: ReadonlySet<string>
 }
 
 interface CanvasToolSettings {
@@ -65,9 +65,9 @@ export interface CanvasDocumentWriter {
   updateNodeData: <TPatch extends Record<string, unknown>>(nodeId: string, data: TPatch) => void
   updateEdge: (edgeId: string, updater: (edge: Edge) => Edge) => void
   resizeNode: (nodeId: string, width: number, height: number, position: XYPosition) => void
-  deleteNodes: (nodeIds: Array<string>) => void
+  deleteNodes: (nodeIds: ReadonlySet<string>) => void
   createEdge: (connection: Connection, defaults?: CanvasEdgeCreationDefaults) => void
-  deleteEdges: (edgeIds: Array<string>) => void
+  deleteEdges: (edgeIds: ReadonlySet<string>) => void
   setNodePosition: (nodeId: string, position: XYPosition) => void
 }
 
@@ -94,11 +94,11 @@ interface CanvasDocumentQuery {
 export interface CanvasSelectionController {
   getSnapshot: () => CanvasSelectionSnapshot
   replace: (selection: CanvasSelectionSnapshot) => void
-  replaceNodes: (nodeIds: Array<string>) => void
-  replaceEdges: (edgeIds: Array<string>) => void
+  replaceNodes: (nodeIds: ReadonlySet<string>) => void
+  replaceEdges: (edgeIds: ReadonlySet<string>) => void
   clear: () => void
-  getSelectedNodeIds: () => Array<string>
-  getSelectedEdgeIds: () => Array<string>
+  getSelectedNodeIds: () => ReadonlySet<string>
+  getSelectedEdgeIds: () => ReadonlySet<string>
   toggleNodeFromTarget: (targetId: string | null, toggle: boolean) => void
   toggleEdgeFromTarget: (targetId: string | null, toggle: boolean) => void
   beginGesture: (kind: CanvasSelectionGestureKind) => void
@@ -144,7 +144,7 @@ export interface CanvasCoreAwarenessWriter {
   setLocalCursor: (position: Point2D | null) => void
   setLocalDragging: (positions: Record<string, Point2D> | null) => void
   setLocalResizing: (resizing: ResizingState | null) => void
-  setLocalSelection: (nodeIds: Array<string> | null) => void
+  setLocalSelection: (nodeIds: ReadonlySet<string> | null) => void
 }
 
 export interface CanvasAwarenessPresenceWriter {

@@ -4,6 +4,10 @@ import {
   clearCanvasPendingSelectionPreview,
   getCanvasPendingSelectionPreview,
 } from '../use-canvas-pending-selection-preview'
+import type {
+  CanvasSelectionCommitMode,
+  CanvasSelectionSnapshot,
+} from '../../../tools/canvas-tool-types'
 
 describe('createCanvasSelectionGestureSession', () => {
   const rafCallbacks = new Map<number, FrameRequestCallback>()
@@ -46,12 +50,12 @@ describe('createCanvasSelectionGestureSession', () => {
   it('uses the starting committed selection when publishing additive preview state', () => {
     const session = createSession({
       selection: {
-        getSelectedNodeIds: () => ['existing-node'],
-        getSelectedEdgeIds: () => ['existing-edge'],
+        getSelectedNodeIds: () => new Set(['existing-node']),
+        getSelectedEdgeIds: () => new Set(['existing-edge']),
       },
       preview: () => ({
-        nodeIds: ['next-node'],
-        edgeIds: [],
+        nodeIds: new Set(['next-node']),
+        edgeIds: new Set<string>(),
       }),
     })
 
@@ -76,8 +80,8 @@ describe('createCanvasSelectionGestureSession', () => {
       clear,
       interaction: { suppressNextSurfaceClick },
       preview: () => ({
-        nodeIds: ['node-1'],
-        edgeIds: ['edge-1'],
+        nodeIds: new Set(['node-1']),
+        edgeIds: new Set(['edge-1']),
       }),
       selection: {
         commitGestureSelection,
@@ -99,8 +103,8 @@ describe('createCanvasSelectionGestureSession', () => {
 
     expect(commitGestureSelection).toHaveBeenCalledWith(
       {
-        nodeIds: ['node-1'],
-        edgeIds: ['edge-1'],
+        nodeIds: new Set(['node-1']),
+        edgeIds: new Set(['edge-1']),
       },
       'replace',
     )
@@ -118,8 +122,8 @@ describe('createCanvasSelectionGestureSession', () => {
     const session = createSession({
       clear,
       preview: () => ({
-        nodeIds: ['node-1'],
-        edgeIds: [],
+        nodeIds: new Set(['node-1']),
+        edgeIds: new Set<string>(),
       }),
       selection: {
         commitGestureSelection,
@@ -156,16 +160,16 @@ function createSession({
   interaction?: {
     suppressNextSurfaceClick: () => void
   }
-  preview: (state: { value: string }) => { nodeIds: Array<string>; edgeIds: Array<string> } | null
+  preview: (state: { value: string }) => CanvasSelectionSnapshot | null
   selection?: Partial<{
     beginGesture: (kind: 'marquee' | 'lasso') => void
     commitGestureSelection: (
-      selection: { nodeIds: Array<string>; edgeIds: Array<string> },
-      mode?: 'replace' | 'add',
+      selection: CanvasSelectionSnapshot,
+      mode?: CanvasSelectionCommitMode,
     ) => void
     endGesture: () => void
-    getSelectedNodeIds: () => Array<string>
-    getSelectedEdgeIds: () => Array<string>
+    getSelectedNodeIds: () => ReadonlySet<string>
+    getSelectedEdgeIds: () => ReadonlySet<string>
   }>
 }) {
   return createCanvasSelectionGestureSession({
@@ -179,8 +183,8 @@ function createSession({
       beginGesture: selection?.beginGesture ?? vi.fn(),
       commitGestureSelection: selection?.commitGestureSelection ?? vi.fn(),
       endGesture: selection?.endGesture ?? vi.fn(),
-      getSelectedNodeIds: selection?.getSelectedNodeIds ?? (() => []),
-      getSelectedEdgeIds: selection?.getSelectedEdgeIds ?? (() => []),
+      getSelectedNodeIds: selection?.getSelectedNodeIds ?? (() => new Set<string>()),
+      getSelectedEdgeIds: selection?.getSelectedEdgeIds ?? (() => new Set<string>()),
     }),
     interaction: interaction ?? {
       suppressNextSurfaceClick: vi.fn(),

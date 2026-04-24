@@ -158,7 +158,7 @@ export function useCanvasContextMenu({
 
   const openForPane = (event: MouseEvent | React.MouseEvent) => {
     const position = normalizeContextMenuEvent(event)
-    const nextSelection = { nodeIds: [], edgeIds: [] }
+    const nextSelection = { nodeIds: new Set<string>(), edgeIds: new Set<string>() }
     selection.clear()
     openMenu(position, nextSelection)
   }
@@ -166,9 +166,9 @@ export function useCanvasContextMenu({
   const openForNode = (event: React.MouseEvent, node: Node) => {
     const position = normalizeContextMenuEvent(event)
     const currentSelection = selection.getSnapshot()
-    const nextSelection = currentSelection.nodeIds.includes(node.id)
+    const nextSelection = currentSelection.nodeIds.has(node.id)
       ? currentSelection
-      : { nodeIds: [node.id], edgeIds: [] }
+      : { nodeIds: new Set([node.id]), edgeIds: new Set<string>() }
 
     if (nextSelection !== currentSelection) {
       selection.replace(nextSelection)
@@ -180,9 +180,9 @@ export function useCanvasContextMenu({
   const openForEdge = (event: React.MouseEvent, edge: Edge) => {
     const position = normalizeContextMenuEvent(event)
     const currentSelection = selection.getSnapshot()
-    const nextSelection = currentSelection.edgeIds.includes(edge.id)
+    const nextSelection = currentSelection.edgeIds.has(edge.id)
       ? currentSelection
-      : { nodeIds: [], edgeIds: [edge.id] }
+      : { nodeIds: new Set<string>(), edgeIds: new Set([edge.id]) }
 
     if (nextSelection !== currentSelection) {
       selection.replace(nextSelection)

@@ -164,7 +164,7 @@ export function useCanvasCommands({
         }
 
         const snapshot = getSelectionSnapshot(args)
-        return snapshot.nodeIds.length > 0 || snapshot.edgeIds.length > 0
+        return snapshot.nodeIds.size > 0 || snapshot.edgeIds.size > 0
       },
       run: (args) => {
         if (!canEdit) {

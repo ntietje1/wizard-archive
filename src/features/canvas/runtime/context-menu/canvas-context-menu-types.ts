@@ -25,17 +25,17 @@ export type CanvasContextMenuTarget =
   | { kind: 'pane' }
   | {
       kind: 'mixed-selection'
-      nodeIds: Array<string>
-      edgeIds: Array<string>
+      nodeIds: ReadonlyArray<string>
+      edgeIds: ReadonlyArray<string>
     }
   | {
       kind: 'node-selection'
-      nodeIds: Array<string>
+      nodeIds: ReadonlyArray<string>
       nodeType: CanvasNodeType | null
     }
   | {
       kind: 'edge-selection'
-      edgeIds: Array<string>
+      edgeIds: ReadonlyArray<string>
       edgeType: CanvasEdgeType | null
     }
   | {

@@ -58,11 +58,11 @@ describe('useCanvasSelectionController', () => {
     const { result } = renderHook(() => useCanvasSelectionController())
 
     act(() => {
-      result.current.replace({ nodeIds: ['a', 'b'], edgeIds: ['e-a-b'] })
+      result.current.replace({ nodeIds: new Set(['a', 'b']), edgeIds: new Set(['e-a-b']) })
     })
 
-    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(['a', 'b'])
-    expect(useCanvasSelectionState.getState().selectedEdgeIds).toEqual(['e-a-b'])
+    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(new Set(['a', 'b']))
+    expect(useCanvasSelectionState.getState().selectedEdgeIds).toEqual(new Set(['e-a-b']))
     expect(reactFlowMock.getNodes()).toEqual([
       expect.objectContaining({ id: 'a', selected: true, draggable: true }),
       expect.objectContaining({ id: 'b', selected: true, draggable: true }),
@@ -76,20 +76,20 @@ describe('useCanvasSelectionController', () => {
     const { result } = renderHook(() => useCanvasSelectionController())
 
     act(() => {
-      result.current.replaceNodes(['a'])
+      result.current.replaceNodes(new Set(['a']))
     })
 
-    expect(result.current.getSelectedNodeIds()).toEqual(['a'])
-    expect(result.current.getSelectedEdgeIds()).toEqual([])
-    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(['a'])
-    expect(useCanvasSelectionState.getState().selectedEdgeIds).toEqual([])
+    expect(result.current.getSelectedNodeIds()).toEqual(new Set(['a']))
+    expect(result.current.getSelectedEdgeIds()).toEqual(new Set())
+    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(new Set(['a']))
+    expect(useCanvasSelectionState.getState().selectedEdgeIds).toEqual(new Set())
 
     act(() => {
       result.current.clear()
     })
 
-    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual([])
-    expect(useCanvasSelectionState.getState().selectedEdgeIds).toEqual([])
+    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(new Set())
+    expect(useCanvasSelectionState.getState().selectedEdgeIds).toEqual(new Set())
     expect(reactFlowMock.getNodes()).toEqual([
       expect.objectContaining({ id: 'a', selected: false, draggable: false }),
       expect.objectContaining({ id: 'b', selected: false, draggable: false }),
@@ -103,11 +103,11 @@ describe('useCanvasSelectionController', () => {
     const { result } = renderHook(() => useCanvasSelectionController())
 
     act(() => {
-      result.current.replaceNodes(['z'])
+      result.current.replaceNodes(new Set(['z']))
     })
 
-    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(['z'])
-    expect(useCanvasSelectionState.getState().selectedEdgeIds).toEqual([])
+    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(new Set(['z']))
+    expect(useCanvasSelectionState.getState().selectedEdgeIds).toEqual(new Set())
     expect(reactFlowMock.getNodes()).toEqual([
       expect.objectContaining({ id: 'a', selected: false, draggable: false }),
       expect.objectContaining({ id: 'b', selected: false, draggable: false }),
@@ -124,8 +124,8 @@ describe('useCanvasSelectionController', () => {
       result.current.clear()
     })
 
-    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual([])
-    expect(useCanvasSelectionState.getState().selectedEdgeIds).toEqual([])
+    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(new Set())
+    expect(useCanvasSelectionState.getState().selectedEdgeIds).toEqual(new Set())
     expect(reactFlowMock.getNodes()).toEqual([
       expect.objectContaining({ id: 'a', selected: false, draggable: false }),
       expect.objectContaining({ id: 'b', selected: false, draggable: false }),
@@ -139,11 +139,11 @@ describe('useCanvasSelectionController', () => {
     const { result } = renderHook(() => useCanvasSelectionController())
 
     act(() => {
-      result.current.replaceNodes(['a'])
+      result.current.replaceNodes(new Set(['a']))
     })
 
-    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(['a'])
-    expect(useCanvasSelectionState.getState().selectedEdgeIds).toEqual([])
+    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(new Set(['a']))
+    expect(useCanvasSelectionState.getState().selectedEdgeIds).toEqual(new Set())
     expect(reactFlowMock.getNodes()).toEqual([
       expect.objectContaining({ id: 'a', selected: true, draggable: true }),
       expect.objectContaining({ id: 'b', selected: false, draggable: false }),
@@ -173,18 +173,18 @@ describe('useCanvasSelectionController', () => {
       result.current.selection.toggleNodeFromTarget('a', false)
     })
 
-    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(['a'])
+    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(new Set(['a']))
   })
 
   it('supports edge-only selection snapshots and edge toggle selection', () => {
     const { result } = renderHook(() => useCanvasSelectionController())
 
     act(() => {
-      result.current.replaceEdges(['e-a-b'])
+      result.current.replaceEdges(new Set(['e-a-b']))
     })
 
-    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual([])
-    expect(useCanvasSelectionState.getState().selectedEdgeIds).toEqual(['e-a-b'])
+    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(new Set())
+    expect(useCanvasSelectionState.getState().selectedEdgeIds).toEqual(new Set(['e-a-b']))
     expect(reactFlowMock.getEdges()).toEqual([
       expect.objectContaining({ id: 'e-a-b', selected: true }),
     ])
@@ -193,7 +193,7 @@ describe('useCanvasSelectionController', () => {
       result.current.toggleEdgeFromTarget('e-a-b', true)
     })
 
-    expect(useCanvasSelectionState.getState().selectedEdgeIds).toEqual([])
+    expect(useCanvasSelectionState.getState().selectedEdgeIds).toEqual(new Set())
     expect(reactFlowMock.getEdges()).toEqual([
       expect.objectContaining({ id: 'e-a-b', selected: false }),
     ])
@@ -203,12 +203,15 @@ describe('useCanvasSelectionController', () => {
     const { result } = renderHook(() => useCanvasSelectionController())
 
     act(() => {
-      result.current.replace({ nodeIds: ['a'], edgeIds: [] })
-      result.current.commitGestureSelection({ nodeIds: ['b'], edgeIds: ['e-a-b'] }, 'add')
+      result.current.replace({ nodeIds: new Set(['a']), edgeIds: new Set<string>() })
+      result.current.commitGestureSelection(
+        { nodeIds: new Set(['b']), edgeIds: new Set(['e-a-b']) },
+        'add',
+      )
     })
 
-    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(['a', 'b'])
-    expect(useCanvasSelectionState.getState().selectedEdgeIds).toEqual(['e-a-b'])
+    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(new Set(['a', 'b']))
+    expect(useCanvasSelectionState.getState().selectedEdgeIds).toEqual(new Set(['e-a-b']))
     expect(reactFlowMock.getNodes()).toEqual([
       expect.objectContaining({ id: 'a', selected: true, draggable: true }),
       expect.objectContaining({ id: 'b', selected: true, draggable: true }),

@@ -67,7 +67,7 @@ export function useCanvasEditableNodeSession({
     }
 
     if (!isSelected) {
-      selection.replace({ nodeIds: [id], edgeIds: [] })
+      selection.replace({ nodeIds: new Set([id]), edgeIds: new Set() })
       return
     }
 
@@ -87,7 +87,7 @@ export function useCanvasEditableNodeSession({
   ])
 
   useEffect(() => {
-    if (!editing || !hasPendingAutoEdit || selectedNodeIds.length === 0 || isSelected) {
+    if (!editing || !hasPendingAutoEdit || selectedNodeIds.size === 0 || isSelected) {
       return
     }
 
@@ -100,7 +100,7 @@ export function useCanvasEditableNodeSession({
     hasPendingAutoEdit,
     isSelected,
     scheduleEditingChange,
-    selectedNodeIds.length,
+    selectedNodeIds.size,
   ])
 
   const startEditing = useCallback(

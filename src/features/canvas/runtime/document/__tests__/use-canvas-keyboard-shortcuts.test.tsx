@@ -15,9 +15,11 @@ const hotkeyRegistrations = vi.hoisted(
 const copySnapshotSpy = vi.hoisted(() => vi.fn(() => true))
 const cutSnapshotSpy = vi.hoisted(() => vi.fn(() => true))
 const deleteSnapshotSpy = vi.hoisted(() => vi.fn(() => true))
-const pasteClipboardSpy = vi.hoisted(() => vi.fn(() => ({ nodeIds: ['node-2'], edgeIds: [] })))
+const pasteClipboardSpy = vi.hoisted(() =>
+  vi.fn(() => ({ nodeIds: new Set(['node-2']), edgeIds: new Set<string>() })),
+)
 const getSelectionSnapshotSpy = vi.hoisted(() =>
-  vi.fn(() => ({ nodeIds: ['node-1'], edgeIds: [] })),
+  vi.fn(() => ({ nodeIds: new Set(['node-1']), edgeIds: new Set<string>() })),
 )
 
 vi.mock('@tanstack/react-hotkeys', () => ({
@@ -187,8 +189,8 @@ describe('useCanvasKeyboardShortcuts', () => {
     expect(deleteSnapshotSpy).toHaveBeenCalledWith()
     expect(deletePreventDefaultSpy).toHaveBeenCalledTimes(1)
     expect(selection.replace).toHaveBeenCalledWith({
-      nodeIds: ['node-1', 'node-2'],
-      edgeIds: ['edge-1'],
+      nodeIds: new Set(['node-1', 'node-2']),
+      edgeIds: new Set(['edge-1']),
     })
     expect(preventDefaultSpy).toHaveBeenCalledTimes(1)
     expect(useCanvasToolStore.getState().activeTool).toBe('edge')

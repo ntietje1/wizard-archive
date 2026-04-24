@@ -27,8 +27,8 @@ export function createCanvasReorderPlan(
   selection: CanvasSelectionSnapshot,
   direction: CanvasReorderDirection,
 ): CanvasReorderPlan | null {
-  const hasNodes = selection.nodeIds.length > 0
-  const hasEdges = selection.edgeIds.length > 0
+  const hasNodes = selection.nodeIds.size > 0
+  const hasEdges = selection.edgeIds.size > 0
   if (!hasNodes && !hasEdges) {
     return null
   }

@@ -33,10 +33,10 @@ export function isPrimarySelectionModifier(
 }
 
 export function mergeSelectedIds(
-  selectedIds: Array<string>,
-  incomingIds: Array<string>,
-): Array<string> {
-  return Array.from(new Set([...selectedIds, ...incomingIds]))
+  selectedIds: ReadonlySet<string>,
+  incomingIds: ReadonlySet<string>,
+): ReadonlySet<string> {
+  return new Set([...selectedIds, ...incomingIds])
 }
 
 export function applyCanvasSelectionCommitMode({
@@ -63,28 +63,31 @@ export function getNextSelectedIds({
   targetId,
   toggle,
 }: {
-  selectedIds: Array<string>
+  selectedIds: ReadonlySet<string>
   targetId: string | null
   toggle: boolean
-}): Array<string> {
+}): ReadonlySet<string> {
   if (!targetId) {
-    return toggle ? selectedIds : []
+    return toggle ? selectedIds : new Set()
   }
 
   if (!toggle) {
-    return [targetId]
+    return new Set([targetId])
   }
 
-  if (selectedIds.includes(targetId)) {
-    return selectedIds.filter((id) => id !== targetId)
+  const nextIds = new Set(selectedIds)
+  if (nextIds.has(targetId)) {
+    nextIds.delete(targetId)
+    return nextIds
   }
 
-  return [...selectedIds, targetId]
+  nextIds.add(targetId)
+  return nextIds
 }
 
 export function isExclusivelySelectedNode(
-  selectedNodeIds: Array<string>,
+  selectedNodeIds: ReadonlySet<string>,
   targetId: string | null,
 ): boolean {
-  return targetId !== null && selectedNodeIds.length === 1 && selectedNodeIds[0] === targetId
+  return targetId !== null && selectedNodeIds.size === 1 && selectedNodeIds.has(targetId)
 }

@@ -75,7 +75,7 @@ type CanvasToolbarState = {
   hasSelection: boolean
   properties: Array<CanvasResolvedProperty>
   selectedEdges: Array<Edge>
-  selectionSnapshot: { nodeIds: Array<string>; edgeIds: Array<string> }
+  selectionSnapshot: { nodeIds: ReadonlySet<string>; edgeIds: ReadonlySet<string> }
   setEdgeType: (type: CanvasEdgeType) => void
   showsEdgeToolDefaults: boolean
   updateEdge: (edgeId: string, updater: (edge: Edge) => Edge) => void
@@ -101,10 +101,8 @@ function useCanvasToolbarState(): CanvasToolbarState {
   )
   const toolPropertyContext = useCanvasToolPropertyContext()
 
-  const selectedNodeIdSet = new Set(selectionSnapshot.nodeIds)
-  const selectedEdgeIdSet = new Set(selectionSnapshot.edgeIds)
-  const selectedNodes = nodes.filter((node) => selectedNodeIdSet.has(node.id))
-  const selectedEdges = edges.filter((edge) => selectedEdgeIdSet.has(edge.id))
+  const selectedNodes = nodes.filter((node) => selectionSnapshot.nodeIds.has(node.id))
+  const selectedEdges = edges.filter((edge) => selectionSnapshot.edgeIds.has(edge.id))
   const hasSelection = selectedNodes.length > 0 || selectedEdges.length > 0
   const hasOnlySelectedEdges = selectedNodes.length === 0 && selectedEdges.length > 0
   const showsEdgeToolDefaults = !hasSelection && activeTool === 'edge'
@@ -457,7 +455,7 @@ function CanvasReorderControls({
   selection,
 }: {
   commands: CanvasCommands
-  selection: { nodeIds: Array<string>; edgeIds: Array<string> }
+  selection: { nodeIds: ReadonlySet<string>; edgeIds: ReadonlySet<string> }
 }) {
   return (
     <div className="flex flex-col gap-1">

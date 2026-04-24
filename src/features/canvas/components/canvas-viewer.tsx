@@ -8,11 +8,15 @@ import {
 } from '@xyflow/react'
 import { ClientOnly } from '@tanstack/react-router'
 import '@xyflow/react/dist/style.css'
-import { useMemo } from 'react'
+import { Profiler, useMemo } from 'react'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { ContextMenuHost } from '~/features/context-menu/components/context-menu-host'
 import { cn } from '~/features/shadcn/lib/utils'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
+import {
+  isCanvasPerformanceEnabled,
+  recordCanvasPerformanceMetric,
+} from '../runtime/performance/canvas-performance-metrics'
 import { canvasEdgeTypes } from '../edges/canvas-edge-renderers'
 import { CanvasConnectionPreview } from '../edges/shared/canvas-connection-preview'
 import { canvasNodeTypes } from '../nodes/canvas-node-renderers'
@@ -41,6 +45,7 @@ const PAN_BOTH: Array<number> = [0, 1]
 const SELECTION_KEY_DISABLED: Array<string> = []
 const MAX_ZOOM = 4
 const MIN_ZOOM = 0.1
+
 export function CanvasViewer({ item: canvas }: EditorViewerProps<CanvasWithContent>) {
   return (
     <ClientOnly fallback={null}>
@@ -104,6 +109,98 @@ export function CanvasFlow({
   const pendingSelectionPreview = useCanvasPendingSelectionPreviewSummary()
   const edgeToolActive = runtime.activeTool === 'edge'
   const canvasCursor = runtime.toolCursor ?? 'pointer'
+  const canvasFlowContent = (
+    <div
+      className="canvas-flow-shell relative flex-1 min-h-0 allow-motion"
+      style={{ cursor: canvasCursor }}
+      data-testid="canvas-flow-shell"
+    >
+      <CanvasToolbar canEdit={canEdit} />
+      <CanvasConditionalToolbar canEdit={canEdit} />
+      <div
+        ref={runtime.canvasSurfaceRef}
+        className="relative h-full w-full"
+        data-testid="canvas-surface"
+        role="region"
+        aria-label="Canvas surface"
+      >
+        <ReactFlow
+          defaultNodes={EMPTY_NODES}
+          defaultEdges={EMPTY_EDGES}
+          defaultViewport={initialViewport}
+          onNodeDragStart={runtime.flowHandlers.onNodeDragStart}
+          onNodeDrag={runtime.flowHandlers.onNodeDrag}
+          onNodeDragStop={runtime.flowHandlers.onNodeDragStop}
+          onNodesDelete={runtime.flowHandlers.onNodesDelete}
+          onEdgesDelete={runtime.flowHandlers.onEdgesDelete}
+          onConnect={runtime.flowHandlers.onConnect}
+          onMoveStart={runtime.flowHandlers.onMoveStart}
+          onMoveEnd={runtime.flowHandlers.onMoveEnd}
+          onNodeClick={runtime.flowHandlers.onNodeClick}
+          onEdgeClick={runtime.flowHandlers.onEdgeClick}
+          onPaneClick={runtime.flowHandlers.onPaneClick}
+          onNodeContextMenu={runtime.contextMenu.openForNode}
+          onEdgeContextMenu={runtime.contextMenu.openForEdge}
+          onPaneContextMenu={runtime.contextMenu.openForPane}
+          onMouseMove={runtime.flowHandlers.onMouseMove}
+          onMouseLeave={runtime.flowHandlers.onMouseLeave}
+          edgeTypes={canvasEdgeTypes}
+          nodeTypes={canvasNodeTypes}
+          connectionLineComponent={CanvasConnectionPreview}
+          nodesDraggable={false}
+          nodesConnectable={canEdit && edgeToolActive}
+          connectOnClick={false}
+          elevateNodesOnSelect={false}
+          elevateEdgesOnSelect={false}
+          elementsSelectable={false}
+          selectionOnDrag={false}
+          selectionMode={SelectionMode.Partial}
+          connectionMode={ConnectionMode.Loose}
+          selectionKeyCode={SELECTION_KEY_DISABLED}
+          panOnDrag={runtime.activeTool === 'hand' ? PAN_BOTH : PAN_MIDDLE_ONLY}
+          deleteKeyCode={DELETE_KEYS_NONE}
+          colorMode={colorMode}
+          minZoom={MIN_ZOOM}
+          maxZoom={MAX_ZOOM}
+          zoomOnScroll={false}
+          zoomOnDoubleClick={false}
+          panOnScroll={false}
+          preventScrolling={false}
+          proOptions={PRO_OPTIONS}
+        >
+          <CanvasViewportPersistence
+            key={canvasId}
+            canvasId={canvasId}
+            initialViewport={initialViewport}
+          />
+          <Background bgColor="var(--background)" />
+          <MiniMap zoomable={false} pannable={false} nodeComponent={MiniMapNode} />
+          <CanvasLocalOverlaysHost />
+          <CanvasAwarenessHost remoteUsers={runtime.remoteUsers} />
+        </ReactFlow>
+
+        <ContextMenuHost
+          ref={runtime.contextMenu.hostRef}
+          menu={runtime.contextMenu.menu}
+          onClose={runtime.contextMenu.onClose}
+        />
+
+        {pendingSelectionPreview.active &&
+          pendingSelectionPreview.nodeCount + pendingSelectionPreview.edgeCount > 0 && (
+            <CanvasPendingSelectionStatus
+              nodeCount={pendingSelectionPreview.nodeCount}
+              edgeCount={pendingSelectionPreview.edgeCount}
+            />
+          )}
+
+        <CanvasDropOverlay
+          ref={runtime.dropTarget.dropOverlayRef}
+          isDropTarget={runtime.dropTarget.isDropTarget}
+          isFileDropTarget={runtime.dropTarget.isFileDropTarget}
+        />
+      </div>
+    </div>
+  )
 
   return (
     <CanvasRuntimeProvider
@@ -116,96 +213,21 @@ export function CanvasFlow({
       remoteHighlights={runtime.remoteHighlights}
       selection={runtime.selection}
     >
-      <div
-        className="canvas-flow-shell relative flex-1 min-h-0 allow-motion"
-        style={{ cursor: canvasCursor }}
-        data-testid="canvas-flow-shell"
-      >
-        <CanvasToolbar canEdit={canEdit} />
-        <CanvasConditionalToolbar canEdit={canEdit} />
-        <div
-          ref={runtime.canvasSurfaceRef}
-          className="relative h-full w-full"
-          data-testid="canvas-surface"
-          role="region"
-          aria-label="Canvas surface"
+      {isCanvasPerformanceEnabled() ? (
+        <Profiler
+          id="CanvasFlow"
+          onRender={(_id, phase, actualDuration, baseDuration) => {
+            recordCanvasPerformanceMetric('canvas.react.commit', actualDuration, {
+              phase,
+              baseDuration,
+            })
+          }}
         >
-          <ReactFlow
-            defaultNodes={EMPTY_NODES}
-            defaultEdges={EMPTY_EDGES}
-            defaultViewport={initialViewport}
-            onNodeDragStart={runtime.flowHandlers.onNodeDragStart}
-            onNodeDrag={runtime.flowHandlers.onNodeDrag}
-            onNodeDragStop={runtime.flowHandlers.onNodeDragStop}
-            onNodesDelete={runtime.flowHandlers.onNodesDelete}
-            onEdgesDelete={runtime.flowHandlers.onEdgesDelete}
-            onConnect={runtime.flowHandlers.onConnect}
-            onMoveStart={runtime.flowHandlers.onMoveStart}
-            onMoveEnd={runtime.flowHandlers.onMoveEnd}
-            onNodeClick={runtime.flowHandlers.onNodeClick}
-            onEdgeClick={runtime.flowHandlers.onEdgeClick}
-            onPaneClick={runtime.flowHandlers.onPaneClick}
-            onNodeContextMenu={runtime.contextMenu.openForNode}
-            onEdgeContextMenu={runtime.contextMenu.openForEdge}
-            onPaneContextMenu={runtime.contextMenu.openForPane}
-            onMouseMove={runtime.flowHandlers.onMouseMove}
-            onMouseLeave={runtime.flowHandlers.onMouseLeave}
-            edgeTypes={canvasEdgeTypes}
-            nodeTypes={canvasNodeTypes}
-            connectionLineComponent={CanvasConnectionPreview}
-            nodesDraggable={false}
-            nodesConnectable={canEdit && edgeToolActive}
-            connectOnClick={false}
-            elevateNodesOnSelect={false}
-            elevateEdgesOnSelect={false}
-            elementsSelectable={false}
-            selectionOnDrag={false}
-            selectionMode={SelectionMode.Partial}
-            connectionMode={ConnectionMode.Loose}
-            selectionKeyCode={SELECTION_KEY_DISABLED}
-            panOnDrag={runtime.activeTool === 'hand' ? PAN_BOTH : PAN_MIDDLE_ONLY}
-            deleteKeyCode={DELETE_KEYS_NONE}
-            colorMode={colorMode}
-            minZoom={MIN_ZOOM}
-            maxZoom={MAX_ZOOM}
-            zoomOnScroll={false}
-            zoomOnDoubleClick={false}
-            panOnScroll={false}
-            preventScrolling={false}
-            proOptions={PRO_OPTIONS}
-          >
-            <CanvasViewportPersistence
-              key={canvasId}
-              canvasId={canvasId}
-              initialViewport={initialViewport}
-            />
-            <Background bgColor="var(--background)" />
-            <MiniMap zoomable={false} pannable={false} nodeComponent={MiniMapNode} />
-            <CanvasLocalOverlaysHost />
-            <CanvasAwarenessHost remoteUsers={runtime.remoteUsers} />
-          </ReactFlow>
-
-          <ContextMenuHost
-            ref={runtime.contextMenu.hostRef}
-            menu={runtime.contextMenu.menu}
-            onClose={runtime.contextMenu.onClose}
-          />
-
-          {pendingSelectionPreview.active &&
-            pendingSelectionPreview.nodeCount + pendingSelectionPreview.edgeCount > 0 && (
-              <CanvasPendingSelectionStatus
-                nodeCount={pendingSelectionPreview.nodeCount}
-                edgeCount={pendingSelectionPreview.edgeCount}
-              />
-            )}
-
-          <CanvasDropOverlay
-            ref={runtime.dropTarget.dropOverlayRef}
-            isDropTarget={runtime.dropTarget.isDropTarget}
-            isFileDropTarget={runtime.dropTarget.isFileDropTarget}
-          />
-        </div>
-      </div>
+          {canvasFlowContent}
+        </Profiler>
+      ) : (
+        canvasFlowContent
+      )}
     </CanvasRuntimeProvider>
   )
 }

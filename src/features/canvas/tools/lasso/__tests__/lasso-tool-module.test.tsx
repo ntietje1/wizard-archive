@@ -11,6 +11,7 @@ import {
 import type { Edge, Node } from '@xyflow/react'
 import type {
   CanvasMeasuredNode,
+  CanvasSelectionSnapshot,
   CanvasToolId,
   CanvasToolRuntime,
   CanvasSelectionCommitMode,
@@ -166,8 +167,8 @@ describe('lassoToolSpec', () => {
     expect(suppressNextSurfaceClick).toHaveBeenCalledTimes(1)
     expect(commitGestureSelection).toHaveBeenCalledWith(
       {
-        nodeIds: ['embed-1'],
-        edgeIds: ['edge-1'],
+        nodeIds: new Set(['embed-1']),
+        edgeIds: new Set(['edge-1']),
       },
       'replace',
     )
@@ -242,7 +243,10 @@ describe('lassoToolSpec', () => {
     flushAnimationFrame()
     controller.onPointerUp?.(createPointerEvent(target, { clientX: 0, clientY: 0 }))
 
-    expect(commitGestureSelection).toHaveBeenCalledWith({ nodeIds: [], edgeIds: [] }, 'replace')
+    expect(commitGestureSelection).toHaveBeenCalledWith(
+      { nodeIds: new Set<string>(), edgeIds: new Set<string>() },
+      'replace',
+    )
     expect(clear).not.toHaveBeenCalled()
     expect(getCanvasPendingSelectionPreview()).toEqual({ kind: 'inactive' })
   })
@@ -317,8 +321,8 @@ describe('lassoToolSpec', () => {
 
     expect(commitGestureSelection).toHaveBeenCalledWith(
       {
-        nodeIds: ['inside-node', 'contact-node'],
-        edgeIds: ['edge-1'],
+        nodeIds: new Set(['inside-node', 'contact-node']),
+        edgeIds: new Set(['edge-1']),
       },
       'replace',
     )
@@ -347,8 +351,8 @@ describe('lassoToolSpec', () => {
 
     expect(commitGestureSelection).toHaveBeenCalledWith(
       {
-        nodeIds: ['inside-node'],
-        edgeIds: [],
+        nodeIds: new Set(['inside-node']),
+        edgeIds: new Set<string>(),
       },
       'add',
     )
@@ -360,8 +364,8 @@ describe('lassoToolSpec', () => {
         getMeasuredNodes: () => [createEmbedNode('inside-node', 20, 20)],
         getNodes: () => [createEmbedNode('inside-node', 20, 20)],
         getEdges: () => [],
-        selectedNodeIds: ['existing-node'],
-        selectedEdgeIds: ['existing-edge'],
+        selectedNodeIds: new Set(['existing-node']),
+        selectedEdgeIds: new Set(['existing-edge']),
         commitGestureSelection: vi.fn(),
         beginGesture: vi.fn(),
         endGesture: vi.fn(),
@@ -443,14 +447,14 @@ function createLassoEnvironment({
   setPresence,
   setActiveTool,
   clearSelection,
-  selectedNodeIds = [],
-  selectedEdgeIds = [],
+  selectedNodeIds = new Set<string>(),
+  selectedEdgeIds = new Set<string>(),
 }: {
   getMeasuredNodes: () => Array<CanvasMeasuredNode>
   getNodes: () => Array<Node>
   getEdges: () => Array<Edge>
   commitGestureSelection: (
-    selection: { nodeIds: Array<string>; edgeIds: Array<string> },
+    selection: CanvasSelectionSnapshot,
     mode?: CanvasSelectionCommitMode,
   ) => void
   beginGesture: (kind: 'marquee' | 'lasso') => void
@@ -459,8 +463,8 @@ function createLassoEnvironment({
   setPresence: (namespace: string, value: unknown) => void
   setActiveTool?: (tool: CanvasToolId) => void
   clearSelection?: () => void
-  selectedNodeIds?: Array<string>
-  selectedEdgeIds?: Array<string>
+  selectedNodeIds?: ReadonlySet<string>
+  selectedEdgeIds?: ReadonlySet<string>
 }): CanvasToolRuntime {
   return {
     viewport: {

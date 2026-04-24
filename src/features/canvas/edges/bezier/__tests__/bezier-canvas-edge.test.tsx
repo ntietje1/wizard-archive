@@ -68,7 +68,10 @@ describe('BezierCanvasEdge', () => {
 
   it('keeps baseline styling when another edge owns the pending preview', () => {
     act(() => {
-      setCanvasPendingSelectionPreview({ nodeIds: [], edgeIds: ['other-edge'] })
+      setCanvasPendingSelectionPreview({
+        nodeIds: new Set<string>(),
+        edgeIds: new Set(['other-edge']),
+      })
     })
 
     render(<BezierCanvasEdge {...createEdgeProps({ selected: false })} />)
@@ -94,7 +97,9 @@ describe('BezierCanvasEdge', () => {
   })
 
   it('keeps the edge stroke and adds a thin selected highlight from authoritative selection', () => {
-    useCanvasSelectionState.getState().setSelection({ nodeIds: [], edgeIds: ['edge-1'] })
+    useCanvasSelectionState
+      .getState()
+      .setSelection({ nodeIds: new Set<string>(), edgeIds: new Set(['edge-1']) })
     render(<BezierCanvasEdge {...createEdgeProps({ selected: true })} />)
 
     expect(screen.getByTestId('canvas-edge')).toHaveAttribute('data-edge-visual-selected', 'true')
@@ -118,7 +123,9 @@ describe('BezierCanvasEdge', () => {
   })
 
   it('preserves custom edge styling while drawing the selected highlight inside it', () => {
-    useCanvasSelectionState.getState().setSelection({ nodeIds: [], edgeIds: ['edge-1'] })
+    useCanvasSelectionState
+      .getState()
+      .setSelection({ nodeIds: new Set<string>(), edgeIds: new Set(['edge-1']) })
     render(
       <BezierCanvasEdge
         {...createEdgeProps(
@@ -146,7 +153,10 @@ describe('BezierCanvasEdge', () => {
 
   it('shows lower-opacity local preview styling for pending-selected edges', () => {
     act(() => {
-      setCanvasPendingSelectionPreview({ nodeIds: [], edgeIds: ['edge-1'] })
+      setCanvasPendingSelectionPreview({
+        nodeIds: new Set<string>(),
+        edgeIds: new Set(['edge-1']),
+      })
     })
 
     render(<BezierCanvasEdge {...createEdgeProps({ selected: false })} />)
@@ -174,7 +184,9 @@ describe('BezierCanvasEdge', () => {
   })
 
   it('suppresses edge interaction chrome in embedded read-only mode', () => {
-    useCanvasSelectionState.getState().setSelection({ nodeIds: [], edgeIds: ['edge-1'] })
+    useCanvasSelectionState
+      .getState()
+      .setSelection({ nodeIds: new Set<string>(), edgeIds: new Set(['edge-1']) })
 
     render(
       <CanvasRenderModeProvider mode="embedded-readonly">

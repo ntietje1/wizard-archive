@@ -37,8 +37,8 @@ const EMPTY_REMOTE_HIGHLIGHTS = new Map<string, RemoteHighlight>() as ReadonlyMa
   string,
   RemoteHighlight
 >
-const EMPTY_SELECTION_NODE_IDS: Array<string> = []
-const EMPTY_SELECTION_EDGE_IDS: Array<string> = []
+const EMPTY_SELECTION_NODE_IDS = new Set<string>()
+const EMPTY_SELECTION_EDGE_IDS = new Set<string>()
 const EMPTY_SELECTION_SNAPSHOT = {
   nodeIds: EMPTY_SELECTION_NODE_IDS,
   edgeIds: EMPTY_SELECTION_EDGE_IDS,

@@ -81,12 +81,12 @@ export function createCanvasDocumentWriter({
       })
     },
     deleteNodes: (nodeIds) => {
-      if (nodeIds.length === 0) return
+      if (nodeIds.size === 0) return
       transactCanvasMaps(nodesMap, edgesMap, () => {
         deleteCanvasSelectionCommand({
           nodesMap,
           edgesMap,
-          selection: { nodeIds, edgeIds: [] },
+          selection: { nodeIds, edgeIds: new Set() },
         })
       })
     },
@@ -101,7 +101,7 @@ export function createCanvasDocumentWriter({
       })
     },
     deleteEdges: (edgeIds) => {
-      if (edgeIds.length === 0) return
+      if (edgeIds.size === 0) return
       withEdgeTransaction(() => {
         deleteCanvasEdgesCommand({ edgesMap, edgeIds })
       })

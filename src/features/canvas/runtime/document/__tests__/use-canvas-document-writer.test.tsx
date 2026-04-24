@@ -109,8 +109,8 @@ describe('createCanvasDocumentWriter', () => {
       style: { stroke: 'var(--t-blue)', strokeWidth: 4 },
     })
 
-    writer.deleteEdges([edgeId])
-    writer.deleteNodes(['node-1'])
+    writer.deleteEdges(new Set([edgeId]))
+    writer.deleteNodes(new Set(['node-1']))
 
     expect(nodesMap.get('node-1')).toBeUndefined()
     expect(edgesMap.get(edgeId)).toBeUndefined()
@@ -146,7 +146,7 @@ describe('createCanvasDocumentWriter', () => {
     })
     const writer = createCanvasDocumentWriter({ nodesMap, edgesMap })
 
-    writer.deleteNodes(['node-1'])
+    writer.deleteNodes(new Set(['node-1']))
 
     expect(nodesMap.has('node-1')).toBe(false)
     expect(edgesMap.has('edge-1')).toBe(false)
@@ -175,8 +175,8 @@ describe('createCanvasDocumentWriter', () => {
       ...edge,
       type: 'step',
     }))
-    writer.deleteNodes(['missing-node', 'also-missing'])
-    writer.deleteEdges(['missing-edge'])
+    writer.deleteNodes(new Set(['missing-node', 'also-missing']))
+    writer.deleteEdges(new Set(['missing-edge']))
 
     expect(Array.from(nodesMap.values())).toEqual([])
     expect(Array.from(edgesMap.values())).toEqual([])

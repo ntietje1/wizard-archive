@@ -16,8 +16,8 @@ describe('useCanvasPendingSelectionPreview', () => {
 
   it('stores a pending preview set and clears it back to inactive state', () => {
     setCanvasPendingSelectionPreview({
-      nodeIds: ['node-1', 'node-2'],
-      edgeIds: ['edge-1'],
+      nodeIds: new Set(['node-1', 'node-2']),
+      edgeIds: new Set(['edge-1']),
     })
 
     expect(getCanvasPendingSelectionPreview()).toEqual({
@@ -32,7 +32,7 @@ describe('useCanvasPendingSelectionPreview', () => {
   })
 
   it('distinguishes an active empty preview from an inactive preview', () => {
-    setCanvasPendingSelectionPreview({ nodeIds: [], edgeIds: [] })
+    setCanvasPendingSelectionPreview({ nodeIds: new Set<string>(), edgeIds: new Set<string>() })
 
     expect(getCanvasPendingSelectionPreview()).toEqual({
       kind: 'active',
@@ -43,14 +43,14 @@ describe('useCanvasPendingSelectionPreview', () => {
 
   it('keeps the existing preview reference when the effective preview ids are unchanged', () => {
     setCanvasPendingSelectionPreview({
-      nodeIds: ['node-1', 'node-2'],
-      edgeIds: ['edge-1'],
+      nodeIds: new Set(['node-1', 'node-2']),
+      edgeIds: new Set(['edge-1']),
     })
     const initialPreview = getCanvasPendingSelectionPreview()
 
     setCanvasPendingSelectionPreview({
-      nodeIds: ['node-2', 'node-1'],
-      edgeIds: ['edge-1'],
+      nodeIds: new Set(['node-2', 'node-1']),
+      edgeIds: new Set(['edge-1']),
     })
 
     expect(getCanvasPendingSelectionPreview()).toBe(initialPreview)
@@ -71,8 +71,8 @@ describe('useCanvasPendingSelectionPreview', () => {
 
     act(() => {
       setCanvasPendingSelectionPreview({
-        nodeIds: ['node-1'],
-        edgeIds: ['edge-1'],
+        nodeIds: new Set(['node-1']),
+        edgeIds: new Set(['edge-1']),
       })
     })
 

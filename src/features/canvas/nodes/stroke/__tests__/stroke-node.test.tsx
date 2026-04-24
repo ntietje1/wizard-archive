@@ -44,7 +44,7 @@ afterEach(() => {
 
 describe('StrokeNode', () => {
   it('renders the local stroke highlight for pending-selected strokes', () => {
-    setCanvasPendingSelectionPreview({ nodeIds: ['stroke-1'], edgeIds: [] })
+    setCanvasPendingSelectionPreview({ nodeIds: new Set(['stroke-1']), edgeIds: new Set() })
     const { container, getByTestId } = render(
       <StrokeNode {...setupStrokeNodeProps({ selected: false })} />,
     )
@@ -54,7 +54,7 @@ describe('StrokeNode', () => {
   })
 
   it('drops the local stroke highlight when a pending preview excludes the committed stroke', () => {
-    setCanvasPendingSelectionPreview({ nodeIds: ['other-node'], edgeIds: [] })
+    setCanvasPendingSelectionPreview({ nodeIds: new Set(['other-node']), edgeIds: new Set() })
     const { container, getByTestId } = render(
       <StrokeNode {...setupStrokeNodeProps({ selected: true })} />,
     )
@@ -64,7 +64,7 @@ describe('StrokeNode', () => {
   })
 
   it('keeps two paths (stroke and hit target) when a pending preview excludes an unselected stroke', () => {
-    setCanvasPendingSelectionPreview({ nodeIds: [], edgeIds: [] })
+    setCanvasPendingSelectionPreview({ nodeIds: new Set(), edgeIds: new Set() })
     const { container, getByTestId } = render(
       <StrokeNode {...setupStrokeNodeProps({ selected: false })} />,
     )
@@ -74,7 +74,7 @@ describe('StrokeNode', () => {
   })
 
   it('keeps the highlight path when a pending preview includes an already selected stroke', () => {
-    setCanvasPendingSelectionPreview({ nodeIds: ['stroke-1'], edgeIds: [] })
+    setCanvasPendingSelectionPreview({ nodeIds: new Set(['stroke-1']), edgeIds: new Set() })
     const { container, getByTestId } = render(
       <StrokeNode {...setupStrokeNodeProps({ selected: true })} />,
     )
@@ -116,8 +116,8 @@ describe('StrokeNode', () => {
 
 function setupStrokeNodeProps({ selected, size = 4 }: { selected: boolean; size?: number }) {
   useCanvasSelectionState.getState().setSelection({
-    nodeIds: selected ? ['stroke-1'] : [],
-    edgeIds: [],
+    nodeIds: selected ? new Set(['stroke-1']) : new Set<string>(),
+    edgeIds: new Set<string>(),
   })
 
   return {

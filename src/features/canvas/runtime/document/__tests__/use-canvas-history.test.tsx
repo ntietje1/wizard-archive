@@ -210,23 +210,29 @@ describe('useCanvasHistory', () => {
     hooks.push(hook)
 
     act(() => {
-      hook.result.current.onSelectionChange({ nodeIds: ['a'], edgeIds: [] })
-      hook.result.current.onSelectionChange({ nodeIds: ['a', 'b'], edgeIds: ['edge-1'] })
+      hook.result.current.onSelectionChange({ nodeIds: new Set(['a']), edgeIds: new Set() })
+      hook.result.current.onSelectionChange({
+        nodeIds: new Set(['a', 'b']),
+        edgeIds: new Set(['edge-1']),
+      })
     })
 
     act(() => {
       hook.result.current.undo()
     })
 
-    expect(selectionController.replace).toHaveBeenLastCalledWith({ nodeIds: ['a'], edgeIds: [] })
+    expect(selectionController.replace).toHaveBeenLastCalledWith({
+      nodeIds: new Set(['a']),
+      edgeIds: new Set(),
+    })
 
     act(() => {
       hook.result.current.redo()
     })
 
     expect(selectionController.replace).toHaveBeenLastCalledWith({
-      nodeIds: ['a', 'b'],
-      edgeIds: ['edge-1'],
+      nodeIds: new Set(['a', 'b']),
+      edgeIds: new Set(['edge-1']),
     })
   })
 

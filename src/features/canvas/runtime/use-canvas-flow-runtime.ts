@@ -21,14 +21,17 @@ import { useCanvasPointerBridge } from './interaction/use-canvas-pointer-bridge'
 import { useCanvasRemoteDragAnimation } from './interaction/use-canvas-remote-drag-animation'
 import { useCanvasSurfaceClickGuard } from './interaction/use-canvas-surface-click-guard'
 import { useCanvasWheel } from './interaction/use-canvas-wheel'
+import { exposeCanvasPerformanceRuntime } from './performance/canvas-performance-metrics'
 import { clearCanvasSelectionState } from './selection/use-canvas-selection-state'
 import { useCanvasSelectionController } from './selection/use-canvas-selection-actions'
 import { useCanvasSelectionRect } from './selection/use-canvas-selection-rect'
 import { useCanvasSessionState } from './session/use-canvas-session-state'
+import { createCanvasNodePlacement } from '../nodes/canvas-node-modules'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import { canvasToolSpecs } from '../tools/canvas-tool-modules'
 import type {
   CanvasEdgeCreationDefaults,
+  CanvasSelectionSnapshot,
   CanvasToolId,
   CanvasToolRuntime,
 } from '../tools/canvas-tool-types'
@@ -65,9 +68,9 @@ export function useCanvasFlowRuntime({
   const canvasSurfaceRef = useRef<HTMLDivElement>(null)
   const localDraggingIdsRef = useRef(new Set<string>())
   const previousActiveToolRef = useRef<CanvasToolId | null>(null)
-  const historySelectionChangeRef = useRef<
-    (selection: { nodeIds: Array<string>; edgeIds: Array<string> }) => void
-  >(() => undefined)
+  const historySelectionChangeRef = useRef<(selection: CanvasSelectionSnapshot) => void>(
+    () => undefined,
+  )
   const selection = useCanvasSelectionController({
     onSelectionChange: (nextSelection) => historySelectionChangeRef.current(nextSelection),
     setLocalSelection: session.awareness.core.setLocalSelection,
@@ -127,6 +130,61 @@ export function useCanvasFlowRuntime({
     nodesMap,
     edgesMap,
   })
+
+  useEffect(
+    () =>
+      exposeCanvasPerformanceRuntime({
+        clearCanvas: () => {
+          doc.transact(() => {
+            nodesMap.clear()
+            edgesMap.clear()
+          })
+          selection.clear()
+        },
+        getCounts: () => ({
+          nodes: nodesMap.size,
+          edges: edgesMap.size,
+        }),
+        seedTextNodes: ({
+          count,
+          columns = 25,
+          spacingX = 180,
+          spacingY = 120,
+          start = { x: 0, y: 0 },
+        }) => {
+          doc.transact(() => {
+            for (let index = 0; index < count; index += 1) {
+              const column = index % columns
+              const row = Math.floor(index / columns)
+              const placement = createCanvasNodePlacement('text', {
+                position: {
+                  x: start.x + column * spacingX,
+                  y: start.y + row * spacingY,
+                },
+              })
+              const node = {
+                ...placement.node,
+                id: `perf-node-${index}`,
+                draggable: false,
+                selected: false,
+                zIndex: index,
+              }
+              nodesMap.set(node.id, node)
+            }
+          })
+        },
+        updateFirstNodeSurface: () => {
+          documentWriter.updateNodeData('perf-node-0', {
+            backgroundColor: '#e8f2ff',
+            borderStroke: '#2563eb',
+          })
+        },
+        selectFirstNode: () => {
+          selection.replaceNodes(new Set(['perf-node-0']))
+        },
+      }),
+    [doc, documentWriter, edgesMap, nodesMap, selection],
+  )
 
   useCanvasDocumentProjection({
     nodesMap,

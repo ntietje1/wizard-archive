@@ -184,8 +184,8 @@ export function useCanvasKeyboardShortcuts({
     (event) => {
       if (event.repeat) return
       selection.replace({
-        nodeIds: Array.from(nodesMap.keys()),
-        edgeIds: Array.from(edgesMap.keys()),
+        nodeIds: new Set(nodesMap.keys()),
+        edgeIds: new Set(edgesMap.keys()),
       })
       event.preventDefault()
     },

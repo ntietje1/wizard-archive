@@ -51,8 +51,8 @@ describe('CanvasConditionalToolbar draw tool', () => {
     useCanvasSelectionState.getState().reset()
     useCanvasToolStore.getState().setActiveTool('draw')
     useCanvasSelectionState.getState().setSelection({
-      nodeIds: [],
-      edgeIds: [],
+      nodeIds: new Set<string>(),
+      edgeIds: new Set<string>(),
     })
   })
 
