@@ -103,6 +103,7 @@ export function CanvasFlow({
   })
   const pendingSelectionPreview = useCanvasPendingSelectionPreviewSummary()
   const edgeToolActive = runtime.activeTool === 'edge'
+  const canvasCursor = runtime.toolCursor ?? 'pointer'
 
   return (
     <CanvasRuntimeProvider
@@ -117,7 +118,7 @@ export function CanvasFlow({
     >
       <div
         className="canvas-flow-shell relative flex-1 min-h-0 allow-motion"
-        style={{ cursor: runtime.toolCursor }}
+        style={{ cursor: canvasCursor }}
         data-testid="canvas-flow-shell"
       >
         <CanvasToolbar canEdit={canEdit} />

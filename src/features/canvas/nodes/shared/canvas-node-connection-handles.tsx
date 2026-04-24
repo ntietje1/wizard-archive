@@ -46,7 +46,7 @@ export function CanvasNodeConnectionHandles({
       position={position}
       isConnectableStart
       isConnectableEnd
-      style={edgeToolActive ? { ...style, cursor: 'pointer' } : style}
+      style={style}
       className={cn(
         BASE_HANDLE_CLASS,
         handlesVisible ? 'duration-150' : 'duration-0',

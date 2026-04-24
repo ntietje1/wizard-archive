@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { forwardRef } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasFlow } from '../canvas-viewer'
@@ -86,7 +86,7 @@ const runtimeMock = vi.hoisted(() => ({
     commitGestureSelection: vi.fn(),
     endGesture: vi.fn(),
   },
-  toolCursor: undefined,
+  toolCursor: undefined as string | undefined,
 }))
 
 vi.mock('@xyflow/react', () => ({
@@ -196,6 +196,7 @@ describe('CanvasFlow', () => {
 
   afterEach(() => {
     runtimeMock.activeTool = 'select'
+    runtimeMock.toolCursor = undefined
   })
 
   it('renders the React Flow surface with the canvas-owned defaults', () => {
@@ -234,12 +235,14 @@ describe('CanvasFlow', () => {
       zoom: 1.5,
     })
     expect(reactFlowMock.props?.deleteKeyCode).toEqual([])
+    expect(screen.getByTestId('canvas-flow-shell')).toHaveStyle({ cursor: 'pointer' })
 
     doc.destroy()
   })
 
   it('enables drag edge creation only while the edge tool is active', () => {
     runtimeMock.activeTool = 'edge'
+    runtimeMock.toolCursor = 'crosshair'
     const doc = new Y.Doc()
 
     render(
@@ -260,6 +263,7 @@ describe('CanvasFlow', () => {
 
     expect(reactFlowMock.props?.nodesConnectable).toBe(true)
     expect(reactFlowMock.props?.connectOnClick).toBe(false)
+    expect(screen.getByTestId('canvas-flow-shell')).toHaveStyle({ cursor: 'crosshair' })
 
     doc.destroy()
   })

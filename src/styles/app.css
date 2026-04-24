@@ -208,7 +208,7 @@
 .canvas-flow-shell .react-flow__edge,
 .canvas-flow-shell .react-flow__edge-path,
 .canvas-flow-shell .react-flow__edge-interaction {
-  cursor: pointer !important;
+  cursor: inherit !important;
 }
 
 .canvas-flow-shell svg.react-flow__connectionline {
