@@ -54,19 +54,17 @@ function getCanvasRectangleCandidateBounds(
   return getCanvasNodeBounds(node)
 }
 
-function filterCanvasSelectionCandidates(
-  nodes: Array<Node>,
+function isCanvasSelectionCandidate(
+  node: Node,
   candidateBounds: Bounds | null,
   getBounds: (node: Node) => Bounds | null,
-): Array<Node> {
+): boolean {
   if (!candidateBounds) {
-    return nodes
+    return true
   }
 
-  return nodes.filter((node) => {
-    const bounds = getBounds(node)
-    return !bounds || rectIntersectsBounds(candidateBounds, bounds)
-  })
+  const bounds = getBounds(node)
+  return !bounds || rectIntersectsBounds(candidateBounds, bounds)
 }
 
 function screenEventToFlowPosition(
@@ -114,32 +112,44 @@ export function getCanvasNodesMatchingRectangle(
   nodes: Array<Node>,
   rect: Bounds,
   context: CanvasNodeSelectionContext,
-): Array<string> {
-  return filterCanvasSelectionCandidates(nodes, rect, (node) =>
-    getCanvasRectangleCandidateBounds(node, context),
-  )
-    .filter((node) => {
-      const normalizedNode = getSelectionNode(node)
-      return Boolean(
-        normalizedNode && matchesCanvasNodeRectangleSelection(normalizedNode, rect, context),
+): ReadonlySet<string> {
+  const matchingIds = new Set<string>()
+  for (const node of nodes) {
+    if (
+      !isCanvasSelectionCandidate(node, rect, (candidate) =>
+        getCanvasRectangleCandidateBounds(candidate, context),
       )
-    })
-    .map((node) => node.id)
+    ) {
+      continue
+    }
+
+    const normalizedNode = getSelectionNode(node)
+    if (normalizedNode && matchesCanvasNodeRectangleSelection(normalizedNode, rect, context)) {
+      matchingIds.add(node.id)
+    }
+  }
+
+  return matchingIds
 }
 
 export function getCanvasNodesMatchingLasso(
   nodes: Array<Node>,
   polygon: Array<Point2D>,
   context: CanvasNodeSelectionContext,
-): Array<string> {
+): ReadonlySet<string> {
   const polygonBounds = boundsFromPoints(polygon)
+  const matchingIds = new Set<string>()
 
-  return filterCanvasSelectionCandidates(nodes, polygonBounds, getCanvasNodeBounds)
-    .filter((node) => {
-      const normalizedNode = getSelectionNode(node)
-      return Boolean(
-        normalizedNode && matchesCanvasNodeLassoSelection(normalizedNode, polygon, context),
-      )
-    })
-    .map((node) => node.id)
+  for (const node of nodes) {
+    if (!isCanvasSelectionCandidate(node, polygonBounds, getCanvasNodeBounds)) {
+      continue
+    }
+
+    const normalizedNode = getSelectionNode(node)
+    if (normalizedNode && matchesCanvasNodeLassoSelection(normalizedNode, polygon, context)) {
+      matchingIds.add(node.id)
+    }
+  }
+
+  return matchingIds
 }

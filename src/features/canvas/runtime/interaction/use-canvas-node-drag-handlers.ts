@@ -183,7 +183,7 @@ export function useCanvasNodeDragHandlers({
       for (const draggedNode of nodes) {
         localDraggingIdsRef.current.delete(draggedNode.id)
       }
-      remoteDragAnimation.clearNodeSprings(nodes.map((draggedNode) => draggedNode.id))
+      remoteDragAnimation.clearNodeSprings(new Set(nodes.map((draggedNode) => draggedNode.id)))
       clearCanvasDragSnapGuides()
       dragSessionRef.current = null
 

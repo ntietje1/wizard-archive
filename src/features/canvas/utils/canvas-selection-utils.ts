@@ -36,7 +36,28 @@ export function mergeSelectedIds(
   selectedIds: ReadonlySet<string>,
   incomingIds: ReadonlySet<string>,
 ): ReadonlySet<string> {
-  return new Set([...selectedIds, ...incomingIds])
+  const mergedIds = new Set(selectedIds)
+  for (const id of incomingIds) {
+    mergedIds.add(id)
+  }
+  return mergedIds
+}
+
+export function areStringSetsEqual(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  if (a === b) {
+    return true
+  }
+  if (a.size !== b.size) {
+    return false
+  }
+
+  for (const value of a) {
+    if (!b.has(value)) {
+      return false
+    }
+  }
+
+  return true
 }
 
 export function applyCanvasSelectionCommitMode({

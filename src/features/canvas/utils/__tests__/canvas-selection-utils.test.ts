@@ -3,6 +3,7 @@ import {
   getNextSelectedIds,
   isExclusivelySelectedNode,
   isPrimarySelectionModifier,
+  areStringSetsEqual,
   mergeSelectedIds,
 } from '../canvas-selection-utils'
 
@@ -25,6 +26,11 @@ describe('canvas-selection-utils', () => {
       new Set(['a', 'b', 'c']),
     )
     expect(mergeSelectedIds(new Set(), new Set(['b', 'c']))).toEqual(new Set(['b', 'c']))
+  })
+
+  it('compares set membership without requiring array conversion', () => {
+    expect(areStringSetsEqual(new Set(['a', 'b']), new Set(['b', 'a']))).toBe(true)
+    expect(areStringSetsEqual(new Set(['a', 'b']), new Set(['a', 'c']))).toBe(false)
   })
 
   it('keeps modifier-click on empty canvas from clearing selection', () => {

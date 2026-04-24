@@ -1,6 +1,9 @@
+import { areStringSetsEqual } from '../../utils/canvas-selection-utils'
+import type { CanvasSelectionSnapshot } from '../../tools/canvas-tool-types'
+
 interface CanvasPendingSelectionPreviewSelection {
-  nodeIds: Set<string>
-  edgeIds: Set<string>
+  nodeIds: ReadonlySet<string>
+  edgeIds: ReadonlySet<string>
 }
 
 export type CanvasPendingSelectionPreviewActive = {
@@ -11,29 +14,12 @@ export type CanvasPendingSelectionPreview =
   | { kind: 'inactive' }
   | CanvasPendingSelectionPreviewActive
 
-function areStringSetsEqual(a: Set<string>, b: Set<string>): boolean {
-  if (a === b) {
-    return true
-  }
-  if (a.size !== b.size) {
-    return false
-  }
-
-  for (const value of a) {
-    if (!b.has(value)) {
-      return false
-    }
-  }
-
-  return true
-}
-
 export function createInactiveCanvasPendingSelectionPreview(): CanvasPendingSelectionPreview {
   return { kind: 'inactive' }
 }
 
 export function createCanvasPendingSelectionPreview(
-  preview: { nodeIds: Iterable<string>; edgeIds?: Iterable<string> } | null,
+  preview: CanvasSelectionSnapshot | null,
 ): CanvasPendingSelectionPreview {
   if (preview === null) {
     return createInactiveCanvasPendingSelectionPreview()
@@ -42,7 +28,7 @@ export function createCanvasPendingSelectionPreview(
   return {
     kind: 'active',
     nodeIds: new Set(preview.nodeIds),
-    edgeIds: new Set(preview.edgeIds ?? []),
+    edgeIds: new Set(preview.edgeIds),
   }
 }
 

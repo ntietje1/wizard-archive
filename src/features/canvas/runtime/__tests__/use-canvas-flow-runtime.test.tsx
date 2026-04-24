@@ -45,13 +45,13 @@ const historyMock = vi.hoisted(() => ({
   onSelectionChange: vi.fn(),
 }))
 const selectionControllerMock = vi.hoisted(() => ({
-  getSnapshot: vi.fn(() => ({ nodeIds: [], edgeIds: [] })),
+  getSnapshot: vi.fn(() => ({ nodeIds: new Set<string>(), edgeIds: new Set<string>() })),
   replace: vi.fn(),
   replaceNodes: vi.fn(),
   replaceEdges: vi.fn(),
   clear: vi.fn(),
-  getSelectedNodeIds: vi.fn(() => []),
-  getSelectedEdgeIds: vi.fn(() => []),
+  getSelectedNodeIds: vi.fn(() => new Set<string>()),
+  getSelectedEdgeIds: vi.fn(() => new Set<string>()),
   toggleNodeFromTarget: vi.fn(),
   toggleEdgeFromTarget: vi.fn(),
   beginGesture: vi.fn(),

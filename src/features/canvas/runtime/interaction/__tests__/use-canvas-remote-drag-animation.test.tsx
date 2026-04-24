@@ -21,6 +21,6 @@ describe('useCanvasRemoteDragAnimation', () => {
 
     expect(result.current.hasSpring('node-1')).toBe(false)
     expect(() => result.current.setTarget('node-1', { x: 10, y: 20 })).not.toThrow()
-    expect(() => result.current.clearNodeSprings(['node-1'])).not.toThrow()
+    expect(() => result.current.clearNodeSprings(new Set(['node-1']))).not.toThrow()
   })
 })

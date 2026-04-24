@@ -11,7 +11,7 @@ interface UseCanvasRemoteDragAnimationOptions {
 export interface CanvasRemoteDragAnimation {
   hasSpring: (nodeId: string) => boolean
   setTarget: (nodeId: string, position: { x: number; y: number }) => void
-  clearNodeSprings: (nodeIds: Array<string>) => void
+  clearNodeSprings: (nodeIds: ReadonlySet<string>) => void
 }
 
 export function useCanvasRemoteDragAnimation({
@@ -134,7 +134,7 @@ export function useCanvasRemoteDragAnimation({
     }
   }, [])
 
-  const clearNodeSprings = useCallback((nodeIds: Array<string>) => {
+  const clearNodeSprings = useCallback((nodeIds: ReadonlySet<string>) => {
     for (const nodeId of nodeIds) {
       springStatesRef.current.delete(nodeId)
     }

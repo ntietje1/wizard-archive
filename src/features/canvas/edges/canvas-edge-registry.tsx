@@ -157,19 +157,17 @@ export function getCanvasEdgeInspectableProperties(
   return getCanvasEdgeSpec(edge).getProperties(edge, updateEdge)
 }
 
-function filterCanvasEdgeSelectionCandidates(
-  edges: Array<NormalizedCanvasEdgeEntry>,
+function isCanvasEdgeSelectionCandidate(
+  edge: CanvasRuntimeEdge,
   candidateBounds: Bounds | null,
   context: CanvasEdgeSelectionContext,
-) {
+): boolean {
   if (!candidateBounds) {
-    return edges
+    return true
   }
 
-  return edges.filter(({ edge }) => {
-    const bounds = getCanvasEdgeSpec(edge).getBounds(edge, context)
-    return !bounds || rectIntersectsBounds(candidateBounds, bounds)
-  })
+  const bounds = getCanvasEdgeSpec(edge).getBounds(edge, context)
+  return !bounds || rectIntersectsBounds(candidateBounds, bounds)
 }
 
 export function findCanvasEdgeAtPoint(
@@ -196,13 +194,21 @@ export function getCanvasEdgesMatchingRectangle(
   edges: Array<Edge>,
   rect: Bounds,
   context: Pick<CanvasEdgeSelectionContext, 'zoom'>,
-): Array<string> {
+): ReadonlySet<string> {
   const selectionContext = createCanvasEdgeSelectionContext(nodes, context.zoom)
   const normalizedEdges = normalizeCanvasEdges(edges)
+  const matchingIds = new Set<string>()
 
-  return filterCanvasEdgeSelectionCandidates(normalizedEdges, rect, selectionContext)
-    .filter(({ edge }) => getCanvasEdgeSpec(edge).intersectsRectangle(edge, rect, selectionContext))
-    .map(({ rawEdge }) => rawEdge.id)
+  for (const { rawEdge, edge } of normalizedEdges) {
+    if (
+      isCanvasEdgeSelectionCandidate(edge, rect, selectionContext) &&
+      getCanvasEdgeSpec(edge).intersectsRectangle(edge, rect, selectionContext)
+    ) {
+      matchingIds.add(rawEdge.id)
+    }
+  }
+
+  return matchingIds
 }
 
 export function getCanvasEdgesMatchingLasso(
@@ -210,14 +216,20 @@ export function getCanvasEdgesMatchingLasso(
   edges: Array<Edge>,
   polygon: Array<Point2D>,
   context: Pick<CanvasEdgeSelectionContext, 'zoom'>,
-): Array<string> {
+): ReadonlySet<string> {
   const selectionContext = createCanvasEdgeSelectionContext(nodes, context.zoom)
   const polygonBounds = boundsFromPoints(polygon)
   const normalizedEdges = normalizeCanvasEdges(edges)
+  const matchingIds = new Set<string>()
 
-  return filterCanvasEdgeSelectionCandidates(normalizedEdges, polygonBounds, selectionContext)
-    .filter(({ edge }) =>
-      getCanvasEdgeSpec(edge).intersectsPolygon(edge, polygon, selectionContext),
-    )
-    .map(({ rawEdge }) => rawEdge.id)
+  for (const { rawEdge, edge } of normalizedEdges) {
+    if (
+      isCanvasEdgeSelectionCandidate(edge, polygonBounds, selectionContext) &&
+      getCanvasEdgeSpec(edge).intersectsPolygon(edge, polygon, selectionContext)
+    ) {
+      matchingIds.add(rawEdge.id)
+    }
+  }
+
+  return matchingIds
 }

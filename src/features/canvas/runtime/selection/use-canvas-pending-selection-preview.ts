@@ -10,6 +10,7 @@ import {
   isCanvasPendingPreviewActive,
 } from './canvas-pending-selection-preview-state'
 import type { CanvasPendingSelectionPreview } from './canvas-pending-selection-preview-state'
+import type { CanvasSelectionSnapshot } from '../../tools/canvas-tool-types'
 
 interface CanvasPendingSelectionPreviewState {
   preview: CanvasPendingSelectionPreview
@@ -39,9 +40,7 @@ const useCanvasPendingSelectionPreviewStore = create<
     }),
 }))
 
-export function setCanvasPendingSelectionPreview(
-  preview: { nodeIds: Iterable<string>; edgeIds?: Iterable<string> } | null,
-) {
+export function setCanvasPendingSelectionPreview(preview: CanvasSelectionSnapshot | null) {
   useCanvasPendingSelectionPreviewStore
     .getState()
     .setPendingSelection(createCanvasPendingSelectionPreview(preview))

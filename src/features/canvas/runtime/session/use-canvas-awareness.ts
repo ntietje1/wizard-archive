@@ -170,13 +170,13 @@ export function useCanvasAwareness(provider: ConvexYjsProvider | null) {
       return
     }
 
-    const orderedNodeIds = Array.from(nodeIds)
-    const parsedNodeIds = parseCanvasSelectionAwarenessState(orderedNodeIds)
+    const serializedNodeIds = Array.from(nodeIds)
+    const parsedNodeIds = parseCanvasSelectionAwarenessState(serializedNodeIds)
     if (!parsedNodeIds) {
       warnInvalidLocalPresenceUpdate(
         'setLocalSelection',
         'parseCanvasSelectionAwarenessState',
-        orderedNodeIds,
+        serializedNodeIds,
       )
       return
     }

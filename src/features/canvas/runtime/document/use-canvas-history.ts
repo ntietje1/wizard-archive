@@ -8,6 +8,7 @@ import type {
 import type { Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 import { logger } from '~/shared/utils/logger'
+import { areStringSetsEqual } from '../../utils/canvas-selection-utils'
 
 const MAX_HISTORY_SIZE = 100
 const EMPTY_CANVAS_SELECTION: CanvasSelectionSnapshot = {
@@ -173,10 +174,8 @@ export function useCanvasHistory({ nodesMap, edgesMap, selection }: UseCanvasHis
       if (docMutatedRef.current) return
 
       const same =
-        prev.nodeIds.size === selectionSnapshot.nodeIds.size &&
-        prev.edgeIds.size === selectionSnapshot.edgeIds.size &&
-        [...prev.nodeIds].every((id) => selectionSnapshot.nodeIds.has(id)) &&
-        [...prev.edgeIds].every((id) => selectionSnapshot.edgeIds.has(id))
+        areStringSetsEqual(prev.nodeIds, selectionSnapshot.nodeIds) &&
+        areStringSetsEqual(prev.edgeIds, selectionSnapshot.edgeIds)
       if (same) return
 
       pushHistoryEntry(undoStackRef.current, {

@@ -86,7 +86,7 @@ describe('canvas edge specs', () => {
         { x: 80, y: 10, width: 40, height: 20 },
         { zoom: 1 },
       ),
-    ).toEqual(['edge-1', 'edge-2'])
+    ).toEqual(new Set(['edge-1', 'edge-2']))
 
     expect(
       getCanvasEdgesMatchingRectangle(
@@ -95,7 +95,7 @@ describe('canvas edge specs', () => {
         { x: 80, y: 60, width: 40, height: 20 },
         { zoom: 1 },
       ),
-    ).toEqual([])
+    ).toEqual(new Set())
   })
 
   it('selects only intersecting edges through lasso hit testing', () => {
@@ -123,7 +123,7 @@ describe('canvas edge specs', () => {
         ],
         { zoom: 1 },
       ),
-    ).toEqual(['crossing-edge'])
+    ).toEqual(new Set(['crossing-edge']))
   })
 
   it('matches straight edges on point, rectangle, and lasso hit testing', () => {
@@ -140,7 +140,7 @@ describe('canvas edge specs', () => {
         { x: 80, y: 10, width: 40, height: 20 },
         { zoom: 1 },
       ),
-    ).toEqual(['straight-edge'])
+    ).toEqual(new Set(['straight-edge']))
     expect(
       getCanvasEdgesMatchingLasso(
         nodes,
@@ -153,7 +153,7 @@ describe('canvas edge specs', () => {
         ],
         { zoom: 1 },
       ),
-    ).toEqual(['straight-edge'])
+    ).toEqual(new Set(['straight-edge']))
   })
 
   it('matches step edges on point, rectangle, and lasso hit testing', () => {
@@ -171,7 +171,7 @@ describe('canvas edge specs', () => {
         { x: 10, y: 60, width: 20, height: 40 },
         { zoom: 1 },
       ),
-    ).toEqual(['step-edge'])
+    ).toEqual(new Set(['step-edge']))
     expect(
       getCanvasEdgesMatchingLasso(
         stepNodes,
@@ -184,7 +184,7 @@ describe('canvas edge specs', () => {
         ],
         { zoom: 1 },
       ),
-    ).toEqual(['step-edge'])
+    ).toEqual(new Set(['step-edge']))
   })
 
   it('ignores malformed edge styles during hit testing', () => {

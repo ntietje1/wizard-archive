@@ -83,8 +83,8 @@ export const lassoToolSpec: CanvasToolSpec<'lasso'> = {
       )
 
       return {
-        nodeIds: new Set(pendingNodeIds),
-        edgeIds: new Set(pendingEdgeIds),
+        nodeIds: pendingNodeIds,
+        edgeIds: pendingEdgeIds,
       }
     }
 

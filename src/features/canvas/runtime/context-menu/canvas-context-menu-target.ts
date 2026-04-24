@@ -35,6 +35,27 @@ function getOrderedNormalizedSelectedEdges(
     .filter((edge): edge is NonNullable<ReturnType<typeof normalizeCanvasEdge>> => edge !== null)
 }
 
+function getSharedValue<TItem, TValue>(
+  items: ReadonlyArray<TItem>,
+  getValue: (item: TItem) => TValue,
+): TValue | null {
+  let sharedValue: TValue | null = null
+  let hasValue = false
+  for (const item of items) {
+    const value = getValue(item)
+    if (!hasValue) {
+      sharedValue = value
+      hasValue = true
+      continue
+    }
+    if (value !== sharedValue) {
+      return null
+    }
+  }
+
+  return sharedValue
+}
+
 function resolveNodeSelectionTarget(
   selection: CanvasSelectionSnapshot,
   nodesMap: Y.Map<Node>,
@@ -56,8 +77,7 @@ function resolveNodeSelectionTarget(
     }
   }
 
-  const nodeTypes = new Set(selectedNodes.map((node) => node.type))
-  const nodeType = nodeTypes.size === 1 ? (Array.from(nodeTypes)[0] ?? null) : null
+  const nodeType = getSharedValue(selectedNodes, (node) => node.type)
   return {
     target: {
       kind: 'node-selection',
@@ -73,8 +93,7 @@ function resolveEdgeSelectionTarget(
   edgesMap: Y.Map<Edge>,
 ): CanvasResolvedContextMenuTarget {
   const selectedEdges = getOrderedNormalizedSelectedEdges(selection.edgeIds, edgesMap)
-  const edgeTypes = new Set(selectedEdges.map((edge) => edge.type))
-  const edgeType = edgeTypes.size === 1 ? (Array.from(edgeTypes)[0] ?? null) : null
+  const edgeType = getSharedValue(selectedEdges, (edge) => edge.type)
 
   return {
     target: {
