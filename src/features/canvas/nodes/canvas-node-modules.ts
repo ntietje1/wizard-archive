@@ -22,7 +22,7 @@ import {
   bindCanvasPaintProperty,
   bindCanvasStrokeSizeProperty,
 } from '../properties/canvas-property-types'
-import type { CanvasAwarenessCapability, CanvasDocumentWriter } from '../tools/canvas-tool-types'
+import type { CanvasAwarenessCapability } from '../tools/canvas-tool-types'
 import { polygonIntersectsBounds, rectIntersectsBounds } from '../utils/canvas-geometry-utils'
 import type {
   CanvasNodeCreateArgs,
@@ -46,6 +46,10 @@ const EMPTY_AWARENESS_LAYERS: ReadonlyArray<{
   key: CanvasNodeType
   Layer: NonNullable<CanvasAwarenessCapability['Layer']>
 }> = []
+type PatchCanvasNodeData = <TPatch extends Record<string, unknown>>(
+  nodeId: string,
+  data: TPatch,
+) => void
 
 function withNormalizedCanvasNode<TResult>(
   node: Node,
@@ -58,23 +62,28 @@ function withNormalizedCanvasNode<TResult>(
 
 function getStrokeNodeProperties(
   node: Extract<AnyNormalizedCanvasNode, { type: 'stroke' }>,
-  updateNodeData: CanvasDocumentWriter['updateNodeData'],
+  patchNodeData: PatchCanvasNodeData,
 ): CanvasInspectableProperties {
   return {
     bindings: [
       bindCanvasPaintProperty(linePaintCanvasProperty, {
         getColor: () => node.data.color,
+        setValue: ({ color, opacity }) =>
+          patchNodeData(node.id, {
+            color: typeof color === 'string' && color.length > 0 ? color : node.data.color,
+            opacity,
+          }),
         setColor: (color) =>
-          updateNodeData(node.id, {
+          patchNodeData(node.id, {
             color: typeof color === 'string' && color.length > 0 ? color : node.data.color,
           }),
         getOpacity: () => node.data.opacity ?? 100,
-        setOpacity: (opacity) => updateNodeData(node.id, { opacity }),
+        setOpacity: (opacity) => patchNodeData(node.id, { opacity }),
       }),
       bindCanvasStrokeSizeProperty(
         freehandStrokeSizeCanvasProperty,
         () => clampStrokeNodeSize(node.data.size),
-        (size) => updateNodeData(node.id, { size: clampStrokeNodeSize(size) }),
+        (size) => patchNodeData(node.id, { size: clampStrokeNodeSize(size) }),
       ),
     ],
   }
@@ -82,13 +91,13 @@ function getStrokeNodeProperties(
 
 function getSurfaceNodeProperties(
   node: Extract<AnyNormalizedCanvasNode, { type: 'embed' | 'text' }>,
-  updateNodeData: CanvasDocumentWriter['updateNodeData'],
+  patchNodeData: PatchCanvasNodeData,
 ): CanvasInspectableProperties {
   return {
     bindings: [
-      bindCanvasNodeSurfaceFillProperty(node, updateNodeData),
-      bindCanvasNodeSurfaceBorderPaintProperty(node, updateNodeData),
-      bindCanvasNodeSurfaceBorderWidthProperty(node, updateNodeData),
+      bindCanvasNodeSurfaceFillProperty(node, patchNodeData),
+      bindCanvasNodeSurfaceBorderPaintProperty(node, patchNodeData),
+      bindCanvasNodeSurfaceBorderWidthProperty(node, patchNodeData),
     ],
   }
 }
@@ -100,7 +109,7 @@ type CanvasNodeSpec<TType extends CanvasNodeType = CanvasNodeType> = {
   contextMenuContributors: ReadonlyArray<CanvasContextMenuContributor>
   getProperties?: (
     node: Extract<AnyNormalizedCanvasNode, { type: TType }>,
-    updateNodeData: CanvasDocumentWriter['updateNodeData'],
+    patchNodeData: PatchCanvasNodeData,
   ) => CanvasInspectableProperties
   resize?: (
     node: Extract<AnyNormalizedCanvasNode, { type: TType }>,
@@ -150,7 +159,7 @@ export const canvasNodeAwarenessLayers = EMPTY_AWARENESS_LAYERS
 
 export function getCanvasNodeInspectableProperties(
   normalizedNode: AnyNormalizedCanvasNode | null,
-  updateNodeData: CanvasDocumentWriter['updateNodeData'],
+  patchNodeData: PatchCanvasNodeData,
 ): CanvasInspectableProperties {
   if (!normalizedNode) {
     return EMPTY_CANVAS_INSPECTABLE_PROPERTIES
@@ -158,7 +167,7 @@ export function getCanvasNodeInspectableProperties(
 
   const getProperties = canvasNodeSpecs[normalizedNode.type].getProperties
   return getProperties
-    ? getProperties(normalizedNode as never, updateNodeData)
+    ? getProperties(normalizedNode as never, patchNodeData)
     : EMPTY_CANVAS_INSPECTABLE_PROPERTIES
 }
 

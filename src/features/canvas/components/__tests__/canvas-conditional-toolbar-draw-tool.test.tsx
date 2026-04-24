@@ -18,7 +18,6 @@ vi.mock('~/shared/components/color-picker-popover', () => ({
 function renderToolbar() {
   const runtime = createCanvasRuntime({
     nodeActions: {
-      updateNodeData: vi.fn(),
       onResize: vi.fn(),
       onResizeEnd: vi.fn(),
     },

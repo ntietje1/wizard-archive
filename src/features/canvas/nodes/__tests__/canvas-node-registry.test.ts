@@ -60,7 +60,7 @@ describe('canvas node specs', () => {
   })
 
   it('returns empty inspectable properties for invalid raw nodes', () => {
-    const updateNodeData = vi.fn()
+    const patchNodeData = vi.fn()
 
     expect(
       getCanvasNodeInspectableProperties(
@@ -70,13 +70,13 @@ describe('canvas node specs', () => {
           position: { x: 0, y: 0 },
           data: null,
         } as never),
-        updateNodeData,
+        patchNodeData,
       ).bindings,
     ).toEqual([])
   })
 
   it('returns typed inspectable properties for valid text nodes', () => {
-    const updateNodeData = vi.fn()
+    const patchNodeData = vi.fn()
 
     expect(
       getCanvasNodeInspectableProperties(
@@ -88,7 +88,7 @@ describe('canvas node specs', () => {
           height: 80,
           data: {},
         } as never),
-        updateNodeData,
+        patchNodeData,
       ).bindings.map((binding) => binding.definition.id),
     ).toEqual(['fill', 'linePaint', 'strokeSize'])
   })

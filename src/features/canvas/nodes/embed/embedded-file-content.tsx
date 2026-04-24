@@ -7,7 +7,7 @@ import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
 
 export function EmbeddedFileContent({ nodeId, file }: { nodeId: string; file: FileWithContent }) {
   const {
-    nodeActions: { updateNodeData },
+    documentWriter: { patchNodeData },
   } = useCanvasRuntime()
   const [erroredUrls, setErroredUrls] = useState<Set<string>>(() => new Set())
   const lastStoredAspectRatioRef = useRef<number | null>(null)
@@ -28,8 +28,8 @@ export function EmbeddedFileContent({ nodeId, file }: { nodeId: string; file: Fi
     }
 
     lastStoredAspectRatioRef.current = null
-    updateNodeData(nodeId, { lockedAspectRatio: null })
-  }, [nodeId, updateNodeData, visualSourceUrl])
+    patchNodeData(new Map([[nodeId, { lockedAspectRatio: null }]]))
+  }, [nodeId, patchNodeData, visualSourceUrl])
 
   if (!visualSourceUrl) {
     return (
@@ -60,7 +60,7 @@ export function EmbeddedFileContent({ nodeId, file }: { nodeId: string; file: Fi
             const aspectRatio = Number((naturalWidth / naturalHeight).toFixed(6))
             if (lastStoredAspectRatioRef.current !== aspectRatio) {
               lastStoredAspectRatioRef.current = aspectRatio
-              updateNodeData(nodeId, { lockedAspectRatio: aspectRatio })
+              patchNodeData(new Map([[nodeId, { lockedAspectRatio: aspectRatio }]]))
             }
           }
         }}

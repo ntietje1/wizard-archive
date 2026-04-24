@@ -23,13 +23,13 @@ import { createCanvasNodesById } from './shared/canvas-node-map'
 import { boundsFromPoints, rectIntersectsBounds } from '../utils/canvas-geometry-utils'
 import { EMPTY_CANVAS_INSPECTABLE_PROPERTIES } from '../properties/canvas-property-types'
 import type {
+  CanvasEdgePatch,
   CanvasEdgeSelectionContext,
   CanvasEdgeType,
   CanvasRuntimeEdge,
 } from './canvas-edge-types'
 import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
 import type { CanvasContextMenuContributor } from '../runtime/context-menu/canvas-context-menu-types'
-import type { CanvasDocumentWriter } from '../tools/canvas-tool-types'
 import type { Point2D } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-geometry-utils'
 import type { Edge, Node } from '@xyflow/react'
@@ -102,7 +102,7 @@ type CanvasEdgeSpec = {
   ) => boolean
   getProperties: (
     edge: CanvasRuntimeEdge,
-    updateEdge: CanvasDocumentWriter['updateEdge'],
+    patchEdge: (edgeId: string, patch: CanvasEdgePatch) => void,
   ) => CanvasInspectableProperties
 }
 
@@ -148,13 +148,13 @@ function getCanvasEdgeSpec(edge: CanvasRuntimeEdge): CanvasEdgeSpec {
 
 export function getCanvasEdgeInspectableProperties(
   edge: CanvasRuntimeEdge | null,
-  updateEdge: CanvasDocumentWriter['updateEdge'],
+  patchEdge: (edgeId: string, patch: CanvasEdgePatch) => void,
 ): CanvasInspectableProperties {
   if (!edge) {
     return EMPTY_CANVAS_INSPECTABLE_PROPERTIES
   }
 
-  return getCanvasEdgeSpec(edge).getProperties(edge, updateEdge)
+  return getCanvasEdgeSpec(edge).getProperties(edge, patchEdge)
 }
 
 function isCanvasEdgeSelectionCandidate(

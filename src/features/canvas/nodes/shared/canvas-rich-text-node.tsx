@@ -80,7 +80,7 @@ export function CanvasRichTextNode({
 }: CanvasRichTextNodeComponentProps) {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
   const {
-    nodeActions: { updateNodeData },
+    documentWriter: { patchNodeData },
     canEdit,
   } = useCanvasRuntime()
   const [isEditing, setIsEditing] = useState(false)
@@ -106,7 +106,7 @@ export function CanvasRichTextNode({
     lifecycle: editableSession.lifecycle,
     onActivated: editableSession.handleActivated,
     onPersistContent: (nextContent) => {
-      updateNodeData(id, { content: nextContent })
+      patchNodeData(new Map([[id, { content: nextContent }]]))
     },
   })
   const showsFormattingToolbar = editableSession.editable && editorSession.editor !== null

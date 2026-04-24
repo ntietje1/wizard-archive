@@ -86,9 +86,12 @@ export const EMPTY_CANVAS_INSPECTABLE_PROPERTIES: CanvasInspectableProperties = 
 
 export function bindCanvasPaintProperty(
   definition: CanvasPaintPropertyDefinition,
-  binding: Omit<CanvasPaintPropertyBinding, 'definition' | 'getValue' | 'setValue'>,
+  binding: Omit<CanvasPaintPropertyBinding, 'definition' | 'getValue' | 'setValue'> & {
+    setValue?: (value: CanvasPaintValue) => void
+  },
 ): CanvasPaintPropertyBinding {
   return {
+    ...binding,
     definition,
     getValue: () => {
       const color = binding.getColor()
@@ -104,10 +107,14 @@ export function bindCanvasPaintProperty(
           }
     },
     setValue: (value) => {
+      if (binding.setValue) {
+        binding.setValue(value)
+        return
+      }
+
       binding.setColor(value.color)
       binding.setOpacity(value.opacity)
     },
-    ...binding,
   }
 }
 

@@ -17,8 +17,9 @@ interface CanvasPerformanceRuntime {
     spacingY?: number
     start?: XYPosition
   }) => void
-  selectFirstNode: () => void
-  updateFirstNodeSurface: () => void
+  selectFirstNodes: (count: number) => void
+  profileSelectedNodeDrag: (options: { delta: XYPosition; steps: number }) => void
+  updateSelectedNodeSurface: () => void
 }
 
 interface CanvasPerformanceCollector {

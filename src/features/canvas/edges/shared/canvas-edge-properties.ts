@@ -12,53 +12,59 @@ import {
   bindCanvasPaintProperty,
   bindCanvasStrokeSizeProperty,
 } from '../../properties/canvas-property-types'
-import type { CanvasRuntimeEdge } from '../canvas-edge-types'
+import type { CanvasEdgePatch, CanvasRuntimeEdge } from '../canvas-edge-types'
 import type { CanvasInspectableProperties } from '../../properties/canvas-property-types'
-import type { CanvasDocumentWriter } from '../../tools/canvas-tool-types'
 
 export function getCanvasStrokeEdgeProperties(
   edge: CanvasRuntimeEdge,
-  updateEdge: CanvasDocumentWriter['updateEdge'],
+  patchEdge: (edgeId: string, patch: CanvasEdgePatch) => void,
 ): CanvasInspectableProperties {
   return {
     bindings: [
       bindCanvasPaintProperty(linePaintCanvasProperty, {
         getColor: () => readCanvasEdgeStroke(edge.style),
-        setColor: (stroke) =>
-          updateEdge(edge.id, (currentEdge) => ({
-            ...currentEdge,
+        setValue: ({ color: stroke, opacity }) => {
+          const clampedOpacity = Math.max(0, Math.min(100, opacity))
+
+          patchEdge(edge.id, {
             style: {
-              ...currentEdge.style,
+              stroke:
+                typeof stroke === 'string' && stroke.length > 0
+                  ? stroke
+                  : DEFAULT_CANVAS_EDGE_STROKE,
+              opacity: clampedOpacity >= 100 ? undefined : clampedOpacity / 100,
+            },
+          })
+        },
+        setColor: (stroke) =>
+          patchEdge(edge.id, {
+            style: {
               stroke:
                 typeof stroke === 'string' && stroke.length > 0
                   ? stroke
                   : DEFAULT_CANVAS_EDGE_STROKE,
             },
-          })),
+          }),
         getOpacity: () => readCanvasEdgeOpacityPercent(edge.style),
         setOpacity: (opacity) => {
           const clampedOpacity = Math.max(0, Math.min(100, opacity))
 
-          return updateEdge(edge.id, (currentEdge) => ({
-            ...currentEdge,
+          return patchEdge(edge.id, {
             style: {
-              ...currentEdge.style,
               opacity: clampedOpacity >= 100 ? undefined : clampedOpacity / 100,
             },
-          }))
+          })
         },
       }),
       bindCanvasStrokeSizeProperty(
         strokeSizeCanvasProperty,
         () => readCanvasEdgeStrokeWidth(edge.style),
         (strokeWidth) =>
-          updateEdge(edge.id, (currentEdge) => ({
-            ...currentEdge,
+          patchEdge(edge.id, {
             style: {
-              ...currentEdge.style,
               strokeWidth,
             },
-          })),
+          }),
       ),
     ],
   }

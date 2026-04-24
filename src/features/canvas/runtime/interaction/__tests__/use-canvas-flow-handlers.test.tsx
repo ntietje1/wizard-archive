@@ -7,14 +7,13 @@ import type { MouseEvent as ReactMouseEvent } from 'react'
 function createDocumentWriter(): CanvasDocumentWriter {
   return {
     createNode: vi.fn(),
-    updateNode: vi.fn(),
-    updateNodeData: vi.fn(),
-    updateEdge: vi.fn(),
+    patchNodeData: vi.fn(),
+    patchEdges: vi.fn(),
     resizeNode: vi.fn(),
     deleteNodes: vi.fn(),
     createEdge: vi.fn(),
     deleteEdges: vi.fn(),
-    setNodePosition: vi.fn(),
+    setNodePositions: vi.fn(),
   }
 }
 

@@ -51,7 +51,7 @@ describe('useCanvasNodeDragHandlers', () => {
       setLocalSelection: vi.fn(),
     }
     const documentWriter = {
-      setNodePosition: vi.fn(),
+      setNodePositions: vi.fn(),
     }
     const { result } = renderHook(() =>
       useCanvasNodeDragHandlers({
@@ -107,7 +107,7 @@ describe('useCanvasNodeDragHandlers', () => {
     ]
     const reactFlowInstance = createReactFlowMock()
     const documentWriter = {
-      setNodePosition: vi.fn(),
+      setNodePositions: vi.fn(),
     }
     const { result } = renderHook(() =>
       useCanvasNodeDragHandlers({
@@ -145,7 +145,9 @@ describe('useCanvasNodeDragHandlers', () => {
       dragState.currentNodes[0],
     ] as never)
 
-    expect(documentWriter.setNodePosition).toHaveBeenCalledWith('dragged', { x: 40, y: 10 })
+    expect(documentWriter.setNodePositions).toHaveBeenCalledWith(
+      new Map([['dragged', { x: 40, y: 10 }]]),
+    )
   })
 })
 

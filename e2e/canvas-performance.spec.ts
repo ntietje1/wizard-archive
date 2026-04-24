@@ -16,7 +16,9 @@ import {
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
 const ARTIFACT_DIR = path.resolve('output/playwright')
+const ARTIFACT_PREFIX = process.env.CANVAS_PERF_ARTIFACT_PREFIX ?? 'canvas-performance-baseline'
 const NODE_COUNT = Number(process.env.CANVAS_PERF_NODE_COUNT ?? 250)
+const SELECTED_COUNTS = [1, 25, 100, 250] as const
 const campaignName = testName('Perf')
 const canvasName = 'Untitled Canvas'
 
@@ -89,27 +91,63 @@ test.describe.serial('canvas performance probe', () => {
     }, NODE_COUNT)
 
     await expect.poll(() => getCanvasNodes(page).count(), { timeout: 30_000 }).toBe(NODE_COUNT)
-    await page.screenshot({ path: path.join(ARTIFACT_DIR, 'canvas-performance-heavy-scene.png') })
+    await page.screenshot({ path: path.join(ARTIFACT_DIR, `${ARTIFACT_PREFIX}-heavy-scene.png`) })
 
     await selectCanvasTool(page, 'Pointer')
     const firstNode = getCanvasNodeById(page, 'perf-node-0')
+    const firstNodeShell = getCanvasNodeShellById(page, 'perf-node-0')
     await expect(firstNode).toBeVisible({ timeout: 10_000 })
 
     const interactions: Record<string, InteractionSummary> = {}
     interactions.propertyChange = await measureInteraction(page, async () => {
+      await selectFirstCanvasNodes(page, 1)
       await page.evaluate(() => {
-        window.__WA_CANVAS_PERF_RUNTIME__?.updateFirstNodeSurface()
+        window.__WA_CANVAS_PERF_RUNTIME__?.updateSelectedNodeSurface()
       })
     })
 
-    await page.evaluate(() => {
-      window.__WA_CANVAS_PERF_RUNTIME__?.selectFirstNode()
-    })
-    await expect(firstNode).toHaveAttribute('data-node-selected', 'true', { timeout: 10_000 })
+    for (const selectedCount of SELECTED_COUNTS) {
+      await selectFirstCanvasNodes(page, selectedCount)
+      interactions[`toolbarFillSelected${selectedCount}`] = await measureInteraction(
+        page,
+        async () => {
+          await page
+            .getByRole('button', {
+              name: selectedCount % 2 === 0 ? 'Select Red color' : 'Select Blue color',
+            })
+            .first()
+            .click()
+        },
+      )
 
-    interactions.dragNode = await measureInteraction(page, async () => {
-      await dragCanvasNode(page, firstNode, { x: 180, y: 80 })
-    })
+      interactions[`directUpdateSelected${selectedCount}`] = await measureInteraction(
+        page,
+        async () => {
+          await page.evaluate(() => {
+            window.__WA_CANVAS_PERF_RUNTIME__?.updateSelectedNodeSurface()
+          })
+        },
+      )
+    }
+
+    for (const selectedCount of SELECTED_COUNTS) {
+      await selectFirstCanvasNodes(page, selectedCount)
+      interactions[`dragSelected${selectedCount}`] = await measureInteraction(page, async () => {
+        await dragCanvasNode(page, firstNodeShell, { x: 30, y: 20 })
+      })
+
+      interactions[`handlerDragSelected${selectedCount}`] = await measureInteraction(
+        page,
+        async () => {
+          await page.evaluate(() => {
+            window.__WA_CANVAS_PERF_RUNTIME__?.profileSelectedNodeDrag({
+              delta: { x: 30, y: 20 },
+              steps: 12,
+            })
+          })
+        },
+      )
+    }
 
     const viewport = getViewportControls(page)
     interactions.zoomButtons = await measureInteraction(page, async () => {
@@ -136,15 +174,16 @@ test.describe.serial('canvas performance probe', () => {
 
     const payload = {
       nodeCount: NODE_COUNT,
+      selectedCounts: SELECTED_COUNTS,
       counts: await page.evaluate(() => window.__WA_CANVAS_PERF_RUNTIME__?.getCounts()),
       interactions,
     }
 
     await writeFile(
-      path.join(ARTIFACT_DIR, 'canvas-performance-baseline.json'),
+      path.join(ARTIFACT_DIR, `${ARTIFACT_PREFIX}.json`),
       JSON.stringify(payload, null, 2),
     )
-    await context.tracing.stop({ path: path.join(ARTIFACT_DIR, 'canvas-performance-baseline.zip') })
+    await context.tracing.stop({ path: path.join(ARTIFACT_DIR, `${ARTIFACT_PREFIX}.zip`) })
 
     expect(payload.counts?.nodes).toBe(NODE_COUNT)
   })
@@ -154,6 +193,36 @@ async function waitForCanvasPerformanceRuntime(page: Page) {
   await page.waitForFunction(() => Boolean(window.__WA_CANVAS_PERF_RUNTIME__), null, {
     timeout: 10_000,
   })
+}
+
+async function selectFirstCanvasNodes(page: Page, count: number) {
+  await page.evaluate((selectedCount) => {
+    window.__WA_CANVAS_PERF_RUNTIME__?.selectFirstNodes(selectedCount)
+  }, count)
+  await page.waitForFunction(
+    () =>
+      document
+        .querySelector('[data-testid="canvas-node"][data-node-id="perf-node-0"]')
+        ?.getAttribute('data-node-selected') === 'true',
+    null,
+    { timeout: 10_000 },
+  )
+  await page.waitForFunction(
+    () =>
+      document
+        .querySelector(
+          '.react-flow__node:has([data-testid="canvas-node"][data-node-id="perf-node-0"])',
+        )
+        ?.classList.contains('selected') === true,
+    null,
+    { timeout: 10_000 },
+  )
+}
+
+function getCanvasNodeShellById(page: Page, nodeId: string) {
+  return page.locator(
+    `.react-flow__node:has([data-testid="canvas-node"][data-node-id="${nodeId}"])`,
+  )
 }
 
 async function measureInteraction(

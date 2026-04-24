@@ -228,7 +228,7 @@ describe('canvas edge specs', () => {
   })
 
   it('returns empty inspectable properties for invalid edges and typed properties for valid edges', () => {
-    const updateEdge = () => undefined
+    const patchEdge = () => undefined
 
     expect(
       getCanvasEdgeInspectableProperties(
@@ -238,13 +238,13 @@ describe('canvas edge specs', () => {
           }),
           source: null,
         } as unknown as Edge),
-        updateEdge,
+        patchEdge,
       ).bindings,
     ).toEqual([])
 
     // Expect 2 bindings: stroke paint and stroke width.
     expect(
-      getCanvasEdgeInspectableProperties(normalizeCanvasEdge(createStraightEdge()), updateEdge)
+      getCanvasEdgeInspectableProperties(normalizeCanvasEdge(createStraightEdge()), patchEdge)
         .bindings,
     ).toHaveLength(2)
   })

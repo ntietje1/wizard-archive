@@ -10,7 +10,7 @@ import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
 export function EmbeddedMapContent({ nodeId, map }: { nodeId: string; map: GameMapWithContent }) {
   const { pins, isPinGhost } = useMapRenderPins(map)
   const {
-    nodeActions: { updateNodeData },
+    documentWriter: { patchNodeData },
   } = useCanvasRuntime()
   const { imageLoaded, imageError, handleImageLoad, handleImageError } = useMapImageStatus(
     map._id,
@@ -42,7 +42,7 @@ export function EmbeddedMapContent({ nodeId, map }: { nodeId: string; map: GameM
             const aspectRatio = Number((naturalWidth / naturalHeight).toFixed(6))
             if (lastStoredAspectRatioRef.current !== aspectRatio) {
               lastStoredAspectRatioRef.current = aspectRatio
-              updateNodeData(nodeId, { lockedAspectRatio: aspectRatio })
+              patchNodeData(new Map([[nodeId, { lockedAspectRatio: aspectRatio }]]))
             }
           }
 

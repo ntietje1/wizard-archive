@@ -131,6 +131,15 @@ export function useCanvasFlowRuntime({
     edgesMap,
   })
 
+  const dragHandlers = useCanvasNodeDragHandlers({
+    documentWriter,
+    nodesDoc: doc,
+    remoteDragAnimation,
+    awareness: session.awareness.core,
+    reactFlowInstance: reactFlow,
+    localDraggingIdsRef,
+  })
+
   useEffect(
     () =>
       exposeCanvasPerformanceRuntime({
@@ -173,17 +182,67 @@ export function useCanvasFlowRuntime({
             }
           })
         },
-        updateFirstNodeSurface: () => {
-          documentWriter.updateNodeData('perf-node-0', {
-            backgroundColor: '#e8f2ff',
-            borderStroke: '#2563eb',
-          })
+        updateSelectedNodeSurface: () => {
+          const updates = new Map<string, Record<string, unknown>>()
+          for (const nodeId of selection.getSelectedNodeIds()) {
+            updates.set(nodeId, {
+              backgroundColor: '#e8f2ff',
+              borderStroke: '#2563eb',
+            })
+          }
+          documentWriter.patchNodeData(updates)
         },
-        selectFirstNode: () => {
-          selection.replaceNodes(new Set(['perf-node-0']))
+        selectFirstNodes: (count) => {
+          const nodeIds = new Set<string>()
+          for (let index = 0; index < count; index += 1) {
+            nodeIds.add(`perf-node-${index}`)
+          }
+          selection.replaceNodes(nodeIds)
+        },
+        profileSelectedNodeDrag: ({ delta, steps }) => {
+          const selectedIds = selection.getSelectedNodeIds()
+          const draggedNodes = reactFlow.getNodes().filter((node) => selectedIds.has(node.id))
+          const [firstDraggedNode] = draggedNodes
+          if (!firstDraggedNode || steps <= 0) {
+            return
+          }
+
+          const start = { x: 100, y: 100 }
+          const createDragEvent = (
+            type: string,
+            clientX: number,
+            clientY: number,
+          ): Parameters<typeof dragHandlers.onNodeDrag>[0] =>
+            new MouseEvent(type, { clientX, clientY }) as unknown as Parameters<
+              typeof dragHandlers.onNodeDrag
+            >[0]
+
+          dragHandlers.onNodeDragStart(
+            createDragEvent('mousemove', start.x, start.y),
+            firstDraggedNode,
+            draggedNodes,
+          )
+
+          for (let step = 1; step <= steps; step += 1) {
+            dragHandlers.onNodeDrag(
+              createDragEvent(
+                'mousemove',
+                start.x + (delta.x * step) / steps,
+                start.y + (delta.y * step) / steps,
+              ),
+              firstDraggedNode,
+              draggedNodes,
+            )
+          }
+
+          dragHandlers.onNodeDragStop(
+            createDragEvent('mouseup', start.x + delta.x, start.y + delta.y),
+            firstDraggedNode,
+            draggedNodes,
+          )
         },
       }),
-    [doc, documentWriter, edgesMap, nodesMap, selection],
+    [doc, documentWriter, dragHandlers, edgesMap, nodesMap, reactFlow, selection],
   )
 
   useCanvasDocumentProjection({
@@ -216,15 +275,6 @@ export function useCanvasFlowRuntime({
     edgesMap,
     selection,
     commands,
-  })
-
-  const dragHandlers = useCanvasNodeDragHandlers({
-    documentWriter,
-    nodesDoc: doc,
-    remoteDragAnimation,
-    awareness: session.awareness.core,
-    reactFlowInstance: reactFlow,
-    localDraggingIdsRef,
   })
 
   const cursorPresence = useCanvasCursorPresence({

@@ -47,7 +47,6 @@ describe('CanvasToolbar', () => {
         setPendingEditNodePoint: vi.fn(),
       },
       nodeActions: {
-        updateNodeData: vi.fn(),
         onResize: vi.fn(),
         onResizeEnd: vi.fn(),
       },

@@ -60,14 +60,13 @@ function createCanvasCommands(): CanvasCommands {
 function createCanvasDocumentWriter(): CanvasDocumentWriter {
   return {
     createNode: vi.fn(),
-    updateNode: vi.fn(),
-    updateNodeData: vi.fn(),
-    updateEdge: vi.fn(),
+    patchNodeData: vi.fn(),
+    patchEdges: vi.fn(),
     resizeNode: vi.fn(),
     deleteNodes: vi.fn(),
     createEdge: vi.fn(),
     deleteEdges: vi.fn(),
-    setNodePosition: vi.fn(),
+    setNodePositions: vi.fn(),
   }
 }
 
@@ -83,7 +82,6 @@ export function createCanvasRuntime(
     }
     editSession: CanvasSessionRuntime['editSession']
     nodeActions: {
-      updateNodeData: (nodeId: string, data: Record<string, unknown>) => void
       transact?: (fn: () => void) => void
       onResize: (
         nodeId: string,
@@ -133,7 +131,6 @@ export function createCanvasRuntime(
       ...editSessionOverrides,
     },
     nodeActions: {
-      updateNodeData: () => undefined,
       onResize: () => undefined,
       onResizeEnd: () => undefined,
       ...nodeActionsOverrides,

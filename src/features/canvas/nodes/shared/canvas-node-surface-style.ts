@@ -97,14 +97,16 @@ export function bindCanvasNodeSurfaceFillProperty<
   TType extends CanvasNodeType,
 >(
   node: CanvasRuntimeNode<TData, TType>,
-  updateNodeData: <TPatch extends Partial<TData>>(nodeId: string, data: TPatch) => void,
+  patchNodeData: <TPatch extends Partial<TData>>(nodeId: string, data: TPatch) => void,
 ) {
   return bindCanvasPaintProperty(fillCanvasProperty, {
     getColor: () => node.data.backgroundColor,
-    setColor: (backgroundColor) => updateNodeData(node.id, { backgroundColor } as Partial<TData>),
+    setValue: ({ color: backgroundColor, opacity: backgroundOpacity }) =>
+      patchNodeData(node.id, { backgroundColor, backgroundOpacity } as Partial<TData>),
+    setColor: (backgroundColor) => patchNodeData(node.id, { backgroundColor } as Partial<TData>),
     getOpacity: () => node.data.backgroundOpacity,
     setOpacity: (backgroundOpacity) =>
-      updateNodeData(node.id, { backgroundOpacity } as Partial<TData>),
+      patchNodeData(node.id, { backgroundOpacity } as Partial<TData>),
   })
 }
 
@@ -113,13 +115,15 @@ export function bindCanvasNodeSurfaceBorderPaintProperty<
   TType extends CanvasNodeType,
 >(
   node: CanvasRuntimeNode<TData, TType>,
-  updateNodeData: <TPatch extends Partial<TData>>(nodeId: string, data: TPatch) => void,
+  patchNodeData: <TPatch extends Partial<TData>>(nodeId: string, data: TPatch) => void,
 ) {
   return bindCanvasPaintProperty(linePaintCanvasProperty, {
     getColor: () => node.data.borderStroke,
-    setColor: (borderStroke) => updateNodeData(node.id, { borderStroke } as Partial<TData>),
+    setValue: ({ color: borderStroke, opacity: borderOpacity }) =>
+      patchNodeData(node.id, { borderStroke, borderOpacity } as Partial<TData>),
+    setColor: (borderStroke) => patchNodeData(node.id, { borderStroke } as Partial<TData>),
     getOpacity: () => node.data.borderOpacity,
-    setOpacity: (borderOpacity) => updateNodeData(node.id, { borderOpacity } as Partial<TData>),
+    setOpacity: (borderOpacity) => patchNodeData(node.id, { borderOpacity } as Partial<TData>),
   })
 }
 
@@ -128,11 +132,11 @@ export function bindCanvasNodeSurfaceBorderWidthProperty<
   TType extends CanvasNodeType,
 >(
   node: CanvasRuntimeNode<TData, TType>,
-  updateNodeData: <TPatch extends Partial<TData>>(nodeId: string, data: TPatch) => void,
+  patchNodeData: <TPatch extends Partial<TData>>(nodeId: string, data: TPatch) => void,
 ) {
   return bindCanvasStrokeSizeProperty(
     strokeSizeCanvasProperty,
     () => node.data.borderWidth,
-    (borderWidth) => updateNodeData(node.id, { borderWidth } as Partial<TData>),
+    (borderWidth) => patchNodeData(node.id, { borderWidth } as Partial<TData>),
   )
 }

@@ -46,7 +46,11 @@ export function useCanvasDocumentProjection({
       reactFlow.setNodes((current) =>
         measureCanvasPerformance(
           'canvas.projection.nodes.observe',
-          { nodeCount: nodesMap.size, currentCount: current.length },
+          {
+            changedCount: event.keysChanged.size,
+            currentCount: current.length,
+            nodeCount: nodesMap.size,
+          },
           () =>
             applyChangedCanvasNodes(current, event.keysChanged, {
               nodesMap,
@@ -75,7 +79,11 @@ export function useCanvasDocumentProjection({
       reactFlow.setEdges((current) =>
         measureCanvasPerformance(
           'canvas.projection.edges.observe',
-          { edgeCount: edgesMap.size, currentCount: current.length },
+          {
+            changedCount: event.keysChanged.size,
+            currentCount: current.length,
+            edgeCount: edgesMap.size,
+          },
           () => applyChangedCanvasEdges(current, event.keysChanged, edgesMap),
         ),
       )
@@ -129,6 +137,7 @@ function applyChangedCanvasNodes(
 
   const currentById = new Map(current.map((node) => [node.id, node]))
   const next: Array<Node> = []
+  let orderMayHaveChanged = false
 
   for (const node of current) {
     if (!changedIds.has(node.id)) {
@@ -138,16 +147,23 @@ function applyChangedCanvasNodes(
 
     const remoteNode = nodesMap.get(node.id)
     if (!remoteNode) {
+      orderMayHaveChanged = true
       continue
     }
 
-    next.push(
-      mergeProjectedCanvasNode(node, stripEphemeralCanvasNodeState(remoteNode), {
+    const projectedNode = mergeProjectedCanvasNode(
+      node,
+      stripEphemeralCanvasNodeState(remoteNode),
+      {
         localDraggingIds,
         remoteResizeDimensions,
         remoteDragAnimation,
-      }),
+      },
     )
+    if (node.zIndex !== projectedNode.zIndex) {
+      orderMayHaveChanged = true
+    }
+    next.push(projectedNode)
   }
 
   for (const id of changedIds) {
@@ -158,10 +174,11 @@ function applyChangedCanvasNodes(
     const remoteNode = nodesMap.get(id)
     if (remoteNode) {
       next.push(stripEphemeralCanvasNodeState(remoteNode))
+      orderMayHaveChanged = true
     }
   }
 
-  return sortCanvasElementsByZIndex(next)
+  return orderMayHaveChanged ? sortCanvasElementsByZIndex(next) : next
 }
 
 function mergeProjectedCanvasNode(
@@ -211,6 +228,7 @@ function applyChangedCanvasEdges(
 
   const currentById = new Map(current.map((edge) => [edge.id, edge]))
   const next: Array<Edge> = []
+  let orderMayHaveChanged = false
 
   for (const edge of current) {
     if (!changedIds.has(edge.id)) {
@@ -220,7 +238,13 @@ function applyChangedCanvasEdges(
 
     const remoteEdge = edgesMap.get(edge.id)
     if (remoteEdge) {
-      next.push({ ...edge, ...remoteEdge })
+      const projectedEdge = { ...edge, ...remoteEdge }
+      if (edge.zIndex !== projectedEdge.zIndex) {
+        orderMayHaveChanged = true
+      }
+      next.push(projectedEdge)
+    } else {
+      orderMayHaveChanged = true
     }
   }
 
@@ -232,8 +256,9 @@ function applyChangedCanvasEdges(
     const remoteEdge = edgesMap.get(id)
     if (remoteEdge) {
       next.push(remoteEdge)
+      orderMayHaveChanged = true
     }
   }
 
-  return sortCanvasElementsByZIndex(next)
+  return orderMayHaveChanged ? sortCanvasElementsByZIndex(next) : next
 }

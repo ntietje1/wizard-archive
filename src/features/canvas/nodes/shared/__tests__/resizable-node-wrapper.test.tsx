@@ -576,7 +576,6 @@ function renderWrapper({ selected }: { selected: boolean }) {
 function createProviderValues() {
   return createCanvasRuntime({
     nodeActions: {
-      updateNodeData: () => undefined,
       onResize: vi.fn(),
       onResizeEnd: vi.fn(),
     },

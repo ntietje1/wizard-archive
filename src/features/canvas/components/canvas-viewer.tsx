@@ -147,7 +147,7 @@ export function CanvasFlow({
           edgeTypes={canvasEdgeTypes}
           nodeTypes={canvasNodeTypes}
           connectionLineComponent={CanvasConnectionPreview}
-          nodesDraggable={false}
+          nodesDraggable={canEdit && runtime.activeTool === 'select'}
           nodesConnectable={canEdit && edgeToolActive}
           connectOnClick={false}
           elevateNodesOnSelect={false}

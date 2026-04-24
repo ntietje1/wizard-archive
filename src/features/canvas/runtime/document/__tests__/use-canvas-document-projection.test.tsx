@@ -204,4 +204,37 @@ describe('useCanvasDocumentProjection', () => {
     expect(reactFlowMock.nodes.map((node) => node.id)).toEqual(['node-1', 'node-2'])
     expect(reactFlowMock.nodes.map((node) => node.zIndex)).toEqual([4, 10])
   })
+
+  it('preserves current node order when a document update does not change zIndex', () => {
+    const doc = new Y.Doc()
+    const nodesMap = doc.getMap<Node>('nodes')
+    const edgesMap = doc.getMap<Edge>('edges')
+    nodesMap.set('node-1', createOrderedTextNode('node-1', 1))
+    nodesMap.set('node-2', createOrderedTextNode('node-2', 2))
+
+    renderHook(() =>
+      useCanvasDocumentProjection({
+        nodesMap,
+        edgesMap,
+        localDraggingIdsRef: { current: new Set<string>() },
+        remoteResizeDimensions: {},
+        remoteDragAnimation: createRemoteDragAnimation(),
+      }),
+    )
+
+    act(() => {
+      reactFlowMock.setNodes((current) => [...current].reverse())
+    })
+
+    act(() => {
+      const existing = nodesMap.get('node-1')
+      if (!existing) throw new Error('missing node-1')
+      nodesMap.set('node-1', {
+        ...existing,
+        data: { ...existing.data, label: 'Updated' },
+      })
+    })
+
+    expect(reactFlowMock.nodes.map((node) => node.id)).toEqual(['node-2', 'node-1'])
+  })
 })

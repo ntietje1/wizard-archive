@@ -6,7 +6,7 @@ import {
   normalizeCanvasEdge,
   resolveCanvasEdgeType,
 } from '../edges/canvas-edge-registry'
-import type { CanvasEdgeType } from '../edges/canvas-edge-types'
+import type { CanvasEdgePatch, CanvasEdgeType } from '../edges/canvas-edge-types'
 import { useCanvasRuntime } from '../runtime/providers/canvas-runtime'
 import {
   useIsCanvasSelectionGestureActive,
@@ -17,6 +17,7 @@ import {
   normalizeCanvasNode,
 } from '../nodes/canvas-node-modules'
 import { CANVAS_REORDER_ACTIONS } from '../runtime/document/canvas-reorder-actions'
+import { measureCanvasPerformance } from '../runtime/performance/canvas-performance-metrics'
 import { canvasToolSpecs } from '../tools/canvas-tool-modules'
 import { useCanvasToolPropertyContext, useCanvasToolStore } from '../stores/canvas-tool-store'
 import { linePaintCanvasProperty } from '../properties/canvas-property-definitions'
@@ -78,7 +79,7 @@ type CanvasToolbarState = {
   selectionSnapshot: { nodeIds: ReadonlySet<string>; edgeIds: ReadonlySet<string> }
   setEdgeType: (type: CanvasEdgeType) => void
   showsEdgeToolDefaults: boolean
-  updateEdge: (edgeId: string, updater: (edge: Edge) => Edge) => void
+  patchEdge: (edgeId: string, patch: CanvasEdgePatch) => void
   runPropertyChange: (applyChange: () => void) => void
 }
 
@@ -106,27 +107,90 @@ function useCanvasToolbarState(): CanvasToolbarState {
   const hasSelection = selectedNodes.length > 0 || selectedEdges.length > 0
   const hasOnlySelectedEdges = selectedNodes.length === 0 && selectedEdges.length > 0
   const showsEdgeToolDefaults = !hasSelection && activeTool === 'edge'
+  let pendingNodeDataPatches: Map<string, Record<string, unknown>> | null = null
+  let pendingEdgePatches: Map<string, CanvasEdgePatch> | null = null
 
-  const properties = resolveProperties(
-    activeTool,
-    selectedNodes,
-    selectedEdges,
-    nodeActions.updateNodeData,
-    documentWriter.updateEdge,
-    toolPropertyContext,
+  const patchNodeDataForProperty = (nodeId: string, data: Record<string, unknown>) => {
+    if (!pendingNodeDataPatches) {
+      documentWriter.patchNodeData(new Map([[nodeId, data]]))
+      return
+    }
+
+    pendingNodeDataPatches.set(nodeId, {
+      ...pendingNodeDataPatches.get(nodeId),
+      ...data,
+    })
+  }
+
+  const patchEdgeForProperty = (edgeId: string, patch: CanvasEdgePatch) => {
+    if (!pendingEdgePatches) {
+      documentWriter.patchEdges(new Map([[edgeId, patch]]))
+      return
+    }
+
+    const existingPatch = pendingEdgePatches.get(edgeId)
+    pendingEdgePatches.set(
+      edgeId,
+      existingPatch
+        ? {
+            ...existingPatch,
+            ...patch,
+            style: patch.style ? { ...existingPatch.style, ...patch.style } : existingPatch.style,
+          }
+        : patch,
+    )
+  }
+
+  const properties = measureCanvasPerformance(
+    'canvas.toolbar.resolve-properties',
+    {
+      selectedEdgeCount: selectedEdges.length,
+      selectedNodeCount: selectedNodes.length,
+    },
+    () =>
+      resolveProperties(
+        activeTool,
+        selectedNodes,
+        selectedEdges,
+        patchNodeDataForProperty,
+        patchEdgeForProperty,
+        toolPropertyContext,
+      ),
   )
   const runPropertyChange = (applyChange: () => void) => {
-    if (selectedNodes.length === 0 && selectedEdges.length === 0) {
-      applyChange()
-      return
+    const applyBatchedChange = () => {
+      pendingNodeDataPatches = new Map()
+      pendingEdgePatches = new Map()
+      try {
+        applyChange()
+        documentWriter.patchNodeData(pendingNodeDataPatches)
+        documentWriter.patchEdges(pendingEdgePatches)
+      } finally {
+        pendingNodeDataPatches = null
+        pendingEdgePatches = null
+      }
     }
 
-    if (!nodeActions.transact) {
-      applyChange()
-      return
-    }
+    measureCanvasPerformance(
+      'canvas.toolbar.apply-property',
+      {
+        selectedEdgeCount: selectedEdges.length,
+        selectedNodeCount: selectedNodes.length,
+      },
+      () => {
+        if (selectedNodes.length === 0 && selectedEdges.length === 0) {
+          applyChange()
+          return
+        }
 
-    nodeActions.transact(applyChange)
+        if (!nodeActions.transact) {
+          applyBatchedChange()
+          return
+        }
+
+        nodeActions.transact(applyBatchedChange)
+      },
+    )
   }
 
   return {
@@ -139,7 +203,7 @@ function useCanvasToolbarState(): CanvasToolbarState {
     selectionSnapshot,
     setEdgeType,
     showsEdgeToolDefaults,
-    updateEdge: documentWriter.updateEdge,
+    patchEdge: patchEdgeForProperty,
     runPropertyChange,
   }
 }
@@ -179,10 +243,7 @@ export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarPr
               toolbar.selectedEdges.forEach((edge) => {
                 if (resolveCanvasEdgeType(edge.type) === type) return
 
-                toolbar.updateEdge(edge.id, (currentEdge) => ({
-                  ...currentEdge,
-                  type,
-                }))
+                toolbar.patchEdge(edge.id, { type })
               })
             })
           }
@@ -249,17 +310,17 @@ function resolveProperties(
   activeTool: CanvasToolId,
   selectedNodes: Array<Node>,
   selectedEdges: Array<Edge>,
-  updateNodeData: (nodeId: string, data: Record<string, unknown>) => void,
-  updateEdge: (edgeId: string, updater: (edge: Edge) => Edge) => void,
+  patchNodeData: (nodeId: string, data: Record<string, unknown>) => void,
+  patchEdge: (edgeId: string, patch: CanvasEdgePatch) => void,
   toolPropertyContext: CanvasToolPropertyContext,
 ): Array<CanvasResolvedProperty> {
   if (selectedNodes.length > 0 || selectedEdges.length > 0) {
     const selectedProperties = [
       ...selectedNodes.map<CanvasInspectableProperties>((node) =>
-        getCanvasNodeInspectableProperties(normalizeCanvasNode(node), updateNodeData),
+        getCanvasNodeInspectableProperties(normalizeCanvasNode(node), patchNodeData),
       ),
       ...selectedEdges.map<CanvasInspectableProperties>((edge) =>
-        getCanvasEdgeInspectableProperties(normalizeCanvasEdge(edge), updateEdge),
+        getCanvasEdgeInspectableProperties(normalizeCanvasEdge(edge), patchEdge),
       ),
     ]
 

@@ -28,14 +28,13 @@ const cancelConnectionSpy = vi.hoisted(() => vi.fn())
 
 const documentWriterMock = vi.hoisted(() => ({
   createNode: vi.fn(),
-  updateNode: vi.fn(),
-  updateNodeData: vi.fn(),
-  updateEdge: vi.fn(),
+  patchNodeData: vi.fn(),
+  patchEdges: vi.fn(),
   resizeNode: vi.fn(),
   deleteNodes: vi.fn(),
   createEdge: vi.fn(),
   deleteEdges: vi.fn(),
-  setNodePosition: vi.fn(),
+  setNodePositions: vi.fn(),
 }))
 const historyMock = vi.hoisted(() => ({
   canUndo: false,
@@ -78,7 +77,6 @@ const cursorPresenceMock = vi.hoisted(() => ({
   onMouseLeave: vi.fn(),
 }))
 const nodeActionsMock = vi.hoisted(() => ({
-  updateNodeData: vi.fn(),
   transact: vi.fn(),
   onResize: vi.fn(),
   onResizeEnd: vi.fn(),

@@ -5,13 +5,13 @@ import {
   createCanvasNodeCommand,
   deleteCanvasEdgesCommand,
   deleteCanvasSelectionCommand,
+  patchCanvasEdgesCommand,
+  patchCanvasNodeDataCommand,
   resizeCanvasNodeCommand,
-  setCanvasNodePositionCommand,
-  updateCanvasEdgeCommand,
-  updateCanvasNodeCommand,
-  updateCanvasNodeDataCommand,
+  setCanvasNodePositionsCommand,
 } from './canvas-document-commands'
 import { sanitizeNodeForPersistence } from './canvas-node-persistence-sanitizer'
+import { measureCanvasPerformance } from '../performance/canvas-performance-metrics'
 import { transactCanvasMap, transactCanvasMaps } from './canvas-yjs-transactions'
 import type { Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
@@ -39,32 +39,30 @@ export function createCanvasDocumentWriter({
         })
       })
     },
-    updateNode: (nodeId, updater) => {
+    patchNodeData: (updates) => {
+      if (updates.size === 0) return
       withNodeTransaction(() => {
-        updateCanvasNodeCommand({
-          nodesMap,
-          nodeId,
-          updater,
-          sanitizeNode: sanitizeNodeForPersistence,
-        })
+        measureCanvasPerformance(
+          'canvas.document.nodes.patch-data',
+          { nodeCount: updates.size },
+          () => {
+            patchCanvasNodeDataCommand({
+              nodesMap,
+              updates,
+              sanitizeNode: sanitizeNodeForPersistence,
+            })
+          },
+        )
       })
     },
-    updateNodeData: (nodeId, data) => {
-      withNodeTransaction(() => {
-        updateCanvasNodeDataCommand({
-          nodesMap,
-          nodeId,
-          data,
-          sanitizeNode: sanitizeNodeForPersistence,
-        })
-      })
-    },
-    updateEdge: (edgeId, updater) => {
+    patchEdges: (updates) => {
+      if (updates.size === 0) return
       withEdgeTransaction(() => {
-        updateCanvasEdgeCommand({
-          edgesMap,
-          edgeId,
-          updater,
+        measureCanvasPerformance('canvas.document.edges.patch', { edgeCount: updates.size }, () => {
+          patchCanvasEdgesCommand({
+            edgesMap,
+            updates,
+          })
         })
       })
     },
@@ -106,14 +104,20 @@ export function createCanvasDocumentWriter({
         deleteCanvasEdgesCommand({ edgesMap, edgeIds })
       })
     },
-    setNodePosition: (nodeId, position) => {
+    setNodePositions: (positions) => {
+      if (positions.size === 0) return
       withNodeTransaction(() => {
-        setCanvasNodePositionCommand({
-          nodesMap,
-          nodeId,
-          position,
-          sanitizeNode: sanitizeNodeForPersistence,
-        })
+        measureCanvasPerformance(
+          'canvas.document.nodes.set-position',
+          { nodeCount: positions.size },
+          () => {
+            setCanvasNodePositionsCommand({
+              nodesMap,
+              positions,
+              sanitizeNode: sanitizeNodeForPersistence,
+            })
+          },
+        )
       })
     },
   }

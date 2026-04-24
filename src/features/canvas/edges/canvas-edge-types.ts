@@ -1,4 +1,4 @@
-import type { ParsedCanvasRuntimeEdge } from 'convex/canvases/validation'
+import type { ParsedCanvasEdgeStyle, ParsedCanvasRuntimeEdge } from 'convex/canvases/validation'
 import type { Edge, EdgeProps, Node } from '@xyflow/react'
 import type { CanvasNormalizedEdgeStyle } from './shared/canvas-edge-style'
 
@@ -11,6 +11,11 @@ export type CanvasEdgeRendererProps<
 
 export type CanvasRuntimeEdge = Omit<ParsedCanvasRuntimeEdge, 'style'> & {
   style: CanvasNormalizedEdgeStyle
+}
+
+export type CanvasEdgePatch = {
+  type?: CanvasEdgeType
+  style?: Partial<ParsedCanvasEdgeStyle>
 }
 
 export interface CanvasEdgeSelectionContext {

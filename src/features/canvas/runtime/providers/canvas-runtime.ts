@@ -87,14 +87,13 @@ export const READ_ONLY_CANVAS_RUNTIME: CanvasRuntime = {
   },
   documentWriter: {
     createNode: () => undefined,
-    updateNode: () => undefined,
-    updateNodeData: () => undefined,
-    updateEdge: () => undefined,
+    patchNodeData: () => undefined,
+    patchEdges: () => undefined,
     resizeNode: () => undefined,
     deleteNodes: () => undefined,
     createEdge: () => undefined,
     deleteEdges: () => undefined,
-    setNodePosition: () => undefined,
+    setNodePositions: () => undefined,
   },
   editSession: {
     editingEmbedId: null,
@@ -105,7 +104,6 @@ export const READ_ONLY_CANVAS_RUNTIME: CanvasRuntime = {
     setPendingEditNodePoint: () => undefined,
   },
   nodeActions: {
-    updateNodeData: () => undefined,
     transact: (fn) => fn(),
     onResize: () => undefined,
     onResizeEnd: () => undefined,

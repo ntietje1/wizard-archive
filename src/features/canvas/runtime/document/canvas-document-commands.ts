@@ -4,6 +4,7 @@ import type {
   CanvasEdgeCreationDefaults,
   CanvasSelectionSnapshot,
 } from '../../tools/canvas-tool-types'
+import type { CanvasEdgePatch } from '../../edges/canvas-edge-types'
 import { getCanvasDeletionSelection } from '../context-menu/canvas-context-menu-selection'
 import type { CanvasReorderPlan } from './canvas-reorder-plan'
 import type { CanvasContextMenuPoint } from '../context-menu/canvas-context-menu-types'
@@ -78,59 +79,47 @@ export function createCanvasNodeCommand({
   )
 }
 
-export function updateCanvasNodeCommand({
+export function patchCanvasNodeDataCommand({
   nodesMap,
-  nodeId,
-  updater,
+  updates,
   sanitizeNode,
 }: {
   nodesMap: Y.Map<Node>
-  nodeId: string
-  updater: (node: Node) => Node
+  updates: ReadonlyMap<string, Record<string, unknown>>
   sanitizeNode: CanvasNodeSanitizer
 }) {
-  updateCanvasNodeIfPresent({
-    nodesMap,
-    nodeId,
-    sanitizeNode,
-    operation: 'updateNode',
-    updater,
-  })
+  for (const [nodeId, data] of updates) {
+    updateCanvasNodeIfPresent({
+      nodesMap,
+      nodeId,
+      sanitizeNode,
+      operation: 'patchNodeData',
+      updater: (existing) => ({
+        ...existing,
+        data: { ...existing.data, ...data },
+      }),
+    })
+  }
 }
 
-export function updateCanvasNodeDataCommand({
-  nodesMap,
-  nodeId,
-  data,
-  sanitizeNode,
-}: {
-  nodesMap: Y.Map<Node>
-  nodeId: string
-  data: Record<string, unknown>
-  sanitizeNode: CanvasNodeSanitizer
-}) {
-  updateCanvasNodeIfPresent({
-    nodesMap,
-    nodeId,
-    sanitizeNode,
-    operation: 'updateNodeData',
-    updater: (existing) => ({
-      ...existing,
-      data: { ...existing.data, ...data },
-    }),
-  })
-}
-
-export function updateCanvasEdgeCommand({
+export function patchCanvasEdgesCommand({
   edgesMap,
-  edgeId,
-  updater,
+  updates,
 }: {
   edgesMap: Y.Map<Edge>
-  edgeId: string
-  updater: (edge: Edge) => Edge
+  updates: ReadonlyMap<string, CanvasEdgePatch>
 }) {
-  updateCanvasEdgeIfPresent({ edgesMap, edgeId, updater })
+  for (const [edgeId, patch] of updates) {
+    updateCanvasEdgeIfPresent({
+      edgesMap,
+      edgeId,
+      updater: (existing) => ({
+        ...existing,
+        ...patch,
+        style: patch.style ? { ...existing.style, ...patch.style } : existing.style,
+      }),
+    })
+  }
 }
 
 export function resizeCanvasNodeCommand({
@@ -157,24 +146,24 @@ export function resizeCanvasNodeCommand({
   })
 }
 
-export function setCanvasNodePositionCommand({
+export function setCanvasNodePositionsCommand({
   nodesMap,
-  nodeId,
-  position,
+  positions,
   sanitizeNode,
 }: {
   nodesMap: Y.Map<Node>
-  nodeId: string
-  position: XYPosition
+  positions: ReadonlyMap<string, XYPosition>
   sanitizeNode: CanvasNodeSanitizer
 }) {
-  updateCanvasNodeIfPresent({
-    nodesMap,
-    nodeId,
-    sanitizeNode,
-    operation: 'setNodePosition',
-    updater: (existing) => ({ ...existing, position }),
-  })
+  for (const [nodeId, position] of positions) {
+    updateCanvasNodeIfPresent({
+      nodesMap,
+      nodeId,
+      sanitizeNode,
+      operation: 'setNodePositions',
+      updater: (existing) => ({ ...existing, position }),
+    })
+  }
 }
 
 export function deleteCanvasSelectionCommand({

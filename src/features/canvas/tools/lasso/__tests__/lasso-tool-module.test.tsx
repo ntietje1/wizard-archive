@@ -473,14 +473,13 @@ function createLassoEnvironment({
     },
     commands: {
       createNode: () => undefined,
-      updateNode: () => undefined,
-      updateNodeData: () => undefined,
-      updateEdge: () => undefined,
+      patchNodeData: () => undefined,
+      patchEdges: () => undefined,
       resizeNode: () => undefined,
       deleteNodes: () => undefined,
       createEdge: () => undefined,
       deleteEdges: () => undefined,
-      setNodePosition: () => undefined,
+      setNodePositions: () => undefined,
     },
     query: {
       getNodes,

@@ -6,7 +6,7 @@ import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime-co
 import { useCanvasSelectionState } from '../../runtime/selection/use-canvas-selection-state'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import type { Edge, Node } from '@xyflow/react'
-import type { CanvasEdgeType } from '../../edges/canvas-edge-types'
+import type { CanvasEdgePatch, CanvasEdgeType } from '../../edges/canvas-edge-types'
 import type { CanvasCommands } from '../../runtime/document/use-canvas-commands'
 import type { CanvasSelectionSnapshot } from '../../tools/canvas-tool-types'
 
@@ -96,26 +96,38 @@ function emitSelectionState(selection: CanvasSelectionSnapshot) {
 
 function renderToolbar({
   updateNodeData = vi.fn(),
-  updateEdge = vi.fn(),
+  patchNodeData = vi.fn((updates: ReadonlyMap<string, Record<string, unknown>>) => {
+    for (const [nodeId, data] of updates) {
+      updateNodeData(nodeId, data)
+    }
+  }),
+  patchEdge = vi.fn(),
+  patchEdges = vi.fn((updates: ReadonlyMap<string, CanvasEdgePatch>) => {
+    for (const [edgeId, patch] of updates) {
+      patchEdge(edgeId, patch)
+    }
+  }),
   transact = vi.fn((fn: () => void) => fn()),
   commands,
 }: {
   updateNodeData?: (nodeId: string, data: Record<string, unknown>) => void
-  updateEdge?: (edgeId: string, updater: (edge: Edge) => Edge) => void
+  patchNodeData?: (updates: ReadonlyMap<string, Record<string, unknown>>) => void
+  patchEdge?: (edgeId: string, patch: CanvasEdgePatch) => void
+  patchEdges?: (updates: ReadonlyMap<string, CanvasEdgePatch>) => void
   transact?: (fn: () => void) => void
   commands?: CanvasCommands
 } = {}) {
   const baseRuntime = createCanvasRuntime()
   const runtime = createCanvasRuntime({
     nodeActions: {
-      updateNodeData,
       transact,
       onResize: vi.fn(),
       onResizeEnd: vi.fn(),
     },
     documentWriter: {
       ...baseRuntime.documentWriter,
-      updateEdge,
+      patchNodeData,
+      patchEdges,
     },
     editSession: {
       editingEmbedId: null,
@@ -143,7 +155,9 @@ function renderToolbar({
   return {
     ...view,
     updateNodeData,
-    updateEdge,
+    patchNodeData,
+    patchEdge,
+    patchEdges,
     transact,
   }
 }
@@ -408,10 +422,14 @@ describe('CanvasConditionalToolbar', () => {
 
     fireEvent.click(within(fillGroup!).getByRole('button', { name: 'Select Red color' }))
 
-    expect(updateNodeData).toHaveBeenCalledWith(firstText.id, { backgroundColor: 'var(--t-red)' })
-    expect(updateNodeData).toHaveBeenCalledWith(firstText.id, { backgroundOpacity: 100 })
-    expect(updateNodeData).toHaveBeenCalledWith(secondText.id, { backgroundColor: 'var(--t-red)' })
-    expect(updateNodeData).toHaveBeenCalledWith(secondText.id, { backgroundOpacity: 100 })
+    expect(updateNodeData).toHaveBeenCalledWith(firstText.id, {
+      backgroundColor: 'var(--t-red)',
+      backgroundOpacity: 100,
+    })
+    expect(updateNodeData).toHaveBeenCalledWith(secondText.id, {
+      backgroundColor: 'var(--t-red)',
+      backgroundOpacity: 100,
+    })
     expect(transact).toHaveBeenCalledTimes(1)
   })
 
@@ -430,7 +448,10 @@ describe('CanvasConditionalToolbar', () => {
 
     fireEvent.click(within(strokeGroup!).getByRole('button', { name: 'Select Clear color' }))
 
-    expect(updateNodeData).toHaveBeenCalledWith(text.id, { borderOpacity: 0 })
+    expect(updateNodeData).toHaveBeenCalledWith(text.id, {
+      borderOpacity: 0,
+      borderStroke: 'var(--foreground)',
+    })
   })
 
   it('fans out shared opacity updates to every selected node', () => {
@@ -452,8 +473,14 @@ describe('CanvasConditionalToolbar', () => {
       })
     })
 
-    expect(updateNodeData).toHaveBeenCalledWith(firstStroke.id, { opacity: 42 })
-    expect(updateNodeData).toHaveBeenCalledWith(secondStroke.id, { opacity: 42 })
+    expect(updateNodeData).toHaveBeenCalledWith(firstStroke.id, {
+      color: 'var(--foreground)',
+      opacity: 42,
+    })
+    expect(updateNodeData).toHaveBeenCalledWith(secondStroke.id, {
+      color: 'var(--foreground)',
+      opacity: 42,
+    })
     expect(transact).toHaveBeenCalledTimes(1)
   })
 
@@ -488,8 +515,14 @@ describe('CanvasConditionalToolbar', () => {
       })
     })
 
-    expect(updateNodeData).toHaveBeenCalledWith(firstText.id, { backgroundOpacity: 65 })
-    expect(updateNodeData).toHaveBeenCalledWith(secondText.id, { backgroundOpacity: 65 })
+    expect(updateNodeData).toHaveBeenCalledWith(firstText.id, {
+      backgroundColor: 'var(--background)',
+      backgroundOpacity: 65,
+    })
+    expect(updateNodeData).toHaveBeenCalledWith(secondText.id, {
+      backgroundColor: 'var(--background)',
+      backgroundOpacity: 65,
+    })
   })
 
   it('shows the reverse primary swatch for fill and applies it to selected nodes', () => {
@@ -511,8 +544,10 @@ describe('CanvasConditionalToolbar', () => {
       within(fillGroup!).getByRole('button', { name: 'Select Reverse primary color' }),
     )
 
-    expect(updateNodeData).toHaveBeenCalledWith(text.id, { backgroundColor: 'var(--foreground)' })
-    expect(updateNodeData).toHaveBeenCalledWith(text.id, { backgroundOpacity: 100 })
+    expect(updateNodeData).toHaveBeenCalledWith(text.id, {
+      backgroundColor: 'var(--foreground)',
+      backgroundOpacity: 100,
+    })
   })
 
   it('shows a primary border preset instead of a default preset', () => {
@@ -674,8 +709,8 @@ describe('CanvasConditionalToolbar', () => {
   })
 
   it('updates selected edge stroke color and width through the document writer', () => {
-    const updateEdge = vi.fn()
-    renderToolbar({ updateEdge })
+    const patchEdge = vi.fn()
+    renderToolbar({ patchEdge })
     const edge = createEdge({ stroke: 'var(--foreground)', strokeWidth: 1.5 })
     edgesMock.edges = [edge]
     emitSelectionState(selectionSnapshot(new Set<string>(), new Set([edge.id])))
@@ -683,30 +718,14 @@ describe('CanvasConditionalToolbar', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Select Red color' }))
     fireEvent.change(getStrokeSizeSlider(), { target: { value: '8' } })
 
-    expect(updateEdge).toHaveBeenNthCalledWith(1, edge.id, expect.any(Function))
-    expect(updateEdge).toHaveBeenNthCalledWith(2, edge.id, expect.any(Function))
-    expect(updateEdge).toHaveBeenNthCalledWith(3, edge.id, expect.any(Function))
-
-    const updateStroke = updateEdge.mock.calls[0][1] as (edge: Edge) => Edge
-    const updateOpacity = updateEdge.mock.calls[1][1] as (edge: Edge) => Edge
-    const updateStrokeWidth = updateEdge.mock.calls[2][1] as (edge: Edge) => Edge
-
-    expect(updateStroke(edge)).toMatchObject({
+    expect(patchEdge).toHaveBeenNthCalledWith(1, edge.id, {
       style: {
-        stroke: 'var(--t-red)',
-        strokeWidth: 1.5,
-      },
-    })
-    expect(updateOpacity(edge)).toMatchObject({
-      style: {
-        stroke: 'var(--foreground)',
-        strokeWidth: 1.5,
         opacity: undefined,
+        stroke: 'var(--t-red)',
       },
     })
-    expect(updateStrokeWidth(edge)).toMatchObject({
+    expect(patchEdge).toHaveBeenNthCalledWith(2, edge.id, {
       style: {
-        stroke: 'var(--foreground)',
         strokeWidth: 8,
       },
     })
@@ -764,10 +783,18 @@ describe('CanvasConditionalToolbar', () => {
   })
 
   it('disables stroke color controls when a zero-width edge selection resolves stroke size to zero', () => {
-    const updateEdge = vi.fn((edgeId: string, updater: (edge: Edge) => Edge) => {
-      edgesMock.edges = edgesMock.edges.map((edge) => (edge.id === edgeId ? updater(edge) : edge))
+    const patchEdge = vi.fn((edgeId: string, patch: CanvasEdgePatch) => {
+      edgesMock.edges = edgesMock.edges.map((edge) =>
+        edge.id === edgeId
+          ? {
+              ...edge,
+              ...patch,
+              style: patch.style ? { ...edge.style, ...patch.style } : edge.style,
+            }
+          : edge,
+      )
     })
-    renderToolbar({ updateEdge })
+    renderToolbar({ patchEdge })
     const edge = createEdge({ stroke: 'var(--foreground)', strokeWidth: 2 })
     edgesMock.edges = [edge]
     emitSelectionState(selectionSnapshot(new Set<string>(), new Set([edge.id])))
@@ -853,8 +880,8 @@ describe('CanvasConditionalToolbar', () => {
 
   it('shows edge type controls for selected edges and updates every selected edge type', () => {
     const transact = vi.fn((fn: () => void) => fn())
-    const updateEdge = vi.fn()
-    renderToolbar({ updateEdge, transact })
+    const patchEdge = vi.fn()
+    renderToolbar({ patchEdge, transact })
     const firstEdge = createEdge({ type: 'bezier' })
     const secondEdge = createEdge({ type: 'straight' })
     edgesMock.edges = [firstEdge, secondEdge]
@@ -877,15 +904,9 @@ describe('CanvasConditionalToolbar', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Change edge type to Step' }))
 
     expect(transact).toHaveBeenCalledTimes(1)
-    expect(updateEdge).toHaveBeenCalledTimes(2)
-    expect(updateEdge).toHaveBeenNthCalledWith(1, firstEdge.id, expect.any(Function))
-    expect(updateEdge).toHaveBeenNthCalledWith(2, secondEdge.id, expect.any(Function))
-
-    const updateFirstEdge = updateEdge.mock.calls[0][1] as (edge: Edge) => Edge
-    const updateSecondEdge = updateEdge.mock.calls[1][1] as (edge: Edge) => Edge
-
-    expect(updateFirstEdge(firstEdge)).toMatchObject({ type: 'step' })
-    expect(updateSecondEdge(secondEdge)).toMatchObject({ type: 'step' })
+    expect(patchEdge).toHaveBeenCalledTimes(2)
+    expect(patchEdge).toHaveBeenNthCalledWith(1, firstEdge.id, { type: 'step' })
+    expect(patchEdge).toHaveBeenNthCalledWith(2, secondEdge.id, { type: 'step' })
   })
 
   it('shows the active edge type when all selected edges match', () => {

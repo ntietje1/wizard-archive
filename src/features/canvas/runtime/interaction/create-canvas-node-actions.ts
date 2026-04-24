@@ -14,7 +14,6 @@ export function createCanvasNodeActions({
   transact: (fn: () => void) => void
 }) {
   return {
-    updateNodeData: documentWriter.updateNodeData,
     transact,
     onResize: (nodeId, width, height, position) => {
       reactFlowInstance.setNodes((current) =>

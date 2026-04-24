@@ -4,7 +4,7 @@ import type {
   ResizingState,
   RemoteUser,
 } from '../utils/canvas-awareness-types'
-import type { CanvasEdgeType } from '../edges/canvas-edge-types'
+import type { CanvasEdgePatch, CanvasEdgeType } from '../edges/canvas-edge-types'
 import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
 import type { Connection, Edge, Node, XYPosition } from '@xyflow/react'
 import type { ComponentType, CSSProperties, MouseEvent as ReactMouseEvent, ReactNode } from 'react'
@@ -49,11 +49,10 @@ export interface CanvasEditSessionState {
 
 /**
  * Per-node UI callbacks for node components. Prefer this interface inside node renderers for
- * immediate interaction updates; `updateNodeData` applies local node-level changes, while
- * `onResize` and `onResizeEnd` separate live resize feedback from the committed resize write.
+ * immediate interaction updates; `onResize` and `onResizeEnd` separate live resize feedback from
+ * the committed resize write.
  */
 export interface CanvasNodeActions {
-  updateNodeData: <TPatch extends Record<string, unknown>>(nodeId: string, data: TPatch) => void
   transact?: (fn: () => void) => void
   onResize: (nodeId: string, width: number, height: number, position: XYPosition) => void
   onResizeEnd: (nodeId: string, width: number, height: number, position: XYPosition) => void
@@ -61,14 +60,13 @@ export interface CanvasNodeActions {
 
 export interface CanvasDocumentWriter {
   createNode: (node: Node) => void
-  updateNode: (nodeId: string, updater: (node: Node) => Node) => void
-  updateNodeData: <TPatch extends Record<string, unknown>>(nodeId: string, data: TPatch) => void
-  updateEdge: (edgeId: string, updater: (edge: Edge) => Edge) => void
+  patchNodeData: (updates: ReadonlyMap<string, Record<string, unknown>>) => void
+  patchEdges: (updates: ReadonlyMap<string, CanvasEdgePatch>) => void
   resizeNode: (nodeId: string, width: number, height: number, position: XYPosition) => void
   deleteNodes: (nodeIds: ReadonlySet<string>) => void
   createEdge: (connection: Connection, defaults?: CanvasEdgeCreationDefaults) => void
   deleteEdges: (edgeIds: ReadonlySet<string>) => void
-  setNodePosition: (nodeId: string, position: XYPosition) => void
+  setNodePositions: (positions: ReadonlyMap<string, XYPosition>) => void
 }
 
 interface CanvasDocumentReader {
