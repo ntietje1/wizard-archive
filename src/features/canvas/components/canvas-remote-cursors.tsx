@@ -27,6 +27,7 @@ const WILL_CHANGE_IDLE_TIMEOUT = 150
 
 function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
   const elementRef = useRef<HTMLDivElement>(null)
+  const cursor = remoteUser.cursor
   const isDragging = !!(remoteUser.dragging && Object.keys(remoteUser.dragging).length > 0)
   const nodes = useNodes()
   const wasDraggingRef = useRef(false)
@@ -40,15 +41,15 @@ function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
   const willChangeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   let pinnedPosition: { x: number; y: number } | null = null
-  if (isDragging && remoteUser.cursor && remoteUser.dragging) {
+  if (isDragging && cursor && remoteUser.dragging) {
     const entries = Object.entries(remoteUser.dragging)
     if (entries.length > 0) {
       const [refNodeId, refDragPos] = entries[0]
       const node = nodes.find((n) => n.id === refNodeId)
       if (node) {
         pinnedPosition = {
-          x: node.position.x + (remoteUser.cursor.x - refDragPos.x),
-          y: node.position.y + (remoteUser.cursor.y - refDragPos.y),
+          x: node.position.x + (cursor.x - refDragPos.x),
+          y: node.position.y + (cursor.y - refDragPos.y),
         }
       }
     }
@@ -67,14 +68,13 @@ function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
       }
     }
     wasDraggingRef.current = isDragging
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDragging, pinnedX, pinnedY])
+  }, [isDragging, pinnedPosition, pinnedX, pinnedY])
 
-  useSpringPosition(isDragging ? null : remoteUser.cursor, elementRef)
+  useSpringPosition(isDragging ? null : cursor, elementRef)
 
   useEffect(() => {
     const element = elementRef.current
-    if (!element || !remoteUser.cursor) {
+    if (!element || !cursor) {
       if (willChangeTimeoutRef.current) {
         clearTimeout(willChangeTimeoutRef.current)
         willChangeTimeoutRef.current = null
@@ -105,10 +105,10 @@ function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
         willChangeTimeoutRef.current = null
       }
     }
-  }, [remoteUser.cursor, isDragging])
+  }, [cursor, isDragging])
 
   useEffect(() => {
-    if (!isDragging || !remoteUser.cursor) {
+    if (!isDragging || !cursor) {
       lerpRef.current = null
       return
     }
@@ -139,43 +139,25 @@ function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
 
     rafIdRef.current = requestAnimationFrame(animate)
     return () => cancelAnimationFrame(rafIdRef.current)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [remoteUser.cursor?.x, remoteUser.cursor?.y, isDragging])
+  }, [cursor, isDragging])
 
-  if (!remoteUser.cursor) return null
+  if (!cursor) return null
 
   return (
-    <div
-      ref={elementRef}
-      style={{
-        position: 'absolute',
-        left: 0,
-        top: 0,
-        pointerEvents: 'none',
-        zIndex: 1000,
-      }}
-    >
+    <div ref={elementRef} className="pointer-events-none absolute left-0 top-0 z-[1000]">
       <CursorIcon color={remoteUser.user.color} />
       <NameLabel name={remoteUser.user.name} color={remoteUser.user.color} />
     </div>
   )
 }
 
-export function NameLabel({ name, color }: { name: string; color: string }) {
+function NameLabel({ name, color }: { name: string; color: string }) {
   return (
     <div
+      className="ml-3 -mt-0.5 w-fit whitespace-nowrap rounded px-1.5 py-0.5 text-[12px] leading-4 font-medium"
       style={{
-        marginLeft: 12,
-        marginTop: -2,
-        padding: '2px 6px',
-        borderRadius: 4,
         backgroundColor: color,
         color: getContrastColor(color),
-        fontSize: 12,
-        fontWeight: 500,
-        lineHeight: '16px',
-        whiteSpace: 'nowrap',
-        width: 'fit-content',
       }}
     >
       {name}

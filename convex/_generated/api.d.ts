@@ -66,6 +66,7 @@ import type * as canvases_functions_updateCanvas from "../canvases/functions/upd
 import type * as canvases_mutations from "../canvases/mutations.js";
 import type * as canvases_triggers from "../canvases/triggers.js";
 import type * as canvases_types from "../canvases/types.js";
+import type * as canvases_validation from "../canvases/validation.js";
 import type * as common_async from "../common/async.js";
 import type * as common_constants from "../common/constants.js";
 import type * as common_logger from "../common/logger.js";
@@ -302,6 +303,7 @@ declare const fullApi: ApiFromModules<{
   "canvases/mutations": typeof canvases_mutations;
   "canvases/triggers": typeof canvases_triggers;
   "canvases/types": typeof canvases_types;
+  "canvases/validation": typeof canvases_validation;
   "common/async": typeof common_async;
   "common/constants": typeof common_constants;
   "common/logger": typeof common_logger;

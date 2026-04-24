@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 // --- Styles & inline content ---
 
-const stylesSchema = z
+export const stylesSchema = z
   .strictObject({
     bold: z.boolean().optional(),
     italic: z.boolean().optional(),
@@ -36,7 +36,7 @@ export const tableContentSchema = z.strictObject({
 
 // --- Block props ---
 
-const textAlignmentSchema = z.enum(['left', 'center', 'right', 'justify']).optional()
+export const textAlignmentSchema = z.enum(['left', 'center', 'right', 'justify']).optional()
 
 const defaultProps = {
   textColor: z.string().optional(),
@@ -44,9 +44,9 @@ const defaultProps = {
   textAlignment: textAlignmentSchema,
 }
 
-const paragraphPropsSchema = z.strictObject({ ...defaultProps })
+export const paragraphPropsSchema = z.strictObject({ ...defaultProps })
 
-const headingPropsSchema = z.strictObject({
+export const headingPropsSchema = z.strictObject({
   level: z.union([
     z.literal(1),
     z.literal(2),
@@ -59,33 +59,31 @@ const headingPropsSchema = z.strictObject({
   ...defaultProps,
 })
 
-const bulletListItemPropsSchema = z.strictObject({ ...defaultProps })
+export const bulletListItemPropsSchema = z.strictObject({ ...defaultProps })
 
-const numberedListItemPropsSchema = z.strictObject({
+export const numberedListItemPropsSchema = z.strictObject({
   start: z.number().optional(),
   ...defaultProps,
 })
 
-const checkListItemPropsSchema = z.strictObject({
+export const checkListItemPropsSchema = z.strictObject({
   checked: z.boolean().optional(),
   ...defaultProps,
 })
 
-const toggleListItemPropsSchema = z.strictObject({ ...defaultProps })
+export const toggleListItemPropsSchema = z.strictObject({ ...defaultProps })
 
-const quotePropsSchema = z.strictObject({
-  textColor: z.string().optional(),
-  backgroundColor: z.string().optional(),
-  textAlignment: textAlignmentSchema,
+export const quotePropsSchema = z.strictObject({
+  ...defaultProps,
 })
 
-const codeBlockPropsSchema = z.strictObject({
+export const codeBlockPropsSchema = z.strictObject({
   language: z.string().optional(),
 })
 
-const dividerPropsSchema = z.strictObject({})
+export const dividerPropsSchema = z.strictObject({})
 
-const imagePropsSchema = z.strictObject({
+export const imagePropsSchema = z.strictObject({
   name: z.string().optional(),
   url: z.string().optional(),
   caption: z.string().optional(),
@@ -95,7 +93,7 @@ const imagePropsSchema = z.strictObject({
   previewWidth: z.number().optional(),
 })
 
-const videoPropsSchema = z.strictObject({
+export const videoPropsSchema = z.strictObject({
   name: z.string().optional(),
   url: z.string().optional(),
   caption: z.string().optional(),
@@ -105,7 +103,7 @@ const videoPropsSchema = z.strictObject({
   previewWidth: z.number().optional(),
 })
 
-const audioPropsSchema = z.strictObject({
+export const audioPropsSchema = z.strictObject({
   name: z.string().optional(),
   url: z.string().optional(),
   caption: z.string().optional(),
@@ -113,14 +111,14 @@ const audioPropsSchema = z.strictObject({
   showPreview: z.boolean().optional(),
 })
 
-const filePropsSchema = z.strictObject({
+export const filePropsSchema = z.strictObject({
   name: z.string().optional(),
   url: z.string().optional(),
   caption: z.string().optional(),
   backgroundColor: z.string().optional(),
 })
 
-const tablePropsSchema = z.strictObject({
+export const tablePropsSchema = z.strictObject({
   textColor: z.string().optional(),
 })
 
@@ -128,58 +126,141 @@ const tablePropsSchema = z.strictObject({
 
 const inlineContent = z.array(inlineContentSchema).optional()
 
-export const flatBlockContentSchema = z.discriminatedUnion('type', [
-  z.strictObject({
-    type: z.literal('paragraph'),
-    props: paragraphPropsSchema,
-    content: inlineContent,
-  }),
-  z.strictObject({ type: z.literal('heading'), props: headingPropsSchema, content: inlineContent }),
-  z.strictObject({
-    type: z.literal('bulletListItem'),
-    props: bulletListItemPropsSchema,
-    content: inlineContent,
-  }),
-  z.strictObject({
-    type: z.literal('numberedListItem'),
-    props: numberedListItemPropsSchema,
-    content: inlineContent,
-  }),
-  z.strictObject({
-    type: z.literal('checkListItem'),
-    props: checkListItemPropsSchema,
-    content: inlineContent,
-  }),
-  z.strictObject({
-    type: z.literal('toggleListItem'),
-    props: toggleListItemPropsSchema,
-    content: inlineContent,
-  }),
-  z.strictObject({ type: z.literal('quote'), props: quotePropsSchema, content: inlineContent }),
-  z.strictObject({
-    type: z.literal('codeBlock'),
-    props: codeBlockPropsSchema,
-    content: inlineContent,
-  }),
-  z.strictObject({ type: z.literal('divider'), props: dividerPropsSchema, content: inlineContent }),
-  z.strictObject({ type: z.literal('image'), props: imagePropsSchema, content: inlineContent }),
-  z.strictObject({ type: z.literal('video'), props: videoPropsSchema, content: inlineContent }),
-  z.strictObject({ type: z.literal('audio'), props: audioPropsSchema, content: inlineContent }),
-  z.strictObject({ type: z.literal('file'), props: filePropsSchema, content: inlineContent }),
-  z.strictObject({
-    type: z.literal('table'),
-    props: tablePropsSchema,
-    content: tableContentSchema.optional(),
-  }),
-])
+export const paragraphBlockContentSchema = z.strictObject({
+  type: z.literal('paragraph'),
+  props: paragraphPropsSchema,
+  content: inlineContent,
+})
+
+export const headingBlockContentSchema = z.strictObject({
+  type: z.literal('heading'),
+  props: headingPropsSchema,
+  content: inlineContent,
+})
+
+export const bulletListItemBlockContentSchema = z.strictObject({
+  type: z.literal('bulletListItem'),
+  props: bulletListItemPropsSchema,
+  content: inlineContent,
+})
+
+export const numberedListItemBlockContentSchema = z.strictObject({
+  type: z.literal('numberedListItem'),
+  props: numberedListItemPropsSchema,
+  content: inlineContent,
+})
+
+export const checkListItemBlockContentSchema = z.strictObject({
+  type: z.literal('checkListItem'),
+  props: checkListItemPropsSchema,
+  content: inlineContent,
+})
+
+export const toggleListItemBlockContentSchema = z.strictObject({
+  type: z.literal('toggleListItem'),
+  props: toggleListItemPropsSchema,
+  content: inlineContent,
+})
+
+export const quoteBlockContentSchema = z.strictObject({
+  type: z.literal('quote'),
+  props: quotePropsSchema,
+  content: inlineContent,
+})
+
+export const codeBlockBlockContentSchema = z.strictObject({
+  type: z.literal('codeBlock'),
+  props: codeBlockPropsSchema,
+  content: inlineContent,
+})
+
+export const dividerBlockContentSchema = z.strictObject({
+  type: z.literal('divider'),
+  props: dividerPropsSchema,
+  content: inlineContent,
+})
+
+export const imageBlockContentSchema = z.strictObject({
+  type: z.literal('image'),
+  props: imagePropsSchema,
+  content: inlineContent,
+})
+
+export const videoBlockContentSchema = z.strictObject({
+  type: z.literal('video'),
+  props: videoPropsSchema,
+  content: inlineContent,
+})
+
+export const audioBlockContentSchema = z.strictObject({
+  type: z.literal('audio'),
+  props: audioPropsSchema,
+  content: inlineContent,
+})
+
+export const fileBlockContentSchema = z.strictObject({
+  type: z.literal('file'),
+  props: filePropsSchema,
+  content: inlineContent,
+})
+
+export const tableBlockContentSchema = z.strictObject({
+  type: z.literal('table'),
+  props: tablePropsSchema,
+  content: tableContentSchema.optional(),
+})
+
+const allFlatBlockContentSchemas = [
+  paragraphBlockContentSchema,
+  headingBlockContentSchema,
+  bulletListItemBlockContentSchema,
+  numberedListItemBlockContentSchema,
+  checkListItemBlockContentSchema,
+  toggleListItemBlockContentSchema,
+  quoteBlockContentSchema,
+  codeBlockBlockContentSchema,
+  dividerBlockContentSchema,
+  imageBlockContentSchema,
+  videoBlockContentSchema,
+  audioBlockContentSchema,
+  fileBlockContentSchema,
+  tableBlockContentSchema,
+] as const
+
+type FlatBlockContentSchema = (typeof allFlatBlockContentSchemas)[number]
+
+export const flatBlockContentSchema = z.discriminatedUnion('type', allFlatBlockContentSchemas)
+
+const canvasFlatBlockContentSchemas = [
+  paragraphBlockContentSchema,
+  headingBlockContentSchema,
+  bulletListItemBlockContentSchema,
+  numberedListItemBlockContentSchema,
+  checkListItemBlockContentSchema,
+  quoteBlockContentSchema,
+  codeBlockBlockContentSchema,
+] as const
+
+type CanvasFlatBlockType = (typeof canvasFlatBlockContentSchemas)[number]['shape']['type']['value']
+
+export const canvasAllowedBlockTypes = canvasFlatBlockContentSchemas.map(
+  (schema) => schema.shape.type.value,
+) as [CanvasFlatBlockType, ...Array<CanvasFlatBlockType>]
+
+export const canvasFlatBlockContentSchema = z.discriminatedUnion(
+  'type',
+  canvasFlatBlockContentSchemas,
+)
 
 // --- Derived: block type enum ---
 
-const blockTypes = flatBlockContentSchema.options.map((opt) => opt.shape.type.value) as [
+const blockTypes = allFlatBlockContentSchemas.map((schema) => schema.shape.type.value) as [
   string,
   ...Array<string>,
 ]
 export const blockTypeSchema = z.enum(blockTypes)
+
+export const canvasBlockTypeSchema = z.enum(canvasAllowedBlockTypes)
 
 // --- BlockNote ID (UUID v4) ---
 
@@ -207,3 +288,52 @@ export const blockNoteBlockSchema: z.ZodType<BlockNoteBlock> = z.lazy(() => {
     options as [(typeof options)[0], (typeof options)[1], ...typeof options],
   ) as z.ZodType<BlockNoteBlock>
 })
+
+type PartialBlockNoteBlock = {
+  id?: z.infer<typeof blockNoteIdSchema>
+  type: z.infer<typeof blockTypeSchema>
+  props?: z.infer<typeof flatBlockContentSchema>['props']
+  content?: Array<z.infer<typeof inlineContentSchema>> | z.infer<typeof tableContentSchema>
+  children?: Array<PartialBlockNoteBlock>
+}
+
+function createPartialBlockSchema(
+  schemas: ReadonlyArray<FlatBlockContentSchema>,
+): z.ZodType<PartialBlockNoteBlock> {
+  const partialBlockSchema: z.ZodType<PartialBlockNoteBlock> = z.lazy(() => {
+    if (schemas.length < 2) {
+      throw new Error(
+        `createPartialBlockSchema requires at least 2 block types, got ${schemas.length}`,
+      )
+    }
+
+    const options = schemas.map((schema) =>
+      z.strictObject({
+        ...schema.shape,
+        props: schema.shape.props.optional(),
+        content: schema.shape.content,
+        id: blockNoteIdSchema.optional(),
+        children: z.array(partialBlockSchema).optional(),
+      }),
+    )
+
+    const [first, second, ...rest] = options
+    return z.discriminatedUnion('type', [
+      first,
+      second,
+      ...rest,
+    ]) as z.ZodType<PartialBlockNoteBlock>
+  })
+
+  return partialBlockSchema
+}
+
+export const partialBlockNoteBlockSchema = createPartialBlockSchema(allFlatBlockContentSchemas)
+
+export const canvasPartialBlockNoteBlockSchema = createPartialBlockSchema(
+  canvasFlatBlockContentSchemas,
+)
+
+export const partialBlockNoteDocumentSchema = z.array(partialBlockNoteBlockSchema)
+
+export const canvasPartialBlockNoteDocumentSchema = z.array(canvasPartialBlockNoteBlockSchema)

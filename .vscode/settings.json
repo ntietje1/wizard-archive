@@ -4,15 +4,8 @@
   "editor.formatOnSave": false,
   "editor.formatOnSaveMode": "file",
   "editor.codeActionsOnSave": {
-    "source.fixAll.oxc": "never",
-    "source.fixAll.eslint": "never"
+    "source.fixAll.oxc": "explicit",
+    "source.fixAll.eslint": "explicit"
   },
-
-  "eslint.enable": true,
-  "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
-  "eslint.options": {
-    "overrideConfigFile": "eslint.config.js"
-  },
-
   "files.autoSave": "onFocusChange"
 }

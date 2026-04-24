@@ -57,10 +57,9 @@ describe('registerLinkPlugins', () => {
     })
 
     expect(requestAnimationFrameSpy).not.toHaveBeenCalled()
-    expect(unregisterPlugin).toHaveBeenNthCalledWith(1, stabilizerKey)
-    expect(unregisterPlugin).toHaveBeenNthCalledWith(2, pluginKey)
-    expect(registerPlugin).toHaveBeenNthCalledWith(1, stabilizerPlugin)
-    expect(registerPlugin).toHaveBeenNthCalledWith(2, decorationPlugin)
+    expect(unregisterPlugin).not.toHaveBeenCalled()
+    expect(registerPlugin).toHaveBeenNthCalledWith(1, stabilizerPlugin, expect.any(Function))
+    expect(registerPlugin).toHaveBeenNthCalledWith(2, decorationPlugin, expect.any(Function))
     expect(pluginRef.current).toBe(decorationPlugin)
     expect(mockCreateSelectionStabilizerPlugin).toHaveBeenCalledWith(stabilizerKey)
     expect(setMeta).toHaveBeenCalledWith(pluginKey, true)
@@ -68,8 +67,8 @@ describe('registerLinkPlugins', () => {
 
     cleanup()
 
-    expect(unregisterPlugin).toHaveBeenNthCalledWith(3, stabilizerKey)
-    expect(unregisterPlugin).toHaveBeenNthCalledWith(4, pluginKey)
+    expect(unregisterPlugin).toHaveBeenNthCalledWith(1, stabilizerKey)
+    expect(unregisterPlugin).toHaveBeenNthCalledWith(2, pluginKey)
   })
 
   it('waits for the editor view before registering plugins', () => {
@@ -111,10 +110,9 @@ describe('registerLinkPlugins', () => {
     } as never
     queuedFrame?.(0)
 
-    expect(unregisterPlugin).toHaveBeenNthCalledWith(1, stabilizerKey)
-    expect(unregisterPlugin).toHaveBeenNthCalledWith(2, pluginKey)
-    expect(registerPlugin).toHaveBeenNthCalledWith(1, stabilizerPlugin)
-    expect(registerPlugin).toHaveBeenNthCalledWith(2, decorationPlugin)
+    expect(unregisterPlugin).not.toHaveBeenCalled()
+    expect(registerPlugin).toHaveBeenNthCalledWith(1, stabilizerPlugin, expect.any(Function))
+    expect(registerPlugin).toHaveBeenNthCalledWith(2, decorationPlugin, expect.any(Function))
     expect(pluginRef.current).toBe(decorationPlugin)
     expect(mockCreateSelectionStabilizerPlugin).toHaveBeenCalledWith(stabilizerKey)
     expect(setMeta).toHaveBeenCalledWith(pluginKey, true)

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { File, FileAudio, FileText, FileVideo } from 'lucide-react'
-import { LoadingSpinner } from '~/shared/components/loading-spinner'
+import { PreviewImage } from '~/features/previews/components/preview-image'
+import { resolveFilePreviewImageUrl } from './file-preview-source'
 
 export function FilePreview({
   downloadUrl,
@@ -14,7 +15,6 @@ export function FilePreview({
   alt?: string
 }) {
   const [erroredUrls, setErroredUrls] = useState<Set<string>>(() => new Set())
-  const [loadedUrl, setLoadedUrl] = useState<string | null>(null)
 
   const markErrored = (url: string) => {
     setErroredUrls((prev) => new Set(prev).add(url))
@@ -29,26 +29,21 @@ export function FilePreview({
     )
   }
 
-  if (contentType?.startsWith('image/') && !erroredUrls.has(downloadUrl)) {
-    return (
-      <ImageWithLoader
-        src={downloadUrl}
-        alt={alt ?? 'Embedded image'}
-        isLoading={loadedUrl !== downloadUrl}
-        onLoad={() => setLoadedUrl(downloadUrl)}
-        onError={() => markErrored(downloadUrl)}
-      />
-    )
-  }
+  const previewImageUrl = resolveFilePreviewImageUrl({
+    downloadUrl,
+    contentType,
+    previewUrl,
+    erroredUrls,
+  })
 
-  if (previewUrl && !erroredUrls.has(previewUrl)) {
+  if (previewImageUrl) {
     return (
-      <ImageWithLoader
-        src={previewUrl}
+      <PreviewImage
+        src={previewImageUrl}
         alt={alt ?? 'File preview'}
-        isLoading={loadedUrl !== previewUrl}
-        onLoad={() => setLoadedUrl(previewUrl)}
-        onError={() => markErrored(previewUrl)}
+        showLoadingIndicator={true}
+        fallback={null}
+        onError={() => markErrored(previewImageUrl)}
       />
     )
   }
@@ -59,39 +54,6 @@ export function FilePreview({
     <div className="h-full flex items-center justify-center text-muted-foreground">
       <Icon className="h-6 w-6" aria-hidden />
       <span className="sr-only">File preview unavailable</span>
-    </div>
-  )
-}
-
-function ImageWithLoader({
-  src,
-  alt,
-  isLoading,
-  onLoad,
-  onError,
-}: {
-  src: string
-  alt: string
-  isLoading: boolean
-  onLoad: () => void
-  onError: () => void
-}) {
-  return (
-    <div className="h-full w-full overflow-hidden relative">
-      {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <LoadingSpinner size="sm" />
-        </div>
-      )}
-      <img
-        src={src}
-        alt={alt}
-        className={`h-full w-full object-contain transition-opacity ${isLoading ? 'opacity-0' : 'opacity-100'}`}
-        draggable={false}
-        referrerPolicy="no-referrer"
-        onLoad={onLoad}
-        onError={onError}
-      />
     </div>
   )
 }

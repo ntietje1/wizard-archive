@@ -21,8 +21,13 @@ interface PluginState {
 export function useWikiLinkExtension(
   editor: CustomBlockNoteEditor | undefined,
   resolver: LinkResolver,
+  isViewerMode = resolver.isViewerMode,
 ) {
   const pluginRef = useRef<Plugin | null>(null)
+  const resolverRef = useRef(resolver)
+  const isViewerModeRef = useRef(isViewerMode)
+  resolverRef.current = resolver
+  isViewerModeRef.current = isViewerMode
 
   useEffect(() => {
     const tiptapEditor = editor?._tiptapEditor
@@ -32,11 +37,21 @@ export function useWikiLinkExtension(
       tiptapEditor,
       pluginKey: PLUGIN_KEY,
       stabilizerKey: SELECTION_STABILIZER_KEY,
-      createDecorationPlugin: () => createWikiLinkPlugin(resolver, resolver.isViewerMode),
+      createDecorationPlugin: () =>
+        createWikiLinkPlugin(
+          () => resolverRef.current,
+          () => isViewerModeRef.current,
+        ),
       pluginRef,
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor, resolver, resolver.isViewerMode])
+  }, [editor])
+
+  useEffect(() => {
+    const view = editor?._tiptapEditor?.view
+    if (!view) return
+
+    view.dispatch(view.state.tr.setMeta(PLUGIN_KEY, true))
+  }, [editor, resolver, isViewerMode])
 }
 
 function findWikiLinks(
@@ -72,17 +87,21 @@ function findWikiLinks(
   return matches
 }
 
-function createWikiLinkPlugin(resolver: LinkResolver, isViewerMode: boolean): Plugin<PluginState> {
+function createWikiLinkPlugin(
+  getResolver: () => LinkResolver,
+  getIsViewerMode: () => boolean,
+): Plugin<PluginState> {
   return new Plugin<PluginState>({
     key: PLUGIN_KEY,
     state: {
       init(_, { doc, selection }) {
+        const resolver = getResolver()
         const matches = findWikiLinks(doc, resolver)
         return {
           decorations: buildWikiLinkDecorations(
             doc,
             matches,
-            isViewerMode,
+            getIsViewerMode(),
             selection.from,
             selection.to,
           ),
@@ -91,6 +110,8 @@ function createWikiLinkPlugin(resolver: LinkResolver, isViewerMode: boolean): Pl
         }
       },
       apply(tr, oldState, _, newEditorState) {
+        const resolver = getResolver()
+        const isViewerMode = getIsViewerMode()
         const forceRebuild = tr.getMeta(PLUGIN_KEY)
         const { from: selFrom, to: selTo } = newEditorState.selection
 

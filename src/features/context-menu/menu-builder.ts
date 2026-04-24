@@ -1,70 +1,173 @@
-import { groupConfig } from './menu-registry'
-import type { BuiltMenu, MenuContext, MenuGroup, MenuItemDef } from './types'
+import type {
+  BuiltContextMenu,
+  ContextMenuCommand,
+  ContextMenuContributor,
+  ContextMenuGroupConfig,
+  ContextMenuItemSpec,
+  ContextMenuScope,
+  ContextMenuSurfaceId,
+  ResolvedContextMenuItem,
+} from './types'
 
-function processMenuItem(item: MenuItemDef, ctx: MenuContext): MenuItemDef | null {
-  // Resolve children (can be static array or dynamic function)
-  const resolvedChildren = typeof item.children === 'function' ? item.children(ctx) : item.children
+type CommandMap<TContext, TServices> = Readonly<
+  Record<string, ContextMenuCommand<TContext, TServices, any>>
+>
 
-  const filteredChildren = resolvedChildren
-    ? resolvedChildren
-        .filter((child) => child.shouldShow(ctx))
-        .map((child) => processMenuItem(child, ctx))
-        .filter((child): child is MenuItemDef => child !== null)
-        .sort((a, b) => a.priority - b.priority) // Sort children by priority
-    : undefined
+interface BuildContextMenuOptions<TContext extends { surface: ContextMenuSurfaceId }, TServices> {
+  context: TContext
+  services: TServices
+  contributors: ReadonlyArray<ContextMenuContributor<TContext, TServices>>
+  commands: CommandMap<TContext, TServices>
+  groupConfig: ContextMenuGroupConfig
+}
 
-  // If children resolve to empty, show the item without a submenu
-  const finalChildren =
-    filteredChildren && filteredChildren.length > 0 ? filteredChildren : undefined
+function resolveValue<TValue, TContext, TServices, TPayload>(
+  value:
+    | TValue
+    | ((context: TContext, services: TServices, payload: TPayload | undefined) => TValue),
+  context: TContext,
+  services: TServices,
+  payload: TPayload | undefined,
+): TValue {
+  return typeof value === 'function'
+    ? (value as (context: TContext, services: TServices, payload: TPayload | undefined) => TValue)(
+        context,
+        services,
+        payload,
+      )
+    : value
+}
+
+function resolveContextMenuItem<
+  TContext extends { surface: ContextMenuSurfaceId },
+  TServices,
+  TPayload,
+>(
+  item: ContextMenuItemSpec<TContext, TServices, TPayload>,
+  context: TContext,
+  services: TServices,
+  commands: CommandMap<TContext, TServices>,
+): ResolvedContextMenuItem | null {
+  const payload = item.payload
+  if (item.applies && !item.applies(context, services, payload)) {
+    return null
+  }
+
+  const command = item.commandId ? commands[item.commandId] : undefined
+  if (item.commandId && !command) {
+    throw new Error(`Missing context-menu command "${item.commandId}"`)
+  }
+
+  const childrenSource =
+    typeof item.children === 'function' ? item.children(context, services, payload) : item.children
+  const children = childrenSource
+    ?.map((child) => resolveContextMenuItem(child, context, services, commands))
+    .filter((child): child is ResolvedContextMenuItem => child !== null)
+    .sort((a, b) => a.priority - b.priority)
+
+  const label = item.label ?? command?.label
+  if (!label) {
+    throw new Error(`Missing context-menu label for item "${item.id}"`)
+  }
 
   return {
-    ...item,
-    children: finalChildren,
+    id: item.id,
+    commandId: item.commandId,
+    label: resolveValue(label, context, services, payload),
+    icon: item.icon ?? command?.icon,
+    shortcut: item.shortcut
+      ? resolveValue(item.shortcut, context, services, payload)
+      : command?.shortcut
+        ? resolveValue(command.shortcut, context, services, payload)
+        : undefined,
+    disabled: item.isEnabled
+      ? !item.isEnabled(context, services, payload)
+      : command?.isEnabled
+        ? !command.isEnabled(context, services, payload)
+        : false,
+    checked: item.isChecked
+      ? item.isChecked(context, services, payload)
+      : command?.isChecked
+        ? command.isChecked(context, services, payload)
+        : false,
+    group: item.group,
+    priority: item.priority ?? 0,
+    scope: item.scope ?? 'base',
+    variant: item.variant,
+    className: item.className,
+    children: children && children.length > 0 ? children : undefined,
+    onSelect: async () => {
+      if (item.onSelect) {
+        await item.onSelect(context, services, payload)
+        return
+      }
+      if (!command) return
+      await command.run(context, services, payload)
+    },
   }
 }
 
-export function buildMenu(items: Array<MenuItemDef>, ctx: MenuContext): BuiltMenu {
-  // filter to visible items and process submenus
-  const visible = items
-    .filter((item) => item.shouldShow(ctx))
-    .map((item) => processMenuItem(item, ctx))
-    .filter((item): item is MenuItemDef => item !== null)
+function suppressDuplicateSelectionItems(items: Array<ResolvedContextMenuItem>) {
+  const targetCommandIds = new Set(
+    items
+      .filter((item) => item.scope === 'target')
+      .map((item) => item.commandId)
+      .filter(Boolean),
+  )
 
-  if (visible.length === 0) {
+  return items.filter(
+    (item) =>
+      !(item.scope === 'selection' && item.commandId && targetCommandIds.has(item.commandId)),
+  )
+}
+
+export function buildMenu<TContext extends { surface: ContextMenuSurfaceId }, TServices>({
+  context,
+  services,
+  contributors,
+  commands,
+  groupConfig,
+}: BuildContextMenuOptions<TContext, TServices>): BuiltContextMenu {
+  const resolvedItems = suppressDuplicateSelectionItems(
+    contributors
+      .filter((contributor) => contributor.surfaces.includes(context.surface))
+      .filter((contributor) => contributor.applies?.(context, services) ?? true)
+      .flatMap((contributor) => contributor.getItems(context, services))
+      .map((item) => resolveContextMenuItem(item, context, services, commands))
+      .filter((item): item is ResolvedContextMenuItem => item !== null),
+  )
+
+  if (resolvedItems.length === 0) {
     return { groups: [], flatItems: [], isEmpty: true }
   }
 
-  // group items
-  const groupMap = visible.reduce((map, item) => {
-    const group = item.group
-    if (!map.has(group)) {
-      map.set(group, [])
+  const groupMap = new Map<string, Array<ResolvedContextMenuItem>>()
+  for (const item of resolvedItems) {
+    const items = groupMap.get(item.group)
+    if (items) {
+      items.push(item)
+      continue
     }
-    map.get(group)!.push(item)
-    return map
-  }, new Map<string, Array<MenuItemDef>>())
-
-  // sort items within each group
-  for (const groupItems of groupMap.values()) {
-    groupItems.sort((a, b) => a.priority - b.priority)
+    groupMap.set(item.group, [item])
   }
 
-  // sort groups
-  const sortedGroupIds = Array.from(groupMap.keys()).sort((a, b) => {
-    const aPriority = groupConfig[a as keyof typeof groupConfig].priority
-    const bPriority = groupConfig[b as keyof typeof groupConfig].priority
-    return aPriority - bPriority
-  })
+  for (const items of groupMap.values()) {
+    items.sort((a, b) => a.priority - b.priority)
+  }
 
-  // combine
-  const groups: Array<MenuGroup> = sortedGroupIds.map((id) => ({
-    id,
-    items: groupMap.get(id)!,
-  }))
+  const groups = Array.from(groupMap.entries())
+    .sort(([a], [b]) => {
+      const aPriority = groupConfig[a]?.priority ?? Number.MAX_SAFE_INTEGER
+      const bPriority = groupConfig[b]?.priority ?? Number.MAX_SAFE_INTEGER
+      return aPriority - bPriority
+    })
+    .map(([id, items]) => ({ id, items }))
 
   return {
     groups,
-    flatItems: visible,
+    flatItems: groups.flatMap((group) => group.items),
     isEmpty: false,
   }
 }
+
+export type { ContextMenuScope }

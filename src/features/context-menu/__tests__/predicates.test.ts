@@ -12,7 +12,7 @@ import { testId } from '~/test/helpers/test-id'
 function ctx(overrides: Partial<MenuContext> = {}): MenuContext {
   return {
     item: undefined,
-    viewContext: VIEW_CONTEXT.SIDEBAR,
+    surface: VIEW_CONTEXT.SIDEBAR,
     ...overrides,
   }
 }
@@ -75,7 +75,7 @@ describe('view context predicates', () => {
   it('inSidebar / notInSidebar', () => {
     expect(p.inSidebar(ctx())).toBe(true)
     expect(p.notInSidebar(ctx())).toBe(false)
-    expect(p.inSidebar(ctx({ viewContext: VIEW_CONTEXT.TOPBAR }))).toBe(false)
+    expect(p.inSidebar(ctx({ surface: VIEW_CONTEXT.TOPBAR }))).toBe(false)
   })
 
   it('atRoot returns true when no item', () => {

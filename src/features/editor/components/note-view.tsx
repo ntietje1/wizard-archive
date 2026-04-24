@@ -23,8 +23,9 @@ interface NoteViewProps {
 
 export function NoteView({ editor, editable, linkResolver, className, children }: NoteViewProps) {
   const resolvedTheme = useResolvedTheme()
-  useWikiLinkExtension(editor, linkResolver)
-  useMdLinkExtension(editor, linkResolver)
+  const isViewerMode = !editable || linkResolver.isViewerMode
+  useWikiLinkExtension(editor, linkResolver, isViewerMode)
+  useMdLinkExtension(editor, linkResolver, isViewerMode)
   useDisableAutolink(editor)
 
   return (
@@ -38,9 +39,13 @@ export function NoteView({ editor, editable, linkResolver, className, children }
       slashMenu={false}
       linkToolbar={false}
     >
-      <PreventExternalDrop />
-      <SideMenuController sideMenu={SideMenuRenderer} />
-      <SlashMenu editor={editor} />
+      {editable && (
+        <>
+          <PreventExternalDrop />
+          <SideMenuController sideMenu={SideMenuRenderer} />
+          <SlashMenu editor={editor} />
+        </>
+      )}
       {children}
     </BlockNoteView>
   )

@@ -1,0 +1,16 @@
+import { createCanvasNodePlacement } from '../canvas-node-modules'
+import type { Id } from 'convex/_generated/dataModel'
+import type { Node, XYPosition } from '@xyflow/react'
+
+const EMBED_SIZE = { width: 320, height: 240 } as const
+
+export function createEmbedCanvasNode(
+  sidebarItemId: Id<'sidebarItems'>,
+  position: XYPosition,
+): Node {
+  return createCanvasNodePlacement('embed', {
+    position,
+    size: EMBED_SIZE,
+    data: { sidebarItemId },
+  }).node
+}

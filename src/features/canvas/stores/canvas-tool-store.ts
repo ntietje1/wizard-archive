@@ -1,103 +1,63 @@
 import { create } from 'zustand'
-import type { DrawingState, Point2D } from '../utils/canvas-awareness-types'
-import type { Bounds } from '../utils/canvas-stroke-utils'
-
-export type CanvasTool = 'select' | 'hand' | 'draw' | 'erase' | 'lasso' | 'rectangle'
-
-const TOOL_CURSORS: Record<CanvasTool, string | undefined> = {
-  select: undefined,
-  hand: 'grab',
-  draw: 'crosshair',
-  erase: 'cell',
-  lasso: 'crosshair',
-  rectangle: 'crosshair',
-}
-
-export function getToolCursor(tool: CanvasTool): string | undefined {
-  return TOOL_CURSORS[tool]
-}
+import { useShallow } from 'zustand/shallow'
+import { STROKE_SIZE_OPTIONS } from '../properties/canvas-property-definitions'
+import type { CanvasToolId, CanvasToolPropertyContext } from '../tools/canvas-tool-types'
 
 interface CanvasToolState {
-  activeTool: CanvasTool
+  activeTool: CanvasToolId
+  edgeType: 'bezier' | 'straight' | 'step'
   strokeColor: string
   strokeSize: number
   strokeOpacity: number
-  erasingStrokeIds: Set<string>
-  rectDeselectedIds: Set<string>
-  localDrawing: DrawingState | null
-  lassoPath: Array<Point2D>
-  selectionRect: Bounds | null
-  canUndo: boolean
-  canRedo: boolean
-  undo: () => void
-  redo: () => void
 }
 
 interface CanvasToolActions {
-  setActiveTool: (tool: CanvasTool) => void
+  setActiveTool: (tool: CanvasToolId) => void
+  setEdgeType: (type: CanvasToolState['edgeType']) => void
   setStrokeColor: (color: string) => void
   setStrokeSize: (size: number) => void
   setStrokeOpacity: (opacity: number) => void
-  setErasingStrokeIds: (ids: Set<string>) => void
-  setRectDeselectedIds: (ids: Set<string>) => void
-  setLocalDrawing: (drawing: DrawingState | null) => void
-  setLassoPath: (path: Array<Point2D>) => void
-  setSelectionRect: (rect: Bounds | null) => void
-  setHistory: (history: {
-    canUndo: boolean
-    canRedo: boolean
-    undo: () => void
-    redo: () => void
-  }) => void
   reset: () => void
 }
 
 const INITIAL_STATE: CanvasToolState = {
   activeTool: 'select',
+  edgeType: 'bezier',
   strokeColor: 'var(--foreground)',
-  strokeSize: 4,
+  strokeSize: STROKE_SIZE_OPTIONS[2],
   strokeOpacity: 100,
-  erasingStrokeIds: new Set(),
-  rectDeselectedIds: new Set(),
-  localDrawing: null,
-  lassoPath: [],
-  selectionRect: null,
-  canUndo: false,
-  canRedo: false,
-  undo: () => {},
-  redo: () => {},
 }
 
 export const useCanvasToolStore = create<CanvasToolState & CanvasToolActions>((set) => ({
   ...INITIAL_STATE,
 
-  setActiveTool: (tool) =>
-    set({
-      activeTool: tool,
-      erasingStrokeIds: new Set(),
-      rectDeselectedIds: new Set(),
-      localDrawing: null,
-      lassoPath: [],
-      selectionRect: null,
-    }),
+  setActiveTool: (tool) => set({ activeTool: tool }),
+  setEdgeType: (edgeType) => set({ edgeType }),
 
   setStrokeColor: (color) => set({ strokeColor: color }),
   setStrokeSize: (size) => set({ strokeSize: size }),
   setStrokeOpacity: (opacity) => set({ strokeOpacity: opacity }),
 
-  setErasingStrokeIds: (ids) => set({ erasingStrokeIds: ids }),
-  setRectDeselectedIds: (ids) => set({ rectDeselectedIds: ids }),
-  setLocalDrawing: (drawing) => set({ localDrawing: drawing }),
-  setLassoPath: (path) => set({ lassoPath: path }),
-  setSelectionRect: (rect) => set({ selectionRect: rect }),
-
-  setHistory: (history) => set(history),
-
-  reset: () =>
-    set({
-      ...INITIAL_STATE,
-      erasingStrokeIds: new Set(),
-      rectDeselectedIds: new Set(),
-      lassoPath: [],
-    }),
+  reset: () => set(INITIAL_STATE),
 }))
+
+export function useCanvasToolPropertyContext(): CanvasToolPropertyContext {
+  const subscribedSettings = useCanvasToolStore(
+    useShallow((state) => ({
+      edgeType: state.edgeType,
+      strokeColor: state.strokeColor,
+      strokeOpacity: state.strokeOpacity,
+      strokeSize: state.strokeSize,
+    })),
+  )
+
+  return {
+    toolState: {
+      getSettings: () => subscribedSettings,
+      setEdgeType: (type) => useCanvasToolStore.getState().setEdgeType(type),
+      setStrokeColor: (color) => useCanvasToolStore.getState().setStrokeColor(color),
+      setStrokeOpacity: (opacity) => useCanvasToolStore.getState().setStrokeOpacity(opacity),
+      setStrokeSize: (size) => useCanvasToolStore.getState().setStrokeSize(size),
+    },
+  }
+}

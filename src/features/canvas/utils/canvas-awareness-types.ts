@@ -1,4 +1,6 @@
 export type Point2D = { x: number; y: number }
+export type CanvasAwarenessNamespace = `core.${string}` | `tool.${string}` | `node.${string}`
+export type CanvasAwarenessPresence = Partial<Record<CanvasAwarenessNamespace, unknown>>
 
 /**
  * Serialized in-progress stroke data broadcast via awareness.
@@ -14,6 +16,11 @@ export type DrawingState = {
 
 export type ResizingState = Record<string, { width: number; height: number; x: number; y: number }>
 
+export type RemoteHighlight = {
+  color: string
+  name: string
+}
+
 export type SelectingState =
   | { type: 'rect'; x: number; y: number; width: number; height: number }
   | { type: 'lasso'; points: Array<Point2D> }
@@ -23,15 +30,9 @@ export type SelectingState =
  * Tracks cursor position, active drag/resize/draw/select operations.
  * All operation states are nullable when inactive.
  */
-export type CanvasAwarenessState = {
+type CanvasAwarenessState = {
   user: { name: string; color: string }
-  cursor: Point2D | null
-  /** Map of element IDs to their current drag positions */
-  dragging: Record<string, Point2D> | null
-  resizing: ResizingState | null
-  selectedNodeIds: Array<string> | null
-  drawing: DrawingState | null
-  selecting: SelectingState | null
+  presence: CanvasAwarenessPresence
 }
 
 /**
@@ -39,4 +40,8 @@ export type CanvasAwarenessState = {
  */
 export type RemoteUser = CanvasAwarenessState & {
   clientId: number
+  cursor: Point2D | null
+  dragging: Record<string, Point2D> | null
+  resizing: ResizingState | null
+  selectedNodeIds: Array<string> | null
 }

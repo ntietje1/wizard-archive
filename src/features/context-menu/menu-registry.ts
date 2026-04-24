@@ -1,4 +1,5 @@
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import type { PermissionLevel } from 'convex/permissions/types'
 import {
   ArrowUpLeft,
   ArrowUpRight,
@@ -25,8 +26,13 @@ import {
   Trash2,
 } from 'lucide-react'
 import * as p from './predicates'
-import type { MenuContext, MenuItemDef } from './types'
-import type { PermissionLevel } from 'convex/permissions/types'
+import type {
+  ContextMenuCommand,
+  ContextMenuContributor,
+  ContextMenuGroupConfig,
+  ContextMenuItemSpec,
+  EditorMenuContext,
+} from './types'
 import {
   RIGHT_SIDEBAR_CONTENT,
   RIGHT_SIDEBAR_PANEL_ID,
@@ -46,10 +52,10 @@ function activatePanelContent(contentId: string): void {
   store.setVisible(RIGHT_SIDEBAR_PANEL_ID, true)
 }
 
-// Helper to get a friendly type name for the item
-function getTypeName(ctx: MenuContext): string {
-  if (!ctx.item) return 'Item'
-  switch (ctx.item.type) {
+function getTypeName(context: EditorMenuContext): string {
+  if (!context.item) return 'Item'
+
+  switch (context.item.type) {
     case SIDEBAR_ITEM_TYPES.notes:
       return 'Note'
     case SIDEBAR_ITEM_TYPES.folders:
@@ -61,532 +67,543 @@ function getTypeName(ctx: MenuContext): string {
     case SIDEBAR_ITEM_TYPES.canvases:
       return 'Canvas'
     default:
-      return assertNever(ctx.item)
+      return assertNever(context.item)
   }
 }
 
 export type ActionHandlers = {
-  open: (ctx: MenuContext) => void
-  rename: (ctx: MenuContext) => void
-  delete: (ctx: MenuContext) => void
-  showInSidebar: (ctx: MenuContext) => void
-
-  createNote: (ctx: MenuContext) => void
-  createFolder: (ctx: MenuContext) => void
-  createMap: (ctx: MenuContext) => void
-  createFile: (ctx: MenuContext) => void
-  createCanvas: (ctx: MenuContext) => void
-
-  editMap: (ctx: MenuContext) => void
-  editFile: (ctx: MenuContext) => void
-  editItem: (ctx: MenuContext) => void
-
-  pinToMap: (ctx: MenuContext) => void
-  goToMapPin: (ctx: MenuContext) => void
-  createMapPin: (ctx: MenuContext) => void
-
-  removeMapPin: (ctx: MenuContext) => void
-  moveMapPin: (ctx: MenuContext) => void
-  togglePinVisibility: (ctx: MenuContext) => void
-
-  startSession: (ctx: MenuContext) => void
-  endSession: (ctx: MenuContext) => void
-
-  // Share actions
-  setGeneralAccessLevel: (ctx: MenuContext, level: PermissionLevel | null) => void
-
-  // Download actions
-  downloadFile: (ctx: MenuContext) => void
-  downloadNote: (ctx: MenuContext) => void
-  downloadMap: (ctx: MenuContext) => void
-  downloadFolder: (ctx: MenuContext) => void
-  downloadAll: (ctx: MenuContext) => void
-
-  // Bookmark actions
-  toggleBookmark: (ctx: MenuContext) => void
-
-  // Trash actions
-  restore: (ctx: MenuContext) => void
-  permanentlyDelete: (ctx: MenuContext) => void
-  emptyTrash: (ctx: MenuContext) => void
+  open: (context: EditorMenuContext) => void
+  rename: (context: EditorMenuContext) => void
+  delete: (context: EditorMenuContext) => void
+  showInSidebar: (context: EditorMenuContext) => void
+  createNote: (context: EditorMenuContext) => void
+  createFolder: (context: EditorMenuContext) => void
+  createMap: (context: EditorMenuContext) => void
+  createFile: (context: EditorMenuContext) => void
+  createCanvas: (context: EditorMenuContext) => void
+  editMap: (context: EditorMenuContext) => void
+  editFile: (context: EditorMenuContext) => void
+  editItem: (context: EditorMenuContext) => void
+  pinToMap: (context: EditorMenuContext) => void
+  goToMapPin: (context: EditorMenuContext) => void
+  createMapPin: (context: EditorMenuContext) => void
+  removeMapPin: (context: EditorMenuContext) => void
+  moveMapPin: (context: EditorMenuContext) => void
+  togglePinVisibility: (context: EditorMenuContext) => void
+  startSession: (context: EditorMenuContext) => void
+  endSession: (context: EditorMenuContext) => void
+  setGeneralAccessLevel: (context: EditorMenuContext, level: PermissionLevel | null) => void
+  downloadFile: (context: EditorMenuContext) => void
+  downloadNote: (context: EditorMenuContext) => void
+  downloadMap: (context: EditorMenuContext) => void
+  downloadFolder: (context: EditorMenuContext) => void
+  downloadAll: (context: EditorMenuContext) => void
+  toggleBookmark: (context: EditorMenuContext) => void
+  restore: (context: EditorMenuContext) => void
+  permanentlyDelete: (context: EditorMenuContext) => void
+  emptyTrash: (context: EditorMenuContext) => void
 }
 
-export function createMenuItems(actions: ActionHandlers): Array<MenuItemDef> {
-  return [
-    // ========== PRIMARY GROUP ==========
-    {
-      id: 'test-editor',
-      label: 'Test Editor',
-      icon: Pencil,
-      group: 'primary',
-      priority: 0,
-      shouldShow: (ctx) => p.hasBlockNoteEditor(ctx),
-      action: (ctx) => {
-        logger.debug('test-editor', ctx)
-      },
-    },
-    {
-      id: 'test-block',
-      label: 'Test Block',
-      icon: Pencil,
-      group: 'primary',
-      priority: 0,
-      shouldShow: (ctx) => p.hasBlockNoteId(ctx),
-      action: (ctx) => {
-        logger.debug('test-block', ctx.blockNoteId)
-        if (!ctx.blockNoteId) return
-        const block = ctx.editor?.getBlock(ctx.blockNoteId)
-        logger.debug(block?.content)
-      },
-    },
-    {
-      id: 'open',
-      label: 'Open',
-      icon: SquareArrowOutUpRight,
-      group: 'primary',
-      priority: 0,
-      shouldShow: (ctx) => (p.inSidebar(ctx) || p.hasPinContext(ctx)) && ctx.item !== undefined,
-      action: actions.open,
-    },
-    {
-      id: 'go-to-map-pin',
-      label: 'Go to Map Pin',
-      icon: Navigation,
-      group: 'primary',
-      priority: 1,
-      shouldShow: (
-        ctx, // TODO: check view access on both item and map
-      ) =>
-        p.inSidebar(ctx) &&
-        p.isSidebarItem(ctx) &&
-        p.isPinnedOnActiveMap(ctx) &&
-        p.isNotActiveMap(ctx),
-      action: actions.goToMapPin,
-    },
-    {
-      id: 'toggle-bookmark',
-      label: (ctx) => (ctx.item?.isBookmarked ? 'Remove Bookmark' : 'Bookmark'),
-      icon: Bookmark,
-      group: 'primary',
-      priority: 2,
-      shouldShow: (ctx) => p.inSidebar(ctx) && p.isSidebarItem(ctx),
-      isChecked: (ctx) => ctx.item?.isBookmarked ?? false,
-      action: actions.toggleBookmark,
-    },
-
-    // ========== CREATE GROUP ==========
-    {
-      id: 'create-new-submenu',
-      label: 'New...',
-      icon: Plus,
-      group: 'create',
-      priority: 5,
-      shouldShow: (ctx) =>
-        p.hasFullAccess(ctx) &&
-        !p.inView('topbar')(ctx) &&
-        !p.hasPinContext(ctx) &&
-        (p.isType(SIDEBAR_ITEM_TYPES.folders)(ctx) || p.atRoot(ctx)),
-      action: () => {}, // No action for submenu parent
-      children: [
-        // Note, Folder, Map, Canvas
-        {
-          id: 'submenu-create-note',
-          label: 'Note',
-          icon: FilePlus,
-          group: 'create',
-          priority: 10,
-          shouldShow: p.always,
-          action: actions.createNote,
-        },
-        {
-          id: 'submenu-create-folder',
-          label: 'Folder',
-          icon: FolderPlus,
-          group: 'create',
-          priority: 11,
-          shouldShow: p.always,
-          action: actions.createFolder,
-        },
-        {
-          id: 'submenu-create-map',
-          label: 'Map',
-          icon: MapPin,
-          group: 'create',
-          priority: 12,
-          shouldShow: p.always,
-          action: actions.createMap,
-        },
-        {
-          id: 'submenu-create-file',
-          label: 'File',
-          icon: File,
-          group: 'create',
-          priority: 14,
-          shouldShow: p.always,
-          action: actions.createFile,
-        },
-        {
-          id: 'submenu-create-canvas',
-          label: 'Canvas',
-          icon: Grid2x2Plus,
-          group: 'create',
-          priority: 13,
-          shouldShow: p.always,
-          action: actions.createCanvas,
-        },
-      ],
-    },
-
-    // // ========== SHARE GROUP ==========
-    // {
-    //   id: 'share-item',
-    //   label: 'Share...',
-    //   icon: Share2,
-    //   group: 'share',
-    //   variant: 'share',
-    //   priority: 20,
-    //   shouldShow: (ctx) => p.isDm(ctx) && p.isSidebarItem(ctx),
-    //   isDisabled: (ctx) => ctx.shareState?.isLoading ?? false,
-    //   action: () => {},
-    //   children: (ctx): Array<MenuItemDef> => {
-    //     const shareState = ctx.shareState
-    //     if (!shareState) return []
-
-    //     const currentLevel = shareState.allPermissionLevel
-    //     const inheritedLevel = shareState.inheritedAllPermissionLevel
-    //     const hasInherited = inheritedLevel !== undefined
-
-    //     const PERMISSION_LABELS: Record<string, string> = {
-    //       none: 'None',
-    //       view: 'View',
-    //       edit: 'Edit',
-    //       full_access: 'Full access',
-    //     }
-
-    //     const items: Array<MenuItemDef> = []
-
-    //     if (hasInherited) {
-    //       const inheritedLabel = PERMISSION_LABELS[inheritedLevel] ?? 'None'
-    //       items.push({
-    //         id: 'general-access-default',
-    //         label: `Default (${inheritedLabel})`,
-    //         group: 'share',
-    //         priority: 0,
-    //         shouldShow: p.always,
-    //         isChecked: () => currentLevel === undefined,
-    //         action: () => actions.setGeneralAccessLevel(ctx, undefined),
-    //       })
-    //     }
-
-    //     const levels: Array<{ key: string; level: PermissionLevel }> = [
-    //       { key: 'none', level: 'none' },
-    //       { key: 'view', level: 'view' },
-    //       { key: 'edit', level: 'edit' },
-    //       { key: 'full_access', level: 'full_access' },
-    //     ]
-
-    //     for (const { key, level } of levels) {
-    //       items.push({
-    //         id: `general-access-${key}`,
-    //         label: PERMISSION_LABELS[key],
-    //         group: 'share',
-    //         priority: items.length,
-    //         shouldShow: p.always,
-    //         isChecked: () => currentLevel === level,
-    //         action: () => actions.setGeneralAccessLevel(ctx, level),
-    //       })
-    //     }
-
-    //     return items
-    //   },
-    // },
-
-    // ========== NAVIGATION GROUP ==========
-    {
-      id: 'show-in-sidebar',
-      label: 'Show in Sidebar',
-      icon: Eye,
-      group: 'primary',
-      priority: 0,
-      shouldShow: (ctx) => p.isSidebarItem(ctx) && p.isNotActiveMap(ctx),
-      action: actions.showInSidebar,
-    },
-
-    // // ========== SESSION GROUP ==========
-    // {
-    //   id: 'start-session',
-    //   label: 'Start Session',
-    //   icon: Play,
-    //   group: 'primary',
-    //   priority: 1,
-    //   shouldShow: (ctx) =>
-    //     p.hasNoActiveSession(ctx) &&
-    //     p.atRoot(ctx) &&
-    //     ctx.memberRole === CAMPAIGN_MEMBER_ROLE.DM,
-    //   action: actions.startSession,
-    // },
-    // {
-    //   id: 'end-session',
-    //   label: 'End Session',
-    //   icon: Pause,
-    //   group: 'primary',
-    //   priority: 1,
-    //   shouldShow: (ctx) =>
-    //     p.hasActiveSession(ctx) &&
-    //     p.atRoot(ctx) &&
-    //     ctx.memberRole === CAMPAIGN_MEMBER_ROLE.DM,
-    //   action: actions.endSession,
-    // },
-
-    // ========== PIN ACTIONS GROUP ==========
-    {
-      id: 'pin-to-map',
-      label: 'Pin to Map',
-      icon: MapPin,
-      group: 'pin-actions',
-      priority: 1,
-      shouldShow: (ctx) =>
-        p.hasEditAccess(ctx) &&
-        p.inSidebar(ctx) &&
-        p.isSidebarItem(ctx) &&
-        !p.isPinnedOnActiveMap(ctx) &&
-        p.isNotActiveMap(ctx),
-      action: actions.pinToMap,
-    },
-    {
-      id: 'toggle-pin-visibility',
-      label: (ctx) => (ctx.activePin?.visible === true ? 'Hide Pin' : 'Show Pin'),
-      icon: EyeOff,
-      group: 'pin-actions',
-      priority: 49,
-      shouldShow: (ctx) => p.isDm(ctx) && p.hasPinContext(ctx),
-      action: actions.togglePinVisibility,
-    },
-    {
-      id: 'move-map-pin',
-      label: 'Move Pin',
-      icon: Move,
-      group: 'pin-actions',
-      priority: 50,
-      shouldShow: (ctx) => p.hasEditAccess(ctx) && p.hasPinContext(ctx),
-      action: actions.moveMapPin,
-    },
-    {
-      id: 'remove-map-pin',
-      label: 'Remove Pin',
-      icon: Trash2,
-      group: 'pin-actions',
-      priority: 51,
-      variant: 'danger',
-      shouldShow: (ctx) => p.hasEditAccess(ctx) && p.hasPinContext(ctx),
-      action: actions.removeMapPin,
-    },
-    {
-      id: 'create-map-pin',
-      label: 'Create Pin Here',
-      icon: MapPin,
-      group: 'pin-actions',
-      priority: 52,
-      shouldShow: (ctx) => p.hasEditAccess(ctx) && p.isActiveMap(ctx) && p.inView('map-view')(ctx),
-      action: actions.createMapPin,
-    },
-
-    // ========== PANELS GROUP ==========
-    {
-      id: 'panel-history',
-      label: 'Edit History',
-      icon: History,
-      group: 'panels',
-      priority: 70,
-      shouldShow: (ctx) => p.isSidebarItem(ctx) && p.inView('topbar')(ctx),
-      isChecked: () => isPanelContentActive(RIGHT_SIDEBAR_CONTENT.history),
-      action: () => activatePanelContent(RIGHT_SIDEBAR_CONTENT.history),
-    },
-    {
-      id: 'panel-backlinks',
-      label: 'Back Links',
-      icon: ArrowUpLeft,
-      group: 'panels',
-      priority: 71,
-      shouldShow: (ctx) => p.isSidebarItem(ctx) && p.inView('topbar')(ctx),
-      isChecked: () => isPanelContentActive(RIGHT_SIDEBAR_CONTENT.backlinks),
-      action: () => activatePanelContent(RIGHT_SIDEBAR_CONTENT.backlinks),
-    },
-    {
-      id: 'panel-outgoing',
-      label: 'Outgoing Links',
-      icon: ArrowUpRight,
-      group: 'panels',
-      priority: 72,
-      shouldShow: (ctx) => p.isSidebarItem(ctx) && p.inView('topbar')(ctx),
-      isChecked: () => isPanelContentActive(RIGHT_SIDEBAR_CONTENT.outgoing),
-      action: () => activatePanelContent(RIGHT_SIDEBAR_CONTENT.outgoing),
-    },
-    {
-      id: 'panel-outline',
-      label: 'Outline',
-      icon: List,
-      group: 'panels',
-      priority: 73,
-      shouldShow: (ctx) => p.isSidebarItem(ctx) && p.inView('topbar')(ctx),
-      isChecked: () => isPanelContentActive(RIGHT_SIDEBAR_CONTENT.outline),
-      action: () => activatePanelContent(RIGHT_SIDEBAR_CONTENT.outline),
-    },
-
-    // ========== DOWNLOAD GROUP ==========
-    {
-      id: 'download-file',
-      label: 'Download',
-      icon: Download,
-      group: 'download',
-      priority: 80,
-      shouldShow: (ctx) =>
-        p.isSidebarItem(ctx) && p.isType(SIDEBAR_ITEM_TYPES.files)(ctx) && !p.hasPinContext(ctx),
-      action: actions.downloadFile,
-    },
-    {
-      id: 'download-note',
-      label: 'Download',
-      icon: Download,
-      group: 'download',
-      priority: 80,
-      shouldShow: (ctx) =>
-        p.hasViewAccess(ctx) &&
-        p.isSidebarItem(ctx) &&
-        p.isType(SIDEBAR_ITEM_TYPES.notes)(ctx) &&
-        !p.hasMapContext(ctx),
-      action: actions.downloadNote,
-    },
-    {
-      id: 'download-map',
-      label: 'Download Map Image',
-      icon: Download,
-      group: 'download',
-      priority: 80,
-      shouldShow: (ctx) =>
-        p.isSidebarItem(ctx) && p.isType(SIDEBAR_ITEM_TYPES.gameMaps)(ctx) && !p.hasMapContext(ctx),
-      action: actions.downloadMap,
-    },
-    {
-      id: 'download-folder',
-      label: 'Download',
-      icon: FolderDown,
-      group: 'download',
-      priority: 81,
-      shouldShow: (ctx) =>
-        p.hasViewAccess(ctx) &&
-        p.isSidebarItem(ctx) &&
-        p.isType(SIDEBAR_ITEM_TYPES.folders)(ctx) &&
-        !p.hasMapContext(ctx),
-      action: actions.downloadFolder,
-    },
-    {
-      id: 'download-all',
-      label: 'Download All',
-      icon: FolderDown,
-      group: 'download',
-      priority: 82,
-      shouldShow: (ctx) => p.atRoot(ctx) && p.inSidebar(ctx),
-      action: actions.downloadAll,
-    },
-
-    // ========== EDIT GROUP ==========
-    {
-      id: 'rename',
-      label: 'Rename',
-      icon: FileTypeIcon,
-      group: 'edit',
-      priority: 90,
-      shouldShow: (ctx) =>
-        p.hasFullAccess(ctx) && p.inSidebar(ctx) && p.isItemNotTrashed(ctx) && p.isSidebarItem(ctx),
-      action: actions.rename,
-    },
-    {
-      id: 'edit-map',
-      label: 'Edit Map',
-      icon: FileEdit,
-      group: 'edit',
-      priority: 99,
-      shouldShow: (ctx) =>
-        p.hasFullAccess(ctx) &&
-        p.isItemNotTrashed(ctx) &&
-        p.isType(SIDEBAR_ITEM_TYPES.gameMaps)(ctx),
-      action: actions.editMap,
-    },
-    {
-      id: 'edit-file',
-      label: 'Edit File',
-      icon: FileEdit,
-      group: 'edit',
-      priority: 99,
-      shouldShow: (ctx) =>
-        p.hasFullAccess(ctx) && p.isItemNotTrashed(ctx) && p.isType(SIDEBAR_ITEM_TYPES.files)(ctx),
-      action: actions.editFile,
-    },
-    {
-      id: 'edit-item',
-      label: (ctx) => `Edit ${getTypeName(ctx)}`,
-      icon: FileEdit,
-      group: 'edit',
-      priority: 99,
-      shouldShow: (ctx) =>
-        p.hasFullAccess(ctx) &&
-        p.isSidebarItem(ctx) &&
-        p.isItemNotTrashed(ctx) &&
-        p.isNotType(SIDEBAR_ITEM_TYPES.gameMaps, SIDEBAR_ITEM_TYPES.files)(ctx),
-      action: actions.editItem,
-    },
-
-    // ========== DANGER GROUP ==========
-    {
-      id: 'delete',
-      label: 'Move to Trash',
-      icon: Trash2,
-      group: 'danger',
-      priority: 100,
-      variant: 'danger',
-      shouldShow: (ctx) =>
-        p.hasFullAccess(ctx) &&
-        p.isSidebarItem(ctx) &&
-        p.isItemNotTrashed(ctx) &&
-        (p.inView('sidebar')(ctx) || p.inView('folder-view')(ctx) || p.inView('topbar')(ctx)),
-      action: actions.delete,
-    },
-
-    // ========== TRASH VIEW ACTIONS ==========
-    {
-      id: 'restore',
-      label: 'Restore',
-      icon: RotateCcw,
-      group: 'primary',
-      priority: 0,
-      shouldShow: (ctx) => p.isItemTrashed(ctx) && p.isSidebarItem(ctx),
-      action: actions.restore,
-    },
-    {
-      id: 'permanently-delete',
-      label: 'Delete Forever',
-      icon: Trash2,
-      group: 'danger',
-      priority: 100,
-      variant: 'danger',
-      shouldShow: (ctx) => p.isItemTrashed(ctx) && p.isSidebarItem(ctx),
-      action: actions.permanentlyDelete,
-    },
-    {
-      id: 'empty-trash',
-      label: 'Empty Trash',
-      icon: Trash2,
-      group: 'danger',
-      priority: 101,
-      variant: 'danger',
-      shouldShow: (ctx) => p.isTrashView(ctx) && p.isDm(ctx),
-      action: actions.emptyTrash,
-    },
-  ]
+export interface EditorContextMenuServices {
+  actions: ActionHandlers
 }
 
-export const groupConfig = {
+type EditorContextMenuItem = ContextMenuItemSpec<EditorMenuContext, EditorContextMenuServices>
+type EditorContextMenuContributor = ContextMenuContributor<
+  EditorMenuContext,
+  EditorContextMenuServices
+>
+
+type SimpleActionKey = Exclude<keyof ActionHandlers, 'setGeneralAccessLevel'>
+
+function createActionCommand(
+  id: SimpleActionKey,
+): ContextMenuCommand<EditorMenuContext, EditorContextMenuServices> {
+  return {
+    id,
+    run: (context, services) => services.actions[id](context),
+  }
+}
+
+export const editorContextMenuCommands = {
+  open: createActionCommand('open'),
+  rename: createActionCommand('rename'),
+  delete: createActionCommand('delete'),
+  showInSidebar: createActionCommand('showInSidebar'),
+  createNote: createActionCommand('createNote'),
+  createFolder: createActionCommand('createFolder'),
+  createMap: createActionCommand('createMap'),
+  createFile: createActionCommand('createFile'),
+  createCanvas: createActionCommand('createCanvas'),
+  editMap: createActionCommand('editMap'),
+  editFile: createActionCommand('editFile'),
+  editItem: createActionCommand('editItem'),
+  pinToMap: createActionCommand('pinToMap'),
+  goToMapPin: createActionCommand('goToMapPin'),
+  createMapPin: createActionCommand('createMapPin'),
+  removeMapPin: createActionCommand('removeMapPin'),
+  moveMapPin: createActionCommand('moveMapPin'),
+  togglePinVisibility: createActionCommand('togglePinVisibility'),
+  startSession: createActionCommand('startSession'),
+  endSession: createActionCommand('endSession'),
+  downloadFile: createActionCommand('downloadFile'),
+  downloadNote: createActionCommand('downloadNote'),
+  downloadMap: createActionCommand('downloadMap'),
+  downloadFolder: createActionCommand('downloadFolder'),
+  downloadAll: createActionCommand('downloadAll'),
+  toggleBookmark: createActionCommand('toggleBookmark'),
+  restore: createActionCommand('restore'),
+  permanentlyDelete: createActionCommand('permanentlyDelete'),
+  emptyTrash: createActionCommand('emptyTrash'),
+  setGeneralAccessLevel: {
+    id: 'setGeneralAccessLevel',
+    run: (context, services, payload) =>
+      services.actions.setGeneralAccessLevel(context, (payload as PermissionLevel | null) ?? null),
+  },
+  activatePanel: {
+    id: 'activatePanel',
+    run: (_context, _services, payload) => {
+      if (typeof payload !== 'string') {
+        logger.warn('activatePanel received invalid payload', payload)
+        return
+      }
+      activatePanelContent(payload)
+    },
+  },
+  logTestEditor: {
+    id: 'logTestEditor',
+    run: (context) => {
+      logger.debug('test-editor', context)
+    },
+  },
+  logTestBlock: {
+    id: 'logTestBlock',
+    run: (context) => {
+      logger.debug('test-block', context.blockNoteId)
+      if (!context.blockNoteId) return
+      const block = context.editor?.getBlock(context.blockNoteId)
+      logger.debug(block?.content)
+    },
+  },
+} satisfies Record<string, ContextMenuCommand<EditorMenuContext, EditorContextMenuServices>>
+
+const createSubmenuItems: Array<EditorContextMenuItem> = [
+  {
+    id: 'submenu-create-note',
+    commandId: 'createNote',
+    label: 'Note',
+    icon: FilePlus,
+    group: 'create',
+    priority: 10,
+  },
+  {
+    id: 'submenu-create-folder',
+    commandId: 'createFolder',
+    label: 'Folder',
+    icon: FolderPlus,
+    group: 'create',
+    priority: 11,
+  },
+  {
+    id: 'submenu-create-map',
+    commandId: 'createMap',
+    label: 'Map',
+    icon: MapPin,
+    group: 'create',
+    priority: 12,
+  },
+  {
+    id: 'submenu-create-canvas',
+    commandId: 'createCanvas',
+    label: 'Canvas',
+    icon: Grid2x2Plus,
+    group: 'create',
+    priority: 13,
+  },
+  {
+    id: 'submenu-create-file',
+    commandId: 'createFile',
+    label: 'File',
+    icon: File,
+    group: 'create',
+    priority: 14,
+  },
+]
+
+export const editorContextMenuContributors = [
+  {
+    id: 'editor-tests',
+    surfaces: ['note-view'],
+    getItems: () => [
+      {
+        id: 'test-editor',
+        commandId: 'logTestEditor',
+        label: 'Test Editor',
+        icon: Pencil,
+        group: 'primary',
+        priority: 0,
+        applies: (context) => p.hasBlockNoteEditor(context),
+      },
+      {
+        id: 'test-block',
+        commandId: 'logTestBlock',
+        label: 'Test Block',
+        icon: Pencil,
+        group: 'primary',
+        priority: 1,
+        applies: (context) => p.hasBlockNoteId(context),
+      },
+    ],
+  },
+  {
+    id: 'editor-primary',
+    surfaces: ['sidebar', 'topbar', 'folder-view', 'map-view', 'trash-view', 'note-view'],
+    getItems: () => [
+      {
+        id: 'open',
+        commandId: 'open',
+        label: 'Open',
+        icon: SquareArrowOutUpRight,
+        group: 'primary',
+        priority: 0,
+        applies: (context) =>
+          (p.inSidebar(context) || p.hasPinContext(context)) && context.item !== undefined,
+      },
+      {
+        id: 'go-to-map-pin',
+        commandId: 'goToMapPin',
+        label: 'Go to Map Pin',
+        icon: Navigation,
+        group: 'primary',
+        priority: 1,
+        applies: (context) =>
+          p.inSidebar(context) &&
+          p.isSidebarItem(context) &&
+          p.isPinnedOnActiveMap(context) &&
+          p.isNotActiveMap(context),
+      },
+      {
+        id: 'toggle-bookmark',
+        commandId: 'toggleBookmark',
+        label: (context) => (context.item?.isBookmarked ? 'Remove Bookmark' : 'Bookmark'),
+        icon: Bookmark,
+        group: 'primary',
+        priority: 2,
+        applies: (context) => p.inSidebar(context) && p.isSidebarItem(context),
+        isChecked: (context) => context.item?.isBookmarked ?? false,
+      },
+      {
+        id: 'show-in-sidebar',
+        commandId: 'showInSidebar',
+        label: 'Show in Sidebar',
+        icon: Eye,
+        group: 'primary',
+        priority: 3,
+        applies: (context) => p.isSidebarItem(context) && p.isNotActiveMap(context),
+      },
+      {
+        id: 'restore',
+        commandId: 'restore',
+        label: 'Restore',
+        icon: RotateCcw,
+        group: 'primary',
+        priority: 4,
+        applies: (context) => p.isItemTrashed(context) && p.isSidebarItem(context),
+      },
+    ],
+  },
+  {
+    id: 'editor-create',
+    surfaces: ['sidebar', 'folder-view'],
+    getItems: () => [
+      {
+        id: 'create-new-submenu',
+        label: 'New...',
+        icon: Plus,
+        group: 'create',
+        priority: 5,
+        applies: (context) =>
+          p.hasFullAccess(context) &&
+          !p.hasPinContext(context) &&
+          (p.isType(SIDEBAR_ITEM_TYPES.folders)(context) || p.atRoot(context)),
+        children: () => createSubmenuItems,
+      },
+    ],
+  },
+  {
+    id: 'editor-pin-actions',
+    surfaces: ['sidebar', 'map-view'],
+    getItems: () => [
+      {
+        id: 'pin-to-map',
+        commandId: 'pinToMap',
+        label: 'Pin to Map',
+        icon: MapPin,
+        group: 'pin-actions',
+        priority: 1,
+        applies: (context) =>
+          p.hasEditAccess(context) &&
+          p.inSidebar(context) &&
+          p.isSidebarItem(context) &&
+          !p.isPinnedOnActiveMap(context) &&
+          p.isNotActiveMap(context),
+      },
+      {
+        id: 'toggle-pin-visibility',
+        commandId: 'togglePinVisibility',
+        label: (context) => (context.activePin?.visible === true ? 'Hide Pin' : 'Show Pin'),
+        icon: EyeOff,
+        group: 'pin-actions',
+        priority: 49,
+        applies: (context) => p.isDm(context) && p.hasPinContext(context),
+      },
+      {
+        id: 'move-map-pin',
+        commandId: 'moveMapPin',
+        label: 'Move Pin',
+        icon: Move,
+        group: 'pin-actions',
+        priority: 50,
+        applies: (context) => p.hasEditAccess(context) && p.hasPinContext(context),
+      },
+      {
+        id: 'remove-map-pin',
+        commandId: 'removeMapPin',
+        label: 'Remove Pin',
+        icon: Trash2,
+        group: 'pin-actions',
+        priority: 51,
+        variant: 'danger',
+        applies: (context) => p.hasEditAccess(context) && p.hasPinContext(context),
+      },
+      {
+        id: 'create-map-pin',
+        commandId: 'createMapPin',
+        label: 'Create Pin Here',
+        icon: MapPin,
+        group: 'pin-actions',
+        priority: 52,
+        applies: (context) =>
+          p.hasEditAccess(context) && p.isActiveMap(context) && p.inView('map-view')(context),
+      },
+    ],
+  },
+  {
+    id: 'editor-panels',
+    surfaces: ['topbar'],
+    getItems: () => [
+      {
+        id: 'panel-history',
+        commandId: 'activatePanel',
+        payload: RIGHT_SIDEBAR_CONTENT.history,
+        label: 'Edit History',
+        icon: History,
+        group: 'panels',
+        priority: 70,
+        applies: (context) => p.isSidebarItem(context),
+        isChecked: () => isPanelContentActive(RIGHT_SIDEBAR_CONTENT.history),
+      },
+      {
+        id: 'panel-backlinks',
+        commandId: 'activatePanel',
+        payload: RIGHT_SIDEBAR_CONTENT.backlinks,
+        label: 'Back Links',
+        icon: ArrowUpLeft,
+        group: 'panels',
+        priority: 71,
+        applies: (context) => p.isSidebarItem(context),
+        isChecked: () => isPanelContentActive(RIGHT_SIDEBAR_CONTENT.backlinks),
+      },
+      {
+        id: 'panel-outgoing',
+        commandId: 'activatePanel',
+        payload: RIGHT_SIDEBAR_CONTENT.outgoing,
+        label: 'Outgoing Links',
+        icon: ArrowUpRight,
+        group: 'panels',
+        priority: 72,
+        applies: (context) => p.isSidebarItem(context),
+        isChecked: () => isPanelContentActive(RIGHT_SIDEBAR_CONTENT.outgoing),
+      },
+      {
+        id: 'panel-outline',
+        commandId: 'activatePanel',
+        payload: RIGHT_SIDEBAR_CONTENT.outline,
+        label: 'Outline',
+        icon: List,
+        group: 'panels',
+        priority: 73,
+        applies: (context) => p.isSidebarItem(context),
+        isChecked: () => isPanelContentActive(RIGHT_SIDEBAR_CONTENT.outline),
+      },
+    ],
+  },
+  {
+    id: 'editor-download',
+    surfaces: ['sidebar', 'folder-view', 'topbar', 'map-view'],
+    getItems: () => [
+      {
+        id: 'download-file',
+        commandId: 'downloadFile',
+        label: 'Download',
+        icon: Download,
+        group: 'download',
+        priority: 80,
+        applies: (context) =>
+          p.isSidebarItem(context) &&
+          p.isType(SIDEBAR_ITEM_TYPES.files)(context) &&
+          !p.hasPinContext(context),
+      },
+      {
+        id: 'download-note',
+        commandId: 'downloadNote',
+        label: 'Download',
+        icon: Download,
+        group: 'download',
+        priority: 80,
+        applies: (context) =>
+          p.hasViewAccess(context) &&
+          p.isSidebarItem(context) &&
+          p.isType(SIDEBAR_ITEM_TYPES.notes)(context) &&
+          !p.hasMapContext(context),
+      },
+      {
+        id: 'download-map',
+        commandId: 'downloadMap',
+        label: 'Download Map Image',
+        icon: Download,
+        group: 'download',
+        priority: 80,
+        applies: (context) =>
+          p.isSidebarItem(context) &&
+          p.isType(SIDEBAR_ITEM_TYPES.gameMaps)(context) &&
+          !p.hasMapContext(context),
+      },
+      {
+        id: 'download-folder',
+        commandId: 'downloadFolder',
+        label: 'Download',
+        icon: FolderDown,
+        group: 'download',
+        priority: 81,
+        applies: (context) =>
+          p.hasViewAccess(context) &&
+          p.isSidebarItem(context) &&
+          p.isType(SIDEBAR_ITEM_TYPES.folders)(context) &&
+          !p.hasMapContext(context),
+      },
+      {
+        id: 'download-all',
+        commandId: 'downloadAll',
+        label: 'Download All',
+        icon: FolderDown,
+        group: 'download',
+        priority: 82,
+        applies: (context) => p.atRoot(context) && p.inSidebar(context),
+      },
+    ],
+  },
+  {
+    id: 'editor-edit',
+    surfaces: ['sidebar', 'folder-view', 'topbar'],
+    getItems: () => [
+      {
+        id: 'rename',
+        commandId: 'rename',
+        label: 'Rename',
+        icon: FileTypeIcon,
+        group: 'edit',
+        priority: 90,
+        applies: (context) =>
+          p.hasFullAccess(context) &&
+          p.inSidebar(context) &&
+          p.isItemNotTrashed(context) &&
+          p.isSidebarItem(context),
+      },
+      {
+        id: 'edit-map',
+        commandId: 'editMap',
+        label: 'Edit Map',
+        icon: FileEdit,
+        group: 'edit',
+        priority: 99,
+        applies: (context) =>
+          p.hasFullAccess(context) &&
+          p.isItemNotTrashed(context) &&
+          p.isType(SIDEBAR_ITEM_TYPES.gameMaps)(context),
+      },
+      {
+        id: 'edit-file',
+        commandId: 'editFile',
+        label: 'Edit File',
+        icon: FileEdit,
+        group: 'edit',
+        priority: 99,
+        applies: (context) =>
+          p.hasFullAccess(context) &&
+          p.isItemNotTrashed(context) &&
+          p.isType(SIDEBAR_ITEM_TYPES.files)(context),
+      },
+      {
+        id: 'edit-item',
+        commandId: 'editItem',
+        label: (context) => `Edit ${getTypeName(context)}`,
+        icon: FileEdit,
+        group: 'edit',
+        priority: 99,
+        applies: (context) =>
+          p.hasFullAccess(context) &&
+          p.isSidebarItem(context) &&
+          p.isItemNotTrashed(context) &&
+          p.isNotType(SIDEBAR_ITEM_TYPES.gameMaps, SIDEBAR_ITEM_TYPES.files)(context),
+      },
+    ],
+  },
+  {
+    id: 'editor-danger',
+    surfaces: ['sidebar', 'folder-view', 'topbar', 'trash-view'],
+    getItems: () => [
+      {
+        id: 'delete',
+        commandId: 'delete',
+        label: 'Move to Trash',
+        icon: Trash2,
+        group: 'danger',
+        priority: 100,
+        variant: 'danger',
+        applies: (context) =>
+          p.hasFullAccess(context) &&
+          p.isSidebarItem(context) &&
+          p.isItemNotTrashed(context) &&
+          (p.inView('sidebar')(context) ||
+            p.inView('folder-view')(context) ||
+            p.inView('topbar')(context)),
+      },
+      {
+        id: 'permanently-delete',
+        commandId: 'permanentlyDelete',
+        label: 'Delete Forever',
+        icon: Trash2,
+        group: 'danger',
+        priority: 100,
+        variant: 'danger',
+        applies: (context) => p.isItemTrashed(context) && p.isSidebarItem(context),
+      },
+      {
+        id: 'empty-trash',
+        commandId: 'emptyTrash',
+        label: 'Empty Trash',
+        icon: Trash2,
+        group: 'danger',
+        priority: 101,
+        variant: 'danger',
+        applies: (context) => p.isTrashView(context) && p.isDm(context),
+      },
+    ],
+  },
+] satisfies ReadonlyArray<EditorContextMenuContributor>
+
+export const groupConfig: ContextMenuGroupConfig = {
   primary: { label: null, priority: 0 },
   create: { label: null, priority: 1 },
   share: { label: null, priority: 2 },

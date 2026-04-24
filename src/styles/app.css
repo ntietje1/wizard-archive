@@ -203,20 +203,33 @@
   transition-duration: 0s !important;
 }
 
-/* Hide React Flow's selection box since we render our own */
-.react-flow__selection {
-  display: none !important;
+.canvas-flow-shell .react-flow__node,
+.canvas-flow-shell .react-flow__node-stroke path,
+.canvas-flow-shell .react-flow__edge,
+.canvas-flow-shell .react-flow__edge-path,
+.canvas-flow-shell .react-flow__edge-interaction {
+  cursor: inherit !important;
 }
 
-/* Style React Flow's multi-node selection bounding box */
-.react-flow__nodesselection-rect {
-  border: 1px dotted var(--primary) !important;
-  background: oklch(from var(--primary) l c h / 0.08) !important;
+.canvas-flow-shell svg.react-flow__connectionline {
+  z-index: 1 !important;
 }
 
-/* Hide native multi-select box on pointerdown to match per-node indicator timing */
-.react-flow__renderer:active .react-flow__nodesselection-rect {
-  opacity: 0 !important;
+@media (prefers-reduced-motion: no-preference) {
+  .canvas-node-connection-handle::after {
+    animation: canvas-node-connection-handle-pulse 1.8s ease-in-out infinite;
+  }
+
+  @keyframes canvas-node-connection-handle-pulse {
+    0%,
+    100% {
+      background-color: var(--background);
+    }
+
+    50% {
+      background-color: var(--primary);
+    }
+  }
 }
 
 /* Stroke nodes: only the filled path receives pointer events, not the bounding box */
@@ -225,8 +238,13 @@
 }
 
 .react-flow__node-stroke path,
-.react-flow__node-stroke .react-flow__resize-control {
+.react-flow__node-stroke .react-flow__resize-control,
+.react-flow__node-stroke .canvas-node-resize-handle {
   pointer-events: auto !important;
+}
+
+.react-flow__node:has([data-node-editing='true']) {
+  z-index: 1000 !important;
 }
 
 @layer base {
@@ -377,6 +395,11 @@
   display: flex;
   flex-direction: column;
   border-radius: 0;
+}
+
+:root .canvas-rich-text-editor {
+  --bn-colors-editor-background: transparent;
+  background-color: transparent;
 }
 
 @layer utilities {

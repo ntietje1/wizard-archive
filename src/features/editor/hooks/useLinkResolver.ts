@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from 'react'
 import { normalizeSidebarItemColorOrDefault } from 'convex/sidebarItems/validation/color'
 import { isDangerousUrl } from 'convex/links/linkParsers'
 import { resolveParsedItemPath } from 'convex/links/linkResolution'
@@ -26,58 +27,64 @@ export function useLinkResolver(sourceNoteId?: Id<'sidebarItems'>): LinkResolver
   const isViewerMode = editorMode === 'viewer' || viewAsPlayerId !== undefined
   const sourceParentId = sourceNoteId ? itemsMap.get(sourceNoteId)?.parentId : undefined
 
-  const resolveLink = (parsed: ParsedLinkData): ResolvedLink => {
-    if (parsed.isExternal) {
-      const href = isDangerousUrl(parsed.rawTarget) ? null : parsed.rawTarget
+  const resolveLink = useCallback(
+    (parsed: ParsedLinkData): ResolvedLink => {
+      if (parsed.isExternal) {
+        const href = isDangerousUrl(parsed.rawTarget) ? null : parsed.rawTarget
+        return {
+          ...parsed,
+          resolved: true,
+          itemId: null,
+          href,
+          color: null,
+        }
+      }
+
+      if (!dmUsername || !campaignSlug || parsed.itemPath.length === 0) {
+        return {
+          ...parsed,
+          resolved: false,
+          itemId: null,
+          href: null,
+          color: null,
+        }
+      }
+
+      const item = resolveParsedItemPath(
+        parsed.pathKind,
+        parsed.itemPath,
+        allItems,
+        itemsMap,
+        sourceParentId,
+      )
+      if (!item) {
+        return {
+          ...parsed,
+          resolved: false,
+          itemId: null,
+          href: null,
+          color: null,
+        }
+      }
+
+      let href = `/campaigns/${dmUsername}/${campaignSlug}/editor?item=${item.slug}`
+      if (parsed.headingPath.length > 0) {
+        href = `${href}&heading=${encodeURIComponent(parsed.headingPath.join('#'))}`
+      }
+
       return {
         ...parsed,
         resolved: true,
-        itemId: null,
+        itemId: item._id,
         href,
-        color: null,
+        color: normalizeSidebarItemColorOrDefault(item.color),
       }
-    }
+    },
+    [allItems, campaignSlug, dmUsername, itemsMap, sourceParentId],
+  )
 
-    if (!dmUsername || !campaignSlug || parsed.itemPath.length === 0) {
-      return {
-        ...parsed,
-        resolved: false,
-        itemId: null,
-        href: null,
-        color: null,
-      }
-    }
-
-    const item = resolveParsedItemPath(
-      parsed.pathKind,
-      parsed.itemPath,
-      allItems,
-      itemsMap,
-      sourceParentId,
-    )
-    if (!item) {
-      return {
-        ...parsed,
-        resolved: false,
-        itemId: null,
-        href: null,
-        color: null,
-      }
-    }
-
-    let href = `/campaigns/${dmUsername}/${campaignSlug}/editor?item=${item.slug}`
-    if (parsed.headingPath.length > 0) {
-      href = `${href}&heading=${encodeURIComponent(parsed.headingPath.join('#'))}`
-    }
-
-    return {
-      ...parsed,
-      resolved: true,
-      itemId: item._id,
-      href,
-      color: normalizeSidebarItemColorOrDefault(item.color),
-    }
-  }
-
-  return { resolveLink, allItems, itemsMap, isViewerMode }
+  return useMemo(
+    () => ({ resolveLink, allItems, itemsMap, isViewerMode }),
+    [resolveLink, allItems, itemsMap, isViewerMode],
+  )
 }

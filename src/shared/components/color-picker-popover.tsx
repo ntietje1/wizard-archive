@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Slider as SliderPrimitive } from '@base-ui/react/slider'
 import Color from 'color'
 import {
@@ -7,102 +7,134 @@ import {
   ColorPickerSelection,
 } from '~/features/shadcn/components/color-picker'
 import { Popover, PopoverContent, PopoverTrigger } from '~/features/shadcn/components/popover'
+import { cn } from '~/features/shadcn/lib/utils'
+import { logger } from '~/shared/utils/logger'
+import { normalizePickerColor } from '~/shared/utils/color'
 
-const CHECKERBOARD_PATTERN =
-  'url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMUlEQVQ4T2NkYGAQYcAP3uCTZhw1gGGYhAGBZIA/nYDCgBDAm9BGDWAAJyRCgLaBCAAgXwixzAS0pgAAAABJRU5ErkJggg==") left center'
+const CHECKERBOARD_PATTERN = [
+  'linear-gradient(45deg, currentColor 25%, transparent 25%, transparent 75%, currentColor 75%, currentColor)',
+  'linear-gradient(45deg, currentColor 25%, transparent 25%, transparent 75%, currentColor 75%, currentColor)',
+].join(', ')
+const STRIPE_PATTERN =
+  'repeating-linear-gradient(135deg, var(--muted-foreground) 0 2px, transparent 2px 6px)'
+
+interface PaintPickerValue {
+  color: string
+  opacity: number
+}
 
 interface ColorPickerPopoverProps {
-  value: string
-  onChange: (color: string) => void
-  opacity?: number
-  onOpacityChange?: (opacity: number) => void
+  value: PaintPickerValue
+  onChange: (value: PaintPickerValue) => void
+  mixed?: boolean
+  showOpacity?: boolean
+  disabled?: boolean
 }
 
 export function ColorPickerPopover({
   value,
   onChange,
-  opacity,
-  onOpacityChange,
+  mixed = false,
+  showOpacity = true,
+  disabled = false,
 }: ColorPickerPopoverProps) {
-  const [localOpacity, setLocalOpacity] = useState(opacity ?? 100)
-  const [prevOpacity, setPrevOpacity] = useState(opacity)
-  if (opacity !== prevOpacity) {
-    setPrevOpacity(opacity)
-    setLocalOpacity(opacity ?? 100)
+  const [open, setOpen] = useState(false)
+  const normalizedValue = normalizePickerColor(value.color)
+
+  let opacityGradient = 'linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%)'
+  try {
+    const parsed = Color(normalizedValue)
+    const [r, g, b] = parsed.rgb().array()
+    opacityGradient = `linear-gradient(90deg, rgba(${r}, ${g}, ${b}, 0) 0%, rgba(${r}, ${g}, ${b}, 1) 100%)`
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      logger.warn('Failed to build opacity gradient for color picker', {
+        normalizedValue,
+        error,
+      })
+    }
   }
 
-  const handleOpacitySlider = useCallback(
-    (val: number | ReadonlyArray<number>) => {
-      const v = Array.isArray(val) ? val[0] : val
-      setLocalOpacity(v)
-      onOpacityChange?.(v)
-    },
-    [onOpacityChange],
-  )
-
-  const opacityGradient = useMemo(() => {
-    try {
-      const parsed = Color(value)
-      const [r, g, b] = parsed.rgb().array()
-      return `linear-gradient(90deg, rgba(${r}, ${g}, ${b}, 0) 0%, rgba(${r}, ${g}, ${b}, 1) 100%)`
-    } catch {
-      return 'linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%)'
-    }
-  }, [value])
-
   return (
-    <Popover>
+    <Popover
+      open={disabled ? false : open}
+      onOpenChange={(nextOpen) => {
+        if (disabled) return
+        setOpen(nextOpen)
+      }}
+    >
       <PopoverTrigger
-        nativeButton
-        render={(props) => (
-          <span
-            {...props}
-            role="button"
-            aria-label="Open color picker"
-            className="h-6 w-6 rounded-sm border border-border transition-transform hover:scale-110 inline-block"
-            style={{ background: CHECKERBOARD_PATTERN }}
-          >
-            <span
-              className="block h-full w-full rounded-sm"
-              style={{
-                backgroundColor: value,
-                opacity: localOpacity / 100,
-              }}
-            />
-          </span>
+        aria-label={`Open color picker${mixed ? ' (mixed values)' : ''}`}
+        className={cn(
+          'inline-flex h-6 w-6 items-center justify-center rounded-sm border border-border text-foreground/15 enabled:cursor-pointer transition-transform enabled:hover:scale-110 disabled:cursor-not-allowed disabled:opacity-50',
         )}
-      />
+        disabled={disabled}
+        type="button"
+      >
+        <span
+          className="block h-full w-full rounded-sm"
+          style={{
+            backgroundColor: 'var(--background)',
+            backgroundImage: CHECKERBOARD_PATTERN,
+            backgroundPosition: '0 0, 4px 4px',
+            backgroundSize: '8px 8px',
+          }}
+        >
+          <span
+            data-testid="color-preview"
+            className="block h-full w-full rounded-sm"
+            style={{
+              backgroundColor: mixed ? 'transparent' : value.color,
+              backgroundImage: mixed ? STRIPE_PATTERN : undefined,
+              opacity: mixed ? 1 : value.opacity / 100,
+            }}
+          />
+        </span>
+      </PopoverTrigger>
       <PopoverContent side="bottom" align="end" className="w-56 p-3 allow-motion">
-        <ColorPicker value={value} onChange={onChange}>
+        {mixed && <p className="mb-2 text-xs text-muted-foreground">Mixed values</p>}
+        <ColorPicker
+          value={normalizedValue}
+          onChange={(color) => {
+            onChange({
+              color,
+              opacity: value.opacity,
+            })
+          }}
+        >
           <ColorPickerSelection className="h-32 rounded-md" />
           <ColorPickerHue />
-
-          {onOpacityChange && (
+          {showOpacity ? (
             <SliderPrimitive.Root
               className="relative flex h-4 w-full touch-none"
               aria-label="Opacity"
               min={0}
               max={100}
               step={1}
-              value={[localOpacity]}
-              onValueChange={handleOpacitySlider}
+              value={[value.opacity]}
+              onValueChange={(val) => {
+                const nextOpacity = Array.isArray(val) ? val[0] : val
+                onChange({
+                  color: value.color,
+                  opacity: nextOpacity,
+                })
+              }}
             >
               <SliderPrimitive.Control className="relative flex w-full touch-none items-center">
                 <SliderPrimitive.Track
-                  className="relative my-0.5 h-3 w-full grow overflow-hidden rounded-full"
+                  data-testid="opacity-track"
+                  className="relative my-0.5 h-3 w-full grow overflow-hidden rounded-full text-foreground/15"
                   style={{
-                    background: CHECKERBOARD_PATTERN,
+                    backgroundColor: 'var(--background)',
+                    backgroundImage: `${opacityGradient}, ${CHECKERBOARD_PATTERN}`,
+                    backgroundPosition: '0 0, 0 0, 4px 4px',
+                    backgroundSize: '100% 100%, 8px 8px, 8px 8px',
                   }}
-                >
-                  <div
-                    className="absolute inset-0 rounded-full pointer-events-none"
-                    style={{ background: opacityGradient }}
-                  />
-                </SliderPrimitive.Track>
-                <SliderPrimitive.Thumb className="block h-4 w-4 rounded-full border border-primary/50 bg-background shadow focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
+                />
+                <SliderPrimitive.Thumb className="block h-4 w-4 rounded-full border-2 border-white bg-transparent shadow-[0_0_0_1px_rgba(0,0,0,0.5)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
               </SliderPrimitive.Control>
             </SliderPrimitive.Root>
-          )}
+          ) : null}
         </ColorPicker>
       </PopoverContent>
     </Popover>

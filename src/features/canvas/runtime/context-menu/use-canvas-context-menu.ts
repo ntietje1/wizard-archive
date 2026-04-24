@@ -1,0 +1,212 @@
+import { useLayoutEffect, useRef, useState } from 'react'
+import { createAndSelectEmbeddedCanvasNode } from '../document/canvas-document-commands'
+import { buildCanvasContextMenu } from './canvas-context-menu-registry'
+import { resolveCanvasContextMenuTarget } from './canvas-context-menu-target'
+import type { CanvasSelectionController } from '../../tools/canvas-tool-types'
+import type {
+  CanvasContextMenuCommands,
+  CanvasContextMenuContext,
+  CanvasContextMenuContributor,
+  CanvasContextMenuPoint,
+  CanvasContextMenuServices,
+} from './canvas-context-menu-types'
+import type { Id } from 'convex/_generated/dataModel'
+import type { Edge, Node } from '@xyflow/react'
+import type * as Y from 'yjs'
+import type { ContextMenuHostRef } from '~/features/context-menu/components/context-menu-host'
+import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
+import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
+import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
+
+interface UseCanvasContextMenuOptions {
+  activeTool: string
+  canEdit: boolean
+  campaignId: Id<'campaigns'>
+  canvasParentId: Id<'sidebarItems'> | null
+  nodesMap: Y.Map<Node>
+  edgesMap: Y.Map<Edge>
+  createNode: (node: Node) => void
+  screenToFlowPosition: (position: CanvasContextMenuPoint) => { x: number; y: number }
+  selection: Pick<CanvasSelectionController, 'clear' | 'getSnapshot' | 'replace'>
+  commands: CanvasContextMenuCommands
+}
+
+type PointerPosition = { x: number; y: number }
+
+function normalizeContextMenuEvent(event: MouseEvent | React.MouseEvent) {
+  const nativeEvent = 'nativeEvent' in event ? event.nativeEvent : event
+  event.preventDefault()
+  event.stopPropagation()
+  nativeEvent.stopImmediatePropagation?.()
+
+  return {
+    x: nativeEvent.clientX,
+    y: nativeEvent.clientY,
+  }
+}
+
+export function useCanvasContextMenu({
+  activeTool,
+  canEdit,
+  campaignId,
+  canvasParentId,
+  nodesMap,
+  edgesMap,
+  createNode,
+  screenToFlowPosition,
+  selection,
+  commands,
+}: UseCanvasContextMenuOptions) {
+  const hostRef = useRef<ContextMenuHostRef>(null)
+  const pendingOpenPositionRef = useRef<PointerPosition | null>(null)
+  const [menuState, setMenuState] = useState<{
+    context: CanvasContextMenuContext
+    contributors: ReadonlyArray<CanvasContextMenuContributor>
+  } | null>(null)
+  const { createItem } = useCreateSidebarItem()
+  const { getDefaultName } = useSidebarValidation()
+  const { navigateToItem } = useEditorNavigation()
+  const { itemsMap } = useActiveSidebarItems()
+
+  const services = {
+    canOpenEmbedTarget: (target) =>
+      target.kind === 'embed-node' && itemsMap.has(target.sidebarItemId),
+    openEmbedTarget: async (target) => {
+      if (target.kind !== 'embed-node') {
+        return false
+      }
+
+      const item = itemsMap.get(target.sidebarItemId)
+      if (!item) {
+        return false
+      }
+
+      await navigateToItem(item.slug)
+      return true
+    },
+    createAndEmbedSidebarItem: async (type, pointerPosition) => {
+      if (!canEdit) {
+        return null
+      }
+
+      try {
+        const result = await createItem({
+          type,
+          campaignId,
+          parentTarget: { kind: 'direct', parentId: canvasParentId },
+          name: getDefaultName(type, canvasParentId),
+        })
+
+        return createAndSelectEmbeddedCanvasNode({
+          sidebarItemId: result.id,
+          pointerPosition,
+          screenToFlowPosition,
+          createNode,
+          replaceSelection: selection.replace,
+        })
+      } catch (error) {
+        console.error('Failed to create embedded sidebar item from canvas context menu', {
+          campaignId,
+          canvasParentId,
+          type,
+          error,
+        })
+        return null
+      }
+    },
+  } satisfies CanvasContextMenuServices
+
+  useLayoutEffect(() => {
+    if (!menuState || !pendingOpenPositionRef.current) {
+      return
+    }
+
+    hostRef.current?.open(pendingOpenPositionRef.current)
+    pendingOpenPositionRef.current = null
+  }, [menuState])
+
+  const openMenu = (
+    position: PointerPosition,
+    nextSelection: CanvasContextMenuContext['selection'],
+  ) => {
+    if (activeTool !== 'select') {
+      return
+    }
+
+    const resolvedSelection = resolveCanvasContextMenuTarget(nextSelection, nodesMap, edgesMap)
+    pendingOpenPositionRef.current = position
+    setMenuState({
+      context: {
+        surface: 'canvas',
+        pointerPosition: position,
+        selection: nextSelection,
+        target: resolvedSelection.target,
+        canEdit,
+      },
+      contributors: resolvedSelection.contributors,
+    })
+  }
+
+  const close = () => {
+    // `close` is the full programmatic teardown path: clear pending open state,
+    // reset menu context, and tell the host to dismiss immediately.
+    pendingOpenPositionRef.current = null
+    setMenuState(null)
+    hostRef.current?.close()
+  }
+
+  const openForPane = (event: MouseEvent | React.MouseEvent) => {
+    const position = normalizeContextMenuEvent(event)
+    const nextSelection = { nodeIds: [], edgeIds: [] }
+    selection.clear()
+    openMenu(position, nextSelection)
+  }
+
+  const openForNode = (event: React.MouseEvent, node: Node) => {
+    const position = normalizeContextMenuEvent(event)
+    const currentSelection = selection.getSnapshot()
+    const nextSelection = currentSelection.nodeIds.includes(node.id)
+      ? currentSelection
+      : { nodeIds: [node.id], edgeIds: [] }
+
+    if (nextSelection !== currentSelection) {
+      selection.replace(nextSelection)
+    }
+
+    openMenu(position, nextSelection)
+  }
+
+  const openForEdge = (event: React.MouseEvent, edge: Edge) => {
+    const position = normalizeContextMenuEvent(event)
+    const currentSelection = selection.getSnapshot()
+    const nextSelection = currentSelection.edgeIds.includes(edge.id)
+      ? currentSelection
+      : { nodeIds: [], edgeIds: [edge.id] }
+
+    if (nextSelection !== currentSelection) {
+      selection.replace(nextSelection)
+    }
+
+    openMenu(position, nextSelection)
+  }
+
+  return {
+    close,
+    hostRef,
+    menu: menuState
+      ? buildCanvasContextMenu({
+          context: menuState.context,
+          services,
+          commands,
+          contributors: menuState.contributors,
+        })
+      : { groups: [], flatItems: [], isEmpty: true },
+    // `onClose` is host-driven dismissal only; the host already handled its own
+    // teardown, so this just clears the hook state.
+    onClose: () => setMenuState(null),
+    openForEdge,
+    openForNode,
+    openForPane,
+  }
+}
