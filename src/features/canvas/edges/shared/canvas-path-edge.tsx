@@ -1,8 +1,8 @@
 import { BaseEdge } from '@xyflow/react'
 import { getCanvasEdgeInteractionWidth } from './canvas-edge-geometry'
-import { readCanvasEdgeStroke, readCanvasEdgeStrokeWidth } from './canvas-edge-style'
+import { buildCanvasEdgeRenderStyle, normalizeCanvasEdgeStyle } from './canvas-edge-style'
 import { useCanvasEdgeVisualSelection } from './use-canvas-edge-visual-selection'
-import type { CanvasEdgeRendererProps } from '../canvas-edge-module-types'
+import type { CanvasEdgeRendererProps } from '../canvas-edge-types'
 import type { CSSProperties } from 'react'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 
@@ -37,19 +37,18 @@ export function CanvasPathEdge({
     useCanvasEdgeVisualSelection(props.id)
   if (!geometry) return null
 
+  const normalizedStyle = normalizeCanvasEdgeStyle(props.style)
   const style = {
     ...CANVAS_EDGE_PATH_STYLE,
-    ...props.style,
-    stroke: readCanvasEdgeStroke(props.style),
-    strokeWidth: readCanvasEdgeStrokeWidth(props.style),
-    opacity: pendingPreviewActive && pendingSelected ? 0.45 : props.style?.opacity,
+    ...buildCanvasEdgeRenderStyle(normalizedStyle),
+    opacity: pendingPreviewActive && pendingSelected ? 0.45 : normalizedStyle.opacity,
   }
   const selectedHighlightStyle =
     interactiveRenderMode && visuallySelected
       ? {
           ...SELECTED_EDGE_HIGHLIGHT_STYLE,
           strokeWidth: Math.max(
-            readCanvasEdgeStrokeWidth(props.style) * SELECTED_EDGE_HIGHLIGHT_SCALE,
+            normalizedStyle.strokeWidth * SELECTED_EDGE_HIGHLIGHT_SCALE,
             SELECTED_EDGE_HIGHLIGHT_WIDTH_MIN,
           ),
         }

@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import { createCanvasProviderProps } from '../../../runtime/__tests__/canvas-runtime-test-utils'
-import { CanvasProviders } from '../../../runtime/providers/canvas-runtime-context'
+import { createCanvasRuntime } from '../../../runtime/__tests__/canvas-runtime-test-utils'
+import { CanvasRuntimeProvider } from '../../../runtime/providers/canvas-runtime-context'
 import { CanvasRenderModeProvider } from '../../../runtime/providers/canvas-render-mode-context'
 import {
   clearCanvasDragSnapGuides,
@@ -112,11 +112,11 @@ describe('ResizableNodeWrapper', () => {
     })
 
     render(
-      <CanvasProviders {...providerValues}>
+      <CanvasRuntimeProvider {...providerValues}>
         <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
           <div>node body</div>
         </ResizableNodeWrapper>
-      </CanvasProviders>,
+      </CanvasRuntimeProvider>,
     )
 
     const handle = screen.getByTestId('canvas-node-resize-handle-bottom-right')
@@ -144,11 +144,11 @@ describe('ResizableNodeWrapper', () => {
     })
 
     render(
-      <CanvasProviders {...providerValues}>
+      <CanvasRuntimeProvider {...providerValues}>
         <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
           <div>node body</div>
         </ResizableNodeWrapper>
-      </CanvasProviders>,
+      </CanvasRuntimeProvider>,
     )
 
     const handle = screen.getByTestId('canvas-node-resize-handle-bottom-right')
@@ -205,11 +205,11 @@ describe('ResizableNodeWrapper', () => {
     ])
 
     render(
-      <CanvasProviders {...providerValues}>
+      <CanvasRuntimeProvider {...providerValues}>
         <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
           <div>node body</div>
         </ResizableNodeWrapper>
-      </CanvasProviders>,
+      </CanvasRuntimeProvider>,
     )
 
     const handle = screen.getByTestId('canvas-node-resize-handle-bottom-right')
@@ -254,11 +254,11 @@ describe('ResizableNodeWrapper', () => {
     ])
 
     render(
-      <CanvasProviders {...providerValues}>
+      <CanvasRuntimeProvider {...providerValues}>
         <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
           <div>node body</div>
         </ResizableNodeWrapper>
-      </CanvasProviders>,
+      </CanvasRuntimeProvider>,
     )
 
     const handle = screen.getByTestId('canvas-node-resize-handle-bottom-right')
@@ -315,11 +315,11 @@ describe('ResizableNodeWrapper', () => {
     ])
 
     render(
-      <CanvasProviders {...providerValues}>
+      <CanvasRuntimeProvider {...providerValues}>
         <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
           <div>node body</div>
         </ResizableNodeWrapper>
-      </CanvasProviders>,
+      </CanvasRuntimeProvider>,
     )
 
     const handle = screen.getByTestId('canvas-node-resize-handle-bottom-right')
@@ -365,7 +365,7 @@ describe('ResizableNodeWrapper', () => {
     })
 
     render(
-      <CanvasProviders {...providerValues}>
+      <CanvasRuntimeProvider {...providerValues}>
         <ResizableNodeWrapper id="node-1" nodeType="stroke" dragging={false}>
           <div
             style={{
@@ -377,7 +377,7 @@ describe('ResizableNodeWrapper', () => {
             overlay
           </div>
         </ResizableNodeWrapper>
-      </CanvasProviders>,
+      </CanvasRuntimeProvider>,
     )
 
     const handle = screen.getByTestId('canvas-node-resize-handle-bottom-right')
@@ -408,11 +408,11 @@ describe('ResizableNodeWrapper', () => {
 
     render(
       <CanvasRenderModeProvider mode="embedded-readonly">
-        <CanvasProviders {...createProviderValues()}>
+        <CanvasRuntimeProvider {...createProviderValues()}>
           <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
             <div>node body</div>
           </ResizableNodeWrapper>
-        </CanvasProviders>
+        </CanvasRuntimeProvider>
       </CanvasRenderModeProvider>,
     )
 
@@ -428,11 +428,11 @@ describe('ResizableNodeWrapper', () => {
     })
 
     render(
-      <CanvasProviders {...providerValues}>
+      <CanvasRuntimeProvider {...providerValues}>
         <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false} lockedAspectRatio={2}>
           <div>node body</div>
         </ResizableNodeWrapper>
-      </CanvasProviders>,
+      </CanvasRuntimeProvider>,
     )
 
     const handle = screen.getByTestId('canvas-node-resize-handle-bottom-right')
@@ -469,11 +469,11 @@ describe('ResizableNodeWrapper', () => {
     ])
 
     render(
-      <CanvasProviders {...providerValues}>
+      <CanvasRuntimeProvider {...providerValues}>
         <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false} lockedAspectRatio={2}>
           <div>node body</div>
         </ResizableNodeWrapper>
-      </CanvasProviders>,
+      </CanvasRuntimeProvider>,
     )
 
     const handle = screen.getByTestId('canvas-node-resize-handle-bottom-right')
@@ -520,11 +520,11 @@ describe('ResizableNodeWrapper', () => {
     ])
 
     render(
-      <CanvasProviders {...providerValues}>
+      <CanvasRuntimeProvider {...providerValues}>
         <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
           <div>node body</div>
         </ResizableNodeWrapper>
-      </CanvasProviders>,
+      </CanvasRuntimeProvider>,
     )
 
     const handle = screen.getByTestId('canvas-node-resize-handle-bottom-right')
@@ -565,16 +565,16 @@ function renderWrapper({ selected }: { selected: boolean }) {
   })
 
   return render(
-    <CanvasProviders {...createProviderValues()}>
+    <CanvasRuntimeProvider {...createProviderValues()}>
       <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
         <div>node body</div>
       </ResizableNodeWrapper>
-    </CanvasProviders>,
+    </CanvasRuntimeProvider>,
   )
 }
 
 function createProviderValues() {
-  return createCanvasProviderProps({
+  return createCanvasRuntime({
     nodeActions: {
       updateNodeData: () => undefined,
       onResize: vi.fn(),

@@ -1,5 +1,4 @@
 import type { BlockNoteEditor } from '@blocknote/core'
-import { Selection } from '@tiptap/pm/state'
 import {
   AlignCenter,
   AlignLeft,
@@ -37,6 +36,12 @@ import { Separator } from '~/features/shadcn/components/separator'
 import { cn } from '~/features/shadcn/lib/utils'
 import { getNextBlockTypeMenuState } from './canvas-floating-formatting-toolbar-state'
 import type { BlockTypeMenuChangeDetails } from './canvas-floating-formatting-toolbar-state'
+import {
+  captureCanvasRichTextSelection,
+  readCanvasRichTextActiveStyles,
+  restoreCanvasRichTextSelection,
+} from './canvas-rich-text-blocknote-adapter'
+import type { CanvasRichTextSelectionSnapshot } from './canvas-rich-text-blocknote-adapter'
 
 type SupportedBlockType =
   | 'paragraph'
@@ -87,20 +92,6 @@ interface ToolbarSnapshot {
   canAlign: boolean
   canFormatInline: boolean
   supportedBlockTypes: Array<BlockTypeOption>
-}
-
-interface EditorViewLike {
-  dispatch: (transaction: unknown) => void
-  focus: () => void
-  state: {
-    doc: unknown
-    selection: {
-      toJSON: () => Record<string, unknown>
-    }
-    tr: {
-      setSelection: (selection: Selection) => unknown
-    }
-  }
 }
 
 const BLOCK_TYPE_OPTIONS: Array<BlockTypeOption> = [
@@ -220,10 +211,10 @@ export function CanvasFloatingFormattingToolbar({
 }: CanvasFloatingFormattingToolbarProps) {
   const snapshotRef = useRef<ToolbarSnapshot>(EMPTY_SNAPSHOT)
   const ignoreOpeningClickCloseRef = useRef(false)
-  const selectionSnapshotRef = useRef<Record<string, unknown> | null>(null)
+  const selectionSnapshotRef = useRef<CanvasRichTextSelectionSnapshot | null>(null)
   const [blockTypeMenuOpen, setBlockTypeMenuOpen] = useState(false)
   const captureSelection = useCallback(() => {
-    selectionSnapshotRef.current = getSelectionSnapshot(editor)
+    selectionSnapshotRef.current = captureCanvasRichTextSelection(editor)
   }, [editor])
   const handleBlockTypeMenuOpenChange = useCallback(
     (nextOpen: boolean, details: BlockTypeMenuChangeDetails) => {
@@ -280,7 +271,7 @@ export function CanvasFloatingFormattingToolbar({
       return
     }
 
-    restoreSelectionAndFocus(editor, selectionSnapshotRef.current)
+    restoreCanvasRichTextSelection(editor, selectionSnapshotRef.current)
     const selectedBlocks = getSelectedBlocks(editor)
     editor.transact(() => {
       for (const block of selectedBlocks) {
@@ -293,12 +284,12 @@ export function CanvasFloatingFormattingToolbar({
   }
 
   const toggleInlineStyle = (style: InlineStyle) => {
-    restoreSelectionAndFocus(editor, selectionSnapshotRef.current)
+    restoreCanvasRichTextSelection(editor, selectionSnapshotRef.current)
     editor.toggleStyles({ [style]: true })
   }
 
   const setTextAlignment = (alignment: TextAlignment) => {
-    restoreSelectionAndFocus(editor, selectionSnapshotRef.current)
+    restoreCanvasRichTextSelection(editor, selectionSnapshotRef.current)
     const selectedBlocks = getSelectedBlocks(editor)
     editor.transact(() => {
       for (const block of selectedBlocks) {
@@ -479,7 +470,7 @@ function getToolbarSnapshot(editor: FormattingEditor): ToolbarSnapshot {
   const supportedBlockTypes = BLOCK_TYPE_OPTIONS.filter((option) =>
     blockTypeOptionExists(editor, option),
   )
-  const activeStyles = editor.getActiveStyles() as Partial<Record<InlineStyle, boolean>>
+  const activeStyles = readCanvasRichTextActiveStyles<InlineStyle>(editor)
   const alignableBlocks = selectedBlocks.filter((block) =>
     blockTypeSupportsProp(editor, block.type, 'textAlignment'),
   )
@@ -570,38 +561,6 @@ function styleExistsInSchema(editor: FormattingEditor, style: InlineStyle) {
   return (
     !!styleDefinition && styleDefinition.type === style && styleDefinition.propSchema === 'boolean'
   )
-}
-
-function getSelectionSnapshot(editor: FormattingEditor | null): Record<string, unknown> | null {
-  return getTiptapView(editor)?.state.selection.toJSON() ?? null
-}
-
-function restoreSelectionAndFocus(
-  editor: FormattingEditor,
-  selectionSnapshot: Record<string, unknown> | null,
-) {
-  const view = getTiptapView(editor)
-  if (!view) {
-    editor.focus()
-    return
-  }
-
-  if (selectionSnapshot) {
-    try {
-      const nextSelection = Selection.fromJSON(view.state.doc as never, selectionSnapshot)
-      view.dispatch(view.state.tr.setSelection(nextSelection))
-    } catch {
-      // Fall back to the editor's current selection if the saved snapshot is no longer valid.
-    }
-  }
-
-  view.focus()
-}
-
-function getTiptapView(editor: FormattingEditor | null): EditorViewLike | null {
-  const tiptapEditor = (editor as { _tiptapEditor?: { view?: EditorViewLike } } | null)
-    ?._tiptapEditor
-  return tiptapEditor?.view ?? null
 }
 
 function preventEditorBlur(event: ReactMouseEvent) {

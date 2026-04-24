@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { drawToolModule } from '../draw-tool-module'
+import { drawToolSpec } from '../draw-tool-module'
 import { clearDrawToolLocalOverlay, useDrawToolLocalOverlayStore } from '../draw-tool-local-overlay'
 import type { CanvasToolRuntime } from '../../canvas-tool-types'
 
@@ -29,12 +29,12 @@ function createPointerEvent(
   } as PointerEvent
 }
 
-describe('drawToolModule', () => {
+describe('drawToolSpec', () => {
   it('publishes and clears tool.draw awareness while drawing', () => {
     const createNode = vi.fn()
     const setPresence = vi.fn()
     clearDrawToolLocalOverlay()
-    const controller = drawToolModule.createHandlers(
+    const controller = drawToolSpec.createHandlers(
       createDrawEnvironment({
         createNode,
         setPresence,
@@ -83,7 +83,7 @@ describe('drawToolModule', () => {
 
   it('locks stroke creation to a straight axis-aligned line while shift is held', () => {
     const createNode = vi.fn()
-    const controller = drawToolModule.createHandlers(
+    const controller = drawToolSpec.createHandlers(
       createDrawEnvironment({
         createNode,
         setPresence: vi.fn(),
@@ -116,7 +116,7 @@ describe('drawToolModule', () => {
       strokeOpacity: 100,
       strokeSize: 4,
     }
-    const controller = drawToolModule.createHandlers(
+    const controller = drawToolSpec.createHandlers(
       createDrawEnvironment({
         createNode,
         setPresence: vi.fn(),
@@ -144,7 +144,7 @@ describe('drawToolModule', () => {
 
   it('clamps freehand strokes to a minimum size of 1 even if tool state falls to zero', () => {
     const createNode = vi.fn()
-    const controller = drawToolModule.createHandlers(
+    const controller = drawToolSpec.createHandlers(
       createDrawEnvironment({
         createNode,
         setPresence: vi.fn(),

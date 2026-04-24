@@ -39,6 +39,13 @@ export function clampStrokeNodeSize(size: number): number {
   return Number.isFinite(size) ? Math.max(size, MIN_STROKE_NODE_SIZE) : MIN_STROKE_NODE_SIZE
 }
 
+export function normalizeStrokeNodeData(data: StrokeNodeData): StrokeNodeData {
+  return {
+    ...data,
+    size: clampStrokeNodeSize(data.size),
+  }
+}
+
 export function isStrokeNode(node: Node): node is StrokeNodeType {
   return node.type === 'stroke'
 }

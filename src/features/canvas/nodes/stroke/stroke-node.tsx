@@ -1,5 +1,5 @@
 import { useInternalNode, useViewport } from '@xyflow/react'
-import type { CanvasNodeMinimapProps } from '../canvas-node-module-types'
+import type { CanvasNodeMinimapProps } from '../canvas-node-types'
 import type { CanvasConnectionHandleDescriptor } from '../shared/canvas-node-connection-handles'
 import { ResizableNodeWrapper } from '../shared/resizable-node-wrapper'
 import type { Node, NodeProps } from '@xyflow/react'

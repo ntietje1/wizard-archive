@@ -10,7 +10,7 @@ import {
 import { resolveCanvasEdgeEndpoint } from './canvas-edge-geometry'
 import { assertNever } from '~/shared/utils/utils'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
-import type { CanvasEdgeRendererProps } from '../canvas-edge-module-types'
+import type { CanvasEdgeRendererProps } from '../canvas-edge-types'
 import { Position } from '@xyflow/react'
 import type { ConnectionLineComponentProps, InternalNode, Node } from '@xyflow/react'
 import type { CSSProperties } from 'react'

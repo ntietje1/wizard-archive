@@ -1,8 +1,6 @@
 import { render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { CanvasAwarenessHost } from '../canvas-awareness-host'
-import * as canvasNodeModules from '../../nodes/canvas-node-modules'
-import * as canvasToolModules from '../../tools/canvas-tool-modules'
 
 const viewportMock = vi.hoisted(() => ({
   x: 12,
@@ -14,25 +12,26 @@ vi.mock('@xyflow/react', () => ({
   useViewport: () => viewportMock,
 }))
 
+vi.mock('../../tools/canvas-tool-modules', () => ({
+  canvasToolAwarenessLayers: [
+    {
+      key: 'select',
+      Layer: () => <div data-testid="tool-awareness-layer" />,
+    },
+  ],
+}))
+
+vi.mock('../../nodes/canvas-node-modules', () => ({
+  canvasNodeAwarenessLayers: [
+    {
+      key: 'text',
+      Layer: () => <div data-testid="node-awareness-layer" />,
+    },
+  ],
+}))
+
 describe('CanvasAwarenessHost', () => {
-  beforeEach(() => {
-    vi.restoreAllMocks()
-  })
-
-  it('renders tool and node awareness layers from the registry selectors', () => {
-    vi.spyOn(canvasToolModules, 'getCanvasToolAwarenessLayers').mockReturnValue([
-      {
-        key: 'select',
-        Layer: () => <div data-testid="tool-awareness-layer" />,
-      },
-    ])
-    vi.spyOn(canvasNodeModules, 'getCanvasNodeAwarenessLayers').mockReturnValue([
-      {
-        key: 'text',
-        Layer: () => <div data-testid="node-awareness-layer" />,
-      },
-    ])
-
+  it('renders tool and node awareness layers from the direct awareness exports', () => {
     render(<CanvasAwarenessHost remoteUsers={[]} />)
 
     expect(screen.getByTestId('tool-awareness-layer')).toBeVisible()
@@ -40,9 +39,6 @@ describe('CanvasAwarenessHost', () => {
   })
 
   it('applies the current viewport transform to the awareness layer container', () => {
-    vi.spyOn(canvasToolModules, 'getCanvasToolAwarenessLayers').mockReturnValue([])
-    vi.spyOn(canvasNodeModules, 'getCanvasNodeAwarenessLayers').mockReturnValue([])
-
     render(<CanvasAwarenessHost remoteUsers={[]} />)
 
     const transformedLayerContainer = screen.getByTestId('awareness-layer-container')

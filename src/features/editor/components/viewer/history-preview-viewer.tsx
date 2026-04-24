@@ -14,11 +14,12 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { CustomBlock } from 'convex/notes/editorSpecs'
 import type { Edge, Node } from '@xyflow/react'
 import type { GameMapSnapshotData } from 'convex/gameMaps/types'
+import { canvasEdgeTypes } from '~/features/canvas/edges/canvas-edge-renderers'
+import { canvasNodeTypes } from '~/features/canvas/nodes/canvas-node-renderers'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
-import { getCanvasNodeTypes } from '~/features/canvas/nodes/canvas-node-modules'
-import { canvasEdgeTypes } from '~/features/canvas/edges/canvas-edge-registry'
-import { CanvasReadOnlyProviders } from '~/features/canvas/runtime/providers/canvas-read-only-providers'
+import { CanvasRuntimeProvider } from '~/features/canvas/runtime/providers/canvas-runtime-context'
+import { READ_ONLY_CANVAS_RUNTIME } from '~/features/canvas/runtime/providers/canvas-runtime'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { NoteContent } from '~/features/editor/components/note-content'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
@@ -26,8 +27,6 @@ import { PinMarker } from '~/features/editor/components/viewer/map/pin-marker'
 import { resolvePinColor, resolvePinIcon } from '~/features/editor/components/viewer/map/pin-utils'
 import { destroyBlockNoteEditor } from '~/features/editor/utils/destroy-blocknote-editor'
 import { logger } from '~/shared/utils/logger'
-
-const canvasNodeTypes = getCanvasNodeTypes()
 
 export function HistoryPreviewViewer({ entryId }: { entryId: Id<'editHistory'> }) {
   const snapshotQuery = useCampaignQuery(api.documentSnapshots.queries.getSnapshotForHistoryEntry, {
@@ -151,7 +150,7 @@ function CanvasSnapshotPreview({ data }: { data: ArrayBuffer }) {
 
   return (
     <div className="flex-1 min-h-0">
-      <CanvasReadOnlyProviders>
+      <CanvasRuntimeProvider {...READ_ONLY_CANVAS_RUNTIME}>
         <ReactFlowProvider>
           <ReactFlow
             nodes={nodes}
@@ -168,7 +167,7 @@ function CanvasSnapshotPreview({ data }: { data: ArrayBuffer }) {
             <Background />
           </ReactFlow>
         </ReactFlowProvider>
-      </CanvasReadOnlyProviders>
+      </CanvasRuntimeProvider>
     </div>
   )
 }
@@ -211,8 +210,8 @@ function GameMapSnapshotPreview({ data }: { data: ArrayBuffer }) {
       {imageUrl.data ? (
         <div className="relative">
           <img src={imageUrl.data} alt="Map preview" className="max-w-full" />
-          {snapshotData.pins.map((pin, i) => (
-            <SnapshotPin key={i} pin={pin} />
+          {snapshotData.pins.map((pin) => (
+            <SnapshotPin key={`${pin.itemId}:${pin.x}:${pin.y}`} pin={pin} />
           ))}
         </div>
       ) : imageUrl.isLoading ? (

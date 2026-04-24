@@ -1,13 +1,11 @@
 import { useViewport } from '@xyflow/react'
 import { CanvasRemoteCursors } from './canvas-remote-cursors'
-import { getCanvasNodeAwarenessLayers } from '../nodes/canvas-node-modules'
-import { getCanvasToolAwarenessLayers } from '../tools/canvas-tool-modules'
+import { canvasNodeAwarenessLayers } from '../nodes/canvas-node-modules'
+import { canvasToolAwarenessLayers } from '../tools/canvas-tool-modules'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
 
 export function CanvasAwarenessHost({ remoteUsers }: { remoteUsers: Array<RemoteUser> }) {
   const viewport = useViewport()
-  const toolAwarenessLayers = getCanvasToolAwarenessLayers()
-  const nodeAwarenessLayers = getCanvasNodeAwarenessLayers()
 
   return (
     <div className="pointer-events-none absolute inset-0" style={{ zIndex: 5 }}>
@@ -19,10 +17,10 @@ export function CanvasAwarenessHost({ remoteUsers }: { remoteUsers: Array<Remote
           transformOrigin: '0 0',
         }}
       >
-        {toolAwarenessLayers.map(({ key, Layer }) => (
+        {canvasToolAwarenessLayers.map(({ key, Layer }) => (
           <Layer key={key} remoteUsers={remoteUsers} />
         ))}
-        {nodeAwarenessLayers.map(({ key, Layer }) => (
+        {canvasNodeAwarenessLayers.map(({ key, Layer }) => (
           <Layer key={key} remoteUsers={remoteUsers} />
         ))}
       </div>

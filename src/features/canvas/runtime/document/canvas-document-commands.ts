@@ -1,17 +1,55 @@
 import { createEmbedCanvasNode } from '../../nodes/embed/embed-node-creation'
-import { getCanvasNodeModuleByType } from '../../nodes/canvas-node-modules'
+import { resizeCanvasNode } from '../../nodes/canvas-node-modules'
 import type {
   CanvasEdgeCreationDefaults,
   CanvasSelectionSnapshot,
 } from '../../tools/canvas-tool-types'
 import { getCanvasDeletionSelection } from '../context-menu/canvas-context-menu-selection'
-import type { CanvasReorderUpdates } from '../context-menu/canvas-context-menu-reorder'
+import type { CanvasReorderPlan } from './canvas-reorder-plan'
 import type { CanvasContextMenuPoint } from '../context-menu/canvas-context-menu-types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Connection, Edge, Node, XYPosition } from '@xyflow/react'
 import type * as Y from 'yjs'
 
 export type CanvasNodeSanitizer = (node: Node, operation: string, fallbackNode?: Node) => Node
+
+function updateCanvasNodeIfPresent({
+  nodesMap,
+  nodeId,
+  sanitizeNode,
+  operation,
+  updater,
+}: {
+  nodesMap: Y.Map<Node>
+  nodeId: string
+  sanitizeNode: CanvasNodeSanitizer
+  operation: string
+  updater: (node: Node) => Node
+}) {
+  const existing = nodesMap.get(nodeId)
+  if (!existing) {
+    return
+  }
+
+  nodesMap.set(nodeId, sanitizeNode(updater(existing), operation, existing))
+}
+
+function updateCanvasEdgeIfPresent({
+  edgesMap,
+  edgeId,
+  updater,
+}: {
+  edgesMap: Y.Map<Edge>
+  edgeId: string
+  updater: (edge: Edge) => Edge
+}) {
+  const existing = edgesMap.get(edgeId)
+  if (!existing) {
+    return
+  }
+
+  edgesMap.set(edgeId, updater(existing))
+}
 
 export function createCanvasNodeCommand({
   nodesMap,
@@ -51,12 +89,13 @@ export function updateCanvasNodeCommand({
   updater: (node: Node) => Node
   sanitizeNode: CanvasNodeSanitizer
 }) {
-  const existing = nodesMap.get(nodeId)
-  if (!existing) {
-    return
-  }
-
-  nodesMap.set(nodeId, sanitizeNode(updater(existing), 'updateNode', existing))
+  updateCanvasNodeIfPresent({
+    nodesMap,
+    nodeId,
+    sanitizeNode,
+    operation: 'updateNode',
+    updater,
+  })
 }
 
 export function updateCanvasNodeDataCommand({
@@ -70,22 +109,16 @@ export function updateCanvasNodeDataCommand({
   data: Record<string, unknown>
   sanitizeNode: CanvasNodeSanitizer
 }) {
-  const existing = nodesMap.get(nodeId)
-  if (!existing) {
-    return
-  }
-
-  nodesMap.set(
+  updateCanvasNodeIfPresent({
+    nodesMap,
     nodeId,
-    sanitizeNode(
-      {
-        ...existing,
-        data: { ...existing.data, ...data },
-      },
-      'updateNodeData',
-      existing,
-    ),
-  )
+    sanitizeNode,
+    operation: 'updateNodeData',
+    updater: (existing) => ({
+      ...existing,
+      data: { ...existing.data, ...data },
+    }),
+  })
 }
 
 export function updateCanvasEdgeCommand({
@@ -97,12 +130,7 @@ export function updateCanvasEdgeCommand({
   edgeId: string
   updater: (edge: Edge) => Edge
 }) {
-  const existing = edgesMap.get(edgeId)
-  if (!existing) {
-    return
-  }
-
-  edgesMap.set(edgeId, updater(existing))
+  updateCanvasEdgeIfPresent({ edgesMap, edgeId, updater })
 }
 
 export function resizeCanvasNodeCommand({
@@ -120,22 +148,13 @@ export function resizeCanvasNodeCommand({
   position: XYPosition
   sanitizeNode: CanvasNodeSanitizer
 }) {
-  const existing = nodesMap.get(nodeId)
-  if (!existing) {
-    return
-  }
-
-  const nodeModule = getCanvasNodeModuleByType(existing.type)
-  nodesMap.set(
+  updateCanvasNodeIfPresent({
+    nodesMap,
     nodeId,
-    sanitizeNode(
-      nodeModule?.resize
-        ? nodeModule.resize(existing, { width, height, position })
-        : { ...existing, width, height, position },
-      'resizeNode',
-      existing,
-    ),
-  )
+    sanitizeNode,
+    operation: 'resizeNode',
+    updater: (existing) => resizeCanvasNode(existing, { width, height, position }),
+  })
 }
 
 export function setCanvasNodePositionCommand({
@@ -149,12 +168,13 @@ export function setCanvasNodePositionCommand({
   position: XYPosition
   sanitizeNode: CanvasNodeSanitizer
 }) {
-  const existing = nodesMap.get(nodeId)
-  if (!existing) {
-    return
-  }
-
-  nodesMap.set(nodeId, sanitizeNode({ ...existing, position }, 'setNodePosition', existing))
+  updateCanvasNodeIfPresent({
+    nodesMap,
+    nodeId,
+    sanitizeNode,
+    operation: 'setNodePosition',
+    updater: (existing) => ({ ...existing, position }),
+  })
 }
 
 export function deleteCanvasSelectionCommand({
@@ -256,7 +276,7 @@ export function applyCanvasReorderCommand({
 }: {
   nodesMap: Y.Map<Node>
   edgesMap: Y.Map<Edge>
-  reorderUpdates: CanvasReorderUpdates
+  reorderUpdates: CanvasReorderPlan
 }) {
   reorderUpdates.nodes?.forEach((node) => {
     nodesMap.set(node.id, node)

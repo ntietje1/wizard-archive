@@ -1,6 +1,6 @@
 import { useHotkey } from '@tanstack/react-hotkeys'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
-import { getCanvasToolbarTools } from '../../tools/canvas-tool-modules'
+import { canvasToolbarTools } from '../../tools/canvas-tool-modules'
 import type { CanvasCommands } from './use-canvas-commands'
 import type {
   CanvasHistoryController,
@@ -69,14 +69,13 @@ export function useCanvasKeyboardShortcuts({
   selection,
   commands,
 }: UseCanvasKeyboardShortcutsOptions) {
-  const toolbarTools = getCanvasToolbarTools()
-  const selectTool = toolbarTools.find((tool) => tool.id === 'select')
-  const handTool = toolbarTools.find((tool) => tool.id === 'hand')
-  const lassoTool = toolbarTools.find((tool) => tool.id === 'lasso')
-  const drawTool = toolbarTools.find((tool) => tool.id === 'draw')
-  const eraseTool = toolbarTools.find((tool) => tool.id === 'erase')
-  const textTool = toolbarTools.find((tool) => tool.id === 'text')
-  const edgeTool = toolbarTools.find((tool) => tool.id === 'edge')
+  const selectTool = canvasToolbarTools.find((tool) => tool.id === 'select')
+  const handTool = canvasToolbarTools.find((tool) => tool.id === 'hand')
+  const lassoTool = canvasToolbarTools.find((tool) => tool.id === 'lasso')
+  const drawTool = canvasToolbarTools.find((tool) => tool.id === 'draw')
+  const eraseTool = canvasToolbarTools.find((tool) => tool.id === 'erase')
+  const textTool = canvasToolbarTools.find((tool) => tool.id === 'text')
+  const edgeTool = canvasToolbarTools.find((tool) => tool.id === 'edge')
   const toolLookup = {
     select: selectTool,
     hand: handTool,

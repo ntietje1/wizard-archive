@@ -11,6 +11,7 @@ import {
   Scissors,
   Trash2,
 } from 'lucide-react'
+import { parseCanvasReorderPayload } from 'convex/canvases/validation'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import {
   CANVAS_REORDER_ACTIONS,
@@ -24,11 +25,20 @@ import type {
   CanvasContextMenuContext,
   CanvasContextMenuContributor,
   CanvasContextMenuItem,
+  CanvasContextMenuReorderPayload,
   CanvasContextMenuServices,
 } from './canvas-context-menu-types'
 
-function hasSelection(context: CanvasContextMenuContext): boolean {
-  return context.selection.nodeIds.length > 0 || context.selection.edgeIds.length > 0
+// Any target kind other than `pane` is currently treated as selectable.
+// Update this if new non-selectable target kinds are introduced.
+function isTargetSelectable(context: CanvasContextMenuContext): boolean {
+  return context.target.kind !== 'pane'
+}
+
+function createCanvasReorderPayload(
+  direction: CanvasReorderDirection,
+): CanvasContextMenuReorderPayload {
+  return { kind: 'reorder', direction }
 }
 
 function buildCanvasReorderItems(): Array<CanvasContextMenuItem> {
@@ -40,19 +50,12 @@ function buildCanvasReorderItems(): Array<CanvasContextMenuItem> {
     group: 'reorder',
     priority,
     scope: 'selection',
-    payload: { direction: action.direction },
+    payload: createCanvasReorderPayload(action.direction),
   }))
 }
 
-function getCanvasReorderDirection(payload: unknown): CanvasReorderDirection | null {
-  if (!payload || typeof payload !== 'object' || !('direction' in payload)) {
-    return null
-  }
-
-  const { direction } = payload
-  return CANVAS_REORDER_ACTIONS.some((action) => action.direction === direction)
-    ? (direction as CanvasReorderDirection)
-    : null
+export function parseCanvasReorderDirection(payload: unknown): CanvasReorderDirection | null {
+  return parseCanvasReorderPayload(payload)?.direction ?? null
 }
 
 function buildCanvasCreateItems(): Array<CanvasContextMenuItem> {
@@ -86,7 +89,7 @@ const canvasPaneContributor: CanvasContextMenuContributor = {
   id: 'canvas-pane',
   surfaces: ['canvas'],
   getItems: (context, _services) =>
-    hasSelection(context)
+    context.target.kind !== 'pane'
       ? []
       : [
           {
@@ -111,7 +114,7 @@ const canvasPaneContributor: CanvasContextMenuContributor = {
 const canvasSelectionContributor: CanvasContextMenuContributor = {
   id: 'canvas-selection',
   surfaces: ['canvas'],
-  applies: (context) => hasSelection(context),
+  applies: (context) => isTargetSelectable(context),
   getItems: (_context, _services) => [
     {
       id: 'canvas-selection-reorder',
@@ -234,7 +237,7 @@ export function buildCanvasContextMenu({
       'canvas-selection-reorder': {
         id: 'canvas-selection-reorder',
         isEnabled: (nextContext, _services, payload) => {
-          const direction = getCanvasReorderDirection(payload)
+          const direction = parseCanvasReorderDirection(payload)
           return (
             direction !== null &&
             commands.reorder.canRun({
@@ -244,7 +247,7 @@ export function buildCanvasContextMenu({
           )
         },
         run: (nextContext, _services, payload) => {
-          const direction = getCanvasReorderDirection(payload)
+          const direction = parseCanvasReorderDirection(payload)
           if (!direction) {
             return
           }

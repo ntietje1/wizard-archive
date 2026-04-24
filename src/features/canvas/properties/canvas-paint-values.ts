@@ -1,6 +1,6 @@
 import Color from 'color'
 import { normalizePickerColor } from '~/shared/utils/color'
-import type { CanvasPaintPropertyBinding, CanvasPaintValue } from './canvas-property-types'
+import type { CanvasPaintValue } from './canvas-property-types'
 
 const CSS_VARIABLE_REFERENCE_PATTERN = /^var\(\s*(?:--[^),\s]+)\s*(?:,\s*[^)]+)?\)$/
 
@@ -35,18 +35,4 @@ export function areCanvasPaintValuesEqual(
     normalizedLeft.opacity === normalizedRight.opacity &&
     normalizedLeft.color === normalizedRight.color
   )
-}
-
-export function readCanvasPaintBindingValue(binding: CanvasPaintPropertyBinding): CanvasPaintValue {
-  const color = binding.getColor()
-
-  return color === null
-    ? {
-        color: binding.definition.defaultValue.color,
-        opacity: 0,
-      }
-    : {
-        color,
-        opacity: binding.getOpacity(),
-      }
 }

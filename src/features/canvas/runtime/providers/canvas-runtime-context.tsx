@@ -1,63 +1,11 @@
-import type { RemoteHighlight } from '../../utils/canvas-awareness-types'
-import type {
-  CanvasDocumentWriter,
-  CanvasEditSessionState,
-  CanvasHistoryController,
-  CanvasNodeActions,
-  CanvasSelectionController,
-} from '../../tools/canvas-tool-types'
-import type { CanvasCommands } from '../document/use-canvas-commands'
-import {
-  CanvasCommandsContext,
-  CanvasDocumentWriterContext,
-  CanvasEditSessionContext,
-  CanvasHistoryContext,
-  CanvasNodeActionsContext,
-  CanvasPermissionsContext,
-  CanvasRemoteHighlightsContext,
-  CanvasSelectionContext,
-} from './canvas-runtime-hooks'
+import type { ReactNode } from 'react'
+import { CanvasRuntimeContext } from './canvas-runtime'
+import type { CanvasRuntime } from './canvas-runtime'
 
-interface CanvasProvidersProps {
-  canEdit: boolean
-  remoteHighlights: Map<string, RemoteHighlight>
-  history: CanvasHistoryController
-  commands: CanvasCommands
-  documentWriter: CanvasDocumentWriter
-  editSession: CanvasEditSessionState
-  nodeActions: CanvasNodeActions
-  selection: CanvasSelectionController
-  children: React.ReactNode
+interface CanvasRuntimeProviderProps extends CanvasRuntime {
+  children: ReactNode
 }
 
-export function CanvasProviders({
-  canEdit,
-  remoteHighlights,
-  history,
-  commands,
-  documentWriter,
-  editSession,
-  nodeActions,
-  selection,
-  children,
-}: CanvasProvidersProps) {
-  return (
-    <CanvasPermissionsContext value={canEdit}>
-      <CanvasHistoryContext value={history}>
-        <CanvasCommandsContext value={commands}>
-          <CanvasDocumentWriterContext value={documentWriter}>
-            <CanvasEditSessionContext value={editSession}>
-              <CanvasSelectionContext value={selection}>
-                <CanvasNodeActionsContext value={nodeActions}>
-                  <CanvasRemoteHighlightsContext value={remoteHighlights}>
-                    {children}
-                  </CanvasRemoteHighlightsContext>
-                </CanvasNodeActionsContext>
-              </CanvasSelectionContext>
-            </CanvasEditSessionContext>
-          </CanvasDocumentWriterContext>
-        </CanvasCommandsContext>
-      </CanvasHistoryContext>
-    </CanvasPermissionsContext>
-  )
+export function CanvasRuntimeProvider({ children, ...runtime }: CanvasRuntimeProviderProps) {
+  return <CanvasRuntimeContext value={runtime}>{children}</CanvasRuntimeContext>
 }

@@ -1,5 +1,6 @@
 import {
   DEFAULT_CANVAS_EDGE_STROKE,
+  readCanvasEdgeOpacityPercent,
   readCanvasEdgeStroke,
   readCanvasEdgeStrokeWidth,
 } from './canvas-edge-style'
@@ -11,12 +12,12 @@ import {
   bindCanvasPaintProperty,
   bindCanvasStrokeSizeProperty,
 } from '../../properties/canvas-property-types'
+import type { CanvasRuntimeEdge } from '../canvas-edge-types'
 import type { CanvasInspectableProperties } from '../../properties/canvas-property-types'
 import type { CanvasDocumentWriter } from '../../tools/canvas-tool-types'
-import type { Edge } from '@xyflow/react'
 
 export function getCanvasStrokeEdgeProperties(
-  edge: Edge,
+  edge: CanvasRuntimeEdge,
   updateEdge: CanvasDocumentWriter['updateEdge'],
 ): CanvasInspectableProperties {
   return {
@@ -34,10 +35,7 @@ export function getCanvasStrokeEdgeProperties(
                   : DEFAULT_CANVAS_EDGE_STROKE,
             },
           })),
-        getOpacity: () =>
-          typeof edge.style?.opacity === 'number'
-            ? Math.round(Math.min(1, Math.max(0, edge.style.opacity)) * 100)
-            : 100,
+        getOpacity: () => readCanvasEdgeOpacityPercent(edge.style),
         setOpacity: (opacity) => {
           const clampedOpacity = Math.max(0, Math.min(100, opacity))
 

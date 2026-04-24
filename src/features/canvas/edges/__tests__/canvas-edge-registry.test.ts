@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
   findCanvasEdgeAtPoint,
+  getCanvasEdgeInspectableProperties,
   getCanvasEdgesMatchingLasso,
   getCanvasEdgesMatchingRectangle,
+  normalizeCanvasEdge,
 } from '../canvas-edge-registry'
 import type { Edge, Node } from '@xyflow/react'
 
@@ -53,12 +55,10 @@ function createStepEdge(overrides?: Partial<Edge>): Edge {
   }
 }
 
-describe('canvas-edge-registry', () => {
+describe('canvas edge specs', () => {
   const nodes = [createNode('source', 0, 0), createNode('target', 160, 0)]
 
   it('matches the bezier edge on point hits using the rendered bezier geometry', () => {
-    // findCanvasEdgeAtPoint samples the createBezierEdge curve between these nodes, so
-    // {x:100,y:20} lands near the rendered arc while {x:100,y:70} stays well outside it.
     expect(findCanvasEdgeAtPoint(nodes, [createBezierEdge()], { x: 100, y: 20 }, { zoom: 1 })).toBe(
       'edge-1',
     )
@@ -185,5 +185,67 @@ describe('canvas-edge-registry', () => {
         { zoom: 1 },
       ),
     ).toEqual(['step-edge'])
+  })
+
+  it('ignores malformed edge styles during hit testing', () => {
+    expect(
+      findCanvasEdgeAtPoint(
+        nodes,
+        [
+          createBezierEdge({
+            id: 'edge-invalid',
+            source: 'source',
+            target: 'target',
+            style: { strokeWidth: -1 },
+          }),
+          createBezierEdge({
+            id: 'edge-fallback',
+          }),
+        ],
+        { x: 100, y: 20 },
+        { zoom: 1 },
+      ),
+    ).toBe('edge-fallback')
+  })
+
+  it('falls back unsupported edge types safely', () => {
+    const fallbackEdge = normalizeCanvasEdge(
+      createBezierEdge({ id: 'edge-fallback', type: 'curved' }),
+    )
+
+    expect(fallbackEdge).toMatchObject({
+      id: 'edge-fallback',
+      type: 'bezier',
+    })
+    expect(
+      findCanvasEdgeAtPoint(
+        nodes,
+        [createBezierEdge({ id: 'edge-fallback', type: 'curved' })],
+        { x: 100, y: 20 },
+        { zoom: 1 },
+      ),
+    ).toBe('edge-fallback')
+  })
+
+  it('returns empty inspectable properties for invalid edges and typed properties for valid edges', () => {
+    const updateEdge = () => undefined
+
+    expect(
+      getCanvasEdgeInspectableProperties(
+        normalizeCanvasEdge({
+          ...createBezierEdge({
+            id: 'edge-invalid-properties',
+          }),
+          source: null,
+        } as unknown as Edge),
+        updateEdge,
+      ).bindings,
+    ).toEqual([])
+
+    // Expect 2 bindings: stroke paint and stroke width.
+    expect(
+      getCanvasEdgeInspectableProperties(normalizeCanvasEdge(createStraightEdge()), updateEdge)
+        .bindings,
+    ).toHaveLength(2)
   })
 })

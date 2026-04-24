@@ -183,7 +183,7 @@ vi.mock('~/features/previews/hooks/use-yjs-preview-upload', () => ({
 }))
 
 vi.mock('../document/use-canvas-document-writer', () => ({
-  useCanvasDocumentWriter: () => documentWriterMock,
+  createCanvasDocumentWriter: () => documentWriterMock,
 }))
 
 vi.mock('../document/use-canvas-document-projection', () => ({
@@ -223,8 +223,8 @@ vi.mock('../interaction/use-canvas-cursor-presence', () => ({
   },
 }))
 
-vi.mock('../interaction/use-canvas-node-actions', () => ({
-  useCanvasNodeActions: (...args: Array<unknown>) => {
+vi.mock('../interaction/create-canvas-node-actions', () => ({
+  createCanvasNodeActions: (...args: Array<unknown>) => {
     nodeActionsSpy(...args)
     return nodeActionsMock
   },
@@ -254,7 +254,7 @@ vi.mock('../interaction/use-canvas-drop-integration', () => ({
 }))
 
 vi.mock('../interaction/use-canvas-flow-handlers', () => ({
-  useCanvasFlowHandlers: (...args: Array<unknown>) => {
+  createCanvasFlowHandlers: (...args: Array<unknown>) => {
     flowHandlersSpy(...args)
     return flowHandlersMock
   },
@@ -292,12 +292,65 @@ vi.mock('../interaction/use-canvas-modifier-keys', () => ({
 }))
 
 vi.mock('../../tools/canvas-tool-modules', () => ({
-  clearCanvasToolTransientState: (...args: Array<unknown>) => clearToolTransientStateSpy(...args),
-  createCanvasToolHandlers: (...args: Array<unknown>) => {
-    toolHandlersSpy(...args)
-    return toolHandlersMock
+  canvasToolSpecs: {
+    select: {
+      cursor: undefined,
+      createHandlers: (runtime: unknown) => {
+        toolHandlersSpy('select', runtime)
+        return toolHandlersMock
+      },
+      localOverlay: { clear: () => clearToolTransientStateSpy('select-overlay') },
+      awareness: {
+        clear: (presence: unknown) => clearToolTransientStateSpy('select-awareness', presence),
+      },
+    },
+    hand: {
+      cursor: undefined,
+      createHandlers: (runtime: unknown) => {
+        toolHandlersSpy('hand', runtime)
+        return toolHandlersMock
+      },
+    },
+    lasso: {
+      cursor: 'crosshair',
+      createHandlers: (runtime: unknown) => {
+        toolHandlersSpy('lasso', runtime)
+        return toolHandlersMock
+      },
+    },
+    draw: {
+      cursor: 'crosshair',
+      createHandlers: (runtime: unknown) => {
+        toolHandlersSpy('draw', runtime)
+        return toolHandlersMock
+      },
+      localOverlay: { clear: () => clearToolTransientStateSpy('draw-overlay') },
+      awareness: {
+        clear: (presence: unknown) => clearToolTransientStateSpy('draw-awareness', presence),
+      },
+    },
+    erase: {
+      cursor: undefined,
+      createHandlers: (runtime: unknown) => {
+        toolHandlersSpy('erase', runtime)
+        return toolHandlersMock
+      },
+    },
+    text: {
+      cursor: undefined,
+      createHandlers: (runtime: unknown) => {
+        toolHandlersSpy('text', runtime)
+        return toolHandlersMock
+      },
+    },
+    edge: {
+      cursor: undefined,
+      createHandlers: (runtime: unknown) => {
+        toolHandlersSpy('edge', runtime)
+        return toolHandlersMock
+      },
+    },
   },
-  getCanvasToolCursor: (toolId: string) => (toolId === 'draw' ? 'crosshair' : undefined),
 }))
 
 vi.mock('../selection/use-canvas-selection-state', () => ({
@@ -454,7 +507,11 @@ describe('useCanvasFlowRuntime', () => {
     doc.destroy()
 
     expect(clearSelectionSpy).toHaveBeenCalledTimes(1)
-    expect(clearToolTransientStateSpy).toHaveBeenCalledWith('select', session.awareness.presence)
+    expect(clearToolTransientStateSpy).toHaveBeenCalledWith('select-overlay')
+    expect(clearToolTransientStateSpy).toHaveBeenCalledWith(
+      'select-awareness',
+      session.awareness.presence,
+    )
   })
 
   it('clears the previous tool transient state when the active tool changes', () => {
@@ -478,7 +535,11 @@ describe('useCanvasFlowRuntime', () => {
 
     rerender()
 
-    expect(clearToolTransientStateSpy).toHaveBeenCalledWith('select', session.awareness.presence)
+    expect(clearToolTransientStateSpy).toHaveBeenCalledWith('select-overlay')
+    expect(clearToolTransientStateSpy).toHaveBeenCalledWith(
+      'select-awareness',
+      session.awareness.presence,
+    )
     expect(toolHandlersSpy).toHaveBeenCalledWith('draw', expect.any(Object))
     expect(cancelConnectionSpy).toHaveBeenCalledTimes(1)
     expect(storeApiMock.setState).toHaveBeenCalledWith({ connectionClickStartHandle: null })

@@ -9,6 +9,7 @@ const sidebarItemPreviewSpy = vi.hoisted(() => vi.fn())
 const embeddedCanvasSpy = vi.hoisted(() => vi.fn())
 const embeddedFileSpy = vi.hoisted(() => vi.fn())
 const embeddedMapSpy = vi.hoisted(() => vi.fn())
+const setEditingEmbedId = vi.hoisted(() => vi.fn())
 const renderModeState = vi.hoisted(() => ({
   interactive: true,
 }))
@@ -44,12 +45,14 @@ vi.mock('../embedded-map-content', () => ({
   },
 }))
 
-vi.mock('../../../runtime/providers/canvas-runtime-hooks', () => ({
-  useCanvasEditSessionContext: () => ({
-    editingEmbedId: null,
-    setEditingEmbedId: vi.fn(),
+vi.mock('../../../runtime/providers/canvas-runtime', () => ({
+  useCanvasRuntime: () => ({
+    canEdit: true,
+    editSession: {
+      editingEmbedId: null,
+      setEditingEmbedId,
+    },
   }),
-  useCanvasPermissionsContext: () => true,
 }))
 
 vi.mock('../../../runtime/providers/use-canvas-render-mode', () => ({
@@ -103,11 +106,19 @@ vi.mock('~/features/sidebar/hooks/useSidebarItemById', () => ({
 
 vi.mock('../../shared/canvas-node-surface-style', () => ({
   getCanvasNodeSurfaceStyle: () => ({}),
+  normalizeCanvasNodeSurfaceStyleData: () => ({
+    backgroundColor: 'var(--background)',
+    backgroundOpacity: 100,
+    borderStroke: 'var(--border)',
+    borderOpacity: 100,
+    borderWidth: 1,
+  }),
 }))
 
 describe('EmbedNode', () => {
   beforeEach(() => {
     renderModeState.interactive = true
+    setEditingEmbedId.mockClear()
     contentItemState.data = {
       _id: 'canvas-1',
       type: SIDEBAR_ITEM_TYPES.canvases,

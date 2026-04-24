@@ -1,4 +1,19 @@
 import type { CSSProperties } from 'react'
+import {
+  parseCanvasNodeBorderWidth,
+  parseCanvasNodeSurfaceColor,
+  parseCanvasNodeSurfaceOpacity,
+} from 'convex/canvases/validation'
+import {
+  fillCanvasProperty,
+  linePaintCanvasProperty,
+  strokeSizeCanvasProperty,
+} from '../../properties/canvas-property-definitions'
+import {
+  bindCanvasPaintProperty,
+  bindCanvasStrokeSizeProperty,
+} from '../../properties/canvas-property-types'
+import type { CanvasNodeData, CanvasRuntimeNode, CanvasNodeType } from '../canvas-node-types'
 
 export interface CanvasNodeSurfaceStyleData {
   backgroundColor?: string | null
@@ -8,36 +23,43 @@ export interface CanvasNodeSurfaceStyleData {
   borderWidth?: number
 }
 
-export const DEFAULT_CANVAS_NODE_BACKGROUND_COLOR = 'var(--background)' as const
-export const DEFAULT_CANVAS_NODE_BACKGROUND_OPACITY = 100 as const
-export const DEFAULT_CANVAS_NODE_BORDER_STROKE = 'var(--border)' as const
-export const DEFAULT_CANVAS_NODE_BORDER_OPACITY = 100 as const
-export const DEFAULT_CANVAS_NODE_BORDER_WIDTH = 1 as const
+const DEFAULT_CANVAS_NODE_BACKGROUND_COLOR = 'var(--background)' as const
+const DEFAULT_CANVAS_NODE_BACKGROUND_OPACITY = 100 as const
+const DEFAULT_CANVAS_NODE_BORDER_STROKE = 'var(--border)' as const
+const DEFAULT_CANVAS_NODE_BORDER_WIDTH = 1 as const
 
-function clampNumber(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value))
+export interface CanvasNormalizedNodeSurfaceStyleData {
+  backgroundColor: string | null
+  backgroundOpacity: number
+  borderStroke: string | null
+  borderOpacity: number
+  borderWidth: number
 }
 
-function readNumber(value: unknown, fallback: number, min: number, max: number): number {
-  return typeof value === 'number' && Number.isFinite(value)
-    ? clampNumber(value, min, max)
-    : fallback
+function readCanvasNodeSurfaceColor(value: unknown): string | null | undefined {
+  return parseCanvasNodeSurfaceColor(value)
 }
 
-export function readCanvasNodeSurfaceColor(value: unknown): string | null | undefined {
-  if (typeof value === 'string') {
-    return value
+function readCanvasNodeSurfaceOpacity(value: unknown): number {
+  return parseCanvasNodeSurfaceOpacity(value, DEFAULT_CANVAS_NODE_BACKGROUND_OPACITY)
+}
+
+function readCanvasNodeBorderWidth(value: unknown): number {
+  return parseCanvasNodeBorderWidth(value, DEFAULT_CANVAS_NODE_BORDER_WIDTH)
+}
+
+export function normalizeCanvasNodeSurfaceStyleData(
+  data: Partial<CanvasNodeSurfaceStyleData> | undefined,
+): CanvasNormalizedNodeSurfaceStyleData {
+  return {
+    backgroundColor:
+      readCanvasNodeSurfaceColor(data?.backgroundColor) ?? DEFAULT_CANVAS_NODE_BACKGROUND_COLOR,
+    backgroundOpacity: readCanvasNodeSurfaceOpacity(data?.backgroundOpacity),
+    borderStroke:
+      readCanvasNodeSurfaceColor(data?.borderStroke) ?? DEFAULT_CANVAS_NODE_BORDER_STROKE,
+    borderOpacity: readCanvasNodeSurfaceOpacity(data?.borderOpacity),
+    borderWidth: readCanvasNodeBorderWidth(data?.borderWidth),
   }
-
-  return value === null ? null : undefined
-}
-
-export function readCanvasNodeSurfaceOpacity(value: unknown): number {
-  return readNumber(value, DEFAULT_CANVAS_NODE_BACKGROUND_OPACITY, 0, 100)
-}
-
-export function readCanvasNodeBorderWidth(value: unknown): number {
-  return readNumber(value, DEFAULT_CANVAS_NODE_BORDER_WIDTH, 0, 99)
 }
 
 function resolveCanvasNodePaint(color: string | null | undefined, opacity: number): string {
@@ -53,15 +75,64 @@ function resolveCanvasNodePaint(color: string | null | undefined, opacity: numbe
 }
 
 export function getCanvasNodeSurfaceStyle(data: CanvasNodeSurfaceStyleData): CSSProperties {
-  const backgroundOpacity = readCanvasNodeSurfaceOpacity(data.backgroundOpacity)
-  const borderOpacity = readCanvasNodeSurfaceOpacity(data.borderOpacity)
-  const borderWidth = readCanvasNodeBorderWidth(data.borderWidth)
+  const surfaceStyle = normalizeCanvasNodeSurfaceStyleData(data)
 
   return {
-    backgroundColor: resolveCanvasNodePaint(data.backgroundColor, backgroundOpacity),
+    backgroundColor: resolveCanvasNodePaint(
+      surfaceStyle.backgroundColor,
+      surfaceStyle.backgroundOpacity,
+    ),
     border:
-      data.borderStroke !== null && data.borderStroke !== undefined && data.borderStroke !== ''
-        ? `${borderWidth}px solid ${resolveCanvasNodePaint(data.borderStroke, borderOpacity)}`
+      surfaceStyle.borderStroke !== null && surfaceStyle.borderStroke !== ''
+        ? `${surfaceStyle.borderWidth}px solid ${resolveCanvasNodePaint(
+            surfaceStyle.borderStroke,
+            surfaceStyle.borderOpacity,
+          )}`
         : 'none',
   }
+}
+
+export function bindCanvasNodeSurfaceFillProperty<
+  TData extends CanvasNodeData & CanvasNormalizedNodeSurfaceStyleData,
+  TType extends CanvasNodeType,
+>(
+  node: CanvasRuntimeNode<TData, TType>,
+  updateNodeData: <TPatch extends Partial<TData>>(nodeId: string, data: TPatch) => void,
+) {
+  return bindCanvasPaintProperty(fillCanvasProperty, {
+    getColor: () => node.data.backgroundColor,
+    setColor: (backgroundColor) => updateNodeData(node.id, { backgroundColor } as Partial<TData>),
+    getOpacity: () => node.data.backgroundOpacity,
+    setOpacity: (backgroundOpacity) =>
+      updateNodeData(node.id, { backgroundOpacity } as Partial<TData>),
+  })
+}
+
+export function bindCanvasNodeSurfaceBorderPaintProperty<
+  TData extends CanvasNodeData & CanvasNormalizedNodeSurfaceStyleData,
+  TType extends CanvasNodeType,
+>(
+  node: CanvasRuntimeNode<TData, TType>,
+  updateNodeData: <TPatch extends Partial<TData>>(nodeId: string, data: TPatch) => void,
+) {
+  return bindCanvasPaintProperty(linePaintCanvasProperty, {
+    getColor: () => node.data.borderStroke,
+    setColor: (borderStroke) => updateNodeData(node.id, { borderStroke } as Partial<TData>),
+    getOpacity: () => node.data.borderOpacity,
+    setOpacity: (borderOpacity) => updateNodeData(node.id, { borderOpacity } as Partial<TData>),
+  })
+}
+
+export function bindCanvasNodeSurfaceBorderWidthProperty<
+  TData extends CanvasNodeData & CanvasNormalizedNodeSurfaceStyleData,
+  TType extends CanvasNodeType,
+>(
+  node: CanvasRuntimeNode<TData, TType>,
+  updateNodeData: <TPatch extends Partial<TData>>(nodeId: string, data: TPatch) => void,
+) {
+  return bindCanvasStrokeSizeProperty(
+    strokeSizeCanvasProperty,
+    () => node.data.borderWidth,
+    (borderWidth) => updateNodeData(node.id, { borderWidth } as Partial<TData>),
+  )
 }

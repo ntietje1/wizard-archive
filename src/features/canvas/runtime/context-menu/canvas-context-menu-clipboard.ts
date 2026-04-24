@@ -1,10 +1,6 @@
 import { getNextCanvasElementZIndex } from '../document/canvas-z-index'
-import {
-  cloneCanvasEdge,
-  cloneCanvasNode,
-  getCurrentCanvasEdges,
-  getCurrentCanvasNodes,
-} from './canvas-context-menu-elements'
+import { sortCanvasElementsByZIndex } from '../document/canvas-z-order'
+import { stripEphemeralCanvasNodeState } from '../../utils/canvas-node-persistence'
 import type { CanvasClipboardEntry } from './canvas-context-menu-types'
 import type { CanvasSelectionSnapshot } from '../../tools/canvas-tool-types'
 import type { Edge, Node } from '@xyflow/react'
@@ -16,6 +12,23 @@ interface MaterializedCanvasPaste {
   nodes: Array<Node>
   edges: Array<Edge>
   selection: CanvasSelectionSnapshot
+}
+
+function cloneCanvasNode(node: Node): Node {
+  return structuredClone(stripEphemeralCanvasNodeState(node))
+}
+
+function cloneCanvasEdge(edge: Edge): Edge {
+  // Canvas edges do not carry ephemeral React Flow runtime state, so a direct clone is sufficient.
+  return structuredClone(edge)
+}
+
+function getCurrentCanvasNodes(nodesMap: Y.Map<Node>): Array<Node> {
+  return sortCanvasElementsByZIndex(Array.from(nodesMap.values()))
+}
+
+function getCurrentCanvasEdges(edgesMap: Y.Map<Edge>): Array<Edge> {
+  return sortCanvasElementsByZIndex(Array.from(edgesMap.values()))
 }
 
 export function createCanvasClipboardEntry(

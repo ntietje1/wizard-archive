@@ -3,6 +3,7 @@ import {
   applyCanvasReorderCommand,
   deleteCanvasSelectionCommand,
 } from './canvas-document-commands'
+import { createCanvasReorderPlan } from './canvas-reorder-plan'
 import { sanitizeNodeForPersistence } from './canvas-node-persistence-sanitizer'
 import { transactCanvasMaps } from './canvas-yjs-transactions'
 import { useCanvasClipboardStore } from '../context-menu/use-canvas-clipboard-store'
@@ -10,7 +11,6 @@ import {
   createCanvasClipboardEntry,
   materializeCanvasPaste,
 } from '../context-menu/canvas-context-menu-clipboard'
-import { createCanvasReorderUpdates } from '../context-menu/canvas-context-menu-reorder'
 import type { CanvasReorderDirection } from './canvas-reorder'
 import type {
   CanvasSelectionController,
@@ -188,7 +188,7 @@ export function useCanvasCommands({
         }
 
         return (
-          createCanvasReorderUpdates(
+          createCanvasReorderPlan(
             nodesMap,
             edgesMap,
             getSelectionSnapshot(args),
@@ -201,18 +201,18 @@ export function useCanvasCommands({
           return false
         }
 
-        const reorderUpdates = createCanvasReorderUpdates(
+        const reorderPlan = createCanvasReorderPlan(
           nodesMap,
           edgesMap,
           getSelectionSnapshot(args),
           args.direction,
         )
-        if (!reorderUpdates) {
+        if (!reorderPlan) {
           return false
         }
 
         transactCanvasMaps(nodesMap, edgesMap, () => {
-          applyCanvasReorderCommand({ nodesMap, edgesMap, reorderUpdates })
+          applyCanvasReorderCommand({ nodesMap, edgesMap, reorderUpdates: reorderPlan })
         })
 
         return true

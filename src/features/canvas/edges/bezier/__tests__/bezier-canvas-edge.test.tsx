@@ -7,8 +7,11 @@ import {
   clearCanvasPendingSelectionPreview,
   setCanvasPendingSelectionPreview,
 } from '../../../runtime/selection/use-canvas-pending-selection-preview'
-import type { CanvasEdgeRendererProps } from '../../canvas-edge-module-types'
-import { DEFAULT_CANVAS_EDGE_STROKE_WIDTH } from '../../shared/canvas-edge-style'
+import type { CanvasEdgeRendererProps } from '../../canvas-edge-types'
+import {
+  DEFAULT_CANVAS_EDGE_OPACITY,
+  DEFAULT_CANVAS_EDGE_STROKE_WIDTH,
+} from '../../shared/canvas-edge-style'
 import { BezierCanvasEdge } from '../bezier-canvas-edge'
 import { buildBezierCanvasEdgeGeometryFromEdge } from '../bezier-canvas-edge-geometry'
 import type { Node } from '@xyflow/react'
@@ -52,6 +55,7 @@ describe('BezierCanvasEdge', () => {
     expect(baseEdgeSpy.mock.calls[0]?.[0]).toEqual(
       expect.objectContaining({
         style: expect.objectContaining({
+          opacity: DEFAULT_CANVAS_EDGE_OPACITY,
           stroke: 'var(--foreground)',
           strokeWidth: DEFAULT_CANVAS_EDGE_STROKE_WIDTH,
           strokeLinecap: 'square',
@@ -78,6 +82,7 @@ describe('BezierCanvasEdge', () => {
     expect(baseEdgeSpy.mock.calls[0]?.[0]).toEqual(
       expect.objectContaining({
         style: expect.objectContaining({
+          opacity: DEFAULT_CANVAS_EDGE_OPACITY,
           stroke: 'var(--foreground)',
           strokeWidth: DEFAULT_CANVAS_EDGE_STROKE_WIDTH,
           strokeLinecap: 'square',
@@ -97,6 +102,7 @@ describe('BezierCanvasEdge', () => {
     expect(baseEdgeSpy.mock.calls[0]?.[0]).toEqual(
       expect.objectContaining({
         style: expect.objectContaining({
+          opacity: DEFAULT_CANVAS_EDGE_OPACITY,
           stroke: 'var(--foreground)',
           strokeWidth: DEFAULT_CANVAS_EDGE_STROKE_WIDTH,
           strokeLinecap: 'square',
@@ -182,6 +188,7 @@ describe('BezierCanvasEdge', () => {
       expect.objectContaining({
         interactionWidth: 0,
         style: expect.objectContaining({
+          opacity: DEFAULT_CANVAS_EDGE_OPACITY,
           stroke: 'var(--foreground)',
           strokeWidth: DEFAULT_CANVAS_EDGE_STROKE_WIDTH,
           strokeLinecap: 'square',

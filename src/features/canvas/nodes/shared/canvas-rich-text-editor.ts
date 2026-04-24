@@ -1,9 +1,10 @@
+import { BlockNoteSchema } from '@blocknote/core'
+import { parseCanvasRichTextContent } from 'convex/canvases/validation'
 import {
-  BlockNoteSchema,
-  defaultBlockSpecs,
-  defaultInlineContentSpecs,
-  defaultStyleSpecs,
-} from '@blocknote/core'
+  customBlockSpecs,
+  customInlineContentSpecs,
+  customStyleSpecs,
+} from 'convex/notes/editorSpecs'
 import type {
   BlockNoteEditor,
   BlockSpecs,
@@ -12,30 +13,19 @@ import type {
   StyleSpecs,
 } from '@blocknote/core'
 
-const {
-  audio: _audio,
-  divider: _divider,
-  file: _file,
-  image: _image,
-  table: _table,
-  toggleListItem: _toggleListItem,
-  video: _video,
-  ...canvasBlockSpecs
-} = defaultBlockSpecs
-
-const { link: _link, ...canvasInlineContentSpecs } = defaultInlineContentSpecs
-
 const canvasRichTextBlockSpecs = {
-  ...canvasBlockSpecs,
+  paragraph: customBlockSpecs.paragraph,
+  heading: customBlockSpecs.heading,
+  bulletListItem: customBlockSpecs.bulletListItem,
+  numberedListItem: customBlockSpecs.numberedListItem,
+  checkListItem: customBlockSpecs.checkListItem,
+  quote: customBlockSpecs.quote,
+  codeBlock: customBlockSpecs.codeBlock,
 } as BlockSpecs
 
-const canvasRichTextInlineContentSpecs = {
-  ...canvasInlineContentSpecs,
-} as InlineContentSpecs
+const canvasRichTextInlineContentSpecs: InlineContentSpecs = customInlineContentSpecs
 
-const canvasRichTextStyleSpecs = {
-  ...defaultStyleSpecs,
-} satisfies StyleSpecs
+const canvasRichTextStyleSpecs: StyleSpecs = customStyleSpecs
 
 export const canvasRichTextEditorSchema = BlockNoteSchema.create({
   blockSpecs: canvasRichTextBlockSpecs,
@@ -59,32 +49,77 @@ export type CanvasRichTextEditor = BlockNoteEditor<
   CanvasRichTextStyleSchema
 >
 
+export type CanvasRichTextContent = Array<CanvasRichTextPartialBlock>
+
+interface CanvasValidRichTextContentState {
+  kind: 'valid'
+  content: CanvasRichTextContent
+}
+
+interface CanvasInvalidRichTextContentState {
+  kind: 'invalid'
+  content: CanvasRichTextContent
+}
+
+export type CanvasRichTextContentState =
+  | CanvasValidRichTextContentState
+  | CanvasInvalidRichTextContentState
+
+function createCanvasRichTextContentState(
+  kind: CanvasRichTextContentState['kind'],
+  content: CanvasRichTextContent,
+): CanvasRichTextContentState {
+  return { kind, content }
+}
+
+interface CanvasRichTextContentSnapshot {
+  content: Array<CanvasRichTextPartialBlock>
+  serialized: string
+}
+
 const EMPTY_CANVAS_RICH_TEXT_CONTENT = [
   { type: 'paragraph' },
 ] satisfies Array<CanvasRichTextPartialBlock>
 
-export function createEmptyCanvasRichTextContent(): Array<CanvasRichTextPartialBlock> {
+export function createEmptyCanvasRichTextContent(): CanvasRichTextContent {
   return cloneCanvasRichTextContent(EMPTY_CANVAS_RICH_TEXT_CONTENT)
 }
 
-export function normalizeCanvasRichTextContent(value: unknown): Array<CanvasRichTextPartialBlock> {
-  if (!Array.isArray(value) || value.length === 0) {
-    return createEmptyCanvasRichTextContent()
+export function readCanvasRichTextContentState(value: unknown): CanvasRichTextContentState {
+  if (value === undefined || value === null) {
+    return createCanvasRichTextContentState('valid', createEmptyCanvasRichTextContent())
   }
 
-  return cloneCanvasRichTextContent(value as Array<CanvasRichTextPartialBlock>)
+  if (Array.isArray(value) && value.length === 0) {
+    return createCanvasRichTextContentState('valid', createEmptyCanvasRichTextContent())
+  }
+
+  const parsedContent = parseCanvasRichTextContent(value)
+  if (!parsedContent) {
+    return createCanvasRichTextContentState('invalid', createEmptyCanvasRichTextContent())
+  }
+
+  return createCanvasRichTextContentState(
+    'valid',
+    cloneCanvasRichTextContent(parsedContent as CanvasRichTextContent),
+  )
 }
 
 export function cloneCanvasRichTextContent(
-  blocks: ReadonlyArray<CanvasRichTextPartialBlock>,
-): Array<CanvasRichTextPartialBlock> {
-  return JSON.parse(JSON.stringify(blocks)) as Array<CanvasRichTextPartialBlock>
+  blocks: ReadonlyArray<CanvasRichTextPartialBlock> | CanvasRichTextContent,
+): CanvasRichTextContent {
+  return JSON.parse(serializeCanvasRichTextContent(blocks)) as CanvasRichTextContent
 }
 
-export function serializeCanvasRichTextContent(
-  blocks: ReadonlyArray<CanvasRichTextPartialBlock>,
-): string {
-  return JSON.stringify(blocks)
+export function snapshotCanvasRichTextContent(
+  blocks: ReadonlyArray<CanvasRichTextPartialBlock> | CanvasRichTextContent,
+): CanvasRichTextContentSnapshot {
+  const serialized = serializeCanvasRichTextContent(blocks)
+  const content = JSON.parse(serialized) as CanvasRichTextContent
+  return {
+    content,
+    serialized,
+  }
 }
 
 export function extractCanvasRichTextPlainText(
@@ -103,59 +138,28 @@ export function extractCanvasRichTextPlainText(
 }
 
 function extractBlockText(block: CanvasRichTextPartialBlock): string {
-  const content = block.content as unknown
-  if (!content) {
+  const content = block.content ?? []
+  if (content.length === 0) {
     return ''
   }
 
-  if (Array.isArray(content)) {
-    return content
-      .flatMap((item: unknown) => {
-        if (typeof item === 'string') {
-          return item
-        }
+  return content
+    .map((item) => readCanvasRichTextInlineText(item))
+    .filter((item) => item.length > 0)
+    .join(' ')
+    .trim()
+}
 
-        if (item && typeof item === 'object' && 'text' in item && typeof item.text === 'string') {
-          return item.text
-        }
-
-        return ''
-      })
-      .filter(Boolean)
-      .join(' ')
-      .trim()
+function readCanvasRichTextInlineText(item: unknown): string {
+  if (typeof item !== 'object' || item === null) {
+    return ''
   }
 
-  if (
-    typeof content === 'object' &&
-    content !== null &&
-    'type' in content &&
-    content.type === 'tableContent' &&
-    'rows' in content &&
-    Array.isArray(content.rows)
-  ) {
-    const rows = content.rows as Array<unknown>
+  return 'text' in item && typeof item.text === 'string' ? item.text : ''
+}
 
-    return rows
-      .flatMap((row: unknown) => {
-        if (!row || typeof row !== 'object' || !('cells' in row) || !Array.isArray(row.cells)) {
-          return []
-        }
-
-        return row.cells.flatMap((cell: unknown) =>
-          Array.isArray(cell)
-            ? cell.flatMap((item: unknown) =>
-                item && typeof item === 'object' && 'text' in item && typeof item.text === 'string'
-                  ? item.text
-                  : '',
-              )
-            : [],
-        )
-      })
-      .filter(Boolean)
-      .join(' ')
-      .trim()
-  }
-
-  return ''
+function serializeCanvasRichTextContent(
+  blocks: ReadonlyArray<CanvasRichTextPartialBlock> | CanvasRichTextContent,
+) {
+  return JSON.stringify(blocks)
 }

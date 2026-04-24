@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { selectToolModule } from '../select-tool-module'
+import { selectToolSpec } from '../select-tool-module'
 import type { CanvasMeasuredNode, CanvasToolRuntime } from '../../canvas-tool-types'
 import type { Edge, Node } from '@xyflow/react'
 
@@ -29,6 +29,8 @@ function createStrokeNode(id: string): CanvasMeasuredNode {
     width: 100,
     height: 20,
     data: {
+      color: 'var(--foreground)',
+      opacity: 100,
       bounds: { x: 0, y: 0, width: 100, height: 20 },
       points: [
         [0, 10, 0.5],
@@ -47,6 +49,8 @@ function createOffsetStrokeNode(id: string): CanvasMeasuredNode {
     width: 100,
     height: 20,
     data: {
+      color: 'var(--foreground)',
+      opacity: 100,
       bounds: { x: 120, y: 40, width: 100, height: 20 },
       points: [
         [120, 50, 0.5],
@@ -65,6 +69,8 @@ function createConcaveStrokeNode(id: string): CanvasMeasuredNode {
     width: 100,
     height: 100,
     data: {
+      color: 'var(--foreground)',
+      opacity: 100,
       bounds: { x: 0, y: 0, width: 100, height: 100 },
       points: [
         [20, 20, 0.5],
@@ -77,10 +83,10 @@ function createConcaveStrokeNode(id: string): CanvasMeasuredNode {
   }
 }
 
-describe('selectToolModule', () => {
+describe('selectToolSpec', () => {
   it('preserves multi-selection on modifier-click empty canvas', () => {
     const toggleNodeFromTarget = vi.fn()
-    const controller = selectToolModule.createHandlers(
+    const controller = selectToolSpec.createHandlers(
       createSelectEnvironment({
         getNodes: () => [],
         toggleNodeFromTarget,
@@ -95,7 +101,7 @@ describe('selectToolModule', () => {
   it('uses the same padded stroke hit test for modifier deselection as for selection', () => {
     const toggleNodeFromTarget = vi.fn()
     const strokeNode = createStrokeNode('stroke-1')
-    const controller = selectToolModule.createHandlers(
+    const controller = selectToolSpec.createHandlers(
       createSelectEnvironment({
         getNodes: () => [strokeNode],
         toggleNodeFromTarget,
@@ -110,7 +116,7 @@ describe('selectToolModule', () => {
   it('hit-tests moved strokes using their current measured position instead of assuming origin placement', () => {
     const toggleNodeFromTarget = vi.fn()
     const strokeNode = createOffsetStrokeNode('stroke-1')
-    const controller = selectToolModule.createHandlers(
+    const controller = selectToolSpec.createHandlers(
       createSelectEnvironment({
         getNodes: () => [createStrokeNode('stale-stroke')],
         getMeasuredNodes: () => [strokeNode],
@@ -126,7 +132,7 @@ describe('selectToolModule', () => {
   it('does not select a concave stroke from clicks in its open interior gap', () => {
     const toggleNodeFromTarget = vi.fn()
     const strokeNode = createConcaveStrokeNode('stroke-1')
-    const controller = selectToolModule.createHandlers(
+    const controller = selectToolSpec.createHandlers(
       createSelectEnvironment({
         getNodes: () => [strokeNode],
         toggleNodeFromTarget,
@@ -146,7 +152,7 @@ describe('selectToolModule', () => {
       position: { x: 0, y: 0 },
       data: {},
     } as Node
-    const controller = selectToolModule.createHandlers(
+    const controller = selectToolSpec.createHandlers(
       createSelectEnvironment({
         getNodes: () => [clickedNode],
         toggleNodeFromTarget,
@@ -166,7 +172,7 @@ describe('selectToolModule', () => {
       position: { x: 0, y: 0 },
       data: {},
     } as Node
-    const controller = selectToolModule.createHandlers(
+    const controller = selectToolSpec.createHandlers(
       createSelectEnvironment({
         getNodes: () => [clickedNode],
         toggleNodeFromTarget,
@@ -181,7 +187,7 @@ describe('selectToolModule', () => {
   it('routes edge clicks through explicit edge selection control', () => {
     const toggleNodeFromTarget = vi.fn()
     const toggleEdgeFromTarget = vi.fn()
-    const controller = selectToolModule.createHandlers(
+    const controller = selectToolSpec.createHandlers(
       createSelectEnvironment({
         getNodes: () => [],
         toggleNodeFromTarget,

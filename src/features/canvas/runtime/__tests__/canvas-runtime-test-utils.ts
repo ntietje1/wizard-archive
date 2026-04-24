@@ -2,6 +2,7 @@ import { vi } from 'vitest'
 import type { CanvasDocumentWriter, CanvasSelectionController } from '../../tools/canvas-tool-types'
 import type { RemoteHighlight } from '../../utils/canvas-awareness-types'
 import type { CanvasCommands } from '../document/use-canvas-commands'
+import type { CanvasRuntime } from '../providers/canvas-runtime'
 import type { CanvasSessionRuntime } from '../session/use-canvas-session-state'
 
 function createCanvasSelectionController(): CanvasSelectionController {
@@ -70,7 +71,7 @@ function createCanvasDocumentWriter(): CanvasDocumentWriter {
   }
 }
 
-export function createCanvasProviderProps(
+export function createCanvasRuntime(
   overrides: Partial<{
     canEdit: boolean
     remoteHighlights: Map<string, RemoteHighlight>
@@ -101,7 +102,7 @@ export function createCanvasProviderProps(
     selection: CanvasSelectionController
     commands: CanvasCommands
   }> = {},
-) {
+): CanvasRuntime {
   const {
     history: historyOverrides,
     editSession: editSessionOverrides,

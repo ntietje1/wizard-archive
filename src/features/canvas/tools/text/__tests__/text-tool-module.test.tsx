@@ -1,19 +1,19 @@
 import { describe, expect, it, vi } from 'vitest'
-import { textToolModule } from '../text-tool-module'
+import { textToolSpec } from '../text-tool-module'
 import {
   createPlacementEnvironment,
   createPointerEvent,
 } from '../../shared/__tests__/placement-tool-test-utils'
 import type { Node } from '@xyflow/react'
 
-describe('textToolModule', () => {
+describe('textToolSpec', () => {
   it('creates a default-sized text node on click and requests editing at the click point', () => {
     const createdNodes: Array<Node> = []
     const setPendingEditNodeId = vi.fn()
     const setPendingEditNodePoint = vi.fn()
     const setActiveTool = vi.fn()
     const replaceSelection = vi.fn()
-    const controller = textToolModule.createHandlers(
+    const controller = textToolSpec.createHandlers(
       createPlacementEnvironment({
         activeTool: 'text',
         createNode: (node) => {
@@ -47,7 +47,7 @@ describe('textToolModule', () => {
   it('creates a custom-sized text node on drag', () => {
     const createdNodes: Array<Node> = []
     const setActiveTool = vi.fn()
-    const controller = textToolModule.createHandlers(
+    const controller = textToolSpec.createHandlers(
       createPlacementEnvironment({
         activeTool: 'text',
         createNode: (node) => {

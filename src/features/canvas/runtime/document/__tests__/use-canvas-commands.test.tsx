@@ -62,6 +62,12 @@ function getNodeZIndexes(nodesMap: Y.Map<Node>) {
     .map((node) => ({ id: node.id, zIndex: node.zIndex }))
 }
 
+function getEdgeZIndexes(edgesMap: Y.Map<Edge>) {
+  return Array.from(edgesMap.values())
+    .sort((left, right) => left.id.localeCompare(right.id))
+    .map((edge) => ({ id: edge.id, zIndex: edge.zIndex }))
+}
+
 afterEach(() => {
   useCanvasClipboardStore.setState({ clipboard: null })
 })
@@ -320,6 +326,57 @@ describe('useCanvasCommands', () => {
     })
 
     expect(getNodeZIndexes(nodesMap)).toEqual([firstNode, secondNode, thirdNode])
+
+    unmount()
+    doc.destroy()
+  })
+
+  it('returns false when reorder is requested without any selected nodes or edges', () => {
+    const { doc, nodesMap, edgesMap } = createCanvasMaps()
+    const selection = createSelectionController({ nodeIds: [], edgeIds: [] })
+
+    const { result, unmount } = renderHook(() =>
+      useCanvasCommands({
+        canEdit: true,
+        nodesMap,
+        edgesMap,
+        selection,
+      }),
+    )
+
+    expect(result.current.reorder.canRun({ direction: 'bringToFront' })).toBe(false)
+
+    act(() => {
+      expect(result.current.reorder.run({ direction: 'bringToFront' })).toBe(false)
+    })
+
+    unmount()
+    doc.destroy()
+  })
+
+  it('reorders edge selections with the same plan used by canRun', () => {
+    const { doc, nodesMap, edgesMap } = createCanvasMaps()
+    const selection = createSelectionController({ nodeIds: [], edgeIds: ['edge-1'] })
+
+    const { result, unmount } = renderHook(() =>
+      useCanvasCommands({
+        canEdit: true,
+        nodesMap,
+        edgesMap,
+        selection,
+      }),
+    )
+
+    expect(result.current.reorder.canRun({ direction: 'bringToFront' })).toBe(true)
+
+    act(() => {
+      expect(result.current.reorder.run({ direction: 'bringToFront' })).toBe(true)
+    })
+
+    expect(getEdgeZIndexes(edgesMap)).toEqual([
+      { id: 'edge-1', zIndex: 2 },
+      { id: 'edge-2', zIndex: 1 },
+    ])
 
     unmount()
     doc.destroy()

@@ -1,8 +1,8 @@
 import { render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasToolbar } from '../canvas-toolbar'
-import { createCanvasProviderProps } from '../../runtime/__tests__/canvas-runtime-test-utils'
-import { CanvasProviders } from '../../runtime/providers/canvas-runtime-context'
+import { createCanvasRuntime } from '../../runtime/__tests__/canvas-runtime-test-utils'
+import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime-context'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 
 const reactFlowMock = vi.hoisted(() => ({
@@ -35,7 +35,7 @@ describe('CanvasToolbar', () => {
   })
 
   function renderToolbar(canEdit = true) {
-    const providerProps = createCanvasProviderProps({
+    const runtime = createCanvasRuntime({
       canEdit,
       history,
       editSession: {
@@ -54,9 +54,9 @@ describe('CanvasToolbar', () => {
     })
 
     return render(
-      <CanvasProviders {...providerProps}>
+      <CanvasRuntimeProvider {...runtime}>
         <CanvasToolbar canEdit={canEdit} />
-      </CanvasProviders>,
+      </CanvasRuntimeProvider>,
     )
   }
 

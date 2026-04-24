@@ -14,16 +14,20 @@ vi.mock('../use-embedded-canvas-state', () => ({
   useEmbeddedCanvasState: (canvasId: string) => useEmbeddedCanvasStateMock(canvasId),
 }))
 
-vi.mock('../../runtime/providers/canvas-read-only-providers', () => ({
-  CanvasReadOnlyProviders: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+vi.mock('../../runtime/providers/canvas-runtime-context', () => ({
+  CanvasRuntimeProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
-vi.mock('../../edges/canvas-edge-registry', () => ({
+vi.mock('../../runtime/providers/canvas-runtime', () => ({
+  READ_ONLY_CANVAS_RUNTIME: {},
+}))
+
+vi.mock('../../edges/canvas-edge-renderers', () => ({
   canvasEdgeTypes: {},
 }))
 
 vi.mock('../embedded-canvas-node-types', () => ({
-  getEmbeddedCanvasNodeTypes: () => ({}),
+  embeddedCanvasNodeTypes: {},
 }))
 
 vi.mock('~/features/settings/hooks/useTheme', () => ({

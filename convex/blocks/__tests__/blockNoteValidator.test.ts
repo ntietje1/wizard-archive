@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { blockNoteBlockSchema } from '../blockSchemas'
+import {
+  blockNoteBlockSchema,
+  canvasAllowedBlockTypes,
+  canvasPartialBlockNoteBlockSchema,
+} from '../blockSchemas'
 import {
   customBlockSpecs,
   customInlineContentSpecs,
@@ -254,5 +258,48 @@ describe('invalid blocks are rejected', () => {
       content: [{ type: 'text', text: 'x', styles: { bold: 'yes' } }],
     })
     expect(result.success).toBe(false)
+  })
+})
+
+describe('canvas block subset', () => {
+  it('stays aligned with the note editor block family for supported types', () => {
+    const supportedCanvasTypes = Object.keys(customBlockSpecs).filter((type) =>
+      canvasAllowedBlockTypes.includes(type as (typeof canvasAllowedBlockTypes)[number]),
+    )
+
+    expect(supportedCanvasTypes.sort()).toEqual([...canvasAllowedBlockTypes].sort())
+  })
+
+  it('accepts canvas-supported partial blocks from the note schema family', () => {
+    expect(
+      canvasPartialBlockNoteBlockSchema.safeParse({
+        type: 'paragraph',
+        content: [{ type: 'text', text: 'Hello', styles: { bold: true } }],
+      }).success,
+    ).toBe(true)
+
+    expect(
+      canvasPartialBlockNoteBlockSchema.safeParse({
+        type: 'heading',
+        props: { level: 2 },
+        content: [{ type: 'text', text: 'Title' }],
+      }).success,
+    ).toBe(true)
+  })
+
+  it('rejects note block types that the canvas editor does not support', () => {
+    const excludedTypes = Object.keys(customBlockSpecs).filter(
+      (type) => !canvasAllowedBlockTypes.includes(type as (typeof canvasAllowedBlockTypes)[number]),
+    )
+
+    for (const type of excludedTypes) {
+      expect(
+        canvasPartialBlockNoteBlockSchema.safeParse({
+          type,
+          props: {},
+        }).success,
+        `Canvas subset should reject "${type}"`,
+      ).toBe(false)
+    }
   })
 })

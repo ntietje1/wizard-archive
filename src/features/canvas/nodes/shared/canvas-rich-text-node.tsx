@@ -3,34 +3,25 @@ import type { CSSProperties } from 'react'
 import type { Node, NodeProps } from '@xyflow/react'
 import { CanvasNodeConnectionHandles } from './canvas-node-connection-handles'
 import { ResizableNodeWrapper } from './resizable-node-wrapper'
-import {
-  extractCanvasRichTextPlainText,
-  normalizeCanvasRichTextContent,
-} from './canvas-rich-text-editor'
+import { extractCanvasRichTextPlainText } from './canvas-rich-text-editor'
 import type { CanvasRichTextPartialBlock } from './canvas-rich-text-editor'
+import type { CanvasRichTextNodeData } from './canvas-rich-text-node-data'
 import { CanvasFloatingFormattingToolbar } from './canvas-floating-formatting-toolbar'
 import { CanvasRichTextView } from './canvas-rich-text-view'
 import { useCanvasEditableNodeSession } from './use-canvas-editable-node-session'
 import { useCanvasRichTextEditorSession } from './use-canvas-rich-text-editor-session'
 import { getCanvasNodeSurfaceStyle } from './canvas-node-surface-style'
-import type { CanvasNodeSurfaceStyleData } from './canvas-node-surface-style'
-import {
-  useCanvasNodeActionsContext,
-  useCanvasPermissionsContext,
-} from '../../runtime/providers/canvas-runtime-hooks'
+import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { cn } from '~/features/shadcn/lib/utils'
-
-export interface CanvasRichTextNodeData
-  extends Record<string, unknown>, CanvasNodeSurfaceStyleData {
-  content?: Array<CanvasRichTextPartialBlock>
-}
 
 interface CanvasRichTextNodeVariant {
   nodeType: 'text'
   editAriaLabel: string
   emptyAriaLabel: string
+  invalidAriaLabel: string
+  invalidContentLabel: string
   minWidth: number
   minHeight: number
   containerClassName: string
@@ -44,17 +35,24 @@ interface CanvasRichTextNodeComponentProps extends NodeProps<Node<CanvasRichText
 }
 
 function CanvasRichTextPreview({
+  content,
   data,
+  invalid,
   variant,
 }: {
+  content: Array<CanvasRichTextPartialBlock>
   data: CanvasRichTextNodeData
+  invalid: boolean
   variant: Pick<
     CanvasRichTextNodeVariant,
-    'containerClassName' | 'contentClassName' | 'textClassName' | 'textColor' | 'emptyAriaLabel'
+    | 'containerClassName'
+    | 'contentClassName'
+    | 'textClassName'
+    | 'textColor'
+    | 'invalidContentLabel'
   >
 }) {
-  const content = normalizeCanvasRichTextContent(data.content)
-  const plainText = extractCanvasRichTextPlainText(content)
+  const plainText = invalid ? '' : extractCanvasRichTextPlainText(content)
 
   return (
     <div
@@ -62,7 +60,13 @@ function CanvasRichTextPreview({
       style={getContainerStyle(data, variant.textColor)}
     >
       <div className={variant.contentClassName}>
-        {plainText ? <p className={variant.textClassName}>{plainText}</p> : null}
+        {invalid ? (
+          <p className={cn(variant.textClassName, 'italic text-muted-foreground')}>
+            {variant.invalidContentLabel}
+          </p>
+        ) : plainText ? (
+          <p className={variant.textClassName}>{plainText}</p>
+        ) : null}
       </div>
     </div>
   )
@@ -75,16 +79,21 @@ export function CanvasRichTextNode({
   variant,
 }: CanvasRichTextNodeComponentProps) {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
-  const { updateNodeData } = useCanvasNodeActionsContext()
-  const canEdit = useCanvasPermissionsContext()
+  const {
+    nodeActions: { updateNodeData },
+    canEdit,
+  } = useCanvasRuntime()
   const [isEditing, setIsEditing] = useState(false)
   const wrapperRef = useRef<HTMLDivElement | null>(null)
-  const content = normalizeCanvasRichTextContent(data.content)
-  const plainText = extractCanvasRichTextPlainText(content)
-  const ariaLabel = plainText || variant.emptyAriaLabel
+  const hasInvalidContent = data.richText.kind === 'invalid'
+  const content = data.richText.content
+  const plainText = hasInvalidContent ? '' : extractCanvasRichTextPlainText(content)
+  const ariaLabel = hasInvalidContent
+    ? variant.invalidAriaLabel
+    : plainText || variant.emptyAriaLabel
   const editableSession = useCanvasEditableNodeSession({
     id,
-    canEdit: canEdit && interactiveRenderMode,
+    canEdit: canEdit && interactiveRenderMode && !hasInvalidContent,
     editing: isEditing,
     setEditing: setIsEditing,
   })
@@ -92,6 +101,7 @@ export function CanvasRichTextNode({
   const editorSession = useCanvasRichTextEditorSession({
     ariaLabel: variant.editAriaLabel,
     content,
+    enabled: !hasInvalidContent,
     editable: editableSession.editable,
     lifecycle: editableSession.lifecycle,
     onActivated: editableSession.handleActivated,
@@ -127,7 +137,7 @@ export function CanvasRichTextNode({
         aria-label={ariaLabel}
         tabIndex={interactiveRenderMode ? 0 : -1}
         onDoubleClick={
-          interactiveRenderMode
+          interactiveRenderMode && !hasInvalidContent
             ? (event) => {
                 event.preventDefault()
                 event.stopPropagation()
@@ -136,7 +146,7 @@ export function CanvasRichTextNode({
             : undefined
         }
         onKeyDown={
-          interactiveRenderMode
+          interactiveRenderMode && !hasInvalidContent
             ? (event) => {
                 if (!editableSession.editable && (event.key === 'Enter' || event.key === 'F2')) {
                   event.preventDefault()
@@ -177,7 +187,12 @@ export function CanvasRichTextNode({
                 />
               </div>
             ) : (
-              <CanvasRichTextPreview data={data} variant={variant} />
+              <CanvasRichTextPreview
+                content={content}
+                data={data}
+                invalid={hasInvalidContent}
+                variant={variant}
+              />
             )}
           </ScrollArea>
         </div>

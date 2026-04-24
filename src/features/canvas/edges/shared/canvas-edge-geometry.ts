@@ -1,9 +1,9 @@
+import { normalizeCanvasNode } from '../../nodes/canvas-node-normalization'
 import { getCanvasNodeBounds } from '../../nodes/shared/canvas-node-bounds'
 import {
   getAbsoluteStrokePointsForNode,
   getStrokeEndpointConnectionPosition,
   getStrokeEndpointPoint,
-  isStrokeNode,
 } from '../../nodes/stroke/stroke-node-model'
 import {
   boundsFromPoints,
@@ -58,16 +58,18 @@ export function resolveCanvasEdgeEndpoint(
   handleId: string | null | undefined,
   fallbackPosition: Position,
 ): { point: Point2D; position: Position } | null {
-  if (isStrokeNode(node) && (handleId === 'start' || handleId === 'end')) {
-    const absolutePoints = getAbsoluteStrokePointsForNode(node)
-    const point = getStrokeEndpointPoint(node, handleId, absolutePoints)
+  const parsedNode = normalizeCanvasNode(node)
+
+  if (parsedNode?.type === 'stroke' && (handleId === 'start' || handleId === 'end')) {
+    const absolutePoints = getAbsoluteStrokePointsForNode(parsedNode)
+    const point = getStrokeEndpointPoint(parsedNode, handleId, absolutePoints)
     if (!point) {
       return null
     }
 
     return {
       point,
-      position: getStrokeEndpointConnectionPosition(node, handleId, absolutePoints),
+      position: getStrokeEndpointConnectionPosition(parsedNode, handleId, absolutePoints),
     }
   }
 
@@ -114,7 +116,7 @@ function inferCanvasEdgePositions(sourceNode: Node, targetNode: Node) {
     : { sourcePosition: Position.Top, targetPosition: Position.Bottom }
 }
 
-export function getCanvasEdgeAnchorPoint(node: Node, position: Position): Point2D | null {
+function getCanvasEdgeAnchorPoint(node: Node, position: Position): Point2D | null {
   const bounds = getCanvasNodeBounds(node)
   if (!bounds) return null
 

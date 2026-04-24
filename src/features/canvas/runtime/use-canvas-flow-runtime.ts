@@ -6,16 +6,16 @@ import type * as Y from 'yjs'
 import { getMeasuredCanvasNodesFromLookup } from './document/canvas-measured-nodes'
 import { useCanvasCommands } from './document/use-canvas-commands'
 import { useCanvasDocumentProjection } from './document/use-canvas-document-projection'
-import { useCanvasDocumentWriter } from './document/use-canvas-document-writer'
+import { createCanvasDocumentWriter } from './document/use-canvas-document-writer'
 import { useCanvasHistory } from './document/use-canvas-history'
 import { useCanvasKeyboardShortcuts } from './document/use-canvas-keyboard-shortcuts'
 import { useCanvasContextMenu } from './context-menu/use-canvas-context-menu'
 import { transactCanvasMaps } from './document/canvas-yjs-transactions'
 import { useCanvasCursorPresence } from './interaction/use-canvas-cursor-presence'
 import { useCanvasDropIntegration } from './interaction/use-canvas-drop-integration'
-import { useCanvasFlowHandlers } from './interaction/use-canvas-flow-handlers'
+import { createCanvasFlowHandlers } from './interaction/use-canvas-flow-handlers'
 import { useCanvasModifierKeys } from './interaction/use-canvas-modifier-keys'
-import { useCanvasNodeActions } from './interaction/use-canvas-node-actions'
+import { createCanvasNodeActions } from './interaction/create-canvas-node-actions'
 import { useCanvasNodeDragHandlers } from './interaction/use-canvas-node-drag-handlers'
 import { useCanvasPointerBridge } from './interaction/use-canvas-pointer-bridge'
 import { useCanvasRemoteDragAnimation } from './interaction/use-canvas-remote-drag-animation'
@@ -26,11 +26,7 @@ import { useCanvasSelectionController } from './selection/use-canvas-selection-a
 import { useCanvasSelectionRect } from './selection/use-canvas-selection-rect'
 import { useCanvasSessionState } from './session/use-canvas-session-state'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
-import {
-  clearCanvasToolTransientState,
-  createCanvasToolHandlers,
-  getCanvasToolCursor,
-} from '../tools/canvas-tool-modules'
+import { canvasToolSpecs } from '../tools/canvas-tool-modules'
 import type {
   CanvasEdgeCreationDefaults,
   CanvasToolId,
@@ -89,7 +85,9 @@ export function useCanvasFlowRuntime({
 
   useEffect(() => {
     return () => {
-      clearCanvasToolTransientState(activeTool, session.awareness.presence)
+      const activeToolSpec = canvasToolSpecs[activeTool]
+      activeToolSpec.localOverlay?.clear()
+      activeToolSpec.awareness?.clear?.(session.awareness.presence)
     }
   }, [activeTool, session.awareness.presence])
 
@@ -125,7 +123,7 @@ export function useCanvasFlowRuntime({
     resolveElement: (container) => container,
   })
 
-  const documentWriter = useCanvasDocumentWriter({
+  const documentWriter = createCanvasDocumentWriter({
     nodesMap,
     edgesMap,
   })
@@ -176,7 +174,7 @@ export function useCanvasFlowRuntime({
     awareness: session.awareness.core,
   })
 
-  const nodeActions = useCanvasNodeActions({
+  const nodeActions = createCanvasNodeActions({
     documentWriter,
     reactFlowInstance: reactFlow,
     session,
@@ -196,23 +194,22 @@ export function useCanvasFlowRuntime({
     enabled: canEdit && isSelectMode,
   })
 
-  const toolRuntimeRef = useRef<CanvasToolRuntime | null>(null)
-  toolRuntimeRef.current ??= {
+  const toolRuntime: CanvasToolRuntime = {
     viewport: {
-      getZoom: () => 1,
-      screenToFlowPosition: (position) => position,
+      screenToFlowPosition: reactFlow.screenToFlowPosition,
+      getZoom: () => reactFlow.getZoom(),
     },
     commands: documentWriter,
     query: {
-      getNodes: () => [],
-      getEdges: () => [],
-      getMeasuredNodes: () => [],
+      getNodes: reactFlow.getNodes,
+      getEdges: reactFlow.getEdges,
+      getMeasuredNodes: () => getMeasuredCanvasNodesFromLookup(storeApi.getState().nodeLookup),
     },
     selection,
     interaction,
     modifiers: {
-      getPrimaryPressed: () => false,
-      getShiftPressed: () => false,
+      getShiftPressed: () => modifiers.shiftPressed,
+      getPrimaryPressed: () => modifiers.primaryPressed,
     },
     editSession: session.editSession,
     toolState: {
@@ -231,27 +228,8 @@ export function useCanvasFlowRuntime({
     },
     awareness: session.awareness,
   }
-  toolRuntimeRef.current.viewport = {
-    screenToFlowPosition: reactFlow.screenToFlowPosition,
-    getZoom: () => reactFlow.getZoom(),
-  }
-  toolRuntimeRef.current.commands = documentWriter
-  toolRuntimeRef.current.query = {
-    getNodes: reactFlow.getNodes,
-    getEdges: reactFlow.getEdges,
-    getMeasuredNodes: () => getMeasuredCanvasNodesFromLookup(storeApi.getState().nodeLookup),
-  }
-  toolRuntimeRef.current.selection = selection
-  toolRuntimeRef.current.interaction = interaction
-  toolRuntimeRef.current.modifiers = {
-    getShiftPressed: () => modifiers.shiftPressed,
-    getPrimaryPressed: () => modifiers.primaryPressed,
-  }
-  toolRuntimeRef.current.editSession = session.editSession
-  toolRuntimeRef.current.awareness = session.awareness
-  const toolRuntime = toolRuntimeRef.current
-
-  const activeToolHandlers = createCanvasToolHandlers(activeTool, toolRuntime)
+  const activeToolSpec = canvasToolSpecs[activeTool]
+  const activeToolHandlers = activeToolSpec.createHandlers(toolRuntime)
 
   useCanvasPointerBridge({
     surfaceRef: canvasSurfaceRef,
@@ -281,7 +259,7 @@ export function useCanvasFlowRuntime({
     }
   }
 
-  const flowHandlers = useCanvasFlowHandlers({
+  const flowHandlers = createCanvasFlowHandlers({
     activeToolHandlers,
     cancelConnectionDraft,
     canEdit,
@@ -320,6 +298,6 @@ export function useCanvasFlowRuntime({
     remoteHighlights: session.remoteHighlights,
     remoteUsers: session.remoteUsers,
     selection,
-    toolCursor: getCanvasToolCursor(activeTool),
+    toolCursor: activeToolSpec.cursor,
   }
 }

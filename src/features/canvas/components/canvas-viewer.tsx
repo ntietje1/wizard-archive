@@ -13,10 +13,10 @@ import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { ContextMenuHost } from '~/features/context-menu/components/context-menu-host'
 import { cn } from '~/features/shadcn/lib/utils'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
-import { canvasEdgeTypes } from '../edges/canvas-edge-registry'
+import { canvasEdgeTypes } from '../edges/canvas-edge-renderers'
 import { CanvasConnectionPreview } from '../edges/shared/canvas-connection-preview'
-import { getCanvasNodeTypes } from '../nodes/canvas-node-modules'
-import { CanvasProviders } from '../runtime/providers/canvas-runtime-context'
+import { canvasNodeTypes } from '../nodes/canvas-node-renderers'
+import { CanvasRuntimeProvider } from '../runtime/providers/canvas-runtime-context'
 import { CanvasViewportPersistence } from '../runtime/interaction/canvas-viewport-persistence'
 import { useCanvasPendingSelectionPreviewSummary } from '../runtime/selection/use-canvas-pending-selection-preview'
 import { loadPersistedCanvasViewport } from '../runtime/interaction/canvas-viewport-storage'
@@ -41,8 +41,6 @@ const PAN_BOTH: Array<number> = [0, 1]
 const SELECTION_KEY_DISABLED: Array<string> = []
 const MAX_ZOOM = 4
 const MIN_ZOOM = 0.1
-const canvasNodeTypes = getCanvasNodeTypes()
-
 export function CanvasViewer({ item: canvas }: EditorViewerProps<CanvasWithContent>) {
   return (
     <ClientOnly fallback={null}>
@@ -107,7 +105,7 @@ export function CanvasFlow({
   const edgeToolActive = runtime.activeTool === 'edge'
 
   return (
-    <CanvasProviders
+    <CanvasRuntimeProvider
       canEdit={canEdit}
       history={runtime.history}
       commands={runtime.commands}
@@ -207,7 +205,7 @@ export function CanvasFlow({
           />
         </div>
       </div>
-    </CanvasProviders>
+    </CanvasRuntimeProvider>
   )
 }
 

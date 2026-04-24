@@ -8,13 +8,13 @@ import {
   releasePointerCapture,
   screenEventToFlowPosition,
 } from '../shared/tool-module-utils'
-import type { CanvasToolModule } from '../canvas-tool-types'
+import type { CanvasToolSpec } from '../canvas-tool-types'
 import { LassoAwarenessLayer } from './lasso-tool-awareness-layer'
 import { setLassoToolAwareness } from './lasso-tool-awareness'
 import { clearLassoToolLocalOverlay, setLassoToolLocalPoints } from './lasso-tool-local-overlay'
 import { LassoToolLocalOverlayLayer } from './lasso-tool-local-overlay-layer'
 
-export const lassoToolModule: CanvasToolModule<'lasso'> = {
+export const lassoToolSpec: CanvasToolSpec<'lasso'> = {
   id: 'lasso',
   label: 'Lasso select',
   group: 'selection',

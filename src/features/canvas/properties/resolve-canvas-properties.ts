@@ -1,55 +1,129 @@
 import type {
   CanvasInspectableProperties,
   CanvasPaintPropertyBinding,
-  CanvasPaintValue,
+  CanvasPaintResolvedProperty,
   CanvasPropertyBinding,
   CanvasPropertyValue,
   CanvasResolvedProperty,
   CanvasStrokeSizePropertyBinding,
+  CanvasStrokeSizePropertyDefinition,
+  CanvasStrokeSizeResolvedProperty,
 } from './canvas-property-types'
-import { areCanvasPaintValuesEqual, readCanvasPaintBindingValue } from './canvas-paint-values'
+import { areCanvasPaintValuesEqual } from './canvas-paint-values'
 import { assertNever } from '~/shared/utils/utils'
 
 function createValue<TValue>(isMixed: boolean, value: TValue): CanvasPropertyValue<TValue> {
   return isMixed ? { kind: 'mixed' } : { kind: 'value', value }
 }
 
-function createNumericValue(
-  values: Array<number>,
-  equals?: (left: unknown, right: unknown) => boolean,
-): CanvasPropertyValue<number> {
+function createResolvedValue<TValue>(
+  definition: { equals?: (left: TValue, right: TValue) => boolean },
+  values: Array<TValue>,
+): CanvasPropertyValue<TValue> {
   if (values.length === 0) {
-    throw new RangeError('createNumericValue: values must be a non-empty array')
+    throw new RangeError('createResolvedValue: values must be a non-empty array')
   }
 
   const [firstValue, ...restValues] = values
   const isMixed = restValues.some((value) =>
-    equals ? !equals(firstValue, value) : !Object.is(firstValue, value),
+    definition.equals ? !definition.equals(firstValue, value) : !Object.is(firstValue, value),
   )
 
   return createValue(isMixed, firstValue)
 }
 
-function createNumericProperty(
+function createPaintProperty(
+  binding: CanvasPaintPropertyBinding,
+  matches: Array<CanvasPaintPropertyBinding>,
+): CanvasPaintResolvedProperty {
+  const definition = {
+    ...binding.definition,
+    equals: binding.definition.equals ?? areCanvasPaintValuesEqual,
+  }
+
+  return {
+    definition,
+    value: createResolvedValue(
+      definition,
+      matches.map((match) => match.getValue()),
+    ),
+    setValue: (nextValue: Parameters<CanvasPaintPropertyBinding['setValue']>[0]) => {
+      matches.forEach((match) => match.setValue(nextValue))
+    },
+  }
+}
+
+function createStrokeSizeProperty(
   binding: CanvasStrokeSizePropertyBinding,
   matches: Array<CanvasStrokeSizePropertyBinding>,
-): CanvasResolvedProperty {
-  const min = Math.max(...matches.map((match) => match.definition.min))
-  const max = Math.min(...matches.map((match) => match.definition.max))
+): CanvasStrokeSizeResolvedProperty {
+  const computedMin = Math.max(...matches.map((match) => match.definition.min))
+  const computedMax = Math.min(...matches.map((match) => match.definition.max))
+  // Keep the resolved range valid even when bindings provide conflicting min/max constraints.
+  const min = Math.min(computedMin, computedMax)
+  const max = computedMax
 
   return {
     definition: {
       ...binding.definition,
       min,
       max,
-    },
-    value: createNumericValue(
+    } satisfies CanvasStrokeSizePropertyDefinition,
+    value: createResolvedValue(
+      binding.definition,
       matches.map((match) => match.getValue()),
-      binding.definition.equals,
     ),
     setValue: (nextValue: number) => {
       matches.forEach((match) => match.setValue(nextValue))
     },
+  }
+}
+
+function isPaintPropertyBinding(
+  binding: CanvasPropertyBinding,
+): binding is CanvasPaintPropertyBinding {
+  return binding.definition.kind === 'paint'
+}
+
+function isStrokeSizePropertyBinding(
+  binding: CanvasPropertyBinding,
+): binding is CanvasStrokeSizePropertyBinding {
+  return binding.definition.kind === 'strokeSize'
+}
+
+type CanvasPropertyBindingByKind = {
+  paint: CanvasPaintPropertyBinding
+  strokeSize: CanvasStrokeSizePropertyBinding
+}
+
+const canvasPropertyResolvers = {
+  paint: createPaintProperty,
+  strokeSize: createStrokeSizeProperty,
+} satisfies {
+  [TKind in keyof CanvasPropertyBindingByKind]: (
+    binding: CanvasPropertyBindingByKind[TKind],
+    matches: Array<CanvasPropertyBindingByKind[TKind]>,
+  ) => CanvasResolvedProperty
+}
+
+function resolvePropertyByKind<TKind extends keyof CanvasPropertyBindingByKind>(
+  kind: TKind,
+  binding: CanvasPropertyBindingByKind[TKind],
+  matches: Array<CanvasPropertyBinding>,
+): CanvasResolvedProperty {
+  switch (kind) {
+    case 'paint':
+      return canvasPropertyResolvers.paint(
+        binding as CanvasPaintPropertyBinding,
+        matches.filter(isPaintPropertyBinding),
+      )
+    case 'strokeSize':
+      return canvasPropertyResolvers.strokeSize(
+        binding as CanvasStrokeSizePropertyBinding,
+        matches.filter(isStrokeSizePropertyBinding),
+      )
+    default:
+      return assertNever(kind)
   }
 }
 
@@ -80,42 +154,6 @@ function createResolvedProperty(
   binding: CanvasPropertyBinding,
   matches: Array<CanvasPropertyBinding>,
 ): CanvasResolvedProperty {
-  switch (binding.definition.kind) {
-    case 'paint': {
-      const paintMatches = matches as Array<CanvasPaintPropertyBinding>
-      if (paintMatches.length === 0) {
-        throw new RangeError('createResolvedProperty: paint matches must be a non-empty array')
-      }
-
-      const [firstValue, ...restValues] = paintMatches.map(readCanvasPaintBindingValue)
-      const value = createValue(
-        restValues.some((candidate) => !areCanvasPaintValuesEqual(candidate, firstValue)),
-        firstValue,
-      )
-
-      return {
-        definition: binding.definition,
-        value,
-        setValue: (nextValue: CanvasPaintValue) => {
-          paintMatches.forEach((match) => {
-            match.setColor(nextValue.color)
-            match.setOpacity(nextValue.opacity)
-          })
-        },
-        setColor: (nextColor: string) => {
-          paintMatches.forEach((match) => match.setColor(nextColor))
-        },
-        setOpacity: (nextOpacity: number) => {
-          paintMatches.forEach((match) => match.setOpacity(nextOpacity))
-        },
-      }
-    }
-    case 'strokeSize': {
-      const strokeSizeBinding = binding as CanvasStrokeSizePropertyBinding
-      const strokeSizeMatches = matches as Array<CanvasStrokeSizePropertyBinding>
-      return createNumericProperty(strokeSizeBinding, strokeSizeMatches)
-    }
-    default:
-      return assertNever(binding.definition)
-  }
+  const kind = binding.definition.kind
+  return resolvePropertyByKind(kind, binding as CanvasPropertyBindingByKind[typeof kind], matches)
 }

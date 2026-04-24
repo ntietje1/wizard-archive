@@ -7,9 +7,9 @@ import {
   bindCanvasPaintProperty,
   bindCanvasStrokeSizeProperty,
 } from '../../properties/canvas-property-types'
-import type { CanvasToolModule } from '../canvas-tool-types'
+import type { CanvasToolSpec } from '../canvas-tool-types'
 
-export const edgeToolModule: CanvasToolModule<'edge'> = {
+export const edgeToolSpec: CanvasToolSpec<'edge'> = {
   id: 'edge',
   label: 'Edges',
   group: 'creation',

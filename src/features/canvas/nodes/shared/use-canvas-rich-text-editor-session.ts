@@ -1,12 +1,14 @@
-import { BlockNoteEditor } from '@blocknote/core'
 import { useCallback, useEffect, useRef } from 'react'
 import type { RichEmbedLifecycleController } from '../embed/use-rich-embed-lifecycle'
 import {
-  canvasRichTextEditorSchema,
   cloneCanvasRichTextContent,
-  serializeCanvasRichTextContent,
+  snapshotCanvasRichTextContent,
 } from './canvas-rich-text-editor'
-import type { CanvasRichTextEditor, CanvasRichTextPartialBlock } from './canvas-rich-text-editor'
+import type { CanvasRichTextContent, CanvasRichTextEditor } from './canvas-rich-text-editor'
+import {
+  createCanvasRichTextBlockNoteEditor,
+  observeCanvasRichTextChanges,
+} from './canvas-rich-text-blocknote-adapter'
 import { useBlockNoteActivationLifecycle } from './use-blocknote-activation-lifecycle'
 import { useOwnedBlockNoteEditor } from '~/features/editor/hooks/useOwnedBlockNoteEditor'
 import { destroyBlockNoteEditor } from '~/features/editor/utils/destroy-blocknote-editor'
@@ -14,21 +16,23 @@ import { destroyBlockNoteEditor } from '~/features/editor/utils/destroy-blocknot
 export function useCanvasRichTextEditorSession({
   ariaLabel,
   content,
+  enabled = true,
   editable,
   lifecycle,
   onActivated,
   onPersistContent,
 }: {
   ariaLabel: string
-  content: Array<CanvasRichTextPartialBlock>
+  content: CanvasRichTextContent
+  enabled?: boolean
   editable: boolean
   lifecycle: RichEmbedLifecycleController
   onActivated: () => void
-  onPersistContent: (content: Array<CanvasRichTextPartialBlock>) => void
+  onPersistContent: (content: CanvasRichTextContent) => void
 }) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const scrollTopRef = useRef(0)
-  const contentKey = serializeCanvasRichTextContent(content)
+  const contentKey = snapshotCanvasRichTextContent(content).serialized
   const persistedContentKeyRef = useRef(contentKey)
   const initialContentRef = useRef(content)
   const latestContentRef = useRef(content)
@@ -39,28 +43,15 @@ export function useCanvasRichTextEditorSession({
   latestContentRef.current = content
 
   const createEditor = useCallback(() => {
+    if (!enabled) {
+      return null
+    }
+
     try {
-      return BlockNoteEditor.create({
-        schema: canvasRichTextEditorSchema,
-        initialContent: cloneCanvasRichTextContent(initialContentRef.current),
-        placeholders: {
-          emptyDocument: '',
-          default: '',
-          paragraph: '',
-          heading: '',
-          bulletListItem: '',
-          numberedListItem: '',
-          checkListItem: '',
-          quote: '',
-          codeBlock: '',
-        },
-        domAttributes: {
-          editor: {
-            'aria-label': ariaLabel,
-            class: 'canvas-rich-text-editor',
-          },
-        },
-      }) as CanvasRichTextEditor
+      return createCanvasRichTextBlockNoteEditor({
+        ariaLabel,
+        content: initialContentRef.current,
+      })
     } catch (error) {
       console.error('Error creating BlockNoteEditor for canvas rich text node', {
         ariaLabel,
@@ -68,7 +59,7 @@ export function useCanvasRichTextEditorSession({
       })
       return null
     }
-  }, [ariaLabel])
+  }, [ariaLabel, enabled])
 
   const destroyEditor = useCallback(
     (editor: CanvasRichTextEditor) => {
@@ -91,7 +82,7 @@ export function useCanvasRichTextEditorSession({
 
   useBlockNoteActivationLifecycle({
     lifecycle,
-    editable,
+    editable: enabled && editable,
     editor,
     onActivationErrorMessage:
       'Canvas rich text node failed to compute selection from pointer position',
@@ -135,7 +126,7 @@ export function useCanvasRichTextEditorSession({
 
     if (wasEditable && !editable) {
       const finalContent = cloneCanvasRichTextContent(editor.document)
-      const finalContentKey = serializeCanvasRichTextContent(finalContent)
+      const finalContentKey = snapshotCanvasRichTextContent(finalContent).serialized
 
       persistedContentKeyRef.current = finalContentKey
       lastExternalContentKeyRef.current = finalContentKey
@@ -175,8 +166,8 @@ export function useCanvasRichTextEditorSession({
 
     lastExternalContentKeyRef.current = contentKey
 
-    const editorContentKey = serializeCanvasRichTextContent(editor.document)
-    if (editorContentKey === contentKey) {
+    const editorContentSnapshot = snapshotCanvasRichTextContent(editor.document)
+    if (editorContentSnapshot.serialized === contentKey) {
       persistedContentKeyRef.current = contentKey
       return
     }
@@ -188,7 +179,7 @@ export function useCanvasRichTextEditorSession({
   const handleChange = useCallback(
     (currentEditor: CanvasRichTextEditor) => {
       const nextContent = cloneCanvasRichTextContent(currentEditor.document)
-      const nextKey = serializeCanvasRichTextContent(nextContent)
+      const nextKey = snapshotCanvasRichTextContent(nextContent).serialized
       if (nextKey === persistedContentKeyRef.current) {
         return
       }
@@ -204,9 +195,7 @@ export function useCanvasRichTextEditorSession({
       return
     }
 
-    return editor.onChange((currentEditor) => {
-      handleChange(currentEditor as CanvasRichTextEditor)
-    })
+    return observeCanvasRichTextChanges(editor, handleChange)
   }, [editor, handleChange])
 
   return {

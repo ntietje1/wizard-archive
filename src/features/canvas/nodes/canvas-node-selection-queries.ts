@@ -1,44 +1,44 @@
+import { parseCanvasStrokeSelectionData } from 'convex/canvases/validation'
 import { getStrokeSelectionBounds } from './stroke/stroke-node-interactions'
 import { getCanvasNodeBounds } from './shared/canvas-node-bounds'
-import { getCanvasNodeModuleByType } from './canvas-node-modules'
+import {
+  matchesCanvasNodeLassoSelection,
+  matchesCanvasNodePointSelection,
+  matchesCanvasNodeRectangleSelection,
+  normalizeCanvasNode,
+} from './canvas-node-modules'
+import type { AnyNormalizedCanvasNode } from './canvas-node-modules'
 import { boundsFromPoints, rectIntersectsBounds } from '../utils/canvas-geometry-utils'
 import type { CanvasViewportTools } from '../tools/canvas-tool-types'
 import type { Point2D } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-geometry-utils'
-import type { CanvasNodeSelectionContext } from './canvas-node-module-types'
+import type { CanvasNodeSelectionContext } from './canvas-node-types'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import type { Node } from '@xyflow/react'
 
-type StrokeSelectionNode = Node<
-  {
-    points: Array<[number, number, number]>
-    size: number
-    bounds: Bounds
-  },
-  'stroke'
->
+function getSelectionNode(node: Node): AnyNormalizedCanvasNode | null {
+  return normalizeCanvasNode(node)
+}
 
-function isStrokeSelectionNode(node: Node): node is StrokeSelectionNode {
-  const bounds = node.data.bounds
+function getStrokeSelectionCandidateBounds(
+  node: Node,
+  context: CanvasNodeSelectionContext,
+): Bounds | null {
+  if (node.type !== 'stroke') {
+    return null
+  }
 
-  return (
-    node.type === 'stroke' &&
-    Array.isArray(node.data.points) &&
-    typeof node.data.size === 'number' &&
-    typeof bounds === 'object' &&
-    bounds !== null &&
-    'x' in bounds &&
-    typeof bounds.x === 'number' &&
-    Number.isFinite(bounds.x) &&
-    'y' in bounds &&
-    typeof bounds.y === 'number' &&
-    Number.isFinite(bounds.y) &&
-    'width' in bounds &&
-    typeof bounds.width === 'number' &&
-    Number.isFinite(bounds.width) &&
-    'height' in bounds &&
-    typeof bounds.height === 'number' &&
-    Number.isFinite(bounds.height)
+  const parsedStrokeData = parseCanvasStrokeSelectionData(node.data)
+  if (!parsedStrokeData) {
+    return null
+  }
+
+  return getStrokeSelectionBounds(
+    {
+      position: node.position,
+      data: parsedStrokeData,
+    },
+    context.zoom,
   )
 }
 
@@ -46,8 +46,9 @@ function getCanvasRectangleCandidateBounds(
   node: Node,
   context: CanvasNodeSelectionContext,
 ): Bounds | null {
-  if (isStrokeSelectionNode(node)) {
-    return getStrokeSelectionBounds(node, context.zoom)
+  const strokeBounds = getStrokeSelectionCandidateBounds(node, context)
+  if (strokeBounds) {
+    return strokeBounds
   }
 
   return getCanvasNodeBounds(node)
@@ -85,7 +86,8 @@ export function findCanvasNodeAtPoint(
 ): string | null {
   for (let index = nodes.length - 1; index >= 0; index -= 1) {
     const node = nodes[index]
-    if (getCanvasNodeModuleByType(node.type)?.selection?.point?.(node, point, context)) {
+    const normalizedNode = getSelectionNode(node)
+    if (normalizedNode && matchesCanvasNodePointSelection(normalizedNode, point, context)) {
       return node.id
     }
   }
@@ -116,9 +118,12 @@ export function getCanvasNodesMatchingRectangle(
   return filterCanvasSelectionCandidates(nodes, rect, (node) =>
     getCanvasRectangleCandidateBounds(node, context),
   )
-    .filter((node) =>
-      getCanvasNodeModuleByType(node.type)?.selection?.rectangle?.(node, rect, context),
-    )
+    .filter((node) => {
+      const normalizedNode = getSelectionNode(node)
+      return Boolean(
+        normalizedNode && matchesCanvasNodeRectangleSelection(normalizedNode, rect, context),
+      )
+    })
     .map((node) => node.id)
 }
 
@@ -130,8 +135,11 @@ export function getCanvasNodesMatchingLasso(
   const polygonBounds = boundsFromPoints(polygon)
 
   return filterCanvasSelectionCandidates(nodes, polygonBounds, getCanvasNodeBounds)
-    .filter((node) =>
-      getCanvasNodeModuleByType(node.type)?.selection?.lasso?.(node, polygon, context),
-    )
+    .filter((node) => {
+      const normalizedNode = getSelectionNode(node)
+      return Boolean(
+        normalizedNode && matchesCanvasNodeLassoSelection(normalizedNode, polygon, context),
+      )
+    })
     .map((node) => node.id)
 }

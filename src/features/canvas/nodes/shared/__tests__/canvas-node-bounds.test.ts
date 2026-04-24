@@ -94,6 +94,44 @@ describe('getCanvasNodeBounds', () => {
     ).toBeNull()
   })
 
+  it('returns null when persisted bounds dimensions are not finite numbers', () => {
+    expect(
+      getCanvasNodeBounds({
+        id: 'node-invalid-bounds-width',
+        type: 'text',
+        position: { x: 0, y: 0 },
+        data: { bounds: { x: 0, y: 0, width: 'bad', height: 36 } },
+      }),
+    ).toBeNull()
+
+    expect(
+      getCanvasNodeBounds({
+        id: 'node-invalid-bounds-height',
+        type: 'text',
+        position: { x: 0, y: 0 },
+        data: { bounds: { x: 0, y: 0, width: 120, height: Number.NaN } },
+      }),
+    ).toBeNull()
+
+    expect(
+      getCanvasNodeBounds({
+        id: 'node-invalid-bounds-width-infinite',
+        type: 'text',
+        position: { x: 0, y: 0 },
+        data: { bounds: { x: 0, y: 0, width: Number.POSITIVE_INFINITY, height: 36 } },
+      }),
+    ).toBeNull()
+
+    expect(
+      getCanvasNodeBounds({
+        id: 'node-invalid-bounds-height-negative-infinite',
+        type: 'text',
+        position: { x: 0, y: 0 },
+        data: { bounds: { x: 0, y: 0, width: 120, height: Number.NEGATIVE_INFINITY } },
+      }),
+    ).toBeNull()
+  })
+
   it('preserves explicit zero dimensions', () => {
     const node: Node = {
       id: 'node-zero-size',

@@ -39,6 +39,34 @@ describe('DrawAwarenessLayer', () => {
     expect(container.querySelector('svg')).toBeInTheDocument()
   })
 
+  it('ignores invalid remote draw awareness payloads', () => {
+    const remoteUsers: Array<RemoteUser> = [
+      {
+        clientId: 1,
+        user: { name: 'Tester', color: '#f00' },
+        presence: {
+          'tool.draw': {
+            points: [
+              [0, 0, 0.5],
+              [1, 1, 'bad'],
+            ],
+            color: '#f00',
+            size: 4,
+            opacity: 50,
+          },
+        },
+        cursor: null,
+        dragging: null,
+        resizing: null,
+        selectedNodeIds: null,
+      },
+    ]
+
+    const { container } = render(<DrawAwarenessLayer remoteUsers={remoteUsers} />)
+
+    expect(container.querySelector('path')).not.toBeInTheDocument()
+  })
+
   it('renders the local draw overlay from the draw slice store', () => {
     setDrawToolLocalDrawing({
       points: [

@@ -30,7 +30,7 @@ export interface CanvasFlowHandlers {
   onMouseLeave: () => void
 }
 
-export function useCanvasFlowHandlers({
+export function createCanvasFlowHandlers({
   activeToolHandlers,
   cancelConnectionDraft,
   canEdit,
@@ -58,28 +58,28 @@ export function useCanvasFlowHandlers({
     onNodeDragStop: NonNullable<CanvasFlowHandlers['onNodeDragStop']>
   }
 }) {
+  const canEditSelection = canEdit && isSelectMode
+  const canCreateEdges = canEdit && isEdgeMode
+
   return {
-    onNodeDragStart: canEdit && isSelectMode ? dragHandlers.onNodeDragStart : undefined,
-    onNodeDrag: canEdit && isSelectMode ? dragHandlers.onNodeDrag : undefined,
-    onNodeDragStop: canEdit && isSelectMode ? dragHandlers.onNodeDragStop : undefined,
-    onNodesDelete:
-      canEdit && isSelectMode
-        ? (deleted: Array<Node>) => {
-            documentWriter.deleteNodes(deleted.map((node) => node.id))
-          }
-        : undefined,
-    onEdgesDelete:
-      canEdit && isSelectMode
-        ? (deleted: Array<Edge>) => {
-            documentWriter.deleteEdges(deleted.map((edge) => edge.id))
-          }
-        : undefined,
-    onConnect:
-      canEdit && isEdgeMode
-        ? (connection: Connection) => {
-            documentWriter.createEdge(connection, getEdgeCreationDefaults())
-          }
-        : undefined,
+    onNodeDragStart: canEditSelection ? dragHandlers.onNodeDragStart : undefined,
+    onNodeDrag: canEditSelection ? dragHandlers.onNodeDrag : undefined,
+    onNodeDragStop: canEditSelection ? dragHandlers.onNodeDragStop : undefined,
+    onNodesDelete: canEditSelection
+      ? (deleted: Array<Node>) => {
+          documentWriter.deleteNodes(deleted.map((node) => node.id))
+        }
+      : undefined,
+    onEdgesDelete: canEditSelection
+      ? (deleted: Array<Edge>) => {
+          documentWriter.deleteEdges(deleted.map((edge) => edge.id))
+        }
+      : undefined,
+    onConnect: canCreateEdges
+      ? (connection: Connection) => {
+          documentWriter.createEdge(connection, getEdgeCreationDefaults())
+        }
+      : undefined,
     onMoveStart: activeToolHandlers.onMoveStart,
     onMoveEnd: activeToolHandlers.onMoveEnd,
     onNodeClick: activeToolHandlers.onNodeClick,

@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
+import {
+  parseCanvasAwarenessPresence,
+  parseCanvasAwarenessUser,
+  parseCanvasDraggingAwarenessState,
+  parseCanvasPoint2D,
+  parseCanvasResizingAwarenessState,
+  parseCanvasSelectionAwarenessState,
+} from 'convex/canvases/validation'
 import type { Awareness } from 'y-protocols/awareness'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
+import { logger } from '~/shared/utils/logger'
 import type {
   CanvasAwarenessNamespace,
   CanvasAwarenessPresence,
@@ -11,11 +20,14 @@ import type {
 function buildRemoteUsers(awareness: Awareness, localClientId: number): Array<RemoteUser> {
   const states = awareness.getStates()
   const localState = states.get(localClientId)
-  const localUser = localState?.user as { name: string; color: string } | undefined
+  const localUser = parseCanvasAwarenessUser(localState?.user)
   const users: Array<RemoteUser> = []
   states.forEach((state, clientId) => {
-    if (clientId === localClientId || !state.user) return
-    const remote = state.user as { name: string; color: string }
+    if (clientId === localClientId) return
+
+    const remote = parseCanvasAwarenessUser(state.user)
+    if (!remote) return
+
     if (
       // TODO: identify users by unique id rather than name/color
       localUser &&
@@ -26,25 +38,31 @@ function buildRemoteUsers(awareness: Awareness, localClientId: number): Array<Re
     const presence = readPresence(state)
     users.push({
       clientId,
-      user: state.user as { name: string; color: string },
+      user: remote,
       presence,
-      cursor: (presence['core.cursor'] as { x: number; y: number } | undefined) ?? null,
-      dragging:
-        (presence['core.dragging'] as Record<string, { x: number; y: number }> | undefined) ?? null,
-      resizing: (presence['core.resizing'] as ResizingState | undefined) ?? null,
-      selectedNodeIds: (presence['core.selection'] as Array<string> | undefined) ?? null,
+      cursor: parseCanvasPoint2D(presence['core.cursor']),
+      dragging: parseCanvasDraggingAwarenessState(presence['core.dragging']),
+      resizing: parseCanvasResizingAwarenessState(presence['core.resizing']),
+      selectedNodeIds: parseCanvasSelectionAwarenessState(presence['core.selection']),
     })
   })
   return users
 }
 
-function readPresence(state: Record<string, unknown>): CanvasAwarenessPresence {
-  const storedPresence = state.presence
-  if (!storedPresence || typeof storedPresence !== 'object') {
+function readPresence(state: unknown): CanvasAwarenessPresence {
+  if (!state || typeof state !== 'object' || !('presence' in state)) {
     return {}
   }
 
-  return storedPresence as CanvasAwarenessPresence
+  return parseCanvasAwarenessPresence(state.presence) ?? {}
+}
+
+function warnInvalidLocalPresenceUpdate(setter: string, parser: string, value: unknown) {
+  if (!import.meta.env.DEV) {
+    return
+  }
+
+  logger.warn(`${setter}: ignoring invalid local awareness payload from ${parser}`, value)
 }
 
 export function useCanvasAwareness(provider: ConvexYjsProvider | null) {
@@ -95,7 +113,7 @@ export function useCanvasAwareness(provider: ConvexYjsProvider | null) {
     if (!awareness) return
 
     const currentState = awareness.getLocalState() ?? {}
-    const currentPresence = readPresence(currentState as Record<string, unknown>)
+    const currentPresence = readPresence(currentState)
     awareness.setLocalStateField('presence', updater(currentPresence))
   }
 
@@ -113,19 +131,75 @@ export function useCanvasAwareness(provider: ConvexYjsProvider | null) {
   }
 
   const setLocalCursor = (pos: { x: number; y: number } | null) => {
-    setLocalPresence('core.cursor', pos)
+    if (pos === null) {
+      setLocalPresence('core.cursor', null)
+      return
+    }
+
+    const parsedPosition = parseCanvasPoint2D(pos)
+    if (!parsedPosition) {
+      warnInvalidLocalPresenceUpdate('setLocalCursor', 'parseCanvasPoint2D', pos)
+      return
+    }
+
+    setLocalPresence('core.cursor', parsedPosition)
   }
 
   const setLocalDragging = (positions: Record<string, { x: number; y: number }> | null) => {
-    setLocalPresence('core.dragging', positions)
+    if (positions === null) {
+      setLocalPresence('core.dragging', null)
+      return
+    }
+
+    const parsedPositions = parseCanvasDraggingAwarenessState(positions)
+    if (!parsedPositions) {
+      warnInvalidLocalPresenceUpdate(
+        'setLocalDragging',
+        'parseCanvasDraggingAwarenessState',
+        positions,
+      )
+      return
+    }
+
+    setLocalPresence('core.dragging', parsedPositions)
   }
 
   const setLocalSelection = (nodeIds: Array<string> | null) => {
-    setLocalPresence('core.selection', nodeIds)
+    if (nodeIds === null) {
+      setLocalPresence('core.selection', null)
+      return
+    }
+
+    const parsedNodeIds = parseCanvasSelectionAwarenessState(nodeIds)
+    if (!parsedNodeIds) {
+      warnInvalidLocalPresenceUpdate(
+        'setLocalSelection',
+        'parseCanvasSelectionAwarenessState',
+        nodeIds,
+      )
+      return
+    }
+
+    setLocalPresence('core.selection', parsedNodeIds)
   }
 
   const setLocalResizing = (resizing: ResizingState | null) => {
-    setLocalPresence('core.resizing', resizing)
+    if (resizing === null) {
+      setLocalPresence('core.resizing', null)
+      return
+    }
+
+    const parsedResizing = parseCanvasResizingAwarenessState(resizing)
+    if (!parsedResizing) {
+      warnInvalidLocalPresenceUpdate(
+        'setLocalResizing',
+        'parseCanvasResizingAwarenessState',
+        resizing,
+      )
+      return
+    }
+
+    setLocalPresence('core.resizing', parsedResizing)
   }
 
   return {

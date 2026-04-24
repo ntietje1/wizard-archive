@@ -174,4 +174,46 @@ describe('canvas node selection queries', () => {
     expect(findCanvasNodeAtPoint(nodes, { x: 50, y: 40 }, { zoom: 1 })).toBeNull()
     expect(findCanvasNodeAtPoint(nodes, { x: 20, y: 50 }, { zoom: 1 })).toBe('stroke-u')
   })
+
+  it('ignores malformed stroke payloads during rectangle selection candidate filtering', () => {
+    const nodes: Array<Node> = [
+      {
+        id: 'stroke-invalid',
+        type: 'stroke',
+        position: { x: 0, y: 0 },
+        width: 100,
+        height: 20,
+        data: {
+          bounds: { x: 0, y: 0, width: 100, height: 20 },
+          points: [[0, 10, 'bad']],
+          size: 4,
+        },
+      },
+      {
+        id: 'text-1',
+        type: 'text',
+        position: { x: 10, y: 10 },
+        width: 80,
+        height: 80,
+        data: {},
+      },
+    ]
+
+    expect(
+      getCanvasNodesMatchingRectangle(nodes, { x: 0, y: 0, width: 100, height: 100 }, { zoom: 1 }),
+    ).toEqual(['text-1'])
+    expect(findCanvasNodeAtPoint(nodes, { x: 10, y: 10 }, { zoom: 1 })).toBe('text-1')
+    expect(
+      getCanvasNodesMatchingLasso(
+        nodes,
+        [
+          { x: 0, y: 0 },
+          { x: 100, y: 0 },
+          { x: 100, y: 100 },
+          { x: 0, y: 100 },
+        ],
+        { zoom: 1 },
+      ),
+    ).toEqual(['text-1'])
+  })
 })

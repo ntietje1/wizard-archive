@@ -2,8 +2,9 @@ import { act, render, screen } from '@testing-library/react'
 import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasRichTextNode } from '../canvas-rich-text-node'
-import { createCanvasProviderProps } from '../../../runtime/__tests__/canvas-runtime-test-utils'
-import { CanvasProviders } from '../../../runtime/providers/canvas-runtime-context'
+import { normalizeCanvasRichTextNodeData } from '../canvas-rich-text-node-data'
+import { createCanvasRuntime } from '../../../runtime/__tests__/canvas-runtime-test-utils'
+import { CanvasRuntimeProvider } from '../../../runtime/providers/canvas-runtime-context'
 import { CanvasRenderModeProvider } from '../../../runtime/providers/canvas-render-mode-context'
 import { useCanvasSelectionState } from '../../../runtime/selection/use-canvas-selection-state'
 
@@ -113,14 +114,31 @@ describe('CanvasRichTextNode', () => {
     expect(screen.getByRole('group', { name: 'Empty text node' })).toHaveAttribute('tabindex', '-1')
     expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual([])
   })
+
+  it('renders an invalid-content placeholder and does not enter editing for malformed content', async () => {
+    render(<CanvasRichTextNodeHarness content={[{ type: 'table' }]} />)
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(screen.getByText('Invalid text content')).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Invalid text node' })).toBeInTheDocument()
+    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual([])
+    expect(screen.queryByText('Empty text node')).toBeNull()
+  })
 })
 
+const EMPTY_CONTENT: Array<never> = []
+
 function CanvasRichTextNodeHarness({
+  content = EMPTY_CONTENT,
   mode = 'interactive',
 }: {
+  content?: unknown
   mode?: 'interactive' | 'embedded-readonly'
 }) {
-  const baseProps = createCanvasProviderProps()
+  const defaultSelection = createCanvasRuntime().selection
   const [pendingEditNodeId, setPendingEditNodeId] = useState<string | null>('text-1')
   const [pendingEditNodePoint, setPendingEditNodePoint] = useState<{ x: number; y: number } | null>(
     { x: 100, y: 120 },
@@ -128,11 +146,13 @@ function CanvasRichTextNodeHarness({
   const nodeProps = {
     id: 'text-1',
     dragging: false,
-    data: { content: [] },
+    data: normalizeCanvasRichTextNodeData({ content }),
     variant: {
       nodeType: 'text',
       editAriaLabel: 'Edit text node',
       emptyAriaLabel: 'Empty text node',
+      invalidAriaLabel: 'Invalid text node',
+      invalidContentLabel: 'Invalid text content',
       minWidth: 160,
       minHeight: 80,
       containerClassName: 'rounded-sm',
@@ -144,8 +164,8 @@ function CanvasRichTextNodeHarness({
 
   return (
     <CanvasRenderModeProvider mode={mode}>
-      <CanvasProviders
-        {...createCanvasProviderProps({
+      <CanvasRuntimeProvider
+        {...createCanvasRuntime({
           editSession: {
             editingEmbedId: null,
             setEditingEmbedId: () => undefined,
@@ -155,13 +175,13 @@ function CanvasRichTextNodeHarness({
             setPendingEditNodePoint,
           },
           selection: {
-            ...baseProps.selection,
+            ...defaultSelection,
             replace: (selection) => useCanvasSelectionState.getState().setSelection(selection),
           },
         })}
       >
         <CanvasRichTextNode {...nodeProps} />
-      </CanvasProviders>
+      </CanvasRuntimeProvider>
     </CanvasRenderModeProvider>
   )
 }

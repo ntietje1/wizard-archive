@@ -1,4 +1,4 @@
-import { useCanvasRemoteHighlightsContext } from '../../runtime/providers/canvas-runtime-hooks'
+import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
 import { useCanvasNodeVisualSelection } from './use-canvas-node-visual-selection'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 
@@ -20,7 +20,7 @@ export function CanvasNodeFrame({
   children,
 }: CanvasNodeFrameProps) {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
-  const remoteHighlights = useCanvasRemoteHighlightsContext()
+  const { remoteHighlights } = useCanvasRuntime()
   const { visuallySelected, pendingPreviewActive, pendingSelected, selected } =
     useCanvasNodeVisualSelection(id)
   const highlight = interactiveRenderMode ? remoteHighlights.get(id) : undefined

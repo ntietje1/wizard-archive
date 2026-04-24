@@ -1,48 +1,31 @@
 import { stripEphemeralCanvasNodeState } from '../../utils/canvas-node-persistence'
 import type { Node } from '@xyflow/react'
+import {
+  parseCanvasAwarenessPresence,
+  parseCanvasPoint2D,
+  parsePersistedCanvasNode,
+} from 'convex/canvases/validation'
+import type { PersistedCanvasNodeValue } from 'convex/canvases/validation'
 import { logger } from '~/shared/utils/logger'
 
-type PersistedCanvasNode = Omit<Node, 'selected' | 'draggable' | 'dragging' | 'resizing'>
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value)
-}
-
-function isCanvasPosition(value: unknown): value is { x: number; y: number } {
-  return isRecord(value) && isFiniteNumber(value.x) && isFiniteNumber(value.y)
-}
-
-function isPersistedCanvasNode(node: unknown): node is PersistedCanvasNode {
-  return (
-    isRecord(node) &&
-    typeof node.id === 'string' &&
-    (node.type === undefined || typeof node.type === 'string') &&
-    isCanvasPosition(node.position) &&
-    isRecord(node.data) &&
-    (node.width === undefined || isFiniteNumber(node.width)) &&
-    (node.height === undefined || isFiniteNumber(node.height))
-  )
-}
-
-function buildSafePersistedCanvasNode(node: Node): PersistedCanvasNode {
-  const safeNode: PersistedCanvasNode = {
+function buildSafePersistedCanvasNode(node: Node): PersistedCanvasNodeValue {
+  const safeNode: PersistedCanvasNodeValue = {
     id: node.id,
-    position: isCanvasPosition(node.position) ? node.position : { x: 0, y: 0 },
-    data: isRecord(node.data) ? node.data : {},
+    position: parseCanvasPoint2D(node.position) ?? { x: 0, y: 0 },
+    data: parseCanvasAwarenessPresence(node.data) ?? {},
   }
 
   if (typeof node.type === 'string') {
     safeNode.type = node.type
   }
-  if (isFiniteNumber(node.width)) {
-    safeNode.width = node.width
+  const width = typeof node.width === 'number' && Number.isFinite(node.width) ? node.width : null
+  if (width !== null) {
+    safeNode.width = width
   }
-  if (isFiniteNumber(node.height)) {
-    safeNode.height = node.height
+  const height =
+    typeof node.height === 'number' && Number.isFinite(node.height) ? node.height : null
+  if (height !== null) {
+    safeNode.height = height
   }
 
   return safeNode
@@ -52,13 +35,14 @@ export function sanitizeNodeForPersistence(
   node: Node,
   operation: string,
   fallbackNode: Node = node,
-): PersistedCanvasNode {
+): PersistedCanvasNodeValue {
   try {
     const persistedNode = stripEphemeralCanvasNodeState(node)
-    if (!isPersistedCanvasNode(persistedNode)) {
-      throw new TypeError('stripEphemeralCanvasNodeState returned an invalid canvas node shape')
+    const parsedNode = parsePersistedCanvasNode(persistedNode)
+    if (!parsedNode) {
+      throw new TypeError('parsePersistedCanvasNode rejected the stripped canvas node shape')
     }
-    return persistedNode
+    return parsedNode
   } catch (error) {
     logger.error('Canvas node persistence sanitization failed', {
       operation,

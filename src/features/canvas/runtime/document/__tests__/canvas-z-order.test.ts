@@ -1,7 +1,30 @@
 import { describe, expect, it } from 'vitest'
+import { createCanvasReorderPlan } from '../canvas-reorder-plan'
 import { reorderCanvasElementIds } from '../canvas-reorder'
 import { getNextCanvasElementZIndex } from '../canvas-z-index'
 import { applyCanvasZOrder, sortCanvasElementsByZIndex } from '../canvas-z-order'
+import type { Edge, Node } from '@xyflow/react'
+import * as Y from 'yjs'
+
+function createNode(id: string, zIndex: number): Node {
+  return {
+    id,
+    type: 'text',
+    position: { x: 0, y: 0 },
+    data: {},
+    zIndex,
+  }
+}
+
+function createEdge(id: string, zIndex: number): Edge {
+  return {
+    id,
+    type: 'bezier',
+    source: `${id}-source`,
+    target: `${id}-target`,
+    zIndex,
+  }
+}
 
 describe('canvas z-order helpers', () => {
   it('returns the base z-index when there are no elements', () => {
@@ -63,5 +86,45 @@ describe('canvas z-order helpers', () => {
       { id: 'node-3', zIndex: 2 },
       { id: 'node-1', zIndex: 3 },
     ])
+  })
+
+  it('returns no reorder plan for an empty selection', () => {
+    const doc = new Y.Doc()
+    try {
+      const nodesMap = doc.getMap<Node>('nodes')
+      const edgesMap = doc.getMap<Edge>('edges')
+
+      expect(
+        createCanvasReorderPlan(nodesMap, edgesMap, { nodeIds: [], edgeIds: [] }, 'bringToFront'),
+      ).toBeNull()
+    } finally {
+      doc.destroy()
+    }
+  })
+
+  it('builds a mixed reorder plan for selected nodes and edges', () => {
+    const doc = new Y.Doc()
+    const nodesMap = doc.getMap<Node>('nodes')
+    const edgesMap = doc.getMap<Edge>('edges')
+    try {
+      nodesMap.set('node-1', createNode('node-1', 1))
+      nodesMap.set('node-2', createNode('node-2', 2))
+      edgesMap.set('edge-1', createEdge('edge-1', 1))
+      edgesMap.set('edge-2', createEdge('edge-2', 2))
+
+      expect(
+        createCanvasReorderPlan(
+          nodesMap,
+          edgesMap,
+          { nodeIds: ['node-1'], edgeIds: ['edge-1'] },
+          'bringToFront',
+        ),
+      ).toEqual({
+        nodes: [createNode('node-2', 1), createNode('node-1', 2)],
+        edges: [createEdge('edge-2', 1), createEdge('edge-1', 2)],
+      })
+    } finally {
+      doc.destroy()
+    }
   })
 })

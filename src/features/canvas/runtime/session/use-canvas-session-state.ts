@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useCanvasAwareness } from './use-canvas-awareness'
 import {
   getRemoteDragPositions,
@@ -22,6 +22,14 @@ export interface CanvasSessionRuntime {
   remoteHighlights: Map<string, RemoteHighlight>
 }
 
+function getCanvasRemoteSessionState(remoteUsers: Array<RemoteUser>) {
+  return {
+    remoteDragPositions: getRemoteDragPositions(remoteUsers),
+    remoteResizeDimensions: getRemoteResizeDimensions(remoteUsers),
+    remoteHighlights: getRemoteHighlights(remoteUsers),
+  }
+}
+
 export function useCanvasSessionState({ provider }: UseCanvasSessionStateOptions) {
   const [editingEmbedId, setEditingEmbedId] = useState<string | null>(null)
   const [pendingEditNodeId, setPendingEditNodeId] = useState<string | null>(null)
@@ -29,36 +37,21 @@ export function useCanvasSessionState({ provider }: UseCanvasSessionStateOptions
     null,
   )
   const awareness = useCanvasAwareness(provider)
+  const remoteUsers = awareness.remoteUsers
+  const { remoteDragPositions, remoteResizeDimensions, remoteHighlights } =
+    getCanvasRemoteSessionState(remoteUsers)
 
-  const editSession = useMemo<CanvasEditSessionState>(
-    () => ({
+  return {
+    editSession: {
       editingEmbedId,
       setEditingEmbedId,
       pendingEditNodeId,
       pendingEditNodePoint,
       setPendingEditNodeId,
       setPendingEditNodePoint,
-    }),
-    [editingEmbedId, pendingEditNodeId, pendingEditNodePoint],
-  )
-
-  const remoteDragPositions = useMemo(
-    () => getRemoteDragPositions(awareness.remoteUsers),
-    [awareness.remoteUsers],
-  )
-  const remoteResizeDimensions = useMemo(
-    () => getRemoteResizeDimensions(awareness.remoteUsers),
-    [awareness.remoteUsers],
-  )
-  const remoteHighlights = useMemo(
-    () => getRemoteHighlights(awareness.remoteUsers),
-    [awareness.remoteUsers],
-  )
-
-  return {
-    editSession,
+    } satisfies CanvasEditSessionState,
     awareness,
-    remoteUsers: awareness.remoteUsers,
+    remoteUsers,
     remoteDragPositions,
     remoteResizeDimensions,
     remoteHighlights,

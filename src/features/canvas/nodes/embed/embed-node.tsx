@@ -1,10 +1,8 @@
 import { useState } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { RichEmbedLifecycleController } from './use-rich-embed-lifecycle'
-import {
-  useCanvasEditSessionContext,
-  useCanvasPermissionsContext,
-} from '../../runtime/providers/canvas-runtime-hooks'
+import { normalizeEmbedNodeData } from './embed-node-data'
+import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
 import { ResizableNodeWrapper } from '../shared/resizable-node-wrapper'
 import type { EmbedNodeData } from './embed-node-data'
 import { EmbedNoteContent } from './embed-note-content'
@@ -26,14 +24,14 @@ import { EmbeddedMapContent } from './embedded-map-content'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 
 export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>) {
+  const normalizedData = normalizeEmbedNodeData(data)
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
-  const sidebarItemId = data.sidebarItemId
+  const sidebarItemId = normalizedData.sidebarItemId
   const { itemsMap } = useActiveSidebarItems()
   const item = sidebarItemId ? itemsMap.get(sidebarItemId) : undefined
   const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
   const { data: contentItem } = useSidebarItemById(sidebarItemId)
-  const editSession = useCanvasEditSessionContext()
-  const canEdit = useCanvasPermissionsContext()
+  const { editSession, canEdit } = useCanvasRuntime()
   const editableSession = useCanvasEditableNodeSession({
     id,
     canEdit: canEdit && interactiveRenderMode,
@@ -55,7 +53,7 @@ export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>
       dragging={!!dragging}
       minWidth={240}
       minHeight={180}
-      lockedAspectRatio={getLockedAspectRatio(contentItem, data.lockedAspectRatio)}
+      lockedAspectRatio={getLockedAspectRatio(contentItem, normalizedData.lockedAspectRatio)}
       editing={showsFormattingToolbar}
       chrome={
         <>
@@ -73,7 +71,7 @@ export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>
     >
       <div
         className="relative h-full w-full overflow-hidden rounded-lg"
-        style={getCanvasNodeSurfaceStyle(data)}
+        style={getCanvasNodeSurfaceStyle(normalizedData)}
         onDoubleClick={(event) => {
           if (!interactiveRenderMode || contentItem?.type !== SIDEBAR_ITEM_TYPES.notes) {
             return

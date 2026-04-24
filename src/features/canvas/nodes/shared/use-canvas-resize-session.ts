@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { useInternalNode, useReactFlow } from '@xyflow/react'
 import type { ControlPosition } from '@xyflow/react'
 import { getCanvasNodeBounds } from './canvas-node-bounds'
-import { useCanvasNodeActionsContext } from '../../runtime/providers/canvas-runtime-hooks'
+import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 import {
   clearCanvasDragSnapGuides,
@@ -97,7 +97,9 @@ export function useCanvasResizeSession({
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
   const reactFlow = useReactFlow()
   const internalNode = useInternalNode(id)
-  const { onResize, onResizeEnd } = useCanvasNodeActionsContext()
+  const {
+    nodeActions: { onResize, onResizeEnd },
+  } = useCanvasRuntime()
   const { shiftPressed, primaryPressed } = useCanvasModifierKeys()
   const selected = useIsCanvasNodeSelected(id)
   const resizeSessionRef = useRef<ResizeSession | null>(null)

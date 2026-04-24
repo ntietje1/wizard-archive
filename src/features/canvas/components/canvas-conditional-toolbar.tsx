@@ -1,27 +1,30 @@
 import { useState } from 'react'
 import { useEdges, useNodes } from '@xyflow/react'
 import type { Edge, Node } from '@xyflow/react'
-import { getCanvasEdgeProperties, resolveCanvasEdgeType } from '../edges/canvas-edge-registry'
+import {
+  getCanvasEdgeInspectableProperties,
+  normalizeCanvasEdge,
+  resolveCanvasEdgeType,
+} from '../edges/canvas-edge-registry'
+import type { CanvasEdgeType } from '../edges/canvas-edge-types'
+import { useCanvasRuntime } from '../runtime/providers/canvas-runtime'
 import {
   useIsCanvasSelectionGestureActive,
   useCanvasSelectionState,
 } from '../runtime/selection/use-canvas-selection-state'
-import { useCanvasToolPropertyContext, useCanvasToolStore } from '../stores/canvas-tool-store'
-import { getCanvasNodeProperties } from '../nodes/canvas-node-modules'
-import { CANVAS_REORDER_ACTIONS } from '../runtime/document/canvas-reorder-actions'
-import { getCanvasToolProperties } from '../tools/canvas-tool-modules'
-import { ColorPickerPopover } from '~/shared/components/color-picker-popover'
 import {
-  useCanvasCommandsContext,
-  useCanvasDocumentWriterContext,
-  useCanvasNodeActionsContext,
-} from '../runtime/providers/canvas-runtime-hooks'
-import type { CanvasEdgeType } from '../edges/canvas-edge-module-types'
-import type { CanvasCommands } from '../runtime/document/use-canvas-commands'
-import type { CanvasToolId, CanvasToolPropertyContext } from '../tools/canvas-tool-types'
+  getCanvasNodeInspectableProperties,
+  normalizeCanvasNode,
+} from '../nodes/canvas-node-modules'
+import { CANVAS_REORDER_ACTIONS } from '../runtime/document/canvas-reorder-actions'
+import { canvasToolSpecs } from '../tools/canvas-tool-modules'
+import { useCanvasToolPropertyContext, useCanvasToolStore } from '../stores/canvas-tool-store'
 import { linePaintCanvasProperty } from '../properties/canvas-property-definitions'
 import { resolveCanvasProperties } from '../properties/resolve-canvas-properties'
-import { readResolvedPropertyValue } from '../properties/canvas-property-types'
+import {
+  EMPTY_CANVAS_INSPECTABLE_PROPERTIES,
+  readResolvedPropertyValue,
+} from '../properties/canvas-property-types'
 import type {
   CanvasInspectableProperties,
   CanvasPaintResolvedProperty,
@@ -29,7 +32,10 @@ import type {
   CanvasStrokeSizeResolvedProperty,
 } from '../properties/canvas-property-types'
 import { areCanvasPaintValuesEqual } from '../properties/canvas-paint-values'
+import type { CanvasCommands } from '../runtime/document/use-canvas-commands'
+import type { CanvasToolId, CanvasToolPropertyContext } from '../tools/canvas-tool-types'
 import { Slider } from '~/features/shadcn/components/slider'
+import { ColorPickerPopover } from '~/shared/components/color-picker-popover'
 import { useShallow } from 'zustand/shallow'
 
 interface CanvasConditionalToolbarProps {
@@ -62,10 +68,22 @@ function isStrokeSizeProperty(
   return property.definition.kind === 'strokeSize'
 }
 
-export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarProps) {
-  const { updateNodeData, transact } = useCanvasNodeActionsContext()
-  const commands = useCanvasCommandsContext()
-  const documentWriter = useCanvasDocumentWriterContext()
+type CanvasToolbarState = {
+  commands: CanvasCommands
+  edgeType: CanvasEdgeType
+  hasOnlySelectedEdges: boolean
+  hasSelection: boolean
+  properties: Array<CanvasResolvedProperty>
+  selectedEdges: Array<Edge>
+  selectionSnapshot: { nodeIds: Array<string>; edgeIds: Array<string> }
+  setEdgeType: (type: CanvasEdgeType) => void
+  showsEdgeToolDefaults: boolean
+  updateEdge: (edgeId: string, updater: (edge: Edge) => Edge) => void
+  runPropertyChange: (applyChange: () => void) => void
+}
+
+function useCanvasToolbarState(): CanvasToolbarState {
+  const { nodeActions, commands, documentWriter } = useCanvasRuntime()
   const nodes = useNodes()
   const edges = useEdges()
   const selectionSnapshot = useCanvasSelectionState(
@@ -74,7 +92,6 @@ export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarPr
       edgeIds: state.selectedEdgeIds,
     })),
   )
-  const isSelectionGestureActive = useIsCanvasSelectionGestureActive()
   const { activeTool, edgeType, setEdgeType } = useCanvasToolStore(
     useShallow((state) => ({
       activeTool: state.activeTool,
@@ -96,7 +113,7 @@ export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarPr
     activeTool,
     selectedNodes,
     selectedEdges,
-    updateNodeData,
+    nodeActions.updateNodeData,
     documentWriter.updateEdge,
     toolPropertyContext,
   )
@@ -106,14 +123,37 @@ export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarPr
       return
     }
 
-    if (!transact) {
+    if (!nodeActions.transact) {
       applyChange()
       return
     }
 
-    transact(applyChange)
+    nodeActions.transact(applyChange)
   }
-  if (!canEdit || isSelectionGestureActive || (properties.length === 0 && !hasSelection)) {
+
+  return {
+    commands,
+    edgeType,
+    hasOnlySelectedEdges,
+    hasSelection,
+    properties,
+    selectedEdges,
+    selectionSnapshot,
+    setEdgeType,
+    showsEdgeToolDefaults,
+    updateEdge: documentWriter.updateEdge,
+    runPropertyChange,
+  }
+}
+
+export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarProps) {
+  const isSelectionGestureActive = useIsCanvasSelectionGestureActive()
+  const toolbar = useCanvasToolbarState()
+  if (
+    !canEdit ||
+    isSelectionGestureActive ||
+    (toolbar.properties.length === 0 && !toolbar.hasSelection)
+  ) {
     return null
   }
 
@@ -123,21 +163,25 @@ export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarPr
       role="toolbar"
       aria-label="Canvas conditional toolbar"
     >
-      {properties.length > 0 ? (
-        <CanvasPropertyControls properties={properties} onPropertyChange={runPropertyChange} />
+      {toolbar.properties.length > 0 ? (
+        <CanvasPropertyControls
+          properties={toolbar.properties}
+          onPropertyChange={toolbar.runPropertyChange}
+        />
       ) : null}
-      {properties.length > 0 && (hasOnlySelectedEdges || showsEdgeToolDefaults) ? (
+      {toolbar.properties.length > 0 &&
+      (toolbar.hasOnlySelectedEdges || toolbar.showsEdgeToolDefaults) ? (
         <div className="my-1 h-px w-full bg-border" aria-hidden="true" />
       ) : null}
-      {hasOnlySelectedEdges ? (
+      {toolbar.hasOnlySelectedEdges ? (
         <CanvasEdgeTypeControls
-          selectedType={getSharedSelectedEdgeType(selectedEdges)}
+          selectedType={getSharedSelectedEdgeType(toolbar.selectedEdges)}
           onSelectType={(type) =>
-            runPropertyChange(() => {
-              selectedEdges.forEach((edge) => {
+            toolbar.runPropertyChange(() => {
+              toolbar.selectedEdges.forEach((edge) => {
                 if (resolveCanvasEdgeType(edge.type) === type) return
 
-                documentWriter.updateEdge(edge.id, (currentEdge) => ({
+                toolbar.updateEdge(edge.id, (currentEdge) => ({
                   ...currentEdge,
                   type,
                 }))
@@ -146,14 +190,20 @@ export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarPr
           }
         />
       ) : null}
-      {showsEdgeToolDefaults ? (
-        <CanvasEdgeTypeControls selectedType={edgeType} onSelectType={setEdgeType} />
+      {toolbar.showsEdgeToolDefaults ? (
+        <CanvasEdgeTypeControls
+          selectedType={toolbar.edgeType}
+          onSelectType={toolbar.setEdgeType}
+        />
       ) : null}
-      {(properties.length > 0 || hasOnlySelectedEdges || showsEdgeToolDefaults) && hasSelection ? (
+      {(toolbar.properties.length > 0 ||
+        toolbar.hasOnlySelectedEdges ||
+        toolbar.showsEdgeToolDefaults) &&
+      toolbar.hasSelection ? (
         <div className="my-1 h-px w-full bg-border" aria-hidden="true" />
       ) : null}
-      {hasSelection ? (
-        <CanvasReorderControls commands={commands} selection={selectionSnapshot} />
+      {toolbar.hasSelection ? (
+        <CanvasReorderControls commands={toolbar.commands} selection={toolbar.selectionSnapshot} />
       ) : null}
     </div>
   )
@@ -207,21 +257,21 @@ function resolveProperties(
 ): Array<CanvasResolvedProperty> {
   if (selectedNodes.length > 0 || selectedEdges.length > 0) {
     const selectedProperties = [
-      ...selectedNodes.map<CanvasInspectableProperties>(
-        (node) => getCanvasNodeProperties(node, updateNodeData) ?? { bindings: [] },
+      ...selectedNodes.map<CanvasInspectableProperties>((node) =>
+        getCanvasNodeInspectableProperties(normalizeCanvasNode(node), updateNodeData),
       ),
-      ...selectedEdges.map<CanvasInspectableProperties>(
-        (edge) => getCanvasEdgeProperties(edge, updateEdge) ?? { bindings: [] },
+      ...selectedEdges.map<CanvasInspectableProperties>((edge) =>
+        getCanvasEdgeInspectableProperties(normalizeCanvasEdge(edge), updateEdge),
       ),
     ]
 
     return resolveCanvasProperties(selectedProperties)
   }
 
-  const toolProperties = getCanvasToolProperties(activeTool, toolPropertyContext)
-  if (!toolProperties) return []
-
-  return resolveCanvasProperties([toolProperties])
+  return resolveCanvasProperties([
+    canvasToolSpecs[activeTool]?.properties?.(toolPropertyContext) ??
+      EMPTY_CANVAS_INSPECTABLE_PROPERTIES,
+  ])
 }
 
 function CanvasPropertyControls({

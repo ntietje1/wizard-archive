@@ -1,4 +1,5 @@
 import { BASE_BG_COLORS, BASE_TEXT_COLORS } from '~/shared/utils/color'
+import { areCanvasPaintValuesEqual } from './canvas-paint-values'
 import type {
   CanvasPaintPreset,
   CanvasPaintPropertyDefinition,
@@ -45,6 +46,7 @@ export const linePaintCanvasProperty: CanvasPaintPropertyDefinition = {
   id: 'linePaint',
   kind: 'paint',
   label: 'Stroke',
+  equals: areCanvasPaintValuesEqual,
   defaultValue: DEFAULT_STROKE_VALUE,
   options: createPaintOptions(DEFAULT_STROKE_VALUE, BASE_TEXT_COLORS),
 }
@@ -53,6 +55,7 @@ export const fillCanvasProperty: CanvasPaintPropertyDefinition = {
   id: 'fill',
   kind: 'paint',
   label: 'Fill',
+  equals: areCanvasPaintValuesEqual,
   defaultValue: DEFAULT_FILL_VALUE,
   options: createPaintOptions(DEFAULT_FILL_VALUE, BASE_BG_COLORS),
 }

@@ -1,13 +1,12 @@
 import { useLayoutEffect, useRef, useState } from 'react'
-import { getCanvasEdgeContextMenuContributors } from '../../edges/canvas-edge-registry'
-import { getCanvasNodeContextMenuContributors } from '../../nodes/canvas-node-modules'
-import { parseEmbedNodeData } from '../../nodes/embed/embed-node-data'
 import { createAndSelectEmbeddedCanvasNode } from '../document/canvas-document-commands'
 import { buildCanvasContextMenu } from './canvas-context-menu-registry'
+import { resolveCanvasContextMenuTarget } from './canvas-context-menu-target'
 import type { CanvasSelectionController } from '../../tools/canvas-tool-types'
 import type {
   CanvasContextMenuCommands,
   CanvasContextMenuContext,
+  CanvasContextMenuContributor,
   CanvasContextMenuPoint,
   CanvasContextMenuServices,
 } from './canvas-context-menu-types'
@@ -35,36 +34,6 @@ interface UseCanvasContextMenuOptions {
 
 type PointerPosition = { x: number; y: number }
 
-function getSelectionItemCount(selection: CanvasContextMenuContext['selection']) {
-  return selection.nodeIds.length + selection.edgeIds.length
-}
-
-function getSingleSelectionType(
-  selection: CanvasContextMenuContext['selection'],
-  nodesMap: Y.Map<Node>,
-  edgesMap: Y.Map<Edge>,
-) {
-  if (selection.edgeIds.length === 0 && selection.nodeIds.length > 0) {
-    const nodeTypes = new Set(
-      selection.nodeIds
-        .map((nodeId) => nodesMap.get(nodeId)?.type)
-        .filter((type) => type !== undefined),
-    )
-    return nodeTypes.size === 1 ? { kind: 'node' as const, type: [...nodeTypes][0] } : null
-  }
-
-  if (selection.nodeIds.length === 0 && selection.edgeIds.length > 0) {
-    const edgeTypes = new Set(
-      selection.edgeIds
-        .map((edgeId) => edgesMap.get(edgeId)?.type)
-        .filter((type) => type !== undefined),
-    )
-    return edgeTypes.size === 1 ? { kind: 'edge' as const, type: [...edgeTypes][0] } : null
-  }
-
-  return null
-}
-
 function normalizeContextMenuEvent(event: MouseEvent | React.MouseEvent) {
   const nativeEvent = 'nativeEvent' in event ? event.nativeEvent : event
   event.preventDefault()
@@ -91,35 +60,24 @@ export function useCanvasContextMenu({
 }: UseCanvasContextMenuOptions) {
   const hostRef = useRef<ContextMenuHostRef>(null)
   const pendingOpenPositionRef = useRef<PointerPosition | null>(null)
-  const [menuContext, setMenuContext] = useState<CanvasContextMenuContext | null>(null)
+  const [menuState, setMenuState] = useState<{
+    context: CanvasContextMenuContext
+    contributors: ReadonlyArray<CanvasContextMenuContributor>
+  } | null>(null)
   const { createItem } = useCreateSidebarItem()
   const { getDefaultName } = useSidebarValidation()
   const { navigateToItem } = useEditorNavigation()
   const { itemsMap } = useActiveSidebarItems()
 
-  const resolveSelectedEmbedItem = (selectionSnapshot: CanvasContextMenuContext['selection']) => {
-    if (selectionSnapshot.edgeIds.length > 0 || selectionSnapshot.nodeIds.length !== 1) {
-      return null
-    }
-
-    const selectedNode = nodesMap.get(selectionSnapshot.nodeIds[0])
-    if (selectedNode?.type !== 'embed') {
-      return null
-    }
-
-    const sidebarItemId = parseEmbedNodeData(selectedNode.data).sidebarItemId
-    if (!sidebarItemId) {
-      return null
-    }
-
-    return itemsMap.get(sidebarItemId) ?? null
-  }
-
   const services = {
-    canOpenEmbedSelection: (selectionSnapshot) =>
-      resolveSelectedEmbedItem(selectionSnapshot) !== null,
-    openEmbedSelection: async (selectionSnapshot) => {
-      const item = resolveSelectedEmbedItem(selectionSnapshot)
+    canOpenEmbedTarget: (target) =>
+      target.kind === 'embed-node' && itemsMap.has(target.sidebarItemId),
+    openEmbedTarget: async (target) => {
+      if (target.kind !== 'embed-node') {
+        return false
+      }
+
+      const item = itemsMap.get(target.sidebarItemId)
       if (!item) {
         return false
       }
@@ -160,13 +118,13 @@ export function useCanvasContextMenu({
   } satisfies CanvasContextMenuServices
 
   useLayoutEffect(() => {
-    if (!menuContext || !pendingOpenPositionRef.current) {
+    if (!menuState || !pendingOpenPositionRef.current) {
       return
     }
 
     hostRef.current?.open(pendingOpenPositionRef.current)
     pendingOpenPositionRef.current = null
-  }, [menuContext])
+  }, [menuState])
 
   const openMenu = (
     position: PointerPosition,
@@ -176,12 +134,17 @@ export function useCanvasContextMenu({
       return
     }
 
+    const resolvedSelection = resolveCanvasContextMenuTarget(nextSelection, nodesMap, edgesMap)
     pendingOpenPositionRef.current = position
-    setMenuContext({
-      surface: 'canvas',
-      pointerPosition: position,
-      selection: nextSelection,
-      canEdit,
+    setMenuState({
+      context: {
+        surface: 'canvas',
+        pointerPosition: position,
+        selection: nextSelection,
+        target: resolvedSelection.target,
+        canEdit,
+      },
+      contributors: resolvedSelection.contributors,
     })
   }
 
@@ -189,7 +152,7 @@ export function useCanvasContextMenu({
     // `close` is the full programmatic teardown path: clear pending open state,
     // reset menu context, and tell the host to dismiss immediately.
     pendingOpenPositionRef.current = null
-    setMenuContext(null)
+    setMenuState(null)
     hostRef.current?.close()
   }
 
@@ -228,31 +191,20 @@ export function useCanvasContextMenu({
     openMenu(position, nextSelection)
   }
 
-  const selectionType =
-    menuContext && getSelectionItemCount(menuContext.selection) > 0
-      ? getSingleSelectionType(menuContext.selection, nodesMap, edgesMap)
-      : null
-  const selectionContributors =
-    selectionType?.kind === 'node'
-      ? getCanvasNodeContextMenuContributors(selectionType.type)
-      : selectionType?.kind === 'edge'
-        ? getCanvasEdgeContextMenuContributors(selectionType.type)
-        : []
-
   return {
     close,
     hostRef,
-    menu: menuContext
+    menu: menuState
       ? buildCanvasContextMenu({
-          context: menuContext,
+          context: menuState.context,
           services,
           commands,
-          contributors: selectionContributors,
+          contributors: menuState.contributors,
         })
       : { groups: [], flatItems: [], isEmpty: true },
     // `onClose` is host-driven dismissal only; the host already handled its own
     // teardown, so this just clears the hook state.
-    onClose: () => setMenuContext(null),
+    onClose: () => setMenuState(null),
     openForEdge,
     openForNode,
     openForPane,

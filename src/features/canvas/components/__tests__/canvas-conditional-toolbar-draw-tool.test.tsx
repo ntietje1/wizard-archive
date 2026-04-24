@@ -1,8 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasConditionalToolbar } from '../canvas-conditional-toolbar'
-import { createCanvasProviderProps } from '../../runtime/__tests__/canvas-runtime-test-utils'
-import { CanvasProviders } from '../../runtime/providers/canvas-runtime-context'
+import { createCanvasRuntime } from '../../runtime/__tests__/canvas-runtime-test-utils'
+import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime-context'
 import { useCanvasSelectionState } from '../../runtime/selection/use-canvas-selection-state'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 
@@ -16,7 +16,7 @@ vi.mock('~/shared/components/color-picker-popover', () => ({
 }))
 
 function renderToolbar() {
-  const providerProps = createCanvasProviderProps({
+  const runtime = createCanvasRuntime({
     nodeActions: {
       updateNodeData: vi.fn(),
       onResize: vi.fn(),
@@ -39,9 +39,9 @@ function renderToolbar() {
   })
 
   return render(
-    <CanvasProviders {...providerProps}>
+    <CanvasRuntimeProvider {...runtime}>
       <CanvasConditionalToolbar canEdit />
-    </CanvasProviders>,
+    </CanvasRuntimeProvider>,
   )
 }
 

@@ -1,4 +1,5 @@
 import type { Id } from 'convex/_generated/dataModel'
+import { parsePersistedCanvasViewport } from 'convex/canvases/validation'
 import { logger } from '~/shared/utils/logger'
 
 const DEFAULT_CANVAS_VIEWPORT = {
@@ -24,8 +25,7 @@ export function loadPersistedCanvasViewport(canvasId: Id<'sidebarItems'>): Persi
       return DEFAULT_CANVAS_VIEWPORT
     }
 
-    const parsedValue = JSON.parse(rawValue)
-    return isPersistedCanvasViewport(parsedValue) ? parsedValue : DEFAULT_CANVAS_VIEWPORT
+    return parsePersistedCanvasViewport(JSON.parse(rawValue)) ?? DEFAULT_CANVAS_VIEWPORT
   } catch (error) {
     logger.debug(error)
     return DEFAULT_CANVAS_VIEWPORT
@@ -58,20 +58,4 @@ export function savePersistedCanvasViewport(
 
 function getCanvasViewportStorageKey(canvasId: Id<'sidebarItems'>): string {
   return `canvas-viewport-${canvasId}`
-}
-
-function isPersistedCanvasViewport(value: unknown): value is PersistedCanvasViewport {
-  if (typeof value !== 'object' || value === null) {
-    return false
-  }
-
-  const candidate = value as Record<string, unknown>
-  return (
-    typeof candidate.x === 'number' &&
-    Number.isFinite(candidate.x) &&
-    typeof candidate.y === 'number' &&
-    Number.isFinite(candidate.y) &&
-    typeof candidate.zoom === 'number' &&
-    Number.isFinite(candidate.zoom)
-  )
 }

@@ -1,18 +1,22 @@
 import { describe, expect, it, vi } from 'vitest'
-import { getCanvasNodeContextMenuContributors } from '../../../nodes/canvas-node-modules'
-import { buildCanvasContextMenu } from '../canvas-context-menu-registry'
+import { canvasNodeSpecs } from '../../../nodes/canvas-node-modules'
+import {
+  buildCanvasContextMenu,
+  parseCanvasReorderDirection,
+} from '../canvas-context-menu-registry'
 import type {
   CanvasContextMenuCommands,
   CanvasContextMenuContext,
   CanvasContextMenuServices,
 } from '../canvas-context-menu-types'
+import { testId } from '~/test/helpers/test-id'
 
 function createServices(
   overrides: Partial<CanvasContextMenuServices> = {},
 ): CanvasContextMenuServices {
   return {
-    canOpenEmbedSelection: () => false,
-    openEmbedSelection: vi.fn(() => Promise.resolve(true)),
+    canOpenEmbedTarget: () => false,
+    openEmbedTarget: vi.fn(() => Promise.resolve(true)),
     createAndEmbedSidebarItem: vi.fn(() => Promise.resolve(null)),
     ...overrides,
   }
@@ -63,6 +67,7 @@ function createContext(
     surface: 'canvas',
     pointerPosition: { x: 100, y: 200 },
     selection: { nodeIds: [], edgeIds: [] },
+    target: { kind: 'pane' },
     canEdit: true,
     ...overrides,
   }
@@ -98,7 +103,10 @@ describe('buildCanvasContextMenu', () => {
     }
     const selection = { nodeIds: ['node-1'], edgeIds: [] }
     const menu = buildCanvasContextMenu({
-      context: createContext({ selection }),
+      context: createContext({
+        selection,
+        target: { kind: 'node-selection', nodeIds: selection.nodeIds, nodeType: 'text' },
+      }),
       services: createServices(),
       commands: createCommands({ copy: copyCommand }),
     })
@@ -119,15 +127,23 @@ describe('buildCanvasContextMenu', () => {
   })
 
   it('merges node contributors that now expose direct actions instead of command ids', async () => {
-    const openEmbedSelection = vi.fn(() => Promise.resolve(true))
+    const openEmbedTarget = vi.fn(() => Promise.resolve(true))
     const services = createServices({
-      canOpenEmbedSelection: () => true,
-      openEmbedSelection,
+      canOpenEmbedTarget: () => true,
+      openEmbedTarget,
     })
     const selection = { nodeIds: ['embed-1'], edgeIds: [] }
-    const contributors = getCanvasNodeContextMenuContributors('embed')
+    const contributors = canvasNodeSpecs.embed.contextMenuContributors
     const menu = buildCanvasContextMenu({
-      context: createContext({ selection }),
+      context: createContext({
+        selection,
+        target: {
+          kind: 'embed-node',
+          nodeId: 'embed-1',
+          nodeType: 'embed',
+          sidebarItemId: testId<'sidebarItems'>('sidebar-1'),
+        },
+      }),
       services,
       commands: createCommands(),
       contributors,
@@ -139,6 +155,32 @@ describe('buildCanvasContextMenu', () => {
     expect(openItem).toBeDefined()
 
     await openItem!.onSelect()
-    expect(openEmbedSelection).toHaveBeenCalledWith(selection)
+    expect(openEmbedTarget).toHaveBeenCalledWith({
+      kind: 'embed-node',
+      nodeId: 'embed-1',
+      nodeType: 'embed',
+      sidebarItemId: testId<'sidebarItems'>('sidebar-1'),
+    })
+  })
+
+  it('parses valid reorder payloads and rejects malformed ones', () => {
+    expect(parseCanvasReorderDirection(null)).toBeNull()
+    expect(parseCanvasReorderDirection(undefined)).toBeNull()
+    expect(parseCanvasReorderDirection({ direction: 'bringToFront' })).toBeNull()
+    expect(parseCanvasReorderDirection({ kind: 'reorder' })).toBeNull()
+    expect(parseCanvasReorderDirection({ kind: 'reorder', direction: 'sideways' })).toBeNull()
+    expect(parseCanvasReorderDirection('sendToBack')).toBeNull()
+    expect(parseCanvasReorderDirection({ kind: 'reorder', direction: 'sendToBack' })).toBe(
+      'sendToBack',
+    )
+    expect(parseCanvasReorderDirection({ kind: 'reorder', direction: 'bringToFront' })).toBe(
+      'bringToFront',
+    )
+    expect(parseCanvasReorderDirection({ kind: 'reorder', direction: 'bringForward' })).toBe(
+      'bringForward',
+    )
+    expect(parseCanvasReorderDirection({ kind: 'reorder', direction: 'sendBackward' })).toBe(
+      'sendBackward',
+    )
   })
 })

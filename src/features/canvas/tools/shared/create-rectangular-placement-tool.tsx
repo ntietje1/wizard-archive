@@ -7,7 +7,7 @@ import {
 } from './tool-module-utils'
 import { setRectCreationDragRect } from './rect-creation-local-overlay'
 import type { CanvasToolHandlers, CanvasToolRuntime } from '../canvas-tool-types'
-import type { CanvasNodeType } from '../../nodes/canvas-node-module-types'
+import type { CanvasNodeType } from '../../nodes/canvas-node-types'
 
 const MIN_DRAG_RECT_SIZE = 10
 

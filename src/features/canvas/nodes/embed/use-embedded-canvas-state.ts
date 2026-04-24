@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { api } from 'convex/_generated/api'
+import { parseEmbeddedCanvasStableId } from 'convex/canvases/validation'
 import * as Y from 'yjs'
 import { yMapToArray } from '../../utils/canvas-yjs-utils'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Edge, Node } from '@xyflow/react'
+
+export { parseEmbeddedCanvasStableId } from 'convex/canvases/validation'
 
 function useYMapAsArray<T>(doc: Y.Doc, mapName: string): Array<T> {
   const snapshotRef = useRef<Array<T>>([])
@@ -93,19 +96,9 @@ function valuesEqual(left: unknown, right: unknown) {
     return true
   }
 
-  const leftId = readStableId(left)
-  return leftId !== undefined && leftId === readStableId(right)
+  const leftId = parseEmbeddedCanvasStableId(left)
+  return leftId !== undefined && leftId === parseEmbeddedCanvasStableId(right)
 }
-
-function readStableId(value: unknown): string | undefined {
-  if (typeof value !== 'object' || value === null || !('id' in value)) {
-    return undefined
-  }
-
-  const { id } = value as { id?: unknown }
-  return typeof id === 'string' ? id : undefined
-}
-
 function createEmbeddedCanvasDoc(_canvasId: Id<'sidebarItems'>) {
   return new Y.Doc()
 }

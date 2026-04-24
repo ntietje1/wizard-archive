@@ -9,12 +9,13 @@ import {
   useStoreApi,
 } from '@xyflow/react'
 import { Loader2 } from 'lucide-react'
-import { canvasEdgeTypes } from '../../edges/canvas-edge-registry'
-import { CanvasReadOnlyProviders } from '../../runtime/providers/canvas-read-only-providers'
+import { canvasEdgeTypes } from '../../edges/canvas-edge-renderers'
+import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime-context'
+import { READ_ONLY_CANVAS_RUNTIME } from '../../runtime/providers/canvas-runtime'
 import { useEmbeddedCanvasState } from './use-embedded-canvas-state'
 import { useResolvedTheme } from '~/features/settings/hooks/useTheme'
 import { CanvasThumbnailPreview } from '~/features/previews/components/canvas-thumbnail-preview'
-import { getEmbeddedCanvasNodeTypes } from './embedded-canvas-node-types'
+import { embeddedCanvasNodeTypes } from './embedded-canvas-node-types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Edge, Node, Viewport } from '@xyflow/react'
 
@@ -67,11 +68,11 @@ export function EmbeddedCanvasContent({
 
   return (
     <div className="h-full w-full min-h-0 min-w-0 overflow-hidden">
-      <CanvasReadOnlyProviders>
+      <CanvasRuntimeProvider {...READ_ONLY_CANVAS_RUNTIME}>
         <ReactFlowProvider>
           <EmbeddedCanvasFlow nodes={nodes} edges={normalizedEdges} containerSize={containerSize} />
         </ReactFlowProvider>
-      </CanvasReadOnlyProviders>
+      </CanvasRuntimeProvider>
     </div>
   )
 }
@@ -86,7 +87,6 @@ function EmbeddedCanvasFlow({
   containerSize: { width: number; height: number }
 }) {
   const colorMode = useResolvedTheme()
-  const nodeTypes = useMemo(() => getEmbeddedCanvasNodeTypes(), [])
   const bounds = useMemo(() => getEmbeddedCanvasBounds(nodes), [nodes])
   const viewport = useMemo(
     () => getEmbeddedCanvasViewport(bounds, containerSize.width, containerSize.height),
@@ -101,7 +101,7 @@ function EmbeddedCanvasFlow({
         defaultEdges={EMPTY_EDGES}
         nodes={nodes}
         edges={edges}
-        nodeTypes={nodeTypes}
+        nodeTypes={embeddedCanvasNodeTypes}
         edgeTypes={canvasEdgeTypes}
         colorMode={colorMode}
         minZoom={MIN_ZOOM}

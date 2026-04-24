@@ -4,7 +4,7 @@ import type {
   ResizingState,
   RemoteUser,
 } from '../utils/canvas-awareness-types'
-import type { CanvasEdgeType } from '../edges/canvas-edge-module-types'
+import type { CanvasEdgeType } from '../edges/canvas-edge-types'
 import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
 import type { Connection, Edge, Node, XYPosition } from '@xyflow/react'
 import type { ComponentType, CSSProperties, MouseEvent as ReactMouseEvent, ReactNode } from 'react'
@@ -53,7 +53,7 @@ export interface CanvasEditSessionState {
  * `onResize` and `onResizeEnd` separate live resize feedback from the committed resize write.
  */
 export interface CanvasNodeActions {
-  updateNodeData: (nodeId: string, data: Record<string, unknown>) => void
+  updateNodeData: <TPatch extends Record<string, unknown>>(nodeId: string, data: TPatch) => void
   transact?: (fn: () => void) => void
   onResize: (nodeId: string, width: number, height: number, position: XYPosition) => void
   onResizeEnd: (nodeId: string, width: number, height: number, position: XYPosition) => void
@@ -62,7 +62,7 @@ export interface CanvasNodeActions {
 export interface CanvasDocumentWriter {
   createNode: (node: Node) => void
   updateNode: (nodeId: string, updater: (node: Node) => Node) => void
-  updateNodeData: (nodeId: string, data: Record<string, unknown>) => void
+  updateNodeData: <TPatch extends Record<string, unknown>>(nodeId: string, data: TPatch) => void
   updateEdge: (edgeId: string, updater: (edge: Edge) => Edge) => void
   resizeNode: (nodeId: string, width: number, height: number, position: XYPosition) => void
   deleteNodes: (nodeIds: Array<string>) => void
@@ -191,7 +191,7 @@ export interface CanvasToolHandlers {
   onMoveEnd?: () => void
 }
 
-export interface CanvasToolModule<TId extends CanvasToolId = CanvasToolId> {
+export interface CanvasToolSpec<TId extends CanvasToolId = CanvasToolId> {
   id: TId
   label: string
   group: 'selection' | 'creation'
@@ -205,6 +205,6 @@ export interface CanvasToolModule<TId extends CanvasToolId = CanvasToolId> {
   createHandlers: (runtime: CanvasToolRuntime) => CanvasToolHandlers
 }
 
-export type AnyCanvasToolModule = {
-  [TId in CanvasToolId]: CanvasToolModule<TId>
+export type AnyCanvasToolSpec = {
+  [TId in CanvasToolId]: CanvasToolSpec<TId>
 }[CanvasToolId]

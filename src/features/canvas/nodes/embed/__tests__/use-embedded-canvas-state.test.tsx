@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as Y from 'yjs'
-import { useEmbeddedCanvasState } from '../use-embedded-canvas-state'
+import { parseEmbeddedCanvasStableId, useEmbeddedCanvasState } from '../use-embedded-canvas-state'
 import { testId } from '~/test/helpers/test-id'
 
 const useCampaignQueryMock = vi.hoisted(() => vi.fn())
@@ -125,6 +125,20 @@ describe('useEmbeddedCanvasState', () => {
         expect.objectContaining({ id: 'node-2', position: { x: 30, y: 40 } }),
       ])
     })
+  })
+})
+
+describe('parseEmbeddedCanvasStableId', () => {
+  it('rejects malformed stable ids safely', () => {
+    expect(parseEmbeddedCanvasStableId({ id: 'node-1' })).toBe('node-1')
+    expect(parseEmbeddedCanvasStableId(null)).toBeUndefined()
+    expect(parseEmbeddedCanvasStableId(undefined)).toBeUndefined()
+    expect(parseEmbeddedCanvasStableId({})).toBeUndefined()
+    expect(parseEmbeddedCanvasStableId({ foo: 'bar' })).toBeUndefined()
+    expect(parseEmbeddedCanvasStableId({ id: null })).toBeUndefined()
+    expect(parseEmbeddedCanvasStableId({ id: '' })).toBeUndefined()
+    expect(parseEmbeddedCanvasStableId({ id: 42 })).toBeUndefined()
+    expect(parseEmbeddedCanvasStableId('node-1')).toBeUndefined()
   })
 })
 

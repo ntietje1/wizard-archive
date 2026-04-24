@@ -1,12 +1,12 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasConditionalToolbar } from '../canvas-conditional-toolbar'
-import { createCanvasProviderProps } from '../../runtime/__tests__/canvas-runtime-test-utils'
-import { CanvasProviders } from '../../runtime/providers/canvas-runtime-context'
+import { createCanvasRuntime } from '../../runtime/__tests__/canvas-runtime-test-utils'
+import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime-context'
 import { useCanvasSelectionState } from '../../runtime/selection/use-canvas-selection-state'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import type { Edge, Node } from '@xyflow/react'
-import type { CanvasEdgeType } from '../../edges/canvas-edge-module-types'
+import type { CanvasEdgeType } from '../../edges/canvas-edge-types'
 import type { CanvasCommands } from '../../runtime/document/use-canvas-commands'
 
 const nodesMock = vi.hoisted(() => ({
@@ -97,8 +97,8 @@ function renderToolbar({
   transact?: (fn: () => void) => void
   commands?: CanvasCommands
 } = {}) {
-  const baseProps = createCanvasProviderProps()
-  const providerProps = createCanvasProviderProps({
+  const baseRuntime = createCanvasRuntime()
+  const runtime = createCanvasRuntime({
     nodeActions: {
       updateNodeData,
       transact,
@@ -106,7 +106,7 @@ function renderToolbar({
       onResizeEnd: vi.fn(),
     },
     documentWriter: {
-      ...baseProps.documentWriter,
+      ...baseRuntime.documentWriter,
       updateEdge,
     },
     editSession: {
@@ -127,9 +127,9 @@ function renderToolbar({
   })
 
   const view = render(
-    <CanvasProviders {...providerProps}>
+    <CanvasRuntimeProvider {...runtime}>
       <CanvasConditionalToolbar canEdit />
-    </CanvasProviders>,
+    </CanvasRuntimeProvider>,
   )
 
   return {
@@ -157,6 +157,19 @@ function createNode(
     sidebarItemId?: string
   } = {},
 ): Node {
+  const strokeData =
+    type === 'stroke'
+      ? {
+          points: [
+            [0, 0, 0.5],
+            [24, 0, 0.5],
+          ],
+          bounds: { x: 0, y: 0, width: 24, height: 1 },
+          color: options.color ?? 'var(--foreground)',
+          size: options.size ?? 4,
+        }
+      : {}
+
   return {
     id: `${type}-${nodeIdCounter++}`,
     type,
@@ -170,9 +183,10 @@ function createNode(
     width: 100,
     height: 100,
     data: {
-      ...(options.color !== undefined ? { color: options.color } : {}),
+      ...strokeData,
+      ...(type !== 'stroke' && options.color !== undefined ? { color: options.color } : {}),
       ...(options.opacity !== undefined ? { opacity: options.opacity } : {}),
-      ...(options.size !== undefined ? { size: options.size } : {}),
+      ...(type !== 'stroke' && options.size !== undefined ? { size: options.size } : {}),
       ...(options.backgroundColor !== undefined
         ? { backgroundColor: options.backgroundColor }
         : {}),
@@ -901,7 +915,7 @@ describe('CanvasConditionalToolbar', () => {
     const reorderCanRun = vi.fn(() => true)
     renderToolbar({
       commands: {
-        ...createCanvasProviderProps().commands,
+        ...createCanvasRuntime().commands,
         reorder: {
           id: 'reorder',
           canRun: reorderCanRun,

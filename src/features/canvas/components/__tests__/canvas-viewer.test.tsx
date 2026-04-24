@@ -136,7 +136,7 @@ vi.mock('../../runtime/use-canvas-flow-runtime', () => ({
 }))
 
 vi.mock('../../runtime/providers/canvas-runtime-context', () => ({
-  CanvasProviders: ({ children }: { children: React.ReactNode }) => children,
+  CanvasRuntimeProvider: ({ children }: { children: React.ReactNode }) => children,
 }))
 
 vi.mock('../canvas-toolbar', () => ({
