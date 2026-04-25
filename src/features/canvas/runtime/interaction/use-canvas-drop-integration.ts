@@ -7,7 +7,7 @@ interface UseCanvasDropIntegrationOptions {
   canEdit: boolean
   isSelectMode: boolean
   createNode: (node: Node) => void
-  screenToFlowPosition: (position: { x: number; y: number }) => { x: number; y: number }
+  screenToCanvasPosition: (position: { x: number; y: number }) => { x: number; y: number }
 }
 
 export function useCanvasDropIntegration({
@@ -15,12 +15,12 @@ export function useCanvasDropIntegration({
   canEdit,
   isSelectMode,
   createNode,
-  screenToFlowPosition,
+  screenToCanvasPosition,
 }: UseCanvasDropIntegrationOptions) {
   return useCanvasDropTarget({
     canvasId,
     enabled: canEdit && isSelectMode,
     createNode,
-    screenToFlowPosition,
+    screenToCanvasPosition,
   })
 }

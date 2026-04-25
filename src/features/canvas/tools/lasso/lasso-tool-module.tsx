@@ -6,7 +6,7 @@ import { isPrimarySelectionModifier } from '../../utils/canvas-selection-utils'
 import {
   setPointerCapture,
   releasePointerCapture,
-  screenEventToFlowPosition,
+  screenEventToCanvasPosition,
 } from '../shared/tool-module-utils'
 import type { CanvasToolSpec } from '../canvas-tool-types'
 import { LassoAwarenessLayer } from './lasso-tool-awareness-layer'
@@ -130,7 +130,7 @@ export const lassoToolSpec: CanvasToolSpec<'lasso'> = {
         captureTarget = setPointerCapture(event)
         pointerId = event.pointerId
         active = true
-        const pos = screenEventToFlowPosition(services.viewport, event)
+        const pos = screenEventToCanvasPosition(services.viewport, event)
         points = [pos]
         session.begin({ points }, isPrimarySelectionModifier(event) ? 'add' : 'replace')
       },
@@ -138,7 +138,7 @@ export const lassoToolSpec: CanvasToolSpec<'lasso'> = {
         if (!active) return
 
         claimPointerEvent(event)
-        const pos = screenEventToFlowPosition(services.viewport, event)
+        const pos = screenEventToCanvasPosition(services.viewport, event)
         points = [...points, pos]
         session.update({ points })
       },

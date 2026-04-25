@@ -12,11 +12,11 @@ describe('useCanvasViewportInteractions', () => {
     render(<Harness canPrimaryPan={canPrimaryPan} viewportController={viewportController} />)
 
     const surface = document.querySelector('[data-testid="surface"]') as HTMLElement
-    const flow = document.querySelector('.react-flow') as HTMLElement
+    const scene = document.querySelector('.canvas-scene') as HTMLElement
 
-    flow.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 10 }))
-    flow.dispatchEvent(createPointerEvent('pointerdown', { button: 1 }))
-    flow.dispatchEvent(createPointerEvent('pointerdown', { button: 0 }))
+    scene.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 10 }))
+    scene.dispatchEvent(createPointerEvent('pointerdown', { button: 1 }))
+    scene.dispatchEvent(createPointerEvent('pointerdown', { button: 0 }))
     surface.dispatchEvent(createPointerEvent('pointerdown', { button: 0 }))
 
     expect(viewportController.handleWheel).toHaveBeenCalledTimes(1)
@@ -28,18 +28,16 @@ describe('useCanvasViewportInteractions', () => {
     vi.mocked(viewportController.handleWheel).mockImplementation((event) => {
       event.preventDefault()
     })
-    const reactFlowWheel = vi.fn()
+    const sceneWheel = vi.fn()
 
     render(<Harness canPrimaryPan={() => false} viewportController={viewportController} />)
 
-    // Harness installs the canvas capture listener before this bubble listener, so stopPropagation
-    // after handleWheel prevents the React Flow listener from observing handled wheel events.
-    const flow = document.querySelector('.react-flow') as HTMLElement
-    flow.addEventListener('wheel', reactFlowWheel, { passive: true })
-    flow.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 10 }))
+    const scene = document.querySelector('.canvas-scene') as HTMLElement
+    scene.addEventListener('wheel', sceneWheel, { passive: true })
+    scene.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 10 }))
 
     expect(viewportController.handleWheel).toHaveBeenCalledTimes(1)
-    expect(reactFlowWheel).not.toHaveBeenCalled()
+    expect(sceneWheel).not.toHaveBeenCalled()
   })
 })
 
@@ -55,7 +53,7 @@ function Harness({
 
   return (
     <div ref={ref} data-testid="surface">
-      <div className="react-flow" />
+      <div className="canvas-scene" />
     </div>
   )
 }

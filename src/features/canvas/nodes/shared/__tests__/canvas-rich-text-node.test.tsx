@@ -24,14 +24,6 @@ vi.mock('@xyflow/react', () => ({
     measured: { width: 200, height: 120 },
     internals: { positionAbsolute: { x: 0, y: 0 } },
   }),
-  useReactFlow: () => ({
-    setNodes: (
-      updater: Array<{ id: string }> | ((nodes: Array<{ id: string }>) => Array<{ id: string }>),
-    ) => (typeof updater === 'function' ? updater([{ id: 'text-1' }]) : updater),
-    setEdges: (updater: Array<never> | ((edges: Array<never>) => Array<never>)) =>
-      typeof updater === 'function' ? updater([]) : updater,
-    screenToFlowPosition: ({ x, y }: { x: number; y: number }) => ({ x, y }),
-  }),
 }))
 
 // This mock bypasses CanvasRenderModeProvider, so the harness mode prop and

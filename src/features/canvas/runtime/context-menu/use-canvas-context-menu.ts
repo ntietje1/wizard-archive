@@ -28,7 +28,7 @@ interface UseCanvasContextMenuOptions {
   nodesMap: Y.Map<Node>
   edgesMap: Y.Map<Edge>
   createNode: (node: Node) => void
-  screenToFlowPosition: (position: CanvasContextMenuPoint) => { x: number; y: number }
+  screenToCanvasPosition: (position: CanvasContextMenuPoint) => { x: number; y: number }
   selection: Pick<CanvasSelectionController, 'clearSelection' | 'getSnapshot' | 'setSelection'>
   commands: CanvasContextMenuCommands
 }
@@ -56,7 +56,7 @@ export function useCanvasContextMenu({
   nodesMap,
   edgesMap,
   createNode,
-  screenToFlowPosition,
+  screenToCanvasPosition,
   selection,
   commands,
 }: UseCanvasContextMenuOptions) {
@@ -103,7 +103,7 @@ export function useCanvasContextMenu({
         return createAndSelectEmbeddedCanvasNode({
           sidebarItemId: result.id,
           pointerPosition,
-          screenToFlowPosition,
+          screenToCanvasPosition,
           createNode,
           replaceSelection: selection.setSelection,
         })

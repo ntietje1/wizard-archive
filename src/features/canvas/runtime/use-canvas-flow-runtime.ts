@@ -1,5 +1,5 @@
 import type { Id } from 'convex/_generated/dataModel'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import type { Connection, Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
@@ -140,11 +140,6 @@ export function useCanvasFlowRuntime({
     }
   }, [activeTool, session.awareness.presence])
 
-  const cancelConnectionDraft = useCallback(() => {
-    // Connection drafts are owned by the internal scene. This hook remains the keyboard/tool
-    // integration point for cancelling tool-owned ephemeral state.
-  }, [])
-
   useEffect(() => {
     const previousTool = previousActiveToolRef.current
     previousActiveToolRef.current = activeTool
@@ -152,8 +147,6 @@ export function useCanvasFlowRuntime({
     if (previousTool === null || previousTool === activeTool) {
       return
     }
-
-    cancelConnectionDraft()
 
     if (!canEdit || !SELECTION_INCOMPATIBLE_TOOLS.has(activeTool)) {
       return
@@ -163,7 +156,7 @@ export function useCanvasFlowRuntime({
     session.editSession.setEditingEmbedId(null)
     session.editSession.setPendingEditNodeId(null)
     session.editSession.setPendingEditNodePoint(null)
-  }, [activeTool, canEdit, cancelConnectionDraft, selection, session.editSession])
+  }, [activeTool, canEdit, selection, session.editSession])
 
   useYjsPreviewUpload({
     itemId: canvasId,
@@ -348,7 +341,6 @@ export function useCanvasFlowRuntime({
   useCanvasKeyboardShortcuts({
     undo: history.undo,
     redo: history.redo,
-    cancelConnectionDraft,
     canEdit,
     nodesMap,
     edgesMap,
@@ -387,7 +379,7 @@ export function useCanvasFlowRuntime({
 
   const toolRuntime: CanvasToolRuntime = {
     viewport: {
-      screenToFlowPosition: viewportController.screenToCanvasPosition,
+      screenToCanvasPosition: viewportController.screenToCanvasPosition,
       getZoom: viewportController.getZoom,
     },
     commands: documentWriter,
@@ -438,7 +430,7 @@ export function useCanvasFlowRuntime({
     canEdit,
     isSelectMode,
     createNode: documentWriter.createNode,
-    screenToFlowPosition: viewportController.screenToCanvasPosition,
+    screenToCanvasPosition: viewportController.screenToCanvasPosition,
   })
 
   const getEdgeCreationDefaults = (): CanvasEdgeCreationDefaults => {
@@ -462,7 +454,7 @@ export function useCanvasFlowRuntime({
     nodesMap,
     edgesMap,
     createNode: documentWriter.createNode,
-    screenToFlowPosition: viewportController.screenToCanvasPosition,
+    screenToCanvasPosition: viewportController.screenToCanvasPosition,
     selection,
     commands,
   })

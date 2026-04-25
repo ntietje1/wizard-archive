@@ -113,7 +113,7 @@ interface CanvasModifierKeyReader {
 }
 
 export interface CanvasViewportTools {
-  screenToFlowPosition: (position: XYPosition) => XYPosition
+  screenToCanvasPosition: (position: XYPosition) => XYPosition
   getZoom: () => number
 }
 

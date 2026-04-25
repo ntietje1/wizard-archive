@@ -57,8 +57,5 @@ export function useCanvasViewportInteractions({
 }
 
 function isCanvasViewportTarget(target: EventTarget | null) {
-  return (
-    target instanceof Element &&
-    Boolean(target.closest('.canvas-scene') || target.closest('.react-flow'))
-  )
+  return target instanceof Element && Boolean(target.closest('.canvas-scene'))
 }

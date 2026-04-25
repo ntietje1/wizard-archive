@@ -147,7 +147,7 @@ function createToolPropertyContext(): CanvasToolPropertyContext {
 function createToolRuntime(): CanvasToolRuntime {
   return {
     viewport: {
-      screenToFlowPosition: (position) => position,
+      screenToCanvasPosition: (position) => position,
       getZoom: () => 1,
     },
     commands: {

@@ -2,7 +2,7 @@ import { Pencil } from 'lucide-react'
 import {
   setPointerCapture,
   releasePointerCapture,
-  screenEventToFlowPosition,
+  screenEventToCanvasPosition,
 } from '../shared/tool-module-utils'
 import type { CanvasToolSpec } from '../canvas-tool-types'
 import { DrawAwarenessLayer } from './draw-tool-awareness-layer'
@@ -92,7 +92,7 @@ export const drawToolSpec: CanvasToolSpec<'draw'> = {
         pointerId = event.pointerId
         const { strokeColor, strokeOpacity, strokeSize } = services.toolState.getSettings()
         const normalizedStrokeSize = clampStrokeNodeSize(strokeSize)
-        const pos = screenEventToFlowPosition(services.viewport, event)
+        const pos = screenEventToCanvasPosition(services.viewport, event)
         const point: [number, number, number] = [pos.x, pos.y, event.pressure || 0.5]
         rawPoints = [point]
 
@@ -111,7 +111,7 @@ export const drawToolSpec: CanvasToolSpec<'draw'> = {
 
         const { strokeColor, strokeOpacity, strokeSize } = services.toolState.getSettings()
         const normalizedStrokeSize = clampStrokeNodeSize(strokeSize)
-        const pos = screenEventToFlowPosition(services.viewport, event)
+        const pos = screenEventToCanvasPosition(services.viewport, event)
         const point: [number, number, number] = [pos.x, pos.y, event.pressure || 0.5]
         rawPoints.push(point)
         const renderedPoints = getRenderedPoints()

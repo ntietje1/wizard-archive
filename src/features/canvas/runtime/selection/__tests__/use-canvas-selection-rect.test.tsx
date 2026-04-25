@@ -10,8 +10,8 @@ import type { Edge, Node } from '@xyflow/react'
 
 const useCanvasModifierKeysMock = vi.hoisted(() => vi.fn(() => ({ shiftPressed: false })))
 
-const reactFlowMock = vi.hoisted(() => ({
-  screenToFlowPosition: ({ x, y }: { x: number; y: number }) => ({ x, y }),
+const canvasViewportMock = vi.hoisted(() => ({
+  screenToCanvasPosition: ({ x, y }: { x: number; y: number }) => ({ x, y }),
   getZoom: () => 1,
   getNodes: (): Array<Node> => [],
   getEdges: (): Array<Edge> => [],
@@ -21,34 +21,15 @@ const storeState = vi.hoisted(() => ({
   nodeLookup: new Map(),
 }))
 
-const storeApiMock = vi.hoisted(() => {
-  return {
-    getState: () => storeState,
-    reset: () => {
-      storeState.nodeLookup = new Map()
-    },
-  }
-})
-
 vi.mock('../../interaction/use-canvas-modifier-keys', () => ({
   useCanvasModifierKeys: () => useCanvasModifierKeysMock(),
 }))
 
-vi.mock('@xyflow/react', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>
-
-  return {
-    ...actual,
-    useReactFlow: () => reactFlowMock,
-    useStoreApi: () => storeApiMock,
-  }
-})
-
 function createCanvasEngineMock(): CanvasEngine {
   return {
     getSnapshot: () => ({
-      nodes: reactFlowMock.getNodes(),
-      edges: reactFlowMock.getEdges(),
+      nodes: canvasViewportMock.getNodes(),
+      edges: canvasViewportMock.getEdges(),
       nodeLookup: storeState.nodeLookup,
     }),
   } as unknown as CanvasEngine
@@ -59,8 +40,8 @@ function createViewportControllerMock(): Pick<
   'getZoom' | 'screenToCanvasPosition'
 > {
   return {
-    getZoom: reactFlowMock.getZoom,
-    screenToCanvasPosition: reactFlowMock.screenToFlowPosition,
+    getZoom: canvasViewportMock.getZoom,
+    screenToCanvasPosition: canvasViewportMock.screenToCanvasPosition,
   }
 }
 
@@ -73,7 +54,7 @@ describe('useCanvasSelectionRect', () => {
   beforeEach(() => {
     clearSelectToolLocalOverlay()
     pendingPreview = null
-    storeApiMock.reset()
+    storeState.nodeLookup = new Map()
     rafCallbacks.clear()
     nextRafId = 1
     vi.stubGlobal(
@@ -128,7 +109,8 @@ describe('useCanvasSelectionRect', () => {
     const selection = createSelectionMock()
     const surface = document.createElement('div')
     const pane = document.createElement('div')
-    pane.className = 'react-flow__pane'
+    pane.className = 'canvas-scene'
+    pane.dataset.canvasPane = 'true'
     pane.dataset.canvasPane = 'true'
     const viewport = document.createElement('div')
     viewport.dataset.canvasViewport = 'true'
@@ -203,7 +185,7 @@ describe('useCanvasSelectionRect', () => {
         },
       ],
     ])
-    const getNodesSpy = vi.spyOn(reactFlowMock, 'getNodes').mockReturnValue([
+    const getNodesSpy = vi.spyOn(canvasViewportMock, 'getNodes').mockReturnValue([
       {
         id: 'text-1',
         type: 'text',
@@ -221,7 +203,7 @@ describe('useCanvasSelectionRect', () => {
         height: 80,
       },
     ])
-    const getEdgesSpy = vi.spyOn(reactFlowMock, 'getEdges').mockReturnValue([
+    const getEdgesSpy = vi.spyOn(canvasViewportMock, 'getEdges').mockReturnValue([
       {
         id: 'edge-1',
         type: 'bezier',
@@ -233,7 +215,8 @@ describe('useCanvasSelectionRect', () => {
     ])
     const surface = document.createElement('div')
     const pane = document.createElement('div')
-    pane.className = 'react-flow__pane'
+    pane.className = 'canvas-scene'
+    pane.dataset.canvasPane = 'true'
     surface.appendChild(pane)
     document.body.appendChild(surface)
     const surfaceRef = { current: surface }
@@ -332,7 +315,7 @@ describe('useCanvasSelectionRect', () => {
         },
       ],
     ])
-    const getNodesSpy = vi.spyOn(reactFlowMock, 'getNodes').mockReturnValue([
+    const getNodesSpy = vi.spyOn(canvasViewportMock, 'getNodes').mockReturnValue([
       {
         id: 'text-1',
         type: 'text',
@@ -342,10 +325,11 @@ describe('useCanvasSelectionRect', () => {
         height: 80,
       },
     ])
-    const getEdgesSpy = vi.spyOn(reactFlowMock, 'getEdges').mockReturnValue([])
+    const getEdgesSpy = vi.spyOn(canvasViewportMock, 'getEdges').mockReturnValue([])
     const surface = document.createElement('div')
     const pane = document.createElement('div')
-    pane.className = 'react-flow__pane'
+    pane.className = 'canvas-scene'
+    pane.dataset.canvasPane = 'true'
     surface.appendChild(pane)
     document.body.appendChild(surface)
     const surfaceRef = { current: surface }
@@ -421,7 +405,7 @@ describe('useCanvasSelectionRect', () => {
         },
       ],
     ])
-    const getNodesSpy = vi.spyOn(reactFlowMock, 'getNodes').mockReturnValue([
+    const getNodesSpy = vi.spyOn(canvasViewportMock, 'getNodes').mockReturnValue([
       {
         id: 'text-1',
         type: 'text',
@@ -431,10 +415,11 @@ describe('useCanvasSelectionRect', () => {
         height: 80,
       },
     ])
-    const getEdgesSpy = vi.spyOn(reactFlowMock, 'getEdges').mockReturnValue([])
+    const getEdgesSpy = vi.spyOn(canvasViewportMock, 'getEdges').mockReturnValue([])
     const surface = document.createElement('div')
     const pane = document.createElement('div')
-    pane.className = 'react-flow__pane'
+    pane.className = 'canvas-scene'
+    pane.dataset.canvasPane = 'true'
     surface.appendChild(pane)
     document.body.appendChild(surface)
     const surfaceRef = { current: surface }
@@ -489,7 +474,7 @@ describe('useCanvasSelectionRect', () => {
         },
       ],
     ])
-    const getNodesSpy = vi.spyOn(reactFlowMock, 'getNodes').mockReturnValue([
+    const getNodesSpy = vi.spyOn(canvasViewportMock, 'getNodes').mockReturnValue([
       {
         id: 'text-1',
         type: 'text',
@@ -499,10 +484,11 @@ describe('useCanvasSelectionRect', () => {
         height: 80,
       },
     ])
-    const getEdgesSpy = vi.spyOn(reactFlowMock, 'getEdges').mockReturnValue([])
+    const getEdgesSpy = vi.spyOn(canvasViewportMock, 'getEdges').mockReturnValue([])
     const surface = document.createElement('div')
     const pane = document.createElement('div')
-    pane.className = 'react-flow__pane'
+    pane.className = 'canvas-scene'
+    pane.dataset.canvasPane = 'true'
     surface.appendChild(pane)
     document.body.appendChild(surface)
     const surfaceRef = { current: surface }
@@ -574,7 +560,7 @@ describe('useCanvasSelectionRect', () => {
         },
       ],
     ])
-    const getNodesSpy = vi.spyOn(reactFlowMock, 'getNodes').mockReturnValue([
+    const getNodesSpy = vi.spyOn(canvasViewportMock, 'getNodes').mockReturnValue([
       {
         id: 'text-1',
         type: 'text',
@@ -584,10 +570,11 @@ describe('useCanvasSelectionRect', () => {
         height: 80,
       },
     ])
-    const getEdgesSpy = vi.spyOn(reactFlowMock, 'getEdges').mockReturnValue([])
+    const getEdgesSpy = vi.spyOn(canvasViewportMock, 'getEdges').mockReturnValue([])
     const surface = document.createElement('div')
     const pane = document.createElement('div')
-    pane.className = 'react-flow__pane'
+    pane.className = 'canvas-scene'
+    pane.dataset.canvasPane = 'true'
     surface.appendChild(pane)
     document.body.appendChild(surface)
     const surfaceRef = { current: surface }

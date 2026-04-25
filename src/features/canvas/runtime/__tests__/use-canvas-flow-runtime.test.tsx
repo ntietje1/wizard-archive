@@ -102,12 +102,6 @@ const toolHandlersMock = vi.hoisted(
       onPaneClick: vi.fn(),
     }) as const,
 )
-const storeApiMock = vi.hoisted(() => ({
-  getState: () => ({
-    nodeLookup: new Map(),
-  }),
-  setState: vi.fn(),
-}))
 const session = vi.hoisted(() => ({
   editSession: {
     editingEmbedId: null,
@@ -138,10 +132,6 @@ const remoteDragAnimation = vi.hoisted(() => ({
   hasSpring: vi.fn(() => false),
   setTarget: vi.fn(),
   clearNodeSprings: vi.fn(),
-}))
-
-vi.mock('@xyflow/react', () => ({
-  useStoreApi: () => storeApiMock,
 }))
 
 vi.mock('~/features/previews/hooks/use-yjs-preview-upload', () => ({
@@ -344,7 +334,6 @@ describe('useCanvasFlowRuntime', () => {
     toolHandlersSpy.mockReset()
     clearSelectionSpy.mockReset()
     clearToolTransientStateSpy.mockReset()
-    storeApiMock.setState.mockReset()
     selectionControllerMock.clear.mockReset()
     selectionControllerMock.clearSelection.mockReset()
     session.editSession.setEditingEmbedId.mockReset()
@@ -400,7 +389,6 @@ describe('useCanvasFlowRuntime', () => {
     expect(keyboardSpy).toHaveBeenCalledWith({
       undo: historyMock.undo,
       redo: historyMock.redo,
-      cancelConnectionDraft: expect.any(Function),
       canEdit: true,
       nodesMap,
       edgesMap,
@@ -456,7 +444,7 @@ describe('useCanvasFlowRuntime', () => {
       nodesMap,
       edgesMap,
       createNode: documentWriterMock.createNode,
-      screenToFlowPosition: expect.any(Function),
+      screenToCanvasPosition: expect.any(Function),
       selection: selectionControllerMock,
       commands: commandsMock,
     })

@@ -70,7 +70,6 @@ describe('useCanvasKeyboardShortcuts', () => {
     const { unmount } = renderHook(() =>
       useCanvasKeyboardShortcuts({
         ...history,
-        cancelConnectionDraft: vi.fn(),
         canEdit: true,
         nodesMap: new Map() as never,
         edgesMap: new Map() as never,
@@ -93,7 +92,6 @@ describe('useCanvasKeyboardShortcuts', () => {
       undo: vi.fn(),
       redo: vi.fn(),
     }
-    const cancelConnectionDraft = vi.fn()
     const selection = {
       getSnapshot: getSelectionSnapshotSpy,
       setSelection: vi.fn(),
@@ -103,7 +101,6 @@ describe('useCanvasKeyboardShortcuts', () => {
     renderHook(() =>
       useCanvasKeyboardShortcuts({
         ...history,
-        cancelConnectionDraft,
         canEdit: true,
         nodesMap: new Map([
           ['node-1', {}],
@@ -118,7 +115,6 @@ describe('useCanvasKeyboardShortcuts', () => {
     useCanvasToolStore.getState().setActiveTool('draw')
     dispatchKeyboardShortcut(new KeyboardEvent('keydown', { key: 'Escape' }))
     expect(selection.clearSelection).toHaveBeenCalledTimes(1)
-    expect(cancelConnectionDraft).toHaveBeenCalledTimes(1)
     expect(useCanvasToolStore.getState().activeTool).toBe('draw')
 
     dispatchKeyboardShortcut(new KeyboardEvent('keydown', { key: 'Escape' }))
@@ -170,7 +166,6 @@ describe('useCanvasKeyboardShortcuts', () => {
       useCanvasKeyboardShortcuts({
         undo: vi.fn(),
         redo: vi.fn(),
-        cancelConnectionDraft: vi.fn(),
         canEdit: true,
         nodesMap: new Map() as never,
         edgesMap: new Map() as never,
@@ -198,7 +193,6 @@ describe('useCanvasKeyboardShortcuts', () => {
       useCanvasKeyboardShortcuts({
         undo: vi.fn(),
         redo: vi.fn(),
-        cancelConnectionDraft: vi.fn(),
         canEdit: true,
         nodesMap: new Map() as never,
         edgesMap: new Map() as never,

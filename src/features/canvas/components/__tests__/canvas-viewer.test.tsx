@@ -128,9 +128,6 @@ vi.mock('@xyflow/react', () => ({
     (sourceX + targetX) / 2,
     (sourceY + targetY) / 2,
   ],
-  useReactFlow: () => ({
-    screenToFlowPosition: ({ x, y }: { x: number; y: number }) => ({ x, y }),
-  }),
   Position: {
     Top: 'top',
     Right: 'right',
@@ -143,7 +140,6 @@ vi.mock('@xyflow/react', () => ({
   SelectionMode: {
     Partial: 'partial',
   },
-  useViewport: () => ({ x: 0, y: 0, zoom: 1 }),
 }))
 
 vi.mock('../../runtime/use-canvas-flow-runtime', () => ({

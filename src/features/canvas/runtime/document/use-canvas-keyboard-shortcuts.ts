@@ -9,7 +9,6 @@ import type { Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 
 interface UseCanvasKeyboardShortcutsOptions extends Pick<CanvasHistoryController, 'undo' | 'redo'> {
-  cancelConnectionDraft: () => void
   canEdit: boolean
   nodesMap: Y.Map<Node>
   edgesMap: Y.Map<Edge>
@@ -53,7 +52,6 @@ function handleEscapeShortcut(current: UseCanvasKeyboardShortcutsOptions, key: s
   }
 
   current.selection.clearSelection()
-  current.cancelConnectionDraft()
   return true
 }
 

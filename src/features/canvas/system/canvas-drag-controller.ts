@@ -407,7 +407,7 @@ function shouldIgnoreDragTarget(target: EventTarget | null) {
     target instanceof Element &&
     Boolean(
       target.closest(
-        '.react-flow__handle, .canvas-node-connection-handle, .canvas-node-resize-handle, input, textarea, select, button, a',
+        '.canvas-node-connection-handle, .canvas-node-resize-handle, input, textarea, select, button, a',
       ),
     )
   )

@@ -1,10 +1,10 @@
 import type { CanvasViewportTools } from '../canvas-tool-types'
 
-export function screenEventToFlowPosition(
-  context: Pick<CanvasViewportTools, 'screenToFlowPosition'>,
+export function screenEventToCanvasPosition(
+  context: Pick<CanvasViewportTools, 'screenToCanvasPosition'>,
   event: Pick<PointerEvent, 'clientX' | 'clientY'>,
-): ReturnType<CanvasViewportTools['screenToFlowPosition']> {
-  return context.screenToFlowPosition({
+): ReturnType<CanvasViewportTools['screenToCanvasPosition']> {
+  return context.screenToCanvasPosition({
     x: event.clientX,
     y: event.clientY,
   })

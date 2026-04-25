@@ -67,11 +67,11 @@ function isCanvasSelectionCandidate(
   return !bounds || rectIntersectsBounds(candidateBounds, bounds)
 }
 
-function screenEventToFlowPosition(
-  context: Pick<CanvasViewportTools, 'screenToFlowPosition'>,
+function screenEventToCanvasPosition(
+  context: Pick<CanvasViewportTools, 'screenToCanvasPosition'>,
   event: Pick<ReactMouseEvent, 'clientX' | 'clientY'>,
-): ReturnType<CanvasViewportTools['screenToFlowPosition']> {
-  return context.screenToFlowPosition({
+): ReturnType<CanvasViewportTools['screenToCanvasPosition']> {
+  return context.screenToCanvasPosition({
     x: event.clientX,
     y: event.clientY,
   })
@@ -94,14 +94,14 @@ export function findCanvasNodeAtPoint(
 }
 
 export function hitTestCanvasNode(
-  context: Pick<CanvasViewportTools, 'screenToFlowPosition' | 'getZoom'> & {
+  context: Pick<CanvasViewportTools, 'screenToCanvasPosition' | 'getZoom'> & {
     getMeasuredNodes: () => Array<Node>
   },
   event: ReactMouseEvent,
 ): string | null {
   return findCanvasNodeAtPoint(
     context.getMeasuredNodes(),
-    screenEventToFlowPosition(context, event),
+    screenEventToCanvasPosition(context, event),
     {
       zoom: context.getZoom(),
     },

@@ -53,7 +53,7 @@ export function useCanvasPointerBridge({
       if (
         !event.target ||
         !(event.target instanceof Element) ||
-        (!event.target.closest('.canvas-scene') && !event.target.closest('.react-flow'))
+        !event.target.closest('.canvas-scene')
       ) {
         return
       }

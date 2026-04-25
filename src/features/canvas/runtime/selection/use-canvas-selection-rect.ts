@@ -62,9 +62,7 @@ export function useCanvasSelectionRect({
 
   useEffect(() => {
     if (!enabled) return
-    const pane =
-      surfaceRef.current?.querySelector<HTMLDivElement>('[data-canvas-pane="true"]') ??
-      surfaceRef.current?.querySelector<HTMLDivElement>('.react-flow__pane')
+    const pane = surfaceRef.current?.querySelector<HTMLDivElement>('[data-canvas-pane="true"]')
     if (!pane) return
     const paneElement = pane
 

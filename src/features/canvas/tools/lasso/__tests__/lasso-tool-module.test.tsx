@@ -494,7 +494,7 @@ function createLassoEnvironment({
 }): CanvasToolRuntime {
   return {
     viewport: {
-      screenToFlowPosition: ({ x, y }) => ({ x, y }),
+      screenToCanvasPosition: ({ x, y }) => ({ x, y }),
       getZoom: () => 1,
     },
     commands: {

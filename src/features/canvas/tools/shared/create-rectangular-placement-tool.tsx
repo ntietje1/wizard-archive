@@ -2,7 +2,7 @@ import { createCanvasNodePlacement } from '../../nodes/canvas-node-modules'
 import { getConstrainedRectFromPoints } from '../../utils/canvas-constraint-utils'
 import {
   releasePointerCapture,
-  screenEventToFlowPosition,
+  screenEventToCanvasPosition,
   setPointerCapture,
 } from './tool-module-utils'
 import { setRectCreationDragRect } from './rect-creation-local-overlay'
@@ -26,7 +26,7 @@ export function createRectangularPlacementToolController<
       return
     }
 
-    const pos = services.viewport.screenToFlowPosition(lastClientPos)
+    const pos = services.viewport.screenToCanvasPosition(lastClientPos)
     setRectCreationDragRect(
       getConstrainedRectFromPoints(start, pos, {
         square: services.modifiers.getShiftPressed(),
@@ -105,7 +105,7 @@ export function createRectangularPlacementToolController<
       captureTarget = setPointerCapture(event)
       pointerId = event.pointerId
       active = true
-      start = screenEventToFlowPosition(services.viewport, event)
+      start = screenEventToCanvasPosition(services.viewport, event)
       lastClientPos = { x: event.clientX, y: event.clientY }
       setRectCreationDragRect(null)
     },
@@ -135,7 +135,7 @@ export function createRectangularPlacementToolController<
 
       lastClientPos = { x: event.clientX, y: event.clientY }
       const point = { x: lastClientPos.x, y: lastClientPos.y }
-      const pos = services.viewport.screenToFlowPosition(lastClientPos)
+      const pos = services.viewport.screenToCanvasPosition(lastClientPos)
       const rect = getConstrainedRectFromPoints(start, pos, {
         square: services.modifiers.getShiftPressed(),
       })
