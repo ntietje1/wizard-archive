@@ -6,12 +6,16 @@ import type { Edge, Node } from '@xyflow/react'
 import * as Y from 'yjs'
 import { testId } from '~/test/helpers/test-id'
 
-const reactFlowMock = vi.hoisted(() => ({
+const sceneMock = vi.hoisted(() => ({
   props: null as Record<string, unknown> | null,
 }))
 
 const runtimeMock = vi.hoisted(() => ({
   activeTool: 'select' as 'select' | 'edge',
+  canvasEngine: {
+    getSnapshot: () => ({ viewport: { x: 0, y: 0, zoom: 1 } }),
+    subscribe: () => () => undefined,
+  },
   canvasSurfaceRef: { current: null },
   contextMenu: {
     close: vi.fn(),
@@ -53,7 +57,7 @@ const runtimeMock = vi.hoisted(() => ({
     setPendingEditNodeId: vi.fn(),
     setPendingEditNodePoint: vi.fn(),
   },
-  flowHandlers: {
+  sceneHandlers: {
     onMouseMove: vi.fn(),
     onMouseLeave: vi.fn(),
   },
@@ -67,6 +71,24 @@ const runtimeMock = vi.hoisted(() => ({
     transact: vi.fn(),
     onResize: vi.fn(),
     onResizeEnd: vi.fn(),
+  },
+  nodeDragController: null,
+  viewportController: {
+    getViewport: vi.fn(() => ({ x: 0, y: 0, zoom: 1 })),
+    getZoom: vi.fn(() => 1),
+    screenToCanvasPosition: vi.fn(({ x, y }: { x: number; y: number }) => ({ x, y })),
+    canvasToScreenPosition: vi.fn(({ x, y }: { x: number; y: number }) => ({ x, y })),
+    handleWheel: vi.fn(),
+    handlePanPointerDown: vi.fn(),
+    panBy: vi.fn(),
+    zoomBy: vi.fn(),
+    zoomTo: vi.fn(),
+    zoomIn: vi.fn(),
+    zoomOut: vi.fn(),
+    fitView: vi.fn(),
+    syncFromDocumentOrAdapter: vi.fn(),
+    commit: vi.fn(),
+    destroy: vi.fn(),
   },
   remoteHighlights: new Map(),
   remoteUsers: [],
@@ -115,11 +137,6 @@ vi.mock('@xyflow/react', () => ({
     Bottom: 'bottom',
     Left: 'left',
   },
-  ReactFlow: (props: Record<string, unknown>) => {
-    reactFlowMock.props = props
-    return <div data-testid="react-flow">{props.children as React.ReactNode}</div>
-  },
-  ReactFlowProvider: ({ children }: { children: React.ReactNode }) => children,
   ConnectionMode: {
     Loose: 'loose',
   },
@@ -151,6 +168,13 @@ vi.mock('../canvas-local-overlays-host', () => ({
 
 vi.mock('../canvas-awareness-host', () => ({
   CanvasAwarenessHost: () => null,
+}))
+
+vi.mock('../canvas-scene', () => ({
+  CanvasScene: (props: Record<string, unknown>) => {
+    sceneMock.props = props
+    return <div data-testid="canvas-scene" />
+  },
 }))
 
 vi.mock('~/features/context-menu/components/context-menu-host', () => ({
@@ -189,7 +213,7 @@ vi.mock('~/features/dnd/stores/dnd-store', () => ({
 
 describe('CanvasFlow', () => {
   beforeEach(() => {
-    reactFlowMock.props = null
+    sceneMock.props = null
   })
 
   afterEach(() => {
@@ -197,7 +221,7 @@ describe('CanvasFlow', () => {
     runtimeMock.toolCursor = undefined
   })
 
-  it('renders the React Flow surface with the canvas-owned defaults', () => {
+  it('renders the internal canvas scene with the canvas-owned runtime', () => {
     const doc = new Y.Doc()
     const props: Parameters<typeof CanvasFlow>[0] = {
       status: 'ready',
@@ -215,30 +239,23 @@ describe('CanvasFlow', () => {
 
     render(<CanvasFlow {...props} />)
 
-    expect(reactFlowMock.props?.zoomOnDoubleClick).toBe(false)
-    expect(reactFlowMock.props?.connectionMode).toBe('loose')
-    expect(reactFlowMock.props?.connectionLineComponent).toEqual(expect.any(Function))
-    expect(reactFlowMock.props?.edgeTypes).toEqual(
+    expect(screen.getByTestId('canvas-scene')).toBeInTheDocument()
+    expect(sceneMock.props).toEqual(
       expect.objectContaining({
-        bezier: expect.any(Function),
+        canEdit: true,
+        remoteUsers: runtimeMock.remoteUsers,
+        sceneHandlers: runtimeMock.sceneHandlers,
+        onNodeContextMenu: runtimeMock.contextMenu.openForNode,
+        onEdgeContextMenu: runtimeMock.contextMenu.openForEdge,
+        onPaneContextMenu: runtimeMock.contextMenu.openForPane,
       }),
     )
-    expect(reactFlowMock.props?.nodesConnectable).toBe(false)
-    expect(reactFlowMock.props?.connectOnClick).toBe(false)
-    expect(reactFlowMock.props?.elevateNodesOnSelect).toBe(false)
-    expect(reactFlowMock.props?.elevateEdgesOnSelect).toBe(false)
-    expect(reactFlowMock.props?.defaultViewport).toEqual({
-      x: 120,
-      y: -45,
-      zoom: 1.5,
-    })
-    expect(reactFlowMock.props?.deleteKeyCode).toEqual([])
     expect(screen.getByTestId('canvas-flow-shell')).toHaveStyle({ cursor: 'pointer' })
 
     doc.destroy()
   })
 
-  it('enables drag edge creation only while the edge tool is active', () => {
+  it('uses the active tool cursor from the runtime', () => {
     runtimeMock.activeTool = 'edge'
     runtimeMock.toolCursor = 'crosshair'
     const doc = new Y.Doc()
@@ -259,8 +276,8 @@ describe('CanvasFlow', () => {
       />,
     )
 
-    expect(reactFlowMock.props?.nodesConnectable).toBe(true)
-    expect(reactFlowMock.props?.connectOnClick).toBe(false)
+    expect(screen.getByTestId('canvas-scene')).toBeInTheDocument()
+    expect(sceneMock.props?.sceneHandlers).toBe(runtimeMock.sceneHandlers)
     expect(screen.getByTestId('canvas-flow-shell')).toHaveStyle({ cursor: 'crosshair' })
 
     doc.destroy()

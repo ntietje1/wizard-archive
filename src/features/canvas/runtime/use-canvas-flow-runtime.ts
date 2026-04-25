@@ -1,9 +1,9 @@
-import { useReactFlow, useStoreApi } from '@xyflow/react'
 import type { Id } from 'convex/_generated/dataModel'
 import { useCallback, useEffect, useRef } from 'react'
-import type { Edge, Node } from '@xyflow/react'
+import type { MouseEvent as ReactMouseEvent } from 'react'
+import type { Connection, Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
-import { getMeasuredCanvasNodesFromLookup } from './document/canvas-measured-nodes'
+import { getMeasuredCanvasNodesFromEngineSnapshot } from './document/canvas-measured-nodes'
 import { useCanvasCommands } from './document/use-canvas-commands'
 import { useCanvasDocumentProjection } from './document/use-canvas-document-projection'
 import { createCanvasDocumentWriter } from './document/use-canvas-document-writer'
@@ -13,22 +13,23 @@ import { useCanvasContextMenu } from './context-menu/use-canvas-context-menu'
 import { transactCanvasMaps } from './document/canvas-yjs-transactions'
 import { useCanvasCursorPresence } from './interaction/use-canvas-cursor-presence'
 import { useCanvasDropIntegration } from './interaction/use-canvas-drop-integration'
-import { createCanvasFlowHandlers } from './interaction/use-canvas-flow-handlers'
 import { useCanvasModifierKeys } from './interaction/use-canvas-modifier-keys'
 import { createCanvasNodeActions } from './interaction/create-canvas-node-actions'
 import { useCanvasNodeDragHandlers } from './interaction/use-canvas-node-drag-handlers'
 import { useCanvasPointerBridge } from './interaction/use-canvas-pointer-bridge'
 import { useCanvasRemoteDragAnimation } from './interaction/use-canvas-remote-drag-animation'
+import { useCanvasViewportInteractions } from './interaction/use-canvas-viewport-interactions'
 import { useCanvasSurfaceClickGuard } from './interaction/use-canvas-surface-click-guard'
-import { useCanvasWheel } from './interaction/use-canvas-wheel'
 import { exposeCanvasPerformanceRuntime } from './performance/canvas-performance-metrics'
-import { clearCanvasSelectionState } from './selection/use-canvas-selection-state'
 import { useCanvasSelectionController } from './selection/use-canvas-selection-actions'
 import { useCanvasSelectionRect } from './selection/use-canvas-selection-rect'
 import { useCanvasSessionState } from './session/use-canvas-session-state'
 import { createCanvasNodePlacement } from '../nodes/canvas-node-modules'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
+import { createCanvasEngine } from '../system/canvas-engine'
+import { createCanvasViewportController } from '../system/canvas-viewport-controller'
 import { canvasToolSpecs } from '../tools/canvas-tool-modules'
+import { isPrimarySelectionModifier } from '../utils/canvas-selection-utils'
 import type {
   CanvasEdgeCreationDefaults,
   CanvasSelectionSnapshot,
@@ -47,6 +48,7 @@ interface UseCanvasFlowRuntimeOptions {
   canEdit: boolean
   provider: ConvexYjsProvider | null
   doc: Y.Doc
+  initialViewport: { x: number; y: number; zoom: number }
 }
 
 const SELECTION_INCOMPATIBLE_TOOLS = new Set<CanvasToolId>(['draw', 'erase', 'text', 'edge'])
@@ -60,31 +62,52 @@ export function useCanvasFlowRuntime({
   canEdit,
   provider,
   doc,
+  initialViewport,
 }: UseCanvasFlowRuntimeOptions) {
   const session = useCanvasSessionState({ provider })
   const activeTool = useCanvasToolStore((state) => state.activeTool)
-  const reactFlow = useReactFlow()
-  const storeApi = useStoreApi()
+  const canvasEngineRef = useRef<ReturnType<typeof createCanvasEngine> | null>(null)
+  canvasEngineRef.current ??= createCanvasEngine()
+  const canvasEngine = canvasEngineRef.current
   const canvasSurfaceRef = useRef<HTMLDivElement>(null)
+  const viewportControllerRef = useRef<ReturnType<typeof createCanvasViewportController> | null>(
+    null,
+  )
+  viewportControllerRef.current ??= createCanvasViewportController({
+    canvasEngine,
+    getSurfaceElement: () => canvasSurfaceRef.current,
+  })
+  const viewportController = viewportControllerRef.current
   const localDraggingIdsRef = useRef(new Set<string>())
   const previousActiveToolRef = useRef<CanvasToolId | null>(null)
   const historySelectionChangeRef = useRef<(selection: CanvasSelectionSnapshot) => void>(
     () => undefined,
   )
   const selection = useCanvasSelectionController({
-    onSelectionChange: (nextSelection) => historySelectionChangeRef.current(nextSelection),
+    canvasEngine,
+    onSelectionChange: (nextSelection) => {
+      historySelectionChangeRef.current(nextSelection)
+    },
     setLocalSelection: session.awareness.core.setLocalSelection,
   })
   const remoteDragAnimation = useCanvasRemoteDragAnimation({
+    canvasEngine,
     localDraggingIdsRef,
     remoteDragPositions: session.remoteDragPositions,
   })
 
   useEffect(() => {
     return () => {
-      clearCanvasSelectionState()
+      canvasEngine.clearSelection()
     }
-  }, [canvasId])
+  }, [canvasEngine, canvasId])
+
+  useEffect(() => () => canvasEngine.destroy(), [canvasEngine])
+  useEffect(() => () => viewportController.destroy(), [viewportController])
+
+  useEffect(() => {
+    viewportController.syncFromDocumentOrAdapter(initialViewport)
+  }, [initialViewport, viewportController])
 
   useEffect(() => {
     return () => {
@@ -95,9 +118,9 @@ export function useCanvasFlowRuntime({
   }, [activeTool, session.awareness.presence])
 
   const cancelConnectionDraft = useCallback(() => {
-    storeApi.getState().cancelConnection?.()
-    storeApi.setState({ connectionClickStartHandle: null })
-  }, [storeApi])
+    // Connection drafts are owned by the internal scene. This hook remains the keyboard/tool
+    // integration point for cancelling tool-owned ephemeral state.
+  }, [])
 
   useEffect(() => {
     const previousTool = previousActiveToolRef.current
@@ -113,7 +136,7 @@ export function useCanvasFlowRuntime({
       return
     }
 
-    selection.clear()
+    selection.clearSelection()
     session.editSession.setEditingEmbedId(null)
     session.editSession.setPendingEditNodeId(null)
     session.editSession.setPendingEditNodePoint(null)
@@ -130,14 +153,23 @@ export function useCanvasFlowRuntime({
     nodesMap,
     edgesMap,
   })
+  const modifiers = useCanvasModifierKeys()
+  const interaction = useCanvasSurfaceClickGuard(canvasSurfaceRef)
 
   const dragHandlers = useCanvasNodeDragHandlers({
+    canvasEngine,
     documentWriter,
     nodesDoc: doc,
     remoteDragAnimation,
     awareness: session.awareness.core,
-    reactFlowInstance: reactFlow,
+    interaction,
+    getFlowPosition: viewportController.screenToCanvasPosition,
+    getZoom: viewportController.getZoom,
+    selection,
     localDraggingIdsRef,
+    getShiftPressed: () => modifiers.shiftPressed,
+    getPrimaryPressed: () => modifiers.primaryPressed,
+    getCanStartDrag: () => useCanvasToolStore.getState().activeTool === 'select',
   })
 
   useEffect(
@@ -148,7 +180,7 @@ export function useCanvasFlowRuntime({
             nodesMap.clear()
             edgesMap.clear()
           })
-          selection.clear()
+          selection.clearSelection()
         },
         getCounts: () => ({
           nodes: nodesMap.size,
@@ -184,7 +216,7 @@ export function useCanvasFlowRuntime({
         },
         updateSelectedNodeSurface: () => {
           const updates = new Map<string, Record<string, unknown>>()
-          for (const nodeId of selection.getSelectedNodeIds()) {
+          for (const nodeId of selection.getSnapshot().nodeIds) {
             updates.set(nodeId, {
               backgroundColor: '#e8f2ff',
               borderStroke: '#2563eb',
@@ -197,55 +229,33 @@ export function useCanvasFlowRuntime({
           for (let index = 0; index < count; index += 1) {
             nodeIds.add(`perf-node-${index}`)
           }
-          selection.replaceNodes(nodeIds)
+          selection.setSelection({ nodeIds, edgeIds: new Set() })
         },
         profileSelectedNodeDrag: ({ delta, steps }) => {
-          const selectedIds = selection.getSelectedNodeIds()
-          const draggedNodes = reactFlow.getNodes().filter((node) => selectedIds.has(node.id))
-          const [firstDraggedNode] = draggedNodes
-          if (!firstDraggedNode || steps <= 0) {
-            return
-          }
-
-          const start = { x: 100, y: 100 }
-          const createDragEvent = (
-            type: string,
-            clientX: number,
-            clientY: number,
-          ): Parameters<typeof dragHandlers.onNodeDrag>[0] =>
-            new MouseEvent(type, { clientX, clientY }) as unknown as Parameters<
-              typeof dragHandlers.onNodeDrag
-            >[0]
-
-          dragHandlers.onNodeDragStart(
-            createDragEvent('mousemove', start.x, start.y),
-            firstDraggedNode,
-            draggedNodes,
-          )
-
-          for (let step = 1; step <= steps; step += 1) {
-            dragHandlers.onNodeDrag(
-              createDragEvent(
-                'mousemove',
-                start.x + (delta.x * step) / steps,
-                start.y + (delta.y * step) / steps,
-              ),
-              firstDraggedNode,
-              draggedNodes,
-            )
-          }
-
-          dragHandlers.onNodeDragStop(
-            createDragEvent('mouseup', start.x + delta.x, start.y + delta.y),
-            firstDraggedNode,
-            draggedNodes,
-          )
+          const selectedIds = selection.getSnapshot().nodeIds
+          dragHandlers.profileDrag({ nodeIds: selectedIds, delta, steps })
         },
+        getNodePosition: (nodeId) =>
+          canvasEngine.getSnapshot().nodeLookup.get(nodeId)?.node.position ?? null,
+        setViewport: (viewport) => {
+          viewportController.syncFromDocumentOrAdapter(viewport)
+        },
+        getViewport: () => viewportController.getViewport(),
       }),
-    [doc, documentWriter, dragHandlers, edgesMap, nodesMap, reactFlow, selection],
+    [
+      canvasEngine,
+      doc,
+      documentWriter,
+      dragHandlers,
+      edgesMap,
+      nodesMap,
+      selection,
+      viewportController,
+    ],
   )
 
   useCanvasDocumentProjection({
+    canvasEngine,
     nodesMap,
     edgesMap,
     localDraggingIdsRef,
@@ -278,23 +288,23 @@ export function useCanvasFlowRuntime({
   })
 
   const cursorPresence = useCanvasCursorPresence({
-    reactFlowInstance: reactFlow,
+    screenToCanvasPosition: viewportController.screenToCanvasPosition,
     awareness: session.awareness.core,
   })
 
   const nodeActions = createCanvasNodeActions({
+    canvasEngine,
     documentWriter,
-    reactFlowInstance: reactFlow,
     session,
     transact: (fn) => transactCanvasMaps(nodesMap, edgesMap, fn),
   })
 
-  const interaction = useCanvasSurfaceClickGuard(canvasSurfaceRef)
   const isSelectMode = activeTool === 'select'
   const isEdgeMode = activeTool === 'edge'
-  const modifiers = useCanvasModifierKeys()
 
   useCanvasSelectionRect({
+    canvasEngine,
+    viewportController,
     surfaceRef: canvasSurfaceRef,
     awareness: session.awareness.presence,
     selection,
@@ -304,14 +314,14 @@ export function useCanvasFlowRuntime({
 
   const toolRuntime: CanvasToolRuntime = {
     viewport: {
-      screenToFlowPosition: reactFlow.screenToFlowPosition,
-      getZoom: () => reactFlow.getZoom(),
+      screenToFlowPosition: viewportController.screenToCanvasPosition,
+      getZoom: viewportController.getZoom,
     },
     commands: documentWriter,
     query: {
-      getNodes: reactFlow.getNodes,
-      getEdges: reactFlow.getEdges,
-      getMeasuredNodes: () => getMeasuredCanvasNodesFromLookup(storeApi.getState().nodeLookup),
+      getNodes: () => [...canvasEngine.getSnapshot().nodes],
+      getEdges: () => [...canvasEngine.getSnapshot().edges],
+      getMeasuredNodes: () => getMeasuredCanvasNodesFromEngineSnapshot(canvasEngine.getSnapshot()),
     },
     selection,
     interaction,
@@ -344,14 +354,18 @@ export function useCanvasFlowRuntime({
     activeToolHandlers,
   })
 
-  useCanvasWheel(canvasSurfaceRef)
+  useCanvasViewportInteractions({
+    ref: canvasSurfaceRef,
+    viewportController,
+    canPrimaryPan: () => useCanvasToolStore.getState().activeTool === 'hand',
+  })
 
   const dropTarget = useCanvasDropIntegration({
     canvasId,
     canEdit,
     isSelectMode,
     createNode: documentWriter.createNode,
-    screenToFlowPosition: reactFlow.screenToFlowPosition,
+    screenToFlowPosition: viewportController.screenToCanvasPosition,
   })
 
   const getEdgeCreationDefaults = (): CanvasEdgeCreationDefaults => {
@@ -367,18 +381,6 @@ export function useCanvasFlowRuntime({
     }
   }
 
-  const flowHandlers = createCanvasFlowHandlers({
-    activeToolHandlers,
-    cancelConnectionDraft,
-    canEdit,
-    cursorPresence,
-    documentWriter,
-    dragHandlers,
-    getEdgeCreationDefaults,
-    isEdgeMode,
-    isSelectMode,
-  })
-
   const contextMenu = useCanvasContextMenu({
     activeTool,
     canEdit,
@@ -387,22 +389,54 @@ export function useCanvasFlowRuntime({
     nodesMap,
     edgesMap,
     createNode: documentWriter.createNode,
-    screenToFlowPosition: reactFlow.screenToFlowPosition,
+    screenToFlowPosition: viewportController.screenToCanvasPosition,
     selection,
     commands,
   })
 
   return {
     activeTool,
+    canvasEngine,
     canvasSurfaceRef,
     commands,
     contextMenu,
     documentWriter,
     dropTarget,
     editSession: session.editSession,
-    flowHandlers,
+    sceneHandlers: {
+      activeToolHandlers,
+      cursorPresence,
+      createEdgeFromConnection: (connection: Connection) => {
+        if (!canEdit || !isEdgeMode) {
+          return
+        }
+        documentWriter.createEdge(connection, getEdgeCreationDefaults())
+      },
+      onNodeClick: (event: ReactMouseEvent, node: Node) => {
+        if (!canEdit || !isSelectMode) {
+          return
+        }
+        activeToolHandlers.onNodeClick?.(event, node)
+      },
+      onEdgeClick: (event: ReactMouseEvent, edge: Edge) => {
+        if (!canEdit || !isSelectMode) {
+          return
+        }
+        activeToolHandlers.onEdgeClick?.(event, edge)
+      },
+      onPaneClick: (event: ReactMouseEvent) => {
+        if (!canEdit || !isSelectMode || isPrimarySelectionModifier(event)) {
+          return
+        }
+        selection.clearSelection()
+      },
+      onMouseMove: cursorPresence.onMouseMove,
+      onMouseLeave: cursorPresence.onMouseLeave,
+    },
     history,
     nodeActions,
+    nodeDragController: dragHandlers,
+    viewportController,
     remoteHighlights: session.remoteHighlights,
     remoteUsers: session.remoteUsers,
     selection,

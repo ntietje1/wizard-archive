@@ -7,11 +7,7 @@ import {
   clearCanvasDragSnapGuides,
   useCanvasDragSnapOverlayStore,
 } from '../../../runtime/interaction/canvas-drag-snap-overlay'
-import { useCanvasSelectionState } from '../../../runtime/selection/use-canvas-selection-state'
-import {
-  clearCanvasPendingSelectionPreview,
-  setCanvasPendingSelectionPreview,
-} from '../../../runtime/selection/use-canvas-pending-selection-preview'
+import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
 import { ResizableNodeWrapper } from '../resizable-node-wrapper'
 
 const modifierState = vi.hoisted(() => ({
@@ -26,11 +22,8 @@ const useInternalNodeMock = vi.hoisted(() =>
     internals: { positionAbsolute: { x: 10, y: 20 } },
   })),
 )
-const screenToFlowPositionMock = vi.hoisted(() =>
-  vi.fn(({ x, y }: { x: number; y: number }) => ({ x, y })),
-)
-const getNodesMock = vi.hoisted(() =>
-  vi.fn(() => [
+const canvasNodes = vi.hoisted(() => ({
+  current: [
     {
       id: 'node-1',
       type: 'test',
@@ -38,9 +31,9 @@ const getNodesMock = vi.hoisted(() =>
       width: 80,
       height: 40,
     },
-  ]),
-)
-const getZoomMock = vi.hoisted(() => vi.fn(() => 1))
+  ],
+}))
+let lastRuntime: ReturnType<typeof createCanvasRuntime> | null = null
 
 vi.mock('../../../runtime/interaction/use-canvas-modifier-keys', () => ({
   useCanvasModifierKeys: () => modifierState,
@@ -48,21 +41,13 @@ vi.mock('../../../runtime/interaction/use-canvas-modifier-keys', () => ({
 
 vi.mock('@xyflow/react', () => ({
   useInternalNode: () => useInternalNodeMock(),
-  useReactFlow: () => ({
-    getNodes: getNodesMock,
-    getZoom: getZoomMock,
-    screenToFlowPosition: screenToFlowPositionMock,
-  }),
 }))
 
 afterEach(() => {
   clearCanvasDragSnapGuides()
-  clearCanvasPendingSelectionPreview()
-  useCanvasSelectionState.getState().reset()
   modifierState.shiftPressed = false
   modifierState.primaryPressed = false
-  getNodesMock.mockReset()
-  getNodesMock.mockReturnValue([
+  canvasNodes.current = [
     {
       id: 'node-1',
       type: 'test',
@@ -70,9 +55,8 @@ afterEach(() => {
       width: 80,
       height: 40,
     },
-  ])
-  getZoomMock.mockReset()
-  getZoomMock.mockReturnValue(1)
+  ]
+  lastRuntime = null
 })
 
 beforeAll(() => {
@@ -88,16 +72,20 @@ beforeAll(() => {
 
 describe('ResizableNodeWrapper', () => {
   it('renders the normal selection border for pending-only preview nodes without resize handles', () => {
-    setCanvasPendingSelectionPreview({ nodeIds: new Set(['node-1']), edgeIds: new Set() })
-    renderWrapper({ selected: false })
+    renderWrapper({
+      selected: false,
+      pendingPreview: { nodeIds: new Set(['node-1']), edgeIds: new Set() },
+    })
 
     expect(screen.getByTestId('selection-border')).toBeInTheDocument()
     expect(screen.queryAllByTestId(/canvas-node-resize-handle-/)).toHaveLength(0)
   })
 
   it('hides the local selection border for excluded committed nodes while keeping committed resize handles', () => {
-    setCanvasPendingSelectionPreview({ nodeIds: new Set(['other-node']), edgeIds: new Set() })
-    renderWrapper({ selected: true })
+    renderWrapper({
+      selected: true,
+      pendingPreview: { nodeIds: new Set(['other-node']), edgeIds: new Set() },
+    })
 
     expect(screen.queryByTestId('selection-border')).toBeNull()
     expect(screen.queryAllByTestId(/canvas-node-resize-handle-/)).toHaveLength(4)
@@ -106,12 +94,13 @@ describe('ResizableNodeWrapper', () => {
   it('resizes to a square while shift is held', () => {
     modifierState.shiftPressed = true
     const providerValues = createProviderValues()
-    useCanvasSelectionState.getState().setSelection({
+    providerValues.canvasEngine.setSelection({
       nodeIds: new Set(['node-1']),
       edgeIds: new Set<string>(),
     })
 
-    render(
+    renderWithRuntime(
+      providerValues,
       <CanvasRuntimeProvider {...providerValues}>
         <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
           <div>node body</div>
@@ -138,12 +127,13 @@ describe('ResizableNodeWrapper', () => {
 
   it('recomputes the live resize immediately when shift is pressed and released mid-drag', () => {
     const providerValues = createProviderValues()
-    useCanvasSelectionState.getState().setSelection({
+    providerValues.canvasEngine.setSelection({
       nodeIds: new Set(['node-1']),
       edgeIds: new Set<string>(),
     })
 
-    render(
+    renderWithRuntime(
+      providerValues,
       <CanvasRuntimeProvider {...providerValues}>
         <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
           <div>node body</div>
@@ -183,18 +173,11 @@ describe('ResizableNodeWrapper', () => {
 
   it('snaps ctrl-resizing to nearby node edges and centers', () => {
     const providerValues = createProviderValues()
-    useCanvasSelectionState.getState().setSelection({
+    providerValues.canvasEngine.setSelection({
       nodeIds: new Set(['node-1']),
       edgeIds: new Set<string>(),
     })
-    getNodesMock.mockReturnValue([
-      {
-        id: 'node-1',
-        type: 'test',
-        position: { x: 10, y: 20 },
-        width: 80,
-        height: 40,
-      },
+    setResizeSnapTargets([
       {
         id: 'node-2',
         type: 'test',
@@ -204,7 +187,8 @@ describe('ResizableNodeWrapper', () => {
       },
     ])
 
-    render(
+    renderWithRuntime(
+      providerValues,
       <CanvasRuntimeProvider {...providerValues}>
         <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
           <div>node body</div>
@@ -239,7 +223,7 @@ describe('ResizableNodeWrapper', () => {
 
   it('snaps shift-resizing to nearby node edges while staying square', () => {
     const providerValues = createProviderValues()
-    useCanvasSelectionState.getState().setSelection({
+    providerValues.canvasEngine.setSelection({
       nodeIds: new Set(['node-1']),
       edgeIds: new Set<string>(),
     })
@@ -253,7 +237,8 @@ describe('ResizableNodeWrapper', () => {
       },
     ])
 
-    render(
+    renderWithRuntime(
+      providerValues,
       <CanvasRuntimeProvider {...providerValues}>
         <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
           <div>node body</div>
@@ -300,7 +285,7 @@ describe('ResizableNodeWrapper', () => {
 
   it('recomputes the live resize immediately when the primary snap modifier is pressed and released mid-drag', () => {
     const providerValues = createProviderValues()
-    useCanvasSelectionState.getState().setSelection({
+    providerValues.canvasEngine.setSelection({
       nodeIds: new Set(['node-1']),
       edgeIds: new Set<string>(),
     })
@@ -314,7 +299,8 @@ describe('ResizableNodeWrapper', () => {
       },
     ])
 
-    render(
+    renderWithRuntime(
+      providerValues,
       <CanvasRuntimeProvider {...providerValues}>
         <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
           <div>node body</div>
@@ -359,12 +345,13 @@ describe('ResizableNodeWrapper', () => {
 
   it('keeps resize handles above overlay children such as stroke hit targets', () => {
     const providerValues = createProviderValues()
-    useCanvasSelectionState.getState().setSelection({
+    providerValues.canvasEngine.setSelection({
       nodeIds: new Set(['node-1']),
       edgeIds: new Set<string>(),
     })
 
-    render(
+    renderWithRuntime(
+      providerValues,
       <CanvasRuntimeProvider {...providerValues}>
         <ResizableNodeWrapper id="node-1" nodeType="stroke" dragging={false}>
           <div
@@ -401,14 +388,16 @@ describe('ResizableNodeWrapper', () => {
   })
 
   it('suppresses selection chrome and resize handles in embedded read-only mode', () => {
-    useCanvasSelectionState.getState().setSelection({
+    const providerValues = createProviderValues()
+    providerValues.canvasEngine.setSelection({
       nodeIds: new Set(['node-1']),
       edgeIds: new Set<string>(),
     })
 
-    render(
+    renderWithRuntime(
+      providerValues,
       <CanvasRenderModeProvider mode="embedded-readonly">
-        <CanvasRuntimeProvider {...createProviderValues()}>
+        <CanvasRuntimeProvider {...providerValues}>
           <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
             <div>node body</div>
           </ResizableNodeWrapper>
@@ -422,12 +411,13 @@ describe('ResizableNodeWrapper', () => {
 
   it('locks resizing to the provided aspect ratio', () => {
     const providerValues = createProviderValues()
-    useCanvasSelectionState.getState().setSelection({
+    providerValues.canvasEngine.setSelection({
       nodeIds: new Set(['node-1']),
       edgeIds: new Set<string>(),
     })
 
-    render(
+    renderWithRuntime(
+      providerValues,
       <CanvasRuntimeProvider {...providerValues}>
         <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false} lockedAspectRatio={2}>
           <div>node body</div>
@@ -454,7 +444,7 @@ describe('ResizableNodeWrapper', () => {
 
   it('snaps aspect-locked resizing on a single axis while preserving the ratio', () => {
     const providerValues = createProviderValues()
-    useCanvasSelectionState.getState().setSelection({
+    providerValues.canvasEngine.setSelection({
       nodeIds: new Set(['node-1']),
       edgeIds: new Set<string>(),
     })
@@ -468,7 +458,8 @@ describe('ResizableNodeWrapper', () => {
       },
     ])
 
-    render(
+    renderWithRuntime(
+      providerValues,
       <CanvasRuntimeProvider {...providerValues}>
         <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false} lockedAspectRatio={2}>
           <div>node body</div>
@@ -505,7 +496,7 @@ describe('ResizableNodeWrapper', () => {
     modifierState.shiftPressed = true
     modifierState.primaryPressed = true
     const providerValues = createProviderValues()
-    useCanvasSelectionState.getState().setSelection({
+    providerValues.canvasEngine.setSelection({
       nodeIds: new Set(['node-1']),
       edgeIds: new Set<string>(),
     })
@@ -519,7 +510,8 @@ describe('ResizableNodeWrapper', () => {
       },
     ])
 
-    render(
+    renderWithRuntime(
+      providerValues,
       <CanvasRuntimeProvider {...providerValues}>
         <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
           <div>node body</div>
@@ -558,14 +550,25 @@ describe('ResizableNodeWrapper', () => {
   })
 })
 
-function renderWrapper({ selected }: { selected: boolean }) {
-  useCanvasSelectionState.getState().setSelection({
+function renderWrapper({
+  selected,
+  pendingPreview = null,
+}: {
+  selected: boolean
+  pendingPreview?: { nodeIds: ReadonlySet<string>; edgeIds: ReadonlySet<string> } | null
+}) {
+  const providerValues = createProviderValues()
+  providerValues.canvasEngine.setSelection({
     nodeIds: selected ? new Set(['node-1']) : new Set<string>(),
     edgeIds: new Set<string>(),
   })
+  if (pendingPreview) {
+    providerValues.canvasEngine.setSelectionGesturePreview(pendingPreview)
+  }
 
-  return render(
-    <CanvasRuntimeProvider {...createProviderValues()}>
+  return renderWithRuntime(
+    providerValues,
+    <CanvasRuntimeProvider {...providerValues}>
       <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
         <div>node body</div>
       </ResizableNodeWrapper>
@@ -573,13 +576,23 @@ function renderWrapper({ selected }: { selected: boolean }) {
   )
 }
 
+function renderWithRuntime(
+  runtime: ReturnType<typeof createCanvasRuntime>,
+  ui: React.ReactElement,
+) {
+  return render(<CanvasEngineProvider engine={runtime.canvasEngine}>{ui}</CanvasEngineProvider>)
+}
+
 function createProviderValues() {
-  return createCanvasRuntime({
+  const runtime = createCanvasRuntime({
     nodeActions: {
       onResize: vi.fn(),
       onResizeEnd: vi.fn(),
     },
   })
+  runtime.canvasEngine.setDocumentSnapshot({ nodes: canvasNodes.current as never })
+  lastRuntime = runtime
+  return runtime
 }
 
 function setResizeSnapTargets(
@@ -591,7 +604,7 @@ function setResizeSnapTargets(
     height: number
   }>,
 ) {
-  getNodesMock.mockReturnValue([
+  canvasNodes.current = [
     {
       id: 'node-1',
       type: 'test',
@@ -600,5 +613,6 @@ function setResizeSnapTargets(
       height: 40,
     },
     ...extraNodes,
-  ])
+  ]
+  lastRuntime?.canvasEngine.setDocumentSnapshot({ nodes: canvasNodes.current as never })
 }

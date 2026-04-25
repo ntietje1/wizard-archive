@@ -17,30 +17,74 @@ export function useCanvasPointerBridge({
     const surfaceElement = surfaceRef.current
     if (!surfaceElement) return
 
+    let activeToolPointerId: number | null = null
+    let activeGestureHandlers: CanvasToolHandlers | null = null
+    const capture = true
+
+    const addWindowPointerListeners = () => {
+      window.addEventListener('pointermove', onPointerMove, capture)
+      window.addEventListener('pointerup', onPointerUp, capture)
+      window.addEventListener('pointercancel', onPointerCancel, capture)
+      window.addEventListener('selectstart', preventNativeGesture, capture)
+      window.addEventListener('dragstart', preventNativeGesture, capture)
+    }
+
+    const removeWindowPointerListeners = () => {
+      window.removeEventListener('pointermove', onPointerMove, capture)
+      window.removeEventListener('pointerup', onPointerUp, capture)
+      window.removeEventListener('pointercancel', onPointerCancel, capture)
+      window.removeEventListener('selectstart', preventNativeGesture, capture)
+      window.removeEventListener('dragstart', preventNativeGesture, capture)
+    }
+
+    const endActiveToolPointer = () => {
+      activeToolPointerId = null
+      activeGestureHandlers = null
+      removeWindowPointerListeners()
+    }
+
     const onPointerDown = (event: PointerEvent) => {
       const handlers = toolHandlersRef.current
       if (!handlers.onPointerDown || event.button !== 0) return
       if (
         !event.target ||
         !(event.target instanceof Element) ||
-        !event.target.closest('.react-flow')
+        (!event.target.closest('.canvas-scene') && !event.target.closest('.react-flow'))
       ) {
         return
       }
 
       handlers.onPointerDown(event)
+      activeToolPointerId = event.pointerId
+      activeGestureHandlers = handlers
+      addWindowPointerListeners()
+    }
+
+    const preventNativeGesture = (event: Event) => {
+      if (activeToolPointerId === null) return
+
+      event.preventDefault()
+      event.stopPropagation()
     }
 
     const onPointerMove = (event: PointerEvent) => {
-      toolHandlersRef.current.onPointerMove?.(event)
+      if (activeToolPointerId !== event.pointerId) return
+
+      activeGestureHandlers?.onPointerMove?.(event)
     }
 
     const onPointerUp = (event: PointerEvent) => {
-      toolHandlersRef.current.onPointerUp?.(event)
+      if (activeToolPointerId !== event.pointerId) return
+
+      activeGestureHandlers?.onPointerUp?.(event)
+      endActiveToolPointer()
     }
 
     const onPointerCancel = (event: PointerEvent) => {
-      toolHandlersRef.current.onPointerCancel?.(event)
+      if (activeToolPointerId !== event.pointerId) return
+
+      activeGestureHandlers?.onPointerCancel?.(event)
+      endActiveToolPointer()
     }
 
     const onKeyDown = (event: KeyboardEvent) => {
@@ -52,17 +96,12 @@ export function useCanvasPointerBridge({
     }
 
     surfaceElement.addEventListener('pointerdown', onPointerDown)
-    surfaceElement.addEventListener('pointermove', onPointerMove)
-    surfaceElement.addEventListener('pointerup', onPointerUp)
-    surfaceElement.addEventListener('pointercancel', onPointerCancel)
     window.addEventListener('keydown', onKeyDown)
     window.addEventListener('keyup', onKeyUp)
 
     return () => {
       surfaceElement.removeEventListener('pointerdown', onPointerDown)
-      surfaceElement.removeEventListener('pointermove', onPointerMove)
-      surfaceElement.removeEventListener('pointerup', onPointerUp)
-      surfaceElement.removeEventListener('pointercancel', onPointerCancel)
+      removeWindowPointerListeners()
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
     }

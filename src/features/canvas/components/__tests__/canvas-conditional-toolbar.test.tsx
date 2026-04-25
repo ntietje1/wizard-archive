@@ -1,9 +1,11 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasConditionalToolbar } from '../canvas-conditional-toolbar'
+import { CanvasEngineProvider } from '../../react/canvas-engine-context'
 import { createCanvasRuntime } from '../../runtime/__tests__/canvas-runtime-test-utils'
 import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime-context'
-import { useCanvasSelectionState } from '../../runtime/selection/use-canvas-selection-state'
+import { createCanvasEngine } from '../../system/canvas-engine'
+import type { CanvasEngine } from '../../system/canvas-engine'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import type { Edge, Node } from '@xyflow/react'
 import type { CanvasEdgePatch, CanvasEdgeType } from '../../edges/canvas-edge-types'
@@ -22,6 +24,8 @@ const colorPickerMock = vi.hoisted(() => ({
   props: [] as Array<Record<string, unknown>>,
 }))
 
+let toolbarEngine: CanvasEngine = createCanvasEngine()
+
 vi.mock('@xyflow/react', () => ({
   useNodes: () => nodesMock.nodes,
   useEdges: () => edgesMock.edges,
@@ -34,6 +38,7 @@ vi.mock('~/features/shadcn/components/slider', () => ({
     max,
     step,
     onValueChange,
+    onValueCommitted,
     ...props
   }: {
     value?: Array<number>
@@ -41,6 +46,7 @@ vi.mock('~/features/shadcn/components/slider', () => ({
     max?: number
     step?: number
     onValueChange?: (value: Array<number>) => void
+    onValueCommitted?: (value: Array<number>) => void
     'aria-label'?: string
   }) => (
     <input
@@ -49,6 +55,7 @@ vi.mock('~/features/shadcn/components/slider', () => ({
       max={max}
       min={min}
       onChange={(event) => onValueChange?.([Number(event.currentTarget.value)])}
+      onMouseUp={(event) => onValueCommitted?.([Number(event.currentTarget.value)])}
       step={step}
       value={value?.[0] ?? min ?? 0}
     />
@@ -73,7 +80,8 @@ function emitSelection(nodes: Array<Node>) {
   act(() => {
     colorPickerMock.props = []
     nodesMock.nodes = nodes
-    useCanvasSelectionState.getState().setSelection({
+    toolbarEngine.setDocumentSnapshot({ nodes, edges: edgesMock.edges })
+    toolbarEngine.setSelection({
       nodeIds: new Set(nodes.map((node) => node.id)),
       edgeIds: new Set<string>(),
     })
@@ -90,7 +98,8 @@ function selectionSnapshot(
 function emitSelectionState(selection: CanvasSelectionSnapshot) {
   act(() => {
     colorPickerMock.props = []
-    useCanvasSelectionState.getState().setSelection(selection)
+    toolbarEngine.setDocumentSnapshot({ nodes: nodesMock.nodes, edges: edgesMock.edges })
+    toolbarEngine.setSelection(selection)
   })
 }
 
@@ -117,6 +126,8 @@ function renderToolbar({
   transact?: (fn: () => void) => void
   commands?: CanvasCommands
 } = {}) {
+  toolbarEngine = createCanvasEngine()
+  toolbarEngine.setDocumentSnapshot({ nodes: nodesMock.nodes, edges: edgesMock.edges })
   const baseRuntime = createCanvasRuntime()
   const runtime = createCanvasRuntime({
     nodeActions: {
@@ -147,9 +158,11 @@ function renderToolbar({
   })
 
   const view = render(
-    <CanvasRuntimeProvider {...runtime}>
-      <CanvasConditionalToolbar canEdit />
-    </CanvasRuntimeProvider>,
+    <CanvasEngineProvider engine={toolbarEngine}>
+      <CanvasRuntimeProvider {...runtime}>
+        <CanvasConditionalToolbar canEdit />
+      </CanvasRuntimeProvider>
+    </CanvasEngineProvider>,
   )
 
   return {
@@ -255,10 +268,19 @@ function getStrokeSizeInput() {
   return screen.getByRole('textbox', { name: 'Stroke size input' })
 }
 
+function previewStrokeSize(value: number) {
+  fireEvent.input(getStrokeSizeSlider(), { target: { value: String(value) } })
+}
+
+function commitStrokeSize(value: number) {
+  const slider = getStrokeSizeSlider()
+  fireEvent.input(slider, { target: { value: String(value) } })
+  fireEvent.pointerUp(slider)
+}
+
 describe('CanvasConditionalToolbar', () => {
   beforeEach(() => {
     useCanvasToolStore.getState().reset()
-    useCanvasSelectionState.getState().reset()
     nodesMock.nodes = []
     edgesMock.edges = []
     colorPickerMock.props = []
@@ -325,7 +347,7 @@ describe('CanvasConditionalToolbar', () => {
     expect(getStrokeSizeInput()).toHaveValue('4')
 
     fireEvent.click(redColorButton)
-    fireEvent.change(getStrokeSizeSlider(), { target: { value: '8' } })
+    commitStrokeSize(8)
 
     expect(reversePrimaryColorButton).toHaveAttribute('aria-pressed', 'false')
     expect(redColorButton).toHaveAttribute('aria-pressed', 'true')
@@ -392,9 +414,26 @@ describe('CanvasConditionalToolbar', () => {
 
     expect(getStrokeSizeInput()).toHaveValue('4')
     expect(getStrokeSizeSlider()).toHaveAttribute('min', '1')
-    fireEvent.change(getStrokeSizeSlider(), { target: { value: '8' } })
+    commitStrokeSize(8)
 
     expect(updateNodeData).toHaveBeenCalledWith(stroke.id, { size: 8 })
+  })
+
+  it('previews selected stroke size changes without writing until slider commit', () => {
+    const { updateNodeData } = renderToolbar()
+
+    const stroke = createNode('stroke', {
+      color: 'var(--foreground)',
+      opacity: 75,
+      size: 4,
+    })
+    emitSelection([stroke])
+
+    previewStrokeSize(9)
+    expect(updateNodeData).not.toHaveBeenCalled()
+
+    fireEvent.pointerUp(getStrokeSizeSlider())
+    expect(updateNodeData).toHaveBeenCalledWith(stroke.id, { size: 9 })
   })
 
   it('shows shared properties for compatible multi-select and hides tool-only controls', () => {
@@ -605,7 +644,7 @@ describe('CanvasConditionalToolbar', () => {
     })
     emitSelection([text, embed])
 
-    fireEvent.change(getStrokeSizeSlider(), { target: { value: '7' } })
+    commitStrokeSize(7)
 
     expect(updateNodeData).toHaveBeenCalledWith(text.id, { borderWidth: 7 })
     expect(updateNodeData).toHaveBeenCalledWith(embed.id, { borderWidth: 7 })
@@ -716,7 +755,7 @@ describe('CanvasConditionalToolbar', () => {
     emitSelectionState(selectionSnapshot(new Set<string>(), new Set([edge.id])))
 
     fireEvent.click(screen.getByRole('button', { name: 'Select Red color' }))
-    fireEvent.change(getStrokeSizeSlider(), { target: { value: '8' } })
+    commitStrokeSize(8)
 
     expect(patchEdge).toHaveBeenNthCalledWith(1, edge.id, {
       style: {
@@ -802,7 +841,7 @@ describe('CanvasConditionalToolbar', () => {
     const strokeGroup = screen.getByText('Stroke').parentElement
     expect(strokeGroup).not.toBeNull()
 
-    fireEvent.change(getStrokeSizeSlider(), { target: { value: '0' } })
+    commitStrokeSize(0)
     emitSelectionState(selectionSnapshot(new Set<string>(), new Set([edge.id])))
 
     const clearButton = within(strokeGroup!).getByRole('button', { name: 'Select Clear color' })
@@ -813,7 +852,7 @@ describe('CanvasConditionalToolbar', () => {
     expect(clearButton).toBeDisabled()
     expect(colorPickerButton).toBeDisabled()
 
-    fireEvent.change(getStrokeSizeSlider(), { target: { value: '6' } })
+    commitStrokeSize(6)
     emitSelectionState(selectionSnapshot(new Set<string>(), new Set([edge.id])))
 
     expect(within(strokeGroup!).getByRole('button', { name: 'Select Clear color' })).toBeEnabled()
@@ -849,7 +888,7 @@ describe('CanvasConditionalToolbar', () => {
     expect(input).toHaveValue('')
     expect(input).toHaveAttribute('placeholder', '--')
 
-    fireEvent.change(getStrokeSizeSlider(), { target: { value: '11' } })
+    commitStrokeSize(11)
     emitSelectionState(selectionSnapshot(new Set([firstNode.id, secondNode.id])))
 
     expect(updateNodeData).toHaveBeenCalledWith(firstNode.id, { borderWidth: 11 })
@@ -986,16 +1025,16 @@ describe('CanvasConditionalToolbar', () => {
 
   it('hides the toolbar while marquee selection is still provisional', () => {
     renderToolbar()
+    emitSelection([createNode('stroke', { color: 'var(--foreground)', opacity: 75 })])
 
     act(() => {
-      useCanvasSelectionState.getState().beginGesture('marquee')
+      toolbarEngine.beginSelectionGesture('marquee', 'replace')
     })
-    emitSelection([createNode('stroke', { color: 'var(--foreground)', opacity: 75 })])
 
     expect(screen.queryByRole('toolbar', { name: 'Canvas conditional toolbar' })).toBeNull()
 
     act(() => {
-      useCanvasSelectionState.getState().endGesture()
+      toolbarEngine.cancelSelectionGesture()
     })
 
     expect(screen.getByRole('toolbar', { name: 'Canvas conditional toolbar' })).toBeVisible()

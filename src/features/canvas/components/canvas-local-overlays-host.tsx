@@ -1,9 +1,12 @@
-import { useViewport } from '@xyflow/react'
 import { CanvasDragSnapOverlay } from './canvas-drag-snap-overlay'
+import { useContext, useSyncExternalStore } from 'react'
+import { CanvasEngineContext } from '../react/canvas-engine-context-value'
 import { canvasToolLocalOverlayLayers } from '../tools/canvas-tool-modules'
 
+const DEFAULT_VIEWPORT = { x: 0, y: 0, zoom: 1 }
+
 export function CanvasLocalOverlaysHost() {
-  const viewport = useViewport()
+  const viewport = useCanvasViewportSnapshot()
 
   return (
     <div className="pointer-events-none absolute inset-0" style={{ zIndex: 4 }}>
@@ -21,4 +24,17 @@ export function CanvasLocalOverlaysHost() {
       </div>
     </div>
   )
+}
+
+function useCanvasViewportSnapshot() {
+  const canvasEngine = useContext(CanvasEngineContext)
+  return useSyncExternalStore(
+    canvasEngine?.subscribe ?? subscribeToNoop,
+    () => canvasEngine?.getSnapshot().viewport ?? DEFAULT_VIEWPORT,
+    () => DEFAULT_VIEWPORT,
+  )
+}
+
+function subscribeToNoop() {
+  return () => undefined
 }

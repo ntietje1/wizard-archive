@@ -1,11 +1,9 @@
 import { renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as Y from 'yjs'
-import {
-  clearCanvasDragSnapGuides,
-  useCanvasDragSnapOverlayStore,
-} from '../canvas-drag-snap-overlay'
+import { clearCanvasDragSnapGuides } from '../canvas-drag-snap-overlay'
 import { useCanvasNodeDragHandlers } from '../use-canvas-node-drag-handlers'
+import { createCanvasEngine } from '../../../system/canvas-engine'
 
 const modifierState = vi.hoisted(() => ({
   shiftPressed: false,
@@ -43,7 +41,9 @@ describe('useCanvasNodeDragHandlers', () => {
         data: {},
       },
     ]
-    const reactFlowInstance = createReactFlowMock()
+    const viewport = createViewportMock()
+    const canvasEngine = createCanvasEngine()
+    canvasEngine.setDocumentSnapshot({ nodes: dragState.currentNodes })
     const awareness = {
       setLocalDragging: vi.fn(),
       setLocalCursor: vi.fn(),
@@ -53,8 +53,10 @@ describe('useCanvasNodeDragHandlers', () => {
     const documentWriter = {
       setNodePositions: vi.fn(),
     }
+    const selection = createSelectionMock(new Set(['dragged']))
     const { result } = renderHook(() =>
       useCanvasNodeDragHandlers({
+        canvasEngine,
         documentWriter: documentWriter as never,
         nodesDoc: new Y.Doc(),
         remoteDragAnimation: {
@@ -63,29 +65,32 @@ describe('useCanvasNodeDragHandlers', () => {
           clearNodeSprings: () => undefined,
         },
         awareness,
-        reactFlowInstance: reactFlowInstance as never,
+        interaction: { suppressNextSurfaceClick: vi.fn() },
+        getFlowPosition: viewport.screenToCanvasPosition,
+        getZoom: viewport.getZoom,
+        selection,
         localDraggingIdsRef: { current: new Set<string>() },
+        getShiftPressed: () => modifierState.shiftPressed,
+        getPrimaryPressed: () => modifierState.primaryPressed,
       }),
     )
 
-    result.current.onNodeDragStart?.(
-      createMouseEvent(10, 10),
-      dragState.currentNodes[0],
-      dragState.currentNodes as never,
-    )
-    result.current.onNodeDrag?.(
-      createMouseEvent(40, 22),
-      dragState.currentNodes[0],
-      dragState.currentNodes as never,
-    )
+    result.current.profileDrag({
+      nodeIds: new Set(['dragged']),
+      delta: { x: 30, y: 12 },
+      steps: 1,
+    })
 
-    expect(dragState.currentNodes[0].position).toEqual({ x: 40, y: 10 })
+    expect(canvasEngine.getSnapshot().nodeLookup.get('dragged')?.node.position).toEqual({
+      x: 40,
+      y: 10,
+    })
     expect(awareness.setLocalDragging).toHaveBeenCalledWith({
       dragged: { x: 40, y: 10 },
     })
   })
 
-  it('snaps dragged nodes to nearby node edges and publishes guides when the primary modifier is held', () => {
+  it('snaps dragged nodes to nearby node edges when the primary modifier is held', () => {
     modifierState.primaryPressed = true
     dragState.currentNodes = [
       {
@@ -105,12 +110,16 @@ describe('useCanvasNodeDragHandlers', () => {
         data: {},
       },
     ]
-    const reactFlowInstance = createReactFlowMock()
+    const viewport = createViewportMock()
+    const canvasEngine = createCanvasEngine()
+    canvasEngine.setDocumentSnapshot({ nodes: dragState.currentNodes })
     const documentWriter = {
       setNodePositions: vi.fn(),
     }
+    const selection = createSelectionMock(new Set(['dragged']))
     const { result } = renderHook(() =>
       useCanvasNodeDragHandlers({
+        canvasEngine,
         documentWriter: documentWriter as never,
         nodesDoc: new Y.Doc(),
         remoteDragAnimation: {
@@ -124,56 +133,99 @@ describe('useCanvasNodeDragHandlers', () => {
           setLocalResizing: vi.fn(),
           setLocalSelection: vi.fn(),
         },
-        reactFlowInstance: reactFlowInstance as never,
+        interaction: { suppressNextSurfaceClick: vi.fn() },
+        getFlowPosition: viewport.screenToCanvasPosition,
+        getZoom: viewport.getZoom,
+        selection,
         localDraggingIdsRef: { current: new Set<string>() },
+        getShiftPressed: () => modifierState.shiftPressed,
+        getPrimaryPressed: () => modifierState.primaryPressed,
       }),
     )
 
-    result.current.onNodeDragStart?.(createMouseEvent(10, 10), dragState.currentNodes[0], [
-      dragState.currentNodes[0],
-    ] as never)
-    result.current.onNodeDrag?.(createMouseEvent(41, 10), dragState.currentNodes[0], [
-      dragState.currentNodes[0],
-    ] as never)
+    result.current.profileDrag({
+      nodeIds: new Set(['dragged']),
+      delta: { x: 31, y: 0 },
+      steps: 1,
+    })
 
-    expect(dragState.currentNodes[0].position.x).toBe(40)
-    expect(useCanvasDragSnapOverlayStore.getState().guides).toContainEqual(
-      expect.objectContaining({ orientation: 'vertical', position: 80 }),
-    )
-
-    result.current.onNodeDragStop?.(createMouseEvent(41, 10), dragState.currentNodes[0], [
-      dragState.currentNodes[0],
-    ] as never)
-
+    expect(canvasEngine.getSnapshot().nodeLookup.get('dragged')?.node.position.x).toBe(40)
     expect(documentWriter.setNodePositions).toHaveBeenCalledWith(
       new Map([['dragged', { x: 40, y: 10 }]]),
     )
   })
+
+  it('commits engine drag positions before writing document positions', () => {
+    dragState.currentNodes = [
+      {
+        id: 'dragged',
+        type: 'text',
+        position: { x: 10, y: 10 },
+        width: 40,
+        height: 40,
+        data: {},
+      },
+    ]
+    const viewport = createViewportMock()
+    const canvasEngine = createCanvasEngine()
+    canvasEngine.setDocumentSnapshot({ nodes: dragState.currentNodes })
+    const documentWriter = {
+      setNodePositions: vi.fn(() => {
+        expect(canvasEngine.getSnapshot().nodes[0]?.position).toEqual({ x: 35, y: 30 })
+        expect(canvasEngine.getSnapshot().nodeLookup.get('dragged')?.dragging).toBe(false)
+      }),
+    }
+    const suppressNextSurfaceClick = vi.fn()
+    const selection = createSelectionMock(new Set(['dragged']))
+    const { result } = renderHook(() =>
+      useCanvasNodeDragHandlers({
+        canvasEngine,
+        documentWriter: documentWriter as never,
+        nodesDoc: new Y.Doc(),
+        remoteDragAnimation: {
+          hasSpring: () => false,
+          setTarget: () => undefined,
+          clearNodeSprings: () => undefined,
+        },
+        awareness: {
+          setLocalDragging: vi.fn(),
+          setLocalCursor: vi.fn(),
+          setLocalResizing: vi.fn(),
+          setLocalSelection: vi.fn(),
+        },
+        interaction: { suppressNextSurfaceClick },
+        getFlowPosition: viewport.screenToCanvasPosition,
+        getZoom: viewport.getZoom,
+        selection,
+        localDraggingIdsRef: { current: new Set<string>() },
+        getShiftPressed: () => modifierState.shiftPressed,
+        getPrimaryPressed: () => modifierState.primaryPressed,
+      }),
+    )
+
+    result.current.profileDrag({
+      nodeIds: new Set(['dragged']),
+      delta: { x: 25, y: 20 },
+      steps: 1,
+    })
+
+    expect(documentWriter.setNodePositions).toHaveBeenCalledWith(
+      new Map([['dragged', { x: 35, y: 30 }]]),
+    )
+    expect(suppressNextSurfaceClick).toHaveBeenCalledTimes(1)
+  })
 })
 
-function createReactFlowMock() {
+function createViewportMock() {
   return {
-    screenToFlowPosition: ({ x, y }: { x: number; y: number }) => ({ x, y }),
+    screenToCanvasPosition: ({ x, y }: { x: number; y: number }) => ({ x, y }),
     getZoom: () => 1,
-    getNodes: () => dragState.currentNodes,
-    setNodes: (updater: (nodes: Array<any>) => Array<any>) => {
-      dragState.currentNodes = updater(dragState.currentNodes)
-    },
   }
 }
 
-function createMouseEvent(clientX: number, clientY: number) {
+function createSelectionMock(nodeIds: ReadonlySet<string>) {
   return {
-    clientX,
-    clientY,
-    pointerId: 1,
-    preventDefault: vi.fn(),
-    stopPropagation: vi.fn(),
-    nativeEvent: {
-      stopImmediatePropagation: vi.fn(),
-    },
-    isDefaultPrevented: () => false,
-    isPropagationStopped: () => false,
-    persist: () => undefined,
-  } as unknown as React.MouseEvent
+    getSelectedNodeIds: vi.fn(() => nodeIds),
+    replaceNodes: vi.fn(),
+  } as never
 }

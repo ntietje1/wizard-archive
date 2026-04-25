@@ -6,18 +6,20 @@ import type {
 } from '../utils/canvas-awareness-types'
 import type { CanvasEdgePatch, CanvasEdgeType } from '../edges/canvas-edge-types'
 import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
+import type {
+  CanvasSelectionCommitMode,
+  CanvasSelectionGestureKind,
+  CanvasSelectionSnapshot,
+} from '../system/canvas-selection'
 import type { Connection, Edge, Node, XYPosition } from '@xyflow/react'
 import type { ComponentType, CSSProperties, MouseEvent as ReactMouseEvent, ReactNode } from 'react'
 
 export type CanvasToolId = 'select' | 'hand' | 'draw' | 'erase' | 'lasso' | 'text' | 'edge'
-
-export type CanvasSelectionGestureKind = 'marquee' | 'lasso'
-export type CanvasSelectionCommitMode = 'replace' | 'add'
-
-export interface CanvasSelectionSnapshot {
-  nodeIds: ReadonlySet<string>
-  edgeIds: ReadonlySet<string>
-}
+export type {
+  CanvasSelectionCommitMode,
+  CanvasSelectionGestureKind,
+  CanvasSelectionSnapshot,
+} from '../system/canvas-selection'
 
 interface CanvasToolSettings {
   strokeColor: string
@@ -91,20 +93,14 @@ interface CanvasDocumentQuery {
 
 export interface CanvasSelectionController {
   getSnapshot: () => CanvasSelectionSnapshot
-  replace: (selection: CanvasSelectionSnapshot) => void
-  replaceNodes: (nodeIds: ReadonlySet<string>) => void
-  replaceEdges: (edgeIds: ReadonlySet<string>) => void
-  clear: () => void
-  getSelectedNodeIds: () => ReadonlySet<string>
-  getSelectedEdgeIds: () => ReadonlySet<string>
-  toggleNodeFromTarget: (targetId: string | null, toggle: boolean) => void
-  toggleEdgeFromTarget: (targetId: string | null, toggle: boolean) => void
-  beginGesture: (kind: CanvasSelectionGestureKind) => void
-  commitGestureSelection: (
-    selection: CanvasSelectionSnapshot,
-    mode?: CanvasSelectionCommitMode,
-  ) => void
-  endGesture: () => void
+  setSelection: (selection: CanvasSelectionSnapshot) => void
+  clearSelection: () => void
+  toggleNode: (nodeId: string, toggle: boolean) => void
+  toggleEdge: (edgeId: string, toggle: boolean) => void
+  beginGesture: (kind: CanvasSelectionGestureKind, mode: CanvasSelectionCommitMode) => void
+  setGesturePreview: (selection: CanvasSelectionSnapshot | null) => void
+  commitGesture: () => void
+  cancelGesture: () => void
 }
 
 export interface CanvasInteractionTools {

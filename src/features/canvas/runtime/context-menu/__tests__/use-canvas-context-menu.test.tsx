@@ -45,11 +45,11 @@ function createSelectionController(
   let currentSelection = snapshot
 
   return {
-    clear: vi.fn(() => {
+    clearSelection: vi.fn(() => {
       currentSelection = { nodeIds: new Set<string>(), edgeIds: new Set<string>() }
     }),
     getSnapshot: vi.fn(() => currentSelection),
-    replace: vi.fn((nextSelection) => {
+    setSelection: vi.fn((nextSelection) => {
       currentSelection = nextSelection
     }),
   }
@@ -181,7 +181,7 @@ describe('useCanvasContextMenu', () => {
       result.current.openForPane(createContextMenuEvent(20, 40))
     })
 
-    expect(selection.clear).toHaveBeenCalledTimes(1)
+    expect(selection.clearSelection).toHaveBeenCalledTimes(1)
     expect(open).toHaveBeenCalledWith({ x: 20, y: 40 })
     expect(result.current.menu.isEmpty).toBe(false)
   })
@@ -220,7 +220,7 @@ describe('useCanvasContextMenu', () => {
       result.current.openForNode(createContextMenuEvent(10, 15), nodesMap.get('node-1')!)
     })
 
-    expect(selection.replace).toHaveBeenCalledWith({
+    expect(selection.setSelection).toHaveBeenCalledWith({
       nodeIds: new Set(['node-1']),
       edgeIds: new Set<string>(),
     })

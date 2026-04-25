@@ -1,5 +1,4 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
-import { useReactFlow } from '@xyflow/react'
 import { yMapToArray } from '../../utils/canvas-yjs-utils'
 import { stripEphemeralCanvasNodeState } from '../../utils/canvas-node-persistence'
 import { measureCanvasPerformance } from '../performance/canvas-performance-metrics'
@@ -7,9 +6,11 @@ import type { ResizingState } from '../../utils/canvas-awareness-types'
 import type { CanvasRemoteDragAnimation } from '../interaction/use-canvas-remote-drag-animation'
 import { sortCanvasElementsByZIndex } from './canvas-z-order'
 import type { Edge, Node } from '@xyflow/react'
+import type { CanvasEngine } from '../../system/canvas-engine'
 import type * as Y from 'yjs'
 
 interface UseCanvasDocumentProjectionOptions {
+  canvasEngine: CanvasEngine
   nodesMap: Y.Map<Node>
   edgesMap: Y.Map<Edge>
   localDraggingIdsRef: React.RefObject<Set<string>>
@@ -18,13 +19,13 @@ interface UseCanvasDocumentProjectionOptions {
 }
 
 export function useCanvasDocumentProjection({
+  canvasEngine,
   nodesMap,
   edgesMap,
   localDraggingIdsRef,
   remoteResizeDimensions,
   remoteDragAnimation,
 }: UseCanvasDocumentProjectionOptions) {
-  const reactFlow = useReactFlow()
   const remoteResizeDimensionsRef = useRef(remoteResizeDimensions)
   const remoteDragAnimationRef = useRef(remoteDragAnimation)
 
@@ -34,86 +35,112 @@ export function useCanvasDocumentProjection({
   }, [remoteDragAnimation, remoteResizeDimensions])
 
   useEffect(() => {
-    reactFlow.setNodes(
-      measureCanvasPerformance(
-        'canvas.projection.nodes.initial',
-        { nodeCount: nodesMap.size },
-        () => sortCanvasElementsByZIndex(yMapToArray(nodesMap).map(stripEphemeralCanvasNodeState)),
-      ),
+    const initialNodes = measureCanvasPerformance(
+      'canvas.projection.nodes.initial',
+      { nodeCount: nodesMap.size },
+      () => sortCanvasElementsByZIndex(yMapToArray(nodesMap).map(stripEphemeralCanvasNodeState)),
     )
+    canvasEngine.setDocumentSnapshot({ nodes: initialNodes })
 
     const handler = (event: Y.YMapEvent<Node>) => {
-      reactFlow.setNodes((current) =>
-        measureCanvasPerformance(
-          'canvas.projection.nodes.observe',
-          {
-            changedCount: event.keysChanged.size,
-            currentCount: current.length,
-            nodeCount: nodesMap.size,
-          },
-          () =>
-            applyChangedCanvasNodes(current, event.keysChanged, {
+      measureCanvasPerformance(
+        'canvas.projection.nodes.observe',
+        {
+          changedCount: event.keysChanged.size,
+          currentCount: canvasEngine.getSnapshot().nodes.length,
+          nodeCount: nodesMap.size,
+        },
+        () => {
+          const nextNodes = applyChangedCanvasNodes(
+            [...canvasEngine.getSnapshot().nodes],
+            event.keysChanged,
+            {
               nodesMap,
               localDraggingIds: localDraggingIdsRef.current,
               remoteResizeDimensions: remoteResizeDimensionsRef.current,
               remoteDragAnimation: remoteDragAnimationRef.current,
-            }),
-        ),
+            },
+          )
+          canvasEngine.setDocumentSnapshot({ nodes: nextNodes })
+          return nextNodes
+        },
       )
     }
 
     nodesMap.observe(handler)
     return () => nodesMap.unobserve(handler)
-  }, [localDraggingIdsRef, nodesMap, reactFlow])
+  }, [canvasEngine, localDraggingIdsRef, nodesMap])
 
   useEffect(() => {
-    reactFlow.setEdges(
-      measureCanvasPerformance(
-        'canvas.projection.edges.initial',
-        { edgeCount: edgesMap.size },
-        () => sortCanvasElementsByZIndex(yMapToArray(edgesMap)),
-      ),
+    const initialEdges = measureCanvasPerformance(
+      'canvas.projection.edges.initial',
+      { edgeCount: edgesMap.size },
+      () => sortCanvasElementsByZIndex(yMapToArray(edgesMap)),
     )
+    canvasEngine.setDocumentSnapshot({ edges: initialEdges })
 
     const handler = (event: Y.YMapEvent<Edge>) => {
-      reactFlow.setEdges((current) =>
-        measureCanvasPerformance(
-          'canvas.projection.edges.observe',
-          {
-            changedCount: event.keysChanged.size,
-            currentCount: current.length,
-            edgeCount: edgesMap.size,
-          },
-          () => applyChangedCanvasEdges(current, event.keysChanged, edgesMap),
-        ),
+      measureCanvasPerformance(
+        'canvas.projection.edges.observe',
+        {
+          changedCount: event.keysChanged.size,
+          currentCount: canvasEngine.getSnapshot().edges.length,
+          edgeCount: edgesMap.size,
+        },
+        () => {
+          const nextEdges = applyChangedCanvasEdges(
+            [...canvasEngine.getSnapshot().edges],
+            event.keysChanged,
+            edgesMap,
+          )
+          canvasEngine.setDocumentSnapshot({ edges: nextEdges })
+          return nextEdges
+        },
       )
     }
 
     edgesMap.observe(handler)
     return () => edgesMap.unobserve(handler)
-  }, [edgesMap, reactFlow])
+  }, [canvasEngine, edgesMap])
 
   useEffect(() => {
     if (Object.keys(remoteResizeDimensions).length === 0) return
 
-    reactFlow.setNodes((current) =>
-      measureCanvasPerformance(
-        'canvas.projection.remote-resize',
-        { nodeCount: current.length, resizeCount: Object.keys(remoteResizeDimensions).length },
-        () =>
-          current.map((node) => {
-            const resizeDimensions = remoteResizeDimensions[node.id]
-            if (!resizeDimensions) return node
-            return {
-              ...node,
-              width: resizeDimensions.width,
-              height: resizeDimensions.height,
-              position: { x: resizeDimensions.x, y: resizeDimensions.y },
-            }
-          }),
-      ),
+    measureCanvasPerformance(
+      'canvas.projection.remote-resize',
+      {
+        nodeCount: canvasEngine.getSnapshot().nodes.length,
+        resizeCount: Object.keys(remoteResizeDimensions).length,
+      },
+      () =>
+        updateCanvasEngineRemoteResize(
+          canvasEngine,
+          canvasEngine.getSnapshot().nodes,
+          remoteResizeDimensions,
+        ),
     )
-  }, [reactFlow, remoteResizeDimensions])
+  }, [canvasEngine, remoteResizeDimensions])
+}
+
+function updateCanvasEngineRemoteResize(
+  canvasEngine: CanvasEngine,
+  current: ReadonlyArray<Node>,
+  remoteResizeDimensions: ResizingState,
+) {
+  const updates = new Map<string, Partial<Node>>()
+  for (const node of current) {
+    const resizeDimensions = remoteResizeDimensions[node.id]
+    if (!resizeDimensions) {
+      continue
+    }
+
+    updates.set(node.id, {
+      width: resizeDimensions.width,
+      height: resizeDimensions.height,
+      position: { x: resizeDimensions.x, y: resizeDimensions.y },
+    })
+  }
+  canvasEngine.patchNodes(updates)
 }
 
 function applyChangedCanvasNodes(

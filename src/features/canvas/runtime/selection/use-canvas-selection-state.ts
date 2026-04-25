@@ -1,9 +1,9 @@
-import { create } from 'zustand'
-import { useShallow } from 'zustand/shallow'
+import { useCanvasEngineSelector } from '../../react/use-canvas-engine'
+import type { CanvasEngineEquality } from '../../system/canvas-engine'
 import type {
   CanvasSelectionGestureKind,
   CanvasSelectionSnapshot,
-} from '../../tools/canvas-tool-types'
+} from '../../system/canvas-selection'
 
 interface CanvasSelectionState {
   selectedNodeIds: ReadonlySet<string>
@@ -11,48 +11,35 @@ interface CanvasSelectionState {
   gestureKind: CanvasSelectionGestureKind | null
 }
 
-interface CanvasSelectionStateActions {
-  setSelection: (selection: CanvasSelectionSnapshot) => void
-  beginGesture: (kind: CanvasSelectionGestureKind) => void
-  endGesture: () => void
-  reset: () => void
+export function useCanvasSelectionState<T>(
+  selector: (state: CanvasSelectionState) => T,
+  equality?: CanvasEngineEquality<T>,
+) {
+  return useCanvasEngineSelector(
+    (snapshot) =>
+      selector({
+        selectedNodeIds: snapshot.selection.nodeIds,
+        selectedEdgeIds: snapshot.selection.edgeIds,
+        gestureKind: snapshot.selection.gestureKind,
+      }),
+    equality,
+  )
 }
-
-function createInitialCanvasSelectionState(): CanvasSelectionState {
-  return {
-    selectedNodeIds: new Set(),
-    selectedEdgeIds: new Set(),
-    gestureKind: null,
-  }
-}
-
-export function clearCanvasSelectionState() {
-  useCanvasSelectionState.getState().reset()
-}
-
-export const useCanvasSelectionState = create<CanvasSelectionState & CanvasSelectionStateActions>(
-  (set) => ({
-    ...createInitialCanvasSelectionState(),
-    setSelection: ({ nodeIds: selectedNodeIds, edgeIds: selectedEdgeIds }) =>
-      set({ selectedNodeIds, selectedEdgeIds }),
-    beginGesture: (gestureKind) => set({ gestureKind }),
-    endGesture: () => set({ gestureKind: null }),
-    reset: () => set(createInitialCanvasSelectionState()),
-  }),
-)
 
 export function useSelectedCanvasNodeIds() {
-  return useCanvasSelectionState(useShallow((state) => state.selectedNodeIds))
+  return useCanvasEngineSelector((state) => state.selection.nodeIds)
 }
 
 export function useIsCanvasNodeSelected(id: string) {
-  return useCanvasSelectionState((state) => state.selectedNodeIds.has(id))
+  return useCanvasEngineSelector((state) => state.selection.nodeIds.has(id))
 }
 
 export function useIsCanvasEdgeSelected(id: string) {
-  return useCanvasSelectionState((state) => state.selectedEdgeIds.has(id))
+  return useCanvasEngineSelector((state) => state.selection.edgeIds.has(id))
 }
 
 export function useIsCanvasSelectionGestureActive() {
-  return useCanvasSelectionState((state) => state.gestureKind !== null)
+  return useCanvasEngineSelector((state) => state.selection.gestureKind !== null)
 }
+
+export type { CanvasSelectionSnapshot }

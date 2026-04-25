@@ -117,10 +117,16 @@ export const lassoToolSpec: CanvasToolSpec<'lasso'> = {
       pointerId = null
     }
 
+    const claimPointerEvent = (event: PointerEvent) => {
+      event.preventDefault()
+      event.stopPropagation()
+    }
+
     return {
       onPointerDown: (event) => {
         if (event.button !== 0) return
 
+        claimPointerEvent(event)
         captureTarget = setPointerCapture(event)
         pointerId = event.pointerId
         active = true
@@ -129,17 +135,19 @@ export const lassoToolSpec: CanvasToolSpec<'lasso'> = {
         session.begin({ points }, isPrimarySelectionModifier(event) ? 'add' : 'replace')
       },
       onPointerMove: (event) => {
-        if (!active || (event.buttons & 1) !== 1) return
+        if (!active) return
 
+        claimPointerEvent(event)
         const pos = screenEventToFlowPosition(services.viewport, event)
         points = [...points, pos]
         session.update({ points })
       },
-      onPointerUp: () => {
+      onPointerUp: (event) => {
         if (!active) return
 
+        claimPointerEvent(event)
         if (points.length === 1) {
-          services.selection.clear()
+          services.selection.clearSelection()
           reset()
           return
         }
@@ -147,7 +155,10 @@ export const lassoToolSpec: CanvasToolSpec<'lasso'> = {
         session.commit({ points })
         reset()
       },
-      onPointerCancel: () => {
+      onPointerCancel: (event) => {
+        if (active) {
+          claimPointerEvent(event)
+        }
         reset()
       },
     }

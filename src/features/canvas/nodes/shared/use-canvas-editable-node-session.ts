@@ -67,7 +67,7 @@ export function useCanvasEditableNodeSession({
     }
 
     if (!isSelected) {
-      selection.replace({ nodeIds: new Set([id]), edgeIds: new Set() })
+      selection.setSelection({ nodeIds: new Set([id]), edgeIds: new Set() })
       return
     }
 

@@ -1,7 +1,8 @@
-import { BaseEdge } from '@xyflow/react'
+import { useContext, useEffect, useRef } from 'react'
 import { getCanvasEdgeInteractionWidth } from './canvas-edge-geometry'
 import { buildCanvasEdgeRenderStyle, normalizeCanvasEdgeStyle } from './canvas-edge-style'
 import { useCanvasEdgeVisualSelection } from './use-canvas-edge-visual-selection'
+import { CanvasEngineContext } from '../../react/canvas-engine-context-value'
 import type { CanvasEdgeRendererProps } from '../canvas-edge-types'
 import type { CSSProperties } from 'react'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
@@ -33,8 +34,24 @@ export function CanvasPathEdge({
   geometry: CanvasPathEdgeGeometry | null
 }) {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
+  const canvasEngine = useContext(CanvasEngineContext)
+  const pathRef = useRef<SVGPathElement | null>(null)
+  const highlightPathRef = useRef<SVGPathElement | null>(null)
+  const interactionPathRef = useRef<SVGPathElement | null>(null)
   const { visuallySelected, pendingPreviewActive, pendingSelected, selected } =
     useCanvasEdgeVisualSelection(props.id)
+  useEffect(() => {
+    if (!canvasEngine) {
+      return undefined
+    }
+
+    return canvasEngine.registerEdgePaths(props.id, {
+      path: pathRef.current,
+      highlightPath: highlightPathRef.current,
+      interactionPath: interactionPathRef.current,
+    })
+  })
+
   if (!geometry) return null
 
   const normalizedStyle = normalizeCanvasEdgeStyle(props.style)
@@ -64,26 +81,29 @@ export function CanvasPathEdge({
       data-edge-pending-preview-active={pendingPreviewActive ? 'true' : 'false'}
       data-edge-pending-selected={pendingSelected ? 'true' : 'false'}
     >
-      <BaseEdge
+      <path
+        ref={pathRef}
         id={props.id}
-        path={geometry.path}
-        labelX={geometry.labelX}
-        labelY={geometry.labelY}
-        label={props.label}
-        labelStyle={props.labelStyle}
-        labelShowBg={props.labelShowBg}
-        labelBgStyle={props.labelBgStyle}
-        labelBgPadding={props.labelBgPadding}
-        labelBgBorderRadius={props.labelBgBorderRadius}
+        d={geometry.path}
         markerStart={props.markerStart}
         markerEnd={props.markerEnd}
-        interactionWidth={
-          interactiveRenderMode ? (props.interactionWidth ?? getCanvasEdgeInteractionWidth()) : 0
-        }
+        fill="none"
         style={style}
       />
+      {interactiveRenderMode ? (
+        <path
+          ref={interactionPathRef}
+          d={geometry.path}
+          fill="none"
+          stroke="transparent"
+          strokeWidth={props.interactionWidth ?? getCanvasEdgeInteractionWidth()}
+          pointerEvents="stroke"
+          data-testid="canvas-edge-interaction"
+        />
+      ) : null}
       {selectedHighlightStyle ? (
         <path
+          ref={highlightPathRef}
           d={geometry.path}
           style={selectedHighlightStyle}
           data-testid="canvas-edge-selection-highlight"

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
-import { useNodes } from '@xyflow/react'
+import { useCanvasEngineSelector } from '../react/use-canvas-engine'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
 import { getContrastColor } from '~/shared/utils/color'
 import { useSpringPosition } from '~/shared/hooks/useSpringPosition'
@@ -29,7 +29,10 @@ function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
   const elementRef = useRef<HTMLDivElement>(null)
   const cursor = remoteUser.cursor
   const isDragging = !!(remoteUser.dragging && Object.keys(remoteUser.dragging).length > 0)
-  const nodes = useNodes()
+  const dragReference = getRemoteDragReference(remoteUser)
+  const pinnedNode = useCanvasEngineSelector((snapshot) =>
+    dragReference ? (snapshot.nodeLookup.get(dragReference.nodeId)?.node ?? null) : null,
+  )
   const wasDraggingRef = useRef(false)
   const lerpRef = useRef<{
     from: { x: number; y: number }
@@ -42,14 +45,11 @@ function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
 
   let pinnedPosition: { x: number; y: number } | null = null
   if (isDragging && cursor && remoteUser.dragging) {
-    const entries = Object.entries(remoteUser.dragging)
-    if (entries.length > 0) {
-      const [refNodeId, refDragPos] = entries[0]
-      const node = nodes.find((n) => n.id === refNodeId)
-      if (node) {
+    if (dragReference) {
+      if (pinnedNode) {
         pinnedPosition = {
-          x: node.position.x + (cursor.x - refDragPos.x),
-          y: node.position.y + (cursor.y - refDragPos.y),
+          x: pinnedNode.position.x + (cursor.x - dragReference.position.x),
+          y: pinnedNode.position.y + (cursor.y - dragReference.position.y),
         }
       }
     }
@@ -149,6 +149,20 @@ function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
       <NameLabel name={remoteUser.user.name} color={remoteUser.user.color} />
     </div>
   )
+}
+
+function getRemoteDragReference(remoteUser: RemoteUser) {
+  if (!remoteUser.dragging) {
+    return null
+  }
+
+  const [entry] = Object.entries(remoteUser.dragging)
+  if (!entry) {
+    return null
+  }
+
+  const [nodeId, position] = entry
+  return { nodeId, position }
 }
 
 function NameLabel({ name, color }: { name: string; color: string }) {

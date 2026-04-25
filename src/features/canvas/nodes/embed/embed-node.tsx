@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { RichEmbedLifecycleController } from './use-rich-embed-lifecycle'
 import { normalizeEmbedNodeData } from './embed-node-data'
@@ -8,7 +8,6 @@ import type { EmbedNodeData } from './embed-node-data'
 import { EmbedNoteContent } from './embed-note-content'
 import { CanvasFloatingFormattingToolbar } from '../shared/canvas-floating-formatting-toolbar'
 import { useCanvasEditableNodeSession } from '../shared/use-canvas-editable-node-session'
-import type { Node, NodeProps } from '@xyflow/react'
 import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
 import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
@@ -22,8 +21,9 @@ import { EmbeddedCanvasContent } from './embedded-canvas-content'
 import { EmbeddedFileContent } from './embedded-file-content'
 import { EmbeddedMapContent } from './embedded-map-content'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
+import type { CanvasNodeComponentProps } from '../canvas-node-types'
 
-export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>) {
+export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<EmbedNodeData>) {
   const normalizedData = normalizeEmbedNodeData(data)
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
   const sidebarItemId = normalizedData.sidebarItemId
@@ -31,7 +31,8 @@ export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>
   const item = sidebarItemId ? itemsMap.get(sidebarItemId) : undefined
   const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
   const { data: contentItem } = useSidebarItemById(sidebarItemId)
-  const { editSession, canEdit } = useCanvasRuntime()
+  const { canvasEngine, editSession, canEdit } = useCanvasRuntime()
+  const surfaceRef = useRef<HTMLDivElement | null>(null)
   const editableSession = useCanvasEditableNodeSession({
     id,
     canEdit: canEdit && interactiveRenderMode,
@@ -45,6 +46,11 @@ export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>
   const label = item?.name ?? 'Missing item'
   const isMissing = !item
   const showFloatingLabel = !showsFormattingToolbar
+
+  useEffect(
+    () => canvasEngine.registerNodeSurfaceElement(id, surfaceRef.current),
+    [canvasEngine, id],
+  )
 
   return (
     <ResizableNodeWrapper
@@ -60,7 +66,7 @@ export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>
           <CanvasFloatingFormattingToolbar editor={noteEditor} visible={showsFormattingToolbar} />
           <CanvasNodeConnectionHandles />
           {showFloatingLabel && (
-            <div className="pointer-events-none absolute left-3 top-0 z-20 max-w-[calc(100%-1.5rem)] -translate-y-[calc(100%+0.375rem)]">
+            <div className="pointer-events-none absolute left-3 top-0 z-20 max-w-[calc(100%-1.5rem)] -translate-y-[calc(100%+0.375rem)] select-none">
               <span className="block truncate text-xs font-medium text-muted-foreground">
                 {isMissing ? `Warning: ${label}` : label}
               </span>
@@ -70,7 +76,11 @@ export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>
       }
     >
       <div
-        className="relative h-full w-full overflow-hidden rounded-lg"
+        ref={surfaceRef}
+        className={cn(
+          'relative h-full w-full overflow-hidden rounded-lg',
+          isEditing ? 'select-text' : 'select-none',
+        )}
         style={getCanvasNodeSurfaceStyle(normalizedData)}
         onDoubleClick={(event) => {
           if (!interactiveRenderMode || contentItem?.type !== SIDEBAR_ITEM_TYPES.notes) {

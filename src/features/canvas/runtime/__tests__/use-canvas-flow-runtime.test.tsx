@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useCanvasFlowRuntime } from '../use-canvas-flow-runtime'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
-import type { Edge, Node, ReactFlowInstance } from '@xyflow/react'
+import type { Edge, Node } from '@xyflow/react'
 import type { CanvasCommands } from '../document/use-canvas-commands'
 import * as Y from 'yjs'
 import { testId } from '~/test/helpers/test-id'
@@ -16,15 +16,13 @@ const cursorPresenceSpy = vi.hoisted(() => vi.fn())
 const nodeActionsSpy = vi.hoisted(() => vi.fn())
 const selectionRectSpy = vi.hoisted(() => vi.fn())
 const pointerBridgeSpy = vi.hoisted(() => vi.fn())
-const wheelSpy = vi.hoisted(() => vi.fn())
+const viewportInteractionsSpy = vi.hoisted(() => vi.fn())
 const dropIntegrationSpy = vi.hoisted(() => vi.fn())
-const flowHandlersSpy = vi.hoisted(() => vi.fn())
 const contextMenuSpy = vi.hoisted(() => vi.fn())
 const surfaceClickGuardSpy = vi.hoisted(() => vi.fn())
 const toolHandlersSpy = vi.hoisted(() => vi.fn())
 const clearSelectionSpy = vi.hoisted(() => vi.fn())
 const clearToolTransientStateSpy = vi.hoisted(() => vi.fn())
-const cancelConnectionSpy = vi.hoisted(() => vi.fn())
 
 const documentWriterMock = vi.hoisted(() => ({
   createNode: vi.fn(),
@@ -68,9 +66,9 @@ const commandsMock = vi.hoisted(
   }),
 )
 const dragHandlersMock = vi.hoisted(() => ({
-  onNodeDragStart: vi.fn(),
-  onNodeDrag: vi.fn(),
-  onNodeDragStop: vi.fn(),
+  destroy: vi.fn(),
+  handlePointerDown: vi.fn(),
+  profileDrag: vi.fn(),
 }))
 const cursorPresenceMock = vi.hoisted(() => ({
   onMouseMove: vi.fn(),
@@ -81,24 +79,6 @@ const nodeActionsMock = vi.hoisted(() => ({
   onResize: vi.fn(),
   onResizeEnd: vi.fn(),
 }))
-const flowHandlersMock = vi.hoisted(
-  () =>
-    ({
-      onNodeDragStart: vi.fn(),
-      onNodeDrag: vi.fn(),
-      onNodeDragStop: vi.fn(),
-      onNodesDelete: vi.fn(),
-      onEdgesDelete: vi.fn(),
-      onConnect: vi.fn(),
-      onMoveStart: vi.fn(),
-      onMoveEnd: vi.fn(),
-      onNodeClick: vi.fn(),
-      onEdgeClick: vi.fn(),
-      onPaneClick: vi.fn(),
-      onMouseMove: vi.fn(),
-      onMouseLeave: vi.fn(),
-    }) as const,
-)
 const contextMenuMock = vi.hoisted(
   () =>
     ({
@@ -121,20 +101,8 @@ const toolHandlersMock = vi.hoisted(
       onPaneClick: vi.fn(),
     }) as const,
 )
-const reactFlowMock = vi.hoisted(
-  () =>
-    ({
-      getEdges: vi.fn(() => []),
-      getNodes: vi.fn(() => []),
-      getZoom: vi.fn(() => 1),
-      setEdges: vi.fn(),
-      setNodes: vi.fn(),
-      screenToFlowPosition: vi.fn(({ x, y }: { x: number; y: number }) => ({ x, y })),
-    }) as unknown as ReactFlowInstance,
-)
 const storeApiMock = vi.hoisted(() => ({
   getState: () => ({
-    cancelConnection: cancelConnectionSpy,
     nodeLookup: new Map(),
   }),
   setState: vi.fn(),
@@ -172,7 +140,6 @@ const remoteDragAnimation = vi.hoisted(() => ({
 }))
 
 vi.mock('@xyflow/react', () => ({
-  useReactFlow: () => reactFlowMock,
   useStoreApi: () => storeApiMock,
 }))
 
@@ -236,8 +203,8 @@ vi.mock('../interaction/use-canvas-pointer-bridge', () => ({
   useCanvasPointerBridge: pointerBridgeSpy,
 }))
 
-vi.mock('../interaction/use-canvas-wheel', () => ({
-  useCanvasWheel: wheelSpy,
+vi.mock('../interaction/use-canvas-viewport-interactions', () => ({
+  useCanvasViewportInteractions: viewportInteractionsSpy,
 }))
 
 vi.mock('../interaction/use-canvas-drop-integration', () => ({
@@ -248,13 +215,6 @@ vi.mock('../interaction/use-canvas-drop-integration', () => ({
       isDropTarget: true,
       isFileDropTarget: false,
     }
-  },
-}))
-
-vi.mock('../interaction/use-canvas-flow-handlers', () => ({
-  createCanvasFlowHandlers: (...args: Array<unknown>) => {
-    flowHandlersSpy(...args)
-    return flowHandlersMock
   },
 }))
 
@@ -376,15 +336,13 @@ describe('useCanvasFlowRuntime', () => {
     nodeActionsSpy.mockReset()
     selectionRectSpy.mockReset()
     pointerBridgeSpy.mockReset()
-    wheelSpy.mockReset()
+    viewportInteractionsSpy.mockReset()
     dropIntegrationSpy.mockReset()
-    flowHandlersSpy.mockReset()
     contextMenuSpy.mockReset()
     surfaceClickGuardSpy.mockReset()
     toolHandlersSpy.mockReset()
     clearSelectionSpy.mockReset()
     clearToolTransientStateSpy.mockReset()
-    cancelConnectionSpy.mockReset()
     storeApiMock.setState.mockReset()
     selectionControllerMock.clear.mockReset()
     session.editSession.setEditingEmbedId.mockReset()
@@ -409,6 +367,7 @@ describe('useCanvasFlowRuntime', () => {
         canEdit: true,
         provider: null,
         doc,
+        initialViewport: { x: 0, y: 0, zoom: 1 },
       }),
     )
 
@@ -419,6 +378,10 @@ describe('useCanvasFlowRuntime', () => {
       resolveElement: expect.any(Function),
     })
     expect(projectionSpy).toHaveBeenCalledWith({
+      canvasEngine: expect.objectContaining({
+        getSnapshot: expect.any(Function),
+        setDocumentSnapshot: expect.any(Function),
+      }),
       nodesMap,
       edgesMap,
       localDraggingIdsRef: expect.any(Object),
@@ -440,13 +403,22 @@ describe('useCanvasFlowRuntime', () => {
       commands: commandsMock,
     })
     expect(nodeActionsSpy).toHaveBeenCalledWith({
+      canvasEngine: expect.objectContaining({
+        getSnapshot: expect.any(Function),
+      }),
       documentWriter: documentWriterMock,
-      reactFlowInstance: reactFlowMock,
       session,
       transact: expect.any(Function),
     })
     expect(selectionRectSpy).toHaveBeenCalledWith({
+      canvasEngine: expect.objectContaining({
+        getSnapshot: expect.any(Function),
+      }),
       surfaceRef: expect.any(Object),
+      viewportController: expect.objectContaining({
+        getZoom: expect.any(Function),
+        screenToCanvasPosition: expect.any(Function),
+      }),
       awareness: session.awareness.presence,
       selection: selectionControllerMock,
       interaction: expect.objectContaining({
@@ -458,7 +430,11 @@ describe('useCanvasFlowRuntime', () => {
       surfaceRef: expect.any(Object),
       activeToolHandlers: toolHandlersMock,
     })
-    expect(wheelSpy).toHaveBeenCalledWith(expect.objectContaining({ current: null }))
+    expect(viewportInteractionsSpy).toHaveBeenCalledWith({
+      ref: expect.objectContaining({ current: null }),
+      viewportController: expect.objectContaining({ handleWheel: expect.any(Function) }),
+      canPrimaryPan: expect.any(Function),
+    })
     expect(toolHandlersSpy).toHaveBeenCalledWith(
       'select',
       expect.objectContaining({
@@ -475,7 +451,7 @@ describe('useCanvasFlowRuntime', () => {
       nodesMap,
       edgesMap,
       createNode: documentWriterMock.createNode,
-      screenToFlowPosition: reactFlowMock.screenToFlowPosition,
+      screenToFlowPosition: expect.any(Function),
       selection: selectionControllerMock,
       commands: commandsMock,
     })
@@ -491,9 +467,17 @@ describe('useCanvasFlowRuntime', () => {
           isFileDropTarget: false,
         },
         editSession: session.editSession,
-        flowHandlers: flowHandlersMock,
+        sceneHandlers: expect.objectContaining({
+          createEdgeFromConnection: expect.any(Function),
+          onMouseMove: cursorPresenceMock.onMouseMove,
+          onMouseLeave: cursorPresenceMock.onMouseLeave,
+        }),
         history: historyMock,
         nodeActions: nodeActionsMock,
+        viewportController: expect.objectContaining({
+          getZoom: expect.any(Function),
+          screenToCanvasPosition: expect.any(Function),
+        }),
         remoteHighlights: session.remoteHighlights,
         remoteUsers: session.remoteUsers,
         selection: selectionControllerMock,
@@ -524,6 +508,7 @@ describe('useCanvasFlowRuntime', () => {
         canEdit: true,
         provider: null,
         doc,
+        initialViewport: { x: 0, y: 0, zoom: 1 },
       }),
     )
 
@@ -539,8 +524,6 @@ describe('useCanvasFlowRuntime', () => {
       session.awareness.presence,
     )
     expect(toolHandlersSpy).toHaveBeenCalledWith('draw', expect.any(Object))
-    expect(cancelConnectionSpy).toHaveBeenCalledTimes(1)
-    expect(storeApiMock.setState).toHaveBeenCalledWith({ connectionClickStartHandle: null })
     expect(selectionControllerMock.clear).toHaveBeenCalledTimes(1)
     expect(session.editSession.setEditingEmbedId).toHaveBeenCalledWith(null)
     expect(session.editSession.setPendingEditNodeId).toHaveBeenCalledWith(null)
@@ -561,6 +544,7 @@ describe('useCanvasFlowRuntime', () => {
         canEdit: true,
         provider: null,
         doc,
+        initialViewport: { x: 0, y: 0, zoom: 1 },
       }),
     )
 
@@ -570,8 +554,6 @@ describe('useCanvasFlowRuntime', () => {
 
     rerender()
 
-    expect(cancelConnectionSpy).toHaveBeenCalledTimes(1)
-    expect(storeApiMock.setState).toHaveBeenCalledWith({ connectionClickStartHandle: null })
     expect(selectionControllerMock.clear).not.toHaveBeenCalled()
     expect(session.editSession.setEditingEmbedId).not.toHaveBeenCalled()
     expect(session.editSession.setPendingEditNodeId).not.toHaveBeenCalled()

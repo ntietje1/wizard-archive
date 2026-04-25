@@ -1,174 +1,103 @@
-import { useReactFlow } from '@xyflow/react'
 import { useRef } from 'react'
-import {
-  applyCanvasSelectionCommitMode,
-  getNextSelectedIds,
-} from '../../utils/canvas-selection-utils'
-import { useCanvasSelectionState } from './use-canvas-selection-state'
+import { areCanvasSelectionsEqual } from '../../system/canvas-selection'
+import type { CanvasEngine } from '../../system/canvas-engine'
 import type {
   CanvasSelectionController,
   CanvasSelectionSnapshot,
 } from '../../tools/canvas-tool-types'
-import type { ReactFlowInstance } from '@xyflow/react'
 
 interface UseCanvasSelectionControllerOptions {
+  canvasEngine: CanvasEngine
   onSelectionChange?: (selection: CanvasSelectionSnapshot) => void
   setLocalSelection?: (nodeIds: ReadonlySet<string> | null) => void
 }
 
-type SelectionProjectionReactFlow = Pick<ReactFlowInstance, 'setNodes'> &
-  Partial<Pick<ReactFlowInstance, 'setEdges'>>
-
-function getCanvasSelectionSnapshot(): CanvasSelectionSnapshot {
-  const state = useCanvasSelectionState.getState()
-  return {
-    nodeIds: state.selectedNodeIds,
-    edgeIds: state.selectedEdgeIds,
-  }
-}
-
-function hasSameIds(nextIds: ReadonlySet<string>, prevIds: ReadonlySet<string>) {
-  if (nextIds.size !== prevIds.size) {
-    return false
-  }
-
-  for (const id of nextIds) {
-    if (!prevIds.has(id)) {
-      return false
-    }
-  }
-  return true
-}
-
-function hasSameSelection(
-  nextSelection: CanvasSelectionSnapshot,
-  prevSelection: CanvasSelectionSnapshot,
-) {
-  return (
-    hasSameIds(nextSelection.nodeIds, prevSelection.nodeIds) &&
-    hasSameIds(nextSelection.edgeIds, prevSelection.edgeIds)
-  )
-}
-
-function projectCanvasSelectionToReactFlow(
-  reactFlow: SelectionProjectionReactFlow,
-  selection: CanvasSelectionSnapshot,
-) {
-  reactFlow.setNodes((nodes) =>
-    nodes.map((node) => {
-      const selected = selection.nodeIds.has(node.id)
-      const draggable = selected
-      if (node.selected === selected && (node.draggable ?? false) === draggable) {
-        return node
-      }
-
-      return { ...node, selected, draggable }
-    }),
-  )
-  reactFlow.setEdges?.((edges) =>
-    edges.map((edge) => {
-      const selected = selection.edgeIds.has(edge.id)
-      return edge.selected === selected ? edge : { ...edge, selected }
-    }),
-  )
-}
-
 export function useCanvasSelectionController({
+  canvasEngine,
   onSelectionChange,
   setLocalSelection,
-}: UseCanvasSelectionControllerOptions = {}): CanvasSelectionController {
-  const reactFlow = useReactFlow()
-  const reactFlowRef = useRef<SelectionProjectionReactFlow>(reactFlow)
+}: UseCanvasSelectionControllerOptions): CanvasSelectionController {
   const onSelectionChangeRef = useRef(onSelectionChange)
   const setLocalSelectionRef = useRef(setLocalSelection)
-  reactFlowRef.current = reactFlow
   onSelectionChangeRef.current = onSelectionChange
   setLocalSelectionRef.current = setLocalSelection
 
   const controllerRef = useRef<CanvasSelectionController | null>(null)
-  controllerRef.current ??= createCanvasSelectionController({
-    getReactFlow: () => reactFlowRef.current,
-    onSelectionChange: (selection) => onSelectionChangeRef.current?.(selection),
-    setLocalSelection: (nodeIds) => setLocalSelectionRef.current?.(nodeIds),
-  })
+  if (!controllerRef.current) {
+    controllerRef.current = createCanvasSelectionController({
+      canvasEngine,
+      onSelectionChange: (selection) => onSelectionChangeRef.current?.(selection),
+      setLocalSelection: (nodeIds) => setLocalSelectionRef.current?.(nodeIds),
+    })
+  }
 
   return controllerRef.current
 }
 
 function createCanvasSelectionController({
-  getReactFlow,
+  canvasEngine,
   onSelectionChange,
   setLocalSelection,
 }: {
-  getReactFlow: () => SelectionProjectionReactFlow
+  canvasEngine: CanvasEngine
   onSelectionChange: (selection: CanvasSelectionSnapshot) => void
   setLocalSelection: (nodeIds: ReadonlySet<string> | null) => void
 }): CanvasSelectionController {
-  const applySelection = (selection: CanvasSelectionSnapshot) => {
-    const prevSelection = getCanvasSelectionSnapshot()
+  const getSnapshot = () => {
+    const { selection } = canvasEngine.getSnapshot()
+    return {
+      nodeIds: selection.nodeIds,
+      edgeIds: selection.edgeIds,
+    }
+  }
 
-    if (hasSameSelection(selection, prevSelection)) {
+  const notifySelectionChange = (
+    previous: CanvasSelectionSnapshot,
+    next: CanvasSelectionSnapshot,
+  ) => {
+    if (areCanvasSelectionsEqual(previous, next)) {
       return
     }
 
-    projectCanvasSelectionToReactFlow(getReactFlow(), selection)
-    useCanvasSelectionState.getState().setSelection(selection)
-    setLocalSelection(selection.nodeIds.size > 0 ? selection.nodeIds : null)
-    onSelectionChange(selection)
+    setLocalSelection(next.nodeIds.size > 0 ? next.nodeIds : null)
+    onSelectionChange(next)
+  }
+
+  const applySelection = (selection: CanvasSelectionSnapshot) => {
+    const previous = getSnapshot()
+    canvasEngine.setSelection(selection)
+    notifySelectionChange(previous, getSnapshot())
   }
 
   return {
-    getSnapshot: () => getCanvasSelectionSnapshot(),
-    replace: (selection) => {
-      applySelection(selection)
-    },
-    replaceNodes: (nodeIds) => {
-      applySelection({ nodeIds, edgeIds: new Set() })
-    },
-    replaceEdges: (edgeIds) => {
-      applySelection({ nodeIds: new Set(), edgeIds })
-    },
-    clear: () => {
+    getSnapshot,
+    setSelection: applySelection,
+    clearSelection: () => {
       applySelection({ nodeIds: new Set(), edgeIds: new Set() })
     },
-    getSelectedNodeIds: () => useCanvasSelectionState.getState().selectedNodeIds,
-    getSelectedEdgeIds: () => useCanvasSelectionState.getState().selectedEdgeIds,
-    toggleNodeFromTarget: (targetId, toggle) => {
-      const currentSelection = getCanvasSelectionSnapshot()
-      applySelection({
-        nodeIds: getNextSelectedIds({
-          selectedIds: currentSelection.nodeIds,
-          targetId,
-          toggle,
-        }),
-        edgeIds: toggle ? currentSelection.edgeIds : new Set(),
-      })
+    toggleNode: (nodeId, toggle) => {
+      const previous = getSnapshot()
+      canvasEngine.toggleNodeSelection(nodeId, toggle)
+      notifySelectionChange(previous, getSnapshot())
     },
-    toggleEdgeFromTarget: (targetId, toggle) => {
-      const currentSelection = getCanvasSelectionSnapshot()
-      applySelection({
-        nodeIds: toggle ? currentSelection.nodeIds : new Set(),
-        edgeIds: getNextSelectedIds({
-          selectedIds: currentSelection.edgeIds,
-          targetId,
-          toggle,
-        }),
-      })
+    toggleEdge: (edgeId, toggle) => {
+      const previous = getSnapshot()
+      canvasEngine.toggleEdgeSelection(edgeId, toggle)
+      notifySelectionChange(previous, getSnapshot())
     },
-    beginGesture: (kind) => {
-      useCanvasSelectionState.getState().beginGesture(kind)
+    beginGesture: (kind, mode) => {
+      canvasEngine.beginSelectionGesture(kind, mode)
     },
-    commitGestureSelection: (selection, mode = 'replace') => {
-      applySelection(
-        applyCanvasSelectionCommitMode({
-          currentSelection: getCanvasSelectionSnapshot(),
-          nextSelection: selection,
-          mode,
-        }),
-      )
+    setGesturePreview: (selection) => {
+      canvasEngine.setSelectionGesturePreview(selection)
     },
-    endGesture: () => {
-      useCanvasSelectionState.getState().endGesture()
+    commitGesture: () => {
+      const previous = getSnapshot()
+      canvasEngine.commitSelectionGesture()
+      notifySelectionChange(previous, getSnapshot())
+    },
+    cancelGesture: () => {
+      canvasEngine.cancelSelectionGesture()
     },
   }
 }

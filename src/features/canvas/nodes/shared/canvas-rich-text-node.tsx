@@ -1,6 +1,5 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
-import type { Node, NodeProps } from '@xyflow/react'
 import { CanvasNodeConnectionHandles } from './canvas-node-connection-handles'
 import { ResizableNodeWrapper } from './resizable-node-wrapper'
 import { extractCanvasRichTextPlainText } from './canvas-rich-text-editor'
@@ -15,6 +14,7 @@ import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { cn } from '~/features/shadcn/lib/utils'
+import type { CanvasNodeComponentProps } from '../canvas-node-types'
 
 interface CanvasRichTextNodeVariant {
   nodeType: 'text'
@@ -30,7 +30,7 @@ interface CanvasRichTextNodeVariant {
   textColor: string
 }
 
-interface CanvasRichTextNodeComponentProps extends NodeProps<Node<CanvasRichTextNodeData>> {
+interface CanvasRichTextNodeComponentProps extends CanvasNodeComponentProps<CanvasRichTextNodeData> {
   variant: CanvasRichTextNodeVariant
 }
 
@@ -80,6 +80,7 @@ export function CanvasRichTextNode({
 }: CanvasRichTextNodeComponentProps) {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
   const {
+    canvasEngine,
     documentWriter: { patchNodeData },
     canEdit,
   } = useCanvasRuntime()
@@ -110,6 +111,11 @@ export function CanvasRichTextNode({
     },
   })
   const showsFormattingToolbar = editableSession.editable && editorSession.editor !== null
+
+  useEffect(
+    () => canvasEngine.registerNodeSurfaceElement(id, wrapperRef.current),
+    [canvasEngine, id],
+  )
 
   return (
     <ResizableNodeWrapper
@@ -168,6 +174,7 @@ export function CanvasRichTextNode({
         <div
           className={cn(
             'h-full',
+            editableSession.editable ? 'select-text' : 'select-none',
             editableSession.editable && 'nodrag nopan',
             interactiveRenderMode && editableSession.isExclusivelySelected && 'nowheel',
           )}

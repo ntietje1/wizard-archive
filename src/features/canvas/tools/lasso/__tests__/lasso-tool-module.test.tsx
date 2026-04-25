@@ -1,10 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { lassoToolSpec } from '../lasso-tool-module'
 import {
-  clearCanvasPendingSelectionPreview,
-  getCanvasPendingSelectionPreview,
-} from '../../../runtime/selection/use-canvas-pending-selection-preview'
-import {
   clearLassoToolLocalOverlay,
   useLassoToolLocalOverlayStore,
 } from '../lasso-tool-local-overlay'
@@ -14,13 +10,19 @@ import type {
   CanvasSelectionSnapshot,
   CanvasToolId,
   CanvasToolRuntime,
-  CanvasSelectionCommitMode,
 } from '../../canvas-tool-types'
 
 type MockPointerTarget = HTMLDivElement & {
   setPointerCapture: (pointerId: number) => void
   releasePointerCapture: (pointerId: number) => void
 }
+
+type TestPointerEvent = PointerEvent & {
+  preventDefaultSpy: ReturnType<typeof vi.fn>
+  stopPropagationSpy: ReturnType<typeof vi.fn>
+}
+
+let pendingPreview: CanvasSelectionSnapshot | null = null
 
 function createPointerTarget() {
   const target = document.createElement('div') as unknown as MockPointerTarget
@@ -32,14 +34,21 @@ function createPointerTarget() {
 function createPointerEvent(
   target: Element,
   overrides: Partial<PointerEvent> & { clientX: number; clientY: number },
-): PointerEvent {
+): TestPointerEvent {
+  const preventDefaultSpy = vi.fn()
+  const stopPropagationSpy = vi.fn()
+
   return {
     button: 0,
     buttons: 1,
     pointerId: 1,
     target,
+    preventDefault: preventDefaultSpy,
+    stopPropagation: stopPropagationSpy,
+    preventDefaultSpy,
+    stopPropagationSpy,
     ...overrides,
-  } as PointerEvent
+  } as TestPointerEvent
 }
 
 function createEmbedNode(id: string, x: number, y: number): CanvasMeasuredNode {
@@ -72,7 +81,7 @@ describe('lassoToolSpec', () => {
 
   beforeEach(() => {
     clearLassoToolLocalOverlay()
-    clearCanvasPendingSelectionPreview()
+    pendingPreview = null
     rafCallbacks.clear()
     nextRafId = 1
     vi.stubGlobal(
@@ -141,12 +150,11 @@ describe('lassoToolSpec', () => {
 
     expect(requestAnimationFrame).toHaveBeenCalledTimes(1)
     expect(setPresence).not.toHaveBeenCalled()
-    expect(getCanvasPendingSelectionPreview()).toEqual({ kind: 'inactive' })
+    expect(pendingPreview).toBeNull()
 
     flushAnimationFrame()
 
-    expect(getCanvasPendingSelectionPreview()).toEqual({
-      kind: 'active',
+    expect(pendingPreview).toEqual({
       nodeIds: new Set(['embed-1']),
       edgeIds: new Set(['edge-1']),
     })
@@ -157,7 +165,7 @@ describe('lassoToolSpec', () => {
 
     controller.onPointerUp?.(createPointerEvent(target, { clientX: 0, clientY: 0 }))
 
-    expect(beginGesture).toHaveBeenCalledWith('lasso')
+    expect(beginGesture).toHaveBeenCalledWith('lasso', 'replace')
     expect(useLassoToolLocalOverlayStore.getState().points).toEqual([])
     expect(setPresence).toHaveBeenCalledWith(
       'tool.lasso',
@@ -165,17 +173,12 @@ describe('lassoToolSpec', () => {
     )
     expect(setPresence).toHaveBeenLastCalledWith('tool.lasso', null)
     expect(suppressNextSurfaceClick).toHaveBeenCalledTimes(1)
-    expect(commitGestureSelection).toHaveBeenCalledWith(
-      {
-        nodeIds: new Set(['embed-1']),
-        edgeIds: new Set(['edge-1']),
-      },
-      'replace',
-    )
-    expect(endGesture).toHaveBeenCalled()
+    expect(pendingPreview).toEqual({
+      nodeIds: new Set(['embed-1']),
+      edgeIds: new Set(['edge-1']),
+    })
     expect(target.setPointerCapture).toHaveBeenCalledWith(1)
     expect(target.releasePointerCapture).toHaveBeenCalledWith(1)
-    expect(getCanvasPendingSelectionPreview()).toEqual({ kind: 'inactive' })
   })
 
   it('publishes a fresh local lasso path array on each pointer update so the local overlay rerenders', () => {
@@ -214,11 +217,68 @@ describe('lassoToolSpec', () => {
     ])
     expect(secondPath).not.toBe(firstPath)
     expect(thirdPath).not.toBe(secondPath)
-    expect(getCanvasPendingSelectionPreview()).toEqual({
-      kind: 'active',
+    expect(pendingPreview).toEqual({
       nodeIds: new Set(),
       edgeIds: new Set(),
     })
+  })
+
+  it('claims active pointer events so native text selection cannot steal the lasso gesture', () => {
+    const controller = lassoToolSpec.createHandlers(
+      createLassoEnvironment({
+        getMeasuredNodes: () => [],
+        getNodes: () => [],
+        getEdges: () => [],
+        commitGestureSelection: vi.fn(),
+        beginGesture: vi.fn(),
+        endGesture: vi.fn(),
+        suppressNextSurfaceClick: vi.fn(),
+        setPresence: vi.fn(),
+      }),
+    )
+    const target = createPointerTarget()
+    const pointerDown = createPointerEvent(target, { clientX: 0, clientY: 0 })
+    const pointerMove = createPointerEvent(target, { clientX: 50, clientY: 50 })
+    const pointerUp = createPointerEvent(target, { clientX: 50, clientY: 50 })
+
+    controller.onPointerDown?.(pointerDown)
+    controller.onPointerMove?.(pointerMove)
+    controller.onPointerUp?.(pointerUp)
+
+    expect(pointerDown.preventDefaultSpy).toHaveBeenCalledTimes(1)
+    expect(pointerDown.stopPropagationSpy).toHaveBeenCalledTimes(1)
+    expect(pointerMove.preventDefaultSpy).toHaveBeenCalledTimes(1)
+    expect(pointerMove.stopPropagationSpy).toHaveBeenCalledTimes(1)
+    expect(pointerUp.preventDefaultSpy).toHaveBeenCalledTimes(1)
+    expect(pointerUp.stopPropagationSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('continues the active lasso gesture even if a later move has a stale buttons value', () => {
+    const controller = lassoToolSpec.createHandlers(
+      createLassoEnvironment({
+        getMeasuredNodes: () => [createEmbedNode('inside-node', 20, 20)],
+        getNodes: () => [createEmbedNode('inside-node', 20, 20)],
+        getEdges: () => [],
+        commitGestureSelection: vi.fn(),
+        beginGesture: vi.fn(),
+        endGesture: vi.fn(),
+        suppressNextSurfaceClick: vi.fn(),
+        setPresence: vi.fn(),
+      }),
+    )
+    const target = createPointerTarget()
+
+    controller.onPointerDown?.(createPointerEvent(target, { clientX: 0, clientY: 0 }))
+    controller.onPointerMove?.(createPointerEvent(target, { buttons: 0, clientX: 100, clientY: 0 }))
+    controller.onPointerMove?.(
+      createPointerEvent(target, { buttons: 0, clientX: 100, clientY: 100 }),
+    )
+
+    expect(useLassoToolLocalOverlayStore.getState().points).toEqual([
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+      { x: 100, y: 100 },
+    ])
   })
 
   it('clears selection when no measured nodes fall inside the lasso', () => {
@@ -243,12 +303,8 @@ describe('lassoToolSpec', () => {
     flushAnimationFrame()
     controller.onPointerUp?.(createPointerEvent(target, { clientX: 0, clientY: 0 }))
 
-    expect(commitGestureSelection).toHaveBeenCalledWith(
-      { nodeIds: new Set<string>(), edgeIds: new Set<string>() },
-      'replace',
-    )
+    expect(pendingPreview).toEqual({ nodeIds: new Set<string>(), edgeIds: new Set<string>() })
     expect(clear).not.toHaveBeenCalled()
-    expect(getCanvasPendingSelectionPreview()).toEqual({ kind: 'inactive' })
   })
 
   it('clears selection on a point click without committing a lasso selection', () => {
@@ -277,7 +333,6 @@ describe('lassoToolSpec', () => {
     expect(commitGestureSelection).not.toHaveBeenCalled()
     expect(endGesture).toHaveBeenCalledTimes(1)
     expect(target.releasePointerCapture).toHaveBeenCalledWith(1)
-    expect(getCanvasPendingSelectionPreview()).toEqual({ kind: 'inactive' })
   })
 
   it('selects nodes and edges when the lasso contacts them', () => {
@@ -319,13 +374,10 @@ describe('lassoToolSpec', () => {
     flushAnimationFrame()
     controller.onPointerUp?.(createPointerEvent(target, { clientX: 0, clientY: 0 }))
 
-    expect(commitGestureSelection).toHaveBeenCalledWith(
-      {
-        nodeIds: new Set(['inside-node', 'contact-node']),
-        edgeIds: new Set(['edge-1']),
-      },
-      'replace',
-    )
+    expect(pendingPreview).toEqual({
+      nodeIds: new Set(['inside-node', 'contact-node']),
+      edgeIds: new Set(['edge-1']),
+    })
     expect(suppressNextSurfaceClick).toHaveBeenCalledTimes(1)
   })
 
@@ -349,13 +401,10 @@ describe('lassoToolSpec', () => {
     flushAnimationFrame()
     controller.onPointerUp?.(createPointerEvent(target, { clientX: 0, clientY: 0 }))
 
-    expect(commitGestureSelection).toHaveBeenCalledWith(
-      {
-        nodeIds: new Set(['inside-node']),
-        edgeIds: new Set<string>(),
-      },
-      'add',
-    )
+    expect(pendingPreview).toEqual({
+      nodeIds: new Set(['inside-node']),
+      edgeIds: new Set<string>(),
+    })
   })
 
   it('keeps already-selected items in the additive lasso preview', () => {
@@ -378,8 +427,7 @@ describe('lassoToolSpec', () => {
     drawRectangleLasso(controller, target, { ctrlKey: true })
     flushAnimationFrame()
 
-    expect(getCanvasPendingSelectionPreview()).toEqual({
-      kind: 'active',
+    expect(pendingPreview).toEqual({
       nodeIds: new Set(['existing-node', 'inside-node']),
       edgeIds: new Set(['existing-edge']),
     })
@@ -440,7 +488,7 @@ function createLassoEnvironment({
   getMeasuredNodes,
   getNodes,
   getEdges,
-  commitGestureSelection,
+  commitGestureSelection: _commitGestureSelection,
   beginGesture,
   endGesture,
   suppressNextSurfaceClick,
@@ -453,11 +501,8 @@ function createLassoEnvironment({
   getMeasuredNodes: () => Array<CanvasMeasuredNode>
   getNodes: () => Array<Node>
   getEdges: () => Array<Edge>
-  commitGestureSelection: (
-    selection: CanvasSelectionSnapshot,
-    mode?: CanvasSelectionCommitMode,
-  ) => void
-  beginGesture: (kind: 'marquee' | 'lasso') => void
+  commitGestureSelection: (selection: CanvasSelectionSnapshot, mode?: string) => void
+  beginGesture: (kind: 'marquee' | 'lasso', mode?: string) => void
   endGesture: () => void
   suppressNextSurfaceClick: () => void
   setPresence: (namespace: string, value: unknown) => void
@@ -488,17 +533,16 @@ function createLassoEnvironment({
     },
     selection: {
       getSnapshot: () => ({ nodeIds: selectedNodeIds, edgeIds: selectedEdgeIds }),
-      replace: vi.fn(),
-      replaceNodes: vi.fn(),
-      replaceEdges: vi.fn(),
-      clear: clearSelection ?? vi.fn(),
-      getSelectedNodeIds: () => selectedNodeIds,
-      getSelectedEdgeIds: () => selectedEdgeIds,
-      toggleNodeFromTarget: vi.fn(),
-      toggleEdgeFromTarget: vi.fn(),
-      beginGesture,
-      commitGestureSelection,
-      endGesture,
+      setSelection: vi.fn(),
+      clearSelection: clearSelection ?? vi.fn(),
+      toggleNode: vi.fn(),
+      toggleEdge: vi.fn(),
+      beginGesture: (kind, mode) => beginGesture(kind, mode),
+      setGesturePreview: vi.fn((preview: CanvasSelectionSnapshot | null) => {
+        pendingPreview = preview
+      }),
+      commitGesture: vi.fn(),
+      cancelGesture: endGesture,
     },
     interaction: {
       suppressNextSurfaceClick,

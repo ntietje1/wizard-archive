@@ -1,16 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { CanvasAwarenessHost } from '../canvas-awareness-host'
-
-const viewportMock = vi.hoisted(() => ({
-  x: 12,
-  y: 34,
-  zoom: 2,
-}))
-
-vi.mock('@xyflow/react', () => ({
-  useViewport: () => viewportMock,
-}))
+import { CanvasEngineProvider } from '../../react/canvas-engine-context'
+import { createCanvasEngine } from '../../system/canvas-engine'
 
 vi.mock('../../tools/canvas-tool-modules', () => ({
   canvasToolAwarenessLayers: [
@@ -39,7 +31,14 @@ describe('CanvasAwarenessHost', () => {
   })
 
   it('applies the current viewport transform to the awareness layer container', () => {
-    render(<CanvasAwarenessHost remoteUsers={[]} />)
+    const canvasEngine = createCanvasEngine()
+    canvasEngine.setViewport({ x: 12, y: 34, zoom: 2 })
+
+    render(
+      <CanvasEngineProvider engine={canvasEngine}>
+        <CanvasAwarenessHost remoteUsers={[]} />
+      </CanvasEngineProvider>,
+    )
 
     const transformedLayerContainer = screen.getByTestId('awareness-layer-container')
     expect(transformedLayerContainer).toHaveStyle({

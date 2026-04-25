@@ -65,7 +65,7 @@ export function createRectangularPlacementToolController<
     const placement = createCanvasNodePlacement(nodeType, { position })
     services.commands.createNode(placement.node)
     if (placement.node.selected) {
-      services.selection.replaceNodes(new Set([placement.node.id]))
+      services.selection.setSelection({ nodeIds: new Set([placement.node.id]), edgeIds: new Set() })
     }
     services.toolState.setActiveTool('select')
     if (placement.startEditing) {
@@ -87,7 +87,7 @@ export function createRectangularPlacementToolController<
     })
     services.commands.createNode(placement.node)
     if (placement.node.selected) {
-      services.selection.replaceNodes(new Set([placement.node.id]))
+      services.selection.setSelection({ nodeIds: new Set([placement.node.id]), edgeIds: new Set() })
     }
     services.toolState.setActiveTool('select')
     if (placement.startEditing) {

@@ -1,28 +1,29 @@
-import { getCanvasVisualSelectionState } from '../../runtime/selection/canvas-visual-selection'
-import {
-  useCanvasNodePendingPreview,
-  useCanvasPendingPreviewActive,
-} from '../../runtime/selection/use-canvas-pending-selection-preview'
-import { useIsCanvasNodeSelected } from '../../runtime/selection/use-canvas-selection-state'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
+import { useCanvasEngineSelector } from '../../react/use-canvas-engine'
+import {
+  areCanvasVisualSelectionStatesEqual,
+  getCanvasVisualSelectionState,
+} from '../../system/canvas-selection'
+
+const INACTIVE_NODE_VISUAL_SELECTION = getCanvasVisualSelectionState({
+  selected: false,
+  pendingPreview: { kind: 'inactive' },
+  id: '',
+  kind: 'node',
+})
 
 export function useCanvasNodeVisualSelection(id: string) {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
-  const selected = useIsCanvasNodeSelected(id)
-  const pendingPreviewActive = useCanvasPendingPreviewActive()
-  const pendingSelected = useCanvasNodePendingPreview(id)
-
-  if (!interactiveRenderMode) {
-    return getCanvasVisualSelectionState({
-      selected: false,
-      pendingPreviewActive: false,
-      pendingSelected: false,
-    })
-  }
-
-  return getCanvasVisualSelectionState({
-    selected,
-    pendingPreviewActive,
-    pendingSelected,
-  })
+  return useCanvasEngineSelector(
+    (state) =>
+      interactiveRenderMode
+        ? getCanvasVisualSelectionState({
+            selected: state.selection.nodeIds.has(id),
+            pendingPreview: state.selection.pendingPreview,
+            id,
+            kind: 'node',
+          })
+        : INACTIVE_NODE_VISUAL_SELECTION,
+    areCanvasVisualSelectionStatesEqual,
+  )
 }

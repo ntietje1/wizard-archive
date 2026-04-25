@@ -1,17 +1,23 @@
-import { useLayoutEffect, useMemo } from 'react'
+import { useContext, useEffect, useLayoutEffect, useMemo, useSyncExternalStore } from 'react'
 import {
   Background,
   getNodesBounds,
   getViewportForBounds,
   ReactFlow,
   ReactFlowProvider,
-  useInternalNode,
   useStoreApi,
 } from '@xyflow/react'
+import '@xyflow/react/dist/style.css'
 import { Loader2 } from 'lucide-react'
 import { canvasEdgeTypes } from '../../edges/canvas-edge-renderers'
 import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime-context'
-import { READ_ONLY_CANVAS_RUNTIME } from '../../runtime/providers/canvas-runtime'
+import type { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
+import {
+  CanvasRuntimeContext,
+  READ_ONLY_CANVAS_RUNTIME,
+} from '../../runtime/providers/canvas-runtime'
+import { CanvasEngineProvider } from '../../react/canvas-engine-context'
+import { createCanvasEngine } from '../../system/canvas-engine'
 import { useEmbeddedCanvasState } from './use-embedded-canvas-state'
 import { useResolvedTheme } from '~/features/settings/hooks/useTheme'
 import { CanvasThumbnailPreview } from '~/features/previews/components/canvas-thumbnail-preview'
@@ -40,16 +46,17 @@ export function EmbeddedCanvasContent({
   alt: string
 }) {
   const { nodes, edges, isLoading, isError } = useEmbeddedCanvasState(canvasId)
-  const internalNode = useInternalNode(nodeId)
+  const runtime = useContext(CanvasRuntimeContext) ?? READ_ONLY_CANVAS_RUNTIME
+  const internalNode = useRuntimeCanvasNode(runtime.canvasEngine, nodeId)
   const containerSize = useMemo(() => {
-    const width = internalNode?.measured?.width ?? internalNode?.width ?? 0
-    const height = internalNode?.measured?.height ?? internalNode?.height ?? 0
+    const width = internalNode?.measured.width ?? internalNode?.node.width ?? 0
+    const height = internalNode?.measured.height ?? internalNode?.node.height ?? 0
     return { width, height }
   }, [
-    internalNode?.height,
-    internalNode?.measured?.height,
-    internalNode?.measured?.width,
-    internalNode?.width,
+    internalNode?.measured.height,
+    internalNode?.measured.width,
+    internalNode?.node.height,
+    internalNode?.node.width,
   ])
   const normalizedEdges = useMemo(() => normalizeEmbeddedCanvasEdges(nodes, edges), [edges, nodes])
 
@@ -77,6 +84,21 @@ export function EmbeddedCanvasContent({
   )
 }
 
+function useRuntimeCanvasNode(
+  canvasEngine: ReturnType<typeof useCanvasRuntime>['canvasEngine'],
+  nodeId: string,
+) {
+  return useSyncExternalStore(
+    canvasEngine.subscribe ?? subscribeToNoop,
+    () => canvasEngine.getSnapshot().nodeLookup?.get(nodeId),
+    () => undefined,
+  )
+}
+
+function subscribeToNoop() {
+  return () => undefined
+}
+
 function EmbeddedCanvasFlow({
   nodes,
   edges,
@@ -87,45 +109,54 @@ function EmbeddedCanvasFlow({
   containerSize: { width: number; height: number }
 }) {
   const colorMode = useResolvedTheme()
+  const canvasEngine = useMemo(() => createCanvasEngine(), [])
   const bounds = useMemo(() => getEmbeddedCanvasBounds(nodes), [nodes])
   const viewport = useMemo(
     () => getEmbeddedCanvasViewport(bounds, containerSize.width, containerSize.height),
     [bounds, containerSize.height, containerSize.width],
   )
+  useEffect(() => {
+    canvasEngine.setDocumentSnapshot({ nodes, edges })
+  }, [canvasEngine, edges, nodes])
+  useEffect(() => () => canvasEngine.destroy(), [canvasEngine])
 
   return (
-    <div className="relative h-full w-full min-h-0 min-w-0 bg-background [&_.react-flow__edge]:pointer-events-none [&_.react-flow__node]:pointer-events-none">
-      <ReactFlow
-        className="h-full w-full min-h-0 min-w-0"
-        defaultNodes={EMPTY_NODES}
-        defaultEdges={EMPTY_EDGES}
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={embeddedCanvasNodeTypes}
-        edgeTypes={canvasEdgeTypes}
-        colorMode={colorMode}
-        minZoom={MIN_ZOOM}
-        maxZoom={MAX_ZOOM}
-        nodesDraggable={false}
-        nodesConnectable={false}
-        elementsSelectable={false}
-        elevateNodesOnSelect={false}
-        elevateEdgesOnSelect={false}
-        selectionOnDrag={false}
-        zoomOnDoubleClick={false}
-        zoomOnScroll={false}
-        zoomOnPinch={false}
-        panOnScroll={false}
-        panOnDrag={false}
-        preventScrolling={true}
-        proOptions={PRO_OPTIONS}
-        viewport={viewport}
-        onViewportChange={NOOP}
-      >
-        <EmbeddedCanvasSizeSync width={containerSize.width} height={containerSize.height} />
-        <Background bgColor="var(--background)" />
-      </ReactFlow>
-    </div>
+    <CanvasEngineProvider engine={canvasEngine}>
+      <CanvasRuntimeProvider {...READ_ONLY_CANVAS_RUNTIME} canvasEngine={canvasEngine}>
+        <div className="relative h-full w-full min-h-0 min-w-0 bg-background [&_.react-flow__edge]:pointer-events-none [&_.react-flow__node]:pointer-events-none">
+          <ReactFlow
+            className="h-full w-full min-h-0 min-w-0"
+            defaultNodes={EMPTY_NODES}
+            defaultEdges={EMPTY_EDGES}
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={embeddedCanvasNodeTypes}
+            edgeTypes={canvasEdgeTypes}
+            colorMode={colorMode}
+            minZoom={MIN_ZOOM}
+            maxZoom={MAX_ZOOM}
+            nodesDraggable={false}
+            nodesConnectable={false}
+            elementsSelectable={false}
+            elevateNodesOnSelect={false}
+            elevateEdgesOnSelect={false}
+            selectionOnDrag={false}
+            zoomOnDoubleClick={false}
+            zoomOnScroll={false}
+            zoomOnPinch={false}
+            panOnScroll={false}
+            panOnDrag={false}
+            preventScrolling={true}
+            proOptions={PRO_OPTIONS}
+            viewport={viewport}
+            onViewportChange={NOOP}
+          >
+            <EmbeddedCanvasSizeSync width={containerSize.width} height={containerSize.height} />
+            <Background bgColor="var(--background)" />
+          </ReactFlow>
+        </div>
+      </CanvasRuntimeProvider>
+    </CanvasEngineProvider>
   )
 }
 

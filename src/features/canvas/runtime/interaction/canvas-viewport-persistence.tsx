@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
-import { useViewport } from '@xyflow/react'
 import type { Id } from 'convex/_generated/dataModel'
 import { savePersistedCanvasViewport } from './canvas-viewport-storage'
+import { useCanvasEngineSelector } from '../../react/use-canvas-engine'
 import type { PersistedCanvasViewport } from './canvas-viewport-storage'
 
 const VIEWPORT_SAVE_DEBOUNCE_MS = 250
@@ -13,7 +13,10 @@ export function CanvasViewportPersistence({
   canvasId: Id<'sidebarItems'>
   initialViewport: PersistedCanvasViewport
 }) {
-  const viewport = useViewport()
+  const viewport = useCanvasEngineSelector(
+    (snapshot) => snapshot.viewport,
+    persistedCanvasViewportsEqual,
+  )
   const lastSavedViewportRef = useRef(initialViewport)
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 

@@ -23,7 +23,7 @@ interface UseCanvasCommandsOptions {
   canEdit: boolean
   nodesMap: Y.Map<Node>
   edgesMap: Y.Map<Edge>
-  selection: Pick<CanvasSelectionController, 'getSnapshot' | 'replace' | 'clear'>
+  selection: Pick<CanvasSelectionController, 'getSnapshot' | 'setSelection' | 'clearSelection'>
 }
 
 interface CanvasCommand<TArgs = void, TResult = boolean> {
@@ -77,7 +77,7 @@ export function useCanvasCommands({
       })
     })
 
-    selection.replace(paste.selection)
+    selection.setSelection(paste.selection)
     return paste.selection
   }
 
@@ -124,7 +124,7 @@ export function useCanvasCommands({
         }
 
         setClipboard(copied)
-        selection.clear()
+        selection.clearSelection()
         return true
       },
     },
@@ -176,7 +176,7 @@ export function useCanvasCommands({
           return false
         }
 
-        selection.clear()
+        selection.clearSelection()
         return true
       },
     },

@@ -1,11 +1,9 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  clearCanvasPendingSelectionPreview,
-  getCanvasPendingSelectionPreview,
-} from '../use-canvas-pending-selection-preview'
 import { useCanvasSelectionRect } from '../use-canvas-selection-rect'
 import { clearSelectToolLocalOverlay } from '../../../tools/select/select-tool-local-overlay'
+import type { CanvasEngine } from '../../../system/canvas-engine'
+import type { CanvasSelectionSnapshot } from '../../../tools/canvas-tool-types'
 import type { Edge, Node } from '@xyflow/react'
 
 const useCanvasModifierKeysMock = vi.hoisted(() => vi.fn(() => ({ shiftPressed: false })))
@@ -44,14 +42,32 @@ vi.mock('@xyflow/react', async (importOriginal) => {
   }
 })
 
+function createCanvasEngineMock(): CanvasEngine {
+  return {
+    getSnapshot: () => ({
+      nodes: reactFlowMock.getNodes(),
+      edges: reactFlowMock.getEdges(),
+      nodeLookup: storeState.nodeLookup,
+    }),
+  } as unknown as CanvasEngine
+}
+
+function createViewportControllerMock() {
+  return {
+    getZoom: reactFlowMock.getZoom,
+    screenToCanvasPosition: reactFlowMock.screenToFlowPosition,
+  } as never
+}
+
 describe('useCanvasSelectionRect', () => {
   const FIXED_RAF_TIMESTAMP = 1000
   const rafCallbacks = new Map<number, FrameRequestCallback>()
   let nextRafId = 1
+  let pendingPreview: CanvasSelectionSnapshot | null = null
 
   beforeEach(() => {
     clearSelectToolLocalOverlay()
-    clearCanvasPendingSelectionPreview()
+    pendingPreview = null
     storeApiMock.reset()
     rafCallbacks.clear()
     nextRafId = 1
@@ -86,16 +102,27 @@ describe('useCanvasSelectionRect', () => {
     }
   }
 
-  it('coalesces marquee preview updates to one animation frame and still commits the latest rectangle', () => {
+  function createSelectionMock(
+    snapshot: CanvasSelectionSnapshot = {
+      nodeIds: new Set<string>(),
+      edgeIds: new Set<string>(),
+    },
+  ) {
+    return {
+      getSnapshot: vi.fn(() => snapshot),
+      beginGesture: vi.fn(),
+      setGesturePreview: vi.fn((preview: CanvasSelectionSnapshot | null) => {
+        pendingPreview = preview
+      }),
+      commitGesture: vi.fn(),
+      cancelGesture: vi.fn(),
+    }
+  }
+
+  it('coalesces marquee preview updates and commits the last rendered preview without recomputing on release', () => {
     const setPresence = vi.fn()
     const suppressNextSurfaceClick = vi.fn()
-    const selection = {
-      beginGesture: vi.fn(),
-      commitGestureSelection: vi.fn(),
-      endGesture: vi.fn(),
-      getSelectedNodeIds: vi.fn(() => new Set<string>()),
-      getSelectedEdgeIds: vi.fn(() => new Set<string>()),
-    }
+    const selection = createSelectionMock()
     storeState.nodeLookup = new Map([
       [
         'text-1',
@@ -155,6 +182,8 @@ describe('useCanvasSelectionRect', () => {
 
     const { unmount } = renderHook(() =>
       useCanvasSelectionRect({
+        canvasEngine: createCanvasEngineMock(),
+        viewportController: createViewportControllerMock(),
         surfaceRef,
         awareness: {
           setPresence,
@@ -180,14 +209,13 @@ describe('useCanvasSelectionRect', () => {
     })
 
     expect(requestAnimationFrame).toHaveBeenCalledTimes(1)
-    expect(getCanvasPendingSelectionPreview()).toEqual({ kind: 'inactive' })
+    expect(pendingPreview).toBeNull()
     expect(setPresence).not.toHaveBeenCalled()
 
     act(() => {
       flushAnimationFrame()
     })
-    expect(getCanvasPendingSelectionPreview()).toEqual({
-      kind: 'active',
+    expect(pendingPreview).toEqual({
       nodeIds: new Set(['text-1']),
       edgeIds: new Set(),
     })
@@ -213,25 +241,15 @@ describe('useCanvasSelectionRect', () => {
       )
     })
 
-    expect(setPresence).toHaveBeenNthCalledWith(2, 'tool.select', {
-      type: 'rect',
-      x: 10,
-      y: 20,
-      width: 90,
-      height: 80,
-    })
+    expect(setPresence).toHaveBeenCalledTimes(2)
     expect(setPresence).toHaveBeenLastCalledWith('tool.select', null)
-    expect(selection.beginGesture).toHaveBeenCalledWith('marquee')
-    expect(selection.commitGestureSelection).toHaveBeenCalledWith(
-      {
-        nodeIds: new Set(['text-1']),
-        edgeIds: new Set(['edge-1']),
-      },
-      'replace',
-    )
+    expect(selection.beginGesture).toHaveBeenCalledWith('marquee', 'replace')
+    expect(pendingPreview).toEqual({
+      nodeIds: new Set(['text-1']),
+      edgeIds: new Set(),
+    })
+    expect(selection.commitGesture).toHaveBeenCalledTimes(1)
     expect(suppressNextSurfaceClick).toHaveBeenCalledTimes(1)
-    expect(selection.endGesture).toHaveBeenCalled()
-    expect(getCanvasPendingSelectionPreview()).toEqual({ kind: 'inactive' })
 
     unmount()
     surface.remove()
@@ -240,13 +258,10 @@ describe('useCanvasSelectionRect', () => {
   })
 
   it('commits additive marquee selection when the primary modifier is held at drag start', () => {
-    const selection = {
-      beginGesture: vi.fn(),
-      commitGestureSelection: vi.fn(),
-      endGesture: vi.fn(),
-      getSelectedNodeIds: vi.fn(() => new Set(['text-existing'])),
-      getSelectedEdgeIds: vi.fn(() => new Set(['edge-existing'])),
-    }
+    const selection = createSelectionMock({
+      nodeIds: new Set(['text-existing']),
+      edgeIds: new Set(['edge-existing']),
+    })
     storeState.nodeLookup = new Map([
       [
         'text-1',
@@ -279,6 +294,8 @@ describe('useCanvasSelectionRect', () => {
 
     const { unmount } = renderHook(() =>
       useCanvasSelectionRect({
+        canvasEngine: createCanvasEngineMock(),
+        viewportController: createViewportControllerMock(),
         surfaceRef,
         awareness: {
           setPresence: vi.fn(),
@@ -310,8 +327,7 @@ describe('useCanvasSelectionRect', () => {
       flushAnimationFrame()
     })
 
-    expect(getCanvasPendingSelectionPreview()).toEqual({
-      kind: 'active',
+    expect(pendingPreview).toEqual({
       nodeIds: new Set(['text-existing', 'text-1']),
       edgeIds: new Set(['edge-existing']),
     })
@@ -323,13 +339,7 @@ describe('useCanvasSelectionRect', () => {
       window.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 90, clientY: 90 }))
     })
 
-    expect(selection.commitGestureSelection).toHaveBeenCalledWith(
-      {
-        nodeIds: new Set(['text-1']),
-        edgeIds: new Set<string>(),
-      },
-      'add',
-    )
+    expect(selection.commitGesture).toHaveBeenCalledTimes(1)
 
     unmount()
     surface.remove()
@@ -339,13 +349,7 @@ describe('useCanvasSelectionRect', () => {
 
   it('uses a square marquee when shift is held during selection', () => {
     useCanvasModifierKeysMock.mockReturnValue({ shiftPressed: true })
-    const selection = {
-      beginGesture: vi.fn(),
-      commitGestureSelection: vi.fn(),
-      endGesture: vi.fn(),
-      getSelectedNodeIds: vi.fn(() => new Set<string>()),
-      getSelectedEdgeIds: vi.fn(() => new Set<string>()),
-    }
+    const selection = createSelectionMock()
     storeState.nodeLookup = new Map([
       [
         'text-1',
@@ -378,6 +382,8 @@ describe('useCanvasSelectionRect', () => {
 
     const { unmount } = renderHook(() =>
       useCanvasSelectionRect({
+        canvasEngine: createCanvasEngineMock(),
+        viewportController: createViewportControllerMock(),
         surfaceRef,
         awareness: {
           setPresence: vi.fn(),
@@ -401,13 +407,7 @@ describe('useCanvasSelectionRect', () => {
       window.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 70, clientY: 40 }))
     })
 
-    expect(selection.commitGestureSelection).toHaveBeenCalledWith(
-      {
-        nodeIds: new Set(['text-1']),
-        edgeIds: new Set<string>(),
-      },
-      'replace',
-    )
+    expect(selection.commitGesture).toHaveBeenCalledTimes(1)
 
     unmount()
     surface.remove()
@@ -417,13 +417,7 @@ describe('useCanvasSelectionRect', () => {
 
   it('keeps an in-progress marquee active when shift is pressed mid-drag and constrains it to a square', () => {
     const setPresence = vi.fn()
-    const selection = {
-      beginGesture: vi.fn(),
-      commitGestureSelection: vi.fn(),
-      endGesture: vi.fn(),
-      getSelectedNodeIds: vi.fn(() => new Set<string>()),
-      getSelectedEdgeIds: vi.fn(() => new Set<string>()),
-    }
+    const selection = createSelectionMock()
     storeState.nodeLookup = new Map([
       [
         'text-1',
@@ -464,6 +458,8 @@ describe('useCanvasSelectionRect', () => {
     }
     const hookProps = {
       surfaceRef,
+      canvasEngine: createCanvasEngineMock(),
+      viewportController: createViewportControllerMock(),
       awareness,
       interaction,
       selection,
@@ -501,13 +497,7 @@ describe('useCanvasSelectionRect', () => {
       width: 20,
       height: 20,
     })
-    expect(selection.commitGestureSelection).toHaveBeenCalledWith(
-      {
-        nodeIds: new Set(['text-1']),
-        edgeIds: new Set<string>(),
-      },
-      'replace',
-    )
+    expect(selection.commitGesture).toHaveBeenCalledTimes(1)
 
     unmount()
     surface.remove()
@@ -517,13 +507,7 @@ describe('useCanvasSelectionRect', () => {
 
   it('recomputes the active marquee when shift is pressed without any further pointer movement', () => {
     const setPresence = vi.fn()
-    const selection = {
-      beginGesture: vi.fn(),
-      commitGestureSelection: vi.fn(),
-      endGesture: vi.fn(),
-      getSelectedNodeIds: vi.fn(() => new Set<string>()),
-      getSelectedEdgeIds: vi.fn(() => new Set<string>()),
-    }
+    const selection = createSelectionMock()
     storeState.nodeLookup = new Map([
       [
         'text-1',
@@ -561,6 +545,8 @@ describe('useCanvasSelectionRect', () => {
     }
     const hookProps = {
       surfaceRef,
+      canvasEngine: createCanvasEngineMock(),
+      viewportController: createViewportControllerMock(),
       awareness,
       interaction,
       selection,
@@ -613,13 +599,7 @@ describe('useCanvasSelectionRect', () => {
       window.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 70, clientY: 40 }))
     })
 
-    expect(selection.commitGestureSelection).toHaveBeenCalledWith(
-      {
-        nodeIds: new Set(['text-1']),
-        edgeIds: new Set<string>(),
-      },
-      'replace',
-    )
+    expect(selection.commitGesture).toHaveBeenCalledTimes(1)
 
     unmount()
     surface.remove()

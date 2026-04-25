@@ -3,21 +3,10 @@ import type {
   CanvasEdgeCreationDefaults,
   CanvasToolHandlers,
 } from '../../tools/canvas-tool-types'
-import type {
-  Connection,
-  Edge,
-  Node,
-  OnConnect,
-  OnEdgesDelete,
-  OnNodeDrag,
-  OnNodesDelete,
-} from '@xyflow/react'
+import type { Connection, Edge, Node, OnConnect, OnEdgesDelete, OnNodesDelete } from '@xyflow/react'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 
 export interface CanvasFlowHandlers {
-  onNodeDragStart?: OnNodeDrag
-  onNodeDrag?: OnNodeDrag
-  onNodeDragStop?: OnNodeDrag
   onNodesDelete?: OnNodesDelete
   onEdgesDelete?: OnEdgesDelete
   onConnect?: OnConnect
@@ -36,7 +25,6 @@ export function createCanvasFlowHandlers({
   canEdit,
   cursorPresence,
   documentWriter,
-  dragHandlers,
   getEdgeCreationDefaults,
   isEdgeMode,
   isSelectMode,
@@ -52,19 +40,11 @@ export function createCanvasFlowHandlers({
     onMouseMove: (event: ReactMouseEvent) => void
   }
   documentWriter: CanvasDocumentWriter
-  dragHandlers: {
-    onNodeDragStart: NonNullable<CanvasFlowHandlers['onNodeDragStart']>
-    onNodeDrag: NonNullable<CanvasFlowHandlers['onNodeDrag']>
-    onNodeDragStop: NonNullable<CanvasFlowHandlers['onNodeDragStop']>
-  }
 }) {
   const canEditSelection = canEdit && isSelectMode
   const canCreateEdges = canEdit && isEdgeMode
 
   return {
-    onNodeDragStart: canEditSelection ? dragHandlers.onNodeDragStart : undefined,
-    onNodeDrag: canEditSelection ? dragHandlers.onNodeDrag : undefined,
-    onNodeDragStop: canEditSelection ? dragHandlers.onNodeDragStop : undefined,
     onNodesDelete: canEditSelection
       ? (deleted: Array<Node>) => {
           documentWriter.deleteNodes(new Set(deleted.map((node) => node.id)))

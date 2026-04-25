@@ -89,8 +89,8 @@ describe('useCanvasKeyboardShortcuts', () => {
     }
     const selection = {
       getSnapshot: getSelectionSnapshotSpy,
-      replace: vi.fn(),
-      clear: vi.fn(),
+      setSelection: vi.fn(),
+      clearSelection: vi.fn(),
     }
 
     renderHook(() =>
@@ -135,8 +135,8 @@ describe('useCanvasKeyboardShortcuts', () => {
     const cancelConnectionDraft = vi.fn()
     const selection = {
       getSnapshot: getSelectionSnapshotSpy,
-      replace: vi.fn(),
-      clear: vi.fn(),
+      setSelection: vi.fn(),
+      clearSelection: vi.fn(),
     }
 
     renderHook(() =>
@@ -156,7 +156,7 @@ describe('useCanvasKeyboardShortcuts', () => {
 
     useCanvasToolStore.getState().setActiveTool('draw')
     getRegistration('Escape').callback(new KeyboardEvent('keydown', { key: 'Escape' }))
-    expect(selection.clear).toHaveBeenCalledTimes(1)
+    expect(selection.clearSelection).toHaveBeenCalledTimes(1)
     expect(cancelConnectionDraft).toHaveBeenCalledTimes(1)
     expect(useCanvasToolStore.getState().activeTool).toBe('draw')
 
@@ -185,10 +185,10 @@ describe('useCanvasKeyboardShortcuts', () => {
     getRegistration('Mod+V').callback(new KeyboardEvent('keydown', { key: 'v', ctrlKey: true }))
     getRegistration('Mod+Z').callback(new KeyboardEvent('keydown', { key: 'z', repeat: true }))
 
-    expect(selection.clear).toHaveBeenCalledTimes(2)
+    expect(selection.clearSelection).toHaveBeenCalledTimes(2)
     expect(deleteSnapshotSpy).toHaveBeenCalledWith()
     expect(deletePreventDefaultSpy).toHaveBeenCalledTimes(1)
-    expect(selection.replace).toHaveBeenCalledWith({
+    expect(selection.setSelection).toHaveBeenCalledWith({
       nodeIds: new Set(['node-1', 'node-2']),
       edgeIds: new Set(['edge-1']),
     })
@@ -212,8 +212,8 @@ describe('useCanvasKeyboardShortcuts', () => {
         edgesMap: new Map() as never,
         selection: {
           getSnapshot: getSelectionSnapshotSpy,
-          replace: vi.fn(),
-          clear: vi.fn(),
+          setSelection: vi.fn(),
+          clearSelection: vi.fn(),
         },
         commands: createCommands(),
       }),
@@ -244,8 +244,8 @@ describe('useCanvasKeyboardShortcuts', () => {
         edgesMap: new Map() as never,
         selection: {
           getSnapshot: getSelectionSnapshotSpy,
-          replace: vi.fn(),
-          clear: vi.fn(),
+          setSelection: vi.fn(),
+          clearSelection: vi.fn(),
         },
         commands: createCommands({
           copy: {

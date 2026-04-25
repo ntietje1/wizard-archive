@@ -37,14 +37,14 @@ function createNode(id: string): Node {
 describe('useCanvasHistory', () => {
   let docs: Array<Y.Doc>
   let hooks: Array<RenderHookResult<ReturnType<typeof useCanvasHistory>, unknown>>
-  let selectionController: Pick<Parameters<typeof useCanvasHistory>[0]['selection'], 'replace'>
+  let selectionController: Pick<Parameters<typeof useCanvasHistory>[0]['selection'], 'setSelection'>
 
   beforeEach(() => {
     docs = []
     hooks = []
     reactFlowMock.reset()
     selectionController = {
-      replace: vi.fn(),
+      setSelection: vi.fn(),
     }
   })
 
@@ -221,7 +221,7 @@ describe('useCanvasHistory', () => {
       hook.result.current.undo()
     })
 
-    expect(selectionController.replace).toHaveBeenLastCalledWith({
+    expect(selectionController.setSelection).toHaveBeenLastCalledWith({
       nodeIds: new Set(['a']),
       edgeIds: new Set(),
     })
@@ -230,7 +230,7 @@ describe('useCanvasHistory', () => {
       hook.result.current.redo()
     })
 
-    expect(selectionController.replace).toHaveBeenLastCalledWith({
+    expect(selectionController.setSelection).toHaveBeenLastCalledWith({
       nodeIds: new Set(['a', 'b']),
       edgeIds: new Set(['edge-1']),
     })

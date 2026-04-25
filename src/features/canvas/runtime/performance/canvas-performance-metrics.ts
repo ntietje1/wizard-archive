@@ -19,6 +19,9 @@ interface CanvasPerformanceRuntime {
   }) => void
   selectFirstNodes: (count: number) => void
   profileSelectedNodeDrag: (options: { delta: XYPosition; steps: number }) => void
+  getNodePosition: (nodeId: string) => XYPosition | null
+  setViewport: (viewport: { x: number; y: number; zoom: number }) => void
+  getViewport: () => { x: number; y: number; zoom: number }
   updateSelectedNodeSurface: () => void
 }
 

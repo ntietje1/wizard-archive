@@ -1,19 +1,13 @@
 import { renderHook } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { useCanvasRemoteDragAnimation } from '../use-canvas-remote-drag-animation'
-
-const reactFlowMock = vi.hoisted(() => ({
-  setNodes: vi.fn(),
-}))
-
-vi.mock('@xyflow/react', () => ({
-  useReactFlow: () => reactFlowMock,
-}))
+import { createCanvasEngine } from '../../../system/canvas-engine'
 
 describe('useCanvasRemoteDragAnimation', () => {
   it('exposes the spring control API for remote drag animation', () => {
     const { result } = renderHook(() =>
       useCanvasRemoteDragAnimation({
+        canvasEngine: createCanvasEngine(),
         localDraggingIdsRef: { current: new Set<string>() },
         remoteDragPositions: {},
       }),

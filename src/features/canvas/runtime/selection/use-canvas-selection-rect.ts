@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react'
 import type { RefObject } from 'react'
-import { useReactFlow, useStoreApi } from '@xyflow/react'
-import { getMeasuredCanvasNodesFromLookup } from '../document/canvas-measured-nodes'
+import { getMeasuredCanvasNodesFromEngineSnapshot } from '../document/canvas-measured-nodes'
 import { createCanvasSelectionGestureController } from './canvas-selection-gesture-controller'
 import { isPrimarySelectionModifier } from '../../utils/canvas-selection-utils'
 import { useCanvasModifierKeys } from '../interaction/use-canvas-modifier-keys'
+import type { CanvasEngine } from '../../system/canvas-engine'
+import type { CanvasViewportController } from '../../system/canvas-viewport-controller'
 import type {
   CanvasAwarenessPresenceWriter,
   CanvasInteractionTools,
@@ -12,29 +13,27 @@ import type {
 } from '../../tools/canvas-tool-types'
 
 interface UseCanvasSelectionRectOptions {
+  canvasEngine: CanvasEngine
+  viewportController: CanvasViewportController
   surfaceRef: RefObject<HTMLDivElement | null>
   awareness: CanvasAwarenessPresenceWriter
   interaction: Pick<CanvasInteractionTools, 'suppressNextSurfaceClick'>
   selection: Pick<
     CanvasSelectionController,
-    | 'beginGesture'
-    | 'commitGestureSelection'
-    | 'endGesture'
-    | 'getSelectedNodeIds'
-    | 'getSelectedEdgeIds'
+    'beginGesture' | 'cancelGesture' | 'commitGesture' | 'getSnapshot' | 'setGesturePreview'
   >
   enabled: boolean
 }
 
 export function useCanvasSelectionRect({
+  canvasEngine,
+  viewportController,
   surfaceRef,
   awareness,
   interaction,
   selection,
   enabled,
 }: UseCanvasSelectionRectOptions) {
-  const reactFlow = useReactFlow()
-  const storeApi = useStoreApi()
   const { shiftPressed } = useCanvasModifierKeys()
   const awarenessRef = useRef(awareness)
   awarenessRef.current = awareness
@@ -52,12 +51,19 @@ export function useCanvasSelectionRect({
 
   useEffect(() => {
     if (!enabled) return
-    const pane = surfaceRef.current?.querySelector<HTMLDivElement>('.react-flow__pane')
+    const pane =
+      surfaceRef.current?.querySelector<HTMLDivElement>('[data-canvas-pane="true"]') ??
+      surfaceRef.current?.querySelector<HTMLDivElement>('.react-flow__pane')
     if (!pane) return
 
     const gestureController = createCanvasSelectionGestureController({
-      reactFlow,
-      getMeasuredNodes: () => getMeasuredCanvasNodesFromLookup(storeApi.getState().nodeLookup),
+      viewport: {
+        getZoom: viewportController.getZoom,
+        screenToCanvasPosition: viewportController.screenToCanvasPosition,
+      },
+      getNodes: () => canvasEngine.getSnapshot().nodes,
+      getEdges: () => canvasEngine.getSnapshot().edges,
+      getMeasuredNodes: () => getMeasuredCanvasNodesFromEngineSnapshot(canvasEngine.getSnapshot()),
       getAwareness: () => awarenessRef.current,
       interaction,
       getSelection: () => selectionRef.current,
@@ -118,5 +124,5 @@ export function useCanvasSelectionRect({
       }
       gestureController.dispose()
     }
-  }, [enabled, interaction, reactFlow, storeApi, surfaceRef])
+  }, [canvasEngine, enabled, interaction, surfaceRef, viewportController])
 }

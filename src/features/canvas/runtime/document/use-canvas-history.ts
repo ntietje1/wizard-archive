@@ -24,7 +24,7 @@ type ActionEntry =
 interface UseCanvasHistoryOptions {
   nodesMap: Y.Map<Node>
   edgesMap: Y.Map<Edge>
-  selection: Pick<CanvasSelectionController, 'replace'>
+  selection: Pick<CanvasSelectionController, 'setSelection'>
 }
 
 export function useCanvasHistory({ nodesMap, edgesMap, selection }: UseCanvasHistoryOptions) {
@@ -60,7 +60,7 @@ export function useCanvasHistory({ nodesMap, edgesMap, selection }: UseCanvasHis
   const restoreSelection = useCallback(
     (selectionSnapshot: CanvasSelectionSnapshot) => {
       const nextSelection = structuredClone(selectionSnapshot)
-      selection.replace(nextSelection)
+      selection.setSelection(nextSelection)
       selectionRef.current = nextSelection
     },
     [selection],

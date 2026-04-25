@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { useEdges, useNodes } from '@xyflow/react'
+import { useMemo, useRef, useState } from 'react'
 import type { Edge, Node } from '@xyflow/react'
 import {
   getCanvasEdgeInspectableProperties,
@@ -9,10 +8,6 @@ import {
 import type { CanvasEdgePatch, CanvasEdgeType } from '../edges/canvas-edge-types'
 import { useCanvasRuntime } from '../runtime/providers/canvas-runtime'
 import {
-  useIsCanvasSelectionGestureActive,
-  useCanvasSelectionState,
-} from '../runtime/selection/use-canvas-selection-state'
-import {
   getCanvasNodeInspectableProperties,
   normalizeCanvasNode,
 } from '../nodes/canvas-node-modules'
@@ -21,6 +16,16 @@ import { measureCanvasPerformance } from '../runtime/performance/canvas-performa
 import { canvasToolSpecs } from '../tools/canvas-tool-modules'
 import { useCanvasToolPropertyContext, useCanvasToolStore } from '../stores/canvas-tool-store'
 import { linePaintCanvasProperty } from '../properties/canvas-property-definitions'
+import { useCanvasEngineSelector } from '../react/use-canvas-engine'
+import {
+  areCanvasPropertyEdgesEqual,
+  areCanvasPropertyNodesEqual,
+  selectCanvasSelectedEdges,
+  selectCanvasSelectedNodes,
+} from '../system/canvas-engine-selectors'
+import { createCanvasPropertySessionController } from '../system/canvas-property-session-controller'
+import type { CanvasPropertyPatchSet } from '../system/canvas-property-session-controller'
+import { areCanvasSelectionsEqual } from '../system/canvas-selection'
 import { resolveCanvasProperties } from '../properties/resolve-canvas-properties'
 import {
   EMPTY_CANVAS_INSPECTABLE_PROPERTIES,
@@ -35,7 +40,6 @@ import type {
 import { areCanvasPaintValuesEqual } from '../properties/canvas-paint-values'
 import type { CanvasCommands } from '../runtime/document/use-canvas-commands'
 import type { CanvasToolId, CanvasToolPropertyContext } from '../tools/canvas-tool-types'
-import { Slider } from '~/features/shadcn/components/slider'
 import { ColorPickerPopover } from '~/shared/components/color-picker-popover'
 import { useShallow } from 'zustand/shallow'
 
@@ -75,23 +79,33 @@ type CanvasToolbarState = {
   hasOnlySelectedEdges: boolean
   hasSelection: boolean
   properties: Array<CanvasResolvedProperty>
-  selectedEdges: Array<Edge>
+  selectedEdges: ReadonlyArray<Edge>
   selectionSnapshot: { nodeIds: ReadonlySet<string>; edgeIds: ReadonlySet<string> }
   setEdgeType: (type: CanvasEdgeType) => void
   showsEdgeToolDefaults: boolean
   patchEdge: (edgeId: string, patch: CanvasEdgePatch) => void
   runPropertyChange: (applyChange: () => void) => void
+  runPropertyPreviewChange: (applyChange: () => void) => void
+  commitPropertyPreviewChange: (applyChange?: () => void) => void
+  cancelPropertyPreviewChange: () => void
 }
 
 function useCanvasToolbarState(): CanvasToolbarState {
-  const { nodeActions, commands, documentWriter } = useCanvasRuntime()
-  const nodes = useNodes()
-  const edges = useEdges()
-  const selectionSnapshot = useCanvasSelectionState(
-    useShallow((state) => ({
-      nodeIds: state.selectedNodeIds,
-      edgeIds: state.selectedEdgeIds,
-    })),
+  const { canvasEngine, nodeActions, commands, documentWriter } = useCanvasRuntime()
+  const selectedNodes = useCanvasEngineSelector(
+    selectCanvasSelectedNodes,
+    areCanvasPropertyNodesEqual,
+  )
+  const selectedEdges = useCanvasEngineSelector(
+    selectCanvasSelectedEdges,
+    areCanvasPropertyEdgesEqual,
+  )
+  const selectionSnapshot = useCanvasEngineSelector(
+    (state) => ({
+      nodeIds: state.selection.nodeIds,
+      edgeIds: state.selection.edgeIds,
+    }),
+    areCanvasSelectionsEqual,
   )
   const { activeTool, edgeType, setEdgeType } = useCanvasToolStore(
     useShallow((state) => ({
@@ -102,17 +116,19 @@ function useCanvasToolbarState(): CanvasToolbarState {
   )
   const toolPropertyContext = useCanvasToolPropertyContext()
 
-  const selectedNodes = nodes.filter((node) => selectionSnapshot.nodeIds.has(node.id))
-  const selectedEdges = edges.filter((edge) => selectionSnapshot.edgeIds.has(edge.id))
   const hasSelection = selectedNodes.length > 0 || selectedEdges.length > 0
   const hasOnlySelectedEdges = selectedNodes.length === 0 && selectedEdges.length > 0
   const showsEdgeToolDefaults = !hasSelection && activeTool === 'edge'
-  let pendingNodeDataPatches: Map<string, Record<string, unknown>> | null = null
-  let pendingEdgePatches: Map<string, CanvasEdgePatch> | null = null
+  const pendingNodeDataPatchesRef = useRef<Map<string, Record<string, unknown>> | null>(null)
+  const pendingEdgePatchesRef = useRef<Map<string, CanvasEdgePatch> | null>(null)
+  const propertySessionController = useMemo(() => createCanvasPropertySessionController(), [])
 
   const patchNodeDataForProperty = (nodeId: string, data: Record<string, unknown>) => {
+    const pendingNodeDataPatches = pendingNodeDataPatchesRef.current
     if (!pendingNodeDataPatches) {
-      documentWriter.patchNodeData(new Map([[nodeId, data]]))
+      const updates = new Map([[nodeId, data]])
+      canvasEngine.scheduleNodeDataPatches(updates)
+      documentWriter.patchNodeData(updates)
       return
     }
 
@@ -123,8 +139,11 @@ function useCanvasToolbarState(): CanvasToolbarState {
   }
 
   const patchEdgeForProperty = (edgeId: string, patch: CanvasEdgePatch) => {
+    const pendingEdgePatches = pendingEdgePatchesRef.current
     if (!pendingEdgePatches) {
-      documentWriter.patchEdges(new Map([[edgeId, patch]]))
+      const updates = new Map([[edgeId, patch]])
+      canvasEngine.scheduleEdgePatches(updates)
+      documentWriter.patchEdges(updates)
       return
     }
 
@@ -157,20 +176,42 @@ function useCanvasToolbarState(): CanvasToolbarState {
         toolPropertyContext,
       ),
   )
-  const runPropertyChange = (applyChange: () => void) => {
-    const applyBatchedChange = () => {
-      pendingNodeDataPatches = new Map()
-      pendingEdgePatches = new Map()
-      try {
-        applyChange()
-        documentWriter.patchNodeData(pendingNodeDataPatches)
-        documentWriter.patchEdges(pendingEdgePatches)
-      } finally {
-        pendingNodeDataPatches = null
-        pendingEdgePatches = null
+  const collectPropertyPatches = (applyChange: () => void): CanvasPropertyPatchSet => {
+    pendingNodeDataPatchesRef.current = new Map()
+    pendingEdgePatchesRef.current = new Map()
+    try {
+      applyChange()
+      return {
+        nodeDataPatches: pendingNodeDataPatchesRef.current ?? new Map(),
+        edgePatches: pendingEdgePatchesRef.current ?? new Map(),
       }
+    } finally {
+      pendingNodeDataPatchesRef.current = null
+      pendingEdgePatchesRef.current = null
+    }
+  }
+
+  const previewPropertyPatches = (patches: CanvasPropertyPatchSet) => {
+    canvasEngine.scheduleNodeDataPatches(patches.nodeDataPatches)
+    canvasEngine.scheduleEdgePatches(patches.edgePatches)
+  }
+
+  const commitPropertyPatches = (patches: CanvasPropertyPatchSet) => {
+    const applyCommittedPatches = () => {
+      previewPropertyPatches(patches)
+      documentWriter.patchNodeData(patches.nodeDataPatches)
+      documentWriter.patchEdges(patches.edgePatches)
     }
 
+    if (nodeActions.transact) {
+      nodeActions.transact(applyCommittedPatches)
+      return
+    }
+
+    applyCommittedPatches()
+  }
+
+  const runPropertyChange = (applyChange: () => void) => {
     measureCanvasPerformance(
       'canvas.toolbar.apply-property',
       {
@@ -183,14 +224,47 @@ function useCanvasToolbarState(): CanvasToolbarState {
           return
         }
 
-        if (!nodeActions.transact) {
-          applyBatchedChange()
-          return
-        }
-
-        nodeActions.transact(applyBatchedChange)
+        commitPropertyPatches(collectPropertyPatches(applyChange))
       },
     )
+  }
+
+  const runPropertyPreviewChange = (applyChange: () => void) => {
+    if (selectedNodes.length === 0 && selectedEdges.length === 0) {
+      applyChange()
+      return
+    }
+
+    propertySessionController.startPropertySession({
+      collectPatches: collectPropertyPatches,
+      previewPatches: previewPropertyPatches,
+      commitPatches: (patches) => {
+        measureCanvasPerformance(
+          'canvas.toolbar.commit-property-preview',
+          {
+            selectedEdgeCount: selectedEdges.length,
+            selectedNodeCount: selectedNodes.length,
+          },
+          () => commitPropertyPatches(patches),
+        )
+      },
+    })
+    measureCanvasPerformance(
+      'canvas.toolbar.preview-property',
+      {
+        selectedEdgeCount: selectedEdges.length,
+        selectedNodeCount: selectedNodes.length,
+      },
+      () => propertySessionController.updatePropertyPreview(applyChange),
+    )
+  }
+
+  const commitPropertyPreviewChange = (applyChange?: () => void) => {
+    propertySessionController.commitPropertySession(applyChange)
+  }
+
+  const cancelPropertyPreviewChange = () => {
+    propertySessionController.cancelPropertySession()
   }
 
   return {
@@ -205,11 +279,16 @@ function useCanvasToolbarState(): CanvasToolbarState {
     showsEdgeToolDefaults,
     patchEdge: patchEdgeForProperty,
     runPropertyChange,
+    runPropertyPreviewChange,
+    commitPropertyPreviewChange,
+    cancelPropertyPreviewChange,
   }
 }
 
 export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarProps) {
-  const isSelectionGestureActive = useIsCanvasSelectionGestureActive()
+  const isSelectionGestureActive = useCanvasEngineSelector(
+    (state) => state.selection.gestureKind !== null,
+  )
   const toolbar = useCanvasToolbarState()
   if (
     !canEdit ||
@@ -229,6 +308,9 @@ export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarPr
         <CanvasPropertyControls
           properties={toolbar.properties}
           onPropertyChange={toolbar.runPropertyChange}
+          onPropertyPreviewChange={toolbar.runPropertyPreviewChange}
+          onPropertyPreviewCommit={toolbar.commitPropertyPreviewChange}
+          onPropertyPreviewCancel={toolbar.cancelPropertyPreviewChange}
         />
       ) : null}
       {toolbar.properties.length > 0 &&
@@ -268,7 +350,7 @@ export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarPr
   )
 }
 
-function getSharedSelectedEdgeType(edges: Array<Edge>) {
+function getSharedSelectedEdgeType(edges: ReadonlyArray<Edge>) {
   const firstEdgeType = edges[0] ? resolveCanvasEdgeType(edges[0].type) : null
   return firstEdgeType && edges.every((edge) => resolveCanvasEdgeType(edge.type) === firstEdgeType)
     ? firstEdgeType
@@ -308,8 +390,8 @@ function CanvasEdgeTypeControls({
 
 function resolveProperties(
   activeTool: CanvasToolId,
-  selectedNodes: Array<Node>,
-  selectedEdges: Array<Edge>,
+  selectedNodes: ReadonlyArray<Node>,
+  selectedEdges: ReadonlyArray<Edge>,
   patchNodeData: (nodeId: string, data: Record<string, unknown>) => void,
   patchEdge: (edgeId: string, patch: CanvasEdgePatch) => void,
   toolPropertyContext: CanvasToolPropertyContext,
@@ -336,9 +418,15 @@ function resolveProperties(
 function CanvasPropertyControls({
   properties,
   onPropertyChange,
+  onPropertyPreviewChange,
+  onPropertyPreviewCommit,
+  onPropertyPreviewCancel,
 }: {
   properties: Array<CanvasResolvedProperty>
   onPropertyChange: (applyChange: () => void) => void
+  onPropertyPreviewChange: (applyChange: () => void) => void
+  onPropertyPreviewCommit: (applyChange?: () => void) => void
+  onPropertyPreviewCancel: () => void
 }) {
   const paintProperties = properties.filter(isPaintProperty)
   const strokeSizeProperty = properties.find(isStrokeSizeProperty)
@@ -410,7 +498,13 @@ function CanvasPropertyControls({
           <p className="text-[11px] font-medium text-muted-foreground">
             {strokeSizeProperty.definition.label}
           </p>
-          <StrokeSizeControl property={strokeSizeProperty} onPropertyChange={onPropertyChange} />
+          <StrokeSizeControl
+            property={strokeSizeProperty}
+            onPropertyChange={onPropertyChange}
+            onPropertyPreviewChange={onPropertyPreviewChange}
+            onPropertyPreviewCommit={onPropertyPreviewCommit}
+            onPropertyPreviewCancel={onPropertyPreviewCancel}
+          />
         </div>
       )}
     </>
@@ -420,14 +514,21 @@ function CanvasPropertyControls({
 function StrokeSizeControl({
   property,
   onPropertyChange,
+  onPropertyPreviewChange,
+  onPropertyPreviewCommit,
+  onPropertyPreviewCancel,
 }: {
   property: CanvasStrokeSizeResolvedProperty
   onPropertyChange: (applyChange: () => void) => void
+  onPropertyPreviewChange: (applyChange: () => void) => void
+  onPropertyPreviewCommit: (applyChange?: () => void) => void
+  onPropertyPreviewCancel: () => void
 }) {
   const strokeSizeValue = readResolvedPropertyValue(property)
   const sliderMax = Math.min(property.definition.max, STROKE_SIZE_SLIDER_MAX)
   const sliderValue = Math.min(strokeSizeValue ?? property.definition.min, sliderMax)
   const [draftValue, setDraftValue] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement | null>(null)
   const inputValue = draftValue ?? strokeSizeValue?.toString() ?? ''
 
   const resetDraftValue = () => {
@@ -460,27 +561,61 @@ function StrokeSizeControl({
   return (
     <div className="flex min-w-[19.8125rem] items-center gap-1">
       <div className="min-w-0 shrink-0" style={{ width: PAINT_SWATCH_STRIP_WIDTH }}>
-        <Slider
+        <input
+          key={`${property.definition.id}-${property.value.kind}-${sliderValue}`}
           aria-label="Stroke size"
-          className="[&_[data-slot=slider-range]]:bg-primary [&_[data-slot=slider-thumb]]:border-primary/40 [&_[data-slot=slider-track]]:bg-primary/25"
+          className="h-6 w-full cursor-pointer accent-primary"
+          data-slot="slider"
+          defaultValue={sliderValue}
           max={sliderMax}
           min={property.definition.min}
-          onValueChange={(values) => {
-            const nextValue = Array.isArray(values) ? values[0] : values
-            if (typeof nextValue !== 'number' || !Number.isFinite(nextValue)) {
+          onInput={(event) => {
+            const nextValue = Number(event.currentTarget.value)
+            if (!Number.isFinite(nextValue)) {
+              return
+            }
+
+            if (inputRef.current) {
+              inputRef.current.value = String(nextValue)
+            }
+            onPropertyPreviewChange(() => property.setValue(nextValue))
+          }}
+          onPointerCancel={() => {
+            onPropertyPreviewCancel()
+            if (inputRef.current) {
+              inputRef.current.value = inputValue
+            }
+          }}
+          onPointerUp={(event) => {
+            const nextValue = Number(event.currentTarget.value)
+            if (!Number.isFinite(nextValue)) {
+              onPropertyPreviewCancel()
               return
             }
 
             setDraftValue(null)
-            onPropertyChange(() => property.setValue(nextValue))
+            onPropertyPreviewCommit(() => property.setValue(nextValue))
+          }}
+          onKeyUp={(event) => {
+            if (
+              !['ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'].includes(event.key)
+            ) {
+              return
+            }
+
+            const nextValue = Number(event.currentTarget.value)
+            if (Number.isFinite(nextValue)) {
+              onPropertyPreviewCommit(() => property.setValue(nextValue))
+            }
           }}
           step={property.definition.step ?? 1}
-          value={[sliderValue]}
+          type="range"
         />
       </div>
       <div className="mx-1 h-6 w-px bg-border" aria-hidden="true" />
       <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm border border-border focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-1">
         <input
+          ref={inputRef}
           aria-label="Stroke size input"
           className="block h-full w-full appearance-none cursor-text bg-transparent p-0 text-center text-xs leading-6 tabular-nums outline-none placeholder:text-muted-foreground"
           inputMode="numeric"

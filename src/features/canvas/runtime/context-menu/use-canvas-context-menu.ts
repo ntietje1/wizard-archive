@@ -28,7 +28,7 @@ interface UseCanvasContextMenuOptions {
   edgesMap: Y.Map<Edge>
   createNode: (node: Node) => void
   screenToFlowPosition: (position: CanvasContextMenuPoint) => { x: number; y: number }
-  selection: Pick<CanvasSelectionController, 'clear' | 'getSnapshot' | 'replace'>
+  selection: Pick<CanvasSelectionController, 'clearSelection' | 'getSnapshot' | 'setSelection'>
   commands: CanvasContextMenuCommands
 }
 
@@ -103,7 +103,7 @@ export function useCanvasContextMenu({
           pointerPosition,
           screenToFlowPosition,
           createNode,
-          replaceSelection: selection.replace,
+          replaceSelection: selection.setSelection,
         })
       } catch (error) {
         console.error('Failed to create embedded sidebar item from canvas context menu', {
@@ -159,7 +159,7 @@ export function useCanvasContextMenu({
   const openForPane = (event: MouseEvent | React.MouseEvent) => {
     const position = normalizeContextMenuEvent(event)
     const nextSelection = { nodeIds: new Set<string>(), edgeIds: new Set<string>() }
-    selection.clear()
+    selection.clearSelection()
     openMenu(position, nextSelection)
   }
 
@@ -171,7 +171,7 @@ export function useCanvasContextMenu({
       : { nodeIds: new Set([node.id]), edgeIds: new Set<string>() }
 
     if (nextSelection !== currentSelection) {
-      selection.replace(nextSelection)
+      selection.setSelection(nextSelection)
     }
 
     openMenu(position, nextSelection)
@@ -185,7 +185,7 @@ export function useCanvasContextMenu({
       : { nodeIds: new Set<string>(), edgeIds: new Set([edge.id]) }
 
     if (nextSelection !== currentSelection) {
-      selection.replace(nextSelection)
+      selection.setSelection(nextSelection)
     }
 
     openMenu(position, nextSelection)

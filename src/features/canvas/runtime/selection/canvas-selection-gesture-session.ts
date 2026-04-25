@@ -1,7 +1,3 @@
-import {
-  clearCanvasPendingSelectionPreview,
-  setCanvasPendingSelectionPreview,
-} from './use-canvas-pending-selection-preview'
 import { applyCanvasSelectionCommitMode } from '../../utils/canvas-selection-utils'
 import type {
   CanvasInteractionTools,
@@ -24,11 +20,7 @@ interface CreateCanvasSelectionGestureSessionOptions<TState> {
   adapter: CanvasSelectionGestureSessionAdapter<TState>
   getSelection: () => Pick<
     CanvasSelectionController,
-    | 'beginGesture'
-    | 'commitGestureSelection'
-    | 'endGesture'
-    | 'getSelectedNodeIds'
-    | 'getSelectedEdgeIds'
+    'beginGesture' | 'cancelGesture' | 'commitGesture' | 'getSnapshot' | 'setGesturePreview'
   >
   interaction: Pick<CanvasInteractionTools, 'suppressNextSurfaceClick'>
   requestAnimationFrame: typeof requestAnimationFrame
@@ -60,6 +52,7 @@ export function createCanvasSelectionGestureSession<TState>({
     startSelection: CanvasSelectionSnapshot
   } | null = null
   let previewRafId = 0
+  let latestPreviewSelection: CanvasSelectionSnapshot | null = null
 
   const cancelPreviewFrame = () => {
     if (!previewRafId) {
@@ -70,16 +63,16 @@ export function createCanvasSelectionGestureSession<TState>({
     previewRafId = 0
   }
 
-  const reset = () => {
+  const reset = ({ cancelGesture }: { cancelGesture: boolean }) => {
     cancelPreviewFrame()
-    clearCanvasPendingSelectionPreview()
 
     const currentState = trackingState
     trackingState = null
+    latestPreviewSelection = null
 
     adapter.clear()
-    if (currentState?.gestureStarted) {
-      getSelection().endGesture()
+    if (cancelGesture && currentState?.gestureStarted) {
+      getSelection().cancelGesture()
     }
   }
 
@@ -100,7 +93,7 @@ export function createCanvasSelectionGestureSession<TState>({
     }
 
     trackingState.gestureStarted = true
-    getSelection().beginGesture(adapter.kind)
+    getSelection().beginGesture(adapter.kind, trackingState.mode)
     return true
   }
 
@@ -112,17 +105,18 @@ export function createCanvasSelectionGestureSession<TState>({
 
     const nextSelection = adapter.preview(trackingState.latestState)
     if (nextSelection === null) {
-      clearCanvasPendingSelectionPreview()
+      latestPreviewSelection = null
+      getSelection().setGesturePreview(null)
       return null
     }
 
-    setCanvasPendingSelectionPreview(
-      applyCanvasSelectionCommitMode({
-        currentSelection: trackingState.startSelection,
-        nextSelection,
-        mode: trackingState.mode,
-      }),
-    )
+    const effectiveSelection = applyCanvasSelectionCommitMode({
+      currentSelection: trackingState.startSelection,
+      nextSelection,
+      mode: trackingState.mode,
+    })
+    latestPreviewSelection = effectiveSelection
+    getSelection().setGesturePreview(effectiveSelection)
 
     return nextSelection
   }
@@ -149,22 +143,19 @@ export function createCanvasSelectionGestureSession<TState>({
   return {
     begin: (state, mode) => {
       if (trackingState !== null || previewRafId !== 0) {
-        reset()
+        reset({ cancelGesture: true })
       }
       trackingState = {
         startState: state,
         latestState: state,
         gestureStarted: adapter.startGestureOnBegin ?? false,
         mode,
-        startSelection: {
-          nodeIds: getSelection().getSelectedNodeIds(),
-          edgeIds: getSelection().getSelectedEdgeIds(),
-        },
+        startSelection: getSelection().getSnapshot(),
       }
 
       adapter.sync?.(state)
       if (trackingState.gestureStarted) {
-        getSelection().beginGesture(adapter.kind)
+        getSelection().beginGesture(adapter.kind, mode)
       }
     },
     update: (state) => {
@@ -201,23 +192,27 @@ export function createCanvasSelectionGestureSession<TState>({
       }
 
       cancelPreviewFrame()
-      const nextSelection = publishPreview()
+      const nextSelection = latestPreviewSelection
       if (nextSelection !== null) {
         interaction.suppressNextSurfaceClick()
-        getSelection().commitGestureSelection(nextSelection, trackingState.mode)
+        getSelection().commitGesture()
+        adapter.clear()
+        trackingState = null
+        latestPreviewSelection = null
+        return
       }
 
-      reset()
+      reset({ cancelGesture: true })
     },
     cancel: () => {
       if (!trackingState) {
         return
       }
 
-      reset()
+      reset({ cancelGesture: true })
     },
     dispose: () => {
-      reset()
+      reset({ cancelGesture: true })
     },
     isTracking: () => trackingState !== null,
   }

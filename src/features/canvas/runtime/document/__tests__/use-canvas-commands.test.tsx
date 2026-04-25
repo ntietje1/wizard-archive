@@ -33,10 +33,10 @@ function createSelectionController(initialSelection: CanvasSelectionSnapshot) {
 
   return {
     getSnapshot: vi.fn(() => selection),
-    replace: vi.fn((nextSelection: CanvasSelectionSnapshot) => {
+    setSelection: vi.fn((nextSelection: CanvasSelectionSnapshot) => {
       selection = nextSelection
     }),
-    clear: vi.fn(() => {
+    clearSelection: vi.fn(() => {
       selection = selectionSnapshot()
     }),
   }
@@ -130,7 +130,7 @@ describe('useCanvasCommands', () => {
       ).toBe(true)
     })
 
-    expect(selection.clear).toHaveBeenCalledTimes(1)
+    expect(selection.clearSelection).toHaveBeenCalledTimes(1)
     expect(nodesMap.has('node-1')).toBe(false)
     expect(nodesMap.has('node-2')).toBe(false)
     expect(edgesMap.has('edge-1')).toBe(false)
@@ -163,7 +163,7 @@ describe('useCanvasCommands', () => {
       expect(result.current.cut.run()).toBe(false)
     })
 
-    expect(selection.clear).not.toHaveBeenCalled()
+    expect(selection.clearSelection).not.toHaveBeenCalled()
     expect(useCanvasClipboardStore.getState().clipboard).toBeNull()
     expect(nodesMap.has('node-1')).toBe(true)
     expect(nodesMap.has('node-2')).toBe(true)
@@ -211,7 +211,7 @@ describe('useCanvasCommands', () => {
         'e-00000000-0000-4000-8000-000000000001-00000000-0000-4000-8000-000000000002-00000000-0000-4000-8000-000000000003',
       ]),
     })
-    expect(selection.replace).toHaveBeenCalledWith(pastedSelection)
+    expect(selection.setSelection).toHaveBeenCalledWith(pastedSelection)
     expect(useCanvasClipboardStore.getState().clipboard?.pasteCount).toBe(1)
 
     randomUuidSpy.mockRestore()
@@ -236,7 +236,7 @@ describe('useCanvasCommands', () => {
       expect(result.current.delete.run()).toBe(true)
     })
 
-    expect(selection.clear).toHaveBeenCalledTimes(1)
+    expect(selection.clearSelection).toHaveBeenCalledTimes(1)
     expect(nodesMap.has('node-1')).toBe(false)
     expect(nodesMap.has('node-2')).toBe(false)
     expect(edgesMap.has('edge-1')).toBe(false)
@@ -277,7 +277,7 @@ describe('useCanvasCommands', () => {
         'e-00000000-0000-4000-8000-000000000011-00000000-0000-4000-8000-000000000012-00000000-0000-4000-8000-000000000013',
       ]),
     })
-    expect(selection.replace).toHaveBeenCalledWith(duplicateSelection)
+    expect(selection.setSelection).toHaveBeenCalledWith(duplicateSelection)
     expect(useCanvasClipboardStore.getState().clipboard).toMatchObject({
       nodes: [{ id: 'node-1' }, { id: 'node-2' }],
       edges: [{ id: 'edge-1' }],

@@ -11,7 +11,7 @@ import type {
   CanvasSelectionCommitMode,
   CanvasSelectionController,
 } from '../../tools/canvas-tool-types'
-import type { ReactFlowInstance } from '@xyflow/react'
+import type { Edge, Node } from '@xyflow/react'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
 
 const MIN_SELECTION_DRAG_DISTANCE_PX = 1
@@ -24,17 +24,18 @@ type MarqueeGestureState = {
 }
 
 interface CanvasSelectionGestureControllerOptions {
-  reactFlow: Pick<ReactFlowInstance, 'getEdges' | 'getNodes' | 'getZoom' | 'screenToFlowPosition'>
+  viewport: {
+    getZoom: () => number
+    screenToCanvasPosition: (position: ClientPoint) => ClientPoint
+  }
+  getNodes: () => ReadonlyArray<Node>
+  getEdges: () => ReadonlyArray<Edge>
   getMeasuredNodes: () => ReturnType<typeof getMeasuredCanvasNodesFromLookup>
   getAwareness: () => CanvasAwarenessPresenceWriter
   interaction: Pick<CanvasInteractionTools, 'suppressNextSurfaceClick'>
   getSelection: () => Pick<
     CanvasSelectionController,
-    | 'beginGesture'
-    | 'commitGestureSelection'
-    | 'endGesture'
-    | 'getSelectedNodeIds'
-    | 'getSelectedEdgeIds'
+    'beginGesture' | 'cancelGesture' | 'commitGesture' | 'getSnapshot' | 'setGesturePreview'
   >
   requestAnimationFrame: typeof requestAnimationFrame
   cancelAnimationFrame: typeof cancelAnimationFrame
@@ -55,18 +56,20 @@ function boundsEqual(a: Bounds | null, b: Bounds | null): boolean {
 }
 
 function getFlowRect(
-  reactFlow: Pick<ReactFlowInstance, 'screenToFlowPosition'>,
+  viewport: Pick<CanvasSelectionGestureControllerOptions['viewport'], 'screenToCanvasPosition'>,
   state: MarqueeGestureState,
 ): Bounds {
   return getConstrainedRectFromPoints(
-    reactFlow.screenToFlowPosition(state.startClientPoint),
-    reactFlow.screenToFlowPosition(state.currentClientPoint),
+    viewport.screenToCanvasPosition(state.startClientPoint),
+    viewport.screenToCanvasPosition(state.currentClientPoint),
     { square: state.square },
   )
 }
 
 export function createCanvasSelectionGestureController({
-  reactFlow,
+  viewport,
+  getNodes,
+  getEdges,
   getMeasuredNodes,
   getAwareness,
   interaction,
@@ -95,22 +98,17 @@ export function createCanvasSelectionGestureController({
           currentState.currentClientPoint.y - startState.startClientPoint.y,
         ) > MIN_SELECTION_DRAG_DISTANCE_PX,
       preview: (state) => {
-        const flowRect = getFlowRect(reactFlow, state)
+        const flowRect = getFlowRect(viewport, state)
         setSelectToolSelectionDragRect(flowRect)
         publishSelectToolAwareness(flowRect)
 
         return {
           nodeIds: getCanvasNodesMatchingRectangle(getMeasuredNodes(), flowRect, {
-            zoom: reactFlow.getZoom(),
+            zoom: viewport.getZoom(),
           }),
-          edgeIds: getCanvasEdgesMatchingRectangle(
-            reactFlow.getNodes(),
-            reactFlow.getEdges(),
-            flowRect,
-            {
-              zoom: reactFlow.getZoom(),
-            },
-          ),
+          edgeIds: getCanvasEdgesMatchingRectangle([...getNodes()], [...getEdges()], flowRect, {
+            zoom: viewport.getZoom(),
+          }),
         }
       },
       clear: () => {

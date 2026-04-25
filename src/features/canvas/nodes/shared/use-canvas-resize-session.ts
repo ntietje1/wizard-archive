@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
-import { useInternalNode, useReactFlow } from '@xyflow/react'
+import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react'
 import type { ControlPosition } from '@xyflow/react'
 import { getCanvasNodeBounds } from './canvas-node-bounds'
 import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
@@ -95,11 +94,12 @@ export function useCanvasResizeSession({
   lockedAspectRatio?: number
 }): ReadonlyArray<CanvasNodeResizeHandleDescriptor> {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
-  const reactFlow = useReactFlow()
-  const internalNode = useInternalNode(id)
   const {
+    canvasEngine,
     nodeActions: { onResize, onResizeEnd },
+    viewportController,
   } = useCanvasRuntime()
+  const internalNode = useRuntimeCanvasNode(canvasEngine, id)
   const { shiftPressed, primaryPressed } = useCanvasModifierKeys()
   const selected = useIsCanvasNodeSelected(id)
   const resizeSessionRef = useRef<ResizeSession | null>(null)
@@ -112,12 +112,14 @@ export function useCanvasResizeSession({
   const minWidthRef = useRef(minWidth)
   const minHeightRef = useRef(minHeight)
   const lockedAspectRatioRef = useRef(lockedAspectRatio)
-  const reactFlowRef = useRef(reactFlow)
+  const canvasEngineRef = useRef(canvasEngine)
+  const viewportControllerRef = useRef(viewportController)
   idRef.current = id
   minWidthRef.current = minWidth
   minHeightRef.current = minHeight
   lockedAspectRatioRef.current = lockedAspectRatio
-  reactFlowRef.current = reactFlow
+  canvasEngineRef.current = canvasEngine
+  viewportControllerRef.current = viewportController
   shiftPressedRef.current = shiftPressed
   primaryPressedRef.current = primaryPressed
   onResizeRef.current = onResize
@@ -137,7 +139,7 @@ export function useCanvasResizeSession({
       lockedAspectRatio: lockedAspectRatioRef.current,
       square,
       snap,
-      zoom: reactFlowRef.current.getZoom(),
+      zoom: viewportControllerRef.current.getZoom(),
     })
 
     if (guides.length > 0) {
@@ -158,7 +160,7 @@ export function useCanvasResizeSession({
       return
     }
 
-    const currentPoint = reactFlowRef.current.screenToFlowPosition({
+    const currentPoint = viewportControllerRef.current.screenToCanvasPosition({
       x: event.clientX,
       y: event.clientY,
     })
@@ -171,7 +173,7 @@ export function useCanvasResizeSession({
       lockedAspectRatio: lockedAspectRatioRef.current,
       square: event.shiftKey || shiftPressedRef.current,
       snap: isPrimarySelectionModifier(event),
-      zoom: reactFlowRef.current.getZoom(),
+      zoom: viewportControllerRef.current.getZoom(),
     })
 
     if (commit || guides.length === 0) {
@@ -312,9 +314,11 @@ export function useCanvasResizeSession({
         handlePosition: position as CornerHandlePosition,
         startBounds: currentBounds,
         currentPoint: null,
-        targetBounds: reactFlowRef.current
-          .getNodes()
-          .filter((candidate) => candidate.type !== 'stroke' && candidate.id !== idRef.current)
+        targetBounds: canvasEngineRef.current
+          .getSnapshot()
+          .nodes.filter(
+            (candidate) => candidate.type !== 'stroke' && candidate.id !== idRef.current,
+          )
           .flatMap((candidate) => {
             const bounds = getCanvasNodeBounds(candidate)
             return bounds ? [bounds] : []
@@ -323,6 +327,21 @@ export function useCanvasResizeSession({
       addWindowListeners()
     },
   }))
+}
+
+function useRuntimeCanvasNode(
+  canvasEngine: ReturnType<typeof useCanvasRuntime>['canvasEngine'],
+  nodeId: string,
+) {
+  return useSyncExternalStore(
+    canvasEngine.subscribe ?? subscribeToNoop,
+    () => canvasEngine.getSnapshot().nodeLookup?.get(nodeId),
+    () => undefined,
+  )
+}
+
+function subscribeToNoop() {
+  return () => undefined
 }
 
 function resolveSessionResizeBounds({
@@ -377,7 +396,17 @@ function resolveSessionResizeBounds({
 }
 
 function getCurrentResizeBounds(
-  internalNode: ReturnType<typeof useInternalNode> | undefined,
+  internalNode:
+    | {
+        node: {
+          width?: number | null
+          height?: number | null
+          position: { x: number; y: number }
+        }
+        measured: { width?: number; height?: number }
+        positionAbsolute: { x: number; y: number }
+      }
+    | undefined,
   minWidth: number,
   minHeight: number,
 ): ResizeBounds | null {
@@ -385,10 +414,9 @@ function getCurrentResizeBounds(
     return null
   }
 
-  const width = internalNode.measured?.width ?? internalNode.width ?? minWidth
-  const height = internalNode.measured?.height ?? internalNode.height ?? minHeight
-  const position = internalNode.position ??
-    internalNode.internals.positionAbsolute ?? { x: 0, y: 0 }
+  const width = internalNode.measured.width ?? internalNode.node.width ?? minWidth
+  const height = internalNode.measured.height ?? internalNode.node.height ?? minHeight
+  const position = internalNode.node.position ?? internalNode.positionAbsolute
 
   return {
     x: position.x,

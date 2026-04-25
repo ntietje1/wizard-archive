@@ -1,6 +1,10 @@
 import { vi } from 'vitest'
 import type { CanvasDocumentWriter, CanvasSelectionController } from '../../tools/canvas-tool-types'
 import type { RemoteHighlight } from '../../utils/canvas-awareness-types'
+import { createCanvasEngine } from '../../system/canvas-engine'
+import type { CanvasDragController } from '../../system/canvas-drag-controller'
+import type { CanvasEngine } from '../../system/canvas-engine'
+import type { CanvasViewportController } from '../../system/canvas-viewport-controller'
 import type { CanvasCommands } from '../document/use-canvas-commands'
 import type { CanvasRuntime } from '../providers/canvas-runtime'
 import type { CanvasSessionRuntime } from '../session/use-canvas-session-state'
@@ -8,17 +12,14 @@ import type { CanvasSessionRuntime } from '../session/use-canvas-session-state'
 function createCanvasSelectionController(): CanvasSelectionController {
   return {
     getSnapshot: vi.fn(() => ({ nodeIds: new Set<string>(), edgeIds: new Set<string>() })),
-    replace: vi.fn(),
-    replaceNodes: vi.fn(),
-    replaceEdges: vi.fn(),
-    clear: vi.fn(),
-    getSelectedNodeIds: vi.fn(() => new Set<string>()),
-    getSelectedEdgeIds: vi.fn(() => new Set<string>()),
-    toggleNodeFromTarget: vi.fn(),
-    toggleEdgeFromTarget: vi.fn(),
+    setSelection: vi.fn(),
+    clearSelection: vi.fn(),
+    toggleNode: vi.fn(),
+    toggleEdge: vi.fn(),
     beginGesture: vi.fn(),
-    commitGestureSelection: vi.fn(),
-    endGesture: vi.fn(),
+    setGesturePreview: vi.fn(),
+    commitGesture: vi.fn(),
+    cancelGesture: vi.fn(),
   }
 }
 
@@ -98,6 +99,9 @@ export function createCanvasRuntime(
     }
     documentWriter: CanvasDocumentWriter
     selection: CanvasSelectionController
+    canvasEngine: CanvasEngine
+    nodeDragController: CanvasDragController | null
+    viewportController: CanvasViewportController
     commands: CanvasCommands
   }> = {},
 ): CanvasRuntime {
@@ -113,6 +117,7 @@ export function createCanvasRuntime(
 
   return {
     canEdit: true,
+    canvasEngine: createCanvasEngine(),
     remoteHighlights: new Map(),
     history: {
       canUndo: false,
@@ -142,6 +147,24 @@ export function createCanvasRuntime(
     selection: {
       ...createCanvasSelectionController(),
       ...selectionOverrides,
+    },
+    nodeDragController: null,
+    viewportController: {
+      getViewport: vi.fn(() => ({ x: 0, y: 0, zoom: 1 })),
+      getZoom: vi.fn(() => 1),
+      screenToCanvasPosition: vi.fn((position) => position),
+      canvasToScreenPosition: vi.fn((position) => position),
+      handleWheel: vi.fn(),
+      handlePanPointerDown: vi.fn(),
+      panBy: vi.fn(),
+      zoomBy: vi.fn(),
+      zoomTo: vi.fn(),
+      zoomIn: vi.fn(),
+      zoomOut: vi.fn(),
+      fitView: vi.fn(),
+      syncFromDocumentOrAdapter: vi.fn(),
+      commit: vi.fn(),
+      destroy: vi.fn(),
     },
     commands: {
       ...createCanvasCommands(),

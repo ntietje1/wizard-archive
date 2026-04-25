@@ -1,14 +1,13 @@
 import { render } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { useCanvasSelectionState } from '../../../runtime/selection/use-canvas-selection-state'
-import {
-  clearCanvasPendingSelectionPreview,
-  setCanvasPendingSelectionPreview,
-} from '../../../runtime/selection/use-canvas-pending-selection-preview'
+import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
+import { createCanvasEngine } from '../../../system/canvas-engine'
+import type { CanvasEngine } from '../../../system/canvas-engine'
 import { StrokeNode } from '../stroke-node'
 
 const connectionHandlesSpy = vi.hoisted(() => vi.fn())
+let strokeEngine: CanvasEngine = createCanvasEngine()
 
 vi.mock('@xyflow/react', () => ({
   useViewport: () => ({ zoom: 1 }),
@@ -36,55 +35,67 @@ vi.mock('../../shared/canvas-node-connection-handles', () => ({
   },
 }))
 
+vi.mock('../../../runtime/providers/canvas-runtime', () => ({
+  useCanvasRuntime: () => ({
+    canvasEngine: {
+      registerStrokeNodePaths: vi.fn(() => vi.fn()),
+    },
+  }),
+}))
+
 afterEach(() => {
-  clearCanvasPendingSelectionPreview()
-  useCanvasSelectionState.getState().reset()
+  strokeEngine = createCanvasEngine()
   connectionHandlesSpy.mockReset()
 })
 
 describe('StrokeNode', () => {
   it('renders the local stroke highlight for pending-selected strokes', () => {
-    setCanvasPendingSelectionPreview({ nodeIds: new Set(['stroke-1']), edgeIds: new Set() })
-    const { container, getByTestId } = render(
-      <StrokeNode {...setupStrokeNodeProps({ selected: false })} />,
-    )
+    const props = setupStrokeNodeProps({ selected: false })
+    strokeEngine.setSelectionGesturePreview({
+      nodeIds: new Set(['stroke-1']),
+      edgeIds: new Set(),
+    })
+    const { container, getByTestId } = renderStroke(<StrokeNode {...props} />)
 
     expect(getByTestId('stroke-hit-target')).toBeInTheDocument()
     expect(container.querySelectorAll('path')).toHaveLength(3)
   })
 
   it('drops the local stroke highlight when a pending preview excludes the committed stroke', () => {
-    setCanvasPendingSelectionPreview({ nodeIds: new Set(['other-node']), edgeIds: new Set() })
-    const { container, getByTestId } = render(
-      <StrokeNode {...setupStrokeNodeProps({ selected: true })} />,
-    )
+    const props = setupStrokeNodeProps({ selected: true })
+    strokeEngine.setSelectionGesturePreview({
+      nodeIds: new Set(['other-node']),
+      edgeIds: new Set(),
+    })
+    const { container, getByTestId } = renderStroke(<StrokeNode {...props} />)
 
     expect(getByTestId('stroke-hit-target')).toBeInTheDocument()
     expect(container.querySelectorAll('path')).toHaveLength(2)
   })
 
   it('keeps two paths (stroke and hit target) when a pending preview excludes an unselected stroke', () => {
-    setCanvasPendingSelectionPreview({ nodeIds: new Set(), edgeIds: new Set() })
-    const { container, getByTestId } = render(
-      <StrokeNode {...setupStrokeNodeProps({ selected: false })} />,
-    )
+    const props = setupStrokeNodeProps({ selected: false })
+    strokeEngine.setSelectionGesturePreview({ nodeIds: new Set(), edgeIds: new Set() })
+    const { container, getByTestId } = renderStroke(<StrokeNode {...props} />)
 
     expect(getByTestId('stroke-hit-target')).toBeInTheDocument()
     expect(container.querySelectorAll('path')).toHaveLength(2)
   })
 
   it('keeps the highlight path when a pending preview includes an already selected stroke', () => {
-    setCanvasPendingSelectionPreview({ nodeIds: new Set(['stroke-1']), edgeIds: new Set() })
-    const { container, getByTestId } = render(
-      <StrokeNode {...setupStrokeNodeProps({ selected: true })} />,
-    )
+    const props = setupStrokeNodeProps({ selected: true })
+    strokeEngine.setSelectionGesturePreview({
+      nodeIds: new Set(['stroke-1']),
+      edgeIds: new Set(),
+    })
+    const { container, getByTestId } = renderStroke(<StrokeNode {...props} />)
 
     expect(getByTestId('stroke-hit-target')).toBeInTheDocument()
     expect(container.querySelectorAll('path')).toHaveLength(3)
   })
 
   it('passes only start and end connection handles at the stroke endpoints', () => {
-    render(<StrokeNode {...setupStrokeNodeProps({ selected: false })} />)
+    renderStroke(<StrokeNode {...setupStrokeNodeProps({ selected: false })} />)
 
     expect(connectionHandlesSpy).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -105,7 +116,7 @@ describe('StrokeNode', () => {
   })
 
   it('still renders a visible stroke path when legacy stroke data has size zero', () => {
-    const { container, getByTestId } = render(
+    const { container, getByTestId } = renderStroke(
       <StrokeNode {...setupStrokeNodeProps({ selected: false, size: 0 })} />,
     )
 
@@ -115,7 +126,7 @@ describe('StrokeNode', () => {
 })
 
 function setupStrokeNodeProps({ selected, size = 4 }: { selected: boolean; size?: number }) {
-  useCanvasSelectionState.getState().setSelection({
+  strokeEngine.setSelection({
     nodeIds: selected ? new Set(['stroke-1']) : new Set<string>(),
     edgeIds: new Set<string>(),
   })
@@ -144,4 +155,8 @@ function setupStrokeNodeProps({ selected, size = 4 }: { selected: boolean; size?
       size,
     },
   }
+}
+
+function renderStroke(ui: React.ReactElement) {
+  return render(<CanvasEngineProvider engine={strokeEngine}>{ui}</CanvasEngineProvider>)
 }

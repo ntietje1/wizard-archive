@@ -1,4 +1,8 @@
 import type { RemoteHighlight } from '../../utils/canvas-awareness-types'
+import { createCanvasEngine } from '../../system/canvas-engine'
+import type { CanvasDragController } from '../../system/canvas-drag-controller'
+import type { CanvasEngine } from '../../system/canvas-engine'
+import type { CanvasViewportController } from '../../system/canvas-viewport-controller'
 import type {
   CanvasDocumentWriter,
   CanvasEditSessionState,
@@ -11,12 +15,15 @@ import { createContext, useContext } from 'react'
 
 export interface CanvasRuntime {
   canEdit: boolean
+  canvasEngine: CanvasEngine
   remoteHighlights: ReadonlyMap<string, RemoteHighlight>
   history: CanvasHistoryController
   commands: CanvasCommands
   documentWriter: CanvasDocumentWriter
   editSession: CanvasEditSessionState
   nodeActions: CanvasNodeActions
+  nodeDragController: CanvasDragController | null
+  viewportController: CanvasViewportController
   selection: CanvasSelectionController
 }
 
@@ -43,9 +50,11 @@ const EMPTY_SELECTION_SNAPSHOT = {
   nodeIds: EMPTY_SELECTION_NODE_IDS,
   edgeIds: EMPTY_SELECTION_EDGE_IDS,
 }
+const READ_ONLY_CANVAS_ENGINE = createCanvasEngine()
 
 export const READ_ONLY_CANVAS_RUNTIME: CanvasRuntime = {
   canEdit: false,
+  canvasEngine: READ_ONLY_CANVAS_ENGINE,
   remoteHighlights: EMPTY_REMOTE_HIGHLIGHTS,
   history: {
     canUndo: false,
@@ -108,18 +117,33 @@ export const READ_ONLY_CANVAS_RUNTIME: CanvasRuntime = {
     onResize: () => undefined,
     onResizeEnd: () => undefined,
   },
+  nodeDragController: null,
+  viewportController: {
+    getViewport: () => READ_ONLY_CANVAS_ENGINE.getSnapshot().viewport,
+    getZoom: () => READ_ONLY_CANVAS_ENGINE.getSnapshot().viewport.zoom,
+    screenToCanvasPosition: (position) => position,
+    canvasToScreenPosition: (position) => position,
+    handleWheel: () => undefined,
+    handlePanPointerDown: () => undefined,
+    panBy: () => undefined,
+    zoomBy: () => undefined,
+    zoomTo: () => undefined,
+    zoomIn: () => undefined,
+    zoomOut: () => undefined,
+    fitView: () => undefined,
+    syncFromDocumentOrAdapter: () => undefined,
+    commit: () => undefined,
+    destroy: () => undefined,
+  },
   selection: {
     getSnapshot: () => EMPTY_SELECTION_SNAPSHOT,
-    replace: () => undefined,
-    replaceNodes: () => undefined,
-    replaceEdges: () => undefined,
-    clear: () => undefined,
-    getSelectedNodeIds: () => EMPTY_SELECTION_NODE_IDS,
-    getSelectedEdgeIds: () => EMPTY_SELECTION_EDGE_IDS,
-    toggleNodeFromTarget: () => undefined,
-    toggleEdgeFromTarget: () => undefined,
+    setSelection: () => undefined,
+    clearSelection: () => undefined,
+    toggleNode: () => undefined,
+    toggleEdge: () => undefined,
     beginGesture: () => undefined,
-    commitGestureSelection: () => undefined,
-    endGesture: () => undefined,
+    setGesturePreview: () => undefined,
+    commitGesture: () => undefined,
+    cancelGesture: () => undefined,
   },
 }

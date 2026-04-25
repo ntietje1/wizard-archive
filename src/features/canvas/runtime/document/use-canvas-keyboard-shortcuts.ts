@@ -15,7 +15,7 @@ interface UseCanvasKeyboardShortcutsOptions extends Pick<CanvasHistoryController
   canEdit: boolean
   nodesMap: Y.Map<Node>
   edgesMap: Y.Map<Edge>
-  selection: Pick<CanvasSelectionController, 'getSnapshot' | 'replace' | 'clear'>
+  selection: Pick<CanvasSelectionController, 'getSnapshot' | 'setSelection' | 'clearSelection'>
   commands: Pick<CanvasCommands, 'copy' | 'cut' | 'paste' | 'delete'>
 }
 
@@ -94,7 +94,7 @@ export function useCanvasKeyboardShortcuts({
     'Escape',
     (event) => {
       if (event.repeat) return
-      selection.clear()
+      selection.clearSelection()
       cancelConnectionDraft()
     },
     hotkeyOptions,
@@ -183,7 +183,7 @@ export function useCanvasKeyboardShortcuts({
     'Mod+A',
     (event) => {
       if (event.repeat) return
-      selection.replace({
+      selection.setSelection({
         nodeIds: new Set(nodesMap.keys()),
         edgeIds: new Set(edgesMap.keys()),
       })

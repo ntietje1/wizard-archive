@@ -1,11 +1,14 @@
-import { useViewport } from '@xyflow/react'
+import { useContext, useSyncExternalStore } from 'react'
 import { CanvasRemoteCursors } from './canvas-remote-cursors'
+import { CanvasEngineContext } from '../react/canvas-engine-context-value'
 import { canvasNodeAwarenessLayers } from '../nodes/canvas-node-modules'
 import { canvasToolAwarenessLayers } from '../tools/canvas-tool-modules'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
 
+const DEFAULT_VIEWPORT = { x: 0, y: 0, zoom: 1 }
+
 export function CanvasAwarenessHost({ remoteUsers }: { remoteUsers: Array<RemoteUser> }) {
-  const viewport = useViewport()
+  const viewport = useCanvasViewportSnapshot()
 
   return (
     <div className="pointer-events-none absolute inset-0" style={{ zIndex: 5 }}>
@@ -27,4 +30,17 @@ export function CanvasAwarenessHost({ remoteUsers }: { remoteUsers: Array<Remote
       <CanvasRemoteCursors remoteUsers={remoteUsers} />
     </div>
   )
+}
+
+function useCanvasViewportSnapshot() {
+  const canvasEngine = useContext(CanvasEngineContext)
+  return useSyncExternalStore(
+    canvasEngine?.subscribe ?? subscribeToNoop,
+    () => canvasEngine?.getSnapshot().viewport ?? DEFAULT_VIEWPORT,
+    () => DEFAULT_VIEWPORT,
+  )
+}
+
+function subscribeToNoop() {
+  return () => undefined
 }

@@ -1,9 +1,10 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasConditionalToolbar } from '../canvas-conditional-toolbar'
+import { CanvasEngineProvider } from '../../react/canvas-engine-context'
 import { createCanvasRuntime } from '../../runtime/__tests__/canvas-runtime-test-utils'
 import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime-context'
-import { useCanvasSelectionState } from '../../runtime/selection/use-canvas-selection-state'
+import { createCanvasEngine } from '../../system/canvas-engine'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 
 vi.mock('@xyflow/react', () => ({
@@ -16,6 +17,7 @@ vi.mock('~/shared/components/color-picker-popover', () => ({
 }))
 
 function renderToolbar() {
+  const canvasEngine = createCanvasEngine()
   const runtime = createCanvasRuntime({
     nodeActions: {
       onResize: vi.fn(),
@@ -38,21 +40,18 @@ function renderToolbar() {
   })
 
   return render(
-    <CanvasRuntimeProvider {...runtime}>
-      <CanvasConditionalToolbar canEdit />
-    </CanvasRuntimeProvider>,
+    <CanvasEngineProvider engine={canvasEngine}>
+      <CanvasRuntimeProvider {...runtime}>
+        <CanvasConditionalToolbar canEdit />
+      </CanvasRuntimeProvider>
+    </CanvasEngineProvider>,
   )
 }
 
 describe('CanvasConditionalToolbar draw tool', () => {
   beforeEach(() => {
     useCanvasToolStore.getState().reset()
-    useCanvasSelectionState.getState().reset()
     useCanvasToolStore.getState().setActiveTool('draw')
-    useCanvasSelectionState.getState().setSelection({
-      nodeIds: new Set<string>(),
-      edgeIds: new Set<string>(),
-    })
   })
 
   it('updates the active draw color immediately after a preset click', () => {

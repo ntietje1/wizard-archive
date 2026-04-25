@@ -1,16 +1,21 @@
 import { act, render, screen } from '@testing-library/react'
 import { useState } from 'react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasRichTextNode } from '../canvas-rich-text-node'
 import { normalizeCanvasRichTextNodeData } from '../canvas-rich-text-node-data'
 import { createCanvasRuntime } from '../../../runtime/__tests__/canvas-runtime-test-utils'
 import { CanvasRuntimeProvider } from '../../../runtime/providers/canvas-runtime-context'
 import { CanvasRenderModeProvider } from '../../../runtime/providers/canvas-render-mode-context'
-import { useCanvasSelectionState } from '../../../runtime/selection/use-canvas-selection-state'
+import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
+import { createCanvasEngine } from '../../../system/canvas-engine'
+import type { CanvasEngine } from '../../../system/canvas-engine'
+import type { CanvasSelectionSnapshot } from '../../../tools/canvas-tool-types'
 
 const renderModeState = vi.hoisted(() => ({
   interactive: true,
 }))
+
+let richTextEngine: CanvasEngine = createCanvasEngine()
 
 vi.mock('@xyflow/react', () => ({
   useInternalNode: () => ({
@@ -74,15 +79,8 @@ vi.mock('~/features/shadcn/components/scroll-area', () => ({
 
 describe('CanvasRichTextNode', () => {
   beforeEach(() => {
+    richTextEngine = createCanvasEngine()
     renderModeState.interactive = true
-    useCanvasSelectionState.getState().setSelection({
-      nodeIds: new Set<string>(),
-      edgeIds: new Set<string>(),
-    })
-  })
-
-  afterEach(() => {
-    useCanvasSelectionState.getState().reset()
   })
 
   it('selects the new text node when pending auto-edit starts', async () => {
@@ -92,7 +90,7 @@ describe('CanvasRichTextNode', () => {
       await Promise.resolve()
     })
 
-    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(new Set(['text-1']))
+    expect(richTextEngine.getSnapshot().selection.nodeIds).toEqual(new Set(['text-1']))
     expect(getCanvasNode()).toHaveAttribute('data-node-selected', 'true')
   })
 
@@ -112,7 +110,7 @@ describe('CanvasRichTextNode', () => {
 
     expect(screen.queryByTestId('connection-handles')).toBeNull()
     expect(screen.getByRole('group', { name: 'Empty text node' })).toHaveAttribute('tabindex', '-1')
-    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(new Set())
+    expect(richTextEngine.getSnapshot().selection.nodeIds).toEqual(new Set())
   })
 
   it('renders an invalid-content placeholder and does not enter editing for malformed content', async () => {
@@ -124,7 +122,7 @@ describe('CanvasRichTextNode', () => {
 
     expect(screen.getByText('Invalid text content')).toBeInTheDocument()
     expect(screen.getByRole('group', { name: 'Invalid text node' })).toBeInTheDocument()
-    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(new Set())
+    expect(richTextEngine.getSnapshot().selection.nodeIds).toEqual(new Set())
     expect(screen.queryByText('Empty text node')).toBeNull()
   })
 })
@@ -163,26 +161,30 @@ function CanvasRichTextNodeHarness({
   } as unknown as Parameters<typeof CanvasRichTextNode>[0]
 
   return (
-    <CanvasRenderModeProvider mode={mode}>
-      <CanvasRuntimeProvider
-        {...createCanvasRuntime({
-          editSession: {
-            editingEmbedId: null,
-            setEditingEmbedId: () => undefined,
-            pendingEditNodeId,
-            pendingEditNodePoint,
-            setPendingEditNodeId,
-            setPendingEditNodePoint,
-          },
-          selection: {
-            ...defaultSelection,
-            replace: (selection) => useCanvasSelectionState.getState().setSelection(selection),
-          },
-        })}
-      >
-        <CanvasRichTextNode {...nodeProps} />
-      </CanvasRuntimeProvider>
-    </CanvasRenderModeProvider>
+    <CanvasEngineProvider engine={richTextEngine}>
+      <CanvasRenderModeProvider mode={mode}>
+        <CanvasRuntimeProvider
+          {...createCanvasRuntime({
+            canvasEngine: richTextEngine,
+            editSession: {
+              editingEmbedId: null,
+              setEditingEmbedId: () => undefined,
+              pendingEditNodeId,
+              pendingEditNodePoint,
+              setPendingEditNodeId,
+              setPendingEditNodePoint,
+            },
+            selection: {
+              ...defaultSelection,
+              setSelection: (selection: CanvasSelectionSnapshot) =>
+                richTextEngine.setSelection(selection),
+            },
+          })}
+        >
+          <CanvasRichTextNode {...nodeProps} />
+        </CanvasRuntimeProvider>
+      </CanvasRenderModeProvider>
+    </CanvasEngineProvider>
   )
 }
 

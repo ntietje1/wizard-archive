@@ -48,6 +48,16 @@ export interface CanvasNodeMinimapProps {
   shapeRendering?: string
 }
 
+export interface CanvasNodeComponentProps<TData extends CanvasNodeData = CanvasNodeData> {
+  id: string
+  type?: string
+  data: TData
+  dragging?: boolean
+  selected?: boolean
+  width?: number
+  height?: number
+}
+
 export interface CanvasNodeSelectionContext {
   zoom: number
 }

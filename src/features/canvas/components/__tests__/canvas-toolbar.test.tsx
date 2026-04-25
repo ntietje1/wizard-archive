@@ -11,10 +11,6 @@ const reactFlowMock = vi.hoisted(() => ({
   zoomOut: vi.fn(),
 }))
 
-vi.mock('@xyflow/react', () => ({
-  useReactFlow: () => reactFlowMock,
-}))
-
 describe('CanvasToolbar', () => {
   const history = {
     canUndo: false,
@@ -49,6 +45,12 @@ describe('CanvasToolbar', () => {
       nodeActions: {
         onResize: vi.fn(),
         onResizeEnd: vi.fn(),
+      },
+      viewportController: {
+        ...createCanvasRuntime().viewportController,
+        fitView: reactFlowMock.fitView,
+        zoomIn: reactFlowMock.zoomIn,
+        zoomOut: reactFlowMock.zoomOut,
       },
     })
 
@@ -107,6 +109,18 @@ describe('CanvasToolbar', () => {
     buttons.forEach((button) => {
       expect(button).toHaveClass('cursor-pointer')
     })
+  })
+
+  it('routes viewport buttons through the canvas viewport controller', () => {
+    renderToolbar()
+
+    screen.getByRole('button', { name: 'Zoom in' }).click()
+    screen.getByRole('button', { name: 'Zoom out' }).click()
+    screen.getByRole('button', { name: 'Fit zoom' }).click()
+
+    expect(reactFlowMock.zoomIn).toHaveBeenCalledTimes(1)
+    expect(reactFlowMock.zoomOut).toHaveBeenCalledTimes(1)
+    expect(reactFlowMock.fitView).toHaveBeenCalledTimes(1)
   })
 
   it('shows only viewport controls in read-only mode', () => {

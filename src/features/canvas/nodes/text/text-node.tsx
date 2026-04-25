@@ -1,9 +1,9 @@
-import type { Node, NodeProps } from '@xyflow/react'
 import { CanvasRichTextNode } from '../shared/canvas-rich-text-node'
 import { normalizeCanvasRichTextNodeData } from '../shared/canvas-rich-text-node-data'
 import type { CanvasRichTextNodeInputData } from '../shared/canvas-rich-text-node-data'
+import type { CanvasNodeComponentProps } from '../canvas-node-types'
 
-export function TextNode(props: NodeProps<Node<CanvasRichTextNodeInputData>>) {
+export function TextNode(props: CanvasNodeComponentProps<CanvasRichTextNodeInputData>) {
   return (
     <CanvasRichTextNode
       {...props}

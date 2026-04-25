@@ -1,4 +1,5 @@
 import type { CanvasMeasuredNode } from '../../tools/canvas-tool-types'
+import type { CanvasEngineSnapshot } from '../../system/canvas-engine'
 
 type MeasuredNodeLookupValue = {
   id: string
@@ -27,6 +28,32 @@ export function getMeasuredCanvasNodesFromLookup(
         type: internalNode.type,
         data: internalNode.data,
         position: internalNode.position,
+        width,
+        height,
+      },
+    ]
+  })
+}
+
+export function getMeasuredCanvasNodesFromEngineSnapshot(
+  snapshot: CanvasEngineSnapshot,
+): Array<CanvasMeasuredNode> {
+  const nodeLookup = (snapshot as Partial<CanvasEngineSnapshot>).nodeLookup
+  if (!nodeLookup) {
+    return []
+  }
+
+  return Array.from(nodeLookup.values()).flatMap((internalNode) => {
+    const node = 'node' in internalNode ? internalNode.node : internalNode
+    const width = internalNode.measured.width
+    const height = internalNode.measured.height
+    if (width === undefined || height === undefined) {
+      return []
+    }
+
+    return [
+      {
+        ...node,
         width,
         height,
       },

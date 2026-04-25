@@ -1,5 +1,4 @@
 import { MousePointer2 } from 'lucide-react'
-import { hitTestCanvasNode } from '../../nodes/canvas-node-selection-queries'
 import type { CanvasToolSpec } from '../canvas-tool-types'
 import { isPrimarySelectionModifier } from '../../utils/canvas-selection-utils'
 import { SelectAwarenessLayer } from './select-tool-awareness-layer'
@@ -22,23 +21,10 @@ export const selectToolSpec: CanvasToolSpec<'select'> = {
   },
   createHandlers: (services) => ({
     onNodeClick: (event, node) => {
-      services.selection.toggleNodeFromTarget(node.id, isPrimarySelectionModifier(event))
+      services.selection.toggleNode(node.id, isPrimarySelectionModifier(event))
     },
     onEdgeClick: (event, edge) => {
-      services.selection.toggleEdgeFromTarget(edge.id, isPrimarySelectionModifier(event))
-    },
-    onPaneClick: (event) => {
-      services.selection.toggleNodeFromTarget(
-        hitTestCanvasNode(
-          {
-            getMeasuredNodes: services.query.getMeasuredNodes,
-            getZoom: services.viewport.getZoom,
-            screenToFlowPosition: services.viewport.screenToFlowPosition,
-          },
-          event,
-        ),
-        isPrimarySelectionModifier(event),
-      )
+      services.selection.toggleEdge(edge.id, isPrimarySelectionModifier(event))
     },
   }),
 }

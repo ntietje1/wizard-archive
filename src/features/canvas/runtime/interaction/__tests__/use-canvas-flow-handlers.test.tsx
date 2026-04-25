@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest'
 import { createCanvasFlowHandlers } from '../use-canvas-flow-handlers'
 import type { CanvasDocumentWriter, CanvasToolHandlers } from '../../../tools/canvas-tool-types'
 import type { Edge, Node } from '@xyflow/react'
-import type { MouseEvent as ReactMouseEvent } from 'react'
 
 function createDocumentWriter(): CanvasDocumentWriter {
   return {
@@ -28,18 +27,12 @@ function createActiveToolHandlers(): CanvasToolHandlers {
 }
 
 describe('createCanvasFlowHandlers', () => {
-  const mouseEvent = {} as ReactMouseEvent
   const node = { id: 'node-1' } as Node
   const edge = { id: 'edge-1' } as Edge
 
-  it('enables selection drag and delete handlers only when editing in select mode', () => {
+  it('enables delete handlers only when editing in select mode', () => {
     const documentWriter = createDocumentWriter()
     const activeToolHandlers = createActiveToolHandlers()
-    const dragHandlers = {
-      onNodeDragStart: vi.fn(),
-      onNodeDrag: vi.fn(),
-      onNodeDragStop: vi.fn(),
-    }
 
     const handlers = createCanvasFlowHandlers({
       activeToolHandlers,
@@ -50,21 +43,14 @@ describe('createCanvasFlowHandlers', () => {
         onMouseLeave: vi.fn(),
       },
       documentWriter,
-      dragHandlers,
       getEdgeCreationDefaults: () => ({ type: 'bezier' }),
       isEdgeMode: false,
       isSelectMode: true,
     })
 
-    handlers.onNodeDragStart?.(mouseEvent, node, [])
-    handlers.onNodeDrag?.(mouseEvent, node, [])
-    handlers.onNodeDragStop?.(mouseEvent, node, [])
     handlers.onNodesDelete?.([node])
     handlers.onEdgesDelete?.([edge])
 
-    expect(dragHandlers.onNodeDragStart).toHaveBeenCalledTimes(1)
-    expect(dragHandlers.onNodeDrag).toHaveBeenCalledTimes(1)
-    expect(dragHandlers.onNodeDragStop).toHaveBeenCalledTimes(1)
     expect(documentWriter.deleteNodes).toHaveBeenCalledWith(new Set(['node-1']))
     expect(documentWriter.deleteEdges).toHaveBeenCalledWith(new Set(['edge-1']))
   })
@@ -79,19 +65,11 @@ describe('createCanvasFlowHandlers', () => {
         onMouseLeave: vi.fn(),
       },
       documentWriter: createDocumentWriter(),
-      dragHandlers: {
-        onNodeDragStart: vi.fn(),
-        onNodeDrag: vi.fn(),
-        onNodeDragStop: vi.fn(),
-      },
       getEdgeCreationDefaults: () => ({ type: 'bezier' }),
       isEdgeMode: false,
       isSelectMode: true,
     })
 
-    expect(handlers.onNodeDragStart).toBeUndefined()
-    expect(handlers.onNodeDrag).toBeUndefined()
-    expect(handlers.onNodeDragStop).toBeUndefined()
     expect(handlers.onNodesDelete).toBeUndefined()
     expect(handlers.onEdgesDelete).toBeUndefined()
     expect(handlers.onConnect).toBeUndefined()
@@ -111,11 +89,6 @@ describe('createCanvasFlowHandlers', () => {
         onMouseLeave: vi.fn(),
       },
       documentWriter,
-      dragHandlers: {
-        onNodeDragStart: vi.fn(),
-        onNodeDrag: vi.fn(),
-        onNodeDragStop: vi.fn(),
-      },
       getEdgeCreationDefaults: () => ({ type: 'step' }),
       isEdgeMode: true,
       isSelectMode: false,
@@ -127,7 +100,7 @@ describe('createCanvasFlowHandlers', () => {
       sourceHandle: null,
       targetHandle: null,
     })
-    handlers.onPaneClick?.({} as ReactMouseEvent)
+    handlers.onPaneClick?.({} as never)
 
     expect(documentWriter.createEdge).toHaveBeenCalledWith(
       {

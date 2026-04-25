@@ -1,79 +1,52 @@
-import { create } from 'zustand'
-import { useShallow } from 'zustand/shallow'
 import {
-  createCanvasPendingSelectionPreview,
-  createInactiveCanvasPendingSelectionPreview,
   getCanvasPendingSelectionPreviewSummary,
-  getNextCanvasPendingSelectionPreview,
-  isCanvasEdgePendingPreview,
-  isCanvasNodePendingPreview,
   isCanvasPendingPreviewActive,
-} from './canvas-pending-selection-preview-state'
-import type { CanvasPendingSelectionPreview } from './canvas-pending-selection-preview-state'
-import type { CanvasSelectionSnapshot } from '../../tools/canvas-tool-types'
+} from '../../system/canvas-selection'
+import type { CanvasPendingSelectionPreview } from '../../system/canvas-selection'
+import { useCanvasEngineSelector } from '../../react/use-canvas-engine'
 
-interface CanvasPendingSelectionPreviewState {
-  preview: CanvasPendingSelectionPreview
+const INACTIVE_PENDING_SELECTION_PREVIEW_SUMMARY = {
+  active: false,
+  nodeCount: 0,
+  edgeCount: 0,
 }
 
-interface CanvasPendingSelectionPreviewActions {
-  setPendingSelection: (preview: CanvasPendingSelectionPreview) => void
-  reset: () => void
-}
-
-const useCanvasPendingSelectionPreviewStore = create<
-  CanvasPendingSelectionPreviewState & CanvasPendingSelectionPreviewActions
->((set) => ({
-  preview: createInactiveCanvasPendingSelectionPreview(),
-  setPendingSelection: (preview) =>
-    set((state) => {
-      const nextPreview = getNextCanvasPendingSelectionPreview(state.preview, preview)
-      return nextPreview === state.preview ? state : { preview: nextPreview }
-    }),
-  reset: () =>
-    set((state) => {
-      const nextPreview = getNextCanvasPendingSelectionPreview(
-        state.preview,
-        createInactiveCanvasPendingSelectionPreview(),
-      )
-      return nextPreview === state.preview ? state : { preview: nextPreview }
-    }),
-}))
-
-export function setCanvasPendingSelectionPreview(preview: CanvasSelectionSnapshot | null) {
-  useCanvasPendingSelectionPreviewStore
-    .getState()
-    .setPendingSelection(createCanvasPendingSelectionPreview(preview))
-}
-
-export function clearCanvasPendingSelectionPreview() {
-  useCanvasPendingSelectionPreviewStore.getState().reset()
-}
-
-export function getCanvasPendingSelectionPreview() {
-  return useCanvasPendingSelectionPreviewStore.getState().preview
+function arePreviewSummariesEqual(
+  left: typeof INACTIVE_PENDING_SELECTION_PREVIEW_SUMMARY,
+  right: typeof INACTIVE_PENDING_SELECTION_PREVIEW_SUMMARY,
+) {
+  return (
+    left.active === right.active &&
+    left.nodeCount === right.nodeCount &&
+    left.edgeCount === right.edgeCount
+  )
 }
 
 export function useCanvasPendingPreviewActive() {
-  return useCanvasPendingSelectionPreviewStore((state) =>
-    isCanvasPendingPreviewActive(state.preview),
+  return useCanvasEngineSelector((state) =>
+    isCanvasPendingPreviewActive(state.selection.pendingPreview),
   )
 }
 
 export function useCanvasNodePendingPreview(id: string) {
-  return useCanvasPendingSelectionPreviewStore((state) =>
-    isCanvasNodePendingPreview(state.preview, id),
-  )
+  return useCanvasEngineSelector((state) => {
+    const preview = state.selection.pendingPreview
+    return preview.kind === 'active' && preview.nodeIds.has(id)
+  })
 }
 
 export function useCanvasEdgePendingPreview(id: string) {
-  return useCanvasPendingSelectionPreviewStore((state) =>
-    isCanvasEdgePendingPreview(state.preview, id),
-  )
+  return useCanvasEngineSelector((state) => {
+    const preview = state.selection.pendingPreview
+    return preview.kind === 'active' && preview.edgeIds.has(id)
+  })
 }
 
 export function useCanvasPendingSelectionPreviewSummary() {
-  return useCanvasPendingSelectionPreviewStore(
-    useShallow((state) => getCanvasPendingSelectionPreviewSummary(state.preview)),
+  return useCanvasEngineSelector(
+    (state) => getCanvasPendingSelectionPreviewSummary(state.selection.pendingPreview),
+    arePreviewSummariesEqual,
   )
 }
+
+export type { CanvasPendingSelectionPreview }

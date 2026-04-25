@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
-import { useReactFlow } from '@xyflow/react'
 import type { SpringState } from '~/shared/hooks/useSpringPosition'
 import { SPRING_DEFAULTS, stepSpring } from '~/shared/hooks/useSpringPosition'
+import type { CanvasEngine } from '../../system/canvas-engine'
 
 interface UseCanvasRemoteDragAnimationOptions {
+  canvasEngine: CanvasEngine
   localDraggingIdsRef: React.RefObject<Set<string>>
   remoteDragPositions: Record<string, { x: number; y: number }>
 }
@@ -15,10 +16,10 @@ export interface CanvasRemoteDragAnimation {
 }
 
 export function useCanvasRemoteDragAnimation({
+  canvasEngine,
   localDraggingIdsRef,
   remoteDragPositions,
 }: UseCanvasRemoteDragAnimationOptions): CanvasRemoteDragAnimation {
-  const reactFlow = useReactFlow()
   const remoteDragRef = useRef(remoteDragPositions)
   remoteDragRef.current = remoteDragPositions
   const springStatesRef = useRef(
@@ -83,17 +84,7 @@ export function useCanvasRemoteDragAnimation({
       }
 
       if (updates.size > 0) {
-        reactFlow.setNodes((current) =>
-          current.map((node) => {
-            if (localDraggingIdsRef.current?.has(node.id)) return node
-            const position = updates.get(node.id)
-            if (!position) return node
-            if (node.position.x === position.x && node.position.y === position.y) {
-              return node
-            }
-            return { ...node, position }
-          }),
-        )
+        canvasEngine.updateDrag(updates)
       }
 
       if (springs.size === 0) {
@@ -117,7 +108,7 @@ export function useCanvasRemoteDragAnimation({
       cancelAnimationFrame(springRafIdRef.current)
       springRafIdRef.current = 0
     }
-  }, [localDraggingIdsRef, reactFlow])
+  }, [canvasEngine, localDraggingIdsRef])
 
   useEffect(() => {
     if (Object.keys(remoteDragPositions).length > 0) {

@@ -95,7 +95,6 @@ test.describe.serial('canvas performance probe', () => {
 
     await selectCanvasTool(page, 'Pointer')
     const firstNode = getCanvasNodeById(page, 'perf-node-0')
-    const firstNodeShell = getCanvasNodeShellById(page, 'perf-node-0')
     await expect(firstNode).toBeVisible({ timeout: 10_000 })
 
     const interactions: Record<string, InteractionSummary> = {}
@@ -128,12 +127,19 @@ test.describe.serial('canvas performance probe', () => {
           })
         },
       )
+
+      interactions[`toolbarStrokeSizeSelected${selectedCount}`] = await measureInteraction(
+        page,
+        async () => {
+          await dragStrokeSizeSlider(page)
+        },
+      )
     }
 
     for (const selectedCount of SELECTED_COUNTS) {
       await selectFirstCanvasNodes(page, selectedCount)
       interactions[`dragSelected${selectedCount}`] = await measureInteraction(page, async () => {
-        await dragCanvasNode(page, firstNodeShell, { x: 30, y: 20 })
+        await dragCanvasNode(page, firstNode, { x: 30, y: 20 })
       })
 
       interactions[`handlerDragSelected${selectedCount}`] = await measureInteraction(
@@ -166,6 +172,26 @@ test.describe.serial('canvas performance probe', () => {
       for (let index = 0; index < 12; index += 1) {
         await page.mouse.wheel(0, 180)
       }
+    })
+
+    interactions.viewportCoordinateRegression = await measureInteraction(page, async () => {
+      await selectCanvasTool(page, 'Pointer')
+      const before = await getRuntimeNodePosition(page, 'perf-node-0')
+      await page.evaluate((position) => {
+        window.__WA_CANVAS_PERF_RUNTIME__?.setViewport({
+          x: 360 - position.x * 2,
+          y: 240 - position.y * 2,
+          zoom: 2,
+        })
+      }, before)
+      await expect(firstNode).toBeVisible({ timeout: 10_000 })
+      await page.waitForTimeout(50)
+      const positionedBefore = await getRuntimeNodePosition(page, 'perf-node-0')
+      await dragCanvasNode(page, firstNode, { x: 40, y: 20 })
+      const after = await getRuntimeNodePosition(page, 'perf-node-0')
+
+      expect(round(after.x - positionedBefore.x)).toBe(20)
+      expect(round(after.y - positionedBefore.y)).toBe(10)
     })
 
     interactions.marqueeSelection = await measureInteraction(page, async () => {
@@ -207,22 +233,30 @@ async function selectFirstCanvasNodes(page: Page, count: number) {
     null,
     { timeout: 10_000 },
   )
-  await page.waitForFunction(
-    () =>
-      document
-        .querySelector(
-          '.react-flow__node:has([data-testid="canvas-node"][data-node-id="perf-node-0"])',
-        )
-        ?.classList.contains('selected') === true,
-    null,
-    { timeout: 10_000 },
-  )
 }
 
-function getCanvasNodeShellById(page: Page, nodeId: string) {
-  return page.locator(
-    `.react-flow__node:has([data-testid="canvas-node"][data-node-id="${nodeId}"])`,
-  )
+async function dragStrokeSizeSlider(page: Page) {
+  const slider = page
+    .getByRole('toolbar', { name: 'Canvas conditional toolbar' })
+    .locator('[data-slot="slider"]')
+    .first()
+  await expect(slider).toBeVisible({ timeout: 10_000 })
+  const box = await slider.boundingBox()
+  if (!box) throw new Error('Stroke size slider is not visible')
+
+  const y = box.y + box.height / 2
+  await page.mouse.move(box.x + box.width * 0.25, y)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width * 0.8, y, { steps: 12 })
+  await page.mouse.up()
+}
+
+async function getRuntimeNodePosition(page: Page, nodeId: string) {
+  return page.evaluate((id) => {
+    const position = window.__WA_CANVAS_PERF_RUNTIME__?.getNodePosition(id)
+    if (!position) throw new Error(`Missing runtime node position for ${id}`)
+    return position
+  }, nodeId)
 }
 
 async function measureInteraction(

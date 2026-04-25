@@ -1,8 +1,8 @@
-import { useInternalNode, useViewport } from '@xyflow/react'
-import type { CanvasNodeMinimapProps } from '../canvas-node-types'
+import { useEffect, useRef } from 'react'
+import type { Ref } from 'react'
+import type { CanvasNodeComponentProps, CanvasNodeMinimapProps } from '../canvas-node-types'
 import type { CanvasConnectionHandleDescriptor } from '../shared/canvas-node-connection-handles'
 import { ResizableNodeWrapper } from '../shared/resizable-node-wrapper'
-import type { Node, NodeProps } from '@xyflow/react'
 import type { StrokeEndpoint, StrokeNodeData, StrokeNodeType } from './stroke-node-model'
 import {
   getAbsoluteStrokePointsForNode,
@@ -18,6 +18,7 @@ import { useCanvasNodeVisualSelection } from '../shared/use-canvas-node-visual-s
 import { CanvasNodeConnectionHandles } from '../shared/canvas-node-connection-handles'
 import { getStrokeSelectionPadding } from './stroke-node-interactions'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
+import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
 
 const HIGHLIGHT_SCALE = 0.3
 const ERASING_OPACITY = 0.3
@@ -77,11 +78,13 @@ function StrokePreview({
   width,
   height,
   opacityOverride,
+  pathRef,
 }: {
   data: StrokeNodeData
   width?: number
   height?: number
   opacityOverride?: number
+  pathRef?: Ref<SVGPathElement>
 }) {
   const { points, color, size, bounds } = data
   const d = pointsToPathD(points, size)
@@ -109,15 +112,22 @@ function StrokePreview({
       preserveAspectRatio="none"
       style={{ overflow: 'visible' }}
     >
-      <path d={d} fill={color} opacity={normalizedOpacity} />
+      <path ref={pathRef} d={d} fill={color} opacity={normalizedOpacity} />
     </svg>
   )
 }
 
-export function StrokeNode({ id, data, dragging, width, height }: NodeProps<Node<StrokeNodeData>>) {
+export function StrokeNode({
+  id,
+  data,
+  dragging,
+  width,
+  height,
+}: CanvasNodeComponentProps<StrokeNodeData>) {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
+  const { canvasEngine, viewportController } = useCanvasRuntime()
   const { points, size, bounds } = data
-  const { zoom } = useViewport()
+  const zoom = viewportController?.getZoom?.() ?? 1
   const isErasing = useEraseToolLocalOverlayStore((state) => state.erasingStrokeIds.has(id))
   const { visuallySelected } = useCanvasNodeVisualSelection(id)
   const connectionHandles = getStrokeConnectionHandles(data)
@@ -137,6 +147,17 @@ export function StrokeNode({ id, data, dragging, width, height }: NodeProps<Node
     : null
 
   const highlightD = visuallySelected ? pointsToPathD(points, size * HIGHLIGHT_SCALE) : null
+  const pathRef = useRef<SVGPathElement | null>(null)
+  const highlightPathRef = useRef<SVGPathElement | null>(null)
+
+  useEffect(
+    () =>
+      canvasEngine.registerStrokeNodePaths(id, {
+        path: pathRef.current,
+        highlightPath: highlightPathRef.current,
+      }),
+    [canvasEngine, id],
+  )
   const hitTarget =
     interactiveRenderMode && hitTargetD && hitTargetViewBox ? (
       <svg
@@ -179,7 +200,7 @@ export function StrokeNode({ id, data, dragging, width, height }: NodeProps<Node
           pointerEvents: 'none',
         }}
       >
-        <path d={highlightD} fill="var(--primary)" />
+        <path ref={highlightPathRef} d={highlightD} fill="var(--primary)" />
       </svg>
     ) : null
 
@@ -198,6 +219,7 @@ export function StrokeNode({ id, data, dragging, width, height }: NodeProps<Node
         width={svgWidth}
         height={svgHeight}
         opacityOverride={interactiveRenderMode && isErasing ? ERASING_OPACITY : undefined}
+        pathRef={pathRef}
       />
       {highlightPath}
     </ResizableNodeWrapper>
@@ -262,14 +284,14 @@ function StrokeMinimapSvg({
 }
 
 function useInternalStrokeNode(id: string) {
-  const node = useInternalNode<StrokeNodeType>(id)
-  const { zoom } = useViewport()
+  const { canvasEngine, viewportController } = useCanvasRuntime()
+  const node = canvasEngine.getSnapshot().nodeLookup.get(id)?.node as StrokeNodeType | undefined
   if (!node || node.type !== 'stroke') {
     return null
   }
 
   return {
     data: node.data,
-    zoom,
+    zoom: viewportController?.getZoom?.() ?? 1,
   }
 }
