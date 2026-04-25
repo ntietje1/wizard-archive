@@ -215,6 +215,15 @@
   z-index: 1 !important;
 }
 
+.canvas-scene__viewport[data-camera-state='moving'] .canvas-stroke-hit-target-layer,
+.canvas-scene__viewport[data-camera-state='moving'] .canvas-node-connection-handle {
+  display: none;
+}
+
+.canvas-scene__viewport[data-camera-state='moving'] .canvas-stroke-highlight-path {
+  visibility: hidden;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .canvas-node-connection-handle::after {
     animation: canvas-node-connection-handle-pulse 1.8s ease-in-out infinite;
