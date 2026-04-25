@@ -1,6 +1,9 @@
 import type { CanvasEngineSnapshot } from './canvas-engine'
 import type { Edge, Node } from '@xyflow/react'
 
+const EMPTY_SELECTED_NODES: ReadonlyArray<Node> = []
+const EMPTY_SELECTED_EDGES: ReadonlyArray<Edge> = []
+
 export interface CanvasEdgeEndpointNodes {
   source: Node | null
   target: Node | null
@@ -82,7 +85,7 @@ export function areCanvasPropertyEdgesEqual(left: ReadonlyArray<Edge>, right: Re
 
 function getSelectedNodes(nodes: ReadonlyArray<Node>, selectedNodeIds: ReadonlySet<string>) {
   if (selectedNodeIds.size === 0) {
-    return []
+    return EMPTY_SELECTED_NODES
   }
 
   return nodes.filter((node) => selectedNodeIds.has(node.id))
@@ -90,7 +93,7 @@ function getSelectedNodes(nodes: ReadonlyArray<Node>, selectedNodeIds: ReadonlyS
 
 function getSelectedEdges(edges: ReadonlyArray<Edge>, selectedEdgeIds: ReadonlySet<string>) {
   if (selectedEdgeIds.size === 0) {
-    return []
+    return EMPTY_SELECTED_EDGES
   }
 
   return edges.filter((edge) => selectedEdgeIds.has(edge.id))

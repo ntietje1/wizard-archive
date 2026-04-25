@@ -15,5 +15,7 @@ export function buildCanvasEdgePath(
       return buildStraightCanvasEdgeGeometryFromEdge(edge, nodesById)?.path ?? null
     case 'step':
       return buildStepCanvasEdgeGeometryFromEdge(edge, nodesById)?.path ?? null
+    default:
+      return null
   }
 }

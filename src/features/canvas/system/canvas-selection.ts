@@ -172,17 +172,17 @@ export function applyCanvasSelectionCommitMode({
 export function getNextSelectedIds({
   selectedIds,
   targetId,
-  toggle,
+  additive,
 }: {
   selectedIds: ReadonlySet<string>
   targetId: string | null
-  toggle: boolean
+  additive: boolean
 }): ReadonlySet<string> {
   if (!targetId) {
-    return toggle ? selectedIds : EMPTY_SET
+    return additive ? selectedIds : EMPTY_SET
   }
 
-  if (!toggle) {
+  if (!additive) {
     return new Set([targetId])
   }
 

@@ -31,7 +31,11 @@ vi.mock('../../nodes/canvas-node-modules', () => ({
 
 describe('CanvasAwarenessHost', () => {
   it('renders tool and node awareness layers from the direct awareness exports', () => {
-    render(<CanvasAwarenessHost remoteUsers={[]} />)
+    render(
+      <CanvasEngineProvider engine={createCanvasEngine()}>
+        <CanvasAwarenessHost remoteUsers={[]} />
+      </CanvasEngineProvider>,
+    )
 
     expect(screen.getByTestId('tool-awareness-layer')).toBeVisible()
     expect(screen.getByTestId('node-awareness-layer')).toBeVisible()
@@ -69,11 +73,8 @@ describe('CanvasAwarenessHost', () => {
       </CanvasEngineProvider>,
     )
 
-    const localOverlayLayer = screen.getByTestId('tool-local-overlay-layer')
-    const transformedLayerContainer = localOverlayLayer.parentElement
-    if (!transformedLayerContainer) {
-      throw new Error('Expected local overlay layer to have a transform container')
-    }
+    expect(screen.getByTestId('tool-local-overlay-layer')).toBeVisible()
+    const transformedLayerContainer = screen.getByTestId('local-overlay-transform-container')
     expect(transformedLayerContainer).toHaveStyle({
       transform: 'translate3d(-20px, 8px, 0) scale(0.75)',
       transformOrigin: '0 0',

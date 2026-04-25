@@ -75,14 +75,14 @@ function createCanvasSelectionController({
     clearSelection: () => {
       applySelection({ nodeIds: new Set(), edgeIds: new Set() })
     },
-    toggleNode: (nodeId, toggle) => {
+    toggleNode: (nodeId, additive) => {
       const previous = getSnapshot()
-      canvasEngine.toggleNodeSelection(nodeId, toggle)
+      canvasEngine.toggleNodeSelection(nodeId, additive)
       notifySelectionChange(previous, getSnapshot())
     },
-    toggleEdge: (edgeId, toggle) => {
+    toggleEdge: (edgeId, additive) => {
       const previous = getSnapshot()
-      canvasEngine.toggleEdgeSelection(edgeId, toggle)
+      canvasEngine.toggleEdgeSelection(edgeId, additive)
       notifySelectionChange(previous, getSnapshot())
     },
     beginGesture: (kind, mode) => {

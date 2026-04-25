@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useCanvasSelectionRect } from '../use-canvas-selection-rect'
 import { clearSelectToolLocalOverlay } from '../../../tools/select/select-tool-local-overlay'
 import type { CanvasEngine } from '../../../system/canvas-engine'
+import type { CanvasViewportController } from '../../../system/canvas-viewport-controller'
 import type { CanvasSelectionSnapshot } from '../../../tools/canvas-tool-types'
 import type { Edge, Node } from '@xyflow/react'
 
@@ -52,11 +53,14 @@ function createCanvasEngineMock(): CanvasEngine {
   } as unknown as CanvasEngine
 }
 
-function createViewportControllerMock() {
+function createViewportControllerMock(): Pick<
+  CanvasViewportController,
+  'getZoom' | 'screenToCanvasPosition'
+> {
   return {
     getZoom: reactFlowMock.getZoom,
     screenToCanvasPosition: reactFlowMock.screenToFlowPosition,
-  } as never
+  }
 }
 
 describe('useCanvasSelectionRect', () => {
@@ -331,6 +335,7 @@ describe('useCanvasSelectionRect', () => {
       nodeIds: new Set(['text-existing', 'text-1']),
       edgeIds: new Set(['edge-existing']),
     })
+    expect(selection.beginGesture).toHaveBeenCalledWith('marquee', 'add')
 
     act(() => {
       window.dispatchEvent(

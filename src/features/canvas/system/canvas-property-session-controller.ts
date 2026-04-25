@@ -24,6 +24,11 @@ export function createCanvasPropertySessionController(): CanvasPropertySessionCo
 
   return {
     startPropertySession: (options) => {
+      if (activeSession) {
+        activeSession = null
+        latestPreview = null
+      }
+
       activeSession = options
       latestPreview = null
     },

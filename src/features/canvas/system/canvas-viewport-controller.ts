@@ -280,7 +280,7 @@ function getWheelZoomFactor(deltaY: number) {
 }
 
 function releasePointerCapture(target: Element | null, pointerId: number) {
-  if (target instanceof HTMLElement && target.hasPointerCapture(pointerId)) {
+  if (target?.hasPointerCapture(pointerId)) {
     target.releasePointerCapture(pointerId)
   }
 }

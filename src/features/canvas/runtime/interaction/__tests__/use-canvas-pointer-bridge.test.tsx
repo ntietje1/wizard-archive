@@ -120,12 +120,22 @@ function Harness({ activeToolHandlers }: { activeToolHandlers: CanvasToolHandler
 
 function createPointerEvent(
   type: string,
-  init: { button: number; pointerId: number },
+  init: { button: number; buttons?: number; pointerId: number },
 ): PointerEvent {
+  if (typeof PointerEvent !== 'undefined') {
+    return new PointerEvent(type, {
+      bubbles: true,
+      button: init.button,
+      buttons: init.buttons ?? 1,
+      cancelable: true,
+      pointerId: init.pointerId,
+    })
+  }
+
   const event = new Event(type, { bubbles: true, cancelable: true }) as PointerEvent
   Object.defineProperties(event, {
     button: { value: init.button },
-    buttons: { value: 1 },
+    buttons: { value: init.buttons ?? 1 },
     pointerId: { value: init.pointerId },
   })
   return event

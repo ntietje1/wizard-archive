@@ -598,7 +598,16 @@ function StrokeSizeControl({
           }}
           onKeyUp={(event) => {
             if (
-              !['ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'].includes(event.key)
+              ![
+                'ArrowLeft',
+                'ArrowRight',
+                'ArrowUp',
+                'ArrowDown',
+                'Home',
+                'End',
+                'PageUp',
+                'PageDown',
+              ].includes(event.key)
             ) {
               return
             }

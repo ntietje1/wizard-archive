@@ -19,7 +19,7 @@ vi.mock('@xyflow/react', () => ({
     position: string
     'data-testid': string
     'data-selected'?: string
-    'data-connection-in-progress'?: string
+    'data-handles-visible'?: string
     className?: string
     style?: React.CSSProperties
   }) => <div {...props}>{children}</div>,
@@ -48,18 +48,15 @@ describe('CanvasNodeConnectionHandles', () => {
     expect(screen.getByTestId('canvas-node-handle-top')).toHaveClass('duration-0')
   })
 
-  it('shows connection-indicator styling during an active edge-tool connection', () => {
+  it('marks handles visible while the edge tool is active', () => {
     reactFlowMock.connectionInProgress = true
     useCanvasToolStore.getState().setActiveTool('edge')
 
     render(<CanvasNodeConnectionHandles />)
 
     expect(screen.getByTestId('canvas-node-handle-top')).toHaveAttribute(
-      'data-connection-in-progress',
+      'data-handles-visible',
       'true',
-    )
-    expect(screen.getByTestId('canvas-node-handle-top')).toHaveClass(
-      '[&.connectionindicator]:opacity-100',
     )
     expect(screen.getByTestId('canvas-node-handle-top')).toHaveClass('duration-150')
   })

@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
 import { createCanvasEngine } from '../../../system/canvas-engine'
 import type { CanvasEngine } from '../../../system/canvas-engine'
@@ -43,7 +43,7 @@ vi.mock('../../../runtime/providers/canvas-runtime', () => ({
   }),
 }))
 
-afterEach(() => {
+beforeEach(() => {
   strokeEngine = createCanvasEngine()
   connectionHandlesSpy.mockReset()
 })
@@ -158,7 +158,7 @@ function setupStrokeNodeProps({ selected, size = 4 }: { selected: boolean; size?
     selectable: true,
     deletable: true,
     zIndex: 1,
-    type: 'stroke',
+    type: 'stroke' as const,
     data: {
       bounds: { x: 0, y: 0, width: 100, height: 20 },
       points: [

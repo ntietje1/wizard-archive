@@ -10,6 +10,14 @@ type StrokePathCacheEntry = {
 
 const strokePathCache = new Map<string, StrokePathCacheEntry>()
 
+export function clearStrokePathCache(nodeId: string) {
+  strokePathCache.delete(nodeId)
+}
+
+export function clearAllStrokePathCache() {
+  strokePathCache.clear()
+}
+
 export function getCachedStrokeDetailPath(
   nodeId: string,
   data: StrokeNodeData,

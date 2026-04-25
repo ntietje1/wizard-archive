@@ -78,7 +78,7 @@ function screenEventToFlowPosition(
 }
 
 export function findCanvasNodeAtPoint(
-  nodes: Array<Node>,
+  nodes: ReadonlyArray<Node>,
   point: Point2D,
   context: CanvasNodeSelectionContext,
 ): string | null {
@@ -109,17 +109,14 @@ export function hitTestCanvasNode(
 }
 
 export function getCanvasNodesMatchingRectangle(
-  nodes: Array<Node>,
+  nodes: ReadonlyArray<Node>,
   rect: Bounds,
   context: CanvasNodeSelectionContext,
 ): ReadonlySet<string> {
   const matchingIds = new Set<string>()
+  const getBounds = (candidate: Node) => getCanvasRectangleCandidateBounds(candidate, context)
   for (const node of nodes) {
-    if (
-      !isCanvasSelectionCandidate(node, rect, (candidate) =>
-        getCanvasRectangleCandidateBounds(candidate, context),
-      )
-    ) {
+    if (!isCanvasSelectionCandidate(node, rect, getBounds)) {
       continue
     }
 
@@ -133,8 +130,8 @@ export function getCanvasNodesMatchingRectangle(
 }
 
 export function getCanvasNodesMatchingLasso(
-  nodes: Array<Node>,
-  polygon: Array<Point2D>,
+  nodes: ReadonlyArray<Node>,
+  polygon: ReadonlyArray<Point2D>,
   context: CanvasNodeSelectionContext,
 ): ReadonlySet<string> {
   const polygonBounds = boundsFromPoints(polygon)

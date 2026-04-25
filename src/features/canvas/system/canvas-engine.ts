@@ -14,6 +14,7 @@ import type {
 } from './canvas-selection'
 import { createCanvasDomRegistry } from './canvas-dom-registry'
 import { createCanvasRenderScheduler } from './canvas-render-scheduler'
+import { clearStrokePathCache } from '../nodes/stroke/stroke-path-cache'
 import type { CanvasEdgePatch } from '../edges/canvas-edge-types'
 import type {
   CanvasDomRegistry,
@@ -74,6 +75,12 @@ type CanvasViewportCommitListener = (viewport: CanvasViewport) => void
 export type CanvasEngineEquality<T> = (a: T, b: T) => boolean
 export type { CanvasViewport }
 
+/**
+ * CanvasEngine accepts canonical dispatch operations for replayable state changes and direct
+ * methods for synchronous local updates. Prefer dispatch({ type: ... }) when the caller needs a
+ * serialized operation boundary; use direct methods like setSelection, patchNodes, or setViewport
+ * for local runtime work that should execute immediately.
+ */
 export interface CanvasEngine {
   getSnapshot: () => CanvasEngineSnapshot
   subscribe: (listener: CanvasEngineListener) => () => void
@@ -93,8 +100,8 @@ export interface CanvasEngine {
   setNodePositions: (positions: ReadonlyMap<string, XYPosition>) => void
   setSelection: (selection: { nodeIds: ReadonlySet<string>; edgeIds: ReadonlySet<string> }) => void
   clearSelection: () => void
-  toggleNodeSelection: (nodeId: string, toggle: boolean) => void
-  toggleEdgeSelection: (edgeId: string, toggle: boolean) => void
+  toggleNodeSelection: (nodeId: string, additive: boolean) => void
+  toggleEdgeSelection: (edgeId: string, additive: boolean) => void
   beginSelectionGesture: (kind: CanvasSelectionGestureKind, mode: CanvasSelectionCommitMode) => void
   setSelectionGesturePreview: (selection: CanvasSelectionSnapshot | null) => void
   commitSelectionGesture: () => void
@@ -131,8 +138,8 @@ type CanvasEngineOperation =
   | { type: 'set-node-positions'; positions: ReadonlyMap<string, XYPosition> }
   | { type: 'set-selection'; nodeIds: ReadonlySet<string>; edgeIds: ReadonlySet<string> }
   | { type: 'clear-selection' }
-  | { type: 'toggle-node-selection'; nodeId: string; toggle: boolean }
-  | { type: 'toggle-edge-selection'; edgeId: string; toggle: boolean }
+  | { type: 'toggle-node-selection'; nodeId: string; additive: boolean }
+  | { type: 'toggle-edge-selection'; edgeId: string; additive: boolean }
   | {
       type: 'begin-selection-gesture'
       kind: CanvasSelectionGestureKind
@@ -225,10 +232,10 @@ export function createCanvasEngine(): CanvasEngine {
         clearSelection()
         break
       case 'toggle-node-selection':
-        toggleNodeSelection(operation.nodeId, operation.toggle)
+        toggleNodeSelection(operation.nodeId, operation.additive)
         break
       case 'toggle-edge-selection':
-        toggleEdgeSelection(operation.edgeId, operation.toggle)
+        toggleEdgeSelection(operation.edgeId, operation.additive)
         break
       case 'begin-selection-gesture':
         beginSelectionGesture(operation.kind, operation.mode)
@@ -260,10 +267,23 @@ export function createCanvasEngine(): CanvasEngine {
       case 'measure-node':
         measureNode(operation.nodeId, operation.dimensions)
         break
+      default: {
+        const exhaustiveOperation: never = operation
+        throw new Error(`Unhandled canvas engine operation: ${String(exhaustiveOperation)}`)
+      }
     }
   }
 
   const setDocumentSnapshot: CanvasEngine['setDocumentSnapshot'] = ({ nodes, edges }) => {
+    if (nodes) {
+      const nextNodeIds = new Set(nodes.map((node) => node.id))
+      for (const node of snapshot.nodes) {
+        if (node.type === 'stroke' && !nextNodeIds.has(node.id)) {
+          clearStrokePathCache(node.id)
+        }
+      }
+    }
+
     const nextNodes = nodes ?? snapshot.nodes
     const nextEdges = edges ?? snapshot.edges
     const nodeLookup = createNodeLookup(nextNodes, snapshot.selection.nodeIds, draggingNodeIds)
@@ -358,24 +378,24 @@ export function createCanvasEngine(): CanvasEngine {
     setSelection({ nodeIds: EMPTY_SET, edgeIds: EMPTY_SET })
   }
 
-  const toggleNodeSelection: CanvasEngine['toggleNodeSelection'] = (nodeId, toggle) => {
+  const toggleNodeSelection: CanvasEngine['toggleNodeSelection'] = (nodeId, additive) => {
     setSelection({
       nodeIds: getNextSelectedIds({
         selectedIds: snapshot.selection.nodeIds,
         targetId: nodeId,
-        toggle,
+        additive,
       }),
-      edgeIds: toggle ? snapshot.selection.edgeIds : EMPTY_SET,
+      edgeIds: additive ? snapshot.selection.edgeIds : EMPTY_SET,
     })
   }
 
-  const toggleEdgeSelection: CanvasEngine['toggleEdgeSelection'] = (edgeId, toggle) => {
+  const toggleEdgeSelection: CanvasEngine['toggleEdgeSelection'] = (edgeId, additive) => {
     setSelection({
-      nodeIds: toggle ? snapshot.selection.nodeIds : EMPTY_SET,
+      nodeIds: additive ? snapshot.selection.nodeIds : EMPTY_SET,
       edgeIds: getNextSelectedIds({
         selectedIds: snapshot.selection.edgeIds,
         targetId: edgeId,
-        toggle,
+        additive,
       }),
     })
   }
@@ -712,6 +732,8 @@ export function createCanvasEngine(): CanvasEngine {
       }
     },
     subscribeSelector: (selector, listener, equality = Object.is) => {
+      // This tracks the previous value delivered to the external listener; subscribeWithSelector
+      // keeps its own equality state for deciding when that listener should run.
       let selected = selector(snapshot)
       return subscribeWithSelector({
         getSnapshot: () => snapshot,
@@ -876,7 +898,6 @@ function getConnectedEdgePaths({
   nodeLookup: ReadonlyMap<string, CanvasInternalNode>
 }) {
   const paths = new Map<string, string>()
-  const nodesById = createNodesByIdFromLookup(nodeLookup)
 
   for (const nodeId of nodeIds) {
     const connectedEdgeIds = edgeIdsByNodeId.get(nodeId)
@@ -890,7 +911,16 @@ function getConnectedEdgePaths({
       }
 
       const edge = edgeLookup.get(edgeId)?.edge
-      const path = edge ? buildCanvasEdgePath(edge, nodesById) : null
+      const sourceNode = edge ? nodeLookup.get(edge.source)?.node : null
+      const targetNode = edge ? nodeLookup.get(edge.target)?.node : null
+      const nodesById =
+        sourceNode && targetNode
+          ? new Map([
+              [sourceNode.id, sourceNode],
+              [targetNode.id, targetNode],
+            ])
+          : null
+      const path = edge && nodesById ? buildCanvasEdgePath(edge, nodesById) : null
       if (path) {
         paths.set(edgeId, path)
       }
@@ -898,14 +928,6 @@ function getConnectedEdgePaths({
   }
 
   return paths
-}
-
-function createNodesByIdFromLookup(nodeLookup: ReadonlyMap<string, CanvasInternalNode>) {
-  const nodesById = new Map<string, Node>()
-  for (const [nodeId, internalNode] of nodeLookup) {
-    nodesById.set(nodeId, internalNode.node)
-  }
-  return nodesById
 }
 
 function replaceNodes(nodes: ReadonlyArray<Node>, updates: ReadonlyMap<string, Partial<Node>>) {
@@ -916,8 +938,16 @@ function replaceNodes(nodes: ReadonlyArray<Node>, updates: ReadonlyMap<string, P
       return node
     }
 
+    if (
+      Object.entries(patch).every(
+        ([key, value]) => node[key as keyof Node] === (value as Node[keyof Node]),
+      )
+    ) {
+      return node
+    }
+
     const nextNode = { ...node, ...patch }
-    changed ||= nextNode !== node
+    changed = true
     return nextNode
   })
 

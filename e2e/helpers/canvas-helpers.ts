@@ -73,7 +73,7 @@ export function getCanvasLassoOverlay(page: Page) {
 }
 
 export function getCanvasNodes(page: Page) {
-  return page.getByTestId('canvas-node')
+  return page.locator('[data-testid="canvas-node"], .react-flow__node')
 }
 
 export function getCanvasEdges(page: Page) {

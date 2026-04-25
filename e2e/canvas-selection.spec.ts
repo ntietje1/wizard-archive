@@ -25,6 +25,7 @@ import type { Page } from '@playwright/test'
 const campaignName = testName('Cnv Select')
 const canvasName = DEFAULT_CANVAS_NAME
 const mod = process.platform === 'darwin' ? 'Meta' : 'Control'
+const TEXT_CONTENT_LOCATOR = '[aria-label="Text node content"][contenteditable="true"]'
 
 test.describe.serial('canvas selection', () => {
   test.beforeAll(async ({ browser }) => {
@@ -185,13 +186,13 @@ async function openSelectionCanvas(page: Page) {
 async function seedSelectionCanvas(page: Page) {
   await selectCanvasTool(page, 'Text')
   await clickCanvasAt(page, { x: 120, y: 120 })
-  await page.locator('[aria-label="Text node content"][contenteditable="true"]').fill('Alpha')
+  await page.locator(TEXT_CONTENT_LOCATOR).fill('Alpha')
   await clickCanvasAt(page, { x: 720, y: 520 })
   await expect.poll(() => getCanvasNodesByType(page, 'text').count()).toBe(1)
 
   await selectCanvasTool(page, 'Text')
   await clickCanvasAt(page, { x: 320, y: 130 })
-  await page.locator('[aria-label="Text node content"][contenteditable="true"]').fill('Beta')
+  await page.locator(TEXT_CONTENT_LOCATOR).fill('Beta')
   await clickCanvasAt(page, { x: 720, y: 520 })
   await expect.poll(() => getCanvasNodesByType(page, 'text').count()).toBe(2)
 }

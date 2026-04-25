@@ -94,8 +94,8 @@ function createSelectEnvironment({
 }: {
   getNodes: () => Array<Node>
   getMeasuredNodes?: () => Array<CanvasMeasuredNode>
-  toggleNode: (targetId: string, toggle: boolean) => void
-  toggleEdge?: (targetId: string, toggle: boolean) => void
+  toggleNode: (targetId: string, additive: boolean) => void
+  toggleEdge?: (targetId: string, additive: boolean) => void
 }): CanvasToolRuntime {
   return {
     viewport: {

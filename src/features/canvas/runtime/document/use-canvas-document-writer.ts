@@ -13,6 +13,7 @@ import {
 import { sanitizeNodeForPersistence } from './canvas-node-persistence-sanitizer'
 import { measureCanvasPerformance } from '../performance/canvas-performance-metrics'
 import { transactCanvasMap, transactCanvasMaps } from './canvas-yjs-transactions'
+import { clearStrokePathCache } from '../../nodes/stroke/stroke-path-cache'
 import type { Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 
@@ -87,6 +88,9 @@ export function createCanvasDocumentWriter({
           selection: { nodeIds, edgeIds: new Set() },
         })
       })
+      for (const nodeId of nodeIds) {
+        clearStrokePathCache(nodeId)
+      }
     },
     createEdge: (connection, defaults) => {
       withEdgeTransaction(() => {

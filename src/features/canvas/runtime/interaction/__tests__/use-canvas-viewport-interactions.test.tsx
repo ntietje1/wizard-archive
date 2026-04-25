@@ -1,7 +1,6 @@
 import { render } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { useRef } from 'react'
-import { createCanvasRuntime } from '../../__tests__/canvas-runtime-test-utils'
 import { useCanvasViewportInteractions } from '../use-canvas-viewport-interactions'
 import type { CanvasViewportController } from '../../../system/canvas-viewport-controller'
 
@@ -33,6 +32,8 @@ describe('useCanvasViewportInteractions', () => {
 
     render(<Harness canPrimaryPan={() => false} viewportController={viewportController} />)
 
+    // Harness installs the canvas capture listener before this bubble listener, so stopPropagation
+    // after handleWheel prevents the React Flow listener from observing handled wheel events.
     const flow = document.querySelector('.react-flow') as HTMLElement
     flow.addEventListener('wheel', reactFlowWheel, { passive: true })
     flow.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 10 }))
@@ -61,16 +62,34 @@ function Harness({
 
 function createViewportControllerMock(): CanvasViewportController {
   return {
-    ...createCanvasRuntime().viewportController,
+    getViewport: vi.fn(() => ({ x: 0, y: 0, zoom: 1 })),
+    getZoom: vi.fn(() => 1),
+    screenToCanvasPosition: vi.fn((position) => position),
+    canvasToScreenPosition: vi.fn((position) => position),
     handleWheel: vi.fn(),
     handlePanPointerDown: vi.fn(),
+    panBy: vi.fn(),
+    zoomBy: vi.fn(),
+    zoomTo: vi.fn(),
+    zoomIn: vi.fn(),
+    zoomOut: vi.fn(),
+    fitView: vi.fn(),
+    syncFromDocumentOrAdapter: vi.fn(),
+    commit: vi.fn(),
+    destroy: vi.fn(),
   }
 }
 
 function createPointerEvent(type: string, init: { button: number }): PointerEvent {
+  if (typeof PointerEvent !== 'undefined') {
+    return new PointerEvent(type, {
+      bubbles: true,
+      button: init.button,
+      cancelable: true,
+    })
+  }
+
   const event = new Event(type, { bubbles: true, cancelable: true }) as PointerEvent
-  Object.defineProperties(event, {
-    button: { value: init.button },
-  })
+  Object.defineProperty(event, 'button', { value: init.button })
   return event
 }

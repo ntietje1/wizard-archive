@@ -15,7 +15,18 @@ export function createCanvasViewportPersistence({
   initialViewport: PersistedCanvasViewport
 }) {
   let lastSavedViewport = initialViewport
+  let pendingViewport: PersistedCanvasViewport | null = null
   let saveTimeout: ReturnType<typeof setTimeout> | null = null
+
+  const savePendingViewport = () => {
+    if (!pendingViewport) {
+      return
+    }
+
+    savePersistedCanvasViewport(canvasId, pendingViewport)
+    lastSavedViewport = pendingViewport
+    pendingViewport = null
+  }
 
   const clearSaveTimeout = () => {
     if (saveTimeout) {
@@ -36,15 +47,16 @@ export function createCanvasViewportPersistence({
     }
 
     clearSaveTimeout()
+    pendingViewport = nextViewport
 
     saveTimeout = setTimeout(() => {
-      savePersistedCanvasViewport(canvasId, nextViewport)
-      lastSavedViewport = nextViewport
+      savePendingViewport()
       saveTimeout = null
     }, VIEWPORT_SAVE_DEBOUNCE_MS)
   })
 
   return () => {
+    savePendingViewport()
     unsubscribe()
     clearSaveTimeout()
   }

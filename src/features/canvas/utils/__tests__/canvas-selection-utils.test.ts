@@ -26,9 +26,13 @@ describe('canvas-selection-utils', () => {
       new Set(['a', 'b', 'c']),
     )
     expect(mergeSelectedIds(new Set(), new Set(['b', 'c']))).toEqual(new Set(['b', 'c']))
+    expect(mergeSelectedIds(new Set(), new Set())).toEqual(new Set())
   })
 
   it('compares set membership without requiring array conversion', () => {
+    expect(areStringSetsEqual(new Set(), new Set())).toBe(true)
+    expect(areStringSetsEqual(new Set(), new Set(['a']))).toBe(false)
+    expect(areStringSetsEqual(new Set(['a']), new Set(['a', 'b']))).toBe(false)
     expect(areStringSetsEqual(new Set(['a', 'b']), new Set(['b', 'a']))).toBe(true)
     expect(areStringSetsEqual(new Set(['a', 'b']), new Set(['a', 'c']))).toBe(false)
   })
@@ -38,7 +42,7 @@ describe('canvas-selection-utils', () => {
       getNextSelectedIds({
         selectedIds: new Set(['a', 'b']),
         targetId: null,
-        toggle: true,
+        additive: true,
       }),
     ).toEqual(new Set(['a', 'b']))
 
@@ -46,7 +50,7 @@ describe('canvas-selection-utils', () => {
       getNextSelectedIds({
         selectedIds: new Set(['a', 'b']),
         targetId: null,
-        toggle: false,
+        additive: false,
       }),
     ).toEqual(new Set())
   })
@@ -56,7 +60,7 @@ describe('canvas-selection-utils', () => {
       getNextSelectedIds({
         selectedIds: new Set(['a', 'b']),
         targetId: 'c',
-        toggle: true,
+        additive: true,
       }),
     ).toEqual(new Set(['a', 'b', 'c']))
 
@@ -64,7 +68,7 @@ describe('canvas-selection-utils', () => {
       getNextSelectedIds({
         selectedIds: new Set(['a', 'b']),
         targetId: 'b',
-        toggle: true,
+        additive: true,
       }),
     ).toEqual(new Set(['a']))
 
@@ -72,7 +76,7 @@ describe('canvas-selection-utils', () => {
       getNextSelectedIds({
         selectedIds: new Set(['a', 'b']),
         targetId: 'b',
-        toggle: false,
+        additive: false,
       }),
     ).toEqual(new Set(['b']))
 
@@ -80,7 +84,7 @@ describe('canvas-selection-utils', () => {
       getNextSelectedIds({
         selectedIds: new Set(['a', 'b']),
         targetId: 'c',
-        toggle: false,
+        additive: false,
       }),
     ).toEqual(new Set(['c']))
   })

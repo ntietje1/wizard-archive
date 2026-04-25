@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import type { Page } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
 import {
   createCanvas,
@@ -16,9 +16,9 @@ import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
 const ARTIFACT_DIR = path.resolve('output/playwright')
 const ARTIFACT_PREFIX = process.env.CANVAS_PERF_ARTIFACT_PREFIX ?? 'canvas-performance-baseline'
-const NODE_COUNT = Number(process.env.CANVAS_PERF_NODE_COUNT ?? 250)
-const STROKE_NODE_COUNT = Number(process.env.CANVAS_PERF_STROKE_NODE_COUNT ?? 50)
-const SELECTED_COUNTS = [1, 25, 100, 250] as const
+const NODE_COUNT = readCanvasPerfCount('CANVAS_PERF_NODE_COUNT', 250)
+const STROKE_NODE_COUNT = readCanvasPerfCount('CANVAS_PERF_STROKE_NODE_COUNT', 50)
+const SELECTED_COUNTS = [1, 25, 100, 250].filter((count) => count <= NODE_COUNT)
 const campaignName = testName('Perf')
 const canvasName = 'Untitled Canvas'
 
@@ -190,7 +190,7 @@ test.describe.serial('canvas performance probe', () => {
         })
       }, before)
       await expect(firstNode).toBeVisible({ timeout: 10_000 })
-      await page.waitForTimeout(50)
+      await waitForStableLocatorPosition(firstNode)
       const positionedBefore = await getRuntimeNodePosition(page, 'perf-node-0')
       await dragCanvasNode(page, firstNode, { x: 40, y: 20 })
       const after = await getRuntimeNodePosition(page, 'perf-node-0')
@@ -260,6 +260,11 @@ async function selectFirstCanvasNodes(page: Page, count: number) {
         .querySelector('[data-testid="canvas-node"][data-node-id="perf-node-0"]')
         ?.getAttribute('data-node-selected') === 'true',
     null,
+    { timeout: 10_000 },
+  )
+  await page.waitForFunction(
+    (expected) => window.__WA_CANVAS_PERF_RUNTIME__?.getSelectedCount() === expected,
+    count,
     { timeout: 10_000 },
   )
 }
@@ -386,8 +391,8 @@ async function measureInteraction(
   })
   const start = Date.now()
   await action()
-  await page.waitForTimeout(350)
   const wallMs = Date.now() - start
+  await page.waitForTimeout(350)
   const entries = await page.evaluate(() => window.__WA_CANVAS_PERF__?.entries ?? [])
   return {
     wallMs,
@@ -423,4 +428,42 @@ function summarizeMetrics(entries: Array<CanvasPerformanceMetric>): InteractionS
 
 function round(value: number) {
   return Math.round(value * 100) / 100
+}
+
+function readCanvasPerfCount(envName: string, fallback: number) {
+  const rawValue = process.env[envName]
+  if (rawValue === undefined) {
+    return fallback
+  }
+
+  const value = Number.parseInt(rawValue, 10)
+  if (!Number.isFinite(value) || value < 1) {
+    console.warn(`${envName} must be a positive integer; using ${fallback}`)
+    return fallback
+  }
+
+  return value
+}
+
+async function waitForStableLocatorPosition(locator: Locator) {
+  await expect
+    .poll(
+      async () => {
+        const firstBox = await locator.boundingBox()
+        await locator.page().evaluate(
+          () =>
+            new Promise<void>((resolve) => {
+              requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+            }),
+        )
+        const secondBox = await locator.boundingBox()
+        if (!firstBox || !secondBox) {
+          return false
+        }
+
+        return round(firstBox.x) === round(secondBox.x) && round(firstBox.y) === round(secondBox.y)
+      },
+      { timeout: 10_000 },
+    )
+    .toBe(true)
 }

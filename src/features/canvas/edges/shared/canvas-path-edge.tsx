@@ -1,8 +1,12 @@
-import { useContext, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { getCanvasEdgeInteractionWidth } from './canvas-edge-geometry'
-import { buildCanvasEdgeRenderStyle, normalizeCanvasEdgeStyle } from './canvas-edge-style'
+import {
+  buildCanvasEdgeRenderStyle,
+  normalizeCanvasEdgeStyle,
+  PENDING_PREVIEW_EDGE_OPACITY,
+} from './canvas-edge-style'
 import { useCanvasEdgeVisualSelection } from './use-canvas-edge-visual-selection'
-import { CanvasEngineContext } from '../../react/canvas-engine-context-value'
+import { useCanvasEngine } from '../../react/use-canvas-engine'
 import type { CanvasEdgeRendererProps } from '../canvas-edge-types'
 import type { CSSProperties } from 'react'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
@@ -34,23 +38,20 @@ export function CanvasPathEdge({
   geometry: CanvasPathEdgeGeometry | null
 }) {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
-  const canvasEngine = useContext(CanvasEngineContext)
+  const canvasEngine = useCanvasEngine()
   const pathRef = useRef<SVGPathElement | null>(null)
   const highlightPathRef = useRef<SVGPathElement | null>(null)
   const interactionPathRef = useRef<SVGPathElement | null>(null)
   const { visuallySelected, pendingPreviewActive, pendingSelected, selected } =
     useCanvasEdgeVisualSelection(props.id)
+  const hasSelectedHighlight = interactiveRenderMode && visuallySelected
   useEffect(() => {
-    if (!canvasEngine) {
-      return undefined
-    }
-
     return canvasEngine.registerEdgePaths(props.id, {
       path: pathRef.current,
       highlightPath: highlightPathRef.current,
       interactionPath: interactionPathRef.current,
     })
-  })
+  }, [canvasEngine, props.id, hasSelectedHighlight])
 
   if (!geometry) return null
 
@@ -58,18 +59,20 @@ export function CanvasPathEdge({
   const style = {
     ...CANVAS_EDGE_PATH_STYLE,
     ...buildCanvasEdgeRenderStyle(normalizedStyle),
-    opacity: pendingPreviewActive && pendingSelected ? 0.45 : normalizedStyle.opacity,
+    opacity:
+      pendingPreviewActive && pendingSelected
+        ? PENDING_PREVIEW_EDGE_OPACITY
+        : normalizedStyle.opacity,
   }
-  const selectedHighlightStyle =
-    interactiveRenderMode && visuallySelected
-      ? {
-          ...SELECTED_EDGE_HIGHLIGHT_STYLE,
-          strokeWidth: Math.max(
-            normalizedStyle.strokeWidth * SELECTED_EDGE_HIGHLIGHT_SCALE,
-            SELECTED_EDGE_HIGHLIGHT_WIDTH_MIN,
-          ),
-        }
-      : null
+  const selectedHighlightStyle = hasSelectedHighlight
+    ? {
+        ...SELECTED_EDGE_HIGHLIGHT_STYLE,
+        strokeWidth: Math.max(
+          normalizedStyle.strokeWidth * SELECTED_EDGE_HIGHLIGHT_SCALE,
+          SELECTED_EDGE_HIGHLIGHT_WIDTH_MIN,
+        ),
+      }
+    : null
 
   return (
     <g
@@ -89,6 +92,7 @@ export function CanvasPathEdge({
         markerEnd={props.markerEnd}
         fill="none"
         style={style}
+        data-testid="canvas-edge-primary-path"
       />
       {interactiveRenderMode ? (
         <path

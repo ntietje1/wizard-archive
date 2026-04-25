@@ -1,7 +1,7 @@
 import { logger } from '~/shared/utils/logger'
 import type { Node } from '@xyflow/react'
 
-export function createCanvasNodesById(nodes: Array<Node>): ReadonlyMap<string, Node> {
+export function createCanvasNodesById(nodes: ReadonlyArray<Node>): ReadonlyMap<string, Node> {
   const nodesById = new Map<string, Node>()
 
   for (const node of nodes) {

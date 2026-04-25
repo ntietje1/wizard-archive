@@ -55,6 +55,9 @@ const EDGE_RENDERERS = {
   straight: StraightCanvasEdge,
   step: StepCanvasEdge,
 } as const
+const MINIMAP_SCALE = 40
+const MINIMAP_OFFSET_PERCENT = 48
+const MINIMAP_MAX_PERCENT = 96
 
 export function CanvasScene({
   canEdit,
@@ -67,7 +70,11 @@ export function CanvasScene({
   const canvasEngine = useCanvasEngine()
   const paneRef = useRef<HTMLDivElement | null>(null)
   const viewportRef = useRef<HTMLDivElement | null>(null)
+  const sceneHandlersRef = useRef(sceneHandlers)
+  const connectionDraftRef = useRef<ConnectionDraft | null>(null)
   const [connectionDraft, setConnectionDraft] = useState<ConnectionDraft | null>(null)
+  const [isDraggingConnection, setIsDraggingConnection] = useState(false)
+  sceneHandlersRef.current = sceneHandlers
 
   useEffect(() => {
     const unregister = canvasEngine.registerViewportElement(viewportRef.current)
@@ -78,42 +85,49 @@ export function CanvasScene({
   }, [canvasEngine])
 
   useEffect(() => {
-    if (!connectionDraft) {
+    if (!isDraggingConnection) {
       return undefined
     }
 
     const handlePointerMove = (event: PointerEvent) => {
-      setConnectionDraft((draft) => {
-        if (!draft) {
-          return null
-        }
-        return {
-          ...draft,
-          current: canvasEngine.screenToCanvasPosition(
-            { x: event.clientX, y: event.clientY },
-            paneRef.current?.getBoundingClientRect() ?? null,
-          ),
-        }
-      })
+      const draft = connectionDraftRef.current
+      if (!draft) {
+        return
+      }
+
+      const nextDraft = {
+        ...draft,
+        current: canvasEngine.screenToCanvasPosition(
+          { x: event.clientX, y: event.clientY },
+          paneRef.current?.getBoundingClientRect() ?? null,
+        ),
+      }
+      connectionDraftRef.current = nextDraft
+      setConnectionDraft(nextDraft)
     }
 
     const handlePointerUp = (event: PointerEvent) => {
       const target = document.elementFromPoint(event.clientX, event.clientY)
       const targetHandle = resolveConnectionHandle(target)
-      setConnectionDraft((draft) => {
-        if (draft && targetHandle && targetHandle.nodeId !== draft.source) {
-          sceneHandlers.createEdgeFromConnection({
-            source: draft.source,
-            target: targetHandle.nodeId,
-            sourceHandle: draft.sourceHandle,
-            targetHandle: targetHandle.handleId,
-          })
-        }
-        return null
-      })
+      const draft = connectionDraftRef.current
+      connectionDraftRef.current = null
+      setConnectionDraft(null)
+      setIsDraggingConnection(false)
+      if (draft && targetHandle && targetHandle.nodeId !== draft.source) {
+        sceneHandlersRef.current.createEdgeFromConnection({
+          source: draft.source,
+          target: targetHandle.nodeId,
+          sourceHandle: draft.sourceHandle,
+          targetHandle: targetHandle.handleId,
+        })
+      }
     }
 
-    const handlePointerCancel = () => setConnectionDraft(null)
+    const handlePointerCancel = () => {
+      connectionDraftRef.current = null
+      setConnectionDraft(null)
+      setIsDraggingConnection(false)
+    }
 
     window.addEventListener('pointermove', handlePointerMove)
     window.addEventListener('pointerup', handlePointerUp, { once: true })
@@ -123,7 +137,7 @@ export function CanvasScene({
       window.removeEventListener('pointerup', handlePointerUp)
       window.removeEventListener('pointercancel', handlePointerCancel)
     }
-  }, [canvasEngine, connectionDraft, sceneHandlers])
+  }, [canvasEngine, isDraggingConnection])
 
   const handlePointerDownCapture = (event: ReactPointerEvent) => {
     if (!canEdit || event.button !== 0) {
@@ -142,12 +156,15 @@ export function CanvasScene({
       { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
       paneRef.current?.getBoundingClientRect() ?? null,
     )
-    setConnectionDraft({
+    const draft = {
       source: handle.nodeId,
       sourceHandle: handle.handleId,
       start,
       current: start,
-    })
+    }
+    connectionDraftRef.current = draft
+    setConnectionDraft(draft)
+    setIsDraggingConnection(true)
   }
 
   const handlePaneClick = (event: ReactMouseEvent) => {
@@ -298,7 +315,7 @@ function CanvasNodeWrapper({
     >
       <Component
         id={node.id}
-        type={node.type}
+        type={type}
         data={node.data}
         dragging={internalNode.dragging}
         selected={internalNode.selected}
@@ -417,8 +434,20 @@ function CanvasMiniMap() {
           key={node.id}
           className="absolute rounded-sm bg-muted-foreground/45"
           style={{
-            left: `${Math.max(0, Math.min(96, node.position.x / 40 + 48))}%`,
-            top: `${Math.max(0, Math.min(96, node.position.y / 40 + 48))}%`,
+            left: `${Math.max(
+              0,
+              Math.min(
+                MINIMAP_MAX_PERCENT,
+                node.position.x / MINIMAP_SCALE + MINIMAP_OFFSET_PERCENT,
+              ),
+            )}%`,
+            top: `${Math.max(
+              0,
+              Math.min(
+                MINIMAP_MAX_PERCENT,
+                node.position.y / MINIMAP_SCALE + MINIMAP_OFFSET_PERCENT,
+              ),
+            )}%`,
             width: 4,
             height: 4,
           }}

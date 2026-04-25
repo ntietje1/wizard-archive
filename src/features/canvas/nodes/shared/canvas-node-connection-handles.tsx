@@ -20,9 +20,6 @@ const HANDLE_POSITIONS: ReadonlyArray<CanvasConnectionHandleDescriptor> = [
 const BASE_HANDLE_CLASS =
   "canvas-node-connection-handle relative !z-20 !size-8 !rounded-full !border-0 !bg-transparent opacity-0 scale-75 pointer-events-none transition-[opacity,transform] after:pointer-events-none after:absolute after:left-1/2 after:top-1/2 after:size-3.5 after:-translate-x-1/2 after:-translate-y-1/2 after:rounded-full after:border after:border-border after:bg-background after:content-['']"
 
-const ACTIVE_CONNECTION_HANDLE_CLASS =
-  '[&.connectionindicator]:opacity-100 [&.connectionindicator]:scale-100 [&.connectionindicator]:pointer-events-auto'
-
 export function CanvasNodeConnectionHandles({
   handles = HANDLE_POSITIONS,
 }: {
@@ -44,20 +41,19 @@ export function CanvasNodeConnectionHandles({
         BASE_HANDLE_CLASS,
         handlesVisible ? 'duration-150' : 'duration-0',
         edgeToolActive && 'opacity-100 scale-100 pointer-events-auto',
-        handlesVisible && ACTIVE_CONNECTION_HANDLE_CLASS,
       )}
       data-testid={`canvas-node-handle-${id}`}
       data-canvas-node-handle="true"
       data-handle-id={id}
       data-handle-position={position}
-      data-connection-in-progress={handlesVisible ? 'true' : 'false'}
+      data-handles-visible={handlesVisible ? 'true' : 'false'}
       data-edge-tool-active={edgeToolActive ? 'true' : 'false'}
     />
   ))
 }
 
 function getDefaultHandleStyle(position: Position): CSSProperties {
-  switch (String(position)) {
+  switch (position) {
     case 'top':
       return { position: 'absolute', left: '50%', top: 0, transform: 'translate(-50%, -50%)' }
     case 'right':

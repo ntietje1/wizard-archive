@@ -170,6 +170,7 @@ describe('useCanvasNodeDragHandlers', () => {
     const canvasEngine = createCanvasEngine()
     canvasEngine.setDocumentSnapshot({ nodes: dragState.currentNodes })
     const documentWriter = {
+      // These expectations verify engine state at the exact moment drag persistence is requested.
       setNodePositions: vi.fn(() => {
         expect(canvasEngine.getSnapshot().nodes[0]?.position).toEqual({ x: 35, y: 30 })
         expect(canvasEngine.getSnapshot().nodeLookup.get('dragged')?.dragging).toBe(false)
@@ -225,7 +226,14 @@ function createViewportMock() {
 
 function createSelectionMock(nodeIds: ReadonlySet<string>) {
   return {
-    getSelectedNodeIds: vi.fn(() => nodeIds),
-    replaceNodes: vi.fn(),
-  } as never
+    getSnapshot: vi.fn(() => ({ nodeIds, edgeIds: new Set<string>() })),
+    setSelection: vi.fn(),
+    clearSelection: vi.fn(),
+    toggleNode: vi.fn(),
+    toggleEdge: vi.fn(),
+    beginGesture: vi.fn(),
+    setGesturePreview: vi.fn(),
+    commitGesture: vi.fn(),
+    cancelGesture: vi.fn(),
+  }
 }

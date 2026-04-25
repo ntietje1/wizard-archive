@@ -28,8 +28,6 @@ import type { Edge, Node, Viewport } from '@xyflow/react'
 const MAX_ZOOM = 4
 const MIN_ZOOM = 0.01
 const PRO_OPTIONS = { hideAttribution: true }
-const EMPTY_NODES: Array<Node> = []
-const EMPTY_EDGES: Array<Edge> = []
 const DEFAULT_VIEWPORT: Viewport = { x: 0, y: 0, zoom: 1 }
 const FIT_PADDING = 0.12
 const NOOP = () => {}
@@ -126,8 +124,6 @@ function EmbeddedCanvasFlow({
         <div className="relative h-full w-full min-h-0 min-w-0 bg-background [&_.react-flow__edge]:pointer-events-none [&_.react-flow__node]:pointer-events-none">
           <ReactFlow
             className="h-full w-full min-h-0 min-w-0"
-            defaultNodes={EMPTY_NODES}
-            defaultEdges={EMPTY_EDGES}
             nodes={nodes}
             edges={edges}
             nodeTypes={embeddedCanvasNodeTypes}

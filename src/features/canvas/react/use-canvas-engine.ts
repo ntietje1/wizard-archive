@@ -1,40 +1,37 @@
-import { useContext, useEffect, useState } from 'react'
-import { CanvasEngineContext } from './canvas-engine-context-value'
-import type {
-  CanvasEngine,
-  CanvasEngineEquality,
-  CanvasEngineSnapshot,
-} from '../system/canvas-engine'
+import { useCallback, useRef, useSyncExternalStore } from 'react'
+import { useCanvasEngine } from './canvas-engine-context-value'
+import type { CanvasEngineEquality, CanvasEngineSnapshot } from '../system/canvas-engine'
 
-export function useCanvasEngine(): CanvasEngine {
-  const engine = useContext(CanvasEngineContext)
-  if (!engine) {
-    throw new Error('useCanvasEngine must be used within CanvasEngineProvider')
-  }
-
-  return engine
-}
+export { useCanvasEngine }
 
 export function useCanvasEngineSelector<T>(
   selector: (snapshot: CanvasEngineSnapshot) => T,
   equality: CanvasEngineEquality<T> = Object.is,
 ): T {
   const engine = useCanvasEngine()
-  const [selected, setSelected] = useState(() => selector(engine.getSnapshot()))
+  const selectorRef = useRef(selector)
+  const equalityRef = useRef(equality)
+  const selectedRef = useRef(selector(engine.getSnapshot()))
+  selectorRef.current = selector
+  equalityRef.current = equality
+  const currentSelected = selector(engine.getSnapshot())
+  if (!equality(selectedRef.current, currentSelected)) {
+    selectedRef.current = currentSelected
+  }
+  const subscribe = useCallback(
+    (notify: () => void) =>
+      engine.subscribe(() => {
+        const next = selectorRef.current(engine.getSnapshot())
+        if (equalityRef.current(selectedRef.current, next)) {
+          return
+        }
 
-  useEffect(() => {
-    setSelected((current) => {
-      const next = selector(engine.getSnapshot())
-      return equality(current, next) ? current : next
-    })
-    return engine.subscribeSelector(
-      selector,
-      (next) => {
-        setSelected(next)
-      },
-      equality,
-    )
-  }, [engine, equality, selector])
+        selectedRef.current = next
+        notify()
+      }),
+    [engine],
+  )
+  const getSnapshot = useCallback(() => selectedRef.current, [])
 
-  return selected
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 }

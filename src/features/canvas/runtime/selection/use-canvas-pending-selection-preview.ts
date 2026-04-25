@@ -5,15 +5,15 @@ import {
 import type { CanvasPendingSelectionPreview } from '../../system/canvas-selection'
 import { useCanvasEngineSelector } from '../../react/use-canvas-engine'
 
-const INACTIVE_PENDING_SELECTION_PREVIEW_SUMMARY = {
-  active: false,
-  nodeCount: 0,
-  edgeCount: 0,
+type PendingSelectionPreviewSummary = {
+  active: boolean
+  nodeCount: number
+  edgeCount: number
 }
 
 function arePreviewSummariesEqual(
-  left: typeof INACTIVE_PENDING_SELECTION_PREVIEW_SUMMARY,
-  right: typeof INACTIVE_PENDING_SELECTION_PREVIEW_SUMMARY,
+  left: PendingSelectionPreviewSummary,
+  right: PendingSelectionPreviewSummary,
 ) {
   return (
     left.active === right.active &&

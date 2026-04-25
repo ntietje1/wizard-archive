@@ -2,6 +2,9 @@ import { useEffect, useRef } from 'react'
 import { measureCanvasPerformance } from '../performance/canvas-performance-metrics'
 import type { CanvasViewportController } from '../../system/canvas-viewport-controller'
 
+const PRIMARY_BUTTON = 0
+const MIDDLE_BUTTON = 1
+
 export function useCanvasViewportInteractions({
   canPrimaryPan,
   ref,
@@ -36,7 +39,10 @@ export function useCanvasViewportInteractions({
         return
       }
 
-      if (event.button === 1 || (event.button === 0 && canPrimaryPanRef.current())) {
+      if (
+        event.button === MIDDLE_BUTTON ||
+        (event.button === PRIMARY_BUTTON && canPrimaryPanRef.current())
+      ) {
         viewportController.handlePanPointerDown(event)
       }
     }

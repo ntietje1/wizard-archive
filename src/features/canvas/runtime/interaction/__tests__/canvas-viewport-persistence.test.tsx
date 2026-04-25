@@ -8,6 +8,8 @@ import {
 
 describe('canvas viewport persistence', () => {
   let storage: Record<string, string>
+  let cleanup: (() => void) | null = null
+  let engine: ReturnType<typeof createCanvasEngine> | null = null
 
   beforeEach(() => {
     storage = {}
@@ -20,6 +22,10 @@ describe('canvas viewport persistence', () => {
   })
 
   afterEach(() => {
+    cleanup?.()
+    engine?.destroy()
+    cleanup = null
+    engine = null
     vi.useRealTimers()
     vi.restoreAllMocks()
   })
@@ -61,8 +67,8 @@ describe('canvas viewport persistence', () => {
   })
 
   it('persists viewport changes after a short debounce', () => {
-    const engine = createCanvasEngine()
-    const destroyPersistence = createCanvasViewportPersistence({
+    engine = createCanvasEngine()
+    cleanup = createCanvasViewportPersistence({
       canvasEngine: engine,
       canvasId: 'canvas-1' as never,
       initialViewport: { x: 0, y: 0, zoom: 1 },
@@ -75,13 +81,11 @@ describe('canvas viewport persistence', () => {
     vi.advanceTimersByTime(250)
 
     expect(storage['canvas-viewport-canvas-1']).toBe(JSON.stringify({ x: 140, y: -80, zoom: 1.8 }))
-    destroyPersistence()
-    engine.destroy()
   })
 
   it('does not persist live viewport changes until they commit', () => {
-    const engine = createCanvasEngine()
-    const destroyPersistence = createCanvasViewportPersistence({
+    engine = createCanvasEngine()
+    cleanup = createCanvasViewportPersistence({
       canvasEngine: engine,
       canvasId: 'canvas-1' as never,
       initialViewport: { x: 0, y: 0, zoom: 1 },
@@ -94,8 +98,5 @@ describe('canvas viewport persistence', () => {
     engine.setViewport({ x: 40, y: -20, zoom: 1.25 })
     vi.advanceTimersByTime(250)
     expect(storage['canvas-viewport-canvas-1']).toBe(JSON.stringify({ x: 40, y: -20, zoom: 1.25 }))
-
-    destroyPersistence()
-    engine.destroy()
   })
 })

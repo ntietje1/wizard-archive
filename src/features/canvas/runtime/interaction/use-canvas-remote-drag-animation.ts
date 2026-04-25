@@ -122,7 +122,18 @@ export function useCanvasRemoteDragAnimation({
     const existing = springStatesRef.current.get(nodeId)
     if (existing) {
       existing.target = position
+      startSpringLoopRef.current?.()
+      return
     }
+
+    springStatesRef.current.set(nodeId, {
+      spring: {
+        pos: { ...position },
+        vel: { x: 0, y: 0 },
+      },
+      target: position,
+    })
+    startSpringLoopRef.current?.()
   }, [])
 
   const clearNodeSprings = useCallback((nodeIds: ReadonlySet<string>) => {

@@ -4,6 +4,7 @@ import { CanvasToolbar } from '../canvas-toolbar'
 import { createCanvasRuntime } from '../../runtime/__tests__/canvas-runtime-test-utils'
 import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime-context'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
+import type { CanvasViewportController } from '../../system/canvas-viewport-controller'
 
 const reactFlowMock = vi.hoisted(() => ({
   fitView: vi.fn(),
@@ -31,6 +32,23 @@ describe('CanvasToolbar', () => {
   })
 
   function renderToolbar(canEdit = true) {
+    const viewportController: CanvasViewportController = {
+      getViewport: vi.fn(() => ({ x: 0, y: 0, zoom: 1 })),
+      getZoom: vi.fn(() => 1),
+      screenToCanvasPosition: vi.fn((position) => position),
+      canvasToScreenPosition: vi.fn((position) => position),
+      handleWheel: vi.fn(),
+      handlePanPointerDown: vi.fn(),
+      panBy: vi.fn(),
+      zoomBy: vi.fn(),
+      zoomTo: vi.fn(),
+      zoomIn: reactFlowMock.zoomIn,
+      zoomOut: reactFlowMock.zoomOut,
+      fitView: reactFlowMock.fitView,
+      syncFromDocumentOrAdapter: vi.fn(),
+      commit: vi.fn(),
+      destroy: vi.fn(),
+    }
     const runtime = createCanvasRuntime({
       canEdit,
       history,
@@ -46,12 +64,7 @@ describe('CanvasToolbar', () => {
         onResize: vi.fn(),
         onResizeEnd: vi.fn(),
       },
-      viewportController: {
-        ...createCanvasRuntime().viewportController,
-        fitView: reactFlowMock.fitView,
-        zoomIn: reactFlowMock.zoomIn,
-        zoomOut: reactFlowMock.zoomOut,
-      },
+      viewportController,
     })
 
     return render(

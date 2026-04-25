@@ -32,6 +32,7 @@ import { createCanvasViewportController } from '../system/canvas-viewport-contro
 import { canvasToolSpecs } from '../tools/canvas-tool-modules'
 import { isPrimarySelectionModifier } from '../utils/canvas-selection-utils'
 import { getStrokeBounds } from '../nodes/stroke/stroke-node-model'
+import { clearAllStrokePathCache } from '../nodes/stroke/stroke-path-cache'
 import type {
   CanvasEdgeCreationDefaults,
   CanvasSelectionSnapshot,
@@ -110,17 +111,25 @@ export function useCanvasFlowRuntime({
   useEffect(() => () => viewportController.destroy(), [viewportController])
 
   useEffect(() => {
-    viewportController.syncFromDocumentOrAdapter(initialViewport)
-  }, [initialViewport, viewportController])
+    viewportController.syncFromDocumentOrAdapter({
+      x: initialViewport.x,
+      y: initialViewport.y,
+      zoom: initialViewport.zoom,
+    })
+  }, [initialViewport.x, initialViewport.y, initialViewport.zoom, viewportController])
 
   useEffect(
     () =>
       createCanvasViewportPersistence({
         canvasEngine,
         canvasId,
-        initialViewport,
+        initialViewport: {
+          x: initialViewport.x,
+          y: initialViewport.y,
+          zoom: initialViewport.zoom,
+        },
       }),
-    [canvasEngine, canvasId, initialViewport],
+    [canvasEngine, canvasId, initialViewport.x, initialViewport.y, initialViewport.zoom],
   )
 
   useEffect(() => {
@@ -194,6 +203,7 @@ export function useCanvasFlowRuntime({
             nodesMap.clear()
             edgesMap.clear()
           })
+          clearAllStrokePathCache()
           selection.clearSelection()
         },
         getCounts: () => ({
@@ -284,6 +294,8 @@ export function useCanvasFlowRuntime({
           }
           selection.setSelection({ nodeIds, edgeIds: new Set() })
         },
+        getSelectedCount: () =>
+          selection.getSnapshot().nodeIds.size + selection.getSnapshot().edgeIds.size,
         profileSelectedNodeDrag: ({ delta, steps }) => {
           const selectedIds = selection.getSnapshot().nodeIds
           dragHandlers.profileDrag({ nodeIds: selectedIds, delta, steps })

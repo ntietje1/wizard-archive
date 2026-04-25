@@ -92,7 +92,7 @@ function StrokeVisual({
   pathRef?: Ref<SVGPathElement>
   highlightPathRef?: Ref<SVGPathElement>
 }) {
-  const { color, bounds } = data
+  const { color = 'transparent', bounds } = data
   const detailD = getCachedStrokeDetailPath(id, data)
   if (!detailD && !highlightD) return null
 
@@ -181,14 +181,16 @@ export function StrokeNode({
   const pathRef = useRef<SVGPathElement | null>(null)
   const highlightPathRef = useRef<SVGPathElement | null>(null)
 
-  useEffect(
-    () =>
-      canvasEngine.registerStrokeNodePaths(id, {
-        path: pathRef.current,
-        highlightPath: highlightPathRef.current,
-      }),
-    [canvasEngine, highlightD, id],
-  )
+  useEffect(() => {
+    if (!highlightD) {
+      highlightPathRef.current = null
+    }
+
+    return canvasEngine.registerStrokeNodePaths(id, {
+      path: pathRef.current,
+      highlightPath: highlightD ? highlightPathRef.current : null,
+    })
+  }, [canvasEngine, highlightD, id])
   const hitTarget =
     interactiveRenderMode && hitTargetD && hitTargetViewBox ? (
       <svg

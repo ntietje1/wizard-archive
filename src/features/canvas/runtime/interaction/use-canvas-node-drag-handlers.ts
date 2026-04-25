@@ -48,6 +48,7 @@ export function useCanvasNodeDragHandlers({
 }: UseCanvasNodeDragHandlersOptions): CanvasDragController {
   const optionsRef = useRef({
     awareness,
+    canvasEngine,
     documentWriter,
     getPrimaryPressed,
     getCanStartDrag,
@@ -62,6 +63,7 @@ export function useCanvasNodeDragHandlers({
   })
   optionsRef.current = {
     awareness,
+    canvasEngine,
     documentWriter,
     getPrimaryPressed,
     getCanStartDrag,
@@ -90,7 +92,7 @@ export function useCanvasNodeDragHandlers({
           'canvas.drag.start',
           {
             draggedCount: event.draggedNodeIds.size,
-            totalCount: canvasEngine.getSnapshot().nodes.length,
+            totalCount: optionsRef.current.canvasEngine.getSnapshot().nodes.length,
           },
           () => handleDragStart(event, optionsRef.current),
         ),
@@ -127,8 +129,13 @@ function handleDragStart(
     selection,
   }: Pick<UseCanvasNodeDragHandlersOptions, 'localDraggingIdsRef' | 'selection'>,
 ) {
+  const localDraggingIds = localDraggingIdsRef.current
+  if (!localDraggingIds) {
+    return
+  }
+
   for (const nodeId of event.draggedNodeIds) {
-    localDraggingIdsRef.current.add(nodeId)
+    localDraggingIds.add(nodeId)
   }
 
   if (!selection.getSnapshot().nodeIds.has(event.activeNodeId)) {
@@ -189,8 +196,11 @@ function handleDragEnd(
   } catch (error) {
     logger.error('useCanvasNodeDragHandlers: failed to persist node drag positions', error)
   } finally {
-    for (const nodeId of event.draggedNodeIds) {
-      localDraggingIdsRef.current.delete(nodeId)
+    const localDraggingIds = localDraggingIdsRef.current
+    if (localDraggingIds) {
+      for (const nodeId of event.draggedNodeIds) {
+        localDraggingIds.delete(nodeId)
+      }
     }
     remoteDragAnimation.clearNodeSprings(event.draggedNodeIds)
     clearCanvasDragSnapGuides()

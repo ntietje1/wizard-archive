@@ -100,7 +100,7 @@ describe('createCanvasFlowHandlers', () => {
       sourceHandle: null,
       targetHandle: null,
     })
-    handlers.onPaneClick?.({} as never)
+    handlers.onPaneClick?.({} as unknown as Parameters<NonNullable<typeof handlers.onPaneClick>>[0])
 
     expect(documentWriter.createEdge).toHaveBeenCalledWith(
       {

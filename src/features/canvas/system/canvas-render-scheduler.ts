@@ -92,7 +92,7 @@ export function createCanvasRenderScheduler({
         const detailPath = getCachedStrokeDetailPath(nodeId, strokeData)
         if (detailPath && strokePaths?.path) {
           strokePaths.path.setAttribute('d', detailPath)
-          strokePaths.path.setAttribute('fill', strokeData.color)
+          strokePaths.path.setAttribute('fill', strokeData.color ?? 'transparent')
           strokePaths.path.setAttribute('opacity', opacity)
         }
 
@@ -213,9 +213,11 @@ function parseStrokeNodeData(data: Record<string, unknown>): StrokeNodeData | nu
 }
 
 function readEdgeStyle(path: SVGPathElement): NonNullable<Edge['style']> {
+  const strokeWidth = path.style.strokeWidth
+  const opacity = path.style.opacity
   return {
     stroke: path.style.stroke,
-    strokeWidth: Number.parseFloat(path.style.strokeWidth),
-    opacity: Number.parseFloat(path.style.opacity),
+    strokeWidth: strokeWidth ? Number.parseFloat(strokeWidth) : undefined,
+    opacity: opacity ? Number.parseFloat(opacity) : undefined,
   }
 }

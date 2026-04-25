@@ -37,23 +37,25 @@ export function createCanvasDomRegistry(): CanvasDomRegistry {
 
   return {
     registerNode: (nodeId, element) => {
-      if (element) {
-        nodes.set(nodeId, element)
+      if (!element) {
+        return () => undefined
       }
 
+      nodes.set(nodeId, element)
       return () => {
-        if (!element || nodes.get(nodeId) === element) {
+        if (nodes.get(nodeId) === element) {
           nodes.delete(nodeId)
         }
       }
     },
     registerNodeSurface: (nodeId, element) => {
-      if (element) {
-        nodeSurfaces.set(nodeId, element)
+      if (!element) {
+        return () => undefined
       }
 
+      nodeSurfaces.set(nodeId, element)
       return () => {
-        if (!element || nodeSurfaces.get(nodeId) === element) {
+        if (nodeSurfaces.get(nodeId) === element) {
           nodeSurfaces.delete(nodeId)
         }
       }
@@ -68,12 +70,13 @@ export function createCanvasDomRegistry(): CanvasDomRegistry {
       }
     },
     registerEdge: (edgeId, element) => {
-      if (element) {
-        edges.set(edgeId, element)
+      if (!element) {
+        return () => undefined
       }
 
+      edges.set(edgeId, element)
       return () => {
-        if (!element || edges.get(edgeId) === element) {
+        if (edges.get(edgeId) === element) {
           edges.delete(edgeId)
         }
       }
@@ -88,10 +91,14 @@ export function createCanvasDomRegistry(): CanvasDomRegistry {
       }
     },
     registerViewport: (element) => {
+      if (!element) {
+        return () => undefined
+      }
+
       viewport = element ?? undefined
 
       return () => {
-        if (!element || viewport === element) {
+        if (viewport === element) {
           viewport = undefined
         }
       }

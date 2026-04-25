@@ -9,6 +9,7 @@ import {
 } from '../../../runtime/interaction/canvas-drag-snap-overlay'
 import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
 import { ResizableNodeWrapper } from '../resizable-node-wrapper'
+import type { Node } from '@xyflow/react'
 
 const modifierState = vi.hoisted(() => ({
   shiftPressed: false,
@@ -590,7 +591,7 @@ function createProviderValues() {
       onResizeEnd: vi.fn(),
     },
   })
-  runtime.canvasEngine.setDocumentSnapshot({ nodes: canvasNodes.current as never })
+  runtime.canvasEngine.setDocumentSnapshot({ nodes: canvasNodes.current as Array<Node> })
   lastRuntime = runtime
   return runtime
 }
@@ -614,5 +615,5 @@ function setResizeSnapTargets(
     },
     ...extraNodes,
   ]
-  lastRuntime?.canvasEngine.setDocumentSnapshot({ nodes: canvasNodes.current as never })
+  lastRuntime?.canvasEngine.setDocumentSnapshot({ nodes: canvasNodes.current as Array<Node> })
 }

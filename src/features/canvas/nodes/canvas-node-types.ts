@@ -50,7 +50,7 @@ export interface CanvasNodeMinimapProps {
 
 export interface CanvasNodeComponentProps<TData extends CanvasNodeData = CanvasNodeData> {
   id: string
-  type?: string
+  type?: CanvasNodeType
   data: TData
   dragging?: boolean
   selected?: boolean

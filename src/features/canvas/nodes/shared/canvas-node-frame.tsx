@@ -48,7 +48,9 @@ export function CanvasNodeFrame({
       nodeDragController.handlePointerDown(id, event)
     }
     dragTarget.addEventListener('pointerdown', handlePointerDown, { capture: true })
-    dragTarget.addEventListener('mousedown', handleMouseDown, { capture: true })
+    if (!window.PointerEvent) {
+      dragTarget.addEventListener('mousedown', handleMouseDown, { capture: true })
+    }
     return () => {
       dragTarget.removeEventListener('pointerdown', handlePointerDown, { capture: true })
       dragTarget.removeEventListener('mousedown', handleMouseDown, { capture: true })

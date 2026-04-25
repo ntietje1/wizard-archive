@@ -14,7 +14,7 @@ import type {
 
 interface UseCanvasSelectionRectOptions {
   canvasEngine: CanvasEngine
-  viewportController: CanvasViewportController
+  viewportController: Pick<CanvasViewportController, 'getZoom' | 'screenToCanvasPosition'>
   surfaceRef: RefObject<HTMLDivElement | null>
   awareness: CanvasAwarenessPresenceWriter
   interaction: Pick<CanvasInteractionTools, 'suppressNextSurfaceClick'>
@@ -23,6 +23,15 @@ interface UseCanvasSelectionRectOptions {
     'beginGesture' | 'cancelGesture' | 'commitGesture' | 'getSnapshot' | 'setGesturePreview'
   >
   enabled: boolean
+}
+
+function getCanvasSelectionSnapshot(canvasEngine: CanvasEngine) {
+  const snapshot = canvasEngine.getSnapshot()
+  return {
+    nodes: snapshot.nodes,
+    edges: snapshot.edges,
+    measuredNodes: getMeasuredCanvasNodesFromEngineSnapshot(snapshot),
+  }
 }
 
 export function useCanvasSelectionRect({
@@ -61,9 +70,7 @@ export function useCanvasSelectionRect({
         getZoom: viewportController.getZoom,
         screenToCanvasPosition: viewportController.screenToCanvasPosition,
       },
-      getNodes: () => canvasEngine.getSnapshot().nodes,
-      getEdges: () => canvasEngine.getSnapshot().edges,
-      getMeasuredNodes: () => getMeasuredCanvasNodesFromEngineSnapshot(canvasEngine.getSnapshot()),
+      getCanvasSnapshot: () => getCanvasSelectionSnapshot(canvasEngine),
       getAwareness: () => awarenessRef.current,
       interaction,
       getSelection: () => selectionRef.current,

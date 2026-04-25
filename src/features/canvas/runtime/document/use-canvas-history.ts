@@ -11,10 +11,6 @@ import { logger } from '~/shared/utils/logger'
 import { areStringSetsEqual } from '../../utils/canvas-selection-utils'
 
 const MAX_HISTORY_SIZE = 100
-const EMPTY_CANVAS_SELECTION: CanvasSelectionSnapshot = {
-  nodeIds: new Set(),
-  edgeIds: new Set(),
-}
 type CanvasHistoryState = Pick<CanvasHistoryController, 'canUndo' | 'canRedo'>
 
 type ActionEntry =
@@ -32,7 +28,10 @@ export function useCanvasHistory({ nodesMap, edgesMap, selection }: UseCanvasHis
   const redoStackRef = useRef<Array<ActionEntry>>([])
   const isUndoRedoingRef = useRef(false)
   const docMutatedRef = useRef(false)
-  const selectionRef = useRef<CanvasSelectionSnapshot>(EMPTY_CANVAS_SELECTION)
+  const selectionRef = useRef<CanvasSelectionSnapshot>({
+    nodeIds: new Set(),
+    edgeIds: new Set(),
+  })
   const undoManagerRef = useRef<UndoManager | null>(null)
   const [historyState, setHistoryState] = useState<CanvasHistoryState>({
     canUndo: false,

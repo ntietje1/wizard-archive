@@ -45,15 +45,18 @@ export function getMeasuredCanvasNodesFromEngineSnapshot(
 
   return Array.from(nodeLookup.values()).flatMap((internalNode) => {
     const node = 'node' in internalNode ? internalNode.node : internalNode
-    const width = internalNode.measured.width
-    const height = internalNode.measured.height
+    const width = internalNode.measured?.width
+    const height = internalNode.measured?.height
     if (width === undefined || height === undefined) {
       return []
     }
 
     return [
       {
-        ...node,
+        id: node.id,
+        type: node.type,
+        data: node.data,
+        position: node.position,
         width,
         height,
       },

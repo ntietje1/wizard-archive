@@ -1,15 +1,10 @@
 import { useKeyHold } from '@tanstack/react-hotkeys'
-import { useEffect, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { isPrimarySelectionModifier } from '../../utils/canvas-selection-utils'
 
 export function useCanvasModifierKeys() {
   const shiftPressed = useKeyHold('Shift')
-  const modifiersRef = useRef({
-    shiftPressed: false,
-    primaryPressed: false,
-  })
-
-  modifiersRef.current.shiftPressed = shiftPressed
+  const [primaryPressed, setPrimaryPressed] = useState(false)
 
   useEffect(() => {
     const updatePrimaryPressed = (event: KeyboardEvent) => {
@@ -17,14 +12,16 @@ export function useCanvasModifierKeys() {
         return
       }
 
-      modifiersRef.current.primaryPressed = isPrimarySelectionModifier({
-        ctrlKey: event.ctrlKey,
-        metaKey: event.metaKey,
-      })
+      setPrimaryPressed(
+        isPrimarySelectionModifier({
+          ctrlKey: event.ctrlKey,
+          metaKey: event.metaKey,
+        }),
+      )
     }
 
     const clearPrimaryPressed = () => {
-      modifiersRef.current.primaryPressed = false
+      setPrimaryPressed(false)
     }
 
     window.addEventListener('keydown', updatePrimaryPressed)
@@ -37,5 +34,5 @@ export function useCanvasModifierKeys() {
     }
   }, [])
 
-  return modifiersRef.current
+  return { primaryPressed, shiftPressed }
 }

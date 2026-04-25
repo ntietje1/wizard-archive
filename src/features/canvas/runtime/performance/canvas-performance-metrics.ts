@@ -26,6 +26,7 @@ interface CanvasPerformanceRuntime {
     pointsPerStroke?: number
   }) => void
   selectFirstNodes: (count: number) => void
+  getSelectedCount: () => number
   profileSelectedNodeDrag: (options: { delta: XYPosition; steps: number }) => void
   getNodePosition: (nodeId: string) => XYPosition | null
   setViewport: (viewport: { x: number; y: number; zoom: number }) => void
@@ -73,11 +74,12 @@ export function measureCanvasPerformance<TResult>(
   try {
     return action()
   } finally {
+    const endTime = performance.now()
     const entry = {
       name,
       details,
-      durationMs: performance.now() - start,
-      timestampMs: performance.now(),
+      durationMs: endTime - start,
+      timestampMs: endTime,
     }
     collector.entries.push(entry)
     collector.record?.(entry)

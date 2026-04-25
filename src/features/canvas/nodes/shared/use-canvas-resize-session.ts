@@ -416,7 +416,7 @@ function getCurrentResizeBounds(
 
   const width = internalNode.measured.width ?? internalNode.node.width ?? minWidth
   const height = internalNode.measured.height ?? internalNode.node.height ?? minHeight
-  const position = internalNode.node.position ?? internalNode.positionAbsolute
+  const position = internalNode.node.position
 
   return {
     x: position.x,

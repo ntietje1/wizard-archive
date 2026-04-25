@@ -8,6 +8,7 @@ import type { CanvasEdgeRendererProps } from '../../canvas-edge-types'
 import {
   DEFAULT_CANVAS_EDGE_OPACITY,
   DEFAULT_CANVAS_EDGE_STROKE_WIDTH,
+  PENDING_PREVIEW_EDGE_OPACITY,
 } from '../../shared/canvas-edge-style'
 import { BezierCanvasEdge } from '../bezier-canvas-edge'
 import { buildBezierCanvasEdgeGeometryFromEdge } from '../bezier-canvas-edge-geometry'
@@ -116,7 +117,7 @@ describe('BezierCanvasEdge', () => {
     expect(getPrimaryPath()).toHaveStyle({
       stroke: 'var(--foreground)',
       strokeWidth: String(DEFAULT_CANVAS_EDGE_STROKE_WIDTH),
-      opacity: '0.45',
+      opacity: String(PENDING_PREVIEW_EDGE_OPACITY),
       strokeLinecap: 'square',
       strokeLinejoin: 'round',
     })
@@ -261,9 +262,5 @@ function renderEdge(
 }
 
 function getPrimaryPath() {
-  const path = screen.getByTestId('canvas-edge').querySelector('path:not([stroke="transparent"])')
-  if (!path) {
-    throw new Error('Expected primary edge path to render')
-  }
-  return path as SVGPathElement
+  return screen.getByTestId('canvas-edge-primary-path') as unknown as SVGPathElement
 }

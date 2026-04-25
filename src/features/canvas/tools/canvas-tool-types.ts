@@ -95,8 +95,8 @@ export interface CanvasSelectionController {
   getSnapshot: () => CanvasSelectionSnapshot
   setSelection: (selection: CanvasSelectionSnapshot) => void
   clearSelection: () => void
-  toggleNode: (nodeId: string, toggle: boolean) => void
-  toggleEdge: (edgeId: string, toggle: boolean) => void
+  toggleNode: (nodeId: string, additive: boolean) => void
+  toggleEdge: (edgeId: string, additive: boolean) => void
   beginGesture: (kind: CanvasSelectionGestureKind, mode: CanvasSelectionCommitMode) => void
   setGesturePreview: (selection: CanvasSelectionSnapshot | null) => void
   commitGesture: () => void

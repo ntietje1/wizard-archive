@@ -269,7 +269,7 @@ export function matchesCanvasNodeRectangleSelection(
 
 export function matchesCanvasNodeLassoSelection(
   node: AnyNormalizedCanvasNode,
-  polygon: Array<{ x: number; y: number }>,
+  polygon: ReadonlyArray<{ x: number; y: number }>,
   _context: { zoom: number },
 ): boolean {
   switch (node.type) {

@@ -72,6 +72,7 @@ export function createCanvasDragController({
 
   const destroy = () => {
     detachWindowListeners()
+    clearCanvasDragSnapGuides()
     session = null
   }
 
@@ -134,6 +135,7 @@ export function createCanvasDragController({
     endSession(
       new MouseEvent('mouseup', { clientX: start.x + delta.x, clientY: start.y + delta.y }),
     )
+    clearCanvasDragSnapGuides()
     session = null
   }
 
@@ -382,9 +384,9 @@ function createDragEvent(
   final: boolean,
 ): CanvasDragEvent {
   const firstPosition = useStartPositions
-    ? session.startPositions.values().next().value
-    : resolvedPositions.values().next().value
-  const startPosition = session.startPositions.values().next().value ?? { x: 0, y: 0 }
+    ? session.startPositions.get(session.activeNodeId)
+    : resolvedPositions.get(session.activeNodeId)
+  const startPosition = session.startPositions.get(session.activeNodeId) ?? { x: 0, y: 0 }
   const delta = firstPosition
     ? { x: firstPosition.x - startPosition.x, y: firstPosition.y - startPosition.y }
     : { x: 0, y: 0 }

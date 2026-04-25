@@ -28,9 +28,11 @@ interface CanvasSelectionGestureControllerOptions {
     getZoom: () => number
     screenToCanvasPosition: (position: ClientPoint) => ClientPoint
   }
-  getNodes: () => ReadonlyArray<Node>
-  getEdges: () => ReadonlyArray<Edge>
-  getMeasuredNodes: () => ReturnType<typeof getMeasuredCanvasNodesFromLookup>
+  getCanvasSnapshot: () => {
+    nodes: ReadonlyArray<Node>
+    edges: ReadonlyArray<Edge>
+    measuredNodes: ReturnType<typeof getMeasuredCanvasNodesFromLookup>
+  }
   getAwareness: () => CanvasAwarenessPresenceWriter
   interaction: Pick<CanvasInteractionTools, 'suppressNextSurfaceClick'>
   getSelection: () => Pick<
@@ -68,9 +70,7 @@ function getFlowRect(
 
 export function createCanvasSelectionGestureController({
   viewport,
-  getNodes,
-  getEdges,
-  getMeasuredNodes,
+  getCanvasSnapshot,
   getAwareness,
   interaction,
   getSelection,
@@ -99,16 +99,22 @@ export function createCanvasSelectionGestureController({
         ) > MIN_SELECTION_DRAG_DISTANCE_PX,
       preview: (state) => {
         const flowRect = getFlowRect(viewport, state)
+        const canvasSnapshot = getCanvasSnapshot()
         setSelectToolSelectionDragRect(flowRect)
         publishSelectToolAwareness(flowRect)
 
         return {
-          nodeIds: getCanvasNodesMatchingRectangle(getMeasuredNodes(), flowRect, {
+          nodeIds: getCanvasNodesMatchingRectangle(canvasSnapshot.measuredNodes, flowRect, {
             zoom: viewport.getZoom(),
           }),
-          edgeIds: getCanvasEdgesMatchingRectangle([...getNodes()], [...getEdges()], flowRect, {
-            zoom: viewport.getZoom(),
-          }),
+          edgeIds: getCanvasEdgesMatchingRectangle(
+            canvasSnapshot.nodes,
+            canvasSnapshot.edges,
+            flowRect,
+            {
+              zoom: viewport.getZoom(),
+            },
+          ),
         }
       },
       clear: () => {

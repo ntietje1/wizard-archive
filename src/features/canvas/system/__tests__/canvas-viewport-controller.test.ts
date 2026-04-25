@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createCanvasEngine } from '../canvas-engine'
 import { createCanvasViewportController } from '../canvas-viewport-controller'
 
+const VIEWPORT_COMMIT_IDLE_MS = 300
+
 describe('createCanvasViewportController', () => {
   beforeEach(() => {
     vi.useFakeTimers()
@@ -29,7 +31,7 @@ describe('createCanvasViewportController', () => {
     expect(engine.getSnapshot().viewport).toEqual({ x: -10, y: -20, zoom: 1 })
     expect(viewportElement.style.transform).toBe('translate3d(-10px, -20px, 0) scale(1)')
 
-    vi.advanceTimersByTime(300)
+    vi.advanceTimersByTime(VIEWPORT_COMMIT_IDLE_MS)
 
     expect(listener).not.toHaveBeenCalled()
     expect(viewportListener).toHaveBeenCalledTimes(1)
@@ -69,7 +71,7 @@ describe('createCanvasViewportController', () => {
     expect(engine.getSnapshot().viewport.zoom).toBeGreaterThan(firstViewport.zoom)
     expect(viewportElement.style.transform).toContain('scale(')
 
-    vi.advanceTimersByTime(300)
+    vi.advanceTimersByTime(VIEWPORT_COMMIT_IDLE_MS)
 
     expect(listener).not.toHaveBeenCalled()
     expect(viewportListener).toHaveBeenCalledTimes(1)
@@ -207,7 +209,17 @@ function createViewportTestHarness() {
 
 function createSurface({ left = 0, top = 0 } = {}) {
   const surface = document.createElement('div')
-  surface.getBoundingClientRect = () => ({ left, top, width: 800, height: 600 }) as DOMRect
+  surface.getBoundingClientRect = () =>
+    ({
+      x: left,
+      y: top,
+      left,
+      top,
+      right: left + 800,
+      bottom: top + 600,
+      width: 800,
+      height: 600,
+    }) as DOMRect
   return surface
 }
 

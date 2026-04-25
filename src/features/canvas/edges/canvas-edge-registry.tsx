@@ -46,7 +46,7 @@ export function resolveCanvasEdgeType(type: string | undefined): CanvasEdgeType 
 }
 
 function createCanvasEdgeSelectionContext(
-  nodes: Array<Node>,
+  nodes: ReadonlyArray<Node>,
   zoom: number,
 ): CanvasEdgeSelectionContext {
   return {
@@ -75,7 +75,7 @@ export function normalizeCanvasEdge(edge: Edge): CanvasRuntimeEdge | null {
   }
 }
 
-function normalizeCanvasEdges(edges: Array<Edge>): Array<NormalizedCanvasEdgeEntry> {
+function normalizeCanvasEdges(edges: ReadonlyArray<Edge>): Array<NormalizedCanvasEdgeEntry> {
   return edges.flatMap((rawEdge) => {
     const edge = normalizeCanvasEdge(rawEdge)
     return edge ? [{ rawEdge, edge }] : []
@@ -190,8 +190,8 @@ export function findCanvasEdgeAtPoint(
 }
 
 export function getCanvasEdgesMatchingRectangle(
-  nodes: Array<Node>,
-  edges: Array<Edge>,
+  nodes: ReadonlyArray<Node>,
+  edges: ReadonlyArray<Edge>,
   rect: Bounds,
   context: Pick<CanvasEdgeSelectionContext, 'zoom'>,
 ): ReadonlySet<string> {
@@ -212,8 +212,8 @@ export function getCanvasEdgesMatchingRectangle(
 }
 
 export function getCanvasEdgesMatchingLasso(
-  nodes: Array<Node>,
-  edges: Array<Edge>,
+  nodes: ReadonlyArray<Node>,
+  edges: ReadonlyArray<Edge>,
   polygon: Array<Point2D>,
   context: Pick<CanvasEdgeSelectionContext, 'zoom'>,
 ): ReadonlySet<string> {

@@ -208,9 +208,8 @@ test.describe.serial('canvas basics', () => {
       steps: 12,
     })
 
-    await expect
-      .poll(async () => (await targetHandle.getAttribute('class')) ?? '')
-      .toContain('connectionindicator')
+    await expect.poll(async () => getCanvasEdges(page).count()).toBe(edgeCountBefore)
+    await expect(page.getByTestId('canvas-connection-preview')).toBeVisible()
 
     await page.mouse.up()
     await expect.poll(() => getCanvasEdges(page).count()).toBe(edgeCountBefore + 1)

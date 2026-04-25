@@ -44,6 +44,10 @@ export function useCanvasPointerBridge({
     }
 
     const onPointerDown = (event: PointerEvent) => {
+      if (activeToolPointerId !== null || activeGestureHandlers !== null) {
+        return
+      }
+
       const handlers = toolHandlersRef.current
       if (!handlers.onPointerDown || event.button !== 0) return
       if (
