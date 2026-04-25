@@ -17,6 +17,14 @@ interface CanvasPerformanceRuntime {
     spacingY?: number
     start?: XYPosition
   }) => void
+  seedStrokeNodes: (options: {
+    count: number
+    columns?: number
+    spacingX?: number
+    spacingY?: number
+    start?: XYPosition
+    pointsPerStroke?: number
+  }) => void
   selectFirstNodes: (count: number) => void
   profileSelectedNodeDrag: (options: { delta: XYPosition; steps: number }) => void
   getNodePosition: (nodeId: string) => XYPosition | null

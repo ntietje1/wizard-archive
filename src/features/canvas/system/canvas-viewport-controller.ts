@@ -46,11 +46,9 @@ interface CanvasPanSession {
 export function createCanvasViewportController({
   canvasEngine,
   getSurfaceElement,
-  mirrorAdapterViewport,
 }: {
   canvasEngine: CanvasEngine
   getSurfaceElement: () => HTMLElement | null
-  mirrorAdapterViewport?: (viewport: CanvasViewport) => void
 }): CanvasViewportController {
   let commitTimer: ReturnType<typeof setTimeout> | null = null
   let panSession: CanvasPanSession | null = null
@@ -86,12 +84,10 @@ export function createCanvasViewportController({
       }
       canvasEngine.setViewport(nextViewport)
       canvasEngine.flushRenderScheduler()
-      mirrorAdapterViewport?.(nextViewport)
       return
     }
 
     canvasEngine.setViewportLive(nextViewport)
-    mirrorAdapterViewport?.(nextViewport)
     if (options.deferCommit !== false) {
       scheduleCommit()
     }
@@ -101,7 +97,6 @@ export function createCanvasViewportController({
     const viewport = getViewport()
     canvasEngine.setViewport(viewport)
     canvasEngine.flushRenderScheduler()
-    mirrorAdapterViewport?.(viewport)
   }
 
   const stopPanSession = (event: PointerEvent, shouldCommit: boolean) => {

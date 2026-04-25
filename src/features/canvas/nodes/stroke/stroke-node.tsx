@@ -10,8 +10,8 @@ import {
   getStrokeEndpointConnectionPosition,
   getStrokeEndpointPoint,
   pointsToCenterlinePathD,
-  pointsToPathD,
 } from './stroke-node-model'
+import { getCachedStrokeDetailPath } from './stroke-path-cache'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
 import { useEraseToolLocalOverlayStore } from '../../tools/erase/erase-tool-local-overlay'
 import { useCanvasNodeVisualSelection } from '../shared/use-canvas-node-visual-selection'
@@ -73,22 +73,28 @@ function getStrokeConnectionHandles(data: StrokeNodeData): Array<CanvasConnectio
   })
 }
 
-function StrokePreview({
+function StrokeVisual({
+  id,
   data,
   width,
   height,
   opacityOverride,
+  highlightD,
   pathRef,
+  highlightPathRef,
 }: {
+  id: string
   data: StrokeNodeData
   width?: number
   height?: number
   opacityOverride?: number
+  highlightD: string | null
   pathRef?: Ref<SVGPathElement>
+  highlightPathRef?: Ref<SVGPathElement>
 }) {
-  const { points, color, size, bounds } = data
-  const d = pointsToPathD(points, size)
-  if (!d) return null
+  const { color, bounds } = data
+  const detailD = getCachedStrokeDetailPath(id, data)
+  if (!detailD && !highlightD) return null
 
   const normalizedOpacity = opacityOverride ?? (data.opacity ?? 100) / 100
   const svgWidth = resolveSvgDimension(width, bounds.width)
@@ -106,13 +112,36 @@ function StrokePreview({
 
   return (
     <svg
+      className="canvas-stroke-visual"
       width={svgWidth}
       height={svgHeight}
       viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
       preserveAspectRatio="none"
-      style={{ overflow: 'visible' }}
+      style={{
+        overflow: 'visible',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        pointerEvents: 'none',
+      }}
     >
-      <path ref={pathRef} d={d} fill={color} opacity={normalizedOpacity} />
+      {highlightD ? (
+        <path
+          ref={highlightPathRef}
+          className="canvas-stroke-highlight-path"
+          d={highlightD}
+          fill="var(--primary)"
+        />
+      ) : null}
+      {detailD ? (
+        <path
+          ref={pathRef}
+          className="canvas-stroke-detail-path"
+          d={detailD}
+          fill={color}
+          opacity={normalizedOpacity}
+        />
+      ) : null}
     </svg>
   )
 }
@@ -126,7 +155,7 @@ export function StrokeNode({
 }: CanvasNodeComponentProps<StrokeNodeData>) {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
   const { canvasEngine, viewportController } = useCanvasRuntime()
-  const { points, size, bounds } = data
+  const { size, bounds } = data
   const zoom = viewportController?.getZoom?.() ?? 1
   const isErasing = useEraseToolLocalOverlayStore((state) => state.erasingStrokeIds.has(id))
   const { visuallySelected } = useCanvasNodeVisualSelection(id)
@@ -136,7 +165,7 @@ export function StrokeNode({
   const svgHeight = height ?? bounds.height
   const viewBox = resolveViewBox(bounds, svgWidth, svgHeight)
   const hitPadding = getStrokeSelectionPadding(zoom)
-  const hitTargetD = pointsToCenterlinePathD(points)
+  const hitTargetD = pointsToCenterlinePathD(data.points)
   const hitTargetViewBox = viewBox
     ? {
         x: viewBox.x - hitPadding,
@@ -146,7 +175,9 @@ export function StrokeNode({
       }
     : null
 
-  const highlightD = visuallySelected ? pointsToPathD(points, size * HIGHLIGHT_SCALE) : null
+  const highlightD = visuallySelected
+    ? getCachedStrokeDetailPath(id, data, size * HIGHLIGHT_SCALE)
+    : null
   const pathRef = useRef<SVGPathElement | null>(null)
   const highlightPathRef = useRef<SVGPathElement | null>(null)
 
@@ -156,11 +187,12 @@ export function StrokeNode({
         path: pathRef.current,
         highlightPath: highlightPathRef.current,
       }),
-    [canvasEngine, id],
+    [canvasEngine, highlightD, id],
   )
   const hitTarget =
     interactiveRenderMode && hitTargetD && hitTargetViewBox ? (
       <svg
+        className="canvas-stroke-hit-target-layer"
         width={svgWidth + hitPadding * 2}
         height={svgHeight + hitPadding * 2}
         viewBox={`${hitTargetViewBox.x} ${hitTargetViewBox.y} ${hitTargetViewBox.width} ${hitTargetViewBox.height}`}
@@ -185,25 +217,6 @@ export function StrokeNode({
         />
       </svg>
     ) : null
-  const highlightPath =
-    interactiveRenderMode && highlightD && viewBox ? (
-      <svg
-        width={svgWidth}
-        height={svgHeight}
-        viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
-        preserveAspectRatio="none"
-        style={{
-          overflow: 'visible',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          pointerEvents: 'none',
-        }}
-      >
-        <path ref={highlightPathRef} d={highlightD} fill="var(--primary)" />
-      </svg>
-    ) : null
-
   return (
     <ResizableNodeWrapper
       id={id}
@@ -214,14 +227,16 @@ export function StrokeNode({
       chrome={<CanvasNodeConnectionHandles handles={connectionHandles} />}
     >
       {hitTarget}
-      <StrokePreview
+      <StrokeVisual
+        id={id}
         data={data}
         width={svgWidth}
         height={svgHeight}
         opacityOverride={interactiveRenderMode && isErasing ? ERASING_OPACITY : undefined}
+        highlightD={interactiveRenderMode ? highlightD : null}
         pathRef={pathRef}
+        highlightPathRef={highlightPathRef}
       />
-      {highlightPath}
     </ResizableNodeWrapper>
   )
 }

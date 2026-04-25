@@ -181,10 +181,6 @@ vi.mock('~/features/context-menu/components/context-menu-host', () => ({
   ContextMenuHost: forwardRef((_props, _ref) => null),
 }))
 
-vi.mock('../../runtime/interaction/canvas-viewport-persistence', () => ({
-  CanvasViewportPersistence: () => null,
-}))
-
 vi.mock('../canvas-minimap-node', () => ({
   MiniMapNode: () => null,
 }))

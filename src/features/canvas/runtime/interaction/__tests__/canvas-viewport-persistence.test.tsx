@@ -1,7 +1,5 @@
-import { render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { CanvasViewportPersistence } from '../canvas-viewport-persistence'
-import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
+import { createCanvasViewportPersistence } from '../canvas-viewport-persistence'
 import { createCanvasEngine } from '../../../system/canvas-engine'
 import {
   loadPersistedCanvasViewport,
@@ -64,30 +62,40 @@ describe('canvas viewport persistence', () => {
 
   it('persists viewport changes after a short debounce', () => {
     const engine = createCanvasEngine()
-    const { rerender } = render(
-      <CanvasEngineProvider engine={engine}>
-        <CanvasViewportPersistence
-          canvasId={'canvas-1' as never}
-          initialViewport={{ x: 0, y: 0, zoom: 1 }}
-        />
-      </CanvasEngineProvider>,
-    )
+    const destroyPersistence = createCanvasViewportPersistence({
+      canvasEngine: engine,
+      canvasId: 'canvas-1' as never,
+      initialViewport: { x: 0, y: 0, zoom: 1 },
+    })
 
     engine.setViewport({ x: 140, y: -80, zoom: 1.8 })
-    rerender(
-      <CanvasEngineProvider engine={engine}>
-        <CanvasViewportPersistence
-          canvasId={'canvas-1' as never}
-          initialViewport={{ x: 0, y: 0, zoom: 1 }}
-        />
-      </CanvasEngineProvider>,
-    )
 
     expect(storage['canvas-viewport-canvas-1']).toBeUndefined()
 
     vi.advanceTimersByTime(250)
 
     expect(storage['canvas-viewport-canvas-1']).toBe(JSON.stringify({ x: 140, y: -80, zoom: 1.8 }))
+    destroyPersistence()
+    engine.destroy()
+  })
+
+  it('does not persist live viewport changes until they commit', () => {
+    const engine = createCanvasEngine()
+    const destroyPersistence = createCanvasViewportPersistence({
+      canvasEngine: engine,
+      canvasId: 'canvas-1' as never,
+      initialViewport: { x: 0, y: 0, zoom: 1 },
+    })
+
+    engine.setViewportLive({ x: 40, y: -20, zoom: 1.25 })
+    vi.advanceTimersByTime(250)
+    expect(storage['canvas-viewport-canvas-1']).toBeUndefined()
+
+    engine.setViewport({ x: 40, y: -20, zoom: 1.25 })
+    vi.advanceTimersByTime(250)
+    expect(storage['canvas-viewport-canvas-1']).toBe(JSON.stringify({ x: 40, y: -20, zoom: 1.25 }))
+
+    destroyPersistence()
     engine.destroy()
   })
 })

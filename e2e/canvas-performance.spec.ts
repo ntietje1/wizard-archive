@@ -8,7 +8,6 @@ import {
   dragCanvasNode,
   dragOnCanvas,
   getCanvasNodeById,
-  getCanvasNodes,
   getCanvasPane,
   getViewportControls,
   selectCanvasTool,
@@ -18,6 +17,7 @@ import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 const ARTIFACT_DIR = path.resolve('output/playwright')
 const ARTIFACT_PREFIX = process.env.CANVAS_PERF_ARTIFACT_PREFIX ?? 'canvas-performance-baseline'
 const NODE_COUNT = Number(process.env.CANVAS_PERF_NODE_COUNT ?? 250)
+const STROKE_NODE_COUNT = Number(process.env.CANVAS_PERF_STROKE_NODE_COUNT ?? 50)
 const SELECTED_COUNTS = [1, 25, 100, 250] as const
 const campaignName = testName('Perf')
 const canvasName = 'Untitled Canvas'
@@ -90,7 +90,7 @@ test.describe.serial('canvas performance probe', () => {
       })
     }, NODE_COUNT)
 
-    await expect.poll(() => getCanvasNodes(page).count(), { timeout: 30_000 }).toBe(NODE_COUNT)
+    await waitForRuntimeNodeCount(page, NODE_COUNT)
     await page.screenshot({ path: path.join(ARTIFACT_DIR, `${ARTIFACT_PREFIX}-heavy-scene.png`) })
 
     await selectCanvasTool(page, 'Pointer')
@@ -174,6 +174,11 @@ test.describe.serial('canvas performance probe', () => {
       }
     })
 
+    await moveMouseToCanvasCenter(page)
+    interactions.ctrlWheelZoom = await measureInteraction(page, async () => {
+      await ctrlWheelZoom(page)
+    })
+
     interactions.viewportCoordinateRegression = await measureInteraction(page, async () => {
       await selectCanvasTool(page, 'Pointer')
       const before = await getRuntimeNodePosition(page, 'perf-node-0')
@@ -198,8 +203,30 @@ test.describe.serial('canvas performance probe', () => {
       await dragOnCanvas(page, { x: 20, y: 20 }, { x: 760, y: 520 }, { steps: 24 })
     })
 
+    await page.evaluate((count) => {
+      const runtime = window.__WA_CANVAS_PERF_RUNTIME__
+      if (!runtime) throw new Error('Missing canvas performance runtime')
+      runtime.clearCanvas()
+      runtime.seedStrokeNodes({
+        count,
+        columns: 10,
+        spacingX: 220,
+        spacingY: 140,
+        start: { x: 120, y: 160 },
+        pointsPerStroke: 100,
+      })
+    }, STROKE_NODE_COUNT)
+    await waitForRuntimeNodeCount(page, STROKE_NODE_COUNT)
+
+    await moveMouseToCanvasCenter(page)
+    interactions.ctrlWheelZoomStrokes = await measureInteraction(page, async () => {
+      await ctrlWheelZoomWithStrokeAssertion(page)
+    })
+    await expectStrokeCameraIdle(page)
+
     const payload = {
       nodeCount: NODE_COUNT,
+      strokeNodeCount: STROKE_NODE_COUNT,
       selectedCounts: SELECTED_COUNTS,
       counts: await page.evaluate(() => window.__WA_CANVAS_PERF_RUNTIME__?.getCounts()),
       interactions,
@@ -211,7 +238,9 @@ test.describe.serial('canvas performance probe', () => {
     )
     await context.tracing.stop({ path: path.join(ARTIFACT_DIR, `${ARTIFACT_PREFIX}.zip`) })
 
-    expect(payload.counts?.nodes).toBe(NODE_COUNT)
+    expect(payload.counts?.nodes).toBe(STROKE_NODE_COUNT)
+    expect(payload.interactions.ctrlWheelZoom.metrics['canvas.react.commit']).toBeUndefined()
+    expect(payload.interactions.ctrlWheelZoomStrokes.metrics['canvas.react.commit']).toBeUndefined()
   })
 })
 
@@ -235,6 +264,15 @@ async function selectFirstCanvasNodes(page: Page, count: number) {
   )
 }
 
+async function waitForRuntimeNodeCount(page: Page, count: number) {
+  await expect
+    .poll(
+      async () => page.evaluate(() => window.__WA_CANVAS_PERF_RUNTIME__?.getCounts().nodes ?? null),
+      { timeout: 30_000 },
+    )
+    .toBe(count)
+}
+
 async function dragStrokeSizeSlider(page: Page) {
   const slider = page
     .getByRole('toolbar', { name: 'Canvas conditional toolbar' })
@@ -249,6 +287,84 @@ async function dragStrokeSizeSlider(page: Page) {
   await page.mouse.down()
   await page.mouse.move(box.x + box.width * 0.8, y, { steps: 12 })
   await page.mouse.up()
+}
+
+async function moveMouseToCanvasCenter(page: Page) {
+  const box = await getCanvasPane(page).boundingBox()
+  if (!box) throw new Error('Canvas pane is not visible')
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.waitForTimeout(100)
+}
+
+async function ctrlWheelZoom(page: Page) {
+  await page.keyboard.down('Control')
+  try {
+    for (let index = 0; index < 12; index += 1) {
+      await page.mouse.wheel(0, index % 2 === 0 ? -120 : 120)
+    }
+  } finally {
+    await page.keyboard.up('Control')
+  }
+}
+
+async function ctrlWheelZoomWithStrokeAssertion(page: Page) {
+  const initialState = await readStrokeVisualState(page)
+  await page.keyboard.down('Control')
+  try {
+    await page.mouse.wheel(0, -120)
+    const movingState = await expectStrokeCameraMoving(page)
+    expect(movingState.viewBox).toBe(initialState.viewBox)
+    for (let index = 1; index < 12; index += 1) {
+      await page.mouse.wheel(0, index % 2 === 0 ? -120 : 120)
+    }
+  } finally {
+    await page.keyboard.up('Control')
+  }
+}
+
+async function expectStrokeCameraMoving(page: Page) {
+  await page.waitForFunction(
+    () =>
+      document.querySelector('.canvas-scene__viewport')?.getAttribute('data-camera-state') ===
+      'moving',
+    null,
+    { timeout: 5_000 },
+  )
+  const state = await readStrokeVisualState(page)
+  expect(state.cameraState).toBe('moving')
+  expect(state.detailVisibility).toBe('visible')
+  return state
+}
+
+async function expectStrokeCameraIdle(page: Page) {
+  await page.waitForFunction(
+    () =>
+      document.querySelector('.canvas-scene__viewport')?.getAttribute('data-camera-state') ===
+      'idle',
+    null,
+    { timeout: 5_000 },
+  )
+  const state = await readStrokeVisualState(page)
+  expect(state.cameraState).toBe('idle')
+  expect(state.detailVisibility).toBe('visible')
+  return state
+}
+
+async function readStrokeVisualState(page: Page) {
+  return page.evaluate(() => {
+    const viewport = document.querySelector('.canvas-scene__viewport')
+    const detail = document.querySelector('.canvas-stroke-detail-path')
+    const svg = document.querySelector('.canvas-stroke-visual')
+    if (!detail || !svg) {
+      throw new Error('Missing stroke visual path')
+    }
+
+    return {
+      cameraState: viewport?.getAttribute('data-camera-state'),
+      detailVisibility: getComputedStyle(detail).visibility,
+      viewBox: svg.getAttribute('viewBox'),
+    }
+  })
 }
 
 async function getRuntimeNodePosition(page: Page, nodeId: string) {

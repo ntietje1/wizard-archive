@@ -47,6 +47,7 @@ const selectionControllerMock = vi.hoisted(() => ({
   replaceNodes: vi.fn(),
   replaceEdges: vi.fn(),
   clear: vi.fn(),
+  clearSelection: vi.fn(),
   getSelectedNodeIds: vi.fn(() => new Set<string>()),
   getSelectedEdgeIds: vi.fn(() => new Set<string>()),
   toggleNodeFromTarget: vi.fn(),
@@ -345,6 +346,7 @@ describe('useCanvasFlowRuntime', () => {
     clearToolTransientStateSpy.mockReset()
     storeApiMock.setState.mockReset()
     selectionControllerMock.clear.mockReset()
+    selectionControllerMock.clearSelection.mockReset()
     session.editSession.setEditingEmbedId.mockReset()
     session.editSession.setPendingEditNodeId.mockReset()
     session.editSession.setPendingEditNodePoint.mockReset()
@@ -389,6 +391,9 @@ describe('useCanvasFlowRuntime', () => {
       remoteDragAnimation,
     })
     expect(selectionControllerSpy).toHaveBeenCalledWith({
+      canvasEngine: expect.objectContaining({
+        getSnapshot: expect.any(Function),
+      }),
       onSelectionChange: expect.any(Function),
       setLocalSelection: session.awareness.core.setLocalSelection,
     })
@@ -488,7 +493,6 @@ describe('useCanvasFlowRuntime', () => {
     unmount()
     doc.destroy()
 
-    expect(clearSelectionSpy).toHaveBeenCalledTimes(1)
     expect(clearToolTransientStateSpy).toHaveBeenCalledWith('select-overlay')
     expect(clearToolTransientStateSpy).toHaveBeenCalledWith(
       'select-awareness',
@@ -524,7 +528,7 @@ describe('useCanvasFlowRuntime', () => {
       session.awareness.presence,
     )
     expect(toolHandlersSpy).toHaveBeenCalledWith('draw', expect.any(Object))
-    expect(selectionControllerMock.clear).toHaveBeenCalledTimes(1)
+    expect(selectionControllerMock.clearSelection).toHaveBeenCalledTimes(1)
     expect(session.editSession.setEditingEmbedId).toHaveBeenCalledWith(null)
     expect(session.editSession.setPendingEditNodeId).toHaveBeenCalledWith(null)
     expect(session.editSession.setPendingEditNodePoint).toHaveBeenCalledWith(null)
@@ -554,7 +558,7 @@ describe('useCanvasFlowRuntime', () => {
 
     rerender()
 
-    expect(selectionControllerMock.clear).not.toHaveBeenCalled()
+    expect(selectionControllerMock.clearSelection).not.toHaveBeenCalled()
     expect(session.editSession.setEditingEmbedId).not.toHaveBeenCalled()
     expect(session.editSession.setPendingEditNodeId).not.toHaveBeenCalled()
     expect(session.editSession.setPendingEditNodePoint).not.toHaveBeenCalled()

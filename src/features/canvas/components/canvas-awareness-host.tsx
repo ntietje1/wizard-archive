@@ -1,22 +1,33 @@
-import { useContext, useSyncExternalStore } from 'react'
+import { useContext, useEffect, useRef } from 'react'
 import { CanvasRemoteCursors } from './canvas-remote-cursors'
 import { CanvasEngineContext } from '../react/canvas-engine-context-value'
 import { canvasNodeAwarenessLayers } from '../nodes/canvas-node-modules'
 import { canvasToolAwarenessLayers } from '../tools/canvas-tool-modules'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
 
-const DEFAULT_VIEWPORT = { x: 0, y: 0, zoom: 1 }
-
 export function CanvasAwarenessHost({ remoteUsers }: { remoteUsers: Array<RemoteUser> }) {
-  const viewport = useCanvasViewportSnapshot()
+  const canvasEngine = useContext(CanvasEngineContext)
+  const viewportRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!canvasEngine) {
+      return undefined
+    }
+
+    const unregister = canvasEngine.registerViewportOverlayElement(viewportRef.current)
+    canvasEngine.scheduleViewportTransform(canvasEngine.getSnapshot().viewport)
+    canvasEngine.flushRenderScheduler()
+    return unregister
+  }, [canvasEngine])
 
   return (
     <div className="pointer-events-none absolute inset-0" style={{ zIndex: 5 }}>
       <div
+        ref={viewportRef}
         data-testid="awareness-layer-container"
         className="absolute inset-0"
         style={{
-          transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
+          backfaceVisibility: 'hidden',
           transformOrigin: '0 0',
         }}
       >
@@ -30,17 +41,4 @@ export function CanvasAwarenessHost({ remoteUsers }: { remoteUsers: Array<Remote
       <CanvasRemoteCursors remoteUsers={remoteUsers} />
     </div>
   )
-}
-
-function useCanvasViewportSnapshot() {
-  const canvasEngine = useContext(CanvasEngineContext)
-  return useSyncExternalStore(
-    canvasEngine?.subscribe ?? subscribeToNoop,
-    () => canvasEngine?.getSnapshot().viewport ?? DEFAULT_VIEWPORT,
-    () => DEFAULT_VIEWPORT,
-  )
-}
-
-function subscribeToNoop() {
-  return () => undefined
 }

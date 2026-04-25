@@ -57,7 +57,7 @@ export function getCanvasSurface(page: Page) {
 }
 
 export function getCanvasPane(page: Page) {
-  return getCanvasSurface(page).locator('.react-flow__pane')
+  return getCanvasSurface(page).locator('[data-testid="canvas-scene"], .react-flow__pane').first()
 }
 
 export function getCanvasPendingSelectionStatus(page: Page) {
@@ -77,7 +77,7 @@ export function getCanvasNodes(page: Page) {
 }
 
 export function getCanvasEdges(page: Page) {
-  return page.locator('.react-flow__edge')
+  return page.locator('[data-testid="canvas-edge"], .react-flow__edge')
 }
 
 export function getCanvasToolButton(page: Page, label: keyof typeof TOOL_NAME_PATTERNS) {

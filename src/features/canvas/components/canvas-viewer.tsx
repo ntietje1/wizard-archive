@@ -9,7 +9,6 @@ import {
   recordCanvasPerformanceMetric,
 } from '../runtime/performance/canvas-performance-metrics'
 import { CanvasRuntimeProvider } from '../runtime/providers/canvas-runtime-context'
-import { CanvasViewportPersistence } from '../runtime/interaction/canvas-viewport-persistence'
 import { CanvasEngineProvider } from '../react/canvas-engine-context'
 import { useCanvasPendingSelectionPreviewSummary } from '../runtime/selection/use-canvas-pending-selection-preview'
 import { loadPersistedCanvasViewport } from '../runtime/interaction/canvas-viewport-storage'
@@ -82,13 +81,7 @@ export function CanvasFlow({
   })
   const canvasCursor = runtime.toolCursor ?? 'pointer'
   const canvasFlowContent = (
-    <CanvasFlowContent
-      canEdit={canEdit}
-      canvasId={canvasId}
-      initialViewport={initialViewport}
-      runtime={runtime}
-      canvasCursor={canvasCursor}
-    />
+    <CanvasFlowContent canEdit={canEdit} runtime={runtime} canvasCursor={canvasCursor} />
   )
 
   return (
@@ -128,14 +121,10 @@ export function CanvasFlow({
 
 function CanvasFlowContent({
   canEdit,
-  canvasId,
-  initialViewport,
   runtime,
   canvasCursor,
 }: {
   canEdit: boolean
-  canvasId: ReadyCanvasSession['canvasId']
-  initialViewport: { x: number; y: number; zoom: number }
   runtime: ReturnType<typeof useCanvasFlowRuntime>
   canvasCursor: string
 }) {
@@ -156,11 +145,6 @@ function CanvasFlowContent({
         role="region"
         aria-label="Canvas surface"
       >
-        <CanvasViewportPersistence
-          key={canvasId}
-          canvasId={canvasId}
-          initialViewport={initialViewport}
-        />
         <CanvasScene
           canEdit={canEdit}
           remoteUsers={runtime.remoteUsers}

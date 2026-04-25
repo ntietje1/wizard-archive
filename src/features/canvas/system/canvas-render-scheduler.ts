@@ -1,8 +1,9 @@
 import { normalizeCanvasEdgeStyle } from '../edges/shared/canvas-edge-style'
 import { getCanvasNodeSurfaceStyle } from '../nodes/shared/canvas-node-surface-style'
-import { pointsToPathD } from '../nodes/stroke/stroke-node-model'
+import { getCachedStrokeDetailPath } from '../nodes/stroke/stroke-path-cache'
 import type { CanvasEdgePatch } from '../edges/canvas-edge-types'
 import type { CanvasDomRegistry } from './canvas-dom-registry'
+import type { StrokeNodeData } from '../nodes/stroke/stroke-node-model'
 import type { Edge, XYPosition } from '@xyflow/react'
 
 export interface CanvasViewport {
@@ -11,12 +12,15 @@ export interface CanvasViewport {
   zoom: number
 }
 
+export type CanvasCameraState = 'idle' | 'moving'
+
 export interface CanvasRenderScheduler {
   scheduleNodeTransforms: (positions: ReadonlyMap<string, XYPosition>) => void
   scheduleEdgePaths: (paths: ReadonlyMap<string, string>) => void
   scheduleNodeDataPatches: (updates: ReadonlyMap<string, Record<string, unknown>>) => void
   scheduleEdgePatches: (updates: ReadonlyMap<string, CanvasEdgePatch>) => void
   scheduleViewportTransform: (viewport: CanvasViewport) => void
+  scheduleCameraState: (state: CanvasCameraState) => void
   flush: () => void
   destroy: () => void
 }
@@ -31,7 +35,21 @@ export function createCanvasRenderScheduler({
   const pendingNodeDataPatches = new Map<string, Record<string, unknown>>()
   const pendingEdgePatches = new Map<string, CanvasEdgePatch>()
   let pendingViewportTransform: CanvasViewport | null = null
+  let pendingCameraState: CanvasCameraState | null = null
+  let appliedCameraState: CanvasCameraState | null = null
   let frameId: number | null = null
+
+  const applyCameraState = (state: CanvasCameraState) => {
+    if (appliedCameraState === state) {
+      return
+    }
+
+    for (const viewport of domRegistry.getViewportTargets()) {
+      viewport.dataset.cameraState = state
+      viewport.style.willChange = state === 'moving' ? 'transform' : ''
+    }
+    appliedCameraState = state
+  }
 
   const requestFlush = () => {
     if (frameId !== null || typeof requestAnimationFrame === 'undefined') {
@@ -68,14 +86,20 @@ export function createCanvasRenderScheduler({
       }
 
       const strokePaths = domRegistry.getStrokeNodePaths(nodeId)
-      const strokePath = getStrokeNodePathFromData(patch)
-      if (strokePath) {
-        strokePaths?.path?.setAttribute('d', strokePath)
-      }
+      const strokeData = parseStrokeNodeData(patch)
+      if (strokeData) {
+        const opacity = String((strokeData.opacity ?? 100) / 100)
+        const detailPath = getCachedStrokeDetailPath(nodeId, strokeData)
+        if (detailPath && strokePaths?.path) {
+          strokePaths.path.setAttribute('d', detailPath)
+          strokePaths.path.setAttribute('fill', strokeData.color)
+          strokePaths.path.setAttribute('opacity', opacity)
+        }
 
-      const strokeHighlightPath = getStrokeNodeHighlightPathFromData(patch)
-      if (strokeHighlightPath) {
-        strokePaths?.highlightPath?.setAttribute('d', strokeHighlightPath)
+        const highlightPath = getCachedStrokeDetailPath(nodeId, strokeData, strokeData.size * 0.3)
+        if (highlightPath && strokePaths?.highlightPath) {
+          strokePaths.highlightPath.setAttribute('d', highlightPath)
+        }
       }
     }
     pendingNodeDataPatches.clear()
@@ -103,10 +127,14 @@ export function createCanvasRenderScheduler({
     }
     pendingEdgePatches.clear()
 
+    if (pendingCameraState !== null) {
+      applyCameraState(pendingCameraState)
+      pendingCameraState = null
+    }
+
     if (pendingViewportTransform) {
-      const viewport = domRegistry.getViewport()
-      if (viewport) {
-        viewport.style.transform = `translate(${pendingViewportTransform.x}px, ${pendingViewportTransform.y}px) scale(${pendingViewportTransform.zoom})`
+      for (const viewport of domRegistry.getViewportTargets()) {
+        viewport.style.transform = `translate3d(${pendingViewportTransform.x}px, ${pendingViewportTransform.y}px, 0) scale(${pendingViewportTransform.zoom})`
       }
       pendingViewportTransform = null
     }
@@ -149,6 +177,16 @@ export function createCanvasRenderScheduler({
       pendingViewportTransform = viewport
       requestFlush()
     },
+    scheduleCameraState: (state) => {
+      if (state === 'moving') {
+        applyCameraState('moving')
+        pendingCameraState = null
+        return
+      }
+
+      pendingCameraState = 'idle'
+      requestFlush()
+    },
     flush,
     destroy: () => {
       if (frameId !== null && typeof cancelAnimationFrame !== 'undefined') {
@@ -160,24 +198,18 @@ export function createCanvasRenderScheduler({
       pendingNodeDataPatches.clear()
       pendingEdgePatches.clear()
       pendingViewportTransform = null
+      pendingCameraState = null
+      appliedCameraState = null
     },
   }
 }
 
-function getStrokeNodePathFromData(data: Record<string, unknown>): string | null {
+function parseStrokeNodeData(data: Record<string, unknown>): StrokeNodeData | null {
   if (!Array.isArray(data.points) || typeof data.size !== 'number') {
     return null
   }
 
-  return pointsToPathD(data.points as Array<[number, number, number]>, data.size)
-}
-
-function getStrokeNodeHighlightPathFromData(data: Record<string, unknown>): string | null {
-  if (!Array.isArray(data.points) || typeof data.size !== 'number') {
-    return null
-  }
-
-  return pointsToPathD(data.points as Array<[number, number, number]>, data.size * 0.3)
+  return data as StrokeNodeData
 }
 
 function readEdgeStyle(path: SVGPathElement): NonNullable<Edge['style']> {

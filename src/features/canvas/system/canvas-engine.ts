@@ -20,7 +20,11 @@ import type {
   CanvasRegisteredEdgePaths,
   CanvasRegisteredStrokeNodePaths,
 } from './canvas-dom-registry'
-import type { CanvasRenderScheduler, CanvasViewport } from './canvas-render-scheduler'
+import type {
+  CanvasCameraState,
+  CanvasRenderScheduler,
+  CanvasViewport,
+} from './canvas-render-scheduler'
 import type { Edge, Node, XYPosition } from '@xyflow/react'
 
 export interface CanvasInternalNode {
@@ -60,16 +64,20 @@ export interface CanvasEngineSnapshot {
   dirtyNodeIds: ReadonlySet<string>
   dirtyEdgeIds: ReadonlySet<string>
   viewport: CanvasViewport
+  cameraState: CanvasCameraState
+  debouncedZoomLevel: number
   version: number
 }
 
 type CanvasEngineListener = () => void
+type CanvasViewportCommitListener = (viewport: CanvasViewport) => void
 export type CanvasEngineEquality<T> = (a: T, b: T) => boolean
 export type { CanvasViewport }
 
 export interface CanvasEngine {
   getSnapshot: () => CanvasEngineSnapshot
   subscribe: (listener: CanvasEngineListener) => () => void
+  subscribeViewportCommit: (listener: CanvasViewportCommitListener) => () => void
   subscribeSelector: <T>(
     selector: (snapshot: CanvasEngineSnapshot) => T,
     listener: (next: T, previous: T) => void,
@@ -93,6 +101,8 @@ export interface CanvasEngine {
   cancelSelectionGesture: () => void
   setViewport: (viewport: CanvasViewport) => void
   setViewportLive: (viewport: CanvasViewport) => void
+  getDebouncedZoomLevel: () => number
+  getEfficientZoomLevel: () => number
   screenToCanvasPosition: (position: XYPosition, surfaceBounds: DOMRect | null) => XYPosition
   canvasToScreenPosition: (position: XYPosition, surfaceBounds: DOMRect | null) => XYPosition
   startDrag: (nodeIds: ReadonlySet<string>) => void
@@ -100,11 +110,14 @@ export interface CanvasEngine {
   registerNodeElement: (nodeId: string, element: HTMLElement | null) => () => void
   registerNodeSurfaceElement: (nodeId: string, element: HTMLElement | null) => () => void
   registerStrokeNodePaths: (nodeId: string, paths: CanvasRegisteredStrokeNodePaths) => () => void
+  registerEdgeElement: (edgeId: string, element: SVGElement | null) => () => void
   registerEdgePaths: (edgeId: string, paths: CanvasRegisteredEdgePaths) => () => void
   registerViewportElement: (element: HTMLElement | null) => () => void
+  registerViewportOverlayElement: (element: HTMLElement | null) => () => void
   scheduleNodeDataPatches: (updates: ReadonlyMap<string, Record<string, unknown>>) => void
   scheduleEdgePatches: (updates: ReadonlyMap<string, CanvasEdgePatch>) => void
   scheduleViewportTransform: (viewport: CanvasViewport) => void
+  scheduleCameraState: (state: CanvasCameraState) => void
   flushRenderScheduler: () => void
   stopDrag: () => void
   measureNode: (nodeId: string, dimensions: { width: number; height: number }) => void
@@ -143,6 +156,7 @@ const EMPTY_EDGE_IDS_BY_NODE_ID: ReadonlyMap<string, ReadonlySet<string>> = new 
 const EMPTY_IDS: ReadonlyArray<string> = []
 const EMPTY_SET: ReadonlySet<string> = new Set()
 const DEFAULT_VIEWPORT: CanvasViewport = { x: 0, y: 0, zoom: 1 }
+const EFFICIENT_ZOOM_SHAPE_COUNT_THRESHOLD = 500
 
 export function createCanvasEngine(): CanvasEngine {
   const domRegistry: CanvasDomRegistry = createCanvasDomRegistry()
@@ -161,15 +175,24 @@ export function createCanvasEngine(): CanvasEngine {
     dirtyNodeIds: EMPTY_SET,
     dirtyEdgeIds: EMPTY_SET,
     viewport: DEFAULT_VIEWPORT,
+    cameraState: 'idle',
+    debouncedZoomLevel: DEFAULT_VIEWPORT.zoom,
     version: 0,
   }
   const listeners = new Set<CanvasEngineListener>()
+  const viewportCommitListeners = new Set<CanvasViewportCommitListener>()
   let draggingNodeIds = new Set<string>()
   let hasUncommittedViewport = false
 
   const emit = () => {
     for (const listener of listeners) {
       listener()
+    }
+  }
+
+  const emitViewportCommit = (viewport: CanvasViewport) => {
+    for (const listener of viewportCommitListeners) {
+      listener(viewport)
     }
   }
 
@@ -243,6 +266,9 @@ export function createCanvasEngine(): CanvasEngine {
   const setDocumentSnapshot: CanvasEngine['setDocumentSnapshot'] = ({ nodes, edges }) => {
     const nextNodes = nodes ?? snapshot.nodes
     const nextEdges = edges ?? snapshot.edges
+    const nodeLookup = createNodeLookup(nextNodes, snapshot.selection.nodeIds, draggingNodeIds)
+    const edgeLookup = createEdgeLookup(nextEdges, snapshot.selection.edgeIds)
+    const edgeIdsByNodeId = createEdgeAdjacency(nextEdges)
 
     commit({
       ...snapshot,
@@ -250,9 +276,9 @@ export function createCanvasEngine(): CanvasEngine {
       edges: nextEdges,
       nodeIds: nextNodes.map((node) => node.id),
       edgeIds: nextEdges.map((edge) => edge.id),
-      nodeLookup: createNodeLookup(nextNodes, snapshot.selection.nodeIds, draggingNodeIds),
-      edgeLookup: createEdgeLookup(nextEdges, snapshot.selection.edgeIds),
-      edgeIdsByNodeId: createEdgeAdjacency(nextEdges),
+      nodeLookup,
+      edgeLookup,
+      edgeIdsByNodeId,
       dirtyNodeIds: nodes ? new Set(nextNodes.map((node) => node.id)) : EMPTY_SET,
       dirtyEdgeIds: edges ? new Set(nextEdges.map((edge) => edge.id)) : EMPTY_SET,
     })
@@ -313,14 +339,16 @@ export function createCanvasEngine(): CanvasEngine {
     }
     const dirtyNodeIds = getChangedSelectionIds(snapshot.selection.nodeIds, nodeIds)
     const dirtyEdgeIds = getChangedSelectionIds(snapshot.selection.edgeIds, edgeIds)
+    const nodeLookup = updateNodeSelectionLookup(snapshot.nodeLookup, nodeIds, dirtyNodeIds)
+    const edgeLookup = updateEdgeSelectionLookup(snapshot.edgeLookup, edgeIds, dirtyEdgeIds)
 
     commit({
       ...snapshot,
       selection: nextSelection,
       selectedNodeIds: nextSelection.nodeIds,
       selectedEdgeIds: nextSelection.edgeIds,
-      nodeLookup: updateNodeSelectionLookup(snapshot.nodeLookup, nodeIds, dirtyNodeIds),
-      edgeLookup: updateEdgeSelectionLookup(snapshot.edgeLookup, edgeIds, dirtyEdgeIds),
+      nodeLookup,
+      edgeLookup,
       dirtyNodeIds,
       dirtyEdgeIds,
     })
@@ -460,13 +488,17 @@ export function createCanvasEngine(): CanvasEngine {
     }
 
     hasUncommittedViewport = false
+    renderScheduler.scheduleCameraState('idle')
     renderScheduler.scheduleViewportTransform(viewport)
-    commit({
+    snapshot = {
       ...snapshot,
       viewport,
+      cameraState: 'idle',
+      debouncedZoomLevel: viewport.zoom,
       dirtyNodeIds: EMPTY_SET,
       dirtyEdgeIds: EMPTY_SET,
-    })
+    }
+    emitViewportCommit(viewport)
   }
 
   const setViewportLive: CanvasEngine['setViewportLive'] = (viewport) => {
@@ -479,12 +511,25 @@ export function createCanvasEngine(): CanvasEngine {
     }
 
     hasUncommittedViewport = true
+    const debouncedZoomLevel =
+      snapshot.cameraState === 'idle' ? snapshot.viewport.zoom : snapshot.debouncedZoomLevel
+    renderScheduler.scheduleCameraState('moving')
     snapshot = {
       ...snapshot,
       viewport,
+      cameraState: 'moving',
+      debouncedZoomLevel,
     }
     renderScheduler.scheduleViewportTransform(viewport)
   }
+
+  const getDebouncedZoomLevel: CanvasEngine['getDebouncedZoomLevel'] = () =>
+    snapshot.cameraState === 'idle' ? snapshot.viewport.zoom : snapshot.debouncedZoomLevel
+
+  const getEfficientZoomLevel: CanvasEngine['getEfficientZoomLevel'] = () =>
+    snapshot.nodes.length + snapshot.edges.length > EFFICIENT_ZOOM_SHAPE_COUNT_THRESHOLD
+      ? getDebouncedZoomLevel()
+      : snapshot.viewport.zoom
 
   const screenToCanvasPosition: CanvasEngine['screenToCanvasPosition'] = (
     position,
@@ -584,10 +629,11 @@ export function createCanvasEngine(): CanvasEngine {
     const previouslyDragging = draggingNodeIds
     draggingNodeIds = new Set()
     const nextNodes = snapshot.nodes.map((node) => snapshot.nodeLookup.get(node.id)?.node ?? node)
+    const nodeLookup = createNodeLookup(nextNodes, snapshot.selection.nodeIds, draggingNodeIds)
     commit({
       ...snapshot,
       nodes: nextNodes,
-      nodeLookup: createNodeLookup(nextNodes, snapshot.selection.nodeIds, draggingNodeIds),
+      nodeLookup,
       dirtyNodeIds: previouslyDragging,
       dirtyEdgeIds: EMPTY_SET,
     })
@@ -636,12 +682,33 @@ export function createCanvasEngine(): CanvasEngine {
     renderScheduler.scheduleNodeDataPatches(mergedUpdates)
   }
 
+  const registerViewportElement: CanvasEngine['registerViewportElement'] = (element) => {
+    const unregister = domRegistry.registerViewport(element)
+    renderScheduler.scheduleCameraState(snapshot.cameraState)
+    renderScheduler.scheduleViewportTransform(snapshot.viewport)
+    return unregister
+  }
+
+  const registerNodeElement: CanvasEngine['registerNodeElement'] = (nodeId, element) => {
+    return domRegistry.registerNode(nodeId, element)
+  }
+
+  const registerEdgeElement: CanvasEngine['registerEdgeElement'] = (edgeId, element) => {
+    return domRegistry.registerEdge(edgeId, element)
+  }
+
   return {
     getSnapshot: () => snapshot,
     subscribe: (listener) => {
       listeners.add(listener)
       return () => {
         listeners.delete(listener)
+      }
+    },
+    subscribeViewportCommit: (listener) => {
+      viewportCommitListeners.add(listener)
+      return () => {
+        viewportCommitListeners.delete(listener)
       }
     },
     subscribeSelector: (selector, listener, equality = Object.is) => {
@@ -678,23 +745,29 @@ export function createCanvasEngine(): CanvasEngine {
     cancelSelectionGesture,
     setViewport,
     setViewportLive,
+    getDebouncedZoomLevel,
+    getEfficientZoomLevel,
     screenToCanvasPosition,
     canvasToScreenPosition,
     startDrag,
     updateDrag,
-    registerNodeElement: domRegistry.registerNode,
+    registerNodeElement,
     registerNodeSurfaceElement: domRegistry.registerNodeSurface,
     registerStrokeNodePaths: domRegistry.registerStrokeNodePaths,
+    registerEdgeElement,
     registerEdgePaths: domRegistry.registerEdgePaths,
-    registerViewportElement: domRegistry.registerViewport,
+    registerViewportElement,
+    registerViewportOverlayElement: domRegistry.registerViewportOverlay,
     scheduleNodeDataPatches,
     scheduleEdgePatches: renderScheduler.scheduleEdgePatches,
     scheduleViewportTransform: renderScheduler.scheduleViewportTransform,
+    scheduleCameraState: renderScheduler.scheduleCameraState,
     flushRenderScheduler: renderScheduler.flush,
     stopDrag,
     measureNode,
     destroy: () => {
       listeners.clear()
+      viewportCommitListeners.clear()
       draggingNodeIds = new Set()
       hasUncommittedViewport = false
       renderScheduler.destroy()

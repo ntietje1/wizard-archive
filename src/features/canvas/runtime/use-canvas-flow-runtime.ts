@@ -19,6 +19,7 @@ import { useCanvasNodeDragHandlers } from './interaction/use-canvas-node-drag-ha
 import { useCanvasPointerBridge } from './interaction/use-canvas-pointer-bridge'
 import { useCanvasRemoteDragAnimation } from './interaction/use-canvas-remote-drag-animation'
 import { useCanvasViewportInteractions } from './interaction/use-canvas-viewport-interactions'
+import { createCanvasViewportPersistence } from './interaction/canvas-viewport-persistence'
 import { useCanvasSurfaceClickGuard } from './interaction/use-canvas-surface-click-guard'
 import { exposeCanvasPerformanceRuntime } from './performance/canvas-performance-metrics'
 import { useCanvasSelectionController } from './selection/use-canvas-selection-actions'
@@ -30,6 +31,7 @@ import { createCanvasEngine } from '../system/canvas-engine'
 import { createCanvasViewportController } from '../system/canvas-viewport-controller'
 import { canvasToolSpecs } from '../tools/canvas-tool-modules'
 import { isPrimarySelectionModifier } from '../utils/canvas-selection-utils'
+import { getStrokeBounds } from '../nodes/stroke/stroke-node-model'
 import type {
   CanvasEdgeCreationDefaults,
   CanvasSelectionSnapshot,
@@ -52,6 +54,8 @@ interface UseCanvasFlowRuntimeOptions {
 }
 
 const SELECTION_INCOMPATIBLE_TOOLS = new Set<CanvasToolId>(['draw', 'erase', 'text', 'edge'])
+const PERFORMANCE_STROKE_WIDTH = 160
+const PERFORMANCE_STROKE_AMPLITUDE = 28
 
 export function useCanvasFlowRuntime({
   nodesMap,
@@ -108,6 +112,16 @@ export function useCanvasFlowRuntime({
   useEffect(() => {
     viewportController.syncFromDocumentOrAdapter(initialViewport)
   }, [initialViewport, viewportController])
+
+  useEffect(
+    () =>
+      createCanvasViewportPersistence({
+        canvasEngine,
+        canvasId,
+        initialViewport,
+      }),
+    [canvasEngine, canvasId, initialViewport],
+  )
 
   useEffect(() => {
     return () => {
@@ -211,6 +225,45 @@ export function useCanvasFlowRuntime({
                 zIndex: index,
               }
               nodesMap.set(node.id, node)
+            }
+          })
+        },
+        seedStrokeNodes: ({
+          count,
+          columns = 10,
+          spacingX = 240,
+          spacingY = 160,
+          start = { x: 0, y: 0 },
+          pointsPerStroke = 80,
+        }) => {
+          doc.transact(() => {
+            for (let index = 0; index < count; index += 1) {
+              const column = index % columns
+              const row = Math.floor(index / columns)
+              const origin = {
+                x: start.x + column * spacingX,
+                y: start.y + row * spacingY,
+              }
+              const points = createPerformanceStrokePoints(origin, pointsPerStroke)
+              const size = 8
+              const bounds = getStrokeBounds(points, size)
+              nodesMap.set(`perf-stroke-${index}`, {
+                id: `perf-stroke-${index}`,
+                type: 'stroke',
+                position: { x: bounds.x, y: bounds.y },
+                width: bounds.width,
+                height: bounds.height,
+                data: {
+                  points,
+                  color: '#2563eb',
+                  size,
+                  opacity: 100,
+                  bounds,
+                },
+                draggable: false,
+                selected: false,
+                zIndex: index,
+              })
             }
           })
         },
@@ -442,4 +495,23 @@ export function useCanvasFlowRuntime({
     selection,
     toolCursor: activeToolSpec.cursor,
   }
+}
+
+function createPerformanceStrokePoints(
+  origin: { x: number; y: number },
+  pointsPerStroke: number,
+): Array<[number, number, number]> {
+  const safePointCount = Math.max(2, Math.floor(pointsPerStroke))
+  const points: Array<[number, number, number]> = []
+
+  for (let index = 0; index < safePointCount; index += 1) {
+    const progress = index / (safePointCount - 1)
+    points.push([
+      origin.x + progress * PERFORMANCE_STROKE_WIDTH,
+      origin.y + Math.sin(progress * Math.PI * 4) * PERFORMANCE_STROKE_AMPLITUDE,
+      0.5,
+    ])
+  }
+
+  return points
 }

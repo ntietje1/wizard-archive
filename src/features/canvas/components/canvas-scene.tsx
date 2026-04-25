@@ -72,6 +72,7 @@ export function CanvasScene({
   useEffect(() => {
     const unregister = canvasEngine.registerViewportElement(viewportRef.current)
     canvasEngine.scheduleViewportTransform(canvasEngine.getSnapshot().viewport)
+    canvasEngine.scheduleCameraState(canvasEngine.getSnapshot().cameraState)
     canvasEngine.flushRenderScheduler()
     return unregister
   }, [canvasEngine])
@@ -171,11 +172,24 @@ export function CanvasScene({
       onMouseLeave={sceneHandlers.onMouseLeave}
       onPointerDownCapture={handlePointerDownCapture}
     >
+      <style>{`
+        .canvas-scene__viewport[data-camera-state="moving"] .canvas-stroke-hit-target-layer,
+        .canvas-scene__viewport[data-camera-state="moving"] .canvas-node-connection-handle {
+          display: none;
+        }
+
+        .canvas-scene__viewport[data-camera-state="moving"] .canvas-stroke-highlight-path {
+          visibility: hidden;
+        }
+      `}</style>
       <CanvasBackground />
       <div
         ref={viewportRef}
         className="canvas-scene__viewport absolute left-0 top-0 h-full w-full"
-        style={{ transformOrigin: '0 0' }}
+        style={{
+          backfaceVisibility: 'hidden',
+          transformOrigin: '0 0',
+        }}
       >
         <svg
           className="canvas-edge-layer pointer-events-none absolute left-0 top-0 overflow-visible"
@@ -323,6 +337,11 @@ function CanvasEdgeWrapper({
   onEdgeContextMenu: (event: ReactMouseEvent, edge: Edge) => void
 }) {
   const internalEdge = useCanvasEngineSelector((snapshot) => snapshot.edgeLookup.get(edgeId))
+  const canvasEngine = useCanvasEngine()
+  const edgeRef = useRef<SVGGElement | null>(null)
+
+  useEffect(() => canvasEngine.registerEdgeElement(edgeId, edgeRef.current), [canvasEngine, edgeId])
+
   if (!internalEdge || !internalEdge.visible) {
     return null
   }
@@ -340,6 +359,7 @@ function CanvasEdgeWrapper({
 
   return (
     <g
+      ref={edgeRef}
       className="pointer-events-auto"
       onClick={(event) => onEdgeClick?.(event, edge)}
       onContextMenu={(event) => onEdgeContextMenu(event, edge)}

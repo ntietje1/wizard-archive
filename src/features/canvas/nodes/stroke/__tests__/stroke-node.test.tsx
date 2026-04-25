@@ -58,7 +58,8 @@ describe('StrokeNode', () => {
     const { container, getByTestId } = renderStroke(<StrokeNode {...props} />)
 
     expect(getByTestId('stroke-hit-target')).toBeInTheDocument()
-    expect(container.querySelectorAll('path')).toHaveLength(3)
+    expect(container.querySelector('.canvas-stroke-detail-path')).toBeInTheDocument()
+    expect(container.querySelector('.canvas-stroke-highlight-path')).toBeInTheDocument()
   })
 
   it('drops the local stroke highlight when a pending preview excludes the committed stroke', () => {
@@ -70,16 +71,18 @@ describe('StrokeNode', () => {
     const { container, getByTestId } = renderStroke(<StrokeNode {...props} />)
 
     expect(getByTestId('stroke-hit-target')).toBeInTheDocument()
-    expect(container.querySelectorAll('path')).toHaveLength(2)
+    expect(container.querySelector('.canvas-stroke-detail-path')).toBeInTheDocument()
+    expect(container.querySelector('.canvas-stroke-highlight-path')).not.toBeInTheDocument()
   })
 
-  it('keeps two paths (stroke and hit target) when a pending preview excludes an unselected stroke', () => {
+  it('keeps the detail path when a pending preview excludes an unselected stroke', () => {
     const props = setupStrokeNodeProps({ selected: false })
     strokeEngine.setSelectionGesturePreview({ nodeIds: new Set(), edgeIds: new Set() })
     const { container, getByTestId } = renderStroke(<StrokeNode {...props} />)
 
     expect(getByTestId('stroke-hit-target')).toBeInTheDocument()
-    expect(container.querySelectorAll('path')).toHaveLength(2)
+    expect(container.querySelector('.canvas-stroke-detail-path')).toBeInTheDocument()
+    expect(container.querySelector('.canvas-stroke-highlight-path')).not.toBeInTheDocument()
   })
 
   it('keeps the highlight path when a pending preview includes an already selected stroke', () => {
@@ -91,7 +94,8 @@ describe('StrokeNode', () => {
     const { container, getByTestId } = renderStroke(<StrokeNode {...props} />)
 
     expect(getByTestId('stroke-hit-target')).toBeInTheDocument()
-    expect(container.querySelectorAll('path')).toHaveLength(3)
+    expect(container.querySelector('.canvas-stroke-detail-path')).toBeInTheDocument()
+    expect(container.querySelector('.canvas-stroke-highlight-path')).toBeInTheDocument()
   })
 
   it('passes only start and end connection handles at the stroke endpoints', () => {
@@ -121,7 +125,17 @@ describe('StrokeNode', () => {
     )
 
     expect(getByTestId('stroke-hit-target')).toBeInTheDocument()
-    expect(container.querySelectorAll('path')).toHaveLength(2)
+    expect(container.querySelector('.canvas-stroke-detail-path')).toBeInTheDocument()
+  })
+
+  it('renders detail and highlight paths inside one stable svg coordinate frame', () => {
+    const { container } = renderStroke(<StrokeNode {...setupStrokeNodeProps({ selected: true })} />)
+
+    const svg = container.querySelector('.canvas-stroke-visual')
+    expect(svg).toBeInTheDocument()
+    expect(svg?.getAttribute('viewBox')).toBe('0 0 100 20')
+    expect(svg?.querySelector('.canvas-stroke-detail-path')).toBeInTheDocument()
+    expect(svg?.querySelector('.canvas-stroke-highlight-path')).toBeInTheDocument()
   })
 })
 

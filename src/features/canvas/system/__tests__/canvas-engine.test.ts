@@ -239,25 +239,123 @@ describe('createCanvasEngine', () => {
     engine.destroy()
   })
 
-  it('updates live viewport transforms without notifying subscribers until commit', () => {
+  it('updates viewport transforms without notifying general subscribers', () => {
     const engine = createCanvasEngine()
     const viewportElement = document.createElement('div')
     const unregister = engine.registerViewportElement(viewportElement)
     const listener = vi.fn()
     const unsubscribe = engine.subscribe(listener)
+    const viewportListener = vi.fn()
+    const unsubscribeViewport = engine.subscribeViewportCommit(viewportListener)
 
     engine.setViewportLive({ x: 10, y: 20, zoom: 2 })
     engine.flushRenderScheduler()
 
     expect(listener).not.toHaveBeenCalled()
+    expect(viewportListener).not.toHaveBeenCalled()
     expect(engine.getSnapshot().viewport).toEqual({ x: 10, y: 20, zoom: 2 })
-    expect(viewportElement.style.transform).toBe('translate(10px, 20px) scale(2)')
+    expect(engine.getSnapshot().cameraState).toBe('moving')
+    expect(engine.getSnapshot().debouncedZoomLevel).toBe(1)
+    expect(engine.getDebouncedZoomLevel()).toBe(1)
+    expect(viewportElement.style.transform).toBe('translate3d(10px, 20px, 0) scale(2)')
+    expect(viewportElement).toHaveAttribute('data-camera-state', 'moving')
+    expect(viewportElement.style.willChange).toBe('transform')
 
     engine.setViewport({ x: 10, y: 20, zoom: 2 })
-    expect(listener).toHaveBeenCalledTimes(1)
+    engine.flushRenderScheduler()
+    expect(listener).not.toHaveBeenCalled()
+    expect(viewportListener).toHaveBeenCalledTimes(1)
+    expect(viewportListener).toHaveBeenCalledWith({ x: 10, y: 20, zoom: 2 })
+    expect(engine.getSnapshot().cameraState).toBe('idle')
+    expect(engine.getSnapshot().debouncedZoomLevel).toBe(2)
+    expect(engine.getDebouncedZoomLevel()).toBe(2)
+    expect(viewportElement).toHaveAttribute('data-camera-state', 'idle')
+    expect(viewportElement.style.willChange).toBe('')
 
     unsubscribe()
+    unsubscribeViewport()
     unregister()
+    engine.destroy()
+  })
+
+  it('keeps all ordered ids mounted and does not hide registered elements during viewport movement', () => {
+    const engine = createCanvasEngine()
+    const viewportElement = document.createElement('div')
+    Object.defineProperties(viewportElement, {
+      clientWidth: { value: 100 },
+      clientHeight: { value: 100 },
+    })
+    viewportElement.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 100, height: 100 }) as DOMRect
+    const insideElement = document.createElement('div')
+    const nearElement = document.createElement('div')
+    const farElement = document.createElement('div')
+    const unregisterViewport = engine.registerViewportElement(viewportElement)
+    const unregisterInside = engine.registerNodeElement('inside', insideElement)
+    const unregisterNear = engine.registerNodeElement('near', nearElement)
+    const unregisterFar = engine.registerNodeElement('far', farElement)
+    const listener = vi.fn()
+    const unsubscribe = engine.subscribe(listener)
+
+    engine.setDocumentSnapshot({
+      nodes: [
+        { ...createNode('inside', 0), width: 20, height: 20 },
+        { ...createNode('near', 1), position: { x: 150, y: 0 }, width: 20, height: 20 },
+        { ...createNode('far', 2), position: { x: 350, y: 0 }, width: 20, height: 20 },
+      ],
+    })
+    engine.flushRenderScheduler()
+
+    expect(engine.getSnapshot().nodeIds).toEqual(['inside', 'near', 'far'])
+    expect(insideElement.style.display).toBe('')
+    expect(nearElement.style.display).toBe('')
+    expect(farElement.style.display).toBe('')
+
+    listener.mockClear()
+    engine.setViewportLive({ x: -100, y: 0, zoom: 1 })
+    engine.flushRenderScheduler()
+
+    expect(listener).not.toHaveBeenCalled()
+    expect(engine.getSnapshot().nodeIds).toEqual(['inside', 'near', 'far'])
+
+    engine.setViewport({ x: -100, y: 0, zoom: 1 })
+    engine.flushRenderScheduler()
+
+    expect(listener).not.toHaveBeenCalled()
+    expect(engine.getSnapshot().nodeIds).toEqual(['inside', 'near', 'far'])
+    expect(insideElement.style.display).toBe('')
+    expect(nearElement.style.display).toBe('')
+    expect(farElement.style.display).toBe('')
+
+    unsubscribe()
+    unregisterViewport()
+    unregisterInside()
+    unregisterNear()
+    unregisterFar()
+    engine.destroy()
+  })
+
+  it('updates registered viewport overlay transforms with the main viewport', () => {
+    const engine = createCanvasEngine()
+    const viewportElement = document.createElement('div')
+    const localOverlayElement = document.createElement('div')
+    const awarenessOverlayElement = document.createElement('div')
+
+    const unregisterViewport = engine.registerViewportElement(viewportElement)
+    const unregisterLocalOverlay = engine.registerViewportOverlayElement(localOverlayElement)
+    const unregisterAwarenessOverlay =
+      engine.registerViewportOverlayElement(awarenessOverlayElement)
+
+    engine.setViewportLive({ x: 15, y: -25, zoom: 1.5 })
+    engine.flushRenderScheduler()
+
+    expect(viewportElement.style.transform).toBe('translate3d(15px, -25px, 0) scale(1.5)')
+    expect(localOverlayElement.style.transform).toBe('translate3d(15px, -25px, 0) scale(1.5)')
+    expect(awarenessOverlayElement.style.transform).toBe('translate3d(15px, -25px, 0) scale(1.5)')
+
+    unregisterViewport()
+    unregisterLocalOverlay()
+    unregisterAwarenessOverlay()
     engine.destroy()
   })
 

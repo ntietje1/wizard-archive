@@ -11,11 +11,9 @@ describe('createCanvasViewportController', () => {
     vi.useRealTimers()
   })
 
-  it('handles wheel pan as a live viewport update and mirrors adapter state from the engine', () => {
-    const mirrorAdapterViewport = vi.fn()
-    const { controller, engine, listener, viewportElement } = createViewportTestHarness({
-      mirrorAdapterViewport,
-    })
+  it('handles wheel pan as a live viewport update and commits through the narrow viewport channel', () => {
+    const { controller, engine, listener, viewportListener, viewportElement } =
+      createViewportTestHarness()
 
     controller.handleWheel(
       new WheelEvent('wheel', {
@@ -27,14 +25,55 @@ describe('createCanvasViewportController', () => {
     engine.flushRenderScheduler()
 
     expect(listener).not.toHaveBeenCalled()
-    expect(mirrorAdapterViewport).toHaveBeenCalledWith({ x: -10, y: -20, zoom: 1 })
+    expect(viewportListener).not.toHaveBeenCalled()
     expect(engine.getSnapshot().viewport).toEqual({ x: -10, y: -20, zoom: 1 })
-    expect(viewportElement.style.transform).toBe('translate(-10px, -20px) scale(1)')
+    expect(viewportElement.style.transform).toBe('translate3d(-10px, -20px, 0) scale(1)')
 
     vi.advanceTimersByTime(300)
 
-    expect(listener).toHaveBeenCalledTimes(1)
-    expect(mirrorAdapterViewport).toHaveBeenLastCalledWith({ x: -10, y: -20, zoom: 1 })
+    expect(listener).not.toHaveBeenCalled()
+    expect(viewportListener).toHaveBeenCalledTimes(1)
+    expect(viewportListener).toHaveBeenCalledWith({ x: -10, y: -20, zoom: 1 })
+
+    controller.destroy()
+    engine.destroy()
+  })
+
+  it('keeps repeated ctrl-wheel zoom off the general render subscription until idle commit', () => {
+    const { controller, engine, listener, viewportListener, viewportElement } =
+      createViewportTestHarness()
+
+    controller.handleWheel(
+      new WheelEvent('wheel', {
+        clientX: 400,
+        clientY: 300,
+        ctrlKey: true,
+        deltaY: -100,
+        cancelable: true,
+      }),
+    )
+    const firstViewport = engine.getSnapshot().viewport
+    controller.handleWheel(
+      new WheelEvent('wheel', {
+        clientX: 400,
+        clientY: 300,
+        ctrlKey: true,
+        deltaY: -100,
+        cancelable: true,
+      }),
+    )
+    engine.flushRenderScheduler()
+
+    expect(listener).not.toHaveBeenCalled()
+    expect(viewportListener).not.toHaveBeenCalled()
+    expect(engine.getSnapshot().viewport.zoom).toBeGreaterThan(firstViewport.zoom)
+    expect(viewportElement.style.transform).toContain('scale(')
+
+    vi.advanceTimersByTime(300)
+
+    expect(listener).not.toHaveBeenCalled()
+    expect(viewportListener).toHaveBeenCalledTimes(1)
+    expect(viewportListener).toHaveBeenCalledWith(engine.getSnapshot().viewport)
 
     controller.destroy()
     engine.destroy()
@@ -109,7 +148,8 @@ describe('createCanvasViewportController', () => {
   })
 
   it('pans through an engine-owned pointer gesture and commits once on release', () => {
-    const { controller, engine, listener, surface, viewportElement } = createViewportTestHarness()
+    const { controller, engine, listener, viewportListener, surface, viewportElement } =
+      createViewportTestHarness()
     const releasePointerCapture = vi.fn()
     surface.setPointerCapture = vi.fn()
     surface.hasPointerCapture = vi.fn(() => true)
@@ -130,14 +170,17 @@ describe('createCanvasViewportController', () => {
     engine.flushRenderScheduler()
 
     expect(listener).not.toHaveBeenCalled()
+    expect(viewportListener).not.toHaveBeenCalled()
     expect(engine.getSnapshot().viewport).toEqual({ x: 30, y: -20, zoom: 1 })
-    expect(viewportElement.style.transform).toBe('translate(30px, -20px) scale(1)')
+    expect(viewportElement.style.transform).toBe('translate3d(30px, -20px, 0) scale(1)')
 
     window.dispatchEvent(
       createPointerEvent('pointerup', { clientX: 130, clientY: 180, pointerId: 7 }),
     )
 
-    expect(listener).toHaveBeenCalledTimes(1)
+    expect(listener).not.toHaveBeenCalled()
+    expect(viewportListener).toHaveBeenCalledTimes(1)
+    expect(viewportListener).toHaveBeenCalledWith({ x: 30, y: -20, zoom: 1 })
     expect(releasePointerCapture).toHaveBeenCalledWith(7)
 
     controller.destroy()
@@ -145,24 +188,21 @@ describe('createCanvasViewportController', () => {
   })
 })
 
-function createViewportTestHarness({
-  mirrorAdapterViewport,
-}: {
-  mirrorAdapterViewport?: (viewport: { x: number; y: number; zoom: number }) => void
-} = {}) {
+function createViewportTestHarness() {
   const engine = createCanvasEngine()
   const surface = createSurface()
   const viewportElement = document.createElement('div')
   engine.registerViewportElement(viewportElement)
   const listener = vi.fn()
+  const viewportListener = vi.fn()
   engine.subscribe(listener)
+  engine.subscribeViewportCommit(viewportListener)
   const controller = createCanvasViewportController({
     canvasEngine: engine,
     getSurfaceElement: () => surface,
-    mirrorAdapterViewport,
   })
 
-  return { controller, engine, listener, surface, viewportElement }
+  return { controller, engine, listener, viewportListener, surface, viewportElement }
 }
 
 function createSurface({ left = 0, top = 0 } = {}) {
