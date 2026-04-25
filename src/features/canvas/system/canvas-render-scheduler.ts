@@ -2,6 +2,7 @@ import { normalizeCanvasEdgeStyle } from '../edges/shared/canvas-edge-style'
 import { getCanvasNodeSurfaceStyle } from '../nodes/shared/canvas-node-surface-style'
 import { getCachedStrokeDetailPath } from '../nodes/stroke/stroke-path-cache'
 import type { CanvasEdgePatch } from '../edges/canvas-edge-types'
+import type { CanvasCullingDiff } from './canvas-culling'
 import type { CanvasDomRegistry } from './canvas-dom-registry'
 import type { StrokeNodeData } from '../nodes/stroke/stroke-node-model'
 import type { Edge, XYPosition } from '@xyflow/react'
@@ -21,6 +22,7 @@ export interface CanvasRenderScheduler {
   scheduleEdgePatches: (updates: ReadonlyMap<string, CanvasEdgePatch>) => void
   scheduleViewportTransform: (viewport: CanvasViewport) => void
   scheduleCameraState: (state: CanvasCameraState) => void
+  scheduleCullingDiff: (diff: CanvasCullingDiff) => void
   flush: () => void
   destroy: () => void
 }
@@ -34,6 +36,8 @@ export function createCanvasRenderScheduler({
   const pendingEdgePaths = new Map<string, string>()
   const pendingNodeDataPatches = new Map<string, Record<string, unknown>>()
   const pendingEdgePatches = new Map<string, CanvasEdgePatch>()
+  const pendingCulledNodeIds = new Map<string, boolean>()
+  const pendingCulledEdgeIds = new Map<string, boolean>()
   let pendingViewportTransform: CanvasViewport | null = null
   let pendingCameraState: CanvasCameraState | null = null
   let appliedCameraState: CanvasCameraState | null = null
@@ -63,6 +67,16 @@ export function createCanvasRenderScheduler({
   }
 
   const flush = () => {
+    applyNodeTransforms()
+    applyEdgePaths()
+    applyNodeDataPatches()
+    applyEdgePatches()
+    applyPendingCameraState()
+    applyViewportTransform()
+    applyCullingDiff()
+  }
+
+  const applyNodeTransforms = () => {
     for (const [nodeId, position] of pendingNodeTransforms) {
       const element = domRegistry.getNode(nodeId)
       if (element) {
@@ -70,7 +84,9 @@ export function createCanvasRenderScheduler({
       }
     }
     pendingNodeTransforms.clear()
+  }
 
+  const applyEdgePaths = () => {
     for (const [edgeId, path] of pendingEdgePaths) {
       const paths = domRegistry.getEdgePaths(edgeId)
       paths?.path?.setAttribute('d', path)
@@ -78,66 +94,99 @@ export function createCanvasRenderScheduler({
       paths?.interactionPath?.setAttribute('d', path)
     }
     pendingEdgePaths.clear()
+  }
 
+  const applyNodeDataPatches = () => {
     for (const [nodeId, patch] of pendingNodeDataPatches) {
       const surface = domRegistry.getNodeSurface(nodeId)
       if (surface) {
         Object.assign(surface.style, getCanvasNodeSurfaceStyle(patch))
       }
 
-      const strokePaths = domRegistry.getStrokeNodePaths(nodeId)
-      const strokeData = parseStrokeNodeData(patch)
-      if (strokeData) {
-        const opacity = String((strokeData.opacity ?? 100) / 100)
-        const detailPath = getCachedStrokeDetailPath(nodeId, strokeData)
-        if (detailPath && strokePaths?.path) {
-          strokePaths.path.setAttribute('d', detailPath)
-          strokePaths.path.setAttribute('fill', strokeData.color ?? 'transparent')
-          strokePaths.path.setAttribute('opacity', opacity)
-        }
-
-        const highlightPath = getCachedStrokeDetailPath(nodeId, strokeData, strokeData.size * 0.3)
-        if (highlightPath && strokePaths?.highlightPath) {
-          strokePaths.highlightPath.setAttribute('d', highlightPath)
-        }
-      }
+      applyStrokeNodeDataPatch(nodeId, patch)
     }
     pendingNodeDataPatches.clear()
+  }
 
+  const applyStrokeNodeDataPatch = (nodeId: string, patch: Record<string, unknown>) => {
+    const strokeData = parseStrokeNodeData(patch)
+    if (!strokeData) {
+      return
+    }
+
+    const strokePaths = domRegistry.getStrokeNodePaths(nodeId)
+    const opacity = String((strokeData.opacity ?? 100) / 100)
+    const detailPath = getCachedStrokeDetailPath(nodeId, strokeData)
+    if (detailPath && strokePaths?.path) {
+      strokePaths.path.setAttribute('d', detailPath)
+      strokePaths.path.setAttribute('fill', strokeData.color ?? 'transparent')
+      strokePaths.path.setAttribute('opacity', opacity)
+    }
+
+    const highlightPath = getCachedStrokeDetailPath(nodeId, strokeData, strokeData.size * 0.3)
+    if (highlightPath && strokePaths?.highlightPath) {
+      strokePaths.highlightPath.setAttribute('d', highlightPath)
+    }
+  }
+
+  const applyEdgePatches = () => {
     for (const [edgeId, patch] of pendingEdgePatches) {
-      if (!patch.style) {
-        continue
-      }
-
-      const paths = domRegistry.getEdgePaths(edgeId)
-      if (!paths?.path) {
-        continue
-      }
-
-      const style = normalizeCanvasEdgeStyle({
-        ...readEdgeStyle(paths.path),
-        ...patch.style,
-      })
-      paths.path.style.stroke = style.stroke
-      paths.path.style.strokeWidth = String(style.strokeWidth)
-      paths.path.style.opacity = String(style.opacity)
-      if (paths.highlightPath) {
-        paths.highlightPath.style.strokeWidth = String(Math.max(style.strokeWidth * 0.15, 1))
+      if (patch.style) {
+        applyEdgeStylePatch(edgeId, patch.style)
       }
     }
     pendingEdgePatches.clear()
+  }
 
-    if (pendingCameraState !== null) {
-      applyCameraState(pendingCameraState)
-      pendingCameraState = null
+  const applyEdgeStylePatch = (edgeId: string, patch: CanvasEdgePatch['style']) => {
+    const paths = domRegistry.getEdgePaths(edgeId)
+    if (!paths?.path) {
+      return
     }
 
-    if (pendingViewportTransform) {
-      for (const viewport of domRegistry.getViewportTargets()) {
-        viewport.style.transform = `translate3d(${pendingViewportTransform.x}px, ${pendingViewportTransform.y}px, 0) scale(${pendingViewportTransform.zoom})`
-      }
-      pendingViewportTransform = null
+    const style = normalizeCanvasEdgeStyle({
+      ...readEdgeStyle(paths.path),
+      ...patch,
+    })
+    paths.path.style.stroke = style.stroke
+    paths.path.style.strokeWidth = String(style.strokeWidth)
+    paths.path.style.opacity = String(style.opacity)
+    if (paths.highlightPath) {
+      paths.highlightPath.style.strokeWidth = String(Math.max(style.strokeWidth * 0.15, 1))
     }
+  }
+
+  const applyPendingCameraState = () => {
+    if (pendingCameraState === null) {
+      return
+    }
+
+    applyCameraState(pendingCameraState)
+    pendingCameraState = null
+  }
+
+  const applyViewportTransform = () => {
+    if (!pendingViewportTransform) {
+      return
+    }
+
+    for (const viewport of domRegistry.getViewportTargets()) {
+      viewport.style.transform = `translate3d(${pendingViewportTransform.x}px, ${pendingViewportTransform.y}px, 0) scale(${pendingViewportTransform.zoom})`
+    }
+    pendingViewportTransform = null
+  }
+
+  const applyCullingDiff = () => {
+    if (pendingCulledNodeIds.size === 0 && pendingCulledEdgeIds.size === 0) {
+      return
+    }
+
+    domRegistry.applyCullingDiff({
+      nodeIds: pendingCulledNodeIds,
+      edgeIds: pendingCulledEdgeIds,
+    })
+    pendingCulledNodeIds.clear()
+    pendingCulledEdgeIds.clear()
   }
 
   return {
@@ -187,6 +236,15 @@ export function createCanvasRenderScheduler({
       pendingCameraState = 'idle'
       requestFlush()
     },
+    scheduleCullingDiff: (diff) => {
+      for (const [nodeId, isCulled] of diff.nodeIds) {
+        pendingCulledNodeIds.set(nodeId, isCulled)
+      }
+      for (const [edgeId, isCulled] of diff.edgeIds) {
+        pendingCulledEdgeIds.set(edgeId, isCulled)
+      }
+      requestFlush()
+    },
     flush,
     destroy: () => {
       if (frameId !== null && typeof cancelAnimationFrame !== 'undefined') {
@@ -197,6 +255,8 @@ export function createCanvasRenderScheduler({
       pendingEdgePaths.clear()
       pendingNodeDataPatches.clear()
       pendingEdgePatches.clear()
+      pendingCulledNodeIds.clear()
+      pendingCulledEdgeIds.clear()
       pendingViewportTransform = null
       pendingCameraState = null
       appliedCameraState = null

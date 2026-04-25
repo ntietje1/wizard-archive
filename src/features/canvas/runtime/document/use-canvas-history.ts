@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { UndoManager } from 'yjs'
 import type {
   CanvasHistoryController,
@@ -188,5 +188,8 @@ export function useCanvasHistory({ nodesMap, edgesMap, selection }: UseCanvasHis
     [pushHistoryEntry, syncStore],
   )
 
-  return { ...historyState, undo, redo, onSelectionChange }
+  return useMemo(
+    () => ({ ...historyState, undo, redo, onSelectionChange }),
+    [historyState, onSelectionChange, redo, undo],
+  )
 }

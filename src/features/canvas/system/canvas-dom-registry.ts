@@ -1,3 +1,5 @@
+import type { CanvasCullingDiff } from './canvas-culling'
+
 export interface CanvasRegisteredEdgePaths {
   path: SVGPathElement | null
   highlightPath?: SVGPathElement | null
@@ -23,6 +25,8 @@ export interface CanvasDomRegistry {
   getEdge: (edgeId: string) => SVGElement | undefined
   getEdgePaths: (edgeId: string) => CanvasRegisteredEdgePaths | undefined
   getViewportTargets: () => ReadonlyArray<HTMLElement>
+  getViewportSurfaceBounds: () => Pick<DOMRect, 'width' | 'height'> | null
+  applyCullingDiff: (diff: CanvasCullingDiff) => void
   clear: () => void
 }
 
@@ -33,6 +37,8 @@ export function createCanvasDomRegistry(): CanvasDomRegistry {
   const edges = new Map<string, SVGElement>()
   const edgePaths = new Map<string, CanvasRegisteredEdgePaths>()
   const viewportOverlays = new Set<HTMLElement>()
+  const culledNodeIds = new Set<string>()
+  const culledEdgeIds = new Set<string>()
   let viewport: HTMLElement | undefined
 
   return {
@@ -42,6 +48,7 @@ export function createCanvasDomRegistry(): CanvasDomRegistry {
       }
 
       nodes.set(nodeId, element)
+      applyCullingDisplay(element, culledNodeIds.has(nodeId))
       return () => {
         if (nodes.get(nodeId) === element) {
           nodes.delete(nodeId)
@@ -75,6 +82,7 @@ export function createCanvasDomRegistry(): CanvasDomRegistry {
       }
 
       edges.set(edgeId, element)
+      applyCullingDisplay(element, culledEdgeIds.has(edgeId))
       return () => {
         if (edges.get(edgeId) === element) {
           edges.delete(edgeId)
@@ -120,6 +128,24 @@ export function createCanvasDomRegistry(): CanvasDomRegistry {
     getEdge: (edgeId) => edges.get(edgeId),
     getEdgePaths: (edgeId) => edgePaths.get(edgeId),
     getViewportTargets: () => (viewport ? [viewport, ...viewportOverlays] : [...viewportOverlays]),
+    getViewportSurfaceBounds: () => viewport?.parentElement?.getBoundingClientRect() ?? null,
+    applyCullingDiff: (diff) => {
+      for (const [nodeId, isCulled] of diff.nodeIds) {
+        updateCullingSet(culledNodeIds, nodeId, isCulled)
+        const element = nodes.get(nodeId)
+        if (element) {
+          applyCullingDisplay(element, isCulled)
+        }
+      }
+
+      for (const [edgeId, isCulled] of diff.edgeIds) {
+        updateCullingSet(culledEdgeIds, edgeId, isCulled)
+        const element = edges.get(edgeId)
+        if (element) {
+          applyCullingDisplay(element, isCulled)
+        }
+      }
+    },
     clear: () => {
       nodes.clear()
       nodeSurfaces.clear()
@@ -127,7 +153,29 @@ export function createCanvasDomRegistry(): CanvasDomRegistry {
       edges.clear()
       edgePaths.clear()
       viewportOverlays.clear()
+      culledNodeIds.clear()
+      culledEdgeIds.clear()
       viewport = undefined
     },
   }
+}
+
+function updateCullingSet(set: Set<string>, id: string, isCulled: boolean) {
+  if (isCulled) {
+    set.add(id)
+    return
+  }
+
+  set.delete(id)
+}
+
+function applyCullingDisplay(element: Element, isCulled: boolean) {
+  const htmlElement = element as HTMLElement | SVGElement
+  htmlElement.style.display = isCulled ? 'none' : ''
+  if (isCulled) {
+    htmlElement.setAttribute('data-canvas-culled', 'true')
+    return
+  }
+
+  htmlElement.setAttribute('data-canvas-culled', 'false')
 }

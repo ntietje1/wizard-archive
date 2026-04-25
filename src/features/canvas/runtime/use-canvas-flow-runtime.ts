@@ -1,5 +1,5 @@
 import type { Id } from 'convex/_generated/dataModel'
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import type { Connection, Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
@@ -172,10 +172,14 @@ export function useCanvasFlowRuntime({
     resolveElement: (container) => container,
   })
 
-  const documentWriter = createCanvasDocumentWriter({
-    nodesMap,
-    edgesMap,
-  })
+  const documentWriter = useMemo(
+    () =>
+      createCanvasDocumentWriter({
+        nodesMap,
+        edgesMap,
+      }),
+    [edgesMap, nodesMap],
+  )
   const modifiers = useCanvasModifierKeys()
   const interaction = useCanvasSurfaceClickGuard(canvasSurfaceRef)
 
@@ -190,8 +194,8 @@ export function useCanvasFlowRuntime({
     getZoom: viewportController.getZoom,
     selection,
     localDraggingIdsRef,
-    getShiftPressed: () => modifiers.shiftPressed,
-    getPrimaryPressed: () => modifiers.primaryPressed,
+    getShiftPressed: () => readShiftModifier(modifiers),
+    getPrimaryPressed: () => readPrimaryModifier(modifiers),
     getCanStartDrag: () => useCanvasToolStore.getState().activeTool === 'select',
   })
 
@@ -357,12 +361,16 @@ export function useCanvasFlowRuntime({
     awareness: session.awareness.core,
   })
 
-  const nodeActions = createCanvasNodeActions({
-    canvasEngine,
-    documentWriter,
-    session,
-    transact: (fn) => transactCanvasMaps(nodesMap, edgesMap, fn),
-  })
+  const nodeActions = useMemo(
+    () =>
+      createCanvasNodeActions({
+        canvasEngine,
+        documentWriter,
+        session,
+        transact: (fn) => transactCanvasMaps(nodesMap, edgesMap, fn),
+      }),
+    [canvasEngine, documentWriter, edgesMap, nodesMap, session],
+  )
 
   const isSelectMode = activeTool === 'select'
   const isEdgeMode = activeTool === 'edge'
@@ -391,8 +399,8 @@ export function useCanvasFlowRuntime({
     selection,
     interaction,
     modifiers: {
-      getShiftPressed: () => modifiers.shiftPressed,
-      getPrimaryPressed: () => modifiers.primaryPressed,
+      getShiftPressed: () => readShiftModifier(modifiers),
+      getPrimaryPressed: () => readPrimaryModifier(modifiers),
     },
     editSession: session.editSession,
     toolState: {
@@ -526,4 +534,12 @@ function createPerformanceStrokePoints(
   }
 
   return points
+}
+
+function readPrimaryModifier(modifiers: ReturnType<typeof useCanvasModifierKeys>) {
+  return modifiers.getPrimaryPressed?.() ?? modifiers.primaryPressed
+}
+
+function readShiftModifier(modifiers: ReturnType<typeof useCanvasModifierKeys>) {
+  return modifiers.getShiftPressed?.() ?? modifiers.shiftPressed
 }

@@ -11,6 +11,7 @@ import {
   createCanvasClipboardEntry,
   materializeCanvasPaste,
 } from '../context-menu/canvas-context-menu-clipboard'
+import { useMemo } from 'react'
 import type { CanvasReorderDirection } from './canvas-reorder'
 import type {
   CanvasSelectionController,
@@ -59,164 +60,166 @@ export function useCanvasCommands({
   const setClipboard = useCanvasClipboardStore((state) => state.setClipboard)
   const incrementPasteCount = useCanvasClipboardStore((state) => state.incrementPasteCount)
 
-  const getSelectionSnapshot = (
-    args?: CanvasSelectionCommandArgs | CanvasReorderCommandArgs,
-  ): CanvasSelectionSnapshot => args?.selection ?? selection.getSnapshot()
+  return useMemo(() => {
+    const getSelectionSnapshot = (
+      args?: CanvasSelectionCommandArgs | CanvasReorderCommandArgs,
+    ): CanvasSelectionSnapshot => args?.selection ?? selection.getSnapshot()
 
-  const getClipboardEntry = (snapshot: CanvasSelectionSnapshot) =>
-    createCanvasClipboardEntry(nodesMap, edgesMap, snapshot)
+    const getClipboardEntry = (snapshot: CanvasSelectionSnapshot) =>
+      createCanvasClipboardEntry(nodesMap, edgesMap, snapshot)
 
-  const applyPaste = (paste: ReturnType<typeof materializeCanvasPaste>) => {
-    transactCanvasMaps(nodesMap, edgesMap, () => {
-      applyCanvasPasteCommand({
-        nodesMap,
-        edgesMap,
-        paste,
-        sanitizeNode: sanitizeNodeForPersistence,
-        onApplied: incrementPasteCount,
+    const applyPaste = (paste: ReturnType<typeof materializeCanvasPaste>) => {
+      transactCanvasMaps(nodesMap, edgesMap, () => {
+        applyCanvasPasteCommand({
+          nodesMap,
+          edgesMap,
+          paste,
+          sanitizeNode: sanitizeNodeForPersistence,
+          onApplied: incrementPasteCount,
+        })
       })
-    })
 
-    selection.setSelection(paste.selection)
-    return paste.selection
-  }
+      selection.setSelection(paste.selection)
+      return paste.selection
+    }
 
-  const deleteSnapshotFromMaps = (snapshot: CanvasSelectionSnapshot) => {
-    let deleted = false
+    const deleteSnapshotFromMaps = (snapshot: CanvasSelectionSnapshot) => {
+      let deleted = false
 
-    transactCanvasMaps(nodesMap, edgesMap, () => {
-      deleted = deleteCanvasSelectionCommand({ nodesMap, edgesMap, selection: snapshot })
-    })
+      transactCanvasMaps(nodesMap, edgesMap, () => {
+        deleted = deleteCanvasSelectionCommand({ nodesMap, edgesMap, selection: snapshot })
+      })
 
-    return deleted
-  }
+      return deleted
+    }
 
-  return {
-    copy: {
-      id: 'copy',
-      canRun: (args) => getClipboardEntry(getSelectionSnapshot(args)) !== null,
-      run: (args) => {
-        const nextClipboard = getClipboardEntry(getSelectionSnapshot(args))
-        if (!nextClipboard) {
-          return false
-        }
+    return {
+      copy: {
+        id: 'copy',
+        canRun: (args) => getClipboardEntry(getSelectionSnapshot(args)) !== null,
+        run: (args) => {
+          const nextClipboard = getClipboardEntry(getSelectionSnapshot(args))
+          if (!nextClipboard) {
+            return false
+          }
 
-        setClipboard(nextClipboard)
-        return true
+          setClipboard(nextClipboard)
+          return true
+        },
       },
-    },
-    cut: {
-      id: 'cut',
-      canRun: (args) => canEdit && getClipboardEntry(getSelectionSnapshot(args)) !== null,
-      run: (args) => {
-        if (!canEdit) {
-          return false
-        }
+      cut: {
+        id: 'cut',
+        canRun: (args) => canEdit && getClipboardEntry(getSelectionSnapshot(args)) !== null,
+        run: (args) => {
+          if (!canEdit) {
+            return false
+          }
 
-        const snapshot = getSelectionSnapshot(args)
-        const copied = getClipboardEntry(snapshot)
-        if (!copied) {
-          return false
-        }
+          const snapshot = getSelectionSnapshot(args)
+          const copied = getClipboardEntry(snapshot)
+          if (!copied) {
+            return false
+          }
 
-        if (!deleteSnapshotFromMaps(snapshot)) {
-          return false
-        }
+          if (!deleteSnapshotFromMaps(snapshot)) {
+            return false
+          }
 
-        setClipboard(copied)
-        selection.clearSelection()
-        return true
+          setClipboard(copied)
+          selection.clearSelection()
+          return true
+        },
       },
-    },
-    paste: {
-      id: 'paste',
-      canRun: () => canEdit && clipboard !== null && clipboard.nodes.length > 0,
-      run: () => {
-        if (!canEdit || !clipboard || clipboard.nodes.length === 0) {
-          return null
-        }
+      paste: {
+        id: 'paste',
+        canRun: () => canEdit && clipboard !== null && clipboard.nodes.length > 0,
+        run: () => {
+          if (!canEdit || !clipboard || clipboard.nodes.length === 0) {
+            return null
+          }
 
-        return applyPaste(materializeCanvasPaste(nodesMap, edgesMap, clipboard))
+          return applyPaste(materializeCanvasPaste(nodesMap, edgesMap, clipboard))
+        },
       },
-    },
-    duplicate: {
-      id: 'duplicate',
-      canRun: (args) => canEdit && getClipboardEntry(getSelectionSnapshot(args)) !== null,
-      run: (args) => {
-        if (!canEdit) {
-          return null
-        }
+      duplicate: {
+        id: 'duplicate',
+        canRun: (args) => canEdit && getClipboardEntry(getSelectionSnapshot(args)) !== null,
+        run: (args) => {
+          if (!canEdit) {
+            return null
+          }
 
-        const nextClipboard = getClipboardEntry(getSelectionSnapshot(args))
-        if (!nextClipboard) {
-          return null
-        }
+          const nextClipboard = getClipboardEntry(getSelectionSnapshot(args))
+          if (!nextClipboard) {
+            return null
+          }
 
-        setClipboard(nextClipboard)
-        return applyPaste(materializeCanvasPaste(nodesMap, edgesMap, nextClipboard))
+          setClipboard(nextClipboard)
+          return applyPaste(materializeCanvasPaste(nodesMap, edgesMap, nextClipboard))
+        },
       },
-    },
-    delete: {
-      id: 'delete',
-      canRun: (args) => {
-        if (!canEdit) {
-          return false
-        }
+      delete: {
+        id: 'delete',
+        canRun: (args) => {
+          if (!canEdit) {
+            return false
+          }
 
-        const snapshot = getSelectionSnapshot(args)
-        return snapshot.nodeIds.size > 0 || snapshot.edgeIds.size > 0
+          const snapshot = getSelectionSnapshot(args)
+          return snapshot.nodeIds.size > 0 || snapshot.edgeIds.size > 0
+        },
+        run: (args) => {
+          if (!canEdit) {
+            return false
+          }
+
+          const snapshot = getSelectionSnapshot(args)
+          if (!deleteSnapshotFromMaps(snapshot)) {
+            return false
+          }
+
+          selection.clearSelection()
+          return true
+        },
       },
-      run: (args) => {
-        if (!canEdit) {
-          return false
-        }
+      reorder: {
+        id: 'reorder',
+        canRun: (args) => {
+          if (!canEdit || !args) {
+            return false
+          }
 
-        const snapshot = getSelectionSnapshot(args)
-        if (!deleteSnapshotFromMaps(snapshot)) {
-          return false
-        }
+          return (
+            createCanvasReorderPlan(
+              nodesMap,
+              edgesMap,
+              getSelectionSnapshot(args),
+              args.direction,
+            ) !== null
+          )
+        },
+        run: (args) => {
+          if (!canEdit || !args) {
+            return false
+          }
 
-        selection.clearSelection()
-        return true
-      },
-    },
-    reorder: {
-      id: 'reorder',
-      canRun: (args) => {
-        if (!canEdit || !args) {
-          return false
-        }
-
-        return (
-          createCanvasReorderPlan(
+          const reorderPlan = createCanvasReorderPlan(
             nodesMap,
             edgesMap,
             getSelectionSnapshot(args),
             args.direction,
-          ) !== null
-        )
+          )
+          if (!reorderPlan) {
+            return false
+          }
+
+          transactCanvasMaps(nodesMap, edgesMap, () => {
+            applyCanvasReorderCommand({ nodesMap, edgesMap, reorderUpdates: reorderPlan })
+          })
+
+          return true
+        },
       },
-      run: (args) => {
-        if (!canEdit || !args) {
-          return false
-        }
-
-        const reorderPlan = createCanvasReorderPlan(
-          nodesMap,
-          edgesMap,
-          getSelectionSnapshot(args),
-          args.direction,
-        )
-        if (!reorderPlan) {
-          return false
-        }
-
-        transactCanvasMaps(nodesMap, edgesMap, () => {
-          applyCanvasReorderCommand({ nodesMap, edgesMap, reorderUpdates: reorderPlan })
-        })
-
-        return true
-      },
-    },
-  }
+    }
+  }, [canEdit, clipboard, edgesMap, incrementPasteCount, nodesMap, selection, setClipboard])
 }

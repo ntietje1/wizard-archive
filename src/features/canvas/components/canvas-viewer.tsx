@@ -1,5 +1,5 @@
 import { ClientOnly } from '@tanstack/react-router'
-import { Profiler, useMemo } from 'react'
+import { memo, Profiler, useMemo } from 'react'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { ContextMenuHost } from '~/features/context-menu/components/context-menu-host'
 import { cn } from '~/features/shadcn/lib/utils'
@@ -103,6 +103,10 @@ export function CanvasFlow({
           <Profiler
             id="CanvasFlow"
             onRender={(_id, phase, actualDuration, baseDuration) => {
+              if (actualDuration < 0.25) {
+                return
+              }
+
               recordCanvasPerformanceMetric('canvas.react.commit', actualDuration, {
                 phase,
                 baseDuration,
@@ -119,7 +123,7 @@ export function CanvasFlow({
   )
 }
 
-function CanvasFlowContent({
+const CanvasFlowContent = memo(function CanvasFlowContent({
   canEdit,
   runtime,
   canvasCursor,
@@ -175,6 +179,32 @@ function CanvasFlowContent({
         />
       </div>
     </div>
+  )
+}, areCanvasFlowContentPropsEqual)
+
+function areCanvasFlowContentPropsEqual(
+  previous: {
+    canEdit: boolean
+    runtime: ReturnType<typeof useCanvasFlowRuntime>
+    canvasCursor: string
+  },
+  next: {
+    canEdit: boolean
+    runtime: ReturnType<typeof useCanvasFlowRuntime>
+    canvasCursor: string
+  },
+) {
+  return (
+    previous.canEdit === next.canEdit &&
+    previous.canvasCursor === next.canvasCursor &&
+    previous.runtime.canvasEngine === next.runtime.canvasEngine &&
+    previous.runtime.canvasSurfaceRef === next.runtime.canvasSurfaceRef &&
+    previous.runtime.contextMenu.hostRef === next.runtime.contextMenu.hostRef &&
+    previous.runtime.contextMenu.menu === next.runtime.contextMenu.menu &&
+    previous.runtime.dropTarget.dropOverlayRef === next.runtime.dropTarget.dropOverlayRef &&
+    previous.runtime.dropTarget.isDropTarget === next.runtime.dropTarget.isDropTarget &&
+    previous.runtime.dropTarget.isFileDropTarget === next.runtime.dropTarget.isFileDropTarget &&
+    previous.runtime.remoteUsers === next.runtime.remoteUsers
   )
 }
 

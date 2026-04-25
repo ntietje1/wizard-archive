@@ -4,14 +4,6 @@ import { useCanvasKeyboardShortcuts } from '../use-canvas-keyboard-shortcuts'
 import { useCanvasToolStore } from '../../../stores/canvas-tool-store'
 import type { CanvasCommands } from '../use-canvas-commands'
 
-const hotkeyRegistrations = vi.hoisted(
-  () =>
-    [] as Array<{
-      hotkey: string
-      callback: (event: KeyboardEvent) => void
-      options: { ignoreInputs: boolean }
-    }>,
-)
 const copySnapshotSpy = vi.hoisted(() => vi.fn(() => true))
 const cutSnapshotSpy = vi.hoisted(() => vi.fn(() => true))
 const deleteSnapshotSpy = vi.hoisted(() => vi.fn(() => true))
@@ -21,25 +13,6 @@ const pasteClipboardSpy = vi.hoisted(() =>
 const getSelectionSnapshotSpy = vi.hoisted(() =>
   vi.fn(() => ({ nodeIds: new Set(['node-1']), edgeIds: new Set<string>() })),
 )
-
-vi.mock('@tanstack/react-hotkeys', () => ({
-  useHotkey: (
-    hotkey: string,
-    callback: (event: KeyboardEvent) => void,
-    options: { ignoreInputs: boolean },
-  ) => {
-    hotkeyRegistrations.push({ hotkey, callback, options })
-  },
-}))
-
-function getRegistration(hotkey: string) {
-  const registration = hotkeyRegistrations.find((entry) => entry.hotkey === hotkey)
-  if (!registration) {
-    throw new Error(`Missing hotkey registration for ${hotkey}`)
-  }
-
-  return registration
-}
 
 type KeyboardShortcutCommands = Pick<CanvasCommands, 'copy' | 'cut' | 'paste' | 'delete'>
 
@@ -73,7 +46,6 @@ function createCommands(
 
 describe('useCanvasKeyboardShortcuts', () => {
   beforeEach(() => {
-    hotkeyRegistrations.length = 0
     useCanvasToolStore.getState().reset()
     copySnapshotSpy.mockClear()
     cutSnapshotSpy.mockClear()
@@ -82,7 +54,9 @@ describe('useCanvasKeyboardShortcuts', () => {
     getSelectionSnapshotSpy.mockClear()
   })
 
-  it('registers the canvas shortcuts through TanStack Hotkeys with input filtering enabled', () => {
+  it('registers one global keydown listener and removes it on unmount', () => {
+    const addEventListenerSpy = vi.spyOn(window, 'addEventListener')
+    const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener')
     const history = {
       undo: vi.fn(),
       redo: vi.fn(),
@@ -93,7 +67,7 @@ describe('useCanvasKeyboardShortcuts', () => {
       clearSelection: vi.fn(),
     }
 
-    renderHook(() =>
+    const { unmount } = renderHook(() =>
       useCanvasKeyboardShortcuts({
         ...history,
         cancelConnectionDraft: vi.fn(),
@@ -105,26 +79,13 @@ describe('useCanvasKeyboardShortcuts', () => {
       }),
     )
 
-    expect(hotkeyRegistrations.map((entry) => entry.hotkey)).toEqual([
-      'Escape',
-      'Backspace',
-      'Delete',
-      '1',
-      '2',
-      '3',
-      '4',
-      '5',
-      '6',
-      '7',
-      'Mod+A',
-      'Mod+Z',
-      'Mod+Shift+Z',
-      'Mod+Y',
-      'Mod+C',
-      'Mod+X',
-      'Mod+V',
-    ])
-    expect(hotkeyRegistrations.every((entry) => entry.options.ignoreInputs)).toBe(true)
+    expect(addEventListenerSpy).toHaveBeenCalledWith('keydown', expect.any(Function))
+
+    unmount()
+
+    expect(removeEventListenerSpy).toHaveBeenCalledWith('keydown', expect.any(Function))
+    addEventListenerSpy.mockRestore()
+    removeEventListenerSpy.mockRestore()
   })
 
   it('routes tool shortcuts, deletion, Escape, undo, redo, copy, cut, and paste through the expected canvas actions while ignoring repeated key events', () => {
@@ -155,35 +116,38 @@ describe('useCanvasKeyboardShortcuts', () => {
     )
 
     useCanvasToolStore.getState().setActiveTool('draw')
-    getRegistration('Escape').callback(new KeyboardEvent('keydown', { key: 'Escape' }))
+    dispatchKeyboardShortcut(new KeyboardEvent('keydown', { key: 'Escape' }))
     expect(selection.clearSelection).toHaveBeenCalledTimes(1)
     expect(cancelConnectionDraft).toHaveBeenCalledTimes(1)
     expect(useCanvasToolStore.getState().activeTool).toBe('draw')
 
-    getRegistration('Escape').callback(new KeyboardEvent('keydown', { key: 'Escape' }))
-    getRegistration('7').callback(new KeyboardEvent('keydown', { key: '7' }))
+    dispatchKeyboardShortcut(new KeyboardEvent('keydown', { key: 'Escape' }))
+    dispatchKeyboardShortcut(new KeyboardEvent('keydown', { key: '7' }))
     const deletePreventDefaultSpy = vi.fn()
-    const deleteEvent = {
-      repeat: false,
-      preventDefault: deletePreventDefaultSpy,
-      target: document.createElement('div'),
-    } as unknown as KeyboardEvent
-    getRegistration('Delete').callback(deleteEvent)
-    const preventDefaultSpy = vi.fn()
-    const selectAllEvent = {
-      repeat: false,
-      preventDefault: preventDefaultSpy,
-    } as unknown as KeyboardEvent
-    getRegistration('Mod+A').callback(selectAllEvent)
-    getRegistration('Mod+Z').callback(new KeyboardEvent('keydown', { key: 'z' }))
-    getRegistration('Mod+Shift+Z').callback(
-      new KeyboardEvent('keydown', { key: 'Z', shiftKey: true }),
+    dispatchKeyboardShortcut(
+      createKeyboardShortcutEvent('Delete', {
+        preventDefault: deletePreventDefaultSpy,
+        target: document.createElement('div'),
+      }),
     )
-    getRegistration('Mod+Y').callback(new KeyboardEvent('keydown', { key: 'y' }))
-    getRegistration('Mod+C').callback(new KeyboardEvent('keydown', { key: 'c', ctrlKey: true }))
-    getRegistration('Mod+X').callback(new KeyboardEvent('keydown', { key: 'x', ctrlKey: true }))
-    getRegistration('Mod+V').callback(new KeyboardEvent('keydown', { key: 'v', ctrlKey: true }))
-    getRegistration('Mod+Z').callback(new KeyboardEvent('keydown', { key: 'z', repeat: true }))
+    const preventDefaultSpy = vi.fn()
+    dispatchKeyboardShortcut(
+      createKeyboardShortcutEvent('a', {
+        ctrlKey: true,
+        preventDefault: preventDefaultSpy,
+      }),
+    )
+    dispatchKeyboardShortcut(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true }))
+    dispatchKeyboardShortcut(
+      new KeyboardEvent('keydown', { key: 'Z', ctrlKey: true, shiftKey: true }),
+    )
+    dispatchKeyboardShortcut(new KeyboardEvent('keydown', { key: 'y', ctrlKey: true }))
+    dispatchKeyboardShortcut(new KeyboardEvent('keydown', { key: 'c', ctrlKey: true }))
+    dispatchKeyboardShortcut(new KeyboardEvent('keydown', { key: 'x', ctrlKey: true }))
+    dispatchKeyboardShortcut(new KeyboardEvent('keydown', { key: 'v', ctrlKey: true }))
+    dispatchKeyboardShortcut(
+      new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, repeat: true }),
+    )
 
     expect(selection.clearSelection).toHaveBeenCalledTimes(2)
     expect(deleteSnapshotSpy).toHaveBeenCalledWith()
@@ -222,11 +186,7 @@ describe('useCanvasKeyboardShortcuts', () => {
     const editableTarget = document.createElement('div')
     editableTarget.setAttribute('contenteditable', 'true')
 
-    getRegistration('Backspace').callback({
-      repeat: false,
-      preventDefault: vi.fn(),
-      target: editableTarget,
-    } as unknown as KeyboardEvent)
+    dispatchKeyboardShortcut(createKeyboardShortcutEvent('Backspace', { target: editableTarget }))
 
     expect(deleteSnapshotSpy).not.toHaveBeenCalled()
   })
@@ -258,13 +218,37 @@ describe('useCanvasKeyboardShortcuts', () => {
     )
 
     const preventDefaultSpy = vi.fn()
-    getRegistration('Mod+C').callback({
-      repeat: false,
-      preventDefault: preventDefaultSpy,
-    } as unknown as KeyboardEvent)
+    dispatchKeyboardShortcut(
+      createKeyboardShortcutEvent('c', { ctrlKey: true, preventDefault: preventDefaultSpy }),
+    )
 
     expect(copyCanRun).toHaveBeenCalledTimes(1)
     expect(copySnapshotSpy).not.toHaveBeenCalled()
     expect(preventDefaultSpy).not.toHaveBeenCalled()
   })
 })
+
+function dispatchKeyboardShortcut(event: KeyboardEvent) {
+  window.dispatchEvent(event)
+}
+
+function createKeyboardShortcutEvent(
+  key: string,
+  options: KeyboardEventInit & {
+    preventDefault?: () => void
+    target?: EventTarget | null
+  } = {},
+) {
+  const { preventDefault, target, ...eventInit } = options
+  const event = new KeyboardEvent('keydown', { key, bubbles: true, ...eventInit })
+
+  if (preventDefault) {
+    Object.defineProperty(event, 'preventDefault', { value: preventDefault })
+  }
+
+  if (target) {
+    Object.defineProperty(event, 'target', { value: target })
+  }
+
+  return event
+}

@@ -4,6 +4,7 @@ import { getMeasuredCanvasNodesFromEngineSnapshot } from '../document/canvas-mea
 import { createCanvasSelectionGestureController } from './canvas-selection-gesture-controller'
 import { isPrimarySelectionModifier } from '../../utils/canvas-selection-utils'
 import { useCanvasModifierKeys } from '../interaction/use-canvas-modifier-keys'
+import { isCanvasEmptyPaneTarget } from '../interaction/canvas-pane-targets'
 import type { CanvasEngine } from '../../system/canvas-engine'
 import type { CanvasViewportController } from '../../system/canvas-viewport-controller'
 import type {
@@ -43,13 +44,14 @@ export function useCanvasSelectionRect({
   selection,
   enabled,
 }: UseCanvasSelectionRectOptions) {
-  const { shiftPressed } = useCanvasModifierKeys()
+  const modifiers = useCanvasModifierKeys()
+  const shiftPressed = readShiftModifier(modifiers)
+  const modifiersRef = useRef(modifiers)
+  modifiersRef.current = modifiers
   const awarenessRef = useRef(awareness)
   awarenessRef.current = awareness
   const selectionRef = useRef(selection)
   selectionRef.current = selection
-  const shiftPressedRef = useRef(shiftPressed)
-  shiftPressedRef.current = shiftPressed
   const gestureControllerRef = useRef<ReturnType<
     typeof createCanvasSelectionGestureController
   > | null>(null)
@@ -64,6 +66,7 @@ export function useCanvasSelectionRect({
       surfaceRef.current?.querySelector<HTMLDivElement>('[data-canvas-pane="true"]') ??
       surfaceRef.current?.querySelector<HTMLDivElement>('.react-flow__pane')
     if (!pane) return
+    const paneElement = pane
 
     const gestureController = createCanvasSelectionGestureController({
       viewport: {
@@ -82,7 +85,7 @@ export function useCanvasSelectionRect({
     function handlePointerMove(event: PointerEvent) {
       gestureController.update(
         { x: event.clientX, y: event.clientY },
-        { square: shiftPressedRef.current },
+        { square: event.shiftKey || readShiftModifier(modifiersRef.current) },
       )
     }
 
@@ -91,7 +94,7 @@ export function useCanvasSelectionRect({
       window.removeEventListener('pointerup', handlePointerUp)
       window.removeEventListener('pointercancel', handlePointerCancel)
       if (gestureController.isTracking()) {
-        gestureController.commit({ square: shiftPressedRef.current })
+        gestureController.commit({ square: readShiftModifier(modifiersRef.current) })
       }
     }
 
@@ -104,8 +107,14 @@ export function useCanvasSelectionRect({
       }
     }
 
+    function handleKeyChange(event: KeyboardEvent) {
+      if (event.key === 'Shift') {
+        gestureController.refresh({ square: event.type === 'keydown' })
+      }
+    }
+
     function handlePointerDown(event: PointerEvent) {
-      if (event.button !== 0 || event.target !== pane) return
+      if (event.button !== 0 || !isCanvasEmptyPaneTarget(event.target, paneElement)) return
 
       gestureController.begin(
         {
@@ -120,9 +129,13 @@ export function useCanvasSelectionRect({
     }
 
     pane.addEventListener('pointerdown', handlePointerDown)
+    window.addEventListener('keydown', handleKeyChange)
+    window.addEventListener('keyup', handleKeyChange)
 
     return () => {
       pane.removeEventListener('pointerdown', handlePointerDown)
+      window.removeEventListener('keydown', handleKeyChange)
+      window.removeEventListener('keyup', handleKeyChange)
       window.removeEventListener('pointermove', handlePointerMove)
       window.removeEventListener('pointerup', handlePointerUp)
       window.removeEventListener('pointercancel', handlePointerCancel)
@@ -132,4 +145,8 @@ export function useCanvasSelectionRect({
       gestureController.dispose()
     }
   }, [canvasEngine, enabled, interaction, surfaceRef, viewportController])
+}
+
+function readShiftModifier(modifiers: ReturnType<typeof useCanvasModifierKeys>) {
+  return modifiers.getShiftPressed?.() ?? modifiers.shiftPressed
 }

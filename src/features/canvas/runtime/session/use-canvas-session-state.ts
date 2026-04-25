@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useCanvasAwareness } from './use-canvas-awareness'
 import {
   getRemoteDragPositions,
@@ -38,18 +38,25 @@ export function useCanvasSessionState({ provider }: UseCanvasSessionStateOptions
   )
   const awareness = useCanvasAwareness(provider)
   const remoteUsers = awareness.remoteUsers
-  const { remoteDragPositions, remoteResizeDimensions, remoteHighlights } =
-    getCanvasRemoteSessionState(remoteUsers)
+  const { remoteDragPositions, remoteResizeDimensions, remoteHighlights } = useMemo(
+    () => getCanvasRemoteSessionState(remoteUsers),
+    [remoteUsers],
+  )
 
-  return {
-    editSession: {
+  const editSession = useMemo(
+    () => ({
       editingEmbedId,
       setEditingEmbedId,
       pendingEditNodeId,
       pendingEditNodePoint,
       setPendingEditNodeId,
       setPendingEditNodePoint,
-    } satisfies CanvasEditSessionState,
+    }),
+    [editingEmbedId, pendingEditNodeId, pendingEditNodePoint],
+  ) satisfies CanvasEditSessionState
+
+  return {
+    editSession,
     awareness,
     remoteUsers,
     remoteDragPositions,

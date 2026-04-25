@@ -14,8 +14,15 @@ import type {
 } from './canvas-selection'
 import { createCanvasDomRegistry } from './canvas-dom-registry'
 import { createCanvasRenderScheduler } from './canvas-render-scheduler'
+import {
+  computeCanvasCullingSnapshot,
+  createEmptyCanvasCullingSnapshot,
+  getCanvasCullingDiff,
+  isCanvasCullingDiffEmpty,
+} from './canvas-culling'
 import { clearStrokePathCache } from '../nodes/stroke/stroke-path-cache'
 import type { CanvasEdgePatch } from '../edges/canvas-edge-types'
+import type { CanvasCullingSnapshot } from './canvas-culling'
 import type {
   CanvasDomRegistry,
   CanvasRegisteredEdgePaths,
@@ -190,6 +197,7 @@ export function createCanvasEngine(): CanvasEngine {
   const viewportCommitListeners = new Set<CanvasViewportCommitListener>()
   let draggingNodeIds = new Set<string>()
   let hasUncommittedViewport = false
+  let cullingSnapshot: CanvasCullingSnapshot = createEmptyCanvasCullingSnapshot()
 
   const emit = () => {
     for (const listener of listeners) {
@@ -208,7 +216,25 @@ export function createCanvasEngine(): CanvasEngine {
       ...next,
       version: snapshot.version + 1,
     }
+    reconcileCulling()
     emit()
+  }
+
+  const reconcileCulling = () => {
+    const nextCullingSnapshot = computeCanvasCullingSnapshot({
+      viewport: snapshot.viewport,
+      surfaceBounds: domRegistry.getViewportSurfaceBounds(),
+      nodeLookup: snapshot.nodeLookup,
+      edges: snapshot.edges,
+      selection: snapshot.selection,
+      draggingNodeIds,
+    })
+    const diff = getCanvasCullingDiff(cullingSnapshot, nextCullingSnapshot)
+    cullingSnapshot = nextCullingSnapshot
+
+    if (!isCanvasCullingDiffEmpty(diff)) {
+      renderScheduler.scheduleCullingDiff(diff)
+    }
   }
 
   const dispatch = (operation: CanvasEngineOperation) => {
@@ -518,6 +544,7 @@ export function createCanvasEngine(): CanvasEngine {
       dirtyNodeIds: EMPTY_SET,
       dirtyEdgeIds: EMPTY_SET,
     }
+    reconcileCulling()
     emitViewportCommit(viewport)
   }
 
@@ -541,6 +568,7 @@ export function createCanvasEngine(): CanvasEngine {
       debouncedZoomLevel,
     }
     renderScheduler.scheduleViewportTransform(viewport)
+    reconcileCulling()
   }
 
   const getDebouncedZoomLevel: CanvasEngine['getDebouncedZoomLevel'] = () =>
@@ -630,6 +658,7 @@ export function createCanvasEngine(): CanvasEngine {
     }
     snapshot = nextSnapshot
 
+    reconcileCulling()
     renderScheduler.scheduleNodeTransforms(positions)
     renderScheduler.scheduleEdgePaths(
       getConnectedEdgePaths({
@@ -669,17 +698,30 @@ export function createCanvasEngine(): CanvasEngine {
       return
     }
 
-    const nodeWithDimensions = {
-      ...existing.node,
-      width: dimensions.width,
-      height: dimensions.height,
-    }
+    const usesMeasuredDimensions =
+      typeof existing.node.width !== 'number' || typeof existing.node.height !== 'number'
+    const nodeWithDimensions = usesMeasuredDimensions
+      ? {
+          ...existing.node,
+          width: existing.node.width ?? dimensions.width,
+          height: existing.node.height ?? dimensions.height,
+        }
+      : existing.node
     const nextNodeLookup = new Map(snapshot.nodeLookup)
     nextNodeLookup.set(nodeId, {
       ...existing,
       node: nodeWithDimensions,
       measured: dimensions,
     })
+
+    if (!usesMeasuredDimensions) {
+      snapshot = {
+        ...snapshot,
+        nodeLookup: nextNodeLookup,
+      }
+      reconcileCulling()
+      return
+    }
 
     commit({
       ...snapshot,
@@ -706,6 +748,7 @@ export function createCanvasEngine(): CanvasEngine {
     const unregister = domRegistry.registerViewport(element)
     renderScheduler.scheduleCameraState(snapshot.cameraState)
     renderScheduler.scheduleViewportTransform(snapshot.viewport)
+    reconcileCulling()
     return unregister
   }
 
@@ -792,6 +835,7 @@ export function createCanvasEngine(): CanvasEngine {
       viewportCommitListeners.clear()
       draggingNodeIds = new Set()
       hasUncommittedViewport = false
+      cullingSnapshot = createEmptyCanvasCullingSnapshot()
       renderScheduler.destroy()
       domRegistry.clear()
     },

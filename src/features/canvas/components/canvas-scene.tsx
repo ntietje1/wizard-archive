@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { cn } from '~/features/shadcn/lib/utils'
 import { BezierCanvasEdge } from '../edges/bezier/bezier-canvas-edge'
 import type { CanvasEdgeType } from '../edges/canvas-edge-types'
@@ -12,11 +12,17 @@ import { CanvasAwarenessHost } from './canvas-awareness-host'
 import { CanvasLocalOverlaysHost } from './canvas-local-overlays-host'
 import type { CanvasNodeComponentProps } from '../nodes/canvas-node-types'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
+import type { CanvasEngine, CanvasInternalNode } from '../system/canvas-engine'
+import { isCanvasEmptyPaneTarget } from '../runtime/interaction/canvas-pane-targets'
 import type { Connection, Edge, Node } from '@xyflow/react'
 import type {
   ComponentType,
+  Dispatch,
+  KeyboardEvent as ReactKeyboardEvent,
   MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
+  RefObject,
+  SetStateAction,
 } from 'react'
 
 type CanvasSceneHandlers = {
@@ -58,6 +64,26 @@ const EDGE_RENDERERS = {
 const MINIMAP_SCALE = 40
 const MINIMAP_OFFSET_PERCENT = 48
 const MINIMAP_MAX_PERCENT = 96
+type CanvasNodeShellSnapshot = {
+  id: string
+  type: string | undefined
+  className: string | undefined
+  position: { x: number; y: number }
+  width: number | undefined
+  height: number | undefined
+  zIndex: number
+  visible: boolean
+}
+
+type CanvasNodeContentSnapshot = {
+  id: string
+  type: keyof typeof NODE_RENDERERS
+  data: Node['data']
+  dragging: boolean
+  selected: boolean
+  width: number | undefined
+  height: number | undefined
+}
 
 export function CanvasScene({
   canEdit,
@@ -71,10 +97,38 @@ export function CanvasScene({
   const paneRef = useRef<HTMLDivElement | null>(null)
   const viewportRef = useRef<HTMLDivElement | null>(null)
   const sceneHandlersRef = useRef(sceneHandlers)
+  const nodeHandlersRef = useRef({
+    onNodeClick: sceneHandlers.onNodeClick,
+    onNodeContextMenu,
+  })
+  const edgeHandlersRef = useRef({
+    onEdgeClick: sceneHandlers.onEdgeClick,
+    onEdgeContextMenu,
+  })
   const connectionDraftRef = useRef<ConnectionDraft | null>(null)
   const [connectionDraft, setConnectionDraft] = useState<ConnectionDraft | null>(null)
-  const [isDraggingConnection, setIsDraggingConnection] = useState(false)
+  const isDraggingConnection = connectionDraft !== null
   sceneHandlersRef.current = sceneHandlers
+  nodeHandlersRef.current = {
+    onNodeClick: sceneHandlers.onNodeClick,
+    onNodeContextMenu,
+  }
+  edgeHandlersRef.current = {
+    onEdgeClick: sceneHandlers.onEdgeClick,
+    onEdgeContextMenu,
+  }
+  const handleNodeClick = useCallback((event: ReactMouseEvent, node: Node) => {
+    nodeHandlersRef.current.onNodeClick?.(event, node)
+  }, [])
+  const handleNodeContextMenu = useCallback((event: ReactMouseEvent, node: Node) => {
+    nodeHandlersRef.current.onNodeContextMenu(event, node)
+  }, [])
+  const handleEdgeClick = useCallback((event: ReactMouseEvent, edge: Edge) => {
+    edgeHandlersRef.current.onEdgeClick?.(event, edge)
+  }, [])
+  const handleEdgeContextMenu = useCallback((event: ReactMouseEvent, edge: Edge) => {
+    edgeHandlersRef.current.onEdgeContextMenu(event, edge)
+  }, [])
 
   useEffect(() => {
     const unregister = canvasEngine.registerViewportElement(viewportRef.current)
@@ -84,60 +138,52 @@ export function CanvasScene({
     return unregister
   }, [canvasEngine])
 
+  const handleConnectionPointerMove = useCallback(
+    (event: PointerEvent) => {
+      updateConnectionDraftPosition({
+        canvasEngine,
+        connectionDraftRef,
+        paneRef,
+        event,
+        setConnectionDraft,
+      })
+    },
+    [canvasEngine],
+  )
+
+  const handleConnectionPointerUp = useCallback((event: PointerEvent) => {
+    finishConnectionDraft({
+      connectionDraftRef,
+      event,
+      setConnectionDraft,
+      createEdgeFromConnection: sceneHandlersRef.current.createEdgeFromConnection,
+    })
+  }, [])
+
+  const handleConnectionPointerCancel = useCallback(() => {
+    connectionDraftRef.current = null
+    setConnectionDraft(null)
+  }, [])
+
   useEffect(() => {
     if (!isDraggingConnection) {
       return undefined
     }
 
-    const handlePointerMove = (event: PointerEvent) => {
-      const draft = connectionDraftRef.current
-      if (!draft) {
-        return
-      }
-
-      const nextDraft = {
-        ...draft,
-        current: canvasEngine.screenToCanvasPosition(
-          { x: event.clientX, y: event.clientY },
-          paneRef.current?.getBoundingClientRect() ?? null,
-        ),
-      }
-      connectionDraftRef.current = nextDraft
-      setConnectionDraft(nextDraft)
-    }
-
-    const handlePointerUp = (event: PointerEvent) => {
-      const target = document.elementFromPoint(event.clientX, event.clientY)
-      const targetHandle = resolveConnectionHandle(target)
-      const draft = connectionDraftRef.current
-      connectionDraftRef.current = null
-      setConnectionDraft(null)
-      setIsDraggingConnection(false)
-      if (draft && targetHandle && targetHandle.nodeId !== draft.source) {
-        sceneHandlersRef.current.createEdgeFromConnection({
-          source: draft.source,
-          target: targetHandle.nodeId,
-          sourceHandle: draft.sourceHandle,
-          targetHandle: targetHandle.handleId,
-        })
-      }
-    }
-
-    const handlePointerCancel = () => {
-      connectionDraftRef.current = null
-      setConnectionDraft(null)
-      setIsDraggingConnection(false)
-    }
-
-    window.addEventListener('pointermove', handlePointerMove)
-    window.addEventListener('pointerup', handlePointerUp, { once: true })
-    window.addEventListener('pointercancel', handlePointerCancel, { once: true })
+    window.addEventListener('pointermove', handleConnectionPointerMove)
+    window.addEventListener('pointerup', handleConnectionPointerUp, { once: true })
+    window.addEventListener('pointercancel', handleConnectionPointerCancel, { once: true })
     return () => {
-      window.removeEventListener('pointermove', handlePointerMove)
-      window.removeEventListener('pointerup', handlePointerUp)
-      window.removeEventListener('pointercancel', handlePointerCancel)
+      window.removeEventListener('pointermove', handleConnectionPointerMove)
+      window.removeEventListener('pointerup', handleConnectionPointerUp)
+      window.removeEventListener('pointercancel', handleConnectionPointerCancel)
     }
-  }, [canvasEngine, isDraggingConnection])
+  }, [
+    handleConnectionPointerCancel,
+    handleConnectionPointerMove,
+    handleConnectionPointerUp,
+    isDraggingConnection,
+  ])
 
   const handlePointerDownCapture = (event: ReactPointerEvent) => {
     if (!canEdit || event.button !== 0) {
@@ -164,12 +210,17 @@ export function CanvasScene({
     }
     connectionDraftRef.current = draft
     setConnectionDraft(draft)
-    setIsDraggingConnection(true)
   }
 
   const handlePaneClick = (event: ReactMouseEvent) => {
-    if (event.target === paneRef.current) {
+    if (isCanvasEmptyPaneTarget(event.target, paneRef.current)) {
       sceneHandlers.onPaneClick?.(event)
+    }
+  }
+
+  const handlePaneKeyDown = (event: ReactKeyboardEvent) => {
+    if (event.key === ' ') {
+      event.preventDefault()
     }
   }
 
@@ -179,14 +230,18 @@ export function CanvasScene({
       className="canvas-scene absolute inset-0 touch-none select-none overflow-hidden bg-background"
       data-canvas-pane="true"
       data-testid="canvas-scene"
+      role="application"
+      aria-label="Canvas"
+      tabIndex={-1}
       onClick={handlePaneClick}
       onContextMenu={(event) => {
-        if (event.target === paneRef.current) {
+        if (isCanvasEmptyPaneTarget(event.target, paneRef.current)) {
           onPaneContextMenu(event)
         }
       }}
       onMouseMove={sceneHandlers.onMouseMove}
       onMouseLeave={sceneHandlers.onMouseLeave}
+      onKeyDown={handlePaneKeyDown}
       onPointerDownCapture={handlePointerDownCapture}
     >
       <style>{`
@@ -202,6 +257,7 @@ export function CanvasScene({
       <CanvasBackground />
       <div
         ref={viewportRef}
+        data-canvas-viewport="true"
         className="canvas-scene__viewport absolute left-0 top-0 h-full w-full"
         style={{
           backfaceVisibility: 'hidden',
@@ -210,18 +266,19 @@ export function CanvasScene({
       >
         <svg
           className="canvas-edge-layer pointer-events-none absolute left-0 top-0 overflow-visible"
+          data-canvas-edge-layer="true"
           width="1"
           height="1"
         >
           <CanvasEdgeRenderer
-            onEdgeClick={sceneHandlers.onEdgeClick}
-            onEdgeContextMenu={onEdgeContextMenu}
+            onEdgeClick={handleEdgeClick}
+            onEdgeContextMenu={handleEdgeContextMenu}
           />
           <CanvasConnectionLayer draft={connectionDraft} />
         </svg>
         <CanvasNodeRenderer
-          onNodeClick={sceneHandlers.onNodeClick}
-          onNodeContextMenu={onNodeContextMenu}
+          onNodeClick={handleNodeClick}
+          onNodeContextMenu={handleNodeContextMenu}
         />
       </div>
       <CanvasLocalOverlaysHost />
@@ -231,7 +288,7 @@ export function CanvasScene({
   )
 }
 
-function CanvasNodeRenderer({
+const CanvasNodeRenderer = memo(function CanvasNodeRenderer({
   onNodeClick,
   onNodeContextMenu,
 }: {
@@ -247,9 +304,9 @@ function CanvasNodeRenderer({
       onNodeContextMenu={onNodeContextMenu}
     />
   ))
-}
+})
 
-function CanvasNodeWrapper({
+const CanvasNodeWrapper = memo(function CanvasNodeWrapper({
   nodeId,
   onNodeClick,
   onNodeContextMenu,
@@ -258,12 +315,15 @@ function CanvasNodeWrapper({
   onNodeClick?: (event: ReactMouseEvent, node: Node) => void
   onNodeContextMenu: (event: ReactMouseEvent, node: Node) => void
 }) {
-  const internalNode = useCanvasEngineSelector((snapshot) => snapshot.nodeLookup.get(nodeId))
+  const shell = useCanvasEngineSelector(
+    (snapshot) => selectCanvasNodeShellSnapshot(snapshot.nodeLookup.get(nodeId)),
+    areCanvasNodeShellSnapshotsEqual,
+  )
   const canvasEngine = useCanvasEngine()
   const nodeRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    if (!internalNode) {
+    if (!shell) {
       return undefined
     }
 
@@ -274,59 +334,96 @@ function CanvasNodeWrapper({
 
     const observer = new ResizeObserver(([entry]) => {
       if (!entry) return
-      canvasEngine.measureNode(internalNode.id, {
+      if (nodeElement.dataset.canvasCulled === 'true') return
+      if (entry.contentRect.width <= 0 || entry.contentRect.height <= 0) return
+      canvasEngine.measureNode(shell.id, {
         width: entry.contentRect.width,
         height: entry.contentRect.height,
       })
     })
     observer.observe(nodeElement)
     return () => observer.disconnect()
-  }, [canvasEngine, internalNode])
+  }, [canvasEngine, shell])
 
-  if (!internalNode || !internalNode.visible) {
+  useEffect(() => canvasEngine.registerNodeElement(nodeId, nodeRef.current), [canvasEngine, nodeId])
+
+  if (!shell || !shell.visible) {
     return null
   }
 
-  const node = internalNode.node
-  const type =
-    node.type === 'embed' || node.type === 'stroke' || node.type === 'text' ? node.type : 'text'
-  const Component = NODE_RENDERERS[type] as ComponentType<CanvasNodeComponentProps>
-  const width = node.width ?? internalNode.measured.width
-  const height = node.height ?? internalNode.measured.height
+  const getCurrentNode = () => canvasEngine.getSnapshot().nodeLookup.get(nodeId)?.node ?? null
+  const handleNodeKeyDown = (event: ReactKeyboardEvent) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+    }
+  }
 
   return (
     <div
       ref={nodeRef}
       className={cn(
         'canvas-node-shell absolute left-0 top-0 touch-none select-none',
-        node.className,
+        shell.className,
       )}
-      data-node-id={node.id}
-      data-node-type={node.type}
+      data-node-id={shell.id}
+      data-node-type={shell.type}
+      role="group"
+      aria-label={`${shell.type ?? 'canvas'} node`}
+      tabIndex={-1}
       style={{
-        transform: `translate(${node.position.x}px, ${node.position.y}px)`,
-        width,
-        height,
-        zIndex: internalNode.zIndex,
+        contain: 'layout style',
+        transform: `translate(${shell.position.x}px, ${shell.position.y}px)`,
+        width: shell.width,
+        height: shell.height,
+        zIndex: shell.zIndex,
         pointerEvents: 'auto',
       }}
-      onClick={(event) => onNodeClick?.(event, node)}
-      onContextMenu={(event) => onNodeContextMenu(event, node)}
+      onClick={(event) => {
+        const node = getCurrentNode()
+        if (node) {
+          onNodeClick?.(event, node)
+        }
+      }}
+      onContextMenu={(event) => {
+        const node = getCurrentNode()
+        if (node) {
+          onNodeContextMenu(event, node)
+        }
+      }}
+      onKeyDown={handleNodeKeyDown}
     >
+      <CanvasNodeContent nodeId={nodeId} />
+    </div>
+  )
+})
+
+const CanvasNodeContent = memo(function CanvasNodeContent({ nodeId }: { nodeId: string }) {
+  const content = useCanvasEngineSelector(
+    (snapshot) => selectCanvasNodeContentSnapshot(snapshot.nodeLookup.get(nodeId)),
+    areCanvasNodeContentSnapshotsEqual,
+  )
+
+  if (!content) {
+    return null
+  }
+
+  const Component = NODE_RENDERERS[content.type] as ComponentType<CanvasNodeComponentProps>
+  return (
+    <div className="canvas-node-content h-full w-full" style={{ contain: 'layout style' }}>
       <Component
-        id={node.id}
-        type={type}
-        data={node.data}
-        dragging={internalNode.dragging}
-        selected={internalNode.selected}
-        width={width}
-        height={height}
+        id={content.id}
+        type={content.type}
+        data={content.data}
+        dragging={content.dragging}
+        selected={content.selected}
+        width={content.width}
+        height={content.height}
       />
     </div>
   )
-}
+})
 
-function CanvasEdgeRenderer({
+const CanvasEdgeRenderer = memo(function CanvasEdgeRenderer({
   onEdgeClick,
   onEdgeContextMenu,
 }: {
@@ -342,9 +439,9 @@ function CanvasEdgeRenderer({
       onEdgeContextMenu={onEdgeContextMenu}
     />
   ))
-}
+})
 
-function CanvasEdgeWrapper({
+const CanvasEdgeWrapper = memo(function CanvasEdgeWrapper({
   edgeId,
   onEdgeClick,
   onEdgeContextMenu,
@@ -378,13 +475,14 @@ function CanvasEdgeWrapper({
     <g
       ref={edgeRef}
       className="pointer-events-auto"
+      data-canvas-edge-id={edge.id}
       onClick={(event) => onEdgeClick?.(event, edge)}
       onContextMenu={(event) => onEdgeContextMenu(event, edge)}
     >
       <Component {...props} />
     </g>
   )
-}
+})
 
 function CanvasConnectionLayer({ draft }: { draft: ConnectionDraft | null }) {
   if (!draft) {
@@ -479,6 +577,62 @@ function resolveConnectionHandle(target: EventTarget | null) {
   }
 }
 
+function updateConnectionDraftPosition({
+  canvasEngine,
+  connectionDraftRef,
+  paneRef,
+  event,
+  setConnectionDraft,
+}: {
+  canvasEngine: CanvasEngine
+  connectionDraftRef: RefObject<ConnectionDraft | null>
+  paneRef: RefObject<HTMLDivElement | null>
+  event: PointerEvent
+  setConnectionDraft: Dispatch<SetStateAction<ConnectionDraft | null>>
+}) {
+  const draft = connectionDraftRef.current
+  if (!draft) {
+    return
+  }
+
+  const nextDraft = {
+    ...draft,
+    current: canvasEngine.screenToCanvasPosition(
+      { x: event.clientX, y: event.clientY },
+      paneRef.current?.getBoundingClientRect() ?? null,
+    ),
+  }
+  connectionDraftRef.current = nextDraft
+  setConnectionDraft(nextDraft)
+}
+
+function finishConnectionDraft({
+  connectionDraftRef,
+  event,
+  setConnectionDraft,
+  createEdgeFromConnection,
+}: {
+  connectionDraftRef: RefObject<ConnectionDraft | null>
+  event: PointerEvent
+  setConnectionDraft: Dispatch<SetStateAction<ConnectionDraft | null>>
+  createEdgeFromConnection: (connection: Connection) => void
+}) {
+  const target = document.elementFromPoint(event.clientX, event.clientY)
+  const targetHandle = resolveConnectionHandle(target)
+  const draft = connectionDraftRef.current
+  connectionDraftRef.current = null
+  setConnectionDraft(null)
+
+  if (draft && targetHandle && targetHandle.nodeId !== draft.source) {
+    createEdgeFromConnection({
+      source: draft.source,
+      target: targetHandle.nodeId,
+      sourceHandle: draft.sourceHandle,
+      targetHandle: targetHandle.handleId,
+    })
+  }
+}
+
 function resolveEdgeType(type: string | undefined): CanvasEdgeType {
   return type === 'straight' || type === 'step' || type === 'bezier' ? type : 'bezier'
 }
@@ -496,4 +650,90 @@ function areStringArraysEqual(left: ReadonlyArray<string>, right: ReadonlyArray<
     }
   }
   return true
+}
+
+function selectCanvasNodeShellSnapshot(
+  internalNode: CanvasInternalNode | undefined,
+): CanvasNodeShellSnapshot | null {
+  if (!internalNode) {
+    return null
+  }
+
+  const node = internalNode.node
+  return {
+    id: node.id,
+    type: node.type,
+    className: node.className,
+    position: node.position,
+    width: node.width ?? internalNode.measured.width,
+    height: node.height ?? internalNode.measured.height,
+    zIndex: internalNode.zIndex,
+    visible: internalNode.visible,
+  }
+}
+
+function selectCanvasNodeContentSnapshot(
+  internalNode: CanvasInternalNode | undefined,
+): CanvasNodeContentSnapshot | null {
+  if (!internalNode) {
+    return null
+  }
+
+  const node = internalNode.node
+  const type =
+    node.type === 'embed' || node.type === 'stroke' || node.type === 'text' ? node.type : 'text'
+  return {
+    id: node.id,
+    type,
+    data: node.data,
+    dragging: internalNode.dragging,
+    selected: internalNode.selected,
+    width: node.width ?? internalNode.measured.width,
+    height: node.height ?? internalNode.measured.height,
+  }
+}
+
+function areCanvasNodeShellSnapshotsEqual(
+  left: CanvasNodeShellSnapshot | null,
+  right: CanvasNodeShellSnapshot | null,
+) {
+  if (left === right) {
+    return true
+  }
+  if (!left || !right) {
+    return false
+  }
+
+  return (
+    left.id === right.id &&
+    left.type === right.type &&
+    left.className === right.className &&
+    left.position === right.position &&
+    left.width === right.width &&
+    left.height === right.height &&
+    left.zIndex === right.zIndex &&
+    left.visible === right.visible
+  )
+}
+
+function areCanvasNodeContentSnapshotsEqual(
+  left: CanvasNodeContentSnapshot | null,
+  right: CanvasNodeContentSnapshot | null,
+) {
+  if (left === right) {
+    return true
+  }
+  if (!left || !right) {
+    return false
+  }
+
+  return (
+    left.id === right.id &&
+    left.type === right.type &&
+    left.data === right.data &&
+    left.dragging === right.dragging &&
+    left.selected === right.selected &&
+    left.width === right.width &&
+    left.height === right.height
+  )
 }

@@ -14,6 +14,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 import type { ContextMenuHostRef } from '~/features/context-menu/components/context-menu-host'
+import type { BuiltContextMenu } from '~/features/context-menu/types'
 import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
@@ -33,6 +34,7 @@ interface UseCanvasContextMenuOptions {
 }
 
 type PointerPosition = { x: number; y: number }
+const EMPTY_CONTEXT_MENU: BuiltContextMenu = { groups: [], flatItems: [], isEmpty: true }
 
 function normalizeContextMenuEvent(event: MouseEvent | React.MouseEvent) {
   const nativeEvent = 'nativeEvent' in event ? event.nativeEvent : event
@@ -201,7 +203,7 @@ export function useCanvasContextMenu({
           commands,
           contributors: menuState.contributors,
         })
-      : { groups: [], flatItems: [], isEmpty: true },
+      : EMPTY_CONTEXT_MENU,
     // `onClose` is host-driven dismissal only; the host already handled its own
     // teardown, so this just clears the hook state.
     onClose: () => setMenuState(null),

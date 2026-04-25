@@ -278,21 +278,21 @@ describe('createCanvasEngine', () => {
     engine.destroy()
   })
 
-  it('keeps all ordered ids mounted and does not hide registered elements during viewport movement', () => {
+  it('culls offscreen registered elements without mutating ordered ids or notifying subscribers', () => {
     const engine = createCanvasEngine()
+    const paneElement = document.createElement('div')
     const viewportElement = document.createElement('div')
-    Object.defineProperties(viewportElement, {
+    paneElement.append(viewportElement)
+    Object.defineProperties(paneElement, {
       clientWidth: { value: 100 },
       clientHeight: { value: 100 },
     })
-    viewportElement.getBoundingClientRect = () =>
+    paneElement.getBoundingClientRect = () =>
       ({ left: 0, top: 0, width: 100, height: 100 }) as DOMRect
     const insideElement = document.createElement('div')
-    const nearElement = document.createElement('div')
     const farElement = document.createElement('div')
     const unregisterViewport = engine.registerViewportElement(viewportElement)
     const unregisterInside = engine.registerNodeElement('inside', insideElement)
-    const unregisterNear = engine.registerNodeElement('near', nearElement)
     const unregisterFar = engine.registerNodeElement('far', farElement)
     const listener = vi.fn()
     const unsubscribe = engine.subscribe(listener)
@@ -300,38 +300,141 @@ describe('createCanvasEngine', () => {
     engine.setDocumentSnapshot({
       nodes: [
         { ...createNode('inside', 0), width: 20, height: 20 },
-        { ...createNode('near', 1), position: { x: 150, y: 0 }, width: 20, height: 20 },
-        { ...createNode('far', 2), position: { x: 350, y: 0 }, width: 20, height: 20 },
+        { ...createNode('far', 1), position: { x: 800, y: 0 }, width: 20, height: 20 },
       ],
     })
     engine.flushRenderScheduler()
 
-    expect(engine.getSnapshot().nodeIds).toEqual(['inside', 'near', 'far'])
+    expect(engine.getSnapshot().nodeIds).toEqual(['inside', 'far'])
     expect(insideElement.style.display).toBe('')
-    expect(nearElement.style.display).toBe('')
-    expect(farElement.style.display).toBe('')
+    expect(farElement.style.display).toBe('none')
+    expect(farElement).toHaveAttribute('data-canvas-culled', 'true')
 
     listener.mockClear()
-    engine.setViewportLive({ x: -100, y: 0, zoom: 1 })
+    engine.setViewportLive({ x: -700, y: 0, zoom: 1 })
     engine.flushRenderScheduler()
 
     expect(listener).not.toHaveBeenCalled()
-    expect(engine.getSnapshot().nodeIds).toEqual(['inside', 'near', 'far'])
+    expect(engine.getSnapshot().nodeIds).toEqual(['inside', 'far'])
+    expect(insideElement.style.display).toBe('none')
+    expect(farElement.style.display).toBe('')
 
-    engine.setViewport({ x: -100, y: 0, zoom: 1 })
+    engine.setViewport({ x: -700, y: 0, zoom: 1 })
     engine.flushRenderScheduler()
 
     expect(listener).not.toHaveBeenCalled()
-    expect(engine.getSnapshot().nodeIds).toEqual(['inside', 'near', 'far'])
-    expect(insideElement.style.display).toBe('')
-    expect(nearElement.style.display).toBe('')
+    expect(engine.getSnapshot().nodeIds).toEqual(['inside', 'far'])
     expect(farElement.style.display).toBe('')
 
     unsubscribe()
     unregisterViewport()
     unregisterInside()
-    unregisterNear()
     unregisterFar()
+    engine.destroy()
+  })
+
+  it('applies the current culling state when an element registers after reconciliation', () => {
+    const engine = createCanvasEngine()
+    const paneElement = document.createElement('div')
+    const viewportElement = document.createElement('div')
+    paneElement.append(viewportElement)
+    paneElement.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 100, height: 100 }) as DOMRect
+    engine.registerViewportElement(viewportElement)
+
+    engine.setDocumentSnapshot({
+      nodes: [{ ...createNode('far', 0), position: { x: 800, y: 0 }, width: 20, height: 20 }],
+    })
+    engine.flushRenderScheduler()
+
+    const farElement = document.createElement('div')
+    const unregisterFar = engine.registerNodeElement('far', farElement)
+
+    expect(farElement.style.display).toBe('none')
+    expect(farElement).toHaveAttribute('data-canvas-culled', 'true')
+
+    unregisterFar()
+    engine.destroy()
+  })
+
+  it('uses measured node dimensions when document dimensions are absent', () => {
+    const engine = createCanvasEngine()
+    const paneElement = document.createElement('div')
+    const viewportElement = document.createElement('div')
+    paneElement.append(viewportElement)
+    paneElement.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 100, height: 100 }) as DOMRect
+    const measuredElement = document.createElement('div')
+    engine.registerViewportElement(viewportElement)
+    engine.registerNodeElement('measured', measuredElement)
+    engine.setDocumentSnapshot({
+      nodes: [{ ...createNode('measured', 0), position: { x: 800, y: 0 } }],
+    })
+    engine.flushRenderScheduler()
+
+    expect(measuredElement.style.display).toBe('')
+
+    engine.measureNode('measured', { width: 20, height: 20 })
+    engine.flushRenderScheduler()
+
+    expect(measuredElement.style.display).toBe('none')
+
+    engine.destroy()
+  })
+
+  it('stores measurements for dimensioned nodes without notifying general subscribers', () => {
+    const engine = createCanvasEngine()
+    const listener = vi.fn()
+    engine.setDocumentSnapshot({
+      nodes: [{ ...createNode('dimensioned', 0), width: 20, height: 20 }],
+    })
+    engine.subscribe(listener)
+
+    engine.measureNode('dimensioned', { width: 20, height: 20 })
+
+    expect(listener).not.toHaveBeenCalled()
+    expect(engine.getSnapshot().nodeLookup.get('dimensioned')?.measured).toEqual({
+      width: 20,
+      height: 20,
+    })
+
+    engine.destroy()
+  })
+
+  it('keeps selected offscreen nodes and connected edges visible', () => {
+    const engine = createCanvasEngine()
+    const paneElement = document.createElement('div')
+    const viewportElement = document.createElement('div')
+    paneElement.append(viewportElement)
+    paneElement.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 100, height: 100 }) as DOMRect
+    const sourceElement = document.createElement('div')
+    const targetElement = document.createElement('div')
+    const edgeElement = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+    engine.registerViewportElement(viewportElement)
+    engine.registerNodeElement('source', sourceElement)
+    engine.registerNodeElement('target', targetElement)
+    engine.registerEdgeElement('edge-1', edgeElement)
+
+    engine.setDocumentSnapshot({
+      nodes: [
+        { ...createNode('source', 0), position: { x: 800, y: 0 }, width: 20, height: 20 },
+        { ...createNode('target', 1), position: { x: 900, y: 0 }, width: 20, height: 20 },
+      ],
+      edges: [createEdge('edge-1', 'source', 'target')],
+    })
+    engine.flushRenderScheduler()
+
+    expect(sourceElement.style.display).toBe('none')
+    expect(edgeElement.style.display).toBe('none')
+
+    engine.setSelection({ nodeIds: new Set(['source']), edgeIds: new Set() })
+    engine.flushRenderScheduler()
+
+    expect(sourceElement.style.display).toBe('')
+    expect(edgeElement.style.display).toBe('')
+    expect(targetElement.style.display).toBe('none')
+
     engine.destroy()
   })
 

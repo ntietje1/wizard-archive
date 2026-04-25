@@ -2,6 +2,7 @@ import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useCanvasSelectionRect } from '../use-canvas-selection-rect'
 import { clearSelectToolLocalOverlay } from '../../../tools/select/select-tool-local-overlay'
+import { isCanvasEmptyPaneTarget } from '../../interaction/canvas-pane-targets'
 import type { CanvasEngine } from '../../../system/canvas-engine'
 import type { CanvasViewportController } from '../../../system/canvas-viewport-controller'
 import type { CanvasSelectionSnapshot } from '../../../tools/canvas-tool-types'
@@ -122,6 +123,59 @@ describe('useCanvasSelectionRect', () => {
       cancelGesture: vi.fn(),
     }
   }
+
+  it('starts marquee selection from the internal viewport but not from edge targets', () => {
+    const selection = createSelectionMock()
+    const surface = document.createElement('div')
+    const pane = document.createElement('div')
+    pane.className = 'react-flow__pane'
+    pane.dataset.canvasPane = 'true'
+    const viewport = document.createElement('div')
+    viewport.dataset.canvasViewport = 'true'
+    const edgeLayer = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    edgeLayer.dataset.canvasEdgeLayer = 'true'
+    const edgeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+    edgeGroup.dataset.canvasEdgeId = 'edge-1'
+    const edgePath = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+
+    edgeGroup.appendChild(edgePath)
+    edgeLayer.appendChild(edgeGroup)
+    viewport.appendChild(edgeLayer)
+    pane.appendChild(viewport)
+    surface.appendChild(pane)
+    document.body.appendChild(surface)
+    expect(isCanvasEmptyPaneTarget(edgePath, pane)).toBe(false)
+    expect(isCanvasEmptyPaneTarget(viewport, pane)).toBe(true)
+
+    const { unmount } = renderHook(() =>
+      useCanvasSelectionRect({
+        canvasEngine: createCanvasEngineMock(),
+        viewportController: createViewportControllerMock(),
+        surfaceRef: { current: surface },
+        awareness: { setPresence: vi.fn() },
+        interaction: { suppressNextSurfaceClick: vi.fn() },
+        selection,
+        enabled: true,
+      }),
+    )
+
+    act(() => {
+      edgePath.dispatchEvent(createPointerDownEvent({ clientX: 10, clientY: 20 }))
+    })
+    expect(selection.beginGesture).not.toHaveBeenCalled()
+
+    act(() => {
+      viewport.dispatchEvent(createPointerDownEvent({ clientX: 10, clientY: 20 }))
+      window.dispatchEvent(
+        new MouseEvent('pointermove', { bubbles: true, clientX: 20, clientY: 30 }),
+      )
+      flushAnimationFrame()
+    })
+    expect(selection.beginGesture).toHaveBeenCalledWith('marquee', 'replace')
+
+    unmount()
+    surface.remove()
+  })
 
   it('coalesces marquee preview updates and commits the last rendered preview without recomputing on release', () => {
     const setPresence = vi.fn()
@@ -471,12 +525,9 @@ describe('useCanvasSelectionRect', () => {
       enabled: true,
     }
 
-    const { rerender, unmount } = renderHook(
-      (props: typeof hookProps) => useCanvasSelectionRect(props),
-      {
-        initialProps: hookProps,
-      },
-    )
+    const { unmount } = renderHook((props: typeof hookProps) => useCanvasSelectionRect(props), {
+      initialProps: hookProps,
+    })
 
     act(() => {
       pane.dispatchEvent(
@@ -484,12 +535,10 @@ describe('useCanvasSelectionRect', () => {
       )
     })
 
-    useCanvasModifierKeysMock.mockReturnValue({ shiftPressed: true })
-    rerender(hookProps)
-
     act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Shift' }))
       window.dispatchEvent(
-        new MouseEvent('pointermove', { bubbles: true, clientX: 70, clientY: 40 }),
+        new MouseEvent('pointermove', { bubbles: true, clientX: 70, clientY: 40, shiftKey: true }),
       )
       flushAnimationFrame()
       window.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 70, clientY: 40 }))
@@ -560,12 +609,9 @@ describe('useCanvasSelectionRect', () => {
 
     useCanvasModifierKeysMock.mockReturnValue({ shiftPressed: false })
 
-    const { rerender, unmount } = renderHook(
-      (props: typeof hookProps) => useCanvasSelectionRect(props),
-      {
-        initialProps: hookProps,
-      },
-    )
+    const { unmount } = renderHook((props: typeof hookProps) => useCanvasSelectionRect(props), {
+      initialProps: hookProps,
+    })
 
     act(() => {
       pane.dispatchEvent(
@@ -585,10 +631,8 @@ describe('useCanvasSelectionRect', () => {
       height: 20,
     })
 
-    useCanvasModifierKeysMock.mockReturnValue({ shiftPressed: true })
-    rerender(hookProps)
-
     act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Shift' }))
       flushAnimationFrame()
     })
 
@@ -612,3 +656,8 @@ describe('useCanvasSelectionRect', () => {
     getEdgesSpy.mockRestore()
   })
 })
+
+function createPointerDownEvent({ clientX, clientY }: { clientX: number; clientY: number }) {
+  const EventCtor = typeof PointerEvent === 'undefined' ? MouseEvent : PointerEvent
+  return new EventCtor('pointerdown', { bubbles: true, button: 0, clientX, clientY })
+}

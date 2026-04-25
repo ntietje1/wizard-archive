@@ -100,11 +100,9 @@ export function useCanvasResizeSession({
     viewportController,
   } = useCanvasRuntime()
   const internalNode = useRuntimeCanvasNode(canvasEngine, id)
-  const { shiftPressed, primaryPressed } = useCanvasModifierKeys()
+  const modifiers = useCanvasModifierKeys()
   const selected = useIsCanvasNodeSelected(id)
   const resizeSessionRef = useRef<ResizeSession | null>(null)
-  const shiftPressedRef = useRef(shiftPressed)
-  const primaryPressedRef = useRef(primaryPressed)
   const onResizeRef = useRef(onResize)
   const onResizeEndRef = useRef(onResizeEnd)
   const removeWindowListenersRef = useRef<() => void>(() => undefined)
@@ -120,8 +118,6 @@ export function useCanvasResizeSession({
   lockedAspectRatioRef.current = lockedAspectRatio
   canvasEngineRef.current = canvasEngine
   viewportControllerRef.current = viewportController
-  shiftPressedRef.current = shiftPressed
-  primaryPressedRef.current = primaryPressed
   onResizeRef.current = onResize
   onResizeEndRef.current = onResizeEnd
 
@@ -154,47 +150,50 @@ export function useCanvasResizeSession({
     })
   }, [])
 
-  const updateResize = useCallback((event: PointerEvent, commit: boolean) => {
-    const session = resizeSessionRef.current
-    if (!session || event.pointerId !== session.pointerId) {
-      return
-    }
+  const updateResize = useCallback(
+    (event: PointerEvent, commit: boolean) => {
+      const session = resizeSessionRef.current
+      if (!session || event.pointerId !== session.pointerId) {
+        return
+      }
 
-    const currentPoint = viewportControllerRef.current.screenToCanvasPosition({
-      x: event.clientX,
-      y: event.clientY,
-    })
-    session.currentPoint = currentPoint
-    const { bounds: nextBounds, guides } = resolveSessionResizeBounds({
-      session,
-      currentPoint,
-      minWidth: minWidthRef.current,
-      minHeight: minHeightRef.current,
-      lockedAspectRatio: lockedAspectRatioRef.current,
-      square: event.shiftKey || shiftPressedRef.current,
-      snap: isPrimarySelectionModifier(event),
-      zoom: viewportControllerRef.current.getZoom(),
-    })
+      const currentPoint = viewportControllerRef.current.screenToCanvasPosition({
+        x: event.clientX,
+        y: event.clientY,
+      })
+      session.currentPoint = currentPoint
+      const { bounds: nextBounds, guides } = resolveSessionResizeBounds({
+        session,
+        currentPoint,
+        minWidth: minWidthRef.current,
+        minHeight: minHeightRef.current,
+        lockedAspectRatio: lockedAspectRatioRef.current,
+        square: event.shiftKey || readShiftModifier(modifiers),
+        snap: isPrimarySelectionModifier(event),
+        zoom: viewportControllerRef.current.getZoom(),
+      })
 
-    if (commit || guides.length === 0) {
-      clearCanvasDragSnapGuides()
-    } else {
-      setCanvasDragSnapGuides(guides)
-    }
+      if (commit || guides.length === 0) {
+        clearCanvasDragSnapGuides()
+      } else {
+        setCanvasDragSnapGuides(guides)
+      }
 
-    if (commit) {
-      onResizeEndRef.current(idRef.current, nextBounds.width, nextBounds.height, {
+      if (commit) {
+        onResizeEndRef.current(idRef.current, nextBounds.width, nextBounds.height, {
+          x: nextBounds.x,
+          y: nextBounds.y,
+        })
+        return
+      }
+
+      onResizeRef.current(idRef.current, nextBounds.width, nextBounds.height, {
         x: nextBounds.x,
         y: nextBounds.y,
       })
-      return
-    }
-
-    onResizeRef.current(idRef.current, nextBounds.width, nextBounds.height, {
-      x: nextBounds.x,
-      y: nextBounds.y,
-    })
-  }, [])
+    },
+    [modifiers],
+  )
 
   const handlePointerMove = useCallback(
     (event: PointerEvent) => {
@@ -206,27 +205,27 @@ export function useCanvasResizeSession({
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
       if (event.key === 'Shift') {
-        updateResizeForSession(true, primaryPressedRef.current)
+        updateResizeForSession(true, readPrimaryModifier(modifiers))
       }
 
       if (event.key === 'Control' || event.key === 'Meta') {
-        updateResizeForSession(shiftPressedRef.current, true)
+        updateResizeForSession(readShiftModifier(modifiers), true)
       }
     },
-    [updateResizeForSession],
+    [modifiers, updateResizeForSession],
   )
 
   const handleKeyUp = useCallback(
     (event: KeyboardEvent) => {
       if (event.key === 'Shift') {
-        updateResizeForSession(false, primaryPressedRef.current)
+        updateResizeForSession(false, readPrimaryModifier(modifiers))
       }
 
       if (event.key === 'Control' || event.key === 'Meta') {
-        updateResizeForSession(shiftPressedRef.current, false)
+        updateResizeForSession(readShiftModifier(modifiers), false)
       }
     },
-    [updateResizeForSession],
+    [modifiers, updateResizeForSession],
   )
 
   const endResize = useCallback(
@@ -342,6 +341,14 @@ function useRuntimeCanvasNode(
 
 function subscribeToNoop() {
   return () => undefined
+}
+
+function readPrimaryModifier(modifiers: ReturnType<typeof useCanvasModifierKeys>) {
+  return modifiers.getPrimaryPressed?.() ?? modifiers.primaryPressed
+}
+
+function readShiftModifier(modifiers: ReturnType<typeof useCanvasModifierKeys>) {
+  return modifiers.getShiftPressed?.() ?? modifiers.shiftPressed
 }
 
 function resolveSessionResizeBounds({
