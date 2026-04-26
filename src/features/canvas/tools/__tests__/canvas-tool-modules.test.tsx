@@ -10,7 +10,7 @@ import type { CanvasEdgeType } from '../../edges/canvas-edge-types'
 
 const selectAwarenessClear = vi.hoisted(() => vi.fn())
 const selectOverlayClear = vi.hoisted(() => vi.fn())
-const selectCreateHandlers = vi.hoisted(() => vi.fn(() => ({ onPaneClick: vi.fn() })))
+const selectCreateHandlers = vi.hoisted(() => vi.fn(() => ({ onNodeClick: vi.fn() })))
 const drawAwarenessClear = vi.hoisted(() => vi.fn())
 const drawOverlayClear = vi.hoisted(() => vi.fn())
 const drawCreateHandlers = vi.hoisted(() => vi.fn(() => ({ onPointerDown: vi.fn() })))

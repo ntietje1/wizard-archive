@@ -25,7 +25,6 @@ type CanvasSceneHandlers = {
   createEdgeFromConnection: (connection: Connection) => void
   onNodeClick?: (event: ReactMouseEvent, node: Node) => void
   onEdgeClick?: (event: ReactMouseEvent, edge: Edge) => void
-  onPaneClick?: (event: ReactMouseEvent) => void
   onMouseMove?: (event: ReactMouseEvent) => void
   onMouseLeave?: () => void
 }
@@ -166,12 +165,6 @@ export function CanvasScene({
     setConnectionDraft(draft)
   }
 
-  const handlePaneClick = (event: ReactMouseEvent) => {
-    if (isCanvasEmptyPaneTarget(event.target, paneRef.current)) {
-      sceneHandlers.onPaneClick?.(event)
-    }
-  }
-
   const handlePaneKeyDown = (event: ReactKeyboardEvent) => {
     if (event.key === ' ') {
       event.preventDefault()
@@ -187,7 +180,6 @@ export function CanvasScene({
       role="application"
       aria-label="Canvas"
       tabIndex={-1}
-      onClick={handlePaneClick}
       onContextMenu={(event) => {
         if (isCanvasEmptyPaneTarget(event.target, paneRef.current)) {
           onPaneContextMenu(event)

@@ -16,21 +16,21 @@ import { useCanvasDropIntegration } from './interaction/use-canvas-drop-integrat
 import { useCanvasModifierKeys } from './interaction/use-canvas-modifier-keys'
 import { createCanvasNodeActions } from './interaction/create-canvas-node-actions'
 import { useCanvasNodeDragHandlers } from './interaction/use-canvas-node-drag-handlers'
-import { useCanvasPointerBridge } from './interaction/use-canvas-pointer-bridge'
 import { useCanvasRemoteDragAnimation } from './interaction/use-canvas-remote-drag-animation'
 import { useCanvasViewportInteractions } from './interaction/use-canvas-viewport-interactions'
 import { createCanvasViewportPersistence } from './interaction/canvas-viewport-persistence'
-import { useCanvasSurfaceClickGuard } from './interaction/use-canvas-surface-click-guard'
+import {
+  useCanvasPointerRouter,
+  useCanvasPointerRouterController,
+} from './interaction/use-canvas-pointer-router'
 import { exposeCanvasPerformanceRuntime } from './performance/canvas-performance-metrics'
 import { useCanvasSelectionController } from './selection/use-canvas-selection-actions'
-import { useCanvasSelectionRect } from './selection/use-canvas-selection-rect'
 import { useCanvasSessionState } from './session/use-canvas-session-state'
 import { createCanvasNodePlacement } from '../nodes/canvas-node-modules'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import { createCanvasEngine } from '../system/canvas-engine'
 import { createCanvasViewportController } from '../system/canvas-viewport-controller'
 import { canvasToolSpecs } from '../tools/canvas-tool-modules'
-import { isPrimarySelectionModifier } from '../utils/canvas-selection-utils'
 import { getStrokeBounds } from '../nodes/stroke/stroke-node-model'
 import { clearAllStrokePathCache } from '../nodes/stroke/stroke-path-cache'
 import type {
@@ -83,6 +83,7 @@ export function useCanvasFlowRuntime({
     getSurfaceElement: () => canvasSurfaceRef.current,
   })
   const viewportController = viewportControllerRef.current
+  const pointerRouter = useCanvasPointerRouterController()
   const localDraggingIdsRef = useRef(new Set<string>())
   const previousActiveToolRef = useRef<CanvasToolId | null>(null)
   const historySelectionChangeRef = useRef<(selection: CanvasSelectionSnapshot) => void>(
@@ -174,7 +175,7 @@ export function useCanvasFlowRuntime({
     [edgesMap, nodesMap],
   )
   const modifiers = useCanvasModifierKeys()
-  const interaction = useCanvasSurfaceClickGuard(canvasSurfaceRef)
+  const interaction = pointerRouter.interaction
 
   const dragHandlers = useCanvasNodeDragHandlers({
     canvasEngine,
@@ -367,16 +368,6 @@ export function useCanvasFlowRuntime({
   const isSelectMode = activeTool === 'select'
   const isEdgeMode = activeTool === 'edge'
 
-  useCanvasSelectionRect({
-    canvasEngine,
-    viewportController,
-    surfaceRef: canvasSurfaceRef,
-    awareness: session.awareness.presence,
-    selection,
-    interaction,
-    enabled: canEdit && isSelectMode,
-  })
-
   const toolRuntime: CanvasToolRuntime = {
     viewport: {
       screenToCanvasPosition: viewportController.screenToCanvasPosition,
@@ -414,9 +405,19 @@ export function useCanvasFlowRuntime({
   const activeToolSpec = canvasToolSpecs[activeTool]
   const activeToolHandlers = activeToolSpec.createHandlers(toolRuntime)
 
-  useCanvasPointerBridge({
+  useCanvasPointerRouter({
+    router: pointerRouter,
     surfaceRef: canvasSurfaceRef,
-    activeToolHandlers,
+    options: {
+      activeTool,
+      activeToolHandlers,
+      awareness: session.awareness.presence,
+      canvasEngine,
+      enabled: canEdit,
+      getShiftPressed: () => readShiftModifier(modifiers),
+      selection,
+      viewportController,
+    },
   })
 
   useCanvasViewportInteractions({
@@ -488,12 +489,6 @@ export function useCanvasFlowRuntime({
           return
         }
         activeToolHandlers.onEdgeClick?.(event, edge)
-      },
-      onPaneClick: (event: ReactMouseEvent) => {
-        if (!canEdit || !isSelectMode || isPrimarySelectionModifier(event)) {
-          return
-        }
-        selection.clearSelection()
       },
       onMouseMove: cursorPresence.onMouseMove,
       onMouseLeave: cursorPresence.onMouseLeave,

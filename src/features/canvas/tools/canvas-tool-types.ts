@@ -180,7 +180,6 @@ export interface CanvasToolHandlers {
   onKeyUp?: (event: KeyboardEvent) => void
   onNodeClick?: (event: ReactMouseEvent, node: Node) => void
   onEdgeClick?: (event: ReactMouseEvent, edge: Edge) => void
-  onPaneClick?: (event: ReactMouseEvent) => void
   onMoveStart?: (event: MouseEvent | TouchEvent | null) => void
   onMoveEnd?: () => void
 }

@@ -27,14 +27,15 @@ interface CreateCanvasSelectionGestureSessionOptions<TState> {
   cancelAnimationFrame: typeof cancelAnimationFrame
 }
 
-export interface CanvasSelectionGestureSession<TState> {
+interface CanvasSelectionGestureSession<TState> {
   begin: (state: TState, mode: CanvasSelectionCommitMode) => void
   update: (state: TState) => void
   refresh: (state: TState) => void
-  commit: (state?: TState) => void
+  commit: (state?: TState) => boolean
   cancel: () => void
   dispose: () => void
   isTracking: () => boolean
+  hasRenderedPreview: () => boolean
 }
 
 export function createCanvasSelectionGestureSession<TState>({
@@ -184,7 +185,7 @@ export function createCanvasSelectionGestureSession<TState>({
     },
     commit: (state) => {
       if (!trackingState) {
-        return
+        return false
       }
 
       if (state !== undefined) {
@@ -199,10 +200,11 @@ export function createCanvasSelectionGestureSession<TState>({
         adapter.clear()
         trackingState = null
         latestPreviewSelection = null
-        return
+        return true
       }
 
       reset({ cancelGesture: true })
+      return false
     },
     cancel: () => {
       if (!trackingState) {
@@ -215,5 +217,6 @@ export function createCanvasSelectionGestureSession<TState>({
       reset({ cancelGesture: true })
     },
     isTracking: () => trackingState !== null,
+    hasRenderedPreview: () => latestPreviewSelection !== null,
   }
 }

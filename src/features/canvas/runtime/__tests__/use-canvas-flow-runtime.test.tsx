@@ -14,15 +14,18 @@ const selectionControllerSpy = vi.hoisted(() => vi.fn())
 const dragHandlersSpy = vi.hoisted(() => vi.fn())
 const cursorPresenceSpy = vi.hoisted(() => vi.fn())
 const nodeActionsSpy = vi.hoisted(() => vi.fn())
-const selectionRectSpy = vi.hoisted(() => vi.fn())
-const pointerBridgeSpy = vi.hoisted(() => vi.fn())
+const pointerRouterSpy = vi.hoisted(() => vi.fn())
 const viewportInteractionsSpy = vi.hoisted(() => vi.fn())
 const dropIntegrationSpy = vi.hoisted(() => vi.fn())
 const contextMenuSpy = vi.hoisted(() => vi.fn())
-const surfaceClickGuardSpy = vi.hoisted(() => vi.fn())
 const toolHandlersSpy = vi.hoisted(() => vi.fn())
 const clearSelectionSpy = vi.hoisted(() => vi.fn())
 const clearToolTransientStateSpy = vi.hoisted(() => vi.fn())
+const pointerRouterMock = vi.hoisted(() => ({
+  interaction: {
+    suppressNextSurfaceClick: vi.fn(),
+  },
+}))
 
 const documentWriterMock = vi.hoisted(() => ({
   createNode: vi.fn(),
@@ -50,11 +53,16 @@ const selectionControllerMock = vi.hoisted(() => ({
   clearSelection: vi.fn(),
   getSelectedNodeIds: vi.fn(() => new Set<string>()),
   getSelectedEdgeIds: vi.fn(() => new Set<string>()),
+  setGesturePreview: vi.fn(),
   toggleNodeFromTarget: vi.fn(),
   toggleEdgeFromTarget: vi.fn(),
+  toggleNode: vi.fn(),
+  toggleEdge: vi.fn(),
   beginGesture: vi.fn(),
   commitGestureSelection: vi.fn(),
+  commitGesture: vi.fn(),
   endGesture: vi.fn(),
+  cancelGesture: vi.fn(),
 }))
 const commandsMock = vi.hoisted(
   (): Pick<CanvasCommands, 'copy' | 'cut' | 'paste' | 'duplicate' | 'delete' | 'reorder'> => ({
@@ -99,7 +107,6 @@ const toolHandlersMock = vi.hoisted(
       onMoveEnd: vi.fn(),
       onNodeClick: vi.fn(),
       onEdgeClick: vi.fn(),
-      onPaneClick: vi.fn(),
     }) as const,
 )
 const session = vi.hoisted(() => ({
@@ -186,12 +193,9 @@ vi.mock('../interaction/create-canvas-node-actions', () => ({
   },
 }))
 
-vi.mock('../selection/use-canvas-selection-rect', () => ({
-  useCanvasSelectionRect: selectionRectSpy,
-}))
-
-vi.mock('../interaction/use-canvas-pointer-bridge', () => ({
-  useCanvasPointerBridge: pointerBridgeSpy,
+vi.mock('../interaction/use-canvas-pointer-router', () => ({
+  useCanvasPointerRouterController: () => pointerRouterMock,
+  useCanvasPointerRouter: pointerRouterSpy,
 }))
 
 vi.mock('../interaction/use-canvas-viewport-interactions', () => ({
@@ -213,15 +217,6 @@ vi.mock('../context-menu/use-canvas-context-menu', () => ({
   useCanvasContextMenu: (...args: Array<unknown>) => {
     contextMenuSpy(...args)
     return contextMenuMock
-  },
-}))
-
-vi.mock('../interaction/use-canvas-surface-click-guard', () => ({
-  useCanvasSurfaceClickGuard: (...args: Array<unknown>) => {
-    surfaceClickGuardSpy(...args)
-    return {
-      suppressNextSurfaceClick: vi.fn(),
-    }
   },
 }))
 
@@ -325,12 +320,10 @@ describe('useCanvasFlowRuntime', () => {
     dragHandlersSpy.mockReset()
     cursorPresenceSpy.mockReset()
     nodeActionsSpy.mockReset()
-    selectionRectSpy.mockReset()
-    pointerBridgeSpy.mockReset()
+    pointerRouterSpy.mockReset()
     viewportInteractionsSpy.mockReset()
     dropIntegrationSpy.mockReset()
     contextMenuSpy.mockReset()
-    surfaceClickGuardSpy.mockReset()
     toolHandlersSpy.mockReset()
     clearSelectionSpy.mockReset()
     clearToolTransientStateSpy.mockReset()
@@ -403,25 +396,24 @@ describe('useCanvasFlowRuntime', () => {
       session,
       transact: expect.any(Function),
     })
-    expect(selectionRectSpy).toHaveBeenCalledWith({
-      canvasEngine: expect.objectContaining({
-        getSnapshot: expect.any(Function),
-      }),
+    expect(pointerRouterSpy).toHaveBeenCalledWith({
+      router: pointerRouterMock,
       surfaceRef: expect.any(Object),
-      viewportController: expect.objectContaining({
-        getZoom: expect.any(Function),
-        screenToCanvasPosition: expect.any(Function),
+      options: expect.objectContaining({
+        activeTool: 'select',
+        activeToolHandlers: toolHandlersMock,
+        awareness: session.awareness.presence,
+        canvasEngine: expect.objectContaining({
+          getSnapshot: expect.any(Function),
+        }),
+        enabled: true,
+        getShiftPressed: expect.any(Function),
+        selection: selectionControllerMock,
+        viewportController: expect.objectContaining({
+          getZoom: expect.any(Function),
+          screenToCanvasPosition: expect.any(Function),
+        }),
       }),
-      awareness: session.awareness.presence,
-      selection: selectionControllerMock,
-      interaction: expect.objectContaining({
-        suppressNextSurfaceClick: expect.any(Function),
-      }),
-      enabled: true,
-    })
-    expect(pointerBridgeSpy).toHaveBeenCalledWith({
-      surfaceRef: expect.any(Object),
-      activeToolHandlers: toolHandlersMock,
     })
     expect(viewportInteractionsSpy).toHaveBeenCalledWith({
       ref: expect.objectContaining({ current: null }),
