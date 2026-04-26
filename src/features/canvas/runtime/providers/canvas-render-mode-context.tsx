@@ -1,6 +1,6 @@
 import { createContext } from 'react'
 
-export type CanvasRenderMode = 'interactive' | 'embedded-readonly'
+type CanvasRenderMode = 'interactive' | 'embedded-readonly'
 
 const CanvasRenderModeContext = createContext<CanvasRenderMode>('interactive')
 

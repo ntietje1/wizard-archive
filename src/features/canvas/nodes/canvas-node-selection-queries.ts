@@ -9,19 +9,17 @@ import {
 } from './canvas-node-modules'
 import type { AnyNormalizedCanvasNode } from './canvas-node-modules'
 import { boundsFromPoints, rectIntersectsBounds } from '../utils/canvas-geometry-utils'
-import type { CanvasViewportTools } from '../tools/canvas-tool-types'
 import type { Point2D } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-geometry-utils'
 import type { CanvasNodeSelectionContext } from './canvas-node-types'
-import type { MouseEvent as ReactMouseEvent } from 'react'
-import type { Node } from '@xyflow/react'
+import type { CanvasNode } from '../types/canvas-domain-types'
 
-function getSelectionNode(node: Node): AnyNormalizedCanvasNode | null {
+function getSelectionNode(node: CanvasNode): AnyNormalizedCanvasNode | null {
   return normalizeCanvasNode(node)
 }
 
 function getStrokeSelectionCandidateBounds(
-  node: Node,
+  node: CanvasNode,
   context: CanvasNodeSelectionContext,
 ): Bounds | null {
   if (node.type !== 'stroke') {
@@ -43,7 +41,7 @@ function getStrokeSelectionCandidateBounds(
 }
 
 function getCanvasRectangleCandidateBounds(
-  node: Node,
+  node: CanvasNode,
   context: CanvasNodeSelectionContext,
 ): Bounds | null {
   const strokeBounds = getStrokeSelectionCandidateBounds(node, context)
@@ -55,9 +53,9 @@ function getCanvasRectangleCandidateBounds(
 }
 
 function isCanvasSelectionCandidate(
-  node: Node,
+  node: CanvasNode,
   candidateBounds: Bounds | null,
-  getBounds: (node: Node) => Bounds | null,
+  getBounds: (node: CanvasNode) => Bounds | null,
 ): boolean {
   if (!candidateBounds) {
     return true
@@ -67,18 +65,8 @@ function isCanvasSelectionCandidate(
   return !bounds || rectIntersectsBounds(candidateBounds, bounds)
 }
 
-function screenEventToCanvasPosition(
-  context: Pick<CanvasViewportTools, 'screenToCanvasPosition'>,
-  event: Pick<ReactMouseEvent, 'clientX' | 'clientY'>,
-): ReturnType<CanvasViewportTools['screenToCanvasPosition']> {
-  return context.screenToCanvasPosition({
-    x: event.clientX,
-    y: event.clientY,
-  })
-}
-
 export function findCanvasNodeAtPoint(
-  nodes: ReadonlyArray<Node>,
+  nodes: ReadonlyArray<CanvasNode>,
   point: Point2D,
   context: CanvasNodeSelectionContext,
 ): string | null {
@@ -93,28 +81,13 @@ export function findCanvasNodeAtPoint(
   return null
 }
 
-export function hitTestCanvasNode(
-  context: Pick<CanvasViewportTools, 'screenToCanvasPosition' | 'getZoom'> & {
-    getMeasuredNodes: () => Array<Node>
-  },
-  event: ReactMouseEvent,
-): string | null {
-  return findCanvasNodeAtPoint(
-    context.getMeasuredNodes(),
-    screenEventToCanvasPosition(context, event),
-    {
-      zoom: context.getZoom(),
-    },
-  )
-}
-
 export function getCanvasNodesMatchingRectangle(
-  nodes: ReadonlyArray<Node>,
+  nodes: ReadonlyArray<CanvasNode>,
   rect: Bounds,
   context: CanvasNodeSelectionContext,
 ): ReadonlySet<string> {
   const matchingIds = new Set<string>()
-  const getBounds = (candidate: Node) => getCanvasRectangleCandidateBounds(candidate, context)
+  const getBounds = (candidate: CanvasNode) => getCanvasRectangleCandidateBounds(candidate, context)
   for (const node of nodes) {
     if (!isCanvasSelectionCandidate(node, rect, getBounds)) {
       continue
@@ -130,7 +103,7 @@ export function getCanvasNodesMatchingRectangle(
 }
 
 export function getCanvasNodesMatchingLasso(
-  nodes: ReadonlyArray<Node>,
+  nodes: ReadonlyArray<CanvasNode>,
   polygon: ReadonlyArray<Point2D>,
   context: CanvasNodeSelectionContext,
 ): ReadonlySet<string> {

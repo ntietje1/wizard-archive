@@ -1,6 +1,6 @@
 import { EMPTY_SET } from './canvas-document-projector'
 import type { CanvasEngineSnapshot, CanvasViewport } from './canvas-engine-types'
-import type { XYPosition } from '@xyflow/react'
+import type { CanvasPosition } from '../types/canvas-domain-types'
 
 const MIN_ZOOM_SHAPE_COUNT_THRESHOLD = 500
 
@@ -19,14 +19,14 @@ interface CanvasViewportManager {
   getEfficientZoomLevel: (snapshot: CanvasEngineSnapshot) => number
   screenToCanvasPosition: (
     snapshot: CanvasEngineSnapshot,
-    position: XYPosition,
+    position: CanvasPosition,
     surfaceBounds: DOMRect | null,
-  ) => XYPosition
+  ) => CanvasPosition
   canvasToScreenPosition: (
     snapshot: CanvasEngineSnapshot,
-    position: XYPosition,
+    position: CanvasPosition,
     surfaceBounds: DOMRect | null,
-  ) => XYPosition
+  ) => CanvasPosition
   reset: () => void
 }
 

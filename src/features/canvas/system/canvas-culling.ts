@@ -5,7 +5,7 @@ import type { CanvasSelectionState } from './canvas-selection'
 import type { CanvasViewport } from './canvas-render-scheduler'
 import type { Bounds } from '../utils/canvas-geometry-utils'
 import { rectIntersectsBounds } from '../utils/canvas-geometry-utils'
-import type { Edge, Node } from '@xyflow/react'
+import type { CanvasEdge, CanvasNode } from '../types/canvas-domain-types'
 
 const CULLING_OVERSCAN_PX = 512
 const MIN_ZOOM = 1e-6
@@ -24,13 +24,13 @@ type CanvasCullingState = {
   viewport: CanvasViewport
   surfaceBounds: Pick<DOMRect, 'width' | 'height'> | null
   nodeLookup: ReadonlyMap<string, CanvasCullingNode>
-  edges: ReadonlyArray<Edge>
+  edges: ReadonlyArray<CanvasEdge>
   selection: CanvasSelectionState
   draggingNodeIds: ReadonlySet<string>
 }
 
 type CanvasCullingNode = {
-  node: Node
+  node: CanvasNode
   measured: {
     width?: number
     height?: number
@@ -128,7 +128,7 @@ function computeEdgeCulling({
   alwaysVisibleNodeIds,
   alwaysVisibleEdgeIds,
 }: {
-  edges: ReadonlyArray<Edge>
+  edges: ReadonlyArray<CanvasEdge>
   nodeBounds: ReadonlyMap<string, Bounds>
   viewportBounds: Bounds
   alwaysVisibleNodeIds: ReadonlySet<string>
@@ -207,7 +207,7 @@ function getNodeCullingBounds({ node, measured }: CanvasCullingNode): Bounds | n
 }
 
 function getMeasuredCanvasNodeBounds(
-  node: Node,
+  node: CanvasNode,
   measured: CanvasCullingNode['measured'],
 ): Bounds | null {
   if (
@@ -227,7 +227,7 @@ function getMeasuredCanvasNodeBounds(
   }
 }
 
-function getNodeCullingPadding(node: Node): number {
+function getNodeCullingPadding(node: CanvasNode): number {
   if (node.type !== 'stroke') {
     return 0
   }
@@ -236,7 +236,10 @@ function getNodeCullingPadding(node: Node): number {
   return Math.max(size, 0)
 }
 
-function getEdgeCullingBounds(edge: Edge, nodeBounds: ReadonlyMap<string, Bounds>): Bounds | null {
+function getEdgeCullingBounds(
+  edge: CanvasEdge,
+  nodeBounds: ReadonlyMap<string, Bounds>,
+): Bounds | null {
   const sourceBounds = nodeBounds.get(edge.source)
   const targetBounds = nodeBounds.get(edge.target)
   if (!sourceBounds || !targetBounds) {

@@ -10,15 +10,15 @@ import {
   setCanvasDragSnapGuides,
 } from '../runtime/interaction/canvas-drag-snap-overlay'
 import type { CanvasEngine } from './canvas-engine'
-import type { Node, XYPosition } from '@xyflow/react'
+import type { CanvasNode, CanvasPosition } from '../types/canvas-domain-types'
 
 export interface CanvasDragEvent {
   sourceEvent: PointerEvent | MouseEvent
   activeNodeId: string
   draggedNodeIds: ReadonlySet<string>
-  startPositions: ReadonlyMap<string, XYPosition>
-  resolvedPositions: ReadonlyMap<string, XYPosition>
-  delta: XYPosition
+  startPositions: ReadonlyMap<string, CanvasPosition>
+  resolvedPositions: ReadonlyMap<string, CanvasPosition>
+  delta: CanvasPosition
   final: boolean
 }
 
@@ -30,19 +30,23 @@ type CanvasDragCallbacks = {
 
 export interface CanvasDragController {
   handlePointerDown: (nodeId: string, event: PointerEvent | MouseEvent) => void
-  profileDrag: (options: { nodeIds: ReadonlySet<string>; delta: XYPosition; steps: number }) => void
+  profileDrag: (options: {
+    nodeIds: ReadonlySet<string>
+    delta: CanvasPosition
+    steps: number
+  }) => void
   destroy: () => void
 }
 
 interface CanvasDragSession {
   activeNodeId: string
   draggedNodeIds: ReadonlySet<string>
-  startPointer: XYPosition
-  pendingClientStart: XYPosition
-  startPositions: ReadonlyMap<string, XYPosition>
+  startPointer: CanvasPosition
+  pendingClientStart: CanvasPosition
+  startPositions: ReadonlyMap<string, CanvasPosition>
   nodeBounds: ReadonlyMap<string, { x: number; y: number; width: number; height: number }>
   targetBounds: Array<{ x: number; y: number; width: number; height: number }>
-  lastResolvedPositions: ReadonlyMap<string, XYPosition>
+  lastResolvedPositions: ReadonlyMap<string, CanvasPosition>
   started: boolean
   inputType: 'pointer' | 'mouse'
 }
@@ -50,7 +54,7 @@ interface CanvasDragSession {
 export function createCanvasDragController({
   callbacks = {},
   canvasEngine,
-  getFlowPosition,
+  getCanvasPosition,
   getPrimaryPressed,
   getCanStartDrag = () => true,
   getSelectedNodeIds,
@@ -60,7 +64,7 @@ export function createCanvasDragController({
 }: {
   callbacks?: CanvasDragCallbacks
   canvasEngine: CanvasEngine
-  getFlowPosition: (point: XYPosition) => XYPosition
+  getCanvasPosition: (point: CanvasPosition) => CanvasPosition
   getPrimaryPressed: () => boolean
   getCanStartDrag?: () => boolean
   getSelectedNodeIds: () => ReadonlySet<string>
@@ -91,7 +95,7 @@ export function createCanvasDragController({
       activeNodeId: nodeId,
       canvasEngine,
       clientStart: { x: event.clientX, y: event.clientY },
-      getFlowPosition,
+      getCanvasPosition,
       inputType,
       selectedNodeIds: getSelectedNodeIds(),
     })
@@ -114,7 +118,7 @@ export function createCanvasDragController({
       activeNodeId,
       canvasEngine,
       clientStart: start,
-      getFlowPosition,
+      getCanvasPosition,
       inputType: 'mouse',
       selectedNodeIds: nodeIds,
     })
@@ -220,7 +224,7 @@ export function createCanvasDragController({
 
     const resolvedPositions = resolveDragPositions({
       canvasEngine,
-      getFlowPosition,
+      getCanvasPosition,
       getPrimaryPressed,
       getShiftPressed,
       getZoom,
@@ -254,14 +258,14 @@ function createDragSession({
   activeNodeId,
   canvasEngine,
   clientStart,
-  getFlowPosition,
+  getCanvasPosition,
   inputType,
   selectedNodeIds,
 }: {
   activeNodeId: string
   canvasEngine: CanvasEngine
-  clientStart: XYPosition
-  getFlowPosition: (point: XYPosition) => XYPosition
+  clientStart: CanvasPosition
+  getCanvasPosition: (point: CanvasPosition) => CanvasPosition
   inputType: CanvasDragSession['inputType']
   selectedNodeIds: ReadonlySet<string>
 }): CanvasDragSession | null {
@@ -272,7 +276,7 @@ function createDragSession({
   const draggedNodes = Array.from(
     draggedNodeIds,
     (nodeId) => snapshot.nodeLookup.get(nodeId)?.node,
-  ).filter((node): node is Node => Boolean(node))
+  ).filter((node): node is CanvasNode => Boolean(node))
 
   if (draggedNodes.length === 0) {
     return null
@@ -295,7 +299,7 @@ function createDragSession({
   return {
     activeNodeId,
     draggedNodeIds,
-    startPointer: getFlowPosition(clientStart),
+    startPointer: getCanvasPosition(clientStart),
     pendingClientStart: clientStart,
     startPositions,
     nodeBounds,
@@ -308,7 +312,7 @@ function createDragSession({
 
 function resolveDragPositions({
   canvasEngine,
-  getFlowPosition,
+  getCanvasPosition,
   getPrimaryPressed,
   getShiftPressed,
   getZoom,
@@ -316,14 +320,14 @@ function resolveDragPositions({
   session,
 }: {
   canvasEngine: CanvasEngine
-  getFlowPosition: (point: XYPosition) => XYPosition
+  getCanvasPosition: (point: CanvasPosition) => CanvasPosition
   getPrimaryPressed: () => boolean
   getShiftPressed: () => boolean
   getZoom: () => number
-  pointer: XYPosition
+  pointer: CanvasPosition
   session: CanvasDragSession
 }) {
-  const currentPointer = getFlowPosition(pointer)
+  const currentPointer = getCanvasPosition(pointer)
   const constrainedPointer = getShiftPressed()
     ? constrainPointToAxis(session.startPointer, currentPointer)
     : currentPointer
@@ -331,7 +335,7 @@ function resolveDragPositions({
     x: constrainedPointer.x - session.startPointer.x,
     y: constrainedPointer.y - session.startPointer.y,
   }
-  const resolvedPositions = new Map<string, XYPosition>()
+  const resolvedPositions = new Map<string, CanvasPosition>()
 
   for (const [nodeId, startPosition] of session.startPositions) {
     resolvedPositions.set(nodeId, {
@@ -379,7 +383,7 @@ function resolveDragPositions({
 function createDragEvent(
   sourceEvent: PointerEvent | MouseEvent,
   session: CanvasDragSession,
-  resolvedPositions: ReadonlyMap<string, XYPosition>,
+  resolvedPositions: ReadonlyMap<string, CanvasPosition>,
   useStartPositions: boolean,
   final: boolean,
 ): CanvasDragEvent {

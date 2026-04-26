@@ -19,7 +19,7 @@ function cloneCanvasNode(node: Node): Node {
 }
 
 function cloneCanvasEdge(edge: Edge): Edge {
-  // Canvas edges do not carry ephemeral React Flow runtime state, so a direct clone is sufficient.
+  // Canvas edges do not carry ephemeral renderer runtime state, so a direct clone is sufficient.
   return structuredClone(edge)
 }
 

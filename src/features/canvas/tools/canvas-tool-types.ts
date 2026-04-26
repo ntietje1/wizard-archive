@@ -11,7 +11,12 @@ import type {
   CanvasSelectionGestureKind,
   CanvasSelectionSnapshot,
 } from '../system/canvas-selection'
-import type { Connection, Edge, Node, XYPosition } from '@xyflow/react'
+import type {
+  CanvasConnection,
+  CanvasEdge,
+  CanvasNode,
+  CanvasPosition,
+} from '../types/canvas-domain-types'
 import type { ComponentType, CSSProperties, MouseEvent as ReactMouseEvent, ReactNode } from 'react'
 
 export type CanvasToolId = 'select' | 'hand' | 'draw' | 'erase' | 'lasso' | 'text' | 'edge'
@@ -56,27 +61,27 @@ export interface CanvasEditSessionState {
  */
 export interface CanvasNodeActions {
   transact?: (fn: () => void) => void
-  onResize: (nodeId: string, width: number, height: number, position: XYPosition) => void
-  onResizeEnd: (nodeId: string, width: number, height: number, position: XYPosition) => void
+  onResize: (nodeId: string, width: number, height: number, position: CanvasPosition) => void
+  onResizeEnd: (nodeId: string, width: number, height: number, position: CanvasPosition) => void
 }
 
 export interface CanvasDocumentWriter {
-  createNode: (node: Node) => void
+  createNode: (node: CanvasNode) => void
   patchNodeData: (updates: ReadonlyMap<string, Record<string, unknown>>) => void
   patchEdges: (updates: ReadonlyMap<string, CanvasEdgePatch>) => void
-  resizeNode: (nodeId: string, width: number, height: number, position: XYPosition) => void
+  resizeNode: (nodeId: string, width: number, height: number, position: CanvasPosition) => void
   deleteNodes: (nodeIds: ReadonlySet<string>) => void
-  createEdge: (connection: Connection, defaults?: CanvasEdgeCreationDefaults) => void
+  createEdge: (connection: CanvasConnection, defaults?: CanvasEdgeCreationDefaults) => void
   deleteEdges: (edgeIds: ReadonlySet<string>) => void
-  setNodePositions: (positions: ReadonlyMap<string, XYPosition>) => void
+  setNodePositions: (positions: ReadonlyMap<string, CanvasPosition>) => void
 }
 
 interface CanvasDocumentReader {
-  getNodes: () => Array<Node>
-  getEdges: () => Array<Edge>
+  getNodes: () => Array<CanvasNode>
+  getEdges: () => Array<CanvasEdge>
 }
 
-export type CanvasMeasuredNode = Node & {
+export type CanvasMeasuredNode = CanvasNode & {
   width: number
   height: number
 }
@@ -113,7 +118,7 @@ interface CanvasModifierKeyReader {
 }
 
 export interface CanvasViewportTools {
-  screenToCanvasPosition: (position: XYPosition) => XYPosition
+  screenToCanvasPosition: (position: CanvasPosition) => CanvasPosition
   getZoom: () => number
 }
 
@@ -178,8 +183,8 @@ export interface CanvasToolHandlers {
   onPointerCancel?: (event: PointerEvent) => void
   onKeyDown?: (event: KeyboardEvent) => void
   onKeyUp?: (event: KeyboardEvent) => void
-  onNodeClick?: (event: ReactMouseEvent, node: Node) => void
-  onEdgeClick?: (event: ReactMouseEvent, edge: Edge) => void
+  onNodeClick?: (event: ReactMouseEvent, node: CanvasNode) => void
+  onEdgeClick?: (event: ReactMouseEvent, edge: CanvasEdge) => void
   onMoveStart?: (event: MouseEvent | TouchEvent | null) => void
   onMoveEnd?: () => void
 }

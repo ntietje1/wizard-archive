@@ -1,4 +1,4 @@
-import type { XYPosition } from '@xyflow/react'
+import type { CanvasPosition } from '../types/canvas-domain-types'
 
 export type Bounds = {
   x: number
@@ -7,9 +7,9 @@ export type Bounds = {
   height: number
 }
 
-export type PointLike = XYPosition
+export type PointLike = CanvasPosition
 
-export function rectFromPoints(a: XYPosition, b: XYPosition): Bounds {
+export function rectFromPoints(a: CanvasPosition, b: CanvasPosition): Bounds {
   return {
     x: Math.min(a.x, b.x),
     y: Math.min(a.y, b.y),

@@ -3,10 +3,11 @@ import type {
   CanvasInternalEdge,
   CanvasInternalNode,
 } from './canvas-engine-types'
-import type { Edge, Node } from '@xyflow/react'
+import type { CanvasEdgePatch } from '../edges/canvas-edge-types'
+import type { CanvasEdge, CanvasNode } from '../types/canvas-domain-types'
 
-export const EMPTY_NODES: ReadonlyArray<Node> = []
-export const EMPTY_EDGES: ReadonlyArray<Edge> = []
+export const EMPTY_NODES: ReadonlyArray<CanvasNode> = []
+export const EMPTY_EDGES: ReadonlyArray<CanvasEdge> = []
 export const EMPTY_NODE_LOOKUP: ReadonlyMap<string, CanvasInternalNode> = new Map()
 export const EMPTY_EDGE_LOOKUP: ReadonlyMap<string, CanvasInternalEdge> = new Map()
 export const EMPTY_EDGE_IDS_BY_NODE_ID: ReadonlyMap<string, ReadonlySet<string>> = new Map()
@@ -20,8 +21,8 @@ export function projectCanvasDocumentSnapshot({
   draggingNodeIds,
 }: {
   snapshot: CanvasEngineSnapshot
-  nodes?: ReadonlyArray<Node>
-  edges?: ReadonlyArray<Edge>
+  nodes?: ReadonlyArray<CanvasNode>
+  edges?: ReadonlyArray<CanvasEdge>
   draggingNodeIds: ReadonlySet<string>
 }): Omit<CanvasEngineSnapshot, 'version'> {
   const nextNodes = nodes ?? snapshot.nodes
@@ -42,8 +43,8 @@ export function projectCanvasDocumentSnapshot({
 }
 
 export function patchCanvasNodes(
-  nodes: ReadonlyArray<Node>,
-  updates: ReadonlyMap<string, Partial<Node>>,
+  nodes: ReadonlyArray<CanvasNode>,
+  updates: ReadonlyMap<string, Partial<CanvasNode>>,
 ) {
   let changed = false
   const nextNodes = nodes.map((node) => {
@@ -54,7 +55,7 @@ export function patchCanvasNodes(
 
     if (
       Object.entries(patch).every(
-        ([key, value]) => node[key as keyof Node] === (value as Node[keyof Node]),
+        ([key, value]) => node[key as keyof CanvasNode] === (value as CanvasNode[keyof CanvasNode]),
       )
     ) {
       return node
@@ -69,8 +70,8 @@ export function patchCanvasNodes(
 }
 
 export function patchCanvasEdges(
-  edges: ReadonlyArray<Edge>,
-  updates: ReadonlyMap<string, Partial<Edge>>,
+  edges: ReadonlyArray<CanvasEdge>,
+  updates: ReadonlyMap<string, CanvasEdgePatch>,
 ) {
   let changed = false
   const nextEdges = edges.map((edge) => {
@@ -84,7 +85,11 @@ export function patchCanvasEdges(
       ...patch,
       style: patch.style ? { ...edge.style, ...patch.style } : edge.style,
     }
-    changed ||= nextEdge !== edge
+    if (isCanvasEdgePatchNoop(edge, patch)) {
+      return edge
+    }
+
+    changed = true
     return nextEdge
   })
 
@@ -92,7 +97,7 @@ export function patchCanvasEdges(
 }
 
 export function createNodeLookup(
-  nodes: ReadonlyArray<Node>,
+  nodes: ReadonlyArray<CanvasNode>,
   selectedNodeIds: ReadonlySet<string>,
   draggingNodeIds: ReadonlySet<string>,
 ): ReadonlyMap<string, CanvasInternalNode> {
@@ -119,7 +124,7 @@ export function createNodeLookup(
 }
 
 function createEdgeLookup(
-  edges: ReadonlyArray<Edge>,
+  edges: ReadonlyArray<CanvasEdge>,
   selectedEdgeIds: ReadonlySet<string>,
 ): ReadonlyMap<string, CanvasInternalEdge> {
   const lookup = new Map<string, CanvasInternalEdge>()
@@ -137,7 +142,9 @@ function createEdgeLookup(
   return lookup
 }
 
-function createEdgeAdjacency(edges: ReadonlyArray<Edge>): ReadonlyMap<string, ReadonlySet<string>> {
+function createEdgeAdjacency(
+  edges: ReadonlyArray<CanvasEdge>,
+): ReadonlyMap<string, ReadonlySet<string>> {
   const adjacency = new Map<string, Set<string>>()
 
   for (const edge of edges) {
@@ -146,6 +153,20 @@ function createEdgeAdjacency(edges: ReadonlyArray<Edge>): ReadonlyMap<string, Re
   }
 
   return adjacency
+}
+
+function isCanvasEdgePatchNoop(edge: CanvasEdge, patch: CanvasEdgePatch) {
+  if (patch.type !== undefined && patch.type !== edge.type) {
+    return false
+  }
+
+  if (!patch.style) {
+    return true
+  }
+
+  return Object.entries(patch.style).every(
+    ([key, value]) => edge.style?.[key as keyof NonNullable<CanvasEdge['style']>] === value,
+  )
 }
 
 function addEdgeAdjacency(adjacency: Map<string, Set<string>>, nodeId: string, edgeId: string) {

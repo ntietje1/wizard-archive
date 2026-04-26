@@ -1,20 +1,21 @@
-import type { Position } from '@xyflow/react'
 import type { CSSProperties } from 'react'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 
+type CanvasConnectionHandlePosition = 'top' | 'right' | 'bottom' | 'left'
+
 export type CanvasConnectionHandleDescriptor = {
   id: string
-  position: Position
+  position: CanvasConnectionHandlePosition
   style?: CSSProperties
 }
 
 const HANDLE_POSITIONS: ReadonlyArray<CanvasConnectionHandleDescriptor> = [
-  { id: 'top', position: 'top' as Position },
-  { id: 'right', position: 'right' as Position },
-  { id: 'bottom', position: 'bottom' as Position },
-  { id: 'left', position: 'left' as Position },
+  { id: 'top', position: 'top' },
+  { id: 'right', position: 'right' },
+  { id: 'bottom', position: 'bottom' },
+  { id: 'left', position: 'left' },
 ] as const
 
 const BASE_HANDLE_CLASS =
@@ -52,7 +53,7 @@ export function CanvasNodeConnectionHandles({
   ))
 }
 
-function getDefaultHandleStyle(position: Position): CSSProperties {
+function getDefaultHandleStyle(position: CanvasConnectionHandlePosition): CSSProperties {
   switch (position) {
     case 'top':
       return { position: 'absolute', left: '50%', top: 0, transform: 'translate(-50%, -50%)' }

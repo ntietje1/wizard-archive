@@ -1,4 +1,4 @@
-import type { XYPosition } from '@xyflow/react'
+import type { CanvasPosition } from '../../types/canvas-domain-types'
 
 interface CanvasPerformanceMetric {
   name: string
@@ -15,20 +15,20 @@ interface CanvasPerformanceRuntime {
     columns?: number
     spacingX?: number
     spacingY?: number
-    start?: XYPosition
+    start?: CanvasPosition
   }) => void
   seedStrokeNodes: (options: {
     count: number
     columns?: number
     spacingX?: number
     spacingY?: number
-    start?: XYPosition
+    start?: CanvasPosition
     pointsPerStroke?: number
   }) => void
   selectFirstNodes: (count: number) => void
   getSelectedCount: () => number
-  profileSelectedNodeDrag: (options: { delta: XYPosition; steps: number }) => void
-  getNodePosition: (nodeId: string) => XYPosition | null
+  profileSelectedNodeDrag: (options: { delta: CanvasPosition; steps: number }) => void
+  getNodePosition: (nodeId: string) => CanvasPosition | null
   setViewport: (viewport: { x: number; y: number; zoom: number }) => void
   getViewport: () => { x: number; y: number; zoom: number }
   updateSelectedNodeSurface: () => void

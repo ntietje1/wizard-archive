@@ -1,41 +1,10 @@
 import { render, screen } from '@testing-library/react'
-import type { ReactNode } from 'react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { CanvasNodeConnectionHandles } from '../canvas-node-connection-handles'
 import { useCanvasToolStore } from '../../../stores/canvas-tool-store'
 
-const reactFlowMock = vi.hoisted(() => ({
-  connectionInProgress: false,
-}))
-
-vi.mock('@xyflow/react', () => ({
-  Handle: ({
-    children,
-    ...props
-  }: {
-    children?: ReactNode
-    id: string
-    type: 'source' | 'target'
-    position: string
-    'data-testid': string
-    'data-selected'?: string
-    'data-handles-visible'?: string
-    className?: string
-    style?: React.CSSProperties
-  }) => <div {...props}>{children}</div>,
-  Position: {
-    Top: 'top',
-    Right: 'right',
-    Bottom: 'bottom',
-    Left: 'left',
-  },
-  useConnection: (selector?: (connection: { inProgress: boolean }) => boolean) =>
-    selector ? selector({ inProgress: reactFlowMock.connectionInProgress }) : null,
-}))
-
 describe('CanvasNodeConnectionHandles', () => {
   beforeEach(() => {
-    reactFlowMock.connectionInProgress = false
     useCanvasToolStore.getState().reset()
   })
 
@@ -49,7 +18,6 @@ describe('CanvasNodeConnectionHandles', () => {
   })
 
   it('marks handles visible while the edge tool is active', () => {
-    reactFlowMock.connectionInProgress = true
     useCanvasToolStore.getState().setActiveTool('edge')
 
     render(<CanvasNodeConnectionHandles />)

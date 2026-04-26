@@ -13,9 +13,43 @@ import type {
 import type { CanvasCommands } from '../document/use-canvas-commands'
 import { createContext, useContext } from 'react'
 
+type CanvasDomRuntimeAdapter = Pick<
+  CanvasEngine,
+  | 'flushRenderScheduler'
+  | 'registerEdgeElement'
+  | 'registerEdgePaths'
+  | 'registerNodeElement'
+  | 'registerNodeSurfaceElement'
+  | 'registerStrokeNodePaths'
+  | 'registerViewportElement'
+  | 'registerViewportOverlayElement'
+  | 'scheduleCameraState'
+  | 'scheduleEdgePatches'
+  | 'scheduleNodeDataPatches'
+  | 'scheduleViewportTransform'
+>
+
+export function createCanvasDomRuntimeAdapter(canvasEngine: CanvasEngine): CanvasDomRuntimeAdapter {
+  return {
+    flushRenderScheduler: canvasEngine.flushRenderScheduler,
+    registerEdgeElement: canvasEngine.registerEdgeElement,
+    registerEdgePaths: canvasEngine.registerEdgePaths,
+    registerNodeElement: canvasEngine.registerNodeElement,
+    registerNodeSurfaceElement: canvasEngine.registerNodeSurfaceElement,
+    registerStrokeNodePaths: canvasEngine.registerStrokeNodePaths,
+    registerViewportElement: canvasEngine.registerViewportElement,
+    registerViewportOverlayElement: canvasEngine.registerViewportOverlayElement,
+    scheduleCameraState: canvasEngine.scheduleCameraState,
+    scheduleEdgePatches: canvasEngine.scheduleEdgePatches,
+    scheduleNodeDataPatches: canvasEngine.scheduleNodeDataPatches,
+    scheduleViewportTransform: canvasEngine.scheduleViewportTransform,
+  }
+}
+
 export interface CanvasRuntime {
   canEdit: boolean
   canvasEngine: CanvasEngine
+  domRuntime: CanvasDomRuntimeAdapter
   remoteHighlights: ReadonlyMap<string, RemoteHighlight>
   history: CanvasHistoryController
   commands: CanvasCommands
@@ -55,6 +89,7 @@ const READ_ONLY_CANVAS_ENGINE = createCanvasEngine()
 export const READ_ONLY_CANVAS_RUNTIME: CanvasRuntime = {
   canEdit: false,
   canvasEngine: READ_ONLY_CANVAS_ENGINE,
+  domRuntime: createCanvasDomRuntimeAdapter(READ_ONLY_CANVAS_ENGINE),
   remoteHighlights: EMPTY_REMOTE_HIGHLIGHTS,
   history: {
     canUndo: false,

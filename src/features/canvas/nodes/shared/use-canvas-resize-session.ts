@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
-import type { ControlPosition } from '@xyflow/react'
 import { getCanvasNodeBounds } from './canvas-node-bounds'
 import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
@@ -12,7 +11,10 @@ import { useIsCanvasNodeSelected } from '../../runtime/selection/use-canvas-sele
 import { isPrimarySelectionModifier } from '../../utils/canvas-selection-utils'
 import { releasePointerCapture } from '../../tools/shared/tool-module-utils'
 import { createCanvasResizeController } from '../../system/canvas-resize-controller'
-import type { CanvasNodeResizeHandleDescriptor } from './canvas-node-resize-handles'
+import type {
+  CanvasNodeResizeHandleDescriptor,
+  CanvasNodeResizeHandlePosition,
+} from './canvas-node-resize-handles'
 import type { CSSProperties } from 'react'
 
 const HANDLE_SIZE = 4
@@ -21,7 +23,7 @@ const SELECTION_BORDER_OUTSET_PX = 1
 const RESIZE_HANDLE_OUTSET_PX = SELECTION_BORDER_OUTSET_PX
 
 const CORNERS: Array<{
-  position: ControlPosition
+  position: CanvasNodeResizeHandlePosition
   cursorClassName: string
   style: CSSProperties
 }> = [

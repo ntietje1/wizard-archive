@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import { forwardRef } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { CanvasFlow } from '../canvas-viewer'
-import type { Edge, Node } from '@xyflow/react'
+import { CanvasEditor } from '../canvas-viewer'
+import type { CanvasEdge, CanvasNode } from '../../types/canvas-domain-types'
 import * as Y from 'yjs'
 import { testId } from '~/test/helpers/test-id'
 
@@ -43,6 +43,20 @@ const runtimeMock = vi.hoisted(() => ({
     createEdge: vi.fn(),
     deleteEdges: vi.fn(),
     setNodePositions: vi.fn(),
+  },
+  domRuntime: {
+    flushRenderScheduler: vi.fn(),
+    registerEdgeElement: vi.fn(() => vi.fn()),
+    registerEdgePaths: vi.fn(() => vi.fn()),
+    registerNodeElement: vi.fn(() => vi.fn()),
+    registerNodeSurfaceElement: vi.fn(() => vi.fn()),
+    registerStrokeNodePaths: vi.fn(() => vi.fn()),
+    registerViewportElement: vi.fn(() => vi.fn()),
+    registerViewportOverlayElement: vi.fn(() => vi.fn()),
+    scheduleCameraState: vi.fn(),
+    scheduleEdgePatches: vi.fn(),
+    scheduleNodeDataPatches: vi.fn(),
+    scheduleViewportTransform: vi.fn(),
   },
   dropTarget: {
     dropOverlayRef: { current: null },
@@ -142,8 +156,8 @@ vi.mock('@xyflow/react', () => ({
   },
 }))
 
-vi.mock('../../runtime/use-canvas-flow-runtime', () => ({
-  useCanvasFlowRuntime: () => runtimeMock,
+vi.mock('../../runtime/use-canvas-editor-runtime', () => ({
+  useCanvasEditorRuntime: () => runtimeMock,
 }))
 
 vi.mock('../../runtime/providers/canvas-runtime-context', () => ({
@@ -177,10 +191,6 @@ vi.mock('~/features/context-menu/components/context-menu-host', () => ({
   ContextMenuHost: forwardRef((_props, _ref) => null),
 }))
 
-vi.mock('../canvas-minimap-node', () => ({
-  MiniMapNode: () => null,
-}))
-
 vi.mock('../../runtime/selection/use-canvas-pending-selection-preview', () => ({
   useCanvasPendingSelectionPreviewSummary: () => ({
     active: false,
@@ -203,7 +213,7 @@ vi.mock('~/features/dnd/stores/dnd-store', () => ({
   ) => selector({ isDraggingElement: false, isDraggingFiles: false }),
 }))
 
-describe('CanvasFlow', () => {
+describe('CanvasEditor', () => {
   beforeEach(() => {
     sceneMock.props = null
   })
@@ -215,7 +225,7 @@ describe('CanvasFlow', () => {
 
   it('renders the internal canvas scene with the canvas-owned runtime', () => {
     const doc = new Y.Doc()
-    const props: Parameters<typeof CanvasFlow>[0] = {
+    const props: Parameters<typeof CanvasEditor>[0] = {
       status: 'ready',
       canvasId: testId<'sidebarItems'>('canvas-1'),
       campaignId: testId<'campaigns'>('campaign-1'),
@@ -225,11 +235,11 @@ describe('CanvasFlow', () => {
       provider: null,
       user: { name: 'Test User', color: '#61afef' },
       doc,
-      nodesMap: doc.getMap<Node>('nodes'),
-      edgesMap: doc.getMap<Edge>('edges'),
+      nodesMap: doc.getMap<CanvasNode>('nodes'),
+      edgesMap: doc.getMap<CanvasEdge>('edges'),
     }
 
-    render(<CanvasFlow {...props} />)
+    render(<CanvasEditor {...props} />)
 
     expect(screen.getByTestId('canvas-scene')).toBeInTheDocument()
     expect(sceneMock.props).toEqual(
@@ -242,7 +252,7 @@ describe('CanvasFlow', () => {
         onPaneContextMenu: runtimeMock.contextMenu.openForPane,
       }),
     )
-    expect(screen.getByTestId('canvas-flow-shell')).toHaveStyle({ cursor: 'pointer' })
+    expect(screen.getByTestId('canvas-editor-shell')).toHaveStyle({ cursor: 'pointer' })
 
     doc.destroy()
   })
@@ -253,7 +263,7 @@ describe('CanvasFlow', () => {
     const doc = new Y.Doc()
 
     render(
-      <CanvasFlow
+      <CanvasEditor
         status="ready"
         canvasId={testId<'sidebarItems'>('canvas-1')}
         campaignId={testId<'campaigns'>('campaign-1')}
@@ -263,14 +273,14 @@ describe('CanvasFlow', () => {
         provider={null}
         user={{ name: 'Test User', color: '#61afef' }}
         doc={doc}
-        nodesMap={doc.getMap<Node>('nodes')}
-        edgesMap={doc.getMap<Edge>('edges')}
+        nodesMap={doc.getMap<CanvasNode>('nodes')}
+        edgesMap={doc.getMap<CanvasEdge>('edges')}
       />,
     )
 
     expect(screen.getByTestId('canvas-scene')).toBeInTheDocument()
     expect(sceneMock.props?.sceneHandlers).toBe(runtimeMock.sceneHandlers)
-    expect(screen.getByTestId('canvas-flow-shell')).toHaveStyle({ cursor: 'crosshair' })
+    expect(screen.getByTestId('canvas-editor-shell')).toHaveStyle({ cursor: 'crosshair' })
 
     doc.destroy()
   })

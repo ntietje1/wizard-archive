@@ -4,7 +4,7 @@ export type CanvasAwarenessPresence = Partial<Record<CanvasAwarenessNamespace, u
 
 /**
  * Serialized in-progress stroke data broadcast via awareness.
- * `points` — array of [x, y, pressure] tuples in flow-space pixels.
+ * `points` — array of [x, y, pressure] tuples in canvas-space pixels.
  * `color` — CSS color string. `size` — stroke width in px. `opacity` — 0–100.
  */
 export type DrawingState = {

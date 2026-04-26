@@ -22,7 +22,7 @@ interface UseCanvasNodeDragHandlersOptions {
   remoteDragAnimation: CanvasRemoteDragAnimation
   awareness: CanvasCoreAwarenessWriter
   interaction: Pick<CanvasInteractionTools, 'suppressNextSurfaceClick'>
-  getFlowPosition: (point: { x: number; y: number }) => { x: number; y: number }
+  getCanvasPosition: (point: { x: number; y: number }) => { x: number; y: number }
   getZoom: () => number
   selection: CanvasSelectionController
   localDraggingIdsRef: RefObject<Set<string>>
@@ -38,7 +38,7 @@ export function useCanvasNodeDragHandlers({
   remoteDragAnimation,
   awareness,
   interaction,
-  getFlowPosition,
+  getCanvasPosition,
   getZoom,
   selection,
   localDraggingIdsRef,
@@ -56,7 +56,7 @@ export function useCanvasNodeDragHandlers({
     interaction,
     localDraggingIdsRef,
     nodesDoc,
-    getFlowPosition,
+    getCanvasPosition,
     getZoom,
     remoteDragAnimation,
     selection,
@@ -71,7 +71,7 @@ export function useCanvasNodeDragHandlers({
     interaction,
     localDraggingIdsRef,
     nodesDoc,
-    getFlowPosition,
+    getCanvasPosition,
     getZoom,
     remoteDragAnimation,
     selection,
@@ -80,7 +80,7 @@ export function useCanvasNodeDragHandlers({
   const controllerRef = useRef<CanvasDragController | null>(null)
   controllerRef.current ??= createCanvasDragController({
     canvasEngine,
-    getFlowPosition: (point) => optionsRef.current.getFlowPosition(point),
+    getCanvasPosition: (point) => optionsRef.current.getCanvasPosition(point),
     getZoom: () => optionsRef.current.getZoom(),
     getSelectedNodeIds: () => optionsRef.current.selection.getSnapshot().nodeIds,
     getShiftPressed: () => optionsRef.current.getShiftPressed(),
@@ -149,12 +149,12 @@ function handleDrag(
   event: CanvasDragEvent,
   {
     awareness,
-    getFlowPosition,
-  }: Pick<UseCanvasNodeDragHandlersOptions, 'awareness' | 'getFlowPosition'>,
+    getCanvasPosition,
+  }: Pick<UseCanvasNodeDragHandlersOptions, 'awareness' | 'getCanvasPosition'>,
 ) {
   awareness.setLocalDragging(Object.fromEntries(event.resolvedPositions))
   awareness.setLocalCursor(
-    getFlowPosition({
+    getCanvasPosition({
       x: event.sourceEvent.clientX,
       y: event.sourceEvent.clientY,
     }),

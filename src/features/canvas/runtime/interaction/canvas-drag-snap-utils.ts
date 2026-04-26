@@ -18,7 +18,7 @@ interface SnapTargetCandidate {
   targetEnd: number
 }
 
-export interface CanvasDragSnapResult {
+interface CanvasDragSnapResult {
   xAdjustment: number
   yAdjustment: number
   guides: Array<CanvasDragGuide>

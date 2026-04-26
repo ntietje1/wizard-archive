@@ -1,12 +1,11 @@
 import { useEffect, useRef } from 'react'
 import type { Ref } from 'react'
-import type { CanvasNodeComponentProps, CanvasNodeMinimapProps } from '../canvas-node-types'
+import type { CanvasNodeComponentProps } from '../canvas-node-types'
 import type { CanvasConnectionHandleDescriptor } from '../shared/canvas-node-connection-handles'
 import { ResizableNodeWrapper } from '../shared/resizable-node-wrapper'
-import type { StrokeEndpoint, StrokeNodeData, StrokeNodeType } from './stroke-node-model'
+import type { StrokeEndpoint, StrokeNodeData } from './stroke-node-model'
 import {
   getAbsoluteStrokePointsForNode,
-  getMiniMapStrokePath,
   getStrokeEndpointConnectionPosition,
   getStrokeEndpointPoint,
   pointsToCenterlinePathD,
@@ -154,7 +153,7 @@ export function StrokeNode({
   height,
 }: CanvasNodeComponentProps<StrokeNodeData>) {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
-  const { canvasEngine, viewportController } = useCanvasRuntime()
+  const { domRuntime, viewportController } = useCanvasRuntime()
   const { size, bounds } = data
   const zoom = viewportController?.getZoom?.() ?? 1
   const isErasing = useEraseToolLocalOverlayStore((state) => state.erasingStrokeIds.has(id))
@@ -186,11 +185,11 @@ export function StrokeNode({
       highlightPathRef.current = null
     }
 
-    return canvasEngine.registerStrokeNodePaths(id, {
+    return domRuntime.registerStrokeNodePaths(id, {
       path: pathRef.current,
       highlightPath: highlightD ? highlightPathRef.current : null,
     })
-  }, [canvasEngine, highlightD, id])
+  }, [domRuntime, highlightD, id])
   const hitTarget =
     interactiveRenderMode && hitTargetD && hitTargetViewBox ? (
       <svg
@@ -241,74 +240,4 @@ export function StrokeNode({
       />
     </ResizableNodeWrapper>
   )
-}
-
-export function StrokeMinimapNode({
-  id,
-  x,
-  y,
-  width,
-  height,
-  color,
-  borderRadius,
-  shapeRendering,
-}: CanvasNodeMinimapProps) {
-  return (
-    <StrokeMinimapSvg
-      id={id}
-      x={x}
-      y={y}
-      width={width}
-      height={height}
-      color={color}
-      borderRadius={borderRadius}
-      shapeRendering={shapeRendering}
-    />
-  )
-}
-
-function StrokeMinimapSvg({
-  id,
-  x,
-  y,
-  width,
-  height,
-  color,
-  shapeRendering,
-}: CanvasNodeMinimapProps) {
-  const internal = useInternalStrokeNode(id)
-  if (!internal) return null
-
-  const d = getMiniMapStrokePath(internal.data.points, internal.data.size, internal.zoom)
-  if (!d || !internal.data.bounds) return null
-
-  const viewBox = resolveViewBox(internal.data.bounds, 1, 1)
-  if (!viewBox) return null
-
-  return (
-    <svg
-      x={x}
-      y={y}
-      width={width}
-      height={height}
-      viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
-      preserveAspectRatio="none"
-      overflow="visible"
-    >
-      <path d={d} fill={color} shapeRendering={shapeRendering} />
-    </svg>
-  )
-}
-
-function useInternalStrokeNode(id: string) {
-  const { canvasEngine, viewportController } = useCanvasRuntime()
-  const node = canvasEngine.getSnapshot().nodeLookup.get(id)?.node as StrokeNodeType | undefined
-  if (!node || node.type !== 'stroke') {
-    return null
-  }
-
-  return {
-    data: node.data,
-    zoom: viewportController?.getZoom?.() ?? 1,
-  }
 }

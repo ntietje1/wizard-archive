@@ -6,10 +6,10 @@ import {
   PENDING_PREVIEW_EDGE_OPACITY,
 } from './canvas-edge-style'
 import { useCanvasEdgeVisualSelection } from './use-canvas-edge-visual-selection'
-import { useCanvasEngine } from '../../react/use-canvas-engine'
 import type { CanvasEdgeRendererProps } from '../canvas-edge-types'
 import type { CSSProperties } from 'react'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
+import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
 
 const CANVAS_EDGE_PATH_STYLE: CSSProperties = {
   strokeLinecap: 'square',
@@ -24,7 +24,7 @@ const SELECTED_EDGE_HIGHLIGHT_STYLE: CSSProperties = {
 const SELECTED_EDGE_HIGHLIGHT_SCALE = 0.15
 const SELECTED_EDGE_HIGHLIGHT_WIDTH_MIN = 1
 
-export interface CanvasPathEdgeGeometry {
+interface CanvasPathEdgeGeometry {
   path: string
   labelX: number
   labelY: number
@@ -38,7 +38,7 @@ export function CanvasPathEdge({
   geometry: CanvasPathEdgeGeometry | null
 }) {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
-  const canvasEngine = useCanvasEngine()
+  const { domRuntime } = useCanvasRuntime()
   const pathRef = useRef<SVGPathElement | null>(null)
   const highlightPathRef = useRef<SVGPathElement | null>(null)
   const interactionPathRef = useRef<SVGPathElement | null>(null)
@@ -46,12 +46,12 @@ export function CanvasPathEdge({
     useCanvasEdgeVisualSelection(props.id)
   const hasSelectedHighlight = interactiveRenderMode && visuallySelected
   useEffect(() => {
-    return canvasEngine.registerEdgePaths(props.id, {
+    return domRuntime.registerEdgePaths(props.id, {
       path: pathRef.current,
       highlightPath: highlightPathRef.current,
       interactionPath: interactionPathRef.current,
     })
-  }, [canvasEngine, props.id, hasSelectedHighlight])
+  }, [domRuntime, props.id, hasSelectedHighlight])
 
   if (!geometry) return null
 

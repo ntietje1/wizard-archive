@@ -5,7 +5,7 @@ import { StrokeNode } from '../nodes/stroke/stroke-node'
 import { useCanvasEngineSelector } from '../react/use-canvas-engine'
 import type { CanvasNodeComponentProps } from '../nodes/canvas-node-types'
 import type { CanvasInternalNode } from '../system/canvas-engine'
-import type { Node } from '@xyflow/react'
+import type { CanvasNode } from '../types/canvas-domain-types'
 import type { ComponentType } from 'react'
 
 const NODE_RENDERERS = {
@@ -17,7 +17,7 @@ const NODE_RENDERERS = {
 type CanvasNodeContentSnapshot = {
   id: string
   type: keyof typeof NODE_RENDERERS
-  data: Node['data']
+  data: CanvasNode['data']
   dragging: boolean
   selected: boolean
   width: number | undefined

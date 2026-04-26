@@ -55,7 +55,7 @@ describe('canvas node specs', () => {
     })
   })
 
-  it('exposes the static React Flow node renderers', () => {
+  it('exposes the static canvas node renderers', () => {
     expect(canvasNodeTypes.text).toBe(TextNode)
   })
 

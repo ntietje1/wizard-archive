@@ -48,7 +48,7 @@ vi.mock('../embedded-map-content', () => ({
 vi.mock('../../../runtime/providers/canvas-runtime', () => ({
   useCanvasRuntime: () => ({
     canEdit: true,
-    canvasEngine: {
+    domRuntime: {
       registerNodeSurfaceElement: vi.fn(() => vi.fn()),
     },
     editSession: {

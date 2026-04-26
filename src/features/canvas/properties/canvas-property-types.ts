@@ -29,7 +29,7 @@ export type CanvasStrokeSizePropertyDefinition = CanvasPropertyBase<'strokeSize'
   step?: number
 }
 
-export type CanvasAnyPropertyDefinition =
+type CanvasAnyPropertyDefinition =
   | CanvasPaintPropertyDefinition
   | CanvasStrokeSizePropertyDefinition
 

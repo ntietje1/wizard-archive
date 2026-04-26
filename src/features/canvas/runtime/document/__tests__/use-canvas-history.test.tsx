@@ -5,26 +5,6 @@ import { useCanvasHistory } from '../use-canvas-history'
 import type { RenderHookResult } from '@testing-library/react'
 import type { Edge, Node } from '@xyflow/react'
 
-const reactFlowMock = vi.hoisted(() => {
-  let nodes: Array<Node> = []
-
-  return {
-    get nodes() {
-      return nodes
-    },
-    reset() {
-      nodes = []
-    },
-    setNodes(updater: (nodes: Array<Node>) => Array<Node>) {
-      nodes = updater(nodes)
-    },
-  }
-})
-
-vi.mock('@xyflow/react', () => ({
-  useReactFlow: () => reactFlowMock,
-}))
-
 function createNode(id: string): Node {
   return {
     id,
@@ -42,7 +22,6 @@ describe('useCanvasHistory', () => {
   beforeEach(() => {
     docs = []
     hooks = []
-    reactFlowMock.reset()
     selectionController = {
       setSelection: vi.fn(),
     }

@@ -1,9 +1,9 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { useCanvasFlowRuntime } from '../use-canvas-flow-runtime'
+import { useCanvasEditorRuntime } from '../use-canvas-editor-runtime'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
-import type { Edge, Node } from '@xyflow/react'
 import type { CanvasCommands } from '../document/use-canvas-commands'
+import type { CanvasEdge, CanvasNode } from '../../types/canvas-domain-types'
 import * as Y from 'yjs'
 import { testId } from '~/test/helpers/test-id'
 
@@ -305,12 +305,12 @@ function createTestCanvasDoc() {
   const doc = new Y.Doc()
   return {
     doc,
-    nodesMap: doc.getMap<Node>('nodes'),
-    edgesMap: doc.getMap<Edge>('edges'),
+    nodesMap: doc.getMap<CanvasNode>('nodes'),
+    edgesMap: doc.getMap<CanvasEdge>('edges'),
   }
 }
 
-describe('useCanvasFlowRuntime', () => {
+describe('useCanvasEditorRuntime', () => {
   beforeEach(() => {
     useCanvasToolStore.getState().reset()
     previewSpy.mockReset()
@@ -342,7 +342,7 @@ describe('useCanvasFlowRuntime', () => {
     const { doc, nodesMap, edgesMap } = createTestCanvasDoc()
 
     const { result, unmount } = renderHook(() =>
-      useCanvasFlowRuntime({
+      useCanvasEditorRuntime({
         nodesMap,
         edgesMap,
         canvasId: testId<'sidebarItems'>('canvas-id'),
@@ -483,7 +483,7 @@ describe('useCanvasFlowRuntime', () => {
   it('clears the previous tool transient state when the active tool changes', () => {
     const { doc, nodesMap, edgesMap } = createTestCanvasDoc()
     const { rerender } = renderHook(() =>
-      useCanvasFlowRuntime({
+      useCanvasEditorRuntime({
         nodesMap,
         edgesMap,
         canvasId: testId<'sidebarItems'>('canvas-id'),
@@ -519,7 +519,7 @@ describe('useCanvasFlowRuntime', () => {
   it('keeps selection state when switching to a selection-compatible tool', () => {
     const { doc, nodesMap, edgesMap } = createTestCanvasDoc()
     const { rerender } = renderHook(() =>
-      useCanvasFlowRuntime({
+      useCanvasEditorRuntime({
         nodesMap,
         edgesMap,
         canvasId: testId<'sidebarItems'>('canvas-id'),

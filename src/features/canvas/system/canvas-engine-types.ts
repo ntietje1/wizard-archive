@@ -10,12 +10,12 @@ import type {
   CanvasRegisteredEdgePaths,
   CanvasRegisteredStrokeNodePaths,
 } from './canvas-dom-registry'
-import type { Edge, Node, XYPosition } from '@xyflow/react'
+import type { CanvasEdge, CanvasNode, CanvasPosition } from '../types/canvas-domain-types'
 
 export interface CanvasInternalNode {
   id: string
-  node: Node
-  positionAbsolute: XYPosition
+  node: CanvasNode
+  positionAbsolute: CanvasPosition
   measured: {
     width?: number
     height?: number
@@ -29,15 +29,15 @@ export interface CanvasInternalNode {
 
 export interface CanvasInternalEdge {
   id: string
-  edge: Edge
+  edge: CanvasEdge
   selected: boolean
   zIndex: number
   visible: boolean
 }
 
 export interface CanvasEngineSnapshot {
-  nodes: ReadonlyArray<Node>
-  edges: ReadonlyArray<Edge>
+  nodes: ReadonlyArray<CanvasNode>
+  edges: ReadonlyArray<CanvasEdge>
   nodeIds: ReadonlyArray<string>
   edgeIds: ReadonlyArray<string>
   nodeLookup: ReadonlyMap<string, CanvasInternalNode>
@@ -68,12 +68,12 @@ export interface CanvasEngine {
     equality?: CanvasEngineEquality<T>,
   ) => () => void
   setDocumentSnapshot: (snapshot: {
-    nodes?: ReadonlyArray<Node>
-    edges?: ReadonlyArray<Edge>
+    nodes?: ReadonlyArray<CanvasNode>
+    edges?: ReadonlyArray<CanvasEdge>
   }) => void
-  patchNodes: (updates: ReadonlyMap<string, Partial<Node>>) => void
-  patchEdges: (updates: ReadonlyMap<string, Partial<Edge>>) => void
-  setNodePositions: (positions: ReadonlyMap<string, XYPosition>) => void
+  patchNodes: (updates: ReadonlyMap<string, Partial<CanvasNode>>) => void
+  patchEdges: (updates: ReadonlyMap<string, CanvasEdgePatch>) => void
+  setNodePositions: (positions: ReadonlyMap<string, CanvasPosition>) => void
   setSelection: (selection: { nodeIds: ReadonlySet<string>; edgeIds: ReadonlySet<string> }) => void
   clearSelection: () => void
   toggleNodeSelection: (nodeId: string, additive: boolean) => void
@@ -86,10 +86,16 @@ export interface CanvasEngine {
   setViewportLive: (viewport: CanvasViewport) => void
   getDebouncedZoomLevel: () => number
   getEfficientZoomLevel: () => number
-  screenToCanvasPosition: (position: XYPosition, surfaceBounds: DOMRect | null) => XYPosition
-  canvasToScreenPosition: (position: XYPosition, surfaceBounds: DOMRect | null) => XYPosition
+  screenToCanvasPosition: (
+    position: CanvasPosition,
+    surfaceBounds: DOMRect | null,
+  ) => CanvasPosition
+  canvasToScreenPosition: (
+    position: CanvasPosition,
+    surfaceBounds: DOMRect | null,
+  ) => CanvasPosition
   startDrag: (nodeIds: ReadonlySet<string>) => void
-  updateDrag: (positions: ReadonlyMap<string, XYPosition>) => void
+  updateDrag: (positions: ReadonlyMap<string, CanvasPosition>) => void
   registerNodeElement: (nodeId: string, element: HTMLElement | null) => () => void
   registerNodeSurfaceElement: (nodeId: string, element: HTMLElement | null) => () => void
   registerStrokeNodePaths: (nodeId: string, paths: CanvasRegisteredStrokeNodePaths) => () => void

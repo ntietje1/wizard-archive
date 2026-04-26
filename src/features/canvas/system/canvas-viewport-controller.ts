@@ -1,6 +1,6 @@
 import { getCanvasNodeBounds } from '../nodes/shared/canvas-node-bounds'
 import type { CanvasEngine, CanvasViewport } from './canvas-engine'
-import type { Node, XYPosition } from '@xyflow/react'
+import type { CanvasNode, CanvasPosition } from '../types/canvas-domain-types'
 import type { Bounds } from '../utils/canvas-geometry-utils'
 
 const MIN_ZOOM = 0.1
@@ -16,13 +16,13 @@ const FIT_VIEW_PADDING = 0.15
 export interface CanvasViewportController {
   getViewport: () => CanvasViewport
   getZoom: () => number
-  screenToCanvasPosition: (position: XYPosition) => XYPosition
-  canvasToScreenPosition: (position: XYPosition) => XYPosition
+  screenToCanvasPosition: (position: CanvasPosition) => CanvasPosition
+  canvasToScreenPosition: (position: CanvasPosition) => CanvasPosition
   handleWheel: (event: WheelEvent) => void
   handlePanPointerDown: (event: PointerEvent) => void
-  panBy: (delta: XYPosition, options?: CanvasViewportUpdateOptions) => void
-  zoomBy: (factor: number, center?: XYPosition, options?: CanvasViewportUpdateOptions) => void
-  zoomTo: (zoom: number, center?: XYPosition, options?: CanvasViewportUpdateOptions) => void
+  panBy: (delta: CanvasPosition, options?: CanvasViewportUpdateOptions) => void
+  zoomBy: (factor: number, center?: CanvasPosition, options?: CanvasViewportUpdateOptions) => void
+  zoomTo: (zoom: number, center?: CanvasPosition, options?: CanvasViewportUpdateOptions) => void
   zoomIn: () => void
   zoomOut: () => void
   fitView: () => void
@@ -39,7 +39,7 @@ interface CanvasViewportUpdateOptions {
 interface CanvasPanSession {
   pointerId: number
   target: Element | null
-  startClient: XYPosition
+  startClient: CanvasPosition
   startViewport: CanvasViewport
 }
 
@@ -57,7 +57,7 @@ export function createCanvasViewportController({
 
   const getViewport = () => canvasEngine.getSnapshot().viewport
 
-  const getSurfaceCenter = (): XYPosition => {
+  const getSurfaceCenter = (): CanvasPosition => {
     const bounds = getSurfaceBounds()
     return bounds
       ? { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 }
@@ -286,7 +286,7 @@ function releasePointerCapture(target: Element | null, pointerId: number) {
 }
 
 function getFitViewViewport(
-  nodes: ReadonlyArray<Node>,
+  nodes: ReadonlyArray<CanvasNode>,
   surfaceBounds: DOMRect | null,
 ): CanvasViewport | null {
   if (!surfaceBounds || nodes.length === 0) {
@@ -325,7 +325,7 @@ function clampZoom(zoom: number) {
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number.isFinite(zoom) ? zoom : 1))
 }
 
-function getCanvasNodesBounds(nodes: ReadonlyArray<Node>): Bounds | null {
+function getCanvasNodesBounds(nodes: ReadonlyArray<CanvasNode>): Bounds | null {
   let bounds: Bounds | null = null
 
   for (const node of nodes) {

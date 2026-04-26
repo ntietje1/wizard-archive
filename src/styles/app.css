@@ -203,18 +203,6 @@
   transition-duration: 0s !important;
 }
 
-.canvas-flow-shell .react-flow__node,
-.canvas-flow-shell .react-flow__node-stroke path,
-.canvas-flow-shell .react-flow__edge,
-.canvas-flow-shell .react-flow__edge-path,
-.canvas-flow-shell .react-flow__edge-interaction {
-  cursor: inherit !important;
-}
-
-.canvas-flow-shell svg.react-flow__connectionline {
-  z-index: 1 !important;
-}
-
 .canvas-scene__viewport[data-camera-state='moving'] .canvas-stroke-hit-target-layer,
 .canvas-scene__viewport[data-camera-state='moving'] .canvas-node-connection-handle {
   display: none;

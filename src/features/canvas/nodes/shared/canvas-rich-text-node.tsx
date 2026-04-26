@@ -80,7 +80,7 @@ export function CanvasRichTextNode({
 }: CanvasRichTextNodeComponentProps) {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
   const {
-    canvasEngine,
+    domRuntime,
     documentWriter: { patchNodeData },
     canEdit,
   } = useCanvasRuntime()
@@ -112,10 +112,7 @@ export function CanvasRichTextNode({
   })
   const showsFormattingToolbar = editableSession.editable && editorSession.editor !== null
 
-  useEffect(
-    () => canvasEngine.registerNodeSurfaceElement(id, wrapperRef.current),
-    [canvasEngine, id],
-  )
+  useEffect(() => domRuntime.registerNodeSurfaceElement(id, wrapperRef.current), [domRuntime, id])
 
   return (
     <ResizableNodeWrapper

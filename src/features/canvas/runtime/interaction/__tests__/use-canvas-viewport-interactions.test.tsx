@@ -23,7 +23,7 @@ describe('useCanvasViewportInteractions', () => {
     expect(viewportController.handlePanPointerDown).toHaveBeenCalledTimes(2)
   })
 
-  it('captures handled wheel events before React Flow can mutate the viewport', () => {
+  it('captures handled wheel events before scene bubble handlers observe them', () => {
     const viewportController = createViewportControllerMock()
     vi.mocked(viewportController.handleWheel).mockImplementation((event) => {
       event.preventDefault()

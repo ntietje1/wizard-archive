@@ -2,11 +2,11 @@ import { buildBezierCanvasEdgeGeometryFromEdge } from '../edges/bezier/bezier-ca
 import { resolveCanvasEdgeType } from '../edges/canvas-edge-registry'
 import { buildStepCanvasEdgeGeometryFromEdge } from '../edges/step/step-canvas-edge-geometry'
 import { buildStraightCanvasEdgeGeometryFromEdge } from '../edges/straight/straight-canvas-edge-geometry'
-import type { Edge, Node } from '@xyflow/react'
+import type { CanvasEdge, CanvasNode } from '../types/canvas-domain-types'
 
 export function buildCanvasEdgePath(
-  edge: Edge,
-  nodesById: ReadonlyMap<string, Node>,
+  edge: CanvasEdge,
+  nodesById: ReadonlyMap<string, CanvasNode>,
 ): string | null {
   switch (resolveCanvasEdgeType(edge.type)) {
     case 'bezier':

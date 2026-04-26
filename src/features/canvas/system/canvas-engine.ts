@@ -20,13 +20,12 @@ import { createCanvasSelectionManager } from './canvas-selection-manager'
 import { createCanvasStore } from './canvas-store'
 import { createCanvasViewportManager, DEFAULT_CANVAS_VIEWPORT } from './canvas-viewport-manager'
 import type { CanvasEngine, CanvasEngineSnapshot } from './canvas-engine-types'
-import type { Node } from '@xyflow/react'
+import type { CanvasNode } from '../types/canvas-domain-types'
 
 export type {
   CanvasEngine,
   CanvasEngineEquality,
   CanvasEngineSnapshot,
-  CanvasInternalEdge,
   CanvasInternalNode,
   CanvasViewport,
 } from './canvas-engine-types'
@@ -99,7 +98,7 @@ export function createCanvasEngine(): CanvasEngine {
       return
     }
 
-    const updates = new Map<string, Partial<Node>>()
+    const updates = new Map<string, Partial<CanvasNode>>()
     for (const [nodeId, position] of positions) {
       updates.set(nodeId, { position })
     }
@@ -278,8 +277,8 @@ function createInitialCanvasEngineSnapshot(): CanvasEngineSnapshot {
 }
 
 function clearRemovedStrokePathCache(
-  previousNodes: ReadonlyArray<Node>,
-  nextNodes: ReadonlyArray<Node> | undefined,
+  previousNodes: ReadonlyArray<CanvasNode>,
+  nextNodes: ReadonlyArray<CanvasNode> | undefined,
 ) {
   if (!nextNodes) {
     return

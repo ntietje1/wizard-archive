@@ -9,9 +9,10 @@ import { CanvasMiniMap } from './canvas-minimap'
 import { CanvasNodeRenderer } from './canvas-node-renderer'
 import { isCanvasEmptyPaneTarget } from '../runtime/interaction/canvas-pane-targets'
 import { useCanvasEngine } from '../react/use-canvas-engine'
+import { useCanvasRuntime } from '../runtime/providers/canvas-runtime'
 import type { CanvasEngine } from '../system/canvas-engine'
+import type { CanvasConnection, CanvasEdge, CanvasNode } from '../types/canvas-domain-types'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
-import type { Connection, Edge, Node } from '@xyflow/react'
 import type {
   Dispatch,
   KeyboardEvent as ReactKeyboardEvent,
@@ -22,9 +23,9 @@ import type {
 } from 'react'
 
 type CanvasSceneHandlers = {
-  createEdgeFromConnection: (connection: Connection) => void
-  onNodeClick?: (event: ReactMouseEvent, node: Node) => void
-  onEdgeClick?: (event: ReactMouseEvent, edge: Edge) => void
+  createEdgeFromConnection: (connection: CanvasConnection) => void
+  onNodeClick?: (event: ReactMouseEvent, node: CanvasNode) => void
+  onEdgeClick?: (event: ReactMouseEvent, edge: CanvasEdge) => void
   onMouseMove?: (event: ReactMouseEvent) => void
   onMouseLeave?: () => void
 }
@@ -33,8 +34,8 @@ interface CanvasSceneProps {
   canEdit: boolean
   remoteUsers: Array<RemoteUser>
   sceneHandlers: CanvasSceneHandlers
-  onNodeContextMenu: (event: ReactMouseEvent, node: Node) => void
-  onEdgeContextMenu: (event: ReactMouseEvent, edge: Edge) => void
+  onNodeContextMenu: (event: ReactMouseEvent, node: CanvasNode) => void
+  onEdgeContextMenu: (event: ReactMouseEvent, edge: CanvasEdge) => void
   onPaneContextMenu: (event: ReactMouseEvent) => void
 }
 
@@ -47,6 +48,7 @@ export function CanvasScene({
   onPaneContextMenu,
 }: CanvasSceneProps) {
   const canvasEngine = useCanvasEngine()
+  const { domRuntime } = useCanvasRuntime()
   const paneRef = useRef<HTMLDivElement | null>(null)
   const viewportRef = useRef<HTMLDivElement | null>(null)
   const sceneHandlersRef = useRef(sceneHandlers)
@@ -70,26 +72,26 @@ export function CanvasScene({
     onEdgeClick: sceneHandlers.onEdgeClick,
     onEdgeContextMenu,
   }
-  const handleNodeClick = useCallback((event: ReactMouseEvent, node: Node) => {
+  const handleNodeClick = useCallback((event: ReactMouseEvent, node: CanvasNode) => {
     nodeHandlersRef.current.onNodeClick?.(event, node)
   }, [])
-  const handleNodeContextMenu = useCallback((event: ReactMouseEvent, node: Node) => {
+  const handleNodeContextMenu = useCallback((event: ReactMouseEvent, node: CanvasNode) => {
     nodeHandlersRef.current.onNodeContextMenu(event, node)
   }, [])
-  const handleEdgeClick = useCallback((event: ReactMouseEvent, edge: Edge) => {
+  const handleEdgeClick = useCallback((event: ReactMouseEvent, edge: CanvasEdge) => {
     edgeHandlersRef.current.onEdgeClick?.(event, edge)
   }, [])
-  const handleEdgeContextMenu = useCallback((event: ReactMouseEvent, edge: Edge) => {
+  const handleEdgeContextMenu = useCallback((event: ReactMouseEvent, edge: CanvasEdge) => {
     edgeHandlersRef.current.onEdgeContextMenu(event, edge)
   }, [])
 
   useEffect(() => {
-    const unregister = canvasEngine.registerViewportElement(viewportRef.current)
-    canvasEngine.scheduleViewportTransform(canvasEngine.getSnapshot().viewport)
-    canvasEngine.scheduleCameraState(canvasEngine.getSnapshot().cameraState)
-    canvasEngine.flushRenderScheduler()
+    const unregister = domRuntime.registerViewportElement(viewportRef.current)
+    domRuntime.scheduleViewportTransform(canvasEngine.getSnapshot().viewport)
+    domRuntime.scheduleCameraState(canvasEngine.getSnapshot().cameraState)
+    domRuntime.flushRenderScheduler()
     return unregister
-  }, [canvasEngine])
+  }, [canvasEngine, domRuntime])
 
   const handleConnectionPointerMove = useCallback(
     (event: PointerEvent) => {
@@ -284,7 +286,7 @@ function finishConnectionDraft({
   connectionDraftRef: RefObject<CanvasConnectionDraft | null>
   event: PointerEvent
   setConnectionDraft: Dispatch<SetStateAction<CanvasConnectionDraft | null>>
-  createEdgeFromConnection: (connection: Connection) => void
+  createEdgeFromConnection: (connection: CanvasConnection) => void
 }) {
   const target = document.elementFromPoint(event.clientX, event.clientY)
   const targetHandle = resolveConnectionHandle(target)

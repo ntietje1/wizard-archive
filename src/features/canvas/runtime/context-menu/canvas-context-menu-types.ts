@@ -45,7 +45,7 @@ export type CanvasContextMenuTarget =
       nodeType: 'embed'
     }
 
-export type EmbedNodeTarget = Extract<CanvasContextMenuTarget, { kind: 'embed-node' }>
+type EmbedNodeTarget = Extract<CanvasContextMenuTarget, { kind: 'embed-node' }>
 
 export type CanvasContextMenuReorderPayload = {
   kind: 'reorder'

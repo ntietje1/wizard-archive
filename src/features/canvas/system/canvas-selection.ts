@@ -6,7 +6,7 @@ export interface CanvasSelectionSnapshot {
   edgeIds: ReadonlySet<string>
 }
 
-export type CanvasPendingSelectionPreview =
+type CanvasPendingSelectionPreview =
   | { kind: 'inactive' }
   | ({ kind: 'active' } & CanvasSelectionSnapshot)
 
@@ -17,7 +17,7 @@ export interface CanvasSelectionState extends CanvasSelectionSnapshot {
   gestureStartSelection: CanvasSelectionSnapshot | null
 }
 
-export interface CanvasVisualSelectionState {
+interface CanvasVisualSelectionState {
   selected: boolean
   pendingPreviewActive: boolean
   pendingSelected: boolean
@@ -26,7 +26,7 @@ export interface CanvasVisualSelectionState {
 
 const EMPTY_SET: ReadonlySet<string> = new Set()
 
-export function createEmptyCanvasSelectionSnapshot(): CanvasSelectionSnapshot {
+function createEmptyCanvasSelectionSnapshot(): CanvasSelectionSnapshot {
   return {
     nodeIds: EMPTY_SET,
     edgeIds: EMPTY_SET,
@@ -45,20 +45,6 @@ export function createInitialCanvasSelectionState(): CanvasSelectionState {
 
 export function createInactiveCanvasPendingSelectionPreview(): CanvasPendingSelectionPreview {
   return { kind: 'inactive' }
-}
-
-export function createCanvasPendingSelectionPreview(
-  selection: CanvasSelectionSnapshot | null,
-): CanvasPendingSelectionPreview {
-  if (selection === null) {
-    return createInactiveCanvasPendingSelectionPreview()
-  }
-
-  return {
-    kind: 'active',
-    nodeIds: new Set(selection.nodeIds),
-    edgeIds: new Set(selection.edgeIds),
-  }
 }
 
 export function isCanvasPendingPreviewActive(

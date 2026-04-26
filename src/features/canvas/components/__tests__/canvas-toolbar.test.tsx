@@ -6,7 +6,7 @@ import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime-co
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import type { CanvasViewportController } from '../../system/canvas-viewport-controller'
 
-const reactFlowMock = vi.hoisted(() => ({
+const viewportActionMock = vi.hoisted(() => ({
   fitView: vi.fn(),
   zoomIn: vi.fn(),
   zoomOut: vi.fn(),
@@ -22,9 +22,9 @@ describe('CanvasToolbar', () => {
 
   beforeEach(() => {
     useCanvasToolStore.getState().reset()
-    reactFlowMock.fitView.mockReset()
-    reactFlowMock.zoomIn.mockReset()
-    reactFlowMock.zoomOut.mockReset()
+    viewportActionMock.fitView.mockReset()
+    viewportActionMock.zoomIn.mockReset()
+    viewportActionMock.zoomOut.mockReset()
     history.canUndo = false
     history.canRedo = true
     history.undo = vi.fn()
@@ -42,9 +42,9 @@ describe('CanvasToolbar', () => {
       panBy: vi.fn(),
       zoomBy: vi.fn(),
       zoomTo: vi.fn(),
-      zoomIn: reactFlowMock.zoomIn,
-      zoomOut: reactFlowMock.zoomOut,
-      fitView: reactFlowMock.fitView,
+      zoomIn: viewportActionMock.zoomIn,
+      zoomOut: viewportActionMock.zoomOut,
+      fitView: viewportActionMock.fitView,
       syncFromDocumentOrAdapter: vi.fn(),
       commit: vi.fn(),
       destroy: vi.fn(),
@@ -131,9 +131,9 @@ describe('CanvasToolbar', () => {
     screen.getByRole('button', { name: 'Zoom out' }).click()
     screen.getByRole('button', { name: 'Fit zoom' }).click()
 
-    expect(reactFlowMock.zoomIn).toHaveBeenCalledTimes(1)
-    expect(reactFlowMock.zoomOut).toHaveBeenCalledTimes(1)
-    expect(reactFlowMock.fitView).toHaveBeenCalledTimes(1)
+    expect(viewportActionMock.zoomIn).toHaveBeenCalledTimes(1)
+    expect(viewportActionMock.zoomOut).toHaveBeenCalledTimes(1)
+    expect(viewportActionMock.fitView).toHaveBeenCalledTimes(1)
   })
 
   it('shows only viewport controls in read-only mode', () => {

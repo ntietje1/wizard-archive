@@ -13,7 +13,7 @@ import { CanvasEngineProvider } from '../react/canvas-engine-context'
 import { useCanvasPendingSelectionPreviewSummary } from '../runtime/selection/use-canvas-pending-selection-preview'
 import { loadPersistedCanvasViewport } from '../runtime/interaction/canvas-viewport-storage'
 import { useCanvasViewerSession } from '../runtime/session/use-canvas-viewer-session'
-import { useCanvasFlowRuntime } from '../runtime/use-canvas-flow-runtime'
+import { useCanvasEditorRuntime } from '../runtime/use-canvas-editor-runtime'
 import { CanvasConditionalToolbar } from './canvas-conditional-toolbar'
 import { CanvasScene } from './canvas-scene'
 import { CanvasToolbar } from './canvas-toolbar'
@@ -52,12 +52,12 @@ function CanvasViewerInner({ canvas }: { canvas: CanvasWithContent }) {
     )
   }
 
-  return <CanvasFlow {...session} />
+  return <CanvasEditor {...session} />
 }
 
 type ReadyCanvasSession = Extract<CanvasViewerSession, { status: 'ready' }>
 
-export function CanvasFlow({
+export function CanvasEditor({
   canvasId,
   campaignId,
   canEdit,
@@ -68,7 +68,7 @@ export function CanvasFlow({
   edgesMap,
 }: ReadyCanvasSession) {
   const initialViewport = useMemo(() => loadPersistedCanvasViewport(canvasId), [canvasId])
-  const runtime = useCanvasFlowRuntime({
+  const runtime = useCanvasEditorRuntime({
     nodesMap,
     edgesMap,
     canvasId,
@@ -80,8 +80,8 @@ export function CanvasFlow({
     initialViewport,
   })
   const canvasCursor = runtime.toolCursor ?? 'pointer'
-  const canvasFlowContent = (
-    <CanvasFlowContent canEdit={canEdit} runtime={runtime} canvasCursor={canvasCursor} />
+  const canvasEditorContent = (
+    <CanvasEditorContent canEdit={canEdit} runtime={runtime} canvasCursor={canvasCursor} />
   )
 
   return (
@@ -92,6 +92,7 @@ export function CanvasFlow({
         history={runtime.history}
         commands={runtime.commands}
         documentWriter={runtime.documentWriter}
+        domRuntime={runtime.domRuntime}
         editSession={runtime.editSession}
         nodeActions={runtime.nodeActions}
         nodeDragController={runtime.nodeDragController}
@@ -101,7 +102,7 @@ export function CanvasFlow({
       >
         {isCanvasPerformanceEnabled() ? (
           <Profiler
-            id="CanvasFlow"
+            id="CanvasEditor"
             onRender={(_id, phase, actualDuration, baseDuration) => {
               if (actualDuration < 0.25) {
                 return
@@ -113,32 +114,32 @@ export function CanvasFlow({
               })
             }}
           >
-            {canvasFlowContent}
+            {canvasEditorContent}
           </Profiler>
         ) : (
-          canvasFlowContent
+          canvasEditorContent
         )}
       </CanvasRuntimeProvider>
     </CanvasEngineProvider>
   )
 }
 
-const CanvasFlowContent = memo(function CanvasFlowContent({
+const CanvasEditorContent = memo(function CanvasEditorContent({
   canEdit,
   runtime,
   canvasCursor,
 }: {
   canEdit: boolean
-  runtime: ReturnType<typeof useCanvasFlowRuntime>
+  runtime: ReturnType<typeof useCanvasEditorRuntime>
   canvasCursor: string
 }) {
   const pendingSelectionPreview = useCanvasPendingSelectionPreviewSummary()
 
   return (
     <div
-      className="canvas-flow-shell relative flex-1 min-h-0 allow-motion"
+      className="canvas-editor-shell relative flex-1 min-h-0 allow-motion"
       style={{ cursor: canvasCursor }}
-      data-testid="canvas-flow-shell"
+      data-testid="canvas-editor-shell"
     >
       <CanvasToolbar canEdit={canEdit} />
       <CanvasConditionalToolbar canEdit={canEdit} />
@@ -180,17 +181,17 @@ const CanvasFlowContent = memo(function CanvasFlowContent({
       </div>
     </div>
   )
-}, areCanvasFlowContentPropsEqual)
+}, areCanvasEditorContentPropsEqual)
 
-function areCanvasFlowContentPropsEqual(
+function areCanvasEditorContentPropsEqual(
   previous: {
     canEdit: boolean
-    runtime: ReturnType<typeof useCanvasFlowRuntime>
+    runtime: ReturnType<typeof useCanvasEditorRuntime>
     canvasCursor: string
   },
   next: {
     canEdit: boolean
-    runtime: ReturnType<typeof useCanvasFlowRuntime>
+    runtime: ReturnType<typeof useCanvasEditorRuntime>
     canvasCursor: string
   },
 ) {

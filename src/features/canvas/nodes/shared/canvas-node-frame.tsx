@@ -1,7 +1,6 @@
-import { useEffect, useRef } from 'react'
-import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
 import { useCanvasNodeVisualSelection } from './use-canvas-node-visual-selection'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
+import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
 
 interface CanvasNodeFrameProps {
   id: string
@@ -21,45 +20,13 @@ export function CanvasNodeFrame({
   children,
 }: CanvasNodeFrameProps) {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
-  const { canEdit, canvasEngine, nodeDragController, remoteHighlights } = useCanvasRuntime()
-  const frameRef = useRef<HTMLDivElement | null>(null)
+  const { remoteHighlights } = useCanvasRuntime()
   const { visuallySelected, pendingPreviewActive, pendingSelected, selected } =
     useCanvasNodeVisualSelection(id)
   const highlight = interactiveRenderMode ? remoteHighlights.get(id) : undefined
 
-  useEffect(() => {
-    const frame = frameRef.current
-    const shell = frame?.closest('.canvas-node-shell')
-    return canvasEngine.registerNodeElement(id, shell instanceof HTMLElement ? shell : frame)
-  }, [canvasEngine, id])
-
-  useEffect(() => {
-    const frame = frameRef.current
-    const shell = frame?.closest('.canvas-node-shell')
-    const dragTarget = shell instanceof HTMLElement ? shell : frame
-    if (!dragTarget || !canEdit || !interactiveRenderMode || editing || !nodeDragController) {
-      return undefined
-    }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      nodeDragController.handlePointerDown(id, event)
-    }
-    const handleMouseDown = (event: MouseEvent) => {
-      nodeDragController.handlePointerDown(id, event)
-    }
-    dragTarget.addEventListener('pointerdown', handlePointerDown, { capture: true })
-    if (!window.PointerEvent) {
-      dragTarget.addEventListener('mousedown', handleMouseDown, { capture: true })
-    }
-    return () => {
-      dragTarget.removeEventListener('pointerdown', handlePointerDown, { capture: true })
-      dragTarget.removeEventListener('mousedown', handleMouseDown, { capture: true })
-    }
-  }, [canEdit, editing, id, interactiveRenderMode, nodeDragController])
-
   return (
     <div
-      ref={frameRef}
       className="relative h-full w-full select-none"
       data-testid="canvas-node"
       data-node-id={id}

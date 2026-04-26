@@ -1,5 +1,4 @@
 import { useMemo, useRef } from 'react'
-import type { Edge, Node } from '@xyflow/react'
 import {
   getCanvasEdgeInspectableProperties,
   normalizeCanvasEdge,
@@ -31,10 +30,11 @@ import type {
 } from '../properties/canvas-property-types'
 import type { CanvasPropertyPatchSet } from '../system/canvas-property-session-controller'
 import type { CanvasToolId, CanvasToolPropertyContext } from '../tools/canvas-tool-types'
+import type { CanvasEdge, CanvasNode } from '../types/canvas-domain-types'
 import { useShallow } from 'zustand/shallow'
 
 export function useCanvasToolbarModel() {
-  const { canvasEngine, nodeActions, commands, documentWriter } = useCanvasRuntime()
+  const { domRuntime, nodeActions, commands, documentWriter } = useCanvasRuntime()
   const selectedNodes = useCanvasEngineSelector(
     selectCanvasSelectedNodes,
     areCanvasPropertyNodesEqual,
@@ -70,7 +70,7 @@ export function useCanvasToolbarModel() {
     const pendingNodeDataPatches = pendingNodeDataPatchesRef.current
     if (!pendingNodeDataPatches) {
       const updates = new Map([[nodeId, data]])
-      canvasEngine.scheduleNodeDataPatches(updates)
+      domRuntime.scheduleNodeDataPatches(updates)
       documentWriter.patchNodeData(updates)
       return
     }
@@ -85,7 +85,7 @@ export function useCanvasToolbarModel() {
     const pendingEdgePatches = pendingEdgePatchesRef.current
     if (!pendingEdgePatches) {
       const updates = new Map([[edgeId, patch]])
-      canvasEngine.scheduleEdgePatches(updates)
+      domRuntime.scheduleEdgePatches(updates)
       documentWriter.patchEdges(updates)
       return
     }
@@ -136,8 +136,8 @@ export function useCanvasToolbarModel() {
   }
 
   const previewPropertyPatches = (patches: CanvasPropertyPatchSet) => {
-    canvasEngine.scheduleNodeDataPatches(patches.nodeDataPatches)
-    canvasEngine.scheduleEdgePatches(patches.edgePatches)
+    domRuntime.scheduleNodeDataPatches(patches.nodeDataPatches)
+    domRuntime.scheduleEdgePatches(patches.edgePatches)
   }
 
   const commitPropertyPatches = (patches: CanvasPropertyPatchSet) => {
@@ -233,8 +233,8 @@ export function useCanvasToolbarModel() {
 
 function resolveProperties(
   activeTool: CanvasToolId,
-  selectedNodes: ReadonlyArray<Node>,
-  selectedEdges: ReadonlyArray<Edge>,
+  selectedNodes: ReadonlyArray<CanvasNode>,
+  selectedEdges: ReadonlyArray<CanvasEdge>,
   patchNodeData: (nodeId: string, data: Record<string, unknown>) => void,
   patchEdge: (edgeId: string, patch: CanvasEdgePatch) => void,
   toolPropertyContext: CanvasToolPropertyContext,
@@ -258,7 +258,7 @@ function resolveProperties(
   ])
 }
 
-function getSharedSelectedEdgeType(edges: ReadonlyArray<Edge>) {
+function getSharedSelectedEdgeType(edges: ReadonlyArray<CanvasEdge>) {
   const firstEdgeType = edges[0] ? resolveCanvasEdgeType(edges[0].type) : null
   return firstEdgeType && edges.every((edge) => resolveCanvasEdgeType(edge.type) === firstEdgeType)
     ? firstEdgeType

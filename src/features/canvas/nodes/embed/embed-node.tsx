@@ -31,7 +31,7 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
   const item = sidebarItemId ? itemsMap.get(sidebarItemId) : undefined
   const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
   const { data: contentItem } = useSidebarItemById(sidebarItemId)
-  const { canvasEngine, editSession, canEdit } = useCanvasRuntime()
+  const { domRuntime, editSession, canEdit } = useCanvasRuntime()
   const surfaceRef = useRef<HTMLDivElement | null>(null)
   const editableSession = useCanvasEditableNodeSession({
     id,
@@ -47,10 +47,7 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
   const isMissing = !item
   const showFloatingLabel = !showsFormattingToolbar
 
-  useEffect(
-    () => canvasEngine.registerNodeSurfaceElement(id, surfaceRef.current),
-    [canvasEngine, id],
-  )
+  useEffect(() => domRuntime.registerNodeSurfaceElement(id, surfaceRef.current), [domRuntime, id])
 
   return (
     <ResizableNodeWrapper

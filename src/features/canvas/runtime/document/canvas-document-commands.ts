@@ -12,7 +12,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { Connection, Edge, Node, XYPosition } from '@xyflow/react'
 import type * as Y from 'yjs'
 
-export type CanvasNodeSanitizer = (node: Node, operation: string, fallbackNode?: Node) => Node
+type CanvasNodeSanitizer = (node: Node, operation: string, fallbackNode?: Node) => Node
 
 function updateCanvasNodeIfPresent({
   nodesMap,

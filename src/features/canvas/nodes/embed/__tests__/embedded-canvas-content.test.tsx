@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { EmbeddedCanvasContent } from '../embedded-canvas-content'
 import { testId } from '~/test/helpers/test-id'
+import type * as CanvasRuntimeModule from '../../../runtime/providers/canvas-runtime'
 
 const useEmbeddedCanvasStateMock = vi.hoisted(() => vi.fn())
 const canvasThumbnailPreviewSpy = vi.hoisted(() => vi.fn())
@@ -9,20 +10,42 @@ const reactFlowSpy = vi.hoisted(() => vi.fn())
 const getNodesBoundsMock = vi.hoisted(() => vi.fn())
 const getViewportForBoundsMock = vi.hoisted(() => vi.fn())
 const reactFlowStoreSetStateMock = vi.hoisted(() => vi.fn())
+const readOnlyCanvasSnapshot = vi.hoisted(() => ({
+  nodeLookup: new Map([
+    [
+      'embed-node-1',
+      {
+        measured: { width: 400, height: 240 },
+        node: { width: 400, height: 240 },
+      },
+    ],
+  ]),
+}))
 
 vi.mock('../use-embedded-canvas-state', () => ({
   useEmbeddedCanvasState: (canvasId: string) => useEmbeddedCanvasStateMock(canvasId),
 }))
 
-vi.mock('../../runtime/providers/canvas-runtime-context', () => ({
+vi.mock('../../../runtime/providers/canvas-runtime-context', () => ({
   CanvasRuntimeProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
-vi.mock('../../runtime/providers/canvas-runtime', () => ({
-  READ_ONLY_CANVAS_RUNTIME: {},
-}))
+vi.mock('../../../runtime/providers/canvas-runtime', async (importOriginal) => {
+  const actual = await importOriginal<typeof CanvasRuntimeModule>()
 
-vi.mock('../../edges/canvas-edge-renderers', () => ({
+  return {
+    ...actual,
+    READ_ONLY_CANVAS_RUNTIME: {
+      ...actual.READ_ONLY_CANVAS_RUNTIME,
+      canvasEngine: {
+        subscribe: () => () => undefined,
+        getSnapshot: () => readOnlyCanvasSnapshot,
+      },
+    },
+  }
+})
+
+vi.mock('../../../edges/canvas-edge-renderers', () => ({
   canvasEdgeTypes: {},
 }))
 

@@ -1,7 +1,6 @@
 import type { Id } from 'convex/_generated/dataModel'
 import { useEffect, useMemo, useRef } from 'react'
 import type { MouseEvent as ReactMouseEvent } from 'react'
-import type { Connection, Edge, Node } from '@xyflow/react'
 import type * as Y from 'yjs'
 import { getMeasuredCanvasNodesFromEngineSnapshot } from './document/canvas-measured-nodes'
 import { useCanvasCommands } from './document/use-canvas-commands'
@@ -23,28 +22,27 @@ import {
   useCanvasPointerRouter,
   useCanvasPointerRouterController,
 } from './interaction/use-canvas-pointer-router'
-import { exposeCanvasPerformanceRuntime } from './performance/canvas-performance-metrics'
+import { useCanvasPerformanceProbeRuntime } from './performance/use-canvas-performance-probe-runtime'
 import { useCanvasSelectionController } from './selection/use-canvas-selection-actions'
 import { useCanvasSessionState } from './session/use-canvas-session-state'
-import { createCanvasNodePlacement } from '../nodes/canvas-node-modules'
+import { createCanvasDomRuntimeAdapter } from './providers/canvas-runtime'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import { createCanvasEngine } from '../system/canvas-engine'
 import { createCanvasViewportController } from '../system/canvas-viewport-controller'
 import { canvasToolSpecs } from '../tools/canvas-tool-modules'
-import { getStrokeBounds } from '../nodes/stroke/stroke-node-model'
-import { clearAllStrokePathCache } from '../nodes/stroke/stroke-path-cache'
 import type {
   CanvasEdgeCreationDefaults,
   CanvasSelectionSnapshot,
   CanvasToolId,
   CanvasToolRuntime,
 } from '../tools/canvas-tool-types'
+import type { CanvasConnection, CanvasEdge, CanvasNode } from '../types/canvas-domain-types'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
 import { useYjsPreviewUpload } from '~/features/previews/hooks/use-yjs-preview-upload'
 
-interface UseCanvasFlowRuntimeOptions {
-  nodesMap: Y.Map<Node>
-  edgesMap: Y.Map<Edge>
+interface UseCanvasEditorRuntimeOptions {
+  nodesMap: Y.Map<CanvasNode>
+  edgesMap: Y.Map<CanvasEdge>
   canvasId: Id<'sidebarItems'>
   campaignId: Id<'campaigns'>
   canvasParentId: Id<'sidebarItems'> | null
@@ -55,10 +53,7 @@ interface UseCanvasFlowRuntimeOptions {
 }
 
 const SELECTION_INCOMPATIBLE_TOOLS = new Set<CanvasToolId>(['draw', 'erase', 'text', 'edge'])
-const PERFORMANCE_STROKE_WIDTH = 160
-const PERFORMANCE_STROKE_AMPLITUDE = 28
-
-export function useCanvasFlowRuntime({
+export function useCanvasEditorRuntime({
   nodesMap,
   edgesMap,
   canvasId,
@@ -68,7 +63,7 @@ export function useCanvasFlowRuntime({
   provider,
   doc,
   initialViewport,
-}: UseCanvasFlowRuntimeOptions) {
+}: UseCanvasEditorRuntimeOptions) {
   const session = useCanvasSessionState({ provider })
   const activeTool = useCanvasToolStore((state) => state.activeTool)
   const canvasEngineRef = useRef<ReturnType<typeof createCanvasEngine> | null>(null)
@@ -184,7 +179,7 @@ export function useCanvasFlowRuntime({
     remoteDragAnimation,
     awareness: session.awareness.core,
     interaction,
-    getFlowPosition: viewportController.screenToCanvasPosition,
+    getCanvasPosition: viewportController.screenToCanvasPosition,
     getZoom: viewportController.getZoom,
     selection,
     localDraggingIdsRef,
@@ -193,129 +188,16 @@ export function useCanvasFlowRuntime({
     getCanStartDrag: () => useCanvasToolStore.getState().activeTool === 'select',
   })
 
-  useEffect(
-    () =>
-      exposeCanvasPerformanceRuntime({
-        clearCanvas: () => {
-          doc.transact(() => {
-            nodesMap.clear()
-            edgesMap.clear()
-          })
-          clearAllStrokePathCache()
-          selection.clearSelection()
-        },
-        getCounts: () => ({
-          nodes: nodesMap.size,
-          edges: edgesMap.size,
-        }),
-        seedTextNodes: ({
-          count,
-          columns = 25,
-          spacingX = 180,
-          spacingY = 120,
-          start = { x: 0, y: 0 },
-        }) => {
-          doc.transact(() => {
-            for (let index = 0; index < count; index += 1) {
-              const column = index % columns
-              const row = Math.floor(index / columns)
-              const placement = createCanvasNodePlacement('text', {
-                position: {
-                  x: start.x + column * spacingX,
-                  y: start.y + row * spacingY,
-                },
-              })
-              const node = {
-                ...placement.node,
-                id: `perf-node-${index}`,
-                draggable: false,
-                selected: false,
-                zIndex: index,
-              }
-              nodesMap.set(node.id, node)
-            }
-          })
-        },
-        seedStrokeNodes: ({
-          count,
-          columns = 10,
-          spacingX = 240,
-          spacingY = 160,
-          start = { x: 0, y: 0 },
-          pointsPerStroke = 80,
-        }) => {
-          doc.transact(() => {
-            for (let index = 0; index < count; index += 1) {
-              const column = index % columns
-              const row = Math.floor(index / columns)
-              const origin = {
-                x: start.x + column * spacingX,
-                y: start.y + row * spacingY,
-              }
-              const points = createPerformanceStrokePoints(origin, pointsPerStroke)
-              const size = 8
-              const bounds = getStrokeBounds(points, size)
-              nodesMap.set(`perf-stroke-${index}`, {
-                id: `perf-stroke-${index}`,
-                type: 'stroke',
-                position: { x: bounds.x, y: bounds.y },
-                width: bounds.width,
-                height: bounds.height,
-                data: {
-                  points,
-                  color: '#2563eb',
-                  size,
-                  opacity: 100,
-                  bounds,
-                },
-                draggable: false,
-                selected: false,
-                zIndex: index,
-              })
-            }
-          })
-        },
-        updateSelectedNodeSurface: () => {
-          const updates = new Map<string, Record<string, unknown>>()
-          for (const nodeId of selection.getSnapshot().nodeIds) {
-            updates.set(nodeId, {
-              backgroundColor: '#e8f2ff',
-              borderStroke: '#2563eb',
-            })
-          }
-          documentWriter.patchNodeData(updates)
-        },
-        selectFirstNodes: (count) => {
-          const nodeIds = new Set<string>()
-          for (let index = 0; index < count; index += 1) {
-            nodeIds.add(`perf-node-${index}`)
-          }
-          selection.setSelection({ nodeIds, edgeIds: new Set() })
-        },
-        getSelectedCount: () =>
-          selection.getSnapshot().nodeIds.size + selection.getSnapshot().edgeIds.size,
-        profileSelectedNodeDrag: ({ delta, steps }) => {
-          const selectedIds = selection.getSnapshot().nodeIds
-          dragHandlers.profileDrag({ nodeIds: selectedIds, delta, steps })
-        },
-        getNodePosition: (nodeId) =>
-          canvasEngine.getSnapshot().nodeLookup.get(nodeId)?.node.position ?? null,
-        setViewport: (viewport) => {
-          viewportController.syncFromDocumentOrAdapter(viewport)
-        },
-        getViewport: () => viewportController.getViewport(),
-      }),
-    [
-      canvasEngine,
-      doc,
-      documentWriter,
-      dragHandlers,
-      edgesMap,
-      nodesMap,
-      selection,
-      viewportController,
-    ],
-  )
+  useCanvasPerformanceProbeRuntime({
+    canvasEngine,
+    documentWriter,
+    doc,
+    dragController: dragHandlers,
+    edgesMap,
+    nodesMap,
+    selection,
+    viewportController,
+  })
 
   useCanvasDocumentProjection({
     canvasEngine,
@@ -364,6 +246,7 @@ export function useCanvasFlowRuntime({
       }),
     [canvasEngine, documentWriter, edgesMap, nodesMap, session],
   )
+  const domRuntime = useMemo(() => createCanvasDomRuntimeAdapter(canvasEngine), [canvasEngine])
 
   const isSelectMode = activeTool === 'select'
   const isEdgeMode = activeTool === 'edge'
@@ -467,24 +350,25 @@ export function useCanvasFlowRuntime({
     commands,
     contextMenu,
     documentWriter,
+    domRuntime,
     dropTarget,
     editSession: session.editSession,
     sceneHandlers: {
       activeToolHandlers,
       cursorPresence,
-      createEdgeFromConnection: (connection: Connection) => {
+      createEdgeFromConnection: (connection: CanvasConnection) => {
         if (!canEdit || !isEdgeMode) {
           return
         }
         documentWriter.createEdge(connection, getEdgeCreationDefaults())
       },
-      onNodeClick: (event: ReactMouseEvent, node: Node) => {
+      onNodeClick: (event: ReactMouseEvent, node: CanvasNode) => {
         if (!canEdit || !isSelectMode) {
           return
         }
         activeToolHandlers.onNodeClick?.(event, node)
       },
-      onEdgeClick: (event: ReactMouseEvent, edge: Edge) => {
+      onEdgeClick: (event: ReactMouseEvent, edge: CanvasEdge) => {
         if (!canEdit || !isSelectMode) {
           return
         }
@@ -502,25 +386,6 @@ export function useCanvasFlowRuntime({
     selection,
     toolCursor: activeToolSpec.cursor,
   }
-}
-
-function createPerformanceStrokePoints(
-  origin: { x: number; y: number },
-  pointsPerStroke: number,
-): Array<[number, number, number]> {
-  const safePointCount = Math.max(2, Math.floor(pointsPerStroke))
-  const points: Array<[number, number, number]> = []
-
-  for (let index = 0; index < safePointCount; index += 1) {
-    const progress = index / (safePointCount - 1)
-    points.push([
-      origin.x + progress * PERFORMANCE_STROKE_WIDTH,
-      origin.y + Math.sin(progress * Math.PI * 4) * PERFORMANCE_STROKE_AMPLITUDE,
-      0.5,
-    ])
-  }
-
-  return points
 }
 
 function readPrimaryModifier(modifiers: ReturnType<typeof useCanvasModifierKeys>) {

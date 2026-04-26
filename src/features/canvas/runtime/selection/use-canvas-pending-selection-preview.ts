@@ -2,7 +2,6 @@ import {
   getCanvasPendingSelectionPreviewSummary,
   isCanvasPendingPreviewActive,
 } from '../../system/canvas-selection'
-import type { CanvasPendingSelectionPreview } from '../../system/canvas-selection'
 import { useCanvasEngineSelector } from '../../react/use-canvas-engine'
 
 type PendingSelectionPreviewSummary = {
@@ -48,5 +47,3 @@ export function useCanvasPendingSelectionPreviewSummary() {
     arePreviewSummariesEqual,
   )
 }
-
-export type { CanvasPendingSelectionPreview }

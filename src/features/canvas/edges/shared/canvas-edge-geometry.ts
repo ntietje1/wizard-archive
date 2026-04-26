@@ -22,7 +22,7 @@ const MIN_ZOOM = 1e-6
 const NODE_EDGE_ANCHOR_OUTSET_PX = 0
 const POINT_EPSILON = 1e-6
 
-export type CanvasEdgeEndpoints = {
+type CanvasEdgeEndpoints = {
   sourceX: number
   sourceY: number
   targetX: number

@@ -10,7 +10,6 @@ const connectionHandlesSpy = vi.hoisted(() => vi.fn())
 let strokeEngine: CanvasEngine = createCanvasEngine()
 
 vi.mock('@xyflow/react', () => ({
-  useViewport: () => ({ zoom: 1 }),
   Position: {
     Top: 'top',
     Right: 'right',
@@ -37,8 +36,12 @@ vi.mock('../../shared/canvas-node-connection-handles', () => ({
 
 vi.mock('../../../runtime/providers/canvas-runtime', () => ({
   useCanvasRuntime: () => ({
-    canvasEngine: {
+    domRuntime: {
       registerStrokeNodePaths: vi.fn(() => vi.fn()),
+    },
+    canvasEngine: strokeEngine,
+    viewportController: {
+      getZoom: () => 1,
     },
   }),
 }))

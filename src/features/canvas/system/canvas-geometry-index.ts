@@ -1,12 +1,12 @@
 import { buildCanvasEdgePath } from './canvas-edge-paths'
 import { createNodeLookup, EMPTY_SET } from './canvas-document-projector'
 import type { CanvasEngineSnapshot, CanvasInternalNode } from './canvas-engine-types'
-import type { Node, XYPosition } from '@xyflow/react'
+import type { CanvasNode, CanvasPosition } from '../types/canvas-domain-types'
 
 interface CanvasGeometryIndex {
   updateDraggedNodePositions: (
     snapshot: CanvasEngineSnapshot,
-    positions: ReadonlyMap<string, XYPosition>,
+    positions: ReadonlyMap<string, CanvasPosition>,
   ) => { snapshot: Omit<CanvasEngineSnapshot, 'version'>; dirtyNodeIds: ReadonlySet<string> } | null
   stopDrag: (
     snapshot: CanvasEngineSnapshot,
@@ -153,7 +153,7 @@ export function createCanvasGeometryIndex(): CanvasGeometryIndex {
 }
 
 function createNodesById(nodeLookup: ReadonlyMap<string, CanvasInternalNode>) {
-  const nodesById = new Map<string, Node>()
+  const nodesById = new Map<string, CanvasNode>()
   for (const [nodeId, internalNode] of nodeLookup) {
     nodesById.set(nodeId, internalNode.node)
   }

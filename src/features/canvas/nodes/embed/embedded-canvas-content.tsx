@@ -11,11 +11,12 @@ import '@xyflow/react/dist/style.css'
 import { Loader2 } from 'lucide-react'
 import { canvasEdgeTypes } from '../../edges/canvas-edge-renderers'
 import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime-context'
-import type { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
 import {
   CanvasRuntimeContext,
   READ_ONLY_CANVAS_RUNTIME,
+  createCanvasDomRuntimeAdapter,
 } from '../../runtime/providers/canvas-runtime'
+import type { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
 import { CanvasEngineProvider } from '../../react/canvas-engine-context'
 import { createCanvasEngine } from '../../system/canvas-engine'
 import { useEmbeddedCanvasState } from './use-embedded-canvas-state'
@@ -108,6 +109,7 @@ function EmbeddedCanvasFlow({
 }) {
   const colorMode = useResolvedTheme()
   const canvasEngine = useMemo(() => createCanvasEngine(), [])
+  const domRuntime = useMemo(() => createCanvasDomRuntimeAdapter(canvasEngine), [canvasEngine])
   const bounds = useMemo(() => getEmbeddedCanvasBounds(nodes), [nodes])
   const viewport = useMemo(
     () => getEmbeddedCanvasViewport(bounds, containerSize.width, containerSize.height),
@@ -120,7 +122,11 @@ function EmbeddedCanvasFlow({
 
   return (
     <CanvasEngineProvider engine={canvasEngine}>
-      <CanvasRuntimeProvider {...READ_ONLY_CANVAS_RUNTIME} canvasEngine={canvasEngine}>
+      <CanvasRuntimeProvider
+        {...READ_ONLY_CANVAS_RUNTIME}
+        canvasEngine={canvasEngine}
+        domRuntime={domRuntime}
+      >
         <div className="relative h-full w-full min-h-0 min-w-0 bg-background [&_.react-flow__edge]:pointer-events-none [&_.react-flow__node]:pointer-events-none">
           <ReactFlow
             className="h-full w-full min-h-0 min-w-0"

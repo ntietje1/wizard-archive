@@ -8,6 +8,7 @@ import {
   EMPTY_NODE_LOOKUP,
   EMPTY_NODES,
   EMPTY_SET,
+  patchCanvasEdges,
   projectCanvasDocumentSnapshot,
 } from '../canvas-document-projector'
 import { createCanvasCullingManager } from '../canvas-culling-manager'
@@ -55,6 +56,17 @@ describe('canvas engine managers', () => {
     expect(projected.edgeLookup.get('edge-1')?.edge).toBe(edge)
     expect(projected.edgeIdsByNodeId.get('source')).toEqual(new Set(['edge-1']))
     expect(projected.edgeIdsByNodeId.get('target')).toEqual(new Set(['edge-1']))
+  })
+
+  it('keeps edge patch projection stable when persisted fields are unchanged', () => {
+    const edge = createEdge('edge-1', 'source', 'target')
+    const edges = [edge]
+
+    expect(patchCanvasEdges(edges, new Map([['edge-1', { type: 'bezier' }]]))).toBe(edges)
+    expect(
+      patchCanvasEdges(edges, new Map([['edge-1', { style: { strokeWidth: undefined } }]])),
+    ).toBe(edges)
+    expect(patchCanvasEdges(edges, new Map([['edge-1', { type: 'step' }]]))).not.toBe(edges)
   })
 
   it('keeps selection preview updates out of node and edge lookups', () => {

@@ -12,7 +12,7 @@ export type StrokeNodeData = {
   bounds: Bounds
 }
 
-export type StrokeNodeType = Node<StrokeNodeData, 'stroke'>
+type StrokeNodeType = Node<StrokeNodeData, 'stroke'>
 
 type StrokeNodeLike = {
   position: XYPosition
@@ -31,8 +31,6 @@ const STROKE_OPTIONS_BASE = {
   streamline: 0.5,
 }
 
-const MINI_MAP_STROKE_PADDING = 12
-const MIN_ZOOM = 1e-6
 const MIN_STROKE_NODE_SIZE = 1
 
 export function clampStrokeNodeSize(size: number): number {
@@ -211,13 +209,4 @@ export function resizeStrokeNode<TNode extends StrokeNodeLike>(
       size: clampStrokeNodeSize(size * Math.min(scaleX, scaleY)),
     },
   }
-}
-
-export function getMiniMapStrokePath(
-  points: Array<[number, number, number]>,
-  size: number,
-  zoom: number,
-): string {
-  const safeZoom = Number.isFinite(zoom) && zoom > MIN_ZOOM ? zoom : MIN_ZOOM
-  return pointsToPathD(points, (clampStrokeNodeSize(size) + MINI_MAP_STROKE_PADDING) / safeZoom)
 }

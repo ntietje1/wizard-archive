@@ -1,12 +1,12 @@
-import type { XYPosition } from '@xyflow/react'
 import type {
   ParsedCanvasRuntimeEmbedNode,
   ParsedCanvasRuntimeStrokeNode,
   ParsedCanvasRuntimeTextNode,
 } from 'convex/canvases/validation'
+import type { CanvasPosition } from '../types/canvas-domain-types'
 
 /**
- * Raw node creation/input data stays broad at the React Flow boundary; stricter node contracts are
+ * Raw node creation/input data stays broad at the document boundary; stricter node contracts are
  * enforced through the parsed runtime node types and per-node normalizers.
  */
 export type CanvasNodeData = Record<string, unknown>
@@ -32,20 +32,9 @@ export type CanvasRuntimeNode<
 }
 
 export interface CanvasNodeCreateArgs {
-  position: XYPosition
+  position: CanvasPosition
   size?: { width: number; height: number }
   data?: CanvasNodeData
-}
-
-export interface CanvasNodeMinimapProps {
-  id: string
-  x: number
-  y: number
-  width: number
-  height: number
-  color?: string
-  borderRadius?: number
-  shapeRendering?: string
 }
 
 export interface CanvasNodeComponentProps<TData extends CanvasNodeData = CanvasNodeData> {

@@ -1,9 +1,15 @@
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 
+export type CanvasNodeResizeHandlePosition =
+  | 'top-left'
+  | 'top-right'
+  | 'bottom-left'
+  | 'bottom-right'
+
 export interface CanvasNodeResizeHandleDescriptor {
   cursorClassName: string
   onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => void
-  position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
+  position: CanvasNodeResizeHandlePosition
   style: CSSProperties
 }
 

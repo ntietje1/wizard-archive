@@ -3,8 +3,9 @@ import { BezierCanvasEdge } from '../edges/bezier/bezier-canvas-edge'
 import type { CanvasEdgeType } from '../edges/canvas-edge-types'
 import { StepCanvasEdge } from '../edges/step/step-canvas-edge'
 import { StraightCanvasEdge } from '../edges/straight/straight-canvas-edge'
-import { useCanvasEngine, useCanvasEngineSelector } from '../react/use-canvas-engine'
-import type { Edge } from '@xyflow/react'
+import { useCanvasEngineSelector } from '../react/use-canvas-engine'
+import { useCanvasRuntime } from '../runtime/providers/canvas-runtime'
+import type { CanvasEdge } from '../types/canvas-domain-types'
 import type { ComponentType, MouseEvent as ReactMouseEvent } from 'react'
 
 const EDGE_RENDERERS = {
@@ -19,14 +20,14 @@ export const CanvasEdgeWrapper = memo(function CanvasEdgeWrapper({
   onEdgeContextMenu,
 }: {
   edgeId: string
-  onEdgeClick?: (event: ReactMouseEvent, edge: Edge) => void
-  onEdgeContextMenu: (event: ReactMouseEvent, edge: Edge) => void
+  onEdgeClick?: (event: ReactMouseEvent, edge: CanvasEdge) => void
+  onEdgeContextMenu: (event: ReactMouseEvent, edge: CanvasEdge) => void
 }) {
   const internalEdge = useCanvasEngineSelector((snapshot) => snapshot.edgeLookup.get(edgeId))
-  const canvasEngine = useCanvasEngine()
+  const { domRuntime } = useCanvasRuntime()
   const edgeRef = useRef<SVGGElement | null>(null)
 
-  useEffect(() => canvasEngine.registerEdgeElement(edgeId, edgeRef.current), [canvasEngine, edgeId])
+  useEffect(() => domRuntime.registerEdgeElement(edgeId, edgeRef.current), [domRuntime, edgeId])
 
   if (!internalEdge || !internalEdge.visible) {
     return null

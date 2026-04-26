@@ -2,8 +2,10 @@ import { memo, useEffect, useRef } from 'react'
 import { cn } from '~/features/shadcn/lib/utils'
 import { CanvasNodeContent } from './canvas-node-content'
 import { useCanvasEngine, useCanvasEngineSelector } from '../react/use-canvas-engine'
+import { useCanvasRuntime } from '../runtime/providers/canvas-runtime'
+import { useIsInteractiveCanvasRenderMode } from '../runtime/providers/use-canvas-render-mode'
 import type { CanvasInternalNode } from '../system/canvas-engine'
-import type { Node } from '@xyflow/react'
+import type { CanvasNode } from '../types/canvas-domain-types'
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react'
 
 type CanvasNodeShellSnapshot = {
@@ -23,15 +25,18 @@ export const CanvasNodeWrapper = memo(function CanvasNodeWrapper({
   onNodeContextMenu,
 }: {
   nodeId: string
-  onNodeClick?: (event: ReactMouseEvent, node: Node) => void
-  onNodeContextMenu: (event: ReactMouseEvent, node: Node) => void
+  onNodeClick?: (event: ReactMouseEvent, node: CanvasNode) => void
+  onNodeContextMenu: (event: ReactMouseEvent, node: CanvasNode) => void
 }) {
   const shell = useCanvasEngineSelector(
     (snapshot) => selectCanvasNodeShellSnapshot(snapshot.nodeLookup.get(nodeId)),
     areCanvasNodeShellSnapshotsEqual,
   )
   const canvasEngine = useCanvasEngine()
+  const { canEdit, domRuntime, nodeDragController } = useCanvasRuntime()
+  const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
   const nodeRef = useRef<HTMLDivElement | null>(null)
+  const shellMounted = shell !== null
 
   useEffect(() => {
     if (!shell) {
@@ -56,7 +61,40 @@ export const CanvasNodeWrapper = memo(function CanvasNodeWrapper({
     return () => observer.disconnect()
   }, [canvasEngine, shell])
 
-  useEffect(() => canvasEngine.registerNodeElement(nodeId, nodeRef.current), [canvasEngine, nodeId])
+  useEffect(
+    () => domRuntime.registerNodeElement(nodeId, nodeRef.current),
+    [domRuntime, nodeId, shellMounted],
+  )
+
+  useEffect(() => {
+    const dragTarget = nodeRef.current
+    if (!dragTarget || !canEdit || !interactiveRenderMode || !nodeDragController) {
+      return undefined
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (isNodeDragBlocked(event.target)) {
+        return
+      }
+
+      nodeDragController.handlePointerDown(nodeId, event)
+    }
+    const handleMouseDown = (event: MouseEvent) => {
+      if (isNodeDragBlocked(event.target)) {
+        return
+      }
+
+      nodeDragController.handlePointerDown(nodeId, event)
+    }
+    dragTarget.addEventListener('pointerdown', handlePointerDown, { capture: true })
+    if (!window.PointerEvent) {
+      dragTarget.addEventListener('mousedown', handleMouseDown, { capture: true })
+    }
+    return () => {
+      dragTarget.removeEventListener('pointerdown', handlePointerDown, { capture: true })
+      dragTarget.removeEventListener('mousedown', handleMouseDown, { capture: true })
+    }
+  }, [canEdit, interactiveRenderMode, nodeDragController, nodeId, shellMounted])
 
   if (!shell || !shell.visible) {
     return null
@@ -126,6 +164,29 @@ function selectCanvasNodeShellSnapshot(
     zIndex: internalNode.zIndex,
     visible: internalNode.visible,
   }
+}
+
+function isNodeDragBlocked(target: EventTarget | null) {
+  if (!(target instanceof Element)) {
+    return false
+  }
+
+  return Boolean(
+    target.closest(
+      [
+        '[data-node-editing="true"]',
+        '.canvas-node-resize-handle',
+        '[data-canvas-node-handle="true"]',
+        'input',
+        'textarea',
+        'select',
+        'button',
+        'a[href]',
+        '[contenteditable="true"]',
+        '.canvas-rich-text-editor',
+      ].join(','),
+    ),
+  )
 }
 
 function areCanvasNodeShellSnapshotsEqual(

@@ -6,6 +6,7 @@ import type { CanvasDragController } from '../../system/canvas-drag-controller'
 import type { CanvasEngine } from '../../system/canvas-engine'
 import type { CanvasViewportController } from '../../system/canvas-viewport-controller'
 import type { CanvasCommands } from '../document/use-canvas-commands'
+import { createCanvasDomRuntimeAdapter } from '../providers/canvas-runtime'
 import type { CanvasRuntime } from '../providers/canvas-runtime'
 import type { CanvasSessionRuntime } from '../session/use-canvas-session-state'
 
@@ -100,6 +101,7 @@ export function createCanvasRuntime(
     documentWriter: CanvasDocumentWriter
     selection: CanvasSelectionController
     canvasEngine: CanvasEngine
+    domRuntime: CanvasRuntime['domRuntime']
     nodeDragController: CanvasDragController | null
     viewportController: CanvasViewportController
     commands: CanvasCommands
@@ -112,12 +114,16 @@ export function createCanvasRuntime(
     documentWriter: documentWriterOverrides,
     selection: selectionOverrides,
     commands: commandsOverrides,
+    canvasEngine: canvasEngineOverride,
+    domRuntime: domRuntimeOverride,
     ...restOverrides
   } = overrides
+  const canvasEngine = canvasEngineOverride ?? createCanvasEngine()
 
   return {
     canEdit: true,
-    canvasEngine: createCanvasEngine(),
+    canvasEngine,
+    domRuntime: domRuntimeOverride ?? createCanvasDomRuntimeAdapter(canvasEngine),
     remoteHighlights: new Map(),
     history: {
       canUndo: false,

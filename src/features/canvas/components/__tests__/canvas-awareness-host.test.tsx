@@ -4,6 +4,11 @@ import { CanvasAwarenessHost } from '../canvas-awareness-host'
 import { CanvasLocalOverlaysHost } from '../canvas-local-overlays-host'
 import { CanvasEngineProvider } from '../../react/canvas-engine-context'
 import { createCanvasEngine } from '../../system/canvas-engine'
+import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime-context'
+import {
+  READ_ONLY_CANVAS_RUNTIME,
+  createCanvasDomRuntimeAdapter,
+} from '../../runtime/providers/canvas-runtime'
 
 vi.mock('../../tools/canvas-tool-modules', () => ({
   canvasToolAwarenessLayers: [
@@ -33,7 +38,9 @@ describe('CanvasAwarenessHost', () => {
   it('renders tool and node awareness layers from the direct awareness exports', () => {
     render(
       <CanvasEngineProvider engine={createCanvasEngine()}>
-        <CanvasAwarenessHost remoteUsers={[]} />
+        <CanvasRuntimeProvider {...READ_ONLY_CANVAS_RUNTIME}>
+          <CanvasAwarenessHost remoteUsers={[]} />
+        </CanvasRuntimeProvider>
       </CanvasEngineProvider>,
     )
 
@@ -43,13 +50,20 @@ describe('CanvasAwarenessHost', () => {
 
   it('applies the current viewport transform to the awareness layer container', () => {
     const canvasEngine = createCanvasEngine()
+    const domRuntime = createCanvasDomRuntimeAdapter(canvasEngine)
     canvasEngine.setViewport({ x: 12, y: 34, zoom: 2 })
     const subscribeSpy = vi.spyOn(canvasEngine, 'subscribe')
-    const registerSpy = vi.spyOn(canvasEngine, 'registerViewportOverlayElement')
+    const registerSpy = vi.spyOn(domRuntime, 'registerViewportOverlayElement')
 
     render(
       <CanvasEngineProvider engine={canvasEngine}>
-        <CanvasAwarenessHost remoteUsers={[]} />
+        <CanvasRuntimeProvider
+          {...READ_ONLY_CANVAS_RUNTIME}
+          canvasEngine={canvasEngine}
+          domRuntime={domRuntime}
+        >
+          <CanvasAwarenessHost remoteUsers={[]} />
+        </CanvasRuntimeProvider>
       </CanvasEngineProvider>,
     )
 
@@ -64,12 +78,19 @@ describe('CanvasAwarenessHost', () => {
 
   it('applies viewport transforms to local overlays through the DOM scheduler', () => {
     const canvasEngine = createCanvasEngine()
+    const domRuntime = createCanvasDomRuntimeAdapter(canvasEngine)
     canvasEngine.setViewport({ x: -20, y: 8, zoom: 0.75 })
     const subscribeSpy = vi.spyOn(canvasEngine, 'subscribe')
 
     render(
       <CanvasEngineProvider engine={canvasEngine}>
-        <CanvasLocalOverlaysHost />
+        <CanvasRuntimeProvider
+          {...READ_ONLY_CANVAS_RUNTIME}
+          canvasEngine={canvasEngine}
+          domRuntime={domRuntime}
+        >
+          <CanvasLocalOverlaysHost />
+        </CanvasRuntimeProvider>
       </CanvasEngineProvider>,
     )
 

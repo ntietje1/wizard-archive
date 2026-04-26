@@ -5,7 +5,7 @@ import type { CanvasEdgePatch } from '../edges/canvas-edge-types'
 import type { CanvasCullingDiff } from './canvas-culling'
 import type { CanvasDomRegistry } from './canvas-dom-registry'
 import type { StrokeNodeData } from '../nodes/stroke/stroke-node-model'
-import type { Edge, XYPosition } from '@xyflow/react'
+import type { CanvasEdge, CanvasPosition } from '../types/canvas-domain-types'
 
 export interface CanvasViewport {
   x: number
@@ -15,8 +15,8 @@ export interface CanvasViewport {
 
 export type CanvasCameraState = 'idle' | 'moving'
 
-export interface CanvasRenderScheduler {
-  scheduleNodeTransforms: (positions: ReadonlyMap<string, XYPosition>) => void
+interface CanvasRenderScheduler {
+  scheduleNodeTransforms: (positions: ReadonlyMap<string, CanvasPosition>) => void
   scheduleEdgePaths: (paths: ReadonlyMap<string, string>) => void
   scheduleNodeDataPatches: (updates: ReadonlyMap<string, Record<string, unknown>>) => void
   scheduleEdgePatches: (updates: ReadonlyMap<string, CanvasEdgePatch>) => void
@@ -32,7 +32,7 @@ export function createCanvasRenderScheduler({
 }: {
   domRegistry: CanvasDomRegistry
 }): CanvasRenderScheduler {
-  const pendingNodeTransforms = new Map<string, XYPosition>()
+  const pendingNodeTransforms = new Map<string, CanvasPosition>()
   const pendingEdgePaths = new Map<string, string>()
   const pendingNodeDataPatches = new Map<string, Record<string, unknown>>()
   const pendingEdgePatches = new Map<string, CanvasEdgePatch>()
@@ -272,7 +272,7 @@ function parseStrokeNodeData(data: Record<string, unknown>): StrokeNodeData | nu
   return data as StrokeNodeData
 }
 
-function readEdgeStyle(path: SVGPathElement): NonNullable<Edge['style']> {
+function readEdgeStyle(path: SVGPathElement): NonNullable<CanvasEdge['style']> {
   const strokeWidth = path.style.strokeWidth
   const opacity = path.style.opacity
   return {
