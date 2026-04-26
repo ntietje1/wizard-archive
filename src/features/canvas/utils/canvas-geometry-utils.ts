@@ -7,8 +7,6 @@ export type Bounds = {
   height: number
 }
 
-export type PointLike = CanvasPosition
-
 export function rectFromPoints(a: CanvasPosition, b: CanvasPosition): Bounds {
   return {
     x: Math.min(a.x, b.x),
@@ -27,7 +25,7 @@ export function rectIntersectsBounds(rect: Bounds, bounds: Bounds): boolean {
   )
 }
 
-export function boundsFromPoints(points: ReadonlyArray<PointLike>): Bounds | null {
+export function boundsFromPoints(points: ReadonlyArray<CanvasPosition>): Bounds | null {
   if (points.length === 0) return null
 
   let minX = Infinity

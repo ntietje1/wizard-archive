@@ -26,12 +26,9 @@ export function createCanvasDocumentWriter({
   nodesMap,
   edgesMap,
 }: CreateCanvasDocumentWriterOptions): CanvasDocumentWriter {
-  const withNodeTransaction = (fn: () => void) => transactCanvasMap(nodesMap, fn)
-  const withEdgeTransaction = (fn: () => void) => transactCanvasMap(edgesMap, fn)
-
   return {
     createNode: (node) => {
-      withNodeTransaction(() => {
+      transactCanvasMap(nodesMap, () => {
         createCanvasNodeCommand({
           nodesMap,
           node,
@@ -42,7 +39,7 @@ export function createCanvasDocumentWriter({
     },
     patchNodeData: (updates) => {
       if (updates.size === 0) return
-      withNodeTransaction(() => {
+      transactCanvasMap(nodesMap, () => {
         measureCanvasPerformance(
           'canvas.document.nodes.patch-data',
           { nodeCount: updates.size },
@@ -58,7 +55,7 @@ export function createCanvasDocumentWriter({
     },
     patchEdges: (updates) => {
       if (updates.size === 0) return
-      withEdgeTransaction(() => {
+      transactCanvasMap(edgesMap, () => {
         measureCanvasPerformance('canvas.document.edges.patch', { edgeCount: updates.size }, () => {
           patchCanvasEdgesCommand({
             edgesMap,
@@ -68,7 +65,7 @@ export function createCanvasDocumentWriter({
       })
     },
     resizeNode: (nodeId, width, height, position) => {
-      withNodeTransaction(() => {
+      transactCanvasMap(nodesMap, () => {
         resizeCanvasNodeCommand({
           nodesMap,
           nodeId,
@@ -93,7 +90,7 @@ export function createCanvasDocumentWriter({
       }
     },
     createEdge: (connection, defaults) => {
-      withEdgeTransaction(() => {
+      transactCanvasMap(edgesMap, () => {
         createCanvasEdgeCommand({
           edgesMap,
           connection,
@@ -104,13 +101,13 @@ export function createCanvasDocumentWriter({
     },
     deleteEdges: (edgeIds) => {
       if (edgeIds.size === 0) return
-      withEdgeTransaction(() => {
+      transactCanvasMap(edgesMap, () => {
         deleteCanvasEdgesCommand({ edgesMap, edgeIds })
       })
     },
     setNodePositions: (positions) => {
       if (positions.size === 0) return
-      withNodeTransaction(() => {
+      transactCanvasMap(nodesMap, () => {
         measureCanvasPerformance(
           'canvas.document.nodes.set-position',
           { nodeCount: positions.size },

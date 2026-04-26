@@ -1,7 +1,8 @@
 import { rectFromPoints } from './canvas-geometry-utils'
-import type { Bounds, PointLike } from './canvas-geometry-utils'
+import type { CanvasPosition } from '../types/canvas-domain-types'
+import type { Bounds } from './canvas-geometry-utils'
 
-export function constrainPointToAxis(start: PointLike, end: PointLike): PointLike {
+export function constrainPointToAxis(start: CanvasPosition, end: CanvasPosition): CanvasPosition {
   const deltaX = end.x - start.x
   const deltaY = end.y - start.y
 
@@ -12,7 +13,7 @@ export function constrainPointToAxis(start: PointLike, end: PointLike): PointLik
   return { x: start.x, y: end.y }
 }
 
-export function constrainPointToSquare(start: PointLike, end: PointLike): PointLike {
+export function constrainPointToSquare(start: CanvasPosition, end: CanvasPosition): CanvasPosition {
   const deltaX = end.x - start.x
   const deltaY = end.y - start.y
   const size = Math.min(Math.abs(deltaX), Math.abs(deltaY))
@@ -24,8 +25,8 @@ export function constrainPointToSquare(start: PointLike, end: PointLike): PointL
 }
 
 export function getConstrainedRectFromPoints(
-  start: PointLike,
-  end: PointLike,
+  start: CanvasPosition,
+  end: CanvasPosition,
   { square }: { square: boolean },
 ): Bounds {
   return rectFromPoints(start, square ? constrainPointToSquare(start, end) : end)

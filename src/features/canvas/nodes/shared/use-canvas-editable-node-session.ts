@@ -4,10 +4,7 @@ import type {
   RichEmbedLifecycleController,
 } from '../embed/use-rich-embed-lifecycle'
 import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
-import {
-  useIsCanvasNodeSelected,
-  useSelectedCanvasNodeIds,
-} from '../../runtime/selection/use-canvas-selection-state'
+import { useCanvasEngineSelector } from '../../react/use-canvas-engine'
 import { isExclusivelySelectedNode } from '../../utils/canvas-selection-utils'
 
 interface UseCanvasEditableNodeSessionOptions {
@@ -24,8 +21,8 @@ export function useCanvasEditableNodeSession({
   setEditing,
 }: UseCanvasEditableNodeSessionOptions) {
   const { editSession, selection } = useCanvasRuntime()
-  const selectedNodeIds = useSelectedCanvasNodeIds()
-  const isSelected = useIsCanvasNodeSelected(id)
+  const selectedNodeIds = useCanvasEngineSelector((state) => state.selection.nodeIds)
+  const isSelected = useCanvasEngineSelector((state) => state.selection.nodeIds.has(id))
   const isExclusivelySelected = isExclusivelySelectedNode(selectedNodeIds, id)
   const pendingActivationRef = useRef<RichEmbedActivationPayload | null>(null)
   const editFrameRef = useRef<number | null>(null)

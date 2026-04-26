@@ -7,15 +7,13 @@ import {
   setCanvasDragSnapGuides,
 } from '../../runtime/interaction/canvas-drag-snap-overlay'
 import { useCanvasModifierKeys } from '../../runtime/interaction/use-canvas-modifier-keys'
-import { useIsCanvasNodeSelected } from '../../runtime/selection/use-canvas-selection-state'
 import { isPrimarySelectionModifier } from '../../utils/canvas-selection-utils'
 import { releasePointerCapture } from '../../tools/shared/tool-module-utils'
 import { createCanvasResizeController } from '../../system/canvas-resize-controller'
-import type {
-  CanvasNodeResizeHandleDescriptor,
-  CanvasNodeResizeHandlePosition,
-} from './canvas-node-resize-handles'
+import { useCanvasEngineSelector } from '../../react/use-canvas-engine'
+import type { CanvasNodeResizeHandleDescriptor } from './canvas-node-resize-handles'
 import type { CSSProperties } from 'react'
+import type { Bounds } from '../../utils/canvas-geometry-utils'
 
 const HANDLE_SIZE = 4
 const HANDLE_HIT_SIZE = 16
@@ -23,7 +21,7 @@ const SELECTION_BORDER_OUTSET_PX = 1
 const RESIZE_HANDLE_OUTSET_PX = SELECTION_BORDER_OUTSET_PX
 
 const CORNERS: Array<{
-  position: CanvasNodeResizeHandlePosition
+  position: CanvasNodeResizeHandleDescriptor['position']
   cursorClassName: string
   style: CSSProperties
 }> = [
@@ -61,14 +59,6 @@ const CORNERS: Array<{
   },
 ]
 
-type CornerHandlePosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
-type CanvasResizeBounds = {
-  x: number
-  y: number
-  width: number
-  height: number
-}
-
 export function useCanvasResizeSession({
   id,
   dragging,
@@ -90,7 +80,7 @@ export function useCanvasResizeSession({
   } = useCanvasRuntime()
   const internalNode = useRuntimeCanvasNode(canvasEngine, id)
   const modifiers = useCanvasModifierKeys()
-  const selected = useIsCanvasNodeSelected(id)
+  const selected = useCanvasEngineSelector((state) => state.selection.nodeIds.has(id))
   const resizeController = useMemo(() => createCanvasResizeController(), [])
   const resizeTargetRef = useRef<{ pointerId: number; target: Element | null } | null>(null)
   const onResizeRef = useRef(onResize)
@@ -277,7 +267,7 @@ export function useCanvasResizeSession({
   }
 
   return CORNERS.map(({ position, cursorClassName, style }) => ({
-    position: position as CornerHandlePosition,
+    position,
     cursorClassName,
     style,
     onPointerDown: (event) => {
@@ -295,7 +285,7 @@ export function useCanvasResizeSession({
       }
       resizeController.start({
         pointerId: event.pointerId,
-        handlePosition: position as CornerHandlePosition,
+        handlePosition: position,
         startBounds: currentBounds,
         minWidth: minWidthRef.current,
         minHeight: minHeightRef.current,
@@ -352,7 +342,7 @@ function getCurrentResizeBounds(
     | undefined,
   minWidth: number,
   minHeight: number,
-): CanvasResizeBounds | null {
+): Bounds | null {
   if (!internalNode) {
     return null
   }

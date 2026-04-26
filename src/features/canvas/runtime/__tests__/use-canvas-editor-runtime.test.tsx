@@ -19,7 +19,6 @@ const viewportInteractionsSpy = vi.hoisted(() => vi.fn())
 const dropIntegrationSpy = vi.hoisted(() => vi.fn())
 const contextMenuSpy = vi.hoisted(() => vi.fn())
 const toolHandlersSpy = vi.hoisted(() => vi.fn())
-const clearSelectionSpy = vi.hoisted(() => vi.fn())
 const clearToolTransientStateSpy = vi.hoisted(() => vi.fn())
 const pointerRouterMock = vi.hoisted(() => ({
   interaction: {
@@ -297,10 +296,6 @@ vi.mock('../../tools/canvas-tool-modules', () => ({
   },
 }))
 
-vi.mock('../selection/use-canvas-selection-state', () => ({
-  clearCanvasSelectionState: clearSelectionSpy,
-}))
-
 function createTestCanvasDoc() {
   const doc = new Y.Doc()
   return {
@@ -325,7 +320,6 @@ describe('useCanvasEditorRuntime', () => {
     dropIntegrationSpy.mockReset()
     contextMenuSpy.mockReset()
     toolHandlersSpy.mockReset()
-    clearSelectionSpy.mockReset()
     clearToolTransientStateSpy.mockReset()
     selectionControllerMock.clear.mockReset()
     selectionControllerMock.clearSelection.mockReset()
