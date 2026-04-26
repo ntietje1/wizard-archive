@@ -45,13 +45,18 @@ export function CanvasPathEdge({
   const { visuallySelected, pendingPreviewActive, pendingSelected, selected } =
     useCanvasEdgeVisualSelection(props.id)
   const hasSelectedHighlight = interactiveRenderMode && visuallySelected
+  const hasGeometry = geometry !== null
   useEffect(() => {
+    if (!hasGeometry) {
+      return undefined
+    }
+
     return domRuntime.registerEdgePaths(props.id, {
       path: pathRef.current,
       highlightPath: highlightPathRef.current,
       interactionPath: interactionPathRef.current,
     })
-  }, [domRuntime, props.id, hasSelectedHighlight])
+  }, [domRuntime, props.id, hasGeometry, hasSelectedHighlight, interactiveRenderMode])
 
   if (!geometry) return null
 

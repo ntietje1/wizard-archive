@@ -73,6 +73,24 @@ describe('createCanvasEngine', () => {
     expect(listener).not.toHaveBeenCalled()
   })
 
+  it('skips projection and notification for unchanged engine patches', () => {
+    const engine = createCanvasEngine()
+    engine.setDocumentSnapshot({
+      nodes: [createNode('a', 0)],
+      edges: [createEdge('edge-1', 'a', 'a')],
+    })
+    const version = engine.getSnapshot().version
+    const listener = vi.fn()
+    engine.subscribe(listener)
+
+    engine.patchNodes(new Map([['a', { zIndex: 0 }]]))
+    engine.patchEdges(new Map([['edge-1', { type: 'bezier' }]]))
+    engine.setNodePositions(new Map([['a', { x: 0, y: 0 }]]))
+
+    expect(listener).not.toHaveBeenCalled()
+    expect(engine.getSnapshot().version).toBe(version)
+  })
+
   it('clears only previously selected item internals', () => {
     const engine = createCanvasEngine()
     engine.setDocumentSnapshot({

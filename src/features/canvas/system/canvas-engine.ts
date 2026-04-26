@@ -82,7 +82,13 @@ export function createCanvasEngine(): CanvasEngine {
       return
     }
 
-    setDocumentSnapshot({ nodes: patchCanvasNodes(store.getSnapshot().nodes, updates) })
+    const snapshot = store.getSnapshot()
+    const nextNodes = patchCanvasNodes(snapshot.nodes, updates)
+    if (nextNodes === snapshot.nodes) {
+      return
+    }
+
+    setDocumentSnapshot({ nodes: nextNodes })
   }
 
   const patchEdges: CanvasEngine['patchEdges'] = (updates) => {
@@ -90,7 +96,13 @@ export function createCanvasEngine(): CanvasEngine {
       return
     }
 
-    setDocumentSnapshot({ edges: patchCanvasEdges(store.getSnapshot().edges, updates) })
+    const snapshot = store.getSnapshot()
+    const nextEdges = patchCanvasEdges(snapshot.edges, updates)
+    if (nextEdges === snapshot.edges) {
+      return
+    }
+
+    setDocumentSnapshot({ edges: nextEdges })
   }
 
   const setNodePositions: CanvasEngine['setNodePositions'] = (positions) => {

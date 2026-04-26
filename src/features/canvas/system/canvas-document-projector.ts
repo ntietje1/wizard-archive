@@ -53,11 +53,7 @@ export function patchCanvasNodes(
       return node
     }
 
-    if (
-      Object.entries(patch).every(
-        ([key, value]) => node[key as keyof CanvasNode] === (value as CanvasNode[keyof CanvasNode]),
-      )
-    ) {
+    if (isCanvasNodePatchNoop(node, patch)) {
       return node
     }
 
@@ -166,6 +162,27 @@ function isCanvasEdgePatchNoop(edge: CanvasEdge, patch: CanvasEdgePatch) {
 
   return Object.entries(patch.style).every(
     ([key, value]) => edge.style?.[key as keyof NonNullable<CanvasEdge['style']>] === value,
+  )
+}
+
+function isCanvasNodePatchNoop(node: CanvasNode, patch: Partial<CanvasNode>) {
+  return Object.entries(patch).every(([key, value]) => {
+    if (key === 'position') {
+      return areCanvasPositionsEqual(node.position, value)
+    }
+
+    return node[key as keyof CanvasNode] === (value as CanvasNode[keyof CanvasNode])
+  })
+}
+
+function areCanvasPositionsEqual(left: CanvasNode['position'], right: unknown) {
+  return (
+    typeof right === 'object' &&
+    right !== null &&
+    'x' in right &&
+    'y' in right &&
+    left.x === right.x &&
+    left.y === right.y
   )
 }
 
