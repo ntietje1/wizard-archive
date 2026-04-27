@@ -1,28 +1,23 @@
 import { useEffect, useRef } from 'react'
 
-export type Vec2 = { x: number; y: number }
+type Vec2 = { x: number; y: number }
 
-export type SpringOptions = {
+type SpringOptions = {
   stiffness?: number
   damping?: number
   settleThreshold?: number
 }
 
-export const SPRING_DEFAULTS = {
+const SPRING_DEFAULTS = {
   stiffness: 600,
   damping: 50,
   settleThreshold: 0.3,
   maxDt: 0.04,
 } as const
 
-export type SpringState = { pos: Vec2; vel: Vec2 }
+type SpringState = { pos: Vec2; vel: Vec2 }
 
-export function stepSpring(
-  state: SpringState,
-  target: Vec2,
-  dt: number,
-  opts?: SpringOptions,
-): boolean {
+function stepSpring(state: SpringState, target: Vec2, dt: number, opts?: SpringOptions): boolean {
   const stiffness = opts?.stiffness ?? SPRING_DEFAULTS.stiffness
   const damping = opts?.damping ?? SPRING_DEFAULTS.damping
   const settle = opts?.settleThreshold ?? SPRING_DEFAULTS.settleThreshold

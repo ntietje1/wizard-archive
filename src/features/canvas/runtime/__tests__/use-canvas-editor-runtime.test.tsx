@@ -31,6 +31,7 @@ const documentWriterMock = vi.hoisted(() => ({
   patchNodeData: vi.fn(),
   patchEdges: vi.fn(),
   resizeNode: vi.fn(),
+  resizeNodes: vi.fn(),
   deleteNodes: vi.fn(),
   createEdge: vi.fn(),
   deleteEdges: vi.fn(),
@@ -86,6 +87,9 @@ const nodeActionsMock = vi.hoisted(() => ({
   transact: vi.fn(),
   onResize: vi.fn(),
   onResizeEnd: vi.fn(),
+  onResizeMany: vi.fn(),
+  onResizeManyCancel: vi.fn(),
+  onResizeManyEnd: vi.fn(),
 }))
 const contextMenuMock = vi.hoisted(
   () =>
@@ -121,7 +125,6 @@ const session = vi.hoisted(() => ({
     remoteUsers: [],
     core: {
       setLocalCursor: vi.fn(),
-      setLocalDragging: vi.fn(),
       setLocalResizing: vi.fn(),
       setLocalSelection: vi.fn(),
     },
@@ -130,14 +133,8 @@ const session = vi.hoisted(() => ({
     },
   },
   remoteUsers: [],
-  remoteDragPositions: {},
   remoteResizeDimensions: {},
   remoteHighlights: new Map(),
-}))
-const remoteDragAnimation = vi.hoisted(() => ({
-  hasSpring: vi.fn(() => false),
-  setTarget: vi.fn(),
-  clearNodeSprings: vi.fn(),
 }))
 
 vi.mock('~/features/previews/hooks/use-yjs-preview-upload', () => ({
@@ -221,10 +218,6 @@ vi.mock('../context-menu/use-canvas-context-menu', () => ({
 
 vi.mock('../session/use-canvas-session-state', () => ({
   useCanvasSessionState: () => session,
-}))
-
-vi.mock('../interaction/use-canvas-remote-drag-animation', () => ({
-  useCanvasRemoteDragAnimation: () => remoteDragAnimation,
 }))
 
 vi.mock('../interaction/use-canvas-modifier-keys', () => ({
@@ -364,7 +357,6 @@ describe('useCanvasEditorRuntime', () => {
       edgesMap,
       localDraggingIdsRef: expect.any(Object),
       remoteResizeDimensions: session.remoteResizeDimensions,
-      remoteDragAnimation,
     })
     expect(selectionControllerSpy).toHaveBeenCalledWith({
       canvasEngine: expect.objectContaining({

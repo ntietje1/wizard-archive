@@ -1,50 +1,57 @@
+import { CanvasScreenSpaceSvg } from './canvas-screen-space-overlay'
+import {
+  CANVAS_SELECTION_CHROME_STROKE_WIDTH_PX,
+  canvasPointToScreenPoint,
+  useCanvasScreenSpaceViewport,
+} from './canvas-screen-space-overlay-utils'
 import { useCanvasDragSnapOverlayStore } from '../runtime/interaction/canvas-drag-snap-overlay'
 
 export function CanvasDragSnapOverlay() {
   const guides = useCanvasDragSnapOverlayStore((state) => state.guides)
+  const viewport = useCanvasScreenSpaceViewport()
 
   if (guides.length === 0) {
     return null
   }
 
   return (
-    <svg
-      aria-hidden="true"
-      width="100%"
-      height="100%"
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        overflow: 'visible',
-        pointerEvents: 'none',
-      }}
-    >
+    <CanvasScreenSpaceSvg>
       {guides.map((guide) =>
-        guide.orientation === 'vertical' ? (
-          <line
-            key={`vertical-${guide.position}-${guide.start}-${guide.end}`}
-            x1={guide.position}
-            x2={guide.position}
-            y1={guide.start}
-            y2={guide.end}
-            stroke="var(--primary)"
-            strokeOpacity={0.35}
-            strokeWidth={1}
-          />
-        ) : (
-          <line
-            key={`horizontal-${guide.position}-${guide.start}-${guide.end}`}
-            x1={guide.start}
-            x2={guide.end}
-            y1={guide.position}
-            y2={guide.position}
-            stroke="var(--primary)"
-            strokeOpacity={0.35}
-            strokeWidth={1}
-          />
-        ),
+        guide.orientation === 'vertical'
+          ? renderGuideLine({
+              key: `vertical-${guide.position}-${guide.start}-${guide.end}`,
+              start: canvasPointToScreenPoint({ x: guide.position, y: guide.start }, viewport),
+              end: canvasPointToScreenPoint({ x: guide.position, y: guide.end }, viewport),
+            })
+          : renderGuideLine({
+              key: `horizontal-${guide.position}-${guide.start}-${guide.end}`,
+              start: canvasPointToScreenPoint({ x: guide.start, y: guide.position }, viewport),
+              end: canvasPointToScreenPoint({ x: guide.end, y: guide.position }, viewport),
+            }),
       )}
-    </svg>
+    </CanvasScreenSpaceSvg>
+  )
+}
+
+function renderGuideLine({
+  key,
+  start,
+  end,
+}: {
+  key: string
+  start: { x: number; y: number }
+  end: { x: number; y: number }
+}) {
+  return (
+    <line
+      key={key}
+      x1={start.x}
+      y1={start.y}
+      x2={end.x}
+      y2={end.y}
+      stroke="var(--primary)"
+      strokeOpacity={0.35}
+      strokeWidth={CANVAS_SELECTION_CHROME_STROKE_WIDTH_PX}
+    />
   )
 }

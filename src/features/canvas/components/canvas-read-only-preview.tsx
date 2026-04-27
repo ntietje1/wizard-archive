@@ -208,13 +208,7 @@ const PREVIEW_NODE_RENDERERS = {
 } as const satisfies CanvasNodeRendererMap
 
 function CanvasPreviewNodeContent({ nodeId }: { nodeId: string }) {
-  return (
-    <CanvasNodeContentRenderer
-      nodeId={nodeId}
-      renderers={PREVIEW_NODE_RENDERERS}
-      fallbackType="text"
-    />
-  )
+  return <CanvasNodeContentRenderer nodeId={nodeId} renderers={PREVIEW_NODE_RENDERERS} />
 }
 
 function CanvasPreviewEmbedNode({ id, data, dragging }: CanvasNodeComponentProps<EmbedNodeData>) {

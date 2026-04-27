@@ -1,9 +1,8 @@
 import { act, renderHook } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
 import { useCanvasDocumentProjection } from '../use-canvas-document-projection'
 import { createCanvasEngine } from '../../../system/canvas-engine'
-import type { CanvasRemoteDragAnimation } from '../../interaction/use-canvas-remote-drag-animation'
 import type {
   CanvasEdge as Edge,
   CanvasNode as Node,
@@ -27,14 +26,6 @@ function createOrderedTextNode(id: string, zIndex: number): Node {
   }
 }
 
-function createRemoteDragAnimation(): CanvasRemoteDragAnimation {
-  return {
-    hasSpring: () => false,
-    setTarget: vi.fn(),
-    clearNodeSprings: vi.fn(),
-  }
-}
-
 describe('useCanvasDocumentProjection', () => {
   it('preserves local selection when remote state props rerender without document changes', () => {
     const doc = new Y.Doc()
@@ -50,7 +41,6 @@ describe('useCanvasDocumentProjection', () => {
       edgesMap,
       localDraggingIdsRef,
       remoteResizeDimensions: {},
-      remoteDragAnimation: createRemoteDragAnimation(),
     }
 
     const { rerender } = renderHook(
@@ -74,7 +64,6 @@ describe('useCanvasDocumentProjection', () => {
     rerender({
       ...initialProps,
       remoteResizeDimensions: {},
-      remoteDragAnimation: createRemoteDragAnimation(),
     })
 
     expect(canvasEngine.getSnapshot().nodes).toEqual([
@@ -112,7 +101,6 @@ describe('useCanvasDocumentProjection', () => {
         edgesMap,
         localDraggingIdsRef,
         remoteResizeDimensions: {},
-        remoteDragAnimation: createRemoteDragAnimation(),
       }),
     )
 
@@ -176,7 +164,6 @@ describe('useCanvasDocumentProjection', () => {
         edgesMap,
         localDraggingIdsRef: { current: new Set<string>() },
         remoteResizeDimensions: {},
-        remoteDragAnimation: createRemoteDragAnimation(),
       }),
     )
 
@@ -200,7 +187,6 @@ describe('useCanvasDocumentProjection', () => {
         edgesMap,
         localDraggingIdsRef: { current: new Set<string>() },
         remoteResizeDimensions: {},
-        remoteDragAnimation: createRemoteDragAnimation(),
       }),
     )
 

@@ -94,7 +94,6 @@ function createRemoteUser(presence: RemoteUser['presence']): RemoteUser {
     user: { name: 'Tester', color: '#f00' },
     presence,
     cursor: null,
-    dragging: null,
     resizing: null,
     selectedNodeIds: null,
   }

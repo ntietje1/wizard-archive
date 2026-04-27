@@ -25,17 +25,8 @@ vi.mock('../../tools/canvas-tool-modules', () => ({
   ],
 }))
 
-vi.mock('../../nodes/canvas-node-modules', () => ({
-  canvasNodeAwarenessLayers: [
-    {
-      key: 'text',
-      Layer: () => <div data-testid="node-awareness-layer" />,
-    },
-  ],
-}))
-
 describe('CanvasAwarenessHost', () => {
-  it('renders tool and node awareness layers from the direct awareness exports', () => {
+  it('renders tool awareness layers from the direct awareness exports', () => {
     render(
       <CanvasEngineProvider engine={createCanvasEngine()}>
         <CanvasRuntimeProvider {...READ_ONLY_CANVAS_RUNTIME}>
@@ -45,10 +36,9 @@ describe('CanvasAwarenessHost', () => {
     )
 
     expect(screen.getByTestId('tool-awareness-layer')).toBeVisible()
-    expect(screen.getByTestId('node-awareness-layer')).toBeVisible()
   })
 
-  it('applies the current viewport transform to the awareness layer container', () => {
+  it('renders awareness layers in a screen-space container without viewport registration', () => {
     const canvasEngine = createCanvasEngine()
     const domRuntime = createCanvasDomRuntimeAdapter(canvasEngine)
     canvasEngine.setViewport({ x: 12, y: 34, zoom: 2 })
@@ -67,20 +57,20 @@ describe('CanvasAwarenessHost', () => {
       </CanvasEngineProvider>,
     )
 
-    const transformedLayerContainer = screen.getByTestId('awareness-layer-container')
-    expect(transformedLayerContainer).toHaveStyle({
+    const layerContainer = screen.getByTestId('awareness-layer-container')
+    expect(layerContainer).not.toHaveStyle({
       transform: 'translate3d(12px, 34px, 0) scale(2)',
-      transformOrigin: '0 0',
     })
-    expect(registerSpy).toHaveBeenCalledTimes(1)
+    expect(registerSpy).not.toHaveBeenCalled()
     expect(subscribeSpy).not.toHaveBeenCalled()
   })
 
-  it('applies viewport transforms to local overlays through the DOM scheduler', () => {
+  it('renders local overlays in a screen-space container without viewport registration', () => {
     const canvasEngine = createCanvasEngine()
     const domRuntime = createCanvasDomRuntimeAdapter(canvasEngine)
     canvasEngine.setViewport({ x: -20, y: 8, zoom: 0.75 })
     const subscribeSpy = vi.spyOn(canvasEngine, 'subscribe')
+    const registerSpy = vi.spyOn(domRuntime, 'registerViewportOverlayElement')
 
     render(
       <CanvasEngineProvider engine={canvasEngine}>
@@ -95,11 +85,11 @@ describe('CanvasAwarenessHost', () => {
     )
 
     expect(screen.getByTestId('tool-local-overlay-layer')).toBeVisible()
-    const transformedLayerContainer = screen.getByTestId('local-overlay-transform-container')
-    expect(transformedLayerContainer).toHaveStyle({
+    const layerContainer = screen.getByTestId('local-overlay-screen-container')
+    expect(layerContainer).not.toHaveStyle({
       transform: 'translate3d(-20px, 8px, 0) scale(0.75)',
-      transformOrigin: '0 0',
     })
+    expect(registerSpy).not.toHaveBeenCalled()
     expect(subscribeSpy).not.toHaveBeenCalled()
   })
 })

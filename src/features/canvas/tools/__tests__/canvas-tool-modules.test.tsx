@@ -155,6 +155,7 @@ function createToolRuntime(): CanvasToolRuntime {
       patchNodeData: vi.fn(),
       patchEdges: vi.fn(),
       resizeNode: vi.fn(),
+      resizeNodes: vi.fn(),
       deleteNodes: vi.fn(),
       createEdge: vi.fn(),
       deleteEdges: vi.fn(),
@@ -199,7 +200,6 @@ function createToolRuntime(): CanvasToolRuntime {
     awareness: {
       core: {
         setLocalCursor: vi.fn(),
-        setLocalDragging: vi.fn(),
         setLocalResizing: vi.fn(),
         setLocalSelection: vi.fn(),
       },

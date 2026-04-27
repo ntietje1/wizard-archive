@@ -48,6 +48,31 @@ export function boundsFromPoints(points: ReadonlyArray<CanvasPosition>): Bounds 
   }
 }
 
+export function unionBounds(left: Bounds, right: Bounds): Bounds {
+  const minX = Math.min(left.x, right.x)
+  const minY = Math.min(left.y, right.y)
+  const maxX = Math.max(left.x + left.width, right.x + right.width)
+  const maxY = Math.max(left.y + left.height, right.y + right.height)
+  return {
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY,
+  }
+}
+
+export function boundsUnion(items: ReadonlyArray<Bounds>): Bounds | null {
+  if (items.length === 0) {
+    return null
+  }
+
+  let bounds = items[0]
+  for (const item of items.slice(1)) {
+    bounds = unionBounds(bounds, item)
+  }
+  return bounds
+}
+
 export function segmentsIntersect(
   ax: number,
   ay: number,

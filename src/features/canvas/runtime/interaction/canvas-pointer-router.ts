@@ -343,7 +343,7 @@ export function classifyCanvasPointerTarget(
     return 'outside'
   }
 
-  if (target.closest('.canvas-node-resize-handle')) {
+  if (target.closest('.canvas-selection-resize-zone')) {
     return 'resize-handle'
   }
 

@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { getCanvasEdgeEndpoints } from '../canvas-edge-geometry'
-import * as CanvasDomainTypes from '~/features/canvas/types/canvas-domain-types'
-
-type Edge = CanvasDomainTypes.CanvasEdge
-type Node = CanvasDomainTypes.CanvasNode
+import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
+import type {
+  CanvasEdge as Edge,
+  CanvasNode as Node,
+} from '~/features/canvas/types/canvas-domain-types'
 
 describe('getCanvasEdgeEndpoints', () => {
   it('anchors stroke edges to the start and end stroke points instead of the bounding box', () => {
@@ -62,16 +63,16 @@ describe('getCanvasEdgeEndpoints', () => {
       sourceY: 30,
       targetX: 200,
       targetY: 50,
-      sourcePosition: CanvasDomainTypes.CANVAS_HANDLE_POSITION.Left,
-      targetPosition: CanvasDomainTypes.CANVAS_HANDLE_POSITION.Left,
+      sourcePosition: CANVAS_HANDLE_POSITION.Left,
+      targetPosition: CANVAS_HANDLE_POSITION.Left,
     })
     expect(endEndpoints).toEqual({
       sourceX: 110,
       sourceY: 30,
       targetX: 200,
       targetY: 50,
-      sourcePosition: CanvasDomainTypes.CANVAS_HANDLE_POSITION.Right,
-      targetPosition: CanvasDomainTypes.CANVAS_HANDLE_POSITION.Left,
+      sourcePosition: CANVAS_HANDLE_POSITION.Right,
+      targetPosition: CANVAS_HANDLE_POSITION.Left,
     })
   })
 
@@ -118,8 +119,8 @@ describe('getCanvasEdgeEndpoints', () => {
       sourceY: 30,
       targetX: 200,
       targetY: 50,
-      sourcePosition: CanvasDomainTypes.CANVAS_HANDLE_POSITION.Right,
-      targetPosition: CanvasDomainTypes.CANVAS_HANDLE_POSITION.Left,
+      sourcePosition: CANVAS_HANDLE_POSITION.Right,
+      targetPosition: CANVAS_HANDLE_POSITION.Left,
     })
   })
 })

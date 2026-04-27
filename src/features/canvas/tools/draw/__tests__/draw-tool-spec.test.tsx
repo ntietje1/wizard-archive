@@ -203,6 +203,7 @@ function createDrawEnvironment({
       patchNodeData: () => undefined,
       patchEdges: () => undefined,
       resizeNode: () => undefined,
+      resizeNodes: () => undefined,
       deleteNodes: () => undefined,
       createEdge: () => undefined,
       deleteEdges: () => undefined,
@@ -251,7 +252,6 @@ function createDrawEnvironment({
     awareness: {
       core: {
         setLocalCursor: () => undefined,
-        setLocalDragging: () => undefined,
         setLocalResizing: () => undefined,
         setLocalSelection: () => undefined,
       },

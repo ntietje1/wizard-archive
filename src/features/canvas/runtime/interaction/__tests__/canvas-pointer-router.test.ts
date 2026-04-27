@@ -19,14 +19,14 @@ import type {
 
 describe('classifyCanvasPointerTarget', () => {
   it('classifies pane, node, edge, handle, resize, interactive, and outside targets', () => {
-    const { pane, viewport, node, edge, handle, resizeHandle, input } = createCanvasDom()
+    const { pane, viewport, node, edge, handle, resizeZone, input } = createCanvasDom()
     const outside = document.createElement('div')
 
     expect(classifyCanvasPointerTarget(viewport, pane)).toBe('pane')
     expect(classifyCanvasPointerTarget(node, pane)).toBe('node')
     expect(classifyCanvasPointerTarget(edge, pane)).toBe('edge')
     expect(classifyCanvasPointerTarget(handle, pane)).toBe('connection-handle')
-    expect(classifyCanvasPointerTarget(resizeHandle, pane)).toBe('resize-handle')
+    expect(classifyCanvasPointerTarget(resizeZone, pane)).toBe('resize-handle')
     expect(classifyCanvasPointerTarget(input, pane)).toBe('blocked-interactive-child')
     expect(classifyCanvasPointerTarget(outside, pane)).toBe('outside')
   })
@@ -319,12 +319,12 @@ function createCanvasDom() {
   text.textContent = 'node text'
   const handle = document.createElement('button')
   handle.dataset.canvasNodeHandle = 'true'
-  const resizeHandle = document.createElement('button')
-  resizeHandle.className = 'canvas-node-resize-handle'
+  const resizeZone = document.createElement('button')
+  resizeZone.className = 'canvas-selection-resize-zone'
   const input = document.createElement('input')
 
   edgeLayer.appendChild(edge)
-  node.append(text, handle, resizeHandle, input)
+  node.append(text, handle, resizeZone, input)
   viewport.append(edgeLayer, node)
   pane.appendChild(viewport)
   surface.appendChild(pane)
@@ -336,7 +336,7 @@ function createCanvasDom() {
     input,
     node,
     pane,
-    resizeHandle,
+    resizeZone,
     surface,
     text,
     viewport,

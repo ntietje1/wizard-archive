@@ -3,7 +3,6 @@ import { yMapToArray } from '../../utils/canvas-yjs-utils'
 import { stripEphemeralCanvasNodeState } from '../../utils/canvas-node-persistence'
 import { measureCanvasPerformance } from '../performance/canvas-performance-metrics'
 import type { ResizingState } from '../../utils/canvas-awareness-types'
-import type { CanvasRemoteDragAnimation } from '../interaction/use-canvas-remote-drag-animation'
 import { sortCanvasElementsByZIndex } from './canvas-z-order'
 import type {
   CanvasEdge as Edge,
@@ -18,7 +17,6 @@ interface UseCanvasDocumentProjectionOptions {
   edgesMap: Y.Map<Edge>
   localDraggingIdsRef: React.RefObject<Set<string>>
   remoteResizeDimensions: ResizingState
-  remoteDragAnimation: CanvasRemoteDragAnimation
 }
 
 export function useCanvasDocumentProjection({
@@ -27,15 +25,12 @@ export function useCanvasDocumentProjection({
   edgesMap,
   localDraggingIdsRef,
   remoteResizeDimensions,
-  remoteDragAnimation,
 }: UseCanvasDocumentProjectionOptions) {
   const remoteResizeDimensionsRef = useRef(remoteResizeDimensions)
-  const remoteDragAnimationRef = useRef(remoteDragAnimation)
 
   useLayoutEffect(() => {
     remoteResizeDimensionsRef.current = remoteResizeDimensions
-    remoteDragAnimationRef.current = remoteDragAnimation
-  }, [remoteDragAnimation, remoteResizeDimensions])
+  }, [remoteResizeDimensions])
 
   useEffect(() => {
     const initialNodes = measureCanvasPerformance(
@@ -59,12 +54,8 @@ export function useCanvasDocumentProjection({
             nodesMap,
             localDraggingIds: localDraggingIdsRef.current,
             remoteResizeDimensions: remoteResizeDimensionsRef.current,
-            remoteDragAnimation: remoteDragAnimationRef.current,
           })
-          for (const target of projection.remoteDragTargets) {
-            remoteDragAnimationRef.current.setTarget(target.id, target.position)
-          }
-          const nextNodes = projection.nodes
+          const nextNodes = projection
           canvasEngine.setDocumentSnapshot({ nodes: nextNodes })
           return nextNodes
         },
@@ -150,21 +141,18 @@ function applyChangedCanvasNodes(
     nodesMap,
     localDraggingIds,
     remoteResizeDimensions,
-    remoteDragAnimation,
   }: {
     nodesMap: Y.Map<Node>
     localDraggingIds: Set<string> | undefined
     remoteResizeDimensions: ResizingState
-    remoteDragAnimation: CanvasRemoteDragAnimation
   },
-): { nodes: Array<Node>; remoteDragTargets: Array<{ id: string; position: Node['position'] }> } {
+): Array<Node> {
   if (changedIds.size === 0) {
-    return { nodes: current, remoteDragTargets: [] }
+    return current
   }
 
   const currentById = new Map(current.map((node) => [node.id, node]))
   const next: Array<Node> = []
-  const remoteDragTargets: Array<{ id: string; position: Node['position'] }> = []
   let orderMayHaveChanged = false
 
   for (const node of current) {
@@ -185,16 +173,12 @@ function applyChangedCanvasNodes(
       {
         localDraggingIds,
         remoteResizeDimensions,
-        remoteDragAnimation,
       },
     )
-    if (projectedNode.remoteDragTarget) {
-      remoteDragTargets.push(projectedNode.remoteDragTarget)
-    }
-    if (node.zIndex !== projectedNode.node.zIndex) {
+    if (node.zIndex !== projectedNode.zIndex) {
       orderMayHaveChanged = true
     }
-    next.push(projectedNode.node)
+    next.push(projectedNode)
   }
 
   for (const id of changedIds) {
@@ -209,10 +193,7 @@ function applyChangedCanvasNodes(
     }
   }
 
-  return {
-    nodes: orderMayHaveChanged ? sortCanvasElementsByZIndex(next) : next,
-    remoteDragTargets,
-  }
+  return orderMayHaveChanged ? sortCanvasElementsByZIndex(next) : next
 }
 
 function mergeProjectedCanvasNode(
@@ -221,39 +202,27 @@ function mergeProjectedCanvasNode(
   {
     localDraggingIds,
     remoteResizeDimensions,
-    remoteDragAnimation,
   }: {
     localDraggingIds: Set<string> | undefined
     remoteResizeDimensions: ResizingState
-    remoteDragAnimation: CanvasRemoteDragAnimation
   },
 ) {
   if (localDraggingIds?.has(remote.id)) {
-    return { node: { ...local, ...remote, position: local.position }, remoteDragTarget: null }
+    return { ...local, ...remote, position: local.position }
   }
 
   const resizeDimensions = remoteResizeDimensions[remote.id]
   if (resizeDimensions) {
     return {
-      node: {
-        ...local,
-        ...remote,
-        width: resizeDimensions.width,
-        height: resizeDimensions.height,
-        position: { x: resizeDimensions.x, y: resizeDimensions.y },
-      },
-      remoteDragTarget: null,
+      ...local,
+      ...remote,
+      width: resizeDimensions.width,
+      height: resizeDimensions.height,
+      position: { x: resizeDimensions.x, y: resizeDimensions.y },
     }
   }
 
-  if (remoteDragAnimation.hasSpring(remote.id)) {
-    return {
-      node: { ...local, ...remote, position: local.position },
-      remoteDragTarget: { id: remote.id, position: remote.position },
-    }
-  }
-
-  return { node: { ...local, ...remote }, remoteDragTarget: null }
+  return { ...local, ...remote }
 }
 
 function applyChangedCanvasEdges(

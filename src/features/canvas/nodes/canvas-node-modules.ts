@@ -22,7 +22,6 @@ import {
   bindCanvasPaintProperty,
   bindCanvasStrokeSizeProperty,
 } from '../properties/canvas-property-types'
-import type { CanvasAwarenessCapability } from '../tools/canvas-tool-types'
 import { polygonIntersectsBounds, rectIntersectsBounds } from '../utils/canvas-geometry-utils'
 import type {
   CanvasNodeCreateArgs,
@@ -42,10 +41,6 @@ const DEFAULT_TEXT_SIZE = {
   height: TEXT_NODE_DEFAULT_HEIGHT,
 } as const
 const EMPTY_CONTEXT_MENU_CONTRIBUTORS: ReadonlyArray<CanvasContextMenuContributor> = []
-const EMPTY_AWARENESS_LAYERS: ReadonlyArray<{
-  key: CanvasNodeType
-  Layer: NonNullable<CanvasAwarenessCapability['Layer']>
-}> = []
 type PatchCanvasNodeData = <TPatch extends Record<string, unknown>>(
   nodeId: string,
   data: TPatch,
@@ -169,8 +164,6 @@ export const canvasNodeSpecs = {
     resize: undefined,
   },
 } as const satisfies { [TType in CanvasNodeType]: CanvasNodeSpec<TType> }
-
-export const canvasNodeAwarenessLayers = EMPTY_AWARENESS_LAYERS
 
 export function getCanvasNodeInspectableProperties(
   normalizedNode: AnyNormalizedCanvasNode | null,

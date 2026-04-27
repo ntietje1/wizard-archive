@@ -61,31 +61,22 @@ export function buildConnectionDraftGeometry(
     }
   }
 
+  const renderProps = {
+    sourceX: draft.source.point.x,
+    sourceY: draft.source.point.y,
+    targetX: draft.current.x,
+    targetY: draft.current.y,
+    sourcePosition: draft.source.position,
+    targetPosition: getOppositePosition(draft.source.position),
+  }
+
   switch (edgeType) {
     case 'bezier':
       return buildFreeDragBezierPreviewGeometry(draft.source, draft.current)
-    case 'straight': {
-      const renderProps = {
-        sourceX: draft.source.point.x,
-        sourceY: draft.source.point.y,
-        targetX: draft.current.x,
-        targetY: draft.current.y,
-        sourcePosition: draft.source.position,
-        targetPosition: getOppositePosition(draft.source.position),
-      }
+    case 'straight':
       return buildStraightCanvasEdgeGeometryFromRenderProps(renderProps)
-    }
-    case 'step': {
-      const renderProps = {
-        sourceX: draft.source.point.x,
-        sourceY: draft.source.point.y,
-        targetX: draft.current.x,
-        targetY: draft.current.y,
-        sourcePosition: draft.source.position,
-        targetPosition: getOppositePosition(draft.source.position),
-      }
+    case 'step':
       return buildStepCanvasEdgeGeometryFromRenderProps(renderProps)
-    }
     default:
       return assertNever(edgeType)
   }

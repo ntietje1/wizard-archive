@@ -9,5 +9,8 @@ describe('canvas renderer utils', () => {
 
     expect(areArraysEqual(left, right)).toBe(true)
     expect(areArraysEqual(left, ['node', 2, true])).toBe(false)
+    expect(areArraysEqual([], [])).toBe(true)
+    expect(areArraysEqual([1], [1, 2])).toBe(false)
+    expect(areArraysEqual([1, 2], [2, 1])).toBe(false)
   })
 })

@@ -1,32 +1,24 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { CanvasPendingSelectionPreviewOverlay } from '../../../components/canvas-pending-selection-preview-overlay'
+import { CanvasSelectionResizeOverlay } from '../../../components/canvas-selection-resize-overlay'
 import { createCanvasRuntime } from '../../../runtime/__tests__/canvas-runtime-test-utils'
 import { CanvasRuntimeProvider } from '../../../runtime/providers/canvas-runtime-context'
-import { CanvasRenderModeProvider } from '../../../runtime/providers/canvas-render-mode-context'
 import {
   clearCanvasDragSnapGuides,
   useCanvasDragSnapOverlayStore,
 } from '../../../runtime/interaction/canvas-drag-snap-overlay'
 import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
+import { CanvasNodeResizeMetadataProvider } from '../canvas-node-resize-metadata-provider'
 import { ResizableNodeWrapper } from '../resizable-node-wrapper'
+import { resolveSelectionResizeUpdates } from '../use-canvas-resize-session'
+import type { CanvasNodeResizeUpdate } from '../../../tools/canvas-tool-types'
 import type { CanvasNode as Node } from '~/features/canvas/types/canvas-domain-types'
 
 const modifierState = vi.hoisted(() => ({
   shiftPressed: false,
   primaryPressed: false,
 }))
-const canvasNodes = vi.hoisted(() => ({
-  current: [
-    {
-      id: 'node-1',
-      type: 'test',
-      position: { x: 10, y: 20 },
-      width: 80,
-      height: 40,
-    },
-  ],
-}))
-let lastRuntime: ReturnType<typeof createCanvasRuntime> | null = null
 
 vi.mock('../../../runtime/interaction/use-canvas-modifier-keys', () => ({
   useCanvasModifierKeys: () => modifierState,
@@ -36,16 +28,6 @@ afterEach(() => {
   clearCanvasDragSnapGuides()
   modifierState.shiftPressed = false
   modifierState.primaryPressed = false
-  canvasNodes.current = [
-    {
-      id: 'node-1',
-      type: 'test',
-      position: { x: 10, y: 20 },
-      width: 80,
-      height: 40,
-    },
-  ]
-  lastRuntime = null
 })
 
 beforeAll(() => {
@@ -60,552 +42,466 @@ beforeAll(() => {
 })
 
 describe('ResizableNodeWrapper', () => {
-  it('renders the normal selection border for pending-only preview nodes without resize handles', () => {
-    renderWrapper({
-      selected: false,
+  it('shows aggregate pending-only preview chrome without resize zones', () => {
+    renderSelectionResize({
       pendingPreview: { nodeIds: new Set(['node-1']), edgeIds: new Set() },
+      selectedNodeIds: new Set(),
     })
 
-    expect(screen.getByTestId('selection-border')).toBeInTheDocument()
+    expect(screen.getByTestId('canvas-pending-selection-preview-wrapper')).toHaveStyle({
+      height: '40px',
+      transform: 'translate(10px, 20px)',
+      width: '80px',
+    })
+    expect(screen.getByTestId('canvas-pending-selection-preview-fill')).toHaveClass('bg-primary/5')
+    expect(screen.getByTestId('canvas-node-selection-indicator')).toHaveStyle({
+      borderWidth: '1.5px',
+      borderRadius: '2px',
+      inset: '-3px',
+      opacity: '0.55',
+    })
+    expect(screen.queryByTestId('selection-border')).toBeNull()
+    expect(screen.queryByTestId('canvas-selection-resize-wrapper')).toBeNull()
     expect(screen.queryAllByTestId(/canvas-node-resize-handle-/)).toHaveLength(0)
+    expect(screen.queryAllByTestId(/canvas-selection-resize-zone-/)).toHaveLength(0)
   })
 
-  it('hides the local selection border for excluded committed nodes while keeping committed resize handles', () => {
-    renderWrapper({
-      selected: true,
+  it('ignores pending-selected edges when computing aggregate pending preview bounds', () => {
+    renderSelectionResize({
+      nodes: [
+        createNode('node-1', { x: 10, y: 20 }, 80, 40),
+        createNode('node-2', { x: 150, y: 200 }, 50, 50),
+      ],
+      pendingPreview: {
+        nodeIds: new Set(['node-1']),
+        edgeIds: new Set(['edge-1']),
+      },
+      selectedNodeIds: new Set(),
+    })
+
+    expect(screen.getByTestId('canvas-pending-selection-preview-wrapper')).toHaveStyle({
+      height: '40px',
+      transform: 'translate(10px, 20px)',
+      width: '80px',
+    })
+  })
+
+  it('renders one filled resize wrapper without a duplicate node indicator for a single selected node', () => {
+    renderSelectionResize()
+
+    expect(screen.getByTestId('canvas-selection-resize-wrapper')).toBeInTheDocument()
+    expect(screen.getByTestId('canvas-selection-resize-fill')).toBeInTheDocument()
+    expect(screen.getByTestId('canvas-selection-resize-outline')).toBeInTheDocument()
+    expect(screen.getByTestId('canvas-selection-resize-fill')).toHaveClass('bg-primary/5')
+    expect(screen.queryByTestId('canvas-node-selection-indicator')).toBeNull()
+    expect(screen.queryAllByTestId(/canvas-node-resize-handle-/)).toHaveLength(0)
+    expect(screen.queryAllByTestId(/canvas-selection-resize-zone-/)).toHaveLength(8)
+    expect(screen.queryByTestId('selection-border')).toBeNull()
+  })
+
+  it('renders one resize wrapper for multiple selected nodes', () => {
+    renderSelectionResize({
+      nodes: [
+        createNode('node-1', { x: 10, y: 20 }, 80, 40),
+        createNode('node-2', { x: 110, y: 80 }, 40, 30),
+      ],
+      selectedNodeIds: new Set(['node-1', 'node-2']),
+    })
+
+    const wrapper = screen.getByTestId('canvas-selection-resize-wrapper')
+    const outline = screen.getByTestId('canvas-selection-resize-outline')
+    expect(wrapper).toHaveStyle({
+      height: '90px',
+      transform: 'translate(10px, 20px)',
+      width: '140px',
+    })
+    expect(outline).toHaveStyle({
+      borderWidth: '1.5px',
+      inset: '-3px',
+    })
+    const nodeIndicators = screen.getAllByTestId('canvas-node-selection-indicator')
+    expect(nodeIndicators).toHaveLength(2)
+    const nodeIndicatorStyle = nodeIndicators[0].getAttribute('style') ?? ''
+    expect(nodeIndicatorStyle).toContain('border-color: var(--primary)')
+    expect(nodeIndicatorStyle).toContain('border-style: solid')
+    expect(nodeIndicatorStyle).toContain('border-width: 1.5px')
+    expect(nodeIndicatorStyle).toContain('border-radius: 2px')
+    expect(nodeIndicatorStyle).toContain('inset: -3px')
+    expect(nodeIndicatorStyle).toContain('opacity: 0.55')
+    expect(screen.queryAllByTestId(/canvas-node-resize-handle-/)).toHaveLength(0)
+    expect(screen.queryAllByTestId(/canvas-selection-resize-zone-/)).toHaveLength(8)
+  })
+
+  it('keeps individual selected-node borders screen-constant with zoom-aware local styles', () => {
+    const runtime = renderSelectionResize({
+      nodes: [
+        createNode('node-1', { x: 10, y: 20 }, 80, 40),
+        createNode('node-2', { x: 110, y: 80 }, 40, 30),
+      ],
+      selectedNodeIds: new Set(['node-1', 'node-2']),
+    })
+
+    const getFirstIndicator = () => screen.getAllByTestId('canvas-node-selection-indicator')[0]
+    expect(getFirstIndicator()).toHaveStyle({
+      borderWidth: '1.5px',
+      borderRadius: '2px',
+      inset: '-3px',
+      opacity: '0.55',
+    })
+
+    act(() => {
+      runtime.canvasEngine.setViewportLive({ x: 5, y: -10, zoom: 2 })
+    })
+
+    expect(getFirstIndicator()).toHaveStyle({
+      borderWidth: '0.75px',
+      borderRadius: '1px',
+      inset: '-1.5px',
+      opacity: '0.55',
+    })
+  })
+
+  it('hides the aggregate resize wrapper but keeps local selection borders while dragging', () => {
+    renderSelectionResize({
+      draggingNodeIds: new Set(['node-1', 'node-2']),
+      nodes: [
+        createNode('node-1', { x: 10, y: 20 }, 80, 40),
+        createNode('node-2', { x: 110, y: 80 }, 40, 30),
+      ],
+      selectedNodeIds: new Set(['node-1', 'node-2']),
+    })
+
+    expect(screen.queryByTestId('canvas-selection-resize-wrapper')).toBeNull()
+    expect(screen.getAllByTestId('canvas-node-selection-indicator')).toHaveLength(2)
+  })
+
+  it('renders local selection borders after node content so they move with node wrappers', () => {
+    renderSelectionResize({
+      nodes: [
+        createNode('node-1', { x: 10, y: 20 }, 80, 40),
+        createNode('node-2', { x: 110, y: 80 }, 40, 30),
+      ],
+      selectedNodeIds: new Set(['node-1', 'node-2']),
+    })
+
+    const nodeBody = screen.getAllByText('node body')[0]
+    const nodeIndicator = screen.getAllByTestId('canvas-node-selection-indicator')[0]
+
+    expect(nodeBody.closest('[data-testid="canvas-node"]')).toContainElement(nodeIndicator)
+    expect(
+      nodeBody.compareDocumentPosition(nodeIndicator) & globalThis.Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+  })
+
+  it('ignores selected edges when computing wrapper bounds', () => {
+    renderSelectionResize({
+      selectedEdgeIds: new Set(['edge-1']),
+    })
+
+    expect(screen.getByTestId('canvas-selection-resize-wrapper')).toHaveStyle({
+      height: '40px',
+      transform: 'translate(10px, 20px)',
+      width: '80px',
+    })
+  })
+
+  it('keeps zones and outline screen-constant while the wrapper tracks viewport zoom', () => {
+    const runtime = renderSelectionResize()
+    const wrapper = screen.getByTestId('canvas-selection-resize-wrapper')
+    const outline = screen.getByTestId('canvas-selection-resize-outline')
+    const cornerZone = screen.getByTestId('canvas-selection-resize-zone-top-left')
+    const topZone = screen.getByTestId('canvas-selection-resize-zone-top')
+    const rightZone = screen.getByTestId('canvas-selection-resize-zone-right')
+
+    expect(wrapper).toHaveStyle({
+      height: '40px',
+      transform: 'translate(10px, 20px)',
+      width: '80px',
+    })
+    expect(outline).toHaveStyle({
+      borderWidth: '1.5px',
+      inset: '-3px',
+    })
+    expect(cornerZone).toHaveStyle({
+      height: '36px',
+      left: '-18px',
+      top: '-18px',
+      width: '36px',
+    })
+    expect(topZone).toHaveStyle({
+      height: '36px',
+      left: '18px',
+      right: '18px',
+      top: '-18px',
+    })
+    expect(rightZone).toHaveStyle({
+      bottom: '18px',
+      right: '-18px',
+      top: '18px',
+      width: '36px',
+    })
+
+    expect(screen.queryByTestId('canvas-node-selection-indicator')).toBeNull()
+
+    act(() => {
+      runtime.canvasEngine.setViewportLive({ x: 5, y: -10, zoom: 2 })
+    })
+
+    expect(wrapper).toHaveStyle({
+      height: '80px',
+      transform: 'translate(25px, 30px)',
+      width: '160px',
+    })
+    expect(outline).toHaveStyle({
+      borderWidth: '1.5px',
+      inset: '-3px',
+    })
+    expect(cornerZone).toHaveStyle({
+      height: '36px',
+      left: '-18px',
+      top: '-18px',
+      width: '36px',
+    })
+    expect(topZone).toHaveStyle({
+      height: '36px',
+      left: '18px',
+      right: '18px',
+      top: '-18px',
+    })
+    expect(rightZone).toHaveStyle({
+      bottom: '18px',
+      right: '-18px',
+      top: '18px',
+      width: '36px',
+    })
+  })
+
+  it('hides the committed resize wrapper while a selection preview is active', () => {
+    renderSelectionResize({
       pendingPreview: { nodeIds: new Set(['other-node']), edgeIds: new Set() },
     })
 
-    expect(screen.queryByTestId('selection-border')).toBeNull()
-    expect(screen.queryAllByTestId(/canvas-node-resize-handle-/)).toHaveLength(4)
+    expect(screen.queryByTestId('canvas-selection-resize-wrapper')).toBeNull()
+    expect(screen.queryByTestId('canvas-node-selection-indicator')).toBeNull()
   })
 
-  it('resizes to a square while shift is held', () => {
-    modifierState.shiftPressed = true
-    const providerValues = createProviderValues()
-    providerValues.canvasEngine.setSelection({
-      nodeIds: new Set(['node-1']),
-      edgeIds: new Set<string>(),
+  it('resizes all selected nodes from one aggregate side zone', () => {
+    const runtime = renderSelectionResize({
+      nodes: [
+        createNode('node-1', { x: 10, y: 20 }, 80, 40),
+        createNode('node-2', { x: 110, y: 20 }, 40, 40),
+      ],
+      selectedNodeIds: new Set(['node-1', 'node-2']),
     })
 
-    renderWithRuntime(
-      providerValues,
-      <CanvasRuntimeProvider {...providerValues}>
-        <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
-          <div>node body</div>
-        </ResizableNodeWrapper>
-      </CanvasRuntimeProvider>,
-    )
-
-    const handle = screen.getByTestId('canvas-node-resize-handle-bottom-right')
+    const zone = screen.getByTestId('canvas-selection-resize-zone-right')
     act(() => {
-      fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 90, clientY: 60 })
-      fireEvent.pointerMove(window, { pointerId: 1, clientX: 110, clientY: 65, shiftKey: true })
-      fireEvent.pointerUp(window, { pointerId: 1, clientX: 110, clientY: 65, shiftKey: true })
+      fireEvent.pointerDown(zone, { button: 0, pointerId: 1, clientX: 150, clientY: 40 })
+      fireEvent.pointerMove(window, { pointerId: 1, clientX: 290, clientY: 40 })
+      fireEvent.pointerUp(window, { pointerId: 1, clientX: 290, clientY: 40 })
     })
 
-    expect(providerValues.nodeActions.onResize).toHaveBeenCalledWith('node-1', 50, 50, {
-      x: 10,
-      y: 20,
-    })
-    expect(providerValues.nodeActions.onResizeEnd).toHaveBeenCalledWith('node-1', 50, 50, {
-      x: 10,
-      y: 20,
-    })
-  })
-
-  it('recomputes the live resize immediately when shift is pressed and released mid-drag', () => {
-    const providerValues = createProviderValues()
-    providerValues.canvasEngine.setSelection({
-      nodeIds: new Set(['node-1']),
-      edgeIds: new Set<string>(),
-    })
-
-    renderWithRuntime(
-      providerValues,
-      <CanvasRuntimeProvider {...providerValues}>
-        <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
-          <div>node body</div>
-        </ResizableNodeWrapper>
-      </CanvasRuntimeProvider>,
-    )
-
-    const handle = screen.getByTestId('canvas-node-resize-handle-bottom-right')
-    act(() => {
-      fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 90, clientY: 60 })
-      fireEvent.pointerMove(window, { pointerId: 1, clientX: 110, clientY: 65 })
-    })
-
-    expect(providerValues.nodeActions.onResize).toHaveBeenLastCalledWith('node-1', 100, 45, {
-      x: 10,
-      y: 20,
-    })
-
-    act(() => {
-      fireEvent.keyDown(window, { key: 'Shift' })
-    })
-
-    expect(providerValues.nodeActions.onResize).toHaveBeenLastCalledWith('node-1', 50, 50, {
-      x: 10,
-      y: 20,
-    })
-
-    act(() => {
-      fireEvent.keyUp(window, { key: 'Shift' })
-    })
-
-    expect(providerValues.nodeActions.onResize).toHaveBeenLastCalledWith('node-1', 100, 45, {
-      x: 10,
-      y: 20,
-    })
-  })
-
-  it('snaps ctrl-resizing to nearby node edges and centers', () => {
-    modifierState.primaryPressed = true
-    const providerValues = createProviderValues()
-    providerValues.canvasEngine.setSelection({
-      nodeIds: new Set(['node-1']),
-      edgeIds: new Set<string>(),
-    })
-    setResizeSnapTargets([
-      {
-        id: 'node-2',
-        type: 'test',
-        position: { x: 120, y: 120 },
-        width: 80,
-        height: 40,
-      },
+    expectMapEntries(runtime.nodeActions.onResizeMany, [
+      ['node-1', { width: 160, height: 40, position: { x: 10, y: 20 } }],
+      ['node-2', { width: 80, height: 40, position: { x: 210, y: 20 } }],
     ])
+    expectMapEntries(runtime.nodeActions.onResizeManyEnd, [
+      ['node-1', { width: 160, height: 40, position: { x: 10, y: 20 } }],
+      ['node-2', { width: 80, height: 40, position: { x: 210, y: 20 } }],
+    ])
+  })
 
-    renderWithRuntime(
-      providerValues,
-      <CanvasRuntimeProvider {...providerValues}>
-        <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
-          <div>node body</div>
-        </ResizableNodeWrapper>
-      </CanvasRuntimeProvider>,
-    )
-
-    const handle = screen.getByTestId('canvas-node-resize-handle-bottom-right')
-    act(() => {
-      fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 90, clientY: 60 })
-      fireEvent.pointerMove(window, { pointerId: 1, clientX: 125, clientY: 63, ctrlKey: true })
+  it('shrinks multi-select gaps even when selected nodes are already at minimum width', () => {
+    const runtime = renderSelectionResize({
+      nodes: [
+        createNode('node-1', { x: 10, y: 20 }, 50, 40),
+        createNode('node-2', { x: 210, y: 20 }, 50, 40),
+      ],
+      selectedNodeIds: new Set(['node-1', 'node-2']),
     })
 
+    const zone = screen.getByTestId('canvas-selection-resize-zone-right')
+    act(() => {
+      fireEvent.pointerDown(zone, { button: 0, pointerId: 1, clientX: 260, clientY: 40 })
+      fireEvent.pointerMove(window, { pointerId: 1, clientX: 135, clientY: 40 })
+    })
+
+    expectMapEntries(runtime.nodeActions.onResizeMany, [
+      ['node-1', { width: 50, height: 40, position: { x: -2.5, y: 20 } }],
+      ['node-2', { width: 50, height: 40, position: { x: 97.5, y: 20 } }],
+    ])
+  })
+
+  it('keeps single selected nodes clamped to their minimum size', () => {
+    const runtime = renderSelectionResize({
+      nodes: [createNode('node-1', { x: 10, y: 20 }, 50, 40)],
+    })
+
+    const zone = screen.getByTestId('canvas-selection-resize-zone-right')
+    act(() => {
+      fireEvent.pointerDown(zone, { button: 0, pointerId: 1, clientX: 60, clientY: 40 })
+      fireEvent.pointerMove(window, { pointerId: 1, clientX: 25, clientY: 40 })
+    })
+
+    expectMapEntries(runtime.nodeActions.onResizeMany, [
+      ['node-1', { width: 50, height: 40, position: { x: 10, y: 20 } }],
+    ])
+  })
+
+  it('keeps aspect-ratio locked nodes locked inside a group resize', () => {
+    const updates = resolveSelectionResizeUpdates({
+      handlePosition: 'right',
+      startBounds: { x: 10, y: 20, width: 140, height: 40 },
+      nextBounds: { x: 10, y: 20, width: 280, height: 40 },
+      nodes: [
+        {
+          id: 'node-1',
+          bounds: { x: 10, y: 20, width: 80, height: 40 },
+          dragging: false,
+          metadata: { dragging: false, lockedAspectRatio: 2, minHeight: 20, minWidth: 20 },
+        },
+        {
+          id: 'node-2',
+          bounds: { x: 110, y: 20, width: 40, height: 40 },
+          dragging: false,
+          metadata: { dragging: false, minHeight: 20, minWidth: 20 },
+        },
+      ],
+    })
+
+    expect(updates.get('node-1')).toEqual({
+      width: 160,
+      height: 80,
+      position: { x: 10, y: 0 },
+    })
+    expect(updates.get('node-2')).toEqual({
+      width: 80,
+      height: 40,
+      position: { x: 210, y: 20 },
+    })
+  })
+
+  it('keeps snapping active for the aggregate wrapper', () => {
+    modifierState.primaryPressed = true
+    const runtime = renderSelectionResize({
+      nodes: [
+        createNode('node-1', { x: 10, y: 20 }, 80, 40),
+        createNode('node-2', { x: 120, y: 120 }, 80, 40),
+      ],
+      selectedNodeIds: new Set(['node-1']),
+    })
+
+    const zone = screen.getByTestId('canvas-selection-resize-zone-bottom-right')
+    act(() => {
+      fireEvent.pointerDown(zone, { button: 0, pointerId: 1, clientX: 90, clientY: 60 })
+      fireEvent.pointerMove(window, { pointerId: 1, clientX: 118, clientY: 75, ctrlKey: true })
+    })
+
+    expectMapEntries(runtime.nodeActions.onResizeMany, [
+      ['node-1', { width: 110, height: 55, position: { x: 10, y: 20 } }],
+    ])
     expect(useCanvasDragSnapOverlayStore.getState().guides).toContainEqual(
       expect.objectContaining({ orientation: 'vertical', position: 120 }),
     )
-    expect(providerValues.nodeActions.onResize).toHaveBeenLastCalledWith('node-1', 110, 43, {
-      x: 10,
-      y: 20,
-    })
-
-    act(() => {
-      fireEvent.pointerUp(window, { pointerId: 1, clientX: 125, clientY: 63, ctrlKey: true })
-    })
-
-    expect(providerValues.nodeActions.onResizeEnd).toHaveBeenLastCalledWith('node-1', 110, 43, {
-      x: 10,
-      y: 20,
-    })
-    expect(useCanvasDragSnapOverlayStore.getState().guides).toEqual([])
   })
 
-  it('snaps shift-resizing to nearby node edges while staying square', () => {
-    modifierState.shiftPressed = true
-    modifierState.primaryPressed = true
-    const providerValues = createProviderValues()
-    providerValues.canvasEngine.setSelection({
-      nodeIds: new Set(['node-1']),
-      edgeIds: new Set<string>(),
+  it('restores preview bounds and clears resize state on cancel', () => {
+    const runtime = renderSelectionResize()
+
+    const zone = screen.getByTestId('canvas-selection-resize-zone-right')
+    act(() => {
+      fireEvent.pointerDown(zone, { button: 0, pointerId: 1, clientX: 90, clientY: 40 })
+      fireEvent.pointerMove(window, { pointerId: 1, clientX: 120, clientY: 40 })
+      fireEvent.pointerCancel(window, { pointerId: 1, clientX: 120, clientY: 40 })
     })
-    setResizeSnapTargets([
-      {
-        id: 'node-2',
-        type: 'test',
-        position: { x: 120, y: 300 },
-        width: 80,
-        height: 40,
-      },
+
+    expectMapEntries(runtime.nodeActions.onResizeManyCancel, [
+      ['node-1', { width: 80, height: 40, position: { x: 10, y: 20 } }],
     ])
-
-    renderWithRuntime(
-      providerValues,
-      <CanvasRuntimeProvider {...providerValues}>
-        <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
-          <div>node body</div>
-        </ResizableNodeWrapper>
-      </CanvasRuntimeProvider>,
-    )
-
-    const handle = screen.getByTestId('canvas-node-resize-handle-bottom-right')
-    act(() => {
-      fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 90, clientY: 60 })
-      fireEvent.pointerMove(window, {
-        pointerId: 1,
-        clientX: 125,
-        clientY: 135,
-        shiftKey: true,
-        ctrlKey: true,
-      })
-    })
-
-    expect(useCanvasDragSnapOverlayStore.getState().guides).toContainEqual(
-      expect.objectContaining({ orientation: 'vertical', position: 120 }),
-    )
-    expect(providerValues.nodeActions.onResize).toHaveBeenLastCalledWith('node-1', 110, 110, {
-      x: 10,
-      y: 20,
-    })
-
-    act(() => {
-      fireEvent.pointerUp(window, {
-        pointerId: 1,
-        clientX: 125,
-        clientY: 135,
-        shiftKey: true,
-        ctrlKey: true,
-      })
-    })
-
-    expect(providerValues.nodeActions.onResizeEnd).toHaveBeenLastCalledWith('node-1', 110, 110, {
-      x: 10,
-      y: 20,
-    })
-    expect(useCanvasDragSnapOverlayStore.getState().guides).toEqual([])
-  })
-
-  it('recomputes the live resize immediately when the primary snap modifier is pressed and released mid-drag', () => {
-    const providerValues = createProviderValues()
-    providerValues.canvasEngine.setSelection({
-      nodeIds: new Set(['node-1']),
-      edgeIds: new Set<string>(),
-    })
-    setResizeSnapTargets([
-      {
-        id: 'node-2',
-        type: 'test',
-        position: { x: 120, y: 300 },
-        width: 80,
-        height: 40,
-      },
-    ])
-
-    renderWithRuntime(
-      providerValues,
-      <CanvasRuntimeProvider {...providerValues}>
-        <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
-          <div>node body</div>
-        </ResizableNodeWrapper>
-      </CanvasRuntimeProvider>,
-    )
-
-    const handle = screen.getByTestId('canvas-node-resize-handle-bottom-right')
-    act(() => {
-      fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 90, clientY: 60 })
-      fireEvent.pointerMove(window, { pointerId: 1, clientX: 125, clientY: 63 })
-    })
-
-    expect(providerValues.nodeActions.onResize).toHaveBeenLastCalledWith('node-1', 115, 43, {
-      x: 10,
-      y: 20,
-    })
-    expect(useCanvasDragSnapOverlayStore.getState().guides).toEqual([])
-
-    act(() => {
-      fireEvent.keyDown(window, { key: 'Control' })
-    })
-
-    expect(providerValues.nodeActions.onResize).toHaveBeenLastCalledWith('node-1', 110, 43, {
-      x: 10,
-      y: 20,
-    })
-    expect(useCanvasDragSnapOverlayStore.getState().guides).toContainEqual(
-      expect.objectContaining({ orientation: 'vertical', position: 120 }),
-    )
-
-    act(() => {
-      fireEvent.keyUp(window, { key: 'Control' })
-    })
-
-    expect(providerValues.nodeActions.onResize).toHaveBeenLastCalledWith('node-1', 115, 43, {
-      x: 10,
-      y: 20,
-    })
-    expect(useCanvasDragSnapOverlayStore.getState().guides).toEqual([])
-  })
-
-  it('keeps resize handles above overlay children such as stroke hit targets', () => {
-    const providerValues = createProviderValues()
-    providerValues.canvasEngine.setSelection({
-      nodeIds: new Set(['node-1']),
-      edgeIds: new Set<string>(),
-    })
-
-    renderWithRuntime(
-      providerValues,
-      <CanvasRuntimeProvider {...providerValues}>
-        <ResizableNodeWrapper id="node-1" nodeType="stroke" dragging={false}>
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              pointerEvents: 'auto',
-            }}
-          >
-            overlay
-          </div>
-        </ResizableNodeWrapper>
-      </CanvasRuntimeProvider>,
-    )
-
-    const handle = screen.getByTestId('canvas-node-resize-handle-bottom-right')
-
-    expect(handle).toHaveClass('canvas-node-resize-handle')
-    expect(handle).toHaveStyle({
-      width: '16px',
-      height: '16px',
-      right: '-8px',
-      bottom: '-8px',
-    })
-
-    act(() => {
-      fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 90, clientY: 60 })
-      fireEvent.pointerMove(window, { pointerId: 1, clientX: 110, clientY: 75 })
-      fireEvent.pointerUp(window, { pointerId: 1, clientX: 110, clientY: 75 })
-    })
-
-    expect(providerValues.nodeActions.onResize).toHaveBeenCalled()
-    expect(providerValues.nodeActions.onResizeEnd).toHaveBeenCalled()
-  })
-
-  it('suppresses selection chrome and resize handles in embedded read-only mode', () => {
-    const providerValues = createProviderValues()
-    providerValues.canvasEngine.setSelection({
-      nodeIds: new Set(['node-1']),
-      edgeIds: new Set<string>(),
-    })
-
-    renderWithRuntime(
-      providerValues,
-      <CanvasRenderModeProvider mode="embedded-readonly">
-        <CanvasRuntimeProvider {...providerValues}>
-          <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
-            <div>node body</div>
-          </ResizableNodeWrapper>
-        </CanvasRuntimeProvider>
-      </CanvasRenderModeProvider>,
-    )
-
-    expect(screen.queryByTestId('selection-border')).toBeNull()
-    expect(screen.queryAllByTestId(/canvas-node-resize-handle-/)).toHaveLength(0)
-  })
-
-  it('locks resizing to the provided aspect ratio', () => {
-    const providerValues = createProviderValues()
-    providerValues.canvasEngine.setSelection({
-      nodeIds: new Set(['node-1']),
-      edgeIds: new Set<string>(),
-    })
-
-    renderWithRuntime(
-      providerValues,
-      <CanvasRuntimeProvider {...providerValues}>
-        <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false} lockedAspectRatio={2}>
-          <div>node body</div>
-        </ResizableNodeWrapper>
-      </CanvasRuntimeProvider>,
-    )
-
-    const handle = screen.getByTestId('canvas-node-resize-handle-bottom-right')
-    act(() => {
-      fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 90, clientY: 60 })
-      fireEvent.pointerMove(window, { pointerId: 1, clientX: 110, clientY: 65 })
-      fireEvent.pointerUp(window, { pointerId: 1, clientX: 110, clientY: 65 })
-    })
-
-    expect(providerValues.nodeActions.onResize).toHaveBeenLastCalledWith('node-1', 100, 50, {
-      x: 10,
-      y: 20,
-    })
-    expect(providerValues.nodeActions.onResizeEnd).toHaveBeenLastCalledWith('node-1', 100, 50, {
-      x: 10,
-      y: 20,
-    })
-  })
-
-  it('snaps aspect-locked resizing on a single axis while preserving the ratio', () => {
-    modifierState.primaryPressed = true
-    const providerValues = createProviderValues()
-    providerValues.canvasEngine.setSelection({
-      nodeIds: new Set(['node-1']),
-      edgeIds: new Set<string>(),
-    })
-    setResizeSnapTargets([
-      {
-        id: 'node-2',
-        type: 'test',
-        position: { x: 300, y: 75 },
-        width: 80,
-        height: 40,
-      },
-    ])
-
-    renderWithRuntime(
-      providerValues,
-      <CanvasRuntimeProvider {...providerValues}>
-        <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false} lockedAspectRatio={2}>
-          <div>node body</div>
-        </ResizableNodeWrapper>
-      </CanvasRuntimeProvider>,
-    )
-
-    const handle = screen.getByTestId('canvas-node-resize-handle-bottom-right')
-    act(() => {
-      fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 90, clientY: 60 })
-      fireEvent.pointerMove(window, { pointerId: 1, clientX: 110, clientY: 72, ctrlKey: true })
-    })
-
-    expect(useCanvasDragSnapOverlayStore.getState().guides).toContainEqual(
-      expect.objectContaining({ orientation: 'horizontal', position: 75 }),
-    )
-    expect(providerValues.nodeActions.onResize).toHaveBeenLastCalledWith('node-1', 110, 55, {
-      x: 10,
-      y: 20,
-    })
-
-    act(() => {
-      fireEvent.pointerUp(window, { pointerId: 1, clientX: 110, clientY: 72, ctrlKey: true })
-    })
-
-    expect(providerValues.nodeActions.onResizeEnd).toHaveBeenLastCalledWith('node-1', 110, 55, {
-      x: 10,
-      y: 20,
-    })
-    expect(useCanvasDragSnapOverlayStore.getState().guides).toEqual([])
-  })
-
-  it('keeps snapping active when shift is released mid-drag after starting with square snapping', () => {
-    modifierState.shiftPressed = true
-    modifierState.primaryPressed = true
-    const providerValues = createProviderValues()
-    providerValues.canvasEngine.setSelection({
-      nodeIds: new Set(['node-1']),
-      edgeIds: new Set<string>(),
-    })
-    setResizeSnapTargets([
-      {
-        id: 'node-2',
-        type: 'test',
-        position: { x: 120, y: 300 },
-        width: 80,
-        height: 40,
-      },
-    ])
-
-    renderWithRuntime(
-      providerValues,
-      <CanvasRuntimeProvider {...providerValues}>
-        <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
-          <div>node body</div>
-        </ResizableNodeWrapper>
-      </CanvasRuntimeProvider>,
-    )
-
-    const handle = screen.getByTestId('canvas-node-resize-handle-bottom-right')
-    act(() => {
-      fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 90, clientY: 60 })
-      fireEvent.pointerMove(window, {
-        pointerId: 1,
-        clientX: 125,
-        clientY: 135,
-        shiftKey: true,
-        ctrlKey: true,
-      })
-    })
-
-    expect(providerValues.nodeActions.onResize).toHaveBeenLastCalledWith('node-1', 110, 110, {
-      x: 10,
-      y: 20,
-    })
-
-    act(() => {
-      fireEvent.keyUp(window, { key: 'Shift' })
-    })
-
-    expect(providerValues.nodeActions.onResize).toHaveBeenLastCalledWith('node-1', 110, 115, {
-      x: 10,
-      y: 20,
-    })
-    expect(useCanvasDragSnapOverlayStore.getState().guides).toContainEqual(
-      expect.objectContaining({ orientation: 'vertical', position: 120 }),
-    )
+    expect(runtime.nodeActions.onResizeManyEnd).not.toHaveBeenCalled()
   })
 })
 
-function renderWrapper({
-  selected,
+function renderSelectionResize({
+  draggingNodeIds = new Set<string>(),
+  nodes = [createNode('node-1', { x: 10, y: 20 }, 80, 40)],
   pendingPreview = null,
+  selectedEdgeIds = new Set<string>(),
+  selectedNodeIds = new Set(['node-1']),
 }: {
-  selected: boolean
+  draggingNodeIds?: ReadonlySet<string>
+  nodes?: Array<Node>
   pendingPreview?: { nodeIds: ReadonlySet<string>; edgeIds: ReadonlySet<string> } | null
-}) {
-  const providerValues = createProviderValues()
-  providerValues.canvasEngine.setSelection({
-    nodeIds: selected ? new Set(['node-1']) : new Set<string>(),
-    edgeIds: new Set<string>(),
-  })
-  if (pendingPreview) {
-    providerValues.canvasEngine.setSelectionGesturePreview(pendingPreview)
-  }
-
-  return renderWithRuntime(
-    providerValues,
-    <CanvasRuntimeProvider {...providerValues}>
-      <ResizableNodeWrapper id="node-1" nodeType="test" dragging={false}>
-        <div>node body</div>
-      </ResizableNodeWrapper>
-    </CanvasRuntimeProvider>,
-  )
-}
-
-function renderWithRuntime(
-  runtime: ReturnType<typeof createCanvasRuntime>,
-  ui: React.ReactElement,
-) {
-  return render(<CanvasEngineProvider engine={runtime.canvasEngine}>{ui}</CanvasEngineProvider>)
-}
-
-function createProviderValues() {
+  selectedEdgeIds?: ReadonlySet<string>
+  selectedNodeIds?: ReadonlySet<string>
+} = {}) {
   const runtime = createCanvasRuntime({
     nodeActions: {
-      onResize: vi.fn(),
-      onResizeEnd: vi.fn(),
+      onResizeMany: vi.fn(),
+      onResizeManyCancel: vi.fn(),
+      onResizeManyEnd: vi.fn(),
     },
   })
-  runtime.canvasEngine.setDocumentSnapshot({ nodes: canvasNodes.current as Array<Node> })
-  lastRuntime = runtime
+  runtime.canvasEngine.setDocumentSnapshot({ nodes })
+  runtime.canvasEngine.setSelection({
+    nodeIds: selectedNodeIds,
+    edgeIds: selectedEdgeIds,
+  })
+  if (draggingNodeIds.size > 0) {
+    runtime.canvasEngine.startDrag(draggingNodeIds)
+  }
+  if (pendingPreview) {
+    runtime.canvasEngine.setSelectionGesturePreview(pendingPreview)
+  }
+
+  render(
+    <CanvasEngineProvider engine={runtime.canvasEngine}>
+      <CanvasRuntimeProvider {...runtime}>
+        <CanvasNodeResizeMetadataProvider>
+          {nodes.map((node) => (
+            <ResizableNodeWrapper
+              key={node.id}
+              id={node.id}
+              nodeType={node.type ?? 'test'}
+              dragging={draggingNodeIds.has(node.id)}
+              minHeight={node.type === 'stroke' ? 20 : 30}
+              minWidth={node.type === 'stroke' ? 20 : 50}
+            >
+              <div>node body</div>
+            </ResizableNodeWrapper>
+          ))}
+          <CanvasPendingSelectionPreviewOverlay />
+          <CanvasSelectionResizeOverlay />
+        </CanvasNodeResizeMetadataProvider>
+      </CanvasRuntimeProvider>
+    </CanvasEngineProvider>,
+  )
+
   return runtime
 }
 
-function setResizeSnapTargets(
-  extraNodes: Array<{
-    id: string
-    type: string
-    position: { x: number; y: number }
-    width: number
-    height: number
-  }>,
-) {
-  canvasNodes.current = [
-    {
-      id: 'node-1',
-      type: 'test',
-      position: { x: 10, y: 20 },
-      width: 80,
-      height: 40,
-    },
-    ...extraNodes,
-  ]
-  lastRuntime?.canvasEngine.setDocumentSnapshot({ nodes: canvasNodes.current as Array<Node> })
+function createNode(
+  id: string,
+  position: { x: number; y: number },
+  width: number,
+  height: number,
+  type = 'test',
+): Node {
+  return {
+    data: {},
+    id,
+    type,
+    position,
+    width,
+    height,
+  }
+}
+
+function expectMapEntries(spy: unknown, entries: Array<[string, CanvasNodeResizeUpdate]>) {
+  expect(spy).toHaveBeenCalled()
+  const calls = (spy as ReturnType<typeof vi.fn>).mock.calls
+  const lastCall = calls.at(-1)
+  const updates = lastCall?.[0]
+  expect(updates).toBeInstanceOf(Map)
+  expect(Array.from((updates as Map<string, CanvasNodeResizeUpdate>).entries())).toEqual(entries)
 }

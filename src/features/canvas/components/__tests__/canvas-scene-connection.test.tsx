@@ -92,6 +92,7 @@ function setElementRect(
 }
 
 function renderScene(createEdgeFromConnection = vi.fn()) {
+  engine?.destroy()
   engine = createCanvasEngine()
   const currentEngine = engine
   currentEngine.setDocumentSnapshot({ nodes: [sourceNode, targetNode] })

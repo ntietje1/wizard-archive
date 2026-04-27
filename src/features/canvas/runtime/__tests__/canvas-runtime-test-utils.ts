@@ -65,6 +65,7 @@ function createCanvasDocumentWriter(): CanvasDocumentWriter {
     patchNodeData: vi.fn(),
     patchEdges: vi.fn(),
     resizeNode: vi.fn(),
+    resizeNodes: vi.fn(),
     deleteNodes: vi.fn(),
     createEdge: vi.fn(),
     deleteEdges: vi.fn(),
@@ -83,21 +84,7 @@ export function createCanvasRuntime(
       redo: () => void
     }
     editSession: CanvasSessionRuntime['editSession']
-    nodeActions: {
-      transact?: (fn: () => void) => void
-      onResize: (
-        nodeId: string,
-        width: number,
-        height: number,
-        position: { x: number; y: number },
-      ) => void
-      onResizeEnd: (
-        nodeId: string,
-        width: number,
-        height: number,
-        position: { x: number; y: number },
-      ) => void
-    }
+    nodeActions: Partial<CanvasRuntime['nodeActions']>
     documentWriter: CanvasDocumentWriter
     selection: CanvasSelectionController
     canvasEngine: CanvasEngine
@@ -144,6 +131,9 @@ export function createCanvasRuntime(
     nodeActions: {
       onResize: () => undefined,
       onResizeEnd: () => undefined,
+      onResizeMany: () => undefined,
+      onResizeManyCancel: () => undefined,
+      onResizeManyEnd: () => undefined,
       ...nodeActionsOverrides,
     },
     documentWriter: {

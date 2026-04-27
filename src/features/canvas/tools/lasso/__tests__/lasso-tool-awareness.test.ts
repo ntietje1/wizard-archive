@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { readRemoteLassoState, setLassoToolAwareness } from '../lasso-tool-awareness'
 import { logger } from '~/shared/utils/logger'
 import type { RemoteUser } from '../../../utils/canvas-awareness-types'
@@ -11,6 +11,10 @@ vi.mock('~/shared/utils/logger', () => ({
 }))
 
 describe('lasso tool awareness', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it('returns parsed lasso state for valid remote lasso awareness payloads', () => {
     const remoteUser = createRemoteUser({
       'tool.lasso': {
@@ -99,7 +103,6 @@ function createRemoteUser(presence: RemoteUser['presence']): RemoteUser {
     user: { name: 'Tester', color: '#0f0' },
     presence,
     cursor: null,
-    dragging: null,
     resizing: null,
     selectedNodeIds: null,
   }

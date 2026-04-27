@@ -16,7 +16,6 @@ export function CanvasNodeContent({ nodeId }: { nodeId: string }) {
     <CanvasNodeContentRenderer
       nodeId={nodeId}
       renderers={NODE_RENDERERS}
-      fallbackType="text"
       onUnknownNodeType={warnUnknownCanvasNodeType}
     />
   )

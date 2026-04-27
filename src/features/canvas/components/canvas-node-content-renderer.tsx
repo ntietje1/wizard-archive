@@ -1,14 +1,16 @@
-import { memo, useEffect } from 'react'
+import { memo, useCallback, useEffect, useRef } from 'react'
 import { useCanvasEngineSelector } from '../react/use-canvas-engine'
 import type { CanvasEngineSnapshot, CanvasInternalNode } from '../system/canvas-engine'
 import type { CanvasNode } from '../types/canvas-domain-types'
+import { CANVAS_NODE_TYPES } from '../nodes/canvas-node-types'
 import type { CanvasNodeComponentProps, CanvasNodeType } from '../nodes/canvas-node-types'
 import type { ComponentType } from 'react'
 
-export type CanvasNodeRendererMap = Record<
-  CanvasNodeType,
-  ComponentType<CanvasNodeComponentProps<any>>
+export type CanvasNodeRendererMap = Partial<
+  Record<CanvasNodeType, ComponentType<CanvasNodeComponentProps<any>>>
 >
+
+const canvasNodeTypeSet = new Set<string>(CANVAS_NODE_TYPES)
 
 type CanvasNodeContentSnapshot = {
   id: string
@@ -25,22 +27,25 @@ type CanvasNodeContentSnapshot = {
 interface CanvasNodeContentRendererProps {
   nodeId: string
   renderers: CanvasNodeRendererMap
-  fallbackType: CanvasNodeType
   onUnknownNodeType?: (nodeType: string, rendererTypes: ReadonlyArray<string>) => void
 }
+
+const DEFAULT_CANVAS_NODE_RENDERER_TYPE = 'text'
 
 export const CanvasNodeContentRenderer = memo(function CanvasNodeContentRenderer({
   nodeId,
   renderers,
-  fallbackType,
   onUnknownNodeType,
 }: CanvasNodeContentRendererProps) {
-  const selectContent = (snapshot: CanvasEngineSnapshot) =>
-    selectCanvasNodeContentSnapshot({
-      internalNode: snapshot.nodeLookup.get(nodeId),
-      renderers,
-      fallbackType,
-    })
+  const reportedUnknownTypesRef = useRef(new Set<string>())
+  const selectContent = useCallback(
+    (snapshot: CanvasEngineSnapshot) =>
+      selectCanvasNodeContentSnapshot({
+        internalNode: snapshot.nodeLookup.get(nodeId),
+        renderers,
+      }),
+    [nodeId, renderers],
+  )
   const content = useCanvasEngineSelector(selectContent, areCanvasNodeContentSnapshotsEqual)
 
   useEffect(() => {
@@ -48,6 +53,11 @@ export const CanvasNodeContentRenderer = memo(function CanvasNodeContentRenderer
       return
     }
 
+    if (reportedUnknownTypesRef.current.has(content.rawType)) {
+      return
+    }
+
+    reportedUnknownTypesRef.current.add(content.rawType)
     onUnknownNodeType?.(content.rawType, Object.keys(renderers))
   }, [content?.isKnownType, content?.rawType, onUnknownNodeType, renderers])
 
@@ -78,11 +88,9 @@ export const CanvasNodeContentRenderer = memo(function CanvasNodeContentRenderer
 function selectCanvasNodeContentSnapshot({
   internalNode,
   renderers,
-  fallbackType,
 }: {
   internalNode: CanvasInternalNode | undefined
   renderers: CanvasNodeRendererMap
-  fallbackType: CanvasNodeType
 }): CanvasNodeContentSnapshot | null {
   if (!internalNode) {
     return null
@@ -91,7 +99,7 @@ function selectCanvasNodeContentSnapshot({
   const node = internalNode.node
   const rawType = node.type
   const isKnownType = isCanvasNodeType(rawType) && rawType in renderers
-  const type = isKnownType ? rawType : fallbackType
+  const type = isKnownType ? rawType : DEFAULT_CANVAS_NODE_RENDERER_TYPE
 
   return {
     id: node.id,
@@ -131,5 +139,5 @@ function areCanvasNodeContentSnapshotsEqual(
 }
 
 function isCanvasNodeType(value: unknown): value is CanvasNodeType {
-  return value === 'embed' || value === 'stroke' || value === 'text'
+  return typeof value === 'string' && canvasNodeTypeSet.has(value)
 }

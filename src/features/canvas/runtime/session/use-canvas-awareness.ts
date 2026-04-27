@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import {
   parseCanvasAwarenessPresence,
   parseCanvasAwarenessUser,
-  parseCanvasDraggingAwarenessState,
   parseCanvasPoint2D,
   parseCanvasResizingAwarenessState,
   parseCanvasSelectionAwarenessState,
@@ -41,7 +40,6 @@ function buildRemoteUsers(awareness: Awareness, localClientId: number): Array<Re
       user: remote,
       presence,
       cursor: parseCanvasPoint2D(presence['core.cursor']),
-      dragging: parseCanvasDraggingAwarenessState(presence['core.dragging']),
       resizing: parseCanvasResizingAwarenessState(presence['core.resizing']),
       selectedNodeIds: parseCanvasSelectionAwarenessState(presence['core.selection']),
     })
@@ -145,25 +143,6 @@ export function useCanvasAwareness(provider: ConvexYjsProvider | null) {
     setLocalPresence('core.cursor', parsedPosition)
   }
 
-  const setLocalDragging = (positions: Record<string, { x: number; y: number }> | null) => {
-    if (positions === null) {
-      setLocalPresence('core.dragging', null)
-      return
-    }
-
-    const parsedPositions = parseCanvasDraggingAwarenessState(positions)
-    if (!parsedPositions) {
-      warnInvalidLocalPresenceUpdate(
-        'setLocalDragging',
-        'parseCanvasDraggingAwarenessState',
-        positions,
-      )
-      return
-    }
-
-    setLocalPresence('core.dragging', parsedPositions)
-  }
-
   const setLocalSelection = (nodeIds: ReadonlySet<string> | null) => {
     if (nodeIds === null) {
       setLocalPresence('core.selection', null)
@@ -207,7 +186,6 @@ export function useCanvasAwareness(provider: ConvexYjsProvider | null) {
     remoteUsers,
     core: {
       setLocalCursor,
-      setLocalDragging,
       setLocalResizing,
       setLocalSelection,
     },

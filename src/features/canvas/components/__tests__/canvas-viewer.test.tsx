@@ -39,6 +39,7 @@ const runtimeMock = vi.hoisted(() => ({
     patchNodeData: vi.fn(),
     patchEdges: vi.fn(),
     resizeNode: vi.fn(),
+    resizeNodes: vi.fn(),
     deleteNodes: vi.fn(),
     createEdge: vi.fn(),
     deleteEdges: vi.fn(),
@@ -85,6 +86,9 @@ const runtimeMock = vi.hoisted(() => ({
     transact: vi.fn(),
     onResize: vi.fn(),
     onResizeEnd: vi.fn(),
+    onResizeMany: vi.fn(),
+    onResizeManyCancel: vi.fn(),
+    onResizeManyEnd: vi.fn(),
   },
   nodeDragController: null,
   viewportController: {

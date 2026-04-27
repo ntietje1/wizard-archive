@@ -15,7 +15,6 @@ import { useCanvasDropIntegration } from './interaction/use-canvas-drop-integrat
 import { useCanvasModifierKeys } from './interaction/use-canvas-modifier-keys'
 import { createCanvasNodeActions } from './interaction/create-canvas-node-actions'
 import { useCanvasNodeDragHandlers } from './interaction/use-canvas-node-drag-handlers'
-import { useCanvasRemoteDragAnimation } from './interaction/use-canvas-remote-drag-animation'
 import { useCanvasViewportInteractions } from './interaction/use-canvas-viewport-interactions'
 import { createCanvasViewportPersistence } from './interaction/canvas-viewport-persistence'
 import {
@@ -92,12 +91,6 @@ export function useCanvasEditorRuntime({
     },
     setLocalSelection: session.awareness.core.setLocalSelection,
   })
-  const remoteDragAnimation = useCanvasRemoteDragAnimation({
-    canvasEngine,
-    localDraggingIdsRef,
-    remoteDragPositions: session.remoteDragPositions,
-  })
-
   useEffect(() => {
     return () => {
       canvasEngine.clearSelection()
@@ -177,7 +170,6 @@ export function useCanvasEditorRuntime({
     canvasEngine,
     documentWriter,
     nodesDoc: doc,
-    remoteDragAnimation,
     awareness: session.awareness.core,
     interaction,
     getCanvasPosition: viewportController.screenToCanvasPosition,
@@ -206,7 +198,6 @@ export function useCanvasEditorRuntime({
     edgesMap,
     localDraggingIdsRef,
     remoteResizeDimensions: session.remoteResizeDimensions,
-    remoteDragAnimation,
   })
 
   const history = useCanvasHistory({

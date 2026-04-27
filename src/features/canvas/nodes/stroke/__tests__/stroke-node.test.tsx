@@ -6,7 +6,7 @@ import { createCanvasEngine } from '../../../system/canvas-engine'
 import type { CanvasEngine } from '../../../system/canvas-engine'
 import { StrokeNode } from '../stroke-node'
 
-let strokeEngine: CanvasEngine
+let strokeEngine!: CanvasEngine
 
 vi.mock('../../shared/resizable-node-wrapper', () => ({
   ResizableNodeWrapper: ({ children, chrome }: { children: ReactNode; chrome?: ReactNode }) => (

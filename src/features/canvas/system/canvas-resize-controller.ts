@@ -9,7 +9,21 @@ type CanvasResizeBounds = {
   height: number
 }
 
-type CanvasResizeHandlePosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
+export type CanvasResizeHandlePosition =
+  | 'top'
+  | 'top-right'
+  | 'right'
+  | 'bottom-right'
+  | 'bottom'
+  | 'bottom-left'
+  | 'left'
+  | 'top-left'
+
+type CanvasSideResizeHandlePosition = 'top' | 'right' | 'bottom' | 'left'
+type CanvasCornerResizeHandlePosition = Exclude<
+  CanvasResizeHandlePosition,
+  CanvasSideResizeHandlePosition
+>
 
 type ResizeAxis = 'x' | 'y'
 
@@ -214,6 +228,27 @@ function resolveResizeBounds({
   square: boolean
   preferredAxis?: ResizeAxis
 }): CanvasResizeBounds {
+  if (isSideResizeHandle(handlePosition) && lockedAspectRatio) {
+    return resolveAspectLockedSideResizeBounds({
+      handlePosition,
+      startBounds,
+      currentPoint,
+      minWidth,
+      minHeight,
+      lockedAspectRatio,
+    })
+  }
+
+  if (isSideResizeHandle(handlePosition)) {
+    return resolveOneAxisResizeBounds({
+      handlePosition,
+      startBounds,
+      currentPoint,
+      minWidth,
+      minHeight,
+    })
+  }
+
   const anchor = getOppositeCorner(startBounds, handlePosition)
   if (lockedAspectRatio) {
     const signedPoint = applyLockedAspectRatioSize({
@@ -253,6 +288,75 @@ function resolveResizeBounds({
   return normalizeResizeBounds(anchor, signedPoint)
 }
 
+function resolveAspectLockedSideResizeBounds({
+  handlePosition,
+  startBounds,
+  currentPoint,
+  minWidth,
+  minHeight,
+  lockedAspectRatio,
+}: {
+  handlePosition: CanvasSideResizeHandlePosition
+  startBounds: CanvasResizeBounds
+  currentPoint: { x: number; y: number }
+  minWidth: number
+  minHeight: number
+  lockedAspectRatio: number
+}): CanvasResizeBounds {
+  const centerX = startBounds.x + startBounds.width / 2
+  const centerY = startBounds.y + startBounds.height / 2
+  const { minimumWidth, minimumHeight } = getMinimumLockedAspectRatioDimensions(
+    minWidth,
+    minHeight,
+    lockedAspectRatio,
+  )
+
+  switch (handlePosition) {
+    case 'left': {
+      const right = startBounds.x + startBounds.width
+      const width = Math.max(Math.abs(currentPoint.x - right), minimumWidth)
+      const height = width / lockedAspectRatio
+      return {
+        x: right - width,
+        y: centerY - height / 2,
+        width,
+        height,
+      }
+    }
+    case 'right': {
+      const width = Math.max(Math.abs(currentPoint.x - startBounds.x), minimumWidth)
+      const height = width / lockedAspectRatio
+      return {
+        x: startBounds.x,
+        y: centerY - height / 2,
+        width,
+        height,
+      }
+    }
+    case 'top': {
+      const bottom = startBounds.y + startBounds.height
+      const height = Math.max(Math.abs(currentPoint.y - bottom), minimumHeight)
+      const width = height * lockedAspectRatio
+      return {
+        x: centerX - width / 2,
+        y: bottom - height,
+        width,
+        height,
+      }
+    }
+    case 'bottom': {
+      const height = Math.max(Math.abs(currentPoint.y - startBounds.y), minimumHeight)
+      const width = height * lockedAspectRatio
+      return {
+        x: centerX - width / 2,
+        y: startBounds.y,
+        width,
+        height,
+      }
+    }
+  }
+}
+
 function resolveSquareResizePoint({
   anchor,
   point,
@@ -288,6 +392,55 @@ function resolveSquareResizePoint({
     handlePosition,
     minSize,
   })
+}
+
+function resolveOneAxisResizeBounds({
+  handlePosition,
+  startBounds,
+  currentPoint,
+  minWidth,
+  minHeight,
+}: {
+  handlePosition: CanvasSideResizeHandlePosition
+  startBounds: CanvasResizeBounds
+  currentPoint: { x: number; y: number }
+  minWidth: number
+  minHeight: number
+}): CanvasResizeBounds {
+  switch (handlePosition) {
+    case 'left': {
+      const right = startBounds.x + startBounds.width
+      const width = Math.max(Math.abs(currentPoint.x - right), minWidth)
+      return {
+        ...startBounds,
+        x: right - width,
+        width,
+      }
+    }
+    case 'right': {
+      const width = Math.max(Math.abs(currentPoint.x - startBounds.x), minWidth)
+      return {
+        ...startBounds,
+        width,
+      }
+    }
+    case 'top': {
+      const bottom = startBounds.y + startBounds.height
+      const height = Math.max(Math.abs(currentPoint.y - bottom), minHeight)
+      return {
+        ...startBounds,
+        y: bottom - height,
+        height,
+      }
+    }
+    case 'bottom': {
+      const height = Math.max(Math.abs(currentPoint.y - startBounds.y), minHeight)
+      return {
+        ...startBounds,
+        height,
+      }
+    }
+  }
 }
 
 function getMinimumLockedAspectRatioDimensions(
@@ -372,7 +525,10 @@ function getCandidateDistance(
   return Math.abs(candidate.width - targetWidth) + Math.abs(candidate.height - targetHeight)
 }
 
-function getOppositeCorner(bounds: CanvasResizeBounds, handlePosition: CanvasResizeHandlePosition) {
+function getOppositeCorner(
+  bounds: CanvasResizeBounds,
+  handlePosition: CanvasCornerResizeHandlePosition,
+) {
   switch (handlePosition) {
     case 'top-left':
       return { x: bounds.x + bounds.width, y: bounds.y + bounds.height }
@@ -449,6 +605,14 @@ function getHandleDirection(handlePosition: CanvasResizeHandlePosition) {
       return { x: -1, y: 1 }
     case 'bottom-right':
       return { x: 1, y: 1 }
+    case 'top':
+      return { x: 0, y: -1 }
+    case 'right':
+      return { x: 1, y: 0 }
+    case 'bottom':
+      return { x: 0, y: 1 }
+    case 'left':
+      return { x: -1, y: 0 }
   }
 }
 
@@ -473,7 +637,7 @@ function resolveResizeSnap({
   lockedAspectRatio?: number
   square: boolean
 }): { bounds: CanvasResizeBounds; guides: ReadonlyArray<CanvasDragGuide> } | null {
-  if (!square && !lockedAspectRatio) {
+  if (!lockedAspectRatio && (!isCornerResizeHandle(handlePosition) || !square)) {
     return resolveFreeformResizeSnap({
       bounds,
       handlePosition,
@@ -512,40 +676,44 @@ function resolveFreeformResizeSnap({
   minWidth: number
   minHeight: number
 }): { bounds: CanvasResizeBounds; guides: ReadonlyArray<CanvasDragGuide> } | null {
-  const anchor = getOppositeCorner(bounds, handlePosition)
   const currentPoint = getResizeHandlePoint(bounds, handlePosition)
-  const xSnap = getBestResizeAxisSnap({
-    axis: 'x',
-    bounds,
-    handlePosition,
-    targetBounds,
-    threshold,
-  })
-  const ySnap = getBestResizeAxisSnap({
-    axis: 'y',
-    bounds,
-    handlePosition,
-    targetBounds,
-    threshold,
-  })
+  const xSnap = affectsResizeAxis(handlePosition, 'x')
+    ? getBestResizeAxisSnap({
+        axis: 'x',
+        bounds,
+        handlePosition,
+        targetBounds,
+        threshold,
+      })
+    : null
+  const ySnap = affectsResizeAxis(handlePosition, 'y')
+    ? getBestResizeAxisSnap({
+        axis: 'y',
+        bounds,
+        handlePosition,
+        targetBounds,
+        threshold,
+      })
+    : null
 
   if (!xSnap && !ySnap) {
     return null
   }
 
-  const snappedPoint = applyMinimumRectSize({
-    anchor,
-    point: {
+  const snappedBounds = resolveResizeBounds({
+    handlePosition,
+    startBounds: bounds,
+    currentPoint: {
       x: xSnap?.point ?? currentPoint.x,
       y: ySnap?.point ?? currentPoint.y,
     },
-    handlePosition,
     minWidth,
     minHeight,
+    square: false,
   })
 
   return {
-    bounds: normalizeResizeBounds(anchor, snappedPoint),
+    bounds: snappedBounds,
     guides: [xSnap?.guide ?? null, ySnap?.guide ?? null].filter((guide) => guide !== null),
   }
 }
@@ -616,14 +784,22 @@ function getResizeHandlePoint(
   handlePosition: CanvasResizeHandlePosition,
 ) {
   switch (handlePosition) {
+    case 'top':
+      return { x: bounds.x + bounds.width / 2, y: bounds.y }
     case 'top-left':
       return { x: bounds.x, y: bounds.y }
     case 'top-right':
       return { x: bounds.x + bounds.width, y: bounds.y }
+    case 'right':
+      return { x: bounds.x + bounds.width, y: bounds.y + bounds.height / 2 }
+    case 'bottom':
+      return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height }
     case 'bottom-left':
       return { x: bounds.x, y: bounds.y + bounds.height }
     case 'bottom-right':
       return { x: bounds.x + bounds.width, y: bounds.y + bounds.height }
+    case 'left':
+      return { x: bounds.x, y: bounds.y + bounds.height / 2 }
   }
 }
 
@@ -711,6 +887,10 @@ function collectResizeAxisCandidates({
   targetBounds: CanvasResizeBounds
   handlePosition: CanvasResizeHandlePosition
 }) {
+  if (!affectsResizeAxis(handlePosition, axis)) {
+    return []
+  }
+
   const createSnapCandidate = ({
     axis: candidateAxis,
     bounds: candidateBounds,
@@ -742,7 +922,7 @@ function collectResizeAxisCandidates({
         : candidateTargetBounds.x + candidateTargetBounds.width,
   })
 
-  const anchor = getOppositeCorner(bounds, handlePosition)
+  const anchor = getResizeAxisAnchorPoint(bounds, handlePosition)
   const centerX = bounds.x + bounds.width / 2
   const centerY = bounds.y + bounds.height / 2
 
@@ -753,7 +933,7 @@ function collectResizeAxisCandidates({
       targetBounds.x + targetBounds.width,
     ]
 
-    if (handlePosition === 'top-left' || handlePosition === 'bottom-left') {
+    if (isLeadingResizeHandle(handlePosition, 'x')) {
       return targetValues.flatMap((targetValue) => [
         createSnapCandidate({
           axis,
@@ -800,7 +980,7 @@ function collectResizeAxisCandidates({
     targetBounds.y + targetBounds.height,
   ]
 
-  if (handlePosition === 'top-left' || handlePosition === 'top-right') {
+  if (isLeadingResizeHandle(handlePosition, 'y')) {
     return targetValues.flatMap((targetValue) => [
       createSnapCandidate({
         axis,
@@ -839,4 +1019,63 @@ function collectResizeAxisCandidates({
       point: 2 * targetValue - anchor.y,
     }),
   ])
+}
+
+function isCornerResizeHandle(
+  handlePosition: CanvasResizeHandlePosition,
+): handlePosition is CanvasCornerResizeHandlePosition {
+  return (
+    handlePosition === 'top-left' ||
+    handlePosition === 'top-right' ||
+    handlePosition === 'bottom-left' ||
+    handlePosition === 'bottom-right'
+  )
+}
+
+function isSideResizeHandle(
+  handlePosition: CanvasResizeHandlePosition,
+): handlePosition is CanvasSideResizeHandlePosition {
+  return !isCornerResizeHandle(handlePosition)
+}
+
+function affectsResizeAxis(handlePosition: CanvasResizeHandlePosition, axis: ResizeAxis) {
+  if (axis === 'x') {
+    return handlePosition !== 'top' && handlePosition !== 'bottom'
+  }
+
+  return handlePosition !== 'left' && handlePosition !== 'right'
+}
+
+function isLeadingResizeHandle(handlePosition: CanvasResizeHandlePosition, axis: ResizeAxis) {
+  if (axis === 'x') {
+    return (
+      handlePosition === 'left' || handlePosition === 'top-left' || handlePosition === 'bottom-left'
+    )
+  }
+
+  return handlePosition === 'top' || handlePosition === 'top-left' || handlePosition === 'top-right'
+}
+
+function getResizeAxisAnchorPoint(
+  bounds: CanvasResizeBounds,
+  handlePosition: CanvasResizeHandlePosition,
+) {
+  switch (handlePosition) {
+    case 'top':
+      return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height }
+    case 'top-right':
+      return { x: bounds.x, y: bounds.y + bounds.height }
+    case 'right':
+      return { x: bounds.x, y: bounds.y + bounds.height / 2 }
+    case 'bottom-right':
+      return { x: bounds.x, y: bounds.y }
+    case 'bottom':
+      return { x: bounds.x + bounds.width / 2, y: bounds.y }
+    case 'bottom-left':
+      return { x: bounds.x + bounds.width, y: bounds.y }
+    case 'left':
+      return { x: bounds.x + bounds.width, y: bounds.y + bounds.height / 2 }
+    case 'top-left':
+      return { x: bounds.x + bounds.width, y: bounds.y + bounds.height }
+  }
 }

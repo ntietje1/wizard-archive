@@ -143,7 +143,6 @@ export interface ParsedCanvasReorderPayload {
   direction: 'sendToBack' | 'sendBackward' | 'bringForward' | 'bringToFront'
 }
 
-export type ParsedCanvasDraggingAwarenessState = Record<string, ParsedCanvasPoint2D>
 export type ParsedCanvasResizingAwarenessState = Record<string, ParsedCanvasResizeAwarenessEntry>
 export type ParsedCanvasRichTextContent = z.infer<typeof canvasPartialBlockNoteDocumentSchema>
 export type ParsedCanvasNodeType = 'embed' | 'stroke' | 'text'
@@ -277,9 +276,6 @@ export const canvasLassoAwarenessStateSchema: z.ZodType<ParsedCanvasLassoAwarene
   })
   .catchall(z.unknown())
 
-export const canvasDraggingAwarenessStateSchema: z.ZodType<ParsedCanvasDraggingAwarenessState> =
-  z.record(z.string(), canvasPoint2DSchema)
-
 export const canvasResizingAwarenessStateSchema: z.ZodType<ParsedCanvasResizingAwarenessState> =
   z.record(z.string(), canvasResizeAwarenessEntrySchema)
 
@@ -399,13 +395,6 @@ export function parseCanvasLassoAwarenessState(
   value: unknown,
 ): ParsedCanvasLassoAwarenessState | null {
   const result = canvasLassoAwarenessStateSchema.safeParse(value)
-  return result.success ? result.data : null
-}
-
-export function parseCanvasDraggingAwarenessState(
-  value: unknown,
-): ParsedCanvasDraggingAwarenessState | null {
-  const result = canvasDraggingAwarenessStateSchema.safeParse(value)
   return result.success ? result.data : null
 }
 

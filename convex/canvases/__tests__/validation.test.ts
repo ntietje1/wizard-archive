@@ -4,7 +4,6 @@ import {
   parseCanvasAwarenessPresence,
   parseCanvasBounds,
   parseCanvasBoundsDimensions,
-  parseCanvasDraggingAwarenessState,
   parseCanvasDrawAwarenessState,
   parseCanvasEdgeStyle,
   parseCanvasEdgeType,
@@ -338,14 +337,7 @@ describe('canvas awareness parsers', () => {
     })
   })
 
-  it('parses valid dragging, resizing, and selection awareness payloads', () => {
-    expect(
-      parseCanvasDraggingAwarenessState({
-        'node-1': { x: 10, y: 20 },
-      }),
-    ).toEqual({
-      'node-1': { x: 10, y: 20 },
-    })
+  it('parses valid resizing and selection awareness payloads', () => {
     expect(
       parseCanvasResizingAwarenessState({
         'node-1': { x: 10, y: 20, width: 30, height: 40 },
@@ -429,11 +421,6 @@ describe('canvas awareness parsers', () => {
       parseCanvasLassoAwarenessState({
         type: 'lasso',
         points: [{ x: 0 }],
-      }),
-    ).toBeNull()
-    expect(
-      parseCanvasDraggingAwarenessState({
-        'node-1': { x: 'bad', y: 20 },
       }),
     ).toBeNull()
     expect(

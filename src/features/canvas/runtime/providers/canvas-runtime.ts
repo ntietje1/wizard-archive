@@ -134,6 +134,7 @@ export const READ_ONLY_CANVAS_RUNTIME: CanvasRuntime = {
     patchNodeData: () => undefined,
     patchEdges: () => undefined,
     resizeNode: () => undefined,
+    resizeNodes: () => undefined,
     deleteNodes: () => undefined,
     createEdge: () => undefined,
     deleteEdges: () => undefined,
@@ -151,6 +152,9 @@ export const READ_ONLY_CANVAS_RUNTIME: CanvasRuntime = {
     transact: (fn) => fn(),
     onResize: () => undefined,
     onResizeEnd: () => undefined,
+    onResizeMany: () => undefined,
+    onResizeManyCancel: () => undefined,
+    onResizeManyEnd: () => undefined,
   },
   nodeDragController: null,
   viewportController: {

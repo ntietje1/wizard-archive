@@ -7,6 +7,9 @@ import { CanvasEdgeRenderer } from './canvas-edge-renderer'
 import { CanvasLocalOverlaysHost } from './canvas-local-overlays-host'
 import { CanvasNodeContent } from './canvas-node-content'
 import { CanvasNodeRenderer } from './canvas-node-renderer'
+import { CanvasPendingSelectionPreviewOverlay } from './canvas-pending-selection-preview-overlay'
+import { CanvasSelectionResizeOverlay } from './canvas-selection-resize-overlay'
+import { CanvasNodeResizeMetadataProvider } from '../nodes/shared/canvas-node-resize-metadata-provider'
 import { isCanvasEmptyPaneTarget } from '../runtime/interaction/canvas-pane-targets'
 import { useCanvasEngine } from '../react/use-canvas-engine'
 import { useCanvasRuntime } from '../runtime/providers/canvas-runtime'
@@ -87,18 +90,18 @@ export function CanvasScene({
       onEdgeContextMenu,
     }
   }, [onEdgeContextMenu, onNodeContextMenu, sceneHandlers])
-  const handleNodeClick = (event: ReactMouseEvent, node: CanvasNode) => {
+  const handleNodeClick = useCallback((event: ReactMouseEvent, node: CanvasNode) => {
     nodeHandlersRef.current.onNodeClick?.(event, node)
-  }
-  const handleNodeContextMenu = (event: ReactMouseEvent, node: CanvasNode) => {
+  }, [])
+  const handleNodeContextMenu = useCallback((event: ReactMouseEvent, node: CanvasNode) => {
     nodeHandlersRef.current.onNodeContextMenu(event, node)
-  }
-  const handleEdgeClick = (event: ReactMouseEvent, edge: CanvasEdge) => {
+  }, [])
+  const handleEdgeClick = useCallback((event: ReactMouseEvent, edge: CanvasEdge) => {
     edgeHandlersRef.current.onEdgeClick?.(event, edge)
-  }
-  const handleEdgeContextMenu = (event: ReactMouseEvent, edge: CanvasEdge) => {
+  }, [])
+  const handleEdgeContextMenu = useCallback((event: ReactMouseEvent, edge: CanvasEdge) => {
     edgeHandlersRef.current.onEdgeContextMenu(event, edge)
-  }
+  }, [])
 
   useEffect(() => {
     const unregister = domRuntime.registerViewportElement(viewportRef.current)
@@ -238,33 +241,37 @@ export function CanvasScene({
       onPointerDownCapture={handlePointerDownCapture}
     >
       <CanvasBackground />
-      <div
-        ref={viewportRef}
-        data-canvas-viewport="true"
-        className="canvas-scene__viewport absolute left-0 top-0 h-full w-full"
-        style={{
-          backfaceVisibility: 'hidden',
-          transformOrigin: '0 0',
-        }}
-      >
-        <svg
-          className="canvas-edge-layer pointer-events-none absolute left-0 top-0 overflow-visible"
-          data-canvas-edge-layer="true"
-          width="1"
-          height="1"
+      <CanvasNodeResizeMetadataProvider>
+        <div
+          ref={viewportRef}
+          data-canvas-viewport="true"
+          className="canvas-scene__viewport absolute left-0 top-0 h-full w-full"
+          style={{
+            backfaceVisibility: 'hidden',
+            transformOrigin: '0 0',
+          }}
         >
-          <CanvasEdgeRenderer
-            onEdgeClick={handleEdgeClick}
-            onEdgeContextMenu={handleEdgeContextMenu}
+          <svg
+            className="canvas-edge-layer pointer-events-none absolute left-0 top-0 overflow-visible"
+            data-canvas-edge-layer="true"
+            width="1"
+            height="1"
+          >
+            <CanvasEdgeRenderer
+              onEdgeClick={handleEdgeClick}
+              onEdgeContextMenu={handleEdgeContextMenu}
+            />
+            <CanvasConnectionLayer draft={connectionDraft} />
+          </svg>
+          <CanvasNodeRenderer
+            onNodeClick={handleNodeClick}
+            onNodeContextMenu={handleNodeContextMenu}
+            NodeContentComponent={CanvasNodeContent}
           />
-          <CanvasConnectionLayer draft={connectionDraft} />
-        </svg>
-        <CanvasNodeRenderer
-          onNodeClick={handleNodeClick}
-          onNodeContextMenu={handleNodeContextMenu}
-          NodeContentComponent={CanvasNodeContent}
-        />
-      </div>
+        </div>
+        <CanvasPendingSelectionPreviewOverlay />
+        <CanvasSelectionResizeOverlay />
+      </CanvasNodeResizeMetadataProvider>
       <CanvasLocalOverlaysHost />
       <CanvasAwarenessHost remoteUsers={remoteUsers} />
     </div>
@@ -372,16 +379,14 @@ function finishConnectionDraft({
   createEdgeFromConnection: (connection: CanvasConnection) => void
 }) {
   const draft = connectionDraftRef.current
-  const snapTarget =
-    draft?.snapTarget ??
-    (draft
-      ? resolveConnectionSnapTarget({
-          canvasEngine,
-          event,
-          paneRef,
-          source: draft.source,
-        })
-      : null)
+  const snapTarget = draft
+    ? resolveConnectionSnapTarget({
+        canvasEngine,
+        event,
+        paneRef,
+        source: draft.source,
+      })
+    : null
   connectionDraftRef.current = null
   connectionSnapStateRef.current.lastResolvedAt = 0
   setConnectionDraft(null)

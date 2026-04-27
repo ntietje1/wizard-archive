@@ -8,6 +8,7 @@ import {
   patchCanvasEdgesCommand,
   patchCanvasNodeDataCommand,
   resizeCanvasNodeCommand,
+  resizeCanvasNodesCommand,
   setCanvasNodePositionsCommand,
 } from './canvas-document-commands'
 import { sanitizeNodeForPersistence } from './canvas-node-persistence-sanitizer'
@@ -77,6 +78,22 @@ export function createCanvasDocumentWriter({
           position,
           sanitizeNode: sanitizeNodeForPersistence,
         })
+      })
+    },
+    resizeNodes: (updates) => {
+      if (updates.size === 0) return
+      transactCanvasMap(nodesMap, () => {
+        measureCanvasPerformance(
+          'canvas.document.nodes.resize',
+          { nodeCount: updates.size },
+          () => {
+            resizeCanvasNodesCommand({
+              nodesMap,
+              updates,
+              sanitizeNode: sanitizeNodeForPersistence,
+            })
+          },
+        )
       })
     },
     deleteNodes: (nodeIds) => {

@@ -132,6 +132,7 @@ export function createCanvasEngine(): CanvasEngine {
     domRuntime.scheduleCameraState('idle')
     domRuntime.scheduleViewportTransform(viewport)
     setRuntimeSnapshot(next)
+    store.emitViewportChange(viewport)
     store.emitViewportCommit(viewport)
   }
 
@@ -144,6 +145,7 @@ export function createCanvasEngine(): CanvasEngine {
     domRuntime.scheduleCameraState('moving')
     domRuntime.scheduleViewportTransform(viewport)
     setRuntimeSnapshot(next)
+    store.emitViewportChange(viewport)
   }
 
   const startDrag: CanvasEngine['startDrag'] = (nodeIds) => {
@@ -206,6 +208,7 @@ export function createCanvasEngine(): CanvasEngine {
   return {
     getSnapshot: store.getSnapshot,
     subscribe: store.subscribe,
+    subscribeViewportChange: store.subscribeViewportChange,
     subscribeViewportCommit: store.subscribeViewportCommit,
     subscribeSelector: store.subscribeSelector,
     setDocumentSnapshot,

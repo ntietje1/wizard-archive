@@ -63,6 +63,15 @@ export interface CanvasNodeActions {
   transact?: (fn: () => void) => void
   onResize: (nodeId: string, width: number, height: number, position: CanvasPosition) => void
   onResizeEnd: (nodeId: string, width: number, height: number, position: CanvasPosition) => void
+  onResizeMany: (updates: ReadonlyMap<string, CanvasNodeResizeUpdate>) => void
+  onResizeManyCancel: (updates: ReadonlyMap<string, CanvasNodeResizeUpdate>) => void
+  onResizeManyEnd: (updates: ReadonlyMap<string, CanvasNodeResizeUpdate>) => void
+}
+
+export interface CanvasNodeResizeUpdate {
+  width: number
+  height: number
+  position: CanvasPosition
 }
 
 export interface CanvasDocumentWriter {
@@ -70,6 +79,7 @@ export interface CanvasDocumentWriter {
   patchNodeData: (updates: ReadonlyMap<string, Record<string, unknown>>) => void
   patchEdges: (updates: ReadonlyMap<string, CanvasEdgePatch>) => void
   resizeNode: (nodeId: string, width: number, height: number, position: CanvasPosition) => void
+  resizeNodes: (updates: ReadonlyMap<string, CanvasNodeResizeUpdate>) => void
   deleteNodes: (nodeIds: ReadonlySet<string>) => void
   createEdge: (connection: CanvasConnection, defaults?: CanvasEdgeCreationDefaults) => void
   deleteEdges: (edgeIds: ReadonlySet<string>) => void
@@ -118,7 +128,7 @@ interface CanvasModifierKeyReader {
 }
 
 export interface CanvasViewportTools {
-  screenToCanvasPosition: (position: CanvasPosition) => CanvasPosition
+  screenToCanvasPosition: (position: Point2D) => CanvasPosition
   getZoom: () => number
 }
 
@@ -141,7 +151,6 @@ export interface CanvasToolPropertyContext {
 
 export interface CanvasCoreAwarenessWriter {
   setLocalCursor: (position: Point2D | null) => void
-  setLocalDragging: (positions: Record<string, Point2D> | null) => void
   setLocalResizing: (resizing: ResizingState | null) => void
   setLocalSelection: (nodeIds: ReadonlySet<string> | null) => void
 }

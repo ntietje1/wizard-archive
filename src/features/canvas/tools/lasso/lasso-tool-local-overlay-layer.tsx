@@ -1,32 +1,30 @@
 import { useLassoToolLocalOverlayStore } from './lasso-tool-local-overlay'
+import { CanvasScreenSpaceSvg } from '../../components/canvas-screen-space-overlay'
+import {
+  CANVAS_SELECTION_CHROME_FILL_OPACITY,
+  CANVAS_SELECTION_CHROME_STROKE_WIDTH_PX,
+  canvasPointsToScreenPoints,
+  useCanvasScreenSpaceViewport,
+} from '../../components/canvas-screen-space-overlay-utils'
 
 export function LassoToolLocalOverlayLayer() {
   const lassoPath = useLassoToolLocalOverlayStore((state) => state.points)
+  const viewport = useCanvasScreenSpaceViewport()
 
   if (lassoPath.length < 2) return null
+  const screenPoints = canvasPointsToScreenPoints(lassoPath, viewport)
 
   return (
-    <svg
-      data-testid="canvas-lasso-overlay"
-      aria-hidden="true"
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        overflow: 'visible',
-        pointerEvents: 'none',
-      }}
-    >
-      <polygon
-        points={lassoPath.map((point) => `${point.x},${point.y}`).join(' ')}
-        fill="var(--primary)"
-        fillOpacity={0.08}
-        stroke="var(--primary)"
-        strokeWidth={1}
-        strokeDasharray="3 3"
-      />
-    </svg>
+    <div data-testid="canvas-lasso-overlay" className="absolute inset-0 pointer-events-none">
+      <CanvasScreenSpaceSvg>
+        <polygon
+          points={screenPoints.map((point) => `${point.x},${point.y}`).join(' ')}
+          fill="var(--primary)"
+          fillOpacity={CANVAS_SELECTION_CHROME_FILL_OPACITY}
+          stroke="var(--primary)"
+          strokeWidth={CANVAS_SELECTION_CHROME_STROKE_WIDTH_PX}
+        />
+      </CanvasScreenSpaceSvg>
+    </div>
   )
 }

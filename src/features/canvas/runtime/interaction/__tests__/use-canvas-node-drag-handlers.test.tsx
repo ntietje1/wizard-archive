@@ -45,7 +45,6 @@ describe('useCanvasNodeDragHandlers', () => {
     const canvasEngine = createCanvasEngine()
     canvasEngine.setDocumentSnapshot({ nodes: dragState.currentNodes })
     const awareness = {
-      setLocalDragging: vi.fn(),
       setLocalCursor: vi.fn(),
       setLocalResizing: vi.fn(),
       setLocalSelection: vi.fn(),
@@ -59,11 +58,6 @@ describe('useCanvasNodeDragHandlers', () => {
         canvasEngine,
         documentWriter: documentWriter as never,
         nodesDoc: new Y.Doc(),
-        remoteDragAnimation: {
-          hasSpring: () => false,
-          setTarget: () => undefined,
-          clearNodeSprings: () => undefined,
-        },
         awareness,
         interaction: { suppressNextSurfaceClick: vi.fn() },
         getCanvasPosition: viewport.screenToCanvasPosition,
@@ -85,9 +79,7 @@ describe('useCanvasNodeDragHandlers', () => {
       x: 40,
       y: 10,
     })
-    expect(awareness.setLocalDragging).toHaveBeenCalledWith({
-      dragged: { x: 40, y: 10 },
-    })
+    expect(awareness.setLocalCursor).toHaveBeenCalledWith({ x: 130, y: 112 })
   })
 
   it('snaps dragged nodes to nearby node edges when the primary modifier is held', () => {
@@ -122,13 +114,7 @@ describe('useCanvasNodeDragHandlers', () => {
         canvasEngine,
         documentWriter: documentWriter as never,
         nodesDoc: new Y.Doc(),
-        remoteDragAnimation: {
-          hasSpring: () => false,
-          setTarget: () => undefined,
-          clearNodeSprings: () => undefined,
-        },
         awareness: {
-          setLocalDragging: vi.fn(),
           setLocalCursor: vi.fn(),
           setLocalResizing: vi.fn(),
           setLocalSelection: vi.fn(),
@@ -183,13 +169,7 @@ describe('useCanvasNodeDragHandlers', () => {
         canvasEngine,
         documentWriter: documentWriter as never,
         nodesDoc: new Y.Doc(),
-        remoteDragAnimation: {
-          hasSpring: () => false,
-          setTarget: () => undefined,
-          clearNodeSprings: () => undefined,
-        },
         awareness: {
-          setLocalDragging: vi.fn(),
           setLocalCursor: vi.fn(),
           setLocalResizing: vi.fn(),
           setLocalSelection: vi.fn(),

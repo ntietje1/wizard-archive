@@ -168,6 +168,26 @@ export function resizeCanvasNodeCommand({
   })
 }
 
+export function resizeCanvasNodesCommand({
+  nodesMap,
+  updates,
+  sanitizeNode,
+}: {
+  nodesMap: Y.Map<Node>
+  updates: ReadonlyMap<string, { width: number; height: number; position: XYPosition }>
+  sanitizeNode: CanvasNodeSanitizer
+}) {
+  for (const [nodeId, update] of updates) {
+    updateCanvasNodeIfPresent({
+      nodesMap,
+      nodeId,
+      sanitizeNode,
+      operation: 'resizeNodes',
+      updater: (existing) => resizeCanvasNode(existing, update),
+    })
+  }
+}
+
 export function setCanvasNodePositionsCommand({
   nodesMap,
   positions,

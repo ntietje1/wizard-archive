@@ -5,16 +5,15 @@ import type {
 } from 'convex/canvases/validation'
 import type { CanvasPosition } from '../types/canvas-domain-types'
 
+export const CANVAS_NODE_TYPES = ['embed', 'stroke', 'text'] as const
+
 /**
  * Raw node creation/input data stays broad at the document boundary; stricter node contracts are
  * enforced through the parsed runtime node types and per-node normalizers.
  */
 export type CanvasNodeData = Record<string, unknown>
 
-export type CanvasNodeType =
-  | ParsedCanvasRuntimeEmbedNode['type']
-  | ParsedCanvasRuntimeStrokeNode['type']
-  | ParsedCanvasRuntimeTextNode['type']
+export type CanvasNodeType = (typeof CANVAS_NODE_TYPES)[number]
 
 interface CanvasParsedRuntimeNodeMap {
   embed: ParsedCanvasRuntimeEmbedNode

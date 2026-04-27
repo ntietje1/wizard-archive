@@ -1,5 +1,6 @@
 import { getCanvasNodeBounds } from '../nodes/shared/canvas-node-bounds'
 import type { CanvasNode, CanvasViewport } from '../types/canvas-domain-types'
+import { boundsUnion } from './canvas-geometry-utils'
 import type { Bounds } from './canvas-geometry-utils'
 
 export function getCanvasFitViewport({
@@ -43,30 +44,10 @@ export function getCanvasFitViewport({
 }
 
 function getCanvasContentBounds(nodes: ReadonlyArray<CanvasNode>): Bounds | null {
-  let bounds: Bounds | null = null
-
-  for (const node of nodes) {
+  const boundsItems = nodes.flatMap((node) => {
     const nodeBounds = getCanvasNodeBounds(node)
-    if (!nodeBounds) {
-      continue
-    }
+    return nodeBounds ? [nodeBounds] : []
+  })
 
-    if (!bounds) {
-      bounds = nodeBounds
-      continue
-    }
-
-    const minX = Math.min(bounds.x, nodeBounds.x)
-    const minY = Math.min(bounds.y, nodeBounds.y)
-    const maxX = Math.max(bounds.x + bounds.width, nodeBounds.x + nodeBounds.width)
-    const maxY = Math.max(bounds.y + bounds.height, nodeBounds.y + nodeBounds.height)
-    bounds = {
-      x: minX,
-      y: minY,
-      width: maxX - minX,
-      height: maxY - minY,
-    }
-  }
-
-  return bounds
+  return boundsUnion(boundsItems)
 }

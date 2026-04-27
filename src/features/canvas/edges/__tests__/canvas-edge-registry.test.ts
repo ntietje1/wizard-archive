@@ -245,6 +245,11 @@ describe('canvas edge specs', () => {
         opacity: 1,
       },
     })
+    expect(normalizeCanvasEdge(createBezierEdge({ style: { opacity: -0.5 } }))).toMatchObject({
+      style: {
+        opacity: 0,
+      },
+    })
   })
 
   it('returns empty inspectable properties for invalid edges and typed properties for valid edges', () => {
@@ -281,7 +286,7 @@ describe('canvas edge specs', () => {
     )
 
     expect(strokeSizeBinding).toBeDefined()
-    if (!strokeSizeBinding || strokeSizeBinding.definition.kind !== 'strokeSize') {
+    if (!strokeSizeBinding) {
       throw new Error('Expected edge stroke-size binding')
     }
 

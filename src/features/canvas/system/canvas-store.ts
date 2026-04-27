@@ -3,6 +3,7 @@ import type {
   CanvasEngineListener,
   CanvasEngineSnapshot,
   CanvasViewport,
+  CanvasViewportChangeListener,
   CanvasViewportCommitListener,
 } from './canvas-engine-types'
 
@@ -14,12 +15,14 @@ export interface CanvasStore {
   ) => void
   notify: () => void
   subscribe: (listener: CanvasEngineListener) => () => void
+  subscribeViewportChange: (listener: CanvasViewportChangeListener) => () => void
   subscribeViewportCommit: (listener: CanvasViewportCommitListener) => () => void
   subscribeSelector: <T>(
     selector: (snapshot: CanvasEngineSnapshot) => T,
     listener: (next: T, previous: T) => void,
     equality?: CanvasEngineEquality<T>,
   ) => () => void
+  emitViewportChange: (viewport: CanvasViewport) => void
   emitViewportCommit: (viewport: CanvasViewport) => void
   destroy: () => void
 }
@@ -27,6 +30,7 @@ export interface CanvasStore {
 export function createCanvasStore(initialSnapshot: CanvasEngineSnapshot): CanvasStore {
   let snapshot = initialSnapshot
   const listeners = new Set<CanvasEngineListener>()
+  const viewportChangeListeners = new Set<CanvasViewportChangeListener>()
   const viewportCommitListeners = new Set<CanvasViewportCommitListener>()
 
   const emit = () => {
@@ -58,6 +62,12 @@ export function createCanvasStore(initialSnapshot: CanvasEngineSnapshot): Canvas
       }
     },
     notify: emit,
+    subscribeViewportChange: (listener) => {
+      viewportChangeListeners.add(listener)
+      return () => {
+        viewportChangeListeners.delete(listener)
+      }
+    },
     subscribeViewportCommit: (listener) => {
       viewportCommitListeners.add(listener)
       return () => {
@@ -83,6 +93,15 @@ export function createCanvasStore(initialSnapshot: CanvasEngineSnapshot): Canvas
         equality,
       })
     },
+    emitViewportChange: (viewport) => {
+      for (const listener of Array.from(viewportChangeListeners)) {
+        try {
+          listener(viewport)
+        } catch (error) {
+          console.error('Canvas viewport change listener failed', error)
+        }
+      }
+    },
     emitViewportCommit: (viewport) => {
       for (const listener of Array.from(viewportCommitListeners)) {
         try {
@@ -94,6 +113,7 @@ export function createCanvasStore(initialSnapshot: CanvasEngineSnapshot): Canvas
     },
     destroy: () => {
       listeners.clear()
+      viewportChangeListeners.clear()
       viewportCommitListeners.clear()
     },
   }

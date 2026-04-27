@@ -49,6 +49,7 @@ export function createPlacementEnvironment({
       patchNodeData: () => undefined,
       patchEdges: () => undefined,
       resizeNode: () => undefined,
+      resizeNodes: () => undefined,
       deleteNodes: () => undefined,
       createEdge: () => undefined,
       deleteEdges: () => undefined,
@@ -102,7 +103,6 @@ export function createPlacementEnvironment({
     awareness: {
       core: {
         setLocalCursor: () => undefined,
-        setLocalDragging: () => undefined,
         setLocalResizing: () => undefined,
         setLocalSelection: () => undefined,
       },

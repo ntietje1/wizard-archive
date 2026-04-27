@@ -12,7 +12,7 @@ export function isCanvasEmptyPaneTarget(
 
   if (
     target.closest('.canvas-node-shell') ||
-    target.closest('.canvas-node-resize-handle') ||
+    target.closest('.canvas-selection-resize-zone') ||
     target.closest('[data-canvas-node-handle="true"]') ||
     target.closest('[data-canvas-edge-id]')
   ) {

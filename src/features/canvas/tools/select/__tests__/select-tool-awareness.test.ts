@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { readRemoteSelectRectState, setSelectToolAwareness } from '../select-tool-awareness'
 import { logger } from '~/shared/utils/logger'
 import type { RemoteUser } from '../../../utils/canvas-awareness-types'
@@ -11,6 +11,10 @@ vi.mock('~/shared/utils/logger', () => ({
 }))
 
 describe('select tool awareness', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it.each([
     {
       label: 'negative width',
@@ -31,6 +35,10 @@ describe('select tool awareness', () => {
     {
       label: 'non-finite x',
       payload: { type: 'rect', x: Number.NaN, y: 20, width: 30, height: 40 },
+    },
+    {
+      label: 'non-finite y',
+      payload: { type: 'rect', x: 10, y: Number.NaN, width: 30, height: 40 },
     },
     {
       label: 'missing height',
@@ -77,6 +85,10 @@ describe('select tool awareness', () => {
       label: 'non-finite x',
       rect: { x: Number.POSITIVE_INFINITY, y: 20, width: 30, height: 40 },
     },
+    {
+      label: 'non-finite y',
+      rect: { x: 10, y: Number.NaN, width: 30, height: 40 },
+    },
     { label: 'missing height', rect: { x: 10, y: 20, width: 30 } },
   ])('does not publish invalid select awareness payloads: $label', ({ rect }) => {
     const setPresence = vi.fn()
@@ -94,7 +106,6 @@ function createRemoteUser(presence: RemoteUser['presence']): RemoteUser {
     user: { name: 'Tester', color: '#00f' },
     presence,
     cursor: null,
-    dragging: null,
     resizing: null,
     selectedNodeIds: null,
   }

@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useRef } from 'react'
-import { useCanvasEngineSelector } from '../react/use-canvas-engine'
+import { useEffect, useMemo, useRef } from 'react'
+import { useCanvasScreenSpaceViewport } from './canvas-screen-space-overlay-utils'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
 import { getContrastColor } from '~/shared/utils/color'
 import { useSpringPosition } from '~/shared/hooks/useSpringPosition'
@@ -21,60 +21,32 @@ function CursorIcon({ color }: { color: string }) {
   )
 }
 
-const PIN_LERP_DURATION = 200
-// Clear the GPU hint shortly after cursor updates stop so it matches the drag lerp timing.
+// Clear the GPU hint shortly after cursor updates stop.
 const WILL_CHANGE_IDLE_TIMEOUT = 150
 
 function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
   const elementRef = useRef<HTMLDivElement>(null)
+  const viewport = useCanvasScreenSpaceViewport()
   const cursor = remoteUser.cursor
-  const isDragging = !!(remoteUser.dragging && Object.keys(remoteUser.dragging).length > 0)
-  const dragReference = getRemoteDragReference(remoteUser)
-  const pinnedNode = useCanvasEngineSelector((snapshot) =>
-    dragReference ? (snapshot.nodeLookup.get(dragReference.nodeId)?.node ?? null) : null,
+  const cursorX = cursor?.x
+  const cursorY = cursor?.y
+  const screenCursor = useMemo(
+    () =>
+      cursorX === undefined || cursorY === undefined
+        ? null
+        : {
+            x: viewport.x + cursorX * viewport.zoom,
+            y: viewport.y + cursorY * viewport.zoom,
+          },
+    [cursorX, cursorY, viewport.x, viewport.y, viewport.zoom],
   )
-  const wasDraggingRef = useRef(false)
-  const lerpRef = useRef<{
-    from: { x: number; y: number }
-    startTime: number
-  } | null>(null)
-  const pinnedRef = useRef<{ x: number; y: number } | null>(null)
-  const rafIdRef = useRef<number>(0)
-  const animatedPosRef = useRef<{ x: number; y: number } | null>(null)
   const willChangeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  let pinnedPosition: { x: number; y: number } | null = null
-  if (isDragging && cursor && remoteUser.dragging) {
-    if (dragReference) {
-      if (pinnedNode) {
-        pinnedPosition = {
-          x: pinnedNode.position.x + (cursor.x - dragReference.position.x),
-          y: pinnedNode.position.y + (cursor.y - dragReference.position.y),
-        }
-      }
-    }
-  }
-
-  const pinnedX = pinnedPosition?.x ?? null
-  const pinnedY = pinnedPosition?.y ?? null
-
-  useLayoutEffect(() => {
-    pinnedRef.current = pinnedPosition
-
-    if (isDragging && !wasDraggingRef.current && animatedPosRef.current) {
-      lerpRef.current = {
-        from: { ...animatedPosRef.current },
-        startTime: performance.now(),
-      }
-    }
-    wasDraggingRef.current = isDragging
-  }, [isDragging, pinnedPosition, pinnedX, pinnedY])
-
-  useSpringPosition(isDragging ? null : cursor, elementRef)
+  useSpringPosition(screenCursor, elementRef)
 
   useEffect(() => {
     const element = elementRef.current
-    if (!element || !cursor) {
+    if (!element || !screenCursor) {
       if (willChangeTimeoutRef.current) {
         clearTimeout(willChangeTimeoutRef.current)
         willChangeTimeoutRef.current = null
@@ -89,15 +61,12 @@ function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
     if (willChangeTimeoutRef.current) {
       clearTimeout(willChangeTimeoutRef.current)
     }
-    willChangeTimeoutRef.current = setTimeout(
-      () => {
-        if (elementRef.current) {
-          elementRef.current.style.willChange = ''
-        }
-        willChangeTimeoutRef.current = null
-      },
-      isDragging ? PIN_LERP_DURATION : WILL_CHANGE_IDLE_TIMEOUT,
-    )
+    willChangeTimeoutRef.current = setTimeout(() => {
+      if (elementRef.current) {
+        elementRef.current.style.willChange = ''
+      }
+      willChangeTimeoutRef.current = null
+    }, WILL_CHANGE_IDLE_TIMEOUT)
 
     return () => {
       if (willChangeTimeoutRef.current) {
@@ -105,43 +74,9 @@ function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
         willChangeTimeoutRef.current = null
       }
     }
-  }, [cursor, isDragging])
+  }, [screenCursor])
 
-  useEffect(() => {
-    if (!isDragging || !cursor) {
-      lerpRef.current = null
-      return
-    }
-
-    const animate = () => {
-      const pinned = pinnedRef.current
-      const currentElement = elementRef.current
-      if (!pinned || !currentElement) return
-
-      const lerp = lerpRef.current
-      let x: number
-      let y: number
-      if (lerp) {
-        const t = Math.min((performance.now() - lerp.startTime) / PIN_LERP_DURATION, 1)
-        const ease = t * (2 - t)
-        x = lerp.from.x + (pinned.x - lerp.from.x) * ease
-        y = lerp.from.y + (pinned.y - lerp.from.y) * ease
-        if (t >= 1) lerpRef.current = null
-      } else {
-        x = pinned.x
-        y = pinned.y
-      }
-      animatedPosRef.current = { x, y }
-      currentElement.style.transform = `translate(${x}px, ${y}px)`
-
-      rafIdRef.current = requestAnimationFrame(animate)
-    }
-
-    rafIdRef.current = requestAnimationFrame(animate)
-    return () => cancelAnimationFrame(rafIdRef.current)
-  }, [cursor, isDragging])
-
-  if (!cursor) return null
+  if (!screenCursor) return null
 
   return (
     <div ref={elementRef} className="pointer-events-none absolute left-0 top-0 z-[1000]">
@@ -149,20 +84,6 @@ function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
       <NameLabel name={remoteUser.user.name} color={remoteUser.user.color} />
     </div>
   )
-}
-
-function getRemoteDragReference(remoteUser: RemoteUser) {
-  if (!remoteUser.dragging) {
-    return null
-  }
-
-  const [entry] = Object.entries(remoteUser.dragging)
-  if (!entry) {
-    return null
-  }
-
-  const [nodeId, position] = entry
-  return { nodeId, position }
 }
 
 function NameLabel({ name, color }: { name: string; color: string }) {

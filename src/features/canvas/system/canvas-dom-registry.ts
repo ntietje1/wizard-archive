@@ -235,6 +235,7 @@ function readResizeObserverBorderBoxSize(
     }
   }
 
+  // Older ResizeObserver implementations only expose contentRect, so this fallback may exclude borders.
   return {
     width: entry.contentRect.width,
     height: entry.contentRect.height,

@@ -1,12 +1,7 @@
 import type { RemoteHighlight, RemoteUser, ResizingState } from '../../utils/canvas-awareness-types'
 
-const EMPTY_DRAG_POSITIONS: Record<string, { x: number; y: number }> = {}
 const EMPTY_RESIZE_DIMENSIONS: ResizingState = {}
 const EMPTY_HIGHLIGHTS = new Map<string, RemoteHighlight>()
-
-export function getRemoteDragPositions(remoteUsers: Array<RemoteUser>) {
-  return mergeRemoteStates(remoteUsers, (remoteUser) => remoteUser.dragging, EMPTY_DRAG_POSITIONS)
-}
 
 export function getRemoteResizeDimensions(remoteUsers: Array<RemoteUser>) {
   return mergeRemoteStates(
@@ -41,10 +36,6 @@ export function getRemoteHighlights(remoteUsers: Array<RemoteUser>) {
 }
 
 function getRemoteHighlightNodeIds(remoteUser: RemoteUser): Array<string> | null {
-  if (remoteUser.dragging) {
-    return Object.keys(remoteUser.dragging)
-  }
-
   if (remoteUser.resizing) {
     return Object.keys(remoteUser.resizing)
   }

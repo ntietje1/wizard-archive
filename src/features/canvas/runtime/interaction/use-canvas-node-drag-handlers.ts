@@ -12,14 +12,12 @@ import type {
   CanvasInteractionTools,
   CanvasSelectionController,
 } from '../../tools/canvas-tool-types'
-import type { CanvasRemoteDragAnimation } from './use-canvas-remote-drag-animation'
 import type * as Y from 'yjs'
 
 interface UseCanvasNodeDragHandlersOptions {
   canvasEngine: CanvasEngine
   documentWriter: CanvasDocumentWriter
   nodesDoc: Y.Doc | null | undefined
-  remoteDragAnimation: CanvasRemoteDragAnimation
   awareness: CanvasCoreAwarenessWriter
   interaction: Pick<CanvasInteractionTools, 'suppressNextSurfaceClick'>
   getCanvasPosition: (point: { x: number; y: number }) => { x: number; y: number }
@@ -35,7 +33,6 @@ export function useCanvasNodeDragHandlers({
   canvasEngine,
   documentWriter,
   nodesDoc,
-  remoteDragAnimation,
   awareness,
   interaction,
   getCanvasPosition,
@@ -58,7 +55,6 @@ export function useCanvasNodeDragHandlers({
     nodesDoc,
     getCanvasPosition,
     getZoom,
-    remoteDragAnimation,
     selection,
   })
   optionsRef.current = {
@@ -73,7 +69,6 @@ export function useCanvasNodeDragHandlers({
     nodesDoc,
     getCanvasPosition,
     getZoom,
-    remoteDragAnimation,
     selection,
   }
 
@@ -148,11 +143,10 @@ function handleDragStart(
 function handleDrag(
   event: CanvasDragEvent,
   {
-    awareness,
     getCanvasPosition,
+    awareness,
   }: Pick<UseCanvasNodeDragHandlersOptions, 'awareness' | 'getCanvasPosition'>,
 ) {
-  awareness.setLocalDragging(Object.fromEntries(event.resolvedPositions))
   awareness.setLocalCursor(
     getCanvasPosition({
       x: event.sourceEvent.clientX,
@@ -164,20 +158,13 @@ function handleDrag(
 function handleDragEnd(
   event: CanvasDragEvent,
   {
-    awareness,
     documentWriter,
     localDraggingIdsRef,
     nodesDoc,
-    remoteDragAnimation,
     interaction,
   }: Pick<
     UseCanvasNodeDragHandlersOptions,
-    | 'awareness'
-    | 'documentWriter'
-    | 'interaction'
-    | 'localDraggingIdsRef'
-    | 'nodesDoc'
-    | 'remoteDragAnimation'
+    'documentWriter' | 'interaction' | 'localDraggingIdsRef' | 'nodesDoc'
   >,
 ) {
   try {
@@ -202,8 +189,6 @@ function handleDragEnd(
         localDraggingIds.delete(nodeId)
       }
     }
-    remoteDragAnimation.clearNodeSprings(event.draggedNodeIds)
     clearCanvasDragSnapGuides()
-    awareness.setLocalDragging(null)
   }
 }

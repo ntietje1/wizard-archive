@@ -204,7 +204,7 @@ function isNodeDragBlocked(target: EventTarget | null) {
     target.closest(
       [
         '[data-node-editing="true"]',
-        '.canvas-node-resize-handle',
+        '.canvas-selection-resize-zone',
         '[data-canvas-node-handle="true"]',
         'input',
         'textarea',

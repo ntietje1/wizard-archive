@@ -155,6 +155,33 @@ describe('createCanvasDocumentWriter', () => {
     expect(stroke?.selected).toBeUndefined()
   })
 
+  it('resizes multiple nodes in one writer call', () => {
+    nodesMap.set('node-1', createTextNode('node-1'))
+    nodesMap.set('stroke-1', createStrokeNode('stroke-1'))
+    const writer = createCanvasDocumentWriter({ nodesMap, edgesMap })
+
+    writer.resizeNodes(
+      new Map([
+        ['node-1', { width: 120, height: 60, position: { x: 10, y: 20 } }],
+        ['stroke-1', { width: 40, height: 20, position: { x: 50, y: 60 } }],
+      ]),
+    )
+
+    expect(nodesMap.get('node-1')).toMatchObject({
+      position: { x: 10, y: 20 },
+      width: 120,
+      height: 60,
+    })
+    expect(nodesMap.get('stroke-1')).toMatchObject({
+      position: { x: 50, y: 60 },
+      width: 40,
+      height: 20,
+      data: {
+        bounds: { x: 0, y: 0, width: 40, height: 20 },
+      },
+    })
+  })
+
   it('applies batched node data, edge, and position updates in one writer call', () => {
     nodesMap.set('node-1', createTextNode('node-1'))
     nodesMap.set('node-2', createTextNode('node-2'))
@@ -240,6 +267,7 @@ describe('createCanvasDocumentWriter', () => {
 
     writer.patchNodeData(new Map())
     writer.patchEdges(new Map())
+    writer.resizeNodes(new Map())
     writer.setNodePositions(new Map())
 
     expect(nodeEvents).toBe(0)
@@ -277,6 +305,9 @@ describe('createCanvasDocumentWriter', () => {
 
     writer.patchNodeData(new Map([['missing-node', { label: 'ignored' }]]))
     writer.resizeNode('missing-node', 50, 60, { x: 1, y: 2 })
+    writer.resizeNodes(
+      new Map([['missing-node', { width: 50, height: 60, position: { x: 1, y: 2 } }]]),
+    )
     writer.setNodePositions(new Map([['missing-node', { x: 5, y: 6 }]]))
     writer.patchEdges(
       new Map([

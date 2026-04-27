@@ -60,12 +60,14 @@ export interface CanvasEngineSnapshot {
 }
 
 export type CanvasEngineListener = () => void
+export type CanvasViewportChangeListener = (viewport: CanvasViewport) => void
 export type CanvasViewportCommitListener = (viewport: CanvasViewport) => void
 export type CanvasEngineEquality<T> = (a: T, b: T) => boolean
 
 export interface CanvasEngine {
   getSnapshot: () => CanvasEngineSnapshot
   subscribe: (listener: CanvasEngineListener) => () => void
+  subscribeViewportChange: (listener: CanvasViewportChangeListener) => () => void
   subscribeViewportCommit: (listener: CanvasViewportCommitListener) => () => void
   subscribeSelector: <T>(
     selector: (snapshot: CanvasEngineSnapshot) => T,
