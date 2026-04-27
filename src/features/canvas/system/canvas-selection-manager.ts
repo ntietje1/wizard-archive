@@ -5,11 +5,7 @@ import {
   isCanvasPendingPreviewActive,
 } from './canvas-selection'
 import { EMPTY_SET } from './canvas-document-projector'
-import type {
-  CanvasEngineSnapshot,
-  CanvasInternalEdge,
-  CanvasInternalNode,
-} from './canvas-engine-types'
+import type { CanvasEngineSnapshot } from './canvas-engine-types'
 import type {
   CanvasSelectionCommitMode,
   CanvasSelectionGestureKind,
@@ -80,8 +76,8 @@ export function createCanvasSelectionManager(): CanvasSelectionManager {
       selection: nextSelection,
       selectedNodeIds: nextSelection.nodeIds,
       selectedEdgeIds: nextSelection.edgeIds,
-      nodeLookup: updateNodeSelectionLookup(snapshot.nodeLookup, nodeIds, dirtyNodeIds),
-      edgeLookup: updateEdgeSelectionLookup(snapshot.edgeLookup, edgeIds, dirtyEdgeIds),
+      nodeLookup: updateSelectionLookup(snapshot.nodeLookup, nodeIds, dirtyNodeIds),
+      edgeLookup: updateSelectionLookup(snapshot.edgeLookup, edgeIds, dirtyEdgeIds),
       dirtyNodeIds,
       dirtyEdgeIds,
     }
@@ -137,6 +133,14 @@ export function createCanvasSelectionManager(): CanvasSelectionManager {
         }),
       }),
     beginGesture: (snapshot, kind, mode) => {
+      if (
+        snapshot.selection.gestureKind === kind &&
+        snapshot.selection.gestureMode === mode &&
+        snapshot.selection.pendingPreview.kind === 'inactive'
+      ) {
+        return null
+      }
+
       const nextSelection: CanvasSelectionState = {
         ...snapshot.selection,
         pendingPreview: createInactiveCanvasPendingSelectionPreview(),
@@ -223,47 +227,24 @@ function getChangedSelectionIds(previous: ReadonlySet<string>, next: ReadonlySet
   return changed
 }
 
-function updateNodeSelectionLookup(
-  lookup: ReadonlyMap<string, CanvasInternalNode>,
-  selectedNodeIds: ReadonlySet<string>,
-  changedNodeIds: ReadonlySet<string>,
+function updateSelectionLookup<TValue extends { selected: boolean }>(
+  lookup: ReadonlyMap<string, TValue>,
+  selectedIds: ReadonlySet<string>,
+  changedIds: ReadonlySet<string>,
 ) {
-  if (changedNodeIds.size === 0) {
+  if (changedIds.size === 0) {
     return lookup
   }
 
   const nextLookup = new Map(lookup)
-  for (const nodeId of changedNodeIds) {
-    const existing = lookup.get(nodeId)
+  for (const id of changedIds) {
+    const existing = lookup.get(id)
     if (!existing) {
       continue
     }
-    nextLookup.set(nodeId, {
+    nextLookup.set(id, {
       ...existing,
-      selected: selectedNodeIds.has(nodeId),
-    })
-  }
-  return nextLookup
-}
-
-function updateEdgeSelectionLookup(
-  lookup: ReadonlyMap<string, CanvasInternalEdge>,
-  selectedEdgeIds: ReadonlySet<string>,
-  changedEdgeIds: ReadonlySet<string>,
-) {
-  if (changedEdgeIds.size === 0) {
-    return lookup
-  }
-
-  const nextLookup = new Map(lookup)
-  for (const edgeId of changedEdgeIds) {
-    const existing = lookup.get(edgeId)
-    if (!existing) {
-      continue
-    }
-    nextLookup.set(edgeId, {
-      ...existing,
-      selected: selectedEdgeIds.has(edgeId),
+      selected: selectedIds.has(id),
     })
   }
   return nextLookup

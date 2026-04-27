@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import type { CanvasEdgeType } from '../edges/canvas-edge-types'
 import { CANVAS_REORDER_ACTIONS } from '../runtime/document/canvas-reorder-actions'
 import { linePaintCanvasProperty } from '../properties/canvas-property-definitions'
@@ -245,11 +245,12 @@ function StrokeSizeControl({
   const sliderMax = Math.min(property.definition.max, STROKE_SIZE_SLIDER_MAX)
   const sliderValue = Math.min(strokeSizeValue ?? property.definition.min, sliderMax)
   const [draftValue, setDraftValue] = useState<string | null>(null)
-  const inputRef = useRef<HTMLInputElement | null>(null)
-  const inputValue = draftValue ?? strokeSizeValue?.toString() ?? ''
+  const [previewValue, setPreviewValue] = useState<string | null>(null)
+  const inputValue = previewValue ?? draftValue ?? strokeSizeValue?.toString() ?? ''
 
   const resetDraftValue = () => {
     setDraftValue(null)
+    setPreviewValue(null)
   }
 
   const commitDraftValue = () => {
@@ -292,16 +293,12 @@ function StrokeSizeControl({
               return
             }
 
-            if (inputRef.current) {
-              inputRef.current.value = String(nextValue)
-            }
+            setPreviewValue(String(nextValue))
             onPropertyPreviewChange(() => property.setValue(nextValue))
           }}
           onPointerCancel={() => {
             onPropertyPreviewCancel()
-            if (inputRef.current) {
-              inputRef.current.value = inputValue
-            }
+            setPreviewValue(null)
           }}
           onPointerUp={(event) => {
             const nextValue = Number(event.currentTarget.value)
@@ -310,7 +307,7 @@ function StrokeSizeControl({
               return
             }
 
-            setDraftValue(null)
+            resetDraftValue()
             onPropertyPreviewCommit(() => property.setValue(nextValue))
           }}
           onKeyUp={(event) => {
@@ -331,6 +328,7 @@ function StrokeSizeControl({
 
             const nextValue = Number(event.currentTarget.value)
             if (Number.isFinite(nextValue)) {
+              resetDraftValue()
               onPropertyPreviewCommit(() => property.setValue(nextValue))
             }
           }}
@@ -341,7 +339,6 @@ function StrokeSizeControl({
       <div className="mx-1 h-6 w-px bg-border" aria-hidden="true" />
       <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm border border-border focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-1">
         <input
-          ref={inputRef}
           aria-label="Stroke size input"
           className="block h-full w-full appearance-none cursor-text bg-transparent p-0 text-center text-xs leading-6 tabular-nums outline-none placeholder:text-muted-foreground"
           inputMode="numeric"

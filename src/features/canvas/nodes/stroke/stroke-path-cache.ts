@@ -29,11 +29,12 @@ export function getCachedStrokeDetailPath(
     return cached
   }
 
-  const path = size === entry.size ? entry.detailPath : pointsToPathD(data.points, size)
+  const path = pointsToPathD(data.points, size)
   entry.detailBySize.set(size, path)
   return path
 }
 
+// Cache invalidation relies on strokePathCache callers replacing the immutable points array.
 function getStrokePathCacheEntry(nodeId: string, data: StrokeNodeData): StrokePathCacheEntry {
   const existing = strokePathCache.get(nodeId)
   if (existing && existing.points === data.points && existing.size === data.size) {

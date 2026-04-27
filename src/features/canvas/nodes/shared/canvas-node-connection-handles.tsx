@@ -3,7 +3,7 @@ import { cn } from '~/features/shadcn/lib/utils'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 
-type CanvasConnectionHandlePosition = 'top' | 'right' | 'bottom' | 'left'
+export type CanvasConnectionHandlePosition = 'top' | 'right' | 'bottom' | 'left'
 
 export type CanvasConnectionHandleDescriptor = {
   id: string
@@ -28,7 +28,6 @@ export function CanvasNodeConnectionHandles({
 }) {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
   const edgeToolActive = useCanvasToolStore((state) => state.activeTool === 'edge')
-  const handlesVisible = edgeToolActive
 
   if (!interactiveRenderMode) {
     return null
@@ -40,15 +39,14 @@ export function CanvasNodeConnectionHandles({
       style={{ ...getDefaultHandleStyle(position), ...style }}
       className={cn(
         BASE_HANDLE_CLASS,
-        handlesVisible ? 'duration-150' : 'duration-0',
+        edgeToolActive ? 'duration-150' : 'duration-0',
         edgeToolActive && 'opacity-100 scale-100 pointer-events-auto',
       )}
       data-testid={`canvas-node-handle-${id}`}
       data-canvas-node-handle="true"
       data-handle-id={id}
       data-handle-position={position}
-      data-handles-visible={handlesVisible ? 'true' : 'false'}
-      data-edge-tool-active={edgeToolActive ? 'true' : 'false'}
+      data-handles-visible={edgeToolActive ? 'true' : 'false'}
     />
   ))
 }

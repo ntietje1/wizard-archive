@@ -16,12 +16,24 @@ import type { CanvasEdgePatch, CanvasRuntimeEdge } from '../canvas-edge-types'
 import type { CanvasInspectableProperties } from '../../properties/canvas-property-types'
 
 function normalizeOpacityPercent(opacity: number) {
+  if (Number.isNaN(opacity)) {
+    return undefined
+  }
+
   const clampedOpacity = Math.max(0, Math.min(100, opacity))
   return clampedOpacity >= 100 ? undefined : clampedOpacity / 100
 }
 
 function validateStroke(stroke: string) {
   return typeof stroke === 'string' && stroke.length > 0 ? stroke : DEFAULT_CANVAS_EDGE_STROKE
+}
+
+function validateStrokeWidth(strokeWidth: number) {
+  if (!Number.isFinite(strokeWidth)) {
+    return strokeSizeCanvasProperty.min
+  }
+
+  return Math.max(strokeSizeCanvasProperty.min, Math.min(strokeSizeCanvasProperty.max, strokeWidth))
 }
 
 export function getCanvasStrokeEdgeProperties(
@@ -59,7 +71,7 @@ export function getCanvasStrokeEdgeProperties(
         (strokeWidth) =>
           patchEdge(edge.id, {
             style: {
-              strokeWidth,
+              strokeWidth: validateStrokeWidth(strokeWidth),
             },
           }),
       ),

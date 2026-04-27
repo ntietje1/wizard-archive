@@ -296,9 +296,14 @@ function clearRemovedStrokePathCache(
     return
   }
 
-  const nextNodeIds = new Set(nextNodes.map((node) => node.id))
+  let nextNodeIds: Set<string> | null = null
   for (const node of previousNodes) {
-    if (node.type === 'stroke' && !nextNodeIds.has(node.id)) {
+    if (node.type !== 'stroke') {
+      continue
+    }
+
+    nextNodeIds ??= new Set(nextNodes.map((nextNode) => nextNode.id))
+    if (!nextNodeIds.has(node.id)) {
       clearStrokePathCache(node.id)
     }
   }

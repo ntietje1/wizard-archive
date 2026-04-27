@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { CanvasAwarenessHost } from './canvas-awareness-host'
 import { CanvasBackground } from './canvas-background'
 import { CanvasConnectionLayer } from './canvas-connection-layer'
@@ -61,17 +61,22 @@ export function CanvasScene({
     onEdgeContextMenu,
   })
   const connectionDraftRef = useRef<CanvasConnectionDraft | null>(null)
+  const connectionPointerUpRef = useRef<(event: PointerEvent) => void>(() => undefined)
+  const connectionPointerCancelRef = useRef<() => void>(() => undefined)
   const [connectionDraft, setConnectionDraft] = useState<CanvasConnectionDraft | null>(null)
   const isDraggingConnection = connectionDraft !== null
-  sceneHandlersRef.current = sceneHandlers
-  nodeHandlersRef.current = {
-    onNodeClick: sceneHandlers.onNodeClick,
-    onNodeContextMenu,
-  }
-  edgeHandlersRef.current = {
-    onEdgeClick: sceneHandlers.onEdgeClick,
-    onEdgeContextMenu,
-  }
+
+  useLayoutEffect(() => {
+    sceneHandlersRef.current = sceneHandlers
+    nodeHandlersRef.current = {
+      onNodeClick: sceneHandlers.onNodeClick,
+      onNodeContextMenu,
+    }
+    edgeHandlersRef.current = {
+      onEdgeClick: sceneHandlers.onEdgeClick,
+      onEdgeContextMenu,
+    }
+  }, [onEdgeContextMenu, onNodeContextMenu, sceneHandlers])
   const handleNodeClick = useCallback((event: ReactMouseEvent, node: CanvasNode) => {
     nodeHandlersRef.current.onNodeClick?.(event, node)
   }, [])
@@ -107,6 +112,7 @@ export function CanvasScene({
   )
 
   const handleConnectionPointerUp = useCallback((event: PointerEvent) => {
+    window.removeEventListener('pointercancel', connectionPointerCancelRef.current)
     finishConnectionDraft({
       connectionDraftRef,
       event,
@@ -116,9 +122,14 @@ export function CanvasScene({
   }, [])
 
   const handleConnectionPointerCancel = useCallback(() => {
-    connectionDraftRef.current = null
-    setConnectionDraft(null)
+    window.removeEventListener('pointerup', connectionPointerUpRef.current)
+    cancelConnectionDraft({ connectionDraftRef, setConnectionDraft })
   }, [])
+
+  useLayoutEffect(() => {
+    connectionPointerUpRef.current = handleConnectionPointerUp
+    connectionPointerCancelRef.current = handleConnectionPointerCancel
+  }, [handleConnectionPointerCancel, handleConnectionPointerUp])
 
   useEffect(() => {
     if (!isDraggingConnection) {
@@ -149,6 +160,9 @@ export function CanvasScene({
     if (!handle) {
       return
     }
+    if (!handle.nodeId) {
+      return
+    }
 
     event.preventDefault()
     event.stopPropagation()
@@ -170,6 +184,13 @@ export function CanvasScene({
   const handlePaneKeyDown = (event: ReactKeyboardEvent) => {
     if (event.key === ' ') {
       event.preventDefault()
+      return
+    }
+
+    if ((event.key === 'Escape' || event.key === 'Esc') && connectionDraftRef.current) {
+      event.preventDefault()
+      event.stopPropagation()
+      cancelConnectionDraft({ connectionDraftRef, setConnectionDraft })
     }
   }
 
@@ -243,7 +264,7 @@ function resolveConnectionHandle(target: EventTarget | null) {
 
   return {
     element,
-    nodeId: nodeElement.dataset.nodeId ?? '',
+    nodeId: nodeElement.dataset.nodeId ?? null,
     handleId: element.dataset.handleId ?? null,
   }
 }
@@ -294,7 +315,7 @@ function finishConnectionDraft({
   connectionDraftRef.current = null
   setConnectionDraft(null)
 
-  if (draft && targetHandle && targetHandle.nodeId !== draft.source) {
+  if (draft && targetHandle?.nodeId && targetHandle.nodeId !== draft.source) {
     createEdgeFromConnection({
       source: draft.source,
       target: targetHandle.nodeId,
@@ -302,4 +323,15 @@ function finishConnectionDraft({
       targetHandle: targetHandle.handleId,
     })
   }
+}
+
+function cancelConnectionDraft({
+  connectionDraftRef,
+  setConnectionDraft,
+}: {
+  connectionDraftRef: RefObject<CanvasConnectionDraft | null>
+  setConnectionDraft: Dispatch<SetStateAction<CanvasConnectionDraft | null>>
+}) {
+  connectionDraftRef.current = null
+  setConnectionDraft(null)
 }

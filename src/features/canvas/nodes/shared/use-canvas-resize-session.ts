@@ -7,7 +7,6 @@ import {
   setCanvasDragSnapGuides,
 } from '../../runtime/interaction/canvas-drag-snap-overlay'
 import { useCanvasModifierKeys } from '../../runtime/interaction/use-canvas-modifier-keys'
-import { isPrimarySelectionModifier } from '../../utils/canvas-selection-utils'
 import { releasePointerCapture } from '../../tools/shared/tool-module-utils'
 import { createCanvasResizeController } from '../../system/canvas-resize-controller'
 import { useCanvasEngineSelector } from '../../react/use-canvas-engine'
@@ -148,8 +147,8 @@ export function useCanvasResizeSession({
       const options = {
         pointerId: event.pointerId,
         currentPoint,
-        square: event.shiftKey || readShiftModifier(modifiers),
-        snap: isPrimarySelectionModifier(event),
+        square: readShiftModifier(modifiers),
+        snap: readPrimaryModifier(modifiers),
         zoom: viewportControllerRef.current.getZoom(),
       }
 
@@ -203,16 +202,19 @@ export function useCanvasResizeSession({
         return
       }
 
-      updateResize(event, commit)
-      clearCanvasDragSnapGuides()
+      if (commit) {
+        updateResize(event, true)
+      } else {
+        applyResizeResult(resizeController.cancel(), { clearGuides: true })
+      }
       releasePointerCapture(resizeTarget.target, resizeTarget.pointerId)
       resizeTargetRef.current = null
       removeWindowListenersRef.current()
       if (!commit) {
-        resizeController.cancel()
+        clearCanvasDragSnapGuides()
       }
     },
-    [resizeController, updateResize],
+    [applyResizeResult, resizeController, updateResize],
   )
 
   const handlePointerUp = useCallback(
@@ -321,11 +323,11 @@ function subscribeToNoop() {
 }
 
 function readPrimaryModifier(modifiers: ReturnType<typeof useCanvasModifierKeys>) {
-  return modifiers.getPrimaryPressed?.() ?? modifiers.primaryPressed
+  return modifiers.primaryPressed
 }
 
 function readShiftModifier(modifiers: ReturnType<typeof useCanvasModifierKeys>) {
-  return modifiers.getShiftPressed?.() ?? modifiers.shiftPressed
+  return modifiers.shiftPressed
 }
 
 function getCurrentResizeBounds(

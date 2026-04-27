@@ -197,6 +197,17 @@ export function mergeSelectedIds(
     return selectedIds
   }
 
+  let hasNewIds = false
+  for (const id of incomingIds) {
+    if (!selectedIds.has(id)) {
+      hasNewIds = true
+      break
+    }
+  }
+  if (!hasNewIds) {
+    return selectedIds
+  }
+
   const mergedIds = new Set(selectedIds)
   for (const id of incomingIds) {
     mergedIds.add(id)

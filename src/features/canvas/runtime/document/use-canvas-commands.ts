@@ -39,6 +39,7 @@ interface CanvasSelectionCommandArgs {
 
 interface CanvasReorderCommandArgs extends CanvasSelectionCommandArgs {
   direction: CanvasReorderDirection
+  _reorderPlan?: ReturnType<typeof createCanvasReorderPlan>
 }
 
 export interface CanvasCommands {
@@ -68,6 +69,22 @@ export function useCanvasCommands({
     const getClipboardEntry = (snapshot: CanvasSelectionSnapshot) =>
       createCanvasClipboardEntry(nodesMap, edgesMap, snapshot)
 
+    const hasCopyableSelection = (snapshot: CanvasSelectionSnapshot) => {
+      for (const nodeId of snapshot.nodeIds) {
+        if (nodesMap.has(nodeId)) {
+          return true
+        }
+      }
+
+      for (const edgeId of snapshot.edgeIds) {
+        if (edgesMap.has(edgeId)) {
+          return true
+        }
+      }
+
+      return false
+    }
+
     const applyPaste = (paste: ReturnType<typeof materializeCanvasPaste>) => {
       transactCanvasMaps(nodesMap, edgesMap, () => {
         applyCanvasPasteCommand({
@@ -96,7 +113,7 @@ export function useCanvasCommands({
     return {
       copy: {
         id: 'copy',
-        canRun: (args) => getClipboardEntry(getSelectionSnapshot(args)) !== null,
+        canRun: (args) => hasCopyableSelection(getSelectionSnapshot(args)),
         run: (args) => {
           const nextClipboard = getClipboardEntry(getSelectionSnapshot(args))
           if (!nextClipboard) {
@@ -109,7 +126,7 @@ export function useCanvasCommands({
       },
       cut: {
         id: 'cut',
-        canRun: (args) => canEdit && getClipboardEntry(getSelectionSnapshot(args)) !== null,
+        canRun: (args) => canEdit && hasCopyableSelection(getSelectionSnapshot(args)),
         run: (args) => {
           if (!canEdit) {
             return false
@@ -143,7 +160,7 @@ export function useCanvasCommands({
       },
       duplicate: {
         id: 'duplicate',
-        canRun: (args) => canEdit && getClipboardEntry(getSelectionSnapshot(args)) !== null,
+        canRun: (args) => canEdit && hasCopyableSelection(getSelectionSnapshot(args)),
         run: (args) => {
           if (!canEdit) {
             return null
@@ -189,26 +206,29 @@ export function useCanvasCommands({
             return false
           }
 
-          return (
-            createCanvasReorderPlan(
-              nodesMap,
-              edgesMap,
-              getSelectionSnapshot(args),
-              args.direction,
-            ) !== null
+          args._reorderPlan = createCanvasReorderPlan(
+            nodesMap,
+            edgesMap,
+            getSelectionSnapshot(args),
+            args.direction,
           )
+          return args._reorderPlan !== null
         },
         run: (args) => {
           if (!canEdit || !args) {
             return false
           }
 
-          const reorderPlan = createCanvasReorderPlan(
-            nodesMap,
-            edgesMap,
-            getSelectionSnapshot(args),
-            args.direction,
-          )
+          const reorderPlan =
+            '_reorderPlan' in args
+              ? args._reorderPlan
+              : createCanvasReorderPlan(
+                  nodesMap,
+                  edgesMap,
+                  getSelectionSnapshot(args),
+                  args.direction,
+                )
+          args._reorderPlan = undefined
           if (!reorderPlan) {
             return false
           }

@@ -6,7 +6,7 @@ import type {
   CanvasViewportCommitListener,
 } from './canvas-engine-types'
 
-interface CanvasStore {
+export interface CanvasStore {
   getSnapshot: () => CanvasEngineSnapshot
   setSnapshot: (
     snapshot: Omit<CanvasEngineSnapshot, 'version'>,
@@ -30,8 +30,12 @@ export function createCanvasStore(initialSnapshot: CanvasEngineSnapshot): Canvas
   const viewportCommitListeners = new Set<CanvasViewportCommitListener>()
 
   const emit = () => {
-    for (const listener of listeners) {
-      listener()
+    for (const listener of Array.from(listeners)) {
+      try {
+        listener()
+      } catch (error) {
+        console.error('Canvas store listener failed', error)
+      }
     }
   }
 
@@ -80,8 +84,12 @@ export function createCanvasStore(initialSnapshot: CanvasEngineSnapshot): Canvas
       })
     },
     emitViewportCommit: (viewport) => {
-      for (const listener of viewportCommitListeners) {
-        listener(viewport)
+      for (const listener of Array.from(viewportCommitListeners)) {
+        try {
+          listener(viewport)
+        } catch (error) {
+          console.error('Canvas viewport commit listener failed', error)
+        }
       }
     },
     destroy: () => {

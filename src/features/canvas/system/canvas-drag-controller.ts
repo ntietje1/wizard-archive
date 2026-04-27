@@ -47,6 +47,7 @@ interface CanvasDragSession {
   nodeBounds: ReadonlyMap<string, { x: number; y: number; width: number; height: number }>
   targetBounds: Array<{ x: number; y: number; width: number; height: number }>
   lastResolvedPositions: ReadonlyMap<string, CanvasPosition>
+  existingNodeIds: ReadonlySet<string>
   started: boolean
   inputType: 'pointer' | 'mouse'
 }
@@ -108,7 +109,7 @@ export function createCanvasDragController({
   }
 
   const profileDrag: CanvasDragController['profileDrag'] = ({ nodeIds, delta, steps }) => {
-    const [activeNodeId] = nodeIds
+    const activeNodeId = nodeIds.values().next().value
     if (!activeNodeId || steps <= 0) {
       return
     }
@@ -180,7 +181,11 @@ export function createCanvasDragController({
   }
 
   const handleUp = (event: PointerEvent | MouseEvent) => {
-    if (session?.started) {
+    if (!session) {
+      return
+    }
+
+    if (session.started) {
       endSession(event)
     }
 
@@ -223,7 +228,6 @@ export function createCanvasDragController({
     }
 
     const resolvedPositions = resolveDragPositions({
-      canvasEngine,
       getCanvasPosition,
       getPrimaryPressed,
       getShiftPressed,
@@ -305,13 +309,13 @@ function createDragSession({
     nodeBounds,
     targetBounds,
     lastResolvedPositions: startPositions,
+    existingNodeIds: new Set(snapshot.nodeLookup.keys()),
     started: false,
     inputType,
   }
 }
 
 function resolveDragPositions({
-  canvasEngine,
   getCanvasPosition,
   getPrimaryPressed,
   getShiftPressed,
@@ -319,7 +323,6 @@ function resolveDragPositions({
   pointer,
   session,
 }: {
-  canvasEngine: CanvasEngine
   getCanvasPosition: (point: CanvasPosition) => CanvasPosition
   getPrimaryPressed: () => boolean
   getShiftPressed: () => boolean
@@ -370,9 +373,8 @@ function resolveDragPositions({
     clearCanvasDragSnapGuides()
   }
 
-  const existingIds = new Set(canvasEngine.getSnapshot().nodeLookup.keys())
   for (const nodeId of resolvedPositions.keys()) {
-    if (!existingIds.has(nodeId)) {
+    if (!session.existingNodeIds.has(nodeId)) {
       resolvedPositions.delete(nodeId)
     }
   }

@@ -280,18 +280,18 @@ export function createAndSelectEmbeddedCanvasNode({
   pointerPosition,
   screenToCanvasPosition,
   createNode,
-  replaceSelection,
+  setSelection,
 }: {
   sidebarItemId: Id<'sidebarItems'>
   pointerPosition: CanvasContextMenuPoint
   screenToCanvasPosition: (position: CanvasContextMenuPoint) => { x: number; y: number }
   createNode: (node: Node) => void
-  replaceSelection: (selection: CanvasSelectionSnapshot) => void
+  setSelection: (selection: CanvasSelectionSnapshot) => void
 }) {
   const embedNode = createEmbedCanvasNode(sidebarItemId, screenToCanvasPosition(pointerPosition))
   createNode(embedNode)
 
   const nextSelection = { nodeIds: new Set([embedNode.id]), edgeIds: new Set<string>() }
-  replaceSelection(nextSelection)
+  setSelection(nextSelection)
   return nextSelection
 }

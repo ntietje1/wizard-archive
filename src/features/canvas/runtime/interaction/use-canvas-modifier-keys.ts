@@ -6,10 +6,7 @@ type CanvasModifierKeyState = {
   shiftPressed: boolean
 }
 
-type CanvasModifierKeyReader = CanvasModifierKeyState & {
-  getPrimaryPressed: () => boolean
-  getShiftPressed: () => boolean
-}
+type CanvasModifierKeyReader = CanvasModifierKeyState
 
 let listenerCount = 0
 let modifierKeyState: CanvasModifierKeyState = {
@@ -31,8 +28,6 @@ export function useCanvasModifierKeys(): CanvasModifierKeyReader {
       get shiftPressed() {
         return modifierKeyState.shiftPressed
       },
-      getPrimaryPressed: () => modifierKeyState.primaryPressed,
-      getShiftPressed: () => modifierKeyState.shiftPressed,
     }),
     [],
   )
@@ -48,6 +43,9 @@ function subscribeCanvasModifierKeys() {
 }
 
 function unsubscribeCanvasModifierKeys() {
+  if (import.meta.env.DEV && listenerCount <= 0) {
+    console.warn('Canvas modifier listenerCount unsubscribe mismatch')
+  }
   listenerCount = Math.max(0, listenerCount - 1)
   if (listenerCount > 0) {
     return

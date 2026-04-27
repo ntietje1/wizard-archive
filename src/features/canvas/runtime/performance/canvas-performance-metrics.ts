@@ -63,17 +63,25 @@ export function isCanvasPerformanceEnabled() {
 export function measureCanvasPerformance<TResult>(
   name: string,
   details: Record<string, unknown>,
+  action: () => Promise<TResult>,
+): Promise<TResult>
+export function measureCanvasPerformance<TResult>(
+  name: string,
+  details: Record<string, unknown>,
   action: () => TResult,
-): TResult {
+): TResult
+export function measureCanvasPerformance<TResult>(
+  name: string,
+  details: Record<string, unknown>,
+  action: () => TResult | Promise<TResult>,
+): TResult | Promise<TResult> {
   const collector = getCanvasPerformanceCollector()
   if (!collector) {
     return action()
   }
 
   const start = performance.now()
-  try {
-    return action()
-  } finally {
+  const record = () => {
     const endTime = performance.now()
     const entry = {
       name,
@@ -83,6 +91,19 @@ export function measureCanvasPerformance<TResult>(
     }
     collector.entries.push(entry)
     collector.record?.(entry)
+  }
+
+  try {
+    const result = action()
+    if (result instanceof Promise) {
+      return result.finally(record)
+    }
+
+    record()
+    return result
+  } catch (error) {
+    record()
+    throw error
   }
 }
 

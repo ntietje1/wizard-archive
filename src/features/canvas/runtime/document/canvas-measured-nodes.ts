@@ -1,5 +1,5 @@
 import type { CanvasMeasuredNode } from '../../tools/canvas-tool-types'
-import type { CanvasEngineSnapshot } from '../../system/canvas-engine'
+import type { CanvasEngineSnapshot, CanvasInternalNode } from '../../system/canvas-engine'
 
 type MeasuredNodeLookupValue = {
   id: string
@@ -38,28 +38,26 @@ export function getMeasuredCanvasNodesFromLookup(
 export function getMeasuredCanvasNodesFromEngineSnapshot(
   snapshot: CanvasEngineSnapshot,
 ): Array<CanvasMeasuredNode> {
-  const nodeLookup = (snapshot as Partial<CanvasEngineSnapshot>).nodeLookup
+  const nodeLookup = snapshot.nodeLookup
   if (!nodeLookup) {
     return []
   }
 
-  return Array.from(nodeLookup.values()).flatMap((internalNode) => {
-    const node = 'node' in internalNode ? internalNode.node : internalNode
-    const width = internalNode.measured?.width
-    const height = internalNode.measured?.height
-    if (width === undefined || height === undefined) {
-      return []
-    }
+  return getMeasuredCanvasNodesFromLookup(normalizeMeasuredNodeLookup(nodeLookup))
+}
 
-    return [
-      {
-        id: node.id,
-        type: node.type,
-        data: node.data,
-        position: node.position,
-        width,
-        height,
-      },
-    ]
-  })
+function normalizeMeasuredNodeLookup(
+  nodeLookup: ReadonlyMap<string, CanvasInternalNode>,
+): Map<string, MeasuredNodeLookupValue> {
+  const normalized = new Map<string, MeasuredNodeLookupValue>()
+  for (const [nodeId, internalNode] of nodeLookup) {
+    normalized.set(nodeId, {
+      id: internalNode.node.id,
+      type: internalNode.node.type,
+      data: internalNode.node.data,
+      position: internalNode.node.position,
+      measured: internalNode.measured,
+    })
+  }
+  return normalized
 }

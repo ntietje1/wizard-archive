@@ -120,8 +120,9 @@ export function useCanvasRemoteDragAnimation({
 
   const setTarget = useCallback((nodeId: string, position: { x: number; y: number }) => {
     const existing = springStatesRef.current.get(nodeId)
+    const target = { ...position }
     if (existing) {
-      existing.target = position
+      existing.target = target
       startSpringLoopRef.current?.()
       return
     }
@@ -131,7 +132,7 @@ export function useCanvasRemoteDragAnimation({
         pos: { ...position },
         vel: { x: 0, y: 0 },
       },
-      target: position,
+      target,
     })
     startSpringLoopRef.current?.()
   }, [])

@@ -28,9 +28,17 @@ export function createCanvasDomRuntime() {
 
       const mergedUpdates = new Map<string, Record<string, unknown>>()
       for (const [nodeId, patch] of updates) {
-        const existingData = snapshot.nodeLookup.get(nodeId)?.node.data
-        mergedUpdates.set(nodeId, { ...existingData, ...patch })
+        const internalNode = snapshot.nodeLookup.get(nodeId)
+        if (!internalNode) {
+          continue
+        }
+
+        mergedUpdates.set(nodeId, { ...internalNode.node.data, ...patch })
       }
+      if (mergedUpdates.size === 0) {
+        return
+      }
+
       scheduler.scheduleNodeDataPatches(mergedUpdates)
     },
     scheduleEdgePatches: scheduler.scheduleEdgePatches,

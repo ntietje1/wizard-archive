@@ -3,6 +3,7 @@ import type { CanvasEngineSnapshot, CanvasViewport } from './canvas-engine-types
 import type { CanvasPosition } from '../types/canvas-domain-types'
 
 const MIN_ZOOM_SHAPE_COUNT_THRESHOLD = 500
+const VIEWPORT_EQUALITY_EPSILON = 1e-6
 
 export const DEFAULT_CANVAS_VIEWPORT: CanvasViewport = { x: 0, y: 0, zoom: 1 }
 
@@ -32,6 +33,8 @@ interface CanvasViewportManager {
 
 export function createCanvasViewportManager(): CanvasViewportManager {
   let hasUncommittedViewport = false
+  const getDebouncedZoomLevel = (snapshot: CanvasEngineSnapshot) =>
+    snapshot.cameraState === 'idle' ? snapshot.viewport.zoom : snapshot.debouncedZoomLevel
 
   return {
     setViewport: (snapshot, viewport) => {
@@ -63,13 +66,10 @@ export function createCanvasViewportManager(): CanvasViewportManager {
           snapshot.cameraState === 'idle' ? snapshot.viewport.zoom : snapshot.debouncedZoomLevel,
       }
     },
-    getDebouncedZoomLevel: (snapshot) =>
-      snapshot.cameraState === 'idle' ? snapshot.viewport.zoom : snapshot.debouncedZoomLevel,
+    getDebouncedZoomLevel,
     getEfficientZoomLevel: (snapshot) =>
       snapshot.nodes.length + snapshot.edges.length > MIN_ZOOM_SHAPE_COUNT_THRESHOLD
-        ? snapshot.cameraState === 'idle'
-          ? snapshot.viewport.zoom
-          : snapshot.debouncedZoomLevel
+        ? getDebouncedZoomLevel(snapshot)
         : snapshot.viewport.zoom,
     screenToCanvasPosition: (snapshot, position, surfaceBounds) => {
       const originX = surfaceBounds?.left ?? 0
@@ -96,5 +96,9 @@ export function createCanvasViewportManager(): CanvasViewportManager {
 }
 
 function areCanvasViewportsEqual(left: CanvasViewport, right: CanvasViewport) {
-  return left.x === right.x && left.y === right.y && left.zoom === right.zoom
+  return (
+    Math.abs(left.x - right.x) <= VIEWPORT_EQUALITY_EPSILON &&
+    Math.abs(left.y - right.y) <= VIEWPORT_EQUALITY_EPSILON &&
+    Math.abs(left.zoom - right.zoom) <= VIEWPORT_EQUALITY_EPSILON
+  )
 }

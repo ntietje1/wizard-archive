@@ -89,13 +89,13 @@ function useRuntimeCanvasNode(
 ) {
   return useSyncExternalStore(
     canvasEngine.subscribe ?? subscribeToNoop,
-    () => canvasEngine.getSnapshot().nodeLookup?.get(nodeId),
+    () => canvasEngine.getSnapshot?.()?.nodeLookup?.get(nodeId),
     () => undefined,
   )
 }
 
-function subscribeToNoop() {
-  return () => undefined
+function subscribeToNoop(): () => void {
+  return () => {}
 }
 
 function EmbeddedCanvasFlow({

@@ -102,6 +102,7 @@ function handleHistoryShortcut(
   key: string,
 ) {
   if (key === 'z') {
+    event.preventDefault()
     if (event.shiftKey) {
       current.redo()
     } else {
@@ -111,6 +112,7 @@ function handleHistoryShortcut(
   }
 
   if (key === 'y') {
+    event.preventDefault()
     current.redo()
     return true
   }
@@ -154,7 +156,7 @@ function handleCanvasKeyDown(current: UseCanvasKeyboardShortcutsOptions, event: 
 
   const key = event.key.toLowerCase()
 
-  if (handleEscapeShortcut(current, key) || isEditableKeyboardTarget(event.target)) {
+  if (isEditableKeyboardTarget(event.target) || handleEscapeShortcut(current, key)) {
     return
   }
 
@@ -163,7 +165,7 @@ function handleCanvasKeyDown(current: UseCanvasKeyboardShortcutsOptions, event: 
   }
 
   if (!event.ctrlKey && !event.metaKey) {
-    handleToolShortcut(current, event.key)
+    handleToolShortcut(current, key)
     return
   }
 

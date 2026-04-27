@@ -76,15 +76,15 @@ export function patchCanvasEdges(
       return edge
     }
 
+    if (isCanvasEdgePatchNoop(edge, patch)) {
+      return edge
+    }
+
     const nextEdge = {
       ...edge,
       ...patch,
       style: patch.style ? { ...edge.style, ...patch.style } : edge.style,
     }
-    if (isCanvasEdgePatchNoop(edge, patch)) {
-      return edge
-    }
-
     changed = true
     return nextEdge
   })

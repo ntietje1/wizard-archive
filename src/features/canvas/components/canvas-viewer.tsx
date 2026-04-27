@@ -21,6 +21,9 @@ import type { CanvasViewerSession } from '../runtime/session/use-canvas-viewer-s
 import type { EditorViewerProps } from '~/features/editor/components/viewer/sidebar-item-editor'
 import type { CanvasWithContent } from 'convex/canvases/types'
 
+// React Profiler durations are milliseconds; this ignores trivial sub-millisecond commits.
+const MIN_TRIVIAL_COMMIT_DURATION_MS = 0.25
+
 export function CanvasViewer({ item: canvas }: EditorViewerProps<CanvasWithContent>) {
   return (
     <ClientOnly fallback={null}>
@@ -104,7 +107,7 @@ export function CanvasEditor({
           <Profiler
             id="CanvasEditor"
             onRender={(_id, phase, actualDuration, baseDuration) => {
-              if (actualDuration < 0.25) {
+              if (actualDuration < MIN_TRIVIAL_COMMIT_DURATION_MS) {
                 return
               }
 
@@ -200,8 +203,13 @@ function areCanvasEditorContentPropsEqual(
     previous.canvasCursor === next.canvasCursor &&
     previous.runtime.canvasEngine === next.runtime.canvasEngine &&
     previous.runtime.canvasSurfaceRef === next.runtime.canvasSurfaceRef &&
+    previous.runtime.sceneHandlers === next.runtime.sceneHandlers &&
     previous.runtime.contextMenu.hostRef === next.runtime.contextMenu.hostRef &&
     previous.runtime.contextMenu.menu === next.runtime.contextMenu.menu &&
+    previous.runtime.contextMenu.openForNode === next.runtime.contextMenu.openForNode &&
+    previous.runtime.contextMenu.openForEdge === next.runtime.contextMenu.openForEdge &&
+    previous.runtime.contextMenu.openForPane === next.runtime.contextMenu.openForPane &&
+    previous.runtime.contextMenu.onClose === next.runtime.contextMenu.onClose &&
     previous.runtime.dropTarget.dropOverlayRef === next.runtime.dropTarget.dropOverlayRef &&
     previous.runtime.dropTarget.isDropTarget === next.runtime.dropTarget.isDropTarget &&
     previous.runtime.dropTarget.isFileDropTarget === next.runtime.dropTarget.isFileDropTarget &&

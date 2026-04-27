@@ -40,6 +40,40 @@ export function createCanvasDomRegistry(): CanvasDomRegistry {
   const culledNodeIds = new Set<string>()
   const culledEdgeIds = new Set<string>()
   let viewport: HTMLElement | undefined
+  let viewportSurfaceBounds: Pick<DOMRect, 'width' | 'height'> | null = null
+  let viewportSurfaceBoundsObserver: ResizeObserver | null = null
+
+  const disconnectViewportSurfaceBoundsObserver = () => {
+    viewportSurfaceBoundsObserver?.disconnect()
+    viewportSurfaceBoundsObserver = null
+    viewportSurfaceBounds = null
+  }
+
+  const observeViewportSurfaceBounds = (element: HTMLElement) => {
+    const surfaceElement = element.parentElement
+    disconnectViewportSurfaceBoundsObserver()
+    if (!surfaceElement) {
+      return
+    }
+
+    const bounds = surfaceElement.getBoundingClientRect()
+    viewportSurfaceBounds = { width: bounds.width, height: bounds.height }
+    if (typeof ResizeObserver === 'undefined') {
+      return
+    }
+
+    viewportSurfaceBoundsObserver = new ResizeObserver(([entry]) => {
+      if (!entry) {
+        return
+      }
+
+      viewportSurfaceBounds = {
+        width: entry.contentRect.width,
+        height: entry.contentRect.height,
+      }
+    })
+    viewportSurfaceBoundsObserver.observe(surfaceElement)
+  }
 
   return {
     registerNode: (nodeId, element) => {
@@ -68,6 +102,10 @@ export function createCanvasDomRegistry(): CanvasDomRegistry {
       }
     },
     registerStrokeNodePaths: (nodeId, paths) => {
+      if (areStrokeNodePathsEmpty(paths)) {
+        return () => undefined
+      }
+
       strokeNodePaths.set(nodeId, paths)
 
       return () => {
@@ -90,6 +128,10 @@ export function createCanvasDomRegistry(): CanvasDomRegistry {
       }
     },
     registerEdgePaths: (edgeId, paths) => {
+      if (areEdgePathsEmpty(paths)) {
+        return () => undefined
+      }
+
       edgePaths.set(edgeId, paths)
 
       return () => {
@@ -103,11 +145,13 @@ export function createCanvasDomRegistry(): CanvasDomRegistry {
         return () => undefined
       }
 
-      viewport = element ?? undefined
+      viewport = element
+      observeViewportSurfaceBounds(element)
 
       return () => {
         if (viewport === element) {
           viewport = undefined
+          disconnectViewportSurfaceBoundsObserver()
         }
       }
     },
@@ -128,7 +172,7 @@ export function createCanvasDomRegistry(): CanvasDomRegistry {
     getEdge: (edgeId) => edges.get(edgeId),
     getEdgePaths: (edgeId) => edgePaths.get(edgeId),
     getViewportTargets: () => (viewport ? [viewport, ...viewportOverlays] : [...viewportOverlays]),
-    getViewportSurfaceBounds: () => viewport?.parentElement?.getBoundingClientRect() ?? null,
+    getViewportSurfaceBounds: () => viewportSurfaceBounds,
     applyCullingDiff: (diff) => {
       for (const [nodeId, isCulled] of diff.nodeIds) {
         updateCullingSet(culledNodeIds, nodeId, isCulled)
@@ -147,6 +191,18 @@ export function createCanvasDomRegistry(): CanvasDomRegistry {
       }
     },
     clear: () => {
+      for (const nodeId of culledNodeIds) {
+        const element = nodes.get(nodeId)
+        if (element) {
+          applyCullingDisplay(element, false)
+        }
+      }
+      for (const edgeId of culledEdgeIds) {
+        const element = edges.get(edgeId)
+        if (element) {
+          applyCullingDisplay(element, false)
+        }
+      }
       nodes.clear()
       nodeSurfaces.clear()
       strokeNodePaths.clear()
@@ -156,8 +212,17 @@ export function createCanvasDomRegistry(): CanvasDomRegistry {
       culledNodeIds.clear()
       culledEdgeIds.clear()
       viewport = undefined
+      disconnectViewportSurfaceBoundsObserver()
     },
   }
+}
+
+function areStrokeNodePathsEmpty(paths: CanvasRegisteredStrokeNodePaths) {
+  return !paths.path && !paths.highlightPath
+}
+
+function areEdgePathsEmpty(paths: CanvasRegisteredEdgePaths) {
+  return !paths.path && !paths.highlightPath && !paths.interactionPath
 }
 
 function updateCullingSet(set: Set<string>, id: string, isCulled: boolean) {
@@ -174,8 +239,7 @@ function applyCullingDisplay(element: Element, isCulled: boolean) {
   htmlElement.style.display = isCulled ? 'none' : ''
   if (isCulled) {
     htmlElement.setAttribute('data-canvas-culled', 'true')
-    return
+  } else {
+    htmlElement.removeAttribute('data-canvas-culled')
   }
-
-  htmlElement.setAttribute('data-canvas-culled', 'false')
 }

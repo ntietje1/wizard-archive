@@ -43,6 +43,8 @@ export function createCanvasViewportPersistence({
     } satisfies PersistedCanvasViewport
 
     if (persistedCanvasViewportsEqual(lastSavedViewport, nextViewport)) {
+      clearSaveTimeout()
+      pendingViewport = null
       return
     }
 

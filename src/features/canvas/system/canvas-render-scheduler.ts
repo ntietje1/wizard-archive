@@ -15,6 +15,9 @@ export interface CanvasViewport {
 
 export type CanvasCameraState = 'idle' | 'moving'
 
+const HIGHLIGHT_PATH_OFFSET_FACTOR = 0.3
+const HIGHLIGHT_STROKE_WIDTH_FACTOR = 0.15
+
 interface CanvasRenderScheduler {
   scheduleNodeTransforms: (positions: ReadonlyMap<string, CanvasPosition>) => void
   scheduleEdgePaths: (paths: ReadonlyMap<string, string>) => void
@@ -123,7 +126,11 @@ export function createCanvasRenderScheduler({
       strokePaths.path.setAttribute('opacity', opacity)
     }
 
-    const highlightPath = getCachedStrokeDetailPath(nodeId, strokeData, strokeData.size * 0.3)
+    const highlightPath = getCachedStrokeDetailPath(
+      nodeId,
+      strokeData,
+      strokeData.size * HIGHLIGHT_PATH_OFFSET_FACTOR,
+    )
     if (highlightPath && strokePaths?.highlightPath) {
       strokePaths.highlightPath.setAttribute('d', highlightPath)
     }
@@ -152,7 +159,9 @@ export function createCanvasRenderScheduler({
     paths.path.style.strokeWidth = String(style.strokeWidth)
     paths.path.style.opacity = String(style.opacity)
     if (paths.highlightPath) {
-      paths.highlightPath.style.strokeWidth = String(Math.max(style.strokeWidth * 0.15, 1))
+      paths.highlightPath.style.strokeWidth = String(
+        Math.max(style.strokeWidth * HIGHLIGHT_STROKE_WIDTH_FACTOR, 1),
+      )
     }
   }
 

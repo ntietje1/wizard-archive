@@ -126,8 +126,8 @@ export function useCanvasToolbarModel() {
     try {
       applyChange()
       return {
-        nodeDataPatches: pendingNodeDataPatchesRef.current ?? new Map(),
-        edgePatches: pendingEdgePatchesRef.current ?? new Map(),
+        nodeDataPatches: pendingNodeDataPatchesRef.current,
+        edgePatches: pendingEdgePatchesRef.current,
       }
     } finally {
       pendingNodeDataPatchesRef.current = null
@@ -174,7 +174,10 @@ export function useCanvasToolbarModel() {
   }
 
   const runPropertyPreviewChange = (applyChange: () => void) => {
-    if (selectedNodes.length === 0 && selectedEdges.length === 0) {
+    const selectedNodeCount = selectedNodes.length
+    const selectedEdgeCount = selectedEdges.length
+
+    if (selectedNodeCount === 0 && selectedEdgeCount === 0) {
       applyChange()
       return
     }
@@ -186,8 +189,8 @@ export function useCanvasToolbarModel() {
         measureCanvasPerformance(
           'canvas.toolbar.commit-property-preview',
           {
-            selectedEdgeCount: selectedEdges.length,
-            selectedNodeCount: selectedNodes.length,
+            selectedEdgeCount,
+            selectedNodeCount,
           },
           () => commitPropertyPatches(patches),
         )
@@ -196,8 +199,8 @@ export function useCanvasToolbarModel() {
     measureCanvasPerformance(
       'canvas.toolbar.preview-property',
       {
-        selectedEdgeCount: selectedEdges.length,
-        selectedNodeCount: selectedNodes.length,
+        selectedEdgeCount,
+        selectedNodeCount,
       },
       () => propertySessionController.updatePropertyPreview(applyChange),
     )

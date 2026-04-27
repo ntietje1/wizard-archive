@@ -106,6 +106,8 @@ export function createCanvasViewportController({
 
     if (shouldCommit) {
       commit()
+    } else if (event.type === 'pointercancel') {
+      applyViewport(panSession.startViewport, { commit: true })
     }
 
     releasePointerCapture(panSession.target, panSession.pointerId)
@@ -187,25 +189,27 @@ export function createCanvasViewportController({
       event.preventDefault()
       const { deltaX, deltaY, ctrlKey, shiftKey } = event
       if (ctrlKey) {
-        zoomTo(getViewport().zoom * getWheelZoomFactor(deltaY), {
+        const viewport = getViewport()
+        zoomTo(viewport.zoom * getWheelZoomFactor(deltaY), {
           x: event.clientX,
           y: event.clientY,
         })
         return
       }
 
+      const viewport = getViewport()
       if (shiftKey) {
         applyViewport({
-          ...getViewport(),
-          x: getViewport().x - deltaY * WHEEL_PAN_SENSITIVITY,
+          ...viewport,
+          x: viewport.x - deltaY * WHEEL_PAN_SENSITIVITY,
         })
         return
       }
 
       applyViewport({
-        ...getViewport(),
-        x: getViewport().x - deltaX * WHEEL_PAN_SENSITIVITY,
-        y: getViewport().y - deltaY * WHEEL_PAN_SENSITIVITY,
+        ...viewport,
+        x: viewport.x - deltaX * WHEEL_PAN_SENSITIVITY,
+        y: viewport.y - deltaY * WHEEL_PAN_SENSITIVITY,
       })
     },
     handlePanPointerDown: (event) => {

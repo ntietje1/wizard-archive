@@ -32,6 +32,7 @@ type ActivePointerGesture =
       startTargetKind: CanvasPointerTargetKind
       controller: ReturnType<typeof createCanvasSelectionGestureController>
       startPoint: { x: number; y: number }
+      lastPoint: { x: number; y: number }
     }
   | {
       kind: 'tool'
@@ -193,6 +194,7 @@ export function createCanvasPointerRouter(): CanvasPointerRouter {
       startTargetKind: targetKind,
       controller,
       startPoint: input.clientPoint,
+      lastPoint: input.clientPoint,
     }
     addWindowGestureListeners()
   }
@@ -204,6 +206,7 @@ export function createCanvasPointerRouter(): CanvasPointerRouter {
 
     if (activeGesture.kind === 'selection') {
       claimCanvasPointerEvent(event)
+      activeGesture.lastPoint = { x: event.clientX, y: event.clientY }
       activeGesture.controller.update(getPointerInput(event))
       return
     }
@@ -259,7 +262,7 @@ export function createCanvasPointerRouter(): CanvasPointerRouter {
     options?.activeToolHandlers.onKeyDown?.(event)
     if (event.key === 'Shift' && activeGesture?.kind === 'selection') {
       activeGesture.controller.refresh(
-        getPointerInput(eventAsPointerLike(event, activeGesture.startPoint)),
+        getPointerInput(eventAsPointerLike(event, activeGesture.lastPoint)),
       )
     }
   }
@@ -268,7 +271,7 @@ export function createCanvasPointerRouter(): CanvasPointerRouter {
     options?.activeToolHandlers.onKeyUp?.(event)
     if (event.key === 'Shift' && activeGesture?.kind === 'selection') {
       activeGesture.controller.refresh(
-        getPointerInput(eventAsPointerLike(event, activeGesture.startPoint)),
+        getPointerInput(eventAsPointerLike(event, activeGesture.lastPoint)),
       )
     }
   }
@@ -455,6 +458,7 @@ function createPointerCancelEvent(pointerId: number): PointerEvent {
     return new PointerEvent('pointercancel', { bubbles: true, pointerId })
   }
 
+  // Edge runtimes only need pointerId on this fallback; other PointerEvent fields are unavailable.
   const event = new Event('pointercancel', { bubbles: true }) as PointerEvent
   Object.defineProperty(event, 'pointerId', { value: pointerId })
   return event

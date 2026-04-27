@@ -20,5 +20,12 @@ export function useCanvasPointerRouter({
 }) {
   router.setOptions(options)
 
-  useEffect(() => router.attach(surfaceRef.current), [router, surfaceRef])
+  useEffect(() => {
+    const element = surfaceRef.current
+    if (!element) {
+      return undefined
+    }
+
+    return router.attach(element)
+  }, [router, surfaceRef])
 }

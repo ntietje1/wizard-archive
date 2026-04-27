@@ -9,5 +9,5 @@ export function CanvasEngineProvider({
   children: ReactNode
   engine: CanvasEngine
 }) {
-  return <CanvasEngineContext value={engine}>{children}</CanvasEngineContext>
+  return <CanvasEngineContext.Provider value={engine}>{children}</CanvasEngineContext.Provider>
 }

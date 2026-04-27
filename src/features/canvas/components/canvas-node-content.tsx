@@ -13,6 +13,7 @@ const NODE_RENDERERS = {
   stroke: StrokeNode,
   text: TextNode,
 } as const
+const warnedNodeTypes = new Set<string>()
 
 type CanvasNodeContentSnapshot = {
   id: string
@@ -58,8 +59,16 @@ function selectCanvasNodeContentSnapshot(
   }
 
   const node = internalNode.node
-  const type =
-    node.type === 'embed' || node.type === 'stroke' || node.type === 'text' ? node.type : 'text'
+  const rawType = node.type
+  const isKnownType = isCanvasNodeRendererType(rawType)
+  const type: keyof typeof NODE_RENDERERS = isKnownType ? rawType : 'text'
+  if (import.meta.env.DEV && rawType && !isKnownType && !warnedNodeTypes.has(rawType)) {
+    console.warn('Unknown canvas node type; falling back to NODE_RENDERERS.text', {
+      nodeType: rawType,
+      expectedRenderers: Object.keys(NODE_RENDERERS),
+    })
+    warnedNodeTypes.add(rawType)
+  }
   return {
     id: node.id,
     type,
@@ -69,6 +78,10 @@ function selectCanvasNodeContentSnapshot(
     width: node.width ?? internalNode.measured.width,
     height: node.height ?? internalNode.measured.height,
   }
+}
+
+function isCanvasNodeRendererType(type: string | undefined): type is keyof typeof NODE_RENDERERS {
+  return typeof type === 'string' && type in NODE_RENDERERS
 }
 
 function areCanvasNodeContentSnapshotsEqual(

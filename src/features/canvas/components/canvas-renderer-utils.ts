@@ -1,14 +1,14 @@
-export function areStringArraysEqual(left: ReadonlyArray<string>, right: ReadonlyArray<string>) {
+type PrimitiveArrayValue = string | number | boolean | bigint | symbol | null | undefined
+
+export function areArraysEqual<T extends PrimitiveArrayValue>(
+  left: ReadonlyArray<T>,
+  right: ReadonlyArray<T>,
+): boolean {
   if (left === right) {
     return true
   }
   if (left.length !== right.length) {
     return false
   }
-  for (let index = 0; index < left.length; index += 1) {
-    if (left[index] !== right[index]) {
-      return false
-    }
-  }
-  return true
+  return left.every((value, index) => value === right[index])
 }

@@ -325,7 +325,7 @@ export function useCanvasEditorRuntime({
       style: {
         stroke: strokeColor,
         strokeWidth: strokeSize,
-        opacity: strokeOpacity >= 100 ? undefined : strokeOpacity / 100,
+        opacity: normalizeOpacityPercent(strokeOpacity),
       },
     }
   }
@@ -389,9 +389,18 @@ export function useCanvasEditorRuntime({
 }
 
 function readPrimaryModifier(modifiers: ReturnType<typeof useCanvasModifierKeys>) {
-  return modifiers.getPrimaryPressed?.() ?? modifiers.primaryPressed
+  return modifiers.primaryPressed
 }
 
 function readShiftModifier(modifiers: ReturnType<typeof useCanvasModifierKeys>) {
-  return modifiers.getShiftPressed?.() ?? modifiers.shiftPressed
+  return modifiers.shiftPressed
+}
+
+function normalizeOpacityPercent(opacity: number) {
+  if (!Number.isFinite(opacity)) {
+    return undefined
+  }
+
+  const clampedOpacity = Math.max(0, Math.min(100, opacity))
+  return clampedOpacity >= 100 ? undefined : clampedOpacity / 100
 }

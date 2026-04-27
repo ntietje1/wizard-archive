@@ -131,8 +131,10 @@ export function useCanvasPerformanceProbeRuntime({
           }
           selection.setSelection({ nodeIds, edgeIds: new Set() })
         },
-        getSelectedCount: () =>
-          selection.getSnapshot().nodeIds.size + selection.getSnapshot().edgeIds.size,
+        getSelectedCount: () => {
+          const snapshot = selection.getSnapshot()
+          return snapshot.nodeIds.size + snapshot.edgeIds.size
+        },
         profileSelectedNodeDrag: ({ delta, steps }) => {
           dragController.profileDrag({
             nodeIds: selection.getSnapshot().nodeIds,

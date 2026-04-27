@@ -6,6 +6,7 @@ import type {
 import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
 import { useCanvasEngineSelector } from '../../react/use-canvas-engine'
 import { isExclusivelySelectedNode } from '../../utils/canvas-selection-utils'
+import { areStringSetsEqual } from '../../system/canvas-selection'
 
 interface UseCanvasEditableNodeSessionOptions {
   id: string
@@ -21,8 +22,11 @@ export function useCanvasEditableNodeSession({
   setEditing,
 }: UseCanvasEditableNodeSessionOptions) {
   const { editSession, selection } = useCanvasRuntime()
-  const selectedNodeIds = useCanvasEngineSelector((state) => state.selection.nodeIds)
-  const isSelected = useCanvasEngineSelector((state) => state.selection.nodeIds.has(id))
+  const selectionState = useCanvasEngineSelector(
+    (state) => [state.selection.nodeIds, state.selection.nodeIds.has(id)] as const,
+    areEditableSelectionStatesEqual,
+  )
+  const [selectedNodeIds, isSelected] = selectionState
   const isExclusivelySelected = isExclusivelySelectedNode(selectedNodeIds, id)
   const pendingActivationRef = useRef<RichEmbedActivationPayload | null>(null)
   const editFrameRef = useRef<number | null>(null)
@@ -144,4 +148,11 @@ export function useCanvasEditableNodeSession({
     startEditing,
     stopEditing,
   }
+}
+
+function areEditableSelectionStatesEqual(
+  left: readonly [ReadonlySet<string>, boolean],
+  right: readonly [ReadonlySet<string>, boolean],
+) {
+  return left[1] === right[1] && areStringSetsEqual(left[0], right[0])
 }

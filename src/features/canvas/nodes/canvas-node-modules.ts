@@ -70,15 +70,18 @@ function getStrokeNodeProperties(
         getColor: () => node.data.color,
         setValue: ({ color, opacity }) =>
           patchNodeData(node.id, {
-            color: typeof color === 'string' && color.length > 0 ? color : node.data.color,
-            opacity,
+            color: validateColor(color, node.data.color),
+            opacity: validateOpacity(opacity, node.data.opacity ?? 100),
           }),
         setColor: (color) =>
           patchNodeData(node.id, {
-            color: typeof color === 'string' && color.length > 0 ? color : node.data.color,
+            color: validateColor(color, node.data.color),
           }),
         getOpacity: () => node.data.opacity ?? 100,
-        setOpacity: (opacity) => patchNodeData(node.id, { opacity }),
+        setOpacity: (opacity) =>
+          patchNodeData(node.id, {
+            opacity: validateOpacity(opacity, node.data.opacity ?? 100),
+          }),
       }),
       bindCanvasStrokeSizeProperty(
         freehandStrokeSizeCanvasProperty,
@@ -87,6 +90,18 @@ function getStrokeNodeProperties(
       ),
     ],
   }
+}
+
+function validateColor(color: unknown, fallback: string) {
+  return typeof color === 'string' && color.length > 0 ? color : fallback
+}
+
+function validateOpacity(opacity: number | undefined, fallback: number) {
+  if (opacity === undefined || !Number.isFinite(opacity)) {
+    return fallback
+  }
+
+  return Math.max(0, Math.min(100, opacity))
 }
 
 function getSurfaceNodeProperties(

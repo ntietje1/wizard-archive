@@ -23,7 +23,9 @@ export function useCanvasSelectionController({
   setLocalSelectionRef.current = setLocalSelection
 
   const controllerRef = useRef<CanvasSelectionController | null>(null)
-  if (!controllerRef.current) {
+  const canvasEngineRef = useRef<CanvasEngine | null>(null)
+  if (!controllerRef.current || canvasEngineRef.current !== canvasEngine) {
+    canvasEngineRef.current = canvasEngine
     controllerRef.current = createCanvasSelectionController({
       canvasEngine,
       onSelectionChange: (selection) => onSelectionChangeRef.current?.(selection),

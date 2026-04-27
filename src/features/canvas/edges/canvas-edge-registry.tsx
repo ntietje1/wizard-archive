@@ -97,7 +97,7 @@ type CanvasEdgeSpec = {
   ) => boolean
   intersectsPolygon: (
     edge: CanvasRuntimeEdge,
-    polygon: Array<Point2D>,
+    polygon: ReadonlyArray<Point2D>,
     context: CanvasEdgeSelectionContext,
   ) => boolean
   getProperties: (
@@ -214,7 +214,7 @@ export function getCanvasEdgesMatchingRectangle(
 export function getCanvasEdgesMatchingLasso(
   nodes: ReadonlyArray<Node>,
   edges: ReadonlyArray<Edge>,
-  polygon: Array<Point2D>,
+  polygon: ReadonlyArray<Point2D>,
   context: Pick<CanvasEdgeSelectionContext, 'zoom'>,
 ): ReadonlySet<string> {
   const selectionContext = createCanvasEdgeSelectionContext(nodes, context.zoom)

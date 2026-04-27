@@ -10,9 +10,11 @@ export function CanvasLocalOverlaysHost() {
   const viewportRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    const unregister = viewportRef.current
-      ? domRuntime.registerViewportOverlayElement(viewportRef.current)
-      : undefined
+    if (!viewportRef.current) {
+      return undefined
+    }
+
+    const unregister = domRuntime.registerViewportOverlayElement(viewportRef.current)
     domRuntime.scheduleViewportTransform(canvasEngine.getSnapshot().viewport)
     domRuntime.flushRenderScheduler()
     return unregister

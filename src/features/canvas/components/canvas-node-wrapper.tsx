@@ -37,9 +37,10 @@ export const CanvasNodeWrapper = memo(function CanvasNodeWrapper({
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
   const nodeRef = useRef<HTMLDivElement | null>(null)
   const shellMounted = shell !== null
+  const shellId = shell?.id
 
   useEffect(() => {
-    if (!shell) {
+    if (!shellId) {
       return undefined
     }
 
@@ -52,14 +53,14 @@ export const CanvasNodeWrapper = memo(function CanvasNodeWrapper({
       if (!entry) return
       if (nodeElement.dataset.canvasCulled === 'true') return
       if (entry.contentRect.width <= 0 || entry.contentRect.height <= 0) return
-      canvasEngine.measureNode(shell.id, {
+      canvasEngine.measureNode(shellId, {
         width: entry.contentRect.width,
         height: entry.contentRect.height,
       })
     })
     observer.observe(nodeElement)
     return () => observer.disconnect()
-  }, [canvasEngine, shell])
+  }, [canvasEngine, shellId])
 
   useEffect(
     () => domRuntime.registerNodeElement(nodeId, nodeRef.current),
@@ -103,6 +104,10 @@ export const CanvasNodeWrapper = memo(function CanvasNodeWrapper({
   const getCurrentNode = () => canvasEngine.getSnapshot().nodeLookup.get(nodeId)?.node ?? null
   const handleNodeKeyDown = (event: ReactKeyboardEvent) => {
     if (event.key === 'Enter' || event.key === ' ') {
+      if (event.target !== event.currentTarget && isInteractiveKeyboardTarget(event.target)) {
+        return
+      }
+
       event.preventDefault()
     }
   }
@@ -166,6 +171,25 @@ function selectCanvasNodeShellSnapshot(
   }
 }
 
+function isInteractiveKeyboardTarget(target: EventTarget | null) {
+  return (
+    target instanceof Element &&
+    Boolean(
+      target.closest(
+        [
+          'input',
+          'textarea',
+          'select',
+          'button',
+          'a[href]',
+          '[contenteditable="true"]',
+          '.canvas-rich-text-editor',
+        ].join(','),
+      ),
+    )
+  )
+}
+
 function isNodeDragBlocked(target: EventTarget | null) {
   if (!(target instanceof Element)) {
     return false
@@ -204,7 +228,8 @@ function areCanvasNodeShellSnapshotsEqual(
     left.id === right.id &&
     left.type === right.type &&
     left.className === right.className &&
-    left.position === right.position &&
+    left.position.x === right.position.x &&
+    left.position.y === right.position.y &&
     left.width === right.width &&
     left.height === right.height &&
     left.zIndex === right.zIndex &&

@@ -159,7 +159,7 @@ export function bezierCanvasEdgeIntersectsRectangle(
 
 export function bezierCanvasEdgeIntersectsPolygon(
   edge: Edge,
-  polygon: Array<Point2D>,
+  polygon: ReadonlyArray<Point2D>,
   nodesById: ReadonlyMap<string, Node>,
 ): boolean {
   const geometry = buildBezierCanvasEdgeGeometryFromEdge(edge, nodesById)

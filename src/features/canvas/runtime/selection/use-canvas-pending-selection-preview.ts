@@ -1,11 +1,7 @@
 import { getCanvasPendingSelectionPreviewSummary } from '../../system/canvas-selection'
 import { useCanvasEngineSelector } from '../../react/use-canvas-engine'
 
-type PendingSelectionPreviewSummary = {
-  active: boolean
-  nodeCount: number
-  edgeCount: number
-}
+type PendingSelectionPreviewSummary = ReturnType<typeof getCanvasPendingSelectionPreviewSummary>
 
 function arePreviewSummariesEqual(
   left: PendingSelectionPreviewSummary,

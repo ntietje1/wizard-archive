@@ -1,4 +1,7 @@
-export function isCanvasEmptyPaneTarget(target: EventTarget | null, pane: HTMLElement | null) {
+export function isCanvasEmptyPaneTarget(
+  target: EventTarget | null,
+  pane: HTMLElement | null,
+): boolean {
   if (!(target instanceof Element) || !pane?.contains(target)) {
     return false
   }

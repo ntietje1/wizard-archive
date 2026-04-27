@@ -105,7 +105,7 @@ export function useCanvasContextMenu({
           pointerPosition,
           screenToCanvasPosition,
           createNode,
-          replaceSelection: selection.setSelection,
+          setSelection: selection.setSelection,
         })
       } catch (error) {
         console.error('Failed to create embedded sidebar item from canvas context menu', {

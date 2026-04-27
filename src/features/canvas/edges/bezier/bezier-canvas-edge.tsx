@@ -7,12 +7,11 @@ import {
   createCanvasEndpointNodesById,
   useCanvasEdgeEndpointNodes,
 } from '../shared/use-canvas-edge-endpoint-nodes'
-import { useMemo } from 'react'
 import type { CanvasEdgeRendererProps } from '../canvas-edge-types'
 
 export function BezierCanvasEdge(props: CanvasEdgeRendererProps) {
   const endpointNodes = useCanvasEdgeEndpointNodes(props)
-  const nodesById = useMemo(() => createCanvasEndpointNodesById(endpointNodes), [endpointNodes])
+  const nodesById = createCanvasEndpointNodesById(endpointNodes)
   const geometry =
     buildBezierCanvasEdgeGeometryFromEdge(
       {

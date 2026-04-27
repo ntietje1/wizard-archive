@@ -35,7 +35,7 @@ describe('CanvasNodeConnectionHandles', () => {
     render(<CanvasNodeConnectionHandles />)
 
     expect(screen.getByTestId('canvas-node-handle-top')).toHaveAttribute(
-      'data-edge-tool-active',
+      'data-handles-visible',
       'true',
     )
     expect(screen.getByTestId('canvas-node-handle-top')).toHaveClass(

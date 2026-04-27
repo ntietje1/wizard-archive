@@ -62,7 +62,7 @@ interface CanvasResizeController {
     snap: boolean
     zoom: number
   }) => CanvasResizeResult | null
-  cancel: () => void
+  cancel: () => CanvasResizeResult | null
   dispose: () => void
 }
 
@@ -92,6 +92,16 @@ export function createCanvasResizeController(): CanvasResizeController {
     session = null
   }
 
+  const cancelSession = () => {
+    if (!session) {
+      return null
+    }
+
+    const result = { bounds: session.startBounds, guides: [], final: false }
+    clearSession()
+    return result
+  }
+
   return {
     start: (options) => {
       session = {
@@ -110,6 +120,7 @@ export function createCanvasResizeController(): CanvasResizeController {
       session = { ...session, currentPoint, square, snap, zoom }
       return resolveSession(false)
     },
+    // refreshModifiers handles keyboard-only changes; pointerId is validated by update and commit.
     refreshModifiers: ({ square, snap, zoom }) => {
       if (!session) {
         return null
@@ -128,7 +139,7 @@ export function createCanvasResizeController(): CanvasResizeController {
       clearSession()
       return result
     },
-    cancel: clearSession,
+    cancel: cancelSession,
     dispose: clearSession,
   }
 }
@@ -204,8 +215,6 @@ function resolveResizeBounds({
   preferredAxis?: ResizeAxis
 }): CanvasResizeBounds {
   const anchor = getOppositeCorner(startBounds, handlePosition)
-  const minimumSquareSize = Math.max(minWidth, minHeight)
-
   if (lockedAspectRatio) {
     const signedPoint = applyLockedAspectRatioSize({
       anchor,
@@ -221,6 +230,7 @@ function resolveResizeBounds({
   }
 
   if (square) {
+    const minimumSquareSize = Math.max(minWidth, minHeight)
     const signedPoint = resolveSquareResizePoint({
       anchor,
       point: currentPoint,
@@ -638,18 +648,7 @@ function getBestResizeAxisSnap({
       handlePosition,
     }),
   )
-  let bestCandidate: (typeof candidates)[number] | null = null
-  let bestDistance = threshold + 1
-
-  for (const candidate of candidates) {
-    const distance = Math.abs(candidate.targetValue - candidate.draggedValue)
-    if (distance > threshold || distance >= bestDistance) {
-      continue
-    }
-
-    bestCandidate = candidate
-    bestDistance = distance
-  }
+  const bestCandidate = getBestResizeSnapCandidate(candidates, threshold)
 
   if (!bestCandidate) {
     return null
