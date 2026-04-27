@@ -23,7 +23,7 @@ type StrokeNodeLike = {
   }
 }
 
-export type StrokeEndpoint = 'start' | 'end'
+type StrokeEndpoint = 'start' | 'end'
 
 const STROKE_OPTIONS_BASE = {
   thinning: 0.5,

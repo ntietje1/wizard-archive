@@ -53,7 +53,7 @@ function handleIdToPosition(handleId: string | null | undefined, fallback: Posit
   }
 }
 
-export function resolveCanvasEdgeEndpoint(
+function resolveCanvasEdgeEndpoint(
   node: Node,
   handleId: string | null | undefined,
   fallbackPosition: Position,

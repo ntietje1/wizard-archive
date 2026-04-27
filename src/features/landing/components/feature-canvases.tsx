@@ -34,7 +34,7 @@ export function FeatureCanvases() {
               <li>→ Embed notes, folders, and canvases as interactive nodes</li>
               <li>→ Multiple collaborators can work in the same board together</li>
               <li>→ Snapshot history with rollback</li>
-              <li>→ Pan, zoom, and minimap navigation</li>
+              <li>→ Pan and zoom navigation</li>
             </ul>
             <Link
               to="/sign-up"

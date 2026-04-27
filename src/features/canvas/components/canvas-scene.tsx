@@ -2,10 +2,9 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { CanvasAwarenessHost } from './canvas-awareness-host'
 import { CanvasBackground } from './canvas-background'
 import { CanvasConnectionLayer } from './canvas-connection-layer'
-import type { CanvasConnectionDraft } from './canvas-connection-layer'
+import type { CanvasConnectionDraft } from './canvas-connection-layer-geometry'
 import { CanvasEdgeRenderer } from './canvas-edge-renderer'
 import { CanvasLocalOverlaysHost } from './canvas-local-overlays-host'
-import { CanvasMiniMap } from './canvas-minimap'
 import { CanvasNodeRenderer } from './canvas-node-renderer'
 import { isCanvasEmptyPaneTarget } from '../runtime/interaction/canvas-pane-targets'
 import { useCanvasEngine } from '../react/use-canvas-engine'
@@ -13,6 +12,7 @@ import { useCanvasRuntime } from '../runtime/providers/canvas-runtime'
 import type { CanvasEngine } from '../system/canvas-engine'
 import type { CanvasConnection, CanvasEdge, CanvasNode } from '../types/canvas-domain-types'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
+import { Position } from '@xyflow/react'
 import type {
   Dispatch,
   KeyboardEvent as ReactKeyboardEvent,
@@ -21,6 +21,8 @@ import type {
   RefObject,
   SetStateAction,
 } from 'react'
+
+const CONNECTION_HANDLE_SNAP_RADIUS = 20
 
 type CanvasSceneHandlers = {
   createEdgeFromConnection: (connection: CanvasConnection) => void
@@ -111,15 +113,20 @@ export function CanvasScene({
     [canvasEngine],
   )
 
-  const handleConnectionPointerUp = useCallback((event: PointerEvent) => {
-    window.removeEventListener('pointercancel', connectionPointerCancelRef.current)
-    finishConnectionDraft({
-      connectionDraftRef,
-      event,
-      setConnectionDraft,
-      createEdgeFromConnection: sceneHandlersRef.current.createEdgeFromConnection,
-    })
-  }, [])
+  const handleConnectionPointerUp = useCallback(
+    (event: PointerEvent) => {
+      window.removeEventListener('pointercancel', connectionPointerCancelRef.current)
+      finishConnectionDraft({
+        canvasEngine,
+        connectionDraftRef,
+        event,
+        paneRef,
+        setConnectionDraft,
+        createEdgeFromConnection: sceneHandlersRef.current.createEdgeFromConnection,
+      })
+    },
+    [canvasEngine],
+  )
 
   const handleConnectionPointerCancel = useCallback(() => {
     window.removeEventListener('pointerup', connectionPointerUpRef.current)
@@ -163,6 +170,9 @@ export function CanvasScene({
     if (!handle.nodeId) {
       return
     }
+    if (!handle.position) {
+      return
+    }
 
     event.preventDefault()
     event.stopPropagation()
@@ -172,10 +182,14 @@ export function CanvasScene({
       paneRef.current?.getBoundingClientRect() ?? null,
     )
     const draft = {
-      source: handle.nodeId,
-      sourceHandle: handle.handleId,
-      start,
+      source: {
+        nodeId: handle.nodeId,
+        handleId: handle.handleId,
+        position: handle.position,
+        point: start,
+      },
       current: start,
+      snapTarget: null,
     }
     connectionDraftRef.current = draft
     setConnectionDraft(draft)
@@ -242,7 +256,6 @@ export function CanvasScene({
       </div>
       <CanvasLocalOverlaysHost />
       <CanvasAwarenessHost remoteUsers={remoteUsers} />
-      <CanvasMiniMap />
     </div>
   )
 }
@@ -266,6 +279,22 @@ function resolveConnectionHandle(target: EventTarget | null) {
     element,
     nodeId: nodeElement.dataset.nodeId ?? null,
     handleId: element.dataset.handleId ?? null,
+    position: parseConnectionHandlePosition(element.dataset.handlePosition),
+  }
+}
+
+function parseConnectionHandlePosition(value: string | undefined): Position | null {
+  switch (value) {
+    case Position.Top:
+      return Position.Top
+    case Position.Right:
+      return Position.Right
+    case Position.Bottom:
+      return Position.Bottom
+    case Position.Left:
+      return Position.Left
+    default:
+      return null
   }
 }
 
@@ -289,40 +318,115 @@ function updateConnectionDraftPosition({
 
   const nextDraft = {
     ...draft,
-    current: canvasEngine.screenToCanvasPosition(
-      { x: event.clientX, y: event.clientY },
-      paneRef.current?.getBoundingClientRect() ?? null,
-    ),
+    current: screenToCanvasPosition(canvasEngine, paneRef, { x: event.clientX, y: event.clientY }),
+    snapTarget: resolveConnectionSnapTarget({
+      canvasEngine,
+      event,
+      paneRef,
+      source: draft.source,
+    }),
   }
   connectionDraftRef.current = nextDraft
   setConnectionDraft(nextDraft)
 }
 
 function finishConnectionDraft({
+  canvasEngine,
   connectionDraftRef,
   event,
+  paneRef,
   setConnectionDraft,
   createEdgeFromConnection,
 }: {
+  canvasEngine: CanvasEngine
   connectionDraftRef: RefObject<CanvasConnectionDraft | null>
   event: PointerEvent
+  paneRef: RefObject<HTMLDivElement | null>
   setConnectionDraft: Dispatch<SetStateAction<CanvasConnectionDraft | null>>
   createEdgeFromConnection: (connection: CanvasConnection) => void
 }) {
-  const target = document.elementFromPoint(event.clientX, event.clientY)
-  const targetHandle = resolveConnectionHandle(target)
   const draft = connectionDraftRef.current
+  const snapTarget =
+    draft?.snapTarget ??
+    (draft
+      ? resolveConnectionSnapTarget({
+          canvasEngine,
+          event,
+          paneRef,
+          source: draft.source,
+        })
+      : null)
   connectionDraftRef.current = null
   setConnectionDraft(null)
 
-  if (draft && targetHandle?.nodeId && targetHandle.nodeId !== draft.source) {
+  if (draft && snapTarget) {
     createEdgeFromConnection({
-      source: draft.source,
-      target: targetHandle.nodeId,
-      sourceHandle: draft.sourceHandle,
-      targetHandle: targetHandle.handleId,
+      source: draft.source.nodeId,
+      target: snapTarget.nodeId,
+      sourceHandle: draft.source.handleId,
+      targetHandle: snapTarget.handleId,
     })
   }
+}
+
+function screenToCanvasPosition(
+  canvasEngine: CanvasEngine,
+  paneRef: RefObject<HTMLDivElement | null>,
+  point: { x: number; y: number },
+) {
+  return canvasEngine.screenToCanvasPosition(
+    point,
+    paneRef.current?.getBoundingClientRect() ?? null,
+  )
+}
+
+function resolveConnectionSnapTarget({
+  canvasEngine,
+  event,
+  paneRef,
+  source,
+}: {
+  canvasEngine: CanvasEngine
+  event: PointerEvent
+  paneRef: RefObject<HTMLDivElement | null>
+  source: CanvasConnectionDraft['source']
+}): CanvasConnectionDraft['snapTarget'] {
+  const root = paneRef.current ?? document
+  const handles = root.querySelectorAll('[data-canvas-node-handle="true"]')
+  let closest: CanvasConnectionDraft['snapTarget'] = null
+  let closestDistance = Number.POSITIVE_INFINITY
+
+  for (const element of handles) {
+    if (!(element instanceof HTMLElement)) {
+      continue
+    }
+
+    const handle = resolveConnectionHandle(element)
+    if (!handle || !handle.nodeId || handle.nodeId === source.nodeId || !handle.position) {
+      continue
+    }
+
+    const rect = element.getBoundingClientRect()
+    if (rect.width <= 0 || rect.height <= 0) {
+      continue
+    }
+
+    const center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+    const distance = Math.hypot(center.x - event.clientX, center.y - event.clientY)
+    if (distance > CONNECTION_HANDLE_SNAP_RADIUS || distance >= closestDistance) {
+      continue
+    }
+
+    closestDistance = distance
+    closest = {
+      nodeId: handle.nodeId,
+      handleId: handle.handleId,
+      position: handle.position,
+      point: screenToCanvasPosition(canvasEngine, paneRef, center),
+    }
+  }
+
+  return closest
 }
 
 function cancelConnectionDraft({

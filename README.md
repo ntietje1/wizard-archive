@@ -41,7 +41,7 @@ A campaign management platform built for Dungeon Masters and their players. Orga
 - Drawing tools with adjustable brush sizes, eraser, shapes, sticky notes, and text nodes
 - Embed other campaign content (notes, folders, canvases) as interactive nodes
 - Real-time collaboration with remote cursor visibility
-- Pan, zoom, minimap, and fit-to-view navigation
+- Pan, zoom, and fit-to-view navigation
 - Snapshot history with rollback
 
 ### Sidebar & Organization

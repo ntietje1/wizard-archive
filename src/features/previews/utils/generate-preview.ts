@@ -9,15 +9,6 @@ export async function captureElementPreview(element: HTMLElement): Promise<Blob>
     quality: 0.9,
     type: 'image/webp',
     skipFonts: true,
-    filter: (node) => {
-      if (node instanceof HTMLElement) {
-        const cls = node.className
-        if (typeof cls === 'string' && cls.includes('react-flow__minimap')) {
-          return false
-        }
-      }
-      return true
-    },
   })
   if (!blob) throw new Error('Failed to generate preview')
   return blob

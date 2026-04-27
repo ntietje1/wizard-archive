@@ -3,9 +3,9 @@ import { cn } from '~/features/shadcn/lib/utils'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 
-export type CanvasConnectionHandlePosition = 'top' | 'right' | 'bottom' | 'left'
+type CanvasConnectionHandlePosition = 'top' | 'right' | 'bottom' | 'left'
 
-export type CanvasConnectionHandleDescriptor = {
+type CanvasConnectionHandleDescriptor = {
   id: string
   position: CanvasConnectionHandlePosition
   style?: CSSProperties

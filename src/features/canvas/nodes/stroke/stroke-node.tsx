@@ -1,20 +1,13 @@
 import { useEffect, useRef } from 'react'
 import type { Ref } from 'react'
 import type { CanvasNodeComponentProps } from '../canvas-node-types'
-import type { CanvasConnectionHandleDescriptor } from '../shared/canvas-node-connection-handles'
 import { ResizableNodeWrapper } from '../shared/resizable-node-wrapper'
-import type { StrokeEndpoint, StrokeNodeData } from './stroke-node-model'
-import {
-  getAbsoluteStrokePointsForNode,
-  getStrokeEndpointConnectionPosition,
-  getStrokeEndpointPoint,
-  pointsToCenterlinePathD,
-} from './stroke-node-model'
+import type { StrokeNodeData } from './stroke-node-model'
+import { pointsToCenterlinePathD } from './stroke-node-model'
 import { getCachedStrokeDetailPath } from './stroke-path-cache'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
 import { useEraseToolLocalOverlayStore } from '../../tools/erase/erase-tool-local-overlay'
 import { useCanvasNodeVisualSelection } from '../shared/use-canvas-node-visual-selection'
-import { CanvasNodeConnectionHandles } from '../shared/canvas-node-connection-handles'
 import { getStrokeSelectionPadding } from './stroke-node-interactions'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
@@ -22,7 +15,6 @@ import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
 const HIGHLIGHT_SCALE = 0.3
 const ERASING_OPACITY = 0.3
 const MIN_HIT_STROKE_OPACITY = 0.001
-const STROKE_CONNECTION_ENDPOINTS: ReadonlyArray<StrokeEndpoint> = ['start', 'end']
 
 function resolveSvgDimension(value: number | undefined, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback
@@ -41,35 +33,6 @@ function resolveViewBox(bounds: Bounds, fallbackWidth: number, fallbackHeight: n
     width,
     height,
   }
-}
-
-function getStrokeConnectionHandles(data: StrokeNodeData): Array<CanvasConnectionHandleDescriptor> {
-  const strokeNode = {
-    position: { x: data.bounds.x, y: data.bounds.y },
-    data,
-  }
-
-  return STROKE_CONNECTION_ENDPOINTS.flatMap((endpoint) => {
-    const absolutePoints = getAbsoluteStrokePointsForNode(strokeNode)
-    const point = getStrokeEndpointPoint(strokeNode, endpoint, absolutePoints)
-    if (!point) {
-      return []
-    }
-
-    return [
-      {
-        id: endpoint,
-        position: getStrokeEndpointConnectionPosition(strokeNode, endpoint, absolutePoints),
-        style: {
-          left: point.x - data.bounds.x,
-          top: point.y - data.bounds.y,
-          right: 'auto',
-          bottom: 'auto',
-          transform: 'translate(-50%, -50%)',
-        },
-      } satisfies CanvasConnectionHandleDescriptor,
-    ]
-  })
 }
 
 function StrokeVisual({
@@ -158,7 +121,6 @@ export function StrokeNode({
   const zoom = viewportController?.getZoom?.() ?? 1
   const isErasing = useEraseToolLocalOverlayStore((state) => state.erasingStrokeIds.has(id))
   const { visuallySelected } = useCanvasNodeVisualSelection(id)
-  const connectionHandles = getStrokeConnectionHandles(data)
 
   const svgWidth = width ?? bounds.width
   const svgHeight = height ?? bounds.height
@@ -225,7 +187,6 @@ export function StrokeNode({
       dragging={!!dragging}
       minWidth={20}
       minHeight={20}
-      chrome={<CanvasNodeConnectionHandles handles={connectionHandles} />}
     >
       {hitTarget}
       <StrokeVisual

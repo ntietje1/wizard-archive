@@ -6,7 +6,6 @@ import { createCanvasEngine } from '../../../system/canvas-engine'
 import type { CanvasEngine } from '../../../system/canvas-engine'
 import { StrokeNode } from '../stroke-node'
 
-const connectionHandlesSpy = vi.hoisted(() => vi.fn())
 let strokeEngine: CanvasEngine = createCanvasEngine()
 
 vi.mock('@xyflow/react', () => ({
@@ -27,13 +26,6 @@ vi.mock('../../shared/resizable-node-wrapper', () => ({
   ),
 }))
 
-vi.mock('../../shared/canvas-node-connection-handles', () => ({
-  CanvasNodeConnectionHandles: (props: unknown) => {
-    connectionHandlesSpy(props)
-    return <div data-testid="stroke-connection-handles" />
-  },
-}))
-
 vi.mock('../../../runtime/providers/canvas-runtime', () => ({
   useCanvasRuntime: () => ({
     domRuntime: {
@@ -48,7 +40,6 @@ vi.mock('../../../runtime/providers/canvas-runtime', () => ({
 
 beforeEach(() => {
   strokeEngine = createCanvasEngine()
-  connectionHandlesSpy.mockReset()
 })
 
 describe('StrokeNode', () => {
@@ -101,25 +92,12 @@ describe('StrokeNode', () => {
     expect(container.querySelector('.canvas-stroke-highlight-path')).toBeInTheDocument()
   })
 
-  it('passes only start and end connection handles at the stroke endpoints', () => {
-    renderStroke(<StrokeNode {...setupStrokeNodeProps({ selected: false })} />)
-
-    expect(connectionHandlesSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        handles: [
-          expect.objectContaining({
-            id: 'start',
-            position: 'left',
-            style: expect.objectContaining({ left: 0, top: 10 }),
-          }),
-          expect.objectContaining({
-            id: 'end',
-            position: 'right',
-            style: expect.objectContaining({ left: 100, top: 10 }),
-          }),
-        ],
-      }),
+  it('does not render edge creation handles for strokes', () => {
+    const { container } = renderStroke(
+      <StrokeNode {...setupStrokeNodeProps({ selected: false })} />,
     )
+
+    expect(container.querySelector('[data-canvas-node-handle="true"]')).not.toBeInTheDocument()
   })
 
   it('still renders a visible stroke path when legacy stroke data has size zero', () => {

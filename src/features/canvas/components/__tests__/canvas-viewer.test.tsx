@@ -126,7 +126,6 @@ const runtimeMock = vi.hoisted(() => ({
 vi.mock('@xyflow/react', () => ({
   Background: () => null,
   Handle: () => null,
-  MiniMap: () => null,
   getBezierPath: ({
     sourceX,
     sourceY,
