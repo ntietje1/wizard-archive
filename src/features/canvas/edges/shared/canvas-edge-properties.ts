@@ -1,12 +1,13 @@
 import {
   DEFAULT_CANVAS_EDGE_STROKE,
+  clampCanvasEdgeStrokeWidth,
   readCanvasEdgeOpacityPercent,
   readCanvasEdgeStroke,
   readCanvasEdgeStrokeWidth,
 } from './canvas-edge-style'
 import {
+  lineStrokeSizeCanvasProperty,
   linePaintCanvasProperty,
-  strokeSizeCanvasProperty,
 } from '../../properties/canvas-property-definitions'
 import {
   bindCanvasPaintProperty,
@@ -30,10 +31,10 @@ function validateStroke(stroke: string) {
 
 function validateStrokeWidth(strokeWidth: number) {
   if (!Number.isFinite(strokeWidth)) {
-    return strokeSizeCanvasProperty.min
+    return lineStrokeSizeCanvasProperty.min
   }
 
-  return Math.max(strokeSizeCanvasProperty.min, Math.min(strokeSizeCanvasProperty.max, strokeWidth))
+  return clampCanvasEdgeStrokeWidth(Math.min(lineStrokeSizeCanvasProperty.max, strokeWidth))
 }
 
 export function getCanvasStrokeEdgeProperties(
@@ -66,7 +67,7 @@ export function getCanvasStrokeEdgeProperties(
           }),
       }),
       bindCanvasStrokeSizeProperty(
-        strokeSizeCanvasProperty,
+        lineStrokeSizeCanvasProperty,
         () => readCanvasEdgeStrokeWidth(edge.style),
         (strokeWidth) =>
           patchEdge(edge.id, {

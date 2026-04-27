@@ -7,10 +7,12 @@ const MIDDLE_BUTTON = 1
 
 export function useCanvasViewportInteractions({
   canPrimaryPan,
+  enabled = true,
   ref,
   viewportController,
 }: {
   canPrimaryPan: () => boolean
+  enabled?: boolean
   ref: React.RefObject<HTMLDivElement | null>
   viewportController: CanvasViewportController
 }) {
@@ -19,7 +21,7 @@ export function useCanvasViewportInteractions({
 
   useEffect(() => {
     const el = ref.current
-    if (!el) return
+    if (!el || !enabled) return
 
     const handleWheel = (event: WheelEvent) => {
       measureCanvasPerformance(
@@ -53,7 +55,7 @@ export function useCanvasViewportInteractions({
       el.removeEventListener('wheel', handleWheel, { capture: true })
       el.removeEventListener('pointerdown', handlePointerDown)
     }
-  }, [ref, viewportController])
+  }, [enabled, ref, viewportController])
 }
 
 function isCanvasViewportTarget(target: EventTarget | null) {

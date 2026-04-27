@@ -1,6 +1,6 @@
 import { useCanvasDropTarget } from './use-canvas-drop-target'
 import type { Id } from 'convex/_generated/dataModel'
-import type { Node } from '@xyflow/react'
+import type { CanvasNode as Node } from '~/features/canvas/types/canvas-domain-types'
 
 interface UseCanvasDropIntegrationOptions {
   canvasId: Id<'sidebarItems'>

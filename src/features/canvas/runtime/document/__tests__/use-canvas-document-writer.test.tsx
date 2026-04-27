@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
 import { createCanvasDocumentWriter } from '../use-canvas-document-writer'
-import type { Edge, Node } from '@xyflow/react'
+import type {
+  CanvasEdge as Edge,
+  CanvasNode as Node,
+} from '~/features/canvas/types/canvas-domain-types'
 import type { CanvasEdgePatch } from '../../../edges/canvas-edge-types'
 
 const validCanvasEdgePatch: CanvasEdgePatch = {
@@ -198,6 +201,30 @@ describe('createCanvasDocumentWriter', () => {
     expect(edgesMap.get('edge-1')).toMatchObject({
       style: { strokeWidth: 8 },
     })
+  })
+
+  it('clamps edge stroke widths to one when creating and patching edges', () => {
+    nodesMap.set('node-1', createTextNode('node-1'))
+    nodesMap.set('node-2', createTextNode('node-2'))
+    const writer = createCanvasDocumentWriter({ nodesMap, edgesMap })
+
+    writer.createEdge(
+      {
+        source: 'node-1',
+        target: 'node-2',
+      },
+      {
+        type: 'bezier',
+        style: { strokeWidth: 0 },
+      },
+    )
+
+    const [edgeId] = Array.from(edgesMap.keys())
+    expect(edgesMap.get(edgeId)?.style).toMatchObject({ strokeWidth: 1 })
+
+    writer.patchEdges(new Map([[edgeId, { style: { strokeWidth: -4 } }]]))
+
+    expect(edgesMap.get(edgeId)?.style).toMatchObject({ strokeWidth: 1 })
   })
 
   it('does not transact empty batched updates', () => {

@@ -5,7 +5,10 @@ import { measureCanvasPerformance } from '../performance/canvas-performance-metr
 import type { ResizingState } from '../../utils/canvas-awareness-types'
 import type { CanvasRemoteDragAnimation } from '../interaction/use-canvas-remote-drag-animation'
 import { sortCanvasElementsByZIndex } from './canvas-z-order'
-import type { Edge, Node } from '@xyflow/react'
+import type {
+  CanvasEdge as Edge,
+  CanvasNode as Node,
+} from '~/features/canvas/types/canvas-domain-types'
 import type { CanvasEngine } from '../../system/canvas-engine'
 import type * as Y from 'yjs'
 

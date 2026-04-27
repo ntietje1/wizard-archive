@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { CustomBlock, CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Doc } from 'yjs'
@@ -30,9 +30,9 @@ export function EmbedNoteContent({
   const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
   const [doc, setDoc] = useState<Doc | null>(null)
 
-  const isReady = useCallback(() => {
+  const isReady = () => {
     return !!doc
-  }, [doc])
+  }
 
   const onEditorChange = (newEditor: CustomBlockNoteEditor | null, newDoc: Doc | null) => {
     setEditor(newEditor)

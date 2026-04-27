@@ -7,7 +7,10 @@ import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime-co
 import { createCanvasEngine } from '../../system/canvas-engine'
 import type { CanvasEngine } from '../../system/canvas-engine'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
-import type { Edge, Node } from '@xyflow/react'
+import type {
+  CanvasEdge as Edge,
+  CanvasNode as Node,
+} from '~/features/canvas/types/canvas-domain-types'
 import type { CanvasEdgePatch, CanvasEdgeType } from '../../edges/canvas-edge-types'
 import type { CanvasCommands } from '../../runtime/document/use-canvas-commands'
 import type { CanvasSelectionSnapshot } from '../../tools/canvas-tool-types'
@@ -25,11 +28,6 @@ const colorPickerMock = vi.hoisted(() => ({
 }))
 
 let toolbarEngine: CanvasEngine = createCanvasEngine()
-
-vi.mock('@xyflow/react', () => ({
-  useNodes: () => nodesMock.nodes,
-  useEdges: () => edgesMock.edges,
-}))
 
 vi.mock('~/features/shadcn/components/slider', () => ({
   Slider: ({
@@ -740,7 +738,7 @@ describe('CanvasConditionalToolbar', () => {
     expect(screen.getByRole('toolbar', { name: 'Canvas conditional toolbar' })).toBeVisible()
     expect(screen.getByText('Stroke')).toBeVisible()
     expect(screen.getByText('Stroke size')).toBeVisible()
-    expect(getStrokeSizeSlider()).toHaveAttribute('min', '0')
+    expect(getStrokeSizeSlider()).toHaveAttribute('min', '1')
     expect(screen.getByText('Reorder')).toBeVisible()
     expect(screen.getByRole('button', { name: 'Send to back' })).toBeVisible()
     expect(screen.getByRole('button', { name: 'Bring to front' })).toHaveClass('cursor-pointer')
@@ -821,7 +819,7 @@ describe('CanvasConditionalToolbar', () => {
     expect(input).toHaveValue('12')
   })
 
-  it('disables stroke color controls when a zero-width edge selection resolves stroke size to zero', () => {
+  it('clamps selected edge stroke size to one when zero is committed', () => {
     const patchEdge = vi.fn((edgeId: string, patch: CanvasEdgePatch) => {
       edgesMock.edges = edgesMock.edges.map((edge) =>
         edge.id === edgeId
@@ -849,8 +847,14 @@ describe('CanvasConditionalToolbar', () => {
       name: 'Open color picker',
     })
 
-    expect(clearButton).toBeDisabled()
-    expect(colorPickerButton).toBeDisabled()
+    expect(patchEdge).toHaveBeenLastCalledWith(edge.id, {
+      style: {
+        strokeWidth: 1,
+      },
+    })
+    expect(getStrokeSizeInput()).toHaveValue('1')
+    expect(clearButton).toBeEnabled()
+    expect(colorPickerButton).toBeEnabled()
 
     commitStrokeSize(6)
     emitSelectionState(selectionSnapshot(new Set<string>(), new Set([edge.id])))

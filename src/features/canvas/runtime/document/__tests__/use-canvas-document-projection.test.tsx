@@ -4,7 +4,10 @@ import * as Y from 'yjs'
 import { useCanvasDocumentProjection } from '../use-canvas-document-projection'
 import { createCanvasEngine } from '../../../system/canvas-engine'
 import type { CanvasRemoteDragAnimation } from '../../interaction/use-canvas-remote-drag-animation'
-import type { Edge, Node } from '@xyflow/react'
+import type {
+  CanvasEdge as Edge,
+  CanvasNode as Node,
+} from '~/features/canvas/types/canvas-domain-types'
 
 function createTextNode(id: string): Node {
   return {

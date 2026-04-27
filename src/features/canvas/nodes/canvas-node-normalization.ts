@@ -7,7 +7,7 @@ import { normalizeStrokeNodeData } from './stroke/stroke-node-model'
 import type { StrokeNodeData } from './stroke/stroke-node-model'
 import type { CanvasRuntimeNode } from './canvas-node-types'
 import type { ParsedCanvasRuntimeNode } from 'convex/canvases/validation'
-import type { Node } from '@xyflow/react'
+import type { CanvasNode as Node } from '~/features/canvas/types/canvas-domain-types'
 import { assertNever } from '~/shared/utils/utils'
 
 type CanvasNormalizedEmbedNode = CanvasRuntimeNode<EmbedNodeData, 'embed'>

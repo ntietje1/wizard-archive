@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createCanvasNodesById } from '../canvas-node-map'
 import { logger } from '~/shared/utils/logger'
-import type { Node } from '@xyflow/react'
+import type { CanvasNode as Node } from '~/features/canvas/types/canvas-domain-types'
 
 vi.mock('~/shared/utils/logger', () => ({
   logger: {
@@ -68,6 +68,12 @@ describe('createCanvasNodesById', () => {
 
     expect(nodesById.size).toBe(1)
     expect(nodesById.get('node-1')?.position.x).toBe(0)
-    expect(logger.warn).toHaveBeenCalledWith('createCanvasNodesById: skipping invalid node entry')
+    expect(logger.warn).toHaveBeenCalledTimes(2)
+    expect(logger.warn).toHaveBeenCalledWith(
+      'createCanvasNodesById: skipping invalid node entry at index 0',
+    )
+    expect(logger.warn).toHaveBeenCalledWith(
+      'createCanvasNodesById: skipping invalid node entry at index 1',
+    )
   })
 })

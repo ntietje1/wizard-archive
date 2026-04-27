@@ -5,7 +5,7 @@ import {
 } from '../../system/canvas-engine-selectors'
 import type { CanvasEdgeRendererProps } from '../canvas-edge-types'
 import type { CanvasEdgeEndpointNodes } from '../../system/canvas-engine-selectors'
-import type { Node } from '@xyflow/react'
+import type { CanvasNode as Node } from '~/features/canvas/types/canvas-domain-types'
 
 export function useCanvasEdgeEndpointNodes(
   props: Pick<CanvasEdgeRendererProps, 'source' | 'target'>,

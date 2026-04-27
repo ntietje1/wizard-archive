@@ -5,13 +5,7 @@ import type { CanvasEdgePatch } from '../edges/canvas-edge-types'
 import type { CanvasCullingDiff } from './canvas-culling'
 import type { CanvasDomRegistry } from './canvas-dom-registry'
 import type { StrokeNodeData } from '../nodes/stroke/stroke-node-model'
-import type { CanvasEdge, CanvasPosition } from '../types/canvas-domain-types'
-
-export interface CanvasViewport {
-  x: number
-  y: number
-  zoom: number
-}
+import type { CanvasEdge, CanvasPosition, CanvasViewport } from '../types/canvas-domain-types'
 
 export type CanvasCameraState = 'idle' | 'moving'
 

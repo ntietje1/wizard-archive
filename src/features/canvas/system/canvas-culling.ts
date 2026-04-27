@@ -2,10 +2,9 @@ import { normalizeCanvasEdgeStyle } from '../edges/shared/canvas-edge-style'
 import { getCanvasEdgeInteractionWidth } from '../edges/shared/canvas-edge-geometry'
 import { getCanvasNodeBounds } from '../nodes/shared/canvas-node-bounds'
 import type { CanvasSelectionState } from './canvas-selection'
-import type { CanvasViewport } from './canvas-render-scheduler'
 import type { Bounds } from '../utils/canvas-geometry-utils'
 import { rectIntersectsBounds } from '../utils/canvas-geometry-utils'
-import type { CanvasEdge, CanvasNode } from '../types/canvas-domain-types'
+import type { CanvasEdge, CanvasNode, CanvasViewport } from '../types/canvas-domain-types'
 
 const CULLING_OVERSCAN_PX = 512
 const MIN_ZOOM = 1e-6

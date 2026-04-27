@@ -4,13 +4,18 @@ import type {
   CanvasSelectionSnapshot,
   CanvasSelectionState,
 } from './canvas-selection'
-import type { CanvasCameraState, CanvasViewport } from './canvas-render-scheduler'
+import type { CanvasCameraState } from './canvas-render-scheduler'
 import type { CanvasEdgePatch } from '../edges/canvas-edge-types'
 import type {
   CanvasRegisteredEdgePaths,
   CanvasRegisteredStrokeNodePaths,
 } from './canvas-dom-registry'
-import type { CanvasEdge, CanvasNode, CanvasPosition } from '../types/canvas-domain-types'
+import type {
+  CanvasEdge,
+  CanvasNode,
+  CanvasPosition,
+  CanvasViewport,
+} from '../types/canvas-domain-types'
 
 export interface CanvasInternalNode {
   id: string
@@ -113,4 +118,4 @@ export interface CanvasEngine {
   destroy: () => void
 }
 
-export type { CanvasViewport }
+export type { CanvasViewport } from '../types/canvas-domain-types'

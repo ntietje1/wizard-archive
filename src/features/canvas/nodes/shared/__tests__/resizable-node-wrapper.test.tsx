@@ -9,20 +9,12 @@ import {
 } from '../../../runtime/interaction/canvas-drag-snap-overlay'
 import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
 import { ResizableNodeWrapper } from '../resizable-node-wrapper'
-import type { Node } from '@xyflow/react'
+import type { CanvasNode as Node } from '~/features/canvas/types/canvas-domain-types'
 
 const modifierState = vi.hoisted(() => ({
   shiftPressed: false,
   primaryPressed: false,
 }))
-const useInternalNodeMock = vi.hoisted(() =>
-  vi.fn(() => ({
-    id: 'node-1',
-    position: { x: 10, y: 20 },
-    measured: { width: 80, height: 40 },
-    internals: { positionAbsolute: { x: 10, y: 20 } },
-  })),
-)
 const canvasNodes = vi.hoisted(() => ({
   current: [
     {
@@ -38,10 +30,6 @@ let lastRuntime: ReturnType<typeof createCanvasRuntime> | null = null
 
 vi.mock('../../../runtime/interaction/use-canvas-modifier-keys', () => ({
   useCanvasModifierKeys: () => modifierState,
-}))
-
-vi.mock('@xyflow/react', () => ({
-  useInternalNode: () => useInternalNodeMock(),
 }))
 
 afterEach(() => {
@@ -173,6 +161,7 @@ describe('ResizableNodeWrapper', () => {
   })
 
   it('snaps ctrl-resizing to nearby node edges and centers', () => {
+    modifierState.primaryPressed = true
     const providerValues = createProviderValues()
     providerValues.canvasEngine.setSelection({
       nodeIds: new Set(['node-1']),
@@ -223,6 +212,8 @@ describe('ResizableNodeWrapper', () => {
   })
 
   it('snaps shift-resizing to nearby node edges while staying square', () => {
+    modifierState.shiftPressed = true
+    modifierState.primaryPressed = true
     const providerValues = createProviderValues()
     providerValues.canvasEngine.setSelection({
       nodeIds: new Set(['node-1']),
@@ -444,6 +435,7 @@ describe('ResizableNodeWrapper', () => {
   })
 
   it('snaps aspect-locked resizing on a single axis while preserving the ratio', () => {
+    modifierState.primaryPressed = true
     const providerValues = createProviderValues()
     providerValues.canvasEngine.setSelection({
       nodeIds: new Set(['node-1']),

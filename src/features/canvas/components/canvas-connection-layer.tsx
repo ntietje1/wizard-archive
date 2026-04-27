@@ -1,5 +1,6 @@
 import { buildConnectionDraftGeometry } from './canvas-connection-layer-geometry'
 import type { CanvasConnectionDraft } from './canvas-connection-layer-geometry'
+import { clampCanvasEdgeStrokeWidth } from '../edges/shared/canvas-edge-style'
 import { useCanvasEngineSelector } from '../react/use-canvas-engine'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import type { CanvasInternalNode } from '../system/canvas-engine'
@@ -24,7 +25,6 @@ export function CanvasConnectionLayer({ draft }: { draft: CanvasConnectionDraft 
       strokeSize: state.strokeSize,
     })),
   )
-
   if (!draft) {
     return null
   }
@@ -40,7 +40,7 @@ export function CanvasConnectionLayer({ draft }: { draft: CanvasConnectionDraft 
       style={{
         ...CONNECTION_PREVIEW_PATH_STYLE,
         stroke: strokeColor,
-        strokeWidth: strokeSize,
+        strokeWidth: clampCanvasEdgeStrokeWidth(strokeSize),
         opacity: strokeOpacity / 100,
       }}
       data-testid="canvas-connection-preview"

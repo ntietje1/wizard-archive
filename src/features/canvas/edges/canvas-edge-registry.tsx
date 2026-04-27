@@ -32,7 +32,10 @@ import type { CanvasInspectableProperties } from '../properties/canvas-property-
 import type { CanvasContextMenuContributor } from '../runtime/context-menu/canvas-context-menu-types'
 import type { Point2D } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-geometry-utils'
-import type { Edge, Node } from '@xyflow/react'
+import type {
+  CanvasEdge as Edge,
+  CanvasNode as Node,
+} from '~/features/canvas/types/canvas-domain-types'
 
 const EMPTY_CONTEXT_MENU_CONTRIBUTORS: ReadonlyArray<CanvasContextMenuContributor> = []
 

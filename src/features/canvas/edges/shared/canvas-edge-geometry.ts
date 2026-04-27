@@ -12,10 +12,14 @@ import {
   rectIntersectsBounds,
   segmentsIntersect,
 } from '../../utils/canvas-geometry-utils'
-import { Position } from '@xyflow/react'
+import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
 import type { Point2D } from '../../utils/canvas-awareness-types'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
-import type { Edge, Node } from '@xyflow/react'
+import type {
+  CanvasEdge as Edge,
+  CanvasHandlePosition,
+  CanvasNode as Node,
+} from '~/features/canvas/types/canvas-domain-types'
 
 const DEFAULT_CANVAS_EDGE_INTERACTION_WIDTH = 20
 const MIN_ZOOM = 1e-6
@@ -27,8 +31,8 @@ type CanvasEdgeEndpoints = {
   sourceY: number
   targetX: number
   targetY: number
-  sourcePosition: Position
-  targetPosition: Position
+  sourcePosition: CanvasHandlePosition
+  targetPosition: CanvasHandlePosition
 }
 
 export type PolylineCanvasEdgeGeometry = {
@@ -38,16 +42,19 @@ export type PolylineCanvasEdgeGeometry = {
   points: Array<Point2D>
 }
 
-function handleIdToPosition(handleId: string | null | undefined, fallback: Position): Position {
+function handleIdToPosition(
+  handleId: string | null | undefined,
+  fallback: CanvasHandlePosition,
+): CanvasHandlePosition {
   switch (handleId) {
     case 'top':
-      return Position.Top
+      return CANVAS_HANDLE_POSITION.Top
     case 'right':
-      return Position.Right
+      return CANVAS_HANDLE_POSITION.Right
     case 'bottom':
-      return Position.Bottom
+      return CANVAS_HANDLE_POSITION.Bottom
     case 'left':
-      return Position.Left
+      return CANVAS_HANDLE_POSITION.Left
     default:
       return fallback
   }
@@ -56,8 +63,8 @@ function handleIdToPosition(handleId: string | null | undefined, fallback: Posit
 function resolveCanvasEdgeEndpoint(
   node: Node,
   handleId: string | null | undefined,
-  fallbackPosition: Position,
-): { point: Point2D; position: Position } | null {
+  fallbackPosition: CanvasHandlePosition,
+): { point: Point2D; position: CanvasHandlePosition } | null {
   const parsedNode = normalizeCanvasNode(node)
 
   if (parsedNode?.type === 'stroke' && (handleId === 'start' || handleId === 'end')) {
@@ -99,7 +106,10 @@ function inferCanvasEdgePositions(sourceNode: Node, targetNode: Node) {
   const source = getBoundsCenter(sourceNode)
   const target = getBoundsCenter(targetNode)
   if (!source || !target) {
-    return { sourcePosition: Position.Right, targetPosition: Position.Left }
+    return {
+      sourcePosition: CANVAS_HANDLE_POSITION.Right,
+      targetPosition: CANVAS_HANDLE_POSITION.Left,
+    }
   }
 
   const dx = target.center.x - source.center.x
@@ -107,33 +117,39 @@ function inferCanvasEdgePositions(sourceNode: Node, targetNode: Node) {
 
   if (Math.abs(dx) >= Math.abs(dy)) {
     return dx >= 0
-      ? { sourcePosition: Position.Right, targetPosition: Position.Left }
-      : { sourcePosition: Position.Left, targetPosition: Position.Right }
+      ? {
+          sourcePosition: CANVAS_HANDLE_POSITION.Right,
+          targetPosition: CANVAS_HANDLE_POSITION.Left,
+        }
+      : {
+          sourcePosition: CANVAS_HANDLE_POSITION.Left,
+          targetPosition: CANVAS_HANDLE_POSITION.Right,
+        }
   }
 
   return dy >= 0
-    ? { sourcePosition: Position.Bottom, targetPosition: Position.Top }
-    : { sourcePosition: Position.Top, targetPosition: Position.Bottom }
+    ? { sourcePosition: CANVAS_HANDLE_POSITION.Bottom, targetPosition: CANVAS_HANDLE_POSITION.Top }
+    : { sourcePosition: CANVAS_HANDLE_POSITION.Top, targetPosition: CANVAS_HANDLE_POSITION.Bottom }
 }
 
-function getCanvasEdgeAnchorPoint(node: Node, position: Position): Point2D | null {
+function getCanvasEdgeAnchorPoint(node: Node, position: CanvasHandlePosition): Point2D | null {
   const bounds = getCanvasNodeBounds(node)
   if (!bounds) return null
 
   switch (position) {
-    case Position.Top:
+    case CANVAS_HANDLE_POSITION.Top:
       return { x: bounds.x + bounds.width / 2, y: bounds.y - NODE_EDGE_ANCHOR_OUTSET_PX }
-    case Position.Right:
+    case CANVAS_HANDLE_POSITION.Right:
       return {
         x: bounds.x + bounds.width + NODE_EDGE_ANCHOR_OUTSET_PX,
         y: bounds.y + bounds.height / 2,
       }
-    case Position.Bottom:
+    case CANVAS_HANDLE_POSITION.Bottom:
       return {
         x: bounds.x + bounds.width / 2,
         y: bounds.y + bounds.height + NODE_EDGE_ANCHOR_OUTSET_PX,
       }
-    case Position.Left:
+    case CANVAS_HANDLE_POSITION.Left:
       return { x: bounds.x - NODE_EDGE_ANCHOR_OUTSET_PX, y: bounds.y + bounds.height / 2 }
     default:
       return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }

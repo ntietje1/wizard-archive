@@ -177,9 +177,25 @@ function createEditor({
   let currentSelectedBlocks = selectedBlocks
   const selectionListeners = new Set<() => void>()
   const changeListeners = new Set<() => void>()
+  const focus = vi.fn()
 
   const editor = {
-    focus: vi.fn(),
+    _tiptapEditor: {
+      view: {
+        dispatch: vi.fn(),
+        focus,
+        state: {
+          doc: {},
+          selection: {
+            toJSON: vi.fn(() => null),
+          },
+          tr: {
+            setSelection: vi.fn((selection: unknown) => selection),
+          },
+        },
+      },
+    },
+    focus,
     getActiveStyles: vi.fn(() => currentActiveStyles),
     getSelection: vi.fn(() => ({ blocks: currentSelectedBlocks })),
     getTextCursorPosition: vi.fn(() => ({

@@ -17,7 +17,10 @@ import type {
   CanvasSelectionController,
   CanvasSelectionSnapshot,
 } from '../../tools/canvas-tool-types'
-import type { Edge, Node } from '@xyflow/react'
+import type {
+  CanvasEdge as Edge,
+  CanvasNode as Node,
+} from '~/features/canvas/types/canvas-domain-types'
 import type * as Y from 'yjs'
 
 interface UseCanvasCommandsOptions {
@@ -220,14 +223,8 @@ export function useCanvasCommands({
           }
 
           const reorderPlan =
-            '_reorderPlan' in args
-              ? args._reorderPlan
-              : createCanvasReorderPlan(
-                  nodesMap,
-                  edgesMap,
-                  getSelectionSnapshot(args),
-                  args.direction,
-                )
+            args._reorderPlan ??
+            createCanvasReorderPlan(nodesMap, edgesMap, getSelectionSnapshot(args), args.direction)
           args._reorderPlan = undefined
           if (!reorderPlan) {
             return false

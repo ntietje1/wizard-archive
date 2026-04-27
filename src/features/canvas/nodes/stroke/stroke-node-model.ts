@@ -1,6 +1,10 @@
 import getStroke from 'perfect-freehand'
-import { Position } from '@xyflow/react'
-import type { Node, XYPosition } from '@xyflow/react'
+import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
+import type {
+  CanvasHandlePosition,
+  CanvasNode as Node,
+  CanvasPosition as XYPosition,
+} from '~/features/canvas/types/canvas-domain-types'
 import type { Point2D } from '../../utils/canvas-awareness-types'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
 
@@ -155,9 +159,9 @@ export function getStrokeEndpointConnectionPosition(
   node: StrokeNodeLike,
   endpoint: StrokeEndpoint,
   absolutePoints: ReadonlyArray<AbsoluteStrokePoint> = getAbsoluteStrokePointsForNode(node),
-): Position {
+): CanvasHandlePosition {
   if (absolutePoints.length < 2) {
-    return endpoint === 'start' ? Position.Left : Position.Right
+    return endpoint === 'start' ? CANVAS_HANDLE_POSITION.Left : CANVAS_HANDLE_POSITION.Right
   }
 
   const { endpointPoint, interiorPoint } = getStrokeEndpointPair(endpoint, absolutePoints)
@@ -165,10 +169,10 @@ export function getStrokeEndpointConnectionPosition(
   const dy = interiorPoint[1] - endpointPoint[1]
 
   if (Math.abs(dx) >= Math.abs(dy)) {
-    return dx >= 0 ? Position.Left : Position.Right
+    return dx >= 0 ? CANVAS_HANDLE_POSITION.Left : CANVAS_HANDLE_POSITION.Right
   }
 
-  return dy >= 0 ? Position.Top : Position.Bottom
+  return dy >= 0 ? CANVAS_HANDLE_POSITION.Top : CANVAS_HANDLE_POSITION.Bottom
 }
 
 export function resizeStrokeNode<TNode extends StrokeNodeLike>(

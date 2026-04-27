@@ -1,5 +1,6 @@
 import { createEmbedCanvasNode } from '../../nodes/embed/embed-node-creation'
 import { resizeCanvasNode } from '../../nodes/canvas-node-modules'
+import { clampCanvasEdgeStrokeWidth } from '../../edges/shared/canvas-edge-style'
 import type {
   CanvasEdgeCreationDefaults,
   CanvasSelectionSnapshot,
@@ -9,10 +10,16 @@ import { getCanvasDeletionSelection } from '../context-menu/canvas-context-menu-
 import type { CanvasReorderPlan } from './canvas-reorder-plan'
 import type { CanvasContextMenuPoint } from '../context-menu/canvas-context-menu-types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { Connection, Edge, Node, XYPosition } from '@xyflow/react'
+import type {
+  CanvasConnection as Connection,
+  CanvasEdge as Edge,
+  CanvasNode as Node,
+  CanvasPosition as XYPosition,
+} from '~/features/canvas/types/canvas-domain-types'
 import type * as Y from 'yjs'
 
 type CanvasNodeSanitizer = (node: Node, operation: string, fallbackNode?: Node) => Node
+type CanvasEdgeStyle = NonNullable<Edge['style']>
 
 function updateCanvasNodeIfPresent({
   nodesMap,
@@ -50,6 +57,19 @@ function updateCanvasEdgeIfPresent({
   }
 
   edgesMap.set(edgeId, updater(existing))
+}
+
+function clampCanvasEdgeStyle<TStyle extends Edge['style'] | CanvasEdgePatch['style']>(
+  style: TStyle,
+): TStyle {
+  if (!style || typeof style.strokeWidth !== 'number') {
+    return style
+  }
+
+  return {
+    ...style,
+    strokeWidth: clampCanvasEdgeStrokeWidth(style.strokeWidth),
+  } as TStyle
 }
 
 export function createCanvasNodeCommand({
@@ -116,7 +136,9 @@ export function patchCanvasEdgesCommand({
       updater: (existing) => ({
         ...existing,
         ...patch,
-        style: patch.style ? { ...existing.style, ...patch.style } : existing.style,
+        style: patch.style
+          ? ({ ...existing.style, ...clampCanvasEdgeStyle(patch.style) } satisfies CanvasEdgeStyle)
+          : existing.style,
       }),
     })
   }
@@ -206,7 +228,7 @@ export function createCanvasEdgeCommand({
     ...connection,
     id,
     type: defaults?.type ?? 'bezier',
-    style: defaults?.style,
+    style: clampCanvasEdgeStyle(defaults?.style),
     zIndex: nextZIndex,
   })
 }

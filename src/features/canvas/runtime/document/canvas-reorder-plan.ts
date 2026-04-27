@@ -3,7 +3,10 @@ import { applyCanvasZOrder, sortCanvasElementsByZIndex } from './canvas-z-order'
 import { stripEphemeralCanvasNodeState } from '../../utils/canvas-node-persistence'
 import type { CanvasSelectionSnapshot } from '../../tools/canvas-tool-types'
 import type { CanvasReorderDirection } from './canvas-reorder'
-import type { Edge, Node } from '@xyflow/react'
+import type {
+  CanvasEdge as Edge,
+  CanvasNode as Node,
+} from '~/features/canvas/types/canvas-domain-types'
 import type * as Y from 'yjs'
 
 export interface CanvasReorderPlan {

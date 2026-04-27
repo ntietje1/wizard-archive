@@ -84,7 +84,7 @@ A campaign management platform built for Dungeon Masters and their players. Orga
 | --------------- | ------------------------------------------------------------------------------------------------ |
 | **Frontend**    | React 19, TypeScript, TanStack Router, TanStack React Query, Tailwind CSS v4, shadcn/ui, Zustand |
 | **Editor**      | BlockNote, Yjs, Tiptap                                                                           |
-| **Canvases**    | ReactFlow, Yjs                                                                                   |
+| **Canvases**    | Custom canvas renderer, Yjs                                                                      |
 | **Maps**        | React Zoom Pan Pinch                                                                             |
 | **Drag & Drop** | Atlaskit Pragmatic Drag and Drop                                                                 |
 | **Validation**  | Zod, Convex Validators                                                                           |

@@ -1,5 +1,5 @@
 import type { CanvasSelectionSnapshot } from '../../tools/canvas-tool-types'
-import type { Edge } from '@xyflow/react'
+import type { CanvasEdge as Edge } from '~/features/canvas/types/canvas-domain-types'
 import type * as Y from 'yjs'
 
 export function getCanvasDeletionSelection(

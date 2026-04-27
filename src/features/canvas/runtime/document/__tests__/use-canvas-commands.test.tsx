@@ -5,7 +5,10 @@ import { useCanvasClipboardStore } from '../../context-menu/use-canvas-clipboard
 import * as canvasDocumentCommands from '../canvas-document-commands'
 import type { CanvasReorderDirection } from '../canvas-reorder'
 import type { CanvasSelectionSnapshot } from '../../../tools/canvas-tool-types'
-import type { Edge, Node } from '@xyflow/react'
+import type {
+  CanvasEdge as Edge,
+  CanvasNode as Node,
+} from '~/features/canvas/types/canvas-domain-types'
 import * as Y from 'yjs'
 
 function createNode(id: string, zIndex: number): Node {

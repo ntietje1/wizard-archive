@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { CanvasConnectionLayer } from '../canvas-connection-layer'
 import { buildConnectionDraftGeometry } from '../canvas-connection-layer-geometry'
 import type { CanvasConnectionDraft } from '../canvas-connection-layer-geometry'
@@ -13,8 +13,12 @@ import { buildStraightCanvasEdgeGeometryFromEdge } from '../../edges/straight/st
 import { CanvasEngineProvider } from '../../react/canvas-engine-context'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import { createCanvasEngine } from '../../system/canvas-engine'
-import { Position } from '@xyflow/react'
-import type { Edge, Node } from '@xyflow/react'
+import type { CanvasEngine } from '../../system/canvas-engine'
+import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
+import type {
+  CanvasEdge as Edge,
+  CanvasNode as Node,
+} from '~/features/canvas/types/canvas-domain-types'
 
 const sourceNode: Node = {
   id: 'source',
@@ -43,14 +47,14 @@ function createSnappedDraft(): CanvasConnectionDraft {
     source: {
       nodeId: 'source',
       handleId: 'right',
-      position: Position.Right,
+      position: CANVAS_HANDLE_POSITION.Right,
       point: { x: 100, y: 25 },
     },
     current: { x: 200, y: 25 },
     snapTarget: {
       nodeId: 'target',
       handleId: 'left',
-      position: Position.Left,
+      position: CANVAS_HANDLE_POSITION.Left,
       point: { x: 200, y: 25 },
     },
   }
@@ -77,6 +81,8 @@ function buildExpectedPath(type: CanvasEdgeType) {
       return buildStraightCanvasEdgeGeometryFromEdge(edge, nodesById)?.path
     case 'step':
       return buildStepCanvasEdgeGeometryFromEdge(edge, nodesById)?.path
+    default:
+      throw new Error(`Unhandled canvas edge type in buildExpectedPath: ${String(type as unknown)}`)
   }
 }
 
@@ -88,8 +94,15 @@ function parseCubicPath(path: string) {
 }
 
 describe('CanvasConnectionLayer', () => {
+  let engine: CanvasEngine | null = null
+
   beforeEach(() => {
     useCanvasToolStore.getState().reset()
+  })
+
+  afterEach(() => {
+    engine?.destroy()
+    engine = null
   })
 
   it.each<CanvasEdgeType>(['bezier', 'straight', 'step'])(
@@ -106,7 +119,7 @@ describe('CanvasConnectionLayer', () => {
       source: {
         nodeId: 'source',
         handleId: 'right',
-        position: Position.Right,
+        position: CANVAS_HANDLE_POSITION.Right,
         point: { x: 100, y: 25 },
       },
       current: { x: 220, y: 85 },
@@ -119,7 +132,7 @@ describe('CanvasConnectionLayer', () => {
       targetX: draft.current.x,
       targetY: draft.current.y,
       sourcePosition: draft.source.position,
-      targetPosition: Position.Left,
+      targetPosition: CANVAS_HANDLE_POSITION.Left,
     })
 
     expect(geometry?.path).toContain(' C ')
@@ -135,7 +148,7 @@ describe('CanvasConnectionLayer', () => {
   })
 
   it('renders the active edge type with the current edge tool style', () => {
-    const engine = createCanvasEngine()
+    engine = createCanvasEngine()
     engine.setDocumentSnapshot({ nodes: [sourceNode] })
     useCanvasToolStore.getState().setEdgeType('straight')
     useCanvasToolStore.getState().setStrokeColor('var(--t-red)')
@@ -150,7 +163,7 @@ describe('CanvasConnectionLayer', () => {
               source: {
                 nodeId: 'source',
                 handleId: 'right',
-                position: Position.Right,
+                position: CANVAS_HANDLE_POSITION.Right,
                 point: { x: 100, y: 25 },
               },
               current: { x: 150, y: 40 },
@@ -169,7 +182,34 @@ describe('CanvasConnectionLayer', () => {
       stroke: 'var(--t-red)',
       strokeWidth: '8',
     })
+  })
 
-    engine.destroy()
+  it('renders connection previews with a minimum stroke width of one', () => {
+    engine = createCanvasEngine()
+    engine.setDocumentSnapshot({ nodes: [sourceNode] })
+    useCanvasToolStore.getState().setStrokeSize(0)
+
+    render(
+      <CanvasEngineProvider engine={engine}>
+        <svg>
+          <CanvasConnectionLayer
+            draft={{
+              source: {
+                nodeId: 'source',
+                handleId: 'right',
+                position: CANVAS_HANDLE_POSITION.Right,
+                point: { x: 100, y: 25 },
+              },
+              current: { x: 150, y: 40 },
+              snapTarget: null,
+            }}
+          />
+        </svg>
+      </CanvasEngineProvider>,
+    )
+
+    expect(screen.getByTestId('canvas-connection-preview')).toHaveStyle({
+      strokeWidth: '1',
+    })
   })
 })

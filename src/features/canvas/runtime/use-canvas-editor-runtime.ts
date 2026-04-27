@@ -26,6 +26,7 @@ import { useCanvasPerformanceProbeRuntime } from './performance/use-canvas-perfo
 import { useCanvasSelectionController } from './selection/use-canvas-selection-actions'
 import { useCanvasSessionState } from './session/use-canvas-session-state'
 import { createCanvasDomRuntimeAdapter } from './providers/canvas-runtime'
+import { clampCanvasEdgeStrokeWidth } from '../edges/shared/canvas-edge-style'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import { createCanvasEngine } from '../system/canvas-engine'
 import { createCanvasViewportController } from '../system/canvas-viewport-controller'
@@ -324,7 +325,7 @@ export function useCanvasEditorRuntime({
       type: edgeType,
       style: {
         stroke: strokeColor,
-        strokeWidth: strokeSize,
+        strokeWidth: clampCanvasEdgeStrokeWidth(strokeSize),
         opacity: normalizeOpacityPercent(strokeOpacity),
       },
     }

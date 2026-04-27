@@ -123,38 +123,6 @@ const runtimeMock = vi.hoisted(() => ({
   toolCursor: undefined as string | undefined,
 }))
 
-vi.mock('@xyflow/react', () => ({
-  Background: () => null,
-  Handle: () => null,
-  getBezierPath: ({
-    sourceX,
-    sourceY,
-    targetX,
-    targetY,
-  }: {
-    sourceX: number
-    sourceY: number
-    targetX: number
-    targetY: number
-  }) => [
-    `M ${sourceX},${sourceY} C ${sourceX},${sourceY} ${targetX},${targetY} ${targetX},${targetY}`,
-    (sourceX + targetX) / 2,
-    (sourceY + targetY) / 2,
-  ],
-  Position: {
-    Top: 'top',
-    Right: 'right',
-    Bottom: 'bottom',
-    Left: 'left',
-  },
-  ConnectionMode: {
-    Loose: 'loose',
-  },
-  SelectionMode: {
-    Partial: 'partial',
-  },
-}))
-
 vi.mock('../../runtime/use-canvas-editor-runtime', () => ({
   useCanvasEditorRuntime: () => runtimeMock,
 }))

@@ -23,7 +23,10 @@ import type {
   CanvasSelectionSnapshot,
 } from '../../tools/canvas-tool-types'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
-import type { Edge, Node } from '@xyflow/react'
+import type {
+  CanvasEdge as Edge,
+  CanvasNode as Node,
+} from '~/features/canvas/types/canvas-domain-types'
 
 const MIN_SELECTION_DRAG_DISTANCE_PX = 1
 
@@ -254,15 +257,16 @@ export function createLassoSelectionStrategy({
     createInitialState: (input) => ({
       points: [input.canvasPoint],
     }),
-    updateState: (state, input) => ({
-      points: [...state.points, input.canvasPoint],
-    }),
+    updateState: (state, input) => {
+      state.points.push(input.canvasPoint)
+      return state
+    },
     refreshState: (state) => state,
     sync: ({ points }) => {
-      setLassoToolLocalPoints(points)
+      setLassoToolLocalPoints([...points])
     },
     preview: ({ points }) => {
-      publishLassoAwareness(points)
+      publishLassoAwareness([...points])
       if (points.length < 3) {
         return null
       }

@@ -56,8 +56,7 @@ export function createCanvasDomRegistry(): CanvasDomRegistry {
       return
     }
 
-    const bounds = surfaceElement.getBoundingClientRect()
-    viewportSurfaceBounds = { width: bounds.width, height: bounds.height }
+    viewportSurfaceBounds = readElementBorderBoxSize(surfaceElement)
     if (typeof ResizeObserver === 'undefined') {
       return
     }
@@ -67,10 +66,7 @@ export function createCanvasDomRegistry(): CanvasDomRegistry {
         return
       }
 
-      viewportSurfaceBounds = {
-        width: entry.contentRect.width,
-        height: entry.contentRect.height,
-      }
+      viewportSurfaceBounds = readResizeObserverBorderBoxSize(entry)
     })
     viewportSurfaceBoundsObserver.observe(surfaceElement)
   }
@@ -219,6 +215,30 @@ export function createCanvasDomRegistry(): CanvasDomRegistry {
 
 function areStrokeNodePathsEmpty(paths: CanvasRegisteredStrokeNodePaths) {
   return !paths.path && !paths.highlightPath
+}
+
+function readElementBorderBoxSize(element: HTMLElement): Pick<DOMRect, 'width' | 'height'> {
+  const bounds = element.getBoundingClientRect()
+  return { width: bounds.width, height: bounds.height }
+}
+
+function readResizeObserverBorderBoxSize(
+  entry: ResizeObserverEntry,
+): Pick<DOMRect, 'width' | 'height'> {
+  const borderBoxSize = Array.isArray(entry.borderBoxSize)
+    ? entry.borderBoxSize[0]
+    : entry.borderBoxSize
+  if (borderBoxSize) {
+    return {
+      width: borderBoxSize.inlineSize,
+      height: borderBoxSize.blockSize,
+    }
+  }
+
+  return {
+    width: entry.contentRect.width,
+    height: entry.contentRect.height,
+  }
 }
 
 function areEdgePathsEmpty(paths: CanvasRegisteredEdgePaths) {

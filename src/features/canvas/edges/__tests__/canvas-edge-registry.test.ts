@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   findCanvasEdgeAtPoint,
   getCanvasEdgeInspectableProperties,
@@ -6,7 +6,11 @@ import {
   getCanvasEdgesMatchingRectangle,
   normalizeCanvasEdge,
 } from '../canvas-edge-registry'
-import type { Edge, Node } from '@xyflow/react'
+import type {
+  CanvasEdge as Edge,
+  CanvasNode as Node,
+} from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasStrokeSizePropertyBinding } from '../../properties/canvas-property-types'
 
 function createNode(id: string, x: number, y: number): Node {
   return {
@@ -227,6 +231,22 @@ describe('canvas edge specs', () => {
     ).toBe('edge-fallback')
   })
 
+  it('normalizes zero-width edge styles to the minimum visible stroke width', () => {
+    expect(normalizeCanvasEdge(createBezierEdge({ style: { strokeWidth: 0 } }))).toMatchObject({
+      style: {
+        strokeWidth: 1,
+      },
+    })
+  })
+
+  it('normalizes edge opacity into the renderable opacity range', () => {
+    expect(normalizeCanvasEdge(createBezierEdge({ style: { opacity: 2 } }))).toMatchObject({
+      style: {
+        opacity: 1,
+      },
+    })
+  })
+
   it('returns empty inspectable properties for invalid edges and typed properties for valid edges', () => {
     const patchEdge = () => undefined
 
@@ -247,5 +267,30 @@ describe('canvas edge specs', () => {
       getCanvasEdgeInspectableProperties(normalizeCanvasEdge(createStraightEdge()), patchEdge)
         .bindings,
     ).toHaveLength(2)
+  })
+
+  it('clamps selected edge stroke width edits to the property range', () => {
+    const patchEdge = vi.fn()
+    const properties = getCanvasEdgeInspectableProperties(
+      normalizeCanvasEdge(createStraightEdge()),
+      patchEdge,
+    )
+    const strokeSizeBinding = properties.bindings.find(
+      (binding): binding is CanvasStrokeSizePropertyBinding =>
+        binding.definition.kind === 'strokeSize',
+    )
+
+    expect(strokeSizeBinding).toBeDefined()
+    if (!strokeSizeBinding || strokeSizeBinding.definition.kind !== 'strokeSize') {
+      throw new Error('Expected edge stroke-size binding')
+    }
+
+    strokeSizeBinding.setValue(120)
+
+    expect(patchEdge).toHaveBeenCalledWith('straight-edge', {
+      style: {
+        strokeWidth: 99,
+      },
+    })
   })
 })

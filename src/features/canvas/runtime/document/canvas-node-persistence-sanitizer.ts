@@ -1,5 +1,5 @@
 import { stripEphemeralCanvasNodeState } from '../../utils/canvas-node-persistence'
-import type { Node } from '@xyflow/react'
+import type { CanvasNode as Node } from '~/features/canvas/types/canvas-domain-types'
 import {
   parseCanvasAwarenessPresence,
   parseCanvasPoint2D,

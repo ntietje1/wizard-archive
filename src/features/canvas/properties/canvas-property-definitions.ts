@@ -70,6 +70,11 @@ export const strokeSizeCanvasProperty: CanvasStrokeSizePropertyDefinition = {
   step: 1,
 }
 
+export const lineStrokeSizeCanvasProperty: CanvasStrokeSizePropertyDefinition = {
+  ...strokeSizeCanvasProperty,
+  min: 1,
+}
+
 export const freehandStrokeSizeCanvasProperty: CanvasStrokeSizePropertyDefinition = {
   ...strokeSizeCanvasProperty,
   min: 1,

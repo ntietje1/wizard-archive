@@ -1,21 +1,12 @@
 import { render } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
 import { createCanvasEngine } from '../../../system/canvas-engine'
 import type { CanvasEngine } from '../../../system/canvas-engine'
 import { StrokeNode } from '../stroke-node'
 
-let strokeEngine: CanvasEngine = createCanvasEngine()
-
-vi.mock('@xyflow/react', () => ({
-  Position: {
-    Top: 'top',
-    Right: 'right',
-    Bottom: 'bottom',
-    Left: 'left',
-  },
-}))
+let strokeEngine: CanvasEngine
 
 vi.mock('../../shared/resizable-node-wrapper', () => ({
   ResizableNodeWrapper: ({ children, chrome }: { children: ReactNode; chrome?: ReactNode }) => (
@@ -38,11 +29,15 @@ vi.mock('../../../runtime/providers/canvas-runtime', () => ({
   }),
 }))
 
-beforeEach(() => {
-  strokeEngine = createCanvasEngine()
-})
-
 describe('StrokeNode', () => {
+  beforeEach(() => {
+    strokeEngine = createCanvasEngine()
+  })
+
+  afterEach(() => {
+    strokeEngine.destroy()
+  })
+
   it('renders the local stroke highlight for pending-selected strokes', () => {
     const props = setupStrokeNodeProps({ selected: false })
     strokeEngine.setSelectionGesturePreview({

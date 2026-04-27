@@ -17,15 +17,6 @@ const renderModeState = vi.hoisted(() => ({
 
 let richTextEngine: CanvasEngine = createCanvasEngine()
 
-vi.mock('@xyflow/react', () => ({
-  useInternalNode: () => ({
-    id: 'text-1',
-    position: { x: 0, y: 0 },
-    measured: { width: 200, height: 120 },
-    internals: { positionAbsolute: { x: 0, y: 0 } },
-  }),
-}))
-
 // This mock bypasses CanvasRenderModeProvider, so the harness mode prop and
 // renderModeState.interactive must stay aligned when changing test render mode.
 vi.mock('../../../runtime/providers/use-canvas-render-mode', () => ({

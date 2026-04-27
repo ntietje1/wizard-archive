@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react'
-import { Position } from '@xyflow/react'
+import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
 import { describe, expect, it, vi } from 'vitest'
 import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
 import { CanvasRuntimeProvider } from '../../../runtime/providers/canvas-runtime-context'
@@ -90,8 +90,8 @@ function createEdgeProps(): CanvasEdgeRendererProps {
     sourceY: 0,
     targetX: 10,
     targetY: 10,
-    sourcePosition: Position.Right,
-    targetPosition: Position.Left,
+    sourcePosition: CANVAS_HANDLE_POSITION.Right,
+    targetPosition: CANVAS_HANDLE_POSITION.Left,
     animated: false,
     data: {},
     selectable: true,

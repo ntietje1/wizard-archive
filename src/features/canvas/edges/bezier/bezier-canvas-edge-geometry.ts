@@ -6,12 +6,19 @@ import {
   polylineIntersectsPolygon,
   polylineIntersectsRect,
 } from '../shared/canvas-edge-geometry'
-import { getBezierPath } from '@xyflow/react'
 import type { Point2D } from '../../utils/canvas-awareness-types'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
-import type { Edge, EdgeProps, Node } from '@xyflow/react'
+import type {
+  CanvasEdge as Edge,
+  CanvasHandlePosition,
+  CanvasNode as Node,
+} from '~/features/canvas/types/canvas-domain-types'
+import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasEdgeRenderGeometryProps as EdgeProps } from '../canvas-edge-types'
+import { assertNever } from '~/shared/utils/utils'
 
 const DEFAULT_BEZIER_SAMPLE_STEPS = 24
+const DEFAULT_CURVATURE = 0.25
 
 type BezierCurve = {
   path: string
@@ -21,28 +28,6 @@ type BezierCurve = {
   control1: Point2D
   control2: Point2D
   end: Point2D
-}
-
-function parseBezierPath(path: string, labelX: number, labelY: number): BezierCurve | null {
-  const match = path
-    .trim()
-    .match(
-      /^M\s*([-+]?\d*\.?\d+(?:e[-+]?\d+)?)\s*,?\s*([-+]?\d*\.?\d+(?:e[-+]?\d+)?)\s*C\s*([-+]?\d*\.?\d+(?:e[-+]?\d+)?)\s*,?\s*([-+]?\d*\.?\d+(?:e[-+]?\d+)?)\s+([-+]?\d*\.?\d+(?:e[-+]?\d+)?)\s*,?\s*([-+]?\d*\.?\d+(?:e[-+]?\d+)?)\s+([-+]?\d*\.?\d+(?:e[-+]?\d+)?)\s*,?\s*([-+]?\d*\.?\d+(?:e[-+]?\d+)?)$/i,
-    )
-  if (!match) return null
-
-  const values = match.slice(1).map(Number)
-  if (values.some((value) => !Number.isFinite(value))) return null
-
-  return {
-    path,
-    labelX,
-    labelY,
-    start: { x: values[0], y: values[1] },
-    control1: { x: values[2], y: values[3] },
-    control2: { x: values[4], y: values[5] },
-    end: { x: values[6], y: values[7] },
-  }
 }
 
 function evaluateBezierPoint(curve: BezierCurve, t: number): Point2D {
@@ -74,22 +59,92 @@ function sampleBezierCurve(curve: BezierCurve, steps: number = DEFAULT_BEZIER_SA
   return points
 }
 
+function getControlOffset(distance: number, curvature: number): number {
+  return distance >= 0 ? distance / 2 : curvature * 25 * Math.sqrt(-distance)
+}
+
+function getControlPoint({
+  curvature,
+  position,
+  source,
+  target,
+}: {
+  curvature: number
+  position: CanvasHandlePosition
+  source: Point2D
+  target: Point2D
+}): Point2D {
+  switch (position) {
+    case CANVAS_HANDLE_POSITION.Left:
+      return {
+        x: source.x - getControlOffset(source.x - target.x, curvature),
+        y: source.y,
+      }
+    case CANVAS_HANDLE_POSITION.Right:
+      return {
+        x: source.x + getControlOffset(target.x - source.x, curvature),
+        y: source.y,
+      }
+    case CANVAS_HANDLE_POSITION.Top:
+      return {
+        x: source.x,
+        y: source.y - getControlOffset(source.y - target.y, curvature),
+      }
+    case CANVAS_HANDLE_POSITION.Bottom:
+      return {
+        x: source.x,
+        y: source.y + getControlOffset(target.y - source.y, curvature),
+      }
+    default:
+      return assertNever(position)
+  }
+}
+
+function buildBezierPath(
+  props: Pick<
+    EdgeProps,
+    'sourceX' | 'sourceY' | 'targetX' | 'targetY' | 'sourcePosition' | 'targetPosition'
+  >,
+) {
+  const source = { x: props.sourceX, y: props.sourceY }
+  const target = { x: props.targetX, y: props.targetY }
+  const control1 = getControlPoint({
+    curvature: DEFAULT_CURVATURE,
+    position: props.sourcePosition,
+    source,
+    target,
+  })
+  const control2 = getControlPoint({
+    curvature: DEFAULT_CURVATURE,
+    position: props.targetPosition,
+    source: target,
+    target: source,
+  })
+  const curve = {
+    path: `M ${source.x},${source.y} C ${control1.x},${control1.y} ${control2.x},${control2.y} ${target.x},${target.y}`,
+    labelX: 0,
+    labelY: 0,
+    start: source,
+    control1,
+    control2,
+    end: target,
+  }
+  const label = evaluateBezierPoint(curve, 0.5)
+
+  return {
+    ...curve,
+    labelX: label.x,
+    labelY: label.y,
+  }
+}
+
 export function buildBezierCanvasEdgeGeometryFromRenderProps(
   props: Pick<
     EdgeProps,
     'sourceX' | 'sourceY' | 'targetX' | 'targetY' | 'sourcePosition' | 'targetPosition'
   >,
-): BezierCurve | null {
-  const [path, labelX, labelY] = getBezierPath({
-    sourceX: props.sourceX,
-    sourceY: props.sourceY,
-    targetX: props.targetX,
-    targetY: props.targetY,
-    sourcePosition: props.sourcePosition,
-    targetPosition: props.targetPosition,
-  })
-
-  return parseBezierPath(path, labelX, labelY)
+): BezierCurve {
+  return buildBezierPath(props)
 }
 
 export function buildBezierCanvasEdgeGeometryFromEdge(

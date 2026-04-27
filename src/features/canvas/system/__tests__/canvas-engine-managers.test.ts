@@ -17,7 +17,10 @@ import { createCanvasSelectionManager } from '../canvas-selection-manager'
 import { createCanvasStore } from '../canvas-store'
 import { createCanvasViewportManager, DEFAULT_CANVAS_VIEWPORT } from '../canvas-viewport-manager'
 import type { CanvasEngineSnapshot } from '../canvas-engine-types'
-import type { Edge, Node } from '@xyflow/react'
+import type {
+  CanvasEdge as Edge,
+  CanvasNode as Node,
+} from '~/features/canvas/types/canvas-domain-types'
 
 describe('canvas engine managers', () => {
   it('keeps selector notification in the store boundary', () => {

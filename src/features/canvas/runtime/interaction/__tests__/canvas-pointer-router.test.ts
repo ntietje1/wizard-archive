@@ -12,7 +12,10 @@ import type {
   CanvasToolHandlers,
   CanvasToolId,
 } from '../../../tools/canvas-tool-types'
-import type { Edge, Node } from '@xyflow/react'
+import type {
+  CanvasEdge as Edge,
+  CanvasNode as Node,
+} from '~/features/canvas/types/canvas-domain-types'
 
 describe('classifyCanvasPointerTarget', () => {
   it('classifies pane, node, edge, handle, resize, interactive, and outside targets', () => {

@@ -1,4 +1,4 @@
-import { Position } from '@xyflow/react'
+import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
 import { getCanvasNodeBounds } from '../../nodes/shared/canvas-node-bounds'
 import { boundsFromPoints, rectIntersectsBounds } from '../../utils/canvas-geometry-utils'
 import {
@@ -14,7 +14,12 @@ import {
 import type { PolylineCanvasEdgeGeometry } from '../shared/canvas-edge-geometry'
 import type { Point2D } from '../../utils/canvas-awareness-types'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
-import type { Edge, EdgeProps, Node } from '@xyflow/react'
+import type {
+  CanvasEdge as Edge,
+  CanvasHandlePosition,
+  CanvasNode as Node,
+} from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasEdgeRenderGeometryProps as EdgeProps } from '../canvas-edge-types'
 
 const STEP_EDGE_STUB_LENGTH = 48
 type StepSplitCoordinates = {
@@ -24,30 +29,33 @@ type StepSplitCoordinates = {
   relaxSplitY?: boolean
 }
 
-function isHorizontalPosition(position: Position): boolean {
-  return position === Position.Left || position === Position.Right
+function isHorizontalPosition(position: CanvasHandlePosition): boolean {
+  return position === CANVAS_HANDLE_POSITION.Left || position === CANVAS_HANDLE_POSITION.Right
 }
 
-function getPositionCoordinate(position: Position, point: Pick<Point2D, 'x' | 'y'>): number {
+function getPositionCoordinate(
+  position: CanvasHandlePosition,
+  point: Pick<Point2D, 'x' | 'y'>,
+): number {
   return isHorizontalPosition(position) ? point.x : point.y
 }
 
-function getPositionDirection(position: Position): Point2D {
+function getPositionDirection(position: CanvasHandlePosition): Point2D {
   switch (position) {
-    case Position.Left:
+    case CANVAS_HANDLE_POSITION.Left:
       return { x: -1, y: 0 }
-    case Position.Right:
+    case CANVAS_HANDLE_POSITION.Right:
       return { x: 1, y: 0 }
-    case Position.Top:
+    case CANVAS_HANDLE_POSITION.Top:
       return { x: 0, y: -1 }
-    case Position.Bottom:
+    case CANVAS_HANDLE_POSITION.Bottom:
       return { x: 0, y: 1 }
     default:
       return { x: 0, y: 0 }
   }
 }
 
-function buildStepStubPoint(point: Point2D, position: Position): Point2D {
+function buildStepStubPoint(point: Point2D, position: CanvasHandlePosition): Point2D {
   const direction = getPositionDirection(position)
 
   return {
@@ -57,7 +65,7 @@ function buildStepStubPoint(point: Point2D, position: Position): Point2D {
 }
 
 function respectsPositionDirection(
-  position: Position,
+  position: CanvasHandlePosition,
   startCoordinate: number,
   nextCoordinate: number,
 ): boolean {
@@ -69,16 +77,22 @@ function respectsPositionDirection(
 }
 
 function areHorizontalHandlesFacing(
-  sourcePosition: Position,
-  targetPosition: Position,
+  sourcePosition: CanvasHandlePosition,
+  targetPosition: CanvasHandlePosition,
   sourceStubX: number,
   targetStubX: number,
 ): boolean {
-  if (sourcePosition === Position.Right && targetPosition === Position.Left) {
+  if (
+    sourcePosition === CANVAS_HANDLE_POSITION.Right &&
+    targetPosition === CANVAS_HANDLE_POSITION.Left
+  ) {
     return sourceStubX <= targetStubX
   }
 
-  if (sourcePosition === Position.Left && targetPosition === Position.Right) {
+  if (
+    sourcePosition === CANVAS_HANDLE_POSITION.Left &&
+    targetPosition === CANVAS_HANDLE_POSITION.Right
+  ) {
     return sourceStubX >= targetStubX
   }
 
@@ -86,16 +100,22 @@ function areHorizontalHandlesFacing(
 }
 
 function areVerticalHandlesFacing(
-  sourcePosition: Position,
-  targetPosition: Position,
+  sourcePosition: CanvasHandlePosition,
+  targetPosition: CanvasHandlePosition,
   sourceStubY: number,
   targetStubY: number,
 ): boolean {
-  if (sourcePosition === Position.Bottom && targetPosition === Position.Top) {
+  if (
+    sourcePosition === CANVAS_HANDLE_POSITION.Bottom &&
+    targetPosition === CANVAS_HANDLE_POSITION.Top
+  ) {
     return sourceStubY <= targetStubY
   }
 
-  if (sourcePosition === Position.Top && targetPosition === Position.Bottom) {
+  if (
+    sourcePosition === CANVAS_HANDLE_POSITION.Top &&
+    targetPosition === CANVAS_HANDLE_POSITION.Bottom
+  ) {
     return sourceStubY >= targetStubY
   }
 
@@ -152,8 +172,10 @@ function buildRelaxedHorizontalStepPoints(
   const end = { x: props.targetX, y: props.targetY }
 
   if (
-    (props.sourcePosition === Position.Right && props.targetPosition === Position.Left) ||
-    (props.sourcePosition === Position.Left && props.targetPosition === Position.Right)
+    (props.sourcePosition === CANVAS_HANDLE_POSITION.Right &&
+      props.targetPosition === CANVAS_HANDLE_POSITION.Left) ||
+    (props.sourcePosition === CANVAS_HANDLE_POSITION.Left &&
+      props.targetPosition === CANVAS_HANDLE_POSITION.Right)
   ) {
     const middleX = (props.sourceX + props.targetX) / 2
 
@@ -166,7 +188,8 @@ function buildRelaxedHorizontalStepPoints(
   }
 
   const commonX =
-    props.sourcePosition === Position.Right || props.targetPosition === Position.Right
+    props.sourcePosition === CANVAS_HANDLE_POSITION.Right ||
+    props.targetPosition === CANVAS_HANDLE_POSITION.Right
       ? Math.max(props.sourceX, props.targetX)
       : Math.min(props.sourceX, props.targetX)
 
@@ -188,8 +211,10 @@ function buildRelaxedVerticalStepPoints(
   const end = { x: props.targetX, y: props.targetY }
 
   if (
-    (props.sourcePosition === Position.Bottom && props.targetPosition === Position.Top) ||
-    (props.sourcePosition === Position.Top && props.targetPosition === Position.Bottom)
+    (props.sourcePosition === CANVAS_HANDLE_POSITION.Bottom &&
+      props.targetPosition === CANVAS_HANDLE_POSITION.Top) ||
+    (props.sourcePosition === CANVAS_HANDLE_POSITION.Top &&
+      props.targetPosition === CANVAS_HANDLE_POSITION.Bottom)
   ) {
     const middleY = (props.sourceY + props.targetY) / 2
 
@@ -202,7 +227,8 @@ function buildRelaxedVerticalStepPoints(
   }
 
   const commonY =
-    props.sourcePosition === Position.Bottom || props.targetPosition === Position.Bottom
+    props.sourcePosition === CANVAS_HANDLE_POSITION.Bottom ||
+    props.targetPosition === CANVAS_HANDLE_POSITION.Bottom
       ? Math.max(props.sourceY, props.targetY)
       : Math.min(props.sourceY, props.targetY)
 

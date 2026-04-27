@@ -3,7 +3,7 @@ import type {
   CanvasToolId,
   CanvasToolRuntime,
 } from '../../canvas-tool-types'
-import type { Node } from '@xyflow/react'
+import type { CanvasNode } from '~/features/canvas/types/canvas-domain-types'
 
 export function createPointerEvent(
   x: number,
@@ -33,7 +33,7 @@ export function createPlacementEnvironment({
   setActiveTool,
 }: {
   activeTool: CanvasToolId
-  createNode: (node: Node) => void
+  createNode: (node: CanvasNode) => void
   replaceSelection: (selection: CanvasSelectionSnapshot) => void
   setPendingEditNodeId: (nodeId: string | null) => void
   setPendingEditNodePoint?: (point: { x: number; y: number } | null) => void

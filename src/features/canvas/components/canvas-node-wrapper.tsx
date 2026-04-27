@@ -1,12 +1,15 @@
 import { memo, useEffect, useRef } from 'react'
 import { cn } from '~/features/shadcn/lib/utils'
-import { CanvasNodeContent } from './canvas-node-content'
 import { useCanvasEngine, useCanvasEngineSelector } from '../react/use-canvas-engine'
 import { useCanvasRuntime } from '../runtime/providers/canvas-runtime'
 import { useIsInteractiveCanvasRenderMode } from '../runtime/providers/use-canvas-render-mode'
 import type { CanvasInternalNode } from '../system/canvas-engine'
 import type { CanvasNode } from '../types/canvas-domain-types'
-import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react'
+import type {
+  KeyboardEvent as ReactKeyboardEvent,
+  MouseEvent as ReactMouseEvent,
+  ReactNode,
+} from 'react'
 
 type CanvasNodeShellSnapshot = {
   id: string
@@ -20,10 +23,12 @@ type CanvasNodeShellSnapshot = {
 }
 
 export const CanvasNodeWrapper = memo(function CanvasNodeWrapper({
+  children,
   nodeId,
   onNodeClick,
   onNodeContextMenu,
 }: {
+  children: ReactNode
   nodeId: string
   onNodeClick?: (event: ReactMouseEvent, node: CanvasNode) => void
   onNodeContextMenu: (event: ReactMouseEvent, node: CanvasNode) => void
@@ -146,7 +151,7 @@ export const CanvasNodeWrapper = memo(function CanvasNodeWrapper({
       }}
       onKeyDown={handleNodeKeyDown}
     >
-      <CanvasNodeContent nodeId={nodeId} />
+      {children}
     </div>
   )
 })

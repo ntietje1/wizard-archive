@@ -1,6 +1,5 @@
 import { TextSelection } from '@tiptap/pm/state'
 import type { EditorView } from '@tiptap/pm/view'
-import { useCallback } from 'react'
 import type {
   RichEmbedActivationPayload,
   RichEmbedLifecycleController,
@@ -50,43 +49,40 @@ export function useBlockNoteActivationLifecycle<TEditor extends BlockNoteEditorW
   onActivationErrorMessage: string
   onActivated?: () => void
 }) {
-  const isEditorReady = useCallback(() => {
+  const isEditorReady = () => {
     if (!editor || !getMountedBlockNoteView(editor)) {
       return false
     }
 
     return isReady ? isReady(editor) : true
-  }, [editor, isReady])
+  }
 
-  const onActivate = useCallback(
-    (payload: RichEmbedActivationPayload | null) => {
-      if (!editor) {
-        return
-      }
+  const onActivate = (payload: RichEmbedActivationPayload | null) => {
+    if (!editor) {
+      return
+    }
 
-      const view = getMountedBlockNoteView(editor)
-      if (!view) {
-        return
-      }
+    const view = getMountedBlockNoteView(editor)
+    if (!view) {
+      return
+    }
 
-      const point = payload?.point
-      if (point) {
-        try {
-          const pos = view.posAtCoords({ left: point.x, top: point.y })
-          if (pos && pos.inside !== -1) {
-            const tr = view.state.tr.setSelection(TextSelection.create(view.state.doc, pos.pos))
-            view.dispatch(tr)
-          }
-        } catch (error) {
-          logger.warn(onActivationErrorMessage, error)
+    const point = payload?.point
+    if (point) {
+      try {
+        const pos = view.posAtCoords({ left: point.x, top: point.y })
+        if (pos && pos.inside !== -1) {
+          const tr = view.state.tr.setSelection(TextSelection.create(view.state.doc, pos.pos))
+          view.dispatch(tr)
         }
+      } catch (error) {
+        logger.warn(onActivationErrorMessage, error)
       }
+    }
 
-      view.focus()
-      onActivated?.()
-    },
-    [editor, onActivated, onActivationErrorMessage],
-  )
+    view.focus()
+    onActivated?.()
+  }
 
   useRichEmbedLifecycle({
     lifecycle,

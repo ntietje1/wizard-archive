@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { sanitizeNodeForPersistence } from '../canvas-node-persistence-sanitizer'
 import { logger } from '~/shared/utils/logger'
-import type { Node } from '@xyflow/react'
+import type { CanvasNode as Node } from '~/features/canvas/types/canvas-domain-types'
 
 vi.mock('~/shared/utils/logger', () => ({
   logger: {

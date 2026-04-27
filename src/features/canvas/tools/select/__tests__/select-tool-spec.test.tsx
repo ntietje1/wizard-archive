@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import { selectToolSpec } from '../select-tool-module'
 import type { CanvasMeasuredNode, CanvasToolRuntime } from '../../canvas-tool-types'
-import type { Edge, Node } from '@xyflow/react'
+import type {
+  CanvasEdge as Edge,
+  CanvasNode as Node,
+} from '~/features/canvas/types/canvas-domain-types'
 
 function createMouseEvent(
   x: number,
@@ -22,7 +25,7 @@ function createMouseEvent(
 }
 
 describe('selectToolSpec', () => {
-  it('routes regular node ctrl-click through strict toggle behavior', () => {
+  it('routes regular node ctrl-click through additive selection behavior', () => {
     const toggleNode = vi.fn()
     const clickedNode = {
       id: 'c',
@@ -86,7 +89,7 @@ describe('selectToolSpec', () => {
 
 function createSelectEnvironment({
   getNodes,
-  // Intentional compatibility cast: plain React Flow nodes lack measured dimensions, so tests that
+  // Intentional compatibility cast: plain canvas nodes lack measured dimensions, so tests that
   // depend on width/height should override `getMeasuredNodes` or supply measured node objects.
   getMeasuredNodes = () => getNodes() as Array<CanvasMeasuredNode>,
   toggleNode,

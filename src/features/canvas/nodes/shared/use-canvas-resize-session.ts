@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react'
 import { getCanvasNodeBounds } from './canvas-node-bounds'
 import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
@@ -80,7 +80,9 @@ export function useCanvasResizeSession({
   const internalNode = useRuntimeCanvasNode(canvasEngine, id)
   const modifiers = useCanvasModifierKeys()
   const selected = useCanvasEngineSelector((state) => state.selection.nodeIds.has(id))
-  const resizeController = useMemo(() => createCanvasResizeController(), [])
+  const resizeControllerRef = useRef<ReturnType<typeof createCanvasResizeController> | null>(null)
+  resizeControllerRef.current ??= createCanvasResizeController()
+  const resizeController = resizeControllerRef.current
   const resizeTargetRef = useRef<{ pointerId: number; target: Element | null } | null>(null)
   const onResizeRef = useRef(onResize)
   const onResizeEndRef = useRef(onResizeEnd)

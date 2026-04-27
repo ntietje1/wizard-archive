@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { createEmbedCanvasNode } from '../../nodes/embed/embed-node-creation'
 import type { Id } from 'convex/_generated/dataModel'
-import type { Node } from '@xyflow/react'
+import type { CanvasNode } from '~/features/canvas/types/canvas-domain-types'
 import type { CanvasDropZoneData } from '~/features/dnd/utils/dnd-registry'
 import type { FileDropOverride } from '~/features/dnd/stores/dnd-store'
 import { handleError } from '~/shared/utils/logger'
@@ -17,7 +17,7 @@ const STACK_OFFSET = 20
 interface UseCanvasDropTargetOptions {
   canvasId: Id<'sidebarItems'>
   enabled: boolean
-  createNode: (node: Node) => void
+  createNode: (node: CanvasNode) => void
   screenToCanvasPosition: (position: { x: number; y: number }) => { x: number; y: number }
 }
 

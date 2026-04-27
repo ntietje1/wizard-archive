@@ -1,4 +1,4 @@
-import type { Node } from '@xyflow/react'
+import type { CanvasNode as Node } from '~/features/canvas/types/canvas-domain-types'
 
 export function stripEphemeralCanvasNodeState<TNode extends Node>(
   node: TNode,

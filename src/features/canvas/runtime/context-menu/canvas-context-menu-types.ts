@@ -6,7 +6,10 @@ import type { CanvasNodeType } from '../../nodes/canvas-node-types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { CanvasReorderDirection } from '../document/canvas-reorder'
-import type { Edge, Node } from '@xyflow/react'
+import type {
+  CanvasEdge as Edge,
+  CanvasNode as Node,
+} from '~/features/canvas/types/canvas-domain-types'
 
 export interface CanvasContextMenuPoint {
   x: number

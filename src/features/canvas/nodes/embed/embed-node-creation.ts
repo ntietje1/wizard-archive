@@ -1,6 +1,9 @@
 import { createCanvasNodePlacement } from '../canvas-node-modules'
 import type { Id } from 'convex/_generated/dataModel'
-import type { Node, XYPosition } from '@xyflow/react'
+import type {
+  CanvasNode as Node,
+  CanvasPosition as XYPosition,
+} from '~/features/canvas/types/canvas-domain-types'
 
 const EMBED_SIZE = { width: 320, height: 240 } as const
 

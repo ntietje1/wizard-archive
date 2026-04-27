@@ -1,9 +1,14 @@
 import { render, screen } from '@testing-library/react'
-import { Position } from '@xyflow/react'
+import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
 import { describe, expect, it } from 'vitest'
 import { CanvasRenderModeProvider } from '../../../runtime/providers/canvas-render-mode-context'
+import { CanvasRuntimeProvider } from '../../../runtime/providers/canvas-runtime-context'
 import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
 import { createCanvasEngine } from '../../../system/canvas-engine'
+import {
+  READ_ONLY_CANVAS_RUNTIME,
+  createCanvasDomRuntimeAdapter,
+} from '../../../runtime/providers/canvas-runtime'
 import type { CanvasEdgeRendererProps } from '../../canvas-edge-types'
 import {
   DEFAULT_CANVAS_EDGE_OPACITY,
@@ -12,7 +17,7 @@ import {
 } from '../../shared/canvas-edge-style'
 import { BezierCanvasEdge } from '../bezier-canvas-edge'
 import { buildBezierCanvasEdgeGeometryFromEdge } from '../bezier-canvas-edge-geometry'
-import type { Node } from '@xyflow/react'
+import type { CanvasNode as Node } from '~/features/canvas/types/canvas-domain-types'
 import type { ReactElement } from 'react'
 
 describe('BezierCanvasEdge', () => {
@@ -213,8 +218,8 @@ function createEdgeProps(
     sourceY: 20,
     targetX: 160,
     targetY: 20,
-    sourcePosition: Position.Right,
-    targetPosition: Position.Left,
+    sourcePosition: CANVAS_HANDLE_POSITION.Right,
+    targetPosition: CANVAS_HANDLE_POSITION.Left,
     animated: false,
     data: {},
     selectable: true,
@@ -256,7 +261,13 @@ function renderEdge(
 
   return render(
     <CanvasEngineProvider engine={engine}>
-      <svg>{ui}</svg>
+      <CanvasRuntimeProvider
+        {...READ_ONLY_CANVAS_RUNTIME}
+        canvasEngine={engine}
+        domRuntime={createCanvasDomRuntimeAdapter(engine)}
+      >
+        <svg>{ui}</svg>
+      </CanvasRuntimeProvider>
     </CanvasEngineProvider>,
   )
 }

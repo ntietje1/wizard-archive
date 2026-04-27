@@ -3,8 +3,11 @@ import {
   buildStepCanvasEdgeGeometryFromEdge,
   buildStepCanvasEdgeGeometryFromRenderProps,
 } from '../step-canvas-edge-geometry'
-import { Position } from '@xyflow/react'
-import type { Edge, Node } from '@xyflow/react'
+import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
+import type {
+  CanvasEdge as Edge,
+  CanvasNode as Node,
+} from '~/features/canvas/types/canvas-domain-types'
 
 describe('buildStepCanvasEdgeGeometryFromRenderProps', () => {
   it('splits the middle run when bottom-to-top handles face away from each other', () => {
@@ -13,8 +16,8 @@ describe('buildStepCanvasEdgeGeometryFromRenderProps', () => {
       sourceY: 150,
       targetX: 300,
       targetY: 130,
-      sourcePosition: Position.Bottom,
-      targetPosition: Position.Top,
+      sourcePosition: CANVAS_HANDLE_POSITION.Bottom,
+      targetPosition: CANVAS_HANDLE_POSITION.Top,
     })
 
     expect(geometry.points).toEqual([
@@ -33,8 +36,8 @@ describe('buildStepCanvasEdgeGeometryFromRenderProps', () => {
       sourceY: 150,
       targetX: 300,
       targetY: 190,
-      sourcePosition: Position.Bottom,
-      targetPosition: Position.Top,
+      sourcePosition: CANVAS_HANDLE_POSITION.Bottom,
+      targetPosition: CANVAS_HANDLE_POSITION.Top,
     })
 
     expect(geometry.points).toEqual([
@@ -53,8 +56,8 @@ describe('buildStepCanvasEdgeGeometryFromRenderProps', () => {
       sourceY: 150,
       targetX: 300,
       targetY: 250,
-      sourcePosition: Position.Bottom,
-      targetPosition: Position.Top,
+      sourcePosition: CANVAS_HANDLE_POSITION.Bottom,
+      targetPosition: CANVAS_HANDLE_POSITION.Top,
     })
 
     expect(geometry.points).toEqual([

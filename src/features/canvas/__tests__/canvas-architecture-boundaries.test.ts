@@ -6,37 +6,31 @@ import type { CanvasEdgePatch } from '../edges/canvas-edge-types'
 const repoRoot = process.cwd()
 
 describe('canvas architecture boundaries', () => {
-  it('keeps main editor runtime names canvas-owned', () => {
-    const mainEditorFiles = [
-      'src/features/canvas/components/canvas-viewer.tsx',
-      'src/features/canvas/runtime/use-canvas-editor-runtime.ts',
-    ].map(readRepoFile)
+  it('keeps main editor entry points on the canvas-owned runtime and scene', () => {
+    const viewer = readRepoFile('src/features/canvas/components/canvas-viewer.tsx')
+    const runtime = readRepoFile('src/features/canvas/runtime/use-canvas-editor-runtime.ts')
 
-    for (const file of mainEditorFiles) {
-      expect(file).not.toContain('CanvasFlow')
-      expect(file).not.toContain('useCanvasFlowRuntime')
-      expect(file).not.toContain('canvas-flow-shell')
-      expect(file).not.toContain('screenToFlowPosition')
-      expect(file).not.toContain('getFlowPosition')
-    }
+    expect(viewer).toContain('useCanvasEditorRuntime')
+    expect(viewer).toContain('CanvasScene')
+    expect(runtime).toContain('createCanvasEngine')
+    expect(runtime).toContain('createCanvasViewportController')
   })
 
-  it('keeps connection handle rendering independent from React Flow components', () => {
+  it('keeps connection handle rendering independent from external graph components', () => {
     const connectionHandles = readRepoFile(
       'src/features/canvas/nodes/shared/canvas-node-connection-handles.tsx',
     )
 
-    expect(connectionHandles).not.toContain('@xyflow/react')
     expect(connectionHandles).not.toContain('useConnection')
   })
 
-  it('keeps pure canvas system modules independent from React Flow imports', () => {
+  it('keeps pure canvas system modules independent from external graph imports', () => {
     const systemFiles = listFiles(join(repoRoot, 'src/features/canvas/system')).filter(
       (file) => !file.includes(`${pathSeparator}__tests__${pathSeparator}`),
     )
 
     for (const file of systemFiles) {
-      expect(readFileSync(file, 'utf8')).not.toContain('@xyflow/react')
+      expect(readFileSync(file, 'utf8')).not.toContain('~/features/canvas/components')
     }
   })
 

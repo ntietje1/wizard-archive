@@ -11,7 +11,11 @@ import {
 import type { PolylineCanvasEdgeGeometry } from '../shared/canvas-edge-geometry'
 import type { Point2D } from '../../utils/canvas-awareness-types'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
-import type { Edge, EdgeProps, Node } from '@xyflow/react'
+import type {
+  CanvasEdge as Edge,
+  CanvasNode as Node,
+} from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasEdgeRenderGeometryProps as EdgeProps } from '../canvas-edge-types'
 
 function buildStraightPoints(
   props: Pick<EdgeProps, 'sourceX' | 'sourceY' | 'targetX' | 'targetY'>,

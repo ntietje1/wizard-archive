@@ -5,7 +5,10 @@ import type {
   CanvasContextMenuContributor,
   CanvasContextMenuTarget,
 } from './canvas-context-menu-types'
-import type { Edge, Node } from '@xyflow/react'
+import type {
+  CanvasEdge as Edge,
+  CanvasNode as Node,
+} from '~/features/canvas/types/canvas-domain-types'
 import type * as Y from 'yjs'
 
 type CanvasResolvedContextMenuTarget = {

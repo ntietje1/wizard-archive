@@ -3,7 +3,10 @@ import { createCanvasReorderPlan } from '../canvas-reorder-plan'
 import { reorderCanvasElementIds } from '../canvas-reorder'
 import { getNextCanvasElementZIndex } from '../canvas-z-index'
 import { applyCanvasZOrder, sortCanvasElementsByZIndex } from '../canvas-z-order'
-import type { Edge, Node } from '@xyflow/react'
+import type {
+  CanvasEdge as Edge,
+  CanvasNode as Node,
+} from '~/features/canvas/types/canvas-domain-types'
 import * as Y from 'yjs'
 
 function createNode(id: string, zIndex: number): Node {

@@ -6,7 +6,10 @@ import {
   areCanvasEdgeEndpointNodesEqual,
   selectCanvasEdgeEndpointNodes,
 } from '../canvas-engine-selectors'
-import type { Edge, Node } from '@xyflow/react'
+import type {
+  CanvasEdge as Edge,
+  CanvasNode as Node,
+} from '~/features/canvas/types/canvas-domain-types'
 
 describe('createCanvasEngine', () => {
   it('stores document nodes as ordered ids plus lookup entries', () => {
@@ -358,7 +361,7 @@ describe('createCanvasEngine', () => {
     paneElement.append(viewportElement)
     paneElement.getBoundingClientRect = () =>
       ({ left: 0, top: 0, width: 100, height: 100 }) as DOMRect
-    engine.registerViewportElement(viewportElement)
+    const unregisterViewport = engine.registerViewportElement(viewportElement)
 
     engine.setDocumentSnapshot({
       nodes: [{ ...createNode('far', 0), position: { x: 800, y: 0 }, width: 20, height: 20 }],
@@ -372,6 +375,7 @@ describe('createCanvasEngine', () => {
     expect(farElement).toHaveAttribute('data-canvas-culled', 'true')
 
     unregisterFar()
+    unregisterViewport()
     engine.destroy()
   })
 
@@ -383,8 +387,8 @@ describe('createCanvasEngine', () => {
     paneElement.getBoundingClientRect = () =>
       ({ left: 0, top: 0, width: 100, height: 100 }) as DOMRect
     const measuredElement = document.createElement('div')
-    engine.registerViewportElement(viewportElement)
-    engine.registerNodeElement('measured', measuredElement)
+    const unregisterViewport = engine.registerViewportElement(viewportElement)
+    const unregisterMeasured = engine.registerNodeElement('measured', measuredElement)
     engine.setDocumentSnapshot({
       nodes: [{ ...createNode('measured', 0), position: { x: 800, y: 0 } }],
     })
@@ -397,6 +401,8 @@ describe('createCanvasEngine', () => {
 
     expect(measuredElement.style.display).toBe('none')
 
+    unregisterMeasured()
+    unregisterViewport()
     engine.destroy()
   })
 
@@ -429,10 +435,10 @@ describe('createCanvasEngine', () => {
     const sourceElement = document.createElement('div')
     const targetElement = document.createElement('div')
     const edgeElement = document.createElementNS('http://www.w3.org/2000/svg', 'g')
-    engine.registerViewportElement(viewportElement)
-    engine.registerNodeElement('source', sourceElement)
-    engine.registerNodeElement('target', targetElement)
-    engine.registerEdgeElement('edge-1', edgeElement)
+    const unregisterViewport = engine.registerViewportElement(viewportElement)
+    const unregisterSource = engine.registerNodeElement('source', sourceElement)
+    const unregisterTarget = engine.registerNodeElement('target', targetElement)
+    const unregisterEdge = engine.registerEdgeElement('edge-1', edgeElement)
 
     engine.setDocumentSnapshot({
       nodes: [
@@ -453,6 +459,10 @@ describe('createCanvasEngine', () => {
     expect(edgeElement.style.display).toBe('')
     expect(targetElement.style.display).toBe('none')
 
+    unregisterEdge()
+    unregisterTarget()
+    unregisterSource()
+    unregisterViewport()
     engine.destroy()
   })
 

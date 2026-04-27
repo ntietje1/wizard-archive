@@ -1,6 +1,6 @@
 import { parseCanvasBoundsDimensions } from 'convex/canvases/validation'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
-import type { Node } from '@xyflow/react'
+import type { CanvasNode as Node } from '~/features/canvas/types/canvas-domain-types'
 
 export function getCanvasNodeBounds(node: Node): Bounds | null {
   const fallbackBounds =

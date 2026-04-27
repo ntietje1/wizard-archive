@@ -1,4 +1,5 @@
-import { Position } from '@xyflow/react'
+import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasHandlePosition } from '~/features/canvas/types/canvas-domain-types'
 import { buildBezierCanvasEdgeGeometryFromEdge } from '../edges/bezier/bezier-canvas-edge-geometry'
 import type { CanvasEdgeType } from '../edges/canvas-edge-types'
 import {
@@ -11,11 +12,12 @@ import {
 } from '../edges/straight/straight-canvas-edge-geometry'
 import type { CanvasEdge, CanvasNode } from '../types/canvas-domain-types'
 import type { Point2D } from '../utils/canvas-awareness-types'
+import { assertNever } from '~/shared/utils/utils'
 
 type CanvasConnectionDraftEndpoint = {
   nodeId: string
   handleId: string | null
-  position: Position
+  position: CanvasHandlePosition
   point: Point2D
 }
 
@@ -54,25 +56,38 @@ export function buildConnectionDraftGeometry(
         return buildStraightCanvasEdgeGeometryFromEdge(edge, nodesById)
       case 'step':
         return buildStepCanvasEdgeGeometryFromEdge(edge, nodesById)
+      default:
+        return assertNever(edgeType)
     }
-  }
-
-  const renderProps = {
-    sourceX: draft.source.point.x,
-    sourceY: draft.source.point.y,
-    targetX: draft.current.x,
-    targetY: draft.current.y,
-    sourcePosition: draft.source.position,
-    targetPosition: getOppositePosition(draft.source.position),
   }
 
   switch (edgeType) {
     case 'bezier':
       return buildFreeDragBezierPreviewGeometry(draft.source, draft.current)
-    case 'straight':
+    case 'straight': {
+      const renderProps = {
+        sourceX: draft.source.point.x,
+        sourceY: draft.source.point.y,
+        targetX: draft.current.x,
+        targetY: draft.current.y,
+        sourcePosition: draft.source.position,
+        targetPosition: getOppositePosition(draft.source.position),
+      }
       return buildStraightCanvasEdgeGeometryFromRenderProps(renderProps)
-    case 'step':
+    }
+    case 'step': {
+      const renderProps = {
+        sourceX: draft.source.point.x,
+        sourceY: draft.source.point.y,
+        targetX: draft.current.x,
+        targetY: draft.current.y,
+        sourcePosition: draft.source.position,
+        targetPosition: getOppositePosition(draft.source.position),
+      }
       return buildStepCanvasEdgeGeometryFromRenderProps(renderProps)
+    }
+    default:
+      return assertNever(edgeType)
   }
 }
 
@@ -105,29 +120,33 @@ function buildFreeDragBezierPreviewGeometry(
   }
 }
 
-function getOppositePosition(position: Position): Position {
+function getOppositePosition(position: CanvasHandlePosition): CanvasHandlePosition {
   switch (position) {
-    case Position.Top:
-      return Position.Bottom
-    case Position.Right:
-      return Position.Left
-    case Position.Bottom:
-      return Position.Top
-    case Position.Left:
-      return Position.Right
+    case CANVAS_HANDLE_POSITION.Top:
+      return CANVAS_HANDLE_POSITION.Bottom
+    case CANVAS_HANDLE_POSITION.Right:
+      return CANVAS_HANDLE_POSITION.Left
+    case CANVAS_HANDLE_POSITION.Bottom:
+      return CANVAS_HANDLE_POSITION.Top
+    case CANVAS_HANDLE_POSITION.Left:
+      return CANVAS_HANDLE_POSITION.Right
+    default:
+      return assertNever(position)
   }
 }
 
-function positionToVector(position: Position): Point2D {
+function positionToVector(position: CanvasHandlePosition): Point2D {
   switch (position) {
-    case Position.Top:
+    case CANVAS_HANDLE_POSITION.Top:
       return { x: 0, y: -1 }
-    case Position.Right:
+    case CANVAS_HANDLE_POSITION.Right:
       return { x: 1, y: 0 }
-    case Position.Bottom:
+    case CANVAS_HANDLE_POSITION.Bottom:
       return { x: 0, y: 1 }
-    case Position.Left:
+    case CANVAS_HANDLE_POSITION.Left:
       return { x: -1, y: 0 }
+    default:
+      return assertNever(position)
   }
 }
 

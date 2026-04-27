@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react'
+import { useRef } from 'react'
 import {
   getCanvasEdgeInspectableProperties,
   normalizeCanvasEdge,
@@ -64,7 +64,11 @@ export function useCanvasToolbarModel() {
   const showsEdgeToolDefaults = !hasSelection && activeTool === 'edge'
   const pendingNodeDataPatchesRef = useRef<Map<string, Record<string, unknown>> | null>(null)
   const pendingEdgePatchesRef = useRef<Map<string, CanvasEdgePatch> | null>(null)
-  const propertySessionController = useMemo(() => createCanvasPropertySessionController(), [])
+  const propertySessionControllerRef = useRef<ReturnType<
+    typeof createCanvasPropertySessionController
+  > | null>(null)
+  propertySessionControllerRef.current ??= createCanvasPropertySessionController()
+  const propertySessionController = propertySessionControllerRef.current
 
   const patchNodeDataForProperty = (nodeId: string, data: Record<string, unknown>) => {
     const pendingNodeDataPatches = pendingNodeDataPatchesRef.current

@@ -18,6 +18,7 @@ const TOOL_NAME_PATTERNS = {
   Panning: /^(Panning|Hand)$/i,
   'Lasso select': /^Lasso select$/i,
   Draw: /^Draw$/i,
+  Edges: /^Edges$/i,
   Eraser: /^(Eraser|Erase)$/i,
   Text: /^(Text|Add text node)$/i,
 } as const satisfies Record<string, RegExp>
@@ -51,13 +52,11 @@ export async function openCanvas(page: Page, name: string) {
 }
 
 export function getCanvasSurface(page: Page) {
-  return page
-    .locator('[data-testid="canvas-surface"], [aria-label="Canvas surface"], .react-flow')
-    .first()
+  return page.locator('[data-testid="canvas-surface"], [aria-label="Canvas surface"]').first()
 }
 
 export function getCanvasPane(page: Page) {
-  return getCanvasSurface(page).locator('[data-testid="canvas-scene"], .react-flow__pane').first()
+  return getCanvasSurface(page).locator('[data-testid="canvas-scene"]').first()
 }
 
 export function getCanvasPendingSelectionStatus(page: Page) {
@@ -73,11 +72,11 @@ export function getCanvasLassoOverlay(page: Page) {
 }
 
 export function getCanvasNodes(page: Page) {
-  return page.locator('[data-testid="canvas-node"], .react-flow__node')
+  return page.locator('[data-testid="canvas-node"]')
 }
 
 export function getCanvasEdges(page: Page) {
-  return page.locator('[data-testid="canvas-edge"], .react-flow__edge')
+  return page.locator('[data-testid="canvas-edge"]')
 }
 
 export function getCanvasToolButton(page: Page, label: keyof typeof TOOL_NAME_PATTERNS) {

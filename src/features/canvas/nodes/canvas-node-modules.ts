@@ -31,7 +31,7 @@ import type {
 } from './canvas-node-types'
 import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
 import type { CanvasContextMenuContributor } from '../runtime/context-menu/canvas-context-menu-types'
-import type { Node, XYPosition } from '@xyflow/react'
+import type { CanvasNode, CanvasPosition } from '~/features/canvas/types/canvas-domain-types'
 import { assertNever } from '~/shared/utils/utils'
 import { normalizeCanvasNode } from './canvas-node-normalization'
 import type { AnyNormalizedCanvasNode } from './canvas-node-normalization'
@@ -52,7 +52,7 @@ type PatchCanvasNodeData = <TPatch extends Record<string, unknown>>(
 ) => void
 
 function withNormalizedCanvasNode<TResult>(
-  node: Node,
+  node: CanvasNode,
   onNode: (node: AnyNormalizedCanvasNode) => TResult,
   onInvalid: () => TResult,
 ): TResult {
@@ -128,8 +128,8 @@ type CanvasNodeSpec<TType extends CanvasNodeType = CanvasNodeType> = {
   ) => CanvasInspectableProperties
   resize?: (
     node: Extract<AnyNormalizedCanvasNode, { type: TType }>,
-    resize: { width: number; height: number; position: XYPosition },
-  ) => Node
+    resize: { width: number; height: number; position: CanvasPosition },
+  ) => CanvasNode
 }
 
 export const canvasNodeSpecs = {
@@ -189,7 +189,7 @@ export function getCanvasNodeInspectableProperties(
 export function createCanvasNodePlacement(
   type: CanvasNodeType,
   args: CanvasNodeCreateArgs,
-): { node: Node; startEditing: boolean } {
+): { node: CanvasNode; startEditing: boolean } {
   const spec = canvasNodeSpecs[type]
   const resolvedSize = args.size ?? spec.defaultSize
   if (!resolvedSize) {
@@ -212,7 +212,7 @@ export function createCanvasNodePlacement(
     throw new Error(`Missing default canvas node data for "${type}"`)
   }
 
-  const node: Node = {
+  const node: CanvasNode = {
     id: crypto.randomUUID(),
     type,
     position,
@@ -236,9 +236,9 @@ export { normalizeCanvasNode }
 export type { AnyNormalizedCanvasNode }
 
 export function resizeCanvasNode(
-  node: Node,
-  resize: { width: number; height: number; position: XYPosition },
-): Node {
+  node: CanvasNode,
+  resize: { width: number; height: number; position: CanvasPosition },
+): CanvasNode {
   return withNormalizedCanvasNode(
     node,
     (normalizedNode) =>

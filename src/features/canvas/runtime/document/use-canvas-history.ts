@@ -5,7 +5,10 @@ import type {
   CanvasSelectionController,
   CanvasSelectionSnapshot,
 } from '../../tools/canvas-tool-types'
-import type { Edge, Node } from '@xyflow/react'
+import type {
+  CanvasEdge as Edge,
+  CanvasNode as Node,
+} from '~/features/canvas/types/canvas-domain-types'
 import type * as Y from 'yjs'
 import { logger } from '~/shared/utils/logger'
 import { areStringSetsEqual } from '../../utils/canvas-selection-utils'

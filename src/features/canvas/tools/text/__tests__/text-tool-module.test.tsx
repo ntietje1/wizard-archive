@@ -4,7 +4,7 @@ import {
   createPlacementEnvironment,
   createPointerEvent,
 } from '../../shared/__tests__/placement-tool-test-utils'
-import type { Node } from '@xyflow/react'
+import type { CanvasNode as Node } from '~/features/canvas/types/canvas-domain-types'
 
 describe('textToolSpec', () => {
   it('creates a default-sized text node on click and requests editing at the click point', () => {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import type { SpringState } from '~/shared/hooks/useSpringPosition'
 import { SPRING_DEFAULTS, stepSpring } from '~/shared/hooks/useSpringPosition'
 import type { CanvasEngine } from '../../system/canvas-engine'
@@ -116,9 +116,9 @@ export function useCanvasRemoteDragAnimation({
     }
   }, [remoteDragPositions])
 
-  const hasSpring = useCallback((nodeId: string) => springStatesRef.current.has(nodeId), [])
+  const hasSpring = (nodeId: string) => springStatesRef.current.has(nodeId)
 
-  const setTarget = useCallback((nodeId: string, position: { x: number; y: number }) => {
+  const setTarget = (nodeId: string, position: { x: number; y: number }) => {
     const existing = springStatesRef.current.get(nodeId)
     const target = { ...position }
     if (existing) {
@@ -135,9 +135,9 @@ export function useCanvasRemoteDragAnimation({
       target,
     })
     startSpringLoopRef.current?.()
-  }, [])
+  }
 
-  const clearNodeSprings = useCallback((nodeIds: ReadonlySet<string>) => {
+  const clearNodeSprings = (nodeIds: ReadonlySet<string>) => {
     for (const nodeId of nodeIds) {
       springStatesRef.current.delete(nodeId)
     }
@@ -146,14 +146,11 @@ export function useCanvasRemoteDragAnimation({
       cancelAnimationFrame(springRafIdRef.current)
       springRafIdRef.current = 0
     }
-  }, [])
+  }
 
-  return useMemo(
-    () => ({
-      hasSpring,
-      setTarget,
-      clearNodeSprings,
-    }),
-    [clearNodeSprings, hasSpring, setTarget],
-  )
+  return {
+    hasSpring,
+    setTarget,
+    clearNodeSprings,
+  }
 }

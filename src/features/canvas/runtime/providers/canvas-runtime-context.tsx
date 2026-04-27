@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import type { ReactNode } from 'react'
 import { CanvasRuntimeContext } from './canvas-runtime'
 import type { CanvasRuntime } from './canvas-runtime'
@@ -22,35 +21,19 @@ export function CanvasRuntimeProvider({
   selection,
   viewportController,
 }: CanvasRuntimeProviderProps) {
-  const value = useMemo(
-    () => ({
-      canEdit,
-      canvasEngine,
-      commands,
-      documentWriter,
-      domRuntime,
-      editSession,
-      history,
-      nodeActions,
-      nodeDragController,
-      remoteHighlights,
-      selection,
-      viewportController,
-    }),
-    [
-      canEdit,
-      canvasEngine,
-      commands,
-      documentWriter,
-      domRuntime,
-      editSession,
-      history,
-      nodeActions,
-      nodeDragController,
-      remoteHighlights,
-      selection,
-      viewportController,
-    ],
-  )
+  const value = {
+    canEdit,
+    canvasEngine,
+    commands,
+    documentWriter,
+    domRuntime,
+    editSession,
+    history,
+    nodeActions,
+    nodeDragController,
+    remoteHighlights,
+    selection,
+    viewportController,
+  }
   return <CanvasRuntimeContext value={value}>{children}</CanvasRuntimeContext>
 }

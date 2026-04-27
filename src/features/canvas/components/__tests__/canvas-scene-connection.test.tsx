@@ -8,8 +8,7 @@ import {
 } from '../../runtime/providers/canvas-runtime'
 import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime-context'
 import { createCanvasEngine } from '../../system/canvas-engine'
-import type { CanvasConnection } from '../../types/canvas-domain-types'
-import type { Node } from '@xyflow/react'
+import type { CanvasConnection, CanvasNode as Node } from '../../types/canvas-domain-types'
 
 vi.mock('../canvas-background', () => ({
   CanvasBackground: () => null,
@@ -73,6 +72,8 @@ const targetNode: Node = {
   data: {},
 }
 
+let engine: ReturnType<typeof createCanvasEngine> | null = null
+
 function setElementRect(
   element: Element,
   rect: { left: number; top: number; width: number; height: number },
@@ -91,15 +92,16 @@ function setElementRect(
 }
 
 function renderScene(createEdgeFromConnection = vi.fn()) {
-  const engine = createCanvasEngine()
-  engine.setDocumentSnapshot({ nodes: [sourceNode, targetNode] })
+  engine = createCanvasEngine()
+  const currentEngine = engine
+  currentEngine.setDocumentSnapshot({ nodes: [sourceNode, targetNode] })
   render(
-    <CanvasEngineProvider engine={engine}>
+    <CanvasEngineProvider engine={currentEngine}>
       <CanvasRuntimeProvider
         {...READ_ONLY_CANVAS_RUNTIME}
         canEdit
-        canvasEngine={engine}
-        domRuntime={createCanvasDomRuntimeAdapter(engine)}
+        canvasEngine={currentEngine}
+        domRuntime={createCanvasDomRuntimeAdapter(currentEngine)}
       >
         <CanvasScene
           canEdit
@@ -133,7 +135,7 @@ function renderScene(createEdgeFromConnection = vi.fn()) {
     height: 8,
   })
 
-  return { createEdgeFromConnection, engine }
+  return { createEdgeFromConnection }
 }
 
 async function startConnectionDrag() {
@@ -148,12 +150,14 @@ async function startConnectionDrag() {
 
 describe('CanvasScene connection creation', () => {
   afterEach(() => {
+    engine?.destroy()
+    engine = null
     vi.clearAllMocks()
   })
 
   it('snaps the live preview to a nearby compatible handle and commits that target', async () => {
     const createEdgeFromConnection = vi.fn()
-    const { engine } = renderScene(createEdgeFromConnection)
+    renderScene(createEdgeFromConnection)
 
     await startConnectionDrag()
     fireEvent.pointerMove(window, { clientX: 206, clientY: 25, pointerId: 1 })
@@ -173,32 +177,26 @@ describe('CanvasScene connection creation', () => {
       sourceHandle: 'right',
       targetHandle: 'left',
     } satisfies CanvasConnection)
-
-    engine.destroy()
   })
 
   it('cancels the connection when pointer-up has no snapped target', async () => {
     const createEdgeFromConnection = vi.fn()
-    const { engine } = renderScene(createEdgeFromConnection)
+    renderScene(createEdgeFromConnection)
 
     await startConnectionDrag()
     fireEvent.pointerUp(window, { clientX: 500, clientY: 500, pointerId: 1 })
 
     expect(createEdgeFromConnection).not.toHaveBeenCalled()
-
-    engine.destroy()
   })
 
   it('does not snap or commit to a handle on the source node', async () => {
     const createEdgeFromConnection = vi.fn()
-    const { engine } = renderScene(createEdgeFromConnection)
+    renderScene(createEdgeFromConnection)
 
     await startConnectionDrag()
     fireEvent.pointerMove(window, { clientX: 0, clientY: 25, pointerId: 1 })
     fireEvent.pointerUp(window, { clientX: 0, clientY: 25, pointerId: 1 })
 
     expect(createEdgeFromConnection).not.toHaveBeenCalled()
-
-    engine.destroy()
   })
 })

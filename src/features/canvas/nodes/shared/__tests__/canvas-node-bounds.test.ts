@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { getCanvasNodeBounds } from '../canvas-node-bounds'
-import type { Node } from '@xyflow/react'
+import type { CanvasNode as Node } from '~/features/canvas/types/canvas-domain-types'
 
 describe('getCanvasNodeBounds', () => {
   it('uses measured node dimensions when width and height are present', () => {

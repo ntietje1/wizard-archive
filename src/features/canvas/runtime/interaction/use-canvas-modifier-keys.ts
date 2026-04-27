@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect } from 'react'
 import { isPrimarySelectionModifier } from '../../utils/canvas-selection-utils'
 
 type CanvasModifierKeyState = {
@@ -14,23 +14,22 @@ let modifierKeyState: CanvasModifierKeyState = {
   shiftPressed: false,
 }
 
+const CANVAS_MODIFIER_KEY_READER: CanvasModifierKeyReader = {
+  get primaryPressed() {
+    return modifierKeyState.primaryPressed
+  },
+  get shiftPressed() {
+    return modifierKeyState.shiftPressed
+  },
+}
+
 export function useCanvasModifierKeys(): CanvasModifierKeyReader {
   useEffect(() => {
     subscribeCanvasModifierKeys()
     return unsubscribeCanvasModifierKeys
   }, [])
 
-  return useMemo(
-    () => ({
-      get primaryPressed() {
-        return modifierKeyState.primaryPressed
-      },
-      get shiftPressed() {
-        return modifierKeyState.shiftPressed
-      },
-    }),
-    [],
-  )
+  return CANVAS_MODIFIER_KEY_READER
 }
 
 function subscribeCanvasModifierKeys() {

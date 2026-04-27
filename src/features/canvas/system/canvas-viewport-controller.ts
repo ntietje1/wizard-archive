@@ -1,7 +1,6 @@
-import { getCanvasNodeBounds } from '../nodes/shared/canvas-node-bounds'
 import type { CanvasEngine, CanvasViewport } from './canvas-engine'
+import { getCanvasFitViewport } from '../utils/canvas-fit-view'
 import type { CanvasNode, CanvasPosition } from '../types/canvas-domain-types'
-import type { Bounds } from '../utils/canvas-geometry-utils'
 
 const MIN_ZOOM = 0.1
 const MAX_ZOOM = 4
@@ -297,24 +296,14 @@ function getFitViewViewport(
     return null
   }
 
-  const nodesBounds = getCanvasNodesBounds(nodes)
-  if (!nodesBounds) {
-    return null
-  }
-
-  const paddedWidth = nodesBounds.width * (1 + FIT_VIEW_PADDING * 2)
-  const paddedHeight = nodesBounds.height * (1 + FIT_VIEW_PADDING * 2)
-  if (paddedWidth <= 0 || paddedHeight <= 0) {
-    return null
-  }
-
-  const zoom = clampZoom(
-    Math.min(surfaceBounds.width / paddedWidth, surfaceBounds.height / paddedHeight),
-  )
-  const x = surfaceBounds.width / 2 - (nodesBounds.x + nodesBounds.width / 2) * zoom
-  const y = surfaceBounds.height / 2 - (nodesBounds.y + nodesBounds.height / 2) * zoom
-
-  return { x, y, zoom }
+  return getCanvasFitViewport({
+    nodes,
+    width: surfaceBounds.width,
+    height: surfaceBounds.height,
+    minZoom: MIN_ZOOM,
+    maxZoom: MAX_ZOOM,
+    padding: FIT_VIEW_PADDING,
+  })
 }
 
 function normalizeViewport(viewport: CanvasViewport): CanvasViewport {
@@ -327,33 +316,4 @@ function normalizeViewport(viewport: CanvasViewport): CanvasViewport {
 
 function clampZoom(zoom: number) {
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number.isFinite(zoom) ? zoom : 1))
-}
-
-function getCanvasNodesBounds(nodes: ReadonlyArray<CanvasNode>): Bounds | null {
-  let bounds: Bounds | null = null
-
-  for (const node of nodes) {
-    const nodeBounds = getCanvasNodeBounds(node)
-    if (!nodeBounds) {
-      continue
-    }
-
-    if (!bounds) {
-      bounds = nodeBounds
-      continue
-    }
-
-    const minX = Math.min(bounds.x, nodeBounds.x)
-    const minY = Math.min(bounds.y, nodeBounds.y)
-    const maxX = Math.max(bounds.x + bounds.width, nodeBounds.x + nodeBounds.width)
-    const maxY = Math.max(bounds.y + bounds.height, nodeBounds.y + nodeBounds.height)
-    bounds = {
-      x: minX,
-      y: minY,
-      width: maxX - minX,
-      height: maxY - minY,
-    }
-  }
-
-  return bounds
 }

@@ -229,18 +229,16 @@
   }
 }
 
-/* Stroke nodes: only the filled path receives pointer events, not the bounding box */
-.react-flow__node-stroke {
+.canvas-node-shell[data-node-type='stroke'] {
   pointer-events: none !important;
 }
 
-.react-flow__node-stroke path,
-.react-flow__node-stroke .react-flow__resize-control,
-.react-flow__node-stroke .canvas-node-resize-handle {
+.canvas-node-shell[data-node-type='stroke'] path,
+.canvas-node-shell[data-node-type='stroke'] .canvas-node-resize-handle {
   pointer-events: auto !important;
 }
 
-.react-flow__node:has([data-node-editing='true']) {
+.canvas-node-shell:has([data-node-editing='true']) {
   z-index: 1000 !important;
 }
 
