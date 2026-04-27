@@ -35,3 +35,12 @@ export function useCanvasEngineSelector<T>(
 
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 }
+
+export function useCanvasViewportZoom(): number {
+  const engine = useCanvasEngine()
+  return useSyncExternalStore(
+    engine.subscribeViewportChange,
+    () => engine.getSnapshot().viewport.zoom,
+    () => engine.getSnapshot().viewport.zoom,
+  )
+}

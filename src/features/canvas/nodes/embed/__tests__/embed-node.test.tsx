@@ -3,6 +3,8 @@ import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { EmbedNode } from '../embed-node'
+import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
+import { createCanvasEngine } from '../../../system/canvas-engine'
 import { testId } from '~/test/helpers/test-id'
 
 const sidebarItemPreviewSpy = vi.hoisted(() => vi.fn())
@@ -135,7 +137,7 @@ describe('EmbedNode', () => {
   })
 
   it('renders canvas embeds through the dedicated embedded canvas renderer in interactive mode', () => {
-    render(<EmbedNode {...createEmbedNodeProps('node-1', 'canvas-1')} />)
+    renderEmbedNode()
 
     expect(screen.getByTestId('embedded-canvas-content')).toBeInTheDocument()
     expect(embeddedCanvasSpy).toHaveBeenCalledWith({
@@ -155,7 +157,7 @@ describe('EmbedNode', () => {
       imageUrl: 'map.png',
       pins: [],
     }
-    render(<EmbedNode {...createEmbedNodeProps('node-1', 'map-1')} />)
+    renderEmbedNode('node-1', 'map-1')
 
     expect(screen.getByTestId('embedded-map-content')).toBeInTheDocument()
     expect(embeddedMapSpy).toHaveBeenCalledWith({
@@ -180,7 +182,7 @@ describe('EmbedNode', () => {
       downloadUrl: 'document.pdf',
       previewUrl: 'preview.png',
     }
-    render(<EmbedNode {...createEmbedNodeProps('node-1', 'file-1')} />)
+    renderEmbedNode('node-1', 'file-1')
 
     expect(screen.getByTestId('embedded-file-content')).toBeInTheDocument()
     expect(embeddedFileSpy).toHaveBeenCalledWith({
@@ -199,7 +201,7 @@ describe('EmbedNode', () => {
 
   it('falls back to the shared read-only preview path for nested embedded canvases', () => {
     renderModeState.interactive = false
-    render(<EmbedNode {...createEmbedNodeProps('node-1', 'canvas-1')} />)
+    renderEmbedNode()
 
     expect(screen.getByTestId('shared-sidebar-item-preview')).toBeInTheDocument()
     expect(sidebarItemPreviewSpy).toHaveBeenCalledWith({
@@ -222,7 +224,7 @@ describe('EmbedNode', () => {
       imageUrl: 'map.png',
       pins: [],
     }
-    render(<EmbedNode {...createEmbedNodeProps('node-1', 'map-1')} />)
+    renderEmbedNode('node-1', 'map-1')
 
     expect(screen.getByTestId('shared-sidebar-item-preview')).toBeInTheDocument()
     expect(sidebarItemPreviewSpy).toHaveBeenCalledWith({
@@ -247,7 +249,7 @@ describe('EmbedNode', () => {
       downloadUrl: 'document.pdf',
       previewUrl: 'preview.png',
     }
-    render(<EmbedNode {...createEmbedNodeProps('node-1', 'file-1')} />)
+    renderEmbedNode('node-1', 'file-1')
 
     expect(screen.getByTestId('shared-sidebar-item-preview')).toBeInTheDocument()
     expect(sidebarItemPreviewSpy).toHaveBeenCalledWith({
@@ -262,7 +264,37 @@ describe('EmbedNode', () => {
     })
     expect(embeddedFileSpy).not.toHaveBeenCalled()
   })
+
+  it('inverse-scales the floating name label from the current viewport zoom', () => {
+    renderEmbedNode('node-1', 'canvas-1', { zoom: 2 })
+
+    expect(screen.getByTestId('embed-node-floating-label-frame')).toHaveStyle({
+      height: '8px',
+      transform: 'translateY(calc(-100% - 3px))',
+    })
+    expect(screen.getByTestId('embed-node-floating-label')).toHaveStyle({
+      lineHeight: '16px',
+      transform: 'scale(0.5)',
+      transformOrigin: 'left bottom',
+      width: '200%',
+    })
+  })
 })
+
+function renderEmbedNode(
+  id = 'node-1',
+  sidebarItemId = 'canvas-1',
+  viewport: { zoom: number } = { zoom: 1 },
+) {
+  const engine = createCanvasEngine()
+  engine.setViewport({ x: 0, y: 0, zoom: viewport.zoom })
+
+  return render(
+    <CanvasEngineProvider engine={engine}>
+      <EmbedNode {...createEmbedNodeProps(id, sidebarItemId)} />
+    </CanvasEngineProvider>,
+  )
+}
 
 function createEmbedNodeProps(id: string, sidebarItemId: string): Parameters<typeof EmbedNode>[0] {
   return {

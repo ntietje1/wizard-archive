@@ -21,7 +21,11 @@ import { EmbeddedCanvasContent } from './embedded-canvas-content'
 import { EmbeddedFileContent } from './embedded-file-content'
 import { EmbeddedMapContent } from './embedded-map-content'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
+import { useCanvasViewportZoom } from '../../react/use-canvas-engine'
 import type { CanvasNodeComponentProps } from '../canvas-node-types'
+
+const EMBED_FLOATING_LABEL_GAP_PX = 6
+const EMBED_FLOATING_LABEL_LINE_HEIGHT_PX = 16
 
 export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<EmbedNodeData>) {
   const normalizedData = normalizeEmbedNodeData(data)
@@ -43,6 +47,7 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
   const noteEditor = contentItem?.type === SIDEBAR_ITEM_TYPES.notes ? editor : null
   const showsFormattingToolbar = isEditing && noteEditor !== null
 
+  const zoom = useCanvasViewportZoom()
   const label = item?.name ?? 'Missing item'
   const isMissing = !item
   const showFloatingLabel = !showsFormattingToolbar
@@ -63,11 +68,7 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
           <CanvasFloatingFormattingToolbar editor={noteEditor} visible={showsFormattingToolbar} />
           <CanvasNodeConnectionHandles />
           {showFloatingLabel && (
-            <div className="pointer-events-none absolute left-3 top-0 z-20 max-w-[calc(100%-1.5rem)] -translate-y-[calc(100%+0.375rem)] select-none">
-              <span className="block truncate text-xs font-medium text-muted-foreground">
-                {isMissing ? `Warning: ${label}` : label}
-              </span>
-            </div>
+            <EmbedFloatingLabel label={label} missing={isMissing} zoom={zoom} />
           )}
         </>
       }
@@ -105,6 +106,42 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
         )}
       </div>
     </ResizableNodeWrapper>
+  )
+}
+
+function EmbedFloatingLabel({
+  label,
+  missing,
+  zoom,
+}: {
+  label: string
+  missing: boolean
+  zoom: number
+}) {
+  const safeZoom = Number.isFinite(zoom) && zoom > 0 ? zoom : 1
+
+  return (
+    <div
+      data-testid="embed-node-floating-label-frame"
+      className="pointer-events-none absolute left-0 top-0 z-20 w-full select-none"
+      style={{
+        height: EMBED_FLOATING_LABEL_LINE_HEIGHT_PX / safeZoom,
+        transform: `translateY(calc(-100% - ${EMBED_FLOATING_LABEL_GAP_PX / safeZoom}px))`,
+      }}
+    >
+      <span
+        data-testid="embed-node-floating-label"
+        className="absolute bottom-0 left-0 block truncate text-xs font-medium text-muted-foreground"
+        style={{
+          lineHeight: `${EMBED_FLOATING_LABEL_LINE_HEIGHT_PX}px`,
+          transform: `scale(${1 / safeZoom})`,
+          transformOrigin: 'left bottom',
+          width: `${safeZoom * 100}%`,
+        }}
+      >
+        {missing ? `Warning: ${label}` : label}
+      </span>
+    </div>
   )
 }
 
