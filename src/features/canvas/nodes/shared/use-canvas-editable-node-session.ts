@@ -3,7 +3,7 @@ import type {
   RichEmbedActivationPayload,
   RichEmbedLifecycleController,
 } from '../embed/use-rich-embed-lifecycle'
-import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
+import { useCanvasInteractionServices } from '../../runtime/providers/canvas-runtime'
 import { useCanvasEngineSelector } from '../../react/use-canvas-engine'
 import { isExclusivelySelectedNode } from '../../utils/canvas-selection-utils'
 import { areStringSetsEqual } from '../../system/canvas-selection'
@@ -21,7 +21,7 @@ export function useCanvasEditableNodeSession({
   editing,
   setEditing,
 }: UseCanvasEditableNodeSessionOptions) {
-  const { editSession, selection } = useCanvasRuntime()
+  const { editSession, selection } = useCanvasInteractionServices()
   const selectionState = useCanvasEngineSelector(
     (state) => [state.selection.nodeIds, state.selection.nodeIds.has(id)] as const,
     areEditableSelectionStatesEqual,

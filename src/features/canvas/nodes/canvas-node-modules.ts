@@ -28,6 +28,12 @@ import type {
   CanvasNodeDataByType,
   CanvasNodePlacementBehavior,
 } from './canvas-node-types'
+import { parseCanvasDocumentNode } from 'convex/canvases/validation'
+import type {
+  CanvasEmbedDocumentNode,
+  CanvasStrokeDocumentNode,
+  CanvasTextDocumentNode,
+} from 'convex/canvases/validation'
 import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
 import type { CanvasContextMenuContributor } from '../runtime/context-menu/canvas-context-menu-types'
 import type {
@@ -53,6 +59,11 @@ type PatchCanvasNodeData = <TType extends CanvasNodeType>(
   nodeId: string,
   data: CanvasNodeDataPatch<TType>,
 ) => void
+type CanvasDocumentNodeByType<TType extends CanvasNodeType> = {
+  embed: CanvasEmbedDocumentNode
+  stroke: CanvasStrokeDocumentNode
+  text: CanvasTextDocumentNode
+}[TType]
 
 function withNormalizedCanvasNode<TResult>(
   node: CanvasDocumentNode,
@@ -187,6 +198,10 @@ export function getCanvasNodeInspectableProperties(
     : EMPTY_CANVAS_INSPECTABLE_PROPERTIES
 }
 
+export function createCanvasNodePlacement<TType extends CanvasNodeType>(
+  type: TType,
+  args: CanvasNodeCreateArgs<TType>,
+): { node: CanvasDocumentNodeByType<TType>; selectOnCreate: boolean; startEditing: boolean }
 export function createCanvasNodePlacement(
   type: CanvasNodeType,
   args: CanvasNodeCreateArgs,
@@ -213,14 +228,17 @@ export function createCanvasNodePlacement(
     throw new Error(`Missing default canvas node data for "${type}"`)
   }
 
-  const node = {
+  const node = parseCanvasDocumentNode({
     id: crypto.randomUUID(),
     type,
     position,
     width: resolvedSize.width,
     height: resolvedSize.height,
     data,
-  } as CanvasDocumentNode
+  })
+  if (!node) {
+    throw new Error(`Invalid default canvas node data for "${type}"`)
+  }
 
   return {
     node,

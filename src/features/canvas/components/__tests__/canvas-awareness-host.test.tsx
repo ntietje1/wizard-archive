@@ -3,12 +3,10 @@ import { describe, expect, it, vi } from 'vitest'
 import { CanvasAwarenessHost } from '../canvas-awareness-host'
 import { CanvasLocalOverlaysHost } from '../canvas-local-overlays-host'
 import { CanvasEngineProvider } from '../../react/canvas-engine-context'
+import { createCanvasDomRuntime } from '../../system/canvas-dom-runtime'
 import { createCanvasEngine } from '../../system/canvas-engine'
 import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime-context'
-import {
-  READ_ONLY_CANVAS_RUNTIME,
-  createCanvasDomRuntimeAdapter,
-} from '../../runtime/providers/canvas-runtime'
+import { createCanvasRuntime } from '../../runtime/__tests__/canvas-runtime-test-utils'
 
 vi.mock('../../tools/canvas-tool-modules', () => ({
   canvasToolAwarenessLayers: [
@@ -27,9 +25,11 @@ vi.mock('../../tools/canvas-tool-modules', () => ({
 
 describe('CanvasAwarenessHost', () => {
   it('renders tool awareness layers from the direct awareness exports', () => {
+    const runtime = createCanvasRuntime({ canEdit: false })
+
     render(
-      <CanvasEngineProvider engine={createCanvasEngine()}>
-        <CanvasRuntimeProvider {...READ_ONLY_CANVAS_RUNTIME}>
+      <CanvasEngineProvider engine={runtime.canvasEngine}>
+        <CanvasRuntimeProvider {...runtime}>
           <CanvasAwarenessHost remoteUsers={[]} />
         </CanvasRuntimeProvider>
       </CanvasEngineProvider>,
@@ -39,8 +39,8 @@ describe('CanvasAwarenessHost', () => {
   })
 
   it('renders awareness layers in a screen-space container without viewport registration', () => {
-    const canvasEngine = createCanvasEngine()
-    const domRuntime = createCanvasDomRuntimeAdapter(canvasEngine)
+    const domRuntime = createCanvasDomRuntime()
+    const canvasEngine = createCanvasEngine({ domRuntime })
     canvasEngine.setViewport({ x: 12, y: 34, zoom: 2 })
     const subscribeSpy = vi.spyOn(canvasEngine, 'subscribe')
     const registerSpy = vi.spyOn(domRuntime, 'registerViewportOverlayElement')
@@ -48,9 +48,11 @@ describe('CanvasAwarenessHost', () => {
     render(
       <CanvasEngineProvider engine={canvasEngine}>
         <CanvasRuntimeProvider
-          {...READ_ONLY_CANVAS_RUNTIME}
-          canvasEngine={canvasEngine}
-          domRuntime={domRuntime}
+          {...createCanvasRuntime({
+            canEdit: false,
+            canvasEngine,
+            domRuntime,
+          })}
         >
           <CanvasAwarenessHost remoteUsers={[]} />
         </CanvasRuntimeProvider>
@@ -66,8 +68,8 @@ describe('CanvasAwarenessHost', () => {
   })
 
   it('renders local overlays in a screen-space container without viewport registration', () => {
-    const canvasEngine = createCanvasEngine()
-    const domRuntime = createCanvasDomRuntimeAdapter(canvasEngine)
+    const domRuntime = createCanvasDomRuntime()
+    const canvasEngine = createCanvasEngine({ domRuntime })
     canvasEngine.setViewport({ x: -20, y: 8, zoom: 0.75 })
     const subscribeSpy = vi.spyOn(canvasEngine, 'subscribe')
     const registerSpy = vi.spyOn(domRuntime, 'registerViewportOverlayElement')
@@ -75,9 +77,11 @@ describe('CanvasAwarenessHost', () => {
     render(
       <CanvasEngineProvider engine={canvasEngine}>
         <CanvasRuntimeProvider
-          {...READ_ONLY_CANVAS_RUNTIME}
-          canvasEngine={canvasEngine}
-          domRuntime={domRuntime}
+          {...createCanvasRuntime({
+            canEdit: false,
+            canvasEngine,
+            domRuntime,
+          })}
         >
           <CanvasLocalOverlaysHost />
         </CanvasRuntimeProvider>

@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createCanvasDomRuntime } from '../canvas-dom-runtime'
 import { createCanvasEngine } from '../canvas-engine'
-import { createCanvasViewportController } from '../canvas-viewport-controller'
-
-const VIEWPORT_COMMIT_IDLE_MS = 300
+import {
+  createCanvasViewportController,
+  VIEWPORT_COMMIT_IDLE_MS,
+} from '../canvas-viewport-controller'
 
 describe('createCanvasViewportController', () => {
   beforeEach(() => {
@@ -14,7 +16,7 @@ describe('createCanvasViewportController', () => {
   })
 
   it('handles wheel pan as a live viewport update and commits through the narrow viewport channel', () => {
-    const { controller, engine, listener, viewportListener, viewportElement } =
+    const { controller, domRuntime, engine, listener, viewportListener, viewportElement } =
       createViewportTestHarness()
 
     controller.handleWheel(
@@ -24,7 +26,7 @@ describe('createCanvasViewportController', () => {
         cancelable: true,
       }),
     )
-    engine.flushRenderScheduler()
+    domRuntime.flush()
 
     expect(listener).not.toHaveBeenCalled()
     expect(viewportListener).not.toHaveBeenCalled()
@@ -42,7 +44,7 @@ describe('createCanvasViewportController', () => {
   })
 
   it('keeps repeated ctrl-wheel zoom off the general render subscription until idle commit', () => {
-    const { controller, engine, listener, viewportListener, viewportElement } =
+    const { controller, domRuntime, engine, listener, viewportListener, viewportElement } =
       createViewportTestHarness()
 
     controller.handleWheel(
@@ -64,7 +66,7 @@ describe('createCanvasViewportController', () => {
         cancelable: true,
       }),
     )
-    engine.flushRenderScheduler()
+    domRuntime.flush()
 
     expect(listener).not.toHaveBeenCalled()
     expect(viewportListener).not.toHaveBeenCalled()
@@ -82,10 +84,12 @@ describe('createCanvasViewportController', () => {
   })
 
   it('zooms around the pointer without coordinate drift', () => {
-    const engine = createCanvasEngine()
+    const domRuntime = createCanvasDomRuntime()
+    const engine = createCanvasEngine({ domRuntime })
     const surface = createSurface({ left: 100, top: 50 })
     const controller = createCanvasViewportController({
       canvasEngine: engine,
+      domRuntime,
       getSurfaceElement: () => surface,
     })
     const before = controller.screenToCanvasPosition({ x: 300, y: 250 })
@@ -150,7 +154,7 @@ describe('createCanvasViewportController', () => {
   })
 
   it('pans through an engine-owned pointer gesture and commits once on release', () => {
-    const { controller, engine, listener, viewportListener, surface, viewportElement } =
+    const { controller, domRuntime, engine, listener, viewportListener, surface, viewportElement } =
       createViewportTestHarness()
     const releasePointerCapture = vi.fn()
     surface.setPointerCapture = vi.fn()
@@ -169,7 +173,7 @@ describe('createCanvasViewportController', () => {
     window.dispatchEvent(
       createPointerEvent('pointermove', { clientX: 130, clientY: 180, pointerId: 7 }),
     )
-    engine.flushRenderScheduler()
+    domRuntime.flush()
 
     expect(listener).not.toHaveBeenCalled()
     expect(viewportListener).not.toHaveBeenCalled()
@@ -191,20 +195,22 @@ describe('createCanvasViewportController', () => {
 })
 
 function createViewportTestHarness() {
-  const engine = createCanvasEngine()
+  const domRuntime = createCanvasDomRuntime()
+  const engine = createCanvasEngine({ domRuntime })
   const surface = createSurface()
   const viewportElement = document.createElement('div')
-  engine.registerViewportElement(viewportElement)
+  domRuntime.registerViewportElement(viewportElement)
   const listener = vi.fn()
   const viewportListener = vi.fn()
   engine.subscribe(listener)
   engine.subscribeViewportCommit(viewportListener)
   const controller = createCanvasViewportController({
     canvasEngine: engine,
+    domRuntime,
     getSurfaceElement: () => surface,
   })
 
-  return { controller, engine, listener, viewportListener, surface, viewportElement }
+  return { controller, domRuntime, engine, listener, viewportListener, surface, viewportElement }
 }
 
 function createSurface({ left = 0, top = 0 } = {}) {

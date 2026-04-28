@@ -103,6 +103,12 @@ export function useCanvasNodeDragHandlers({
           { draggedCount: event.draggedNodeIds.size },
           () => handleDragEnd(event, optionsRef.current),
         ),
+      onCancel: (event) =>
+        measureCanvasPerformance(
+          'canvas.drag.cancel',
+          { draggedCount: event.draggedNodeIds.size },
+          () => handleDragCancel(event, optionsRef.current),
+        ),
     },
   })
 
@@ -153,6 +159,19 @@ function handleDrag(
       y: event.sourceEvent.clientY,
     }),
   )
+}
+
+function handleDragCancel(
+  event: CanvasDragEvent,
+  { localDraggingIdsRef }: Pick<UseCanvasNodeDragHandlersOptions, 'localDraggingIdsRef'>,
+) {
+  const localDraggingIds = localDraggingIdsRef.current
+  if (localDraggingIds) {
+    for (const nodeId of event.draggedNodeIds) {
+      localDraggingIds.delete(nodeId)
+    }
+  }
+  clearCanvasDragSnapGuides()
 }
 
 function handleDragEnd(

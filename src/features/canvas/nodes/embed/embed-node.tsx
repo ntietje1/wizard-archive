@@ -2,7 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { RichEmbedLifecycleController } from './use-rich-embed-lifecycle'
 import { normalizeEmbedNodeData } from './embed-node-data'
-import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
+import {
+  useCanvasDomRuntime,
+  useCanvasInteractionServices,
+} from '../../runtime/providers/canvas-runtime'
 import { ResizableNodeWrapper } from '../shared/resizable-node-wrapper'
 import type { EmbedNodeData } from './embed-node-data'
 import { EmbedNoteContent } from './embed-note-content'
@@ -35,7 +38,8 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
   const item = sidebarItemId ? itemsMap.get(sidebarItemId) : undefined
   const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
   const { data: contentItem } = useSidebarItemById(sidebarItemId)
-  const { domRuntime, editSession, canEdit } = useCanvasRuntime()
+  const domRuntime = useCanvasDomRuntime()
+  const { editSession, canEdit } = useCanvasInteractionServices()
   const surfaceRef = useRef<HTMLDivElement | null>(null)
   const editableSession = useCanvasEditableNodeSession({
     id,

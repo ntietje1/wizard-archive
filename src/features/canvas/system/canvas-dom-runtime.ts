@@ -3,7 +3,35 @@ import { createCanvasRenderScheduler } from './canvas-render-scheduler'
 import type { CanvasNodeDataPatch } from '../nodes/canvas-node-modules'
 import type { CanvasEngineSnapshot } from './canvas-engine-types'
 
-export function createCanvasDomRuntime() {
+export interface CanvasDomRuntime {
+  registry: ReturnType<typeof createCanvasDomRegistry>
+  registerNodeElement: ReturnType<typeof createCanvasDomRegistry>['registerNode']
+  registerNodeSurfaceElement: ReturnType<typeof createCanvasDomRegistry>['registerNodeSurface']
+  registerStrokeNodePaths: ReturnType<typeof createCanvasDomRegistry>['registerStrokeNodePaths']
+  registerEdgeElement: ReturnType<typeof createCanvasDomRegistry>['registerEdge']
+  registerEdgePaths: ReturnType<typeof createCanvasDomRegistry>['registerEdgePaths']
+  registerViewportElement: ReturnType<typeof createCanvasDomRegistry>['registerViewport']
+  registerViewportOverlayElement: ReturnType<
+    typeof createCanvasDomRegistry
+  >['registerViewportOverlay']
+  getViewportSurfaceBounds: ReturnType<typeof createCanvasDomRegistry>['getViewportSurfaceBounds']
+  scheduleNodeTransforms: ReturnType<typeof createCanvasRenderScheduler>['scheduleNodeTransforms']
+  scheduleEdgePaths: ReturnType<typeof createCanvasRenderScheduler>['scheduleEdgePaths']
+  scheduleNodeDataPatches: (
+    snapshot: CanvasEngineSnapshot,
+    updates: ReadonlyMap<string, CanvasNodeDataPatch>,
+  ) => void
+  scheduleEdgePatches: ReturnType<typeof createCanvasRenderScheduler>['scheduleEdgePatches']
+  scheduleViewportTransform: ReturnType<
+    typeof createCanvasRenderScheduler
+  >['scheduleViewportTransform']
+  scheduleCameraState: ReturnType<typeof createCanvasRenderScheduler>['scheduleCameraState']
+  scheduleCullingDiff: ReturnType<typeof createCanvasRenderScheduler>['scheduleCullingDiff']
+  flush: ReturnType<typeof createCanvasRenderScheduler>['flush']
+  destroy: () => void
+}
+
+export function createCanvasDomRuntime(): CanvasDomRuntime {
   const registry = createCanvasDomRegistry()
   const scheduler = createCanvasRenderScheduler({ domRegistry: registry })
 

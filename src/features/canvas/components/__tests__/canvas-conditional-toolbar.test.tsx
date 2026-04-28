@@ -1,10 +1,12 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasConditionalToolbar } from '../canvas-conditional-toolbar'
 import { CanvasEngineProvider } from '../../react/canvas-engine-context'
-import { createCanvasRuntime } from '../../runtime/__tests__/canvas-runtime-test-utils'
+import {
+  createCanvasRuntime,
+  createCanvasRuntimeEnginePair,
+} from '../../runtime/__tests__/canvas-runtime-test-utils'
 import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime-context'
-import { createCanvasEngine } from '../../system/canvas-engine'
 import type { CanvasEngine } from '../../system/canvas-engine'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import type {
@@ -28,7 +30,7 @@ const colorPickerMock = vi.hoisted(() => ({
   props: [] as Array<Record<string, unknown>>,
 }))
 
-let toolbarEngine: CanvasEngine = createCanvasEngine()
+let toolbarEngine: CanvasEngine | null = null
 
 vi.mock('~/features/shadcn/components/slider', () => ({
   Slider: ({
@@ -77,10 +79,11 @@ vi.mock('~/shared/components/color-picker-popover', () => ({
 
 function emitSelection(nodes: Array<Node>) {
   act(() => {
+    const engine = getToolbarEngine()
     colorPickerMock.props = []
     nodesMock.nodes = nodes
-    toolbarEngine.setDocumentSnapshot({ nodes, edges: edgesMock.edges })
-    toolbarEngine.setSelection({
+    engine.setDocumentSnapshot({ nodes, edges: edgesMock.edges })
+    engine.setSelection({
       nodeIds: new Set(nodes.map((node) => node.id)),
       edgeIds: new Set<string>(),
     })
@@ -96,10 +99,19 @@ function selectionSnapshot(
 
 function emitSelectionState(selection: CanvasSelectionSnapshot) {
   act(() => {
+    const engine = getToolbarEngine()
     colorPickerMock.props = []
-    toolbarEngine.setDocumentSnapshot({ nodes: nodesMock.nodes, edges: edgesMock.edges })
-    toolbarEngine.setSelection(selection)
+    engine.setDocumentSnapshot({ nodes: nodesMock.nodes, edges: edgesMock.edges })
+    engine.setSelection(selection)
   })
+}
+
+function getToolbarEngine() {
+  if (!toolbarEngine) {
+    throw new Error('Canvas conditional toolbar test rendered without an engine')
+  }
+
+  return toolbarEngine
 }
 
 function renderToolbar({
@@ -125,10 +137,15 @@ function renderToolbar({
   transact?: (fn: () => void) => void
   commands?: CanvasCommands
 } = {}) {
-  toolbarEngine = createCanvasEngine()
-  toolbarEngine.setDocumentSnapshot({ nodes: nodesMock.nodes, edges: edgesMock.edges })
+  toolbarEngine?.destroy()
+  const runtimePair = createCanvasRuntimeEnginePair()
+  const currentEngine = runtimePair.canvasEngine
+  toolbarEngine = currentEngine
+  currentEngine.setDocumentSnapshot({ nodes: nodesMock.nodes, edges: edgesMock.edges })
   const baseRuntime = createCanvasRuntime()
   const runtime = createCanvasRuntime({
+    canvasEngine: currentEngine,
+    domRuntime: runtimePair.domRuntime,
     nodeActions: {
       transact,
       onResize: vi.fn(),
@@ -157,7 +174,7 @@ function renderToolbar({
   })
 
   const view = render(
-    <CanvasEngineProvider engine={toolbarEngine}>
+    <CanvasEngineProvider engine={currentEngine}>
       <CanvasRuntimeProvider {...runtime}>
         <CanvasConditionalToolbar canEdit />
       </CanvasRuntimeProvider>
@@ -279,6 +296,11 @@ describe('CanvasConditionalToolbar', () => {
     colorPickerMock.props = []
     nodeIdCounter = 0
     edgeIdCounter = 0
+  })
+
+  afterEach(() => {
+    toolbarEngine?.destroy()
+    toolbarEngine = null
   })
 
   it('shows draw tool properties when nothing is selected', () => {
@@ -1027,13 +1049,13 @@ describe('CanvasConditionalToolbar', () => {
     emitSelection([createNode('stroke', { color: 'var(--foreground)', opacity: 75 })])
 
     act(() => {
-      toolbarEngine.beginSelectionGesture('marquee', 'replace')
+      getToolbarEngine().beginSelectionGesture('marquee', 'replace')
     })
 
     expect(screen.queryByRole('toolbar', { name: 'Canvas conditional toolbar' })).toBeNull()
 
     act(() => {
-      toolbarEngine.cancelSelectionGesture()
+      getToolbarEngine().cancelSelectionGesture()
     })
 
     expect(screen.getByRole('toolbar', { name: 'Canvas conditional toolbar' })).toBeVisible()

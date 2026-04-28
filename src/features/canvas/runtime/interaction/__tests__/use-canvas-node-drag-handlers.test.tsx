@@ -195,6 +195,122 @@ describe('useCanvasNodeDragHandlers', () => {
     )
     expect(suppressNextSurfaceClick).toHaveBeenCalledTimes(1)
   })
+
+  it('ignores move, commit, and cancel events from a different pointer', () => {
+    dragState.currentNodes = [
+      {
+        id: 'dragged',
+        type: 'text',
+        position: { x: 10, y: 10 },
+        width: 40,
+        height: 40,
+        data: {},
+      },
+    ]
+    const viewport = createViewportMock()
+    const canvasEngine = createCanvasEngine()
+    canvasEngine.setDocumentSnapshot({ nodes: dragState.currentNodes })
+    const documentWriter = {
+      setNodePositions: vi.fn(),
+    }
+    const selection = createSelectionMock(new Set(['dragged']))
+    const localDraggingIdsRef = { current: new Set<string>() }
+    const { result } = renderHook(() =>
+      useCanvasNodeDragHandlers({
+        canvasEngine,
+        documentWriter: documentWriter as never,
+        nodesDoc: new Y.Doc(),
+        awareness: {
+          setLocalCursor: vi.fn(),
+          setLocalResizing: vi.fn(),
+          setLocalSelection: vi.fn(),
+        },
+        interaction: { suppressNextSurfaceClick: vi.fn() },
+        getCanvasPosition: viewport.screenToCanvasPosition,
+        getZoom: viewport.getZoom,
+        selection,
+        localDraggingIdsRef,
+        getShiftPressed: () => modifierState.shiftPressed,
+        getPrimaryPressed: () => modifierState.primaryPressed,
+      }),
+    )
+
+    expect(result.current.begin('dragged', createPointerEvent('pointerdown', 1, 100, 100))).toBe(
+      true,
+    )
+    expect(result.current.update(createPointerEvent('pointermove', 2, 140, 140))).toBe(false)
+    expect(result.current.commit(createPointerEvent('pointerup', 2, 140, 140))).toBe(false)
+    expect(result.current.cancel(createPointerEvent('pointercancel', 2, 140, 140))).toBe(false)
+
+    expect(canvasEngine.getSnapshot().nodeLookup.get('dragged')?.node.position).toEqual({
+      x: 10,
+      y: 10,
+    })
+    expect(documentWriter.setNodePositions).not.toHaveBeenCalled()
+
+    expect(result.current.update(createPointerEvent('pointermove', 1, 140, 140))).toBe(true)
+    expect(result.current.commit(createPointerEvent('pointerup', 1, 140, 140))).toBe(true)
+
+    expect(documentWriter.setNodePositions).toHaveBeenCalledWith(
+      new Map([['dragged', { x: 50, y: 50 }]]),
+    )
+  })
+
+  it('cancels active pointer drags without persisting document positions', () => {
+    dragState.currentNodes = [
+      {
+        id: 'dragged',
+        type: 'text',
+        position: { x: 10, y: 10 },
+        width: 40,
+        height: 40,
+        data: {},
+      },
+    ]
+    const viewport = createViewportMock()
+    const canvasEngine = createCanvasEngine()
+    canvasEngine.setDocumentSnapshot({ nodes: dragState.currentNodes })
+    const documentWriter = {
+      setNodePositions: vi.fn(),
+    }
+    const selection = createSelectionMock(new Set(['dragged']))
+    const localDraggingIdsRef = { current: new Set<string>() }
+    const { result } = renderHook(() =>
+      useCanvasNodeDragHandlers({
+        canvasEngine,
+        documentWriter: documentWriter as never,
+        nodesDoc: new Y.Doc(),
+        awareness: {
+          setLocalCursor: vi.fn(),
+          setLocalResizing: vi.fn(),
+          setLocalSelection: vi.fn(),
+        },
+        interaction: { suppressNextSurfaceClick: vi.fn() },
+        getCanvasPosition: viewport.screenToCanvasPosition,
+        getZoom: viewport.getZoom,
+        selection,
+        localDraggingIdsRef,
+        getShiftPressed: () => modifierState.shiftPressed,
+        getPrimaryPressed: () => modifierState.primaryPressed,
+      }),
+    )
+
+    expect(result.current.begin('dragged', createPointerEvent('pointerdown', 1, 100, 100))).toBe(
+      true,
+    )
+    expect(result.current.update(createPointerEvent('pointermove', 1, 140, 140))).toBe(true)
+    expect(localDraggingIdsRef.current.has('dragged')).toBe(true)
+
+    expect(result.current.cancel(createPointerEvent('pointercancel', 1, 140, 140))).toBe(true)
+
+    expect(canvasEngine.getSnapshot().nodeLookup.get('dragged')?.node.position).toEqual({
+      x: 10,
+      y: 10,
+    })
+    expect(canvasEngine.getSnapshot().nodeLookup.get('dragged')?.dragging).toBe(false)
+    expect(localDraggingIdsRef.current.has('dragged')).toBe(false)
+    expect(documentWriter.setNodePositions).not.toHaveBeenCalled()
+  })
 })
 
 function createViewportMock() {
@@ -216,4 +332,14 @@ function createSelectionMock(nodeIds: ReadonlySet<string>) {
     commitGesture: vi.fn(),
     cancelGesture: vi.fn(),
   }
+}
+
+function createPointerEvent(type: string, pointerId: number, clientX: number, clientY: number) {
+  return new PointerEvent(type, {
+    bubbles: true,
+    button: 0,
+    clientX,
+    clientY,
+    pointerId,
+  })
 }

@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { getCanvasNodeBounds } from './canvas-node-bounds'
 import { useCanvasNodeResizeMetadataSnapshot } from './canvas-node-resize-metadata'
-import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
+import {
+  useCanvasDocumentServices,
+  useCanvasInteractionServices,
+} from '../../runtime/providers/canvas-runtime'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 import {
   clearCanvasDragSnapGuides,
@@ -9,10 +12,11 @@ import {
 } from '../../runtime/interaction/canvas-drag-snap-overlay'
 import { useCanvasModifierKeys } from '../../runtime/interaction/use-canvas-modifier-keys'
 import { releasePointerCapture } from '../../tools/shared/tool-module-utils'
-import { createCanvasResizeController } from '../../system/canvas-resize-controller'
-import { useCanvasEngineSelector } from '../../react/use-canvas-engine'
+import { affectsCanvasResizeAxis, resolveCanvasResize } from '../../system/canvas-resize-geometry'
+import { getResizeHandlePoint } from '../../system/canvas-resize-handles'
+import { useCanvasEngine, useCanvasEngineSelector } from '../../react/use-canvas-engine'
 import type { CanvasNodeResizeMetadata } from './canvas-node-resize-metadata'
-import type { CanvasResizeHandlePosition } from '../../system/canvas-resize-controller'
+import type { CanvasResizeHandlePosition } from '../../system/canvas-resize-geometry'
 import type { CanvasNodeResizeUpdate } from '../../tools/canvas-tool-types'
 import type { CanvasEngineSnapshot, CanvasInternalNode } from '../../system/canvas-engine'
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
@@ -72,6 +76,7 @@ interface CanvasSelectionResizeSession {
 
 export interface CanvasSelectionResizeZoneDescriptor {
   cursorClassName: string
+  onKeyboardStart: (target: HTMLButtonElement) => void
   onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => void
   position: CanvasResizeHandlePosition
   style: CSSProperties
@@ -88,24 +93,26 @@ interface ActiveSelectionResize {
   handlePosition: CanvasResizeHandlePosition
   nodes: ReadonlyArray<SelectionResizeNode>
   startBounds: Bounds
+  targetBounds: ReadonlyArray<Bounds>
+  minWidth: number
+  minHeight: number
+  currentPoint: { x: number; y: number } | null
 }
+
+type CanvasResizeSessionResult = ReturnType<typeof resolveCanvasResize> & { final: boolean }
 
 export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
+  const canvasEngine = useCanvasEngine()
   const {
-    canvasEngine,
-    canEdit,
     nodeActions: { onResizeMany, onResizeManyCancel, onResizeManyEnd },
-    viewportController,
-  } = useCanvasRuntime()
+  } = useCanvasDocumentServices()
+  const { canEdit, viewportController } = useCanvasInteractionServices()
   const modifiers = useCanvasModifierKeys()
   const metadataSnapshot = useCanvasNodeResizeMetadataSnapshot()
   const selection = useCanvasEngineSelector((snapshot) =>
     getSelectedResizeNodes(snapshot, metadataSnapshot),
   )
-  const resizeControllerRef = useRef<ReturnType<typeof createCanvasResizeController> | null>(null)
-  resizeControllerRef.current ??= createCanvasResizeController()
-  const resizeController = resizeControllerRef.current
   const resizeTargetRef = useRef<{ pointerId: number; target: Element | null } | null>(null)
   const activeResizeRef = useRef<ActiveSelectionResize | null>(null)
   const removeWindowListenersRef = useRef<() => void>(() => undefined)
@@ -122,7 +129,7 @@ export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
 
   const applyResizeResult = useCallback(
     (
-      result: ReturnType<typeof resizeController.update>,
+      result: CanvasResizeSessionResult | null,
       options: { cancel?: boolean; clearGuides: boolean } = { clearGuides: false },
     ) => {
       const activeResize = activeResizeRef.current
@@ -154,39 +161,70 @@ export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
 
   const updateResizeForSession = useCallback(
     (square: boolean, snap: boolean) => {
-      applyResizeResult(
-        resizeController.refreshModifiers({
+      const activeResize = activeResizeRef.current
+      if (!activeResize?.currentPoint) {
+        return
+      }
+
+      applyResizeResult({
+        ...resolveCanvasResize({
+          handlePosition: activeResize.handlePosition,
+          startBounds: activeResize.startBounds,
+          currentPoint: activeResize.currentPoint,
+          targetBounds: activeResize.targetBounds,
+          minWidth: activeResize.minWidth,
+          minHeight: activeResize.minHeight,
           square,
           snap,
           zoom: viewportControllerRef.current.getZoom(),
         }),
-      )
+        final: false,
+      })
     },
-    [applyResizeResult, resizeController],
+    [applyResizeResult],
   )
 
   const updateResize = useCallback(
     (event: PointerEvent, commit: boolean) => {
+      const resizeTarget = resizeTargetRef.current
+      if (!resizeTarget || event.pointerId !== resizeTarget.pointerId) {
+        return
+      }
+
       const currentPoint = viewportControllerRef.current.screenToCanvasPosition({
         x: event.clientX,
         y: event.clientY,
       })
-      const options = {
-        pointerId: event.pointerId,
-        currentPoint,
-        square: readShiftModifier(modifiers),
-        snap: readPrimaryModifier(modifiers),
-        zoom: viewportControllerRef.current.getZoom(),
+      const activeResize = activeResizeRef.current
+      if (!activeResize) {
+        return
       }
 
+      const square = readShiftModifier(modifiers)
+      const snap = readPrimaryModifier(modifiers)
+      activeResizeRef.current = { ...activeResize, currentPoint }
+
       applyResizeResult(
-        commit ? resizeController.commit(options) : resizeController.update(options),
+        {
+          ...resolveCanvasResize({
+            handlePosition: activeResize.handlePosition,
+            startBounds: activeResize.startBounds,
+            currentPoint,
+            targetBounds: activeResize.targetBounds,
+            minWidth: activeResize.minWidth,
+            minHeight: activeResize.minHeight,
+            square,
+            snap,
+            zoom: viewportControllerRef.current.getZoom(),
+          }),
+          final: commit,
+        },
         {
           clearGuides: commit,
         },
       )
     },
-    [applyResizeResult, modifiers, resizeController],
+    [applyResizeResult, modifiers],
   )
 
   const handlePointerMove = useCallback(
@@ -232,7 +270,11 @@ export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
       if (commit) {
         updateResize(event, true)
       } else {
-        applyResizeResult(resizeController.cancel(), { cancel: true, clearGuides: true })
+        const activeResize = activeResizeRef.current
+        applyResizeResult(
+          activeResize ? { bounds: activeResize.startBounds, guides: [], final: false } : null,
+          { cancel: true, clearGuides: true },
+        )
       }
       releasePointerCapture(resizeTarget.target, resizeTarget.pointerId)
       resizeTargetRef.current = null
@@ -242,7 +284,7 @@ export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
         clearCanvasDragSnapGuides()
       }
     },
-    [applyResizeResult, resizeController, updateResize],
+    [applyResizeResult, updateResize],
   )
 
   const handlePointerUp = useCallback(
@@ -287,9 +329,8 @@ export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
         resizeTargetRef.current = null
       }
       activeResizeRef.current = null
-      resizeController.dispose()
     }
-  }, [removeWindowListeners, resizeController])
+  }, [removeWindowListeners])
 
   if (
     !canEdit ||
@@ -300,10 +341,60 @@ export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
     return null
   }
 
+  const startSelectionResize = (
+    position: CanvasResizeHandlePosition,
+    target: HTMLButtonElement,
+    pointerId: number | null,
+  ) => {
+    const startSelection = getSelectedResizeNodes(
+      canvasEngineRef.current.getSnapshot(),
+      metadataSnapshot,
+    )
+    if (!startSelection) {
+      return
+    }
+
+    const minimumSize = getMinimumSelectionResizeSize(startSelection)
+    if (pointerId !== null) {
+      target.setPointerCapture(pointerId)
+      resizeTargetRef.current = {
+        pointerId,
+        target,
+      }
+    } else {
+      resizeTargetRef.current = null
+    }
+    activeResizeRef.current = {
+      handlePosition: position,
+      nodes: startSelection.nodes,
+      startBounds: startSelection.bounds,
+      minWidth: minimumSize.width,
+      minHeight: minimumSize.height,
+      currentPoint:
+        pointerId === null ? getResizeHandlePoint(startSelection.bounds, position) : null,
+      targetBounds: canvasEngineRef.current
+        .getSnapshot()
+        .nodes.filter(
+          (candidate) =>
+            candidate.type !== 'stroke' && !startSelection.selectedNodeIds.has(candidate.id),
+        )
+        .flatMap((candidate) => {
+          const bounds = getCanvasNodeBounds(candidate)
+          return bounds ? [bounds] : []
+        }),
+    }
+    if (pointerId !== null) {
+      addWindowListeners()
+    }
+  }
+
   const zones = RESIZE_HANDLES.map(({ position, cursorClassName }) => ({
     position,
     cursorClassName,
     style: getResizeZoneStyle(position),
+    onKeyboardStart: (target: HTMLButtonElement) => {
+      startSelectionResize(position, target, null)
+    },
     onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => {
       if (event.button !== 0) {
         return
@@ -311,44 +402,7 @@ export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
 
       event.preventDefault()
       event.stopPropagation()
-
-      const startSelection = getSelectedResizeNodes(
-        canvasEngineRef.current.getSnapshot(),
-        metadataSnapshot,
-      )
-      if (!startSelection) {
-        return
-      }
-
-      const minimumSize = getMinimumSelectionResizeSize(startSelection)
-      event.currentTarget.setPointerCapture(event.pointerId)
-      resizeTargetRef.current = {
-        pointerId: event.pointerId,
-        target: event.currentTarget,
-      }
-      activeResizeRef.current = {
-        handlePosition: position,
-        nodes: startSelection.nodes,
-        startBounds: startSelection.bounds,
-      }
-      resizeController.start({
-        pointerId: event.pointerId,
-        handlePosition: position,
-        startBounds: startSelection.bounds,
-        minWidth: minimumSize.width,
-        minHeight: minimumSize.height,
-        targetBounds: canvasEngineRef.current
-          .getSnapshot()
-          .nodes.filter(
-            (candidate) =>
-              candidate.type !== 'stroke' && !startSelection.selectedNodeIds.has(candidate.id),
-          )
-          .flatMap((candidate) => {
-            const bounds = getCanvasNodeBounds(candidate)
-            return bounds ? [bounds] : []
-          }),
-      })
-      addWindowListeners()
+      startSelectionResize(position, event.currentTarget, event.pointerId)
     },
   }))
 
@@ -382,7 +436,7 @@ export function resolveSelectionResizeUpdates({
 
     if (metadata.lockedAspectRatio) {
       const scale = getLockedNodeScale(handlePosition, scaleX, scaleY)
-      if (affectsResizeAxis(handlePosition, 'x')) {
+      if (affectsCanvasResizeAxis(handlePosition, 'x')) {
         width = Math.max(
           bounds.width * scale,
           metadata.minWidth,
@@ -532,23 +586,15 @@ function getLockedNodeScale(
   scaleX: number,
   scaleY: number,
 ) {
-  if (!affectsResizeAxis(handlePosition, 'x')) {
+  if (!affectsCanvasResizeAxis(handlePosition, 'x')) {
     return scaleY
   }
 
-  if (!affectsResizeAxis(handlePosition, 'y')) {
+  if (!affectsCanvasResizeAxis(handlePosition, 'y')) {
     return scaleX
   }
 
   return Math.abs(scaleX - 1) >= Math.abs(scaleY - 1) ? scaleX : scaleY
-}
-
-function affectsResizeAxis(handlePosition: CanvasResizeHandlePosition, axis: 'x' | 'y') {
-  if (axis === 'x') {
-    return handlePosition !== 'top' && handlePosition !== 'bottom'
-  }
-
-  return handlePosition !== 'left' && handlePosition !== 'right'
 }
 
 function getResizeZoneStyle(position: CanvasResizeHandlePosition): CSSProperties {

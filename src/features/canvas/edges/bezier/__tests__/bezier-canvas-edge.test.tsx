@@ -4,11 +4,10 @@ import { describe, expect, it } from 'vitest'
 import { CanvasRenderModeProvider } from '../../../runtime/providers/canvas-render-mode-context'
 import { CanvasRuntimeProvider } from '../../../runtime/providers/canvas-runtime-context'
 import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
+import { createCanvasDomRuntime } from '../../../system/canvas-dom-runtime'
 import { createCanvasEngine } from '../../../system/canvas-engine'
-import {
-  READ_ONLY_CANVAS_RUNTIME,
-  createCanvasDomRuntimeAdapter,
-} from '../../../runtime/providers/canvas-runtime'
+import { createCanvasRuntime } from '../../../runtime/__tests__/canvas-runtime-test-utils'
+import { resolveCanvasScreenMinimumStrokeWidthCss as screenMinimumStrokeWidthCss } from '../../../utils/canvas-screen-stroke-width'
 import type { CanvasEdgeRendererProps } from '../../canvas-edge-types'
 import {
   DEFAULT_CANVAS_EDGE_OPACITY,
@@ -32,7 +31,7 @@ describe('BezierCanvasEdge', () => {
     expect(getPrimaryPath()).toHaveStyle({
       opacity: String(DEFAULT_CANVAS_EDGE_OPACITY),
       stroke: 'var(--foreground)',
-      strokeWidth: String(DEFAULT_CANVAS_EDGE_STROKE_WIDTH),
+      strokeWidth: String(screenMinimumStrokeWidthCss(DEFAULT_CANVAS_EDGE_STROKE_WIDTH)),
       strokeLinecap: 'square',
       strokeLinejoin: 'round',
     })
@@ -55,7 +54,7 @@ describe('BezierCanvasEdge', () => {
     expect(getPrimaryPath()).toHaveStyle({
       opacity: String(DEFAULT_CANVAS_EDGE_OPACITY),
       stroke: 'var(--foreground)',
-      strokeWidth: String(DEFAULT_CANVAS_EDGE_STROKE_WIDTH),
+      strokeWidth: String(screenMinimumStrokeWidthCss(DEFAULT_CANVAS_EDGE_STROKE_WIDTH)),
       strokeLinecap: 'square',
       strokeLinejoin: 'round',
     })
@@ -71,7 +70,7 @@ describe('BezierCanvasEdge', () => {
     expect(getPrimaryPath()).toHaveStyle({
       opacity: String(DEFAULT_CANVAS_EDGE_OPACITY),
       stroke: 'var(--foreground)',
-      strokeWidth: String(DEFAULT_CANVAS_EDGE_STROKE_WIDTH),
+      strokeWidth: String(screenMinimumStrokeWidthCss(DEFAULT_CANVAS_EDGE_STROKE_WIDTH)),
       strokeLinecap: 'square',
       strokeLinejoin: 'round',
     })
@@ -97,7 +96,7 @@ describe('BezierCanvasEdge', () => {
 
     expect(getPrimaryPath()).toHaveStyle({
       stroke: 'var(--t-red)',
-      strokeWidth: '8',
+      strokeWidth: String(screenMinimumStrokeWidthCss(8)),
       strokeLinecap: 'square',
       strokeLinejoin: 'round',
     })
@@ -121,7 +120,7 @@ describe('BezierCanvasEdge', () => {
     expect(screen.getByTestId('canvas-edge')).toHaveAttribute('data-edge-pending-selected', 'true')
     expect(getPrimaryPath()).toHaveStyle({
       stroke: 'var(--foreground)',
-      strokeWidth: String(DEFAULT_CANVAS_EDGE_STROKE_WIDTH),
+      strokeWidth: String(screenMinimumStrokeWidthCss(DEFAULT_CANVAS_EDGE_STROKE_WIDTH)),
       opacity: String(PENDING_PREVIEW_EDGE_OPACITY),
       strokeLinecap: 'square',
       strokeLinejoin: 'round',
@@ -145,7 +144,7 @@ describe('BezierCanvasEdge', () => {
     expect(getPrimaryPath()).toHaveStyle({
       opacity: String(DEFAULT_CANVAS_EDGE_OPACITY),
       stroke: 'var(--foreground)',
-      strokeWidth: String(DEFAULT_CANVAS_EDGE_STROKE_WIDTH),
+      strokeWidth: String(screenMinimumStrokeWidthCss(DEFAULT_CANVAS_EDGE_STROKE_WIDTH)),
       strokeLinecap: 'square',
       strokeLinejoin: 'round',
     })
@@ -240,7 +239,8 @@ function renderEdge(
     selection?: { nodeIds: ReadonlySet<string>; edgeIds: ReadonlySet<string> }
   } = {},
 ) {
-  const engine = createCanvasEngine()
+  const domRuntime = createCanvasDomRuntime()
+  const engine = createCanvasEngine({ domRuntime })
   engine.setDocumentSnapshot({ nodes })
   engine.setSelection(selection)
   if (pendingPreview) {
@@ -250,9 +250,7 @@ function renderEdge(
   return render(
     <CanvasEngineProvider engine={engine}>
       <CanvasRuntimeProvider
-        {...READ_ONLY_CANVAS_RUNTIME}
-        canvasEngine={engine}
-        domRuntime={createCanvasDomRuntimeAdapter(engine)}
+        {...createCanvasRuntime({ canEdit: false, canvasEngine: engine, domRuntime })}
       >
         <svg>{ui}</svg>
       </CanvasRuntimeProvider>

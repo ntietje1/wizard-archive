@@ -2,14 +2,18 @@ import { Maximize2, Minus, Plus, Redo2, Undo2 } from 'lucide-react'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import { canvasToolbarTools } from '../tools/canvas-tool-modules'
 import { Button } from '~/features/shadcn/components/button'
-import { useCanvasRuntime } from '../runtime/providers/canvas-runtime'
+import {
+  useCanvasDocumentServices,
+  useCanvasInteractionServices,
+} from '../runtime/providers/canvas-runtime'
 
 interface CanvasToolbarProps {
   canEdit: boolean
 }
 
 export function CanvasToolbar({ canEdit }: CanvasToolbarProps) {
-  const { history, viewportController } = useCanvasRuntime()
+  const { history } = useCanvasDocumentServices()
+  const { viewportController } = useCanvasInteractionServices()
 
   const activeTool = useCanvasToolStore((s) => s.activeTool)
   const setActiveTool = useCanvasToolStore((s) => s.setActiveTool)

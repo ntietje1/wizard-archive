@@ -12,6 +12,7 @@ import type * as Y from 'yjs'
 
 const PERFORMANCE_STROKE_WIDTH = 160
 const PERFORMANCE_STROKE_AMPLITUDE = 28
+const COORDINATE_PROBE_Z_INDEX = 10_000
 
 export function useCanvasPerformanceProbeRuntime({
   canvasEngine,
@@ -63,17 +64,37 @@ export function useCanvasPerformanceProbeRuntime({
                   x: start.x + column * spacingX,
                   y: start.y + row * spacingY,
                 },
+                data: {
+                  content: [
+                    {
+                      type: 'paragraph',
+                      content: [{ type: 'text', text: `Perf node ${index}`, styles: {} }],
+                    },
+                  ],
+                },
               })
               const node = {
                 ...placement.node,
                 id: `perf-node-${index}`,
-                draggable: false,
-                selected: false,
                 zIndex: index,
               }
               nodesMap.set(node.id, node)
             }
           })
+        },
+        seedCoordinateProbeNode: ({ id, start = { x: 0, y: 0 } }) => {
+          doc.transact(() => {
+            const placement = createCanvasNodePlacement('embed', {
+              position: start,
+            })
+            const node = {
+              ...placement.node,
+              id,
+              zIndex: COORDINATE_PROBE_Z_INDEX,
+            }
+            nodesMap.set(node.id, node)
+          })
+          selection.setSelection({ nodeIds: new Set([id]), edgeIds: new Set() })
         },
         seedStrokeNodes: ({
           count,
@@ -107,8 +128,6 @@ export function useCanvasPerformanceProbeRuntime({
                   opacity: 100,
                   bounds,
                 },
-                draggable: false,
-                selected: false,
                 zIndex: index,
               })
             }

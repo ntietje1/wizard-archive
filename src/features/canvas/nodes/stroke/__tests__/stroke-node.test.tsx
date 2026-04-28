@@ -4,9 +4,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
 import { createCanvasEngine } from '../../../system/canvas-engine'
 import type { CanvasEngine } from '../../../system/canvas-engine'
+import { getCachedStrokeDetailPath } from '../stroke-path-cache'
 import { StrokeNode } from '../stroke-node'
 
 let strokeEngine!: CanvasEngine
+const strokeNodeMocks = vi.hoisted(() => ({
+  registerStrokeNodePaths: vi.fn(() => vi.fn()),
+  zoom: 1,
+}))
 
 vi.mock('../../shared/resizable-node-wrapper', () => ({
   ResizableNodeWrapper: ({ children, chrome }: { children: ReactNode; chrome?: ReactNode }) => (
@@ -18,13 +23,12 @@ vi.mock('../../shared/resizable-node-wrapper', () => ({
 }))
 
 vi.mock('../../../runtime/providers/canvas-runtime', () => ({
-  useCanvasRuntime: () => ({
-    domRuntime: {
-      registerStrokeNodePaths: vi.fn(() => vi.fn()),
-    },
-    canvasEngine: strokeEngine,
+  useCanvasDomRuntime: () => ({
+    registerStrokeNodePaths: strokeNodeMocks.registerStrokeNodePaths,
+  }),
+  useCanvasInteractionServices: () => ({
     viewportController: {
-      getZoom: () => 1,
+      getZoom: () => strokeNodeMocks.zoom,
     },
   }),
 }))
@@ -32,6 +36,8 @@ vi.mock('../../../runtime/providers/canvas-runtime', () => ({
 describe('StrokeNode', () => {
   beforeEach(() => {
     strokeEngine = createCanvasEngine()
+    strokeNodeMocks.registerStrokeNodePaths.mockClear()
+    strokeNodeMocks.zoom = 1
   })
 
   afterEach(() => {
@@ -112,6 +118,23 @@ describe('StrokeNode', () => {
     expect(svg?.getAttribute('viewBox')).toBe('0 0 100 20')
     expect(svg?.querySelector('.canvas-stroke-detail-path')).toBeInTheDocument()
     expect(svg?.querySelector('.canvas-stroke-highlight-path')).toBeInTheDocument()
+  })
+
+  it('applies the screen-pixel minimum at low zoom without mutating authored size', () => {
+    strokeNodeMocks.zoom = 0.3
+    const props = setupStrokeNodeProps({ selected: false, size: 1 })
+    const { container } = renderStroke(<StrokeNode {...props} />)
+
+    const detailPath = container.querySelector('.canvas-stroke-detail-path')
+    expect(detailPath).toHaveAttribute(
+      'd',
+      getCachedStrokeDetailPath(props.id, props.data, 1 / strokeNodeMocks.zoom),
+    )
+    expect(props.data.size).toBe(1)
+    expect(strokeNodeMocks.registerStrokeNodePaths).toHaveBeenCalledWith(
+      props.id,
+      expect.objectContaining({ data: props.data }),
+    )
   })
 })
 

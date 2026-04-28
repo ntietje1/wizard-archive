@@ -6,10 +6,11 @@ import {
   PENDING_PREVIEW_EDGE_OPACITY,
 } from './canvas-edge-style'
 import { useCanvasEdgeVisualSelection } from './use-canvas-edge-visual-selection'
+import { resolveCanvasScreenMinimumStrokeWidthCss } from '../../utils/canvas-screen-stroke-width'
 import type { CanvasEdgeRendererProps } from '../canvas-edge-types'
 import type { CSSProperties } from 'react'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
-import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
+import { useCanvasDomRuntime } from '../../runtime/providers/canvas-runtime'
 
 const CANVAS_EDGE_PATH_STYLE: CSSProperties = {
   strokeLinecap: 'square',
@@ -38,7 +39,7 @@ export function CanvasPathEdge({
   geometry: CanvasPathEdgeGeometry | null
 }) {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
-  const { domRuntime } = useCanvasRuntime()
+  const domRuntime = useCanvasDomRuntime()
   const pathRef = useRef<SVGPathElement | null>(null)
   const highlightPathRef = useRef<SVGPathElement | null>(null)
   const interactionPathRef = useRef<SVGPathElement | null>(null)
@@ -69,13 +70,14 @@ export function CanvasPathEdge({
         ? PENDING_PREVIEW_EDGE_OPACITY
         : normalizedStyle.opacity,
   }
+  const selectedHighlightStrokeWidth = Math.max(
+    normalizedStyle.strokeWidth * SELECTED_EDGE_HIGHLIGHT_SCALE,
+    SELECTED_EDGE_HIGHLIGHT_WIDTH_MIN,
+  )
   const selectedHighlightStyle = hasSelectedHighlight
     ? {
         ...SELECTED_EDGE_HIGHLIGHT_STYLE,
-        strokeWidth: Math.max(
-          normalizedStyle.strokeWidth * SELECTED_EDGE_HIGHLIGHT_SCALE,
-          SELECTED_EDGE_HIGHLIGHT_WIDTH_MIN,
-        ),
+        strokeWidth: resolveCanvasScreenMinimumStrokeWidthCss(selectedHighlightStrokeWidth),
       }
     : null
 
@@ -95,6 +97,7 @@ export function CanvasPathEdge({
         d={geometry.path}
         fill="none"
         style={style}
+        data-canvas-authored-stroke-width={normalizedStyle.strokeWidth}
         data-testid="canvas-edge-primary-path"
       />
       {interactiveRenderMode ? (
@@ -113,6 +116,7 @@ export function CanvasPathEdge({
           ref={highlightPathRef}
           d={geometry.path}
           style={selectedHighlightStyle}
+          data-canvas-authored-stroke-width={selectedHighlightStrokeWidth}
           data-testid="canvas-edge-selection-highlight"
         />
       ) : null}

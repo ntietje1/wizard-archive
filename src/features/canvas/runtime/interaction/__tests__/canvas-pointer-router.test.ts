@@ -22,13 +22,13 @@ describe('classifyCanvasPointerTarget', () => {
     const { pane, viewport, node, edge, handle, resizeZone, input } = createCanvasDom()
     const outside = document.createElement('div')
 
-    expect(classifyCanvasPointerTarget(viewport, pane)).toBe('pane')
-    expect(classifyCanvasPointerTarget(node, pane)).toBe('node')
-    expect(classifyCanvasPointerTarget(edge, pane)).toBe('edge')
-    expect(classifyCanvasPointerTarget(handle, pane)).toBe('connection-handle')
-    expect(classifyCanvasPointerTarget(resizeZone, pane)).toBe('resize-handle')
-    expect(classifyCanvasPointerTarget(input, pane)).toBe('blocked-interactive-child')
-    expect(classifyCanvasPointerTarget(outside, pane)).toBe('outside')
+    expect(classifyCanvasPointerTarget(viewport, pane)).toEqual({ kind: 'pane' })
+    expect(classifyCanvasPointerTarget(node, pane)).toEqual({ kind: 'node', nodeId: 'node-1' })
+    expect(classifyCanvasPointerTarget(edge, pane)).toEqual({ kind: 'edge' })
+    expect(classifyCanvasPointerTarget(handle, pane)).toEqual({ kind: 'connection-handle' })
+    expect(classifyCanvasPointerTarget(resizeZone, pane)).toEqual({ kind: 'resize-handle' })
+    expect(classifyCanvasPointerTarget(input, pane)).toEqual({ kind: 'blocked-interactive-child' })
+    expect(classifyCanvasPointerTarget(outside, pane)).toEqual({ kind: 'outside' })
   })
 })
 
@@ -247,6 +247,44 @@ describe('createCanvasPointerRouter', () => {
     detach()
   })
 
+  it('routes select-tool node drags through the node drag controller', () => {
+    const { surface, node } = createCanvasDom()
+    const nodeDragController = createNodeDragControllerMock()
+    const router = createCanvasPointerRouter()
+    router.setOptions(createRouterOptions({ activeTool: 'select', nodeDragController }))
+    const detach = router.attach(surface)
+
+    node.dispatchEvent(createPointerEvent('pointerdown', { pointerId: 7 }))
+    window.dispatchEvent(createPointerEvent('pointermove', { clientX: 10, pointerId: 8 }))
+    window.dispatchEvent(createPointerEvent('pointerup', { clientX: 10, pointerId: 8 }))
+    window.dispatchEvent(createPointerEvent('pointermove', { clientX: 20, pointerId: 7 }))
+    window.dispatchEvent(createPointerEvent('pointerup', { clientX: 20, pointerId: 7 }))
+
+    expect(nodeDragController.begin).toHaveBeenCalledWith('node-1', expect.any(Event))
+    expect(nodeDragController.update).toHaveBeenCalledTimes(1)
+    expect(nodeDragController.commit).toHaveBeenCalledTimes(1)
+    expect(nodeDragController.cancel).not.toHaveBeenCalled()
+
+    detach()
+  })
+
+  it('cancels select-tool node drags without committing them', () => {
+    const { surface, node } = createCanvasDom()
+    const nodeDragController = createNodeDragControllerMock()
+    const router = createCanvasPointerRouter()
+    router.setOptions(createRouterOptions({ activeTool: 'select', nodeDragController }))
+    const detach = router.attach(surface)
+
+    node.dispatchEvent(createPointerEvent('pointerdown', { pointerId: 7 }))
+    window.dispatchEvent(createPointerEvent('pointercancel', { pointerId: 7 }))
+
+    expect(nodeDragController.begin).toHaveBeenCalledTimes(1)
+    expect(nodeDragController.cancel).toHaveBeenCalledTimes(1)
+    expect(nodeDragController.commit).not.toHaveBeenCalled()
+
+    detach()
+  })
+
   function flushAnimationFrame() {
     const callbacks = Array.from(rafCallbacks.values())
     rafCallbacks.clear()
@@ -260,6 +298,7 @@ describe('createCanvasPointerRouter', () => {
 function createRouterOptions({
   activeTool,
   activeToolHandlers = {},
+  nodeDragController = null,
   selection = createSelectionMock(),
   nodes = [],
   edges = [],
@@ -267,6 +306,7 @@ function createRouterOptions({
 }: {
   activeTool: CanvasToolId
   activeToolHandlers?: CanvasToolHandlers
+  nodeDragController?: CanvasPointerRouterOptions['nodeDragController']
   selection?: ReturnType<typeof createSelectionMock>
   nodes?: Array<Node>
   edges?: Array<Edge>
@@ -281,6 +321,7 @@ function createRouterOptions({
     } as unknown as CanvasEngine,
     enabled: true,
     getShiftPressed: () => false,
+    nodeDragController,
     selection,
     viewportController: {
       getZoom: () => 1,
@@ -315,6 +356,7 @@ function createCanvasDom() {
   edge.dataset.canvasEdgeId = 'edge-1'
   const node = document.createElement('div')
   node.className = 'canvas-node-shell'
+  node.dataset.nodeId = 'node-1'
   const text = document.createElement('p')
   text.textContent = 'node text'
   const handle = document.createElement('button')
@@ -340,6 +382,19 @@ function createCanvasDom() {
     surface,
     text,
     viewport,
+  }
+}
+
+function createNodeDragControllerMock(): NonNullable<
+  CanvasPointerRouterOptions['nodeDragController']
+> {
+  return {
+    begin: vi.fn(() => true),
+    update: vi.fn(() => true),
+    commit: vi.fn(() => true),
+    cancel: vi.fn(() => true),
+    profileDrag: vi.fn(),
+    destroy: vi.fn(),
   }
 }
 

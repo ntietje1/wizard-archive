@@ -40,6 +40,8 @@ test.describe.serial('canvas selection', () => {
     await createCanvas(page, canvasName)
 
     await seedSelectionCanvas(page)
+    await page.reload()
+    await expect(getCanvasNodesByType(page, 'text')).toHaveCount(2, { timeout: 10000 })
 
     await page.close()
     await context.close()
@@ -70,9 +72,10 @@ test.describe.serial('canvas selection', () => {
     await clickCanvasNode(page, getCanvasNodesByType(page, 'text').first())
     await expect.poll(() => getCommittedSelectedCanvasNodes(page).count()).toBe(1)
 
-    await page.keyboard.down(mod)
-    await clickCanvasNode(page, getCanvasNodesByType(page, 'text').nth(1))
-    await page.keyboard.up(mod)
+    await clickCanvasNode(page, getCanvasNodesByType(page, 'text').nth(1), {
+      modifiers: [mod],
+      positionRatio: { xRatio: 0.9, yRatio: 0.5 },
+    })
     await expect.poll(() => getCommittedSelectedCanvasNodes(page).count()).toBe(2)
 
     await clickCanvasAt(page, { x: 720, y: 520 })
@@ -87,8 +90,8 @@ test.describe.serial('canvas selection', () => {
     await selectCanvasTool(page, 'Pointer')
     await clickCanvasAt(page, { x: 720, y: 520 })
 
-    await startCanvasPointerGesture(page, { x: 80, y: 60 })
-    await moveCanvasPointer(page, { x: 420, y: 250 })
+    await startCanvasPointerGesture(page, { x: 20, y: 320 })
+    await moveCanvasPointer(page, { x: 850, y: 20 })
 
     const pendingStatus = getCanvasPendingSelectionStatus(page)
     await expect(getCanvasMarqueeOverlay(page)).toBeVisible()
@@ -123,11 +126,11 @@ test.describe.serial('canvas selection', () => {
     await openSelectionCanvas(page)
 
     await selectCanvasTool(page, 'Lasso select')
-    await startCanvasPointerGesture(page, { x: 60, y: 60 })
-    await moveCanvasPointer(page, { x: 260, y: 65 })
-    await moveCanvasPointer(page, { x: 260, y: 220 })
-    await moveCanvasPointer(page, { x: 50, y: 225 })
-    await moveCanvasPointer(page, { x: 40, y: 75 })
+    await startCanvasPointerGesture(page, { x: 20, y: 300 })
+    await moveCanvasPointer(page, { x: 300, y: 300 })
+    await moveCanvasPointer(page, { x: 300, y: 20 })
+    await moveCanvasPointer(page, { x: 20, y: 20 })
+    await moveCanvasPointer(page, { x: 20, y: 300 })
     await endCanvasPointerGesture(page)
 
     await expect.poll(() => getCommittedSelectedCanvasNodes(page).count()).toBe(1)
@@ -142,8 +145,8 @@ test.describe.serial('canvas selection', () => {
 
     await selectCanvasTool(page, 'Lasso select')
     await lassoOnCanvas(page, [
-      { x: 600, y: 80 },
-      { x: 620, y: 90 },
+      { x: 850, y: 320 },
+      { x: 870, y: 330 },
     ])
     await expect.poll(() => getCommittedSelectedCanvasNodes(page).count()).toBe(0)
   })
@@ -186,13 +189,13 @@ async function openSelectionCanvas(page: Page) {
 async function seedSelectionCanvas(page: Page) {
   await selectCanvasTool(page, 'Text')
   await clickCanvasAt(page, { x: 120, y: 120 })
-  await page.locator(TEXT_CONTENT_LOCATOR).fill('Alpha')
+  await page.locator(TEXT_CONTENT_LOCATOR).last().fill('Alpha')
   await clickCanvasAt(page, { x: 720, y: 520 })
   await expect.poll(() => getCanvasNodesByType(page, 'text').count()).toBe(1)
 
   await selectCanvasTool(page, 'Text')
-  await clickCanvasAt(page, { x: 320, y: 130 })
-  await page.locator(TEXT_CONTENT_LOCATOR).fill('Beta')
+  await clickCanvasAt(page, { x: 620, y: 130 })
+  await page.locator(TEXT_CONTENT_LOCATOR).last().fill('Beta')
   await clickCanvasAt(page, { x: 720, y: 520 })
   await expect.poll(() => getCanvasNodesByType(page, 'text').count()).toBe(2)
 }

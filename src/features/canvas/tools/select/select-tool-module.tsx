@@ -21,10 +21,16 @@ export const selectToolSpec: CanvasToolSpec<'select'> = {
   },
   createHandlers: (services) => ({
     onNodeClick: (event, node) => {
-      services.selection.toggleNode(node.id, isPrimarySelectionModifier(event))
+      services.selection.toggleNode(
+        node.id,
+        isPrimarySelectionModifier(event) || services.modifiers.getPrimaryPressed(),
+      )
     },
     onEdgeClick: (event, edge) => {
-      services.selection.toggleEdge(edge.id, isPrimarySelectionModifier(event))
+      services.selection.toggleEdge(
+        edge.id,
+        isPrimarySelectionModifier(event) || services.modifiers.getPrimaryPressed(),
+      )
     },
   }),
 }

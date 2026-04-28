@@ -46,7 +46,7 @@ const runtimeMock = vi.hoisted(() => ({
     setNodePositions: vi.fn(),
   },
   domRuntime: {
-    flushRenderScheduler: vi.fn(),
+    flush: vi.fn(),
     registerEdgeElement: vi.fn(() => vi.fn()),
     registerEdgePaths: vi.fn(() => vi.fn()),
     registerNodeElement: vi.fn(() => vi.fn()),
@@ -54,9 +54,13 @@ const runtimeMock = vi.hoisted(() => ({
     registerStrokeNodePaths: vi.fn(() => vi.fn()),
     registerViewportElement: vi.fn(() => vi.fn()),
     registerViewportOverlayElement: vi.fn(() => vi.fn()),
+    getViewportSurfaceBounds: vi.fn(() => null),
     scheduleCameraState: vi.fn(),
+    scheduleCullingDiff: vi.fn(),
     scheduleEdgePatches: vi.fn(),
+    scheduleEdgePaths: vi.fn(),
     scheduleNodeDataPatches: vi.fn(),
+    scheduleNodeTransforms: vi.fn(),
     scheduleViewportTransform: vi.fn(),
   },
   dropTarget: {
@@ -90,7 +94,6 @@ const runtimeMock = vi.hoisted(() => ({
     onResizeManyCancel: vi.fn(),
     onResizeManyEnd: vi.fn(),
   },
-  nodeDragController: null,
   viewportController: {
     getViewport: vi.fn(() => ({ x: 0, y: 0, zoom: 1 })),
     getZoom: vi.fn(() => 1),

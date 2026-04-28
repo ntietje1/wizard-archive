@@ -1,6 +1,7 @@
 import { buildConnectionDraftGeometry } from './canvas-connection-layer-geometry'
-import type { CanvasConnectionDraft } from './canvas-connection-layer-geometry'
 import { clampCanvasEdgeStrokeWidth } from '../edges/shared/canvas-edge-style'
+import { resolveCanvasScreenMinimumStrokeWidthCss } from '../utils/canvas-screen-stroke-width'
+import type { CanvasConnectionDraft } from '../runtime/interaction/canvas-connection-gesture-types'
 import { useCanvasEngineSelector } from '../react/use-canvas-engine'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import type { CanvasInternalNode } from '../system/canvas-engine'
@@ -33,6 +34,7 @@ export function CanvasConnectionLayer({ draft }: { draft: CanvasConnectionDraft 
   if (!geometry) {
     return null
   }
+  const strokeWidth = clampCanvasEdgeStrokeWidth(strokeSize)
 
   return (
     <path
@@ -40,9 +42,10 @@ export function CanvasConnectionLayer({ draft }: { draft: CanvasConnectionDraft 
       style={{
         ...CONNECTION_PREVIEW_PATH_STYLE,
         stroke: strokeColor,
-        strokeWidth: clampCanvasEdgeStrokeWidth(strokeSize),
+        strokeWidth: resolveCanvasScreenMinimumStrokeWidthCss(strokeWidth),
         opacity: strokeOpacity / 100,
       }}
+      data-canvas-authored-stroke-width={strokeWidth}
       data-testid="canvas-connection-preview"
       data-edge-type={edgeType}
       data-snap-target={draft.snapTarget ? 'true' : 'false'}

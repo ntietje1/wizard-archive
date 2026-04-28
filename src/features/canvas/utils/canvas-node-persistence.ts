@@ -3,7 +3,7 @@ import type { CanvasDocumentNode } from '~/features/canvas/types/canvas-domain-t
 export function stripEphemeralCanvasNodeState(node: CanvasDocumentNode): CanvasDocumentNode
 export function stripEphemeralCanvasNodeState(node: unknown): unknown
 export function stripEphemeralCanvasNodeState(node: unknown): unknown {
-  if (!node || typeof node !== 'object') {
+  if (!node || typeof node !== 'object' || Array.isArray(node)) {
     return node
   }
 

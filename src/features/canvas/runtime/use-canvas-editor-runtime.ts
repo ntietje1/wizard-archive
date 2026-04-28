@@ -1,6 +1,6 @@
 import type { Id } from 'convex/_generated/dataModel'
 import { useEffect, useMemo, useRef } from 'react'
-import type { MouseEvent as ReactMouseEvent } from 'react'
+import type { MouseEvent as ReactMouseEvent, RefObject } from 'react'
 import type * as Y from 'yjs'
 import { getMeasuredCanvasNodesFromEngineSnapshot } from './document/canvas-measured-nodes'
 import { useCanvasCommands } from './document/use-canvas-commands'
@@ -24,15 +24,16 @@ import {
 import { useCanvasPerformanceProbeRuntime } from './performance/use-canvas-performance-probe-runtime'
 import { useCanvasSelectionController } from './selection/use-canvas-selection-actions'
 import { useCanvasSessionState } from './session/use-canvas-session-state'
-import { createCanvasDomRuntimeAdapter } from './providers/canvas-runtime'
 import { clampCanvasEdgeStrokeWidth } from '../edges/shared/canvas-edge-style'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
+import { createCanvasDomRuntime } from '../system/canvas-dom-runtime'
 import { createCanvasEngine } from '../system/canvas-engine'
 import { createCanvasViewportController } from '../system/canvas-viewport-controller'
 import { canvasToolSpecs } from '../tools/canvas-tool-modules'
 import type {
   CanvasEdgeCreationDefaults,
   CanvasSelectionSnapshot,
+  CanvasToolHandlers,
   CanvasToolId,
   CanvasToolRuntime,
 } from '../tools/canvas-tool-types'
@@ -69,88 +70,16 @@ export function useCanvasEditorRuntime({
   initialViewport,
 }: UseCanvasEditorRuntimeOptions) {
   const session = useCanvasSessionState({ provider })
-  const activeTool = useCanvasToolStore((state) => state.activeTool)
-  const canvasEngineRef = useRef<ReturnType<typeof createCanvasEngine> | null>(null)
-  canvasEngineRef.current ??= createCanvasEngine()
-  const canvasEngine = canvasEngineRef.current
-  const canvasSurfaceRef = useRef<HTMLDivElement>(null)
-  const viewportControllerRef = useRef<ReturnType<typeof createCanvasViewportController> | null>(
-    null,
-  )
-  viewportControllerRef.current ??= createCanvasViewportController({
-    canvasEngine,
-    getSurfaceElement: () => canvasSurfaceRef.current,
+  const { canvasEngine, canvasSurfaceRef, domRuntime, viewportController } = useCanvasCoreServices({
+    canvasId,
+    initialViewport,
   })
-  const viewportController = viewportControllerRef.current
-  const pointerRouter = useCanvasPointerRouterController()
-  const localDraggingIdsRef = useRef(new Set<string>())
-  const previousActiveToolRef = useRef<CanvasToolId | null>(null)
-  const historySelectionChangeRef = useRef<(selection: CanvasSelectionSnapshot) => void>(
-    () => undefined,
-  )
-  const selection = useCanvasSelectionController({
+  const { historySelectionChangeRef, selection } = useCanvasSelectionServices({
     canvasEngine,
-    onSelectionChange: (nextSelection) => {
-      historySelectionChangeRef.current(nextSelection)
-    },
+    canvasId,
     setLocalSelection: session.awareness.core.setLocalSelection,
   })
-  useEffect(() => {
-    return () => {
-      canvasEngine.clearSelection()
-    }
-  }, [canvasEngine, canvasId])
-
-  useEffect(() => () => canvasEngine.destroy(), [canvasEngine])
-  useEffect(() => () => viewportController.destroy(), [viewportController])
-
-  useEffect(() => {
-    viewportController.syncFromDocumentOrAdapter({
-      x: initialViewport.x,
-      y: initialViewport.y,
-      zoom: initialViewport.zoom,
-    })
-  }, [initialViewport.x, initialViewport.y, initialViewport.zoom, viewportController])
-
-  useEffect(
-    () =>
-      createCanvasViewportPersistence({
-        canvasEngine,
-        canvasId,
-        initialViewport: {
-          x: initialViewport.x,
-          y: initialViewport.y,
-          zoom: initialViewport.zoom,
-        },
-      }),
-    [canvasEngine, canvasId, initialViewport.x, initialViewport.y, initialViewport.zoom],
-  )
-
-  useEffect(() => {
-    return () => {
-      const activeToolSpec = canvasToolSpecs[activeTool]
-      activeToolSpec.localOverlay?.clear()
-      activeToolSpec.awareness?.clear?.(session.awareness.presence)
-    }
-  }, [activeTool, session.awareness.presence])
-
-  useEffect(() => {
-    const previousTool = previousActiveToolRef.current
-    previousActiveToolRef.current = activeTool
-
-    if (previousTool === null || previousTool === activeTool) {
-      return
-    }
-
-    if (!canEdit || !SELECTION_INCOMPATIBLE_TOOLS.has(activeTool)) {
-      return
-    }
-
-    selection.clearSelection()
-    session.editSession.setEditingEmbedId(null)
-    session.editSession.setPendingEditNodeId(null)
-    session.editSession.setPendingEditNodePoint(null)
-  }, [activeTool, canEdit, selection, session.editSession])
+  const localDraggingIdsRef = useRef(new Set<string>())
 
   useYjsPreviewUpload({
     itemId: canvasId,
@@ -159,16 +88,19 @@ export function useCanvasEditorRuntime({
     resolveElement: (container) => container,
   })
 
-  const documentWriter = useMemo(
-    () =>
-      createCanvasDocumentWriter({
-        nodesMap,
-        edgesMap,
-      }),
-    [edgesMap, nodesMap],
-  )
+  const { commands, documentWriter, history, nodeActions } = useCanvasEditorDocumentServices({
+    canEdit,
+    canvasEngine,
+    edgesMap,
+    nodesMap,
+    selection,
+    session,
+  })
+  historySelectionChangeRef.current = history.onSelectionChange
   const modifiers = useCanvasModifierKeys()
+  const pointerRouter = useCanvasPointerRouterController()
   const interaction = pointerRouter.interaction
+  const activeTool = useCanvasToolStore((state) => state.activeTool)
 
   const dragHandlers = useCanvasNodeDragHandlers({
     canvasEngine,
@@ -195,7 +127,6 @@ export function useCanvasEditorRuntime({
     selection,
     viewportController,
   })
-
   useCanvasDocumentProjection({
     canvasEngine,
     nodesMap,
@@ -203,141 +134,39 @@ export function useCanvasEditorRuntime({
     localDraggingIdsRef,
     remoteResizeDimensions: session.remoteResizeDimensions,
   })
-
-  const history = useCanvasHistory({
-    nodesMap,
-    edgesMap,
-    selection,
-  })
-  historySelectionChangeRef.current = history.onSelectionChange
-  const commands = useCanvasCommands({
+  const { activeToolSpec, activeToolHandlers, contextMenu, cursorPresence, dropTarget } =
+    useCanvasToolSceneModel({
+      activeTool,
+      campaignId,
+      canvasEngine,
+      canvasId,
+      canvasParentId,
+      canEdit,
+      commands,
+      documentWriter,
+      edgesMap,
+      modifiers,
+      nodesMap,
+      pointerRouter,
+      selection,
+      session,
+      viewportController,
+    })
+  useCanvasEditorInteractionServices({
+    activeTool,
+    activeToolHandlers,
+    canvasEngine,
+    canvasSurfaceRef,
     canEdit,
-    nodesMap,
-    edgesMap,
+    dragHandlers,
+    modifiers,
+    pointerRouter,
     selection,
+    session,
+    viewportController,
   })
-
-  useCanvasKeyboardShortcuts({
-    undo: history.undo,
-    redo: history.redo,
-    canEdit,
-    nodesMap,
-    edgesMap,
-    selection,
-    commands,
-  })
-
-  const cursorPresence = useCanvasCursorPresence({
-    screenToCanvasPosition: viewportController.screenToCanvasPosition,
-    awareness: session.awareness.core,
-  })
-
-  const nodeActions = useMemo(
-    () =>
-      createCanvasNodeActions({
-        canvasEngine,
-        documentWriter,
-        session,
-        transact: (fn) => transactCanvasMaps(nodesMap, edgesMap, fn),
-      }),
-    [canvasEngine, documentWriter, edgesMap, nodesMap, session],
-  )
-  const domRuntime = useMemo(() => createCanvasDomRuntimeAdapter(canvasEngine), [canvasEngine])
-
   const isSelectMode = activeTool === 'select'
   const isEdgeMode = activeTool === 'edge'
-
-  const toolRuntime: CanvasToolRuntime = {
-    viewport: {
-      screenToCanvasPosition: viewportController.screenToCanvasPosition,
-      getZoom: viewportController.getZoom,
-    },
-    commands: documentWriter,
-    query: {
-      getNodes: () => [...canvasEngine.getSnapshot().nodes],
-      getEdges: () => [...canvasEngine.getSnapshot().edges],
-      getMeasuredNodes: () => getMeasuredCanvasNodesFromEngineSnapshot(canvasEngine.getSnapshot()),
-    },
-    selection,
-    interaction,
-    modifiers: {
-      getShiftPressed: () => readShiftModifier(modifiers),
-      getPrimaryPressed: () => readPrimaryModifier(modifiers),
-    },
-    editSession: session.editSession,
-    toolState: {
-      getSettings: () => ({
-        edgeType: useCanvasToolStore.getState().edgeType,
-        strokeColor: useCanvasToolStore.getState().strokeColor,
-        strokeOpacity: useCanvasToolStore.getState().strokeOpacity,
-        strokeSize: useCanvasToolStore.getState().strokeSize,
-      }),
-      getActiveTool: () => useCanvasToolStore.getState().activeTool,
-      setActiveTool: (tool) => useCanvasToolStore.getState().setActiveTool(tool),
-      setEdgeType: (type) => useCanvasToolStore.getState().setEdgeType(type),
-      setStrokeColor: (color) => useCanvasToolStore.getState().setStrokeColor(color),
-      setStrokeSize: (size) => useCanvasToolStore.getState().setStrokeSize(size),
-      setStrokeOpacity: (opacity) => useCanvasToolStore.getState().setStrokeOpacity(opacity),
-    },
-    awareness: session.awareness,
-  }
-  const activeToolSpec = canvasToolSpecs[activeTool]
-  const activeToolHandlers = activeToolSpec.createHandlers(toolRuntime)
-
-  useCanvasPointerRouter({
-    router: pointerRouter,
-    surfaceRef: canvasSurfaceRef,
-    options: {
-      activeTool,
-      activeToolHandlers,
-      awareness: session.awareness.presence,
-      canvasEngine,
-      enabled: canEdit,
-      getShiftPressed: () => readShiftModifier(modifiers),
-      selection,
-      viewportController,
-    },
-  })
-
-  useCanvasViewportInteractions({
-    ref: canvasSurfaceRef,
-    viewportController,
-    canPrimaryPan: () => useCanvasToolStore.getState().activeTool === 'hand',
-  })
-
-  const dropTarget = useCanvasDropIntegration({
-    canvasId,
-    canEdit,
-    isSelectMode,
-    createNode: documentWriter.createNode,
-    screenToCanvasPosition: viewportController.screenToCanvasPosition,
-  })
-
-  const getEdgeCreationDefaults = (): CanvasEdgeCreationDefaults => {
-    const { edgeType, strokeColor, strokeOpacity, strokeSize } = useCanvasToolStore.getState()
-
-    return {
-      type: edgeType,
-      style: {
-        stroke: strokeColor,
-        strokeWidth: clampCanvasEdgeStrokeWidth(strokeSize),
-        opacity: normalizeOpacityPercent(strokeOpacity),
-      },
-    }
-  }
-
-  const contextMenu = useCanvasContextMenu({
-    activeTool,
-    canEdit,
-    campaignId,
-    canvasParentId,
-    nodesMap,
-    edgesMap,
-    createNode: documentWriter.createNode,
-    screenToCanvasPosition: viewportController.screenToCanvasPosition,
-    selection,
-    commands,
-  })
 
   return {
     activeTool,
@@ -375,12 +204,348 @@ export function useCanvasEditorRuntime({
     },
     history,
     nodeActions,
-    nodeDragController: dragHandlers,
     viewportController,
     remoteHighlights: session.remoteHighlights,
     remoteUsers: session.remoteUsers,
     selection,
     toolCursor: activeToolSpec.cursor,
+  }
+}
+
+function useCanvasCoreServices({
+  canvasId,
+  initialViewport,
+}: Pick<UseCanvasEditorRuntimeOptions, 'canvasId' | 'initialViewport'>) {
+  const domRuntimeRef = useRef<ReturnType<typeof createCanvasDomRuntime> | null>(null)
+  domRuntimeRef.current ??= createCanvasDomRuntime()
+  const domRuntime = domRuntimeRef.current
+  const canvasEngineRef = useRef<ReturnType<typeof createCanvasEngine> | null>(null)
+  canvasEngineRef.current ??= createCanvasEngine({ domRuntime })
+  const canvasEngine = canvasEngineRef.current
+  const canvasSurfaceRef = useRef<HTMLDivElement>(null)
+  const viewportControllerRef = useRef<ReturnType<typeof createCanvasViewportController> | null>(
+    null,
+  )
+  viewportControllerRef.current ??= createCanvasViewportController({
+    canvasEngine,
+    domRuntime,
+    getSurfaceElement: () => canvasSurfaceRef.current,
+  })
+  const viewportController = viewportControllerRef.current
+
+  useEffect(() => () => canvasEngine.destroy(), [canvasEngine])
+  useEffect(() => () => domRuntime.destroy(), [domRuntime])
+  useEffect(() => () => viewportController.destroy(), [viewportController])
+
+  useEffect(() => {
+    viewportController.syncFromDocumentOrAdapter({
+      x: initialViewport.x,
+      y: initialViewport.y,
+      zoom: initialViewport.zoom,
+    })
+  }, [initialViewport.x, initialViewport.y, initialViewport.zoom, viewportController])
+
+  useEffect(
+    () =>
+      createCanvasViewportPersistence({
+        canvasEngine,
+        canvasId,
+        initialViewport: {
+          x: initialViewport.x,
+          y: initialViewport.y,
+          zoom: initialViewport.zoom,
+        },
+      }),
+    [canvasEngine, canvasId, initialViewport.x, initialViewport.y, initialViewport.zoom],
+  )
+
+  return {
+    canvasEngine,
+    canvasSurfaceRef,
+    domRuntime,
+    viewportController,
+  }
+}
+
+function useCanvasSelectionServices({
+  canvasEngine,
+  canvasId,
+  setLocalSelection,
+}: {
+  canvasEngine: ReturnType<typeof createCanvasEngine>
+  canvasId: Id<'sidebarItems'>
+  setLocalSelection: (nodeIds: ReadonlySet<string> | null) => void
+}) {
+  const historySelectionChangeRef = useRef<(selection: CanvasSelectionSnapshot) => void>(
+    () => undefined,
+  )
+  const selection = useCanvasSelectionController({
+    canvasEngine,
+    onSelectionChange: (nextSelection) => {
+      historySelectionChangeRef.current(nextSelection)
+    },
+    setLocalSelection,
+  })
+
+  useEffect(() => {
+    return () => {
+      canvasEngine.clearSelection()
+    }
+  }, [canvasEngine, canvasId])
+
+  return {
+    historySelectionChangeRef,
+    selection,
+  }
+}
+
+function useCanvasEditorDocumentServices({
+  canEdit,
+  canvasEngine,
+  edgesMap,
+  nodesMap,
+  selection,
+  session,
+}: Pick<UseCanvasEditorRuntimeOptions, 'canEdit' | 'edgesMap' | 'nodesMap'> & {
+  canvasEngine: ReturnType<typeof createCanvasEngine>
+  selection: ReturnType<typeof useCanvasSelectionController>
+  session: ReturnType<typeof useCanvasSessionState>
+}) {
+  const documentWriter = useMemo(
+    () =>
+      createCanvasDocumentWriter({
+        nodesMap,
+        edgesMap,
+      }),
+    [edgesMap, nodesMap],
+  )
+  const history = useCanvasHistory({
+    nodesMap,
+    edgesMap,
+    selection,
+  })
+  const commands = useCanvasCommands({
+    canEdit,
+    nodesMap,
+    edgesMap,
+    selection,
+  })
+
+  useCanvasKeyboardShortcuts({
+    undo: history.undo,
+    redo: history.redo,
+    canEdit,
+    nodesMap,
+    edgesMap,
+    selection,
+    commands,
+  })
+
+  const nodeActions = useMemo(
+    () =>
+      createCanvasNodeActions({
+        canvasEngine,
+        documentWriter,
+        session,
+        transact: (fn) => transactCanvasMaps(nodesMap, edgesMap, fn),
+      }),
+    [canvasEngine, documentWriter, edgesMap, nodesMap, session],
+  )
+
+  return {
+    commands,
+    documentWriter,
+    history,
+    nodeActions,
+  }
+}
+
+function useCanvasToolSceneModel({
+  activeTool,
+  campaignId,
+  canvasEngine,
+  canvasId,
+  canvasParentId,
+  canEdit,
+  commands,
+  documentWriter,
+  edgesMap,
+  modifiers,
+  nodesMap,
+  pointerRouter,
+  selection,
+  session,
+  viewportController,
+}: Pick<
+  UseCanvasEditorRuntimeOptions,
+  'campaignId' | 'canvasId' | 'canvasParentId' | 'canEdit' | 'edgesMap' | 'nodesMap'
+> & {
+  activeTool: CanvasToolId
+  canvasEngine: ReturnType<typeof createCanvasEngine>
+  commands: ReturnType<typeof useCanvasCommands>
+  documentWriter: ReturnType<typeof createCanvasDocumentWriter>
+  modifiers: ReturnType<typeof useCanvasModifierKeys>
+  pointerRouter: ReturnType<typeof useCanvasPointerRouterController>
+  selection: ReturnType<typeof useCanvasSelectionController>
+  session: ReturnType<typeof useCanvasSessionState>
+  viewportController: ReturnType<typeof createCanvasViewportController>
+}) {
+  const interaction = pointerRouter.interaction
+  const cursorPresence = useCanvasCursorPresence({
+    screenToCanvasPosition: viewportController.screenToCanvasPosition,
+    awareness: session.awareness.core,
+  })
+  const isSelectMode = activeTool === 'select'
+  const activeToolSpec = canvasToolSpecs[activeTool]
+  const toolRuntime: CanvasToolRuntime = {
+    viewport: {
+      screenToCanvasPosition: viewportController.screenToCanvasPosition,
+      getZoom: viewportController.getZoom,
+    },
+    commands: documentWriter,
+    query: {
+      getNodes: () => [...canvasEngine.getSnapshot().nodes],
+      getEdges: () => [...canvasEngine.getSnapshot().edges],
+      getMeasuredNodes: () => getMeasuredCanvasNodesFromEngineSnapshot(canvasEngine.getSnapshot()),
+    },
+    selection,
+    interaction,
+    modifiers: {
+      getShiftPressed: () => readShiftModifier(modifiers),
+      getPrimaryPressed: () => readPrimaryModifier(modifiers),
+    },
+    editSession: session.editSession,
+    toolState: {
+      getSettings: () => ({
+        edgeType: useCanvasToolStore.getState().edgeType,
+        strokeColor: useCanvasToolStore.getState().strokeColor,
+        strokeOpacity: useCanvasToolStore.getState().strokeOpacity,
+        strokeSize: useCanvasToolStore.getState().strokeSize,
+      }),
+      getActiveTool: () => useCanvasToolStore.getState().activeTool,
+      setActiveTool: (tool) => useCanvasToolStore.getState().setActiveTool(tool),
+      setEdgeType: (type) => useCanvasToolStore.getState().setEdgeType(type),
+      setStrokeColor: (color) => useCanvasToolStore.getState().setStrokeColor(color),
+      setStrokeSize: (size) => useCanvasToolStore.getState().setStrokeSize(size),
+      setStrokeOpacity: (opacity) => useCanvasToolStore.getState().setStrokeOpacity(opacity),
+    },
+    awareness: session.awareness,
+  }
+  const activeToolHandlers = activeToolSpec.createHandlers(toolRuntime)
+  const dropTarget = useCanvasDropIntegration({
+    canvasId,
+    canEdit,
+    isSelectMode,
+    createNode: documentWriter.createNode,
+    screenToCanvasPosition: viewportController.screenToCanvasPosition,
+  })
+  const contextMenu = useCanvasContextMenu({
+    activeTool,
+    canEdit,
+    campaignId,
+    canvasParentId,
+    nodesMap,
+    edgesMap,
+    createNode: documentWriter.createNode,
+    screenToCanvasPosition: viewportController.screenToCanvasPosition,
+    selection,
+    commands,
+  })
+
+  return {
+    activeToolHandlers,
+    activeToolSpec,
+    contextMenu,
+    cursorPresence,
+    dropTarget,
+  }
+}
+
+function useCanvasEditorInteractionServices({
+  activeTool,
+  activeToolHandlers,
+  canvasEngine,
+  canvasSurfaceRef,
+  canEdit,
+  dragHandlers,
+  modifiers,
+  pointerRouter,
+  selection,
+  session,
+  viewportController,
+}: Pick<UseCanvasEditorRuntimeOptions, 'canEdit'> & {
+  activeTool: CanvasToolId
+  activeToolHandlers: CanvasToolHandlers
+  canvasEngine: ReturnType<typeof createCanvasEngine>
+  canvasSurfaceRef: RefObject<HTMLDivElement | null>
+  dragHandlers: ReturnType<typeof useCanvasNodeDragHandlers>
+  modifiers: ReturnType<typeof useCanvasModifierKeys>
+  pointerRouter: ReturnType<typeof useCanvasPointerRouterController>
+  selection: ReturnType<typeof useCanvasSelectionController>
+  session: ReturnType<typeof useCanvasSessionState>
+  viewportController: ReturnType<typeof createCanvasViewportController>
+}) {
+  const previousActiveToolRef = useRef<CanvasToolId | null>(null)
+
+  useEffect(() => {
+    return () => {
+      const activeToolSpec = canvasToolSpecs[activeTool]
+      activeToolSpec.localOverlay?.clear()
+      activeToolSpec.awareness?.clear?.(session.awareness.presence)
+    }
+  }, [activeTool, session.awareness.presence])
+
+  useEffect(() => {
+    const previousTool = previousActiveToolRef.current
+    previousActiveToolRef.current = activeTool
+
+    if (previousTool === null || previousTool === activeTool) {
+      return
+    }
+
+    if (!canEdit || !SELECTION_INCOMPATIBLE_TOOLS.has(activeTool)) {
+      return
+    }
+
+    selection.clearSelection()
+    session.editSession.setEditingEmbedId(null)
+    session.editSession.setPendingEditNodeId(null)
+    session.editSession.setPendingEditNodePoint(null)
+  }, [activeTool, canEdit, selection, session.editSession])
+
+  useCanvasPointerRouter({
+    router: pointerRouter,
+    surfaceRef: canvasSurfaceRef,
+    options: {
+      activeTool,
+      activeToolHandlers,
+      awareness: session.awareness.presence,
+      canvasEngine,
+      enabled: canEdit,
+      getShiftPressed: () => readShiftModifier(modifiers),
+      nodeDragController: dragHandlers,
+      selection,
+      viewportController,
+    },
+  })
+
+  useCanvasViewportInteractions({
+    ref: canvasSurfaceRef,
+    viewportController,
+    canPrimaryPan: () => useCanvasToolStore.getState().activeTool === 'hand',
+  })
+}
+
+function getEdgeCreationDefaults(): CanvasEdgeCreationDefaults {
+  const { edgeType, strokeColor, strokeOpacity, strokeSize } = useCanvasToolStore.getState()
+
+  return {
+    type: edgeType,
+    style: {
+      stroke: strokeColor,
+      strokeWidth: clampCanvasEdgeStrokeWidth(strokeSize),
+      opacity: normalizeOpacityPercent(strokeOpacity),
+    },
   }
 }
 

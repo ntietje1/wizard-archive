@@ -5,13 +5,13 @@ import { MapPinsLayer } from '~/features/editor/components/viewer/map/map-pins-l
 import { useMapImageStatus } from '~/features/editor/components/viewer/map/use-map-image-status'
 import { MapImagePreview } from '~/features/editor/components/viewer/map/map-image-preview'
 import { useMapRenderPins } from '~/features/editor/components/viewer/map/use-map-render-pins'
-import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
+import { useCanvasDocumentServices } from '../../runtime/providers/canvas-runtime'
 
 export function EmbeddedMapContent({ nodeId, map }: { nodeId: string; map: GameMapWithContent }) {
   const { pins, isPinGhost } = useMapRenderPins(map)
   const {
     documentWriter: { patchNodeData },
-  } = useCanvasRuntime()
+  } = useCanvasDocumentServices()
   const { imageLoaded, imageError, handleImageLoad, handleImageError } = useMapImageStatus(
     map._id,
     map.imageUrl,

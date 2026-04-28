@@ -6,11 +6,6 @@ import type {
 } from './canvas-selection'
 import type { CanvasCameraState } from './canvas-render-scheduler'
 import type { CanvasEdgePatch } from '../edges/canvas-edge-types'
-import type { CanvasNodeDataPatch } from '../nodes/canvas-node-modules'
-import type {
-  CanvasRegisteredEdgePaths,
-  CanvasRegisteredStrokeNodePaths,
-} from './canvas-dom-registry'
 import type {
   CanvasDocumentEdge,
   CanvasDocumentNodePatch,
@@ -105,24 +100,9 @@ export interface CanvasEngine {
   ) => CanvasPosition
   startDrag: (nodeIds: ReadonlySet<string>) => void
   updateDrag: (positions: ReadonlyMap<string, CanvasPosition>) => void
-  registerNodeElement: (nodeId: string, element: HTMLElement | null) => () => void
-  registerNodeSurfaceElement: (nodeId: string, element: HTMLElement | null) => () => void
-  registerStrokeNodePaths: (nodeId: string, paths: CanvasRegisteredStrokeNodePaths) => () => void
-  registerEdgeElement: (edgeId: string, element: SVGElement | null) => () => void
-  registerEdgePaths: (edgeId: string, paths: CanvasRegisteredEdgePaths) => () => void
-  registerViewportElement: (element: HTMLElement | null) => () => void
-  registerViewportOverlayElement: (element: HTMLElement | null) => () => void
-  /**
-   * Schedules runtime node data updates; use CanvasDocumentNodePatch with patchNodes for
-   * persisted document fields such as position, dimensions, and zIndex.
-   */
-  scheduleNodeDataPatches: (updates: ReadonlyMap<string, CanvasNodeDataPatch>) => void
-  scheduleEdgePatches: (updates: ReadonlyMap<string, CanvasEdgePatch>) => void
-  scheduleViewportTransform: (viewport: CanvasViewport) => void
-  scheduleCameraState: (state: CanvasCameraState) => void
-  flushRenderScheduler: () => void
   stopDrag: () => void
   measureNode: (nodeId: string, dimensions: { width: number; height: number }) => void
+  refreshCulling: () => void
   destroy: () => void
 }
 

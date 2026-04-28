@@ -13,6 +13,13 @@ interface CanvasDragOptions {
   steps?: number
 }
 
+interface CanvasNodePositionRatio {
+  xRatio: number
+  yRatio: number
+}
+
+const MODIFIER_SETTLE_DELAY_MS = 50
+
 const TOOL_NAME_PATTERNS = {
   Pointer: /^(Pointer|Select)$/i,
   Panning: /^(Panning|Hand)$/i,
@@ -202,24 +209,61 @@ export async function lassoOnCanvas(
   await endCanvasPointerGesture(page)
 }
 
-export async function clickCanvasNode(page: Page, locator: Locator) {
+export async function clickCanvasNode(
+  page: Page,
+  locator: Locator,
+  options: {
+    modifiers?: Array<'Alt' | 'Control' | 'Meta' | 'Shift'>
+    positionRatio?: CanvasNodePositionRatio
+  } = {},
+) {
   const box = await locator.boundingBox()
   if (!box) {
     throw new Error('Canvas node is not visible')
   }
 
-  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+  const positionRatio = options.positionRatio ?? { xRatio: 0.5, yRatio: 0.5 }
+  const click = () =>
+    page.mouse.click(
+      box.x + box.width * positionRatio.xRatio,
+      box.y + box.height * positionRatio.yRatio,
+    )
+  if (!options.modifiers?.length) {
+    await click()
+    return
+  }
+
+  for (const modifier of options.modifiers) {
+    await page.keyboard.down(modifier)
+  }
+  await page.waitForTimeout(MODIFIER_SETTLE_DELAY_MS)
+  try {
+    await click()
+  } finally {
+    for (const modifier of [...options.modifiers].reverse()) {
+      await page.keyboard.up(modifier)
+    }
+  }
 }
 
-export async function dragCanvasNode(page: Page, locator: Locator, delta: CanvasPoint) {
+export async function dragCanvasNode(
+  page: Page,
+  locator: Locator,
+  delta: CanvasPoint,
+  options: { positionRatio?: CanvasNodePositionRatio } = {},
+) {
   const box = await locator.boundingBox()
   if (!box) {
     throw new Error('Canvas node is not visible')
   }
 
+  const positionRatio = options.positionRatio ?? {
+    xRatio: 0.5,
+    yRatio: 0.5,
+  }
   const start = {
-    x: box.x + box.width / 2,
-    y: box.y + box.height / 2,
+    x: box.x + box.width * positionRatio.xRatio,
+    y: box.y + box.height * positionRatio.yRatio,
   }
 
   await page.mouse.move(start.x, start.y)

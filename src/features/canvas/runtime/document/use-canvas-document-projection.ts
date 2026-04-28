@@ -288,9 +288,13 @@ function applyChangedCanvasEdges(
 }
 
 function readCanvasDocumentNode(node: unknown): CanvasDocumentNode | null {
+  if (!node) {
+    return null
+  }
+
   const parsedNode = parseCanvasDocumentNode(node)
   if (parsedNode) {
-    return parsedNode as CanvasDocumentNode
+    return parsedNode
   }
 
   warnMalformedCanvasDocumentValue('node', node)

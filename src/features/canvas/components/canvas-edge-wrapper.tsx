@@ -4,7 +4,7 @@ import type { CanvasEdgeRendererProps, CanvasEdgeType } from '../edges/canvas-ed
 import { StepCanvasEdge } from '../edges/step/step-canvas-edge'
 import { StraightCanvasEdge } from '../edges/straight/straight-canvas-edge'
 import { useCanvasEngineSelector } from '../react/use-canvas-engine'
-import { useCanvasRuntime } from '../runtime/providers/canvas-runtime'
+import { useCanvasDomRuntime } from '../runtime/providers/canvas-runtime'
 import type { CanvasDocumentEdge } from '../types/canvas-domain-types'
 import type { ComponentType, MouseEvent as ReactMouseEvent } from 'react'
 
@@ -26,7 +26,7 @@ export const CanvasEdgeWrapper = memo(function CanvasEdgeWrapper({
   onEdgeContextMenu: (event: ReactMouseEvent, edge: CanvasDocumentEdge) => void
 }) {
   const internalEdge = useCanvasEngineSelector((snapshot) => snapshot.edgeLookup.get(edgeId))
-  const { domRuntime } = useCanvasRuntime()
+  const domRuntime = useCanvasDomRuntime()
   const unregisterEdgeRef = useRef<(() => void) | null>(null)
 
   const setEdgeRef = useCallback(

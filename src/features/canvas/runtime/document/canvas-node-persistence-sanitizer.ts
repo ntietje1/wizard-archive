@@ -16,33 +16,34 @@ function buildSafePersistedCanvasNode(node: CanvasDocumentNode): ParsedCanvasDoc
     type = 'text'
     data = parseCanvasNodeDataByType(type, {}) ?? {}
   }
-  const safeNode = {
+  const safeNodeFields: Partial<ParsedCanvasDocumentNode> = {}
+  const safeNodeBase = {
     id: node.id,
     type,
     position: parseCanvasPoint2D(node.position) ?? { x: 0, y: 0 },
     data,
-  } as ParsedCanvasDocumentNode
+  }
 
   const width = typeof node.width === 'number' && Number.isFinite(node.width) ? node.width : null
   if (width !== null) {
-    safeNode.width = width
+    safeNodeFields.width = width
   }
   const height =
     typeof node.height === 'number' && Number.isFinite(node.height) ? node.height : null
   if (height !== null) {
-    safeNode.height = height
+    safeNodeFields.height = height
   }
   if (typeof node.zIndex === 'number' && Number.isFinite(node.zIndex)) {
-    safeNode.zIndex = node.zIndex
+    safeNodeFields.zIndex = node.zIndex
   }
   if (typeof node.className === 'string') {
-    safeNode.className = node.className
+    safeNodeFields.className = node.className
   }
   if (typeof node.hidden === 'boolean') {
-    safeNode.hidden = node.hidden
+    safeNodeFields.hidden = node.hidden
   }
 
-  return safeNode
+  return { ...safeNodeBase, ...safeNodeFields } as ParsedCanvasDocumentNode
 }
 
 export function sanitizeNodeForPersistence(

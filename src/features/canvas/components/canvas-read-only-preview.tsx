@@ -7,10 +7,7 @@ import { CanvasEdgeRenderer } from './canvas-edge-renderer'
 import { CanvasNodeContentRenderer } from './canvas-node-content-renderer'
 import type { CanvasNodeRendererMap } from './canvas-node-content-renderer'
 import { CanvasNodeRenderer } from './canvas-node-renderer'
-import {
-  READ_ONLY_CANVAS_RUNTIME,
-  createCanvasDomRuntimeAdapter,
-} from '../runtime/providers/canvas-runtime'
+import { createCanvasDomRuntime } from '../system/canvas-dom-runtime'
 import { createCanvasEngine } from '../system/canvas-engine'
 import { createCanvasViewportController } from '../system/canvas-viewport-controller'
 import { getCanvasFitViewport } from '../utils/canvas-fit-view'
@@ -28,6 +25,11 @@ import type { CanvasNodeComponentProps } from '../nodes/canvas-node-types'
 import type { EmbedNodeData } from '../nodes/embed/embed-node-data'
 import { cn } from '~/features/shadcn/lib/utils'
 import type { MouseEvent as ReactMouseEvent } from 'react'
+import type {
+  CanvasDocumentServices,
+  CanvasInteractionServices,
+  CanvasPresenceServices,
+} from '../runtime/providers/canvas-runtime'
 
 const DEFAULT_MIN_ZOOM = 0.01
 const DEFAULT_MAX_ZOOM = 4
@@ -56,20 +58,28 @@ export function CanvasReadOnlyPreview({
 }: CanvasReadOnlyPreviewProps) {
   const surfaceRef = useRef<HTMLDivElement | null>(null)
   const viewportRef = useRef<HTMLDivElement | null>(null)
-  const canvasEngineRef = useRef<ReturnType<typeof createCanvasEngine> | null>(null)
-  canvasEngineRef.current ??= createCanvasEngine()
-  const canvasEngine = canvasEngineRef.current
-  const domRuntimeRef = useRef<ReturnType<typeof createCanvasDomRuntimeAdapter> | null>(null)
-  domRuntimeRef.current ??= createCanvasDomRuntimeAdapter(canvasEngine)
+  const domRuntimeRef = useRef<ReturnType<typeof createCanvasDomRuntime> | null>(null)
+  domRuntimeRef.current ??= createCanvasDomRuntime()
   const domRuntime = domRuntimeRef.current
+  const canvasEngineRef = useRef<ReturnType<typeof createCanvasEngine> | null>(null)
+  canvasEngineRef.current ??= createCanvasEngine({ domRuntime })
+  const canvasEngine = canvasEngineRef.current
   const viewportControllerRef = useRef<ReturnType<typeof createCanvasViewportController> | null>(
     null,
   )
   viewportControllerRef.current ??= createCanvasViewportController({
     canvasEngine,
+    domRuntime,
     getSurfaceElement: () => surfaceRef.current,
   })
   const viewportController = viewportControllerRef.current
+  const runtimeServicesRef = useRef<{
+    documentServices: CanvasDocumentServices
+    interactionServices: CanvasInteractionServices
+    presenceServices: CanvasPresenceServices
+  } | null>(null)
+  runtimeServicesRef.current ??= createReadOnlyPreviewServices(viewportController)
+  const runtimeServices = runtimeServicesRef.current
   const size = useElementSize(surfaceRef)
 
   useEffect(() => {
@@ -77,13 +87,15 @@ export function CanvasReadOnlyPreview({
   }, [canvasEngine, edges, nodes])
 
   useEffect(() => () => canvasEngine.destroy(), [canvasEngine])
+  useEffect(() => () => domRuntime.destroy(), [domRuntime])
   useEffect(() => () => viewportController.destroy(), [viewportController])
 
   useEffect(() => {
     const unregister = domRuntime.registerViewportElement(viewportRef.current)
     domRuntime.scheduleViewportTransform(canvasEngine.getSnapshot().viewport)
     domRuntime.scheduleCameraState(canvasEngine.getSnapshot().cameraState)
-    domRuntime.flushRenderScheduler()
+    canvasEngine.refreshCulling()
+    domRuntime.flush()
     return unregister
   }, [canvasEngine, domRuntime])
 
@@ -114,10 +126,10 @@ export function CanvasReadOnlyPreview({
   return (
     <CanvasEngineProvider engine={canvasEngine}>
       <CanvasRuntimeProvider
-        {...READ_ONLY_CANVAS_RUNTIME}
-        canvasEngine={canvasEngine}
         domRuntime={domRuntime}
-        viewportController={viewportController}
+        documentServices={runtimeServices.documentServices}
+        interactionServices={runtimeServices.interactionServices}
+        presenceServices={runtimeServices.presenceServices}
       >
         <CanvasRenderModeProvider mode="embedded-readonly">
           <div
@@ -161,6 +173,83 @@ export function CanvasReadOnlyPreview({
       </CanvasRuntimeProvider>
     </CanvasEngineProvider>
   )
+}
+
+function createReadOnlyPreviewServices(
+  viewportController: ReturnType<typeof createCanvasViewportController>,
+): {
+  documentServices: CanvasDocumentServices
+  interactionServices: CanvasInteractionServices
+  presenceServices: CanvasPresenceServices
+} {
+  const selectionSnapshot = {
+    nodeIds: new Set<string>(),
+    edgeIds: new Set<string>(),
+  }
+
+  return {
+    documentServices: {
+      history: {
+        canUndo: false,
+        canRedo: false,
+        undo: () => undefined,
+        redo: () => undefined,
+      },
+      commands: {
+        copy: { id: 'copy', canRun: () => false, run: () => false },
+        cut: { id: 'cut', canRun: () => false, run: () => false },
+        paste: { id: 'paste', canRun: () => false, run: () => null },
+        duplicate: { id: 'duplicate', canRun: () => false, run: () => null },
+        delete: { id: 'delete', canRun: () => false, run: () => false },
+        reorder: { id: 'reorder', canRun: () => false, run: () => false },
+      },
+      documentWriter: {
+        createNode: () => undefined,
+        patchNodeData: () => undefined,
+        patchEdges: () => undefined,
+        resizeNode: () => undefined,
+        resizeNodes: () => undefined,
+        deleteNodes: () => undefined,
+        createEdge: () => undefined,
+        deleteEdges: () => undefined,
+        setNodePositions: () => undefined,
+      },
+      nodeActions: {
+        transact: (fn) => fn(),
+        onResize: () => undefined,
+        onResizeEnd: () => undefined,
+        onResizeMany: () => undefined,
+        onResizeManyCancel: () => undefined,
+        onResizeManyEnd: () => undefined,
+      },
+    },
+    interactionServices: {
+      canEdit: false,
+      editSession: {
+        editingEmbedId: null,
+        setEditingEmbedId: () => undefined,
+        pendingEditNodeId: null,
+        pendingEditNodePoint: null,
+        setPendingEditNodeId: () => undefined,
+        setPendingEditNodePoint: () => undefined,
+      },
+      selection: {
+        getSnapshot: () => selectionSnapshot,
+        setSelection: () => undefined,
+        clearSelection: () => undefined,
+        toggleNode: () => undefined,
+        toggleEdge: () => undefined,
+        beginGesture: () => undefined,
+        setGesturePreview: () => undefined,
+        commitGesture: () => undefined,
+        cancelGesture: () => undefined,
+      },
+      viewportController,
+    },
+    presenceServices: {
+      remoteHighlights: new Map(),
+    },
+  }
 }
 
 function useElementSize(ref: React.RefObject<HTMLElement | null>) {

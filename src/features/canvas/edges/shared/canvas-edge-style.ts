@@ -1,4 +1,5 @@
 import { parseCanvasEdgeStyle } from 'convex/canvases/validation'
+import { resolveCanvasScreenMinimumStrokeWidthCss } from '../../utils/canvas-screen-stroke-width'
 import type { CSSProperties } from 'react'
 
 export const DEFAULT_CANVAS_EDGE_STROKE = 'var(--foreground)'
@@ -59,7 +60,7 @@ export function buildCanvasEdgeRenderStyle(
 ): CSSProperties {
   return {
     stroke: normalizedStyle.stroke,
-    strokeWidth: normalizedStyle.strokeWidth,
+    strokeWidth: resolveCanvasScreenMinimumStrokeWidthCss(normalizedStyle.strokeWidth),
     opacity: normalizedStyle.opacity,
   }
 }

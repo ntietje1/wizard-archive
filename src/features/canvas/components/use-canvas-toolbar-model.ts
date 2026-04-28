@@ -5,7 +5,7 @@ import {
   resolveCanvasEdgeType,
 } from '../edges/canvas-edge-registry'
 import type { CanvasEdgePatch, CanvasEdgeType } from '../edges/canvas-edge-types'
-import { useCanvasRuntime } from '../runtime/providers/canvas-runtime'
+import { useCanvasDocumentServices, useCanvasDomRuntime } from '../runtime/providers/canvas-runtime'
 import {
   getCanvasNodeInspectableProperties,
   normalizeCanvasNode,
@@ -14,7 +14,7 @@ import type { CanvasNodeDataPatch } from '../nodes/canvas-node-modules'
 import { measureCanvasPerformance } from '../runtime/performance/canvas-performance-metrics'
 import { canvasToolSpecs } from '../tools/canvas-tool-modules'
 import { useCanvasToolPropertyContext, useCanvasToolStore } from '../stores/canvas-tool-store'
-import { useCanvasEngineSelector } from '../react/use-canvas-engine'
+import { useCanvasEngine, useCanvasEngineSelector } from '../react/use-canvas-engine'
 import {
   areCanvasPropertyEdgesEqual,
   areCanvasPropertyNodesEqual,
@@ -35,7 +35,9 @@ import type { CanvasDocumentEdge, CanvasDocumentNode } from '../types/canvas-dom
 import { useShallow } from 'zustand/shallow'
 
 export function useCanvasToolbarModel() {
-  const { domRuntime, nodeActions, commands, documentWriter } = useCanvasRuntime()
+  const canvasEngine = useCanvasEngine()
+  const domRuntime = useCanvasDomRuntime()
+  const { nodeActions, commands, documentWriter } = useCanvasDocumentServices()
   const selectedNodes = useCanvasEngineSelector(
     selectCanvasSelectedNodes,
     areCanvasPropertyNodesEqual,
@@ -75,7 +77,7 @@ export function useCanvasToolbarModel() {
     const pendingNodeDataPatches = pendingNodeDataPatchesRef.current
     if (!pendingNodeDataPatches) {
       const updates = new Map([[nodeId, data]])
-      domRuntime.scheduleNodeDataPatches(updates)
+      domRuntime.scheduleNodeDataPatches(canvasEngine.getSnapshot(), updates)
       documentWriter.patchNodeData(updates)
       return
     }
@@ -141,7 +143,7 @@ export function useCanvasToolbarModel() {
   }
 
   const previewPropertyPatches = (patches: CanvasPropertyPatchSet) => {
-    domRuntime.scheduleNodeDataPatches(patches.nodeDataPatches)
+    domRuntime.scheduleNodeDataPatches(canvasEngine.getSnapshot(), patches.nodeDataPatches)
     domRuntime.scheduleEdgePatches(patches.edgePatches)
   }
 

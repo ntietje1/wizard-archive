@@ -26,10 +26,14 @@ type CanvasDragCallbacks = {
   onStart?: (event: CanvasDragEvent) => void
   onDrag?: (event: CanvasDragEvent) => void
   onEnd?: (event: CanvasDragEvent) => void
+  onCancel?: (event: CanvasDragEvent) => void
 }
 
 export interface CanvasDragController {
-  handlePointerDown: (nodeId: string, event: PointerEvent | MouseEvent) => void
+  begin: (nodeId: string, event: PointerEvent | MouseEvent) => boolean
+  update: (event: PointerEvent | MouseEvent) => boolean
+  commit: (event: PointerEvent | MouseEvent) => boolean
+  cancel: (event: PointerEvent | MouseEvent) => boolean
   profileDrag: (options: {
     nodeIds: ReadonlySet<string>
     delta: CanvasPosition
@@ -49,7 +53,7 @@ interface CanvasDragSession {
   lastResolvedPositions: ReadonlyMap<string, CanvasPosition>
   existingNodeIds: ReadonlySet<string>
   started: boolean
-  inputType: 'pointer' | 'mouse'
+  pointerId: number | null
 }
 
 export function createCanvasDragController({
@@ -76,36 +80,33 @@ export function createCanvasDragController({
   let session: CanvasDragSession | null = null
 
   const destroy = () => {
-    detachWindowListeners()
     clearCanvasDragSnapGuides()
     session = null
   }
 
-  const handlePointerDown = (nodeId: string, event: PointerEvent | MouseEvent) => {
+  const begin: CanvasDragController['begin'] = (nodeId, event) => {
     if (session) {
-      return
+      return false
     }
 
     if (event.button !== 0 || !getCanStartDrag() || shouldIgnoreDragTarget(event.target)) {
-      return
+      return false
     }
 
-    const inputType =
-      typeof PointerEvent !== 'undefined' && event instanceof PointerEvent ? 'pointer' : 'mouse'
     const nextSession = createDragSession({
       activeNodeId: nodeId,
       canvasEngine,
       clientStart: { x: event.clientX, y: event.clientY },
       getCanvasPosition,
-      inputType,
+      pointerId: getPointerId(event),
       selectedNodeIds: getSelectedNodeIds(),
     })
     if (!nextSession) {
-      return
+      return false
     }
 
     session = nextSession
-    attachWindowListeners(inputType)
+    return true
   }
 
   const profileDrag: CanvasDragController['profileDrag'] = ({ nodeIds, delta, steps }) => {
@@ -120,7 +121,7 @@ export function createCanvasDragController({
       canvasEngine,
       clientStart: start,
       getCanvasPosition,
-      inputType: 'mouse',
+      pointerId: null,
       selectedNodeIds: nodeIds,
     })
     if (!syntheticSession) {
@@ -144,17 +145,9 @@ export function createCanvasDragController({
     session = null
   }
 
-  const onPointerMove = (event: PointerEvent) => {
-    handleMove(event)
-  }
-
-  const onMouseMove = (event: MouseEvent) => {
-    handleMove(event)
-  }
-
-  const handleMove = (event: PointerEvent | MouseEvent) => {
-    if (!session) {
-      return
+  const update: CanvasDragController['update'] = (event) => {
+    if (!session || !isSessionEvent(session, event)) {
+      return false
     }
 
     if (!session.started) {
@@ -163,26 +156,19 @@ export function createCanvasDragController({
         event.clientY - session.pendingClientStart.y,
       )
       if (distance < thresholdPx) {
-        return
+        return true
       }
       startSession(event)
     }
 
     updateSession(event)
     event.preventDefault()
+    return true
   }
 
-  const onPointerUp = (event: PointerEvent) => {
-    handleUp(event)
-  }
-
-  const onMouseUp = (event: MouseEvent) => {
-    handleUp(event)
-  }
-
-  const handleUp = (event: PointerEvent | MouseEvent) => {
-    if (!session) {
-      return
+  const commit: CanvasDragController['commit'] = (event) => {
+    if (!session || !isSessionEvent(session, event)) {
+      return false
     }
 
     if (session.started) {
@@ -190,26 +176,22 @@ export function createCanvasDragController({
     }
 
     destroy()
+    return true
   }
 
-  function attachWindowListeners(inputType: CanvasDragSession['inputType']) {
-    if (inputType === 'pointer') {
-      window.addEventListener('pointermove', onPointerMove)
-      window.addEventListener('pointerup', onPointerUp)
-      window.addEventListener('pointercancel', onPointerUp)
-      return
+  const cancel: CanvasDragController['cancel'] = (event) => {
+    if (!session || !isSessionEvent(session, event)) {
+      return false
     }
 
-    window.addEventListener('mousemove', onMouseMove)
-    window.addEventListener('mouseup', onMouseUp)
-  }
+    if (session.started) {
+      canvasEngine.updateDrag(session.startPositions)
+      canvasEngine.stopDrag()
+      callbacks.onCancel?.(createDragEvent(event, session, session.startPositions, false, false))
+    }
 
-  function detachWindowListeners() {
-    window.removeEventListener('pointermove', onPointerMove)
-    window.removeEventListener('pointerup', onPointerUp)
-    window.removeEventListener('pointercancel', onPointerUp)
-    window.removeEventListener('mousemove', onMouseMove)
-    window.removeEventListener('mouseup', onMouseUp)
+    destroy()
+    return true
   }
 
   function startSession(sourceEvent: PointerEvent | MouseEvent) {
@@ -252,7 +234,10 @@ export function createCanvasDragController({
   }
 
   return {
-    handlePointerDown,
+    begin,
+    update,
+    commit,
+    cancel,
     profileDrag,
     destroy,
   }
@@ -263,14 +248,14 @@ function createDragSession({
   canvasEngine,
   clientStart,
   getCanvasPosition,
-  inputType,
+  pointerId,
   selectedNodeIds,
 }: {
   activeNodeId: string
   canvasEngine: CanvasEngine
   clientStart: CanvasPosition
   getCanvasPosition: (point: CanvasPosition) => CanvasPosition
-  inputType: CanvasDragSession['inputType']
+  pointerId: number | null
   selectedNodeIds: ReadonlySet<string>
 }): CanvasDragSession | null {
   const snapshot = canvasEngine.getSnapshot()
@@ -311,8 +296,16 @@ function createDragSession({
     lastResolvedPositions: startPositions,
     existingNodeIds: new Set(snapshot.nodeLookup.keys()),
     started: false,
-    inputType,
+    pointerId,
   }
+}
+
+function getPointerId(event: PointerEvent | MouseEvent) {
+  return 'pointerId' in event ? event.pointerId : null
+}
+
+function isSessionEvent(session: CanvasDragSession, event: PointerEvent | MouseEvent) {
+  return session.pointerId === null || getPointerId(event) === session.pointerId
 }
 
 function resolveDragPositions({

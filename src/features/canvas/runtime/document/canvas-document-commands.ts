@@ -119,8 +119,25 @@ export function patchCanvasNodeDataCommand({
       nodeId,
       sanitizeNode,
       operation: 'patchNodeData',
-      updater: (existing) =>
-        ({ ...existing, data: { ...existing.data, ...data } }) as CanvasDocumentNode,
+      updater: (existing): CanvasDocumentNode => {
+        switch (existing.type) {
+          case 'embed':
+            return {
+              ...existing,
+              data: { ...existing.data, ...data } as typeof existing.data,
+            } satisfies CanvasDocumentNode
+          case 'stroke':
+            return {
+              ...existing,
+              data: { ...existing.data, ...data } as typeof existing.data,
+            } satisfies CanvasDocumentNode
+          case 'text':
+            return {
+              ...existing,
+              data: { ...existing.data, ...data } as typeof existing.data,
+            } satisfies CanvasDocumentNode
+        }
+      },
     })
   }
 }

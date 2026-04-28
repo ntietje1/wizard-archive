@@ -65,6 +65,27 @@ describe('selectToolSpec', () => {
     expect(toggleNode).toHaveBeenCalledWith('c', false)
   })
 
+  it('uses the tracked primary modifier when click events do not carry modifier state', () => {
+    const toggleNode = vi.fn()
+    const clickedNode = {
+      id: 'c',
+      type: 'text',
+      position: { x: 0, y: 0 },
+      data: {},
+    } as Node
+    const controller = selectToolSpec.createHandlers(
+      createSelectEnvironment({
+        getNodes: () => [clickedNode],
+        primaryPressed: true,
+        toggleNode,
+      }),
+    )
+
+    controller.onNodeClick?.(createMouseEvent(0, 0), clickedNode)
+
+    expect(toggleNode).toHaveBeenCalledWith('c', true)
+  })
+
   it('routes edge clicks through explicit edge selection control', () => {
     const toggleNode = vi.fn()
     const toggleEdge = vi.fn()
@@ -94,9 +115,11 @@ function createSelectEnvironment({
   getMeasuredNodes = () => getNodes() as Array<CanvasMeasuredNode>,
   toggleNode,
   toggleEdge = vi.fn(),
+  primaryPressed = false,
 }: {
   getNodes: () => Array<Node>
   getMeasuredNodes?: () => Array<CanvasMeasuredNode>
+  primaryPressed?: boolean
   toggleNode: (targetId: string, additive: boolean) => void
   toggleEdge?: (targetId: string, additive: boolean) => void
 }): CanvasToolRuntime {
@@ -137,7 +160,7 @@ function createSelectEnvironment({
     },
     modifiers: {
       getShiftPressed: () => false,
-      getPrimaryPressed: () => false,
+      getPrimaryPressed: () => primaryPressed,
     },
     editSession: {
       editingEmbedId: null,

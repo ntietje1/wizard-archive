@@ -19,6 +19,7 @@ import { createCanvasGeometryIndex } from './canvas-geometry-index'
 import { createCanvasSelectionManager } from './canvas-selection-manager'
 import { createCanvasStore } from './canvas-store'
 import { createCanvasViewportManager, DEFAULT_CANVAS_VIEWPORT } from './canvas-viewport-manager'
+import type { CanvasDomRuntime } from './canvas-dom-runtime'
 import type { CanvasEngine, CanvasEngineSnapshot } from './canvas-engine-types'
 import type { CanvasDocumentNodePatch, CanvasDocumentNode } from '../types/canvas-domain-types'
 
@@ -30,9 +31,10 @@ export type {
   CanvasViewport,
 } from './canvas-engine-types'
 
-export function createCanvasEngine(): CanvasEngine {
+export function createCanvasEngine(config: { domRuntime?: CanvasDomRuntime } = {}): CanvasEngine {
+  const ownsDomRuntime = !config.domRuntime
+  const domRuntime = config.domRuntime ?? createCanvasDomRuntime()
   const store = createCanvasStore(createInitialCanvasEngineSnapshot())
-  const domRuntime = createCanvasDomRuntime()
   const selectionManager = createCanvasSelectionManager()
   const viewportManager = createCanvasViewportManager()
   const geometryIndex = createCanvasGeometryIndex()
@@ -196,15 +198,6 @@ export function createCanvasEngine(): CanvasEngine {
     setRuntimeSnapshot(update.snapshot)
   }
 
-  const registerViewportElement: CanvasEngine['registerViewportElement'] = (element) => {
-    const unregister = domRuntime.registerViewportElement(element)
-    const snapshot = store.getSnapshot()
-    domRuntime.scheduleCameraState(snapshot.cameraState)
-    domRuntime.scheduleViewportTransform(snapshot.viewport)
-    reconcileCulling()
-    return unregister
-  }
-
   return {
     getSnapshot: store.getSnapshot,
     subscribe: store.subscribe,
@@ -245,27 +238,17 @@ export function createCanvasEngine(): CanvasEngine {
       viewportManager.canvasToScreenPosition(store.getSnapshot(), position, surfaceBounds),
     startDrag,
     updateDrag,
-    registerNodeElement: domRuntime.registerNodeElement,
-    registerNodeSurfaceElement: domRuntime.registerNodeSurfaceElement,
-    registerStrokeNodePaths: domRuntime.registerStrokeNodePaths,
-    registerEdgeElement: domRuntime.registerEdgeElement,
-    registerEdgePaths: domRuntime.registerEdgePaths,
-    registerViewportElement,
-    registerViewportOverlayElement: domRuntime.registerViewportOverlayElement,
-    scheduleNodeDataPatches: (updates) =>
-      domRuntime.scheduleNodeDataPatches(store.getSnapshot(), updates),
-    scheduleEdgePatches: domRuntime.scheduleEdgePatches,
-    scheduleViewportTransform: domRuntime.scheduleViewportTransform,
-    scheduleCameraState: domRuntime.scheduleCameraState,
-    flushRenderScheduler: domRuntime.flush,
     stopDrag,
     measureNode,
+    refreshCulling: reconcileCulling,
     destroy: () => {
       store.destroy()
       draggingNodeIds = new Set()
       viewportManager.reset()
       cullingManager.reset()
-      domRuntime.destroy()
+      if (ownsDomRuntime) {
+        domRuntime.destroy()
+      }
     },
   }
 }

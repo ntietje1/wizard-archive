@@ -13,6 +13,7 @@ import {
   bindCanvasPaintProperty,
   bindCanvasStrokeSizeProperty,
 } from '../../properties/canvas-property-types'
+import { resolveCanvasScreenMinimumStrokeWidthCss } from '../../utils/canvas-screen-stroke-width'
 import type { CanvasNodeRenderDataByType, CanvasRuntimeNode } from '../canvas-node-types'
 import type { CanvasNodeType } from '../../types/canvas-domain-types'
 
@@ -77,19 +78,28 @@ function resolveCanvasNodePaint(color: string | null | undefined, opacity: numbe
 
 export function getCanvasNodeSurfaceStyle(data: CanvasNodeSurfaceStyleData): CSSProperties {
   const surfaceStyle = normalizeCanvasNodeSurfaceStyleData(data)
+  const hasBorder =
+    surfaceStyle.borderWidth > 0 &&
+    surfaceStyle.borderOpacity > 0 &&
+    surfaceStyle.borderStroke !== null &&
+    surfaceStyle.borderStroke !== ''
+  const backgroundColor = resolveCanvasNodePaint(
+    surfaceStyle.backgroundColor,
+    surfaceStyle.backgroundOpacity,
+  )
+
+  if (!hasBorder) {
+    return {
+      backgroundColor,
+      border: 'none',
+    }
+  }
 
   return {
-    backgroundColor: resolveCanvasNodePaint(
-      surfaceStyle.backgroundColor,
-      surfaceStyle.backgroundOpacity,
-    ),
-    border:
-      surfaceStyle.borderStroke !== null && surfaceStyle.borderStroke !== ''
-        ? `${surfaceStyle.borderWidth}px solid ${resolveCanvasNodePaint(
-            surfaceStyle.borderStroke,
-            surfaceStyle.borderOpacity,
-          )}`
-        : 'none',
+    backgroundColor,
+    borderColor: resolveCanvasNodePaint(surfaceStyle.borderStroke, surfaceStyle.borderOpacity),
+    borderStyle: 'solid',
+    borderWidth: resolveCanvasScreenMinimumStrokeWidthCss(surfaceStyle.borderWidth),
   }
 }
 

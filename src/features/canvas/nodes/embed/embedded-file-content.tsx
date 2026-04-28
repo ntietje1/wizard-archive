@@ -3,12 +3,12 @@ import { Loader2 } from 'lucide-react'
 import type { FileWithContent } from 'convex/files/types'
 import { FilePreview } from '~/features/editor/components/viewer/file/file-preview'
 import { resolveFilePreviewImageUrl } from '~/features/editor/components/viewer/file/file-preview-source'
-import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
+import { useCanvasDocumentServices } from '../../runtime/providers/canvas-runtime'
 
 export function EmbeddedFileContent({ nodeId, file }: { nodeId: string; file: FileWithContent }) {
   const {
     documentWriter: { patchNodeData },
-  } = useCanvasRuntime()
+  } = useCanvasDocumentServices()
   const [erroredUrls, setErroredUrls] = useState<Set<string>>(() => new Set())
   const lastStoredAspectRatioRef = useRef<number | null>(null)
   const visualSourceUrl = resolveFilePreviewImageUrl({

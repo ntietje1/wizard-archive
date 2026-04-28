@@ -1,8 +1,7 @@
 import { memo, useEffect, useRef } from 'react'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useCanvasEngine, useCanvasEngineSelector } from '../react/use-canvas-engine'
-import { useCanvasRuntime } from '../runtime/providers/canvas-runtime'
-import { useIsInteractiveCanvasRenderMode } from '../runtime/providers/use-canvas-render-mode'
+import { useCanvasDomRuntime } from '../runtime/providers/canvas-runtime'
 import type { CanvasInternalNode } from '../system/canvas-engine'
 import type { CanvasDocumentNode } from '../types/canvas-domain-types'
 import type {
@@ -38,8 +37,7 @@ export const CanvasNodeWrapper = memo(function CanvasNodeWrapper({
     areCanvasNodeShellSnapshotsEqual,
   )
   const canvasEngine = useCanvasEngine()
-  const { canEdit, domRuntime, nodeDragController } = useCanvasRuntime()
-  const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
+  const domRuntime = useCanvasDomRuntime()
   const nodeRef = useRef<HTMLDivElement | null>(null)
   const shellMounted = shell !== null
   const shellId = shell?.id
@@ -71,36 +69,6 @@ export const CanvasNodeWrapper = memo(function CanvasNodeWrapper({
     () => domRuntime.registerNodeElement(nodeId, nodeRef.current),
     [domRuntime, nodeId, shellMounted],
   )
-
-  useEffect(() => {
-    const dragTarget = nodeRef.current
-    if (!dragTarget || !canEdit || !interactiveRenderMode || !nodeDragController) {
-      return undefined
-    }
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (isNodeDragBlocked(event.target)) {
-        return
-      }
-
-      nodeDragController.handlePointerDown(nodeId, event)
-    }
-    const handleMouseDown = (event: MouseEvent) => {
-      if (isNodeDragBlocked(event.target)) {
-        return
-      }
-
-      nodeDragController.handlePointerDown(nodeId, event)
-    }
-    dragTarget.addEventListener('pointerdown', handlePointerDown, { capture: true })
-    if (!window.PointerEvent) {
-      dragTarget.addEventListener('mousedown', handleMouseDown, { capture: true })
-    }
-    return () => {
-      dragTarget.removeEventListener('pointerdown', handlePointerDown, { capture: true })
-      dragTarget.removeEventListener('mousedown', handleMouseDown, { capture: true })
-    }
-  }, [canEdit, interactiveRenderMode, nodeDragController, nodeId, shellMounted])
 
   if (!shell || !shell.visible) {
     return null
@@ -192,29 +160,6 @@ function isInteractiveKeyboardTarget(target: EventTarget | null) {
         ].join(','),
       ),
     )
-  )
-}
-
-function isNodeDragBlocked(target: EventTarget | null) {
-  if (!(target instanceof Element)) {
-    return false
-  }
-
-  return Boolean(
-    target.closest(
-      [
-        '[data-node-editing="true"]',
-        '.canvas-selection-resize-zone',
-        '[data-canvas-node-handle="true"]',
-        'input',
-        'textarea',
-        'select',
-        'button',
-        'a[href]',
-        '[contenteditable="true"]',
-        '.canvas-rich-text-editor',
-      ].join(','),
-    ),
   )
 }
 

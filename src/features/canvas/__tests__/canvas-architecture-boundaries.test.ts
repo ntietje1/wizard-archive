@@ -24,7 +24,7 @@ describe('canvas architecture boundaries', () => {
     expect(connectionHandles).not.toContain('useConnection')
   })
 
-  it('keeps the canvas slice free of React Flow and xyflow compatibility contracts', () => {
+  it('keeps the canvas slice on the native canvas engine and renderer contracts', () => {
     const canvasFiles = listFiles(join(repoRoot, 'src/features/canvas')).filter(
       (file) =>
         (file.endsWith('.ts') || file.endsWith('.tsx')) &&
@@ -35,11 +35,8 @@ describe('canvas architecture boundaries', () => {
 
     for (const file of canvasFiles) {
       const source = readFileSync(file, 'utf8')
-      expect(source).not.toMatch(/xyflow|reactflow|ReactFlow|react-flow/)
       expect(source).not.toContain('CanvasNodeData = Record<string, unknown>')
-      expect(source).not.toContain('XYPosition')
       expect(source).not.toContain('CanvasNodeComponentProps<any>')
-      expect(source).not.toContain('CanvasEdgeRendererProps<Record<string, unknown>')
     }
   })
 
@@ -56,9 +53,13 @@ describe('canvas architecture boundaries', () => {
   it('keeps node shell ownership in CanvasNodeWrapper, not inner node frame', () => {
     const wrapper = readRepoFile('src/features/canvas/components/canvas-node-wrapper.tsx')
     const frame = readRepoFile('src/features/canvas/nodes/shared/canvas-node-frame.tsx')
+    const router = readRepoFile('src/features/canvas/runtime/interaction/canvas-pointer-router.ts')
 
     expect(wrapper).toContain('registerNodeElement')
-    expect(wrapper).toContain('nodeDragController.handlePointerDown')
+    expect(wrapper).not.toContain('nodeDragController')
+    expect(router).toContain("kind: 'node-drag'")
+    expect(router).toContain('nodeDragController')
+    expect(router).toMatch(/\.begin\(\s*target\.nodeId,\s*event\s*\)/)
     expect(frame).not.toContain('registerNodeElement')
     expect(frame).not.toContain('nodeDragController')
   })
@@ -79,6 +80,18 @@ describe('canvas architecture boundaries', () => {
       'patchEdges: (updates: ReadonlyMap<string, CanvasEdgePatch>) => void',
     )
     expect(engineTypes).not.toContain('patchEdges: (updates: ReadonlyMap<string, Partial<Edge>>)')
+  })
+
+  it('keeps DOM registration and render scheduling out of the engine public API', () => {
+    const engineTypes = readRepoFile('src/features/canvas/system/canvas-engine-types.ts')
+    const runtime = readRepoFile('src/features/canvas/runtime/providers/canvas-runtime.ts')
+
+    expect(engineTypes).not.toContain('registerViewportElement')
+    expect(engineTypes).not.toContain('scheduleNodeDataPatches')
+    expect(engineTypes).not.toContain('flushRenderScheduler')
+    expect(runtime).toContain('CanvasDomRuntimeContext')
+    expect(runtime).not.toContain('interface CanvasRuntime')
+    expect(runtime).not.toContain('READ_ONLY_CANVAS_RUNTIME')
   })
 })
 

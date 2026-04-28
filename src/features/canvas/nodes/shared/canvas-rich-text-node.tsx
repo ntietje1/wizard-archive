@@ -10,7 +10,11 @@ import { CanvasRichTextView } from './canvas-rich-text-view'
 import { useCanvasEditableNodeSession } from './use-canvas-editable-node-session'
 import { useCanvasRichTextEditorSession } from './use-canvas-rich-text-editor-session'
 import { getCanvasNodeSurfaceStyle } from './canvas-node-surface-style'
-import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
+import {
+  useCanvasDocumentServices,
+  useCanvasDomRuntime,
+  useCanvasInteractionServices,
+} from '../../runtime/providers/canvas-runtime'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { cn } from '~/features/shadcn/lib/utils'
@@ -80,10 +84,10 @@ export function CanvasRichTextNode({
 }: CanvasRichTextNodeComponentProps) {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
   const {
-    domRuntime,
     documentWriter: { patchNodeData },
-    canEdit,
-  } = useCanvasRuntime()
+  } = useCanvasDocumentServices()
+  const domRuntime = useCanvasDomRuntime()
+  const { canEdit } = useCanvasInteractionServices()
   const [isEditing, setIsEditing] = useState(false)
   const wrapperRef = useRef<HTMLDivElement | null>(null)
   const hasInvalidContent = data.richText.kind === 'invalid'

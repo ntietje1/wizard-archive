@@ -17,6 +17,7 @@ interface CanvasPerformanceRuntime {
     spacingY?: number
     start?: CanvasPosition
   }) => void
+  seedCoordinateProbeNode: (options: { id: string; start?: CanvasPosition }) => void
   seedStrokeNodes: (options: {
     count: number
     columns?: number

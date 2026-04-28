@@ -113,6 +113,45 @@ describe('DrawAwarenessLayer', () => {
     )
   })
 
+  it('floors remote draw preview strokes to one screen pixel when zoomed out', () => {
+    const engine = createCanvasEngine()
+    engine.setViewport({ x: 0, y: 0, zoom: 0.25 })
+    const points: Array<[number, number, number]> = [
+      [0, 0, 0.5],
+      [20, 20, 0.5],
+    ]
+    const remoteUsers: Array<RemoteUser> = [
+      {
+        clientId: 1,
+        user: { name: 'Tester', color: '#f00' },
+        presence: {
+          'tool.draw': {
+            points,
+            color: '#f00',
+            size: 1,
+            opacity: 50,
+          },
+        },
+        cursor: null,
+        resizing: null,
+        selectedNodeIds: null,
+      },
+    ]
+
+    const { container } = renderWithEngine(<DrawAwarenessLayer remoteUsers={remoteUsers} />, engine)
+
+    expect(container.querySelector('path')).toHaveAttribute(
+      'd',
+      pointsToPathD(
+        [
+          [0, 0, 0.5],
+          [5, 5, 0.5],
+        ],
+        1,
+      ),
+    )
+  })
+
   it('renders the local draw overlay from the draw slice store', () => {
     setDrawToolLocalDrawing({
       points: [
@@ -153,6 +192,34 @@ describe('DrawAwarenessLayer', () => {
           [35, 46, 0.5],
         ],
         8,
+      ),
+    )
+  })
+
+  it('floors local draw preview strokes to one screen pixel when zoomed out', () => {
+    const engine = createCanvasEngine()
+    engine.setViewport({ x: 0, y: 0, zoom: 0.25 })
+    const points: Array<[number, number, number]> = [
+      [0, 0, 0.5],
+      [20, 20, 0.5],
+    ]
+    setDrawToolLocalDrawing({
+      points,
+      color: '#f00',
+      size: 1,
+      opacity: 50,
+    })
+
+    const { container } = renderWithEngine(<DrawToolLocalOverlayLayer />, engine)
+
+    expect(container.querySelector('path')).toHaveAttribute(
+      'd',
+      pointsToPathD(
+        [
+          [0, 0, 0.5],
+          [5, 5, 0.5],
+        ],
+        1,
       ),
     )
   })

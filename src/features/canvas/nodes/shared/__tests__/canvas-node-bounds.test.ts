@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { getCanvasNodeBounds } from '../canvas-node-bounds'
 import type { CanvasDocumentNode as Node } from '~/features/canvas/types/canvas-domain-types'
 
+/**
+ * asNode(value: unknown): Node force-casts malformed shapes for testing purposes only.
+ * Use it for invalid node shapes or edge cases the type system would normally reject.
+ * Prefer real Node instances when the test is not covering type-system edge cases.
+ */
 function asNode(value: unknown): Node {
   return value as Node
 }

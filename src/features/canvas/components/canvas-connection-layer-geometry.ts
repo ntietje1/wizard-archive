@@ -1,7 +1,7 @@
 import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
 import type { CanvasHandlePosition } from '~/features/canvas/types/canvas-domain-types'
 import { buildBezierCanvasEdgeGeometryFromEdge } from '../edges/bezier/bezier-canvas-edge-geometry'
-import type { CanvasEdgeType } from '../edges/canvas-edge-types'
+import type { CanvasEdgeRenderGeometryProps, CanvasEdgeType } from '../edges/canvas-edge-types'
 import {
   buildStepCanvasEdgeGeometryFromEdge,
   buildStepCanvasEdgeGeometryFromRenderProps,
@@ -10,22 +10,10 @@ import {
   buildStraightCanvasEdgeGeometryFromEdge,
   buildStraightCanvasEdgeGeometryFromRenderProps,
 } from '../edges/straight/straight-canvas-edge-geometry'
+import type { CanvasConnectionDraft } from '../runtime/interaction/canvas-connection-gesture-types'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from '../types/canvas-domain-types'
 import type { Point2D } from '../utils/canvas-awareness-types'
 import { assertNever } from '~/shared/utils/utils'
-
-type CanvasConnectionDraftEndpoint = {
-  nodeId: string
-  handleId: string | null
-  position: CanvasHandlePosition
-  point: Point2D
-}
-
-export type CanvasConnectionDraft = {
-  source: CanvasConnectionDraftEndpoint
-  current: Point2D
-  snapTarget: CanvasConnectionDraftEndpoint | null
-}
 
 type CanvasConnectionPreviewGeometry = {
   path: string
@@ -73,7 +61,12 @@ export function buildConnectionDraftGeometry(
   }
 }
 
-function createFreeDragRenderProps(draft: CanvasConnectionDraft) {
+function createFreeDragRenderProps(
+  draft: CanvasConnectionDraft,
+): Pick<
+  CanvasEdgeRenderGeometryProps,
+  'sourceX' | 'sourceY' | 'targetX' | 'targetY' | 'sourcePosition' | 'targetPosition'
+> {
   return {
     sourceX: draft.source.point.x,
     sourceY: draft.source.point.y,
@@ -85,7 +78,7 @@ function createFreeDragRenderProps(draft: CanvasConnectionDraft) {
 }
 
 function buildFreeDragBezierPreviewGeometry(
-  source: CanvasConnectionDraftEndpoint,
+  source: CanvasConnectionDraft['source'],
   current: Point2D,
 ): CanvasConnectionPreviewGeometry {
   const dx = current.x - source.point.x

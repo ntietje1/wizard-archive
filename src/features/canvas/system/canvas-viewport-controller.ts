@@ -1,4 +1,5 @@
 import type { CanvasEngine, CanvasViewport } from './canvas-engine'
+import type { CanvasDomRuntime } from './canvas-dom-runtime'
 import { getCanvasFitViewport } from '../utils/canvas-fit-view'
 import type { CanvasDocumentNode, CanvasPosition } from '../types/canvas-domain-types'
 
@@ -9,7 +10,7 @@ const WHEEL_ZOOM_SENSITIVITY = 0.002
 const MIN_WHEEL_ZOOM_FACTOR = 0.5
 const MAX_WHEEL_ZOOM_FACTOR = 2
 const WHEEL_PAN_SENSITIVITY = 1
-const VIEWPORT_COMMIT_DELAY_MS = 300
+export const VIEWPORT_COMMIT_IDLE_MS = 300
 const FIT_VIEW_PADDING = 0.15
 
 export interface CanvasViewportController {
@@ -44,9 +45,11 @@ interface CanvasPanSession {
 
 export function createCanvasViewportController({
   canvasEngine,
+  domRuntime,
   getSurfaceElement,
 }: {
   canvasEngine: CanvasEngine
+  domRuntime: Pick<CanvasDomRuntime, 'flush'>
   getSurfaceElement: () => HTMLElement | null
 }): CanvasViewportController {
   let commitTimer: ReturnType<typeof setTimeout> | null = null
@@ -71,7 +74,7 @@ export function createCanvasViewportController({
     commitTimer = setTimeout(() => {
       commitTimer = null
       commit()
-    }, VIEWPORT_COMMIT_DELAY_MS)
+    }, VIEWPORT_COMMIT_IDLE_MS)
   }
 
   const applyViewport = (viewport: CanvasViewport, options: CanvasViewportUpdateOptions = {}) => {
@@ -82,7 +85,7 @@ export function createCanvasViewportController({
         commitTimer = null
       }
       canvasEngine.setViewport(nextViewport)
-      canvasEngine.flushRenderScheduler()
+      domRuntime.flush()
       return
     }
 
@@ -95,7 +98,7 @@ export function createCanvasViewportController({
   const commit = () => {
     const viewport = getViewport()
     canvasEngine.setViewport(viewport)
-    canvasEngine.flushRenderScheduler()
+    domRuntime.flush()
   }
 
   const stopPanSession = (event: PointerEvent, shouldCommit: boolean) => {

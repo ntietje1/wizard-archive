@@ -2,11 +2,16 @@ import { normalizeCanvasEdgeStyle } from '../edges/shared/canvas-edge-style'
 import { parseCanvasStrokeNodeData } from 'convex/canvases/validation'
 import { getCanvasNodeSurfaceStyle } from '../nodes/shared/canvas-node-surface-style'
 import { getCachedStrokeDetailPath } from '../nodes/stroke/stroke-path-cache'
+import {
+  resolveCanvasScreenMinimumStrokeWidth,
+  resolveCanvasScreenMinimumStrokeWidthCss,
+} from '../utils/canvas-screen-stroke-width'
 import type { CanvasEdgePatch } from '../edges/canvas-edge-types'
 import type { CanvasNodeDataPatch } from '../nodes/canvas-node-modules'
 import type { CanvasCullingDiff } from './canvas-culling'
-import type { CanvasDomRegistry } from './canvas-dom-registry'
+import type { CanvasDomRegistry, CanvasRegisteredStrokeNodePaths } from './canvas-dom-registry'
 import type { CanvasNodeSurfaceStyleData } from '../nodes/shared/canvas-node-surface-style'
+import type { StrokeNodeData } from '../nodes/stroke/stroke-node-model'
 import type {
   CanvasDocumentEdge,
   CanvasPosition,
@@ -44,6 +49,7 @@ export function createCanvasRenderScheduler({
   let pendingViewportTransform: CanvasViewport | null = null
   let pendingCameraState: CanvasCameraState | null = null
   let appliedCameraState: CanvasCameraState | null = null
+  let currentViewportZoom = 1
   let frameId: number | null = null
 
   const applyCameraState = (state: CanvasCameraState) => {
@@ -118,21 +124,8 @@ export function createCanvasRenderScheduler({
     }
 
     const strokePaths = domRegistry.getStrokeNodePaths(nodeId)
-    const opacity = String((strokeData.opacity ?? 100) / 100)
-    const detailPath = getCachedStrokeDetailPath(nodeId, strokeData)
-    if (detailPath && strokePaths?.path) {
-      strokePaths.path.setAttribute('d', detailPath)
-      strokePaths.path.setAttribute('fill', strokeData.color ?? 'transparent')
-      strokePaths.path.setAttribute('opacity', opacity)
-    }
-
-    const highlightPath = getCachedStrokeDetailPath(
-      nodeId,
-      strokeData,
-      strokeData.size * HIGHLIGHT_PATH_OFFSET_FACTOR,
-    )
-    if (highlightPath && strokePaths?.highlightPath) {
-      strokePaths.highlightPath.setAttribute('d', highlightPath)
+    if (strokePaths) {
+      applyStrokeNodePaths(nodeId, strokePaths, strokeData)
     }
   }
 
@@ -155,13 +148,18 @@ export function createCanvasRenderScheduler({
       ...readEdgeStyle(paths.path),
       ...patch,
     })
+    const highlightStrokeWidth = Math.max(style.strokeWidth * HIGHLIGHT_STROKE_WIDTH_FACTOR, 1)
     paths.path.style.stroke = style.stroke
-    paths.path.style.strokeWidth = String(style.strokeWidth)
+    paths.path.style.strokeWidth = String(
+      resolveCanvasScreenMinimumStrokeWidthCss(style.strokeWidth),
+    )
     paths.path.style.opacity = String(style.opacity)
+    paths.path.dataset.canvasAuthoredStrokeWidth = String(style.strokeWidth)
     if (paths.highlightPath) {
       paths.highlightPath.style.strokeWidth = String(
-        Math.max(style.strokeWidth * HIGHLIGHT_STROKE_WIDTH_FACTOR, 1),
+        resolveCanvasScreenMinimumStrokeWidthCss(highlightStrokeWidth),
       )
+      paths.highlightPath.dataset.canvasAuthoredStrokeWidth = String(highlightStrokeWidth)
     }
   }
 
@@ -181,8 +179,50 @@ export function createCanvasRenderScheduler({
 
     for (const viewport of domRegistry.getViewportTargets()) {
       viewport.style.transform = `translate3d(${pendingViewportTransform.x}px, ${pendingViewportTransform.y}px, 0) scale(${pendingViewportTransform.zoom})`
+      viewport.style.setProperty('--canvas-zoom', String(pendingViewportTransform.zoom))
     }
+    currentViewportZoom = pendingViewportTransform.zoom
+    refreshRegisteredStrokeNodePaths()
     pendingViewportTransform = null
+  }
+
+  const refreshRegisteredStrokeNodePaths = () => {
+    for (const [nodeId, strokePaths] of domRegistry.getStrokeNodePathEntries()) {
+      if (strokePaths.data) {
+        applyStrokeNodePaths(nodeId, strokePaths, strokePaths.data)
+      }
+    }
+  }
+
+  const applyStrokeNodePaths = (
+    nodeId: string,
+    strokePaths: CanvasRegisteredStrokeNodePaths,
+    strokeData: StrokeNodeData,
+  ) => {
+    strokePaths.data = strokeData
+    const opacity = String((strokeData.opacity ?? 100) / 100)
+    const detailPath = getCachedStrokeDetailPath(
+      nodeId,
+      strokeData,
+      resolveCanvasScreenMinimumStrokeWidth(strokeData.size, currentViewportZoom),
+    )
+    if (detailPath && strokePaths.path) {
+      strokePaths.path.setAttribute('d', detailPath)
+      strokePaths.path.setAttribute('fill', strokeData.color ?? 'transparent')
+      strokePaths.path.setAttribute('opacity', opacity)
+    }
+
+    const highlightPath = getCachedStrokeDetailPath(
+      nodeId,
+      strokeData,
+      resolveCanvasScreenMinimumStrokeWidth(
+        strokeData.size * HIGHLIGHT_PATH_OFFSET_FACTOR,
+        currentViewportZoom,
+      ),
+    )
+    if (highlightPath && strokePaths.highlightPath) {
+      strokePaths.highlightPath.setAttribute('d', highlightPath)
+    }
   }
 
   const applyCullingDiff = () => {
@@ -269,12 +309,13 @@ export function createCanvasRenderScheduler({
       pendingViewportTransform = null
       pendingCameraState = null
       appliedCameraState = null
+      currentViewportZoom = 1
     },
   }
 }
 
 function readEdgeStyle(path: SVGPathElement): NonNullable<CanvasDocumentEdge['style']> {
-  const strokeWidth = path.style.strokeWidth
+  const strokeWidth = path.dataset.canvasAuthoredStrokeWidth
   const opacity = path.style.opacity
   return {
     stroke: path.style.stroke,

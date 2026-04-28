@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { CanvasConnectionLayer } from '../canvas-connection-layer'
 import { buildConnectionDraftGeometry } from '../canvas-connection-layer-geometry'
-import type { CanvasConnectionDraft } from '../canvas-connection-layer-geometry'
+import type { CanvasConnectionDraft } from '../../runtime/interaction/canvas-connection-gesture-types'
 import {
   buildBezierCanvasEdgeGeometryFromEdge,
   buildBezierCanvasEdgeGeometryFromRenderProps,
@@ -44,6 +44,7 @@ const nodesById = new Map([
 
 function createSnappedDraft(): CanvasConnectionDraft {
   return {
+    pointerId: 1,
     source: {
       nodeId: 'source',
       handleId: 'right',
@@ -116,6 +117,7 @@ describe('CanvasConnectionLayer', () => {
 
   it('uses a cubic drag-vector preview for unsnapped bezier drags', () => {
     const draft: CanvasConnectionDraft = {
+      pointerId: 1,
       source: {
         nodeId: 'source',
         handleId: 'right',
@@ -160,6 +162,7 @@ describe('CanvasConnectionLayer', () => {
         <svg>
           <CanvasConnectionLayer
             draft={{
+              pointerId: 1,
               source: {
                 nodeId: 'source',
                 handleId: 'right',
@@ -180,11 +183,12 @@ describe('CanvasConnectionLayer', () => {
     expect(preview).toHaveStyle({
       opacity: '0.42',
       stroke: 'var(--t-red)',
-      strokeWidth: '8',
+      strokeWidth: 'max(8px, calc(1px / max(var(--canvas-zoom, 1), 0.0001)))',
     })
+    expect(preview).toHaveAttribute('data-canvas-authored-stroke-width', '8')
   })
 
-  it('renders connection previews with a minimum stroke width of one', () => {
+  it('renders connection previews with a screen-pixel stroke floor', () => {
     engine = createCanvasEngine()
     engine.setDocumentSnapshot({ nodes: [sourceNode] })
     useCanvasToolStore.getState().setStrokeSize(0)
@@ -194,6 +198,7 @@ describe('CanvasConnectionLayer', () => {
         <svg>
           <CanvasConnectionLayer
             draft={{
+              pointerId: 1,
               source: {
                 nodeId: 'source',
                 handleId: 'right',
@@ -209,7 +214,7 @@ describe('CanvasConnectionLayer', () => {
     )
 
     expect(screen.getByTestId('canvas-connection-preview')).toHaveStyle({
-      strokeWidth: '1',
+      strokeWidth: 'max(1px, calc(1px / max(var(--canvas-zoom, 1), 0.0001)))',
     })
   })
 })

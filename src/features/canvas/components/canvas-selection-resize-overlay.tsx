@@ -25,15 +25,33 @@ function CanvasSelectionResizeZones({
 }) {
   return (
     <>
-      {zones.map(({ position, cursorClassName, onPointerDown, style }) => (
+      {zones.map(({ position, cursorClassName, onKeyboardStart, onPointerDown, style }) => (
         <button
           key={position}
           type="button"
           aria-label={`Resize ${position} selection edge`}
           data-testid={`canvas-selection-resize-zone-${position}`}
           data-resize-zone-position={position}
-          className={`canvas-selection-resize-zone nodrag nopan pointer-events-auto absolute border-none bg-transparent p-0 touch-none z-[2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${cursorClassName}`}
+          className={`canvas-selection-resize-zone nodrag nopan pointer-events-auto absolute border-none bg-transparent p-0 touch-none z-[2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 ${cursorClassName}`}
           style={style}
+          onClick={(event) => {
+            if (event.detail !== 0) {
+              return
+            }
+
+            event.preventDefault()
+            event.stopPropagation()
+            onKeyboardStart(event.currentTarget)
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') {
+              return
+            }
+
+            event.preventDefault()
+            event.stopPropagation()
+            onKeyboardStart(event.currentTarget)
+          }}
           onPointerDown={onPointerDown}
         />
       ))}

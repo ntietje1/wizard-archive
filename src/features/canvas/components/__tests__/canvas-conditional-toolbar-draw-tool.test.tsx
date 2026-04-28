@@ -4,7 +4,6 @@ import { CanvasConditionalToolbar } from '../canvas-conditional-toolbar'
 import { CanvasEngineProvider } from '../../react/canvas-engine-context'
 import { createCanvasRuntime } from '../../runtime/__tests__/canvas-runtime-test-utils'
 import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime-context'
-import { createCanvasEngine } from '../../system/canvas-engine'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 
 vi.mock('~/shared/components/color-picker-popover', () => ({
@@ -12,7 +11,6 @@ vi.mock('~/shared/components/color-picker-popover', () => ({
 }))
 
 function renderToolbar() {
-  const canvasEngine = createCanvasEngine()
   const runtime = createCanvasRuntime({
     nodeActions: {
       onResize: vi.fn(),
@@ -35,7 +33,7 @@ function renderToolbar() {
   })
 
   return render(
-    <CanvasEngineProvider engine={canvasEngine}>
+    <CanvasEngineProvider engine={runtime.canvasEngine}>
       <CanvasRuntimeProvider {...runtime}>
         <CanvasConditionalToolbar canEdit />
       </CanvasRuntimeProvider>

@@ -1,4 +1,5 @@
 import type { CanvasCullingDiff } from './canvas-culling'
+import type { StrokeNodeData } from '../nodes/stroke/stroke-node-model'
 
 export interface CanvasRegisteredEdgePaths {
   path: SVGPathElement | null
@@ -9,6 +10,7 @@ export interface CanvasRegisteredEdgePaths {
 export interface CanvasRegisteredStrokeNodePaths {
   path: SVGPathElement | null
   highlightPath?: SVGPathElement | null
+  data?: StrokeNodeData
 }
 
 export interface CanvasDomRegistry {
@@ -22,12 +24,34 @@ export interface CanvasDomRegistry {
   getNode: (nodeId: string) => HTMLElement | undefined
   getNodeSurface: (nodeId: string) => HTMLElement | undefined
   getStrokeNodePaths: (nodeId: string) => CanvasRegisteredStrokeNodePaths | undefined
+  getStrokeNodePathEntries: () => ReadonlyArray<readonly [string, CanvasRegisteredStrokeNodePaths]>
   getEdge: (edgeId: string) => SVGElement | undefined
   getEdgePaths: (edgeId: string) => CanvasRegisteredEdgePaths | undefined
   getViewportTargets: () => ReadonlyArray<HTMLElement>
   getViewportSurfaceBounds: () => Pick<DOMRect, 'width' | 'height'> | null
   applyCullingDiff: (diff: CanvasCullingDiff) => void
   clear: () => void
+}
+
+function cloneStrokeNodePaths(
+  paths: CanvasRegisteredStrokeNodePaths,
+): CanvasRegisteredStrokeNodePaths {
+  return {
+    ...paths,
+    data: paths.data ? cloneStrokeNodeData(paths.data) : paths.data,
+  }
+}
+
+function cloneStrokeNodeData(data: StrokeNodeData): StrokeNodeData {
+  if (typeof structuredClone === 'function') {
+    return structuredClone(data)
+  }
+
+  return {
+    ...data,
+    points: data.points.map((point) => [...point]),
+    bounds: { ...data.bounds },
+  }
 }
 
 export function createCanvasDomRegistry(): CanvasDomRegistry {
@@ -165,6 +189,11 @@ export function createCanvasDomRegistry(): CanvasDomRegistry {
     getNode: (nodeId) => nodes.get(nodeId),
     getNodeSurface: (nodeId) => nodeSurfaces.get(nodeId),
     getStrokeNodePaths: (nodeId) => strokeNodePaths.get(nodeId),
+    getStrokeNodePathEntries: () =>
+      Array.from(strokeNodePaths.entries(), ([nodeId, paths]) => [
+        nodeId,
+        cloneStrokeNodePaths(paths),
+      ]),
     getEdge: (edgeId) => edges.get(edgeId),
     getEdgePaths: (edgeId) => edgePaths.get(edgeId),
     getViewportTargets: () => (viewport ? [viewport, ...viewportOverlays] : [...viewportOverlays]),

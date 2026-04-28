@@ -1,13 +1,16 @@
 import { act, render, screen } from '@testing-library/react'
 import { useState } from 'react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasRichTextNode } from '../canvas-rich-text-node'
 import { normalizeCanvasRichTextNodeData } from '../canvas-rich-text-node-data'
-import { createCanvasRuntime } from '../../../runtime/__tests__/canvas-runtime-test-utils'
+import {
+  createCanvasRuntime,
+  createCanvasRuntimeEnginePair,
+} from '../../../runtime/__tests__/canvas-runtime-test-utils'
 import { CanvasRuntimeProvider } from '../../../runtime/providers/canvas-runtime-context'
 import { CanvasRenderModeProvider } from '../../../runtime/providers/canvas-render-mode-context'
 import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
-import { createCanvasEngine } from '../../../system/canvas-engine'
+import type { CanvasDomRuntime } from '../../../system/canvas-dom-runtime'
 import type { CanvasEngine } from '../../../system/canvas-engine'
 import type { CanvasSelectionSnapshot } from '../../../tools/canvas-tool-types'
 
@@ -15,7 +18,8 @@ const renderModeState = vi.hoisted(() => ({
   interactive: true,
 }))
 
-let richTextEngine: CanvasEngine = createCanvasEngine()
+let richTextEngine: CanvasEngine
+let richTextDomRuntime: CanvasDomRuntime
 
 // This mock bypasses CanvasRenderModeProvider, so the harness mode prop and
 // renderModeState.interactive must stay aligned when changing test render mode.
@@ -62,8 +66,15 @@ vi.mock('~/features/shadcn/components/scroll-area', () => ({
 
 describe('CanvasRichTextNode', () => {
   beforeEach(() => {
-    richTextEngine = createCanvasEngine()
+    const runtimePair = createCanvasRuntimeEnginePair()
+    richTextEngine = runtimePair.canvasEngine
+    richTextDomRuntime = runtimePair.domRuntime
     renderModeState.interactive = true
+  })
+
+  afterEach(() => {
+    richTextEngine.destroy()
+    richTextDomRuntime.destroy()
   })
 
   it('selects the new text node when pending auto-edit starts', async () => {
@@ -149,6 +160,7 @@ function CanvasRichTextNodeHarness({
         <CanvasRuntimeProvider
           {...createCanvasRuntime({
             canvasEngine: richTextEngine,
+            domRuntime: richTextDomRuntime,
             editSession: {
               editingEmbedId: null,
               setEditingEmbedId: () => undefined,

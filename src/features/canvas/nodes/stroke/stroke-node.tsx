@@ -9,8 +9,12 @@ import type { Bounds } from '../../utils/canvas-geometry-utils'
 import { useEraseToolLocalOverlayStore } from '../../tools/erase/erase-tool-local-overlay'
 import { useCanvasNodeVisualSelection } from '../shared/use-canvas-node-visual-selection'
 import { getStrokeSelectionPadding } from './stroke-node-interactions'
+import { resolveCanvasScreenMinimumStrokeWidth } from '../../utils/canvas-screen-stroke-width'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
-import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
+import {
+  useCanvasDomRuntime,
+  useCanvasInteractionServices,
+} from '../../runtime/providers/canvas-runtime'
 
 const HIGHLIGHT_SCALE = 0.3
 const ERASING_OPACITY = 0.3
@@ -41,6 +45,7 @@ function StrokeVisual({
   width,
   height,
   opacityOverride,
+  detailSize,
   highlightD,
   pathRef,
   highlightPathRef,
@@ -50,12 +55,13 @@ function StrokeVisual({
   width?: number
   height?: number
   opacityOverride?: number
+  detailSize: number
   highlightD: string | null
   pathRef?: Ref<SVGPathElement>
   highlightPathRef?: Ref<SVGPathElement>
 }) {
   const { color = 'transparent', bounds } = data
-  const detailD = getCachedStrokeDetailPath(id, data)
+  const detailD = getCachedStrokeDetailPath(id, data, detailSize)
   if (!detailD && !highlightD) return null
 
   const normalizedOpacity = opacityOverride ?? (data.opacity ?? 100) / 100
@@ -116,7 +122,8 @@ export function StrokeNode({
   height,
 }: CanvasNodeComponentProps<StrokeNodeData>) {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
-  const { domRuntime, viewportController } = useCanvasRuntime()
+  const domRuntime = useCanvasDomRuntime()
+  const { viewportController } = useCanvasInteractionServices()
   const { size, bounds } = data
   const zoom = viewportController?.getZoom?.() ?? 1
   const isErasing = useEraseToolLocalOverlayStore((state) => state.erasingStrokeIds.has(id))
@@ -136,9 +143,9 @@ export function StrokeNode({
       }
     : null
 
-  const highlightD = visuallySelected
-    ? getCachedStrokeDetailPath(id, data, size * HIGHLIGHT_SCALE)
-    : null
+  const detailSize = resolveCanvasScreenMinimumStrokeWidth(size, zoom)
+  const highlightSize = resolveCanvasScreenMinimumStrokeWidth(size * HIGHLIGHT_SCALE, zoom)
+  const highlightD = visuallySelected ? getCachedStrokeDetailPath(id, data, highlightSize) : null
   const pathRef = useRef<SVGPathElement | null>(null)
   const highlightPathRef = useRef<SVGPathElement | null>(null)
 
@@ -150,8 +157,9 @@ export function StrokeNode({
     return domRuntime.registerStrokeNodePaths(id, {
       path: pathRef.current,
       highlightPath: highlightD ? highlightPathRef.current : null,
+      data,
     })
-  }, [domRuntime, highlightD, id])
+  }, [data, domRuntime, highlightD, id])
   const hitTarget =
     interactiveRenderMode && hitTargetD && hitTargetViewBox ? (
       <svg
@@ -195,6 +203,7 @@ export function StrokeNode({
         width={svgWidth}
         height={svgHeight}
         opacityOverride={interactiveRenderMode && isErasing ? ERASING_OPACITY : undefined}
+        detailSize={detailSize}
         highlightD={interactiveRenderMode ? highlightD : null}
         pathRef={pathRef}
         highlightPathRef={highlightPathRef}

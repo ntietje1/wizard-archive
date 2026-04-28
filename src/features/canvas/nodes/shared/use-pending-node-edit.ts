@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
+import { useCanvasInteractionServices } from '../../runtime/providers/canvas-runtime'
 
 interface UsePendingNodeEditOptions {
   id: string
@@ -16,7 +16,7 @@ export function usePendingNodeEdit({
 }: UsePendingNodeEditOptions) {
   const {
     editSession: { pendingEditNodeId, setPendingEditNodeId },
-  } = useCanvasRuntime()
+  } = useCanvasInteractionServices()
 
   useEffect(() => {
     if (!selected || isEditing || pendingEditNodeId !== id) return

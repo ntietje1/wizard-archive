@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
+import { createCanvasDomRuntime } from '../canvas-dom-runtime'
 import { createCanvasEngine } from '../canvas-engine'
+import { getCachedStrokeDetailPath } from '../../nodes/stroke/stroke-path-cache'
 import {
   areCanvasPropertyEdgesEqual,
   areCanvasPropertyNodesEqual,
@@ -191,7 +193,7 @@ describe('createCanvasEngine', () => {
   })
 
   it('updates live drag DOM transforms and connected edge paths without notifying subscribers', () => {
-    const engine = createCanvasEngine()
+    const { domRuntime, engine } = createEngineWithDomRuntime()
     const source = { ...createNode('source', 0), width: 100, height: 50 }
     const target = {
       ...createNode('target', 1),
@@ -201,8 +203,8 @@ describe('createCanvasEngine', () => {
     }
     const nodeElement = document.createElement('div')
     const edgePath = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-    const unsubscribeNode = engine.registerNodeElement('source', nodeElement)
-    const unsubscribeEdge = engine.registerEdgePaths('edge-1', {
+    const unsubscribeNode = domRuntime.registerNodeElement('source', nodeElement)
+    const unsubscribeEdge = domRuntime.registerEdgePaths('edge-1', {
       path: edgePath,
       highlightPath: null,
       interactionPath: null,
@@ -216,7 +218,7 @@ describe('createCanvasEngine', () => {
     const unsubscribe = engine.subscribe(listener)
 
     engine.updateDrag(new Map([['source', { x: 20, y: 10 }]]))
-    engine.flushRenderScheduler()
+    domRuntime.flush()
 
     expect(listener).not.toHaveBeenCalled()
     expect(nodeElement.style.transform).toBe('translate(20px, 10px)')
@@ -232,7 +234,7 @@ describe('createCanvasEngine', () => {
   })
 
   it('merges visual node data patches with the current engine data before writing DOM styles', () => {
-    const engine = createCanvasEngine()
+    const { domRuntime, engine } = createEngineWithDomRuntime()
     const nodeSurface = document.createElement('div')
     engine.setDocumentSnapshot({
       nodes: [
@@ -248,29 +250,33 @@ describe('createCanvasEngine', () => {
         } as Node,
       ],
     })
-    const unregister = engine.registerNodeSurfaceElement('a', nodeSurface)
+    const unregister = domRuntime.registerNodeSurfaceElement('a', nodeSurface)
 
-    engine.scheduleNodeDataPatches(new Map([['a', { borderWidth: 4 }]]))
-    engine.flushRenderScheduler()
+    domRuntime.scheduleNodeDataPatches(engine.getSnapshot(), new Map([['a', { borderWidth: 4 }]]))
+    domRuntime.flush()
 
     expect(nodeSurface.style.backgroundColor).toBe('rgb(255, 0, 0)')
-    expect(nodeSurface.style.border).toBe('4px solid rgb(0, 0, 0)')
+    expect(nodeSurface.style.borderColor).toBe('rgb(0, 0, 0)')
+    expect(nodeSurface.style.borderStyle).toBe('solid')
+    expect(nodeSurface.style.borderWidth).toBe(
+      'max(4px, calc(1px / max(var(--canvas-zoom, 1), 0.0001)))',
+    )
 
     unregister()
     engine.destroy()
   })
 
   it('updates viewport transforms without notifying general subscribers', () => {
-    const engine = createCanvasEngine()
+    const { domRuntime, engine } = createEngineWithDomRuntime()
     const viewportElement = document.createElement('div')
-    const unregister = engine.registerViewportElement(viewportElement)
+    const unregister = domRuntime.registerViewportElement(viewportElement)
     const listener = vi.fn()
     const unsubscribe = engine.subscribe(listener)
     const viewportListener = vi.fn()
     const unsubscribeViewport = engine.subscribeViewportCommit(viewportListener)
 
     engine.setViewportLive({ x: 10, y: 20, zoom: 2 })
-    engine.flushRenderScheduler()
+    domRuntime.flush()
 
     expect(listener).not.toHaveBeenCalled()
     expect(viewportListener).not.toHaveBeenCalled()
@@ -279,11 +285,12 @@ describe('createCanvasEngine', () => {
     expect(engine.getSnapshot().debouncedZoomLevel).toBe(1)
     expect(engine.getDebouncedZoomLevel()).toBe(1)
     expect(viewportElement.style.transform).toBe('translate3d(10px, 20px, 0) scale(2)')
+    expect(viewportElement.style.getPropertyValue('--canvas-zoom')).toBe('2')
     expect(viewportElement).toHaveAttribute('data-camera-state', 'moving')
     expect(viewportElement.style.willChange).toBe('transform')
 
     engine.setViewport({ x: 10, y: 20, zoom: 2 })
-    engine.flushRenderScheduler()
+    domRuntime.flush()
     expect(listener).not.toHaveBeenCalled()
     expect(viewportListener).toHaveBeenCalledTimes(1)
     expect(viewportListener).toHaveBeenCalledWith({ x: 10, y: 20, zoom: 2 })
@@ -300,7 +307,7 @@ describe('createCanvasEngine', () => {
   })
 
   it('culls offscreen registered elements without mutating ordered ids or notifying subscribers', () => {
-    const engine = createCanvasEngine()
+    const { domRuntime, engine } = createEngineWithDomRuntime()
     const paneElement = document.createElement('div')
     const viewportElement = document.createElement('div')
     paneElement.append(viewportElement)
@@ -312,9 +319,9 @@ describe('createCanvasEngine', () => {
       ({ left: 0, top: 0, width: 100, height: 100 }) as DOMRect
     const insideElement = document.createElement('div')
     const farElement = document.createElement('div')
-    const unregisterViewport = engine.registerViewportElement(viewportElement)
-    const unregisterInside = engine.registerNodeElement('inside', insideElement)
-    const unregisterFar = engine.registerNodeElement('far', farElement)
+    const unregisterViewport = domRuntime.registerViewportElement(viewportElement)
+    const unregisterInside = domRuntime.registerNodeElement('inside', insideElement)
+    const unregisterFar = domRuntime.registerNodeElement('far', farElement)
     const listener = vi.fn()
     const unsubscribe = engine.subscribe(listener)
 
@@ -324,7 +331,8 @@ describe('createCanvasEngine', () => {
         { ...createNode('far', 1), position: { x: 800, y: 0 }, width: 20, height: 20 },
       ],
     })
-    engine.flushRenderScheduler()
+    engine.refreshCulling()
+    domRuntime.flush()
 
     expect(engine.getSnapshot().nodeIds).toEqual(['inside', 'far'])
     expect(insideElement.style.display).toBe('')
@@ -333,7 +341,7 @@ describe('createCanvasEngine', () => {
 
     listener.mockClear()
     engine.setViewportLive({ x: -700, y: 0, zoom: 1 })
-    engine.flushRenderScheduler()
+    domRuntime.flush()
 
     expect(listener).not.toHaveBeenCalled()
     expect(engine.getSnapshot().nodeIds).toEqual(['inside', 'far'])
@@ -341,7 +349,7 @@ describe('createCanvasEngine', () => {
     expect(farElement.style.display).toBe('')
 
     engine.setViewport({ x: -700, y: 0, zoom: 1 })
-    engine.flushRenderScheduler()
+    domRuntime.flush()
 
     expect(listener).not.toHaveBeenCalled()
     expect(engine.getSnapshot().nodeIds).toEqual(['inside', 'far'])
@@ -355,21 +363,22 @@ describe('createCanvasEngine', () => {
   })
 
   it('applies the current culling state when an element registers after reconciliation', () => {
-    const engine = createCanvasEngine()
+    const { domRuntime, engine } = createEngineWithDomRuntime()
     const paneElement = document.createElement('div')
     const viewportElement = document.createElement('div')
     paneElement.append(viewportElement)
     paneElement.getBoundingClientRect = () =>
       ({ left: 0, top: 0, width: 100, height: 100 }) as DOMRect
-    const unregisterViewport = engine.registerViewportElement(viewportElement)
+    const unregisterViewport = domRuntime.registerViewportElement(viewportElement)
 
     engine.setDocumentSnapshot({
       nodes: [{ ...createNode('far', 0), position: { x: 800, y: 0 }, width: 20, height: 20 }],
     })
-    engine.flushRenderScheduler()
+    engine.refreshCulling()
+    domRuntime.flush()
 
     const farElement = document.createElement('div')
-    const unregisterFar = engine.registerNodeElement('far', farElement)
+    const unregisterFar = domRuntime.registerNodeElement('far', farElement)
 
     expect(farElement.style.display).toBe('none')
     expect(farElement).toHaveAttribute('data-canvas-culled', 'true')
@@ -380,24 +389,25 @@ describe('createCanvasEngine', () => {
   })
 
   it('uses measured node dimensions when document dimensions are absent', () => {
-    const engine = createCanvasEngine()
+    const { domRuntime, engine } = createEngineWithDomRuntime()
     const paneElement = document.createElement('div')
     const viewportElement = document.createElement('div')
     paneElement.append(viewportElement)
     paneElement.getBoundingClientRect = () =>
       ({ left: 0, top: 0, width: 100, height: 100 }) as DOMRect
     const measuredElement = document.createElement('div')
-    const unregisterViewport = engine.registerViewportElement(viewportElement)
-    const unregisterMeasured = engine.registerNodeElement('measured', measuredElement)
+    const unregisterViewport = domRuntime.registerViewportElement(viewportElement)
+    const unregisterMeasured = domRuntime.registerNodeElement('measured', measuredElement)
     engine.setDocumentSnapshot({
       nodes: [{ ...createNode('measured', 0), position: { x: 800, y: 0 } }],
     })
-    engine.flushRenderScheduler()
+    engine.refreshCulling()
+    domRuntime.flush()
 
     expect(measuredElement.style.display).toBe('')
 
     engine.measureNode('measured', { width: 20, height: 20 })
-    engine.flushRenderScheduler()
+    domRuntime.flush()
 
     expect(measuredElement.style.display).toBe('none')
 
@@ -426,7 +436,7 @@ describe('createCanvasEngine', () => {
   })
 
   it('keeps selected offscreen nodes and connected edges visible', () => {
-    const engine = createCanvasEngine()
+    const { domRuntime, engine } = createEngineWithDomRuntime()
     const paneElement = document.createElement('div')
     const viewportElement = document.createElement('div')
     paneElement.append(viewportElement)
@@ -435,10 +445,10 @@ describe('createCanvasEngine', () => {
     const sourceElement = document.createElement('div')
     const targetElement = document.createElement('div')
     const edgeElement = document.createElementNS('http://www.w3.org/2000/svg', 'g')
-    const unregisterViewport = engine.registerViewportElement(viewportElement)
-    const unregisterSource = engine.registerNodeElement('source', sourceElement)
-    const unregisterTarget = engine.registerNodeElement('target', targetElement)
-    const unregisterEdge = engine.registerEdgeElement('edge-1', edgeElement)
+    const unregisterViewport = domRuntime.registerViewportElement(viewportElement)
+    const unregisterSource = domRuntime.registerNodeElement('source', sourceElement)
+    const unregisterTarget = domRuntime.registerNodeElement('target', targetElement)
+    const unregisterEdge = domRuntime.registerEdgeElement('edge-1', edgeElement)
 
     engine.setDocumentSnapshot({
       nodes: [
@@ -447,13 +457,14 @@ describe('createCanvasEngine', () => {
       ],
       edges: [createEdge('edge-1', 'source', 'target')],
     })
-    engine.flushRenderScheduler()
+    engine.refreshCulling()
+    domRuntime.flush()
 
     expect(sourceElement.style.display).toBe('none')
     expect(edgeElement.style.display).toBe('none')
 
     engine.setSelection({ nodeIds: new Set(['source']), edgeIds: new Set() })
-    engine.flushRenderScheduler()
+    domRuntime.flush()
 
     expect(sourceElement.style.display).toBe('')
     expect(edgeElement.style.display).toBe('')
@@ -467,22 +478,25 @@ describe('createCanvasEngine', () => {
   })
 
   it('updates registered viewport overlay transforms with the main viewport', () => {
-    const engine = createCanvasEngine()
+    const { domRuntime, engine } = createEngineWithDomRuntime()
     const viewportElement = document.createElement('div')
     const localOverlayElement = document.createElement('div')
     const awarenessOverlayElement = document.createElement('div')
 
-    const unregisterViewport = engine.registerViewportElement(viewportElement)
-    const unregisterLocalOverlay = engine.registerViewportOverlayElement(localOverlayElement)
+    const unregisterViewport = domRuntime.registerViewportElement(viewportElement)
+    const unregisterLocalOverlay = domRuntime.registerViewportOverlayElement(localOverlayElement)
     const unregisterAwarenessOverlay =
-      engine.registerViewportOverlayElement(awarenessOverlayElement)
+      domRuntime.registerViewportOverlayElement(awarenessOverlayElement)
 
     engine.setViewportLive({ x: 15, y: -25, zoom: 1.5 })
-    engine.flushRenderScheduler()
+    domRuntime.flush()
 
     expect(viewportElement.style.transform).toBe('translate3d(15px, -25px, 0) scale(1.5)')
     expect(localOverlayElement.style.transform).toBe('translate3d(15px, -25px, 0) scale(1.5)')
     expect(awarenessOverlayElement.style.transform).toBe('translate3d(15px, -25px, 0) scale(1.5)')
+    expect(viewportElement.style.getPropertyValue('--canvas-zoom')).toBe('1.5')
+    expect(localOverlayElement.style.getPropertyValue('--canvas-zoom')).toBe('1.5')
+    expect(awarenessOverlayElement.style.getPropertyValue('--canvas-zoom')).toBe('1.5')
 
     unregisterViewport()
     unregisterLocalOverlay()
@@ -491,10 +505,10 @@ describe('createCanvasEngine', () => {
   })
 
   it('updates registered stroke paths from visual node data patches', () => {
-    const engine = createCanvasEngine()
+    const { domRuntime, engine } = createEngineWithDomRuntime()
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
     const highlightPath = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-    const unregister = engine.registerStrokeNodePaths('stroke-1', {
+    const unregister = domRuntime.registerStrokeNodePaths('stroke-1', {
       path,
       highlightPath,
     })
@@ -516,13 +530,69 @@ describe('createCanvasEngine', () => {
       ],
     })
 
-    engine.scheduleNodeDataPatches(new Map([['stroke-1', { size: 8 }]]))
-    engine.flushRenderScheduler()
+    domRuntime.scheduleNodeDataPatches(engine.getSnapshot(), new Map([['stroke-1', { size: 8 }]]))
+    domRuntime.flush()
 
     expect(path.getAttribute('d')).toBeTruthy()
     expect(highlightPath.getAttribute('d')).toBeTruthy()
 
     unregister()
+    engine.destroy()
+  })
+
+  it('applies edge style patches with render-only screen stroke floors', () => {
+    const { domRuntime, engine } = createEngineWithDomRuntime()
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+    const highlightPath = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+    const unregister = domRuntime.registerEdgePaths('edge-1', {
+      path,
+      highlightPath,
+    })
+
+    domRuntime.scheduleEdgePatches(
+      new Map([['edge-1', { style: { stroke: '#ff0000', strokeWidth: 8, opacity: 0.5 } }]]),
+    )
+    domRuntime.flush()
+
+    expect(path.style.stroke).toBe('rgb(255, 0, 0)')
+    expect(path.style.strokeWidth).toBe('max(8px, calc(1px / max(var(--canvas-zoom, 1), 0.0001)))')
+    expect(path.dataset.canvasAuthoredStrokeWidth).toBe('8')
+    expect(path.style.opacity).toBe('0.5')
+    expect(highlightPath.style.strokeWidth).toBe(
+      'max(1.2px, calc(1px / max(var(--canvas-zoom, 1), 0.0001)))',
+    )
+    expect(highlightPath.dataset.canvasAuthoredStrokeWidth).toBe('1.2')
+
+    unregister()
+    engine.destroy()
+  })
+
+  it('recomputes registered stroke paths when viewport zoom changes', () => {
+    const { domRuntime, engine } = createEngineWithDomRuntime()
+    const viewportElement = document.createElement('div')
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+    const strokeData = {
+      points: [
+        [0, 0, 0.5],
+        [24, 0, 0.5],
+      ] as Array<[number, number, number]>,
+      bounds: { x: 0, y: 0, width: 24, height: 1 },
+      color: 'var(--foreground)',
+      size: 1,
+    }
+    const unregisterViewport = domRuntime.registerViewportElement(viewportElement)
+    const unregisterStroke = domRuntime.registerStrokeNodePaths('stroke-1', {
+      path,
+      data: strokeData,
+    })
+
+    engine.setViewportLive({ x: 0, y: 0, zoom: 0.25 })
+    domRuntime.flush()
+
+    expect(path.getAttribute('d')).toBe(getCachedStrokeDetailPath('stroke-1', strokeData, 4))
+
+    unregisterStroke()
+    unregisterViewport()
     engine.destroy()
   })
 })
@@ -555,6 +625,12 @@ function createNode(id: string, zIndex: number): Node {
     zIndex,
     data: {},
   }
+}
+
+function createEngineWithDomRuntime() {
+  const domRuntime = createCanvasDomRuntime()
+  const engine = createCanvasEngine({ domRuntime })
+  return { domRuntime, engine }
 }
 
 function createEdge(id: string, source: string, target: string): Edge {

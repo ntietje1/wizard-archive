@@ -1,5 +1,6 @@
 import type { Id } from '../_generated/dataModel'
 import { canvasPartialBlockNoteDocumentSchema } from '../blocks/blockSchemas'
+import { logger } from '../common/logger'
 import { z } from 'zod'
 
 function clampNumber(value: number, min: number, max: number): number {
@@ -218,48 +219,33 @@ export const canvasStrokeNodeDataSchema: z.ZodType<CanvasStrokeNodeData> = z
   })
   .strict()
 
+const canvasDocumentNodeBaseSchema = z
+  .object({
+    id: z.string(),
+    position: canvasPositionSchema,
+    width: finiteNumberSchema.optional(),
+    height: finiteNumberSchema.optional(),
+    hidden: z.boolean().optional(),
+    zIndex: finiteNumberSchema.optional(),
+    className: z.string().optional(),
+  })
+  .strict()
+
 export const canvasDocumentNodeSchema: z.ZodType<CanvasDocumentNode> = z.discriminatedUnion(
   'type',
   [
-    z
-      .object({
-        id: z.string(),
-        type: z.literal('embed'),
-        position: canvasPositionSchema,
-        data: canvasEmbedNodeDataSchema,
-        width: finiteNumberSchema.optional(),
-        height: finiteNumberSchema.optional(),
-        hidden: z.boolean().optional(),
-        zIndex: finiteNumberSchema.optional(),
-        className: z.string().optional(),
-      })
-      .strict(),
-    z
-      .object({
-        id: z.string(),
-        type: z.literal('stroke'),
-        position: canvasPositionSchema,
-        data: canvasStrokeNodeDataSchema,
-        width: finiteNumberSchema.optional(),
-        height: finiteNumberSchema.optional(),
-        hidden: z.boolean().optional(),
-        zIndex: finiteNumberSchema.optional(),
-        className: z.string().optional(),
-      })
-      .strict(),
-    z
-      .object({
-        id: z.string(),
-        type: z.literal('text'),
-        position: canvasPositionSchema,
-        data: canvasTextNodeDataSchema,
-        width: finiteNumberSchema.optional(),
-        height: finiteNumberSchema.optional(),
-        hidden: z.boolean().optional(),
-        zIndex: finiteNumberSchema.optional(),
-        className: z.string().optional(),
-      })
-      .strict(),
+    canvasDocumentNodeBaseSchema.extend({
+      type: z.literal('embed'),
+      data: canvasEmbedNodeDataSchema,
+    }),
+    canvasDocumentNodeBaseSchema.extend({
+      type: z.literal('stroke'),
+      data: canvasStrokeNodeDataSchema,
+    }),
+    canvasDocumentNodeBaseSchema.extend({
+      type: z.literal('text'),
+      data: canvasTextNodeDataSchema,
+    }),
   ],
 )
 
@@ -514,10 +500,27 @@ export function parseCanvasDocumentNodes(value: unknown): Array<CanvasDocumentNo
     return null
   }
 
-  return value.flatMap((node) => {
+  return value.flatMap((node, index) => {
     const parsedNode = parseCanvasDocumentNode(node)
-    return parsedNode ? [parsedNode] : []
+    if (parsedNode) {
+      return [parsedNode]
+    }
+
+    logger.warn('parseCanvasDocumentNodes: dropped malformed canvas document node', {
+      index,
+      nodeId: getCanvasNodeLogField(node, 'id'),
+      nodeType: getCanvasNodeLogField(node, 'type'),
+    })
+    return []
   })
+}
+
+function getCanvasNodeLogField(node: unknown, field: 'id' | 'type'): unknown {
+  if (!node || typeof node !== 'object') {
+    return undefined
+  }
+
+  return (node as Record<string, unknown>)[field]
 }
 
 export function parseCanvasEdgeType(value: unknown): CanvasEdgeType | null {

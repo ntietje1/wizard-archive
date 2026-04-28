@@ -405,6 +405,29 @@ describe('ResizableNodeWrapper', () => {
     )
   })
 
+  it('refreshes resize geometry when modifier keys change during a session', () => {
+    const runtime = renderSelectionResize()
+
+    const zone = screen.getByTestId('canvas-selection-resize-zone-bottom-right')
+    act(() => {
+      fireEvent.pointerDown(zone, { button: 0, pointerId: 1, clientX: 90, clientY: 60 })
+      fireEvent.pointerMove(window, { pointerId: 1, clientX: 110, clientY: 65 })
+    })
+
+    expectMapEntries(runtime.nodeActions.onResizeMany, [
+      ['node-1', { width: 100, height: 45, position: { x: 10, y: 20 } }],
+    ])
+
+    modifierState.shiftPressed = true
+    act(() => {
+      fireEvent.keyDown(window, { key: 'Shift' })
+    })
+
+    expectMapEntries(runtime.nodeActions.onResizeMany, [
+      ['node-1', { width: 50, height: 50, position: { x: 10, y: 20 } }],
+    ])
+  })
+
   it('restores preview bounds and clears resize state on cancel', () => {
     const runtime = renderSelectionResize()
 
@@ -419,6 +442,34 @@ describe('ResizableNodeWrapper', () => {
       ['node-1', { width: 80, height: 40, position: { x: 10, y: 20 } }],
     ])
     expect(runtime.nodeActions.onResizeManyEnd).not.toHaveBeenCalled()
+  })
+
+  it('ignores resize move, cancel, and up events from other pointers', () => {
+    const runtime = renderSelectionResize()
+
+    const zone = screen.getByTestId('canvas-selection-resize-zone-right')
+    act(() => {
+      fireEvent.pointerDown(zone, { button: 0, pointerId: 1, clientX: 90, clientY: 40 })
+      fireEvent.pointerMove(window, { pointerId: 2, clientX: 140, clientY: 40 })
+      fireEvent.pointerCancel(window, { pointerId: 2, clientX: 140, clientY: 40 })
+      fireEvent.pointerUp(window, { pointerId: 2, clientX: 140, clientY: 40 })
+    })
+
+    expect(runtime.nodeActions.onResizeMany).not.toHaveBeenCalled()
+    expect(runtime.nodeActions.onResizeManyCancel).not.toHaveBeenCalled()
+    expect(runtime.nodeActions.onResizeManyEnd).not.toHaveBeenCalled()
+
+    act(() => {
+      fireEvent.pointerMove(window, { pointerId: 1, clientX: 120, clientY: 40 })
+      fireEvent.pointerUp(window, { pointerId: 1, clientX: 120, clientY: 40 })
+    })
+
+    expectMapEntries(runtime.nodeActions.onResizeMany, [
+      ['node-1', { width: 110, height: 40, position: { x: 10, y: 20 } }],
+    ])
+    expectMapEntries(runtime.nodeActions.onResizeManyEnd, [
+      ['node-1', { width: 110, height: 40, position: { x: 10, y: 20 } }],
+    ])
   })
 })
 

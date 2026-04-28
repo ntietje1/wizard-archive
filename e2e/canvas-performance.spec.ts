@@ -155,6 +155,7 @@ test.describe.serial('canvas performance probe', () => {
       )
     }
 
+    await clearCanvasSelection(page)
     const viewport = getViewportControls(page)
     interactions.zoomButtons = await measureInteraction(page, async () => {
       for (let index = 0; index < 4; index += 1) {
@@ -175,13 +176,25 @@ test.describe.serial('canvas performance probe', () => {
     })
 
     await moveMouseToCanvasCenter(page)
-    interactions.ctrlWheelZoom = await measureInteraction(page, async () => {
+    interactions.ctrlWheelZoom = await measureControlWheelInteraction(page, async () => {
       await ctrlWheelZoom(page)
     })
 
     interactions.viewportCoordinateRegression = await measureInteraction(page, async () => {
       await selectCanvasTool(page, 'Pointer')
-      const before = await getRuntimeNodePosition(page, 'perf-node-0')
+      const coordinateNodeId = 'perf-embed-0'
+      await page.evaluate((nodeId) => {
+        const runtime = window.__WA_CANVAS_PERF_RUNTIME__
+        if (!runtime) throw new Error('Missing canvas performance runtime')
+        runtime.seedCoordinateProbeNode({
+          id: nodeId,
+          start: { x: 120, y: 120 },
+        })
+      }, coordinateNodeId)
+      await waitForRuntimeNodeCount(page, NODE_COUNT + 1)
+      const coordinateNode = getCanvasNodeById(page, coordinateNodeId)
+      await expect(coordinateNode).toBeVisible({ timeout: 10_000 })
+      const before = await getRuntimeNodePosition(page, coordinateNodeId)
       await page.evaluate((position) => {
         window.__WA_CANVAS_PERF_RUNTIME__?.setViewport({
           x: 360 - position.x * 2,
@@ -189,11 +202,11 @@ test.describe.serial('canvas performance probe', () => {
           zoom: 2,
         })
       }, before)
-      await expect(firstNode).toBeVisible({ timeout: 10_000 })
-      await waitForStableLocatorPosition(firstNode)
-      const positionedBefore = await getRuntimeNodePosition(page, 'perf-node-0')
-      await dragCanvasNode(page, firstNode, { x: 40, y: 20 })
-      const after = await getRuntimeNodePosition(page, 'perf-node-0')
+      await expect(coordinateNode).toBeVisible({ timeout: 10_000 })
+      await waitForStableLocatorPosition(coordinateNode)
+      const positionedBefore = await getRuntimeNodePosition(page, coordinateNodeId)
+      await dragCanvasNode(page, coordinateNode, { x: 40, y: 20 })
+      const after = await getRuntimeNodePosition(page, coordinateNodeId)
 
       expect(round(after.x - positionedBefore.x)).toBe(20)
       expect(round(after.y - positionedBefore.y)).toBe(10)
@@ -219,7 +232,7 @@ test.describe.serial('canvas performance probe', () => {
     await waitForRuntimeNodeCount(page, STROKE_NODE_COUNT)
 
     await moveMouseToCanvasCenter(page)
-    interactions.ctrlWheelZoomStrokes = await measureInteraction(page, async () => {
+    interactions.ctrlWheelZoomStrokes = await measureControlWheelInteraction(page, async () => {
       await ctrlWheelZoomWithStrokeAssertion(page)
     })
     await expectStrokeCameraIdle(page)
@@ -269,6 +282,19 @@ async function selectFirstCanvasNodes(page: Page, count: number) {
   )
 }
 
+async function clearCanvasSelection(page: Page) {
+  await page.evaluate(() => {
+    window.__WA_CANVAS_PERF_RUNTIME__?.selectFirstNodes(0)
+  })
+  await page.waitForFunction(
+    () => window.__WA_CANVAS_PERF_RUNTIME__?.getSelectedCount() === 0,
+    null,
+    {
+      timeout: 10_000,
+    },
+  )
+}
+
 async function waitForRuntimeNodeCount(page: Page, count: number) {
   await expect
     .poll(
@@ -302,28 +328,18 @@ async function moveMouseToCanvasCenter(page: Page) {
 }
 
 async function ctrlWheelZoom(page: Page) {
-  await page.keyboard.down('Control')
-  try {
-    for (let index = 0; index < 12; index += 1) {
-      await page.mouse.wheel(0, index % 2 === 0 ? -120 : 120)
-    }
-  } finally {
-    await page.keyboard.up('Control')
+  for (let index = 0; index < 12; index += 1) {
+    await page.mouse.wheel(0, index % 2 === 0 ? -120 : 120)
   }
 }
 
 async function ctrlWheelZoomWithStrokeAssertion(page: Page) {
   const initialState = await readStrokeVisualState(page)
-  await page.keyboard.down('Control')
-  try {
-    await page.mouse.wheel(0, -120)
-    const movingState = await expectStrokeCameraMoving(page)
-    expect(movingState.viewBox).toBe(initialState.viewBox)
-    for (let index = 1; index < 12; index += 1) {
-      await page.mouse.wheel(0, index % 2 === 0 ? -120 : 120)
-    }
-  } finally {
-    await page.keyboard.up('Control')
+  await page.mouse.wheel(0, -120)
+  const movingState = await expectStrokeCameraMoving(page)
+  expect(movingState.viewBox).toBe(initialState.viewBox)
+  for (let index = 1; index < 12; index += 1) {
+    await page.mouse.wheel(0, index % 2 === 0 ? -120 : 120)
   }
 }
 
@@ -383,6 +399,7 @@ async function getRuntimeNodePosition(page: Page, nodeId: string) {
 async function measureInteraction(
   page: Page,
   action: () => Promise<void>,
+  { settleMs = 350 }: { settleMs?: number } = {},
 ): Promise<InteractionSummary> {
   await page.evaluate(() => {
     if (window.__WA_CANVAS_PERF__) {
@@ -392,11 +409,25 @@ async function measureInteraction(
   const start = Date.now()
   await action()
   const wallMs = Date.now() - start
-  await page.waitForTimeout(350)
+  if (settleMs > 0) {
+    await page.waitForTimeout(settleMs)
+  }
   const entries = await page.evaluate(() => window.__WA_CANVAS_PERF__?.entries ?? [])
   return {
     wallMs,
     metrics: summarizeMetrics(entries),
+  }
+}
+
+async function measureControlWheelInteraction(
+  page: Page,
+  action: () => Promise<void>,
+): Promise<InteractionSummary> {
+  await page.keyboard.down('Control')
+  try {
+    return await measureInteraction(page, action, { settleMs: 0 })
+  } finally {
+    await page.keyboard.up('Control')
   }
 }
 

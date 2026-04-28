@@ -7,6 +7,7 @@ import {
 import { isCanvasEmptyPaneTarget } from './canvas-pane-targets'
 import { isPrimarySelectionModifier } from '../../utils/canvas-selection-utils'
 import type { CanvasEngine } from '../../system/canvas-engine'
+import type { CanvasDragController } from '../../system/canvas-drag-controller'
 import type { CanvasViewportController } from '../../system/canvas-viewport-controller'
 import type {
   CanvasAwarenessPresenceWriter,
@@ -16,23 +17,28 @@ import type {
   CanvasToolId,
 } from '../../tools/canvas-tool-types'
 
-type CanvasPointerTargetKind =
-  | 'blocked-interactive-child'
-  | 'connection-handle'
-  | 'edge'
-  | 'node'
-  | 'outside'
-  | 'pane'
-  | 'resize-handle'
+type CanvasPointerTarget =
+  | { kind: 'blocked-interactive-child' }
+  | { kind: 'connection-handle' }
+  | { kind: 'edge' }
+  | { kind: 'node'; nodeId: string }
+  | { kind: 'outside' }
+  | { kind: 'pane' }
+  | { kind: 'resize-handle' }
 
 type ActivePointerGesture =
   | {
       kind: 'selection'
       pointerId: number
-      startTargetKind: CanvasPointerTargetKind
+      startTargetKind: CanvasPointerTarget['kind']
       controller: ReturnType<typeof createCanvasSelectionGestureController>
       startPoint: { x: number; y: number }
       lastPoint: { x: number; y: number }
+    }
+  | {
+      kind: 'node-drag'
+      pointerId: number
+      controller: CanvasDragController
     }
   | {
       kind: 'tool'
@@ -44,6 +50,7 @@ export interface CanvasPointerRouterOptions {
   enabled: boolean
   activeTool: CanvasToolId
   activeToolHandlers: CanvasToolHandlers
+  nodeDragController: CanvasDragController | null
   canvasEngine: CanvasEngine
   viewportController: Pick<CanvasViewportController, 'getZoom' | 'screenToCanvasPosition'>
   awareness: CanvasAwarenessPresenceWriter
@@ -121,6 +128,8 @@ export function createCanvasPointerRouter(): CanvasPointerRouter {
   const cancelActiveGesture = () => {
     if (activeGesture?.kind === 'selection') {
       activeGesture.controller.cancel()
+    } else if (activeGesture?.kind === 'node-drag') {
+      activeGesture.controller.cancel(createPointerCancelEvent(activeGesture.pointerId))
     } else if (activeGesture?.kind === 'tool') {
       activeGesture.handlers.onPointerCancel?.(createPointerCancelEvent(activeGesture.pointerId))
     }
@@ -134,38 +143,51 @@ export function createCanvasPointerRouter(): CanvasPointerRouter {
     }
 
     const pane = getPane()
-    const targetKind = classifyCanvasPointerTarget(event.target, pane)
+    const target = classifyCanvasPointerTarget(event.target, pane)
     if (
-      targetKind === 'outside' ||
-      targetKind === 'connection-handle' ||
-      targetKind === 'resize-handle'
+      target.kind === 'outside' ||
+      target.kind === 'connection-handle' ||
+      target.kind === 'resize-handle'
     ) {
       return
     }
 
-    if (currentOptions.activeTool === 'select' && targetKind === 'pane') {
+    if (currentOptions.activeTool === 'select' && target.kind === 'node') {
+      const controller = currentOptions.nodeDragController
+      if (!controller || !controller.begin(target.nodeId, event)) {
+        return
+      }
+
+      claimCanvasPointerEvent(event)
+      captureTarget = setPointerCapture(event)
+      activeGesture = {
+        kind: 'node-drag',
+        pointerId: event.pointerId,
+        controller,
+      }
+      addWindowGestureListeners()
+      return
+    }
+
+    if (currentOptions.activeTool === 'select' && target.kind === 'pane') {
       claimCanvasPointerEvent(event)
       beginSelectionGesture(
         event,
-        targetKind,
+        target,
         createRectangleSelectionGesture(currentOptions, interaction),
       )
       return
     }
 
-    if (currentOptions.activeTool === 'lasso' && targetKind !== 'blocked-interactive-child') {
+    if (currentOptions.activeTool === 'lasso' && target.kind !== 'blocked-interactive-child') {
       claimCanvasPointerEvent(event)
-      beginSelectionGesture(
-        event,
-        targetKind,
-        createLassoSelectionGesture(currentOptions, interaction),
-      )
+      beginSelectionGesture(event, target, createLassoSelectionGesture(currentOptions, interaction))
       return
     }
 
     if (
       !currentOptions.activeToolHandlers.onPointerDown ||
-      targetKind === 'blocked-interactive-child'
+      target.kind === 'blocked-interactive-child'
     ) {
       return
     }
@@ -182,7 +204,7 @@ export function createCanvasPointerRouter(): CanvasPointerRouter {
 
   const beginSelectionGesture = (
     event: PointerEvent,
-    targetKind: CanvasPointerTargetKind,
+    target: CanvasPointerTarget,
     controller: ReturnType<typeof createCanvasSelectionGestureController>,
   ) => {
     const input = getPointerInput(event)
@@ -191,7 +213,7 @@ export function createCanvasPointerRouter(): CanvasPointerRouter {
     activeGesture = {
       kind: 'selection',
       pointerId: event.pointerId,
-      startTargetKind: targetKind,
+      startTargetKind: target.kind,
       controller,
       startPoint: input.clientPoint,
       lastPoint: input.clientPoint,
@@ -208,6 +230,12 @@ export function createCanvasPointerRouter(): CanvasPointerRouter {
       claimCanvasPointerEvent(event)
       activeGesture.lastPoint = { x: event.clientX, y: event.clientY }
       activeGesture.controller.update(getPointerInput(event))
+      return
+    }
+
+    if (activeGesture.kind === 'node-drag') {
+      claimCanvasPointerEvent(event)
+      activeGesture.controller.update(event)
       return
     }
 
@@ -229,6 +257,13 @@ export function createCanvasPointerRouter(): CanvasPointerRouter {
       return
     }
 
+    if (activeGesture.kind === 'node-drag') {
+      claimCanvasPointerEvent(event)
+      activeGesture.controller.commit(event)
+      endActiveGesture()
+      return
+    }
+
     activeGesture.handlers.onPointerUp?.(event)
     endActiveGesture()
   }
@@ -241,6 +276,9 @@ export function createCanvasPointerRouter(): CanvasPointerRouter {
     if (activeGesture.kind === 'selection') {
       claimCanvasPointerEvent(event)
       activeGesture.controller.cancel()
+    } else if (activeGesture.kind === 'node-drag') {
+      claimCanvasPointerEvent(event)
+      activeGesture.controller.cancel(event)
     } else {
       activeGesture.handlers.onPointerCancel?.(event)
     }
@@ -338,36 +376,37 @@ const MIN_POINT_GESTURE_DISTANCE = 1
 export function classifyCanvasPointerTarget(
   target: EventTarget | null,
   pane: HTMLElement | null,
-): CanvasPointerTargetKind {
+): CanvasPointerTarget {
   if (!(target instanceof Element) || !pane?.contains(target)) {
-    return 'outside'
+    return { kind: 'outside' }
   }
 
   if (target.closest('.canvas-selection-resize-zone')) {
-    return 'resize-handle'
+    return { kind: 'resize-handle' }
   }
 
   if (target.closest('[data-canvas-node-handle="true"]')) {
-    return 'connection-handle'
+    return { kind: 'connection-handle' }
   }
 
   if (target.closest(INTERACTIVE_CHILD_SELECTOR)) {
-    return 'blocked-interactive-child'
+    return { kind: 'blocked-interactive-child' }
   }
 
   if (target.closest('[data-canvas-edge-id]')) {
-    return 'edge'
+    return { kind: 'edge' }
   }
 
-  if (target.closest('.canvas-node-shell')) {
-    return 'node'
+  const node = target.closest<HTMLElement>('.canvas-node-shell')
+  if (node?.dataset.nodeId) {
+    return { kind: 'node', nodeId: node.dataset.nodeId }
   }
 
   if (isCanvasEmptyPaneTarget(target, pane)) {
-    return 'pane'
+    return { kind: 'pane' }
   }
 
-  return 'outside'
+  return { kind: 'outside' }
 }
 
 const INTERACTIVE_CHILD_SELECTOR = [

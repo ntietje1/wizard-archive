@@ -5,6 +5,7 @@ import {
   useCanvasScreenSpaceViewport,
 } from '../../components/canvas-screen-space-overlay-utils'
 import { pointsToPathD } from '../../nodes/stroke/stroke-node-model'
+import { resolveCanvasScreenMinimumStrokeWidth } from '../../utils/canvas-screen-stroke-width'
 
 export function DrawToolLocalOverlayLayer() {
   const localDrawing = useDrawToolLocalOverlayStore((state) => state.localDrawing)
@@ -14,7 +15,7 @@ export function DrawToolLocalOverlayLayer() {
     localDrawing && localDrawing.points.length >= 2
       ? pointsToPathD(
           canvasStrokePointsToScreenPoints(localDrawing.points, viewport),
-          localDrawing.size * viewport.zoom,
+          resolveCanvasScreenMinimumStrokeWidth(localDrawing.size * viewport.zoom, 1),
         )
       : null
 

@@ -14,6 +14,7 @@ import {
   getCanvasNodesByType,
   getCanvasPendingPreviewActiveNodes,
   getCanvasPendingSelectionStatus,
+  getCanvasToolButton,
   moveCanvasPointer,
   openCanvas,
   resizeCanvasNode,
@@ -26,6 +27,8 @@ import type { Browser, BrowserContext, Page } from '@playwright/test'
 const campaignName = testName('Cnv Collab')
 const canvasName = DEFAULT_CANVAS_NAME
 const SHARED_TEXT_TIMEOUT_MS = 15_000
+const TEXT_CONTENT_LOCATOR = '[aria-label="Text node content"][contenteditable="true"]'
+const EMPTY_CANVAS_POINT = { x: 720, y: 520 }
 
 test.describe.serial('canvas collaboration', () => {
   test.beforeAll(async ({ browser }) => {
@@ -70,53 +73,74 @@ test.describe.serial('canvas collaboration', () => {
 
       await selectCanvasTool(collab.page1, 'Text')
       await clickCanvasAt(collab.page1, { x: 120, y: 120 })
-      await collab.page1.getByLabel('Text node content').fill('Shared text')
-      await clickCanvasAt(collab.page1, { x: 40, y: 40 })
+      await collab.page1.locator(TEXT_CONTENT_LOCATOR).last().fill('Shared text')
+      await clickCanvasAt(collab.page1, EMPTY_CANVAS_POINT)
 
       await expect.poll(() => getCanvasNodesByType(collab.page2, 'text').count()).toBe(1)
       await expect(collab.page2.getByText('Shared text', { exact: true })).toBeVisible({
         timeout: SHARED_TEXT_TIMEOUT_MS,
       })
+      await expect(getCanvasToolButton(collab.page1, 'Text')).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
 
-      await selectCanvasTool(collab.page1, 'Text')
       await clickCanvasAt(collab.page1, { x: 320, y: 120 })
-      await collab.page1.getByLabel('Text node content').fill('Shared second text')
-      await clickCanvasAt(collab.page1, { x: 40, y: 40 })
+      await collab.page1.locator(TEXT_CONTENT_LOCATOR).last().fill('Shared second text')
+      await clickCanvasAt(collab.page1, EMPTY_CANVAS_POINT)
       await expect.poll(() => getCanvasNodesByType(collab.page2, 'text').count()).toBe(2)
+      await expect(getCanvasToolButton(collab.page1, 'Text')).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
 
-      await selectCanvasTool(collab.page1, 'Text')
       await dragOnCanvas(collab.page1, { x: 260, y: 260 }, { x: 380, y: 360 })
-      await collab.page1.getByLabel('Text node content').fill('Dragged shared text')
-      await clickCanvasAt(collab.page1, { x: 40, y: 40 })
+      await collab.page1.locator(TEXT_CONTENT_LOCATOR).last().fill('Dragged shared text')
+      await clickCanvasAt(collab.page1, EMPTY_CANVAS_POINT)
       await expect.poll(() => getCanvasNodesByType(collab.page2, 'text').count()).toBe(3)
 
-      const page2DraggedText = getCanvasNodesByType(collab.page2, 'text').last()
+      const page2DraggedText = getCanvasNodesByType(collab.page2, 'text').filter({
+        hasText: 'Dragged shared text',
+      })
       const beforeMove = await getCanvasNodeBoundingBox(page2DraggedText)
 
       await selectCanvasTool(collab.page1, 'Pointer')
-      const page1DraggedText = getCanvasNodesByType(collab.page1, 'text').last()
+      const page1DraggedText = getCanvasNodesByType(collab.page1, 'text').filter({
+        hasText: 'Dragged shared text',
+      })
       await clickCanvasNode(collab.page1, page1DraggedText)
-      await dragCanvasNode(collab.page1, page1DraggedText, { x: 140, y: 80 })
+      await dragCanvasNode(
+        collab.page1,
+        page1DraggedText,
+        { x: 140, y: 80 },
+        { positionRatio: { xRatio: 0.5, yRatio: 0.5 } },
+      )
 
       await expect
-        .poll(async () => {
-          const box = await getCanvasNodeBoundingBox(page2DraggedText)
-          const deltaX = Math.round(box.x - beforeMove.x)
-          const deltaY = Math.round(box.y - beforeMove.y)
-          return deltaX > 80 && deltaY > 40
-        })
+        .poll(
+          async () => {
+            const box = await getCanvasNodeBoundingBox(page2DraggedText)
+            const deltaX = Math.round(box.x - beforeMove.x)
+            const deltaY = Math.round(box.y - beforeMove.y)
+            return deltaX > 80 && deltaY > 40
+          },
+          { timeout: SHARED_TEXT_TIMEOUT_MS },
+        )
         .toBe(true)
 
       const beforeResize = await getCanvasNodeBoundingBox(page2DraggedText)
       await resizeCanvasNode(collab.page1, page1DraggedText, 'bottom-right', { x: 80, y: 60 })
 
       await expect
-        .poll(async () => {
-          const box = await getCanvasNodeBoundingBox(page2DraggedText)
-          const deltaWidth = Math.round(box.width - beforeResize.width)
-          const deltaHeight = Math.round(box.height - beforeResize.height)
-          return deltaWidth > 40 && deltaHeight > 20
-        })
+        .poll(
+          async () => {
+            const box = await getCanvasNodeBoundingBox(page2DraggedText)
+            const deltaWidth = Math.round(box.width - beforeResize.width)
+            const deltaHeight = Math.round(box.height - beforeResize.height)
+            return deltaWidth > 40 && deltaHeight > 20
+          },
+          { timeout: SHARED_TEXT_TIMEOUT_MS },
+        )
         .toBe(true)
 
       await selectCanvasTool(collab.page1, 'Draw')

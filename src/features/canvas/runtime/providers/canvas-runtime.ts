@@ -1,7 +1,7 @@
+import { createContext, useContext } from 'react'
+import type { Context } from 'react'
 import type { RemoteHighlight } from '../../utils/canvas-awareness-types'
-import { createCanvasEngine } from '../../system/canvas-engine'
-import type { CanvasDragController } from '../../system/canvas-drag-controller'
-import type { CanvasEngine } from '../../system/canvas-engine'
+import type { CanvasDomRuntime } from '../../system/canvas-dom-runtime'
 import type { CanvasViewportController } from '../../system/canvas-viewport-controller'
 import type {
   CanvasDocumentWriter,
@@ -11,178 +11,64 @@ import type {
   CanvasSelectionController,
 } from '../../tools/canvas-tool-types'
 import type { CanvasCommands } from '../document/use-canvas-commands'
-import { createContext, useContext } from 'react'
 
-type CanvasDomRuntimeAdapter = Pick<
-  CanvasEngine,
-  | 'flushRenderScheduler'
-  | 'registerEdgeElement'
-  | 'registerEdgePaths'
-  | 'registerNodeElement'
-  | 'registerNodeSurfaceElement'
-  | 'registerStrokeNodePaths'
-  | 'registerViewportElement'
-  | 'registerViewportOverlayElement'
-  | 'scheduleCameraState'
-  | 'scheduleEdgePatches'
-  | 'scheduleNodeDataPatches'
-  | 'scheduleViewportTransform'
->
-
-export function createCanvasDomRuntimeAdapter(canvasEngine: CanvasEngine): CanvasDomRuntimeAdapter {
-  return {
-    flushRenderScheduler: canvasEngine.flushRenderScheduler,
-    registerEdgeElement: canvasEngine.registerEdgeElement,
-    registerEdgePaths: canvasEngine.registerEdgePaths,
-    registerNodeElement: canvasEngine.registerNodeElement,
-    registerNodeSurfaceElement: canvasEngine.registerNodeSurfaceElement,
-    registerStrokeNodePaths: canvasEngine.registerStrokeNodePaths,
-    registerViewportElement: canvasEngine.registerViewportElement,
-    registerViewportOverlayElement: canvasEngine.registerViewportOverlayElement,
-    scheduleCameraState: canvasEngine.scheduleCameraState,
-    scheduleEdgePatches: canvasEngine.scheduleEdgePatches,
-    scheduleNodeDataPatches: canvasEngine.scheduleNodeDataPatches,
-    scheduleViewportTransform: canvasEngine.scheduleViewportTransform,
-  }
-}
-
-export interface CanvasRuntime {
-  canEdit: boolean
-  canvasEngine: CanvasEngine
-  domRuntime: CanvasDomRuntimeAdapter
-  remoteHighlights: ReadonlyMap<string, RemoteHighlight>
+export interface CanvasDocumentServices {
   history: CanvasHistoryController
   commands: CanvasCommands
   documentWriter: CanvasDocumentWriter
-  editSession: CanvasEditSessionState
   nodeActions: CanvasNodeActions
-  nodeDragController: CanvasDragController | null
-  viewportController: CanvasViewportController
+}
+
+export interface CanvasInteractionServices {
+  canEdit: boolean
+  editSession: CanvasEditSessionState
   selection: CanvasSelectionController
+  viewportController: CanvasViewportController
 }
 
-export const CanvasRuntimeContext = createContext<CanvasRuntime | null>(null)
+export interface CanvasPresenceServices {
+  remoteHighlights: ReadonlyMap<string, RemoteHighlight>
+}
 
-CanvasRuntimeContext.displayName = 'CanvasRuntimeContext'
+export const CanvasDomRuntimeContext = createContext<CanvasDomRuntime | null>(null)
+export const CanvasDocumentServicesContext = createContext<CanvasDocumentServices | null>(null)
+export const CanvasInteractionServicesContext = createContext<CanvasInteractionServices | null>(
+  null,
+)
+export const CanvasPresenceServicesContext = createContext<CanvasPresenceServices | null>(null)
 
-export function useCanvasRuntime(): CanvasRuntime {
-  const runtime = useContext(CanvasRuntimeContext)
-  if (runtime === null) {
-    throw new Error('useCanvasRuntime must be used within CanvasRuntimeProvider')
+CanvasDomRuntimeContext.displayName = 'CanvasDomRuntimeContext'
+CanvasDocumentServicesContext.displayName = 'CanvasDocumentServicesContext'
+CanvasInteractionServicesContext.displayName = 'CanvasInteractionServicesContext'
+CanvasPresenceServicesContext.displayName = 'CanvasPresenceServicesContext'
+
+function createServiceHook<TService>(
+  context: Context<TService | null>,
+  hookName: string,
+): () => TService {
+  return () => {
+    const services = useContext(context)
+    if (services === null) {
+      throw new Error(`${hookName} must be used within CanvasRuntimeProvider`)
+    }
+
+    return services
   }
-
-  return runtime
 }
 
-const EMPTY_REMOTE_HIGHLIGHTS = new Map<string, RemoteHighlight>() as ReadonlyMap<
-  string,
-  RemoteHighlight
->
-const EMPTY_SELECTION_NODE_IDS = new Set<string>()
-const EMPTY_SELECTION_EDGE_IDS = new Set<string>()
-const EMPTY_SELECTION_SNAPSHOT = {
-  nodeIds: EMPTY_SELECTION_NODE_IDS,
-  edgeIds: EMPTY_SELECTION_EDGE_IDS,
-}
-const READ_ONLY_CANVAS_ENGINE = createCanvasEngine()
-
-export const READ_ONLY_CANVAS_RUNTIME: CanvasRuntime = {
-  canEdit: false,
-  canvasEngine: READ_ONLY_CANVAS_ENGINE,
-  domRuntime: createCanvasDomRuntimeAdapter(READ_ONLY_CANVAS_ENGINE),
-  remoteHighlights: EMPTY_REMOTE_HIGHLIGHTS,
-  history: {
-    canUndo: false,
-    canRedo: false,
-    undo: () => undefined,
-    redo: () => undefined,
-  },
-  commands: {
-    copy: {
-      id: 'copy',
-      canRun: () => false,
-      run: () => false,
-    },
-    cut: {
-      id: 'cut',
-      canRun: () => false,
-      run: () => false,
-    },
-    paste: {
-      id: 'paste',
-      canRun: () => false,
-      run: () => null,
-    },
-    duplicate: {
-      id: 'duplicate',
-      canRun: () => false,
-      run: () => null,
-    },
-    delete: {
-      id: 'delete',
-      canRun: () => false,
-      run: () => false,
-    },
-    reorder: {
-      id: 'reorder',
-      canRun: () => false,
-      run: () => false,
-    },
-  },
-  documentWriter: {
-    createNode: () => undefined,
-    patchNodeData: () => undefined,
-    patchEdges: () => undefined,
-    resizeNode: () => undefined,
-    resizeNodes: () => undefined,
-    deleteNodes: () => undefined,
-    createEdge: () => undefined,
-    deleteEdges: () => undefined,
-    setNodePositions: () => undefined,
-  },
-  editSession: {
-    editingEmbedId: null,
-    setEditingEmbedId: () => undefined,
-    pendingEditNodeId: null,
-    pendingEditNodePoint: null,
-    setPendingEditNodeId: () => undefined,
-    setPendingEditNodePoint: () => undefined,
-  },
-  nodeActions: {
-    transact: (fn) => fn(),
-    onResize: () => undefined,
-    onResizeEnd: () => undefined,
-    onResizeMany: () => undefined,
-    onResizeManyCancel: () => undefined,
-    onResizeManyEnd: () => undefined,
-  },
-  nodeDragController: null,
-  viewportController: {
-    getViewport: () => READ_ONLY_CANVAS_ENGINE.getSnapshot().viewport,
-    getZoom: () => READ_ONLY_CANVAS_ENGINE.getSnapshot().viewport.zoom,
-    screenToCanvasPosition: (position) => position,
-    canvasToScreenPosition: (position) => position,
-    handleWheel: () => undefined,
-    handlePanPointerDown: () => undefined,
-    panBy: () => undefined,
-    zoomBy: () => undefined,
-    zoomTo: () => undefined,
-    zoomIn: () => undefined,
-    zoomOut: () => undefined,
-    fitView: () => undefined,
-    syncFromDocumentOrAdapter: () => undefined,
-    commit: () => undefined,
-    destroy: () => undefined,
-  },
-  selection: {
-    getSnapshot: () => EMPTY_SELECTION_SNAPSHOT,
-    setSelection: () => undefined,
-    clearSelection: () => undefined,
-    toggleNode: () => undefined,
-    toggleEdge: () => undefined,
-    beginGesture: () => undefined,
-    setGesturePreview: () => undefined,
-    commitGesture: () => undefined,
-    cancelGesture: () => undefined,
-  },
-}
+export const useCanvasDomRuntime = createServiceHook<CanvasDomRuntime>(
+  CanvasDomRuntimeContext,
+  'useCanvasDomRuntime',
+)
+export const useCanvasDocumentServices = createServiceHook<CanvasDocumentServices>(
+  CanvasDocumentServicesContext,
+  'useCanvasDocumentServices',
+)
+export const useCanvasInteractionServices = createServiceHook<CanvasInteractionServices>(
+  CanvasInteractionServicesContext,
+  'useCanvasInteractionServices',
+)
+export const useCanvasPresenceServices = createServiceHook<CanvasPresenceServices>(
+  CanvasPresenceServicesContext,
+  'useCanvasPresenceServices',
+)
