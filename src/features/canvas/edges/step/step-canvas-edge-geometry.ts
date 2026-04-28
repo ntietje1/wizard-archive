@@ -15,9 +15,9 @@ import type { PolylineCanvasEdgeGeometry } from '../shared/canvas-edge-geometry'
 import type { Point2D } from '../../utils/canvas-awareness-types'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
 import type {
-  CanvasEdge as Edge,
+  CanvasDocumentEdge,
   CanvasHandlePosition,
-  CanvasNode as Node,
+  CanvasDocumentNode,
 } from '~/features/canvas/types/canvas-domain-types'
 import type { CanvasEdgeRenderGeometryProps as EdgeProps } from '../canvas-edge-types'
 
@@ -122,7 +122,10 @@ function areVerticalHandlesFacing(
   return false
 }
 
-function getClosestHorizontalEdgeMidpoint(sourceNode: Node, targetNode: Node): number | null {
+function getClosestHorizontalEdgeMidpoint(
+  sourceNode: CanvasDocumentNode,
+  targetNode: CanvasDocumentNode,
+): number | null {
   const sourceBounds = getCanvasNodeBounds(sourceNode)
   const targetBounds = getCanvasNodeBounds(targetNode)
   if (!sourceBounds || !targetBounds) return null
@@ -137,7 +140,10 @@ function getClosestHorizontalEdgeMidpoint(sourceNode: Node, targetNode: Node): n
   return (targetBounds.x + targetBounds.width + sourceBounds.x) / 2
 }
 
-function getClosestVerticalEdgeMidpoint(sourceNode: Node, targetNode: Node): number | null {
+function getClosestVerticalEdgeMidpoint(
+  sourceNode: CanvasDocumentNode,
+  targetNode: CanvasDocumentNode,
+): number | null {
   const sourceBounds = getCanvasNodeBounds(sourceNode)
   const targetBounds = getCanvasNodeBounds(targetNode)
   if (!sourceBounds || !targetBounds) return null
@@ -412,8 +418,8 @@ export function buildStepCanvasEdgeGeometryFromRenderProps(
 }
 
 export function buildStepCanvasEdgeGeometryFromEdge(
-  edge: Edge,
-  nodesById: ReadonlyMap<string, Node>,
+  edge: CanvasDocumentEdge,
+  nodesById: ReadonlyMap<string, CanvasDocumentNode>,
 ): PolylineCanvasEdgeGeometry | null {
   const sourceNode = nodesById.get(edge.source)
   const targetNode = nodesById.get(edge.target)
@@ -444,8 +450,8 @@ export function buildStepCanvasEdgeGeometryFromEdge(
 }
 
 export function getStepCanvasEdgeBounds(
-  edge: Edge,
-  nodesById: ReadonlyMap<string, Node>,
+  edge: CanvasDocumentEdge,
+  nodesById: ReadonlyMap<string, CanvasDocumentNode>,
 ): Bounds | null {
   const geometry = buildStepCanvasEdgeGeometryFromEdge(edge, nodesById)
   if (!geometry) return null
@@ -454,9 +460,9 @@ export function getStepCanvasEdgeBounds(
 }
 
 export function stepCanvasEdgeContainsPoint(
-  edge: Edge,
+  edge: CanvasDocumentEdge,
   point: Point2D,
-  nodesById: ReadonlyMap<string, Node>,
+  nodesById: ReadonlyMap<string, CanvasDocumentNode>,
   zoom: number,
 ): boolean {
   const geometry = buildStepCanvasEdgeGeometryFromEdge(edge, nodesById)
@@ -480,9 +486,9 @@ export function stepCanvasEdgeContainsPoint(
 }
 
 export function stepCanvasEdgeIntersectsRectangle(
-  edge: Edge,
+  edge: CanvasDocumentEdge,
   rect: Bounds,
-  nodesById: ReadonlyMap<string, Node>,
+  nodesById: ReadonlyMap<string, CanvasDocumentNode>,
 ): boolean {
   const geometry = buildStepCanvasEdgeGeometryFromEdge(edge, nodesById)
   if (!geometry) return false
@@ -496,9 +502,9 @@ export function stepCanvasEdgeIntersectsRectangle(
 }
 
 export function stepCanvasEdgeIntersectsPolygon(
-  edge: Edge,
+  edge: CanvasDocumentEdge,
   polygon: ReadonlyArray<Point2D>,
-  nodesById: ReadonlyMap<string, Node>,
+  nodesById: ReadonlyMap<string, CanvasDocumentNode>,
 ): boolean {
   const geometry = buildStepCanvasEdgeGeometryFromEdge(edge, nodesById)
   if (!geometry) return false

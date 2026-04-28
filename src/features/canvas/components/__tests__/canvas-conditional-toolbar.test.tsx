@@ -8,8 +8,9 @@ import { createCanvasEngine } from '../../system/canvas-engine'
 import type { CanvasEngine } from '../../system/canvas-engine'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge as Edge,
+  CanvasDocumentNode as Node,
+  CanvasNodeType,
 } from '~/features/canvas/types/canvas-domain-types'
 import type { CanvasEdgePatch, CanvasEdgeType } from '../../edges/canvas-edge-types'
 import type { CanvasCommands } from '../../runtime/document/use-canvas-commands'
@@ -177,7 +178,7 @@ let nodeIdCounter = 0
 let edgeIdCounter = 0
 
 function createNode(
-  type: string,
+  type: CanvasNodeType,
   options: {
     color?: string
     opacity?: number
@@ -207,12 +208,6 @@ function createNode(
     id: `${type}-${nodeIdCounter++}`,
     type,
     position: { x: 0, y: 0 },
-    selected: false,
-    dragging: false,
-    draggable: true,
-    deletable: true,
-    selectable: true,
-    connectable: true,
     width: 100,
     height: 100,
     data: {
@@ -231,7 +226,7 @@ function createNode(
       ...(options.borderWidth !== undefined ? { borderWidth: options.borderWidth } : {}),
       ...(options.sidebarItemId !== undefined ? { sidebarItemId: options.sidebarItemId } : {}),
     },
-  }
+  } as Node
 }
 
 function createEdge(
@@ -880,7 +875,7 @@ describe('CanvasConditionalToolbar', () => {
     })
     const updateNodeData = vi.fn((nodeId: string, data: Record<string, unknown>) => {
       nodesMock.nodes = nodesMock.nodes.map((node) =>
-        node.id === nodeId ? { ...node, data: { ...node.data, ...data } } : node,
+        node.id === nodeId ? ({ ...node, data: { ...node.data, ...data } } as Node) : node,
       )
     })
 

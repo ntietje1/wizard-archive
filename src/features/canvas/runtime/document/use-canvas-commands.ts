@@ -18,15 +18,15 @@ import type {
   CanvasSelectionSnapshot,
 } from '../../tools/canvas-tool-types'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
 } from '~/features/canvas/types/canvas-domain-types'
 import type * as Y from 'yjs'
 
 interface UseCanvasCommandsOptions {
   canEdit: boolean
-  nodesMap: Y.Map<Node>
-  edgesMap: Y.Map<Edge>
+  nodesMap: Y.Map<CanvasDocumentNode>
+  edgesMap: Y.Map<CanvasDocumentEdge>
   selection: Pick<CanvasSelectionController, 'getSnapshot' | 'setSelection' | 'clearSelection'>
 }
 

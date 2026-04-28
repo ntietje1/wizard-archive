@@ -1,15 +1,23 @@
-import type { ParsedCanvasEdgeStyle, ParsedCanvasRuntimeEdge } from 'convex/canvases/validation'
 import type { CanvasNormalizedEdgeStyle } from './shared/canvas-edge-style'
-import type { CanvasEdge, CanvasHandlePosition, CanvasNode } from '../types/canvas-domain-types'
-import type { CSSProperties, ReactNode } from 'react'
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+  CanvasEdgeStyle,
+  CanvasEdgeType,
+  CanvasHandlePosition,
+} from '../types/canvas-domain-types'
 
-export type CanvasEdgeType = 'bezier' | 'straight' | 'step'
+export type { CanvasEdgeType }
 
-export type CanvasEdgeRendererProps<
-  TData extends Record<string, unknown> = Record<string, unknown>,
-  TType extends CanvasEdgeType = CanvasEdgeType,
-> = CanvasEdge<TData, TType> & {
+export interface CanvasEdgeRendererProps<TType extends CanvasEdgeType = CanvasEdgeType> {
+  id: string
   type: TType
+  source: string
+  target: string
+  sourceHandle?: string | null
+  targetHandle?: string | null
+  style?: CanvasEdgeStyle
+  selected?: boolean
   sourceX: number
   sourceY: number
   targetX: number
@@ -18,12 +26,6 @@ export type CanvasEdgeRendererProps<
   targetPosition: CanvasHandlePosition
   sourceHandleId?: string | null
   targetHandleId?: string | null
-  label?: ReactNode
-  labelStyle?: CSSProperties
-  labelShowBg?: boolean
-  labelBgStyle?: CSSProperties
-  labelBgPadding?: [number, number]
-  labelBgBorderRadius?: number
 }
 
 export type CanvasEdgeRenderGeometryProps = Pick<
@@ -31,16 +33,16 @@ export type CanvasEdgeRenderGeometryProps = Pick<
   'sourceX' | 'sourceY' | 'targetX' | 'targetY' | 'sourcePosition' | 'targetPosition'
 >
 
-export type CanvasRuntimeEdge = Omit<ParsedCanvasRuntimeEdge, 'style'> & {
+export type CanvasRuntimeEdge = Omit<CanvasDocumentEdge, 'style'> & {
   style: CanvasNormalizedEdgeStyle
 }
 
 export type CanvasEdgePatch = {
   type?: CanvasEdgeType
-  style?: Partial<ParsedCanvasEdgeStyle>
+  style?: Partial<CanvasEdgeStyle>
 }
 
 export interface CanvasEdgeSelectionContext {
-  nodesById: ReadonlyMap<string, CanvasNode>
+  nodesById: ReadonlyMap<string, CanvasDocumentNode>
   zoom: number
 }

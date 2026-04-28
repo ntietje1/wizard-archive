@@ -1,6 +1,6 @@
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
 } from '~/features/canvas/types/canvas-domain-types'
 import type * as Y from 'yjs'
 
@@ -13,7 +13,11 @@ export function transactCanvasMap<TValue>(map: Y.Map<TValue>, fn: () => void) {
   fn()
 }
 
-export function transactCanvasMaps(nodesMap: Y.Map<Node>, edgesMap: Y.Map<Edge>, fn: () => void) {
+export function transactCanvasMaps(
+  nodesMap: Y.Map<CanvasDocumentNode>,
+  edgesMap: Y.Map<CanvasDocumentEdge>,
+  fn: () => void,
+) {
   if (nodesMap.doc && edgesMap.doc && nodesMap.doc !== edgesMap.doc) {
     throw new Error('transactCanvasMaps requires nodesMap.doc and edgesMap.doc to match')
   }

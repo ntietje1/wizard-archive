@@ -2,7 +2,7 @@ import { memo } from 'react'
 import { CanvasNodeWrapper } from './canvas-node-wrapper'
 import { areArraysEqual } from './canvas-renderer-utils'
 import { useCanvasEngineSelector } from '../react/use-canvas-engine'
-import type { CanvasNode } from '../types/canvas-domain-types'
+import type { CanvasDocumentNode } from '../types/canvas-domain-types'
 import type { ComponentType, MouseEvent as ReactMouseEvent } from 'react'
 
 export const CanvasNodeRenderer = memo(function CanvasNodeRenderer({
@@ -10,8 +10,8 @@ export const CanvasNodeRenderer = memo(function CanvasNodeRenderer({
   onNodeContextMenu,
   NodeContentComponent,
 }: {
-  onNodeClick?: (event: ReactMouseEvent, node: CanvasNode) => void
-  onNodeContextMenu: (event: ReactMouseEvent, node: CanvasNode) => void
+  onNodeClick?: (event: ReactMouseEvent, node: CanvasDocumentNode) => void
+  onNodeContextMenu: (event: ReactMouseEvent, node: CanvasDocumentNode) => void
   NodeContentComponent: ComponentType<{ nodeId: string }>
 }) {
   const nodeIds = useCanvasEngineSelector((snapshot) => snapshot.nodeIds, areArraysEqual)

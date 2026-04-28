@@ -13,8 +13,8 @@ import type {
   CanvasToolId,
 } from '../../../tools/canvas-tool-types'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge as Edge,
+  CanvasDocumentNode as Node,
 } from '~/features/canvas/types/canvas-domain-types'
 
 describe('classifyCanvasPointerTarget', () => {

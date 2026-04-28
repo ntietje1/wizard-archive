@@ -16,8 +16,8 @@ import { createCanvasEngine } from '../../system/canvas-engine'
 import type { CanvasEngine } from '../../system/canvas-engine'
 import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge as Edge,
+  CanvasDocumentNode as Node,
 } from '~/features/canvas/types/canvas-domain-types'
 
 const sourceNode: Node = {

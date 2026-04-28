@@ -26,11 +26,10 @@ describe('RectCreationLocalOverlayLayer', () => {
 
     const rect = container.querySelector('rect')
     expect(rect).not.toBeNull()
-    const rectElement = rect as Element
-    expect(rectElement).toHaveAttribute('x', '15')
-    expect(rectElement).toHaveAttribute('y', '48')
-    expect(rectElement).toHaveAttribute('width', '60')
-    expect(rectElement).toHaveAttribute('height', '80')
-    expect(rectElement).toHaveAttribute('stroke-width', '1.5')
+    expect(rect!).toHaveAttribute('x', '15')
+    expect(rect!).toHaveAttribute('y', '48')
+    expect(rect!).toHaveAttribute('width', '60')
+    expect(rect!).toHaveAttribute('height', '80')
+    expect(rect!).toHaveAttribute('stroke-width', '1.5')
   })
 })

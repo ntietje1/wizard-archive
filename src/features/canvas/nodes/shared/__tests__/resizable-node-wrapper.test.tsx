@@ -13,7 +13,7 @@ import { CanvasNodeResizeMetadataProvider } from '../canvas-node-resize-metadata
 import { ResizableNodeWrapper } from '../resizable-node-wrapper'
 import { resolveSelectionResizeUpdates } from '../use-canvas-resize-session'
 import type { CanvasNodeResizeUpdate } from '../../../tools/canvas-tool-types'
-import type { CanvasNode as Node } from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentNode as Node } from '~/features/canvas/types/canvas-domain-types'
 
 const modifierState = vi.hoisted(() => ({
   shiftPressed: false,
@@ -462,7 +462,7 @@ function renderSelectionResize({
             <ResizableNodeWrapper
               key={node.id}
               id={node.id}
-              nodeType={node.type ?? 'test'}
+              nodeType={node.type}
               dragging={draggingNodeIds.has(node.id)}
               minHeight={node.type === 'stroke' ? 20 : 30}
               minWidth={node.type === 'stroke' ? 20 : 50}
@@ -485,7 +485,7 @@ function createNode(
   position: { x: number; y: number },
   width: number,
   height: number,
-  type = 'test',
+  type: Node['type'] = 'text',
 ): Node {
   return {
     data: {},
@@ -494,7 +494,7 @@ function createNode(
     position,
     width,
     height,
-  }
+  } as Node
 }
 
 function expectMapEntries(spy: unknown, entries: Array<[string, CanvasNodeResizeUpdate]>) {

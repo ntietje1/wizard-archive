@@ -1,7 +1,7 @@
 import type { CanvasDocumentWriter, CanvasNodeActions } from '../../tools/canvas-tool-types'
 import type { CanvasSessionRuntime } from '../session/use-canvas-session-state'
 import type { CanvasEngine } from '../../system/canvas-engine'
-import type { CanvasNode } from '../../types/canvas-domain-types'
+import type { CanvasDocumentNodePatch } from '../../types/canvas-domain-types'
 
 export function createCanvasNodeActions({
   canvasEngine,
@@ -58,7 +58,7 @@ function previewNodeResize(
 }
 
 function createNodeResizePatches(updates: Parameters<CanvasNodeActions['onResizeMany']>[0]) {
-  const nodePatches = new Map<string, Partial<CanvasNode>>()
+  const nodePatches = new Map<string, CanvasDocumentNodePatch>()
   for (const [nodeId, update] of updates) {
     nodePatches.set(nodeId, update)
   }

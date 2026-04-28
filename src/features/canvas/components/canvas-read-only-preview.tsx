@@ -23,7 +23,7 @@ import { getCanvasNodeSurfaceStyle } from '../nodes/shared/canvas-node-surface-s
 import { normalizeEmbedNodeData } from '../nodes/embed/embed-node-data'
 import { SidebarItemPreviewContent } from '~/features/previews/components/sidebar-item-preview-content'
 import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
-import type { CanvasEdge, CanvasNode } from '../types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from '../types/canvas-domain-types'
 import type { CanvasNodeComponentProps } from '../nodes/canvas-node-types'
 import type { EmbedNodeData } from '../nodes/embed/embed-node-data'
 import { cn } from '~/features/shadcn/lib/utils'
@@ -36,8 +36,8 @@ const DEFAULT_EMBED_MIN_WIDTH = 240
 const DEFAULT_EMBED_MIN_HEIGHT = 180
 
 interface CanvasReadOnlyPreviewProps {
-  nodes: ReadonlyArray<CanvasNode>
-  edges: ReadonlyArray<CanvasEdge>
+  nodes: ReadonlyArray<CanvasDocumentNode>
+  edges: ReadonlyArray<CanvasDocumentEdge>
   interactive?: boolean
   fitPadding?: number
   minZoom?: number
@@ -193,11 +193,11 @@ function preventCanvasPreviewMenu(event: ReactMouseEvent) {
   event.preventDefault()
 }
 
-function preventCanvasPreviewNodeMenu(event: ReactMouseEvent, _node: CanvasNode) {
+function preventCanvasPreviewNodeMenu(event: ReactMouseEvent, _node: CanvasDocumentNode) {
   event.preventDefault()
 }
 
-function preventCanvasPreviewEdgeMenu(event: ReactMouseEvent, _edge: CanvasEdge) {
+function preventCanvasPreviewEdgeMenu(event: ReactMouseEvent, _edge: CanvasDocumentEdge) {
   event.preventDefault()
 }
 

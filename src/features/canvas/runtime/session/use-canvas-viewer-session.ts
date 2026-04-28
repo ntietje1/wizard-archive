@@ -4,8 +4,8 @@ import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
 } from '~/features/canvas/types/canvas-domain-types'
 import type * as Y from 'yjs'
 import type { CanvasWithContent } from 'convex/canvases/types'
@@ -45,8 +45,8 @@ export type CanvasViewerSession =
       provider: ReturnType<typeof useConvexYjsCollaboration>['provider']
       user: { name: string; color: string }
       doc: Y.Doc
-      nodesMap: Y.Map<Node>
-      edgesMap: Y.Map<Edge>
+      nodesMap: Y.Map<CanvasDocumentNode>
+      edgesMap: Y.Map<CanvasDocumentEdge>
     }
 
 export function useCanvasViewerSession(canvas: CanvasWithContent): CanvasViewerSession {
@@ -64,8 +64,8 @@ export function useCanvasViewerSession(canvas: CanvasWithContent): CanvasViewerS
     canEdit,
   )
 
-  const nodesMap = doc ? doc.getMap<Node>('nodes') : null
-  const edgesMap = doc ? doc.getMap<Edge>('edges') : null
+  const nodesMap = doc ? doc.getMap<CanvasDocumentNode>('nodes') : null
+  const edgesMap = doc ? doc.getMap<CanvasDocumentEdge>('edges') : null
   const user = { name: userName, color: userColor }
 
   useEffect(() => {

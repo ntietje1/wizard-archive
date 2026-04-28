@@ -9,9 +9,7 @@ import {
 } from '../shared/use-canvas-edge-endpoint-nodes'
 import type { CanvasEdgeRendererProps } from '../canvas-edge-types'
 
-export function StraightCanvasEdge(
-  props: CanvasEdgeRendererProps<Record<string, unknown>, 'straight'>,
-) {
+export function StraightCanvasEdge(props: CanvasEdgeRendererProps<'straight'>) {
   const endpointNodes = useCanvasEdgeEndpointNodes(props)
   const nodesById = createCanvasEndpointNodesById(endpointNodes)
   const geometry =

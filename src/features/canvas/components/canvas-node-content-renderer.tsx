@@ -1,14 +1,21 @@
 import { memo, useCallback, useEffect, useRef } from 'react'
 import { useCanvasEngineSelector } from '../react/use-canvas-engine'
 import type { CanvasEngineSnapshot, CanvasInternalNode } from '../system/canvas-engine'
-import type { CanvasNode } from '../types/canvas-domain-types'
+import type { CanvasDocumentNode, CanvasNodeType } from '../types/canvas-domain-types'
 import { CANVAS_NODE_TYPES } from '../nodes/canvas-node-types'
-import type { CanvasNodeComponentProps, CanvasNodeType } from '../nodes/canvas-node-types'
+import type {
+  CanvasNodeComponentDataByType,
+  CanvasNodeComponentProps,
+} from '../nodes/canvas-node-types'
 import type { ComponentType } from 'react'
 
-export type CanvasNodeRendererMap = Partial<
-  Record<CanvasNodeType, ComponentType<CanvasNodeComponentProps<any>>>
->
+type CanvasNodeDataUnion = CanvasNodeComponentDataByType[CanvasNodeType]
+
+export type CanvasNodeRendererMap = Partial<{
+  [TType in CanvasNodeType]: ComponentType<
+    CanvasNodeComponentProps<CanvasNodeComponentDataByType[TType]>
+  >
+}>
 
 const canvasNodeTypeSet = new Set<string>(CANVAS_NODE_TYPES)
 
@@ -17,7 +24,7 @@ type CanvasNodeContentSnapshot = {
   type: CanvasNodeType
   rawType: string | undefined
   isKnownType: boolean
-  data: CanvasNode['data']
+  data: CanvasDocumentNode['data']
   dragging: boolean
   selected: boolean
   width: number | undefined
@@ -30,7 +37,7 @@ interface CanvasNodeContentRendererProps {
   onUnknownNodeType?: (nodeType: string, rendererTypes: ReadonlyArray<string>) => void
 }
 
-const DEFAULT_CANVAS_NODE_RENDERER_TYPE = 'text'
+const DEFAULT_CANVAS_NODE_RENDERER_TYPE = 'text' as const satisfies CanvasNodeType
 
 export const CanvasNodeContentRenderer = memo(function CanvasNodeContentRenderer({
   nodeId,
@@ -65,8 +72,15 @@ export const CanvasNodeContentRenderer = memo(function CanvasNodeContentRenderer
     return null
   }
 
-  const Component = renderers[content.type]
+  const Component = renderers[content.type] as
+    | ComponentType<CanvasNodeComponentProps<CanvasNodeDataUnion>>
+    | undefined
   if (!Component) {
+    if (import.meta.env.DEV) {
+      console.warn(
+        `CanvasNodeContentRenderer: missing "${DEFAULT_CANVAS_NODE_RENDERER_TYPE}" renderer for fallback from "${content.rawType ?? 'unknown'}" node type`,
+      )
+    }
     return null
   }
 
@@ -75,7 +89,7 @@ export const CanvasNodeContentRenderer = memo(function CanvasNodeContentRenderer
       <Component
         id={content.id}
         type={content.type}
-        data={content.data}
+        data={content.data as CanvasNodeDataUnion}
         dragging={content.dragging}
         selected={content.selected}
         width={content.width}

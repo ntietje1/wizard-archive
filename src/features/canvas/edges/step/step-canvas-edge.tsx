@@ -9,7 +9,7 @@ import {
 } from '../shared/use-canvas-edge-endpoint-nodes'
 import type { CanvasEdgeRendererProps } from '../canvas-edge-types'
 
-export function StepCanvasEdge(props: CanvasEdgeRendererProps<Record<string, unknown>, 'step'>) {
+export function StepCanvasEdge(props: CanvasEdgeRendererProps<'step'>) {
   const endpointNodes = useCanvasEdgeEndpointNodes(props)
   const nodesById = createCanvasEndpointNodesById(endpointNodes)
   const geometry =

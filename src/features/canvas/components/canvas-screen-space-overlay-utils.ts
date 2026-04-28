@@ -39,7 +39,7 @@ export function canvasBoundsToScreenBounds(bounds: Bounds, viewport: CanvasViewp
 export function canvasPointsToScreenPoints<TPoint extends { x: number; y: number }>(
   points: ReadonlyArray<TPoint>,
   viewport: CanvasViewport,
-): Array<TPoint> {
+): Array<Omit<TPoint, 'x' | 'y'> & { x: number; y: number }> {
   return points.map((point) => ({
     ...point,
     ...canvasPointToScreenPoint(point, viewport),

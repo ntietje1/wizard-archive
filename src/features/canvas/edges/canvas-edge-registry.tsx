@@ -1,4 +1,4 @@
-import { parseCanvasEdgeType, parseCanvasRuntimeEdge } from 'convex/canvases/validation'
+import { parseCanvasDocumentEdge, parseCanvasEdgeType } from 'convex/canvases/validation'
 import {
   bezierCanvasEdgeContainsPoint,
   bezierCanvasEdgeIntersectsPolygon,
@@ -33,14 +33,14 @@ import type { CanvasContextMenuContributor } from '../runtime/context-menu/canva
 import type { Point2D } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-geometry-utils'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
 } from '~/features/canvas/types/canvas-domain-types'
 
 const EMPTY_CONTEXT_MENU_CONTRIBUTORS: ReadonlyArray<CanvasContextMenuContributor> = []
 
 type NormalizedCanvasEdgeEntry = {
-  rawEdge: Edge
+  rawEdge: CanvasDocumentEdge
   edge: CanvasRuntimeEdge
 }
 
@@ -49,7 +49,7 @@ export function resolveCanvasEdgeType(type: string | undefined): CanvasEdgeType 
 }
 
 function createCanvasEdgeSelectionContext(
-  nodes: ReadonlyArray<Node>,
+  nodes: ReadonlyArray<CanvasDocumentNode>,
   zoom: number,
 ): CanvasEdgeSelectionContext {
   return {
@@ -58,8 +58,8 @@ function createCanvasEdgeSelectionContext(
   }
 }
 
-export function normalizeCanvasEdge(edge: Edge): CanvasRuntimeEdge | null {
-  const parsedEdge = parseCanvasRuntimeEdge({
+export function normalizeCanvasEdge(edge: CanvasDocumentEdge): CanvasRuntimeEdge | null {
+  const parsedEdge = parseCanvasDocumentEdge({
     id: edge.id,
     source: edge.source,
     target: edge.target,
@@ -78,7 +78,9 @@ export function normalizeCanvasEdge(edge: Edge): CanvasRuntimeEdge | null {
   }
 }
 
-function normalizeCanvasEdges(edges: ReadonlyArray<Edge>): Array<NormalizedCanvasEdgeEntry> {
+function normalizeCanvasEdges(
+  edges: ReadonlyArray<CanvasDocumentEdge>,
+): Array<NormalizedCanvasEdgeEntry> {
   return edges.flatMap((rawEdge) => {
     const edge = normalizeCanvasEdge(rawEdge)
     return edge ? [{ rawEdge, edge }] : []
@@ -174,8 +176,8 @@ function isCanvasEdgeSelectionCandidate(
 }
 
 export function findCanvasEdgeAtPoint(
-  nodes: Array<Node>,
-  edges: Array<Edge>,
+  nodes: ReadonlyArray<CanvasDocumentNode>,
+  edges: ReadonlyArray<CanvasDocumentEdge>,
   point: Point2D,
   context: Pick<CanvasEdgeSelectionContext, 'zoom'>,
 ): string | null {
@@ -193,8 +195,8 @@ export function findCanvasEdgeAtPoint(
 }
 
 export function getCanvasEdgesMatchingRectangle(
-  nodes: ReadonlyArray<Node>,
-  edges: ReadonlyArray<Edge>,
+  nodes: ReadonlyArray<CanvasDocumentNode>,
+  edges: ReadonlyArray<CanvasDocumentEdge>,
   rect: Bounds,
   context: Pick<CanvasEdgeSelectionContext, 'zoom'>,
 ): ReadonlySet<string> {
@@ -215,8 +217,8 @@ export function getCanvasEdgesMatchingRectangle(
 }
 
 export function getCanvasEdgesMatchingLasso(
-  nodes: ReadonlyArray<Node>,
-  edges: ReadonlyArray<Edge>,
+  nodes: ReadonlyArray<CanvasDocumentNode>,
+  edges: ReadonlyArray<CanvasDocumentEdge>,
   polygon: ReadonlyArray<Point2D>,
   context: Pick<CanvasEdgeSelectionContext, 'zoom'>,
 ): ReadonlySet<string> {

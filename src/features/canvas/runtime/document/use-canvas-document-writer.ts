@@ -16,14 +16,14 @@ import { measureCanvasPerformance } from '../performance/canvas-performance-metr
 import { transactCanvasMap, transactCanvasMaps } from './canvas-yjs-transactions'
 import { clearStrokePathCache } from '../../nodes/stroke/stroke-path-cache'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
 } from '~/features/canvas/types/canvas-domain-types'
 import type * as Y from 'yjs'
 
 interface CreateCanvasDocumentWriterOptions {
-  nodesMap: Y.Map<Node>
-  edgesMap: Y.Map<Edge>
+  nodesMap: Y.Map<CanvasDocumentNode>
+  edgesMap: Y.Map<CanvasDocumentEdge>
 }
 
 export function createCanvasDocumentWriter({

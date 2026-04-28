@@ -1,20 +1,21 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
+import { parseCanvasDocumentEdge, parseCanvasDocumentNode } from 'convex/canvases/validation'
 import { yMapToArray } from '../../utils/canvas-yjs-utils'
-import { stripEphemeralCanvasNodeState } from '../../utils/canvas-node-persistence'
 import { measureCanvasPerformance } from '../performance/canvas-performance-metrics'
 import type { ResizingState } from '../../utils/canvas-awareness-types'
 import { sortCanvasElementsByZIndex } from './canvas-z-order'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentNodePatch,
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
 } from '~/features/canvas/types/canvas-domain-types'
 import type { CanvasEngine } from '../../system/canvas-engine'
 import type * as Y from 'yjs'
 
 interface UseCanvasDocumentProjectionOptions {
   canvasEngine: CanvasEngine
-  nodesMap: Y.Map<Node>
-  edgesMap: Y.Map<Edge>
+  nodesMap: Y.Map<CanvasDocumentNode>
+  edgesMap: Y.Map<CanvasDocumentEdge>
   localDraggingIdsRef: React.RefObject<Set<string>>
   remoteResizeDimensions: ResizingState
 }
@@ -36,11 +37,17 @@ export function useCanvasDocumentProjection({
     const initialNodes = measureCanvasPerformance(
       'canvas.projection.nodes.initial',
       { nodeCount: nodesMap.size },
-      () => sortCanvasElementsByZIndex(yMapToArray(nodesMap).map(stripEphemeralCanvasNodeState)),
+      () =>
+        sortCanvasElementsByZIndex(
+          yMapToArray(nodesMap).flatMap((node) => {
+            const parsedNode = readCanvasDocumentNode(node)
+            return parsedNode ? [parsedNode] : []
+          }),
+        ),
     )
     canvasEngine.setDocumentSnapshot({ nodes: initialNodes })
 
-    const handler = (event: Y.YMapEvent<Node>) => {
+    const handler = (event: Y.YMapEvent<CanvasDocumentNode>) => {
       measureCanvasPerformance(
         'canvas.projection.nodes.observe',
         {
@@ -70,11 +77,17 @@ export function useCanvasDocumentProjection({
     const initialEdges = measureCanvasPerformance(
       'canvas.projection.edges.initial',
       { edgeCount: edgesMap.size },
-      () => sortCanvasElementsByZIndex(yMapToArray(edgesMap)),
+      () =>
+        sortCanvasElementsByZIndex(
+          yMapToArray(edgesMap).flatMap((edge) => {
+            const parsedEdge = readCanvasDocumentEdge(edge)
+            return parsedEdge ? [parsedEdge] : []
+          }),
+        ),
     )
     canvasEngine.setDocumentSnapshot({ edges: initialEdges })
 
-    const handler = (event: Y.YMapEvent<Edge>) => {
+    const handler = (event: Y.YMapEvent<CanvasDocumentEdge>) => {
       measureCanvasPerformance(
         'canvas.projection.edges.observe',
         {
@@ -115,10 +128,10 @@ export function useCanvasDocumentProjection({
 
 function updateCanvasEngineRemoteResize(
   canvasEngine: CanvasEngine,
-  current: ReadonlyArray<Node>,
+  current: ReadonlyArray<CanvasDocumentNode>,
   remoteResizeDimensions: ResizingState,
 ) {
-  const updates = new Map<string, Partial<Node>>()
+  const updates = new Map<string, CanvasDocumentNodePatch>()
   for (const node of current) {
     const resizeDimensions = remoteResizeDimensions[node.id]
     if (!resizeDimensions) {
@@ -135,24 +148,24 @@ function updateCanvasEngineRemoteResize(
 }
 
 function applyChangedCanvasNodes(
-  current: Array<Node>,
+  current: Array<CanvasDocumentNode>,
   changedIds: Set<string>,
   {
     nodesMap,
     localDraggingIds,
     remoteResizeDimensions,
   }: {
-    nodesMap: Y.Map<Node>
+    nodesMap: Y.Map<CanvasDocumentNode>
     localDraggingIds: Set<string> | undefined
     remoteResizeDimensions: ResizingState
   },
-): Array<Node> {
+): Array<CanvasDocumentNode> {
   if (changedIds.size === 0) {
     return current
   }
 
   const currentById = new Map(current.map((node) => [node.id, node]))
-  const next: Array<Node> = []
+  const next: Array<CanvasDocumentNode> = []
   let orderMayHaveChanged = false
 
   for (const node of current) {
@@ -167,14 +180,16 @@ function applyChangedCanvasNodes(
       continue
     }
 
-    const projectedNode = mergeProjectedCanvasNode(
-      node,
-      stripEphemeralCanvasNodeState(remoteNode),
-      {
-        localDraggingIds,
-        remoteResizeDimensions,
-      },
-    )
+    const parsedRemoteNode = readCanvasDocumentNode(remoteNode)
+    if (!parsedRemoteNode) {
+      orderMayHaveChanged = true
+      continue
+    }
+
+    const projectedNode = mergeProjectedCanvasNode(node, parsedRemoteNode, {
+      localDraggingIds,
+      remoteResizeDimensions,
+    })
     if (node.zIndex !== projectedNode.zIndex) {
       orderMayHaveChanged = true
     }
@@ -187,8 +202,9 @@ function applyChangedCanvasNodes(
     }
 
     const remoteNode = nodesMap.get(id)
-    if (remoteNode) {
-      next.push(stripEphemeralCanvasNodeState(remoteNode))
+    const parsedRemoteNode = remoteNode ? readCanvasDocumentNode(remoteNode) : null
+    if (parsedRemoteNode) {
+      next.push(parsedRemoteNode)
       orderMayHaveChanged = true
     }
   }
@@ -197,8 +213,8 @@ function applyChangedCanvasNodes(
 }
 
 function mergeProjectedCanvasNode(
-  local: Node,
-  remote: Node,
+  local: CanvasDocumentNode,
+  remote: CanvasDocumentNode,
   {
     localDraggingIds,
     remoteResizeDimensions,
@@ -226,16 +242,16 @@ function mergeProjectedCanvasNode(
 }
 
 function applyChangedCanvasEdges(
-  current: Array<Edge>,
+  current: Array<CanvasDocumentEdge>,
   changedIds: Set<string>,
-  edgesMap: Y.Map<Edge>,
+  edgesMap: Y.Map<CanvasDocumentEdge>,
 ) {
   if (changedIds.size === 0) {
     return current
   }
 
   const currentById = new Map(current.map((edge) => [edge.id, edge]))
-  const next: Array<Edge> = []
+  const next: Array<CanvasDocumentEdge> = []
   let orderMayHaveChanged = false
 
   for (const edge of current) {
@@ -244,7 +260,7 @@ function applyChangedCanvasEdges(
       continue
     }
 
-    const remoteEdge = edgesMap.get(edge.id)
+    const remoteEdge = readCanvasDocumentEdge(edgesMap.get(edge.id))
     if (remoteEdge) {
       const projectedEdge = { ...edge, ...remoteEdge }
       if (edge.zIndex !== projectedEdge.zIndex) {
@@ -261,7 +277,7 @@ function applyChangedCanvasEdges(
       continue
     }
 
-    const remoteEdge = edgesMap.get(id)
+    const remoteEdge = readCanvasDocumentEdge(edgesMap.get(id))
     if (remoteEdge) {
       next.push(remoteEdge)
       orderMayHaveChanged = true
@@ -269,4 +285,34 @@ function applyChangedCanvasEdges(
   }
 
   return orderMayHaveChanged ? sortCanvasElementsByZIndex(next) : next
+}
+
+function readCanvasDocumentNode(node: unknown): CanvasDocumentNode | null {
+  const parsedNode = parseCanvasDocumentNode(node)
+  if (parsedNode) {
+    return parsedNode as CanvasDocumentNode
+  }
+
+  warnMalformedCanvasDocumentValue('node', node)
+  return null
+}
+
+function readCanvasDocumentEdge(edge: unknown): CanvasDocumentEdge | null {
+  if (!edge) {
+    return null
+  }
+
+  const parsedEdge = parseCanvasDocumentEdge(edge)
+  if (parsedEdge) {
+    return parsedEdge as CanvasDocumentEdge
+  }
+
+  warnMalformedCanvasDocumentValue('edge', edge)
+  return null
+}
+
+function warnMalformedCanvasDocumentValue(kind: 'node' | 'edge', value: unknown) {
+  if (import.meta.env.DEV) {
+    console.warn(`Ignoring malformed canvas document ${kind}`, value)
+  }
 }

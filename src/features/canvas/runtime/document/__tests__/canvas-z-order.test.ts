@@ -4,8 +4,8 @@ import { reorderCanvasElementIds } from '../canvas-reorder'
 import { getNextCanvasElementZIndex } from '../canvas-z-index'
 import { applyCanvasZOrder, sortCanvasElementsByZIndex } from '../canvas-z-order'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge as Edge,
+  CanvasDocumentNode as Node,
 } from '~/features/canvas/types/canvas-domain-types'
 import * as Y from 'yjs'
 

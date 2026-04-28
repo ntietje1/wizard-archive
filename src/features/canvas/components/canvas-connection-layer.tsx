@@ -4,7 +4,7 @@ import { clampCanvasEdgeStrokeWidth } from '../edges/shared/canvas-edge-style'
 import { useCanvasEngineSelector } from '../react/use-canvas-engine'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import type { CanvasInternalNode } from '../system/canvas-engine'
-import type { CanvasNode } from '../types/canvas-domain-types'
+import type { CanvasDocumentNode } from '../types/canvas-domain-types'
 import type { CSSProperties } from 'react'
 import { useShallow } from 'zustand/shallow'
 
@@ -51,7 +51,7 @@ export function CanvasConnectionLayer({ draft }: { draft: CanvasConnectionDraft 
 }
 
 function createNodesById(nodeLookup: ReadonlyMap<string, CanvasInternalNode>) {
-  const nodesById = new Map<string, CanvasNode>()
+  const nodesById = new Map<string, CanvasDocumentNode>()
   for (const [nodeId, internalNode] of nodeLookup) {
     nodesById.set(nodeId, internalNode.node)
   }

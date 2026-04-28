@@ -2,13 +2,13 @@ import type { CanvasSelectionSnapshot } from '../../tools/canvas-tool-types'
 import type { CanvasCommands } from '../document/use-canvas-commands'
 import type { ContextMenuContributor, ContextMenuItemSpec } from '~/features/context-menu/types'
 import type { CanvasEdgeType } from '../../edges/canvas-edge-types'
-import type { CanvasNodeType } from '../../nodes/canvas-node-types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { CanvasReorderDirection } from '../document/canvas-reorder'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+  CanvasNodeType,
 } from '~/features/canvas/types/canvas-domain-types'
 
 export interface CanvasContextMenuPoint {
@@ -56,8 +56,8 @@ export type CanvasContextMenuReorderPayload = {
 }
 
 export interface CanvasClipboardEntry {
-  nodes: Array<Node>
-  edges: Array<Edge>
+  nodes: Array<CanvasDocumentNode>
+  edges: Array<CanvasDocumentEdge>
   pasteCount: number
 }
 

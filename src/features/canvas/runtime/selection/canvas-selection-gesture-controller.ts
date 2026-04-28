@@ -24,8 +24,8 @@ import type {
 } from '../../tools/canvas-tool-types'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
 } from '~/features/canvas/types/canvas-domain-types'
 
 const MIN_SELECTION_DRAG_DISTANCE_PX = 1
@@ -156,8 +156,8 @@ export function createRectangleSelectionStrategy({
     screenToCanvasPosition: (position: { x: number; y: number }) => { x: number; y: number }
   }
   getCanvasSnapshot: () => {
-    nodes: ReadonlyArray<Node>
-    edges: ReadonlyArray<Edge>
+    nodes: ReadonlyArray<CanvasDocumentNode>
+    edges: ReadonlyArray<CanvasDocumentEdge>
     measuredNodes: ReturnType<typeof getMeasuredCanvasNodesFromLookup>
   }
   getAwareness: () => CanvasAwarenessPresenceWriter
@@ -234,8 +234,8 @@ export function createLassoSelectionStrategy({
     getZoom: () => number
   }
   getCanvasSnapshot: () => {
-    nodes: ReadonlyArray<Node>
-    edges: ReadonlyArray<Edge>
+    nodes: ReadonlyArray<CanvasDocumentNode>
+    edges: ReadonlyArray<CanvasDocumentEdge>
     measuredNodes: ReadonlyArray<CanvasMeasuredNode>
   }
   getAwareness: () => CanvasAwarenessPresenceWriter

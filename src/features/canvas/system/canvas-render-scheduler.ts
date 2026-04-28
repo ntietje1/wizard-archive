@@ -1,11 +1,17 @@
 import { normalizeCanvasEdgeStyle } from '../edges/shared/canvas-edge-style'
+import { parseCanvasStrokeNodeData } from 'convex/canvases/validation'
 import { getCanvasNodeSurfaceStyle } from '../nodes/shared/canvas-node-surface-style'
 import { getCachedStrokeDetailPath } from '../nodes/stroke/stroke-path-cache'
 import type { CanvasEdgePatch } from '../edges/canvas-edge-types'
+import type { CanvasNodeDataPatch } from '../nodes/canvas-node-modules'
 import type { CanvasCullingDiff } from './canvas-culling'
 import type { CanvasDomRegistry } from './canvas-dom-registry'
-import type { StrokeNodeData } from '../nodes/stroke/stroke-node-model'
-import type { CanvasEdge, CanvasPosition, CanvasViewport } from '../types/canvas-domain-types'
+import type { CanvasNodeSurfaceStyleData } from '../nodes/shared/canvas-node-surface-style'
+import type {
+  CanvasDocumentEdge,
+  CanvasPosition,
+  CanvasViewport,
+} from '../types/canvas-domain-types'
 
 export type CanvasCameraState = 'idle' | 'moving'
 
@@ -15,7 +21,7 @@ const HIGHLIGHT_STROKE_WIDTH_FACTOR = 0.15
 interface CanvasRenderScheduler {
   scheduleNodeTransforms: (positions: ReadonlyMap<string, CanvasPosition>) => void
   scheduleEdgePaths: (paths: ReadonlyMap<string, string>) => void
-  scheduleNodeDataPatches: (updates: ReadonlyMap<string, Record<string, unknown>>) => void
+  scheduleNodeDataPatches: (updates: ReadonlyMap<string, CanvasNodeDataPatch>) => void
   scheduleEdgePatches: (updates: ReadonlyMap<string, CanvasEdgePatch>) => void
   scheduleViewportTransform: (viewport: CanvasViewport) => void
   scheduleCameraState: (state: CanvasCameraState) => void
@@ -31,7 +37,7 @@ export function createCanvasRenderScheduler({
 }): CanvasRenderScheduler {
   const pendingNodeTransforms = new Map<string, CanvasPosition>()
   const pendingEdgePaths = new Map<string, string>()
-  const pendingNodeDataPatches = new Map<string, Record<string, unknown>>()
+  const pendingNodeDataPatches = new Map<string, CanvasNodeDataPatch>()
   const pendingEdgePatches = new Map<string, CanvasEdgePatch>()
   const pendingCulledNodeIds = new Map<string, boolean>()
   const pendingCulledEdgeIds = new Map<string, boolean>()
@@ -97,7 +103,7 @@ export function createCanvasRenderScheduler({
     for (const [nodeId, patch] of pendingNodeDataPatches) {
       const surface = domRegistry.getNodeSurface(nodeId)
       if (surface) {
-        Object.assign(surface.style, getCanvasNodeSurfaceStyle(patch))
+        Object.assign(surface.style, getCanvasNodeSurfaceStyle(patch as CanvasNodeSurfaceStyleData))
       }
 
       applyStrokeNodeDataPatch(nodeId, patch)
@@ -105,8 +111,8 @@ export function createCanvasRenderScheduler({
     pendingNodeDataPatches.clear()
   }
 
-  const applyStrokeNodeDataPatch = (nodeId: string, patch: Record<string, unknown>) => {
-    const strokeData = parseStrokeNodeData(patch)
+  const applyStrokeNodeDataPatch = (nodeId: string, patch: CanvasNodeDataPatch) => {
+    const strokeData = parseCanvasStrokeNodeData(patch)
     if (!strokeData) {
       return
     }
@@ -267,15 +273,7 @@ export function createCanvasRenderScheduler({
   }
 }
 
-function parseStrokeNodeData(data: Record<string, unknown>): StrokeNodeData | null {
-  if (!Array.isArray(data.points) || typeof data.size !== 'number') {
-    return null
-  }
-
-  return data as StrokeNodeData
-}
-
-function readEdgeStyle(path: SVGPathElement): NonNullable<CanvasEdge['style']> {
+function readEdgeStyle(path: SVGPathElement): NonNullable<CanvasDocumentEdge['style']> {
   const strokeWidth = path.style.strokeWidth
   const opacity = path.style.opacity
   return {

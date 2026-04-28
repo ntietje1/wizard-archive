@@ -1,5 +1,6 @@
 import { createCanvasDomRegistry } from './canvas-dom-registry'
 import { createCanvasRenderScheduler } from './canvas-render-scheduler'
+import type { CanvasNodeDataPatch } from '../nodes/canvas-node-modules'
 import type { CanvasEngineSnapshot } from './canvas-engine-types'
 
 export function createCanvasDomRuntime() {
@@ -20,13 +21,13 @@ export function createCanvasDomRuntime() {
     scheduleEdgePaths: scheduler.scheduleEdgePaths,
     scheduleNodeDataPatches: (
       snapshot: CanvasEngineSnapshot,
-      updates: ReadonlyMap<string, Record<string, unknown>>,
+      updates: ReadonlyMap<string, CanvasNodeDataPatch>,
     ) => {
       if (updates.size === 0) {
         return
       }
 
-      const mergedUpdates = new Map<string, Record<string, unknown>>()
+      const mergedUpdates = new Map<string, CanvasNodeDataPatch>()
       for (const [nodeId, patch] of updates) {
         const internalNode = snapshot.nodeLookup.get(nodeId)
         if (!internalNode) {

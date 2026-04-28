@@ -1,5 +1,5 @@
 import type { Id } from 'convex/_generated/dataModel'
-import { parsePersistedCanvasViewport } from 'convex/canvases/validation'
+import { parseCanvasViewport } from 'convex/canvases/validation'
 import { logger } from '~/shared/utils/logger'
 
 const DEFAULT_CANVAS_VIEWPORT = {
@@ -25,7 +25,7 @@ export function loadPersistedCanvasViewport(canvasId: Id<'sidebarItems'>): Persi
       return DEFAULT_CANVAS_VIEWPORT
     }
 
-    return parsePersistedCanvasViewport(JSON.parse(rawValue)) ?? DEFAULT_CANVAS_VIEWPORT
+    return parseCanvasViewport(JSON.parse(rawValue)) ?? DEFAULT_CANVAS_VIEWPORT
   } catch (error) {
     logger.debug(error)
     return DEFAULT_CANVAS_VIEWPORT

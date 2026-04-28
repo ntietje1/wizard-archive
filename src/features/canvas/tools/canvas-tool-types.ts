@@ -5,6 +5,7 @@ import type {
   RemoteUser,
 } from '../utils/canvas-awareness-types'
 import type { CanvasEdgePatch, CanvasEdgeType } from '../edges/canvas-edge-types'
+import type { CanvasNodeDataPatch } from '../nodes/canvas-node-modules'
 import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
 import type {
   CanvasSelectionCommitMode,
@@ -13,11 +14,11 @@ import type {
 } from '../system/canvas-selection'
 import type {
   CanvasConnection,
-  CanvasEdge,
-  CanvasNode,
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
   CanvasPosition,
 } from '../types/canvas-domain-types'
-import type { ComponentType, CSSProperties, MouseEvent as ReactMouseEvent, ReactNode } from 'react'
+import type { ComponentType, MouseEvent as ReactMouseEvent, ReactNode } from 'react'
 
 export type CanvasToolId = 'select' | 'hand' | 'draw' | 'erase' | 'lasso' | 'text' | 'edge'
 export type {
@@ -35,7 +36,7 @@ interface CanvasToolSettings {
 
 export interface CanvasEdgeCreationDefaults {
   type: CanvasEdgeType
-  style?: CSSProperties
+  style?: CanvasEdgePatch['style']
 }
 
 export interface CanvasHistoryController {
@@ -75,8 +76,8 @@ export interface CanvasNodeResizeUpdate {
 }
 
 export interface CanvasDocumentWriter {
-  createNode: (node: CanvasNode) => void
-  patchNodeData: (updates: ReadonlyMap<string, Record<string, unknown>>) => void
+  createNode: (node: CanvasDocumentNode) => void
+  patchNodeData: (updates: ReadonlyMap<string, CanvasNodeDataPatch>) => void
   patchEdges: (updates: ReadonlyMap<string, CanvasEdgePatch>) => void
   resizeNode: (nodeId: string, width: number, height: number, position: CanvasPosition) => void
   resizeNodes: (updates: ReadonlyMap<string, CanvasNodeResizeUpdate>) => void
@@ -87,11 +88,11 @@ export interface CanvasDocumentWriter {
 }
 
 interface CanvasDocumentReader {
-  getNodes: () => Array<CanvasNode>
-  getEdges: () => Array<CanvasEdge>
+  getNodes: () => Array<CanvasDocumentNode>
+  getEdges: () => Array<CanvasDocumentEdge>
 }
 
-export type CanvasMeasuredNode = CanvasNode & {
+export type CanvasMeasuredNode = CanvasDocumentNode & {
   width: number
   height: number
 }
@@ -192,8 +193,8 @@ export interface CanvasToolHandlers {
   onPointerCancel?: (event: PointerEvent) => void
   onKeyDown?: (event: KeyboardEvent) => void
   onKeyUp?: (event: KeyboardEvent) => void
-  onNodeClick?: (event: ReactMouseEvent, node: CanvasNode) => void
-  onEdgeClick?: (event: ReactMouseEvent, edge: CanvasEdge) => void
+  onNodeClick?: (event: ReactMouseEvent, node: CanvasDocumentNode) => void
+  onEdgeClick?: (event: ReactMouseEvent, edge: CanvasDocumentEdge) => void
   onMoveStart?: (event: MouseEvent | TouchEvent | null) => void
   onMoveEnd?: () => void
 }

@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { resolveCanvasContextMenuTarget } from '../canvas-context-menu-target'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge as Edge,
+  CanvasDocumentNode as Node,
 } from '~/features/canvas/types/canvas-domain-types'
 import * as Y from 'yjs'
 

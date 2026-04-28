@@ -24,6 +24,25 @@ describe('canvas architecture boundaries', () => {
     expect(connectionHandles).not.toContain('useConnection')
   })
 
+  it('keeps the canvas slice free of React Flow and xyflow compatibility contracts', () => {
+    const canvasFiles = listFiles(join(repoRoot, 'src/features/canvas')).filter(
+      (file) =>
+        (file.endsWith('.ts') || file.endsWith('.tsx')) &&
+        !file.includes(`${pathSeparator}__tests__${pathSeparator}`),
+    )
+
+    expect(canvasFiles.length).toBeGreaterThan(0)
+
+    for (const file of canvasFiles) {
+      const source = readFileSync(file, 'utf8')
+      expect(source).not.toMatch(/xyflow|reactflow|ReactFlow|react-flow/)
+      expect(source).not.toContain('CanvasNodeData = Record<string, unknown>')
+      expect(source).not.toContain('XYPosition')
+      expect(source).not.toContain('CanvasNodeComponentProps<any>')
+      expect(source).not.toContain('CanvasEdgeRendererProps<Record<string, unknown>')
+    }
+  })
+
   it('keeps pure canvas system modules independent from external graph imports', () => {
     const systemFiles = listFiles(join(repoRoot, 'src/features/canvas/system')).filter(
       (file) => !file.includes(`${pathSeparator}__tests__${pathSeparator}`),

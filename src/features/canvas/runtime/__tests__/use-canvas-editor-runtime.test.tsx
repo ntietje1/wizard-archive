@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useCanvasEditorRuntime } from '../use-canvas-editor-runtime'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import type { CanvasCommands } from '../document/use-canvas-commands'
-import type { CanvasEdge, CanvasNode } from '../../types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from '../../types/canvas-domain-types'
 import * as Y from 'yjs'
 import { testId } from '~/test/helpers/test-id'
 
@@ -293,8 +293,8 @@ function createTestCanvasDoc() {
   const doc = new Y.Doc()
   return {
     doc,
-    nodesMap: doc.getMap<CanvasNode>('nodes'),
-    edgesMap: doc.getMap<CanvasEdge>('edges'),
+    nodesMap: doc.getMap<CanvasDocumentNode>('nodes'),
+    edgesMap: doc.getMap<CanvasDocumentEdge>('edges'),
   }
 }
 

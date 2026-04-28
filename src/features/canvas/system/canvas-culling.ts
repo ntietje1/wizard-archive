@@ -1,10 +1,15 @@
 import { normalizeCanvasEdgeStyle } from '../edges/shared/canvas-edge-style'
+import { parseCanvasStrokeNodeData } from 'convex/canvases/validation'
 import { getCanvasEdgeInteractionWidth } from '../edges/shared/canvas-edge-geometry'
 import { getCanvasNodeBounds } from '../nodes/shared/canvas-node-bounds'
 import type { CanvasSelectionState } from './canvas-selection'
 import type { Bounds } from '../utils/canvas-geometry-utils'
 import { rectIntersectsBounds } from '../utils/canvas-geometry-utils'
-import type { CanvasEdge, CanvasNode, CanvasViewport } from '../types/canvas-domain-types'
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+  CanvasViewport,
+} from '../types/canvas-domain-types'
 
 const CULLING_OVERSCAN_PX = 512
 const MIN_ZOOM = 1e-6
@@ -23,13 +28,13 @@ type CanvasCullingState = {
   viewport: CanvasViewport
   surfaceBounds: Pick<DOMRect, 'width' | 'height'> | null
   nodeLookup: ReadonlyMap<string, CanvasCullingNode>
-  edges: ReadonlyArray<CanvasEdge>
+  edges: ReadonlyArray<CanvasDocumentEdge>
   selection: CanvasSelectionState
   draggingNodeIds: ReadonlySet<string>
 }
 
 type CanvasCullingNode = {
-  node: CanvasNode
+  node: CanvasDocumentNode
   measured: {
     width?: number
     height?: number
@@ -127,7 +132,7 @@ function computeEdgeCulling({
   alwaysVisibleNodeIds,
   alwaysVisibleEdgeIds,
 }: {
-  edges: ReadonlyArray<CanvasEdge>
+  edges: ReadonlyArray<CanvasDocumentEdge>
   nodeBounds: ReadonlyMap<string, Bounds>
   viewportBounds: Bounds
   alwaysVisibleNodeIds: ReadonlySet<string>
@@ -206,7 +211,7 @@ function getNodeCullingBounds({ node, measured }: CanvasCullingNode): Bounds | n
 }
 
 function getMeasuredCanvasNodeBounds(
-  node: CanvasNode,
+  node: CanvasDocumentNode,
   measured: CanvasCullingNode['measured'],
 ): Bounds | null {
   if (
@@ -226,17 +231,17 @@ function getMeasuredCanvasNodeBounds(
   }
 }
 
-function getNodeCullingPadding(node: CanvasNode): number {
+function getNodeCullingPadding(node: CanvasDocumentNode): number {
   if (node.type !== 'stroke') {
     return 0
   }
 
-  const size = typeof node.data?.size === 'number' ? node.data.size : 0
+  const size = parseCanvasStrokeNodeData(node.data)?.size ?? 0
   return Math.max(size, 0)
 }
 
 function getEdgeCullingBounds(
-  edge: CanvasEdge,
+  edge: CanvasDocumentEdge,
   nodeBounds: ReadonlyMap<string, Bounds>,
 ): Bounds | null {
   const sourceBounds = nodeBounds.get(edge.source)

@@ -2,11 +2,11 @@ import { buildBezierCanvasEdgeGeometryFromEdge } from '../edges/bezier/bezier-ca
 import { resolveCanvasEdgeType } from '../edges/canvas-edge-registry'
 import { buildStepCanvasEdgeGeometryFromEdge } from '../edges/step/step-canvas-edge-geometry'
 import { buildStraightCanvasEdgeGeometryFromEdge } from '../edges/straight/straight-canvas-edge-geometry'
-import type { CanvasEdge, CanvasNode } from '../types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from '../types/canvas-domain-types'
 
 export function buildCanvasEdgePath(
-  edge: CanvasEdge,
-  nodesById: ReadonlyMap<string, CanvasNode>,
+  edge: CanvasDocumentEdge,
+  nodesById: ReadonlyMap<string, CanvasDocumentNode>,
 ): string | null {
   switch (resolveCanvasEdgeType(edge.type)) {
     case 'bezier':

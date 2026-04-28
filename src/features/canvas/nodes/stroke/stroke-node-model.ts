@@ -1,9 +1,9 @@
 import getStroke from 'perfect-freehand'
 import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
 import type {
+  CanvasDocumentNode,
   CanvasHandlePosition,
-  CanvasNode as Node,
-  CanvasPosition as XYPosition,
+  CanvasPosition,
 } from '~/features/canvas/types/canvas-domain-types'
 import type { Point2D } from '../../utils/canvas-awareness-types'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
@@ -16,10 +16,10 @@ export type StrokeNodeData = {
   bounds: Bounds
 }
 
-type StrokeNodeType = Node<StrokeNodeData, 'stroke'>
+type StrokeNodeType = Extract<CanvasDocumentNode, { type: 'stroke' }>
 
 type StrokeNodeLike = {
-  position: XYPosition
+  position: CanvasPosition
   data: {
     points: Array<[number, number, number]>
     size: number
@@ -48,7 +48,7 @@ export function normalizeStrokeNodeData(data: StrokeNodeData): StrokeNodeData {
   }
 }
 
-export function isStrokeNode(node: Node): node is StrokeNodeType {
+export function isStrokeNode(node: CanvasDocumentNode): node is StrokeNodeType {
   return node.type === 'stroke'
 }
 
@@ -113,7 +113,7 @@ export function getStrokeBounds(
 function getAbsoluteStrokePoints(
   points: Array<[number, number, number]>,
   bounds: Bounds,
-  position: XYPosition,
+  position: CanvasPosition,
 ): Array<[number, number, number]> {
   const offsetX = position.x - bounds.x
   const offsetY = position.y - bounds.y
@@ -184,7 +184,7 @@ export function resizeStrokeNode<TNode extends StrokeNodeLike>(
   }: {
     width: number
     height: number
-    position: XYPosition
+    position: CanvasPosition
   },
 ): TNode {
   const { bounds, points, size } = node.data

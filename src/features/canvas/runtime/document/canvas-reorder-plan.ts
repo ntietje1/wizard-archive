@@ -4,29 +4,29 @@ import { stripEphemeralCanvasNodeState } from '../../utils/canvas-node-persisten
 import type { CanvasSelectionSnapshot } from '../../tools/canvas-tool-types'
 import type { CanvasReorderDirection } from './canvas-reorder'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
 } from '~/features/canvas/types/canvas-domain-types'
 import type * as Y from 'yjs'
 
 export interface CanvasReorderPlan {
-  nodes: Array<Node> | null
-  edges: Array<Edge> | null
+  nodes: Array<CanvasDocumentNode> | null
+  edges: Array<CanvasDocumentEdge> | null
 }
 
-function getCurrentCanvasNodes(nodesMap: Y.Map<Node>): Array<Node> {
+function getCurrentCanvasNodes(nodesMap: Y.Map<CanvasDocumentNode>): Array<CanvasDocumentNode> {
   return sortCanvasElementsByZIndex(
-    Array.from(nodesMap.values()).map(stripEphemeralCanvasNodeState),
+    Array.from(nodesMap.values()).map((node) => stripEphemeralCanvasNodeState(node)),
   )
 }
 
-function getCurrentCanvasEdges(edgesMap: Y.Map<Edge>): Array<Edge> {
+function getCurrentCanvasEdges(edgesMap: Y.Map<CanvasDocumentEdge>): Array<CanvasDocumentEdge> {
   return sortCanvasElementsByZIndex(Array.from(edgesMap.values()))
 }
 
 export function createCanvasReorderPlan(
-  nodesMap: Y.Map<Node>,
-  edgesMap: Y.Map<Edge>,
+  nodesMap: Y.Map<CanvasDocumentNode>,
+  edgesMap: Y.Map<CanvasDocumentEdge>,
   selection: CanvasSelectionSnapshot,
   direction: CanvasReorderDirection,
 ): CanvasReorderPlan | null {

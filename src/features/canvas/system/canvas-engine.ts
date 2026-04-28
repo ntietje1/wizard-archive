@@ -20,7 +20,7 @@ import { createCanvasSelectionManager } from './canvas-selection-manager'
 import { createCanvasStore } from './canvas-store'
 import { createCanvasViewportManager, DEFAULT_CANVAS_VIEWPORT } from './canvas-viewport-manager'
 import type { CanvasEngine, CanvasEngineSnapshot } from './canvas-engine-types'
-import type { CanvasNode } from '../types/canvas-domain-types'
+import type { CanvasDocumentNodePatch, CanvasDocumentNode } from '../types/canvas-domain-types'
 
 export type {
   CanvasEngine,
@@ -110,7 +110,7 @@ export function createCanvasEngine(): CanvasEngine {
       return
     }
 
-    const updates = new Map<string, Partial<CanvasNode>>()
+    const updates = new Map<string, CanvasDocumentNodePatch>()
     for (const [nodeId, position] of positions) {
       updates.set(nodeId, { position })
     }
@@ -292,8 +292,8 @@ function createInitialCanvasEngineSnapshot(): CanvasEngineSnapshot {
 }
 
 function clearRemovedStrokePathCache(
-  previousNodes: ReadonlyArray<CanvasNode>,
-  nextNodes: ReadonlyArray<CanvasNode> | undefined,
+  previousNodes: ReadonlyArray<CanvasDocumentNode>,
+  nextNodes: ReadonlyArray<CanvasDocumentNode> | undefined,
 ) {
   if (!nextNodes) {
     return

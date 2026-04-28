@@ -4,7 +4,7 @@ import { useCanvasEngine, useCanvasEngineSelector } from '../react/use-canvas-en
 import { useCanvasRuntime } from '../runtime/providers/canvas-runtime'
 import { useIsInteractiveCanvasRenderMode } from '../runtime/providers/use-canvas-render-mode'
 import type { CanvasInternalNode } from '../system/canvas-engine'
-import type { CanvasNode } from '../types/canvas-domain-types'
+import type { CanvasDocumentNode } from '../types/canvas-domain-types'
 import type {
   KeyboardEvent as ReactKeyboardEvent,
   MouseEvent as ReactMouseEvent,
@@ -30,8 +30,8 @@ export const CanvasNodeWrapper = memo(function CanvasNodeWrapper({
 }: {
   children: ReactNode
   nodeId: string
-  onNodeClick?: (event: ReactMouseEvent, node: CanvasNode) => void
-  onNodeContextMenu: (event: ReactMouseEvent, node: CanvasNode) => void
+  onNodeClick?: (event: ReactMouseEvent, node: CanvasDocumentNode) => void
+  onNodeContextMenu: (event: ReactMouseEvent, node: CanvasDocumentNode) => void
 }) {
   const shell = useCanvasEngineSelector(
     (snapshot) => selectCanvasNodeShellSnapshot(snapshot.nodeLookup.get(nodeId)),

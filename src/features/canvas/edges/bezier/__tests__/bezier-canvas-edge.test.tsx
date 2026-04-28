@@ -17,7 +17,7 @@ import {
 } from '../../shared/canvas-edge-style'
 import { BezierCanvasEdge } from '../bezier-canvas-edge'
 import { buildBezierCanvasEdgeGeometryFromEdge } from '../bezier-canvas-edge-geometry'
-import type { CanvasNode as Node } from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentNode } from '~/features/canvas/types/canvas-domain-types'
 import type { ReactElement } from 'react'
 
 describe('BezierCanvasEdge', () => {
@@ -154,7 +154,7 @@ describe('BezierCanvasEdge', () => {
   })
 
   it('anchors the curve to node bounds instead of render-prop handle coordinates when nodes are available', () => {
-    const nodes = [
+    const nodes: Array<CanvasDocumentNode> = [
       {
         id: 'source',
         type: 'text',
@@ -220,21 +220,9 @@ function createEdgeProps(
     targetY: 20,
     sourcePosition: CANVAS_HANDLE_POSITION.Right,
     targetPosition: CANVAS_HANDLE_POSITION.Left,
-    animated: false,
-    data: {},
-    selectable: true,
-    deletable: true,
     style: undefined,
     sourceHandleId: 'right',
     targetHandleId: 'left',
-    label: undefined,
-    labelStyle: undefined,
-    labelShowBg: false,
-    labelBgStyle: undefined,
-    labelBgPadding: undefined,
-    labelBgBorderRadius: undefined,
-    markerStart: undefined,
-    markerEnd: undefined,
     ...overrides,
     selected: overrides.selected ?? selected,
   }
@@ -247,7 +235,7 @@ function renderEdge(
     pendingPreview = null,
     selection = { nodeIds: new Set<string>(), edgeIds: new Set<string>() },
   }: {
-    nodes?: Array<Node>
+    nodes?: Array<CanvasDocumentNode>
     pendingPreview?: { nodeIds: ReadonlySet<string>; edgeIds: ReadonlySet<string> } | null
     selection?: { nodeIds: ReadonlySet<string>; edgeIds: ReadonlySet<string> }
   } = {},

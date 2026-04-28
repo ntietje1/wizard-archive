@@ -4,39 +4,39 @@ import { stripEphemeralCanvasNodeState } from '../../utils/canvas-node-persisten
 import type { CanvasClipboardEntry } from './canvas-context-menu-types'
 import type { CanvasSelectionSnapshot } from '../../tools/canvas-tool-types'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
 } from '~/features/canvas/types/canvas-domain-types'
 import type * as Y from 'yjs'
 
 const CANVAS_PASTE_OFFSET = 32
 
 interface MaterializedCanvasPaste {
-  nodes: Array<Node>
-  edges: Array<Edge>
+  nodes: Array<CanvasDocumentNode>
+  edges: Array<CanvasDocumentEdge>
   selection: CanvasSelectionSnapshot
 }
 
-function cloneCanvasNode(node: Node): Node {
+function cloneCanvasNode(node: CanvasDocumentNode): CanvasDocumentNode {
   return structuredClone(stripEphemeralCanvasNodeState(node))
 }
 
-function cloneCanvasEdge(edge: Edge): Edge {
+function cloneCanvasEdge(edge: CanvasDocumentEdge): CanvasDocumentEdge {
   // Canvas edges do not carry ephemeral renderer runtime state, so a direct clone is sufficient.
   return structuredClone(edge)
 }
 
-function getCurrentCanvasNodes(nodesMap: Y.Map<Node>): Array<Node> {
+function getCurrentCanvasNodes(nodesMap: Y.Map<CanvasDocumentNode>): Array<CanvasDocumentNode> {
   return sortCanvasElementsByZIndex(Array.from(nodesMap.values()))
 }
 
-function getCurrentCanvasEdges(edgesMap: Y.Map<Edge>): Array<Edge> {
+function getCurrentCanvasEdges(edgesMap: Y.Map<CanvasDocumentEdge>): Array<CanvasDocumentEdge> {
   return sortCanvasElementsByZIndex(Array.from(edgesMap.values()))
 }
 
 export function createCanvasClipboardEntry(
-  nodesMap: Y.Map<Node>,
-  edgesMap: Y.Map<Edge>,
+  nodesMap: Y.Map<CanvasDocumentNode>,
+  edgesMap: Y.Map<CanvasDocumentEdge>,
   selection: CanvasSelectionSnapshot,
 ): CanvasClipboardEntry | null {
   const selectedNodes = getCurrentCanvasNodes(nodesMap).filter((node) =>
@@ -59,8 +59,8 @@ export function createCanvasClipboardEntry(
 }
 
 export function materializeCanvasPaste(
-  nodesMap: Y.Map<Node>,
-  edgesMap: Y.Map<Edge>,
+  nodesMap: Y.Map<CanvasDocumentNode>,
+  edgesMap: Y.Map<CanvasDocumentEdge>,
   clipboardEntry: CanvasClipboardEntry,
 ): MaterializedCanvasPaste {
   const nodeIdMap = new Map<string, string>()

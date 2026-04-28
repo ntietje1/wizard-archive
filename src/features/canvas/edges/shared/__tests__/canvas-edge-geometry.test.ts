@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { getCanvasEdgeEndpoints } from '../canvas-edge-geometry'
 import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge as Edge,
+  CanvasDocumentNode as Node,
 } from '~/features/canvas/types/canvas-domain-types'
 
 describe('getCanvasEdgeEndpoints', () => {
   it('anchors stroke edges to the start and end stroke points instead of the bounding box', () => {
-    const strokeNode: Node = {
+    const strokeNode = {
       id: 'stroke-1',
       type: 'stroke',
       position: { x: 10, y: 20 },
@@ -23,7 +23,7 @@ describe('getCanvasEdgeEndpoints', () => {
         color: 'var(--foreground)',
         size: 4,
       },
-    }
+    } as unknown as Node
     const targetNode: Node = {
       id: 'target-1',
       type: 'text',
@@ -77,7 +77,7 @@ describe('getCanvasEdgeEndpoints', () => {
   })
 
   it('falls back to regular node anchors when stroke node data is malformed', () => {
-    const strokeNode: Node = {
+    const strokeNode = {
       id: 'stroke-1',
       type: 'stroke',
       position: { x: 10, y: 20 },
@@ -89,7 +89,7 @@ describe('getCanvasEdgeEndpoints', () => {
         color: 'var(--foreground)',
         size: 4,
       },
-    }
+    } as unknown as Node
     const targetNode: Node = {
       id: 'target-1',
       type: 'text',

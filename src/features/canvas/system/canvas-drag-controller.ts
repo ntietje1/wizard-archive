@@ -10,7 +10,7 @@ import {
   setCanvasDragSnapGuides,
 } from '../runtime/interaction/canvas-drag-snap-overlay'
 import type { CanvasEngine } from './canvas-engine'
-import type { CanvasNode, CanvasPosition } from '../types/canvas-domain-types'
+import type { CanvasDocumentNode, CanvasPosition } from '../types/canvas-domain-types'
 
 export interface CanvasDragEvent {
   sourceEvent: PointerEvent | MouseEvent
@@ -280,7 +280,7 @@ function createDragSession({
   const draggedNodes = Array.from(
     draggedNodeIds,
     (nodeId) => snapshot.nodeLookup.get(nodeId)?.node,
-  ).filter((node): node is CanvasNode => Boolean(node))
+  ).filter((node): node is CanvasDocumentNode => Boolean(node))
 
   if (draggedNodes.length === 0) {
     return null

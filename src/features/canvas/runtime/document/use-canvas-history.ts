@@ -6,8 +6,8 @@ import type {
   CanvasSelectionSnapshot,
 } from '../../tools/canvas-tool-types'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
 } from '~/features/canvas/types/canvas-domain-types'
 import type * as Y from 'yjs'
 import { logger } from '~/shared/utils/logger'
@@ -21,8 +21,8 @@ type ActionEntry =
   | { type: 'selection'; before: CanvasSelectionSnapshot; after: CanvasSelectionSnapshot }
 
 interface UseCanvasHistoryOptions {
-  nodesMap: Y.Map<Node>
-  edgesMap: Y.Map<Edge>
+  nodesMap: Y.Map<CanvasDocumentNode>
+  edgesMap: Y.Map<CanvasDocumentEdge>
   selection: Pick<CanvasSelectionController, 'setSelection'>
 }
 

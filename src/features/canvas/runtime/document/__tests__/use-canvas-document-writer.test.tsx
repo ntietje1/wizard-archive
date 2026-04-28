@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
 import { createCanvasDocumentWriter } from '../use-canvas-document-writer'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge as Edge,
+  CanvasDocumentNode as Node,
 } from '~/features/canvas/types/canvas-domain-types'
 import type { CanvasEdgePatch } from '../../../edges/canvas-edge-types'
 
@@ -24,7 +24,7 @@ function createTextNode(id: string): Node {
     position: { x: 10, y: 20 },
     width: 120,
     height: 36,
-    data: { label: 'Hello' },
+    data: { content: [{ type: 'paragraph' }] },
   }
 }
 
@@ -88,7 +88,7 @@ describe('createCanvasDocumentWriter', () => {
 
     expect(nodesMap.get('node-1')).toMatchObject({
       type: 'text',
-      data: { label: 'Hello' },
+      data: { content: [{ type: 'paragraph' }] },
     })
     expect(Array.from(edgesMap.values())).toEqual([
       expect.objectContaining({
@@ -105,12 +105,12 @@ describe('createCanvasDocumentWriter', () => {
       }),
     ])
 
-    writer.patchNodeData(new Map([['node-1', { label: 'Updated', color: 'red' }]]))
+    writer.patchNodeData(new Map([['node-1', { backgroundColor: 'red' }]]))
     writer.setNodePositions(new Map([['node-1', { x: 50, y: 60 }]]))
 
     expect(nodesMap.get('node-1')).toMatchObject({
       position: { x: 50, y: 60 },
-      data: { label: 'Updated', color: 'red' },
+      data: { backgroundColor: 'red' },
     })
 
     const [edgeId] = Array.from(edgesMap.keys())
@@ -152,7 +152,6 @@ describe('createCanvasDocumentWriter', () => {
       // Stroke bounds stay in local coordinates; the world position is stored on node.position.
       bounds: { x: 0, y: 0, width: 40, height: 20 },
     })
-    expect(stroke?.selected).toBeUndefined()
   })
 
   it('resizes multiple nodes in one writer call', () => {
@@ -303,7 +302,7 @@ describe('createCanvasDocumentWriter', () => {
   it('no-ops when update paths target missing nodes or edges', () => {
     const writer = createCanvasDocumentWriter({ nodesMap, edgesMap })
 
-    writer.patchNodeData(new Map([['missing-node', { label: 'ignored' }]]))
+    writer.patchNodeData(new Map([['missing-node', { backgroundColor: 'ignored' }]]))
     writer.resizeNode('missing-node', 50, 60, { x: 1, y: 2 })
     writer.resizeNodes(
       new Map([['missing-node', { width: 50, height: 60, position: { x: 1, y: 2 } }]]),

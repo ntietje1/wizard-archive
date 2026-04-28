@@ -12,8 +12,8 @@ import type {
 } from './canvas-context-menu-types'
 import type { Id } from 'convex/_generated/dataModel'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
 } from '~/features/canvas/types/canvas-domain-types'
 import type * as Y from 'yjs'
 import type { ContextMenuHostRef } from '~/features/context-menu/components/context-menu-host'
@@ -28,9 +28,9 @@ interface UseCanvasContextMenuOptions {
   canEdit: boolean
   campaignId: Id<'campaigns'>
   canvasParentId: Id<'sidebarItems'> | null
-  nodesMap: Y.Map<Node>
-  edgesMap: Y.Map<Edge>
-  createNode: (node: Node) => void
+  nodesMap: Y.Map<CanvasDocumentNode>
+  edgesMap: Y.Map<CanvasDocumentEdge>
+  createNode: (node: CanvasDocumentNode) => void
   screenToCanvasPosition: (position: CanvasContextMenuPoint) => { x: number; y: number }
   selection: Pick<CanvasSelectionController, 'clearSelection' | 'getSnapshot' | 'setSelection'>
   commands: CanvasContextMenuCommands
@@ -168,7 +168,7 @@ export function useCanvasContextMenu({
     openMenu(position, nextSelection)
   }
 
-  const openForNode = (event: React.MouseEvent, node: Node) => {
+  const openForNode = (event: React.MouseEvent, node: CanvasDocumentNode) => {
     const position = normalizeContextMenuEvent(event)
     const currentSelection = selection.getSnapshot()
     const nextSelection = currentSelection.nodeIds.has(node.id)
@@ -182,7 +182,7 @@ export function useCanvasContextMenu({
     openMenu(position, nextSelection)
   }
 
-  const openForEdge = (event: React.MouseEvent, edge: Edge) => {
+  const openForEdge = (event: React.MouseEvent, edge: CanvasDocumentEdge) => {
     const position = normalizeContextMenuEvent(event)
     const currentSelection = selection.getSnapshot()
     const nextSelection = currentSelection.edgeIds.has(edge.id)

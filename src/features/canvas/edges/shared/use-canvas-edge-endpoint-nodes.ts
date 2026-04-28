@@ -5,7 +5,7 @@ import {
 } from '../../system/canvas-engine-selectors'
 import type { CanvasEdgeRendererProps } from '../canvas-edge-types'
 import type { CanvasEdgeEndpointNodes } from '../../system/canvas-engine-selectors'
-import type { CanvasNode as Node } from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentNode } from '~/features/canvas/types/canvas-domain-types'
 
 export function useCanvasEdgeEndpointNodes(
   props: Pick<CanvasEdgeRendererProps, 'source' | 'target'>,
@@ -18,8 +18,8 @@ export function useCanvasEdgeEndpointNodes(
 
 export function createCanvasEndpointNodesById(
   endpointNodes: CanvasEdgeEndpointNodes,
-): ReadonlyMap<string, Node> {
-  const nodesById = new Map<string, Node>()
+): ReadonlyMap<string, CanvasDocumentNode> {
+  const nodesById = new Map<string, CanvasDocumentNode>()
   if (endpointNodes.source) {
     nodesById.set(endpointNodes.source.id, endpointNodes.source)
   }

@@ -93,8 +93,6 @@ export function CanvasPathEdge({
         ref={pathRef}
         id={props.id}
         d={geometry.path}
-        markerStart={props.markerStart}
-        markerEnd={props.markerEnd}
         fill="none"
         style={style}
         data-testid="canvas-edge-primary-path"
@@ -105,7 +103,7 @@ export function CanvasPathEdge({
           d={geometry.path}
           fill="none"
           stroke="transparent"
-          strokeWidth={props.interactionWidth ?? getCanvasEdgeInteractionWidth()}
+          strokeWidth={getCanvasEdgeInteractionWidth()}
           pointerEvents="stroke"
           data-testid="canvas-edge-interaction"
         />

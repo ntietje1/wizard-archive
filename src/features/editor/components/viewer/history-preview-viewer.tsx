@@ -10,7 +10,10 @@ import { editorSchema } from 'convex/notes/editorSpecs'
 import { HistoryPreviewBanner } from './history-preview-banner'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CustomBlock } from 'convex/notes/editorSpecs'
-import type { CanvasEdge, CanvasNode } from '~/features/canvas/types/canvas-domain-types'
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '~/features/canvas/types/canvas-domain-types'
 import type { GameMapSnapshotData } from 'convex/gameMaps/types'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
@@ -128,8 +131,8 @@ function CanvasSnapshotPreview({ data }: { data: ArrayBuffer }) {
     try {
       Y.applyUpdate(doc, new Uint8Array(data))
 
-      const nodesMap = doc.getMap<CanvasNode>('nodes')
-      const edgesMap = doc.getMap<CanvasEdge>('edges')
+      const nodesMap = doc.getMap<CanvasDocumentNode>('nodes')
+      const edgesMap = doc.getMap<CanvasDocumentEdge>('edges')
 
       const parsedNodes = Array.from(nodesMap.values())
       const parsedEdges = Array.from(edgesMap.values())
@@ -137,7 +140,10 @@ function CanvasSnapshotPreview({ data }: { data: ArrayBuffer }) {
       return { nodes: parsedNodes, edges: parsedEdges }
     } catch (error) {
       logger.error('Failed to parse canvas snapshot:', error)
-      return { nodes: [] as Array<CanvasNode>, edges: [] as Array<CanvasEdge> }
+      return {
+        nodes: [] as Array<CanvasDocumentNode>,
+        edges: [] as Array<CanvasDocumentEdge>,
+      }
     } finally {
       doc.destroy()
     }

@@ -1,23 +1,23 @@
 import type { CanvasEngineSnapshot } from './canvas-engine'
-import type { CanvasEdge, CanvasNode } from '../types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from '../types/canvas-domain-types'
 
-const EMPTY_SELECTED_NODES: ReadonlyArray<CanvasNode> = []
-const EMPTY_SELECTED_EDGES: ReadonlyArray<CanvasEdge> = []
+const EMPTY_SELECTED_NODES: ReadonlyArray<CanvasDocumentNode> = []
+const EMPTY_SELECTED_EDGES: ReadonlyArray<CanvasDocumentEdge> = []
 
 export interface CanvasEdgeEndpointNodes {
-  source: CanvasNode | null
-  target: CanvasNode | null
+  source: CanvasDocumentNode | null
+  target: CanvasDocumentNode | null
 }
 
 export function selectCanvasSelectedNodes(
   snapshot: CanvasEngineSnapshot,
-): ReadonlyArray<CanvasNode> {
+): ReadonlyArray<CanvasDocumentNode> {
   return getSelectedNodes(snapshot.nodes, snapshot.selection.nodeIds)
 }
 
 export function selectCanvasSelectedEdges(
   snapshot: CanvasEngineSnapshot,
-): ReadonlyArray<CanvasEdge> {
+): ReadonlyArray<CanvasDocumentEdge> {
   return getSelectedEdges(snapshot.edges, snapshot.selection.edgeIds)
 }
 
@@ -40,8 +40,8 @@ export function areCanvasEdgeEndpointNodesEqual(
 }
 
 export function areCanvasPropertyNodesEqual(
-  left: ReadonlyArray<CanvasNode>,
-  right: ReadonlyArray<CanvasNode>,
+  left: ReadonlyArray<CanvasDocumentNode>,
+  right: ReadonlyArray<CanvasDocumentNode>,
 ) {
   if (left === right) {
     return true
@@ -67,8 +67,8 @@ export function areCanvasPropertyNodesEqual(
 }
 
 export function areCanvasPropertyEdgesEqual(
-  left: ReadonlyArray<CanvasEdge>,
-  right: ReadonlyArray<CanvasEdge>,
+  left: ReadonlyArray<CanvasDocumentEdge>,
+  right: ReadonlyArray<CanvasDocumentEdge>,
 ) {
   if (left === right) {
     return true
@@ -93,7 +93,10 @@ export function areCanvasPropertyEdgesEqual(
   return true
 }
 
-function getSelectedNodes(nodes: ReadonlyArray<CanvasNode>, selectedNodeIds: ReadonlySet<string>) {
+function getSelectedNodes(
+  nodes: ReadonlyArray<CanvasDocumentNode>,
+  selectedNodeIds: ReadonlySet<string>,
+) {
   if (selectedNodeIds.size === 0) {
     return EMPTY_SELECTED_NODES
   }
@@ -101,7 +104,10 @@ function getSelectedNodes(nodes: ReadonlyArray<CanvasNode>, selectedNodeIds: Rea
   return nodes.filter((node) => selectedNodeIds.has(node.id))
 }
 
-function getSelectedEdges(edges: ReadonlyArray<CanvasEdge>, selectedEdgeIds: ReadonlySet<string>) {
+function getSelectedEdges(
+  edges: ReadonlyArray<CanvasDocumentEdge>,
+  selectedEdgeIds: ReadonlySet<string>,
+) {
   if (selectedEdgeIds.size === 0) {
     return EMPTY_SELECTED_EDGES
   }

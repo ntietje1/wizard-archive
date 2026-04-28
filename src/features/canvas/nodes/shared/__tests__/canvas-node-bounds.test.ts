@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { getCanvasNodeBounds } from '../canvas-node-bounds'
-import type { CanvasNode as Node } from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentNode as Node } from '~/features/canvas/types/canvas-domain-types'
+
+function asNode(value: unknown): Node {
+  return value as Node
+}
 
 describe('getCanvasNodeBounds', () => {
   it('uses measured node dimensions when width and height are present', () => {
-    const node: Node = {
+    const node = asNode({
       id: 'node-1',
       type: 'text',
       position: { x: 20, y: 40 },
@@ -13,7 +17,7 @@ describe('getCanvasNodeBounds', () => {
       data: {
         bounds: { x: 0, y: 0, width: 999, height: 999 },
       },
-    }
+    })
 
     expect(getCanvasNodeBounds(node)).toEqual({
       x: 20,
@@ -24,14 +28,14 @@ describe('getCanvasNodeBounds', () => {
   })
 
   it('falls back to persisted local bounds dimensions when measured size is absent', () => {
-    const node: Node = {
+    const node = asNode({
       id: 'node-1',
       type: 'stroke',
       position: { x: 5, y: 10 },
       data: {
         bounds: { x: 0, y: 0, width: 40, height: 20 },
       },
-    }
+    })
 
     expect(getCanvasNodeBounds(node)).toEqual({
       x: 5,
@@ -81,7 +85,7 @@ describe('getCanvasNodeBounds', () => {
         type: 'text',
         position: { x: 0, y: 0 },
         data: { bounds: { x: 0, y: 0, height: 36 } },
-      }),
+      } as unknown as Node),
     ).toBeNull()
 
     expect(
@@ -90,7 +94,7 @@ describe('getCanvasNodeBounds', () => {
         type: 'text',
         position: { x: 0, y: 0 },
         data: { bounds: { x: 0, y: 0, width: 120 } },
-      }),
+      } as unknown as Node),
     ).toBeNull()
   })
 
@@ -101,7 +105,7 @@ describe('getCanvasNodeBounds', () => {
         type: 'text',
         position: { x: 0, y: 0 },
         data: { bounds: { x: 0, y: 0, width: 'bad', height: 36 } },
-      }),
+      } as unknown as Node),
     ).toBeNull()
 
     expect(
@@ -110,7 +114,7 @@ describe('getCanvasNodeBounds', () => {
         type: 'text',
         position: { x: 0, y: 0 },
         data: { bounds: { x: 0, y: 0, width: 120, height: Number.NaN } },
-      }),
+      } as unknown as Node),
     ).toBeNull()
 
     expect(
@@ -119,7 +123,7 @@ describe('getCanvasNodeBounds', () => {
         type: 'text',
         position: { x: 0, y: 0 },
         data: { bounds: { x: 0, y: 0, width: Number.POSITIVE_INFINITY, height: 36 } },
-      }),
+      } as unknown as Node),
     ).toBeNull()
 
     expect(
@@ -128,7 +132,7 @@ describe('getCanvasNodeBounds', () => {
         type: 'text',
         position: { x: 0, y: 0 },
         data: { bounds: { x: 0, y: 0, width: 120, height: Number.NEGATIVE_INFINITY } },
-      }),
+      } as unknown as Node),
     ).toBeNull()
   })
 

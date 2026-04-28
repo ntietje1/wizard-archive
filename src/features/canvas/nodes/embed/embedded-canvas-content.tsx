@@ -5,8 +5,8 @@ import { CanvasThumbnailPreview } from '~/features/previews/components/canvas-th
 import { CanvasReadOnlyPreview } from '../../components/canvas-read-only-preview'
 import type { Id } from 'convex/_generated/dataModel'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
 } from '~/features/canvas/types/canvas-domain-types'
 
 const MAX_ZOOM = 4
@@ -53,7 +53,10 @@ export function EmbeddedCanvasContent({
   )
 }
 
-function normalizeEmbeddedCanvasEdges(nodes: Array<Node>, edges: Array<Edge>): Array<Edge> {
+function normalizeEmbeddedCanvasEdges(
+  nodes: Array<CanvasDocumentNode>,
+  edges: Array<CanvasDocumentEdge>,
+): Array<CanvasDocumentEdge> {
   if (edges.length === 0) {
     return edges
   }
@@ -89,7 +92,10 @@ function normalizeEmbeddedCanvasEdges(nodes: Array<Node>, edges: Array<Edge>): A
   })
 }
 
-function inferEmbeddedCanvasHandleIds(sourceNode: Node, targetNode: Node) {
+function inferEmbeddedCanvasHandleIds(
+  sourceNode: CanvasDocumentNode,
+  targetNode: CanvasDocumentNode,
+) {
   const sourceBounds = getNodeBounds(sourceNode)
   const targetBounds = getNodeBounds(targetNode)
   if (!sourceBounds || !targetBounds) {
@@ -110,9 +116,9 @@ function inferEmbeddedCanvasHandleIds(sourceNode: Node, targetNode: Node) {
     : { sourceHandle: 'top', targetHandle: 'bottom' }
 }
 
-function getNodeBounds(node: Node) {
-  const width = node.width ?? node.measured?.width
-  const height = node.height ?? node.measured?.height
+function getNodeBounds(node: CanvasDocumentNode) {
+  const width = node.width
+  const height = node.height
   if (typeof width !== 'number' || typeof height !== 'number') {
     return null
   }

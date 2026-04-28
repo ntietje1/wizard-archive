@@ -2,15 +2,15 @@ import { memo } from 'react'
 import { CanvasEdgeWrapper } from './canvas-edge-wrapper'
 import { areArraysEqual } from './canvas-renderer-utils'
 import { useCanvasEngineSelector } from '../react/use-canvas-engine'
-import type { CanvasEdge } from '../types/canvas-domain-types'
+import type { CanvasDocumentEdge } from '../types/canvas-domain-types'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 
 export const CanvasEdgeRenderer = memo(function CanvasEdgeRenderer({
   onEdgeClick,
   onEdgeContextMenu,
 }: {
-  onEdgeClick?: (event: ReactMouseEvent, edge: CanvasEdge) => void
-  onEdgeContextMenu: (event: ReactMouseEvent, edge: CanvasEdge) => void
+  onEdgeClick?: (event: ReactMouseEvent, edge: CanvasDocumentEdge) => void
+  onEdgeContextMenu: (event: ReactMouseEvent, edge: CanvasDocumentEdge) => void
 }) {
   const edgeIds = useCanvasEngineSelector((snapshot) => snapshot.edgeIds, areArraysEqual)
   return edgeIds.map((edgeId) => (

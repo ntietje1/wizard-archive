@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest'
 import { selectToolSpec } from '../select-tool-module'
 import type { CanvasMeasuredNode, CanvasToolRuntime } from '../../canvas-tool-types'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge as Edge,
+  CanvasDocumentNode as Node,
 } from '~/features/canvas/types/canvas-domain-types'
 
 function createMouseEvent(

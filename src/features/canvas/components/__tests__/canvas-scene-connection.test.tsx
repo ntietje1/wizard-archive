@@ -8,7 +8,7 @@ import {
 } from '../../runtime/providers/canvas-runtime'
 import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime-context'
 import { createCanvasEngine } from '../../system/canvas-engine'
-import type { CanvasConnection, CanvasNode as Node } from '../../types/canvas-domain-types'
+import type { CanvasConnection, CanvasDocumentNode as Node } from '../../types/canvas-domain-types'
 
 vi.mock('../canvas-background', () => ({
   CanvasBackground: () => null,

@@ -16,9 +16,9 @@ import { useCanvasRuntime } from '../runtime/providers/canvas-runtime'
 import type { CanvasEngine } from '../system/canvas-engine'
 import type {
   CanvasConnection,
-  CanvasEdge,
+  CanvasDocumentEdge,
   CanvasHandlePosition,
-  CanvasNode,
+  CanvasDocumentNode,
 } from '../types/canvas-domain-types'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
 import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
@@ -36,8 +36,8 @@ const CONNECTION_HANDLE_SNAP_INTERVAL_MS = 50
 
 type CanvasSceneHandlers = {
   createEdgeFromConnection: (connection: CanvasConnection) => void
-  onNodeClick?: (event: ReactMouseEvent, node: CanvasNode) => void
-  onEdgeClick?: (event: ReactMouseEvent, edge: CanvasEdge) => void
+  onNodeClick?: (event: ReactMouseEvent, node: CanvasDocumentNode) => void
+  onEdgeClick?: (event: ReactMouseEvent, edge: CanvasDocumentEdge) => void
   onMouseMove?: (event: ReactMouseEvent) => void
   onMouseLeave?: () => void
 }
@@ -46,8 +46,8 @@ interface CanvasSceneProps {
   canEdit: boolean
   remoteUsers: Array<RemoteUser>
   sceneHandlers: CanvasSceneHandlers
-  onNodeContextMenu: (event: ReactMouseEvent, node: CanvasNode) => void
-  onEdgeContextMenu: (event: ReactMouseEvent, edge: CanvasEdge) => void
+  onNodeContextMenu: (event: ReactMouseEvent, node: CanvasDocumentNode) => void
+  onEdgeContextMenu: (event: ReactMouseEvent, edge: CanvasDocumentEdge) => void
   onPaneContextMenu: (event: ReactMouseEvent) => void
 }
 
@@ -90,16 +90,16 @@ export function CanvasScene({
       onEdgeContextMenu,
     }
   }, [onEdgeContextMenu, onNodeContextMenu, sceneHandlers])
-  const handleNodeClick = useCallback((event: ReactMouseEvent, node: CanvasNode) => {
+  const handleNodeClick = useCallback((event: ReactMouseEvent, node: CanvasDocumentNode) => {
     nodeHandlersRef.current.onNodeClick?.(event, node)
   }, [])
-  const handleNodeContextMenu = useCallback((event: ReactMouseEvent, node: CanvasNode) => {
+  const handleNodeContextMenu = useCallback((event: ReactMouseEvent, node: CanvasDocumentNode) => {
     nodeHandlersRef.current.onNodeContextMenu(event, node)
   }, [])
-  const handleEdgeClick = useCallback((event: ReactMouseEvent, edge: CanvasEdge) => {
+  const handleEdgeClick = useCallback((event: ReactMouseEvent, edge: CanvasDocumentEdge) => {
     edgeHandlersRef.current.onEdgeClick?.(event, edge)
   }, [])
-  const handleEdgeContextMenu = useCallback((event: ReactMouseEvent, edge: CanvasEdge) => {
+  const handleEdgeContextMenu = useCallback((event: ReactMouseEvent, edge: CanvasDocumentEdge) => {
     edgeHandlersRef.current.onEdgeContextMenu(event, edge)
   }, [])
 

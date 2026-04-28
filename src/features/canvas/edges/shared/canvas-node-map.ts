@@ -1,8 +1,10 @@
 import { logger } from '~/shared/utils/logger'
-import type { CanvasNode as Node } from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentNode } from '~/features/canvas/types/canvas-domain-types'
 
-export function createCanvasNodesById(nodes: ReadonlyArray<Node>): ReadonlyMap<string, Node> {
-  const nodesById = new Map<string, Node>()
+export function createCanvasNodesById(
+  nodes: ReadonlyArray<CanvasDocumentNode>,
+): ReadonlyMap<string, CanvasDocumentNode> {
+  const nodesById = new Map<string, CanvasDocumentNode>()
 
   for (const [index, node] of nodes.entries()) {
     if (!node || typeof node !== 'object' || typeof node.id !== 'string' || node.id.length === 0) {

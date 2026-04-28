@@ -13,7 +13,8 @@ import {
   bindCanvasPaintProperty,
   bindCanvasStrokeSizeProperty,
 } from '../../properties/canvas-property-types'
-import type { CanvasNodeData, CanvasRuntimeNode, CanvasNodeType } from '../canvas-node-types'
+import type { CanvasNodeRenderDataByType, CanvasRuntimeNode } from '../canvas-node-types'
+import type { CanvasNodeType } from '../../types/canvas-domain-types'
 
 export interface CanvasNodeSurfaceStyleData {
   backgroundColor?: string | null
@@ -93,10 +94,10 @@ export function getCanvasNodeSurfaceStyle(data: CanvasNodeSurfaceStyleData): CSS
 }
 
 export function bindCanvasNodeSurfaceFillProperty<
-  TData extends CanvasNodeData & CanvasNormalizedNodeSurfaceStyleData,
   TType extends CanvasNodeType,
+  TData extends CanvasNodeRenderDataByType[TType] & CanvasNormalizedNodeSurfaceStyleData,
 >(
-  node: CanvasRuntimeNode<TData, TType>,
+  node: CanvasRuntimeNode<TType, TData>,
   patchNodeData: <TPatch extends Partial<TData>>(nodeId: string, data: TPatch) => void,
 ) {
   return bindCanvasPaintProperty(fillCanvasProperty, {
@@ -111,10 +112,10 @@ export function bindCanvasNodeSurfaceFillProperty<
 }
 
 export function bindCanvasNodeSurfaceBorderPaintProperty<
-  TData extends CanvasNodeData & CanvasNormalizedNodeSurfaceStyleData,
   TType extends CanvasNodeType,
+  TData extends CanvasNodeRenderDataByType[TType] & CanvasNormalizedNodeSurfaceStyleData,
 >(
-  node: CanvasRuntimeNode<TData, TType>,
+  node: CanvasRuntimeNode<TType, TData>,
   patchNodeData: <TPatch extends Partial<TData>>(nodeId: string, data: TPatch) => void,
 ) {
   return bindCanvasPaintProperty(linePaintCanvasProperty, {
@@ -128,10 +129,10 @@ export function bindCanvasNodeSurfaceBorderPaintProperty<
 }
 
 export function bindCanvasNodeSurfaceBorderWidthProperty<
-  TData extends CanvasNodeData & CanvasNormalizedNodeSurfaceStyleData,
   TType extends CanvasNodeType,
+  TData extends CanvasNodeRenderDataByType[TType] & CanvasNormalizedNodeSurfaceStyleData,
 >(
-  node: CanvasRuntimeNode<TData, TType>,
+  node: CanvasRuntimeNode<TType, TData>,
   patchNodeData: <TPatch extends Partial<TData>>(nodeId: string, data: TPatch) => void,
 ) {
   return bindCanvasStrokeSizeProperty(

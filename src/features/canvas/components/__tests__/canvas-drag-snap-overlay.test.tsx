@@ -27,9 +27,12 @@ describe('CanvasDragSnapOverlay', () => {
       </CanvasEngineProvider>,
     )
 
-    const lines = container.querySelectorAll('line')
+    const lines = Array.from(container.querySelectorAll('line'))
     expect(lines).toHaveLength(2)
-    const [vertical, horizontal] = lines
+    const vertical = lines.find((line) => line.getAttribute('x1') === line.getAttribute('x2'))
+    const horizontal = lines.find((line) => line.getAttribute('y1') === line.getAttribute('y2'))
+    expect(vertical).toBeDefined()
+    expect(horizontal).toBeDefined()
     expect(vertical).toHaveAttribute('x1', '25')
     expect(vertical).toHaveAttribute('y1', '30')
     expect(vertical).toHaveAttribute('x2', '25')

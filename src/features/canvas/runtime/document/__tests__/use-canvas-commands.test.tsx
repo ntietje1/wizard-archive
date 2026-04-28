@@ -6,8 +6,8 @@ import * as canvasDocumentCommands from '../canvas-document-commands'
 import type { CanvasReorderDirection } from '../canvas-reorder'
 import type { CanvasSelectionSnapshot } from '../../../tools/canvas-tool-types'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge as Edge,
+  CanvasDocumentNode as Node,
 } from '~/features/canvas/types/canvas-domain-types'
 import * as Y from 'yjs'
 

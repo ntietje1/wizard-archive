@@ -1,7 +1,7 @@
 import { buildCanvasEdgePath } from './canvas-edge-paths'
 import { createNodeLookup, EMPTY_SET } from './canvas-document-projector'
 import type { CanvasEngineSnapshot, CanvasInternalNode } from './canvas-engine-types'
-import type { CanvasNode, CanvasPosition } from '../types/canvas-domain-types'
+import type { CanvasDocumentNode, CanvasPosition } from '../types/canvas-domain-types'
 
 interface CanvasGeometryIndex {
   updateDraggedNodePositions: (
@@ -153,7 +153,7 @@ export function createCanvasGeometryIndex(): CanvasGeometryIndex {
 }
 
 function createNodesById(nodeLookup: ReadonlyMap<string, CanvasInternalNode>) {
-  const nodesById = new Map<string, CanvasNode>()
+  const nodesById = new Map<string, CanvasDocumentNode>()
   for (const [nodeId, internalNode] of nodeLookup) {
     nodesById.set(nodeId, internalNode.node)
   }

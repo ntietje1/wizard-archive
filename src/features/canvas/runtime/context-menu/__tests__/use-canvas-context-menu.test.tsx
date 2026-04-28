@@ -2,8 +2,8 @@ import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useCanvasContextMenu } from '../use-canvas-context-menu'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge as Edge,
+  CanvasDocumentNode as Node,
 } from '~/features/canvas/types/canvas-domain-types'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'

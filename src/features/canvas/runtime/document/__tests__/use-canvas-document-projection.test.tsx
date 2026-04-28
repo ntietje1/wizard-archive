@@ -4,8 +4,8 @@ import * as Y from 'yjs'
 import { useCanvasDocumentProjection } from '../use-canvas-document-projection'
 import { createCanvasEngine } from '../../../system/canvas-engine'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge as Edge,
+  CanvasDocumentNode as Node,
 } from '~/features/canvas/types/canvas-domain-types'
 
 function createTextNode(id: string): Node {
@@ -15,7 +15,7 @@ function createTextNode(id: string): Node {
     position: { x: 20, y: 40 },
     width: 120,
     height: 36,
-    data: { label: 'Hello' },
+    data: { content: [{ type: 'paragraph' }] },
   }
 }
 
@@ -55,7 +55,7 @@ describe('useCanvasDocumentProjection', () => {
         id: 'node-1',
       }),
     ])
-    expect(canvasEngine.getSnapshot().nodes[0]?.selected).toBeUndefined()
+    expect(canvasEngine.getSnapshot().selection.nodeIds).toEqual(new Set())
 
     act(() => {
       canvasEngine.setSelection({ nodeIds: new Set(['node-1']), edgeIds: new Set() })
@@ -74,7 +74,7 @@ describe('useCanvasDocumentProjection', () => {
     expect(canvasEngine.getSnapshot().selectedNodeIds).toEqual(new Set(['node-1']))
   })
 
-  it('ignores stale persisted selection flags when document updates rerender nodes', () => {
+  it('drops nodes with stale persisted selection flags', () => {
     const doc = new Y.Doc()
     const nodesMap = doc.getMap<Node>('nodes')
     const edgesMap = doc.getMap<Edge>('edges')
@@ -82,13 +82,13 @@ describe('useCanvasDocumentProjection', () => {
       ...createTextNode('node-1'),
       selected: true,
       draggable: true,
-    })
+    } as unknown as Node)
     nodesMap.set('node-2', {
       ...createTextNode('node-2'),
       position: { x: 220, y: 40 },
       selected: true,
       draggable: true,
-    })
+    } as unknown as Node)
 
     const localDraggingIdsRef = { current: new Set<string>() }
 
@@ -104,48 +104,8 @@ describe('useCanvasDocumentProjection', () => {
       }),
     )
 
-    expect(canvasEngine.getSnapshot().nodes).toHaveLength(2)
-    expect(canvasEngine.getSnapshot().nodes).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: 'node-1',
-          position: { x: 20, y: 40 },
-        }),
-        expect.objectContaining({
-          id: 'node-2',
-          position: { x: 220, y: 40 },
-        }),
-      ]),
-    )
-    expect(
-      canvasEngine.getSnapshot().nodes.find((node) => node.id === 'node-1')?.selected,
-    ).toBeUndefined()
+    expect(canvasEngine.getSnapshot().nodes).toHaveLength(0)
     expect(canvasEngine.getSnapshot().edges).toEqual([])
-
-    act(() => {
-      canvasEngine.setSelection({ nodeIds: new Set(['node-1']), edgeIds: new Set() })
-    })
-
-    act(() => {
-      const existing = nodesMap.get('node-1')
-      if (!existing) {
-        throw new Error('missing node-1')
-      }
-
-      nodesMap.set('node-1', {
-        ...existing,
-        data: { ...existing.data, label: 'Updated' },
-      })
-    })
-
-    expect(canvasEngine.getSnapshot().nodes).toHaveLength(2)
-    expect(canvasEngine.getSnapshot().nodes).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ id: 'node-1' }),
-        expect.objectContaining({ id: 'node-2' }),
-      ]),
-    )
-    expect(canvasEngine.getSnapshot().selectedNodeIds).toEqual(new Set(['node-1']))
   })
 
   it('sorts projected nodes by persisted zIndex without renormalizing their stored values', () => {
@@ -199,8 +159,8 @@ describe('useCanvasDocumentProjection', () => {
       if (!existing) throw new Error('missing node-1')
       nodesMap.set('node-1', {
         ...existing,
-        data: { ...existing.data, label: 'Updated' },
-      })
+        data: { ...existing.data, backgroundColor: 'var(--background)' },
+      } as Node)
     })
 
     expect(canvasEngine.getSnapshot().nodes.map((node) => node.id)).toEqual(['node-2', 'node-1'])

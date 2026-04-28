@@ -4,17 +4,19 @@ import * as Y from 'yjs'
 import { useCanvasHistory } from '../use-canvas-history'
 import type { RenderHookResult } from '@testing-library/react'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge as Edge,
+  CanvasDocumentNode as Node,
 } from '~/features/canvas/types/canvas-domain-types'
 
-function createNode(id: string): Node {
+type TextNode = Extract<Node, { type: 'text' }>
+
+function createNode(id: string): TextNode {
   return {
     id,
     type: 'text',
     position: { x: 0, y: 0 },
-    data: { label: id },
-  } as Node
+    data: { content: id },
+  }
 }
 
 describe('useCanvasHistory', () => {
@@ -276,20 +278,20 @@ describe('useCanvasHistory', () => {
 
     act(() => {
       doc.transact(() => {
-        nodesMap.set('a', { ...createNode('a'), data: { label: 'updated-a' } })
-        nodesMap.set('b', { ...createNode('b'), data: { label: 'updated-b' } })
+        nodesMap.set('a', { ...createNode('a'), data: { content: 'updated-a' } })
+        nodesMap.set('b', { ...createNode('b'), data: { content: 'updated-b' } })
       })
     })
 
-    expect(nodesMap.get('a')?.data).toMatchObject({ label: 'updated-a' })
-    expect(nodesMap.get('b')?.data).toMatchObject({ label: 'updated-b' })
+    expect(nodesMap.get('a')?.data).toMatchObject({ content: 'updated-a' })
+    expect(nodesMap.get('b')?.data).toMatchObject({ content: 'updated-b' })
 
     act(() => {
       hook.result.current.undo()
     })
 
-    expect(nodesMap.get('a')?.data).toMatchObject({ label: 'a' })
-    expect(nodesMap.get('b')?.data).toMatchObject({ label: 'b' })
+    expect(nodesMap.get('a')?.data).toMatchObject({ content: 'a' })
+    expect(nodesMap.get('b')?.data).toMatchObject({ content: 'b' })
     expect(hook.result.current.canUndo).toBe(false)
     expect(hook.result.current.canRedo).toBe(true)
   })

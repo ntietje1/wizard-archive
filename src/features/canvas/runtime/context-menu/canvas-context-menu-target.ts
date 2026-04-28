@@ -6,8 +6,8 @@ import type {
   CanvasContextMenuTarget,
 } from './canvas-context-menu-types'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
 } from '~/features/canvas/types/canvas-domain-types'
 import type * as Y from 'yjs'
 
@@ -18,22 +18,22 @@ type CanvasResolvedContextMenuTarget = {
 
 function getOrderedNormalizedSelectedNodes(
   nodeIds: ReadonlySet<string>,
-  nodesMap: Y.Map<Node>,
+  nodesMap: Y.Map<CanvasDocumentNode>,
 ): Array<NonNullable<ReturnType<typeof normalizeCanvasNode>>> {
   return Array.from(nodeIds)
     .map((nodeId) => nodesMap.get(nodeId))
-    .filter((node): node is Node => node !== undefined)
+    .filter((node): node is CanvasDocumentNode => node !== undefined)
     .map((node) => normalizeCanvasNode(node))
     .filter((node): node is NonNullable<ReturnType<typeof normalizeCanvasNode>> => node !== null)
 }
 
 function getOrderedNormalizedSelectedEdges(
   edgeIds: ReadonlySet<string>,
-  edgesMap: Y.Map<Edge>,
+  edgesMap: Y.Map<CanvasDocumentEdge>,
 ): Array<NonNullable<ReturnType<typeof normalizeCanvasEdge>>> {
   return Array.from(edgeIds)
     .map((edgeId) => edgesMap.get(edgeId))
-    .filter((edge): edge is Edge => edge !== undefined)
+    .filter((edge): edge is CanvasDocumentEdge => edge !== undefined)
     .map((edge) => normalizeCanvasEdge(edge))
     .filter((edge): edge is NonNullable<ReturnType<typeof normalizeCanvasEdge>> => edge !== null)
 }
@@ -61,7 +61,7 @@ function getSharedValue<TItem, TValue>(
 
 function resolveNodeSelectionTarget(
   selection: CanvasSelectionSnapshot,
-  nodesMap: Y.Map<Node>,
+  nodesMap: Y.Map<CanvasDocumentNode>,
 ): CanvasResolvedContextMenuTarget {
   const selectedNodes = getOrderedNormalizedSelectedNodes(selection.nodeIds, nodesMap)
 
@@ -93,7 +93,7 @@ function resolveNodeSelectionTarget(
 
 function resolveEdgeSelectionTarget(
   selection: CanvasSelectionSnapshot,
-  edgesMap: Y.Map<Edge>,
+  edgesMap: Y.Map<CanvasDocumentEdge>,
 ): CanvasResolvedContextMenuTarget {
   const selectedEdges = getOrderedNormalizedSelectedEdges(selection.edgeIds, edgesMap)
   const edgeType = getSharedValue(selectedEdges, (edge) => edge.type)
@@ -110,8 +110,8 @@ function resolveEdgeSelectionTarget(
 
 export function resolveCanvasContextMenuTarget(
   selection: CanvasSelectionSnapshot,
-  nodesMap: Y.Map<Node>,
-  edgesMap: Y.Map<Edge>,
+  nodesMap: Y.Map<CanvasDocumentNode>,
+  edgesMap: Y.Map<CanvasDocumentEdge>,
 ): CanvasResolvedContextMenuTarget {
   if (selection.nodeIds.size === 0 && selection.edgeIds.size === 0) {
     return { target: { kind: 'pane' }, contributors: [] }

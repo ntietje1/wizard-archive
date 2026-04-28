@@ -4,10 +4,14 @@ import type {
   CanvasInternalNode,
 } from './canvas-engine-types'
 import type { CanvasEdgePatch } from '../edges/canvas-edge-types'
-import type { CanvasEdge, CanvasNode } from '../types/canvas-domain-types'
+import type {
+  CanvasDocumentNodePatch,
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '../types/canvas-domain-types'
 
-export const EMPTY_NODES: ReadonlyArray<CanvasNode> = []
-export const EMPTY_EDGES: ReadonlyArray<CanvasEdge> = []
+export const EMPTY_NODES: ReadonlyArray<CanvasDocumentNode> = []
+export const EMPTY_EDGES: ReadonlyArray<CanvasDocumentEdge> = []
 export const EMPTY_NODE_LOOKUP: ReadonlyMap<string, CanvasInternalNode> = new Map()
 export const EMPTY_EDGE_LOOKUP: ReadonlyMap<string, CanvasInternalEdge> = new Map()
 export const EMPTY_EDGE_IDS_BY_NODE_ID: ReadonlyMap<string, ReadonlySet<string>> = new Map()
@@ -21,8 +25,8 @@ export function projectCanvasDocumentSnapshot({
   draggingNodeIds,
 }: {
   snapshot: CanvasEngineSnapshot
-  nodes?: ReadonlyArray<CanvasNode>
-  edges?: ReadonlyArray<CanvasEdge>
+  nodes?: ReadonlyArray<CanvasDocumentNode>
+  edges?: ReadonlyArray<CanvasDocumentEdge>
   draggingNodeIds: ReadonlySet<string>
 }): Omit<CanvasEngineSnapshot, 'version'> {
   const nextNodes = nodes ?? snapshot.nodes
@@ -43,8 +47,8 @@ export function projectCanvasDocumentSnapshot({
 }
 
 export function patchCanvasNodes(
-  nodes: ReadonlyArray<CanvasNode>,
-  updates: ReadonlyMap<string, Partial<CanvasNode>>,
+  nodes: ReadonlyArray<CanvasDocumentNode>,
+  updates: ReadonlyMap<string, CanvasDocumentNodePatch>,
 ) {
   let changed = false
   const nextNodes = nodes.map((node) => {
@@ -66,7 +70,7 @@ export function patchCanvasNodes(
 }
 
 export function patchCanvasEdges(
-  edges: ReadonlyArray<CanvasEdge>,
+  edges: ReadonlyArray<CanvasDocumentEdge>,
   updates: ReadonlyMap<string, CanvasEdgePatch>,
 ) {
   let changed = false
@@ -93,7 +97,7 @@ export function patchCanvasEdges(
 }
 
 export function createNodeLookup(
-  nodes: ReadonlyArray<CanvasNode>,
+  nodes: ReadonlyArray<CanvasDocumentNode>,
   selectedNodeIds: ReadonlySet<string>,
   draggingNodeIds: ReadonlySet<string>,
 ): ReadonlyMap<string, CanvasInternalNode> {
@@ -120,7 +124,7 @@ export function createNodeLookup(
 }
 
 function createEdgeLookup(
-  edges: ReadonlyArray<CanvasEdge>,
+  edges: ReadonlyArray<CanvasDocumentEdge>,
   selectedEdgeIds: ReadonlySet<string>,
 ): ReadonlyMap<string, CanvasInternalEdge> {
   const lookup = new Map<string, CanvasInternalEdge>()
@@ -139,7 +143,7 @@ function createEdgeLookup(
 }
 
 function createEdgeAdjacency(
-  edges: ReadonlyArray<CanvasEdge>,
+  edges: ReadonlyArray<CanvasDocumentEdge>,
 ): ReadonlyMap<string, ReadonlySet<string>> {
   const adjacency = new Map<string, Set<string>>()
 
@@ -151,7 +155,7 @@ function createEdgeAdjacency(
   return adjacency
 }
 
-function isCanvasEdgePatchNoop(edge: CanvasEdge, patch: CanvasEdgePatch) {
+function isCanvasEdgePatchNoop(edge: CanvasDocumentEdge, patch: CanvasEdgePatch) {
   if (patch.type !== undefined && patch.type !== edge.type) {
     return false
   }
@@ -161,21 +165,24 @@ function isCanvasEdgePatchNoop(edge: CanvasEdge, patch: CanvasEdgePatch) {
   }
 
   return Object.entries(patch.style).every(
-    ([key, value]) => edge.style?.[key as keyof NonNullable<CanvasEdge['style']>] === value,
+    ([key, value]) => edge.style?.[key as keyof NonNullable<CanvasDocumentEdge['style']>] === value,
   )
 }
 
-function isCanvasNodePatchNoop(node: CanvasNode, patch: Partial<CanvasNode>) {
+function isCanvasNodePatchNoop(node: CanvasDocumentNode, patch: CanvasDocumentNodePatch) {
   return Object.entries(patch).every(([key, value]) => {
     if (key === 'position') {
       return areCanvasPositionsEqual(node.position, value)
     }
 
-    return node[key as keyof CanvasNode] === (value as CanvasNode[keyof CanvasNode])
+    return (
+      node[key as keyof CanvasDocumentNode] ===
+      (value as CanvasDocumentNode[keyof CanvasDocumentNode])
+    )
   })
 }
 
-function areCanvasPositionsEqual(left: CanvasNode['position'], right: unknown) {
+function areCanvasPositionsEqual(left: CanvasDocumentNode['position'], right: unknown) {
   return (
     typeof right === 'object' &&
     right !== null &&

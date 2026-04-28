@@ -67,8 +67,8 @@ export function boundsUnion(items: ReadonlyArray<Bounds>): Bounds | null {
   }
 
   let bounds = items[0]
-  for (const item of items.slice(1)) {
-    bounds = unionBounds(bounds, item)
+  for (let index = 1; index < items.length; index += 1) {
+    bounds = unionBounds(bounds, items[index])
   }
   return bounds
 }
@@ -114,6 +114,10 @@ export function polygonIntersectsBounds(
   polygon: ReadonlyArray<{ x: number; y: number }>,
   bounds: Bounds,
 ): boolean {
+  if (polygon.length === 0) {
+    return false
+  }
+
   const polygonBounds = boundsFromPoints(polygon)
   if (polygonBounds && !rectIntersectsBounds(polygonBounds, bounds)) {
     return false

@@ -1,11 +1,8 @@
 import type { CanvasMeasuredNode } from '../../tools/canvas-tool-types'
 import type { CanvasEngineSnapshot, CanvasInternalNode } from '../../system/canvas-engine'
+import type { CanvasDocumentNode } from '../../types/canvas-domain-types'
 
-type MeasuredNodeLookupValue = {
-  id: string
-  type?: string
-  data: Record<string, unknown>
-  position: { x: number; y: number }
+type MeasuredNodeLookupValue = Pick<CanvasDocumentNode, 'data' | 'id' | 'position' | 'type'> & {
   measured?: {
     width?: number
     height?: number
@@ -30,7 +27,7 @@ export function getMeasuredCanvasNodesFromLookup(
         position: internalNode.position,
         width,
         height,
-      },
+      } as CanvasMeasuredNode,
     ]
   })
 }

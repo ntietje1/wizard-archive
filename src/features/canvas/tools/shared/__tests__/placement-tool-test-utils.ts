@@ -3,7 +3,7 @@ import type {
   CanvasToolId,
   CanvasToolRuntime,
 } from '../../canvas-tool-types'
-import type { CanvasNode } from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentNode } from '~/features/canvas/types/canvas-domain-types'
 
 export function createPointerEvent(
   x: number,
@@ -33,7 +33,7 @@ export function createPlacementEnvironment({
   setActiveTool,
 }: {
   activeTool: CanvasToolId
-  createNode: (node: CanvasNode) => void
+  createNode: (node: CanvasDocumentNode) => void
   replaceSelection: (selection: CanvasSelectionSnapshot) => void
   setPendingEditNodeId: (nodeId: string | null) => void
   setPendingEditNodePoint?: (point: { x: number; y: number } | null) => void

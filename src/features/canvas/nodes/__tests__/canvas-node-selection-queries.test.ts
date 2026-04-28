@@ -4,7 +4,7 @@ import {
   getCanvasNodesMatchingLasso,
   getCanvasNodesMatchingRectangle,
 } from '../canvas-node-selection-queries'
-import type { CanvasNode as Node } from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentNode as Node } from '~/features/canvas/types/canvas-domain-types'
 
 describe('canvas node selection queries', () => {
   it('uses default rectangular selection behavior for rectangle-shaped nodes', () => {
@@ -63,7 +63,7 @@ describe('canvas node selection queries', () => {
         width: 10,
         height: 10,
         data: {},
-      },
+      } as unknown as Node,
       {
         id: 'stroke-1',
         type: 'stroke',
@@ -188,7 +188,7 @@ describe('canvas node selection queries', () => {
           points: [[0, 10, 'bad']],
           size: 4,
         },
-      },
+      } as unknown as Node,
       {
         id: 'text-1',
         type: 'text',

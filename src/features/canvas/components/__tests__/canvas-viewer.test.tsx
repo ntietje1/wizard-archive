@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { forwardRef } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasEditor } from '../canvas-viewer'
-import type { CanvasEdge, CanvasNode } from '../../types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from '../../types/canvas-domain-types'
 import * as Y from 'yjs'
 import { testId } from '~/test/helpers/test-id'
 
@@ -206,8 +206,8 @@ describe('CanvasEditor', () => {
       provider: null,
       user: { name: 'Test User', color: '#61afef' },
       doc,
-      nodesMap: doc.getMap<CanvasNode>('nodes'),
-      edgesMap: doc.getMap<CanvasEdge>('edges'),
+      nodesMap: doc.getMap<CanvasDocumentNode>('nodes'),
+      edgesMap: doc.getMap<CanvasDocumentEdge>('edges'),
     }
 
     render(<CanvasEditor {...props} />)
@@ -244,8 +244,8 @@ describe('CanvasEditor', () => {
         provider={null}
         user={{ name: 'Test User', color: '#61afef' }}
         doc={doc}
-        nodesMap={doc.getMap<CanvasNode>('nodes')}
-        edgesMap={doc.getMap<CanvasEdge>('edges')}
+        nodesMap={doc.getMap<CanvasDocumentNode>('nodes')}
+        edgesMap={doc.getMap<CanvasDocumentEdge>('edges')}
       />,
     )
 

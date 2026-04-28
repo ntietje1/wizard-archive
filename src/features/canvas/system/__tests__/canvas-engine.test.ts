@@ -7,8 +7,8 @@ import {
   selectCanvasEdgeEndpointNodes,
 } from '../canvas-engine-selectors'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge as Edge,
+  CanvasDocumentNode as Node,
 } from '~/features/canvas/types/canvas-domain-types'
 
 describe('createCanvasEngine', () => {
@@ -245,7 +245,7 @@ describe('createCanvasEngine', () => {
             borderOpacity: 100,
             borderWidth: 1,
           },
-        },
+        } as Node,
       ],
     })
     const unregister = engine.registerNodeSurfaceElement('a', nodeSurface)
@@ -531,7 +531,7 @@ describe('canvas engine property selectors', () => {
   it('treats node position-only changes as equal for property subscribers', () => {
     const node = createNode('a', 0)
     const movedNode = { ...node, position: { x: 10, y: 12 } }
-    const updatedNode = { ...node, data: { color: 'red' } }
+    const updatedNode = { ...node, data: { backgroundColor: 'red' } } as Node
 
     expect(areCanvasPropertyNodesEqual([node], [movedNode])).toBe(true)
     expect(areCanvasPropertyNodesEqual([node], [updatedNode])).toBe(false)

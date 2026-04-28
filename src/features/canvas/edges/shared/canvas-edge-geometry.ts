@@ -16,9 +16,9 @@ import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-ty
 import type { Point2D } from '../../utils/canvas-awareness-types'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
 import type {
-  CanvasEdge as Edge,
+  CanvasDocumentEdge,
   CanvasHandlePosition,
-  CanvasNode as Node,
+  CanvasDocumentNode,
 } from '~/features/canvas/types/canvas-domain-types'
 
 const DEFAULT_CANVAS_EDGE_INTERACTION_WIDTH = 20
@@ -61,7 +61,7 @@ function handleIdToPosition(
 }
 
 function resolveCanvasEdgeEndpoint(
-  node: Node,
+  node: CanvasDocumentNode,
   handleId: string | null | undefined,
   fallbackPosition: CanvasHandlePosition,
 ): { point: Point2D; position: CanvasHandlePosition } | null {
@@ -89,7 +89,7 @@ function resolveCanvasEdgeEndpoint(
   return { point, position }
 }
 
-function getBoundsCenter(node: Node) {
+function getBoundsCenter(node: CanvasDocumentNode) {
   const bounds = getCanvasNodeBounds(node)
   if (!bounds) return null
 
@@ -102,7 +102,7 @@ function getBoundsCenter(node: Node) {
   }
 }
 
-function inferCanvasEdgePositions(sourceNode: Node, targetNode: Node) {
+function inferCanvasEdgePositions(sourceNode: CanvasDocumentNode, targetNode: CanvasDocumentNode) {
   const source = getBoundsCenter(sourceNode)
   const target = getBoundsCenter(targetNode)
   if (!source || !target) {
@@ -132,7 +132,10 @@ function inferCanvasEdgePositions(sourceNode: Node, targetNode: Node) {
     : { sourcePosition: CANVAS_HANDLE_POSITION.Top, targetPosition: CANVAS_HANDLE_POSITION.Bottom }
 }
 
-function getCanvasEdgeAnchorPoint(node: Node, position: CanvasHandlePosition): Point2D | null {
+function getCanvasEdgeAnchorPoint(
+  node: CanvasDocumentNode,
+  position: CanvasHandlePosition,
+): Point2D | null {
   const bounds = getCanvasNodeBounds(node)
   if (!bounds) return null
 
@@ -166,8 +169,8 @@ export function getCanvasEdgePointThreshold(zoom: number): number {
 }
 
 export function getCanvasEdgeEndpoints(
-  edge: Edge,
-  nodesById: ReadonlyMap<string, Node>,
+  edge: CanvasDocumentEdge,
+  nodesById: ReadonlyMap<string, CanvasDocumentNode>,
 ): CanvasEdgeEndpoints | null {
   const sourceNode = nodesById.get(edge.source)
   const targetNode = nodesById.get(edge.target)

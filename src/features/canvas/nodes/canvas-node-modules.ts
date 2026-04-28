@@ -25,12 +25,16 @@ import {
 import { polygonIntersectsBounds, rectIntersectsBounds } from '../utils/canvas-geometry-utils'
 import type {
   CanvasNodeCreateArgs,
+  CanvasNodeDataByType,
   CanvasNodePlacementBehavior,
-  CanvasNodeType,
 } from './canvas-node-types'
 import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
 import type { CanvasContextMenuContributor } from '../runtime/context-menu/canvas-context-menu-types'
-import type { CanvasNode, CanvasPosition } from '~/features/canvas/types/canvas-domain-types'
+import type {
+  CanvasDocumentNode,
+  CanvasNodeType,
+  CanvasPosition,
+} from '~/features/canvas/types/canvas-domain-types'
 import { assertNever } from '~/shared/utils/utils'
 import { normalizeCanvasNode } from './canvas-node-normalization'
 import type { AnyNormalizedCanvasNode } from './canvas-node-normalization'
@@ -41,13 +45,17 @@ const DEFAULT_TEXT_SIZE = {
   height: TEXT_NODE_DEFAULT_HEIGHT,
 } as const
 const EMPTY_CONTEXT_MENU_CONTRIBUTORS: ReadonlyArray<CanvasContextMenuContributor> = []
-type PatchCanvasNodeData = <TPatch extends Record<string, unknown>>(
+export type CanvasNodeDataPatch<TType extends CanvasNodeType = CanvasNodeType> = Partial<{
+  [TKey in keyof CanvasNodeDataByType[TType]]: CanvasNodeDataByType[TType][TKey] | null
+}>
+
+type PatchCanvasNodeData = <TType extends CanvasNodeType>(
   nodeId: string,
-  data: TPatch,
+  data: CanvasNodeDataPatch<TType>,
 ) => void
 
 function withNormalizedCanvasNode<TResult>(
-  node: CanvasNode,
+  node: CanvasDocumentNode,
   onNode: (node: AnyNormalizedCanvasNode) => TResult,
   onInvalid: () => TResult,
 ): TResult {
@@ -115,7 +123,7 @@ function getSurfaceNodeProperties(
 type CanvasNodeSpec<TType extends CanvasNodeType = CanvasNodeType> = {
   placement: CanvasNodePlacementBehavior | null
   defaultSize: { width: number; height: number } | null
-  createDefaultData: () => Record<string, unknown> | null
+  createDefaultData: () => CanvasNodeDataPatch<TType> | null
   contextMenuContributors: ReadonlyArray<CanvasContextMenuContributor>
   getProperties?: (
     node: Extract<AnyNormalizedCanvasNode, { type: TType }>,
@@ -124,7 +132,7 @@ type CanvasNodeSpec<TType extends CanvasNodeType = CanvasNodeType> = {
   resize?: (
     node: Extract<AnyNormalizedCanvasNode, { type: TType }>,
     resize: { width: number; height: number; position: CanvasPosition },
-  ) => CanvasNode
+  ) => CanvasDocumentNode
 }
 
 export const canvasNodeSpecs = {
@@ -182,7 +190,7 @@ export function getCanvasNodeInspectableProperties(
 export function createCanvasNodePlacement(
   type: CanvasNodeType,
   args: CanvasNodeCreateArgs,
-): { node: CanvasNode; startEditing: boolean } {
+): { node: CanvasDocumentNode; selectOnCreate: boolean; startEditing: boolean } {
   const spec = canvasNodeSpecs[type]
   const resolvedSize = args.size ?? spec.defaultSize
   if (!resolvedSize) {
@@ -205,22 +213,18 @@ export function createCanvasNodePlacement(
     throw new Error(`Missing default canvas node data for "${type}"`)
   }
 
-  const node: CanvasNode = {
+  const node = {
     id: crypto.randomUUID(),
     type,
     position,
     width: resolvedSize.width,
     height: resolvedSize.height,
-    data: data as Record<string, unknown>,
-  }
-
-  if (placement?.selectOnCreate) {
-    node.selected = true
-    node.draggable = true
-  }
+    data,
+  } as CanvasDocumentNode
 
   return {
     node,
+    selectOnCreate: placement?.selectOnCreate ?? false,
     startEditing: placement?.startEditingOnCreate ?? false,
   }
 }
@@ -229,9 +233,9 @@ export { normalizeCanvasNode }
 export type { AnyNormalizedCanvasNode }
 
 export function resizeCanvasNode(
-  node: CanvasNode,
+  node: CanvasDocumentNode,
   resize: { width: number; height: number; position: CanvasPosition },
-): CanvasNode {
+): CanvasDocumentNode {
   return withNormalizedCanvasNode(
     node,
     (normalizedNode) =>

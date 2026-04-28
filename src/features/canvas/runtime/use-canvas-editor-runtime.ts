@@ -36,13 +36,17 @@ import type {
   CanvasToolId,
   CanvasToolRuntime,
 } from '../tools/canvas-tool-types'
-import type { CanvasConnection, CanvasEdge, CanvasNode } from '../types/canvas-domain-types'
+import type {
+  CanvasConnection,
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+} from '../types/canvas-domain-types'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
 import { useYjsPreviewUpload } from '~/features/previews/hooks/use-yjs-preview-upload'
 
 interface UseCanvasEditorRuntimeOptions {
-  nodesMap: Y.Map<CanvasNode>
-  edgesMap: Y.Map<CanvasEdge>
+  nodesMap: Y.Map<CanvasDocumentNode>
+  edgesMap: Y.Map<CanvasDocumentEdge>
   canvasId: Id<'sidebarItems'>
   campaignId: Id<'campaigns'>
   canvasParentId: Id<'sidebarItems'> | null
@@ -354,13 +358,13 @@ export function useCanvasEditorRuntime({
         }
         documentWriter.createEdge(connection, getEdgeCreationDefaults())
       },
-      onNodeClick: (event: ReactMouseEvent, node: CanvasNode) => {
+      onNodeClick: (event: ReactMouseEvent, node: CanvasDocumentNode) => {
         if (!canEdit || !isSelectMode) {
           return
         }
         activeToolHandlers.onNodeClick?.(event, node)
       },
-      onEdgeClick: (event: ReactMouseEvent, edge: CanvasEdge) => {
+      onEdgeClick: (event: ReactMouseEvent, edge: CanvasDocumentEdge) => {
         if (!canEdit || !isSelectMode) {
           return
         }

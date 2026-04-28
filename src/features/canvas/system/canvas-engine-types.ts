@@ -6,20 +6,22 @@ import type {
 } from './canvas-selection'
 import type { CanvasCameraState } from './canvas-render-scheduler'
 import type { CanvasEdgePatch } from '../edges/canvas-edge-types'
+import type { CanvasNodeDataPatch } from '../nodes/canvas-node-modules'
 import type {
   CanvasRegisteredEdgePaths,
   CanvasRegisteredStrokeNodePaths,
 } from './canvas-dom-registry'
 import type {
-  CanvasEdge,
-  CanvasNode,
+  CanvasDocumentEdge,
+  CanvasDocumentNodePatch,
+  CanvasDocumentNode,
   CanvasPosition,
   CanvasViewport,
 } from '../types/canvas-domain-types'
 
 export interface CanvasInternalNode {
   id: string
-  node: CanvasNode
+  node: CanvasDocumentNode
   positionAbsolute: CanvasPosition
   measured: {
     width?: number
@@ -34,15 +36,15 @@ export interface CanvasInternalNode {
 
 export interface CanvasInternalEdge {
   id: string
-  edge: CanvasEdge
+  edge: CanvasDocumentEdge
   selected: boolean
   zIndex: number
   visible: boolean
 }
 
 export interface CanvasEngineSnapshot {
-  nodes: ReadonlyArray<CanvasNode>
-  edges: ReadonlyArray<CanvasEdge>
+  nodes: ReadonlyArray<CanvasDocumentNode>
+  edges: ReadonlyArray<CanvasDocumentEdge>
   nodeIds: ReadonlyArray<string>
   edgeIds: ReadonlyArray<string>
   nodeLookup: ReadonlyMap<string, CanvasInternalNode>
@@ -75,10 +77,10 @@ export interface CanvasEngine {
     equality?: CanvasEngineEquality<T>,
   ) => () => void
   setDocumentSnapshot: (snapshot: {
-    nodes?: ReadonlyArray<CanvasNode>
-    edges?: ReadonlyArray<CanvasEdge>
+    nodes?: ReadonlyArray<CanvasDocumentNode>
+    edges?: ReadonlyArray<CanvasDocumentEdge>
   }) => void
-  patchNodes: (updates: ReadonlyMap<string, Partial<CanvasNode>>) => void
+  patchNodes: (updates: ReadonlyMap<string, CanvasDocumentNodePatch>) => void
   patchEdges: (updates: ReadonlyMap<string, CanvasEdgePatch>) => void
   setNodePositions: (positions: ReadonlyMap<string, CanvasPosition>) => void
   setSelection: (selection: { nodeIds: ReadonlySet<string>; edgeIds: ReadonlySet<string> }) => void
@@ -110,7 +112,11 @@ export interface CanvasEngine {
   registerEdgePaths: (edgeId: string, paths: CanvasRegisteredEdgePaths) => () => void
   registerViewportElement: (element: HTMLElement | null) => () => void
   registerViewportOverlayElement: (element: HTMLElement | null) => () => void
-  scheduleNodeDataPatches: (updates: ReadonlyMap<string, Record<string, unknown>>) => void
+  /**
+   * Schedules runtime node data updates; use CanvasDocumentNodePatch with patchNodes for
+   * persisted document fields such as position, dimensions, and zIndex.
+   */
+  scheduleNodeDataPatches: (updates: ReadonlyMap<string, CanvasNodeDataPatch>) => void
   scheduleEdgePatches: (updates: ReadonlyMap<string, CanvasEdgePatch>) => void
   scheduleViewportTransform: (viewport: CanvasViewport) => void
   scheduleCameraState: (state: CanvasCameraState) => void

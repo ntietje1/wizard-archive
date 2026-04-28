@@ -10,7 +10,7 @@ import {
   buildStraightCanvasEdgeGeometryFromEdge,
   buildStraightCanvasEdgeGeometryFromRenderProps,
 } from '../edges/straight/straight-canvas-edge-geometry'
-import type { CanvasEdge, CanvasNode } from '../types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from '../types/canvas-domain-types'
 import type { Point2D } from '../utils/canvas-awareness-types'
 import { assertNever } from '~/shared/utils/utils'
 
@@ -37,10 +37,10 @@ const FREE_DRAG_BEZIER_MAX_CONTROL_DISTANCE = 180
 export function buildConnectionDraftGeometry(
   edgeType: CanvasEdgeType,
   draft: CanvasConnectionDraft,
-  nodesById: ReadonlyMap<string, CanvasNode>,
+  nodesById: ReadonlyMap<string, CanvasDocumentNode>,
 ): CanvasConnectionPreviewGeometry | null {
   if (draft.snapTarget) {
-    const edge: CanvasEdge = {
+    const edge: CanvasDocumentEdge = {
       id: 'canvas-connection-preview',
       source: draft.source.nodeId,
       target: draft.snapTarget.nodeId,
@@ -61,24 +61,26 @@ export function buildConnectionDraftGeometry(
     }
   }
 
-  const renderProps = {
+  switch (edgeType) {
+    case 'bezier':
+      return buildFreeDragBezierPreviewGeometry(draft.source, draft.current)
+    case 'straight':
+      return buildStraightCanvasEdgeGeometryFromRenderProps(createFreeDragRenderProps(draft))
+    case 'step':
+      return buildStepCanvasEdgeGeometryFromRenderProps(createFreeDragRenderProps(draft))
+    default:
+      return assertNever(edgeType)
+  }
+}
+
+function createFreeDragRenderProps(draft: CanvasConnectionDraft) {
+  return {
     sourceX: draft.source.point.x,
     sourceY: draft.source.point.y,
     targetX: draft.current.x,
     targetY: draft.current.y,
     sourcePosition: draft.source.position,
     targetPosition: getOppositePosition(draft.source.position),
-  }
-
-  switch (edgeType) {
-    case 'bezier':
-      return buildFreeDragBezierPreviewGeometry(draft.source, draft.current)
-    case 'straight':
-      return buildStraightCanvasEdgeGeometryFromRenderProps(renderProps)
-    case 'step':
-      return buildStepCanvasEdgeGeometryFromRenderProps(renderProps)
-    default:
-      return assertNever(edgeType)
   }
 }
 

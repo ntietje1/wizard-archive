@@ -14,6 +14,7 @@ describe('createCanvasNodeResizeMetadataStore', () => {
     cleanupOriginal()
 
     expect(store.getSnapshot().get('node-1')).toBe(nextMetadata)
+    expect(listener).toHaveBeenCalledTimes(2)
   })
 
   it('reuses the empty metadata snapshot after the final registration cleans up', () => {

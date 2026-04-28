@@ -1,42 +1,62 @@
 import type {
-  ParsedCanvasRuntimeEmbedNode,
-  ParsedCanvasRuntimeStrokeNode,
-  ParsedCanvasRuntimeTextNode,
+  CanvasEmbedNodeData,
+  CanvasStrokeNodeData,
+  CanvasTextNodeData,
 } from 'convex/canvases/validation'
-import type { CanvasPosition } from '../types/canvas-domain-types'
+import type { EmbedNodeData } from './embed/embed-node-data'
+import type {
+  CanvasRichTextNodeData,
+  CanvasRichTextNodeInputData,
+} from './shared/canvas-rich-text-node-data'
+import type { StrokeNodeData } from './stroke/stroke-node-model'
+import type { CanvasNodeType, CanvasPosition } from '../types/canvas-domain-types'
 
-export const CANVAS_NODE_TYPES = ['embed', 'stroke', 'text'] as const
+export const CANVAS_NODE_TYPES = [
+  'embed',
+  'stroke',
+  'text',
+] as const satisfies ReadonlyArray<CanvasNodeType>
 
-/**
- * Raw node creation/input data stays broad at the document boundary; stricter node contracts are
- * enforced through the parsed runtime node types and per-node normalizers.
- */
-export type CanvasNodeData = Record<string, unknown>
-
-export type CanvasNodeType = (typeof CANVAS_NODE_TYPES)[number]
-
-interface CanvasParsedRuntimeNodeMap {
-  embed: ParsedCanvasRuntimeEmbedNode
-  stroke: ParsedCanvasRuntimeStrokeNode
-  text: ParsedCanvasRuntimeTextNode
+export interface CanvasNodeDataByType {
+  embed: CanvasEmbedNodeData
+  stroke: CanvasStrokeNodeData
+  text: CanvasTextNodeData
 }
 
-type CanvasParsedRuntimeNodeByType<TType extends CanvasNodeType> = CanvasParsedRuntimeNodeMap[TType]
+export interface CanvasNodeRenderDataByType {
+  embed: EmbedNodeData
+  stroke: StrokeNodeData
+  text: CanvasRichTextNodeData
+}
+
+export interface CanvasNodeComponentDataByType {
+  embed: EmbedNodeData
+  stroke: StrokeNodeData
+  text: CanvasRichTextNodeInputData
+}
 
 export type CanvasRuntimeNode<
-  TData extends CanvasNodeData = CanvasNodeData,
   TType extends CanvasNodeType = CanvasNodeType,
-> = Omit<CanvasParsedRuntimeNodeByType<TType>, 'data'> & {
+  TData extends CanvasNodeRenderDataByType[TType] = CanvasNodeRenderDataByType[TType],
+> = {
+  id: string
+  type: TType
+  position: CanvasPosition
   data: TData
+  width?: number
+  height?: number
+  hidden?: boolean
+  zIndex?: number
+  className?: string
 }
 
-export interface CanvasNodeCreateArgs {
+export interface CanvasNodeCreateArgs<TType extends CanvasNodeType = CanvasNodeType> {
   position: CanvasPosition
   size?: { width: number; height: number }
-  data?: CanvasNodeData
+  data?: Partial<CanvasNodeDataByType[TType]>
 }
 
-export interface CanvasNodeComponentProps<TData extends CanvasNodeData = CanvasNodeData> {
+export interface CanvasNodeComponentProps<TData = CanvasNodeComponentDataByType[CanvasNodeType]> {
   id: string
   type?: CanvasNodeType
   data: TData

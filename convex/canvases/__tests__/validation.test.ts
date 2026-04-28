@@ -17,21 +17,20 @@ import {
   parseCanvasPoint2D,
   parseCanvasRichTextContent,
   parseCanvasResizingAwarenessState,
-  parseCanvasRuntimeEdge,
-  parseCanvasRuntimeNode,
   parseCanvasSelectionAwarenessState,
   parseCanvasSelectAwarenessState,
   parseCanvasSidebarItemId,
   parseCanvasStrokeSelectionData,
   parseCanvasStrokeNodeData,
   parseCanvasTextNodeData,
-  parsePersistedCanvasNode,
-  parsePersistedCanvasViewport,
+  parseCanvasDocumentEdge,
+  parseCanvasDocumentNode,
+  parseCanvasViewport,
 } from '../validation'
 
-describe('parsePersistedCanvasViewport', () => {
+describe('parseCanvasViewport', () => {
   it('returns the parsed viewport for finite coordinates', () => {
-    expect(parsePersistedCanvasViewport({ x: 42, y: -18, zoom: 1.75 })).toEqual({
+    expect(parseCanvasViewport({ x: 42, y: -18, zoom: 1.75 })).toEqual({
       x: 42,
       y: -18,
       zoom: 1.75,
@@ -39,18 +38,18 @@ describe('parsePersistedCanvasViewport', () => {
   })
 
   it('rejects invalid viewport payloads', () => {
-    expect(parsePersistedCanvasViewport({ x: 'bad', y: 0, zoom: 1 })).toBeNull()
+    expect(parseCanvasViewport({ x: 'bad', y: 0, zoom: 1 })).toBeNull()
   })
 })
 
-describe('parsePersistedCanvasNode', () => {
+describe('parseCanvasDocumentNode', () => {
   it('preserves non-ephemeral node fields while validating the required shape', () => {
     expect(
-      parsePersistedCanvasNode({
+      parseCanvasDocumentNode({
         id: 'node-1',
         type: 'text',
         position: { x: 10, y: 20 },
-        data: { label: 'Hello' },
+        data: { content: [{ type: 'paragraph' }] },
         width: 120,
         height: 36,
         zIndex: 7,
@@ -59,7 +58,7 @@ describe('parsePersistedCanvasNode', () => {
       id: 'node-1',
       type: 'text',
       position: { x: 10, y: 20 },
-      data: { label: 'Hello' },
+      data: { content: [{ type: 'paragraph' }] },
       width: 120,
       height: 36,
       zIndex: 7,
@@ -68,10 +67,32 @@ describe('parsePersistedCanvasNode', () => {
 
   it('rejects nodes with invalid persisted coordinates', () => {
     expect(
-      parsePersistedCanvasNode({
+      parseCanvasDocumentNode({
         id: 'node-1',
+        type: 'text',
         position: { x: Number.NaN, y: 20 },
         data: {},
+      }),
+    ).toBeNull()
+  })
+
+  it('rejects legacy React Flow node fields and unknown node data keys', () => {
+    expect(
+      parseCanvasDocumentNode({
+        id: 'node-1',
+        type: 'text',
+        position: { x: 10, y: 20 },
+        data: {},
+        selected: true,
+      }),
+    ).toBeNull()
+
+    expect(
+      parseCanvasDocumentNode({
+        id: 'node-1',
+        type: 'embed',
+        position: { x: 10, y: 20 },
+        data: { sidebarItemId: 'sidebar-1', label: 'legacy' },
       }),
     ).toBeNull()
   })
@@ -193,7 +214,7 @@ describe('canvas runtime node parsers', () => {
 
   it('parses runtime nodes by validated type and rejects malformed node data', () => {
     expect(
-      parseCanvasRuntimeNode({
+      parseCanvasDocumentNode({
         id: 'embed-1',
         type: 'embed',
         position: { x: 10, y: 20 },
@@ -213,7 +234,7 @@ describe('canvas runtime node parsers', () => {
     })
 
     expect(
-      parseCanvasRuntimeNode({
+      parseCanvasDocumentNode({
         id: 'stroke-1',
         type: 'stroke',
         position: { x: 10, y: 20 },
@@ -441,7 +462,7 @@ describe('canvas edge parsers', () => {
       opacity: 1,
     })
     expect(
-      parseCanvasRuntimeEdge({
+      parseCanvasDocumentEdge({
         id: 'edge-1',
         source: 'node-1',
         target: 'node-2',
@@ -459,15 +480,29 @@ describe('canvas edge parsers', () => {
 
   it('rejects malformed edge contracts', () => {
     expect(parseCanvasEdgeType('curved')).toBeNull()
-    expect(parseCanvasEdgeStyle({ strokeWidth: -1 })).toEqual({})
+    expect(parseCanvasEdgeStyle({ strokeWidth: -1 })).toBeNull()
     expect(
-      parseCanvasRuntimeEdge({
+      parseCanvasDocumentEdge({
         id: 'edge-1',
         source: 'node-1',
         target: 'node-2',
         type: 'curved',
       }),
     ).toBeNull()
+  })
+
+  it('rejects legacy React Flow edge fields and unknown style keys', () => {
+    expect(
+      parseCanvasDocumentEdge({
+        id: 'edge-1',
+        source: 'node-1',
+        target: 'node-2',
+        type: 'bezier',
+        animated: true,
+      }),
+    ).toBeNull()
+
+    expect(parseCanvasEdgeStyle({ stroke: '#f00', markerEnd: 'arrow' })).toBeNull()
   })
 })
 

@@ -7,7 +7,7 @@ import type { CanvasDragController } from '../../system/canvas-drag-controller'
 import type { CanvasEngine } from '../../system/canvas-engine'
 import type { CanvasViewportController } from '../../system/canvas-viewport-controller'
 import type { CanvasDocumentWriter, CanvasSelectionController } from '../../tools/canvas-tool-types'
-import type { CanvasEdge, CanvasNode } from '../../types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from '../../types/canvas-domain-types'
 import type * as Y from 'yjs'
 
 const PERFORMANCE_STROKE_WIDTH = 160
@@ -27,8 +27,8 @@ export function useCanvasPerformanceProbeRuntime({
   documentWriter: CanvasDocumentWriter
   doc: Y.Doc
   dragController: CanvasDragController
-  edgesMap: Y.Map<CanvasEdge>
-  nodesMap: Y.Map<CanvasNode>
+  edgesMap: Y.Map<CanvasDocumentEdge>
+  nodesMap: Y.Map<CanvasDocumentNode>
   selection: CanvasSelectionController
   viewportController: CanvasViewportController
 }) {

@@ -1,13 +1,13 @@
 import throttle from 'lodash-es/throttle'
 import { useEffect, useRef } from 'react'
 import type { CanvasCoreAwarenessWriter } from '../../tools/canvas-tool-types'
-import type { CanvasPosition as XYPosition } from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasPosition } from '~/features/canvas/types/canvas-domain-types'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 
 const CURSOR_UPDATE_THROTTLE_MS = 75
 
 interface UseCanvasCursorPresenceOptions {
-  screenToCanvasPosition: (position: XYPosition) => XYPosition
+  screenToCanvasPosition: (position: CanvasPosition) => CanvasPosition
   awareness: CanvasCoreAwarenessWriter
 }
 

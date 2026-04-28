@@ -1,12 +1,12 @@
 import { useCanvasDropTarget } from './use-canvas-drop-target'
 import type { Id } from 'convex/_generated/dataModel'
-import type { CanvasNode as Node } from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentNode } from '~/features/canvas/types/canvas-domain-types'
 
 interface UseCanvasDropIntegrationOptions {
   canvasId: Id<'sidebarItems'>
   canEdit: boolean
   isSelectMode: boolean
-  createNode: (node: Node) => void
+  createNode: (node: CanvasDocumentNode) => void
   screenToCanvasPosition: (position: { x: number; y: number }) => { x: number; y: number }
 }
 

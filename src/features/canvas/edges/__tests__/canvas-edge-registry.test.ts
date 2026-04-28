@@ -7,8 +7,8 @@ import {
   normalizeCanvasEdge,
 } from '../canvas-edge-registry'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge as Edge,
+  CanvasDocumentNode as Node,
 } from '~/features/canvas/types/canvas-domain-types'
 import type { CanvasStrokeSizePropertyBinding } from '../../properties/canvas-property-types'
 
@@ -213,22 +213,19 @@ describe('canvas edge specs', () => {
   })
 
   it('falls back unsupported edge types safely', () => {
-    const fallbackEdge = normalizeCanvasEdge(
-      createBezierEdge({ id: 'edge-fallback', type: 'curved' }),
-    )
+    const unsupportedEdge = {
+      ...createBezierEdge({ id: 'edge-fallback' }),
+      type: 'curved',
+    } as unknown as Edge
+    const fallbackEdge = normalizeCanvasEdge(unsupportedEdge)
 
     expect(fallbackEdge).toMatchObject({
       id: 'edge-fallback',
       type: 'bezier',
     })
-    expect(
-      findCanvasEdgeAtPoint(
-        nodes,
-        [createBezierEdge({ id: 'edge-fallback', type: 'curved' })],
-        { x: 100, y: 20 },
-        { zoom: 1 },
-      ),
-    ).toBe('edge-fallback')
+    expect(findCanvasEdgeAtPoint(nodes, [unsupportedEdge], { x: 100, y: 20 }, { zoom: 1 })).toBe(
+      'edge-fallback',
+    )
   })
 
   it('normalizes zero-width edge styles to the minimum visible stroke width', () => {

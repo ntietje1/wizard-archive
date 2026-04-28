@@ -268,6 +268,8 @@ describe('EmbedNode', () => {
   it('inverse-scales the floating name label from the current viewport zoom', () => {
     renderEmbedNode('node-1', 'canvas-1', { zoom: 2 })
 
+    // The base line height is 16px; at zoom=2, inverse scale is 0.5, so the frame
+    // height is 16 * 0.5 = 8px, the label scales to 0.5, and its width expands to 200%.
     expect(screen.getByTestId('embed-node-floating-label-frame')).toHaveStyle({
       height: '8px',
       transform: 'translateY(calc(-100% - 3px))',

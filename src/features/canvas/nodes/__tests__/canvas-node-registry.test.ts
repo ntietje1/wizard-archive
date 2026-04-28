@@ -4,6 +4,7 @@ import {
   getCanvasNodeInspectableProperties,
   normalizeCanvasNode,
 } from '../canvas-node-modules'
+import type { Id } from 'convex/_generated/dataModel'
 import { canvasNodeTypes } from '../canvas-node-renderers'
 import { TextNode } from '../text/text-node'
 
@@ -18,14 +19,15 @@ describe('canvas node specs', () => {
       position: { x: -60, y: 80 },
       width: 320,
       height: 240,
-      selected: true,
-      draggable: true,
       data: {
         content: [{ type: 'paragraph' }],
         backgroundColor: 'var(--background)',
         borderStroke: 'var(--border)',
       },
     })
+    expect(createCanvasNodePlacement('text', { position: { x: 100, y: 200 } }).selectOnCreate).toBe(
+      true,
+    )
   })
 
   it('marks new text nodes for immediate editing', () => {
@@ -39,7 +41,7 @@ describe('canvas node specs', () => {
   it('merges embed defaults with provided creation data', () => {
     const { node } = createCanvasNodePlacement('embed', {
       position: { x: 40, y: 60 },
-      data: { sidebarItemId: 'folder-1' },
+      data: { sidebarItemId: 'folder-1' as Id<'sidebarItems'> },
     })
 
     expect(node).toMatchObject({

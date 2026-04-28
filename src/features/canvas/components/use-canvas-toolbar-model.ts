@@ -10,6 +10,7 @@ import {
   getCanvasNodeInspectableProperties,
   normalizeCanvasNode,
 } from '../nodes/canvas-node-modules'
+import type { CanvasNodeDataPatch } from '../nodes/canvas-node-modules'
 import { measureCanvasPerformance } from '../runtime/performance/canvas-performance-metrics'
 import { canvasToolSpecs } from '../tools/canvas-tool-modules'
 import { useCanvasToolPropertyContext, useCanvasToolStore } from '../stores/canvas-tool-store'
@@ -30,7 +31,7 @@ import type {
 } from '../properties/canvas-property-types'
 import type { CanvasPropertyPatchSet } from '../system/canvas-property-session-controller'
 import type { CanvasToolId, CanvasToolPropertyContext } from '../tools/canvas-tool-types'
-import type { CanvasEdge, CanvasNode } from '../types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from '../types/canvas-domain-types'
 import { useShallow } from 'zustand/shallow'
 
 export function useCanvasToolbarModel() {
@@ -62,7 +63,7 @@ export function useCanvasToolbarModel() {
   const hasSelection = selectedNodes.length > 0 || selectedEdges.length > 0
   const hasOnlySelectedEdges = selectedNodes.length === 0 && selectedEdges.length > 0
   const showsEdgeToolDefaults = !hasSelection && activeTool === 'edge'
-  const pendingNodeDataPatchesRef = useRef<Map<string, Record<string, unknown>> | null>(null)
+  const pendingNodeDataPatchesRef = useRef<Map<string, CanvasNodeDataPatch> | null>(null)
   const pendingEdgePatchesRef = useRef<Map<string, CanvasEdgePatch> | null>(null)
   const propertySessionControllerRef = useRef<ReturnType<
     typeof createCanvasPropertySessionController
@@ -70,7 +71,7 @@ export function useCanvasToolbarModel() {
   propertySessionControllerRef.current ??= createCanvasPropertySessionController()
   const propertySessionController = propertySessionControllerRef.current
 
-  const patchNodeDataForProperty = (nodeId: string, data: Record<string, unknown>) => {
+  const patchNodeDataForProperty = (nodeId: string, data: CanvasNodeDataPatch) => {
     const pendingNodeDataPatches = pendingNodeDataPatchesRef.current
     if (!pendingNodeDataPatches) {
       const updates = new Map([[nodeId, data]])
@@ -240,9 +241,9 @@ export function useCanvasToolbarModel() {
 
 function resolveProperties(
   activeTool: CanvasToolId,
-  selectedNodes: ReadonlyArray<CanvasNode>,
-  selectedEdges: ReadonlyArray<CanvasEdge>,
-  patchNodeData: (nodeId: string, data: Record<string, unknown>) => void,
+  selectedNodes: ReadonlyArray<CanvasDocumentNode>,
+  selectedEdges: ReadonlyArray<CanvasDocumentEdge>,
+  patchNodeData: (nodeId: string, data: CanvasNodeDataPatch) => void,
   patchEdge: (edgeId: string, patch: CanvasEdgePatch) => void,
   toolPropertyContext: CanvasToolPropertyContext,
 ): Array<CanvasResolvedProperty> {
@@ -265,7 +266,7 @@ function resolveProperties(
   ])
 }
 
-function getSharedSelectedEdgeType(edges: ReadonlyArray<CanvasEdge>) {
+function getSharedSelectedEdgeType(edges: ReadonlyArray<CanvasDocumentEdge>) {
   const firstEdgeType = edges[0] ? resolveCanvasEdgeType(edges[0].type) : null
   return firstEdgeType && edges.every((edge) => resolveCanvasEdgeType(edge.type) === firstEdgeType)
     ? firstEdgeType

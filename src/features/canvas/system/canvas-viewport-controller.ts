@@ -1,6 +1,6 @@
 import type { CanvasEngine, CanvasViewport } from './canvas-engine'
 import { getCanvasFitViewport } from '../utils/canvas-fit-view'
-import type { CanvasNode, CanvasPosition } from '../types/canvas-domain-types'
+import type { CanvasDocumentNode, CanvasPosition } from '../types/canvas-domain-types'
 
 const MIN_ZOOM = 0.1
 const MAX_ZOOM = 4
@@ -289,7 +289,7 @@ function releasePointerCapture(target: Element | null, pointerId: number) {
 }
 
 function getFitViewViewport(
-  nodes: ReadonlyArray<CanvasNode>,
+  nodes: ReadonlyArray<CanvasDocumentNode>,
   surfaceBounds: DOMRect | null,
 ): CanvasViewport | null {
   if (!surfaceBounds || nodes.length === 0) {

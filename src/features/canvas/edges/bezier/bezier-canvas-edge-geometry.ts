@@ -9,9 +9,9 @@ import {
 import type { Point2D } from '../../utils/canvas-awareness-types'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
 import type {
-  CanvasEdge as Edge,
+  CanvasDocumentEdge,
   CanvasHandlePosition,
-  CanvasNode as Node,
+  CanvasDocumentNode,
 } from '~/features/canvas/types/canvas-domain-types'
 import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
 import type { CanvasEdgeRenderGeometryProps as EdgeProps } from '../canvas-edge-types'
@@ -148,8 +148,8 @@ export function buildBezierCanvasEdgeGeometryFromRenderProps(
 }
 
 export function buildBezierCanvasEdgeGeometryFromEdge(
-  edge: Edge,
-  nodesById: ReadonlyMap<string, Node>,
+  edge: CanvasDocumentEdge,
+  nodesById: ReadonlyMap<string, CanvasDocumentNode>,
 ): BezierCurve | null {
   const endpoints = getCanvasEdgeEndpoints(edge, nodesById)
   if (!endpoints) return null
@@ -158,8 +158,8 @@ export function buildBezierCanvasEdgeGeometryFromEdge(
 }
 
 export function getBezierCanvasEdgeBounds(
-  edge: Edge,
-  nodesById: ReadonlyMap<string, Node>,
+  edge: CanvasDocumentEdge,
+  nodesById: ReadonlyMap<string, CanvasDocumentNode>,
 ): Bounds | null {
   const geometry = buildBezierCanvasEdgeGeometryFromEdge(edge, nodesById)
   if (!geometry) return null
@@ -168,9 +168,9 @@ export function getBezierCanvasEdgeBounds(
 }
 
 export function bezierCanvasEdgeContainsPoint(
-  edge: Edge,
+  edge: CanvasDocumentEdge,
   point: Point2D,
-  nodesById: ReadonlyMap<string, Node>,
+  nodesById: ReadonlyMap<string, CanvasDocumentNode>,
   zoom: number,
 ): boolean {
   const geometry = buildBezierCanvasEdgeGeometryFromEdge(edge, nodesById)
@@ -196,9 +196,9 @@ export function bezierCanvasEdgeContainsPoint(
 }
 
 export function bezierCanvasEdgeIntersectsRectangle(
-  edge: Edge,
+  edge: CanvasDocumentEdge,
   rect: Bounds,
-  nodesById: ReadonlyMap<string, Node>,
+  nodesById: ReadonlyMap<string, CanvasDocumentNode>,
 ): boolean {
   const geometry = buildBezierCanvasEdgeGeometryFromEdge(edge, nodesById)
   if (!geometry) return false
@@ -213,9 +213,9 @@ export function bezierCanvasEdgeIntersectsRectangle(
 }
 
 export function bezierCanvasEdgeIntersectsPolygon(
-  edge: Edge,
+  edge: CanvasDocumentEdge,
   polygon: ReadonlyArray<Point2D>,
-  nodesById: ReadonlyMap<string, Node>,
+  nodesById: ReadonlyMap<string, CanvasDocumentNode>,
 ): boolean {
   const geometry = buildBezierCanvasEdgeGeometryFromEdge(edge, nodesById)
   if (!geometry) return false

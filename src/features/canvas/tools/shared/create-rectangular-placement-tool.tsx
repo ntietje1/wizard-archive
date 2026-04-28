@@ -7,7 +7,7 @@ import {
 } from './tool-module-utils'
 import { setRectCreationDragRect } from './rect-creation-local-overlay'
 import type { CanvasToolHandlers, CanvasToolRuntime } from '../canvas-tool-types'
-import type { CanvasNodeType } from '../../nodes/canvas-node-types'
+import type { CanvasNodeType } from '../../types/canvas-domain-types'
 
 const MIN_DRAG_RECT_SIZE = 10
 
@@ -64,7 +64,7 @@ export function createRectangularPlacementToolController<
   ) => {
     const placement = createCanvasNodePlacement(nodeType, { position })
     services.commands.createNode(placement.node)
-    if (placement.node.selected) {
+    if (placement.selectOnCreate) {
       services.selection.setSelection({ nodeIds: new Set([placement.node.id]), edgeIds: new Set() })
     }
     services.toolState.setActiveTool('select')
@@ -86,7 +86,7 @@ export function createRectangularPlacementToolController<
       size: { width: rect.width, height: rect.height },
     })
     services.commands.createNode(placement.node)
-    if (placement.node.selected) {
+    if (placement.selectOnCreate) {
       services.selection.setSelection({ nodeIds: new Set([placement.node.id]), edgeIds: new Set() })
     }
     services.toolState.setActiveTool('select')

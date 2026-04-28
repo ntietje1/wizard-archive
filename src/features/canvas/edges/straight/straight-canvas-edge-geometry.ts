@@ -12,8 +12,8 @@ import type { PolylineCanvasEdgeGeometry } from '../shared/canvas-edge-geometry'
 import type { Point2D } from '../../utils/canvas-awareness-types'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
 } from '~/features/canvas/types/canvas-domain-types'
 import type { CanvasEdgeRenderGeometryProps as EdgeProps } from '../canvas-edge-types'
 
@@ -41,8 +41,8 @@ export function buildStraightCanvasEdgeGeometryFromRenderProps(
 }
 
 export function buildStraightCanvasEdgeGeometryFromEdge(
-  edge: Edge,
-  nodesById: ReadonlyMap<string, Node>,
+  edge: CanvasDocumentEdge,
+  nodesById: ReadonlyMap<string, CanvasDocumentNode>,
 ): PolylineCanvasEdgeGeometry | null {
   const endpoints = getCanvasEdgeEndpoints(edge, nodesById)
   if (!endpoints) return null
@@ -51,8 +51,8 @@ export function buildStraightCanvasEdgeGeometryFromEdge(
 }
 
 export function getStraightCanvasEdgeBounds(
-  edge: Edge,
-  nodesById: ReadonlyMap<string, Node>,
+  edge: CanvasDocumentEdge,
+  nodesById: ReadonlyMap<string, CanvasDocumentNode>,
 ): Bounds | null {
   const geometry = buildStraightCanvasEdgeGeometryFromEdge(edge, nodesById)
   if (!geometry) return null
@@ -61,9 +61,9 @@ export function getStraightCanvasEdgeBounds(
 }
 
 export function straightCanvasEdgeContainsPoint(
-  edge: Edge,
+  edge: CanvasDocumentEdge,
   point: Point2D,
-  nodesById: ReadonlyMap<string, Node>,
+  nodesById: ReadonlyMap<string, CanvasDocumentNode>,
   zoom: number,
 ): boolean {
   const geometry = buildStraightCanvasEdgeGeometryFromEdge(edge, nodesById)
@@ -87,9 +87,9 @@ export function straightCanvasEdgeContainsPoint(
 }
 
 export function straightCanvasEdgeIntersectsRectangle(
-  edge: Edge,
+  edge: CanvasDocumentEdge,
   rect: Bounds,
-  nodesById: ReadonlyMap<string, Node>,
+  nodesById: ReadonlyMap<string, CanvasDocumentNode>,
 ): boolean {
   const geometry = buildStraightCanvasEdgeGeometryFromEdge(edge, nodesById)
   if (!geometry) return false
@@ -103,9 +103,9 @@ export function straightCanvasEdgeIntersectsRectangle(
 }
 
 export function straightCanvasEdgeIntersectsPolygon(
-  edge: Edge,
+  edge: CanvasDocumentEdge,
   polygon: ReadonlyArray<Point2D>,
-  nodesById: ReadonlyMap<string, Node>,
+  nodesById: ReadonlyMap<string, CanvasDocumentNode>,
 ): boolean {
   const geometry = buildStraightCanvasEdgeGeometryFromEdge(edge, nodesById)
   if (!geometry) return false

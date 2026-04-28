@@ -5,8 +5,8 @@ import {
 } from '../step-canvas-edge-geometry'
 import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
 import type {
-  CanvasEdge as Edge,
-  CanvasNode as Node,
+  CanvasDocumentEdge as Edge,
+  CanvasDocumentNode as Node,
 } from '~/features/canvas/types/canvas-domain-types'
 
 describe('buildStepCanvasEdgeGeometryFromRenderProps', () => {

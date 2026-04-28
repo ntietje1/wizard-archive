@@ -12,14 +12,14 @@ import { boundsFromPoints, rectIntersectsBounds } from '../utils/canvas-geometry
 import type { Point2D } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-geometry-utils'
 import type { CanvasNodeSelectionContext } from './canvas-node-types'
-import type { CanvasNode } from '../types/canvas-domain-types'
+import type { CanvasDocumentNode } from '../types/canvas-domain-types'
 
-function getSelectionNode(node: CanvasNode): AnyNormalizedCanvasNode | null {
+function getSelectionNode(node: CanvasDocumentNode): AnyNormalizedCanvasNode | null {
   return normalizeCanvasNode(node)
 }
 
 function getStrokeSelectionCandidateBounds(
-  node: CanvasNode,
+  node: CanvasDocumentNode,
   context: CanvasNodeSelectionContext,
 ): Bounds | null {
   if (node.type !== 'stroke') {
@@ -41,7 +41,7 @@ function getStrokeSelectionCandidateBounds(
 }
 
 function getCanvasRectangleCandidateBounds(
-  node: CanvasNode,
+  node: CanvasDocumentNode,
   context: CanvasNodeSelectionContext,
 ): Bounds | null {
   const strokeBounds = getStrokeSelectionCandidateBounds(node, context)
@@ -53,9 +53,9 @@ function getCanvasRectangleCandidateBounds(
 }
 
 function isCanvasSelectionCandidate(
-  node: CanvasNode,
+  node: CanvasDocumentNode,
   candidateBounds: Bounds | null,
-  getBounds: (node: CanvasNode) => Bounds | null,
+  getBounds: (node: CanvasDocumentNode) => Bounds | null,
 ): boolean {
   if (!candidateBounds) {
     return true
@@ -66,7 +66,7 @@ function isCanvasSelectionCandidate(
 }
 
 export function findCanvasNodeAtPoint(
-  nodes: ReadonlyArray<CanvasNode>,
+  nodes: ReadonlyArray<CanvasDocumentNode>,
   point: Point2D,
   context: CanvasNodeSelectionContext,
 ): string | null {
@@ -82,12 +82,13 @@ export function findCanvasNodeAtPoint(
 }
 
 export function getCanvasNodesMatchingRectangle(
-  nodes: ReadonlyArray<CanvasNode>,
+  nodes: ReadonlyArray<CanvasDocumentNode>,
   rect: Bounds,
   context: CanvasNodeSelectionContext,
 ): ReadonlySet<string> {
   const matchingIds = new Set<string>()
-  const getBounds = (candidate: CanvasNode) => getCanvasRectangleCandidateBounds(candidate, context)
+  const getBounds = (candidate: CanvasDocumentNode) =>
+    getCanvasRectangleCandidateBounds(candidate, context)
   for (const node of nodes) {
     if (!isCanvasSelectionCandidate(node, rect, getBounds)) {
       continue
@@ -103,7 +104,7 @@ export function getCanvasNodesMatchingRectangle(
 }
 
 export function getCanvasNodesMatchingLasso(
-  nodes: ReadonlyArray<CanvasNode>,
+  nodes: ReadonlyArray<CanvasDocumentNode>,
   polygon: ReadonlyArray<Point2D>,
   context: CanvasNodeSelectionContext,
 ): ReadonlySet<string> {
