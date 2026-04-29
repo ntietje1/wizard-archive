@@ -13,7 +13,6 @@ import {
 import { useCanvasModifierKeys } from '../../runtime/interaction/use-canvas-modifier-keys'
 import { releasePointerCapture } from '../../tools/shared/tool-module-utils'
 import { affectsCanvasResizeAxis, resolveCanvasResize } from '../../system/canvas-resize-geometry'
-import { getResizeHandlePoint } from '../../system/canvas-resize-handles'
 import { useCanvasEngine, useCanvasEngineSelector } from '../../react/use-canvas-engine'
 import type { CanvasNodeResizeMetadata } from './canvas-node-resize-metadata'
 import type { CanvasResizeHandlePosition } from '../../system/canvas-resize-geometry'
@@ -76,7 +75,6 @@ interface CanvasSelectionResizeSession {
 
 export interface CanvasSelectionResizeZoneDescriptor {
   cursorClassName: string
-  onKeyboardStart: (target: HTMLButtonElement) => void
   onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => void
   position: CanvasResizeHandlePosition
   style: CSSProperties
@@ -326,8 +324,8 @@ export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
       const resizeTarget = resizeTargetRef.current
       if (resizeTarget) {
         releasePointerCapture(resizeTarget.target, resizeTarget.pointerId)
-        resizeTargetRef.current = null
       }
+      resizeTargetRef.current = null
       activeResizeRef.current = null
     }
   }, [removeWindowListeners])
@@ -344,7 +342,7 @@ export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
   const startSelectionResize = (
     position: CanvasResizeHandlePosition,
     target: HTMLButtonElement,
-    pointerId: number | null,
+    pointerId: number,
   ) => {
     const startSelection = getSelectedResizeNodes(
       canvasEngineRef.current.getSnapshot(),
@@ -355,14 +353,10 @@ export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
     }
 
     const minimumSize = getMinimumSelectionResizeSize(startSelection)
-    if (pointerId !== null) {
-      target.setPointerCapture(pointerId)
-      resizeTargetRef.current = {
-        pointerId,
-        target,
-      }
-    } else {
-      resizeTargetRef.current = null
+    target.setPointerCapture(pointerId)
+    resizeTargetRef.current = {
+      pointerId,
+      target,
     }
     activeResizeRef.current = {
       handlePosition: position,
@@ -370,8 +364,7 @@ export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
       startBounds: startSelection.bounds,
       minWidth: minimumSize.width,
       minHeight: minimumSize.height,
-      currentPoint:
-        pointerId === null ? getResizeHandlePoint(startSelection.bounds, position) : null,
+      currentPoint: null,
       targetBounds: canvasEngineRef.current
         .getSnapshot()
         .nodes.filter(
@@ -383,18 +376,13 @@ export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
           return bounds ? [bounds] : []
         }),
     }
-    if (pointerId !== null) {
-      addWindowListeners()
-    }
+    addWindowListeners()
   }
 
   const zones = RESIZE_HANDLES.map(({ position, cursorClassName }) => ({
     position,
     cursorClassName,
     style: getResizeZoneStyle(position),
-    onKeyboardStart: (target: HTMLButtonElement) => {
-      startSelectionResize(position, target, null)
-    },
     onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => {
       if (event.button !== 0) {
         return

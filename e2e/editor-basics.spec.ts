@@ -53,6 +53,78 @@ test.describe.serial('editor basics', () => {
     await expect(editor).toContainText('Hello from Playwright')
   })
 
+  test('editor owns the top and bottom whitespace of the note viewport', async ({ page }) => {
+    await page.goto('/campaigns')
+    await navigateToCampaign(page, campaignName)
+    await openItem(page, noteName)
+
+    const editor = page.locator('.bn-editor').first()
+    await expect(editor).toBeVisible({ timeout: 10000 })
+
+    const TOP_EDITOR_EDGE_OFFSET_PX = 4
+    const BOTTOM_VIEWPORT_INSET_PX = 24
+
+    await expect
+      .poll(
+        async () =>
+          page.evaluate(
+            ({ bottomViewportInsetPx, topEditorEdgeOffsetPx }) => {
+              const describeElement = (element: Element | null) => {
+                if (!element) return null
+                const testId = element.getAttribute('data-testid')
+                return testId
+                  ? `${element.tagName.toLowerCase()}[data-testid="${testId}"]`
+                  : element.tagName.toLowerCase()
+              }
+
+              const editorElement = document.querySelector('.bn-editor')
+              const viewport = document.querySelector('[data-slot="scroll-area-viewport"]')
+              if (!editorElement || !viewport) {
+                return {
+                  bottomInEditor: false,
+                  bottomTarget: null,
+                  editorFound: Boolean(editorElement),
+                  topInEditor: false,
+                  topTarget: null,
+                  viewportFound: Boolean(viewport),
+                }
+              }
+
+              const editorRect = editorElement.getBoundingClientRect()
+              const viewportRect = viewport.getBoundingClientRect()
+              const x = editorRect.left + editorRect.width / 2
+              const topTarget = document.elementFromPoint(x, editorRect.top + topEditorEdgeOffsetPx)
+              const bottomTarget = document.elementFromPoint(
+                x,
+                viewportRect.bottom - bottomViewportInsetPx,
+              )
+
+              return {
+                bottomInEditor: Boolean(bottomTarget?.closest('.bn-editor')),
+                bottomTarget: describeElement(bottomTarget),
+                editorFound: true,
+                topInEditor: Boolean(topTarget?.closest('.bn-editor')),
+                topTarget: describeElement(topTarget),
+                viewportFound: true,
+              }
+            },
+            {
+              bottomViewportInsetPx: BOTTOM_VIEWPORT_INSET_PX,
+              topEditorEdgeOffsetPx: TOP_EDITOR_EDGE_OFFSET_PX,
+            },
+          ),
+        { timeout: 10000 },
+      )
+      .toEqual(
+        expect.objectContaining({
+          bottomInEditor: true,
+          editorFound: true,
+          topInEditor: true,
+          viewportFound: true,
+        }),
+      )
+  })
+
   test('slash menu creates heading', async ({ page }) => {
     await page.goto('/campaigns')
     await navigateToCampaign(page, campaignName)

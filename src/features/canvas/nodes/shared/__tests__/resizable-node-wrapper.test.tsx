@@ -132,6 +132,17 @@ describe('ResizableNodeWrapper', () => {
     expect(screen.queryAllByTestId(/canvas-selection-resize-zone-/)).toHaveLength(8)
   })
 
+  it('labels aggregate resize handles as corners or edges', () => {
+    renderSelectionResize()
+
+    expect(screen.getByTestId('canvas-selection-resize-zone-top-left')).toHaveAccessibleName(
+      'Resize top-left selection corner',
+    )
+    expect(screen.getByTestId('canvas-selection-resize-zone-top')).toHaveAccessibleName(
+      'Resize top selection edge',
+    )
+  })
+
   it('keeps individual selected-node borders screen-constant with zoom-aware local styles', () => {
     const runtime = renderSelectionResize({
       nodes: [

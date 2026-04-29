@@ -26,6 +26,12 @@ describe('RectCreationLocalOverlayLayer', () => {
 
     const rect = container.querySelector('rect')
     expect(rect).not.toBeNull()
+    if (typeof SVGRectElement === 'undefined') {
+      expect(rect?.namespaceURI).toBe('http://www.w3.org/2000/svg')
+      expect(rect?.tagName.toLowerCase()).toBe('rect')
+    } else {
+      expect(rect).toBeInstanceOf(SVGRectElement)
+    }
     const rectEl = rect as SVGRectElement
     expect(rectEl).toHaveAttribute('x', '15')
     expect(rectEl).toHaveAttribute('y', '48')

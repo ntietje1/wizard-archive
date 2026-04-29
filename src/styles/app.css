@@ -374,15 +374,40 @@
 
 /* BlockNote editor - fill available height */
 .note-editor-fill-height {
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 100%;
+  width: 100%;
+}
+
+.note-editor-scroll-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100%;
+  width: 100%;
+}
+
+.note-editor-scroll-content > .note-editor-fill-height {
+  flex: 1 0 auto;
+}
+
+.note-editor-fill-height > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
 }
 
 .note-editor-fill-height .bn-container {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  width: 100%;
 }
 
 .note-editor-fill-height .bn-editor {
@@ -390,11 +415,31 @@
   display: flex;
   flex-direction: column;
   border-radius: 0;
+  min-height: 0;
+  width: 100%;
+}
+
+.note-editor-surface .bn-block-outer {
+  width: 100%;
+  max-width: 48rem;
+  margin-inline: auto;
+}
+
+.note-editor-surface .bn-editor {
+  padding-top: 0.5rem;
 }
 
 :root .canvas-rich-text-editor {
   --bn-colors-editor-background: transparent;
   background-color: transparent;
+}
+
+:root .canvas-node-shell[data-node-type='embed'] .bn-container,
+:root .canvas-node-shell[data-node-type='embed'] .bn-editor {
+  --bn-colors-editor-background: transparent;
+  background-color: transparent;
+  width: 100%;
+  height: 100%;
 }
 
 @layer utilities {

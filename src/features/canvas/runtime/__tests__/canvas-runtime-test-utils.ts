@@ -123,7 +123,6 @@ export function createCanvasRuntime(
     domRuntime: domRuntimeOverride,
     remoteHighlights = new Map<string, RemoteHighlight>(),
     canEdit = true,
-    ...otherOverrides
   } = overrides
   if (canvasEngineOverride && !domRuntimeOverride) {
     throw new Error('createCanvasRuntime requires domRuntime when canvasEngine is overridden')
@@ -218,6 +217,5 @@ export function createCanvasRuntime(
     selection,
     viewportController,
     commands,
-    ...otherOverrides,
   }
 }

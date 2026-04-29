@@ -78,9 +78,9 @@ vi.mock('../../shared/use-canvas-editable-node-session', () => ({
     editable: false,
     isSelected: false,
     isExclusivelySelected: false,
-    lifecycle: {},
     handleDoubleClick: vi.fn(),
     handleActivated: vi.fn(),
+    pendingActivationRef: { current: null },
   }),
 }))
 

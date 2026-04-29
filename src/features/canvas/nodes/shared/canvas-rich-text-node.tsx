@@ -108,8 +108,8 @@ export function CanvasRichTextNode({
     content,
     enabled: !hasInvalidContent,
     editable: editableSession.editable,
-    lifecycle: editableSession.lifecycle,
     onActivated: editableSession.handleActivated,
+    pendingActivationRef: editableSession.pendingActivationRef,
     onPersistContent: (nextContent) => {
       patchNodeData(new Map([[id, { content: nextContent }]]))
     },

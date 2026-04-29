@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react'
 import type {
+  PendingRichEmbedActivationRef,
   RichEmbedActivationPayload,
-  RichEmbedLifecycleController,
 } from '../embed/use-rich-embed-lifecycle'
 import { useCanvasInteractionServices } from '../../runtime/providers/canvas-runtime'
 import { useCanvasEngineSelector } from '../../react/use-canvas-engine'
@@ -28,7 +28,8 @@ export function useCanvasEditableNodeSession({
   )
   const [selectedNodeIds, isSelected] = selectionState
   const isExclusivelySelected = isExclusivelySelectedNode(selectedNodeIds, id)
-  const pendingActivationRef = useRef<RichEmbedActivationPayload | null>(null)
+  const pendingActivationRef: PendingRichEmbedActivationRef =
+    useRef<RichEmbedActivationPayload | null>(null)
   const editFrameRef = useRef<number | null>(null)
   const hasPendingAutoEdit = editSession.pendingEditNodeId === id
 
@@ -105,12 +106,12 @@ export function useCanvasEditableNodeSession({
   ])
 
   const startEditing = useCallback(
-    (point?: { x: number; y: number } | null) => {
+    (point?: RichEmbedActivationPayload | null) => {
       if (!canEdit || !isExclusivelySelected) {
         return
       }
 
-      pendingActivationRef.current = point ? { point } : null
+      pendingActivationRef.current = point ?? null
       scheduleEditingChange(true)
     },
     [canEdit, isExclusivelySelected, scheduleEditingChange],
@@ -122,7 +123,9 @@ export function useCanvasEditableNodeSession({
 
   const handleDoubleClick = useCallback(
     (event: Pick<React.MouseEvent, 'clientX' | 'clientY'>) => {
-      startEditing({ x: event.clientX, y: event.clientY })
+      startEditing({
+        point: { x: event.clientX, y: event.clientY },
+      })
     },
     [startEditing],
   )
@@ -142,9 +145,9 @@ export function useCanvasEditableNodeSession({
     hasPendingAutoEdit,
     isExclusivelySelected,
     isSelected,
-    lifecycle: { pendingActivationRef } satisfies RichEmbedLifecycleController,
     handleActivated,
     handleDoubleClick,
+    pendingActivationRef,
     startEditing,
     stopEditing,
   }

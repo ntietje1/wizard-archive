@@ -47,11 +47,7 @@ function cloneStrokeNodeData(data: StrokeNodeData): StrokeNodeData {
     return structuredClone(data)
   }
 
-  return {
-    ...data,
-    points: data.points.map((point) => [...point]),
-    bounds: { ...data.bounds },
-  }
+  return JSON.parse(JSON.stringify(data)) as StrokeNodeData
 }
 
 export function createCanvasDomRegistry(): CanvasDomRegistry {

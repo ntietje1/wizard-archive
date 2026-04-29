@@ -308,7 +308,7 @@ function readCanvasDocumentEdge(edge: unknown): CanvasDocumentEdge | null {
 
   const parsedEdge = parseCanvasDocumentEdge(edge)
   if (parsedEdge) {
-    return parsedEdge as CanvasDocumentEdge
+    return parsedEdge
   }
 
   warnMalformedCanvasDocumentValue('edge', edge)

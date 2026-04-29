@@ -2,7 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { CANVAS_HANDLE_POSITION } from '../../types/canvas-domain-types'
 import type { CanvasEngine } from '../../system/canvas-engine'
 import type { CanvasConnection, CanvasHandlePosition } from '../../types/canvas-domain-types'
-import type { CanvasConnectionDraft } from './canvas-connection-gesture-types'
+import type {
+  CanvasConnectionDraft,
+  CanvasConnectionDraftEndpoint,
+} from './canvas-connection-gesture-types'
 import type { PointerEvent as ReactPointerEvent, RefObject } from 'react'
 
 const CONNECTION_HANDLE_SNAP_RADIUS = 20
@@ -191,11 +194,11 @@ function resolveConnectionSnapTarget({
   canvasEngine: CanvasEngine
   event: PointerEvent
   paneRef: RefObject<HTMLDivElement | null>
-  source: CanvasConnectionDraft['source']
-}): CanvasConnectionDraft['snapTarget'] {
+  source: CanvasConnectionDraftEndpoint
+}): CanvasConnectionDraftEndpoint | null {
   const root = paneRef.current ?? document
   const handles = root.querySelectorAll('[data-canvas-node-handle="true"]')
-  let closest: CanvasConnectionDraft['snapTarget'] = null
+  let closest: CanvasConnectionDraftEndpoint | null = null
   let closestDistance = Number.POSITIVE_INFINITY
 
   for (const element of handles) {

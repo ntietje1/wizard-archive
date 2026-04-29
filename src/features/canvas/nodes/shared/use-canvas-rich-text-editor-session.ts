@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
-import type { RichEmbedLifecycleController } from '../embed/use-rich-embed-lifecycle'
+import type { PendingRichEmbedActivationRef } from '../embed/use-rich-embed-lifecycle'
 import {
   cloneCanvasRichTextContent,
   snapshotCanvasRichTextContent,
@@ -18,7 +18,7 @@ export function useCanvasRichTextEditorSession({
   content,
   enabled = true,
   editable,
-  lifecycle,
+  pendingActivationRef,
   onActivated,
   onPersistContent,
 }: {
@@ -26,7 +26,7 @@ export function useCanvasRichTextEditorSession({
   content: CanvasRichTextContent
   enabled?: boolean
   editable: boolean
-  lifecycle: RichEmbedLifecycleController
+  pendingActivationRef: PendingRichEmbedActivationRef
   onActivated: () => void
   onPersistContent: (content: CanvasRichTextContent) => void
 }) {
@@ -81,7 +81,7 @@ export function useCanvasRichTextEditorSession({
   })
 
   useBlockNoteActivationLifecycle({
-    lifecycle,
+    pendingActivationRef,
     editable: enabled && editable,
     editor,
     onActivationErrorMessage:

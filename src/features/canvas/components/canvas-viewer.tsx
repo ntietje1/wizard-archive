@@ -164,7 +164,7 @@ const CanvasEditorContent = memo(function CanvasEditorContent({
       <CanvasConditionalToolbar canEdit={canEdit} />
       <div
         ref={runtime.canvasSurfaceRef}
-        className="relative h-full w-full"
+        className="relative z-0 h-full w-full"
         data-testid="canvas-surface"
         role="region"
         aria-label="Canvas surface"

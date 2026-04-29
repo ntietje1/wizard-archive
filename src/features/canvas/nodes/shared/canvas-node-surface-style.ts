@@ -27,6 +27,7 @@ export interface CanvasNodeSurfaceStyleData {
 
 const DEFAULT_CANVAS_NODE_BACKGROUND_COLOR = 'var(--background)' as const
 const DEFAULT_CANVAS_NODE_BACKGROUND_OPACITY = 100 as const
+const DEFAULT_CANVAS_NODE_BORDER_OPACITY = 100 as const
 const DEFAULT_CANVAS_NODE_BORDER_STROKE = 'var(--border)' as const
 const DEFAULT_CANVAS_NODE_BORDER_WIDTH = 1 as const
 
@@ -46,6 +47,10 @@ function readCanvasNodeSurfaceOpacity(value: unknown): number {
   return parseCanvasNodeSurfaceOpacity(value, DEFAULT_CANVAS_NODE_BACKGROUND_OPACITY)
 }
 
+function readCanvasNodeBorderOpacity(value: unknown): number {
+  return parseCanvasNodeSurfaceOpacity(value, DEFAULT_CANVAS_NODE_BORDER_OPACITY)
+}
+
 function readCanvasNodeBorderWidth(value: unknown): number {
   return parseCanvasNodeBorderWidth(value, DEFAULT_CANVAS_NODE_BORDER_WIDTH)
 }
@@ -59,7 +64,7 @@ export function normalizeCanvasNodeSurfaceStyleData(
     backgroundOpacity: readCanvasNodeSurfaceOpacity(data?.backgroundOpacity),
     borderStroke:
       readCanvasNodeSurfaceColor(data?.borderStroke) ?? DEFAULT_CANVAS_NODE_BORDER_STROKE,
-    borderOpacity: readCanvasNodeSurfaceOpacity(data?.borderOpacity),
+    borderOpacity: readCanvasNodeBorderOpacity(data?.borderOpacity),
     borderWidth: readCanvasNodeBorderWidth(data?.borderWidth),
   }
 }

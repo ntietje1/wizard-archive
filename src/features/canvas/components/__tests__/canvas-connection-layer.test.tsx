@@ -14,6 +14,7 @@ import { CanvasEngineProvider } from '../../react/canvas-engine-context'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import { createCanvasEngine } from '../../system/canvas-engine'
 import type { CanvasEngine } from '../../system/canvas-engine'
+import type { CSSProperties } from 'react'
 import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
 import type {
   CanvasDocumentEdge as Edge,
@@ -196,6 +197,44 @@ describe('CanvasConnectionLayer', () => {
     render(
       <CanvasEngineProvider engine={engine}>
         <svg>
+          <CanvasConnectionLayer
+            draft={{
+              pointerId: 1,
+              source: {
+                nodeId: 'source',
+                handleId: 'right',
+                position: CANVAS_HANDLE_POSITION.Right,
+                point: { x: 100, y: 25 },
+              },
+              current: { x: 150, y: 40 },
+              snapTarget: null,
+            }}
+          />
+        </svg>
+      </CanvasEngineProvider>,
+    )
+
+    expect(screen.getByTestId('canvas-connection-preview')).toHaveStyle({
+      strokeWidth: 'max(1px, calc(1px / max(var(--canvas-zoom, 1), 0.0001)))',
+    })
+  })
+
+  it.each([
+    ['zero zoom', '0'],
+    ['negative zoom', '-1'],
+    ['sub-floor zoom', '0.00005'],
+    ['undefined zoom', undefined],
+  ])('keeps connection preview stroke width guarded for %s', (_, canvasZoom) => {
+    engine = createCanvasEngine()
+    engine.setDocumentSnapshot({ nodes: [sourceNode] })
+    useCanvasToolStore.getState().setStrokeSize(0)
+
+    const svgStyle =
+      canvasZoom === undefined ? undefined : ({ '--canvas-zoom': canvasZoom } as CSSProperties)
+
+    render(
+      <CanvasEngineProvider engine={engine}>
+        <svg style={svgStyle}>
           <CanvasConnectionLayer
             draft={{
               pointerId: 1,

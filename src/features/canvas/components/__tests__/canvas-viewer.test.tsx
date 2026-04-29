@@ -258,4 +258,28 @@ describe('CanvasEditor', () => {
 
     doc.destroy()
   })
+
+  it('keeps canvas scene overlays inside a lower stacking context than floating UI', () => {
+    const doc = new Y.Doc()
+
+    render(
+      <CanvasEditor
+        status="ready"
+        canvasId={testId<'sidebarItems'>('canvas-1')}
+        campaignId={testId<'campaigns'>('campaign-1')}
+        canEdit
+        colorMode="light"
+        parentId={null}
+        provider={null}
+        user={{ name: 'Test User', color: '#61afef' }}
+        doc={doc}
+        nodesMap={doc.getMap<CanvasDocumentNode>('nodes')}
+        edgesMap={doc.getMap<CanvasDocumentEdge>('edges')}
+      />,
+    )
+
+    expect(screen.getByTestId('canvas-surface')).toHaveClass('z-0')
+
+    doc.destroy()
+  })
 })

@@ -136,6 +136,10 @@ export function patchCanvasNodeDataCommand({
               ...existing,
               data: { ...existing.data, ...data } as typeof existing.data,
             } satisfies CanvasDocumentNode
+          default: {
+            const _exhaustive: never = existing
+            throw new Error(`Unhandled canvas node type in patchNodeData: ${String(_exhaustive)}`)
+          }
         }
       },
     })

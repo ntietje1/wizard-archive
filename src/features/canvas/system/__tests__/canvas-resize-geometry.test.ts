@@ -131,6 +131,19 @@ describe('resolveCanvasResize', () => {
     })
   })
 
+  it('does not snap when the pointer is outside the scaled snap threshold', () => {
+    const result = resize({
+      currentPoint: { x: 104, y: 43 },
+      startBounds: { x: 0, y: 0, width: 100, height: 40 },
+      targetBounds: [{ x: 110, y: 100, width: 20, height: 40 }],
+      snap: true,
+      zoom: 2,
+    })
+
+    expect(result.bounds.width).toBe(104)
+    expect(result.guides).toHaveLength(0)
+  })
+
   it('chooses the closest overlapping resize snap target', () => {
     const result = resize({
       currentPoint: { x: 108, y: 43 },

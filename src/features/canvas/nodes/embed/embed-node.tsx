@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import type { RichEmbedLifecycleController } from './use-rich-embed-lifecycle'
+import type { PendingRichEmbedActivationRef } from './use-rich-embed-lifecycle'
 import { normalizeEmbedNodeData } from './embed-node-data'
 import {
   useCanvasDomRuntime,
@@ -102,9 +102,9 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
               isEditing={isEditing}
               isExclusivelySelected={editableSession.isExclusivelySelected}
               interactiveRenderMode={interactiveRenderMode}
-              lifecycle={editableSession.lifecycle}
               onActivated={editableSession.handleActivated}
               onEditorChange={setEditor}
+              pendingActivationRef={editableSession.pendingActivationRef}
             />
           </div>
         )}
@@ -155,18 +155,18 @@ function EmbedRichContent({
   isEditing,
   isExclusivelySelected,
   interactiveRenderMode,
-  lifecycle,
   onActivated,
   onEditorChange,
+  pendingActivationRef,
 }: {
   nodeId: string
   contentItem: AnySidebarItemWithContent | undefined
   isEditing: boolean
   isExclusivelySelected: boolean
   interactiveRenderMode: boolean
-  lifecycle: RichEmbedLifecycleController
   onActivated: () => void
   onEditorChange: (editor: CustomBlockNoteEditor | null) => void
+  pendingActivationRef: PendingRichEmbedActivationRef
 }): React.ReactElement | null {
   if (!contentItem) {
     return (
@@ -183,9 +183,9 @@ function EmbedRichContent({
         content={contentItem.content}
         editable={isEditing}
         isExclusivelySelected={isExclusivelySelected}
-        lifecycle={lifecycle}
         onActivated={onActivated}
         onCanvasEditorChange={onEditorChange}
+        pendingActivationRef={pendingActivationRef}
       />
     )
   }

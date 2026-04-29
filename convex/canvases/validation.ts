@@ -234,18 +234,24 @@ const canvasDocumentNodeBaseSchema = z
 export const canvasDocumentNodeSchema: z.ZodType<CanvasDocumentNode> = z.discriminatedUnion(
   'type',
   [
-    canvasDocumentNodeBaseSchema.extend({
-      type: z.literal('embed'),
-      data: canvasEmbedNodeDataSchema,
-    }),
-    canvasDocumentNodeBaseSchema.extend({
-      type: z.literal('stroke'),
-      data: canvasStrokeNodeDataSchema,
-    }),
-    canvasDocumentNodeBaseSchema.extend({
-      type: z.literal('text'),
-      data: canvasTextNodeDataSchema,
-    }),
+    canvasDocumentNodeBaseSchema
+      .extend({
+        type: z.literal('embed'),
+        data: canvasEmbedNodeDataSchema,
+      })
+      .strict(),
+    canvasDocumentNodeBaseSchema
+      .extend({
+        type: z.literal('stroke'),
+        data: canvasStrokeNodeDataSchema,
+      })
+      .strict(),
+    canvasDocumentNodeBaseSchema
+      .extend({
+        type: z.literal('text'),
+        data: canvasTextNodeDataSchema,
+      })
+      .strict(),
   ],
 )
 
