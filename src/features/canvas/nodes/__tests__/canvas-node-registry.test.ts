@@ -92,7 +92,7 @@ describe('canvas node specs', () => {
         } as never),
         patchNodeData,
       ).bindings.map((binding) => binding.definition.id),
-    ).toEqual(['fill', 'linePaint', 'strokeSize'])
+    ).toEqual(['textColor', 'fill', 'linePaint', 'strokeSize'])
   })
 
   it('throws when a node spec has no default data and none is provided', () => {

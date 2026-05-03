@@ -3,6 +3,7 @@ import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { PendingRichEmbedActivationRef } from './use-rich-embed-lifecycle'
 import { normalizeEmbedNodeData } from './embed-node-data'
 import {
+  useCanvasDocumentServices,
   useCanvasDomRuntime,
   useCanvasInteractionServices,
 } from '../../runtime/providers/canvas-runtime'
@@ -10,6 +11,7 @@ import { ResizableNodeWrapper } from '../shared/resizable-node-wrapper'
 import type { EmbedNodeData } from './embed-node-data'
 import { EmbedNoteContent } from './embed-note-content'
 import { CanvasFloatingFormattingToolbar } from '../shared/canvas-floating-formatting-toolbar'
+import { registerCanvasRichTextFormattingSession } from '../shared/canvas-rich-text-formatting-session'
 import { useCanvasEditableNodeSession } from '../shared/use-canvas-editable-node-session'
 import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
 import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
@@ -17,7 +19,11 @@ import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { cn } from '~/features/shadcn/lib/utils'
 import { CanvasNodeConnectionHandles } from '../shared/canvas-node-connection-handles'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
-import { getCanvasNodeSurfaceStyle } from '../shared/canvas-node-surface-style'
+import {
+  getCanvasNodeDefaultTextColor,
+  getCanvasNodeSurfaceStyle,
+  getCanvasNodeTextStyle,
+} from '../shared/canvas-node-surface-style'
 import { SidebarItemPreviewContent } from '~/features/previews/components/sidebar-item-preview-content'
 import { resolveFilePreviewImageUrl } from '~/features/editor/components/viewer/file/file-preview-source'
 import { EmbeddedCanvasContent } from './embedded-canvas-content'
@@ -26,9 +32,18 @@ import { EmbeddedMapContent } from './embedded-map-content'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 import { useCanvasViewportZoom } from '../../react/use-canvas-engine'
 import type { CanvasNodeComponentProps } from '../canvas-node-types'
+import type { CanvasDocumentWriter } from '../../tools/canvas-tool-types'
 
 const EMBED_FLOATING_LABEL_GAP_PX = 6
 const EMBED_FLOATING_LABEL_LINE_HEIGHT_PX = 16
+
+function persistEmbedTextColor(
+  patchNodeData: CanvasDocumentWriter['patchNodeData'],
+  id: string,
+  textColor: string,
+) {
+  patchNodeData(new Map([[id, { textColor }]]))
+}
 
 export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<EmbedNodeData>) {
   const normalizedData = normalizeEmbedNodeData(data)
@@ -37,6 +52,9 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
   const { itemsMap } = useActiveSidebarItems()
   const item = sidebarItemId ? itemsMap.get(sidebarItemId) : undefined
   const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
+  const {
+    documentWriter: { patchNodeData },
+  } = useCanvasDocumentServices()
   const { data: contentItem } = useSidebarItemById(sidebarItemId)
   const domRuntime = useCanvasDomRuntime()
   const { editSession, canEdit } = useCanvasInteractionServices()
@@ -50,6 +68,7 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
   const isEditing = editableSession.editable && contentItem?.type === SIDEBAR_ITEM_TYPES.notes
   const noteEditor = contentItem?.type === SIDEBAR_ITEM_TYPES.notes ? editor : null
   const showsFormattingToolbar = isEditing && noteEditor !== null
+  const defaultTextColor = getCanvasNodeDefaultTextColor(normalizedData)
 
   const zoom = useCanvasViewportZoom()
   const label = item?.name ?? 'Missing item'
@@ -57,6 +76,21 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
   const showFloatingLabel = !showsFormattingToolbar
 
   useEffect(() => domRuntime.registerNodeSurfaceElement(id, surfaceRef.current), [domRuntime, id])
+
+  useEffect(() => {
+    if (!showsFormattingToolbar || !noteEditor) {
+      return
+    }
+
+    return registerCanvasRichTextFormattingSession({
+      nodeId: id,
+      editor: noteEditor,
+      defaultTextColor,
+      setDefaultTextColor: (textColor) => {
+        persistEmbedTextColor(patchNodeData, id, textColor)
+      },
+    })
+  }, [defaultTextColor, id, noteEditor, patchNodeData, showsFormattingToolbar])
 
   return (
     <ResizableNodeWrapper
@@ -69,7 +103,14 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
       editing={showsFormattingToolbar}
       chrome={
         <>
-          <CanvasFloatingFormattingToolbar editor={noteEditor} visible={showsFormattingToolbar} />
+          <CanvasFloatingFormattingToolbar
+            defaultTextColor={defaultTextColor}
+            editor={noteEditor}
+            onDefaultTextColorChange={(textColor) => {
+              persistEmbedTextColor(patchNodeData, id, textColor)
+            }}
+            visible={showsFormattingToolbar}
+          />
           <CanvasNodeConnectionHandles />
           {showFloatingLabel && (
             <EmbedFloatingLabel label={label} missing={isMissing} zoom={zoom} />
@@ -83,7 +124,10 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
           'relative h-full w-full overflow-hidden rounded-lg',
           isEditing ? 'select-text' : 'select-none',
         )}
-        style={getCanvasNodeSurfaceStyle(normalizedData)}
+        style={{
+          ...getCanvasNodeSurfaceStyle(normalizedData),
+          ...getCanvasNodeTextStyle(normalizedData),
+        }}
         onDoubleClick={(event) => {
           if (!interactiveRenderMode || contentItem?.type !== SIDEBAR_ITEM_TYPES.notes) {
             return
@@ -105,6 +149,7 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
               onActivated={editableSession.handleActivated}
               onEditorChange={setEditor}
               pendingActivationRef={editableSession.pendingActivationRef}
+              textColor={normalizedData.textColor}
             />
           </div>
         )}
@@ -158,6 +203,7 @@ function EmbedRichContent({
   onActivated,
   onEditorChange,
   pendingActivationRef,
+  textColor,
 }: {
   nodeId: string
   contentItem: AnySidebarItemWithContent | undefined
@@ -167,6 +213,7 @@ function EmbedRichContent({
   onActivated: () => void
   onEditorChange: (editor: CustomBlockNoteEditor | null) => void
   pendingActivationRef: PendingRichEmbedActivationRef
+  textColor: string | null
 }): React.ReactElement | null {
   if (!contentItem) {
     return (
@@ -186,6 +233,7 @@ function EmbedRichContent({
         onActivated={onActivated}
         onCanvasEditorChange={onEditorChange}
         pendingActivationRef={pendingActivationRef}
+        textColor={textColor}
       />
     )
   }

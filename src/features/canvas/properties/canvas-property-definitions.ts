@@ -39,8 +39,20 @@ function createPaintOptions(
   ]
 }
 
-const DEFAULT_STROKE_VALUE = createPaintValue('var(--foreground)')
+const DEFAULT_FOREGROUND_VALUE = createPaintValue('var(--foreground)')
+const DEFAULT_STROKE_VALUE = DEFAULT_FOREGROUND_VALUE
 const DEFAULT_FILL_VALUE = createPaintValue('var(--background)')
+const DEFAULT_TEXT_VALUE = DEFAULT_FOREGROUND_VALUE
+
+export const textColorCanvasProperty: CanvasPaintPropertyDefinition = {
+  id: 'textColor',
+  kind: 'paint',
+  label: 'Text',
+  equals: areCanvasPaintValuesEqual,
+  defaultValue: DEFAULT_TEXT_VALUE,
+  options: createColorPresets(BASE_TEXT_COLORS),
+  showOpacity: false,
+}
 
 export const linePaintCanvasProperty: CanvasPaintPropertyDefinition = {
   id: 'linePaint',
@@ -48,7 +60,7 @@ export const linePaintCanvasProperty: CanvasPaintPropertyDefinition = {
   label: 'Stroke',
   equals: areCanvasPaintValuesEqual,
   defaultValue: DEFAULT_STROKE_VALUE,
-  options: createPaintOptions(DEFAULT_STROKE_VALUE, BASE_TEXT_COLORS),
+  options: createColorPresets(BASE_TEXT_COLORS),
 }
 
 export const fillCanvasProperty: CanvasPaintPropertyDefinition = {

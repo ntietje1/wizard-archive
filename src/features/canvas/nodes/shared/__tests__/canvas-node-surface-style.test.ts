@@ -40,12 +40,37 @@ describe('canvas-node-surface-style', () => {
           borderOpacity: -10,
         }),
       ).toEqual({
+        textColor: 'var(--foreground)',
         backgroundColor: 'var(--background)',
         backgroundOpacity: 100,
         borderStroke: '',
         borderOpacity: 0,
         borderWidth: 1,
       })
+    })
+
+    it('normalizes empty text color to the default text color', () => {
+      expect(normalizeCanvasNodeSurfaceStyleData({ textColor: '' }).textColor).toBe(
+        'var(--foreground)',
+      )
+    })
+
+    it('normalizes nullish text colors to the default text color', () => {
+      expect(normalizeCanvasNodeSurfaceStyleData({ textColor: null }).textColor).toBe(
+        'var(--foreground)',
+      )
+      expect(normalizeCanvasNodeSurfaceStyleData({ textColor: undefined }).textColor).toBe(
+        'var(--foreground)',
+      )
+    })
+
+    it('normalizes whitespace and invalid text colors to the default text color', () => {
+      expect(normalizeCanvasNodeSurfaceStyleData({ textColor: '  ' }).textColor).toBe(
+        'var(--foreground)',
+      )
+      expect(normalizeCanvasNodeSurfaceStyleData({ textColor: 'invalid-color' }).textColor).toBe(
+        'var(--foreground)',
+      )
     })
   })
 

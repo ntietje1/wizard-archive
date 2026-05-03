@@ -6,10 +6,15 @@ import { extractCanvasRichTextPlainText } from './canvas-rich-text-editor'
 import type { CanvasRichTextPartialBlock } from './canvas-rich-text-editor'
 import type { CanvasRichTextNodeData } from './canvas-rich-text-node-data'
 import { CanvasFloatingFormattingToolbar } from './canvas-floating-formatting-toolbar'
+import { registerCanvasRichTextFormattingSession } from './canvas-rich-text-formatting-session'
 import { CanvasRichTextView } from './canvas-rich-text-view'
 import { useCanvasEditableNodeSession } from './use-canvas-editable-node-session'
 import { useCanvasRichTextEditorSession } from './use-canvas-rich-text-editor-session'
-import { getCanvasNodeSurfaceStyle } from './canvas-node-surface-style'
+import {
+  getCanvasNodeDefaultTextColor,
+  getCanvasNodeSurfaceStyle,
+  getCanvasNodeTextStyle,
+} from './canvas-node-surface-style'
 import {
   useCanvasDocumentServices,
   useCanvasDomRuntime,
@@ -19,6 +24,7 @@ import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-ca
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { cn } from '~/features/shadcn/lib/utils'
 import type { CanvasNodeComponentProps } from '../canvas-node-types'
+import type { CanvasDocumentWriter } from '../../tools/canvas-tool-types'
 
 interface CanvasRichTextNodeVariant {
   nodeType: 'text'
@@ -31,11 +37,18 @@ interface CanvasRichTextNodeVariant {
   containerClassName: string
   contentClassName: string
   textClassName: string
-  textColor: string
 }
 
 interface CanvasRichTextNodeComponentProps extends CanvasNodeComponentProps<CanvasRichTextNodeData> {
   variant: CanvasRichTextNodeVariant
+}
+
+function persistCanvasRichTextDefaultTextColor(
+  patchNodeData: CanvasDocumentWriter['patchNodeData'],
+  id: string,
+  textColor: string,
+) {
+  patchNodeData(new Map([[id, { textColor }]]))
 }
 
 function CanvasRichTextPreview({
@@ -49,11 +62,7 @@ function CanvasRichTextPreview({
   invalid: boolean
   variant: Pick<
     CanvasRichTextNodeVariant,
-    | 'containerClassName'
-    | 'contentClassName'
-    | 'textClassName'
-    | 'textColor'
-    | 'invalidContentLabel'
+    'containerClassName' | 'contentClassName' | 'textClassName' | 'invalidContentLabel'
   >
 }) {
   const plainText = invalid ? '' : extractCanvasRichTextPlainText(content)
@@ -61,7 +70,7 @@ function CanvasRichTextPreview({
   return (
     <div
       className={cn('h-full w-full overflow-hidden', variant.containerClassName)}
-      style={getContainerStyle(data, variant.textColor)}
+      style={getContainerStyle(data)}
     >
       <div className={variant.contentClassName}>
         {invalid ? (
@@ -115,8 +124,24 @@ export function CanvasRichTextNode({
     },
   })
   const showsFormattingToolbar = editableSession.editable && editorSession.editor !== null
+  const defaultTextColor = getCanvasNodeDefaultTextColor(data)
 
   useEffect(() => domRuntime.registerNodeSurfaceElement(id, wrapperRef.current), [domRuntime, id])
+
+  useEffect(() => {
+    if (!showsFormattingToolbar || !editorSession.editor) {
+      return
+    }
+
+    return registerCanvasRichTextFormattingSession({
+      nodeId: id,
+      editor: editorSession.editor,
+      defaultTextColor,
+      setDefaultTextColor: (textColor) => {
+        persistCanvasRichTextDefaultTextColor(patchNodeData, id, textColor)
+      },
+    })
+  }, [defaultTextColor, editorSession.editor, id, patchNodeData, showsFormattingToolbar])
 
   return (
     <ResizableNodeWrapper
@@ -129,7 +154,11 @@ export function CanvasRichTextNode({
       chrome={
         <>
           <CanvasFloatingFormattingToolbar
+            defaultTextColor={defaultTextColor}
             editor={editorSession.editor}
+            onDefaultTextColorChange={(textColor) => {
+              persistCanvasRichTextDefaultTextColor(patchNodeData, id, textColor)
+            }}
             visible={showsFormattingToolbar}
           />
           <CanvasNodeConnectionHandles />
@@ -139,7 +168,7 @@ export function CanvasRichTextNode({
       <div
         ref={wrapperRef}
         className={cn('h-full w-full overflow-hidden', variant.containerClassName)}
-        style={getContainerStyle(data, variant.textColor)}
+        style={getContainerStyle(data)}
         role="group"
         aria-label={ariaLabel}
         tabIndex={interactiveRenderMode ? 0 : -1}
@@ -192,6 +221,7 @@ export function CanvasRichTextNode({
                     '[&_.bn-editor]:h-full [&_.bn-editor]:bg-transparent',
                     '[&_.bn-editor]:outline-none [&_.bn-editor]:px-0 [&_.bn-editor]:py-0',
                   )}
+                  style={getCanvasNodeTextStyle(data)}
                 />
               </div>
             ) : (
@@ -209,9 +239,9 @@ export function CanvasRichTextNode({
   )
 }
 
-function getContainerStyle(data: CanvasRichTextNodeData, textColor: string): CSSProperties {
+function getContainerStyle(data: CanvasRichTextNodeData): CSSProperties {
   return {
     ...getCanvasNodeSurfaceStyle(data),
-    color: textColor,
+    ...getCanvasNodeTextStyle(data),
   }
 }

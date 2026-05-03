@@ -186,21 +186,25 @@ describe('canvas runtime node parsers', () => {
         sidebarItemId: 'sidebar-1',
         lockedAspectRatio: 1.25,
         backgroundOpacity: 120,
+        textColor: 'var(--t-red)',
       }),
     ).toEqual({
       sidebarItemId: 'sidebar-1',
       lockedAspectRatio: 1.25,
       backgroundOpacity: 100,
+      textColor: 'var(--t-red)',
     })
 
     expect(
       parseCanvasTextNodeData({
         content: [{ type: 'paragraph' }],
         borderWidth: 200,
+        textColor: 'var(--t-blue)',
       }),
     ).toEqual({
       content: [{ type: 'paragraph' }],
       borderWidth: 99,
+      textColor: 'var(--t-blue)',
     })
 
     expect(

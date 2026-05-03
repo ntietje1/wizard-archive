@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import {
   getCanvasEdgeInspectableProperties,
   normalizeCanvasEdge,
@@ -11,9 +12,13 @@ import {
   normalizeCanvasNode,
 } from '../nodes/canvas-node-modules'
 import type { CanvasNodeDataPatch } from '../nodes/canvas-node-modules'
+import { useCanvasRichTextFormattingSnapshot } from '../nodes/shared/canvas-rich-text-formatting-session'
+import { applyCanvasRichTextDefaultTextColor } from '../nodes/shared/canvas-rich-text-default-color'
+import { restoreCanvasRichTextSelection } from '../nodes/shared/canvas-rich-text-blocknote-adapter'
 import { measureCanvasPerformance } from '../runtime/performance/canvas-performance-metrics'
 import { canvasToolSpecs } from '../tools/canvas-tool-modules'
 import { useCanvasToolPropertyContext, useCanvasToolStore } from '../stores/canvas-tool-store'
+import { textColorCanvasProperty } from '../properties/canvas-property-definitions'
 import { useCanvasEngine, useCanvasEngineSelector } from '../react/use-canvas-engine'
 import {
   areCanvasPropertyEdgesEqual,
@@ -24,7 +29,10 @@ import {
 import { createCanvasPropertySessionController } from '../system/canvas-property-session-controller'
 import { areCanvasSelectionsEqual } from '../system/canvas-selection'
 import { resolveCanvasProperties } from '../properties/resolve-canvas-properties'
-import { EMPTY_CANVAS_INSPECTABLE_PROPERTIES } from '../properties/canvas-property-types'
+import {
+  EMPTY_CANVAS_INSPECTABLE_PROPERTIES,
+  bindCanvasPaintProperty,
+} from '../properties/canvas-property-types'
 import type {
   CanvasInspectableProperties,
   CanvasResolvedProperty,
@@ -32,6 +40,7 @@ import type {
 import type { CanvasPropertyPatchSet } from '../system/canvas-property-session-controller'
 import type { CanvasToolId, CanvasToolPropertyContext } from '../tools/canvas-tool-types'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from '../types/canvas-domain-types'
+import { useOptionalActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useShallow } from 'zustand/shallow'
 
 export function useCanvasToolbarModel() {
@@ -61,6 +70,8 @@ export function useCanvasToolbarModel() {
     })),
   )
   const toolPropertyContext = useCanvasToolPropertyContext()
+  const activeSidebarItems = useOptionalActiveSidebarItems()
+  const activeFormattingSnapshot = useCanvasRichTextFormattingSnapshot()
 
   const hasSelection = selectedNodes.length > 0 || selectedEdges.length > 0
   const hasOnlySelectedEdges = selectedNodes.length === 0 && selectedEdges.length > 0
@@ -124,6 +135,16 @@ export function useCanvasToolbarModel() {
         patchNodeDataForProperty,
         patchEdgeForProperty,
         toolPropertyContext,
+        activeFormattingSnapshot,
+        (node) => {
+          const sidebarItemId =
+            node.type === 'embed' && typeof node.data.sidebarItemId === 'string'
+              ? node.data.sidebarItemId
+              : null
+          return sidebarItemId
+            ? activeSidebarItems?.itemsMap.get(sidebarItemId)?.type === SIDEBAR_ITEM_TYPES.notes
+            : false
+        },
       ),
   )
 
@@ -248,11 +269,18 @@ function resolveProperties(
   patchNodeData: (nodeId: string, data: CanvasNodeDataPatch) => void,
   patchEdge: (edgeId: string, patch: CanvasEdgePatch) => void,
   toolPropertyContext: CanvasToolPropertyContext,
+  activeFormattingSnapshot: ReturnType<typeof useCanvasRichTextFormattingSnapshot>,
+  isNoteEmbed: (node: CanvasDocumentNode) => boolean,
 ): Array<CanvasResolvedProperty> {
   if (selectedNodes.length > 0 || selectedEdges.length > 0) {
     const selectedProperties = [
       ...selectedNodes.map<CanvasInspectableProperties>((node) =>
-        getCanvasNodeInspectableProperties(normalizeCanvasNode(node), patchNodeData),
+        getSelectedNodeInspectableProperties(
+          node,
+          patchNodeData,
+          isNoteEmbed(node),
+          activeFormattingSnapshot,
+        ),
       ),
       ...selectedEdges.map<CanvasInspectableProperties>((edge) =>
         getCanvasEdgeInspectableProperties(normalizeCanvasEdge(edge), patchEdge),
@@ -266,6 +294,65 @@ function resolveProperties(
     canvasToolSpecs[activeTool]?.properties?.(toolPropertyContext) ??
       EMPTY_CANVAS_INSPECTABLE_PROPERTIES,
   ])
+}
+
+function getSelectedNodeInspectableProperties(
+  node: CanvasDocumentNode,
+  patchNodeData: (nodeId: string, data: CanvasNodeDataPatch) => void,
+  includeTextColor: boolean,
+  activeFormattingSnapshot: ReturnType<typeof useCanvasRichTextFormattingSnapshot>,
+): CanvasInspectableProperties {
+  const properties = getCanvasNodeInspectableProperties(normalizeCanvasNode(node), patchNodeData, {
+    includeTextColor,
+  })
+  if (!activeFormattingSnapshot || activeFormattingSnapshot.nodeId !== node.id) {
+    return properties
+  }
+
+  return {
+    bindings: [
+      createActiveRichTextColorBinding(activeFormattingSnapshot),
+      ...properties.bindings.filter(
+        (binding) => binding.definition.id !== textColorCanvasProperty.id,
+      ),
+    ],
+  }
+}
+
+function createActiveRichTextColorBinding(
+  activeFormattingSnapshot: NonNullable<ReturnType<typeof useCanvasRichTextFormattingSnapshot>>,
+) {
+  const applyTextColor = (color: string) => {
+    if (activeFormattingSnapshot.hasTextSelection) {
+      restoreCanvasRichTextSelection(
+        activeFormattingSnapshot.editor,
+        activeFormattingSnapshot.selectionSnapshot,
+      )
+      activeFormattingSnapshot.editor.addStyles({ textColor: color })
+      activeFormattingSnapshot.editor.focus()
+      return
+    }
+
+    applyCanvasRichTextDefaultTextColor(
+      activeFormattingSnapshot.editor,
+      activeFormattingSnapshot.defaultTextColor,
+      color,
+      activeFormattingSnapshot.selectionSnapshot,
+    )
+    activeFormattingSnapshot.setDefaultTextColor(color)
+  }
+
+  return bindCanvasPaintProperty(textColorCanvasProperty, {
+    getPropertyValue: () => activeFormattingSnapshot.textColorValue,
+    getColor: () =>
+      activeFormattingSnapshot.textColorValue.kind === 'value'
+        ? activeFormattingSnapshot.textColorValue.value.color
+        : activeFormattingSnapshot.defaultTextColor,
+    setValue: ({ color }) => applyTextColor(color),
+    setColor: applyTextColor,
+    getOpacity: () => 100,
+    setOpacity: () => undefined,
+  })
 }
 
 function getSharedSelectedEdgeType(edges: ReadonlyArray<CanvasDocumentEdge>) {

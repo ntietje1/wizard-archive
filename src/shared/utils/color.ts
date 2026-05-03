@@ -23,6 +23,7 @@ export function getContrastColor(hexColor: string): string {
 
 export const BASE_TEXT_COLORS: ReadonlyArray<NamedColorOption> = [
   { color: 'var(--background)', label: 'Primary' },
+  { color: 'var(--border)', label: 'Border' },
   { color: 'var(--foreground)', label: 'Reverse primary' },
   { color: 'var(--t-red)', label: 'Red' },
   { color: 'var(--t-orange)', label: 'Orange' },

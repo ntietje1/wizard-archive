@@ -11,6 +11,7 @@ const sidebarItemPreviewSpy = vi.hoisted(() => vi.fn())
 const embeddedCanvasSpy = vi.hoisted(() => vi.fn())
 const embeddedFileSpy = vi.hoisted(() => vi.fn())
 const embeddedMapSpy = vi.hoisted(() => vi.fn())
+const embedNoteSpy = vi.hoisted(() => vi.fn())
 const setEditingEmbedId = vi.hoisted(() => vi.fn())
 const renderModeState = vi.hoisted(() => ({
   interactive: true,
@@ -47,7 +48,19 @@ vi.mock('../embedded-map-content', () => ({
   },
 }))
 
+vi.mock('../embed-note-content', () => ({
+  EmbedNoteContent: (props: unknown) => {
+    embedNoteSpy(props)
+    return <div data-testid="embed-note-content">embedded-note</div>
+  },
+}))
+
 vi.mock('../../../runtime/providers/canvas-runtime', () => ({
+  useCanvasDocumentServices: () => ({
+    documentWriter: {
+      patchNodeData: vi.fn(),
+    },
+  }),
   useCanvasDomRuntime: () => ({
     registerNodeSurfaceElement: vi.fn(() => vi.fn()),
   }),
@@ -99,6 +112,7 @@ vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
       ['canvas-1', { name: 'Canvas Item' }],
       ['file-1', { name: 'File Item' }],
       ['map-1', { name: 'Map Item' }],
+      ['note-1', { name: 'Note Item' }],
     ]),
   }),
 }))
@@ -110,8 +124,14 @@ vi.mock('~/features/sidebar/hooks/useSidebarItemById', () => ({
 }))
 
 vi.mock('../../shared/canvas-node-surface-style', () => ({
+  getCanvasNodeDefaultTextColor: (data?: { textColor?: string }) =>
+    data?.textColor ?? 'var(--foreground)',
+  getCanvasNodeTextStyle: () => ({
+    color: 'var(--foreground)',
+  }),
   getCanvasNodeSurfaceStyle: () => ({}),
-  normalizeCanvasNodeSurfaceStyleData: () => ({
+  normalizeCanvasNodeSurfaceStyleData: (data?: { textColor?: string }) => ({
+    textColor: data?.textColor ?? 'var(--foreground)',
     backgroundColor: 'var(--background)',
     backgroundOpacity: 100,
     borderStroke: 'var(--border)',
@@ -134,6 +154,7 @@ describe('EmbedNode', () => {
     embeddedCanvasSpy.mockReset()
     embeddedFileSpy.mockReset()
     embeddedMapSpy.mockReset()
+    embedNoteSpy.mockReset()
   })
 
   it('renders canvas embeds through the dedicated embedded canvas renderer in interactive mode', () => {
@@ -281,27 +302,50 @@ describe('EmbedNode', () => {
       width: '200%',
     })
   })
+
+  it('passes node textColor to embedded note content as the default text color', () => {
+    contentItemState.data = {
+      _id: 'note-1',
+      type: SIDEBAR_ITEM_TYPES.notes,
+      name: 'Note Item',
+      content: [],
+    }
+
+    renderEmbedNode('node-1', 'note-1', { zoom: 1 }, { textColor: 'var(--t-purple)' })
+
+    expect(screen.getByTestId('embed-note-content')).toBeInTheDocument()
+    expect(embedNoteSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        textColor: 'var(--t-purple)',
+      }),
+    )
+  })
 })
 
 function renderEmbedNode(
   id = 'node-1',
   sidebarItemId = 'canvas-1',
   viewport: { zoom: number } = { zoom: 1 },
+  data: Record<string, unknown> = {},
 ) {
   const engine = createCanvasEngine()
   engine.setViewport({ x: 0, y: 0, zoom: viewport.zoom })
 
   return render(
     <CanvasEngineProvider engine={engine}>
-      <EmbedNode {...createEmbedNodeProps(id, sidebarItemId)} />
+      <EmbedNode {...createEmbedNodeProps(id, sidebarItemId, data)} />
     </CanvasEngineProvider>,
   )
 }
 
-function createEmbedNodeProps(id: string, sidebarItemId: string): Parameters<typeof EmbedNode>[0] {
+function createEmbedNodeProps(
+  id: string,
+  sidebarItemId: string,
+  data: Record<string, unknown>,
+): Parameters<typeof EmbedNode>[0] {
   return {
     id,
-    data: { sidebarItemId: testId<'sidebarItems'>(sidebarItemId) },
+    data: { sidebarItemId: testId<'sidebarItems'>(sidebarItemId), ...data },
     dragging: false,
   } as unknown as Parameters<typeof EmbedNode>[0]
 }

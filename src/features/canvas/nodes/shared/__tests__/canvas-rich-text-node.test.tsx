@@ -17,6 +17,10 @@ import type { CanvasSelectionSnapshot } from '../../../tools/canvas-tool-types'
 const renderModeState = vi.hoisted(() => ({
   interactive: true,
 }))
+const ownedEditorState = vi.hoisted((): { editor: unknown } => ({
+  editor: null,
+}))
+const richTextViewSpy = vi.hoisted(() => vi.fn())
 
 let richTextEngine: CanvasEngine
 let richTextDomRuntime: CanvasDomRuntime
@@ -45,7 +49,14 @@ vi.mock('../use-blocknote-activation-lifecycle', () => ({
 }))
 
 vi.mock('~/features/editor/hooks/useOwnedBlockNoteEditor', () => ({
-  useOwnedBlockNoteEditor: () => null,
+  useOwnedBlockNoteEditor: () => ownedEditorState.editor,
+}))
+
+vi.mock('../canvas-rich-text-view', () => ({
+  CanvasRichTextView: (props: { style?: React.CSSProperties }) => {
+    richTextViewSpy(props)
+    return <div data-testid="canvas-rich-text-view" style={props.style} />
+  },
 }))
 
 vi.mock('~/features/shadcn/components/scroll-area', () => ({
@@ -70,6 +81,8 @@ describe('CanvasRichTextNode', () => {
     richTextEngine = runtimePair.canvasEngine
     richTextDomRuntime = runtimePair.domRuntime
     renderModeState.interactive = true
+    ownedEditorState.editor = null
+    richTextViewSpy.mockReset()
   })
 
   afterEach(() => {
@@ -119,6 +132,39 @@ describe('CanvasRichTextNode', () => {
     expect(richTextEngine.getSnapshot().selection.nodeIds).toEqual(new Set())
     expect(screen.queryByText('Empty text node')).toBeNull()
   })
+
+  it('uses node textColor as the default rendered text color', () => {
+    render(
+      <CanvasRichTextNodeHarness
+        content={[{ type: 'paragraph', content: [{ type: 'text', text: 'Colored text' }] }]}
+        textColor="var(--t-red)"
+      />,
+    )
+
+    expect(screen.getByRole('group', { name: 'Colored text' })).toHaveStyle({
+      color: 'var(--t-red)',
+    })
+  })
+
+  it('passes node textColor to the BlockNote container as the default editor text color', () => {
+    ownedEditorState.editor = createEditor()
+
+    render(
+      <CanvasRichTextNodeHarness
+        content={[{ type: 'paragraph', content: [{ type: 'text', text: 'Colored text' }] }]}
+        textColor="var(--t-blue)"
+      />,
+    )
+
+    expect(richTextViewSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        style: expect.objectContaining({
+          '--bn-colors-editor-text': 'var(--t-blue)',
+          color: 'var(--t-blue)',
+        }),
+      }),
+    )
+  })
 })
 
 const EMPTY_CONTENT: Array<never> = []
@@ -126,9 +172,11 @@ const EMPTY_CONTENT: Array<never> = []
 function CanvasRichTextNodeHarness({
   content = EMPTY_CONTENT,
   mode = 'interactive',
+  textColor,
 }: {
   content?: unknown
   mode?: 'interactive' | 'embedded-readonly'
+  textColor?: string
 }) {
   const defaultSelection = createCanvasRuntime().selection
   const [pendingEditNodeId, setPendingEditNodeId] = useState<string | null>('text-1')
@@ -138,7 +186,7 @@ function CanvasRichTextNodeHarness({
   const nodeProps = {
     id: 'text-1',
     dragging: false,
-    data: normalizeCanvasRichTextNodeData({ content }),
+    data: normalizeCanvasRichTextNodeData({ content, textColor }),
     variant: {
       nodeType: 'text',
       editAriaLabel: 'Edit text node',
@@ -185,4 +233,12 @@ function CanvasRichTextNodeHarness({
 
 function getCanvasNode() {
   return screen.getByTestId('canvas-node')
+}
+
+function createEditor() {
+  return {
+    document: [],
+    onChange: vi.fn(() => () => undefined),
+    replaceBlocks: vi.fn(),
+  }
 }

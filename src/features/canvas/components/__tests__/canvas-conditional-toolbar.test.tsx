@@ -1,6 +1,8 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasConditionalToolbar } from '../canvas-conditional-toolbar'
+import { registerCanvasRichTextFormattingSession } from '../../nodes/shared/canvas-rich-text-formatting-session'
+import type { CanvasRichTextFormattingEditor } from '../../nodes/shared/canvas-rich-text-formatting-session'
 import { CanvasEngineProvider } from '../../react/canvas-engine-context'
 import {
   createCanvasRuntime,
@@ -205,6 +207,7 @@ function createNode(
     borderStroke?: string | null
     borderOpacity?: number
     borderWidth?: number
+    textColor?: string | null
     sidebarItemId?: string
   } = {},
 ): Node {
@@ -241,6 +244,7 @@ function createNode(
       ...(options.borderStroke !== undefined ? { borderStroke: options.borderStroke } : {}),
       ...(options.borderOpacity !== undefined ? { borderOpacity: options.borderOpacity } : {}),
       ...(options.borderWidth !== undefined ? { borderWidth: options.borderWidth } : {}),
+      ...(options.textColor !== undefined ? { textColor: options.textColor } : {}),
       ...(options.sidebarItemId !== undefined ? { sidebarItemId: options.sidebarItemId } : {}),
     },
   } as Node
@@ -267,6 +271,80 @@ function createEdge(
             ...(options.strokeWidth !== undefined ? { strokeWidth: options.strokeWidth } : {}),
           }
         : undefined,
+  }
+}
+
+function createFormattingEditor({
+  hasTextSelection = true,
+  selectedCutContent,
+  selectedFullContent,
+  textColor,
+}: {
+  hasTextSelection?: boolean
+  selectedCutContent?: Array<unknown>
+  selectedFullContent?: Array<unknown>
+  textColor: string
+}) {
+  const listeners = new Set<() => void>()
+  const block = {
+    id: 'paragraph-1',
+    type: 'paragraph',
+    props: {},
+    content: selectedFullContent ?? [{ type: 'text', text: 'selection', styles: { textColor } }],
+  }
+  const cutBlock = {
+    ...block,
+    content: selectedCutContent ?? block.content,
+  }
+
+  return {
+    _tiptapEditor: {
+      view: {
+        dispatch: vi.fn(),
+        focus: vi.fn(),
+        state: {
+          doc: {},
+          selection: {
+            toJSON: vi.fn(() => null),
+          },
+          tr: {
+            setSelection: vi.fn((selection: unknown) => selection),
+          },
+        },
+      },
+    },
+    addStyles: vi.fn(),
+    document: [block],
+    focus: vi.fn(),
+    getActiveStyles: vi.fn(() => ({ textColor })),
+    getSelection: vi.fn(() => (hasTextSelection ? { blocks: [block] } : undefined)),
+    getSelectionCutBlocks: vi.fn(() => ({
+      _meta: { endPos: 0, startPos: 0 },
+      blockCutAtEnd: undefined,
+      blockCutAtStart: undefined,
+      blocks: [cutBlock],
+    })),
+    getTextCursorPosition: vi.fn(() => ({
+      block,
+      nextBlock: undefined,
+      parentBlock: undefined,
+      prevBlock: undefined,
+    })),
+    isEditable: true,
+    onChange: vi.fn((callback: () => void) => {
+      listeners.add(callback)
+      return () => listeners.delete(callback)
+    }),
+    onSelectionChange: vi.fn((callback: () => void) => {
+      listeners.add(callback)
+      return () => listeners.delete(callback)
+    }),
+    replaceBlocks: vi.fn(),
+    schema: {
+      styleSchema: {
+        textColor: { propSchema: 'string', type: 'textColor' },
+      },
+    },
   }
 }
 
@@ -487,12 +565,369 @@ describe('CanvasConditionalToolbar', () => {
     expect(transact).toHaveBeenCalledTimes(1)
   })
 
-  it('supports clearing the selected border stroke by setting opacity to zero', () => {
+  it('shows and updates text color for selected text nodes', () => {
+    const { updateNodeData } = renderToolbar()
+    const text = createNode('text', { textColor: 'var(--t-blue)' })
+    emitSelection([text])
+
+    const textGroup = screen.getByText('Text').parentElement
+    expect(textGroup).not.toBeNull()
+    expect(within(textGroup!).getByRole('button', { name: 'Select Blue color' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+
+    fireEvent.click(within(textGroup!).getByRole('button', { name: 'Select Red color' }))
+
+    expect(updateNodeData).toHaveBeenCalledWith(text.id, { textColor: 'var(--t-red)' })
+  })
+
+  it('renders mixed text color state for selected text nodes with different defaults', () => {
+    renderToolbar()
+    emitSelection([
+      createNode('text', { textColor: 'var(--t-blue)' }),
+      createNode('text', { textColor: 'var(--t-red)' }),
+    ])
+
+    const textGroup = screen.getByText('Text').parentElement
+    expect(textGroup).not.toBeNull()
+    expect(within(textGroup!).getByRole('button', { name: 'Select Blue color' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+    expect(within(textGroup!).getByRole('button', { name: 'Select Red color' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+    expect(colorPickerMock.props[0]?.mixed).toBe(true)
+  })
+
+  it('applies text color to the active rich-text selection instead of the node default', () => {
+    const { updateNodeData } = renderToolbar()
+    const editor = createFormattingEditor({
+      textColor: 'var(--t-blue)',
+    }) as unknown as CanvasRichTextFormattingEditor
+    let unregister: () => void = () => undefined
+    act(() => {
+      unregister = registerCanvasRichTextFormattingSession({
+        nodeId: 'text-0',
+        editor,
+        defaultTextColor: 'var(--t-purple)',
+        setDefaultTextColor: vi.fn(),
+      })
+    })
+
+    try {
+      emitSelection([createNode('text', { textColor: 'var(--t-purple)' })])
+
+      const textGroup = screen.getByText('Text').parentElement
+      expect(textGroup).not.toBeNull()
+      expect(within(textGroup!).getByRole('button', { name: 'Select Blue color' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
+
+      fireEvent.click(within(textGroup!).getByRole('button', { name: 'Select Red color' }))
+
+      expect(editor.addStyles).toHaveBeenCalledWith({ textColor: 'var(--t-red)' })
+      expect(editor.focus).toHaveBeenCalled()
+      expect(updateNodeData).not.toHaveBeenCalledWith('text-0', { textColor: 'var(--t-red)' })
+    } finally {
+      act(() => {
+        unregister()
+      })
+    }
+  })
+
+  it('applies custom picker text color to the active rich-text selection', () => {
+    const { updateNodeData } = renderToolbar()
+    const setDefaultTextColor = vi.fn()
+    const editor = createFormattingEditor({
+      textColor: 'var(--t-blue)',
+    }) as unknown as CanvasRichTextFormattingEditor
+    let unregister: () => void = () => undefined
+    act(() => {
+      unregister = registerCanvasRichTextFormattingSession({
+        nodeId: 'text-0',
+        editor,
+        defaultTextColor: 'var(--t-purple)',
+        setDefaultTextColor,
+      })
+    })
+
+    try {
+      emitSelection([createNode('text', { textColor: 'var(--t-purple)' })])
+
+      const textColorPicker = colorPickerMock.props[0]
+      expect(textColorPicker).toBeDefined()
+
+      act(() => {
+        ;(textColorPicker?.onChange as (value: { color: string; opacity: number }) => void)?.({
+          color: '#123456',
+          opacity: 100,
+        })
+      })
+
+      expect(editor.addStyles).toHaveBeenCalledWith({ textColor: '#123456' })
+      expect(editor.focus).toHaveBeenCalled()
+      expect(setDefaultTextColor).not.toHaveBeenCalled()
+      expect(updateNodeData).not.toHaveBeenCalledWith('text-0', { textColor: '#123456' })
+    } finally {
+      act(() => {
+        unregister()
+      })
+    }
+  })
+
+  it('uses the sliced text selection colors instead of the full selected block colors', () => {
+    renderToolbar()
+    const editor = createFormattingEditor({
+      selectedFullContent: [
+        { type: 'text', text: 'blue', styles: { textColor: 'var(--t-blue)' } },
+        { type: 'text', text: 'red', styles: { textColor: 'var(--t-red)' } },
+      ],
+      selectedCutContent: [{ type: 'text', text: 'blue', styles: { textColor: 'var(--t-blue)' } }],
+      textColor: 'var(--t-blue)',
+    }) as unknown as CanvasRichTextFormattingEditor
+    let unregister: () => void = () => undefined
+    act(() => {
+      unregister = registerCanvasRichTextFormattingSession({
+        nodeId: 'text-0',
+        editor,
+        defaultTextColor: 'var(--foreground)',
+        setDefaultTextColor: vi.fn(),
+      })
+    })
+
+    try {
+      emitSelection([createNode('text', { textColor: 'var(--foreground)' })])
+
+      const textGroup = screen.getByText('Text').parentElement
+      expect(textGroup).not.toBeNull()
+      expect(within(textGroup!).getByRole('button', { name: 'Select Blue color' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
+      expect(colorPickerMock.props[0]?.mixed).toBe(false)
+    } finally {
+      act(() => {
+        unregister()
+      })
+    }
+  })
+
+  it('preserves existing unstyled rich text when changing the active editor default color', () => {
+    const { updateNodeData } = renderToolbar()
+    const editor = createFormattingEditor({
+      hasTextSelection: false,
+      selectedFullContent: [
+        { type: 'text', text: 'existing default' },
+        { type: 'text', text: 'existing red', styles: { textColor: 'var(--t-red)' } },
+      ],
+      textColor: 'var(--t-purple)',
+    }) as unknown as CanvasRichTextFormattingEditor
+    let unregister: () => void = () => undefined
+    act(() => {
+      unregister = registerCanvasRichTextFormattingSession({
+        nodeId: 'text-0',
+        editor,
+        defaultTextColor: 'var(--t-purple)',
+        setDefaultTextColor: vi.fn((textColor: string) => {
+          updateNodeData('text-0', { textColor })
+        }),
+      })
+    })
+
+    try {
+      emitSelection([createNode('text', { textColor: 'var(--t-purple)' })])
+
+      const textGroup = screen.getByText('Text').parentElement
+      expect(textGroup).not.toBeNull()
+
+      fireEvent.click(within(textGroup!).getByRole('button', { name: 'Select Red color' }))
+
+      expect(editor.replaceBlocks).toHaveBeenCalledWith(editor.document, [
+        {
+          id: 'paragraph-1',
+          type: 'paragraph',
+          props: {},
+          content: [
+            {
+              type: 'text',
+              text: 'existing default',
+              styles: { textColor: 'var(--t-purple)' },
+            },
+            { type: 'text', text: 'existing red', styles: { textColor: 'var(--t-red)' } },
+          ],
+        },
+      ])
+      expect(editor.addStyles).toHaveBeenCalledWith({ textColor: 'var(--t-red)' })
+      expect(editor.focus).toHaveBeenCalled()
+      expect(updateNodeData).toHaveBeenCalledWith('text-0', { textColor: 'var(--t-red)' })
+    } finally {
+      act(() => {
+        unregister()
+      })
+    }
+  })
+
+  it('preserves existing default-colored rich text through the BlockNote document state', () => {
+    const { updateNodeData } = renderToolbar()
+    const editor = createFormattingEditor({
+      hasTextSelection: false,
+      selectedFullContent: [{ type: 'text', text: 'existing default' }],
+      textColor: 'var(--t-purple)',
+    }) as unknown as CanvasRichTextFormattingEditor & {
+      _tiptapEditor: {
+        view: {
+          dispatch: ReturnType<typeof vi.fn>
+          state: {
+            doc: {
+              descendants: (
+                callback: (
+                  node: { isText: boolean; marks: Array<never>; nodeSize: number },
+                  position: number,
+                ) => void,
+              ) => void
+            }
+            schema: {
+              marks: {
+                textColor: {
+                  create: ReturnType<typeof vi.fn>
+                }
+              }
+            }
+            tr: {
+              addMark: ReturnType<typeof vi.fn>
+              setSelection: ReturnType<typeof vi.fn>
+            }
+          }
+        }
+      }
+    }
+    editor._tiptapEditor.view.state.doc = {
+      descendants: vi.fn((callback) => {
+        callback({ isText: true, marks: [], nodeSize: 16 }, 1)
+      }),
+    }
+    editor._tiptapEditor.view.state.schema = {
+      marks: {
+        textColor: {
+          create: vi.fn((attributes: { stringValue: string }) => attributes),
+        },
+      },
+    }
+    editor._tiptapEditor.view.state.tr = {
+      ...editor._tiptapEditor.view.state.tr,
+      addMark: vi.fn((from: number, to: number, mark: unknown) => ({ from, mark, to })),
+    }
+    let unregister: () => void = () => undefined
+    act(() => {
+      unregister = registerCanvasRichTextFormattingSession({
+        nodeId: 'text-0',
+        editor,
+        defaultTextColor: 'var(--t-purple)',
+        setDefaultTextColor: vi.fn((textColor: string) => {
+          updateNodeData('text-0', { textColor })
+        }),
+      })
+    })
+
+    try {
+      emitSelection([createNode('text', { textColor: 'var(--t-purple)' })])
+
+      const textGroup = screen.getByText('Text').parentElement
+      expect(textGroup).not.toBeNull()
+
+      fireEvent.click(within(textGroup!).getByRole('button', { name: 'Select Red color' }))
+
+      expect(editor._tiptapEditor.view.state.doc.descendants).not.toHaveBeenCalled()
+      expect(editor._tiptapEditor.view.state.schema.marks.textColor.create).not.toHaveBeenCalled()
+      expect(editor._tiptapEditor.view.state.tr.addMark).not.toHaveBeenCalled()
+      expect(editor._tiptapEditor.view.dispatch).not.toHaveBeenCalled()
+      expect(editor.replaceBlocks).toHaveBeenCalledWith(editor.document, [
+        {
+          id: 'paragraph-1',
+          type: 'paragraph',
+          props: {},
+          content: [
+            {
+              type: 'text',
+              text: 'existing default',
+              styles: { textColor: 'var(--t-purple)' },
+            },
+          ],
+        },
+      ])
+      expect(updateNodeData).toHaveBeenCalledWith('text-0', { textColor: 'var(--t-red)' })
+    } finally {
+      act(() => {
+        unregister()
+      })
+    }
+  })
+
+  it('preserves existing default-colored rich text when changing to a custom default color', () => {
+    const { updateNodeData } = renderToolbar()
+    const editor = createFormattingEditor({
+      hasTextSelection: false,
+      selectedFullContent: [{ type: 'text', text: 'existing default' }],
+      textColor: 'var(--t-purple)',
+    }) as unknown as CanvasRichTextFormattingEditor
+    let unregister: () => void = () => undefined
+    act(() => {
+      unregister = registerCanvasRichTextFormattingSession({
+        nodeId: 'text-0',
+        editor,
+        defaultTextColor: 'var(--t-purple)',
+        setDefaultTextColor: vi.fn((textColor: string) => {
+          updateNodeData('text-0', { textColor })
+        }),
+      })
+    })
+
+    try {
+      emitSelection([createNode('text', { textColor: 'var(--t-purple)' })])
+
+      const textColorPicker = colorPickerMock.props[0]
+      expect(textColorPicker).toBeDefined()
+
+      act(() => {
+        ;(textColorPicker?.onChange as (value: { color: string; opacity: number }) => void)?.({
+          color: '#123456',
+          opacity: 100,
+        })
+      })
+
+      expect(editor.replaceBlocks).toHaveBeenCalledWith(editor.document, [
+        {
+          id: 'paragraph-1',
+          type: 'paragraph',
+          props: {},
+          content: [
+            {
+              type: 'text',
+              text: 'existing default',
+              styles: { textColor: 'var(--t-purple)' },
+            },
+          ],
+        },
+      ])
+      expect(editor.addStyles).toHaveBeenCalledWith({ textColor: '#123456' })
+      expect(updateNodeData).toHaveBeenCalledWith('text-0', { textColor: '#123456' })
+    } finally {
+      act(() => {
+        unregister()
+      })
+    }
+  })
+
+  it('supports selecting the border stroke preset', () => {
     const { updateNodeData } = renderToolbar()
 
     const text = createNode('text', {
       backgroundColor: 'var(--background)',
-      borderStroke: 'var(--border)',
+      borderStroke: 'var(--foreground)',
       borderOpacity: 100,
     })
     emitSelection([text])
@@ -500,12 +935,27 @@ describe('CanvasConditionalToolbar', () => {
     const strokeGroup = screen.getByText('Stroke').parentElement
     expect(strokeGroup).not.toBeNull()
 
-    fireEvent.click(within(strokeGroup!).getByRole('button', { name: 'Select Clear color' }))
+    fireEvent.click(within(strokeGroup!).getByRole('button', { name: 'Select Border color' }))
 
     expect(updateNodeData).toHaveBeenCalledWith(text.id, {
-      borderOpacity: 0,
-      borderStroke: 'var(--foreground)',
+      borderOpacity: 100,
+      borderStroke: 'var(--border)',
     })
+  })
+
+  it('prevents text color swatch pointer down from taking focus from the active editor', () => {
+    renderToolbar()
+    emitSelection([createNode('text', { textColor: 'var(--t-blue)' })])
+
+    const textGroup = screen.getByText('Text').parentElement
+    expect(textGroup).not.toBeNull()
+
+    const redButton = within(textGroup!).getByRole('button', { name: 'Select Red color' })
+    const event = new MouseEvent('pointerdown', { bubbles: true, cancelable: true })
+
+    redButton.dispatchEvent(event)
+
+    expect(event.defaultPrevented).toBe(true)
   })
 
   it('fans out shared opacity updates to every selected node', () => {
@@ -558,9 +1008,9 @@ describe('CanvasConditionalToolbar', () => {
     emitSelection([firstText, secondText])
 
     act(() => {
-      // props[0] is the fill color picker; border is rendered after fill.
+      // props[1] is the fill color picker; text color is rendered before fill.
       ;(
-        colorPickerMock.props[0]?.onChange as
+        colorPickerMock.props[1]?.onChange as
           | ((value: { color: string; opacity: number }) => void)
           | undefined
       )?.({
@@ -622,6 +1072,8 @@ describe('CanvasConditionalToolbar', () => {
 
     expect(within(strokeGroup!).queryByRole('button', { name: 'Select Default color' })).toBeNull()
     expect(within(strokeGroup!).getByRole('button', { name: 'Select Primary color' })).toBeVisible()
+    expect(within(strokeGroup!).getByRole('button', { name: 'Select Border color' })).toBeVisible()
+    expect(within(strokeGroup!).queryByRole('button', { name: 'Select Clear color' })).toBeNull()
   })
 
   it('shows fill, border, and stroke size controls for embed nodes', () => {
@@ -684,10 +1136,10 @@ describe('CanvasConditionalToolbar', () => {
       'aria-pressed',
       'false',
     )
-    expect(screen.getAllByTestId('color-picker-popover')).toHaveLength(2)
+    expect(screen.getAllByTestId('color-picker-popover')).toHaveLength(3)
   })
 
-  it('does not treat an opacity-zero custom color as the clear preset', () => {
+  it('does not select a color preset for an opacity-zero custom color', () => {
     useCanvasToolStore.getState().setActiveTool('draw')
     renderToolbar()
 
@@ -700,16 +1152,13 @@ describe('CanvasConditionalToolbar', () => {
     const strokeGroup = screen.getByText('Stroke').parentElement
     expect(strokeGroup).not.toBeNull()
 
-    expect(
-      within(strokeGroup!).getByRole('button', { name: 'Select Clear color' }),
-    ).toHaveAttribute('aria-pressed', 'false')
     expect(within(strokeGroup!).getByRole('button', { name: 'Select Red color' })).toHaveAttribute(
       'aria-pressed',
       'false',
     )
   })
 
-  it('selecting clear then a color unselects the clear preset', () => {
+  it('selecting border then a color unselects the border preset', () => {
     useCanvasToolStore.getState().setActiveTool('draw')
     renderToolbar()
     emitSelection([])
@@ -717,15 +1166,15 @@ describe('CanvasConditionalToolbar', () => {
     const strokeGroup = screen.getByText('Stroke').parentElement
     expect(strokeGroup).not.toBeNull()
 
-    const clearButton = within(strokeGroup!).getByRole('button', { name: 'Select Clear color' })
+    const borderButton = within(strokeGroup!).getByRole('button', { name: 'Select Border color' })
     const redButton = within(strokeGroup!).getByRole('button', { name: 'Select Red color' })
 
-    fireEvent.click(clearButton)
-    expect(clearButton).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(borderButton)
+    expect(borderButton).toHaveAttribute('aria-pressed', 'true')
     expect(redButton).toHaveAttribute('aria-pressed', 'false')
 
     fireEvent.click(redButton)
-    expect(clearButton).toHaveAttribute('aria-pressed', 'false')
+    expect(borderButton).toHaveAttribute('aria-pressed', 'false')
     expect(redButton).toHaveAttribute('aria-pressed', 'true')
   })
 
@@ -859,7 +1308,7 @@ describe('CanvasConditionalToolbar', () => {
     commitStrokeSize(0)
     emitSelectionState(selectionSnapshot(new Set<string>(), new Set([edge.id])))
 
-    const clearButton = within(strokeGroup!).getByRole('button', { name: 'Select Clear color' })
+    const borderButton = within(strokeGroup!).getByRole('button', { name: 'Select Border color' })
     const colorPickerButton = within(strokeGroup!).getByRole('button', {
       name: 'Open color picker',
     })
@@ -870,13 +1319,13 @@ describe('CanvasConditionalToolbar', () => {
       },
     })
     expect(getStrokeSizeInput()).toHaveValue('1')
-    expect(clearButton).toBeEnabled()
+    expect(borderButton).toBeEnabled()
     expect(colorPickerButton).toBeEnabled()
 
     commitStrokeSize(6)
     emitSelectionState(selectionSnapshot(new Set<string>(), new Set([edge.id])))
 
-    expect(within(strokeGroup!).getByRole('button', { name: 'Select Clear color' })).toBeEnabled()
+    expect(within(strokeGroup!).getByRole('button', { name: 'Select Border color' })).toBeEnabled()
     expect(
       within(strokeGroup!).getByRole('button', {
         name: 'Open color picker',

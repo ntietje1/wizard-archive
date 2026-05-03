@@ -20,6 +20,7 @@ export interface CanvasPaintPreset {
 export type CanvasPaintPropertyDefinition = CanvasPropertyBase<'paint', CanvasPaintValue> & {
   defaultValue: CanvasPaintValue
   options: ReadonlyArray<CanvasPaintPreset>
+  showOpacity?: boolean
 }
 
 export type CanvasStrokeSizePropertyDefinition = CanvasPropertyBase<'strokeSize', number> & {
@@ -37,6 +38,7 @@ export type CanvasPropertyValue<TValue> = { kind: 'value'; value: TValue } | { k
 
 type CanvasPropertyBindingBase<TValue, TDefinition extends CanvasAnyPropertyDefinition> = {
   definition: TDefinition
+  getPropertyValue?: () => CanvasPropertyValue<TValue>
   getValue: () => TValue
   setValue: (value: TValue) => void
 }

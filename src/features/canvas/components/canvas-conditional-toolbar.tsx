@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useReducer } from 'react'
+import type { SyntheticEvent } from 'react'
 import type { CanvasEdgeType } from '../edges/canvas-edge-types'
 import { CANVAS_REORDER_ACTIONS } from '../runtime/document/canvas-reorder-actions'
 import { linePaintCanvasProperty } from '../properties/canvas-property-definitions'
@@ -31,6 +32,35 @@ const STROKE_SIZE_SLIDER_MAX = 50
 const PAINT_SWATCH_STRIP_WIDTH = `calc(${linePaintCanvasProperty.options.length} * 1.5rem + ${
   linePaintCanvasProperty.options.length - 1
 } * 0.25rem)`
+
+interface StrokeSizeDraftState {
+  draftValue: string | null
+  previewValue: string | null
+}
+
+type StrokeSizeDraftAction =
+  | { type: 'reset' }
+  | { type: 'setDraftValue'; value: string | null }
+  | { type: 'setPreviewValue'; value: string | null }
+
+const INITIAL_STROKE_SIZE_DRAFT_STATE: StrokeSizeDraftState = {
+  draftValue: null,
+  previewValue: null,
+}
+
+function strokeSizeDraftReducer(
+  state: StrokeSizeDraftState,
+  action: StrokeSizeDraftAction,
+): StrokeSizeDraftState {
+  switch (action.type) {
+    case 'reset':
+      return INITIAL_STROKE_SIZE_DRAFT_STATE
+    case 'setDraftValue':
+      return { ...state, draftValue: action.value }
+    case 'setPreviewValue':
+      return { ...state, previewValue: action.value }
+  }
+}
 
 function isPaintProperty(
   property: CanvasResolvedProperty,
@@ -182,6 +212,7 @@ function CanvasPropertyControls({
                         : 'none',
                     outlineOffset: '1px',
                   }}
+                  onPointerDown={preventToolbarFocus}
                   onClick={() => onPropertyChange(() => paintProperty.setValue(preset.value))}
                   aria-label={`Select ${preset.label} color`}
                   aria-pressed={
@@ -205,6 +236,7 @@ function CanvasPropertyControls({
                 onChange={(value) => onPropertyChange(() => paintProperty.setValue(value))}
                 disabled={disabled}
                 mixed={paintProperty.value.kind === 'mixed'}
+                showOpacity={paintProperty.definition.showOpacity ?? true}
               />
             </div>
           </div>
@@ -244,13 +276,14 @@ function StrokeSizeControl({
   const strokeSizeValue = readResolvedPropertyValue(property)
   const sliderMax = Math.min(property.definition.max, STROKE_SIZE_SLIDER_MAX)
   const sliderValue = Math.min(strokeSizeValue ?? property.definition.min, sliderMax)
-  const [draftValue, setDraftValue] = useState<string | null>(null)
-  const [previewValue, setPreviewValue] = useState<string | null>(null)
+  const [{ draftValue, previewValue }, dispatchDraftState] = useReducer(
+    strokeSizeDraftReducer,
+    INITIAL_STROKE_SIZE_DRAFT_STATE,
+  )
   const inputValue = previewValue ?? draftValue ?? strokeSizeValue?.toString() ?? ''
 
   const resetDraftValue = () => {
-    setDraftValue(null)
-    setPreviewValue(null)
+    dispatchDraftState({ type: 'reset' })
   }
 
   const commitDraftValue = () => {
@@ -293,12 +326,12 @@ function StrokeSizeControl({
               return
             }
 
-            setPreviewValue(String(nextValue))
+            dispatchDraftState({ type: 'setPreviewValue', value: String(nextValue) })
             onPropertyPreviewChange(() => property.setValue(nextValue))
           }}
           onPointerCancel={() => {
             onPropertyPreviewCancel()
-            setPreviewValue(null)
+            dispatchDraftState({ type: 'setPreviewValue', value: null })
           }}
           onPointerUp={(event) => {
             const nextValue = Number(event.currentTarget.value)
@@ -346,7 +379,7 @@ function StrokeSizeControl({
           onBlur={commitDraftValue}
           onChange={(event) => {
             const sanitizedValue = event.currentTarget.value.replace(/\D/g, '').slice(0, 2)
-            setDraftValue(sanitizedValue)
+            dispatchDraftState({ type: 'setDraftValue', value: sanitizedValue })
           }}
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
@@ -367,6 +400,11 @@ function StrokeSizeControl({
       </div>
     </div>
   )
+}
+
+function preventToolbarFocus(event: SyntheticEvent) {
+  event.preventDefault()
+  event.stopPropagation()
 }
 
 function CanvasReorderControls({

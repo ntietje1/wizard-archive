@@ -4,7 +4,7 @@ import { PreventExternalDrop } from './extensions/prevent-external-drop/prevent-
 import { SideMenuRenderer } from './extensions/side-menu/side-menu'
 import { SlashMenu } from './extensions/slash-menu/slash-menu'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import './extensions/wiki-link/wiki-link.css'
 import './extensions/md-link/md-link.css'
 import { useWikiLinkExtension } from '~/features/editor/hooks/useWikiLinkExtension'
@@ -18,10 +18,18 @@ interface NoteViewProps {
   editable: boolean
   linkResolver: LinkResolver
   className?: string
+  style?: CSSProperties
   children?: ReactNode
 }
 
-export function NoteView({ editor, editable, linkResolver, className, children }: NoteViewProps) {
+export function NoteView({
+  editor,
+  editable,
+  linkResolver,
+  className,
+  style,
+  children,
+}: NoteViewProps) {
   const resolvedTheme = useResolvedTheme()
   const isViewerMode = !editable || linkResolver.isViewerMode
   useWikiLinkExtension(editor, linkResolver, isViewerMode)
@@ -32,6 +40,7 @@ export function NoteView({ editor, editable, linkResolver, className, children }
     <BlockNoteView
       className={className}
       editor={editor}
+      style={style}
       theme={resolvedTheme}
       editable={editable}
       sideMenu={false}

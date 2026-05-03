@@ -59,6 +59,7 @@ export interface CanvasStrokeNodeData {
 export interface CanvasEmbedNodeData {
   sidebarItemId?: Id<'sidebarItems'>
   lockedAspectRatio?: number
+  textColor?: string | null
   backgroundColor?: string | null
   backgroundOpacity?: number
   borderStroke?: string | null
@@ -68,6 +69,7 @@ export interface CanvasEmbedNodeData {
 
 export interface CanvasTextNodeData {
   content?: unknown
+  textColor?: string | null
   backgroundColor?: string | null
   backgroundOpacity?: number
   borderStroke?: string | null
@@ -187,6 +189,7 @@ export const canvasViewportSchema = z.object({
 })
 
 const canvasSurfaceStylingSchema = {
+  textColor: canvasNodeSurfaceColorSchema.optional(),
   backgroundColor: canvasNodeSurfaceColorSchema.optional(),
   backgroundOpacity: canvasNodeSurfaceOpacitySchema.optional(),
   borderStroke: canvasNodeSurfaceColorSchema.optional(),

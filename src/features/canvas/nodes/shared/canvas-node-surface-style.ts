@@ -8,6 +8,7 @@ import {
   fillCanvasProperty,
   linePaintCanvasProperty,
   strokeSizeCanvasProperty,
+  textColorCanvasProperty,
 } from '../../properties/canvas-property-definitions'
 import {
   bindCanvasPaintProperty,
@@ -18,6 +19,7 @@ import type { CanvasNodeRenderDataByType, CanvasRuntimeNode } from '../canvas-no
 import type { CanvasNodeType } from '../../types/canvas-domain-types'
 
 export interface CanvasNodeSurfaceStyleData {
+  textColor?: string | null
   backgroundColor?: string | null
   backgroundOpacity?: number
   borderStroke?: string | null
@@ -30,8 +32,10 @@ const DEFAULT_CANVAS_NODE_BACKGROUND_OPACITY = 100 as const
 const DEFAULT_CANVAS_NODE_BORDER_OPACITY = 100 as const
 const DEFAULT_CANVAS_NODE_BORDER_STROKE = 'var(--border)' as const
 const DEFAULT_CANVAS_NODE_BORDER_WIDTH = 1 as const
+const DEFAULT_CANVAS_NODE_TEXT_COLOR = 'var(--foreground)' as const
 
 export interface CanvasNormalizedNodeSurfaceStyleData {
+  textColor: string
   backgroundColor: string | null
   backgroundOpacity: number
   borderStroke: string | null
@@ -41,6 +45,24 @@ export interface CanvasNormalizedNodeSurfaceStyleData {
 
 function readCanvasNodeSurfaceColor(value: unknown): string | null | undefined {
   return parseCanvasNodeSurfaceColor(value)
+}
+
+function readCanvasNodeTextColor(value: unknown): string | null | undefined {
+  const textColor = readCanvasNodeSurfaceColor(value)
+  if (typeof textColor !== 'string') {
+    return textColor
+  }
+
+  const trimmedTextColor = textColor.trim()
+  return isCanvasNodeTextColor(trimmedTextColor) ? trimmedTextColor : undefined
+}
+
+function isCanvasNodeTextColor(value: string): boolean {
+  return (
+    /^var\(--[A-Za-z0-9_-]+\)$/.test(value) ||
+    /^#[\da-f]{3,4}$/i.test(value) ||
+    /^#[\da-f]{6}([\da-f]{2})?$/i.test(value)
+  )
 }
 
 function readCanvasNodeSurfaceOpacity(value: unknown): number {
@@ -59,6 +81,7 @@ export function normalizeCanvasNodeSurfaceStyleData(
   data: Partial<CanvasNodeSurfaceStyleData> | undefined,
 ): CanvasNormalizedNodeSurfaceStyleData {
   return {
+    textColor: readCanvasNodeTextColor(data?.textColor) ?? DEFAULT_CANVAS_NODE_TEXT_COLOR,
     backgroundColor:
       readCanvasNodeSurfaceColor(data?.backgroundColor) ?? DEFAULT_CANVAS_NODE_BACKGROUND_COLOR,
     backgroundOpacity: readCanvasNodeSurfaceOpacity(data?.backgroundOpacity),
@@ -67,6 +90,19 @@ export function normalizeCanvasNodeSurfaceStyleData(
     borderOpacity: readCanvasNodeBorderOpacity(data?.borderOpacity),
     borderWidth: readCanvasNodeBorderWidth(data?.borderWidth),
   }
+}
+
+export function getCanvasNodeTextStyle(data: CanvasNodeSurfaceStyleData): CSSProperties {
+  const color = getCanvasNodeDefaultTextColor(data)
+
+  return {
+    color,
+    '--bn-colors-editor-text': color,
+  } as CSSProperties
+}
+
+export function getCanvasNodeDefaultTextColor(data: CanvasNodeSurfaceStyleData): string {
+  return normalizeCanvasNodeSurfaceStyleData(data).textColor
 }
 
 function resolveCanvasNodePaint(color: string | null | undefined, opacity: number): string {
@@ -123,6 +159,22 @@ export function bindCanvasNodeSurfaceFillProperty<
     getOpacity: () => node.data.backgroundOpacity,
     setOpacity: (backgroundOpacity) =>
       patchNodeData(node.id, { backgroundOpacity } as Partial<TData>),
+  })
+}
+
+export function bindCanvasNodeTextColorProperty<
+  TType extends CanvasNodeType,
+  TData extends CanvasNodeRenderDataByType[TType] & CanvasNormalizedNodeSurfaceStyleData,
+>(
+  node: CanvasRuntimeNode<TType, TData>,
+  patchNodeData: <TPatch extends Partial<TData>>(nodeId: string, data: TPatch) => void,
+) {
+  return bindCanvasPaintProperty(textColorCanvasProperty, {
+    getColor: () => node.data.textColor,
+    setValue: ({ color: textColor }) => patchNodeData(node.id, { textColor } as Partial<TData>),
+    setColor: (textColor) => patchNodeData(node.id, { textColor } as Partial<TData>),
+    getOpacity: () => 100,
+    setOpacity: () => undefined,
   })
 }
 

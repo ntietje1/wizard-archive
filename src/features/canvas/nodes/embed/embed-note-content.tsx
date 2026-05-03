@@ -1,12 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useReducer, useRef } from 'react'
 import type { CustomBlock, CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Doc } from 'yjs'
 import type { PendingRichEmbedActivationRef } from './use-rich-embed-lifecycle'
 import { NoteContent } from '~/features/editor/components/note-content'
 import { useBlockNoteActivationLifecycle } from '../shared/use-blocknote-activation-lifecycle'
+import { getCanvasNodeTextStyle } from '../shared/canvas-node-surface-style'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { cn } from '~/features/shadcn/lib/utils'
+
+interface EmbedNoteEditorState {
+  doc: Doc | null
+  editor: CustomBlockNoteEditor | null
+}
 
 export function EmbedNoteContent({
   noteId,
@@ -16,6 +22,7 @@ export function EmbedNoteContent({
   onActivated,
   onCanvasEditorChange,
   pendingActivationRef,
+  textColor,
 }: {
   noteId: Id<'sidebarItems'>
   content: Array<CustomBlock>
@@ -24,19 +31,25 @@ export function EmbedNoteContent({
   onActivated?: () => void
   onCanvasEditorChange?: (editor: CustomBlockNoteEditor | null) => void
   pendingActivationRef: PendingRichEmbedActivationRef
+  textColor: string | null
 }) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const scrollTopRef = useRef(0)
-  const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
-  const [doc, setDoc] = useState<Doc | null>(null)
+  const textStyle = getCanvasNodeTextStyle({ textColor })
+  const [{ doc, editor }, setEditorState] = useReducer(
+    (_state: EmbedNoteEditorState, nextState: EmbedNoteEditorState) => nextState,
+    {
+      doc: null,
+      editor: null,
+    },
+  )
 
   const isReady = useCallback(() => {
     return !!doc
   }, [doc])
 
   const onEditorChange = (newEditor: CustomBlockNoteEditor | null, newDoc: Doc | null) => {
-    setEditor(newEditor)
-    setDoc(newDoc)
+    setEditorState({ doc: newDoc, editor: newEditor })
     onCanvasEditorChange?.(newEditor)
   }
 
@@ -77,8 +90,13 @@ export function EmbedNoteContent({
 
   return (
     <div
-      className={cn('h-full', editable && 'nodrag nopan', isExclusivelySelected && 'nowheel')}
+      className={cn(
+        'canvas-rich-text-editor h-full',
+        editable && 'nodrag nopan',
+        isExclusivelySelected && 'nowheel',
+      )}
       data-testid="embed-note-content-wrapper"
+      style={textStyle}
     >
       <ScrollArea
         viewportRef={viewportRef}
@@ -89,6 +107,7 @@ export function EmbedNoteContent({
           noteId={noteId}
           content={content}
           editable={editable}
+          style={textStyle}
           onEditorChange={onEditorChange}
         />
       </ScrollArea>

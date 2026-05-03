@@ -143,7 +143,7 @@
 }
 
 .dark {
-  --background: oklch(0.2 0.01032 303.544);
+  --background: oklch(0.14 0.01 303);
   --foreground: oklch(0.95 0.01416 303.899);
   --card: oklch(0.2 0.01032 303.544);
   --card-foreground: oklch(0.95 0.01416 303.899);
@@ -440,6 +440,98 @@
   background-color: transparent;
   width: 100%;
   height: 100%;
+}
+
+:root .canvas-rich-text-editor [data-style-type='textColor'],
+:root .canvas-rich-text-editor [data-text-color],
+:root .canvas-rich-text-editor .bn-block:has(> .bn-block-content[data-text-color]) {
+  color: var(--canvas-rich-text-color, inherit);
+}
+
+:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--background)'],
+:root .canvas-rich-text-editor [data-text-color='var(--background)'],
+:root
+  .canvas-rich-text-editor
+  .bn-block:has(> .bn-block-content[data-text-color='var(--background)']) {
+  --canvas-rich-text-color: var(--background);
+}
+
+:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--foreground)'],
+:root .canvas-rich-text-editor [data-text-color='var(--foreground)'],
+:root
+  .canvas-rich-text-editor
+  .bn-block:has(> .bn-block-content[data-text-color='var(--foreground)']) {
+  --canvas-rich-text-color: var(--foreground);
+}
+
+:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--border)'],
+:root .canvas-rich-text-editor [data-text-color='var(--border)'],
+:root .canvas-rich-text-editor .bn-block:has(> .bn-block-content[data-text-color='var(--border)']) {
+  --canvas-rich-text-color: var(--border);
+}
+
+:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--t-gray)'],
+:root .canvas-rich-text-editor [data-text-color='var(--t-gray)'],
+:root .canvas-rich-text-editor .bn-block:has(> .bn-block-content[data-text-color='var(--t-gray)']) {
+  --canvas-rich-text-color: var(--t-gray);
+}
+
+:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--t-brown)'],
+:root .canvas-rich-text-editor [data-text-color='var(--t-brown)'],
+:root
+  .canvas-rich-text-editor
+  .bn-block:has(> .bn-block-content[data-text-color='var(--t-brown)']) {
+  --canvas-rich-text-color: var(--t-brown);
+}
+
+:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--t-red)'],
+:root .canvas-rich-text-editor [data-text-color='var(--t-red)'],
+:root .canvas-rich-text-editor .bn-block:has(> .bn-block-content[data-text-color='var(--t-red)']) {
+  --canvas-rich-text-color: var(--t-red);
+}
+
+:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--t-orange)'],
+:root .canvas-rich-text-editor [data-text-color='var(--t-orange)'],
+:root
+  .canvas-rich-text-editor
+  .bn-block:has(> .bn-block-content[data-text-color='var(--t-orange)']) {
+  --canvas-rich-text-color: var(--t-orange);
+}
+
+:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--t-yellow)'],
+:root .canvas-rich-text-editor [data-text-color='var(--t-yellow)'],
+:root
+  .canvas-rich-text-editor
+  .bn-block:has(> .bn-block-content[data-text-color='var(--t-yellow)']) {
+  --canvas-rich-text-color: var(--t-yellow);
+}
+
+:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--t-green)'],
+:root .canvas-rich-text-editor [data-text-color='var(--t-green)'],
+:root
+  .canvas-rich-text-editor
+  .bn-block:has(> .bn-block-content[data-text-color='var(--t-green)']) {
+  --canvas-rich-text-color: var(--t-green);
+}
+
+:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--t-blue)'],
+:root .canvas-rich-text-editor [data-text-color='var(--t-blue)'],
+:root .canvas-rich-text-editor .bn-block:has(> .bn-block-content[data-text-color='var(--t-blue)']) {
+  --canvas-rich-text-color: var(--t-blue);
+}
+
+:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--t-purple)'],
+:root .canvas-rich-text-editor [data-text-color='var(--t-purple)'],
+:root
+  .canvas-rich-text-editor
+  .bn-block:has(> .bn-block-content[data-text-color='var(--t-purple)']) {
+  --canvas-rich-text-color: var(--t-purple);
+}
+
+:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--t-pink)'],
+:root .canvas-rich-text-editor [data-text-color='var(--t-pink)'],
+:root .canvas-rich-text-editor .bn-block:has(> .bn-block-content[data-text-color='var(--t-pink)']) {
+  --canvas-rich-text-color: var(--t-pink);
 }
 
 @layer utilities {

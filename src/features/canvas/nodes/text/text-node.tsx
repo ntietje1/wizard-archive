@@ -19,7 +19,6 @@ export function TextNode(props: CanvasNodeComponentProps<CanvasRichTextNodeInput
         containerClassName: 'rounded-lg',
         contentClassName: 'h-full w-full overflow-hidden',
         textClassName: 'text-sm',
-        textColor: 'inherit',
       }}
     />
   )

@@ -8,6 +8,7 @@ import { testId } from '~/test/helpers/test-id'
 
 const mockEditor = vi.hoisted(() => ({ id: 'editor' }) as unknown as CustomBlockNoteEditor)
 const mockUseBlockNoteActivationLifecycle = vi.hoisted(() => vi.fn())
+const noteContentSpy = vi.hoisted(() => vi.fn())
 
 vi.mock('../../shared/use-blocknote-activation-lifecycle', () => ({
   useBlockNoteActivationLifecycle: (...args: Array<unknown>) =>
@@ -20,13 +21,18 @@ vi.mock('~/features/editor/components/note-content', async () => {
   return {
     NoteContent: ({
       onEditorChange,
+      ...props
     }: {
       onEditorChange?: (editor: CustomBlockNoteEditor | null, doc: null) => void
+      style?: React.CSSProperties
     }) => {
+      const onEditorChangeRef = React.useRef(onEditorChange)
+      onEditorChangeRef.current = onEditorChange
+      noteContentSpy(props)
       React.useEffect(() => {
-        onEditorChange?.(mockEditor, null)
-        return () => onEditorChange?.(null, null)
-      }, [onEditorChange])
+        onEditorChangeRef.current?.(mockEditor, null)
+        return () => onEditorChangeRef.current?.(null, null)
+      }, [])
 
       return <div data-testid="embed-note-content-editor" />
     },
@@ -50,6 +56,7 @@ vi.mock('~/features/shadcn/components/scroll-area', () => ({
 describe('EmbedNoteContent', () => {
   beforeEach(() => {
     mockUseBlockNoteActivationLifecycle.mockReset()
+    noteContentSpy.mockReset()
   })
 
   it('renders without pointer-based note focus plumbing', () => {
@@ -61,6 +68,7 @@ describe('EmbedNoteContent', () => {
         editable={true}
         isExclusivelySelected={true}
         pendingActivationRef={pendingActivationRef}
+        textColor="var(--foreground)"
       />,
     )
 
@@ -91,6 +99,7 @@ describe('EmbedNoteContent', () => {
         editable={false}
         isExclusivelySelected={true}
         pendingActivationRef={pendingActivationRef}
+        textColor="var(--foreground)"
       />,
     )
 
@@ -113,6 +122,7 @@ describe('EmbedNoteContent', () => {
         editable={true}
         isExclusivelySelected={false}
         pendingActivationRef={pendingActivationRef}
+        textColor="var(--foreground)"
       />,
     )
 
@@ -138,6 +148,7 @@ describe('EmbedNoteContent', () => {
         isExclusivelySelected={true}
         onCanvasEditorChange={onCanvasEditorChange}
         pendingActivationRef={pendingActivationRef}
+        textColor="var(--foreground)"
       />,
     )
 
@@ -146,5 +157,28 @@ describe('EmbedNoteContent', () => {
     unmount()
 
     expect(onCanvasEditorChange).toHaveBeenCalledWith(null)
+  })
+
+  it('passes textColor to the embedded BlockNote container as the default editor text color', () => {
+    const pendingActivationRef = { current: null }
+    render(
+      <EmbedNoteContent
+        noteId={testId<'sidebarItems'>('note-id')}
+        content={[]}
+        editable={true}
+        isExclusivelySelected={true}
+        pendingActivationRef={pendingActivationRef}
+        textColor="var(--t-purple)"
+      />,
+    )
+
+    expect(noteContentSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        style: expect.objectContaining({
+          '--bn-colors-editor-text': 'var(--t-purple)',
+          color: 'var(--t-purple)',
+        }),
+      }),
+    )
   })
 })

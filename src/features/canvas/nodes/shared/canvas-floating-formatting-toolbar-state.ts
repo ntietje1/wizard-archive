@@ -23,7 +23,8 @@ export function getNextBlockTypeMenuState({
     return {
       open: true,
       ignoreOpeningClickClose:
-        details.reason === 'trigger-press' && details.event.type === 'mousedown',
+        details.reason === 'trigger-press' &&
+        (details.event.type === 'mousedown' || details.event.type === 'pointerdown'),
     }
   }
 

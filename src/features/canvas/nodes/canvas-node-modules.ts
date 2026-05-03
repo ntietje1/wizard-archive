@@ -4,6 +4,7 @@ import {
   bindCanvasNodeSurfaceBorderPaintProperty,
   bindCanvasNodeSurfaceBorderWidthProperty,
   bindCanvasNodeSurfaceFillProperty,
+  bindCanvasNodeTextColorProperty,
   normalizeCanvasNodeSurfaceStyleData,
 } from './shared/canvas-node-surface-style'
 import { clampStrokeNodeSize, resizeStrokeNode } from './stroke/stroke-node-model'
@@ -77,6 +78,7 @@ function withNormalizedCanvasNode<TResult>(
 function getStrokeNodeProperties(
   node: Extract<AnyNormalizedCanvasNode, { type: 'stroke' }>,
   patchNodeData: PatchCanvasNodeData,
+  _options?: { includeTextColor?: boolean },
 ): CanvasInspectableProperties {
   return {
     bindings: [
@@ -121,9 +123,15 @@ function validateOpacity(opacity: number | undefined, fallback: number) {
 function getSurfaceNodeProperties(
   node: Extract<AnyNormalizedCanvasNode, { type: 'embed' | 'text' }>,
   patchNodeData: PatchCanvasNodeData,
+  options: { includeTextColor?: boolean } = {},
 ): CanvasInspectableProperties {
+  const textColorBindings = options.includeTextColor
+    ? [bindCanvasNodeTextColorProperty(node, patchNodeData)]
+    : []
+
   return {
     bindings: [
+      ...textColorBindings,
       bindCanvasNodeSurfaceFillProperty(node, patchNodeData),
       bindCanvasNodeSurfaceBorderPaintProperty(node, patchNodeData),
       bindCanvasNodeSurfaceBorderWidthProperty(node, patchNodeData),
@@ -139,6 +147,7 @@ type CanvasNodeSpec<TType extends CanvasNodeType = CanvasNodeType> = {
   getProperties?: (
     node: Extract<AnyNormalizedCanvasNode, { type: TType }>,
     patchNodeData: PatchCanvasNodeData,
+    options?: { includeTextColor?: boolean },
   ) => CanvasInspectableProperties
   resize?: (
     node: Extract<AnyNormalizedCanvasNode, { type: TType }>,
@@ -187,6 +196,7 @@ export const canvasNodeSpecs = {
 export function getCanvasNodeInspectableProperties(
   normalizedNode: AnyNormalizedCanvasNode | null,
   patchNodeData: PatchCanvasNodeData,
+  options: { includeTextColor?: boolean } = {},
 ): CanvasInspectableProperties {
   if (!normalizedNode) {
     return EMPTY_CANVAS_INSPECTABLE_PROPERTIES
@@ -194,7 +204,9 @@ export function getCanvasNodeInspectableProperties(
 
   const getProperties = canvasNodeSpecs[normalizedNode.type].getProperties
   return getProperties
-    ? getProperties(normalizedNode as never, patchNodeData)
+    ? getProperties(normalizedNode as never, patchNodeData, {
+        includeTextColor: normalizedNode.type === 'text' || options.includeTextColor,
+      })
     : EMPTY_CANVAS_INSPECTABLE_PROPERTIES
 }
 

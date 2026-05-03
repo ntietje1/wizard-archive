@@ -23,7 +23,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useRef, useState, useSyncExternalStore } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import type { MouseEvent as ReactMouseEvent, SyntheticEvent } from 'react'
+import type { SyntheticEvent } from 'react'
 import { Button } from '~/features/shadcn/components/button'
 import {
   DropdownMenu,
@@ -36,12 +36,18 @@ import { Separator } from '~/features/shadcn/components/separator'
 import { cn } from '~/features/shadcn/lib/utils'
 import { getNextBlockTypeMenuState } from './canvas-floating-formatting-toolbar-state'
 import type { BlockTypeMenuChangeDetails } from './canvas-floating-formatting-toolbar-state'
+import { textColorCanvasProperty } from '../../properties/canvas-property-definitions'
+import { areCanvasPaintValuesEqual } from '../../properties/canvas-paint-values'
+import type { CanvasPaintValue } from '../../properties/canvas-property-types'
 import {
   captureCanvasRichTextSelection,
   readCanvasRichTextActiveStyles,
   restoreCanvasRichTextSelection,
 } from './canvas-rich-text-blocknote-adapter'
 import type { CanvasRichTextSelectionSnapshot } from './canvas-rich-text-blocknote-adapter'
+import { applyCanvasRichTextDefaultTextColor } from './canvas-rich-text-default-color'
+import { resolveCanvasRichTextSelectionTextColor } from './canvas-rich-text-selection-colors'
+import { ColorIcon } from '~/features/editor/components/extensions/selection-toolbar/color-picker/color-icon'
 
 type SupportedBlockType =
   | 'paragraph'
@@ -58,12 +64,17 @@ type TextAlignment = 'left' | 'center' | 'right'
 type FormattingEditor = Pick<
   BlockNoteEditor<any, any, any>,
   | 'focus'
+  | 'document'
   | 'getActiveStyles'
   | 'getSelection'
+  | 'getSelectionCutBlocks'
   | 'getTextCursorPosition'
   | 'isEditable'
+  | 'addStyles'
   | 'onChange'
   | 'onSelectionChange'
+  | 'removeStyles'
+  | 'replaceBlocks'
   | 'toggleStyles'
   | 'transact'
   | 'updateBlock'
@@ -73,7 +84,9 @@ type FormattingEditor = Pick<
 type FormattingBlock = ReturnType<FormattingEditor['getTextCursorPosition']>['block']
 
 interface CanvasFloatingFormattingToolbarProps {
+  defaultTextColor?: string
   editor: FormattingEditor | null
+  onDefaultTextColorChange?: (color: string) => void
   visible: boolean
 }
 
@@ -89,8 +102,10 @@ interface ToolbarSnapshot {
   activeAlignment: TextAlignment | null
   activeBlockTypeId: string | null
   activeStyles: Partial<Record<InlineStyle, boolean>>
+  activeTextColor: { kind: 'value'; value: CanvasPaintValue } | { kind: 'mixed' }
   canAlign: boolean
   canFormatInline: boolean
+  hasTextSelection: boolean
   supportedBlockTypes: Array<BlockTypeOption>
 }
 
@@ -200,13 +215,19 @@ const EMPTY_SNAPSHOT: ToolbarSnapshot = {
   activeAlignment: null,
   activeBlockTypeId: null,
   activeStyles: {},
+  activeTextColor: { kind: 'value', value: textColorCanvasProperty.defaultValue },
   canAlign: false,
   canFormatInline: false,
+  hasTextSelection: false,
   supportedBlockTypes: [],
 }
+const FLOATING_FORMATTING_TOOLBAR_Z_INDEX = 60
+const FLOATING_FORMATTING_COLOR_PALETTE_Z_INDEX = 70
 
 export function CanvasFloatingFormattingToolbar({
+  defaultTextColor = textColorCanvasProperty.defaultValue.color,
   editor,
+  onDefaultTextColorChange,
   visible,
 }: CanvasFloatingFormattingToolbarProps) {
   const snapshotRef = useRef<ToolbarSnapshot>(EMPTY_SNAPSHOT)
@@ -245,7 +266,7 @@ export function CanvasFloatingFormattingToolbar({
       }
     },
     () => {
-      const nextSnapshot = getVisibleToolbarSnapshot(editor, visible)
+      const nextSnapshot = getVisibleToolbarSnapshot(editor, visible, defaultTextColor)
       if (toolbarSnapshotsEqual(snapshotRef.current, nextSnapshot)) {
         return snapshotRef.current
       }
@@ -304,15 +325,40 @@ export function CanvasFloatingFormattingToolbar({
     })
   }
 
+  const setTextColor = (color: string) => {
+    if (snapshot.hasTextSelection) {
+      restoreCanvasRichTextSelection(editor, selectionSnapshotRef.current)
+      editor.addStyles({ textColor: color })
+      return
+    }
+
+    restoreCanvasRichTextSelection(editor, selectionSnapshotRef.current)
+    applyCanvasRichTextDefaultTextColor(
+      editor,
+      defaultTextColor,
+      color,
+      selectionSnapshotRef.current,
+    )
+    onDefaultTextColorChange?.(color)
+  }
+
   return (
-    <div className="absolute left-1/2 top-0 z-30 -translate-x-1/2 -translate-y-[calc(100%+0.5rem)] pointer-events-auto nodrag nopan nowheel">
+    <div
+      className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-[calc(100%+0.5rem)] pointer-events-auto nodrag nopan nowheel"
+      style={{ zIndex: FLOATING_FORMATTING_TOOLBAR_Z_INDEX }}
+    >
       <div
         role="toolbar"
         aria-label="Canvas formatting toolbar"
         className="flex items-center gap-1 rounded-lg border bg-background/95 p-1 shadow-md backdrop-blur-sm"
-        onPointerDownCapture={(event) => {
+        onPointerDown={(event) => {
           captureSelection()
-          stopPropagation(event)
+          // This relies on DropdownMenuTrigger emitting data-slot="dropdown-menu-trigger".
+          if (eventStartedOnDropdownTrigger(event)) {
+            return
+          }
+
+          preventEditorBlur(event)
         }}
       >
         <DropdownMenu
@@ -329,7 +375,6 @@ export function CanvasFloatingFormattingToolbar({
                 className="min-w-36 justify-between gap-2"
                 aria-label="Block type"
                 title="Block type"
-                onMouseDown={preventEditorBlur}
               >
                 <span className="flex items-center gap-2">
                   <BlockTypeIcon className="size-4" />
@@ -367,6 +412,14 @@ export function CanvasFloatingFormattingToolbar({
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <Separator orientation="vertical" className="h-6" />
+
+        <TextColorControls
+          activeColor={snapshot.activeTextColor}
+          disabled={snapshot.hasTextSelection && !textColorStyleExistsInSchema(editor)}
+          onColorChange={setTextColor}
+        />
 
         <Separator orientation="vertical" className="h-6" />
 
@@ -432,12 +485,13 @@ function ToolbarButton({
 function getVisibleToolbarSnapshot(
   editor: FormattingEditor | null,
   visible: boolean,
+  defaultTextColor: string,
 ): ToolbarSnapshot {
   if (!editor || !visible || !editor.isEditable) {
     return EMPTY_SNAPSHOT
   }
 
-  return getToolbarSnapshot(editor)
+  return getToolbarSnapshot(editor, defaultTextColor)
 }
 
 function toolbarSnapshotsEqual(current: ToolbarSnapshot, next: ToolbarSnapshot) {
@@ -445,7 +499,20 @@ function toolbarSnapshotsEqual(current: ToolbarSnapshot, next: ToolbarSnapshot) 
     current.activeAlignment !== next.activeAlignment ||
     current.activeBlockTypeId !== next.activeBlockTypeId ||
     current.canAlign !== next.canAlign ||
-    current.canFormatInline !== next.canFormatInline
+    current.canFormatInline !== next.canFormatInline ||
+    current.hasTextSelection !== next.hasTextSelection
+  ) {
+    return false
+  }
+
+  if (current.activeTextColor.kind !== next.activeTextColor.kind) {
+    return false
+  }
+
+  if (
+    current.activeTextColor.kind === 'value' &&
+    next.activeTextColor.kind === 'value' &&
+    !areCanvasPaintValuesEqual(current.activeTextColor.value, next.activeTextColor.value)
   ) {
     return false
   }
@@ -456,17 +523,21 @@ function toolbarSnapshotsEqual(current: ToolbarSnapshot, next: ToolbarSnapshot) 
     }
   }
 
-  if (current.supportedBlockTypes.length !== next.supportedBlockTypes.length) {
-    return false
-  }
-
-  return current.supportedBlockTypes.every((option, index) => {
-    return option.id === next.supportedBlockTypes[index]?.id
-  })
+  return (
+    current.supportedBlockTypes.length === next.supportedBlockTypes.length &&
+    current.supportedBlockTypes.every((option, index) => {
+      return option.id === next.supportedBlockTypes[index]?.id
+    })
+  )
 }
 
-function getToolbarSnapshot(editor: FormattingEditor): ToolbarSnapshot {
+function getToolbarSnapshot(editor: FormattingEditor, defaultTextColor: string): ToolbarSnapshot {
+  const selection = editor.getSelection()
+  const hasTextSelection = selection !== undefined
   const selectedBlocks = getSelectedBlocks(editor)
+  const selectedTextBlocks = hasTextSelection
+    ? editor.getSelectionCutBlocks().blocks
+    : selectedBlocks
   const supportedBlockTypes = BLOCK_TYPE_OPTIONS.filter((option) =>
     blockTypeOptionExists(editor, option),
   )
@@ -474,15 +545,110 @@ function getToolbarSnapshot(editor: FormattingEditor): ToolbarSnapshot {
   const alignableBlocks = selectedBlocks.filter((block) =>
     blockTypeSupportsProp(editor, block.type, 'textAlignment'),
   )
+  const activeTextColor = editor.getActiveStyles().textColor
 
   return {
     activeAlignment: getActiveAlignment(alignableBlocks),
     activeBlockTypeId: getActiveBlockTypeId(selectedBlocks, supportedBlockTypes),
     activeStyles,
+    activeTextColor: resolveCanvasRichTextSelectionTextColor({
+      activeTextColor: typeof activeTextColor === 'string' ? activeTextColor : null,
+      defaultTextColor,
+      hasTextSelection,
+      selectedBlocks: selectedTextBlocks,
+    }),
     canAlign: alignableBlocks.length > 0,
     canFormatInline: selectedBlocks.some((block) => block.content !== undefined),
+    hasTextSelection,
     supportedBlockTypes,
   }
+}
+
+function TextColorControls({
+  activeColor,
+  disabled,
+  onColorChange,
+}: {
+  activeColor: ToolbarSnapshot['activeTextColor']
+  disabled: boolean
+  onColorChange: (color: string) => void
+}) {
+  const ignoreOpeningClickCloseRef = useRef(false)
+  const [open, setOpen] = useState(false)
+  const activeValue = activeColor.kind === 'value' ? activeColor.value : undefined
+  const activeColorValue = activeValue?.color ?? ''
+  const triggerLabel = activeColor.kind === 'mixed' ? 'Text color (mixed values)' : 'Text color'
+  const handleOpenChange = (nextOpen: boolean, details: BlockTypeMenuChangeDetails) => {
+    const nextState = getNextBlockTypeMenuState({
+      ignoreOpeningClickClose: ignoreOpeningClickCloseRef.current,
+      nextOpen,
+      details,
+    })
+    ignoreOpeningClickCloseRef.current = nextState.ignoreOpeningClickClose
+    setOpen(nextState.open)
+  }
+
+  return (
+    <DropdownMenu modal={false} open={open} onOpenChange={handleOpenChange}>
+      <DropdownMenuTrigger
+        nativeButton
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1.5 px-2"
+            aria-label={triggerLabel}
+            disabled={disabled}
+            title={triggerLabel}
+          >
+            <ColorIcon
+              textColor={activeColor.kind === 'mixed' ? undefined : activeValue?.color}
+              size={18}
+            />
+            <ChevronDown className="size-3.5 text-muted-foreground" />
+          </Button>
+        }
+      />
+      <DropdownMenuContent
+        align="center"
+        className="w-auto min-w-0 overflow-visible p-2"
+        style={{ zIndex: FLOATING_FORMATTING_COLOR_PALETTE_Z_INDEX }}
+        aria-label="Text color palette"
+      >
+        <DropdownMenuRadioGroup
+          className="grid grid-cols-5 gap-1"
+          value={activeColorValue}
+          onValueChange={(color) => {
+            onColorChange(color)
+            setOpen(false)
+          }}
+        >
+          {textColorCanvasProperty.options.map((preset) => {
+            const isActive = activeValue
+              ? areCanvasPaintValuesEqual(activeValue, preset.value)
+              : false
+
+            return (
+              <DropdownMenuRadioItem
+                key={`${preset.label}-${preset.value.color}`}
+                value={preset.value.color}
+                aria-label={`Select ${preset.label} text color`}
+                disabled={disabled}
+                title={preset.label}
+                className="flex h-7 w-7 items-center justify-center rounded-sm border border-border p-0 transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 [&_[data-slot=dropdown-menu-radio-item-indicator]]:hidden"
+                style={{
+                  backgroundColor: preset.value.color,
+                  outline: isActive ? '2px solid var(--primary)' : 'none',
+                  outlineOffset: '1px',
+                }}
+              />
+            )
+          })}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
 }
 
 function getSelectedBlocks(editor: FormattingEditor): Array<FormattingBlock> {
@@ -563,9 +729,26 @@ function styleExistsInSchema(editor: FormattingEditor, style: InlineStyle) {
   )
 }
 
-function preventEditorBlur(event: ReactMouseEvent) {
+function textColorStyleExistsInSchema(editor: FormattingEditor) {
+  const styleDefinition = editor.schema.styleSchema.textColor
+  return (
+    !!styleDefinition &&
+    styleDefinition.type === 'textColor' &&
+    styleDefinition.propSchema === 'string'
+  )
+}
+
+function preventEditorBlur(event: SyntheticEvent) {
   event.preventDefault()
   event.stopPropagation()
+}
+
+function eventStartedOnDropdownTrigger(event: SyntheticEvent) {
+  // Keep this in sync with the DropdownMenuTrigger data-slot attribute.
+  return (
+    event.target instanceof Element &&
+    event.target.closest('[data-slot="dropdown-menu-trigger"]') !== null
+  )
 }
 
 function stopPropagation(event: SyntheticEvent) {

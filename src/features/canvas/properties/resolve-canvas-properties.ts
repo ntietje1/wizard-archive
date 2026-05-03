@@ -32,6 +32,24 @@ function createResolvedValue<TValue>(
   return createValue(isMixed, firstValue)
 }
 
+function createResolvedBindingValue<TValue>(
+  definition: { equals?: (left: TValue, right: TValue) => boolean },
+  bindings: Array<{ getPropertyValue?: () => CanvasPropertyValue<TValue>; getValue: () => TValue }>,
+): CanvasPropertyValue<TValue> {
+  const values = bindings.map(
+    (binding) => binding.getPropertyValue?.() ?? createValue(false, binding.getValue()),
+  )
+  if (values.some((value) => value.kind === 'mixed')) {
+    return { kind: 'mixed' }
+  }
+
+  const resolvedValues = values as Array<Extract<CanvasPropertyValue<TValue>, { kind: 'value' }>>
+  return createResolvedValue(
+    definition,
+    resolvedValues.map((value) => value.value),
+  )
+}
+
 function createPaintProperty(
   binding: CanvasPaintPropertyBinding,
   matches: Array<CanvasPaintPropertyBinding>,
@@ -43,10 +61,7 @@ function createPaintProperty(
 
   return {
     definition,
-    value: createResolvedValue(
-      definition,
-      matches.map((match) => match.getValue()),
-    ),
+    value: createResolvedBindingValue(definition, matches),
     setValue: (nextValue: Parameters<CanvasPaintPropertyBinding['setValue']>[0]) => {
       matches.forEach((match) => match.setValue(nextValue))
     },
@@ -69,10 +84,7 @@ function createStrokeSizeProperty(
       min,
       max,
     } satisfies CanvasStrokeSizePropertyDefinition,
-    value: createResolvedValue(
-      binding.definition,
-      matches.map((match) => match.getValue()),
-    ),
+    value: createResolvedBindingValue(binding.definition, matches),
     setValue: (nextValue: number) => {
       matches.forEach((match) => match.setValue(nextValue))
     },

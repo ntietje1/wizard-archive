@@ -16,7 +16,10 @@ import { TextNode } from '../nodes/text/text-node'
 import { StrokeNode } from '../nodes/stroke/stroke-node'
 import { ResizableNodeWrapper } from '../nodes/shared/resizable-node-wrapper'
 import { CanvasNodeConnectionHandles } from '../nodes/shared/canvas-node-connection-handles'
-import { getCanvasNodeSurfaceStyle } from '../nodes/shared/canvas-node-surface-style'
+import {
+  getCanvasNodeSurfaceStyle,
+  getCanvasNodeTextStyle,
+} from '../nodes/shared/canvas-node-surface-style'
 import { normalizeEmbedNodeData } from '../nodes/embed/embed-node-data'
 import { SidebarItemPreviewContent } from '~/features/previews/components/sidebar-item-preview-content'
 import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
@@ -315,7 +318,10 @@ function CanvasPreviewEmbedNode({ id, data, dragging }: CanvasNodeComponentProps
     >
       <div
         className="relative h-full w-full overflow-hidden rounded-lg"
-        style={getCanvasNodeSurfaceStyle(normalizedData)}
+        style={{
+          ...getCanvasNodeSurfaceStyle(normalizedData),
+          ...getCanvasNodeTextStyle(normalizedData),
+        }}
       >
         {contentItem ? <SidebarItemPreviewContent item={contentItem} /> : null}
         {!contentItem && isLoading ? (
