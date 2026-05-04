@@ -47,10 +47,14 @@ export function createCanvasViewportController({
   canvasEngine,
   domRuntime,
   getSurfaceElement,
+  maxZoom = MAX_ZOOM,
+  minZoom = MIN_ZOOM,
 }: {
   canvasEngine: CanvasEngine
   domRuntime: Pick<CanvasDomRuntime, 'flush'>
   getSurfaceElement: () => HTMLElement | null
+  maxZoom?: number
+  minZoom?: number
 }): CanvasViewportController {
   let commitTimer: ReturnType<typeof setTimeout> | null = null
   let panSession: CanvasPanSession | null = null
@@ -58,6 +62,13 @@ export function createCanvasViewportController({
   const getSurfaceBounds = () => getSurfaceElement()?.getBoundingClientRect() ?? null
 
   const getViewport = () => canvasEngine.getSnapshot().viewport
+  const clampViewportZoom = (zoom: number) =>
+    Math.min(maxZoom, Math.max(minZoom, Number.isFinite(zoom) ? zoom : 1))
+  const normalizeViewport = (viewport: CanvasViewport): CanvasViewport => ({
+    x: Number.isFinite(viewport.x) ? viewport.x : 0,
+    y: Number.isFinite(viewport.y) ? viewport.y : 0,
+    zoom: clampViewportZoom(viewport.zoom),
+  })
 
   const getSurfaceCenter = (): CanvasPosition => {
     const bounds = getSurfaceBounds()
@@ -159,8 +170,8 @@ export function createCanvasViewportController({
     options: CanvasViewportUpdateOptions = {},
   ) => {
     const viewport = getViewport()
-    const nextZoom = clampZoom(zoom)
-    const currentZoom = viewport.zoom || MIN_ZOOM
+    const nextZoom = clampViewportZoom(zoom)
+    const currentZoom = viewport.zoom || minZoom
     const scale = nextZoom / currentZoom
     const bounds = getSurfaceBounds()
     const centerX = bounds ? center.x - bounds.left : center.x
@@ -257,7 +268,10 @@ export function createCanvasViewportController({
       zoomTo(getViewport().zoom / ZOOM_BUTTON_FACTOR, getSurfaceCenter())
     },
     fitView: () => {
-      const viewport = getFitViewViewport(canvasEngine.getSnapshot().nodes, getSurfaceBounds())
+      const viewport = getFitViewViewport(canvasEngine.getSnapshot().nodes, getSurfaceBounds(), {
+        maxZoom,
+        minZoom,
+      })
       if (viewport) {
         applyViewport(viewport, { commit: true })
       }
@@ -294,6 +308,7 @@ function releasePointerCapture(target: Element | null, pointerId: number) {
 function getFitViewViewport(
   nodes: ReadonlyArray<CanvasDocumentNode>,
   surfaceBounds: DOMRect | null,
+  zoomBounds: { maxZoom: number; minZoom: number },
 ): CanvasViewport | null {
   if (!surfaceBounds || nodes.length === 0) {
     return null
@@ -303,20 +318,8 @@ function getFitViewViewport(
     nodes,
     width: surfaceBounds.width,
     height: surfaceBounds.height,
-    minZoom: MIN_ZOOM,
-    maxZoom: MAX_ZOOM,
+    minZoom: zoomBounds.minZoom,
+    maxZoom: zoomBounds.maxZoom,
     padding: FIT_VIEW_PADDING,
   })
-}
-
-function normalizeViewport(viewport: CanvasViewport): CanvasViewport {
-  return {
-    x: Number.isFinite(viewport.x) ? viewport.x : 0,
-    y: Number.isFinite(viewport.y) ? viewport.y : 0,
-    zoom: clampZoom(viewport.zoom),
-  }
-}
-
-function clampZoom(zoom: number) {
-  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number.isFinite(zoom) ? zoom : 1))
 }

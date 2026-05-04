@@ -212,6 +212,12 @@ describe('buildCanvasContextMenu', () => {
         edgeIds: new Set<string>(),
       }).flatItems.some((item) => item.id === 'canvas-selection-arrange'),
     ).toBe(true)
+    expect(
+      buildSelectionMenu({
+        nodeIds: new Set<string>(),
+        edgeIds: new Set(['edge-1', 'edge-2']),
+      }).flatItems.some((item) => item.id === 'canvas-selection-arrange'),
+    ).toBe(false)
   })
 
   it('runs arrangement submenu items with the selected canvas nodes', async () => {

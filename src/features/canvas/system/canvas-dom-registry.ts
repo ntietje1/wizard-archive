@@ -1,5 +1,6 @@
 import type { CanvasCullingDiff } from './canvas-culling'
 import type { StrokeNodeData } from '../nodes/stroke/stroke-node-model'
+import { readElementBorderBoxSize, readResizeObserverBorderBoxSize } from './canvas-element-size'
 
 export interface CanvasRegisteredEdgePaths {
   path: SVGPathElement | null
@@ -73,6 +74,7 @@ export function createCanvasDomRegistry(): CanvasDomRegistry {
     const surfaceElement = element.parentElement
     disconnectViewportSurfaceBoundsObserver()
     if (!surfaceElement) {
+      viewportSurfaceBounds = { width: 0, height: 0 }
       return
     }
 
@@ -240,31 +242,6 @@ export function createCanvasDomRegistry(): CanvasDomRegistry {
 
 function areStrokeNodePathsEmpty(paths: CanvasRegisteredStrokeNodePaths) {
   return !paths.path && !paths.highlightPath
-}
-
-function readElementBorderBoxSize(element: HTMLElement): Pick<DOMRect, 'width' | 'height'> {
-  const bounds = element.getBoundingClientRect()
-  return { width: bounds.width, height: bounds.height }
-}
-
-function readResizeObserverBorderBoxSize(
-  entry: ResizeObserverEntry,
-): Pick<DOMRect, 'width' | 'height'> {
-  const borderBoxSize = Array.isArray(entry.borderBoxSize)
-    ? entry.borderBoxSize[0]
-    : entry.borderBoxSize
-  if (borderBoxSize) {
-    return {
-      width: borderBoxSize.inlineSize,
-      height: borderBoxSize.blockSize,
-    }
-  }
-
-  // Older ResizeObserver implementations only expose contentRect, which represents the content box and excludes borders.
-  return {
-    width: entry.contentRect.width,
-    height: entry.contentRect.height,
-  }
 }
 
 function areEdgePathsEmpty(paths: CanvasRegisteredEdgePaths) {

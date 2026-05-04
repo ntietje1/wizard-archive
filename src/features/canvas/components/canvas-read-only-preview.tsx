@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { CanvasRenderModeProvider } from '../runtime/providers/canvas-render-mode-context'
 import { CanvasRuntimeProvider } from '../runtime/providers/canvas-runtime-context'
 import { CanvasEngineProvider } from '../react/canvas-engine-context'
 import { CanvasBackground } from './canvas-background'
+import { applyCanvasBackgroundViewport } from './canvas-background-viewport'
 import { CanvasEdgeRenderer } from './canvas-edge-renderer'
 import { CanvasNodeContentRenderer } from './canvas-node-content-renderer'
 import type { CanvasNodeRendererMap } from './canvas-node-content-renderer'
@@ -10,6 +11,11 @@ import { CanvasNodeRenderer } from './canvas-node-renderer'
 import { createCanvasDomRuntime } from '../system/canvas-dom-runtime'
 import { createCanvasEngine } from '../system/canvas-engine'
 import { createCanvasViewportController } from '../system/canvas-viewport-controller'
+import {
+  readElementBorderBoxSize,
+  readResizeObserverBorderBoxSize,
+} from '../system/canvas-element-size'
+import type { CanvasElementSize } from '../system/canvas-element-size'
 import { getCanvasFitViewport } from '../utils/canvas-fit-view'
 import { useCanvasViewportInteractions } from '../runtime/interaction/use-canvas-viewport-interactions'
 import { TextNode } from '../nodes/text/text-node'
@@ -60,6 +66,7 @@ export function CanvasReadOnlyPreview({
   className,
 }: CanvasReadOnlyPreviewProps) {
   const surfaceRef = useRef<HTMLDivElement | null>(null)
+  const backgroundRef = useRef<HTMLDivElement | null>(null)
   const viewportRef = useRef<HTMLDivElement | null>(null)
   const domRuntimeRef = useRef<ReturnType<typeof createCanvasDomRuntime> | null>(null)
   domRuntimeRef.current ??= createCanvasDomRuntime()
@@ -74,6 +81,8 @@ export function CanvasReadOnlyPreview({
     canvasEngine,
     domRuntime,
     getSurfaceElement: () => surfaceRef.current,
+    maxZoom,
+    minZoom,
   })
   const viewportController = viewportControllerRef.current
   const runtimeServicesRef = useRef<{
@@ -83,11 +92,21 @@ export function CanvasReadOnlyPreview({
   } | null>(null)
   runtimeServicesRef.current ??= createReadOnlyPreviewServices(viewportController)
   const runtimeServices = runtimeServicesRef.current
-  const size = useElementSize(surfaceRef)
 
   useEffect(() => {
     canvasEngine.setDocumentSnapshot({ nodes, edges })
   }, [canvasEngine, edges, nodes])
+
+  useCanvasReadOnlyPreviewFit({
+    canvasEngine,
+    fitPadding,
+    maxZoom,
+    minZoom,
+    nodes,
+    surfaceRef,
+    viewportController,
+  })
+  useCanvasReadOnlyPreviewBackground({ backgroundRef, canvasEngine })
 
   useEffect(() => () => canvasEngine.destroy(), [canvasEngine])
   useEffect(() => () => domRuntime.destroy(), [domRuntime])
@@ -101,23 +120,6 @@ export function CanvasReadOnlyPreview({
     domRuntime.flush()
     return unregister
   }, [canvasEngine, domRuntime])
-
-  useEffect(() => {
-    if (size.width <= 0 || size.height <= 0) {
-      viewportController.syncFromDocumentOrAdapter({ x: 0, y: 0, zoom: 1 })
-      return
-    }
-
-    const viewport = getCanvasFitViewport({
-      nodes,
-      width: size.width,
-      height: size.height,
-      minZoom,
-      maxZoom,
-      padding: fitPadding,
-    })
-    viewportController.syncFromDocumentOrAdapter(viewport ?? { x: 0, y: 0, zoom: 1 })
-  }, [fitPadding, maxZoom, minZoom, nodes, size.height, size.width, viewportController])
 
   useCanvasViewportInteractions({
     ref: surfaceRef,
@@ -148,7 +150,10 @@ export function CanvasReadOnlyPreview({
             tabIndex={-1}
             onContextMenu={preventCanvasPreviewMenu}
           >
-            <CanvasBackground />
+            <CanvasBackground
+              backgroundRef={backgroundRef}
+              testId="canvas-read-only-preview-background"
+            />
             <div
               ref={viewportRef}
               data-canvas-viewport="true"
@@ -176,6 +181,23 @@ export function CanvasReadOnlyPreview({
       </CanvasRuntimeProvider>
     </CanvasEngineProvider>
   )
+}
+
+function useCanvasReadOnlyPreviewBackground({
+  backgroundRef,
+  canvasEngine,
+}: {
+  backgroundRef: React.RefObject<HTMLElement | null>
+  canvasEngine: ReturnType<typeof createCanvasEngine>
+}) {
+  useEffect(() => {
+    const syncBackground = () => {
+      applyCanvasBackgroundViewport(backgroundRef.current, canvasEngine.getSnapshot().viewport)
+    }
+
+    syncBackground()
+    return canvasEngine.subscribeViewportChange(syncBackground)
+  }, [backgroundRef, canvasEngine])
 }
 
 function createReadOnlyPreviewServices(
@@ -256,30 +278,119 @@ function createReadOnlyPreviewServices(
   }
 }
 
-function useElementSize(ref: React.RefObject<HTMLElement | null>) {
-  const [size, setSize] = useState({ width: 0, height: 0 })
+function useCanvasReadOnlyPreviewFit({
+  canvasEngine,
+  fitPadding,
+  maxZoom,
+  minZoom,
+  nodes,
+  surfaceRef,
+  viewportController,
+}: {
+  canvasEngine: ReturnType<typeof createCanvasEngine>
+  fitPadding: number
+  maxZoom: number
+  minZoom: number
+  nodes: ReadonlyArray<CanvasDocumentNode>
+  surfaceRef: React.RefObject<HTMLElement | null>
+  viewportController: ReturnType<typeof createCanvasViewportController>
+}) {
+  const frameRef = useRef<number | null>(null)
+  const pendingSizeRef = useRef<CanvasElementSize | null>(null)
+  const lastSizeRef = useRef<CanvasElementSize | null>(null)
 
   useEffect(() => {
-    const element = ref.current
-    if (!element || typeof ResizeObserver === 'undefined') {
+    const fitToSize = (size: CanvasElementSize) => {
+      lastSizeRef.current = size
+      if (size.width <= 0 || size.height <= 0) {
+        viewportController.syncFromDocumentOrAdapter({ x: 0, y: 0, zoom: 1 })
+        return
+      }
+
+      const viewport = getCanvasFitViewport({
+        nodes: getCanvasReadOnlyPreviewFitNodes(canvasEngine, nodes),
+        width: size.width,
+        height: size.height,
+        minZoom,
+        maxZoom,
+        padding: fitPadding,
+      })
+      viewportController.syncFromDocumentOrAdapter(viewport ?? { x: 0, y: 0, zoom: 1 })
+    }
+
+    const scheduleFit = (size: CanvasElementSize) => {
+      lastSizeRef.current = size
+      pendingSizeRef.current = size
+      if (frameRef.current !== null) {
+        return
+      }
+
+      if (typeof requestAnimationFrame === 'undefined') {
+        const nextSize = pendingSizeRef.current
+        pendingSizeRef.current = null
+        if (nextSize) {
+          fitToSize(nextSize)
+        }
+        return
+      }
+
+      frameRef.current = requestAnimationFrame(() => {
+        frameRef.current = null
+        const nextSize = pendingSizeRef.current
+        pendingSizeRef.current = null
+        if (nextSize) {
+          fitToSize(nextSize)
+        }
+      })
+    }
+
+    const element = surfaceRef.current
+    if (!element) {
       return undefined
     }
 
-    const syncSize = () => {
-      const rect = element.getBoundingClientRect()
-      setSize((current) =>
-        current.width === rect.width && current.height === rect.height
-          ? current
-          : { width: rect.width, height: rect.height },
-      )
+    fitToSize(readElementBorderBoxSize(element))
+    const unsubscribeEngine = canvasEngine.subscribe(() => {
+      const size = lastSizeRef.current
+      if (size) {
+        scheduleFit(size)
+      }
+    })
+    if (typeof ResizeObserver === 'undefined') {
+      return unsubscribeEngine
     }
-    syncSize()
-    const observer = new ResizeObserver(syncSize)
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [ref])
 
-  return size
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry) {
+        scheduleFit(readResizeObserverBorderBoxSize(entry))
+      }
+    })
+    observer.observe(element)
+    return () => {
+      unsubscribeEngine()
+      observer.disconnect()
+      if (frameRef.current !== null && typeof cancelAnimationFrame !== 'undefined') {
+        cancelAnimationFrame(frameRef.current)
+      }
+      frameRef.current = null
+      pendingSizeRef.current = null
+    }
+  }, [canvasEngine, fitPadding, maxZoom, minZoom, nodes, surfaceRef, viewportController])
+}
+
+function getCanvasReadOnlyPreviewFitNodes(
+  canvasEngine: ReturnType<typeof createCanvasEngine>,
+  fallbackNodes: ReadonlyArray<CanvasDocumentNode>,
+): ReadonlyArray<CanvasDocumentNode> {
+  const snapshot = canvasEngine.getSnapshot()
+  if (snapshot.nodeIds.length === 0) {
+    return fallbackNodes
+  }
+
+  return snapshot.nodeIds.flatMap((nodeId) => {
+    const node = snapshot.nodeLookup.get(nodeId)?.node
+    return node ? [node] : []
+  })
 }
 
 function preventCanvasPreviewMenu(event: ReactMouseEvent) {

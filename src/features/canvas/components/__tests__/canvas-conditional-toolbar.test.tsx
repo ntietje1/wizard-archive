@@ -1076,7 +1076,7 @@ describe('CanvasConditionalToolbar', () => {
     expect(within(strokeGroup!).queryByRole('button', { name: 'Select Clear color' })).toBeNull()
   })
 
-  it('shows fill, border, and stroke size controls for embed nodes', () => {
+  it('shows border and stroke size controls without fill for embed nodes', () => {
     renderToolbar()
 
     emitSelection([
@@ -1090,7 +1090,7 @@ describe('CanvasConditionalToolbar', () => {
       }),
     ])
 
-    expect(screen.getByText('Fill')).toBeVisible()
+    expect(screen.queryByText('Fill')).toBeNull()
     expect(screen.getAllByText('Stroke')).toHaveLength(1)
     expect(screen.getByText('Stroke size')).toBeVisible()
   })

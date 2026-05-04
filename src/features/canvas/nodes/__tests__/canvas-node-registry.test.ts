@@ -95,6 +95,24 @@ describe('canvas node specs', () => {
     ).toEqual(['textColor', 'fill', 'linePaint', 'strokeSize'])
   })
 
+  it('omits fill from valid embed node inspectable properties', () => {
+    const patchNodeData = vi.fn()
+
+    expect(
+      getCanvasNodeInspectableProperties(
+        normalizeCanvasNode({
+          id: 'embed-1',
+          type: 'embed',
+          position: { x: 0, y: 0 },
+          width: 100,
+          height: 80,
+          data: {},
+        } as never),
+        patchNodeData,
+      ).bindings.map((binding) => binding.definition.id),
+    ).toEqual(['linePaint', 'strokeSize'])
+  })
+
   it('throws when a node spec has no default data and none is provided', () => {
     expect(() =>
       createCanvasNodePlacement('stroke', {

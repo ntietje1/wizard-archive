@@ -60,6 +60,7 @@ type PatchCanvasNodeData = <TType extends CanvasNodeType>(
   nodeId: string,
   data: CanvasNodeDataPatch<TType>,
 ) => void
+type CanvasNodePropertyOptions = { includeTextColor?: boolean; includeFill?: boolean }
 type CanvasDocumentNodeByType<TType extends CanvasNodeType> = {
   embed: CanvasEmbedDocumentNode
   stroke: CanvasStrokeDocumentNode
@@ -123,16 +124,18 @@ function validateOpacity(opacity: number | undefined, fallback: number) {
 function getSurfaceNodeProperties(
   node: Extract<AnyNormalizedCanvasNode, { type: 'embed' | 'text' }>,
   patchNodeData: PatchCanvasNodeData,
-  options: { includeTextColor?: boolean } = {},
+  options: CanvasNodePropertyOptions = {},
 ): CanvasInspectableProperties {
   const textColorBindings = options.includeTextColor
     ? [bindCanvasNodeTextColorProperty(node, patchNodeData)]
     : []
+  const fillBindings =
+    options.includeFill === false ? [] : [bindCanvasNodeSurfaceFillProperty(node, patchNodeData)]
 
   return {
     bindings: [
       ...textColorBindings,
-      bindCanvasNodeSurfaceFillProperty(node, patchNodeData),
+      ...fillBindings,
       bindCanvasNodeSurfaceBorderPaintProperty(node, patchNodeData),
       bindCanvasNodeSurfaceBorderWidthProperty(node, patchNodeData),
     ],
@@ -147,7 +150,7 @@ type CanvasNodeSpec<TType extends CanvasNodeType = CanvasNodeType> = {
   getProperties?: (
     node: Extract<AnyNormalizedCanvasNode, { type: TType }>,
     patchNodeData: PatchCanvasNodeData,
-    options?: { includeTextColor?: boolean },
+    options?: CanvasNodePropertyOptions,
   ) => CanvasInspectableProperties
   resize?: (
     node: Extract<AnyNormalizedCanvasNode, { type: TType }>,
@@ -165,7 +168,8 @@ export const canvasNodeSpecs = {
     defaultSize: DEFAULT_EMBED_SIZE,
     createDefaultData: () => ({ ...normalizeCanvasNodeSurfaceStyleData(undefined) }),
     contextMenuContributors: embedNodeContextMenuContributors,
-    getProperties: getSurfaceNodeProperties,
+    getProperties: (node, patchNodeData, options) =>
+      getSurfaceNodeProperties(node, patchNodeData, { ...options, includeFill: false }),
     resize: undefined,
   },
   stroke: {

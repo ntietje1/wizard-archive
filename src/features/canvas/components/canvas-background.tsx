@@ -1,7 +1,16 @@
-export function CanvasBackground() {
+import type { Ref } from 'react'
+
+interface CanvasBackgroundProps {
+  backgroundRef?: Ref<HTMLDivElement>
+  testId?: string
+}
+
+export function CanvasBackground({ backgroundRef, testId }: CanvasBackgroundProps) {
   return (
     <div
+      ref={backgroundRef}
       className="pointer-events-none absolute inset-0"
+      data-testid={testId}
       style={{
         backgroundColor: 'var(--background)',
         backgroundImage:

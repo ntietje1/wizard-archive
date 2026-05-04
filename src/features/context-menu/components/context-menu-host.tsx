@@ -33,6 +33,24 @@ interface ContextMenuResolvedItemProps {
   onAction: (menuItem: ResolvedContextMenuItem) => Promise<void>
 }
 
+interface MenuItemContentProps {
+  IconComponent: ResolvedContextMenuItem['icon']
+  checked: boolean
+  label: string
+  shortcut?: string
+}
+
+function MenuItemContent({ IconComponent, checked, label, shortcut }: MenuItemContentProps) {
+  return (
+    <>
+      {IconComponent && <IconComponent className="mr-2 h-4 w-4" />}
+      <span className="flex-1">{label}</span>
+      {shortcut && <span className="ml-2 text-xs text-muted-foreground">{shortcut}</span>}
+      {checked && <CheckIcon className="ml-2 h-4 w-4" />}
+    </>
+  )
+}
+
 function ContextMenuResolvedItem({ menuItem, onAction }: ContextMenuResolvedItemProps) {
   const IconComponent = menuItem.icon
 
@@ -47,12 +65,12 @@ function ContextMenuResolvedItem({ menuItem, onAction }: ContextMenuResolvedItem
           )}
           disabled={menuItem.disabled}
         >
-          {IconComponent && <IconComponent className="mr-2 h-4 w-4" />}
-          <span className="flex-1">{menuItem.label}</span>
-          {menuItem.shortcut && (
-            <span className="ml-2 text-xs text-muted-foreground">{menuItem.shortcut}</span>
-          )}
-          {menuItem.checked && <CheckIcon className="ml-2 h-4 w-4" />}
+          <MenuItemContent
+            IconComponent={IconComponent}
+            checked={menuItem.checked}
+            label={menuItem.label}
+            shortcut={menuItem.shortcut}
+          />
         </ContextMenuSubTrigger>
         <ContextMenuSubContent>
           {menuItem.children.map((child, index) => (
@@ -71,7 +89,10 @@ function ContextMenuResolvedItem({ menuItem, onAction }: ContextMenuResolvedItem
   return (
     <ContextMenuItem
       variant={menuItem.variant === 'danger' ? 'destructive' : 'default'}
-      className={cn(menuItem.className)}
+      className={cn(
+        menuItem.variant === 'share' && 'text-primary focus:text-primary',
+        menuItem.className,
+      )}
       disabled={menuItem.disabled}
       onClick={async (event) => {
         event.preventDefault()
@@ -82,12 +103,12 @@ function ContextMenuResolvedItem({ menuItem, onAction }: ContextMenuResolvedItem
         }
       }}
     >
-      {IconComponent && <IconComponent className="mr-2 h-4 w-4" />}
-      <span className="flex-1">{menuItem.label}</span>
-      {menuItem.shortcut && (
-        <span className="ml-2 text-xs text-muted-foreground">{menuItem.shortcut}</span>
-      )}
-      {menuItem.checked && <CheckIcon className="ml-2 h-4 w-4" />}
+      <MenuItemContent
+        IconComponent={IconComponent}
+        checked={menuItem.checked}
+        label={menuItem.label}
+        shortcut={menuItem.shortcut}
+      />
     </ContextMenuItem>
   )
 }
