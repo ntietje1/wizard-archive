@@ -30,6 +30,23 @@ describe('classifyCanvasPointerTarget', () => {
     expect(classifyCanvasPointerTarget(input, pane)).toEqual({ kind: 'blocked-interactive-child' })
     expect(classifyCanvasPointerTarget(outside, pane)).toEqual({ kind: 'outside' })
   })
+
+  it('treats read-only rich embedded notes as draggable node content', () => {
+    const { pane, node } = createCanvasDom()
+    const readOnlyEmbedNote = document.createElement('div')
+    readOnlyEmbedNote.className = 'canvas-rich-text-editor'
+    const editingEmbedNote = document.createElement('div')
+    editingEmbedNote.className = 'canvas-rich-text-editor nodrag nopan'
+    node.append(readOnlyEmbedNote, editingEmbedNote)
+
+    expect(classifyCanvasPointerTarget(readOnlyEmbedNote, pane)).toEqual({
+      kind: 'node',
+      nodeId: 'node-1',
+    })
+    expect(classifyCanvasPointerTarget(editingEmbedNote, pane)).toEqual({
+      kind: 'blocked-interactive-child',
+    })
+  })
 })
 
 describe('createCanvasPointerRouter', () => {

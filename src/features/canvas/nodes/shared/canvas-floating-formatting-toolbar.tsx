@@ -326,20 +326,24 @@ export function CanvasFloatingFormattingToolbar({
   }
 
   const setTextColor = (color: string) => {
+    const selectionSnapshot = selectionSnapshotRef.current
+
     if (snapshot.hasTextSelection) {
-      restoreCanvasRichTextSelection(editor, selectionSnapshotRef.current)
+      restoreCanvasRichTextSelection(editor, selectionSnapshot)
       editor.addStyles({ textColor: color })
+      editor.focus()
+      requestAnimationFrame(() => {
+        restoreCanvasRichTextSelection(editor, selectionSnapshot)
+      })
       return
     }
 
-    restoreCanvasRichTextSelection(editor, selectionSnapshotRef.current)
-    applyCanvasRichTextDefaultTextColor(
-      editor,
-      defaultTextColor,
-      color,
-      selectionSnapshotRef.current,
-    )
+    restoreCanvasRichTextSelection(editor, selectionSnapshot)
+    applyCanvasRichTextDefaultTextColor(editor, defaultTextColor, color, selectionSnapshot)
     onDefaultTextColorChange?.(color)
+    requestAnimationFrame(() => {
+      editor.focus()
+    })
   }
 
   return (
@@ -615,6 +619,12 @@ function TextColorControls({
         className="w-auto min-w-0 overflow-visible p-2"
         style={{ zIndex: FLOATING_FORMATTING_COLOR_PALETTE_Z_INDEX }}
         aria-label="Text color palette"
+        finalFocus={false}
+        onPointerDownCapture={(event) => {
+          preventEditorBlur(event)
+        }}
+        onPointerUpCapture={stopPropagation}
+        onClick={stopPropagation}
       >
         <DropdownMenuRadioGroup
           className="grid grid-cols-5 gap-1"

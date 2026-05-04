@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
+import { Schema } from '@tiptap/pm/model'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { CanvasFloatingFormattingToolbar } from '../canvas-floating-formatting-toolbar'
@@ -296,6 +297,92 @@ describe('CanvasFloatingFormattingToolbar', () => {
     expect(editor.removeStyles).not.toHaveBeenCalled()
   })
 
+  it('restores the editor cursor after applying a selected text color', () => {
+    const editor = createEditor({
+      activeStyles: { textColor: 'var(--t-blue)' },
+      selectedBlocks: [
+        createParagraphBlock('paragraph-1', {
+          textAlignment: 'left',
+          content: [{ type: 'text', text: 'blue', styles: { textColor: 'var(--t-blue)' } }],
+        }),
+      ],
+    })
+
+    render(<CanvasFloatingFormattingToolbar editor={editor as never} visible />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Text color' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Select Red text color' }))
+
+    const addStylesOrder = editor.addStyles.mock.invocationCallOrder[0]
+    const lastFocusOrder = editor.focus.mock.invocationCallOrder.at(-1)
+
+    expect(addStylesOrder).toBeDefined()
+    expect(lastFocusOrder).toBeDefined()
+    expect(lastFocusOrder).toBeGreaterThan(addStylesOrder!)
+  })
+
+  it('restores the editor cursor again after the text color menu closes', () => {
+    const animationFrames: Array<FrameRequestCallback> = []
+    const requestAnimationFrameSpy = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback: FrameRequestCallback) => {
+        animationFrames.push(callback)
+        return animationFrames.length
+      })
+    const editor = createEditor({
+      activeStyles: { textColor: 'var(--t-blue)' },
+      selectedBlocks: [
+        createParagraphBlock('paragraph-1', {
+          textAlignment: 'left',
+          content: [{ type: 'text', text: 'blue', styles: { textColor: 'var(--t-blue)' } }],
+        }),
+      ],
+    })
+
+    try {
+      render(<CanvasFloatingFormattingToolbar editor={editor as never} visible />)
+
+      fireEvent.click(screen.getByRole('button', { name: 'Text color' }))
+      fireEvent.click(screen.getByRole('menuitemradio', { name: 'Select Red text color' }))
+
+      const addStylesOrder = editor.addStyles.mock.invocationCallOrder[0]
+      expect(addStylesOrder).toBeDefined()
+      expect(requestAnimationFrameSpy).toHaveBeenCalled()
+      const focusCountAfterColorChange = editor.focus.mock.calls.length
+
+      act(() => {
+        animationFrames.forEach((callback) => callback(performance.now()))
+      })
+
+      expect(editor.focus).toHaveBeenCalledTimes(focusCountAfterColorChange + 1)
+      expect(editor.focus.mock.invocationCallOrder.at(-1)).toBeGreaterThan(addStylesOrder!)
+    } finally {
+      requestAnimationFrameSpy.mockRestore()
+    }
+  })
+
+  it('does not return focus to the text color trigger after selecting a swatch', async () => {
+    const user = userEvent.setup()
+    const editor = createEditor({
+      activeStyles: { textColor: 'var(--t-blue)' },
+      selectedBlocks: [
+        createParagraphBlock('paragraph-1', {
+          textAlignment: 'left',
+          content: [{ type: 'text', text: 'blue', styles: { textColor: 'var(--t-blue)' } }],
+        }),
+      ],
+    })
+
+    render(<CanvasFloatingFormattingToolbar editor={editor as never} visible />)
+
+    const textColorTrigger = screen.getByRole('button', { name: 'Text color' })
+    await user.click(textColorTrigger)
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Select Red text color' }))
+
+    expect(editor.focus).toHaveBeenCalled()
+    expect(textColorTrigger).not.toHaveFocus()
+  })
+
   it('reflects a custom selected text color in the trigger icon', () => {
     const editor = createEditor({
       activeStyles: { textColor: '#123456' },
@@ -372,6 +459,60 @@ describe('CanvasFloatingFormattingToolbar', () => {
       ],
     )
     expect(editor.addStyles).toHaveBeenCalledWith({ textColor: 'var(--t-red)' })
+  })
+
+  it('keeps the pending text color mark after changing color with a collapsed cursor', () => {
+    const animationFrames: Array<FrameRequestCallback> = []
+    const requestAnimationFrameSpy = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback: FrameRequestCallback) => {
+        animationFrames.push(callback)
+        return animationFrames.length
+      })
+    const paragraph = createParagraphBlock('paragraph-1', {
+      textAlignment: 'left',
+      content: [
+        { type: 'text', text: 'existing default' },
+        { type: 'text', text: 'existing blue', styles: { textColor: 'var(--t-blue)' } },
+      ],
+    })
+    const editor = createEditor({
+      activeStyles: { textColor: 'var(--t-blue)' },
+      hasTextSelection: false,
+      selectionSnapshot: { anchor: 2, head: 2, type: 'text' },
+      selectedBlocks: [paragraph],
+    })
+
+    try {
+      render(
+        <CanvasFloatingFormattingToolbar
+          editor={editor as never}
+          visible
+          defaultTextColor="var(--foreground)"
+          onDefaultTextColorChange={vi.fn()}
+        />,
+      )
+
+      const textColorTrigger = screen.getByRole('button', { name: 'Text color' })
+      fireEvent.pointerDown(textColorTrigger)
+      fireEvent.click(textColorTrigger)
+      fireEvent.click(screen.getByRole('menuitemradio', { name: 'Select Red text color' }))
+
+      const addStylesOrder = editor.addStyles.mock.invocationCallOrder[0]
+      expect(addStylesOrder).toBeDefined()
+
+      act(() => {
+        animationFrames.forEach((callback) => callback(performance.now()))
+      })
+
+      const selectionDispatchAfterPendingMark =
+        editor._tiptapEditor.view.dispatch.mock.invocationCallOrder.some(
+          (dispatchOrder) => dispatchOrder > addStylesOrder!,
+        )
+      expect(selectionDispatchAfterPendingMark).toBe(false)
+    } finally {
+      requestAnimationFrameSpy.mockRestore()
+    }
   })
 
   it('shows mixed text color state when selected rich text contains multiple colors', () => {
@@ -530,14 +671,35 @@ function readZIndex(element: Element | null, label = 'element'): number {
   return Number.parseInt(zIndex, 10)
 }
 
+const proseMirrorTestSchema = new Schema({
+  nodes: {
+    doc: { content: 'block+' },
+    paragraph: {
+      content: 'text*',
+      group: 'block',
+      parseDOM: [{ tag: 'p' }],
+      toDOM: () => ['p', 0],
+    },
+    text: { group: 'inline' },
+  },
+})
+
+function createProseMirrorTestDoc() {
+  return proseMirrorTestSchema.node('doc', null, [
+    proseMirrorTestSchema.node('paragraph', null, [proseMirrorTestSchema.text('hello')]),
+  ])
+}
+
 function createEditor({
   activeStyles,
   hasTextSelection = true,
+  selectionSnapshot = null,
   selectedCutBlocks,
   selectedBlocks,
 }: {
   activeStyles: Record<string, unknown>
   hasTextSelection?: boolean
+  selectionSnapshot?: Record<string, unknown> | null
   selectedCutBlocks?: Array<TestBlock>
   selectedBlocks: Array<TestBlock>
 }) {
@@ -554,9 +716,9 @@ function createEditor({
         dispatch: vi.fn(),
         focus,
         state: {
-          doc: {},
+          doc: createProseMirrorTestDoc(),
           selection: {
-            toJSON: vi.fn(() => null),
+            toJSON: vi.fn(() => selectionSnapshot),
           },
           tr: {
             setSelection: vi.fn((selection: unknown) => selection),

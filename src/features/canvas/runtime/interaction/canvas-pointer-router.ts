@@ -389,7 +389,7 @@ export function classifyCanvasPointerTarget(
     return { kind: 'connection-handle' }
   }
 
-  if (target.closest(INTERACTIVE_CHILD_SELECTOR)) {
+  if (isBlockedInteractiveChild(target)) {
     return { kind: 'blocked-interactive-child' }
   }
 
@@ -416,8 +416,16 @@ const INTERACTIVE_CHILD_SELECTOR = [
   'button',
   'a[href]',
   '[contenteditable="true"]',
-  '.canvas-rich-text-editor',
 ].join(',')
+
+function isBlockedInteractiveChild(target: Element) {
+  if (target.closest(INTERACTIVE_CHILD_SELECTOR)) {
+    return true
+  }
+
+  const richTextEditor = target.closest('.canvas-rich-text-editor')
+  return Boolean(richTextEditor?.closest('.nodrag, .nopan'))
+}
 
 function createRectangleSelectionGesture(
   options: CanvasPointerRouterOptions,
