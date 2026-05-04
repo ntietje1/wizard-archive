@@ -37,7 +37,22 @@ describe('classifyCanvasPointerTarget', () => {
     readOnlyEmbedNote.className = 'canvas-rich-text-editor'
     const editingEmbedNote = document.createElement('div')
     editingEmbedNote.className = 'canvas-rich-text-editor nodrag nopan'
-    node.append(readOnlyEmbedNote, editingEmbedNote)
+    const nodragOnlyEmbedNote = document.createElement('div')
+    nodragOnlyEmbedNote.className = 'canvas-rich-text-editor nodrag'
+    const nopanOnlyEmbedNote = document.createElement('div')
+    nopanOnlyEmbedNote.className = 'canvas-rich-text-editor nopan'
+    const nestedEmbedNote = document.createElement('div')
+    nestedEmbedNote.className = 'canvas-rich-text-editor'
+    const nestedEditor = document.createElement('div')
+    nestedEditor.className = 'canvas-rich-text-editor'
+    nestedEmbedNote.appendChild(nestedEditor)
+    node.append(
+      readOnlyEmbedNote,
+      editingEmbedNote,
+      nodragOnlyEmbedNote,
+      nopanOnlyEmbedNote,
+      nestedEmbedNote,
+    )
 
     expect(classifyCanvasPointerTarget(readOnlyEmbedNote, pane)).toEqual({
       kind: 'node',
@@ -45,6 +60,16 @@ describe('classifyCanvasPointerTarget', () => {
     })
     expect(classifyCanvasPointerTarget(editingEmbedNote, pane)).toEqual({
       kind: 'blocked-interactive-child',
+    })
+    expect(classifyCanvasPointerTarget(nodragOnlyEmbedNote, pane)).toEqual({
+      kind: 'blocked-interactive-child',
+    })
+    expect(classifyCanvasPointerTarget(nopanOnlyEmbedNote, pane)).toEqual({
+      kind: 'blocked-interactive-child',
+    })
+    expect(classifyCanvasPointerTarget(nestedEditor, pane)).toEqual({
+      kind: 'node',
+      nodeId: 'node-1',
     })
   })
 })

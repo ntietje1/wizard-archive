@@ -4,6 +4,7 @@ import type { ContextMenuContributor, ContextMenuItemSpec } from '~/features/con
 import type { CanvasEdgeType } from '../../edges/canvas-edge-types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
+import type { CanvasArrangeAction } from '../document/canvas-arrange'
 import type { CanvasReorderDirection } from '../document/canvas-reorder'
 import type {
   CanvasDocumentEdge,
@@ -55,6 +56,11 @@ export type CanvasContextMenuReorderPayload = {
   direction: CanvasReorderDirection
 }
 
+export type CanvasContextMenuArrangePayload = {
+  kind: 'arrange'
+  action: CanvasArrangeAction
+}
+
 export interface CanvasClipboardEntry {
   nodes: Array<CanvasDocumentNode>
   edges: Array<CanvasDocumentEdge>
@@ -64,6 +70,8 @@ export interface CanvasClipboardEntry {
 export interface CanvasContextMenuServices {
   canOpenEmbedTarget: (target: EmbedNodeTarget) => boolean
   openEmbedTarget: (target: EmbedNodeTarget) => Promise<boolean>
+  hasSelectableCanvasItems: () => boolean
+  selectAllCanvasItems: () => void
   createAndEmbedSidebarItem: (
     type: SidebarItemType,
     pointerPosition: CanvasContextMenuPoint,
@@ -78,7 +86,7 @@ export type CanvasContextMenuItem<TPayload = unknown> = ContextMenuItemSpec<
 
 export type CanvasContextMenuCommands = Pick<
   CanvasCommands,
-  'copy' | 'cut' | 'paste' | 'duplicate' | 'delete' | 'reorder'
+  'copy' | 'cut' | 'paste' | 'duplicate' | 'delete' | 'reorder' | 'arrange'
 >
 
 export type CanvasContextMenuContributor = ContextMenuContributor<

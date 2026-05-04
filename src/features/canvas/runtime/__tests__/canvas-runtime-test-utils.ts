@@ -63,6 +63,11 @@ function createCanvasCommands(): CanvasCommands {
       canRun: vi.fn(() => true),
       run: vi.fn(() => true),
     },
+    arrange: {
+      id: 'arrange',
+      canRun: vi.fn(() => true),
+      run: vi.fn(() => true),
+    },
   }
 }
 

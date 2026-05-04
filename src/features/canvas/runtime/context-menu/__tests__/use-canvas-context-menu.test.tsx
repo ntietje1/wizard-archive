@@ -109,6 +109,11 @@ function createCommands(
       canRun: vi.fn(() => true),
       run: vi.fn(() => true),
     },
+    arrange: {
+      id: 'arrange',
+      canRun: vi.fn(() => true),
+      run: vi.fn(() => true),
+    },
     ...overrides,
   }
 }
@@ -187,6 +192,65 @@ describe('useCanvasContextMenu', () => {
     expect(selection.clearSelection).toHaveBeenCalledTimes(1)
     expect(open).toHaveBeenCalledWith({ x: 20, y: 40 })
     expect(result.current.menu.isEmpty).toBe(false)
+  })
+
+  it('selects every canvas item from the pane menu Select All action', async () => {
+    const selection = createSelectionController()
+    const { nodesMap, edgesMap } = createContextMenuDoc()
+    nodesMap.set('node-1', {
+      id: 'node-1',
+      type: 'text',
+      position: { x: 0, y: 0 },
+      data: {},
+    } as Node)
+    nodesMap.set('node-2', {
+      id: 'node-2',
+      type: 'text',
+      position: { x: 10, y: 10 },
+      data: {},
+    } as Node)
+    edgesMap.set('edge-1', {
+      id: 'edge-1',
+      source: 'node-1',
+      target: 'node-2',
+      type: 'straight',
+    } as Edge)
+    const { result } = renderHook(() =>
+      useCanvasContextMenu({
+        activeTool: 'select',
+        canEdit: true,
+        campaignId: testCampaignId,
+        canvasParentId: null,
+        nodesMap,
+        edgesMap,
+        createNode: vi.fn(),
+        screenToCanvasPosition: ({ x, y }) => ({ x, y }),
+        selection,
+        commands: createCommands(),
+      }),
+    )
+
+    result.current.hostRef.current = {
+      open: vi.fn(),
+      close: vi.fn(),
+    }
+
+    act(() => {
+      result.current.openForPane(createContextMenuEvent(20, 40))
+    })
+
+    const selectAllItem = result.current.menu.flatItems.find((item) => item.label === 'Select All')
+    expect(selectAllItem).toBeDefined()
+    expect(selectAllItem?.disabled).toBe(false)
+
+    await act(async () => {
+      await selectAllItem!.onSelect()
+    })
+
+    expect(selection.setSelection).toHaveBeenCalledWith({
+      nodeIds: new Set(['node-1', 'node-2']),
+      edgeIds: new Set(['edge-1']),
+    })
   })
 
   it('selects the right-clicked node before opening the menu', () => {

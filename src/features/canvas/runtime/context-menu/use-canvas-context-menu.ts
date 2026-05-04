@@ -75,6 +75,13 @@ export function useCanvasContextMenu({
   const { itemsMap } = useActiveSidebarItems()
 
   const services = {
+    hasSelectableCanvasItems: () => nodesMap.size > 0 || edgesMap.size > 0,
+    selectAllCanvasItems: () => {
+      selection.setSelection({
+        nodeIds: new Set(nodesMap.keys()),
+        edgeIds: new Set(edgesMap.keys()),
+      })
+    },
     canOpenEmbedTarget: (target) =>
       target.kind === 'embed-node' && itemsMap.has(target.sidebarItemId),
     openEmbedTarget: async (target) => {

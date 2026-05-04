@@ -205,6 +205,7 @@ function createReadOnlyPreviewServices(
         duplicate: { id: 'duplicate', canRun: () => false, run: () => null },
         delete: { id: 'delete', canRun: () => false, run: () => false },
         reorder: { id: 'reorder', canRun: () => false, run: () => false },
+        arrange: { id: 'arrange', canRun: () => false, run: () => false },
       },
       documentWriter: {
         createNode: () => undefined,

@@ -79,9 +79,17 @@ describe('readCanvasRichTextContentState', () => {
     expect(
       readCanvasRichTextContentState([
         {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Paragraph' }],
+        },
+        {
           type: 'heading',
           props: { level: 2 },
           content: [{ type: 'text', text: 'Heading' }],
+        },
+        {
+          type: 'quote',
+          content: [{ type: 'text', text: 'Quote' }],
         },
         {
           type: 'bulletListItem',
@@ -105,9 +113,17 @@ describe('readCanvasRichTextContentState', () => {
     ).toEqual({
       content: [
         {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Paragraph' }],
+        },
+        {
           type: 'heading',
           props: { level: 2 },
           content: [{ type: 'text', text: 'Heading' }],
+        },
+        {
+          type: 'quote',
+          content: [{ type: 'text', text: 'Quote' }],
         },
         {
           type: 'bulletListItem',

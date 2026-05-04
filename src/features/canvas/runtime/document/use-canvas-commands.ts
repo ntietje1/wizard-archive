@@ -2,7 +2,9 @@ import {
   applyCanvasPasteCommand,
   applyCanvasReorderCommand,
   deleteCanvasSelectionCommand,
+  setCanvasNodePositionsCommand,
 } from './canvas-document-commands'
+import { createCanvasArrangePlan } from './canvas-arrange'
 import { createCanvasReorderPlan } from './canvas-reorder-plan'
 import { sanitizeNodeForPersistence } from './canvas-node-persistence-sanitizer'
 import { transactCanvasMaps } from './canvas-yjs-transactions'
@@ -12,6 +14,7 @@ import {
   materializeCanvasPaste,
 } from '../context-menu/canvas-context-menu-clipboard'
 import { useMemo } from 'react'
+import type { CanvasArrangeAction } from './canvas-arrange'
 import type { CanvasReorderDirection } from './canvas-reorder'
 import type {
   CanvasSelectionController,
@@ -45,6 +48,11 @@ interface CanvasReorderCommandArgs extends CanvasSelectionCommandArgs {
   _reorderPlan?: ReturnType<typeof createCanvasReorderPlan>
 }
 
+interface CanvasArrangeCommandArgs extends CanvasSelectionCommandArgs {
+  action: CanvasArrangeAction
+  _arrangePlan?: ReturnType<typeof createCanvasArrangePlan>
+}
+
 export interface CanvasCommands {
   copy: CanvasCommand<CanvasSelectionCommandArgs, boolean>
   cut: CanvasCommand<CanvasSelectionCommandArgs, boolean>
@@ -52,6 +60,7 @@ export interface CanvasCommands {
   duplicate: CanvasCommand<CanvasSelectionCommandArgs, CanvasSelectionSnapshot | null>
   delete: CanvasCommand<CanvasSelectionCommandArgs, boolean>
   reorder: CanvasCommand<CanvasReorderCommandArgs, boolean>
+  arrange: CanvasCommand<CanvasArrangeCommandArgs, boolean>
 }
 
 export function useCanvasCommands({
@@ -232,6 +241,44 @@ export function useCanvasCommands({
 
           transactCanvasMaps(nodesMap, edgesMap, () => {
             applyCanvasReorderCommand({ nodesMap, edgesMap, reorderUpdates: reorderPlan })
+          })
+
+          return true
+        },
+      },
+      arrange: {
+        id: 'arrange',
+        canRun: (args) => {
+          if (!canEdit || !args) {
+            return false
+          }
+
+          args._arrangePlan = createCanvasArrangePlan(
+            nodesMap,
+            getSelectionSnapshot(args),
+            args.action,
+          )
+          return args._arrangePlan !== null
+        },
+        run: (args) => {
+          if (!canEdit || !args) {
+            return false
+          }
+
+          const arrangePlan =
+            args._arrangePlan ??
+            createCanvasArrangePlan(nodesMap, getSelectionSnapshot(args), args.action)
+          args._arrangePlan = undefined
+          if (!arrangePlan) {
+            return false
+          }
+
+          transactCanvasMaps(nodesMap, edgesMap, () => {
+            setCanvasNodePositionsCommand({
+              nodesMap,
+              positions: arrangePlan,
+              sanitizeNode: sanitizeNodeForPersistence,
+            })
           })
 
           return true

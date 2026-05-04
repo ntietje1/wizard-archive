@@ -43,7 +43,6 @@ describe('CanvasReadOnlyPreview', () => {
     )
 
     const previewEl = await screen.findByTestId('sidebar-item-preview-content')
-    expect(previewEl).toBeInTheDocument()
 
     await waitFor(() => {
       expect(previewEl.parentElement).toHaveStyle({

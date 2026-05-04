@@ -11,11 +11,13 @@ import type {
 } from '~/features/canvas/types/canvas-domain-types'
 import * as Y from 'yjs'
 
-function createNode(id: string, zIndex: number): Node {
+function createNode(id: string, zIndex: number, width = 20, height = 10): Node {
   return {
     id,
     type: 'text',
     position: { x: zIndex * 10, y: zIndex * 10 },
+    width,
+    height,
     data: {},
     zIndex,
   }
@@ -76,6 +78,12 @@ function getEdgeZIndexes(edgesMap: Y.Map<Edge>) {
   return Array.from(edgesMap.values())
     .sort((left, right) => left.id.localeCompare(right.id))
     .map((edge) => ({ id: edge.id, zIndex: edge.zIndex }))
+}
+
+function getNodePositions(nodesMap: Y.Map<Node>) {
+  return Array.from(nodesMap.values())
+    .sort((left, right) => left.id.localeCompare(right.id))
+    .map((node) => ({ id: node.id, position: node.position }))
 }
 
 afterEach(() => {
@@ -364,6 +372,98 @@ describe('useCanvasCommands', () => {
 
     act(() => {
       expect(result.current.reorder.run({ direction: 'bringToFront' })).toBe(false)
+    })
+
+    unmount()
+    doc.destroy()
+  })
+
+  it('arranges selected nodes and ignores selected edges for eligibility', () => {
+    const { doc, nodesMap, edgesMap } = createCanvasMaps()
+    nodesMap.set('node-1', {
+      ...nodesMap.get('node-1')!,
+      position: { x: 30, y: 10 },
+      width: 20,
+      height: 10,
+    })
+    nodesMap.set('node-2', {
+      ...nodesMap.get('node-2')!,
+      position: { x: 10, y: 50 },
+      width: 40,
+      height: 20,
+    })
+    const selection = createSelectionController(
+      selectionSnapshot(new Set(['node-1', 'node-2']), new Set(['edge-1'])),
+    )
+
+    const { result, unmount } = renderHook(() =>
+      useCanvasCommands({
+        canEdit: true,
+        nodesMap,
+        edgesMap,
+        selection,
+      }),
+    )
+
+    expect(result.current.arrange.canRun({ action: 'alignLeft' })).toBe(true)
+
+    act(() => {
+      expect(result.current.arrange.run({ action: 'alignLeft' })).toBe(true)
+    })
+
+    expect(getNodePositions(nodesMap)).toEqual([
+      { id: 'node-1', position: { x: 10, y: 10 } },
+      { id: 'node-2', position: { x: 10, y: 50 } },
+      { id: 'node-3', position: { x: 20, y: 20 } },
+    ])
+
+    unmount()
+    doc.destroy()
+  })
+
+  it('requires enough selected nodes for each arrangement action', () => {
+    const { doc, nodesMap, edgesMap } = createCanvasMaps()
+    const twoNodeSelection = createSelectionController(
+      selectionSnapshot(new Set(['node-1', 'node-2'])),
+    )
+
+    const { result, unmount } = renderHook(() =>
+      useCanvasCommands({
+        canEdit: true,
+        nodesMap,
+        edgesMap,
+        selection: twoNodeSelection,
+      }),
+    )
+
+    expect(result.current.arrange.canRun({ action: 'distributeHorizontal' })).toBe(false)
+    act(() => {
+      expect(result.current.arrange.run({ action: 'distributeHorizontal' })).toBe(false)
+    })
+
+    unmount()
+    doc.destroy()
+  })
+
+  it('does not arrange edge-only selections', () => {
+    const { doc, nodesMap, edgesMap } = createCanvasMaps()
+    const selection = createSelectionController(
+      selectionSnapshot(new Set<string>(), new Set(['edge-1'])),
+    )
+
+    const { result, unmount } = renderHook(() =>
+      useCanvasCommands({
+        canEdit: true,
+        nodesMap,
+        edgesMap,
+        selection,
+      }),
+    )
+
+    expect(result.current.arrange.canRun({ action: 'alignLeft' })).toBe(false)
+
+    act(() => {
+      expect(result.current.arrange.run({ action: 'alignLeft' })).toBe(false)
     })
 
     unmount()

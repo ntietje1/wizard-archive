@@ -28,6 +28,20 @@ const submenuItem = {
   onSelect: vi.fn(),
 }
 
+const secondSubmenuItem = {
+  ...submenuItem,
+  id: 'submenu-item-2',
+  label: 'Distribute H',
+  group: 'group-2',
+}
+
+const thirdSubmenuItem = {
+  ...submenuItem,
+  id: 'submenu-item-3',
+  label: 'Flip H',
+  group: 'group-3',
+}
+
 const submenuParent = {
   id: 'submenu-parent',
   label: 'Reorder',
@@ -38,6 +52,11 @@ const submenuParent = {
   scope: 'target' as const,
   onSelect: vi.fn(),
   children: [submenuItem],
+}
+
+const groupedSubmenuParent = {
+  ...submenuParent,
+  children: [submenuItem, secondSubmenuItem, thirdSubmenuItem],
 }
 
 const simpleMenu: BuiltContextMenu = {
@@ -59,6 +78,17 @@ const submenuMenu: BuiltContextMenu = {
     },
   ],
   flatItems: [leafItem, submenuParent, submenuItem],
+  isEmpty: false,
+}
+
+const groupedSubmenuMenu: BuiltContextMenu = {
+  groups: [
+    {
+      id: 'group-1',
+      items: [groupedSubmenuParent],
+    },
+  ],
+  flatItems: [groupedSubmenuParent, submenuItem, secondSubmenuItem, thirdSubmenuItem],
   isEmpty: false,
 }
 
@@ -200,5 +230,28 @@ describe('ContextMenuHost', () => {
     expect(screen.getAllByRole('menu')).toHaveLength(2)
     expect(reorderItem).toBeVisible()
     expect(sendToBackItem).toBeVisible()
+  })
+
+  it('renders separators between submenu child groups', async () => {
+    const user = userEvent.setup()
+    render(
+      <ContextMenuHost menu={groupedSubmenuMenu}>
+        <div data-testid="context-trigger">Canvas surface</div>
+      </ContextMenuHost>,
+    )
+
+    fireEvent.contextMenu(screen.getByTestId('context-trigger'), {
+      bubbles: true,
+      cancelable: true,
+      clientX: 24,
+      clientY: 32,
+      button: 2,
+    })
+
+    const reorderItem = await screen.findByRole('menuitem', { name: 'Reorder' })
+    await user.hover(reorderItem)
+
+    await screen.findByRole('menuitem', { name: 'Flip H' })
+    expect(document.body.querySelectorAll('[data-slot="context-menu-separator"]')).toHaveLength(2)
   })
 })
