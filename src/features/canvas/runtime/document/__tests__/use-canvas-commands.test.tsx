@@ -305,25 +305,25 @@ describe('useCanvasDocumentCommands', () => {
       'sendToBack',
       { id: 'node-1', zIndex: 2 },
       { id: 'node-2', zIndex: 1 },
-      { id: 'node-3', zIndex: 3 },
+      { id: 'node-3', zIndex: 5 },
     ],
     [
       'sendBackward',
-      { id: 'node-1', zIndex: 2 },
-      { id: 'node-2', zIndex: 1 },
-      { id: 'node-3', zIndex: 3 },
+      { id: 'node-1', zIndex: 1 },
+      { id: 'node-2', zIndex: 2 },
+      { id: 'node-3', zIndex: 5 },
     ],
     [
       'bringForward',
       { id: 'node-1', zIndex: 1 },
-      { id: 'node-2', zIndex: 3 },
-      { id: 'node-3', zIndex: 2 },
+      { id: 'node-2', zIndex: 4 },
+      { id: 'node-3', zIndex: 5 },
     ],
     [
       'bringToFront',
       { id: 'node-1', zIndex: 1 },
-      { id: 'node-2', zIndex: 3 },
-      { id: 'node-3', zIndex: 2 },
+      { id: 'node-2', zIndex: 5 },
+      { id: 'node-3', zIndex: 4 },
     ],
   ] satisfies Array<
     [
@@ -492,8 +492,8 @@ describe('useCanvasDocumentCommands', () => {
     })
 
     expect(getEdgeZIndexes(edgesMap)).toEqual([
-      { id: 'edge-1', zIndex: 2 },
-      { id: 'edge-2', zIndex: 1 },
+      { id: 'edge-1', zIndex: 5 },
+      { id: 'edge-2', zIndex: 3 },
     ])
 
     unmount()

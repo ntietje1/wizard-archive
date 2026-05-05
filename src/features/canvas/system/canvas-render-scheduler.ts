@@ -12,7 +12,11 @@ import type { CanvasCullingDiff } from './canvas-culling'
 import type { CanvasDomRegistry, CanvasRegisteredStrokeNodePaths } from './canvas-dom-registry'
 import type { CanvasNodeSurfaceStyleData } from '../nodes/shared/canvas-node-surface-style'
 import type { StrokeNodeData } from '../nodes/stroke/stroke-node-model'
-import type { CanvasPosition, CanvasViewport } from '../types/canvas-domain-types'
+import type {
+  CanvasDocumentNodePatch,
+  CanvasPosition,
+  CanvasViewport,
+} from '../types/canvas-domain-types'
 import type { CanvasDocumentEdge } from 'convex/canvases/validation'
 
 export type CanvasCameraState = 'idle' | 'moving'
@@ -22,6 +26,7 @@ const HIGHLIGHT_STROKE_WIDTH_FACTOR = 0.15
 
 interface CanvasRenderScheduler {
   scheduleNodeTransforms: (positions: ReadonlyMap<string, CanvasPosition>) => void
+  scheduleNodeLayoutPatches: (updates: ReadonlyMap<string, CanvasDocumentNodePatch>) => void
   scheduleEdgePaths: (paths: ReadonlyMap<string, string>) => void
   scheduleNodeDataPatches: (updates: ReadonlyMap<string, CanvasNodeDataPatch>) => void
   scheduleEdgePatches: (updates: ReadonlyMap<string, CanvasEdgePatch>) => void
@@ -38,6 +43,7 @@ export function createCanvasRenderScheduler({
   domRegistry: CanvasDomRegistry
 }): CanvasRenderScheduler {
   const pendingNodeTransforms = new Map<string, CanvasPosition>()
+  const pendingNodeLayoutPatches = new Map<string, CanvasDocumentNodePatch>()
   const pendingEdgePaths = new Map<string, string>()
   const pendingNodeDataPatches = new Map<string, CanvasNodeDataPatch>()
   const pendingEdgePatches = new Map<string, CanvasEdgePatch>()
@@ -74,6 +80,7 @@ export function createCanvasRenderScheduler({
 
   const flush = () => {
     applyNodeTransforms()
+    applyNodeLayoutPatches()
     applyEdgePaths()
     applyNodeDataPatches()
     applyEdgePatches()
@@ -90,6 +97,26 @@ export function createCanvasRenderScheduler({
       }
     }
     pendingNodeTransforms.clear()
+  }
+
+  const applyNodeLayoutPatches = () => {
+    for (const [nodeId, patch] of pendingNodeLayoutPatches) {
+      const element = domRegistry.getNode(nodeId)
+      if (!element) {
+        continue
+      }
+
+      if (patch.position) {
+        element.style.transform = `translate(${patch.position.x}px, ${patch.position.y}px)`
+      }
+      if (typeof patch.width === 'number') {
+        element.style.width = `${patch.width}px`
+      }
+      if (typeof patch.height === 'number') {
+        element.style.height = `${patch.height}px`
+      }
+    }
+    pendingNodeLayoutPatches.clear()
   }
 
   const applyEdgePaths = () => {
@@ -242,6 +269,16 @@ export function createCanvasRenderScheduler({
       }
       requestFlush()
     },
+    scheduleNodeLayoutPatches: (updates) => {
+      for (const [nodeId, update] of updates) {
+        pendingNodeLayoutPatches.set(nodeId, {
+          ...pendingNodeLayoutPatches.get(nodeId),
+          ...update,
+          position: update.position ?? pendingNodeLayoutPatches.get(nodeId)?.position,
+        })
+      }
+      requestFlush()
+    },
     scheduleEdgePaths: (paths) => {
       for (const [edgeId, path] of paths) {
         pendingEdgePaths.set(edgeId, path)
@@ -298,6 +335,7 @@ export function createCanvasRenderScheduler({
       }
       frameId = null
       pendingNodeTransforms.clear()
+      pendingNodeLayoutPatches.clear()
       pendingEdgePaths.clear()
       pendingNodeDataPatches.clear()
       pendingEdgePatches.clear()

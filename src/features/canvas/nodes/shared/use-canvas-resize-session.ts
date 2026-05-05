@@ -15,11 +15,12 @@ import { releasePointerCapture } from '../../tools/shared/tool-module-utils'
 import { affectsCanvasResizeAxis } from '../../system/canvas-resize-handles'
 import { resolveCanvasResize } from '../../system/canvas-resize-geometry'
 import { useCanvasEngine, useCanvasEngineSelector } from '../../react/use-canvas-engine'
+import { canvasBoundsToScreenBounds } from '../../components/canvas-screen-space-overlay-utils'
 import type { CanvasNodeResizeMetadata } from './canvas-node-resize-metadata'
 import type { CanvasResizeHandlePosition } from '../../system/canvas-resize-handles'
 import type { CanvasNodeResizeUpdate } from '../../tools/canvas-tool-types'
 import type { CanvasEngineSnapshot, CanvasInternalNode } from '../../system/canvas-engine-types'
-import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
+import type { CSSProperties, PointerEvent as ReactPointerEvent, RefObject } from 'react'
 import { boundsUnion } from '../../utils/canvas-geometry-utils'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
 
@@ -71,6 +72,7 @@ const RESIZE_HANDLES: Array<{
 
 interface CanvasSelectionResizeSession {
   bounds: Bounds
+  overlayRef: RefObject<HTMLDivElement | null>
   zones: ReadonlyArray<CanvasSelectionResizeZoneDescriptor>
 }
 
@@ -112,6 +114,7 @@ export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
     getSelectedResizeNodes(snapshot, metadataSnapshot),
   )
   const resizeTargetRef = useRef<{ pointerId: number; target: Element | null } | null>(null)
+  const resizeOverlayRef = useRef<HTMLDivElement | null>(null)
   const activeResizeRef = useRef<ActiveSelectionResize | null>(null)
   const removeWindowListenersRef = useRef<() => void>(() => undefined)
   const canvasEngineRef = useRef(canvasEngine)
@@ -124,6 +127,21 @@ export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
   onResizeManyRef.current = onResizeMany
   onResizeManyCancelRef.current = onResizeManyCancel
   onResizeManyEndRef.current = onResizeManyEnd
+
+  const updateResizeOverlay = useCallback((bounds: Bounds) => {
+    const overlay = resizeOverlayRef.current
+    if (!overlay) {
+      return
+    }
+
+    const screenBounds = canvasBoundsToScreenBounds(
+      bounds,
+      canvasEngineRef.current.getSnapshot().viewport,
+    )
+    overlay.style.height = `${screenBounds.height}px`
+    overlay.style.transform = `translate(${screenBounds.x}px, ${screenBounds.y}px)`
+    overlay.style.width = `${screenBounds.width}px`
+  }, [])
 
   const applyResizeResult = useCallback(
     (
@@ -140,13 +158,13 @@ export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
       } else {
         setCanvasDragSnapGuides(result.guides)
       }
-
       const updates = resolveSelectionResizeUpdates({
         handlePosition: activeResize.handlePosition,
         nextBounds: result.bounds,
         nodes: activeResize.nodes,
         startBounds: activeResize.startBounds,
       })
+      updateResizeOverlay(getResizeUpdateBounds(updates) ?? result.bounds)
       const resize = options.cancel
         ? onResizeManyCancelRef.current
         : result.final
@@ -154,7 +172,7 @@ export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
           : onResizeManyRef.current
       resize(updates)
     },
-    [],
+    [updateResizeOverlay],
   )
 
   const updateResizeForSession = useCallback(
@@ -396,6 +414,7 @@ export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
 
   return {
     bounds: selection.bounds,
+    overlayRef: resizeOverlayRef,
     zones,
   }
 }
@@ -452,6 +471,17 @@ export function resolveSelectionResizeUpdates({
   }
 
   return updates
+}
+
+function getResizeUpdateBounds(updates: ReadonlyMap<string, CanvasNodeResizeUpdate>) {
+  return boundsUnion(
+    Array.from(updates.values(), (update) => ({
+      x: update.position.x,
+      y: update.position.y,
+      width: update.width,
+      height: update.height,
+    })),
+  )
 }
 
 function getSelectedResizeNodes(
@@ -531,13 +561,6 @@ function getMinimumSelectionResizeSize(selection: {
   bounds: Bounds
   nodes: ReadonlyArray<SelectionResizeNode>
 }) {
-  if (selection.nodes.length > 1) {
-    return {
-      width: 1,
-      height: 1,
-    }
-  }
-
   let minScaleX = 0
   let minScaleY = 0
 

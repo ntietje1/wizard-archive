@@ -34,7 +34,10 @@ export function createCanvasDocumentWriter({
           nodesMap,
           node,
           sanitizeNode: sanitizeNodeForPersistence,
-          nextZIndex: getNextCanvasElementZIndex(Array.from(nodesMap.values())),
+          nextZIndex: getNextCanvasElementZIndex([
+            ...Array.from(nodesMap.values()),
+            ...Array.from(edgesMap.values()),
+          ]),
         })
       })
     },
@@ -112,7 +115,10 @@ export function createCanvasDocumentWriter({
           edgesMap,
           connection,
           defaults,
-          nextZIndex: getNextCanvasElementZIndex(Array.from(edgesMap.values())),
+          nextZIndex: getNextCanvasElementZIndex([
+            ...Array.from(nodesMap.values()),
+            ...Array.from(edgesMap.values()),
+          ]),
         })
       })
     },

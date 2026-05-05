@@ -48,6 +48,68 @@ describe('resolveCanvasResize', () => {
     ).toEqual({ x: 10, y: 50, width: 100, height: 20 })
   })
 
+  it('clamps side handles at minimum dimensions instead of flipping across the anchor', () => {
+    const startBounds = { x: 10, y: 20, width: 100, height: 50 }
+
+    expect(
+      resize({
+        handlePosition: 'right',
+        startBounds,
+        currentPoint: { x: -100, y: 45 },
+        minWidth: 30,
+        minHeight: 20,
+      }).bounds,
+    ).toEqual({ x: 10, y: 20, width: 30, height: 50 })
+    expect(
+      resize({
+        handlePosition: 'left',
+        startBounds,
+        currentPoint: { x: 200, y: 45 },
+        minWidth: 30,
+        minHeight: 20,
+      }).bounds,
+    ).toEqual({ x: 80, y: 20, width: 30, height: 50 })
+    expect(
+      resize({
+        handlePosition: 'top',
+        startBounds,
+        currentPoint: { x: 60, y: 100 },
+        minWidth: 30,
+        minHeight: 20,
+      }).bounds,
+    ).toEqual({ x: 10, y: 50, width: 100, height: 20 })
+    expect(
+      resize({
+        handlePosition: 'bottom',
+        startBounds,
+        currentPoint: { x: 60, y: -100 },
+        minWidth: 30,
+        minHeight: 20,
+      }).bounds,
+    ).toEqual({ x: 10, y: 20, width: 100, height: 20 })
+  })
+
+  it('clamps corner handles at minimum dimensions instead of flipping across the anchor', () => {
+    expect(
+      resize({
+        handlePosition: 'bottom-right',
+        startBounds: { x: 0, y: 0, width: 100, height: 50 },
+        currentPoint: { x: -100, y: -100 },
+        minWidth: 30,
+        minHeight: 20,
+      }).bounds,
+    ).toEqual({ x: 0, y: 0, width: 30, height: 20 })
+    expect(
+      resize({
+        handlePosition: 'top-left',
+        startBounds: { x: 10, y: 20, width: 100, height: 50 },
+        currentPoint: { x: 200, y: 200 },
+        minWidth: 30,
+        minHeight: 20,
+      }).bounds,
+    ).toEqual({ x: 80, y: 50, width: 30, height: 20 })
+  })
+
   it('applies square constraints only to corner handles', () => {
     expect(
       resize({
@@ -94,6 +156,37 @@ describe('resolveCanvasResize', () => {
         minHeight: 20,
       }).bounds,
     ).toEqual({ x: -10, y: 20, width: 140, height: 70 })
+  })
+
+  it('clamps constrained handles at minimum dimensions instead of flipping across the anchor', () => {
+    expect(
+      resize({
+        handlePosition: 'bottom-right',
+        currentPoint: { x: -100, y: -100 },
+        lockedAspectRatio: 2,
+        minWidth: 30,
+        minHeight: 20,
+      }).bounds,
+    ).toEqual({ x: 0, y: 0, width: 40, height: 20 })
+    expect(
+      resize({
+        handlePosition: 'right',
+        startBounds: { x: 10, y: 20, width: 100, height: 50 },
+        currentPoint: { x: -100, y: 45 },
+        lockedAspectRatio: 2,
+        minWidth: 30,
+        minHeight: 20,
+      }).bounds,
+    ).toEqual({ x: 10, y: 35, width: 40, height: 20 })
+    expect(
+      resize({
+        handlePosition: 'bottom-right',
+        currentPoint: { x: -100, y: -100 },
+        square: true,
+        minWidth: 30,
+        minHeight: 20,
+      }).bounds,
+    ).toEqual({ x: 0, y: 0, width: 30, height: 30 })
   })
 
   it('snaps resized bounds to nearby target bounds', () => {

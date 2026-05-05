@@ -233,6 +233,63 @@ describe('createCanvasEngine', () => {
     engine.destroy()
   })
 
+  it('updates live resize DOM bounds and connected edge paths without notifying subscribers', () => {
+    const { domRuntime, engine } = createEngineWithDomRuntime()
+    const source = { ...createNode('source', 0), width: 100, height: 50 }
+    const target = {
+      ...createNode('target', 1),
+      position: { x: 200, y: 0 },
+      width: 100,
+      height: 50,
+    }
+    const nodeElement = document.createElement('div')
+    const edgePath = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+    const unsubscribeNode = domRuntime.registerNodeElement('source', nodeElement)
+    const unsubscribeEdge = domRuntime.registerEdgePaths('edge-1', {
+      path: edgePath,
+      highlightPath: null,
+      interactionPath: null,
+    })
+    engine.setDocumentSnapshot({
+      nodes: [source, target],
+      edges: [createEdge('edge-1', 'source', 'target')],
+    })
+    const listener = vi.fn()
+    const unsubscribe = engine.subscribe(listener)
+
+    engine.updateResize(
+      new Map([
+        [
+          'source',
+          {
+            width: 160,
+            height: 80,
+            position: { x: 20, y: 10 },
+          },
+        ],
+      ]),
+    )
+    domRuntime.flush()
+
+    expect(listener).not.toHaveBeenCalled()
+    expect(nodeElement.style.transform).toBe('translate(20px, 10px)')
+    expect(nodeElement.style.width).toBe('160px')
+    expect(nodeElement.style.height).toBe('80px')
+    expect(edgePath.getAttribute('d')).toBeTruthy()
+    expect(engine.getSnapshot().nodes[0]).toBe(source)
+    expect(engine.getSnapshot().nodeLookup.get('source')?.node).toEqual({
+      ...source,
+      width: 160,
+      height: 80,
+      position: { x: 20, y: 10 },
+    })
+
+    unsubscribe()
+    unsubscribeNode()
+    unsubscribeEdge()
+    engine.destroy()
+  })
+
   it('merges visual node data patches with the current engine data before writing DOM styles', () => {
     const { domRuntime, engine } = createEngineWithDomRuntime()
     const nodeSurface = document.createElement('div')

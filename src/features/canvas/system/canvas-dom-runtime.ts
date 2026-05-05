@@ -16,6 +16,9 @@ export interface CanvasDomRuntime {
   >['registerViewportOverlay']
   getViewportSurfaceBounds: ReturnType<typeof createCanvasDomRegistry>['getViewportSurfaceBounds']
   scheduleNodeTransforms: ReturnType<typeof createCanvasRenderScheduler>['scheduleNodeTransforms']
+  scheduleNodeLayoutPatches: ReturnType<
+    typeof createCanvasRenderScheduler
+  >['scheduleNodeLayoutPatches']
   scheduleEdgePaths: ReturnType<typeof createCanvasRenderScheduler>['scheduleEdgePaths']
   scheduleNodeDataPatches: (
     snapshot: CanvasEngineSnapshot,
@@ -46,6 +49,7 @@ export function createCanvasDomRuntime(): CanvasDomRuntime {
     registerViewportOverlayElement: registry.registerViewportOverlay,
     getViewportSurfaceBounds: registry.getViewportSurfaceBounds,
     scheduleNodeTransforms: scheduler.scheduleNodeTransforms,
+    scheduleNodeLayoutPatches: scheduler.scheduleNodeLayoutPatches,
     scheduleEdgePaths: scheduler.scheduleEdgePaths,
     scheduleNodeDataPatches: (
       snapshot: CanvasEngineSnapshot,

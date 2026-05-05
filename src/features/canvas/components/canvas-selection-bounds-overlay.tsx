@@ -6,22 +6,25 @@ import {
   useCanvasScreenSpaceViewport,
 } from './canvas-screen-space-overlay-utils'
 import type { Bounds } from '../utils/canvas-geometry-utils'
-import type { ReactNode } from 'react'
+import type { ReactNode, Ref } from 'react'
 
 export function CanvasSelectionBoundsOverlay({
   bounds,
   children,
   testIdPrefix,
+  wrapperRef,
 }: {
   bounds: Bounds
   children?: ReactNode
   testIdPrefix: string
+  wrapperRef?: Ref<HTMLDivElement>
 }) {
   const viewport = useCanvasScreenSpaceViewport()
   const screenBounds = canvasBoundsToScreenBounds(bounds, viewport)
 
   return (
     <div
+      ref={wrapperRef}
       data-testid={`${testIdPrefix}-wrapper`}
       className="absolute left-0 top-0 pointer-events-none"
       style={{

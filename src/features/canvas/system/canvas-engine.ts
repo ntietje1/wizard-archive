@@ -167,6 +167,19 @@ export function createCanvasEngine(config: { domRuntime?: CanvasDomRuntime } = {
     )
   }
 
+  const updateResize: CanvasEngine['updateResize'] = (updates) => {
+    const update = geometryIndex.updateResizedNodeBounds(store.getSnapshot(), updates)
+    if (!update) {
+      return
+    }
+
+    setRuntimeSnapshot(update.snapshot, { incrementVersion: true })
+    domRuntime.scheduleNodeLayoutPatches(update.layoutPatches)
+    domRuntime.scheduleEdgePaths(
+      geometryIndex.getConnectedEdgePaths(store.getSnapshot(), update.dirtyNodeIds),
+    )
+  }
+
   const stopDrag: CanvasEngine['stopDrag'] = () => {
     if (draggingNodeIds.size === 0) {
       return
@@ -232,6 +245,7 @@ export function createCanvasEngine(config: { domRuntime?: CanvasDomRuntime } = {
     startDrag,
     updateDrag,
     stopDrag,
+    updateResize,
     measureNode,
     refreshCulling: reconcileCulling,
     destroy: () => {

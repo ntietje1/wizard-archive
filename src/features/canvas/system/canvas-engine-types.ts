@@ -100,6 +100,7 @@ export interface CanvasEngine {
   startDrag: (nodeIds: ReadonlySet<string>) => void
   updateDrag: (positions: ReadonlyMap<string, CanvasPosition>) => void
   stopDrag: () => void
+  updateResize: (updates: ReadonlyMap<string, CanvasDocumentNodePatch>) => void
   measureNode: (nodeId: string, dimensions: { width: number; height: number }) => void
   refreshCulling: () => void
   destroy: () => void

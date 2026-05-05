@@ -322,7 +322,53 @@ describe('ResizableNodeWrapper', () => {
     ])
   })
 
-  it('shrinks multi-select gaps even when selected nodes are already at minimum width', () => {
+  it('updates the aggregate resize wrapper during live multiselect resize', () => {
+    renderSelectionResize({
+      nodes: [
+        createNode('node-1', { x: 10, y: 20 }, 80, 40),
+        createNode('node-2', { x: 110, y: 20 }, 40, 40),
+      ],
+      selectedNodeIds: new Set(['node-1', 'node-2']),
+    })
+
+    const wrapper = screen.getByTestId('canvas-selection-resize-wrapper')
+    const zone = screen.getByTestId('canvas-selection-resize-zone-right')
+    act(() => {
+      fireEvent.pointerDown(zone, { button: 0, pointerId: 1, clientX: 150, clientY: 40 })
+      fireEvent.pointerMove(window, { pointerId: 1, clientX: 290, clientY: 40 })
+    })
+
+    expect(wrapper).toHaveStyle({
+      height: '40px',
+      transform: 'translate(10px, 20px)',
+      width: '280px',
+    })
+  })
+
+  it('stops the aggregate resize wrapper at minimum-clamped multiselect bounds', () => {
+    renderSelectionResize({
+      nodes: [
+        createNode('node-1', { x: 10, y: 20 }, 50, 40),
+        createNode('node-2', { x: 210, y: 20 }, 50, 40),
+      ],
+      selectedNodeIds: new Set(['node-1', 'node-2']),
+    })
+
+    const wrapper = screen.getByTestId('canvas-selection-resize-wrapper')
+    const zone = screen.getByTestId('canvas-selection-resize-zone-right')
+    act(() => {
+      fireEvent.pointerDown(zone, { button: 0, pointerId: 1, clientX: 260, clientY: 40 })
+      fireEvent.pointerMove(window, { pointerId: 1, clientX: 135, clientY: 40 })
+    })
+
+    expect(wrapper).toHaveStyle({
+      height: '40px',
+      transform: 'translate(10px, 20px)',
+      width: '250px',
+    })
+  })
+
+  it('stops resizing all selected nodes once the multiselect reaches a minimum size', () => {
     const runtime = renderSelectionResize({
       nodes: [
         createNode('node-1', { x: 10, y: 20 }, 50, 40),
@@ -338,8 +384,8 @@ describe('ResizableNodeWrapper', () => {
     })
 
     expectMapEntries(runtime.nodeActions.onResizeMany, [
-      ['node-1', { width: 50, height: 40, position: { x: -2.5, y: 20 } }],
-      ['node-2', { width: 50, height: 40, position: { x: 97.5, y: 20 } }],
+      ['node-1', { width: 50, height: 40, position: { x: 10, y: 20 } }],
+      ['node-2', { width: 50, height: 40, position: { x: 210, y: 20 } }],
     ])
   })
 
@@ -351,7 +397,7 @@ describe('ResizableNodeWrapper', () => {
     const zone = screen.getByTestId('canvas-selection-resize-zone-right')
     act(() => {
       fireEvent.pointerDown(zone, { button: 0, pointerId: 1, clientX: 60, clientY: 40 })
-      fireEvent.pointerMove(window, { pointerId: 1, clientX: 25, clientY: 40 })
+      fireEvent.pointerMove(window, { pointerId: 1, clientX: -90, clientY: 40 })
     })
 
     expectMapEntries(runtime.nodeActions.onResizeMany, [

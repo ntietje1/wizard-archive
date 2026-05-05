@@ -126,16 +126,16 @@ export function CanvasScene({
           onPointerDownCapture: connectionGesture.onPointerDownCapture,
         }}
       >
+        <CanvasEdgeRenderer
+          onEdgeClick={handleEdgeClick}
+          onEdgeContextMenu={handleEdgeContextMenu}
+        />
         <svg
-          className="canvas-edge-layer pointer-events-none absolute left-0 top-0 overflow-visible"
-          data-canvas-edge-layer="true"
+          className="canvas-connection-layer pointer-events-none absolute left-0 top-0 overflow-visible"
+          data-canvas-connection-layer="true"
           width="1"
           height="1"
         >
-          <CanvasEdgeRenderer
-            onEdgeClick={handleEdgeClick}
-            onEdgeContextMenu={handleEdgeContextMenu}
-          />
           <CanvasConnectionLayer draft={connectionGesture.draft} />
         </svg>
         <CanvasNodeRenderer

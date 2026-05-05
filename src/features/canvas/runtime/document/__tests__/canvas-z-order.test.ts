@@ -110,26 +110,26 @@ describe('canvas z-order helpers', () => {
     }
   })
 
-  it('builds a mixed reorder plan for selected nodes and edges', () => {
+  it('builds a mixed reorder plan across selected nodes and edges', () => {
     const doc = new Y.Doc()
     const nodesMap = doc.getMap<Node>('nodes')
     const edgesMap = doc.getMap<Edge>('edges')
     try {
       nodesMap.set('node-1', createNode('node-1', 1))
-      nodesMap.set('node-2', createNode('node-2', 2))
-      edgesMap.set('edge-1', createEdge('edge-1', 1))
-      edgesMap.set('edge-2', createEdge('edge-2', 2))
+      nodesMap.set('node-2', createNode('node-2', 3))
+      edgesMap.set('edge-1', createEdge('edge-1', 2))
+      edgesMap.set('edge-2', createEdge('edge-2', 4))
 
       expect(
         createCanvasReorderPlan(
           nodesMap,
           edgesMap,
-          { nodeIds: new Set(['node-1']), edgeIds: new Set(['edge-1']) },
+          { nodeIds: new Set<string>(), edgeIds: new Set(['edge-1']) },
           'bringToFront',
         ),
       ).toEqual({
-        nodes: [createNode('node-2', 1), createNode('node-1', 2)],
-        edges: [createEdge('edge-2', 1), createEdge('edge-1', 2)],
+        nodes: [createNode('node-1', 1), createNode('node-2', 2)],
+        edges: [createEdge('edge-2', 3), createEdge('edge-1', 4)],
       })
     } finally {
       doc.destroy()

@@ -27,10 +27,11 @@ export function createCanvasNodeActions({
       previewNodeResize(canvasEngine, session, updates)
     },
     onResizeManyCancel: (updates) => {
-      canvasEngine.patchNodes(createNodeResizePatches(updates))
+      canvasEngine.updateResize(createNodeResizePatches(updates))
       session.awareness.core.setLocalResizing(null)
     },
     onResizeManyEnd: (updates) => {
+      canvasEngine.updateResize(createNodeResizePatches(updates))
       session.awareness.core.setLocalResizing(null)
       documentWriter.resizeNodes(updates)
     },
@@ -53,7 +54,7 @@ function previewNodeResize(
     }
   }
 
-  canvasEngine.patchNodes(createNodeResizePatches(updates))
+  canvasEngine.updateResize(createNodeResizePatches(updates))
   session.awareness.core.setLocalResizing(resizing)
 }
 

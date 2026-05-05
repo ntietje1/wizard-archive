@@ -9,10 +9,14 @@ export function CanvasSelectionResizeOverlay() {
     return null
   }
 
-  const { bounds, zones } = resizeSession
+  const { bounds, overlayRef, zones } = resizeSession
 
   return (
-    <CanvasSelectionBoundsOverlay bounds={bounds} testIdPrefix="canvas-selection-resize">
+    <CanvasSelectionBoundsOverlay
+      bounds={bounds}
+      testIdPrefix="canvas-selection-resize"
+      wrapperRef={overlayRef}
+    >
       <CanvasSelectionResizeZones zones={zones} />
     </CanvasSelectionBoundsOverlay>
   )

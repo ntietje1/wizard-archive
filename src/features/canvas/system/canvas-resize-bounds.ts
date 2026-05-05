@@ -112,7 +112,7 @@ function resolveAspectLockedSideResizeBounds({
   switch (handlePosition) {
     case 'left': {
       const right = startBounds.x + startBounds.width
-      const width = Math.max(Math.abs(currentPoint.x - right), minimumWidth)
+      const width = getDirectedSize(right, currentPoint.x, -1, minimumWidth)
       const height = width / lockedAspectRatio
       return {
         x: right - width,
@@ -122,7 +122,7 @@ function resolveAspectLockedSideResizeBounds({
       }
     }
     case 'right': {
-      const width = Math.max(Math.abs(currentPoint.x - startBounds.x), minimumWidth)
+      const width = getDirectedSize(startBounds.x, currentPoint.x, 1, minimumWidth)
       const height = width / lockedAspectRatio
       return {
         x: startBounds.x,
@@ -133,7 +133,7 @@ function resolveAspectLockedSideResizeBounds({
     }
     case 'top': {
       const bottom = startBounds.y + startBounds.height
-      const height = Math.max(Math.abs(currentPoint.y - bottom), minimumHeight)
+      const height = getDirectedSize(bottom, currentPoint.y, -1, minimumHeight)
       const width = height * lockedAspectRatio
       return {
         x: centerX - width / 2,
@@ -143,7 +143,7 @@ function resolveAspectLockedSideResizeBounds({
       }
     }
     case 'bottom': {
-      const height = Math.max(Math.abs(currentPoint.y - startBounds.y), minimumHeight)
+      const height = getDirectedSize(startBounds.y, currentPoint.y, 1, minimumHeight)
       const width = height * lockedAspectRatio
       return {
         x: centerX - width / 2,
@@ -170,10 +170,10 @@ function resolveSquareResizePoint({
 }) {
   if (preferredAxis === 'x' || preferredAxis === 'y') {
     const direction = getHandleDirection(handlePosition)
-    const size = Math.max(
-      Math.abs(
-        (preferredAxis === 'x' ? point.x : point.y) - (preferredAxis === 'x' ? anchor.x : anchor.y),
-      ),
+    const size = getDirectedSize(
+      preferredAxis === 'x' ? anchor.x : anchor.y,
+      preferredAxis === 'x' ? point.x : point.y,
+      direction[preferredAxis],
       minSize,
     )
 
@@ -208,7 +208,7 @@ function resolveOneAxisResizeBounds({
   switch (handlePosition) {
     case 'left': {
       const right = startBounds.x + startBounds.width
-      const width = Math.max(Math.abs(currentPoint.x - right), minWidth)
+      const width = getDirectedSize(right, currentPoint.x, -1, minWidth)
       return {
         ...startBounds,
         x: right - width,
@@ -216,7 +216,7 @@ function resolveOneAxisResizeBounds({
       }
     }
     case 'right': {
-      const width = Math.max(Math.abs(currentPoint.x - startBounds.x), minWidth)
+      const width = getDirectedSize(startBounds.x, currentPoint.x, 1, minWidth)
       return {
         ...startBounds,
         width,
@@ -224,7 +224,7 @@ function resolveOneAxisResizeBounds({
     }
     case 'top': {
       const bottom = startBounds.y + startBounds.height
-      const height = Math.max(Math.abs(currentPoint.y - bottom), minHeight)
+      const height = getDirectedSize(bottom, currentPoint.y, -1, minHeight)
       return {
         ...startBounds,
         y: bottom - height,
@@ -232,7 +232,7 @@ function resolveOneAxisResizeBounds({
       }
     }
     case 'bottom': {
-      const height = Math.max(Math.abs(currentPoint.y - startBounds.y), minHeight)
+      const height = getDirectedSize(startBounds.y, currentPoint.y, 1, minHeight)
       return {
         ...startBounds,
         height,
@@ -270,8 +270,8 @@ function applyLockedAspectRatioSize({
   preferredAxis?: ResizeAxis
 }) {
   const direction = getHandleDirection(handlePosition)
-  const deltaX = Math.abs(point.x - anchor.x)
-  const deltaY = Math.abs(point.y - anchor.y)
+  const deltaX = Math.max((point.x - anchor.x) * direction.x, 0)
+  const deltaY = Math.max((point.y - anchor.y) * direction.y, 0)
   const { minimumWidth, minimumHeight } = getMinimumLockedAspectRatioDimensions(
     minWidth,
     minHeight,
@@ -335,8 +335,8 @@ function applyMinimumSquareSize({
   minSize: number
 }) {
   const direction = getHandleDirection(handlePosition)
-  const width = Math.abs(point.x - anchor.x)
-  const height = Math.abs(point.y - anchor.y)
+  const width = Math.max((point.x - anchor.x) * direction.x, 0)
+  const height = Math.max((point.y - anchor.y) * direction.y, 0)
   const size = Math.max(width, height, minSize)
 
   return {
@@ -359,8 +359,8 @@ function applyMinimumRectSize({
   minHeight: number
 }) {
   const direction = getHandleDirection(handlePosition)
-  const width = Math.max(Math.abs(point.x - anchor.x), minWidth)
-  const height = Math.max(Math.abs(point.y - anchor.y), minHeight)
+  const width = getDirectedSize(anchor.x, point.x, direction.x, minWidth)
+  const height = getDirectedSize(anchor.y, point.y, direction.y, minHeight)
 
   return {
     x: anchor.x + direction.x * width,
@@ -375,4 +375,13 @@ function normalizeResizeBounds(anchor: { x: number; y: number }, point: { x: num
     width: Math.abs(point.x - anchor.x),
     height: Math.abs(point.y - anchor.y),
   }
+}
+
+function getDirectedSize(
+  anchorCoordinate: number,
+  pointCoordinate: number,
+  direction: number,
+  minimumSize: number,
+) {
+  return Math.max((pointCoordinate - anchorCoordinate) * direction, minimumSize)
 }

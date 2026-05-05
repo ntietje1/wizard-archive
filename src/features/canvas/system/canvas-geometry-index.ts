@@ -1,7 +1,7 @@
 import { buildCanvasEdgePath } from './canvas-edge-paths'
 import { createNodeLookup, EMPTY_SET } from './canvas-document-projector'
 import type { CanvasEngineSnapshot, CanvasInternalNode } from './canvas-engine-types'
-import type { CanvasPosition } from '../types/canvas-domain-types'
+import type { CanvasDocumentNodePatch, CanvasPosition } from '../types/canvas-domain-types'
 import type { CanvasDocumentNode } from 'convex/canvases/validation'
 
 interface CanvasGeometryIndex {
@@ -9,6 +9,14 @@ interface CanvasGeometryIndex {
     snapshot: CanvasEngineSnapshot,
     positions: ReadonlyMap<string, CanvasPosition>,
   ) => { snapshot: Omit<CanvasEngineSnapshot, 'version'>; dirtyNodeIds: ReadonlySet<string> } | null
+  updateResizedNodeBounds: (
+    snapshot: CanvasEngineSnapshot,
+    updates: ReadonlyMap<string, CanvasDocumentNodePatch>,
+  ) => {
+    snapshot: Omit<CanvasEngineSnapshot, 'version'>
+    dirtyNodeIds: ReadonlySet<string>
+    layoutPatches: ReadonlyMap<string, CanvasDocumentNodePatch>
+  } | null
   stopDrag: (
     snapshot: CanvasEngineSnapshot,
     dirtyNodeIds: ReadonlySet<string>,
@@ -67,6 +75,73 @@ export function createCanvasGeometryIndex(): CanvasGeometryIndex {
           dirtyEdgeIds: EMPTY_SET,
         },
         dirtyNodeIds,
+      }
+    },
+    updateResizedNodeBounds: (snapshot, updates) => {
+      if (updates.size === 0) {
+        return null
+      }
+
+      const nextNodeLookup = new Map(snapshot.nodeLookup)
+      const dirtyNodeIds = new Set<string>()
+      const layoutPatches = new Map<string, CanvasDocumentNodePatch>()
+      let changed = false
+
+      for (const [nodeId, update] of updates) {
+        const existing = nextNodeLookup.get(nodeId)
+        if (!existing) {
+          continue
+        }
+
+        const nextPosition = update.position ?? existing.node.position
+        const nextWidth = update.width ?? existing.node.width
+        const nextHeight = update.height ?? existing.node.height
+        if (
+          existing.node.position.x === nextPosition.x &&
+          existing.node.position.y === nextPosition.y &&
+          existing.node.width === nextWidth &&
+          existing.node.height === nextHeight
+        ) {
+          continue
+        }
+
+        const nextNode = {
+          ...existing.node,
+          position: nextPosition,
+          width: nextWidth,
+          height: nextHeight,
+        }
+        dirtyNodeIds.add(nodeId)
+        layoutPatches.set(nodeId, {
+          position: nextPosition,
+          width: nextWidth,
+          height: nextHeight,
+        })
+        nextNodeLookup.set(nodeId, {
+          ...existing,
+          node: nextNode,
+          positionAbsolute: nextPosition,
+          measured: {
+            width: nextWidth,
+            height: nextHeight,
+          },
+        })
+        changed = true
+      }
+
+      if (!changed) {
+        return null
+      }
+
+      return {
+        snapshot: {
+          ...snapshot,
+          nodeLookup: nextNodeLookup,
+          dirtyNodeIds,
+          dirtyEdgeIds: EMPTY_SET,
+        },
+        dirtyNodeIds,
+        layoutPatches,
       }
     },
     stopDrag: (snapshot, dirtyNodeIds, activeDraggingNodeIds) => {

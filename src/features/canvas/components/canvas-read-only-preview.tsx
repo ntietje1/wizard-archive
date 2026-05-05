@@ -62,17 +62,10 @@ export function CanvasReadOnlyPreview({
             onContextMenu: preventCanvasPreviewMenu,
           }}
         >
-          <svg
-            className="canvas-edge-layer pointer-events-none absolute left-0 top-0 overflow-visible"
-            data-canvas-edge-layer="true"
-            width="1"
-            height="1"
-          >
-            <CanvasPreviewEdgeRenderer
-              interactive={interactive}
-              onEdgeContextMenu={preventCanvasPreviewEdgeMenu}
-            />
-          </svg>
+          <CanvasPreviewEdgeRenderer
+            interactive={interactive}
+            onEdgeContextMenu={preventCanvasPreviewEdgeMenu}
+          />
           <CanvasPreviewNodeRenderer
             interactive={interactive}
             onNodeContextMenu={preventCanvasPreviewNodeMenu}

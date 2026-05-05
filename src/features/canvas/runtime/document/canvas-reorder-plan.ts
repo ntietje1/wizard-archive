@@ -1,5 +1,5 @@
 import { reorderCanvasElementIds } from './canvas-reorder'
-import { applyCanvasZOrder, sortCanvasElementsByZIndex } from './canvas-z-order'
+import { sortCanvasElementsByZIndex } from './canvas-z-order'
 import { stripEphemeralCanvasNodeState } from '../../utils/canvas-node-persistence'
 import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
 import type { CanvasReorderDirection } from './canvas-reorder'
@@ -10,6 +10,10 @@ export interface CanvasReorderPlan {
   nodes: Array<CanvasDocumentNode> | null
   edges: Array<CanvasDocumentEdge> | null
 }
+
+type MixedCanvasElement =
+  | { id: string; kind: 'node'; node: CanvasDocumentNode; zIndex?: number }
+  | { id: string; kind: 'edge'; edge: CanvasDocumentEdge; zIndex?: number }
 
 function getCurrentCanvasNodes(nodesMap: Y.Map<CanvasDocumentNode>): Array<CanvasDocumentNode> {
   return sortCanvasElementsByZIndex(
@@ -27,35 +31,57 @@ export function createCanvasReorderPlan(
   selection: CanvasSelectionSnapshot,
   direction: CanvasReorderDirection,
 ): CanvasReorderPlan | null {
-  const hasNodes = selection.nodeIds.size > 0
-  const hasEdges = selection.edgeIds.size > 0
-  if (!hasNodes && !hasEdges) {
+  if (selection.nodeIds.size === 0 && selection.edgeIds.size === 0) {
     return null
   }
 
-  const currentNodes = hasNodes ? getCurrentCanvasNodes(nodesMap) : null
-  const currentEdges = hasEdges ? getCurrentCanvasEdges(edgesMap) : null
+  const currentNodes = getCurrentCanvasNodes(nodesMap)
+  const currentEdges = getCurrentCanvasEdges(edgesMap)
+  const currentElements = sortCanvasElementsByZIndex([
+    ...currentNodes.map(
+      (node): MixedCanvasElement => ({
+        id: getMixedCanvasElementId('node', node.id),
+        kind: 'node',
+        node,
+        zIndex: node.zIndex,
+      }),
+    ),
+    ...currentEdges.map(
+      (edge): MixedCanvasElement => ({
+        id: getMixedCanvasElementId('edge', edge.id),
+        kind: 'edge',
+        edge,
+        zIndex: edge.zIndex,
+      }),
+    ),
+  ])
+  const selectedIds = new Set([
+    ...Array.from(selection.nodeIds, (id) => getMixedCanvasElementId('node', id)),
+    ...Array.from(selection.edgeIds, (id) => getMixedCanvasElementId('edge', id)),
+  ])
+  const reorderedIds = reorderCanvasElementIds(
+    currentElements.map((element) => element.id),
+    selectedIds,
+    direction,
+  )
+  const nextZIndexById = new Map(reorderedIds.map((id, index) => [id, index + 1]))
 
   return {
-    nodes: currentNodes
-      ? applyCanvasZOrder(
-          currentNodes,
-          reorderCanvasElementIds(
-            currentNodes.map((node) => node.id),
-            selection.nodeIds,
-            direction,
-          ),
-        )
-      : null,
-    edges: currentEdges
-      ? applyCanvasZOrder(
-          currentEdges,
-          reorderCanvasElementIds(
-            currentEdges.map((edge) => edge.id),
-            selection.edgeIds,
-            direction,
-          ),
-        )
-      : null,
+    nodes: sortCanvasElementsByZIndex(
+      currentNodes.map((node) => ({
+        ...node,
+        zIndex: nextZIndexById.get(getMixedCanvasElementId('node', node.id)) ?? node.zIndex,
+      })),
+    ),
+    edges: sortCanvasElementsByZIndex(
+      currentEdges.map((edge) => ({
+        ...edge,
+        zIndex: nextZIndexById.get(getMixedCanvasElementId('edge', edge.id)) ?? edge.zIndex,
+      })),
+    ),
   }
+}
+
+function getMixedCanvasElementId(kind: MixedCanvasElement['kind'], id: string) {
+  return `${kind}:${id}`
 }
