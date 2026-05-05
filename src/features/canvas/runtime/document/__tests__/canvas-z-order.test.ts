@@ -110,7 +110,7 @@ describe('canvas z-order helpers', () => {
     }
   })
 
-  it('builds a mixed reorder plan across selected nodes and edges', () => {
+  it('builds an edge-only reorder plan across nodes and edges', () => {
     const doc = new Y.Doc()
     const nodesMap = doc.getMap<Node>('nodes')
     const edgesMap = doc.getMap<Edge>('edges')

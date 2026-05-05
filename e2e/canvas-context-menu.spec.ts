@@ -18,6 +18,7 @@ import {
   waitForCanvasRuntime,
 } from './helpers/canvas-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
+import { getBrowserPrimaryModifier } from './helpers/keyboard-helpers'
 import type { Locator, Page } from '@playwright/test'
 
 const campaignName = testName('CnvCtx')
@@ -88,12 +89,13 @@ test.describe.serial('canvas context menu workflows', () => {
   })
 
   test('exposes arrange actions for multi-node selections', async ({ page }) => {
-    await page.keyboard.down(process.platform === 'darwin' ? 'Meta' : 'Control')
+    const modifier = await getBrowserPrimaryModifier(page)
+    await page.keyboard.down(modifier)
     try {
       await getCanvasNodeById(page, 'perf-node-0').click()
       await getCanvasNodeById(page, 'perf-node-1').click()
     } finally {
-      await page.keyboard.up(process.platform === 'darwin' ? 'Meta' : 'Control')
+      await page.keyboard.up(modifier)
     }
     await expect.poll(() => getCommittedSelectedCanvasNodes(page).count()).toBe(2)
 
@@ -131,7 +133,7 @@ test.describe.serial('canvas context menu workflows', () => {
 
     await rightClickNode(page, getCanvasNodeById(page, 'perf-node-0'))
     await page.getByRole('menuitem', { name: 'Cut' }).click()
-    await expect.poll(() => getCanvasNodes(page).count()).toBeGreaterThanOrEqual(3)
+    await expect.poll(() => getCanvasNodes(page).count()).toBe(3)
   })
 })
 
@@ -147,7 +149,12 @@ async function rightClickEmptyPane(page: Page) {
   const box = await getCanvasPane(page).boundingBox()
   if (!box) throw new Error('Canvas pane is not visible')
 
-  await page.mouse.click(box.x + box.width - 120, box.y + box.height - 120, { button: 'right' })
+  // Use a proportional bottom-right inset so the click stays inside the pane while avoiding
+  // the seeded nodes clustered near the top-left/middle of these fixtures.
+  const inset = Math.max(40, Math.min(box.width, box.height) * 0.1)
+  await page.mouse.click(box.x + box.width - inset, box.y + box.height - inset, {
+    button: 'right',
+  })
   await expect(page.getByRole('menu')).toBeVisible()
 }
 

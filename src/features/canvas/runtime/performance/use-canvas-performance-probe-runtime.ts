@@ -71,7 +71,10 @@ export function useCanvasPerformanceProbeRuntime({
             window.__WA_CANVAS_PERF__.entries.length = 0
           }
         },
-        setSelection: ({ nodeIds = [], edgeIds = [] }) => {
+        setSelection: ({ nodeIds, edgeIds }) => {
+          if (nodeIds === undefined && edgeIds === undefined) {
+            throw new Error('setSelection requires nodeIds or edgeIds')
+          }
           selection.setSelection({ nodeIds: new Set(nodeIds), edgeIds: new Set(edgeIds) })
         },
         seedTextNodes: ({
@@ -79,7 +82,6 @@ export function useCanvasPerformanceProbeRuntime({
           columns = 25,
           idPrefix = 'perf-node',
           labelPrefix = 'Perf node',
-          position,
           size,
           spacingX = 180,
           spacingY = 120,
@@ -92,7 +94,7 @@ export function useCanvasPerformanceProbeRuntime({
               const column = index % columns
               const row = Math.floor(index / columns)
               const placement = createCanvasNodePlacement('text', {
-                position: position ?? {
+                position: {
                   x: start.x + column * spacingX,
                   y: start.y + row * spacingY,
                 },
@@ -134,7 +136,6 @@ export function useCanvasPerformanceProbeRuntime({
           count,
           columns = 10,
           idPrefix = 'perf-stroke',
-          position,
           spacingX = 240,
           spacingY = 160,
           start = { x: 0, y: 0 },
@@ -146,7 +147,7 @@ export function useCanvasPerformanceProbeRuntime({
             for (let index = 0; index < count; index += 1) {
               const column = index % columns
               const row = Math.floor(index / columns)
-              const origin = position ?? {
+              const origin = {
                 x: start.x + column * spacingX,
                 y: start.y + row * spacingY,
               }

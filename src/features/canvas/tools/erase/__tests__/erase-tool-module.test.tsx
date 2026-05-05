@@ -1,13 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { eraseToolSpec } from '../erase-tool-module'
 import { clearEraseToolLocalOverlay } from '../erase-tool-local-overlay'
-import type { CanvasToolRuntime } from '../../canvas-tool-types'
+import { createMockCanvasToolRuntime } from '../../__tests__/helpers/create-mock-canvas-tool-runtime'
 import type { CanvasDocumentNode } from 'convex/canvases/validation'
-
-type PointerTarget = HTMLDivElement & {
-  setPointerCapture: (pointerId: number) => void
-  releasePointerCapture: (pointerId: number) => void
-}
 
 describe('eraseToolSpec', () => {
   afterEach(() => {
@@ -37,9 +32,10 @@ describe('eraseToolSpec', () => {
         ],
       }),
     )
-    const target = createPointerTarget()
+    const { element: target, setPointerCapture } = createPointerTarget()
 
     controller.onPointerDown?.(createPointerEvent(target, { clientX: 40, clientY: 0 }))
+    expect(setPointerCapture).toHaveBeenCalledWith(1)
     controller.onPointerMove?.(createPointerEvent(target, { clientX: 40, clientY: 40 }))
     controller.onPointerUp?.(createPointerEvent(target, { clientX: 40, clientY: 40 }))
 
@@ -59,96 +55,22 @@ describe('eraseToolSpec', () => {
         ],
       }),
     )
-    const target = createPointerTarget()
+    const { element: target, releasePointerCapture } = createPointerTarget()
 
     controller.onPointerDown?.(createPointerEvent(target, { clientX: 40, clientY: 0 }))
     controller.onPointerMove?.(createPointerEvent(target, { clientX: 40, clientY: 40 }))
     controller.onPointerCancel?.(createPointerEvent(target, { clientX: 40, clientY: 40 }))
 
     expect(deleteNodes).not.toHaveBeenCalled()
-    expect(target.releasePointerCapture).toHaveBeenCalledWith(1)
+    expect(releasePointerCapture).toHaveBeenCalledWith(1)
   })
 })
 
-function createEraseRuntime({
-  deleteNodes,
-  nodes,
-}: {
+function createEraseRuntime(options: {
   deleteNodes: (nodeIds: ReadonlySet<string>) => void
   nodes: Array<CanvasDocumentNode>
-}): CanvasToolRuntime {
-  return {
-    viewport: {
-      screenToCanvasPosition: ({ x, y }) => ({ x, y }),
-      getZoom: () => 1,
-    },
-    commands: {
-      createNode: () => undefined,
-      patchNodeData: () => undefined,
-      patchEdges: () => undefined,
-      resizeNode: () => undefined,
-      resizeNodes: () => undefined,
-      deleteNodes,
-      createEdge: () => undefined,
-      deleteEdges: () => undefined,
-      setNodePositions: () => undefined,
-    },
-    query: {
-      getNodes: () => nodes,
-      getEdges: () => [],
-      getMeasuredNodes: () => [],
-    },
-    selection: {
-      getSnapshot: () => ({ nodeIds: new Set<string>(), edgeIds: new Set<string>() }),
-      setSelection: () => undefined,
-      clearSelection: () => undefined,
-      toggleNode: () => undefined,
-      toggleEdge: () => undefined,
-      beginGesture: () => undefined,
-      setGesturePreview: () => undefined,
-      commitGesture: () => undefined,
-      cancelGesture: () => undefined,
-    },
-    interaction: {
-      suppressNextSurfaceClick: () => undefined,
-    },
-    modifiers: {
-      getShiftPressed: () => false,
-      getPrimaryPressed: () => false,
-    },
-    editSession: {
-      editingEmbedId: null,
-      setEditingEmbedId: () => undefined,
-      pendingEditNodeId: null,
-      pendingEditNodePoint: null,
-      setPendingEditNodeId: () => undefined,
-      setPendingEditNodePoint: () => undefined,
-    },
-    toolState: {
-      getSettings: () => ({
-        edgeType: 'bezier',
-        strokeColor: 'var(--foreground)',
-        strokeOpacity: 100,
-        strokeSize: 4,
-      }),
-      getActiveTool: () => 'erase',
-      setActiveTool: () => undefined,
-      setEdgeType: () => undefined,
-      setStrokeColor: () => undefined,
-      setStrokeSize: () => undefined,
-      setStrokeOpacity: () => undefined,
-    },
-    awareness: {
-      core: {
-        setLocalCursor: () => undefined,
-        setLocalResizing: () => undefined,
-        setLocalSelection: () => undefined,
-      },
-      presence: {
-        setPresence: () => undefined,
-      },
-    },
-  }
+}) {
+  return createMockCanvasToolRuntime(options)
 }
 
 function createStrokeNode(id: string, points: Array<[number, number, number]>): CanvasDocumentNode {
@@ -169,10 +91,12 @@ function createStrokeNode(id: string, points: Array<[number, number, number]>): 
 }
 
 function createPointerTarget() {
-  const target = document.createElement('div') as PointerTarget
-  target.setPointerCapture = vi.fn()
-  target.releasePointerCapture = vi.fn()
-  return target
+  const element = document.createElement('div')
+  const setPointerCapture = vi.fn()
+  const releasePointerCapture = vi.fn()
+  element.setPointerCapture = setPointerCapture
+  element.releasePointerCapture = releasePointerCapture
+  return { element, setPointerCapture, releasePointerCapture }
 }
 
 function createPointerEvent(
@@ -183,6 +107,8 @@ function createPointerEvent(
     button: 0,
     buttons: 1,
     pointerId: 1,
+    preventDefault: vi.fn(),
+    stopPropagation: vi.fn(),
     target,
     ...overrides,
   } as PointerEvent

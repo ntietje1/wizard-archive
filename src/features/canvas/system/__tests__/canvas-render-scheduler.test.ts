@@ -30,6 +30,32 @@ describe('createCanvasRenderScheduler', () => {
     scheduler.destroy()
   })
 
+  it('schedules one animation frame for rapid updates', () => {
+    const requestAnimationFrame = vi.mocked(globalThis.requestAnimationFrame)
+    const scheduler = createCanvasRenderScheduler({
+      domRegistry: createDomRegistry(),
+    })
+
+    scheduler.scheduleNodeTransforms(new Map([['node-1', { x: 10, y: 20 }]]))
+    scheduler.scheduleNodeTransforms(new Map([['node-1', { x: 30, y: 40 }]]))
+
+    expect(requestAnimationFrame).toHaveBeenCalledTimes(1)
+
+    scheduler.destroy()
+  })
+
+  it('cancels a pending animation frame on destroy', () => {
+    const cancelAnimationFrame = vi.mocked(globalThis.cancelAnimationFrame)
+    const scheduler = createCanvasRenderScheduler({
+      domRegistry: createDomRegistry(),
+    })
+
+    scheduler.scheduleNodeTransforms(new Map([['node-1', { x: 10, y: 20 }]]))
+    scheduler.destroy()
+
+    expect(cancelAnimationFrame).toHaveBeenCalledWith(1)
+  })
+
   it('applies edge style patches without losing existing authored stroke width', () => {
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
     path.style.stroke = '#111827'

@@ -24,6 +24,10 @@ import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
 const campaignName = testName('CnvPerf')
 const canvasName = DEFAULT_CANVAS_NAME
+// Selected-state background applied by updateSelectedNodeSurface in the opt-in canvas runtime.
+const EXPECTED_SELECTED_STATE_BG = 'rgb(232, 242, 255)'
+
+test.use({ storageState: AUTH_STORAGE_PATH })
 
 test.describe.serial('canvas performance smoke workflows', () => {
   test.setTimeout(60_000)
@@ -74,16 +78,21 @@ test.describe.serial('canvas performance smoke workflows', () => {
     await selectFirstCanvasNodesViaRuntime(page, 40)
     const startedAt = Date.now()
     await page.evaluate(() => {
-      window.__WA_CANVAS_PERF_RUNTIME__?.updateSelectedNodeSurface()
+      const runtime = window.__WA_CANVAS_PERF_RUNTIME__
+      if (!runtime) {
+        throw new Error('Missing __WA_CANVAS_PERF_RUNTIME__ for updateSelectedNodeSurface')
+      }
+      runtime.updateSelectedNodeSurface()
     })
+    const updateDurationMs = Date.now() - startedAt
     await expect
       .poll(() =>
         getCanvasNodeById(page, 'perf-node-0').evaluate(
           (node) => getComputedStyle(node.querySelector('[role="group"]')!).backgroundColor,
         ),
       )
-      .toBe('rgb(232, 242, 255)')
-    expect(Date.now() - startedAt).toBeLessThan(5_000)
+      .toBe(EXPECTED_SELECTED_STATE_BG)
+    expect(updateDurationMs).toBeLessThan(5_000)
 
     await selectCanvasTool(page, 'Pointer')
     await dragCanvasNode(page, getCanvasNodeById(page, 'perf-node-0'), { x: 30, y: 20 })

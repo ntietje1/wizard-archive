@@ -70,13 +70,13 @@ export function createCanvasReorderPlan(
     nodes: sortCanvasElementsByZIndex(
       currentNodes.map((node) => ({
         ...node,
-        zIndex: nextZIndexById.get(getMixedCanvasElementId('node', node.id)) ?? node.zIndex,
+        zIndex: getNextReorderedZIndex(nextZIndexById, 'node', node.id),
       })),
     ),
     edges: sortCanvasElementsByZIndex(
       currentEdges.map((edge) => ({
         ...edge,
-        zIndex: nextZIndexById.get(getMixedCanvasElementId('edge', edge.id)) ?? edge.zIndex,
+        zIndex: getNextReorderedZIndex(nextZIndexById, 'edge', edge.id),
       })),
     ),
   }
@@ -84,4 +84,17 @@ export function createCanvasReorderPlan(
 
 function getMixedCanvasElementId(kind: MixedCanvasElement['kind'], id: string) {
   return `${kind}:${id}`
+}
+
+function getNextReorderedZIndex(
+  nextZIndexById: ReadonlyMap<string, number>,
+  kind: MixedCanvasElement['kind'],
+  id: string,
+) {
+  const mixedId = getMixedCanvasElementId(kind, id)
+  const zIndex = nextZIndexById.get(mixedId)
+  if (zIndex === undefined) {
+    throw new Error(`Missing reordered z-index for ${mixedId} (${id})`)
+  }
+  return zIndex
 }

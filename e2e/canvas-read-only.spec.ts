@@ -123,7 +123,9 @@ test.describe.serial('canvas read-only permission mode', () => {
     await approvalPage.goto('/campaigns')
     await navigateToCampaign(approvalPage, campaignName)
     const dialog = await openSettingsPeopleTab(approvalPage)
-    const playerRow = dialog.locator('div').filter({ hasText: new RegExp(E2E_PLAYER_EMAIL!, 'i') })
+    const playerRow = dialog
+      .locator('div')
+      .filter({ hasText: new RegExp(escapeRegExp(E2E_PLAYER_EMAIL!), 'i') })
     const approveButton = playerRow.getByRole('button', { name: /approve|accept/i })
     if (await approveButton.isVisible().catch(() => false)) {
       await approveButton.click()
@@ -149,15 +151,19 @@ test.describe.serial('canvas read-only permission mode', () => {
     await page.goto('/campaigns')
     await navigateToCampaign(page, campaignName)
     await page.getByRole('button', { name: /view as/i }).click()
+    const playerUsername = E2E_PLAYER_EMAIL!.split('@')[0]
     await page
       .getByRole('menuitemcheckbox', {
-        name: new RegExp(E2E_PLAYER_EMAIL!.split('@')[0], 'i'),
+        name: new RegExp(escapeRegExp(playerUsername), 'i'),
       })
       .click()
     await openCanvas(page, sharedCanvasName)
     await expect(getCanvasSurface(page)).toBeVisible({ timeout: 10_000 })
   })
 
+  // test.fixme: "renders canvas content while preventing editing gestures and mutation controls"
+  // The view-as/player route setup is not reliable enough yet; re-enable when the player
+  // permission flow consistently opens this canvas in read-only mode from Playwright.
   test.fixme('renders canvas content while preventing editing gestures and mutation controls', async ({
     page,
   }) => {
@@ -200,4 +206,9 @@ async function shareCurrentItemWithPlayers(page: Page) {
     .click()
   await expect(permSelect).toContainText(/view/i, { timeout: 5000 })
   await page.keyboard.press('Escape')
+  await expect(shareDialog).not.toBeVisible({ timeout: 5000 })
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }

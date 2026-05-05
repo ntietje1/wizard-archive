@@ -108,6 +108,24 @@ describe('resolveCanvasResize', () => {
         minHeight: 20,
       }).bounds,
     ).toEqual({ x: 80, y: 50, width: 30, height: 20 })
+    expect(
+      resize({
+        handlePosition: 'top-right',
+        startBounds: { x: 0, y: 0, width: 100, height: 50 },
+        currentPoint: { x: -100, y: 100 },
+        minWidth: 30,
+        minHeight: 20,
+      }).bounds,
+    ).toEqual({ x: 0, y: 30, width: 30, height: 20 })
+    expect(
+      resize({
+        handlePosition: 'bottom-left',
+        startBounds: { x: 10, y: 20, width: 100, height: 50 },
+        currentPoint: { x: 200, y: -100 },
+        minWidth: 30,
+        minHeight: 20,
+      }).bounds,
+    ).toEqual({ x: 80, y: 20, width: 30, height: 20 })
   })
 
   it('applies square constraints only to corner handles', () => {

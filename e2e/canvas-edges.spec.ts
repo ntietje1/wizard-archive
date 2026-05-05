@@ -33,12 +33,15 @@ test.describe.serial('canvas edge workflows', () => {
   test.beforeAll(async ({ browser }) => {
     const context = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
     const page = await context.newPage()
-    await page.goto('/campaigns')
-    await createCampaign(page, campaignName)
-    await navigateToCampaign(page, campaignName)
-    await createCanvas(page, canvasName)
-    await page.close()
-    await context.close()
+    try {
+      await page.goto('/campaigns')
+      await createCampaign(page, campaignName)
+      await navigateToCampaign(page, campaignName)
+      await createCanvas(page, canvasName)
+    } finally {
+      await page.close()
+      await context.close()
+    }
   })
 
   test.afterAll(async ({ browser }) => {
@@ -100,7 +103,7 @@ test.describe.serial('canvas edge workflows', () => {
     await page.getByRole('slider', { name: 'Stroke size' }).fill('8')
     await page.keyboard.press('ArrowRight')
     await expectCanvasEdgeModel(page, edgeId, { type: 'straight' })
-    await page.waitForTimeout(500)
+    await expect(getCanvasEdgeById(page, edgeId)).toHaveAttribute('data-edge-type', 'straight')
 
     await page.reload()
     await waitForCanvasRuntime(page)
@@ -133,7 +136,7 @@ test.describe.serial('canvas edge workflows', () => {
     const edge = getCanvasEdges(page).first()
 
     await expectEdgeInteractionHitTarget(page, edge)
-    await edge.locator('[data-testid="canvas-edge-interaction"]').dispatchEvent('click')
+    await clickEdgeInteraction(page, edge)
 
     await expect(edge).toHaveAttribute('data-edge-selected', 'true')
   })
@@ -174,20 +177,34 @@ test.describe.serial('canvas edge workflows', () => {
   })
 })
 
-async function createEdgeFixture(page: Page) {
+async function createEdgeFixture(
+  page: Page,
+  coords: {
+    sourcePos?: { x: number; y: number }
+    targetPos?: { x: number; y: number }
+    clickAwayPos?: { x: number; y: number }
+  } = {},
+) {
+  const {
+    sourcePos = { x: 140, y: 420 },
+    targetPos = { x: 540, y: 420 },
+    clickAwayPos = { x: 40, y: 40 },
+  } = coords
+  // These are pane-relative points used by selectCanvasTool + clickCanvasAt. Callers can pass
+  // alternate positions if a viewport or layout change would place the text nodes off-screen.
   await selectCanvasTool(page, 'Text')
-  await clickCanvasAt(page, { x: 140, y: 420 })
+  await clickCanvasAt(page, sourcePos)
   const sourceInput = page.locator(textInputSelector).last()
   await sourceInput.fill('Edge source')
   await sourceInput.press('Escape')
-  await clickCanvasAt(page, { x: 40, y: 40 })
+  await clickCanvasAt(page, clickAwayPos)
 
   await selectCanvasTool(page, 'Text')
-  await clickCanvasAt(page, { x: 540, y: 420 })
+  await clickCanvasAt(page, targetPos)
   const targetInput = page.locator(textInputSelector).last()
   await targetInput.fill('Edge target')
   await targetInput.press('Escape')
-  await clickCanvasAt(page, { x: 40, y: 40 })
+  await clickCanvasAt(page, clickAwayPos)
 }
 
 async function createEdgeFromFixtureNodes(page: Page) {

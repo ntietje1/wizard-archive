@@ -13,6 +13,10 @@ interface CanvasPerformanceMetric {
   details?: Record<string, unknown>
 }
 
+type CanvasRuntimeSelectionInput =
+  | { nodeIds: Array<string>; edgeIds?: Array<string> }
+  | { nodeIds?: Array<string>; edgeIds: Array<string> }
+
 interface CanvasPerformanceRuntime {
   clearCanvas: () => void
   getCounts: () => { nodes: number; edges: number }
@@ -25,16 +29,20 @@ interface CanvasPerformanceRuntime {
   }
   getMetrics: () => Array<CanvasPerformanceMetric>
   clearMetrics: () => void
-  setSelection: (selection: { nodeIds?: Array<string>; edgeIds?: Array<string> }) => void
+  /**
+   * Sets runtime selection explicitly. Pass an empty array to clear one axis;
+   * omitting both nodeIds and edgeIds is invalid.
+   */
+  setSelection: (selection: CanvasRuntimeSelectionInput) => void
   seedTextNodes: (options: {
     count: number
     columns?: number
     idPrefix?: string
     labelPrefix?: string
-    position?: CanvasPosition
     size?: { width: number; height: number }
     spacingX?: number
     spacingY?: number
+    /** Grid origin for generated text nodes. */
     start?: CanvasPosition
     style?: Partial<CanvasTextDocumentNode['data']>
     zIndex?: number
@@ -44,9 +52,9 @@ interface CanvasPerformanceRuntime {
     count: number
     columns?: number
     idPrefix?: string
-    position?: CanvasPosition
     spacingX?: number
     spacingY?: number
+    /** Grid origin for generated stroke nodes. */
     start?: CanvasPosition
     pointsPerStroke?: number
     style?: {

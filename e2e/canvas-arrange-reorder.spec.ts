@@ -14,6 +14,7 @@ import {
   waitForCanvasRuntime,
 } from './helpers/canvas-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
+import { getBrowserPrimaryModifier } from './helpers/keyboard-helpers'
 import type { Page } from '@playwright/test'
 
 const campaignName = testName('CnvArrange')
@@ -55,6 +56,9 @@ test.describe.serial('canvas arrange and reorder workflows', () => {
     await selectCanvasTool(page, 'Pointer')
   })
 
+  // test.fixme: "aligns, distributes, and flips selected nodes through the arrange menu"
+  // Arrange menu E2E gestures are not reliable yet; re-enable when the menu can be driven
+  // consistently from Playwright by selecting three nodes, opening Arrange, and applying actions.
   test.fixme('aligns, distributes, and flips selected nodes through the arrange menu', async ({
     page,
   }) => {
@@ -93,7 +97,7 @@ test.describe.serial('canvas arrange and reorder workflows', () => {
     await runArrangeAction(page, 'Flip V')
     await expect
       .poll(async () => getNodePositions(page, ['arrange-0', 'arrange-1', 'arrange-2']))
-      .toEqual([...beforeFlip].reverse())
+      .toEqual(reversePositions(beforeFlip))
   })
 
   test.fixme('reorders selected nodes visually and persists z-order after reload', async ({
@@ -135,7 +139,7 @@ async function runReorderAction(page: Page, action: string) {
 }
 
 async function selectNodesWithPrimaryModifier(page: Page, nodeIds: Array<string>) {
-  const modifier = process.platform === 'darwin' ? 'Meta' : 'Control'
+  const modifier = await getBrowserPrimaryModifier(page)
   await page.keyboard.down(modifier)
   try {
     for (const nodeId of nodeIds) {
@@ -160,4 +164,8 @@ async function getNodePositions(page: Page, nodeIds: Array<string>) {
     if (!node) throw new Error(`Missing node ${nodeId}`)
     return node.position
   })
+}
+
+function reversePositions(positions: Array<{ x: number; y: number }>) {
+  return positions.slice().reverse()
 }

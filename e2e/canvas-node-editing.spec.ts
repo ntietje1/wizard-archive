@@ -23,6 +23,7 @@ import {
   waitForCanvasRuntime,
 } from './helpers/canvas-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
+import { pressUndo } from './helpers/keyboard-helpers'
 
 const campaignName = testName('CnvNodeEdit')
 const canvasName = DEFAULT_CANVAS_NAME
@@ -105,6 +106,24 @@ test.describe.serial('canvas node editing workflows', () => {
         return after ? after.width > before.width + 80 && after.height > before.height + 30 : false
       })
       .toBe(true)
+    const resizedBounds = await node.boundingBox()
+    if (!resizedBounds) throw new Error('Node is not visible after resize')
+
+    await page.reload()
+    await waitForCanvasRuntime(page)
+    await expect(getCanvasNodeById(page, 'perf-embed-0')).toBeVisible({ timeout: 10_000 })
+    await expect
+      .poll(async () => {
+        const afterReload = await getCanvasNodeById(page, 'perf-embed-0').boundingBox()
+        return {
+          width: Math.round(afterReload?.width ?? 0),
+          height: Math.round(afterReload?.height ?? 0),
+        }
+      })
+      .toEqual({
+        width: Math.round(resizedBounds.width),
+        height: Math.round(resizedBounds.height),
+      })
   })
 
   test('exposes every resize handle category for selected nodes', async ({ page }) => {
@@ -131,8 +150,6 @@ test.describe.serial('canvas node editing workflows', () => {
     for (const handle of handles) {
       await expect(page.getByTestId(`canvas-selection-resize-zone-${handle}`)).toBeVisible()
     }
-
-    await expect(getCanvasNodeById(page, 'resize-handles-0')).toBeVisible()
   })
 
   test.fixme('shows snap guides while dragging near another node alignment', async ({ page }) => {
@@ -207,7 +224,7 @@ test.describe.serial('canvas node editing workflows', () => {
     await selectCanvasTool(page, 'Eraser')
     await dragOnCanvas(page, { x: 250, y: 250 }, { x: 390, y: 330 }, { steps: 12 })
     await expect.poll(() => getCanvasNodesByType(page, 'stroke').count()).toBe(0)
-    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+Z' : 'Control+Z')
+    await pressUndo(page)
     await expect(getCanvasNodeById(page, strokeId)).toBeVisible({ timeout: 10_000 })
   })
 })

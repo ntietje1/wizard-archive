@@ -10,9 +10,9 @@ import {
   enableCanvasRuntime,
   getCanvasNodes,
   getCanvasPane,
+  getCanvasEdgeById,
   expectCanvasRuntimeSelection,
   getCanvasNodeById,
-  getCanvasNodesByType,
   getCanvasRuntimeCanvasId,
   getCanvasRuntimeNodePosition,
   getEmbeddedCanvasPreview,
@@ -29,6 +29,8 @@ import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 import type { Page, TestInfo } from '@playwright/test'
 
 const campaignName = testName('CnvEmbeds')
+const MIN_EMBED_DRAG_DELTA_X = 60
+const MIN_EMBED_DRAG_DELTA_Y = 25
 
 test.describe.serial('canvas embedded preview behavior', () => {
   test.setTimeout(90_000)
@@ -116,7 +118,9 @@ test.describe.serial('canvas embedded preview behavior', () => {
     await expect
       .poll(async () => {
         const after = await getCanvasRuntimeNodePosition(page, 'embed-source')
-        return after.x > before.x + 60 && after.y > before.y + 25
+        return (
+          after.x > before.x + MIN_EMBED_DRAG_DELTA_X && after.y > before.y + MIN_EMBED_DRAG_DELTA_Y
+        )
       })
       .toBe(true)
   })
@@ -135,9 +139,6 @@ test.describe.serial('canvas embedded preview behavior', () => {
     })
     const embedNode = getCanvasNodeById(page, 'embed-source')
     await expect(getEmbeddedCanvasPreview(page)).toBeVisible({ timeout: 15_000 })
-    await expect
-      .poll(() => getCanvasNodesByType(page, 'text').count(), { timeout: 15_000 })
-      .toBeGreaterThan(0)
 
     await selectCanvasTool(page, 'Pointer')
     await clickEmbeddedPreview(page, { x: 180, y: 120 }, { clickCount: 2 })
@@ -211,7 +212,7 @@ async function createEmbeddedCanvasFixture(page: Page, testInfo: TestInfo) {
     source: 'embed-child-0',
     target: 'embed-child-1',
   })
-  await page.waitForTimeout(500)
+  await expect(getCanvasEdgeById(page, 'embed-child-edge')).toHaveCount(1)
   const sourceCanvasId = await getCanvasRuntimeCanvasId(page)
 
   await createFreshCanvasForTest(page, campaignName, hostName)

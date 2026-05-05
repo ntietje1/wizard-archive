@@ -6,12 +6,14 @@ import {
   createCanvas,
   DEFAULT_CANVAS_NAME,
   enableCanvasRuntime,
+  getCanvasPane,
   getCanvasNodesByType,
   openCanvas,
   selectCanvasTool,
   waitForCanvasRuntime,
 } from './helpers/canvas-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
+import { pressSelectAll } from './helpers/keyboard-helpers'
 import type { Page } from '@playwright/test'
 
 const campaignName = testName('CnvRichText')
@@ -77,7 +79,10 @@ test.describe.serial('canvas rich text toolbar workflows', () => {
     await getCanvasNodesByType(page, 'text').first().dblclick()
     const reopenedEditor = page.locator(editorSelector).last()
     await selectAllEditorText(page, reopenedEditor)
-    await expect(page.getByRole('toolbar', { name: 'Canvas formatting toolbar' })).toBeVisible()
+    const reopenedToolbar = page.getByRole('toolbar', { name: 'Canvas formatting toolbar' })
+    await expect(reopenedToolbar).toBeVisible()
+    // Active formatting-state assertions are intentionally not enabled yet: the current
+    // product reopens the toolbar with Bold/Italic inactive after reload.
   })
 
   test('keeps canvas shortcuts suppressed while editing and toolbar menus are active', async ({
@@ -93,14 +98,19 @@ test.describe.serial('canvas rich text toolbar workflows', () => {
     const toolbar = page.getByRole('toolbar', { name: 'Canvas formatting toolbar' })
     await toolbar.getByRole('button', { name: 'Text color' }).click()
     await expect(page.getByRole('menuitemradio', { name: 'Select Blue text color' })).toBeVisible()
-    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A')
+    await pressSelectAll(page)
     await expect.poll(() => getCanvasNodesByType(page, 'text').count()).toBe(beforeCount)
   })
 })
 
 async function createEditableTextNode(page: Page, text: string) {
   await selectCanvasTool(page, 'Text')
-  await clickCanvasAt(page, { x: 760, y: 520 })
+  const paneBox = await getCanvasPane(page).boundingBox()
+  if (!paneBox) throw new Error('Canvas pane is not visible')
+  await clickCanvasAt(page, {
+    x: Math.round(paneBox.width * 0.55),
+    y: Math.round(paneBox.height * 0.55),
+  })
   const editor = page.locator(editorSelector).last()
   await expect(editor).toBeVisible()
   await editor.fill(text)
@@ -109,5 +119,5 @@ async function createEditableTextNode(page: Page, text: string) {
 
 async function selectAllEditorText(page: Page, editor: ReturnType<Page['locator']>) {
   await editor.click()
-  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A')
+  await pressSelectAll(page)
 }

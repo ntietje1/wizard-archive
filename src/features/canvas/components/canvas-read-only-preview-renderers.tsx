@@ -181,6 +181,7 @@ function CanvasPreviewEdgeLayer({
   return (
     <svg
       className="canvas-edge-layer pointer-events-none absolute left-0 top-0 overflow-visible"
+      aria-hidden="true"
       data-canvas-edge-layer="true"
       data-canvas-edge-layer-id={edgeId}
       style={{ zIndex }}

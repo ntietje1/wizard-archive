@@ -85,7 +85,11 @@ test.describe.serial('canvas collaboration edge cases', () => {
 
       const before = await getCanvasRuntimeNodePosition(collab.page2, 'perf-node-0')
       await collab.page1.evaluate(() => {
-        window.__WA_CANVAS_PERF_RUNTIME__?.profileSelectedNodeDrag({
+        const runtime = window.__WA_CANVAS_PERF_RUNTIME__
+        if (!runtime) {
+          throw new Error('Missing __WA_CANVAS_PERF_RUNTIME__ for collaboration drag profile')
+        }
+        runtime.profileSelectedNodeDrag({
           delta: { x: 60, y: 30 },
           steps: 6,
         })
@@ -128,13 +132,21 @@ test.describe.serial('canvas collaboration edge cases', () => {
       await setCanvasSelectionViaRuntime(collab.page2, { nodeIds: ['perf-node-0'] })
       await Promise.all([
         collab.page1.evaluate(() => {
-          window.__WA_CANVAS_PERF_RUNTIME__?.profileSelectedNodeDrag({
+          const runtime = window.__WA_CANVAS_PERF_RUNTIME__
+          if (!runtime) {
+            throw new Error('Missing __WA_CANVAS_PERF_RUNTIME__ for collaboration drag profile')
+          }
+          runtime.profileSelectedNodeDrag({
             delta: { x: 40, y: 0 },
             steps: 4,
           })
         }),
         collab.page2.evaluate(() => {
-          window.__WA_CANVAS_PERF_RUNTIME__?.profileSelectedNodeDrag({
+          const runtime = window.__WA_CANVAS_PERF_RUNTIME__
+          if (!runtime) {
+            throw new Error('Missing __WA_CANVAS_PERF_RUNTIME__ for collaboration drag profile')
+          }
+          runtime.profileSelectedNodeDrag({
             delta: { x: 0, y: 40 },
             steps: 4,
           })
@@ -233,20 +245,21 @@ async function openCollabCanvas(page: Page) {
 async function createCollabContexts(browser: Browser) {
   const context1 = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
   let context2: BrowserContext | null = null
+  let page1: Page | null = null
+  let page2: Page | null = null
 
   try {
     context2 = await browser.newContext({ storageState: AUTH_STORAGE_PATH })
+    page1 = await context1.newPage()
+    page2 = await context2.newPage()
     return {
       context1,
       context2,
-      page1: await context1.newPage(),
-      page2: await context2.newPage(),
+      page1,
+      page2,
     }
   } catch (error) {
-    if (context2) {
-      await context2.close()
-    }
-    await context1.close()
+    await closeAllSettled([page2, page1, context2, context1])
     throw error
   }
 }
@@ -262,8 +275,16 @@ async function closeCollabContexts({
   page1: Page
   page2: Page
 }) {
-  await page1.close()
-  await page2.close()
-  await context1.close()
-  await context2.close()
+  await closeAllSettled([page1, page2, context1, context2])
+}
+
+async function closeAllSettled(resources: Array<Page | BrowserContext | null>): Promise<void> {
+  const results = await Promise.allSettled(
+    resources.map((resource) => (resource ? resource.close() : Promise.resolve())),
+  )
+  for (const result of results) {
+    if (result.status === 'rejected') {
+      console.warn('Failed to close canvas collaboration test resource', result.reason)
+    }
+  }
 }

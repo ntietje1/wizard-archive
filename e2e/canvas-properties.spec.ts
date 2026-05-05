@@ -16,10 +16,13 @@ import {
   waitForCanvasRuntime,
 } from './helpers/canvas-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
+import { getBrowserPrimaryModifier } from './helpers/keyboard-helpers'
 import type { Locator, Page } from '@playwright/test'
 
 const campaignName = testName('CnvProps')
 const canvasName = DEFAULT_CANVAS_NAME
+const BLUE_COLOR = 'rgb(82, 156, 202)'
+const RED_COLOR = 'rgb(255, 115, 105)'
 
 test.describe.serial('canvas property toolbar workflows', () => {
   test.setTimeout(60_000)
@@ -78,10 +81,14 @@ test.describe.serial('canvas property toolbar workflows', () => {
     await expect
       .poll(() => readNodeSurfaceStyle(node))
       .toMatchObject({
+        backgroundColor: BLUE_COLOR,
+        borderColor: RED_COLOR,
         borderWidth: '7px',
       })
 
-    await page.waitForTimeout(500)
+    await expect
+      .poll(() => readNodeSurfaceStyle(node))
+      .toMatchObject({ backgroundColor: BLUE_COLOR, borderColor: RED_COLOR, borderWidth: '7px' })
     await page.reload()
     await expect(getCanvasNodeById(page, 'perf-node-0')).toBeVisible({ timeout: 10_000 })
     await getCanvasNodeById(page, 'perf-node-0').click()
@@ -89,6 +96,8 @@ test.describe.serial('canvas property toolbar workflows', () => {
     await expect
       .poll(() => readNodeSurfaceStyle(getCanvasNodeById(page, 'perf-node-0')))
       .toMatchObject({
+        backgroundColor: BLUE_COLOR,
+        borderColor: RED_COLOR,
         borderWidth: '7px',
       })
   })
@@ -106,11 +115,12 @@ test.describe.serial('canvas property toolbar workflows', () => {
     await page.getByRole('textbox', { name: 'Stroke size input' }).fill('7')
     await page.getByRole('textbox', { name: 'Stroke size input' }).press('Enter')
 
-    await page.keyboard.down(process.platform === 'darwin' ? 'Meta' : 'Control')
+    const modifier = await getBrowserPrimaryModifier(page)
+    await page.keyboard.down(modifier)
     try {
       await getCanvasNodeById(page, 'perf-node-0').click()
     } finally {
-      await page.keyboard.up(process.platform === 'darwin' ? 'Meta' : 'Control')
+      await page.keyboard.up(modifier)
     }
     await expect.poll(() => getCommittedSelectedCanvasNodes(page).count()).toBe(2)
 
@@ -149,6 +159,7 @@ test.describe.serial('canvas property toolbar workflows', () => {
     await page.getByRole('button', { name: 'Change edge type to Step' }).click()
     await propertySection(page, 'Stroke').getByRole('button', { name: 'Select Red color' }).click()
     await page.getByRole('slider', { name: 'Stroke size' }).fill('6')
+    // The slider commits keyboard steps; filling 6 then ArrowRight deliberately yields 7.
     await page.keyboard.press('ArrowRight')
 
     await expectCanvasEdgeModel(page, 'prop-edge', {

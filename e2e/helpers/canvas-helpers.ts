@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test'
 import { navigateToCampaign } from './campaign-helpers'
+import { getBrowserPrimaryModifier } from './keyboard-helpers'
 import { openItem } from './sidebar-helpers'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CanvasDocumentEdge } from 'convex/canvases/validation'
@@ -39,6 +40,10 @@ export interface CanvasRuntimeSnapshot {
 }
 
 export const DEFAULT_CANVAS_NAME = 'Untitled Canvas'
+
+type CanvasRuntimeSelectionInput =
+  | { nodeIds: Array<string>; edgeIds?: Array<string> }
+  | { nodeIds?: Array<string>; edgeIds: Array<string> }
 
 interface CanvasDragOptions {
   steps?: number
@@ -317,7 +322,7 @@ export async function expectCanvasRuntimeSelection(
 
 export async function setCanvasSelectionViaRuntime(
   page: Page,
-  selection: { nodeIds?: Array<string>; edgeIds?: Array<string> },
+  selection: CanvasRuntimeSelectionInput,
 ) {
   await waitForCanvasRuntime(page)
   await page.evaluate((nextSelection) => {
@@ -326,6 +331,10 @@ export async function setCanvasSelectionViaRuntime(
   await expectCanvasRuntimeSelection(page, selection)
 }
 
+/**
+ * Seeds text nodes in a grid. `start` is the grid origin; per-node positions are
+ * derived from `start`, `columns`, and spacing.
+ */
 export async function seedCanvasTextNodesViaRuntime(
   page: Page,
   options: {
@@ -333,7 +342,6 @@ export async function seedCanvasTextNodesViaRuntime(
     count: number
     idPrefix?: string
     labelPrefix?: string
-    position?: CanvasPoint
     size?: { width: number; height: number }
     spacingX?: number
     spacingY?: number
@@ -355,7 +363,6 @@ export async function seedCanvasStrokeNodesViaRuntime(
     columns?: number
     count: number
     idPrefix?: string
-    position?: CanvasPoint
     pointsPerStroke?: number
     spacingX?: number
     spacingY?: number
@@ -392,6 +399,11 @@ export async function seedCanvasEdgeViaRuntime(
   await page.evaluate((edgeOptions) => {
     window.__WA_CANVAS_PERF_RUNTIME__?.seedEdge(edgeOptions)
   }, options)
+  if (options.id) {
+    await expect(getCanvasEdgeById(page, options.id)).toHaveCount(1)
+    return
+  }
+
   await expect.poll(() => getCanvasEdges(page).count()).toBeGreaterThan(0)
 }
 
@@ -560,7 +572,7 @@ export async function wheelCanvasPane(
 ) {
   const paneBox = await getCanvasPane(page).boundingBox()
   if (!paneBox) throw new Error('Canvas pane is not visible')
-  const modifier = process.platform === 'darwin' ? 'Meta' : 'Control'
+  const modifier = await getBrowserPrimaryModifier(page)
 
   await page.mouse.move(paneBox.x + paneBox.width / 2, paneBox.y + paneBox.height / 2)
   if (options.controlOrMeta) {
@@ -803,7 +815,7 @@ function getResizeHandleLabel(handlePosition: ResizeHandlePosition) {
     case 'left':
       return 'Resize left selection edge'
     default:
-      return ''
+      throw new Error('Unexpected resize handle position')
   }
 }
 

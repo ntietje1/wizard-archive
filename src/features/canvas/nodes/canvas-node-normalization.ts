@@ -17,7 +17,7 @@ export type AnyNormalizedCanvasNode =
   | CanvasNormalizedStrokeNode
   | CanvasNormalizedTextNode
 
-function normalizeParsedCanvasNode(node: CanvasDocumentNode): AnyNormalizedCanvasNode {
+function normalizeValidatedCanvasNode(node: CanvasDocumentNode): AnyNormalizedCanvasNode {
   switch (node.type) {
     case 'embed':
       return { ...node, data: normalizeEmbedNodeData(node.data) }
@@ -35,5 +35,5 @@ function normalizeParsedCanvasNode(node: CanvasDocumentNode): AnyNormalizedCanva
 
 export function normalizeCanvasNode(node: CanvasDocumentNode): AnyNormalizedCanvasNode | null {
   const parsedNode = parseCanvasDocumentNode(node)
-  return parsedNode ? normalizeParsedCanvasNode(parsedNode) : null
+  return parsedNode ? normalizeValidatedCanvasNode(parsedNode) : null
 }

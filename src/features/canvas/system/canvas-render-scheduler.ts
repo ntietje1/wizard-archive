@@ -271,10 +271,11 @@ export function createCanvasRenderScheduler({
     },
     scheduleNodeLayoutPatches: (updates) => {
       for (const [nodeId, update] of updates) {
+        const existing = pendingNodeLayoutPatches.get(nodeId) ?? {}
         pendingNodeLayoutPatches.set(nodeId, {
-          ...pendingNodeLayoutPatches.get(nodeId),
+          ...existing,
           ...update,
-          position: update.position ?? pendingNodeLayoutPatches.get(nodeId)?.position,
+          position: update.position ?? existing.position,
         })
       }
       requestFlush()

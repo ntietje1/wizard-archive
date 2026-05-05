@@ -98,19 +98,34 @@ test.describe.serial('canvas viewport interactions', () => {
         { positionRatio: { xRatio: 0.1, yRatio: 0.1 } },
       )
 
+      const expectedX = 60 / viewport.zoom
+      const expectedY = 40 / viewport.zoom
+      const toleranceX = Math.max(4, expectedX * 0.35)
+      const toleranceY = Math.max(4, expectedY * 0.35)
       await expect
         .poll(async () => {
           const after = await getCanvasRuntimeNodePosition(page, 'perf-embed-0')
-          const delta = {
-            x: Math.round(after.x - before.x),
-            y: Math.round(after.y - before.y),
-          }
-          return (
-            Math.abs(delta.x - 60 / viewport.zoom) <= 45 &&
-            Math.abs(delta.y - 40 / viewport.zoom) <= 30
-          )
+          return Math.round(after.x - before.x)
         })
-        .toBe(true)
+        .toBeGreaterThanOrEqual(expectedX - toleranceX)
+      await expect
+        .poll(async () => {
+          const after = await getCanvasRuntimeNodePosition(page, 'perf-embed-0')
+          return Math.round(after.x - before.x)
+        })
+        .toBeLessThanOrEqual(expectedX + toleranceX)
+      await expect
+        .poll(async () => {
+          const after = await getCanvasRuntimeNodePosition(page, 'perf-embed-0')
+          return Math.round(after.y - before.y)
+        })
+        .toBeGreaterThanOrEqual(expectedY - toleranceY)
+      await expect
+        .poll(async () => {
+          const after = await getCanvasRuntimeNodePosition(page, 'perf-embed-0')
+          return Math.round(after.y - before.y)
+        })
+        .toBeLessThanOrEqual(expectedY + toleranceY)
     })
   }
 
@@ -223,6 +238,13 @@ test.describe.serial('canvas viewport interactions', () => {
       'transform',
       /matrix\(1\.5, 0, 0, 1\.5, 80, 60\)/,
     )
+    const zoomInButton = await getViewportControls(page).zoomIn.elementHandle()
+    if (!zoomInButton) throw new Error('Viewport zoom-in control is not visible')
+    const viewportContainsChrome = await getCanvasViewport(page).evaluate(
+      (viewport, button) => viewport.contains(button),
+      zoomInButton,
+    )
+    expect(viewportContainsChrome).toBe(false)
   })
 })
 

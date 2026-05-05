@@ -7,7 +7,7 @@ import { createCanvasEngine } from '../../system/canvas-engine'
 import type { CanvasDocumentEdge } from 'convex/canvases/validation'
 
 vi.mock('../canvas-edge-wrapper', () => ({
-  CanvasEdgeWrapper: ({ edgeId }: { edgeId: string }) => <g data-testid={`edge-${edgeId}`} />,
+  CanvasEdgeWrapper: ({ edgeId }: { edgeId: string }) => <g data-testid={edgeId} />,
 }))
 
 describe('CanvasEdgeRenderer', () => {
@@ -28,7 +28,14 @@ describe('CanvasEdgeRenderer', () => {
         </CanvasEngineProvider>,
       )
 
-      const frontLayer = screen.getByTestId('edge-edge-front').parentElement
+      const behindLayer = screen.getByTestId('edge-behind').parentElement
+      expect(behindLayer?.tagName.toLowerCase()).toBe('svg')
+      expect(behindLayer).toHaveAttribute('data-canvas-edge-layer', 'true')
+      expect(behindLayer).toHaveStyle({
+        zIndex: '2',
+      })
+
+      const frontLayer = screen.getByTestId('edge-front').parentElement
       expect(frontLayer?.tagName.toLowerCase()).toBe('svg')
       expect(frontLayer).toHaveAttribute('data-canvas-edge-layer', 'true')
       expect(frontLayer).toHaveStyle({

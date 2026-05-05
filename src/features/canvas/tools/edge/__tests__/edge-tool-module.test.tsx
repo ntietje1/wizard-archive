@@ -21,9 +21,10 @@ describe('edgeToolSpec', () => {
     )
     const paint = properties?.bindings.find(isPaintBinding)
 
-    expect(paint?.getValue()).toEqual({ color: '#2563eb', opacity: 40 })
+    expect(paint).toBeDefined()
+    expect(paint!.getValue()).toEqual({ color: '#2563eb', opacity: 40 })
 
-    paint?.setValue({ color: '#ef4444', opacity: 80 })
+    paint!.setValue({ color: '#ef4444', opacity: 80 })
 
     expect(setStrokeColor).toHaveBeenCalledWith('#ef4444')
     expect(setStrokeOpacity).toHaveBeenCalledWith(80)
@@ -39,9 +40,10 @@ describe('edgeToolSpec', () => {
     )
     const strokeSize = properties?.bindings.find(isStrokeSizeBinding)
 
-    expect(strokeSize?.getValue()).toBe(1)
+    expect(strokeSize).toBeDefined()
+    expect(strokeSize!.getValue()).toBe(1)
 
-    strokeSize?.setValue(0)
+    strokeSize!.setValue(0)
 
     expect(setStrokeSize).toHaveBeenCalledWith(1)
   })

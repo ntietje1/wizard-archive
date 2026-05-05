@@ -23,6 +23,7 @@ import {
   waitForCanvasRuntime,
 } from './helpers/canvas-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
+import { getBrowserPrimaryModifier } from './helpers/keyboard-helpers'
 
 const campaignName = testName('CnvSelectX')
 const canvasName = DEFAULT_CANVAS_NAME
@@ -108,7 +109,8 @@ test.describe.serial('canvas selection under viewport transforms', () => {
   test('modifier selection toggles transformed nodes without moving the viewport', async ({
     page,
   }) => {
-    const modifier = process.platform === 'darwin' ? 'Meta' : 'Control'
+    // Use the browser platform because Playwright can run a different browser OS than the runner.
+    const modifier = await getBrowserPrimaryModifier(page)
     await setCanvasViewportViaRuntime(page, { x: -40, y: 30, zoom: 1.5 })
     await selectCanvasTool(page, 'Pointer')
 
@@ -128,7 +130,7 @@ test.describe.serial('canvas selection under viewport transforms', () => {
     )
   })
 
-  test('lasso and mixed node-edge selections remain accurate after pan and zoom', async ({
+  test('lasso and mixed node-edge selections remain accurate with a viewport transform', async ({
     page,
   }) => {
     await seedCanvasEdgeViaRuntime(page, {
@@ -152,8 +154,14 @@ test.describe.serial('canvas selection under viewport transforms', () => {
       nodeIds: ['perf-node-0'],
       edgeIds: ['selection-edge'],
     })
-    const snapshot = await page.evaluate(() => window.__WA_CANVAS_PERF_RUNTIME__?.getSnapshot())
-    expect(snapshot?.selection).toEqual({
+    const snapshot = await page.evaluate(() => {
+      const runtime = window.__WA_CANVAS_PERF_RUNTIME__
+      if (!runtime) {
+        throw new Error('Missing __WA_CANVAS_PERF_RUNTIME__ for selection snapshot')
+      }
+      return runtime.getSnapshot()
+    })
+    expect(snapshot.selection).toEqual({
       nodeIds: ['perf-node-0'],
       edgeIds: ['selection-edge'],
     })
