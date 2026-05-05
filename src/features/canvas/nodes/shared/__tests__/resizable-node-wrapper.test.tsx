@@ -9,6 +9,7 @@ import {
   useCanvasDragSnapOverlayStore,
 } from '../../../runtime/interaction/canvas-drag-snap-overlay'
 import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
+import { CANVAS_NODE_MIN_SIZE } from '../canvas-node-resize-constants'
 import { CanvasNodeResizeMetadataProvider } from '../canvas-node-resize-metadata-provider'
 import { ResizableNodeWrapper } from '../resizable-node-wrapper'
 import { resolveSelectionResizeUpdates } from '../use-canvas-resize-session'
@@ -234,22 +235,22 @@ describe('ResizableNodeWrapper', () => {
       inset: '-3px',
     })
     expect(cornerZone).toHaveStyle({
-      height: '36px',
-      left: '-18px',
-      top: '-18px',
-      width: '36px',
+      height: '18px',
+      left: '-9px',
+      top: '-9px',
+      width: '18px',
     })
     expect(topZone).toHaveStyle({
-      height: '36px',
-      left: '18px',
-      right: '18px',
-      top: '-18px',
+      height: '18px',
+      left: '9px',
+      right: '9px',
+      top: '-9px',
     })
     expect(rightZone).toHaveStyle({
-      bottom: '18px',
-      right: '-18px',
-      top: '18px',
-      width: '36px',
+      bottom: '9px',
+      right: '-9px',
+      top: '9px',
+      width: '18px',
     })
 
     expect(screen.queryByTestId('canvas-node-selection-indicator')).toBeNull()
@@ -268,23 +269,39 @@ describe('ResizableNodeWrapper', () => {
       inset: '-3px',
     })
     expect(cornerZone).toHaveStyle({
-      height: '36px',
-      left: '-18px',
-      top: '-18px',
-      width: '36px',
+      height: '18px',
+      left: '-9px',
+      top: '-9px',
+      width: '18px',
     })
     expect(topZone).toHaveStyle({
-      height: '36px',
-      left: '18px',
-      right: '18px',
-      top: '-18px',
+      height: '18px',
+      left: '9px',
+      right: '9px',
+      top: '-9px',
     })
     expect(rightZone).toHaveStyle({
-      bottom: '18px',
-      right: '-18px',
-      top: '18px',
-      width: '36px',
+      bottom: '9px',
+      right: '-9px',
+      top: '9px',
+      width: '18px',
     })
+  })
+
+  it('uses larger resize interaction zones for coarse pointer devices', () => {
+    const restorePointerMedia = stubPointerMedia(true)
+    try {
+      renderSelectionResize()
+
+      expect(screen.getByTestId('canvas-selection-resize-zone-top-left')).toHaveStyle({
+        height: '36px',
+        left: '-18px',
+        top: '-18px',
+        width: '36px',
+      })
+    } finally {
+      restorePointerMedia()
+    }
   })
 
   it('hides the committed resize wrapper while a selection preview is active', () => {
@@ -345,11 +362,11 @@ describe('ResizableNodeWrapper', () => {
     })
   })
 
-  it('stops the aggregate resize wrapper at minimum-clamped multiselect bounds', () => {
+  it('keeps the aggregate resize wrapper around minimum-clamped nodes while shrinking', () => {
     renderSelectionResize({
       nodes: [
-        createNode('node-1', { x: 10, y: 20 }, 50, 40),
-        createNode('node-2', { x: 210, y: 20 }, 50, 40),
+        createNode('node-1', { x: 10, y: 20 }, CANVAS_NODE_MIN_SIZE, CANVAS_NODE_MIN_SIZE),
+        createNode('node-2', { x: 210, y: 20 }, CANVAS_NODE_MIN_SIZE, CANVAS_NODE_MIN_SIZE),
       ],
       selectedNodeIds: new Set(['node-1', 'node-2']),
     })
@@ -357,51 +374,81 @@ describe('ResizableNodeWrapper', () => {
     const wrapper = screen.getByTestId('canvas-selection-resize-wrapper')
     const zone = screen.getByTestId('canvas-selection-resize-zone-right')
     act(() => {
-      fireEvent.pointerDown(zone, { button: 0, pointerId: 1, clientX: 260, clientY: 40 })
-      fireEvent.pointerMove(window, { pointerId: 1, clientX: 135, clientY: 40 })
+      fireEvent.pointerDown(zone, { button: 0, pointerId: 1, clientX: 220, clientY: 25 })
+      fireEvent.pointerMove(window, { pointerId: 1, clientX: 115, clientY: 25 })
     })
 
     expect(wrapper).toHaveStyle({
-      height: '40px',
-      transform: 'translate(10px, 20px)',
-      width: '250px',
+      height: '10px',
+      transform: 'translate(7.5px, 20px)',
+      width: '110px',
     })
   })
 
-  it('stops resizing all selected nodes once the multiselect reaches a minimum size', () => {
+  it('shrinks multi-select gaps even when selected nodes are already at minimum width', () => {
     const runtime = renderSelectionResize({
       nodes: [
-        createNode('node-1', { x: 10, y: 20 }, 50, 40),
-        createNode('node-2', { x: 210, y: 20 }, 50, 40),
+        createNode('node-1', { x: 10, y: 20 }, CANVAS_NODE_MIN_SIZE, CANVAS_NODE_MIN_SIZE),
+        createNode('node-2', { x: 210, y: 20 }, CANVAS_NODE_MIN_SIZE, CANVAS_NODE_MIN_SIZE),
       ],
       selectedNodeIds: new Set(['node-1', 'node-2']),
     })
 
     const zone = screen.getByTestId('canvas-selection-resize-zone-right')
     act(() => {
-      fireEvent.pointerDown(zone, { button: 0, pointerId: 1, clientX: 260, clientY: 40 })
-      fireEvent.pointerMove(window, { pointerId: 1, clientX: 135, clientY: 40 })
+      fireEvent.pointerDown(zone, { button: 0, pointerId: 1, clientX: 220, clientY: 25 })
+      fireEvent.pointerMove(window, { pointerId: 1, clientX: 115, clientY: 25 })
     })
 
     expectMapEntries(runtime.nodeActions.onResizeMany, [
-      ['node-1', { width: 50, height: 40, position: { x: 10, y: 20 } }],
-      ['node-2', { width: 50, height: 40, position: { x: 210, y: 20 } }],
+      [
+        'node-1',
+        { width: CANVAS_NODE_MIN_SIZE, height: CANVAS_NODE_MIN_SIZE, position: { x: 7.5, y: 20 } },
+      ],
+      [
+        'node-2',
+        {
+          width: CANVAS_NODE_MIN_SIZE,
+          height: CANVAS_NODE_MIN_SIZE,
+          position: { x: 107.5, y: 20 },
+        },
+      ],
     ])
   })
 
   it('keeps single selected nodes clamped to their minimum size', () => {
     const runtime = renderSelectionResize({
-      nodes: [createNode('node-1', { x: 10, y: 20 }, 50, 40)],
+      nodes: [createNode('node-1', { x: 10, y: 20 }, CANVAS_NODE_MIN_SIZE, CANVAS_NODE_MIN_SIZE)],
     })
 
     const zone = screen.getByTestId('canvas-selection-resize-zone-right')
     act(() => {
-      fireEvent.pointerDown(zone, { button: 0, pointerId: 1, clientX: 60, clientY: 40 })
-      fireEvent.pointerMove(window, { pointerId: 1, clientX: -90, clientY: 40 })
+      fireEvent.pointerDown(zone, { button: 0, pointerId: 1, clientX: 20, clientY: 25 })
+      fireEvent.pointerMove(window, { pointerId: 1, clientX: -90, clientY: 25 })
     })
 
     expectMapEntries(runtime.nodeActions.onResizeMany, [
-      ['node-1', { width: 50, height: 40, position: { x: 10, y: 20 } }],
+      [
+        'node-1',
+        { width: CANVAS_NODE_MIN_SIZE, height: CANVAS_NODE_MIN_SIZE, position: { x: 10, y: 20 } },
+      ],
+    ])
+  })
+
+  it('keeps single locked-aspect corner resize smooth when the pointer moves off ratio', () => {
+    const runtime = renderSelectionResize({
+      lockedAspectRatio: 2,
+      nodes: [createNode('node-1', { x: 10, y: 20 }, 100, 50, 'embed')],
+    })
+
+    const zone = screen.getByTestId('canvas-selection-resize-zone-bottom-right')
+    act(() => {
+      fireEvent.pointerDown(zone, { button: 0, pointerId: 1, clientX: 110, clientY: 70 })
+      fireEvent.pointerMove(window, { pointerId: 1, clientX: 160, clientY: 44.9 })
+    })
+
+    expectMapEntries(runtime.nodeActions.onResizeMany, [
+      ['node-1', { width: 150, height: 75, position: { x: 10, y: 20 } }],
     ])
   })
 
@@ -481,7 +528,7 @@ describe('ResizableNodeWrapper', () => {
     })
 
     expectMapEntries(runtime.nodeActions.onResizeMany, [
-      ['node-1', { width: 50, height: 50, position: { x: 10, y: 20 } }],
+      ['node-1', { width: 45, height: 45, position: { x: 10, y: 20 } }],
     ])
   })
 
@@ -532,12 +579,14 @@ describe('ResizableNodeWrapper', () => {
 
 function renderSelectionResize({
   draggingNodeIds = new Set<string>(),
+  lockedAspectRatio,
   nodes = [createNode('node-1', { x: 10, y: 20 }, 80, 40)],
   pendingPreview = null,
   selectedEdgeIds = new Set<string>(),
   selectedNodeIds = new Set(['node-1']),
 }: {
   draggingNodeIds?: ReadonlySet<string>
+  lockedAspectRatio?: number
   nodes?: Array<Node>
   pendingPreview?: { nodeIds: ReadonlySet<string>; edgeIds: ReadonlySet<string> } | null
   selectedEdgeIds?: ReadonlySet<string>
@@ -572,8 +621,7 @@ function renderSelectionResize({
               id={node.id}
               nodeType={node.type}
               dragging={draggingNodeIds.has(node.id)}
-              minHeight={node.type === 'stroke' ? 20 : 30}
-              minWidth={node.type === 'stroke' ? 20 : 50}
+              lockedAspectRatio={lockedAspectRatio}
             >
               <div>node body</div>
             </ResizableNodeWrapper>
@@ -612,4 +660,29 @@ function expectMapEntries(spy: unknown, entries: Array<[string, CanvasNodeResize
   const updates = lastCall?.[0]
   expect(updates).toBeInstanceOf(Map)
   expect(Array.from((updates as Map<string, CanvasNodeResizeUpdate>).entries())).toEqual(entries)
+}
+
+function stubPointerMedia(coarsePointer: boolean) {
+  const originalMatchMedia = Object.getOwnPropertyDescriptor(window, 'matchMedia')
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    value: vi.fn((query: string) => ({
+      matches: query === '(pointer: coarse)' ? coarsePointer : false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  })
+
+  return () => {
+    if (originalMatchMedia) {
+      Object.defineProperty(window, 'matchMedia', originalMatchMedia)
+    } else {
+      Reflect.deleteProperty(window, 'matchMedia')
+    }
+  }
 }

@@ -4,22 +4,33 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
 import { createCanvasEngine } from '../../../system/canvas-engine'
 import type { CanvasEngine } from '../../../system/canvas-engine-types'
+import { CANVAS_NODE_MIN_SIZE } from '../../shared/canvas-node-resize-constants'
 import { getCachedStrokeDetailPath } from '../stroke-path-cache'
 import { StrokeNode } from '../stroke-node'
 
 let strokeEngine!: CanvasEngine
 const strokeNodeMocks = vi.hoisted(() => ({
   registerStrokeNodePaths: vi.fn(() => vi.fn()),
+  resizableNodeWrapper: vi.fn(),
   zoom: 1,
 }))
 
 vi.mock('../../shared/resizable-node-wrapper', () => ({
-  ResizableNodeWrapper: ({ children, chrome }: { children: ReactNode; chrome?: ReactNode }) => (
-    <div>
-      {chrome}
-      {children}
-    </div>
-  ),
+  ResizableNodeWrapper: (props: {
+    children: ReactNode
+    chrome?: ReactNode
+    minHeight?: number
+    minWidth?: number
+    nodeType: string
+  }) => {
+    strokeNodeMocks.resizableNodeWrapper(props)
+    return (
+      <div>
+        {props.chrome}
+        {props.children}
+      </div>
+    )
+  },
 }))
 
 vi.mock('../../../runtime/providers/canvas-runtime', () => ({
@@ -37,6 +48,7 @@ describe('StrokeNode', () => {
   beforeEach(() => {
     strokeEngine = createCanvasEngine()
     strokeNodeMocks.registerStrokeNodePaths.mockClear()
+    strokeNodeMocks.resizableNodeWrapper.mockClear()
     strokeNodeMocks.zoom = 1
   })
 
@@ -55,6 +67,18 @@ describe('StrokeNode', () => {
     expect(getByTestId('stroke-hit-target')).toBeInTheDocument()
     expect(container.querySelector('.canvas-stroke-detail-path')).toBeInTheDocument()
     expect(container.querySelector('.canvas-stroke-highlight-path')).toBeInTheDocument()
+  })
+
+  it('uses the uniform small canvas node resize minimum', () => {
+    renderStroke(<StrokeNode {...setupStrokeNodeProps({ selected: false })} />)
+
+    expect(strokeNodeMocks.resizableNodeWrapper).toHaveBeenCalledWith(
+      expect.objectContaining({
+        minHeight: CANVAS_NODE_MIN_SIZE,
+        minWidth: CANVAS_NODE_MIN_SIZE,
+        nodeType: 'stroke',
+      }),
+    )
   })
 
   it('drops the local stroke highlight when a pending preview excludes the committed stroke', () => {

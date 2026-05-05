@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { Ref } from 'react'
 import type { CanvasNodeComponentProps } from '../canvas-node-types'
+import { CANVAS_NODE_MIN_SIZE } from '../shared/canvas-node-resize-constants'
 import { ResizableNodeWrapper } from '../shared/resizable-node-wrapper'
 import type { StrokeNodeData } from './stroke-node-model'
 import { pointsToCenterlinePathD } from './stroke-node-model'
@@ -189,8 +190,8 @@ export function StrokeNode({
       id={id}
       nodeType="stroke"
       dragging={!!dragging}
-      minWidth={20}
-      minHeight={20}
+      minWidth={CANVAS_NODE_MIN_SIZE}
+      minHeight={CANVAS_NODE_MIN_SIZE}
     >
       {hitTarget}
       <StrokeVisual

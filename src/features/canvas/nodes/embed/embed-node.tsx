@@ -8,6 +8,7 @@ import {
   useCanvasViewportRuntime,
 } from '../../runtime/providers/canvas-runtime'
 import { ResizableNodeWrapper } from '../shared/resizable-node-wrapper'
+import { CANVAS_NODE_MIN_SIZE } from '../shared/canvas-node-resize-constants'
 import type { EmbedNodeData } from './embed-node-data'
 import { EmbedNoteContent } from './embed-note-content'
 import { CanvasFloatingFormattingToolbar } from '../shared/canvas-floating-formatting-toolbar'
@@ -96,8 +97,8 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
       id={id}
       nodeType="embed"
       dragging={!!dragging}
-      minWidth={240}
-      minHeight={180}
+      minWidth={CANVAS_NODE_MIN_SIZE}
+      minHeight={CANVAS_NODE_MIN_SIZE}
       lockedAspectRatio={getLockedAspectRatio(contentItem, normalizedData.lockedAspectRatio)}
       editing={showsFormattingToolbar}
       chrome={

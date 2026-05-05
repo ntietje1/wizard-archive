@@ -6,16 +6,29 @@ import { useMapImageStatus } from '~/features/editor/components/viewer/map/use-m
 import { MapImagePreview } from '~/features/editor/components/viewer/map/map-image-preview'
 import { useMapRenderPins } from '~/features/editor/components/viewer/map/use-map-render-pins'
 import { useCanvasDocumentRuntime } from '../../runtime/providers/canvas-runtime'
+import { useCanvasEngine } from '../../react/use-canvas-engine'
+import { resolveDefaultEmbedNodeResizeForLockedAspectRatio } from './embed-node-size'
 
 export function EmbeddedMapContent({ nodeId, map }: { nodeId: string; map: GameMapWithContent }) {
   const { pins, isPinGhost } = useMapRenderPins(map)
   const { documentWriter } = useCanvasDocumentRuntime()
-  const { patchNodeData } = documentWriter
+  const { patchNodeData, resizeNode } = documentWriter
+  const canvasEngine = useCanvasEngine()
   const { imageLoaded, imageError, handleImageLoad, handleImageError } = useMapImageStatus(
     map._id,
     map.imageUrl,
   )
   const lastStoredAspectRatioRef = useRef<number | null>(null)
+  const patchLockedAspectRatio = (aspectRatio: number) => {
+    patchNodeData(new Map([[nodeId, { lockedAspectRatio: aspectRatio }]]))
+    const node = canvasEngine.getSnapshot().nodeLookup.get(nodeId)?.node
+    const resize = node
+      ? resolveDefaultEmbedNodeResizeForLockedAspectRatio(node, aspectRatio)
+      : null
+    if (resize) {
+      resizeNode(nodeId, resize.width, resize.height, resize.position)
+    }
+  }
 
   if (!map.imageUrl || imageError) {
     return <MapImagePreview imageUrl={imageError ? null : map.imageUrl} />
@@ -41,7 +54,7 @@ export function EmbeddedMapContent({ nodeId, map }: { nodeId: string; map: GameM
             const aspectRatio = Number((naturalWidth / naturalHeight).toFixed(6))
             if (lastStoredAspectRatioRef.current !== aspectRatio) {
               lastStoredAspectRatioRef.current = aspectRatio
-              patchNodeData(new Map([[nodeId, { lockedAspectRatio: aspectRatio }]]))
+              patchLockedAspectRatio(aspectRatio)
             }
           }
 

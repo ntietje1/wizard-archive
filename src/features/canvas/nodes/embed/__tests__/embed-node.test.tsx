@@ -5,6 +5,7 @@ import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { EmbedNode } from '../embed-node'
 import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
 import { createCanvasEngine } from '../../../system/canvas-engine'
+import { CANVAS_NODE_MIN_SIZE } from '../../shared/canvas-node-resize-constants'
 import { testId } from '~/test/helpers/test-id'
 
 const sidebarItemPreviewSpy = vi.hoisted(() => vi.fn())
@@ -12,6 +13,7 @@ const embeddedCanvasSpy = vi.hoisted(() => vi.fn())
 const embeddedFileSpy = vi.hoisted(() => vi.fn())
 const embeddedMapSpy = vi.hoisted(() => vi.fn())
 const embedNoteSpy = vi.hoisted(() => vi.fn())
+const resizableNodeWrapperSpy = vi.hoisted(() => vi.fn())
 const setEditingEmbedId = vi.hoisted(() => vi.fn())
 const renderModeState = vi.hoisted(() => ({
   interactive: true,
@@ -80,12 +82,21 @@ vi.mock('../../../runtime/providers/use-canvas-render-mode', () => ({
 }))
 
 vi.mock('../../shared/resizable-node-wrapper', () => ({
-  ResizableNodeWrapper: ({ children, chrome }: { children: ReactNode; chrome: ReactNode }) => (
-    <div>
-      {chrome}
-      {children}
-    </div>
-  ),
+  ResizableNodeWrapper: (props: {
+    children: ReactNode
+    chrome: ReactNode
+    minHeight?: number
+    minWidth?: number
+    nodeType: string
+  }) => {
+    resizableNodeWrapperSpy(props)
+    return (
+      <div>
+        {props.chrome}
+        {props.children}
+      </div>
+    )
+  },
 }))
 
 vi.mock('../../shared/use-canvas-editable-node-session', () => ({
@@ -157,6 +168,19 @@ describe('EmbedNode', () => {
     embeddedFileSpy.mockReset()
     embeddedMapSpy.mockReset()
     embedNoteSpy.mockReset()
+    resizableNodeWrapperSpy.mockReset()
+  })
+
+  it('uses the uniform small canvas node resize minimum', () => {
+    renderEmbedNode()
+
+    expect(resizableNodeWrapperSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        minHeight: CANVAS_NODE_MIN_SIZE,
+        minWidth: CANVAS_NODE_MIN_SIZE,
+        nodeType: 'embed',
+      }),
+    )
   })
 
   it('renders canvas embeds through the dedicated embedded canvas renderer in interactive mode', () => {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { getCanvasNodeBounds } from './canvas-node-bounds'
+import { CANVAS_NODE_MIN_SIZE } from './canvas-node-resize-constants'
 import { useCanvasNodeResizeMetadataSnapshot } from './canvas-node-resize-metadata'
 import {
   useCanvasInteractionRuntime,
@@ -24,12 +25,13 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent, RefObject } from
 import { boundsUnion } from '../../utils/canvas-geometry-utils'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
 
-const HANDLE_HIT_SIZE_PX = 36
+const MOUSE_HANDLE_HIT_SIZE_PX = 18
+const TOUCH_HANDLE_HIT_SIZE_PX = 36
 
 const DEFAULT_RESIZE_METADATA: CanvasNodeResizeMetadata = {
   dragging: false,
-  minHeight: 30,
-  minWidth: 50,
+  minHeight: CANVAS_NODE_MIN_SIZE,
+  minWidth: CANVAS_NODE_MIN_SIZE,
 }
 
 const RESIZE_HANDLES: Array<{
@@ -97,6 +99,7 @@ interface ActiveSelectionResize {
   targetBounds: ReadonlyArray<Bounds>
   minWidth: number
   minHeight: number
+  lockedAspectRatio?: number
   currentPoint: { x: number; y: number } | null
 }
 
@@ -190,6 +193,7 @@ export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
           targetBounds: activeResize.targetBounds,
           minWidth: activeResize.minWidth,
           minHeight: activeResize.minHeight,
+          lockedAspectRatio: activeResize.lockedAspectRatio,
           square,
           snap,
           zoom: viewportControllerRef.current.getZoom(),
@@ -229,6 +233,7 @@ export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
             targetBounds: activeResize.targetBounds,
             minWidth: activeResize.minWidth,
             minHeight: activeResize.minHeight,
+            lockedAspectRatio: activeResize.lockedAspectRatio,
             square,
             snap,
             zoom: viewportControllerRef.current.getZoom(),
@@ -382,6 +387,7 @@ export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
       startBounds: startSelection.bounds,
       minWidth: minimumSize.width,
       minHeight: minimumSize.height,
+      lockedAspectRatio: getSingleSelectionLockedAspectRatio(startSelection),
       currentPoint: null,
       targetBounds: canvasEngineRef.current
         .getSnapshot()
@@ -557,10 +563,30 @@ function getCurrentResizeBounds(
   }
 }
 
+function getSingleSelectionLockedAspectRatio(selection: {
+  nodes: ReadonlyArray<SelectionResizeNode>
+}) {
+  if (selection.nodes.length !== 1) {
+    return undefined
+  }
+
+  const lockedAspectRatio = selection.nodes[0].metadata.lockedAspectRatio
+  return typeof lockedAspectRatio === 'number' && Number.isFinite(lockedAspectRatio)
+    ? lockedAspectRatio
+    : undefined
+}
+
 function getMinimumSelectionResizeSize(selection: {
   bounds: Bounds
   nodes: ReadonlyArray<SelectionResizeNode>
 }) {
+  if (selection.nodes.length > 1) {
+    return {
+      width: 1,
+      height: 1,
+    }
+  }
+
   let minScaleX = 0
   let minScaleY = 0
 
@@ -609,9 +635,10 @@ function getLockedNodeScale(
 }
 
 function getResizeZoneStyle(position: CanvasResizeHandlePosition): CSSProperties {
-  const cornerSize = HANDLE_HIT_SIZE_PX
+  const hitSize = getResizeHandleHitSizePx()
+  const cornerSize = hitSize
   const halfCornerSize = cornerSize / 2
-  const sideBandSize = HANDLE_HIT_SIZE_PX
+  const sideBandSize = hitSize
   const halfSideBandSize = sideBandSize / 2
 
   switch (position) {
@@ -667,6 +694,19 @@ function getResizeZoneStyle(position: CanvasResizeHandlePosition): CSSProperties
         width: sideBandSize,
       }
   }
+}
+
+function getResizeHandleHitSizePx() {
+  const coarsePointer =
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(pointer: coarse)').matches
+  const touchPoints =
+    typeof navigator !== 'undefined' &&
+    'maxTouchPoints' in navigator &&
+    navigator.maxTouchPoints > 0
+
+  return coarsePointer || touchPoints ? TOUCH_HANDLE_HIT_SIZE_PX : MOUSE_HANDLE_HIT_SIZE_PX
 }
 
 function readPrimaryModifier(modifiers: ReturnType<typeof useCanvasModifierKeys>) {

@@ -57,6 +57,42 @@ describe('canvas node specs', () => {
     })
   })
 
+  it('fits default embed size to a provided locked aspect ratio', () => {
+    const wide = createCanvasNodePlacement('embed', {
+      position: { x: 40, y: 60 },
+      data: { sidebarItemId: 'wide-file' as Id<'sidebarItems'>, lockedAspectRatio: 2 },
+    }).node
+    const tall = createCanvasNodePlacement('embed', {
+      position: { x: 40, y: 60 },
+      data: { sidebarItemId: 'tall-file' as Id<'sidebarItems'>, lockedAspectRatio: 0.5 },
+    }).node
+
+    expect(wide).toMatchObject({
+      width: 320,
+      height: 160,
+      data: { lockedAspectRatio: 2 },
+    })
+    expect(tall).toMatchObject({
+      width: 120,
+      height: 240,
+      data: { lockedAspectRatio: 0.5 },
+    })
+  })
+
+  it('keeps explicit embed size when creation data has a locked aspect ratio', () => {
+    const { node } = createCanvasNodePlacement('embed', {
+      position: { x: 40, y: 60 },
+      size: { width: 200, height: 200 },
+      data: { sidebarItemId: 'file-1' as Id<'sidebarItems'>, lockedAspectRatio: 2 },
+    })
+
+    expect(node).toMatchObject({
+      width: 200,
+      height: 200,
+      data: { lockedAspectRatio: 2 },
+    })
+  })
+
   it('exposes the static canvas node renderers', () => {
     expect(canvasNodeTypes.text).toBe(TextNode)
   })

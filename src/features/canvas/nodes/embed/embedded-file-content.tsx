@@ -3,11 +3,18 @@ import { Loader2 } from 'lucide-react'
 import type { FileWithContent } from 'convex/files/types'
 import { FilePreview } from '~/features/editor/components/viewer/file/file-preview'
 import { resolveFilePreviewImageUrl } from '~/features/editor/components/viewer/file/file-preview-source'
-import { useCanvasDocumentRuntime } from '../../runtime/providers/canvas-runtime'
+import {
+  useCanvasDocumentRuntime,
+  useCanvasInteractionRuntime,
+} from '../../runtime/providers/canvas-runtime'
+import { useCanvasEngine } from '../../react/use-canvas-engine'
+import { resolveDefaultEmbedNodeResizeForLockedAspectRatio } from './embed-node-size'
 
 export function EmbeddedFileContent({ nodeId, file }: { nodeId: string; file: FileWithContent }) {
   const { documentWriter } = useCanvasDocumentRuntime()
-  const { patchNodeData } = documentWriter
+  const { nodeActions } = useCanvasInteractionRuntime()
+  const { patchNodeData, resizeNode } = documentWriter
+  const canvasEngine = useCanvasEngine()
   const [erroredUrls, setErroredUrls] = useState<Set<string>>(() => new Set())
   const lastStoredAspectRatioRef = useRef<number | null>(null)
   const visualSourceUrl = resolveFilePreviewImageUrl({
@@ -16,6 +23,24 @@ export function EmbeddedFileContent({ nodeId, file }: { nodeId: string; file: Fi
     previewUrl: file.previewUrl,
     erroredUrls,
   })
+  const patchLockedAspectRatio = (aspectRatio: number) => {
+    const node = canvasEngine.getSnapshot().nodeLookup.get(nodeId)?.node
+    const resize = node
+      ? resolveDefaultEmbedNodeResizeForLockedAspectRatio(node, aspectRatio)
+      : null
+    const applyLockedAspectRatio = () => {
+      patchNodeData(new Map([[nodeId, { lockedAspectRatio: aspectRatio }]]))
+      if (resize) {
+        resizeNode(nodeId, resize.width, resize.height, resize.position)
+      }
+    }
+
+    if (nodeActions.transact) {
+      nodeActions.transact(applyLockedAspectRatio)
+    } else {
+      applyLockedAspectRatio()
+    }
+  }
 
   useEffect(() => {
     if (visualSourceUrl) {
@@ -59,7 +84,7 @@ export function EmbeddedFileContent({ nodeId, file }: { nodeId: string; file: Fi
             const aspectRatio = Number((naturalWidth / naturalHeight).toFixed(6))
             if (lastStoredAspectRatioRef.current !== aspectRatio) {
               lastStoredAspectRatioRef.current = aspectRatio
-              patchNodeData(new Map([[nodeId, { lockedAspectRatio: aspectRatio }]]))
+              patchLockedAspectRatio(aspectRatio)
             }
           }
         }}

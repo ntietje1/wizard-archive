@@ -1,4 +1,5 @@
 import { CanvasNodeFrame } from './canvas-node-frame'
+import { CANVAS_NODE_MIN_SIZE } from './canvas-node-resize-constants'
 import { useRegisterCanvasNodeResizeMetadata } from './canvas-node-resize-metadata'
 
 interface ResizableNodeWrapperProps {
@@ -19,8 +20,8 @@ export function ResizableNodeWrapper({
   dragging,
   children,
   chrome,
-  minWidth = 50,
-  minHeight = 30,
+  minWidth = CANVAS_NODE_MIN_SIZE,
+  minHeight = CANVAS_NODE_MIN_SIZE,
   lockedAspectRatio,
   editing = false,
 }: ResizableNodeWrapperProps) {

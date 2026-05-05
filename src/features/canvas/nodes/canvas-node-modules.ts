@@ -13,6 +13,7 @@ import {
   strokeNodeIntersectsRect,
 } from './stroke/stroke-node-interactions'
 import { TEXT_NODE_DEFAULT_HEIGHT, TEXT_NODE_DEFAULT_WIDTH } from './text/text-node-constants'
+import { resolveEmbedNodeDefaultSize } from './embed/embed-node-size'
 import {
   freehandStrokeSizeCanvasProperty,
   linePaintCanvasProperty,
@@ -38,7 +39,6 @@ import { assertNever } from '~/shared/utils/utils'
 import { normalizeCanvasNode } from './canvas-node-normalization'
 import type { AnyNormalizedCanvasNode } from './canvas-node-normalization'
 
-const DEFAULT_EMBED_SIZE = { width: 320, height: 240 } as const
 const DEFAULT_TEXT_SIZE = {
   width: TEXT_NODE_DEFAULT_WIDTH,
   height: TEXT_NODE_DEFAULT_HEIGHT,
@@ -151,10 +151,13 @@ export function getCanvasNodeInspectableProperties(
   }
 }
 
-function getDefaultCanvasNodeSize(type: CanvasNodeType): { width: number; height: number } | null {
+function getDefaultCanvasNodeSize(
+  type: CanvasNodeType,
+  data: CanvasNodeDataPatch | null,
+): { width: number; height: number } | null {
   switch (type) {
     case 'embed':
-      return DEFAULT_EMBED_SIZE
+      return resolveEmbedNodeDefaultSize(getCanvasNodeDataLockedAspectRatio(data))
     case 'stroke':
       return null
     case 'text':
@@ -162,6 +165,11 @@ function getDefaultCanvasNodeSize(type: CanvasNodeType): { width: number; height
     default:
       return assertNever(type)
   }
+}
+
+function getCanvasNodeDataLockedAspectRatio(data: CanvasNodeDataPatch | null): number | null {
+  const lockedAspectRatio = data && 'lockedAspectRatio' in data ? data.lockedAspectRatio : null
+  return typeof lockedAspectRatio === 'number' ? lockedAspectRatio : null
 }
 
 function getCanvasNodePlacementBehavior(type: CanvasNodeType) {
@@ -209,7 +217,15 @@ export function createCanvasNodePlacement(
   type: CanvasNodeType,
   args: CanvasNodeCreateArgs,
 ): { node: CanvasDocumentNode; selectOnCreate: boolean; startEditing: boolean } {
-  const resolvedSize = args.size ?? getDefaultCanvasNodeSize(type)
+  const defaultData = createDefaultCanvasNodeData(type)
+  const mergedData =
+    defaultData && args.data ? { ...defaultData, ...args.data } : (args.data ?? defaultData)
+  const data = mergedData ?? null
+  if (!data) {
+    throw new Error(`Missing default canvas node data for "${type}"`)
+  }
+
+  const resolvedSize = args.size ?? getDefaultCanvasNodeSize(type, data)
   if (!resolvedSize) {
     throw new Error(`Missing default canvas node size for "${type}"`)
   }
@@ -222,13 +238,6 @@ export function createCanvasNodePlacement(
           y: args.position.y - resolvedSize.height / 2,
         }
       : args.position
-  const defaultData = createDefaultCanvasNodeData(type)
-  const mergedData =
-    defaultData && args.data ? { ...defaultData, ...args.data } : (args.data ?? defaultData)
-  const data = mergedData ?? null
-  if (!data) {
-    throw new Error(`Missing default canvas node data for "${type}"`)
-  }
 
   const node = parseCanvasDocumentNode({
     id: crypto.randomUUID(),
