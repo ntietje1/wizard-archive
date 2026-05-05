@@ -28,6 +28,7 @@ function renderLassoShape({
     return (
       <polygon
         key={key}
+        data-testid="canvas-remote-lasso-preview"
         points={pointsValue}
         fill={color}
         fillOpacity={fillOpacity}
@@ -36,7 +37,15 @@ function renderLassoShape({
     )
   }
 
-  return <polyline key={key} points={pointsValue} fill="none" {...strokeProps} />
+  return (
+    <polyline
+      key={key}
+      data-testid="canvas-remote-lasso-preview"
+      points={pointsValue}
+      fill="none"
+      {...strokeProps}
+    />
+  )
 }
 
 export function LassoAwarenessLayer({ remoteUsers }: { remoteUsers: ReadonlyArray<RemoteUser> }) {

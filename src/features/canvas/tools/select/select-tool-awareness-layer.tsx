@@ -23,6 +23,7 @@ export function SelectAwarenessLayer({ remoteUsers }: { remoteUsers: ReadonlyArr
             bounds={canvasBoundsToScreenBounds(selecting, viewport)}
             color={remoteUser.user.color}
             fillOpacity={0.06}
+            testId="canvas-remote-selection-preview"
           />
         )
       })}

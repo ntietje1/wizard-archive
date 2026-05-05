@@ -59,6 +59,7 @@ interface UseCanvasInteractionRuntimeOptions {
   activeTool: CanvasToolId
   activeToolHandlers: CanvasToolHandlers
   canvasEngine: ReturnType<typeof createCanvasEngine>
+  canvasId: Id<'sidebarItems'>
   canvasSurfaceRef: RefObject<HTMLDivElement | null>
   canEdit: boolean
   doc: Y.Doc
@@ -76,6 +77,7 @@ export function useCanvasInteractionRuntime({
   activeTool,
   activeToolHandlers,
   canvasEngine,
+  canvasId,
   canvasSurfaceRef,
   canEdit,
   doc,
@@ -106,6 +108,7 @@ export function useCanvasInteractionRuntime({
   })
 
   useCanvasPerformanceProbeRuntime({
+    canvasId,
     canvasEngine,
     documentWriter,
     doc,

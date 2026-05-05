@@ -26,10 +26,12 @@ export function CanvasScreenSpaceRectChrome({
   bounds,
   color = 'var(--primary)',
   fillOpacity = CANVAS_SELECTION_CHROME_FILL_OPACITY,
+  testId,
 }: {
   bounds: Bounds
   color?: string
   fillOpacity?: number
+  testId?: string
 }) {
   const normalizedBounds = normalizeScreenBounds(bounds)
 
@@ -43,6 +45,7 @@ export function CanvasScreenSpaceRectChrome({
       fillOpacity={fillOpacity}
       stroke={color}
       strokeWidth={CANVAS_SELECTION_CHROME_STROKE_WIDTH_PX}
+      data-testid={testId}
     />
   )
 }

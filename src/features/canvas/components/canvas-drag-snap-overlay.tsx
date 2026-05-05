@@ -45,6 +45,7 @@ function renderGuideLine({
   return (
     <line
       key={key}
+      data-testid="canvas-drag-snap-guide"
       x1={start.x}
       y1={start.y}
       x2={end.x}

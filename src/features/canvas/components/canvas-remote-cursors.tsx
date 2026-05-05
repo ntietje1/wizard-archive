@@ -79,7 +79,12 @@ function RemoteCursor({ remoteUser }: { remoteUser: RemoteUser }) {
   if (!screenCursor) return null
 
   return (
-    <div ref={elementRef} className="pointer-events-none absolute left-0 top-0 z-[1000]">
+    <div
+      ref={elementRef}
+      className="pointer-events-none absolute left-0 top-0 z-[1000]"
+      data-testid="canvas-remote-cursor"
+      data-remote-client-id={remoteUser.clientId}
+    >
       <CursorIcon color={remoteUser.user.color} />
       <NameLabel name={remoteUser.user.name} color={remoteUser.user.color} />
     </div>

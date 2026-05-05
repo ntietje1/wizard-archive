@@ -99,6 +99,7 @@ export function useCanvasEditorRuntime({
     activeTool,
     activeToolHandlers: tools.activeToolHandlers,
     canvasEngine: core.canvasEngine,
+    canvasId,
     canvasSurfaceRef: core.canvasSurfaceRef,
     canEdit,
     doc,

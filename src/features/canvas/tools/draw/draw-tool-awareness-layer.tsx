@@ -29,6 +29,7 @@ export function DrawAwarenessLayer({ remoteUsers }: { remoteUsers: Array<RemoteU
         return (
           <path
             key={`remote-${user.clientId}`}
+            data-testid="canvas-remote-draw-preview"
             d={d}
             fill={drawing.color}
             opacity={((drawing.opacity ?? 100) / 100) * 0.7}

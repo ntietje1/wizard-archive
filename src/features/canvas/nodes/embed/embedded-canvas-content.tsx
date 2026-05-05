@@ -37,7 +37,10 @@ export function EmbeddedCanvasContent({
   }
 
   return (
-    <div className="h-full w-full min-h-0 min-w-0 overflow-hidden">
+    <div
+      className="h-full w-full min-h-0 min-w-0 overflow-hidden"
+      data-testid="embedded-canvas-root"
+    >
       <CanvasReadOnlyPreview
         nodes={nodes}
         edges={normalizedEdges}

@@ -1,3 +1,9 @@
+import type { Id } from 'convex/_generated/dataModel'
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+  CanvasTextDocumentNode,
+} from 'convex/canvases/validation'
 import type { CanvasPosition } from '../../types/canvas-domain-types'
 
 interface CanvasPerformanceMetric {
@@ -10,21 +16,63 @@ interface CanvasPerformanceMetric {
 interface CanvasPerformanceRuntime {
   clearCanvas: () => void
   getCounts: () => { nodes: number; edges: number }
+  getCanvasId: () => Id<'sidebarItems'>
+  getSnapshot: () => {
+    nodes: Array<CanvasDocumentNode>
+    edges: Array<CanvasDocumentEdge>
+    selection: { nodeIds: Array<string>; edgeIds: Array<string> }
+    viewport: { x: number; y: number; zoom: number }
+  }
+  getMetrics: () => Array<CanvasPerformanceMetric>
+  clearMetrics: () => void
+  setSelection: (selection: { nodeIds?: Array<string>; edgeIds?: Array<string> }) => void
   seedTextNodes: (options: {
     count: number
     columns?: number
+    idPrefix?: string
+    labelPrefix?: string
+    position?: CanvasPosition
+    size?: { width: number; height: number }
     spacingX?: number
     spacingY?: number
     start?: CanvasPosition
+    style?: Partial<CanvasTextDocumentNode['data']>
+    zIndex?: number
   }) => void
   seedCoordinateProbeNode: (options: { id: string; start?: CanvasPosition }) => void
   seedStrokeNodes: (options: {
     count: number
     columns?: number
+    idPrefix?: string
+    position?: CanvasPosition
     spacingX?: number
     spacingY?: number
     start?: CanvasPosition
     pointsPerStroke?: number
+    style?: {
+      color?: string
+      opacity?: number
+      size?: number
+    }
+    zIndex?: number
+  }) => void
+  seedEdge: (options: {
+    id?: string
+    source: string
+    target: string
+    sourceHandle?: string
+    targetHandle?: string
+    type?: CanvasDocumentEdge['type']
+    style?: CanvasDocumentEdge['style']
+    zIndex?: number
+  }) => void
+  seedEmbedNode: (options: {
+    id: string
+    sidebarItemId: Id<'sidebarItems'>
+    position: CanvasPosition
+    width?: number
+    height?: number
+    zIndex?: number
   }) => void
   selectFirstNodes: (count: number) => void
   getSelectedCount: () => number
