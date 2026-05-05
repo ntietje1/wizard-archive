@@ -1,6 +1,6 @@
 import type { Id } from 'convex/_generated/dataModel'
 import { savePersistedCanvasViewport } from './canvas-viewport-storage'
-import type { CanvasEngine } from '../../system/canvas-engine'
+import type { CanvasEngine } from '../../system/canvas-engine-types'
 import type { PersistedCanvasViewport } from './canvas-viewport-storage'
 
 const VIEWPORT_SAVE_DEBOUNCE_MS = 250

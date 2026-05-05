@@ -5,12 +5,7 @@ import * as Y from 'yjs'
 import { yMapToArray } from '../../utils/canvas-yjs-utils'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import type { Id } from 'convex/_generated/dataModel'
-import type {
-  CanvasDocumentEdge,
-  CanvasDocumentNode,
-} from '~/features/canvas/types/canvas-domain-types'
-
-export { parseEmbeddedCanvasStableId } from 'convex/canvases/validation'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 
 function useYMapAsArray<T>(doc: Y.Doc, mapName: string): Array<T> {
   const snapshotRef = useRef<Array<T>>([])

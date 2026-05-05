@@ -4,7 +4,7 @@ import type { CanvasMeasuredNode, CanvasToolRuntime } from '../../canvas-tool-ty
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from '~/features/canvas/types/canvas-domain-types'
+} from 'convex/canvases/validation'
 
 function createMouseEvent(
   x: number,

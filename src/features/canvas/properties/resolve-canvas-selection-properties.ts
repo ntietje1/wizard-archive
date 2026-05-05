@@ -16,7 +16,7 @@ import type { CanvasNodeDataPatch } from '../nodes/canvas-node-modules'
 import type { CanvasRichTextFormattingSnapshot } from '../nodes/shared/canvas-rich-text-formatting-session'
 import type { CanvasInspectableProperties, CanvasResolvedProperty } from './canvas-property-types'
 import type { CanvasToolId, CanvasToolPropertyContext } from '../tools/canvas-tool-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '../types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 
 export function resolveCanvasSelectionProperties({
   activeFormattingSnapshot,
@@ -43,7 +43,7 @@ export function resolveCanvasSelectionProperties({
         getSelectedNodeInspectableProperties(
           node,
           patchNodeData,
-          isNoteEmbed(node),
+          node.type === 'text' || isNoteEmbed(node),
           activeFormattingSnapshot,
         ),
       ),

@@ -12,11 +12,8 @@ import type { CanvasCullingDiff } from './canvas-culling'
 import type { CanvasDomRegistry, CanvasRegisteredStrokeNodePaths } from './canvas-dom-registry'
 import type { CanvasNodeSurfaceStyleData } from '../nodes/shared/canvas-node-surface-style'
 import type { StrokeNodeData } from '../nodes/stroke/stroke-node-model'
-import type {
-  CanvasDocumentEdge,
-  CanvasPosition,
-  CanvasViewport,
-} from '../types/canvas-domain-types'
+import type { CanvasPosition, CanvasViewport } from '../types/canvas-domain-types'
+import type { CanvasDocumentEdge } from 'convex/canvases/validation'
 
 export type CanvasCameraState = 'idle' | 'moving'
 

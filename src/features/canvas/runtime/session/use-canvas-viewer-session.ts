@@ -3,10 +3,7 @@ import { api } from 'convex/_generated/api'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
-import type {
-  CanvasDocumentEdge,
-  CanvasDocumentNode,
-} from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 import type * as Y from 'yjs'
 import type { CanvasWithContent } from 'convex/canvases/types'
 import { useConvexYjsCollaboration } from '~/features/editor/hooks/useConvexYjsCollaboration'

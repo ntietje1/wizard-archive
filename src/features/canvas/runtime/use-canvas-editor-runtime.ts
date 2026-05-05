@@ -14,11 +14,8 @@ import {
 } from './use-canvas-interaction-runtime'
 import { useCanvasToolRuntime } from './use-canvas-tool-runtime'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
-import type {
-  CanvasDocumentEdge,
-  CanvasDocumentNode,
-  CanvasViewport,
-} from '../types/canvas-domain-types'
+import type { CanvasViewport } from '../types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
 import { useYjsPreviewUpload } from '~/features/previews/hooks/use-yjs-preview-upload'
 

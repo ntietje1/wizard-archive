@@ -1,13 +1,11 @@
 import type { CanvasNormalizedEdgeStyle } from './shared/canvas-edge-style'
+import type { CanvasHandlePosition } from '../types/canvas-domain-types'
 import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
   CanvasEdgeStyle,
   CanvasEdgeType,
-  CanvasHandlePosition,
-} from '../types/canvas-domain-types'
-
-export type { CanvasEdgeType }
+} from 'convex/canvases/validation'
 
 export interface CanvasEdgeRendererProps<TType extends CanvasEdgeType = CanvasEdgeType> {
   id: string

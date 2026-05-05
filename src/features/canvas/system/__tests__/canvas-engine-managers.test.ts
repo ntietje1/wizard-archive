@@ -20,7 +20,7 @@ import type { CanvasEngineSnapshot } from '../canvas-engine-types'
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from '~/features/canvas/types/canvas-domain-types'
+} from 'convex/canvases/validation'
 
 describe('canvas engine managers', () => {
   it('keeps selector notification in the store boundary', () => {

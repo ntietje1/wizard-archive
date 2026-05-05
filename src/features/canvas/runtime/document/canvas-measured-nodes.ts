@@ -1,6 +1,6 @@
 import type { CanvasMeasuredNode } from '../../tools/canvas-tool-types'
-import type { CanvasEngineSnapshot, CanvasInternalNode } from '../../system/canvas-engine'
-import type { CanvasDocumentNode } from '../../types/canvas-domain-types'
+import type { CanvasEngineSnapshot, CanvasInternalNode } from '../../system/canvas-engine-types'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 
 type MeasuredNodeLookupValue = Pick<CanvasDocumentNode, 'data' | 'id' | 'position' | 'type'> & {
   measured?: {

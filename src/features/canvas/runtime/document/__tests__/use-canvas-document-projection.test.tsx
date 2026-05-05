@@ -6,7 +6,7 @@ import { createCanvasEngine } from '../../../system/canvas-engine'
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from '~/features/canvas/types/canvas-domain-types'
+} from 'convex/canvases/validation'
 
 function createTextNode(id: string): Node {
   return {

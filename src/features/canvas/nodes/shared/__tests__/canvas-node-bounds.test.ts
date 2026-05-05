@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { getCanvasNodeBounds } from '../canvas-node-bounds'
-import type { CanvasDocumentNode as Node } from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentNode as Node } from 'convex/canvases/validation'
 
 /**
  * asNode(value: unknown): Node force-casts malformed shapes for testing purposes only.

@@ -4,8 +4,8 @@ import { resolveCanvasScreenMinimumStrokeWidthCss } from '../utils/canvas-screen
 import type { CanvasConnectionDraft } from '../runtime/interaction/canvas-connection-gesture-types'
 import { useCanvasEngineSelector } from '../react/use-canvas-engine'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
-import type { CanvasInternalNode } from '../system/canvas-engine'
-import type { CanvasDocumentNode } from '../types/canvas-domain-types'
+import type { CanvasInternalNode } from '../system/canvas-engine-types'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 import type { CSSProperties } from 'react'
 import { useShallow } from 'zustand/shallow'
 

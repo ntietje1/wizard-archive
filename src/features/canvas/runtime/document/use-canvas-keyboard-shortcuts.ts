@@ -5,10 +5,7 @@ import type {
   CanvasHistoryController,
   CanvasSelectionController,
 } from '../../tools/canvas-tool-types'
-import type {
-  CanvasDocumentEdge,
-  CanvasDocumentNode,
-} from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 import type * as Y from 'yjs'
 
 interface UseCanvasKeyboardShortcutsOptions extends Pick<CanvasHistoryController, 'undo' | 'redo'> {

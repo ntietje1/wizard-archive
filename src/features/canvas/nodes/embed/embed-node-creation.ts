@@ -1,9 +1,7 @@
 import { createCanvasNodePlacement } from '../canvas-node-modules'
 import type { Id } from 'convex/_generated/dataModel'
-import type {
-  CanvasDocumentNode,
-  CanvasPosition,
-} from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasPosition } from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 
 const EMBED_SIZE = { width: 320, height: 240 } as const
 

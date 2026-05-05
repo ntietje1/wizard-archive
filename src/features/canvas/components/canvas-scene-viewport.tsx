@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { CanvasBackground } from './canvas-background'
 import { cn } from '~/features/shadcn/lib/utils'
-import type { CanvasEngine } from '../system/canvas-engine'
+import type { CanvasEngine } from '../system/canvas-engine-types'
 import type { CanvasDomRuntime } from '../system/canvas-dom-runtime'
 import type { HTMLAttributes, ReactNode, RefObject } from 'react'
 

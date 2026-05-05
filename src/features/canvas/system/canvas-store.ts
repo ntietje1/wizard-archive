@@ -2,10 +2,10 @@ import type {
   CanvasEngineEquality,
   CanvasEngineListener,
   CanvasEngineSnapshot,
-  CanvasViewport,
   CanvasViewportChangeListener,
   CanvasViewportCommitListener,
 } from './canvas-engine-types'
+import type { CanvasViewport } from '../types/canvas-domain-types'
 
 export interface CanvasStore {
   getSnapshot: () => CanvasEngineSnapshot

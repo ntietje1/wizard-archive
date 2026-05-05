@@ -4,10 +4,7 @@ import { useEmbeddedCanvasState } from './use-embedded-canvas-state'
 import { CanvasThumbnailPreview } from '~/features/previews/components/canvas-thumbnail-preview'
 import { CanvasReadOnlyPreview } from '../../components/canvas-read-only-preview'
 import type { Id } from 'convex/_generated/dataModel'
-import type {
-  CanvasDocumentEdge,
-  CanvasDocumentNode,
-} from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 
 const MAX_ZOOM = 4
 const MIN_ZOOM = 0.01

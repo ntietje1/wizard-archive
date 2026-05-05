@@ -1,6 +1,6 @@
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { resolveCanvasEdgeType } from '../edges/canvas-edge-registry'
-import type { CanvasEdgeType } from '../edges/canvas-edge-types'
+import type { CanvasEdgeType } from 'convex/canvases/validation'
 import {
   useCanvasDocumentRuntime,
   useCanvasInteractionRuntime,

@@ -1,7 +1,4 @@
-import type {
-  CanvasDocumentEdge,
-  CanvasDocumentNode,
-} from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 import type * as Y from 'yjs'
 
 export function transactCanvasMap<TValue>(map: Y.Map<TValue>, fn: () => void) {

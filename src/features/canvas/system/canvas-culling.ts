@@ -5,11 +5,8 @@ import { getCanvasNodeBounds } from '../nodes/shared/canvas-node-bounds'
 import type { CanvasSelectionState } from './canvas-selection'
 import type { Bounds } from '../utils/canvas-geometry-utils'
 import { rectIntersectsBounds } from '../utils/canvas-geometry-utils'
-import type {
-  CanvasDocumentEdge,
-  CanvasDocumentNode,
-  CanvasViewport,
-} from '../types/canvas-domain-types'
+import type { CanvasViewport } from '../types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 
 const CULLING_OVERSCAN_PX = 512
 const MIN_ZOOM = 1e-6

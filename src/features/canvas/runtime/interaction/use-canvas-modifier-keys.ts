@@ -6,15 +6,13 @@ type CanvasModifierKeyState = {
   shiftPressed: boolean
 }
 
-type CanvasModifierKeyReader = CanvasModifierKeyState
-
 let listenerCount = 0
 let modifierKeyState: CanvasModifierKeyState = {
   primaryPressed: false,
   shiftPressed: false,
 }
 
-const CANVAS_MODIFIER_KEY_READER: CanvasModifierKeyReader = {
+const CANVAS_MODIFIER_KEY_READER: CanvasModifierKeyState = {
   get primaryPressed() {
     return modifierKeyState.primaryPressed
   },
@@ -23,7 +21,7 @@ const CANVAS_MODIFIER_KEY_READER: CanvasModifierKeyReader = {
   },
 }
 
-export function useCanvasModifierKeys(): CanvasModifierKeyReader {
+export function useCanvasModifierKeys(): CanvasModifierKeyState {
   useEffect(() => {
     subscribeCanvasModifierKeys()
     return unsubscribeCanvasModifierKeys

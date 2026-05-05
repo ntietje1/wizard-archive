@@ -1,9 +1,7 @@
 import { getCanvasNodeBounds } from '../../nodes/shared/canvas-node-bounds'
-import type {
-  CanvasDocumentNode,
-  CanvasPosition,
-} from '~/features/canvas/types/canvas-domain-types'
-import type { CanvasSelectionSnapshot } from '../../tools/canvas-tool-types'
+import type { CanvasPosition } from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
 import type * as Y from 'yjs'
 

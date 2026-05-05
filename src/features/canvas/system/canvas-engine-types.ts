@@ -7,12 +7,11 @@ import type {
 import type { CanvasCameraState } from './canvas-render-scheduler'
 import type { CanvasEdgePatch } from '../edges/canvas-edge-types'
 import type {
-  CanvasDocumentEdge,
   CanvasDocumentNodePatch,
-  CanvasDocumentNode,
   CanvasPosition,
   CanvasViewport,
 } from '../types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 
 export interface CanvasInternalNode {
   id: string
@@ -105,5 +104,3 @@ export interface CanvasEngine {
   refreshCulling: () => void
   destroy: () => void
 }
-
-export type { CanvasViewport } from '../types/canvas-domain-types'

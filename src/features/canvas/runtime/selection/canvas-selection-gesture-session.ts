@@ -1,11 +1,13 @@
 import { applyCanvasSelectionCommitMode } from '../../utils/canvas-selection-utils'
 import type {
   CanvasInteractionTools,
-  CanvasSelectionCommitMode,
   CanvasSelectionController,
+} from '../../tools/canvas-tool-types'
+import type {
+  CanvasSelectionCommitMode,
   CanvasSelectionGestureKind,
   CanvasSelectionSnapshot,
-} from '../../tools/canvas-tool-types'
+} from '../../system/canvas-selection'
 
 interface CanvasSelectionGestureSessionAdapter<TState> {
   kind: CanvasSelectionGestureKind

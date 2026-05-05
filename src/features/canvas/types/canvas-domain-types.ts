@@ -1,15 +1,9 @@
-import type {
-  CanvasDocumentEdge,
-  CanvasDocumentNode,
-  CanvasEdgeStyle,
-  CanvasEdgeType,
-  CanvasNodeType,
-} from 'convex/canvases/validation'
-
 export type CanvasPosition = {
   x: number
   y: number
 }
+
+export type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 
 export type CanvasViewport = CanvasPosition & {
   zoom: number
@@ -37,12 +31,4 @@ export type CanvasDocumentNodePatch = {
   width?: number
   height?: number
   zIndex?: number
-}
-
-export type {
-  CanvasDocumentEdge,
-  CanvasDocumentNode,
-  CanvasEdgeStyle,
-  CanvasEdgeType,
-  CanvasNodeType,
 }

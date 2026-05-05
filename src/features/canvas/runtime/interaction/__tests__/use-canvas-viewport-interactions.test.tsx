@@ -21,6 +21,14 @@ describe('useCanvasViewportInteractions', () => {
 
     expect(viewportController.handleWheel).toHaveBeenCalledTimes(1)
     expect(viewportController.handlePanPointerDown).toHaveBeenCalledTimes(2)
+    expect(viewportController.handlePanPointerDown).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ button: 1, buttons: 2 }),
+    )
+    expect(viewportController.handlePanPointerDown).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ button: 0, buttons: 1 }),
+    )
   })
 
   it('captures handled wheel events before scene bubble handlers observe them', () => {
@@ -84,11 +92,27 @@ function createPointerEvent(type: string, init: { button: number }): PointerEven
     return new PointerEvent(type, {
       bubbles: true,
       button: init.button,
+      buttons: 1 << init.button,
       cancelable: true,
     })
   }
 
   const event = new Event(type, { bubbles: true, cancelable: true }) as PointerEvent
-  Object.defineProperty(event, 'button', { value: init.button })
+  const pointerFields: Pick<
+    PointerEvent,
+    'button' | 'buttons' | 'isPrimary' | 'pointerId' | 'pointerType' | 'pressure'
+  > = {
+    button: init.button,
+    buttons: 1 << init.button,
+    isPrimary: true,
+    pointerId: 0,
+    pointerType: 'mouse',
+    pressure: 0.5,
+  }
+  // JSDOM may not provide PointerEvent; this fills common fields but cannot emulate
+  // instanceof PointerEvent without the constructor.
+  for (const [key, value] of Object.entries(pointerFields)) {
+    Object.defineProperty(event, key, { value })
+  }
   return event
 }

@@ -15,11 +15,8 @@ import {
 import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
 import type { Point2D } from '../../utils/canvas-awareness-types'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
-import type {
-  CanvasDocumentEdge,
-  CanvasHandlePosition,
-  CanvasDocumentNode,
-} from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasHandlePosition } from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 
 const DEFAULT_CANVAS_EDGE_INTERACTION_WIDTH = 20
 const MIN_ZOOM = 1e-6

@@ -8,6 +8,7 @@ import type { CanvasViewportController } from '../../system/canvas-viewport-cont
 
 const viewportActionMock = vi.hoisted(() => ({
   fitView: vi.fn(),
+  setZoomBounds: vi.fn(),
   zoomIn: vi.fn(),
   zoomOut: vi.fn(),
 }))
@@ -23,6 +24,7 @@ describe('CanvasToolbar', () => {
   beforeEach(() => {
     useCanvasToolStore.getState().reset()
     viewportActionMock.fitView.mockReset()
+    viewportActionMock.setZoomBounds.mockReset()
     viewportActionMock.zoomIn.mockReset()
     viewportActionMock.zoomOut.mockReset()
     history.canUndo = false
@@ -46,7 +48,7 @@ describe('CanvasToolbar', () => {
       zoomOut: viewportActionMock.zoomOut,
       fitView: viewportActionMock.fitView,
       syncFromDocumentOrAdapter: vi.fn(),
-      setZoomBounds: vi.fn(),
+      setZoomBounds: viewportActionMock.setZoomBounds,
       commit: vi.fn(),
       destroy: vi.fn(),
     }

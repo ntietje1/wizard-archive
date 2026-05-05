@@ -2,7 +2,7 @@ import { CanvasSelectionBoundsOverlay } from './canvas-selection-bounds-overlay'
 import { getCanvasNodeBounds } from '../nodes/shared/canvas-node-bounds'
 import { useCanvasEngineSelector } from '../react/use-canvas-engine'
 import { useIsInteractiveCanvasRenderMode } from '../runtime/providers/use-canvas-render-mode'
-import type { CanvasEngineSnapshot } from '../system/canvas-engine'
+import type { CanvasEngineSnapshot } from '../system/canvas-engine-types'
 import { boundsUnion } from '../utils/canvas-geometry-utils'
 import type { Bounds } from '../utils/canvas-geometry-utils'
 

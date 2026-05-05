@@ -4,9 +4,6 @@ import { getSnapThresholdForZoom } from '../utils/canvas-snap-guides'
 import type { CanvasDragGuide } from '../utils/canvas-snap-guides'
 import type { CanvasResizeBounds, CanvasResizeHandlePosition } from './canvas-resize-handles'
 
-export type { CanvasResizeHandlePosition } from './canvas-resize-handles'
-export { affectsCanvasResizeAxis } from './canvas-resize-handles'
-
 interface CanvasResizeGeometryResult {
   bounds: CanvasResizeBounds
   guides: ReadonlyArray<CanvasDragGuide>

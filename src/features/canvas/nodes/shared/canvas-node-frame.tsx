@@ -7,7 +7,7 @@ import {
   useCanvasScreenSpaceViewport,
 } from '../../components/canvas-screen-space-overlay-utils'
 import { useCanvasEngineSelector } from '../../react/use-canvas-engine'
-import type { CanvasEngineSnapshot } from '../../system/canvas-engine'
+import type { CanvasEngineSnapshot } from '../../system/canvas-engine-types'
 
 const CANVAS_NODE_SELECTION_INDICATOR_OPACITY = 0.55
 const CANVAS_SELECTION_CHROME_RADIUS_PX = 2

@@ -15,11 +15,8 @@ import type { createCanvasEngine } from '../system/canvas-engine'
 import type { createCanvasViewportController } from '../system/canvas-viewport-controller'
 import { canvasToolSpecs } from '../tools/canvas-tool-modules'
 import type { CanvasToolRuntime, CanvasToolId } from '../tools/canvas-tool-types'
-import type {
-  CanvasConnection,
-  CanvasDocumentEdge,
-  CanvasDocumentNode,
-} from '../types/canvas-domain-types'
+import type { CanvasConnection } from '../types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 
 interface UseCanvasToolRuntimeOptions {
   activeTool: CanvasToolId

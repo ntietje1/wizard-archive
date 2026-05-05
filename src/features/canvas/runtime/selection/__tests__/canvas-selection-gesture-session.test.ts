@@ -3,7 +3,7 @@ import { createCanvasSelectionGestureSession } from '../canvas-selection-gesture
 import type {
   CanvasSelectionCommitMode,
   CanvasSelectionSnapshot,
-} from '../../../tools/canvas-tool-types'
+} from '../../../system/canvas-selection'
 
 let pendingPreview: CanvasSelectionSnapshot | null = null
 

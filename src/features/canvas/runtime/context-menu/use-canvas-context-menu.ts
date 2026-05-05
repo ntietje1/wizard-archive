@@ -11,10 +11,7 @@ import type {
   CanvasContextMenuServices,
 } from './canvas-context-menu-types'
 import type { Id } from 'convex/_generated/dataModel'
-import type {
-  CanvasDocumentEdge,
-  CanvasDocumentNode,
-} from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 import type * as Y from 'yjs'
 import type { ContextMenuHostRef } from '~/features/context-menu/components/context-menu-host'
 import type { BuiltContextMenu } from '~/features/context-menu/types'

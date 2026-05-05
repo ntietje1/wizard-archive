@@ -2,7 +2,7 @@ import { memo } from 'react'
 import { CanvasNodeWrapper } from './canvas-node-wrapper'
 import { areArraysEqual } from './canvas-renderer-utils'
 import { useCanvasEngineSelector } from '../react/use-canvas-engine'
-import type { CanvasDocumentNode } from '../types/canvas-domain-types'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 import type { ComponentType, MouseEvent as ReactMouseEvent } from 'react'
 
 export const CanvasNodeRenderer = memo(function CanvasNodeRenderer({

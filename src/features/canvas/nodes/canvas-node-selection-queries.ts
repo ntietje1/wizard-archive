@@ -7,12 +7,12 @@ import {
   matchesCanvasNodeRectangleSelection,
   normalizeCanvasNode,
 } from './canvas-node-modules'
-import type { AnyNormalizedCanvasNode } from './canvas-node-modules'
+import type { AnyNormalizedCanvasNode } from './canvas-node-normalization'
 import { boundsFromPoints, rectIntersectsBounds } from '../utils/canvas-geometry-utils'
 import type { Point2D } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-geometry-utils'
 import type { CanvasNodeSelectionContext } from './canvas-node-types'
-import type { CanvasDocumentNode } from '../types/canvas-domain-types'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 
 function getSelectionNode(node: CanvasDocumentNode): AnyNormalizedCanvasNode | null {
   return normalizeCanvasNode(node)

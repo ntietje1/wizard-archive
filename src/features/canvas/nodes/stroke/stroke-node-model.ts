@@ -1,10 +1,10 @@
 import getStroke from 'perfect-freehand'
 import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
 import type {
-  CanvasDocumentNode,
   CanvasHandlePosition,
   CanvasPosition,
 } from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 import type { Point2D } from '../../utils/canvas-awareness-types'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
 

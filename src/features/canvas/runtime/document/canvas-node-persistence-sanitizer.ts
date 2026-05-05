@@ -1,22 +1,21 @@
 import { stripEphemeralCanvasNodeState } from '../../utils/canvas-node-persistence'
-import type { CanvasDocumentNode } from '~/features/canvas/types/canvas-domain-types'
 import {
   parseCanvasNodeDataByType,
   parseCanvasNodeType,
   parseCanvasPoint2D,
   parseCanvasDocumentNode,
 } from 'convex/canvases/validation'
-import type { CanvasDocumentNode as ParsedCanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 import { logger } from '~/shared/utils/logger'
 
-function buildSafePersistedCanvasNode(node: CanvasDocumentNode): ParsedCanvasDocumentNode {
+function buildSafePersistedCanvasNode(node: CanvasDocumentNode): CanvasDocumentNode {
   let type = parseCanvasNodeType(node.type) ?? 'text'
   let data = parseCanvasNodeDataByType(type, node.data)
   if (!data) {
     type = 'text'
     data = parseCanvasNodeDataByType(type, {}) ?? {}
   }
-  const safeNodeFields: Partial<ParsedCanvasDocumentNode> = {}
+  const safeNodeFields: Partial<CanvasDocumentNode> = {}
   const safeNodeBase = {
     id: node.id,
     type,
@@ -43,14 +42,14 @@ function buildSafePersistedCanvasNode(node: CanvasDocumentNode): ParsedCanvasDoc
     safeNodeFields.hidden = node.hidden
   }
 
-  return { ...safeNodeBase, ...safeNodeFields } as ParsedCanvasDocumentNode
+  return { ...safeNodeBase, ...safeNodeFields } as CanvasDocumentNode
 }
 
 export function sanitizeNodeForPersistence(
   node: CanvasDocumentNode,
   operation: string,
   fallbackNode: CanvasDocumentNode = node,
-): ParsedCanvasDocumentNode {
+): CanvasDocumentNode {
   try {
     const persistedNode = stripEphemeralCanvasNodeState(node)
     const parsedNode = parseCanvasDocumentNode(persistedNode)

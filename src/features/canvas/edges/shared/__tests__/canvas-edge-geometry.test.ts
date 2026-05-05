@@ -4,7 +4,7 @@ import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-ty
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from '~/features/canvas/types/canvas-domain-types'
+} from 'convex/canvases/validation'
 
 describe('getCanvasEdgeEndpoints', () => {
   it('anchors stroke edges to the start and end stroke points instead of the bounding box', () => {

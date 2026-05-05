@@ -1,5 +1,5 @@
 import { buildCanvasEdgeGeometry } from '../edges/canvas-edge-registry'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '../types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 
 export function buildCanvasEdgePath(
   edge: CanvasDocumentEdge,

@@ -9,16 +9,17 @@ import {
   createCanvasRuntimeEnginePair,
 } from '../../runtime/__tests__/canvas-runtime-test-utils'
 import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime'
-import type { CanvasEngine } from '../../system/canvas-engine'
+import type { CanvasEngine } from '../../system/canvas-engine-types'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
+  CanvasEdgeType,
   CanvasNodeType,
-} from '~/features/canvas/types/canvas-domain-types'
-import type { CanvasEdgePatch, CanvasEdgeType } from '../../edges/canvas-edge-types'
+} from 'convex/canvases/validation'
+import type { CanvasEdgePatch } from '../../edges/canvas-edge-types'
 import type { CanvasCommands } from '../../runtime/document/use-canvas-commands'
-import type { CanvasSelectionSnapshot } from '../../tools/canvas-tool-types'
+import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
 
 const nodesMock = vi.hoisted(() => ({
   nodes: [] as Array<Node>,

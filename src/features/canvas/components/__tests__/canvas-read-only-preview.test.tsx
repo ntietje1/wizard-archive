@@ -1,7 +1,7 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasReadOnlyPreview } from '../canvas-read-only-preview'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '../../types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 import { testId } from '~/test/helpers/test-id'
 
 vi.mock('~/features/sidebar/hooks/useSidebarItemById', () => ({

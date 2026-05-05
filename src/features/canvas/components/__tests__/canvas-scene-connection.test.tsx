@@ -6,7 +6,8 @@ import { createCanvasRuntime } from '../../runtime/__tests__/canvas-runtime-test
 import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime'
 import { createCanvasDomRuntime } from '../../system/canvas-dom-runtime'
 import { createCanvasEngine } from '../../system/canvas-engine'
-import type { CanvasConnection, CanvasDocumentNode as Node } from '../../types/canvas-domain-types'
+import type { CanvasConnection } from '../../types/canvas-domain-types'
+import type { CanvasDocumentNode as Node } from 'convex/canvases/validation'
 
 vi.mock('../canvas-background', () => ({
   CanvasBackground: () => null,
@@ -277,6 +278,8 @@ describe('CanvasScene connection creation', () => {
       .querySelector('[data-canvas-viewport="true"]')
 
     expect(viewport).not.toContainElement(wrapper)
+    // Source and target are each 100px wide with a 100px gap, so width is 300px;
+    // both nodes are 50px tall, so the selection wrapper height is 50px.
     expect(wrapper).toHaveStyle({
       height: '50px',
       transform: 'translate(0px, 0px)',

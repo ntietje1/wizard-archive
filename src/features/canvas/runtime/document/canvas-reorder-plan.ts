@@ -1,12 +1,9 @@
 import { reorderCanvasElementIds } from './canvas-reorder'
 import { applyCanvasZOrder, sortCanvasElementsByZIndex } from './canvas-z-order'
 import { stripEphemeralCanvasNodeState } from '../../utils/canvas-node-persistence'
-import type { CanvasSelectionSnapshot } from '../../tools/canvas-tool-types'
+import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
 import type { CanvasReorderDirection } from './canvas-reorder'
-import type {
-  CanvasDocumentEdge,
-  CanvasDocumentNode,
-} from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 import type * as Y from 'yjs'
 
 export interface CanvasReorderPlan {

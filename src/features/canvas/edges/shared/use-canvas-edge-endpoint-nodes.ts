@@ -5,7 +5,7 @@ import {
 } from '../../system/canvas-engine-selectors'
 import type { CanvasEdgeRendererProps } from '../canvas-edge-types'
 import type { CanvasEdgeEndpointNodes } from '../../system/canvas-engine-selectors'
-import type { CanvasDocumentNode } from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 
 export function useCanvasEdgeEndpointNodes(
   props: Pick<CanvasEdgeRendererProps, 'source' | 'target'>,

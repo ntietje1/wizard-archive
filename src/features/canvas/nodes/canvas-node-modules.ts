@@ -26,16 +26,14 @@ import { polygonIntersectsBounds, rectIntersectsBounds } from '../utils/canvas-g
 import type { CanvasNodeCreateArgs, CanvasNodeDataByType } from './canvas-node-types'
 import { parseCanvasDocumentNode } from 'convex/canvases/validation'
 import type {
+  CanvasDocumentNode,
   CanvasEmbedDocumentNode,
+  CanvasNodeType,
   CanvasStrokeDocumentNode,
   CanvasTextDocumentNode,
 } from 'convex/canvases/validation'
 import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
-import type {
-  CanvasDocumentNode,
-  CanvasNodeType,
-  CanvasPosition,
-} from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasPosition } from '~/features/canvas/types/canvas-domain-types'
 import { assertNever } from '~/shared/utils/utils'
 import { normalizeCanvasNode } from './canvas-node-normalization'
 import type { AnyNormalizedCanvasNode } from './canvas-node-normalization'
@@ -145,7 +143,8 @@ export function getCanvasNodeInspectableProperties(
       return getStrokeNodeProperties(normalizedNode, patchNodeData)
     case 'text':
       return getSurfaceNodeProperties(normalizedNode, patchNodeData, {
-        includeTextColor: true,
+        ...options,
+        includeTextColor: options.includeTextColor ?? true,
       })
     default:
       return assertNever(normalizedNode)
@@ -251,7 +250,6 @@ export function createCanvasNodePlacement(
 }
 
 export { normalizeCanvasNode }
-export type { AnyNormalizedCanvasNode }
 
 export function resizeCanvasNode(
   node: CanvasDocumentNode,

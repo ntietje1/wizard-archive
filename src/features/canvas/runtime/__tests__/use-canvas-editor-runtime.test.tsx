@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useCanvasEditorRuntime } from '../use-canvas-editor-runtime'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import type { CanvasCommands } from '../document/use-canvas-commands'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '../../types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 import * as Y from 'yjs'
 import { testId } from '~/test/helpers/test-id'
 

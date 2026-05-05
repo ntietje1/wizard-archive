@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createCanvasNodesById } from '../canvas-node-map'
 import { logger } from '~/shared/utils/logger'
-import type { CanvasDocumentNode as Node } from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentNode as Node } from 'convex/canvases/validation'
 
 vi.mock('~/shared/utils/logger', () => ({
   logger: {

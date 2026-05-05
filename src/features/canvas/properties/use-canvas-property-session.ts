@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import type { CanvasEdgePatch } from '../edges/canvas-edge-types'
 import type { CanvasNodeDataPatch } from '../nodes/canvas-node-modules'
-import type { CanvasEngine } from '../system/canvas-engine'
+import type { CanvasEngine } from '../system/canvas-engine-types'
 import type { CanvasDomRuntime } from '../system/canvas-dom-runtime'
 import { createCanvasPropertySessionController } from '../system/canvas-property-session-controller'
 import type { CanvasPropertyPatchSet } from '../system/canvas-property-session-controller'

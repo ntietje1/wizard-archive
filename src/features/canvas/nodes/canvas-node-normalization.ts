@@ -6,9 +6,7 @@ import type { CanvasRichTextNodeData } from './shared/canvas-rich-text-node-data
 import { normalizeStrokeNodeData } from './stroke/stroke-node-model'
 import type { StrokeNodeData } from './stroke/stroke-node-model'
 import type { CanvasRuntimeNode } from './canvas-node-types'
-// ParsedCanvasDocumentNode is the raw parsed input shape; CanvasDocumentNode is the canonical validated domain model.
-import type { CanvasDocumentNode as ParsedCanvasDocumentNode } from 'convex/canvases/validation'
-import type { CanvasDocumentNode } from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 import { assertNever } from '~/shared/utils/utils'
 
 type CanvasNormalizedEmbedNode = CanvasRuntimeNode<'embed', EmbedNodeData>
@@ -19,7 +17,7 @@ export type AnyNormalizedCanvasNode =
   | CanvasNormalizedStrokeNode
   | CanvasNormalizedTextNode
 
-function normalizeParsedCanvasNode(node: ParsedCanvasDocumentNode): AnyNormalizedCanvasNode {
+function normalizeParsedCanvasNode(node: CanvasDocumentNode): AnyNormalizedCanvasNode {
   switch (node.type) {
     case 'embed':
       return { ...node, data: normalizeEmbedNodeData(node.data) }

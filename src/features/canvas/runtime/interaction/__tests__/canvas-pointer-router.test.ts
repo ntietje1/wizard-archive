@@ -5,17 +5,14 @@ import {
   useLassoToolLocalOverlayStore,
 } from '../../../tools/lasso/lasso-tool-local-overlay'
 import { clearSelectToolLocalOverlay } from '../../../tools/select/select-tool-local-overlay'
-import type { CanvasEngine } from '../../../system/canvas-engine'
+import type { CanvasEngine } from '../../../system/canvas-engine-types'
 import type { CanvasPointerRouterOptions } from '../canvas-pointer-router'
-import type {
-  CanvasSelectionSnapshot,
-  CanvasToolHandlers,
-  CanvasToolId,
-} from '../../../tools/canvas-tool-types'
+import type { CanvasToolHandlers, CanvasToolId } from '../../../tools/canvas-tool-types'
+import type { CanvasSelectionSnapshot } from '../../../system/canvas-selection'
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from '~/features/canvas/types/canvas-domain-types'
+} from 'convex/canvases/validation'
 
 describe('classifyCanvasPointerTarget', () => {
   it('classifies pane, node, edge, handle, resize, interactive, and outside targets', () => {

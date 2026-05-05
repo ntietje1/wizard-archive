@@ -148,6 +148,23 @@ describe('createCanvasViewportController', () => {
     engine.destroy()
   })
 
+  it('ignores non-finite zoom bound updates', () => {
+    const { controller, engine } = createViewportTestHarness()
+
+    controller.setZoomBounds({ maxZoom: 1.5, minZoom: 0.25 })
+    controller.setZoomBounds({ maxZoom: Number.POSITIVE_INFINITY, minZoom: Number.NaN })
+    controller.zoomTo(4)
+
+    expect(engine.getSnapshot().viewport.zoom).toBe(1.5)
+
+    controller.zoomTo(0.01)
+
+    expect(engine.getSnapshot().viewport.zoom).toBe(0.25)
+
+    controller.destroy()
+    engine.destroy()
+  })
+
   it('keeps ctrl-wheel zoom engine-owned inside nowheel node content', () => {
     const { controller, engine } = createViewportTestHarness()
     const nowheelTarget = document.createElement('div')

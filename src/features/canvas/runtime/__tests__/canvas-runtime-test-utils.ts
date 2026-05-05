@@ -8,7 +8,7 @@ import type {
 import type { RemoteHighlight } from '../../utils/canvas-awareness-types'
 import { createCanvasDomRuntime } from '../../system/canvas-dom-runtime'
 import { createCanvasEngine } from '../../system/canvas-engine'
-import type { CanvasEngine } from '../../system/canvas-engine'
+import type { CanvasEngine } from '../../system/canvas-engine-types'
 import type { CanvasDomRuntime } from '../../system/canvas-dom-runtime'
 import type { CanvasViewportController } from '../../system/canvas-viewport-controller'
 import type { CanvasCommands } from '../document/use-canvas-commands'

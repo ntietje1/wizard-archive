@@ -16,14 +16,9 @@ import {
 import { useMemo } from 'react'
 import type { CanvasArrangeAction } from './canvas-arrange'
 import type { CanvasReorderDirection } from './canvas-reorder'
-import type {
-  CanvasSelectionController,
-  CanvasSelectionSnapshot,
-} from '../../tools/canvas-tool-types'
-import type {
-  CanvasDocumentEdge,
-  CanvasDocumentNode,
-} from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasSelectionController } from '../../tools/canvas-tool-types'
+import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 import type * as Y from 'yjs'
 
 interface UseCanvasCommandsOptions {

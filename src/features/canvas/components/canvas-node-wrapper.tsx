@@ -2,8 +2,8 @@ import { memo, useEffect, useRef } from 'react'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useCanvasEngine, useCanvasEngineSelector } from '../react/use-canvas-engine'
 import { useCanvasViewportRuntime } from '../runtime/providers/canvas-runtime'
-import type { CanvasInternalNode } from '../system/canvas-engine'
-import type { CanvasDocumentNode } from '../types/canvas-domain-types'
+import type { CanvasInternalNode } from '../system/canvas-engine-types'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 import type {
   KeyboardEvent as ReactKeyboardEvent,
   MouseEvent as ReactMouseEvent,

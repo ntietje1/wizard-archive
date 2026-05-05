@@ -13,11 +13,8 @@ import { useCanvasConnectionGesture } from '../runtime/interaction/canvas-connec
 import { isCanvasEmptyPaneTarget } from '../runtime/interaction/canvas-pane-targets'
 import { useCanvasEngine } from '../react/use-canvas-engine'
 import { useCanvasViewportRuntime } from '../runtime/providers/canvas-runtime'
-import type {
-  CanvasConnection,
-  CanvasDocumentEdge,
-  CanvasDocumentNode,
-} from '../types/canvas-domain-types'
+import type { CanvasConnection } from '../types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react'
 

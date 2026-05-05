@@ -17,16 +17,15 @@ import type {
   CanvasAwarenessPresenceWriter,
   CanvasInteractionTools,
   CanvasMeasuredNode,
-  CanvasSelectionCommitMode,
   CanvasSelectionController,
+} from '../../tools/canvas-tool-types'
+import type {
+  CanvasSelectionCommitMode,
   CanvasSelectionGestureKind,
   CanvasSelectionSnapshot,
-} from '../../tools/canvas-tool-types'
+} from '../../system/canvas-selection'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
-import type {
-  CanvasDocumentEdge,
-  CanvasDocumentNode,
-} from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 
 const MIN_SELECTION_DRAG_DISTANCE_PX = 1
 

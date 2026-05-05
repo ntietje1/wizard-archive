@@ -4,10 +4,10 @@ import { getStrokeBounds } from '../../nodes/stroke/stroke-node-model'
 import { clearAllStrokePathCache } from '../../nodes/stroke/stroke-path-cache'
 import { exposeCanvasPerformanceRuntime } from './canvas-performance-metrics'
 import type { CanvasDragController } from '../../system/canvas-drag-controller'
-import type { CanvasEngine } from '../../system/canvas-engine'
+import type { CanvasEngine } from '../../system/canvas-engine-types'
 import type { CanvasViewportController } from '../../system/canvas-viewport-controller'
 import type { CanvasDocumentWriter, CanvasSelectionController } from '../../tools/canvas-tool-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '../../types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 import type * as Y from 'yjs'
 
 const PERFORMANCE_STROKE_WIDTH = 160

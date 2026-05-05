@@ -9,7 +9,7 @@ import {
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from '~/features/canvas/types/canvas-domain-types'
+} from 'convex/canvases/validation'
 import type { CanvasStrokeSizePropertyBinding } from '../../properties/canvas-property-types'
 
 function createNode(id: string, x: number, y: number): Node {

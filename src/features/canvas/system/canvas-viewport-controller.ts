@@ -1,7 +1,8 @@
-import type { CanvasEngine, CanvasViewport } from './canvas-engine'
+import type { CanvasEngine } from './canvas-engine-types'
 import type { CanvasDomRuntime } from './canvas-dom-runtime'
 import { getCanvasFitViewport } from '../utils/canvas-fit-view'
-import type { CanvasDocumentNode, CanvasPosition } from '../types/canvas-domain-types'
+import type { CanvasPosition, CanvasViewport } from '../types/canvas-domain-types'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 
 const MIN_ZOOM = 0.1
 const MAX_ZOOM = 4
@@ -282,9 +283,17 @@ export function createCanvasViewportController({
       applyViewport(viewport, { commit: true })
     },
     setZoomBounds: (bounds) => {
+      const mergedMaxZoom =
+        bounds.maxZoom !== undefined && Number.isFinite(bounds.maxZoom)
+          ? bounds.maxZoom
+          : zoomBounds.maxZoom
+      const mergedMinZoom =
+        bounds.minZoom !== undefined && Number.isFinite(bounds.minZoom)
+          ? bounds.minZoom
+          : zoomBounds.minZoom
       zoomBounds = {
-        maxZoom: bounds.maxZoom ?? zoomBounds.maxZoom,
-        minZoom: bounds.minZoom ?? zoomBounds.minZoom,
+        maxZoom: Math.max(mergedMaxZoom, mergedMinZoom),
+        minZoom: Math.min(mergedMaxZoom, mergedMinZoom),
       }
     },
     commit,

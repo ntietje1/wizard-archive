@@ -15,12 +15,9 @@ import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import type { createCanvasEngine } from '../system/canvas-engine'
 import type { createCanvasViewportController } from '../system/canvas-viewport-controller'
 import { canvasToolSpecs } from '../tools/canvas-tool-modules'
-import type {
-  CanvasSelectionSnapshot,
-  CanvasToolHandlers,
-  CanvasToolId,
-} from '../tools/canvas-tool-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '../types/canvas-domain-types'
+import type { CanvasToolHandlers, CanvasToolId } from '../tools/canvas-tool-types'
+import type { CanvasSelectionSnapshot } from '../system/canvas-selection'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 
 const SELECTION_INCOMPATIBLE_TOOLS = new Set<CanvasToolId>(['draw', 'erase', 'text', 'edge'])
 

@@ -6,7 +6,7 @@ import {
 } from '../selection/canvas-selection-gesture-controller'
 import { isCanvasEmptyPaneTarget } from './canvas-pane-targets'
 import { isPrimarySelectionModifier } from '../../utils/canvas-selection-utils'
-import type { CanvasEngine } from '../../system/canvas-engine'
+import type { CanvasEngine } from '../../system/canvas-engine-types'
 import type { CanvasDragController } from '../../system/canvas-drag-controller'
 import type { CanvasViewportController } from '../../system/canvas-viewport-controller'
 import type {

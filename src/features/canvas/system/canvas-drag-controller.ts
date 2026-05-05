@@ -5,9 +5,10 @@ import {
   resolveCanvasDragSnap,
   withBoundsPosition,
 } from '../utils/canvas-snap-guides'
-import type { CanvasEngine } from './canvas-engine'
+import type { CanvasEngine } from './canvas-engine-types'
 import type { CanvasDragGuide } from '../utils/canvas-snap-guides'
-import type { CanvasDocumentNode, CanvasPosition } from '../types/canvas-domain-types'
+import type { CanvasPosition } from '../types/canvas-domain-types'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 
 export interface CanvasDragEvent {
   sourceEvent: PointerEvent | MouseEvent

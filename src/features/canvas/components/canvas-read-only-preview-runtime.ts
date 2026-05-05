@@ -10,7 +10,7 @@ import {
 } from '../system/canvas-element-size'
 import { useCanvasViewportInteractions } from '../runtime/interaction/use-canvas-viewport-interactions'
 import type { CanvasElementSize } from '../system/canvas-element-size'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '../types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 import type { RefObject } from 'react'
 
 export function useCanvasReadOnlyPreviewRuntime({

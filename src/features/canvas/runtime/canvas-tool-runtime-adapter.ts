@@ -80,6 +80,15 @@ export function getEdgeCreationDefaults(): CanvasEdgeCreationDefaults {
   }
 }
 
+/**
+ * Converts an opacity percentage into a renderer opacity override.
+ *
+ * @param opacity Percentage value; callers normally provide 0-100.
+ * @returns A 0-1 opacity fraction, or undefined for non-finite input and fully opaque values.
+ *
+ * Values are clamped into 0-100. Percentages >= 100 return undefined because the renderer
+ * treats absence of an opacity override as fully opaque.
+ */
 function normalizeOpacityPercent(opacity: number): number | undefined {
   if (!Number.isFinite(opacity)) {
     return undefined

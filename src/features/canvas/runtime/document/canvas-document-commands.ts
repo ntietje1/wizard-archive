@@ -2,10 +2,8 @@ import { createEmbedCanvasNode } from '../../nodes/embed/embed-node-creation'
 import { resizeCanvasNode } from '../../nodes/canvas-node-modules'
 import type { CanvasNodeDataPatch } from '../../nodes/canvas-node-modules'
 import { clampCanvasEdgeStrokeWidth } from '../../edges/shared/canvas-edge-style'
-import type {
-  CanvasEdgeCreationDefaults,
-  CanvasSelectionSnapshot,
-} from '../../tools/canvas-tool-types'
+import type { CanvasEdgeCreationDefaults } from '../../tools/canvas-tool-types'
+import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
 import type { CanvasEdgePatch } from '../../edges/canvas-edge-types'
 import { getCanvasDeletionSelection } from '../context-menu/canvas-context-menu-selection'
 import type { CanvasReorderPlan } from './canvas-reorder-plan'
@@ -13,10 +11,9 @@ import type { CanvasContextMenuPoint } from '../context-menu/canvas-context-menu
 import type { Id } from 'convex/_generated/dataModel'
 import type {
   CanvasConnection as Connection,
-  CanvasDocumentEdge,
-  CanvasDocumentNode,
   CanvasPosition,
 } from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 import type * as Y from 'yjs'
 
 type CanvasNodeSanitizer = (
@@ -137,8 +134,13 @@ export function patchCanvasNodeDataCommand({
               data: { ...existing.data, ...data } as typeof existing.data,
             } satisfies CanvasDocumentNode
           default: {
+            const nodeType =
+              typeof existing === 'object' && existing !== null && 'type' in existing
+                ? String((existing as { type?: unknown }).type)
+                : typeof existing
             const _exhaustive: never = existing
-            throw new Error(`Unhandled canvas node type in patchNodeData: ${String(_exhaustive)}`)
+            void _exhaustive
+            throw new Error(`Unhandled canvas node type in patchNodeData: ${nodeType}`)
           }
         }
       },

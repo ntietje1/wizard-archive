@@ -11,8 +11,8 @@ import { CanvasRuntimeProvider } from '../../../runtime/providers/canvas-runtime
 import { CanvasRenderModeProvider } from '../../../runtime/providers/canvas-render-mode-context'
 import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
 import type { CanvasDomRuntime } from '../../../system/canvas-dom-runtime'
-import type { CanvasEngine } from '../../../system/canvas-engine'
-import type { CanvasSelectionSnapshot } from '../../../tools/canvas-tool-types'
+import type { CanvasEngine } from '../../../system/canvas-engine-types'
+import type { CanvasSelectionSnapshot } from '../../../system/canvas-selection'
 
 const renderModeState = vi.hoisted(() => ({
   interactive: true,

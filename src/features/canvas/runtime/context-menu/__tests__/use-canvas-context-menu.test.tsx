@@ -4,7 +4,7 @@ import { useCanvasContextMenu } from '../use-canvas-context-menu'
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from '~/features/canvas/types/canvas-domain-types'
+} from 'convex/canvases/validation'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
@@ -12,7 +12,7 @@ import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import * as Y from 'yjs'
 import { testId } from '~/test/helpers/test-id'
 import type { CanvasContextMenuCommands } from '../canvas-context-menu-types'
-import type { CanvasSelectionSnapshot } from '../../../tools/canvas-tool-types'
+import type { CanvasSelectionSnapshot } from '../../../system/canvas-selection'
 
 const sidebarItemsState = vi.hoisted(() => ({
   itemsMap: new Map(),

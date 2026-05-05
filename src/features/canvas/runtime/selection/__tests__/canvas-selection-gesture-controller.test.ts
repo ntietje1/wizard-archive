@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createCanvasSelectionGestureController } from '../canvas-selection-gesture-controller'
-import type { CanvasSelectionSnapshot } from '../../../tools/canvas-tool-types'
+import type { CanvasSelectionSnapshot } from '../../../system/canvas-selection'
 
 describe('createCanvasSelectionGestureController', () => {
   const rafCallbacks = new Map<number, FrameRequestCallback>()

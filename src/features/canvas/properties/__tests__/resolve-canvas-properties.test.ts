@@ -19,7 +19,7 @@ import type {
   CanvasStrokeSizePropertyDefinition,
 } from '../canvas-property-types'
 import type { CanvasToolPropertyContext } from '../../tools/canvas-tool-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '../../types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 
 const testPaintProperty: CanvasPaintPropertyDefinition = {
   id: 'fill',

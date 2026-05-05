@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { CANVAS_HANDLE_POSITION } from '../../types/canvas-domain-types'
-import type { CanvasEngine } from '../../system/canvas-engine'
+import type { CanvasEngine } from '../../system/canvas-engine-types'
 import type { CanvasConnection, CanvasHandlePosition } from '../../types/canvas-domain-types'
 import type {
   CanvasConnectionDraft,

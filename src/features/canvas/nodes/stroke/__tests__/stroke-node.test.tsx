@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
 import { createCanvasEngine } from '../../../system/canvas-engine'
-import type { CanvasEngine } from '../../../system/canvas-engine'
+import type { CanvasEngine } from '../../../system/canvas-engine-types'
 import { getCachedStrokeDetailPath } from '../stroke-path-cache'
 import { StrokeNode } from '../stroke-node'
 

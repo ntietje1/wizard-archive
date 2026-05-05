@@ -298,11 +298,11 @@ function getActiveBlockTypeId(
   blocks: Array<FormattingBlock>,
   supportedBlockTypes: Array<BlockTypeOption>,
 ): string | null {
-  const [firstBlock, ...restBlocks] = blocks
-  if (!firstBlock) {
+  if (blocks.length === 0) {
     return null
   }
 
+  const [firstBlock, ...restBlocks] = blocks
   const matchingType = supportedBlockTypes.find((option) =>
     matchesBlockTypeOption(firstBlock, option),
   )

@@ -1,7 +1,8 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as Y from 'yjs'
-import { parseEmbeddedCanvasStableId, useEmbeddedCanvasState } from '../use-embedded-canvas-state'
+import { parseEmbeddedCanvasStableId } from 'convex/canvases/validation'
+import { useEmbeddedCanvasState } from '../use-embedded-canvas-state'
 import { testId } from '~/test/helpers/test-id'
 
 const useCampaignQueryMock = vi.hoisted(() => vi.fn())

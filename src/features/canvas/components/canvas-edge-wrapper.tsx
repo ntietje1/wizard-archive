@@ -1,11 +1,11 @@
 import { memo, useCallback, useRef } from 'react'
 import { BezierCanvasEdge } from '../edges/bezier/bezier-canvas-edge'
-import type { CanvasEdgeRendererProps, CanvasEdgeType } from '../edges/canvas-edge-types'
+import type { CanvasEdgeRendererProps } from '../edges/canvas-edge-types'
 import { StepCanvasEdge } from '../edges/step/step-canvas-edge'
 import { StraightCanvasEdge } from '../edges/straight/straight-canvas-edge'
 import { useCanvasEngineSelector } from '../react/use-canvas-engine'
 import { useCanvasViewportRuntime } from '../runtime/providers/canvas-runtime'
-import type { CanvasDocumentEdge } from '../types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasEdgeType } from 'convex/canvases/validation'
 import type { ComponentType, MouseEvent as ReactMouseEvent } from 'react'
 
 type EdgeRendererProps = CanvasEdgeRendererProps<CanvasEdgeType>

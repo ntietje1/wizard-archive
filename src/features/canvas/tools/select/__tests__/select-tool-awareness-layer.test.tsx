@@ -9,7 +9,7 @@ import {
 import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
 import { createCanvasEngine } from '../../../system/canvas-engine'
 import type { RemoteUser } from '../../../utils/canvas-awareness-types'
-import type { CanvasEngine } from '../../../system/canvas-engine'
+import type { CanvasEngine } from '../../../system/canvas-engine-types'
 import type { ReactNode } from 'react'
 
 function renderWithEngine(ui: ReactNode, engine: CanvasEngine = createCanvasEngine()) {

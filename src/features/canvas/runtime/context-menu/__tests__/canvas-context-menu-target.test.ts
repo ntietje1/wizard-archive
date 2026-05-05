@@ -3,7 +3,7 @@ import { resolveCanvasContextMenuTarget } from '../canvas-context-menu-target'
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from '~/features/canvas/types/canvas-domain-types'
+} from 'convex/canvases/validation'
 import * as Y from 'yjs'
 
 const openDocs: Array<Y.Doc> = []

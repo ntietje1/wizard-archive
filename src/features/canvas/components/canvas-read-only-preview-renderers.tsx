@@ -28,7 +28,7 @@ import type { CanvasNodeComponentProps } from '../nodes/canvas-node-types'
 import type { EmbedNodeData } from '../nodes/embed/embed-node-data'
 import type { CanvasRichTextNodeInputData } from '../nodes/shared/canvas-rich-text-node-data'
 import type { StrokeNodeData } from '../nodes/stroke/stroke-node-model'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '../types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react'
 
 const DEFAULT_EMBED_MIN_WIDTH = 240

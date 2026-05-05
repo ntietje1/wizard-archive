@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
-import type { CanvasEngine } from '../system/canvas-engine'
+import type { CanvasEngine } from '../system/canvas-engine-types'
 
 export const CanvasEngineContext = createContext<CanvasEngine | null>(null)
 

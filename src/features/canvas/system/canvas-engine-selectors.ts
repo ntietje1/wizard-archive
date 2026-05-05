@@ -1,5 +1,5 @@
-import type { CanvasEngineSnapshot } from './canvas-engine'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '../types/canvas-domain-types'
+import type { CanvasEngineSnapshot } from './canvas-engine-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 
 const EMPTY_SELECTED_NODES: ReadonlyArray<CanvasDocumentNode> = []
 const EMPTY_SELECTED_EDGES: ReadonlyArray<CanvasDocumentEdge> = []

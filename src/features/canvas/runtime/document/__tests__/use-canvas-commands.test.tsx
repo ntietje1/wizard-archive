@@ -4,11 +4,11 @@ import { useCanvasDocumentCommands } from '../use-canvas-commands'
 import { useCanvasClipboardStore } from '../../context-menu/use-canvas-clipboard-store'
 import * as canvasDocumentCommands from '../canvas-document-commands'
 import type { CanvasReorderDirection } from '../canvas-reorder'
-import type { CanvasSelectionSnapshot } from '../../../tools/canvas-tool-types'
+import type { CanvasSelectionSnapshot } from '../../../system/canvas-selection'
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from '~/features/canvas/types/canvas-domain-types'
+} from 'convex/canvases/validation'
 import * as Y from 'yjs'
 
 function createNode(id: string, zIndex: number, width = 20, height = 10): Node {

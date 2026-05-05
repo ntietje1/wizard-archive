@@ -1,7 +1,8 @@
 import { getCanvasFitViewport } from '../utils/canvas-fit-view'
 import type { CanvasElementSize } from '../system/canvas-element-size'
-import type { CanvasEngineSnapshot } from '../system/canvas-engine'
-import type { CanvasDocumentNode, CanvasViewport } from '../types/canvas-domain-types'
+import type { CanvasEngineSnapshot } from '../system/canvas-engine-types'
+import type { CanvasViewport } from '../types/canvas-domain-types'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 
 export const DEFAULT_CANVAS_READ_ONLY_PREVIEW_VIEWPORT: CanvasViewport = { x: 0, y: 0, zoom: 1 }
 

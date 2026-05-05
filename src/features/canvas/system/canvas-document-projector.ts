@@ -4,11 +4,8 @@ import type {
   CanvasInternalNode,
 } from './canvas-engine-types'
 import type { CanvasEdgePatch } from '../edges/canvas-edge-types'
-import type {
-  CanvasDocumentNodePatch,
-  CanvasDocumentEdge,
-  CanvasDocumentNode,
-} from '../types/canvas-domain-types'
+import type { CanvasDocumentNodePatch } from '../types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 
 export const EMPTY_NODES: ReadonlyArray<CanvasDocumentNode> = []
 export const EMPTY_EDGES: ReadonlyArray<CanvasDocumentEdge> = []

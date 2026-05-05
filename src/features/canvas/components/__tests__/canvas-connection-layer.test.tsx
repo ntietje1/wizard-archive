@@ -7,19 +7,19 @@ import {
   buildBezierCanvasEdgeGeometryFromEdge,
   buildBezierCanvasEdgeGeometryFromRenderProps,
 } from '../../edges/bezier/bezier-canvas-edge-geometry'
-import type { CanvasEdgeType } from '../../edges/canvas-edge-types'
 import { buildStepCanvasEdgeGeometryFromEdge } from '../../edges/step/step-canvas-edge-geometry'
 import { buildStraightCanvasEdgeGeometryFromEdge } from '../../edges/straight/straight-canvas-edge-geometry'
 import { CanvasEngineProvider } from '../../react/canvas-engine-context'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import { createCanvasEngine } from '../../system/canvas-engine'
-import type { CanvasEngine } from '../../system/canvas-engine'
+import type { CanvasEngine } from '../../system/canvas-engine-types'
 import type { CSSProperties } from 'react'
 import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from '~/features/canvas/types/canvas-domain-types'
+  CanvasEdgeType,
+} from 'convex/canvases/validation'
 
 const sourceNode: Node = {
   id: 'source',

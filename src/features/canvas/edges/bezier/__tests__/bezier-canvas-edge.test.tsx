@@ -16,7 +16,7 @@ import {
 } from '../../shared/canvas-edge-style'
 import { BezierCanvasEdge } from '../bezier-canvas-edge'
 import { buildBezierCanvasEdgeGeometryFromEdge } from '../bezier-canvas-edge-geometry'
-import type { CanvasDocumentNode } from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 import type { ReactElement } from 'react'
 
 describe('BezierCanvasEdge', () => {

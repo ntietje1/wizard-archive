@@ -6,7 +6,7 @@ import type { RenderHookResult } from '@testing-library/react'
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from '~/features/canvas/types/canvas-domain-types'
+} from 'convex/canvases/validation'
 
 type TextNode = Extract<Node, { type: 'text' }>
 

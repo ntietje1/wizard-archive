@@ -1,6 +1,6 @@
 import type { CanvasDocumentWriter, CanvasNodeActions } from '../../tools/canvas-tool-types'
 import type { CanvasSessionRuntime } from '../session/use-canvas-session-state'
-import type { CanvasEngine } from '../../system/canvas-engine'
+import type { CanvasEngine } from '../../system/canvas-engine-types'
 import type { CanvasDocumentNodePatch } from '../../types/canvas-domain-types'
 
 export function createCanvasNodeActions({

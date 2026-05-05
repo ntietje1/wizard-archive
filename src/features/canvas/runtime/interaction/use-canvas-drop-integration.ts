@@ -1,6 +1,6 @@
 import { useCanvasDropTarget } from './use-canvas-drop-target'
 import type { Id } from 'convex/_generated/dataModel'
-import type { CanvasDocumentNode } from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 
 interface UseCanvasDropIntegrationOptions {
   canvasId: Id<'sidebarItems'>

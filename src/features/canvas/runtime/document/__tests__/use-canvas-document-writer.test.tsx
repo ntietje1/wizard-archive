@@ -4,7 +4,7 @@ import { createCanvasDocumentWriter } from '../use-canvas-document-writer'
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from '~/features/canvas/types/canvas-domain-types'
+} from 'convex/canvases/validation'
 import type { CanvasEdgePatch } from '../../../edges/canvas-edge-types'
 
 const validCanvasEdgePatch: CanvasEdgePatch = {

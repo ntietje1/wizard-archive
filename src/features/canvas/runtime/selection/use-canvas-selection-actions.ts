@@ -1,10 +1,8 @@
 import { useRef } from 'react'
 import { areCanvasSelectionsEqual } from '../../system/canvas-selection'
-import type { CanvasEngine } from '../../system/canvas-engine'
-import type {
-  CanvasSelectionController,
-  CanvasSelectionSnapshot,
-} from '../../tools/canvas-tool-types'
+import type { CanvasEngine } from '../../system/canvas-engine-types'
+import type { CanvasSelectionController } from '../../tools/canvas-tool-types'
+import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
 
 interface UseCanvasSelectionControllerOptions {
   canvasEngine: CanvasEngine

@@ -1,7 +1,8 @@
 import { buildCanvasEdgePath } from './canvas-edge-paths'
 import { createNodeLookup, EMPTY_SET } from './canvas-document-projector'
 import type { CanvasEngineSnapshot, CanvasInternalNode } from './canvas-engine-types'
-import type { CanvasDocumentNode, CanvasPosition } from '../types/canvas-domain-types'
+import type { CanvasPosition } from '../types/canvas-domain-types'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 
 interface CanvasGeometryIndex {
   updateDraggedNodePositions: (

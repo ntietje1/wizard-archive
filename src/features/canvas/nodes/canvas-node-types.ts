@@ -1,5 +1,6 @@
 import type {
   CanvasEmbedNodeData,
+  CanvasNodeType,
   CanvasStrokeNodeData,
   CanvasTextNodeData,
 } from 'convex/canvases/validation'
@@ -9,7 +10,7 @@ import type {
   CanvasRichTextNodeInputData,
 } from './shared/canvas-rich-text-node-data'
 import type { StrokeNodeData } from './stroke/stroke-node-model'
-import type { CanvasNodeType, CanvasPosition } from '../types/canvas-domain-types'
+import type { CanvasPosition } from '../types/canvas-domain-types'
 
 export const CANVAS_NODE_TYPES = [
   'embed',

@@ -1,15 +1,12 @@
 import { normalizeCanvasEdge } from '../../edges/canvas-edge-registry'
 import { normalizeCanvasNode } from '../../nodes/canvas-node-modules'
 import { embedNodeContextMenuContributors } from '../../nodes/embed/embed-node-context-menu'
-import type { CanvasSelectionSnapshot } from '../../tools/canvas-tool-types'
+import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
 import type {
   CanvasContextMenuContributor,
   CanvasContextMenuTarget,
 } from './canvas-context-menu-types'
-import type {
-  CanvasDocumentEdge,
-  CanvasDocumentNode,
-} from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 import type * as Y from 'yjs'
 
 type CanvasResolvedContextMenuTarget = {

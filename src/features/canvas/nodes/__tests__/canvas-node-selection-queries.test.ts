@@ -4,7 +4,7 @@ import {
   getCanvasNodesMatchingLasso,
   getCanvasNodesMatchingRectangle,
 } from '../canvas-node-selection-queries'
-import type { CanvasDocumentNode as Node } from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentNode as Node } from 'convex/canvases/validation'
 
 describe('canvas node selection queries', () => {
   it('uses default rectangular selection behavior for rectangle-shaped nodes', () => {

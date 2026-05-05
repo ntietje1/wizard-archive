@@ -3,12 +3,9 @@ import { UndoManager } from 'yjs'
 import type {
   CanvasHistoryController,
   CanvasSelectionController,
-  CanvasSelectionSnapshot,
 } from '../../tools/canvas-tool-types'
-import type {
-  CanvasDocumentEdge,
-  CanvasDocumentNode,
-} from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 import type * as Y from 'yjs'
 import { logger } from '~/shared/utils/logger'
 import { areStringSetsEqual } from '../../utils/canvas-selection-utils'

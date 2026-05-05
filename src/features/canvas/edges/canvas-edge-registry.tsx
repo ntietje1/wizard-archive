@@ -16,7 +16,6 @@ import { EMPTY_CANVAS_INSPECTABLE_PROPERTIES } from '../properties/canvas-proper
 import type {
   CanvasEdgePatch,
   CanvasEdgeSelectionContext,
-  CanvasEdgeType,
   CanvasRuntimeEdge,
 } from './canvas-edge-types'
 import type { CanvasEdgeGeometry } from './shared/canvas-edge-geometry'
@@ -26,7 +25,8 @@ import type { Bounds } from '../utils/canvas-geometry-utils'
 import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
-} from '~/features/canvas/types/canvas-domain-types'
+  CanvasEdgeType,
+} from 'convex/canvases/validation'
 
 type NormalizedCanvasEdgeEntry = {
   rawEdge: CanvasDocumentEdge

@@ -86,8 +86,11 @@ export function applyCanvasToolbarTextColor({
   selectionSnapshot: CanvasRichTextSelectionSnapshot | null
 }) {
   if (hasTextSelection) {
+    // Restore before styling so BlockNote applies the color to the intended range.
     restoreCanvasRichTextSelection(editor, selectionSnapshot)
     editor.addStyles({ textColor: color })
+    // Focus synchronously for immediate text-selection feedback; focus can still adjust selection,
+    // so restore again on the next frame after the browser/BlockNote focus work settles.
     editor.focus()
     requestAnimationFrame(() => {
       restoreCanvasRichTextSelection(editor, selectionSnapshot)
@@ -98,6 +101,8 @@ export function applyCanvasToolbarTextColor({
   restoreCanvasRichTextSelection(editor, selectionSnapshot)
   applyCanvasRichTextDefaultTextColor(editor, defaultTextColor, color, selectionSnapshot)
   onDefaultTextColorChange?.(color)
+  // Default-color changes do not need immediate selected-text feedback, so defer focus to avoid
+  // stealing focus before the default style update and toolbar event finish.
   requestAnimationFrame(() => {
     editor.focus()
   })

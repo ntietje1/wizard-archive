@@ -10,10 +10,7 @@ import { editorSchema } from 'convex/notes/editorSpecs'
 import { HistoryPreviewBanner } from './history-preview-banner'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CustomBlock } from 'convex/notes/editorSpecs'
-import type {
-  CanvasDocumentEdge,
-  CanvasDocumentNode,
-} from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 import type { GameMapSnapshotData } from 'convex/gameMaps/types'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'

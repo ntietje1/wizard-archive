@@ -1,11 +1,15 @@
 import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
 import type { CanvasHandlePosition } from '~/features/canvas/types/canvas-domain-types'
 import { buildCanvasEdgeGeometry } from '../edges/canvas-edge-registry'
-import type { CanvasEdgeRenderGeometryProps, CanvasEdgeType } from '../edges/canvas-edge-types'
+import type { CanvasEdgeRenderGeometryProps } from '../edges/canvas-edge-types'
 import { buildStepCanvasEdgeGeometryFromRenderProps } from '../edges/step/step-canvas-edge-geometry'
 import { buildStraightCanvasEdgeGeometryFromRenderProps } from '../edges/straight/straight-canvas-edge-geometry'
 import type { CanvasConnectionDraft } from '../runtime/interaction/canvas-connection-gesture-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '../types/canvas-domain-types'
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+  CanvasEdgeType,
+} from 'convex/canvases/validation'
 import type { Point2D } from '../utils/canvas-awareness-types'
 import { assertNever } from '~/shared/utils/utils'
 

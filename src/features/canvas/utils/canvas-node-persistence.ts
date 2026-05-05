@@ -1,4 +1,4 @@
-import type { CanvasDocumentNode } from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 
 export function stripEphemeralCanvasNodeState(node: CanvasDocumentNode): CanvasDocumentNode
 export function stripEphemeralCanvasNodeState(node: unknown): unknown

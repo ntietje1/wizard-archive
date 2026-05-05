@@ -5,10 +5,7 @@ import {
 } from '../shared/canvas-edge-geometry'
 import type { CanvasEdgeGeometry } from '../shared/canvas-edge-geometry'
 import type { Point2D } from '../../utils/canvas-awareness-types'
-import type {
-  CanvasDocumentEdge,
-  CanvasDocumentNode,
-} from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 import type { CanvasEdgeRenderGeometryProps as EdgeProps } from '../canvas-edge-types'
 
 function buildStraightPoints(

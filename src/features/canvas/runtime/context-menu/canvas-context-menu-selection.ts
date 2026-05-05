@@ -1,5 +1,5 @@
-import type { CanvasSelectionSnapshot } from '../../tools/canvas-tool-types'
-import type { CanvasDocumentEdge } from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
+import type { CanvasDocumentEdge } from 'convex/canvases/validation'
 import type * as Y from 'yjs'
 
 export function getCanvasDeletionSelection(

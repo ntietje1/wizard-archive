@@ -21,15 +21,8 @@ import { createCanvasStore } from './canvas-store'
 import { createCanvasViewportManager, DEFAULT_CANVAS_VIEWPORT } from './canvas-viewport-manager'
 import type { CanvasDomRuntime } from './canvas-dom-runtime'
 import type { CanvasEngine, CanvasEngineSnapshot } from './canvas-engine-types'
-import type { CanvasDocumentNodePatch, CanvasDocumentNode } from '../types/canvas-domain-types'
-
-export type {
-  CanvasEngine,
-  CanvasEngineEquality,
-  CanvasEngineSnapshot,
-  CanvasInternalNode,
-  CanvasViewport,
-} from './canvas-engine-types'
+import type { CanvasDocumentNodePatch } from '../types/canvas-domain-types'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 
 export function createCanvasEngine(config: { domRuntime?: CanvasDomRuntime } = {}): CanvasEngine {
   const ownsDomRuntime = !config.domRuntime

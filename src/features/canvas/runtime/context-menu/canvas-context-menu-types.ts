@@ -1,7 +1,6 @@
-import type { CanvasSelectionSnapshot } from '../../tools/canvas-tool-types'
+import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
 import type { CanvasCommands } from '../document/use-canvas-commands'
 import type { ContextMenuContributor, ContextMenuItemSpec } from '~/features/context-menu/types'
-import type { CanvasEdgeType } from '../../edges/canvas-edge-types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { CanvasArrangeAction } from '../document/canvas-arrange'
@@ -9,8 +8,9 @@ import type { CanvasReorderDirection } from '../document/canvas-reorder'
 import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
+  CanvasEdgeType,
   CanvasNodeType,
-} from '~/features/canvas/types/canvas-domain-types'
+} from 'convex/canvases/validation'
 
 export interface CanvasContextMenuPoint {
   x: number

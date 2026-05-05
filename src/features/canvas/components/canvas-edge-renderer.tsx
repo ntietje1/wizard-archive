@@ -2,7 +2,7 @@ import { memo } from 'react'
 import { CanvasEdgeWrapper } from './canvas-edge-wrapper'
 import { areArraysEqual } from './canvas-renderer-utils'
 import { useCanvasEngineSelector } from '../react/use-canvas-engine'
-import type { CanvasDocumentEdge } from '../types/canvas-domain-types'
+import type { CanvasDocumentEdge } from 'convex/canvases/validation'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 
 export const CanvasEdgeRenderer = memo(function CanvasEdgeRenderer({

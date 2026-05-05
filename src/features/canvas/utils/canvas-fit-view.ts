@@ -1,5 +1,6 @@
 import { getCanvasNodeBounds } from '../nodes/shared/canvas-node-bounds'
-import type { CanvasDocumentNode, CanvasViewport } from '../types/canvas-domain-types'
+import type { CanvasViewport } from '../types/canvas-domain-types'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 import { boundsUnion } from './canvas-geometry-utils'
 import type { Bounds } from './canvas-geometry-utils'
 

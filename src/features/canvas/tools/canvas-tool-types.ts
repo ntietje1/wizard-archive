@@ -4,7 +4,7 @@ import type {
   ResizingState,
   RemoteUser,
 } from '../utils/canvas-awareness-types'
-import type { CanvasEdgePatch, CanvasEdgeType } from '../edges/canvas-edge-types'
+import type { CanvasEdgePatch } from '../edges/canvas-edge-types'
 import type { CanvasNodeDataPatch } from '../nodes/canvas-node-modules'
 import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
 import type {
@@ -12,20 +12,15 @@ import type {
   CanvasSelectionGestureKind,
   CanvasSelectionSnapshot,
 } from '../system/canvas-selection'
+import type { CanvasConnection, CanvasPosition } from '../types/canvas-domain-types'
 import type {
-  CanvasConnection,
   CanvasDocumentEdge,
   CanvasDocumentNode,
-  CanvasPosition,
-} from '../types/canvas-domain-types'
+  CanvasEdgeType,
+} from 'convex/canvases/validation'
 import type { ComponentType, MouseEvent as ReactMouseEvent, ReactNode } from 'react'
 
 export type CanvasToolId = 'select' | 'hand' | 'draw' | 'erase' | 'lasso' | 'text' | 'edge'
-export type {
-  CanvasSelectionCommitMode,
-  CanvasSelectionGestureKind,
-  CanvasSelectionSnapshot,
-} from '../system/canvas-selection'
 
 interface CanvasToolSettings {
   strokeColor: string

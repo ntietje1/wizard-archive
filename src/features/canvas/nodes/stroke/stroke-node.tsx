@@ -121,7 +121,7 @@ export function StrokeNode({
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
   const { domRuntime, viewportController } = useCanvasViewportRuntime()
   const { size, bounds } = data
-  const zoom = viewportController?.getZoom?.() ?? 1
+  const zoom = viewportController?.getZoom() ?? 1
   const isErasing = useEraseToolLocalOverlayStore((state) => state.erasingStrokeIds.has(id))
   const { visuallySelected } = useCanvasNodeVisualSelection(id)
 

@@ -1,6 +1,6 @@
 import { useReducer } from 'react'
 import type { SyntheticEvent } from 'react'
-import type { CanvasEdgeType } from '../edges/canvas-edge-types'
+import type { CanvasEdgeType } from 'convex/canvases/validation'
 import { CANVAS_REORDER_ACTIONS } from '../runtime/document/canvas-reorder-actions'
 import { linePaintCanvasProperty } from '../properties/canvas-property-definitions'
 import { useCanvasEngineSelector } from '../react/use-canvas-engine'

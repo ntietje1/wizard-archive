@@ -48,7 +48,7 @@ export function readResizeObserverBorderBoxSize(entry: ResizeObserverEntry): Can
   }
 }
 
-function getBoxAdditions(style: CSSStyleDeclaration): { width: number; height: number } {
+function getBoxAdditions(style: CSSStyleDeclaration): CanvasElementSize {
   return {
     width:
       readCssPixelValue(style.paddingLeft) +

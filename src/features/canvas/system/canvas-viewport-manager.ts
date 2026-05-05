@@ -1,6 +1,6 @@
 import { EMPTY_SET } from './canvas-document-projector'
-import type { CanvasEngineSnapshot, CanvasViewport } from './canvas-engine-types'
-import type { CanvasPosition } from '../types/canvas-domain-types'
+import type { CanvasEngineSnapshot } from './canvas-engine-types'
+import type { CanvasPosition, CanvasViewport } from '../types/canvas-domain-types'
 
 const MIN_ZOOM_SHAPE_COUNT_THRESHOLD = 500
 const VIEWPORT_EQUALITY_EPSILON = 1e-6

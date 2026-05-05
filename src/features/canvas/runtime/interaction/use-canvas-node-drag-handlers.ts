@@ -5,7 +5,7 @@ import { measureCanvasPerformance } from '../performance/canvas-performance-metr
 import { logger } from '~/shared/utils/logger'
 import type { CanvasDragController, CanvasDragEvent } from '../../system/canvas-drag-controller'
 import type { RefObject } from 'react'
-import type { CanvasEngine } from '../../system/canvas-engine'
+import type { CanvasEngine } from '../../system/canvas-engine-types'
 import type {
   CanvasCoreAwarenessWriter,
   CanvasDocumentWriter,
