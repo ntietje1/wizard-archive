@@ -1,13 +1,6 @@
-import { boundsFromPoints, rectIntersectsBounds } from '../../utils/canvas-geometry-utils'
-import {
-  getCanvasEdgeEndpoints,
-  getCanvasEdgePointThreshold,
-  pointNearPolyline,
-  polylineIntersectsPolygon,
-  polylineIntersectsRect,
-} from '../shared/canvas-edge-geometry'
+import { getCanvasEdgeEndpoints } from '../shared/canvas-edge-geometry'
+import type { CanvasEdgeGeometry } from '../shared/canvas-edge-geometry'
 import type { Point2D } from '../../utils/canvas-awareness-types'
-import type { Bounds } from '../../utils/canvas-geometry-utils'
 import type {
   CanvasDocumentEdge,
   CanvasHandlePosition,
@@ -28,9 +21,12 @@ type BezierCurve = {
   control1: Point2D
   control2: Point2D
   end: Point2D
+  hitPoints: ReadonlyArray<Point2D>
 }
 
-function evaluateBezierPoint(curve: BezierCurve, t: number): Point2D {
+type BezierCurveWithoutSamples = Omit<BezierCurve, 'hitPoints'>
+
+function evaluateBezierPoint(curve: BezierCurveWithoutSamples, t: number): Point2D {
   const mt = 1 - t
   const mt2 = mt * mt
   const t2 = t * t
@@ -49,7 +45,10 @@ function evaluateBezierPoint(curve: BezierCurve, t: number): Point2D {
   }
 }
 
-function sampleBezierCurve(curve: BezierCurve, steps: number = DEFAULT_BEZIER_SAMPLE_STEPS) {
+function sampleBezierCurve(
+  curve: BezierCurveWithoutSamples,
+  steps: number = DEFAULT_BEZIER_SAMPLE_STEPS,
+) {
   const points: Array<Point2D> = []
 
   for (let index = 0; index <= steps; index += 1) {
@@ -120,7 +119,7 @@ function buildBezierPath(
     source: target,
     target: source,
   })
-  const curve = {
+  const curve: BezierCurveWithoutSamples = {
     path: `M ${source.x},${source.y} C ${control1.x},${control1.y} ${control2.x},${control2.y} ${target.x},${target.y}`,
     labelX: 0,
     labelY: 0,
@@ -135,6 +134,7 @@ function buildBezierPath(
     ...curve,
     labelX: label.x,
     labelY: label.y,
+    hitPoints: sampleBezierCurve(curve),
   }
 }
 
@@ -143,82 +143,16 @@ export function buildBezierCanvasEdgeGeometryFromRenderProps(
     EdgeProps,
     'sourceX' | 'sourceY' | 'targetX' | 'targetY' | 'sourcePosition' | 'targetPosition'
   >,
-): BezierCurve {
+): CanvasEdgeGeometry {
   return buildBezierPath(props)
 }
 
 export function buildBezierCanvasEdgeGeometryFromEdge(
   edge: CanvasDocumentEdge,
   nodesById: ReadonlyMap<string, CanvasDocumentNode>,
-): BezierCurve | null {
+): CanvasEdgeGeometry | null {
   const endpoints = getCanvasEdgeEndpoints(edge, nodesById)
   if (!endpoints) return null
 
   return buildBezierCanvasEdgeGeometryFromRenderProps(endpoints)
-}
-
-export function getBezierCanvasEdgeBounds(
-  edge: CanvasDocumentEdge,
-  nodesById: ReadonlyMap<string, CanvasDocumentNode>,
-): Bounds | null {
-  const geometry = buildBezierCanvasEdgeGeometryFromEdge(edge, nodesById)
-  if (!geometry) return null
-
-  return boundsFromPoints(sampleBezierCurve(geometry))
-}
-
-export function bezierCanvasEdgeContainsPoint(
-  edge: CanvasDocumentEdge,
-  point: Point2D,
-  nodesById: ReadonlyMap<string, CanvasDocumentNode>,
-  zoom: number,
-): boolean {
-  const geometry = buildBezierCanvasEdgeGeometryFromEdge(edge, nodesById)
-  if (!geometry) return false
-
-  const sampledCurve = sampleBezierCurve(geometry)
-  const bounds = boundsFromPoints(sampledCurve)
-  const threshold = getCanvasEdgePointThreshold(zoom)
-
-  if (
-    bounds &&
-    !rectIntersectsBounds(bounds, {
-      x: point.x - threshold,
-      y: point.y - threshold,
-      width: threshold * 2,
-      height: threshold * 2,
-    })
-  ) {
-    return false
-  }
-
-  return pointNearPolyline(point, sampledCurve, threshold)
-}
-
-export function bezierCanvasEdgeIntersectsRectangle(
-  edge: CanvasDocumentEdge,
-  rect: Bounds,
-  nodesById: ReadonlyMap<string, CanvasDocumentNode>,
-): boolean {
-  const geometry = buildBezierCanvasEdgeGeometryFromEdge(edge, nodesById)
-  if (!geometry) return false
-
-  const points = sampleBezierCurve(geometry)
-  const bounds = boundsFromPoints(points)
-  if (bounds && !rectIntersectsBounds(bounds, rect)) {
-    return false
-  }
-
-  return polylineIntersectsRect(points, rect)
-}
-
-export function bezierCanvasEdgeIntersectsPolygon(
-  edge: CanvasDocumentEdge,
-  polygon: ReadonlyArray<Point2D>,
-  nodesById: ReadonlyMap<string, CanvasDocumentNode>,
-): boolean {
-  const geometry = buildBezierCanvasEdgeGeometryFromEdge(edge, nodesById)
-  if (!geometry) return false
-
-  return polylineIntersectsPolygon(sampleBezierCurve(geometry), polygon)
 }

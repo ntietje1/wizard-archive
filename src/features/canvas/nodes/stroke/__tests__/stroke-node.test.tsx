@@ -23,11 +23,13 @@ vi.mock('../../shared/resizable-node-wrapper', () => ({
 }))
 
 vi.mock('../../../runtime/providers/canvas-runtime', () => ({
-  useCanvasDomRuntime: () => ({
-    registerStrokeNodePaths: strokeNodeMocks.registerStrokeNodePaths,
-  }),
-  useCanvasViewportController: () => ({
-    getZoom: () => strokeNodeMocks.zoom,
+  useCanvasViewportRuntime: () => ({
+    domRuntime: {
+      registerStrokeNodePaths: strokeNodeMocks.registerStrokeNodePaths,
+    },
+    viewportController: {
+      getZoom: () => strokeNodeMocks.zoom,
+    },
   }),
 }))
 

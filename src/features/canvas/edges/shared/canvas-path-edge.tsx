@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { getCanvasEdgeInteractionWidth } from './canvas-edge-geometry'
+import type { CanvasEdgeGeometry } from './canvas-edge-geometry'
 import {
   buildCanvasEdgeRenderStyle,
   normalizeCanvasEdgeStyle,
@@ -10,7 +11,7 @@ import { resolveCanvasScreenMinimumStrokeWidthCss } from '../../utils/canvas-scr
 import type { CanvasEdgeRendererProps } from '../canvas-edge-types'
 import type { CSSProperties, Ref } from 'react'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
-import { useCanvasDomRuntime } from '../../runtime/providers/canvas-runtime'
+import { useCanvasViewportRuntime } from '../../runtime/providers/canvas-runtime'
 
 const CANVAS_EDGE_PATH_STYLE: CSSProperties = {
   strokeLinecap: 'square',
@@ -25,21 +26,15 @@ const SELECTED_EDGE_HIGHLIGHT_STYLE: CSSProperties = {
 const SELECTED_EDGE_HIGHLIGHT_SCALE = 0.15
 const SELECTED_EDGE_HIGHLIGHT_WIDTH_MIN = 1
 
-export interface CanvasPathEdgeGeometry {
-  path: string
-  labelX: number
-  labelY: number
-}
-
 export function CanvasPathEdge({
   props,
   geometry,
 }: {
   props: CanvasEdgeRendererProps
-  geometry: CanvasPathEdgeGeometry | null
+  geometry: CanvasEdgeGeometry | null
 }) {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
-  const domRuntime = useCanvasDomRuntime()
+  const { domRuntime } = useCanvasViewportRuntime()
   const pathRef = useRef<SVGPathElement | null>(null)
   const highlightPathRef = useRef<SVGPathElement | null>(null)
   const interactionPathRef = useRef<SVGPathElement | null>(null)
@@ -93,7 +88,7 @@ export function CanvasPathEdgeVisual({
   highlightPathRef,
   interactionPathRef,
 }: {
-  geometry: CanvasPathEdgeGeometry | null
+  geometry: CanvasEdgeGeometry | null
   id: string
   type: string
   style?: CanvasEdgeRendererProps['style']

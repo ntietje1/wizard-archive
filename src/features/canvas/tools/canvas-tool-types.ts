@@ -195,8 +195,6 @@ export interface CanvasToolHandlers {
   onKeyUp?: (event: KeyboardEvent) => void
   onNodeClick?: (event: ReactMouseEvent, node: CanvasDocumentNode) => void
   onEdgeClick?: (event: ReactMouseEvent, edge: CanvasDocumentEdge) => void
-  onMoveStart?: (event: MouseEvent | TouchEvent | null) => void
-  onMoveEnd?: () => void
 }
 
 export interface CanvasToolSpec<TId extends CanvasToolId = CanvasToolId> {

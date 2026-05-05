@@ -3,10 +3,9 @@ import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { PendingRichEmbedActivationRef } from './use-rich-embed-lifecycle'
 import { normalizeEmbedNodeData } from './embed-node-data'
 import {
-  useCanvasCanEdit,
-  useCanvasDocumentWriter,
-  useCanvasDomRuntime,
-  useCanvasEditSession,
+  useCanvasDocumentRuntime,
+  useCanvasInteractionRuntime,
+  useCanvasViewportRuntime,
 } from '../../runtime/providers/canvas-runtime'
 import { ResizableNodeWrapper } from '../shared/resizable-node-wrapper'
 import type { EmbedNodeData } from './embed-node-data'
@@ -53,11 +52,11 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
   const { itemsMap } = useActiveSidebarItems()
   const item = sidebarItemId ? itemsMap.get(sidebarItemId) : undefined
   const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
-  const { patchNodeData } = useCanvasDocumentWriter()
+  const { documentWriter } = useCanvasDocumentRuntime()
+  const { patchNodeData } = documentWriter
   const { data: contentItem } = useSidebarItemById(sidebarItemId)
-  const domRuntime = useCanvasDomRuntime()
-  const canEdit = useCanvasCanEdit()
-  const editSession = useCanvasEditSession()
+  const { domRuntime } = useCanvasViewportRuntime()
+  const { canEdit, editSession } = useCanvasInteractionRuntime()
   const surfaceRef = useRef<HTMLDivElement | null>(null)
   const editableSession = useCanvasEditableNodeSession({
     id,

@@ -69,9 +69,3 @@ export interface CanvasNodeComponentProps<TData = CanvasNodeComponentDataByType[
 export interface CanvasNodeSelectionContext {
   zoom: number
 }
-
-export interface CanvasNodePlacementBehavior {
-  anchor: 'center' | 'top-left'
-  selectOnCreate: boolean
-  startEditingOnCreate: boolean
-}

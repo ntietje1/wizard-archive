@@ -2,9 +2,8 @@ import { useCallback, useEffect, useRef } from 'react'
 import { getCanvasNodeBounds } from './canvas-node-bounds'
 import { useCanvasNodeResizeMetadataSnapshot } from './canvas-node-resize-metadata'
 import {
-  useCanvasCanEdit,
-  useCanvasNodeActions,
-  useCanvasViewportController,
+  useCanvasInteractionRuntime,
+  useCanvasViewportRuntime,
 } from '../../runtime/providers/canvas-runtime'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 import {
@@ -103,9 +102,9 @@ type CanvasResizeSessionResult = ReturnType<typeof resolveCanvasResize> & { fina
 export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
   const canvasEngine = useCanvasEngine()
-  const { onResizeMany, onResizeManyCancel, onResizeManyEnd } = useCanvasNodeActions()
-  const canEdit = useCanvasCanEdit()
-  const viewportController = useCanvasViewportController()
+  const { canEdit, nodeActions } = useCanvasInteractionRuntime()
+  const { viewportController } = useCanvasViewportRuntime()
+  const { onResizeMany, onResizeManyCancel, onResizeManyEnd } = nodeActions
   const modifiers = useCanvasModifierKeys()
   const metadataSnapshot = useCanvasNodeResizeMetadataSnapshot()
   const selection = useCanvasEngineSelector((snapshot) =>

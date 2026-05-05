@@ -2,10 +2,9 @@ import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { resolveCanvasEdgeType } from '../edges/canvas-edge-registry'
 import type { CanvasEdgeType } from '../edges/canvas-edge-types'
 import {
-  useCanvasCommands,
-  useCanvasDocumentWriter,
-  useCanvasDomRuntime,
-  useCanvasNodeActions,
+  useCanvasDocumentRuntime,
+  useCanvasInteractionRuntime,
+  useCanvasViewportRuntime,
 } from '../runtime/providers/canvas-runtime'
 import { useCanvasRichTextFormattingSnapshot } from '../nodes/shared/canvas-rich-text-formatting-session'
 import { measureCanvasPerformance } from '../runtime/performance/canvas-performance-metrics'
@@ -28,10 +27,9 @@ import { useShallow } from 'zustand/shallow'
 
 export function useCanvasToolbarModel() {
   const canvasEngine = useCanvasEngine()
-  const domRuntime = useCanvasDomRuntime()
-  const commands = useCanvasCommands()
-  const documentWriter = useCanvasDocumentWriter()
-  const nodeActions = useCanvasNodeActions()
+  const { domRuntime } = useCanvasViewportRuntime()
+  const { commands, documentWriter } = useCanvasDocumentRuntime()
+  const { nodeActions } = useCanvasInteractionRuntime()
   const selectedNodes = useCanvasEngineSelector(
     selectCanvasSelectedNodes,
     areCanvasPropertyNodesEqual,
@@ -113,21 +111,38 @@ export function useCanvasToolbarModel() {
       })
     })
   }
+  const propertiesSection =
+    properties.length > 0
+      ? {
+          properties,
+          runPropertyChange,
+          runPropertyPreviewChange,
+          commitPropertyPreviewChange,
+          cancelPropertyPreviewChange,
+        }
+      : null
+  const edgeTypeSection = hasOnlySelectedEdges
+    ? {
+        selectedType: getSharedSelectedEdgeType(selectedEdges),
+        setType: setSelectedEdgesType,
+      }
+    : showsEdgeToolDefaults
+      ? {
+          selectedType: edgeType,
+          setType: setEdgeType,
+        }
+      : null
+  const reorderSection = hasSelection
+    ? {
+        commands,
+        selection: selectionSnapshot,
+      }
+    : null
 
   return {
-    commands,
-    edgeType,
-    hasOnlySelectedEdges,
-    hasSelection,
-    properties,
-    selectedEdgeType: getSharedSelectedEdgeType(selectedEdges),
-    selectionSnapshot,
-    setEdgeType,
-    setSelectedEdgesType,
-    showsEdgeToolDefaults,
-    runPropertyChange,
-    runPropertyPreviewChange,
-    commitPropertyPreviewChange,
-    cancelPropertyPreviewChange,
+    edgeTypeSection,
+    hasContent: propertiesSection !== null || edgeTypeSection !== null || reorderSection !== null,
+    propertiesSection,
+    reorderSection,
   }
 }

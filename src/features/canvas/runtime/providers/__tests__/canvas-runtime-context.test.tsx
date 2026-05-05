@@ -4,63 +4,51 @@ import { describe, expect, it } from 'vitest'
 import { createCanvasRuntime } from '../../__tests__/canvas-runtime-test-utils'
 import {
   CanvasRuntimeProvider,
-  useCanvasCanEdit,
-  useCanvasCommands,
-  useCanvasDocumentWriter,
-  useCanvasDomRuntime,
-  useCanvasEditSession,
-  useCanvasHistory,
-  useCanvasNodeActions,
-  useCanvasRemoteHighlights,
-  useCanvasSelection,
-  useCanvasViewportController,
+  useCanvasCollaborationRuntime,
+  useCanvasDocumentRuntime,
+  useCanvasInteractionRuntime,
+  useCanvasViewportRuntime,
 } from '../canvas-runtime'
 
 describe('CanvasRuntimeProvider', () => {
-  it('throws from narrow runtime hooks outside the provider', () => {
-    expect(() => renderHook(() => useCanvasDomRuntime())).toThrow(
-      'useCanvasDomRuntime must be used within CanvasRuntimeProvider',
+  it('throws from grouped runtime hooks outside the provider', () => {
+    expect(() => renderHook(() => useCanvasDocumentRuntime())).toThrow(
+      'useCanvasDocumentRuntime must be used within CanvasRuntimeProvider',
     )
-    expect(() => renderHook(() => useCanvasDocumentWriter())).toThrow(
-      'useCanvasDocumentWriter must be used within CanvasRuntimeProvider',
+    expect(() => renderHook(() => useCanvasInteractionRuntime())).toThrow(
+      'useCanvasInteractionRuntime must be used within CanvasRuntimeProvider',
     )
-    expect(() => renderHook(() => useCanvasViewportController())).toThrow(
-      'useCanvasViewportController must be used within CanvasRuntimeProvider',
+    expect(() => renderHook(() => useCanvasViewportRuntime())).toThrow(
+      'useCanvasViewportRuntime must be used within CanvasRuntimeProvider',
     )
-    expect(() => renderHook(() => useCanvasRemoteHighlights())).toThrow(
-      'useCanvasRemoteHighlights must be used within CanvasRuntimeProvider',
+    expect(() => renderHook(() => useCanvasCollaborationRuntime())).toThrow(
+      'useCanvasCollaborationRuntime must be used within CanvasRuntimeProvider',
     )
   })
 
-  it('exposes independent service slices through narrow hooks', () => {
+  it('exposes services grouped by runtime concern', () => {
     const runtime = createCanvasRuntime()
     const wrapper = ({ children }: { children: ReactNode }) => (
       <CanvasRuntimeProvider {...runtime}>{children}</CanvasRuntimeProvider>
     )
 
-    expect(renderHook(() => useCanvasDomRuntime(), { wrapper }).result.current).toBe(
-      runtime.domRuntime,
-    )
-    expect(renderHook(() => useCanvasDocumentWriter(), { wrapper }).result.current).toBe(
-      runtime.documentWriter,
-    )
-    expect(renderHook(() => useCanvasHistory(), { wrapper }).result.current).toBe(runtime.history)
-    expect(renderHook(() => useCanvasCommands(), { wrapper }).result.current).toBe(runtime.commands)
-    expect(renderHook(() => useCanvasNodeActions(), { wrapper }).result.current).toBe(
-      runtime.nodeActions,
-    )
-    expect(renderHook(() => useCanvasCanEdit(), { wrapper }).result.current).toBe(runtime.canEdit)
-    expect(renderHook(() => useCanvasEditSession(), { wrapper }).result.current).toBe(
-      runtime.editSession,
-    )
-    expect(renderHook(() => useCanvasSelection(), { wrapper }).result.current).toBe(
-      runtime.selection,
-    )
-    expect(renderHook(() => useCanvasViewportController(), { wrapper }).result.current).toBe(
-      runtime.viewportController,
-    )
-    expect(renderHook(() => useCanvasRemoteHighlights(), { wrapper }).result.current).toBe(
-      runtime.remoteHighlights,
-    )
+    expect(renderHook(() => useCanvasDocumentRuntime(), { wrapper }).result.current).toEqual({
+      commands: runtime.commands,
+      documentWriter: runtime.documentWriter,
+      history: runtime.history,
+    })
+    expect(renderHook(() => useCanvasInteractionRuntime(), { wrapper }).result.current).toEqual({
+      canEdit: runtime.canEdit,
+      editSession: runtime.editSession,
+      nodeActions: runtime.nodeActions,
+      selection: runtime.selection,
+    })
+    expect(renderHook(() => useCanvasViewportRuntime(), { wrapper }).result.current).toEqual({
+      domRuntime: runtime.domRuntime,
+      viewportController: runtime.viewportController,
+    })
+    expect(renderHook(() => useCanvasCollaborationRuntime(), { wrapper }).result.current).toEqual({
+      remoteHighlights: runtime.remoteHighlights,
+    })
   })
 })

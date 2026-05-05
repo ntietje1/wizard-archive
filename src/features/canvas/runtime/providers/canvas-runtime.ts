@@ -1,4 +1,4 @@
-import { createContext, createElement, useContext } from 'react'
+import { createContext, createElement, useContext, useMemo } from 'react'
 import type { Context, ReactNode } from 'react'
 import type { RemoteHighlight } from '../../utils/canvas-awareness-types'
 import type { CanvasDomRuntime } from '../../system/canvas-dom-runtime'
@@ -26,29 +26,39 @@ export type CanvasRuntimeProviderProps = {
   viewportController: CanvasViewportController
 }
 
-const CanvasCanEditContext = createContext<boolean | null>(null)
-const CanvasCommandsContext = createContext<CanvasCommands | null>(null)
-const CanvasDocumentWriterContext = createContext<CanvasDocumentWriter | null>(null)
-const CanvasDomRuntimeContext = createContext<CanvasDomRuntime | null>(null)
-const CanvasEditSessionContext = createContext<CanvasEditSessionState | null>(null)
-const CanvasHistoryContext = createContext<CanvasHistoryController | null>(null)
-const CanvasNodeActionsContext = createContext<CanvasNodeActions | null>(null)
-const CanvasRemoteHighlightsContext = createContext<ReadonlyMap<string, RemoteHighlight> | null>(
+interface CanvasDocumentRuntimeServices {
+  commands: CanvasCommands
+  documentWriter: CanvasDocumentWriter
+  history: CanvasHistoryController
+}
+
+interface CanvasInteractionRuntimeServices {
+  canEdit: boolean
+  editSession: CanvasEditSessionState
+  nodeActions: CanvasNodeActions
+  selection: CanvasSelectionController
+}
+
+interface CanvasViewportRuntimeServices {
+  domRuntime: CanvasDomRuntime
+  viewportController: CanvasViewportController
+}
+
+interface CanvasCollaborationRuntimeServices {
+  remoteHighlights: ReadonlyMap<string, RemoteHighlight>
+}
+
+const CanvasDocumentRuntimeContext = createContext<CanvasDocumentRuntimeServices | null>(null)
+const CanvasInteractionRuntimeContext = createContext<CanvasInteractionRuntimeServices | null>(null)
+const CanvasViewportRuntimeContext = createContext<CanvasViewportRuntimeServices | null>(null)
+const CanvasCollaborationRuntimeContext = createContext<CanvasCollaborationRuntimeServices | null>(
   null,
 )
-const CanvasSelectionContext = createContext<CanvasSelectionController | null>(null)
-const CanvasViewportControllerContext = createContext<CanvasViewportController | null>(null)
 
-CanvasCanEditContext.displayName = 'CanvasCanEditContext'
-CanvasCommandsContext.displayName = 'CanvasCommandsContext'
-CanvasDocumentWriterContext.displayName = 'CanvasDocumentWriterContext'
-CanvasDomRuntimeContext.displayName = 'CanvasDomRuntimeContext'
-CanvasEditSessionContext.displayName = 'CanvasEditSessionContext'
-CanvasHistoryContext.displayName = 'CanvasHistoryContext'
-CanvasNodeActionsContext.displayName = 'CanvasNodeActionsContext'
-CanvasRemoteHighlightsContext.displayName = 'CanvasRemoteHighlightsContext'
-CanvasSelectionContext.displayName = 'CanvasSelectionContext'
-CanvasViewportControllerContext.displayName = 'CanvasViewportControllerContext'
+CanvasDocumentRuntimeContext.displayName = 'CanvasDocumentRuntimeContext'
+CanvasInteractionRuntimeContext.displayName = 'CanvasInteractionRuntimeContext'
+CanvasViewportRuntimeContext.displayName = 'CanvasViewportRuntimeContext'
+CanvasCollaborationRuntimeContext.displayName = 'CanvasCollaborationRuntimeContext'
 
 function createServiceHook<TService>(
   context: Context<TService | null>,
@@ -64,51 +74,24 @@ function createServiceHook<TService>(
   }
 }
 
-export const useCanvasDomRuntime = createServiceHook<CanvasDomRuntime>(
-  CanvasDomRuntimeContext,
-  'useCanvasDomRuntime',
+export const useCanvasDocumentRuntime = createServiceHook<CanvasDocumentRuntimeServices>(
+  CanvasDocumentRuntimeContext,
+  'useCanvasDocumentRuntime',
 )
 
-export const useCanvasDocumentWriter = createServiceHook<CanvasDocumentWriter>(
-  CanvasDocumentWriterContext,
-  'useCanvasDocumentWriter',
+export const useCanvasInteractionRuntime = createServiceHook<CanvasInteractionRuntimeServices>(
+  CanvasInteractionRuntimeContext,
+  'useCanvasInteractionRuntime',
 )
 
-export const useCanvasHistory = createServiceHook<CanvasHistoryController>(
-  CanvasHistoryContext,
-  'useCanvasHistory',
+export const useCanvasViewportRuntime = createServiceHook<CanvasViewportRuntimeServices>(
+  CanvasViewportRuntimeContext,
+  'useCanvasViewportRuntime',
 )
 
-export const useCanvasCommands = createServiceHook<CanvasCommands>(
-  CanvasCommandsContext,
-  'useCanvasCommands',
-)
-
-export const useCanvasNodeActions = createServiceHook<CanvasNodeActions>(
-  CanvasNodeActionsContext,
-  'useCanvasNodeActions',
-)
-
-export const useCanvasCanEdit = createServiceHook<boolean>(CanvasCanEditContext, 'useCanvasCanEdit')
-
-export const useCanvasEditSession = createServiceHook<CanvasEditSessionState>(
-  CanvasEditSessionContext,
-  'useCanvasEditSession',
-)
-
-export const useCanvasSelection = createServiceHook<CanvasSelectionController>(
-  CanvasSelectionContext,
-  'useCanvasSelection',
-)
-
-export const useCanvasViewportController = createServiceHook<CanvasViewportController>(
-  CanvasViewportControllerContext,
-  'useCanvasViewportController',
-)
-
-export const useCanvasRemoteHighlights = createServiceHook<ReadonlyMap<string, RemoteHighlight>>(
-  CanvasRemoteHighlightsContext,
-  'useCanvasRemoteHighlights',
+export const useCanvasCollaborationRuntime = createServiceHook<CanvasCollaborationRuntimeServices>(
+  CanvasCollaborationRuntimeContext,
+  'useCanvasCollaborationRuntime',
 )
 
 export function CanvasRuntimeProvider({
@@ -124,17 +107,24 @@ export function CanvasRuntimeProvider({
   selection,
   viewportController,
 }: CanvasRuntimeProviderProps) {
+  const documentServices = useMemo(
+    () => ({ commands, documentWriter, history }),
+    [commands, documentWriter, history],
+  )
+  const interactionServices = useMemo(
+    () => ({ canEdit, editSession, nodeActions, selection }),
+    [canEdit, editSession, nodeActions, selection],
+  )
+  const viewportServices = useMemo(
+    () => ({ domRuntime, viewportController }),
+    [domRuntime, viewportController],
+  )
+  const collaborationServices = useMemo(() => ({ remoteHighlights }), [remoteHighlights])
   let tree = children
-  tree = provide(CanvasRemoteHighlightsContext, remoteHighlights, tree)
-  tree = provide(CanvasViewportControllerContext, viewportController, tree)
-  tree = provide(CanvasSelectionContext, selection, tree)
-  tree = provide(CanvasEditSessionContext, editSession, tree)
-  tree = provide(CanvasCanEditContext, canEdit, tree)
-  tree = provide(CanvasNodeActionsContext, nodeActions, tree)
-  tree = provide(CanvasCommandsContext, commands, tree)
-  tree = provide(CanvasHistoryContext, history, tree)
-  tree = provide(CanvasDocumentWriterContext, documentWriter, tree)
-  return provide(CanvasDomRuntimeContext, domRuntime, tree)
+  tree = provide(CanvasCollaborationRuntimeContext, collaborationServices, tree)
+  tree = provide(CanvasViewportRuntimeContext, viewportServices, tree)
+  tree = provide(CanvasInteractionRuntimeContext, interactionServices, tree)
+  return provide(CanvasDocumentRuntimeContext, documentServices, tree)
 }
 
 function provide<TValue>(

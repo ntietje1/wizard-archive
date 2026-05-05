@@ -89,7 +89,15 @@ describe('canvas read-only preview model', () => {
     const render: CanvasPreviewEdgeRender = {
       edge,
       type: edgeType,
-      geometry: { path: 'M 0,0 L 1,1', labelX: 0, labelY: 0 },
+      geometry: {
+        path: 'M 0,0 L 1,1',
+        labelX: 0,
+        labelY: 0,
+        hitPoints: [
+          { x: 0, y: 0 },
+          { x: 1, y: 1 },
+        ],
+      },
     }
 
     expect(areCanvasPreviewEdgeRendersEqual(render, { ...render })).toBe(true)

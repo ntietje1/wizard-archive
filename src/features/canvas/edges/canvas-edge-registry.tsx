@@ -1,22 +1,13 @@
 import { parseCanvasDocumentEdge, parseCanvasEdgeType } from 'convex/canvases/validation'
+import { buildBezierCanvasEdgeGeometryFromEdge } from './bezier/bezier-canvas-edge-geometry'
+import { buildStepCanvasEdgeGeometryFromEdge } from './step/step-canvas-edge-geometry'
+import { buildStraightCanvasEdgeGeometryFromEdge } from './straight/straight-canvas-edge-geometry'
 import {
-  bezierCanvasEdgeContainsPoint,
-  bezierCanvasEdgeIntersectsPolygon,
-  bezierCanvasEdgeIntersectsRectangle,
-  getBezierCanvasEdgeBounds,
-} from './bezier/bezier-canvas-edge-geometry'
-import {
-  getStepCanvasEdgeBounds,
-  stepCanvasEdgeContainsPoint,
-  stepCanvasEdgeIntersectsPolygon,
-  stepCanvasEdgeIntersectsRectangle,
-} from './step/step-canvas-edge-geometry'
-import {
-  getStraightCanvasEdgeBounds,
-  straightCanvasEdgeContainsPoint,
-  straightCanvasEdgeIntersectsPolygon,
-  straightCanvasEdgeIntersectsRectangle,
-} from './straight/straight-canvas-edge-geometry'
+  canvasEdgeGeometryContainsPoint,
+  canvasEdgeGeometryIntersectsPolygon,
+  canvasEdgeGeometryIntersectsRectangle,
+  getCanvasEdgeGeometryBounds,
+} from './shared/canvas-edge-geometry'
 import { normalizeCanvasEdgeStyle } from './shared/canvas-edge-style'
 import { getCanvasStrokeEdgeProperties } from './shared/canvas-edge-properties'
 import { createCanvasNodesById } from './shared/canvas-node-map'
@@ -28,6 +19,7 @@ import type {
   CanvasEdgeType,
   CanvasRuntimeEdge,
 } from './canvas-edge-types'
+import type { CanvasEdgeGeometry } from './shared/canvas-edge-geometry'
 import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
 import type { Point2D } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-geometry-utils'
@@ -85,22 +77,10 @@ function normalizeCanvasEdges(
 }
 
 type CanvasEdgeSpec = {
-  getBounds: (edge: CanvasRuntimeEdge, context: CanvasEdgeSelectionContext) => Bounds | null
-  containsPoint: (
+  buildGeometry: (
     edge: CanvasRuntimeEdge,
-    point: Point2D,
-    context: CanvasEdgeSelectionContext,
-  ) => boolean
-  intersectsRectangle: (
-    edge: CanvasRuntimeEdge,
-    rect: Bounds,
-    context: CanvasEdgeSelectionContext,
-  ) => boolean
-  intersectsPolygon: (
-    edge: CanvasRuntimeEdge,
-    polygon: ReadonlyArray<Point2D>,
-    context: CanvasEdgeSelectionContext,
-  ) => boolean
+    nodesById: ReadonlyMap<string, CanvasDocumentNode>,
+  ) => CanvasEdgeGeometry | null
   getProperties: (
     edge: CanvasRuntimeEdge,
     patchEdge: (edgeId: string, patch: CanvasEdgePatch) => void,
@@ -109,33 +89,15 @@ type CanvasEdgeSpec = {
 
 const canvasEdgeSpecs = {
   bezier: {
-    getBounds: (edge, context) => getBezierCanvasEdgeBounds(edge, context.nodesById),
-    containsPoint: (edge, point, context) =>
-      bezierCanvasEdgeContainsPoint(edge, point, context.nodesById, context.zoom),
-    intersectsRectangle: (edge, rect, context) =>
-      bezierCanvasEdgeIntersectsRectangle(edge, rect, context.nodesById),
-    intersectsPolygon: (edge, polygon, context) =>
-      bezierCanvasEdgeIntersectsPolygon(edge, polygon, context.nodesById),
+    buildGeometry: buildBezierCanvasEdgeGeometryFromEdge,
     getProperties: getCanvasStrokeEdgeProperties,
   },
   straight: {
-    getBounds: (edge, context) => getStraightCanvasEdgeBounds(edge, context.nodesById),
-    containsPoint: (edge, point, context) =>
-      straightCanvasEdgeContainsPoint(edge, point, context.nodesById, context.zoom),
-    intersectsRectangle: (edge, rect, context) =>
-      straightCanvasEdgeIntersectsRectangle(edge, rect, context.nodesById),
-    intersectsPolygon: (edge, polygon, context) =>
-      straightCanvasEdgeIntersectsPolygon(edge, polygon, context.nodesById),
+    buildGeometry: buildStraightCanvasEdgeGeometryFromEdge,
     getProperties: getCanvasStrokeEdgeProperties,
   },
   step: {
-    getBounds: (edge, context) => getStepCanvasEdgeBounds(edge, context.nodesById),
-    containsPoint: (edge, point, context) =>
-      stepCanvasEdgeContainsPoint(edge, point, context.nodesById, context.zoom),
-    intersectsRectangle: (edge, rect, context) =>
-      stepCanvasEdgeIntersectsRectangle(edge, rect, context.nodesById),
-    intersectsPolygon: (edge, polygon, context) =>
-      stepCanvasEdgeIntersectsPolygon(edge, polygon, context.nodesById),
+    buildGeometry: buildStepCanvasEdgeGeometryFromEdge,
     getProperties: getCanvasStrokeEdgeProperties,
   },
 } as const satisfies Record<CanvasEdgeType, CanvasEdgeSpec>
@@ -155,16 +117,25 @@ export function getCanvasEdgeInspectableProperties(
   return getCanvasEdgeSpec(edge).getProperties(edge, patchEdge)
 }
 
+export function buildCanvasEdgeGeometry(
+  edge: CanvasDocumentEdge,
+  nodesById: ReadonlyMap<string, CanvasDocumentNode>,
+): CanvasEdgeGeometry | null {
+  const normalizedEdge = normalizeCanvasEdge(edge)
+  return normalizedEdge
+    ? getCanvasEdgeSpec(normalizedEdge).buildGeometry(normalizedEdge, nodesById)
+    : null
+}
+
 function isCanvasEdgeSelectionCandidate(
-  edge: CanvasRuntimeEdge,
+  geometry: CanvasEdgeGeometry,
   candidateBounds: Bounds | null,
-  context: CanvasEdgeSelectionContext,
 ): boolean {
   if (!candidateBounds) {
     return true
   }
 
-  const bounds = getCanvasEdgeSpec(edge).getBounds(edge, context)
+  const bounds = getCanvasEdgeGeometryBounds(geometry)
   return !bounds || rectIntersectsBounds(candidateBounds, bounds)
 }
 
@@ -179,7 +150,8 @@ export function findCanvasEdgeAtPoint(
 
   for (let index = normalizedEdges.length - 1; index >= 0; index -= 1) {
     const { rawEdge, edge } = normalizedEdges[index]
-    if (getCanvasEdgeSpec(edge).containsPoint(edge, point, selectionContext)) {
+    const geometry = getCanvasEdgeSpec(edge).buildGeometry(edge, selectionContext.nodesById)
+    if (geometry && canvasEdgeGeometryContainsPoint(geometry, point, selectionContext.zoom)) {
       return rawEdge.id
     }
   }
@@ -198,9 +170,11 @@ export function getCanvasEdgesMatchingRectangle(
   const matchingIds = new Set<string>()
 
   for (const { rawEdge, edge } of normalizedEdges) {
+    const geometry = getCanvasEdgeSpec(edge).buildGeometry(edge, selectionContext.nodesById)
     if (
-      isCanvasEdgeSelectionCandidate(edge, rect, selectionContext) &&
-      getCanvasEdgeSpec(edge).intersectsRectangle(edge, rect, selectionContext)
+      geometry &&
+      isCanvasEdgeSelectionCandidate(geometry, rect) &&
+      canvasEdgeGeometryIntersectsRectangle(geometry, rect)
     ) {
       matchingIds.add(rawEdge.id)
     }
@@ -221,9 +195,11 @@ export function getCanvasEdgesMatchingLasso(
   const matchingIds = new Set<string>()
 
   for (const { rawEdge, edge } of normalizedEdges) {
+    const geometry = getCanvasEdgeSpec(edge).buildGeometry(edge, selectionContext.nodesById)
     if (
-      isCanvasEdgeSelectionCandidate(edge, polygonBounds, selectionContext) &&
-      getCanvasEdgeSpec(edge).intersectsPolygon(edge, polygon, selectionContext)
+      geometry &&
+      isCanvasEdgeSelectionCandidate(geometry, polygonBounds) &&
+      canvasEdgeGeometryIntersectsPolygon(geometry, polygon)
     ) {
       matchingIds.add(rawEdge.id)
     }

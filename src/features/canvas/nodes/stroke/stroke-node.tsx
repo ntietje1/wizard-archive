@@ -11,10 +11,7 @@ import { useCanvasNodeVisualSelection } from '../shared/use-canvas-node-visual-s
 import { getStrokeSelectionPadding } from './stroke-node-interactions'
 import { resolveCanvasScreenMinimumStrokeWidth } from '../../utils/canvas-screen-stroke-width'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
-import {
-  useCanvasDomRuntime,
-  useCanvasViewportController,
-} from '../../runtime/providers/canvas-runtime'
+import { useCanvasViewportRuntime } from '../../runtime/providers/canvas-runtime'
 
 const HIGHLIGHT_SCALE = 0.3
 const ERASING_OPACITY = 0.3
@@ -122,8 +119,7 @@ export function StrokeNode({
   height,
 }: CanvasNodeComponentProps<StrokeNodeData>) {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
-  const domRuntime = useCanvasDomRuntime()
-  const viewportController = useCanvasViewportController()
+  const { domRuntime, viewportController } = useCanvasViewportRuntime()
   const { size, bounds } = data
   const zoom = viewportController?.getZoom?.() ?? 1
   const isErasing = useEraseToolLocalOverlayStore((state) => state.erasingStrokeIds.has(id))

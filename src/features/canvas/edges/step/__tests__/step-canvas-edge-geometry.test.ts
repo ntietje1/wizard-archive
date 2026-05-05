@@ -20,7 +20,7 @@ describe('buildStepCanvasEdgeGeometryFromRenderProps', () => {
       targetPosition: CANVAS_HANDLE_POSITION.Top,
     })
 
-    expect(geometry.points).toEqual([
+    expect(geometry.hitPoints).toEqual([
       { x: 100, y: 150 },
       { x: 100, y: 198 },
       { x: 200, y: 198 },
@@ -40,7 +40,7 @@ describe('buildStepCanvasEdgeGeometryFromRenderProps', () => {
       targetPosition: CANVAS_HANDLE_POSITION.Top,
     })
 
-    expect(geometry.points).toEqual([
+    expect(geometry.hitPoints).toEqual([
       { x: 100, y: 150 },
       { x: 100, y: 198 },
       { x: 200, y: 198 },
@@ -60,7 +60,7 @@ describe('buildStepCanvasEdgeGeometryFromRenderProps', () => {
       targetPosition: CANVAS_HANDLE_POSITION.Top,
     })
 
-    expect(geometry.points).toEqual([
+    expect(geometry.hitPoints).toEqual([
       { x: 100, y: 150 },
       { x: 100, y: 198 },
       { x: 100, y: 200 },
@@ -107,7 +107,7 @@ describe('buildStepCanvasEdgeGeometryFromEdge', () => {
     )
 
     expect(geometry).not.toBeNull()
-    expect(geometry!.points).toEqual([
+    expect(geometry!.hitPoints).toEqual([
       { x: 100, y: 100 },
       { x: 100, y: 148 },
       { x: 250, y: 148 },
@@ -152,7 +152,7 @@ describe('buildStepCanvasEdgeGeometryFromEdge', () => {
     )
 
     expect(geometry).not.toBeNull()
-    expect(geometry!.points).toEqual([
+    expect(geometry!.hitPoints).toEqual([
       { x: 100, y: 100 },
       { x: 100, y: 50 },
       { x: 230, y: 50 },

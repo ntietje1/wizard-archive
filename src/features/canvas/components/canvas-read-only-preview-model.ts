@@ -1,7 +1,5 @@
-import { buildBezierCanvasEdgeGeometryFromEdge } from '../edges/bezier/bezier-canvas-edge-geometry'
-import { buildStraightCanvasEdgeGeometryFromEdge } from '../edges/straight/straight-canvas-edge-geometry'
-import { buildStepCanvasEdgeGeometryFromEdge } from '../edges/step/step-canvas-edge-geometry'
-import type { CanvasPathEdgeGeometry } from '../edges/shared/canvas-path-edge'
+import { buildCanvasEdgeGeometry, resolveCanvasEdgeType } from '../edges/canvas-edge-registry'
+import type { CanvasEdgeGeometry } from '../edges/shared/canvas-edge-geometry'
 import type { CanvasEngineSnapshot, CanvasInternalNode } from '../system/canvas-engine'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from '../types/canvas-domain-types'
 
@@ -61,7 +59,7 @@ export type CanvasPreviewEdgeType = 'bezier' | 'straight' | 'step'
 
 export type CanvasPreviewEdgeRender = {
   edge: CanvasDocumentEdge
-  geometry: CanvasPathEdgeGeometry
+  geometry: CanvasEdgeGeometry
   type: CanvasPreviewEdgeType
 }
 
@@ -100,21 +98,14 @@ function getPreviewEdgeEndpointNodes(
 }
 
 function resolvePreviewEdgeType(type: string | undefined): CanvasPreviewEdgeType {
-  return type === 'straight' || type === 'step' || type === 'bezier' ? type : 'bezier'
+  return resolveCanvasEdgeType(type)
 }
 
 function getPreviewEdgeGeometry(
   edge: CanvasDocumentEdge & { type: CanvasPreviewEdgeType },
   nodesById: ReadonlyMap<string, CanvasDocumentNode>,
 ) {
-  switch (edge.type) {
-    case 'straight':
-      return buildStraightCanvasEdgeGeometryFromEdge(edge, nodesById)
-    case 'step':
-      return buildStepCanvasEdgeGeometryFromEdge(edge, nodesById)
-    case 'bezier':
-      return buildBezierCanvasEdgeGeometryFromEdge(edge, nodesById)
-  }
+  return buildCanvasEdgeGeometry(edge, nodesById)
 }
 
 export function areCanvasPreviewEdgeRendersEqual(

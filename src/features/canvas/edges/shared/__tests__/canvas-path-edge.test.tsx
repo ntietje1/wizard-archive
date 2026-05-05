@@ -18,7 +18,15 @@ describe('CanvasPathEdge', () => {
     const registerEdgePaths = vi.fn((_edgeId: string, _paths: CanvasRegisteredEdgePaths) => {
       return unregister
     })
-    const geometry = { path: 'M 0,0 L 10,10', labelX: 5, labelY: 5 }
+    const geometry = {
+      path: 'M 0,0 L 10,10',
+      labelX: 5,
+      labelY: 5,
+      hitPoints: [
+        { x: 0, y: 0 },
+        { x: 10, y: 10 },
+      ],
+    }
     const { rerender } = renderEdge(
       <CanvasPathEdge props={createEdgeProps()} geometry={null} />,
       registerEdgePaths,

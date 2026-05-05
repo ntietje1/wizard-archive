@@ -56,16 +56,22 @@ vi.mock('../embed-note-content', () => ({
 }))
 
 vi.mock('../../../runtime/providers/canvas-runtime', () => ({
-  useCanvasCanEdit: () => true,
-  useCanvasDocumentWriter: () => ({
-    patchNodeData: vi.fn(),
+  useCanvasDocumentRuntime: () => ({
+    documentWriter: {
+      patchNodeData: vi.fn(),
+    },
   }),
-  useCanvasDomRuntime: () => ({
-    registerNodeSurfaceElement: vi.fn(() => vi.fn()),
+  useCanvasInteractionRuntime: () => ({
+    canEdit: true,
+    editSession: {
+      editingEmbedId: null,
+      setEditingEmbedId,
+    },
   }),
-  useCanvasEditSession: () => ({
-    editingEmbedId: null,
-    setEditingEmbedId,
+  useCanvasViewportRuntime: () => ({
+    domRuntime: {
+      registerNodeSurfaceElement: vi.fn(() => vi.fn()),
+    },
   }),
 }))
 

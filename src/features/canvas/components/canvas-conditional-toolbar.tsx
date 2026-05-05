@@ -79,13 +79,13 @@ export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarPr
     (state) => state.selection.gestureKind !== null,
   )
   const toolbar = useCanvasToolbarModel()
-  if (
-    !canEdit ||
-    isSelectionGestureActive ||
-    (toolbar.properties.length === 0 && !toolbar.hasSelection)
-  ) {
+  if (!canEdit || isSelectionGestureActive || !toolbar.hasContent) {
     return null
   }
+
+  const showPropertiesToEdgeDivider = toolbar.propertiesSection && toolbar.edgeTypeSection
+  const showReorderDivider =
+    toolbar.reorderSection && (toolbar.propertiesSection || toolbar.edgeTypeSection)
 
   return (
     <div
@@ -93,39 +93,32 @@ export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarPr
       role="toolbar"
       aria-label="Canvas conditional toolbar"
     >
-      {toolbar.properties.length > 0 ? (
+      {toolbar.propertiesSection ? (
         <CanvasPropertyControls
-          properties={toolbar.properties}
-          onPropertyChange={toolbar.runPropertyChange}
-          onPropertyPreviewChange={toolbar.runPropertyPreviewChange}
-          onPropertyPreviewCommit={toolbar.commitPropertyPreviewChange}
-          onPropertyPreviewCancel={toolbar.cancelPropertyPreviewChange}
+          properties={toolbar.propertiesSection.properties}
+          onPropertyChange={toolbar.propertiesSection.runPropertyChange}
+          onPropertyPreviewChange={toolbar.propertiesSection.runPropertyPreviewChange}
+          onPropertyPreviewCommit={toolbar.propertiesSection.commitPropertyPreviewChange}
+          onPropertyPreviewCancel={toolbar.propertiesSection.cancelPropertyPreviewChange}
         />
       ) : null}
-      {toolbar.properties.length > 0 &&
-      (toolbar.hasOnlySelectedEdges || toolbar.showsEdgeToolDefaults) ? (
+      {showPropertiesToEdgeDivider ? (
         <div className="my-1 h-px w-full bg-border" aria-hidden="true" />
       ) : null}
-      {toolbar.hasOnlySelectedEdges ? (
+      {toolbar.edgeTypeSection ? (
         <CanvasEdgeTypeControls
-          selectedType={toolbar.selectedEdgeType}
-          onSelectType={toolbar.setSelectedEdgesType}
+          selectedType={toolbar.edgeTypeSection.selectedType}
+          onSelectType={toolbar.edgeTypeSection.setType}
         />
       ) : null}
-      {toolbar.showsEdgeToolDefaults ? (
-        <CanvasEdgeTypeControls
-          selectedType={toolbar.edgeType}
-          onSelectType={toolbar.setEdgeType}
-        />
-      ) : null}
-      {(toolbar.properties.length > 0 ||
-        toolbar.hasOnlySelectedEdges ||
-        toolbar.showsEdgeToolDefaults) &&
-      toolbar.hasSelection ? (
+      {showReorderDivider ? (
         <div className="my-1 h-px w-full bg-border" aria-hidden="true" />
       ) : null}
-      {toolbar.hasSelection ? (
-        <CanvasReorderControls commands={toolbar.commands} selection={toolbar.selectionSnapshot} />
+      {toolbar.reorderSection ? (
+        <CanvasReorderControls
+          commands={toolbar.reorderSection.commands}
+          selection={toolbar.reorderSection.selection}
+        />
       ) : null}
     </div>
   )

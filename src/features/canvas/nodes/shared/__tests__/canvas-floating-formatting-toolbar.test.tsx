@@ -2,7 +2,12 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { Schema } from '@tiptap/pm/model'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
+import { applyCanvasToolbarTextAlignment } from '../canvas-floating-formatting-toolbar-commands'
 import { CanvasFloatingFormattingToolbar } from '../canvas-floating-formatting-toolbar'
+import {
+  EMPTY_TOOLBAR_SNAPSHOT,
+  toolbarSnapshotsEqual,
+} from '../canvas-floating-formatting-toolbar-model'
 import { getNextBlockTypeMenuState } from '../canvas-floating-formatting-toolbar-state'
 import { CANVAS_SELECTION_OVERLAY_Z_INDEX } from '../../../components/canvas-screen-space-overlay-utils'
 
@@ -15,6 +20,38 @@ type TestBlock = {
 }
 
 describe('CanvasFloatingFormattingToolbar', () => {
+  it('compares formatting toolbar snapshots by rendered state', () => {
+    const snapshot = {
+      ...EMPTY_TOOLBAR_SNAPSHOT,
+      activeStyles: { bold: true },
+    }
+
+    expect(toolbarSnapshotsEqual(snapshot, { ...snapshot, activeStyles: { bold: true } })).toBe(
+      true,
+    )
+    expect(toolbarSnapshotsEqual(snapshot, { ...snapshot, activeStyles: { italic: true } })).toBe(
+      false,
+    )
+  })
+
+  it('applies alignment through the extracted command helper', () => {
+    const paragraph = createParagraphBlock('paragraph-1', { textAlignment: 'left' })
+    const editor = createEditor({
+      activeStyles: {},
+      selectedBlocks: [paragraph],
+    })
+
+    applyCanvasToolbarTextAlignment({
+      alignment: 'right',
+      editor: editor as never,
+      selectionSnapshot: null,
+    })
+
+    expect(editor.updateBlock).toHaveBeenCalledWith(paragraph, {
+      props: { textAlignment: 'right' },
+    })
+  })
+
   it('reflects the current inline style and alignment state', () => {
     const editor = createEditor({
       activeStyles: { bold: true },

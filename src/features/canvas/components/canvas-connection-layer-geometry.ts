@@ -1,15 +1,9 @@
 import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
 import type { CanvasHandlePosition } from '~/features/canvas/types/canvas-domain-types'
-import { buildBezierCanvasEdgeGeometryFromEdge } from '../edges/bezier/bezier-canvas-edge-geometry'
+import { buildCanvasEdgeGeometry } from '../edges/canvas-edge-registry'
 import type { CanvasEdgeRenderGeometryProps, CanvasEdgeType } from '../edges/canvas-edge-types'
-import {
-  buildStepCanvasEdgeGeometryFromEdge,
-  buildStepCanvasEdgeGeometryFromRenderProps,
-} from '../edges/step/step-canvas-edge-geometry'
-import {
-  buildStraightCanvasEdgeGeometryFromEdge,
-  buildStraightCanvasEdgeGeometryFromRenderProps,
-} from '../edges/straight/straight-canvas-edge-geometry'
+import { buildStepCanvasEdgeGeometryFromRenderProps } from '../edges/step/step-canvas-edge-geometry'
+import { buildStraightCanvasEdgeGeometryFromRenderProps } from '../edges/straight/straight-canvas-edge-geometry'
 import type { CanvasConnectionDraft } from '../runtime/interaction/canvas-connection-gesture-types'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from '../types/canvas-domain-types'
 import type { Point2D } from '../utils/canvas-awareness-types'
@@ -37,16 +31,7 @@ export function buildConnectionDraftGeometry(
       type: edgeType,
     }
 
-    switch (edgeType) {
-      case 'bezier':
-        return buildBezierCanvasEdgeGeometryFromEdge(edge, nodesById)
-      case 'straight':
-        return buildStraightCanvasEdgeGeometryFromEdge(edge, nodesById)
-      case 'step':
-        return buildStepCanvasEdgeGeometryFromEdge(edge, nodesById)
-      default:
-        return assertNever(edgeType)
-    }
+    return buildCanvasEdgeGeometry(edge, nodesById)
   }
 
   switch (edgeType) {

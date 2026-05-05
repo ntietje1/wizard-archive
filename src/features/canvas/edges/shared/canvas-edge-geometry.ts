@@ -35,11 +35,11 @@ type CanvasEdgeEndpoints = {
   targetPosition: CanvasHandlePosition
 }
 
-export type PolylineCanvasEdgeGeometry = {
+export type CanvasEdgeGeometry = {
   path: string
   labelX: number
   labelY: number
-  points: Array<Point2D>
+  hitPoints: ReadonlyArray<Point2D>
 }
 
 function handleIdToPosition(
@@ -163,9 +163,54 @@ export function getCanvasEdgeInteractionWidth(): number {
   return DEFAULT_CANVAS_EDGE_INTERACTION_WIDTH
 }
 
-export function getCanvasEdgePointThreshold(zoom: number): number {
+function getCanvasEdgePointThreshold(zoom: number): number {
   const safeZoom = Number.isFinite(zoom) && zoom > MIN_ZOOM ? zoom : MIN_ZOOM
   return DEFAULT_CANVAS_EDGE_INTERACTION_WIDTH / 2 / safeZoom
+}
+
+export function getCanvasEdgeGeometryBounds(geometry: CanvasEdgeGeometry): Bounds | null {
+  return boundsFromPoints(geometry.hitPoints)
+}
+
+export function canvasEdgeGeometryContainsPoint(
+  geometry: CanvasEdgeGeometry,
+  point: Point2D,
+  zoom: number,
+): boolean {
+  const threshold = getCanvasEdgePointThreshold(zoom)
+  const bounds = getCanvasEdgeGeometryBounds(geometry)
+  if (
+    bounds &&
+    !rectIntersectsBounds(bounds, {
+      x: point.x - threshold,
+      y: point.y - threshold,
+      width: threshold * 2,
+      height: threshold * 2,
+    })
+  ) {
+    return false
+  }
+
+  return pointNearPolyline(point, geometry.hitPoints, threshold)
+}
+
+export function canvasEdgeGeometryIntersectsRectangle(
+  geometry: CanvasEdgeGeometry,
+  rect: Bounds,
+): boolean {
+  const bounds = getCanvasEdgeGeometryBounds(geometry)
+  if (bounds && !rectIntersectsBounds(bounds, rect)) {
+    return false
+  }
+
+  return polylineIntersectsRect(geometry.hitPoints, rect)
+}
+
+export function canvasEdgeGeometryIntersectsPolygon(
+  geometry: CanvasEdgeGeometry,
+  polygon: ReadonlyArray<Point2D>,
+): boolean {
+  return polylineIntersectsPolygon(geometry.hitPoints, polygon)
 }
 
 export function getCanvasEdgeEndpoints(
@@ -260,7 +305,7 @@ export function getPolylineMidpoint(points: ReadonlyArray<Point2D>): Point2D {
   return points[points.length - 1]
 }
 
-export function pointNearPolyline(
+function pointNearPolyline(
   point: Point2D,
   polyline: ReadonlyArray<Point2D>,
   threshold: number,
@@ -294,7 +339,7 @@ function pointInRect(point: Point2D, rect: Bounds): boolean {
   )
 }
 
-export function polylineIntersectsRect(points: ReadonlyArray<Point2D>, rect: Bounds): boolean {
+function polylineIntersectsRect(points: ReadonlyArray<Point2D>, rect: Bounds): boolean {
   if (points.some((point) => pointInRect(point, rect))) {
     return true
   }
@@ -328,7 +373,7 @@ export function polylineIntersectsRect(points: ReadonlyArray<Point2D>, rect: Bou
   return false
 }
 
-export function polylineIntersectsPolygon(
+function polylineIntersectsPolygon(
   points: ReadonlyArray<Point2D>,
   polygon: ReadonlyArray<Point2D>,
 ): boolean {

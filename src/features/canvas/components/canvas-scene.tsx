@@ -12,7 +12,7 @@ import { CanvasNodeResizeMetadataProvider } from '../nodes/shared/canvas-node-re
 import { useCanvasConnectionGesture } from '../runtime/interaction/canvas-connection-gesture'
 import { isCanvasEmptyPaneTarget } from '../runtime/interaction/canvas-pane-targets'
 import { useCanvasEngine } from '../react/use-canvas-engine'
-import { useCanvasDomRuntime } from '../runtime/providers/canvas-runtime'
+import { useCanvasViewportRuntime } from '../runtime/providers/canvas-runtime'
 import type {
   CanvasConnection,
   CanvasDocumentEdge,
@@ -47,7 +47,7 @@ export function CanvasScene({
   onPaneContextMenu,
 }: CanvasSceneProps) {
   const canvasEngine = useCanvasEngine()
-  const domRuntime = useCanvasDomRuntime()
+  const { domRuntime } = useCanvasViewportRuntime()
   const paneRef = useRef<HTMLDivElement | null>(null)
   const viewportRef = useRef<HTMLDivElement | null>(null)
   const nodeHandlersRef = useRef({

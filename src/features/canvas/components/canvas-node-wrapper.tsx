@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef } from 'react'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useCanvasEngine, useCanvasEngineSelector } from '../react/use-canvas-engine'
-import { useCanvasDomRuntime } from '../runtime/providers/canvas-runtime'
+import { useCanvasViewportRuntime } from '../runtime/providers/canvas-runtime'
 import type { CanvasInternalNode } from '../system/canvas-engine'
 import type { CanvasDocumentNode } from '../types/canvas-domain-types'
 import type {
@@ -37,7 +37,7 @@ export const CanvasNodeWrapper = memo(function CanvasNodeWrapper({
     areCanvasNodeShellSnapshotsEqual,
   )
   const canvasEngine = useCanvasEngine()
-  const domRuntime = useCanvasDomRuntime()
+  const { domRuntime } = useCanvasViewportRuntime()
   const nodeRef = useRef<HTMLDivElement | null>(null)
   const shellMounted = shell !== null
   const shellId = shell?.id
