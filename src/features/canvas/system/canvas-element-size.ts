@@ -41,30 +41,26 @@ export function readResizeObserverBorderBoxSize(entry: ResizeObserverEntry): Can
     }
   }
 
+  const boxAdditions = getBoxAdditions(getComputedStyle(entry.target))
   return {
-    width: entry.contentRect.width + getHorizontalBoxAdditions(entry.target),
-    height: entry.contentRect.height + getVerticalBoxAdditions(entry.target),
+    width: entry.contentRect.width + boxAdditions.width,
+    height: entry.contentRect.height + boxAdditions.height,
   }
 }
 
-function getHorizontalBoxAdditions(target: Element) {
-  const style = getComputedStyle(target)
-  return (
-    readCssPixelValue(style.paddingLeft) +
-    readCssPixelValue(style.paddingRight) +
-    readCssPixelValue(style.borderLeftWidth) +
-    readCssPixelValue(style.borderRightWidth)
-  )
-}
-
-function getVerticalBoxAdditions(target: Element) {
-  const style = getComputedStyle(target)
-  return (
-    readCssPixelValue(style.paddingTop) +
-    readCssPixelValue(style.paddingBottom) +
-    readCssPixelValue(style.borderTopWidth) +
-    readCssPixelValue(style.borderBottomWidth)
-  )
+function getBoxAdditions(style: CSSStyleDeclaration): { width: number; height: number } {
+  return {
+    width:
+      readCssPixelValue(style.paddingLeft) +
+      readCssPixelValue(style.paddingRight) +
+      readCssPixelValue(style.borderLeftWidth) +
+      readCssPixelValue(style.borderRightWidth),
+    height:
+      readCssPixelValue(style.paddingTop) +
+      readCssPixelValue(style.paddingBottom) +
+      readCssPixelValue(style.borderTopWidth) +
+      readCssPixelValue(style.borderBottomWidth),
+  }
 }
 
 function readCssPixelValue(value: string) {

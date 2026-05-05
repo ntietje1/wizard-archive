@@ -29,15 +29,12 @@ import type {
   CanvasRuntimeEdge,
 } from './canvas-edge-types'
 import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
-import type { CanvasContextMenuContributor } from '../runtime/context-menu/canvas-context-menu-types'
 import type { Point2D } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-geometry-utils'
 import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
 } from '~/features/canvas/types/canvas-domain-types'
-
-const EMPTY_CONTEXT_MENU_CONTRIBUTORS: ReadonlyArray<CanvasContextMenuContributor> = []
 
 type NormalizedCanvasEdgeEntry = {
   rawEdge: CanvasDocumentEdge
@@ -88,7 +85,6 @@ function normalizeCanvasEdges(
 }
 
 type CanvasEdgeSpec = {
-  contextMenuContributors: ReadonlyArray<CanvasContextMenuContributor>
   getBounds: (edge: CanvasRuntimeEdge, context: CanvasEdgeSelectionContext) => Bounds | null
   containsPoint: (
     edge: CanvasRuntimeEdge,
@@ -111,9 +107,8 @@ type CanvasEdgeSpec = {
   ) => CanvasInspectableProperties
 }
 
-export const canvasEdgeSpecs = {
+const canvasEdgeSpecs = {
   bezier: {
-    contextMenuContributors: EMPTY_CONTEXT_MENU_CONTRIBUTORS,
     getBounds: (edge, context) => getBezierCanvasEdgeBounds(edge, context.nodesById),
     containsPoint: (edge, point, context) =>
       bezierCanvasEdgeContainsPoint(edge, point, context.nodesById, context.zoom),
@@ -124,7 +119,6 @@ export const canvasEdgeSpecs = {
     getProperties: getCanvasStrokeEdgeProperties,
   },
   straight: {
-    contextMenuContributors: EMPTY_CONTEXT_MENU_CONTRIBUTORS,
     getBounds: (edge, context) => getStraightCanvasEdgeBounds(edge, context.nodesById),
     containsPoint: (edge, point, context) =>
       straightCanvasEdgeContainsPoint(edge, point, context.nodesById, context.zoom),
@@ -135,7 +129,6 @@ export const canvasEdgeSpecs = {
     getProperties: getCanvasStrokeEdgeProperties,
   },
   step: {
-    contextMenuContributors: EMPTY_CONTEXT_MENU_CONTRIBUTORS,
     getBounds: (edge, context) => getStepCanvasEdgeBounds(edge, context.nodesById),
     containsPoint: (edge, point, context) =>
       stepCanvasEdgeContainsPoint(edge, point, context.nodesById, context.zoom),

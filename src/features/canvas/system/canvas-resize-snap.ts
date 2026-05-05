@@ -6,7 +6,7 @@ import {
   isCornerResizeHandle,
   isLeadingResizeHandle,
 } from './canvas-resize-handles'
-import type { CanvasDragGuide } from '../runtime/interaction/canvas-drag-snap-utils'
+import type { CanvasDragGuide } from '../utils/canvas-snap-guides'
 import type {
   CanvasResizeBounds,
   CanvasResizeHandlePosition,

@@ -8,7 +8,7 @@ import {
   isCanvasPerformanceEnabled,
   recordCanvasPerformanceMetric,
 } from '../runtime/performance/canvas-performance-metrics'
-import { CanvasRuntimeProvider } from '../runtime/providers/canvas-runtime-context'
+import { CanvasRuntimeProvider } from '../runtime/providers/canvas-runtime'
 import { CanvasEngineProvider } from '../react/canvas-engine-context'
 import { useCanvasPendingSelectionPreviewSummary } from '../runtime/selection/use-canvas-pending-selection-preview'
 import { loadPersistedCanvasViewport } from '../runtime/interaction/canvas-viewport-storage'
@@ -82,30 +82,6 @@ export function CanvasEditor({
     doc,
     initialViewport,
   })
-  const documentServices = useMemo(
-    () => ({
-      commands: runtime.commands,
-      documentWriter: runtime.documentWriter,
-      history: runtime.history,
-      nodeActions: runtime.nodeActions,
-    }),
-    [runtime.commands, runtime.documentWriter, runtime.history, runtime.nodeActions],
-  )
-  const interactionServices = useMemo(
-    () => ({
-      canEdit,
-      editSession: runtime.editSession,
-      selection: runtime.selection,
-      viewportController: runtime.viewportController,
-    }),
-    [canEdit, runtime.editSession, runtime.selection, runtime.viewportController],
-  )
-  const presenceServices = useMemo(
-    () => ({
-      remoteHighlights: runtime.remoteHighlights,
-    }),
-    [runtime.remoteHighlights],
-  )
   const canvasCursor = runtime.toolCursor ?? 'pointer'
   const canvasEditorContent = (
     <CanvasEditorContent canEdit={canEdit} runtime={runtime} canvasCursor={canvasCursor} />
@@ -114,10 +90,16 @@ export function CanvasEditor({
   return (
     <CanvasEngineProvider engine={runtime.canvasEngine}>
       <CanvasRuntimeProvider
+        canEdit={canEdit}
+        commands={runtime.commands}
+        documentWriter={runtime.documentWriter}
         domRuntime={runtime.domRuntime}
-        documentServices={documentServices}
-        interactionServices={interactionServices}
-        presenceServices={presenceServices}
+        editSession={runtime.editSession}
+        history={runtime.history}
+        nodeActions={runtime.nodeActions}
+        remoteHighlights={runtime.remoteHighlights}
+        selection={runtime.selection}
+        viewportController={runtime.viewportController}
       >
         {isCanvasPerformanceEnabled() ? (
           <Profiler

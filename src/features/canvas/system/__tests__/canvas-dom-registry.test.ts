@@ -63,17 +63,6 @@ describe('createCanvasDomRegistry', () => {
 
     Object.defineProperty(surface, 'offsetWidth', { configurable: true, value: 0 })
     Object.defineProperty(surface, 'offsetHeight', { configurable: true, value: 0 })
-    vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({
-      bottom: 0,
-      height: 0,
-      left: 0,
-      right: 0,
-      top: 0,
-      width: 0,
-      x: 0,
-      y: 0,
-      toJSON: () => ({}),
-    })
     surface.append(viewport)
 
     registry.registerViewport(viewport)

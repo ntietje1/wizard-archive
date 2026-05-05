@@ -134,7 +134,7 @@ vi.mock('../../runtime/use-canvas-editor-runtime', () => ({
   useCanvasEditorRuntime: () => runtimeMock,
 }))
 
-vi.mock('../../runtime/providers/canvas-runtime-context', () => ({
+vi.mock('../../runtime/providers/canvas-runtime', () => ({
   CanvasRuntimeProvider: ({ children }: { children: React.ReactNode }) => children,
 }))
 
@@ -259,7 +259,7 @@ describe('CanvasEditor', () => {
     doc.destroy()
   })
 
-  it('keeps canvas scene overlays inside a lower stacking context than floating UI', () => {
+  it('applies the base z-index class to the canvas surface', () => {
     const doc = new Y.Doc()
 
     render(

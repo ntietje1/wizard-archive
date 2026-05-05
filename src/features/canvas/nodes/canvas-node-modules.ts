@@ -51,7 +51,6 @@ const DEFAULT_TEXT_SIZE = {
   width: TEXT_NODE_DEFAULT_WIDTH,
   height: TEXT_NODE_DEFAULT_HEIGHT,
 } as const
-const EMPTY_CONTEXT_MENU_CONTRIBUTORS: ReadonlyArray<CanvasContextMenuContributor> = []
 export type CanvasNodeDataPatch<TType extends CanvasNodeType = CanvasNodeType> = Partial<{
   [TKey in keyof CanvasNodeDataByType[TType]]: CanvasNodeDataByType[TType][TKey] | null
 }>
@@ -146,7 +145,7 @@ type CanvasNodeSpec<TType extends CanvasNodeType = CanvasNodeType> = {
   placement: CanvasNodePlacementBehavior | null
   defaultSize: { width: number; height: number } | null
   createDefaultData: () => CanvasNodeDataPatch<TType> | null
-  contextMenuContributors: ReadonlyArray<CanvasContextMenuContributor>
+  contextMenuContributors?: ReadonlyArray<CanvasContextMenuContributor>
   getProperties?: (
     node: Extract<AnyNormalizedCanvasNode, { type: TType }>,
     patchNodeData: PatchCanvasNodeData,
@@ -158,7 +157,7 @@ type CanvasNodeSpec<TType extends CanvasNodeType = CanvasNodeType> = {
   ) => CanvasDocumentNode
 }
 
-export const canvasNodeSpecs = {
+const canvasNodeSpecs = {
   embed: {
     placement: {
       anchor: 'top-left',
@@ -176,7 +175,6 @@ export const canvasNodeSpecs = {
     placement: null,
     defaultSize: null,
     createDefaultData: () => null,
-    contextMenuContributors: EMPTY_CONTEXT_MENU_CONTRIBUTORS,
     getProperties: getStrokeNodeProperties,
     resize: resizeStrokeNode,
   },
@@ -191,7 +189,6 @@ export const canvasNodeSpecs = {
       ...normalizeCanvasNodeSurfaceStyleData(undefined),
       content: createEmptyCanvasRichTextContent(),
     }),
-    contextMenuContributors: EMPTY_CONTEXT_MENU_CONTRIBUTORS,
     getProperties: getSurfaceNodeProperties,
     resize: undefined,
   },

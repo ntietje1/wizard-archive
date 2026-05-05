@@ -4,18 +4,16 @@ import {
   getSnapThresholdForZoom,
   resolveCanvasDragSnap,
   withBoundsPosition,
-} from '../runtime/interaction/canvas-drag-snap-utils'
-import {
-  clearCanvasDragSnapGuides,
-  setCanvasDragSnapGuides,
-} from '../runtime/interaction/canvas-drag-snap-overlay'
+} from '../utils/canvas-snap-guides'
 import type { CanvasEngine } from './canvas-engine'
+import type { CanvasDragGuide } from '../utils/canvas-snap-guides'
 import type { CanvasDocumentNode, CanvasPosition } from '../types/canvas-domain-types'
 
 export interface CanvasDragEvent {
   sourceEvent: PointerEvent | MouseEvent
   activeNodeId: string
   draggedNodeIds: ReadonlySet<string>
+  guides: ReadonlyArray<CanvasDragGuide>
   startPositions: ReadonlyMap<string, CanvasPosition>
   resolvedPositions: ReadonlyMap<string, CanvasPosition>
   delta: CanvasPosition
@@ -56,6 +54,11 @@ interface CanvasDragSession {
   pointerId: number | null
 }
 
+interface ResolvedDragPositions {
+  guides: ReadonlyArray<CanvasDragGuide>
+  positions: ReadonlyMap<string, CanvasPosition>
+}
+
 export function createCanvasDragController({
   callbacks = {},
   canvasEngine,
@@ -80,7 +83,6 @@ export function createCanvasDragController({
   let session: CanvasDragSession | null = null
 
   const destroy = () => {
-    clearCanvasDragSnapGuides()
     session = null
   }
 
@@ -141,7 +143,6 @@ export function createCanvasDragController({
     endSession(
       new MouseEvent('mouseup', { clientX: start.x + delta.x, clientY: start.y + delta.y }),
     )
-    clearCanvasDragSnapGuides()
     session = null
   }
 
@@ -187,7 +188,9 @@ export function createCanvasDragController({
     if (session.started) {
       canvasEngine.updateDrag(session.startPositions)
       canvasEngine.stopDrag()
-      callbacks.onCancel?.(createDragEvent(event, session, session.startPositions, false, false))
+      callbacks.onCancel?.(
+        createDragEvent(event, session, session.startPositions, [], false, false),
+      )
     }
 
     destroy()
@@ -201,7 +204,9 @@ export function createCanvasDragController({
 
     session.started = true
     canvasEngine.startDrag(session.draggedNodeIds)
-    callbacks.onStart?.(createDragEvent(sourceEvent, session, session.startPositions, true, false))
+    callbacks.onStart?.(
+      createDragEvent(sourceEvent, session, session.startPositions, [], true, false),
+    )
   }
 
   function updateSession(sourceEvent: PointerEvent | MouseEvent) {
@@ -209,7 +214,7 @@ export function createCanvasDragController({
       return
     }
 
-    const resolvedPositions = resolveDragPositions({
+    const resolved = resolveDragPositions({
       getCanvasPosition,
       getPrimaryPressed,
       getShiftPressed,
@@ -217,9 +222,11 @@ export function createCanvasDragController({
       pointer: { x: sourceEvent.clientX, y: sourceEvent.clientY },
       session,
     })
-    session.lastResolvedPositions = resolvedPositions
-    canvasEngine.updateDrag(resolvedPositions)
-    callbacks.onDrag?.(createDragEvent(sourceEvent, session, resolvedPositions, false, false))
+    session.lastResolvedPositions = resolved.positions
+    canvasEngine.updateDrag(resolved.positions)
+    callbacks.onDrag?.(
+      createDragEvent(sourceEvent, session, resolved.positions, resolved.guides, false, false),
+    )
   }
 
   function endSession(sourceEvent: PointerEvent | MouseEvent) {
@@ -229,7 +236,7 @@ export function createCanvasDragController({
 
     canvasEngine.stopDrag()
     callbacks.onEnd?.(
-      createDragEvent(sourceEvent, session, session.lastResolvedPositions, false, true),
+      createDragEvent(sourceEvent, session, session.lastResolvedPositions, [], false, true),
     )
   }
 
@@ -322,7 +329,7 @@ function resolveDragPositions({
   getZoom: () => number
   pointer: CanvasPosition
   session: CanvasDragSession
-}) {
+}): ResolvedDragPositions {
   const currentPointer = getCanvasPosition(pointer)
   const constrainedPointer = getShiftPressed()
     ? constrainPointToAxis(session.startPointer, currentPointer)
@@ -350,11 +357,6 @@ function resolveDragPositions({
       targetBounds: session.targetBounds,
       threshold: getSnapThresholdForZoom(getZoom()),
     })
-    if (snap.guides.length > 0) {
-      setCanvasDragSnapGuides(snap.guides)
-    } else {
-      clearCanvasDragSnapGuides()
-    }
 
     for (const [nodeId, position] of resolvedPositions) {
       resolvedPositions.set(nodeId, {
@@ -362,23 +364,32 @@ function resolveDragPositions({
         y: position.y + snap.yAdjustment,
       })
     }
-  } else {
-    clearCanvasDragSnapGuides()
-  }
 
-  for (const nodeId of resolvedPositions.keys()) {
-    if (!session.existingNodeIds.has(nodeId)) {
-      resolvedPositions.delete(nodeId)
+    const cleanedPositions = filterMissingDragPositionsInPlace(
+      resolvedPositions,
+      session.existingNodeIds,
+    )
+    return {
+      guides: snap.guides,
+      positions: cleanedPositions,
     }
   }
 
-  return resolvedPositions
+  const cleanedPositions = filterMissingDragPositionsInPlace(
+    resolvedPositions,
+    session.existingNodeIds,
+  )
+  return {
+    guides: [],
+    positions: cleanedPositions,
+  }
 }
 
 function createDragEvent(
   sourceEvent: PointerEvent | MouseEvent,
   session: CanvasDragSession,
   resolvedPositions: ReadonlyMap<string, CanvasPosition>,
+  guides: ReadonlyArray<CanvasDragGuide>,
   useStartPositions: boolean,
   final: boolean,
 ): CanvasDragEvent {
@@ -394,11 +405,25 @@ function createDragEvent(
     sourceEvent,
     activeNodeId: session.activeNodeId,
     draggedNodeIds: session.draggedNodeIds,
+    guides,
     startPositions: session.startPositions,
     resolvedPositions,
     delta,
     final,
   }
+}
+
+function filterMissingDragPositionsInPlace(
+  positions: Map<string, CanvasPosition>,
+  existingNodeIds: ReadonlySet<string>,
+) {
+  for (const nodeId of positions.keys()) {
+    if (!existingNodeIds.has(nodeId)) {
+      positions.delete(nodeId)
+    }
+  }
+
+  return positions
 }
 
 function shouldIgnoreDragTarget(target: EventTarget | null) {

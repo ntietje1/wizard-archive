@@ -102,3 +102,5 @@ function createFormattingSnapshot(session: CanvasRichTextFormattingSession, revi
     }),
   }
 }
+
+export type CanvasRichTextFormattingSnapshot = ReturnType<typeof createFormattingSnapshot>

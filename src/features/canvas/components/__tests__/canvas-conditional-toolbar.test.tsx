@@ -8,7 +8,7 @@ import {
   createCanvasRuntime,
   createCanvasRuntimeEnginePair,
 } from '../../runtime/__tests__/canvas-runtime-test-utils'
-import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime-context'
+import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime'
 import type { CanvasEngine } from '../../system/canvas-engine'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import type {

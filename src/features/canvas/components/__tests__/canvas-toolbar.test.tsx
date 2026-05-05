@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasToolbar } from '../canvas-toolbar'
 import { createCanvasRuntime } from '../../runtime/__tests__/canvas-runtime-test-utils'
-import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime-context'
+import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import type { CanvasViewportController } from '../../system/canvas-viewport-controller'
 
@@ -46,6 +46,7 @@ describe('CanvasToolbar', () => {
       zoomOut: viewportActionMock.zoomOut,
       fitView: viewportActionMock.fitView,
       syncFromDocumentOrAdapter: vi.fn(),
+      setZoomBounds: vi.fn(),
       commit: vi.fn(),
       destroy: vi.fn(),
     }

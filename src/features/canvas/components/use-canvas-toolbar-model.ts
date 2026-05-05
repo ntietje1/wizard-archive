@@ -1,24 +1,15 @@
-import { useRef } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { resolveCanvasEdgeType } from '../edges/canvas-edge-registry'
+import type { CanvasEdgeType } from '../edges/canvas-edge-types'
 import {
-  getCanvasEdgeInspectableProperties,
-  normalizeCanvasEdge,
-  resolveCanvasEdgeType,
-} from '../edges/canvas-edge-registry'
-import type { CanvasEdgePatch, CanvasEdgeType } from '../edges/canvas-edge-types'
-import { useCanvasDocumentServices, useCanvasDomRuntime } from '../runtime/providers/canvas-runtime'
-import {
-  getCanvasNodeInspectableProperties,
-  normalizeCanvasNode,
-} from '../nodes/canvas-node-modules'
-import type { CanvasNodeDataPatch } from '../nodes/canvas-node-modules'
+  useCanvasCommands,
+  useCanvasDocumentWriter,
+  useCanvasDomRuntime,
+  useCanvasNodeActions,
+} from '../runtime/providers/canvas-runtime'
 import { useCanvasRichTextFormattingSnapshot } from '../nodes/shared/canvas-rich-text-formatting-session'
-import { applyCanvasRichTextDefaultTextColor } from '../nodes/shared/canvas-rich-text-default-color'
-import { restoreCanvasRichTextSelection } from '../nodes/shared/canvas-rich-text-blocknote-adapter'
 import { measureCanvasPerformance } from '../runtime/performance/canvas-performance-metrics'
-import { canvasToolSpecs } from '../tools/canvas-tool-modules'
 import { useCanvasToolPropertyContext, useCanvasToolStore } from '../stores/canvas-tool-store'
-import { textColorCanvasProperty } from '../properties/canvas-property-definitions'
 import { useCanvasEngine, useCanvasEngineSelector } from '../react/use-canvas-engine'
 import {
   areCanvasPropertyEdgesEqual,
@@ -26,27 +17,21 @@ import {
   selectCanvasSelectedEdges,
   selectCanvasSelectedNodes,
 } from '../system/canvas-engine-selectors'
-import { createCanvasPropertySessionController } from '../system/canvas-property-session-controller'
 import { areCanvasSelectionsEqual } from '../system/canvas-selection'
-import { resolveCanvasProperties } from '../properties/resolve-canvas-properties'
 import {
-  EMPTY_CANVAS_INSPECTABLE_PROPERTIES,
-  bindCanvasPaintProperty,
-} from '../properties/canvas-property-types'
-import type {
-  CanvasInspectableProperties,
-  CanvasResolvedProperty,
-} from '../properties/canvas-property-types'
-import type { CanvasPropertyPatchSet } from '../system/canvas-property-session-controller'
-import type { CanvasToolId, CanvasToolPropertyContext } from '../tools/canvas-tool-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from '../types/canvas-domain-types'
+  getSharedSelectedEdgeType,
+  resolveCanvasSelectionProperties,
+} from '../properties/resolve-canvas-selection-properties'
+import { useCanvasPropertySession } from '../properties/use-canvas-property-session'
 import { useOptionalActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useShallow } from 'zustand/shallow'
 
 export function useCanvasToolbarModel() {
   const canvasEngine = useCanvasEngine()
   const domRuntime = useCanvasDomRuntime()
-  const { nodeActions, commands, documentWriter } = useCanvasDocumentServices()
+  const commands = useCanvasCommands()
+  const documentWriter = useCanvasDocumentWriter()
+  const nodeActions = useCanvasNodeActions()
   const selectedNodes = useCanvasEngineSelector(
     selectCanvasSelectedNodes,
     areCanvasPropertyNodesEqual,
@@ -76,50 +61,21 @@ export function useCanvasToolbarModel() {
   const hasSelection = selectedNodes.length > 0 || selectedEdges.length > 0
   const hasOnlySelectedEdges = selectedNodes.length === 0 && selectedEdges.length > 0
   const showsEdgeToolDefaults = !hasSelection && activeTool === 'edge'
-  const pendingNodeDataPatchesRef = useRef<Map<string, CanvasNodeDataPatch> | null>(null)
-  const pendingEdgePatchesRef = useRef<Map<string, CanvasEdgePatch> | null>(null)
-  const propertySessionControllerRef = useRef<ReturnType<
-    typeof createCanvasPropertySessionController
-  > | null>(null)
-  propertySessionControllerRef.current ??= createCanvasPropertySessionController()
-  const propertySessionController = propertySessionControllerRef.current
-
-  const patchNodeDataForProperty = (nodeId: string, data: CanvasNodeDataPatch) => {
-    const pendingNodeDataPatches = pendingNodeDataPatchesRef.current
-    if (!pendingNodeDataPatches) {
-      const updates = new Map([[nodeId, data]])
-      domRuntime.scheduleNodeDataPatches(canvasEngine.getSnapshot(), updates)
-      documentWriter.patchNodeData(updates)
-      return
-    }
-
-    pendingNodeDataPatches.set(nodeId, {
-      ...pendingNodeDataPatches.get(nodeId),
-      ...data,
-    })
-  }
-
-  const patchEdgeForProperty = (edgeId: string, patch: CanvasEdgePatch) => {
-    const pendingEdgePatches = pendingEdgePatchesRef.current
-    if (!pendingEdgePatches) {
-      const updates = new Map([[edgeId, patch]])
-      domRuntime.scheduleEdgePatches(updates)
-      documentWriter.patchEdges(updates)
-      return
-    }
-
-    const existingPatch = pendingEdgePatches.get(edgeId)
-    pendingEdgePatches.set(
-      edgeId,
-      existingPatch
-        ? {
-            ...existingPatch,
-            ...patch,
-            style: patch.style ? { ...existingPatch.style, ...patch.style } : existingPatch.style,
-          }
-        : patch,
-    )
-  }
+  const {
+    cancelPropertyPreviewChange,
+    commitPropertyPreviewChange,
+    patchEdge,
+    patchNodeData,
+    runPropertyChange,
+    runPropertyPreviewChange,
+  } = useCanvasPropertySession({
+    canvasEngine,
+    domRuntime,
+    documentWriter,
+    nodeActions,
+    selectedEdgeCount: selectedEdges.length,
+    selectedNodeCount: selectedNodes.length,
+  })
 
   const properties = measureCanvasPerformance(
     'canvas.toolbar.resolve-properties',
@@ -128,15 +84,10 @@ export function useCanvasToolbarModel() {
       selectedNodeCount: selectedNodes.length,
     },
     () =>
-      resolveProperties(
+      resolveCanvasSelectionProperties({
         activeTool,
-        selectedNodes,
-        selectedEdges,
-        patchNodeDataForProperty,
-        patchEdgeForProperty,
-        toolPropertyContext,
         activeFormattingSnapshot,
-        (node) => {
+        isNoteEmbed: (node) => {
           const sidebarItemId =
             node.type === 'embed' && typeof node.data.sidebarItemId === 'string'
               ? node.data.sidebarItemId
@@ -145,101 +96,20 @@ export function useCanvasToolbarModel() {
             ? activeSidebarItems?.itemsMap.get(sidebarItemId)?.type === SIDEBAR_ITEM_TYPES.notes
             : false
         },
-      ),
+        patchEdge,
+        patchNodeData,
+        selectedEdges,
+        selectedNodes,
+        toolPropertyContext,
+      }),
   )
-
-  const collectPropertyPatches = (applyChange: () => void): CanvasPropertyPatchSet => {
-    pendingNodeDataPatchesRef.current = new Map()
-    pendingEdgePatchesRef.current = new Map()
-    try {
-      applyChange()
-      return {
-        nodeDataPatches: pendingNodeDataPatchesRef.current,
-        edgePatches: pendingEdgePatchesRef.current,
-      }
-    } finally {
-      pendingNodeDataPatchesRef.current = null
-      pendingEdgePatchesRef.current = null
-    }
-  }
-
-  const previewPropertyPatches = (patches: CanvasPropertyPatchSet) => {
-    domRuntime.scheduleNodeDataPatches(canvasEngine.getSnapshot(), patches.nodeDataPatches)
-    domRuntime.scheduleEdgePatches(patches.edgePatches)
-  }
-
-  const commitPropertyPatches = (patches: CanvasPropertyPatchSet) => {
-    const applyCommittedPatches = () => {
-      previewPropertyPatches(patches)
-      documentWriter.patchNodeData(patches.nodeDataPatches)
-      documentWriter.patchEdges(patches.edgePatches)
-    }
-
-    if (nodeActions.transact) {
-      nodeActions.transact(applyCommittedPatches)
-      return
-    }
-
-    applyCommittedPatches()
-  }
-
-  const runPropertyChange = (applyChange: () => void) => {
-    measureCanvasPerformance(
-      'canvas.toolbar.apply-property',
-      {
-        selectedEdgeCount: selectedEdges.length,
-        selectedNodeCount: selectedNodes.length,
-      },
-      () => {
-        if (selectedNodes.length === 0 && selectedEdges.length === 0) {
-          applyChange()
-          return
-        }
-
-        commitPropertyPatches(collectPropertyPatches(applyChange))
-      },
-    )
-  }
-
-  const runPropertyPreviewChange = (applyChange: () => void) => {
-    const selectedNodeCount = selectedNodes.length
-    const selectedEdgeCount = selectedEdges.length
-
-    if (selectedNodeCount === 0 && selectedEdgeCount === 0) {
-      applyChange()
-      return
-    }
-
-    propertySessionController.startPropertySession({
-      collectPatches: collectPropertyPatches,
-      previewPatches: previewPropertyPatches,
-      commitPatches: (patches) => {
-        measureCanvasPerformance(
-          'canvas.toolbar.commit-property-preview',
-          {
-            selectedEdgeCount,
-            selectedNodeCount,
-          },
-          () => commitPropertyPatches(patches),
-        )
-      },
-    })
-    measureCanvasPerformance(
-      'canvas.toolbar.preview-property',
-      {
-        selectedEdgeCount,
-        selectedNodeCount,
-      },
-      () => propertySessionController.updatePropertyPreview(applyChange),
-    )
-  }
 
   const setSelectedEdgesType = (type: CanvasEdgeType) => {
     runPropertyChange(() => {
       selectedEdges.forEach((edge) => {
         if (resolveCanvasEdgeType(edge.type) === type) return
 
-        patchEdgeForProperty(edge.id, { type })
+        patchEdge(edge.id, { type })
       })
     })
   }
@@ -257,107 +127,7 @@ export function useCanvasToolbarModel() {
     showsEdgeToolDefaults,
     runPropertyChange,
     runPropertyPreviewChange,
-    commitPropertyPreviewChange: propertySessionController.commitPropertySession,
-    cancelPropertyPreviewChange: propertySessionController.cancelPropertySession,
+    commitPropertyPreviewChange,
+    cancelPropertyPreviewChange,
   }
-}
-
-function resolveProperties(
-  activeTool: CanvasToolId,
-  selectedNodes: ReadonlyArray<CanvasDocumentNode>,
-  selectedEdges: ReadonlyArray<CanvasDocumentEdge>,
-  patchNodeData: (nodeId: string, data: CanvasNodeDataPatch) => void,
-  patchEdge: (edgeId: string, patch: CanvasEdgePatch) => void,
-  toolPropertyContext: CanvasToolPropertyContext,
-  activeFormattingSnapshot: ReturnType<typeof useCanvasRichTextFormattingSnapshot>,
-  isNoteEmbed: (node: CanvasDocumentNode) => boolean,
-): Array<CanvasResolvedProperty> {
-  if (selectedNodes.length > 0 || selectedEdges.length > 0) {
-    const selectedProperties = [
-      ...selectedNodes.map<CanvasInspectableProperties>((node) =>
-        getSelectedNodeInspectableProperties(
-          node,
-          patchNodeData,
-          isNoteEmbed(node),
-          activeFormattingSnapshot,
-        ),
-      ),
-      ...selectedEdges.map<CanvasInspectableProperties>((edge) =>
-        getCanvasEdgeInspectableProperties(normalizeCanvasEdge(edge), patchEdge),
-      ),
-    ]
-
-    return resolveCanvasProperties(selectedProperties)
-  }
-
-  return resolveCanvasProperties([
-    canvasToolSpecs[activeTool]?.properties?.(toolPropertyContext) ??
-      EMPTY_CANVAS_INSPECTABLE_PROPERTIES,
-  ])
-}
-
-function getSelectedNodeInspectableProperties(
-  node: CanvasDocumentNode,
-  patchNodeData: (nodeId: string, data: CanvasNodeDataPatch) => void,
-  includeTextColor: boolean,
-  activeFormattingSnapshot: ReturnType<typeof useCanvasRichTextFormattingSnapshot>,
-): CanvasInspectableProperties {
-  const properties = getCanvasNodeInspectableProperties(normalizeCanvasNode(node), patchNodeData, {
-    includeTextColor,
-  })
-  if (!activeFormattingSnapshot || activeFormattingSnapshot.nodeId !== node.id) {
-    return properties
-  }
-
-  return {
-    bindings: [
-      createActiveRichTextColorBinding(activeFormattingSnapshot),
-      ...properties.bindings.filter(
-        (binding) => binding.definition.id !== textColorCanvasProperty.id,
-      ),
-    ],
-  }
-}
-
-function createActiveRichTextColorBinding(
-  activeFormattingSnapshot: NonNullable<ReturnType<typeof useCanvasRichTextFormattingSnapshot>>,
-) {
-  const applyTextColor = (color: string) => {
-    if (activeFormattingSnapshot.hasTextSelection) {
-      restoreCanvasRichTextSelection(
-        activeFormattingSnapshot.editor,
-        activeFormattingSnapshot.selectionSnapshot,
-      )
-      activeFormattingSnapshot.editor.addStyles({ textColor: color })
-      activeFormattingSnapshot.editor.focus()
-      return
-    }
-
-    applyCanvasRichTextDefaultTextColor(
-      activeFormattingSnapshot.editor,
-      activeFormattingSnapshot.defaultTextColor,
-      color,
-      activeFormattingSnapshot.selectionSnapshot,
-    )
-    activeFormattingSnapshot.setDefaultTextColor(color)
-  }
-
-  return bindCanvasPaintProperty(textColorCanvasProperty, {
-    getPropertyValue: () => activeFormattingSnapshot.textColorValue,
-    getColor: () =>
-      activeFormattingSnapshot.textColorValue.kind === 'value'
-        ? activeFormattingSnapshot.textColorValue.value.color
-        : activeFormattingSnapshot.defaultTextColor,
-    setValue: ({ color }) => applyTextColor(color),
-    setColor: applyTextColor,
-    getOpacity: () => 100,
-    setOpacity: () => undefined,
-  })
-}
-
-function getSharedSelectedEdgeType(edges: ReadonlyArray<CanvasDocumentEdge>) {
-  const firstEdgeType = edges[0] ? resolveCanvasEdgeType(edges[0].type) : null
-  return firstEdgeType && edges.every((edge) => resolveCanvasEdgeType(edge.type) === firstEdgeType)
-    ? firstEdgeType
-    : null
 }

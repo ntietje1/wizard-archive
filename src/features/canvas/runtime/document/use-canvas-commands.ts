@@ -63,7 +63,7 @@ export interface CanvasCommands {
   arrange: CanvasCommand<CanvasArrangeCommandArgs, boolean>
 }
 
-export function useCanvasCommands({
+export function useCanvasDocumentCommands({
   canEdit,
   nodesMap,
   edgesMap,

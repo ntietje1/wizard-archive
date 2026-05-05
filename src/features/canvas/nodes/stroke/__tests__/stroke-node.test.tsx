@@ -26,10 +26,8 @@ vi.mock('../../../runtime/providers/canvas-runtime', () => ({
   useCanvasDomRuntime: () => ({
     registerStrokeNodePaths: strokeNodeMocks.registerStrokeNodePaths,
   }),
-  useCanvasInteractionServices: () => ({
-    viewportController: {
-      getZoom: () => strokeNodeMocks.zoom,
-    },
+  useCanvasViewportController: () => ({
+    getZoom: () => strokeNodeMocks.zoom,
   }),
 }))
 

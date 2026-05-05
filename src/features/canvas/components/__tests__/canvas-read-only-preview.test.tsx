@@ -1,7 +1,7 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasReadOnlyPreview } from '../canvas-read-only-preview'
-import type { CanvasDocumentNode } from '../../types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from '../../types/canvas-domain-types'
 import { testId } from '~/test/helpers/test-id'
 
 vi.mock('~/features/sidebar/hooks/useSidebarItemById', () => ({
@@ -72,6 +72,47 @@ describe('CanvasReadOnlyPreview', () => {
         color: 'var(--t-purple)',
       })
     })
+  })
+
+  it('renders non-interactive preview nodes and edges without pointer targeting', async () => {
+    render(
+      <CanvasReadOnlyPreview
+        nodes={[
+          createTextNode({ id: 'node-1', position: { x: 0, y: 0 } }),
+          createTextNode({ id: 'node-2', position: { x: 200, y: 0 } }),
+        ]}
+        edges={[createEdge({ id: 'edge-1', source: 'node-1', target: 'node-2' })]}
+      />,
+    )
+
+    const nodeShells = await screen.findAllByRole('group', { name: 'text node' })
+    expect(nodeShells[0]).toHaveStyle({
+      pointerEvents: 'none',
+    })
+    expect(document.querySelector('[data-canvas-edge-id="edge-1"]')).toHaveClass(
+      'pointer-events-none',
+    )
+  })
+
+  it('keeps explicitly interactive preview nodes and edges targetable', async () => {
+    render(
+      <CanvasReadOnlyPreview
+        interactive
+        nodes={[
+          createTextNode({ id: 'node-1', position: { x: 0, y: 0 } }),
+          createTextNode({ id: 'node-2', position: { x: 200, y: 0 } }),
+        ]}
+        edges={[createEdge({ id: 'edge-1', source: 'node-1', target: 'node-2' })]}
+      />,
+    )
+
+    const nodeShells = await screen.findAllByRole('group', { name: 'text node' })
+    expect(nodeShells[0]).toHaveStyle({
+      pointerEvents: 'auto',
+    })
+    expect(document.querySelector('[data-canvas-edge-id="edge-1"]')).toHaveClass(
+      'pointer-events-auto',
+    )
   })
 
   it('fits using untransformed ResizeObserver size when a parent canvas is zoomed', async () => {
@@ -248,6 +289,43 @@ class MockResizeObserver implements ResizeObserver {
   emit(target: Element, size: { width: number; height: number }) {
     this.callback([createResizeObserverEntry(target, size)], this)
   }
+}
+
+function createTextNode({
+  id,
+  position,
+}: {
+  id: string
+  position: { x: number; y: number }
+}): CanvasDocumentNode {
+  return {
+    id,
+    type: 'text',
+    position,
+    width: 100,
+    height: 80,
+    data: {},
+  } satisfies CanvasDocumentNode
+}
+
+function createEdge({
+  id,
+  source,
+  target,
+}: {
+  id: string
+  source: string
+  target: string
+}): CanvasDocumentEdge {
+  return {
+    id,
+    source,
+    target,
+    sourceHandle: null,
+    targetHandle: null,
+    type: 'straight',
+    style: {},
+  } satisfies CanvasDocumentEdge
 }
 
 function emitResize(target: Element, size: { width: number; height: number }) {

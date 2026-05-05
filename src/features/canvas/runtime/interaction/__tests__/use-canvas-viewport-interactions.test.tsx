@@ -73,6 +73,7 @@ function createViewportControllerMock(): CanvasViewportController {
     zoomOut: vi.fn(),
     fitView: vi.fn(),
     syncFromDocumentOrAdapter: vi.fn(),
+    setZoomBounds: vi.fn(),
     commit: vi.fn(),
     destroy: vi.fn(),
   }

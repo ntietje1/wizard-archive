@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasConditionalToolbar } from '../canvas-conditional-toolbar'
 import { CanvasEngineProvider } from '../../react/canvas-engine-context'
 import { createCanvasRuntime } from '../../runtime/__tests__/canvas-runtime-test-utils'
-import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime-context'
+import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 
 vi.mock('~/shared/components/color-picker-popover', () => ({

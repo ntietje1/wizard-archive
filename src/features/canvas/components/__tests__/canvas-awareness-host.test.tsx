@@ -5,7 +5,7 @@ import { CanvasLocalOverlaysHost } from '../canvas-local-overlays-host'
 import { CanvasEngineProvider } from '../../react/canvas-engine-context'
 import { createCanvasDomRuntime } from '../../system/canvas-dom-runtime'
 import { createCanvasEngine } from '../../system/canvas-engine'
-import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime-context'
+import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime'
 import { createCanvasRuntime } from '../../runtime/__tests__/canvas-runtime-test-utils'
 
 vi.mock('../../tools/canvas-tool-modules', () => ({

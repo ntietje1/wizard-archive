@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
+import { useCallback, useLayoutEffect, useRef } from 'react'
 import { CanvasAwarenessHost } from './canvas-awareness-host'
-import { CanvasBackground } from './canvas-background'
 import { CanvasConnectionLayer } from './canvas-connection-layer'
 import { CanvasEdgeRenderer } from './canvas-edge-renderer'
 import { CanvasLocalOverlaysHost } from './canvas-local-overlays-host'
@@ -8,6 +7,7 @@ import { CanvasNodeContent } from './canvas-node-content'
 import { CanvasNodeRenderer } from './canvas-node-renderer'
 import { CanvasPendingSelectionPreviewOverlay } from './canvas-pending-selection-preview-overlay'
 import { CanvasSelectionResizeOverlay } from './canvas-selection-resize-overlay'
+import { CanvasSceneViewport } from './canvas-scene-viewport'
 import { CanvasNodeResizeMetadataProvider } from '../nodes/shared/canvas-node-resize-metadata-provider'
 import { useCanvasConnectionGesture } from '../runtime/interaction/canvas-connection-gesture'
 import { isCanvasEmptyPaneTarget } from '../runtime/interaction/canvas-pane-targets'
@@ -88,15 +88,6 @@ export function CanvasScene({
     edgeHandlersRef.current.onEdgeContextMenu(event, edge)
   }, [])
 
-  useEffect(() => {
-    const unregister = domRuntime.registerViewportElement(viewportRef.current)
-    domRuntime.scheduleViewportTransform(canvasEngine.getSnapshot().viewport)
-    domRuntime.scheduleCameraState(canvasEngine.getSnapshot().cameraState)
-    canvasEngine.refreshCulling()
-    domRuntime.flush()
-    return unregister
-  }, [canvasEngine, domRuntime])
-
   const handlePaneKeyDown = (event: ReactKeyboardEvent) => {
     if (event.key === ' ') {
       event.preventDefault()
@@ -107,58 +98,55 @@ export function CanvasScene({
   }
 
   return (
-    <div
-      ref={paneRef}
-      className="canvas-scene absolute inset-0 touch-none select-none overflow-hidden bg-background"
-      data-canvas-pane="true"
-      data-testid="canvas-scene"
-      role="application"
-      aria-label="Canvas"
-      tabIndex={-1}
-      onContextMenu={(event) => {
-        if (isCanvasEmptyPaneTarget(event.target, paneRef.current)) {
-          onPaneContextMenu(event)
+    <CanvasNodeResizeMetadataProvider>
+      <CanvasSceneViewport
+        engine={canvasEngine}
+        domRuntime={domRuntime}
+        surfaceRef={paneRef}
+        viewportRef={viewportRef}
+        className="absolute inset-0"
+        testId="canvas-scene"
+        surfaceOverlay={
+          <>
+            <CanvasPendingSelectionPreviewOverlay />
+            <CanvasSelectionResizeOverlay />
+            <CanvasLocalOverlaysHost />
+            <CanvasAwarenessHost remoteUsers={remoteUsers} />
+          </>
         }
-      }}
-      onMouseMove={sceneHandlers.onMouseMove}
-      onMouseLeave={sceneHandlers.onMouseLeave}
-      onKeyDown={handlePaneKeyDown}
-      onPointerDownCapture={connectionGesture.onPointerDownCapture}
-    >
-      <CanvasBackground />
-      <CanvasNodeResizeMetadataProvider>
-        <div
-          ref={viewportRef}
-          data-canvas-viewport="true"
-          className="canvas-scene__viewport absolute left-0 top-0 h-full w-full"
-          style={{
-            backfaceVisibility: 'hidden',
-            transformOrigin: '0 0',
-          }}
+        surfaceProps={{
+          role: 'application',
+          'aria-label': 'Canvas',
+          tabIndex: -1,
+          onContextMenu: (event) => {
+            if (isCanvasEmptyPaneTarget(event.target, paneRef.current)) {
+              onPaneContextMenu(event)
+            }
+          },
+          onMouseMove: sceneHandlers.onMouseMove,
+          onMouseLeave: sceneHandlers.onMouseLeave,
+          onKeyDown: handlePaneKeyDown,
+          onPointerDownCapture: connectionGesture.onPointerDownCapture,
+        }}
+      >
+        <svg
+          className="canvas-edge-layer pointer-events-none absolute left-0 top-0 overflow-visible"
+          data-canvas-edge-layer="true"
+          width="1"
+          height="1"
         >
-          <svg
-            className="canvas-edge-layer pointer-events-none absolute left-0 top-0 overflow-visible"
-            data-canvas-edge-layer="true"
-            width="1"
-            height="1"
-          >
-            <CanvasEdgeRenderer
-              onEdgeClick={handleEdgeClick}
-              onEdgeContextMenu={handleEdgeContextMenu}
-            />
-            <CanvasConnectionLayer draft={connectionGesture.draft} />
-          </svg>
-          <CanvasNodeRenderer
-            onNodeClick={handleNodeClick}
-            onNodeContextMenu={handleNodeContextMenu}
-            NodeContentComponent={CanvasNodeContent}
+          <CanvasEdgeRenderer
+            onEdgeClick={handleEdgeClick}
+            onEdgeContextMenu={handleEdgeContextMenu}
           />
-        </div>
-        <CanvasPendingSelectionPreviewOverlay />
-        <CanvasSelectionResizeOverlay />
-      </CanvasNodeResizeMetadataProvider>
-      <CanvasLocalOverlaysHost />
-      <CanvasAwarenessHost remoteUsers={remoteUsers} />
-    </div>
+          <CanvasConnectionLayer draft={connectionGesture.draft} />
+        </svg>
+        <CanvasNodeRenderer
+          onNodeClick={handleNodeClick}
+          onNodeContextMenu={handleNodeContextMenu}
+          NodeContentComponent={CanvasNodeContent}
+        />
+      </CanvasSceneViewport>
+    </CanvasNodeResizeMetadataProvider>
   )
 }

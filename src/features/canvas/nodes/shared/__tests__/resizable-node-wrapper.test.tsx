@@ -3,7 +3,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { CanvasPendingSelectionPreviewOverlay } from '../../../components/canvas-pending-selection-preview-overlay'
 import { CanvasSelectionResizeOverlay } from '../../../components/canvas-selection-resize-overlay'
 import { createCanvasRuntime } from '../../../runtime/__tests__/canvas-runtime-test-utils'
-import { CanvasRuntimeProvider } from '../../../runtime/providers/canvas-runtime-context'
+import { CanvasRuntimeProvider } from '../../../runtime/providers/canvas-runtime'
 import {
   clearCanvasDragSnapGuides,
   useCanvasDragSnapOverlayStore,

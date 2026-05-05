@@ -13,7 +13,7 @@ import { resolveCanvasScreenMinimumStrokeWidth } from '../../utils/canvas-screen
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 import {
   useCanvasDomRuntime,
-  useCanvasInteractionServices,
+  useCanvasViewportController,
 } from '../../runtime/providers/canvas-runtime'
 
 const HIGHLIGHT_SCALE = 0.3
@@ -39,7 +39,7 @@ function resolveViewBox(bounds: Bounds, fallbackWidth: number, fallbackHeight: n
   }
 }
 
-function StrokeVisual({
+export function StrokeVisual({
   id,
   data,
   width,
@@ -123,7 +123,7 @@ export function StrokeNode({
 }: CanvasNodeComponentProps<StrokeNodeData>) {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
   const domRuntime = useCanvasDomRuntime()
-  const { viewportController } = useCanvasInteractionServices()
+  const viewportController = useCanvasViewportController()
   const { size, bounds } = data
   const zoom = viewportController?.getZoom?.() ?? 1
   const isErasing = useEraseToolLocalOverlayStore((state) => state.erasingStrokeIds.has(id))

@@ -16,9 +16,9 @@ import {
   getCanvasNodeTextStyle,
 } from './canvas-node-surface-style'
 import {
-  useCanvasDocumentServices,
+  useCanvasCanEdit,
+  useCanvasDocumentWriter,
   useCanvasDomRuntime,
-  useCanvasInteractionServices,
 } from '../../runtime/providers/canvas-runtime'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
@@ -51,7 +51,7 @@ function persistCanvasRichTextDefaultTextColor(
   patchNodeData(new Map([[id, { textColor }]]))
 }
 
-function CanvasRichTextPreview({
+export function CanvasRichTextPreview({
   content,
   data,
   invalid,
@@ -92,11 +92,9 @@ export function CanvasRichTextNode({
   variant,
 }: CanvasRichTextNodeComponentProps) {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
-  const {
-    documentWriter: { patchNodeData },
-  } = useCanvasDocumentServices()
+  const { patchNodeData } = useCanvasDocumentWriter()
   const domRuntime = useCanvasDomRuntime()
-  const { canEdit } = useCanvasInteractionServices()
+  const canEdit = useCanvasCanEdit()
   const [isEditing, setIsEditing] = useState(false)
   const wrapperRef = useRef<HTMLDivElement | null>(null)
   const hasInvalidContent = data.richText.kind === 'invalid'

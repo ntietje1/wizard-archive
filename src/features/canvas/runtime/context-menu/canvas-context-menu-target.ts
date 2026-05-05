@@ -1,5 +1,6 @@
-import { canvasEdgeSpecs, normalizeCanvasEdge } from '../../edges/canvas-edge-registry'
-import { canvasNodeSpecs, normalizeCanvasNode } from '../../nodes/canvas-node-modules'
+import { normalizeCanvasEdge } from '../../edges/canvas-edge-registry'
+import { normalizeCanvasNode } from '../../nodes/canvas-node-modules'
+import { embedNodeContextMenuContributors } from '../../nodes/embed/embed-node-context-menu'
 import type { CanvasSelectionSnapshot } from '../../tools/canvas-tool-types'
 import type {
   CanvasContextMenuContributor,
@@ -75,7 +76,7 @@ function resolveNodeSelectionTarget(
           nodeType: 'embed',
           sidebarItemId: selectedNode.data.sidebarItemId,
         },
-        contributors: canvasNodeSpecs.embed.contextMenuContributors,
+        contributors: embedNodeContextMenuContributors,
       }
     }
   }
@@ -87,7 +88,7 @@ function resolveNodeSelectionTarget(
       nodeIds: selectedNodes.map((node) => node.id),
       nodeType,
     },
-    contributors: nodeType ? canvasNodeSpecs[nodeType].contextMenuContributors : [],
+    contributors: [],
   }
 }
 
@@ -104,7 +105,7 @@ function resolveEdgeSelectionTarget(
       edgeIds: selectedEdges.map((edge) => edge.id),
       edgeType,
     },
-    contributors: edgeType ? canvasEdgeSpecs[edgeType].contextMenuContributors : [],
+    contributors: [],
   }
 }
 

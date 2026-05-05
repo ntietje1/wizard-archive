@@ -1,4 +1,5 @@
 import { createContext } from 'react'
+import type { ReactNode } from 'react'
 
 type CanvasRenderMode = 'interactive' | 'embedded-readonly'
 
@@ -9,7 +10,7 @@ export function CanvasRenderModeProvider({
   children,
 }: {
   mode: CanvasRenderMode
-  children: React.ReactNode
+  children: ReactNode
 }) {
   return <CanvasRenderModeContext value={mode}>{children}</CanvasRenderModeContext>
 }

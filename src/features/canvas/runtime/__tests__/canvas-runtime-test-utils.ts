@@ -1,5 +1,10 @@
 import { vi } from 'vitest'
-import type { CanvasDocumentWriter, CanvasSelectionController } from '../../tools/canvas-tool-types'
+import type {
+  CanvasDocumentWriter,
+  CanvasHistoryController,
+  CanvasNodeActions,
+  CanvasSelectionController,
+} from '../../tools/canvas-tool-types'
 import type { RemoteHighlight } from '../../utils/canvas-awareness-types'
 import { createCanvasDomRuntime } from '../../system/canvas-dom-runtime'
 import { createCanvasEngine } from '../../system/canvas-engine'
@@ -7,8 +12,7 @@ import type { CanvasEngine } from '../../system/canvas-engine'
 import type { CanvasDomRuntime } from '../../system/canvas-dom-runtime'
 import type { CanvasViewportController } from '../../system/canvas-viewport-controller'
 import type { CanvasCommands } from '../document/use-canvas-commands'
-import type { CanvasDocumentServices, CanvasPresenceServices } from '../providers/canvas-runtime'
-import type { CanvasRuntimeProviderProps } from '../providers/canvas-runtime-context'
+import type { CanvasRuntimeProviderProps } from '../providers/canvas-runtime'
 import type { CanvasSessionRuntime } from '../session/use-canvas-session-state'
 
 export function createCanvasRuntimeEnginePair() {
@@ -96,7 +100,7 @@ export function createCanvasRuntime(
       redo: () => void
     }
     editSession: CanvasSessionRuntime['editSession']
-    nodeActions: Partial<CanvasDocumentServices['nodeActions']>
+    nodeActions: Partial<CanvasNodeActions>
     documentWriter: CanvasDocumentWriter
     selection: CanvasSelectionController
     canvasEngine: CanvasEngine
@@ -109,9 +113,9 @@ export function createCanvasRuntime(
   canEdit: boolean
   commands: CanvasCommands
   documentWriter: CanvasDocumentWriter
-  history: CanvasDocumentServices['history']
-  nodeActions: CanvasDocumentServices['nodeActions']
-  remoteHighlights: CanvasPresenceServices['remoteHighlights']
+  history: CanvasHistoryController
+  nodeActions: CanvasNodeActions
+  remoteHighlights: ReadonlyMap<string, RemoteHighlight>
   selection: CanvasSelectionController
   viewportController: CanvasViewportController
   editSession: CanvasSessionRuntime['editSession']
@@ -183,6 +187,7 @@ export function createCanvasRuntime(
     zoomOut: vi.fn(),
     fitView: vi.fn(),
     syncFromDocumentOrAdapter: vi.fn(),
+    setZoomBounds: vi.fn(),
     commit: vi.fn(),
     destroy: vi.fn(),
     ...viewportControllerOverrides,
@@ -191,36 +196,17 @@ export function createCanvasRuntime(
     ...createCanvasCommands(),
     ...commandsOverrides,
   }
-  const documentServices = {
-    commands,
-    documentWriter,
-    history,
-    nodeActions,
-  }
-  const interactionServices = {
-    canEdit,
-    editSession,
-    selection,
-    viewportController,
-  }
-  const presenceServices = {
-    remoteHighlights,
-  }
-
   return {
     canEdit,
     canvasEngine,
+    commands,
+    documentWriter,
     domRuntime,
-    documentServices,
-    interactionServices,
-    presenceServices,
-    remoteHighlights,
     history,
     editSession,
     nodeActions,
-    documentWriter,
+    remoteHighlights,
     selection,
     viewportController,
-    commands,
   }
 }

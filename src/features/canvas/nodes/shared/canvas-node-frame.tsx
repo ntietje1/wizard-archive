@@ -1,6 +1,6 @@
 import { useCanvasNodeVisualSelection } from './use-canvas-node-visual-selection'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
-import { useCanvasPresenceServices } from '../../runtime/providers/canvas-runtime'
+import { useCanvasRemoteHighlights } from '../../runtime/providers/canvas-runtime'
 import {
   CANVAS_SELECTION_CHROME_OUTSET_PX,
   CANVAS_SELECTION_CHROME_STROKE_WIDTH_PX,
@@ -30,7 +30,7 @@ export function CanvasNodeFrame({
   children,
 }: CanvasNodeFrameProps) {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
-  const { remoteHighlights } = useCanvasPresenceServices()
+  const remoteHighlights = useCanvasRemoteHighlights()
   const { visuallySelected, pendingPreviewActive, pendingSelected, selected } =
     useCanvasNodeVisualSelection(id)
   const visualSelectedNodeCount = useCanvasEngineSelector(getVisualSelectedNodeCount)

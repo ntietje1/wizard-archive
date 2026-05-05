@@ -2,8 +2,9 @@ import { useCallback, useEffect, useRef } from 'react'
 import { getCanvasNodeBounds } from './canvas-node-bounds'
 import { useCanvasNodeResizeMetadataSnapshot } from './canvas-node-resize-metadata'
 import {
-  useCanvasDocumentServices,
-  useCanvasInteractionServices,
+  useCanvasCanEdit,
+  useCanvasNodeActions,
+  useCanvasViewportController,
 } from '../../runtime/providers/canvas-runtime'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 import {
@@ -102,10 +103,9 @@ type CanvasResizeSessionResult = ReturnType<typeof resolveCanvasResize> & { fina
 export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
   const canvasEngine = useCanvasEngine()
-  const {
-    nodeActions: { onResizeMany, onResizeManyCancel, onResizeManyEnd },
-  } = useCanvasDocumentServices()
-  const { canEdit, viewportController } = useCanvasInteractionServices()
+  const { onResizeMany, onResizeManyCancel, onResizeManyEnd } = useCanvasNodeActions()
+  const canEdit = useCanvasCanEdit()
+  const viewportController = useCanvasViewportController()
   const modifiers = useCanvasModifierKeys()
   const metadataSnapshot = useCanvasNodeResizeMetadataSnapshot()
   const selection = useCanvasEngineSelector((snapshot) =>
@@ -138,7 +138,7 @@ export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
       if (options.clearGuides || result.guides.length === 0) {
         clearCanvasDragSnapGuides()
       } else {
-        setCanvasDragSnapGuides([...result.guides])
+        setCanvasDragSnapGuides(result.guides)
       }
 
       const updates = resolveSelectionResizeUpdates({

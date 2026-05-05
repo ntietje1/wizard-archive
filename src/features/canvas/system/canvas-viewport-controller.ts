@@ -27,6 +27,7 @@ export interface CanvasViewportController {
   zoomOut: () => void
   fitView: () => void
   syncFromDocumentOrAdapter: (viewport: CanvasViewport) => void
+  setZoomBounds: (bounds: { maxZoom?: number; minZoom?: number }) => void
   commit: () => void
   destroy: () => void
 }
@@ -58,12 +59,13 @@ export function createCanvasViewportController({
 }): CanvasViewportController {
   let commitTimer: ReturnType<typeof setTimeout> | null = null
   let panSession: CanvasPanSession | null = null
+  let zoomBounds = { maxZoom, minZoom }
 
   const getSurfaceBounds = () => getSurfaceElement()?.getBoundingClientRect() ?? null
 
   const getViewport = () => canvasEngine.getSnapshot().viewport
   const clampViewportZoom = (zoom: number) =>
-    Math.min(maxZoom, Math.max(minZoom, Number.isFinite(zoom) ? zoom : 1))
+    Math.min(zoomBounds.maxZoom, Math.max(zoomBounds.minZoom, Number.isFinite(zoom) ? zoom : 1))
   const normalizeViewport = (viewport: CanvasViewport): CanvasViewport => ({
     x: Number.isFinite(viewport.x) ? viewport.x : 0,
     y: Number.isFinite(viewport.y) ? viewport.y : 0,
@@ -171,7 +173,7 @@ export function createCanvasViewportController({
   ) => {
     const viewport = getViewport()
     const nextZoom = clampViewportZoom(zoom)
-    const currentZoom = viewport.zoom || minZoom
+    const currentZoom = viewport.zoom || zoomBounds.minZoom
     const scale = nextZoom / currentZoom
     const bounds = getSurfaceBounds()
     const centerX = bounds ? center.x - bounds.left : center.x
@@ -269,8 +271,8 @@ export function createCanvasViewportController({
     },
     fitView: () => {
       const viewport = getFitViewViewport(canvasEngine.getSnapshot().nodes, getSurfaceBounds(), {
-        maxZoom,
-        minZoom,
+        maxZoom: zoomBounds.maxZoom,
+        minZoom: zoomBounds.minZoom,
       })
       if (viewport) {
         applyViewport(viewport, { commit: true })
@@ -278,6 +280,12 @@ export function createCanvasViewportController({
     },
     syncFromDocumentOrAdapter: (viewport) => {
       applyViewport(viewport, { commit: true })
+    },
+    setZoomBounds: (bounds) => {
+      zoomBounds = {
+        maxZoom: bounds.maxZoom ?? zoomBounds.maxZoom,
+        minZoom: bounds.minZoom ?? zoomBounds.minZoom,
+      }
     },
     commit,
     destroy: () => {

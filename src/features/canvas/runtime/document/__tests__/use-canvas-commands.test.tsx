@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { useCanvasCommands } from '../use-canvas-commands'
+import { useCanvasDocumentCommands } from '../use-canvas-commands'
 import { useCanvasClipboardStore } from '../../context-menu/use-canvas-clipboard-store'
 import * as canvasDocumentCommands from '../canvas-document-commands'
 import type { CanvasReorderDirection } from '../canvas-reorder'
@@ -90,13 +90,13 @@ afterEach(() => {
   useCanvasClipboardStore.setState({ clipboard: null })
 })
 
-describe('useCanvasCommands', () => {
+describe('useCanvasDocumentCommands', () => {
   it('copies the live selection snapshot into the shared clipboard', () => {
     const { doc, nodesMap, edgesMap } = createCanvasMaps()
     const selection = createSelectionController(selectionSnapshot(new Set(['node-1', 'node-2'])))
 
     const { result, unmount } = renderHook(() =>
-      useCanvasCommands({
+      useCanvasDocumentCommands({
         canEdit: true,
         nodesMap,
         edgesMap,
@@ -125,7 +125,7 @@ describe('useCanvasCommands', () => {
     const selection = createSelectionController(selectionSnapshot(new Set(['node-3'])))
 
     const { result, unmount } = renderHook(() =>
-      useCanvasCommands({
+      useCanvasDocumentCommands({
         canEdit: true,
         nodesMap,
         edgesMap,
@@ -162,7 +162,7 @@ describe('useCanvasCommands', () => {
     const selection = createSelectionController(selectionSnapshot(new Set(['node-1', 'node-2'])))
 
     const { result, unmount } = renderHook(() =>
-      useCanvasCommands({
+      useCanvasDocumentCommands({
         canEdit: true,
         nodesMap,
         edgesMap,
@@ -200,7 +200,7 @@ describe('useCanvasCommands', () => {
     })
 
     const { result, unmount } = renderHook(() =>
-      useCanvasCommands({
+      useCanvasDocumentCommands({
         canEdit: true,
         nodesMap,
         edgesMap,
@@ -235,7 +235,7 @@ describe('useCanvasCommands', () => {
     const selection = createSelectionController(selectionSnapshot(new Set(['node-1', 'node-2'])))
 
     const { result, unmount } = renderHook(() =>
-      useCanvasCommands({
+      useCanvasDocumentCommands({
         canEdit: true,
         nodesMap,
         edgesMap,
@@ -266,7 +266,7 @@ describe('useCanvasCommands', () => {
     const selection = createSelectionController(selectionSnapshot(new Set(['node-1', 'node-2'])))
 
     const { result, unmount } = renderHook(() =>
-      useCanvasCommands({
+      useCanvasDocumentCommands({
         canEdit: true,
         nodesMap,
         edgesMap,
@@ -337,7 +337,7 @@ describe('useCanvasCommands', () => {
     const selection = createSelectionController(selectionSnapshot(new Set(['node-2'])))
 
     const { result, unmount } = renderHook(() =>
-      useCanvasCommands({
+      useCanvasDocumentCommands({
         canEdit: true,
         nodesMap,
         edgesMap,
@@ -360,7 +360,7 @@ describe('useCanvasCommands', () => {
     const selection = createSelectionController(selectionSnapshot())
 
     const { result, unmount } = renderHook(() =>
-      useCanvasCommands({
+      useCanvasDocumentCommands({
         canEdit: true,
         nodesMap,
         edgesMap,
@@ -397,7 +397,7 @@ describe('useCanvasCommands', () => {
     )
 
     const { result, unmount } = renderHook(() =>
-      useCanvasCommands({
+      useCanvasDocumentCommands({
         canEdit: true,
         nodesMap,
         edgesMap,
@@ -428,7 +428,7 @@ describe('useCanvasCommands', () => {
     )
 
     const { result, unmount } = renderHook(() =>
-      useCanvasCommands({
+      useCanvasDocumentCommands({
         canEdit: true,
         nodesMap,
         edgesMap,
@@ -452,7 +452,7 @@ describe('useCanvasCommands', () => {
     )
 
     const { result, unmount } = renderHook(() =>
-      useCanvasCommands({
+      useCanvasDocumentCommands({
         canEdit: true,
         nodesMap,
         edgesMap,
@@ -477,7 +477,7 @@ describe('useCanvasCommands', () => {
     )
 
     const { result, unmount } = renderHook(() =>
-      useCanvasCommands({
+      useCanvasDocumentCommands({
         canEdit: true,
         nodesMap,
         edgesMap,

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { canvasNodeSpecs } from '../../../nodes/canvas-node-modules'
+import { embedNodeContextMenuContributors } from '../../../nodes/embed/embed-node-context-menu'
 import {
   buildCanvasContextMenu,
   parseCanvasReorderDirection,
@@ -263,7 +263,6 @@ describe('buildCanvasContextMenu', () => {
       openEmbedTarget,
     })
     const selection = { nodeIds: new Set(['embed-1']), edgeIds: new Set<string>() }
-    const contributors = canvasNodeSpecs.embed.contextMenuContributors
     const menu = buildCanvasContextMenu({
       context: createContext({
         selection,
@@ -276,7 +275,7 @@ describe('buildCanvasContextMenu', () => {
       }),
       services,
       commands: createCommands(),
-      contributors,
+      contributors: embedNodeContextMenuContributors,
     })
 
     expect(menu.flatItems.map((item) => item.id)).toContain('embed-node-open')

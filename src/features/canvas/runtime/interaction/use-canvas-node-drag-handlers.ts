@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { clearCanvasDragSnapGuides } from './canvas-drag-snap-overlay'
+import { clearCanvasDragSnapGuides, setCanvasDragSnapGuides } from './canvas-drag-snap-overlay'
 import { createCanvasDragController } from '../../system/canvas-drag-controller'
 import { measureCanvasPerformance } from '../performance/canvas-performance-metrics'
 import { logger } from '~/shared/utils/logger'
@@ -116,6 +116,7 @@ export function useCanvasNodeDragHandlers({
     () => () => {
       controllerRef.current?.destroy()
       controllerRef.current = null
+      clearCanvasDragSnapGuides()
     },
     [],
   )
@@ -130,6 +131,8 @@ function handleDragStart(
     selection,
   }: Pick<UseCanvasNodeDragHandlersOptions, 'localDraggingIdsRef' | 'selection'>,
 ) {
+  clearCanvasDragSnapGuides()
+
   const localDraggingIds = localDraggingIdsRef.current
   if (!localDraggingIds) {
     return
@@ -142,8 +145,6 @@ function handleDragStart(
   if (!selection.getSnapshot().nodeIds.has(event.activeNodeId)) {
     selection.setSelection({ nodeIds: new Set([event.activeNodeId]), edgeIds: new Set() })
   }
-
-  clearCanvasDragSnapGuides()
 }
 
 function handleDrag(
@@ -153,12 +154,22 @@ function handleDrag(
     awareness,
   }: Pick<UseCanvasNodeDragHandlersOptions, 'awareness' | 'getCanvasPosition'>,
 ) {
+  syncCanvasDragSnapGuides(event.guides)
   awareness.setLocalCursor(
     getCanvasPosition({
       x: event.sourceEvent.clientX,
       y: event.sourceEvent.clientY,
     }),
   )
+}
+
+function syncCanvasDragSnapGuides(guides: CanvasDragEvent['guides']) {
+  if (guides.length > 0) {
+    setCanvasDragSnapGuides(guides)
+    return
+  }
+
+  clearCanvasDragSnapGuides()
 }
 
 function handleDragCancel(

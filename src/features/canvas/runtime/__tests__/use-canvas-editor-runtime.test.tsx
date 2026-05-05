@@ -158,7 +158,7 @@ vi.mock('../document/use-canvas-keyboard-shortcuts', () => ({
 }))
 
 vi.mock('../document/use-canvas-commands', () => ({
-  useCanvasCommands: () => commandsMock,
+  useCanvasDocumentCommands: () => commandsMock,
 }))
 
 vi.mock('../selection/use-canvas-selection-actions', () => ({

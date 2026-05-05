@@ -7,7 +7,7 @@ import {
   createCanvasRuntime,
   createCanvasRuntimeEnginePair,
 } from '../../../runtime/__tests__/canvas-runtime-test-utils'
-import { CanvasRuntimeProvider } from '../../../runtime/providers/canvas-runtime-context'
+import { CanvasRuntimeProvider } from '../../../runtime/providers/canvas-runtime'
 import { CanvasRenderModeProvider } from '../../../runtime/providers/canvas-render-mode-context'
 import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
 import type { CanvasDomRuntime } from '../../../system/canvas-dom-runtime'

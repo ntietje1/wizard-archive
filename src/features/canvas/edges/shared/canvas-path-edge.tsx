@@ -8,7 +8,7 @@ import {
 import { useCanvasEdgeVisualSelection } from './use-canvas-edge-visual-selection'
 import { resolveCanvasScreenMinimumStrokeWidthCss } from '../../utils/canvas-screen-stroke-width'
 import type { CanvasEdgeRendererProps } from '../canvas-edge-types'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, Ref } from 'react'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 import { useCanvasDomRuntime } from '../../runtime/providers/canvas-runtime'
 
@@ -25,7 +25,7 @@ const SELECTED_EDGE_HIGHLIGHT_STYLE: CSSProperties = {
 const SELECTED_EDGE_HIGHLIGHT_SCALE = 0.15
 const SELECTED_EDGE_HIGHLIGHT_WIDTH_MIN = 1
 
-interface CanvasPathEdgeGeometry {
+export interface CanvasPathEdgeGeometry {
   path: string
   labelX: number
   labelY: number
@@ -59,10 +59,58 @@ export function CanvasPathEdge({
     })
   }, [domRuntime, props.id, hasGeometry, hasSelectedHighlight, interactiveRenderMode])
 
+  return (
+    <CanvasPathEdgeVisual
+      geometry={geometry}
+      id={props.id}
+      type={props.type}
+      style={props.style}
+      interactive={interactiveRenderMode}
+      selected={selected}
+      visuallySelected={visuallySelected}
+      pendingPreviewActive={pendingPreviewActive}
+      pendingSelected={pendingSelected}
+      showSelectedHighlight={hasSelectedHighlight}
+      pathRef={pathRef}
+      highlightPathRef={highlightPathRef}
+      interactionPathRef={interactionPathRef}
+    />
+  )
+}
+
+export function CanvasPathEdgeVisual({
+  geometry,
+  id,
+  type,
+  style,
+  interactive = false,
+  selected = false,
+  visuallySelected = false,
+  pendingPreviewActive = false,
+  pendingSelected = false,
+  showSelectedHighlight = false,
+  pathRef,
+  highlightPathRef,
+  interactionPathRef,
+}: {
+  geometry: CanvasPathEdgeGeometry | null
+  id: string
+  type: string
+  style?: CanvasEdgeRendererProps['style']
+  interactive?: boolean
+  selected?: boolean
+  visuallySelected?: boolean
+  pendingPreviewActive?: boolean
+  pendingSelected?: boolean
+  showSelectedHighlight?: boolean
+  pathRef?: Ref<SVGPathElement>
+  highlightPathRef?: Ref<SVGPathElement>
+  interactionPathRef?: Ref<SVGPathElement>
+}) {
   if (!geometry) return null
 
-  const normalizedStyle = normalizeCanvasEdgeStyle(props.style)
-  const style = {
+  const normalizedStyle = normalizeCanvasEdgeStyle(style)
+  const edgeStyle = {
     ...CANVAS_EDGE_PATH_STYLE,
     ...buildCanvasEdgeRenderStyle(normalizedStyle),
     opacity:
@@ -74,7 +122,7 @@ export function CanvasPathEdge({
     normalizedStyle.strokeWidth * SELECTED_EDGE_HIGHLIGHT_SCALE,
     SELECTED_EDGE_HIGHLIGHT_WIDTH_MIN,
   )
-  const selectedHighlightStyle = hasSelectedHighlight
+  const selectedHighlightStyle = showSelectedHighlight
     ? {
         ...SELECTED_EDGE_HIGHLIGHT_STYLE,
         strokeWidth: resolveCanvasScreenMinimumStrokeWidthCss(selectedHighlightStrokeWidth),
@@ -84,8 +132,8 @@ export function CanvasPathEdge({
   return (
     <g
       data-testid="canvas-edge"
-      data-edge-id={props.id}
-      data-edge-type={props.type}
+      data-edge-id={id}
+      data-edge-type={type}
       data-edge-selected={selected ? 'true' : 'false'}
       data-edge-visual-selected={visuallySelected ? 'true' : 'false'}
       data-edge-pending-preview-active={pendingPreviewActive ? 'true' : 'false'}
@@ -93,14 +141,14 @@ export function CanvasPathEdge({
     >
       <path
         ref={pathRef}
-        id={props.id}
+        id={id}
         d={geometry.path}
         fill="none"
-        style={style}
+        style={edgeStyle}
         data-canvas-authored-stroke-width={normalizedStyle.strokeWidth}
         data-testid="canvas-edge-primary-path"
       />
-      {interactiveRenderMode ? (
+      {interactive ? (
         <path
           ref={interactionPathRef}
           d={geometry.path}

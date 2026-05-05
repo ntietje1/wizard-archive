@@ -1,7 +1,7 @@
-import { getSnapThresholdForZoom } from '../runtime/interaction/canvas-drag-snap-utils'
 import { resolveResizeBounds } from './canvas-resize-bounds'
 import { resolveResizeSnap } from './canvas-resize-snap'
-import type { CanvasDragGuide } from '../runtime/interaction/canvas-drag-snap-utils'
+import { getSnapThresholdForZoom } from '../utils/canvas-snap-guides'
+import type { CanvasDragGuide } from '../utils/canvas-snap-guides'
 import type { CanvasResizeBounds, CanvasResizeHandlePosition } from './canvas-resize-handles'
 
 export type { CanvasResizeHandlePosition } from './canvas-resize-handles'

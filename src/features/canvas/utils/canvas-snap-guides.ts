@@ -1,4 +1,4 @@
-import type { Bounds } from '../../utils/canvas-geometry-utils'
+import type { Bounds } from './canvas-geometry-utils'
 
 const SNAP_THRESHOLD_SCREEN_PX = 8
 
@@ -7,6 +7,14 @@ export interface CanvasDragGuide {
   position: number
   start: number
   end: number
+}
+
+export function getSnapThresholdForZoom(zoom: number) {
+  if (!Number.isFinite(zoom) || zoom <= 0) {
+    throw new TypeError(`getSnapThresholdForZoom expected a finite positive zoom, received ${zoom}`)
+  }
+
+  return SNAP_THRESHOLD_SCREEN_PX / zoom
 }
 
 interface SnapTargetCandidate {
@@ -22,10 +30,6 @@ interface CanvasDragSnapResult {
   xAdjustment: number
   yAdjustment: number
   guides: Array<CanvasDragGuide>
-}
-
-export function getSnapThresholdForZoom(zoom: number) {
-  return SNAP_THRESHOLD_SCREEN_PX / zoom
 }
 
 function getBoundsCenter(bounds: Bounds) {

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { CanvasScene } from '../canvas-scene'
 import { CanvasEngineProvider } from '../../react/canvas-engine-context'
 import { createCanvasRuntime } from '../../runtime/__tests__/canvas-runtime-test-utils'
-import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime-context'
+import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime'
 import { createCanvasDomRuntime } from '../../system/canvas-dom-runtime'
 import { createCanvasEngine } from '../../system/canvas-engine'
 import type { CanvasConnection, CanvasDocumentNode as Node } from '../../types/canvas-domain-types'
@@ -90,7 +90,15 @@ function setElementRect(
   })
 }
 
-function renderScene(createEdgeFromConnection = vi.fn(), canEdit = true) {
+function renderScene({
+  canEdit = true,
+  createEdgeFromConnection = vi.fn<(connection: CanvasConnection) => void>(),
+  selectedNodeIds = new Set<string>(),
+}: {
+  canEdit?: boolean
+  createEdgeFromConnection?: (connection: CanvasConnection) => void
+  selectedNodeIds?: ReadonlySet<string>
+} = {}) {
   engine?.destroy()
   domRuntime?.destroy()
   domRuntime = createCanvasDomRuntime()
@@ -98,6 +106,7 @@ function renderScene(createEdgeFromConnection = vi.fn(), canEdit = true) {
   const currentEngine = engine
   const currentDomRuntime = domRuntime
   currentEngine.setDocumentSnapshot({ nodes: [sourceNode, targetNode] })
+  currentEngine.setSelection({ nodeIds: selectedNodeIds, edgeIds: new Set() })
   render(
     <CanvasEngineProvider engine={currentEngine}>
       <CanvasRuntimeProvider
@@ -163,7 +172,7 @@ describe('CanvasScene connection creation', () => {
 
   it('snaps the live preview to a nearby compatible handle and commits that target', async () => {
     const createEdgeFromConnection = vi.fn()
-    renderScene(createEdgeFromConnection)
+    renderScene({ createEdgeFromConnection })
 
     await startConnectionDrag()
     fireEvent.pointerMove(window, { clientX: 206, clientY: 25, pointerId: 1 })
@@ -187,7 +196,7 @@ describe('CanvasScene connection creation', () => {
 
   it('cancels the connection when pointer-up has no snapped target', async () => {
     const createEdgeFromConnection = vi.fn()
-    renderScene(createEdgeFromConnection)
+    renderScene({ createEdgeFromConnection })
 
     await startConnectionDrag()
     fireEvent.pointerUp(window, { clientX: 500, clientY: 500, pointerId: 1 })
@@ -197,7 +206,7 @@ describe('CanvasScene connection creation', () => {
 
   it('does not snap or commit to a handle on the source node', async () => {
     const createEdgeFromConnection = vi.fn()
-    renderScene(createEdgeFromConnection)
+    renderScene({ createEdgeFromConnection })
 
     await startConnectionDrag()
     fireEvent.pointerMove(window, { clientX: 0, clientY: 25, pointerId: 1 })
@@ -208,7 +217,7 @@ describe('CanvasScene connection creation', () => {
 
   it('does not start connection creation while editing is disabled', () => {
     const createEdgeFromConnection = vi.fn()
-    renderScene(createEdgeFromConnection, false)
+    renderScene({ canEdit: false, createEdgeFromConnection })
 
     fireEvent.pointerDown(screen.getByTestId('source-right-handle'), {
       button: 0,
@@ -223,7 +232,7 @@ describe('CanvasScene connection creation', () => {
 
   it('cancels the active connection draft on escape', async () => {
     const createEdgeFromConnection = vi.fn()
-    renderScene(createEdgeFromConnection)
+    renderScene({ createEdgeFromConnection })
 
     await startConnectionDrag()
     fireEvent.keyDown(screen.getByTestId('canvas-scene'), { key: 'Escape' })
@@ -235,7 +244,7 @@ describe('CanvasScene connection creation', () => {
 
   it('ignores move, cancel, and up events from other pointers', async () => {
     const createEdgeFromConnection = vi.fn()
-    renderScene(createEdgeFromConnection)
+    renderScene({ createEdgeFromConnection })
 
     await startConnectionDrag()
     fireEvent.pointerMove(window, { clientX: 206, clientY: 25, pointerId: 2 })
@@ -257,5 +266,21 @@ describe('CanvasScene connection creation', () => {
       sourceHandle: 'right',
       targetHandle: 'left',
     } satisfies CanvasConnection)
+  })
+
+  it('keeps screen-space selection chrome outside the transformed viewport', () => {
+    renderScene({ selectedNodeIds: new Set(['source', 'target']) })
+
+    const wrapper = screen.getByTestId('canvas-selection-resize-wrapper')
+    const viewport = screen
+      .getByTestId('canvas-scene')
+      .querySelector('[data-canvas-viewport="true"]')
+
+    expect(viewport).not.toContainElement(wrapper)
+    expect(wrapper).toHaveStyle({
+      height: '50px',
+      transform: 'translate(0px, 0px)',
+      width: '300px',
+    })
   })
 })
