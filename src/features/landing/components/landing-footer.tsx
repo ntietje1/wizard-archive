@@ -1,5 +1,5 @@
 import { LandingContainer } from '~/features/landing/components/landing-container'
-import { Logo } from '~/features/landing/components/logo'
+import { WizardArchiveLogo } from '~/shared/components/wizard-archive-logo'
 
 function FooterColumn({
   title,
@@ -37,7 +37,7 @@ export function LandingFooter() {
         <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <div className="flex items-center gap-2.5">
-              <Logo className="h-6 w-6" />
+              <WizardArchiveLogo className="h-6 w-6" />
               <span className="text-sm font-semibold text-foreground">{"Wizard's Archive"}</span>
             </div>
             <p className="mt-3 text-sm text-muted-foreground">

@@ -2,9 +2,9 @@ import { Link } from '@tanstack/react-router'
 import { Menu, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { LandingContainer } from '~/features/landing/components/landing-container'
-import { Logo } from '~/features/landing/components/logo'
 import { buttonVariants } from '~/features/shadcn/components/button'
 import { cn } from '~/features/shadcn/lib/utils'
+import { WizardArchiveLogo } from '~/shared/components/wizard-archive-logo'
 
 export function NavBar() {
   const [scrolled, setScrolled] = useState(false)
@@ -26,7 +26,7 @@ export function NavBar() {
     >
       <LandingContainer className="flex h-full items-center justify-between">
         <Link to="/" className="flex items-center gap-2.5">
-          <Logo className="h-7 w-7" />
+          <WizardArchiveLogo className="h-7 w-7" />
           <span className="text-base font-semibold text-foreground">{"Wizard's Archive"}</span>
         </Link>
 
