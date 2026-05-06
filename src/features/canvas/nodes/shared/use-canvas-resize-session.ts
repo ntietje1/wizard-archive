@@ -74,6 +74,7 @@ const RESIZE_HANDLES: Array<{
 
 interface CanvasSelectionResizeSession {
   bounds: Bounds
+  dragNodeId?: string
   overlayRef: RefObject<HTMLDivElement | null>
   zones: ReadonlyArray<CanvasSelectionResizeZoneDescriptor>
 }
@@ -420,6 +421,7 @@ export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
 
   return {
     bounds: selection.bounds,
+    dragNodeId: getSelectionDragNodeId(selection),
     overlayRef: resizeOverlayRef,
     zones,
   }
@@ -574,6 +576,10 @@ function getSingleSelectionLockedAspectRatio(selection: {
   return typeof lockedAspectRatio === 'number' && Number.isFinite(lockedAspectRatio)
     ? lockedAspectRatio
     : undefined
+}
+
+function getSelectionDragNodeId(selection: { nodes: ReadonlyArray<SelectionResizeNode> }) {
+  return selection.nodes.length > 1 ? selection.nodes[0].id : undefined
 }
 
 function getMinimumSelectionResizeSize(selection: {

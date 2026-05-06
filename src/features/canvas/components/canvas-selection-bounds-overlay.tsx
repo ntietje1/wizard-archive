@@ -6,16 +6,20 @@ import {
   useCanvasScreenSpaceViewport,
 } from './canvas-screen-space-overlay-utils'
 import type { Bounds } from '../utils/canvas-geometry-utils'
-import type { ReactNode, Ref } from 'react'
+import type { MouseEvent as ReactMouseEvent, ReactNode, Ref } from 'react'
 
 export function CanvasSelectionBoundsOverlay({
   bounds,
   children,
+  dragNodeId,
+  onContextMenu,
   testIdPrefix,
   wrapperRef,
 }: {
   bounds: Bounds
   children?: ReactNode
+  dragNodeId?: string
+  onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void
   testIdPrefix: string
   wrapperRef?: Ref<HTMLDivElement>
 }) {
@@ -26,7 +30,9 @@ export function CanvasSelectionBoundsOverlay({
     <div
       ref={wrapperRef}
       data-testid={`${testIdPrefix}-wrapper`}
-      className="absolute left-0 top-0 pointer-events-none"
+      data-canvas-selection-drag-node-id={dragNodeId}
+      className={`absolute left-0 top-0 ${dragNodeId ? 'cursor-move pointer-events-auto' : 'pointer-events-none'}`}
+      onContextMenu={onContextMenu}
       style={{
         height: screenBounds.height,
         transform: `translate(${screenBounds.x}px, ${screenBounds.y}px)`,

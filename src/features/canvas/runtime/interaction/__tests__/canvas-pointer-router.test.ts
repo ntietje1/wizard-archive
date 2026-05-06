@@ -16,12 +16,17 @@ import type {
 
 describe('classifyCanvasPointerTarget', () => {
   it('classifies pane, node, edge, handle, resize, interactive, and outside targets', () => {
-    const { pane, viewport, node, edge, handle, resizeZone, input } = createCanvasDom()
+    const { pane, viewport, node, edge, handle, resizeZone, selectionDragWrapper, input } =
+      createCanvasDom()
     const outside = document.createElement('div')
 
     expect(classifyCanvasPointerTarget(viewport, pane)).toEqual({ kind: 'pane' })
     expect(classifyCanvasPointerTarget(node, pane)).toEqual({ kind: 'node', nodeId: 'node-1' })
     expect(classifyCanvasPointerTarget(edge, pane)).toEqual({ kind: 'edge' })
+    expect(classifyCanvasPointerTarget(selectionDragWrapper, pane)).toEqual({
+      kind: 'node',
+      nodeId: 'node-1',
+    })
     expect(classifyCanvasPointerTarget(handle, pane)).toEqual({ kind: 'connection-handle' })
     expect(classifyCanvasPointerTarget(resizeZone, pane)).toEqual({ kind: 'resize-handle' })
     expect(classifyCanvasPointerTarget(input, pane)).toEqual({ kind: 'blocked-interactive-child' })
@@ -307,6 +312,24 @@ describe('createCanvasPointerRouter', () => {
     detach()
   })
 
+  it('routes select-tool aggregate selection wrapper drags through the node drag controller', () => {
+    const { surface, selectionDragWrapper } = createCanvasDom()
+    const nodeDragController = createNodeDragControllerMock()
+    const router = createCanvasPointerRouter()
+    router.setOptions(createRouterOptions({ activeTool: 'select', nodeDragController }))
+    const detach = router.attach(surface)
+
+    selectionDragWrapper.dispatchEvent(createPointerEvent('pointerdown', { pointerId: 7 }))
+    window.dispatchEvent(createPointerEvent('pointermove', { clientX: 20, pointerId: 7 }))
+    window.dispatchEvent(createPointerEvent('pointerup', { clientX: 20, pointerId: 7 }))
+
+    expect(nodeDragController.begin).toHaveBeenCalledWith('node-1', expect.any(Event))
+    expect(nodeDragController.update).toHaveBeenCalledTimes(1)
+    expect(nodeDragController.commit).toHaveBeenCalledTimes(1)
+
+    detach()
+  })
+
   it('cancels select-tool node drags without committing them', () => {
     const { surface, node } = createCanvasDom()
     const nodeDragController = createNodeDragControllerMock()
@@ -403,11 +426,13 @@ function createCanvasDom() {
   const resizeZone = document.createElement('button')
   resizeZone.className = 'canvas-selection-resize-zone'
   const input = document.createElement('input')
+  const selectionDragWrapper = document.createElement('div')
+  selectionDragWrapper.dataset.canvasSelectionDragNodeId = 'node-1'
 
   edgeLayer.appendChild(edge)
   node.append(text, handle, resizeZone, input)
   viewport.append(edgeLayer, node)
-  pane.appendChild(viewport)
+  pane.append(viewport, selectionDragWrapper)
   surface.appendChild(pane)
   document.body.appendChild(surface)
 
@@ -418,6 +443,7 @@ function createCanvasDom() {
     node,
     pane,
     resizeZone,
+    selectionDragWrapper,
     surface,
     text,
     viewport,

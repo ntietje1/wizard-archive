@@ -133,6 +133,29 @@ describe('ResizableNodeWrapper', () => {
     expect(screen.queryAllByTestId(/canvas-selection-resize-zone-/)).toHaveLength(8)
   })
 
+  it('makes the aggregate selection wrapper draggable through a selected node id', () => {
+    renderSelectionResize({
+      nodes: [
+        createNode('node-1', { x: 10, y: 20 }, 80, 40),
+        createNode('node-2', { x: 110, y: 20 }, 40, 40),
+      ],
+      selectedNodeIds: new Set(['node-1', 'node-2']),
+    })
+
+    expect(screen.getByTestId('canvas-selection-resize-wrapper')).toHaveAttribute(
+      'data-canvas-selection-drag-node-id',
+      'node-1',
+    )
+  })
+
+  it('does not make the single-node selection wrapper draggable', () => {
+    renderSelectionResize()
+
+    expect(screen.getByTestId('canvas-selection-resize-wrapper')).not.toHaveAttribute(
+      'data-canvas-selection-drag-node-id',
+    )
+  })
+
   it('labels aggregate resize handles as corners or edges', () => {
     renderSelectionResize()
 

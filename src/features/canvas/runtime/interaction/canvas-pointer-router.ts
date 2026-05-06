@@ -397,6 +397,11 @@ export function classifyCanvasPointerTarget(
     return { kind: 'edge' }
   }
 
+  const selectionDragTarget = target.closest<HTMLElement>('[data-canvas-selection-drag-node-id]')
+  if (selectionDragTarget?.dataset.canvasSelectionDragNodeId) {
+    return { kind: 'node', nodeId: selectionDragTarget.dataset.canvasSelectionDragNodeId }
+  }
+
   const node = target.closest<HTMLElement>('.canvas-node-shell')
   if (node?.dataset.nodeId) {
     return { kind: 'node', nodeId: node.dataset.nodeId }

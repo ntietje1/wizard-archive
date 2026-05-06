@@ -8,6 +8,7 @@ import { createCanvasDomRuntime } from '../../system/canvas-dom-runtime'
 import { createCanvasEngine } from '../../system/canvas-engine'
 import type { CanvasConnection } from '../../types/canvas-domain-types'
 import type { CanvasDocumentNode as Node } from 'convex/canvases/validation'
+import type { MouseEvent as ReactMouseEvent } from 'react'
 
 vi.mock('../canvas-background', () => ({
   CanvasBackground: () => null,
@@ -94,10 +95,12 @@ function setElementRect(
 function renderScene({
   canEdit = true,
   createEdgeFromConnection = vi.fn<(connection: CanvasConnection) => void>(),
+  onNodeContextMenu = vi.fn(),
   selectedNodeIds = new Set<string>(),
 }: {
   canEdit?: boolean
   createEdgeFromConnection?: (connection: CanvasConnection) => void
+  onNodeContextMenu?: (event: ReactMouseEvent, node: Node) => void
   selectedNodeIds?: ReadonlySet<string>
 } = {}) {
   engine?.destroy()
@@ -121,7 +124,7 @@ function renderScene({
           canEdit={canEdit}
           remoteUsers={[]}
           sceneHandlers={{ createEdgeFromConnection }}
-          onNodeContextMenu={vi.fn()}
+          onNodeContextMenu={onNodeContextMenu}
           onEdgeContextMenu={vi.fn()}
           onPaneContextMenu={vi.fn()}
         />
@@ -149,7 +152,7 @@ function renderScene({
     height: 8,
   })
 
-  return { createEdgeFromConnection }
+  return { createEdgeFromConnection, onNodeContextMenu }
 }
 
 async function startConnectionDrag() {
@@ -285,5 +288,20 @@ describe('CanvasScene connection creation', () => {
       transform: 'translate(0px, 0px)',
       width: '300px',
     })
+  })
+
+  it('opens the node context menu from the multi-select wrapper', () => {
+    const onNodeContextMenu = vi.fn()
+    renderScene({
+      selectedNodeIds: new Set(['source', 'target']),
+      onNodeContextMenu,
+    })
+
+    fireEvent.contextMenu(screen.getByTestId('canvas-selection-resize-wrapper'), {
+      clientX: 120,
+      clientY: 80,
+    })
+
+    expect(onNodeContextMenu).toHaveBeenCalledWith(expect.any(Object), sourceNode)
   })
 })

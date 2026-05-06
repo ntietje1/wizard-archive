@@ -78,6 +78,15 @@ export function CanvasScene({
   const handleNodeContextMenu = useCallback((event: ReactMouseEvent, node: CanvasDocumentNode) => {
     nodeHandlersRef.current.onNodeContextMenu(event, node)
   }, [])
+  const handleSelectionContextMenu = useCallback(
+    (event: ReactMouseEvent, nodeId: string) => {
+      const node = canvasEngine.getSnapshot().nodeLookup.get(nodeId)?.node
+      if (node) {
+        handleNodeContextMenu(event, node)
+      }
+    },
+    [canvasEngine, handleNodeContextMenu],
+  )
   const handleEdgeClick = useCallback((event: ReactMouseEvent, edge: CanvasDocumentEdge) => {
     edgeHandlersRef.current.onEdgeClick?.(event, edge)
   }, [])
@@ -106,7 +115,7 @@ export function CanvasScene({
         surfaceOverlay={
           <>
             <CanvasPendingSelectionPreviewOverlay />
-            <CanvasSelectionResizeOverlay />
+            <CanvasSelectionResizeOverlay onSelectionContextMenu={handleSelectionContextMenu} />
             <CanvasLocalOverlaysHost />
             <CanvasAwarenessHost remoteUsers={remoteUsers} />
           </>

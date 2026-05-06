@@ -1,19 +1,28 @@
 import { CanvasSelectionBoundsOverlay } from './canvas-selection-bounds-overlay'
 import { useCanvasResizeSession } from '../nodes/shared/use-canvas-resize-session'
+import type { MouseEvent as ReactMouseEvent } from 'react'
 import type { CanvasSelectionResizeZoneDescriptor } from '../nodes/shared/use-canvas-resize-session'
 
-export function CanvasSelectionResizeOverlay() {
+export function CanvasSelectionResizeOverlay({
+  onSelectionContextMenu,
+}: {
+  onSelectionContextMenu?: (event: ReactMouseEvent<HTMLDivElement>, nodeId: string) => void
+}) {
   const resizeSession = useCanvasResizeSession()
 
   if (!resizeSession) {
     return null
   }
 
-  const { bounds, overlayRef, zones } = resizeSession
+  const { bounds, dragNodeId, overlayRef, zones } = resizeSession
 
   return (
     <CanvasSelectionBoundsOverlay
       bounds={bounds}
+      dragNodeId={dragNodeId}
+      onContextMenu={
+        dragNodeId ? (event) => onSelectionContextMenu?.(event, dragNodeId) : undefined
+      }
       testIdPrefix="canvas-selection-resize"
       wrapperRef={overlayRef}
     >
