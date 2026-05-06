@@ -22,7 +22,7 @@
     "test:e2e": "node --env-file-if-exists=.env.local ./node_modules/@playwright/test/cli.js test",
     "test:e2e:ui": "node --env-file-if-exists=.env.local ./node_modules/@playwright/test/cli.js test --ui",
     "prepare": "vp config",
-    "deploy:prod": "vp build --mode production && wrangler deploy",
+    "deploy:prod": "vp build --mode production && vp exec wrangler deploy --config dist/server/wrangler.json --keep-vars",
     "preview": "vp build && wrangler dev",
     "cf-typegen": "wrangler types",
     "fallow": "fallow"
