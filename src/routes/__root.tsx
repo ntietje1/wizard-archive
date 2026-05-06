@@ -13,6 +13,11 @@ import { getThemeCookie, resolveTheme } from '~/features/settings/hooks/useTheme
 import type { Theme } from '~/features/settings/hooks/useTheme'
 import appCss from '~/styles/app.css?url'
 
+const appTitle = "Wizard's Archive"
+const appDescription = 'The collaborative campaign manager for TTRPGs.'
+const appImage = '/og-image.png'
+const appThemeColor = '#7B6FD4'
+
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient
   convexClient: ConvexReactClient
@@ -28,8 +33,18 @@ export const Route = createRootRouteWithContext<{
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: "Wizard's Archive",
+        title: appTitle,
       },
+      { name: 'description', content: appDescription },
+      { name: 'theme-color', content: appThemeColor },
+      { property: 'og:type', content: 'website' },
+      { property: 'og:title', content: appTitle },
+      { property: 'og:description', content: appDescription },
+      { property: 'og:image', content: appImage },
+      { name: 'twitter:card', content: 'summary_large_image' },
+      { name: 'twitter:title', content: appTitle },
+      { name: 'twitter:description', content: appDescription },
+      { name: 'twitter:image', content: appImage },
     ],
     links: [
       {
@@ -40,6 +55,11 @@ export const Route = createRootRouteWithContext<{
         crossOrigin: 'anonymous',
       },
       { rel: 'stylesheet', href: appCss },
+      {
+        rel: 'icon',
+        type: 'image/svg+xml',
+        href: '/favicon.svg',
+      },
       {
         rel: 'apple-touch-icon',
         sizes: '180x180',
@@ -57,8 +77,8 @@ export const Route = createRootRouteWithContext<{
         sizes: '16x16',
         href: '/favicon-16x16.png',
       },
-      { rel: 'manifest', href: '/site.webmanifest', color: '#ffffff' },
-      { rel: 'icon', href: '/favicon.ico' },
+      { rel: 'manifest', href: '/site.webmanifest', color: appThemeColor },
+      { rel: 'icon', href: '/favicon.ico', sizes: 'any' },
     ],
   }),
   component: RootComponent,

@@ -25,8 +25,8 @@ export function NavBar() {
       )}
     >
       <LandingContainer className="flex h-full items-center justify-between">
-        <Link to="/" className="flex items-center gap-2.5">
-          <WizardArchiveLogo className="h-7 w-7" />
+        <Link to="/" className="flex items-center gap-1.5">
+          <WizardArchiveLogo className="h-5 w-5" />
           <span className="text-base font-semibold text-foreground">{"Wizard's Archive"}</span>
         </Link>
 

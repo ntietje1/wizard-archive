@@ -38,7 +38,7 @@ export function LandingFooter() {
           <div>
             <div className="flex items-center gap-2.5">
               <WizardArchiveLogo className="h-6 w-6" />
-              <span className="text-sm font-semibold text-foreground">{"Wizard's Archive"}</span>
+              <span className="text-lg font-semibold text-foreground">{"Wizard's Archive"}</span>
             </div>
             <p className="mt-3 text-sm text-muted-foreground">
               The collaborative campaign manager for TTRPGs.
@@ -77,7 +77,7 @@ export function LandingFooter() {
 
         <div className="mt-12 border-t border-border/20 pt-8">
           <p className="text-xs text-muted-foreground">
-            {`© ${new Date().getFullYear()} The Wizard's Archive. All rights reserved.`}
+            {`© ${new Date().getFullYear()} Wizard's Archive. All rights reserved.`}
           </p>
         </div>
       </LandingContainer>
