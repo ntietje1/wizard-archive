@@ -40,6 +40,7 @@ export const Route = createRootRouteWithContext<{
       { property: 'og:type', content: 'website' },
       { property: 'og:title', content: appTitle },
       { property: 'og:description', content: appDescription },
+      { property: 'og:url', content: appUrl },
       { property: 'og:image', content: appImage },
       { name: 'twitter:card', content: 'summary_large_image' },
       { name: 'twitter:title', content: appTitle },
@@ -55,6 +56,7 @@ export const Route = createRootRouteWithContext<{
         crossOrigin: 'anonymous',
       },
       { rel: 'stylesheet', href: appCss },
+      { rel: 'canonical', href: appUrl },
       {
         rel: 'icon',
         type: 'image/svg+xml',

@@ -1,8 +1,10 @@
 import { readFile, writeFile } from 'node:fs/promises'
+import { resolve } from 'node:path'
 import pngToIco from 'png-to-ico'
 import sharp from 'sharp'
 
 const LOGO_PATH = 'public/logo.svg'
+const OG_FONT_PATH = 'public/fonts/inter-variable.ttf'
 const STYLE_PATH = 'src/styles/app.css'
 const WEB_MANIFEST_PATH = 'public/site.webmanifest'
 const FAVICON_VIEWBOX_SIZE = 8192
@@ -13,6 +15,7 @@ const OG_BACKGROUND = '#111114'
 const sourceLogoSvg = await readFile(LOGO_PATH, 'utf8')
 const styleSheet = await readFile(STYLE_PATH, 'utf8')
 const brandPrimaryColor = toStaticHex(readRootCustomProperty(styleSheet, '--primary'))
+const ogFontFile = resolve(OG_FONT_PATH)
 const shapeLogoSvg = stripLogoColor(sourceLogoSvg)
 const brandLogoSvg = tintLogoSvg(shapeLogoSvg, brandPrimaryColor)
 const webManifest = JSON.parse(await readFile(WEB_MANIFEST_PATH, 'utf8'))
@@ -172,12 +175,46 @@ const ogLogo = await sharp(Buffer.from(brandLogoSvg))
   .png()
   .toBuffer()
 
-const ogText = Buffer.from(`
-  <svg width="820" height="630" xmlns="http://www.w3.org/2000/svg">
-    <text x="0" y="280" fill="#ffffff" font-size="92" font-family="Arial, sans-serif" font-weight="700">Wizard&apos;s Archive</text>
-    <text x="4" y="360" fill="#d5d1df" font-size="40" font-family="Arial, sans-serif">Collaborative campaign manager for TTRPGs</text>
-  </svg>
-`)
+const ogText = await sharp({
+  create: {
+    width: 820,
+    height: 630,
+    channels: 4,
+    background: { r: 0, g: 0, b: 0, alpha: 0 },
+  },
+})
+  .composite([
+    {
+      input: await renderOgText(
+        '<span foreground="#ffffff" font_weight="700" font_size="92pt">Wizard&apos;s Archive</span>',
+      ),
+      top: 214,
+      left: 0,
+    },
+    {
+      input: await renderOgText(
+        '<span foreground="#d5d1df" font_size="38pt">Collaborative campaign manager for TTRPGs</span>',
+      ),
+      top: 326,
+      left: 4,
+    },
+  ])
+  .png()
+  .toBuffer()
+
+async function renderOgText(text) {
+  return sharp({
+    text: {
+      text,
+      font: 'Inter',
+      fontfile: ogFontFile,
+      rgba: true,
+      dpi: 72,
+    },
+  })
+    .png()
+    .toBuffer()
+}
 
 await sharp({
   create: {
