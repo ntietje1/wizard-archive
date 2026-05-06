@@ -102,6 +102,8 @@ export function useCanvasToolRuntime({
     nodesMap,
     edgesMap,
     createNode: documentWriter.createNode,
+    setPendingEditNodeId: session.editSession.setPendingEditNodeId,
+    setPendingEditNodePoint: session.editSession.setPendingEditNodePoint,
     screenToCanvasPosition: viewportController.screenToCanvasPosition,
     selection,
     commands,

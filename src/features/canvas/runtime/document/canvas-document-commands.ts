@@ -1,5 +1,5 @@
 import { createEmbedCanvasNode } from '../../nodes/embed/embed-node-creation'
-import { resizeCanvasNode } from '../../nodes/canvas-node-modules'
+import { createCanvasNodePlacement, resizeCanvasNode } from '../../nodes/canvas-node-modules'
 import type { CanvasNodeDataPatch } from '../../nodes/canvas-node-modules'
 import { clampCanvasEdgeStrokeWidth } from '../../edges/shared/canvas-edge-style'
 import type { CanvasEdgeCreationDefaults } from '../../tools/canvas-tool-types'
@@ -361,5 +361,34 @@ export function createAndSelectEmbeddedCanvasNode({
 
   const nextSelection = { nodeIds: new Set([embedNode.id]), edgeIds: new Set<string>() }
   setSelection(nextSelection)
+  return nextSelection
+}
+
+export function createAndSelectTextCanvasNode({
+  pointerPosition,
+  screenToCanvasPosition,
+  createNode,
+  setSelection,
+  setPendingEditNodeId,
+  setPendingEditNodePoint,
+}: {
+  pointerPosition: CanvasContextMenuPoint
+  screenToCanvasPosition: (position: CanvasContextMenuPoint) => { x: number; y: number }
+  createNode: (node: CanvasDocumentNode) => void
+  setSelection: (selection: CanvasSelectionSnapshot) => void
+  setPendingEditNodeId: (nodeId: string | null) => void
+  setPendingEditNodePoint: (point: CanvasContextMenuPoint | null) => void
+}) {
+  const placement = createCanvasNodePlacement('text', {
+    position: screenToCanvasPosition(pointerPosition),
+  })
+  createNode(placement.node)
+
+  const nextSelection = { nodeIds: new Set([placement.node.id]), edgeIds: new Set<string>() }
+  setSelection(nextSelection)
+  if (placement.startEditing) {
+    setPendingEditNodePoint(pointerPosition)
+    setPendingEditNodeId(placement.node.id)
+  }
   return nextSelection
 }

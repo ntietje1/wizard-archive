@@ -1,5 +1,8 @@
 import { useLayoutEffect, useRef, useState } from 'react'
-import { createAndSelectEmbeddedCanvasNode } from '../document/canvas-document-commands'
+import {
+  createAndSelectEmbeddedCanvasNode,
+  createAndSelectTextCanvasNode,
+} from '../document/canvas-document-commands'
 import { buildCanvasContextMenu } from './canvas-context-menu-registry'
 import { resolveCanvasContextMenuTarget } from './canvas-context-menu-target'
 import type { CanvasSelectionController } from '../../tools/canvas-tool-types'
@@ -28,6 +31,8 @@ interface UseCanvasContextMenuOptions {
   nodesMap: Y.Map<CanvasDocumentNode>
   edgesMap: Y.Map<CanvasDocumentEdge>
   createNode: (node: CanvasDocumentNode) => void
+  setPendingEditNodeId: (nodeId: string | null) => void
+  setPendingEditNodePoint: (point: CanvasContextMenuPoint | null) => void
   screenToCanvasPosition: (position: CanvasContextMenuPoint) => { x: number; y: number }
   selection: Pick<CanvasSelectionController, 'clearSelection' | 'getSnapshot' | 'setSelection'>
   commands: CanvasContextMenuCommands
@@ -56,6 +61,8 @@ export function useCanvasContextMenu({
   nodesMap,
   edgesMap,
   createNode,
+  setPendingEditNodeId,
+  setPendingEditNodePoint,
   screenToCanvasPosition,
   selection,
   commands,
@@ -123,6 +130,20 @@ export function useCanvasContextMenu({
         })
         return null
       }
+    },
+    createTextNode: (pointerPosition) => {
+      if (!canEdit) {
+        return null
+      }
+
+      return createAndSelectTextCanvasNode({
+        pointerPosition,
+        screenToCanvasPosition,
+        createNode,
+        setSelection: selection.setSelection,
+        setPendingEditNodeId,
+        setPendingEditNodePoint,
+      })
     },
   } satisfies CanvasContextMenuServices
 

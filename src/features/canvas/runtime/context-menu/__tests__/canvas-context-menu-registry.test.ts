@@ -20,6 +20,7 @@ function createServices(
     hasSelectableCanvasItems: () => false,
     selectAllCanvasItems: vi.fn(),
     createAndEmbedSidebarItem: vi.fn(() => Promise.resolve(null)),
+    createTextNode: vi.fn(() => null),
     ...overrides,
   }
 }
@@ -99,9 +100,49 @@ describe('buildCanvasContextMenu', () => {
       'canvas-pane-create-map',
       'canvas-pane-create-canvas',
       'canvas-pane-create-file',
+      'canvas-pane-create-text',
     ])
     expect(menu.flatItems[1]?.disabled).toBe(true)
     expect(menu.flatItems[2]?.disabled).toBe(true)
+  })
+
+  it('adds separated text-node creation to the pane New submenu', async () => {
+    const createTextNode = vi.fn(() => null)
+    const services = {
+      ...createServices(),
+      createTextNode,
+    }
+    const context = createContext()
+    const menu = buildCanvasContextMenu({
+      context,
+      services,
+      commands: createCommands(),
+    })
+
+    const createSubmenu = menu.flatItems.find((item) => item.id === 'canvas-pane-create-submenu')
+    expect(createSubmenu?.children?.map((item) => item.id)).toEqual([
+      'canvas-pane-create-note',
+      'canvas-pane-create-folder',
+      'canvas-pane-create-map',
+      'canvas-pane-create-canvas',
+      'canvas-pane-create-file',
+      'canvas-pane-create-text',
+    ])
+    expect(createSubmenu?.children?.map((item) => item.group)).toEqual([
+      'create',
+      'create',
+      'create',
+      'create',
+      'create',
+      'create-node',
+    ])
+
+    const textItem = createSubmenu!.children!.find((item) => item.id === 'canvas-pane-create-text')
+    expect(textItem).toBeDefined()
+
+    await textItem!.onSelect()
+
+    expect(createTextNode).toHaveBeenCalledWith(context.pointerPosition)
   })
 
   it('builds selection actions in order and runs shared commands from onSelect', async () => {

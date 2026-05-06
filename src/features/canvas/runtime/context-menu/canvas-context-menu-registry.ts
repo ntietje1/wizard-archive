@@ -12,6 +12,7 @@ import {
   Scissors,
   SquareMousePointer,
   Trash2,
+  Type,
 } from 'lucide-react'
 import { parseCanvasReorderPayload } from 'convex/canvases/validation'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
@@ -135,6 +136,16 @@ function buildCanvasCreateItems(): Array<CanvasContextMenuItem> {
     createItem('canvas-pane-create-map', 'Map', MapPin, 12, SIDEBAR_ITEM_TYPES.gameMaps),
     createItem('canvas-pane-create-canvas', 'Canvas', Grid2x2Plus, 13, SIDEBAR_ITEM_TYPES.canvases),
     createItem('canvas-pane-create-file', 'File', File, 14, SIDEBAR_ITEM_TYPES.files),
+    {
+      id: 'canvas-pane-create-text',
+      label: 'Text',
+      icon: Type,
+      group: 'create-node',
+      priority: 20,
+      onSelect: (context, services) => {
+        services.createTextNode(context.pointerPosition)
+      },
+    },
   ]
 }
 

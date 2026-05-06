@@ -103,6 +103,8 @@ describe('useCanvasToolRuntime', () => {
       nodesMap: harness.nodesMap,
       edgesMap: harness.edgesMap,
       createNode: harness.documentWriter.createNode,
+      setPendingEditNodeId: harness.session.editSession.setPendingEditNodeId,
+      setPendingEditNodePoint: harness.session.editSession.setPendingEditNodePoint,
       screenToCanvasPosition: harness.viewportController.screenToCanvasPosition,
       selection: harness.selection,
       commands: harness.commands,
@@ -214,7 +216,10 @@ function createToolRuntimeHarness() {
           setLocalCursor: vi.fn(),
         },
       },
-      editSession: {},
+      editSession: {
+        setPendingEditNodeId: vi.fn(),
+        setPendingEditNodePoint: vi.fn(),
+      },
     },
     viewportController: {
       getZoom: () => 1,

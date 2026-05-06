@@ -422,6 +422,8 @@ describe('useCanvasEditorRuntime', () => {
       nodesMap,
       edgesMap,
       createNode: documentWriterMock.createNode,
+      setPendingEditNodeId: session.editSession.setPendingEditNodeId,
+      setPendingEditNodePoint: session.editSession.setPendingEditNodePoint,
       screenToCanvasPosition: expect.any(Function),
       selection: selectionControllerMock,
       commands: commandsMock,

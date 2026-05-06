@@ -76,6 +76,7 @@ export interface CanvasContextMenuServices {
     type: SidebarItemType,
     pointerPosition: CanvasContextMenuPoint,
   ) => Promise<CanvasSelectionSnapshot | null>
+  createTextNode: (pointerPosition: CanvasContextMenuPoint) => CanvasSelectionSnapshot | null
 }
 
 export type CanvasContextMenuItem<TPayload = unknown> = ContextMenuItemSpec<

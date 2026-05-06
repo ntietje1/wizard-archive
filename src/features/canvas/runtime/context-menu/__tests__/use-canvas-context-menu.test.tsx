@@ -1,6 +1,10 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useCanvasContextMenu } from '../use-canvas-context-menu'
+import {
+  TEXT_NODE_DEFAULT_HEIGHT,
+  TEXT_NODE_DEFAULT_WIDTH,
+} from '../../../nodes/text/text-node-constants'
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
@@ -173,6 +177,8 @@ describe('useCanvasContextMenu', () => {
         nodesMap,
         edgesMap,
         createNode: vi.fn(),
+        setPendingEditNodeId: vi.fn(),
+        setPendingEditNodePoint: vi.fn(),
         screenToCanvasPosition: ({ x, y }) => ({ x, y }),
         selection,
         commands: createCommands(),
@@ -224,6 +230,8 @@ describe('useCanvasContextMenu', () => {
         nodesMap,
         edgesMap,
         createNode: vi.fn(),
+        setPendingEditNodeId: vi.fn(),
+        setPendingEditNodePoint: vi.fn(),
         screenToCanvasPosition: ({ x, y }) => ({ x, y }),
         selection,
         commands: createCommands(),
@@ -253,6 +261,68 @@ describe('useCanvasContextMenu', () => {
     })
   })
 
+  it('creates and starts editing a text node from the pane menu New submenu', async () => {
+    const selection = createSelectionController()
+    const { nodesMap, edgesMap } = createContextMenuDoc()
+    const createNode = vi.fn()
+    const setPendingEditNodeId = vi.fn()
+    const setPendingEditNodePoint = vi.fn()
+    const { result } = renderHook(() =>
+      useCanvasContextMenu({
+        activeTool: 'select',
+        canEdit: true,
+        campaignId: testCampaignId,
+        canvasParentId: null,
+        nodesMap,
+        edgesMap,
+        createNode,
+        setPendingEditNodeId,
+        setPendingEditNodePoint,
+        screenToCanvasPosition: ({ x, y }) => ({ x: x + 100, y: y + 200 }),
+        selection,
+        commands: createCommands(),
+      }),
+    )
+
+    result.current.hostRef.current = {
+      open: vi.fn(),
+      close: vi.fn(),
+    }
+
+    act(() => {
+      result.current.openForPane(createContextMenuEvent(20, 40))
+    })
+
+    const createSubmenu = result.current.menu.flatItems.find(
+      (item) => item.id === 'canvas-pane-create-submenu',
+    )
+    const textItem = createSubmenu?.children?.find((item) => item.id === 'canvas-pane-create-text')
+    expect(textItem).toBeDefined()
+
+    await act(async () => {
+      await textItem!.onSelect()
+    })
+
+    const createdNode = createNode.mock.calls[0]?.[0] as Node
+    expect(createdNode).toEqual(
+      expect.objectContaining({
+        type: 'text',
+        position: {
+          x: 120 - TEXT_NODE_DEFAULT_WIDTH / 2,
+          y: 240 - TEXT_NODE_DEFAULT_HEIGHT / 2,
+        },
+        width: TEXT_NODE_DEFAULT_WIDTH,
+        height: TEXT_NODE_DEFAULT_HEIGHT,
+      }),
+    )
+    expect(selection.setSelection).toHaveBeenCalledWith({
+      nodeIds: new Set([createdNode.id]),
+      edgeIds: new Set<string>(),
+    })
+    expect(setPendingEditNodePoint).toHaveBeenCalledWith({ x: 20, y: 40 })
+    expect(setPendingEditNodeId).toHaveBeenCalledWith(createdNode.id)
+  })
+
   it('selects the right-clicked node before opening the menu', () => {
     const selection = createSelectionController()
     const { nodesMap, edgesMap } = createContextMenuDoc()
@@ -271,6 +341,8 @@ describe('useCanvasContextMenu', () => {
         nodesMap,
         edgesMap,
         createNode: vi.fn(),
+        setPendingEditNodeId: vi.fn(),
+        setPendingEditNodePoint: vi.fn(),
         screenToCanvasPosition: ({ x, y }) => ({ x, y }),
         selection,
         commands: createCommands(),
@@ -307,6 +379,8 @@ describe('useCanvasContextMenu', () => {
         nodesMap,
         edgesMap,
         createNode: vi.fn(),
+        setPendingEditNodeId: vi.fn(),
+        setPendingEditNodePoint: vi.fn(),
         screenToCanvasPosition: ({ x, y }) => ({ x, y }),
         selection,
         commands: createCommands(),
@@ -358,6 +432,8 @@ describe('useCanvasContextMenu', () => {
         nodesMap,
         edgesMap,
         createNode: vi.fn(),
+        setPendingEditNodeId: vi.fn(),
+        setPendingEditNodePoint: vi.fn(),
         screenToCanvasPosition: ({ x, y }) => ({ x, y }),
         selection,
         commands: createCommands(),
@@ -407,6 +483,8 @@ describe('useCanvasContextMenu', () => {
         nodesMap,
         edgesMap,
         createNode: vi.fn(),
+        setPendingEditNodeId: vi.fn(),
+        setPendingEditNodePoint: vi.fn(),
         screenToCanvasPosition: ({ x, y }) => ({ x, y }),
         selection,
         commands: createCommands(),
