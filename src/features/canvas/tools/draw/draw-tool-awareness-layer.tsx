@@ -1,35 +1,41 @@
+import { CanvasScreenSpaceSvg } from '../../components/canvas-screen-space-overlay'
+import {
+  canvasStrokePointsToScreenPoints,
+  useCanvasScreenSpaceViewport,
+} from '../../components/canvas-screen-space-overlay-utils'
 import { pointsToPathD } from '../../nodes/stroke/stroke-node-model'
 import type { RemoteUser } from '../../utils/canvas-awareness-types'
+import { resolveCanvasScreenMinimumStrokeWidth } from '../../utils/canvas-screen-stroke-width'
 import { readRemoteDrawState } from './draw-tool-awareness'
 
+const MIN_REMOTE_STROKE_WIDTH_PX = 1
+
 export function DrawAwarenessLayer({ remoteUsers }: { remoteUsers: Array<RemoteUser> }) {
+  const viewport = useCanvasScreenSpaceViewport()
+
   return (
-    <svg
-      aria-hidden="true"
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        overflow: 'visible',
-        pointerEvents: 'none',
-      }}
-    >
+    <CanvasScreenSpaceSvg>
       {remoteUsers.map((user) => {
         const drawing = readRemoteDrawState(user)
         if (!drawing || drawing.points.length < 2) return null
-        const d = pointsToPathD(drawing.points, drawing.size)
+        const d = pointsToPathD(
+          canvasStrokePointsToScreenPoints(drawing.points, viewport),
+          resolveCanvasScreenMinimumStrokeWidth(
+            drawing.size * viewport.zoom,
+            MIN_REMOTE_STROKE_WIDTH_PX,
+          ),
+        )
         if (!d) return null
         return (
           <path
             key={`remote-${user.clientId}`}
+            data-testid="canvas-remote-draw-preview"
             d={d}
             fill={drawing.color}
             opacity={((drawing.opacity ?? 100) / 100) * 0.7}
           />
         )
       })}
-    </svg>
+    </CanvasScreenSpaceSvg>
   )
 }

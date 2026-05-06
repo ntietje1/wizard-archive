@@ -4,20 +4,23 @@ import type {
   ResizingState,
   RemoteUser,
 } from '../utils/canvas-awareness-types'
-import type { CanvasEdgeType } from '../edges/canvas-edge-types'
+import type { CanvasEdgePatch } from '../edges/canvas-edge-types'
+import type { CanvasNodeDataPatch } from '../nodes/canvas-node-modules'
 import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
-import type { Connection, Edge, Node, XYPosition } from '@xyflow/react'
-import type { ComponentType, CSSProperties, MouseEvent as ReactMouseEvent, ReactNode } from 'react'
+import type {
+  CanvasSelectionCommitMode,
+  CanvasSelectionGestureKind,
+  CanvasSelectionSnapshot,
+} from '../system/canvas-selection'
+import type { CanvasConnection, CanvasPosition } from '../types/canvas-domain-types'
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+  CanvasEdgeType,
+} from 'convex/canvases/validation'
+import type { ComponentType, MouseEvent as ReactMouseEvent, ReactNode } from 'react'
 
 export type CanvasToolId = 'select' | 'hand' | 'draw' | 'erase' | 'lasso' | 'text' | 'edge'
-
-export type CanvasSelectionGestureKind = 'marquee' | 'lasso'
-export type CanvasSelectionCommitMode = 'replace' | 'add'
-
-export interface CanvasSelectionSnapshot {
-  nodeIds: Array<string>
-  edgeIds: Array<string>
-}
 
 interface CanvasToolSettings {
   strokeColor: string
@@ -28,7 +31,7 @@ interface CanvasToolSettings {
 
 export interface CanvasEdgeCreationDefaults {
   type: CanvasEdgeType
-  style?: CSSProperties
+  style?: CanvasEdgePatch['style']
 }
 
 export interface CanvasHistoryController {
@@ -49,34 +52,42 @@ export interface CanvasEditSessionState {
 
 /**
  * Per-node UI callbacks for node components. Prefer this interface inside node renderers for
- * immediate interaction updates; `updateNodeData` applies local node-level changes, while
- * `onResize` and `onResizeEnd` separate live resize feedback from the committed resize write.
+ * immediate interaction updates; `onResize` and `onResizeEnd` separate live resize feedback from
+ * the committed resize write.
  */
 export interface CanvasNodeActions {
-  updateNodeData: <TPatch extends Record<string, unknown>>(nodeId: string, data: TPatch) => void
   transact?: (fn: () => void) => void
-  onResize: (nodeId: string, width: number, height: number, position: XYPosition) => void
-  onResizeEnd: (nodeId: string, width: number, height: number, position: XYPosition) => void
+  onResize: (nodeId: string, width: number, height: number, position: CanvasPosition) => void
+  onResizeEnd: (nodeId: string, width: number, height: number, position: CanvasPosition) => void
+  onResizeMany: (updates: ReadonlyMap<string, CanvasNodeResizeUpdate>) => void
+  onResizeManyCancel: (updates: ReadonlyMap<string, CanvasNodeResizeUpdate>) => void
+  onResizeManyEnd: (updates: ReadonlyMap<string, CanvasNodeResizeUpdate>) => void
+}
+
+export interface CanvasNodeResizeUpdate {
+  width: number
+  height: number
+  position: CanvasPosition
 }
 
 export interface CanvasDocumentWriter {
-  createNode: (node: Node) => void
-  updateNode: (nodeId: string, updater: (node: Node) => Node) => void
-  updateNodeData: <TPatch extends Record<string, unknown>>(nodeId: string, data: TPatch) => void
-  updateEdge: (edgeId: string, updater: (edge: Edge) => Edge) => void
-  resizeNode: (nodeId: string, width: number, height: number, position: XYPosition) => void
-  deleteNodes: (nodeIds: Array<string>) => void
-  createEdge: (connection: Connection, defaults?: CanvasEdgeCreationDefaults) => void
-  deleteEdges: (edgeIds: Array<string>) => void
-  setNodePosition: (nodeId: string, position: XYPosition) => void
+  createNode: (node: CanvasDocumentNode) => void
+  patchNodeData: (updates: ReadonlyMap<string, CanvasNodeDataPatch>) => void
+  patchEdges: (updates: ReadonlyMap<string, CanvasEdgePatch>) => void
+  resizeNode: (nodeId: string, width: number, height: number, position: CanvasPosition) => void
+  resizeNodes: (updates: ReadonlyMap<string, CanvasNodeResizeUpdate>) => void
+  deleteNodes: (nodeIds: ReadonlySet<string>) => void
+  createEdge: (connection: CanvasConnection, defaults?: CanvasEdgeCreationDefaults) => void
+  deleteEdges: (edgeIds: ReadonlySet<string>) => void
+  setNodePositions: (positions: ReadonlyMap<string, CanvasPosition>) => void
 }
 
 interface CanvasDocumentReader {
-  getNodes: () => Array<Node>
-  getEdges: () => Array<Edge>
+  getNodes: () => Array<CanvasDocumentNode>
+  getEdges: () => Array<CanvasDocumentEdge>
 }
 
-export type CanvasMeasuredNode = Node & {
+export type CanvasMeasuredNode = CanvasDocumentNode & {
   width: number
   height: number
 }
@@ -93,20 +104,14 @@ interface CanvasDocumentQuery {
 
 export interface CanvasSelectionController {
   getSnapshot: () => CanvasSelectionSnapshot
-  replace: (selection: CanvasSelectionSnapshot) => void
-  replaceNodes: (nodeIds: Array<string>) => void
-  replaceEdges: (edgeIds: Array<string>) => void
-  clear: () => void
-  getSelectedNodeIds: () => Array<string>
-  getSelectedEdgeIds: () => Array<string>
-  toggleNodeFromTarget: (targetId: string | null, toggle: boolean) => void
-  toggleEdgeFromTarget: (targetId: string | null, toggle: boolean) => void
-  beginGesture: (kind: CanvasSelectionGestureKind) => void
-  commitGestureSelection: (
-    selection: CanvasSelectionSnapshot,
-    mode?: CanvasSelectionCommitMode,
-  ) => void
-  endGesture: () => void
+  setSelection: (selection: CanvasSelectionSnapshot) => void
+  clearSelection: () => void
+  toggleNode: (nodeId: string, additive: boolean) => void
+  toggleEdge: (edgeId: string, additive: boolean) => void
+  beginGesture: (kind: CanvasSelectionGestureKind, mode: CanvasSelectionCommitMode) => void
+  setGesturePreview: (selection: CanvasSelectionSnapshot | null) => void
+  commitGesture: () => void
+  cancelGesture: () => void
 }
 
 export interface CanvasInteractionTools {
@@ -119,7 +124,7 @@ interface CanvasModifierKeyReader {
 }
 
 export interface CanvasViewportTools {
-  screenToFlowPosition: (position: XYPosition) => XYPosition
+  screenToCanvasPosition: (position: Point2D) => CanvasPosition
   getZoom: () => number
 }
 
@@ -142,9 +147,8 @@ export interface CanvasToolPropertyContext {
 
 export interface CanvasCoreAwarenessWriter {
   setLocalCursor: (position: Point2D | null) => void
-  setLocalDragging: (positions: Record<string, Point2D> | null) => void
   setLocalResizing: (resizing: ResizingState | null) => void
-  setLocalSelection: (nodeIds: Array<string> | null) => void
+  setLocalSelection: (nodeIds: ReadonlySet<string> | null) => void
 }
 
 export interface CanvasAwarenessPresenceWriter {
@@ -184,11 +188,8 @@ export interface CanvasToolHandlers {
   onPointerCancel?: (event: PointerEvent) => void
   onKeyDown?: (event: KeyboardEvent) => void
   onKeyUp?: (event: KeyboardEvent) => void
-  onNodeClick?: (event: ReactMouseEvent, node: Node) => void
-  onEdgeClick?: (event: ReactMouseEvent, edge: Edge) => void
-  onPaneClick?: (event: ReactMouseEvent) => void
-  onMoveStart?: (event: MouseEvent | TouchEvent | null) => void
-  onMoveEnd?: () => void
+  onNodeClick?: (event: ReactMouseEvent, node: CanvasDocumentNode) => void
+  onEdgeClick?: (event: ReactMouseEvent, edge: CanvasDocumentEdge) => void
 }
 
 export interface CanvasToolSpec<TId extends CanvasToolId = CanvasToolId> {

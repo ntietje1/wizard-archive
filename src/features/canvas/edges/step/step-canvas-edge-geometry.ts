@@ -1,20 +1,16 @@
-import { Position } from '@xyflow/react'
+import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
 import { getCanvasNodeBounds } from '../../nodes/shared/canvas-node-bounds'
-import { boundsFromPoints, rectIntersectsBounds } from '../../utils/canvas-geometry-utils'
 import {
   buildPolylinePath,
   compactPolylinePoints,
   getCanvasEdgeEndpoints,
-  getCanvasEdgePointThreshold,
   getPolylineMidpoint,
-  pointNearPolyline,
-  polylineIntersectsPolygon,
-  polylineIntersectsRect,
 } from '../shared/canvas-edge-geometry'
-import type { PolylineCanvasEdgeGeometry } from '../shared/canvas-edge-geometry'
+import type { CanvasEdgeGeometry } from '../shared/canvas-edge-geometry'
 import type { Point2D } from '../../utils/canvas-awareness-types'
-import type { Bounds } from '../../utils/canvas-geometry-utils'
-import type { Edge, EdgeProps, Node } from '@xyflow/react'
+import type { CanvasHandlePosition } from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasEdgeRenderGeometryProps as EdgeProps } from '../canvas-edge-types'
 
 const STEP_EDGE_STUB_LENGTH = 48
 type StepSplitCoordinates = {
@@ -24,30 +20,33 @@ type StepSplitCoordinates = {
   relaxSplitY?: boolean
 }
 
-function isHorizontalPosition(position: Position): boolean {
-  return position === Position.Left || position === Position.Right
+function isHorizontalPosition(position: CanvasHandlePosition): boolean {
+  return position === CANVAS_HANDLE_POSITION.Left || position === CANVAS_HANDLE_POSITION.Right
 }
 
-function getPositionCoordinate(position: Position, point: Pick<Point2D, 'x' | 'y'>): number {
+function getPositionCoordinate(
+  position: CanvasHandlePosition,
+  point: Pick<Point2D, 'x' | 'y'>,
+): number {
   return isHorizontalPosition(position) ? point.x : point.y
 }
 
-function getPositionDirection(position: Position): Point2D {
+function getPositionDirection(position: CanvasHandlePosition): Point2D {
   switch (position) {
-    case Position.Left:
+    case CANVAS_HANDLE_POSITION.Left:
       return { x: -1, y: 0 }
-    case Position.Right:
+    case CANVAS_HANDLE_POSITION.Right:
       return { x: 1, y: 0 }
-    case Position.Top:
+    case CANVAS_HANDLE_POSITION.Top:
       return { x: 0, y: -1 }
-    case Position.Bottom:
+    case CANVAS_HANDLE_POSITION.Bottom:
       return { x: 0, y: 1 }
     default:
       return { x: 0, y: 0 }
   }
 }
 
-function buildStepStubPoint(point: Point2D, position: Position): Point2D {
+function buildStepStubPoint(point: Point2D, position: CanvasHandlePosition): Point2D {
   const direction = getPositionDirection(position)
 
   return {
@@ -57,7 +56,7 @@ function buildStepStubPoint(point: Point2D, position: Position): Point2D {
 }
 
 function respectsPositionDirection(
-  position: Position,
+  position: CanvasHandlePosition,
   startCoordinate: number,
   nextCoordinate: number,
 ): boolean {
@@ -69,16 +68,22 @@ function respectsPositionDirection(
 }
 
 function areHorizontalHandlesFacing(
-  sourcePosition: Position,
-  targetPosition: Position,
+  sourcePosition: CanvasHandlePosition,
+  targetPosition: CanvasHandlePosition,
   sourceStubX: number,
   targetStubX: number,
 ): boolean {
-  if (sourcePosition === Position.Right && targetPosition === Position.Left) {
+  if (
+    sourcePosition === CANVAS_HANDLE_POSITION.Right &&
+    targetPosition === CANVAS_HANDLE_POSITION.Left
+  ) {
     return sourceStubX <= targetStubX
   }
 
-  if (sourcePosition === Position.Left && targetPosition === Position.Right) {
+  if (
+    sourcePosition === CANVAS_HANDLE_POSITION.Left &&
+    targetPosition === CANVAS_HANDLE_POSITION.Right
+  ) {
     return sourceStubX >= targetStubX
   }
 
@@ -86,23 +91,32 @@ function areHorizontalHandlesFacing(
 }
 
 function areVerticalHandlesFacing(
-  sourcePosition: Position,
-  targetPosition: Position,
+  sourcePosition: CanvasHandlePosition,
+  targetPosition: CanvasHandlePosition,
   sourceStubY: number,
   targetStubY: number,
 ): boolean {
-  if (sourcePosition === Position.Bottom && targetPosition === Position.Top) {
+  if (
+    sourcePosition === CANVAS_HANDLE_POSITION.Bottom &&
+    targetPosition === CANVAS_HANDLE_POSITION.Top
+  ) {
     return sourceStubY <= targetStubY
   }
 
-  if (sourcePosition === Position.Top && targetPosition === Position.Bottom) {
+  if (
+    sourcePosition === CANVAS_HANDLE_POSITION.Top &&
+    targetPosition === CANVAS_HANDLE_POSITION.Bottom
+  ) {
     return sourceStubY >= targetStubY
   }
 
   return false
 }
 
-function getClosestHorizontalEdgeMidpoint(sourceNode: Node, targetNode: Node): number | null {
+function getClosestHorizontalEdgeMidpoint(
+  sourceNode: CanvasDocumentNode,
+  targetNode: CanvasDocumentNode,
+): number | null {
   const sourceBounds = getCanvasNodeBounds(sourceNode)
   const targetBounds = getCanvasNodeBounds(targetNode)
   if (!sourceBounds || !targetBounds) return null
@@ -117,7 +131,10 @@ function getClosestHorizontalEdgeMidpoint(sourceNode: Node, targetNode: Node): n
   return (targetBounds.x + targetBounds.width + sourceBounds.x) / 2
 }
 
-function getClosestVerticalEdgeMidpoint(sourceNode: Node, targetNode: Node): number | null {
+function getClosestVerticalEdgeMidpoint(
+  sourceNode: CanvasDocumentNode,
+  targetNode: CanvasDocumentNode,
+): number | null {
   const sourceBounds = getCanvasNodeBounds(sourceNode)
   const targetBounds = getCanvasNodeBounds(targetNode)
   if (!sourceBounds || !targetBounds) return null
@@ -152,8 +169,10 @@ function buildRelaxedHorizontalStepPoints(
   const end = { x: props.targetX, y: props.targetY }
 
   if (
-    (props.sourcePosition === Position.Right && props.targetPosition === Position.Left) ||
-    (props.sourcePosition === Position.Left && props.targetPosition === Position.Right)
+    (props.sourcePosition === CANVAS_HANDLE_POSITION.Right &&
+      props.targetPosition === CANVAS_HANDLE_POSITION.Left) ||
+    (props.sourcePosition === CANVAS_HANDLE_POSITION.Left &&
+      props.targetPosition === CANVAS_HANDLE_POSITION.Right)
   ) {
     const middleX = (props.sourceX + props.targetX) / 2
 
@@ -166,7 +185,8 @@ function buildRelaxedHorizontalStepPoints(
   }
 
   const commonX =
-    props.sourcePosition === Position.Right || props.targetPosition === Position.Right
+    props.sourcePosition === CANVAS_HANDLE_POSITION.Right ||
+    props.targetPosition === CANVAS_HANDLE_POSITION.Right
       ? Math.max(props.sourceX, props.targetX)
       : Math.min(props.sourceX, props.targetX)
 
@@ -188,8 +208,10 @@ function buildRelaxedVerticalStepPoints(
   const end = { x: props.targetX, y: props.targetY }
 
   if (
-    (props.sourcePosition === Position.Bottom && props.targetPosition === Position.Top) ||
-    (props.sourcePosition === Position.Top && props.targetPosition === Position.Bottom)
+    (props.sourcePosition === CANVAS_HANDLE_POSITION.Bottom &&
+      props.targetPosition === CANVAS_HANDLE_POSITION.Top) ||
+    (props.sourcePosition === CANVAS_HANDLE_POSITION.Top &&
+      props.targetPosition === CANVAS_HANDLE_POSITION.Bottom)
   ) {
     const middleY = (props.sourceY + props.targetY) / 2
 
@@ -202,7 +224,8 @@ function buildRelaxedVerticalStepPoints(
   }
 
   const commonY =
-    props.sourcePosition === Position.Bottom || props.targetPosition === Position.Bottom
+    props.sourcePosition === CANVAS_HANDLE_POSITION.Bottom ||
+    props.targetPosition === CANVAS_HANDLE_POSITION.Bottom
       ? Math.max(props.sourceY, props.targetY)
       : Math.min(props.sourceY, props.targetY)
 
@@ -373,7 +396,7 @@ export function buildStepCanvasEdgeGeometryFromRenderProps(
     'sourceX' | 'sourceY' | 'targetX' | 'targetY' | 'sourcePosition' | 'targetPosition'
   >,
   splitCoordinates: StepSplitCoordinates = {},
-): PolylineCanvasEdgeGeometry {
+): CanvasEdgeGeometry {
   const points = buildStepPoints(props, splitCoordinates)
   const midpoint = getPolylineMidpoint(points)
 
@@ -381,14 +404,14 @@ export function buildStepCanvasEdgeGeometryFromRenderProps(
     path: buildPolylinePath(points),
     labelX: midpoint.x,
     labelY: midpoint.y,
-    points,
+    hitPoints: points,
   }
 }
 
 export function buildStepCanvasEdgeGeometryFromEdge(
-  edge: Edge,
-  nodesById: ReadonlyMap<string, Node>,
-): PolylineCanvasEdgeGeometry | null {
+  edge: CanvasDocumentEdge,
+  nodesById: ReadonlyMap<string, CanvasDocumentNode>,
+): CanvasEdgeGeometry | null {
   const sourceNode = nodesById.get(edge.source)
   const targetNode = nodesById.get(edge.target)
   const endpoints = getCanvasEdgeEndpoints(edge, nodesById)
@@ -415,73 +438,4 @@ export function buildStepCanvasEdgeGeometryFromEdge(
     relaxSplitX,
     relaxSplitY,
   })
-}
-
-export function getStepCanvasEdgeBounds(
-  edge: Edge,
-  nodesById: ReadonlyMap<string, Node>,
-): Bounds | null {
-  const geometry = buildStepCanvasEdgeGeometryFromEdge(edge, nodesById)
-  if (!geometry) return null
-
-  return boundsFromPoints(geometry.points)
-}
-
-export function stepCanvasEdgeContainsPoint(
-  edge: Edge,
-  point: Point2D,
-  nodesById: ReadonlyMap<string, Node>,
-  zoom: number,
-): boolean {
-  const geometry = buildStepCanvasEdgeGeometryFromEdge(edge, nodesById)
-  if (!geometry) return false
-
-  const bounds = boundsFromPoints(geometry.points)
-  const threshold = getCanvasEdgePointThreshold(zoom)
-  if (
-    bounds &&
-    !rectIntersectsBounds(bounds, {
-      x: point.x - threshold,
-      y: point.y - threshold,
-      width: threshold * 2,
-      height: threshold * 2,
-    })
-  ) {
-    return false
-  }
-
-  return pointNearPolyline(point, geometry.points, threshold)
-}
-
-export function stepCanvasEdgeIntersectsRectangle(
-  edge: Edge,
-  rect: Bounds,
-  nodesById: ReadonlyMap<string, Node>,
-): boolean {
-  const geometry = buildStepCanvasEdgeGeometryFromEdge(edge, nodesById)
-  if (!geometry) return false
-
-  const bounds = boundsFromPoints(geometry.points)
-  if (bounds && !rectIntersectsBounds(bounds, rect)) {
-    return false
-  }
-
-  return polylineIntersectsRect(geometry.points, rect)
-}
-
-export function stepCanvasEdgeIntersectsPolygon(
-  edge: Edge,
-  polygon: ReadonlyArray<Point2D>,
-  nodesById: ReadonlyMap<string, Node>,
-): boolean {
-  const geometry = buildStepCanvasEdgeGeometryFromEdge(edge, nodesById)
-  if (!geometry) return false
-
-  const geometryBounds = boundsFromPoints(geometry.points)
-  const polygonBounds = boundsFromPoints(polygon)
-  if (geometryBounds && polygonBounds && !rectIntersectsBounds(geometryBounds, polygonBounds)) {
-    return false
-  }
-
-  return polylineIntersectsPolygon(geometry.points, polygon)
 }

@@ -4,11 +4,11 @@ import {
   createPlacementEnvironment,
   createPointerEvent,
 } from '../../shared/__tests__/placement-tool-test-utils'
-import type { Node } from '@xyflow/react'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 
 describe('textToolSpec', () => {
   it('creates a default-sized text node on click and requests editing at the click point', () => {
-    const createdNodes: Array<Node> = []
+    const createdNodes: Array<CanvasDocumentNode> = []
     const setPendingEditNodeId = vi.fn()
     const setPendingEditNodePoint = vi.fn()
     const setActiveTool = vi.fn()
@@ -35,17 +35,18 @@ describe('textToolSpec', () => {
       position: { x: -60, y: 80 },
       width: 320,
       height: 240,
-      selected: true,
-      draggable: true,
     })
-    expect(replaceSelection).toHaveBeenCalledWith({ nodeIds: [createdNodes[0].id], edgeIds: [] })
+    expect(replaceSelection).toHaveBeenCalledWith({
+      nodeIds: new Set([createdNodes[0].id]),
+      edgeIds: new Set<string>(),
+    })
     expect(setPendingEditNodeId).toHaveBeenCalledWith(createdNodes[0].id)
     expect(setPendingEditNodePoint).toHaveBeenCalledWith({ x: 100, y: 200 })
     expect(setActiveTool).toHaveBeenCalledWith('select')
   })
 
   it('creates a custom-sized text node on drag', () => {
-    const createdNodes: Array<Node> = []
+    const createdNodes: Array<CanvasDocumentNode> = []
     const setActiveTool = vi.fn()
     const controller = textToolSpec.createHandlers(
       createPlacementEnvironment({

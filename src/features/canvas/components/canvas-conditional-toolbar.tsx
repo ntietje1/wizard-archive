@@ -1,42 +1,19 @@
-import { useState } from 'react'
-import { useEdges, useNodes } from '@xyflow/react'
-import type { Edge, Node } from '@xyflow/react'
-import {
-  getCanvasEdgeInspectableProperties,
-  normalizeCanvasEdge,
-  resolveCanvasEdgeType,
-} from '../edges/canvas-edge-registry'
-import type { CanvasEdgeType } from '../edges/canvas-edge-types'
-import { useCanvasRuntime } from '../runtime/providers/canvas-runtime'
-import {
-  useIsCanvasSelectionGestureActive,
-  useCanvasSelectionState,
-} from '../runtime/selection/use-canvas-selection-state'
-import {
-  getCanvasNodeInspectableProperties,
-  normalizeCanvasNode,
-} from '../nodes/canvas-node-modules'
+import { useReducer } from 'react'
+import type { SyntheticEvent } from 'react'
+import type { CanvasEdgeType } from 'convex/canvases/validation'
 import { CANVAS_REORDER_ACTIONS } from '../runtime/document/canvas-reorder-actions'
-import { canvasToolSpecs } from '../tools/canvas-tool-modules'
-import { useCanvasToolPropertyContext, useCanvasToolStore } from '../stores/canvas-tool-store'
 import { linePaintCanvasProperty } from '../properties/canvas-property-definitions'
-import { resolveCanvasProperties } from '../properties/resolve-canvas-properties'
-import {
-  EMPTY_CANVAS_INSPECTABLE_PROPERTIES,
-  readResolvedPropertyValue,
-} from '../properties/canvas-property-types'
+import { useCanvasEngineSelector } from '../react/use-canvas-engine'
+import { readResolvedPropertyValue } from '../properties/canvas-property-types'
 import type {
-  CanvasInspectableProperties,
   CanvasPaintResolvedProperty,
   CanvasResolvedProperty,
   CanvasStrokeSizeResolvedProperty,
 } from '../properties/canvas-property-types'
 import { areCanvasPaintValuesEqual } from '../properties/canvas-paint-values'
+import { useCanvasToolbarModel } from './use-canvas-toolbar-model'
 import type { CanvasCommands } from '../runtime/document/use-canvas-commands'
-import type { CanvasToolId, CanvasToolPropertyContext } from '../tools/canvas-tool-types'
-import { Slider } from '~/features/shadcn/components/slider'
 import { ColorPickerPopover } from '~/shared/components/color-picker-popover'
-import { useShallow } from 'zustand/shallow'
 
 interface CanvasConditionalToolbarProps {
   canEdit: boolean
@@ -56,6 +33,35 @@ const PAINT_SWATCH_STRIP_WIDTH = `calc(${linePaintCanvasProperty.options.length}
   linePaintCanvasProperty.options.length - 1
 } * 0.25rem)`
 
+interface StrokeSizeDraftState {
+  draftValue: string | null
+  previewValue: string | null
+}
+
+type StrokeSizeDraftAction =
+  | { type: 'reset' }
+  | { type: 'setDraftValue'; value: string | null }
+  | { type: 'setPreviewValue'; value: string | null }
+
+const INITIAL_STROKE_SIZE_DRAFT_STATE: StrokeSizeDraftState = {
+  draftValue: null,
+  previewValue: null,
+}
+
+function strokeSizeDraftReducer(
+  state: StrokeSizeDraftState,
+  action: StrokeSizeDraftAction,
+): StrokeSizeDraftState {
+  switch (action.type) {
+    case 'reset':
+      return INITIAL_STROKE_SIZE_DRAFT_STATE
+    case 'setDraftValue':
+      return { ...state, draftValue: action.value }
+    case 'setPreviewValue':
+      return { ...state, previewValue: action.value }
+  }
+}
+
 function isPaintProperty(
   property: CanvasResolvedProperty,
 ): property is CanvasPaintResolvedProperty {
@@ -68,94 +74,18 @@ function isStrokeSizeProperty(
   return property.definition.kind === 'strokeSize'
 }
 
-type CanvasToolbarState = {
-  commands: CanvasCommands
-  edgeType: CanvasEdgeType
-  hasOnlySelectedEdges: boolean
-  hasSelection: boolean
-  properties: Array<CanvasResolvedProperty>
-  selectedEdges: Array<Edge>
-  selectionSnapshot: { nodeIds: Array<string>; edgeIds: Array<string> }
-  setEdgeType: (type: CanvasEdgeType) => void
-  showsEdgeToolDefaults: boolean
-  updateEdge: (edgeId: string, updater: (edge: Edge) => Edge) => void
-  runPropertyChange: (applyChange: () => void) => void
-}
-
-function useCanvasToolbarState(): CanvasToolbarState {
-  const { nodeActions, commands, documentWriter } = useCanvasRuntime()
-  const nodes = useNodes()
-  const edges = useEdges()
-  const selectionSnapshot = useCanvasSelectionState(
-    useShallow((state) => ({
-      nodeIds: state.selectedNodeIds,
-      edgeIds: state.selectedEdgeIds,
-    })),
-  )
-  const { activeTool, edgeType, setEdgeType } = useCanvasToolStore(
-    useShallow((state) => ({
-      activeTool: state.activeTool,
-      edgeType: state.edgeType,
-      setEdgeType: state.setEdgeType,
-    })),
-  )
-  const toolPropertyContext = useCanvasToolPropertyContext()
-
-  const selectedNodeIdSet = new Set(selectionSnapshot.nodeIds)
-  const selectedEdgeIdSet = new Set(selectionSnapshot.edgeIds)
-  const selectedNodes = nodes.filter((node) => selectedNodeIdSet.has(node.id))
-  const selectedEdges = edges.filter((edge) => selectedEdgeIdSet.has(edge.id))
-  const hasSelection = selectedNodes.length > 0 || selectedEdges.length > 0
-  const hasOnlySelectedEdges = selectedNodes.length === 0 && selectedEdges.length > 0
-  const showsEdgeToolDefaults = !hasSelection && activeTool === 'edge'
-
-  const properties = resolveProperties(
-    activeTool,
-    selectedNodes,
-    selectedEdges,
-    nodeActions.updateNodeData,
-    documentWriter.updateEdge,
-    toolPropertyContext,
-  )
-  const runPropertyChange = (applyChange: () => void) => {
-    if (selectedNodes.length === 0 && selectedEdges.length === 0) {
-      applyChange()
-      return
-    }
-
-    if (!nodeActions.transact) {
-      applyChange()
-      return
-    }
-
-    nodeActions.transact(applyChange)
-  }
-
-  return {
-    commands,
-    edgeType,
-    hasOnlySelectedEdges,
-    hasSelection,
-    properties,
-    selectedEdges,
-    selectionSnapshot,
-    setEdgeType,
-    showsEdgeToolDefaults,
-    updateEdge: documentWriter.updateEdge,
-    runPropertyChange,
-  }
-}
-
 export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarProps) {
-  const isSelectionGestureActive = useIsCanvasSelectionGestureActive()
-  const toolbar = useCanvasToolbarState()
-  if (
-    !canEdit ||
-    isSelectionGestureActive ||
-    (toolbar.properties.length === 0 && !toolbar.hasSelection)
-  ) {
+  const isSelectionGestureActive = useCanvasEngineSelector(
+    (state) => state.selection.gestureKind !== null,
+  )
+  const toolbar = useCanvasToolbarModel()
+  if (!canEdit || isSelectionGestureActive || !toolbar.hasContent) {
     return null
   }
+
+  const showPropertiesToEdgeDivider = toolbar.propertiesSection && toolbar.edgeTypeSection
+  const showReorderDivider =
+    toolbar.reorderSection && (toolbar.propertiesSection || toolbar.edgeTypeSection)
 
   return (
     <div
@@ -163,57 +93,35 @@ export function CanvasConditionalToolbar({ canEdit }: CanvasConditionalToolbarPr
       role="toolbar"
       aria-label="Canvas conditional toolbar"
     >
-      {toolbar.properties.length > 0 ? (
+      {toolbar.propertiesSection ? (
         <CanvasPropertyControls
-          properties={toolbar.properties}
-          onPropertyChange={toolbar.runPropertyChange}
+          properties={toolbar.propertiesSection.properties}
+          onPropertyChange={toolbar.propertiesSection.runPropertyChange}
+          onPropertyPreviewChange={toolbar.propertiesSection.runPropertyPreviewChange}
+          onPropertyPreviewCommit={toolbar.propertiesSection.commitPropertyPreviewChange}
+          onPropertyPreviewCancel={toolbar.propertiesSection.cancelPropertyPreviewChange}
         />
       ) : null}
-      {toolbar.properties.length > 0 &&
-      (toolbar.hasOnlySelectedEdges || toolbar.showsEdgeToolDefaults) ? (
+      {showPropertiesToEdgeDivider ? (
         <div className="my-1 h-px w-full bg-border" aria-hidden="true" />
       ) : null}
-      {toolbar.hasOnlySelectedEdges ? (
+      {toolbar.edgeTypeSection ? (
         <CanvasEdgeTypeControls
-          selectedType={getSharedSelectedEdgeType(toolbar.selectedEdges)}
-          onSelectType={(type) =>
-            toolbar.runPropertyChange(() => {
-              toolbar.selectedEdges.forEach((edge) => {
-                if (resolveCanvasEdgeType(edge.type) === type) return
-
-                toolbar.updateEdge(edge.id, (currentEdge) => ({
-                  ...currentEdge,
-                  type,
-                }))
-              })
-            })
-          }
+          selectedType={toolbar.edgeTypeSection.selectedType}
+          onSelectType={toolbar.edgeTypeSection.setType}
         />
       ) : null}
-      {toolbar.showsEdgeToolDefaults ? (
-        <CanvasEdgeTypeControls
-          selectedType={toolbar.edgeType}
-          onSelectType={toolbar.setEdgeType}
-        />
-      ) : null}
-      {(toolbar.properties.length > 0 ||
-        toolbar.hasOnlySelectedEdges ||
-        toolbar.showsEdgeToolDefaults) &&
-      toolbar.hasSelection ? (
+      {showReorderDivider ? (
         <div className="my-1 h-px w-full bg-border" aria-hidden="true" />
       ) : null}
-      {toolbar.hasSelection ? (
-        <CanvasReorderControls commands={toolbar.commands} selection={toolbar.selectionSnapshot} />
+      {toolbar.reorderSection ? (
+        <CanvasReorderControls
+          commands={toolbar.reorderSection.commands}
+          selection={toolbar.reorderSection.selection}
+        />
       ) : null}
     </div>
   )
-}
-
-function getSharedSelectedEdgeType(edges: Array<Edge>) {
-  const firstEdgeType = edges[0] ? resolveCanvasEdgeType(edges[0].type) : null
-  return firstEdgeType && edges.every((edge) => resolveCanvasEdgeType(edge.type) === firstEdgeType)
-    ? firstEdgeType
-    : null
 }
 
 function CanvasEdgeTypeControls({
@@ -247,39 +155,18 @@ function CanvasEdgeTypeControls({
   )
 }
 
-function resolveProperties(
-  activeTool: CanvasToolId,
-  selectedNodes: Array<Node>,
-  selectedEdges: Array<Edge>,
-  updateNodeData: (nodeId: string, data: Record<string, unknown>) => void,
-  updateEdge: (edgeId: string, updater: (edge: Edge) => Edge) => void,
-  toolPropertyContext: CanvasToolPropertyContext,
-): Array<CanvasResolvedProperty> {
-  if (selectedNodes.length > 0 || selectedEdges.length > 0) {
-    const selectedProperties = [
-      ...selectedNodes.map<CanvasInspectableProperties>((node) =>
-        getCanvasNodeInspectableProperties(normalizeCanvasNode(node), updateNodeData),
-      ),
-      ...selectedEdges.map<CanvasInspectableProperties>((edge) =>
-        getCanvasEdgeInspectableProperties(normalizeCanvasEdge(edge), updateEdge),
-      ),
-    ]
-
-    return resolveCanvasProperties(selectedProperties)
-  }
-
-  return resolveCanvasProperties([
-    canvasToolSpecs[activeTool]?.properties?.(toolPropertyContext) ??
-      EMPTY_CANVAS_INSPECTABLE_PROPERTIES,
-  ])
-}
-
 function CanvasPropertyControls({
   properties,
   onPropertyChange,
+  onPropertyPreviewChange,
+  onPropertyPreviewCommit,
+  onPropertyPreviewCancel,
 }: {
   properties: Array<CanvasResolvedProperty>
   onPropertyChange: (applyChange: () => void) => void
+  onPropertyPreviewChange: (applyChange: () => void) => void
+  onPropertyPreviewCommit: (applyChange?: () => void) => void
+  onPropertyPreviewCancel: () => void
 }) {
   const paintProperties = properties.filter(isPaintProperty)
   const strokeSizeProperty = properties.find(isStrokeSizeProperty)
@@ -318,6 +205,7 @@ function CanvasPropertyControls({
                         : 'none',
                     outlineOffset: '1px',
                   }}
+                  onPointerDown={preventToolbarFocus}
                   onClick={() => onPropertyChange(() => paintProperty.setValue(preset.value))}
                   aria-label={`Select ${preset.label} color`}
                   aria-pressed={
@@ -341,6 +229,7 @@ function CanvasPropertyControls({
                 onChange={(value) => onPropertyChange(() => paintProperty.setValue(value))}
                 disabled={disabled}
                 mixed={paintProperty.value.kind === 'mixed'}
+                showOpacity={paintProperty.definition.showOpacity ?? true}
               />
             </div>
           </div>
@@ -351,7 +240,13 @@ function CanvasPropertyControls({
           <p className="text-[11px] font-medium text-muted-foreground">
             {strokeSizeProperty.definition.label}
           </p>
-          <StrokeSizeControl property={strokeSizeProperty} onPropertyChange={onPropertyChange} />
+          <StrokeSizeControl
+            property={strokeSizeProperty}
+            onPropertyChange={onPropertyChange}
+            onPropertyPreviewChange={onPropertyPreviewChange}
+            onPropertyPreviewCommit={onPropertyPreviewCommit}
+            onPropertyPreviewCancel={onPropertyPreviewCancel}
+          />
         </div>
       )}
     </>
@@ -361,18 +256,27 @@ function CanvasPropertyControls({
 function StrokeSizeControl({
   property,
   onPropertyChange,
+  onPropertyPreviewChange,
+  onPropertyPreviewCommit,
+  onPropertyPreviewCancel,
 }: {
   property: CanvasStrokeSizeResolvedProperty
   onPropertyChange: (applyChange: () => void) => void
+  onPropertyPreviewChange: (applyChange: () => void) => void
+  onPropertyPreviewCommit: (applyChange?: () => void) => void
+  onPropertyPreviewCancel: () => void
 }) {
   const strokeSizeValue = readResolvedPropertyValue(property)
   const sliderMax = Math.min(property.definition.max, STROKE_SIZE_SLIDER_MAX)
   const sliderValue = Math.min(strokeSizeValue ?? property.definition.min, sliderMax)
-  const [draftValue, setDraftValue] = useState<string | null>(null)
-  const inputValue = draftValue ?? strokeSizeValue?.toString() ?? ''
+  const [{ draftValue, previewValue }, dispatchDraftState] = useReducer(
+    strokeSizeDraftReducer,
+    INITIAL_STROKE_SIZE_DRAFT_STATE,
+  )
+  const inputValue = previewValue ?? draftValue ?? strokeSizeValue?.toString() ?? ''
 
   const resetDraftValue = () => {
-    setDraftValue(null)
+    dispatchDraftState({ type: 'reset' })
   }
 
   const commitDraftValue = () => {
@@ -401,22 +305,61 @@ function StrokeSizeControl({
   return (
     <div className="flex min-w-[19.8125rem] items-center gap-1">
       <div className="min-w-0 shrink-0" style={{ width: PAINT_SWATCH_STRIP_WIDTH }}>
-        <Slider
+        <input
+          key={`${property.definition.id}-${property.value.kind}-${sliderValue}`}
           aria-label="Stroke size"
-          className="[&_[data-slot=slider-range]]:bg-primary [&_[data-slot=slider-thumb]]:border-primary/40 [&_[data-slot=slider-track]]:bg-primary/25"
+          className="h-6 w-full cursor-pointer accent-primary"
+          data-slot="slider"
+          defaultValue={sliderValue}
           max={sliderMax}
           min={property.definition.min}
-          onValueChange={(values) => {
-            const nextValue = Array.isArray(values) ? values[0] : values
-            if (typeof nextValue !== 'number' || !Number.isFinite(nextValue)) {
+          onInput={(event) => {
+            const nextValue = Number(event.currentTarget.value)
+            if (!Number.isFinite(nextValue)) {
               return
             }
 
-            setDraftValue(null)
-            onPropertyChange(() => property.setValue(nextValue))
+            dispatchDraftState({ type: 'setPreviewValue', value: String(nextValue) })
+            onPropertyPreviewChange(() => property.setValue(nextValue))
+          }}
+          onPointerCancel={() => {
+            onPropertyPreviewCancel()
+            dispatchDraftState({ type: 'setPreviewValue', value: null })
+          }}
+          onPointerUp={(event) => {
+            const nextValue = Number(event.currentTarget.value)
+            if (!Number.isFinite(nextValue)) {
+              onPropertyPreviewCancel()
+              return
+            }
+
+            resetDraftValue()
+            onPropertyPreviewCommit(() => property.setValue(nextValue))
+          }}
+          onKeyUp={(event) => {
+            if (
+              ![
+                'ArrowLeft',
+                'ArrowRight',
+                'ArrowUp',
+                'ArrowDown',
+                'Home',
+                'End',
+                'PageUp',
+                'PageDown',
+              ].includes(event.key)
+            ) {
+              return
+            }
+
+            const nextValue = Number(event.currentTarget.value)
+            if (Number.isFinite(nextValue)) {
+              resetDraftValue()
+              onPropertyPreviewCommit(() => property.setValue(nextValue))
+            }
           }}
           step={property.definition.step ?? 1}
-          value={[sliderValue]}
+          type="range"
         />
       </div>
       <div className="mx-1 h-6 w-px bg-border" aria-hidden="true" />
@@ -429,7 +372,7 @@ function StrokeSizeControl({
           onBlur={commitDraftValue}
           onChange={(event) => {
             const sanitizedValue = event.currentTarget.value.replace(/\D/g, '').slice(0, 2)
-            setDraftValue(sanitizedValue)
+            dispatchDraftState({ type: 'setDraftValue', value: sanitizedValue })
           }}
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
@@ -452,12 +395,17 @@ function StrokeSizeControl({
   )
 }
 
+function preventToolbarFocus(event: SyntheticEvent) {
+  event.preventDefault()
+  event.stopPropagation()
+}
+
 function CanvasReorderControls({
   commands,
   selection,
 }: {
   commands: CanvasCommands
-  selection: { nodeIds: Array<string>; edgeIds: Array<string> }
+  selection: { nodeIds: ReadonlySet<string>; edgeIds: ReadonlySet<string> }
 }) {
   return (
     <div className="flex flex-col gap-1">

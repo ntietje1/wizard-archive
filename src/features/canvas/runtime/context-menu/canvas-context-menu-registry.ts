@@ -1,4 +1,5 @@
 import {
+  AlignHorizontalSpaceBetween,
   Copy,
   CopyPlus,
   CornerDownLeft,
@@ -9,18 +10,23 @@ import {
   MapPin,
   Plus,
   Scissors,
+  SquareMousePointer,
   Trash2,
+  Type,
 } from 'lucide-react'
 import { parseCanvasReorderPayload } from 'convex/canvases/validation'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { CANVAS_ARRANGE_ACTIONS } from '../document/canvas-arrange'
 import {
   CANVAS_REORDER_ACTIONS,
   CANVAS_REORDER_SUBMENU_ICON,
 } from '../document/canvas-reorder-actions'
 import { buildMenu } from '~/features/context-menu/menu-builder'
 import type { ContextMenuGroupConfig } from '~/features/context-menu/types'
+import type { CanvasArrangeAction } from '../document/canvas-arrange'
 import type { CanvasReorderDirection } from '../document/canvas-reorder'
 import type {
+  CanvasContextMenuArrangePayload,
   CanvasContextMenuCommands,
   CanvasContextMenuContext,
   CanvasContextMenuContributor,
@@ -28,6 +34,7 @@ import type {
   CanvasContextMenuReorderPayload,
   CanvasContextMenuServices,
 } from './canvas-context-menu-types'
+import { assertNever } from '~/shared/utils/utils'
 
 // Any target kind other than `pane` is currently treated as selectable.
 // Update this if new non-selectable target kinds are introduced.
@@ -54,8 +61,55 @@ function buildCanvasReorderItems(): Array<CanvasContextMenuItem> {
   }))
 }
 
+function createCanvasArrangePayload(action: CanvasArrangeAction): CanvasContextMenuArrangePayload {
+  return { kind: 'arrange', action }
+}
+
+function getCanvasArrangeGroup(action: CanvasArrangeAction): string {
+  switch (action) {
+    case 'alignLeft':
+    case 'alignRight':
+    case 'alignTop':
+    case 'alignBottom':
+      return 'arrange-align'
+    case 'distributeHorizontal':
+    case 'distributeVertical':
+      return 'arrange-distribute'
+    case 'flipHorizontal':
+    case 'flipVertical':
+      return 'arrange-flip'
+    default: {
+      assertNever(action)
+    }
+  }
+}
+
+function buildCanvasArrangeItems(): Array<CanvasContextMenuItem> {
+  return CANVAS_ARRANGE_ACTIONS.map((action, priority) => ({
+    id: `canvas-selection-arrange-${action.id}`,
+    commandId: 'canvas-selection-arrange',
+    label: action.label,
+    group: getCanvasArrangeGroup(action.id),
+    priority,
+    scope: 'selection',
+    payload: createCanvasArrangePayload(action.id),
+  }))
+}
+
 export function parseCanvasReorderDirection(payload: unknown): CanvasReorderDirection | null {
   return parseCanvasReorderPayload(payload)?.direction ?? null
+}
+
+function parseCanvasArrangeAction(payload: unknown): CanvasArrangeAction | null {
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+
+  const maybePayload = payload as Partial<CanvasContextMenuArrangePayload>
+  return maybePayload.kind === 'arrange' &&
+    CANVAS_ARRANGE_ACTIONS.some((action) => action.id === maybePayload.action)
+    ? (maybePayload.action ?? null)
+    : null
 }
 
 function buildCanvasCreateItems(): Array<CanvasContextMenuItem> {
@@ -82,6 +136,16 @@ function buildCanvasCreateItems(): Array<CanvasContextMenuItem> {
     createItem('canvas-pane-create-map', 'Map', MapPin, 12, SIDEBAR_ITEM_TYPES.gameMaps),
     createItem('canvas-pane-create-canvas', 'Canvas', Grid2x2Plus, 13, SIDEBAR_ITEM_TYPES.canvases),
     createItem('canvas-pane-create-file', 'File', File, 14, SIDEBAR_ITEM_TYPES.files),
+    {
+      id: 'canvas-pane-create-text',
+      label: 'Text',
+      icon: Type,
+      group: 'create-node',
+      priority: 20,
+      onSelect: (context, services) => {
+        services.createTextNode(context.pointerPosition)
+      },
+    },
   ]
 }
 
@@ -102,13 +166,32 @@ const canvasPaneContributor: CanvasContextMenuContributor = {
             children: () => buildCanvasCreateItems(),
           },
           {
-            id: 'canvas-pane-paste',
-            commandId: 'canvas-pane-paste',
+            id: 'canvas-pane-select-all',
+            label: 'Select All',
+            icon: SquareMousePointer,
+            shortcut: 'Mod+A',
             group: 'edit',
-            priority: 1,
-            applies: (ctx) => ctx.canEdit,
+            priority: 0,
+            isEnabled: (_ctx, services) => services.hasSelectableCanvasItems(),
+            onSelect: (_ctx, services) => {
+              services.selectAllCanvasItems()
+            },
           },
         ],
+}
+
+const canvasClipboardContributor: CanvasContextMenuContributor = {
+  id: 'canvas-clipboard',
+  surfaces: ['canvas'],
+  getItems: (_context, _services) => [
+    {
+      id: 'canvas-paste',
+      commandId: 'canvas-paste',
+      group: 'edit',
+      priority: 1,
+      applies: (ctx) => ctx.canEdit,
+    },
+  ],
 }
 
 const canvasSelectionContributor: CanvasContextMenuContributor = {
@@ -125,6 +208,16 @@ const canvasSelectionContributor: CanvasContextMenuContributor = {
       scope: 'selection',
       applies: (ctx) => ctx.canEdit,
       children: () => buildCanvasReorderItems(),
+    },
+    {
+      id: 'canvas-selection-arrange',
+      label: 'Arrange',
+      icon: AlignHorizontalSpaceBetween,
+      group: 'reorder',
+      priority: 1,
+      scope: 'selection',
+      applies: (ctx) => ctx.canEdit && ctx.selection.nodeIds.size > 1,
+      children: () => buildCanvasArrangeItems(),
     },
     {
       id: 'canvas-selection-cut',
@@ -155,6 +248,7 @@ const canvasSelectionContributor: CanvasContextMenuContributor = {
       group: 'danger',
       priority: 99,
       scope: 'selection',
+      variant: 'danger',
       applies: (ctx) => ctx.canEdit,
     },
   ],
@@ -162,6 +256,7 @@ const canvasSelectionContributor: CanvasContextMenuContributor = {
 
 const canvasContextMenuContributors = [
   canvasPaneContributor,
+  canvasClipboardContributor,
   canvasSelectionContributor,
 ] satisfies ReadonlyArray<CanvasContextMenuContributor>
 
@@ -189,8 +284,8 @@ export function buildCanvasContextMenu({
     services,
     contributors: [...canvasContextMenuContributors, ...contributors],
     commands: {
-      'canvas-pane-paste': {
-        id: 'canvas-pane-paste',
+      'canvas-paste': {
+        id: 'canvas-paste',
         label: 'Paste',
         icon: CornerDownLeft,
         isEnabled: () => commands.paste.canRun(),
@@ -255,6 +350,30 @@ export function buildCanvasContextMenu({
           commands.reorder.run({
             selection: nextContext.selection,
             direction,
+          })
+        },
+      },
+      'canvas-selection-arrange': {
+        id: 'canvas-selection-arrange',
+        isEnabled: (nextContext, _services, payload) => {
+          const action = parseCanvasArrangeAction(payload)
+          return (
+            action !== null &&
+            commands.arrange.canRun({
+              selection: nextContext.selection,
+              action,
+            })
+          )
+        },
+        run: (nextContext, _services, payload) => {
+          const action = parseCanvasArrangeAction(payload)
+          if (!action) {
+            return
+          }
+
+          commands.arrange.run({
+            selection: nextContext.selection,
+            action,
           })
         },
       },

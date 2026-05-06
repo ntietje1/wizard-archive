@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { UndoManager } from 'yjs'
 import type {
   CanvasHistoryController,
   CanvasSelectionController,
-  CanvasSelectionSnapshot,
 } from '../../tools/canvas-tool-types'
-import type { Edge, Node } from '@xyflow/react'
+import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 import type * as Y from 'yjs'
 import { logger } from '~/shared/utils/logger'
+import { areStringSetsEqual } from '../../utils/canvas-selection-utils'
 
 const MAX_HISTORY_SIZE = 100
 type CanvasHistoryState = Pick<CanvasHistoryController, 'canUndo' | 'canRedo'>
@@ -17,9 +18,9 @@ type ActionEntry =
   | { type: 'selection'; before: CanvasSelectionSnapshot; after: CanvasSelectionSnapshot }
 
 interface UseCanvasHistoryOptions {
-  nodesMap: Y.Map<Node>
-  edgesMap: Y.Map<Edge>
-  selection: Pick<CanvasSelectionController, 'replace'>
+  nodesMap: Y.Map<CanvasDocumentNode>
+  edgesMap: Y.Map<CanvasDocumentEdge>
+  selection: Pick<CanvasSelectionController, 'setSelection'>
 }
 
 export function useCanvasHistory({ nodesMap, edgesMap, selection }: UseCanvasHistoryOptions) {
@@ -27,7 +28,10 @@ export function useCanvasHistory({ nodesMap, edgesMap, selection }: UseCanvasHis
   const redoStackRef = useRef<Array<ActionEntry>>([])
   const isUndoRedoingRef = useRef(false)
   const docMutatedRef = useRef(false)
-  const selectionRef = useRef<CanvasSelectionSnapshot>({ nodeIds: [], edgeIds: [] })
+  const selectionRef = useRef<CanvasSelectionSnapshot>({
+    nodeIds: new Set(),
+    edgeIds: new Set(),
+  })
   const undoManagerRef = useRef<UndoManager | null>(null)
   const [historyState, setHistoryState] = useState<CanvasHistoryState>({
     canUndo: false,
@@ -55,7 +59,7 @@ export function useCanvasHistory({ nodesMap, edgesMap, selection }: UseCanvasHis
   const restoreSelection = useCallback(
     (selectionSnapshot: CanvasSelectionSnapshot) => {
       const nextSelection = structuredClone(selectionSnapshot)
-      selection.replace(nextSelection)
+      selection.setSelection(nextSelection)
       selectionRef.current = nextSelection
     },
     [selection],
@@ -168,13 +172,9 @@ export function useCanvasHistory({ nodesMap, edgesMap, selection }: UseCanvasHis
       if (isUndoRedoingRef.current) return
       if (docMutatedRef.current) return
 
-      const nextNodeIdSet = new Set(selectionSnapshot.nodeIds)
-      const nextEdgeIdSet = new Set(selectionSnapshot.edgeIds)
       const same =
-        prev.nodeIds.length === selectionSnapshot.nodeIds.length &&
-        prev.edgeIds.length === selectionSnapshot.edgeIds.length &&
-        prev.nodeIds.every((id) => nextNodeIdSet.has(id)) &&
-        prev.edgeIds.every((id) => nextEdgeIdSet.has(id))
+        areStringSetsEqual(prev.nodeIds, selectionSnapshot.nodeIds) &&
+        areStringSetsEqual(prev.edgeIds, selectionSnapshot.edgeIds)
       if (same) return
 
       pushHistoryEntry(undoStackRef.current, {
@@ -188,5 +188,8 @@ export function useCanvasHistory({ nodesMap, edgesMap, selection }: UseCanvasHis
     [pushHistoryEntry, syncStore],
   )
 
-  return { ...historyState, undo, redo, onSelectionChange }
+  return useMemo(
+    () => ({ ...historyState, undo, redo, onSelectionChange }),
+    [historyState, onSelectionChange, redo, undo],
+  )
 }

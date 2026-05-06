@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import { selectToolSpec } from '../select-tool-module'
 import type { CanvasMeasuredNode, CanvasToolRuntime } from '../../canvas-tool-types'
-import type { Edge, Node } from '@xyflow/react'
+import type {
+  CanvasDocumentEdge as Edge,
+  CanvasDocumentNode as Node,
+} from 'convex/canvases/validation'
 
 function createMouseEvent(
   x: number,
@@ -21,131 +24,9 @@ function createMouseEvent(
   } as React.MouseEvent
 }
 
-function createStrokeNode(id: string): CanvasMeasuredNode {
-  return {
-    id,
-    type: 'stroke',
-    position: { x: 0, y: 0 },
-    width: 100,
-    height: 20,
-    data: {
-      color: 'var(--foreground)',
-      opacity: 100,
-      bounds: { x: 0, y: 0, width: 100, height: 20 },
-      points: [
-        [0, 10, 0.5],
-        [100, 10, 0.5],
-      ],
-      size: 4,
-    },
-  }
-}
-
-function createOffsetStrokeNode(id: string): CanvasMeasuredNode {
-  return {
-    id,
-    type: 'stroke',
-    position: { x: 420, y: 240 },
-    width: 100,
-    height: 20,
-    data: {
-      color: 'var(--foreground)',
-      opacity: 100,
-      bounds: { x: 120, y: 40, width: 100, height: 20 },
-      points: [
-        [120, 50, 0.5],
-        [220, 50, 0.5],
-      ],
-      size: 4,
-    },
-  }
-}
-
-function createConcaveStrokeNode(id: string): CanvasMeasuredNode {
-  return {
-    id,
-    type: 'stroke',
-    position: { x: 0, y: 0 },
-    width: 100,
-    height: 100,
-    data: {
-      color: 'var(--foreground)',
-      opacity: 100,
-      bounds: { x: 0, y: 0, width: 100, height: 100 },
-      points: [
-        [20, 20, 0.5],
-        [20, 80, 0.5],
-        [80, 80, 0.5],
-        [80, 20, 0.5],
-      ],
-      size: 4,
-    },
-  }
-}
-
 describe('selectToolSpec', () => {
-  it('preserves multi-selection on modifier-click empty canvas', () => {
-    const toggleNodeFromTarget = vi.fn()
-    const controller = selectToolSpec.createHandlers(
-      createSelectEnvironment({
-        getNodes: () => [],
-        toggleNodeFromTarget,
-      }),
-    )
-
-    controller.onPaneClick?.(createMouseEvent(500, 500, { ctrlKey: true }))
-
-    expect(toggleNodeFromTarget).toHaveBeenCalledWith(null, true)
-  })
-
-  it('uses the same padded stroke hit test for modifier deselection as for selection', () => {
-    const toggleNodeFromTarget = vi.fn()
-    const strokeNode = createStrokeNode('stroke-1')
-    const controller = selectToolSpec.createHandlers(
-      createSelectEnvironment({
-        getNodes: () => [strokeNode],
-        toggleNodeFromTarget,
-      }),
-    )
-
-    controller.onPaneClick?.(createMouseEvent(50, 20, { ctrlKey: true }))
-
-    expect(toggleNodeFromTarget).toHaveBeenCalledWith('stroke-1', true)
-  })
-
-  it('hit-tests moved strokes using their current measured position instead of assuming origin placement', () => {
-    const toggleNodeFromTarget = vi.fn()
-    const strokeNode = createOffsetStrokeNode('stroke-1')
-    const controller = selectToolSpec.createHandlers(
-      createSelectEnvironment({
-        getNodes: () => [createStrokeNode('stale-stroke')],
-        getMeasuredNodes: () => [strokeNode],
-        toggleNodeFromTarget,
-      }),
-    )
-
-    controller.onPaneClick?.(createMouseEvent(470, 250))
-
-    expect(toggleNodeFromTarget).toHaveBeenCalledWith('stroke-1', false)
-  })
-
-  it('does not select a concave stroke from clicks in its open interior gap', () => {
-    const toggleNodeFromTarget = vi.fn()
-    const strokeNode = createConcaveStrokeNode('stroke-1')
-    const controller = selectToolSpec.createHandlers(
-      createSelectEnvironment({
-        getNodes: () => [strokeNode],
-        toggleNodeFromTarget,
-      }),
-    )
-
-    controller.onPaneClick?.(createMouseEvent(50, 40))
-
-    expect(toggleNodeFromTarget).toHaveBeenCalledWith(null, false)
-  })
-
-  it('routes regular node ctrl-click through strict toggle behavior', () => {
-    const toggleNodeFromTarget = vi.fn()
+  it('routes regular node ctrl-click through additive selection behavior', () => {
+    const toggleNode = vi.fn()
     const clickedNode = {
       id: 'c',
       type: 'text',
@@ -155,17 +36,17 @@ describe('selectToolSpec', () => {
     const controller = selectToolSpec.createHandlers(
       createSelectEnvironment({
         getNodes: () => [clickedNode],
-        toggleNodeFromTarget,
+        toggleNode,
       }),
     )
 
     controller.onNodeClick?.(createMouseEvent(0, 0, { ctrlKey: true }), clickedNode)
 
-    expect(toggleNodeFromTarget).toHaveBeenCalledWith('c', true)
+    expect(toggleNode).toHaveBeenCalledWith('c', true)
   })
 
   it('treats shift-only clicks as non-modified point selection', () => {
-    const toggleNodeFromTarget = vi.fn()
+    const toggleNode = vi.fn()
     const clickedNode = {
       id: 'c',
       type: 'text',
@@ -175,23 +56,44 @@ describe('selectToolSpec', () => {
     const controller = selectToolSpec.createHandlers(
       createSelectEnvironment({
         getNodes: () => [clickedNode],
-        toggleNodeFromTarget,
+        toggleNode,
       }),
     )
 
     controller.onNodeClick?.(createMouseEvent(0, 0, { shiftKey: true }), clickedNode)
 
-    expect(toggleNodeFromTarget).toHaveBeenCalledWith('c', false)
+    expect(toggleNode).toHaveBeenCalledWith('c', false)
+  })
+
+  it('uses the tracked primary modifier when click events do not carry modifier state', () => {
+    const toggleNode = vi.fn()
+    const clickedNode = {
+      id: 'c',
+      type: 'text',
+      position: { x: 0, y: 0 },
+      data: {},
+    } as Node
+    const controller = selectToolSpec.createHandlers(
+      createSelectEnvironment({
+        getNodes: () => [clickedNode],
+        primaryPressed: true,
+        toggleNode,
+      }),
+    )
+
+    controller.onNodeClick?.(createMouseEvent(0, 0), clickedNode)
+
+    expect(toggleNode).toHaveBeenCalledWith('c', true)
   })
 
   it('routes edge clicks through explicit edge selection control', () => {
-    const toggleNodeFromTarget = vi.fn()
-    const toggleEdgeFromTarget = vi.fn()
+    const toggleNode = vi.fn()
+    const toggleEdge = vi.fn()
     const controller = selectToolSpec.createHandlers(
       createSelectEnvironment({
         getNodes: () => [],
-        toggleNodeFromTarget,
-        toggleEdgeFromTarget,
+        toggleNode,
+        toggleEdge,
       }),
     )
 
@@ -201,39 +103,41 @@ describe('selectToolSpec', () => {
       target: 'b',
     } as Edge)
 
-    expect(toggleEdgeFromTarget).toHaveBeenCalledWith('edge-1', true)
-    expect(toggleNodeFromTarget).not.toHaveBeenCalled()
+    expect(toggleEdge).toHaveBeenCalledWith('edge-1', true)
+    expect(toggleNode).not.toHaveBeenCalled()
   })
 })
 
 function createSelectEnvironment({
   getNodes,
-  // Intentional compatibility cast: plain React Flow nodes lack measured dimensions, so tests that
+  // Intentional compatibility cast: plain canvas nodes lack measured dimensions, so tests that
   // depend on width/height should override `getMeasuredNodes` or supply measured node objects.
   getMeasuredNodes = () => getNodes() as Array<CanvasMeasuredNode>,
-  toggleNodeFromTarget,
-  toggleEdgeFromTarget = vi.fn(),
+  toggleNode,
+  toggleEdge = vi.fn(),
+  primaryPressed = false,
 }: {
   getNodes: () => Array<Node>
   getMeasuredNodes?: () => Array<CanvasMeasuredNode>
-  toggleNodeFromTarget: (targetId: string | null, toggle: boolean) => void
-  toggleEdgeFromTarget?: (targetId: string | null, toggle: boolean) => void
+  primaryPressed?: boolean
+  toggleNode: (targetId: string, additive: boolean) => void
+  toggleEdge?: (targetId: string, additive: boolean) => void
 }): CanvasToolRuntime {
   return {
     viewport: {
-      screenToFlowPosition: ({ x, y }) => ({ x, y }),
+      screenToCanvasPosition: ({ x, y }) => ({ x, y }),
       getZoom: () => 1,
     },
     commands: {
       createNode: () => undefined,
-      updateNode: () => undefined,
-      updateNodeData: () => undefined,
-      updateEdge: () => undefined,
+      patchNodeData: () => undefined,
+      patchEdges: () => undefined,
       resizeNode: () => undefined,
+      resizeNodes: () => undefined,
       deleteNodes: () => undefined,
       createEdge: () => undefined,
       deleteEdges: () => undefined,
-      setNodePosition: () => undefined,
+      setNodePositions: () => undefined,
     },
     query: {
       getNodes,
@@ -241,25 +145,22 @@ function createSelectEnvironment({
       getMeasuredNodes,
     },
     selection: {
-      getSnapshot: () => ({ nodeIds: [], edgeIds: [] }),
-      replace: vi.fn(),
-      replaceNodes: vi.fn(),
-      replaceEdges: vi.fn(),
-      clear: vi.fn(),
-      getSelectedNodeIds: () => [],
-      getSelectedEdgeIds: () => [],
-      toggleNodeFromTarget,
-      toggleEdgeFromTarget,
+      getSnapshot: () => ({ nodeIds: new Set<string>(), edgeIds: new Set<string>() }),
+      setSelection: vi.fn(),
+      clearSelection: vi.fn(),
+      toggleNode,
+      toggleEdge,
       beginGesture: vi.fn(),
-      commitGestureSelection: vi.fn(),
-      endGesture: vi.fn(),
+      setGesturePreview: vi.fn(),
+      commitGesture: vi.fn(),
+      cancelGesture: vi.fn(),
     },
     interaction: {
       suppressNextSurfaceClick: vi.fn(),
     },
     modifiers: {
       getShiftPressed: () => false,
-      getPrimaryPressed: () => false,
+      getPrimaryPressed: () => primaryPressed,
     },
     editSession: {
       editingEmbedId: null,
@@ -286,7 +187,6 @@ function createSelectEnvironment({
     awareness: {
       core: {
         setLocalCursor: () => undefined,
-        setLocalDragging: () => undefined,
         setLocalResizing: () => undefined,
         setLocalSelection: () => undefined,
       },

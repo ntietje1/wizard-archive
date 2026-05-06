@@ -1,198 +1,253 @@
 import { useCallback, useEffect, useRef } from 'react'
-import { useInternalNode, useReactFlow } from '@xyflow/react'
-import type { ControlPosition } from '@xyflow/react'
 import { getCanvasNodeBounds } from './canvas-node-bounds'
-import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
+import { CANVAS_NODE_MIN_SIZE } from './canvas-node-resize-constants'
+import { useCanvasNodeResizeMetadataSnapshot } from './canvas-node-resize-metadata'
+import {
+  useCanvasInteractionRuntime,
+  useCanvasViewportRuntime,
+} from '../../runtime/providers/canvas-runtime'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
 import {
   clearCanvasDragSnapGuides,
   setCanvasDragSnapGuides,
 } from '../../runtime/interaction/canvas-drag-snap-overlay'
-import { getSnapThresholdForZoom } from '../../runtime/interaction/canvas-drag-snap-utils'
 import { useCanvasModifierKeys } from '../../runtime/interaction/use-canvas-modifier-keys'
-import { useIsCanvasNodeSelected } from '../../runtime/selection/use-canvas-selection-state'
-import { constrainPointToSquare } from '../../utils/canvas-constraint-utils'
-import { isPrimarySelectionModifier } from '../../utils/canvas-selection-utils'
 import { releasePointerCapture } from '../../tools/shared/tool-module-utils'
-import type { CanvasNodeResizeHandleDescriptor } from './canvas-node-resize-handles'
-import type { CSSProperties } from 'react'
-import type { CanvasDragGuide } from '../../runtime/interaction/canvas-drag-snap-utils'
+import { affectsCanvasResizeAxis } from '../../system/canvas-resize-handles'
+import { resolveCanvasResize } from '../../system/canvas-resize-geometry'
+import { useCanvasEngine, useCanvasEngineSelector } from '../../react/use-canvas-engine'
+import { canvasBoundsToScreenBounds } from '../../components/canvas-screen-space-overlay-utils'
+import type { CanvasNodeResizeMetadata } from './canvas-node-resize-metadata'
+import type { CanvasResizeHandlePosition } from '../../system/canvas-resize-handles'
+import type { CanvasNodeResizeUpdate } from '../../tools/canvas-tool-types'
+import type { CanvasEngineSnapshot, CanvasInternalNode } from '../../system/canvas-engine-types'
+import type { CSSProperties, PointerEvent as ReactPointerEvent, RefObject } from 'react'
+import { boundsUnion } from '../../utils/canvas-geometry-utils'
+import type { Bounds } from '../../utils/canvas-geometry-utils'
 
-const HANDLE_SIZE = 4
-const HANDLE_HIT_SIZE = 16
-const SELECTION_BORDER_OUTSET_PX = 1
-const RESIZE_HANDLE_OUTSET_PX = SELECTION_BORDER_OUTSET_PX
+const MOUSE_HANDLE_HIT_SIZE_PX = 18
+const TOUCH_HANDLE_HIT_SIZE_PX = 36
 
-const CORNERS: Array<{
-  position: ControlPosition
+const DEFAULT_RESIZE_METADATA: CanvasNodeResizeMetadata = {
+  dragging: false,
+  minHeight: CANVAS_NODE_MIN_SIZE,
+  minWidth: CANVAS_NODE_MIN_SIZE,
+}
+
+const RESIZE_HANDLES: Array<{
+  position: CanvasResizeHandlePosition
   cursorClassName: string
-  style: CSSProperties
 }> = [
   {
     position: 'top-left',
     cursorClassName: 'cursor-nwse-resize',
-    style: {
-      left: -HANDLE_SIZE / 2 + 1 - (HANDLE_HIT_SIZE - HANDLE_SIZE) / 2 - RESIZE_HANDLE_OUTSET_PX,
-      top: -HANDLE_SIZE / 2 + 1 - (HANDLE_HIT_SIZE - HANDLE_SIZE) / 2 - RESIZE_HANDLE_OUTSET_PX,
-    },
+  },
+  {
+    position: 'top',
+    cursorClassName: 'cursor-ns-resize',
   },
   {
     position: 'top-right',
     cursorClassName: 'cursor-nesw-resize',
-    style: {
-      right: -HANDLE_SIZE / 2 + 1 - (HANDLE_HIT_SIZE - HANDLE_SIZE) / 2 - RESIZE_HANDLE_OUTSET_PX,
-      top: -HANDLE_SIZE / 2 + 1 - (HANDLE_HIT_SIZE - HANDLE_SIZE) / 2 - RESIZE_HANDLE_OUTSET_PX,
-    },
   },
   {
-    position: 'bottom-left',
-    cursorClassName: 'cursor-nesw-resize',
-    style: {
-      left: -HANDLE_SIZE / 2 + 1 - (HANDLE_HIT_SIZE - HANDLE_SIZE) / 2 - RESIZE_HANDLE_OUTSET_PX,
-      bottom: -HANDLE_SIZE / 2 + 1 - (HANDLE_HIT_SIZE - HANDLE_SIZE) / 2 - RESIZE_HANDLE_OUTSET_PX,
-    },
+    position: 'right',
+    cursorClassName: 'cursor-ew-resize',
   },
   {
     position: 'bottom-right',
     cursorClassName: 'cursor-nwse-resize',
-    style: {
-      right: -HANDLE_SIZE / 2 + 1 - (HANDLE_HIT_SIZE - HANDLE_SIZE) / 2 - RESIZE_HANDLE_OUTSET_PX,
-      bottom: -HANDLE_SIZE / 2 + 1 - (HANDLE_HIT_SIZE - HANDLE_SIZE) / 2 - RESIZE_HANDLE_OUTSET_PX,
-    },
+  },
+  {
+    position: 'bottom',
+    cursorClassName: 'cursor-ns-resize',
+  },
+  {
+    position: 'bottom-left',
+    cursorClassName: 'cursor-nesw-resize',
+  },
+  {
+    position: 'left',
+    cursorClassName: 'cursor-ew-resize',
   },
 ]
 
-type ResizeBounds = {
-  x: number
-  y: number
-  width: number
-  height: number
+interface CanvasSelectionResizeSession {
+  bounds: Bounds
+  dragNodeId?: string
+  overlayRef: RefObject<HTMLDivElement | null>
+  zones: ReadonlyArray<CanvasSelectionResizeZoneDescriptor>
 }
 
-type CornerHandlePosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
-type ResizeAxis = 'x' | 'y'
-
-type ResizeSession = {
-  pointerId: number
-  target: Element | null
-  handlePosition: CornerHandlePosition
-  startBounds: ResizeBounds
-  currentPoint: { x: number; y: number } | null
-  targetBounds: Array<ResizeBounds>
+export interface CanvasSelectionResizeZoneDescriptor {
+  cursorClassName: string
+  onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => void
+  position: CanvasResizeHandlePosition
+  style: CSSProperties
 }
 
-export function useCanvasResizeSession({
-  id,
-  dragging,
-  minWidth = 50,
-  minHeight = 30,
-  lockedAspectRatio,
-}: {
-  id: string
+interface SelectionResizeNode {
+  bounds: Bounds
   dragging: boolean
-  minWidth?: number
-  minHeight?: number
+  id: string
+  metadata: CanvasNodeResizeMetadata
+}
+
+interface ActiveSelectionResize {
+  handlePosition: CanvasResizeHandlePosition
+  nodes: ReadonlyArray<SelectionResizeNode>
+  startBounds: Bounds
+  targetBounds: ReadonlyArray<Bounds>
+  minWidth: number
+  minHeight: number
   lockedAspectRatio?: number
-}): ReadonlyArray<CanvasNodeResizeHandleDescriptor> {
+  currentPoint: { x: number; y: number } | null
+}
+
+type CanvasResizeSessionResult = ReturnType<typeof resolveCanvasResize> & { final: boolean }
+
+export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
-  const reactFlow = useReactFlow()
-  const internalNode = useInternalNode(id)
-  const {
-    nodeActions: { onResize, onResizeEnd },
-  } = useCanvasRuntime()
-  const { shiftPressed, primaryPressed } = useCanvasModifierKeys()
-  const selected = useIsCanvasNodeSelected(id)
-  const resizeSessionRef = useRef<ResizeSession | null>(null)
-  const shiftPressedRef = useRef(shiftPressed)
-  const primaryPressedRef = useRef(primaryPressed)
-  const onResizeRef = useRef(onResize)
-  const onResizeEndRef = useRef(onResizeEnd)
+  const canvasEngine = useCanvasEngine()
+  const { canEdit, nodeActions } = useCanvasInteractionRuntime()
+  const { viewportController } = useCanvasViewportRuntime()
+  const { onResizeMany, onResizeManyCancel, onResizeManyEnd } = nodeActions
+  const modifiers = useCanvasModifierKeys()
+  const metadataSnapshot = useCanvasNodeResizeMetadataSnapshot()
+  const selection = useCanvasEngineSelector((snapshot) =>
+    getSelectedResizeNodes(snapshot, metadataSnapshot),
+  )
+  const resizeTargetRef = useRef<{ pointerId: number; target: Element | null } | null>(null)
+  const resizeOverlayRef = useRef<HTMLDivElement | null>(null)
+  const activeResizeRef = useRef<ActiveSelectionResize | null>(null)
   const removeWindowListenersRef = useRef<() => void>(() => undefined)
-  const idRef = useRef(id)
-  const minWidthRef = useRef(minWidth)
-  const minHeightRef = useRef(minHeight)
-  const lockedAspectRatioRef = useRef(lockedAspectRatio)
-  const reactFlowRef = useRef(reactFlow)
-  idRef.current = id
-  minWidthRef.current = minWidth
-  minHeightRef.current = minHeight
-  lockedAspectRatioRef.current = lockedAspectRatio
-  reactFlowRef.current = reactFlow
-  shiftPressedRef.current = shiftPressed
-  primaryPressedRef.current = primaryPressed
-  onResizeRef.current = onResize
-  onResizeEndRef.current = onResizeEnd
+  const canvasEngineRef = useRef(canvasEngine)
+  const viewportControllerRef = useRef(viewportController)
+  const onResizeManyRef = useRef(onResizeMany)
+  const onResizeManyCancelRef = useRef(onResizeManyCancel)
+  const onResizeManyEndRef = useRef(onResizeManyEnd)
+  canvasEngineRef.current = canvasEngine
+  viewportControllerRef.current = viewportController
+  onResizeManyRef.current = onResizeMany
+  onResizeManyCancelRef.current = onResizeManyCancel
+  onResizeManyEndRef.current = onResizeManyEnd
 
-  const updateResizeForSession = useCallback((square: boolean, snap: boolean) => {
-    const session = resizeSessionRef.current
-    if (!session?.currentPoint) {
+  const updateResizeOverlay = useCallback((bounds: Bounds) => {
+    const overlay = resizeOverlayRef.current
+    if (!overlay) {
       return
     }
 
-    const { bounds: nextBounds, guides } = resolveSessionResizeBounds({
-      session,
-      currentPoint: session.currentPoint,
-      minWidth: minWidthRef.current,
-      minHeight: minHeightRef.current,
-      lockedAspectRatio: lockedAspectRatioRef.current,
-      square,
-      snap,
-      zoom: reactFlowRef.current.getZoom(),
-    })
-
-    if (guides.length > 0) {
-      setCanvasDragSnapGuides(guides)
-    } else {
-      clearCanvasDragSnapGuides()
-    }
-
-    onResizeRef.current(idRef.current, nextBounds.width, nextBounds.height, {
-      x: nextBounds.x,
-      y: nextBounds.y,
-    })
+    const screenBounds = canvasBoundsToScreenBounds(
+      bounds,
+      canvasEngineRef.current.getSnapshot().viewport,
+    )
+    overlay.style.height = `${screenBounds.height}px`
+    overlay.style.transform = `translate(${screenBounds.x}px, ${screenBounds.y}px)`
+    overlay.style.width = `${screenBounds.width}px`
   }, [])
 
-  const updateResize = useCallback((event: PointerEvent, commit: boolean) => {
-    const session = resizeSessionRef.current
-    if (!session || event.pointerId !== session.pointerId) {
-      return
-    }
+  const applyResizeResult = useCallback(
+    (
+      result: CanvasResizeSessionResult | null,
+      options: { cancel?: boolean; clearGuides: boolean } = { clearGuides: false },
+    ) => {
+      const activeResize = activeResizeRef.current
+      if (!result || !activeResize) {
+        return
+      }
 
-    const currentPoint = reactFlowRef.current.screenToFlowPosition({
-      x: event.clientX,
-      y: event.clientY,
-    })
-    session.currentPoint = currentPoint
-    const { bounds: nextBounds, guides } = resolveSessionResizeBounds({
-      session,
-      currentPoint,
-      minWidth: minWidthRef.current,
-      minHeight: minHeightRef.current,
-      lockedAspectRatio: lockedAspectRatioRef.current,
-      square: event.shiftKey || shiftPressedRef.current,
-      snap: isPrimarySelectionModifier(event),
-      zoom: reactFlowRef.current.getZoom(),
-    })
-
-    if (commit || guides.length === 0) {
-      clearCanvasDragSnapGuides()
-    } else {
-      setCanvasDragSnapGuides(guides)
-    }
-
-    if (commit) {
-      onResizeEndRef.current(idRef.current, nextBounds.width, nextBounds.height, {
-        x: nextBounds.x,
-        y: nextBounds.y,
+      if (options.clearGuides || result.guides.length === 0) {
+        clearCanvasDragSnapGuides()
+      } else {
+        setCanvasDragSnapGuides(result.guides)
+      }
+      const updates = resolveSelectionResizeUpdates({
+        handlePosition: activeResize.handlePosition,
+        nextBounds: result.bounds,
+        nodes: activeResize.nodes,
+        startBounds: activeResize.startBounds,
       })
-      return
-    }
+      updateResizeOverlay(getResizeUpdateBounds(updates) ?? result.bounds)
+      const resize = options.cancel
+        ? onResizeManyCancelRef.current
+        : result.final
+          ? onResizeManyEndRef.current
+          : onResizeManyRef.current
+      resize(updates)
+    },
+    [updateResizeOverlay],
+  )
 
-    onResizeRef.current(idRef.current, nextBounds.width, nextBounds.height, {
-      x: nextBounds.x,
-      y: nextBounds.y,
-    })
-  }, [])
+  const updateResizeForSession = useCallback(
+    (square: boolean, snap: boolean) => {
+      const activeResize = activeResizeRef.current
+      if (!activeResize?.currentPoint) {
+        return
+      }
+
+      applyResizeResult({
+        ...resolveCanvasResize({
+          handlePosition: activeResize.handlePosition,
+          startBounds: activeResize.startBounds,
+          currentPoint: activeResize.currentPoint,
+          targetBounds: activeResize.targetBounds,
+          minWidth: activeResize.minWidth,
+          minHeight: activeResize.minHeight,
+          lockedAspectRatio: activeResize.lockedAspectRatio,
+          square,
+          snap,
+          zoom: viewportControllerRef.current.getZoom(),
+        }),
+        final: false,
+      })
+    },
+    [applyResizeResult],
+  )
+
+  const updateResize = useCallback(
+    (event: PointerEvent, commit: boolean) => {
+      const resizeTarget = resizeTargetRef.current
+      if (!resizeTarget || event.pointerId !== resizeTarget.pointerId) {
+        return
+      }
+
+      const currentPoint = viewportControllerRef.current.screenToCanvasPosition({
+        x: event.clientX,
+        y: event.clientY,
+      })
+      const activeResize = activeResizeRef.current
+      if (!activeResize) {
+        return
+      }
+
+      const square = readShiftModifier(modifiers)
+      const snap = readPrimaryModifier(modifiers)
+      activeResizeRef.current = { ...activeResize, currentPoint }
+
+      applyResizeResult(
+        {
+          ...resolveCanvasResize({
+            handlePosition: activeResize.handlePosition,
+            startBounds: activeResize.startBounds,
+            currentPoint,
+            targetBounds: activeResize.targetBounds,
+            minWidth: activeResize.minWidth,
+            minHeight: activeResize.minHeight,
+            lockedAspectRatio: activeResize.lockedAspectRatio,
+            square,
+            snap,
+            zoom: viewportControllerRef.current.getZoom(),
+          }),
+          final: commit,
+        },
+        {
+          clearGuides: commit,
+        },
+      )
+    },
+    [applyResizeResult, modifiers],
+  )
 
   const handlePointerMove = useCallback(
     (event: PointerEvent) => {
@@ -204,43 +259,54 @@ export function useCanvasResizeSession({
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
       if (event.key === 'Shift') {
-        updateResizeForSession(true, primaryPressedRef.current)
+        updateResizeForSession(true, readPrimaryModifier(modifiers))
       }
 
       if (event.key === 'Control' || event.key === 'Meta') {
-        updateResizeForSession(shiftPressedRef.current, true)
+        updateResizeForSession(readShiftModifier(modifiers), true)
       }
     },
-    [updateResizeForSession],
+    [modifiers, updateResizeForSession],
   )
 
   const handleKeyUp = useCallback(
     (event: KeyboardEvent) => {
       if (event.key === 'Shift') {
-        updateResizeForSession(false, primaryPressedRef.current)
+        updateResizeForSession(false, readPrimaryModifier(modifiers))
       }
 
       if (event.key === 'Control' || event.key === 'Meta') {
-        updateResizeForSession(shiftPressedRef.current, false)
+        updateResizeForSession(readShiftModifier(modifiers), false)
       }
     },
-    [updateResizeForSession],
+    [modifiers, updateResizeForSession],
   )
 
   const endResize = useCallback(
     (event: PointerEvent, commit: boolean) => {
-      const session = resizeSessionRef.current
-      if (!session || event.pointerId !== session.pointerId) {
+      const resizeTarget = resizeTargetRef.current
+      if (!resizeTarget || event.pointerId !== resizeTarget.pointerId) {
         return
       }
 
-      updateResize(event, commit)
-      clearCanvasDragSnapGuides()
-      releasePointerCapture(session.target, session.pointerId)
-      resizeSessionRef.current = null
+      if (commit) {
+        updateResize(event, true)
+      } else {
+        const activeResize = activeResizeRef.current
+        applyResizeResult(
+          activeResize ? { bounds: activeResize.startBounds, guides: [], final: false } : null,
+          { cancel: true, clearGuides: true },
+        )
+      }
+      releasePointerCapture(resizeTarget.target, resizeTarget.pointerId)
+      resizeTargetRef.current = null
+      activeResizeRef.current = null
       removeWindowListenersRef.current()
+      if (!commit) {
+        clearCanvasDragSnapGuides()
+      }
     },
-    [updateResize],
+    [applyResizeResult, updateResize],
   )
 
   const handlePointerUp = useCallback(
@@ -279,776 +345,380 @@ export function useCanvasResizeSession({
       removeWindowListeners()
       clearCanvasDragSnapGuides()
 
-      const session = resizeSessionRef.current
-      if (session) {
-        releasePointerCapture(session.target, session.pointerId)
-        resizeSessionRef.current = null
+      const resizeTarget = resizeTargetRef.current
+      if (resizeTarget) {
+        releasePointerCapture(resizeTarget.target, resizeTarget.pointerId)
       }
+      resizeTargetRef.current = null
+      activeResizeRef.current = null
     }
   }, [removeWindowListeners])
 
-  const currentBounds = getCurrentResizeBounds(internalNode, minWidth, minHeight)
-
-  if (!interactiveRenderMode || !selected || dragging) {
-    return []
+  if (
+    !canEdit ||
+    !interactiveRenderMode ||
+    !selection ||
+    selection.nodes.some((node) => node.dragging || node.metadata.dragging)
+  ) {
+    return null
   }
 
-  return CORNERS.map(({ position, cursorClassName, style }) => ({
-    position: position as CornerHandlePosition,
+  const startSelectionResize = (
+    position: CanvasResizeHandlePosition,
+    target: HTMLButtonElement,
+    pointerId: number,
+  ) => {
+    const startSelection = getSelectedResizeNodes(
+      canvasEngineRef.current.getSnapshot(),
+      metadataSnapshot,
+    )
+    if (!startSelection) {
+      return
+    }
+
+    const minimumSize = getMinimumSelectionResizeSize(startSelection)
+    target.setPointerCapture(pointerId)
+    resizeTargetRef.current = {
+      pointerId,
+      target,
+    }
+    activeResizeRef.current = {
+      handlePosition: position,
+      nodes: startSelection.nodes,
+      startBounds: startSelection.bounds,
+      minWidth: minimumSize.width,
+      minHeight: minimumSize.height,
+      lockedAspectRatio: getSingleSelectionLockedAspectRatio(startSelection),
+      currentPoint: null,
+      targetBounds: canvasEngineRef.current
+        .getSnapshot()
+        .nodes.filter(
+          (candidate) =>
+            candidate.type !== 'stroke' && !startSelection.selectedNodeIds.has(candidate.id),
+        )
+        .flatMap((candidate) => {
+          const bounds = getCanvasNodeBounds(candidate)
+          return bounds ? [bounds] : []
+        }),
+    }
+    addWindowListeners()
+  }
+
+  const zones = RESIZE_HANDLES.map(({ position, cursorClassName }) => ({
+    position,
     cursorClassName,
-    style,
-    onPointerDown: (event) => {
-      if (event.button !== 0 || !currentBounds) {
+    style: getResizeZoneStyle(position),
+    onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => {
+      if (event.button !== 0) {
         return
       }
 
       event.preventDefault()
       event.stopPropagation()
-
-      event.currentTarget.setPointerCapture(event.pointerId)
-      resizeSessionRef.current = {
-        pointerId: event.pointerId,
-        target: event.currentTarget,
-        handlePosition: position as CornerHandlePosition,
-        startBounds: currentBounds,
-        currentPoint: null,
-        targetBounds: reactFlowRef.current
-          .getNodes()
-          .filter((candidate) => candidate.type !== 'stroke' && candidate.id !== idRef.current)
-          .flatMap((candidate) => {
-            const bounds = getCanvasNodeBounds(candidate)
-            return bounds ? [bounds] : []
-          }),
-      }
-      addWindowListeners()
+      startSelectionResize(position, event.currentTarget, event.pointerId)
     },
   }))
-}
-
-function resolveSessionResizeBounds({
-  session,
-  currentPoint,
-  minWidth,
-  minHeight,
-  lockedAspectRatio,
-  square,
-  snap,
-  zoom,
-}: {
-  session: ResizeSession
-  currentPoint: { x: number; y: number }
-  minWidth: number
-  minHeight: number
-  lockedAspectRatio?: number
-  square: boolean
-  snap: boolean
-  zoom: number
-}): { bounds: ResizeBounds; guides: Array<CanvasDragGuide> } {
-  const bounds = resolveResizeBounds({
-    handlePosition: session.handlePosition,
-    startBounds: session.startBounds,
-    currentPoint,
-    minWidth,
-    minHeight,
-    lockedAspectRatio,
-    square,
-  })
-
-  if (!snap || session.targetBounds.length === 0) {
-    return { bounds, guides: [] }
-  }
-
-  const snapResult = resolveResizeSnap({
-    bounds,
-    currentPoint,
-    handlePosition: session.handlePosition,
-    targetBounds: session.targetBounds,
-    threshold: getSnapThresholdForZoom(zoom),
-    minWidth,
-    minHeight,
-    lockedAspectRatio,
-    square,
-  })
 
   return {
-    bounds: snapResult?.bounds ?? bounds,
-    guides: snapResult?.guides ?? [],
+    bounds: selection.bounds,
+    dragNodeId: getSelectionDragNodeId(selection),
+    overlayRef: resizeOverlayRef,
+    zones,
+  }
+}
+
+export function resolveSelectionResizeUpdates({
+  handlePosition,
+  nextBounds,
+  nodes,
+  startBounds,
+}: {
+  handlePosition: CanvasResizeHandlePosition
+  nextBounds: Bounds
+  nodes: ReadonlyArray<SelectionResizeNode>
+  startBounds: Bounds
+}): ReadonlyMap<string, CanvasNodeResizeUpdate> {
+  const updates = new Map<string, CanvasNodeResizeUpdate>()
+  const scaleX = startBounds.width > 0 ? nextBounds.width / startBounds.width : 1
+  const scaleY = startBounds.height > 0 ? nextBounds.height / startBounds.height : 1
+
+  for (const selectionNode of nodes) {
+    const { bounds, metadata } = selectionNode
+    const centerX = nextBounds.x + (bounds.x + bounds.width / 2 - startBounds.x) * scaleX
+    const centerY = nextBounds.y + (bounds.y + bounds.height / 2 - startBounds.y) * scaleY
+    let width = Math.max(bounds.width * scaleX, metadata.minWidth)
+    let height = Math.max(bounds.height * scaleY, metadata.minHeight)
+
+    if (metadata.lockedAspectRatio) {
+      const scale = getLockedNodeScale(handlePosition, scaleX, scaleY)
+      if (affectsCanvasResizeAxis(handlePosition, 'x')) {
+        width = Math.max(
+          bounds.width * scale,
+          metadata.minWidth,
+          metadata.minHeight * metadata.lockedAspectRatio,
+        )
+        height = width / metadata.lockedAspectRatio
+      } else {
+        height = Math.max(
+          bounds.height * scale,
+          metadata.minHeight,
+          metadata.minWidth / metadata.lockedAspectRatio,
+        )
+        width = height * metadata.lockedAspectRatio
+      }
+    }
+
+    updates.set(selectionNode.id, {
+      width,
+      height,
+      position: {
+        x: centerX - width / 2,
+        y: centerY - height / 2,
+      },
+    })
+  }
+
+  return updates
+}
+
+function getResizeUpdateBounds(updates: ReadonlyMap<string, CanvasNodeResizeUpdate>) {
+  return boundsUnion(
+    Array.from(updates.values(), (update) => ({
+      x: update.position.x,
+      y: update.position.y,
+      width: update.width,
+      height: update.height,
+    })),
+  )
+}
+
+function getSelectedResizeNodes(
+  snapshot: CanvasEngineSnapshot,
+  metadataSnapshot: ReadonlyMap<string, CanvasNodeResizeMetadata>,
+): {
+  bounds: Bounds
+  nodes: ReadonlyArray<SelectionResizeNode>
+  selectedNodeIds: ReadonlySet<string>
+} | null {
+  if (
+    snapshot.selection.pendingPreview.kind === 'active' ||
+    snapshot.selection.nodeIds.size === 0
+  ) {
+    return null
+  }
+
+  const selectedNodeIds = new Set(snapshot.selection.nodeIds)
+  const nodes: Array<SelectionResizeNode> = []
+
+  for (const nodeId of selectedNodeIds) {
+    const internalNode = snapshot.nodeLookup.get(nodeId)
+    if (!internalNode?.visible) {
+      continue
+    }
+
+    const metadata = metadataSnapshot.get(nodeId) ?? DEFAULT_RESIZE_METADATA
+    const bounds = getCurrentResizeBounds(internalNode, metadata)
+    if (!bounds) {
+      continue
+    }
+
+    nodes.push({
+      bounds,
+      dragging: internalNode.dragging,
+      id: nodeId,
+      metadata,
+    })
+  }
+
+  if (nodes.length === 0) {
+    return null
+  }
+
+  const selectionBounds = boundsUnion(nodes.map((node) => node.bounds))
+  if (!selectionBounds) {
+    return null
+  }
+
+  return {
+    bounds: selectionBounds,
+    nodes,
+    selectedNodeIds,
   }
 }
 
 function getCurrentResizeBounds(
-  internalNode: ReturnType<typeof useInternalNode> | undefined,
-  minWidth: number,
-  minHeight: number,
-): ResizeBounds | null {
-  if (!internalNode) {
+  internalNode: CanvasInternalNode,
+  metadata: CanvasNodeResizeMetadata,
+): Bounds | null {
+  const width = internalNode.measured.width ?? internalNode.node.width ?? metadata.minWidth
+  const height = internalNode.measured.height ?? internalNode.node.height ?? metadata.minHeight
+
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
     return null
   }
 
-  const width = internalNode.measured?.width ?? internalNode.width ?? minWidth
-  const height = internalNode.measured?.height ?? internalNode.height ?? minHeight
-  const position = internalNode.position ??
-    internalNode.internals.positionAbsolute ?? { x: 0, y: 0 }
-
   return {
-    x: position.x,
-    y: position.y,
+    x: internalNode.node.position.x,
+    y: internalNode.node.position.y,
     width,
     height,
   }
 }
 
-function resolveResizeBounds({
-  handlePosition,
-  startBounds,
-  currentPoint,
-  minWidth,
-  minHeight,
-  lockedAspectRatio,
-  square,
-  preferredAxis,
-}: {
-  handlePosition: CornerHandlePosition
-  startBounds: ResizeBounds
-  currentPoint: { x: number; y: number }
-  minWidth: number
-  minHeight: number
-  lockedAspectRatio?: number
-  square: boolean
-  preferredAxis?: ResizeAxis
-}): ResizeBounds {
-  const anchor = getOppositeCorner(startBounds, handlePosition)
-  const minimumSquareSize = Math.max(minWidth, minHeight)
-
-  if (lockedAspectRatio) {
-    const signedPoint = applyLockedAspectRatioSize({
-      anchor,
-      point: currentPoint,
-      handlePosition,
-      minWidth,
-      minHeight,
-      lockedAspectRatio,
-      preferredAxis,
-    })
-
-    return normalizeResizeBounds(anchor, signedPoint)
+function getSingleSelectionLockedAspectRatio(selection: {
+  nodes: ReadonlyArray<SelectionResizeNode>
+}) {
+  if (selection.nodes.length !== 1) {
+    return undefined
   }
 
-  if (square) {
-    const signedPoint = resolveSquareResizePoint({
-      anchor,
-      point: currentPoint,
-      handlePosition,
-      minSize: minimumSquareSize,
-      preferredAxis,
-    })
-
-    return normalizeResizeBounds(anchor, signedPoint)
-  }
-
-  const signedPoint = applyMinimumRectSize({
-    anchor,
-    point: currentPoint,
-    handlePosition,
-    minWidth,
-    minHeight,
-  })
-
-  return normalizeResizeBounds(anchor, signedPoint)
+  const lockedAspectRatio = selection.nodes[0].metadata.lockedAspectRatio
+  return typeof lockedAspectRatio === 'number' && Number.isFinite(lockedAspectRatio)
+    ? lockedAspectRatio
+    : undefined
 }
 
-function resolveSquareResizePoint({
-  anchor,
-  point,
-  handlePosition,
-  minSize,
-  preferredAxis,
-}: {
-  anchor: { x: number; y: number }
-  point: { x: number; y: number }
-  handlePosition: CornerHandlePosition
-  minSize: number
-  preferredAxis?: ResizeAxis
-}) {
-  if (preferredAxis === 'x' || preferredAxis === 'y') {
-    const direction = getHandleDirection(handlePosition)
-    const size = Math.max(
-      Math.abs(
-        (preferredAxis === 'x' ? point.x : point.y) - (preferredAxis === 'x' ? anchor.x : anchor.y),
-      ),
-      minSize,
-    )
+function getSelectionDragNodeId(selection: { nodes: ReadonlyArray<SelectionResizeNode> }) {
+  return selection.nodes.length > 1 ? selection.nodes[0].id : undefined
+}
 
+function getMinimumSelectionResizeSize(selection: {
+  bounds: Bounds
+  nodes: ReadonlyArray<SelectionResizeNode>
+}) {
+  if (selection.nodes.length > 1) {
     return {
-      x: anchor.x + direction.x * size,
-      y: anchor.y + direction.y * size,
+      width: 1,
+      height: 1,
     }
   }
 
-  const constrainedPoint = constrainPointToSquare(anchor, point)
-  return applyMinimumSquareSize({
-    anchor,
-    point: constrainedPoint,
-    handlePosition,
-    minSize,
-  })
+  let minScaleX = 0
+  let minScaleY = 0
+
+  for (const { bounds, metadata } of selection.nodes) {
+    if (bounds.width > 0) {
+      const lockedMinimumWidth = metadata.lockedAspectRatio
+        ? metadata.minHeight * metadata.lockedAspectRatio
+        : 0
+      minScaleX = Math.max(
+        minScaleX,
+        Math.max(metadata.minWidth, lockedMinimumWidth) / bounds.width,
+      )
+    }
+
+    if (bounds.height > 0) {
+      const lockedMinimumHeight = metadata.lockedAspectRatio
+        ? metadata.minWidth / metadata.lockedAspectRatio
+        : 0
+      minScaleY = Math.max(
+        minScaleY,
+        Math.max(metadata.minHeight, lockedMinimumHeight) / bounds.height,
+      )
+    }
+  }
+
+  return {
+    width: Math.max(selection.bounds.width * minScaleX, 1),
+    height: Math.max(selection.bounds.height * minScaleY, 1),
+  }
 }
 
-function getMinimumLockedAspectRatioDimensions(
-  minWidth: number,
-  minHeight: number,
-  lockedAspectRatio: number,
+function getLockedNodeScale(
+  handlePosition: CanvasResizeHandlePosition,
+  scaleX: number,
+  scaleY: number,
 ) {
-  return {
-    minimumWidth: Math.max(minWidth, minHeight * lockedAspectRatio),
-    minimumHeight: Math.max(minHeight, minWidth / lockedAspectRatio),
+  if (!affectsCanvasResizeAxis(handlePosition, 'x')) {
+    return scaleY
   }
+
+  if (!affectsCanvasResizeAxis(handlePosition, 'y')) {
+    return scaleX
+  }
+
+  return Math.abs(scaleX - 1) >= Math.abs(scaleY - 1) ? scaleX : scaleY
 }
 
-function applyLockedAspectRatioSize({
-  anchor,
-  point,
-  handlePosition,
-  minWidth,
-  minHeight,
-  lockedAspectRatio,
-  preferredAxis,
-}: {
-  anchor: { x: number; y: number }
-  point: { x: number; y: number }
-  handlePosition: CornerHandlePosition
-  minWidth: number
-  minHeight: number
-  lockedAspectRatio: number
-  preferredAxis?: ResizeAxis
-}) {
-  const direction = getHandleDirection(handlePosition)
-  const deltaX = Math.abs(point.x - anchor.x)
-  const deltaY = Math.abs(point.y - anchor.y)
-  const { minimumWidth, minimumHeight } = getMinimumLockedAspectRatioDimensions(
-    minWidth,
-    minHeight,
-    lockedAspectRatio,
-  )
+function getResizeZoneStyle(position: CanvasResizeHandlePosition): CSSProperties {
+  const hitSize = getResizeHandleHitSizePx()
+  const cornerSize = hitSize
+  const halfCornerSize = cornerSize / 2
+  const sideBandSize = hitSize
+  const halfSideBandSize = sideBandSize / 2
 
-  if (preferredAxis === 'x') {
-    const width = Math.max(deltaX, minimumWidth)
-
-    return {
-      x: anchor.x + direction.x * width,
-      y: anchor.y + direction.y * (width / lockedAspectRatio),
-    }
-  }
-
-  if (preferredAxis === 'y') {
-    const height = Math.max(deltaY, minimumHeight)
-
-    return {
-      x: anchor.x + direction.x * height * lockedAspectRatio,
-      y: anchor.y + direction.y * height,
-    }
-  }
-
-  const widthFromX = Math.max(deltaX, minimumWidth)
-  const heightFromY = Math.max(deltaY, minimumHeight)
-  const candidateFromX = {
-    width: widthFromX,
-    height: widthFromX / lockedAspectRatio,
-  }
-  const candidateFromY = { width: heightFromY * lockedAspectRatio, height: heightFromY }
-  const chosenCandidate =
-    getCandidateDistance(candidateFromX, deltaX, deltaY) <=
-    getCandidateDistance(candidateFromY, deltaX, deltaY)
-      ? candidateFromX
-      : candidateFromY
-
-  return {
-    x: anchor.x + direction.x * chosenCandidate.width,
-    y: anchor.y + direction.y * chosenCandidate.height,
-  }
-}
-
-function getCandidateDistance(
-  candidate: { width: number; height: number },
-  targetWidth: number,
-  targetHeight: number,
-) {
-  return Math.abs(candidate.width - targetWidth) + Math.abs(candidate.height - targetHeight)
-}
-
-function getOppositeCorner(bounds: ResizeBounds, handlePosition: CornerHandlePosition) {
-  switch (handlePosition) {
+  switch (position) {
     case 'top-left':
-      return { x: bounds.x + bounds.width, y: bounds.y + bounds.height }
+      return { left: -halfCornerSize, top: -halfCornerSize, width: cornerSize, height: cornerSize }
+    case 'top':
+      return {
+        left: halfCornerSize,
+        right: halfCornerSize,
+        top: -halfSideBandSize,
+        height: sideBandSize,
+      }
     case 'top-right':
-      return { x: bounds.x, y: bounds.y + bounds.height }
-    case 'bottom-left':
-      return { x: bounds.x + bounds.width, y: bounds.y }
+      return {
+        right: -halfCornerSize,
+        top: -halfCornerSize,
+        width: cornerSize,
+        height: cornerSize,
+      }
+    case 'right':
+      return {
+        right: -halfSideBandSize,
+        top: halfCornerSize,
+        bottom: halfCornerSize,
+        width: sideBandSize,
+      }
     case 'bottom-right':
-      return { x: bounds.x, y: bounds.y }
-  }
-}
-
-function applyMinimumSquareSize({
-  anchor,
-  point,
-  handlePosition,
-  minSize,
-}: {
-  anchor: { x: number; y: number }
-  point: { x: number; y: number }
-  handlePosition: CornerHandlePosition
-  minSize: number
-}) {
-  const direction = getHandleDirection(handlePosition)
-  const width = Math.abs(point.x - anchor.x)
-  const height = Math.abs(point.y - anchor.y)
-  const size = Math.max(width, height, minSize)
-
-  return {
-    x: anchor.x + direction.x * size,
-    y: anchor.y + direction.y * size,
-  }
-}
-
-function applyMinimumRectSize({
-  anchor,
-  point,
-  handlePosition,
-  minWidth,
-  minHeight,
-}: {
-  anchor: { x: number; y: number }
-  point: { x: number; y: number }
-  handlePosition: CornerHandlePosition
-  minWidth: number
-  minHeight: number
-}) {
-  const direction = getHandleDirection(handlePosition)
-  const width = Math.max(Math.abs(point.x - anchor.x), minWidth)
-  const height = Math.max(Math.abs(point.y - anchor.y), minHeight)
-
-  return {
-    x: anchor.x + direction.x * width,
-    y: anchor.y + direction.y * height,
-  }
-}
-
-function normalizeResizeBounds(anchor: { x: number; y: number }, point: { x: number; y: number }) {
-  return {
-    x: Math.min(anchor.x, point.x),
-    y: Math.min(anchor.y, point.y),
-    width: Math.abs(point.x - anchor.x),
-    height: Math.abs(point.y - anchor.y),
-  }
-}
-
-function getHandleDirection(handlePosition: CornerHandlePosition) {
-  switch (handlePosition) {
-    case 'top-left':
-      return { x: -1, y: -1 }
-    case 'top-right':
-      return { x: 1, y: -1 }
+      return {
+        right: -halfCornerSize,
+        bottom: -halfCornerSize,
+        width: cornerSize,
+        height: cornerSize,
+      }
+    case 'bottom':
+      return {
+        left: halfCornerSize,
+        right: halfCornerSize,
+        bottom: -halfSideBandSize,
+        height: sideBandSize,
+      }
     case 'bottom-left':
-      return { x: -1, y: 1 }
-    case 'bottom-right':
-      return { x: 1, y: 1 }
+      return {
+        left: -halfCornerSize,
+        bottom: -halfCornerSize,
+        width: cornerSize,
+        height: cornerSize,
+      }
+    case 'left':
+      return {
+        left: -halfSideBandSize,
+        top: halfCornerSize,
+        bottom: halfCornerSize,
+        width: sideBandSize,
+      }
   }
 }
 
-function resolveResizeSnap({
-  bounds,
-  currentPoint,
-  handlePosition,
-  targetBounds,
-  threshold,
-  minWidth,
-  minHeight,
-  lockedAspectRatio,
-  square,
-}: {
-  bounds: ResizeBounds
-  currentPoint: { x: number; y: number }
-  handlePosition: CornerHandlePosition
-  targetBounds: Array<ResizeBounds>
-  threshold: number
-  minWidth: number
-  minHeight: number
-  lockedAspectRatio?: number
-  square: boolean
-}): { bounds: ResizeBounds; guides: Array<CanvasDragGuide> } | null {
-  if (!square && !lockedAspectRatio) {
-    return resolveFreeformResizeSnap({
-      bounds,
-      handlePosition,
-      targetBounds,
-      threshold,
-      minWidth,
-      minHeight,
-    })
-  }
+function getResizeHandleHitSizePx() {
+  const coarsePointer =
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(pointer: coarse)').matches
+  const touchPoints =
+    typeof navigator !== 'undefined' &&
+    'maxTouchPoints' in navigator &&
+    navigator.maxTouchPoints > 0
 
-  return resolveConstrainedResizeSnap({
-    bounds,
-    currentPoint,
-    handlePosition,
-    targetBounds,
-    threshold,
-    minWidth,
-    minHeight,
-    lockedAspectRatio,
-    square,
-  })
+  return coarsePointer || touchPoints ? TOUCH_HANDLE_HIT_SIZE_PX : MOUSE_HANDLE_HIT_SIZE_PX
 }
 
-function resolveFreeformResizeSnap({
-  bounds,
-  handlePosition,
-  targetBounds,
-  threshold,
-  minWidth,
-  minHeight,
-}: {
-  bounds: ResizeBounds
-  handlePosition: CornerHandlePosition
-  targetBounds: Array<ResizeBounds>
-  threshold: number
-  minWidth: number
-  minHeight: number
-}): { bounds: ResizeBounds; guides: Array<CanvasDragGuide> } | null {
-  const anchor = getOppositeCorner(bounds, handlePosition)
-  const currentPoint = getResizeHandlePoint(bounds, handlePosition)
-  const xSnap = getBestResizeAxisSnap({
-    axis: 'x',
-    bounds,
-    handlePosition,
-    targetBounds,
-    threshold,
-  })
-  const ySnap = getBestResizeAxisSnap({
-    axis: 'y',
-    bounds,
-    handlePosition,
-    targetBounds,
-    threshold,
-  })
-
-  if (!xSnap && !ySnap) {
-    return null
-  }
-
-  const snappedPoint = applyMinimumRectSize({
-    anchor,
-    point: {
-      x: xSnap?.point ?? currentPoint.x,
-      y: ySnap?.point ?? currentPoint.y,
-    },
-    handlePosition,
-    minWidth,
-    minHeight,
-  })
-
-  return {
-    bounds: normalizeResizeBounds(anchor, snappedPoint),
-    guides: [xSnap?.guide ?? null, ySnap?.guide ?? null].filter((guide) => guide !== null),
-  }
+function readPrimaryModifier(modifiers: ReturnType<typeof useCanvasModifierKeys>) {
+  return modifiers.primaryPressed
 }
 
-function resolveConstrainedResizeSnap({
-  bounds,
-  currentPoint,
-  handlePosition,
-  targetBounds,
-  threshold,
-  minWidth,
-  minHeight,
-  lockedAspectRatio,
-  square,
-}: {
-  bounds: ResizeBounds
-  currentPoint: { x: number; y: number }
-  handlePosition: CornerHandlePosition
-  targetBounds: Array<ResizeBounds>
-  threshold: number
-  minWidth: number
-  minHeight: number
-  lockedAspectRatio?: number
-  square: boolean
-}): { bounds: ResizeBounds; guides: Array<CanvasDragGuide> } | null {
-  const candidates = targetBounds.flatMap((targetBoundsItem) => [
-    ...collectResizeAxisCandidates({
-      axis: 'x',
-      bounds,
-      targetBounds: targetBoundsItem,
-      handlePosition,
-    }),
-    ...collectResizeAxisCandidates({
-      axis: 'y',
-      bounds,
-      targetBounds: targetBoundsItem,
-      handlePosition,
-    }),
-  ])
-  const bestCandidate = getBestResizeSnapCandidate(candidates, threshold)
-
-  if (!bestCandidate) {
-    return null
-  }
-
-  const snappedBounds = resolveResizeBounds({
-    handlePosition,
-    startBounds: bounds,
-    currentPoint: {
-      x: bestCandidate.axis === 'x' ? bestCandidate.point : currentPoint.x,
-      y: bestCandidate.axis === 'y' ? bestCandidate.point : currentPoint.y,
-    },
-    minWidth,
-    minHeight,
-    lockedAspectRatio,
-    square,
-    preferredAxis: bestCandidate.axis,
-  })
-
-  return {
-    bounds: snappedBounds,
-    guides: [createResizeAxisGuide(bestCandidate)],
-  }
-}
-
-function getResizeHandlePoint(bounds: ResizeBounds, handlePosition: CornerHandlePosition) {
-  switch (handlePosition) {
-    case 'top-left':
-      return { x: bounds.x, y: bounds.y }
-    case 'top-right':
-      return { x: bounds.x + bounds.width, y: bounds.y }
-    case 'bottom-left':
-      return { x: bounds.x, y: bounds.y + bounds.height }
-    case 'bottom-right':
-      return { x: bounds.x + bounds.width, y: bounds.y + bounds.height }
-  }
-}
-
-function getBestResizeAxisSnap({
-  axis,
-  bounds,
-  handlePosition,
-  targetBounds,
-  threshold,
-}: {
-  axis: 'x' | 'y'
-  bounds: ResizeBounds
-  handlePosition: CornerHandlePosition
-  targetBounds: Array<ResizeBounds>
-  threshold: number
-}): { point: number; guide: CanvasDragGuide } | null {
-  const candidates = targetBounds.flatMap((targetBoundsItem) =>
-    collectResizeAxisCandidates({
-      axis,
-      bounds,
-      targetBounds: targetBoundsItem,
-      handlePosition,
-    }),
-  )
-  let bestCandidate: (typeof candidates)[number] | null = null
-  let bestDistance = threshold + 1
-
-  for (const candidate of candidates) {
-    const distance = Math.abs(candidate.targetValue - candidate.draggedValue)
-    if (distance > threshold || distance >= bestDistance) {
-      continue
-    }
-
-    bestCandidate = candidate
-    bestDistance = distance
-  }
-
-  if (!bestCandidate) {
-    return null
-  }
-
-  return {
-    point: bestCandidate.point,
-    guide: createResizeAxisGuide(bestCandidate),
-  }
-}
-
-function getBestResizeSnapCandidate<TCandidate extends ResizeAxisSnapCandidate>(
-  candidates: Array<TCandidate>,
-  threshold: number,
-): TCandidate | null {
-  let bestCandidate: TCandidate | null = null
-  let bestDistance = threshold + 1
-
-  for (const candidate of candidates) {
-    const distance = Math.abs(candidate.targetValue - candidate.draggedValue)
-    if (distance > threshold || distance >= bestDistance) {
-      continue
-    }
-
-    bestCandidate = candidate
-    bestDistance = distance
-  }
-
-  return bestCandidate
-}
-
-function createResizeAxisGuide(candidate: ResizeAxisSnapCandidate): CanvasDragGuide {
-  return {
-    orientation: candidate.axis === 'x' ? 'vertical' : 'horizontal',
-    position: candidate.targetValue,
-    start: Math.min(candidate.draggedStart, candidate.targetStart),
-    end: Math.max(candidate.draggedEnd, candidate.targetEnd),
-  }
-}
-
-type ResizeAxisSnapCandidate = {
-  axis: ResizeAxis
-  draggedValue: number
-  targetValue: number
-  point: number
-  draggedStart: number
-  draggedEnd: number
-  targetStart: number
-  targetEnd: number
-}
-
-function collectResizeAxisCandidates({
-  axis,
-  bounds,
-  targetBounds,
-  handlePosition,
-}: {
-  axis: 'x' | 'y'
-  bounds: ResizeBounds
-  targetBounds: ResizeBounds
-  handlePosition: CornerHandlePosition
-}) {
-  const createSnapCandidate = ({
-    axis: candidateAxis,
-    bounds: candidateBounds,
-    targetBounds: candidateTargetBounds,
-    draggedValue,
-    targetValue,
-    point,
-  }: {
-    axis: 'x' | 'y'
-    bounds: ResizeBounds
-    targetBounds: ResizeBounds
-    draggedValue: number
-    targetValue: number
-    point: number
-  }): ResizeAxisSnapCandidate => ({
-    axis: candidateAxis,
-    draggedValue,
-    targetValue,
-    point,
-    draggedStart: candidateAxis === 'x' ? candidateBounds.y : candidateBounds.x,
-    draggedEnd:
-      candidateAxis === 'x'
-        ? candidateBounds.y + candidateBounds.height
-        : candidateBounds.x + candidateBounds.width,
-    targetStart: candidateAxis === 'x' ? candidateTargetBounds.y : candidateTargetBounds.x,
-    targetEnd:
-      candidateAxis === 'x'
-        ? candidateTargetBounds.y + candidateTargetBounds.height
-        : candidateTargetBounds.x + candidateTargetBounds.width,
-  })
-
-  const anchor = getOppositeCorner(bounds, handlePosition)
-  const centerX = bounds.x + bounds.width / 2
-  const centerY = bounds.y + bounds.height / 2
-
-  if (axis === 'x') {
-    const targetValues = [
-      targetBounds.x,
-      targetBounds.x + targetBounds.width / 2,
-      targetBounds.x + targetBounds.width,
-    ]
-
-    if (handlePosition === 'top-left' || handlePosition === 'bottom-left') {
-      return targetValues.flatMap((targetValue) => [
-        createSnapCandidate({
-          axis,
-          bounds,
-          targetBounds,
-          draggedValue: bounds.x,
-          targetValue,
-          point: targetValue,
-        }),
-        createSnapCandidate({
-          axis,
-          bounds,
-          targetBounds,
-          draggedValue: centerX,
-          targetValue,
-          point: 2 * targetValue - anchor.x,
-        }),
-      ])
-    }
-
-    return targetValues.flatMap((targetValue) => [
-      createSnapCandidate({
-        axis,
-        bounds,
-        targetBounds,
-        draggedValue: bounds.x + bounds.width,
-        targetValue,
-        point: targetValue,
-      }),
-      createSnapCandidate({
-        axis,
-        bounds,
-        targetBounds,
-        draggedValue: centerX,
-        targetValue,
-        point: 2 * targetValue - anchor.x,
-      }),
-    ])
-  }
-
-  const targetValues = [
-    targetBounds.y,
-    targetBounds.y + targetBounds.height / 2,
-    targetBounds.y + targetBounds.height,
-  ]
-
-  if (handlePosition === 'top-left' || handlePosition === 'top-right') {
-    return targetValues.flatMap((targetValue) => [
-      createSnapCandidate({
-        axis,
-        bounds,
-        targetBounds,
-        draggedValue: bounds.y,
-        targetValue,
-        point: targetValue,
-      }),
-      createSnapCandidate({
-        axis,
-        bounds,
-        targetBounds,
-        draggedValue: centerY,
-        targetValue,
-        point: 2 * targetValue - anchor.y,
-      }),
-    ])
-  }
-
-  return targetValues.flatMap((targetValue) => [
-    createSnapCandidate({
-      axis,
-      bounds,
-      targetBounds,
-      draggedValue: bounds.y + bounds.height,
-      targetValue,
-      point: targetValue,
-    }),
-    createSnapCandidate({
-      axis,
-      bounds,
-      targetBounds,
-      draggedValue: centerY,
-      targetValue,
-      point: 2 * targetValue - anchor.y,
-    }),
-  ])
+function readShiftModifier(modifiers: ReturnType<typeof useCanvasModifierKeys>) {
+  return modifiers.shiftPressed
 }

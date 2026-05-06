@@ -1,5 +1,11 @@
 import type { RemoteUser } from '../../utils/canvas-awareness-types'
 import { readRemoteLassoState } from './lasso-tool-awareness'
+import { CanvasScreenSpaceSvg } from '../../components/canvas-screen-space-overlay'
+import {
+  CANVAS_SELECTION_CHROME_STROKE_WIDTH_PX,
+  canvasPointsToScreenPoints,
+  useCanvasScreenSpaceViewport,
+} from '../../components/canvas-screen-space-overlay-utils'
 
 function renderLassoShape({
   key,
@@ -15,14 +21,14 @@ function renderLassoShape({
   const pointsValue = points.map((point) => `${point.x},${point.y}`).join(' ')
   const strokeProps = {
     stroke: color,
-    strokeWidth: 1,
-    strokeDasharray: '3 3',
+    strokeWidth: CANVAS_SELECTION_CHROME_STROKE_WIDTH_PX,
   }
 
   if (points.length >= 3) {
     return (
       <polygon
         key={key}
+        data-testid="canvas-remote-lasso-preview"
         points={pointsValue}
         fill={color}
         fillOpacity={fillOpacity}
@@ -31,23 +37,22 @@ function renderLassoShape({
     )
   }
 
-  return <polyline key={key} points={pointsValue} fill="none" {...strokeProps} />
+  return (
+    <polyline
+      key={key}
+      data-testid="canvas-remote-lasso-preview"
+      points={pointsValue}
+      fill="none"
+      {...strokeProps}
+    />
+  )
 }
 
 export function LassoAwarenessLayer({ remoteUsers }: { remoteUsers: ReadonlyArray<RemoteUser> }) {
+  const viewport = useCanvasScreenSpaceViewport()
+
   return (
-    <svg
-      aria-hidden="true"
-      width="100%"
-      height="100%"
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        overflow: 'visible',
-        pointerEvents: 'none',
-      }}
-    >
+    <CanvasScreenSpaceSvg>
       {remoteUsers.map((remoteUser) => {
         const selecting = readRemoteLassoState(remoteUser)
         if (!selecting) return null
@@ -56,11 +61,11 @@ export function LassoAwarenessLayer({ remoteUsers }: { remoteUsers: ReadonlyArra
 
         return renderLassoShape({
           key: `lasso-${remoteUser.clientId}`,
-          points,
+          points: canvasPointsToScreenPoints(points, viewport),
           color: remoteUser.user.color,
           fillOpacity: 0.06,
         })
       })}
-    </svg>
+    </CanvasScreenSpaceSvg>
   )
 }

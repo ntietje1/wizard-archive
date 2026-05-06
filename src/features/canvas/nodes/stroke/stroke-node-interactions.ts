@@ -141,7 +141,7 @@ export function strokeNodeContainsPoint(
 
 function strokePathIntersectsPolygon(
   points: Array<[number, number, number]>,
-  polygon: Array<{ x: number; y: number }>,
+  polygon: ReadonlyArray<{ x: number; y: number }>,
 ): boolean {
   const polygonBounds = boundsFromPoints(polygon)
   const pathBounds = boundsFromPoints(points.map(([x, y]) => ({ x, y }))) ?? {
@@ -250,7 +250,7 @@ export function strokeNodeIntersectsRect(
 
 export function strokeNodeIntersectsPolygon(
   node: StrokeNodeLike,
-  polygon: Array<Point2D>,
+  polygon: ReadonlyArray<Point2D>,
 ): boolean {
   return strokePathIntersectsPolygon(getAbsoluteStrokePointsForNode(node), polygon)
 }

@@ -1,5 +1,6 @@
 import type { CanvasToolId, CanvasToolRuntime } from '../../canvas-tool-types'
-import type { Node } from '@xyflow/react'
+import type { CanvasSelectionSnapshot } from '../../../system/canvas-selection'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 
 export function createPointerEvent(
   x: number,
@@ -29,27 +30,27 @@ export function createPlacementEnvironment({
   setActiveTool,
 }: {
   activeTool: CanvasToolId
-  createNode: (node: Node) => void
-  replaceSelection: (selection: { nodeIds: Array<string>; edgeIds: Array<string> }) => void
+  createNode: (node: CanvasDocumentNode) => void
+  replaceSelection: (selection: CanvasSelectionSnapshot) => void
   setPendingEditNodeId: (nodeId: string | null) => void
   setPendingEditNodePoint?: (point: { x: number; y: number } | null) => void
   setActiveTool: (tool: CanvasToolId) => void
 }): CanvasToolRuntime {
   return {
     viewport: {
-      screenToFlowPosition: ({ x, y }) => ({ x, y }),
+      screenToCanvasPosition: ({ x, y }) => ({ x, y }),
       getZoom: () => 1,
     },
     commands: {
       createNode,
-      updateNode: () => undefined,
-      updateNodeData: () => undefined,
-      updateEdge: () => undefined,
+      patchNodeData: () => undefined,
+      patchEdges: () => undefined,
       resizeNode: () => undefined,
+      resizeNodes: () => undefined,
       deleteNodes: () => undefined,
       createEdge: () => undefined,
       deleteEdges: () => undefined,
-      setNodePosition: () => undefined,
+      setNodePositions: () => undefined,
     },
     query: {
       getNodes: () => [],
@@ -57,18 +58,15 @@ export function createPlacementEnvironment({
       getMeasuredNodes: () => [],
     },
     selection: {
-      getSnapshot: () => ({ nodeIds: [], edgeIds: [] }),
-      replace: replaceSelection,
-      replaceNodes: (nodeIds) => replaceSelection({ nodeIds, edgeIds: [] }),
-      replaceEdges: (edgeIds) => replaceSelection({ nodeIds: [], edgeIds }),
-      clear: () => undefined,
-      getSelectedNodeIds: () => [],
-      getSelectedEdgeIds: () => [],
-      toggleNodeFromTarget: () => undefined,
-      toggleEdgeFromTarget: () => undefined,
+      getSnapshot: () => ({ nodeIds: new Set<string>(), edgeIds: new Set<string>() }),
+      setSelection: replaceSelection,
+      clearSelection: () => undefined,
+      toggleNode: () => undefined,
+      toggleEdge: () => undefined,
       beginGesture: () => undefined,
-      commitGestureSelection: () => undefined,
-      endGesture: () => undefined,
+      setGesturePreview: () => undefined,
+      commitGesture: () => undefined,
+      cancelGesture: () => undefined,
     },
     interaction: {
       suppressNextSurfaceClick: () => undefined,
@@ -102,7 +100,6 @@ export function createPlacementEnvironment({
     awareness: {
       core: {
         setLocalCursor: () => undefined,
-        setLocalDragging: () => undefined,
         setLocalResizing: () => undefined,
         setLocalSelection: () => undefined,
       },

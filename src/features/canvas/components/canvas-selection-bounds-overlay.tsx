@@ -1,0 +1,60 @@
+import {
+  CANVAS_SELECTION_CHROME_OUTSET_PX,
+  CANVAS_SELECTION_CHROME_STROKE_WIDTH_PX,
+  CANVAS_SELECTION_OVERLAY_Z_INDEX,
+  canvasBoundsToScreenBounds,
+  useCanvasScreenSpaceViewport,
+} from './canvas-screen-space-overlay-utils'
+import type { Bounds } from '../utils/canvas-geometry-utils'
+import type { MouseEvent as ReactMouseEvent, ReactNode, Ref } from 'react'
+
+export function CanvasSelectionBoundsOverlay({
+  bounds,
+  children,
+  dragNodeId,
+  onContextMenu,
+  testIdPrefix,
+  wrapperRef,
+}: {
+  bounds: Bounds
+  children?: ReactNode
+  dragNodeId?: string
+  onContextMenu?: (event: ReactMouseEvent<HTMLDivElement>) => void
+  testIdPrefix: string
+  wrapperRef?: Ref<HTMLDivElement>
+}) {
+  const viewport = useCanvasScreenSpaceViewport()
+  const screenBounds = canvasBoundsToScreenBounds(bounds, viewport)
+
+  return (
+    <div
+      ref={wrapperRef}
+      data-testid={`${testIdPrefix}-wrapper`}
+      data-canvas-selection-drag-node-id={dragNodeId}
+      className={`absolute left-0 top-0 ${dragNodeId ? 'cursor-move pointer-events-auto' : 'pointer-events-none'}`}
+      onContextMenu={onContextMenu}
+      style={{
+        height: screenBounds.height,
+        transform: `translate(${screenBounds.x}px, ${screenBounds.y}px)`,
+        width: screenBounds.width,
+        zIndex: CANVAS_SELECTION_OVERLAY_Z_INDEX,
+      }}
+    >
+      <div
+        data-testid={`${testIdPrefix}-fill`}
+        className="absolute inset-0 rounded-sm pointer-events-none bg-primary/5"
+      />
+      <div
+        data-testid={`${testIdPrefix}-outline`}
+        className="absolute rounded-sm pointer-events-none"
+        style={{
+          borderColor: 'var(--primary)',
+          borderStyle: 'solid',
+          borderWidth: CANVAS_SELECTION_CHROME_STROKE_WIDTH_PX,
+          inset: -CANVAS_SELECTION_CHROME_OUTSET_PX,
+        }}
+      />
+      {children}
+    </div>
+  )
+}

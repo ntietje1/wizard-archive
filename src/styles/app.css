@@ -143,7 +143,7 @@
 }
 
 .dark {
-  --background: oklch(0.2 0.01032 303.544);
+  --background: oklch(0.14 0.01 303);
   --foreground: oklch(0.95 0.01416 303.899);
   --card: oklch(0.2 0.01032 303.544);
   --card-foreground: oklch(0.95 0.01416 303.899);
@@ -203,16 +203,13 @@
   transition-duration: 0s !important;
 }
 
-.canvas-flow-shell .react-flow__node,
-.canvas-flow-shell .react-flow__node-stroke path,
-.canvas-flow-shell .react-flow__edge,
-.canvas-flow-shell .react-flow__edge-path,
-.canvas-flow-shell .react-flow__edge-interaction {
-  cursor: inherit !important;
+.canvas-scene__viewport[data-camera-state='moving'] .canvas-stroke-hit-target-layer,
+.canvas-scene__viewport[data-camera-state='moving'] .canvas-node-connection-handle {
+  display: none;
 }
 
-.canvas-flow-shell svg.react-flow__connectionline {
-  z-index: 1 !important;
+.canvas-scene__viewport[data-camera-state='moving'] .canvas-stroke-highlight-path {
+  visibility: hidden;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -232,18 +229,16 @@
   }
 }
 
-/* Stroke nodes: only the filled path receives pointer events, not the bounding box */
-.react-flow__node-stroke {
+.canvas-node-shell[data-node-type='stroke'] {
   pointer-events: none !important;
 }
 
-.react-flow__node-stroke path,
-.react-flow__node-stroke .react-flow__resize-control,
-.react-flow__node-stroke .canvas-node-resize-handle {
+.canvas-node-shell[data-node-type='stroke'] path,
+.canvas-node-shell[data-node-type='stroke'] .canvas-node-resize-handle {
   pointer-events: auto !important;
 }
 
-.react-flow__node:has([data-node-editing='true']) {
+.canvas-node-shell:has([data-node-editing='true']) {
   z-index: 1000 !important;
 }
 
@@ -379,15 +374,40 @@
 
 /* BlockNote editor - fill available height */
 .note-editor-fill-height {
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 100%;
+  width: 100%;
+}
+
+.note-editor-scroll-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100%;
+  width: 100%;
+}
+
+.note-editor-scroll-content > .note-editor-fill-height {
+  flex: 1 0 auto;
+}
+
+.note-editor-fill-height > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
 }
 
 .note-editor-fill-height .bn-container {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  width: 100%;
 }
 
 .note-editor-fill-height .bn-editor {
@@ -395,11 +415,123 @@
   display: flex;
   flex-direction: column;
   border-radius: 0;
+  min-height: 0;
+  width: 100%;
+}
+
+.note-editor-surface .bn-block-outer {
+  width: 100%;
+  max-width: 48rem;
+  margin-inline: auto;
+}
+
+.note-editor-surface .bn-editor {
+  padding-top: 0.5rem;
 }
 
 :root .canvas-rich-text-editor {
   --bn-colors-editor-background: transparent;
   background-color: transparent;
+}
+
+:root .canvas-node-shell[data-node-type='embed'] .bn-container,
+:root .canvas-node-shell[data-node-type='embed'] .bn-editor {
+  --bn-colors-editor-background: transparent;
+  background-color: transparent;
+  width: 100%;
+  height: 100%;
+}
+
+:root .canvas-rich-text-editor [data-style-type='textColor'],
+:root .canvas-rich-text-editor [data-text-color],
+:root .canvas-rich-text-editor .bn-block:has(> .bn-block-content[data-text-color]) {
+  color: var(--canvas-rich-text-color, inherit);
+}
+
+:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--background)'],
+:root .canvas-rich-text-editor [data-text-color='var(--background)'],
+:root
+  .canvas-rich-text-editor
+  .bn-block:has(> .bn-block-content[data-text-color='var(--background)']) {
+  --canvas-rich-text-color: var(--background);
+}
+
+:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--foreground)'],
+:root .canvas-rich-text-editor [data-text-color='var(--foreground)'],
+:root
+  .canvas-rich-text-editor
+  .bn-block:has(> .bn-block-content[data-text-color='var(--foreground)']) {
+  --canvas-rich-text-color: var(--foreground);
+}
+
+:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--border)'],
+:root .canvas-rich-text-editor [data-text-color='var(--border)'],
+:root .canvas-rich-text-editor .bn-block:has(> .bn-block-content[data-text-color='var(--border)']) {
+  --canvas-rich-text-color: var(--border);
+}
+
+:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--t-gray)'],
+:root .canvas-rich-text-editor [data-text-color='var(--t-gray)'],
+:root .canvas-rich-text-editor .bn-block:has(> .bn-block-content[data-text-color='var(--t-gray)']) {
+  --canvas-rich-text-color: var(--t-gray);
+}
+
+:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--t-brown)'],
+:root .canvas-rich-text-editor [data-text-color='var(--t-brown)'],
+:root
+  .canvas-rich-text-editor
+  .bn-block:has(> .bn-block-content[data-text-color='var(--t-brown)']) {
+  --canvas-rich-text-color: var(--t-brown);
+}
+
+:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--t-red)'],
+:root .canvas-rich-text-editor [data-text-color='var(--t-red)'],
+:root .canvas-rich-text-editor .bn-block:has(> .bn-block-content[data-text-color='var(--t-red)']) {
+  --canvas-rich-text-color: var(--t-red);
+}
+
+:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--t-orange)'],
+:root .canvas-rich-text-editor [data-text-color='var(--t-orange)'],
+:root
+  .canvas-rich-text-editor
+  .bn-block:has(> .bn-block-content[data-text-color='var(--t-orange)']) {
+  --canvas-rich-text-color: var(--t-orange);
+}
+
+:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--t-yellow)'],
+:root .canvas-rich-text-editor [data-text-color='var(--t-yellow)'],
+:root
+  .canvas-rich-text-editor
+  .bn-block:has(> .bn-block-content[data-text-color='var(--t-yellow)']) {
+  --canvas-rich-text-color: var(--t-yellow);
+}
+
+:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--t-green)'],
+:root .canvas-rich-text-editor [data-text-color='var(--t-green)'],
+:root
+  .canvas-rich-text-editor
+  .bn-block:has(> .bn-block-content[data-text-color='var(--t-green)']) {
+  --canvas-rich-text-color: var(--t-green);
+}
+
+:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--t-blue)'],
+:root .canvas-rich-text-editor [data-text-color='var(--t-blue)'],
+:root .canvas-rich-text-editor .bn-block:has(> .bn-block-content[data-text-color='var(--t-blue)']) {
+  --canvas-rich-text-color: var(--t-blue);
+}
+
+:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--t-purple)'],
+:root .canvas-rich-text-editor [data-text-color='var(--t-purple)'],
+:root
+  .canvas-rich-text-editor
+  .bn-block:has(> .bn-block-content[data-text-color='var(--t-purple)']) {
+  --canvas-rich-text-color: var(--t-purple);
+}
+
+:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--t-pink)'],
+:root .canvas-rich-text-editor [data-text-color='var(--t-pink)'],
+:root .canvas-rich-text-editor .bn-block:has(> .bn-block-content[data-text-color='var(--t-pink)']) {
+  --canvas-rich-text-color: var(--t-pink);
 }
 
 @layer utilities {

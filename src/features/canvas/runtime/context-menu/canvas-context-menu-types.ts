@@ -1,12 +1,16 @@
-import type { CanvasSelectionSnapshot } from '../../tools/canvas-tool-types'
+import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
 import type { CanvasCommands } from '../document/use-canvas-commands'
 import type { ContextMenuContributor, ContextMenuItemSpec } from '~/features/context-menu/types'
-import type { CanvasEdgeType } from '../../edges/canvas-edge-types'
-import type { CanvasNodeType } from '../../nodes/canvas-node-types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
+import type { CanvasArrangeAction } from '../document/canvas-arrange'
 import type { CanvasReorderDirection } from '../document/canvas-reorder'
-import type { Edge, Node } from '@xyflow/react'
+import type {
+  CanvasDocumentEdge,
+  CanvasDocumentNode,
+  CanvasEdgeType,
+  CanvasNodeType,
+} from 'convex/canvases/validation'
 
 export interface CanvasContextMenuPoint {
   x: number
@@ -25,17 +29,17 @@ export type CanvasContextMenuTarget =
   | { kind: 'pane' }
   | {
       kind: 'mixed-selection'
-      nodeIds: Array<string>
-      edgeIds: Array<string>
+      nodeIds: ReadonlyArray<string>
+      edgeIds: ReadonlyArray<string>
     }
   | {
       kind: 'node-selection'
-      nodeIds: Array<string>
+      nodeIds: ReadonlyArray<string>
       nodeType: CanvasNodeType | null
     }
   | {
       kind: 'edge-selection'
-      edgeIds: Array<string>
+      edgeIds: ReadonlyArray<string>
       edgeType: CanvasEdgeType | null
     }
   | {
@@ -45,26 +49,34 @@ export type CanvasContextMenuTarget =
       nodeType: 'embed'
     }
 
-export type EmbedNodeTarget = Extract<CanvasContextMenuTarget, { kind: 'embed-node' }>
+type EmbedNodeTarget = Extract<CanvasContextMenuTarget, { kind: 'embed-node' }>
 
 export type CanvasContextMenuReorderPayload = {
   kind: 'reorder'
   direction: CanvasReorderDirection
 }
 
+export type CanvasContextMenuArrangePayload = {
+  kind: 'arrange'
+  action: CanvasArrangeAction
+}
+
 export interface CanvasClipboardEntry {
-  nodes: Array<Node>
-  edges: Array<Edge>
+  nodes: Array<CanvasDocumentNode>
+  edges: Array<CanvasDocumentEdge>
   pasteCount: number
 }
 
 export interface CanvasContextMenuServices {
   canOpenEmbedTarget: (target: EmbedNodeTarget) => boolean
   openEmbedTarget: (target: EmbedNodeTarget) => Promise<boolean>
+  hasSelectableCanvasItems: () => boolean
+  selectAllCanvasItems: () => void
   createAndEmbedSidebarItem: (
     type: SidebarItemType,
     pointerPosition: CanvasContextMenuPoint,
   ) => Promise<CanvasSelectionSnapshot | null>
+  createTextNode: (pointerPosition: CanvasContextMenuPoint) => CanvasSelectionSnapshot | null
 }
 
 export type CanvasContextMenuItem<TPayload = unknown> = ContextMenuItemSpec<
@@ -75,7 +87,7 @@ export type CanvasContextMenuItem<TPayload = unknown> = ContextMenuItemSpec<
 
 export type CanvasContextMenuCommands = Pick<
   CanvasCommands,
-  'copy' | 'cut' | 'paste' | 'duplicate' | 'delete' | 'reorder'
+  'copy' | 'cut' | 'paste' | 'duplicate' | 'delete' | 'reorder' | 'arrange'
 >
 
 export type CanvasContextMenuContributor = ContextMenuContributor<

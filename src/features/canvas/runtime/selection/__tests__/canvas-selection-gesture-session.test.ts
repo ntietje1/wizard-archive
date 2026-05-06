@@ -1,16 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createCanvasSelectionGestureSession } from '../canvas-selection-gesture-session'
-import {
-  clearCanvasPendingSelectionPreview,
-  getCanvasPendingSelectionPreview,
-} from '../use-canvas-pending-selection-preview'
+import type {
+  CanvasSelectionCommitMode,
+  CanvasSelectionSnapshot,
+} from '../../../system/canvas-selection'
+
+let pendingPreview: CanvasSelectionSnapshot | null = null
 
 describe('createCanvasSelectionGestureSession', () => {
   const rafCallbacks = new Map<number, FrameRequestCallback>()
   let nextRafId = 1
 
   beforeEach(() => {
-    clearCanvasPendingSelectionPreview()
+    pendingPreview = null
     rafCallbacks.clear()
     nextRafId = 1
     vi.stubGlobal(
@@ -46,12 +48,14 @@ describe('createCanvasSelectionGestureSession', () => {
   it('uses the starting committed selection when publishing additive preview state', () => {
     const session = createSession({
       selection: {
-        getSelectedNodeIds: () => ['existing-node'],
-        getSelectedEdgeIds: () => ['existing-edge'],
+        getSnapshot: () => ({
+          nodeIds: new Set(['existing-node']),
+          edgeIds: new Set(['existing-edge']),
+        }),
       },
       preview: () => ({
-        nodeIds: ['next-node'],
-        edgeIds: [],
+        nodeIds: new Set(['next-node']),
+        edgeIds: new Set<string>(),
       }),
     })
 
@@ -59,16 +63,14 @@ describe('createCanvasSelectionGestureSession', () => {
     session.update({ value: 'updated' })
     flushAnimationFrame()
 
-    expect(getCanvasPendingSelectionPreview()).toEqual({
-      kind: 'active',
+    expect(pendingPreview).toEqual({
       nodeIds: new Set(['existing-node', 'next-node']),
       edgeIds: new Set(['existing-edge']),
     })
   })
 
   it('commits the last preview, clears pending preview state, and ends the gesture', () => {
-    const commitGestureSelection = vi.fn()
-    const endGesture = vi.fn()
+    const commitGesture = vi.fn()
     const suppressNextSurfaceClick = vi.fn()
     const clear = vi.fn()
 
@@ -76,12 +78,11 @@ describe('createCanvasSelectionGestureSession', () => {
       clear,
       interaction: { suppressNextSurfaceClick },
       preview: () => ({
-        nodeIds: ['node-1'],
-        edgeIds: ['edge-1'],
+        nodeIds: new Set(['node-1']),
+        edgeIds: new Set(['edge-1']),
       }),
       selection: {
-        commitGestureSelection,
-        endGesture,
+        commitGesture,
       },
     })
 
@@ -89,41 +90,95 @@ describe('createCanvasSelectionGestureSession', () => {
     session.update({ value: 'updated' })
     flushAnimationFrame()
 
-    expect(getCanvasPendingSelectionPreview()).toEqual({
-      kind: 'active',
+    expect(pendingPreview).toEqual({
       nodeIds: new Set(['node-1']),
       edgeIds: new Set(['edge-1']),
     })
 
     session.commit({ value: 'final' })
 
-    expect(commitGestureSelection).toHaveBeenCalledWith(
-      {
-        nodeIds: ['node-1'],
-        edgeIds: ['edge-1'],
-      },
-      'replace',
-    )
+    expect(commitGesture).toHaveBeenCalledTimes(1)
     expect(suppressNextSurfaceClick).toHaveBeenCalledTimes(1)
-    expect(endGesture).toHaveBeenCalledTimes(1)
     expect(clear).toHaveBeenCalledTimes(1)
-    expect(getCanvasPendingSelectionPreview()).toEqual({ kind: 'inactive' })
+  })
+
+  it('does not recompute preview selection on commit', () => {
+    const commitGesture = vi.fn()
+    const preview = vi
+      .fn()
+      .mockReturnValueOnce({
+        nodeIds: new Set(['previewed-node']),
+        edgeIds: new Set(['previewed-edge']),
+      })
+      .mockReturnValueOnce({
+        nodeIds: new Set(['final-node']),
+        edgeIds: new Set(['final-edge']),
+      })
+
+    const session = createSession({
+      preview,
+      selection: {
+        commitGesture,
+      },
+    })
+
+    session.begin({ value: 'start' }, 'replace')
+    session.update({ value: 'previewed' })
+    flushAnimationFrame()
+    session.commit({ value: 'final' })
+
+    expect(preview).toHaveBeenCalledTimes(1)
+    expect(preview).toHaveBeenCalledWith({ value: 'previewed' })
+    expect(pendingPreview).toEqual({
+      nodeIds: new Set(['previewed-node']),
+      edgeIds: new Set(['previewed-edge']),
+    })
+    expect(commitGesture).toHaveBeenCalledTimes(1)
+  })
+
+  it('commits the last rendered preview when a newer preview frame is still pending', () => {
+    const commitGesture = vi.fn()
+    const preview = vi.fn(({ value }: { value: string }) => ({
+      nodeIds: new Set([`${value}-node`]),
+      edgeIds: new Set<string>(),
+    }))
+
+    const session = createSession({
+      preview,
+      selection: {
+        commitGesture,
+      },
+    })
+
+    session.begin({ value: 'start' }, 'replace')
+    session.update({ value: 'rendered' })
+    flushAnimationFrame()
+    session.update({ value: 'pending' })
+    session.commit({ value: 'final' })
+
+    expect(preview).toHaveBeenCalledTimes(1)
+    expect(pendingPreview).toEqual({
+      nodeIds: new Set(['rendered-node']),
+      edgeIds: new Set<string>(),
+    })
+    expect(commitGesture).toHaveBeenCalledTimes(1)
+    expect(cancelAnimationFrame).toHaveBeenCalledTimes(1)
   })
 
   it('clears local state on cancel and dispose without committing selection', () => {
-    const commitGestureSelection = vi.fn()
-    const endGesture = vi.fn()
+    const commitGesture = vi.fn()
+    const cancelGesture = vi.fn()
     const clear = vi.fn()
 
     const session = createSession({
       clear,
       preview: () => ({
-        nodeIds: ['node-1'],
-        edgeIds: [],
+        nodeIds: new Set(['node-1']),
+        edgeIds: new Set<string>(),
       }),
       selection: {
-        commitGestureSelection,
-        endGesture,
+        commitGesture,
+        cancelGesture,
       },
     })
 
@@ -132,16 +187,15 @@ describe('createCanvasSelectionGestureSession', () => {
     flushAnimationFrame()
     session.cancel()
 
-    expect(commitGestureSelection).not.toHaveBeenCalled()
-    expect(endGesture).toHaveBeenCalledTimes(1)
+    expect(commitGesture).not.toHaveBeenCalled()
+    expect(cancelGesture).toHaveBeenCalledTimes(1)
     expect(clear).toHaveBeenCalledTimes(1)
-    expect(getCanvasPendingSelectionPreview()).toEqual({ kind: 'inactive' })
 
     session.begin({ value: 'start-again' }, 'replace')
     session.dispose()
 
-    expect(commitGestureSelection).not.toHaveBeenCalled()
-    expect(endGesture).toHaveBeenCalledTimes(2)
+    expect(commitGesture).not.toHaveBeenCalled()
+    expect(cancelGesture).toHaveBeenCalledTimes(2)
     expect(clear).toHaveBeenCalledTimes(2)
   })
 })
@@ -156,18 +210,20 @@ function createSession({
   interaction?: {
     suppressNextSurfaceClick: () => void
   }
-  preview: (state: { value: string }) => { nodeIds: Array<string>; edgeIds: Array<string> } | null
+  preview: (state: { value: string }) => CanvasSelectionSnapshot | null
   selection?: Partial<{
-    beginGesture: (kind: 'marquee' | 'lasso') => void
-    commitGestureSelection: (
-      selection: { nodeIds: Array<string>; edgeIds: Array<string> },
-      mode?: 'replace' | 'add',
-    ) => void
-    endGesture: () => void
-    getSelectedNodeIds: () => Array<string>
-    getSelectedEdgeIds: () => Array<string>
+    beginGesture: (kind: 'marquee' | 'lasso', mode: CanvasSelectionCommitMode) => void
+    cancelGesture: () => void
+    commitGesture: () => void
+    getSnapshot: () => CanvasSelectionSnapshot
+    setGesturePreview: (selection: CanvasSelectionSnapshot | null) => void
   }>
 }) {
+  const startSelection = selection?.getSnapshot?.() ?? {
+    nodeIds: new Set<string>(),
+    edgeIds: new Set<string>(),
+  }
+
   return createCanvasSelectionGestureSession({
     adapter: {
       kind: 'lasso',
@@ -177,10 +233,14 @@ function createSession({
     },
     getSelection: () => ({
       beginGesture: selection?.beginGesture ?? vi.fn(),
-      commitGestureSelection: selection?.commitGestureSelection ?? vi.fn(),
-      endGesture: selection?.endGesture ?? vi.fn(),
-      getSelectedNodeIds: selection?.getSelectedNodeIds ?? (() => []),
-      getSelectedEdgeIds: selection?.getSelectedEdgeIds ?? (() => []),
+      cancelGesture: selection?.cancelGesture ?? vi.fn(),
+      commitGesture: selection?.commitGesture ?? vi.fn(),
+      getSnapshot: selection?.getSnapshot ?? (() => startSelection),
+      setGesturePreview:
+        selection?.setGesturePreview ??
+        ((selectionPreview) => {
+          pendingPreview = selectionPreview
+        }),
     }),
     interaction: interaction ?? {
       suppressNextSurfaceClick: vi.fn(),

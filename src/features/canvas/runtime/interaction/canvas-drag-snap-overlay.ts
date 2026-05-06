@@ -1,9 +1,9 @@
 import { create } from 'zustand'
-import type { CanvasDragGuide } from './canvas-drag-snap-utils'
+import type { CanvasDragGuide } from '../../utils/canvas-snap-guides'
 
 interface CanvasDragSnapOverlayState {
-  guides: Array<CanvasDragGuide>
-  setGuides: (guides: Array<CanvasDragGuide>) => void
+  guides: ReadonlyArray<CanvasDragGuide>
+  setGuides: (guides: ReadonlyArray<CanvasDragGuide>) => void
   clear: () => void
 }
 
@@ -13,7 +13,7 @@ export const useCanvasDragSnapOverlayStore = create<CanvasDragSnapOverlayState>(
   clear: () => set({ guides: [] }),
 }))
 
-export function setCanvasDragSnapGuides(guides: Array<CanvasDragGuide>) {
+export function setCanvasDragSnapGuides(guides: ReadonlyArray<CanvasDragGuide>) {
   useCanvasDragSnapOverlayStore.getState().setGuides(guides)
 }
 

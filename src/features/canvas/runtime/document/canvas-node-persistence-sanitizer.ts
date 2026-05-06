@@ -1,46 +1,60 @@
 import { stripEphemeralCanvasNodeState } from '../../utils/canvas-node-persistence'
-import type { Node } from '@xyflow/react'
 import {
-  parseCanvasAwarenessPresence,
+  parseCanvasNodeDataByType,
+  parseCanvasNodeType,
   parseCanvasPoint2D,
-  parsePersistedCanvasNode,
+  parseCanvasDocumentNode,
 } from 'convex/canvases/validation'
-import type { PersistedCanvasNodeValue } from 'convex/canvases/validation'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 import { logger } from '~/shared/utils/logger'
 
-function buildSafePersistedCanvasNode(node: Node): PersistedCanvasNodeValue {
-  const safeNode: PersistedCanvasNodeValue = {
+function buildSafePersistedCanvasNode(node: CanvasDocumentNode): CanvasDocumentNode {
+  let type = parseCanvasNodeType(node.type) ?? 'text'
+  let data = parseCanvasNodeDataByType(type, node.data)
+  if (!data) {
+    type = 'text'
+    data = parseCanvasNodeDataByType(type, {}) ?? {}
+  }
+  const safeNodeFields: Partial<CanvasDocumentNode> = {}
+  const safeNodeBase = {
     id: node.id,
+    type,
     position: parseCanvasPoint2D(node.position) ?? { x: 0, y: 0 },
-    data: parseCanvasAwarenessPresence(node.data) ?? {},
+    data,
   }
 
-  if (typeof node.type === 'string') {
-    safeNode.type = node.type
-  }
   const width = typeof node.width === 'number' && Number.isFinite(node.width) ? node.width : null
   if (width !== null) {
-    safeNode.width = width
+    safeNodeFields.width = width
   }
   const height =
     typeof node.height === 'number' && Number.isFinite(node.height) ? node.height : null
   if (height !== null) {
-    safeNode.height = height
+    safeNodeFields.height = height
+  }
+  if (typeof node.zIndex === 'number' && Number.isFinite(node.zIndex)) {
+    safeNodeFields.zIndex = node.zIndex
+  }
+  if (typeof node.className === 'string') {
+    safeNodeFields.className = node.className
+  }
+  if (typeof node.hidden === 'boolean') {
+    safeNodeFields.hidden = node.hidden
   }
 
-  return safeNode
+  return { ...safeNodeBase, ...safeNodeFields } as CanvasDocumentNode
 }
 
 export function sanitizeNodeForPersistence(
-  node: Node,
+  node: CanvasDocumentNode,
   operation: string,
-  fallbackNode: Node = node,
-): PersistedCanvasNodeValue {
+  fallbackNode: CanvasDocumentNode = node,
+): CanvasDocumentNode {
   try {
     const persistedNode = stripEphemeralCanvasNodeState(node)
-    const parsedNode = parsePersistedCanvasNode(persistedNode)
+    const parsedNode = parseCanvasDocumentNode(persistedNode)
     if (!parsedNode) {
-      throw new TypeError('parsePersistedCanvasNode rejected the stripped canvas node shape')
+      throw new TypeError('parseCanvasDocumentNode rejected the stripped canvas node shape')
     }
     return parsedNode
   } catch (error) {

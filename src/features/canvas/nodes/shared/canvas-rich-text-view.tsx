@@ -1,12 +1,14 @@
 import { BlockNoteView } from '@blocknote/shadcn'
 import { PreventExternalDrop } from '~/features/editor/components/extensions/prevent-external-drop/prevent-external-drop'
 import { useResolvedTheme } from '~/features/settings/hooks/useTheme'
+import type { CSSProperties } from 'react'
 import type { CanvasRichTextEditor } from './canvas-rich-text-editor'
 
 interface CanvasRichTextViewProps {
   editor: CanvasRichTextEditor
   editable: boolean
   className?: string
+  style?: CSSProperties
   onChange?: (editor: CanvasRichTextEditor) => void
 }
 
@@ -14,6 +16,7 @@ export function CanvasRichTextView({
   editor,
   editable,
   className,
+  style,
   onChange,
 }: CanvasRichTextViewProps) {
   const resolvedTheme = useResolvedTheme()
@@ -22,6 +25,7 @@ export function CanvasRichTextView({
     <BlockNoteView
       className={className}
       editor={editor}
+      style={style}
       theme={resolvedTheme}
       editable={editable}
       onChange={onChange}

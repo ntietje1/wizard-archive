@@ -1,52 +1,33 @@
-import {
-  Background,
-  ConnectionMode,
-  MiniMap,
-  ReactFlow,
-  ReactFlowProvider,
-  SelectionMode,
-} from '@xyflow/react'
 import { ClientOnly } from '@tanstack/react-router'
-import '@xyflow/react/dist/style.css'
-import { useMemo } from 'react'
+import { memo, Profiler, useMemo } from 'react'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { ContextMenuHost } from '~/features/context-menu/components/context-menu-host'
 import { cn } from '~/features/shadcn/lib/utils'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
-import { canvasEdgeTypes } from '../edges/canvas-edge-renderers'
-import { CanvasConnectionPreview } from '../edges/shared/canvas-connection-preview'
-import { canvasNodeTypes } from '../nodes/canvas-node-renderers'
-import { CanvasRuntimeProvider } from '../runtime/providers/canvas-runtime-context'
-import { CanvasViewportPersistence } from '../runtime/interaction/canvas-viewport-persistence'
+import {
+  isCanvasPerformanceEnabled,
+  recordCanvasPerformanceMetric,
+} from '../runtime/performance/canvas-performance-metrics'
+import { CanvasRuntimeProvider } from '../runtime/providers/canvas-runtime'
+import { CanvasEngineProvider } from '../react/canvas-engine-context'
 import { useCanvasPendingSelectionPreviewSummary } from '../runtime/selection/use-canvas-pending-selection-preview'
 import { loadPersistedCanvasViewport } from '../runtime/interaction/canvas-viewport-storage'
 import { useCanvasViewerSession } from '../runtime/session/use-canvas-viewer-session'
-import { useCanvasFlowRuntime } from '../runtime/use-canvas-flow-runtime'
-import { CanvasAwarenessHost } from './canvas-awareness-host'
+import { useCanvasEditorRuntime } from '../runtime/use-canvas-editor-runtime'
 import { CanvasConditionalToolbar } from './canvas-conditional-toolbar'
-import { CanvasLocalOverlaysHost } from './canvas-local-overlays-host'
-import { MiniMapNode } from './canvas-minimap-node'
+import { CanvasScene } from './canvas-scene'
 import { CanvasToolbar } from './canvas-toolbar'
 import type { CanvasViewerSession } from '../runtime/session/use-canvas-viewer-session'
-import type { Edge, Node } from '@xyflow/react'
 import type { EditorViewerProps } from '~/features/editor/components/viewer/sidebar-item-editor'
 import type { CanvasWithContent } from 'convex/canvases/types'
 
-const PRO_OPTIONS = { hideAttribution: true }
-const DELETE_KEYS_NONE: Array<string> = []
-const EMPTY_NODES: Array<Node> = []
-const EMPTY_EDGES: Array<Edge> = []
-const PAN_MIDDLE_ONLY: Array<number> = [1]
-const PAN_BOTH: Array<number> = [0, 1]
-const SELECTION_KEY_DISABLED: Array<string> = []
-const MAX_ZOOM = 4
-const MIN_ZOOM = 0.1
+// React Profiler durations are milliseconds; this ignores trivial sampling noise.
+const MIN_TRIVIAL_COMMIT_DURATION_MS = 1
+
 export function CanvasViewer({ item: canvas }: EditorViewerProps<CanvasWithContent>) {
   return (
     <ClientOnly fallback={null}>
-      <ReactFlowProvider>
-        <CanvasViewerInner canvas={canvas} />
-      </ReactFlowProvider>
+      <CanvasViewerInner canvas={canvas} />
     </ClientOnly>
   )
 }
@@ -74,16 +55,15 @@ function CanvasViewerInner({ canvas }: { canvas: CanvasWithContent }) {
     )
   }
 
-  return <CanvasFlow {...session} />
+  return <CanvasEditor {...session} />
 }
 
 type ReadyCanvasSession = Extract<CanvasViewerSession, { status: 'ready' }>
 
-export function CanvasFlow({
+export function CanvasEditor({
   canvasId,
   campaignId,
   canEdit,
-  colorMode,
   parentId,
   provider,
   doc,
@@ -91,7 +71,7 @@ export function CanvasFlow({
   edgesMap,
 }: ReadyCanvasSession) {
   const initialViewport = useMemo(() => loadPersistedCanvasViewport(canvasId), [canvasId])
-  const runtime = useCanvasFlowRuntime({
+  const runtime = useCanvasEditorRuntime({
     nodesMap,
     edgesMap,
     canvasId,
@@ -100,113 +80,138 @@ export function CanvasFlow({
     canEdit,
     provider,
     doc,
+    initialViewport,
   })
-  const pendingSelectionPreview = useCanvasPendingSelectionPreviewSummary()
-  const edgeToolActive = runtime.activeTool === 'edge'
   const canvasCursor = runtime.toolCursor ?? 'pointer'
+  const canvasEditorContent = (
+    <CanvasEditorContent canEdit={canEdit} runtime={runtime} canvasCursor={canvasCursor} />
+  )
 
   return (
-    <CanvasRuntimeProvider
-      canEdit={canEdit}
-      history={runtime.history}
-      commands={runtime.commands}
-      documentWriter={runtime.documentWriter}
-      editSession={runtime.editSession}
-      nodeActions={runtime.nodeActions}
-      remoteHighlights={runtime.remoteHighlights}
-      selection={runtime.selection}
-    >
-      <div
-        className="canvas-flow-shell relative flex-1 min-h-0 allow-motion"
-        style={{ cursor: canvasCursor }}
-        data-testid="canvas-flow-shell"
+    <CanvasEngineProvider engine={runtime.canvasEngine}>
+      <CanvasRuntimeProvider
+        canEdit={canEdit}
+        commands={runtime.commands}
+        documentWriter={runtime.documentWriter}
+        domRuntime={runtime.domRuntime}
+        editSession={runtime.editSession}
+        history={runtime.history}
+        nodeActions={runtime.nodeActions}
+        remoteHighlights={runtime.remoteHighlights}
+        selection={runtime.selection}
+        viewportController={runtime.viewportController}
       >
-        <CanvasToolbar canEdit={canEdit} />
-        <CanvasConditionalToolbar canEdit={canEdit} />
-        <div
-          ref={runtime.canvasSurfaceRef}
-          className="relative h-full w-full"
-          data-testid="canvas-surface"
-          role="region"
-          aria-label="Canvas surface"
-        >
-          <ReactFlow
-            defaultNodes={EMPTY_NODES}
-            defaultEdges={EMPTY_EDGES}
-            defaultViewport={initialViewport}
-            onNodeDragStart={runtime.flowHandlers.onNodeDragStart}
-            onNodeDrag={runtime.flowHandlers.onNodeDrag}
-            onNodeDragStop={runtime.flowHandlers.onNodeDragStop}
-            onNodesDelete={runtime.flowHandlers.onNodesDelete}
-            onEdgesDelete={runtime.flowHandlers.onEdgesDelete}
-            onConnect={runtime.flowHandlers.onConnect}
-            onMoveStart={runtime.flowHandlers.onMoveStart}
-            onMoveEnd={runtime.flowHandlers.onMoveEnd}
-            onNodeClick={runtime.flowHandlers.onNodeClick}
-            onEdgeClick={runtime.flowHandlers.onEdgeClick}
-            onPaneClick={runtime.flowHandlers.onPaneClick}
-            onNodeContextMenu={runtime.contextMenu.openForNode}
-            onEdgeContextMenu={runtime.contextMenu.openForEdge}
-            onPaneContextMenu={runtime.contextMenu.openForPane}
-            onMouseMove={runtime.flowHandlers.onMouseMove}
-            onMouseLeave={runtime.flowHandlers.onMouseLeave}
-            edgeTypes={canvasEdgeTypes}
-            nodeTypes={canvasNodeTypes}
-            connectionLineComponent={CanvasConnectionPreview}
-            nodesDraggable={false}
-            nodesConnectable={canEdit && edgeToolActive}
-            connectOnClick={false}
-            elevateNodesOnSelect={false}
-            elevateEdgesOnSelect={false}
-            elementsSelectable={false}
-            selectionOnDrag={false}
-            selectionMode={SelectionMode.Partial}
-            connectionMode={ConnectionMode.Loose}
-            selectionKeyCode={SELECTION_KEY_DISABLED}
-            panOnDrag={runtime.activeTool === 'hand' ? PAN_BOTH : PAN_MIDDLE_ONLY}
-            deleteKeyCode={DELETE_KEYS_NONE}
-            colorMode={colorMode}
-            minZoom={MIN_ZOOM}
-            maxZoom={MAX_ZOOM}
-            zoomOnScroll={false}
-            zoomOnDoubleClick={false}
-            panOnScroll={false}
-            preventScrolling={false}
-            proOptions={PRO_OPTIONS}
+        {isCanvasPerformanceEnabled() ? (
+          <Profiler
+            id="CanvasEditor"
+            onRender={(_id, phase, actualDuration, baseDuration) => {
+              if (actualDuration < MIN_TRIVIAL_COMMIT_DURATION_MS) {
+                return
+              }
+
+              recordCanvasPerformanceMetric('canvas.react.commit', actualDuration, {
+                phase,
+                baseDuration,
+              })
+            }}
           >
-            <CanvasViewportPersistence
-              key={canvasId}
-              canvasId={canvasId}
-              initialViewport={initialViewport}
+            {canvasEditorContent}
+          </Profiler>
+        ) : (
+          canvasEditorContent
+        )}
+      </CanvasRuntimeProvider>
+    </CanvasEngineProvider>
+  )
+}
+
+const CanvasEditorContent = memo(function CanvasEditorContent({
+  canEdit,
+  runtime,
+  canvasCursor,
+}: {
+  canEdit: boolean
+  runtime: ReturnType<typeof useCanvasEditorRuntime>
+  canvasCursor: string
+}) {
+  const pendingSelectionPreview = useCanvasPendingSelectionPreviewSummary()
+
+  return (
+    <div
+      className="canvas-editor-shell relative flex-1 min-h-0 allow-motion"
+      style={{ cursor: canvasCursor }}
+      data-testid="canvas-editor-shell"
+    >
+      <CanvasToolbar canEdit={canEdit} />
+      <CanvasConditionalToolbar canEdit={canEdit} />
+      <div
+        ref={runtime.canvasSurfaceRef}
+        className="relative z-0 h-full w-full"
+        data-testid="canvas-surface"
+        role="region"
+        aria-label="Canvas surface"
+      >
+        <CanvasScene
+          canEdit={canEdit}
+          remoteUsers={runtime.remoteUsers}
+          sceneHandlers={runtime.sceneHandlers}
+          onNodeContextMenu={runtime.contextMenu.openForNode}
+          onEdgeContextMenu={runtime.contextMenu.openForEdge}
+          onPaneContextMenu={runtime.contextMenu.openForPane}
+        />
+
+        <ContextMenuHost
+          ref={runtime.contextMenu.hostRef}
+          menu={runtime.contextMenu.menu}
+          onClose={runtime.contextMenu.onClose}
+        />
+
+        {pendingSelectionPreview.active &&
+          pendingSelectionPreview.nodeCount + pendingSelectionPreview.edgeCount > 0 && (
+            <CanvasPendingSelectionStatus
+              nodeCount={pendingSelectionPreview.nodeCount}
+              edgeCount={pendingSelectionPreview.edgeCount}
             />
-            <Background bgColor="var(--background)" />
-            <MiniMap zoomable={false} pannable={false} nodeComponent={MiniMapNode} />
-            <CanvasLocalOverlaysHost />
-            <CanvasAwarenessHost remoteUsers={runtime.remoteUsers} />
-          </ReactFlow>
+          )}
 
-          <ContextMenuHost
-            ref={runtime.contextMenu.hostRef}
-            menu={runtime.contextMenu.menu}
-            onClose={runtime.contextMenu.onClose}
-          />
-
-          {pendingSelectionPreview.active &&
-            pendingSelectionPreview.nodeCount + pendingSelectionPreview.edgeCount > 0 && (
-              <CanvasPendingSelectionStatus
-                nodeCount={pendingSelectionPreview.nodeCount}
-                edgeCount={pendingSelectionPreview.edgeCount}
-              />
-            )}
-
-          <CanvasDropOverlay
-            ref={runtime.dropTarget.dropOverlayRef}
-            isDropTarget={runtime.dropTarget.isDropTarget}
-            isFileDropTarget={runtime.dropTarget.isFileDropTarget}
-          />
-        </div>
+        <CanvasDropOverlay
+          ref={runtime.dropTarget.dropOverlayRef}
+          isDropTarget={runtime.dropTarget.isDropTarget}
+          isFileDropTarget={runtime.dropTarget.isFileDropTarget}
+        />
       </div>
-    </CanvasRuntimeProvider>
+    </div>
+  )
+}, areCanvasEditorContentPropsEqual)
+
+function areCanvasEditorContentPropsEqual(
+  previous: {
+    canEdit: boolean
+    runtime: ReturnType<typeof useCanvasEditorRuntime>
+    canvasCursor: string
+  },
+  next: {
+    canEdit: boolean
+    runtime: ReturnType<typeof useCanvasEditorRuntime>
+    canvasCursor: string
+  },
+) {
+  return (
+    previous.canEdit === next.canEdit &&
+    previous.canvasCursor === next.canvasCursor &&
+    previous.runtime.canvasEngine === next.runtime.canvasEngine &&
+    previous.runtime.canvasSurfaceRef === next.runtime.canvasSurfaceRef &&
+    previous.runtime.sceneHandlers === next.runtime.sceneHandlers &&
+    previous.runtime.contextMenu.hostRef === next.runtime.contextMenu.hostRef &&
+    previous.runtime.contextMenu.menu === next.runtime.contextMenu.menu &&
+    previous.runtime.contextMenu.openForNode === next.runtime.contextMenu.openForNode &&
+    previous.runtime.contextMenu.openForEdge === next.runtime.contextMenu.openForEdge &&
+    previous.runtime.contextMenu.openForPane === next.runtime.contextMenu.openForPane &&
+    previous.runtime.contextMenu.onClose === next.runtime.contextMenu.onClose &&
+    previous.runtime.dropTarget.dropOverlayRef === next.runtime.dropTarget.dropOverlayRef &&
+    previous.runtime.dropTarget.isDropTarget === next.runtime.dropTarget.isDropTarget &&
+    previous.runtime.dropTarget.isFileDropTarget === next.runtime.dropTarget.isFileDropTarget &&
+    previous.runtime.remoteUsers === next.runtime.remoteUsers
   )
 }
 

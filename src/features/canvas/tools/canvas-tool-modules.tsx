@@ -32,7 +32,7 @@ const orderedCanvasToolSpecs = [
   edgeToolSpec,
 ] as const
 
-export type CanvasToolbarTool = Pick<AnyCanvasToolSpec, 'id' | 'label' | 'group' | 'icon'> & {
+type CanvasToolbarTool = Pick<AnyCanvasToolSpec, 'id' | 'label' | 'group' | 'icon'> & {
   shortcut: number
 }
 type CanvasAwarenessLayer = NonNullable<CanvasAwarenessCapability['Layer']>

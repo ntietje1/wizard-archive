@@ -1,29 +1,18 @@
-import { render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { CanvasViewportPersistence } from '../canvas-viewport-persistence'
+import { createCanvasViewportPersistence } from '../canvas-viewport-persistence'
+import { createCanvasEngine } from '../../../system/canvas-engine'
 import {
   loadPersistedCanvasViewport,
   savePersistedCanvasViewport,
 } from '../canvas-viewport-storage'
 
-const viewportState = vi.hoisted(() => ({
-  x: 0,
-  y: 0,
-  zoom: 1,
-}))
-
-vi.mock('@xyflow/react', () => ({
-  useViewport: () => viewportState,
-}))
-
 describe('canvas viewport persistence', () => {
   let storage: Record<string, string>
+  let cleanup: (() => void) | null = null
+  let engine: ReturnType<typeof createCanvasEngine> | null = null
 
   beforeEach(() => {
     storage = {}
-    viewportState.x = 0
-    viewportState.y = 0
-    viewportState.zoom = 1
     vi.useFakeTimers()
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation((key: string) => storage[key] ?? null)
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation((key: string, value: string) => {
@@ -33,6 +22,10 @@ describe('canvas viewport persistence', () => {
   })
 
   afterEach(() => {
+    cleanup?.()
+    engine?.destroy()
+    cleanup = null
+    engine = null
     vi.useRealTimers()
     vi.restoreAllMocks()
   })
@@ -74,27 +67,36 @@ describe('canvas viewport persistence', () => {
   })
 
   it('persists viewport changes after a short debounce', () => {
-    const { rerender } = render(
-      <CanvasViewportPersistence
-        canvasId={'canvas-1' as never}
-        initialViewport={{ x: 0, y: 0, zoom: 1 }}
-      />,
-    )
+    engine = createCanvasEngine()
+    cleanup = createCanvasViewportPersistence({
+      canvasEngine: engine,
+      canvasId: 'canvas-1' as never,
+      initialViewport: { x: 0, y: 0, zoom: 1 },
+    })
 
-    viewportState.x = 140
-    viewportState.y = -80
-    viewportState.zoom = 1.8
-    rerender(
-      <CanvasViewportPersistence
-        canvasId={'canvas-1' as never}
-        initialViewport={{ x: 0, y: 0, zoom: 1 }}
-      />,
-    )
+    engine.setViewport({ x: 140, y: -80, zoom: 1.8 })
 
     expect(storage['canvas-viewport-canvas-1']).toBeUndefined()
 
     vi.advanceTimersByTime(250)
 
     expect(storage['canvas-viewport-canvas-1']).toBe(JSON.stringify({ x: 140, y: -80, zoom: 1.8 }))
+  })
+
+  it('does not persist live viewport changes until they commit', () => {
+    engine = createCanvasEngine()
+    cleanup = createCanvasViewportPersistence({
+      canvasEngine: engine,
+      canvasId: 'canvas-1' as never,
+      initialViewport: { x: 0, y: 0, zoom: 1 },
+    })
+
+    engine.setViewportLive({ x: 40, y: -20, zoom: 1.25 })
+    vi.advanceTimersByTime(250)
+    expect(storage['canvas-viewport-canvas-1']).toBeUndefined()
+
+    engine.setViewport({ x: 40, y: -20, zoom: 1.25 })
+    vi.advanceTimersByTime(250)
+    expect(storage['canvas-viewport-canvas-1']).toBe(JSON.stringify({ x: 40, y: -20, zoom: 1.25 }))
   })
 })

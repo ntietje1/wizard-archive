@@ -41,7 +41,7 @@ A campaign management platform built for Dungeon Masters and their players. Orga
 - Drawing tools with adjustable brush sizes, eraser, shapes, sticky notes, and text nodes
 - Embed other campaign content (notes, folders, canvases) as interactive nodes
 - Real-time collaboration with remote cursor visibility
-- Pan, zoom, minimap, and fit-to-view navigation
+- Pan, zoom, and fit-to-view navigation
 - Snapshot history with rollback
 
 ### Sidebar & Organization
@@ -84,7 +84,7 @@ A campaign management platform built for Dungeon Masters and their players. Orga
 | --------------- | ------------------------------------------------------------------------------------------------ |
 | **Frontend**    | React 19, TypeScript, TanStack Router, TanStack React Query, Tailwind CSS v4, shadcn/ui, Zustand |
 | **Editor**      | BlockNote, Yjs, Tiptap                                                                           |
-| **Canvases**    | ReactFlow, Yjs                                                                                   |
+| **Canvases**    | Custom canvas renderer, Yjs                                                                      |
 | **Maps**        | React Zoom Pan Pinch                                                                             |
 | **Drag & Drop** | Atlaskit Pragmatic Drag and Drop                                                                 |
 | **Validation**  | Zod, Convex Validators                                                                           |

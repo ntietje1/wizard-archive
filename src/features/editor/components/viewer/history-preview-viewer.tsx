@@ -2,8 +2,6 @@ import { useMemo } from 'react'
 import * as Y from 'yjs'
 import { BlockNoteEditor } from '@blocknote/core'
 import { yDocToBlocks } from '@blocknote/core/yjs'
-import { Background, ReactFlow, ReactFlowProvider } from '@xyflow/react'
-import '@xyflow/react/dist/style.css'
 import { api } from 'convex/_generated/api'
 import { Loader2 } from 'lucide-react'
 import { SNAPSHOT_TYPE } from 'convex/documentSnapshots/schema'
@@ -12,14 +10,11 @@ import { editorSchema } from 'convex/notes/editorSpecs'
 import { HistoryPreviewBanner } from './history-preview-banner'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CustomBlock } from 'convex/notes/editorSpecs'
-import type { Edge, Node } from '@xyflow/react'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 import type { GameMapSnapshotData } from 'convex/gameMaps/types'
-import { canvasEdgeTypes } from '~/features/canvas/edges/canvas-edge-renderers'
-import { canvasNodeTypes } from '~/features/canvas/nodes/canvas-node-renderers'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
-import { CanvasRuntimeProvider } from '~/features/canvas/runtime/providers/canvas-runtime-context'
-import { READ_ONLY_CANVAS_RUNTIME } from '~/features/canvas/runtime/providers/canvas-runtime'
+import { CanvasReadOnlyPreview } from '~/features/canvas/components/canvas-read-only-preview'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { NoteContent } from '~/features/editor/components/note-content'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
@@ -133,8 +128,8 @@ function CanvasSnapshotPreview({ data }: { data: ArrayBuffer }) {
     try {
       Y.applyUpdate(doc, new Uint8Array(data))
 
-      const nodesMap = doc.getMap<Node>('nodes')
-      const edgesMap = doc.getMap<Edge>('edges')
+      const nodesMap = doc.getMap<CanvasDocumentNode>('nodes')
+      const edgesMap = doc.getMap<CanvasDocumentEdge>('edges')
 
       const parsedNodes = Array.from(nodesMap.values())
       const parsedEdges = Array.from(edgesMap.values())
@@ -142,7 +137,10 @@ function CanvasSnapshotPreview({ data }: { data: ArrayBuffer }) {
       return { nodes: parsedNodes, edges: parsedEdges }
     } catch (error) {
       logger.error('Failed to parse canvas snapshot:', error)
-      return { nodes: [] as Array<Node>, edges: [] as Array<Edge> }
+      return {
+        nodes: [] as Array<CanvasDocumentNode>,
+        edges: [] as Array<CanvasDocumentEdge>,
+      }
     } finally {
       doc.destroy()
     }
@@ -150,24 +148,7 @@ function CanvasSnapshotPreview({ data }: { data: ArrayBuffer }) {
 
   return (
     <div className="flex-1 min-h-0">
-      <CanvasRuntimeProvider {...READ_ONLY_CANVAS_RUNTIME}>
-        <ReactFlowProvider>
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            nodeTypes={canvasNodeTypes}
-            edgeTypes={canvasEdgeTypes}
-            nodesDraggable={false}
-            nodesConnectable={false}
-            elementsSelectable={false}
-            panOnDrag
-            zoomOnScroll
-            fitView
-          >
-            <Background />
-          </ReactFlow>
-        </ReactFlowProvider>
-      </CanvasRuntimeProvider>
+      <CanvasReadOnlyPreview nodes={nodes} edges={edges} interactive />
     </div>
   )
 }

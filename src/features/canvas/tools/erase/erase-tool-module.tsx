@@ -4,7 +4,7 @@ import { getAbsoluteStrokePointsForNode, isStrokeNode } from '../../nodes/stroke
 import {
   setPointerCapture,
   releasePointerCapture,
-  screenEventToFlowPosition,
+  screenEventToCanvasPosition,
 } from '../shared/tool-module-utils'
 import type { CanvasToolSpec } from '../canvas-tool-types'
 import {
@@ -78,14 +78,14 @@ export const eraseToolSpec: CanvasToolSpec<'erase'> = {
         pointerId = event.pointerId
         erasing = true
         marked = new Set()
-        const pos = screenEventToFlowPosition(services.viewport, event)
+        const pos = screenEventToCanvasPosition(services.viewport, event)
         trail = [pos]
         setEraseToolErasingStrokeIds(new Set())
       },
       onPointerMove: (event) => {
         if (!erasing || (event.buttons & 1) !== 1) return
 
-        trail = [...trail.slice(-199), screenEventToFlowPosition(services.viewport, event)]
+        trail = [...trail.slice(-199), screenEventToCanvasPosition(services.viewport, event)]
         if (rafId) return
 
         rafId = requestAnimationFrame(() => {
@@ -102,7 +102,7 @@ export const eraseToolSpec: CanvasToolSpec<'erase'> = {
         }
         testIntersections()
         if (marked.size > 0) {
-          services.commands.deleteNodes(Array.from(marked))
+          services.commands.deleteNodes(marked)
         }
         reset()
       },

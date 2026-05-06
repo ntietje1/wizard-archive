@@ -1,9 +1,10 @@
-import type { Node, NodeProps } from '@xyflow/react'
 import { CanvasRichTextNode } from '../shared/canvas-rich-text-node'
+import { CANVAS_NODE_MIN_SIZE } from '../shared/canvas-node-resize-constants'
 import { normalizeCanvasRichTextNodeData } from '../shared/canvas-rich-text-node-data'
 import type { CanvasRichTextNodeInputData } from '../shared/canvas-rich-text-node-data'
+import type { CanvasNodeComponentProps } from '../canvas-node-types'
 
-export function TextNode(props: NodeProps<Node<CanvasRichTextNodeInputData>>) {
+export function TextNode(props: CanvasNodeComponentProps<CanvasRichTextNodeInputData>) {
   return (
     <CanvasRichTextNode
       {...props}
@@ -14,12 +15,11 @@ export function TextNode(props: NodeProps<Node<CanvasRichTextNodeInputData>>) {
         emptyAriaLabel: 'Empty text node',
         invalidAriaLabel: 'Invalid text node content',
         invalidContentLabel: 'Invalid text content',
-        minWidth: 80,
-        minHeight: 30,
+        minWidth: CANVAS_NODE_MIN_SIZE,
+        minHeight: CANVAS_NODE_MIN_SIZE,
         containerClassName: 'rounded-lg',
         contentClassName: 'h-full w-full overflow-hidden',
         textClassName: 'text-sm',
-        textColor: 'inherit',
       }}
     />
   )

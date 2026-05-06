@@ -1,4 +1,4 @@
-import type { Edge, Node } from '@xyflow/react'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 import type * as Y from 'yjs'
 
 export function transactCanvasMap<TValue>(map: Y.Map<TValue>, fn: () => void) {
@@ -10,7 +10,11 @@ export function transactCanvasMap<TValue>(map: Y.Map<TValue>, fn: () => void) {
   fn()
 }
 
-export function transactCanvasMaps(nodesMap: Y.Map<Node>, edgesMap: Y.Map<Edge>, fn: () => void) {
+export function transactCanvasMaps(
+  nodesMap: Y.Map<CanvasDocumentNode>,
+  edgesMap: Y.Map<CanvasDocumentEdge>,
+  fn: () => void,
+) {
   if (nodesMap.doc && edgesMap.doc && nodesMap.doc !== edgesMap.doc) {
     throw new Error('transactCanvasMaps requires nodesMap.doc and edgesMap.doc to match')
   }

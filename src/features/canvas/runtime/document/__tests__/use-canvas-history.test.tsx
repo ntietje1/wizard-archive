@@ -3,48 +3,32 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as Y from 'yjs'
 import { useCanvasHistory } from '../use-canvas-history'
 import type { RenderHookResult } from '@testing-library/react'
-import type { Edge, Node } from '@xyflow/react'
+import type {
+  CanvasDocumentEdge as Edge,
+  CanvasDocumentNode as Node,
+} from 'convex/canvases/validation'
 
-const reactFlowMock = vi.hoisted(() => {
-  let nodes: Array<Node> = []
+type TextNode = Extract<Node, { type: 'text' }>
 
-  return {
-    get nodes() {
-      return nodes
-    },
-    reset() {
-      nodes = []
-    },
-    setNodes(updater: (nodes: Array<Node>) => Array<Node>) {
-      nodes = updater(nodes)
-    },
-  }
-})
-
-vi.mock('@xyflow/react', () => ({
-  useReactFlow: () => reactFlowMock,
-}))
-
-function createNode(id: string): Node {
+function createNode(id: string): TextNode {
   return {
     id,
     type: 'text',
     position: { x: 0, y: 0 },
-    data: { label: id },
-  } as Node
+    data: { content: id },
+  }
 }
 
 describe('useCanvasHistory', () => {
   let docs: Array<Y.Doc>
   let hooks: Array<RenderHookResult<ReturnType<typeof useCanvasHistory>, unknown>>
-  let selectionController: Pick<Parameters<typeof useCanvasHistory>[0]['selection'], 'replace'>
+  let selectionController: Pick<Parameters<typeof useCanvasHistory>[0]['selection'], 'setSelection'>
 
   beforeEach(() => {
     docs = []
     hooks = []
-    reactFlowMock.reset()
     selectionController = {
-      replace: vi.fn(),
+      setSelection: vi.fn(),
     }
   })
 
@@ -210,23 +194,29 @@ describe('useCanvasHistory', () => {
     hooks.push(hook)
 
     act(() => {
-      hook.result.current.onSelectionChange({ nodeIds: ['a'], edgeIds: [] })
-      hook.result.current.onSelectionChange({ nodeIds: ['a', 'b'], edgeIds: ['edge-1'] })
+      hook.result.current.onSelectionChange({ nodeIds: new Set(['a']), edgeIds: new Set() })
+      hook.result.current.onSelectionChange({
+        nodeIds: new Set(['a', 'b']),
+        edgeIds: new Set(['edge-1']),
+      })
     })
 
     act(() => {
       hook.result.current.undo()
     })
 
-    expect(selectionController.replace).toHaveBeenLastCalledWith({ nodeIds: ['a'], edgeIds: [] })
+    expect(selectionController.setSelection).toHaveBeenLastCalledWith({
+      nodeIds: new Set(['a']),
+      edgeIds: new Set(),
+    })
 
     act(() => {
       hook.result.current.redo()
     })
 
-    expect(selectionController.replace).toHaveBeenLastCalledWith({
-      nodeIds: ['a', 'b'],
-      edgeIds: ['edge-1'],
+    expect(selectionController.setSelection).toHaveBeenLastCalledWith({
+      nodeIds: new Set(['a', 'b']),
+      edgeIds: new Set(['edge-1']),
     })
   })
 
@@ -288,20 +278,20 @@ describe('useCanvasHistory', () => {
 
     act(() => {
       doc.transact(() => {
-        nodesMap.set('a', { ...createNode('a'), data: { label: 'updated-a' } })
-        nodesMap.set('b', { ...createNode('b'), data: { label: 'updated-b' } })
+        nodesMap.set('a', { ...createNode('a'), data: { content: 'updated-a' } })
+        nodesMap.set('b', { ...createNode('b'), data: { content: 'updated-b' } })
       })
     })
 
-    expect(nodesMap.get('a')?.data).toMatchObject({ label: 'updated-a' })
-    expect(nodesMap.get('b')?.data).toMatchObject({ label: 'updated-b' })
+    expect(nodesMap.get('a')?.data).toMatchObject({ content: 'updated-a' })
+    expect(nodesMap.get('b')?.data).toMatchObject({ content: 'updated-b' })
 
     act(() => {
       hook.result.current.undo()
     })
 
-    expect(nodesMap.get('a')?.data).toMatchObject({ label: 'a' })
-    expect(nodesMap.get('b')?.data).toMatchObject({ label: 'b' })
+    expect(nodesMap.get('a')?.data).toMatchObject({ content: 'a' })
+    expect(nodesMap.get('b')?.data).toMatchObject({ content: 'b' })
     expect(hook.result.current.canUndo).toBe(false)
     expect(hook.result.current.canRedo).toBe(true)
   })

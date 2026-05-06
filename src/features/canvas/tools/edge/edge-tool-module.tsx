@@ -1,12 +1,13 @@
 import { Workflow } from 'lucide-react'
 import {
+  lineStrokeSizeCanvasProperty,
   linePaintCanvasProperty,
-  strokeSizeCanvasProperty,
 } from '../../properties/canvas-property-definitions'
 import {
   bindCanvasPaintProperty,
   bindCanvasStrokeSizeProperty,
 } from '../../properties/canvas-property-types'
+import { clampCanvasEdgeStrokeWidth } from '../../edges/shared/canvas-edge-style'
 import type { CanvasToolSpec } from '../canvas-tool-types'
 
 export const edgeToolSpec: CanvasToolSpec<'edge'> = {
@@ -24,9 +25,9 @@ export const edgeToolSpec: CanvasToolSpec<'edge'> = {
         setOpacity: context.toolState.setStrokeOpacity,
       }),
       bindCanvasStrokeSizeProperty(
-        strokeSizeCanvasProperty,
-        () => context.toolState.getSettings().strokeSize,
-        context.toolState.setStrokeSize,
+        lineStrokeSizeCanvasProperty,
+        () => clampCanvasEdgeStrokeWidth(context.toolState.getSettings().strokeSize),
+        (size) => context.toolState.setStrokeSize(clampCanvasEdgeStrokeWidth(size)),
       ),
     ],
   }),

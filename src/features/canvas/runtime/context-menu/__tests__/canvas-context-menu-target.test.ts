@@ -1,9 +1,22 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { resolveCanvasContextMenuTarget } from '../canvas-context-menu-target'
-import type { Edge, Node } from '@xyflow/react'
+import type {
+  CanvasDocumentEdge as Edge,
+  CanvasDocumentNode as Node,
+} from 'convex/canvases/validation'
 import * as Y from 'yjs'
 
 const openDocs: Array<Y.Doc> = []
+
+function selectionSnapshot({
+  nodeIds = new Set<string>(),
+  edgeIds = new Set<string>(),
+}: {
+  nodeIds?: ReadonlySet<string>
+  edgeIds?: ReadonlySet<string>
+} = {}) {
+  return { nodeIds, edgeIds }
+}
 
 function createContextMenuDoc() {
   const doc = new Y.Doc()
@@ -23,9 +36,7 @@ describe('resolveCanvasContextMenuTarget', () => {
   it('returns a pane target for an empty selection', () => {
     const { nodesMap, edgesMap } = createContextMenuDoc()
 
-    expect(
-      resolveCanvasContextMenuTarget({ nodeIds: [], edgeIds: [] }, nodesMap, edgesMap),
-    ).toEqual({
+    expect(resolveCanvasContextMenuTarget(selectionSnapshot(), nodesMap, edgesMap)).toEqual({
       target: { kind: 'pane' },
       contributors: [],
     })
@@ -43,7 +54,7 @@ describe('resolveCanvasContextMenuTarget', () => {
     } as Node)
 
     const resolved = resolveCanvasContextMenuTarget(
-      { nodeIds: ['embed-1'], edgeIds: [] },
+      selectionSnapshot({ nodeIds: new Set(['embed-1']) }),
       nodesMap,
       edgesMap,
     )
@@ -78,7 +89,7 @@ describe('resolveCanvasContextMenuTarget', () => {
 
     expect(
       resolveCanvasContextMenuTarget(
-        { nodeIds: ['node-1'], edgeIds: ['edge-1'] },
+        selectionSnapshot({ nodeIds: new Set(['node-1']), edgeIds: new Set(['edge-1']) }),
         nodesMap,
         edgesMap,
       ),
@@ -105,7 +116,7 @@ describe('resolveCanvasContextMenuTarget', () => {
 
     expect(
       resolveCanvasContextMenuTarget(
-        { nodeIds: ['text-1', 'text-2'], edgeIds: [] },
+        selectionSnapshot({ nodeIds: new Set(['text-1', 'text-2']) }),
         nodesMap,
         edgesMap,
       ),
@@ -138,7 +149,7 @@ describe('resolveCanvasContextMenuTarget', () => {
 
     expect(
       resolveCanvasContextMenuTarget(
-        { nodeIds: ['text-1', 'embed-1'], edgeIds: [] },
+        selectionSnapshot({ nodeIds: new Set(['text-1', 'embed-1']) }),
         nodesMap,
         edgesMap,
       ),
@@ -162,7 +173,11 @@ describe('resolveCanvasContextMenuTarget', () => {
     } as unknown as Node)
 
     expect(
-      resolveCanvasContextMenuTarget({ nodeIds: ['bad-node'], edgeIds: [] }, nodesMap, edgesMap),
+      resolveCanvasContextMenuTarget(
+        selectionSnapshot({ nodeIds: new Set(['bad-node']) }),
+        nodesMap,
+        edgesMap,
+      ),
     ).toEqual({
       target: {
         kind: 'node-selection',
@@ -184,7 +199,7 @@ describe('resolveCanvasContextMenuTarget', () => {
 
     expect(
       resolveCanvasContextMenuTarget(
-        { nodeIds: ['missing-node', 'text-1'], edgeIds: [] },
+        selectionSnapshot({ nodeIds: new Set(['missing-node', 'text-1']) }),
         nodesMap,
         edgesMap,
       ),
@@ -215,7 +230,7 @@ describe('resolveCanvasContextMenuTarget', () => {
 
     expect(
       resolveCanvasContextMenuTarget(
-        { nodeIds: [], edgeIds: ['edge-1', 'edge-2'] },
+        selectionSnapshot({ edgeIds: new Set(['edge-1', 'edge-2']) }),
         nodesMap,
         edgesMap,
       ),
@@ -246,7 +261,7 @@ describe('resolveCanvasContextMenuTarget', () => {
 
     expect(
       resolveCanvasContextMenuTarget(
-        { nodeIds: [], edgeIds: ['edge-1', 'edge-2'] },
+        selectionSnapshot({ edgeIds: new Set(['edge-1', 'edge-2']) }),
         nodesMap,
         edgesMap,
       ),
@@ -271,7 +286,7 @@ describe('resolveCanvasContextMenuTarget', () => {
 
     expect(
       resolveCanvasContextMenuTarget(
-        { nodeIds: [], edgeIds: ['missing-edge', 'edge-1'] },
+        selectionSnapshot({ edgeIds: new Set(['missing-edge', 'edge-1']) }),
         nodesMap,
         edgesMap,
       ),

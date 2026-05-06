@@ -1,4 +1,4 @@
-import type { XYPosition } from '@xyflow/react'
+import type { CanvasPosition } from '../types/canvas-domain-types'
 
 export type Bounds = {
   x: number
@@ -7,9 +7,7 @@ export type Bounds = {
   height: number
 }
 
-export type PointLike = XYPosition
-
-export function rectFromPoints(a: XYPosition, b: XYPosition): Bounds {
+export function rectFromPoints(a: CanvasPosition, b: CanvasPosition): Bounds {
   return {
     x: Math.min(a.x, b.x),
     y: Math.min(a.y, b.y),
@@ -27,7 +25,7 @@ export function rectIntersectsBounds(rect: Bounds, bounds: Bounds): boolean {
   )
 }
 
-export function boundsFromPoints(points: ReadonlyArray<PointLike>): Bounds | null {
+export function boundsFromPoints(points: ReadonlyArray<CanvasPosition>): Bounds | null {
   if (points.length === 0) return null
 
   let minX = Infinity
@@ -48,6 +46,31 @@ export function boundsFromPoints(points: ReadonlyArray<PointLike>): Bounds | nul
     width: maxX - minX,
     height: maxY - minY,
   }
+}
+
+export function unionBounds(left: Bounds, right: Bounds): Bounds {
+  const minX = Math.min(left.x, right.x)
+  const minY = Math.min(left.y, right.y)
+  const maxX = Math.max(left.x + left.width, right.x + right.width)
+  const maxY = Math.max(left.y + left.height, right.y + right.height)
+  return {
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY,
+  }
+}
+
+export function boundsUnion(items: ReadonlyArray<Bounds>): Bounds | null {
+  if (items.length === 0) {
+    return null
+  }
+
+  let bounds = items[0]
+  for (let index = 1; index < items.length; index += 1) {
+    bounds = unionBounds(bounds, items[index])
+  }
+  return bounds
 }
 
 export function segmentsIntersect(
@@ -91,6 +114,10 @@ export function polygonIntersectsBounds(
   polygon: ReadonlyArray<{ x: number; y: number }>,
   bounds: Bounds,
 ): boolean {
+  if (polygon.length === 0) {
+    return false
+  }
+
   const polygonBounds = boundsFromPoints(polygon)
   if (polygonBounds && !rectIntersectsBounds(polygonBounds, bounds)) {
     return false

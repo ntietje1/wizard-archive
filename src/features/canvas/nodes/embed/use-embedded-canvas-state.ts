@@ -5,9 +5,7 @@ import * as Y from 'yjs'
 import { yMapToArray } from '../../utils/canvas-yjs-utils'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import type { Id } from 'convex/_generated/dataModel'
-import type { Edge, Node } from '@xyflow/react'
-
-export { parseEmbeddedCanvasStableId } from 'convex/canvases/validation'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 
 function useYMapAsArray<T>(doc: Y.Doc, mapName: string): Array<T> {
   const snapshotRef = useRef<Array<T>>([])
@@ -74,8 +72,8 @@ export function useEmbeddedCanvasState(canvasId: Id<'sidebarItems'>) {
     setInitialLoadComplete(true)
   }, [doc, updatesResult.data])
 
-  const nodes = useYMapAsArray<Node>(doc, 'nodes')
-  const edges = useYMapAsArray<Edge>(doc, 'edges')
+  const nodes = useYMapAsArray<CanvasDocumentNode>(doc, 'nodes')
+  const edges = useYMapAsArray<CanvasDocumentEdge>(doc, 'edges')
 
   return {
     nodes,

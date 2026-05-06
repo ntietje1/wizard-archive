@@ -1,17 +1,17 @@
-import { useNodes } from '@xyflow/react'
 import {
   buildStraightCanvasEdgeGeometryFromEdge,
   buildStraightCanvasEdgeGeometryFromRenderProps,
 } from './straight-canvas-edge-geometry'
 import { CanvasPathEdge } from '../shared/canvas-path-edge'
-import { createCanvasNodesById } from '../shared/canvas-node-map'
+import {
+  createCanvasEndpointNodesById,
+  useCanvasEdgeEndpointNodes,
+} from '../shared/use-canvas-edge-endpoint-nodes'
 import type { CanvasEdgeRendererProps } from '../canvas-edge-types'
 
-export function StraightCanvasEdge(
-  props: CanvasEdgeRendererProps<Record<string, unknown>, 'straight'>,
-) {
-  const nodes = useNodes()
-  const nodesById = createCanvasNodesById(nodes)
+export function StraightCanvasEdge(props: CanvasEdgeRendererProps<'straight'>) {
+  const endpointNodes = useCanvasEdgeEndpointNodes(props)
+  const nodesById = createCanvasEndpointNodesById(endpointNodes)
   const geometry =
     buildStraightCanvasEdgeGeometryFromEdge(
       {

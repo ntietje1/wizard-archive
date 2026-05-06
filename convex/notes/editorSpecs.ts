@@ -1,7 +1,10 @@
 import {
   BlockNoteSchema,
+  COLORS_DEFAULT,
+  createStyleSpec,
   defaultBlockSpecs,
   defaultInlineContentSpecs,
+  defaultProps,
   defaultStyleSpecs,
 } from '@blocknote/core'
 import type {
@@ -22,8 +25,39 @@ export const customInlineContentSpecs = {
   ...remainingInlineContentSpecs,
 } as InlineContentSpecs
 
+const textColorStyleSpec = createStyleSpec(
+  {
+    propSchema: 'string',
+    type: 'textColor',
+  },
+  {
+    parse: (element) => {
+      if (element.tagName === 'SPAN' && element.style.color) {
+        return element.style.color
+      }
+
+      return undefined
+    },
+    render: (value) => renderTextColorStyle(value),
+    toExternalHTML: (value) => renderTextColorStyle(value),
+  },
+)
+
+function renderTextColorStyle(value: string | undefined) {
+  const span = document.createElement('span')
+  if (value && value !== defaultProps.textColor.default) {
+    span.style.color = COLORS_DEFAULT[value]?.text ?? value
+  }
+
+  return {
+    contentDOM: span,
+    dom: span,
+  }
+}
+
 export const customStyleSpecs = {
   ...defaultStyleSpecs,
+  textColor: textColorStyleSpec,
 } satisfies StyleSpecs
 
 export const customBlockSpecs = {

@@ -10,6 +10,8 @@ export const ColorIcon = (
   const size = props.size || 16
 
   const style = {
+    ...(textColor !== 'default' ? { color: textColor } : {}),
+    ...(backgroundColor !== 'default' ? { backgroundColor } : {}),
     pointerEvents: 'none',
     fontSize: `${(size * 0.75).toString()}px`,
     height: `${size.toString()}px`,

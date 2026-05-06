@@ -1,8 +1,21 @@
 import { describe, expect, it } from 'vitest'
+import { customStyleSpecs } from 'convex/notes/editorSpecs'
 import {
+  canvasRichTextEditorSchema,
   createEmptyCanvasRichTextContent,
   readCanvasRichTextContentState,
 } from '../canvas-rich-text-editor'
+
+describe('canvas rich text schema', () => {
+  it('renders arbitrary text colors in the editable BlockNote DOM', () => {
+    const rendered = customStyleSpecs.textColor.implementation.render(
+      '#123456',
+      canvasRichTextEditorSchema as never,
+    )
+
+    expect(rendered.dom).toHaveStyle({ color: '#123456' })
+  })
+})
 
 describe('readCanvasRichTextContentState', () => {
   it('treats missing or empty content as valid empty canvas content', () => {
@@ -62,13 +75,21 @@ describe('readCanvasRichTextContentState', () => {
     })
   })
 
-  it('accepts canvas-supported block types individually', () => {
+  it('accepts all canvas-supported block types', () => {
     expect(
       readCanvasRichTextContentState([
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Paragraph' }],
+        },
         {
           type: 'heading',
           props: { level: 2 },
           content: [{ type: 'text', text: 'Heading' }],
+        },
+        {
+          type: 'quote',
+          content: [{ type: 'text', text: 'Quote' }],
         },
         {
           type: 'bulletListItem',
@@ -92,9 +113,17 @@ describe('readCanvasRichTextContentState', () => {
     ).toEqual({
       content: [
         {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Paragraph' }],
+        },
+        {
           type: 'heading',
           props: { level: 2 },
           content: [{ type: 'text', text: 'Heading' }],
+        },
+        {
+          type: 'quote',
+          content: [{ type: 'text', text: 'Quote' }],
         },
         {
           type: 'bulletListItem',

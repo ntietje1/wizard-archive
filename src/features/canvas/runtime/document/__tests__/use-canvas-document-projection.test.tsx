@@ -1,37 +1,12 @@
 import { act, renderHook } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
 import { useCanvasDocumentProjection } from '../use-canvas-document-projection'
-import type { CanvasRemoteDragAnimation } from '../../interaction/use-canvas-remote-drag-animation'
-import type { Edge, Node } from '@xyflow/react'
-
-const reactFlowMock = vi.hoisted(() => {
-  let nodes: Array<Node> = []
-  let edges: Array<Edge> = []
-
-  return {
-    get nodes() {
-      return nodes
-    },
-    get edges() {
-      return edges
-    },
-    reset() {
-      nodes = []
-      edges = []
-    },
-    setNodes(updater: Array<Node> | ((nodes: Array<Node>) => Array<Node>)) {
-      nodes = typeof updater === 'function' ? updater(nodes) : updater
-    },
-    setEdges(updater: Array<Edge> | ((edges: Array<Edge>) => Array<Edge>)) {
-      edges = typeof updater === 'function' ? updater(edges) : updater
-    },
-  }
-})
-
-vi.mock('@xyflow/react', () => ({
-  useReactFlow: () => reactFlowMock,
-}))
+import { createCanvasEngine } from '../../../system/canvas-engine'
+import type {
+  CanvasDocumentEdge as Edge,
+  CanvasDocumentNode as Node,
+} from 'convex/canvases/validation'
 
 function createTextNode(id: string): Node {
   return {
@@ -40,7 +15,7 @@ function createTextNode(id: string): Node {
     position: { x: 20, y: 40 },
     width: 120,
     height: 36,
-    data: { label: 'Hello' },
+    data: { content: [{ type: 'paragraph' }] },
   }
 }
 
@@ -51,19 +26,7 @@ function createOrderedTextNode(id: string, zIndex: number): Node {
   }
 }
 
-function createRemoteDragAnimation(): CanvasRemoteDragAnimation {
-  return {
-    hasSpring: () => false,
-    setTarget: vi.fn(),
-    clearNodeSprings: vi.fn(),
-  }
-}
-
 describe('useCanvasDocumentProjection', () => {
-  beforeEach(() => {
-    reactFlowMock.reset()
-  })
-
   it('preserves local selection when remote state props rerender without document changes', () => {
     const doc = new Y.Doc()
     const nodesMap = doc.getMap<Node>('nodes')
@@ -71,12 +34,13 @@ describe('useCanvasDocumentProjection', () => {
     nodesMap.set('node-1', createTextNode('node-1'))
 
     const localDraggingIdsRef = { current: new Set<string>() }
+    const canvasEngine = createCanvasEngine()
     const initialProps = {
+      canvasEngine,
       nodesMap,
       edgesMap,
       localDraggingIdsRef,
       remoteResizeDimensions: {},
-      remoteDragAnimation: createRemoteDragAnimation(),
     }
 
     const { rerender } = renderHook(
@@ -86,34 +50,31 @@ describe('useCanvasDocumentProjection', () => {
       },
     )
 
-    expect(reactFlowMock.nodes).toEqual([
+    expect(canvasEngine.getSnapshot().nodes).toEqual([
       expect.objectContaining({
         id: 'node-1',
       }),
     ])
-    expect(reactFlowMock.nodes[0]?.selected).toBeUndefined()
+    expect(canvasEngine.getSnapshot().selection.nodeIds).toEqual(new Set())
 
     act(() => {
-      reactFlowMock.setNodes((current) =>
-        current.map((node) => (node.id === 'node-1' ? { ...node, selected: true } : node)),
-      )
+      canvasEngine.setSelection({ nodeIds: new Set(['node-1']), edgeIds: new Set() })
     })
 
     rerender({
       ...initialProps,
       remoteResizeDimensions: {},
-      remoteDragAnimation: createRemoteDragAnimation(),
     })
 
-    expect(reactFlowMock.nodes).toEqual([
+    expect(canvasEngine.getSnapshot().nodes).toEqual([
       expect.objectContaining({
         id: 'node-1',
-        selected: true,
       }),
     ])
+    expect(canvasEngine.getSnapshot().selectedNodeIds).toEqual(new Set(['node-1']))
   })
 
-  it('ignores stale persisted selection flags when document updates rerender nodes', () => {
+  it('drops nodes with stale persisted selection flags', () => {
     const doc = new Y.Doc()
     const nodesMap = doc.getMap<Node>('nodes')
     const edgesMap = doc.getMap<Edge>('edges')
@@ -121,67 +82,30 @@ describe('useCanvasDocumentProjection', () => {
       ...createTextNode('node-1'),
       selected: true,
       draggable: true,
-    })
+    } as unknown as Node)
     nodesMap.set('node-2', {
       ...createTextNode('node-2'),
       position: { x: 220, y: 40 },
       selected: true,
       draggable: true,
-    })
+    } as unknown as Node)
 
     const localDraggingIdsRef = { current: new Set<string>() }
 
+    const canvasEngine = createCanvasEngine()
+
     renderHook(() =>
       useCanvasDocumentProjection({
+        canvasEngine,
         nodesMap,
         edgesMap,
         localDraggingIdsRef,
         remoteResizeDimensions: {},
-        remoteDragAnimation: createRemoteDragAnimation(),
       }),
     )
 
-    expect(reactFlowMock.nodes).toHaveLength(2)
-    expect(reactFlowMock.nodes).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: 'node-1',
-          position: { x: 20, y: 40 },
-        }),
-        expect.objectContaining({
-          id: 'node-2',
-          position: { x: 220, y: 40 },
-        }),
-      ]),
-    )
-    expect(reactFlowMock.nodes.find((node) => node.id === 'node-1')?.selected).toBeUndefined()
-    expect(reactFlowMock.edges).toEqual([])
-
-    act(() => {
-      reactFlowMock.setNodes((current) =>
-        current.map((node) => ({ ...node, selected: node.id === 'node-1' })),
-      )
-    })
-
-    act(() => {
-      const existing = nodesMap.get('node-1')
-      if (!existing) {
-        throw new Error('missing node-1')
-      }
-
-      nodesMap.set('node-1', {
-        ...existing,
-        data: { ...existing.data, label: 'Updated' },
-      })
-    })
-
-    expect(reactFlowMock.nodes).toHaveLength(2)
-    expect(reactFlowMock.nodes).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ id: 'node-1', selected: true }),
-        expect.objectContaining({ id: 'node-2', selected: false }),
-      ]),
-    )
+    expect(canvasEngine.getSnapshot().nodes).toHaveLength(0)
+    expect(canvasEngine.getSnapshot().edges).toEqual([])
   })
 
   it('sorts projected nodes by persisted zIndex without renormalizing their stored values', () => {
@@ -191,17 +115,54 @@ describe('useCanvasDocumentProjection', () => {
     nodesMap.set('node-2', createOrderedTextNode('node-2', 10))
     nodesMap.set('node-1', createOrderedTextNode('node-1', 4))
 
+    const canvasEngine = createCanvasEngine()
+
     renderHook(() =>
       useCanvasDocumentProjection({
+        canvasEngine,
         nodesMap,
         edgesMap,
         localDraggingIdsRef: { current: new Set<string>() },
         remoteResizeDimensions: {},
-        remoteDragAnimation: createRemoteDragAnimation(),
       }),
     )
 
-    expect(reactFlowMock.nodes.map((node) => node.id)).toEqual(['node-1', 'node-2'])
-    expect(reactFlowMock.nodes.map((node) => node.zIndex)).toEqual([4, 10])
+    expect(canvasEngine.getSnapshot().nodes.map((node) => node.id)).toEqual(['node-1', 'node-2'])
+    expect(canvasEngine.getSnapshot().nodes.map((node) => node.zIndex)).toEqual([4, 10])
+  })
+
+  it('preserves current node order when a document update does not change zIndex', () => {
+    const doc = new Y.Doc()
+    const nodesMap = doc.getMap<Node>('nodes')
+    const edgesMap = doc.getMap<Edge>('edges')
+    nodesMap.set('node-1', createOrderedTextNode('node-1', 1))
+    nodesMap.set('node-2', createOrderedTextNode('node-2', 2))
+
+    const canvasEngine = createCanvasEngine()
+
+    renderHook(() =>
+      useCanvasDocumentProjection({
+        canvasEngine,
+        nodesMap,
+        edgesMap,
+        localDraggingIdsRef: { current: new Set<string>() },
+        remoteResizeDimensions: {},
+      }),
+    )
+
+    act(() => {
+      canvasEngine.setDocumentSnapshot({ nodes: [...canvasEngine.getSnapshot().nodes].reverse() })
+    })
+
+    act(() => {
+      const existing = nodesMap.get('node-1')
+      if (!existing) throw new Error('missing node-1')
+      nodesMap.set('node-1', {
+        ...existing,
+        data: { ...existing.data, backgroundColor: 'var(--background)' },
+      } as Node)
+    })
+
+    expect(canvasEngine.getSnapshot().nodes.map((node) => node.id)).toEqual(['node-2', 'node-1'])
   })
 })

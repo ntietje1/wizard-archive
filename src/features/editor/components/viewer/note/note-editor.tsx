@@ -57,16 +57,21 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
         <div
           ref={wrapperRef}
           className="flex flex-col flex-1 min-h-0"
+          data-testid="note-editor-wrapper"
           onContextMenu={handleWrapperContextMenu}
         >
-          <ScrollArea viewportRef={viewportRef} className="flex-1 min-h-0">
+          <ScrollArea
+            viewportRef={viewportRef}
+            className="flex-1 min-h-0"
+            contentClassName={editable ? 'note-editor-scroll-content' : undefined}
+          >
             <NoteContent
               key={note._id}
               noteId={note._id}
               content={filteredContent}
               editable={editable}
               onEditorChange={onEditorChange}
-              className="mx-auto w-full max-w-3xl mt-2"
+              className="note-editor-surface"
             >
               <BlockNoteContextMenuHandler />
             </NoteContent>

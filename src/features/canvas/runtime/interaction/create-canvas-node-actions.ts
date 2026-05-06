@@ -1,32 +1,67 @@
 import type { CanvasDocumentWriter, CanvasNodeActions } from '../../tools/canvas-tool-types'
 import type { CanvasSessionRuntime } from '../session/use-canvas-session-state'
-import type { ReactFlowInstance } from '@xyflow/react'
+import type { CanvasEngine } from '../../system/canvas-engine-types'
+import type { CanvasDocumentNodePatch } from '../../types/canvas-domain-types'
 
 export function createCanvasNodeActions({
+  canvasEngine,
   documentWriter,
-  reactFlowInstance,
   session,
   transact,
 }: {
+  canvasEngine: CanvasEngine
   documentWriter: CanvasDocumentWriter
-  reactFlowInstance: Pick<ReactFlowInstance, 'setNodes'>
   session: CanvasSessionRuntime
   transact: (fn: () => void) => void
 }) {
   return {
-    updateNodeData: documentWriter.updateNodeData,
     transact,
     onResize: (nodeId, width, height, position) => {
-      reactFlowInstance.setNodes((current) =>
-        current.map((node) => (node.id === nodeId ? { ...node, width, height, position } : node)),
-      )
-      session.awareness.core.setLocalResizing({
-        [nodeId]: { width, height, x: position.x, y: position.y },
-      })
+      previewNodeResize(canvasEngine, session, new Map([[nodeId, { width, height, position }]]))
     },
     onResizeEnd: (nodeId, width, height, position) => {
       session.awareness.core.setLocalResizing(null)
       documentWriter.resizeNode(nodeId, width, height, position)
     },
+    onResizeMany: (updates) => {
+      previewNodeResize(canvasEngine, session, updates)
+    },
+    onResizeManyCancel: (updates) => {
+      canvasEngine.updateResize(createNodeResizePatches(updates))
+      session.awareness.core.setLocalResizing(null)
+    },
+    onResizeManyEnd: (updates) => {
+      canvasEngine.updateResize(createNodeResizePatches(updates))
+      session.awareness.core.setLocalResizing(null)
+      documentWriter.resizeNodes(updates)
+    },
   } satisfies CanvasNodeActions
+}
+
+function previewNodeResize(
+  canvasEngine: CanvasEngine,
+  session: CanvasSessionRuntime,
+  updates: Parameters<CanvasNodeActions['onResizeMany']>[0],
+) {
+  const resizing: Record<string, { width: number; height: number; x: number; y: number }> = {}
+
+  for (const [nodeId, update] of updates) {
+    resizing[nodeId] = {
+      width: update.width,
+      height: update.height,
+      x: update.position.x,
+      y: update.position.y,
+    }
+  }
+
+  canvasEngine.updateResize(createNodeResizePatches(updates))
+  session.awareness.core.setLocalResizing(resizing)
+}
+
+function createNodeResizePatches(updates: Parameters<CanvasNodeActions['onResizeMany']>[0]) {
+  const nodePatches = new Map<string, CanvasDocumentNodePatch>()
+  for (const [nodeId, update] of updates) {
+    nodePatches.set(nodeId, update)
+  }
+  return nodePatches
 }

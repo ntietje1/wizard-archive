@@ -1,11 +1,14 @@
-import { TextSelection } from '@tiptap/pm/state'
-import type { EditorView } from '@tiptap/pm/view'
 import { useCallback } from 'react'
+import type { EditorView } from '@tiptap/pm/view'
 import type {
+  PendingRichEmbedActivationRef,
   RichEmbedActivationPayload,
-  RichEmbedLifecycleController,
 } from '../embed/use-rich-embed-lifecycle'
-import { useRichEmbedLifecycle } from '../embed/use-rich-embed-lifecycle'
+import { useDeferredRichEmbedActivation } from '../embed/use-rich-embed-lifecycle'
+import {
+  focusEditorViewAtEnd,
+  focusEditorViewAtNearestPoint,
+} from '~/features/editor/utils/note-editor-focus'
 import { logger } from '~/shared/utils/logger'
 
 export interface BlockNoteEditorWithMountedView {
@@ -17,14 +20,20 @@ export interface BlockNoteEditorWithMountedView {
 export function getMountedBlockNoteView(
   editor: BlockNoteEditorWithMountedView | null | undefined,
 ): EditorView | null {
-  const view = editor?._tiptapEditor?.view
+  let view: EditorView | null | undefined
 
-  // BlockNote does not expose mount readiness directly, so we gate on the connected ProseMirror view.
-  if (!view?.dom?.isConnected) {
+  try {
+    view = editor?._tiptapEditor?.view
+  } catch {
     return null
   }
 
+  // BlockNote does not expose mount readiness directly, so we gate on the connected ProseMirror view.
   try {
+    if (!view?.dom?.isConnected) {
+      return null
+    }
+
     if (!(view as EditorView & { docView?: object | null }).docView) {
       return null
     }
@@ -36,14 +45,14 @@ export function getMountedBlockNoteView(
 }
 
 export function useBlockNoteActivationLifecycle<TEditor extends BlockNoteEditorWithMountedView>({
-  lifecycle,
+  pendingActivationRef,
   editable,
   editor,
   isReady,
   onActivationErrorMessage,
   onActivated,
 }: {
-  lifecycle: RichEmbedLifecycleController
+  pendingActivationRef: PendingRichEmbedActivationRef
   editable: boolean
   editor: TEditor | null
   isReady?: (editor: TEditor) => boolean
@@ -71,25 +80,25 @@ export function useBlockNoteActivationLifecycle<TEditor extends BlockNoteEditorW
 
       const point = payload?.point
       if (point) {
-        try {
-          const pos = view.posAtCoords({ left: point.x, top: point.y })
-          if (pos && pos.inside !== -1) {
-            const tr = view.state.tr.setSelection(TextSelection.create(view.state.doc, pos.pos))
-            view.dispatch(tr)
-          }
-        } catch (error) {
-          logger.warn(onActivationErrorMessage, error)
+        const focused = focusEditorViewAtNearestPoint(view, point) || focusEditorViewAtEnd(view)
+        if (!focused) {
+          logger.warn(onActivationErrorMessage)
         }
+        onActivated?.()
+        return
       }
 
-      view.focus()
+      const focused = focusEditorViewAtEnd(view)
+      if (!focused) {
+        logger.warn(onActivationErrorMessage)
+      }
       onActivated?.()
     },
     [editor, onActivated, onActivationErrorMessage],
   )
 
-  useRichEmbedLifecycle({
-    lifecycle,
+  useDeferredRichEmbedActivation({
+    pendingActivationRef,
     editable,
     isReady: isEditorReady,
     onActivate,

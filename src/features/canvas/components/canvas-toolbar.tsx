@@ -1,17 +1,19 @@
-import { useReactFlow } from '@xyflow/react'
 import { Maximize2, Minus, Plus, Redo2, Undo2 } from 'lucide-react'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import { canvasToolbarTools } from '../tools/canvas-tool-modules'
 import { Button } from '~/features/shadcn/components/button'
-import { useCanvasRuntime } from '../runtime/providers/canvas-runtime'
+import {
+  useCanvasDocumentRuntime,
+  useCanvasViewportRuntime,
+} from '../runtime/providers/canvas-runtime'
 
 interface CanvasToolbarProps {
   canEdit: boolean
 }
 
 export function CanvasToolbar({ canEdit }: CanvasToolbarProps) {
-  const { fitView, zoomIn, zoomOut } = useReactFlow()
-  const { history } = useCanvasRuntime()
+  const { history } = useCanvasDocumentRuntime()
+  const { viewportController } = useCanvasViewportRuntime()
 
   const activeTool = useCanvasToolStore((s) => s.activeTool)
   const setActiveTool = useCanvasToolStore((s) => s.setActiveTool)
@@ -51,7 +53,7 @@ export function CanvasToolbar({ canEdit }: CanvasToolbarProps) {
           variant="ghost"
           size="icon"
           className="h-8 w-8"
-          onClick={() => zoomIn()}
+          onClick={viewportController.zoomIn}
           aria-label="Zoom in"
           title="Zoom in"
         >
@@ -61,7 +63,7 @@ export function CanvasToolbar({ canEdit }: CanvasToolbarProps) {
           variant="ghost"
           size="icon"
           className="h-8 w-8"
-          onClick={() => zoomOut()}
+          onClick={viewportController.zoomOut}
           aria-label="Zoom out"
           title="Zoom out"
         >
@@ -71,7 +73,7 @@ export function CanvasToolbar({ canEdit }: CanvasToolbarProps) {
           variant="ghost"
           size="icon"
           className="h-8 w-8"
-          onClick={() => fitView()}
+          onClick={viewportController.fitView}
           aria-label="Fit zoom"
           title="Fit zoom"
         >

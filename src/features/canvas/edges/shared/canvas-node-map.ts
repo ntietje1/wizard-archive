@@ -1,12 +1,14 @@
 import { logger } from '~/shared/utils/logger'
-import type { Node } from '@xyflow/react'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 
-export function createCanvasNodesById(nodes: Array<Node>): ReadonlyMap<string, Node> {
-  const nodesById = new Map<string, Node>()
+export function createCanvasNodesById(
+  nodes: ReadonlyArray<CanvasDocumentNode>,
+): ReadonlyMap<string, CanvasDocumentNode> {
+  const nodesById = new Map<string, CanvasDocumentNode>()
 
-  for (const node of nodes) {
+  for (const [index, node] of nodes.entries()) {
     if (!node || typeof node !== 'object' || typeof node.id !== 'string' || node.id.length === 0) {
-      logger.warn('createCanvasNodesById: skipping invalid node entry')
+      logger.warn(`createCanvasNodesById: skipping invalid node entry at index ${index}`)
       continue
     }
 

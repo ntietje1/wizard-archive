@@ -1,115 +1,79 @@
-import { act, render, screen } from '@testing-library/react'
-import { Position } from '@xyflow/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
+import { describe, expect, it } from 'vitest'
 import { CanvasRenderModeProvider } from '../../../runtime/providers/canvas-render-mode-context'
-import { useCanvasSelectionState } from '../../../runtime/selection/use-canvas-selection-state'
-import {
-  clearCanvasPendingSelectionPreview,
-  setCanvasPendingSelectionPreview,
-} from '../../../runtime/selection/use-canvas-pending-selection-preview'
+import { CanvasRuntimeProvider } from '../../../runtime/providers/canvas-runtime'
+import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
+import { createCanvasDomRuntime } from '../../../system/canvas-dom-runtime'
+import { createCanvasEngine } from '../../../system/canvas-engine'
+import { createCanvasRuntime } from '../../../runtime/__tests__/canvas-runtime-test-utils'
+import { resolveCanvasScreenMinimumStrokeWidthCss as screenMinimumStrokeWidthCss } from '../../../utils/canvas-screen-stroke-width'
 import type { CanvasEdgeRendererProps } from '../../canvas-edge-types'
 import {
   DEFAULT_CANVAS_EDGE_OPACITY,
   DEFAULT_CANVAS_EDGE_STROKE_WIDTH,
+  PENDING_PREVIEW_EDGE_OPACITY,
 } from '../../shared/canvas-edge-style'
 import { BezierCanvasEdge } from '../bezier-canvas-edge'
 import { buildBezierCanvasEdgeGeometryFromEdge } from '../bezier-canvas-edge-geometry'
-import type { Node } from '@xyflow/react'
-
-const baseEdgeSpy = vi.hoisted(() => vi.fn())
-const useNodesMock = vi.hoisted(() => vi.fn(() => [] as Array<Node>))
-
-vi.mock('@xyflow/react', async () => {
-  const actual = await vi.importActual('@xyflow/react')
-
-  return {
-    ...actual,
-    useNodes: () => useNodesMock(),
-    BaseEdge: (props: Record<string, unknown>) => {
-      baseEdgeSpy(props)
-      return <path data-testid="base-edge" />
-    },
-  }
-})
-
-afterEach(() => {
-  act(() => {
-    clearCanvasPendingSelectionPreview()
-    useCanvasSelectionState.getState().reset()
-  })
-  baseEdgeSpy.mockReset()
-  useNodesMock.mockReset()
-  useNodesMock.mockReturnValue([])
-})
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
+import type { ReactElement } from 'react'
 
 describe('BezierCanvasEdge', () => {
   it('keeps baseline styling when no pending preview is active', () => {
-    render(<BezierCanvasEdge {...createEdgeProps({ selected: false })} />)
+    renderEdge(<BezierCanvasEdge {...createEdgeProps({ selected: false })} />)
 
     expect(screen.getByTestId('canvas-edge')).toHaveAttribute(
       'data-edge-pending-preview-active',
       'false',
     )
     expect(screen.getByTestId('canvas-edge')).toHaveAttribute('data-edge-pending-selected', 'false')
-    expect(baseEdgeSpy).toHaveBeenCalledTimes(1)
-    expect(baseEdgeSpy.mock.calls[0]?.[0]).toEqual(
-      expect.objectContaining({
-        style: expect.objectContaining({
-          opacity: DEFAULT_CANVAS_EDGE_OPACITY,
-          stroke: 'var(--foreground)',
-          strokeWidth: DEFAULT_CANVAS_EDGE_STROKE_WIDTH,
-          strokeLinecap: 'square',
-          strokeLinejoin: 'round',
-        }),
-      }),
-    )
+    expect(getPrimaryPath()).toHaveStyle({
+      opacity: String(DEFAULT_CANVAS_EDGE_OPACITY),
+      stroke: 'var(--foreground)',
+      strokeWidth: String(screenMinimumStrokeWidthCss(DEFAULT_CANVAS_EDGE_STROKE_WIDTH)),
+      strokeLinecap: 'square',
+      strokeLinejoin: 'round',
+    })
     expect(screen.queryByTestId('canvas-edge-selection-highlight')).toBeNull()
   })
 
   it('keeps baseline styling when another edge owns the pending preview', () => {
-    act(() => {
-      setCanvasPendingSelectionPreview({ nodeIds: [], edgeIds: ['other-edge'] })
+    renderEdge(<BezierCanvasEdge {...createEdgeProps({ selected: false })} />, {
+      pendingPreview: {
+        nodeIds: new Set<string>(),
+        edgeIds: new Set(['other-edge']),
+      },
     })
-
-    render(<BezierCanvasEdge {...createEdgeProps({ selected: false })} />)
 
     expect(screen.getByTestId('canvas-edge')).toHaveAttribute(
       'data-edge-pending-preview-active',
       'true',
     )
     expect(screen.getByTestId('canvas-edge')).toHaveAttribute('data-edge-pending-selected', 'false')
-    expect(baseEdgeSpy).toHaveBeenCalledTimes(1)
-    expect(baseEdgeSpy.mock.calls[0]?.[0]).toEqual(
-      expect.objectContaining({
-        style: expect.objectContaining({
-          opacity: DEFAULT_CANVAS_EDGE_OPACITY,
-          stroke: 'var(--foreground)',
-          strokeWidth: DEFAULT_CANVAS_EDGE_STROKE_WIDTH,
-          strokeLinecap: 'square',
-          strokeLinejoin: 'round',
-        }),
-      }),
-    )
+    expect(getPrimaryPath()).toHaveStyle({
+      opacity: String(DEFAULT_CANVAS_EDGE_OPACITY),
+      stroke: 'var(--foreground)',
+      strokeWidth: String(screenMinimumStrokeWidthCss(DEFAULT_CANVAS_EDGE_STROKE_WIDTH)),
+      strokeLinecap: 'square',
+      strokeLinejoin: 'round',
+    })
     expect(screen.queryByTestId('canvas-edge-selection-highlight')).toBeNull()
   })
 
   it('keeps the edge stroke and adds a thin selected highlight from authoritative selection', () => {
-    useCanvasSelectionState.getState().setSelection({ nodeIds: [], edgeIds: ['edge-1'] })
-    render(<BezierCanvasEdge {...createEdgeProps({ selected: true })} />)
+    renderEdge(<BezierCanvasEdge {...createEdgeProps({ selected: true })} />, {
+      selection: { nodeIds: new Set<string>(), edgeIds: new Set(['edge-1']) },
+    })
 
     expect(screen.getByTestId('canvas-edge')).toHaveAttribute('data-edge-visual-selected', 'true')
-    expect(baseEdgeSpy).toHaveBeenCalledTimes(1)
-    expect(baseEdgeSpy.mock.calls[0]?.[0]).toEqual(
-      expect.objectContaining({
-        style: expect.objectContaining({
-          opacity: DEFAULT_CANVAS_EDGE_OPACITY,
-          stroke: 'var(--foreground)',
-          strokeWidth: DEFAULT_CANVAS_EDGE_STROKE_WIDTH,
-          strokeLinecap: 'square',
-          strokeLinejoin: 'round',
-        }),
-      }),
-    )
+    expect(getPrimaryPath()).toHaveStyle({
+      opacity: String(DEFAULT_CANVAS_EDGE_OPACITY),
+      stroke: 'var(--foreground)',
+      strokeWidth: String(screenMinimumStrokeWidthCss(DEFAULT_CANVAS_EDGE_STROKE_WIDTH)),
+      strokeLinecap: 'square',
+      strokeLinejoin: 'round',
+    })
     expect(screen.getByTestId('canvas-edge-selection-highlight')).toHaveStyle({
       stroke: 'var(--primary)',
       strokeLinecap: 'square',
@@ -118,89 +82,78 @@ describe('BezierCanvasEdge', () => {
   })
 
   it('preserves custom edge styling while drawing the selected highlight inside it', () => {
-    useCanvasSelectionState.getState().setSelection({ nodeIds: [], edgeIds: ['edge-1'] })
-    render(
+    renderEdge(
       <BezierCanvasEdge
         {...createEdgeProps(
           { selected: true },
           { style: { stroke: 'var(--t-red)', strokeWidth: 8 } },
         )}
       />,
+      {
+        selection: { nodeIds: new Set<string>(), edgeIds: new Set(['edge-1']) },
+      },
     )
 
-    expect(baseEdgeSpy).toHaveBeenCalledTimes(1)
-    expect(baseEdgeSpy.mock.calls[0]?.[0]).toEqual(
-      expect.objectContaining({
-        style: expect.objectContaining({
-          stroke: 'var(--t-red)',
-          strokeWidth: 8,
-          strokeLinecap: 'square',
-          strokeLinejoin: 'round',
-        }),
-      }),
-    )
+    expect(getPrimaryPath()).toHaveStyle({
+      stroke: 'var(--t-red)',
+      strokeWidth: String(screenMinimumStrokeWidthCss(8)),
+      strokeLinecap: 'square',
+      strokeLinejoin: 'round',
+    })
     expect(screen.getByTestId('canvas-edge-selection-highlight')).toHaveStyle({
       stroke: 'var(--primary)',
     })
   })
 
   it('shows lower-opacity local preview styling for pending-selected edges', () => {
-    act(() => {
-      setCanvasPendingSelectionPreview({ nodeIds: [], edgeIds: ['edge-1'] })
+    renderEdge(<BezierCanvasEdge {...createEdgeProps({ selected: false })} />, {
+      pendingPreview: {
+        nodeIds: new Set<string>(),
+        edgeIds: new Set(['edge-1']),
+      },
     })
-
-    render(<BezierCanvasEdge {...createEdgeProps({ selected: false })} />)
 
     expect(screen.getByTestId('canvas-edge')).toHaveAttribute(
       'data-edge-pending-preview-active',
       'true',
     )
     expect(screen.getByTestId('canvas-edge')).toHaveAttribute('data-edge-pending-selected', 'true')
-    expect(baseEdgeSpy).toHaveBeenCalledTimes(1)
-    expect(baseEdgeSpy.mock.calls[0]?.[0]).toEqual(
-      expect.objectContaining({
-        style: expect.objectContaining({
-          stroke: 'var(--foreground)',
-          strokeWidth: DEFAULT_CANVAS_EDGE_STROKE_WIDTH,
-          opacity: 0.45,
-          strokeLinecap: 'square',
-          strokeLinejoin: 'round',
-        }),
-      }),
-    )
+    expect(getPrimaryPath()).toHaveStyle({
+      stroke: 'var(--foreground)',
+      strokeWidth: String(screenMinimumStrokeWidthCss(DEFAULT_CANVAS_EDGE_STROKE_WIDTH)),
+      opacity: String(PENDING_PREVIEW_EDGE_OPACITY),
+      strokeLinecap: 'square',
+      strokeLinejoin: 'round',
+    })
     expect(screen.getByTestId('canvas-edge-selection-highlight')).toHaveStyle({
       stroke: 'var(--primary)',
     })
   })
 
   it('suppresses edge interaction chrome in embedded read-only mode', () => {
-    useCanvasSelectionState.getState().setSelection({ nodeIds: [], edgeIds: ['edge-1'] })
-
-    render(
+    renderEdge(
       <CanvasRenderModeProvider mode="embedded-readonly">
         <BezierCanvasEdge {...createEdgeProps({ selected: true })} />
       </CanvasRenderModeProvider>,
+      {
+        selection: { nodeIds: new Set<string>(), edgeIds: new Set(['edge-1']) },
+      },
     )
 
     expect(screen.getByTestId('canvas-edge')).toHaveAttribute('data-edge-visual-selected', 'false')
-    expect(baseEdgeSpy).toHaveBeenCalledTimes(1)
-    expect(baseEdgeSpy.mock.calls[0]?.[0]).toEqual(
-      expect.objectContaining({
-        interactionWidth: 0,
-        style: expect.objectContaining({
-          opacity: DEFAULT_CANVAS_EDGE_OPACITY,
-          stroke: 'var(--foreground)',
-          strokeWidth: DEFAULT_CANVAS_EDGE_STROKE_WIDTH,
-          strokeLinecap: 'square',
-          strokeLinejoin: 'round',
-        }),
-      }),
-    )
+    expect(getPrimaryPath()).toHaveStyle({
+      opacity: String(DEFAULT_CANVAS_EDGE_OPACITY),
+      stroke: 'var(--foreground)',
+      strokeWidth: String(screenMinimumStrokeWidthCss(DEFAULT_CANVAS_EDGE_STROKE_WIDTH)),
+      strokeLinecap: 'square',
+      strokeLinejoin: 'round',
+    })
+    expect(screen.queryByTestId('canvas-edge-interaction')).toBeNull()
     expect(screen.queryByTestId('canvas-edge-selection-highlight')).toBeNull()
   })
 
   it('anchors the curve to node bounds instead of render-prop handle coordinates when nodes are available', () => {
-    useNodesMock.mockReturnValue([
+    const nodes: Array<CanvasDocumentNode> = [
       {
         id: 'source',
         type: 'text',
@@ -217,9 +170,9 @@ describe('BezierCanvasEdge', () => {
         height: 40,
         data: {},
       },
-    ])
+    ]
 
-    render(
+    renderEdge(
       <BezierCanvasEdge
         {...createEdgeProps(
           { selected: false },
@@ -231,9 +184,9 @@ describe('BezierCanvasEdge', () => {
           },
         )}
       />,
+      { nodes },
     )
 
-    const nodes = useNodesMock()
     const geometry = buildBezierCanvasEdgeGeometryFromEdge(
       {
         id: 'edge-1',
@@ -247,12 +200,7 @@ describe('BezierCanvasEdge', () => {
     )
 
     expect(geometry).not.toBeNull()
-    expect(baseEdgeSpy).toHaveBeenCalledTimes(1)
-    expect(baseEdgeSpy.mock.calls[0]?.[0]).toEqual(
-      expect.objectContaining({
-        path: geometry?.path,
-      }),
-    )
+    expect(getPrimaryPath()).toHaveAttribute('d', geometry?.path)
   })
 })
 
@@ -269,24 +217,47 @@ function createEdgeProps(
     sourceY: 20,
     targetX: 160,
     targetY: 20,
-    sourcePosition: Position.Right,
-    targetPosition: Position.Left,
-    animated: false,
-    data: {},
-    selectable: true,
-    deletable: true,
+    sourcePosition: CANVAS_HANDLE_POSITION.Right,
+    targetPosition: CANVAS_HANDLE_POSITION.Left,
     style: undefined,
     sourceHandleId: 'right',
     targetHandleId: 'left',
-    label: undefined,
-    labelStyle: undefined,
-    labelShowBg: false,
-    labelBgStyle: undefined,
-    labelBgPadding: undefined,
-    labelBgBorderRadius: undefined,
-    markerStart: undefined,
-    markerEnd: undefined,
     ...overrides,
     selected: overrides.selected ?? selected,
   }
+}
+
+function renderEdge(
+  ui: ReactElement,
+  {
+    nodes = [],
+    pendingPreview = null,
+    selection = { nodeIds: new Set<string>(), edgeIds: new Set<string>() },
+  }: {
+    nodes?: Array<CanvasDocumentNode>
+    pendingPreview?: { nodeIds: ReadonlySet<string>; edgeIds: ReadonlySet<string> } | null
+    selection?: { nodeIds: ReadonlySet<string>; edgeIds: ReadonlySet<string> }
+  } = {},
+) {
+  const domRuntime = createCanvasDomRuntime()
+  const engine = createCanvasEngine({ domRuntime })
+  engine.setDocumentSnapshot({ nodes })
+  engine.setSelection(selection)
+  if (pendingPreview) {
+    engine.setSelectionGesturePreview(pendingPreview)
+  }
+
+  return render(
+    <CanvasEngineProvider engine={engine}>
+      <CanvasRuntimeProvider
+        {...createCanvasRuntime({ canEdit: false, canvasEngine: engine, domRuntime })}
+      >
+        <svg>{ui}</svg>
+      </CanvasRuntimeProvider>
+    </CanvasEngineProvider>,
+  )
+}
+
+function getPrimaryPath() {
+  return screen.getByTestId('canvas-edge-primary-path') as unknown as SVGPathElement
 }

@@ -1,17 +1,27 @@
 import { createEmbedCanvasNode } from '../../nodes/embed/embed-node-creation'
-import { resizeCanvasNode } from '../../nodes/canvas-node-modules'
-import type {
-  CanvasEdgeCreationDefaults,
-  CanvasSelectionSnapshot,
-} from '../../tools/canvas-tool-types'
+import { createCanvasNodePlacement, resizeCanvasNode } from '../../nodes/canvas-node-modules'
+import type { CanvasNodeDataPatch } from '../../nodes/canvas-node-modules'
+import { clampCanvasEdgeStrokeWidth } from '../../edges/shared/canvas-edge-style'
+import type { CanvasEdgeCreationDefaults } from '../../tools/canvas-tool-types'
+import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
+import type { CanvasEdgePatch } from '../../edges/canvas-edge-types'
 import { getCanvasDeletionSelection } from '../context-menu/canvas-context-menu-selection'
 import type { CanvasReorderPlan } from './canvas-reorder-plan'
 import type { CanvasContextMenuPoint } from '../context-menu/canvas-context-menu-types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { Connection, Edge, Node, XYPosition } from '@xyflow/react'
+import type {
+  CanvasConnection as Connection,
+  CanvasPosition,
+} from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 import type * as Y from 'yjs'
 
-export type CanvasNodeSanitizer = (node: Node, operation: string, fallbackNode?: Node) => Node
+type CanvasNodeSanitizer = (
+  node: CanvasDocumentNode,
+  operation: string,
+  fallbackNode?: CanvasDocumentNode,
+) => CanvasDocumentNode
+type CanvasEdgeStyle = NonNullable<CanvasDocumentEdge['style']>
 
 function updateCanvasNodeIfPresent({
   nodesMap,
@@ -20,11 +30,11 @@ function updateCanvasNodeIfPresent({
   operation,
   updater,
 }: {
-  nodesMap: Y.Map<Node>
+  nodesMap: Y.Map<CanvasDocumentNode>
   nodeId: string
   sanitizeNode: CanvasNodeSanitizer
   operation: string
-  updater: (node: Node) => Node
+  updater: (node: CanvasDocumentNode) => CanvasDocumentNode
 }) {
   const existing = nodesMap.get(nodeId)
   if (!existing) {
@@ -39,9 +49,9 @@ function updateCanvasEdgeIfPresent({
   edgeId,
   updater,
 }: {
-  edgesMap: Y.Map<Edge>
+  edgesMap: Y.Map<CanvasDocumentEdge>
   edgeId: string
-  updater: (edge: Edge) => Edge
+  updater: (edge: CanvasDocumentEdge) => CanvasDocumentEdge
 }) {
   const existing = edgesMap.get(edgeId)
   if (!existing) {
@@ -51,14 +61,27 @@ function updateCanvasEdgeIfPresent({
   edgesMap.set(edgeId, updater(existing))
 }
 
+function clampCanvasEdgeStyle<
+  TStyle extends CanvasDocumentEdge['style'] | CanvasEdgePatch['style'],
+>(style: TStyle): TStyle {
+  if (!style || typeof style.strokeWidth !== 'number') {
+    return style
+  }
+
+  return {
+    ...style,
+    strokeWidth: clampCanvasEdgeStrokeWidth(style.strokeWidth),
+  } as TStyle
+}
+
 export function createCanvasNodeCommand({
   nodesMap,
   node,
   sanitizeNode,
   nextZIndex,
 }: {
-  nodesMap: Y.Map<Node>
-  node: Node
+  nodesMap: Y.Map<CanvasDocumentNode>
+  node: CanvasDocumentNode
   sanitizeNode: CanvasNodeSanitizer
   nextZIndex: number
 }) {
@@ -78,59 +101,73 @@ export function createCanvasNodeCommand({
   )
 }
 
-export function updateCanvasNodeCommand({
+export function patchCanvasNodeDataCommand({
   nodesMap,
-  nodeId,
-  updater,
+  updates,
   sanitizeNode,
 }: {
-  nodesMap: Y.Map<Node>
-  nodeId: string
-  updater: (node: Node) => Node
+  nodesMap: Y.Map<CanvasDocumentNode>
+  updates: ReadonlyMap<string, CanvasNodeDataPatch>
   sanitizeNode: CanvasNodeSanitizer
 }) {
-  updateCanvasNodeIfPresent({
-    nodesMap,
-    nodeId,
-    sanitizeNode,
-    operation: 'updateNode',
-    updater,
-  })
+  for (const [nodeId, data] of updates) {
+    updateCanvasNodeIfPresent({
+      nodesMap,
+      nodeId,
+      sanitizeNode,
+      operation: 'patchNodeData',
+      updater: (existing): CanvasDocumentNode => {
+        switch (existing.type) {
+          case 'embed':
+            return {
+              ...existing,
+              data: { ...existing.data, ...data } as typeof existing.data,
+            } satisfies CanvasDocumentNode
+          case 'stroke':
+            return {
+              ...existing,
+              data: { ...existing.data, ...data } as typeof existing.data,
+            } satisfies CanvasDocumentNode
+          case 'text':
+            return {
+              ...existing,
+              data: { ...existing.data, ...data } as typeof existing.data,
+            } satisfies CanvasDocumentNode
+          default: {
+            const nodeType =
+              typeof existing === 'object' && existing !== null && 'type' in existing
+                ? String((existing as { type?: unknown }).type)
+                : typeof existing
+            const _exhaustive: never = existing
+            void _exhaustive
+            throw new Error(`Unhandled canvas node type in patchNodeData: ${nodeType}`)
+          }
+        }
+      },
+    })
+  }
 }
 
-export function updateCanvasNodeDataCommand({
-  nodesMap,
-  nodeId,
-  data,
-  sanitizeNode,
-}: {
-  nodesMap: Y.Map<Node>
-  nodeId: string
-  data: Record<string, unknown>
-  sanitizeNode: CanvasNodeSanitizer
-}) {
-  updateCanvasNodeIfPresent({
-    nodesMap,
-    nodeId,
-    sanitizeNode,
-    operation: 'updateNodeData',
-    updater: (existing) => ({
-      ...existing,
-      data: { ...existing.data, ...data },
-    }),
-  })
-}
-
-export function updateCanvasEdgeCommand({
+export function patchCanvasEdgesCommand({
   edgesMap,
-  edgeId,
-  updater,
+  updates,
 }: {
-  edgesMap: Y.Map<Edge>
-  edgeId: string
-  updater: (edge: Edge) => Edge
+  edgesMap: Y.Map<CanvasDocumentEdge>
+  updates: ReadonlyMap<string, CanvasEdgePatch>
 }) {
-  updateCanvasEdgeIfPresent({ edgesMap, edgeId, updater })
+  for (const [edgeId, patch] of updates) {
+    updateCanvasEdgeIfPresent({
+      edgesMap,
+      edgeId,
+      updater: (existing) => ({
+        ...existing,
+        ...patch,
+        style: patch.style
+          ? ({ ...existing.style, ...clampCanvasEdgeStyle(patch.style) } satisfies CanvasEdgeStyle)
+          : existing.style,
+      }),
+    })
+  }
 }
 
 export function resizeCanvasNodeCommand({
@@ -141,11 +178,11 @@ export function resizeCanvasNodeCommand({
   position,
   sanitizeNode,
 }: {
-  nodesMap: Y.Map<Node>
+  nodesMap: Y.Map<CanvasDocumentNode>
   nodeId: string
   width: number
   height: number
-  position: XYPosition
+  position: CanvasPosition
   sanitizeNode: CanvasNodeSanitizer
 }) {
   updateCanvasNodeIfPresent({
@@ -157,24 +194,44 @@ export function resizeCanvasNodeCommand({
   })
 }
 
-export function setCanvasNodePositionCommand({
+export function resizeCanvasNodesCommand({
   nodesMap,
-  nodeId,
-  position,
+  updates,
   sanitizeNode,
 }: {
-  nodesMap: Y.Map<Node>
-  nodeId: string
-  position: XYPosition
+  nodesMap: Y.Map<CanvasDocumentNode>
+  updates: ReadonlyMap<string, { width: number; height: number; position: CanvasPosition }>
   sanitizeNode: CanvasNodeSanitizer
 }) {
-  updateCanvasNodeIfPresent({
-    nodesMap,
-    nodeId,
-    sanitizeNode,
-    operation: 'setNodePosition',
-    updater: (existing) => ({ ...existing, position }),
-  })
+  for (const [nodeId, update] of updates) {
+    updateCanvasNodeIfPresent({
+      nodesMap,
+      nodeId,
+      sanitizeNode,
+      operation: 'resizeNodes',
+      updater: (existing) => resizeCanvasNode(existing, update),
+    })
+  }
+}
+
+export function setCanvasNodePositionsCommand({
+  nodesMap,
+  positions,
+  sanitizeNode,
+}: {
+  nodesMap: Y.Map<CanvasDocumentNode>
+  positions: ReadonlyMap<string, CanvasPosition>
+  sanitizeNode: CanvasNodeSanitizer
+}) {
+  for (const [nodeId, position] of positions) {
+    updateCanvasNodeIfPresent({
+      nodesMap,
+      nodeId,
+      sanitizeNode,
+      operation: 'setNodePositions',
+      updater: (existing) => ({ ...existing, position }),
+    })
+  }
 }
 
 export function deleteCanvasSelectionCommand({
@@ -182,12 +239,12 @@ export function deleteCanvasSelectionCommand({
   edgesMap,
   selection,
 }: {
-  nodesMap: Y.Map<Node>
-  edgesMap: Y.Map<Edge>
+  nodesMap: Y.Map<CanvasDocumentNode>
+  edgesMap: Y.Map<CanvasDocumentEdge>
   selection: CanvasSelectionSnapshot
 }) {
   const deletionSelection = getCanvasDeletionSelection(edgesMap, selection)
-  if (deletionSelection.nodeIds.length === 0 && deletionSelection.edgeIds.length === 0) {
+  if (deletionSelection.nodeIds.size === 0 && deletionSelection.edgeIds.size === 0) {
     return false
   }
 
@@ -207,7 +264,7 @@ export function createCanvasEdgeCommand({
   defaults,
   nextZIndex,
 }: {
-  edgesMap: Y.Map<Edge>
+  edgesMap: Y.Map<CanvasDocumentEdge>
   connection: Connection
   defaults?: CanvasEdgeCreationDefaults
   nextZIndex: number
@@ -217,7 +274,7 @@ export function createCanvasEdgeCommand({
     ...connection,
     id,
     type: defaults?.type ?? 'bezier',
-    style: defaults?.style,
+    style: clampCanvasEdgeStyle(defaults?.style),
     zIndex: nextZIndex,
   })
 }
@@ -226,8 +283,8 @@ export function deleteCanvasEdgesCommand({
   edgesMap,
   edgeIds,
 }: {
-  edgesMap: Y.Map<Edge>
-  edgeIds: Array<string>
+  edgesMap: Y.Map<CanvasDocumentEdge>
+  edgeIds: ReadonlySet<string>
 }) {
   for (const edgeId of edgeIds) {
     edgesMap.delete(edgeId)
@@ -241,11 +298,11 @@ export function applyCanvasPasteCommand({
   sanitizeNode,
   onApplied,
 }: {
-  nodesMap: Y.Map<Node>
-  edgesMap: Y.Map<Edge>
+  nodesMap: Y.Map<CanvasDocumentNode>
+  edgesMap: Y.Map<CanvasDocumentEdge>
   paste: {
-    nodes: Array<Node>
-    edges: Array<Edge>
+    nodes: Array<CanvasDocumentNode>
+    edges: Array<CanvasDocumentEdge>
     selection: CanvasSelectionSnapshot
   }
   sanitizeNode: CanvasNodeSanitizer
@@ -274,8 +331,8 @@ export function applyCanvasReorderCommand({
   edgesMap,
   reorderUpdates,
 }: {
-  nodesMap: Y.Map<Node>
-  edgesMap: Y.Map<Edge>
+  nodesMap: Y.Map<CanvasDocumentNode>
+  edgesMap: Y.Map<CanvasDocumentEdge>
   reorderUpdates: CanvasReorderPlan
 }) {
   reorderUpdates.nodes?.forEach((node) => {
@@ -289,20 +346,49 @@ export function applyCanvasReorderCommand({
 export function createAndSelectEmbeddedCanvasNode({
   sidebarItemId,
   pointerPosition,
-  screenToFlowPosition,
+  screenToCanvasPosition,
   createNode,
-  replaceSelection,
+  setSelection,
 }: {
   sidebarItemId: Id<'sidebarItems'>
   pointerPosition: CanvasContextMenuPoint
-  screenToFlowPosition: (position: CanvasContextMenuPoint) => { x: number; y: number }
-  createNode: (node: Node) => void
-  replaceSelection: (selection: CanvasSelectionSnapshot) => void
+  screenToCanvasPosition: (position: CanvasContextMenuPoint) => { x: number; y: number }
+  createNode: (node: CanvasDocumentNode) => void
+  setSelection: (selection: CanvasSelectionSnapshot) => void
 }) {
-  const embedNode = createEmbedCanvasNode(sidebarItemId, screenToFlowPosition(pointerPosition))
+  const embedNode = createEmbedCanvasNode(sidebarItemId, screenToCanvasPosition(pointerPosition))
   createNode(embedNode)
 
-  const nextSelection = { nodeIds: [embedNode.id], edgeIds: [] }
-  replaceSelection(nextSelection)
+  const nextSelection = { nodeIds: new Set([embedNode.id]), edgeIds: new Set<string>() }
+  setSelection(nextSelection)
+  return nextSelection
+}
+
+export function createAndSelectTextCanvasNode({
+  pointerPosition,
+  screenToCanvasPosition,
+  createNode,
+  setSelection,
+  setPendingEditNodeId,
+  setPendingEditNodePoint,
+}: {
+  pointerPosition: CanvasContextMenuPoint
+  screenToCanvasPosition: (position: CanvasContextMenuPoint) => { x: number; y: number }
+  createNode: (node: CanvasDocumentNode) => void
+  setSelection: (selection: CanvasSelectionSnapshot) => void
+  setPendingEditNodeId: (nodeId: string | null) => void
+  setPendingEditNodePoint: (point: CanvasContextMenuPoint | null) => void
+}) {
+  const placement = createCanvasNodePlacement('text', {
+    position: screenToCanvasPosition(pointerPosition),
+  })
+  createNode(placement.node)
+
+  const nextSelection = { nodeIds: new Set([placement.node.id]), edgeIds: new Set<string>() }
+  setSelection(nextSelection)
+  if (placement.startEditing) {
+    setPendingEditNodePoint(pointerPosition)
+    setPendingEditNodeId(placement.node.id)
+  }
   return nextSelection
 }

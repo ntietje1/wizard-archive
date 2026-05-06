@@ -1,13 +1,13 @@
 import { useCanvasDropTarget } from './use-canvas-drop-target'
 import type { Id } from 'convex/_generated/dataModel'
-import type { Node } from '@xyflow/react'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 
 interface UseCanvasDropIntegrationOptions {
   canvasId: Id<'sidebarItems'>
   canEdit: boolean
   isSelectMode: boolean
-  createNode: (node: Node) => void
-  screenToFlowPosition: (position: { x: number; y: number }) => { x: number; y: number }
+  createNode: (node: CanvasDocumentNode) => void
+  screenToCanvasPosition: (position: { x: number; y: number }) => { x: number; y: number }
 }
 
 export function useCanvasDropIntegration({
@@ -15,12 +15,12 @@ export function useCanvasDropIntegration({
   canEdit,
   isSelectMode,
   createNode,
-  screenToFlowPosition,
+  screenToCanvasPosition,
 }: UseCanvasDropIntegrationOptions) {
   return useCanvasDropTarget({
     canvasId,
     enabled: canEdit && isSelectMode,
     createNode,
-    screenToFlowPosition,
+    screenToCanvasPosition,
   })
 }

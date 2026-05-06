@@ -1,5 +1,6 @@
 import type { Id } from '../_generated/dataModel'
 import { canvasPartialBlockNoteDocumentSchema } from '../blocks/blockSchemas'
+import { logger } from '../common/logger'
 import { z } from 'zod'
 
 function clampNumber(value: number, min: number, max: number): number {
@@ -36,22 +37,13 @@ const canvasNodeBorderWidthSchema = finiteNumberSchema.transform((value) =>
   clampNumber(value, 0, 99),
 )
 
-export interface PersistedCanvasViewportValue {
+export interface CanvasViewportValue {
   x: number
   y: number
   zoom: number
 }
 
-export type PersistedCanvasNodeValue = Record<string, unknown> & {
-  id: string
-  type?: string
-  position: { x: number; y: number }
-  data: Record<string, unknown>
-  width?: number
-  height?: number
-}
-
-export interface ParsedCanvasStrokeNodeData {
+export interface CanvasStrokeNodeData {
   points: Array<[number, number, number]>
   color: string
   size: number
@@ -64,9 +56,10 @@ export interface ParsedCanvasStrokeNodeData {
   }
 }
 
-export interface ParsedCanvasEmbedNodeData {
+export interface CanvasEmbedNodeData {
   sidebarItemId?: Id<'sidebarItems'>
   lockedAspectRatio?: number
+  textColor?: string | null
   backgroundColor?: string | null
   backgroundOpacity?: number
   borderStroke?: string | null
@@ -74,8 +67,9 @@ export interface ParsedCanvasEmbedNodeData {
   borderWidth?: number
 }
 
-export interface ParsedCanvasTextNodeData {
+export interface CanvasTextNodeData {
   content?: unknown
+  textColor?: string | null
   backgroundColor?: string | null
   backgroundOpacity?: number
   borderStroke?: string | null
@@ -143,73 +137,82 @@ export interface ParsedCanvasReorderPayload {
   direction: 'sendToBack' | 'sendBackward' | 'bringForward' | 'bringToFront'
 }
 
-export type ParsedCanvasDraggingAwarenessState = Record<string, ParsedCanvasPoint2D>
 export type ParsedCanvasResizingAwarenessState = Record<string, ParsedCanvasResizeAwarenessEntry>
 export type ParsedCanvasRichTextContent = z.infer<typeof canvasPartialBlockNoteDocumentSchema>
-export type ParsedCanvasNodeType = 'embed' | 'stroke' | 'text'
-export type ParsedCanvasEdgeType = 'bezier' | 'straight' | 'step'
+export type CanvasNodeType = 'embed' | 'stroke' | 'text'
+export type CanvasEdgeType = 'bezier' | 'straight' | 'step'
 
-interface ParsedCanvasRuntimeNodeBase<TType extends ParsedCanvasNodeType, TData> {
+interface CanvasDocumentNodeBase<TType extends CanvasNodeType, TData> {
   id: string
   type: TType
   position: ParsedCanvasPoint2D
   data: TData
   width?: number
   height?: number
+  hidden?: boolean
+  zIndex?: number
+  className?: string
 }
 
-export type ParsedCanvasRuntimeEmbedNode = ParsedCanvasRuntimeNodeBase<
-  'embed',
-  ParsedCanvasEmbedNodeData
->
-export type ParsedCanvasRuntimeStrokeNode = ParsedCanvasRuntimeNodeBase<
-  'stroke',
-  ParsedCanvasStrokeNodeData
->
-export type ParsedCanvasRuntimeTextNode = ParsedCanvasRuntimeNodeBase<
-  'text',
-  ParsedCanvasTextNodeData
->
+export type CanvasEmbedDocumentNode = CanvasDocumentNodeBase<'embed', CanvasEmbedNodeData>
+export type CanvasStrokeDocumentNode = CanvasDocumentNodeBase<'stroke', CanvasStrokeNodeData>
+export type CanvasTextDocumentNode = CanvasDocumentNodeBase<'text', CanvasTextNodeData>
 
-export type ParsedCanvasRuntimeNode =
-  | ParsedCanvasRuntimeEmbedNode
-  | ParsedCanvasRuntimeStrokeNode
-  | ParsedCanvasRuntimeTextNode
+export type CanvasDocumentNode =
+  | CanvasEmbedDocumentNode
+  | CanvasStrokeDocumentNode
+  | CanvasTextDocumentNode
 
-export interface ParsedCanvasEdgeStyle {
+export interface CanvasEdgeStyle {
   stroke?: string
   strokeWidth?: number
   opacity?: number
 }
 
-export interface ParsedCanvasRuntimeEdge {
+export interface CanvasDocumentEdge {
   id: string
   source: string
   target: string
-  type: ParsedCanvasEdgeType
+  type: CanvasEdgeType
   sourceHandle?: string | null
   targetHandle?: string | null
-  style?: ParsedCanvasEdgeStyle
+  style?: CanvasEdgeStyle
+  hidden?: boolean
+  zIndex?: number
+  className?: string
 }
 
-export const persistedCanvasViewportSchema = z.object({
+export const canvasViewportSchema = z.object({
   x: finiteNumberSchema,
   y: finiteNumberSchema,
   zoom: finiteNumberSchema,
 })
 
-export const persistedCanvasNodeSchema: z.ZodType<PersistedCanvasNodeValue> = z
-  .object({
-    id: z.string(),
-    type: z.string().optional(),
-    position: canvasPositionSchema,
-    data: canvasUnknownRecordSchema,
-    width: finiteNumberSchema.optional(),
-    height: finiteNumberSchema.optional(),
-  })
-  .catchall(z.unknown())
+const canvasSurfaceStylingSchema = {
+  textColor: canvasNodeSurfaceColorSchema.optional(),
+  backgroundColor: canvasNodeSurfaceColorSchema.optional(),
+  backgroundOpacity: canvasNodeSurfaceOpacitySchema.optional(),
+  borderStroke: canvasNodeSurfaceColorSchema.optional(),
+  borderOpacity: canvasNodeSurfaceOpacitySchema.optional(),
+  borderWidth: canvasNodeBorderWidthSchema.optional(),
+} as const
 
-export const canvasStrokeNodeDataSchema: z.ZodType<ParsedCanvasStrokeNodeData> = z
+export const canvasEmbedNodeDataSchema: z.ZodType<CanvasEmbedNodeData> = z
+  .object({
+    sidebarItemId: canvasSidebarItemIdSchema.optional(),
+    lockedAspectRatio: canvasLockedAspectRatioSchema.optional(),
+    ...canvasSurfaceStylingSchema,
+  })
+  .strict()
+
+export const canvasTextNodeDataSchema: z.ZodType<CanvasTextNodeData> = z
+  .object({
+    content: z.unknown().optional(),
+    ...canvasSurfaceStylingSchema,
+  })
+  .strict()
+
+export const canvasStrokeNodeDataSchema: z.ZodType<CanvasStrokeNodeData> = z
   .object({
     points: z.array(canvasPointSchema).min(1),
     color: z.string(),
@@ -217,7 +220,43 @@ export const canvasStrokeNodeDataSchema: z.ZodType<ParsedCanvasStrokeNodeData> =
     opacity: canvasNodeSurfaceOpacitySchema.optional(),
     bounds: canvasBoundsSchema,
   })
-  .catchall(z.unknown())
+  .strict()
+
+const canvasDocumentNodeBaseSchema = z
+  .object({
+    id: z.string(),
+    position: canvasPositionSchema,
+    width: finiteNumberSchema.optional(),
+    height: finiteNumberSchema.optional(),
+    hidden: z.boolean().optional(),
+    zIndex: finiteNumberSchema.optional(),
+    className: z.string().optional(),
+  })
+  .strict()
+
+export const canvasDocumentNodeSchema: z.ZodType<CanvasDocumentNode> = z.discriminatedUnion(
+  'type',
+  [
+    canvasDocumentNodeBaseSchema
+      .extend({
+        type: z.literal('embed'),
+        data: canvasEmbedNodeDataSchema,
+      })
+      .strict(),
+    canvasDocumentNodeBaseSchema
+      .extend({
+        type: z.literal('stroke'),
+        data: canvasStrokeNodeDataSchema,
+      })
+      .strict(),
+    canvasDocumentNodeBaseSchema
+      .extend({
+        type: z.literal('text'),
+        data: canvasTextNodeDataSchema,
+      })
+      .strict(),
+  ],
+)
 
 export const canvasBoundsDimensionsOnlySchema: z.ZodType<ParsedCanvasBoundsDimensions> =
   canvasBoundsDimensionsSchema
@@ -277,9 +316,6 @@ export const canvasLassoAwarenessStateSchema: z.ZodType<ParsedCanvasLassoAwarene
   })
   .catchall(z.unknown())
 
-export const canvasDraggingAwarenessStateSchema: z.ZodType<ParsedCanvasDraggingAwarenessState> =
-  z.record(z.string(), canvasPoint2DSchema)
-
 export const canvasResizingAwarenessStateSchema: z.ZodType<ParsedCanvasResizingAwarenessState> =
   z.record(z.string(), canvasResizeAwarenessEntrySchema)
 
@@ -297,7 +333,7 @@ const embeddedCanvasStableIdSchema = z.object({
   id: z.string().min(1),
 })
 
-const canvasRuntimeEdgeSchema = z
+const canvasDocumentEdgeSchema = z
   .object({
     id: z.string(),
     source: z.string(),
@@ -306,16 +342,19 @@ const canvasRuntimeEdgeSchema = z
     sourceHandle: z.union([z.string(), z.null()]).optional(),
     targetHandle: z.union([z.string(), z.null()]).optional(),
     style: z.unknown().optional(),
+    hidden: z.boolean().optional(),
+    zIndex: finiteNumberSchema.optional(),
+    className: z.string().optional(),
   })
-  .catchall(z.unknown())
+  .strict()
 
-export function parsePersistedCanvasViewport(value: unknown): PersistedCanvasViewportValue | null {
-  const result = persistedCanvasViewportSchema.safeParse(value)
+export function parseCanvasViewport(value: unknown): CanvasViewportValue | null {
+  const result = canvasViewportSchema.safeParse(value)
   return result.success ? result.data : null
 }
 
-export function parsePersistedCanvasNode(value: unknown): PersistedCanvasNodeValue | null {
-  const result = persistedCanvasNodeSchema.safeParse(value)
+export function parseCanvasDocumentNode(value: unknown): CanvasDocumentNode | null {
+  const result = canvasDocumentNodeSchema.safeParse(value)
   return result.success ? result.data : null
 }
 
@@ -344,7 +383,7 @@ export function parseCanvasNodeBorderWidth(value: unknown, fallback = 1): number
   return result.success ? result.data : fallback
 }
 
-export function parseCanvasStrokeNodeData(value: unknown): ParsedCanvasStrokeNodeData | null {
+export function parseCanvasStrokeNodeData(value: unknown): CanvasStrokeNodeData | null {
   const result = canvasStrokeNodeDataSchema.safeParse(value)
   return result.success ? result.data : null
 }
@@ -402,13 +441,6 @@ export function parseCanvasLassoAwarenessState(
   return result.success ? result.data : null
 }
 
-export function parseCanvasDraggingAwarenessState(
-  value: unknown,
-): ParsedCanvasDraggingAwarenessState | null {
-  const result = canvasDraggingAwarenessStateSchema.safeParse(value)
-  return result.success ? result.data : null
-}
-
 export function parseCanvasResizingAwarenessState(
   value: unknown,
 ): ParsedCanvasResizingAwarenessState | null {
@@ -436,81 +468,32 @@ export function parseEmbeddedCanvasStableId(value: unknown): string | undefined 
   return result.success ? result.data.id : undefined
 }
 
-type ParsedCanvasSurfaceStyling = Pick<
-  ParsedCanvasEmbedNodeData,
-  'backgroundColor' | 'backgroundOpacity' | 'borderStroke' | 'borderOpacity' | 'borderWidth'
->
-
-function parseCanvasSurfaceStyling(data: Record<string, unknown>): ParsedCanvasSurfaceStyling {
-  const backgroundColor = parseCanvasNodeSurfaceColor(data.backgroundColor)
-  const backgroundOpacity = finiteNumberSchema.safeParse(data.backgroundOpacity)
-  const borderStroke = parseCanvasNodeSurfaceColor(data.borderStroke)
-  const borderOpacity = finiteNumberSchema.safeParse(data.borderOpacity)
-  const borderWidth = finiteNumberSchema.safeParse(data.borderWidth)
-
-  return {
-    ...(backgroundColor !== undefined ? { backgroundColor } : {}),
-    ...(backgroundOpacity.success
-      ? { backgroundOpacity: clampNumber(backgroundOpacity.data, 0, 100) }
-      : {}),
-    ...(borderStroke !== undefined ? { borderStroke } : {}),
-    ...(borderOpacity.success ? { borderOpacity: clampNumber(borderOpacity.data, 0, 100) } : {}),
-    ...(borderWidth.success ? { borderWidth: clampNumber(borderWidth.data, 0, 99) } : {}),
-  }
+export function parseCanvasEmbedNodeData(value: unknown): CanvasEmbedNodeData | null {
+  const result = canvasEmbedNodeDataSchema.safeParse(value)
+  return result.success ? result.data : null
 }
 
-export function parseCanvasEmbedNodeData(value: unknown): ParsedCanvasEmbedNodeData | null {
-  const result = canvasUnknownRecordSchema.safeParse(value)
-  if (!result.success) {
-    return null
-  }
-
-  const sidebarItemId = parseCanvasSidebarItemId(result.data.sidebarItemId)
-  const lockedAspectRatio = parseCanvasLockedAspectRatio(result.data.lockedAspectRatio)
-
-  return {
-    ...(sidebarItemId ? { sidebarItemId } : {}),
-    ...(lockedAspectRatio ? { lockedAspectRatio } : {}),
-    ...parseCanvasSurfaceStyling(result.data),
-  }
+export function parseCanvasTextNodeData(value: unknown): CanvasTextNodeData | null {
+  const result = canvasTextNodeDataSchema.safeParse(value)
+  return result.success ? result.data : null
 }
 
-export function parseCanvasTextNodeData(value: unknown): ParsedCanvasTextNodeData | null {
-  const result = canvasUnknownRecordSchema.safeParse(value)
-  if (!result.success) {
-    return null
-  }
-
-  return {
-    // Content stays lazy at this boundary; callers should use parseCanvasRichTextContent when they
-    // need validated rich-text blocks instead of the persisted raw payload.
-    ...(result.data.content !== undefined ? { content: result.data.content } : {}),
-    ...parseCanvasSurfaceStyling(result.data),
-  }
-}
-
-export function parseCanvasNodeType(value: unknown): ParsedCanvasNodeType | null {
+export function parseCanvasNodeType(value: unknown): CanvasNodeType | null {
   const result = canvasNodeTypeSchema.safeParse(value)
   return result.success ? result.data : null
 }
 
-export function parseCanvasNodeDataByType(
-  type: 'embed',
-  value: unknown,
-): ParsedCanvasEmbedNodeData | null
+export function parseCanvasNodeDataByType(type: 'embed', value: unknown): CanvasEmbedNodeData | null
 export function parseCanvasNodeDataByType(
   type: 'stroke',
   value: unknown,
-): ParsedCanvasStrokeNodeData | null
+): CanvasStrokeNodeData | null
+export function parseCanvasNodeDataByType(type: 'text', value: unknown): CanvasTextNodeData | null
 export function parseCanvasNodeDataByType(
-  type: 'text',
+  type: CanvasNodeType,
   value: unknown,
-): ParsedCanvasTextNodeData | null
-export function parseCanvasNodeDataByType(
-  type: ParsedCanvasNodeType,
-  value: unknown,
-): ParsedCanvasEmbedNodeData | ParsedCanvasStrokeNodeData | ParsedCanvasTextNodeData | null
-export function parseCanvasNodeDataByType(type: ParsedCanvasNodeType, value: unknown) {
+): CanvasEmbedNodeData | CanvasStrokeNodeData | CanvasTextNodeData | null
+export function parseCanvasNodeDataByType(type: CanvasNodeType, value: unknown) {
   switch (type) {
     case 'embed':
       return parseCanvasEmbedNodeData(value)
@@ -521,73 +504,55 @@ export function parseCanvasNodeDataByType(type: ParsedCanvasNodeType, value: unk
   }
 }
 
-export function parseCanvasRuntimeNode(value: unknown): ParsedCanvasRuntimeNode | null {
-  const recordResult = canvasUnknownRecordSchema.safeParse(value)
-  if (!recordResult.success) {
-    return null
-  }
-
-  const id = z.string().safeParse(recordResult.data.id)
-  const type = parseCanvasNodeType(recordResult.data.type)
-  const position = parseCanvasPoint2D(recordResult.data.position)
-
-  if (!id.success || !type || !position) {
-    return null
-  }
-
-  const data = parseCanvasNodeDataByType(type, recordResult.data.data)
-  if (!data) {
-    return null
-  }
-
-  const width = finiteNumberSchema.safeParse(recordResult.data.width)
-  const height = finiteNumberSchema.safeParse(recordResult.data.height)
-
-  return {
-    id: id.data,
-    type,
-    position,
-    data,
-    ...(width.success ? { width: width.data } : {}),
-    ...(height.success ? { height: height.data } : {}),
-  } as ParsedCanvasRuntimeNode
-}
-
-export function parseCanvasRuntimeNodes(value: unknown): Array<ParsedCanvasRuntimeNode> | null {
+export function parseCanvasDocumentNodes(value: unknown): Array<CanvasDocumentNode> | null {
   if (!Array.isArray(value)) {
     return null
   }
 
-  return value.flatMap((node) => {
-    const parsedNode = parseCanvasRuntimeNode(node)
-    return parsedNode ? [parsedNode] : []
+  return value.flatMap((node, index) => {
+    const parsedNode = parseCanvasDocumentNode(node)
+    if (parsedNode) {
+      return [parsedNode]
+    }
+
+    logger.warn('parseCanvasDocumentNodes: dropped malformed canvas document node', {
+      index,
+      nodeId: getCanvasNodeLogField(node, 'id'),
+      nodeType: getCanvasNodeLogField(node, 'type'),
+    })
+    return []
   })
 }
 
-export function parseCanvasEdgeType(value: unknown): ParsedCanvasEdgeType | null {
+function getCanvasNodeLogField(node: unknown, field: 'id' | 'type'): unknown {
+  if (!node || typeof node !== 'object') {
+    return undefined
+  }
+
+  return (node as Record<string, unknown>)[field]
+}
+
+export function parseCanvasEdgeType(value: unknown): CanvasEdgeType | null {
   const result = canvasEdgeTypeSchema.safeParse(value)
   return result.success ? result.data : null
 }
 
-export function parseCanvasEdgeStyle(value: unknown): ParsedCanvasEdgeStyle | null {
-  const result = canvasUnknownRecordSchema.safeParse(value)
-  if (!result.success) {
-    return null
-  }
+export function parseCanvasEdgeStyle(value: unknown): CanvasEdgeStyle | null {
+  const result = z
+    .object({
+      stroke: z.string().min(1).optional(),
+      strokeWidth: finiteNumberSchema.min(0).optional(),
+      // SVG edge opacity is a CSS alpha value, unlike node surface opacity stored on a 0-100 UI scale.
+      opacity: finiteNumberSchema.transform((opacity) => clampNumber(opacity, 0, 1)).optional(),
+    })
+    .strict()
+    .safeParse(value)
 
-  const stroke = z.string().min(1).safeParse(result.data.stroke)
-  const strokeWidth = finiteNumberSchema.min(0).safeParse(result.data.strokeWidth)
-  const opacity = finiteNumberSchema.safeParse(result.data.opacity)
-
-  return {
-    ...(stroke.success ? { stroke: stroke.data } : {}),
-    ...(strokeWidth.success ? { strokeWidth: strokeWidth.data } : {}),
-    ...(opacity.success ? { opacity: clampNumber(opacity.data, 0, 1) } : {}),
-  }
+  return result.success ? result.data : null
 }
 
-export function parseCanvasRuntimeEdge(value: unknown): ParsedCanvasRuntimeEdge | null {
-  const result = canvasRuntimeEdgeSchema.safeParse(value)
+export function parseCanvasDocumentEdge(value: unknown): CanvasDocumentEdge | null {
+  const result = canvasDocumentEdgeSchema.safeParse(value)
   if (!result.success) {
     return null
   }
@@ -600,13 +565,13 @@ export function parseCanvasRuntimeEdge(value: unknown): ParsedCanvasRuntimeEdge 
   }
 }
 
-export function parseCanvasRuntimeEdges(value: unknown): Array<ParsedCanvasRuntimeEdge> | null {
+export function parseCanvasDocumentEdges(value: unknown): Array<CanvasDocumentEdge> | null {
   if (!Array.isArray(value)) {
     return null
   }
 
   return value.flatMap((edge) => {
-    const parsedEdge = parseCanvasRuntimeEdge(edge)
+    const parsedEdge = parseCanvasDocumentEdge(edge)
     return parsedEdge ? [parsedEdge] : []
   })
 }

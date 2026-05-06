@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { createEmbedCanvasNode } from '../../nodes/embed/embed-node-creation'
 import type { Id } from 'convex/_generated/dataModel'
-import type { Node } from '@xyflow/react'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 import type { CanvasDropZoneData } from '~/features/dnd/utils/dnd-registry'
 import type { FileDropOverride } from '~/features/dnd/stores/dnd-store'
 import { handleError } from '~/shared/utils/logger'
@@ -17,15 +17,15 @@ const STACK_OFFSET = 20
 interface UseCanvasDropTargetOptions {
   canvasId: Id<'sidebarItems'>
   enabled: boolean
-  createNode: (node: Node) => void
-  screenToFlowPosition: (position: { x: number; y: number }) => { x: number; y: number }
+  createNode: (node: CanvasDocumentNode) => void
+  screenToCanvasPosition: (position: { x: number; y: number }) => { x: number; y: number }
 }
 
 export function useCanvasDropTarget({
   canvasId,
   enabled,
   createNode,
-  screenToFlowPosition,
+  screenToCanvasPosition,
 }: UseCanvasDropTargetOptions) {
   const dropOverlayRef = useRef<HTMLDivElement>(null)
 
@@ -51,8 +51,8 @@ export function useCanvasDropTarget({
   enabledRef.current = enabled
   const createNodeRef = useRef(createNode)
   createNodeRef.current = createNode
-  const screenToFlowPositionRef = useRef(screenToFlowPosition)
-  screenToFlowPositionRef.current = screenToFlowPosition
+  const screenToCanvasPositionRef = useRef(screenToCanvasPosition)
+  screenToCanvasPositionRef.current = screenToCanvasPosition
 
   useEffect(() => {
     return monitorForElements({
@@ -70,7 +70,7 @@ export function useCanvasDropTarget({
         if ((sidebarItemId as string) === (canvasIdRef.current as string)) return
 
         const { clientX, clientY } = location.current.input
-        const position = screenToFlowPositionRef.current({
+        const position = screenToCanvasPositionRef.current({
           x: clientX,
           y: clientY,
         })
@@ -88,7 +88,7 @@ export function useCanvasDropTarget({
   useEffect(() => {
     if (!enabled) return
     const handler: FileDropOverride = async (dropResult, clientCoords) => {
-      const basePosition = screenToFlowPositionRef.current(clientCoords)
+      const basePosition = screenToCanvasPositionRef.current(clientCoords)
       try {
         const files = dropResult.files
         const results = await Promise.allSettled(

@@ -1,60 +1,67 @@
-import { useEffect, useRef } from 'react'
-import { useViewport } from '@xyflow/react'
 import type { Id } from 'convex/_generated/dataModel'
 import { savePersistedCanvasViewport } from './canvas-viewport-storage'
+import type { CanvasEngine } from '../../system/canvas-engine-types'
 import type { PersistedCanvasViewport } from './canvas-viewport-storage'
 
 const VIEWPORT_SAVE_DEBOUNCE_MS = 250
 
-export function CanvasViewportPersistence({
+export function createCanvasViewportPersistence({
+  canvasEngine,
   canvasId,
   initialViewport,
 }: {
+  canvasEngine: CanvasEngine
   canvasId: Id<'sidebarItems'>
   initialViewport: PersistedCanvasViewport
 }) {
-  const viewport = useViewport()
-  const lastSavedViewportRef = useRef(initialViewport)
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  let lastSavedViewport = initialViewport
+  let pendingViewport: PersistedCanvasViewport | null = null
+  let saveTimeout: ReturnType<typeof setTimeout> | null = null
 
-  useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current)
-      }
+  const savePendingViewport = () => {
+    if (!pendingViewport) {
+      return
     }
-  }, [])
 
-  useEffect(() => {
+    savePersistedCanvasViewport(canvasId, pendingViewport)
+    lastSavedViewport = pendingViewport
+    pendingViewport = null
+  }
+
+  const clearSaveTimeout = () => {
+    if (saveTimeout) {
+      clearTimeout(saveTimeout)
+      saveTimeout = null
+    }
+  }
+
+  const unsubscribe = canvasEngine.subscribeViewportCommit((viewport) => {
     const nextViewport = {
       x: viewport.x,
       y: viewport.y,
       zoom: viewport.zoom,
     } satisfies PersistedCanvasViewport
 
-    if (persistedCanvasViewportsEqual(lastSavedViewportRef.current, nextViewport)) {
+    if (persistedCanvasViewportsEqual(lastSavedViewport, nextViewport)) {
+      clearSaveTimeout()
+      pendingViewport = null
       return
     }
 
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current)
-    }
+    clearSaveTimeout()
+    pendingViewport = nextViewport
 
-    saveTimeoutRef.current = setTimeout(() => {
-      savePersistedCanvasViewport(canvasId, nextViewport)
-      lastSavedViewportRef.current = nextViewport
-      saveTimeoutRef.current = null
+    saveTimeout = setTimeout(() => {
+      savePendingViewport()
+      saveTimeout = null
     }, VIEWPORT_SAVE_DEBOUNCE_MS)
+  })
 
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current)
-        saveTimeoutRef.current = null
-      }
-    }
-  }, [canvasId, viewport.x, viewport.y, viewport.zoom])
-
-  return null
+  return () => {
+    savePendingViewport()
+    unsubscribe()
+    clearSaveTimeout()
+  }
 }
 
 function persistedCanvasViewportsEqual(

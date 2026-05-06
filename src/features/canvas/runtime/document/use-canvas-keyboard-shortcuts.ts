@@ -1,21 +1,18 @@
-import { useHotkey } from '@tanstack/react-hotkeys'
+import { useEffect, useRef } from 'react'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
-import { canvasToolbarTools } from '../../tools/canvas-tool-modules'
 import type { CanvasCommands } from './use-canvas-commands'
 import type {
   CanvasHistoryController,
   CanvasSelectionController,
-  CanvasToolId,
 } from '../../tools/canvas-tool-types'
-import type { Edge, Node } from '@xyflow/react'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 import type * as Y from 'yjs'
 
 interface UseCanvasKeyboardShortcutsOptions extends Pick<CanvasHistoryController, 'undo' | 'redo'> {
-  cancelConnectionDraft: () => void
   canEdit: boolean
-  nodesMap: Y.Map<Node>
-  edgesMap: Y.Map<Edge>
-  selection: Pick<CanvasSelectionController, 'getSnapshot' | 'replace' | 'clear'>
+  nodesMap: Y.Map<CanvasDocumentNode>
+  edgesMap: Y.Map<CanvasDocumentEdge>
+  selection: Pick<CanvasSelectionController, 'getSnapshot' | 'setSelection' | 'clearSelection'>
   commands: Pick<CanvasCommands, 'copy' | 'cut' | 'paste' | 'delete'>
 }
 
@@ -33,225 +30,166 @@ function isEditableKeyboardTarget(target: EventTarget | null) {
   )
 }
 
-const TOOL_SHORTCUT_BINDINGS = [
-  { key: '1', toolId: 'select' },
-  { key: '2', toolId: 'hand' },
-  { key: '3', toolId: 'lasso' },
-  { key: '4', toolId: 'draw' },
-  { key: '5', toolId: 'erase' },
-  { key: '6', toolId: 'text' },
-  { key: '7', toolId: 'edge' },
-] as const
+const TOOL_SHORTCUTS = new Map([
+  ['1', 'select'],
+  ['2', 'hand'],
+  ['3', 'lasso'],
+  ['4', 'draw'],
+  ['5', 'erase'],
+  ['6', 'text'],
+  ['7', 'edge'],
+] as const)
 
-function useCanvasToolHotkey(
-  hotkey: (typeof TOOL_SHORTCUT_BINDINGS)[number]['key'],
-  tool: { id: CanvasToolId } | undefined,
-  canEdit: boolean,
-  hotkeyOptions: { ignoreInputs: true },
-) {
-  useHotkey(
-    hotkey,
-    (event) => {
-      if (event.repeat || !canEdit || !tool) return
-      useCanvasToolStore.getState().setActiveTool(tool.id)
-    },
-    hotkeyOptions,
-  )
+function getToolShortcut(key: string) {
+  return key.length === 1
+    ? TOOL_SHORTCUTS.get(key as '1' | '2' | '3' | '4' | '5' | '6' | '7')
+    : undefined
 }
 
-export function useCanvasKeyboardShortcuts({
-  undo,
-  redo,
-  cancelConnectionDraft,
-  canEdit,
-  nodesMap,
-  edgesMap,
-  selection,
-  commands,
-}: UseCanvasKeyboardShortcutsOptions) {
-  const selectTool = canvasToolbarTools.find((tool) => tool.id === 'select')
-  const handTool = canvasToolbarTools.find((tool) => tool.id === 'hand')
-  const lassoTool = canvasToolbarTools.find((tool) => tool.id === 'lasso')
-  const drawTool = canvasToolbarTools.find((tool) => tool.id === 'draw')
-  const eraseTool = canvasToolbarTools.find((tool) => tool.id === 'erase')
-  const textTool = canvasToolbarTools.find((tool) => tool.id === 'text')
-  const edgeTool = canvasToolbarTools.find((tool) => tool.id === 'edge')
-  const toolLookup = {
-    select: selectTool,
-    hand: handTool,
-    lasso: lassoTool,
-    draw: drawTool,
-    erase: eraseTool,
-    text: textTool,
-    edge: edgeTool,
-  } as const
+function handleEscapeShortcut(current: UseCanvasKeyboardShortcutsOptions, key: string) {
+  if (key !== 'escape') {
+    return false
+  }
 
-  const hotkeyOptions = {
-    ignoreInputs: true,
-  } as const
+  current.selection.clearSelection()
+  return true
+}
 
-  useHotkey(
-    'Escape',
-    (event) => {
-      if (event.repeat) return
-      selection.clear()
-      cancelConnectionDraft()
-    },
-    hotkeyOptions,
-  )
+function handleDeleteShortcut(
+  current: UseCanvasKeyboardShortcutsOptions,
+  event: KeyboardEvent,
+  key: string,
+) {
+  if (key !== 'backspace' && key !== 'delete') {
+    return false
+  }
 
-  useHotkey(
-    'Backspace',
-    (event) => {
-      if (event.repeat || !canEdit || isEditableKeyboardTarget(event.target)) {
-        return
-      }
+  if (current.canEdit && current.commands.delete.canRun() && current.commands.delete.run()) {
+    event.preventDefault()
+  }
 
-      if (!commands.delete.canRun()) {
-        return
-      }
+  return true
+}
 
-      if (commands.delete.run()) {
-        event.preventDefault()
-      }
-    },
-    hotkeyOptions,
-  )
+function handleToolShortcut(current: UseCanvasKeyboardShortcutsOptions, key: string) {
+  const toolId = getToolShortcut(key)
 
-  useHotkey(
-    'Delete',
-    (event) => {
-      if (event.repeat || !canEdit || isEditableKeyboardTarget(event.target)) {
-        return
-      }
+  if (current.canEdit && toolId) {
+    useCanvasToolStore.getState().setActiveTool(toolId)
+  }
+}
 
-      if (!commands.delete.canRun()) {
-        return
-      }
+function handleSelectAllShortcut(
+  current: UseCanvasKeyboardShortcutsOptions,
+  event: KeyboardEvent,
+  key: string,
+) {
+  if (key !== 'a') {
+    return false
+  }
 
-      if (commands.delete.run()) {
-        event.preventDefault()
-      }
-    },
-    hotkeyOptions,
-  )
+  current.selection.setSelection({
+    nodeIds: new Set(current.nodesMap.keys()),
+    edgeIds: new Set(current.edgesMap.keys()),
+  })
+  event.preventDefault()
+  return true
+}
 
-  useCanvasToolHotkey(
-    TOOL_SHORTCUT_BINDINGS[0].key,
-    toolLookup[TOOL_SHORTCUT_BINDINGS[0].toolId],
-    canEdit,
-    hotkeyOptions,
-  )
-  useCanvasToolHotkey(
-    TOOL_SHORTCUT_BINDINGS[1].key,
-    toolLookup[TOOL_SHORTCUT_BINDINGS[1].toolId],
-    canEdit,
-    hotkeyOptions,
-  )
-  useCanvasToolHotkey(
-    TOOL_SHORTCUT_BINDINGS[2].key,
-    toolLookup[TOOL_SHORTCUT_BINDINGS[2].toolId],
-    canEdit,
-    hotkeyOptions,
-  )
-  useCanvasToolHotkey(
-    TOOL_SHORTCUT_BINDINGS[3].key,
-    toolLookup[TOOL_SHORTCUT_BINDINGS[3].toolId],
-    canEdit,
-    hotkeyOptions,
-  )
-  useCanvasToolHotkey(
-    TOOL_SHORTCUT_BINDINGS[4].key,
-    toolLookup[TOOL_SHORTCUT_BINDINGS[4].toolId],
-    canEdit,
-    hotkeyOptions,
-  )
-  useCanvasToolHotkey(
-    TOOL_SHORTCUT_BINDINGS[5].key,
-    toolLookup[TOOL_SHORTCUT_BINDINGS[5].toolId],
-    canEdit,
-    hotkeyOptions,
-  )
-  useCanvasToolHotkey(
-    TOOL_SHORTCUT_BINDINGS[6].key,
-    toolLookup[TOOL_SHORTCUT_BINDINGS[6].toolId],
-    canEdit,
-    hotkeyOptions,
-  )
+function handleHistoryShortcut(
+  current: UseCanvasKeyboardShortcutsOptions,
+  event: KeyboardEvent,
+  key: string,
+) {
+  if (key === 'z') {
+    event.preventDefault()
+    if (event.shiftKey) {
+      current.redo()
+    } else {
+      current.undo()
+    }
+    return true
+  }
 
-  useHotkey(
-    'Mod+A',
-    (event) => {
-      if (event.repeat) return
-      selection.replace({
-        nodeIds: Array.from(nodesMap.keys()),
-        edgeIds: Array.from(edgesMap.keys()),
-      })
-      event.preventDefault()
-    },
-    hotkeyOptions,
-  )
+  if (key === 'y') {
+    event.preventDefault()
+    current.redo()
+    return true
+  }
 
-  useHotkey(
-    'Mod+Z',
-    (event) => {
-      if (event.repeat) return
-      undo()
-    },
-    hotkeyOptions,
-  )
+  return false
+}
 
-  useHotkey(
-    'Mod+Shift+Z',
-    (event) => {
-      if (event.repeat) return
-      redo()
-    },
-    hotkeyOptions,
-  )
+function runClipboardCommand(
+  command: CanvasCommands['copy'] | CanvasCommands['paste'],
+  event: KeyboardEvent,
+) {
+  if (command.canRun() && command.run()) {
+    event.preventDefault()
+  }
+}
 
-  useHotkey(
-    'Mod+Y',
-    (event) => {
-      if (event.repeat) return
-      redo()
-    },
-    hotkeyOptions,
-  )
+function handleClipboardShortcut(
+  current: UseCanvasKeyboardShortcutsOptions,
+  event: KeyboardEvent,
+  key: string,
+) {
+  if (key === 'c') {
+    runClipboardCommand(current.commands.copy, event)
+    return
+  }
 
-  useHotkey(
-    'Mod+C',
-    (event) => {
-      if (event.repeat) return
-      if (!commands.copy.canRun()) return
-      if (commands.copy.run()) {
-        event.preventDefault()
-      }
-    },
-    hotkeyOptions,
-  )
+  if (key === 'x') {
+    runClipboardCommand(current.commands.cut, event)
+    return
+  }
 
-  useHotkey(
-    'Mod+X',
-    (event) => {
-      if (event.repeat) return
-      if (!commands.cut.canRun()) return
-      if (commands.cut.run()) {
-        event.preventDefault()
-      }
-    },
-    hotkeyOptions,
-  )
+  if (key === 'v') {
+    runClipboardCommand(current.commands.paste, event)
+  }
+}
 
-  useHotkey(
-    'Mod+V',
-    (event) => {
-      if (event.repeat) return
-      if (!commands.paste.canRun()) return
-      if (commands.paste.run()) {
-        event.preventDefault()
-      }
-    },
-    hotkeyOptions,
-  )
+function handleCanvasKeyDown(current: UseCanvasKeyboardShortcutsOptions, event: KeyboardEvent) {
+  if (event.repeat) {
+    return
+  }
+
+  const key = event.key.toLowerCase()
+
+  if (isEditableKeyboardTarget(event.target) || handleEscapeShortcut(current, key)) {
+    return
+  }
+
+  if (handleDeleteShortcut(current, event, key)) {
+    return
+  }
+
+  if (!event.ctrlKey && !event.metaKey) {
+    handleToolShortcut(current, key)
+    return
+  }
+
+  if (handleSelectAllShortcut(current, event, key)) {
+    return
+  }
+
+  if (handleHistoryShortcut(current, event, key)) {
+    return
+  }
+
+  handleClipboardShortcut(current, event, key)
+}
+
+export function useCanvasKeyboardShortcuts(options: UseCanvasKeyboardShortcutsOptions) {
+  const optionsRef = useRef(options)
+  optionsRef.current = options
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      handleCanvasKeyDown(optionsRef.current, event)
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 }

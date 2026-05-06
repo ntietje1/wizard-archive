@@ -3,8 +3,11 @@ import {
   buildStepCanvasEdgeGeometryFromEdge,
   buildStepCanvasEdgeGeometryFromRenderProps,
 } from '../step-canvas-edge-geometry'
-import { Position } from '@xyflow/react'
-import type { Edge, Node } from '@xyflow/react'
+import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
+import type {
+  CanvasDocumentEdge as Edge,
+  CanvasDocumentNode as Node,
+} from 'convex/canvases/validation'
 
 describe('buildStepCanvasEdgeGeometryFromRenderProps', () => {
   it('splits the middle run when bottom-to-top handles face away from each other', () => {
@@ -13,11 +16,11 @@ describe('buildStepCanvasEdgeGeometryFromRenderProps', () => {
       sourceY: 150,
       targetX: 300,
       targetY: 130,
-      sourcePosition: Position.Bottom,
-      targetPosition: Position.Top,
+      sourcePosition: CANVAS_HANDLE_POSITION.Bottom,
+      targetPosition: CANVAS_HANDLE_POSITION.Top,
     })
 
-    expect(geometry.points).toEqual([
+    expect(geometry.hitPoints).toEqual([
       { x: 100, y: 150 },
       { x: 100, y: 198 },
       { x: 200, y: 198 },
@@ -33,11 +36,11 @@ describe('buildStepCanvasEdgeGeometryFromRenderProps', () => {
       sourceY: 150,
       targetX: 300,
       targetY: 190,
-      sourcePosition: Position.Bottom,
-      targetPosition: Position.Top,
+      sourcePosition: CANVAS_HANDLE_POSITION.Bottom,
+      targetPosition: CANVAS_HANDLE_POSITION.Top,
     })
 
-    expect(geometry.points).toEqual([
+    expect(geometry.hitPoints).toEqual([
       { x: 100, y: 150 },
       { x: 100, y: 198 },
       { x: 200, y: 198 },
@@ -53,11 +56,11 @@ describe('buildStepCanvasEdgeGeometryFromRenderProps', () => {
       sourceY: 150,
       targetX: 300,
       targetY: 250,
-      sourcePosition: Position.Bottom,
-      targetPosition: Position.Top,
+      sourcePosition: CANVAS_HANDLE_POSITION.Bottom,
+      targetPosition: CANVAS_HANDLE_POSITION.Top,
     })
 
-    expect(geometry.points).toEqual([
+    expect(geometry.hitPoints).toEqual([
       { x: 100, y: 150 },
       { x: 100, y: 198 },
       { x: 100, y: 200 },
@@ -104,7 +107,7 @@ describe('buildStepCanvasEdgeGeometryFromEdge', () => {
     )
 
     expect(geometry).not.toBeNull()
-    expect(geometry!.points).toEqual([
+    expect(geometry!.hitPoints).toEqual([
       { x: 100, y: 100 },
       { x: 100, y: 148 },
       { x: 250, y: 148 },
@@ -149,7 +152,7 @@ describe('buildStepCanvasEdgeGeometryFromEdge', () => {
     )
 
     expect(geometry).not.toBeNull()
-    expect(geometry!.points).toEqual([
+    expect(geometry!.hitPoints).toEqual([
       { x: 100, y: 100 },
       { x: 100, y: 50 },
       { x: 230, y: 50 },

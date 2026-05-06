@@ -4,7 +4,7 @@ export type CanvasAwarenessPresence = Partial<Record<CanvasAwarenessNamespace, u
 
 /**
  * Serialized in-progress stroke data broadcast via awareness.
- * `points` — array of [x, y, pressure] tuples in flow-space pixels.
+ * `points` — array of [x, y, pressure] tuples in canvas-space pixels.
  * `color` — CSS color string. `size` — stroke width in px. `opacity` — 0–100.
  */
 export type DrawingState = {
@@ -27,7 +27,7 @@ export type SelectingState =
 
 /**
  * Complete awareness state for a user's canvas activity.
- * Tracks cursor position, active drag/resize/draw/select operations.
+ * Tracks cursor position, active resize/draw/select operations.
  * All operation states are nullable when inactive.
  */
 type CanvasAwarenessState = {
@@ -41,7 +41,6 @@ type CanvasAwarenessState = {
 export type RemoteUser = CanvasAwarenessState & {
   clientId: number
   cursor: Point2D | null
-  dragging: Record<string, Point2D> | null
   resizing: ResizingState | null
   selectedNodeIds: Array<string> | null
 }

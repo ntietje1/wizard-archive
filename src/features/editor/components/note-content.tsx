@@ -9,6 +9,7 @@ import { useLinkResolver } from '~/features/editor/hooks/useLinkResolver'
 import type { Doc } from 'yjs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CustomBlock, CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import type { CSSProperties } from 'react'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
 import { useNoteYjsCollaboration } from '~/features/editor/hooks/useNoteYjsCollaboration'
 import { useOwnedBlockNoteEditor } from '~/features/editor/hooks/useOwnedBlockNoteEditor'
@@ -25,6 +26,7 @@ type NoteContentProps = {
   content: Array<CustomBlock>
   editable: boolean
   className?: string
+  style?: CSSProperties
   children?: React.ReactNode
   onEditorChange?: (editor: CustomBlockNoteEditor | null, doc: Doc | null) => void
 }
@@ -67,6 +69,7 @@ export function NoteContent({
   content,
   editable,
   className,
+  style,
   children,
   onEditorChange,
 }: NoteContentProps) {
@@ -77,12 +80,18 @@ export function NoteContent({
           <CollaborativeEditorLoader
             noteId={noteId}
             content={content}
+            style={style}
             onEditorChange={onEditorChange}
           >
             {children}
           </CollaborativeEditorLoader>
         ) : (
-          <StaticEditorInner noteId={noteId} content={content} onEditorChange={onEditorChange}>
+          <StaticEditorInner
+            noteId={noteId}
+            content={content}
+            style={style}
+            onEditorChange={onEditorChange}
+          >
             {children}
           </StaticEditorInner>
         )}
@@ -94,11 +103,13 @@ export function NoteContent({
 function CollaborativeEditorLoader({
   noteId,
   content,
+  style,
   children,
   onEditorChange,
 }: {
   noteId: Id<'sidebarItems'>
   content: Array<CustomBlock>
+  style?: CSSProperties
   children?: React.ReactNode
   onEditorChange?: (editor: CustomBlockNoteEditor | null, doc: Doc | null) => void
 }) {
@@ -116,7 +127,12 @@ function CollaborativeEditorLoader({
 
   if (isLoading || !doc || !provider) {
     return (
-      <StaticEditorInner noteId={noteId} content={content} onEditorChange={onEditorChange}>
+      <StaticEditorInner
+        noteId={noteId}
+        content={content}
+        style={style}
+        onEditorChange={onEditorChange}
+      >
         {children}
       </StaticEditorInner>
     )
@@ -128,6 +144,7 @@ function CollaborativeEditorLoader({
       noteId={noteId}
       doc={doc}
       provider={provider}
+      style={style}
       user={{ name: userName, color: userColor }}
       onEditorChange={onEditorChange}
     >
@@ -139,11 +156,13 @@ function CollaborativeEditorLoader({
 function StaticEditorInner({
   noteId,
   content,
+  style,
   children,
   onEditorChange,
 }: {
   noteId?: Id<'sidebarItems'>
   content: Array<CustomBlock>
+  style?: CSSProperties
   children?: React.ReactNode
   onEditorChange?: (editor: CustomBlockNoteEditor | null, doc: Doc | null) => void
 }) {
@@ -198,7 +217,7 @@ function StaticEditorInner({
 
   return (
     <>
-      <NoteView editor={editor} editable={false} linkResolver={linkResolver}>
+      <NoteView editor={editor} editable={false} linkResolver={linkResolver} style={style}>
         {children}
       </NoteView>
       <LinkClickHandler editor={editor} sourceNoteId={noteId} />
@@ -210,6 +229,7 @@ function CollaborativeEditorInner({
   noteId,
   doc,
   provider,
+  style,
   user,
   children,
   onEditorChange,
@@ -217,6 +237,7 @@ function CollaborativeEditorInner({
   noteId: Id<'sidebarItems'>
   doc: Doc
   provider: ConvexYjsProvider
+  style?: CSSProperties
   user: { name: string; color: string }
   children?: React.ReactNode
   onEditorChange?: (editor: CustomBlockNoteEditor | null, doc: Doc | null) => void
@@ -284,7 +305,7 @@ function CollaborativeEditorInner({
 
   return (
     <>
-      <NoteView editor={editor} editable={true} linkResolver={linkResolver}>
+      <NoteView editor={editor} editable={true} linkResolver={linkResolver} style={style}>
         {children}
       </NoteView>
       <LinkClickHandler editor={editor} sourceNoteId={noteId} />

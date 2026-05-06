@@ -2,17 +2,15 @@ import { render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasToolbar } from '../canvas-toolbar'
 import { createCanvasRuntime } from '../../runtime/__tests__/canvas-runtime-test-utils'
-import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime-context'
+import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
+import type { CanvasViewportController } from '../../system/canvas-viewport-controller'
 
-const reactFlowMock = vi.hoisted(() => ({
+const viewportActionMock = vi.hoisted(() => ({
   fitView: vi.fn(),
+  setZoomBounds: vi.fn(),
   zoomIn: vi.fn(),
   zoomOut: vi.fn(),
-}))
-
-vi.mock('@xyflow/react', () => ({
-  useReactFlow: () => reactFlowMock,
 }))
 
 describe('CanvasToolbar', () => {
@@ -25,9 +23,10 @@ describe('CanvasToolbar', () => {
 
   beforeEach(() => {
     useCanvasToolStore.getState().reset()
-    reactFlowMock.fitView.mockReset()
-    reactFlowMock.zoomIn.mockReset()
-    reactFlowMock.zoomOut.mockReset()
+    viewportActionMock.fitView.mockReset()
+    viewportActionMock.setZoomBounds.mockReset()
+    viewportActionMock.zoomIn.mockReset()
+    viewportActionMock.zoomOut.mockReset()
     history.canUndo = false
     history.canRedo = true
     history.undo = vi.fn()
@@ -35,6 +34,24 @@ describe('CanvasToolbar', () => {
   })
 
   function renderToolbar(canEdit = true) {
+    const viewportController: CanvasViewportController = {
+      getViewport: vi.fn(() => ({ x: 0, y: 0, zoom: 1 })),
+      getZoom: vi.fn(() => 1),
+      screenToCanvasPosition: vi.fn((position) => position),
+      canvasToScreenPosition: vi.fn((position) => position),
+      handleWheel: vi.fn(),
+      handlePanPointerDown: vi.fn(),
+      panBy: vi.fn(),
+      zoomBy: vi.fn(),
+      zoomTo: vi.fn(),
+      zoomIn: viewportActionMock.zoomIn,
+      zoomOut: viewportActionMock.zoomOut,
+      fitView: viewportActionMock.fitView,
+      syncFromDocumentOrAdapter: vi.fn(),
+      setZoomBounds: viewportActionMock.setZoomBounds,
+      commit: vi.fn(),
+      destroy: vi.fn(),
+    }
     const runtime = createCanvasRuntime({
       canEdit,
       history,
@@ -47,10 +64,10 @@ describe('CanvasToolbar', () => {
         setPendingEditNodePoint: vi.fn(),
       },
       nodeActions: {
-        updateNodeData: vi.fn(),
         onResize: vi.fn(),
         onResizeEnd: vi.fn(),
       },
+      viewportController,
     })
 
     return render(
@@ -108,6 +125,18 @@ describe('CanvasToolbar', () => {
     buttons.forEach((button) => {
       expect(button).toHaveClass('cursor-pointer')
     })
+  })
+
+  it('routes viewport buttons through the canvas viewport controller', () => {
+    renderToolbar()
+
+    screen.getByRole('button', { name: 'Zoom in' }).click()
+    screen.getByRole('button', { name: 'Zoom out' }).click()
+    screen.getByRole('button', { name: 'Fit zoom' }).click()
+
+    expect(viewportActionMock.zoomIn).toHaveBeenCalledTimes(1)
+    expect(viewportActionMock.zoomOut).toHaveBeenCalledTimes(1)
+    expect(viewportActionMock.fitView).toHaveBeenCalledTimes(1)
   })
 
   it('shows only viewport controls in read-only mode', () => {

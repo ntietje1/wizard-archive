@@ -89,9 +89,6 @@ describe('useCanvasAwareness', () => {
           user: { name: 'Remote', color: '#f00' },
           presence: {
             'core.cursor': { x: 5, y: 6 },
-            'core.dragging': {
-              'node-1': { x: 10, y: 20 },
-            },
             'core.resizing': {
               'node-2': { x: 4, y: 8, width: 100, height: 50 },
             },
@@ -115,9 +112,6 @@ describe('useCanvasAwareness', () => {
         user: { name: 'Remote', color: '#f00' },
         presence: {
           'core.cursor': { x: 5, y: 6 },
-          'core.dragging': {
-            'node-1': { x: 10, y: 20 },
-          },
           'core.resizing': {
             'node-2': { x: 4, y: 8, width: 100, height: 50 },
           },
@@ -125,9 +119,6 @@ describe('useCanvasAwareness', () => {
           'tool.draw': { color: '#f00' },
         },
         cursor: { x: 5, y: 6 },
-        dragging: {
-          'node-1': { x: 10, y: 20 },
-        },
         resizing: {
           'node-2': { x: 4, y: 8, width: 100, height: 50 },
         },
@@ -151,9 +142,6 @@ describe('useCanvasAwareness', () => {
           user: { name: 'Remote', color: '#f00' },
           presence: {
             'core.cursor': { x: 'bad', y: 6 },
-            'core.dragging': {
-              'node-1': { x: 10, y: 'bad' },
-            },
             'core.resizing': {
               'node-2': { x: 4, y: 8, width: -1, height: 50 },
             },
@@ -183,16 +171,12 @@ describe('useCanvasAwareness', () => {
         user: { name: 'Remote', color: '#f00' },
         presence: {
           'core.cursor': { x: 'bad', y: 6 },
-          'core.dragging': {
-            'node-1': { x: 10, y: 'bad' },
-          },
           'core.resizing': {
             'node-2': { x: 4, y: 8, width: -1, height: 50 },
           },
           'core.selection': ['node-3', 4],
         },
         cursor: null,
-        dragging: null,
         resizing: null,
         selectedNodeIds: null,
       },
@@ -201,7 +185,6 @@ describe('useCanvasAwareness', () => {
         user: { name: 'Remote 2', color: '#0f0' },
         presence: {},
         cursor: null,
-        dragging: null,
         resizing: null,
         selectedNodeIds: null,
       },
@@ -267,10 +250,7 @@ describe('useCanvasAwareness', () => {
 
     act(() => {
       result.current.core.setLocalCursor({ x: 10, y: 20 })
-      result.current.core.setLocalDragging({
-        'node-1': { x: 30, y: 40 },
-      })
-      result.current.core.setLocalSelection(['node-1'])
+      result.current.core.setLocalSelection(new Set(['node-1']))
       result.current.core.setLocalResizing({
         'node-1': { x: 10, y: 20, width: 30, height: 40 },
       })
@@ -279,9 +259,6 @@ describe('useCanvasAwareness', () => {
     expect(awareness.lastPresence).toEqual({
       'tool.draw': { color: '#000' },
       'core.cursor': { x: 10, y: 20 },
-      'core.dragging': {
-        'node-1': { x: 30, y: 40 },
-      },
       'core.selection': ['node-1'],
       'core.resizing': {
         'node-1': { x: 10, y: 20, width: 30, height: 40 },
@@ -289,10 +266,7 @@ describe('useCanvasAwareness', () => {
     })
 
     act(() => {
-      result.current.core.setLocalDragging({
-        'node-1': { x: Number.NaN, y: 40 },
-      } as unknown as Record<string, { x: number; y: number }>)
-      result.current.core.setLocalSelection(['node-1', 2] as unknown as Array<string>)
+      result.current.core.setLocalSelection(new Set(['node-1', 2]) as unknown as Set<string>)
       result.current.core.setLocalResizing({
         'node-1': { x: 10, y: 20, width: -1, height: 40 },
       } as unknown as ResizingState)
@@ -301,9 +275,6 @@ describe('useCanvasAwareness', () => {
     expect(awareness.lastPresence).toEqual({
       'tool.draw': { color: '#000' },
       'core.cursor': { x: 10, y: 20 },
-      'core.dragging': {
-        'node-1': { x: 30, y: 40 },
-      },
       'core.selection': ['node-1'],
       'core.resizing': {
         'node-1': { x: 10, y: 20, width: 30, height: 40 },
@@ -348,7 +319,6 @@ describe('useCanvasAwareness', () => {
             'core.cursor': { x: 9, y: 12 },
           },
           cursor: { x: 9, y: 12 },
-          dragging: null,
           resizing: null,
           selectedNodeIds: null,
         },

@@ -8,6 +8,7 @@ import {
   getCanvasPane,
   getCanvasEdges,
   getCanvasNodeHandle,
+  dragCanvasNode,
   dragOnCanvas,
   getCanvasNodesByType,
   getCanvasSurface,
@@ -18,6 +19,7 @@ import {
   selectCanvasTool,
 } from './helpers/canvas-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
+import type { Page } from '@playwright/test'
 
 const campaignName = testName('Canvas Basics')
 const canvasName = DEFAULT_CANVAS_NAME
@@ -90,28 +92,28 @@ test.describe.serial('canvas basics', () => {
 
     await selectCanvasTool(page, 'Text')
     await clickCanvasAt(page, { x: 120, y: 120 })
-    const textInput = page.getByLabel('Text node content')
+    const textInput = getActiveTextNodeInput(page)
     await expect(textInput).toBeVisible()
     await textInput.fill('Canvas text')
     await clickCanvasAt(page, { x: 40, y: 40 })
 
     await selectCanvasTool(page, 'Text')
     await clickCanvasAt(page, { x: 320, y: 120 })
-    const secondTextInput = page.getByLabel('Text node content')
+    const secondTextInput = getActiveTextNodeInput(page)
     await expect(secondTextInput).toBeVisible()
     await secondTextInput.fill('Second text')
     await clickCanvasAt(page, { x: 40, y: 40 })
 
     await selectCanvasTool(page, 'Text')
     await dragOnCanvas(page, { x: 120, y: 260 }, { x: 280, y: 360 })
-    const draggedTextInput = page.getByLabel('Text node content')
+    const draggedTextInput = getActiveTextNodeInput(page)
     await expect(draggedTextInput).toBeVisible()
     await draggedTextInput.fill('Dragged text')
     await clickCanvasAt(page, { x: 40, y: 40 })
 
     await selectCanvasTool(page, 'Text')
     await dragOnCanvas(page, { x: 340, y: 260 }, { x: 500, y: 420 })
-    const secondDraggedTextInput = page.getByLabel('Text node content')
+    const secondDraggedTextInput = getActiveTextNodeInput(page)
     await expect(secondDraggedTextInput).toBeVisible()
     await secondDraggedTextInput.fill('Dragged second text')
     await clickCanvasAt(page, { x: 40, y: 40 })
@@ -153,15 +155,20 @@ test.describe.serial('canvas basics', () => {
     const selectedTextNode = getCanvasNodesByType(page, 'text').first()
     await clickCanvasNode(page, selectedTextNode)
     await expect.poll(() => getCommittedSelectedCanvasNodes(page).count()).toBe(1)
+    const textCountBeforeDelete = await getCanvasNodesByType(page, 'text').count()
     await page.keyboard.press('Delete')
-    await expect.poll(() => getCanvasNodesByType(page, 'text').count()).toBe(0)
+    await expect
+      .poll(() => getCanvasNodesByType(page, 'text').count())
+      .toBe(textCountBeforeDelete - 1)
 
     const viewport = getViewportControls(page)
     await viewport.undo.click()
-    await expect.poll(() => getCanvasNodesByType(page, 'text').count()).toBe(1)
+    await expect.poll(() => getCanvasNodesByType(page, 'text').count()).toBe(textCountBeforeDelete)
 
     await viewport.redo.click()
-    await expect.poll(() => getCanvasNodesByType(page, 'text').count()).toBe(0)
+    await expect
+      .poll(() => getCanvasNodesByType(page, 'text').count())
+      .toBe(textCountBeforeDelete - 1)
   })
 
   test('create an edge from one node handle to another', async ({ page }) => {
@@ -171,19 +178,21 @@ test.describe.serial('canvas basics', () => {
 
     await selectCanvasTool(page, 'Text')
     await clickCanvasAt(page, { x: 120, y: 420 })
-    const textInput = page.getByLabel('Text node content')
+    const textInput = getActiveTextNodeInput(page)
     await expect(textInput).toBeVisible()
     await textInput.fill('Edge source')
+    await textInput.press('Escape')
     await clickCanvasAt(page, { x: 40, y: 40 })
 
     await selectCanvasTool(page, 'Text')
-    await clickCanvasAt(page, { x: 360, y: 420 })
-    const targetTextInput = page.getByLabel('Text node content')
+    await clickCanvasAt(page, { x: 620, y: 420 })
+    const targetTextInput = getActiveTextNodeInput(page)
     await expect(targetTextInput).toBeVisible()
     await targetTextInput.fill('Edge target')
+    await targetTextInput.press('Escape')
     await clickCanvasAt(page, { x: 40, y: 40 })
 
-    await selectCanvasTool(page, 'Pointer')
+    await selectCanvasTool(page, 'Edges')
     const sourceNode = page.getByTestId('canvas-node').filter({
       has: page.getByText('Edge source', { exact: true }),
     })
@@ -191,7 +200,6 @@ test.describe.serial('canvas basics', () => {
       has: page.getByText('Edge target', { exact: true }),
     })
     const edgeCountBefore = await getCanvasEdges(page).count()
-    await clickCanvasNode(page, sourceNode)
 
     const sourceHandle = getCanvasNodeHandle(sourceNode, 'right')
     const targetHandle = getCanvasNodeHandle(targetNode, 'left')
@@ -204,19 +212,17 @@ test.describe.serial('canvas basics', () => {
 
     await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2)
     await page.mouse.down()
-    await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, {
-      steps: 12,
-    })
-
-    await expect
-      .poll(async () => (await targetHandle.getAttribute('class')) ?? '')
-      .toContain('connectionindicator')
+    const targetCenter = {
+      x: targetBox.x + targetBox.width / 2,
+      y: targetBox.y + targetBox.height / 2,
+    }
+    await page.mouse.move(targetCenter.x, targetCenter.y, { steps: 12 })
 
     await page.mouse.up()
     await expect.poll(() => getCanvasEdges(page).count()).toBe(edgeCountBefore + 1)
   })
 
-  test('closing the canvas context menu on left mouse down can continue into a node drag', async ({
+  test('closing the canvas context menu on left mouse down allows a node drag', async ({
     page,
   }) => {
     await page.goto('/campaigns')
@@ -225,9 +231,10 @@ test.describe.serial('canvas basics', () => {
 
     await selectCanvasTool(page, 'Text')
     await clickCanvasAt(page, { x: 520, y: 420 })
-    const textInput = page.getByLabel('Text node content')
+    const textInput = getActiveTextNodeInput(page)
     await expect(textInput).toBeVisible()
     await textInput.fill('Drag after context menu')
+    await textInput.press('Escape')
     await clickCanvasAt(page, { x: 40, y: 40 })
 
     await selectCanvasTool(page, 'Pointer')
@@ -252,18 +259,12 @@ test.describe.serial('canvas basics', () => {
     })
     await expect(page.getByRole('menu')).toBeVisible()
 
-    await page.mouse.move(dragStartPoint.x, dragStartPoint.y)
-    await page.mouse.down()
-    await page.mouse.move(
-      dragStartPoint.x + CONTEXT_MENU_DRAG_DISTANCE_X,
-      dragStartPoint.y + CONTEXT_MENU_DRAG_DISTANCE_Y,
-      {
-        steps: 12,
-      },
-    )
-    await page.mouse.up()
-
+    await page.mouse.click(dragStartPoint.x, dragStartPoint.y)
     await expect(page.getByRole('menu')).not.toBeVisible()
+    await dragCanvasNode(page, textNode, {
+      x: CONTEXT_MENU_DRAG_DISTANCE_X,
+      y: CONTEXT_MENU_DRAG_DISTANCE_Y,
+    })
 
     await expect
       .poll(async () => {
@@ -280,9 +281,7 @@ test.describe.serial('canvas basics', () => {
       .toBe(true)
   })
 
-  test('canvas context menu stays open while hovering paste and reorder items', async ({
-    page,
-  }) => {
+  test('canvas context menu stays open while hovering pane and reorder items', async ({ page }) => {
     await page.goto('/campaigns')
     await navigateToCampaign(page, campaignName)
     await openCanvas(page, canvasName)
@@ -292,25 +291,34 @@ test.describe.serial('canvas basics', () => {
     if (!paneBox) {
       throw new Error('Canvas pane is not visible before context menu hover test')
     }
+    const emptyPanePoint = {
+      x: paneBox.x + paneBox.width - 260,
+      y: paneBox.y + paneBox.height - 180,
+    }
 
     await selectCanvasTool(page, 'Pointer')
-    await page.mouse.click(paneBox.x + 80, paneBox.y + 80, { button: 'right' })
+    await page.mouse.click(emptyPanePoint.x, emptyPanePoint.y, { button: 'right' })
 
-    const pasteItem = page.getByRole('menuitem', { name: 'Paste' })
-    await expect(pasteItem).toBeVisible()
-    const pasteBox = await pasteItem.boundingBox()
-    if (!pasteBox) {
-      throw new Error('Paste menu item is not visible during context menu hover test')
+    const paneMenu = page.getByRole('menu')
+    await expect(paneMenu).toBeVisible()
+    const paneMenuItem = paneMenu.getByRole('menuitem').first()
+    await expect(paneMenuItem).toBeVisible()
+    const paneMenuItemBox = await paneMenuItem.boundingBox()
+    if (!paneMenuItemBox) {
+      throw new Error('Pane menu item is not visible during context menu hover test')
     }
-    await page.mouse.move(pasteBox.x + pasteBox.width / 2, pasteBox.y + pasteBox.height / 2)
-    await page.mouse.move(paneBox.x + 220, paneBox.y + 80)
-    await expect(pasteItem).toBeVisible()
+    await page.mouse.move(
+      paneMenuItemBox.x + paneMenuItemBox.width / 2,
+      paneMenuItemBox.y + paneMenuItemBox.height / 2,
+    )
+    await page.mouse.move(emptyPanePoint.x + 120, emptyPanePoint.y)
+    await expect(paneMenu).toBeVisible()
 
     await page.mouse.click(paneBox.x + 240, paneBox.y + 240)
 
     await selectCanvasTool(page, 'Text')
     await clickCanvasAt(page, { x: 640, y: 180 })
-    const textInput = page.getByLabel('Text node content')
+    const textInput = getActiveTextNodeInput(page)
     await expect(textInput).toBeVisible()
     await textInput.fill('Context menu reorder hover')
     await clickCanvasAt(page, { x: 40, y: 40 })
@@ -340,3 +348,7 @@ test.describe.serial('canvas basics', () => {
     await expect(page.getByRole('menuitem', { name: 'Send to back' })).toBeVisible()
   })
 })
+
+function getActiveTextNodeInput(page: Page) {
+  return page.locator('[aria-label="Text node content"][contenteditable="true"]')
+}

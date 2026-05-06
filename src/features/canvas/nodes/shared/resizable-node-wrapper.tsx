@@ -1,6 +1,6 @@
 import { CanvasNodeFrame } from './canvas-node-frame'
-import { CanvasNodeResizeHandles } from './canvas-node-resize-handles'
-import { useCanvasResizeSession } from './use-canvas-resize-session'
+import { CANVAS_NODE_MIN_SIZE } from './canvas-node-resize-constants'
+import { useRegisterCanvasNodeResizeMetadata } from './canvas-node-resize-metadata'
 
 interface ResizableNodeWrapperProps {
   id: string
@@ -20,17 +20,16 @@ export function ResizableNodeWrapper({
   dragging,
   children,
   chrome,
-  minWidth = 50,
-  minHeight = 30,
+  minWidth = CANVAS_NODE_MIN_SIZE,
+  minHeight = CANVAS_NODE_MIN_SIZE,
   lockedAspectRatio,
   editing = false,
 }: ResizableNodeWrapperProps) {
-  const resizeHandles = useCanvasResizeSession({
-    id,
+  useRegisterCanvasNodeResizeMetadata(id, {
     dragging,
-    minWidth,
-    minHeight,
     lockedAspectRatio,
+    minHeight,
+    minWidth,
   })
 
   return (
@@ -39,12 +38,7 @@ export function ResizableNodeWrapper({
       nodeType={nodeType}
       dragging={dragging}
       editing={editing}
-      chrome={
-        <>
-          {chrome}
-          {resizeHandles.length > 0 && <CanvasNodeResizeHandles handles={resizeHandles} />}
-        </>
-      }
+      chrome={chrome}
     >
       {children}
     </CanvasNodeFrame>

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   findCanvasEdgeAtPoint,
   getCanvasEdgeInspectableProperties,
@@ -6,7 +6,11 @@ import {
   getCanvasEdgesMatchingRectangle,
   normalizeCanvasEdge,
 } from '../canvas-edge-registry'
-import type { Edge, Node } from '@xyflow/react'
+import type {
+  CanvasDocumentEdge as Edge,
+  CanvasDocumentNode as Node,
+} from 'convex/canvases/validation'
+import type { CanvasStrokeSizePropertyBinding } from '../../properties/canvas-property-types'
 
 function createNode(id: string, x: number, y: number): Node {
   return {
@@ -86,7 +90,7 @@ describe('canvas edge specs', () => {
         { x: 80, y: 10, width: 40, height: 20 },
         { zoom: 1 },
       ),
-    ).toEqual(['edge-1', 'edge-2'])
+    ).toEqual(new Set(['edge-1', 'edge-2']))
 
     expect(
       getCanvasEdgesMatchingRectangle(
@@ -95,7 +99,7 @@ describe('canvas edge specs', () => {
         { x: 80, y: 60, width: 40, height: 20 },
         { zoom: 1 },
       ),
-    ).toEqual([])
+    ).toEqual(new Set())
   })
 
   it('selects only intersecting edges through lasso hit testing', () => {
@@ -123,7 +127,7 @@ describe('canvas edge specs', () => {
         ],
         { zoom: 1 },
       ),
-    ).toEqual(['crossing-edge'])
+    ).toEqual(new Set(['crossing-edge']))
   })
 
   it('matches straight edges on point, rectangle, and lasso hit testing', () => {
@@ -140,7 +144,7 @@ describe('canvas edge specs', () => {
         { x: 80, y: 10, width: 40, height: 20 },
         { zoom: 1 },
       ),
-    ).toEqual(['straight-edge'])
+    ).toEqual(new Set(['straight-edge']))
     expect(
       getCanvasEdgesMatchingLasso(
         nodes,
@@ -153,7 +157,7 @@ describe('canvas edge specs', () => {
         ],
         { zoom: 1 },
       ),
-    ).toEqual(['straight-edge'])
+    ).toEqual(new Set(['straight-edge']))
   })
 
   it('matches step edges on point, rectangle, and lasso hit testing', () => {
@@ -171,7 +175,7 @@ describe('canvas edge specs', () => {
         { x: 10, y: 60, width: 20, height: 40 },
         { zoom: 1 },
       ),
-    ).toEqual(['step-edge'])
+    ).toEqual(new Set(['step-edge']))
     expect(
       getCanvasEdgesMatchingLasso(
         stepNodes,
@@ -184,7 +188,7 @@ describe('canvas edge specs', () => {
         ],
         { zoom: 1 },
       ),
-    ).toEqual(['step-edge'])
+    ).toEqual(new Set(['step-edge']))
   })
 
   it('ignores malformed edge styles during hit testing', () => {
@@ -209,26 +213,44 @@ describe('canvas edge specs', () => {
   })
 
   it('falls back unsupported edge types safely', () => {
-    const fallbackEdge = normalizeCanvasEdge(
-      createBezierEdge({ id: 'edge-fallback', type: 'curved' }),
-    )
+    const unsupportedEdge = {
+      ...createBezierEdge({ id: 'edge-fallback' }),
+      type: 'curved',
+    } as unknown as Edge
+    const fallbackEdge = normalizeCanvasEdge(unsupportedEdge)
 
     expect(fallbackEdge).toMatchObject({
       id: 'edge-fallback',
       type: 'bezier',
     })
-    expect(
-      findCanvasEdgeAtPoint(
-        nodes,
-        [createBezierEdge({ id: 'edge-fallback', type: 'curved' })],
-        { x: 100, y: 20 },
-        { zoom: 1 },
-      ),
-    ).toBe('edge-fallback')
+    expect(findCanvasEdgeAtPoint(nodes, [unsupportedEdge], { x: 100, y: 20 }, { zoom: 1 })).toBe(
+      'edge-fallback',
+    )
+  })
+
+  it('normalizes zero-width edge styles to the minimum visible stroke width', () => {
+    expect(normalizeCanvasEdge(createBezierEdge({ style: { strokeWidth: 0 } }))).toMatchObject({
+      style: {
+        strokeWidth: 1,
+      },
+    })
+  })
+
+  it('normalizes edge opacity into the renderable opacity range', () => {
+    expect(normalizeCanvasEdge(createBezierEdge({ style: { opacity: 2 } }))).toMatchObject({
+      style: {
+        opacity: 1,
+      },
+    })
+    expect(normalizeCanvasEdge(createBezierEdge({ style: { opacity: -0.5 } }))).toMatchObject({
+      style: {
+        opacity: 0,
+      },
+    })
   })
 
   it('returns empty inspectable properties for invalid edges and typed properties for valid edges', () => {
-    const updateEdge = () => undefined
+    const patchEdge = () => undefined
 
     expect(
       getCanvasEdgeInspectableProperties(
@@ -238,14 +260,39 @@ describe('canvas edge specs', () => {
           }),
           source: null,
         } as unknown as Edge),
-        updateEdge,
+        patchEdge,
       ).bindings,
     ).toEqual([])
 
     // Expect 2 bindings: stroke paint and stroke width.
     expect(
-      getCanvasEdgeInspectableProperties(normalizeCanvasEdge(createStraightEdge()), updateEdge)
+      getCanvasEdgeInspectableProperties(normalizeCanvasEdge(createStraightEdge()), patchEdge)
         .bindings,
     ).toHaveLength(2)
+  })
+
+  it('clamps selected edge stroke width edits to the property range', () => {
+    const patchEdge = vi.fn()
+    const properties = getCanvasEdgeInspectableProperties(
+      normalizeCanvasEdge(createStraightEdge()),
+      patchEdge,
+    )
+    const strokeSizeBinding = properties.bindings.find(
+      (binding): binding is CanvasStrokeSizePropertyBinding =>
+        binding.definition.kind === 'strokeSize',
+    )
+
+    expect(strokeSizeBinding).toBeDefined()
+    if (!strokeSizeBinding) {
+      throw new Error('Expected edge stroke-size binding')
+    }
+
+    strokeSizeBinding.setValue(120)
+
+    expect(patchEdge).toHaveBeenCalledWith('straight-edge', {
+      style: {
+        strokeWidth: 99,
+      },
+    })
   })
 })

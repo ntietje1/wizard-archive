@@ -1,7 +1,14 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useCanvasContextMenu } from '../use-canvas-context-menu'
-import type { Edge, Node } from '@xyflow/react'
+import {
+  TEXT_NODE_DEFAULT_HEIGHT,
+  TEXT_NODE_DEFAULT_WIDTH,
+} from '../../../nodes/text/text-node-constants'
+import type {
+  CanvasDocumentEdge as Edge,
+  CanvasDocumentNode as Node,
+} from 'convex/canvases/validation'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
@@ -9,6 +16,7 @@ import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import * as Y from 'yjs'
 import { testId } from '~/test/helpers/test-id'
 import type { CanvasContextMenuCommands } from '../canvas-context-menu-types'
+import type { CanvasSelectionSnapshot } from '../../../system/canvas-selection'
 
 const sidebarItemsState = vi.hoisted(() => ({
   itemsMap: new Map(),
@@ -39,16 +47,16 @@ vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
 }))
 
 function createSelectionController(
-  snapshot: { nodeIds: Array<string>; edgeIds: Array<string> } = { nodeIds: [], edgeIds: [] },
+  snapshot: CanvasSelectionSnapshot = { nodeIds: new Set<string>(), edgeIds: new Set<string>() },
 ) {
   let currentSelection = snapshot
 
   return {
-    clear: vi.fn(() => {
-      currentSelection = { nodeIds: [], edgeIds: [] }
+    clearSelection: vi.fn(() => {
+      currentSelection = { nodeIds: new Set<string>(), edgeIds: new Set<string>() }
     }),
     getSnapshot: vi.fn(() => currentSelection),
-    replace: vi.fn((nextSelection) => {
+    setSelection: vi.fn((nextSelection) => {
       currentSelection = nextSelection
     }),
   }
@@ -105,6 +113,11 @@ function createCommands(
       canRun: vi.fn(() => true),
       run: vi.fn(() => true),
     },
+    arrange: {
+      id: 'arrange',
+      canRun: vi.fn(() => true),
+      run: vi.fn(() => true),
+    },
     ...overrides,
   }
 }
@@ -150,7 +163,10 @@ describe('useCanvasContextMenu', () => {
   })
 
   it('opens the pane menu, clears selection, and derives a non-empty menu in select mode', () => {
-    const selection = createSelectionController({ nodeIds: ['node-1'], edgeIds: [] })
+    const selection = createSelectionController({
+      nodeIds: new Set(['node-1']),
+      edgeIds: new Set<string>(),
+    })
     const { nodesMap, edgesMap } = createContextMenuDoc()
     const { result } = renderHook(() =>
       useCanvasContextMenu({
@@ -161,7 +177,9 @@ describe('useCanvasContextMenu', () => {
         nodesMap,
         edgesMap,
         createNode: vi.fn(),
-        screenToFlowPosition: ({ x, y }) => ({ x, y }),
+        setPendingEditNodeId: vi.fn(),
+        setPendingEditNodePoint: vi.fn(),
+        screenToCanvasPosition: ({ x, y }) => ({ x, y }),
         selection,
         commands: createCommands(),
       }),
@@ -177,13 +195,136 @@ describe('useCanvasContextMenu', () => {
       result.current.openForPane(createContextMenuEvent(20, 40))
     })
 
-    expect(selection.clear).toHaveBeenCalledTimes(1)
+    expect(selection.clearSelection).toHaveBeenCalledTimes(1)
     expect(open).toHaveBeenCalledWith({ x: 20, y: 40 })
     expect(result.current.menu.isEmpty).toBe(false)
   })
 
+  it('selects every canvas item from the pane menu Select All action', async () => {
+    const selection = createSelectionController()
+    const { nodesMap, edgesMap } = createContextMenuDoc()
+    nodesMap.set('node-1', {
+      id: 'node-1',
+      type: 'text',
+      position: { x: 0, y: 0 },
+      data: {},
+    } as Node)
+    nodesMap.set('node-2', {
+      id: 'node-2',
+      type: 'text',
+      position: { x: 10, y: 10 },
+      data: {},
+    } as Node)
+    edgesMap.set('edge-1', {
+      id: 'edge-1',
+      source: 'node-1',
+      target: 'node-2',
+      type: 'straight',
+    } as Edge)
+    const { result } = renderHook(() =>
+      useCanvasContextMenu({
+        activeTool: 'select',
+        canEdit: true,
+        campaignId: testCampaignId,
+        canvasParentId: null,
+        nodesMap,
+        edgesMap,
+        createNode: vi.fn(),
+        setPendingEditNodeId: vi.fn(),
+        setPendingEditNodePoint: vi.fn(),
+        screenToCanvasPosition: ({ x, y }) => ({ x, y }),
+        selection,
+        commands: createCommands(),
+      }),
+    )
+
+    result.current.hostRef.current = {
+      open: vi.fn(),
+      close: vi.fn(),
+    }
+
+    act(() => {
+      result.current.openForPane(createContextMenuEvent(20, 40))
+    })
+
+    const selectAllItem = result.current.menu.flatItems.find((item) => item.label === 'Select All')
+    expect(selectAllItem).toBeDefined()
+    expect(selectAllItem?.disabled).toBe(false)
+
+    await act(async () => {
+      await selectAllItem!.onSelect()
+    })
+
+    expect(selection.setSelection).toHaveBeenCalledWith({
+      nodeIds: new Set(['node-1', 'node-2']),
+      edgeIds: new Set(['edge-1']),
+    })
+  })
+
+  it('creates and starts editing a text node from the pane menu New submenu', async () => {
+    const selection = createSelectionController()
+    const { nodesMap, edgesMap } = createContextMenuDoc()
+    const createNode = vi.fn()
+    const setPendingEditNodeId = vi.fn()
+    const setPendingEditNodePoint = vi.fn()
+    const { result } = renderHook(() =>
+      useCanvasContextMenu({
+        activeTool: 'select',
+        canEdit: true,
+        campaignId: testCampaignId,
+        canvasParentId: null,
+        nodesMap,
+        edgesMap,
+        createNode,
+        setPendingEditNodeId,
+        setPendingEditNodePoint,
+        screenToCanvasPosition: ({ x, y }) => ({ x: x + 100, y: y + 200 }),
+        selection,
+        commands: createCommands(),
+      }),
+    )
+
+    result.current.hostRef.current = {
+      open: vi.fn(),
+      close: vi.fn(),
+    }
+
+    act(() => {
+      result.current.openForPane(createContextMenuEvent(20, 40))
+    })
+
+    const createSubmenu = result.current.menu.flatItems.find(
+      (item) => item.id === 'canvas-pane-create-submenu',
+    )
+    const textItem = createSubmenu?.children?.find((item) => item.id === 'canvas-pane-create-text')
+    expect(textItem).toBeDefined()
+
+    await act(async () => {
+      await textItem!.onSelect()
+    })
+
+    const createdNode = createNode.mock.calls[0]?.[0] as Node
+    expect(createdNode).toEqual(
+      expect.objectContaining({
+        type: 'text',
+        position: {
+          x: 120 - TEXT_NODE_DEFAULT_WIDTH / 2,
+          y: 240 - TEXT_NODE_DEFAULT_HEIGHT / 2,
+        },
+        width: TEXT_NODE_DEFAULT_WIDTH,
+        height: TEXT_NODE_DEFAULT_HEIGHT,
+      }),
+    )
+    expect(selection.setSelection).toHaveBeenCalledWith({
+      nodeIds: new Set([createdNode.id]),
+      edgeIds: new Set<string>(),
+    })
+    expect(setPendingEditNodePoint).toHaveBeenCalledWith({ x: 20, y: 40 })
+    expect(setPendingEditNodeId).toHaveBeenCalledWith(createdNode.id)
+  })
+
   it('selects the right-clicked node before opening the menu', () => {
-    const selection = createSelectionController({ nodeIds: [], edgeIds: [] })
+    const selection = createSelectionController()
     const { nodesMap, edgesMap } = createContextMenuDoc()
     nodesMap.set('node-1', {
       id: 'node-1',
@@ -200,7 +341,9 @@ describe('useCanvasContextMenu', () => {
         nodesMap,
         edgesMap,
         createNode: vi.fn(),
-        screenToFlowPosition: ({ x, y }) => ({ x, y }),
+        setPendingEditNodeId: vi.fn(),
+        setPendingEditNodePoint: vi.fn(),
+        screenToCanvasPosition: ({ x, y }) => ({ x, y }),
         selection,
         commands: createCommands(),
       }),
@@ -216,7 +359,10 @@ describe('useCanvasContextMenu', () => {
       result.current.openForNode(createContextMenuEvent(10, 15), nodesMap.get('node-1')!)
     })
 
-    expect(selection.replace).toHaveBeenCalledWith({ nodeIds: ['node-1'], edgeIds: [] })
+    expect(selection.setSelection).toHaveBeenCalledWith({
+      nodeIds: new Set(['node-1']),
+      edgeIds: new Set<string>(),
+    })
     expect(open).toHaveBeenCalledWith({ x: 10, y: 15 })
     expect(result.current.menu.isEmpty).toBe(false)
   })
@@ -233,7 +379,9 @@ describe('useCanvasContextMenu', () => {
         nodesMap,
         edgesMap,
         createNode: vi.fn(),
-        screenToFlowPosition: ({ x, y }) => ({ x, y }),
+        setPendingEditNodeId: vi.fn(),
+        setPendingEditNodePoint: vi.fn(),
+        screenToCanvasPosition: ({ x, y }) => ({ x, y }),
         selection,
         commands: createCommands(),
       }),
@@ -254,7 +402,10 @@ describe('useCanvasContextMenu', () => {
   })
 
   it('adds embed-node contributors for a single selected embed node', () => {
-    const selection = createSelectionController({ nodeIds: ['embed-1'], edgeIds: [] })
+    const selection = createSelectionController({
+      nodeIds: new Set(['embed-1']),
+      edgeIds: new Set<string>(),
+    })
     const { nodesMap, edgesMap } = createContextMenuDoc()
     sidebarItemsState.itemsMap.set(
       'note-1',
@@ -281,7 +432,9 @@ describe('useCanvasContextMenu', () => {
         nodesMap,
         edgesMap,
         createNode: vi.fn(),
-        screenToFlowPosition: ({ x, y }) => ({ x, y }),
+        setPendingEditNodeId: vi.fn(),
+        setPendingEditNodePoint: vi.fn(),
+        screenToCanvasPosition: ({ x, y }) => ({ x, y }),
         selection,
         commands: createCommands(),
       }),
@@ -302,7 +455,10 @@ describe('useCanvasContextMenu', () => {
   })
 
   it('keeps mixed (node+edge) selections on the shared selection menu without crashing on malformed items', () => {
-    const selection = createSelectionController({ nodeIds: ['bad-node'], edgeIds: ['edge-1'] })
+    const selection = createSelectionController({
+      nodeIds: new Set(['bad-node']),
+      edgeIds: new Set(['edge-1']),
+    })
     const { nodesMap, edgesMap } = createContextMenuDoc()
     // Intentionally corrupt node data to simulate unexpected persisted runtime state.
     nodesMap.set('bad-node', {
@@ -327,7 +483,9 @@ describe('useCanvasContextMenu', () => {
         nodesMap,
         edgesMap,
         createNode: vi.fn(),
-        screenToFlowPosition: ({ x, y }) => ({ x, y }),
+        setPendingEditNodeId: vi.fn(),
+        setPendingEditNodePoint: vi.fn(),
+        screenToCanvasPosition: ({ x, y }) => ({ x, y }),
         selection,
         commands: createCommands(),
       }),

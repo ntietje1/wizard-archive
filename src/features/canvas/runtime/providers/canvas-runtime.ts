@@ -1,4 +1,8 @@
+import { createContext, createElement, useContext, useMemo } from 'react'
+import type { Context, ReactNode } from 'react'
 import type { RemoteHighlight } from '../../utils/canvas-awareness-types'
+import type { CanvasDomRuntime } from '../../system/canvas-dom-runtime'
+import type { CanvasViewportController } from '../../system/canvas-viewport-controller'
 import type {
   CanvasDocumentWriter,
   CanvasEditSessionState,
@@ -7,121 +11,126 @@ import type {
   CanvasSelectionController,
 } from '../../tools/canvas-tool-types'
 import type { CanvasCommands } from '../document/use-canvas-commands'
-import { createContext, useContext } from 'react'
 
-export interface CanvasRuntime {
+export type CanvasRuntimeProviderProps = {
   canEdit: boolean
-  remoteHighlights: ReadonlyMap<string, RemoteHighlight>
-  history: CanvasHistoryController
+  children: ReactNode
   commands: CanvasCommands
   documentWriter: CanvasDocumentWriter
+  domRuntime: CanvasDomRuntime
+  editSession: CanvasEditSessionState
+  history: CanvasHistoryController
+  nodeActions: CanvasNodeActions
+  remoteHighlights: ReadonlyMap<string, RemoteHighlight>
+  selection: CanvasSelectionController
+  viewportController: CanvasViewportController
+}
+
+export interface CanvasDocumentRuntimeServices {
+  commands: CanvasCommands
+  documentWriter: CanvasDocumentWriter
+  history: CanvasHistoryController
+}
+
+export interface CanvasInteractionRuntimeServices {
+  canEdit: boolean
   editSession: CanvasEditSessionState
   nodeActions: CanvasNodeActions
   selection: CanvasSelectionController
 }
 
-export const CanvasRuntimeContext = createContext<CanvasRuntime | null>(null)
+export interface CanvasViewportRuntimeServices {
+  domRuntime: CanvasDomRuntime
+  viewportController: CanvasViewportController
+}
 
-CanvasRuntimeContext.displayName = 'CanvasRuntimeContext'
+export interface CanvasCollaborationRuntimeServices {
+  remoteHighlights: ReadonlyMap<string, RemoteHighlight>
+}
 
-export function useCanvasRuntime(): CanvasRuntime {
-  const runtime = useContext(CanvasRuntimeContext)
-  if (runtime === null) {
-    throw new Error('useCanvasRuntime must be used within CanvasRuntimeProvider')
+const CanvasDocumentRuntimeContext = createContext<CanvasDocumentRuntimeServices | null>(null)
+const CanvasInteractionRuntimeContext = createContext<CanvasInteractionRuntimeServices | null>(null)
+const CanvasViewportRuntimeContext = createContext<CanvasViewportRuntimeServices | null>(null)
+const CanvasCollaborationRuntimeContext = createContext<CanvasCollaborationRuntimeServices | null>(
+  null,
+)
+
+CanvasDocumentRuntimeContext.displayName = 'CanvasDocumentRuntimeContext'
+CanvasInteractionRuntimeContext.displayName = 'CanvasInteractionRuntimeContext'
+CanvasViewportRuntimeContext.displayName = 'CanvasViewportRuntimeContext'
+CanvasCollaborationRuntimeContext.displayName = 'CanvasCollaborationRuntimeContext'
+
+function createServiceHook<TService>(
+  context: Context<TService | null>,
+  hookName: string,
+): () => TService {
+  return () => {
+    const value = useContext(context)
+    if (value === null) {
+      throw new Error(`${hookName} must be used within CanvasRuntimeProvider`)
+    }
+
+    return value
   }
-
-  return runtime
 }
 
-const EMPTY_REMOTE_HIGHLIGHTS = new Map<string, RemoteHighlight>() as ReadonlyMap<
-  string,
-  RemoteHighlight
->
-const EMPTY_SELECTION_NODE_IDS: Array<string> = []
-const EMPTY_SELECTION_EDGE_IDS: Array<string> = []
-const EMPTY_SELECTION_SNAPSHOT = {
-  nodeIds: EMPTY_SELECTION_NODE_IDS,
-  edgeIds: EMPTY_SELECTION_EDGE_IDS,
+export const useCanvasDocumentRuntime = createServiceHook<CanvasDocumentRuntimeServices>(
+  CanvasDocumentRuntimeContext,
+  'useCanvasDocumentRuntime',
+)
+
+export const useCanvasInteractionRuntime = createServiceHook<CanvasInteractionRuntimeServices>(
+  CanvasInteractionRuntimeContext,
+  'useCanvasInteractionRuntime',
+)
+
+export const useCanvasViewportRuntime = createServiceHook<CanvasViewportRuntimeServices>(
+  CanvasViewportRuntimeContext,
+  'useCanvasViewportRuntime',
+)
+
+export const useCanvasCollaborationRuntime = createServiceHook<CanvasCollaborationRuntimeServices>(
+  CanvasCollaborationRuntimeContext,
+  'useCanvasCollaborationRuntime',
+)
+
+export function CanvasRuntimeProvider({
+  canEdit,
+  children,
+  commands,
+  documentWriter,
+  domRuntime,
+  editSession,
+  history,
+  nodeActions,
+  remoteHighlights,
+  selection,
+  viewportController,
+}: CanvasRuntimeProviderProps) {
+  const documentServices = useMemo(
+    () => ({ commands, documentWriter, history }),
+    [commands, documentWriter, history],
+  )
+  const interactionServices = useMemo(
+    () => ({ canEdit, editSession, nodeActions, selection }),
+    [canEdit, editSession, nodeActions, selection],
+  )
+  const viewportServices = useMemo(
+    () => ({ domRuntime, viewportController }),
+    [domRuntime, viewportController],
+  )
+  const collaborationServices = useMemo(() => ({ remoteHighlights }), [remoteHighlights])
+  let tree = children
+  tree = provide(CanvasCollaborationRuntimeContext, collaborationServices, tree)
+  tree = provide(CanvasViewportRuntimeContext, viewportServices, tree)
+  tree = provide(CanvasInteractionRuntimeContext, interactionServices, tree)
+  return provide(CanvasDocumentRuntimeContext, documentServices, tree)
 }
 
-export const READ_ONLY_CANVAS_RUNTIME: CanvasRuntime = {
-  canEdit: false,
-  remoteHighlights: EMPTY_REMOTE_HIGHLIGHTS,
-  history: {
-    canUndo: false,
-    canRedo: false,
-    undo: () => undefined,
-    redo: () => undefined,
-  },
-  commands: {
-    copy: {
-      id: 'copy',
-      canRun: () => false,
-      run: () => false,
-    },
-    cut: {
-      id: 'cut',
-      canRun: () => false,
-      run: () => false,
-    },
-    paste: {
-      id: 'paste',
-      canRun: () => false,
-      run: () => null,
-    },
-    duplicate: {
-      id: 'duplicate',
-      canRun: () => false,
-      run: () => null,
-    },
-    delete: {
-      id: 'delete',
-      canRun: () => false,
-      run: () => false,
-    },
-    reorder: {
-      id: 'reorder',
-      canRun: () => false,
-      run: () => false,
-    },
-  },
-  documentWriter: {
-    createNode: () => undefined,
-    updateNode: () => undefined,
-    updateNodeData: () => undefined,
-    updateEdge: () => undefined,
-    resizeNode: () => undefined,
-    deleteNodes: () => undefined,
-    createEdge: () => undefined,
-    deleteEdges: () => undefined,
-    setNodePosition: () => undefined,
-  },
-  editSession: {
-    editingEmbedId: null,
-    setEditingEmbedId: () => undefined,
-    pendingEditNodeId: null,
-    pendingEditNodePoint: null,
-    setPendingEditNodeId: () => undefined,
-    setPendingEditNodePoint: () => undefined,
-  },
-  nodeActions: {
-    updateNodeData: () => undefined,
-    transact: (fn) => fn(),
-    onResize: () => undefined,
-    onResizeEnd: () => undefined,
-  },
-  selection: {
-    getSnapshot: () => EMPTY_SELECTION_SNAPSHOT,
-    replace: () => undefined,
-    replaceNodes: () => undefined,
-    replaceEdges: () => undefined,
-    clear: () => undefined,
-    getSelectedNodeIds: () => EMPTY_SELECTION_NODE_IDS,
-    getSelectedEdgeIds: () => EMPTY_SELECTION_EDGE_IDS,
-    toggleNodeFromTarget: () => undefined,
-    toggleEdgeFromTarget: () => undefined,
-    beginGesture: () => undefined,
-    commitGestureSelection: () => undefined,
-    endGesture: () => undefined,
-  },
+function provide<TValue>(
+  context: Context<TValue | null>,
+  value: TValue,
+  children: ReactNode,
+): ReactNode {
+  return createElement(context.Provider, { value }, children)
 }

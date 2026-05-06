@@ -1,59 +1,72 @@
-import type { XYPosition } from '@xyflow/react'
 import type {
-  ParsedCanvasRuntimeEmbedNode,
-  ParsedCanvasRuntimeStrokeNode,
-  ParsedCanvasRuntimeTextNode,
+  CanvasEmbedNodeData,
+  CanvasNodeType,
+  CanvasStrokeNodeData,
+  CanvasTextNodeData,
 } from 'convex/canvases/validation'
+import type { EmbedNodeData } from './embed/embed-node-data'
+import type {
+  CanvasRichTextNodeData,
+  CanvasRichTextNodeInputData,
+} from './shared/canvas-rich-text-node-data'
+import type { StrokeNodeData } from './stroke/stroke-node-model'
+import type { CanvasPosition } from '../types/canvas-domain-types'
 
-/**
- * Raw node creation/input data stays broad at the React Flow boundary; stricter node contracts are
- * enforced through the parsed runtime node types and per-node normalizers.
- */
-export type CanvasNodeData = Record<string, unknown>
+export const CANVAS_NODE_TYPES = [
+  'embed',
+  'stroke',
+  'text',
+] as const satisfies ReadonlyArray<CanvasNodeType>
 
-export type CanvasNodeType =
-  | ParsedCanvasRuntimeEmbedNode['type']
-  | ParsedCanvasRuntimeStrokeNode['type']
-  | ParsedCanvasRuntimeTextNode['type']
-
-interface CanvasParsedRuntimeNodeMap {
-  embed: ParsedCanvasRuntimeEmbedNode
-  stroke: ParsedCanvasRuntimeStrokeNode
-  text: ParsedCanvasRuntimeTextNode
+export interface CanvasNodeDataByType {
+  embed: CanvasEmbedNodeData
+  stroke: CanvasStrokeNodeData
+  text: CanvasTextNodeData
 }
 
-type CanvasParsedRuntimeNodeByType<TType extends CanvasNodeType> = CanvasParsedRuntimeNodeMap[TType]
+export interface CanvasNodeRenderDataByType {
+  embed: EmbedNodeData
+  stroke: StrokeNodeData
+  text: CanvasRichTextNodeData
+}
+
+export interface CanvasNodeComponentDataByType {
+  embed: EmbedNodeData
+  stroke: StrokeNodeData
+  text: CanvasRichTextNodeInputData
+}
 
 export type CanvasRuntimeNode<
-  TData extends CanvasNodeData = CanvasNodeData,
   TType extends CanvasNodeType = CanvasNodeType,
-> = Omit<CanvasParsedRuntimeNodeByType<TType>, 'data'> & {
-  data: TData
-}
-
-export interface CanvasNodeCreateArgs {
-  position: XYPosition
-  size?: { width: number; height: number }
-  data?: CanvasNodeData
-}
-
-export interface CanvasNodeMinimapProps {
+  TData extends CanvasNodeRenderDataByType[TType] = CanvasNodeRenderDataByType[TType],
+> = {
   id: string
-  x: number
-  y: number
-  width: number
-  height: number
-  color?: string
-  borderRadius?: number
-  shapeRendering?: string
+  type: TType
+  position: CanvasPosition
+  data: TData
+  width?: number
+  height?: number
+  hidden?: boolean
+  zIndex?: number
+  className?: string
+}
+
+export interface CanvasNodeCreateArgs<TType extends CanvasNodeType = CanvasNodeType> {
+  position: CanvasPosition
+  size?: { width: number; height: number }
+  data?: Partial<CanvasNodeDataByType[TType]>
+}
+
+export interface CanvasNodeComponentProps<TData = CanvasNodeComponentDataByType[CanvasNodeType]> {
+  id: string
+  type?: CanvasNodeType
+  data: TData
+  dragging?: boolean
+  selected?: boolean
+  width?: number
+  height?: number
 }
 
 export interface CanvasNodeSelectionContext {
   zoom: number
-}
-
-export interface CanvasNodePlacementBehavior {
-  anchor: 'center' | 'top-left'
-  selectOnCreate: boolean
-  startEditingOnCreate: boolean
 }

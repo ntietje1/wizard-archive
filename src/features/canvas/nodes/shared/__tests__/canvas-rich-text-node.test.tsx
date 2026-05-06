@@ -3,31 +3,27 @@ import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasRichTextNode } from '../canvas-rich-text-node'
 import { normalizeCanvasRichTextNodeData } from '../canvas-rich-text-node-data'
-import { createCanvasRuntime } from '../../../runtime/__tests__/canvas-runtime-test-utils'
-import { CanvasRuntimeProvider } from '../../../runtime/providers/canvas-runtime-context'
+import {
+  createCanvasRuntime,
+  createCanvasRuntimeEnginePair,
+} from '../../../runtime/__tests__/canvas-runtime-test-utils'
+import { CanvasRuntimeProvider } from '../../../runtime/providers/canvas-runtime'
 import { CanvasRenderModeProvider } from '../../../runtime/providers/canvas-render-mode-context'
-import { useCanvasSelectionState } from '../../../runtime/selection/use-canvas-selection-state'
+import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
+import type { CanvasDomRuntime } from '../../../system/canvas-dom-runtime'
+import type { CanvasEngine } from '../../../system/canvas-engine-types'
+import type { CanvasSelectionSnapshot } from '../../../system/canvas-selection'
 
 const renderModeState = vi.hoisted(() => ({
   interactive: true,
 }))
-
-vi.mock('@xyflow/react', () => ({
-  useInternalNode: () => ({
-    id: 'text-1',
-    position: { x: 0, y: 0 },
-    measured: { width: 200, height: 120 },
-    internals: { positionAbsolute: { x: 0, y: 0 } },
-  }),
-  useReactFlow: () => ({
-    setNodes: (
-      updater: Array<{ id: string }> | ((nodes: Array<{ id: string }>) => Array<{ id: string }>),
-    ) => (typeof updater === 'function' ? updater([{ id: 'text-1' }]) : updater),
-    setEdges: (updater: Array<never> | ((edges: Array<never>) => Array<never>)) =>
-      typeof updater === 'function' ? updater([]) : updater,
-    screenToFlowPosition: ({ x, y }: { x: number; y: number }) => ({ x, y }),
-  }),
+const ownedEditorState = vi.hoisted((): { editor: unknown } => ({
+  editor: null,
 }))
+const richTextViewSpy = vi.hoisted(() => vi.fn())
+
+let richTextEngine: CanvasEngine
+let richTextDomRuntime: CanvasDomRuntime
 
 // This mock bypasses CanvasRenderModeProvider, so the harness mode prop and
 // renderModeState.interactive must stay aligned when changing test render mode.
@@ -53,7 +49,14 @@ vi.mock('../use-blocknote-activation-lifecycle', () => ({
 }))
 
 vi.mock('~/features/editor/hooks/useOwnedBlockNoteEditor', () => ({
-  useOwnedBlockNoteEditor: () => null,
+  useOwnedBlockNoteEditor: () => ownedEditorState.editor,
+}))
+
+vi.mock('../canvas-rich-text-view', () => ({
+  CanvasRichTextView: (props: { style?: React.CSSProperties }) => {
+    richTextViewSpy(props)
+    return <div data-testid="canvas-rich-text-view" style={props.style} />
+  },
 }))
 
 vi.mock('~/features/shadcn/components/scroll-area', () => ({
@@ -74,15 +77,17 @@ vi.mock('~/features/shadcn/components/scroll-area', () => ({
 
 describe('CanvasRichTextNode', () => {
   beforeEach(() => {
+    const runtimePair = createCanvasRuntimeEnginePair()
+    richTextEngine = runtimePair.canvasEngine
+    richTextDomRuntime = runtimePair.domRuntime
     renderModeState.interactive = true
-    useCanvasSelectionState.getState().setSelection({
-      nodeIds: [],
-      edgeIds: [],
-    })
+    ownedEditorState.editor = null
+    richTextViewSpy.mockReset()
   })
 
   afterEach(() => {
-    useCanvasSelectionState.getState().reset()
+    richTextEngine.destroy()
+    richTextDomRuntime.destroy()
   })
 
   it('selects the new text node when pending auto-edit starts', async () => {
@@ -92,7 +97,7 @@ describe('CanvasRichTextNode', () => {
       await Promise.resolve()
     })
 
-    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual(['text-1'])
+    expect(richTextEngine.getSnapshot().selection.nodeIds).toEqual(new Set(['text-1']))
     expect(getCanvasNode()).toHaveAttribute('data-node-selected', 'true')
   })
 
@@ -112,7 +117,7 @@ describe('CanvasRichTextNode', () => {
 
     expect(screen.queryByTestId('connection-handles')).toBeNull()
     expect(screen.getByRole('group', { name: 'Empty text node' })).toHaveAttribute('tabindex', '-1')
-    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual([])
+    expect(richTextEngine.getSnapshot().selection.nodeIds).toEqual(new Set())
   })
 
   it('renders an invalid-content placeholder and does not enter editing for malformed content', async () => {
@@ -124,8 +129,41 @@ describe('CanvasRichTextNode', () => {
 
     expect(screen.getByText('Invalid text content')).toBeInTheDocument()
     expect(screen.getByRole('group', { name: 'Invalid text node' })).toBeInTheDocument()
-    expect(useCanvasSelectionState.getState().selectedNodeIds).toEqual([])
+    expect(richTextEngine.getSnapshot().selection.nodeIds).toEqual(new Set())
     expect(screen.queryByText('Empty text node')).toBeNull()
+  })
+
+  it('uses node textColor as the default rendered text color', () => {
+    render(
+      <CanvasRichTextNodeHarness
+        content={[{ type: 'paragraph', content: [{ type: 'text', text: 'Colored text' }] }]}
+        textColor="var(--t-red)"
+      />,
+    )
+
+    expect(screen.getByRole('group', { name: 'Colored text' })).toHaveStyle({
+      color: 'var(--t-red)',
+    })
+  })
+
+  it('passes node textColor to the BlockNote container as the default editor text color', () => {
+    ownedEditorState.editor = createEditor()
+
+    render(
+      <CanvasRichTextNodeHarness
+        content={[{ type: 'paragraph', content: [{ type: 'text', text: 'Colored text' }] }]}
+        textColor="var(--t-blue)"
+      />,
+    )
+
+    expect(richTextViewSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        style: expect.objectContaining({
+          '--bn-colors-editor-text': 'var(--t-blue)',
+          color: 'var(--t-blue)',
+        }),
+      }),
+    )
   })
 })
 
@@ -134,9 +172,11 @@ const EMPTY_CONTENT: Array<never> = []
 function CanvasRichTextNodeHarness({
   content = EMPTY_CONTENT,
   mode = 'interactive',
+  textColor,
 }: {
   content?: unknown
   mode?: 'interactive' | 'embedded-readonly'
+  textColor?: string
 }) {
   const defaultSelection = createCanvasRuntime().selection
   const [pendingEditNodeId, setPendingEditNodeId] = useState<string | null>('text-1')
@@ -146,7 +186,7 @@ function CanvasRichTextNodeHarness({
   const nodeProps = {
     id: 'text-1',
     dragging: false,
-    data: normalizeCanvasRichTextNodeData({ content }),
+    data: normalizeCanvasRichTextNodeData({ content, textColor }),
     variant: {
       nodeType: 'text',
       editAriaLabel: 'Edit text node',
@@ -163,29 +203,42 @@ function CanvasRichTextNodeHarness({
   } as unknown as Parameters<typeof CanvasRichTextNode>[0]
 
   return (
-    <CanvasRenderModeProvider mode={mode}>
-      <CanvasRuntimeProvider
-        {...createCanvasRuntime({
-          editSession: {
-            editingEmbedId: null,
-            setEditingEmbedId: () => undefined,
-            pendingEditNodeId,
-            pendingEditNodePoint,
-            setPendingEditNodeId,
-            setPendingEditNodePoint,
-          },
-          selection: {
-            ...defaultSelection,
-            replace: (selection) => useCanvasSelectionState.getState().setSelection(selection),
-          },
-        })}
-      >
-        <CanvasRichTextNode {...nodeProps} />
-      </CanvasRuntimeProvider>
-    </CanvasRenderModeProvider>
+    <CanvasEngineProvider engine={richTextEngine}>
+      <CanvasRenderModeProvider mode={mode}>
+        <CanvasRuntimeProvider
+          {...createCanvasRuntime({
+            canvasEngine: richTextEngine,
+            domRuntime: richTextDomRuntime,
+            editSession: {
+              editingEmbedId: null,
+              setEditingEmbedId: () => undefined,
+              pendingEditNodeId,
+              pendingEditNodePoint,
+              setPendingEditNodeId,
+              setPendingEditNodePoint,
+            },
+            selection: {
+              ...defaultSelection,
+              setSelection: (selection: CanvasSelectionSnapshot) =>
+                richTextEngine.setSelection(selection),
+            },
+          })}
+        >
+          <CanvasRichTextNode {...nodeProps} />
+        </CanvasRuntimeProvider>
+      </CanvasRenderModeProvider>
+    </CanvasEngineProvider>
   )
 }
 
 function getCanvasNode() {
   return screen.getByTestId('canvas-node')
+}
+
+function createEditor() {
+  return {
+    document: [],
+    onChange: vi.fn(() => () => undefined),
+    replaceBlocks: vi.fn(),
+  }
 }

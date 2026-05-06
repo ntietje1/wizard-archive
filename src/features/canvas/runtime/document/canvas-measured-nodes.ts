@@ -1,10 +1,8 @@
 import type { CanvasMeasuredNode } from '../../tools/canvas-tool-types'
+import type { CanvasEngineSnapshot, CanvasInternalNode } from '../../system/canvas-engine-types'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 
-type MeasuredNodeLookupValue = {
-  id: string
-  type?: string
-  data: Record<string, unknown>
-  position: { x: number; y: number }
+type MeasuredNodeLookupValue = Pick<CanvasDocumentNode, 'data' | 'id' | 'position' | 'type'> & {
   measured?: {
     width?: number
     height?: number
@@ -29,7 +27,34 @@ export function getMeasuredCanvasNodesFromLookup(
         position: internalNode.position,
         width,
         height,
-      },
+      } as CanvasMeasuredNode,
     ]
   })
+}
+
+export function getMeasuredCanvasNodesFromEngineSnapshot(
+  snapshot: CanvasEngineSnapshot,
+): Array<CanvasMeasuredNode> {
+  const nodeLookup = snapshot.nodeLookup
+  if (!nodeLookup) {
+    return []
+  }
+
+  return getMeasuredCanvasNodesFromLookup(normalizeMeasuredNodeLookup(nodeLookup))
+}
+
+function normalizeMeasuredNodeLookup(
+  nodeLookup: ReadonlyMap<string, CanvasInternalNode>,
+): Map<string, MeasuredNodeLookupValue> {
+  const normalized = new Map<string, MeasuredNodeLookupValue>()
+  for (const [nodeId, internalNode] of nodeLookup) {
+    normalized.set(nodeId, {
+      id: internalNode.node.id,
+      type: internalNode.node.type,
+      data: internalNode.node.data,
+      position: internalNode.node.position,
+      measured: internalNode.measured,
+    })
+  }
+  return normalized
 }

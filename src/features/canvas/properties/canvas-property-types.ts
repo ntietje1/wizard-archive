@@ -20,6 +20,7 @@ export interface CanvasPaintPreset {
 export type CanvasPaintPropertyDefinition = CanvasPropertyBase<'paint', CanvasPaintValue> & {
   defaultValue: CanvasPaintValue
   options: ReadonlyArray<CanvasPaintPreset>
+  showOpacity?: boolean
 }
 
 export type CanvasStrokeSizePropertyDefinition = CanvasPropertyBase<'strokeSize', number> & {
@@ -29,7 +30,7 @@ export type CanvasStrokeSizePropertyDefinition = CanvasPropertyBase<'strokeSize'
   step?: number
 }
 
-export type CanvasAnyPropertyDefinition =
+type CanvasAnyPropertyDefinition =
   | CanvasPaintPropertyDefinition
   | CanvasStrokeSizePropertyDefinition
 
@@ -37,6 +38,7 @@ export type CanvasPropertyValue<TValue> = { kind: 'value'; value: TValue } | { k
 
 type CanvasPropertyBindingBase<TValue, TDefinition extends CanvasAnyPropertyDefinition> = {
   definition: TDefinition
+  getPropertyValue?: () => CanvasPropertyValue<TValue>
   getValue: () => TValue
   setValue: (value: TValue) => void
 }
@@ -86,9 +88,12 @@ export const EMPTY_CANVAS_INSPECTABLE_PROPERTIES: CanvasInspectableProperties = 
 
 export function bindCanvasPaintProperty(
   definition: CanvasPaintPropertyDefinition,
-  binding: Omit<CanvasPaintPropertyBinding, 'definition' | 'getValue' | 'setValue'>,
+  binding: Omit<CanvasPaintPropertyBinding, 'definition' | 'getValue' | 'setValue'> & {
+    setValue?: (value: CanvasPaintValue) => void
+  },
 ): CanvasPaintPropertyBinding {
   return {
+    ...binding,
     definition,
     getValue: () => {
       const color = binding.getColor()
@@ -104,10 +109,14 @@ export function bindCanvasPaintProperty(
           }
     },
     setValue: (value) => {
+      if (binding.setValue) {
+        binding.setValue(value)
+        return
+      }
+
       binding.setColor(value.color)
       binding.setOpacity(value.opacity)
     },
-    ...binding,
   }
 }
 

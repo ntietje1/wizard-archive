@@ -2,12 +2,12 @@ import { createCanvasNodePlacement } from '../../nodes/canvas-node-modules'
 import { getConstrainedRectFromPoints } from '../../utils/canvas-constraint-utils'
 import {
   releasePointerCapture,
-  screenEventToFlowPosition,
+  screenEventToCanvasPosition,
   setPointerCapture,
 } from './tool-module-utils'
 import { setRectCreationDragRect } from './rect-creation-local-overlay'
 import type { CanvasToolHandlers, CanvasToolRuntime } from '../canvas-tool-types'
-import type { CanvasNodeType } from '../../nodes/canvas-node-types'
+import type { CanvasNodeType } from 'convex/canvases/validation'
 
 const MIN_DRAG_RECT_SIZE = 10
 
@@ -26,7 +26,7 @@ export function createRectangularPlacementToolController<
       return
     }
 
-    const pos = services.viewport.screenToFlowPosition(lastClientPos)
+    const pos = services.viewport.screenToCanvasPosition(lastClientPos)
     setRectCreationDragRect(
       getConstrainedRectFromPoints(start, pos, {
         square: services.modifiers.getShiftPressed(),
@@ -64,8 +64,8 @@ export function createRectangularPlacementToolController<
   ) => {
     const placement = createCanvasNodePlacement(nodeType, { position })
     services.commands.createNode(placement.node)
-    if (placement.node.selected) {
-      services.selection.replaceNodes([placement.node.id])
+    if (placement.selectOnCreate) {
+      services.selection.setSelection({ nodeIds: new Set([placement.node.id]), edgeIds: new Set() })
     }
     services.toolState.setActiveTool('select')
     if (placement.startEditing) {
@@ -86,8 +86,8 @@ export function createRectangularPlacementToolController<
       size: { width: rect.width, height: rect.height },
     })
     services.commands.createNode(placement.node)
-    if (placement.node.selected) {
-      services.selection.replaceNodes([placement.node.id])
+    if (placement.selectOnCreate) {
+      services.selection.setSelection({ nodeIds: new Set([placement.node.id]), edgeIds: new Set() })
     }
     services.toolState.setActiveTool('select')
     if (placement.startEditing) {
@@ -105,7 +105,7 @@ export function createRectangularPlacementToolController<
       captureTarget = setPointerCapture(event)
       pointerId = event.pointerId
       active = true
-      start = screenEventToFlowPosition(services.viewport, event)
+      start = screenEventToCanvasPosition(services.viewport, event)
       lastClientPos = { x: event.clientX, y: event.clientY }
       setRectCreationDragRect(null)
     },
@@ -135,7 +135,7 @@ export function createRectangularPlacementToolController<
 
       lastClientPos = { x: event.clientX, y: event.clientY }
       const point = { x: lastClientPos.x, y: lastClientPos.y }
-      const pos = services.viewport.screenToFlowPosition(lastClientPos)
+      const pos = services.viewport.screenToCanvasPosition(lastClientPos)
       const rect = getConstrainedRectFromPoints(start, pos, {
         square: services.modifiers.getShiftPressed(),
       })

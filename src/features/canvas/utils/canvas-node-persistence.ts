@@ -1,15 +1,18 @@
-import type { Node } from '@xyflow/react'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 
-export function stripEphemeralCanvasNodeState<TNode extends Node>(
-  node: TNode,
-): Omit<TNode, 'selected' | 'draggable' | 'dragging' | 'resizing'> {
+export function stripEphemeralCanvasNodeState(node: CanvasDocumentNode): CanvasDocumentNode
+export function stripEphemeralCanvasNodeState(node: unknown): unknown
+export function stripEphemeralCanvasNodeState(node: unknown): unknown {
+  if (!node || typeof node !== 'object' || Array.isArray(node)) {
+    return node
+  }
+
   const {
     selected: _selected,
     draggable: _draggable,
     dragging: _dragging,
     resizing: _resizing,
-    ...persistedNode
-  } = node
-
-  return persistedNode
+    ...documentNode
+  } = node as Record<string, unknown>
+  return documentNode
 }

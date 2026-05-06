@@ -1,9 +1,9 @@
-import { embedNodeContextMenuContributors } from './embed/embed-node-context-menu'
 import { createEmptyCanvasRichTextContent } from './shared/canvas-rich-text-editor'
 import {
   bindCanvasNodeSurfaceBorderPaintProperty,
   bindCanvasNodeSurfaceBorderWidthProperty,
   bindCanvasNodeSurfaceFillProperty,
+  bindCanvasNodeTextColorProperty,
   normalizeCanvasNodeSurfaceStyleData,
 } from './shared/canvas-node-surface-style'
 import { clampStrokeNodeSize, resizeStrokeNode } from './stroke/stroke-node-model'
@@ -13,6 +13,7 @@ import {
   strokeNodeIntersectsRect,
 } from './stroke/stroke-node-interactions'
 import { TEXT_NODE_DEFAULT_HEIGHT, TEXT_NODE_DEFAULT_WIDTH } from './text/text-node-constants'
+import { resolveEmbedNodeDefaultSize } from './embed/embed-node-size'
 import {
   freehandStrokeSizeCanvasProperty,
   linePaintCanvasProperty,
@@ -22,165 +23,201 @@ import {
   bindCanvasPaintProperty,
   bindCanvasStrokeSizeProperty,
 } from '../properties/canvas-property-types'
-import type { CanvasAwarenessCapability, CanvasDocumentWriter } from '../tools/canvas-tool-types'
 import { polygonIntersectsBounds, rectIntersectsBounds } from '../utils/canvas-geometry-utils'
+import type { CanvasNodeCreateArgs, CanvasNodeDataByType } from './canvas-node-types'
+import { parseCanvasDocumentNode } from 'convex/canvases/validation'
 import type {
-  CanvasNodeCreateArgs,
-  CanvasNodePlacementBehavior,
+  CanvasDocumentNode,
+  CanvasEmbedDocumentNode,
   CanvasNodeType,
-} from './canvas-node-types'
+  CanvasStrokeDocumentNode,
+  CanvasTextDocumentNode,
+} from 'convex/canvases/validation'
 import type { CanvasInspectableProperties } from '../properties/canvas-property-types'
-import type { CanvasContextMenuContributor } from '../runtime/context-menu/canvas-context-menu-types'
-import type { Node, XYPosition } from '@xyflow/react'
+import type { CanvasPosition } from '~/features/canvas/types/canvas-domain-types'
 import { assertNever } from '~/shared/utils/utils'
 import { normalizeCanvasNode } from './canvas-node-normalization'
 import type { AnyNormalizedCanvasNode } from './canvas-node-normalization'
 
-const DEFAULT_EMBED_SIZE = { width: 320, height: 240 } as const
 const DEFAULT_TEXT_SIZE = {
   width: TEXT_NODE_DEFAULT_WIDTH,
   height: TEXT_NODE_DEFAULT_HEIGHT,
 } as const
-const EMPTY_CONTEXT_MENU_CONTRIBUTORS: ReadonlyArray<CanvasContextMenuContributor> = []
-const EMPTY_AWARENESS_LAYERS: ReadonlyArray<{
-  key: CanvasNodeType
-  Layer: NonNullable<CanvasAwarenessCapability['Layer']>
-}> = []
+export type CanvasNodeDataPatch<TType extends CanvasNodeType = CanvasNodeType> = Partial<{
+  [TKey in keyof CanvasNodeDataByType[TType]]: CanvasNodeDataByType[TType][TKey] | null
+}>
 
-function withNormalizedCanvasNode<TResult>(
-  node: Node,
-  onNode: (node: AnyNormalizedCanvasNode) => TResult,
-  onInvalid: () => TResult,
-): TResult {
-  const normalizedNode = normalizeCanvasNode(node)
-  return normalizedNode ? onNode(normalizedNode) : onInvalid()
-}
+type PatchCanvasNodeData = <TType extends CanvasNodeType>(
+  nodeId: string,
+  data: CanvasNodeDataPatch<TType>,
+) => void
+type CanvasNodePropertyOptions = { includeTextColor?: boolean; includeFill?: boolean }
+type CanvasDocumentNodeByType<TType extends CanvasNodeType> = {
+  embed: CanvasEmbedDocumentNode
+  stroke: CanvasStrokeDocumentNode
+  text: CanvasTextDocumentNode
+}[TType]
 
 function getStrokeNodeProperties(
   node: Extract<AnyNormalizedCanvasNode, { type: 'stroke' }>,
-  updateNodeData: CanvasDocumentWriter['updateNodeData'],
+  patchNodeData: PatchCanvasNodeData,
+  _options?: { includeTextColor?: boolean },
 ): CanvasInspectableProperties {
   return {
     bindings: [
       bindCanvasPaintProperty(linePaintCanvasProperty, {
         getColor: () => node.data.color,
+        setValue: ({ color, opacity }) =>
+          patchNodeData(node.id, {
+            color: validateColor(color, node.data.color),
+            opacity: validateOpacity(opacity, node.data.opacity ?? 100),
+          }),
         setColor: (color) =>
-          updateNodeData(node.id, {
-            color: typeof color === 'string' && color.length > 0 ? color : node.data.color,
+          patchNodeData(node.id, {
+            color: validateColor(color, node.data.color),
           }),
         getOpacity: () => node.data.opacity ?? 100,
-        setOpacity: (opacity) => updateNodeData(node.id, { opacity }),
+        setOpacity: (opacity) =>
+          patchNodeData(node.id, {
+            opacity: validateOpacity(opacity, node.data.opacity ?? 100),
+          }),
       }),
       bindCanvasStrokeSizeProperty(
         freehandStrokeSizeCanvasProperty,
         () => clampStrokeNodeSize(node.data.size),
-        (size) => updateNodeData(node.id, { size: clampStrokeNodeSize(size) }),
+        (size) => patchNodeData(node.id, { size: clampStrokeNodeSize(size) }),
       ),
     ],
   }
 }
 
+function validateColor(color: unknown, fallback: string) {
+  return typeof color === 'string' && color.length > 0 ? color : fallback
+}
+
+function validateOpacity(opacity: number | undefined, fallback: number) {
+  if (opacity === undefined || !Number.isFinite(opacity)) {
+    return fallback
+  }
+
+  return Math.max(0, Math.min(100, opacity))
+}
+
 function getSurfaceNodeProperties(
   node: Extract<AnyNormalizedCanvasNode, { type: 'embed' | 'text' }>,
-  updateNodeData: CanvasDocumentWriter['updateNodeData'],
+  patchNodeData: PatchCanvasNodeData,
+  options: CanvasNodePropertyOptions = {},
 ): CanvasInspectableProperties {
+  const textColorBindings = options.includeTextColor
+    ? [bindCanvasNodeTextColorProperty(node, patchNodeData)]
+    : []
+  const fillBindings =
+    options.includeFill === false ? [] : [bindCanvasNodeSurfaceFillProperty(node, patchNodeData)]
+
   return {
     bindings: [
-      bindCanvasNodeSurfaceFillProperty(node, updateNodeData),
-      bindCanvasNodeSurfaceBorderPaintProperty(node, updateNodeData),
-      bindCanvasNodeSurfaceBorderWidthProperty(node, updateNodeData),
+      ...textColorBindings,
+      ...fillBindings,
+      bindCanvasNodeSurfaceBorderPaintProperty(node, patchNodeData),
+      bindCanvasNodeSurfaceBorderWidthProperty(node, patchNodeData),
     ],
   }
 }
 
-type CanvasNodeSpec<TType extends CanvasNodeType = CanvasNodeType> = {
-  placement: CanvasNodePlacementBehavior | null
-  defaultSize: { width: number; height: number } | null
-  createDefaultData: () => Record<string, unknown> | null
-  contextMenuContributors: ReadonlyArray<CanvasContextMenuContributor>
-  getProperties?: (
-    node: Extract<AnyNormalizedCanvasNode, { type: TType }>,
-    updateNodeData: CanvasDocumentWriter['updateNodeData'],
-  ) => CanvasInspectableProperties
-  resize?: (
-    node: Extract<AnyNormalizedCanvasNode, { type: TType }>,
-    resize: { width: number; height: number; position: XYPosition },
-  ) => Node
-}
-
-export const canvasNodeSpecs = {
-  embed: {
-    placement: {
-      anchor: 'top-left',
-      selectOnCreate: false,
-      startEditingOnCreate: false,
-    },
-    defaultSize: DEFAULT_EMBED_SIZE,
-    createDefaultData: () => ({ ...normalizeCanvasNodeSurfaceStyleData(undefined) }),
-    contextMenuContributors: embedNodeContextMenuContributors,
-    getProperties: getSurfaceNodeProperties,
-    resize: undefined,
-  },
-  stroke: {
-    placement: null,
-    defaultSize: null,
-    createDefaultData: () => null,
-    contextMenuContributors: EMPTY_CONTEXT_MENU_CONTRIBUTORS,
-    getProperties: getStrokeNodeProperties,
-    resize: resizeStrokeNode,
-  },
-  text: {
-    placement: {
-      anchor: 'center',
-      selectOnCreate: true,
-      startEditingOnCreate: true,
-    },
-    defaultSize: DEFAULT_TEXT_SIZE,
-    createDefaultData: () => ({
-      ...normalizeCanvasNodeSurfaceStyleData(undefined),
-      content: createEmptyCanvasRichTextContent(),
-    }),
-    contextMenuContributors: EMPTY_CONTEXT_MENU_CONTRIBUTORS,
-    getProperties: getSurfaceNodeProperties,
-    resize: undefined,
-  },
-} as const satisfies { [TType in CanvasNodeType]: CanvasNodeSpec<TType> }
-
-export const canvasNodeAwarenessLayers = EMPTY_AWARENESS_LAYERS
-
 export function getCanvasNodeInspectableProperties(
   normalizedNode: AnyNormalizedCanvasNode | null,
-  updateNodeData: CanvasDocumentWriter['updateNodeData'],
+  patchNodeData: PatchCanvasNodeData,
+  options: { includeTextColor?: boolean } = {},
 ): CanvasInspectableProperties {
   if (!normalizedNode) {
     return EMPTY_CANVAS_INSPECTABLE_PROPERTIES
   }
 
-  const getProperties = canvasNodeSpecs[normalizedNode.type].getProperties
-  return getProperties
-    ? getProperties(normalizedNode as never, updateNodeData)
-    : EMPTY_CANVAS_INSPECTABLE_PROPERTIES
+  switch (normalizedNode.type) {
+    case 'embed':
+      return getSurfaceNodeProperties(normalizedNode, patchNodeData, {
+        ...options,
+        includeFill: false,
+      })
+    case 'stroke':
+      return getStrokeNodeProperties(normalizedNode, patchNodeData)
+    case 'text':
+      return getSurfaceNodeProperties(normalizedNode, patchNodeData, {
+        ...options,
+        includeTextColor: options.includeTextColor ?? true,
+      })
+    default:
+      return assertNever(normalizedNode)
+  }
 }
 
+function getDefaultCanvasNodeSize(
+  type: CanvasNodeType,
+  data: CanvasNodeDataPatch | null,
+): { width: number; height: number } | null {
+  switch (type) {
+    case 'embed':
+      return resolveEmbedNodeDefaultSize(getCanvasNodeDataLockedAspectRatio(data))
+    case 'stroke':
+      return null
+    case 'text':
+      return DEFAULT_TEXT_SIZE
+    default:
+      return assertNever(type)
+  }
+}
+
+function getCanvasNodeDataLockedAspectRatio(data: CanvasNodeDataPatch | null): number | null {
+  const lockedAspectRatio = data && 'lockedAspectRatio' in data ? data.lockedAspectRatio : null
+  return typeof lockedAspectRatio === 'number' ? lockedAspectRatio : null
+}
+
+function getCanvasNodePlacementBehavior(type: CanvasNodeType) {
+  switch (type) {
+    case 'embed':
+      return {
+        anchor: 'top-left',
+        selectOnCreate: false,
+        startEditingOnCreate: false,
+      } as const
+    case 'stroke':
+      return null
+    case 'text':
+      return {
+        anchor: 'center',
+        selectOnCreate: true,
+        startEditingOnCreate: true,
+      } as const
+    default:
+      return assertNever(type)
+  }
+}
+
+function createDefaultCanvasNodeData(type: CanvasNodeType): CanvasNodeDataPatch | null {
+  switch (type) {
+    case 'embed':
+      return { ...normalizeCanvasNodeSurfaceStyleData(undefined) }
+    case 'stroke':
+      return null
+    case 'text':
+      return {
+        ...normalizeCanvasNodeSurfaceStyleData(undefined),
+        content: createEmptyCanvasRichTextContent(),
+      }
+    default:
+      return assertNever(type)
+  }
+}
+
+export function createCanvasNodePlacement<TType extends CanvasNodeType>(
+  type: TType,
+  args: CanvasNodeCreateArgs<TType>,
+): { node: CanvasDocumentNodeByType<TType>; selectOnCreate: boolean; startEditing: boolean }
 export function createCanvasNodePlacement(
   type: CanvasNodeType,
   args: CanvasNodeCreateArgs,
-): { node: Node; startEditing: boolean } {
-  const spec = canvasNodeSpecs[type]
-  const resolvedSize = args.size ?? spec.defaultSize
-  if (!resolvedSize) {
-    throw new Error(`Missing default canvas node size for "${type}"`)
-  }
-
-  const placement = spec.placement
-  const position =
-    placement?.anchor === 'center'
-      ? {
-          x: args.position.x - resolvedSize.width / 2,
-          y: args.position.y - resolvedSize.height / 2,
-        }
-      : args.position
-  const defaultData = spec.createDefaultData()
+): { node: CanvasDocumentNode; selectOnCreate: boolean; startEditing: boolean } {
+  const defaultData = createDefaultCanvasNodeData(type)
   const mergedData =
     defaultData && args.data ? { ...defaultData, ...args.data } : (args.data ?? defaultData)
   const data = mergedData ?? null
@@ -188,42 +225,51 @@ export function createCanvasNodePlacement(
     throw new Error(`Missing default canvas node data for "${type}"`)
   }
 
-  const node: Node = {
+  const resolvedSize = args.size ?? getDefaultCanvasNodeSize(type, data)
+  if (!resolvedSize) {
+    throw new Error(`Missing default canvas node size for "${type}"`)
+  }
+
+  const placement = getCanvasNodePlacementBehavior(type)
+  const position =
+    placement?.anchor === 'center'
+      ? {
+          x: args.position.x - resolvedSize.width / 2,
+          y: args.position.y - resolvedSize.height / 2,
+        }
+      : args.position
+
+  const node = parseCanvasDocumentNode({
     id: crypto.randomUUID(),
     type,
     position,
     width: resolvedSize.width,
     height: resolvedSize.height,
-    data: data as Record<string, unknown>,
-  }
-
-  if (placement?.selectOnCreate) {
-    node.selected = true
-    node.draggable = true
+    data,
+  })
+  if (!node) {
+    throw new Error(`Invalid default canvas node data for "${type}"`)
   }
 
   return {
     node,
+    selectOnCreate: placement?.selectOnCreate ?? false,
     startEditing: placement?.startEditingOnCreate ?? false,
   }
 }
 
 export { normalizeCanvasNode }
-export type { AnyNormalizedCanvasNode }
 
 export function resizeCanvasNode(
-  node: Node,
-  resize: { width: number; height: number; position: XYPosition },
-): Node {
-  return withNormalizedCanvasNode(
-    node,
-    (normalizedNode) =>
-      canvasNodeSpecs[normalizedNode.type].resize?.(normalizedNode as never, resize) ?? {
-        ...node,
-        ...resize,
-      },
-    () => ({ ...node, ...resize }),
-  )
+  node: CanvasDocumentNode,
+  resize: { width: number; height: number; position: CanvasPosition },
+): CanvasDocumentNode {
+  const normalizedNode = normalizeCanvasNode(node)
+  if (normalizedNode?.type === 'stroke') {
+    return resizeStrokeNode(normalizedNode, resize)
+  }
+
+  return { ...node, ...resize }
 }
 
 export function matchesCanvasNodePointSelection(
@@ -260,7 +306,7 @@ export function matchesCanvasNodeRectangleSelection(
 
 export function matchesCanvasNodeLassoSelection(
   node: AnyNormalizedCanvasNode,
-  polygon: Array<{ x: number; y: number }>,
+  polygon: ReadonlyArray<{ x: number; y: number }>,
   _context: { zoom: number },
 ): boolean {
   switch (node.type) {

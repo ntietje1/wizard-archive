@@ -1,11 +1,14 @@
-import { Position } from '@xyflow/react'
 import { describe, expect, it } from 'vitest'
 import { getCanvasEdgeEndpoints } from '../canvas-edge-geometry'
-import type { Edge, Node } from '@xyflow/react'
+import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
+import type {
+  CanvasDocumentEdge as Edge,
+  CanvasDocumentNode as Node,
+} from 'convex/canvases/validation'
 
 describe('getCanvasEdgeEndpoints', () => {
   it('anchors stroke edges to the start and end stroke points instead of the bounding box', () => {
-    const strokeNode: Node = {
+    const strokeNode = {
       id: 'stroke-1',
       type: 'stroke',
       position: { x: 10, y: 20 },
@@ -20,7 +23,7 @@ describe('getCanvasEdgeEndpoints', () => {
         color: 'var(--foreground)',
         size: 4,
       },
-    }
+    } as unknown as Node
     const targetNode: Node = {
       id: 'target-1',
       type: 'text',
@@ -60,21 +63,21 @@ describe('getCanvasEdgeEndpoints', () => {
       sourceY: 30,
       targetX: 200,
       targetY: 50,
-      sourcePosition: Position.Left,
-      targetPosition: Position.Left,
+      sourcePosition: CANVAS_HANDLE_POSITION.Left,
+      targetPosition: CANVAS_HANDLE_POSITION.Left,
     })
     expect(endEndpoints).toEqual({
       sourceX: 110,
       sourceY: 30,
       targetX: 200,
       targetY: 50,
-      sourcePosition: Position.Right,
-      targetPosition: Position.Left,
+      sourcePosition: CANVAS_HANDLE_POSITION.Right,
+      targetPosition: CANVAS_HANDLE_POSITION.Left,
     })
   })
 
   it('falls back to regular node anchors when stroke node data is malformed', () => {
-    const strokeNode: Node = {
+    const strokeNode = {
       id: 'stroke-1',
       type: 'stroke',
       position: { x: 10, y: 20 },
@@ -86,7 +89,7 @@ describe('getCanvasEdgeEndpoints', () => {
         color: 'var(--foreground)',
         size: 4,
       },
-    }
+    } as unknown as Node
     const targetNode: Node = {
       id: 'target-1',
       type: 'text',
@@ -116,8 +119,8 @@ describe('getCanvasEdgeEndpoints', () => {
       sourceY: 30,
       targetX: 200,
       targetY: 50,
-      sourcePosition: Position.Right,
-      targetPosition: Position.Left,
+      sourcePosition: CANVAS_HANDLE_POSITION.Right,
+      targetPosition: CANVAS_HANDLE_POSITION.Left,
     })
   })
 })

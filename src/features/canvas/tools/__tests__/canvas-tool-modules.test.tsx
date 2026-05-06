@@ -6,11 +6,11 @@ import {
   canvasToolbarTools,
 } from '../canvas-tool-modules'
 import type { CanvasToolPropertyContext, CanvasToolRuntime } from '../canvas-tool-types'
-import type { CanvasEdgeType } from '../../edges/canvas-edge-types'
+import type { CanvasEdgeType } from 'convex/canvases/validation'
 
 const selectAwarenessClear = vi.hoisted(() => vi.fn())
 const selectOverlayClear = vi.hoisted(() => vi.fn())
-const selectCreateHandlers = vi.hoisted(() => vi.fn(() => ({ onPaneClick: vi.fn() })))
+const selectCreateHandlers = vi.hoisted(() => vi.fn(() => ({ onNodeClick: vi.fn() })))
 const drawAwarenessClear = vi.hoisted(() => vi.fn())
 const drawOverlayClear = vi.hoisted(() => vi.fn())
 const drawCreateHandlers = vi.hoisted(() => vi.fn(() => ({ onPointerDown: vi.fn() })))
@@ -147,19 +147,19 @@ function createToolPropertyContext(): CanvasToolPropertyContext {
 function createToolRuntime(): CanvasToolRuntime {
   return {
     viewport: {
-      screenToFlowPosition: (position) => position,
+      screenToCanvasPosition: (position) => position,
       getZoom: () => 1,
     },
     commands: {
       createNode: vi.fn(),
-      updateNode: vi.fn(),
-      updateNodeData: vi.fn(),
-      updateEdge: vi.fn(),
+      patchNodeData: vi.fn(),
+      patchEdges: vi.fn(),
       resizeNode: vi.fn(),
+      resizeNodes: vi.fn(),
       deleteNodes: vi.fn(),
       createEdge: vi.fn(),
       deleteEdges: vi.fn(),
-      setNodePosition: vi.fn(),
+      setNodePositions: vi.fn(),
     },
     query: {
       getNodes: () => [],
@@ -167,18 +167,15 @@ function createToolRuntime(): CanvasToolRuntime {
       getMeasuredNodes: () => [],
     },
     selection: {
-      getSnapshot: () => ({ nodeIds: [], edgeIds: [] }),
-      replace: vi.fn(),
-      replaceNodes: vi.fn(),
-      replaceEdges: vi.fn(),
-      clear: vi.fn(),
-      getSelectedNodeIds: () => [],
-      getSelectedEdgeIds: () => [],
-      toggleNodeFromTarget: vi.fn(),
-      toggleEdgeFromTarget: vi.fn(),
+      getSnapshot: () => ({ nodeIds: new Set<string>(), edgeIds: new Set<string>() }),
+      setSelection: vi.fn(),
+      clearSelection: vi.fn(),
+      toggleNode: vi.fn(),
+      toggleEdge: vi.fn(),
       beginGesture: vi.fn(),
-      commitGestureSelection: vi.fn(),
-      endGesture: vi.fn(),
+      setGesturePreview: vi.fn(),
+      commitGesture: vi.fn(),
+      cancelGesture: vi.fn(),
     },
     interaction: {
       suppressNextSurfaceClick: vi.fn(),
@@ -203,7 +200,6 @@ function createToolRuntime(): CanvasToolRuntime {
     awareness: {
       core: {
         setLocalCursor: vi.fn(),
-        setLocalDragging: vi.fn(),
         setLocalResizing: vi.fn(),
         setLocalSelection: vi.fn(),
       },

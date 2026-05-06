@@ -12,52 +12,56 @@ import {
   rectIntersectsBounds,
   segmentsIntersect,
 } from '../../utils/canvas-geometry-utils'
-import { Position } from '@xyflow/react'
+import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
 import type { Point2D } from '../../utils/canvas-awareness-types'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
-import type { Edge, Node } from '@xyflow/react'
+import type { CanvasHandlePosition } from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 
 const DEFAULT_CANVAS_EDGE_INTERACTION_WIDTH = 20
 const MIN_ZOOM = 1e-6
 const NODE_EDGE_ANCHOR_OUTSET_PX = 0
 const POINT_EPSILON = 1e-6
 
-export type CanvasEdgeEndpoints = {
+type CanvasEdgeEndpoints = {
   sourceX: number
   sourceY: number
   targetX: number
   targetY: number
-  sourcePosition: Position
-  targetPosition: Position
+  sourcePosition: CanvasHandlePosition
+  targetPosition: CanvasHandlePosition
 }
 
-export type PolylineCanvasEdgeGeometry = {
+export type CanvasEdgeGeometry = {
   path: string
   labelX: number
   labelY: number
-  points: Array<Point2D>
+  hitPoints: ReadonlyArray<Point2D>
 }
 
-function handleIdToPosition(handleId: string | null | undefined, fallback: Position): Position {
+function handleIdToPosition(
+  handleId: string | null | undefined,
+  fallback: CanvasHandlePosition,
+): CanvasHandlePosition {
   switch (handleId) {
     case 'top':
-      return Position.Top
+      return CANVAS_HANDLE_POSITION.Top
     case 'right':
-      return Position.Right
+      return CANVAS_HANDLE_POSITION.Right
     case 'bottom':
-      return Position.Bottom
+      return CANVAS_HANDLE_POSITION.Bottom
     case 'left':
-      return Position.Left
+      return CANVAS_HANDLE_POSITION.Left
     default:
       return fallback
   }
 }
 
-export function resolveCanvasEdgeEndpoint(
-  node: Node,
+function resolveCanvasEdgeEndpoint(
+  node: CanvasDocumentNode,
   handleId: string | null | undefined,
-  fallbackPosition: Position,
-): { point: Point2D; position: Position } | null {
+  fallbackPosition: CanvasHandlePosition,
+): { point: Point2D; position: CanvasHandlePosition } | null {
   const parsedNode = normalizeCanvasNode(node)
 
   if (parsedNode?.type === 'stroke' && (handleId === 'start' || handleId === 'end')) {
@@ -82,7 +86,7 @@ export function resolveCanvasEdgeEndpoint(
   return { point, position }
 }
 
-function getBoundsCenter(node: Node) {
+function getBoundsCenter(node: CanvasDocumentNode) {
   const bounds = getCanvasNodeBounds(node)
   if (!bounds) return null
 
@@ -95,11 +99,14 @@ function getBoundsCenter(node: Node) {
   }
 }
 
-function inferCanvasEdgePositions(sourceNode: Node, targetNode: Node) {
+function inferCanvasEdgePositions(sourceNode: CanvasDocumentNode, targetNode: CanvasDocumentNode) {
   const source = getBoundsCenter(sourceNode)
   const target = getBoundsCenter(targetNode)
   if (!source || !target) {
-    return { sourcePosition: Position.Right, targetPosition: Position.Left }
+    return {
+      sourcePosition: CANVAS_HANDLE_POSITION.Right,
+      targetPosition: CANVAS_HANDLE_POSITION.Left,
+    }
   }
 
   const dx = target.center.x - source.center.x
@@ -107,33 +114,42 @@ function inferCanvasEdgePositions(sourceNode: Node, targetNode: Node) {
 
   if (Math.abs(dx) >= Math.abs(dy)) {
     return dx >= 0
-      ? { sourcePosition: Position.Right, targetPosition: Position.Left }
-      : { sourcePosition: Position.Left, targetPosition: Position.Right }
+      ? {
+          sourcePosition: CANVAS_HANDLE_POSITION.Right,
+          targetPosition: CANVAS_HANDLE_POSITION.Left,
+        }
+      : {
+          sourcePosition: CANVAS_HANDLE_POSITION.Left,
+          targetPosition: CANVAS_HANDLE_POSITION.Right,
+        }
   }
 
   return dy >= 0
-    ? { sourcePosition: Position.Bottom, targetPosition: Position.Top }
-    : { sourcePosition: Position.Top, targetPosition: Position.Bottom }
+    ? { sourcePosition: CANVAS_HANDLE_POSITION.Bottom, targetPosition: CANVAS_HANDLE_POSITION.Top }
+    : { sourcePosition: CANVAS_HANDLE_POSITION.Top, targetPosition: CANVAS_HANDLE_POSITION.Bottom }
 }
 
-function getCanvasEdgeAnchorPoint(node: Node, position: Position): Point2D | null {
+function getCanvasEdgeAnchorPoint(
+  node: CanvasDocumentNode,
+  position: CanvasHandlePosition,
+): Point2D | null {
   const bounds = getCanvasNodeBounds(node)
   if (!bounds) return null
 
   switch (position) {
-    case Position.Top:
+    case CANVAS_HANDLE_POSITION.Top:
       return { x: bounds.x + bounds.width / 2, y: bounds.y - NODE_EDGE_ANCHOR_OUTSET_PX }
-    case Position.Right:
+    case CANVAS_HANDLE_POSITION.Right:
       return {
         x: bounds.x + bounds.width + NODE_EDGE_ANCHOR_OUTSET_PX,
         y: bounds.y + bounds.height / 2,
       }
-    case Position.Bottom:
+    case CANVAS_HANDLE_POSITION.Bottom:
       return {
         x: bounds.x + bounds.width / 2,
         y: bounds.y + bounds.height + NODE_EDGE_ANCHOR_OUTSET_PX,
       }
-    case Position.Left:
+    case CANVAS_HANDLE_POSITION.Left:
       return { x: bounds.x - NODE_EDGE_ANCHOR_OUTSET_PX, y: bounds.y + bounds.height / 2 }
     default:
       return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }
@@ -144,14 +160,59 @@ export function getCanvasEdgeInteractionWidth(): number {
   return DEFAULT_CANVAS_EDGE_INTERACTION_WIDTH
 }
 
-export function getCanvasEdgePointThreshold(zoom: number): number {
+function getCanvasEdgePointThreshold(zoom: number): number {
   const safeZoom = Number.isFinite(zoom) && zoom > MIN_ZOOM ? zoom : MIN_ZOOM
   return DEFAULT_CANVAS_EDGE_INTERACTION_WIDTH / 2 / safeZoom
 }
 
+export function getCanvasEdgeGeometryBounds(geometry: CanvasEdgeGeometry): Bounds | null {
+  return boundsFromPoints(geometry.hitPoints)
+}
+
+export function canvasEdgeGeometryContainsPoint(
+  geometry: CanvasEdgeGeometry,
+  point: Point2D,
+  zoom: number,
+): boolean {
+  const threshold = getCanvasEdgePointThreshold(zoom)
+  const bounds = getCanvasEdgeGeometryBounds(geometry)
+  if (
+    bounds &&
+    !rectIntersectsBounds(bounds, {
+      x: point.x - threshold,
+      y: point.y - threshold,
+      width: threshold * 2,
+      height: threshold * 2,
+    })
+  ) {
+    return false
+  }
+
+  return pointNearPolyline(point, geometry.hitPoints, threshold)
+}
+
+export function canvasEdgeGeometryIntersectsRectangle(
+  geometry: CanvasEdgeGeometry,
+  rect: Bounds,
+): boolean {
+  const bounds = getCanvasEdgeGeometryBounds(geometry)
+  if (bounds && !rectIntersectsBounds(bounds, rect)) {
+    return false
+  }
+
+  return polylineIntersectsRect(geometry.hitPoints, rect)
+}
+
+export function canvasEdgeGeometryIntersectsPolygon(
+  geometry: CanvasEdgeGeometry,
+  polygon: ReadonlyArray<Point2D>,
+): boolean {
+  return polylineIntersectsPolygon(geometry.hitPoints, polygon)
+}
+
 export function getCanvasEdgeEndpoints(
-  edge: Edge,
-  nodesById: ReadonlyMap<string, Node>,
+  edge: CanvasDocumentEdge,
+  nodesById: ReadonlyMap<string, CanvasDocumentNode>,
 ): CanvasEdgeEndpoints | null {
   const sourceNode = nodesById.get(edge.source)
   const targetNode = nodesById.get(edge.target)
@@ -241,7 +302,7 @@ export function getPolylineMidpoint(points: ReadonlyArray<Point2D>): Point2D {
   return points[points.length - 1]
 }
 
-export function pointNearPolyline(
+function pointNearPolyline(
   point: Point2D,
   polyline: ReadonlyArray<Point2D>,
   threshold: number,
@@ -275,7 +336,7 @@ function pointInRect(point: Point2D, rect: Bounds): boolean {
   )
 }
 
-export function polylineIntersectsRect(points: ReadonlyArray<Point2D>, rect: Bounds): boolean {
+function polylineIntersectsRect(points: ReadonlyArray<Point2D>, rect: Bounds): boolean {
   if (points.some((point) => pointInRect(point, rect))) {
     return true
   }
@@ -309,7 +370,7 @@ export function polylineIntersectsRect(points: ReadonlyArray<Point2D>, rect: Bou
   return false
 }
 
-export function polylineIntersectsPolygon(
+function polylineIntersectsPolygon(
   points: ReadonlyArray<Point2D>,
   polygon: ReadonlyArray<Point2D>,
 ): boolean {

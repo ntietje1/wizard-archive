@@ -72,6 +72,11 @@ export const useSidebarItems = (location: SidebarItemLocation): SidebarItemsValu
 export const useActiveSidebarItems = (): SidebarItemsValue =>
   useSidebarItems(SIDEBAR_ITEM_LOCATION.sidebar)
 
+export const useOptionalActiveSidebarItems = (): SidebarItemsValue | null => {
+  const ctx = useContext(SidebarItemsContext)
+  return ctx?.[SIDEBAR_ITEM_LOCATION.sidebar] ?? null
+}
+
 // ---------------------------------------------------------------------------
 // Filtered (permission-gated) view of active items
 // ---------------------------------------------------------------------------

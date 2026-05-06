@@ -1,9 +1,9 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { useRichEmbedActivation, useRichEmbedLifecycle } from '../use-rich-embed-lifecycle'
+import { useDeferredRichEmbedActivation } from '../use-rich-embed-lifecycle'
 import type {
+  PendingRichEmbedActivationRef,
   RichEmbedActivationPayload,
-  RichEmbedLifecycleController,
 } from '../use-rich-embed-lifecycle'
 
 const { mockLoggerWarn } = vi.hoisted(() => ({
@@ -16,7 +16,7 @@ vi.mock('~/shared/utils/logger', () => ({
   },
 }))
 
-describe('useRichEmbedLifecycle', () => {
+describe('useDeferredRichEmbedActivation', () => {
   let queuedFrames: Array<FrameRequestCallback | undefined>
   let requestAnimationFrameSpy: ReturnType<typeof vi.fn>
   let cancelAnimationFrameSpy: ReturnType<typeof vi.fn>
@@ -39,122 +39,69 @@ describe('useRichEmbedLifecycle', () => {
     vi.unstubAllGlobals()
   })
 
-  it('defers embed activation to the next frame and stores the click point', () => {
-    const setEditingEmbedId = vi.fn()
-    const { result, unmount } = renderHook(() =>
-      useRichEmbedActivation({
-        canEdit: true,
-        embedId: 'embed-1',
-        setEditingEmbedId,
+  it('activates once readiness becomes available and clears pending activation', () => {
+    const pendingActivationRef = createPendingActivationRef({ point: { x: 30, y: 40 } })
+    const onActivate = vi.fn()
+    let ready = false
+
+    renderHook(() =>
+      useDeferredRichEmbedActivation({
+        pendingActivationRef,
+        editable: true,
+        isReady: () => ready,
+        onActivate,
       }),
     )
 
     act(() => {
-      result.current.handleDoubleClick({ clientX: 10, clientY: 20 } as React.MouseEvent)
-    })
-
-    expect(result.current.lifecycle.pendingActivationRef.current).toEqual({
-      point: { x: 10, y: 20 },
-    })
-    expect(setEditingEmbedId).not.toHaveBeenCalled()
-
-    act(() => {
       queuedFrames.shift()?.(0)
     })
+    expect(onActivate).not.toHaveBeenCalled()
+    expect(pendingActivationRef.current).toEqual({ point: { x: 30, y: 40 } })
 
-    expect(setEditingEmbedId).toHaveBeenCalledWith('embed-1')
+    ready = true
+    act(() => {
+      queuedFrames.shift()?.(1)
+    })
 
-    unmount()
-    expect(result.current.lifecycle.pendingActivationRef.current).toBeNull()
+    expect(onActivate).toHaveBeenCalledWith({ point: { x: 30, y: 40 } })
+    expect(pendingActivationRef.current).toBeNull()
   })
 
   it('logs a retry-limit warning and preserves pending activation when readiness never arrives', () => {
-    const lifecycle: RichEmbedLifecycleController = {
-      pendingActivationRef: {
-        current: { point: { x: 30, y: 40 } } satisfies RichEmbedActivationPayload,
-      },
-    }
+    const pendingActivationRef = createPendingActivationRef({ point: { x: 30, y: 40 } })
     const onActivate = vi.fn()
 
-    let ready = false
-    renderHook(
-      ({ editable }: { editable: boolean }) =>
-        useRichEmbedLifecycle({
-          lifecycle,
-          editable,
-          isReady: () => ready,
-          onActivate,
-        }),
-      { initialProps: { editable: true } },
+    renderHook(() =>
+      useDeferredRichEmbedActivation({
+        pendingActivationRef,
+        editable: true,
+        isReady: () => false,
+        onActivate,
+      }),
     )
 
     act(() => {
-      for (let i = 0; i <= 10; i += 1) {
-        queuedFrames.shift()?.(i)
+      for (let index = 0; index <= 10; index += 1) {
+        queuedFrames.shift()?.(index)
       }
     })
 
     expect(onActivate).not.toHaveBeenCalled()
     expect(mockLoggerWarn).toHaveBeenCalledWith(
-      'useRichEmbedLifecycle: rich embed did not become ready within retry limit',
+      'useDeferredRichEmbedActivation: rich embed did not become ready within retry limit',
     )
-    expect(lifecycle.pendingActivationRef.current).toEqual({
-      point: { x: 30, y: 40 },
-    })
-  })
-
-  it('activates once readiness becomes available and clears pending activation', () => {
-    const lifecycle: RichEmbedLifecycleController = {
-      pendingActivationRef: {
-        current: { point: { x: 30, y: 40 } } satisfies RichEmbedActivationPayload,
-      },
-    }
-    const onActivate = vi.fn()
-
-    let ready = false
-    const { rerender } = renderHook(
-      ({ editable }: { editable: boolean }) =>
-        useRichEmbedLifecycle({
-          lifecycle,
-          editable,
-          isReady: () => ready,
-          onActivate,
-        }),
-      { initialProps: { editable: true } },
-    )
-
-    act(() => {
-      for (let i = 0; i <= 10; i += 1) {
-        queuedFrames.shift()?.(i)
-      }
-    })
-
-    expect(mockLoggerWarn).toHaveBeenCalled()
-    mockLoggerWarn.mockClear()
-
-    ready = true
-    rerender({ editable: true })
-
-    act(() => {
-      queuedFrames.shift()?.(3)
-    })
-
-    expect(onActivate).toHaveBeenCalledWith({ point: { x: 30, y: 40 } })
-    expect(lifecycle.pendingActivationRef.current).toBeNull()
+    expect(pendingActivationRef.current).toEqual({ point: { x: 30, y: 40 } })
   })
 
   it('clears pending activation when editing becomes disabled', () => {
-    const lifecycle: RichEmbedLifecycleController = {
-      pendingActivationRef: {
-        current: { point: { x: 30, y: 40 } } satisfies RichEmbedActivationPayload,
-      },
-    }
+    const pendingActivationRef = createPendingActivationRef({ point: { x: 30, y: 40 } })
     const onActivate = vi.fn()
 
     const { rerender } = renderHook(
       ({ editable }: { editable: boolean }) =>
-        useRichEmbedLifecycle({
-          lifecycle,
+        useDeferredRichEmbedActivation({
+          pendingActivationRef,
           editable,
           isReady: () => false,
           onActivate,
@@ -163,7 +110,82 @@ describe('useRichEmbedLifecycle', () => {
     )
 
     rerender({ editable: false })
-    expect(lifecycle.pendingActivationRef.current).toBeNull()
+
+    expect(pendingActivationRef.current).toBeNull()
     expect(onActivate).not.toHaveBeenCalled()
   })
+
+  it('uses latest callbacks without restarting scheduled activation', () => {
+    const pendingActivationRef = createPendingActivationRef({ point: { x: 30, y: 40 } })
+    const firstActivate = vi.fn()
+    const secondActivate = vi.fn()
+    const initialProps: {
+      isReady: () => boolean
+      onActivate: (payload: RichEmbedActivationPayload | null) => void
+    } = {
+      isReady: () => false,
+      onActivate: firstActivate,
+    }
+
+    const { rerender } = renderHook(
+      ({
+        isReady,
+        onActivate,
+      }: {
+        isReady: () => boolean
+        onActivate: (payload: RichEmbedActivationPayload | null) => void
+      }) =>
+        useDeferredRichEmbedActivation({
+          pendingActivationRef,
+          editable: true,
+          isReady,
+          onActivate,
+        }),
+      { initialProps },
+    )
+
+    rerender({
+      isReady: () => true,
+      onActivate: secondActivate,
+    })
+
+    expect(cancelAnimationFrameSpy).not.toHaveBeenCalled()
+
+    act(() => {
+      queuedFrames.shift()?.(0)
+    })
+
+    expect(firstActivate).not.toHaveBeenCalled()
+    expect(secondActivate).toHaveBeenCalledWith({ point: { x: 30, y: 40 } })
+    expect(pendingActivationRef.current).toBeNull()
+  })
+
+  it('cancels scheduled activation on unmount', () => {
+    const pendingActivationRef = createPendingActivationRef({ point: { x: 30, y: 40 } })
+    const onActivate = vi.fn()
+
+    const { unmount } = renderHook(() =>
+      useDeferredRichEmbedActivation({
+        pendingActivationRef,
+        editable: true,
+        isReady: () => true,
+        onActivate,
+      }),
+    )
+
+    unmount()
+    act(() => {
+      queuedFrames.forEach((frame) => frame?.(0))
+    })
+
+    expect(cancelAnimationFrameSpy).toHaveBeenCalledWith(1)
+    expect(onActivate).not.toHaveBeenCalled()
+    expect(pendingActivationRef.current).toEqual({ point: { x: 30, y: 40 } })
+  })
 })
+
+function createPendingActivationRef(
+  current: RichEmbedActivationPayload | null,
+): PendingRichEmbedActivationRef {
+  return { current }
+}

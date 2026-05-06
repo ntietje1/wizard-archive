@@ -3,7 +3,10 @@ import { createCanvasReorderPlan } from '../canvas-reorder-plan'
 import { reorderCanvasElementIds } from '../canvas-reorder'
 import { getNextCanvasElementZIndex } from '../canvas-z-index'
 import { applyCanvasZOrder, sortCanvasElementsByZIndex } from '../canvas-z-order'
-import type { Edge, Node } from '@xyflow/react'
+import type {
+  CanvasDocumentEdge as Edge,
+  CanvasDocumentNode as Node,
+} from '~/features/canvas/types/canvas-domain-types'
 import * as Y from 'yjs'
 
 function createNode(id: string, zIndex: number): Node {
@@ -76,7 +79,7 @@ describe('canvas z-order helpers', () => {
 
     const orderedIds = reorderCanvasElementIds(
       elements.map((element) => element.id),
-      ['node-1'],
+      new Set(['node-1']),
       'bringToFront',
     )
 
@@ -95,33 +98,38 @@ describe('canvas z-order helpers', () => {
       const edgesMap = doc.getMap<Edge>('edges')
 
       expect(
-        createCanvasReorderPlan(nodesMap, edgesMap, { nodeIds: [], edgeIds: [] }, 'bringToFront'),
+        createCanvasReorderPlan(
+          nodesMap,
+          edgesMap,
+          { nodeIds: new Set<string>(), edgeIds: new Set<string>() },
+          'bringToFront',
+        ),
       ).toBeNull()
     } finally {
       doc.destroy()
     }
   })
 
-  it('builds a mixed reorder plan for selected nodes and edges', () => {
+  it('builds an edge-only reorder plan across nodes and edges', () => {
     const doc = new Y.Doc()
     const nodesMap = doc.getMap<Node>('nodes')
     const edgesMap = doc.getMap<Edge>('edges')
     try {
       nodesMap.set('node-1', createNode('node-1', 1))
-      nodesMap.set('node-2', createNode('node-2', 2))
-      edgesMap.set('edge-1', createEdge('edge-1', 1))
-      edgesMap.set('edge-2', createEdge('edge-2', 2))
+      nodesMap.set('node-2', createNode('node-2', 3))
+      edgesMap.set('edge-1', createEdge('edge-1', 2))
+      edgesMap.set('edge-2', createEdge('edge-2', 4))
 
       expect(
         createCanvasReorderPlan(
           nodesMap,
           edgesMap,
-          { nodeIds: ['node-1'], edgeIds: ['edge-1'] },
+          { nodeIds: new Set<string>(), edgeIds: new Set(['edge-1']) },
           'bringToFront',
         ),
       ).toEqual({
-        nodes: [createNode('node-2', 1), createNode('node-1', 2)],
-        edges: [createEdge('edge-2', 1), createEdge('edge-1', 2)],
+        nodes: [createNode('node-1', 1), createNode('node-2', 2)],
+        edges: [createEdge('edge-2', 3), createEdge('edge-1', 4)],
       })
     } finally {
       doc.destroy()

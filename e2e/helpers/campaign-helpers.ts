@@ -13,6 +13,7 @@ export async function createCampaign(page: Page, name: string) {
   const nameInput = page.getByLabel(/campaign name/i)
   await expect(nameInput).toBeVisible({ timeout: 5000 })
   await nameInput.fill(name)
+  await expect(nameInput).toHaveValue(name, { timeout: 5000 })
 
   const slugInput = page.getByLabel(/custom link/i)
   await expect(slugInput).toHaveValue(/^[a-z0-9-]{6,30}$/, { timeout: 5000 })

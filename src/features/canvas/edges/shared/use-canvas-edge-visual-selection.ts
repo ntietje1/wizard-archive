@@ -1,28 +1,29 @@
-import { getCanvasVisualSelectionState } from '../../runtime/selection/canvas-visual-selection'
-import {
-  useCanvasEdgePendingPreview,
-  useCanvasPendingPreviewActive,
-} from '../../runtime/selection/use-canvas-pending-selection-preview'
-import { useIsCanvasEdgeSelected } from '../../runtime/selection/use-canvas-selection-state'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
+import { useCanvasEngineSelector } from '../../react/use-canvas-engine'
+import {
+  areCanvasVisualSelectionStatesEqual,
+  getCanvasVisualSelectionState,
+} from '../../system/canvas-selection'
+
+const INACTIVE_EDGE_VISUAL_SELECTION = getCanvasVisualSelectionState({
+  selected: false,
+  pendingPreview: { kind: 'inactive' },
+  id: '',
+  kind: 'edge',
+})
 
 export function useCanvasEdgeVisualSelection(id: string) {
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
-  const selected = useIsCanvasEdgeSelected(id)
-  const pendingPreviewActive = useCanvasPendingPreviewActive()
-  const pendingSelected = useCanvasEdgePendingPreview(id)
-
-  if (!interactiveRenderMode) {
-    return getCanvasVisualSelectionState({
-      selected: false,
-      pendingPreviewActive: false,
-      pendingSelected: false,
-    })
-  }
-
-  return getCanvasVisualSelectionState({
-    selected,
-    pendingPreviewActive,
-    pendingSelected,
-  })
+  return useCanvasEngineSelector(
+    (state) =>
+      interactiveRenderMode
+        ? getCanvasVisualSelectionState({
+            selected: state.selection.edgeIds.has(id),
+            pendingPreview: state.selection.pendingPreview,
+            id,
+            kind: 'edge',
+          })
+        : INACTIVE_EDGE_VISUAL_SELECTION,
+    areCanvasVisualSelectionStatesEqual,
+  )
 }

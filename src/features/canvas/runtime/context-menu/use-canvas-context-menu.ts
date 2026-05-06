@@ -1,5 +1,8 @@
 import { useLayoutEffect, useRef, useState } from 'react'
-import { createAndSelectEmbeddedCanvasNode } from '../document/canvas-document-commands'
+import {
+  createAndSelectEmbeddedCanvasNode,
+  createAndSelectTextCanvasNode,
+} from '../document/canvas-document-commands'
 import { buildCanvasContextMenu } from './canvas-context-menu-registry'
 import { resolveCanvasContextMenuTarget } from './canvas-context-menu-target'
 import type { CanvasSelectionController } from '../../tools/canvas-tool-types'
@@ -11,9 +14,10 @@ import type {
   CanvasContextMenuServices,
 } from './canvas-context-menu-types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { Edge, Node } from '@xyflow/react'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 import type * as Y from 'yjs'
 import type { ContextMenuHostRef } from '~/features/context-menu/components/context-menu-host'
+import type { BuiltContextMenu } from '~/features/context-menu/types'
 import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
@@ -24,15 +28,18 @@ interface UseCanvasContextMenuOptions {
   canEdit: boolean
   campaignId: Id<'campaigns'>
   canvasParentId: Id<'sidebarItems'> | null
-  nodesMap: Y.Map<Node>
-  edgesMap: Y.Map<Edge>
-  createNode: (node: Node) => void
-  screenToFlowPosition: (position: CanvasContextMenuPoint) => { x: number; y: number }
-  selection: Pick<CanvasSelectionController, 'clear' | 'getSnapshot' | 'replace'>
+  nodesMap: Y.Map<CanvasDocumentNode>
+  edgesMap: Y.Map<CanvasDocumentEdge>
+  createNode: (node: CanvasDocumentNode) => void
+  setPendingEditNodeId: (nodeId: string | null) => void
+  setPendingEditNodePoint: (point: CanvasContextMenuPoint | null) => void
+  screenToCanvasPosition: (position: CanvasContextMenuPoint) => { x: number; y: number }
+  selection: Pick<CanvasSelectionController, 'clearSelection' | 'getSnapshot' | 'setSelection'>
   commands: CanvasContextMenuCommands
 }
 
 type PointerPosition = { x: number; y: number }
+const EMPTY_CONTEXT_MENU: BuiltContextMenu = { groups: [], flatItems: [], isEmpty: true }
 
 function normalizeContextMenuEvent(event: MouseEvent | React.MouseEvent) {
   const nativeEvent = 'nativeEvent' in event ? event.nativeEvent : event
@@ -54,7 +61,9 @@ export function useCanvasContextMenu({
   nodesMap,
   edgesMap,
   createNode,
-  screenToFlowPosition,
+  setPendingEditNodeId,
+  setPendingEditNodePoint,
+  screenToCanvasPosition,
   selection,
   commands,
 }: UseCanvasContextMenuOptions) {
@@ -70,6 +79,13 @@ export function useCanvasContextMenu({
   const { itemsMap } = useActiveSidebarItems()
 
   const services = {
+    hasSelectableCanvasItems: () => nodesMap.size > 0 || edgesMap.size > 0,
+    selectAllCanvasItems: () => {
+      selection.setSelection({
+        nodeIds: new Set(nodesMap.keys()),
+        edgeIds: new Set(edgesMap.keys()),
+      })
+    },
     canOpenEmbedTarget: (target) =>
       target.kind === 'embed-node' && itemsMap.has(target.sidebarItemId),
     openEmbedTarget: async (target) => {
@@ -101,9 +117,9 @@ export function useCanvasContextMenu({
         return createAndSelectEmbeddedCanvasNode({
           sidebarItemId: result.id,
           pointerPosition,
-          screenToFlowPosition,
+          screenToCanvasPosition,
           createNode,
-          replaceSelection: selection.replace,
+          setSelection: selection.setSelection,
         })
       } catch (error) {
         console.error('Failed to create embedded sidebar item from canvas context menu', {
@@ -114,6 +130,20 @@ export function useCanvasContextMenu({
         })
         return null
       }
+    },
+    createTextNode: (pointerPosition) => {
+      if (!canEdit) {
+        return null
+      }
+
+      return createAndSelectTextCanvasNode({
+        pointerPosition,
+        screenToCanvasPosition,
+        createNode,
+        setSelection: selection.setSelection,
+        setPendingEditNodeId,
+        setPendingEditNodePoint,
+      })
     },
   } satisfies CanvasContextMenuServices
 
@@ -158,34 +188,34 @@ export function useCanvasContextMenu({
 
   const openForPane = (event: MouseEvent | React.MouseEvent) => {
     const position = normalizeContextMenuEvent(event)
-    const nextSelection = { nodeIds: [], edgeIds: [] }
-    selection.clear()
+    const nextSelection = { nodeIds: new Set<string>(), edgeIds: new Set<string>() }
+    selection.clearSelection()
     openMenu(position, nextSelection)
   }
 
-  const openForNode = (event: React.MouseEvent, node: Node) => {
+  const openForNode = (event: React.MouseEvent, node: CanvasDocumentNode) => {
     const position = normalizeContextMenuEvent(event)
     const currentSelection = selection.getSnapshot()
-    const nextSelection = currentSelection.nodeIds.includes(node.id)
+    const nextSelection = currentSelection.nodeIds.has(node.id)
       ? currentSelection
-      : { nodeIds: [node.id], edgeIds: [] }
+      : { nodeIds: new Set([node.id]), edgeIds: new Set<string>() }
 
     if (nextSelection !== currentSelection) {
-      selection.replace(nextSelection)
+      selection.setSelection(nextSelection)
     }
 
     openMenu(position, nextSelection)
   }
 
-  const openForEdge = (event: React.MouseEvent, edge: Edge) => {
+  const openForEdge = (event: React.MouseEvent, edge: CanvasDocumentEdge) => {
     const position = normalizeContextMenuEvent(event)
     const currentSelection = selection.getSnapshot()
-    const nextSelection = currentSelection.edgeIds.includes(edge.id)
+    const nextSelection = currentSelection.edgeIds.has(edge.id)
       ? currentSelection
-      : { nodeIds: [], edgeIds: [edge.id] }
+      : { nodeIds: new Set<string>(), edgeIds: new Set([edge.id]) }
 
     if (nextSelection !== currentSelection) {
-      selection.replace(nextSelection)
+      selection.setSelection(nextSelection)
     }
 
     openMenu(position, nextSelection)
@@ -201,7 +231,7 @@ export function useCanvasContextMenu({
           commands,
           contributors: menuState.contributors,
         })
-      : { groups: [], flatItems: [], isEmpty: true },
+      : EMPTY_CONTEXT_MENU,
     // `onClose` is host-driven dismissal only; the host already handled its own
     // teardown, so this just clears the hook state.
     onClose: () => setMenuState(null),

@@ -1,6 +1,10 @@
 import getStroke from 'perfect-freehand'
-import { Position } from '@xyflow/react'
-import type { Node, XYPosition } from '@xyflow/react'
+import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-types'
+import type {
+  CanvasHandlePosition,
+  CanvasPosition,
+} from '~/features/canvas/types/canvas-domain-types'
+import type { CanvasDocumentNode } from 'convex/canvases/validation'
 import type { Point2D } from '../../utils/canvas-awareness-types'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
 
@@ -12,10 +16,10 @@ export type StrokeNodeData = {
   bounds: Bounds
 }
 
-export type StrokeNodeType = Node<StrokeNodeData, 'stroke'>
+type StrokeNodeType = Extract<CanvasDocumentNode, { type: 'stroke' }>
 
 type StrokeNodeLike = {
-  position: XYPosition
+  position: CanvasPosition
   data: {
     points: Array<[number, number, number]>
     size: number
@@ -23,7 +27,7 @@ type StrokeNodeLike = {
   }
 }
 
-export type StrokeEndpoint = 'start' | 'end'
+type StrokeEndpoint = 'start' | 'end'
 
 const STROKE_OPTIONS_BASE = {
   thinning: 0.5,
@@ -31,8 +35,6 @@ const STROKE_OPTIONS_BASE = {
   streamline: 0.5,
 }
 
-const MINI_MAP_STROKE_PADDING = 12
-const MIN_ZOOM = 1e-6
 const MIN_STROKE_NODE_SIZE = 1
 
 export function clampStrokeNodeSize(size: number): number {
@@ -46,7 +48,7 @@ export function normalizeStrokeNodeData(data: StrokeNodeData): StrokeNodeData {
   }
 }
 
-export function isStrokeNode(node: Node): node is StrokeNodeType {
+export function isStrokeNode(node: CanvasDocumentNode): node is StrokeNodeType {
   return node.type === 'stroke'
 }
 
@@ -111,7 +113,7 @@ export function getStrokeBounds(
 function getAbsoluteStrokePoints(
   points: Array<[number, number, number]>,
   bounds: Bounds,
-  position: XYPosition,
+  position: CanvasPosition,
 ): Array<[number, number, number]> {
   const offsetX = position.x - bounds.x
   const offsetY = position.y - bounds.y
@@ -157,9 +159,9 @@ export function getStrokeEndpointConnectionPosition(
   node: StrokeNodeLike,
   endpoint: StrokeEndpoint,
   absolutePoints: ReadonlyArray<AbsoluteStrokePoint> = getAbsoluteStrokePointsForNode(node),
-): Position {
+): CanvasHandlePosition {
   if (absolutePoints.length < 2) {
-    return endpoint === 'start' ? Position.Left : Position.Right
+    return endpoint === 'start' ? CANVAS_HANDLE_POSITION.Left : CANVAS_HANDLE_POSITION.Right
   }
 
   const { endpointPoint, interiorPoint } = getStrokeEndpointPair(endpoint, absolutePoints)
@@ -167,10 +169,10 @@ export function getStrokeEndpointConnectionPosition(
   const dy = interiorPoint[1] - endpointPoint[1]
 
   if (Math.abs(dx) >= Math.abs(dy)) {
-    return dx >= 0 ? Position.Left : Position.Right
+    return dx >= 0 ? CANVAS_HANDLE_POSITION.Left : CANVAS_HANDLE_POSITION.Right
   }
 
-  return dy >= 0 ? Position.Top : Position.Bottom
+  return dy >= 0 ? CANVAS_HANDLE_POSITION.Top : CANVAS_HANDLE_POSITION.Bottom
 }
 
 export function resizeStrokeNode<TNode extends StrokeNodeLike>(
@@ -182,7 +184,7 @@ export function resizeStrokeNode<TNode extends StrokeNodeLike>(
   }: {
     width: number
     height: number
-    position: XYPosition
+    position: CanvasPosition
   },
 ): TNode {
   const { bounds, points, size } = node.data
@@ -211,13 +213,4 @@ export function resizeStrokeNode<TNode extends StrokeNodeLike>(
       size: clampStrokeNodeSize(size * Math.min(scaleX, scaleY)),
     },
   }
-}
-
-export function getMiniMapStrokePath(
-  points: Array<[number, number, number]>,
-  size: number,
-  zoom: number,
-): string {
-  const safeZoom = Number.isFinite(zoom) && zoom > MIN_ZOOM ? zoom : MIN_ZOOM
-  return pointsToPathD(points, (clampStrokeNodeSize(size) + MINI_MAP_STROKE_PADDING) / safeZoom)
 }

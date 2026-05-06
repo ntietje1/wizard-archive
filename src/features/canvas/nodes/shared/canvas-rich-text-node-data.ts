@@ -1,5 +1,5 @@
 import { readCanvasRichTextContentState } from './canvas-rich-text-editor'
-import type { ParsedCanvasTextNodeData } from 'convex/canvases/validation'
+import type { CanvasTextNodeData } from 'convex/canvases/validation'
 import type { CanvasRichTextContentState } from './canvas-rich-text-editor'
 import { normalizeCanvasNodeSurfaceStyleData } from './canvas-node-surface-style'
 import type {
@@ -7,18 +7,16 @@ import type {
   CanvasNormalizedNodeSurfaceStyleData,
 } from './canvas-node-surface-style'
 
-export interface CanvasRichTextNodeInputData
-  extends Record<string, unknown>, CanvasNodeSurfaceStyleData {
+export interface CanvasRichTextNodeInputData extends CanvasNodeSurfaceStyleData {
   content?: unknown
 }
 
-export interface CanvasRichTextNodeData
-  extends Record<string, unknown>, CanvasNormalizedNodeSurfaceStyleData {
+export interface CanvasRichTextNodeData extends CanvasNormalizedNodeSurfaceStyleData {
   richText: CanvasRichTextContentState
 }
 
 function isCanvasRichTextNodeData(
-  data: CanvasRichTextNodeInputData | CanvasRichTextNodeData | ParsedCanvasTextNodeData,
+  data: CanvasRichTextNodeInputData | CanvasRichTextNodeData | CanvasTextNodeData,
 ): data is CanvasRichTextNodeData {
   if (!('richText' in data)) {
     return false
@@ -29,7 +27,7 @@ function isCanvasRichTextNodeData(
 }
 
 export function normalizeCanvasRichTextNodeData(
-  data: CanvasRichTextNodeInputData | CanvasRichTextNodeData | ParsedCanvasTextNodeData,
+  data: CanvasRichTextNodeInputData | CanvasRichTextNodeData | CanvasTextNodeData,
 ): CanvasRichTextNodeData {
   const surfaceStyle = normalizeCanvasNodeSurfaceStyleData(data)
   const richText = isCanvasRichTextNodeData(data)

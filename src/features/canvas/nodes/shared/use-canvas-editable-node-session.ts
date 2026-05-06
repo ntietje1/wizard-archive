@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useRef } from 'react'
 import type {
+  PendingRichEmbedActivationRef,
   RichEmbedActivationPayload,
-  RichEmbedLifecycleController,
 } from '../embed/use-rich-embed-lifecycle'
-import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
-import {
-  useIsCanvasNodeSelected,
-  useSelectedCanvasNodeIds,
-} from '../../runtime/selection/use-canvas-selection-state'
+import { useCanvasInteractionRuntime } from '../../runtime/providers/canvas-runtime'
+import { useCanvasEngineSelector } from '../../react/use-canvas-engine'
 import { isExclusivelySelectedNode } from '../../utils/canvas-selection-utils'
+import { areStringSetsEqual } from '../../system/canvas-selection'
 
 interface UseCanvasEditableNodeSessionOptions {
   id: string
@@ -23,11 +21,15 @@ export function useCanvasEditableNodeSession({
   editing,
   setEditing,
 }: UseCanvasEditableNodeSessionOptions) {
-  const { editSession, selection } = useCanvasRuntime()
-  const selectedNodeIds = useSelectedCanvasNodeIds()
-  const isSelected = useIsCanvasNodeSelected(id)
+  const { editSession, selection } = useCanvasInteractionRuntime()
+  const selectionState = useCanvasEngineSelector(
+    (state) => [state.selection.nodeIds, state.selection.nodeIds.has(id)] as const,
+    areEditableSelectionStatesEqual,
+  )
+  const [selectedNodeIds, isSelected] = selectionState
   const isExclusivelySelected = isExclusivelySelectedNode(selectedNodeIds, id)
-  const pendingActivationRef = useRef<RichEmbedActivationPayload | null>(null)
+  const pendingActivationRef: PendingRichEmbedActivationRef =
+    useRef<RichEmbedActivationPayload | null>(null)
   const editFrameRef = useRef<number | null>(null)
   const hasPendingAutoEdit = editSession.pendingEditNodeId === id
 
@@ -67,7 +69,7 @@ export function useCanvasEditableNodeSession({
     }
 
     if (!isSelected) {
-      selection.replace({ nodeIds: [id], edgeIds: [] })
+      selection.setSelection({ nodeIds: new Set([id]), edgeIds: new Set() })
       return
     }
 
@@ -87,7 +89,7 @@ export function useCanvasEditableNodeSession({
   ])
 
   useEffect(() => {
-    if (!editing || !hasPendingAutoEdit || selectedNodeIds.length === 0 || isSelected) {
+    if (!editing || !hasPendingAutoEdit || selectedNodeIds.size === 0 || isSelected) {
       return
     }
 
@@ -100,16 +102,16 @@ export function useCanvasEditableNodeSession({
     hasPendingAutoEdit,
     isSelected,
     scheduleEditingChange,
-    selectedNodeIds.length,
+    selectedNodeIds.size,
   ])
 
   const startEditing = useCallback(
-    (point?: { x: number; y: number } | null) => {
+    (point?: RichEmbedActivationPayload | null) => {
       if (!canEdit || !isExclusivelySelected) {
         return
       }
 
-      pendingActivationRef.current = point ? { point } : null
+      pendingActivationRef.current = point ?? null
       scheduleEditingChange(true)
     },
     [canEdit, isExclusivelySelected, scheduleEditingChange],
@@ -121,7 +123,9 @@ export function useCanvasEditableNodeSession({
 
   const handleDoubleClick = useCallback(
     (event: Pick<React.MouseEvent, 'clientX' | 'clientY'>) => {
-      startEditing({ x: event.clientX, y: event.clientY })
+      startEditing({
+        point: { x: event.clientX, y: event.clientY },
+      })
     },
     [startEditing],
   )
@@ -141,10 +145,17 @@ export function useCanvasEditableNodeSession({
     hasPendingAutoEdit,
     isExclusivelySelected,
     isSelected,
-    lifecycle: { pendingActivationRef } satisfies RichEmbedLifecycleController,
     handleActivated,
     handleDoubleClick,
+    pendingActivationRef,
     startEditing,
     stopEditing,
   }
+}
+
+function areEditableSelectionStatesEqual(
+  left: readonly [ReadonlySet<string>, boolean],
+  right: readonly [ReadonlySet<string>, boolean],
+) {
+  return left[1] === right[1] && areStringSetsEqual(left[0], right[0])
 }

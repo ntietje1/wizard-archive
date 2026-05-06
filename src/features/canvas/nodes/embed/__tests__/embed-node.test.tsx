@@ -3,12 +3,17 @@ import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { EmbedNode } from '../embed-node'
+import { CanvasEngineProvider } from '../../../react/canvas-engine-context'
+import { createCanvasEngine } from '../../../system/canvas-engine'
+import { CANVAS_NODE_MIN_SIZE } from '../../shared/canvas-node-resize-constants'
 import { testId } from '~/test/helpers/test-id'
 
 const sidebarItemPreviewSpy = vi.hoisted(() => vi.fn())
 const embeddedCanvasSpy = vi.hoisted(() => vi.fn())
 const embeddedFileSpy = vi.hoisted(() => vi.fn())
 const embeddedMapSpy = vi.hoisted(() => vi.fn())
+const embedNoteSpy = vi.hoisted(() => vi.fn())
+const resizableNodeWrapperSpy = vi.hoisted(() => vi.fn())
 const setEditingEmbedId = vi.hoisted(() => vi.fn())
 const renderModeState = vi.hoisted(() => ({
   interactive: true,
@@ -45,12 +50,29 @@ vi.mock('../embedded-map-content', () => ({
   },
 }))
 
+vi.mock('../embed-note-content', () => ({
+  EmbedNoteContent: (props: unknown) => {
+    embedNoteSpy(props)
+    return <div data-testid="embed-note-content">embedded-note</div>
+  },
+}))
+
 vi.mock('../../../runtime/providers/canvas-runtime', () => ({
-  useCanvasRuntime: () => ({
+  useCanvasDocumentRuntime: () => ({
+    documentWriter: {
+      patchNodeData: vi.fn(),
+    },
+  }),
+  useCanvasInteractionRuntime: () => ({
     canEdit: true,
     editSession: {
       editingEmbedId: null,
       setEditingEmbedId,
+    },
+  }),
+  useCanvasViewportRuntime: () => ({
+    domRuntime: {
+      registerNodeSurfaceElement: vi.fn(() => vi.fn()),
     },
   }),
 }))
@@ -60,12 +82,21 @@ vi.mock('../../../runtime/providers/use-canvas-render-mode', () => ({
 }))
 
 vi.mock('../../shared/resizable-node-wrapper', () => ({
-  ResizableNodeWrapper: ({ children, chrome }: { children: ReactNode; chrome: ReactNode }) => (
-    <div>
-      {chrome}
-      {children}
-    </div>
-  ),
+  ResizableNodeWrapper: (props: {
+    children: ReactNode
+    chrome: ReactNode
+    minHeight?: number
+    minWidth?: number
+    nodeType: string
+  }) => {
+    resizableNodeWrapperSpy(props)
+    return (
+      <div>
+        {props.chrome}
+        {props.children}
+      </div>
+    )
+  },
 }))
 
 vi.mock('../../shared/use-canvas-editable-node-session', () => ({
@@ -73,9 +104,9 @@ vi.mock('../../shared/use-canvas-editable-node-session', () => ({
     editable: false,
     isSelected: false,
     isExclusivelySelected: false,
-    lifecycle: {},
     handleDoubleClick: vi.fn(),
     handleActivated: vi.fn(),
+    pendingActivationRef: { current: null },
   }),
 }))
 
@@ -94,6 +125,7 @@ vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
       ['canvas-1', { name: 'Canvas Item' }],
       ['file-1', { name: 'File Item' }],
       ['map-1', { name: 'Map Item' }],
+      ['note-1', { name: 'Note Item' }],
     ]),
   }),
 }))
@@ -105,8 +137,14 @@ vi.mock('~/features/sidebar/hooks/useSidebarItemById', () => ({
 }))
 
 vi.mock('../../shared/canvas-node-surface-style', () => ({
+  getCanvasNodeDefaultTextColor: (data?: { textColor?: string }) =>
+    data?.textColor ?? 'var(--foreground)',
+  getCanvasNodeTextStyle: () => ({
+    color: 'var(--foreground)',
+  }),
   getCanvasNodeSurfaceStyle: () => ({}),
-  normalizeCanvasNodeSurfaceStyleData: () => ({
+  normalizeCanvasNodeSurfaceStyleData: (data?: { textColor?: string }) => ({
+    textColor: data?.textColor ?? 'var(--foreground)',
     backgroundColor: 'var(--background)',
     backgroundOpacity: 100,
     borderStroke: 'var(--border)',
@@ -129,10 +167,24 @@ describe('EmbedNode', () => {
     embeddedCanvasSpy.mockReset()
     embeddedFileSpy.mockReset()
     embeddedMapSpy.mockReset()
+    embedNoteSpy.mockReset()
+    resizableNodeWrapperSpy.mockReset()
+  })
+
+  it('uses the uniform small canvas node resize minimum', () => {
+    renderEmbedNode()
+
+    expect(resizableNodeWrapperSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        minHeight: CANVAS_NODE_MIN_SIZE,
+        minWidth: CANVAS_NODE_MIN_SIZE,
+        nodeType: 'embed',
+      }),
+    )
   })
 
   it('renders canvas embeds through the dedicated embedded canvas renderer in interactive mode', () => {
-    render(<EmbedNode {...createEmbedNodeProps('node-1', 'canvas-1')} />)
+    renderEmbedNode()
 
     expect(screen.getByTestId('embedded-canvas-content')).toBeInTheDocument()
     expect(embeddedCanvasSpy).toHaveBeenCalledWith({
@@ -152,7 +204,7 @@ describe('EmbedNode', () => {
       imageUrl: 'map.png',
       pins: [],
     }
-    render(<EmbedNode {...createEmbedNodeProps('node-1', 'map-1')} />)
+    renderEmbedNode('node-1', 'map-1')
 
     expect(screen.getByTestId('embedded-map-content')).toBeInTheDocument()
     expect(embeddedMapSpy).toHaveBeenCalledWith({
@@ -177,7 +229,7 @@ describe('EmbedNode', () => {
       downloadUrl: 'document.pdf',
       previewUrl: 'preview.png',
     }
-    render(<EmbedNode {...createEmbedNodeProps('node-1', 'file-1')} />)
+    renderEmbedNode('node-1', 'file-1')
 
     expect(screen.getByTestId('embedded-file-content')).toBeInTheDocument()
     expect(embeddedFileSpy).toHaveBeenCalledWith({
@@ -196,7 +248,7 @@ describe('EmbedNode', () => {
 
   it('falls back to the shared read-only preview path for nested embedded canvases', () => {
     renderModeState.interactive = false
-    render(<EmbedNode {...createEmbedNodeProps('node-1', 'canvas-1')} />)
+    renderEmbedNode()
 
     expect(screen.getByTestId('shared-sidebar-item-preview')).toBeInTheDocument()
     expect(sidebarItemPreviewSpy).toHaveBeenCalledWith({
@@ -219,7 +271,7 @@ describe('EmbedNode', () => {
       imageUrl: 'map.png',
       pins: [],
     }
-    render(<EmbedNode {...createEmbedNodeProps('node-1', 'map-1')} />)
+    renderEmbedNode('node-1', 'map-1')
 
     expect(screen.getByTestId('shared-sidebar-item-preview')).toBeInTheDocument()
     expect(sidebarItemPreviewSpy).toHaveBeenCalledWith({
@@ -244,7 +296,7 @@ describe('EmbedNode', () => {
       downloadUrl: 'document.pdf',
       previewUrl: 'preview.png',
     }
-    render(<EmbedNode {...createEmbedNodeProps('node-1', 'file-1')} />)
+    renderEmbedNode('node-1', 'file-1')
 
     expect(screen.getByTestId('shared-sidebar-item-preview')).toBeInTheDocument()
     expect(sidebarItemPreviewSpy).toHaveBeenCalledWith({
@@ -259,12 +311,67 @@ describe('EmbedNode', () => {
     })
     expect(embeddedFileSpy).not.toHaveBeenCalled()
   })
+
+  it('inverse-scales the floating name label from the current viewport zoom', () => {
+    renderEmbedNode('node-1', 'canvas-1', { zoom: 2 })
+
+    // The base line height is 16px; at zoom=2, inverse scale is 0.5, so the frame
+    // height is 16 * 0.5 = 8px, the label scales to 0.5, and its width expands to 200%.
+    expect(screen.getByTestId('embed-node-floating-label-frame')).toHaveStyle({
+      height: '8px',
+      transform: 'translateY(calc(-100% - 3px))',
+    })
+    expect(screen.getByTestId('embed-node-floating-label')).toHaveStyle({
+      lineHeight: '16px',
+      transform: 'scale(0.5)',
+      transformOrigin: 'left bottom',
+      width: '200%',
+    })
+  })
+
+  it('passes node textColor to embedded note content as the default text color', () => {
+    contentItemState.data = {
+      _id: 'note-1',
+      type: SIDEBAR_ITEM_TYPES.notes,
+      name: 'Note Item',
+      content: [],
+    }
+
+    renderEmbedNode('node-1', 'note-1', { zoom: 1 }, { textColor: 'var(--t-purple)' })
+
+    expect(screen.getByTestId('embed-note-content')).toBeInTheDocument()
+    expect(embedNoteSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        textColor: 'var(--t-purple)',
+      }),
+    )
+  })
 })
 
-function createEmbedNodeProps(id: string, sidebarItemId: string): Parameters<typeof EmbedNode>[0] {
+function renderEmbedNode(
+  id = 'node-1',
+  sidebarItemId = 'canvas-1',
+  viewport: { zoom: number } = { zoom: 1 },
+  data: Record<string, unknown> = {},
+) {
+  const engine = createCanvasEngine()
+  engine.setViewport({ x: 0, y: 0, zoom: viewport.zoom })
+
+  return render(
+    <CanvasEngineProvider engine={engine}>
+      <EmbedNode {...createEmbedNodeProps(id, sidebarItemId, data)} />
+    </CanvasEngineProvider>,
+  )
+}
+
+function createEmbedNodeProps(
+  id: string,
+  sidebarItemId: string,
+  data: Record<string, unknown>,
+): Parameters<typeof EmbedNode>[0] {
   return {
     id,
-    data: { sidebarItemId: testId<'sidebarItems'>(sidebarItemId) },
+    data: { sidebarItemId: testId<'sidebarItems'>(sidebarItemId), ...data },
     dragging: false,
   } as unknown as Parameters<typeof EmbedNode>[0]
 }

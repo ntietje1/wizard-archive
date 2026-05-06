@@ -9,9 +9,6 @@ const awarenessMock = vi.hoisted(() => ({
       user: { name: 'Remote', color: '#f00' },
       presence: {},
       cursor: { x: 5, y: 6 },
-      dragging: {
-        'node-1': { x: 10, y: 20 },
-      },
       resizing: {
         'node-2': { width: 100, height: 50, x: 4, y: 8 },
       },
@@ -20,7 +17,6 @@ const awarenessMock = vi.hoisted(() => ({
   ],
   core: {
     setLocalCursor: vi.fn(),
-    setLocalDragging: vi.fn(),
     setLocalResizing: vi.fn(),
     setLocalSelection: vi.fn(),
   },
@@ -43,13 +39,11 @@ describe('useCanvasSessionState', () => {
 
     expect(result.current.awareness).toBe(awarenessMock)
     expect(result.current.remoteUsers).toBe(awarenessMock.remoteUsers)
-    expect(result.current.remoteDragPositions).toEqual({
-      'node-1': { x: 10, y: 20 },
-    })
     expect(result.current.remoteResizeDimensions).toEqual({
       'node-2': { width: 100, height: 50, x: 4, y: 8 },
     })
-    expect(result.current.remoteHighlights.get('node-1')).toEqual({
+    expect(result.current.remoteHighlights.has('node-1')).toBe(false)
+    expect(result.current.remoteHighlights.get('node-2')).toEqual({
       color: '#f00',
       name: 'Remote',
     })

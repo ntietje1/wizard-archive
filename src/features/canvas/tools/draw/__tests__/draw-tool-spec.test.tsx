@@ -195,19 +195,19 @@ function createDrawEnvironment({
 }): CanvasToolRuntime {
   return {
     viewport: {
-      screenToFlowPosition: ({ x, y }) => ({ x, y }),
+      screenToCanvasPosition: ({ x, y }) => ({ x, y }),
       getZoom: () => 1,
     },
     commands: {
       createNode,
-      updateNode: () => undefined,
-      updateNodeData: () => undefined,
-      updateEdge: () => undefined,
+      patchNodeData: () => undefined,
+      patchEdges: () => undefined,
       resizeNode: () => undefined,
+      resizeNodes: () => undefined,
       deleteNodes: () => undefined,
       createEdge: () => undefined,
       deleteEdges: () => undefined,
-      setNodePosition: () => undefined,
+      setNodePositions: () => undefined,
     },
     query: {
       getNodes: () => [],
@@ -215,18 +215,15 @@ function createDrawEnvironment({
       getMeasuredNodes: () => [],
     },
     selection: {
-      getSnapshot: () => ({ nodeIds: [], edgeIds: [] }),
-      replace: () => undefined,
-      replaceNodes: () => undefined,
-      replaceEdges: () => undefined,
-      clear: () => undefined,
-      getSelectedNodeIds: () => [],
-      getSelectedEdgeIds: () => [],
-      toggleNodeFromTarget: () => undefined,
-      toggleEdgeFromTarget: () => undefined,
+      getSnapshot: () => ({ nodeIds: new Set<string>(), edgeIds: new Set<string>() }),
+      setSelection: () => undefined,
+      clearSelection: () => undefined,
+      toggleNode: () => undefined,
+      toggleEdge: () => undefined,
       beginGesture: () => undefined,
-      commitGestureSelection: () => undefined,
-      endGesture: () => undefined,
+      setGesturePreview: () => undefined,
+      commitGesture: () => undefined,
+      cancelGesture: () => undefined,
     },
     interaction: {
       suppressNextSurfaceClick: () => undefined,
@@ -255,7 +252,6 @@ function createDrawEnvironment({
     awareness: {
       core: {
         setLocalCursor: () => undefined,
-        setLocalDragging: () => undefined,
         setLocalResizing: () => undefined,
         setLocalSelection: () => undefined,
       },

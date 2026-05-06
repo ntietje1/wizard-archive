@@ -4,7 +4,7 @@ import {
   getCanvasNodesMatchingLasso,
   getCanvasNodesMatchingRectangle,
 } from '../canvas-node-selection-queries'
-import type { Node } from '@xyflow/react'
+import type { CanvasDocumentNode as Node } from 'convex/canvases/validation'
 
 describe('canvas node selection queries', () => {
   it('uses default rectangular selection behavior for rectangle-shaped nodes', () => {
@@ -22,7 +22,7 @@ describe('canvas node selection queries', () => {
     expect(findCanvasNodeAtPoint(nodes, { x: 20, y: 20 }, { zoom: 1 })).toBe('text-1')
     expect(
       getCanvasNodesMatchingRectangle(nodes, { x: 0, y: 0, width: 100, height: 100 }, { zoom: 1 }),
-    ).toEqual(['text-1'])
+    ).toEqual(new Set(['text-1']))
     expect(
       getCanvasNodesMatchingLasso(
         nodes,
@@ -34,7 +34,7 @@ describe('canvas node selection queries', () => {
         ],
         { zoom: 1 },
       ),
-    ).toEqual(['text-1'])
+    ).toEqual(new Set(['text-1']))
   })
 
   it('selects text nodes when the drag rectangle only partially overlaps them', () => {
@@ -51,7 +51,7 @@ describe('canvas node selection queries', () => {
 
     expect(
       getCanvasNodesMatchingRectangle(nodes, { x: 0, y: 0, width: 30, height: 30 }, { zoom: 1 }),
-    ).toEqual(['text-1'])
+    ).toEqual(new Set(['text-1']))
   })
 
   it('uses bespoke stroke selection behavior and safely ignores unknown node types', () => {
@@ -63,7 +63,7 @@ describe('canvas node selection queries', () => {
         width: 10,
         height: 10,
         data: {},
-      },
+      } as unknown as Node,
       {
         id: 'stroke-1',
         type: 'stroke',
@@ -85,7 +85,7 @@ describe('canvas node selection queries', () => {
     expect(findCanvasNodeAtPoint(nodes, { x: 50, y: 20 }, { zoom: 1 })).toBe('stroke-1')
     expect(
       getCanvasNodesMatchingRectangle(nodes, { x: 0, y: 0, width: 40, height: 40 }, { zoom: 1 }),
-    ).toEqual(['stroke-1'])
+    ).toEqual(new Set(['stroke-1']))
     expect(
       getCanvasNodesMatchingLasso(
         nodes,
@@ -97,7 +97,7 @@ describe('canvas node selection queries', () => {
         ],
         { zoom: 1 },
       ),
-    ).toEqual(['stroke-1'])
+    ).toEqual(new Set(['stroke-1']))
   })
 
   it('uses the same padded stroke hit detection for rectangle selection as point selection', () => {
@@ -123,7 +123,7 @@ describe('canvas node selection queries', () => {
     expect(findCanvasNodeAtPoint(nodes, { x: 50, y: 20 }, { zoom: 1 })).toBe('stroke-1')
     expect(
       getCanvasNodesMatchingRectangle(nodes, { x: 40, y: 20, width: 20, height: 1 }, { zoom: 1 }),
-    ).toEqual(['stroke-1'])
+    ).toEqual(new Set(['stroke-1']))
   })
 
   it('hit-tests moved strokes using their rendered position', () => {
@@ -188,7 +188,7 @@ describe('canvas node selection queries', () => {
           points: [[0, 10, 'bad']],
           size: 4,
         },
-      },
+      } as unknown as Node,
       {
         id: 'text-1',
         type: 'text',
@@ -201,7 +201,7 @@ describe('canvas node selection queries', () => {
 
     expect(
       getCanvasNodesMatchingRectangle(nodes, { x: 0, y: 0, width: 100, height: 100 }, { zoom: 1 }),
-    ).toEqual(['text-1'])
+    ).toEqual(new Set(['text-1']))
     expect(findCanvasNodeAtPoint(nodes, { x: 10, y: 10 }, { zoom: 1 })).toBe('text-1')
     expect(
       getCanvasNodesMatchingLasso(
@@ -214,6 +214,6 @@ describe('canvas node selection queries', () => {
         ],
         { zoom: 1 },
       ),
-    ).toEqual(['text-1'])
+    ).toEqual(new Set(['text-1']))
   })
 })

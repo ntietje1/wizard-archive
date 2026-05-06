@@ -1,37 +1,64 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import type { RichEmbedLifecycleController } from './use-rich-embed-lifecycle'
+import type { PendingRichEmbedActivationRef } from './use-rich-embed-lifecycle'
 import { normalizeEmbedNodeData } from './embed-node-data'
-import { useCanvasRuntime } from '../../runtime/providers/canvas-runtime'
+import {
+  useCanvasDocumentRuntime,
+  useCanvasInteractionRuntime,
+  useCanvasViewportRuntime,
+} from '../../runtime/providers/canvas-runtime'
 import { ResizableNodeWrapper } from '../shared/resizable-node-wrapper'
+import { CANVAS_NODE_MIN_SIZE } from '../shared/canvas-node-resize-constants'
 import type { EmbedNodeData } from './embed-node-data'
 import { EmbedNoteContent } from './embed-note-content'
 import { CanvasFloatingFormattingToolbar } from '../shared/canvas-floating-formatting-toolbar'
+import { registerCanvasRichTextFormattingSession } from '../shared/canvas-rich-text-formatting-session'
 import { useCanvasEditableNodeSession } from '../shared/use-canvas-editable-node-session'
-import type { Node, NodeProps } from '@xyflow/react'
 import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
 import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { cn } from '~/features/shadcn/lib/utils'
 import { CanvasNodeConnectionHandles } from '../shared/canvas-node-connection-handles'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
-import { getCanvasNodeSurfaceStyle } from '../shared/canvas-node-surface-style'
+import {
+  getCanvasNodeDefaultTextColor,
+  getCanvasNodeSurfaceStyle,
+  getCanvasNodeTextStyle,
+} from '../shared/canvas-node-surface-style'
 import { SidebarItemPreviewContent } from '~/features/previews/components/sidebar-item-preview-content'
 import { resolveFilePreviewImageUrl } from '~/features/editor/components/viewer/file/file-preview-source'
 import { EmbeddedCanvasContent } from './embedded-canvas-content'
 import { EmbeddedFileContent } from './embedded-file-content'
 import { EmbeddedMapContent } from './embedded-map-content'
 import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-canvas-render-mode'
+import { useCanvasViewportZoom } from '../../react/use-canvas-engine'
+import type { CanvasNodeComponentProps } from '../canvas-node-types'
+import type { CanvasDocumentWriter } from '../../tools/canvas-tool-types'
 
-export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>) {
+const EMBED_FLOATING_LABEL_GAP_PX = 6
+const EMBED_FLOATING_LABEL_LINE_HEIGHT_PX = 16
+
+function persistEmbedTextColor(
+  patchNodeData: CanvasDocumentWriter['patchNodeData'],
+  id: string,
+  textColor: string,
+) {
+  patchNodeData(new Map([[id, { textColor }]]))
+}
+
+export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<EmbedNodeData>) {
   const normalizedData = normalizeEmbedNodeData(data)
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
   const sidebarItemId = normalizedData.sidebarItemId
   const { itemsMap } = useActiveSidebarItems()
   const item = sidebarItemId ? itemsMap.get(sidebarItemId) : undefined
   const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
+  const { documentWriter } = useCanvasDocumentRuntime()
+  const { patchNodeData } = documentWriter
   const { data: contentItem } = useSidebarItemById(sidebarItemId)
-  const { editSession, canEdit } = useCanvasRuntime()
+  const { domRuntime } = useCanvasViewportRuntime()
+  const { canEdit, editSession } = useCanvasInteractionRuntime()
+  const surfaceRef = useRef<HTMLDivElement | null>(null)
   const editableSession = useCanvasEditableNodeSession({
     id,
     canEdit: canEdit && interactiveRenderMode,
@@ -41,37 +68,66 @@ export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>
   const isEditing = editableSession.editable && contentItem?.type === SIDEBAR_ITEM_TYPES.notes
   const noteEditor = contentItem?.type === SIDEBAR_ITEM_TYPES.notes ? editor : null
   const showsFormattingToolbar = isEditing && noteEditor !== null
+  const defaultTextColor = getCanvasNodeDefaultTextColor(normalizedData)
 
+  const zoom = useCanvasViewportZoom()
   const label = item?.name ?? 'Missing item'
   const isMissing = !item
   const showFloatingLabel = !showsFormattingToolbar
+
+  useEffect(() => domRuntime.registerNodeSurfaceElement(id, surfaceRef.current), [domRuntime, id])
+
+  useEffect(() => {
+    if (!showsFormattingToolbar || !noteEditor) {
+      return
+    }
+
+    return registerCanvasRichTextFormattingSession({
+      nodeId: id,
+      editor: noteEditor,
+      defaultTextColor,
+      setDefaultTextColor: (textColor) => {
+        persistEmbedTextColor(patchNodeData, id, textColor)
+      },
+    })
+  }, [defaultTextColor, id, noteEditor, patchNodeData, showsFormattingToolbar])
 
   return (
     <ResizableNodeWrapper
       id={id}
       nodeType="embed"
       dragging={!!dragging}
-      minWidth={240}
-      minHeight={180}
+      minWidth={CANVAS_NODE_MIN_SIZE}
+      minHeight={CANVAS_NODE_MIN_SIZE}
       lockedAspectRatio={getLockedAspectRatio(contentItem, normalizedData.lockedAspectRatio)}
       editing={showsFormattingToolbar}
       chrome={
         <>
-          <CanvasFloatingFormattingToolbar editor={noteEditor} visible={showsFormattingToolbar} />
+          <CanvasFloatingFormattingToolbar
+            defaultTextColor={defaultTextColor}
+            editor={noteEditor}
+            onDefaultTextColorChange={(textColor) => {
+              persistEmbedTextColor(patchNodeData, id, textColor)
+            }}
+            visible={showsFormattingToolbar}
+          />
           <CanvasNodeConnectionHandles />
           {showFloatingLabel && (
-            <div className="pointer-events-none absolute left-3 top-0 z-20 max-w-[calc(100%-1.5rem)] -translate-y-[calc(100%+0.375rem)]">
-              <span className="block truncate text-xs font-medium text-muted-foreground">
-                {isMissing ? `Warning: ${label}` : label}
-              </span>
-            </div>
+            <EmbedFloatingLabel label={label} missing={isMissing} zoom={zoom} />
           )}
         </>
       }
     >
       <div
-        className="relative h-full w-full overflow-hidden rounded-lg"
-        style={getCanvasNodeSurfaceStyle(normalizedData)}
+        ref={surfaceRef}
+        className={cn(
+          'relative h-full w-full overflow-hidden rounded-lg',
+          isEditing ? 'select-text' : 'select-none',
+        )}
+        style={{
+          ...getCanvasNodeSurfaceStyle(normalizedData),
+          ...getCanvasNodeTextStyle(normalizedData),
+        }}
         onDoubleClick={(event) => {
           if (!interactiveRenderMode || contentItem?.type !== SIDEBAR_ITEM_TYPES.notes) {
             return
@@ -90,14 +146,51 @@ export function EmbedNode({ id, data, dragging }: NodeProps<Node<EmbedNodeData>>
               isEditing={isEditing}
               isExclusivelySelected={editableSession.isExclusivelySelected}
               interactiveRenderMode={interactiveRenderMode}
-              lifecycle={editableSession.lifecycle}
               onActivated={editableSession.handleActivated}
               onEditorChange={setEditor}
+              pendingActivationRef={editableSession.pendingActivationRef}
+              textColor={normalizedData.textColor}
             />
           </div>
         )}
       </div>
     </ResizableNodeWrapper>
+  )
+}
+
+function EmbedFloatingLabel({
+  label,
+  missing,
+  zoom,
+}: {
+  label: string
+  missing: boolean
+  zoom: number
+}) {
+  const safeZoom = Number.isFinite(zoom) && zoom > 0 ? zoom : 1
+
+  return (
+    <div
+      data-testid="embed-node-floating-label-frame"
+      className="pointer-events-none absolute left-0 top-0 z-20 w-full select-none"
+      style={{
+        height: EMBED_FLOATING_LABEL_LINE_HEIGHT_PX / safeZoom,
+        transform: `translateY(calc(-100% - ${EMBED_FLOATING_LABEL_GAP_PX / safeZoom}px))`,
+      }}
+    >
+      <span
+        data-testid="embed-node-floating-label"
+        className="absolute bottom-0 left-0 block truncate text-xs font-medium text-muted-foreground"
+        style={{
+          lineHeight: `${EMBED_FLOATING_LABEL_LINE_HEIGHT_PX}px`,
+          transform: `scale(${1 / safeZoom})`,
+          transformOrigin: 'left bottom',
+          width: `${safeZoom * 100}%`,
+        }}
+      >
+        {missing ? `Warning: ${label}` : label}
+      </span>
+    </div>
   )
 }
 
@@ -107,18 +200,20 @@ function EmbedRichContent({
   isEditing,
   isExclusivelySelected,
   interactiveRenderMode,
-  lifecycle,
   onActivated,
   onEditorChange,
+  pendingActivationRef,
+  textColor,
 }: {
   nodeId: string
   contentItem: AnySidebarItemWithContent | undefined
   isEditing: boolean
   isExclusivelySelected: boolean
   interactiveRenderMode: boolean
-  lifecycle: RichEmbedLifecycleController
   onActivated: () => void
   onEditorChange: (editor: CustomBlockNoteEditor | null) => void
+  pendingActivationRef: PendingRichEmbedActivationRef
+  textColor: string | null
 }): React.ReactElement | null {
   if (!contentItem) {
     return (
@@ -135,9 +230,10 @@ function EmbedRichContent({
         content={contentItem.content}
         editable={isEditing}
         isExclusivelySelected={isExclusivelySelected}
-        lifecycle={lifecycle}
         onActivated={onActivated}
         onCanvasEditorChange={onEditorChange}
+        pendingActivationRef={pendingActivationRef}
+        textColor={textColor}
       />
     )
   }

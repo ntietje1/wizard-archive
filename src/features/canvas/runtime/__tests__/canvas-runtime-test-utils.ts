@@ -1,24 +1,37 @@
 import { vi } from 'vitest'
-import type { CanvasDocumentWriter, CanvasSelectionController } from '../../tools/canvas-tool-types'
+import type {
+  CanvasDocumentWriter,
+  CanvasHistoryController,
+  CanvasNodeActions,
+  CanvasSelectionController,
+} from '../../tools/canvas-tool-types'
 import type { RemoteHighlight } from '../../utils/canvas-awareness-types'
+import { createCanvasDomRuntime } from '../../system/canvas-dom-runtime'
+import { createCanvasEngine } from '../../system/canvas-engine'
+import type { CanvasEngine } from '../../system/canvas-engine-types'
+import type { CanvasDomRuntime } from '../../system/canvas-dom-runtime'
+import type { CanvasViewportController } from '../../system/canvas-viewport-controller'
 import type { CanvasCommands } from '../document/use-canvas-commands'
-import type { CanvasRuntime } from '../providers/canvas-runtime'
+import type { CanvasRuntimeProviderProps } from '../providers/canvas-runtime'
 import type { CanvasSessionRuntime } from '../session/use-canvas-session-state'
+
+export function createCanvasRuntimeEnginePair() {
+  const domRuntime = createCanvasDomRuntime()
+  const canvasEngine = createCanvasEngine({ domRuntime })
+  return { canvasEngine, domRuntime }
+}
 
 function createCanvasSelectionController(): CanvasSelectionController {
   return {
-    getSnapshot: vi.fn(() => ({ nodeIds: [], edgeIds: [] })),
-    replace: vi.fn(),
-    replaceNodes: vi.fn(),
-    replaceEdges: vi.fn(),
-    clear: vi.fn(),
-    getSelectedNodeIds: vi.fn(() => []),
-    getSelectedEdgeIds: vi.fn(() => []),
-    toggleNodeFromTarget: vi.fn(),
-    toggleEdgeFromTarget: vi.fn(),
+    getSnapshot: vi.fn(() => ({ nodeIds: new Set<string>(), edgeIds: new Set<string>() })),
+    setSelection: vi.fn(),
+    clearSelection: vi.fn(),
+    toggleNode: vi.fn(),
+    toggleEdge: vi.fn(),
     beginGesture: vi.fn(),
-    commitGestureSelection: vi.fn(),
-    endGesture: vi.fn(),
+    setGesturePreview: vi.fn(),
+    commitGesture: vi.fn(),
+    cancelGesture: vi.fn(),
   }
 }
 
@@ -54,20 +67,25 @@ function createCanvasCommands(): CanvasCommands {
       canRun: vi.fn(() => true),
       run: vi.fn(() => true),
     },
+    arrange: {
+      id: 'arrange',
+      canRun: vi.fn(() => true),
+      run: vi.fn(() => true),
+    },
   }
 }
 
 function createCanvasDocumentWriter(): CanvasDocumentWriter {
   return {
     createNode: vi.fn(),
-    updateNode: vi.fn(),
-    updateNodeData: vi.fn(),
-    updateEdge: vi.fn(),
+    patchNodeData: vi.fn(),
+    patchEdges: vi.fn(),
     resizeNode: vi.fn(),
+    resizeNodes: vi.fn(),
     deleteNodes: vi.fn(),
     createEdge: vi.fn(),
     deleteEdges: vi.fn(),
-    setNodePosition: vi.fn(),
+    setNodePositions: vi.fn(),
   }
 }
 
@@ -82,27 +100,26 @@ export function createCanvasRuntime(
       redo: () => void
     }
     editSession: CanvasSessionRuntime['editSession']
-    nodeActions: {
-      updateNodeData: (nodeId: string, data: Record<string, unknown>) => void
-      transact?: (fn: () => void) => void
-      onResize: (
-        nodeId: string,
-        width: number,
-        height: number,
-        position: { x: number; y: number },
-      ) => void
-      onResizeEnd: (
-        nodeId: string,
-        width: number,
-        height: number,
-        position: { x: number; y: number },
-      ) => void
-    }
+    nodeActions: Partial<CanvasNodeActions>
     documentWriter: CanvasDocumentWriter
     selection: CanvasSelectionController
+    canvasEngine: CanvasEngine
+    domRuntime: CanvasDomRuntime
+    viewportController: CanvasViewportController
     commands: CanvasCommands
   }> = {},
-): CanvasRuntime {
+): Omit<CanvasRuntimeProviderProps, 'children'> & {
+  canvasEngine: CanvasEngine
+  canEdit: boolean
+  commands: CanvasCommands
+  documentWriter: CanvasDocumentWriter
+  history: CanvasHistoryController
+  nodeActions: CanvasNodeActions
+  remoteHighlights: ReadonlyMap<string, RemoteHighlight>
+  selection: CanvasSelectionController
+  viewportController: CanvasViewportController
+  editSession: CanvasSessionRuntime['editSession']
+} {
   const {
     history: historyOverrides,
     editSession: editSessionOverrides,
@@ -110,46 +127,86 @@ export function createCanvasRuntime(
     documentWriter: documentWriterOverrides,
     selection: selectionOverrides,
     commands: commandsOverrides,
-    ...restOverrides
+    viewportController: viewportControllerOverrides,
+    canvasEngine: canvasEngineOverride,
+    domRuntime: domRuntimeOverride,
+    remoteHighlights = new Map<string, RemoteHighlight>(),
+    canEdit = true,
   } = overrides
+  if (canvasEngineOverride && !domRuntimeOverride) {
+    throw new Error('createCanvasRuntime requires domRuntime when canvasEngine is overridden')
+  }
 
+  const domRuntime = domRuntimeOverride ?? createCanvasDomRuntime()
+  const canvasEngine = canvasEngineOverride ?? createCanvasEngine({ domRuntime })
+
+  const history = {
+    canUndo: false,
+    canRedo: false,
+    undo: () => undefined,
+    redo: () => undefined,
+    ...historyOverrides,
+  }
+  const editSession = {
+    editingEmbedId: null,
+    setEditingEmbedId: () => undefined,
+    pendingEditNodeId: null,
+    pendingEditNodePoint: null,
+    setPendingEditNodeId: () => undefined,
+    setPendingEditNodePoint: () => undefined,
+    ...editSessionOverrides,
+  }
+  const nodeActions = {
+    transact: (fn: () => void) => fn(),
+    onResize: () => undefined,
+    onResizeEnd: () => undefined,
+    onResizeMany: () => undefined,
+    onResizeManyCancel: () => undefined,
+    onResizeManyEnd: () => undefined,
+    ...nodeActionsOverrides,
+  }
+  const documentWriter = {
+    ...createCanvasDocumentWriter(),
+    ...documentWriterOverrides,
+  }
+  const selection = {
+    ...createCanvasSelectionController(),
+    ...selectionOverrides,
+  }
+  const viewportController = {
+    getViewport: vi.fn(() => ({ x: 0, y: 0, zoom: 1 })),
+    getZoom: vi.fn(() => 1),
+    screenToCanvasPosition: vi.fn((position) => position),
+    canvasToScreenPosition: vi.fn((position) => position),
+    handleWheel: vi.fn(),
+    handlePanPointerDown: vi.fn(),
+    panBy: vi.fn(),
+    zoomBy: vi.fn(),
+    zoomTo: vi.fn(),
+    zoomIn: vi.fn(),
+    zoomOut: vi.fn(),
+    fitView: vi.fn(),
+    syncFromDocumentOrAdapter: vi.fn(),
+    setZoomBounds: vi.fn(),
+    commit: vi.fn(),
+    destroy: vi.fn(),
+    ...viewportControllerOverrides,
+  }
+  const commands = {
+    ...createCanvasCommands(),
+    ...commandsOverrides,
+  }
   return {
-    canEdit: true,
-    remoteHighlights: new Map(),
-    history: {
-      canUndo: false,
-      canRedo: false,
-      undo: () => undefined,
-      redo: () => undefined,
-      ...historyOverrides,
-    },
-    editSession: {
-      editingEmbedId: null,
-      setEditingEmbedId: () => undefined,
-      pendingEditNodeId: null,
-      pendingEditNodePoint: null,
-      setPendingEditNodeId: () => undefined,
-      setPendingEditNodePoint: () => undefined,
-      ...editSessionOverrides,
-    },
-    nodeActions: {
-      updateNodeData: () => undefined,
-      onResize: () => undefined,
-      onResizeEnd: () => undefined,
-      ...nodeActionsOverrides,
-    },
-    documentWriter: {
-      ...createCanvasDocumentWriter(),
-      ...documentWriterOverrides,
-    },
-    selection: {
-      ...createCanvasSelectionController(),
-      ...selectionOverrides,
-    },
-    commands: {
-      ...createCanvasCommands(),
-      ...commandsOverrides,
-    },
-    ...restOverrides,
+    canEdit,
+    canvasEngine,
+    commands,
+    documentWriter,
+    domRuntime,
+    history,
+    editSession,
+    nodeActions,
+    remoteHighlights,
+    selection,
+    viewportController,
   }
 }
