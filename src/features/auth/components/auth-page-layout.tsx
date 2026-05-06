@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
-import { Book } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { WizardArchiveLogo } from '~/shared/components/wizard-archive-logo'
 
 export function AuthPageLayout({ children }: { children: ReactNode }) {
   return (
@@ -8,10 +8,8 @@ export function AuthPageLayout({ children }: { children: ReactNode }) {
       <div className="flex flex-col gap-4 p-6 md:p-10">
         <div className="flex justify-center gap-2 md:justify-start">
           <Link to="/" className="flex items-center gap-2 font-medium">
-            <div className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <Book className="size-4" />
-            </div>
-            {"The Wizard's Archive"}
+            <WizardArchiveLogo className="h-6 w-6" />
+            Wizard's Archive
           </Link>
         </div>
         <div className="flex flex-1 items-center justify-center">

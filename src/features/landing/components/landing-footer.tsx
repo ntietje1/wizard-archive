@@ -1,5 +1,5 @@
 import { LandingContainer } from '~/features/landing/components/landing-container'
-import { Logo } from '~/features/landing/components/logo'
+import { WizardArchiveLogo } from '~/shared/components/wizard-archive-logo'
 
 function FooterColumn({
   title,
@@ -37,8 +37,8 @@ export function LandingFooter() {
         <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <div className="flex items-center gap-2.5">
-              <Logo className="h-6 w-6" />
-              <span className="text-sm font-semibold text-foreground">{"Wizard's Archive"}</span>
+              <WizardArchiveLogo className="h-6 w-6" />
+              <span className="text-lg font-semibold text-foreground">{"Wizard's Archive"}</span>
             </div>
             <p className="mt-3 text-sm text-muted-foreground">
               The collaborative campaign manager for TTRPGs.
@@ -76,8 +76,8 @@ export function LandingFooter() {
         </div>
 
         <div className="mt-12 border-t border-border/20 pt-8">
-          <p className="text-xs text-muted-foreground">
-            {`© ${new Date().getFullYear()} The Wizard's Archive. All rights reserved.`}
+          <p className="text-xs text-muted-foreground" suppressHydrationWarning>
+            {`© ${new Date().getFullYear()} Wizard's Archive. All rights reserved.`}
           </p>
         </div>
       </LandingContainer>

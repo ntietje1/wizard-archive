@@ -29,6 +29,14 @@ jobs:
           cache: true
       - run: vp install --frozen-lockfile
 
+      - name: Validate Preview Candidate
+        run: |
+          vp check
+          vp run lint:convex
+          vp build --mode production
+        env:
+          VITE_SITE_URL: ${{ env.PREVIEW_URL }}
+
       - name: Deploy Convex Preview
         run: |
           vp exec convex deploy \
