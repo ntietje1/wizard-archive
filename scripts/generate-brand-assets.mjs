@@ -10,6 +10,8 @@ const WEB_MANIFEST_PATH = 'public/site.webmanifest'
 const FAVICON_VIEWBOX_SIZE = 8192
 const FAVICON_LOGO_SCALE = 0.87
 const FAVICON_LOGO_VERTICAL_SHIFT = -0.03
+const FAVICON_LIGHT_SHAPE_COLOR = '#000000'
+const FAVICON_DARK_SHAPE_COLOR = '#ffffff'
 const OG_BACKGROUND = '#111114'
 
 const sourceLogoSvg = await readFile(LOGO_PATH, 'utf8')
@@ -26,12 +28,35 @@ await writeFile(LOGO_PATH, shapeLogoSvg)
 await writeFile(WEB_MANIFEST_PATH, `${JSON.stringify(webManifest, null, 2)}\n`)
 
 function createFaviconSvg() {
+  return createCircleLogoSvg({ themeAware: true })
+}
+
+function createStaticFaviconSvg(shapeColor) {
+  return createCircleLogoSvg({ shapeColor })
+}
+
+function createCircleLogoSvg({ shapeColor = FAVICON_LIGHT_SHAPE_COLOR, themeAware = false } = {}) {
   const innerLogo = indentSvgContent(extractSvgInnerContent(shapeLogoSvg), 8)
   const inset = Math.round((FAVICON_VIEWBOX_SIZE * (1 - FAVICON_LOGO_SCALE)) / 2)
   const top = inset + Math.round(FAVICON_VIEWBOX_SIZE * FAVICON_LOGO_VERTICAL_SHIFT)
+  const style = themeAware
+    ? `  <style>
+    .favicon-shape {
+      fill: ${FAVICON_LIGHT_SHAPE_COLOR};
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .favicon-shape {
+        fill: ${FAVICON_DARK_SHAPE_COLOR};
+      }
+    }
+  </style>
+`
+    : ''
+  const shapeFill = themeAware ? 'class="favicon-shape"' : `fill="${shapeColor}"`
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${FAVICON_VIEWBOX_SIZE} ${FAVICON_VIEWBOX_SIZE}">
-  <defs>
+${style}  <defs>
     <mask id="logo-cutout" maskUnits="userSpaceOnUse">
       <rect width="${FAVICON_VIEWBOX_SIZE}" height="${FAVICON_VIEWBOX_SIZE}" fill="#ffffff" />
       <g transform="translate(${inset} ${top}) scale(${FAVICON_LOGO_SCALE})" fill="#000000">
@@ -39,13 +64,13 @@ ${innerLogo}
       </g>
     </mask>
   </defs>
-  <circle cx="${FAVICON_VIEWBOX_SIZE / 2}" cy="${FAVICON_VIEWBOX_SIZE / 2}" r="${FAVICON_VIEWBOX_SIZE / 2}" fill="${brandPrimaryColor}" mask="url(#logo-cutout)" />
+  <circle cx="${FAVICON_VIEWBOX_SIZE / 2}" cy="${FAVICON_VIEWBOX_SIZE / 2}" r="${FAVICON_VIEWBOX_SIZE / 2}" ${shapeFill} mask="url(#logo-cutout)" />
 </svg>
 `
 }
 
-async function renderFaviconPng(size) {
-  return sharp(Buffer.from(createFaviconSvg()))
+async function renderFaviconPng(size, shapeColor = FAVICON_LIGHT_SHAPE_COLOR) {
+  return sharp(Buffer.from(createStaticFaviconSvg(shapeColor)))
     .resize(size, size, { fit: 'contain' })
     .png()
     .toBuffer()
@@ -63,9 +88,20 @@ const pngTargets = [
   ['public/android-chrome-512x512.png', 512],
 ]
 
-await Promise.all(
-  pngTargets.map(async ([file, size]) => writeFile(file, await renderFaviconPng(size))),
-)
+const darkPngTargets = [
+  ['public/favicon-16x16-dark.png', 16],
+  ['public/favicon-32x32-dark.png', 32],
+  ['public/favicon-dark.png', 48],
+]
+
+await Promise.all([
+  ...pngTargets.map(([file, size]) =>
+    renderFaviconPng(size, FAVICON_LIGHT_SHAPE_COLOR).then((png) => writeFile(file, png)),
+  ),
+  ...darkPngTargets.map(([file, size]) =>
+    renderFaviconPng(size, FAVICON_DARK_SHAPE_COLOR).then((png) => writeFile(file, png)),
+  ),
+])
 
 await writeFile(
   'public/favicon.ico',

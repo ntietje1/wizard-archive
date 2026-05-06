@@ -1,4 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8192 8192">
+  <style>
+    .favicon-shape {
+      fill: #000000;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .favicon-shape {
+        fill: #ffffff;
+      }
+    }
+  </style>
   <defs>
     <mask id="logo-cutout" maskUnits="userSpaceOnUse">
       <rect width="8192" height="8192" fill="#ffffff" />
@@ -14,5 +25,5 @@
       </g>
     </mask>
   </defs>
-  <circle cx="4096" cy="4096" r="4096" fill="#7B6FD4" mask="url(#logo-cutout)" />
+  <circle cx="4096" cy="4096" r="4096" class="favicon-shape" mask="url(#logo-cutout)" />
 </svg>
