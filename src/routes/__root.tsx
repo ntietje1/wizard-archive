@@ -15,7 +15,7 @@ import appCss from '~/styles/app.css?url'
 
 const appTitle = "Wizard's Archive"
 const appDescription = 'The collaborative campaign manager for TTRPGs.'
-const appImage = '/og-image.png'
+const appImage = new URL('/og-image.png', import.meta.env.VITE_SITE_URL).toString()
 const appThemeColor = '#7B6FD4'
 
 export const Route = createRootRouteWithContext<{
@@ -77,7 +77,8 @@ export const Route = createRootRouteWithContext<{
         sizes: '16x16',
         href: '/favicon-16x16.png',
       },
-      { rel: 'manifest', href: '/site.webmanifest', color: appThemeColor },
+      { rel: 'manifest', href: '/site.webmanifest' },
+      { rel: 'mask-icon', href: '/safari-pinned-tab.svg', color: appThemeColor },
       { rel: 'icon', href: '/favicon.ico', sizes: 'any' },
     ],
   }),

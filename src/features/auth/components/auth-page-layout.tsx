@@ -9,7 +9,7 @@ export function AuthPageLayout({ children }: { children: ReactNode }) {
         <div className="flex justify-center gap-2 md:justify-start">
           <Link to="/" className="flex items-center gap-2 font-medium">
             <WizardArchiveLogo className="h-6 w-6" />
-            {"Wizard's Archive"}
+            Wizard's Archive
           </Link>
         </div>
         <div className="flex flex-1 items-center justify-center">

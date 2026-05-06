@@ -24,7 +24,7 @@ await writeFile(LOGO_PATH, shapeLogoSvg)
 await writeFile(WEB_MANIFEST_PATH, `${JSON.stringify(webManifest, null, 2)}\n`)
 
 function createFaviconSvg() {
-  const innerLogo = extractSvgInnerContent(whiteLogoSvg)
+  const innerLogo = indentSvgContent(extractSvgInnerContent(whiteLogoSvg), 4)
   const inset = Math.round((FAVICON_VIEWBOX_SIZE * (1 - FAVICON_LOGO_SCALE)) / 2)
   const top = inset + Math.round(FAVICON_VIEWBOX_SIZE * FAVICON_LOGO_VERTICAL_SHIFT)
 
@@ -63,6 +63,7 @@ async function renderFaviconPng(size) {
 }
 
 await writeFile('public/favicon.svg', createFaviconSvg())
+await writeFile('public/safari-pinned-tab.svg', tintLogoSvg(shapeLogoSvg, '#000000'))
 
 const pngTargets = [
   ['public/favicon-16x16.png', 16],
@@ -73,9 +74,9 @@ const pngTargets = [
   ['public/android-chrome-512x512.png', 512],
 ]
 
-for (const [file, size] of pngTargets) {
-  await writeFile(file, await renderFaviconPng(size))
-}
+await Promise.all(
+  pngTargets.map(async ([file, size]) => writeFile(file, await renderFaviconPng(size))),
+)
 
 await writeFile(
   'public/favicon.ico',
@@ -93,10 +94,7 @@ function stripLogoColor(svg) {
 function tintLogoSvg(svg, color) {
   const xmlDeclaration = svg.match(/^\s*<\?xml[^>]*>\s*/u)?.[0] ?? ''
   const openingSvgTag = svg.match(/<svg\b[^>]*>/u)?.[0]
-  const innerLogo = extractSvgInnerContent(svg)
-    .split('\n')
-    .map((line) => `    ${line}`)
-    .join('\n')
+  const innerLogo = indentSvgContent(extractSvgInnerContent(svg), 4)
 
   if (!openingSvgTag) {
     throw new Error(`Could not find opening SVG tag in ${LOGO_PATH}`)
@@ -172,8 +170,14 @@ function extractSvgInnerContent(svg) {
     .replace(/^\s*<\?xml[^>]*>\s*/u, '')
     .replace(/^\s*<svg\b[^>]*>\s*/u, '')
     .replace(/\s*<\/svg>\s*$/u, '')
+}
+
+function indentSvgContent(svg, spaces) {
+  const indent = ' '.repeat(spaces)
+
+  return svg
     .split('\n')
-    .map((line) => `    ${line}`)
+    .map((line) => `${indent}${line}`)
     .join('\n')
 }
 
