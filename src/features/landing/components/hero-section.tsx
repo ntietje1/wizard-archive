@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { buttonVariants } from '~/features/shadcn/components/button'
 import { LandingContainer } from '~/features/landing/components/landing-container'
 import { AssetPlaceholder } from '~/features/landing/components/asset-placeholder'
+import { publicSite } from '~/features/landing/content/public-site'
 
 export function HeroSection() {
   return (
@@ -42,7 +43,7 @@ export function HeroSection() {
         </div>
 
         <p className="mt-4 text-xs text-muted-foreground">
-          Free for 14 days. No credit card required. Demo project coming soon.
+          {publicSite.trial.short} Demo project coming soon.
         </p>
 
         <div className="mt-16 w-full max-w-4xl">

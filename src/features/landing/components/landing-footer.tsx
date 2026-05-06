@@ -1,4 +1,5 @@
 import { LandingContainer } from '~/features/landing/components/landing-container'
+import { publicSite } from '~/features/landing/content/public-site'
 import { WizardArchiveLogo } from '~/shared/components/wizard-archive-logo'
 
 function FooterColumn({
@@ -40,27 +41,28 @@ export function LandingFooter() {
               <WizardArchiveLogo className="h-6 w-6" />
               <span className="text-lg font-semibold text-foreground">{"Wizard's Archive"}</span>
             </div>
-            <p className="mt-3 text-sm text-muted-foreground">
-              The collaborative campaign manager for TTRPGs.
-            </p>
+            <p className="mt-3 text-sm text-muted-foreground">{publicSite.tagline}</p>
           </div>
 
           <FooterColumn
             title="Product"
             links={[
-              { label: 'Features', href: '#features' },
-              { label: 'Pricing', href: '#pricing' },
-              { label: 'Changelog', href: '#' },
+              { label: 'Features', href: '/#features' },
+              { label: 'Pricing', href: publicSite.routes.pricing },
+              { label: 'FAQ', href: publicSite.routes.faq },
+              { label: 'Privacy & Security', href: publicSite.routes.security },
+              { label: 'Contact', href: publicSite.routes.contact },
             ]}
           />
 
           <FooterColumn
             title="Community"
             links={[
-              { label: 'Discord', href: 'https://discord.gg/VhfzjsaXTD', external: true },
+              { label: 'Community', href: publicSite.routes.community },
+              { label: 'Discord', href: publicSite.community.discordUrl, external: true },
               {
                 label: 'GitHub',
-                href: 'https://github.com/ntietje1/wizard-archive',
+                href: publicSite.community.githubUrl,
                 external: true,
               },
             ]}
@@ -69,15 +71,16 @@ export function LandingFooter() {
           <FooterColumn
             title="Legal"
             links={[
-              { label: 'Privacy Policy', href: '#' },
-              { label: 'Terms of Service', href: '#' },
+              { label: 'Privacy Policy', href: publicSite.routes.privacy },
+              { label: 'Terms of Service', href: publicSite.routes.terms },
+              { label: 'Billing Policy', href: publicSite.routes.billing },
             ]}
           />
         </div>
 
         <div className="mt-12 border-t border-border/20 pt-8">
           <p className="text-xs text-muted-foreground" suppressHydrationWarning>
-            {`© ${new Date().getFullYear()} Wizard's Archive. All rights reserved.`}
+            {`© ${new Date().getFullYear()} ${publicSite.legalName}. All rights reserved.`}
           </p>
         </div>
       </LandingContainer>

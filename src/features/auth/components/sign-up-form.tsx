@@ -9,6 +9,7 @@ import { Separator } from '~/features/shadcn/components/separator'
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
 import { GoogleIcon } from '~/features/auth/utils/custom-icons'
 import { isPreview } from '~/shared/utils/preview'
+import { publicSite } from '~/features/landing/content/public-site'
 
 type SignUpFormProps = {
   redirectTo?: string
@@ -23,6 +24,7 @@ type SignUpState = {
   isLoading: boolean
   emailSent: boolean
   socialLoading: SocialProvider | null
+  termsAccepted: boolean
 }
 
 type SignUpAction =
@@ -33,6 +35,7 @@ type SignUpAction =
   | { type: 'DONE' }
   | { type: 'SOCIAL_START'; provider: SocialProvider }
   | { type: 'SOCIAL_ERROR'; error: string }
+  | { type: 'SET_TERMS'; accepted: boolean }
 
 function signUpReducer(state: SignUpState, action: SignUpAction): SignUpState {
   switch (action.type) {
@@ -50,6 +53,8 @@ function signUpReducer(state: SignUpState, action: SignUpAction): SignUpState {
       return { ...state, socialLoading: action.provider, error: '' }
     case 'SOCIAL_ERROR':
       return { ...state, error: action.error, socialLoading: null }
+    case 'SET_TERMS':
+      return { ...state, termsAccepted: action.accepted }
   }
 }
 
@@ -60,14 +65,20 @@ const initialState: SignUpState = {
   isLoading: false,
   emailSent: false,
   socialLoading: null,
+  termsAccepted: false,
 }
 
 export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
   const [state, dispatch] = useReducer(signUpReducer, initialState)
-  const { email, password, error, isLoading, emailSent, socialLoading } = state
+  const { email, password, error, isLoading, emailSent, socialLoading, termsAccepted } = state
 
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!termsAccepted) {
+      dispatch({ type: 'ERROR', error: 'Please accept the Terms of Service to continue' })
+      return
+    }
+
     dispatch({ type: 'SUBMIT' })
 
     let handled = false
@@ -121,7 +132,8 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
     }
   }
 
-  const isDisabled = isLoading || !!socialLoading
+  const isAuthDisabled = isLoading || !!socialLoading
+  const isSubmitDisabled = isAuthDisabled || !termsAccepted
 
   if (emailSent) {
     return (
@@ -159,7 +171,7 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
               variant="outline"
               className="w-full"
               onClick={() => handleSocialSignIn('google')}
-              disabled={isDisabled || isPreview}
+              disabled={isAuthDisabled || isPreview}
             >
               {socialLoading === 'google' ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -173,6 +185,24 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
             OAuth is unavailable on preview deployments. Use email and password instead.
           </TooltipContent>
         </Tooltip>
+
+        <p className="text-center text-xs leading-5 text-muted-foreground">
+          By continuing with Google, you agree to the{' '}
+          <a
+            href={publicSite.routes.terms}
+            className="text-primary underline-offset-4 hover:underline"
+          >
+            Terms of Service
+          </a>{' '}
+          and acknowledge the{' '}
+          <a
+            href={publicSite.routes.privacy}
+            className="text-primary underline-offset-4 hover:underline"
+          >
+            Privacy Policy
+          </a>
+          .
+        </p>
 
         <div className="flex items-center gap-3">
           <Separator className="flex-1" />
@@ -197,7 +227,7 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
                 })
               }
               required
-              disabled={isDisabled}
+              disabled={isAuthDisabled}
               autoComplete="email"
             />
           </div>
@@ -217,15 +247,43 @@ export function SignUpForm({ redirectTo = '/campaigns' }: SignUpFormProps) {
               }
               required
               minLength={8}
-              disabled={isDisabled}
+              disabled={isAuthDisabled}
               autoComplete="new-password"
             />
             <p className="text-xs text-muted-foreground">Must be at least 8 characters</p>
           </div>
 
+          <label className="flex items-start gap-3 text-xs leading-5 text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={termsAccepted}
+              onChange={(e) => dispatch({ type: 'SET_TERMS', accepted: e.currentTarget.checked })}
+              required
+              disabled={isAuthDisabled}
+              className="mt-1 size-4 rounded border-border bg-background text-primary"
+            />
+            <span>
+              I agree to the{' '}
+              <a
+                href={publicSite.routes.terms}
+                className="text-primary underline-offset-4 hover:underline"
+              >
+                Terms of Service
+              </a>{' '}
+              and acknowledge the{' '}
+              <a
+                href={publicSite.routes.privacy}
+                className="text-primary underline-offset-4 hover:underline"
+              >
+                Privacy Policy
+              </a>
+              .
+            </span>
+          </label>
+
           {error && <p className="text-sm text-destructive text-center">{error}</p>}
 
-          <Button type="submit" className="w-full" disabled={isDisabled}>
+          <Button type="submit" className="w-full" disabled={isSubmitDisabled}>
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create account'}
           </Button>
         </form>

@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { buttonVariants } from '~/features/shadcn/components/button'
 import { LandingContainer } from '~/features/landing/components/landing-container'
+import { publicSite } from '~/features/landing/content/public-site'
 
 export function FinalCtaSection() {
   return (
@@ -10,7 +11,7 @@ export function FinalCtaSection() {
           Ready to run your next session?
         </h2>
         <p className="mt-4 text-base text-muted-foreground">
-          Free for 14 days. Your players join free. No credit card required.
+          {publicSite.trial.short} Your players join free.
         </p>
         <Link
           to="/sign-up"
