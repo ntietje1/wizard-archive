@@ -15,7 +15,6 @@ const styleSheet = await readFile(STYLE_PATH, 'utf8')
 const brandPrimaryColor = toStaticHex(readRootCustomProperty(styleSheet, '--primary'))
 const shapeLogoSvg = stripLogoColor(sourceLogoSvg)
 const brandLogoSvg = tintLogoSvg(shapeLogoSvg, brandPrimaryColor)
-const whiteLogoSvg = tintLogoSvg(shapeLogoSvg, '#ffffff')
 const webManifest = JSON.parse(await readFile(WEB_MANIFEST_PATH, 'utf8'))
 
 webManifest.theme_color = brandPrimaryColor
@@ -24,40 +23,27 @@ await writeFile(LOGO_PATH, shapeLogoSvg)
 await writeFile(WEB_MANIFEST_PATH, `${JSON.stringify(webManifest, null, 2)}\n`)
 
 function createFaviconSvg() {
-  const innerLogo = indentSvgContent(extractSvgInnerContent(whiteLogoSvg), 4)
+  const innerLogo = indentSvgContent(extractSvgInnerContent(shapeLogoSvg), 8)
   const inset = Math.round((FAVICON_VIEWBOX_SIZE * (1 - FAVICON_LOGO_SCALE)) / 2)
   const top = inset + Math.round(FAVICON_VIEWBOX_SIZE * FAVICON_LOGO_VERTICAL_SHIFT)
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${FAVICON_VIEWBOX_SIZE} ${FAVICON_VIEWBOX_SIZE}">
-  <circle cx="${FAVICON_VIEWBOX_SIZE / 2}" cy="${FAVICON_VIEWBOX_SIZE / 2}" r="${FAVICON_VIEWBOX_SIZE / 2}" fill="${brandPrimaryColor}" />
-  <g transform="translate(${inset} ${top}) scale(${FAVICON_LOGO_SCALE})">
+  <defs>
+    <mask id="logo-cutout" maskUnits="userSpaceOnUse">
+      <rect width="${FAVICON_VIEWBOX_SIZE}" height="${FAVICON_VIEWBOX_SIZE}" fill="#ffffff" />
+      <g transform="translate(${inset} ${top}) scale(${FAVICON_LOGO_SCALE})" fill="#000000">
 ${innerLogo}
-  </g>
+      </g>
+    </mask>
+  </defs>
+  <circle cx="${FAVICON_VIEWBOX_SIZE / 2}" cy="${FAVICON_VIEWBOX_SIZE / 2}" r="${FAVICON_VIEWBOX_SIZE / 2}" fill="${brandPrimaryColor}" mask="url(#logo-cutout)" />
 </svg>
 `
 }
 
 async function renderFaviconPng(size) {
-  const logoSize = Math.round(size * FAVICON_LOGO_SCALE)
-  const logo = await sharp(Buffer.from(whiteLogoSvg))
-    .resize(logoSize, logoSize, { fit: 'contain' })
-    .png()
-    .toBuffer()
-
-  const circle = Buffer.from(`
-    <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2}" fill="${brandPrimaryColor}" />
-    </svg>
-  `)
-
-  return sharp(circle)
-    .composite([
-      {
-        input: logo,
-        top: Math.round((size - logoSize) / 2 + size * FAVICON_LOGO_VERTICAL_SHIFT),
-        left: Math.round((size - logoSize) / 2),
-      },
-    ])
+  return sharp(Buffer.from(createFaviconSvg()))
+    .resize(size, size, { fit: 'contain' })
     .png()
     .toBuffer()
 }
