@@ -76,7 +76,7 @@ export function LandingFooter() {
         </div>
 
         <div className="mt-12 border-t border-border/20 pt-8">
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground" suppressHydrationWarning>
             {`© ${new Date().getFullYear()} Wizard's Archive. All rights reserved.`}
           </p>
         </div>

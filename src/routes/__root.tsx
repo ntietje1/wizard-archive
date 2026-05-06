@@ -11,11 +11,13 @@ import type { ConvexQueryClient } from '@convex-dev/react-query'
 import type { QueryClient } from '@tanstack/react-query'
 import { getThemeCookie, resolveTheme } from '~/features/settings/hooks/useTheme'
 import type { Theme } from '~/features/settings/hooks/useTheme'
+import { getOrigin } from '~/shared/utils/origin'
 import appCss from '~/styles/app.css?url'
 
 const appTitle = "Wizard's Archive"
 const appDescription = 'The collaborative campaign manager for TTRPGs.'
-const appImage = new URL('/og-image.png', import.meta.env.VITE_SITE_URL).toString()
+const appUrl = getOrigin()
+const appImage = new URL('/og-image.png', appUrl).toString()
 const appThemeColor = '#7B6FD4'
 
 export const Route = createRootRouteWithContext<{
