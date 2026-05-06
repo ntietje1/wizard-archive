@@ -20,14 +20,14 @@ export function NavBar() {
   return (
     <header
       className={cn(
-        'fixed top-0 left-0 right-0 z-50 h-16',
-        scrolled ? 'border-b border-border/30 bg-background' : 'bg-transparent',
+        'fixed top-0 left-0 right-0 z-50 h-16 border-b',
+        scrolled ? 'border-border/30 bg-background' : 'border-transparent bg-transparent',
       )}
     >
       <LandingContainer className="flex h-full items-center justify-between">
         <Link to="/" className="flex items-center gap-1.5">
           <WizardArchiveLogo className="h-5 w-5" />
-          <span className="text-base font-semibold text-foreground">{"Wizard's Archive"}</span>
+          <span className="text-base font-semibold text-foreground">Wizard's Archive</span>
         </Link>
 
         <nav className="hidden items-center gap-1 md:flex">
