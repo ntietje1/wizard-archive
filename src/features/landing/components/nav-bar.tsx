@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { Menu, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { LandingContainer } from '~/features/landing/components/landing-container'
+import { publicSite } from '~/features/landing/content/public-site'
 import { buttonVariants } from '~/features/shadcn/components/button'
 import { cn } from '~/features/shadcn/lib/utils'
 import { WizardArchiveLogo } from '~/shared/components/wizard-archive-logo'
@@ -32,25 +33,23 @@ export function NavBar() {
 
         <nav className="hidden items-center gap-1 md:flex">
           <a
-            href="#features"
+            href="/#features"
             className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
           >
             Features
           </a>
           <a
-            href="#pricing"
+            href={publicSite.routes.pricing}
             className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
           >
             Pricing
           </a>
-          <a
-            href="https://discord.gg/VhfzjsaXTD"
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            to={publicSite.routes.community}
             className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
           >
-            Discord
-          </a>
+            Community
+          </Link>
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
@@ -76,27 +75,26 @@ export function NavBar() {
         <div className="absolute inset-x-0 top-16 bg-background border-b border-border/30 md:hidden">
           <div className="flex flex-col gap-1 px-6 py-4">
             <a
-              href="#features"
+              href="/#features"
               className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
               onClick={() => setMobileOpen(false)}
             >
               Features
             </a>
             <a
-              href="#pricing"
+              href={publicSite.routes.pricing}
               className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
               onClick={() => setMobileOpen(false)}
             >
               Pricing
             </a>
-            <a
-              href="https://discord.gg/VhfzjsaXTD"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to={publicSite.routes.community}
               className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
+              onClick={() => setMobileOpen(false)}
             >
-              Discord
-            </a>
+              Community
+            </Link>
             <hr className="my-2 border-border/30" />
             <Link
               to="/sign-in"

@@ -9,7 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
+import { Route as SecurityRouteImport } from './routes/security'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as FaqRouteImport } from './routes/faq'
 import { Route as DemoRouteImport } from './routes/demo'
+import { Route as ContactRouteImport } from './routes/contact'
+import { Route as CommunityRouteImport } from './routes/community'
+import { Route as BillingRouteImport } from './routes/billing'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppSignUpRouteRouteImport } from './routes/_app/sign-up/route'
@@ -29,9 +37,49 @@ import { Route as AppAuthedCampaignsDmUsernameCampaignSlugEditorRouteRouteImport
 import { Route as AppAuthedCampaignsDmUsernameCampaignSlugSceneIndexRouteImport } from './routes/_app/_authed/campaigns/$dmUsername.$campaignSlug/scene/index'
 import { Route as AppAuthedCampaignsDmUsernameCampaignSlugEditorIndexRouteImport } from './routes/_app/_authed/campaigns/$dmUsername.$campaignSlug/editor/index'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SecurityRoute = SecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FaqRoute = FaqRouteImport.update({
+  id: '/faq',
+  path: '/faq',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DemoRoute = DemoRouteImport.update({
   id: '/demo',
   path: '/demo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CommunityRoute = CommunityRouteImport.update({
+  id: '/community',
+  path: '/community',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BillingRoute = BillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -134,7 +182,15 @@ const AppAuthedCampaignsDmUsernameCampaignSlugEditorIndexRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/billing': typeof BillingRoute
+  '/community': typeof CommunityRoute
+  '/contact': typeof ContactRoute
   '/demo': typeof DemoRoute
+  '/faq': typeof FaqRoute
+  '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
+  '/security': typeof SecurityRoute
+  '/terms': typeof TermsRoute
   '/auth-redirect': typeof AppAuthRedirectRouteRoute
   '/forgot-password': typeof AppForgotPasswordRouteRoute
   '/reset-password': typeof AppResetPasswordRouteRoute
@@ -153,7 +209,15 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/billing': typeof BillingRoute
+  '/community': typeof CommunityRoute
+  '/contact': typeof ContactRoute
   '/demo': typeof DemoRoute
+  '/faq': typeof FaqRoute
+  '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
+  '/security': typeof SecurityRoute
+  '/terms': typeof TermsRoute
   '/auth-redirect': typeof AppAuthRedirectRouteRoute
   '/forgot-password': typeof AppForgotPasswordRouteRoute
   '/reset-password': typeof AppResetPasswordRouteRoute
@@ -170,7 +234,15 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
+  '/billing': typeof BillingRoute
+  '/community': typeof CommunityRoute
+  '/contact': typeof ContactRoute
   '/demo': typeof DemoRoute
+  '/faq': typeof FaqRoute
+  '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
+  '/security': typeof SecurityRoute
+  '/terms': typeof TermsRoute
   '/_app/_authed': typeof AppAuthedRouteRouteWithChildren
   '/_app/auth-redirect': typeof AppAuthRedirectRouteRoute
   '/_app/forgot-password': typeof AppForgotPasswordRouteRoute
@@ -192,7 +264,15 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/billing'
+    | '/community'
+    | '/contact'
     | '/demo'
+    | '/faq'
+    | '/pricing'
+    | '/privacy'
+    | '/security'
+    | '/terms'
     | '/auth-redirect'
     | '/forgot-password'
     | '/reset-password'
@@ -211,7 +291,15 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/billing'
+    | '/community'
+    | '/contact'
     | '/demo'
+    | '/faq'
+    | '/pricing'
+    | '/privacy'
+    | '/security'
+    | '/terms'
     | '/auth-redirect'
     | '/forgot-password'
     | '/reset-password'
@@ -227,7 +315,15 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_app'
+    | '/billing'
+    | '/community'
+    | '/contact'
     | '/demo'
+    | '/faq'
+    | '/pricing'
+    | '/privacy'
+    | '/security'
+    | '/terms'
     | '/_app/_authed'
     | '/_app/auth-redirect'
     | '/_app/forgot-password'
@@ -249,17 +345,81 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
+  BillingRoute: typeof BillingRoute
+  CommunityRoute: typeof CommunityRoute
+  ContactRoute: typeof ContactRoute
   DemoRoute: typeof DemoRoute
+  FaqRoute: typeof FaqRoute
+  PricingRoute: typeof PricingRoute
+  PrivacyRoute: typeof PrivacyRoute
+  SecurityRoute: typeof SecurityRoute
+  TermsRoute: typeof TermsRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/security': {
+      id: '/security'
+      path: '/security'
+      fullPath: '/security'
+      preLoaderRoute: typeof SecurityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/faq': {
+      id: '/faq'
+      path: '/faq'
+      fullPath: '/faq'
+      preLoaderRoute: typeof FaqRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/demo': {
       id: '/demo'
       path: '/demo'
       fullPath: '/demo'
       preLoaderRoute: typeof DemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/community': {
+      id: '/community'
+      path: '/community'
+      fullPath: '/community'
+      preLoaderRoute: typeof CommunityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/billing': {
+      id: '/billing'
+      path: '/billing'
+      fullPath: '/billing'
+      preLoaderRoute: typeof BillingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app': {
@@ -497,7 +657,15 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
+  BillingRoute: BillingRoute,
+  CommunityRoute: CommunityRoute,
+  ContactRoute: ContactRoute,
   DemoRoute: DemoRoute,
+  FaqRoute: FaqRoute,
+  PricingRoute: PricingRoute,
+  PrivacyRoute: PrivacyRoute,
+  SecurityRoute: SecurityRoute,
+  TermsRoute: TermsRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

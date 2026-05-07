@@ -2,7 +2,6 @@ import { ArrowLeftRight, BookOpenText, Eye, MonitorPlay, Sparkles, Waypoints } f
 import type { LucideIcon } from 'lucide-react'
 import { AssetPlaceholder } from '~/features/landing/components/asset-placeholder'
 import { LandingContainer } from '~/features/landing/components/landing-container'
-import { SectionLabel } from '~/features/landing/components/section-label'
 import { cn } from '~/features/shadcn/lib/utils'
 
 type CardProps = {
@@ -56,13 +55,12 @@ export function CoreToolsBento() {
     <section className="py-24">
       <LandingContainer>
         <div className="mx-auto max-w-3xl text-center">
-          <SectionLabel>Core Tools</SectionLabel>
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Run the whole campaign without breaking your flow.
+            Keep everything in one place
           </h2>
           <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-            Notes, links, maps, player visibility, and import workflows all work together in one
-            shared workspace. The roadmap sits right next to the shipped product, clearly marked.
+            Notes, maps, visual planning, player access, and import/export all work together so the
+            campaign can move from prep to play without changing tools.
           </p>
         </div>
 
@@ -70,15 +68,15 @@ export function CoreToolsBento() {
           <div className="flex flex-col gap-6">
             <BentoCard
               icon={BookOpenText}
-              title="Write and rearrange notes at the speed of thought."
-              body="Use a clean block editor with slash commands, drag-to-reorder, Markdown import and export, and a workspace structure that still feels simple mid-session."
-              visualLabel="Block editor with slash commands open, formatted campaign notes, and a visible wiki-link embedded in the text"
+              title="Write campaign material quickly."
+              body="Use a clean editor for session notes, locations, handouts, and reference material, with Markdown import and export when you need portability."
+              visualLabel="Writing asset: clean editor with a session note, linked campaign references, sidebar outline, and import/export affordances visible"
               className="min-h-[32rem]"
             />
             <BentoCard
               icon={Waypoints}
-              title="Link everything as you go."
-              body="Type [[ to connect notes, maps, canvases, and files so your campaign stays navigable even when the lore gets dense."
+              title="Connect related material."
+              body="Link notes, maps, canvases, and files so the campaign stays navigable as it grows."
               className="min-h-[20rem]"
             />
           </div>
@@ -86,14 +84,14 @@ export function CoreToolsBento() {
           <div className="flex flex-col gap-6">
             <BentoCard
               icon={Eye}
-              title="Check exactly what a player can see."
-              body="Swap into any player's perspective before you reveal the next twist so you can confirm which blocks, pins, and pages are actually visible."
+              title="Preview player access."
+              body="Check the player-facing view before sharing material, so private prep and shared campaign context stay clearly separated."
               className="min-h-[20rem]"
             />
             <BentoCard
               icon={ArrowLeftRight}
-              title="Bring your notes in and take them back out."
-              body="Import Markdown from the tools you already use, export individual notes or whole folders when you need them, and move into the Archive without feeling locked there."
+              title="Keep your work portable."
+              body="Import Markdown from your existing notes and export campaign material when you need a local copy or backup."
               className="min-h-[32rem]"
             />
           </div>
@@ -101,15 +99,15 @@ export function CoreToolsBento() {
           <div className="flex flex-col gap-6">
             <BentoCard
               icon={Sparkles}
-              title="Build notes that calculate and update themselves."
-              body="Templates will let you embed live values, derived stats, countdowns, and referenceable fields anywhere in the campaign."
+              title="Add structured campaign templates."
+              body="Templates will help standardize repeated campaign material and keep important fields easy to reference."
               eyebrow="Coming Soon"
               className="min-h-[32rem]"
             />
             <BentoCard
               icon={MonitorPlay}
-              title="Push a scene to every player's screen at the right moment."
-              body="Scenes will turn reveals into a native part of the app instead of a screen share, slideshow, or Discord image dump."
+              title="Present shared scenes."
+              body="Scenes will make player-facing presentation a native part of the workspace instead of a separate screen share or slideshow."
               eyebrow="Coming Soon"
               className="min-h-[20rem]"
             />

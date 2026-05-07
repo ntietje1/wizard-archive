@@ -1,6 +1,7 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { ArrowLeft, Sparkles } from 'lucide-react'
 import { LandingContainer } from '~/features/landing/components/landing-container'
+import { publicPageHead } from '~/features/landing/content/public-site'
 import { buttonVariants } from '~/features/shadcn/components/button'
 
 function DemoRouteComponent() {
@@ -43,5 +44,10 @@ function DemoRouteComponent() {
 }
 
 export const Route = createFileRoute('/demo')({
+  head: () =>
+    publicPageHead({
+      title: 'Demo',
+      description: "Demo project preview for The Wizard's Archive.",
+    }),
   component: DemoRouteComponent,
 })
