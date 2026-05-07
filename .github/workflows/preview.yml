@@ -63,7 +63,7 @@ jobs:
           bash scripts/write-worker-env.sh "$worker_env_file"
           bash scripts/write-convex-env.sh "$convex_env_file"
 
-          vp exec convex env set --from-file "$convex_env_file" \
+          vp exec convex env set --from-file "$convex_env_file" --force \
             --preview-name "pr-${{ github.event.pull_request.number }}"
           vp exec wrangler deploy \
             --config dist/server/wrangler.json \

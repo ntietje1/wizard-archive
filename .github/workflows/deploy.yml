@@ -89,7 +89,7 @@ jobs:
           vp run lint:convex
           vp build --mode production
 
-          vp exec convex env set --from-file "$convex_env_file"
+          vp exec convex env set --from-file "$convex_env_file" --force
           vp exec convex deploy
 
           vp exec wrangler versions upload \
