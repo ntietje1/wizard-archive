@@ -2,14 +2,16 @@
 
 Production releases are intentionally manual. A GitHub workflow prepares a tested candidate, and production traffic moves only after the candidate is inspected and promoted in Cloudflare.
 
+The stable candidate URL is `https://candidate.wizardarchive.com`. It runs the same production build against the production Convex backend, so it can read and write production data. Cloudflare Access must protect the entire candidate host and allow only selected test account emails.
+
 ## Normal release
 
 1. Run the **Prepare Production Candidate** GitHub workflow.
 2. Use `main` unless releasing a specific commit or branch.
 3. Add a short release note. It is attached to the uploaded Cloudflare Worker version.
-4. Wait for the workflow to finish. It runs checks, builds the production app, deploys the Convex backend, and uploads a Cloudflare Worker version with the `production-candidate` preview alias.
+4. Wait for the workflow to finish. It runs checks, builds the production app, deploys the Convex backend, uploads a Cloudflare Worker version without sending production traffic to it, and deploys the same build to the `wizard-archive-candidate` Worker at `https://candidate.wizardarchive.com`.
 5. In Cloudflare, open the `wizard-archive` Worker and inspect the uploaded version.
-6. Smoke-test the candidate preview URL for `/`, `/campaigns`, and `/api/auth/get-session`.
+6. Smoke-test `https://candidate.wizardarchive.com` for `/`, `/campaigns`, `/api/auth/get-session`, and Google sign-in with selected test accounts.
 7. Promote the candidate version in Cloudflare's Worker Deployments UI.
 8. Smoke-test production after promotion:
    - `https://wizardarchive.com/`
@@ -20,6 +22,17 @@ Production releases are intentionally manual. A GitHub workflow prepares a teste
    - `https://www.wizardarchive.com/api/auth/get-session`
 
 Do not use `wrangler deploy` for production. `wrangler deploy` sends traffic to the new Worker immediately. Production should use `wrangler versions upload` to create a candidate first.
+
+
+GitHub Actions:
+
+- The production workflow sets `ADDITIONAL_TRUSTED_ORIGINS=https://candidate.wizardarchive.com` before deploying Convex.
+- Keep the existing production secrets in the production environment; the candidate Worker reuses the production Convex and auth configuration.
+
+Google OAuth:
+
+- Add `https://candidate.wizardarchive.com` as an Authorized JavaScript origin.
+- Add `https://candidate.wizardarchive.com/api/auth/callback/google` as an Authorized redirect URI.
 
 ## Rollback
 

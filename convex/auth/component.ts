@@ -49,7 +49,7 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
   return betterAuth({
     secret: process.env.BETTER_AUTH_SECRET,
     baseURL: siteUrl,
-    trustedOrigins: getTrustedOrigins(siteUrl),
+    trustedOrigins: getTrustedOrigins(siteUrl, process.env.ADDITIONAL_TRUSTED_ORIGINS),
     database: authComponent.adapter(ctx),
     session: {
       expiresIn: 60 * 60 * 24 * 30,

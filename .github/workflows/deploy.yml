@@ -17,6 +17,8 @@ concurrency:
 
 env:
   NODE_VERSION: 22
+  CANDIDATE_DOMAIN: candidate.wizardarchive.com
+  CANDIDATE_SITE_URL: https://candidate.wizardarchive.com
 
 jobs:
   prepare-production-candidate:
@@ -38,10 +40,12 @@ jobs:
           set -euo pipefail
           umask 077
           worker_env_file="$(mktemp "${RUNNER_TEMP}/worker-env.XXXXXX")"
+          candidate_worker_env_file="$(mktemp "${RUNNER_TEMP}/candidate-worker-env.XXXXXX")"
           convex_env_file="$(mktemp "${RUNNER_TEMP}/convex-env.XXXXXX")"
-          trap 'rm -f "$worker_env_file" "$convex_env_file"' EXIT
+          trap 'rm -f "$worker_env_file" "$candidate_worker_env_file" "$convex_env_file"' EXIT
 
           bash scripts/write-worker-env.sh "$worker_env_file"
+          VITE_SITE_URL="$CANDIDATE_SITE_URL" bash scripts/write-worker-env.sh "$candidate_worker_env_file"
           bash scripts/write-convex-env.sh "$convex_env_file"
 
           release_sha="$(git rev-parse HEAD)"
@@ -61,8 +65,13 @@ jobs:
             --config dist/server/wrangler.json \
             --secrets-file "$worker_env_file" \
             --tag "$release_sha" \
-            --message "$release_message" \
-            --preview-alias production-candidate
+            --message "$release_message"
+
+          vp exec wrangler deploy \
+            --config dist/server/wrangler.json \
+            --secrets-file "$candidate_worker_env_file" \
+            --name wizard-archive-candidate \
+            --domain "$CANDIDATE_DOMAIN"
         env:
           CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_DEPLOY_KEY }}'
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -72,6 +81,7 @@ jobs:
           VITE_SITE_URL: https://wizardarchive.com
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
           SITE_URL: https://wizardarchive.com
+          ADDITIONAL_TRUSTED_ORIGINS: ${{ env.CANDIDATE_SITE_URL }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}

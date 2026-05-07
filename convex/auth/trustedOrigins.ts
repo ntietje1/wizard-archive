@@ -1,4 +1,4 @@
-export function getTrustedOrigins(siteUrl: string): Array<string> {
+export function getTrustedOrigins(siteUrl: string, additionalTrustedOrigins = ''): Array<string> {
   const siteOrigin = getOrigin(siteUrl)
   if (!siteOrigin) return []
 
@@ -11,7 +11,16 @@ export function getTrustedOrigins(siteUrl: string): Array<string> {
     origins.push(site.origin)
   }
 
+  origins.push(...getAdditionalOrigins(additionalTrustedOrigins))
+
   return [...new Set(origins)]
+}
+
+function getAdditionalOrigins(additionalTrustedOrigins: string): Array<string> {
+  return additionalTrustedOrigins
+    .split(',')
+    .map((origin) => getOrigin(origin.trim()))
+    .filter((origin): origin is string => origin !== null)
 }
 
 function getOrigin(url: string): string | null {

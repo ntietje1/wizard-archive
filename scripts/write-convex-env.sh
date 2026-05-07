@@ -19,6 +19,10 @@ required_vars=(
   RESEND_API_KEY
 )
 
+optional_vars=(
+  ADDITIONAL_TRUSTED_ORIGINS
+)
+
 for var_name in "${required_vars[@]}"; do
   if [[ -z "${!var_name:-}" ]]; then
     echo "Missing required environment variable: ${var_name}" >&2
@@ -33,6 +37,12 @@ trap 'rm -f "$temp_output_path"' EXIT
 {
   for var_name in "${required_vars[@]}"; do
     printf '%s=%s\n' "$var_name" "$(escape_env_value "${!var_name}")"
+  done
+
+  for var_name in "${optional_vars[@]}"; do
+    if [[ -n "${!var_name:-}" ]]; then
+      printf '%s=%s\n' "$var_name" "$(escape_env_value "${!var_name}")"
+    fi
   done
 } > "$temp_output_path"
 

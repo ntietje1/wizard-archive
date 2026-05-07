@@ -22,4 +22,40 @@ describe('getTrustedOrigins', () => {
       'https://preview-12.wizardarchive.com',
     ])
   })
+
+  it('allows additional trusted origins alongside production siblings', () => {
+    expect(
+      getTrustedOrigins('https://wizardarchive.com', 'https://candidate.wizardarchive.com'),
+    ).toEqual([
+      'https://wizardarchive.com',
+      'https://www.wizardarchive.com',
+      'https://candidate.wizardarchive.com',
+    ])
+  })
+
+  it('normalizes additional origins and ignores empty or invalid entries', () => {
+    expect(
+      getTrustedOrigins(
+        'https://wizardarchive.com',
+        'not-a-url, , https://candidate.wizardarchive.com/sign-in',
+      ),
+    ).toEqual([
+      'https://wizardarchive.com',
+      'https://www.wizardarchive.com',
+      'https://candidate.wizardarchive.com',
+    ])
+  })
+
+  it('deduplicates repeated origins', () => {
+    expect(
+      getTrustedOrigins(
+        'https://www.wizardarchive.com',
+        'https://wizardarchive.com, https://candidate.wizardarchive.com, https://candidate.wizardarchive.com',
+      ),
+    ).toEqual([
+      'https://www.wizardarchive.com',
+      'https://wizardarchive.com',
+      'https://candidate.wizardarchive.com',
+    ])
+  })
 })
