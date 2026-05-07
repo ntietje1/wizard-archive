@@ -12,7 +12,7 @@ import { cn } from '~/features/shadcn/lib/utils'
 const communityLinks = [
   {
     title: 'Discord',
-    body: 'Chat with other users, ask informal questions, share feedback, and follow product updates.',
+    body: 'Chat with other users, ask questions, share feedback, and follow product updates.',
     action: 'Join Discord',
     href: publicSite.community.discordUrl,
     icon: MessageCircle,
@@ -20,7 +20,7 @@ const communityLinks = [
   },
   {
     title: 'Reddit',
-    body: 'A public space for broader discussion, showcases, and campaign ideas.',
+    body: 'A public space for broader discussion and campaign workspace ideas.',
     action: 'Coming soon',
     href: '',
     icon: MessageSquare,

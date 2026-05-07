@@ -64,7 +64,7 @@ export const Route = createFileRoute('/pricing')({
     publicPageHead({
       title: 'Pricing',
       description:
-        "Pricing, trial, and paid plan details for The Wizard's Archive campaign manager.",
+        "Pricing, trial, and paid plan details for The Wizard's Archive campaign workspace.",
     }),
   component: PricingRouteComponent,
 })

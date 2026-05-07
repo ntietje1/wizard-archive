@@ -10,6 +10,7 @@ import { HeroSection } from '~/features/landing/components/hero-section'
 import { LandingFooter } from '~/features/landing/components/landing-footer'
 import { NavBar } from '~/features/landing/components/nav-bar'
 import { PricingSection } from '~/features/landing/components/pricing-section'
+import { TrustSection } from '~/features/landing/components/trust-section'
 
 export function LandingPage() {
   return (
@@ -24,6 +25,7 @@ export function LandingPage() {
         <FeatureCanvases />
         <CoreToolsBento />
         <PricingSection />
+        <TrustSection />
         <FaqSection />
         <FinalCtaSection />
       </main>

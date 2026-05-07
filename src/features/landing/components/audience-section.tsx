@@ -1,23 +1,22 @@
 import { Globe2, ScrollText, Users } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { LandingContainer } from '~/features/landing/components/landing-container'
-import { SectionLabel } from '~/features/landing/components/section-label'
 
 const personas = [
   {
     icon: ScrollText,
-    title: 'Dungeon Masters & GMs',
-    body: 'Your campaign, organized. Share exactly what your players need to see. Keep your secrets until the perfect moment. Run any system, any setting.',
+    title: 'DMs and campaign creators',
+    body: 'Write, organize, and run the campaign from one workspace. Keep private prep separate from the material players can access.',
   },
   {
     icon: Users,
     title: 'Players',
-    body: 'Access the campaign without asking the DM. Browse maps, read lore, take notes — all in one place. Free to join, no subscription needed.',
+    body: 'Access all campaign content without a subscription. Players join free and see only what has been shared with them.',
   },
   {
     icon: Globe2,
-    title: 'Virtual & In-Person Groups',
-    body: "Whether your table is a kitchen table or a Discord call, the Wizard's Archive works the same way. One shared space, wherever you play.",
+    title: 'Online and in-person tables',
+    body: 'Use the same campaign workspace whether the table meets in person, online, or both. Everyone works from the same source of truth.',
   },
 ] satisfies Array<{ icon: LucideIcon; title: string; body: string }>
 
@@ -25,7 +24,6 @@ export function AudienceSection() {
   return (
     <section className="py-24">
       <LandingContainer className="flex flex-col items-center">
-        <SectionLabel>{"Who It's For"}</SectionLabel>
         <h2 className="mb-12 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
           Built for the whole table.
         </h2>

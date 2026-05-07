@@ -1,7 +1,7 @@
 export const publicSite = {
   brandName: "The Wizard's Archive",
   legalName: "Wizard's Archive LLC",
-  tagline: 'The collaborative campaign manager for TTRPGs.',
+  tagline: 'The campaign workspace for tabletop RPG groups.',
   effectiveDate: 'May 3, 2026',
   minimumAge: 13,
   supportEmail: 'support@wizardarchive.com',
@@ -89,16 +89,16 @@ export type PublicFaq = {
 
 export const publicFaqs: Array<PublicFaq> = [
   {
-    q: "What makes the Wizard's Archive different from Obsidian or Notion?",
-    a: "Obsidian and Notion are excellent general-purpose tools, but they're not built specifically for running shared tabletop campaigns. The Wizard's Archive combines campaign organization, collaboration, permissions, and Markdown import in one focused workspace.",
+    q: "What makes the Wizard's Archive different from a general notes app?",
+    a: "The Wizard's Archive is built around active tabletop campaigns. It combines campaign writing, organization, maps, player access, sharing controls, and Markdown import/export in one focused workspace.",
   },
   {
-    q: 'How is this different from LegendKeeper?',
-    a: "LegendKeeper is a strong worldbuilding tool. The Wizard's Archive is focused on running an active campaign with private collaboration, simple sharing, and a clean workspace for the table.",
+    q: 'Is this for prep or for play?',
+    a: 'Both. Use it to write and organize the campaign before a session, then use the same workspace to share material with players while the campaign is active.',
   },
   {
-    q: 'How is this different from World Anvil?',
-    a: "World Anvil is a large publishing and worldbuilding platform. The Wizard's Archive is focused on private campaign management, collaboration, and a simpler editing experience.",
+    q: 'Is this a publishing platform?',
+    a: "No. The Wizard's Archive is focused on private campaign management for your table, not public publishing or broad audience building.",
   },
   {
     q: 'Do my players need to pay?',
@@ -130,7 +130,7 @@ export const publicFaqs: Array<PublicFaq> = [
   },
   {
     q: 'Can I import my existing notes?',
-    a: "Yes. Import Markdown files, including individual notes or entire folder structures. If your notes are in Obsidian, Chronicler, or any other Markdown-compatible tool, they'll come over cleanly.",
+    a: 'Yes. Import Markdown files, including individual notes or entire folder structures from Markdown-compatible tools.',
   },
   {
     q: 'What happens to my data if I cancel?',

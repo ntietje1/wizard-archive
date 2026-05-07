@@ -30,7 +30,7 @@ export const Route = createFileRoute('/faq')({
     publicPageHead({
       title: 'FAQ',
       description:
-        "Product, pricing, trial, privacy, and support answers for The Wizard's Archive.",
+        "Product, pricing, trial, privacy, and support answers for The Wizard's Archive campaign workspace.",
     }),
   component: FaqRouteComponent,
 })

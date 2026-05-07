@@ -2,7 +2,6 @@ import { Link } from '@tanstack/react-router'
 import { Check } from 'lucide-react'
 import { useState } from 'react'
 import { LandingContainer } from '~/features/landing/components/landing-container'
-import { SectionLabel } from '~/features/landing/components/section-label'
 import { publicSite } from '~/features/landing/content/public-site'
 import { buttonVariants } from '~/features/shadcn/components/button'
 import { cn } from '~/features/shadcn/lib/utils'
@@ -31,12 +30,11 @@ export function PricingSection({ showHeader = true }: { showHeader?: boolean }) 
       <LandingContainer className="flex flex-col items-center text-center">
         {showHeader ? (
           <>
-            <SectionLabel>Pricing</SectionLabel>
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Simple pricing. No surprises.
+              Try it free for 14 days
             </h2>
-            <p className="mt-4 text-base text-muted-foreground">
-              Start free, upgrade when you need the full DM toolkit, and keep player access free.
+            <p className="mt-4 text-sm font-medium uppercase tracking-[0.18em] text-primary">
+              Simple pricing
             </p>
           </>
         ) : null}
@@ -50,7 +48,7 @@ export function PricingSection({ showHeader = true }: { showHeader?: boolean }) 
           {/* Basic (Free) */}
           <div className="flex flex-col rounded-lg border border-border/30 bg-secondary/20 p-8 text-left">
             <h3 className="text-lg font-semibold text-foreground">Basic</h3>
-            <p className="mt-1 text-sm text-muted-foreground">Collaborate & keep your work.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Join campaigns and keep access.</p>
             <p className="mt-6 text-3xl font-bold text-foreground">Free plan</p>
             <ul className="mt-8 flex-1 space-y-3">
               {freeFeatures.map((feature) => (
@@ -99,9 +97,7 @@ export function PricingSection({ showHeader = true }: { showHeader?: boolean }) 
               </div>
             </div>
             <h3 className="text-lg font-semibold text-foreground">Pro</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Unlimited creation & total control.
-            </p>
+            <p className="mt-1 text-sm text-muted-foreground">Prepare, run, and share campaigns.</p>
             <div className="mt-6">
               {annual ? (
                 <div>

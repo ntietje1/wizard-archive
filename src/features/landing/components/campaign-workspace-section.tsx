@@ -1,7 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { AssetPlaceholder } from '~/features/landing/components/asset-placeholder'
 import { LandingContainer } from '~/features/landing/components/landing-container'
-import { SectionLabel } from '~/features/landing/components/section-label'
 import { buttonVariants } from '~/features/shadcn/components/button'
 
 export function CampaignWorkspaceSection() {
@@ -10,30 +9,25 @@ export function CampaignWorkspaceSection() {
       <LandingContainer>
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
           <div>
-            <SectionLabel>Organization</SectionLabel>
             <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Organize the campaign without building a maze.
+              Write and plan your campaign in one place.
             </h2>
-            <p className="mt-4 text-sm font-medium uppercase tracking-[0.18em] text-primary">
-              Collaborate in the same live workspace.
-            </p>
-            <div className="mt-6 space-y-4 text-base leading-relaxed text-muted-foreground">
+            <div className="mt-4 space-y-4 text-base leading-relaxed text-muted-foreground">
               <p>
-                Keep notes, lore, handouts, and session prep in one shared campaign hub with
-                folders, search, bookmarks, and a structure that still feels easy to navigate when
-                the session is moving fast.
+                Keep notes, lore, handouts, and session prep in one campaign hub with folders,
+                search, bookmarks, links, and Markdown import/export.
               </p>
               <p>
-                DMs and players work in the same live space instead of scattering the campaign
-                across docs, chat threads, and recap messages. The result is a campaign that stays
-                organized for the DM and legible for the whole table.
+                The same workspace you use to prepare becomes the place your group uses during play,
+                so campaign material does not have to be copied across docs, chat threads, and recap
+                notes.
               </p>
             </div>
             <ul className="mt-6 space-y-2 text-sm text-muted-foreground">
-              <li>→ Hierarchical organization that stays easy to browse</li>
-              <li>→ Search and bookmarks for the pages you need mid-session</li>
-              <li>→ Shared notes and campaign context in one place</li>
-              <li>→ Built for the whole table, not just solo prep</li>
+              <li>→ Folders, search, tags, and bookmarks for fast navigation</li>
+              <li>→ Linked notes and documents for campaign context and references</li>
+              <li>→ Markdown import and export for portable campaign writing</li>
+              <li>→ A workspace built for the whole table, not just solo prep</li>
             </ul>
             <Link
               to="/sign-up"
@@ -42,7 +36,7 @@ export function CampaignWorkspaceSection() {
               Get Organized
             </Link>
           </div>
-          <AssetPlaceholder label="Campaign workspace showing the sidebar with clear folder structure, bookmarks or search, and a note open in the main pane with signs of active collaboration" />
+          <AssetPlaceholder label="Prepare asset: campaign sidebar with folders and bookmarks, search results open, a structured session note in the editor, visible internal links, and Markdown-style content ready to export" />
         </div>
       </LandingContainer>
     </section>

@@ -8,7 +8,7 @@ export function FinalCtaSection() {
     <section className="py-32">
       <LandingContainer className="flex flex-col items-center text-center">
         <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          Ready to run your next session?
+          Ready to start building?
         </h2>
         <p className="mt-4 text-base text-muted-foreground">
           {publicSite.trial.short} Your players join free.
