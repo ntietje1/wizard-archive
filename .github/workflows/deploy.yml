@@ -1,41 +1,41 @@
-name: Deploy
+name: Prepare Production Candidate
 
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [main]
   workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref to release
+        required: true
+        default: main
+      release_notes:
+        description: Short note to attach to the Cloudflare Worker version
+        required: false
 
 concurrency:
-  group: deploy
-  cancel-in-progress: true
+  group: prepare-production-candidate
+  cancel-in-progress: false
 
 env:
   NODE_VERSION: 22
 
 jobs:
-  deploy:
-    name: Deploy
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+  prepare-production-candidate:
+    name: Prepare Production Candidate
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - name: Checkout CI-tested commit
-        if: ${{ github.event_name == 'workflow_run' }}
+      - name: Checkout selected ref
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-      - name: Checkout selected ref
-        if: ${{ github.event_name == 'workflow_dispatch' }}
-        uses: actions/checkout@v4
+          ref: ${{ inputs.ref }}
       - uses: voidzero-dev/setup-vp@v1
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: true
       - run: vp install --frozen-lockfile
-      - name: Deploy Convex And Cloudflare
+      - name: Prepare candidate
         run: |
+          set -euo pipefail
           umask 077
           worker_env_file="$(mktemp "${RUNNER_TEMP}/worker-env.XXXXXX")"
           convex_env_file="$(mktemp "${RUNNER_TEMP}/convex-env.XXXXXX")"
@@ -44,24 +44,29 @@ jobs:
           bash scripts/write-worker-env.sh "$worker_env_file"
           bash scripts/write-convex-env.sh "$convex_env_file"
 
+          release_sha="$(git rev-parse HEAD)"
+          release_message="$RELEASE_NOTES"
+          if [[ -z "$release_message" ]]; then
+            release_message="Production candidate ${release_sha}"
+          fi
+
+          vp check
+          vp run lint:convex
+          vp build --mode production
+
           vp exec convex env set --from-file "$convex_env_file"
           vp exec convex deploy
-          vp build --mode production
-          deployed_worker=false
-          rollback_worker() {
-            if [[ "$deployed_worker" == "true" ]]; then
-              vp exec wrangler rollback --name wizard-archive --yes --message "Automated rollback after failed production health check"
-            fi
-          }
-          trap rollback_worker ERR
 
-          vp exec wrangler deploy --config dist/server/wrangler.json --keep-vars --secrets-file "$worker_env_file"
-          deployed_worker=true
-          curl --fail --show-error --silent --retry 5 --retry-delay 3 --output /dev/null https://wizardarchive.com/
-          trap - ERR
+          vp exec wrangler versions upload \
+            --config dist/server/wrangler.json \
+            --secrets-file "$worker_env_file" \
+            --tag "$release_sha" \
+            --message "$release_message" \
+            --preview-alias production-candidate
         env:
           CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_DEPLOY_KEY }}'
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          RELEASE_NOTES: ${{ inputs.release_notes }}
           VITE_CONVEX_URL: ${{ secrets.VITE_CONVEX_URL }}
           VITE_CONVEX_SITE_URL: ${{ secrets.VITE_CONVEX_SITE_URL }}
           VITE_SITE_URL: https://wizardarchive.com
