@@ -30,7 +30,7 @@ function PricingRouteComponent() {
   return (
     <PublicPageLayout>
       <main>
-        <section className="border-b border-border/20 py-20">
+        <section className="pt-20">
           <LandingContainer>
             <PublicPageHeader
               title="Pricing"
@@ -39,13 +39,13 @@ function PricingRouteComponent() {
           </LandingContainer>
         </section>
         <PricingSection showHeader={false} />
-        <section className="border-t border-border/20 pb-24">
+        <section className="pb-24">
           <LandingContainer>
             <div className="mx-auto grid max-w-5xl gap-4 md:grid-cols-2">
               {purchaseDetails.map((detail) => (
                 <section
                   key={detail.title}
-                  className="rounded-lg border border-border/30 bg-secondary/20 p-6"
+                  className="rounded-lg p-6"
                 >
                   <h2 className="text-base font-semibold text-foreground">{detail.title}</h2>
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">{detail.body}</p>
