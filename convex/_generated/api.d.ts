@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as auth_authBaseUrl from "../auth/authBaseUrl.js";
 import type * as auth_component from "../auth/component.js";
 import type * as auth_functions_onCreateUser from "../auth/functions/onCreateUser.js";
 import type * as auth_functions_onDeleteUser from "../auth/functions/onDeleteUser.js";
@@ -15,7 +16,6 @@ import type * as auth_functions_onUpdateUser from "../auth/functions/onUpdateUse
 import type * as auth_functions_purgeExpiredAuthData from "../auth/functions/purgeExpiredAuthData.js";
 import type * as auth_internalMutations from "../auth/internalMutations.js";
 import type * as auth_routes from "../auth/routes.js";
-import type * as auth_trustedOrigins from "../auth/trustedOrigins.js";
 import type * as blockShares_functions_blockShareMutations from "../blockShares/functions/blockShareMutations.js";
 import type * as blockShares_functions_getBlockPermissionLevel from "../blockShares/functions/getBlockPermissionLevel.js";
 import type * as blockShares_functions_getBlockSharesForBlock from "../blockShares/functions/getBlockSharesForBlock.js";
@@ -247,6 +247,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "auth/authBaseUrl": typeof auth_authBaseUrl;
   "auth/component": typeof auth_component;
   "auth/functions/onCreateUser": typeof auth_functions_onCreateUser;
   "auth/functions/onDeleteUser": typeof auth_functions_onDeleteUser;
@@ -254,7 +255,6 @@ declare const fullApi: ApiFromModules<{
   "auth/functions/purgeExpiredAuthData": typeof auth_functions_purgeExpiredAuthData;
   "auth/internalMutations": typeof auth_internalMutations;
   "auth/routes": typeof auth_routes;
-  "auth/trustedOrigins": typeof auth_trustedOrigins;
   "blockShares/functions/blockShareMutations": typeof blockShares_functions_blockShareMutations;
   "blockShares/functions/getBlockPermissionLevel": typeof blockShares_functions_getBlockPermissionLevel;
   "blockShares/functions/getBlockSharesForBlock": typeof blockShares_functions_getBlockSharesForBlock;

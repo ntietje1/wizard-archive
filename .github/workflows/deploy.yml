@@ -17,8 +17,6 @@ concurrency:
 
 env:
   NODE_VERSION: 22
-  CANDIDATE_DOMAIN: candidate.wizardarchive.com
-  CANDIDATE_SITE_URL: https://candidate.wizardarchive.com
 
 jobs:
   prepare-production-candidate:
@@ -51,8 +49,34 @@ jobs:
             fi
           done
 
+          site_host="${VITE_SITE_URL#*://}"
+          site_host="${site_host%%/*}"
+          if [[ -z "$site_host" ]]; then
+            echo "Unable to derive site host from VITE_SITE_URL" >&2
+            exit 1
+          fi
+
+          if [[ "$site_host" == www.* ]]; then
+            site_apex_host="${site_host#www.}"
+            site_www_host="$site_host"
+          else
+            site_apex_host="$site_host"
+            site_www_host="www.${site_host}"
+          fi
+
+          candidate_host="candidate.${site_apex_host}"
+          candidate_site_url="https://${candidate_host}"
+
+          convex_site_host="${VITE_CONVEX_SITE_URL#*://}"
+          convex_site_host="${convex_site_host%%/*}"
+          if [[ -z "$convex_site_host" ]]; then
+            echo "Unable to derive Convex site host from VITE_CONVEX_SITE_URL" >&2
+            exit 1
+          fi
+          export BETTER_AUTH_ALLOWED_HOSTS="${site_apex_host},${site_www_host},${candidate_host},${convex_site_host}"
+
           bash scripts/write-worker-env.sh "$worker_env_file"
-          VITE_SITE_URL="$CANDIDATE_SITE_URL" bash scripts/write-worker-env.sh "$candidate_worker_env_file"
+          VITE_SITE_URL="$candidate_site_url" bash scripts/write-worker-env.sh "$candidate_worker_env_file"
           bash scripts/write-convex-env.sh "$convex_env_file"
 
           release_sha="$(git rev-parse HEAD)"
@@ -78,17 +102,15 @@ jobs:
             --config dist/server/wrangler.json \
             --secrets-file "$candidate_worker_env_file" \
             --name wizard-archive-candidate \
-            --domain "$CANDIDATE_DOMAIN"
+            --domain "$candidate_host"
         env:
           CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_DEPLOY_KEY }}'
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           RELEASE_NOTES: ${{ inputs.release_notes }}
           VITE_CONVEX_URL: ${{ secrets.VITE_CONVEX_URL }}
           VITE_CONVEX_SITE_URL: ${{ secrets.VITE_CONVEX_SITE_URL }}
-          VITE_SITE_URL: https://wizardarchive.com
+          VITE_SITE_URL: ${{ secrets.VITE_SITE_URL }}
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
-          BETTER_AUTH_ALLOWED_HOSTS: wizardarchive.com,www.wizardarchive.com,${{ env.CANDIDATE_DOMAIN }}
-          SITE_URL: https://wizardarchive.com
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}

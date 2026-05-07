@@ -14,7 +14,7 @@ escape_env_value() {
 required_vars=(
   BETTER_AUTH_SECRET
   BETTER_AUTH_ALLOWED_HOSTS
-  SITE_URL
+  VITE_SITE_URL
   RESEND_API_KEY
 )
 

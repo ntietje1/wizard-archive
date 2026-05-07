@@ -1,19 +1,24 @@
 import { describe, expect, it } from 'vite-plus/test'
-import { getAuthBaseUrlConfig, parseAllowedHosts } from '../trustedOrigins'
+import { getAuthBaseUrlConfig, parseAllowedHosts } from '../authBaseUrl'
 
 describe('parseAllowedHosts', () => {
   it('trims, drops empty entries, and deduplicates hosts', () => {
     expect(
       parseAllowedHosts(
-        ' wizardarchive.com, ,www.wizardarchive.com,wizardarchive.com,candidate.wizardarchive.com ',
+        ' app.example.com, ,www.example.com,app.example.com,candidate.example.com,convex.example.site ',
       ),
-    ).toEqual(['wizardarchive.com', 'www.wizardarchive.com', 'candidate.wizardarchive.com'])
+    ).toEqual([
+      'app.example.com',
+      'www.example.com',
+      'candidate.example.com',
+      'convex.example.site',
+    ])
   })
 
   it('preserves exact host strings including ports', () => {
-    expect(parseAllowedHosts('localhost:3000,grandiose-cassowary-420.convex.site')).toEqual([
+    expect(parseAllowedHosts('localhost:3000,convex.example.site')).toEqual([
       'localhost:3000',
-      'grandiose-cassowary-420.convex.site',
+      'convex.example.site',
     ])
   })
 
@@ -25,8 +30,8 @@ describe('parseAllowedHosts', () => {
 
 describe('getAuthBaseUrlConfig', () => {
   it('returns a Better Auth dynamic base URL config', () => {
-    expect(getAuthBaseUrlConfig('wizardarchive.com,www.wizardarchive.com')).toEqual({
-      allowedHosts: ['wizardarchive.com', 'www.wizardarchive.com'],
+    expect(getAuthBaseUrlConfig('app.example.com,www.example.com,convex.example.site')).toEqual({
+      allowedHosts: ['app.example.com', 'www.example.com', 'convex.example.site'],
       protocol: 'auto',
     })
   })

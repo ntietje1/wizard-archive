@@ -34,9 +34,9 @@ function emailLayout(content: string) {
 }
 
 function actionButton(url: string, label: string) {
-  const siteUrl = process.env.SITE_URL
+  const siteUrl = process.env.VITE_SITE_URL
   if (!siteUrl) {
-    throw new Error('SiteUrl environment variable missing')
+    throw new Error('VITE_SITE_URL environment variable missing')
   }
   const isProd = siteUrl.startsWith('https://')
   if (isProd && !url.startsWith('https://')) {

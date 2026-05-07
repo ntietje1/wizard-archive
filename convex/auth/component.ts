@@ -15,7 +15,7 @@ import { components, internal } from '../_generated/api'
 import { onCreateUser } from './functions/onCreateUser'
 import { onUpdateUser } from './functions/onUpdateUser'
 import { onDeleteUser } from './functions/onDeleteUser'
-import { getAuthBaseUrlConfig } from './trustedOrigins'
+import { getAuthBaseUrlConfig } from './authBaseUrl'
 import type { AuthFunctions, GenericCtx } from '@convex-dev/better-auth'
 import type { DataModel } from '../_generated/dataModel'
 

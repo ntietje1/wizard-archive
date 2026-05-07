@@ -17,14 +17,11 @@ export function getAuthBaseUrlConfig(allowedHostsEnv: string | undefined): AuthB
 }
 
 export function parseAllowedHosts(allowedHostsEnv: string | undefined): Array<string> {
-  if (!allowedHostsEnv) return []
-
-  return unique(
-    allowedHostsEnv
-      .split(',')
-      .map((host) => host.trim())
-      .filter((host) => host !== ''),
-  )
+  const hosts = (allowedHostsEnv ?? '')
+    .split(',')
+    .map((host) => host.trim())
+    .filter((host) => host !== '')
+  return unique(hosts)
 }
 
 function unique<T>(values: Array<T>): Array<T> {
