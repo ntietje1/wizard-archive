@@ -23,7 +23,6 @@ The stable candidate URL is `https://candidate.wizardarchive.com`. It runs the s
 
 Do not use `wrangler deploy` for production. `wrangler deploy` sends traffic to the new Worker immediately. Production should use `wrangler versions upload` to create a candidate first.
 
-
 GitHub Actions:
 
 - The production workflow sets `ADDITIONAL_TRUSTED_ORIGINS=https://candidate.wizardarchive.com` before deploying Convex.
