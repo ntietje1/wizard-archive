@@ -23,4 +23,23 @@ describe('Cloudflare deployment workflows', () => {
     expect(deployWorkflow).toContain('curl --fail')
     expect(deployWorkflow).toContain('wrangler rollback --name wizard-archive')
   })
+
+  it('deploys preview Workers on a custom domain instead of an origin-backed route', () => {
+    const previewWorkflow = readRepoFile('.github/workflows/preview.yml')
+
+    expect(previewWorkflow).toContain(
+      '--domain "preview-${{ github.event.pull_request.number }}.wizardarchive.com"',
+    )
+    expect(previewWorkflow).not.toContain(
+      '--route "preview-${{ github.event.pull_request.number }}.wizardarchive.com/*"',
+    )
+  })
+
+  it('retries preview health checks after transient Cloudflare HTTP errors', () => {
+    const previewWorkflow = readRepoFile('.github/workflows/preview.yml')
+
+    expect(previewWorkflow).toContain(
+      'curl --fail --show-error --silent --retry 10 --retry-delay 12 --retry-all-errors',
+    )
+  })
 })

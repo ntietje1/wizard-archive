@@ -68,8 +68,8 @@ jobs:
             --keep-vars \
             --secrets-file "$worker_env_file" \
             --name "${{ env.WORKER_NAME }}" \
-            --route "preview-${{ github.event.pull_request.number }}.wizardarchive.com/*"
-          curl --fail --show-error --silent --retry 5 --retry-delay 3 --output /dev/null "${{ env.PREVIEW_URL }}/"
+            --domain "preview-${{ github.event.pull_request.number }}.wizardarchive.com"
+          curl --fail --show-error --silent --retry 10 --retry-delay 12 --retry-all-errors --output /dev/null "${{ env.PREVIEW_URL }}/"
         env:
           CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_PREVIEW_DEPLOY_KEY }}'
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
