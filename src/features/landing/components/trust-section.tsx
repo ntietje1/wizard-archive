@@ -30,13 +30,13 @@ export function TrustSection() {
             </div>
           </div>
           <ul className="mt-6 grid gap-3 text-sm text-muted-foreground">
-              {trustPoints.map((point) => (
-                <li key={point} className="flex items-center gap-2">
-                  <Check className="size-4 shrink-0 text-primary" aria-hidden="true" />
-                  {point}
-                </li>
-              ))}
-            </ul>
+            {trustPoints.map((point) => (
+              <li key={point} className="flex items-center gap-2">
+                <Check className="size-4 shrink-0 text-primary" aria-hidden="true" />
+                {point}
+              </li>
+            ))}
+          </ul>
         </div>
       </LandingContainer>
     </section>

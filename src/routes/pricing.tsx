@@ -43,10 +43,7 @@ function PricingRouteComponent() {
           <LandingContainer>
             <div className="mx-auto grid max-w-5xl gap-4 md:grid-cols-2">
               {purchaseDetails.map((detail) => (
-                <section
-                  key={detail.title}
-                  className="rounded-lg p-6"
-                >
+                <section key={detail.title} className="rounded-lg p-6">
                   <h2 className="text-base font-semibold text-foreground">{detail.title}</h2>
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">{detail.body}</p>
                 </section>
