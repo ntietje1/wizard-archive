@@ -15,6 +15,7 @@ import { components, internal } from '../_generated/api'
 import { onCreateUser } from './functions/onCreateUser'
 import { onUpdateUser } from './functions/onUpdateUser'
 import { onDeleteUser } from './functions/onDeleteUser'
+import { getTrustedOrigins } from './trustedOrigins'
 import type { AuthFunctions, GenericCtx } from '@convex-dev/better-auth'
 import type { DataModel } from '../_generated/dataModel'
 
@@ -48,6 +49,7 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
   return betterAuth({
     secret: process.env.BETTER_AUTH_SECRET,
     baseURL: siteUrl,
+    trustedOrigins: getTrustedOrigins(siteUrl),
     database: authComponent.adapter(ctx),
     session: {
       expiresIn: 60 * 60 * 24 * 30,
