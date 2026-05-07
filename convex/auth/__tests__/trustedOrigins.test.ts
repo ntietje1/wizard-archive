@@ -1,61 +1,39 @@
-import { describe, expect, it } from 'vitest'
-import { getTrustedOrigins } from '../trustedOrigins'
+import { describe, expect, it } from 'vite-plus/test'
+import { getAuthBaseUrlConfig, parseAllowedHosts } from '../trustedOrigins'
 
-describe('getTrustedOrigins', () => {
-  it('trusts the www sibling for an apex production URL', () => {
-    expect(getTrustedOrigins('https://wizardarchive.com')).toEqual([
-      'https://wizardarchive.com',
-      'https://www.wizardarchive.com',
-    ])
-  })
-
-  it('trusts the apex sibling for a www production URL', () => {
-    expect(getTrustedOrigins('https://www.wizardarchive.com')).toEqual([
-      'https://www.wizardarchive.com',
-      'https://wizardarchive.com',
-    ])
-  })
-
-  it('does not invent variants for localhost or preview subdomains', () => {
-    expect(getTrustedOrigins('http://localhost:3000')).toEqual(['http://localhost:3000'])
-    expect(getTrustedOrigins('https://preview-12.wizardarchive.com')).toEqual([
-      'https://preview-12.wizardarchive.com',
-    ])
-  })
-
-  it('allows additional trusted origins alongside production siblings', () => {
+describe('parseAllowedHosts', () => {
+  it('trims, drops empty entries, and deduplicates hosts', () => {
     expect(
-      getTrustedOrigins('https://wizardarchive.com', 'https://candidate.wizardarchive.com'),
-    ).toEqual([
-      'https://wizardarchive.com',
-      'https://www.wizardarchive.com',
-      'https://candidate.wizardarchive.com',
-    ])
-  })
-
-  it('normalizes additional origins and ignores empty or invalid entries', () => {
-    expect(
-      getTrustedOrigins(
-        'https://wizardarchive.com',
-        'not-a-url, , https://candidate.wizardarchive.com/sign-in',
+      parseAllowedHosts(
+        ' wizardarchive.com, ,www.wizardarchive.com,wizardarchive.com,candidate.wizardarchive.com ',
       ),
-    ).toEqual([
-      'https://wizardarchive.com',
-      'https://www.wizardarchive.com',
-      'https://candidate.wizardarchive.com',
+    ).toEqual(['wizardarchive.com', 'www.wizardarchive.com', 'candidate.wizardarchive.com'])
+  })
+
+  it('preserves exact host strings including ports', () => {
+    expect(parseAllowedHosts('localhost:3000,grandiose-cassowary-420.convex.site')).toEqual([
+      'localhost:3000',
+      'grandiose-cassowary-420.convex.site',
     ])
   })
 
-  it('deduplicates repeated origins', () => {
-    expect(
-      getTrustedOrigins(
-        'https://www.wizardarchive.com',
-        'https://wizardarchive.com, https://candidate.wizardarchive.com, https://candidate.wizardarchive.com',
-      ),
-    ).toEqual([
-      'https://www.wizardarchive.com',
-      'https://wizardarchive.com',
-      'https://candidate.wizardarchive.com',
-    ])
+  it('returns an empty list when the env value is missing or blank', () => {
+    expect(parseAllowedHosts(undefined)).toEqual([])
+    expect(parseAllowedHosts(' ,  , ')).toEqual([])
+  })
+})
+
+describe('getAuthBaseUrlConfig', () => {
+  it('returns a Better Auth dynamic base URL config', () => {
+    expect(getAuthBaseUrlConfig('wizardarchive.com,www.wizardarchive.com')).toEqual({
+      allowedHosts: ['wizardarchive.com', 'www.wizardarchive.com'],
+      protocol: 'auto',
+    })
+  })
+
+  it('fails clearly when BETTER_AUTH_ALLOWED_HOSTS is empty', () => {
+    expect(() => getAuthBaseUrlConfig('')).toThrow(
+      'BETTER_AUTH_ALLOWED_HOSTS must contain at least one host',
+    )
   })
 })

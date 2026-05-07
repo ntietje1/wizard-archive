@@ -13,14 +13,14 @@ escape_env_value() {
 
 required_vars=(
   BETTER_AUTH_SECRET
+  BETTER_AUTH_ALLOWED_HOSTS
   SITE_URL
-  GOOGLE_CLIENT_ID
-  GOOGLE_CLIENT_SECRET
   RESEND_API_KEY
 )
 
 optional_vars=(
-  ADDITIONAL_TRUSTED_ORIGINS
+  GOOGLE_CLIENT_ID
+  GOOGLE_CLIENT_SECRET
 )
 
 for var_name in "${required_vars[@]}"; do

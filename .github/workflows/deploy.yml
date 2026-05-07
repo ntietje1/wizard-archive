@@ -44,6 +44,13 @@ jobs:
           convex_env_file="$(mktemp "${RUNNER_TEMP}/convex-env.XXXXXX")"
           trap 'rm -f "$worker_env_file" "$candidate_worker_env_file" "$convex_env_file"' EXIT
 
+          for var_name in GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET; do
+            if [[ -z "${!var_name:-}" ]]; then
+              echo "Missing required environment variable: ${var_name}" >&2
+              exit 1
+            fi
+          done
+
           bash scripts/write-worker-env.sh "$worker_env_file"
           VITE_SITE_URL="$CANDIDATE_SITE_URL" bash scripts/write-worker-env.sh "$candidate_worker_env_file"
           bash scripts/write-convex-env.sh "$convex_env_file"
@@ -80,8 +87,8 @@ jobs:
           VITE_CONVEX_SITE_URL: ${{ secrets.VITE_CONVEX_SITE_URL }}
           VITE_SITE_URL: https://wizardarchive.com
           BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          BETTER_AUTH_ALLOWED_HOSTS: wizardarchive.com,www.wizardarchive.com,${{ env.CANDIDATE_DOMAIN }}
           SITE_URL: https://wizardarchive.com
-          ADDITIONAL_TRUSTED_ORIGINS: ${{ env.CANDIDATE_SITE_URL }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}

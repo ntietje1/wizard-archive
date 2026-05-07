@@ -1,48 +1,32 @@
-export function getTrustedOrigins(siteUrl: string, additionalTrustedOrigins = ''): Array<string> {
-  const siteOrigin = getOrigin(siteUrl)
-  if (!siteOrigin) return []
+type AuthBaseUrlConfig = {
+  allowedHosts: Array<string>
+  protocol: 'auto'
+}
 
-  const origins = [siteOrigin]
-  const site = new URL(siteOrigin)
-  const siblingHostname = getSiblingHostname(site.hostname)
+export function getAuthBaseUrlConfig(allowedHostsEnv: string | undefined): AuthBaseUrlConfig {
+  const allowedHosts = parseAllowedHosts(allowedHostsEnv)
 
-  if (siblingHostname) {
-    site.hostname = siblingHostname
-    origins.push(site.origin)
+  if (allowedHosts.length === 0) {
+    throw new Error('BETTER_AUTH_ALLOWED_HOSTS must contain at least one host')
   }
 
-  origins.push(...getAdditionalOrigins(additionalTrustedOrigins))
-
-  return [...new Set(origins)]
-}
-
-function getAdditionalOrigins(additionalTrustedOrigins: string): Array<string> {
-  return additionalTrustedOrigins
-    .split(',')
-    .map((origin) => getOrigin(origin.trim()))
-    .filter((origin): origin is string => origin !== null)
-}
-
-function getOrigin(url: string): string | null {
-  try {
-    return new URL(url).origin
-  } catch {
-    return null
+  return {
+    allowedHosts,
+    protocol: 'auto',
   }
 }
 
-function getSiblingHostname(hostname: string): string | null {
-  if (hostname.startsWith('www.')) {
-    return hostname.slice(4)
-  }
+export function parseAllowedHosts(allowedHostsEnv: string | undefined): Array<string> {
+  if (!allowedHostsEnv) return []
 
-  if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
-    return null
-  }
+  return unique(
+    allowedHostsEnv
+      .split(',')
+      .map((host) => host.trim())
+      .filter((host) => host !== ''),
+  )
+}
 
-  if (hostname.split('.').length === 2) {
-    return `www.${hostname}`
-  }
-
-  return null
+function unique<T>(values: Array<T>): Array<T> {
+  return [...new Set(values)]
 }

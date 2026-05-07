@@ -14,6 +14,8 @@ import type * as auth_functions_onDeleteUser from "../auth/functions/onDeleteUse
 import type * as auth_functions_onUpdateUser from "../auth/functions/onUpdateUser.js";
 import type * as auth_functions_purgeExpiredAuthData from "../auth/functions/purgeExpiredAuthData.js";
 import type * as auth_internalMutations from "../auth/internalMutations.js";
+import type * as auth_routes from "../auth/routes.js";
+import type * as auth_trustedOrigins from "../auth/trustedOrigins.js";
 import type * as blockShares_functions_blockShareMutations from "../blockShares/functions/blockShareMutations.js";
 import type * as blockShares_functions_getBlockPermissionLevel from "../blockShares/functions/getBlockPermissionLevel.js";
 import type * as blockShares_functions_getBlockSharesForBlock from "../blockShares/functions/getBlockSharesForBlock.js";
@@ -251,6 +253,8 @@ declare const fullApi: ApiFromModules<{
   "auth/functions/onUpdateUser": typeof auth_functions_onUpdateUser;
   "auth/functions/purgeExpiredAuthData": typeof auth_functions_purgeExpiredAuthData;
   "auth/internalMutations": typeof auth_internalMutations;
+  "auth/routes": typeof auth_routes;
+  "auth/trustedOrigins": typeof auth_trustedOrigins;
   "blockShares/functions/blockShareMutations": typeof blockShares_functions_blockShareMutations;
   "blockShares/functions/getBlockPermissionLevel": typeof blockShares_functions_getBlockPermissionLevel;
   "blockShares/functions/getBlockSharesForBlock": typeof blockShares_functions_getBlockSharesForBlock;

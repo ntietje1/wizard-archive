@@ -15,7 +15,7 @@ import { components, internal } from '../_generated/api'
 import { onCreateUser } from './functions/onCreateUser'
 import { onUpdateUser } from './functions/onUpdateUser'
 import { onDeleteUser } from './functions/onDeleteUser'
-import { getTrustedOrigins } from './trustedOrigins'
+import { getAuthBaseUrlConfig } from './trustedOrigins'
 import type { AuthFunctions, GenericCtx } from '@convex-dev/better-auth'
 import type { DataModel } from '../_generated/dataModel'
 
@@ -33,7 +33,7 @@ export const authComponent = createClient<DataModel>(components.betterAuth, {
 })
 
 export const createAuth = (ctx: GenericCtx<DataModel>) => {
-  const siteUrl = process.env.SITE_URL ?? ''
+  const baseURL = getAuthBaseUrlConfig(process.env.BETTER_AUTH_ALLOWED_HOSTS)
   const googleClientId = process.env.GOOGLE_CLIENT_ID
   const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET
   const googleProvider =
@@ -48,8 +48,7 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
 
   return betterAuth({
     secret: process.env.BETTER_AUTH_SECRET,
-    baseURL: siteUrl,
-    trustedOrigins: getTrustedOrigins(siteUrl, process.env.ADDITIONAL_TRUSTED_ORIGINS),
+    baseURL,
     database: authComponent.adapter(ctx),
     session: {
       expiresIn: 60 * 60 * 24 * 30,
