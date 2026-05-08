@@ -135,7 +135,7 @@ export function CreateNewDashboard({ parentId, folderPath }: CreateNewDashboardP
             <CreateNewButton
               icon={Grid2x2Plus}
               name="Canvas"
-              description="Collaborative whiteboard with nodes and drawing"
+              description="Whiteboard with nodes and drawing"
               onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.canvases)}
               disabled={isDisabled}
               isCreating={creatingType === SIDEBAR_ITEM_TYPES.canvases}

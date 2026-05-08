@@ -86,7 +86,7 @@ const VIEWPORT_CONTROL_PATTERNS = {
 
 export async function createCanvas(page: Page, name: string = DEFAULT_CANVAS_NAME) {
   const prevUrl = page.url()
-  await page.getByRole('button', { name: /canvas.*collaborative whiteboard/i }).click()
+  await page.getByRole('button', { name: /canvas.*whiteboard/i }).click()
 
   const textbox = page.getByRole('textbox', { name: 'Item name' })
   await expect(page).not.toHaveURL(prevUrl, { timeout: 10000 })
