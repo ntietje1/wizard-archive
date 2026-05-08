@@ -52,6 +52,7 @@ function SidebarItemButtonBaseComponent({
         !isSelected && 'hover:bg-muted/70',
       )}
       data-item-selection-target="true"
+      role="option"
       aria-selected={isSelected}
       onContextMenu={onContextMenu}
     >
@@ -96,7 +97,7 @@ function SidebarItemButtonBaseComponent({
           activeOptions={{ includeSearch: false }}
           className="flex items-center min-w-0 flex-1 h-full rounded-sm select-none"
           draggable={false}
-          tabIndex={isFocused ? 0 : undefined}
+          tabIndex={isFocused ? 0 : -1}
           onClick={onClick}
         >
           {nameContent}

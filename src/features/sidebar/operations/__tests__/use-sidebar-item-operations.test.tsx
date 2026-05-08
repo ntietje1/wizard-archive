@@ -98,4 +98,31 @@ describe('useSidebarItemOperationsValue', () => {
     expect(useSidebarUIStore.getState().selectedItemIds).toEqual([folder._id, child._id])
     expect(useSidebarUIStore.getState().anchorItemId).toBe(folder._id)
   })
+
+  it('normalizes restore from a trash folder surface to the sidebar root', async () => {
+    const folder = createFolder({
+      name: 'Folder',
+      location: SIDEBAR_ITEM_LOCATION.trash,
+      parentId: null,
+    })
+    trashItems = [folder]
+    moveSidebarItems.mockResolvedValue([folder._id])
+    useSidebarUIStore.getState().setActiveItemSurface({
+      surface: 'folder-view',
+      parentId: folder._id,
+      visibleItemIds: [folder._id],
+    })
+
+    const { result } = renderHook(() => useSidebarItemOperationsValue())
+    await act(async () => {
+      await result.current.restoreItems([folder])
+    })
+
+    expect(moveSidebarItems).toHaveBeenCalledWith({
+      sourceItemIds: [folder._id],
+      targetParentId: null,
+      action: 'restore',
+      decisions: undefined,
+    })
+  })
 })

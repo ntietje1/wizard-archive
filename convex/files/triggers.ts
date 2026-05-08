@@ -7,8 +7,11 @@ async function isStorageUsedByAnotherFile(
   storageId: Id<'_storage'>,
   sidebarItemId: Id<'sidebarItems'>,
 ) {
-  const files = await db.query('files').collect()
-  return files.some((file) => file.sidebarItemId !== sidebarItemId && file.storageId === storageId)
+  const files = await db
+    .query('files')
+    .withIndex('by_storageId', (q) => q.eq('storageId', storageId))
+    .collect()
+  return files.some((file) => file.sidebarItemId !== sidebarItemId)
 }
 
 export const fileTriggers: SidebarItemTriggerHandlers = {

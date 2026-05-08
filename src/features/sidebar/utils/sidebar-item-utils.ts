@@ -100,9 +100,12 @@ export function buildBreadcrumbs(
   itemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>,
 ): string {
   const path: Array<string> = []
+  const visitedIds = new Set<Id<'sidebarItems'>>([item._id])
   let currentId = item.parentId
 
   while (currentId && itemsMap.has(currentId)) {
+    if (visitedIds.has(currentId)) break
+    visitedIds.add(currentId)
     const parent = itemsMap.get(currentId)!
     path.unshift(parent.name)
     currentId = parent.parentId

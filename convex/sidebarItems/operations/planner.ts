@@ -51,6 +51,7 @@ function removeSelectedDescendants(
   }
 
   const selectedIds = new Set(items.map((item) => item._id))
+  const itemsById = new Map(items.map((item) => [item._id, item]))
   const descendantIds = new Set<Id<'sidebarItems'>>()
   const normalizedIds = new Set<Id<'sidebarItems'>>()
 
@@ -88,7 +89,7 @@ function removeSelectedDescendants(
         )
       }
       seen.add(parentId)
-      parentId = items.find((candidate) => candidate._id === parentId)?.parentId ?? null
+      parentId = itemsById.get(parentId)?.parentId ?? null
     }
     normalizedIds.add(item._id)
     return true
@@ -382,7 +383,6 @@ export function planMoveOperations({
   if (depth > MAX_OPERATION_DEPTH) {
     throw new Error(`Max sidebar move planning depth exceeded`)
   }
-  const conflicts: Array<ItemOperationConflict> = []
   const topLevelItems = removeSelectedDescendants(items, getChildren, depth)
   const movingIds = new Set(topLevelItems.map((item) => item._id))
   const context: MovePlannerContext = {
@@ -392,7 +392,7 @@ export function planMoveOperations({
     getChildren,
     depth,
     movingIds,
-    conflicts,
+    conflicts: [],
     operations: [],
     reservedNames: targetItems.filter((item) => !movingIds.has(item._id)).map((item) => item.name),
   }

@@ -117,6 +117,7 @@ async function executeBulkMove(
     }
   } catch (error) {
     handleError(error, 'Failed to move items')
+    return false
   }
   return true
 }
@@ -163,7 +164,10 @@ async function executeIndividualDropOutcomes(
     }
   }
   if (errors.length > 0) {
-    handleError(new Error(`${errors.length} drag operations failed`), 'Failed to move items')
+    handleError(
+      new AggregateError(errors, `${errors.length} drag operations failed`),
+      'Failed to move items',
+    )
   }
 }
 

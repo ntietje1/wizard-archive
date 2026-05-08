@@ -113,7 +113,7 @@ function handleCopyCut(event: KeyboardEvent, context: HotkeyHandlerContext): boo
   const isCut = isModifierShortcut(event, 'x')
   const isCopy = isModifierShortcut(event, 'c')
   if (!isCopy && !isCut) return false
-  if (!context.campaignId || context.selectedIds.length === 0) return true
+  if (!context.campaignId || context.selectedIds.length === 0) return false
 
   event.preventDefault()
   if (context.itemOperations) {
@@ -135,12 +135,13 @@ function handleCopyCut(event: KeyboardEvent, context: HotkeyHandlerContext): boo
 
 function handlePaste(event: KeyboardEvent, context: HotkeyHandlerContext): boolean {
   if (!isModifierShortcut(event, 'v')) return false
+  if (!context.itemOperations) return false
   if (
     !context.campaignId ||
     !context.itemClipboard ||
     context.itemClipboard.campaignId !== context.campaignId
   ) {
-    return true
+    return false
   }
 
   event.preventDefault()
@@ -150,21 +151,22 @@ function handlePaste(event: KeyboardEvent, context: HotkeyHandlerContext): boole
     surfaceParentId: context.activeItemSurface.parentId,
   })
 
-  void context.itemOperations?.pasteClipboard(pasteParentId)
+  void context.itemOperations.pasteClipboard(pasteParentId)
   return true
 }
 
 function handleDelete(event: KeyboardEvent, context: HotkeyHandlerContext): boolean {
   if (event.key !== 'Delete' && event.key !== 'Backspace') return false
   if (context.selectedItems.length === 0) return true
+  if (!context.itemOperations) return false
 
   event.preventDefault()
   if (context.activeItemSurface.surface === 'trash') {
-    context.itemOperations?.confirmPermanentDeleteItems(context.selectedItems)
+    context.itemOperations.confirmPermanentDeleteItems(context.selectedItems)
     return true
   }
 
-  void context.itemOperations?.trashItems(context.selectedItems)
+  void context.itemOperations.trashItems(context.selectedItems)
   return true
 }
 

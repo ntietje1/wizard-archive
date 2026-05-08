@@ -320,6 +320,13 @@ async function loadDuplicableOperationSource(
   ctx: CampaignMutationCtx,
   sourceItemId: Id<'sidebarItems'>,
 ) {
+  return await validateSidebarItemDuplicable(ctx, sourceItemId)
+}
+
+async function validateSidebarItemDuplicable(
+  ctx: CampaignMutationCtx,
+  sourceItemId: Id<'sidebarItems'>,
+) {
   const rawSource = await getSidebarItem(ctx, sourceItemId)
   if (!rawSource) throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
   const source = await requireItemAccess(ctx, {
@@ -399,36 +406,29 @@ async function loadDuplicableSources(
   {
     sourceItemIds,
     targetParentId,
-    targetItems,
   }: {
     sourceItemIds: Array<Id<'sidebarItems'>>
     targetParentId: Id<'sidebarItems'> | null
-    targetItems: Array<AnySidebarItem>
   },
 ) {
+  const rawTargetParent = targetParentId === null ? null : await getSidebarItem(ctx, targetParentId)
+  if (targetParentId !== null && !rawTargetParent) {
+    throwClientError(ERROR_CODE.NOT_FOUND, 'Target parent not found')
+  }
   const targetParent =
-    targetParentId === null
+    rawTargetParent === null
       ? null
       : await requireItemAccess(ctx, {
-          rawItem: await getSidebarItem(ctx, targetParentId),
+          rawItem: rawTargetParent,
           requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
         })
   const sourceItems = []
   for (const sourceItemId of sourceItemIds) {
-    const rawSource = await getSidebarItem(ctx, sourceItemId)
-    if (!rawSource) throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
-    const source = await requireItemAccess(ctx, {
-      rawItem: rawSource,
-      requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
-    })
-    if (source.location !== SIDEBAR_ITEM_LOCATION.sidebar) {
-      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Only active sidebar items can be duplicated')
-    }
+    const source = await validateSidebarItemDuplicable(ctx, sourceItemId)
     assertSidebarOperationAllowed(
       evaluateDuplicate({ role: ctx.membership.role }, source, {
         parentId: targetParentId,
         parent: targetParent,
-        siblings: targetItems,
       }),
     )
     sourceItems.push(source)
@@ -479,7 +479,6 @@ export async function duplicateSidebarItems(
   const sourceItems = await loadDuplicableSources(ctx, {
     sourceItemIds,
     targetParentId,
-    targetItems,
   })
   const plan = await planDuplicateSidebarItems(ctx, {
     sourceItems,

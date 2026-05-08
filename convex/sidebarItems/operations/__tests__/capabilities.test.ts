@@ -66,7 +66,7 @@ describe('sidebar operation capabilities', () => {
       item('note-1', 'Note', SIDEBAR_ITEM_TYPES.notes, {
         myPermissionLevel: PERMISSION_LEVEL.EDIT,
       }),
-      { parentId: null, parent: null, siblings: [] },
+      { parentId: null, parent: null },
     )
 
     expect(result).toMatchObject({ ok: false, code: 'no_source_permission' })
@@ -80,7 +80,6 @@ describe('sidebar operation capabilities', () => {
     const result = evaluateMoveToParent({ role: CAMPAIGN_MEMBER_ROLE.DM }, item('note-1', 'Note'), {
       parentId: parent._id,
       parent,
-      siblings: [],
     })
 
     expect(result).toMatchObject({ ok: false, code: 'no_target_permission' })
@@ -93,7 +92,6 @@ describe('sidebar operation capabilities', () => {
     const result = evaluateMoveToParent({ role: CAMPAIGN_MEMBER_ROLE.DM }, folder, {
       parentId: descendant._id,
       parent: descendant,
-      siblings: [],
       ancestorIds: [folder._id],
     })
 
@@ -103,7 +101,7 @@ describe('sidebar operation capabilities', () => {
   it('rejects root paste for non-DM actors', () => {
     const result = evaluatePasteTarget(
       { role: CAMPAIGN_MEMBER_ROLE.Player },
-      { parentId: null, parent: null, siblings: [] },
+      { parentId: null, parent: null },
     )
 
     expect(result).toMatchObject({ ok: false, code: 'dm_only' })
@@ -117,8 +115,43 @@ describe('sidebar operation capabilities', () => {
 
     expect(result).toEqual({
       ok: false,
-      code: 'trashed_item',
+      code: 'not_trashed',
       message: 'This item is no longer in the trash',
+    })
+  })
+
+  it('allows DM trash, permanent delete, and paste to an accessible folder', () => {
+    const folder = item('folder-1', 'Folder', SIDEBAR_ITEM_TYPES.folders)
+    const trashedNote = item('note-1', 'Note', SIDEBAR_ITEM_TYPES.notes, {
+      location: SIDEBAR_ITEM_LOCATION.trash,
+    })
+
+    expect(evaluateTrash({ role: CAMPAIGN_MEMBER_ROLE.DM }, item('note-2', 'Note'))).toEqual({
+      ok: true,
+    })
+    expect(evaluatePermanentDelete({ role: CAMPAIGN_MEMBER_ROLE.DM }, trashedNote)).toEqual({
+      ok: true,
+    })
+    expect(
+      evaluatePasteTarget(
+        { role: CAMPAIGN_MEMBER_ROLE.DM },
+        { parentId: folder._id, parent: folder },
+      ),
+    ).toEqual({ ok: true })
+  })
+
+  it('rejects trashing an item that is already trashed', () => {
+    const result = evaluateTrash(
+      { role: CAMPAIGN_MEMBER_ROLE.DM },
+      item('note-1', 'Note', SIDEBAR_ITEM_TYPES.notes, {
+        location: SIDEBAR_ITEM_LOCATION.trash,
+      }),
+    )
+
+    expect(result).toEqual({
+      ok: false,
+      code: 'already_trashed',
+      message: 'This item is already in the trash',
     })
   })
 })

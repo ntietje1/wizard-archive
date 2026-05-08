@@ -16,9 +16,7 @@ export function EmptyTrashConfirmDialog({
 }) {
   const { data: allTrashedItems, status } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
 
-  if (status === 'pending' || !allTrashedItems) {
-    return null // Or a loading skeleton
-  }
+  if (status === 'pending' || !allTrashedItems) return null
 
   return (
     <ConfirmationDialog

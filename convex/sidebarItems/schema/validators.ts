@@ -3,11 +3,10 @@ import { zodToConvex } from 'convex-helpers/server/zod4'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { sidebarItemNameValueSchema } from '../validation/name'
-import { sidebarItemSlugValidator } from '../validation/slug'
-import { sidebarItemColorValidator } from '../validation/color'
-import { sidebarItemIconNameValidator } from '../validation/icon'
 
-export { sidebarItemSlugValidator, sidebarItemColorValidator, sidebarItemIconNameValidator }
+export { sidebarItemSlugValidator } from '../validation/slug'
+export { sidebarItemColorValidator } from '../validation/color'
+export { sidebarItemIconNameValidator } from '../validation/icon'
 
 export const sidebarItemNameValidator = zodToConvex(sidebarItemNameValueSchema)
 

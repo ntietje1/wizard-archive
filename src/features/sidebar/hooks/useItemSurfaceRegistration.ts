@@ -10,10 +10,12 @@ function sameVisibleIds(a: Array<Id<'sidebarItems'>>, b: Array<Id<'sidebarItems'
 }
 
 function sameRegisteredSurface(a: ActiveItemSurface | null, b: ActiveItemSurface | null): boolean {
+  if (a === b) return true
+  if (!a || !b) return false
   return (
-    a?.surface === b?.surface &&
-    a?.parentId === b?.parentId &&
-    Boolean(a && b && sameVisibleIds(a.visibleItemIds, b.visibleItemIds))
+    a.surface === b.surface &&
+    a.parentId === b.parentId &&
+    sameVisibleIds(a.visibleItemIds, b.visibleItemIds)
   )
 }
 
@@ -29,6 +31,7 @@ export function useItemSurfaceRegistration({
   const setActiveItemSurface = useSidebarUIStore((s) => s.setActiveItemSurface)
   const clearItemSelection = useSidebarUIStore((s) => s.clearItemSelection)
   const activeSurface: ActiveItemSurface = { surface, parentId, visibleItemIds }
+  const visibleItemIdsKey = visibleItemIds.join('\u001f')
   const latestSurfaceRef = useRef(activeSurface)
   latestSurfaceRef.current = activeSurface
 
@@ -40,7 +43,7 @@ export function useItemSurfaceRegistration({
         setActiveItemSurface(null)
       }
     }
-  }, [surface, parentId, visibleItemIds, setActiveItemSurface])
+  }, [surface, parentId, visibleItemIdsKey, setActiveItemSurface])
 
   const activateSurface = () => {
     setActiveItemSurface(activeSurface)

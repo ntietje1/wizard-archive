@@ -8,7 +8,7 @@ export function getKeyboardOpenItem({
 }: {
   selectedItems: Array<AnySidebarItem>
   focusedItemId: Id<'sidebarItems'> | null
-}) {
+}): AnySidebarItem | null {
   if (selectedItems.length <= 1) return selectedItems[0] ?? null
   return selectedItems.find((item) => item._id === focusedItemId) ?? selectedItems[0] ?? null
 }
@@ -21,10 +21,11 @@ export function getKeyboardPasteParentId({
   selectedItems: Array<AnySidebarItem>
   focusedItemId: Id<'sidebarItems'> | null
   surfaceParentId: Id<'sidebarItems'> | null
-}) {
+}): Id<'sidebarItems'> | null {
   const focusedItem = selectedItems.find((item) => item._id === focusedItemId)
   const candidate = selectedItems.length === 1 ? selectedItems[0] : focusedItem
-  return candidate?.type === SIDEBAR_ITEM_TYPES.folders &&
+  return candidate &&
+    candidate.type === SIDEBAR_ITEM_TYPES.folders &&
     candidate.location !== SIDEBAR_ITEM_LOCATION.trash
     ? candidate._id
     : surfaceParentId

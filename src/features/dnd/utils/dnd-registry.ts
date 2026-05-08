@@ -183,9 +183,10 @@ function toDropRejectionReason(code: SidebarOperationRejectionCode): DropRejecti
     case 'trashed_folder':
       return 'trashed_folder'
     case 'trashed_item':
+    case 'already_trashed':
       return 'trashed_item'
-    case 'name_conflict':
-      return 'name_conflict'
+    case 'not_trashed':
+      return 'missing_data'
     case 'not_found':
     case 'invalid_target':
       return 'missing_data'
@@ -318,7 +319,6 @@ const rootConfig: DropZoneConfig = {
       const capability = evaluateRestore(actorFromContext(ctx), item, {
         parentId: null,
         parent: null,
-        siblings: [],
       })
       const rejected = capabilityRejection(capability)
       if (rejected) return rejected
@@ -333,7 +333,6 @@ const rootConfig: DropZoneConfig = {
     const capability = evaluateMoveToParent(actorFromContext(ctx), item, {
       parentId: null,
       parent: null,
-      siblings: [],
     })
     const rejected = capabilityRejection(capability)
     if (rejected) return rejected
@@ -356,7 +355,6 @@ const folderConfig = typedConfig<ResolvedSidebarItemDropData>({
       const capability = evaluateRestore(actorFromContext(ctx), item, {
         parentId: folderId,
         parent: t,
-        siblings: [],
         ancestorIds: t.ancestorIds,
       })
       const rejected = capabilityRejection(capability)
@@ -373,7 +371,6 @@ const folderConfig = typedConfig<ResolvedSidebarItemDropData>({
     const capability = evaluateMoveToParent(actorFromContext(ctx), item, {
       parentId: folderId,
       parent: t,
-      siblings: [],
       ancestorIds: t.ancestorIds,
     })
     const rejected = capabilityRejection(capability)

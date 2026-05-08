@@ -28,7 +28,9 @@ export function useItemSelectionInteractions(
       setActiveItemSurface: s.setActiveItemSurface,
     })),
   )
-  const visibleItemIds = activeSurface?.visibleItemIds ?? [item._id]
+  const visibleItemIds = activeSurface?.visibleItemIds.length
+    ? activeSurface.visibleItemIds
+    : [item._id]
 
   const activateSurface = () => {
     if (activeSurface) {

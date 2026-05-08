@@ -15,8 +15,11 @@ async function isStorageUsedByAnotherMap(
   storageId: Id<'_storage'>,
   sidebarItemId: Id<'sidebarItems'>,
 ) {
-  const maps = await db.query('gameMaps').collect()
-  return maps.some((map) => map.sidebarItemId !== sidebarItemId && map.imageStorageId === storageId)
+  const maps = await db
+    .query('gameMaps')
+    .withIndex('by_imageStorageId', (q) => q.eq('imageStorageId', storageId))
+    .collect()
+  return maps.some((map) => map.sidebarItemId !== sidebarItemId)
 }
 
 export const gameMapTriggers: SidebarItemTriggerHandlers = {

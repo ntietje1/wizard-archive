@@ -39,7 +39,7 @@ export function useNoteEditorDropTarget({
         const items = resolveNormalizedDraggedSidebarItems({
           sourceData: source.data,
           activeItemsMap: itemsMapRef.current,
-        })
+        }).filter((item) => item._id !== noteId)
         if (items.length === 0) return
 
         const { clientX, clientY } = location.current.input

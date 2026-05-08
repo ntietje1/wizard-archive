@@ -56,7 +56,8 @@ export const sidebarItemsTables = {
       'deletionTime',
     ])
     .index('by_campaign_slug', ['campaignId', 'slug', 'deletionTime'])
-    .index('by_campaign', ['campaignId', 'deletionTime']),
+    .index('by_campaign', ['campaignId', 'deletionTime'])
+    .index('by_previewStorageId', ['previewStorageId']),
 
   notes: defineTable({
     ...extensionBaseFields,
@@ -70,12 +71,16 @@ export const sidebarItemsTables = {
   gameMaps: defineTable({
     ...extensionBaseFields,
     imageStorageId: v.nullable(v.id('_storage')),
-  }).index('by_sidebarItemId', ['sidebarItemId']),
+  })
+    .index('by_sidebarItemId', ['sidebarItemId'])
+    .index('by_imageStorageId', ['imageStorageId']),
 
   files: defineTable({
     ...extensionBaseFields,
     storageId: v.nullable(v.id('_storage')),
-  }).index('by_sidebarItemId', ['sidebarItemId']),
+  })
+    .index('by_sidebarItemId', ['sidebarItemId'])
+    .index('by_storageId', ['storageId']),
 
   canvases: defineTable({
     ...extensionBaseFields,

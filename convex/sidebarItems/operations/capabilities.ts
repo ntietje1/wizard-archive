@@ -12,13 +12,14 @@ export type SidebarOperationRejectionCode =
   | 'not_folder'
   | 'trashed_folder'
   | 'trashed_item'
+  | 'already_trashed'
+  | 'not_trashed'
   | 'no_source_permission'
   | 'no_target_permission'
   | 'dm_only'
   | 'circular'
   | 'different_location'
   | 'same_parent'
-  | 'name_conflict'
   | 'invalid_target'
 
 export type SidebarOperationCapability =
@@ -39,7 +40,6 @@ export type OperationSidebarItem = Pick<
 export type OperationTargetSnapshot = {
   parentId: Id<'sidebarItems'> | null
   parent: OperationSidebarItem | null
-  siblings: Array<Pick<AnySidebarItem, '_id' | 'name'>>
   ancestorIds?: Array<Id<'sidebarItems'>>
 }
 
@@ -56,7 +56,7 @@ function hasFullAccess(level: PermissionLevel | null | undefined): boolean {
 }
 
 export function isPermissionRejectionCode(code: SidebarOperationRejectionCode): boolean {
-  return code.includes('permission') || code === 'dm_only'
+  return code === 'no_source_permission' || code === 'no_target_permission' || code === 'dm_only'
 }
 
 function evaluateTargetParent(
@@ -112,6 +112,10 @@ export function evaluateTrash(
   actor: OperationActorSnapshot,
   item: OperationSidebarItem,
 ): SidebarOperationCapability {
+  if (item.location === SIDEBAR_ITEM_LOCATION.trash) {
+    return reject('already_trashed', 'This item is already in the trash')
+  }
+
   if (!hasFullAccess(item.myPermissionLevel)) {
     return reject('no_source_permission', 'You do not have sufficient permission for this item')
   }
@@ -148,7 +152,7 @@ export function evaluatePermanentDelete(
   item: OperationSidebarItem,
 ): SidebarOperationCapability {
   if (item.location !== SIDEBAR_ITEM_LOCATION.trash) {
-    return reject('trashed_item', 'This item is no longer in the trash')
+    return reject('not_trashed', 'This item is no longer in the trash')
   }
 
   if (actor.role !== CAMPAIGN_MEMBER_ROLE.DM) {

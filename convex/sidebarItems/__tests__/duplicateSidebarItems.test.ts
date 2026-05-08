@@ -214,6 +214,25 @@ describe('duplicateSidebarItems', () => {
     })
 
     await t.run(async (dbCtx) => {
+      const copiedFileItem = await dbCtx.db.get('sidebarItems', createdIds[0] as Id<'sidebarItems'>)
+      const copiedMapItem = await dbCtx.db.get('sidebarItems', createdIds[1] as Id<'sidebarItems'>)
+      const copiedFile = await dbCtx.db
+        .query('files')
+        .withIndex('by_sidebarItemId', (q) =>
+          q.eq('sidebarItemId', createdIds[0] as Id<'sidebarItems'>),
+        )
+        .unique()
+      const copiedMap = await dbCtx.db
+        .query('gameMaps')
+        .withIndex('by_sidebarItemId', (q) =>
+          q.eq('sidebarItemId', createdIds[1] as Id<'sidebarItems'>),
+        )
+        .unique()
+
+      expect(copiedFileItem?.previewStorageId).toBe(previewStorageId)
+      expect(copiedFile?.storageId).toBe(fileStorageId)
+      expect(copiedMap?.imageStorageId).toBe(mapStorageId)
+      expect(copiedMapItem).not.toBeNull()
       await expect(dbCtx.storage.getUrl(fileStorageId)).resolves.not.toBeNull()
       await expect(dbCtx.storage.getUrl(previewStorageId)).resolves.not.toBeNull()
       await expect(dbCtx.storage.getUrl(mapStorageId)).resolves.not.toBeNull()

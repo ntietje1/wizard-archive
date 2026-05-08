@@ -15,18 +15,24 @@ import { setPreviewImage as setPreviewImageFn } from './functions/setPreviewImag
 import { duplicateSidebarItems as duplicateSidebarItemsFn } from './functions/duplicateSidebarItem'
 import type { Id } from '../_generated/dataModel'
 
-const OPERATION_DECISION_ACTION = {
+export const OPERATION_DECISION_ACTION = {
   skip: 'skip',
   replace: 'replace',
   keepBoth: 'keepBoth',
   cancel: 'cancel',
 } as const
 
-const MOVE_SIDEBAR_ITEMS_ACTION = {
+export type OperationDecisionAction =
+  (typeof OPERATION_DECISION_ACTION)[keyof typeof OPERATION_DECISION_ACTION]
+
+export const MOVE_SIDEBAR_ITEMS_ACTION = {
   move: 'move',
   restore: 'restore',
   trash: 'trash',
 } as const
+
+export type MoveSidebarItemsAction =
+  (typeof MOVE_SIDEBAR_ITEMS_ACTION)[keyof typeof MOVE_SIDEBAR_ITEMS_ACTION]
 
 const operationDecisionValidator = v.object({
   sourceItemId: v.id('sidebarItems'),

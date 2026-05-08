@@ -393,6 +393,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
   createPinAtPositionRef.current = createPinAtPosition
 
   useEffect(() => {
+    // The monitor is registered once; mutable refs above keep drop handling on current map state.
     return monitorForElements({
       onDrop: ({ source, location }) => {
         const topTarget = location.current.dropTargets[0]
@@ -402,11 +403,17 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
         if (targetData.type !== MAP_DROP_ZONE_TYPE) return
         if (targetData.mapId !== mapRef.current._id) return
         const acceptedPinItemIds = mapRef.current.pins.map((pin) => pin.itemId)
-        const items = resolveNormalizedDraggedSidebarItems({
-          sourceData: source.data,
-          activeItemsMap: itemsMapRef.current,
-          excludeItemIds: [mapRef.current._id, ...acceptedPinItemIds],
-        })
+        let items: ReturnType<typeof resolveNormalizedDraggedSidebarItems>
+        try {
+          items = resolveNormalizedDraggedSidebarItems({
+            sourceData: source.data,
+            activeItemsMap: itemsMapRef.current,
+            excludeItemIds: [mapRef.current._id, ...acceptedPinItemIds],
+          })
+        } catch (error) {
+          handleError(error, 'Failed to resolve dragged sidebar items')
+          return
+        }
         if (items.length === 0) return
 
         const validItemIds: Array<Id<'sidebarItems'>> = []
@@ -465,6 +472,13 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
             }),
           )
           const placedCount = results.filter(Boolean).length
+          const failedCount = results.length - placedCount
+          if (failedCount > 0) {
+            handleError(
+              new Error(`${failedCount} of ${results.length} map pins failed to place`),
+              'Failed to place some pins',
+            )
+          }
           if (placedCount > 0) {
             toast.success(
               placedCount === 1 ? 'Pin placed on map' : `${placedCount} pins placed on map`,

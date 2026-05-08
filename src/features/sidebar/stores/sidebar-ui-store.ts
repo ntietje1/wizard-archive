@@ -131,6 +131,20 @@ function sameSurfaceIdentity(a: ItemSurfaceIdentity | null, b: ItemSurfaceIdenti
   return a?.surface === b?.surface && a?.parentId === b?.parentId
 }
 
+function sameVisibleIds(a: Array<Id<'sidebarItems'>>, b: Array<Id<'sidebarItems'>>) {
+  return a.length === b.length && a.every((id, index) => id === b[index])
+}
+
+function sameActiveItemSurface(a: ActiveItemSurface | null, b: ActiveItemSurface | null) {
+  if (a === b) return true
+  if (!a || !b) return false
+  return (
+    a.surface === b.surface &&
+    a.parentId === b.parentId &&
+    sameVisibleIds(a.visibleItemIds, b.visibleItemIds)
+  )
+}
+
 function nextFocusedId(
   currentId: Id<'sidebarItems'> | null,
   direction: 'up' | 'down',
@@ -356,6 +370,7 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
       setActiveItemSurface: (surface) =>
         set((state) => {
           const nextIdentity = surfaceIdentity(surface)
+          if (sameActiveItemSurface(state.activeItemSurface, surface)) return state
           if (!surface) {
             return {
               activeItemSurface: null,

@@ -76,7 +76,6 @@ export const EditorContextMenu = forwardRef<EditorContextMenuRef, EditorContextM
       item,
       primaryItem,
       selectedItems,
-      selectedItemIds: selectedItems.map((selectedItem) => selectedItem._id),
       isMultiSelection: selectedItems.length > 1,
       isItemTrashed: item?.location === SIDEBAR_ITEM_LOCATION.trash,
       isTrashView: isTrashView || viewContext === VIEW_CONTEXT.TRASH_VIEW,

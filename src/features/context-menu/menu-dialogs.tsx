@@ -1,5 +1,5 @@
 import { toast } from 'sonner'
-import { EmptyTrashConfirmDialog } from './hooks/trash-utils'
+import { EmptyTrashConfirmDialog } from './components/dialogs/trash-confirm-dialogs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'

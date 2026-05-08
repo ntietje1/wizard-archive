@@ -187,6 +187,72 @@ describe('trash workflows', () => {
       expect(restoredNestedNote!.parentId).toBe(childFolder.folderId)
     })
 
+    it('restores a trashed folder when the trash surface target points at that folder', async () => {
+      const ctx = await setupCampaignContext(t)
+      const dmAuth = asDm(ctx)
+
+      const folder = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: 'FolderA',
+      })
+
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
+        itemId: folder.folderId,
+        location: 'trash',
+      })
+
+      const movedIds = await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+        campaignId: ctx.campaignId,
+        sourceItemIds: [folder.folderId],
+        targetParentId: folder.folderId,
+        action: 'restore',
+      })
+
+      const restoredFolder = await t.run((dbCtx) => dbCtx.db.get('sidebarItems', folder.folderId))
+
+      expect(movedIds).toEqual([folder.folderId])
+      expect(restoredFolder!.location).toBe('sidebar')
+      expect(restoredFolder!.parentId).toBeNull()
+    })
+
+    it('restores a child from a trashed folder surface to the sidebar root', async () => {
+      const ctx = await setupCampaignContext(t)
+      const dmAuth = asDm(ctx)
+
+      const folder = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: 'FolderA',
+      })
+      const nestedNote = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: 'NestedNote',
+        parentId: folder.folderId,
+      })
+
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
+        itemId: folder.folderId,
+        location: 'trash',
+      })
+
+      const movedIds = await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+        campaignId: ctx.campaignId,
+        sourceItemIds: [nestedNote.noteId],
+        targetParentId: folder.folderId,
+        action: 'restore',
+      })
+
+      const [trashedFolder, restoredNote] = await t.run((dbCtx) =>
+        Promise.all([
+          dbCtx.db.get('sidebarItems', folder.folderId),
+          dbCtx.db.get('sidebarItems', nestedNote.noteId),
+        ]),
+      )
+
+      expect(movedIds).toEqual([nestedNote.noteId])
+      expect(trashedFolder!.location).toBe('trash')
+      expect(restoredNote!.location).toBe('sidebar')
+      expect(restoredNote!.parentId).toBeNull()
+    })
+
     it('bulk trash uses the batch move path and ignores redundant nested descendants', async () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)

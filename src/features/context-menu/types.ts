@@ -119,9 +119,9 @@ export interface EditorMenuContext {
   primaryItem?: AnySidebarItem
   /** Ordered full item objects for the active selection. */
   selectedItems?: Array<AnySidebarItem>
-  /** Convenience ids derived from selectedItems; omit when callers cannot keep it synchronized. */
-  selectedItemIds?: Array<AnySidebarItem['_id']>
-  /** Legacy flag only; predicates should derive multi-selection from selectedItems/selectedItemIds. */
+  /**
+   * @deprecated Derive multi-selection from selectedItems instead.
+   */
   isMultiSelection?: boolean
   currentUserId?: string
   memberRole?: CampaignMemberRole

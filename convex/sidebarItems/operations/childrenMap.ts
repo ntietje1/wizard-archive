@@ -19,8 +19,7 @@ export async function collectSidebarChildrenMap<T extends SidebarChildMapItem>({
   const pending = rootFolderIds.map((folderId) => ({ folderId, depth: 0 }))
 
   while (pending.length > 0) {
-    const next = pending.shift()
-    if (!next) break
+    const next = pending.shift()!
     if (childrenMap.has(next.folderId)) continue
     if (next.depth >= maxDepth) onDepthExceeded()
 

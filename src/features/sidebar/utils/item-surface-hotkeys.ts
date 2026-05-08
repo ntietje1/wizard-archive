@@ -6,7 +6,7 @@ export function isEditableHotkeyTarget(target: EventTarget | null): boolean {
     return true
   }
 
-  return target.isContentEditable === true
+  return target.isContentEditable
 }
 
 export function isModifierShortcut(event: KeyboardEvent, key: string): boolean {

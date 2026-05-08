@@ -591,7 +591,9 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       if (items.length === 0) return
       try {
         const movedIds = await itemOperations.restoreItems(items)
-        if (movedIds.length > 0) {
+        if (movedIds.length === 0) {
+          toast.info('No items restored')
+        } else {
           toast.success(
             movedIds.length === 1 ? 'Item restored' : `${movedIds.length} items restored`,
           )
@@ -634,7 +636,9 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
           new Error(`${failures.length} of ${items.length} bookmark updates failed`),
           items.length === 1 ? 'Failed to toggle bookmark' : 'Failed to toggle bookmarks',
         )
+        return
       }
+      toast.success(items.length === 1 ? 'Bookmark updated' : 'Bookmarks updated')
     },
 
     copy: (ctx: MenuContext) => {

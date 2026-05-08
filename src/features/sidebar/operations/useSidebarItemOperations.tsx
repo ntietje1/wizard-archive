@@ -9,7 +9,7 @@ import { planDuplicateOperations, planMoveOperations } from 'convex/sidebarItems
 import { normalizeTopLevelSelectedItems } from 'convex/sidebarItems/operations/selection'
 import { ItemOperationConflictDialog } from './item-operation-conflict-dialog'
 import { toDecisionArray } from './operation-decisions'
-import { getPasteTargetParentId } from './operation-targets'
+import { getPasteTargetParentId, getRestoreTargetParentId } from './operation-targets'
 import {
   applyOptimisticDuplicateOperationsToSnapshot,
   applyOptimisticPermanentDeleteItemsToSnapshot,
@@ -24,7 +24,7 @@ import type {
   MoveOperation,
 } from 'convex/sidebarItems/operations/types'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { PermanentDeleteConfirmDialog } from '~/features/context-menu/hooks/trash-utils'
+import { PermanentDeleteConfirmDialog } from '~/features/context-menu/components/dialogs/trash-confirm-dialogs'
 import { useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useSidebarItemsCache } from '~/features/sidebar/hooks/useSidebarItemsCache'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
@@ -115,11 +115,6 @@ export function useSidebarItemOperationsValue() {
     allItemsMap,
   )
 
-  const restoreCacheSnapshot = (snapshot: SidebarCacheSnapshot) => {
-    cache.update(SIDEBAR_ITEM_LOCATION.sidebar, () => snapshot.sidebar)
-    cache.update(SIDEBAR_ITEM_LOCATION.trash, () => snapshot.trash)
-  }
-
   const applyCacheSnapshot = (snapshot: SidebarCacheSnapshot) => {
     cache.update(SIDEBAR_ITEM_LOCATION.sidebar, () => snapshot.sidebar)
     cache.update(SIDEBAR_ITEM_LOCATION.trash, () => snapshot.trash)
@@ -179,7 +174,7 @@ export function useSidebarItemOperationsValue() {
       }
       return createdIds
     } catch (error) {
-      restoreCacheSnapshot(snapshot)
+      applyCacheSnapshot(snapshot)
       throw error
     }
   }
@@ -202,7 +197,7 @@ export function useSidebarItemOperationsValue() {
       })
       return movedIds
     } catch (error) {
-      restoreCacheSnapshot(snapshot)
+      applyCacheSnapshot(snapshot)
       throw error
     }
   }
@@ -305,6 +300,10 @@ export function useSidebarItemOperationsValue() {
   ) => {
     items = normalizeItems(items)
     if (!campaignId || items.length === 0) return []
+    targetParentId =
+      action === 'restore'
+        ? getRestoreTargetParentId(activeItemSurface, allItemsMap, targetParentId)
+        : targetParentId
     const targetItems = parentItemsMap.get(targetParentId) ?? []
     const plan = planMoveOperations({
       items,
@@ -352,7 +351,7 @@ export function useSidebarItemOperationsValue() {
       }
       return movedIds
     } catch (error) {
-      restoreCacheSnapshot(snapshot)
+      applyCacheSnapshot(snapshot)
       handleError(error, 'Failed to move items to trash')
       return []
     }
@@ -372,14 +371,14 @@ export function useSidebarItemOperationsValue() {
             ? 'Item permanently deleted'
             : `${deletedIds.length} items permanently deleted`,
         )
-      }
-      const currentSlug = getSelectedSlug()
-      if (items.some((item) => item.slug === currentSlug)) {
-        await clearEditorContent()
+        const currentSlug = getSelectedSlug()
+        if (items.some((item) => item.slug === currentSlug)) {
+          await clearEditorContent()
+        }
       }
       return deletedIds
     } catch (error) {
-      restoreCacheSnapshot(snapshot)
+      applyCacheSnapshot(snapshot)
       handleError(error, items.length === 1 ? 'Failed to delete item' : 'Failed to delete items')
       return []
     }

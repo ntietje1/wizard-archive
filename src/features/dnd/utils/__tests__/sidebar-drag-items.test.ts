@@ -60,4 +60,50 @@ describe('resolveNormalizedDraggedSidebarItems', () => {
 
     expect(items).toEqual([child])
   })
+
+  it('returns an empty result when every dragged id is excluded', () => {
+    const folder = createFolder()
+    const child = createNote({ parentId: folder._id })
+
+    const items = resolveNormalizedDraggedSidebarItems({
+      sourceData: { sidebarItemIds: [folder._id, child._id] },
+      activeItemsMap: itemMap([folder, child]),
+      excludeItemIds: [folder._id, child._id],
+    })
+
+    expect(items).toEqual([])
+  })
+
+  it('normalizes multiple nesting levels after exclusions', () => {
+    const grandparent = createFolder({ name: 'Grandparent' })
+    const parent = createFolder({ name: 'Parent', parentId: grandparent._id })
+    const child = createNote({ name: 'Child', parentId: parent._id })
+
+    const items = resolveNormalizedDraggedSidebarItems({
+      sourceData: { sidebarItemIds: [grandparent._id, parent._id, child._id] },
+      activeItemsMap: itemMap([grandparent, parent, child]),
+      excludeItemIds: [grandparent._id],
+    })
+
+    expect(items).toEqual([parent])
+  })
+
+  it('handles empty and missing ids without throwing', () => {
+    const note = createNote()
+    const missing = 'missing-item' as Id<'sidebarItems'>
+
+    expect(
+      resolveNormalizedDraggedSidebarItems({
+        sourceData: { sidebarItemIds: [] },
+        activeItemsMap: itemMap([note]),
+      }),
+    ).toEqual([])
+    expect(
+      resolveNormalizedDraggedSidebarItems({
+        sourceData: { sidebarItemIds: [missing, note._id] },
+        activeItemsMap: itemMap([note]),
+        excludeItemIds: [missing],
+      }),
+    ).toEqual([note])
+  })
 })

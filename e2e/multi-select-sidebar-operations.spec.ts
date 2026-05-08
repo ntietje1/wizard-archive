@@ -15,9 +15,12 @@ const selectedMoveNoteA = `Selected Move Note A ${Date.now()}`
 const selectedMoveNoteB = `Selected Move Note B ${Date.now()}`
 
 function sidebarSelectionRow(sidebar: Locator, itemName: string) {
-  return sidebar
-    .getByRole('link', { name: itemName, exact: true })
-    .locator('xpath=ancestor::*[@aria-selected][1]')
+  return (
+    sidebar
+      .getByRole('link', { name: itemName, exact: true })
+      // This XPath reaches the selectable row wrapper; revisit if the sidebar DOM is flattened.
+      .locator('xpath=ancestor::*[@aria-selected][1]')
+  )
 }
 
 test.describe.serial('sidebar and folder multi-select item operations', () => {
@@ -154,15 +157,15 @@ test.describe.serial('sidebar and folder multi-select item operations', () => {
       'true',
     )
 
-    await page.waitForTimeout(2500)
-
     await expect(sidebarSelectionRow(sidebar, selectedMoveNoteA)).toHaveAttribute(
       'aria-selected',
       'true',
+      { timeout: 0 },
     )
     await expect(sidebarSelectionRow(sidebar, selectedMoveNoteB)).toHaveAttribute(
       'aria-selected',
       'true',
+      { timeout: 0 },
     )
   })
 })

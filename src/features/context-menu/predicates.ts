@@ -5,30 +5,32 @@ import type { Predicate, ViewContext } from './types'
 import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 
+type PredicateContext = Parameters<Predicate>[0]
+
 export const always: Predicate = () => true
 export const never: Predicate = () => false
 
 export const isSidebarItem: Predicate = (ctx) => ctx.item !== undefined
 
 export const isSingleSelection: Predicate = (ctx) =>
-  (ctx.selectedItems?.length ?? ctx.selectedItemIds?.length ?? (ctx.item ? 1 : 0)) <= 1
+  (ctx.selectedItems?.length ?? (ctx.item ? 1 : 0)) <= 1
 
 // selectedItems is authoritative when present, even if empty; item is the single-item fallback.
 export const hasSelection: Predicate = (ctx) =>
   (ctx.selectedItems?.length ?? (ctx.item ? 1 : 0)) > 0
 
-function selectedItems(ctx: Parameters<Predicate>[0]) {
+function selectedItems(ctx: PredicateContext) {
   return ctx.selectedItems ?? (ctx.item ? [ctx.item] : [])
 }
 
-function selectedItemHasFullAccess(ctx: Parameters<Predicate>[0], itemIndex: number): boolean {
+function selectedItemHasFullAccess(ctx: PredicateContext, itemIndex: number): boolean {
   if (ctx.selectedItems !== undefined) {
     return ctx.selectedItems[itemIndex]?.myPermissionLevel === PERMISSION_LEVEL.FULL_ACCESS
   }
   return hasFullAccess(ctx)
 }
 
-function selectedItemHasEditAccess(ctx: Parameters<Predicate>[0], itemIndex: number): boolean {
+function selectedItemHasEditAccess(ctx: PredicateContext, itemIndex: number): boolean {
   if (ctx.selectedItems !== undefined) {
     const permissionLevel = ctx.selectedItems[itemIndex]?.myPermissionLevel
     return (
@@ -38,7 +40,7 @@ function selectedItemHasEditAccess(ctx: Parameters<Predicate>[0], itemIndex: num
   return hasEditAccess(ctx)
 }
 
-function selectedItemIsTrashed(ctx: Parameters<Predicate>[0], itemIndex: number): boolean {
+function selectedItemIsTrashed(ctx: PredicateContext, itemIndex: number): boolean {
   if (ctx.selectedItems !== undefined) {
     return ctx.selectedItems[itemIndex]?.location === SIDEBAR_ITEM_LOCATION.trash
   }

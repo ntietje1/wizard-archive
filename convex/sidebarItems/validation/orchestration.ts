@@ -98,7 +98,6 @@ export async function validateSidebarParentChange(
     evaluateMoveToParent({ role: ctx.membership.role }, item, {
       parentId: newParentId,
       parent,
-      siblings: [],
     }),
   )
 }

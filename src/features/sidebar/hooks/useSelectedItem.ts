@@ -28,19 +28,16 @@ export function useSelectedItemSync() {
 }
 
 export function useIsSelectedItem(item: AnySidebarItem): boolean {
-  const itemSlug = item.slug
-  const itemId = item._id
   return useSidebarUIStore((s) => {
     const selectedItemIds = Array.isArray(s.selectedItemIds) ? s.selectedItemIds : []
     return selectedItemIds.length > 0
-      ? selectedItemIds.includes(itemId)
-      : s.selectedSlug === itemSlug
+      ? selectedItemIds.includes(item._id)
+      : s.selectedSlug === item.slug
   })
 }
 
 export function useIsFocusedItem(item: AnySidebarItem): boolean {
-  const itemId = item._id
-  return useSidebarUIStore((s) => s.focusedItemId === itemId)
+  return useSidebarUIStore((s) => s.focusedItemId === item._id)
 }
 
 export function getSelectedSlug(): SidebarItemSlug | null {

@@ -8,7 +8,6 @@ export type SidebarCacheSnapshot = {
   trash: Array<AnySidebarItem>
 }
 
-type MutableSidebarCacheSnapshot = SidebarCacheSnapshot
 type MoveItemOrReplaceOperation = Extract<MoveOperation, { action: 'move' | 'replace' }>
 
 function getDescendantIds(folderId: Id<'sidebarItems'>, items: Array<AnySidebarItem>) {
@@ -49,6 +48,7 @@ function trashItemTreeInSnapshot(
         parentId: candidate._id === item._id ? null : candidate.parentId,
         location: SIDEBAR_ITEM_LOCATION.trash,
         deletionTime: now,
+        deletedBy: null,
       })),
       ...trash,
     ] as Array<AnySidebarItem>,
@@ -56,7 +56,7 @@ function trashItemTreeInSnapshot(
 }
 
 function trashItemTreeInState(
-  state: MutableSidebarCacheSnapshot,
+  state: SidebarCacheSnapshot,
   itemId: Id<'sidebarItems'>,
   now: number,
 ) {
@@ -66,7 +66,7 @@ function trashItemTreeInState(
 }
 
 function restoreItemTreeInState(
-  state: MutableSidebarCacheSnapshot,
+  state: SidebarCacheSnapshot,
   source: AnySidebarItem,
   operation: MoveItemOrReplaceOperation,
 ) {
@@ -94,7 +94,7 @@ function restoreItemTreeInState(
 }
 
 function moveSidebarItemInState(
-  state: MutableSidebarCacheSnapshot,
+  state: SidebarCacheSnapshot,
   source: AnySidebarItem,
   operation: MoveItemOrReplaceOperation,
 ) {
@@ -110,13 +110,13 @@ function moveSidebarItemInState(
 }
 
 function findSnapshotItem(state: SidebarCacheSnapshot, itemId: Id<'sidebarItems'>) {
-  const sourceInSidebar = new Map(state.sidebar.map((item) => [item._id, item])).get(itemId)
-  const sourceInTrash = new Map(state.trash.map((item) => [item._id, item])).get(itemId)
+  const sourceInSidebar = state.sidebar.find((item) => item._id === itemId)
+  const sourceInTrash = state.trash.find((item) => item._id === itemId)
   return { source: sourceInSidebar ?? sourceInTrash, sourceInTrash }
 }
 
 function applyOptimisticMoveOperation(
-  state: MutableSidebarCacheSnapshot,
+  state: SidebarCacheSnapshot,
   operation: MoveOperation,
   now: number,
 ) {
@@ -216,12 +216,13 @@ export function applyOptimisticDuplicateOperationsToSnapshot(
   }
 
   const cloneTree = (source: AnySidebarItem, parentId: Id<'sidebarItems'> | null, name: string) => {
-    const tempId = `optimistic-${source._id}-${now}-${tempIndex++}` as Id<'sidebarItems'>
+    const index = tempIndex++
+    const tempId = `optimistic-${source._id}-${now}-${index}` as Id<'sidebarItems'>
     const clone = {
       ...source,
       _id: tempId,
       name,
-      slug: `${source.slug}-optimistic-${tempIndex}` as AnySidebarItem['slug'],
+      slug: `${source.slug}-optimistic-${index}` as AnySidebarItem['slug'],
       parentId,
       location: SIDEBAR_ITEM_LOCATION.sidebar,
       deletionTime: null,

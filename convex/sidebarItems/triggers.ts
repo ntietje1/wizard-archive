@@ -47,8 +47,11 @@ async function isPreviewStorageUsedByAnotherItem(
   storageId: Id<'_storage'>,
   sidebarItemId: Id<'sidebarItems'>,
 ) {
-  const items = await db.query('sidebarItems').collect()
-  return items.some((item) => item._id !== sidebarItemId && item.previewStorageId === storageId)
+  const items = await db
+    .query('sidebarItems')
+    .withIndex('by_previewStorageId', (q) => q.eq('previewStorageId', storageId))
+    .collect()
+  return items.some((item) => item._id !== sidebarItemId)
 }
 
 async function cascadeSharedDependents(

@@ -12,14 +12,15 @@ import { normalizeTopLevelSelectedItems } from '../operations/selection'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 import type { PermissionLevel } from '../../permissions/types'
-import type { AnySidebarItem, AnySidebarItemRow } from '../types/types'
+import type { AnySidebarItemRow } from '../types/types'
 
 const MAX_PERMANENT_DELETE_DEPTH = 50
+type PermanentDeleteSource = AnySidebarItemRow & { myPermissionLevel: PermissionLevel }
 
 async function loadPermanentDeleteSource(
   ctx: CampaignMutationCtx,
   itemId: Id<'sidebarItems'>,
-): Promise<AnySidebarItem> {
+): Promise<PermanentDeleteSource> {
   const rawItem = await getSidebarItem(ctx, itemId)
   if (!rawItem) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
@@ -55,9 +56,9 @@ async function loadPermanentDeleteSource(
       )
     }
   }
-  const item = { ...rawItem, myPermissionLevel: permissionLevel }
+  const item: PermanentDeleteSource = { ...rawItem, myPermissionLevel: permissionLevel }
   assertSidebarOperationAllowed(evaluatePermanentDelete({ role: membership.role }, item))
-  return item as AnySidebarItem
+  return item
 }
 
 async function getTrashChildren(
@@ -77,10 +78,10 @@ async function getTrashChildren(
 
 async function normalizePermanentDeleteRoots(
   ctx: CampaignMutationCtx,
-  sourceItems: Array<AnySidebarItem>,
-) {
+  sourceItems: Array<PermanentDeleteSource>,
+): Promise<Array<PermanentDeleteSource>> {
   const folders = sourceItems.filter((item) => item.type === SIDEBAR_ITEM_TYPES.folders)
-  const childrenMap = await collectSidebarChildrenMap({
+  const childrenMap = await collectSidebarChildrenMap<AnySidebarItemRow>({
     rootFolderIds: folders.map((folder) => folder._id),
     maxDepth: MAX_PERMANENT_DELETE_DEPTH,
     getChildren: async (parentId) => await getTrashChildren(ctx, parentId),
@@ -88,7 +89,7 @@ async function normalizePermanentDeleteRoots(
       throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Max permanent delete planning depth exceeded')
     },
   })
-  const allItems = new Map<Id<'sidebarItems'>, Pick<AnySidebarItem, '_id' | 'parentId'>>()
+  const allItems = new Map<Id<'sidebarItems'>, Pick<AnySidebarItemRow, '_id' | 'parentId'>>()
 
   for (const sourceItem of sourceItems) {
     allItems.set(sourceItem._id, sourceItem)

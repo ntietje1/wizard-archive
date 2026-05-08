@@ -86,6 +86,14 @@ function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
     }
   }
 
+  const handlePermanentDelete = () => {
+    try {
+      itemOperations.confirmPermanentDeleteItems([item])
+    } catch (error) {
+      handleError(error, 'Failed to delete item')
+    }
+  }
+
   return (
     <>
       {isDeleted && (
@@ -99,10 +107,7 @@ function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
                   <RotateCcw className="size-3 mr-0.5" />
                   Restore
                 </BannerButton>
-                <BannerButton
-                  variant="destructive"
-                  onClick={() => itemOperations.confirmPermanentDeleteItems([item])}
-                >
+                <BannerButton variant="destructive" onClick={handlePermanentDelete}>
                   <Trash2 className="size-3 mr-0.5" />
                   Delete from Trash
                 </BannerButton>

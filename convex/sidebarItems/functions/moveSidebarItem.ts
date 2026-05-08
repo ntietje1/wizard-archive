@@ -34,6 +34,7 @@ import type { MoveOperation } from '../operations/types'
 const clearDeletion = { deletionTime: null, deletedBy: null }
 
 type MoveMergeFolderOperation = Extract<MoveOperation, { action: 'mergeFolder' }>
+type ExecutableMoveOperation = Exclude<MoveOperation, { action: 'skip' }>
 export type MoveSidebarItemsAction = 'move' | 'restore' | 'trash'
 
 export const MOVE_OPERATION_ACTION = {
@@ -109,7 +110,7 @@ async function loadMovableSource(ctx: CampaignMutationCtx, itemId: Id<'sidebarIt
   })
 }
 
-function validateSingleMoveIntent({
+function validateMoveIntentAgainstTrash({
   isRelocating,
   isTrashing,
   isRestoring,
@@ -119,7 +120,10 @@ function validateSingleMoveIntent({
   isRestoring: boolean
 }) {
   if (isRelocating && !isTrashing && !isRestoring) {
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'This move is not supported')
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      'Unsupported move: items can only move between parents, into trash, or out of trash',
+    )
   }
 }
 
@@ -138,6 +142,20 @@ async function executeTrash(ctx: CampaignMutationCtx, item: AnySidebarItem) {
   })
 }
 
+async function resolveRestoreTargetParentId(
+  ctx: CampaignMutationCtx,
+  parentId: Id<'sidebarItems'> | null | undefined,
+): Promise<Id<'sidebarItems'> | null> {
+  if (!parentId) return null
+
+  const parent = await getSidebarItem(ctx, parentId)
+  if (!parent) {
+    throwClientError(ERROR_CODE.NOT_FOUND, 'Parent not found')
+  }
+
+  return parent.location === SIDEBAR_ITEM_LOCATION.trash ? null : parentId
+}
+
 async function executeRestore(
   ctx: CampaignMutationCtx,
   {
@@ -152,7 +170,7 @@ async function executeRestore(
     name?: string
   },
 ) {
-  const restoreParentId = parentId ?? null
+  const restoreParentId = await resolveRestoreTargetParentId(ctx, parentId)
   const requestedName = name ? assertSidebarItemName(name) : null
   const restoreParent =
     restoreParentId === null
@@ -165,7 +183,6 @@ async function executeRestore(
     evaluateRestore({ role: ctx.membership.role }, item, {
       parentId: restoreParentId,
       parent: restoreParent,
-      siblings: [],
     }),
   )
 
@@ -291,7 +308,7 @@ export async function moveSidebarItem(
   const isRestoring = isRelocating && item.location === SIDEBAR_ITEM_LOCATION.trash
   const isMoving = parentId !== undefined
 
-  validateSingleMoveIntent({ isRelocating, isTrashing, isRestoring })
+  validateMoveIntentAgainstTrash({ isRelocating, isTrashing, isRestoring })
 
   if (isTrashing) {
     await executeTrash(ctx, item)
@@ -369,10 +386,8 @@ async function executeMoveOperations(
 
 async function executeMoveOperation(
   ctx: CampaignMutationCtx,
-  operation: MoveOperation,
+  operation: ExecutableMoveOperation,
 ): Promise<Id<'sidebarItems'> | null> {
-  if (operation.action === MOVE_OPERATION_ACTION.skip) return null
-
   const source = await loadMovableSource(ctx, operation.sourceItemId)
 
   if (operation.action === MOVE_OPERATION_ACTION.mergeFolder) {
@@ -418,6 +433,7 @@ async function executeMergeFolderMove(
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Destination folder not found')
   }
 
+  // Merge-folder plans move children before this operation; the source can be trashed only once empty.
   const remainingChildren = await getSidebarItemsByParent(ctx, { parentId: source._id })
   if (remainingChildren.length === 0) {
     await executeTrash(ctx, source)
@@ -521,14 +537,16 @@ export async function moveSidebarItems(
     assertRestoreActionSources(sourceItems)
   }
 
-  const targetItems = await getSidebarItemsByParent(ctx, { parentId: targetParentId })
+  const effectiveTargetParentId =
+    action === 'restore' ? await resolveRestoreTargetParentId(ctx, targetParentId) : targetParentId
+  const targetItems = await getSidebarItemsByParent(ctx, { parentId: effectiveTargetParentId })
   const folders = [...sourceItems, ...targetItems].filter(
     (item) => item.type === SIDEBAR_ITEM_TYPES.folders,
   )
   const childrenMap = await collectMoveChildrenMap(ctx, folders)
   const plan = planMoveOperations({
     items: sourceItems,
-    targetParentId,
+    targetParentId: effectiveTargetParentId,
     targetItems,
     decisions: toDecisionRecord(decisions),
     getChildren: (parentId) => childrenMap.get(parentId) ?? [],
