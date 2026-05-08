@@ -81,7 +81,7 @@ function CampaignForm({ mode, onClose, campaign, campaigns }: Omit<CampaignDialo
           await createCampaign.mutateAsync({
             name: value.name.trim(),
             description: value.description.trim(),
-            slug: value.slug,
+            slug: value.slug.trim(),
           })
 
           toast.success('Campaign created successfully')
@@ -91,7 +91,7 @@ function CampaignForm({ mode, onClose, campaign, campaigns }: Omit<CampaignDialo
             campaignId: campaign._id,
             name: value.name.trim(),
             description: value.description.trim() || undefined,
-            slug: value.slug,
+            slug: value.slug.trim(),
           })
 
           toast.success('Campaign updated successfully')

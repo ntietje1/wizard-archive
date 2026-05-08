@@ -130,6 +130,10 @@ describe('validateItemSlug', () => {
     expect(validateItemSlug('').valid).toBe(false)
   })
 
+  it('rejects slugs shorter than 3 characters', () => {
+    expect(validateItemSlug('ab').valid).toBe(false)
+  })
+
   it('rejects uppercase letters', () => {
     expect(validateItemSlug('My-Note').valid).toBe(false)
   })
@@ -147,13 +151,13 @@ describe('validateItemSlug', () => {
     expect(validateItemSlug('note-').valid).toBe(false)
   })
 
-  it('accepts exactly 255 characters', () => {
-    const slug = 'a'.repeat(255)
+  it('accepts exactly 30 characters', () => {
+    const slug = 'a'.repeat(30)
     expect(validateItemSlug(slug)).toEqual({ valid: true })
   })
 
-  it('rejects 256 characters', () => {
-    const slug = 'a'.repeat(256)
+  it('rejects 31 characters', () => {
+    const slug = 'a'.repeat(31)
     expect(validateItemSlug(slug).valid).toBe(false)
   })
 })
@@ -527,7 +531,7 @@ describe('cross-table slug uniqueness', () => {
         campaignId: ctx.campaignId,
         slug: 'bad slug',
       }),
-    ).rejects.toThrow('Slug can only contain lowercase letters, numbers, and single hyphens')
+    ).rejects.toThrow('Slug cannot contain spaces')
   })
 
   it('rejects create requests whose names cannot produce a valid slug', async () => {
@@ -566,8 +570,8 @@ describe('cross-table slug uniqueness', () => {
 
     expect(validateItemSlug(first.slug)).toEqual({ valid: true })
     expect(validateItemSlug(second.slug)).toEqual({ valid: true })
-    expect(first.slug.length).toBeLessThanOrEqual(255)
-    expect(second.slug.length).toBeLessThanOrEqual(255)
+    expect(first.slug.length).toBeLessThanOrEqual(30)
+    expect(second.slug.length).toBeLessThanOrEqual(30)
   })
 
   it('rejects invalid note colors at the mutation boundary', async () => {

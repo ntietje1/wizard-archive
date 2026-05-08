@@ -11,7 +11,11 @@ import type { AnySidebarItem } from '../types/types'
 import { requireItemAccess } from './access'
 import { assertSidebarItemName, checkNameConflict } from './name'
 import { validateNoCircularParentAsync } from './parent'
-import { assertSidebarItemSlug, validateSidebarItemSlug } from './slug'
+import {
+  SIDEBAR_ITEM_SLUG_MAX_LENGTH,
+  assertSidebarItemSlug,
+  validateSidebarItemSlug,
+} from './slug'
 import type { SidebarItemName, ValidationResult } from './name'
 import type { SidebarItemSlug } from './slug'
 
@@ -169,6 +173,7 @@ export async function findUniqueSidebarItemSlug(
           excludeId: itemId,
         }),
       {
+        maxLength: SIDEBAR_ITEM_SLUG_MAX_LENGTH,
         isValidCandidate: (candidate) => validateSidebarItemSlug(candidate) === null,
       },
     )

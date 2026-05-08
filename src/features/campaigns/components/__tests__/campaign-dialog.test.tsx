@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { UseMutationResult } from '@tanstack/react-query'
+import type { api } from 'convex/_generated/api'
 import type { Campaign } from 'convex/campaigns/types'
+import type { FunctionArgs, FunctionReturnType } from 'convex/server'
 import { CampaignDialog } from '~/features/campaigns/components/campaign-dialog'
 import { createCampaign } from '~/test/factories/campaign-factory'
 import { createUser } from '~/test/factories/user-factory'
@@ -10,6 +12,9 @@ import { mockAppMutation, mockAuthQuery } from '~/test/mocks/convex-mocks'
 import { TestWrapper } from '~/test/test-wrapper'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+
+type CreateCampaignInput = FunctionArgs<typeof api.campaigns.mutations.createCampaign>
+type CreateCampaignResult = FunctionReturnType<typeof api.campaigns.mutations.createCampaign>
 
 const mutateAsync = vi.fn()
 
@@ -30,9 +35,9 @@ beforeEach(() => {
 function renderCampaignDialog(campaigns: Array<Campaign> = []) {
   vi.mocked(useAuthQuery).mockReturnValue(mockAuthQuery(createUser({ username: 'dm-user' })))
   vi.mocked(useAppMutation).mockReturnValue(
-    mockAppMutation({
+    mockAppMutation<CreateCampaignResult, CreateCampaignInput>({
       mutateAsync,
-    }) as UseMutationResult<unknown, Error, unknown>,
+    }) as UseMutationResult<CreateCampaignResult, Error, CreateCampaignInput>,
   )
 
   return render(
@@ -53,10 +58,20 @@ describe('CampaignDialog', () => {
 
     expect(input).toHaveValue('my-campaign')
     expect(
-      screen.queryByText(
-        'Campaign link can only contain lowercase letters, numbers, and single hyphens',
-      ),
+      screen.queryByText('Campaign link can only contain single hyphens'),
     ).not.toBeInTheDocument()
+  })
+
+  it('shows validation error for consecutive hyphens', async () => {
+    const user = userEvent.setup()
+    renderCampaignDialog()
+
+    const input = screen.getByLabelText(/custom link/i)
+    await user.clear(input)
+    await user.type(input, 'my--campaign')
+    await user.tab()
+
+    expect(screen.getByText('Campaign link can only contain single hyphens')).toBeInTheDocument()
   })
 
   it('keeps invalid slug characters visible and shows validation feedback', async () => {
@@ -95,6 +110,18 @@ describe('CampaignDialog', () => {
     const input = screen.getByLabelText(/custom link/i)
     await user.clear(input)
     await user.type(input, 'my-campaign-')
+    await user.tab()
+
+    expect(screen.getByText('Campaign link cannot start or end with a hyphen')).toBeInTheDocument()
+  })
+
+  it('explains leading hyphen slug errors after validation runs', async () => {
+    const user = userEvent.setup()
+    renderCampaignDialog()
+
+    const input = screen.getByLabelText(/custom link/i)
+    await user.clear(input)
+    await user.type(input, '-my-campaign')
     await user.tab()
 
     expect(screen.getByText('Campaign link cannot start or end with a hyphen')).toBeInTheDocument()

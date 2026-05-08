@@ -2,7 +2,6 @@ import type { BrandedString } from '../../common/slug'
 import { parseOrThrowClientValidation } from '../../common/zod'
 import { z } from 'zod'
 import { slugify } from '../../common/slug'
-import { parseSidebarItemSlug } from './slug'
 import type { Id } from '../../_generated/dataModel'
 
 export const SIDEBAR_ITEM_NAME_MAX_LENGTH = 255
@@ -45,10 +44,7 @@ export const sidebarItemNameValueSchema = z
     (value) => !value.startsWith('.') && !value.endsWith('.'),
     'Name cannot start or end with a dot',
   )
-  .refine(
-    (value) => parseSidebarItemSlug(slugify(value)) !== null,
-    'Name must contain at least one letter or number',
-  )
+  .refine((value) => slugify(value).length > 0, 'Name must contain at least one letter or number')
 
 export const sidebarItemNameSchema = sidebarItemNameValueSchema.transform(
   (value) => value as SidebarItemName,

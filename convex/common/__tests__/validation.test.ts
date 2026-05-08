@@ -225,8 +225,39 @@ describe('entity-specific slug parsing', () => {
     expect(parseSidebarItemSlug('lore-index')).toBe('lore-index')
   })
 
+  it('parses sidebar item slugs at the exact length boundaries', () => {
+    expect(parseSidebarItemSlug('abc')).toBe('abc')
+    expect(parseSidebarItemSlug('a'.repeat(30))).toBe('a'.repeat(30))
+  })
+
+  it('rejects sidebar item slugs that are too short', () => {
+    expect(parseSidebarItemSlug('ab')).toBeNull()
+    expect(validateSidebarItemSlug('ab')).toContain('at least 3')
+  })
+
+  it('rejects sidebar item slugs that are too long', () => {
+    expect(parseSidebarItemSlug('a'.repeat(31))).toBeNull()
+    expect(validateSidebarItemSlug('a'.repeat(31))).toContain('at most 30')
+  })
+
   it('rejects sidebar item slugs with uppercase letters', () => {
+    expect(parseSidebarItemSlug('Lore-Index')).toBeNull()
     expect(validateSidebarItemSlug('Lore-Index')).toContain('cannot contain uppercase letters')
+  })
+
+  it('rejects sidebar item slugs with spaces', () => {
+    expect(parseSidebarItemSlug('lore index')).toBeNull()
+    expect(validateSidebarItemSlug('lore index')).toContain('cannot contain spaces')
+  })
+
+  it('rejects sidebar item slugs with underscores', () => {
+    expect(parseSidebarItemSlug('lore_index')).toBeNull()
+    expect(validateSidebarItemSlug('lore_index')).toContain('cannot contain underscores')
+  })
+
+  it('rejects sidebar item slugs with special characters', () => {
+    expect(parseSidebarItemSlug('lore!')).toBeNull()
+    expect(validateSidebarItemSlug('lore!')).toContain('cannot contain special characters')
   })
 
   it('rejects sidebar item slugs with double hyphens', () => {
