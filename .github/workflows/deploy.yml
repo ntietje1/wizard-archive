@@ -42,7 +42,16 @@ jobs:
           convex_env_file="$(mktemp "${RUNNER_TEMP}/convex-env.XXXXXX")"
           trap 'rm -f "$worker_env_file" "$candidate_worker_env_file" "$convex_env_file"' EXIT
 
-          for var_name in GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET; do
+          for var_name in \
+            CONVEX_DEPLOY_KEY \
+            CLOUDFLARE_API_TOKEN \
+            VITE_CONVEX_URL \
+            VITE_CONVEX_SITE_URL \
+            VITE_SITE_URL \
+            BETTER_AUTH_SECRET \
+            GOOGLE_CLIENT_ID \
+            GOOGLE_CLIENT_SECRET \
+            RESEND_API_KEY; do
             if [[ -z "${!var_name:-}" ]]; then
               echo "Missing required environment variable: ${var_name}" >&2
               exit 1
@@ -97,6 +106,8 @@ jobs:
             --secrets-file "$worker_env_file" \
             --tag "$release_sha" \
             --message "$release_message"
+
+          VITE_SITE_URL="$candidate_site_url" vp build --mode production
 
           vp exec wrangler deploy \
             --config dist/server/wrangler.json \

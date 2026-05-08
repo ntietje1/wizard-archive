@@ -3,27 +3,39 @@ import { ERROR_CODE, isClientError } from 'convex/errors'
 import { getConvexAuthProxyTarget } from './auth-proxy'
 import type { ConvexAuthProxyTarget } from './auth-proxy'
 
-const convexUrl = import.meta.env.VITE_CONVEX_URL
-const convexSiteUrl = import.meta.env.VITE_CONVEX_SITE_URL
+type AuthServer = ReturnType<typeof convexBetterAuthReactStart>
 
-if (!convexUrl || !convexSiteUrl) {
-  throw new Error(
-    'Missing required environment variables: VITE_CONVEX_URL and VITE_CONVEX_SITE_URL',
-  )
+let auth: AuthServer | null = null
+
+function getRequiredAuthEnv() {
+  const convexUrl = import.meta.env.VITE_CONVEX_URL
+  const convexSiteUrl = import.meta.env.VITE_CONVEX_SITE_URL
+
+  if (!convexUrl || !convexSiteUrl) {
+    throw new Error(
+      'Missing required environment variables: VITE_CONVEX_URL and VITE_CONVEX_SITE_URL',
+    )
+  }
+
+  return { convexUrl, convexSiteUrl }
 }
 
-const auth = convexBetterAuthReactStart({
-  convexUrl,
-  convexSiteUrl,
-  jwtCache: {
-    enabled: true,
-    expirationToleranceSeconds: 60,
-    isAuthError: (error) => isClientError(error, ERROR_CODE.NOT_AUTHENTICATED),
-  },
-})
+function getAuth() {
+  auth ??= convexBetterAuthReactStart({
+    ...getRequiredAuthEnv(),
+    jwtCache: {
+      enabled: true,
+      expirationToleranceSeconds: 60,
+      isAuthError: (error) => isClientError(error, ERROR_CODE.NOT_AUTHENTICATED),
+    },
+  })
+
+  return auth
+}
 
 export const handler = async (request: Request) => {
   try {
+    const { convexSiteUrl } = getRequiredAuthEnv()
     const target: ConvexAuthProxyTarget = getConvexAuthProxyTarget(request, convexSiteUrl)
     const init = {
       method: request.method,
@@ -45,4 +57,6 @@ export const handler = async (request: Request) => {
   }
 }
 
-export const { getToken, fetchAuthQuery, fetchAuthMutation, fetchAuthAction } = auth
+export const getToken: AuthServer['getToken'] = async () => {
+  return await getAuth().getToken()
+}
