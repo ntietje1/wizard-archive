@@ -3,7 +3,7 @@ import { toast } from 'sonner'
 import { useConvex } from '@convex-dev/react-query'
 import JSZip from 'jszip'
 import { api } from 'convex/_generated/api'
-import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import type { MenuDialogState } from './menu-dialogs'
 import type { PermissionLevel } from 'convex/permissions/types'
@@ -14,12 +14,10 @@ import type { Folder } from 'convex/folders/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { handleError, logger } from '~/shared/utils/logger'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
-import { getSelectedSlug } from '~/features/sidebar/hooks/useSelectedItem'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
 import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
-import { useDeleteSidebarItem } from '~/features/sidebar/hooks/useDeleteSidebarItem'
-import { useMoveSidebarItem } from '~/features/sidebar/hooks/useMoveSidebarItem'
+import { useEmptyTrashBin } from '~/features/sidebar/hooks/useEmptyTrashBin'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
@@ -49,8 +47,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
   const { openParentFolders } = useOpenParentFolders()
   const { createItem } = useCreateSidebarItem()
-  const { moveItem } = useMoveSidebarItem()
-  const { permanentlyDeleteItem, emptyTrashBin } = useDeleteSidebarItem()
+  const { emptyTrashBin } = useEmptyTrashBin()
   const { getDefaultName } = useSidebarValidation()
   const { campaignId } = useCampaign()
   const convex = useConvex()
@@ -96,30 +93,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
 
       // Everything else (including empty folders): trash immediately
       try {
-        const results = await Promise.allSettled(
-          items.map((selectedItem) =>
-            moveItem(selectedItem, { location: SIDEBAR_ITEM_LOCATION.trash }),
-          ),
-        )
-        const movedItems = items.filter((_, index) => results[index]?.status === 'fulfilled')
-        const currentSlug = getSelectedSlug()
-        if (movedItems.some((selectedItem) => selectedItem.slug === currentSlug)) {
-          await clearEditorContent()
-        }
-        if (movedItems.length > 0) {
-          toast.success(
-            movedItems.length === 1
-              ? 'Moved to trash'
-              : `Moved ${movedItems.length} items to trash`,
-          )
-        }
-        const failures = results.filter((result) => result.status === 'rejected')
-        if (failures.length > 0) {
-          handleError(
-            new Error(`${failures.length} of ${items.length} trash operations failed`),
-            items.length === 1 ? 'Failed to move item to trash' : 'Failed to move items to trash',
-          )
-        }
+        await itemOperations.trashItems(items)
       } catch (error) {
         handleError(
           error,
@@ -616,10 +590,12 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       const items = getNormalizedContextItems(ctx)
       if (items.length === 0) return
       try {
-        await Promise.all(
-          items.map((item) => moveItem(item, { location: SIDEBAR_ITEM_LOCATION.sidebar })),
-        )
-        toast.success(items.length === 1 ? 'Item restored' : `${items.length} items restored`)
+        const movedIds = await itemOperations.restoreItems(items)
+        if (movedIds.length > 0) {
+          toast.success(
+            movedIds.length === 1 ? 'Item restored' : `${movedIds.length} items restored`,
+          )
+        }
       } catch (error) {
         handleError(
           error,
@@ -694,22 +670,17 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     editMapDialog,
     editFileDialog,
     editSidebarItemDialog,
-    confirmPermanentDeleteItems: null,
     confirmEmptyTrash,
     campaignId,
     closeFolderDialog: makeCloseHandler(setDeleteFolderDialog),
     closeMapDialog: makeCloseHandler(setEditMapDialog),
     closeFileDialog: makeCloseHandler(setEditFileDialog),
     closeSidebarItemDialog: makeCloseHandler(setEditSidebarItemDialog),
-    closePermanentDeleteDialog: () => {
-      onDialogClose?.()
-    },
     closeEmptyTrashDialog: () => {
       setConfirmEmptyTrash(false)
       onDialogClose?.()
     },
     clearEditorContent,
-    permanentlyDeleteItem,
     emptyTrashBin,
   }
 

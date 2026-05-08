@@ -2,6 +2,7 @@ import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { VIEW_CONTEXT } from './constants'
 import type { Predicate, ViewContext } from './types'
+import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 
 export const always: Predicate = () => true
@@ -15,6 +16,34 @@ export const isSingleSelection: Predicate = (ctx) =>
 // selectedItems is authoritative when present, even if empty; item is the single-item fallback.
 export const hasSelection: Predicate = (ctx) =>
   (ctx.selectedItems?.length ?? (ctx.item ? 1 : 0)) > 0
+
+function selectedItems(ctx: Parameters<Predicate>[0]) {
+  return ctx.selectedItems ?? (ctx.item ? [ctx.item] : [])
+}
+
+function selectedItemHasFullAccess(ctx: Parameters<Predicate>[0], itemIndex: number): boolean {
+  if (ctx.selectedItems !== undefined) {
+    return ctx.selectedItems[itemIndex]?.myPermissionLevel === PERMISSION_LEVEL.FULL_ACCESS
+  }
+  return hasFullAccess(ctx)
+}
+
+function selectedItemHasEditAccess(ctx: Parameters<Predicate>[0], itemIndex: number): boolean {
+  if (ctx.selectedItems !== undefined) {
+    const permissionLevel = ctx.selectedItems[itemIndex]?.myPermissionLevel
+    return (
+      permissionLevel === PERMISSION_LEVEL.EDIT || permissionLevel === PERMISSION_LEVEL.FULL_ACCESS
+    )
+  }
+  return hasEditAccess(ctx)
+}
+
+function selectedItemIsTrashed(ctx: Parameters<Predicate>[0], itemIndex: number): boolean {
+  if (ctx.selectedItems !== undefined) {
+    return ctx.selectedItems[itemIndex]?.location === SIDEBAR_ITEM_LOCATION.trash
+  }
+  return isItemTrashed(ctx)
+}
 
 export const isType =
   (...types: Array<SidebarItemType>): Predicate =>
@@ -40,13 +69,9 @@ export const inSidebar: Predicate = (ctx) => ctx.surface === VIEW_CONTEXT.SIDEBA
 
 export const notInSidebar: Predicate = (ctx) => ctx.surface !== VIEW_CONTEXT.SIDEBAR
 
-export const inNoteView: Predicate = (ctx) => ctx.surface === VIEW_CONTEXT.NOTE_VIEW
-
 export const hasBlockNoteEditor: Predicate = (ctx) => ctx.editor !== undefined
 
 export const hasBlockNoteId: Predicate = (ctx) => ctx.blockNoteId !== undefined
-
-export const viewingCanvas: Predicate = (ctx) => ctx.surface === VIEW_CONTEXT.CANVAS_VIEW
 
 export const atRoot: Predicate = (ctx) => !isSidebarItem(ctx)
 
@@ -101,6 +126,26 @@ export const hasEditAccess: Predicate = (ctx) => {
 
 export const hasFullAccess: Predicate = (ctx) => {
   return ctx.permissionLevel === PERMISSION_LEVEL.FULL_ACCESS
+}
+
+export const allSelectedItemsHaveFullAccess: Predicate = (ctx) => {
+  const items = selectedItems(ctx)
+  return items.length > 0 && items.every((_, index) => selectedItemHasFullAccess(ctx, index))
+}
+
+export const allSelectedItemsHaveEditAccess: Predicate = (ctx) => {
+  const items = selectedItems(ctx)
+  return items.length > 0 && items.every((_, index) => selectedItemHasEditAccess(ctx, index))
+}
+
+export const allSelectedItemsTrashed: Predicate = (ctx) => {
+  const items = selectedItems(ctx)
+  return items.length > 0 && items.every((_, index) => selectedItemIsTrashed(ctx, index))
+}
+
+export const allSelectedItemsNotTrashed: Predicate = (ctx) => {
+  const items = selectedItems(ctx)
+  return items.length > 0 && items.every((_, index) => !selectedItemIsTrashed(ctx, index))
 }
 
 export const canWrite: Predicate = (ctx) => {

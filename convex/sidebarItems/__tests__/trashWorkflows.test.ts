@@ -141,6 +141,90 @@ describe('trash workflows', () => {
       expect(restoredBookmark!.sidebarItemId).toBe(noteA.noteId)
       expect(restoredBookmark!.campaignMemberId).toBe(ctx.player.memberId)
     })
+
+    it('bulk restore ignores redundant nested descendants and preserves hierarchy', async () => {
+      const ctx = await setupCampaignContext(t)
+      const dmAuth = asDm(ctx)
+
+      const folder = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: 'FolderA',
+      })
+      const childFolder = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: 'ChildFolder',
+        parentId: folder.folderId,
+      })
+      const nestedNote = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: 'NestedNote',
+        parentId: childFolder.folderId,
+      })
+
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+        campaignId: ctx.campaignId,
+        itemId: folder.folderId,
+        location: 'trash',
+      })
+
+      const movedIds = await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+        campaignId: ctx.campaignId,
+        sourceItemIds: [folder.folderId, nestedNote.noteId],
+        targetParentId: null,
+      })
+
+      const [restoredFolder, restoredChildFolder, restoredNestedNote] = await t.run(async (dbCtx) =>
+        Promise.all([
+          dbCtx.db.get('sidebarItems', folder.folderId),
+          dbCtx.db.get('sidebarItems', childFolder.folderId),
+          dbCtx.db.get('sidebarItems', nestedNote.noteId),
+        ]),
+      )
+
+      expect(movedIds).toEqual([folder.folderId])
+      expect(restoredFolder!.location).toBe('sidebar')
+      expect(restoredFolder!.parentId).toBeNull()
+      expect(restoredChildFolder!.location).toBe('sidebar')
+      expect(restoredChildFolder!.parentId).toBe(folder.folderId)
+      expect(restoredNestedNote!.location).toBe('sidebar')
+      expect(restoredNestedNote!.parentId).toBe(childFolder.folderId)
+    })
+
+    it('bulk trash uses the batch move path and ignores redundant nested descendants', async () => {
+      const ctx = await setupCampaignContext(t)
+      const dmAuth = asDm(ctx)
+
+      const folder = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: 'FolderA',
+      })
+      const nestedNote = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: 'NestedNote',
+        parentId: folder.folderId,
+      })
+      const siblingNote = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: 'SiblingNote',
+      })
+
+      const movedIds = await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+        campaignId: ctx.campaignId,
+        sourceItemIds: [folder.folderId, nestedNote.noteId, siblingNote.noteId],
+        targetParentId: null,
+        action: 'trash',
+      })
+
+      const [trashedFolder, trashedNestedNote, trashedSiblingNote] = await t.run(async (dbCtx) =>
+        Promise.all([
+          dbCtx.db.get('sidebarItems', folder.folderId),
+          dbCtx.db.get('sidebarItems', nestedNote.noteId),
+          dbCtx.db.get('sidebarItems', siblingNote.noteId),
+        ]),
+      )
+
+      expect(movedIds).toEqual([folder.folderId, siblingNote.noteId])
+      expect(trashedFolder!.location).toBe('trash')
+      expect(trashedFolder!.parentId).toBeNull()
+      expect(trashedNestedNote!.location).toBe('trash')
+      expect(trashedNestedNote!.parentId).toBe(folder.folderId)
+      expect(trashedSiblingNote!.location).toBe('trash')
+      expect(trashedSiblingNote!.parentId).toBeNull()
+    })
   })
 
   describe('permanent delete cleanup', () => {
@@ -214,6 +298,50 @@ describe('trash workflows', () => {
       expect(deletedBookmark).toBeNull()
       expect(deletedBlock).toBeNull()
       expect(deletedBlockShare).toBeNull()
+    })
+
+    it('bulk permanently deletes unrelated items and ignores redundant nested descendants', async () => {
+      const ctx = await setupCampaignContext(t)
+      const dmAuth = asDm(ctx)
+
+      const folder = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: 'ToDelete',
+      })
+      const childNote = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: 'ChildNote',
+        parentId: folder.folderId,
+      })
+      const siblingNote = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: 'SiblingNote',
+      })
+
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+        campaignId: ctx.campaignId,
+        sourceItemIds: [folder.folderId, siblingNote.noteId],
+        targetParentId: null,
+        action: 'trash',
+      })
+
+      const deletedIds = await dmAuth.mutation(
+        api.sidebarItems.mutations.permanentlyDeleteSidebarItems,
+        {
+          campaignId: ctx.campaignId,
+          sourceItemIds: [folder.folderId, childNote.noteId, siblingNote.noteId],
+        },
+      )
+
+      const [deletedFolder, deletedChildNote, deletedSiblingNote] = await t.run(async (dbCtx) =>
+        Promise.all([
+          dbCtx.db.get('sidebarItems', folder.folderId),
+          dbCtx.db.get('sidebarItems', childNote.noteId),
+          dbCtx.db.get('sidebarItems', siblingNote.noteId),
+        ]),
+      )
+
+      expect(deletedIds).toEqual([folder.folderId, siblingNote.noteId])
+      expect(deletedFolder).toBeNull()
+      expect(deletedChildNote).toBeNull()
+      expect(deletedSiblingNote).toBeNull()
     })
   })
 

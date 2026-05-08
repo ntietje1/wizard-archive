@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react'
-import type { PointerEvent } from 'react'
+import { useRef } from 'react'
 import { Trash2 } from 'lucide-react'
 import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import { ItemCard } from '../folder/item-card'
@@ -13,33 +12,19 @@ import { useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { TRASH_DROP_ZONE_TYPE } from '~/features/dnd/utils/dnd-registry'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
-import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
-import { isItemSurfaceInteractionTarget } from '~/features/sidebar/utils/item-surface-hotkeys'
+import { useItemSurfaceRegistration } from '~/features/sidebar/hooks/useItemSurfaceRegistration'
 
 export function TrashPageViewer() {
   const dropRef = useRef<HTMLDivElement>(null)
 
   const { parentItemsMap, status } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
-  const rootTrashedItems = useMemo(() => parentItemsMap.get(null) ?? [], [parentItemsMap])
-  const visibleItemIds = useMemo(() => rootTrashedItems.map((item) => item._id), [rootTrashedItems])
-  const setActiveItemSurface = useSidebarUIStore((s) => s.setActiveItemSurface)
-  const clearItemSelection = useSidebarUIStore((s) => s.clearItemSelection)
-
-  const activateTrashSurface = useCallback(() => {
-    setActiveItemSurface({ surface: 'trash', parentId: null, visibleItemIds })
-  }, [setActiveItemSurface, visibleItemIds])
-
-  useEffect(() => {
-    setActiveItemSurface({ surface: 'trash', parentId: null, visibleItemIds })
-    return () => setActiveItemSurface(null)
-  }, [setActiveItemSurface, visibleItemIds])
-
-  const handleSurfacePointerDown = (event: PointerEvent) => {
-    activateTrashSurface()
-    if (!isItemSurfaceInteractionTarget(event.target)) {
-      clearItemSelection()
-    }
-  }
+  const rootTrashedItems = parentItemsMap.get(null) ?? []
+  const visibleItemIds = rootTrashedItems.map((item) => item._id)
+  const { handleSurfacePointerDown } = useItemSurfaceRegistration({
+    surface: 'trash',
+    parentId: null,
+    visibleItemIds,
+  })
 
   const { isDropTarget } = useDndDropTarget({
     ref: dropRef,

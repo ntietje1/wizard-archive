@@ -115,6 +115,7 @@ describe('selection', () => {
     expect(useSidebarUIStore.getState().selectedSlug).toBe('open-note')
     expect(useSidebarUIStore.getState().selectedItemIds).toEqual([noteId])
     expect(useSidebarUIStore.getState().anchorItemId).toBe(noteId)
+    expect(useSidebarUIStore.getState().focusedItemId).toBe(noteId)
   })
 
   it('toggleItemSelection adds and removes one item while preserving the anchor', () => {
@@ -144,6 +145,46 @@ describe('selection', () => {
 
     expect(useSidebarUIStore.getState().selectedItemIds).toEqual([b, c, d])
     expect(useSidebarUIStore.getState().anchorItemId).toBe(b)
+    expect(useSidebarUIStore.getState().focusedItemId).toBe(d)
+  })
+
+  it('moves focus down and selects the focused item', () => {
+    const a = testId<'sidebarItems'>('item_a')
+    const b = testId<'sidebarItems'>('item_b')
+
+    useSidebarUIStore.getState().moveFocus('down', [a, b], false)
+
+    expect(useSidebarUIStore.getState().focusedItemId).toBe(a)
+    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([a])
+
+    useSidebarUIStore.getState().moveFocus('down', [a, b], false)
+
+    expect(useSidebarUIStore.getState().focusedItemId).toBe(b)
+    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([b])
+  })
+
+  it('shift focus movement extends selection from the anchor', () => {
+    const a = testId<'sidebarItems'>('item_a')
+    const b = testId<'sidebarItems'>('item_b')
+    const c = testId<'sidebarItems'>('item_c')
+
+    useSidebarUIStore.getState().selectSingleItem(a)
+    useSidebarUIStore.getState().moveFocus('down', [a, b, c], true)
+    useSidebarUIStore.getState().moveFocus('down', [a, b, c], true)
+
+    expect(useSidebarUIStore.getState().focusedItemId).toBe(c)
+    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([a, b, c])
+    expect(useSidebarUIStore.getState().anchorItemId).toBe(a)
+  })
+
+  it('clearItemSelection leaves keyboard focus in place', () => {
+    const noteId = testId<'sidebarItems'>('note_1')
+
+    useSidebarUIStore.getState().selectSingleItem(noteId)
+    useSidebarUIStore.getState().clearItemSelection()
+
+    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([])
+    expect(useSidebarUIStore.getState().focusedItemId).toBe(noteId)
   })
 
   it('normalizeContextSelection preserves a group when right-clicking a selected item', () => {
@@ -214,9 +255,10 @@ describe('selection', () => {
 
     expect(useSidebarUIStore.getState().selectedItemIds).toEqual([noteId])
     expect(useSidebarUIStore.getState().anchorItemId).toBe(noteId)
+    expect(useSidebarUIStore.getState().focusedItemId).toBe(noteId)
   })
 
-  it('clears item selection when the active surface changes and selected ids are not visible', () => {
+  it('preserves item selection when the active surface changes and selected ids are not visible', () => {
     const folderId = testId<'sidebarItems'>('folder_1')
     const noteId = testId<'sidebarItems'>('note_1')
 
@@ -232,8 +274,48 @@ describe('selection', () => {
       visibleItemIds: [],
     })
 
-    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([])
-    expect(useSidebarUIStore.getState().anchorItemId).toBeNull()
+    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([noteId])
+    expect(useSidebarUIStore.getState().anchorItemId).toBe(noteId)
+    expect(useSidebarUIStore.getState().focusedItemId).toBeNull()
+  })
+
+  it('preserves item selection when the same surface updates after selected items move away', () => {
+    const noteId = testId<'sidebarItems'>('note_1')
+    const mapId = testId<'sidebarItems'>('map_1')
+    const folderId = testId<'sidebarItems'>('folder_1')
+
+    useSidebarUIStore.getState().setActiveItemSurface({
+      surface: 'sidebar',
+      parentId: null,
+      visibleItemIds: [noteId, mapId, folderId],
+    })
+    useSidebarUIStore.getState().setSelectedItemIds([noteId, mapId], noteId)
+    useSidebarUIStore.getState().setActiveItemSurface({
+      surface: 'sidebar',
+      parentId: null,
+      visibleItemIds: [folderId],
+    })
+
+    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([noteId, mapId])
+    expect(useSidebarUIStore.getState().anchorItemId).toBe(noteId)
+    expect(useSidebarUIStore.getState().focusedItemId).toBeNull()
+  })
+
+  it('preserves item selection when the active surface unregisters', () => {
+    const noteId = testId<'sidebarItems'>('note_1')
+    const mapId = testId<'sidebarItems'>('map_1')
+
+    useSidebarUIStore.getState().setActiveItemSurface({
+      surface: 'sidebar',
+      parentId: null,
+      visibleItemIds: [noteId, mapId],
+    })
+    useSidebarUIStore.getState().setSelectedItemIds([noteId, mapId], noteId)
+    useSidebarUIStore.getState().setActiveItemSurface(null)
+
+    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([noteId, mapId])
+    expect(useSidebarUIStore.getState().anchorItemId).toBe(noteId)
+    expect(useSidebarUIStore.getState().activeItemSurface).toBeNull()
   })
 
   it('setSelected preserves item-id selections when route selection changes', () => {

@@ -8,7 +8,7 @@ import { useFolderState } from '~/features/sidebar/hooks/useFolderState'
 import { useContextMenu } from '~/features/context-menu/hooks/useContextMenu'
 import { useEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
-import { useIsSelectedItem } from '~/features/sidebar/hooks/useSelectedItem'
+import { useIsFocusedItem, useIsSelectedItem } from '~/features/sidebar/hooks/useSelectedItem'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
@@ -34,6 +34,7 @@ function FlatSidebarItemComponent({
   const linkProps = useEditorLinkProps(item)
   const { setLastSelectedItem } = useLastEditorItem()
   const isSelected = useIsSelectedItem(item)
+  const isFocused = useIsFocusedItem(item)
   const { toggleExpanded } = useFolderState(item._id)
   const { handleItemClick, handleItemContextMenu } = useItemSelectionInteractions(item, {
     surface: 'bookmarks',
@@ -63,6 +64,7 @@ function FlatSidebarItemComponent({
           icon={icon}
           name={item.name}
           isSelected={isSelected}
+          isFocused={isFocused}
           isExpanded={isExpanded}
           isRenaming={renamingId === item._id}
           linkProps={linkProps}

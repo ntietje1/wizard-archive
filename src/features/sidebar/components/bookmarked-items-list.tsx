@@ -6,34 +6,22 @@ import {
 } from '~/features/sidebar/hooks/useSidebarItems'
 import { useSortOptions } from '~/features/sidebar/hooks/useSortOptions'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
-import { useMemo } from 'react'
-import type { PointerEvent } from 'react'
-import { isItemSurfaceInteractionTarget } from '~/features/sidebar/utils/item-surface-hotkeys'
+import { useItemSurfaceRegistration } from '~/features/sidebar/hooks/useItemSurfaceRegistration'
 
 export function BookmarkedItemsList() {
   const { data: filteredItems, status } = useFilteredSidebarItems()
   const { sortOptions } = useSortOptions()
   const renamingId = useSidebarUIStore((s) => s.renamingId)
   const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
-  const setActiveItemSurface = useSidebarUIStore((s) => s.setActiveItemSurface)
-  const clearItemSelection = useSidebarUIStore((s) => s.clearItemSelection)
 
-  const bookmarkedItems = useMemo(() => {
-    const bookmarked = filteredItems.filter((item) => item.isBookmarked)
-    return sortItemsByOptions(sortOptions, bookmarked) ?? []
-  }, [filteredItems, sortOptions])
-  const visibleItemIds = useMemo(() => bookmarkedItems.map((item) => item._id), [bookmarkedItems])
-
-  const activateBookmarksSurface = () => {
-    setActiveItemSurface({ surface: 'bookmarks', parentId: null, visibleItemIds })
-  }
-
-  const handleSurfacePointerDown = (event: PointerEvent) => {
-    activateBookmarksSurface()
-    if (!isItemSurfaceInteractionTarget(event.target)) {
-      clearItemSelection()
-    }
-  }
+  const bookmarked = filteredItems.filter((item) => item.isBookmarked)
+  const bookmarkedItems = sortItemsByOptions(sortOptions, bookmarked) ?? []
+  const visibleItemIds = bookmarkedItems.map((item) => item._id)
+  const { activateSurface, handleSurfacePointerDown } = useItemSurfaceRegistration({
+    surface: 'bookmarks',
+    parentId: null,
+    visibleItemIds,
+  })
 
   if (status !== 'success') {
     return <BookmarkedItemsLoading />
@@ -43,9 +31,9 @@ export function BookmarkedItemsList() {
     <div className="flex-1 flex min-h-0 min-w-0 overflow-hidden">
       <ScrollArea
         className="flex-1 min-h-0 min-w-0 w-full"
-        onFocusCapture={activateBookmarksSurface}
+        onFocusCapture={activateSurface}
         onPointerDownCapture={handleSurfacePointerDown}
-        onContextMenuCapture={activateBookmarksSurface}
+        onContextMenuCapture={activateSurface}
       >
         <div className="p-1 min-w-0 w-full max-w-full">
           {bookmarkedItems.map((item) => (

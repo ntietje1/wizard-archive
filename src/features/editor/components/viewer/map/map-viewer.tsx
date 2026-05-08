@@ -13,14 +13,11 @@ import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { EditorContextMenuRef } from '~/features/context-menu/components/editor-context-menu'
-import {
-  MAP_DROP_ZONE_TYPE,
-  getDragItemIds,
-  rejectionReasonMessage,
-} from '~/features/dnd/utils/dnd-registry'
+import { MAP_DROP_ZONE_TYPE, rejectionReasonMessage } from '~/features/dnd/utils/dnd-registry'
 import { handleError } from '~/shared/utils/logger'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
+import { resolveNormalizedDraggedSidebarItems } from '~/features/dnd/utils/sidebar-drag-items'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { useMapView } from '~/features/editor/hooks/useMapView'
 import { MapViewProvider } from '~/features/editor/contexts/map-view-context'
@@ -34,6 +31,7 @@ import { FileUploadSection } from '~/features/file-upload/components/file-upload
 import { MapPinsLayer } from './map-pins-layer'
 import { useMapImageStatus } from './use-map-image-status'
 import { useMapRenderPins } from './use-map-render-pins'
+import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 
 interface PinPosition {
   x: number
@@ -150,6 +148,9 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
   const imageRef = useRef<HTMLImageElement>(null)
   const pinsContainerRef = useRef<HTMLDivElement>(null)
   const transformWrapperRef = useRef<ReactZoomPanPinchRef>(null)
+  const { itemsMap } = useActiveSidebarItems()
+  const itemsMapRef = useRef(itemsMap)
+  itemsMapRef.current = itemsMap
   // Keep a ref to `map` so the monitorForElements closure doesn't go stale
   // when pins are added/removed (which would otherwise re-register the monitor).
   const mapRef = useRef(map)
@@ -400,13 +401,18 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
         const targetData = topTarget.data
         if (targetData.type !== MAP_DROP_ZONE_TYPE) return
         if (targetData.mapId !== mapRef.current._id) return
-        const itemIds = getDragItemIds(source.data)
-        if (itemIds.length === 0) return
-
         const acceptedPinItemIds = mapRef.current.pins.map((pin) => pin.itemId)
+        const items = resolveNormalizedDraggedSidebarItems({
+          sourceData: source.data,
+          activeItemsMap: itemsMapRef.current,
+          excludeItemIds: [mapRef.current._id, ...acceptedPinItemIds],
+        })
+        if (items.length === 0) return
+
         const validItemIds: Array<Id<'sidebarItems'>> = []
         const validationErrors: Array<string> = []
-        for (const itemId of itemIds) {
+        for (const item of items) {
+          const itemId = item._id
           const pinError = validatePinTarget(mapRef.current._id, itemId, acceptedPinItemIds)
           if (pinError) {
             validationErrors.push(pinError)

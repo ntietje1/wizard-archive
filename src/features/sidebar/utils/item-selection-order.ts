@@ -3,10 +3,6 @@ import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { sortItemsByOptions } from '~/features/sidebar/hooks/useSidebarItems'
-export {
-  normalizeTopLevelSelectedItems,
-  selectionBelongsToSurface,
-} from './item-selection-normalization'
 
 export interface BuildVisibleSidebarItemIdsOptions {
   parentItemsMap: Map<Id<'sidebarItems'> | null, Array<AnySidebarItem>>

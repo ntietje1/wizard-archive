@@ -322,7 +322,7 @@ export const editorContextMenuContributors = [
         icon: RotateCcw,
         group: 'primary',
         priority: 4,
-        applies: (context) => p.isItemTrashed(context) && p.isSidebarItem(context),
+        applies: (context) => p.allSelectedItemsTrashed(context) && p.isSidebarItem(context),
       },
     ],
   },
@@ -356,7 +356,7 @@ export const editorContextMenuContributors = [
         group: 'pin-actions',
         priority: 1,
         applies: (context) =>
-          p.hasEditAccess(context) &&
+          p.allSelectedItemsHaveEditAccess(context) &&
           p.inSidebar(context) &&
           p.isSidebarItem(context) &&
           !p.isPinnedOnActiveMap(context) &&
@@ -528,7 +528,7 @@ export const editorContextMenuContributors = [
         icon: ClipboardCopy,
         group: 'edit',
         priority: 85,
-        applies: (context) => p.hasSelection(context) && p.isItemNotTrashed(context),
+        applies: (context) => p.hasSelection(context) && p.allSelectedItemsNotTrashed(context),
       },
       {
         id: 'cut',
@@ -538,7 +538,9 @@ export const editorContextMenuContributors = [
         group: 'edit',
         priority: 86,
         applies: (context) =>
-          p.hasSelection(context) && p.isItemNotTrashed(context) && p.canWrite(context),
+          p.hasSelection(context) &&
+          p.allSelectedItemsNotTrashed(context) &&
+          p.allSelectedItemsHaveFullAccess(context),
       },
       {
         id: 'paste',
@@ -560,7 +562,9 @@ export const editorContextMenuContributors = [
         group: 'edit',
         priority: 88,
         applies: (context) =>
-          p.hasSelection(context) && p.isItemNotTrashed(context) && p.canWrite(context),
+          p.hasSelection(context) &&
+          p.allSelectedItemsNotTrashed(context) &&
+          p.allSelectedItemsHaveFullAccess(context),
       },
     ],
   },
@@ -637,9 +641,9 @@ export const editorContextMenuContributors = [
         priority: 100,
         variant: 'danger',
         applies: (context) =>
-          p.hasFullAccess(context) &&
+          p.allSelectedItemsHaveFullAccess(context) &&
           p.isSidebarItem(context) &&
-          p.isItemNotTrashed(context) &&
+          p.allSelectedItemsNotTrashed(context) &&
           (p.inView('sidebar')(context) ||
             p.inView('folder-view')(context) ||
             p.inView('topbar')(context)),
@@ -652,7 +656,7 @@ export const editorContextMenuContributors = [
         group: 'danger',
         priority: 100,
         variant: 'danger',
-        applies: (context) => p.isItemTrashed(context) && p.isSidebarItem(context),
+        applies: (context) => p.allSelectedItemsTrashed(context) && p.isSidebarItem(context),
       },
       {
         id: 'empty-trash',

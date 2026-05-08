@@ -8,17 +8,13 @@ import type { Id } from 'convex/_generated/dataModel'
 import { handleError } from '~/shared/utils/logger'
 import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
 import { Banner, BannerButton } from '~/shared/components/banner'
-import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
-import { useDeleteSidebarItem } from '~/features/sidebar/hooks/useDeleteSidebarItem'
-import { useMoveSidebarItem } from '~/features/sidebar/hooks/useMoveSidebarItem'
+import { useEmptyTrashBin } from '~/features/sidebar/hooks/useEmptyTrashBin'
 import { useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
 import { getItemTypeLabel } from '~/features/sidebar/utils/sidebar-item-utils'
-import {
-  emptyTrashDescription,
-  permanentDeleteDescription,
-} from '~/features/sidebar/utils/trash-utils'
+import { emptyTrashDescription } from '~/features/sidebar/utils/trash-utils'
+import { useSidebarItemOperations } from '~/features/sidebar/operations/useSidebarItemOperations'
 
 function daysAgo(timestamp: number): number {
   return Math.floor((Date.now() - timestamp) / (1000 * 60 * 60 * 24))
@@ -56,11 +52,7 @@ export function TrashBanner({ item }: TrashBannerProps) {
 
 function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
   const isDeleted = item.location === SIDEBAR_ITEM_LOCATION.trash
-  const { moveItem } = useMoveSidebarItem()
-  const { permanentlyDeleteItem } = useDeleteSidebarItem()
-  const { clearEditorContent } = useEditorNavigation()
-  const { data: trashedItems = [] } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
-  const [confirmDelete, setConfirmDelete] = useState(false)
+  const itemOperations = useSidebarItemOperations()
 
   const deletionTime = item.deletionTime
   const deletedById = item.deletedBy
@@ -87,22 +79,11 @@ function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
 
   const handleRestore = async () => {
     try {
-      await moveItem(item, { location: SIDEBAR_ITEM_LOCATION.sidebar })
-      toast.success('Item restored')
+      const movedIds = await itemOperations.restoreItems([item])
+      if (movedIds.length > 0) toast.success('Item restored')
     } catch (error) {
       handleError(error, 'Failed to restore item')
     }
-  }
-
-  const handlePermanentDelete = async () => {
-    try {
-      await permanentlyDeleteItem(item)
-      toast.success('Item permanently deleted')
-      await clearEditorContent()
-    } catch (error) {
-      handleError(error, 'Failed to delete item')
-    }
-    setConfirmDelete(false)
   }
 
   return (
@@ -110,16 +91,19 @@ function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
       {isDeleted && (
         <div className="overflow-hidden fade-in-delayed-fast">
           <Banner
-            icon={<Trash2 className="h-3.5 w-3.5 shrink-0" />}
+            icon={<Trash2 className="size-3.5 shrink-0" />}
             variant="destructive"
             actions={
               <>
                 <BannerButton onClick={handleRestore}>
-                  <RotateCcw className="h-3 w-3 mr-0.5" />
+                  <RotateCcw className="size-3 mr-0.5" />
                   Restore
                 </BannerButton>
-                <BannerButton variant="destructive" onClick={() => setConfirmDelete(true)}>
-                  <Trash2 className="h-3 w-3 mr-0.5" />
+                <BannerButton
+                  variant="destructive"
+                  onClick={() => itemOperations.confirmPermanentDeleteItems([item])}
+                >
+                  <Trash2 className="size-3 mr-0.5" />
                   Delete from Trash
                 </BannerButton>
               </>
@@ -128,18 +112,6 @@ function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
             {message}
           </Banner>
         </div>
-      )}
-
-      {confirmDelete && (
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={() => setConfirmDelete(false)}
-          onConfirm={handlePermanentDelete}
-          title="Permanently Delete"
-          description={permanentDeleteDescription(item, trashedItems)}
-          confirmLabel="Delete Forever"
-          confirmVariant="destructive"
-        />
       )}
     </>
   )
@@ -150,7 +122,7 @@ function RootTrashBanner() {
 
   return (
     <Banner
-      icon={<Trash2 className="h-3.5 w-3.5 shrink-0" />}
+      icon={<Trash2 className="size-3.5 shrink-0" />}
       variant="destructive"
       actions={isDm ? <EmptyTrashButton /> : undefined}
     >
@@ -161,7 +133,7 @@ function RootTrashBanner() {
 
 function EmptyTrashButton() {
   const { campaignId } = useCampaign()
-  const { emptyTrashBin } = useDeleteSidebarItem()
+  const { emptyTrashBin } = useEmptyTrashBin()
   const { data: allTrashedItems = [] } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
   const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false)
 

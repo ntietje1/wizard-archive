@@ -1,10 +1,17 @@
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import { validatePinTarget } from 'convex/gameMaps/validation'
+import {
+  evaluateMoveToParent,
+  evaluateRestore,
+  evaluateTrash,
+} from 'convex/sidebarItems/operations/capabilities'
+import type { SidebarOperationRejectionCode } from 'convex/sidebarItems/operations/capabilities'
 import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import { toast } from 'sonner'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type { SidebarItemLocation, SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
+import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import { assertNever } from '~/shared/utils/utils'
 
@@ -18,11 +25,6 @@ export const SIDEBAR_ROOT_DROP_TYPE = 'root' as const
 export const TRASH_DROP_ZONE_TYPE = 'trash-drop-zone' as const
 
 // ─── Types ───────────────────────────────────────────────────────────
-
-export type SidebarDragData = {
-  sidebarItemId: Id<'sidebarItems'>
-  sidebarItemIds?: Array<Id<'sidebarItems'>>
-}
 
 /** Type-safe extraction of sidebarItemId from raw drag source data. */
 export function getDragItemId(sourceData: Record<string, unknown>): Id<'sidebarItems'> | null {
@@ -40,9 +42,15 @@ export function getDragItemIds(sourceData: Record<string, unknown>): Array<Id<'s
   return legacyId ? [legacyId] : []
 }
 
-export type SidebarItemDropData = {
-  type: AnySidebarItem['type']
-  sidebarItemId: Id<'sidebarItems'>
+export function getDragPreviewItemIds(
+  sourceData: Record<string, unknown>,
+): Array<Id<'sidebarItems'>> {
+  const ids = sourceData.sidebarDragPreviewItemIds
+  if (Array.isArray(ids)) {
+    return ids.filter((id): id is Id<'sidebarItems'> => typeof id === 'string')
+  }
+
+  return getDragItemIds(sourceData)
 }
 
 export type ResolvedSidebarItemDropData = AnySidebarItem & {
@@ -93,9 +101,9 @@ export type SidebarDropData =
   | NoteEditorDropZoneData
   | TrashDropZoneData
 
-export type DragDropAction = 'move' | 'trash' | 'restore' | 'pin' | 'embed' | 'open' | 'link' | null
+type DragDropAction = 'move' | 'trash' | 'restore' | 'pin' | 'embed' | 'open' | 'link' | null
 
-export type DropRejectionReason =
+type DropRejectionReason =
   | 'self_pin'
   | 'self_embed'
   | 'already_pinned'
@@ -110,21 +118,21 @@ export type DropRejectionReason =
 
 // ─── Outcome Types ──────────────────────────────────────────────────
 
-export type OperationOutcome = {
+type OperationOutcome = {
   type: 'operation'
   action: Exclude<DragDropAction, null>
   label: string
   execute: (() => Promise<void>) | null
 }
 
-export type RejectionOutcome = {
+type RejectionOutcome = {
   type: 'rejection'
   reason: DropRejectionReason
 }
 
 export type DropOutcome = OperationOutcome | RejectionOutcome
 
-export type DroppableMoveItemsResult =
+type DroppableMoveItemsResult =
   | {
       status: 'ready'
       action: 'move' | 'restore'
@@ -132,7 +140,20 @@ export type DroppableMoveItemsResult =
       parentId: Id<'sidebarItems'> | null
     }
   | { status: 'blocked' }
+  | { status: 'noop' }
   | { status: 'none' }
+
+type MoveDropAction = 'move' | 'restore'
+
+type ResolvedMoveDropItem = {
+  item: AnySidebarItem
+  outcome: DropOutcome | null
+}
+
+type MoveDropOperation = {
+  item: AnySidebarItem
+  action: MoveDropAction
+}
 
 function operation(
   action: Exclude<DragDropAction, null>,
@@ -146,38 +167,67 @@ function rejection(reason: DropRejectionReason): RejectionOutcome {
   return { type: 'rejection', reason }
 }
 
+function actorFromContext(ctx: DndContext) {
+  return { role: ctx.isDm ? CAMPAIGN_MEMBER_ROLE.DM : CAMPAIGN_MEMBER_ROLE.Player }
+}
+
+function toDropRejectionReason(code: SidebarOperationRejectionCode): DropRejectionReason {
+  switch (code) {
+    case 'no_source_permission':
+    case 'no_target_permission':
+      return 'no_permission'
+    case 'dm_only':
+      return 'dm_only'
+    case 'circular':
+      return 'circular'
+    case 'trashed_folder':
+      return 'trashed_folder'
+    case 'trashed_item':
+      return 'trashed_item'
+    case 'name_conflict':
+      return 'name_conflict'
+    case 'not_found':
+    case 'invalid_target':
+      return 'missing_data'
+    case 'not_folder':
+    case 'different_location':
+    case 'same_parent':
+      return 'not_folder'
+    default:
+      return assertNever(code)
+  }
+}
+
+function capabilityRejection(result: ReturnType<typeof evaluateMoveToParent>) {
+  return result.ok ? null : rejection(toDropRejectionReason(result.code))
+}
+
+function isMoveDropAction(action: Exclude<DragDropAction, null>): action is MoveDropAction {
+  return action === 'move' || action === 'restore'
+}
+
 // ─── Execution Context ──────────────────────────────────────────────
 
 export interface DndContext {
-  /** Moves one dragged item; use for single-item drop outcomes and fallback paths. */
-  moveItem: (
-    item: AnySidebarItem,
-    options: {
-      parentId?: Id<'sidebarItems'> | null
-      location?: SidebarItemLocation
-      skipLocalValidation?: boolean
-    },
-  ) => Promise<unknown>
-  /** Moves a normalized batch of dragged items into a parent folder/root. */
-  moveItems?: (
+  moveItems: (
     items: Array<AnySidebarItem>,
     parentId?: Id<'sidebarItems'> | null,
   ) => Promise<unknown>
+  restoreItems: (
+    items: Array<AnySidebarItem>,
+    parentId?: Id<'sidebarItems'> | null,
+  ) => Promise<unknown>
+  trashItems: (items: Array<AnySidebarItem>) => Promise<unknown>
   navigateToItem: (slug: SidebarItemSlug, replace?: boolean) => Promise<void>
   campaignId: Id<'campaigns'> | null
   campaignName: string | undefined
   isDm: boolean
   setFolderOpen: (folderId: Id<'sidebarItems'>) => void
-  hasSiblingNameConflict: (
-    name: string,
-    parentId: Id<'sidebarItems'> | null,
-    excludeId?: Id<'sidebarItems'>,
-  ) => boolean
 }
 
 // ─── Drop Zone Config ───────────────────────────────────────────────
 
-export interface DropZoneConfig<T extends SidebarDropData = SidebarDropData> {
+interface DropZoneConfig<T extends SidebarDropData = SidebarDropData> {
   resolve: (item: AnySidebarItem, target: T, ctx: DndContext) => DropOutcome | null
   canAcceptFiles: boolean | ((target: T) => boolean)
   getHighlightId: (target: T) => string | null
@@ -224,12 +274,12 @@ export function rejectionReasonMessage(reason: DropRejectionReason): string {
 
 const trashConfig: DropZoneConfig = {
   resolve: (item, _target, ctx) => {
-    if (item.type === SIDEBAR_ITEM_TYPES.folders && !ctx.isDm) {
-      return rejection('dm_only')
-    }
     if (item.location === SIDEBAR_ITEM_LOCATION.trash) return null
+    const capability = evaluateTrash(actorFromContext(ctx), item)
+    const rejected = capabilityRejection(capability)
+    if (rejected) return rejected
     return operation('trash', 'Move to "Trash"', async () => {
-      await ctx.moveItem(item, { location: SIDEBAR_ITEM_LOCATION.trash })
+      await ctx.trashItems([item])
       toast.success('Moved to trash')
     })
   },
@@ -265,38 +315,31 @@ const rootConfig: DropZoneConfig = {
     const name = ctx.campaignName || 'Root'
 
     if (item.location === SIDEBAR_ITEM_LOCATION.trash) {
-      if (item.type === SIDEBAR_ITEM_TYPES.folders && !ctx.isDm) {
-        return rejection('dm_only')
-      }
-      // Bulk ctx.moveItems performs name-conflict planning before committing the move.
-      if (ctx.hasSiblingNameConflict(item.name, null, item._id) && !ctx.moveItems) {
-        return rejection('name_conflict')
-      }
+      const capability = evaluateRestore(actorFromContext(ctx), item, {
+        parentId: null,
+        parent: null,
+        siblings: [],
+      })
+      const rejected = capabilityRejection(capability)
+      if (rejected) return rejected
       return operation('restore', `Restore to "${name}"`, async () => {
-        if (ctx.moveItems) {
-          await ctx.moveItems([item], null)
-        } else {
-          await ctx.moveItem(item, {
-            parentId: null,
-            location: SIDEBAR_ITEM_LOCATION.sidebar,
-          })
-        }
+        await ctx.restoreItems([item], null)
         toast.success('Item restored')
       })
     }
 
     if (item.parentId == null) return null
 
-    // Bulk ctx.moveItems performs name-conflict planning before committing the move.
-    if (ctx.hasSiblingNameConflict(item.name, null, item._id) && !ctx.moveItems) {
-      return rejection('name_conflict')
-    }
+    const capability = evaluateMoveToParent(actorFromContext(ctx), item, {
+      parentId: null,
+      parent: null,
+      siblings: [],
+    })
+    const rejected = capabilityRejection(capability)
+    if (rejected) return rejected
+
     return operation('move', `Move to "${name}"`, async () => {
-      if (ctx.moveItems) {
-        await ctx.moveItems([item], null)
-      } else {
-        await ctx.moveItem(item, { parentId: null })
-      }
+      await ctx.moveItems([item], null)
     })
   },
   canAcceptFiles: true,
@@ -306,33 +349,20 @@ const rootConfig: DropZoneConfig = {
 const folderConfig = typedConfig<ResolvedSidebarItemDropData>({
   resolve: (item, t, ctx) => {
     if (item._id === t._id) return null
-    if (t.location === SIDEBAR_ITEM_LOCATION.trash) return rejection('trashed_folder')
-    if (item.type === SIDEBAR_ITEM_TYPES.folders && t.ancestorIds?.includes(item._id)) {
-      return rejection('circular')
-    }
-    if (t.myPermissionLevel !== PERMISSION_LEVEL.FULL_ACCESS) {
-      return rejection('no_permission')
-    }
 
     const folderId = t._id as Id<'sidebarItems'>
 
     if (item.location === SIDEBAR_ITEM_LOCATION.trash) {
-      if (item.type === SIDEBAR_ITEM_TYPES.folders && !ctx.isDm) {
-        return rejection('dm_only')
-      }
-      // Bulk ctx.moveItems performs name-conflict planning before committing the move.
-      if (ctx.hasSiblingNameConflict(item.name, folderId, item._id) && !ctx.moveItems) {
-        return rejection('name_conflict')
-      }
+      const capability = evaluateRestore(actorFromContext(ctx), item, {
+        parentId: folderId,
+        parent: t,
+        siblings: [],
+        ancestorIds: t.ancestorIds,
+      })
+      const rejected = capabilityRejection(capability)
+      if (rejected) return rejected
       return operation('restore', `Restore to "${t.name}"`, async () => {
-        if (ctx.moveItems) {
-          await ctx.moveItems([item], folderId)
-        } else {
-          await ctx.moveItem(item, {
-            parentId: folderId,
-            location: SIDEBAR_ITEM_LOCATION.sidebar,
-          })
-        }
+        await ctx.restoreItems([item], folderId)
         toast.success('Item restored')
         ctx.setFolderOpen(folderId)
       })
@@ -340,16 +370,17 @@ const folderConfig = typedConfig<ResolvedSidebarItemDropData>({
 
     if (item.parentId === t._id) return null
 
-    // Bulk ctx.moveItems performs name-conflict planning before committing the move.
-    if (ctx.hasSiblingNameConflict(item.name, folderId, item._id) && !ctx.moveItems) {
-      return rejection('name_conflict')
-    }
+    const capability = evaluateMoveToParent(actorFromContext(ctx), item, {
+      parentId: folderId,
+      parent: t,
+      siblings: [],
+      ancestorIds: t.ancestorIds,
+    })
+    const rejected = capabilityRejection(capability)
+    if (rejected) return rejected
+
     return operation('move', `Move to "${t.name}"`, async () => {
-      if (ctx.moveItems) {
-        await ctx.moveItems([item], folderId)
-      } else {
-        await ctx.moveItem(item, { parentId: folderId })
-      }
+      await ctx.moveItems([item], folderId)
       ctx.setFolderOpen(folderId)
     })
   },
@@ -397,7 +428,7 @@ type DropZoneType =
   | typeof SIDEBAR_ROOT_DROP_TYPE
   | SidebarItemType
 
-export const DROP_ZONE_REGISTRY: Record<DropZoneType, DropZoneConfig> = {
+const DROP_ZONE_REGISTRY: Record<DropZoneType, DropZoneConfig> = {
   [CANVAS_DROP_ZONE_TYPE]: canvasConfig,
   [TRASH_DROP_ZONE_TYPE]: trashConfig,
   [MAP_DROP_ZONE_TYPE]: mapConfig,
@@ -442,21 +473,34 @@ export function getDroppableMoveItems(
   }
 
   const parentId = target.type === SIDEBAR_ITEM_TYPES.folders ? target._id : null
-  const movableItems: Array<AnySidebarItem> = []
-  let action: 'move' | 'restore' | null = null
+  const resolvedItems: Array<ResolvedMoveDropItem> = items.map((item) => ({
+    item,
+    outcome: resolveDropOutcome(item, target, ctx),
+  }))
 
-  for (const item of items) {
-    const outcome = resolveDropOutcome(item, target, ctx)
+  if (resolvedItems.length === 0) return { status: 'none' }
+  if (resolvedItems.some(({ outcome }) => outcome?.type === 'rejection'))
+    return { status: 'blocked' }
+
+  const operations: Array<MoveDropOperation> = []
+  for (const { item, outcome } of resolvedItems) {
     if (!outcome) continue
-    if (outcome.type === 'rejection') return { status: 'blocked' }
-    if (outcome.action !== 'move' && outcome.action !== 'restore') return { status: 'none' }
-    action ??= outcome.action
-    if (action !== outcome.action) return { status: 'blocked' }
-    movableItems.push(item)
+    if (outcome.type !== 'operation') return { status: 'blocked' }
+    if (!isMoveDropAction(outcome.action)) return { status: 'none' }
+    operations.push({ item, action: outcome.action })
   }
 
-  if (movableItems.length === 0 || !action) return { status: 'none' }
-  return { status: 'ready', action, items: movableItems, parentId }
+  if (operations.length === 0) return { status: 'noop' }
+
+  const action = operations[0].action
+  if (operations.some((op) => op.action !== action)) return { status: 'blocked' }
+
+  return {
+    status: 'ready',
+    action,
+    items: operations.map(({ item }) => item),
+    parentId,
+  }
 }
 
 export function canDropFilesOnTarget(target: SidebarDropData | null): boolean {

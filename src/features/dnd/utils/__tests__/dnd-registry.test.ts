@@ -28,6 +28,7 @@ import {
   canDropFilesOnTarget,
   getDragItemId,
   getDragItemIds,
+  getDragPreviewItemIds,
   getDropTargetKey,
   getHighlightId,
   getDroppableMoveItems,
@@ -41,13 +42,14 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 function createCtx(overrides?: Partial<DndContext>): DndContext {
   return {
-    moveItem: vi.fn(),
+    moveItems: vi.fn(),
+    restoreItems: vi.fn(),
+    trashItems: vi.fn(),
     navigateToItem: vi.fn(),
     campaignId: testId<'campaigns'>('campaign_1'),
     campaignName: 'Test Campaign',
     isDm: true,
     setFolderOpen: vi.fn(),
-    hasSiblingNameConflict: () => false,
     ...overrides,
   }
 }
@@ -123,6 +125,21 @@ describe('getDragItemIds', () => {
 
   it('ignores non-string batch ids', () => {
     expect(getDragItemIds({ sidebarItemIds: ['note_1', 42, null] })).toEqual(['note_1'])
+  })
+})
+
+describe('getDragPreviewItemIds', () => {
+  it('uses explicit preview ids when operation ids are normalized', () => {
+    expect(
+      getDragPreviewItemIds({
+        sidebarItemIds: ['folder_1'],
+        sidebarDragPreviewItemIds: ['folder_1', 'note_1', 'note_2'],
+      }),
+    ).toEqual(['folder_1', 'note_1', 'note_2'])
+  })
+
+  it('falls back to operation ids when explicit preview ids are missing', () => {
+    expect(getDragPreviewItemIds({ sidebarItemIds: ['folder_1'] })).toEqual(['folder_1'])
   })
 })
 
@@ -240,28 +257,9 @@ describe('resolveDropOutcome', () => {
       expect(result).toMatchObject({ type: 'operation', action: 'restore' })
     })
 
-    it('rejects restore when name conflicts at root', () => {
-      const note = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
-      const ctx = createCtx({ hasSiblingNameConflict: () => true })
-      const result = resolveDropOutcome(note, rootTarget(), ctx)
-
-      expect(result).toEqual({ type: 'rejection', reason: 'name_conflict' })
-    })
-
-    it('rejects move when name conflicts at root', () => {
+    it('allows root move conflicts because batch conflict planning handles them', () => {
       const note = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
-      const ctx = createCtx({ hasSiblingNameConflict: () => true })
-      const result = resolveDropOutcome(note, rootTarget(), ctx)
-
-      expect(result).toEqual({ type: 'rejection', reason: 'name_conflict' })
-    })
-
-    it('allows move conflicts at root when a batch conflict planner is available', () => {
-      const note = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
-      const ctx = createCtx({
-        hasSiblingNameConflict: () => true,
-        moveItems: vi.fn(),
-      })
+      const ctx = createCtx()
       const result = resolveDropOutcome(note, rootTarget(), ctx)
 
       expect(result).toMatchObject({ type: 'operation', action: 'move' })
@@ -354,15 +352,6 @@ describe('resolveDropOutcome', () => {
       expect(result).toMatchObject({ type: 'operation', action: 'restore' })
     })
 
-    it('rejects restoring when name conflicts in target folder', () => {
-      const note = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
-      const target = folderTarget()
-      const ctx = createCtx({ hasSiblingNameConflict: () => true })
-      const result = resolveDropOutcome(note, target, ctx)
-
-      expect(result).toEqual({ type: 'rejection', reason: 'name_conflict' })
-    })
-
     it('rejects restoring a folder as non-DM', () => {
       const folder = createFolder({ location: SIDEBAR_ITEM_LOCATION.trash })
       const target = folderTarget()
@@ -372,22 +361,10 @@ describe('resolveDropOutcome', () => {
       expect(result).toEqual({ type: 'rejection', reason: 'dm_only' })
     })
 
-    it('rejects move when name conflicts in target folder', () => {
+    it('allows folder move conflicts because batch conflict planning handles them', () => {
       const note = createNote()
       const target = folderTarget()
-      const ctx = createCtx({ hasSiblingNameConflict: () => true })
-      const result = resolveDropOutcome(note, target, ctx)
-
-      expect(result).toEqual({ type: 'rejection', reason: 'name_conflict' })
-    })
-
-    it('allows folder move conflicts when a batch conflict planner is available', () => {
-      const note = createNote()
-      const target = folderTarget()
-      const ctx = createCtx({
-        hasSiblingNameConflict: () => true,
-        moveItems: vi.fn(),
-      })
+      const ctx = createCtx()
       const result = resolveDropOutcome(note, target, ctx)
 
       expect(result).toMatchObject({ type: 'operation', action: 'move' })
@@ -525,6 +502,23 @@ describe('resolveDropOutcome', () => {
 })
 
 describe('getDroppableMoveItems', () => {
+  it('returns noop when every selected item is already in the target folder', () => {
+    const target = folderTarget()
+    const first = createNote({ parentId: target._id })
+    const second = createNote({ parentId: target._id })
+    const result = getDroppableMoveItems([first, second], target, createCtx())
+
+    expect(result).toEqual({ status: 'noop' })
+  })
+
+  it('returns noop when every selected active item is already at root', () => {
+    const first = createNote({ parentId: null })
+    const second = createNote({ parentId: null })
+    const result = getDroppableMoveItems([first, second], rootTarget(), createCtx())
+
+    expect(result).toEqual({ status: 'noop' })
+  })
+
   it('returns movable items while ignoring selected items already in the target folder', () => {
     const target = folderTarget()
     const alreadyInside = createNote({ parentId: target._id })
@@ -748,85 +742,53 @@ describe('resolveDropTarget', () => {
 // ─── Operation execution ───────────────────────────────────────────
 
 describe('operation execution', () => {
-  it('trash operation calls moveItem with trash location', async () => {
+  it('trash operation calls the batch trash path', async () => {
     const note = createNote()
     const ctx = createCtx()
     const result = resolveDropOutcome(note, trashTarget(), ctx)
 
     expect(result?.type).toBe('operation')
     await (result as { execute: () => Promise<void> }).execute()
-    expect(ctx.moveItem).toHaveBeenCalledWith(note, {
-      location: SIDEBAR_ITEM_LOCATION.trash,
-    })
+    expect(ctx.trashItems).toHaveBeenCalledWith([note])
   })
 
-  it('root move operation calls moveItem with null parentId', async () => {
+  it('root move operation calls the batch move path with null parentId', async () => {
     const note = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
     const ctx = createCtx()
-    const result = resolveDropOutcome(note, rootTarget(), ctx)
-
-    await (result as { execute: () => Promise<void> }).execute()
-    expect(ctx.moveItem).toHaveBeenCalledWith(note, { parentId: null })
-  })
-
-  it('root move operation uses batch mover when available', async () => {
-    const note = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
-    const ctx = createCtx({ moveItems: vi.fn() })
     const result = resolveDropOutcome(note, rootTarget(), ctx)
 
     await (result as { execute: () => Promise<void> }).execute()
     expect(ctx.moveItems).toHaveBeenCalledWith([note], null)
-    expect(ctx.moveItem).not.toHaveBeenCalled()
   })
 
-  it('folder move operation calls moveItem and opens folder', async () => {
+  it('folder move operation calls the batch move path and opens folder', async () => {
     const note = createNote()
     const target = folderTarget()
     const ctx = createCtx()
     const result = resolveDropOutcome(note, target, ctx)
 
     await (result as { execute: () => Promise<void> }).execute()
-    expect(ctx.moveItem).toHaveBeenCalledWith(note, {
-      parentId: target._id,
-    })
-    expect(ctx.setFolderOpen).toHaveBeenCalledWith(target._id)
-  })
-
-  it('folder move operation uses batch mover when available', async () => {
-    const note = createNote()
-    const target = folderTarget()
-    const ctx = createCtx({ moveItems: vi.fn() })
-    const result = resolveDropOutcome(note, target, ctx)
-
-    await (result as { execute: () => Promise<void> }).execute()
     expect(ctx.moveItems).toHaveBeenCalledWith([note], target._id)
-    expect(ctx.moveItem).not.toHaveBeenCalled()
     expect(ctx.setFolderOpen).toHaveBeenCalledWith(target._id)
   })
 
-  it('restore to root calls moveItem with sidebar location', async () => {
+  it('restore to root calls the batch restore path', async () => {
     const note = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
     const ctx = createCtx()
     const result = resolveDropOutcome(note, rootTarget(), ctx)
 
     await (result as { execute: () => Promise<void> }).execute()
-    expect(ctx.moveItem).toHaveBeenCalledWith(note, {
-      parentId: null,
-      location: SIDEBAR_ITEM_LOCATION.sidebar,
-    })
+    expect(ctx.restoreItems).toHaveBeenCalledWith([note], null)
   })
 
-  it('restore to folder calls moveItem and opens folder', async () => {
+  it('restore to folder calls the batch restore path and opens folder', async () => {
     const note = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
     const target = folderTarget()
     const ctx = createCtx()
     const result = resolveDropOutcome(note, target, ctx)
 
     await (result as { execute: () => Promise<void> }).execute()
-    expect(ctx.moveItem).toHaveBeenCalledWith(note, {
-      parentId: target._id,
-      location: SIDEBAR_ITEM_LOCATION.sidebar,
-    })
+    expect(ctx.restoreItems).toHaveBeenCalledWith([note], target._id)
     expect(ctx.setFolderOpen).toHaveBeenCalledWith(target._id)
   })
 

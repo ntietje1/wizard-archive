@@ -4,7 +4,6 @@ import type {
   ContextMenuContributor,
   ContextMenuGroupConfig,
   ContextMenuItemSpec,
-  ContextMenuScope,
   ContextMenuSurfaceId,
   ResolvedContextMenuItem,
 } from './types'
@@ -169,5 +168,3 @@ export function buildMenu<TContext extends { surface: ContextMenuSurfaceId }, TS
     isEmpty: false,
   }
 }
-
-export type { ContextMenuScope }

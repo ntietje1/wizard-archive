@@ -5,7 +5,10 @@ import {
   moveSidebarItem as moveSidebarItemFn,
   moveSidebarItems as moveSidebarItemsFn,
 } from './functions/moveSidebarItem'
-import { permanentlyDeleteSidebarItem as permanentlyDeleteSidebarItemFn } from './functions/permanentlyDeleteSidebarItem'
+import {
+  permanentlyDeleteSidebarItem as permanentlyDeleteSidebarItemFn,
+  permanentlyDeleteSidebarItems as permanentlyDeleteSidebarItemsFn,
+} from './functions/permanentlyDeleteSidebarItem'
 import { emptyTrashBin as emptyTrashBinFn } from './functions/emptyTrashBin'
 import { claimPreviewGeneration as claimPreviewGenerationFn } from './functions/claimPreviewGeneration'
 import { setPreviewImage as setPreviewImageFn } from './functions/setPreviewImage'
@@ -17,6 +20,12 @@ const OPERATION_DECISION_ACTION = {
   replace: 'replace',
   keepBoth: 'keepBoth',
   cancel: 'cancel',
+} as const
+
+const MOVE_SIDEBAR_ITEMS_ACTION = {
+  move: 'move',
+  restore: 'restore',
+  trash: 'trash',
 } as const
 
 const operationDecisionValidator = v.object({
@@ -51,6 +60,13 @@ export const moveSidebarItems = campaignMutation({
   args: {
     sourceItemIds: v.array(v.id('sidebarItems')),
     targetParentId: v.nullable(v.id('sidebarItems')),
+    action: v.optional(
+      v.union(
+        v.literal(MOVE_SIDEBAR_ITEMS_ACTION.move),
+        v.literal(MOVE_SIDEBAR_ITEMS_ACTION.restore),
+        v.literal(MOVE_SIDEBAR_ITEMS_ACTION.trash),
+      ),
+    ),
     decisions: v.optional(v.array(operationDecisionValidator)),
   },
   returns: v.array(v.id('sidebarItems')),
@@ -67,6 +83,16 @@ export const permanentlyDeleteSidebarItem = campaignMutation({
   handler: async (ctx, args): Promise<null> => {
     await permanentlyDeleteSidebarItemFn(ctx, { itemId: args.itemId })
     return null
+  },
+})
+
+export const permanentlyDeleteSidebarItems = campaignMutation({
+  args: {
+    sourceItemIds: v.array(v.id('sidebarItems')),
+  },
+  returns: v.array(v.id('sidebarItems')),
+  handler: async (ctx, args): Promise<Array<Id<'sidebarItems'>>> => {
+    return await permanentlyDeleteSidebarItemsFn(ctx, { sourceItemIds: args.sourceItemIds })
   },
 })
 

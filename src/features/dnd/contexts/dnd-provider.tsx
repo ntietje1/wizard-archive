@@ -10,7 +10,6 @@ import { resolveDropTarget } from '~/features/dnd/utils/dnd-registry'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useFileDropHandler } from '~/features/dnd/hooks/useFileDropHandler'
-import { useMoveSidebarItem } from '~/features/sidebar/hooks/useMoveSidebarItem'
 import { useSidebarItemOperations } from '~/features/sidebar/operations/useSidebarItemOperations'
 import { useActiveSidebarItems, useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
@@ -23,10 +22,9 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
   const { campaign, campaignId, isDm } = useCampaign()
   const campaignName = campaign.data?.name
   const { navigateToItem } = useEditorNavigation()
-  const { moveItem } = useMoveSidebarItem()
   const itemOperations = useSidebarItemOperations()
   const { handleDrop: handleDropFiles } = useFileDropHandler()
-  const { itemsMap, parentItemsMap, getAncestorSidebarItems } = useActiveSidebarItems()
+  const { itemsMap, getAncestorSidebarItems } = useActiveSidebarItems()
   const { itemsMap: trashedItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
 
   const setFolderState = useSidebarUIStore((s) => s.setFolderState)
@@ -35,25 +33,15 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
     if (campaignId) setFolderState(campaignId, folderId, true)
   }
 
-  const hasSiblingNameConflict = (
-    name: string,
-    parentId: Id<'sidebarItems'> | null,
-    excludeId?: Id<'sidebarItems'>,
-  ): boolean => {
-    const siblings = parentItemsMap.get(parentId) ?? []
-    const normalized = name.trim().toLowerCase()
-    return siblings.some((s) => s.name.trim().toLowerCase() === normalized && s._id !== excludeId)
-  }
-
   const dndContext: DndContext = {
-    moveItem,
     moveItems: itemOperations.moveItems,
+    restoreItems: itemOperations.restoreItems,
+    trashItems: itemOperations.trashItems,
     navigateToItem,
     campaignId: campaignId ?? null,
     campaignName,
     isDm: isDm ?? false,
     setFolderOpen,
-    hasSiblingNameConflict,
   }
 
   const resolveItem = (id: Id<'sidebarItems'>): AnySidebarItem | null =>

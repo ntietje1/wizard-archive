@@ -38,6 +38,11 @@ export function useIsSelectedItem(item: AnySidebarItem): boolean {
   })
 }
 
+export function useIsFocusedItem(item: AnySidebarItem): boolean {
+  const itemId = item._id
+  return useSidebarUIStore((s) => s.focusedItemId === itemId)
+}
+
 export function getSelectedSlug(): SidebarItemSlug | null {
   return useSidebarUIStore.getState().selectedSlug
 }

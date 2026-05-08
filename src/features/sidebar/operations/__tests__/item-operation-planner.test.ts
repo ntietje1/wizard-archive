@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
-import { planDuplicateOperations, planMoveOperations } from '../item-operation-planner'
-import type { ConflictDecision } from '../item-operation-planner'
+import { planDuplicateOperations, planMoveOperations } from 'convex/sidebarItems/operations/planner'
+import type { ConflictDecision } from 'convex/sidebarItems/operations/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 
@@ -251,6 +251,24 @@ describe('planMoveOperations', () => {
         { sourceItemId: 'note-1', action: 'move', targetParentId: null },
         { sourceItemId: 'note-2', action: 'move', targetParentId: null, name: 'Scene 2' },
       ],
+    })
+  })
+
+  it('deduplicates repeated selected sources', () => {
+    const source = item('note-1', 'Scene', SIDEBAR_ITEM_TYPES.notes, {
+      parentId: 'source-root' as Id<'sidebarItems'>,
+    })
+
+    const result = planMoveOperations({
+      items: [source, source],
+      targetParentId: null,
+      targetItems: [],
+    })
+
+    expect(result).toEqual({
+      status: 'ready',
+      conflicts: [],
+      operations: [{ sourceItemId: source._id, action: 'move', targetParentId: null }],
     })
   })
 

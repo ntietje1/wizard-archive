@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import {
-  buildVisibleSidebarItemIds,
   normalizeTopLevelSelectedItems,
   selectionBelongsToSurface,
-} from '~/features/sidebar/utils/item-selection-order'
+} from 'convex/sidebarItems/operations/selection'
+import { buildVisibleSidebarItemIds } from '~/features/sidebar/utils/item-selection-order'
 import type { SortOptions } from 'convex/editors/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
@@ -89,6 +89,19 @@ describe('normalizeTopLevelSelectedItems', () => {
     const result = normalizeTopLevelSelectedItems([second, first], itemsMap)
 
     expect(result.map((item) => item._id)).toEqual([second._id, first._id])
+  })
+
+  it('deduplicates repeated selected items', () => {
+    const first = createNote({ name: 'First' })
+    const second = createNote({ name: 'Second' })
+    const itemsMap = new Map<Id<'sidebarItems'>, AnySidebarItem>([
+      [first._id, first],
+      [second._id, second],
+    ])
+
+    const result = normalizeTopLevelSelectedItems([first, second, first], itemsMap)
+
+    expect(result.map((item) => item._id)).toEqual([first._id, second._id])
   })
 })
 

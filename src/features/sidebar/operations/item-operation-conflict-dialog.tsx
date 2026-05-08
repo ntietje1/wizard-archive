@@ -3,7 +3,7 @@ import type {
   ConflictDecision,
   ConflictDecisionAction,
   ItemOperationConflict,
-} from './item-operation-planner'
+} from 'convex/sidebarItems/operations/types'
 import { Button } from '~/features/shadcn/components/button'
 import { Checkbox } from '~/features/shadcn/components/checkbox'
 import {

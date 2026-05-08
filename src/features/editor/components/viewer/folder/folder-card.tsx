@@ -10,7 +10,7 @@ import { CardTitle } from '~/features/shadcn/components/card'
 import { Button } from '~/features/shadcn/components/button'
 import { useEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
-import { useIsSelectedItem } from '~/features/sidebar/hooks/useSelectedItem'
+import { useIsFocusedItem, useIsSelectedItem } from '~/features/sidebar/hooks/useSelectedItem'
 import { useContextMenu } from '~/features/context-menu/hooks/useContextMenu'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
@@ -132,6 +132,7 @@ function FolderCardInner({
   const linkProps = useEditorLinkProps(folder)
   const { setLastSelectedItem } = useLastEditorItem()
   const isSelected = useIsSelectedItem(folder)
+  const isFocused = useIsFocusedItem(folder)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
   const { handleItemClick, handleItemContextMenu } = useItemSelectionInteractions(folder, {
     surface: itemSurface,
@@ -193,7 +194,12 @@ function FolderCardInner({
           handleItemClick(e, () => setLastSelectedItem(folder.slug))
         }}
       >
-        <div className="relative block w-full h-full cursor-pointer group">
+        <div
+          className={cn(
+            'relative block w-full h-full cursor-pointer group rounded-md',
+            isFocused && !isSelected && 'ring-ring ring-1',
+          )}
+        >
           <FolderSvg dropState={dropState} isSelected={isSelected} />
 
           <div className="relative z-[2] pt-3 px-2">

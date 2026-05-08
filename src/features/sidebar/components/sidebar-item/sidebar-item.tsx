@@ -9,7 +9,7 @@ import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { useFolderState } from '~/features/sidebar/hooks/useFolderState'
 import { useContextMenu } from '~/features/context-menu/hooks/useContextMenu'
-import { useIsSelectedItem } from '~/features/sidebar/hooks/useSelectedItem'
+import { useIsFocusedItem, useIsSelectedItem } from '~/features/sidebar/hooks/useSelectedItem'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useEditSidebarItem } from '~/features/sidebar/hooks/useEditSidebarItem'
 import { useEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
@@ -33,6 +33,7 @@ function SidebarItemComponent({ item, parentItemsMap, visibleItemIds }: SidebarI
   const linkProps = useEditorLinkProps(item)
   const { setLastSelectedItem } = useLastEditorItem()
   const isSelected = useIsSelectedItem(item)
+  const isFocused = useIsFocusedItem(item)
   const { isExpanded, toggleExpanded } = useFolderState(item._id)
   const renamingId = useSidebarUIStore((s) => s.renamingId)
   const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
@@ -70,6 +71,7 @@ function SidebarItemComponent({ item, parentItemsMap, visibleItemIds }: SidebarI
           icon={icon}
           name={item.name}
           isSelected={isSelected}
+          isFocused={isFocused}
           isExpanded={isExpanded}
           isRenaming={renamingId === item._id}
           linkProps={linkProps}

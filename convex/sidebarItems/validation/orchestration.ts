@@ -7,7 +7,9 @@ import type { Id } from '../../_generated/dataModel'
 import { getSidebarItem } from '../functions/getSidebarItem'
 import { getSidebarItemsByParent } from '../functions/getSidebarItemsByParent'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
+import { evaluateMoveToParent } from '../operations/capabilities'
 import type { AnySidebarItem } from '../types/types'
+import { assertSidebarOperationAllowed } from '../functions/operationCapability'
 import { requireItemAccess } from './access'
 import { assertSidebarItemName, checkNameConflict } from './name'
 import { validateNoCircularParentAsync } from './parent'
@@ -71,6 +73,7 @@ export async function validateSidebarParentChange(
     throwClientError(ERROR_CODE.VALIDATION_FAILED, result.error)
   }
 
+  let parent: AnySidebarItem | null = null
   if (newParentId) {
     const parentFromDb = await getSidebarItem(ctx, newParentId)
     if (!parentFromDb) {
@@ -85,11 +88,19 @@ export async function validateSidebarParentChange(
         'Cannot move items into a folder in a different location',
       )
     }
-    await requireItemAccess(ctx, {
+    parent = await requireItemAccess(ctx, {
       rawItem: parentFromDb,
       requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
     })
   }
+
+  assertSidebarOperationAllowed(
+    evaluateMoveToParent({ role: ctx.membership.role }, item, {
+      parentId: newParentId,
+      parent,
+      siblings: [],
+    }),
+  )
 }
 
 export async function validateSidebarCreateParent(

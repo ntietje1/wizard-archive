@@ -5,13 +5,21 @@ import { hasAtLeastPermissionLevel } from '../../permissions/hasAtLeastPermissio
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { hardDeleteTree } from './treeOperations'
 import { getSidebarItem } from './getSidebarItem'
+import { evaluatePermanentDelete } from '../operations/capabilities'
+import { assertSidebarOperationAllowed } from './operationCapability'
+import { collectSidebarChildrenMap } from '../operations/childrenMap'
+import { normalizeTopLevelSelectedItems } from '../operations/selection'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
+import type { PermissionLevel } from '../../permissions/types'
+import type { AnySidebarItem, AnySidebarItemRow } from '../types/types'
 
-export async function permanentlyDeleteSidebarItem(
+const MAX_PERMANENT_DELETE_DEPTH = 50
+
+async function loadPermanentDeleteSource(
   ctx: CampaignMutationCtx,
-  { itemId }: { itemId: Id<'sidebarItems'> },
-): Promise<void> {
+  itemId: Id<'sidebarItems'>,
+): Promise<AnySidebarItem> {
   const rawItem = await getSidebarItem(ctx, itemId)
   if (!rawItem) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
@@ -22,6 +30,7 @@ export async function permanentlyDeleteSidebarItem(
   }
 
   const { membership } = ctx
+  let permissionLevel: PermissionLevel = PERMISSION_LEVEL.FULL_ACCESS
 
   if (membership.role !== CAMPAIGN_MEMBER_ROLE.DM) {
     if (rawItem.type === SIDEBAR_ITEM_TYPES.folders) {
@@ -38,14 +47,80 @@ export async function permanentlyDeleteSidebarItem(
       )
       .first()
 
-    const level = share?.permissionLevel ?? PERMISSION_LEVEL.NONE
-    if (!hasAtLeastPermissionLevel(level, PERMISSION_LEVEL.FULL_ACCESS)) {
+    permissionLevel = share?.permissionLevel ?? PERMISSION_LEVEL.NONE
+    if (!hasAtLeastPermissionLevel(permissionLevel, PERMISSION_LEVEL.FULL_ACCESS)) {
       throwClientError(
         ERROR_CODE.PERMISSION_DENIED,
         'You do not have sufficient permission for this item',
       )
     }
   }
+  const item = { ...rawItem, myPermissionLevel: permissionLevel }
+  assertSidebarOperationAllowed(evaluatePermanentDelete({ role: membership.role }, item))
+  return item as AnySidebarItem
+}
 
-  await hardDeleteTree(ctx, rawItem)
+async function getTrashChildren(
+  ctx: CampaignMutationCtx,
+  parentId: Id<'sidebarItems'>,
+): Promise<Array<AnySidebarItemRow>> {
+  return await ctx.db
+    .query('sidebarItems')
+    .withIndex('by_campaign_location_parent_name', (q) =>
+      q
+        .eq('campaignId', ctx.campaign._id)
+        .eq('location', SIDEBAR_ITEM_LOCATION.trash)
+        .eq('parentId', parentId),
+    )
+    .collect()
+}
+
+async function normalizePermanentDeleteRoots(
+  ctx: CampaignMutationCtx,
+  sourceItems: Array<AnySidebarItem>,
+) {
+  const folders = sourceItems.filter((item) => item.type === SIDEBAR_ITEM_TYPES.folders)
+  const childrenMap = await collectSidebarChildrenMap({
+    rootFolderIds: folders.map((folder) => folder._id),
+    maxDepth: MAX_PERMANENT_DELETE_DEPTH,
+    getChildren: async (parentId) => await getTrashChildren(ctx, parentId),
+    onDepthExceeded: () => {
+      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Max permanent delete planning depth exceeded')
+    },
+  })
+  const allItems = new Map<Id<'sidebarItems'>, Pick<AnySidebarItem, '_id' | 'parentId'>>()
+
+  for (const sourceItem of sourceItems) {
+    allItems.set(sourceItem._id, sourceItem)
+  }
+  for (const children of childrenMap.values()) {
+    for (const child of children) {
+      allItems.set(child._id, child)
+    }
+  }
+
+  return normalizeTopLevelSelectedItems(sourceItems, allItems)
+}
+
+export async function permanentlyDeleteSidebarItems(
+  ctx: CampaignMutationCtx,
+  { sourceItemIds }: { sourceItemIds: Array<Id<'sidebarItems'>> },
+): Promise<Array<Id<'sidebarItems'>>> {
+  const sourceItems = await Promise.all(
+    sourceItemIds.map((itemId) => loadPermanentDeleteSource(ctx, itemId)),
+  )
+  const rootItems = await normalizePermanentDeleteRoots(ctx, sourceItems)
+
+  for (const item of rootItems) {
+    await hardDeleteTree(ctx, item)
+  }
+
+  return rootItems.map((item) => item._id)
+}
+
+export async function permanentlyDeleteSidebarItem(
+  ctx: CampaignMutationCtx,
+  { itemId }: { itemId: Id<'sidebarItems'> },
+): Promise<void> {
+  await permanentlyDeleteSidebarItems(ctx, { sourceItemIds: [itemId] })
 }

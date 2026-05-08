@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { ActionHandlers } from '~/features/context-menu/menu-registry'
 import type {
   ContextMenuCommand,
@@ -135,6 +136,32 @@ describe('buildMenu', () => {
     expect(ids).toContain('delete')
     expect(ids).toContain('toggle-bookmark')
     expect(ids).not.toContain('rename')
+  })
+
+  it('hides active-item operations when any selected root is trashed', () => {
+    const selectedItems = [
+      createNote(),
+      createFile({ location: SIDEBAR_ITEM_LOCATION.trash, deletionTime: Date.now() }),
+    ]
+    const menu = buildMenu({
+      context: sidebarCtx({
+        item: selectedItems[0],
+        primaryItem: selectedItems[0],
+        selectedItems,
+        selectedItemIds: selectedItems.map((item) => item._id),
+        isMultiSelection: true,
+      }),
+      services,
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+
+    const ids = menu.flatItems.map((i) => i.id)
+    expect(ids).not.toContain('copy')
+    expect(ids).not.toContain('cut')
+    expect(ids).not.toContain('duplicate')
+    expect(ids).not.toContain('delete')
   })
 
   it('DM sees "New..." submenu on a folder', () => {

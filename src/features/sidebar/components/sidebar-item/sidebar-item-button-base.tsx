@@ -12,6 +12,7 @@ function SidebarItemButtonBaseComponent({
   name,
   isExpanded = false,
   isSelected = false,
+  isFocused = false,
   isRenaming = false,
   showChevron = true,
   linkProps,
@@ -47,9 +48,11 @@ function SidebarItemButtonBaseComponent({
         'group',
         '[[data-item-dragging]_&]:bg-primary/10',
         isSelected && 'bg-muted',
+        isFocused && 'ring-1 ring-ring',
         !isSelected && 'hover:bg-muted/70',
       )}
       data-item-selection-target="true"
+      aria-selected={isSelected}
       onContextMenu={onContextMenu}
     >
       {/* Icon / Chevron Toggle */}
@@ -93,6 +96,7 @@ function SidebarItemButtonBaseComponent({
           activeOptions={{ includeSearch: false }}
           className="flex items-center min-w-0 flex-1 h-full rounded-sm select-none"
           draggable={false}
+          tabIndex={isFocused ? 0 : undefined}
           onClick={onClick}
         >
           {nameContent}

@@ -4,6 +4,9 @@ import {
   isItemSurfaceInteractionTarget,
   isModifierShortcut,
 } from '../item-surface-hotkeys'
+import { getKeyboardOpenItem, getKeyboardPasteParentId } from '../item-surface-keyboard'
+import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
+import { testId } from '~/test/helpers/test-id'
 
 describe('item surface hotkey utilities', () => {
   it('detects modifier shortcuts with either Ctrl or Meta', () => {
@@ -72,5 +75,47 @@ describe('item surface hotkey utilities', () => {
     expect(isItemSurfaceInteractionTarget(interactiveChild)).toBe(true)
     expect(isItemSurfaceInteractionTarget(plainChild)).toBe(false)
     expect(isItemSurfaceInteractionTarget(blank)).toBe(false)
+  })
+
+  it('opens the focused selected item during multi-selection', () => {
+    const note = createNote()
+    const folder = createFolder()
+
+    expect(getKeyboardOpenItem({ selectedItems: [note, folder], focusedItemId: folder._id })).toBe(
+      folder,
+    )
+  })
+
+  it('falls back to the first selected item when focused item is outside the selection', () => {
+    const note = createNote()
+    const folder = createFolder()
+
+    expect(
+      getKeyboardOpenItem({
+        selectedItems: [note, folder],
+        focusedItemId: testId<'sidebarItems'>('other_item'),
+      }),
+    ).toBe(note)
+  })
+
+  it('pastes into a focused selected folder and otherwise uses the active surface parent', () => {
+    const surfaceParentId = testId<'sidebarItems'>('parent_1')
+    const note = createNote()
+    const folder = createFolder()
+
+    expect(
+      getKeyboardPasteParentId({
+        selectedItems: [note, folder],
+        focusedItemId: folder._id,
+        surfaceParentId,
+      }),
+    ).toBe(folder._id)
+    expect(
+      getKeyboardPasteParentId({
+        selectedItems: [note, folder],
+        focusedItemId: note._id,
+        surfaceParentId,
+      }),
+    ).toBe(surfaceParentId)
   })
 })

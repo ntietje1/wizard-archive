@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware'
 import { useShallow } from 'zustand/shallow'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
-import { selectionBelongsToSurface } from '~/features/sidebar/utils/item-selection-normalization'
+import { selectionBelongsToSurface } from 'convex/sidebarItems/operations/selection'
 
 export type ItemSurface = 'sidebar' | 'folder-view' | 'bookmarks' | 'trash'
 
@@ -37,7 +37,9 @@ interface SidebarUIState {
   selectedSlug: SidebarItemSlug | null
   selectedItemIds: Array<Id<'sidebarItems'>>
   anchorItemId: Id<'sidebarItems'> | null
+  focusedItemId: Id<'sidebarItems'> | null
   selectionSurface: ItemSurfaceIdentity | null
+  focusSurface: ItemSurfaceIdentity | null
   activeItemSurface: ActiveItemSurface | null
   itemClipboard: SidebarItemClipboard | null
   viewAsPlayerId: Id<'campaignMembers'> | null
@@ -57,6 +59,12 @@ interface SidebarUIActions {
   selectSingleItem: (id: Id<'sidebarItems'>) => void
   toggleItemSelection: (id: Id<'sidebarItems'>) => void
   selectItemRange: (targetId: Id<'sidebarItems'>, visibleItemIds: Array<Id<'sidebarItems'>>) => void
+  setFocusedItem: (id: Id<'sidebarItems'> | null) => void
+  moveFocus: (
+    direction: 'up' | 'down',
+    visibleItemIds: Array<Id<'sidebarItems'>>,
+    extendSelection: boolean,
+  ) => void
   clearItemSelection: () => void
   normalizeContextSelection: (
     id: Id<'sidebarItems'>,
@@ -123,6 +131,24 @@ function sameSurfaceIdentity(a: ItemSurfaceIdentity | null, b: ItemSurfaceIdenti
   return a?.surface === b?.surface && a?.parentId === b?.parentId
 }
 
+function nextFocusedId(
+  currentId: Id<'sidebarItems'> | null,
+  direction: 'up' | 'down',
+  visibleItemIds: Array<Id<'sidebarItems'>>,
+) {
+  if (visibleItemIds.length === 0) return null
+  const currentIndex = currentId ? visibleItemIds.indexOf(currentId) : -1
+  if (currentIndex === -1) {
+    return direction === 'up' ? visibleItemIds[visibleItemIds.length - 1] : visibleItemIds[0]
+  }
+
+  const nextIndex =
+    direction === 'up'
+      ? Math.max(0, currentIndex - 1)
+      : Math.min(visibleItemIds.length - 1, currentIndex + 1)
+  return visibleItemIds[nextIndex]
+}
+
 export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
   persist(
     (set) => ({
@@ -132,7 +158,9 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
       selectedSlug: null,
       selectedItemIds: [],
       anchorItemId: null,
+      focusedItemId: null,
       selectionSurface: null,
+      focusSurface: null,
       activeItemSurface: null,
       itemClipboard: null,
       viewAsPlayerId: null,
@@ -209,7 +237,9 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
           return {
             selectedItemIds,
             anchorItemId: nextAnchor,
+            focusedItemId: nextAnchor,
             selectionSurface: surfaceIdentity(state.activeItemSurface),
+            focusSurface: nextAnchor ? surfaceIdentity(state.activeItemSurface) : null,
           }
         }),
 
@@ -217,7 +247,9 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
         set((state) => ({
           selectedItemIds: [id],
           anchorItemId: id,
+          focusedItemId: id,
           selectionSurface: surfaceIdentity(state.activeItemSurface),
+          focusSurface: surfaceIdentity(state.activeItemSurface),
         })),
 
       toggleItemSelection: (id) =>
@@ -244,8 +276,10 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
           return {
             selectedItemIds,
             anchorItemId,
+            focusedItemId: id,
             selectionSurface:
               selectedItemIds.length > 0 ? surfaceIdentity(state.activeItemSurface) : null,
+            focusSurface: surfaceIdentity(state.activeItemSurface),
           }
         }),
 
@@ -253,8 +287,47 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
         set((state) => ({
           selectedItemIds: selectRange(state.anchorItemId, targetId, visibleItemIds),
           anchorItemId: state.anchorItemId ?? targetId,
+          focusedItemId: targetId,
           selectionSurface: surfaceIdentity(state.activeItemSurface),
+          focusSurface: surfaceIdentity(state.activeItemSurface),
         })),
+
+      setFocusedItem: (id) =>
+        set((state) => ({
+          focusedItemId: id,
+          focusSurface: id ? surfaceIdentity(state.activeItemSurface) : null,
+        })),
+
+      moveFocus: (direction, visibleItemIds, extendSelection) =>
+        set((state) => {
+          const focusedItemId = nextFocusedId(state.focusedItemId, direction, visibleItemIds)
+          if (!focusedItemId) {
+            return {
+              focusedItemId: null,
+              focusSurface: null,
+            }
+          }
+
+          const focusSurface = surfaceIdentity(state.activeItemSurface)
+          if (!extendSelection) {
+            return {
+              focusedItemId,
+              focusSurface,
+              selectedItemIds: [focusedItemId],
+              anchorItemId: focusedItemId,
+              selectionSurface: focusSurface,
+            }
+          }
+
+          const anchorItemId = state.anchorItemId ?? state.focusedItemId ?? focusedItemId
+          return {
+            focusedItemId,
+            focusSurface,
+            selectedItemIds: selectRange(anchorItemId, focusedItemId, visibleItemIds),
+            anchorItemId,
+            selectionSurface: focusSurface,
+          }
+        }),
 
       clearItemSelection: () =>
         set(() => ({
@@ -274,7 +347,9 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
           return {
             selectedItemIds: [id],
             anchorItemId: id,
+            focusedItemId: id,
             selectionSurface: surfaceIdentity(state.activeItemSurface),
+            focusSurface: surfaceIdentity(state.activeItemSurface),
           }
         }),
 
@@ -284,28 +359,21 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
           if (!surface) {
             return {
               activeItemSurface: null,
-              selectedItemIds: [],
-              anchorItemId: null,
-              selectionSurface: null,
+              focusedItemId: null,
+              focusSurface: null,
             }
           }
 
-          if (
-            state.selectedItemIds.length > 0 &&
-            !selectionBelongsToSurface(state.selectedItemIds, surface.visibleItemIds)
-          ) {
-            return {
-              activeItemSurface: surface,
-              selectedItemIds: [],
-              anchorItemId: null,
-              selectionSurface: null,
-            }
-          }
+          const focusedItemId =
+            state.focusedItemId && surface.visibleItemIds.includes(state.focusedItemId)
+              ? state.focusedItemId
+              : null
+          const focusSurface = focusedItemId ? nextIdentity : null
 
           return {
             activeItemSurface: surface,
-            // Preserve an empty selectionSurface only while the same surface identity stays active;
-            // selectedItemIds always promote the nextIdentity as the current selection surface.
+            focusedItemId,
+            focusSurface,
             selectionSurface:
               state.selectedItemIds.length > 0
                 ? nextIdentity
@@ -321,7 +389,9 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
         set({
           selectedItemIds: [],
           anchorItemId: null,
+          focusedItemId: null,
           selectionSurface: null,
+          focusSurface: null,
           activeItemSurface: null,
           itemClipboard: null,
         }),

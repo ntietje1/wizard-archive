@@ -14,6 +14,7 @@ export interface SidebarItemHandlers {
 
 export interface SidebarItemState {
   isSelected: boolean
+  isFocused?: boolean
   isRenaming: boolean
   isExpanded?: boolean
 }

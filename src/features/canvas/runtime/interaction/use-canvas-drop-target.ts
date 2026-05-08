@@ -10,7 +10,9 @@ import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarge
 import { useFileDropHandler } from '~/features/dnd/hooks/useFileDropHandler'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
-import { CANVAS_DROP_ZONE_TYPE, getDragItemIds } from '~/features/dnd/utils/dnd-registry'
+import { CANVAS_DROP_ZONE_TYPE } from '~/features/dnd/utils/dnd-registry'
+import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { resolveNormalizedDraggedSidebarItems } from '~/features/dnd/utils/sidebar-drag-items'
 
 const STACK_OFFSET = 20
 
@@ -28,6 +30,7 @@ export function useCanvasDropTarget({
   screenToCanvasPosition,
 }: UseCanvasDropTargetOptions) {
   const dropOverlayRef = useRef<HTMLDivElement>(null)
+  const { itemsMap } = useActiveSidebarItems()
 
   const dropData: CanvasDropZoneData = {
     type: CANVAS_DROP_ZONE_TYPE,
@@ -53,6 +56,8 @@ export function useCanvasDropTarget({
   createNodeRef.current = createNode
   const screenToCanvasPositionRef = useRef(screenToCanvasPosition)
   screenToCanvasPositionRef.current = screenToCanvasPosition
+  const itemsMapRef = useRef(itemsMap)
+  itemsMapRef.current = itemsMap
 
   useEffect(() => {
     return monitorForElements({
@@ -71,13 +76,15 @@ export function useCanvasDropTarget({
           y: clientY,
         })
 
-        const sidebarItemIds = (getDragItemIds(source.data) ?? []).filter(
-          (sidebarItemId) => sidebarItemId !== canvasIdRef.current,
-        )
-        sidebarItemIds.forEach((sidebarItemId, index) => {
+        const sidebarItems = resolveNormalizedDraggedSidebarItems({
+          sourceData: source.data,
+          activeItemsMap: itemsMapRef.current,
+          excludeItemIds: [canvasIdRef.current],
+        })
+        sidebarItems.forEach((sidebarItem, index) => {
           try {
             createNodeRef.current(
-              createEmbedCanvasNode(sidebarItemId, {
+              createEmbedCanvasNode(sidebarItem._id, {
                 x: position.x + index * STACK_OFFSET,
                 y: position.y + index * STACK_OFFSET,
               }),

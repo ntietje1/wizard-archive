@@ -10,7 +10,7 @@ import { Button } from '~/features/shadcn/components/button'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
-import { useIsSelectedItem } from '~/features/sidebar/hooks/useSelectedItem'
+import { useIsFocusedItem, useIsSelectedItem } from '~/features/sidebar/hooks/useSelectedItem'
 import { useContextMenu } from '~/features/context-menu/hooks/useContextMenu'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
@@ -45,6 +45,7 @@ function NoteCardInner({
   const { setLastSelectedItem } = useLastEditorItem()
   const canDrag = hasAtLeastPermissionLevel(note.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
   const isSelected = useIsSelectedItem(note)
+  const isFocused = useIsFocusedItem(note)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
   const { handleItemClick, handleItemContextMenu } = useItemSelectionInteractions(note, {
     surface: itemSurface,
@@ -89,6 +90,7 @@ function NoteCardInner({
           className={cn(
             'w-full h-full cursor-pointer group flex flex-col p-2 relative rounded-md hover:bg-muted/70',
             isSelected && 'ring-ring ring-2',
+            isFocused && !isSelected && 'ring-ring ring-1',
           )}
         >
           <div className="flex items-center justify-between mb-1 min-w-0">

@@ -5,14 +5,16 @@ import type { DndMonitorCtx } from '~/features/dnd/types'
 import { handleError } from '~/shared/utils/logger'
 import {
   getDragItemId,
-  getDragItemIds,
+  getDragPreviewItemIds,
   getDroppableMoveItems,
   getDropTargetKey,
   getHighlightId,
   resolveDropOutcome,
   resolveDropTarget,
 } from '~/features/dnd/utils/dnd-registry'
+import { resolveNormalizedDraggedSidebarItems } from '~/features/dnd/utils/sidebar-drag-items'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
+import type { DropOutcome, SidebarDropData } from '~/features/dnd/utils/dnd-registry'
 
 function resolveDraggedItem(sourceData: Record<string, unknown>, ctx: DndMonitorCtx) {
   const sid = getDragItemId(sourceData)
@@ -20,9 +22,172 @@ function resolveDraggedItem(sourceData: Record<string, unknown>, ctx: DndMonitor
 }
 
 function resolveDraggedItems(sourceData: Record<string, unknown>, ctx: DndMonitorCtx) {
-  return getDragItemIds(sourceData)
-    .map((sid) => ctx.itemsMap.get(sid) ?? ctx.trashedItemsMap.get(sid) ?? null)
-    .filter((item): item is NonNullable<typeof item> => item !== null)
+  return resolveNormalizedDraggedSidebarItems({
+    sourceData,
+    activeItemsMap: ctx.itemsMap,
+    trashedItemsMap: ctx.trashedItemsMap,
+    includeTrashed: true,
+  })
+}
+
+function resolveDraggedPreviewItems(sourceData: Record<string, unknown>, ctx: DndMonitorCtx) {
+  const allItemsMap = new Map([...ctx.itemsMap, ...ctx.trashedItemsMap])
+  return getDragPreviewItemIds(sourceData)
+    .map((id) => allItemsMap.get(id))
+    .filter((item): item is NonNullable<typeof item> => Boolean(item))
+}
+
+function overlayItemCount(items: Array<unknown>) {
+  return items.length > 1 ? items.length : undefined
+}
+
+function resolveMonitorDropTarget(
+  rawDropTarget: Record<string, unknown> | null,
+  ctx: DndMonitorCtx,
+) {
+  return rawDropTarget
+    ? resolveDropTarget(rawDropTarget, ctx.itemsMap, ctx.trashedItemsMap, ctx.getAncestorIds)
+    : null
+}
+
+function resolveDragFeedbackOutcome({
+  ctx,
+  draggedItems,
+  dropTarget,
+}: {
+  ctx: DndMonitorCtx
+  draggedItems: ReturnType<typeof resolveDraggedItems>
+  dropTarget: SidebarDropData | null
+}): DropOutcome | null {
+  const draggedItem = draggedItems[0] ?? null
+  const bulkMove = dropTarget
+    ? getDroppableMoveItems(draggedItems, dropTarget, ctx.dndContext)
+    : { status: 'none' as const }
+
+  if (bulkMove.status === 'ready') {
+    return resolveDropOutcome(bulkMove.items[0] ?? null, dropTarget, ctx.dndContext)
+  }
+  if (bulkMove.status === 'noop') {
+    return null
+  }
+  if (bulkMove.status === 'blocked') {
+    return { type: 'rejection', reason: 'missing_data' }
+  }
+  return resolveDropOutcome(draggedItem, dropTarget, ctx.dndContext)
+}
+
+function resetElementDragState({
+  overlayRef,
+  lastDropTargetKeyRef,
+  setDragState,
+  setSidebarDragTargetId,
+  setDragOutcome,
+  setIsDraggingElement,
+}: {
+  overlayRef: React.RefObject<HTMLDivElement | null>
+  lastDropTargetKeyRef: React.MutableRefObject<string | null>
+  setDragState: React.Dispatch<React.SetStateAction<DragOverlayState>>
+  setSidebarDragTargetId: (id: string | null) => void
+  setDragOutcome: (outcome: DropOutcome | null) => void
+  setIsDraggingElement: (isDragging: boolean) => void
+}) {
+  if (overlayRef.current) overlayRef.current.style.display = 'none'
+  lastDropTargetKeyRef.current = null
+  setDragState(null)
+  setSidebarDragTargetId(null)
+  setDragOutcome(null)
+  setIsDraggingElement(false)
+}
+
+async function executeBulkMove(
+  ctx: DndMonitorCtx,
+  bulkMove: ReturnType<typeof getDroppableMoveItems>,
+) {
+  if (bulkMove.status === 'noop') return true
+  if (bulkMove.status !== 'ready') return false
+
+  try {
+    if (bulkMove.action === 'restore') {
+      await ctx.dndContext.restoreItems(bulkMove.items, bulkMove.parentId)
+    } else {
+      await ctx.dndContext.moveItems(bulkMove.items, bulkMove.parentId)
+    }
+    if (bulkMove.parentId) {
+      ctx.dndContext.setFolderOpen(bulkMove.parentId)
+    }
+  } catch (error) {
+    handleError(error, 'Failed to move items')
+  }
+  return true
+}
+
+function getExecutableOutcomes(
+  draggedItems: ReturnType<typeof resolveDraggedItems>,
+  targetData: SidebarDropData,
+  ctx: DndMonitorCtx,
+) {
+  const outcomes = draggedItems.map((draggedItem) =>
+    resolveDropOutcome(draggedItem, targetData, ctx.dndContext),
+  )
+  return outcomes.filter(
+    (
+      outcome,
+    ): outcome is Extract<NonNullable<typeof outcome>, { type: 'operation' }> & {
+      execute: () => Promise<void>
+    } => outcome?.type === 'operation' && Boolean(outcome.execute),
+  )
+}
+
+async function executeIndividualDropOutcomes(
+  ctx: DndMonitorCtx,
+  draggedItems: ReturnType<typeof resolveDraggedItems>,
+  targetData: SidebarDropData,
+) {
+  const executableOutcomes = getExecutableOutcomes(draggedItems, targetData, ctx)
+  if (executableOutcomes.length !== draggedItems.length) {
+    handleError(
+      new Error(
+        `${draggedItems.length - executableOutcomes.length} of ${draggedItems.length} dragged items cannot be moved`,
+      ),
+      'Some dragged items cannot be moved',
+    )
+    return
+  }
+
+  const errors: Array<unknown> = []
+  for (const outcome of executableOutcomes) {
+    try {
+      await outcome.execute()
+    } catch (error) {
+      errors.push(error)
+    }
+  }
+  if (errors.length > 0) {
+    handleError(new Error(`${errors.length} drag operations failed`), 'Failed to move items')
+  }
+}
+
+async function executeElementDrop(
+  ctx: DndMonitorCtx,
+  sourceData: Record<string, unknown>,
+  targetData: Record<string, unknown>,
+) {
+  const draggedItems = resolveDraggedItems(sourceData, ctx)
+  if (draggedItems.length === 0) return
+
+  const resolvedTarget = resolveDropTarget(
+    targetData,
+    ctx.itemsMap,
+    ctx.trashedItemsMap,
+    ctx.getAncestorIds,
+  )
+  if (!resolvedTarget) return
+
+  const bulkMove = getDroppableMoveItems(draggedItems, resolvedTarget, ctx.dndContext)
+  if (await executeBulkMove(ctx, bulkMove)) return
+  if (bulkMove.status === 'blocked') return
+
+  await executeIndividualDropOutcomes(ctx, draggedItems, resolvedTarget)
 }
 
 export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
@@ -94,7 +259,9 @@ export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
         const ctx = ctxRef.current
         if (!ctx) return
 
-        const draggedItem = resolveDraggedItem(source.data, ctx)
+        const draggedItems = resolveDraggedItems(source.data, ctx)
+        const draggedPreviewItems = resolveDraggedPreviewItems(source.data, ctx)
+        const draggedItem = draggedItems[0] ?? resolveDraggedItem(source.data, ctx)
         const input = location.current.input
 
         if (overlayRef.current) {
@@ -105,7 +272,13 @@ export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
         lastDropTargetKeyRef.current = null
         setDragOutcome(null)
         setIsDraggingElement(true)
-        if (draggedItem) setDragState({ draggedItem, outcome: null })
+        if (draggedItem) {
+          setDragState({
+            draggedItem,
+            draggedItemCount: overlayItemCount(draggedPreviewItems),
+            outcome: null,
+          })
+        }
       },
       onDrag: ({ location, source }) => {
         const input = location.current.input
@@ -120,26 +293,18 @@ export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
         if (key !== lastDropTargetKeyRef.current) {
           lastDropTargetKeyRef.current = key
           const ctx = ctxRef.current
+          if (!ctx) return
 
-          const dropTarget = rawDropTarget
-            ? resolveDropTarget(
-                rawDropTarget,
-                ctx.itemsMap,
-                ctx.trashedItemsMap,
-                ctx.getAncestorIds,
-              )
-            : null
-
+          const dropTarget = resolveMonitorDropTarget(rawDropTarget, ctx)
           const draggedItems = resolveDraggedItems(source.data, ctx)
-          const draggedItem = draggedItems[0] ?? null
-
-          const outcome = resolveDropOutcome(draggedItem, dropTarget, ctx.dndContext)
+          const draggedPreviewItems = resolveDraggedPreviewItems(source.data, ctx)
+          const outcome = resolveDragFeedbackOutcome({ ctx, draggedItems, dropTarget })
 
           setDragState((prev) => {
             if (!prev) return null
             return {
               ...prev,
-              draggedItemCount: draggedItems.length > 1 ? draggedItems.length : undefined,
+              draggedItemCount: overlayItemCount(draggedPreviewItems),
               outcome,
             }
           })
@@ -150,74 +315,20 @@ export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
       },
       onDrop: async ({ source, location }) => {
         isElementDragRef.current = false
-
-        if (overlayRef.current) overlayRef.current.style.display = 'none'
-        lastDropTargetKeyRef.current = null
-        setDragState(null)
-        setSidebarDragTargetId(null)
-        setDragOutcome(null)
-        setIsDraggingElement(false)
+        resetElementDragState({
+          overlayRef,
+          lastDropTargetKeyRef,
+          setDragState,
+          setSidebarDragTargetId,
+          setDragOutcome,
+          setIsDraggingElement,
+        })
 
         const topTarget = location.current.dropTargets[0]
         if (!topTarget) return
 
         const ctx = ctxRef.current
-        const draggedItems = resolveDraggedItems(source.data, ctx)
-        if (draggedItems.length === 0) return
-
-        const targetData = resolveDropTarget(
-          topTarget.data,
-          ctx.itemsMap,
-          ctx.trashedItemsMap,
-          ctx.getAncestorIds,
-        )
-        if (!targetData) return
-
-        const bulkMove = getDroppableMoveItems(draggedItems, targetData, ctx.dndContext)
-        if (ctx.dndContext.moveItems && bulkMove.status === 'ready') {
-          try {
-            await ctx.dndContext.moveItems(bulkMove.items, bulkMove.parentId)
-            if (bulkMove.parentId) {
-              ctx.dndContext.setFolderOpen(bulkMove.parentId)
-            }
-          } catch (error) {
-            handleError(error, 'Failed to move items')
-          }
-          return
-        }
-        if (bulkMove.status === 'blocked') return
-
-        const outcomes = draggedItems.map((draggedItem) =>
-          resolveDropOutcome(draggedItem, targetData, ctx.dndContext),
-        )
-        const executableOutcomes = outcomes.filter(
-          (
-            outcome,
-          ): outcome is Extract<NonNullable<typeof outcome>, { type: 'operation' }> & {
-            execute: () => Promise<void>
-          } => outcome?.type === 'operation' && Boolean(outcome.execute),
-        )
-        if (executableOutcomes.length === 0 || executableOutcomes.length !== draggedItems.length) {
-          handleError(
-            new Error(
-              `${draggedItems.length - executableOutcomes.length} of ${draggedItems.length} dragged items cannot be moved`,
-            ),
-            'Some dragged items cannot be moved',
-          )
-          return
-        }
-
-        const errors: Array<unknown> = []
-        for (const outcome of executableOutcomes) {
-          try {
-            await outcome.execute()
-          } catch (error) {
-            errors.push(error)
-          }
-        }
-        if (errors.length > 0) {
-          handleError(new Error(`${errors.length} drag operations failed`), 'Failed to move items')
-        }
+        if (ctx) await executeElementDrop(ctx, source.data, topTarget.data)
       },
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps

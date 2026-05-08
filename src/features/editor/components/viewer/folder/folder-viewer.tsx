@@ -12,10 +12,7 @@ import { ContentGrid } from '~/features/campaigns/components/content-grid/conten
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
-import { useCallback, useEffect, useMemo } from 'react'
-import type { PointerEvent } from 'react'
-import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
-import { isItemSurfaceInteractionTarget } from '~/features/sidebar/utils/item-surface-hotkeys'
+import { useItemSurfaceRegistration } from '~/features/sidebar/hooks/useItemSurfaceRegistration'
 
 export function FolderViewer({ item: folder }: EditorViewerProps<FolderWithContent>) {
   const { parentItemsMap, status } = useFilteredSidebarItems()
@@ -25,36 +22,15 @@ export function FolderViewer({ item: folder }: EditorViewerProps<FolderWithConte
 
   const isDeleted = folder.location === SIDEBAR_ITEM_LOCATION.trash
   const effectiveStatus = isDeleted ? trashedStatus : status
-  const children = useMemo(
-    () =>
-      isDeleted
-        ? (trashedParentItemsMap.get(folder._id) ?? [])
-        : (parentItemsMap.get(folder._id) ?? []),
-    [folder._id, isDeleted, parentItemsMap, trashedParentItemsMap],
-  )
-  const visibleItemIds = useMemo(() => children.map((child) => child._id), [children])
-  const setActiveItemSurface = useSidebarUIStore((s) => s.setActiveItemSurface)
-  const clearItemSelection = useSidebarUIStore((s) => s.clearItemSelection)
-  const folderSurface = useMemo(
-    () => ({ surface: 'folder-view' as const, parentId: folder._id, visibleItemIds }),
-    [folder._id, visibleItemIds],
-  )
-
-  const activateFolderSurface = useCallback(() => {
-    setActiveItemSurface(folderSurface)
-  }, [folderSurface, setActiveItemSurface])
-
-  const handleSurfacePointerDown = (event: PointerEvent) => {
-    activateFolderSurface()
-    if (!isItemSurfaceInteractionTarget(event.target)) {
-      clearItemSelection()
-    }
-  }
-
-  useEffect(() => {
-    setActiveItemSurface(folderSurface)
-    return () => setActiveItemSurface(null)
-  }, [folderSurface, setActiveItemSurface])
+  const children = isDeleted
+    ? (trashedParentItemsMap.get(folder._id) ?? [])
+    : (parentItemsMap.get(folder._id) ?? [])
+  const visibleItemIds = children.map((child) => child._id)
+  const { handleSurfacePointerDown } = useItemSurfaceRegistration({
+    surface: 'folder-view',
+    parentId: folder._id,
+    visibleItemIds,
+  })
 
   const hasFullAccess =
     !isDeleted && hasAtLeastPermissionLevel(folder.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
