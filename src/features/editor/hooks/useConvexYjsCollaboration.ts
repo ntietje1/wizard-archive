@@ -1,5 +1,5 @@
 import * as Y from 'yjs'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { ConvexYjsProvider } from '../providers/convex-yjs-provider'
@@ -22,8 +22,6 @@ export function useConvexYjsCollaboration(
 ) {
   const convex = useConvex()
   const { campaignId } = useCampaign()
-  const campaignIdRef = useRef(campaignId)
-  campaignIdRef.current = campaignId
   const [state, setState] = useState<YjsState | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [afterSeq, setAfterSeq] = useState<number | undefined>(undefined)
@@ -32,24 +30,29 @@ export function useConvexYjsCollaboration(
     setIsLoading(true)
     setAfterSeq(undefined)
 
+    if (!campaignId) {
+      setState(null)
+      return
+    }
+
     const doc = new Y.Doc()
     const provider = new ConvexYjsProvider(doc, documentId, {
       pushUpdate: (args) =>
         convex.mutation(api.yjsSync.mutations.pushUpdate, {
           ...args,
-          campaignId: campaignIdRef.current!,
+          campaignId,
           documentId,
         }),
       pushAwareness: (args) =>
         convex.mutation(api.yjsSync.mutations.pushAwareness, {
           ...args,
-          campaignId: campaignIdRef.current!,
+          campaignId,
           documentId,
         }),
       removeAwareness: (args) =>
         convex.mutation(api.yjsSync.mutations.removeAwareness, {
           ...args,
-          campaignId: campaignIdRef.current!,
+          campaignId,
           documentId,
         }),
     })
@@ -61,7 +64,7 @@ export function useConvexYjsCollaboration(
       doc.destroy()
       setState(null)
     }
-  }, [documentId, convex])
+  }, [documentId, convex, campaignId])
 
   const { name, color } = user
   useEffect(() => {

@@ -15,6 +15,7 @@ const {
   mockApplyRemoteUpdates,
   mockApplyRemoteAwareness,
   mockSetUser,
+  mockUseCampaign,
   MockConvexYjsProvider,
 } = vi.hoisted(() => {
   const mutation = vi.fn().mockResolvedValue(null)
@@ -26,6 +27,7 @@ const {
     mockApplyRemoteUpdates: vi.fn(),
     mockApplyRemoteAwareness: vi.fn(),
     mockSetUser: vi.fn(),
+    mockUseCampaign: vi.fn().mockReturnValue({ campaignId: 'test-campaign-id' }),
     MockConvexYjsProvider: vi.fn(),
   }
 })
@@ -48,7 +50,7 @@ vi.mock('@convex-dev/react-query', () => ({
 }))
 
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
-  useCampaign: () => ({ campaignId: 'test-campaign-id' }),
+  useCampaign: () => mockUseCampaign(),
 }))
 
 vi.mock('~/shared/hooks/useCampaignQuery', () => ({
@@ -72,6 +74,7 @@ describe('useConvexYjsCollaboration', () => {
     mockApplyRemoteUpdates.mockClear()
     mockApplyRemoteAwareness.mockClear()
     mockSetUser.mockClear()
+    mockUseCampaign.mockReturnValue({ campaignId: 'test-campaign-id' })
 
     MockConvexYjsProvider.mockImplementation(function (
       this: Record<string, unknown>,
@@ -111,6 +114,17 @@ describe('useConvexYjsCollaboration', () => {
         removeAwareness: expect.any(Function),
       }),
     )
+  })
+
+  it('waits for a campaignId before creating provider', () => {
+    mockUseCampaign.mockReturnValue({ campaignId: undefined })
+
+    const { result } = renderHook(() => useConvexYjsCollaboration(DOCUMENT_ID, USER, true))
+
+    expect(MockConvexYjsProvider).not.toHaveBeenCalled()
+    expect(result.current.doc).toBeNull()
+    expect(result.current.provider).toBeNull()
+    expect(result.current.isLoading).toBe(true)
   })
 
   it('returns doc and provider after state initialization', () => {
