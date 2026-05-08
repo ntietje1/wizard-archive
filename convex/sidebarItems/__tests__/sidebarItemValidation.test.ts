@@ -130,6 +130,10 @@ describe('validateItemSlug', () => {
     expect(validateItemSlug('').valid).toBe(false)
   })
 
+  it('rejects slugs shorter than 3 characters', () => {
+    expect(validateItemSlug('ab').valid).toBe(false)
+  })
+
   it('rejects uppercase letters', () => {
     expect(validateItemSlug('My-Note').valid).toBe(false)
   })
@@ -527,7 +531,7 @@ describe('cross-table slug uniqueness', () => {
         campaignId: ctx.campaignId,
         slug: 'bad slug',
       }),
-    ).rejects.toThrow('Slug can only contain lowercase letters, numbers, and single hyphens')
+    ).rejects.toThrow('Slug cannot contain spaces')
   })
 
   it('rejects create requests whose names cannot produce a valid slug', async () => {

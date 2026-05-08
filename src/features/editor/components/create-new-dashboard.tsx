@@ -37,15 +37,15 @@ function CreateNewButton({
       disabled={disabled}
       className="flex items-center gap-4 w-full px-4 py-3 h-auto justify-start text-left group"
     >
-      <div className="shrink-0 w-10 h-10 rounded-lg flex items-center justify-center bg-muted">
-        <Icon className="h-5 w-5 text-muted-foreground" />
+      <div className="shrink-0 size-10 rounded-lg flex items-center justify-center bg-muted">
+        <Icon className="size-5 text-muted-foreground" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="font-medium text-sm">{name}</p>
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
-      <div className="shrink-0 w-8 h-8 rounded-md flex items-center justify-center text-muted-foreground group-hover:text-foreground">
-        {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+      <div className="shrink-0 size-8 rounded-md flex items-center justify-center text-muted-foreground group-hover:text-foreground">
+        {isCreating ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
       </div>
     </Button>
   )
@@ -135,7 +135,7 @@ export function CreateNewDashboard({ parentId, folderPath }: CreateNewDashboardP
             <CreateNewButton
               icon={Grid2x2Plus}
               name="Canvas"
-              description="Collaborative whiteboard with nodes and drawing"
+              description="Create a whiteboard to draw and organize nodes"
               onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.canvases)}
               disabled={isDisabled}
               isCreating={creatingType === SIDEBAR_ITEM_TYPES.canvases}

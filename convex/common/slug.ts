@@ -1,9 +1,12 @@
 import { zodToConvex } from 'convex-helpers/server/zod4'
 import { z } from 'zod'
 
-export const CANONICAL_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
-export const DEFAULT_CANONICAL_SLUG_MAX_LENGTH = 255
-export const MAX_UNIQUE_SLUG_ATTEMPTS = 100
+const CANONICAL_SLUG_UPPERCASE_PATTERN = /[A-Z]/
+const CANONICAL_SLUG_WHITESPACE_PATTERN = /\s/
+const CANONICAL_SLUG_UNDERSCORE_PATTERN = /_/
+const CANONICAL_SLUG_SPECIAL_CHARACTER_PATTERN = /[^a-z0-9-]/
+const DEFAULT_CANONICAL_SLUG_MAX_LENGTH = 255
+const MAX_UNIQUE_SLUG_ATTEMPTS = 100
 
 export type BrandedString<Kind extends string> = string & { readonly __brand: Kind }
 
@@ -35,10 +38,27 @@ function buildCanonicalSlugSchema({ label, minLength, maxLength }: CanonicalSlug
     .string()
     .refine((value) => value.trim().length > 0, `${label} is required`)
     .refine((value) => value === value.trim(), `${label} cannot start or end with whitespace`)
-    .regex(
-      CANONICAL_SLUG_PATTERN,
-      `${label} can only contain lowercase letters, numbers, and single hyphens`,
+    .refine(
+      (value) => !CANONICAL_SLUG_UPPERCASE_PATTERN.test(value),
+      `${label} cannot contain uppercase letters`,
     )
+    .refine(
+      (value) => !CANONICAL_SLUG_WHITESPACE_PATTERN.test(value),
+      `${label} cannot contain spaces`,
+    )
+    .refine(
+      (value) => !CANONICAL_SLUG_UNDERSCORE_PATTERN.test(value),
+      `${label} cannot contain underscores`,
+    )
+    .refine(
+      (value) => !CANONICAL_SLUG_SPECIAL_CHARACTER_PATTERN.test(value),
+      `${label} cannot contain special characters`,
+    )
+    .refine(
+      (value) => !value.startsWith('-') && !value.endsWith('-'),
+      `${label} cannot start or end with a hyphen`,
+    )
+    .refine((value) => !value.includes('--'), `${label} can only contain single hyphens`)
     .refine(
       (value) => minLength === undefined || value.length >= minLength,
       minLength === undefined ? '' : `${label} must be at least ${minLength} characters`,

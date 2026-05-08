@@ -70,8 +70,12 @@ describe('validateUsername', () => {
     expect(validateUsername(long)).toContain('at most 30')
   })
 
-  it('returns error for invalid characters', () => {
-    expect(validateUsername('Alice!')).toContain('lowercase letters, numbers, and single hyphens')
+  it('returns error for uppercase letters', () => {
+    expect(validateUsername('Alice')).toContain('cannot contain uppercase letters')
+  })
+
+  it('returns error for special characters', () => {
+    expect(validateUsername('alice!')).toContain('cannot contain special characters')
   })
 
   it('returns null at exact min length', () => {
@@ -191,47 +195,80 @@ describe('entity-specific slug parsing', () => {
 
   it('rejects campaign slugs with double hyphens', () => {
     expect(parseCampaignSlug('slug--name')).toBeNull()
-    expect(validateCampaignSlug('slug--name')).toContain(
-      'lowercase letters, numbers, and single hyphens',
-    )
+    expect(validateCampaignSlug('slug--name')).toContain('single hyphens')
   })
 
   it('rejects campaign slugs with leading or trailing hyphens', () => {
     expect(parseCampaignSlug('-slug')).toBeNull()
     expect(parseCampaignSlug('slug-')).toBeNull()
-    expect(validateCampaignSlug('-slug')).toContain(
-      'lowercase letters, numbers, and single hyphens',
-    )
-    expect(validateCampaignSlug('slug-')).toContain(
-      'lowercase letters, numbers, and single hyphens',
-    )
+    expect(validateCampaignSlug('-slug')).toContain('cannot start or end with a hyphen')
+    expect(validateCampaignSlug('slug-')).toContain('cannot start or end with a hyphen')
+  })
+
+  it('rejects campaign slugs with uppercase letters', () => {
+    expect(validateCampaignSlug('Campaign-link')).toContain('cannot contain uppercase letters')
+  })
+
+  it('rejects campaign slugs with spaces', () => {
+    expect(validateCampaignSlug('campaign link')).toContain('cannot contain spaces')
+  })
+
+  it('rejects campaign slugs with underscores', () => {
+    expect(validateCampaignSlug('campaign_link')).toContain('cannot contain underscores')
+  })
+
+  it('rejects campaign slugs with special characters', () => {
+    expect(validateCampaignSlug('campaign!')).toContain('cannot contain special characters')
   })
 
   it('parses valid sidebar item slugs', () => {
     expect(parseSidebarItemSlug('lore-index')).toBe('lore-index')
   })
 
+  it('parses sidebar item slugs at the exact length boundaries', () => {
+    expect(parseSidebarItemSlug('abc')).toBe('abc')
+    expect(parseSidebarItemSlug('a'.repeat(255))).toBe('a'.repeat(255))
+  })
+
+  it('rejects sidebar item slugs that are too short', () => {
+    expect(parseSidebarItemSlug('ab')).toBeNull()
+    expect(validateSidebarItemSlug('ab')).toContain('at least 3')
+  })
+
+  it('rejects sidebar item slugs that are too long', () => {
+    expect(parseSidebarItemSlug('a'.repeat(256))).toBeNull()
+    expect(validateSidebarItemSlug('a'.repeat(256))).toContain('at most 255')
+  })
+
   it('rejects sidebar item slugs with uppercase letters', () => {
-    expect(validateSidebarItemSlug('Lore-Index')).toContain(
-      'lowercase letters, numbers, and single hyphens',
-    )
+    expect(parseSidebarItemSlug('Lore-Index')).toBeNull()
+    expect(validateSidebarItemSlug('Lore-Index')).toContain('cannot contain uppercase letters')
+  })
+
+  it('rejects sidebar item slugs with spaces', () => {
+    expect(parseSidebarItemSlug('lore index')).toBeNull()
+    expect(validateSidebarItemSlug('lore index')).toContain('cannot contain spaces')
+  })
+
+  it('rejects sidebar item slugs with underscores', () => {
+    expect(parseSidebarItemSlug('lore_index')).toBeNull()
+    expect(validateSidebarItemSlug('lore_index')).toContain('cannot contain underscores')
+  })
+
+  it('rejects sidebar item slugs with special characters', () => {
+    expect(parseSidebarItemSlug('lore!')).toBeNull()
+    expect(validateSidebarItemSlug('lore!')).toContain('cannot contain special characters')
   })
 
   it('rejects sidebar item slugs with double hyphens', () => {
     expect(parseSidebarItemSlug('lore--index')).toBeNull()
-    expect(validateSidebarItemSlug('lore--index')).toContain(
-      'lowercase letters, numbers, and single hyphens',
-    )
+    expect(validateSidebarItemSlug('lore--index')).toContain('single hyphens')
   })
 
   it('rejects sidebar item slugs with leading or trailing hyphens', () => {
     expect(parseSidebarItemSlug('-lore-index')).toBeNull()
     expect(parseSidebarItemSlug('lore-index-')).toBeNull()
-    expect(validateSidebarItemSlug('-lore-index')).toContain(
-      'lowercase letters, numbers, and single hyphens',
-    )
-    expect(validateSidebarItemSlug('lore-index-')).toContain(
-      'lowercase letters, numbers, and single hyphens',
-    )
+    expect(validateSidebarItemSlug('-lore-index')).toContain('cannot start or end with a hyphen')
+    expect(validateSidebarItemSlug('lore-index-')).toContain('cannot start or end with a hyphen')
   })
 })

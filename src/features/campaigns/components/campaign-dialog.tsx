@@ -1,8 +1,7 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
-import { slugify } from 'convex/common/slug'
 import { validateCampaignName, validateCampaignSlug } from 'convex/campaigns/validation'
 import { Link, Sword } from 'lucide-react'
 import type { RefObject } from 'react'
@@ -60,6 +59,8 @@ function CampaignForm({ mode, onClose, campaign, campaigns }: Omit<CampaignDialo
   campaignsRef.current = campaigns
 
   const [initialSlug] = useState(() => Math.random().toString(36).substring(2, 15))
+  const [showSlugFeedback, setShowSlugFeedback] = useState(false)
+  const slugFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const form = useForm({
     defaultValues:
@@ -80,7 +81,7 @@ function CampaignForm({ mode, onClose, campaign, campaigns }: Omit<CampaignDialo
           await createCampaign.mutateAsync({
             name: value.name.trim(),
             description: value.description.trim(),
-            slug: slugify(value.slug),
+            slug: value.slug.trim(),
           })
 
           toast.success('Campaign created successfully')
@@ -90,7 +91,7 @@ function CampaignForm({ mode, onClose, campaign, campaigns }: Omit<CampaignDialo
             campaignId: campaign._id,
             name: value.name.trim(),
             description: value.description.trim() || undefined,
-            slug: slugify(value.slug),
+            slug: value.slug.trim(),
           })
 
           toast.success('Campaign updated successfully')
@@ -108,6 +109,39 @@ function CampaignForm({ mode, onClose, campaign, campaigns }: Omit<CampaignDialo
   const handleClose = () => {
     if (form.state.isSubmitting) return
     onClose()
+  }
+
+  useEffect(() => {
+    return () => {
+      if (slugFeedbackTimerRef.current) {
+        clearTimeout(slugFeedbackTimerRef.current)
+      }
+    }
+  }, [])
+
+  const scheduleSlugFeedback = () => {
+    setShowSlugFeedback(false)
+    if (slugFeedbackTimerRef.current) {
+      clearTimeout(slugFeedbackTimerRef.current)
+    }
+    slugFeedbackTimerRef.current = setTimeout(() => {
+      setShowSlugFeedback(true)
+    }, 400)
+  }
+
+  const showSlugFeedbackNow = () => {
+    if (slugFeedbackTimerRef.current) {
+      clearTimeout(slugFeedbackTimerRef.current)
+    }
+    setShowSlugFeedback(true)
+  }
+
+  const validateSlug = (value: string): string | null => {
+    const syncError = validateCampaignSlug(value)
+    if (syncError) return syncError
+    const excludeId = mode === 'edit' ? campaign?._id : undefined
+    const slugTaken = campaignsRef.current.some((c) => c.slug === value && c._id !== excludeId)
+    return slugTaken ? 'This link is already taken.' : null
   }
 
   return (
@@ -166,36 +200,36 @@ function CampaignForm({ mode, onClose, campaign, campaigns }: Omit<CampaignDialo
       <form.Field
         name="slug"
         validators={{
-          onMount: ({ value }) => validateCampaignSlug(value),
-          onBlur: ({ value }) => validateCampaignSlug(value),
-          onChange: ({ value }) => {
-            const normalized = slugify(value)
-            const syncError = validateCampaignSlug(normalized)
-            if (syncError) return syncError
-            const excludeId = mode === 'edit' ? campaign?._id : undefined
-            const slugTaken = campaignsRef.current.some(
-              (c) => c.slug === normalized && c._id !== excludeId,
-            )
-            return slugTaken ? 'This link is already taken.' : null
-          },
+          onMount: ({ value }) => validateSlug(value),
+          onBlur: ({ value }) => validateSlug(value),
+          onChange: ({ value }) => validateSlug(value),
+          onSubmit: ({ value }) => validateSlug(value),
         }}
       >
         {(field) => (
           <div className="space-y-2 px-px">
             <Label htmlFor="campaign-slug" className="flex items-center gap-2">
-              <Link className="h-4 w-4" />
+              <Link className="size-4" />
               Custom Link*
             </Label>
             <Input
               id="campaign-slug"
               value={field.state.value}
-              onChange={(e) => field.handleChange(slugify(e.target.value))}
-              onBlur={field.handleBlur}
+              onChange={(e) => {
+                field.handleChange(e.target.value)
+                scheduleSlugFeedback()
+              }}
+              onBlur={() => {
+                showSlugFeedbackNow()
+                field.handleBlur()
+              }}
               placeholder="campaign-link"
               maxLength={30}
               disabled={form.state.isSubmitting}
             />
-            {field.state.meta.errors.length > 0 && field.state.meta.isTouched ? (
+            {field.state.meta.errors.length > 0 &&
+            field.state.meta.isTouched &&
+            showSlugFeedback ? (
               <p className="text-sm text-destructive">{field.state.meta.errors[0]}</p>
             ) : null}
 
