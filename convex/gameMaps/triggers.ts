@@ -10,6 +10,15 @@ async function getPins(db: DatabaseWriter, mapId: Id<'sidebarItems'>) {
     .collect()
 }
 
+async function isStorageUsedByAnotherMap(
+  db: DatabaseWriter,
+  storageId: Id<'_storage'>,
+  sidebarItemId: Id<'sidebarItems'>,
+) {
+  const maps = await db.query('gameMaps').collect()
+  return maps.some((map) => map.sidebarItemId !== sidebarItemId && map.imageStorageId === storageId)
+}
+
 export const gameMapTriggers: SidebarItemTriggerHandlers = {
   onHardDelete: async (db, storage, item) => {
     const [pins, ext] = await Promise.all([
@@ -20,7 +29,9 @@ export const gameMapTriggers: SidebarItemTriggerHandlers = {
         .unique(),
     ])
     const imageStorageId = ext?.imageStorageId ?? null
-    if (imageStorageId) await storage.delete(imageStorageId)
+    if (imageStorageId && !(await isStorageUsedByAnotherMap(db, imageStorageId, item.id))) {
+      await storage.delete(imageStorageId)
+    }
     await asyncMap(pins, (p) => db.delete('mapPins', p._id))
     if (ext) await db.delete('gameMaps', ext._id)
     return imageStorageId

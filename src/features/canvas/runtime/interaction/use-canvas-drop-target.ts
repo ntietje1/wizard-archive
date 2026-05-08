@@ -10,7 +10,7 @@ import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarge
 import { useFileDropHandler } from '~/features/dnd/hooks/useFileDropHandler'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
-import { CANVAS_DROP_ZONE_TYPE, getDragItemId } from '~/features/dnd/utils/dnd-registry'
+import { CANVAS_DROP_ZONE_TYPE, getDragItemIds } from '~/features/dnd/utils/dnd-registry'
 
 const STACK_OFFSET = 20
 
@@ -65,17 +65,27 @@ export function useCanvasDropTarget({
         if (targetData.type !== CANVAS_DROP_ZONE_TYPE) return
         if (targetData.canvasId !== canvasIdRef.current) return
 
-        const sidebarItemId = getDragItemId(source.data)
-        if (!sidebarItemId) return
-        if ((sidebarItemId as string) === (canvasIdRef.current as string)) return
-
         const { clientX, clientY } = location.current.input
         const position = screenToCanvasPositionRef.current({
           x: clientX,
           y: clientY,
         })
 
-        createNodeRef.current(createEmbedCanvasNode(sidebarItemId, position))
+        const sidebarItemIds = (getDragItemIds(source.data) ?? []).filter(
+          (sidebarItemId) => sidebarItemId !== canvasIdRef.current,
+        )
+        sidebarItemIds.forEach((sidebarItemId, index) => {
+          try {
+            createNodeRef.current(
+              createEmbedCanvasNode(sidebarItemId, {
+                x: position.x + index * STACK_OFFSET,
+                y: position.y + index * STACK_OFFSET,
+              }),
+            )
+          } catch (error) {
+            handleError(error, 'Failed to add item to canvas')
+          }
+        })
       },
     })
   }, [])

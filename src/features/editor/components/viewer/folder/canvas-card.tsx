@@ -14,6 +14,8 @@ import { useIsSelectedItem } from '~/features/sidebar/hooks/useSelectedItem'
 import { useContextMenu } from '~/features/context-menu/hooks/useContextMenu'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
+import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
+import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
 
 function CanvasCardSkeleton() {
   return (
@@ -31,7 +33,13 @@ function CanvasCardSkeleton() {
   )
 }
 
-function CanvasCardInner({ item: canvas, onClick }: ItemCardProps<Canvas>) {
+function CanvasCardInner({
+  item: canvas,
+  onClick,
+  parentId,
+  visibleItemIds,
+  itemSurface = 'folder-view',
+}: ItemCardProps<Canvas>) {
   const ref = useRef<HTMLDivElement>(null)
   const [erroredUrl, setErroredUrl] = useState<string | null>(null)
   const imageError = erroredUrl === canvas.previewUrl
@@ -40,10 +48,16 @@ function CanvasCardInner({ item: canvas, onClick }: ItemCardProps<Canvas>) {
   const canDrag = hasAtLeastPermissionLevel(canvas.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
   const isSelected = useIsSelectedItem(canvas)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
+  const { handleItemClick, handleItemContextMenu } = useItemSelectionInteractions(canvas, {
+    surface: itemSurface,
+    parentId: parentId ?? null,
+    visibleItemIds: visibleItemIds ?? [canvas._id],
+  })
+  const dragData = useSidebarDragData(canvas)
 
   const { isDraggingRef } = useDraggable({
     ref,
-    data: { sidebarItemId: canvas._id },
+    data: dragData,
     canDrag,
     dragOpacity: '0.2',
   })
@@ -53,8 +67,11 @@ function CanvasCardInner({ item: canvas, onClick }: ItemCardProps<Canvas>) {
       <Link
         {...linkProps}
         activeOptions={{ includeSearch: false }}
+        aria-label={canvas.name}
+        data-item-selection-target="true"
         className="block w-full h-full [&.active]:pointer-events-auto"
         draggable={false}
+        onContextMenu={handleItemContextMenu}
         onClick={(e) => {
           if (isDraggingRef.current) {
             e.preventDefault()
@@ -62,10 +79,11 @@ function CanvasCardInner({ item: canvas, onClick }: ItemCardProps<Canvas>) {
           }
           if (onClick) {
             e.preventDefault()
+            handleItemClick(e)
             onClick()
             return
           }
-          setLastSelectedItem(canvas.slug)
+          handleItemClick(e, () => setLastSelectedItem(canvas.slug))
         }}
       >
         <Card
@@ -86,6 +104,7 @@ function CanvasCardInner({ item: canvas, onClick }: ItemCardProps<Canvas>) {
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
+                handleItemContextMenu()
                 handleMoreOptions(e)
               }}
             >

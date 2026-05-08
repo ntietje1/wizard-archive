@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
+import type { PointerEvent } from 'react'
 import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { TRASH_RETENTION_DAYS } from 'convex/common/constants'
@@ -15,6 +16,12 @@ import { useDeleteSidebarItem } from '~/features/sidebar/hooks/useDeleteSidebarI
 import { useMoveSidebarItem } from '~/features/sidebar/hooks/useMoveSidebarItem'
 import { useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
+import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
+import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
+import { useIsSelectedItem } from '~/features/sidebar/hooks/useSelectedItem'
+import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
+import { isItemSurfaceInteractionTarget } from '~/features/sidebar/utils/item-surface-hotkeys'
+import { cn } from '~/features/shadcn/lib/utils'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import {
   emptyTrashDescription,
@@ -31,7 +38,21 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
   const { setLastSelectedItem } = useLastEditorItem()
 
   const { data: allTrashedItems, parentItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
-  const rootTrashedItems = parentItemsMap.get(null) ?? []
+  const rootTrashedItems = useMemo(() => parentItemsMap.get(null) ?? [], [parentItemsMap])
+  const visibleItemIds = useMemo(() => rootTrashedItems.map((item) => item._id), [rootTrashedItems])
+  const setActiveItemSurface = useSidebarUIStore((s) => s.setActiveItemSurface)
+  const clearItemSelection = useSidebarUIStore((s) => s.clearItemSelection)
+
+  const activateTrashSurface = () => {
+    setActiveItemSurface({ surface: 'trash', parentId: null, visibleItemIds })
+  }
+
+  const handleSurfacePointerDown = (event: PointerEvent) => {
+    activateTrashSurface()
+    if (!isItemSurfaceInteractionTarget(event.target)) {
+      clearItemSelection()
+    }
+  }
 
   const { moveItem } = useMoveSidebarItem()
   const { permanentlyDeleteItem, emptyTrashBin } = useDeleteSidebarItem()
@@ -104,7 +125,12 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
       </div>
 
       {/* Item list */}
-      <ScrollArea className="max-h-[300px]">
+      <ScrollArea
+        className="max-h-[300px]"
+        onFocusCapture={activateTrashSurface}
+        onPointerDownCapture={handleSurfacePointerDown}
+        onContextMenuCapture={activateTrashSurface}
+      >
         <div className="px-1">
           {rootTrashedItems.map((item) => (
             <TrashPopoverItem
@@ -114,6 +140,7 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
               onPermanentDelete={setConfirmDeleteItem}
               onClick={handleItemClick}
               deletionTimeLabel={getDeletionTimeLabel(item)}
+              visibleItemIds={visibleItemIds}
             />
           ))}
 
@@ -175,20 +202,29 @@ function TrashPopoverItem({
   onPermanentDelete,
   onClick,
   deletionTimeLabel,
+  visibleItemIds,
 }: {
   item: AnySidebarItem
   onRestore: (item: AnySidebarItem) => void
   onPermanentDelete: (item: AnySidebarItem) => void
   onClick: (item: AnySidebarItem) => void
   deletionTimeLabel: string
+  visibleItemIds: Array<AnySidebarItem['_id']>
 }) {
   const Icon = getSidebarItemIcon(item)
   const ref = useRef<HTMLDivElement>(null)
   const linkProps = useEditorLinkProps(item)
+  const dragData = useSidebarDragData(item)
+  const isSelected = useIsSelectedItem(item)
+  const { handleItemClick, handleItemContextMenu } = useItemSelectionInteractions(item, {
+    surface: 'trash',
+    parentId: null,
+    visibleItemIds,
+  })
 
   useDraggable({
     ref,
-    data: { sidebarItemId: item._id },
+    data: dragData,
     canDrag: true,
   })
 
@@ -196,14 +232,21 @@ function TrashPopoverItem({
     <div
       ref={ref}
       data-testid={`trash-item-${item.name}`}
-      className="flex items-center w-full py-1 px-1 rounded-sm hover:bg-muted/70 group min-w-0"
+      data-item-selection-target="true"
+      className={cn(
+        'flex items-center w-full py-1 px-1 rounded-sm hover:bg-muted/70 group min-w-0',
+        isSelected && 'bg-muted ring-1 ring-ring',
+      )}
+      onContextMenu={handleItemContextMenu}
     >
       <Link
         {...linkProps}
         activeOptions={{ includeSearch: false }}
         draggable={false}
         className="flex items-center gap-1.5 flex-1 min-w-0 h-full"
-        onClick={() => onClick(item)}
+        onClick={(event) => {
+          handleItemClick(event, () => onClick(item))
+        }}
       >
         <div className="h-6 w-6 shrink-0 flex items-center justify-center text-muted-foreground">
           <Icon className="h-4 w-4 shrink-0" />
@@ -220,7 +263,12 @@ function TrashPopoverItem({
           variant="ghost"
           size="sm"
           className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm"
-          onClick={() => onRestore(item)}
+          onClick={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            handleItemContextMenu()
+            onRestore(item)
+          }}
           aria-label="Restore"
         >
           <RotateCcw className="h-3.5 w-3.5" />
@@ -229,7 +277,12 @@ function TrashPopoverItem({
           variant="ghost"
           size="sm"
           className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-muted-foreground/10 rounded-sm"
-          onClick={() => onPermanentDelete(item)}
+          onClick={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            handleItemContextMenu()
+            onPermanentDelete(item)
+          }}
           aria-label="Delete forever"
         >
           <Trash2 className="h-3.5 w-3.5" />

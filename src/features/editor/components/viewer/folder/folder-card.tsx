@@ -18,6 +18,8 @@ import { useSidebarItemDropTarget } from '~/features/dnd/hooks/useSidebarItemDro
 import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { cn } from '~/features/shadcn/lib/utils'
+import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
+import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
 
 const H = 140
 const R = 4
@@ -119,12 +121,24 @@ function FolderCardSkeleton() {
   )
 }
 
-function FolderCardInner({ item: folder, onClick }: ItemCardProps<Folder>) {
+function FolderCardInner({
+  item: folder,
+  onClick,
+  parentId,
+  visibleItemIds,
+  itemSurface = 'folder-view',
+}: ItemCardProps<Folder>) {
   const ref = useRef<HTMLDivElement>(null)
   const linkProps = useEditorLinkProps(folder)
   const { setLastSelectedItem } = useLastEditorItem()
   const isSelected = useIsSelectedItem(folder)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
+  const { handleItemClick, handleItemContextMenu } = useItemSelectionInteractions(folder, {
+    surface: itemSurface,
+    parentId: parentId ?? null,
+    visibleItemIds: visibleItemIds ?? [folder._id],
+  })
+  const dragData = useSidebarDragData(folder)
 
   const isDropTarget = useDndStore((s) => s.sidebarDragTargetId === folder._id)
   const isTrashAction = useDndStore(
@@ -135,7 +149,7 @@ function FolderCardInner({ item: folder, onClick }: ItemCardProps<Folder>) {
 
   const { isDraggingRef } = useDraggable({
     ref,
-    data: { sidebarItemId: folder._id },
+    data: dragData,
     canDrag,
     dragOpacity: '0.2',
   })
@@ -160,8 +174,11 @@ function FolderCardInner({ item: folder, onClick }: ItemCardProps<Folder>) {
       <Link
         {...linkProps}
         activeOptions={{ includeSearch: false }}
+        aria-label={folder.name}
+        data-item-selection-target="true"
         className="block h-full [&.active]:pointer-events-auto"
         draggable={false}
+        onContextMenu={handleItemContextMenu}
         onClick={(e) => {
           if (isDraggingRef.current) {
             e.preventDefault()
@@ -169,10 +186,11 @@ function FolderCardInner({ item: folder, onClick }: ItemCardProps<Folder>) {
           }
           if (onClick) {
             e.preventDefault()
+            handleItemClick(e)
             onClick()
             return
           }
-          setLastSelectedItem(folder.slug)
+          handleItemClick(e, () => setLastSelectedItem(folder.slug))
         }}
       >
         <div className="relative block w-full h-full cursor-pointer group">
@@ -194,6 +212,7 @@ function FolderCardInner({ item: folder, onClick }: ItemCardProps<Folder>) {
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
+              handleItemContextMenu(e)
               handleMoreOptions(e)
             }}
           >

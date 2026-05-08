@@ -9,6 +9,13 @@ export const never: Predicate = () => false
 
 export const isSidebarItem: Predicate = (ctx) => ctx.item !== undefined
 
+export const isSingleSelection: Predicate = (ctx) =>
+  (ctx.selectedItems?.length ?? ctx.selectedItemIds?.length ?? (ctx.item ? 1 : 0)) <= 1
+
+// selectedItems is authoritative when present, even if empty; item is the single-item fallback.
+export const hasSelection: Predicate = (ctx) =>
+  (ctx.selectedItems?.length ?? (ctx.item ? 1 : 0)) > 0
+
 export const isType =
   (...types: Array<SidebarItemType>): Predicate =>
   (ctx) =>
@@ -94,6 +101,10 @@ export const hasEditAccess: Predicate = (ctx) => {
 
 export const hasFullAccess: Predicate = (ctx) => {
   return ctx.permissionLevel === PERMISSION_LEVEL.FULL_ACCESS
+}
+
+export const canWrite: Predicate = (ctx) => {
+  return ctx.item ? hasEditAccess(ctx) : isDm(ctx)
 }
 
 export const isItemTrashed: Predicate = (ctx) => ctx.isItemTrashed === true

@@ -1,4 +1,4 @@
-import { forwardRef } from 'react'
+import { forwardRef, useMemo } from 'react'
 import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import { useMenuActions } from '../actions'
 import { VIEW_CONTEXT } from '../constants'
@@ -17,6 +17,10 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useMapViewOptional } from '~/features/editor/hooks/useMapView'
 import { useBlockNoteContextMenuOptional } from '~/features/editor/hooks/useBlockNoteContextMenu'
 import { useSession } from '~/features/sidebar/hooks/useGameSession'
+import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
+import { useActiveSidebarItems, useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { normalizeTopLevelSelectedItems } from '~/features/sidebar/utils/item-selection-normalization'
+import { logger } from '~/shared/utils/logger'
 
 export type EditorContextMenuRef = ContextMenuHostRef
 
@@ -52,10 +56,44 @@ export const EditorContextMenu = forwardRef<EditorContextMenuRef, EditorContextM
     const { currentSession } = useSession()
     const mapView = useMapViewOptional()
     const blockNoteContext = useBlockNoteContextMenuOptional()
+    const selectedItemIds = useSidebarUIStore((s) => s.selectedItemIds)
+    const { itemsMap } = useActiveSidebarItems()
+    const { itemsMap: trashedItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
+    const allItemsMap = useMemo(
+      () => new Map([...trashedItemsMap, ...itemsMap]),
+      [itemsMap, trashedItemsMap],
+    )
+    const canUseItemSelection = viewContext === 'sidebar' || viewContext === 'folder-view'
+    const selectedItems = useMemo(() => {
+      if (!canUseItemSelection || !item || !selectedItemIds.includes(item._id)) {
+        return item ? [item] : []
+      }
+
+      const resolvedItems: Array<AnySidebarItem> = []
+      for (const selectedId of selectedItemIds) {
+        const selectedItem = allItemsMap.get(selectedId)
+        if (selectedItem) {
+          resolvedItems.push(selectedItem)
+        } else {
+          logger.warn('Context menu selection id was not found', {
+            selectedId,
+            selectedItemCount: selectedItemIds.length,
+            viewContext,
+          })
+        }
+      }
+
+      return normalizeTopLevelSelectedItems(resolvedItems, allItemsMap)
+    }, [allItemsMap, canUseItemSelection, item, selectedItemIds, viewContext])
+    const primaryItem = item ?? selectedItems[0]
 
     const menuContext = {
       surface: viewContext,
       item,
+      primaryItem,
+      selectedItems,
+      selectedItemIds: selectedItems.map((selectedItem) => selectedItem._id),
+      isMultiSelection: selectedItems.length > 1,
       isItemTrashed: item?.location === SIDEBAR_ITEM_LOCATION.trash,
       isTrashView: isTrashView || viewContext === VIEW_CONTEXT.TRASH_VIEW,
       currentUserId: campaign.data?.myMembership?.userId,

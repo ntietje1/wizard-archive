@@ -119,16 +119,18 @@ export async function validateSidebarMove(
   {
     item,
     newParentId,
+    name,
   }: {
     item: AnySidebarItem
     newParentId: Id<'sidebarItems'> | null
+    name?: SidebarItemName
   },
 ): Promise<void> {
   await validateSidebarParentChange(ctx, { item, newParentId })
 
   await ensureSidebarItemNameAvailable(ctx, {
     parentId: newParentId,
-    name: assertSidebarItemName(item.name),
+    name: name ?? assertSidebarItemName(item.name),
     excludeId: item._id,
   })
 }
@@ -148,9 +150,11 @@ async function checkSlugConflict(
   const conflict = await ctx.db
     .query('sidebarItems')
     .withIndex('by_campaign_slug', (q) => q.eq('campaignId', campaignId).eq('slug', slug))
-    .unique()
-  if (!conflict) return false
-  return excludeId ? conflict._id !== excludeId : true
+    .collect()
+  if (!excludeId) {
+    return conflict.length > 0
+  }
+  return conflict.some((item) => item._id !== excludeId)
 }
 
 export async function findUniqueSidebarItemSlug(

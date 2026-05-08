@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import type { PointerEventHandler, ReactNode } from 'react'
 import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { Folder } from 'convex/folders/types'
 import { canDropFilesOnTarget } from '~/features/dnd/utils/dnd-registry'
@@ -9,11 +10,17 @@ import { useDndStore } from '~/features/dnd/stores/dnd-store'
 
 interface DroppableFolderZoneProps {
   folder: Folder
-  children: React.ReactNode
+  children: ReactNode
   className?: string
+  onPointerDownCapture?: PointerEventHandler<HTMLDivElement>
 }
 
-export function DroppableFolderZone({ folder, children, className }: DroppableFolderZoneProps) {
+export function DroppableFolderZone({
+  folder,
+  children,
+  className,
+  onPointerDownCapture,
+}: DroppableFolderZoneProps) {
   const ref = useRef<HTMLDivElement>(null)
 
   useSidebarItemDropTarget({ ref, item: folder })
@@ -41,6 +48,9 @@ export function DroppableFolderZone({ folder, children, className }: DroppableFo
   return (
     <div
       ref={ref}
+      role="group"
+      aria-label={`${folder.name} folder contents`}
+      onPointerDownCapture={onPointerDownCapture}
       className={cn(
         className,
         folder.location !== SIDEBAR_ITEM_LOCATION.trash && isDropTarget && activeHighlight,

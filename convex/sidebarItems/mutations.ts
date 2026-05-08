@@ -1,18 +1,40 @@
 import { v } from 'convex/values'
 import { campaignMutation, dmMutation } from '../functions'
 import { sidebarItemLocationValidator } from './schema/validators'
-import { moveSidebarItem as moveSidebarItemFn } from './functions/moveSidebarItem'
+import {
+  moveSidebarItem as moveSidebarItemFn,
+  moveSidebarItems as moveSidebarItemsFn,
+} from './functions/moveSidebarItem'
 import { permanentlyDeleteSidebarItem as permanentlyDeleteSidebarItemFn } from './functions/permanentlyDeleteSidebarItem'
 import { emptyTrashBin as emptyTrashBinFn } from './functions/emptyTrashBin'
 import { claimPreviewGeneration as claimPreviewGenerationFn } from './functions/claimPreviewGeneration'
 import { setPreviewImage as setPreviewImageFn } from './functions/setPreviewImage'
+import { duplicateSidebarItems as duplicateSidebarItemsFn } from './functions/duplicateSidebarItem'
 import type { Id } from '../_generated/dataModel'
+
+const OPERATION_DECISION_ACTION = {
+  skip: 'skip',
+  replace: 'replace',
+  keepBoth: 'keepBoth',
+  cancel: 'cancel',
+} as const
+
+const operationDecisionValidator = v.object({
+  sourceItemId: v.id('sidebarItems'),
+  action: v.union(
+    v.literal(OPERATION_DECISION_ACTION.skip),
+    v.literal(OPERATION_DECISION_ACTION.replace),
+    v.literal(OPERATION_DECISION_ACTION.keepBoth),
+    v.literal(OPERATION_DECISION_ACTION.cancel),
+  ),
+})
 
 export const moveSidebarItem = campaignMutation({
   args: {
     itemId: v.id('sidebarItems'),
     parentId: v.optional(v.nullable(v.id('sidebarItems'))),
     location: v.optional(sidebarItemLocationValidator),
+    name: v.optional(v.string()),
   },
   returns: v.id('sidebarItems'),
   handler: async (ctx, args): Promise<Id<'sidebarItems'>> => {
@@ -20,7 +42,20 @@ export const moveSidebarItem = campaignMutation({
       itemId: args.itemId,
       parentId: args.parentId,
       location: args.location,
+      name: args.name,
     })
+  },
+})
+
+export const moveSidebarItems = campaignMutation({
+  args: {
+    sourceItemIds: v.array(v.id('sidebarItems')),
+    targetParentId: v.nullable(v.id('sidebarItems')),
+    decisions: v.optional(v.array(operationDecisionValidator)),
+  },
+  returns: v.array(v.id('sidebarItems')),
+  handler: async (ctx, args): Promise<Array<Id<'sidebarItems'>>> => {
+    return await moveSidebarItemsFn(ctx, args)
   },
 })
 
@@ -71,5 +106,17 @@ export const setPreviewImage = campaignMutation({
       claimToken: args.claimToken,
     })
     return null
+  },
+})
+
+export const duplicateSidebarItems = campaignMutation({
+  args: {
+    sourceItemIds: v.array(v.id('sidebarItems')),
+    targetParentId: v.nullable(v.id('sidebarItems')),
+    decisions: v.optional(v.array(operationDecisionValidator)),
+  },
+  returns: v.array(v.id('sidebarItems')),
+  handler: async (ctx, args): Promise<Array<Id<'sidebarItems'>>> => {
+    return await duplicateSidebarItemsFn(ctx, args)
   },
 })

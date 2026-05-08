@@ -29,7 +29,13 @@ export function useSelectedItemSync() {
 
 export function useIsSelectedItem(item: AnySidebarItem): boolean {
   const itemSlug = item.slug
-  return useSidebarUIStore((s) => s.selectedSlug === itemSlug)
+  const itemId = item._id
+  return useSidebarUIStore((s) => {
+    const selectedItemIds = Array.isArray(s.selectedItemIds) ? s.selectedItemIds : []
+    return selectedItemIds.length > 0
+      ? selectedItemIds.includes(itemId)
+      : s.selectedSlug === itemSlug
+  })
 }
 
 export function getSelectedSlug(): SidebarItemSlug | null {

@@ -12,6 +12,10 @@ import { ContentGrid } from '~/features/campaigns/components/content-grid/conten
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
+import { useCallback, useEffect, useMemo } from 'react'
+import type { PointerEvent } from 'react'
+import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
+import { isItemSurfaceInteractionTarget } from '~/features/sidebar/utils/item-surface-hotkeys'
 
 export function FolderViewer({ item: folder }: EditorViewerProps<FolderWithContent>) {
   const { parentItemsMap, status } = useFilteredSidebarItems()
@@ -21,9 +25,36 @@ export function FolderViewer({ item: folder }: EditorViewerProps<FolderWithConte
 
   const isDeleted = folder.location === SIDEBAR_ITEM_LOCATION.trash
   const effectiveStatus = isDeleted ? trashedStatus : status
-  const children = isDeleted
-    ? (trashedParentItemsMap.get(folder._id) ?? [])
-    : (parentItemsMap.get(folder._id) ?? [])
+  const children = useMemo(
+    () =>
+      isDeleted
+        ? (trashedParentItemsMap.get(folder._id) ?? [])
+        : (parentItemsMap.get(folder._id) ?? []),
+    [folder._id, isDeleted, parentItemsMap, trashedParentItemsMap],
+  )
+  const visibleItemIds = useMemo(() => children.map((child) => child._id), [children])
+  const setActiveItemSurface = useSidebarUIStore((s) => s.setActiveItemSurface)
+  const clearItemSelection = useSidebarUIStore((s) => s.clearItemSelection)
+  const folderSurface = useMemo(
+    () => ({ surface: 'folder-view' as const, parentId: folder._id, visibleItemIds }),
+    [folder._id, visibleItemIds],
+  )
+
+  const activateFolderSurface = useCallback(() => {
+    setActiveItemSurface(folderSurface)
+  }, [folderSurface, setActiveItemSurface])
+
+  const handleSurfacePointerDown = (event: PointerEvent) => {
+    activateFolderSurface()
+    if (!isItemSurfaceInteractionTarget(event.target)) {
+      clearItemSelection()
+    }
+  }
+
+  useEffect(() => {
+    setActiveItemSurface(folderSurface)
+    return () => setActiveItemSurface(null)
+  }, [folderSurface, setActiveItemSurface])
 
   const hasFullAccess =
     !isDeleted && hasAtLeastPermissionLevel(folder.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
@@ -45,7 +76,11 @@ export function FolderViewer({ item: folder }: EditorViewerProps<FolderWithConte
         className="flex flex-col h-full w-full min-h-0"
         item={folder}
       >
-        <DroppableFolderZone folder={folder} className="flex flex-col h-full w-full min-h-0">
+        <DroppableFolderZone
+          folder={folder}
+          className="flex flex-col h-full w-full min-h-0"
+          onPointerDownCapture={handleSurfacePointerDown}
+        >
           {hasFullAccess ? (
             <CreateNewDashboard parentId={folder._id} folderPath={folderPath} />
           ) : (
@@ -65,11 +100,18 @@ export function FolderViewer({ item: folder }: EditorViewerProps<FolderWithConte
       item={folder}
     >
       <DroppableFolderZone folder={folder} className="flex flex-col h-full w-full min-h-0">
-        <ScrollArea className="flex-1 min-h-0">
+        <ScrollArea className="flex-1 min-h-0" onPointerDownCapture={handleSurfacePointerDown}>
           <div className="w-full min-w-0">
             <ContentGrid className="p-6 min-h-0">
               {children.map((childItem) => {
-                return <ItemCard key={childItem._id} item={childItem} parentId={folder._id} />
+                return (
+                  <ItemCard
+                    key={childItem._id}
+                    item={childItem}
+                    parentId={folder._id}
+                    visibleItemIds={visibleItemIds}
+                  />
+                )
               })}
               {hasFullAccess && <NewItemCard parentId={folder._id} />}
             </ContentGrid>

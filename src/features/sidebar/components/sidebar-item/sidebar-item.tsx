@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import type { MouseEvent } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
 import { SidebarShareButton } from './sidebar-item-share-button'
@@ -18,13 +19,15 @@ import { EditorContextMenu } from '~/features/context-menu/components/editor-con
 import { Collapsible, CollapsibleContent } from '~/features/shadcn/components/collapsible'
 import { sortItemsByOptions } from '~/features/sidebar/hooks/useSidebarItems'
 import { useSortOptions } from '~/features/sidebar/hooks/useSortOptions'
+import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
 
 interface SidebarItemProps {
   item: AnySidebarItem
   parentItemsMap: Map<Id<'sidebarItems'> | null, Array<AnySidebarItem>>
+  visibleItemIds: Array<Id<'sidebarItems'>>
 }
 
-function SidebarItemComponent({ item, parentItemsMap }: SidebarItemProps) {
+function SidebarItemComponent({ item, parentItemsMap, visibleItemIds }: SidebarItemProps) {
   const { editItem } = useEditSidebarItem()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
   const linkProps = useEditorLinkProps(item)
@@ -34,6 +37,11 @@ function SidebarItemComponent({ item, parentItemsMap }: SidebarItemProps) {
   const renamingId = useSidebarUIStore((s) => s.renamingId)
   const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
   const { sortOptions } = useSortOptions()
+  const { handleItemClick, handleItemContextMenu } = useItemSelectionInteractions(item, {
+    surface: 'sidebar',
+    parentId: null,
+    visibleItemIds,
+  })
 
   const isFolder = item.type === SIDEBAR_ITEM_TYPES.folders
   const icon = getSidebarItemIcon(item)
@@ -42,7 +50,9 @@ function SidebarItemComponent({ item, parentItemsMap }: SidebarItemProps) {
 
   const sortedChildren = sortItemsByOptions(sortOptions, children) ?? []
 
-  const handleClick = () => setLastSelectedItem(item.slug)
+  const handleClick = (event: MouseEvent) => {
+    handleItemClick(event, () => setLastSelectedItem(item.slug))
+  }
 
   const handleFinishRename = async (name: string) => {
     await editItem({ item, name })
@@ -64,8 +74,12 @@ function SidebarItemComponent({ item, parentItemsMap }: SidebarItemProps) {
           isRenaming={renamingId === item._id}
           linkProps={linkProps}
           onClick={handleClick}
+          onContextMenu={handleItemContextMenu}
           onToggleExpanded={toggleExpanded}
-          onMoreOptions={handleMoreOptions}
+          onMoreOptions={(event) => {
+            handleItemContextMenu(event)
+            handleMoreOptions(event)
+          }}
           onFinishRename={handleFinishRename}
           onCancelRename={handleCancelRename}
           showChevron={isFolder}
@@ -92,7 +106,12 @@ function SidebarItemComponent({ item, parentItemsMap }: SidebarItemProps) {
             keepRendered
           >
             {sortedChildren.map((childItem) => (
-              <SidebarItem key={childItem._id} item={childItem} parentItemsMap={parentItemsMap} />
+              <SidebarItem
+                key={childItem._id}
+                item={childItem}
+                parentItemsMap={parentItemsMap}
+                visibleItemIds={visibleItemIds}
+              />
             ))}
           </CollapsibleContent>
         </Collapsible>

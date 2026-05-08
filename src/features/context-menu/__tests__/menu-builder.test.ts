@@ -45,6 +45,10 @@ function createActions(): ActionHandlers {
     downloadFolder: vi.fn(),
     downloadAll: vi.fn(),
     toggleBookmark: vi.fn(),
+    copy: vi.fn(),
+    cut: vi.fn(),
+    paste: vi.fn(),
+    duplicate: vi.fn(),
     restore: vi.fn(),
     permanentlyDelete: vi.fn(),
     emptyTrash: vi.fn(),
@@ -79,6 +83,58 @@ describe('buildMenu', () => {
     expect(ids).toContain('delete')
     expect(ids).toContain('edit-item')
     expect(ids).toContain('toggle-bookmark')
+  })
+
+  it('multi-selection keeps batch actions and hides single-item edit actions', () => {
+    const selectedItems = [createNote(), createFile()]
+    const menu = buildMenu({
+      context: sidebarCtx({
+        item: selectedItems[0],
+        primaryItem: selectedItems[0],
+        selectedItems,
+        selectedItemIds: selectedItems.map((item) => item._id),
+        isMultiSelection: true,
+      }),
+      services,
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+
+    const ids = menu.flatItems.map((i) => i.id)
+    expect(ids).toContain('delete')
+    expect(ids).toContain('toggle-bookmark')
+    expect(ids).toContain('copy')
+    expect(ids).toContain('cut')
+    expect(ids).toContain('duplicate')
+    expect(ids).not.toContain('rename')
+    expect(ids).not.toContain('edit-item')
+  })
+
+  it('folder view uses the same multi-selection clipboard menu as the sidebar', () => {
+    const selectedItems = [createNote(), createFile()]
+    const menu = buildMenu({
+      context: sidebarCtx({
+        surface: VIEW_CONTEXT.FOLDER_VIEW,
+        item: selectedItems[0],
+        primaryItem: selectedItems[0],
+        selectedItems,
+        selectedItemIds: selectedItems.map((item) => item._id),
+        isMultiSelection: true,
+      }),
+      services,
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+
+    const ids = menu.flatItems.map((i) => i.id)
+    expect(ids).toContain('copy')
+    expect(ids).toContain('cut')
+    expect(ids).toContain('duplicate')
+    expect(ids).toContain('delete')
+    expect(ids).toContain('toggle-bookmark')
+    expect(ids).not.toContain('rename')
   })
 
   it('DM sees "New..." submenu on a folder', () => {

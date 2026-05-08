@@ -33,9 +33,22 @@ async function cascadeHardDelete(
 
   const deletedStorageId = await handlers[item.type].onHardDelete(db, storage, item)
 
-  if (item.previewStorageId && item.previewStorageId !== deletedStorageId) {
+  if (
+    item.previewStorageId &&
+    item.previewStorageId !== deletedStorageId &&
+    !(await isPreviewStorageUsedByAnotherItem(db, item.previewStorageId, item.id))
+  ) {
     await storage.delete(item.previewStorageId)
   }
+}
+
+async function isPreviewStorageUsedByAnotherItem(
+  db: DatabaseWriter,
+  storageId: Id<'_storage'>,
+  sidebarItemId: Id<'sidebarItems'>,
+) {
+  const items = await db.query('sidebarItems').collect()
+  return items.some((item) => item._id !== sidebarItemId && item.previewStorageId === storageId)
 }
 
 async function cascadeSharedDependents(

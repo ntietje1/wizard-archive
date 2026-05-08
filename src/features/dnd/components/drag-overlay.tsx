@@ -7,20 +7,23 @@ import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 
 export type DragOverlayState = {
   draggedItem: AnySidebarItem
+  draggedItemCount?: number
   outcome: DropOutcome | null
 } | null
 
 function DragOverlayContent({ dragState }: { dragState: DragOverlayState }) {
   if (!dragState) return null
 
-  const { draggedItem, outcome } = dragState
+  const { draggedItem, draggedItemCount, outcome } = dragState
   const DraggedIcon = getSidebarItemIcon(draggedItem)
 
   return (
     <div className="bg-background rounded-sm shadow-lg shadow-foreground/10 px-2 py-1 font-semibold flex flex-col items-start w-fit">
       <span className="flex items-center gap-1 whitespace-nowrap">
         <DraggedIcon className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-        <span className="text-foreground whitespace-nowrap text-xs">{draggedItem.name}</span>
+        <span className="text-foreground whitespace-nowrap text-xs">
+          {(draggedItemCount ?? 0) > 1 ? `${draggedItemCount} items` : draggedItem.name}
+        </span>
       </span>
       {outcome?.type === 'operation' && (
         <span className="text-muted-foreground whitespace-nowrap text-xs">{outcome.label}</span>

@@ -11,6 +11,7 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useFileDropHandler } from '~/features/dnd/hooks/useFileDropHandler'
 import { useMoveSidebarItem } from '~/features/sidebar/hooks/useMoveSidebarItem'
+import { useSidebarItemOperations } from '~/features/sidebar/operations/useSidebarItemOperations'
 import { useActiveSidebarItems, useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { DndProviderContext } from '~/features/dnd/hooks/useDnd'
@@ -23,6 +24,7 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
   const campaignName = campaign.data?.name
   const { navigateToItem } = useEditorNavigation()
   const { moveItem } = useMoveSidebarItem()
+  const itemOperations = useSidebarItemOperations()
   const { handleDrop: handleDropFiles } = useFileDropHandler()
   const { itemsMap, parentItemsMap, getAncestorSidebarItems } = useActiveSidebarItems()
   const { itemsMap: trashedItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
@@ -45,6 +47,7 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
 
   const dndContext: DndContext = {
     moveItem,
+    moveItems: itemOperations.moveItems,
     navigateToItem,
     campaignId: campaignId ?? null,
     campaignName,

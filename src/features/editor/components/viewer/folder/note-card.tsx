@@ -14,6 +14,8 @@ import { useIsSelectedItem } from '~/features/sidebar/hooks/useSelectedItem'
 import { useContextMenu } from '~/features/context-menu/hooks/useContextMenu'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
+import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
+import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
 
 function NoteCardSkeleton() {
   return (
@@ -31,19 +33,31 @@ function NoteCardSkeleton() {
   )
 }
 
-function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
+function NoteCardInner({
+  item: note,
+  onClick,
+  parentId,
+  visibleItemIds,
+  itemSurface = 'folder-view',
+}: ItemCardProps<Note>) {
   const ref = useRef<HTMLDivElement>(null)
   const linkProps = useEditorLinkProps(note)
   const { setLastSelectedItem } = useLastEditorItem()
   const canDrag = hasAtLeastPermissionLevel(note.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
   const isSelected = useIsSelectedItem(note)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
+  const { handleItemClick, handleItemContextMenu } = useItemSelectionInteractions(note, {
+    surface: itemSurface,
+    parentId: parentId ?? null,
+    visibleItemIds: visibleItemIds ?? [note._id],
+  })
+  const dragData = useSidebarDragData(note)
   const [erroredUrl, setErroredUrl] = useState<string | null>(null)
   const imgError = erroredUrl === note.previewUrl
 
   const { isDraggingRef } = useDraggable({
     ref,
-    data: { sidebarItemId: note._id },
+    data: dragData,
     canDrag,
   })
 
@@ -52,8 +66,11 @@ function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
       <Link
         {...linkProps}
         activeOptions={{ includeSearch: false }}
+        aria-label={note.name}
+        data-item-selection-target="true"
         className="block w-full h-full [&.active]:pointer-events-auto"
         draggable={false}
+        onContextMenu={handleItemContextMenu}
         onClick={(e) => {
           if (isDraggingRef.current) {
             e.preventDefault()
@@ -61,10 +78,11 @@ function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
           }
           if (onClick) {
             e.preventDefault()
+            handleItemClick(e)
             onClick()
             return
           }
-          setLastSelectedItem(note.slug)
+          handleItemClick(e, () => setLastSelectedItem(note.slug))
         }}
       >
         <Card
@@ -85,6 +103,7 @@ function NoteCardInner({ item: note, onClick }: ItemCardProps<Note>) {
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
+                handleItemContextMenu(e)
                 handleMoreOptions(e)
               }}
             >

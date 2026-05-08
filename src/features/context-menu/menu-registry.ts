@@ -5,6 +5,8 @@ import {
   ArrowUpRight,
   Bookmark,
   Download,
+  ClipboardCopy,
+  ClipboardPaste,
   Eye,
   EyeOff,
   File,
@@ -22,6 +24,7 @@ import {
   Pencil,
   Plus,
   RotateCcw,
+  Scissors,
   SquareArrowOutUpRight,
   Trash2,
 } from 'lucide-react'
@@ -99,6 +102,10 @@ export type ActionHandlers = {
   downloadFolder: (context: EditorMenuContext) => void
   downloadAll: (context: EditorMenuContext) => void
   toggleBookmark: (context: EditorMenuContext) => void
+  copy: (context: EditorMenuContext) => void
+  cut: (context: EditorMenuContext) => void
+  paste: (context: EditorMenuContext) => void
+  duplicate: (context: EditorMenuContext) => void
   restore: (context: EditorMenuContext) => void
   permanentlyDelete: (context: EditorMenuContext) => void
   emptyTrash: (context: EditorMenuContext) => void
@@ -152,6 +159,10 @@ export const editorContextMenuCommands = {
   downloadFolder: createActionCommand('downloadFolder'),
   downloadAll: createActionCommand('downloadAll'),
   toggleBookmark: createActionCommand('toggleBookmark'),
+  copy: createActionCommand('copy'),
+  cut: createActionCommand('cut'),
+  paste: createActionCommand('paste'),
+  duplicate: createActionCommand('duplicate'),
   restore: createActionCommand('restore'),
   permanentlyDelete: createActionCommand('permanentlyDelete'),
   emptyTrash: createActionCommand('emptyTrash'),
@@ -267,7 +278,9 @@ export const editorContextMenuContributors = [
         group: 'primary',
         priority: 0,
         applies: (context) =>
-          (p.inSidebar(context) || p.hasPinContext(context)) && context.item !== undefined,
+          p.isSingleSelection(context) &&
+          (p.inSidebar(context) || p.hasPinContext(context)) &&
+          context.item !== undefined,
       },
       {
         id: 'go-to-map-pin',
@@ -289,7 +302,8 @@ export const editorContextMenuContributors = [
         icon: Bookmark,
         group: 'primary',
         priority: 2,
-        applies: (context) => p.inSidebar(context) && p.isSidebarItem(context),
+        applies: (context) =>
+          p.inView('sidebar', 'folder-view')(context) && p.isSidebarItem(context),
         isChecked: (context) => context.item?.isBookmarked ?? false,
       },
       {
@@ -504,6 +518,53 @@ export const editorContextMenuContributors = [
     ],
   },
   {
+    id: 'editor-clipboard',
+    surfaces: ['sidebar', 'folder-view'],
+    getItems: () => [
+      {
+        id: 'copy',
+        commandId: 'copy',
+        label: 'Copy',
+        icon: ClipboardCopy,
+        group: 'edit',
+        priority: 85,
+        applies: (context) => p.hasSelection(context) && p.isItemNotTrashed(context),
+      },
+      {
+        id: 'cut',
+        commandId: 'cut',
+        label: 'Cut',
+        icon: Scissors,
+        group: 'edit',
+        priority: 86,
+        applies: (context) =>
+          p.hasSelection(context) && p.isItemNotTrashed(context) && p.canWrite(context),
+      },
+      {
+        id: 'paste',
+        commandId: 'paste',
+        label: 'Paste',
+        icon: ClipboardPaste,
+        group: 'edit',
+        priority: 87,
+        applies: (context) =>
+          p.canWrite(context) &&
+          p.inView('sidebar', 'folder-view')(context) &&
+          (p.atRoot(context) || p.isType(SIDEBAR_ITEM_TYPES.folders)(context)),
+      },
+      {
+        id: 'duplicate',
+        commandId: 'duplicate',
+        label: 'Duplicate',
+        icon: ClipboardCopy,
+        group: 'edit',
+        priority: 88,
+        applies: (context) =>
+          p.hasSelection(context) && p.isItemNotTrashed(context) && p.canWrite(context),
+      },
+    ],
+  },
+  {
     id: 'editor-edit',
     surfaces: ['sidebar', 'folder-view', 'topbar'],
     getItems: () => [
@@ -515,6 +576,7 @@ export const editorContextMenuContributors = [
         group: 'edit',
         priority: 90,
         applies: (context) =>
+          p.isSingleSelection(context) &&
           p.hasFullAccess(context) &&
           p.inSidebar(context) &&
           p.isItemNotTrashed(context) &&
@@ -528,6 +590,7 @@ export const editorContextMenuContributors = [
         group: 'edit',
         priority: 99,
         applies: (context) =>
+          p.isSingleSelection(context) &&
           p.hasFullAccess(context) &&
           p.isItemNotTrashed(context) &&
           p.isType(SIDEBAR_ITEM_TYPES.gameMaps)(context),
@@ -540,6 +603,7 @@ export const editorContextMenuContributors = [
         group: 'edit',
         priority: 99,
         applies: (context) =>
+          p.isSingleSelection(context) &&
           p.hasFullAccess(context) &&
           p.isItemNotTrashed(context) &&
           p.isType(SIDEBAR_ITEM_TYPES.files)(context),
@@ -552,6 +616,7 @@ export const editorContextMenuContributors = [
         group: 'edit',
         priority: 99,
         applies: (context) =>
+          p.isSingleSelection(context) &&
           p.hasFullAccess(context) &&
           p.isSidebarItem(context) &&
           p.isItemNotTrashed(context) &&

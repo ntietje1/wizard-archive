@@ -3,6 +3,7 @@ import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
+import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
 
 interface DraggableSidebarItemProps {
   item: AnySidebarItem
@@ -13,10 +14,11 @@ export function DraggableSidebarItem({ item, children }: DraggableSidebarItemPro
   const ref = useRef<HTMLDivElement>(null)
 
   const canDrag = hasAtLeastPermissionLevel(item.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
+  const dragData = useSidebarDragData(item)
 
   useDraggable({
     ref,
-    data: { sidebarItemId: item._id },
+    data: dragData,
     canDrag,
   })
 

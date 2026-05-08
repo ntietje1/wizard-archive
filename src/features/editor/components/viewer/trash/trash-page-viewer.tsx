@@ -1,4 +1,5 @@
-import { useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
+import type { PointerEvent } from 'react'
 import { Trash2 } from 'lucide-react'
 import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import { ItemCard } from '../folder/item-card'
@@ -12,12 +13,33 @@ import { useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { TRASH_DROP_ZONE_TYPE } from '~/features/dnd/utils/dnd-registry'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
+import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
+import { isItemSurfaceInteractionTarget } from '~/features/sidebar/utils/item-surface-hotkeys'
 
 export function TrashPageViewer() {
   const dropRef = useRef<HTMLDivElement>(null)
 
   const { parentItemsMap, status } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
-  const rootTrashedItems = parentItemsMap.get(null) ?? []
+  const rootTrashedItems = useMemo(() => parentItemsMap.get(null) ?? [], [parentItemsMap])
+  const visibleItemIds = useMemo(() => rootTrashedItems.map((item) => item._id), [rootTrashedItems])
+  const setActiveItemSurface = useSidebarUIStore((s) => s.setActiveItemSurface)
+  const clearItemSelection = useSidebarUIStore((s) => s.clearItemSelection)
+
+  const activateTrashSurface = useCallback(() => {
+    setActiveItemSurface({ surface: 'trash', parentId: null, visibleItemIds })
+  }, [setActiveItemSurface, visibleItemIds])
+
+  useEffect(() => {
+    setActiveItemSurface({ surface: 'trash', parentId: null, visibleItemIds })
+    return () => setActiveItemSurface(null)
+  }, [setActiveItemSurface, visibleItemIds])
+
+  const handleSurfacePointerDown = (event: PointerEvent) => {
+    activateTrashSurface()
+    if (!isItemSurfaceInteractionTarget(event.target)) {
+      clearItemSelection()
+    }
+  }
 
   const { isDropTarget } = useDndDropTarget({
     ref: dropRef,
@@ -56,10 +78,15 @@ export function TrashPageViewer() {
           <>
             <TrashBanner />
             <ScrollArea className="flex-1 min-h-0">
-              <div className="w-full min-w-0">
+              <div className="w-full min-w-0" onPointerDownCapture={handleSurfacePointerDown}>
                 <ContentGrid className="p-6 min-h-0">
                   {rootTrashedItems.map((item) => (
-                    <ItemCard key={item._id} item={item} />
+                    <ItemCard
+                      key={item._id}
+                      item={item}
+                      itemSurface="trash"
+                      visibleItemIds={visibleItemIds}
+                    />
                   ))}
                 </ContentGrid>
               </div>

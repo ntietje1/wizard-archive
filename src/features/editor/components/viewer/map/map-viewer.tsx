@@ -15,7 +15,7 @@ import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { EditorContextMenuRef } from '~/features/context-menu/components/editor-context-menu'
 import {
   MAP_DROP_ZONE_TYPE,
-  getDragItemId,
+  getDragItemIds,
   rejectionReasonMessage,
 } from '~/features/dnd/utils/dnd-registry'
 import { handleError } from '~/shared/utils/logger'
@@ -39,6 +39,9 @@ interface PinPosition {
   x: number
   y: number
 }
+
+const PIN_DROP_OFFSET_STEP_PERCENT = 2
+const PIN_DROP_OFFSET_MAX_PER_ROW = 8
 
 interface MapPinContextMenuWrapperProps {
   pinId: Id<'mapPins'>
@@ -364,7 +367,11 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
     }
   }
 
-  const createPinAtPosition = async (itemId: Id<'sidebarItems'>, position: PinPosition) => {
+  const createPinAtPosition = async (
+    itemId: Id<'sidebarItems'>,
+    position: PinPosition,
+    options: { suppressToast?: boolean } = {},
+  ) => {
     try {
       await createItemPinMutation.mutateAsync({
         mapId: map._id,
@@ -372,9 +379,13 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
         y: position.y,
         itemId,
       })
-      toast.success('Pin placed on map')
+      if (!options.suppressToast) {
+        toast.success('Pin placed on map')
+      }
+      return true
     } catch (error) {
       handleError(error, 'Failed to place pin')
+      return false
     }
   }
   const createPinAtPositionRef = useRef(createPinAtPosition)
@@ -389,13 +400,25 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
         const targetData = topTarget.data
         if (targetData.type !== MAP_DROP_ZONE_TYPE) return
         if (targetData.mapId !== mapRef.current._id) return
-        const itemId = getDragItemId(source.data)
-        if (!itemId) return
+        const itemIds = getDragItemIds(source.data)
+        if (itemIds.length === 0) return
 
-        const existingPinItemIds = mapRef.current.pins.map((pin) => pin.itemId)
-        const pinError = validatePinTarget(mapRef.current._id, itemId, existingPinItemIds)
-        if (pinError) {
-          toast.error(pinError)
+        const acceptedPinItemIds = mapRef.current.pins.map((pin) => pin.itemId)
+        const validItemIds: Array<Id<'sidebarItems'>> = []
+        const validationErrors: Array<string> = []
+        for (const itemId of itemIds) {
+          const pinError = validatePinTarget(mapRef.current._id, itemId, acceptedPinItemIds)
+          if (pinError) {
+            validationErrors.push(pinError)
+            continue
+          }
+          acceptedPinItemIds.push(itemId)
+          validItemIds.push(itemId)
+        }
+        if (validationErrors.length > 0) {
+          toast.error([...new Set(validationErrors)].join('\n'))
+        }
+        if (validItemIds.length === 0) {
           return
         }
 
@@ -414,7 +437,34 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
           y: Math.max(0, Math.min(100, y)),
         }
 
-        void createPinAtPositionRef.current(itemId, position)
+        void (async () => {
+          const results = await Promise.all(
+            validItemIds.map((itemId, index) => {
+              const col = index % PIN_DROP_OFFSET_MAX_PER_ROW
+              const row = Math.floor(index / PIN_DROP_OFFSET_MAX_PER_ROW)
+              const rowSize = Math.min(
+                PIN_DROP_OFFSET_MAX_PER_ROW,
+                validItemIds.length - row * PIN_DROP_OFFSET_MAX_PER_ROW,
+              )
+              const dx = (col - (rowSize - 1) / 2) * PIN_DROP_OFFSET_STEP_PERCENT
+              const dy = row * PIN_DROP_OFFSET_STEP_PERCENT
+              return createPinAtPositionRef.current(
+                itemId,
+                {
+                  x: Math.max(0, Math.min(100, position.x + dx)),
+                  y: Math.max(0, Math.min(100, position.y + dy)),
+                },
+                { suppressToast: true },
+              )
+            }),
+          )
+          const placedCount = results.filter(Boolean).length
+          if (placedCount > 0) {
+            toast.success(
+              placedCount === 1 ? 'Pin placed on map' : `${placedCount} pins placed on map`,
+            )
+          }
+        })()
       },
     })
   }, [])

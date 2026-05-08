@@ -113,7 +113,16 @@ export type ContextMenuGroupConfig = Record<string, ContextMenuGroupConfigEntry>
 
 export interface EditorMenuContext {
   surface: ViewContext
+  /** Item under the context-click target, when the menu opened on a concrete item. */
   item?: AnySidebarItem
+  /** Main item for commands; when selectedItems exists this should be one of those items. */
+  primaryItem?: AnySidebarItem
+  /** Ordered full item objects for the active selection. */
+  selectedItems?: Array<AnySidebarItem>
+  /** Convenience ids derived from selectedItems; omit when callers cannot keep it synchronized. */
+  selectedItemIds?: Array<AnySidebarItem['_id']>
+  /** Legacy flag only; predicates should derive multi-selection from selectedItems/selectedItemIds. */
+  isMultiSelection?: boolean
   currentUserId?: string
   memberRole?: CampaignMemberRole
   permissionLevel?: PermissionLevel

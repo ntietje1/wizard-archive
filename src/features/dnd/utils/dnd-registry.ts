@@ -21,12 +21,23 @@ export const TRASH_DROP_ZONE_TYPE = 'trash-drop-zone' as const
 
 export type SidebarDragData = {
   sidebarItemId: Id<'sidebarItems'>
+  sidebarItemIds?: Array<Id<'sidebarItems'>>
 }
 
 /** Type-safe extraction of sidebarItemId from raw drag source data. */
 export function getDragItemId(sourceData: Record<string, unknown>): Id<'sidebarItems'> | null {
   const id = sourceData.sidebarItemId
   return typeof id === 'string' ? (id as Id<'sidebarItems'>) : null
+}
+
+export function getDragItemIds(sourceData: Record<string, unknown>): Array<Id<'sidebarItems'>> {
+  const ids = sourceData.sidebarItemIds
+  if (Array.isArray(ids)) {
+    return ids.filter((id): id is Id<'sidebarItems'> => typeof id === 'string')
+  }
+
+  const legacyId = getDragItemId(sourceData)
+  return legacyId ? [legacyId] : []
 }
 
 export type SidebarItemDropData = {
@@ -113,6 +124,16 @@ export type RejectionOutcome = {
 
 export type DropOutcome = OperationOutcome | RejectionOutcome
 
+export type DroppableMoveItemsResult =
+  | {
+      status: 'ready'
+      action: 'move' | 'restore'
+      items: Array<AnySidebarItem>
+      parentId: Id<'sidebarItems'> | null
+    }
+  | { status: 'blocked' }
+  | { status: 'none' }
+
 function operation(
   action: Exclude<DragDropAction, null>,
   label: string,
@@ -128,12 +149,19 @@ function rejection(reason: DropRejectionReason): RejectionOutcome {
 // ─── Execution Context ──────────────────────────────────────────────
 
 export interface DndContext {
+  /** Moves one dragged item; use for single-item drop outcomes and fallback paths. */
   moveItem: (
     item: AnySidebarItem,
     options: {
       parentId?: Id<'sidebarItems'> | null
       location?: SidebarItemLocation
+      skipLocalValidation?: boolean
     },
+  ) => Promise<unknown>
+  /** Moves a normalized batch of dragged items into a parent folder/root. */
+  moveItems?: (
+    items: Array<AnySidebarItem>,
+    parentId?: Id<'sidebarItems'> | null,
   ) => Promise<unknown>
   navigateToItem: (slug: SidebarItemSlug, replace?: boolean) => Promise<void>
   campaignId: Id<'campaigns'> | null
@@ -240,25 +268,35 @@ const rootConfig: DropZoneConfig = {
       if (item.type === SIDEBAR_ITEM_TYPES.folders && !ctx.isDm) {
         return rejection('dm_only')
       }
-      if (ctx.hasSiblingNameConflict(item.name, null, item._id)) {
+      // Bulk ctx.moveItems performs name-conflict planning before committing the move.
+      if (ctx.hasSiblingNameConflict(item.name, null, item._id) && !ctx.moveItems) {
         return rejection('name_conflict')
       }
       return operation('restore', `Restore to "${name}"`, async () => {
-        await ctx.moveItem(item, {
-          parentId: null,
-          location: SIDEBAR_ITEM_LOCATION.sidebar,
-        })
+        if (ctx.moveItems) {
+          await ctx.moveItems([item], null)
+        } else {
+          await ctx.moveItem(item, {
+            parentId: null,
+            location: SIDEBAR_ITEM_LOCATION.sidebar,
+          })
+        }
         toast.success('Item restored')
       })
     }
 
     if (item.parentId == null) return null
 
-    if (ctx.hasSiblingNameConflict(item.name, null, item._id)) {
+    // Bulk ctx.moveItems performs name-conflict planning before committing the move.
+    if (ctx.hasSiblingNameConflict(item.name, null, item._id) && !ctx.moveItems) {
       return rejection('name_conflict')
     }
     return operation('move', `Move to "${name}"`, async () => {
-      await ctx.moveItem(item, { parentId: null })
+      if (ctx.moveItems) {
+        await ctx.moveItems([item], null)
+      } else {
+        await ctx.moveItem(item, { parentId: null })
+      }
     })
   },
   canAcceptFiles: true,
@@ -282,14 +320,19 @@ const folderConfig = typedConfig<ResolvedSidebarItemDropData>({
       if (item.type === SIDEBAR_ITEM_TYPES.folders && !ctx.isDm) {
         return rejection('dm_only')
       }
-      if (ctx.hasSiblingNameConflict(item.name, folderId, item._id)) {
+      // Bulk ctx.moveItems performs name-conflict planning before committing the move.
+      if (ctx.hasSiblingNameConflict(item.name, folderId, item._id) && !ctx.moveItems) {
         return rejection('name_conflict')
       }
       return operation('restore', `Restore to "${t.name}"`, async () => {
-        await ctx.moveItem(item, {
-          parentId: folderId,
-          location: SIDEBAR_ITEM_LOCATION.sidebar,
-        })
+        if (ctx.moveItems) {
+          await ctx.moveItems([item], folderId)
+        } else {
+          await ctx.moveItem(item, {
+            parentId: folderId,
+            location: SIDEBAR_ITEM_LOCATION.sidebar,
+          })
+        }
         toast.success('Item restored')
         ctx.setFolderOpen(folderId)
       })
@@ -297,11 +340,16 @@ const folderConfig = typedConfig<ResolvedSidebarItemDropData>({
 
     if (item.parentId === t._id) return null
 
-    if (ctx.hasSiblingNameConflict(item.name, folderId, item._id)) {
+    // Bulk ctx.moveItems performs name-conflict planning before committing the move.
+    if (ctx.hasSiblingNameConflict(item.name, folderId, item._id) && !ctx.moveItems) {
       return rejection('name_conflict')
     }
     return operation('move', `Move to "${t.name}"`, async () => {
-      await ctx.moveItem(item, { parentId: folderId })
+      if (ctx.moveItems) {
+        await ctx.moveItems([item], folderId)
+      } else {
+        await ctx.moveItem(item, { parentId: folderId })
+      }
       ctx.setFolderOpen(folderId)
     })
   },
@@ -382,6 +430,33 @@ export function resolveDropOutcome(
     return rejection('no_permission')
   }
   return outcome
+}
+
+export function getDroppableMoveItems(
+  items: Array<AnySidebarItem>,
+  target: SidebarDropData,
+  ctx: DndContext,
+): DroppableMoveItemsResult {
+  if (target.type !== SIDEBAR_ROOT_DROP_TYPE && target.type !== SIDEBAR_ITEM_TYPES.folders) {
+    return { status: 'none' }
+  }
+
+  const parentId = target.type === SIDEBAR_ITEM_TYPES.folders ? target._id : null
+  const movableItems: Array<AnySidebarItem> = []
+  let action: 'move' | 'restore' | null = null
+
+  for (const item of items) {
+    const outcome = resolveDropOutcome(item, target, ctx)
+    if (!outcome) continue
+    if (outcome.type === 'rejection') return { status: 'blocked' }
+    if (outcome.action !== 'move' && outcome.action !== 'restore') return { status: 'none' }
+    action ??= outcome.action
+    if (action !== outcome.action) return { status: 'blocked' }
+    movableItems.push(item)
+  }
+
+  if (movableItems.length === 0 || !action) return { status: 'none' }
+  return { status: 'ready', action, items: movableItems, parentId }
 }
 
 export function canDropFilesOnTarget(target: SidebarDropData | null): boolean {

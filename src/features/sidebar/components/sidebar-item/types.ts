@@ -7,6 +7,7 @@ import type { EditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProp
 export interface SidebarItemHandlers {
   linkProps?: EditorLinkProps
   onClick?: (e: MouseEvent) => void
+  onContextMenu?: (e: MouseEvent) => void
   onMoreOptions?: (e: MouseEvent) => void
   onToggleExpanded?: (e: MouseEvent) => void
 }

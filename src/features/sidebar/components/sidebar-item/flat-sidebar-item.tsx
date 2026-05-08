@@ -11,12 +11,15 @@ import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
 import { useIsSelectedItem } from '~/features/sidebar/hooks/useSelectedItem'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
+import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
+import type { MouseEvent } from 'react'
 
 interface FlatSidebarItemProps {
   item: AnySidebarItem
   isExpanded: boolean
   renamingId: Id<'sidebarItems'> | null
   setRenamingId: (id: Id<'sidebarItems'> | null) => void
+  visibleItemIds: Array<Id<'sidebarItems'>>
 }
 
 function FlatSidebarItemComponent({
@@ -24,6 +27,7 @@ function FlatSidebarItemComponent({
   isExpanded,
   renamingId,
   setRenamingId,
+  visibleItemIds,
 }: FlatSidebarItemProps) {
   const { editItem } = useEditSidebarItem()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
@@ -31,10 +35,17 @@ function FlatSidebarItemComponent({
   const { setLastSelectedItem } = useLastEditorItem()
   const isSelected = useIsSelectedItem(item)
   const { toggleExpanded } = useFolderState(item._id)
+  const { handleItemClick, handleItemContextMenu } = useItemSelectionInteractions(item, {
+    surface: 'bookmarks',
+    parentId: null,
+    visibleItemIds,
+  })
 
   const icon = getSidebarItemIcon(item)
 
-  const handleClick = () => setLastSelectedItem(item.slug)
+  const handleClick = (event: MouseEvent) => {
+    handleItemClick(event, () => setLastSelectedItem(item.slug))
+  }
 
   const handleFinishRename = async (name: string) => {
     await editItem({ item, name })
@@ -56,8 +67,12 @@ function FlatSidebarItemComponent({
           isRenaming={renamingId === item._id}
           linkProps={linkProps}
           onClick={handleClick}
+          onContextMenu={handleItemContextMenu}
           onToggleExpanded={toggleExpanded}
-          onMoreOptions={handleMoreOptions}
+          onMoreOptions={(event) => {
+            handleItemContextMenu(event)
+            handleMoreOptions(event)
+          }}
           onFinishRename={handleFinishRename}
           onCancelRename={handleCancelRename}
           showChevron={false}

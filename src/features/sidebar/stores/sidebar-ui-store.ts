@@ -3,6 +3,26 @@ import { persist } from 'zustand/middleware'
 import { useShallow } from 'zustand/shallow'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
+import { selectionBelongsToSurface } from '~/features/sidebar/utils/item-selection-normalization'
+
+export type ItemSurface = 'sidebar' | 'folder-view' | 'bookmarks' | 'trash'
+
+export interface ActiveItemSurface {
+  surface: ItemSurface
+  parentId: Id<'sidebarItems'> | null
+  visibleItemIds: Array<Id<'sidebarItems'>>
+}
+
+export interface SidebarItemClipboard {
+  mode: 'copy' | 'cut'
+  campaignId: Id<'campaigns'>
+  itemIds: Array<Id<'sidebarItems'>>
+}
+
+interface ItemSurfaceIdentity {
+  surface: ItemSurface
+  parentId: Id<'sidebarItems'> | null
+}
 
 interface CampaignState {
   folderStates: Record<string, boolean>
@@ -15,6 +35,11 @@ interface SidebarUIState {
   renamingId: Id<'sidebarItems'> | null
   pendingItemName: string
   selectedSlug: SidebarItemSlug | null
+  selectedItemIds: Array<Id<'sidebarItems'>>
+  anchorItemId: Id<'sidebarItems'> | null
+  selectionSurface: ItemSurfaceIdentity | null
+  activeItemSurface: ActiveItemSurface | null
+  itemClipboard: SidebarItemClipboard | null
   viewAsPlayerId: Id<'campaignMembers'> | null
 }
 
@@ -28,6 +53,18 @@ interface SidebarUIActions {
   toggleBookmarksOnlyMode: (campaignId: string) => void
   setPendingItemName: (name: string) => void
   setSelected: (slug: SidebarItemSlug | null) => void
+  setSelectedItemIds: (ids: Array<Id<'sidebarItems'>>, anchorId?: Id<'sidebarItems'> | null) => void
+  selectSingleItem: (id: Id<'sidebarItems'>) => void
+  toggleItemSelection: (id: Id<'sidebarItems'>) => void
+  selectItemRange: (targetId: Id<'sidebarItems'>, visibleItemIds: Array<Id<'sidebarItems'>>) => void
+  clearItemSelection: () => void
+  normalizeContextSelection: (
+    id: Id<'sidebarItems'>,
+    visibleItemIds?: Array<Id<'sidebarItems'>>,
+  ) => void
+  setActiveItemSurface: (surface: ActiveItemSurface | null) => void
+  setItemClipboard: (clipboard: SidebarItemClipboard | null) => void
+  clearSelectionForCampaignChange: () => void
   setViewAsPlayerId: (id: Id<'campaignMembers'> | null) => void
 }
 
@@ -55,6 +92,37 @@ function updateCampaignState(
   }
 }
 
+function uniqueIds(ids: Array<Id<'sidebarItems'>>): Array<Id<'sidebarItems'>> {
+  return Array.from(new Set(ids))
+}
+
+function selectRange(
+  anchorId: Id<'sidebarItems'> | null,
+  targetId: Id<'sidebarItems'>,
+  visibleItemIds: Array<Id<'sidebarItems'>>,
+): Array<Id<'sidebarItems'>> {
+  const effectiveAnchor = anchorId ?? targetId
+  const anchorIndex = visibleItemIds.indexOf(effectiveAnchor)
+  const targetIndex = visibleItemIds.indexOf(targetId)
+
+  if (anchorIndex === -1 || targetIndex === -1) {
+    return [targetId]
+  }
+
+  const start = Math.min(anchorIndex, targetIndex)
+  const end = Math.max(anchorIndex, targetIndex)
+  return visibleItemIds.slice(start, end + 1)
+}
+
+function surfaceIdentity(surface: ActiveItemSurface | null): ItemSurfaceIdentity | null {
+  if (!surface) return null
+  return { surface: surface.surface, parentId: surface.parentId }
+}
+
+function sameSurfaceIdentity(a: ItemSurfaceIdentity | null, b: ItemSurfaceIdentity | null) {
+  return a?.surface === b?.surface && a?.parentId === b?.parentId
+}
+
 export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
   persist(
     (set) => ({
@@ -62,6 +130,11 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
       renamingId: null,
       pendingItemName: '',
       selectedSlug: null,
+      selectedItemIds: [],
+      anchorItemId: null,
+      selectionSurface: null,
+      activeItemSurface: null,
+      itemClipboard: null,
       viewAsPlayerId: null,
 
       setRenamingId: (id) => set({ renamingId: id }),
@@ -119,7 +192,138 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
       setSelected: (slug) =>
         set((state) => {
           if (state.selectedSlug === slug) return state
-          return { selectedSlug: slug }
+          return {
+            selectedSlug: slug,
+          }
+        }),
+
+      setSelectedItemIds: (ids, anchorId) =>
+        set((state) => {
+          const selectedItemIds = uniqueIds(ids)
+          const nextAnchor =
+            anchorId === undefined
+              ? (selectedItemIds[0] ?? null)
+              : anchorId && selectedItemIds.includes(anchorId)
+                ? anchorId
+                : (selectedItemIds[0] ?? null)
+          return {
+            selectedItemIds,
+            anchorItemId: nextAnchor,
+            selectionSurface: surfaceIdentity(state.activeItemSurface),
+          }
+        }),
+
+      selectSingleItem: (id) =>
+        set((state) => ({
+          selectedItemIds: [id],
+          anchorItemId: id,
+          selectionSurface: surfaceIdentity(state.activeItemSurface),
+        })),
+
+      toggleItemSelection: (id) =>
+        set((state) => {
+          const selected = new Set(state.selectedItemIds)
+          if (selected.has(id)) {
+            selected.delete(id)
+          } else {
+            selected.add(id)
+          }
+
+          const selectedItemIds = state.selectedItemIds.filter((selectedId) =>
+            selected.has(selectedId),
+          )
+          if (selected.has(id) && !selectedItemIds.includes(id)) {
+            selectedItemIds.push(id)
+          }
+
+          const anchorItemId =
+            state.anchorItemId && selected.has(state.anchorItemId)
+              ? state.anchorItemId
+              : (selectedItemIds[0] ?? null)
+
+          return {
+            selectedItemIds,
+            anchorItemId,
+            selectionSurface:
+              selectedItemIds.length > 0 ? surfaceIdentity(state.activeItemSurface) : null,
+          }
+        }),
+
+      selectItemRange: (targetId, visibleItemIds) =>
+        set((state) => ({
+          selectedItemIds: selectRange(state.anchorItemId, targetId, visibleItemIds),
+          anchorItemId: state.anchorItemId ?? targetId,
+          selectionSurface: surfaceIdentity(state.activeItemSurface),
+        })),
+
+      clearItemSelection: () =>
+        set(() => ({
+          selectedItemIds: [],
+          anchorItemId: null,
+          selectionSurface: null,
+        })),
+
+      normalizeContextSelection: (id, visibleItemIds) =>
+        set((state) => {
+          if (
+            state.selectedItemIds.includes(id) &&
+            (!visibleItemIds || selectionBelongsToSurface(state.selectedItemIds, visibleItemIds))
+          ) {
+            return state
+          }
+          return {
+            selectedItemIds: [id],
+            anchorItemId: id,
+            selectionSurface: surfaceIdentity(state.activeItemSurface),
+          }
+        }),
+
+      setActiveItemSurface: (surface) =>
+        set((state) => {
+          const nextIdentity = surfaceIdentity(surface)
+          if (!surface) {
+            return {
+              activeItemSurface: null,
+              selectedItemIds: [],
+              anchorItemId: null,
+              selectionSurface: null,
+            }
+          }
+
+          if (
+            state.selectedItemIds.length > 0 &&
+            !selectionBelongsToSurface(state.selectedItemIds, surface.visibleItemIds)
+          ) {
+            return {
+              activeItemSurface: surface,
+              selectedItemIds: [],
+              anchorItemId: null,
+              selectionSurface: null,
+            }
+          }
+
+          return {
+            activeItemSurface: surface,
+            // Preserve an empty selectionSurface only while the same surface identity stays active;
+            // selectedItemIds always promote the nextIdentity as the current selection surface.
+            selectionSurface:
+              state.selectedItemIds.length > 0
+                ? nextIdentity
+                : sameSurfaceIdentity(state.selectionSurface, nextIdentity)
+                  ? state.selectionSurface
+                  : null,
+          }
+        }),
+
+      setItemClipboard: (clipboard) => set({ itemClipboard: clipboard }),
+
+      clearSelectionForCampaignChange: () =>
+        set({
+          selectedItemIds: [],
+          anchorItemId: null,
+          selectionSurface: null,
+          activeItemSurface: null,
+          itemClipboard: null,
         }),
 
       setViewAsPlayerId: (id) => set({ viewAsPlayerId: id }),

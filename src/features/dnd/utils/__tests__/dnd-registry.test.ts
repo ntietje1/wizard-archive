@@ -27,8 +27,10 @@ import {
   TRASH_DROP_ZONE_TYPE,
   canDropFilesOnTarget,
   getDragItemId,
+  getDragItemIds,
   getDropTargetKey,
   getHighlightId,
+  getDroppableMoveItems,
   rejectionReasonMessage,
   resolveDropOutcome,
   resolveDropTarget,
@@ -107,6 +109,20 @@ describe('getDragItemId', () => {
 
   it('returns null when sidebarItemId is not a string', () => {
     expect(getDragItemId({ sidebarItemId: 42 })).toBeNull()
+  })
+})
+
+describe('getDragItemIds', () => {
+  it('extracts batch sidebar ids from source data', () => {
+    expect(getDragItemIds({ sidebarItemIds: ['note_1', 'map_1'] })).toEqual(['note_1', 'map_1'])
+  })
+
+  it('falls back to legacy sidebarItemId source data', () => {
+    expect(getDragItemIds({ sidebarItemId: 'note_1' })).toEqual(['note_1'])
+  })
+
+  it('ignores non-string batch ids', () => {
+    expect(getDragItemIds({ sidebarItemIds: ['note_1', 42, null] })).toEqual(['note_1'])
   })
 })
 
@@ -240,6 +256,17 @@ describe('resolveDropOutcome', () => {
       expect(result).toEqual({ type: 'rejection', reason: 'name_conflict' })
     })
 
+    it('allows move conflicts at root when a batch conflict planner is available', () => {
+      const note = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
+      const ctx = createCtx({
+        hasSiblingNameConflict: () => true,
+        moveItems: vi.fn(),
+      })
+      const result = resolveDropOutcome(note, rootTarget(), ctx)
+
+      expect(result).toMatchObject({ type: 'operation', action: 'move' })
+    })
+
     it('rejects restoring a folder as non-DM', () => {
       const folder = createFolder({ location: SIDEBAR_ITEM_LOCATION.trash })
       const ctx = createCtx({ isDm: false })
@@ -352,6 +379,18 @@ describe('resolveDropOutcome', () => {
       const result = resolveDropOutcome(note, target, ctx)
 
       expect(result).toEqual({ type: 'rejection', reason: 'name_conflict' })
+    })
+
+    it('allows folder move conflicts when a batch conflict planner is available', () => {
+      const note = createNote()
+      const target = folderTarget()
+      const ctx = createCtx({
+        hasSiblingNameConflict: () => true,
+        moveItems: vi.fn(),
+      })
+      const result = resolveDropOutcome(note, target, ctx)
+
+      expect(result).toMatchObject({ type: 'operation', action: 'move' })
     })
   })
 
@@ -482,6 +521,31 @@ describe('resolveDropOutcome', () => {
 
       expect(result).toBeNull()
     })
+  })
+})
+
+describe('getDroppableMoveItems', () => {
+  it('returns movable items while ignoring selected items already in the target folder', () => {
+    const target = folderTarget()
+    const alreadyInside = createNote({ parentId: target._id })
+    const outside = createNote({ parentId: testId<'sidebarItems'>('folder_other') })
+    const result = getDroppableMoveItems([alreadyInside, outside], target, createCtx())
+
+    expect(result).toEqual({
+      status: 'ready',
+      action: 'move',
+      items: [outside],
+      parentId: target._id,
+    })
+  })
+
+  it('blocks the whole batch when any selected item has a real rejection', () => {
+    const folder = createFolder()
+    const target = folderTarget({ ancestorIds: [folder._id] })
+    const note = createNote()
+    const result = getDroppableMoveItems([folder, note], target, createCtx())
+
+    expect(result).toEqual({ status: 'blocked' })
   })
 })
 
@@ -705,6 +769,16 @@ describe('operation execution', () => {
     expect(ctx.moveItem).toHaveBeenCalledWith(note, { parentId: null })
   })
 
+  it('root move operation uses batch mover when available', async () => {
+    const note = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
+    const ctx = createCtx({ moveItems: vi.fn() })
+    const result = resolveDropOutcome(note, rootTarget(), ctx)
+
+    await (result as { execute: () => Promise<void> }).execute()
+    expect(ctx.moveItems).toHaveBeenCalledWith([note], null)
+    expect(ctx.moveItem).not.toHaveBeenCalled()
+  })
+
   it('folder move operation calls moveItem and opens folder', async () => {
     const note = createNote()
     const target = folderTarget()
@@ -715,6 +789,18 @@ describe('operation execution', () => {
     expect(ctx.moveItem).toHaveBeenCalledWith(note, {
       parentId: target._id,
     })
+    expect(ctx.setFolderOpen).toHaveBeenCalledWith(target._id)
+  })
+
+  it('folder move operation uses batch mover when available', async () => {
+    const note = createNote()
+    const target = folderTarget()
+    const ctx = createCtx({ moveItems: vi.fn() })
+    const result = resolveDropOutcome(note, target, ctx)
+
+    await (result as { execute: () => Promise<void> }).execute()
+    expect(ctx.moveItems).toHaveBeenCalledWith([note], target._id)
+    expect(ctx.moveItem).not.toHaveBeenCalled()
     expect(ctx.setFolderOpen).toHaveBeenCalledWith(target._id)
   })
 

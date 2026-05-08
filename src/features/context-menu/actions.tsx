@@ -29,10 +29,18 @@ import { assertNever } from '~/shared/utils/utils'
 import { useSession } from '~/features/sidebar/hooks/useGameSession'
 import { convertBlocksToMarkdown } from '~/features/editor/utils/text-to-blocks'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useSidebarItemOperations } from '~/features/sidebar/operations/useSidebarItemOperations'
 
 interface UseMenuActionsOptions {
   onDialogOpen?: () => void
   onDialogClose?: () => void
+}
+
+function getContextItems(ctx: MenuContext): Array<AnySidebarItem> {
+  if (ctx.selectedItems && ctx.selectedItems.length > 0) {
+    return ctx.selectedItems
+  }
+  return ctx.item ? [ctx.item] : []
 }
 
 export function useMenuActions(options: UseMenuActionsOptions = {}) {
@@ -49,13 +57,14 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const { endCurrentSession, startSession: startNewSession } = useSession()
   const toggleBookmarkMutation = useToggleBookmark()
   const { parentItemsMap } = useActiveSidebarItems()
+  const itemOperations = useSidebarItemOperations()
+  const getNormalizedContextItems = (ctx: MenuContext) =>
+    itemOperations.normalizeItems(getContextItems(ctx))
 
   const [deleteFolderDialog, setDeleteFolderDialog] = useState<Folder | null>(null)
   const [editMapDialog, setEditMapDialog] = useState<Id<'sidebarItems'> | null>(null)
   const [editFileDialog, setEditFileDialog] = useState<Id<'sidebarItems'> | null>(null)
   const [editSidebarItemDialog, setEditSidebarItemDialog] = useState<AnySidebarItem | null>(null)
-  const [confirmPermanentDeleteItem, setConfirmPermanentDeleteItem] =
-    useState<AnySidebarItem | null>(null)
   const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false)
 
   const actions: ActionHandlers = {
@@ -71,11 +80,12 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     },
 
     delete: async (ctx: MenuContext) => {
-      if (!ctx.item) return
-      const item = ctx.item
+      const items = getNormalizedContextItems(ctx)
+      if (items.length === 0) return
+      const item = items[0]
 
       // Non-empty folders: show confirmation dialog
-      if (isFolder(item)) {
+      if (items.length === 1 && isFolder(item)) {
         const children = parentItemsMap.get(item._id)
         if (children && children.length > 0) {
           setDeleteFolderDialog(item)
@@ -86,14 +96,35 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
 
       // Everything else (including empty folders): trash immediately
       try {
-        await moveItem(item, { location: SIDEBAR_ITEM_LOCATION.trash })
+        const results = await Promise.allSettled(
+          items.map((selectedItem) =>
+            moveItem(selectedItem, { location: SIDEBAR_ITEM_LOCATION.trash }),
+          ),
+        )
+        const movedItems = items.filter((_, index) => results[index]?.status === 'fulfilled')
         const currentSlug = getSelectedSlug()
-        if (item.slug === currentSlug) {
+        if (movedItems.some((selectedItem) => selectedItem.slug === currentSlug)) {
           await clearEditorContent()
         }
-        toast.success('Moved to trash')
+        if (movedItems.length > 0) {
+          toast.success(
+            movedItems.length === 1
+              ? 'Moved to trash'
+              : `Moved ${movedItems.length} items to trash`,
+          )
+        }
+        const failures = results.filter((result) => result.status === 'rejected')
+        if (failures.length > 0) {
+          handleError(
+            new Error(`${failures.length} of ${items.length} trash operations failed`),
+            items.length === 1 ? 'Failed to move item to trash' : 'Failed to move items to trash',
+          )
+        }
       } catch (error) {
-        handleError(error, 'Failed to move item to trash')
+        handleError(
+          error,
+          items.length === 1 ? 'Failed to move item to trash' : 'Failed to move items to trash',
+        )
       }
     },
 
@@ -582,18 +613,25 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     },
 
     restore: async (ctx: MenuContext) => {
-      if (!ctx.item) return
+      const items = getNormalizedContextItems(ctx)
+      if (items.length === 0) return
       try {
-        await moveItem(ctx.item, { location: SIDEBAR_ITEM_LOCATION.sidebar })
-        toast.success('Item restored')
+        await Promise.all(
+          items.map((item) => moveItem(item, { location: SIDEBAR_ITEM_LOCATION.sidebar })),
+        )
+        toast.success(items.length === 1 ? 'Item restored' : `${items.length} items restored`)
       } catch (error) {
-        handleError(error, 'Failed to restore item')
+        handleError(
+          error,
+          items.length === 1 ? 'Failed to restore item' : 'Failed to restore items',
+        )
       }
     },
 
     permanentlyDelete: (ctx: MenuContext) => {
-      if (!ctx.item) return
-      setConfirmPermanentDeleteItem(ctx.item)
+      const items = getNormalizedContextItems(ctx)
+      if (items.length === 0) return
+      itemOperations.confirmPermanentDeleteItems(items)
       onDialogOpen?.()
     },
 
@@ -602,16 +640,45 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       onDialogOpen?.()
     },
 
-    toggleBookmark: (ctx: MenuContext) => {
-      if (!campaignId || !ctx.item) return
+    toggleBookmark: async (ctx: MenuContext) => {
+      if (!campaignId) return
+      const items = getNormalizedContextItems(ctx)
+      if (items.length === 0) return
 
-      toggleBookmarkMutation
-        .mutateAsync({
-          sidebarItemId: ctx.item._id,
-        })
-        .catch((error) => {
-          handleError(error, 'Failed to toggle bookmark')
-        })
+      const results = await Promise.allSettled(
+        items.map((item) =>
+          toggleBookmarkMutation.mutateAsync({
+            sidebarItemId: item._id,
+          }),
+        ),
+      )
+      const failures = results.filter((result) => result.status === 'rejected')
+      if (failures.length > 0) {
+        handleError(
+          new Error(`${failures.length} of ${items.length} bookmark updates failed`),
+          items.length === 1 ? 'Failed to toggle bookmark' : 'Failed to toggle bookmarks',
+        )
+      }
+    },
+
+    copy: (ctx: MenuContext) => {
+      itemOperations.copyItems(getNormalizedContextItems(ctx))
+    },
+
+    cut: (ctx: MenuContext) => {
+      itemOperations.cutItems(getNormalizedContextItems(ctx))
+    },
+
+    paste: (ctx: MenuContext) => {
+      const targetParentId = ctx.item && isFolder(ctx.item) ? ctx.item._id : undefined
+      void itemOperations.pasteClipboard(targetParentId)
+    },
+
+    duplicate: (ctx: MenuContext) => {
+      const items = getNormalizedContextItems(ctx)
+      // Duplicate from a context click creates siblings beside that clicked item.
+      const targetParentId = ctx.item?.parentId ?? null
+      void itemOperations.duplicateItems(items, targetParentId)
     },
   }
 
@@ -627,14 +694,16 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     editMapDialog,
     editFileDialog,
     editSidebarItemDialog,
-    confirmPermanentDeleteItem,
+    confirmPermanentDeleteItems: null,
     confirmEmptyTrash,
     campaignId,
     closeFolderDialog: makeCloseHandler(setDeleteFolderDialog),
     closeMapDialog: makeCloseHandler(setEditMapDialog),
     closeFileDialog: makeCloseHandler(setEditFileDialog),
     closeSidebarItemDialog: makeCloseHandler(setEditSidebarItemDialog),
-    closePermanentDeleteDialog: makeCloseHandler(setConfirmPermanentDeleteItem),
+    closePermanentDeleteDialog: () => {
+      onDialogClose?.()
+    },
     closeEmptyTrashDialog: () => {
       setConfirmEmptyTrash(false)
       onDialogClose?.()

@@ -23,10 +23,12 @@ export function useMoveSidebarItem() {
     options: {
       parentId?: Id<'sidebarItems'> | null
       location?: SidebarItemLocation
+      name?: string
+      skipLocalValidation?: boolean
     },
   ) => {
     if (!campaignId || !campaign.data?.myMembership) return
-    const { parentId, location } = options
+    const { parentId, location, name, skipLocalValidation = false } = options
     const isTrashing =
       location === SIDEBAR_ITEM_LOCATION.trash && item.location !== SIDEBAR_ITEM_LOCATION.trash
     const isRestoring =
@@ -34,21 +36,23 @@ export function useMoveSidebarItem() {
       location !== SIDEBAR_ITEM_LOCATION.trash &&
       item.location === SIDEBAR_ITEM_LOCATION.trash
 
-    const moveValidation = validateLocalSidebarMove(
-      {
-        itemId: item._id,
-        name: item.name,
-        parentId,
-        isTrashing,
-        isRestoring,
-      },
-      {
-        getParent: (id) => itemsMap.get(id),
-        getSiblings: (nextParentId) => parentItemsMap.get(nextParentId) ?? [],
-      },
-    )
-    if (!moveValidation.valid) {
-      throw new Error(moveValidation.error)
+    if (!skipLocalValidation) {
+      const moveValidation = validateLocalSidebarMove(
+        {
+          itemId: item._id,
+          name: name ?? item.name,
+          parentId,
+          isTrashing,
+          isRestoring,
+        },
+        {
+          getParent: (id) => itemsMap.get(id),
+          getSiblings: (nextParentId) => parentItemsMap.get(nextParentId) ?? [],
+        },
+      )
+      if (!moveValidation.valid) {
+        throw new Error(moveValidation.error)
+      }
     }
 
     const previousSidebar = cache.get(SIDEBAR_ITEM_LOCATION.sidebar)
@@ -124,6 +128,7 @@ export function useMoveSidebarItem() {
         itemId: item._id,
         parentId,
         location,
+        name,
       })
     } catch (err) {
       cache.update(SIDEBAR_ITEM_LOCATION.sidebar, () => previousSidebar)

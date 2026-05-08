@@ -15,6 +15,8 @@ import { useIsSelectedItem } from '~/features/sidebar/hooks/useSelectedItem'
 import { useContextMenu } from '~/features/context-menu/hooks/useContextMenu'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
+import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
+import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
 
 function getFileTypeIcon(
   contentType: string | null | undefined,
@@ -58,13 +60,26 @@ function FileCardSkeleton() {
   )
 }
 
-function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
+function FileCardInner({
+  item: file,
+  onClick,
+  parentId,
+  visibleItemIds,
+  itemSurface = 'folder-view',
+}: ItemCardProps<SidebarFile>) {
   const ref = useRef<HTMLDivElement>(null)
   const linkProps = useEditorLinkProps(file)
   const { setLastSelectedItem } = useLastEditorItem()
   const canDrag = hasAtLeastPermissionLevel(file.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
   const isSelected = useIsSelectedItem(file)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
+  const resolvedVisibleItemIds = visibleItemIds ?? [file._id]
+  const { handleItemClick, handleItemContextMenu } = useItemSelectionInteractions(file, {
+    surface: itemSurface,
+    parentId: parentId ?? null,
+    visibleItemIds: resolvedVisibleItemIds,
+  })
+  const dragData = useSidebarDragData(file)
 
   const FileIcon = getFileTypeIcon(file.contentType, file.name)
   const [erroredUrl, setErroredUrl] = useState<string | null>(null)
@@ -72,7 +87,7 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
 
   const { isDraggingRef } = useDraggable({
     ref,
-    data: { sidebarItemId: file._id },
+    data: dragData,
     canDrag,
   })
 
@@ -81,8 +96,11 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
       <Link
         {...linkProps}
         activeOptions={{ includeSearch: false }}
+        aria-label={file.name}
+        data-item-selection-target="true"
         className="block w-full h-full [&.active]:pointer-events-auto"
         draggable={false}
+        onContextMenu={handleItemContextMenu}
         onClick={(e) => {
           if (isDraggingRef.current) {
             e.preventDefault()
@@ -90,10 +108,11 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
           }
           if (onClick) {
             e.preventDefault()
+            handleItemClick(e)
             onClick()
             return
           }
-          setLastSelectedItem(file.slug)
+          handleItemClick(e, () => setLastSelectedItem(file.slug))
         }}
       >
         <Card
@@ -114,6 +133,7 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
+                handleItemContextMenu(e)
                 handleMoreOptions(e)
               }}
             >

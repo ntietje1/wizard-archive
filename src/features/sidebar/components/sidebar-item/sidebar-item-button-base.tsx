@@ -16,6 +16,7 @@ function SidebarItemButtonBaseComponent({
   showChevron = true,
   linkProps,
   onClick,
+  onContextMenu,
   onMoreOptions = () => {},
   onToggleExpanded = () => {},
   onFinishRename,
@@ -48,6 +49,8 @@ function SidebarItemButtonBaseComponent({
         isSelected && 'bg-muted',
         !isSelected && 'hover:bg-muted/70',
       )}
+      data-item-selection-target="true"
+      onContextMenu={onContextMenu}
     >
       {/* Icon / Chevron Toggle */}
       <HoverToggleButton

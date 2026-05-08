@@ -5,6 +5,8 @@ import type { DndMonitorCtx } from '~/features/dnd/types'
 import { handleError } from '~/shared/utils/logger'
 import {
   getDragItemId,
+  getDragItemIds,
+  getDroppableMoveItems,
   getDropTargetKey,
   getHighlightId,
   resolveDropOutcome,
@@ -15,6 +17,12 @@ import { useDndStore } from '~/features/dnd/stores/dnd-store'
 function resolveDraggedItem(sourceData: Record<string, unknown>, ctx: DndMonitorCtx) {
   const sid = getDragItemId(sourceData)
   return sid ? (ctx.itemsMap.get(sid) ?? ctx.trashedItemsMap.get(sid) ?? null) : null
+}
+
+function resolveDraggedItems(sourceData: Record<string, unknown>, ctx: DndMonitorCtx) {
+  return getDragItemIds(sourceData)
+    .map((sid) => ctx.itemsMap.get(sid) ?? ctx.trashedItemsMap.get(sid) ?? null)
+    .filter((item): item is NonNullable<typeof item> => item !== null)
 }
 
 export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
@@ -122,13 +130,18 @@ export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
               )
             : null
 
-          const draggedItem = resolveDraggedItem(source.data, ctx)
+          const draggedItems = resolveDraggedItems(source.data, ctx)
+          const draggedItem = draggedItems[0] ?? null
 
           const outcome = resolveDropOutcome(draggedItem, dropTarget, ctx.dndContext)
 
           setDragState((prev) => {
             if (!prev) return null
-            return { ...prev, outcome }
+            return {
+              ...prev,
+              draggedItemCount: draggedItems.length > 1 ? draggedItems.length : undefined,
+              outcome,
+            }
           })
 
           setSidebarDragTargetId(getHighlightId(dropTarget))
@@ -149,8 +162,8 @@ export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
         if (!topTarget) return
 
         const ctx = ctxRef.current
-        const draggedItem = resolveDraggedItem(source.data, ctx)
-        if (!draggedItem) return
+        const draggedItems = resolveDraggedItems(source.data, ctx)
+        if (draggedItems.length === 0) return
 
         const targetData = resolveDropTarget(
           topTarget.data,
@@ -160,13 +173,50 @@ export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
         )
         if (!targetData) return
 
-        const outcome = resolveDropOutcome(draggedItem, targetData, ctx.dndContext)
-        if (outcome?.type !== 'operation' || !outcome.execute) return
+        const bulkMove = getDroppableMoveItems(draggedItems, targetData, ctx.dndContext)
+        if (ctx.dndContext.moveItems && bulkMove.status === 'ready') {
+          try {
+            await ctx.dndContext.moveItems(bulkMove.items, bulkMove.parentId)
+            if (bulkMove.parentId) {
+              ctx.dndContext.setFolderOpen(bulkMove.parentId)
+            }
+          } catch (error) {
+            handleError(error, 'Failed to move items')
+          }
+          return
+        }
+        if (bulkMove.status === 'blocked') return
 
-        try {
-          await outcome.execute()
-        } catch (error) {
-          handleError(error, 'Failed to move item')
+        const outcomes = draggedItems.map((draggedItem) =>
+          resolveDropOutcome(draggedItem, targetData, ctx.dndContext),
+        )
+        const executableOutcomes = outcomes.filter(
+          (
+            outcome,
+          ): outcome is Extract<NonNullable<typeof outcome>, { type: 'operation' }> & {
+            execute: () => Promise<void>
+          } => outcome?.type === 'operation' && Boolean(outcome.execute),
+        )
+        if (executableOutcomes.length === 0 || executableOutcomes.length !== draggedItems.length) {
+          handleError(
+            new Error(
+              `${draggedItems.length - executableOutcomes.length} of ${draggedItems.length} dragged items cannot be moved`,
+            ),
+            'Some dragged items cannot be moved',
+          )
+          return
+        }
+
+        const errors: Array<unknown> = []
+        for (const outcome of executableOutcomes) {
+          try {
+            await outcome.execute()
+          } catch (error) {
+            errors.push(error)
+          }
+        }
+        if (errors.length > 0) {
+          handleError(new Error(`${errors.length} drag operations failed`), 'Failed to move items')
         }
       },
     })
