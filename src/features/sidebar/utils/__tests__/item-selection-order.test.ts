@@ -103,6 +103,23 @@ describe('normalizeTopLevelSelectedItems', () => {
 
     expect(result.map((item) => item._id)).toEqual([first._id, second._id])
   })
+
+  it('deduplicates repeated selected items even when ancestor data has a cycle', () => {
+    const first = createNote({ name: 'First' })
+    const baseParentA = createFolder({ name: 'Parent A' })
+    const parentB = createFolder({ name: 'Parent B', parentId: baseParentA._id })
+    const parentA = { ...baseParentA, parentId: parentB._id }
+    const cycledFirst = { ...first, parentId: parentA._id }
+    const itemsMap = new Map<Id<'sidebarItems'>, AnySidebarItem>([
+      [cycledFirst._id, cycledFirst],
+      [parentA._id, parentA],
+      [parentB._id, parentB],
+    ])
+
+    const result = normalizeTopLevelSelectedItems([cycledFirst, cycledFirst], itemsMap)
+
+    expect(result.map((item) => item._id)).toEqual([first._id])
+  })
 })
 
 describe('selectionBelongsToSurface', () => {

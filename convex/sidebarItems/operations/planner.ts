@@ -16,6 +16,18 @@ type OperationPlannerItem = Pick<
   AnySidebarItemRow,
   '_id' | 'parentId' | 'name' | 'type' | 'location'
 >
+type PlannerItemStatus = 'ready' | 'cancelled' | 'needs-decision'
+
+type ConflictPlanningContext = {
+  decisions: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
+  conflicts: Array<ItemOperationConflict>
+}
+
+type ConflictDecisionHandlers = {
+  keepBoth: () => void
+  replace: () => void
+  mergeFolders: () => PlannerItemStatus
+}
 
 function normalizedName(name: string) {
   return name.trim().toLowerCase()
@@ -39,6 +51,36 @@ function createConflict(
     sourceType: source.type,
     destinationType: destination.type,
   }
+}
+
+function applyConflictDecision(
+  context: ConflictPlanningContext,
+  item: OperationPlannerItem,
+  conflictTarget: OperationPlannerItem,
+  handlers: ConflictDecisionHandlers,
+): PlannerItemStatus {
+  const decision = context.decisions[item._id]
+  if (!decision) {
+    context.conflicts.push(createConflict(item, conflictTarget))
+    return 'needs-decision'
+  }
+
+  if (decision.action === 'cancel') return 'cancelled'
+  if (decision.action === 'skip') return 'ready'
+  if (decision.action === 'keepBoth') {
+    handlers.keepBoth()
+    return 'ready'
+  }
+
+  if (
+    item.type === SIDEBAR_ITEM_TYPES.folders &&
+    conflictTarget.type === SIDEBAR_ITEM_TYPES.folders
+  ) {
+    return handlers.mergeFolders()
+  }
+
+  handlers.replace()
+  return 'ready'
 }
 
 function removeSelectedDescendants(
@@ -166,35 +208,18 @@ function addDuplicateFolderMergeOperations(
 function planDuplicateItem(
   context: DuplicatePlannerContext,
   item: OperationPlannerItem,
-): 'ready' | 'cancelled' | 'needs-decision' {
+): PlannerItemStatus {
   const conflictTarget = findNameConflict(item, context.targetItems)
   if (!conflictTarget) {
     addDuplicateCopyOperation(context, item)
     return 'ready'
   }
 
-  const decision = context.decisions[item._id]
-  if (!decision) {
-    context.conflicts.push(createConflict(item, conflictTarget))
-    return 'needs-decision'
-  }
-
-  if (decision.action === 'cancel') return 'cancelled'
-  if (decision.action === 'skip') return 'ready'
-  if (decision.action === 'keepBoth') {
-    addDuplicateCopyOperation(context, item)
-    return 'ready'
-  }
-
-  if (
-    item.type === SIDEBAR_ITEM_TYPES.folders &&
-    conflictTarget.type === SIDEBAR_ITEM_TYPES.folders
-  ) {
-    return addDuplicateFolderMergeOperations(context, item, conflictTarget)
-  }
-
-  addDuplicateReplaceOperation(context, item, conflictTarget)
-  return 'ready'
+  return applyConflictDecision(context, item, conflictTarget, {
+    keepBoth: () => addDuplicateCopyOperation(context, item),
+    replace: () => addDuplicateReplaceOperation(context, item, conflictTarget),
+    mergeFolders: () => addDuplicateFolderMergeOperations(context, item, conflictTarget),
+  })
 }
 
 export function planDuplicateOperations({
@@ -319,10 +344,7 @@ function addMoveFolderMergeOperations(
   return 'ready'
 }
 
-function planMoveItem(
-  context: MovePlannerContext,
-  item: OperationPlannerItem,
-): 'ready' | 'cancelled' | 'needs-decision' {
+function planMoveItem(context: MovePlannerContext, item: OperationPlannerItem): PlannerItemStatus {
   const candidates = context.targetItems.filter(
     (targetItem) => !context.movingIds.has(targetItem._id),
   )
@@ -341,28 +363,11 @@ function planMoveItem(
     return 'ready'
   }
 
-  const decision = context.decisions[item._id]
-  if (!decision) {
-    context.conflicts.push(createConflict(item, conflictTarget))
-    return 'needs-decision'
-  }
-
-  if (decision.action === 'cancel') return 'cancelled'
-  if (decision.action === 'skip') return 'ready'
-  if (decision.action === 'keepBoth') {
-    addMoveKeepBothOperation(context, item)
-    return 'ready'
-  }
-
-  if (
-    item.type === SIDEBAR_ITEM_TYPES.folders &&
-    conflictTarget.type === SIDEBAR_ITEM_TYPES.folders
-  ) {
-    return addMoveFolderMergeOperations(context, item, conflictTarget)
-  }
-
-  addMoveReplaceOperation(context, item, conflictTarget)
-  return 'ready'
+  return applyConflictDecision(context, item, conflictTarget, {
+    keepBoth: () => addMoveKeepBothOperation(context, item),
+    replace: () => addMoveReplaceOperation(context, item, conflictTarget),
+    mergeFolders: () => addMoveFolderMergeOperations(context, item, conflictTarget),
+  })
 }
 
 export function planMoveOperations({

@@ -38,8 +38,7 @@ export function getDragItemIds(sourceData: Record<string, unknown>): Array<Id<'s
     return ids.filter((id): id is Id<'sidebarItems'> => typeof id === 'string')
   }
 
-  const legacyId = getDragItemId(sourceData)
-  return legacyId ? [legacyId] : []
+  return []
 }
 
 export function getDragPreviewItemIds(
@@ -103,7 +102,7 @@ export type SidebarDropData =
 
 type DragDropAction = 'move' | 'trash' | 'restore' | 'pin' | 'embed' | 'open' | 'link' | null
 
-type DropRejectionReason =
+export type DropRejectionReason =
   | 'self_pin'
   | 'self_embed'
   | 'already_pinned'
@@ -139,11 +138,26 @@ type DroppableMoveItemsResult =
       items: Array<AnySidebarItem>
       parentId: Id<'sidebarItems'> | null
     }
-  | { status: 'blocked' }
+  | { status: 'blocked'; reason: DropRejectionReason }
   | { status: 'noop' }
   | { status: 'none' }
 
 type MoveDropAction = 'move' | 'restore'
+
+export type DropCommand =
+  | { status: 'noop' }
+  | { status: 'blocked'; reason: DropRejectionReason }
+  | {
+      status: 'ready'
+      action: 'move' | 'restore' | 'trash'
+      items: Array<AnySidebarItem>
+      parentId: Id<'sidebarItems'> | null
+    }
+  | {
+      status: 'ready'
+      action: 'open'
+      execute: () => Promise<void>
+    }
 
 type ResolvedMoveDropItem = {
   item: AnySidebarItem
@@ -476,13 +490,15 @@ export function getDroppableMoveItems(
   }))
 
   if (resolvedItems.length === 0) return { status: 'none' }
-  if (resolvedItems.some(({ outcome }) => outcome?.type === 'rejection'))
-    return { status: 'blocked' }
+  const rejected = resolvedItems.find(({ outcome }) => outcome?.type === 'rejection')
+  if (rejected?.outcome?.type === 'rejection') {
+    return { status: 'blocked', reason: rejected.outcome.reason }
+  }
 
   const operations: Array<MoveDropOperation> = []
   for (const { item, outcome } of resolvedItems) {
     if (!outcome) continue
-    if (outcome.type !== 'operation') return { status: 'blocked' }
+    if (outcome.type !== 'operation') return { status: 'blocked', reason: 'missing_data' }
     if (!isMoveDropAction(outcome.action)) return { status: 'none' }
     operations.push({ item, action: outcome.action })
   }
@@ -490,7 +506,9 @@ export function getDroppableMoveItems(
   if (operations.length === 0) return { status: 'noop' }
 
   const action = operations[0].action
-  if (operations.some((op) => op.action !== action)) return { status: 'blocked' }
+  if (operations.some((op) => op.action !== action)) {
+    return { status: 'blocked', reason: 'missing_data' }
+  }
 
   return {
     status: 'ready',
@@ -498,6 +516,75 @@ export function getDroppableMoveItems(
     items: operations.map(({ item }) => item),
     parentId,
   }
+}
+
+function getExecutableCommand(
+  items: Array<AnySidebarItem>,
+  target: SidebarDropData,
+  ctx: DndContext,
+): DropCommand {
+  const outcomes = items.map((item) => resolveDropOutcome(item, target, ctx))
+  const rejected = outcomes.find((outcome) => outcome?.type === 'rejection')
+  if (rejected?.type === 'rejection') {
+    return { status: 'blocked', reason: rejected.reason }
+  }
+
+  const executableOutcome = outcomes.find(
+    (
+      outcome,
+    ): outcome is Extract<DropOutcome, { type: 'operation' }> & {
+      execute: () => Promise<void>
+    } => outcome?.type === 'operation' && outcome.action === 'open' && Boolean(outcome.execute),
+  )
+
+  if (!executableOutcome) return { status: 'noop' }
+  return { status: 'ready', action: 'open', execute: executableOutcome.execute }
+}
+
+function getTrashCommand(
+  items: Array<AnySidebarItem>,
+  target: SidebarDropData,
+  ctx: DndContext,
+): DropCommand {
+  if (target.type !== TRASH_DROP_ZONE_TYPE) return { status: 'noop' }
+
+  const trashItems: Array<AnySidebarItem> = []
+  for (const item of items) {
+    const outcome = resolveDropOutcome(item, target, ctx)
+    if (!outcome) continue
+    if (outcome.type === 'rejection') return { status: 'blocked', reason: outcome.reason }
+    if (outcome.action !== 'trash') return { status: 'blocked', reason: 'missing_data' }
+    trashItems.push(item)
+  }
+
+  if (trashItems.length === 0) return { status: 'noop' }
+  return { status: 'ready', action: 'trash', items: trashItems, parentId: null }
+}
+
+export function resolveDropCommand(
+  items: Array<AnySidebarItem>,
+  target: SidebarDropData,
+  ctx: DndContext,
+): DropCommand {
+  if (items.length === 0) return { status: 'noop' }
+
+  if (target.type === TRASH_DROP_ZONE_TYPE) {
+    return getTrashCommand(items, target, ctx)
+  }
+
+  const moveItems = getDroppableMoveItems(items, target, ctx)
+  if (moveItems.status === 'ready') {
+    return {
+      status: 'ready',
+      action: moveItems.action,
+      items: moveItems.items,
+      parentId: moveItems.parentId,
+    }
+  }
+  if (moveItems.status === 'blocked') return { status: 'blocked', reason: moveItems.reason }
+  if (moveItems.status === 'noop') return { status: 'noop' }
+
+  return getExecutableCommand(items, target, ctx)
 }
 
 export function canDropFilesOnTarget(target: SidebarDropData | null): boolean {

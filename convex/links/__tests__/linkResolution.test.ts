@@ -14,13 +14,14 @@ import { assertSidebarItemName } from '../../sidebarItems/validation/name'
 import { assertSidebarItemSlug } from '../../sidebarItems/validation/slug'
 
 function makeItem(id: string, name: string, parentId: string | null = null): AnySidebarItem {
+  const rawSlug = name.toLowerCase().replace(/\s+/g, '-')
+  const slug = rawSlug.length >= 3 ? rawSlug : rawSlug.padEnd(3, rawSlug)
+
   return {
     _id: id as Id<'sidebarItems'>,
     _creationTime: 0,
     name: name ? assertSidebarItemName(name) : ('' as AnySidebarItem['name']),
-    slug: name
-      ? assertSidebarItemSlug(name.toLowerCase().replace(/\s+/g, '-'))
-      : ('invalid' as AnySidebarItem['slug']),
+    slug: name ? assertSidebarItemSlug(slug) : ('invalid' as AnySidebarItem['slug']),
     parentId: parentId as Id<'sidebarItems'> | null,
     campaignId: 'campaign1' as Id<'campaigns'>,
     type: 'notes',

@@ -10,7 +10,7 @@ import { prepareSidebarItemCreate } from '../validation/orchestration'
 import { getSidebarItem } from './getSidebarItem'
 import { getSidebarItemsByParent } from './getSidebarItemsByParent'
 import { moveSidebarItems } from './moveSidebarItem'
-import { requireItemAccess } from '../validation/access'
+import { checkItemAccess, requireItemAccess } from '../validation/access'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { evaluateDuplicate } from '../operations/capabilities'
 import { assertSidebarOperationAllowed } from './operationCapability'
@@ -418,9 +418,9 @@ async function loadDuplicableSources(
   const targetParent =
     rawTargetParent === null
       ? null
-      : await requireItemAccess(ctx, {
+      : await checkItemAccess(ctx, {
           rawItem: rawTargetParent,
-          requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
+          requiredLevel: PERMISSION_LEVEL.NONE,
         })
   const sourceItems = []
   for (const sourceItemId of sourceItemIds) {

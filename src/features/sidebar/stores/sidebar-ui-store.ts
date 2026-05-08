@@ -376,9 +376,18 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
               activeItemSurface: null,
               focusedItemId: null,
               focusSurface: null,
+              selectedItemIds: [],
+              anchorItemId: null,
+              selectionSurface: null,
             }
           }
 
+          const previousIdentity = surfaceIdentity(state.activeItemSurface)
+          const isSameSurfaceIdentity = sameSurfaceIdentity(previousIdentity, nextIdentity)
+          const preserveSelection =
+            state.selectedItemIds.length > 0 &&
+            (isSameSurfaceIdentity ||
+              selectionBelongsToSurface(state.selectedItemIds, surface.visibleItemIds))
           const focusedItemId =
             state.focusedItemId && surface.visibleItemIds.includes(state.focusedItemId)
               ? state.focusedItemId
@@ -389,12 +398,9 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
             activeItemSurface: surface,
             focusedItemId,
             focusSurface,
-            selectionSurface:
-              state.selectedItemIds.length > 0
-                ? nextIdentity
-                : sameSurfaceIdentity(state.selectionSurface, nextIdentity)
-                  ? state.selectionSurface
-                  : null,
+            selectedItemIds: preserveSelection ? state.selectedItemIds : [],
+            anchorItemId: preserveSelection ? state.anchorItemId : null,
+            selectionSurface: preserveSelection ? nextIdentity : null,
           }
         }),
 

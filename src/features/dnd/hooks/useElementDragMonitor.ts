@@ -6,15 +6,16 @@ import { handleError } from '~/shared/utils/logger'
 import {
   getDragItemId,
   getDragPreviewItemIds,
-  getDroppableMoveItems,
   getDropTargetKey,
   getHighlightId,
+  rejectionReasonMessage,
+  resolveDropCommand,
   resolveDropOutcome,
   resolveDropTarget,
 } from '~/features/dnd/utils/dnd-registry'
 import { resolveNormalizedDraggedSidebarItems } from '~/features/dnd/utils/sidebar-drag-items'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
-import type { DropOutcome, SidebarDropData } from '~/features/dnd/utils/dnd-registry'
+import type { DropCommand, DropOutcome, SidebarDropData } from '~/features/dnd/utils/dnd-registry'
 
 function resolveDraggedItem(sourceData: Record<string, unknown>, ctx: DndMonitorCtx) {
   const sid = getDragItemId(sourceData)
@@ -60,18 +61,22 @@ function resolveDragFeedbackOutcome({
   dropTarget: SidebarDropData | null
 }): DropOutcome | null {
   const draggedItem = draggedItems[0] ?? null
-  const bulkMove = dropTarget
-    ? getDroppableMoveItems(draggedItems, dropTarget, ctx.dndContext)
-    : { status: 'none' as const }
+  const command = dropTarget
+    ? resolveDropCommand(draggedItems, dropTarget, ctx.dndContext)
+    : { status: 'noop' as const }
 
-  if (bulkMove.status === 'ready') {
-    return resolveDropOutcome(bulkMove.items[0] ?? null, dropTarget, ctx.dndContext)
+  if (command.status === 'ready') {
+    return resolveDropOutcome(
+      command.action === 'open' ? draggedItem : (command.items[0] ?? null),
+      dropTarget,
+      ctx.dndContext,
+    )
   }
-  if (bulkMove.status === 'noop') {
+  if (command.status === 'noop') {
     return null
   }
-  if (bulkMove.status === 'blocked') {
-    return { type: 'rejection', reason: 'missing_data' }
+  if (command.status === 'blocked') {
+    return { type: 'rejection', reason: command.reason }
   }
   return resolveDropOutcome(draggedItem, dropTarget, ctx.dndContext)
 }
@@ -99,75 +104,32 @@ function resetElementDragState({
   setIsDraggingElement(false)
 }
 
-async function executeBulkMove(
-  ctx: DndMonitorCtx,
-  bulkMove: ReturnType<typeof getDroppableMoveItems>,
-) {
-  if (bulkMove.status === 'noop') return true
-  if (bulkMove.status !== 'ready') return false
-
+async function executeDropCommand(ctx: DndMonitorCtx, command: DropCommand) {
+  if (command.status === 'noop') return
+  if (command.status === 'blocked') {
+    handleError(new Error(rejectionReasonMessage(command.reason)), 'Cannot drop items here')
+    return
+  }
   try {
-    if (bulkMove.action === 'restore') {
-      await ctx.dndContext.restoreItems(bulkMove.items, bulkMove.parentId)
-    } else {
-      await ctx.dndContext.moveItems(bulkMove.items, bulkMove.parentId)
+    switch (command.action) {
+      case 'move':
+        await ctx.dndContext.moveItems(command.items, command.parentId)
+        break
+      case 'restore':
+        await ctx.dndContext.restoreItems(command.items, command.parentId)
+        break
+      case 'trash':
+        await ctx.dndContext.trashItems(command.items)
+        break
+      case 'open':
+        await command.execute()
+        break
     }
-    if (bulkMove.parentId) {
-      ctx.dndContext.setFolderOpen(bulkMove.parentId)
+    if ('parentId' in command && command.parentId) {
+      ctx.dndContext.setFolderOpen(command.parentId)
     }
   } catch (error) {
     handleError(error, 'Failed to move items')
-    return false
-  }
-  return true
-}
-
-function getExecutableOutcomes(
-  draggedItems: ReturnType<typeof resolveDraggedItems>,
-  targetData: SidebarDropData,
-  ctx: DndMonitorCtx,
-) {
-  const outcomes = draggedItems.map((draggedItem) =>
-    resolveDropOutcome(draggedItem, targetData, ctx.dndContext),
-  )
-  return outcomes.filter(
-    (
-      outcome,
-    ): outcome is Extract<NonNullable<typeof outcome>, { type: 'operation' }> & {
-      execute: () => Promise<void>
-    } => outcome?.type === 'operation' && Boolean(outcome.execute),
-  )
-}
-
-async function executeIndividualDropOutcomes(
-  ctx: DndMonitorCtx,
-  draggedItems: ReturnType<typeof resolveDraggedItems>,
-  targetData: SidebarDropData,
-) {
-  const executableOutcomes = getExecutableOutcomes(draggedItems, targetData, ctx)
-  if (executableOutcomes.length !== draggedItems.length) {
-    handleError(
-      new Error(
-        `${draggedItems.length - executableOutcomes.length} of ${draggedItems.length} dragged items cannot be moved`,
-      ),
-      'Some dragged items cannot be moved',
-    )
-    return
-  }
-
-  const errors: Array<unknown> = []
-  for (const outcome of executableOutcomes) {
-    try {
-      await outcome.execute()
-    } catch (error) {
-      errors.push(error)
-    }
-  }
-  if (errors.length > 0) {
-    handleError(
-      new AggregateError(errors, `${errors.length} drag operations failed`),
-      'Failed to move items',
-    )
   }
 }
 
@@ -187,11 +149,7 @@ async function executeElementDrop(
   )
   if (!resolvedTarget) return
 
-  const bulkMove = getDroppableMoveItems(draggedItems, resolvedTarget, ctx.dndContext)
-  if (await executeBulkMove(ctx, bulkMove)) return
-  if (bulkMove.status === 'blocked') return
-
-  await executeIndividualDropOutcomes(ctx, draggedItems, resolvedTarget)
+  await executeDropCommand(ctx, resolveDropCommand(draggedItems, resolvedTarget, ctx.dndContext))
 }
 
 export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {

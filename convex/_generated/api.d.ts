@@ -183,8 +183,10 @@ import type * as sidebarItems_internalMutations from "../sidebarItems/internalMu
 import type * as sidebarItems_mutations from "../sidebarItems/mutations.js";
 import type * as sidebarItems_operations_capabilities from "../sidebarItems/operations/capabilities.js";
 import type * as sidebarItems_operations_childrenMap from "../sidebarItems/operations/childrenMap.js";
+import type * as sidebarItems_operations_operationTargets from "../sidebarItems/operations/operationTargets.js";
 import type * as sidebarItems_operations_planner from "../sidebarItems/operations/planner.js";
 import type * as sidebarItems_operations_selection from "../sidebarItems/operations/selection.js";
+import type * as sidebarItems_operations_tree from "../sidebarItems/operations/tree.js";
 import type * as sidebarItems_operations_types from "../sidebarItems/operations/types.js";
 import type * as sidebarItems_queries from "../sidebarItems/queries.js";
 import type * as sidebarItems_schema_anySidebarItemValidator from "../sidebarItems/schema/anySidebarItemValidator.js";
@@ -430,8 +432,10 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/mutations": typeof sidebarItems_mutations;
   "sidebarItems/operations/capabilities": typeof sidebarItems_operations_capabilities;
   "sidebarItems/operations/childrenMap": typeof sidebarItems_operations_childrenMap;
+  "sidebarItems/operations/operationTargets": typeof sidebarItems_operations_operationTargets;
   "sidebarItems/operations/planner": typeof sidebarItems_operations_planner;
   "sidebarItems/operations/selection": typeof sidebarItems_operations_selection;
+  "sidebarItems/operations/tree": typeof sidebarItems_operations_tree;
   "sidebarItems/operations/types": typeof sidebarItems_operations_types;
   "sidebarItems/queries": typeof sidebarItems_queries;
   "sidebarItems/schema/anySidebarItemValidator": typeof sidebarItems_schema_anySidebarItemValidator;

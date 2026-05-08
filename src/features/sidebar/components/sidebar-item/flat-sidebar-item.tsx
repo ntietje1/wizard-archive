@@ -1,4 +1,3 @@
-import { memo } from 'react'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
 import { DraggableSidebarItem } from './draggable-sidebar-item'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
@@ -22,7 +21,7 @@ interface FlatSidebarItemProps {
   visibleItemIds: Array<Id<'sidebarItems'>>
 }
 
-function FlatSidebarItemComponent({
+export function FlatSidebarItem({
   item,
   isExpanded,
   renamingId,
@@ -44,7 +43,7 @@ function FlatSidebarItemComponent({
 
   const icon = getSidebarItemIcon(item)
 
-  const handleClick = (event: MouseEvent) => {
+  const selectBookmarkedItem = (event: MouseEvent) => {
     handleItemClick(event, () => setLastSelectedItem(item.slug))
   }
 
@@ -68,7 +67,7 @@ function FlatSidebarItemComponent({
           isExpanded={isExpanded}
           isRenaming={renamingId === item._id}
           linkProps={linkProps}
-          onClick={handleClick}
+          onClick={selectBookmarkedItem}
           onContextMenu={handleItemContextMenu}
           onToggleExpanded={toggleExpanded}
           onMoreOptions={(event) => {
@@ -86,5 +85,3 @@ function FlatSidebarItemComponent({
     </DraggableSidebarItem>
   )
 }
-
-export const FlatSidebarItem = memo(FlatSidebarItemComponent)

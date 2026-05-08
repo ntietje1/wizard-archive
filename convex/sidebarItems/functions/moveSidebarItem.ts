@@ -2,11 +2,12 @@ import { ERROR_CODE, throwClientError } from '../../errors'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import {
+  ensureSidebarItemNameAvailable,
   findUniqueSidebarItemSlug,
   validateSidebarMove,
-  validateSidebarParentChange,
+  validateNoCircularSidebarParentChange,
 } from '../validation/orchestration'
-import { requireItemAccess } from '../validation/access'
+import { checkItemAccess, requireItemAccess } from '../validation/access'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { resyncNoteLinksForNotes } from '../../links/functions/resyncNoteLinksForNotes'
@@ -19,6 +20,7 @@ import { trashTree, restoreTreeDescendants } from './treeOperations'
 import { getSidebarItem } from './getSidebarItem'
 import { collectDescendants } from './collectDescendants'
 import { evaluateRestore, evaluateTrash } from '../operations/capabilities'
+import { normalizeRestoreTargetParentId } from '../operations/operationTargets'
 import { assertSidebarOperationAllowed } from './operationCapability'
 import { toDecisionRecord } from './operationDecisions'
 import type { OperationDecision } from './operationDecisions'
@@ -153,7 +155,7 @@ async function resolveRestoreTargetParentId(
     throwClientError(ERROR_CODE.NOT_FOUND, 'Parent not found')
   }
 
-  return parent.location === SIDEBAR_ITEM_LOCATION.trash ? null : parentId
+  return normalizeRestoreTargetParentId(parentId, parent.location)
 }
 
 async function executeRestore(
@@ -175,9 +177,9 @@ async function executeRestore(
   const restoreParent =
     restoreParentId === null
       ? null
-      : await requireItemAccess(ctx, {
+      : await checkItemAccess(ctx, {
           rawItem: await getSidebarItem(ctx, restoreParentId),
-          requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
+          requiredLevel: PERMISSION_LEVEL.NONE,
         })
   assertSidebarOperationAllowed(
     evaluateRestore({ role: ctx.membership.role }, item, {
@@ -186,17 +188,17 @@ async function executeRestore(
     }),
   )
 
-  await validateSidebarParentChange(ctx, {
+  await validateNoCircularSidebarParentChange(ctx, {
     item: { ...item, location },
     newParentId: restoreParentId,
   })
 
   const itemForRestore = { ...item, parentId: restoreParentId }
   if (requestedName) {
-    await validateSidebarMove(ctx, {
-      item: { ...item, location },
-      newParentId: restoreParentId,
+    await ensureSidebarItemNameAvailable(ctx, {
+      parentId: restoreParentId,
       name: requestedName,
+      excludeId: item._id,
     })
   }
   const conflictPatch = requestedName

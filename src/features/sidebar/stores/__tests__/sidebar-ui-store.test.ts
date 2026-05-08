@@ -258,7 +258,7 @@ describe('selection', () => {
     expect(useSidebarUIStore.getState().focusedItemId).toBe(noteId)
   })
 
-  it('preserves item selection when the active surface changes and selected ids are not visible', () => {
+  it('clears item selection when a different active surface cannot see the selected ids', () => {
     const folderId = testId<'sidebarItems'>('folder_1')
     const noteId = testId<'sidebarItems'>('note_1')
 
@@ -274,9 +274,10 @@ describe('selection', () => {
       visibleItemIds: [],
     })
 
-    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([noteId])
-    expect(useSidebarUIStore.getState().anchorItemId).toBe(noteId)
+    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([])
+    expect(useSidebarUIStore.getState().anchorItemId).toBeNull()
     expect(useSidebarUIStore.getState().focusedItemId).toBeNull()
+    expect(useSidebarUIStore.getState().selectionSurface).toBeNull()
   })
 
   it('preserves item selection when the same surface updates after selected items move away', () => {
@@ -301,7 +302,7 @@ describe('selection', () => {
     expect(useSidebarUIStore.getState().focusedItemId).toBeNull()
   })
 
-  it('preserves item selection when the active surface unregisters', () => {
+  it('clears item selection when the active surface unregisters', () => {
     const noteId = testId<'sidebarItems'>('note_1')
     const mapId = testId<'sidebarItems'>('map_1')
 
@@ -313,9 +314,10 @@ describe('selection', () => {
     useSidebarUIStore.getState().setSelectedItemIds([noteId, mapId], noteId)
     useSidebarUIStore.getState().setActiveItemSurface(null)
 
-    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([noteId, mapId])
-    expect(useSidebarUIStore.getState().anchorItemId).toBe(noteId)
+    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([])
+    expect(useSidebarUIStore.getState().anchorItemId).toBeNull()
     expect(useSidebarUIStore.getState().activeItemSurface).toBeNull()
+    expect(useSidebarUIStore.getState().selectionSurface).toBeNull()
   })
 
   it('setSelected preserves item-id selections when route selection changes', () => {

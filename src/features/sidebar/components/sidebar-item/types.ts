@@ -4,7 +4,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemName } from 'convex/sidebarItems/validation/name'
 import type { EditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 
-export interface SidebarItemHandlers {
+interface SidebarItemHandlers {
   linkProps?: EditorLinkProps
   onClick?: (e: MouseEvent) => void
   onContextMenu?: (e: MouseEvent) => void
@@ -12,7 +12,7 @@ export interface SidebarItemHandlers {
   onToggleExpanded?: (e: MouseEvent) => void
 }
 
-export interface SidebarItemState {
+interface SidebarItemState {
   isSelected: boolean
   isFocused?: boolean
   isRenaming: boolean

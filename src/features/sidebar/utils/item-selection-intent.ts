@@ -1,6 +1,6 @@
-export type ItemSelectionIntent = 'single' | 'toggle' | 'range'
+type ItemSelectionIntent = 'single' | 'toggle' | 'range'
 
-export interface ItemSelectionModifierState {
+interface ItemSelectionModifierState {
   shiftKey: boolean
   metaKey: boolean
   ctrlKey: boolean

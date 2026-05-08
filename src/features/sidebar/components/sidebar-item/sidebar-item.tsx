@@ -1,4 +1,3 @@
-import { memo } from 'react'
 import type { MouseEvent } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
@@ -27,7 +26,7 @@ interface SidebarItemProps {
   visibleItemIds: Array<Id<'sidebarItems'>>
 }
 
-function SidebarItemComponent({ item, parentItemsMap, visibleItemIds }: SidebarItemProps) {
+export function SidebarItem({ item, parentItemsMap, visibleItemIds }: SidebarItemProps) {
   const { editItem } = useEditSidebarItem()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
   const linkProps = useEditorLinkProps(item)
@@ -51,7 +50,7 @@ function SidebarItemComponent({ item, parentItemsMap, visibleItemIds }: SidebarI
 
   const sortedChildren = sortItemsByOptions(sortOptions, children) ?? []
 
-  const handleClick = (event: MouseEvent) => {
+  const selectSidebarItem = (event: MouseEvent) => {
     handleItemClick(event, () => setLastSelectedItem(item.slug))
   }
 
@@ -75,7 +74,7 @@ function SidebarItemComponent({ item, parentItemsMap, visibleItemIds }: SidebarI
           isExpanded={isExpanded}
           isRenaming={renamingId === item._id}
           linkProps={linkProps}
-          onClick={handleClick}
+          onClick={selectSidebarItem}
           onContextMenu={handleItemContextMenu}
           onToggleExpanded={toggleExpanded}
           onMoreOptions={(event) => {
@@ -123,5 +122,3 @@ function SidebarItemComponent({ item, parentItemsMap, visibleItemIds }: SidebarI
 
   return itemButton
 }
-
-export const SidebarItem = memo(SidebarItemComponent)

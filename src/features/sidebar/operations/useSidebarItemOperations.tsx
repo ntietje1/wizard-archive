@@ -7,9 +7,12 @@ import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { planDuplicateOperations, planMoveOperations } from 'convex/sidebarItems/operations/planner'
 import { normalizeTopLevelSelectedItems } from 'convex/sidebarItems/operations/selection'
+import {
+  getPasteTargetParentId,
+  getRestoreTargetParentId,
+} from 'convex/sidebarItems/operations/operationTargets'
 import { ItemOperationConflictDialog } from './item-operation-conflict-dialog'
 import { toDecisionArray } from './operation-decisions'
-import { getPasteTargetParentId, getRestoreTargetParentId } from './operation-targets'
 import {
   applyOptimisticDuplicateOperationsToSnapshot,
   applyOptimisticPermanentDeleteItemsToSnapshot,
@@ -35,14 +38,19 @@ import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { handleError } from '~/shared/utils/logger'
 
 type PendingDuplicateRequest = {
+  kind: 'duplicate'
   items: Array<AnySidebarItem>
   targetParentId: Id<'sidebarItems'> | null
   targetItems: Array<AnySidebarItem>
   conflicts: Array<ItemOperationConflict>
 }
 
-type PendingMoveRequest = PendingDuplicateRequest
 type MoveIntentAction = 'move' | 'restore'
+type PendingMoveRequest = Omit<PendingDuplicateRequest, 'kind'> & {
+  kind: 'move'
+  action: MoveIntentAction
+}
+type PendingConflictRequest = PendingDuplicateRequest | PendingMoveRequest
 
 export interface SidebarItemOperationsValue {
   selectedItems: Array<AnySidebarItem>
@@ -88,9 +96,8 @@ export function useSidebarItemOperationsValue() {
   const itemClipboard = useSidebarUIStore((s) => s.itemClipboard)
   const setItemClipboard = useSidebarUIStore((s) => s.setItemClipboard)
   const setSelectedItemIds = useSidebarUIStore((s) => s.setSelectedItemIds)
-  const [pendingDuplicateRequest, setPendingDuplicateRequest] =
-    useState<PendingDuplicateRequest | null>(null)
-  const [pendingMoveRequest, setPendingMoveRequest] = useState<PendingMoveRequest | null>(null)
+  const [pendingConflictRequest, setPendingConflictRequest] =
+    useState<PendingConflictRequest | null>(null)
   const [pendingPermanentDeleteItems, setPendingPermanentDeleteItems] =
     useState<Array<AnySidebarItem> | null>(null)
 
@@ -208,7 +215,8 @@ export function useSidebarItemOperationsValue() {
     targetItems: Array<AnySidebarItem>,
     conflicts: Array<ItemOperationConflict>,
   ) => {
-    setPendingDuplicateRequest({
+    setPendingConflictRequest({
+      kind: 'duplicate',
       items,
       targetParentId,
       targetItems,
@@ -221,8 +229,11 @@ export function useSidebarItemOperationsValue() {
     targetParentId: Id<'sidebarItems'> | null,
     targetItems: Array<AnySidebarItem>,
     conflicts: Array<ItemOperationConflict>,
+    action: MoveIntentAction,
   ) => {
-    setPendingMoveRequest({
+    setPendingConflictRequest({
+      kind: 'move',
+      action,
       items,
       targetParentId,
       targetItems,
@@ -258,11 +269,9 @@ export function useSidebarItemOperationsValue() {
   }
 
   const resolveDuplicateConflicts = async (
+    request: PendingDuplicateRequest,
     decisions: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>,
   ) => {
-    if (!pendingDuplicateRequest) return
-    const request = pendingDuplicateRequest
-    setPendingDuplicateRequest(null)
     const plan = planDuplicateOperations({
       items: request.items,
       targetParentId: request.targetParentId,
@@ -312,7 +321,7 @@ export function useSidebarItemOperationsValue() {
       getChildren: (parentId) => parentItemsMap.get(parentId) ?? [],
     })
     if (plan.status === 'needs-decision') {
-      handleMovePlanNeedingDecision(items, targetParentId, targetItems, plan.conflicts)
+      handleMovePlanNeedingDecision(items, targetParentId, targetItems, plan.conflicts, action)
       return []
     }
     if (plan.status === 'cancelled') return []
@@ -385,11 +394,9 @@ export function useSidebarItemOperationsValue() {
   }
 
   const resolveMoveConflicts = async (
+    request: PendingMoveRequest,
     decisions: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>,
   ) => {
-    if (!pendingMoveRequest) return
-    const request = pendingMoveRequest
-    setPendingMoveRequest(null)
     const plan = planMoveOperations({
       items: request.items,
       targetParentId: request.targetParentId,
@@ -403,6 +410,7 @@ export function useSidebarItemOperationsValue() {
         request.targetParentId,
         request.targetItems,
         plan.conflicts,
+        request.action,
       )
       return
     }
@@ -412,14 +420,33 @@ export function useSidebarItemOperationsValue() {
         request.items,
         request.targetParentId,
         plan.operations,
-        'move',
+        request.action,
         decisions,
       )
-      toast.success(movedIds.length === 1 ? 'Item moved' : `${movedIds.length} items moved`)
-      setItemClipboard(null)
+      const label = request.action === 'restore' ? 'restored' : 'moved'
+      toast.success(movedIds.length === 1 ? `Item ${label}` : `${movedIds.length} items ${label}`)
+      if (request.action === 'move') {
+        setItemClipboard(null)
+      }
     } catch (error) {
-      handleError(error, 'Failed to move items')
+      handleError(
+        error,
+        request.action === 'restore' ? 'Failed to restore items' : 'Failed to move items',
+      )
     }
+  }
+
+  const resolveConflicts = async (
+    decisions: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>,
+  ) => {
+    if (!pendingConflictRequest) return
+    const request = pendingConflictRequest
+    setPendingConflictRequest(null)
+    if (request.kind === 'duplicate') {
+      await resolveDuplicateConflicts(request, decisions)
+      return
+    }
+    await resolveMoveConflicts(request, decisions)
   }
 
   const copyItems = (items: Array<AnySidebarItem>) => {
@@ -476,23 +503,14 @@ export function useSidebarItemOperationsValue() {
     closePermanentDeleteDialog()
   }
 
-  const dialog = pendingDuplicateRequest ? (
+  const dialog = pendingConflictRequest ? (
     <ItemOperationConflictDialog
-      key={`duplicate-${pendingDuplicateRequest.conflicts.map((conflict) => conflict.sourceItemId).join(':')}`}
-      conflicts={pendingDuplicateRequest.conflicts}
+      key={`${pendingConflictRequest.kind}-${pendingConflictRequest.conflicts.map((conflict) => conflict.sourceItemId).join(':')}`}
+      conflicts={pendingConflictRequest.conflicts}
       onResolve={(decisions) => {
-        void resolveDuplicateConflicts(decisions)
+        void resolveConflicts(decisions)
       }}
-      onCancel={() => setPendingDuplicateRequest(null)}
-    />
-  ) : pendingMoveRequest ? (
-    <ItemOperationConflictDialog
-      key={`move-${pendingMoveRequest.conflicts.map((conflict) => conflict.sourceItemId).join(':')}`}
-      conflicts={pendingMoveRequest.conflicts}
-      onResolve={(decisions) => {
-        void resolveMoveConflicts(decisions)
-      }}
-      onCancel={() => setPendingMoveRequest(null)}
+      onCancel={() => setPendingConflictRequest(null)}
     />
   ) : pendingPermanentDeleteItems && pendingPermanentDeleteItems.length === 1 ? (
     <PermanentDeleteConfirmDialog

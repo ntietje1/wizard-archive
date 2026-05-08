@@ -33,6 +33,7 @@ import {
   getHighlightId,
   getDroppableMoveItems,
   rejectionReasonMessage,
+  resolveDropCommand,
   resolveDropOutcome,
   resolveDropTarget,
 } from '~/features/dnd/utils/dnd-registry'
@@ -119,8 +120,8 @@ describe('getDragItemIds', () => {
     expect(getDragItemIds({ sidebarItemIds: ['note_1', 'map_1'] })).toEqual(['note_1', 'map_1'])
   })
 
-  it('falls back to legacy sidebarItemId source data', () => {
-    expect(getDragItemIds({ sidebarItemId: 'note_1' })).toEqual(['note_1'])
+  it('does not fall back to legacy single-id source data', () => {
+    expect(getDragItemIds({ sidebarItemId: 'note_1' })).toEqual([])
   })
 
   it('ignores non-string batch ids', () => {
@@ -539,7 +540,53 @@ describe('getDroppableMoveItems', () => {
     const note = createNote()
     const result = getDroppableMoveItems([folder, note], target, createCtx())
 
-    expect(result).toEqual({ status: 'blocked' })
+    expect(result).toEqual({ status: 'blocked', reason: 'circular' })
+  })
+})
+
+describe('resolveDropCommand', () => {
+  it('returns a no-op command when every selected item is already in the target folder', () => {
+    const target = folderTarget()
+    const first = createNote({ parentId: target._id })
+    const second = createNote({ parentId: target._id })
+
+    expect(resolveDropCommand([first, second], target, createCtx())).toEqual({ status: 'noop' })
+  })
+
+  it('returns one batch move command while ignoring selected items already in the target folder', () => {
+    const target = folderTarget()
+    const alreadyInside = createNote({ parentId: target._id })
+    const outside = createNote({ parentId: testId<'sidebarItems'>('folder_other') })
+
+    expect(resolveDropCommand([alreadyInside, outside], target, createCtx())).toEqual({
+      status: 'ready',
+      action: 'move',
+      items: [outside],
+      parentId: target._id,
+    })
+  })
+
+  it('returns one batch trash command for active selected items', () => {
+    const first = createNote()
+    const second = createNote()
+
+    expect(resolveDropCommand([first, second], trashTarget(), createCtx())).toEqual({
+      status: 'ready',
+      action: 'trash',
+      items: [first, second],
+      parentId: null,
+    })
+  })
+
+  it('blocks the command when any selected item has a real rejection', () => {
+    const folder = createFolder()
+    const target = folderTarget({ ancestorIds: [folder._id] })
+    const note = createNote()
+
+    expect(resolveDropCommand([folder, note], target, createCtx())).toMatchObject({
+      status: 'blocked',
+      reason: 'circular',
+    })
   })
 })
 

@@ -1,4 +1,3 @@
-import { memo } from 'react'
 import { Link } from '@tanstack/react-router'
 import { ChevronRight, MoreHorizontal } from 'lucide-react'
 import { EditableName } from './editable-item-name'
@@ -7,7 +6,7 @@ import { Button } from '~/features/shadcn/components/button'
 import { HoverToggleButton } from '~/features/sidebar/components/hover-toggle-button'
 import { cn } from '~/features/shadcn/lib/utils'
 
-function SidebarItemButtonBaseComponent({
+export function SidebarItemButtonBase({
   icon: Icon,
   name,
   isExpanded = false,
@@ -58,14 +57,14 @@ function SidebarItemButtonBaseComponent({
     >
       {/* Icon / Chevron Toggle */}
       <HoverToggleButton
-        className="relative h-6 w-6 shrink-0 flex items-center justify-center text-muted-foreground"
-        nonHoverComponent={<Icon className="h-4 w-4 shrink-0" />}
+        className="relative size-6 shrink-0 flex items-center justify-center text-muted-foreground"
+        nonHoverComponent={<Icon className="size-4 shrink-0" />}
         hoverComponent={
           showChevron ? (
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 w-6 hover:text-foreground hover:bg-muted-foreground/10 rounded-sm"
+              className="size-6 hover:text-foreground hover:bg-muted-foreground/10 rounded-sm"
               aria-label={isExpanded ? 'Collapse folder' : 'Expand folder'}
               onClick={(e) => {
                 e.stopPropagation()
@@ -79,11 +78,11 @@ function SidebarItemButtonBaseComponent({
                   isExpanded && 'rotate-90',
                 )}
               >
-                <ChevronRight className="h-3 w-3" />
+                <ChevronRight className="size-3" />
               </div>
             </Button>
           ) : (
-            <Icon className="h-4 w-4 shrink-0" />
+            <Icon className="size-4 shrink-0" />
           )
         }
       />
@@ -108,18 +107,18 @@ function SidebarItemButtonBaseComponent({
       {!isRenaming && (
         <div className="flex items-center shrink-0 w-0 overflow-hidden opacity-0 group-hover:w-auto group-hover:overflow-visible group-hover:opacity-100 has-[[data-share-open]]:w-auto has-[[data-share-open]]:overflow-visible has-[[data-share-open]]:opacity-100 group-hover:transition-opacity">
           {shareButton}
-          <div className="relative h-6 w-6 shrink-0 flex items-center justify-center">
+          <div className="relative size-6 shrink-0 flex items-center justify-center">
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm"
+              className="size-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm"
               aria-label="More options"
               onClick={(e) => {
                 e.preventDefault()
                 onMoreOptions(e)
               }}
             >
-              <MoreHorizontal className="h-4 w-4" />
+              <MoreHorizontal className="size-4" />
             </Button>
           </div>
         </div>
@@ -127,5 +126,3 @@ function SidebarItemButtonBaseComponent({
     </div>
   )
 }
-
-export const SidebarItemButtonBase = memo(SidebarItemButtonBaseComponent)

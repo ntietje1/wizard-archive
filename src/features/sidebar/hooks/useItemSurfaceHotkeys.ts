@@ -43,10 +43,9 @@ interface HotkeyHandlerContext {
   selectedIds: Array<AnySidebarItem['_id']>
   focusedItemId: AnySidebarItem['_id'] | null
   itemClipboard: ReturnType<typeof useSidebarUIStore.getState>['itemClipboard']
-  itemOperations?: ItemSurfaceHotkeyOperations
+  itemOperations: ItemSurfaceHotkeyOperations
   setSelectedItemIds: (ids: Array<AnySidebarItem['_id']>) => void
   clearItemSelection: () => void
-  setItemClipboard: ReturnType<typeof useSidebarUIStore.getState>['setItemClipboard']
   setRenamingId: ReturnType<typeof useSidebarUIStore.getState>['setRenamingId']
   moveFocus: ReturnType<typeof useSidebarUIStore.getState>['moveFocus']
   navigateToItem: ReturnType<typeof useEditorNavigation>['navigateToItem']
@@ -68,12 +67,10 @@ function resolveSelection(
   ids: Array<AnySidebarItem['_id']>,
   activeItemsMap: Map<AnySidebarItem['_id'], AnySidebarItem>,
   trashedItemsMap: Map<AnySidebarItem['_id'], AnySidebarItem>,
-  itemOperations?: ItemSurfaceHotkeyOperations,
+  itemOperations: ItemSurfaceHotkeyOperations,
 ): ResolvedHotkeySelection {
   const rawSelectedItems = resolveItems(ids, activeItemsMap, trashedItemsMap)
-  const selectedItems = itemOperations
-    ? itemOperations.normalizeItems(rawSelectedItems)
-    : rawSelectedItems
+  const selectedItems = itemOperations.normalizeItems(rawSelectedItems)
 
   return {
     selectedItems,
@@ -116,26 +113,16 @@ function handleCopyCut(event: KeyboardEvent, context: HotkeyHandlerContext): boo
   if (!context.campaignId || context.selectedIds.length === 0) return false
 
   event.preventDefault()
-  if (context.itemOperations) {
-    if (isCut) {
-      context.itemOperations.cutItems(context.selectedItems)
-    } else {
-      context.itemOperations.copyItems(context.selectedItems)
-    }
-    return true
+  if (isCut) {
+    context.itemOperations.cutItems(context.selectedItems)
+  } else {
+    context.itemOperations.copyItems(context.selectedItems)
   }
-
-  context.setItemClipboard({
-    mode: isCut ? 'cut' : 'copy',
-    campaignId: context.campaignId,
-    itemIds: context.selectedIds,
-  })
   return true
 }
 
 function handlePaste(event: KeyboardEvent, context: HotkeyHandlerContext): boolean {
   if (!isModifierShortcut(event, 'v')) return false
-  if (!context.itemOperations) return false
   if (
     !context.campaignId ||
     !context.itemClipboard ||
@@ -158,7 +145,6 @@ function handlePaste(event: KeyboardEvent, context: HotkeyHandlerContext): boole
 function handleDelete(event: KeyboardEvent, context: HotkeyHandlerContext): boolean {
   if (event.key !== 'Delete' && event.key !== 'Backspace') return false
   if (context.selectedItems.length === 0) return true
-  if (!context.itemOperations) return false
 
   event.preventDefault()
   if (context.activeItemSurface.surface === 'trash') {
@@ -207,7 +193,7 @@ function handleItemSurfaceHotkey(event: KeyboardEvent, context: HotkeyHandlerCon
   )
 }
 
-export function useItemSurfaceHotkeys(itemOperations?: ItemSurfaceHotkeyOperations) {
+export function useItemSurfaceHotkeys(itemOperations: ItemSurfaceHotkeyOperations) {
   const { campaignId } = useCampaign()
   const { itemsMap: activeItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.sidebar)
   const { itemsMap: trashedItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
@@ -221,7 +207,6 @@ export function useItemSurfaceHotkeys(itemOperations?: ItemSurfaceHotkeyOperatio
   const itemClipboard = useSidebarUIStore((s) => s.itemClipboard)
   const setSelectedItemIds = useSidebarUIStore((s) => s.setSelectedItemIds)
   const clearItemSelection = useSidebarUIStore((s) => s.clearItemSelection)
-  const setItemClipboard = useSidebarUIStore((s) => s.setItemClipboard)
   const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
   const moveFocus = useSidebarUIStore((s) => s.moveFocus)
 
@@ -246,7 +231,6 @@ export function useItemSurfaceHotkeys(itemOperations?: ItemSurfaceHotkeyOperatio
         itemOperations,
         setSelectedItemIds,
         clearItemSelection,
-        setItemClipboard,
         setRenamingId,
         moveFocus,
         navigateToItem,
@@ -271,7 +255,6 @@ export function useItemSurfaceHotkeys(itemOperations?: ItemSurfaceHotkeyOperatio
     openParentFolders,
     setSelectedItemIds,
     selectedItemIds,
-    setItemClipboard,
     setLastSelectedItem,
     setRenamingId,
     trashedItemsMap,

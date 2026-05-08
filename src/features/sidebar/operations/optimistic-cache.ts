@@ -2,6 +2,7 @@ import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/t
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { DuplicateOperation, MoveOperation } from 'convex/sidebarItems/operations/types'
+import { collectDescendantIdsFromItems } from 'convex/sidebarItems/operations/tree'
 
 export type SidebarCacheSnapshot = {
   sidebar: Array<AnySidebarItem>
@@ -9,21 +10,6 @@ export type SidebarCacheSnapshot = {
 }
 
 type MoveItemOrReplaceOperation = Extract<MoveOperation, { action: 'move' | 'replace' }>
-
-function getDescendantIds(folderId: Id<'sidebarItems'>, items: Array<AnySidebarItem>) {
-  const descendants = new Set<Id<'sidebarItems'>>()
-  const visit = (parentId: Id<'sidebarItems'>) => {
-    for (const child of items) {
-      if (child.parentId !== parentId) continue
-      descendants.add(child._id)
-      if (child.type === SIDEBAR_ITEM_TYPES.folders) {
-        visit(child._id)
-      }
-    }
-  }
-  visit(folderId)
-  return descendants
-}
 
 function trashItemTreeInSnapshot(
   itemId: Id<'sidebarItems'>,
@@ -34,7 +20,9 @@ function trashItemTreeInSnapshot(
   const item = sidebar.find((candidate) => candidate._id === itemId)
   if (!item) return { sidebar, trash }
   const descendantIds =
-    item.type === SIDEBAR_ITEM_TYPES.folders ? getDescendantIds(item._id, sidebar) : new Set()
+    item.type === SIDEBAR_ITEM_TYPES.folders
+      ? collectDescendantIdsFromItems(item._id, sidebar)
+      : new Set()
   const movedItems = sidebar.filter(
     (candidate) => candidate._id === item._id || descendantIds.has(candidate._id),
   )
@@ -72,7 +60,7 @@ function restoreItemTreeInState(
 ) {
   const descendantIds =
     source.type === SIDEBAR_ITEM_TYPES.folders
-      ? getDescendantIds(source._id, state.trash)
+      ? collectDescendantIdsFromItems(source._id, state.trash)
       : new Set()
   const restoredItems = state.trash.filter(
     (candidate) => candidate._id === source._id || descendantIds.has(candidate._id),
@@ -98,14 +86,15 @@ function moveSidebarItemInState(
   source: AnySidebarItem,
   operation: MoveItemOrReplaceOperation,
 ) {
-  state.sidebar = state.sidebar.map((candidate) =>
-    candidate._id === source._id
-      ? ({
-          ...candidate,
-          parentId: operation.targetParentId,
-          ...(operation.name ? { name: operation.name } : {}),
-        } as AnySidebarItem)
-      : candidate,
+  state.sidebar = state.sidebar.map(
+    (candidate): AnySidebarItem =>
+      candidate._id === source._id
+        ? {
+            ...candidate,
+            parentId: operation.targetParentId,
+            ...(operation.name ? { name: operation.name as AnySidebarItem['name'] } : {}),
+          }
+        : candidate,
   )
 }
 
@@ -188,7 +177,7 @@ export function applyOptimisticPermanentDeleteItemsToSnapshot(
   for (const item of items) {
     deletedIds.add(item._id)
     if (item.type === SIDEBAR_ITEM_TYPES.folders) {
-      for (const descendantId of getDescendantIds(item._id, snapshot.trash)) {
+      for (const descendantId of collectDescendantIdsFromItems(item._id, snapshot.trash)) {
         deletedIds.add(descendantId)
       }
     }
@@ -215,10 +204,14 @@ export function applyOptimisticDuplicateOperationsToSnapshot(
     trash = next.trash
   }
 
-  const cloneTree = (source: AnySidebarItem, parentId: Id<'sidebarItems'> | null, name: string) => {
+  const cloneTree = (
+    source: AnySidebarItem,
+    parentId: Id<'sidebarItems'> | null,
+    name: AnySidebarItem['name'],
+  ) => {
     const index = tempIndex++
     const tempId = `optimistic-${source._id}-${now}-${index}` as Id<'sidebarItems'>
-    const clone = {
+    const clone: AnySidebarItem = {
       ...source,
       _id: tempId,
       name,
@@ -227,7 +220,7 @@ export function applyOptimisticDuplicateOperationsToSnapshot(
       location: SIDEBAR_ITEM_LOCATION.sidebar,
       deletionTime: null,
       deletedBy: null,
-    } as AnySidebarItem
+    }
     sidebar.push(clone)
     if (source.type !== SIDEBAR_ITEM_TYPES.folders) return tempId
     for (const child of snapshot.sidebar.filter((candidate) => candidate.parentId === source._id)) {
@@ -245,7 +238,11 @@ export function applyOptimisticDuplicateOperationsToSnapshot(
     if (operation.action === 'mergeFolder') continue
     const source = snapshotSidebarMap.get(operation.sourceItemId)
     if (!source) continue
-    cloneTree(source, operation.targetParentId ?? null, operation.name ?? source.name)
+    cloneTree(
+      source,
+      operation.targetParentId ?? null,
+      (operation.name ?? source.name) as AnySidebarItem['name'],
+    )
   }
 
   return { sidebar, trash }

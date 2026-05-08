@@ -51,9 +51,10 @@ describe('validateSearch', () => {
     expect(validateSearch({ item: 'double--hyphen' })).toEqual({})
     expect(validateSearch({ item: 'special@char' })).toEqual({})
   })
-  it('accepts valid slugs with numbers and single characters', () => {
+  it('accepts valid slugs with numbers and the shared minimum length', () => {
     expect(validateSearch({ item: 'item-123' })).toEqual({ item: 'item-123' })
-    expect(validateSearch({ item: 'a' })).toEqual({ item: 'a' })
+    expect(validateSearch({ item: 'a' })).toEqual({})
+    expect(validateSearch({ item: 'abc' })).toEqual({ item: 'abc' })
     expect(validateSearch({ item: 'a-b-c' })).toEqual({ item: 'a-b-c' })
   })
 

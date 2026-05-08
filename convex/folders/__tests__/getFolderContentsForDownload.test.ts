@@ -263,14 +263,14 @@ describe('getFolderContentsForDownload — collectItemsRecursively', () => {
     const dmAuth = asDm(ctx)
 
     const { folderId: l0 } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'L0',
+      name: 'Lvl0',
     })
     const { folderId: l1 } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'L1',
+      name: 'Lvl1',
       parentId: l0,
     })
     const { folderId: l2 } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'L2',
+      name: 'Lvl2',
       parentId: l1,
     })
     await createFile(t, ctx.campaignId, ctx.dm.profile._id, {
@@ -284,7 +284,7 @@ describe('getFolderContentsForDownload — collectItemsRecursively', () => {
     })
 
     expect(result.items.length).toBe(1)
-    expect(result.items[0].path).toBe('L1/L2/deep.png')
+    expect(result.items[0].path).toBe('Lvl1/Lvl2/deep.png')
   })
 
   it('canvases are skipped — not included in output', async () => {

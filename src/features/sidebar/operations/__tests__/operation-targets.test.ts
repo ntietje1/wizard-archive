@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
-import { getRestoreTargetParentId } from '../operation-targets'
+import { getRestoreTargetParentId } from 'convex/sidebarItems/operations/operationTargets'
 import { createFolder } from '~/test/factories/sidebar-item-factory'
 import type { ActiveItemSurface } from '~/features/sidebar/stores/sidebar-ui-store'
 

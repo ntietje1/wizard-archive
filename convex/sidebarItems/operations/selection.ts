@@ -25,7 +25,7 @@ export function normalizeTopLevelSelectedItems<T extends Pick<AnySidebarItem, '_
 
     while (parentId) {
       if (selectedIds.has(parentId)) return false
-      if (seen.has(parentId)) return true
+      if (seen.has(parentId)) break
       seen.add(parentId)
       const parent = allItemsMap.get(parentId)
       if (!parent) break

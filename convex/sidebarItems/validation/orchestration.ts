@@ -10,7 +10,7 @@ import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { evaluateMoveToParent } from '../operations/capabilities'
 import type { AnySidebarItem } from '../types/types'
 import { assertSidebarOperationAllowed } from '../functions/operationCapability'
-import { requireItemAccess } from './access'
+import { checkItemAccess, requireItemAccess } from './access'
 import { assertSidebarItemName, checkNameConflict } from './name'
 import { validateNoCircularParentAsync } from './parent'
 import {
@@ -37,7 +37,7 @@ export async function checkUniqueNameUnderParent(
   return checkNameConflict(name, siblings, excludeId)
 }
 
-async function ensureSidebarItemNameAvailable(
+export async function ensureSidebarItemNameAvailable(
   ctx: CampaignQueryCtx,
   {
     parentId,
@@ -56,7 +56,7 @@ async function ensureSidebarItemNameAvailable(
   }
 }
 
-export async function validateSidebarParentChange(
+export async function validateNoCircularSidebarParentChange(
   ctx: CampaignQueryCtx,
   {
     item,
@@ -72,25 +72,28 @@ export async function validateSidebarParentChange(
   if (!result.valid) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, result.error)
   }
+}
 
+export async function validateSidebarParentChange(
+  ctx: CampaignQueryCtx,
+  {
+    item,
+    newParentId,
+  }: {
+    item: AnySidebarItem
+    newParentId: Id<'sidebarItems'> | null
+  },
+): Promise<void> {
+  await validateNoCircularSidebarParentChange(ctx, { item, newParentId })
   let parent: AnySidebarItem | null = null
   if (newParentId) {
     const parentFromDb = await getSidebarItem(ctx, newParentId)
     if (!parentFromDb) {
       throwClientError(ERROR_CODE.NOT_FOUND, 'Parent not found')
     }
-    if (parentFromDb.type !== SIDEBAR_ITEM_TYPES.folders) {
-      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Parent must be a folder')
-    }
-    if (parentFromDb.location !== item.location) {
-      throwClientError(
-        ERROR_CODE.VALIDATION_FAILED,
-        'Cannot move items into a folder in a different location',
-      )
-    }
-    parent = await requireItemAccess(ctx, {
+    parent = await checkItemAccess(ctx, {
       rawItem: parentFromDb,
-      requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
+      requiredLevel: PERMISSION_LEVEL.NONE,
     })
   }
 
