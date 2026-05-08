@@ -38,7 +38,6 @@ export function getPublicAuthRequest(request: Request): Request {
     method: request.method,
     headers,
     body: request.method === 'GET' || request.method === 'HEAD' ? undefined : request.body,
-    redirect: request.redirect,
     duplex: 'half',
   } satisfies RequestInit & { duplex: 'half' }
 
