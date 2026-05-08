@@ -227,7 +227,7 @@ describe('entity-specific slug parsing', () => {
 
   it('parses sidebar item slugs at the exact length boundaries', () => {
     expect(parseSidebarItemSlug('abc')).toBe('abc')
-    expect(parseSidebarItemSlug('a'.repeat(30))).toBe('a'.repeat(30))
+    expect(parseSidebarItemSlug('a'.repeat(255))).toBe('a'.repeat(255))
   })
 
   it('rejects sidebar item slugs that are too short', () => {
@@ -236,8 +236,8 @@ describe('entity-specific slug parsing', () => {
   })
 
   it('rejects sidebar item slugs that are too long', () => {
-    expect(parseSidebarItemSlug('a'.repeat(31))).toBeNull()
-    expect(validateSidebarItemSlug('a'.repeat(31))).toContain('at most 30')
+    expect(parseSidebarItemSlug('a'.repeat(256))).toBeNull()
+    expect(validateSidebarItemSlug('a'.repeat(256))).toContain('at most 255')
   })
 
   it('rejects sidebar item slugs with uppercase letters', () => {

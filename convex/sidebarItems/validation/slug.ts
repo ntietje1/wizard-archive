@@ -4,7 +4,7 @@ import type { BrandedString } from '../../common/slug'
 import type { ValidationResult } from './name'
 
 export const SIDEBAR_ITEM_SLUG_MIN_LENGTH = 3
-export const SIDEBAR_ITEM_SLUG_MAX_LENGTH = 30
+export const SIDEBAR_ITEM_SLUG_MAX_LENGTH = 255
 
 export type SidebarItemSlug = BrandedString<'SidebarItemSlug'>
 

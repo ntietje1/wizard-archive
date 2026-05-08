@@ -151,13 +151,13 @@ describe('validateItemSlug', () => {
     expect(validateItemSlug('note-').valid).toBe(false)
   })
 
-  it('accepts exactly 30 characters', () => {
-    const slug = 'a'.repeat(30)
+  it('accepts exactly 255 characters', () => {
+    const slug = 'a'.repeat(255)
     expect(validateItemSlug(slug)).toEqual({ valid: true })
   })
 
-  it('rejects 31 characters', () => {
-    const slug = 'a'.repeat(31)
+  it('rejects 256 characters', () => {
+    const slug = 'a'.repeat(256)
     expect(validateItemSlug(slug).valid).toBe(false)
   })
 })
@@ -570,8 +570,8 @@ describe('cross-table slug uniqueness', () => {
 
     expect(validateItemSlug(first.slug)).toEqual({ valid: true })
     expect(validateItemSlug(second.slug)).toEqual({ valid: true })
-    expect(first.slug.length).toBeLessThanOrEqual(30)
-    expect(second.slug.length).toBeLessThanOrEqual(30)
+    expect(first.slug.length).toBeLessThanOrEqual(255)
+    expect(second.slug.length).toBeLessThanOrEqual(255)
   })
 
   it('rejects invalid note colors at the mutation boundary', async () => {
