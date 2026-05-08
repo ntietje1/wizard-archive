@@ -76,13 +76,7 @@ jobs:
           candidate_host="candidate.${site_apex_host}"
           candidate_site_url="https://${candidate_host}"
 
-          convex_site_host="${VITE_CONVEX_SITE_URL#*://}"
-          convex_site_host="${convex_site_host%%/*}"
-          if [[ -z "$convex_site_host" ]]; then
-            echo "Unable to derive Convex site host from VITE_CONVEX_SITE_URL" >&2
-            exit 1
-          fi
-          export BETTER_AUTH_ALLOWED_HOSTS="${site_apex_host},${site_www_host},${candidate_host},${convex_site_host}"
+          export BETTER_AUTH_ALLOWED_HOSTS="${site_apex_host},${site_www_host},${candidate_host}"
 
           bash scripts/write-worker-env.sh "$worker_env_file"
           VITE_SITE_URL="$candidate_site_url" bash scripts/write-worker-env.sh "$candidate_worker_env_file"

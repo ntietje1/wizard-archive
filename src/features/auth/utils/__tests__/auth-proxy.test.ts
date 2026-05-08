@@ -11,6 +11,7 @@ describe('getConvexAuthProxyTarget', () => {
 
     expect(target.url).toBe('https://example.convex.site/api/auth/sign-in/social?provider=google')
     expect(target.headers.get('host')).toBe('example.convex.site')
+    expect(target.headers.get('x-wizard-archive-auth-origin')).toBe('https://app.example.com')
     expect(target.headers.get('x-forwarded-host')).toBe('app.example.com')
     expect(target.headers.get('x-forwarded-proto')).toBe('https')
   })
