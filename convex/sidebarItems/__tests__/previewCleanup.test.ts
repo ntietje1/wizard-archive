@@ -41,9 +41,9 @@ describe('preview cleanup on hard delete', () => {
       previewStorageId: storageId,
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: noteId,
+      sourceItemIds: [noteId],
     })
 
     await t.run(async (dbCtx) => {
@@ -79,9 +79,9 @@ describe('preview cleanup on hard delete', () => {
       previewStorageId: previewBlob,
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: fileId,
+      sourceItemIds: [fileId],
     })
 
     await t.run(async (dbCtx) => {
@@ -116,9 +116,9 @@ describe('preview cleanup on hard delete', () => {
       previewStorageId: sharedBlob,
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: mapId,
+      sourceItemIds: [mapId],
     })
 
     await t.run(async (dbCtx) => {
@@ -154,9 +154,9 @@ describe('preview cleanup on hard delete', () => {
       previewStorageId: previewBlob,
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: mapId,
+      sourceItemIds: [mapId],
     })
 
     await t.run(async (dbCtx) => {
@@ -177,9 +177,9 @@ describe('preview cleanup on hard delete', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     await trashItem(t, noteId, ctx.dm.profile._id)
 
-    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: noteId,
+      sourceItemIds: [noteId],
     })
 
     await t.run(async (dbCtx) => {
@@ -195,9 +195,9 @@ describe('preview cleanup on hard delete', () => {
     const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
     await trashItem(t, folderId, ctx.dm.profile._id)
 
-    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: folderId,
+      sourceItemIds: [folderId],
     })
 
     await t.run(async (dbCtx) => {

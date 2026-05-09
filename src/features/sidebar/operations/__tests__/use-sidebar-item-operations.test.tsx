@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react'
+import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
@@ -132,6 +132,39 @@ describe('useSidebarItemOperationsValue', () => {
       targetParentId: null,
       action: 'restore',
       decisions: undefined,
+    })
+  })
+
+  it('opens the conflict dialog before restoring into a taken name', async () => {
+    const trashed = createNote({
+      name: 'Meeting Notes',
+      location: SIDEBAR_ITEM_LOCATION.trash,
+      parentId: null,
+    })
+    const existing = createNote({ name: 'Meeting Notes', parentId: null })
+    sidebarItems = [existing]
+    trashItems = [trashed]
+    moveSidebarItems.mockResolvedValue([trashed._id])
+
+    const { result } = renderHook(() => useSidebarItemOperationsValue())
+    await act(async () => {
+      await result.current.restoreItems([trashed])
+    })
+
+    expect(moveSidebarItems).not.toHaveBeenCalled()
+
+    render(result.current.dialog)
+    expect(screen.getByRole('heading', { name: 'Resolve File Conflict' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Keep Both' }))
+
+    await waitFor(() => {
+      expect(moveSidebarItems).toHaveBeenCalledWith({
+        sourceItemIds: [trashed._id],
+        targetParentId: null,
+        action: 'restore',
+        decisions: [{ sourceItemId: trashed._id, action: 'keepBoth' }],
+      })
     })
   })
 

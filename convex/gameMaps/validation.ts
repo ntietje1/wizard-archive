@@ -1,4 +1,12 @@
 import type { Id } from '../_generated/dataModel'
+import { SIDEBAR_ITEM_LOCATION } from '../sidebarItems/types/baseTypes'
+import type { AnySidebarItem } from '../sidebarItems/types/types'
+
+export type PinDropValidationCode =
+  | 'self_pin'
+  | 'already_pinned'
+  | 'trashed_item'
+  | 'wrong_campaign'
 
 export function validatePinTarget(
   mapId: Id<'sidebarItems'>,
@@ -11,5 +19,23 @@ export function validatePinTarget(
   if (existingPinItemIds.includes(itemId)) {
     return 'Item is already pinned on this map'
   }
+  return null
+}
+
+export function validatePinDropTarget({
+  mapId,
+  item,
+  existingPinItemIds,
+  campaignId,
+}: {
+  mapId: Id<'sidebarItems'>
+  item: Pick<AnySidebarItem, '_id' | 'campaignId' | 'location'>
+  existingPinItemIds: ReadonlyArray<Id<'sidebarItems'>>
+  campaignId: Id<'campaigns'> | null
+}): PinDropValidationCode | null {
+  if (item._id === mapId) return 'self_pin'
+  if (existingPinItemIds.includes(item._id)) return 'already_pinned'
+  if (item.location === SIDEBAR_ITEM_LOCATION.trash) return 'trashed_item'
+  if (campaignId && item.campaignId !== campaignId) return 'wrong_campaign'
   return null
 }

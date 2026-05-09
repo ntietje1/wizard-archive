@@ -91,6 +91,7 @@ export function useCanvasEditorRuntime({
     modifiers,
     nodesMap,
     pointerRouter,
+    provider,
     selection,
     session,
     viewportController: core.viewportController,

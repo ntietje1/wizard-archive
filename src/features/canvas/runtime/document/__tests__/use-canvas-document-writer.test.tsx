@@ -181,6 +181,20 @@ describe('createCanvasDocumentWriter', () => {
     })
   })
 
+  it('creates multiple nodes in one Yjs transaction', () => {
+    const writer = createCanvasDocumentWriter({ nodesMap, edgesMap })
+    let nodeEvents = 0
+    nodesMap.observe((_event) => {
+      nodeEvents += 1
+    })
+
+    writer.createNodes([createTextNode('node-1'), createTextNode('node-2')])
+
+    expect(nodesMap.has('node-1')).toBe(true)
+    expect(nodesMap.has('node-2')).toBe(true)
+    expect(nodeEvents).toBe(1)
+  })
+
   it('applies batched node data, edge, and position updates in one writer call', () => {
     nodesMap.set('node-1', createTextNode('node-1'))
     nodesMap.set('node-2', createTextNode('node-2'))

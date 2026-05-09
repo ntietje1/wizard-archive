@@ -18,7 +18,10 @@ import {
 } from '../sidebarItems/validation/name'
 import { createMap as createMapFn } from './functions/createMap'
 import { updateMap as updateMapFn } from './functions/updateMap'
-import { createItemPin as createItemPinFn } from './functions/createItemPin'
+import {
+  createItemPin as createItemPinFn,
+  createItemPins as createItemPinsFn,
+} from './functions/createItemPin'
 import { updateItemPin as updateItemPinFn } from './functions/updateItemPin'
 import { updatePinVisibility as updatePinVisibilityFn } from './functions/updatePinVisibility'
 import { removeItemPin as removeItemPinFn } from './functions/removeItemPin'
@@ -92,6 +95,26 @@ export const createItemPin = campaignMutation({
       x: args.x,
       y: args.y,
       itemId: args.itemId,
+    })
+  },
+})
+
+export const createItemPins = campaignMutation({
+  args: {
+    mapId: v.id('sidebarItems'),
+    pins: v.array(
+      v.object({
+        itemId: v.id('sidebarItems'),
+        x: v.number(),
+        y: v.number(),
+      }),
+    ),
+  },
+  returns: v.array(v.id('mapPins')),
+  handler: async (ctx, args): Promise<Array<Id<'mapPins'>>> => {
+    return await createItemPinsFn(ctx, {
+      mapId: args.mapId,
+      pins: args.pins,
     })
   },
 })

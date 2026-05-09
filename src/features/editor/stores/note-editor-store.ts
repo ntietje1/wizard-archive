@@ -1,20 +1,26 @@
 import { create } from 'zustand'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
 
 interface NoteEditorStore {
   editor: CustomBlockNoteEditor | null
-  claimEditor: (editor: CustomBlockNoteEditor | null) => () => void
+  provider: ConvexYjsProvider | null
+  claimEditor: (
+    editor: CustomBlockNoteEditor | null,
+    provider?: ConvexYjsProvider | null,
+  ) => () => void
 }
 
 let claimToken = 0
 
 export const useNoteEditorStore = create<NoteEditorStore>((set) => ({
   editor: null,
-  claimEditor: (editor) => {
+  provider: null,
+  claimEditor: (editor, provider = null) => {
     const token = ++claimToken
-    set({ editor })
+    set({ editor, provider })
     return () => {
-      if (claimToken === token) set({ editor: null })
+      if (claimToken === token) set({ editor: null, provider: null })
     }
   },
 }))

@@ -130,6 +130,7 @@ function createSelectEnvironment({
     },
     commands: {
       createNode: () => undefined,
+      createNodes: () => undefined,
       patchNodeData: () => undefined,
       patchEdges: () => undefined,
       resizeNode: () => undefined,

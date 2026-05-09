@@ -68,10 +68,11 @@ describe('bulk trash operations', () => {
       itemId: noteId,
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: root,
-      location: 'trash',
+      sourceItemIds: [root],
+      targetParentId: null,
+      action: 'trash',
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.emptyTrashBin, {
@@ -115,13 +116,12 @@ describe('bulk trash operations', () => {
       items.push({ id: fileId })
     }
 
-    for (const item of items) {
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
-        campaignId: ctx.campaignId,
-        itemId: item.id,
-        location: 'trash',
-      })
-    }
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      campaignId: ctx.campaignId,
+      sourceItemIds: items.map((item) => item.id),
+      targetParentId: null,
+      action: 'trash',
+    })
 
     await dmAuth.mutation(api.sidebarItems.mutations.emptyTrashBin, {
       campaignId: ctx.campaignId,
@@ -148,15 +148,17 @@ describe('bulk trash operations', () => {
       name: 'Campaign2 Note',
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: note1,
-      location: 'trash',
+      sourceItemIds: [note1],
+      targetParentId: null,
+      action: 'trash',
     })
-    await dm2.authed.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dm2.authed.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: campaign2Id,
-      itemId: note2,
-      location: 'trash',
+      sourceItemIds: [note2],
+      targetParentId: null,
+      action: 'trash',
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.emptyTrashBin, {
@@ -185,15 +187,17 @@ describe('bulk trash operations', () => {
       name: 'Child Note',
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: noteId,
-      location: 'trash',
+      sourceItemIds: [noteId],
+      targetParentId: null,
+      action: 'trash',
     })
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: folderId,
-      location: 'trash',
+      sourceItemIds: [folderId],
+      targetParentId: null,
+      action: 'trash',
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.emptyTrashBin, {
@@ -228,10 +232,11 @@ describe('bulk trash operations', () => {
       campaignMemberId: ctx.player.memberId,
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: folders[0],
-      location: 'trash',
+      sourceItemIds: [folders[0]],
+      targetParentId: null,
+      action: 'trash',
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.emptyTrashBin, {

@@ -10,7 +10,7 @@ import {
 import { api } from '../../_generated/api'
 import { makeYjsUpdateWithBlocks } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
 
-describe('moveSidebarItem cross-module effects', () => {
+describe('moveSidebarItems cross-module effects', () => {
   const t = createTestContext()
 
   it('moving note into shared folder makes it visible via inheritance', async () => {
@@ -42,10 +42,10 @@ describe('moveSidebarItem cross-module effects', () => {
       }),
     )
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: noteId,
-      parentId: sharedFolder,
+      sourceItemIds: [noteId],
+      targetParentId: sharedFolder,
     })
 
     const noteAfterMove = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
@@ -84,10 +84,10 @@ describe('moveSidebarItem cross-module effects', () => {
     })
     expect(noteBefore.myPermissionLevel).toBe('view')
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: noteId,
-      parentId: null,
+      sourceItemIds: [noteId],
+      targetParentId: null,
     })
 
     await expectNotFound(
@@ -111,10 +111,11 @@ describe('moveSidebarItem cross-module effects', () => {
       name: 'Child Note',
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: folderId,
-      location: 'trash',
+      sourceItemIds: [folderId],
+      targetParentId: null,
+      action: 'trash',
     })
 
     const afterTrash = await t.run(async (dbCtx) => ({
@@ -141,10 +142,10 @@ describe('moveSidebarItem cross-module effects', () => {
     })
 
     await expectValidationFailed(
-      dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: parent,
-        parentId: child,
+        sourceItemIds: [parent],
+        targetParentId: child,
       }),
     )
   })
@@ -166,10 +167,11 @@ describe('moveSidebarItem cross-module effects', () => {
     })
 
     await expectPermissionDenied(
-      playerAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      playerAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: folderId,
-        location: 'trash',
+        sourceItemIds: [folderId],
+        targetParentId: null,
+        action: 'trash',
       }),
     )
   })
@@ -191,17 +193,19 @@ describe('moveSidebarItem cross-module effects', () => {
       permissionLevel: 'full_access',
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: folderId,
-      location: 'trash',
+      sourceItemIds: [folderId],
+      targetParentId: null,
+      action: 'trash',
     })
 
     await expectPermissionDenied(
-      playerAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      playerAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: folderId,
-        location: 'sidebar',
+        sourceItemIds: [folderId],
+        targetParentId: null,
+        action: 'restore',
       }),
     )
   })
@@ -256,10 +260,10 @@ describe('moveSidebarItem cross-module effects', () => {
     expect(links[0].targetItemId).toBe(targetId)
     expect(links[0].query).toBe('./Target')
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: sourceId,
-      parentId: folderB,
+      sourceItemIds: [sourceId],
+      targetParentId: folderB,
     })
 
     links = await t.run(async (dbCtx) => {
@@ -328,10 +332,10 @@ describe('moveSidebarItem cross-module effects', () => {
     expect(links).toHaveLength(1)
     expect(links[0].targetItemId).toBe(targetId)
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: districtId,
-      parentId: elsewhereId,
+      sourceItemIds: [districtId],
+      targetParentId: elsewhereId,
     })
 
     links = await t.run(async (dbCtx) => {

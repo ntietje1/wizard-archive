@@ -1,7 +1,9 @@
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
-import { validatePinTarget } from 'convex/gameMaps/validation'
+import { validatePinDropTarget } from 'convex/gameMaps/validation'
+import { validateNoteLinkDropTarget } from 'convex/links/dropValidation'
+import { validateCanvasEmbedDropTarget } from 'convex/canvases/dropValidation'
 import {
   evaluateMoveToParent,
   evaluateRestore,
@@ -9,7 +11,6 @@ import {
 } from 'convex/sidebarItems/operations/capabilities'
 import type { SidebarOperationRejectionCode } from 'convex/sidebarItems/operations/capabilities'
 import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
-import { toast } from 'sonner'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
@@ -101,9 +102,11 @@ export type SidebarDropData =
   | TrashDropZoneData
 
 type DragDropAction = 'move' | 'trash' | 'restore' | 'pin' | 'embed' | 'open' | 'link' | null
+type BatchDropAction = 'pin' | 'embed' | 'link'
 
 export type DropRejectionReason =
   | 'self_pin'
+  | 'self_link'
   | 'self_embed'
   | 'already_pinned'
   | 'not_folder'
@@ -114,6 +117,7 @@ export type DropRejectionReason =
   | 'name_conflict'
   | 'dm_only'
   | 'trashed_item'
+  | 'wrong_campaign'
   | 'mixed_actions'
   | 'unexpected_action'
 
@@ -145,6 +149,36 @@ type DroppableMoveItemsResult =
   | { status: 'none' }
 
 type MoveDropAction = 'move' | 'restore'
+type BatchDropTarget =
+  | { action: 'pin'; target: MapDropZoneData }
+  | { action: 'link'; target: NoteEditorDropZoneData }
+  | { action: 'embed'; target: CanvasDropZoneData }
+
+export type BatchDropCommand =
+  | {
+      status: 'ready'
+      action: BatchDropAction
+      items: Array<AnySidebarItem>
+      rejectedItems: Array<DropRejectedItem>
+      target: MapDropZoneData | NoteEditorDropZoneData | CanvasDropZoneData
+      label: string
+    }
+  | {
+      status: 'failed'
+      action: BatchDropAction
+      items: []
+      rejectedItems: Array<DropRejectedItem>
+      target: MapDropZoneData | NoteEditorDropZoneData | CanvasDropZoneData
+      label: string
+    }
+  | {
+      status: 'partial'
+      action: BatchDropAction
+      items: Array<AnySidebarItem>
+      rejectedItems: Array<DropRejectedItem>
+      target: MapDropZoneData | NoteEditorDropZoneData | CanvasDropZoneData
+      label: string
+    }
 
 export type DropCommand =
   | { status: 'noop' }
@@ -160,6 +194,12 @@ export type DropCommand =
       action: 'open'
       execute: () => Promise<void>
     }
+  | BatchDropCommand
+
+type DropRejectedItem = {
+  item: AnySidebarItem
+  reason: DropRejectionReason
+}
 
 type ResolvedMoveDropItem = {
   item: AnySidebarItem
@@ -265,6 +305,8 @@ export function rejectionReasonMessage(reason: DropRejectionReason): string {
       return 'Cannot move folder into itself'
     case 'self_pin':
       return 'Cannot pin map to itself'
+    case 'self_link':
+      return 'Cannot link note to itself'
     case 'self_embed':
       return 'Cannot embed canvas into itself'
     case 'already_pinned':
@@ -281,6 +323,8 @@ export function rejectionReasonMessage(reason: DropRejectionReason): string {
       return 'Only the DM can do this'
     case 'trashed_item':
       return 'The item is trashed and cannot be used'
+    case 'wrong_campaign':
+      return 'Item belongs to another campaign'
     case 'mixed_actions':
       return 'Cannot move trashed and non-trashed items together'
     case 'unexpected_action':
@@ -298,22 +342,21 @@ const trashConfig: DropZoneConfig = {
     const capability = evaluateTrash(actorFromContext(ctx), item)
     const rejected = capabilityRejection(capability)
     if (rejected) return rejected
-    return operation('trash', 'Move to "Trash"', async () => {
-      await ctx.trashItems([item])
-      toast.success('Moved to trash')
-    })
+    return operation('trash', 'Move to "Trash"')
   },
   canAcceptFiles: false,
   getHighlightId: () => TRASH_DROP_ZONE_TYPE,
 }
 
 const mapConfig = typedConfig<MapDropZoneData>({
-  resolve: (item, t) => {
-    const error = validatePinTarget(t.mapId, item._id, t.pinnedItemIds ?? [])
-    if (error) {
-      const isSelfPin = (item._id as string) === (t.mapId as string)
-      return rejection(isSelfPin ? 'self_pin' : 'already_pinned')
-    }
+  resolve: (item, t, ctx) => {
+    const reason = validatePinDropTarget({
+      mapId: t.mapId,
+      item,
+      existingPinItemIds: t.pinnedItemIds ?? [],
+      campaignId: ctx.campaignId,
+    })
+    if (reason) return rejection(reason)
     return operation('pin', `Pin to "${t.mapName}"`)
   },
   canAcceptFiles: false,
@@ -341,10 +384,7 @@ const rootConfig: DropZoneConfig = {
       })
       const rejected = capabilityRejection(capability)
       if (rejected) return rejected
-      return operation('restore', `Restore to "${name}"`, async () => {
-        await ctx.restoreItems([item], null)
-        toast.success('Item restored')
-      })
+      return operation('restore', `Restore to "${name}"`)
     }
 
     if (item.parentId == null) return null
@@ -356,9 +396,7 @@ const rootConfig: DropZoneConfig = {
     const rejected = capabilityRejection(capability)
     if (rejected) return rejected
 
-    return operation('move', `Move to "${name}"`, async () => {
-      await ctx.moveItems([item], null)
-    })
+    return operation('move', `Move to "${name}"`)
   },
   canAcceptFiles: true,
   getHighlightId: () => SIDEBAR_ROOT_DROP_TYPE,
@@ -378,11 +416,7 @@ const folderConfig = typedConfig<ResolvedSidebarItemDropData>({
       })
       const rejected = capabilityRejection(capability)
       if (rejected) return rejected
-      return operation('restore', `Restore to "${t.name}"`, async () => {
-        await ctx.restoreItems([item], folderId)
-        toast.success('Item restored')
-        ctx.setFolderOpen(folderId)
-      })
+      return operation('restore', `Restore to "${t.name}"`)
     }
 
     if (item.parentId === t._id) return null
@@ -395,10 +429,7 @@ const folderConfig = typedConfig<ResolvedSidebarItemDropData>({
     const rejected = capabilityRejection(capability)
     if (rejected) return rejected
 
-    return operation('move', `Move to "${t.name}"`, async () => {
-      await ctx.moveItems([item], folderId)
-      ctx.setFolderOpen(folderId)
-    })
+    return operation('move', `Move to "${t.name}"`)
   },
   canAcceptFiles: (t) => t.location !== SIDEBAR_ITEM_LOCATION.trash,
   getHighlightId: (t) => t._id,
@@ -406,8 +437,13 @@ const folderConfig = typedConfig<ResolvedSidebarItemDropData>({
 })
 
 const noteEditorConfig = typedConfig<NoteEditorDropZoneData>({
-  resolve: (item) => {
-    if (item.location === SIDEBAR_ITEM_LOCATION.trash) return rejection('trashed_item')
+  resolve: (item, target, ctx) => {
+    const reason = validateNoteLinkDropTarget({
+      noteId: target.noteId,
+      item,
+      campaignId: ctx.campaignId,
+    })
+    if (reason) return rejection(reason)
     return operation('link', 'Add link here')
   },
   canAcceptFiles: false,
@@ -416,9 +452,13 @@ const noteEditorConfig = typedConfig<NoteEditorDropZoneData>({
 })
 
 const canvasConfig = typedConfig<CanvasDropZoneData>({
-  resolve: (item, target) => {
-    if (item.location === SIDEBAR_ITEM_LOCATION.trash) return rejection('trashed_item')
-    if ((item._id as string) === (target.canvasId as string)) return rejection('self_embed')
+  resolve: (item, target, ctx) => {
+    const reason = validateCanvasEmbedDropTarget({
+      canvasId: target.canvasId,
+      item,
+      campaignId: ctx.campaignId,
+    })
+    if (reason) return rejection(reason)
     return operation('embed', 'Add to canvas')
   },
   canAcceptFiles: true,
@@ -566,6 +606,80 @@ function getTrashCommand(
   return { status: 'ready', action: 'trash', items: trashItems, parentId: null }
 }
 
+function getBatchLabel(batchTarget: BatchDropTarget, count: number) {
+  switch (batchTarget.action) {
+    case 'pin':
+      return count === 1
+        ? `Pin to "${batchTarget.target.mapName}"`
+        : `Pin ${count} items to "${batchTarget.target.mapName}"`
+    case 'link':
+      return count === 1 ? 'Add link here' : `Add ${count} links here`
+    case 'embed':
+      return count === 1 ? 'Embed in canvas' : `Embed ${count} items in canvas`
+    default:
+      return assertNever(batchTarget)
+  }
+}
+
+function resolveBatchDropTarget(target: SidebarDropData): BatchDropTarget | null {
+  switch (target.type) {
+    case MAP_DROP_ZONE_TYPE:
+      return { action: 'pin', target }
+    case NOTE_EDITOR_DROP_TYPE:
+      return { action: 'link', target }
+    case CANVAS_DROP_ZONE_TYPE:
+      return { action: 'embed', target }
+    default:
+      return null
+  }
+}
+
+function getBatchCommand(
+  items: Array<AnySidebarItem>,
+  target: SidebarDropData,
+  ctx: DndContext,
+): DropCommand {
+  const batchTarget = resolveBatchDropTarget(target)
+  if (!batchTarget) return { status: 'noop' }
+  const { action } = batchTarget
+
+  const acceptedItems: Array<AnySidebarItem> = []
+  const rejectedItems: Array<DropRejectedItem> = []
+
+  for (const item of items) {
+    const outcome = resolveDropOutcome(item, target, ctx)
+    if (!outcome) continue
+    if (outcome.type === 'rejection') {
+      rejectedItems.push({ item, reason: outcome.reason })
+      continue
+    }
+    if (outcome.action !== action) {
+      return { status: 'blocked', reason: 'unexpected_action' }
+    }
+    acceptedItems.push(item)
+  }
+
+  if (acceptedItems.length === 0 && rejectedItems.length === 0) return { status: 'noop' }
+  if (acceptedItems.length === 0) {
+    return {
+      status: 'failed',
+      action,
+      items: [],
+      rejectedItems,
+      target: batchTarget.target,
+      label: getBatchLabel(batchTarget, 0),
+    }
+  }
+  return {
+    status: rejectedItems.length > 0 ? 'partial' : 'ready',
+    action,
+    items: acceptedItems,
+    rejectedItems,
+    target: batchTarget.target,
+    label: getBatchLabel(batchTarget, acceptedItems.length),
+  }
+}
+
 export function resolveDropCommand(
   items: Array<AnySidebarItem>,
   target: SidebarDropData,
@@ -588,6 +702,9 @@ export function resolveDropCommand(
   }
   if (moveItems.status === 'blocked') return { status: 'blocked', reason: moveItems.reason }
   if (moveItems.status === 'noop') return { status: 'noop' }
+
+  const batchCommand = getBatchCommand(items, target, ctx)
+  if (batchCommand.status !== 'noop') return batchCommand
 
   return getExecutableCommand(items, target, ctx)
 }

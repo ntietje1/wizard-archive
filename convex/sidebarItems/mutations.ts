@@ -1,19 +1,12 @@
 import { v } from 'convex/values'
 import { campaignMutation, dmMutation } from '../functions'
 import { ERROR_CODE, throwClientError } from '../errors'
-import { sidebarItemLocationValidator } from './schema/validators'
-import {
-  moveSidebarItem as moveSidebarItemFn,
-  moveSidebarItems as moveSidebarItemsFn,
-} from './functions/moveSidebarItem'
-import {
-  permanentlyDeleteSidebarItem as permanentlyDeleteSidebarItemFn,
-  permanentlyDeleteSidebarItems as permanentlyDeleteSidebarItemsFn,
-} from './functions/permanentlyDeleteSidebarItem'
+import { moveSidebarItems as moveSidebarItemsFn } from './functions/moveSidebarItems'
+import { permanentlyDeleteSidebarItems as permanentlyDeleteSidebarItemsFn } from './functions/permanentlyDeleteSidebarItems'
 import { emptyTrashBin as emptyTrashBinFn } from './functions/emptyTrashBin'
 import { claimPreviewGeneration as claimPreviewGenerationFn } from './functions/claimPreviewGeneration'
 import { setPreviewImage as setPreviewImageFn } from './functions/setPreviewImage'
-import { duplicateSidebarItems as duplicateSidebarItemsFn } from './functions/duplicateSidebarItem'
+import { duplicateSidebarItems as duplicateSidebarItemsFn } from './functions/duplicateSidebarItems'
 import type { Id } from '../_generated/dataModel'
 
 export const OPERATION_DECISION_ACTION = {
@@ -56,43 +49,6 @@ function assertSidebarItemsBatchSize(sourceItemIds: Array<Id<'sidebarItems'>>) {
   }
 }
 
-function assertDecisionsBelongToBatch({
-  decisions,
-  sourceItemIds,
-}: {
-  decisions?: Array<{ sourceItemId: Id<'sidebarItems'> }>
-  sourceItemIds: Array<Id<'sidebarItems'>>
-}) {
-  if (!decisions) return
-
-  const sourceItemIdSet = new Set(sourceItemIds)
-  const invalidDecision = decisions.find((decision) => !sourceItemIdSet.has(decision.sourceItemId))
-  if (!invalidDecision) return
-
-  throwClientError(
-    ERROR_CODE.VALIDATION_FAILED,
-    `Conflict decision source item ${invalidDecision.sourceItemId} is not in the operation batch`,
-  )
-}
-
-export const moveSidebarItem = campaignMutation({
-  args: {
-    itemId: v.id('sidebarItems'),
-    parentId: v.optional(v.nullable(v.id('sidebarItems'))),
-    location: v.optional(sidebarItemLocationValidator),
-    name: v.optional(v.string()),
-  },
-  returns: v.id('sidebarItems'),
-  handler: async (ctx, args): Promise<Id<'sidebarItems'>> => {
-    return await moveSidebarItemFn(ctx, {
-      itemId: args.itemId,
-      parentId: args.parentId,
-      location: args.location,
-      name: args.name,
-    })
-  },
-})
-
 export const moveSidebarItems = campaignMutation({
   args: {
     sourceItemIds: v.array(v.id('sidebarItems')),
@@ -109,19 +65,7 @@ export const moveSidebarItems = campaignMutation({
   returns: v.array(v.id('sidebarItems')),
   handler: async (ctx, args): Promise<Array<Id<'sidebarItems'>>> => {
     assertSidebarItemsBatchSize(args.sourceItemIds)
-    assertDecisionsBelongToBatch(args)
     return await moveSidebarItemsFn(ctx, args)
-  },
-})
-
-export const permanentlyDeleteSidebarItem = campaignMutation({
-  args: {
-    itemId: v.id('sidebarItems'),
-  },
-  returns: v.null(),
-  handler: async (ctx, args): Promise<null> => {
-    await permanentlyDeleteSidebarItemFn(ctx, { itemId: args.itemId })
-    return null
   },
 })
 
@@ -184,7 +128,6 @@ export const duplicateSidebarItems = campaignMutation({
   returns: v.array(v.id('sidebarItems')),
   handler: async (ctx, args): Promise<Array<Id<'sidebarItems'>>> => {
     assertSidebarItemsBatchSize(args.sourceItemIds)
-    assertDecisionsBelongToBatch(args)
     return await duplicateSidebarItemsFn(ctx, args)
   },
 })

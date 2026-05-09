@@ -10,12 +10,13 @@ import {
   createSidebarShare,
 } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
+import { expectValidationFailed } from '../../_test/assertions.helper'
 
 describe('trash workflows', () => {
   const t = createTestContext()
 
   describe('trash and restore with name conflicts', () => {
-    it('deduplicates name when restoring a note whose name is now taken', async () => {
+    it('requires a conflict decision when restoring a note whose name is now taken', async () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
@@ -23,20 +24,37 @@ describe('trash workflows', () => {
         name: 'Meeting Notes',
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: original.noteId,
-        location: 'trash',
+        sourceItemIds: [original.noteId],
+        targetParentId: null,
+        action: 'trash',
       })
 
       await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
         name: 'Meeting Notes',
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      await expectValidationFailed(
+        dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+          campaignId: ctx.campaignId,
+          sourceItemIds: [original.noteId],
+          targetParentId: null,
+          action: 'restore',
+        }),
+      )
+
+      const stillTrashed = await t.run(async (dbCtx) =>
+        dbCtx.db.get('sidebarItems', original.noteId),
+      )
+      expect(stillTrashed?.location).toBe('trash')
+
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: original.noteId,
-        location: 'sidebar',
+        sourceItemIds: [original.noteId],
+        targetParentId: null,
+        action: 'restore',
+        decisions: [{ sourceItemId: original.noteId, action: 'keepBoth' }],
       })
 
       const restored = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', original.noteId))
@@ -79,10 +97,11 @@ describe('trash workflows', () => {
         campaignMemberId: ctx.player.memberId,
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: folder.folderId,
-        location: 'trash',
+        sourceItemIds: [folder.folderId],
+        targetParentId: null,
+        action: 'trash',
       })
 
       const [trashedFolder, trashedNoteA, trashedNoteB, trashedShare, trashedBookmark] =
@@ -108,10 +127,11 @@ describe('trash workflows', () => {
       expect(trashedBookmark).not.toBeNull()
       expect(trashedBookmark!.sidebarItemId).toBe(noteA.noteId)
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: folder.folderId,
-        location: 'sidebar',
+        sourceItemIds: [folder.folderId],
+        targetParentId: null,
+        action: 'restore',
       })
 
       const [restoredFolder, restoredNoteA, restoredNoteB, restoredShare, restoredBookmark] =
@@ -158,10 +178,11 @@ describe('trash workflows', () => {
         parentId: childFolder.folderId,
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: folder.folderId,
-        location: 'trash',
+        sourceItemIds: [folder.folderId],
+        targetParentId: null,
+        action: 'trash',
       })
 
       const movedIds = await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
@@ -196,10 +217,11 @@ describe('trash workflows', () => {
         name: 'FolderA',
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: folder.folderId,
-        location: 'trash',
+        sourceItemIds: [folder.folderId],
+        targetParentId: null,
+        action: 'trash',
       })
 
       const movedIds = await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
@@ -228,10 +250,11 @@ describe('trash workflows', () => {
         parentId: folder.folderId,
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: folder.folderId,
-        location: 'trash',
+        sourceItemIds: [folder.folderId],
+        targetParentId: null,
+        action: 'trash',
       })
 
       const movedIds = await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
@@ -330,15 +353,16 @@ describe('trash workflows', () => {
         campaignMemberId: ctx.player.memberId,
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: folder.folderId,
-        location: 'trash',
+        sourceItemIds: [folder.folderId],
+        targetParentId: null,
+        action: 'trash',
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: folder.folderId,
+        sourceItemIds: [folder.folderId],
       })
 
       const [
@@ -431,20 +455,11 @@ describe('trash workflows', () => {
         parentId: folder.folderId,
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: note1.noteId,
-        location: 'trash',
-      })
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
-        campaignId: ctx.campaignId,
-        itemId: note2.noteId,
-        location: 'trash',
-      })
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
-        campaignId: ctx.campaignId,
-        itemId: folder.folderId,
-        location: 'trash',
+        sourceItemIds: [note1.noteId, note2.noteId, folder.folderId],
+        targetParentId: null,
+        action: 'trash',
       })
 
       await dmAuth.mutation(api.sidebarItems.mutations.emptyTrashBin, {

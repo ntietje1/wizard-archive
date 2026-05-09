@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { DropOutcome } from '~/features/dnd/utils/dnd-registry'
+import type { BatchDropCommand, DropOutcome } from '~/features/dnd/utils/dnd-registry'
 import type { Id } from 'convex/_generated/dataModel'
 import type { DropResult } from '~/features/file-upload/utils/folder-reader'
 
@@ -8,6 +8,11 @@ export type FileDropOverride = (
   clientCoords: { x: number; y: number },
 ) => Promise<void>
 
+export type DndBatchDecision = {
+  command: Extract<BatchDropCommand, { status: 'partial' | 'failed' }>
+  onConfirm: () => Promise<void>
+}
+
 interface DndState {
   sidebarDragTargetId: string | null
   dragOutcome: DropOutcome | null
@@ -15,6 +20,7 @@ interface DndState {
   isDraggingFiles: boolean
   isDraggingElement: boolean
   fileDropOverride: FileDropOverride | null
+  batchDecision: DndBatchDecision | null
 }
 
 interface DndActions {
@@ -24,6 +30,7 @@ interface DndActions {
   setIsDraggingFiles: (isDragging: boolean) => void
   setIsDraggingElement: (isDragging: boolean) => void
   setFileDropOverride: (handler: FileDropOverride | null) => void
+  setBatchDecision: (decision: DndBatchDecision | null) => void
 }
 
 export const useDndStore = create<DndState & DndActions>()((set) => ({
@@ -33,6 +40,7 @@ export const useDndStore = create<DndState & DndActions>()((set) => ({
   isDraggingFiles: false,
   isDraggingElement: false,
   fileDropOverride: null,
+  batchDecision: null,
 
   setSidebarDragTargetId: (id) =>
     set((state) => {
@@ -44,4 +52,5 @@ export const useDndStore = create<DndState & DndActions>()((set) => ({
   setIsDraggingFiles: (isDragging) => set({ isDraggingFiles: isDragging }),
   setIsDraggingElement: (isDragging) => set({ isDraggingElement: isDragging }),
   setFileDropOverride: (handler) => set({ fileDropOverride: handler }),
+  setBatchDecision: (decision) => set({ batchDecision: decision }),
 }))

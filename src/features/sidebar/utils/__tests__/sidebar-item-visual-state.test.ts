@@ -148,7 +148,7 @@ describe('sidebar item visual state utilities', () => {
 
   it('uses the same action group reveal behavior for sidebar-like item rows', () => {
     expect(sidebarItemActionGroupClass).toBe(
-      'flex items-center shrink-0 invisible opacity-0 pointer-events-none group-hover:visible group-hover:opacity-100 group-hover:pointer-events-auto has-[[data-share-open]]:visible has-[[data-share-open]]:opacity-100 has-[[data-share-open]]:pointer-events-auto',
+      'flex items-center shrink-0 w-0 overflow-hidden opacity-0 pointer-events-none group-hover:w-auto group-hover:overflow-visible group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:w-auto group-focus-within:overflow-visible group-focus-within:opacity-100 group-focus-within:pointer-events-auto has-[[data-share-open]]:w-auto has-[[data-share-open]]:overflow-visible has-[[data-share-open]]:opacity-100 has-[[data-share-open]]:pointer-events-auto',
     )
   })
 

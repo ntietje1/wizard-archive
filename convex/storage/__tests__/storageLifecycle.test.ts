@@ -15,14 +15,15 @@ describe('storage lifecycle with file/map deletion', () => {
       name: 'Delete Me',
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: fileId,
-      location: 'trash',
+      sourceItemIds: [fileId],
+      targetParentId: null,
+      action: 'trash',
     })
-    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: fileId,
+      sourceItemIds: [fileId],
     })
 
     const file = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', fileId))
@@ -37,14 +38,15 @@ describe('storage lifecycle with file/map deletion', () => {
       name: 'Delete Map',
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: mapId,
-      location: 'trash',
+      sourceItemIds: [mapId],
+      targetParentId: null,
+      action: 'trash',
     })
-    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: mapId,
+      sourceItemIds: [mapId],
     })
 
     const map = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', mapId))
@@ -83,10 +85,11 @@ describe('storage lifecycle with file/map deletion', () => {
       name: 'Nested File',
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: folderId,
-      location: 'trash',
+      sourceItemIds: [folderId],
+      targetParentId: null,
+      action: 'trash',
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.emptyTrashBin, {
@@ -110,14 +113,15 @@ describe('storage lifecycle with file/map deletion', () => {
       storageId: null,
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: fileId,
-      location: 'trash',
+      sourceItemIds: [fileId],
+      targetParentId: null,
+      action: 'trash',
     })
-    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: fileId,
+      sourceItemIds: [fileId],
     })
 
     const file = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', fileId))
@@ -133,14 +137,15 @@ describe('storage lifecycle with file/map deletion', () => {
       imageStorageId: null,
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: mapId,
-      location: 'trash',
+      sourceItemIds: [mapId],
+      targetParentId: null,
+      action: 'trash',
     })
-    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: mapId,
+      sourceItemIds: [mapId],
     })
 
     const map = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', mapId))

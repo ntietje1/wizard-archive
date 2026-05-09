@@ -10,7 +10,6 @@ import {
   createBlock,
 } from '../../_test/factories.helper'
 import { expectValidationFailed } from '../../_test/assertions.helper'
-import { SIDEBAR_ITEM_LOCATION } from '../types/baseTypes'
 
 describe('duplicateSidebarItems', () => {
   const t = createTestContext()
@@ -227,23 +226,15 @@ describe('duplicateSidebarItems', () => {
       copiedMapItemId,
     } = await setupImmutableStorageDuplicate()
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: fileId,
-      location: SIDEBAR_ITEM_LOCATION.trash,
+      sourceItemIds: [fileId, mapId],
+      targetParentId: null,
+      action: 'trash',
     })
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: mapId,
-      location: SIDEBAR_ITEM_LOCATION.trash,
-    })
-    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
-      campaignId: ctx.campaignId,
-      itemId: fileId,
-    })
-    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
-      campaignId: ctx.campaignId,
-      itemId: mapId,
+      sourceItemIds: [fileId, mapId],
     })
 
     await t.run(async (dbCtx) => {

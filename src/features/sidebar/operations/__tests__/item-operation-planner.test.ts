@@ -116,6 +116,7 @@ describe('planDuplicateOperations', () => {
       {
         sourceItemId: 'folder-1',
         action: 'mergeFolder',
+        targetParentId: null,
         destinationItemId: 'folder-2',
       },
     ])

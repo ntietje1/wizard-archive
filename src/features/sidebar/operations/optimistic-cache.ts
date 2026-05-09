@@ -95,7 +95,7 @@ function restoreItemTreeInState(
   ] as Array<AnySidebarItem>
 }
 
-function moveSidebarItemInState(
+function moveSnapshotItemInState(
   state: SidebarCacheSnapshot,
   source: AnySidebarItem,
   operation: MoveItemOrReplaceOperation,
@@ -145,7 +145,7 @@ function applyOptimisticMoveOperation(
     return
   }
 
-  moveSidebarItemInState(state, source, operation)
+  moveSnapshotItemInState(state, source, operation)
 }
 
 export function applyOptimisticMoveOperationsToSnapshot(

@@ -72,6 +72,7 @@ export interface CanvasNodeResizeUpdate {
 
 export interface CanvasDocumentWriter {
   createNode: (node: CanvasDocumentNode) => void
+  createNodes: (nodes: ReadonlyArray<CanvasDocumentNode>) => void
   patchNodeData: (updates: ReadonlyMap<string, CanvasNodeDataPatch>) => void
   patchEdges: (updates: ReadonlyMap<string, CanvasEdgePatch>) => void
   resizeNode: (nodeId: string, width: number, height: number, position: CanvasPosition) => void

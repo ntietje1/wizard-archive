@@ -92,7 +92,7 @@ async function resolveRestoreConflicts(
   })
   const otherNames = siblings.filter((s) => s._id !== item._id).map((s) => s.name)
 
-  const uniqueName = deduplicateName(item.name, otherNames) as SidebarItemName
+  const uniqueName = assertSidebarItemName(deduplicateName(item.name, otherNames))
   const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
     itemId: item._id,
     name: uniqueName,
@@ -110,23 +110,6 @@ async function loadMovableSource(ctx: CampaignMutationCtx, itemId: Id<'sidebarIt
     rawItem: itemFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
-}
-
-function validateMoveIntentAgainstTrash({
-  isRelocating,
-  isTrashing,
-  isRestoring,
-}: {
-  isRelocating: boolean
-  isTrashing: boolean
-  isRestoring: boolean
-}) {
-  if (isRelocating && !isTrashing && !isRestoring) {
-    throwClientError(
-      ERROR_CODE.VALIDATION_FAILED,
-      'Unsupported move: items can only move between parents, into trash, or out of trash',
-    )
-  }
 }
 
 async function executeTrash(ctx: CampaignMutationCtx, item: AnySidebarItem) {
@@ -258,8 +241,8 @@ async function executeParentMove(
     name: requestedName ?? undefined,
   })
 
-  const oldParent = item.parentId ? await ctx.db.get('sidebarItems', item.parentId) : null
-  const newParent = parentId ? await ctx.db.get('sidebarItems', parentId) : null
+  const oldParent = item.parentId ? await getSidebarItem(ctx, item.parentId) : null
+  const newParent = parentId ? await getSidebarItem(ctx, parentId) : null
   const renamePatch =
     requestedName && requestedName !== item.name
       ? {
@@ -294,42 +277,6 @@ async function executeParentMove(
   })
 }
 
-export async function moveSidebarItem(
-  ctx: CampaignMutationCtx,
-  {
-    itemId,
-    location,
-    parentId,
-    name,
-  }: {
-    itemId: Id<'sidebarItems'>
-    location?: SidebarItemLocation
-    parentId?: Id<'sidebarItems'> | null
-    name?: string
-  },
-): Promise<Id<'sidebarItems'>> {
-  const item = await loadMovableSource(ctx, itemId)
-
-  const isRelocating = location !== undefined && location !== item.location
-  const isTrashing = isRelocating && location === SIDEBAR_ITEM_LOCATION.trash
-  const isRestoring = isRelocating && item.location === SIDEBAR_ITEM_LOCATION.trash
-  const isMoving = parentId !== undefined
-
-  validateMoveIntentAgainstTrash({ isRelocating, isTrashing, isRestoring })
-
-  if (isTrashing) {
-    await executeTrash(ctx, item)
-  } else if (isRestoring) {
-    if (location === undefined)
-      throw new Error('Invariant: location must be defined when restoring')
-    await executeRestore(ctx, { item, location, parentId, name })
-  } else if (isMoving) {
-    await executeParentMove(ctx, { item, parentId, name })
-  }
-
-  return item._id
-}
-
 async function collectMoveChildrenMap(
   ctx: CampaignMutationCtx,
   folders: Array<Pick<AnySidebarItem, '_id' | 'location'>>,
@@ -340,12 +287,12 @@ async function collectMoveChildrenMap(
     rootFolderIds: folders.map((folder) => folder._id),
     maxDepth: MAX_SIDEBAR_MOVE_DEPTH,
     getChildren: async (parentId) => {
-      if (!folderLocations.has(parentId)) {
-        console.warn(
-          `Missing sidebar folder location while collecting move children for ${parentId}; falling back to sidebar`,
+      const location = folderLocations.get(parentId)
+      if (!location) {
+        throw new Error(
+          `Missing SIDEBAR_ITEM_LOCATION for sidebar folder ${parentId} while collecting move children`,
         )
       }
-      const location = folderLocations.get(parentId) ?? SIDEBAR_ITEM_LOCATION.sidebar
       const children = await getSidebarItemRowsByParentLocation(ctx, {
         parentId,
         location,

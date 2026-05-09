@@ -51,7 +51,7 @@ function resolveMonitorDropTarget(
     : null
 }
 
-function resolveDragFeedbackOutcome({
+function resolveDragFeedback({
   ctx,
   draggedItems,
   dropTarget,
@@ -59,7 +59,7 @@ function resolveDragFeedbackOutcome({
   ctx: DndMonitorCtx
   draggedItems: ReturnType<typeof resolveDraggedItems>
   dropTarget: SidebarDropData | null
-}): DropOutcome | null {
+}): { outcome: DropOutcome | null; rejectedItemCount?: number } {
   const draggedItem = draggedItems[0] ?? null
   const command = dropTarget
     ? resolveDropCommand(draggedItems, dropTarget, ctx.dndContext)
@@ -67,15 +67,38 @@ function resolveDragFeedbackOutcome({
 
   switch (command.status) {
     case 'ready':
-      return resolveDropOutcome(
-        command.action === 'open' ? draggedItem : (command.items[0] ?? null),
-        dropTarget,
-        ctx.dndContext,
-      )
+      if (command.action === 'pin' || command.action === 'link' || command.action === 'embed') {
+        return {
+          outcome: {
+            type: 'operation',
+            action: command.action,
+            label: command.label,
+            execute: null,
+          },
+        }
+      }
+      return {
+        outcome: resolveDropOutcome(
+          command.action === 'open' ? draggedItem : (command.items[0] ?? null),
+          dropTarget,
+          ctx.dndContext,
+        ),
+      }
+    case 'partial':
+    case 'failed':
+      return {
+        outcome: {
+          type: 'operation',
+          action: command.action,
+          label: command.label,
+          execute: null,
+        },
+        rejectedItemCount: command.rejectedItems.length,
+      }
     case 'noop':
-      return null
+      return { outcome: null }
     case 'blocked':
-      return { type: 'rejection', reason: command.reason }
+      return { outcome: { type: 'rejection', reason: command.reason } }
     default:
       return assertNever(command)
   }
@@ -91,6 +114,12 @@ function dropCommandFailureMessage(command: Extract<DropCommand, { status: 'read
       return 'Failed to move items to trash'
     case 'open':
       return 'Failed to open item'
+    case 'pin':
+      return 'Failed to pin item'
+    case 'link':
+      return 'Failed to create link'
+    case 'embed':
+      return 'Failed to embed item'
     default:
       return assertNever(command)
   }
@@ -121,6 +150,7 @@ function resetElementDragState({
 
 async function executeDropCommand(ctx: DndMonitorCtx, command: DropCommand) {
   if (command.status === 'noop') return
+  if (command.status === 'partial' || command.status === 'failed') return
   if (command.status === 'blocked') {
     handleError(new Error(rejectionReasonMessage(command.reason)), 'Cannot drop items here')
     return
@@ -138,6 +168,10 @@ async function executeDropCommand(ctx: DndMonitorCtx, command: DropCommand) {
         break
       case 'open':
         await command.execute()
+        break
+      case 'pin':
+      case 'link':
+      case 'embed':
         break
       default:
         assertNever(command)
@@ -277,19 +311,20 @@ export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
           const dropTarget = resolveMonitorDropTarget(rawDropTarget, ctx)
           const draggedItems = resolveDraggedItems(source.data, ctx)
           const draggedPreviewItems = resolveDraggedPreviewItems(source.data, ctx)
-          const outcome = resolveDragFeedbackOutcome({ ctx, draggedItems, dropTarget })
+          const feedback = resolveDragFeedback({ ctx, draggedItems, dropTarget })
 
           setDragState((prev) => {
             if (!prev) return null
             return {
               ...prev,
               draggedItemCount: overlayItemCount(draggedPreviewItems),
-              outcome,
+              outcome: feedback.outcome,
+              rejectedItemCount: feedback.rejectedItemCount,
             }
           })
 
           setSidebarDragTargetId(getHighlightId(dropTarget))
-          setDragOutcome(outcome)
+          setDragOutcome(feedback.outcome)
         }
       },
       onDrop: async ({ source, location }) => {

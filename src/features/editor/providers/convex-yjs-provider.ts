@@ -180,7 +180,14 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
     }
   }
 
-  private flushUpdates(): Promise<void> {
+  /**
+   * Immediately pushes any locally buffered Yjs updates in their current order.
+   * Call after programmatic local document writes that must be persisted before
+   * continuing. If another push is in flight this awaits that push; otherwise it
+   * merges pending updates into one backend call. Push failures are logged and
+   * the merged update is requeued for a later retry instead of being thrown.
+   */
+  flushUpdates(): Promise<void> {
     this.clearUpdateTimers()
     if (this.pushInFlight) return this.pushInFlightPromise
     if (this.pendingUpdates.length === 0) return Promise.resolve()

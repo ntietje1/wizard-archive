@@ -8,6 +8,7 @@ import {
   expectValidationFailed,
 } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
+import { SIDEBAR_ITEM_LOCATION } from '../../sidebarItems/types/baseTypes'
 
 describe('createMap', () => {
   const t = createTestContext()
@@ -244,6 +245,110 @@ describe('pin CRUD', () => {
       expect(pin!.y).toBe(200)
       expect(pin!.visible).toBe(false)
     })
+  })
+
+  it('creates multiple pins in one batch', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+    const first = await createNote(t, ctx.campaignId, ctx.dm.profile._id, { name: 'First' })
+    const second = await createNote(t, ctx.campaignId, ctx.dm.profile._id, { name: 'Second' })
+
+    const pinIds = await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
+      campaignId: ctx.campaignId,
+      mapId,
+      pins: [
+        { itemId: first.noteId, x: 10, y: 20 },
+        { itemId: second.noteId, x: 30, y: 40 },
+      ],
+    })
+
+    expect(pinIds).toHaveLength(2)
+
+    await t.run(async (dbCtx) => {
+      const pins = await dbCtx.db
+        .query('mapPins')
+        .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
+        .collect()
+      expect(pins.map((pin) => pin.itemId).sort()).toEqual([first.noteId, second.noteId].sort())
+      const historyRows = await dbCtx.db
+        .query('editHistory')
+        .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_added'))
+        .collect()
+      expect(historyRows).toHaveLength(1)
+    })
+  })
+
+  it('rejects oversized batch pin requests before inserting pins', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+    await expectValidationFailed(
+      dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
+        campaignId: ctx.campaignId,
+        mapId,
+        pins: Array.from({ length: 101 }, (_, index) => ({
+          itemId: noteId,
+          x: index,
+          y: index,
+        })),
+      }),
+    )
+
+    await t.run(async (dbCtx) => {
+      const pins = await dbCtx.db
+        .query('mapPins')
+        .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
+        .collect()
+      expect(pins).toHaveLength(0)
+    })
+  })
+
+  it('rejects a batch pin that includes an invalid item', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+    await expectValidationFailed(
+      dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
+        campaignId: ctx.campaignId,
+        mapId,
+        pins: [
+          { itemId: noteId, x: 10, y: 20 },
+          { itemId: mapId, x: 30, y: 40 },
+        ],
+      }),
+    )
+  })
+
+  it('rejects a batch pin that includes a trashed item', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+    await t.run(async (dbCtx) => {
+      await dbCtx.db.patch('sidebarItems', noteId, {
+        deletionTime: Date.now(),
+        deletedBy: ctx.dm.profile._id,
+        location: SIDEBAR_ITEM_LOCATION.trash,
+      })
+    })
+
+    await expectValidationFailed(
+      dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
+        campaignId: ctx.campaignId,
+        mapId,
+        pins: [{ itemId: noteId, x: 10, y: 20 }],
+      }),
+    )
   })
 
   it('rejects duplicate pin for same item', async () => {

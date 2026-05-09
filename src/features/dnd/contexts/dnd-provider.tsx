@@ -15,6 +15,7 @@ import { useActiveSidebarItems, useSidebarItems } from '~/features/sidebar/hooks
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { DndProviderContext } from '~/features/dnd/hooks/useDnd'
 import { DragOverlayPortal } from '~/features/dnd/components/drag-overlay'
+import { DndBatchDecisionDialog } from '~/features/dnd/components/dnd-batch-decision-dialog'
 import { useElementDragMonitor } from '~/features/dnd/hooks/useElementDragMonitor'
 import { useExternalDragMonitor } from '~/features/dnd/hooks/useExternalDragMonitor'
 
@@ -76,7 +77,10 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
     <DndProviderContext.Provider value={value}>
       <div className="flex flex-col flex-1 min-h-0">{children}</div>
       <ClientOnly fallback={null}>
-        <DragOverlayPortal overlayRef={overlayRef} dragState={dragState} />
+        <>
+          <DragOverlayPortal overlayRef={overlayRef} dragState={dragState} />
+          <DndBatchDecisionDialog />
+        </>
       </ClientOnly>
     </DndProviderContext.Provider>
   )

@@ -151,8 +151,10 @@ describe('rejectionReasonMessage', () => {
     expect(rejectionReasonMessage('no_permission')).toBe('No permission to move here')
     expect(rejectionReasonMessage('circular')).toBe('Cannot move folder into itself')
     expect(rejectionReasonMessage('self_pin')).toBe('Cannot pin map to itself')
+    expect(rejectionReasonMessage('self_link')).toBe('Cannot link note to itself')
     expect(rejectionReasonMessage('self_embed')).toBe('Cannot embed canvas into itself')
     expect(rejectionReasonMessage('already_pinned')).toBe('Already pinned to this map')
+    expect(rejectionReasonMessage('wrong_campaign')).toBe('Item belongs to another campaign')
     expect(rejectionReasonMessage('not_folder')).toBe('Cannot drop here')
     expect(rejectionReasonMessage('missing_data')).toBe('Missing data')
     expect(rejectionReasonMessage('trashed_folder')).toBe('Trashed folders are uneditable')
@@ -574,6 +576,101 @@ describe('resolveDropCommand', () => {
     })
   })
 
+  it('returns one batch pin command for map drops', () => {
+    const first = createNote()
+    const second = createNote()
+    const target = mapTarget()
+
+    expect(resolveDropCommand([first, second], target, createCtx())).toMatchObject({
+      status: 'ready',
+      action: 'pin',
+      items: [first, second],
+      rejectedItems: [],
+      target,
+      label: 'Pin 2 items to "World Map"',
+    })
+  })
+
+  it('returns a partial pin command when some items cannot be pinned', () => {
+    const map = createGameMap()
+    const note = createNote()
+    const alreadyPinned = createNote()
+    const target = mapTarget(map._id, { pinnedItemIds: [alreadyPinned._id] })
+
+    expect(resolveDropCommand([note, map, alreadyPinned], target, createCtx())).toMatchObject({
+      status: 'partial',
+      action: 'pin',
+      items: [note],
+      rejectedItems: [
+        { item: map, reason: 'self_pin' },
+        { item: alreadyPinned, reason: 'already_pinned' },
+      ],
+      target,
+      label: 'Pin to "World Map"',
+    })
+  })
+
+  it('returns one batch link command for note editor drops', () => {
+    const targetNote = createNote()
+    const first = createNote()
+    const second = createNote()
+    const target = noteEditorTarget(targetNote._id)
+
+    expect(resolveDropCommand([first, second], target, createCtx())).toMatchObject({
+      status: 'ready',
+      action: 'link',
+      items: [first, second],
+      rejectedItems: [],
+      target,
+      label: 'Add 2 links here',
+    })
+  })
+
+  it('returns a partial link command when the target note is part of the drag', () => {
+    const targetNote = createNote()
+    const other = createNote()
+    const target = noteEditorTarget(targetNote._id)
+
+    expect(resolveDropCommand([targetNote, other], target, createCtx())).toMatchObject({
+      status: 'partial',
+      action: 'link',
+      items: [other],
+      rejectedItems: [{ item: targetNote, reason: 'self_link' }],
+      target,
+      label: 'Add link here',
+    })
+  })
+
+  it('returns a failed batch command when every item is rejected', () => {
+    const targetNote = createNote()
+    const target = noteEditorTarget(targetNote._id)
+
+    expect(resolveDropCommand([targetNote], target, createCtx())).toMatchObject({
+      status: 'failed',
+      action: 'link',
+      items: [],
+      rejectedItems: [{ item: targetNote, reason: 'self_link' }],
+      target,
+      label: 'Add 0 links here',
+    })
+  })
+
+  it('returns one batch embed command for canvas drops', () => {
+    const canvas = createGameMap({ _id: testId<'sidebarItems'>('canvas_1') })
+    const first = createNote()
+    const second = createNote()
+    const target = canvasTarget(canvas._id)
+
+    expect(resolveDropCommand([first, second], target, createCtx())).toMatchObject({
+      status: 'ready',
+      action: 'embed',
+      items: [first, second],
+      rejectedItems: [],
+      target,
+      label: 'Embed 2 items in canvas',
+    })
+  })
+
   it('blocks the command when any selected item has a real rejection', () => {
     const folder = createFolder()
     const target = folderTarget({ ancestorIds: [folder._id] })
@@ -793,63 +890,80 @@ describe('resolveDropTarget', () => {
   })
 })
 
-// ─── Operation execution ───────────────────────────────────────────
+// ─── Batch Commands ────────────────────────────────────────────────
 
-describe('operation execution', () => {
-  it('trash operation calls the batch trash path', async () => {
+describe('batch commands', () => {
+  it('trash operation returns a batch trash command', () => {
     const note = createNote()
     const ctx = createCtx()
-    const result = resolveDropOutcome(note, trashTarget(), ctx)
+    const result = resolveDropCommand([note], trashTarget(), ctx)
 
-    expect(result?.type).toBe('operation')
-    await (result as { execute: () => Promise<void> }).execute()
-    expect(ctx.trashItems).toHaveBeenCalledWith([note])
+    expect(result).toMatchObject({
+      status: 'ready',
+      action: 'trash',
+      items: [note],
+      parentId: null,
+    })
   })
 
-  it('root move operation calls the batch move path with null parentId', async () => {
+  it('root move operation returns a batch move command with null parentId', () => {
     const note = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
     const ctx = createCtx()
-    const result = resolveDropOutcome(note, rootTarget(), ctx)
+    const result = resolveDropCommand([note], rootTarget(), ctx)
 
-    await (result as { execute: () => Promise<void> }).execute()
-    expect(ctx.moveItems).toHaveBeenCalledWith([note], null)
+    expect(result).toMatchObject({
+      status: 'ready',
+      action: 'move',
+      items: [note],
+      parentId: null,
+    })
   })
 
-  it('folder move operation calls the batch move path and opens folder', async () => {
+  it('folder move operation returns a batch move command for the folder parentId', () => {
     const note = createNote()
     const target = folderTarget()
     const ctx = createCtx()
-    const result = resolveDropOutcome(note, target, ctx)
+    const result = resolveDropCommand([note], target, ctx)
 
-    await (result as { execute: () => Promise<void> }).execute()
-    expect(ctx.moveItems).toHaveBeenCalledWith([note], target._id)
-    expect(ctx.setFolderOpen).toHaveBeenCalledWith(target._id)
+    expect(result).toMatchObject({
+      status: 'ready',
+      action: 'move',
+      items: [note],
+      parentId: target._id,
+    })
   })
 
-  it('restore to root calls the batch restore path', async () => {
+  it('restore to root returns a batch restore command', () => {
     const note = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
     const ctx = createCtx()
-    const result = resolveDropOutcome(note, rootTarget(), ctx)
+    const result = resolveDropCommand([note], rootTarget(), ctx)
 
-    await (result as { execute: () => Promise<void> }).execute()
-    expect(ctx.restoreItems).toHaveBeenCalledWith([note], null)
+    expect(result).toMatchObject({
+      status: 'ready',
+      action: 'restore',
+      items: [note],
+      parentId: null,
+    })
   })
 
-  it('restore to folder calls the batch restore path and opens folder', async () => {
+  it('restore to folder returns a batch restore command for the folder parentId', () => {
     const note = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
     const target = folderTarget()
     const ctx = createCtx()
-    const result = resolveDropOutcome(note, target, ctx)
+    const result = resolveDropCommand([note], target, ctx)
 
-    await (result as { execute: () => Promise<void> }).execute()
-    expect(ctx.restoreItems).toHaveBeenCalledWith([note], target._id)
-    expect(ctx.setFolderOpen).toHaveBeenCalledWith(target._id)
+    expect(result).toMatchObject({
+      status: 'ready',
+      action: 'restore',
+      items: [note],
+      parentId: target._id,
+    })
   })
 
   it('empty editor open calls navigateToItem', async () => {
     const note = createNote()
     const ctx = createCtx()
-    const result = resolveDropOutcome(note, emptyEditorTarget(), ctx)
+    const result = resolveDropCommand([note], emptyEditorTarget(), ctx)
 
     await (result as { execute: () => Promise<void> }).execute()
     expect(ctx.navigateToItem).toHaveBeenCalledWith(note.slug, true)

@@ -43,6 +43,7 @@ export function createPlacementEnvironment({
     },
     commands: {
       createNode,
+      createNodes: () => undefined,
       patchNodeData: () => undefined,
       patchEdges: () => undefined,
       resizeNode: () => undefined,

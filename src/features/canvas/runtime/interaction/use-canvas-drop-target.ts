@@ -10,27 +10,36 @@ import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarge
 import { useFileDropHandler } from '~/features/dnd/hooks/useFileDropHandler'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
-import { CANVAS_DROP_ZONE_TYPE } from '~/features/dnd/utils/dnd-registry'
+import {
+  CANVAS_DROP_ZONE_TYPE,
+  rejectionReasonMessage,
+  resolveDropCommand,
+} from '~/features/dnd/utils/dnd-registry'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { resolveNormalizedDraggedSidebarItems } from '~/features/dnd/utils/sidebar-drag-items'
+import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
+import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
 
 const STACK_OFFSET = 20
 
 interface UseCanvasDropTargetOptions {
   canvasId: Id<'sidebarItems'>
   enabled: boolean
-  createNode: (node: CanvasDocumentNode) => void
+  createNodes: (nodes: ReadonlyArray<CanvasDocumentNode>) => void
+  provider: ConvexYjsProvider | null
   screenToCanvasPosition: (position: { x: number; y: number }) => { x: number; y: number }
 }
 
 export function useCanvasDropTarget({
   canvasId,
   enabled,
-  createNode,
+  createNodes,
+  provider,
   screenToCanvasPosition,
 }: UseCanvasDropTargetOptions) {
   const dropOverlayRef = useRef<HTMLDivElement>(null)
   const { itemsMap } = useActiveSidebarItems()
+  const { campaignId } = useCampaign()
 
   const dropData: CanvasDropZoneData = {
     type: CANVAS_DROP_ZONE_TYPE,
@@ -52,8 +61,10 @@ export function useCanvasDropTarget({
   canvasIdRef.current = canvasId
   const enabledRef = useRef(enabled)
   enabledRef.current = enabled
-  const createNodeRef = useRef(createNode)
-  createNodeRef.current = createNode
+  const createNodesRef = useRef(createNodes)
+  createNodesRef.current = createNodes
+  const providerRef = useRef(provider)
+  providerRef.current = provider
   const screenToCanvasPositionRef = useRef(screenToCanvasPosition)
   screenToCanvasPositionRef.current = screenToCanvasPosition
   const itemsMapRef = useRef(itemsMap)
@@ -80,26 +91,49 @@ export function useCanvasDropTarget({
           const sidebarItems = resolveNormalizedDraggedSidebarItems({
             sourceData: source.data,
             activeItemsMap: itemsMapRef.current,
-            excludeItemIds: [canvasIdRef.current],
           })
-          sidebarItems.forEach((sidebarItem, index) => {
-            try {
-              createNodeRef.current(
-                createEmbedCanvasNode(sidebarItem._id, {
-                  x: position.x + index * STACK_OFFSET,
-                  y: position.y + index * STACK_OFFSET,
-                }),
-              )
-            } catch (error) {
-              handleError(error, 'Failed to add item to canvas')
-            }
-          })
+          const command = resolveDropCommand(
+            sidebarItems,
+            { type: CANVAS_DROP_ZONE_TYPE, canvasId: canvasIdRef.current },
+            {
+              moveItems: () => Promise.resolve(),
+              restoreItems: () => Promise.resolve(),
+              trashItems: () => Promise.resolve(),
+              navigateToItem: () => Promise.resolve(),
+              campaignId: campaignId ?? null,
+              campaignName: undefined,
+              isDm: true,
+              setFolderOpen: () => undefined,
+            },
+          )
+          if (command.status === 'blocked') {
+            handleError(new Error(rejectionReasonMessage(command.reason)), 'Cannot drop items here')
+            return
+          }
+          if (command.status === 'noop' || command.action !== 'embed') return
+
+          const createEmbeds = async () => {
+            const nodes = command.items.map((sidebarItem, index) =>
+              createEmbedCanvasNode(sidebarItem._id, {
+                x: position.x + index * STACK_OFFSET,
+                y: position.y + index * STACK_OFFSET,
+              }),
+            )
+            createNodesRef.current(nodes)
+            await providerRef.current?.flushUpdates()
+          }
+
+          if (command.status === 'partial' || command.status === 'failed') {
+            useDndStore.getState().setBatchDecision({ command, onConfirm: createEmbeds })
+            return
+          }
+          void createEmbeds().catch((error) => handleError(error, 'Failed to add items to canvas'))
         } catch (error) {
           handleError(error, 'Failed to resolve dragged sidebar items')
         }
       },
     })
-  }, [])
+  }, [campaignId])
 
   const { uploadSingleFile } = useFileDropHandler()
   const uploadRef = useRef(uploadSingleFile)
@@ -121,12 +155,12 @@ export function useCanvasDropTarget({
             return
           }
           if (!result.value) return
-          createNodeRef.current(
+          createNodesRef.current([
             createEmbedCanvasNode(result.value.id, {
               x: basePosition.x + i * STACK_OFFSET,
               y: basePosition.y + i * STACK_OFFSET,
             }),
-          )
+          ])
         })
       } catch (error) {
         handleError(error, 'Failed to upload files to canvas')

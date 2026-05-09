@@ -38,10 +38,11 @@ describe('hard delete YJS cleanup', () => {
 
     expect(await queryYjsUpdates(noteId)).toHaveLength(1)
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: noteId,
-      location: 'trash',
+      sourceItemIds: [noteId],
+      targetParentId: null,
+      action: 'trash',
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.emptyTrashBin, {
@@ -70,10 +71,11 @@ describe('hard delete YJS cleanup', () => {
 
     expect(await queryYjsAwareness(noteId)).toHaveLength(1)
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: noteId,
-      location: 'trash',
+      sourceItemIds: [noteId],
+      targetParentId: null,
+      action: 'trash',
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.emptyTrashBin, {
@@ -106,10 +108,11 @@ describe('hard delete YJS cleanup', () => {
 
     expect(await queryYjsAwareness(noteId)).toHaveLength(1)
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: folderId,
-      location: 'trash',
+      sourceItemIds: [folderId],
+      targetParentId: null,
+      action: 'trash',
     })
 
     await dmAuth.mutation(api.sidebarItems.mutations.emptyTrashBin, {

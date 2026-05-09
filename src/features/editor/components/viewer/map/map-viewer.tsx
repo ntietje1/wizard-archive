@@ -7,13 +7,16 @@ import { Ban, Image } from 'lucide-react'
 import { toast } from 'sonner'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
-import { validatePinTarget } from 'convex/gameMaps/validation'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { EditorContextMenuRef } from '~/features/context-menu/components/editor-context-menu'
-import { MAP_DROP_ZONE_TYPE, rejectionReasonMessage } from '~/features/dnd/utils/dnd-registry'
+import {
+  MAP_DROP_ZONE_TYPE,
+  rejectionReasonMessage,
+  resolveDropCommand,
+} from '~/features/dnd/utils/dnd-registry'
 import { handleError } from '~/shared/utils/logger'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
@@ -40,7 +43,6 @@ interface PinPosition {
 
 const PIN_DROP_OFFSET_STEP_PERCENT = 2
 const PIN_DROP_OFFSET_MAX_PER_ROW = 8
-const PIN_DROP_BATCH_SIZE = 5
 
 interface MapPinContextMenuWrapperProps {
   pinId: Id<'mapPins'>
@@ -216,6 +218,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
   const justFinishedDraggingRef = useRef<Id<'mapPins'> | null>(null)
 
   const createItemPinMutation = useCampaignMutation(api.gameMaps.mutations.createItemPin)
+  const createItemPinsMutation = useCampaignMutation(api.gameMaps.mutations.createItemPins)
 
   const updateItemPinMutation = useCampaignMutation(api.gameMaps.mutations.updateItemPin)
 
@@ -390,8 +393,39 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
       return false
     }
   }
-  const createPinAtPositionRef = useRef(createPinAtPosition)
-  createPinAtPositionRef.current = createPinAtPosition
+  const setBatchDecision = useDndStore((s) => s.setBatchDecision)
+
+  const createPinsAtPosition = async (
+    itemIds: Array<Id<'sidebarItems'>>,
+    position: PinPosition,
+  ) => {
+    if (itemIds.length === 0) return
+    const pinInputs = itemIds.map((itemId, index) => {
+      const col = index % PIN_DROP_OFFSET_MAX_PER_ROW
+      const row = Math.floor(index / PIN_DROP_OFFSET_MAX_PER_ROW)
+      const rowSize = Math.min(
+        PIN_DROP_OFFSET_MAX_PER_ROW,
+        itemIds.length - row * PIN_DROP_OFFSET_MAX_PER_ROW,
+      )
+      const dx = (col - (rowSize - 1) / 2) * PIN_DROP_OFFSET_STEP_PERCENT
+      const dy = row * PIN_DROP_OFFSET_STEP_PERCENT
+      return {
+        itemId,
+        x: Math.max(0, Math.min(100, position.x + dx)),
+        y: Math.max(0, Math.min(100, position.y + dy)),
+      }
+    })
+
+    await createItemPinsMutation.mutateAsync({
+      mapId: mapRef.current._id,
+      pins: pinInputs,
+    })
+    toast.success(
+      itemIds.length === 1 ? 'Pin placed on map' : `${itemIds.length} pins placed on map`,
+    )
+  }
+  const createPinsAtPositionRef = useRef(createPinsAtPosition)
+  createPinsAtPositionRef.current = createPinsAtPosition
 
   useEffect(() => {
     // The monitor is registered once; mutable refs above keep drop handling on current map state.
@@ -409,7 +443,6 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
           items = resolveNormalizedDraggedSidebarItems({
             sourceData: source.data,
             activeItemsMap: itemsMapRef.current,
-            excludeItemIds: [mapRef.current._id, ...acceptedPinItemIds],
           })
         } catch (error) {
           handleError(error, 'Failed to resolve dragged sidebar items')
@@ -417,36 +450,9 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
         }
         if (items.length === 0) return
 
-        const validItemIds: Array<Id<'sidebarItems'>> = []
-        const validationErrors: Array<string> = []
-        for (const item of items) {
-          const itemId = item._id
-          const pinError = validatePinTarget(mapRef.current._id, itemId, acceptedPinItemIds)
-          if (pinError) {
-            validationErrors.push(pinError)
-            continue
-          }
-          acceptedPinItemIds.push(itemId)
-          validItemIds.push(itemId)
-        }
-        if (validationErrors.length > 0) {
-          const uniqueErrors = [...new Set(validationErrors)]
-          const [firstError, ...otherErrors] = uniqueErrors
-          const message =
-            otherErrors.length === 0
-              ? firstError
-              : `${firstError}; ${otherErrors.slice(0, 2).join('; ')}${
-                  otherErrors.length > 2 ? `; and ${otherErrors.length - 2} more` : ''
-                }`
-          toast.error(message)
-        }
-        if (validItemIds.length === 0) {
-          return
-        }
-
         const { clientX, clientY } = location.current.input
         if (!imageRef.current) {
-          toast.error('No image loaded — cannot place pin')
+          toast.error('No image loaded - cannot place pin')
           return
         }
 
@@ -459,59 +465,46 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
           y: Math.max(0, Math.min(100, y)),
         }
 
-        void (async () => {
-          const batches = Array.from(
-            { length: Math.ceil(validItemIds.length / PIN_DROP_BATCH_SIZE) },
-            (_, batchIndex) => ({
-              start: batchIndex * PIN_DROP_BATCH_SIZE,
-              itemIds: validItemIds.slice(
-                batchIndex * PIN_DROP_BATCH_SIZE,
-                (batchIndex + 1) * PIN_DROP_BATCH_SIZE,
-              ),
-            }),
+        const command = resolveDropCommand(
+          items,
+          {
+            type: MAP_DROP_ZONE_TYPE,
+            mapId: mapRef.current._id,
+            mapName: mapRef.current.name,
+            pinnedItemIds: acceptedPinItemIds,
+          },
+          {
+            moveItems: () => Promise.resolve(),
+            restoreItems: () => Promise.resolve(),
+            trashItems: () => Promise.resolve(),
+            navigateToItem: () => Promise.resolve(),
+            campaignId: mapRef.current.campaignId,
+            campaignName: undefined,
+            isDm: true,
+            setFolderOpen: () => undefined,
+          },
+        )
+
+        if (command.status === 'blocked') {
+          handleError(new Error(rejectionReasonMessage(command.reason)), 'Cannot drop items here')
+          return
+        }
+        if (command.status === 'noop' || command.action !== 'pin') return
+
+        const executePins = async () => {
+          await createPinsAtPositionRef.current(
+            command.items.map((item) => item._id),
+            position,
           )
-          const results: Array<boolean> = []
-          for (const batch of batches) {
-            const batchResults = await Promise.all(
-              batch.itemIds.map((itemId, itemIndexInBatch) => {
-                const index = batch.start + itemIndexInBatch
-                const col = index % PIN_DROP_OFFSET_MAX_PER_ROW
-                const row = Math.floor(index / PIN_DROP_OFFSET_MAX_PER_ROW)
-                const rowSize = Math.min(
-                  PIN_DROP_OFFSET_MAX_PER_ROW,
-                  validItemIds.length - row * PIN_DROP_OFFSET_MAX_PER_ROW,
-                )
-                const dx = (col - (rowSize - 1) / 2) * PIN_DROP_OFFSET_STEP_PERCENT
-                const dy = row * PIN_DROP_OFFSET_STEP_PERCENT
-                return createPinAtPositionRef.current(
-                  itemId,
-                  {
-                    x: Math.max(0, Math.min(100, position.x + dx)),
-                    y: Math.max(0, Math.min(100, position.y + dy)),
-                  },
-                  { suppressToast: true },
-                )
-              }),
-            )
-            results.push(...batchResults)
-          }
-          const placedCount = results.filter(Boolean).length
-          const failedCount = results.length - placedCount
-          if (failedCount > 0) {
-            handleError(
-              new Error(`${failedCount} of ${results.length} map pins failed to place`),
-              'Failed to place some pins',
-            )
-          }
-          if (placedCount > 0) {
-            toast.success(
-              placedCount === 1 ? 'Pin placed on map' : `${placedCount} pins placed on map`,
-            )
-          }
-        })()
+        }
+        if (command.status === 'partial' || command.status === 'failed') {
+          setBatchDecision({ command, onConfirm: executePins })
+          return
+        }
+        void executePins().catch((error) => handleError(error, 'Failed to place pins'))
       },
     })
-  }, [])
+  }, [setBatchDecision])
 
   const handlePlacePin = async (position: PinPosition) => {
     if (!pendingPinItem || !map._id) return

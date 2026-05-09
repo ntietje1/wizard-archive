@@ -85,7 +85,7 @@ async function normalizePermanentDeleteRoots(
   const childrenMap = await collectSidebarChildrenMap<AnySidebarItemRow>({
     rootFolderIds: folders.map((folder) => folder._id),
     maxDepth: MAX_PERMANENT_DELETE_DEPTH,
-    getChildren: async (parentId) => await getTrashChildren(ctx, parentId),
+    getChildren: (parentId) => getTrashChildren(ctx, parentId),
     onDepthExceeded: () => {
       throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Max permanent delete planning depth exceeded')
     },
@@ -127,11 +127,4 @@ export async function permanentlyDeleteSidebarItems(
   }
 
   return rootItems.map((item) => item._id)
-}
-
-export async function permanentlyDeleteSidebarItem(
-  ctx: CampaignMutationCtx,
-  { itemId }: { itemId: Id<'sidebarItems'> },
-): Promise<void> {
-  await permanentlyDeleteSidebarItems(ctx, { sourceItemIds: [itemId] })
 }

@@ -4,7 +4,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { DndMonitorCtx } from '~/features/dnd/types'
 import { useElementDragMonitor } from '~/features/dnd/hooks/useElementDragMonitor'
-import { SIDEBAR_ROOT_DROP_TYPE } from '~/features/dnd/utils/dnd-registry'
+import { MAP_DROP_ZONE_TYPE, SIDEBAR_ROOT_DROP_TYPE } from '~/features/dnd/utils/dnd-registry'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
 
@@ -144,5 +144,132 @@ describe('useElementDragMonitor', () => {
     })
 
     expect(result.current.dragState?.draggedItemCount).toBe(3)
+  })
+
+  it('shows the batch operation label for map pin drops', () => {
+    const first = createNote()
+    const second = createNote()
+    const ctxRef = {
+      current: createMonitorCtx([first, second]),
+    } as React.RefObject<DndMonitorCtx>
+
+    const { result } = renderHook(() => useElementDragMonitor(ctxRef))
+    expect(monitorForElements).toHaveBeenCalledTimes(1)
+    const monitor = monitorForElements.mock.calls[0]?.[0] as {
+      onDragStart: (args: {
+        source: { data: Record<string, unknown> }
+        location: { current: { input: { clientX: number; clientY: number } } }
+      }) => void
+      onDrag: (args: {
+        source: { data: Record<string, unknown> }
+        location: {
+          current: {
+            input: { clientX: number; clientY: number }
+            dropTargets: Array<{ data: Record<string, unknown> }>
+          }
+        }
+      }) => void
+    }
+    const source = {
+      data: {
+        sidebarItemId: first._id,
+        sidebarItemIds: [first._id, second._id] satisfies Array<Id<'sidebarItems'>>,
+      },
+    }
+
+    act(() => {
+      monitor.onDragStart({
+        source,
+        location: { current: { input: { clientX: 10, clientY: 20 } } },
+      })
+      monitor.onDrag({
+        source,
+        location: {
+          current: {
+            input: { clientX: 20, clientY: 30 },
+            dropTargets: [
+              {
+                data: {
+                  type: MAP_DROP_ZONE_TYPE,
+                  mapId: testId<'sidebarItems'>('map_1'),
+                  mapName: 'World Map',
+                  pinnedItemIds: [],
+                },
+              },
+            ],
+          },
+        },
+      })
+    })
+
+    expect(result.current.dragState?.outcome).toMatchObject({
+      type: 'operation',
+      action: 'pin',
+      label: 'Pin 2 items to "World Map"',
+    })
+  })
+
+  it('shows partial batch warnings for map pin drops', () => {
+    const first = createNote()
+    const second = createNote()
+    const ctxRef = {
+      current: createMonitorCtx([first, second]),
+    } as React.RefObject<DndMonitorCtx>
+
+    const { result } = renderHook(() => useElementDragMonitor(ctxRef))
+    expect(monitorForElements).toHaveBeenCalledTimes(1)
+    const monitor = monitorForElements.mock.calls[0]?.[0] as {
+      onDragStart: (args: {
+        source: { data: Record<string, unknown> }
+        location: { current: { input: { clientX: number; clientY: number } } }
+      }) => void
+      onDrag: (args: {
+        source: { data: Record<string, unknown> }
+        location: {
+          current: {
+            input: { clientX: number; clientY: number }
+            dropTargets: Array<{ data: Record<string, unknown> }>
+          }
+        }
+      }) => void
+    }
+    const source = {
+      data: {
+        sidebarItemId: first._id,
+        sidebarItemIds: [first._id, second._id] satisfies Array<Id<'sidebarItems'>>,
+      },
+    }
+
+    act(() => {
+      monitor.onDragStart({
+        source,
+        location: { current: { input: { clientX: 10, clientY: 20 } } },
+      })
+      monitor.onDrag({
+        source,
+        location: {
+          current: {
+            input: { clientX: 20, clientY: 30 },
+            dropTargets: [
+              {
+                data: {
+                  type: MAP_DROP_ZONE_TYPE,
+                  mapId: testId<'sidebarItems'>('map_1'),
+                  mapName: 'World Map',
+                  pinnedItemIds: [second._id],
+                },
+              },
+            ],
+          },
+        },
+      })
+    })
+
+    expect(result.current.dragState?.outcome).toMatchObject({
+      type: 'operation',
+      action: 'pin',
+      label: 'Pin to "World Map"',
+    })
+    expect(result.current.dragState?.rejectedItemCount).toBe(1)
   })
 })

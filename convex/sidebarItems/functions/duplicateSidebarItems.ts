@@ -9,7 +9,7 @@ import { collectSidebarChildrenMap } from '../operations/childrenMap'
 import { prepareSidebarItemCreate } from '../validation/orchestration'
 import { getSidebarItem } from './getSidebarItem'
 import { getSidebarItemsByParent } from './getSidebarItemsByParent'
-import { moveSidebarItems } from './moveSidebarItem'
+import { moveSidebarItems } from './moveSidebarItems'
 import { checkItemAccess, requireItemAccess } from '../validation/access'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { evaluateDuplicate } from '../operations/capabilities'
@@ -24,7 +24,7 @@ import type { SidebarItemIconName } from '../validation/icon'
 import type { SidebarItemName } from '../validation/name'
 
 const MAX_SIDEBAR_DUPLICATE_DEPTH = 50
-const DUPLICATE_INSERT_CHUNK_SIZE = 100
+const DUPLICATE_INSERT_CONCURRENCY = 100
 
 type DuplicateCopyOrReplaceOperation = Extract<DuplicateOperation, { action: 'copy' | 'replace' }>
 type ExecutableDuplicateOperation = Exclude<DuplicateOperation, { action: 'skip' }>
@@ -45,10 +45,12 @@ function cloneStorageId(storageId: Id<'_storage'> | null): Id<'_storage'> | null
   return storageId
 }
 
-//TODO: is this needed?
-async function insertInChunks<T>(items: Array<T>, insert: (item: T) => Promise<unknown>) {
-  for (let index = 0; index < items.length; index += DUPLICATE_INSERT_CHUNK_SIZE) {
-    await Promise.all(items.slice(index, index + DUPLICATE_INSERT_CHUNK_SIZE).map(insert))
+async function insertWithBoundedConcurrency<T>(
+  items: Array<T>,
+  insert: (item: T) => Promise<unknown>,
+) {
+  for (let index = 0; index < items.length; index += DUPLICATE_INSERT_CONCURRENCY) {
+    await Promise.all(items.slice(index, index + DUPLICATE_INSERT_CONCURRENCY).map(insert))
   }
 }
 
@@ -77,7 +79,7 @@ async function copyYjsUpdates(
     .order('asc')
     .collect()
 
-  await insertInChunks(updates, (update) =>
+  await insertWithBoundedConcurrency(updates, (update) =>
     ctx.db.insert('yjsUpdates', {
       documentId: targetItemId,
       update: update.update,
@@ -99,7 +101,7 @@ async function copyNoteBlocks(
     )
     .collect()
 
-  await insertInChunks(blocks, (block) =>
+  await insertWithBoundedConcurrency(blocks, (block) =>
     ctx.db.insert('blocks', {
       noteId: targetItemId,
       blockNoteId: block.blockNoteId,
@@ -440,6 +442,8 @@ async function loadDuplicableSources(
   if (targetParentId !== null && !rawTargetParent) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Target parent not found')
   }
+  // checkItemAccess(rawTargetParent, NONE) verifies targetParent visibility/existence only;
+  // source items require FULL_ACCESS because they are the items being copied.
   const targetParent =
     rawTargetParent === null
       ? null
