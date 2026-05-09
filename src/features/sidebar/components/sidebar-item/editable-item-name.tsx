@@ -12,6 +12,7 @@ interface EditableNameProps {
   isRenaming: boolean
   onFinishRename: (name: string) => Promise<void>
   onCancelRename: () => void
+  displayClassName?: string
   campaignId?: Id<'campaigns'>
   parentId: Id<'sidebarItems'> | null
   excludeId?: Id<'sidebarItems'>
@@ -22,6 +23,7 @@ export function EditableName({
   isRenaming,
   onFinishRename,
   onCancelRename,
+  displayClassName,
   campaignId,
   parentId,
   excludeId,
@@ -130,5 +132,5 @@ export function EditableName({
     )
   }
 
-  return <span className="truncate ml-1">{initialName}</span>
+  return <span className={cn('truncate ml-1', displayClassName)}>{initialName}</span>
 }

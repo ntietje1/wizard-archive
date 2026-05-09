@@ -10,7 +10,7 @@ import { CardTitle } from '~/features/shadcn/components/card'
 import { Button } from '~/features/shadcn/components/button'
 import { useEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
-import { useIsFocusedItem, useIsSelectedItem } from '~/features/sidebar/hooks/useSelectedItem'
+import { useSidebarItemVisualState } from '~/features/sidebar/hooks/useSelectedItem'
 import { useContextMenu } from '~/features/context-menu/hooks/useContextMenu'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
@@ -20,6 +20,12 @@ import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
 import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
+import {
+  sidebarItemFolderFillClass,
+  sidebarItemHoverFillClass,
+  sidebarItemHoverOverlayClass,
+  sidebarItemNameClass,
+} from '~/features/sidebar/utils/sidebar-item-visual-state'
 
 const H = 140
 const R = 4
@@ -55,9 +61,11 @@ type DropState = 'none' | 'valid' | 'trash'
 function FolderSvg({
   dropState = 'none',
   isSelected = false,
+  isViewing = false,
 }: {
   dropState?: DropState
   isSelected?: boolean
+  isViewing?: boolean
 }) {
   const isDrop = dropState !== 'none'
   const strokeClass =
@@ -65,12 +73,14 @@ function FolderSvg({
       ? 'stroke-destructive'
       : dropState === 'valid'
         ? 'stroke-ring'
-        : isSelected
-          ? 'stroke-ring'
-          : 'stroke-border'
-  const strokeWidth = isDrop ? 'stroke-[3]' : isSelected ? 'stroke-[2.5]' : 'stroke-2'
+        : 'stroke-border'
+  const strokeWidth = isDrop ? 'stroke-[3]' : 'stroke-2'
   const tintClass =
     dropState === 'trash' ? 'fill-destructive/5' : dropState === 'valid' ? 'fill-ring/5' : undefined
+  const visualState = { isSelected, isViewing, isMultiSelected: false }
+  const fillClass = sidebarItemFolderFillClass(visualState)
+  const hoverFillClass = sidebarItemHoverFillClass(visualState)
+  const hoverOverlayClass = sidebarItemHoverOverlayClass(visualState)
 
   return (
     <svg className={cn('absolute inset-0 w-full h-full overflow-visible')}>
@@ -79,10 +89,10 @@ function FolderSvg({
         width="100%"
         height={H - TAB_H}
         rx={R}
-        className={cn('fill-card [paint-order:stroke]', strokeWidth, strokeClass)}
+        className={cn(fillClass, '[paint-order:stroke]', strokeWidth, strokeClass)}
       />
       <path d={TAB_STROKE} className={cn('fill-none', strokeWidth, strokeClass)} />
-      <path d={TAB_FILL} className="fill-card" />
+      <path d={TAB_FILL} className={fillClass} />
       {tintClass && (
         <>
           <rect
@@ -101,9 +111,9 @@ function FolderSvg({
         width="100%"
         height={H - TAB_H - 1}
         rx={R}
-        className="fill-muted/70 stroke-none opacity-0 group-hover:opacity-100"
+        className={cn(hoverFillClass, 'stroke-none', hoverOverlayClass)}
       />
-      <path d={TAB_FILL} className="fill-muted/70 opacity-0 group-hover:opacity-100" />
+      <path d={TAB_FILL} className={cn(hoverFillClass, hoverOverlayClass)} />
     </svg>
   )
 }
@@ -131,8 +141,7 @@ function FolderCardInner({
   const ref = useRef<HTMLDivElement>(null)
   const linkProps = useEditorLinkProps(folder)
   const { setLastSelectedItem } = useLastEditorItem()
-  const isSelected = useIsSelectedItem(folder)
-  const isFocused = useIsFocusedItem(folder)
+  const visualState = useSidebarItemVisualState(folder)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
   const { handleItemClick, handleItemContextMenu } = useItemSelectionInteractions(folder, {
     surface: itemSurface,
@@ -194,17 +203,21 @@ function FolderCardInner({
           handleItemClick(e, () => setLastSelectedItem(folder.slug))
         }}
       >
-        <div
-          className={cn(
-            'relative block w-full h-full cursor-pointer group rounded-md',
-            isFocused && !isSelected && 'ring-ring ring-1',
-          )}
-        >
-          <FolderSvg dropState={dropState} isSelected={isSelected} />
+        <div className={cn('relative block w-full h-full cursor-pointer group rounded-md')}>
+          <FolderSvg
+            dropState={dropState}
+            isSelected={visualState.isSelected}
+            isViewing={visualState.isViewing}
+          />
 
           <div className="relative z-[2] pt-3 px-2">
             <div className="flex items-center gap-2 min-w-0">
-              <CardTitle className="p-1 text-sm font-medium text-foreground truncate select-none flex-1 min-w-0">
+              <CardTitle
+                className={cn(
+                  'p-1 text-sm font-medium truncate select-none flex-1 min-w-0',
+                  sidebarItemNameClass(visualState),
+                )}
+              >
                 {folder.name}
               </CardTitle>
             </div>
@@ -213,7 +226,7 @@ function FolderCardInner({
           <Button
             variant="ghost"
             size="sm"
-            className="absolute top-[18px] right-2 h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity z-10"
+            className="absolute top-[18px] right-2 size-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity z-10"
             aria-label="Open folder menu"
             onClick={(e) => {
               e.preventDefault()
@@ -222,7 +235,7 @@ function FolderCardInner({
               handleMoreOptions(e)
             }}
           >
-            <MoreVertical className="h-4 w-4" />
+            <MoreVertical className="size-4" />
           </Button>
         </div>
       </Link>

@@ -7,7 +7,10 @@ import { useFolderState } from '~/features/sidebar/hooks/useFolderState'
 import { useContextMenu } from '~/features/context-menu/hooks/useContextMenu'
 import { useEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
-import { useIsFocusedItem, useIsSelectedItem } from '~/features/sidebar/hooks/useSelectedItem'
+import {
+  useIsFocusedItem,
+  useSidebarItemVisualState,
+} from '~/features/sidebar/hooks/useSelectedItem'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
@@ -32,7 +35,7 @@ export function FlatSidebarItem({
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
   const linkProps = useEditorLinkProps(item)
   const { setLastSelectedItem } = useLastEditorItem()
-  const isSelected = useIsSelectedItem(item)
+  const visualState = useSidebarItemVisualState(item)
   const isFocused = useIsFocusedItem(item)
   const { toggleExpanded } = useFolderState(item._id)
   const { handleItemClick, handleItemContextMenu } = useItemSelectionInteractions(item, {
@@ -62,10 +65,13 @@ export function FlatSidebarItem({
         <SidebarItemButtonBase
           icon={icon}
           name={item.name}
-          isSelected={isSelected}
-          isFocused={isFocused}
-          isExpanded={isExpanded}
-          isRenaming={renamingId === item._id}
+          presentation={{
+            visualState,
+            focused: isFocused,
+            expanded: isExpanded,
+            renaming: renamingId === item._id,
+            showChevron: false,
+          }}
           linkProps={linkProps}
           onClick={selectBookmarkedItem}
           onContextMenu={handleItemContextMenu}
@@ -76,7 +82,6 @@ export function FlatSidebarItem({
           }}
           onFinishRename={handleFinishRename}
           onCancelRename={handleCancelRename}
-          showChevron={false}
           campaignId={item.campaignId}
           parentId={item.parentId}
           excludeId={item._id}

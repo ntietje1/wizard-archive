@@ -17,7 +17,7 @@ import { useSidebarItemOperations } from '~/features/sidebar/operations/useSideb
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
 import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
 import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
-import { useIsFocusedItem, useIsSelectedItem } from '~/features/sidebar/hooks/useSelectedItem'
+import { useSidebarItemVisualState } from '~/features/sidebar/hooks/useSelectedItem'
 import { useItemSurfaceRegistration } from '~/features/sidebar/hooks/useItemSurfaceRegistration'
 import { cn } from '~/features/shadcn/lib/utils'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
@@ -26,6 +26,13 @@ import {
   permanentDeleteDescription,
 } from '~/features/sidebar/utils/trash-utils'
 import { EDITOR_ROUTE, useEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
+import {
+  sidebarItemActionButtonClass,
+  sidebarItemActionGroupClass,
+  sidebarItemBackgroundClass,
+  sidebarItemIconClass,
+  sidebarItemNameClass,
+} from '~/features/sidebar/utils/sidebar-item-visual-state'
 
 interface TrashPopoverContentProps {
   onClose: () => void
@@ -200,8 +207,7 @@ function TrashPopoverItem({
   const ref = useRef<HTMLDivElement>(null)
   const linkProps = useEditorLinkProps(item)
   const dragData = useSidebarDragData(item)
-  const isSelected = useIsSelectedItem(item)
-  const isFocused = useIsFocusedItem(item)
+  const visualState = useSidebarItemVisualState(item)
   const { handleItemClick, handleItemContextMenu } = useItemSelectionInteractions(item, {
     surface: 'trash',
     parentId: null,
@@ -220,9 +226,8 @@ function TrashPopoverItem({
       data-testid={`trash-item-${item.name}`}
       data-item-selection-target="true"
       className={cn(
-        'flex items-center w-full py-1 px-1 rounded-sm hover:bg-muted/70 group min-w-0',
-        isSelected && 'bg-muted ring-1 ring-ring',
-        isFocused && !isSelected && 'ring-1 ring-ring',
+        'flex items-center w-full py-1 px-1 rounded-sm group min-w-0',
+        sidebarItemBackgroundClass(visualState),
       )}
       onContextMenu={handleItemContextMenu}
     >
@@ -235,21 +240,31 @@ function TrashPopoverItem({
           handleItemClick(event, () => onClick(item))
         }}
       >
-        <div className="size-6 shrink-0 flex items-center justify-center text-muted-foreground">
+        <div
+          className={cn(
+            'size-6 shrink-0 flex items-center justify-center',
+            sidebarItemIconClass(visualState),
+          )}
+        >
           <Icon className="size-4 shrink-0" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-sm truncate">{item.name}</div>
+          <div className={cn('text-sm truncate', sidebarItemNameClass(visualState))}>
+            {item.name}
+          </div>
           <div className="text-xs text-muted-foreground truncate leading-none">
             Deleted {deletionTimeLabel}
           </div>
         </div>
       </Link>
-      <div className="flex items-center shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+      <div className={sidebarItemActionGroupClass()}>
         <Button
           variant="ghost"
           size="sm"
-          className="size-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm"
+          className={cn(
+            'size-6 p-0 hover:bg-muted-foreground/10 rounded-sm',
+            sidebarItemActionButtonClass(visualState),
+          )}
           onClick={(event) => {
             event.preventDefault()
             event.stopPropagation()
@@ -263,7 +278,10 @@ function TrashPopoverItem({
         <Button
           variant="ghost"
           size="sm"
-          className="size-6 p-0 text-muted-foreground hover:text-destructive hover:bg-muted-foreground/10 rounded-sm"
+          className={cn(
+            'size-6 p-0 hover:text-destructive hover:bg-muted-foreground/10 rounded-sm',
+            sidebarItemActionButtonClass(visualState),
+          )}
           onClick={(event) => {
             event.preventDefault()
             event.stopPropagation()

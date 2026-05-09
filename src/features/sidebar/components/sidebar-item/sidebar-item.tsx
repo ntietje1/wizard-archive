@@ -8,7 +8,10 @@ import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { useFolderState } from '~/features/sidebar/hooks/useFolderState'
 import { useContextMenu } from '~/features/context-menu/hooks/useContextMenu'
-import { useIsFocusedItem, useIsSelectedItem } from '~/features/sidebar/hooks/useSelectedItem'
+import {
+  useIsFocusedItem,
+  useSidebarItemVisualState,
+} from '~/features/sidebar/hooks/useSelectedItem'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useEditSidebarItem } from '~/features/sidebar/hooks/useEditSidebarItem'
 import { useEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
@@ -19,19 +22,21 @@ import { Collapsible, CollapsibleContent } from '~/features/shadcn/components/co
 import { sortItemsByOptions } from '~/features/sidebar/hooks/useSidebarItems'
 import { useSortOptions } from '~/features/sidebar/hooks/useSortOptions'
 import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
+import { sidebarItemActionButtonClass } from '~/features/sidebar/utils/sidebar-item-visual-state'
 
 interface SidebarItemProps {
   item: AnySidebarItem
   parentItemsMap: Map<Id<'sidebarItems'> | null, Array<AnySidebarItem>>
   visibleItemIds: Array<Id<'sidebarItems'>>
+  depth?: number
 }
 
-export function SidebarItem({ item, parentItemsMap, visibleItemIds }: SidebarItemProps) {
+export function SidebarItem({ item, parentItemsMap, visibleItemIds, depth = 0 }: SidebarItemProps) {
   const { editItem } = useEditSidebarItem()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
   const linkProps = useEditorLinkProps(item)
   const { setLastSelectedItem } = useLastEditorItem()
-  const isSelected = useIsSelectedItem(item)
+  const visualState = useSidebarItemVisualState(item)
   const isFocused = useIsFocusedItem(item)
   const { isExpanded, toggleExpanded } = useFolderState(item._id)
   const renamingId = useSidebarUIStore((s) => s.renamingId)
@@ -69,10 +74,14 @@ export function SidebarItem({ item, parentItemsMap, visibleItemIds }: SidebarIte
         <SidebarItemButtonBase
           icon={icon}
           name={item.name}
-          isSelected={isSelected}
-          isFocused={isFocused}
-          isExpanded={isExpanded}
-          isRenaming={renamingId === item._id}
+          presentation={{
+            visualState,
+            focused: isFocused,
+            expanded: isExpanded,
+            renaming: renamingId === item._id,
+            showChevron: isFolder,
+            indentLevel: depth,
+          }}
           linkProps={linkProps}
           onClick={selectSidebarItem}
           onContextMenu={handleItemContextMenu}
@@ -83,11 +92,15 @@ export function SidebarItem({ item, parentItemsMap, visibleItemIds }: SidebarIte
           }}
           onFinishRename={handleFinishRename}
           onCancelRename={handleCancelRename}
-          showChevron={isFolder}
           campaignId={item.campaignId}
           parentId={item.parentId}
           excludeId={item._id}
-          shareButton={<SidebarShareButton item={item} />}
+          shareButton={
+            <SidebarShareButton
+              item={item}
+              buttonClassName={sidebarItemActionButtonClass(visualState)}
+            />
+          }
         />
       </EditorContextMenu>
     </DraggableSidebarItem>
@@ -99,7 +112,6 @@ export function SidebarItem({ item, parentItemsMap, visibleItemIds }: SidebarIte
         <Collapsible open={isExpanded} onOpenChange={toggleExpanded}>
           {itemButton}
           <CollapsibleContent
-            className="pl-4"
             transition={{
               duration: isExpanded ? 0.2 : 0.15,
               ease: 'easeInOut',
@@ -112,6 +124,7 @@ export function SidebarItem({ item, parentItemsMap, visibleItemIds }: SidebarIte
                 item={childItem}
                 parentItemsMap={parentItemsMap}
                 visibleItemIds={visibleItemIds}
+                depth={depth + 1}
               />
             ))}
           </CollapsibleContent>

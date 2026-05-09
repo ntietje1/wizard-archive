@@ -15,6 +15,7 @@ export function useItemSelectionInteractions(
     selectSingleItem,
     toggleItemSelection,
     selectItemRange,
+    setSelected,
     normalizeContextSelection,
     setActiveItemSurface,
   } = useSidebarUIStore(
@@ -24,6 +25,7 @@ export function useItemSelectionInteractions(
       selectSingleItem: s.selectSingleItem,
       toggleItemSelection: s.toggleItemSelection,
       selectItemRange: s.selectItemRange,
+      setSelected: s.setSelected,
       normalizeContextSelection: s.normalizeContextSelection,
       setActiveItemSurface: s.setActiveItemSurface,
     })),
@@ -52,6 +54,7 @@ export function useItemSelectionInteractions(
       return
     }
 
+    setSelected(item.slug)
     selectSingleItem(item._id)
     onOpen?.()
   }

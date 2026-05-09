@@ -6,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '~/features/shadcn/compo
 import { SharePermissionMenu } from '~/features/sharing/components/share-permission-menu'
 import { useSidebarItemsShare } from '~/features/sharing/hooks/useSidebarItemsShare'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
+import { cn } from '~/features/shadcn/lib/utils'
 
 function SharePopoverContent({ item }: { item: AnySidebarItem }) {
   const { campaign } = useCampaign()
@@ -47,7 +48,13 @@ function SharePopoverContent({ item }: { item: AnySidebarItem }) {
   )
 }
 
-export function SidebarShareButton({ item }: { item: AnySidebarItem }) {
+export function SidebarShareButton({
+  item,
+  buttonClassName,
+}: {
+  item: AnySidebarItem
+  buttonClassName?: string
+}) {
   const { isDm } = useCampaign()
   const [open, setOpen] = useState(false)
 
@@ -65,11 +72,11 @@ export function SidebarShareButton({ item }: { item: AnySidebarItem }) {
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm"
+              className={cn('size-6 p-0 hover:bg-muted-foreground/10 rounded-sm', buttonClassName)}
               onClick={(e) => e.stopPropagation()}
               aria-label="Share"
             >
-              <Share2 className="h-3.5 w-3.5" />
+              <Share2 className="size-3.5" />
             </Button>
           }
         />
