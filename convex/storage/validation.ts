@@ -1,6 +1,6 @@
 export type FileValidationResult = { valid: true } | { valid: false; error: string }
 
-export const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+export const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB
 
 // Allowed MIME type prefixes and exact types
 const ALLOWED_MIME_PREFIXES = ['image/', 'video/', 'audio/', 'text/'] as const

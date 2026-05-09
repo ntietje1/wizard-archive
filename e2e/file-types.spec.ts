@@ -48,9 +48,9 @@ startxref
     pdfPath = path.join(testDir, 'test-document.pdf')
     fs.writeFileSync(pdfPath, pdfContent)
 
-    // Create oversized file (>10MB) with valid extension
+    // Create oversized file (>100MB) with valid extension
     oversizedPath = path.join(testDir, 'test-oversized.txt')
-    const buf = Buffer.alloc(11 * 1024 * 1024, 0x41)
+    const buf = Buffer.alloc(101 * 1024 * 1024, 0x41)
     fs.writeFileSync(oversizedPath, buf)
 
     const context = await browser.newContext({
