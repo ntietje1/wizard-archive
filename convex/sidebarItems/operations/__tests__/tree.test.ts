@@ -17,6 +17,12 @@ function item(
 }
 
 describe('collectDescendantIdsFromItems', () => {
+  it('returns an empty set for a folder with no descendants', () => {
+    const root = item('folder_1', null, SIDEBAR_ITEM_TYPES.folders)
+
+    expect(collectDescendantIdsFromItems(root._id, [root])).toEqual(new Set())
+  })
+
   it('collects nested descendants', () => {
     const root = item('folder_1', null, SIDEBAR_ITEM_TYPES.folders)
     const childFolder = item('folder_2', root._id, SIDEBAR_ITEM_TYPES.folders)
@@ -27,12 +33,32 @@ describe('collectDescendantIdsFromItems', () => {
     )
   })
 
+  it('collects descendants from multiple branches', () => {
+    const root = item('folder_1', null, SIDEBAR_ITEM_TYPES.folders)
+    const childFolderA = item('folder_2', root._id, SIDEBAR_ITEM_TYPES.folders)
+    const childFolderB = item('folder_3', root._id, SIDEBAR_ITEM_TYPES.folders)
+    const leafA = item('note_1', childFolderA._id)
+    const leafB = item('note_2', childFolderB._id)
+
+    expect(
+      collectDescendantIdsFromItems(root._id, [root, childFolderA, childFolderB, leafA, leafB]),
+    ).toEqual(new Set([childFolderA._id, childFolderB._id, leafA._id, leafB._id]))
+  })
+
   it('throws when a cycle reaches the root folder', () => {
     const root = item('folder_1', 'folder_2' as Id<'sidebarItems'>, SIDEBAR_ITEM_TYPES.folders)
     const childFolder = item('folder_2', root._id, SIDEBAR_ITEM_TYPES.folders)
 
     expect(() => collectDescendantIdsFromItems(root._id, [root, childFolder])).toThrow(
-      'Cycle detected',
+      'appears as its own descendant',
+    )
+  })
+
+  it('throws when maxDepth is less than one', () => {
+    const root = item('folder_1', null, SIDEBAR_ITEM_TYPES.folders)
+
+    expect(() => collectDescendantIdsFromItems(root._id, [root], { maxDepth: 0 })).toThrow(
+      'maxDepth must be an integer greater than or equal to 1',
     )
   })
 
@@ -44,5 +70,13 @@ describe('collectDescendantIdsFromItems', () => {
     expect(() =>
       collectDescendantIdsFromItems(root._id, [root, childFolder, leaf], { maxDepth: 1 }),
     ).toThrow('Max sidebar tree depth exceeded')
+  })
+
+  it('throws when the root folder is missing from the item list', () => {
+    const root = item('folder_1', null, SIDEBAR_ITEM_TYPES.folders)
+
+    expect(() => collectDescendantIdsFromItems(root._id, [])).toThrow(
+      `Folder ${root._id} was not found while collecting descendants`,
+    )
   })
 })

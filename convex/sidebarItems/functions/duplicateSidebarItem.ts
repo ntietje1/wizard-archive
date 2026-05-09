@@ -26,6 +26,7 @@ import type { SidebarItemName } from '../validation/name'
 const MAX_SIDEBAR_DUPLICATE_DEPTH = 50
 
 type DuplicateCopyOrReplaceOperation = Extract<DuplicateOperation, { action: 'copy' | 'replace' }>
+type ExecutableDuplicateOperation = Exclude<DuplicateOperation, { action: 'skip' }>
 
 export const DUPLICATE_OPERATION_ACTION = {
   copy: 'copy',
@@ -101,7 +102,7 @@ async function copyNoteBlocks(
       props: block.props,
       inlineContent: block.inlineContent,
       plainText: block.plainText,
-      campaignId: block.campaignId,
+      campaignId: ctx.campaign._id,
       shareStatus: block.shareStatus,
     })
   }
@@ -283,11 +284,9 @@ async function executeDuplicateOperations(
 
 async function executeDuplicateOperation(
   ctx: CampaignMutationCtx,
-  operation: DuplicateOperation,
+  operation: ExecutableDuplicateOperation,
   duplicateCtx: DuplicateCtx,
 ) {
-  if (operation.action === DUPLICATE_OPERATION_ACTION.skip) return
-
   const source = await loadDuplicableOperationSource(ctx, operation.sourceItemId)
 
   if (operation.action === DUPLICATE_OPERATION_ACTION.mergeFolder) {

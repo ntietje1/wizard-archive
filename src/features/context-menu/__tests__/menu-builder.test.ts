@@ -69,7 +69,6 @@ function sidebarCtx(overrides: Partial<MenuContext> = {}): MenuContext {
 describe('buildMenu', () => {
   const actions = createActions()
   const services = { actions }
-  const deletionTime = 1_700_000_000_000
 
   it('DM sees edit and delete actions on a note in sidebar', () => {
     const menu = buildMenu({
@@ -94,7 +93,6 @@ describe('buildMenu', () => {
         item: selectedItems[0],
         primaryItem: selectedItems[0],
         selectedItems,
-        isMultiSelection: true,
       }),
       services,
       contributors: editorContextMenuContributors,
@@ -120,7 +118,6 @@ describe('buildMenu', () => {
         item: selectedItems[0],
         primaryItem: selectedItems[0],
         selectedItems,
-        isMultiSelection: true,
       }),
       services,
       contributors: editorContextMenuContributors,
@@ -138,6 +135,7 @@ describe('buildMenu', () => {
   })
 
   it('hides active-item operations when any selected root is trashed', () => {
+    const deletionTime = 1_700_000_000_000
     const selectedItems = [
       createNote(),
       createFile({ location: SIDEBAR_ITEM_LOCATION.trash, deletionTime }),
@@ -147,7 +145,6 @@ describe('buildMenu', () => {
         item: selectedItems[0],
         primaryItem: selectedItems[0],
         selectedItems,
-        isMultiSelection: true,
       }),
       services,
       contributors: editorContextMenuContributors,

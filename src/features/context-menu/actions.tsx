@@ -609,8 +609,9 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     permanentlyDelete: (ctx: MenuContext) => {
       const items = getNormalizedContextItems(ctx)
       if (items.length === 0) return
-      itemOperations.confirmPermanentDeleteItems(items)
-      onDialogOpen?.()
+      if (itemOperations.confirmPermanentDeleteItems(items)) {
+        onDialogOpen?.()
+      }
     },
 
     emptyTrash: () => {
@@ -631,11 +632,14 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
         ),
       )
       const failures = results.filter((result) => result.status === 'rejected')
+      const successCount = results.length - failures.length
       if (failures.length > 0) {
         handleError(
           new Error(`${failures.length} of ${items.length} bookmark updates failed`),
           items.length === 1 ? 'Failed to toggle bookmark' : 'Failed to toggle bookmarks',
         )
+        if (successCount === 0) return
+        toast.error(`${successCount} bookmarks updated, ${failures.length} failed`)
         return
       }
       toast.success(items.length === 1 ? 'Bookmark updated' : 'Bookmarks updated')

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
@@ -15,13 +15,14 @@ import {
   getKeyboardOpenItem,
   getKeyboardPasteParentId,
 } from '~/features/sidebar/utils/item-surface-keyboard'
+import { handleError } from '~/shared/utils/logger'
 
-interface ItemSurfaceHotkeyOperations {
+export interface ItemSurfaceHotkeyOperations {
   copyItems: (items: Array<AnySidebarItem>) => void
   cutItems: (items: Array<AnySidebarItem>) => void
   pasteClipboard: (targetParentId?: AnySidebarItem['_id'] | null) => Promise<void>
   trashItems: (items: Array<AnySidebarItem>) => Promise<unknown>
-  confirmPermanentDeleteItems: (items: Array<AnySidebarItem>) => void
+  confirmPermanentDeleteItems: (items: Array<AnySidebarItem>) => boolean
   normalizeItems: (items: Array<AnySidebarItem>) => Array<AnySidebarItem>
 }
 
@@ -138,7 +139,9 @@ function handlePaste(event: KeyboardEvent, context: HotkeyHandlerContext): boole
     surfaceParentId: context.activeItemSurface.parentId,
   })
 
-  void context.itemOperations.pasteClipboard(pasteParentId)
+  void context.itemOperations
+    .pasteClipboard(pasteParentId)
+    .catch((error) => handleError(error, 'Failed to paste items'))
   return true
 }
 
@@ -152,7 +155,9 @@ function handleDelete(event: KeyboardEvent, context: HotkeyHandlerContext): bool
     return true
   }
 
-  void context.itemOperations.trashItems(context.selectedItems)
+  void context.itemOperations
+    .trashItems(context.selectedItems)
+    .catch((error) => handleError(error, 'Failed to move items to trash'))
   return true
 }
 
@@ -176,7 +181,9 @@ function handleOpen(event: KeyboardEvent, context: HotkeyHandlerContext): boolea
   if (!itemToOpen) return true
 
   context.setLastSelectedItem(itemToOpen.slug)
-  void context.navigateToItem(itemToOpen.slug)
+  void context
+    .navigateToItem(itemToOpen.slug)
+    .catch((error) => handleError(error, 'Failed to open item'))
   return true
 }
 
@@ -194,6 +201,8 @@ function handleItemSurfaceHotkey(event: KeyboardEvent, context: HotkeyHandlerCon
 }
 
 export function useItemSurfaceHotkeys(itemOperations: ItemSurfaceHotkeyOperations) {
+  const itemOperationsRef = useRef(itemOperations)
+  itemOperationsRef.current = itemOperations
   const { campaignId } = useCampaign()
   const { itemsMap: activeItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.sidebar)
   const { itemsMap: trashedItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
@@ -218,7 +227,7 @@ export function useItemSurfaceHotkeys(itemOperations: ItemSurfaceHotkeyOperation
         selectedItemIds,
         activeItemsMap,
         trashedItemsMap,
-        itemOperations,
+        itemOperationsRef.current,
       )
 
       handleItemSurfaceHotkey(event, {
@@ -228,7 +237,7 @@ export function useItemSurfaceHotkeys(itemOperations: ItemSurfaceHotkeyOperation
         trashedItemsMap,
         focusedItemId,
         itemClipboard,
-        itemOperations,
+        itemOperations: itemOperationsRef.current,
         setSelectedItemIds,
         clearItemSelection,
         setRenamingId,
@@ -249,7 +258,6 @@ export function useItemSurfaceHotkeys(itemOperations: ItemSurfaceHotkeyOperation
     clearItemSelection,
     focusedItemId,
     itemClipboard,
-    itemOperations,
     moveFocus,
     navigateToItem,
     openParentFolders,

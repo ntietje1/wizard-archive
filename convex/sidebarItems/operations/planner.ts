@@ -350,6 +350,7 @@ function planMoveItem(context: MovePlannerContext, item: OperationPlannerItem): 
   )
   const conflictTarget = findNameConflict(item, candidates)
   if (
+    !conflictTarget &&
     item.parentId === context.targetParentId &&
     item.location !== SIDEBAR_ITEM_LOCATION.trash &&
     !context.decisions[item._id]

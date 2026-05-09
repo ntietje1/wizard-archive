@@ -13,6 +13,7 @@ import {
   FileEdit,
   FilePlus,
   FileTypeIcon,
+  Files,
   FolderDown,
   FolderPlus,
   Grid2x2Plus,
@@ -558,7 +559,7 @@ export const editorContextMenuContributors = [
         id: 'duplicate',
         commandId: 'duplicate',
         label: 'Duplicate',
-        icon: ClipboardCopy,
+        icon: Files,
         group: 'edit',
         priority: 88,
         applies: (context) =>

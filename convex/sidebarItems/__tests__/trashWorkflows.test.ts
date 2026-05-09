@@ -168,6 +168,7 @@ describe('trash workflows', () => {
         campaignId: ctx.campaignId,
         sourceItemIds: [folder.folderId, nestedNote.noteId],
         targetParentId: null,
+        action: 'restore',
       })
 
       const [restoredFolder, restoredChildFolder, restoredNestedNote] = await t.run(async (dbCtx) =>

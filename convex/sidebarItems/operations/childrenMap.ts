@@ -19,15 +19,25 @@ export async function collectSidebarChildrenMap<T extends SidebarChildMapItem>({
   const pending = rootFolderIds.map((folderId) => ({ folderId, depth: 0 }))
 
   while (pending.length > 0) {
-    const next = pending.shift()!
-    if (childrenMap.has(next.folderId)) continue
-    if (next.depth >= maxDepth) onDepthExceeded()
+    const batch = pending.splice(0, pending.length).filter((next) => {
+      if (childrenMap.has(next.folderId)) return false
+      if (next.depth >= maxDepth) onDepthExceeded()
+      return true
+    })
 
-    const children = await getChildren(next.folderId)
-    childrenMap.set(next.folderId, children)
-    for (const child of children) {
-      if (child.type === SIDEBAR_ITEM_TYPES.folders) {
-        pending.push({ folderId: child._id, depth: next.depth + 1 })
+    const childrenByFolder = await Promise.all(
+      batch.map(async (next) => ({
+        ...next,
+        children: await getChildren(next.folderId),
+      })),
+    )
+
+    for (const { folderId, depth, children } of childrenByFolder) {
+      childrenMap.set(folderId, children)
+      for (const child of children) {
+        if (child.type === SIDEBAR_ITEM_TYPES.folders) {
+          pending.push({ folderId: child._id, depth: depth + 1 })
+        }
       }
     }
   }

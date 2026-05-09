@@ -110,6 +110,7 @@ describe('normalizeTopLevelSelectedItems', () => {
     const parentB = createFolder({ name: 'Parent B', parentId: baseParentA._id })
     const parentA = { ...baseParentA, parentId: parentB._id }
     const cycledFirst = { ...first, parentId: parentA._id }
+    // parentA and parentB point at each other; cycledFirst enters that cycle.
     const itemsMap = new Map<Id<'sidebarItems'>, AnySidebarItem>([
       [cycledFirst._id, cycledFirst],
       [parentA._id, parentA],

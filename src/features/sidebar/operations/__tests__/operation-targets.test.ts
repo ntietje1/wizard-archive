@@ -31,4 +31,47 @@ describe('sidebar operation targets', () => {
       getRestoreTargetParentId(null, new Map([[activeFolder._id, activeFolder]]), activeFolder._id),
     ).toBe(activeFolder._id)
   })
+
+  it('uses the active sidebar folder surface as the restore target', () => {
+    const activeFolder = createFolder({
+      location: SIDEBAR_ITEM_LOCATION.sidebar,
+      parentId: null,
+    })
+    const activeSurface: ActiveItemSurface = {
+      surface: 'folder-view',
+      parentId: activeFolder._id,
+      visibleItemIds: [],
+    }
+
+    expect(
+      getRestoreTargetParentId(activeSurface, new Map([[activeFolder._id, activeFolder]])),
+    ).toBe(activeFolder._id)
+  })
+
+  it('falls back to root when the active folder surface is missing', () => {
+    const missingFolder = createFolder({
+      location: SIDEBAR_ITEM_LOCATION.sidebar,
+      parentId: null,
+    })
+    const activeSurface: ActiveItemSurface = {
+      surface: 'folder-view',
+      parentId: missingFolder._id,
+      visibleItemIds: [],
+    }
+
+    expect(getRestoreTargetParentId(activeSurface, new Map())).toBeNull()
+  })
+
+  it('falls back to root without an active surface or explicit target', () => {
+    expect(getRestoreTargetParentId(null, new Map())).toBeNull()
+  })
+
+  it('falls back to root when an explicit restore target is missing', () => {
+    const missingFolder = createFolder({
+      location: SIDEBAR_ITEM_LOCATION.sidebar,
+      parentId: null,
+    })
+
+    expect(getRestoreTargetParentId(null, new Map(), missingFolder._id)).toBeNull()
+  })
 })

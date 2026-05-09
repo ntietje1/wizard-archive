@@ -115,14 +115,10 @@ export interface EditorMenuContext {
   surface: ViewContext
   /** Item under the context-click target, when the menu opened on a concrete item. */
   item?: AnySidebarItem
-  /** Main item for commands; when selectedItems exists this should be one of those items. */
+  /** Main selected item for commands; falls back to item when there is no selection. */
   primaryItem?: AnySidebarItem
-  /** Ordered full item objects for the active selection. */
+  /** Ordered full item objects for the active selection; undefined means no selection context, [] means the selection surface is active but empty. */
   selectedItems?: Array<AnySidebarItem>
-  /**
-   * @deprecated Derive multi-selection from selectedItems instead.
-   */
-  isMultiSelection?: boolean
   currentUserId?: string
   memberRole?: CampaignMemberRole
   permissionLevel?: PermissionLevel

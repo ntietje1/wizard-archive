@@ -28,9 +28,7 @@ export function useItemSelectionInteractions(
       setActiveItemSurface: s.setActiveItemSurface,
     })),
   )
-  const visibleItemIds = activeSurface?.visibleItemIds.length
-    ? activeSurface.visibleItemIds
-    : [item._id]
+  const visibleItemIds = activeSurface?.visibleItemIds ?? [item._id]
 
   const activateSurface = () => {
     if (activeSurface) {
@@ -58,7 +56,7 @@ export function useItemSelectionInteractions(
     onOpen?.()
   }
 
-  const handleItemContextMenu = (_event?: MouseEvent) => {
+  const handleItemContextMenu = (_event: MouseEvent) => {
     activateSurface()
     normalizeContextSelection(item._id, visibleItemIds)
   }

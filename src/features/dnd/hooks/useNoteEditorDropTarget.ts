@@ -54,12 +54,15 @@ export function useNoteEditorDropTarget({
 
         const links = items.map((item) => {
           const pathParts = getMinDisambiguationPath(item, allItemsRef.current, itemsMapRef.current)
+          if (pathParts.length === 0) {
+            pathParts.push(item.name)
+          }
           const path = pathParts.join('/')
           const linkText = pathParts.length > 1 ? `${path}|${item.name}` : path
           return `[[${linkText}]]`
         })
 
-        tiptap.chain().focus().insertContentAt(posResult.pos, links.join(' ')).run()
+        tiptap.chain().focus().insertContentAt(posResult.pos, links.join('\n')).run()
       },
     })
   }, [noteId])

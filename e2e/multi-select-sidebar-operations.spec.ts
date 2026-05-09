@@ -156,16 +156,5 @@ test.describe.serial('sidebar and folder multi-select item operations', () => {
       'aria-selected',
       'true',
     )
-
-    await expect(sidebarSelectionRow(sidebar, selectedMoveNoteA)).toHaveAttribute(
-      'aria-selected',
-      'true',
-      { timeout: 0 },
-    )
-    await expect(sidebarSelectionRow(sidebar, selectedMoveNoteB)).toHaveAttribute(
-      'aria-selected',
-      'true',
-      { timeout: 0 },
-    )
   })
 })

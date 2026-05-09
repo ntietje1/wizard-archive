@@ -30,6 +30,7 @@ export function ItemOperationConflictDialog({
   const [decisions, setDecisions] = useState<
     Partial<Record<ItemOperationConflict['sourceItemId'], ConflictDecision>>
   >({})
+
   const conflict = conflicts[index]
   if (!conflict) return null
 

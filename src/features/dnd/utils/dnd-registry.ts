@@ -114,6 +114,7 @@ export type DropRejectionReason =
   | 'name_conflict'
   | 'dm_only'
   | 'trashed_item'
+  | 'mixed_actions'
 
 // ─── Outcome Types ──────────────────────────────────────────────────
 
@@ -206,7 +207,6 @@ function toDropRejectionReason(code: SidebarOperationRejectionCode): DropRejecti
       return 'missing_data'
     case 'not_folder':
     case 'different_location':
-    case 'same_parent':
       return 'not_folder'
     default:
       return assertNever(code)
@@ -280,6 +280,8 @@ export function rejectionReasonMessage(reason: DropRejectionReason): string {
       return 'Only the DM can do this'
     case 'trashed_item':
       return 'The item is trashed and cannot be used'
+    case 'mixed_actions':
+      return 'Cannot move trashed and non-trashed items together'
     default:
       return assertNever(reason)
   }
@@ -507,7 +509,7 @@ export function getDroppableMoveItems(
 
   const action = operations[0].action
   if (operations.some((op) => op.action !== action)) {
-    return { status: 'blocked', reason: 'missing_data' }
+    return { status: 'blocked', reason: 'mixed_actions' }
   }
 
   return {

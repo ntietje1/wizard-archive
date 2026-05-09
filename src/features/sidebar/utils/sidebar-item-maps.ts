@@ -51,5 +51,6 @@ export function collectDescendantIds(
   folderId: Id<'sidebarItems'>,
   items: Array<AnySidebarItem>,
 ): Set<Id<'sidebarItems'>> {
+  if (!items.some((item) => item._id === folderId)) return new Set()
   return collectDescendantIdsFromItems(folderId, items)
 }

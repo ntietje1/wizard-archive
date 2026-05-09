@@ -3,14 +3,21 @@ export function isEditableHotkeyTarget(target: EventTarget | null): boolean {
 
   const tagName = target.tagName.toLowerCase()
   if (tagName === 'input' || tagName === 'textarea' || tagName === 'select') {
-    return true
+    return !(target as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement).disabled
   }
 
   return Boolean(target.isContentEditable)
 }
 
 export function isModifierShortcut(event: KeyboardEvent, key: string): boolean {
-  return (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === key.toLowerCase()
+  const normalizedKey = key.trim().toLowerCase()
+  return (
+    normalizedKey.length > 0 &&
+    (event.ctrlKey || event.metaKey) &&
+    !event.altKey &&
+    !event.shiftKey &&
+    event.key.toLowerCase() === normalizedKey
+  )
 }
 
 export function isItemSurfaceInteractionTarget(target: EventTarget | null): boolean {

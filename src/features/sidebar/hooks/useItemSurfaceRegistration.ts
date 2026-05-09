@@ -46,7 +46,7 @@ export function useItemSurfaceRegistration({
   }, [surface, parentId, visibleItemIdsKey, setActiveItemSurface])
 
   const activateSurface = () => {
-    setActiveItemSurface(activeSurface)
+    setActiveItemSurface(latestSurfaceRef.current)
   }
 
   const handleSurfacePointerDown = (event: PointerEvent) => {

@@ -19,7 +19,6 @@ export type SidebarOperationRejectionCode =
   | 'dm_only'
   | 'circular'
   | 'different_location'
-  | 'same_parent'
   | 'invalid_target'
 
 export type SidebarOperationCapability =
@@ -59,11 +58,7 @@ export function isPermissionRejectionCode(code: SidebarOperationRejectionCode): 
   return code === 'no_source_permission' || code === 'no_target_permission' || code === 'dm_only'
 }
 
-function evaluateTargetParent(
-  item: OperationSidebarItem,
-  target: OperationTargetSnapshot,
-  targetLocation: OperationSidebarItem['location'],
-): SidebarOperationCapability {
+function evaluateParentAccess(target: OperationTargetSnapshot): SidebarOperationCapability {
   if (target.parentId === null) return ok()
 
   if (!target.parent) {
@@ -78,12 +73,24 @@ function evaluateTargetParent(
     return reject('trashed_folder', 'Trashed folders are uneditable')
   }
 
-  if (target.parent.location !== targetLocation) {
-    return reject('different_location', 'Cannot move items into a folder in a different location')
-  }
-
   if (!hasFullAccess(target.parent.myPermissionLevel)) {
     return reject('no_target_permission', 'You do not have sufficient permission for this folder')
+  }
+
+  return ok()
+}
+
+function evaluateTargetParent(
+  item: OperationSidebarItem,
+  target: OperationTargetSnapshot,
+  targetLocation: OperationSidebarItem['location'],
+): SidebarOperationCapability {
+  const parentAccess = evaluateParentAccess(target)
+  if (!parentAccess.ok) return parentAccess
+  if (target.parentId === null) return ok()
+
+  if (target.parent?.location !== targetLocation) {
+    return reject('different_location', 'Cannot move items into a folder in a different location')
   }
 
   if (
@@ -133,7 +140,7 @@ export function evaluateRestore(
   target: OperationTargetSnapshot,
 ): SidebarOperationCapability {
   if (item.location !== SIDEBAR_ITEM_LOCATION.trash) {
-    return reject('trashed_item', 'Only trashed items can be restored')
+    return reject('not_trashed', 'Only trashed items can be restored')
   }
 
   if (!hasFullAccess(item.myPermissionLevel)) {
@@ -193,21 +200,5 @@ export function evaluatePasteTarget(
       : reject('dm_only', 'Only the DM can create items at the root level')
   }
 
-  if (!target.parent) {
-    return reject('not_found', 'Parent not found')
-  }
-
-  if (target.parent.type !== SIDEBAR_ITEM_TYPES.folders) {
-    return reject('not_folder', 'Parent must be a folder')
-  }
-
-  if (target.parent.location === SIDEBAR_ITEM_LOCATION.trash) {
-    return reject('trashed_folder', 'Trashed folders are uneditable')
-  }
-
-  if (!hasFullAccess(target.parent.myPermissionLevel)) {
-    return reject('no_target_permission', 'You do not have sufficient permission for this folder')
-  }
-
-  return ok()
+  return evaluateParentAccess(target)
 }

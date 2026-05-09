@@ -8,17 +8,20 @@ export interface BuildVisibleSidebarItemIdsOptions {
   parentItemsMap: Map<Id<'sidebarItems'> | null, Array<AnySidebarItem>>
   expandedFolderIds: ReadonlySet<Id<'sidebarItems'>>
   sortOptions: SortOptions
-  parentId?: Id<'sidebarItems'> | null
-  accumulator?: Array<Id<'sidebarItems'>>
 }
 
-export function buildVisibleSidebarItemIds({
+interface BuildVisibleSidebarItemIdsInternalOptions extends BuildVisibleSidebarItemIdsOptions {
+  parentId: Id<'sidebarItems'> | null
+  accumulator: Array<Id<'sidebarItems'>>
+}
+
+function appendVisibleSidebarItemIds({
   parentItemsMap,
   expandedFolderIds,
   sortOptions,
-  parentId = null,
-  accumulator = [],
-}: BuildVisibleSidebarItemIdsOptions): Array<Id<'sidebarItems'>> {
+  parentId,
+  accumulator,
+}: BuildVisibleSidebarItemIdsInternalOptions): Array<Id<'sidebarItems'>> {
   const items = sortItemsByOptions(sortOptions, parentItemsMap.get(parentId)) ?? []
 
   for (const item of items) {
@@ -27,7 +30,7 @@ export function buildVisibleSidebarItemIds({
       continue
     }
 
-    buildVisibleSidebarItemIds({
+    appendVisibleSidebarItemIds({
       parentItemsMap,
       expandedFolderIds,
       sortOptions,
@@ -37,4 +40,14 @@ export function buildVisibleSidebarItemIds({
   }
 
   return accumulator
+}
+
+export function buildVisibleSidebarItemIds(
+  options: BuildVisibleSidebarItemIdsOptions,
+): Array<Id<'sidebarItems'>> {
+  return appendVisibleSidebarItemIds({
+    ...options,
+    parentId: null,
+    accumulator: [],
+  })
 }

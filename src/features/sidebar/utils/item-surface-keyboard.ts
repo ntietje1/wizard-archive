@@ -10,7 +10,7 @@ export function getKeyboardOpenItem({
   focusedItemId: Id<'sidebarItems'> | null
 }): AnySidebarItem | null {
   if (selectedItems.length <= 1) return selectedItems[0] ?? null
-  return selectedItems.find((item) => item._id === focusedItemId) ?? selectedItems[0] ?? null
+  return selectedItems.find((item) => item._id === focusedItemId) ?? selectedItems[0]
 }
 
 export function getKeyboardPasteParentId({

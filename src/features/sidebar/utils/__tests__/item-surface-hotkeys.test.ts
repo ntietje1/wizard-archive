@@ -66,6 +66,7 @@ describe('item surface hotkey utilities', () => {
     item.dataset.itemSelectionTarget = 'true'
     item.appendChild(child)
     item.appendChild(interactiveChild)
+    item.appendChild(plainChild)
 
     expect(isItemSurfaceInteractionTarget(link)).toBe(true)
     expect(isItemSurfaceInteractionTarget(inertLink)).toBe(false)
@@ -73,7 +74,7 @@ describe('item surface hotkey utilities', () => {
     expect(isItemSurfaceInteractionTarget(disabledButton)).toBe(false)
     expect(isItemSurfaceInteractionTarget(child)).toBe(true)
     expect(isItemSurfaceInteractionTarget(interactiveChild)).toBe(true)
-    expect(isItemSurfaceInteractionTarget(plainChild)).toBe(false)
+    expect(isItemSurfaceInteractionTarget(plainChild)).toBe(true)
     expect(isItemSurfaceInteractionTarget(blank)).toBe(false)
   })
 

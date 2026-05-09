@@ -253,7 +253,7 @@ function TrashPopoverItem({
           onClick={(event) => {
             event.preventDefault()
             event.stopPropagation()
-            handleItemContextMenu()
+            handleItemContextMenu(event)
             onRestore(item)
           }}
           aria-label="Restore"
@@ -267,7 +267,7 @@ function TrashPopoverItem({
           onClick={(event) => {
             event.preventDefault()
             event.stopPropagation()
-            handleItemContextMenu()
+            handleItemContextMenu(event)
             onPermanentDelete(item)
           }}
           aria-label="Delete forever"

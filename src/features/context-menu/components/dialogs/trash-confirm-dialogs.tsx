@@ -16,15 +16,18 @@ export function EmptyTrashConfirmDialog({
 }) {
   const { data: allTrashedItems, status } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
 
-  if (status === 'pending' || !allTrashedItems) return null
-
   return (
     <ConfirmationDialog
       isOpen={true}
+      isLoading={status === 'pending'}
       onClose={onClose}
       onConfirm={onConfirm}
       title="Empty Trash"
-      description={emptyTrashDescription(allTrashedItems.length)}
+      description={
+        status === 'error'
+          ? 'Trash contents could not be loaded.'
+          : emptyTrashDescription(allTrashedItems?.length ?? 0)
+      }
       confirmLabel="Empty Trash"
       confirmVariant="destructive"
     />
@@ -44,13 +47,12 @@ export function PermanentDeleteConfirmDialog({
 
   return (
     <ConfirmationDialog
-      key={`permanent-delete-${item._id}`}
       isOpen={true}
       isLoading={status === 'pending'}
       onClose={onClose}
       onConfirm={onConfirm}
       title="Permanently Delete"
-      description={trashedItems ? permanentDeleteDescription(item, trashedItems) : ''}
+      description={trashedItems ? permanentDeleteDescription(item, trashedItems) : 'Loading...'}
       confirmLabel="Delete Forever"
       confirmVariant="destructive"
     />

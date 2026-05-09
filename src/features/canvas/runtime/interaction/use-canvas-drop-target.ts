@@ -76,29 +76,27 @@ export function useCanvasDropTarget({
           y: clientY,
         })
 
-        let sidebarItems: ReturnType<typeof resolveNormalizedDraggedSidebarItems>
         try {
-          sidebarItems = resolveNormalizedDraggedSidebarItems({
+          const sidebarItems = resolveNormalizedDraggedSidebarItems({
             sourceData: source.data,
             activeItemsMap: itemsMapRef.current,
             excludeItemIds: [canvasIdRef.current],
           })
+          sidebarItems.forEach((sidebarItem, index) => {
+            try {
+              createNodeRef.current(
+                createEmbedCanvasNode(sidebarItem._id, {
+                  x: position.x + index * STACK_OFFSET,
+                  y: position.y + index * STACK_OFFSET,
+                }),
+              )
+            } catch (error) {
+              handleError(error, 'Failed to add item to canvas')
+            }
+          })
         } catch (error) {
           handleError(error, 'Failed to resolve dragged sidebar items')
-          return
         }
-        sidebarItems.forEach((sidebarItem, index) => {
-          try {
-            createNodeRef.current(
-              createEmbedCanvasNode(sidebarItem._id, {
-                x: position.x + index * STACK_OFFSET,
-                y: position.y + index * STACK_OFFSET,
-              }),
-            )
-          } catch (error) {
-            handleError(error, 'Failed to add item to canvas')
-          }
-        })
       },
     })
   }, [])

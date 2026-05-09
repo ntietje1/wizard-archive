@@ -161,6 +161,9 @@ describe('rejectionReasonMessage', () => {
     )
     expect(rejectionReasonMessage('dm_only')).toBe('Only the DM can do this')
     expect(rejectionReasonMessage('trashed_item')).toBe('The item is trashed and cannot be used')
+    expect(rejectionReasonMessage('mixed_actions')).toBe(
+      'Cannot move trashed and non-trashed items together',
+    )
   })
 })
 
@@ -258,7 +261,7 @@ describe('resolveDropOutcome', () => {
       expect(result).toMatchObject({ type: 'operation', action: 'restore' })
     })
 
-    it('allows root move conflicts because batch conflict planning handles them', () => {
+    it('allows moving nested items to root', () => {
       const note = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
       const ctx = createCtx()
       const result = resolveDropOutcome(note, rootTarget(), ctx)
@@ -362,7 +365,7 @@ describe('resolveDropOutcome', () => {
       expect(result).toEqual({ type: 'rejection', reason: 'dm_only' })
     })
 
-    it('allows folder move conflicts because batch conflict planning handles them', () => {
+    it('allows moving items into folders', () => {
       const note = createNote()
       const target = folderTarget()
       const ctx = createCtx()
@@ -542,6 +545,15 @@ describe('getDroppableMoveItems', () => {
 
     expect(result).toEqual({ status: 'blocked', reason: 'circular' })
   })
+
+  it('blocks mixed move and restore batches with a specific reason', () => {
+    const target = folderTarget()
+    const active = createNote()
+    const trashed = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
+    const result = getDroppableMoveItems([active, trashed], target, createCtx())
+
+    expect(result).toEqual({ status: 'blocked', reason: 'mixed_actions' })
+  })
 })
 
 describe('resolveDropCommand', () => {
@@ -586,6 +598,17 @@ describe('resolveDropCommand', () => {
     expect(resolveDropCommand([folder, note], target, createCtx())).toMatchObject({
       status: 'blocked',
       reason: 'circular',
+    })
+  })
+
+  it('blocks mixed move and restore commands with a specific reason', () => {
+    const target = folderTarget()
+    const active = createNote()
+    const trashed = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
+
+    expect(resolveDropCommand([active, trashed], target, createCtx())).toEqual({
+      status: 'blocked',
+      reason: 'mixed_actions',
     })
   })
 })

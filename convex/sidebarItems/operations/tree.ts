@@ -26,7 +26,7 @@ function addChildDescendant(
   depth: number,
 ) {
   if (child._id === rootFolderId) {
-    throw new Error(`Cycle detected while collecting descendants for ${rootFolderId}`)
+    throw new Error(`Folder ${rootFolderId} appears as its own descendant`)
   }
   if (descendants.has(child._id)) return
 
@@ -41,6 +41,13 @@ export function collectDescendantIdsFromItems(
   items: Array<SidebarTreeItem>,
   { maxDepth = 50 }: { maxDepth?: number } = {},
 ): Set<Id<'sidebarItems'>> {
+  if (!Number.isInteger(maxDepth) || maxDepth < 1) {
+    throw new Error('maxDepth must be an integer greater than or equal to 1')
+  }
+  if (!items.some((item) => item._id === folderId)) {
+    throw new Error(`Folder ${folderId} was not found while collecting descendants`)
+  }
+
   const childrenByParent = indexChildrenByParent(items)
 
   const result = new Set<Id<'sidebarItems'>>()

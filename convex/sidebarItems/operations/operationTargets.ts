@@ -28,5 +28,6 @@ export function getRestoreTargetParentId<T extends { location: SidebarItemLocati
 ): Id<'sidebarItems'> | null {
   const targetParentId = getPasteTargetParentId(activeItemSurface, fallbackParentId)
   const targetParent = targetParentId ? itemsMap.get(targetParentId) : null
+  if (targetParentId && !targetParent) return null
   return normalizeRestoreTargetParentId(targetParentId, targetParent?.location)
 }

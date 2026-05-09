@@ -2,10 +2,24 @@ import { describe, expect, it } from 'vitest'
 import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import { resolveContextSelectedItems } from '~/features/context-menu/selection-context'
+import {
+  resolveContextPrimaryItem,
+  resolveContextSelectedItems,
+} from '~/features/context-menu/selection-context'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 
 describe('resolveContextSelectedItems', () => {
+  it('returns no items when there is no clicked item and no usable selection', () => {
+    const selectedItems = resolveContextSelectedItems({
+      selectedItemIds: [],
+      activeItemsMap: new Map<Id<'sidebarItems'>, AnySidebarItem>(),
+      trashedItemsMap: new Map<Id<'sidebarItems'>, AnySidebarItem>(),
+      canUseItemSelection: true,
+    })
+
+    expect(selectedItems).toEqual([])
+  })
+
   it('falls back to the clicked item when selection is not usable', () => {
     const item = createNote()
 
@@ -15,6 +29,21 @@ describe('resolveContextSelectedItems', () => {
       activeItemsMap: new Map<Id<'sidebarItems'>, AnySidebarItem>(),
       trashedItemsMap: new Map<Id<'sidebarItems'>, AnySidebarItem>(),
       canUseItemSelection: false,
+    })
+
+    expect(selectedItems).toEqual([item])
+  })
+
+  it('falls back to the clicked item when selected ids are missing from item maps', () => {
+    const item = createNote()
+    const missing = createNote()
+
+    const selectedItems = resolveContextSelectedItems({
+      item,
+      selectedItemIds: [item._id, missing._id],
+      activeItemsMap: new Map<Id<'sidebarItems'>, AnySidebarItem>([[item._id, item]]),
+      trashedItemsMap: new Map<Id<'sidebarItems'>, AnySidebarItem>(),
+      canUseItemSelection: true,
     })
 
     expect(selectedItems).toEqual([item])
@@ -35,6 +64,26 @@ describe('resolveContextSelectedItems', () => {
     })
 
     expect(selectedItems).toEqual([folder])
+  })
+
+  it('normalizes deeper hierarchy selections to the highest selected ancestor', () => {
+    const grandparent = createFolder()
+    const parent = createFolder({ parentId: grandparent._id })
+    const child = createNote({ parentId: parent._id })
+
+    const selectedItems = resolveContextSelectedItems({
+      item: child,
+      selectedItemIds: [grandparent._id, parent._id, child._id],
+      activeItemsMap: new Map<Id<'sidebarItems'>, AnySidebarItem>([
+        [grandparent._id, grandparent],
+        [parent._id, parent],
+        [child._id, child],
+      ]),
+      trashedItemsMap: new Map<Id<'sidebarItems'>, AnySidebarItem>(),
+      canUseItemSelection: true,
+    })
+
+    expect(selectedItems).toEqual([grandparent])
   })
 
   it('keeps a selected child when its parent is not selected', () => {
@@ -103,5 +152,35 @@ describe('resolveContextSelectedItems', () => {
     })
 
     expect(selectedItems).toEqual([trashed])
+  })
+
+  it('resolves mixed active and trash selections from both maps', () => {
+    const active = createNote()
+    const trashed = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
+
+    const selectedItems = resolveContextSelectedItems({
+      item: active,
+      selectedItemIds: [active._id, trashed._id],
+      activeItemsMap: new Map<Id<'sidebarItems'>, AnySidebarItem>([[active._id, active]]),
+      trashedItemsMap: new Map<Id<'sidebarItems'>, AnySidebarItem>([[trashed._id, trashed]]),
+      canUseItemSelection: true,
+    })
+
+    expect(selectedItems).toEqual([active, trashed])
+  })
+})
+
+describe('resolveContextPrimaryItem', () => {
+  it('uses the normalized selection root when the context item is collapsed out of selection', () => {
+    const folder = createFolder()
+    const child = createNote({ parentId: folder._id })
+
+    expect(resolveContextPrimaryItem({ item: child, selectedItems: [folder] })).toBe(folder)
+  })
+
+  it('uses the context item when there is no selected item', () => {
+    const item = createNote()
+
+    expect(resolveContextPrimaryItem({ item, selectedItems: [] })).toBe(item)
   })
 })

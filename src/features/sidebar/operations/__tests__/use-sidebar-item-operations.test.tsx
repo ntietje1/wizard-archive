@@ -11,11 +11,9 @@ import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 const moveSidebarItems = vi.fn()
 const duplicateSidebarItems = vi.fn()
 const permanentlyDeleteSidebarItems = vi.fn()
-const mutationMocks = [moveSidebarItems, permanentlyDeleteSidebarItems, duplicateSidebarItems]
 
 let sidebarItems: Array<AnySidebarItem> = []
 let trashItems: Array<AnySidebarItem> = []
-let mutationCallIndex = 0
 
 vi.mock('sonner', () => ({
   toast: {
@@ -52,13 +50,18 @@ vi.mock('~/features/sidebar/hooks/useSidebarItemsCache', () => ({
 }))
 
 vi.mock('~/shared/hooks/useCampaignMutation', () => ({
-  useCampaignMutation: () => ({ mutateAsync: mutationMocks[mutationCallIndex++ % 3] }),
+  useCampaignMutation: () => ({
+    mutateAsync: (args: Record<string, unknown>) => {
+      if ('action' in args) return moveSidebarItems(args)
+      if ('targetParentId' in args) return duplicateSidebarItems(args)
+      return permanentlyDeleteSidebarItems(args)
+    },
+  }),
 }))
 
 describe('useSidebarItemOperationsValue', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mutationCallIndex = 0
     sidebarItems = []
     trashItems = []
     useSidebarUIStore.setState({

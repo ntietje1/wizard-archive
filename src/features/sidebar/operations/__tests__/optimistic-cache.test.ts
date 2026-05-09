@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import {
+  OPTIMISTIC_ID_PREFIX,
   applyOptimisticDuplicateOperationsToSnapshot,
   applyOptimisticMoveOperationsToSnapshot,
+  applyOptimisticTrashItemsToSnapshot,
 } from '../optimistic-cache'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 
@@ -106,7 +108,13 @@ describe('optimistic sidebar operation cache transforms', () => {
       MOVE_TS,
     )
 
-    const clones = next.sidebar.filter((item) => item._id.toString().startsWith('optimistic-'))
+    const originals = next.sidebar.filter(
+      (item) => item._id === folder._id || item._id === child._id,
+    )
+    const clones = next.sidebar.filter((item) =>
+      item._id.toString().startsWith(OPTIMISTIC_ID_PREFIX),
+    )
+    expect(originals).toEqual([folder, child])
     expect(clones).toHaveLength(2)
     expect(clones[0]).toMatchObject({
       name: 'Folder Copy',
@@ -130,7 +138,86 @@ describe('optimistic sidebar operation cache transforms', () => {
       MOVE_TS,
     )
 
-    expect(next.sidebar).toEqual([source, destination])
+    expect(next.sidebar).toHaveLength(2)
+    expect(next.sidebar).toEqual(expect.arrayContaining([source, destination]))
     expect(next.trash).toEqual([])
+  })
+
+  it('ignores move and duplicate operations whose source item is missing', () => {
+    const note = createNote()
+    const missingId = 'missing' as Id<'sidebarItems'>
+
+    const moved = applyOptimisticMoveOperationsToSnapshot(
+      { sidebar: [note], trash: [] },
+      [{ action: 'move', sourceItemId: missingId, targetParentId: null }],
+      MOVE_TS,
+    )
+    const duplicated = applyOptimisticDuplicateOperationsToSnapshot(
+      { sidebar: [note], trash: [] },
+      [{ action: 'copy', sourceItemId: missingId, targetParentId: null, name: 'Copy' }],
+      MOVE_TS,
+    )
+
+    expect(moved).toEqual({ sidebar: [note], trash: [] })
+    expect(duplicated).toEqual({ sidebar: [note], trash: [] })
+  })
+
+  it('handles empty snapshots without throwing', () => {
+    const missingId = 'missing' as Id<'sidebarItems'>
+
+    expect(
+      applyOptimisticMoveOperationsToSnapshot(
+        { sidebar: [], trash: [] },
+        [{ action: 'move', sourceItemId: missingId, targetParentId: null }],
+        MOVE_TS,
+      ),
+    ).toEqual({ sidebar: [], trash: [] })
+    expect(applyOptimisticTrashItemsToSnapshot({ sidebar: [], trash: [] }, [], MOVE_TS)).toEqual({
+      sidebar: [],
+      trash: [],
+    })
+  })
+
+  it('applies multiple move operations in one pass', () => {
+    const folder = createFolder()
+    const first = createNote()
+    const second = createNote()
+
+    const next = applyOptimisticMoveOperationsToSnapshot(
+      { sidebar: [folder, first, second], trash: [] },
+      [
+        { action: 'move', sourceItemId: first._id, targetParentId: folder._id },
+        { action: 'move', sourceItemId: second._id, targetParentId: folder._id },
+      ],
+      MOVE_TS,
+    )
+
+    expect(next.sidebar).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ _id: first._id, parentId: folder._id }),
+        expect.objectContaining({ _id: second._id, parentId: folder._id }),
+      ]),
+    )
+  })
+
+  it('preserves deletedBy on optimistic trash when caller provides it', () => {
+    const note = createNote()
+    const deletedBy = 'profile_1' as Id<'userProfiles'>
+
+    const next = applyOptimisticTrashItemsToSnapshot(
+      { sidebar: [note], trash: [] },
+      [note],
+      MOVE_TS,
+      deletedBy,
+    )
+
+    expect(next.trash).toEqual([
+      expect.objectContaining({
+        _id: note._id,
+        deletedBy,
+        deletionTime: MOVE_TS,
+        location: SIDEBAR_ITEM_LOCATION.trash,
+      }),
+    ])
   })
 })

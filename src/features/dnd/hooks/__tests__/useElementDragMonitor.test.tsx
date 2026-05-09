@@ -50,6 +50,7 @@ describe('useElementDragMonitor', () => {
     } as React.RefObject<DndMonitorCtx>
 
     const { result } = renderHook(() => useElementDragMonitor(ctxRef))
+    expect(monitorForElements).toHaveBeenCalled()
     const monitor = monitorForElements.mock.calls[0]?.[0] as {
       onDragStart: (args: {
         source: { data: Record<string, unknown> }
@@ -86,6 +87,7 @@ describe('useElementDragMonitor', () => {
     } as React.RefObject<DndMonitorCtx>
 
     const { result } = renderHook(() => useElementDragMonitor(ctxRef))
+    expect(monitorForElements).toHaveBeenCalled()
     const monitor = monitorForElements.mock.calls[0]?.[0] as {
       onDragStart: (args: {
         source: { data: Record<string, unknown> }

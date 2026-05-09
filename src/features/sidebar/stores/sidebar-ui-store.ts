@@ -268,22 +268,13 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
 
       toggleItemSelection: (id) =>
         set((state) => {
-          const selected = new Set(state.selectedItemIds)
-          if (selected.has(id)) {
-            selected.delete(id)
-          } else {
-            selected.add(id)
-          }
-
-          const selectedItemIds = state.selectedItemIds.filter((selectedId) =>
-            selected.has(selectedId),
-          )
-          if (selected.has(id) && !selectedItemIds.includes(id)) {
-            selectedItemIds.push(id)
-          }
+          const isSelected = state.selectedItemIds.includes(id)
+          const selectedItemIds = isSelected
+            ? state.selectedItemIds.filter((selectedId) => selectedId !== id)
+            : [...state.selectedItemIds, id]
 
           const anchorItemId =
-            state.anchorItemId && selected.has(state.anchorItemId)
+            state.anchorItemId && selectedItemIds.includes(state.anchorItemId)
               ? state.anchorItemId
               : (selectedItemIds[0] ?? null)
 

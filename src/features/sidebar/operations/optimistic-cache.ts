@@ -11,11 +11,20 @@ export type SidebarCacheSnapshot = {
 
 type MoveItemOrReplaceOperation = Extract<MoveOperation, { action: 'move' | 'replace' }>
 
+export const OPTIMISTIC_ID_PREFIX = 'optimistic-'
+let optimisticIdIndex = 0
+
+function nextOptimisticIdIndex() {
+  optimisticIdIndex += 1
+  return optimisticIdIndex
+}
+
 function trashItemTreeInSnapshot(
   itemId: Id<'sidebarItems'>,
   sidebar: Array<AnySidebarItem>,
   trash: Array<AnySidebarItem>,
   now: number,
+  deletedBy: Id<'userProfiles'> | null = null,
 ) {
   const item = sidebar.find((candidate) => candidate._id === itemId)
   if (!item) return { sidebar, trash }
@@ -36,7 +45,7 @@ function trashItemTreeInSnapshot(
         parentId: candidate._id === item._id ? null : candidate.parentId,
         location: SIDEBAR_ITEM_LOCATION.trash,
         deletionTime: now,
-        deletedBy: null,
+        deletedBy,
       })),
       ...trash,
     ] as Array<AnySidebarItem>,
@@ -47,8 +56,9 @@ function trashItemTreeInState(
   state: SidebarCacheSnapshot,
   itemId: Id<'sidebarItems'>,
   now: number,
+  deletedBy?: Id<'userProfiles'> | null,
 ) {
-  const next = trashItemTreeInSnapshot(itemId, state.sidebar, state.trash, now)
+  const next = trashItemTreeInSnapshot(itemId, state.sidebar, state.trash, now, deletedBy)
   state.sidebar = next.sidebar
   state.trash = next.trash
 }
@@ -155,12 +165,13 @@ export function applyOptimisticTrashItemsToSnapshot(
   snapshot: SidebarCacheSnapshot,
   items: Array<AnySidebarItem>,
   now = Date.now(),
+  deletedBy?: Id<'userProfiles'> | null,
 ): SidebarCacheSnapshot {
   let sidebar = [...snapshot.sidebar]
   let trash = [...snapshot.trash]
 
   for (const item of items) {
-    const next = trashItemTreeInSnapshot(item._id, sidebar, trash, now)
+    const next = trashItemTreeInSnapshot(item._id, sidebar, trash, now, deletedBy)
     sidebar = next.sidebar
     trash = next.trash
   }
@@ -196,7 +207,6 @@ export function applyOptimisticDuplicateOperationsToSnapshot(
 ): SidebarCacheSnapshot {
   let sidebar = [...snapshot.sidebar]
   let trash = [...snapshot.trash]
-  let tempIndex = 0
 
   const trashDestination = (itemId: Id<'sidebarItems'>) => {
     const next = trashItemTreeInSnapshot(itemId, sidebar, trash, now)
@@ -209,8 +219,8 @@ export function applyOptimisticDuplicateOperationsToSnapshot(
     parentId: Id<'sidebarItems'> | null,
     name: AnySidebarItem['name'],
   ) => {
-    const index = tempIndex++
-    const tempId = `optimistic-${source._id}-${now}-${index}` as Id<'sidebarItems'>
+    const index = nextOptimisticIdIndex()
+    const tempId = `${OPTIMISTIC_ID_PREFIX}${source._id}-${now}-${index}` as Id<'sidebarItems'>
     const clone: AnySidebarItem = {
       ...source,
       _id: tempId,
@@ -223,6 +233,8 @@ export function applyOptimisticDuplicateOperationsToSnapshot(
     }
     sidebar.push(clone)
     if (source.type !== SIDEBAR_ITEM_TYPES.folders) return tempId
+    // Children come from the original snapshot so earlier optimistic clones
+    // cannot change the source tree while this batch is still being planned.
     for (const child of snapshot.sidebar.filter((candidate) => candidate.parentId === source._id)) {
       cloneTree(child, tempId, child.name)
     }

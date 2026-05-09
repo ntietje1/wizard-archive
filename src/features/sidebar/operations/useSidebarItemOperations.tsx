@@ -72,14 +72,14 @@ export interface SidebarItemOperationsValue {
   ) => Promise<Array<Id<'sidebarItems'>>>
   trashItems: (items: Array<AnySidebarItem>) => Promise<Array<Id<'sidebarItems'>>>
   permanentlyDeleteItems: (items: Array<AnySidebarItem>) => Promise<Array<Id<'sidebarItems'>>>
-  confirmPermanentDeleteItems: (items: Array<AnySidebarItem>) => void
+  confirmPermanentDeleteItems: (items: Array<AnySidebarItem>) => boolean
   normalizeItems: (items: Array<AnySidebarItem>) => Array<AnySidebarItem>
 }
 
 export const SidebarItemOperationsContext = createContext<SidebarItemOperationsValue | null>(null)
 
 export function useSidebarItemOperationsValue() {
-  const { campaignId } = useCampaign()
+  const { campaignId, campaign } = useCampaign()
   const { parentItemsMap, itemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.sidebar)
   const { itemsMap: trashedItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
   const { clearEditorContent } = useEditorNavigation()
@@ -150,7 +150,14 @@ export function useSidebarItemOperationsValue() {
 
   const applyOptimisticTrashItems = (items: Array<AnySidebarItem>): SidebarCacheSnapshot => {
     const snapshot = getSnapshot()
-    applyCacheSnapshot(applyOptimisticTrashItemsToSnapshot(snapshot, items))
+    applyCacheSnapshot(
+      applyOptimisticTrashItemsToSnapshot(
+        snapshot,
+        items,
+        Date.now(),
+        campaign.data?.myMembership?.userId ?? null,
+      ),
+    )
     return snapshot
   }
 
@@ -375,15 +382,15 @@ export function useSidebarItemOperationsValue() {
         sourceItemIds: items.map((item) => item._id),
       })
       if (deletedIds.length > 0) {
+        const currentSlug = getSelectedSlug()
+        if (items.some((item) => item.slug === currentSlug)) {
+          await clearEditorContent()
+        }
         toast.success(
           deletedIds.length === 1
             ? 'Item permanently deleted'
             : `${deletedIds.length} items permanently deleted`,
         )
-        const currentSlug = getSelectedSlug()
-        if (items.some((item) => item.slug === currentSlug)) {
-          await clearEditorContent()
-        }
       }
       return deletedIds
     } catch (error) {
@@ -480,20 +487,17 @@ export function useSidebarItemOperationsValue() {
       return
     }
 
-    try {
-      const movedIds = await moveItems(items, targetParentId)
-      if (movedIds.length === 0) return
-      setItemClipboard(null)
-      toast.success(movedIds.length === 1 ? 'Item moved' : `${movedIds.length} items moved`)
-    } catch (error) {
-      handleError(error, 'Failed to move items')
-    }
+    const movedIds = await moveItems(items, targetParentId)
+    if (movedIds.length === 0) return
+    setItemClipboard(null)
+    toast.success(movedIds.length === 1 ? 'Item moved' : `${movedIds.length} items moved`)
   }
 
   const confirmPermanentDeleteItems = (items: Array<AnySidebarItem>) => {
     items = normalizeItems(items)
-    if (items.length === 0) return
+    if (items.length === 0) return false
     setPendingPermanentDeleteItems(items)
+    return true
   }
 
   const closePermanentDeleteDialog = () => setPendingPermanentDeleteItems(null)
@@ -505,7 +509,7 @@ export function useSidebarItemOperationsValue() {
 
   const dialog = pendingConflictRequest ? (
     <ItemOperationConflictDialog
-      key={`${pendingConflictRequest.kind}-${pendingConflictRequest.conflicts.map((conflict) => conflict.sourceItemId).join(':')}`}
+      key={`${pendingConflictRequest.kind}-${pendingConflictRequest.conflicts.map((conflict) => `${conflict.sourceItemId}:${conflict.destinationItemId}`).join(':')}`}
       conflicts={pendingConflictRequest.conflicts}
       onResolve={(decisions) => {
         void resolveConflicts(decisions)

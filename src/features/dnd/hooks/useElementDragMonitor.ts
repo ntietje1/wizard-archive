@@ -16,6 +16,7 @@ import {
 import { resolveNormalizedDraggedSidebarItems } from '~/features/dnd/utils/sidebar-drag-items'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import type { DropCommand, DropOutcome, SidebarDropData } from '~/features/dnd/utils/dnd-registry'
+import { assertNever } from '~/shared/utils/utils'
 
 function resolveDraggedItem(sourceData: Record<string, unknown>, ctx: DndMonitorCtx) {
   const sid = getDragItemId(sourceData)
@@ -65,20 +66,35 @@ function resolveDragFeedbackOutcome({
     ? resolveDropCommand(draggedItems, dropTarget, ctx.dndContext)
     : { status: 'noop' as const }
 
-  if (command.status === 'ready') {
-    return resolveDropOutcome(
-      command.action === 'open' ? draggedItem : (command.items[0] ?? null),
-      dropTarget,
-      ctx.dndContext,
-    )
+  switch (command.status) {
+    case 'ready':
+      return resolveDropOutcome(
+        command.action === 'open' ? draggedItem : (command.items[0] ?? null),
+        dropTarget,
+        ctx.dndContext,
+      )
+    case 'noop':
+      return null
+    case 'blocked':
+      return { type: 'rejection', reason: command.reason }
+    default:
+      return assertNever(command)
   }
-  if (command.status === 'noop') {
-    return null
+}
+
+function dropCommandFailureMessage(command: Extract<DropCommand, { status: 'ready' }>) {
+  switch (command.action) {
+    case 'move':
+      return 'Failed to move items'
+    case 'restore':
+      return 'Failed to restore items'
+    case 'trash':
+      return 'Failed to move items to trash'
+    case 'open':
+      return 'Failed to open item'
+    default:
+      return assertNever(command)
   }
-  if (command.status === 'blocked') {
-    return { type: 'rejection', reason: command.reason }
-  }
-  return resolveDropOutcome(draggedItem, dropTarget, ctx.dndContext)
 }
 
 function resetElementDragState({
@@ -124,12 +140,14 @@ async function executeDropCommand(ctx: DndMonitorCtx, command: DropCommand) {
       case 'open':
         await command.execute()
         break
+      default:
+        assertNever(command)
     }
     if ('parentId' in command && command.parentId) {
       ctx.dndContext.setFolderOpen(command.parentId)
     }
   } catch (error) {
-    handleError(error, 'Failed to move items')
+    handleError(error, dropCommandFailureMessage(command))
   }
 }
 

@@ -233,7 +233,7 @@ describe('selection', () => {
     expect(useSidebarUIStore.getState().activeItemSurface).toEqual({
       surface: 'folder-view',
       parentId: folderId,
-      visibleItemIds: ['note_1'],
+      visibleItemIds: [testId<'sidebarItems'>('note_1')],
     })
   })
 

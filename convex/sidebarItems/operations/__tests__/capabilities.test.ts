@@ -69,7 +69,11 @@ describe('sidebar operation capabilities', () => {
       { parentId: null, parent: null },
     )
 
-    expect(result).toMatchObject({ ok: false, code: 'no_source_permission' })
+    expect(result).toEqual({
+      ok: false,
+      code: 'no_source_permission',
+      message: 'You do not have sufficient permission for this item',
+    })
   })
 
   it('rejects moving into a folder without full target access', () => {
@@ -82,7 +86,11 @@ describe('sidebar operation capabilities', () => {
       parent,
     })
 
-    expect(result).toMatchObject({ ok: false, code: 'no_target_permission' })
+    expect(result).toEqual({
+      ok: false,
+      code: 'no_target_permission',
+      message: 'You do not have sufficient permission for this folder',
+    })
   })
 
   it('rejects moving a folder into its descendant', () => {
@@ -120,18 +128,25 @@ describe('sidebar operation capabilities', () => {
     })
   })
 
-  it('allows DM trash, permanent delete, and paste to an accessible folder', () => {
-    const folder = item('folder-1', 'Folder', SIDEBAR_ITEM_TYPES.folders)
+  it('allows DM to trash items', () => {
+    expect(evaluateTrash({ role: CAMPAIGN_MEMBER_ROLE.DM }, item('note-2', 'Note'))).toEqual({
+      ok: true,
+    })
+  })
+
+  it('allows DM to permanently delete trashed items', () => {
     const trashedNote = item('note-1', 'Note', SIDEBAR_ITEM_TYPES.notes, {
       location: SIDEBAR_ITEM_LOCATION.trash,
     })
 
-    expect(evaluateTrash({ role: CAMPAIGN_MEMBER_ROLE.DM }, item('note-2', 'Note'))).toEqual({
-      ok: true,
-    })
     expect(evaluatePermanentDelete({ role: CAMPAIGN_MEMBER_ROLE.DM }, trashedNote)).toEqual({
       ok: true,
     })
+  })
+
+  it('allows DM to paste to accessible folders', () => {
+    const folder = item('folder-1', 'Folder', SIDEBAR_ITEM_TYPES.folders)
+
     expect(
       evaluatePasteTarget(
         { role: CAMPAIGN_MEMBER_ROLE.DM },

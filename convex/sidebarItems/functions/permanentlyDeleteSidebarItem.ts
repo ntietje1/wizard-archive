@@ -15,6 +15,7 @@ import type { PermissionLevel } from '../../permissions/types'
 import type { AnySidebarItemRow } from '../types/types'
 
 const MAX_PERMANENT_DELETE_DEPTH = 50
+const MAX_PERMANENT_DELETE_BATCH_SIZE = 100
 type PermanentDeleteSource = AnySidebarItemRow & { myPermissionLevel: PermissionLevel }
 
 async function loadPermanentDeleteSource(
@@ -107,6 +108,13 @@ export async function permanentlyDeleteSidebarItems(
   ctx: CampaignMutationCtx,
   { sourceItemIds }: { sourceItemIds: Array<Id<'sidebarItems'>> },
 ): Promise<Array<Id<'sidebarItems'>>> {
+  if (sourceItemIds.length > MAX_PERMANENT_DELETE_BATCH_SIZE) {
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      `Batch size cannot exceed ${MAX_PERMANENT_DELETE_BATCH_SIZE} items`,
+    )
+  }
+
   const sourceItems = await Promise.all(
     sourceItemIds.map((itemId) => loadPermanentDeleteSource(ctx, itemId)),
   )

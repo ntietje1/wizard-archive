@@ -7,7 +7,9 @@ export type OperationDecision = {
   action: ConflictDecisionAction
 }
 
-export function toDecisionRecord(decisions: Array<OperationDecision> | undefined) {
+export function toDecisionRecord(
+  decisions: Array<OperationDecision> | undefined,
+): Partial<Record<Id<'sidebarItems'>, { action: ConflictDecisionAction }>> {
   const record: Partial<Record<Id<'sidebarItems'>, { action: ConflictDecisionAction }>> = {}
   for (const decision of decisions ?? []) {
     if (record[decision.sourceItemId]) {

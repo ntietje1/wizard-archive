@@ -7,12 +7,12 @@ describe('getItemSelectionIntent', () => {
   })
 
   it('uses toggle selection for ctrl or meta clicks', () => {
-    expect(getItemSelectionIntent({ shiftKey: false, metaKey: true, ctrlKey: false })).toBe(
-      'toggle',
-    )
-    expect(getItemSelectionIntent({ shiftKey: false, metaKey: false, ctrlKey: true })).toBe(
-      'toggle',
-    )
+    for (const modifiers of [
+      { metaKey: true, ctrlKey: false },
+      { metaKey: false, ctrlKey: true },
+    ]) {
+      expect(getItemSelectionIntent({ shiftKey: false, ...modifiers })).toBe('toggle')
+    }
   })
 
   it('uses single selection for plain clicks', () => {
@@ -22,9 +22,13 @@ describe('getItemSelectionIntent', () => {
   })
 
   it('prioritizes range selection over toggle modifiers', () => {
-    expect(getItemSelectionIntent({ shiftKey: true, metaKey: true, ctrlKey: false })).toBe('range')
-    expect(getItemSelectionIntent({ shiftKey: true, metaKey: false, ctrlKey: true })).toBe('range')
-    expect(getItemSelectionIntent({ shiftKey: true, metaKey: true, ctrlKey: true })).toBe('range')
+    for (const modifiers of [
+      { metaKey: true, ctrlKey: false },
+      { metaKey: false, ctrlKey: true },
+      { metaKey: true, ctrlKey: true },
+    ]) {
+      expect(getItemSelectionIntent({ shiftKey: true, ...modifiers })).toBe('range')
+    }
   })
 
   it('uses toggle selection when ctrl and meta are both pressed without shift', () => {

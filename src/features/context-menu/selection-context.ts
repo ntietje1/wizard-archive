@@ -30,3 +30,13 @@ export function resolveContextSelectedItems({
 
   return normalizeTopLevelSelectedItems(resolvedItems, allItemsMap)
 }
+
+export function resolveContextPrimaryItem({
+  item,
+  selectedItems,
+}: {
+  item?: AnySidebarItem
+  selectedItems: Array<AnySidebarItem>
+}): AnySidebarItem | undefined {
+  return selectedItems[0] ?? item
+}

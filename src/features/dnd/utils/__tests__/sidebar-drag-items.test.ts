@@ -88,9 +88,8 @@ describe('resolveNormalizedDraggedSidebarItems', () => {
     expect(items).toEqual([parent])
   })
 
-  it('handles empty and missing ids without throwing', () => {
+  it('returns an empty result when drag source ids are empty', () => {
     const note = createNote()
-    const missing = 'missing-item' as Id<'sidebarItems'>
 
     expect(
       resolveNormalizedDraggedSidebarItems({
@@ -98,6 +97,12 @@ describe('resolveNormalizedDraggedSidebarItems', () => {
         activeItemsMap: itemMap([note]),
       }),
     ).toEqual([])
+  })
+
+  it('ignores missing ids that are excluded before resolving items', () => {
+    const note = createNote()
+    const missing = 'missing-item' as Id<'sidebarItems'>
+
     expect(
       resolveNormalizedDraggedSidebarItems({
         sourceData: { sidebarItemIds: [missing, note._id] },

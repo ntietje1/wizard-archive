@@ -19,7 +19,10 @@ import { useBlockNoteContextMenuOptional } from '~/features/editor/hooks/useBloc
 import { useSession } from '~/features/sidebar/hooks/useGameSession'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useActiveSidebarItems, useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import { resolveContextSelectedItems } from '~/features/context-menu/selection-context'
+import {
+  resolveContextPrimaryItem,
+  resolveContextSelectedItems,
+} from '~/features/context-menu/selection-context'
 
 export type EditorContextMenuRef = ContextMenuHostRef
 
@@ -58,6 +61,8 @@ export const EditorContextMenu = forwardRef<EditorContextMenuRef, EditorContextM
     const selectedItemIds = useSidebarUIStore((s) => s.selectedItemIds)
     const { itemsMap } = useActiveSidebarItems()
     const { itemsMap: trashedItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
+    // Item selection is intentionally scoped to sidebar, folder, and trash surfaces.
+    // Update this when adding a VIEW_CONTEXT that should share filesystem selection.
     const canUseItemSelection =
       viewContext === VIEW_CONTEXT.SIDEBAR ||
       viewContext === VIEW_CONTEXT.FOLDER_VIEW ||
@@ -69,14 +74,13 @@ export const EditorContextMenu = forwardRef<EditorContextMenuRef, EditorContextM
       trashedItemsMap,
       canUseItemSelection,
     })
-    const primaryItem = item ?? selectedItems[0]
+    const primaryItem = resolveContextPrimaryItem({ item, selectedItems })
 
     const menuContext = {
       surface: viewContext,
       item,
       primaryItem,
       selectedItems,
-      isMultiSelection: selectedItems.length > 1,
       isItemTrashed: item?.location === SIDEBAR_ITEM_LOCATION.trash,
       isTrashView: isTrashView || viewContext === VIEW_CONTEXT.TRASH_VIEW,
       currentUserId: campaign.data?.myMembership?.userId,

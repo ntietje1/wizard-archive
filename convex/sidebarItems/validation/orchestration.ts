@@ -163,11 +163,11 @@ async function checkSlugConflict(
   const conflict = await ctx.db
     .query('sidebarItems')
     .withIndex('by_campaign_slug', (q) => q.eq('campaignId', campaignId).eq('slug', slug))
-    .collect()
+    .first()
   if (!excludeId) {
-    return conflict.length > 0
+    return conflict !== null
   }
-  return conflict.some((item) => item._id !== excludeId)
+  return conflict !== null && conflict._id !== excludeId
 }
 
 export async function findUniqueSidebarItemSlug(

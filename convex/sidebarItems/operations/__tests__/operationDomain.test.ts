@@ -42,7 +42,7 @@ function item(
 }
 
 describe('sidebar operation domain', () => {
-  it('normalizes selected roots and plans moves from backend-side shared modules', () => {
+  it('normalizes parent and child selection to parent only and plans no-op move', () => {
     const folder = item('folder-1', 'Folder', SIDEBAR_ITEM_TYPES.folders)
     const child = item('note-1', 'Child', SIDEBAR_ITEM_TYPES.notes, {
       parentId: folder._id,

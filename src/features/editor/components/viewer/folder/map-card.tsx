@@ -106,7 +106,7 @@ function MapCardInner({
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
-                handleItemContextMenu()
+                handleItemContextMenu(e)
                 handleMoreOptions(e)
               }}
             >

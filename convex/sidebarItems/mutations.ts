@@ -1,5 +1,6 @@
 import { v } from 'convex/values'
 import { campaignMutation, dmMutation } from '../functions'
+import { ERROR_CODE, throwClientError } from '../errors'
 import { sidebarItemLocationValidator } from './schema/validators'
 import {
   moveSidebarItem as moveSidebarItemFn,
@@ -34,7 +35,9 @@ export const MOVE_SIDEBAR_ITEMS_ACTION = {
 export type MoveSidebarItemsAction =
   (typeof MOVE_SIDEBAR_ITEMS_ACTION)[keyof typeof MOVE_SIDEBAR_ITEMS_ACTION]
 
-const operationDecisionValidator = v.object({
+const MAX_SIDEBAR_ITEMS_BATCH_SIZE = 100
+
+export const operationDecisionValidator = v.object({
   sourceItemId: v.id('sidebarItems'),
   action: v.union(
     v.literal(OPERATION_DECISION_ACTION.skip),
@@ -43,6 +46,15 @@ const operationDecisionValidator = v.object({
     v.literal(OPERATION_DECISION_ACTION.cancel),
   ),
 })
+
+function assertSidebarItemsBatchSize(sourceItemIds: Array<Id<'sidebarItems'>>) {
+  if (sourceItemIds.length > MAX_SIDEBAR_ITEMS_BATCH_SIZE) {
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      `Batch size cannot exceed ${MAX_SIDEBAR_ITEMS_BATCH_SIZE} items`,
+    )
+  }
+}
 
 export const moveSidebarItem = campaignMutation({
   args: {
@@ -77,6 +89,7 @@ export const moveSidebarItems = campaignMutation({
   },
   returns: v.array(v.id('sidebarItems')),
   handler: async (ctx, args): Promise<Array<Id<'sidebarItems'>>> => {
+    assertSidebarItemsBatchSize(args.sourceItemIds)
     return await moveSidebarItemsFn(ctx, args)
   },
 })
@@ -98,6 +111,7 @@ export const permanentlyDeleteSidebarItems = campaignMutation({
   },
   returns: v.array(v.id('sidebarItems')),
   handler: async (ctx, args): Promise<Array<Id<'sidebarItems'>>> => {
+    assertSidebarItemsBatchSize(args.sourceItemIds)
     return await permanentlyDeleteSidebarItemsFn(ctx, { sourceItemIds: args.sourceItemIds })
   },
 })
@@ -149,6 +163,7 @@ export const duplicateSidebarItems = campaignMutation({
   },
   returns: v.array(v.id('sidebarItems')),
   handler: async (ctx, args): Promise<Array<Id<'sidebarItems'>>> => {
+    assertSidebarItemsBatchSize(args.sourceItemIds)
     return await duplicateSidebarItemsFn(ctx, args)
   },
 })
