@@ -13,14 +13,10 @@ const dragNoteA = `Drag Note A ${Date.now()}`
 const dragNoteB = `Drag Note B ${Date.now()}`
 const selectedMoveNoteA = `Selected Move Note A ${Date.now()}`
 const selectedMoveNoteB = `Selected Move Note B ${Date.now()}`
+const VISIBILITY_TIMEOUT = 15000
 
 function sidebarSelectionRow(sidebar: Locator, itemName: string) {
-  return (
-    sidebar
-      .getByRole('link', { name: itemName, exact: true })
-      // This XPath reaches the selectable row wrapper; revisit if the sidebar DOM is flattened.
-      .locator('xpath=ancestor::*[@aria-selected][1]')
-  )
+  return sidebar.getByTestId(`selectable-row-${itemName}`)
 }
 
 test.describe.serial('sidebar and folder multi-select item operations', () => {
@@ -74,14 +70,18 @@ test.describe.serial('sidebar and folder multi-select item operations', () => {
     await expect(page.getByRole('menuitem', { name: 'Rename' })).toHaveCount(0)
 
     await page.getByRole('menuitem', { name: 'Duplicate' }).click()
-    await expect(page.getByRole('dialog', { name: 'Replace or Skip Files' })).toBeVisible()
+    await expect(page.getByRole('dialog', { name: 'Resolve File Conflict' })).toBeVisible()
     await page.getByRole('checkbox', { name: 'Apply to all remaining conflicts' }).click()
     await page.getByRole('button', { name: 'Keep Both' }).click()
 
     await expect(sidebar.getByRole('link', { name: `${noteA} 2`, exact: true })).toBeVisible({
-      timeout: 15000,
+      timeout: VISIBILITY_TIMEOUT,
     })
-    await expect(sidebar.getByRole('link', { name: `${noteB} 2`, exact: true })).toBeVisible()
+    await expect(sidebar.getByRole('link', { name: `${noteB} 2`, exact: true })).toBeVisible({
+      timeout: VISIBILITY_TIMEOUT,
+    })
+    await expect(sidebar.getByRole('link', { name: noteA, exact: true })).toBeVisible()
+    await expect(sidebar.getByRole('link', { name: noteB, exact: true })).toBeVisible()
   })
 
   test('copies a multi-selection with hotkeys and pastes duplicates into folder view', async ({
@@ -103,9 +103,11 @@ test.describe.serial('sidebar and folder multi-select item operations', () => {
     await page.keyboard.press(process.platform === 'darwin' ? 'Meta+V' : 'Control+V')
 
     await expect(folderContents.getByRole('link', { name: noteA, exact: true })).toBeVisible({
-      timeout: 15000,
+      timeout: VISIBILITY_TIMEOUT,
     })
-    await expect(folderContents.getByRole('link', { name: noteC, exact: true })).toBeVisible()
+    await expect(folderContents.getByRole('link', { name: noteC, exact: true })).toBeVisible({
+      timeout: VISIBILITY_TIMEOUT,
+    })
   })
 
   test('drags a selected group into a sidebar folder', async ({ page }) => {
@@ -125,9 +127,11 @@ test.describe.serial('sidebar and folder multi-select item operations', () => {
     await openItem(page, folderName)
     const folderContents = page.getByRole('group', { name: `${folderName} folder contents` })
     await expect(folderContents.getByRole('link', { name: dragNoteA, exact: true })).toBeVisible({
-      timeout: 15000,
+      timeout: VISIBILITY_TIMEOUT,
     })
-    await expect(folderContents.getByRole('link', { name: dragNoteB, exact: true })).toBeVisible()
+    await expect(folderContents.getByRole('link', { name: dragNoteB, exact: true })).toBeVisible({
+      timeout: VISIBILITY_TIMEOUT,
+    })
   })
 
   test('keeps moved sidebar items selected after confirmed move result settles', async ({
@@ -150,11 +154,12 @@ test.describe.serial('sidebar and folder multi-select item operations', () => {
     await expect(sidebarSelectionRow(sidebar, selectedMoveNoteA)).toHaveAttribute(
       'aria-selected',
       'true',
-      { timeout: 15000 },
+      { timeout: VISIBILITY_TIMEOUT },
     )
     await expect(sidebarSelectionRow(sidebar, selectedMoveNoteB)).toHaveAttribute(
       'aria-selected',
       'true',
+      { timeout: VISIBILITY_TIMEOUT },
     )
   })
 })

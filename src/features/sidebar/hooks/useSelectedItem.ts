@@ -30,19 +30,22 @@ export function useSelectedItemSync() {
 }
 
 export function useSidebarItemVisualState(item: AnySidebarItem) {
-  return useSidebarUIStore(
-    useShallow((s) =>
-      getSidebarItemVisualState({
-        item,
-        selectedItemIds: Array.isArray(s.selectedItemIds) ? s.selectedItemIds : [],
-        selectedSlug: s.selectedSlug,
-      }),
-    ),
+  const selection = useSidebarUIStore(
+    useShallow((s) => ({
+      selectedItemIds: s.selectedItemIds,
+      selectedSlug: s.selectedSlug,
+    })),
   )
+  return getSidebarItemVisualState({
+    item,
+    selectedItemIds: selection.selectedItemIds,
+    selectedSlug: selection.selectedSlug,
+  })
 }
 
 export function useIsFocusedItem(item: AnySidebarItem): boolean {
-  return useSidebarUIStore((s) => s.focusedItemId === item._id)
+  const focusedItemId = useSidebarUIStore((s) => s.focusedItemId)
+  return focusedItemId === item._id
 }
 
 export function getSelectedSlug(): SidebarItemSlug | null {

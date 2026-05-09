@@ -31,11 +31,11 @@ async function cascadeHardDelete(
 ) {
   await cascadeSharedDependents(db, item.id, item.campaignId)
 
-  const deletedStorageId = await handlers[item.type].onHardDelete(db, storage, item)
+  const deletedStorageIds = await handlers[item.type].onHardDelete(db, storage, item)
 
   if (
     item.previewStorageId &&
-    item.previewStorageId !== deletedStorageId &&
+    !deletedStorageIds.has(item.previewStorageId) &&
     !(await isPreviewStorageUsedByAnotherItem(db, item.previewStorageId, item.id))
   ) {
     await storage.delete(item.previewStorageId)
@@ -47,11 +47,12 @@ async function isPreviewStorageUsedByAnotherItem(
   storageId: Id<'_storage'>,
   sidebarItemId: Id<'sidebarItems'>,
 ) {
-  const items = await db
+  const item = await db
     .query('sidebarItems')
     .withIndex('by_previewStorageId', (q) => q.eq('previewStorageId', storageId))
-    .collect()
-  return items.some((item) => item._id !== sidebarItemId)
+    .filter((q) => q.neq(q.field('_id'), sidebarItemId))
+    .first()
+  return item !== null
 }
 
 async function cascadeSharedDependents(

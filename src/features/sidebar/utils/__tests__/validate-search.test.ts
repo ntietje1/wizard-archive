@@ -51,12 +51,23 @@ describe('validateSearch', () => {
     expect(validateSearch({ item: 'double--hyphen' })).toEqual({})
     expect(validateSearch({ item: 'special@char' })).toEqual({})
   })
-  it('accepts valid slugs with numbers and enforces item slug minimum length', () => {
+  it('accepts valid slugs with numbers', () => {
     expect(validateSearch({ item: 'item-123' })).toEqual({ item: 'item-123' })
+  })
+
+  it('enforces minimum length of 3 for item slugs', () => {
     expect(validateSearch({ item: 'a' })).toEqual({})
     expect(validateSearch({ item: 'aa' })).toEqual({})
     expect(validateSearch({ item: 'abc' })).toEqual({ item: 'abc' })
+  })
+
+  it('accepts multi-part slugs with hyphens', () => {
+    expect(validateSearch({ item: 'a-b' })).toEqual({ item: 'a-b' })
     expect(validateSearch({ item: 'a-b-c' })).toEqual({ item: 'a-b-c' })
+  })
+
+  it('does not enforce minimum length for headings', () => {
+    expect(validateSearch({ heading: 'h' })).toEqual({ heading: 'h' })
     expect(validateSearch({ heading: 'hh' })).toEqual({ heading: 'hh' })
   })
 

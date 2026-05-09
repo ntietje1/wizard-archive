@@ -7,6 +7,7 @@ import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import type { MenuDialogState } from './menu-dialogs'
 import type { PermissionLevel } from 'convex/permissions/types'
+import { getPrimaryItem } from './types'
 import type { MenuContext } from './types'
 import type { ActionHandlers } from './menu-registry'
 import type { Id } from 'convex/_generated/dataModel'
@@ -38,7 +39,8 @@ function getContextItems(ctx: MenuContext): Array<AnySidebarItem> {
   if (ctx.selectedItems && ctx.selectedItems.length > 0) {
     return ctx.selectedItems
   }
-  return ctx.item ? [ctx.item] : []
+  const primaryItem = getPrimaryItem(ctx)
+  return primaryItem ? [primaryItem] : []
 }
 
 export function useMenuActions(options: UseMenuActionsOptions = {}) {
@@ -634,11 +636,15 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       const failures = results.filter((result) => result.status === 'rejected')
       const successCount = results.length - failures.length
       if (failures.length > 0) {
-        handleError(
-          new Error(`${failures.length} of ${items.length} bookmark updates failed`),
-          items.length === 1 ? 'Failed to toggle bookmark' : 'Failed to toggle bookmarks',
-        )
-        if (successCount === 0) return
+        const error = new Error(`${failures.length} of ${items.length} bookmark updates failed`)
+        if (successCount === 0) {
+          handleError(
+            error,
+            items.length === 1 ? 'Failed to toggle bookmark' : 'Failed to toggle bookmarks',
+          )
+          return
+        }
+        console.error(error)
         toast.error(`${successCount} bookmarks updated, ${failures.length} failed`)
         return
       }

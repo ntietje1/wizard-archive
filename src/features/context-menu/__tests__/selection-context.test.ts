@@ -171,6 +171,26 @@ describe('resolveContextSelectedItems', () => {
 })
 
 describe('resolveContextPrimaryItem', () => {
+  it('uses the first selected item as primary for multi-selection menus', () => {
+    const folder = createFolder()
+    const note = createNote()
+
+    expect(resolveContextPrimaryItem({ item: note, selectedItems: [folder, note] })).toBe(folder)
+  })
+
+  it('uses the selected-first primary item even when the context item is selected', () => {
+    const folder = createFolder()
+    const note = createNote()
+
+    expect(resolveContextPrimaryItem({ item: note, selectedItems: [folder, note] })).toBe(folder)
+  })
+
+  it('falls back to the context item when selected items are unrelated and unresolved', () => {
+    const item = createNote()
+
+    expect(resolveContextPrimaryItem({ item, selectedItems: [] })).toBe(item)
+  })
+
   it('uses the normalized selection root when the context item is collapsed out of selection', () => {
     const folder = createFolder()
     const child = createNote({ parentId: folder._id })

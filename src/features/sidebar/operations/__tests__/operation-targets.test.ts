@@ -48,6 +48,33 @@ describe('sidebar operation targets', () => {
     ).toBe(activeFolder._id)
   })
 
+  it('uses an explicit restore target before the active surface parent', () => {
+    const surfaceFolder = createFolder({
+      location: SIDEBAR_ITEM_LOCATION.sidebar,
+      parentId: null,
+    })
+    const explicitTargetFolder = createFolder({
+      location: SIDEBAR_ITEM_LOCATION.sidebar,
+      parentId: null,
+    })
+    const activeSurface: ActiveItemSurface = {
+      surface: 'folder-view',
+      parentId: surfaceFolder._id,
+      visibleItemIds: [],
+    }
+
+    expect(
+      getRestoreTargetParentId(
+        activeSurface,
+        new Map([
+          [surfaceFolder._id, surfaceFolder],
+          [explicitTargetFolder._id, explicitTargetFolder],
+        ]),
+        explicitTargetFolder._id,
+      ),
+    ).toBe(explicitTargetFolder._id)
+  })
+
   it('falls back to root when the active folder surface is missing', () => {
     const missingFolder = createFolder({
       location: SIDEBAR_ITEM_LOCATION.sidebar,

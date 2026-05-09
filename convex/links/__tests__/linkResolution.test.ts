@@ -15,7 +15,7 @@ import { assertSidebarItemSlug } from '../../sidebarItems/validation/slug'
 
 function makeItem(id: string, name: string, parentId: string | null = null): AnySidebarItem {
   const rawSlug = name.toLowerCase().replace(/\s+/g, '-')
-  const slug = rawSlug.length >= 3 ? rawSlug : rawSlug.padEnd(3, rawSlug)
+  const slug = rawSlug.length >= 3 ? rawSlug : rawSlug.padEnd(3, '0')
 
   return {
     _id: id as Id<'sidebarItems'>,

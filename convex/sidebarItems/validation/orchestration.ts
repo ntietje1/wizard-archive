@@ -91,6 +91,7 @@ export async function validateSidebarParentChange(
     if (!parentFromDb) {
       throwClientError(ERROR_CODE.NOT_FOUND, 'Parent not found')
     }
+    // checkItemAccess with PERMISSION_LEVEL.NONE intentionally normalizes parentFromDb for evaluateMoveToParent.
     parent = await checkItemAccess(ctx, {
       rawItem: parentFromDb,
       requiredLevel: PERMISSION_LEVEL.NONE,

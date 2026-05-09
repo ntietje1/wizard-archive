@@ -24,6 +24,7 @@ import type { SidebarItemIconName } from '../validation/icon'
 import type { SidebarItemName } from '../validation/name'
 
 const MAX_SIDEBAR_DUPLICATE_DEPTH = 50
+const DUPLICATE_INSERT_CHUNK_SIZE = 100
 
 type DuplicateCopyOrReplaceOperation = Extract<DuplicateOperation, { action: 'copy' | 'replace' }>
 type ExecutableDuplicateOperation = Exclude<DuplicateOperation, { action: 'skip' }>
@@ -42,6 +43,13 @@ type DuplicateCtx = {
 function cloneStorageId(storageId: Id<'_storage'> | null): Id<'_storage'> | null {
   // Files and images intentionally share immutable Convex storage references.
   return storageId
+}
+
+//TODO: is this needed?
+async function insertInChunks<T>(items: Array<T>, insert: (item: T) => Promise<unknown>) {
+  for (let index = 0; index < items.length; index += DUPLICATE_INSERT_CHUNK_SIZE) {
+    await Promise.all(items.slice(index, index + DUPLICATE_INSERT_CHUNK_SIZE).map(insert))
+  }
 }
 
 async function getUniqueName(
@@ -69,14 +77,14 @@ async function copyYjsUpdates(
     .order('asc')
     .collect()
 
-  for (const update of updates) {
-    await ctx.db.insert('yjsUpdates', {
+  await insertInChunks(updates, (update) =>
+    ctx.db.insert('yjsUpdates', {
       documentId: targetItemId,
       update: update.update,
       seq: update.seq,
       isSnapshot: update.isSnapshot,
-    })
-  }
+    }),
+  )
 }
 
 async function copyNoteBlocks(
@@ -91,8 +99,8 @@ async function copyNoteBlocks(
     )
     .collect()
 
-  for (const block of blocks) {
-    await ctx.db.insert('blocks', {
+  await insertInChunks(blocks, (block) =>
+    ctx.db.insert('blocks', {
       noteId: targetItemId,
       blockNoteId: block.blockNoteId,
       position: block.position,
@@ -104,8 +112,8 @@ async function copyNoteBlocks(
       plainText: block.plainText,
       campaignId: ctx.campaign._id,
       shareStatus: block.shareStatus,
-    })
-  }
+    }),
+  )
 }
 
 async function insertDuplicateSidebarItem(
@@ -159,9 +167,15 @@ async function insertDuplicateSidebarItem(
         .query('folders')
         .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', source._id))
         .unique()
+      if (!sourceFolder) {
+        throwClientError(
+          ERROR_CODE.NOT_FOUND,
+          `Missing folders companion row for sidebar item ${source._id}`,
+        )
+      }
       await ctx.db.insert('folders', {
         sidebarItemId: itemId,
-        inheritShares: sourceFolder?.inheritShares ?? false,
+        inheritShares: sourceFolder.inheritShares,
       })
       break
     }
@@ -170,9 +184,15 @@ async function insertDuplicateSidebarItem(
         .query('gameMaps')
         .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', source._id))
         .unique()
+      if (!sourceMap) {
+        throwClientError(
+          ERROR_CODE.NOT_FOUND,
+          `Missing gameMaps companion row for sidebar item ${source._id}`,
+        )
+      }
       await ctx.db.insert('gameMaps', {
         sidebarItemId: itemId,
-        imageStorageId: cloneStorageId(sourceMap?.imageStorageId ?? null),
+        imageStorageId: cloneStorageId(sourceMap.imageStorageId),
       })
       break
     }
@@ -181,9 +201,15 @@ async function insertDuplicateSidebarItem(
         .query('files')
         .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', source._id))
         .unique()
+      if (!sourceFile) {
+        throwClientError(
+          ERROR_CODE.NOT_FOUND,
+          `Missing files companion row for sidebar item ${source._id}`,
+        )
+      }
       await ctx.db.insert('files', {
         sidebarItemId: itemId,
-        storageId: cloneStorageId(sourceFile?.storageId ?? null),
+        storageId: cloneStorageId(sourceFile.storageId),
       })
       break
     }

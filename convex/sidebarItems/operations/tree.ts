@@ -22,17 +22,18 @@ function addChildDescendant(
   child: SidebarTreeItem,
   rootFolderId: Id<'sidebarItems'>,
   descendants: Set<Id<'sidebarItems'>>,
-  stack: Array<{ id: Id<'sidebarItems'>; depth: number }>,
+  stack: Array<{ id: Id<'sidebarItems'>; depth: number; ancestors: Set<Id<'sidebarItems'>> }>,
   depth: number,
+  ancestors: Set<Id<'sidebarItems'>>,
 ) {
-  if (child._id === rootFolderId) {
-    throw new Error(`Folder ${rootFolderId} appears as its own descendant`)
+  if (child._id === rootFolderId || ancestors.has(child._id)) {
+    throw new Error(`Folder ${child._id} appears as its own descendant`)
   }
   if (descendants.has(child._id)) return
 
   descendants.add(child._id)
   if (child.type === SIDEBAR_ITEM_TYPES.folders) {
-    stack.push({ id: child._id, depth })
+    stack.push({ id: child._id, depth, ancestors: new Set([...ancestors, child._id]) })
   }
 }
 
@@ -51,11 +52,15 @@ export function collectDescendantIdsFromItems(
   const childrenByParent = indexChildrenByParent(items)
 
   const result = new Set<Id<'sidebarItems'>>()
-  const stack: Array<{ id: Id<'sidebarItems'>; depth: number }> = [{ id: folderId, depth: 0 }]
+  const stack: Array<{
+    id: Id<'sidebarItems'>
+    depth: number
+    ancestors: Set<Id<'sidebarItems'>>
+  }> = [{ id: folderId, depth: 0, ancestors: new Set([folderId]) }]
 
   while (stack.length > 0) {
     const current = stack.pop()!
-    if (current.depth >= maxDepth) {
+    if (current.depth > maxDepth) {
       throw new Error(`Max sidebar tree depth exceeded at ${current.id}`)
     }
 
@@ -63,7 +68,7 @@ export function collectDescendantIdsFromItems(
     if (!children) continue
 
     for (const child of children) {
-      addChildDescendant(child, folderId, result, stack, current.depth + 1)
+      addChildDescendant(child, folderId, result, stack, current.depth + 1, current.ancestors)
     }
   }
 

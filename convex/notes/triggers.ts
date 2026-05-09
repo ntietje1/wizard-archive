@@ -39,6 +39,6 @@ export const noteTriggers: SidebarItemTriggerHandlers = {
     if (ext) await db.delete('notes', ext._id)
     await deleteYjsDocument({ db }, item.id)
     await asyncMap([...outgoingLinks, ...incomingLinks], (link) => db.delete('noteLinks', link._id))
-    return null
+    return new Set()
   },
 }

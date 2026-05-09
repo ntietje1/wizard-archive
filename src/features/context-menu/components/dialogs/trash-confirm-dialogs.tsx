@@ -24,9 +24,11 @@ export function EmptyTrashConfirmDialog({
       onConfirm={onConfirm}
       title="Empty Trash"
       description={
-        status === 'error'
-          ? 'Trash contents could not be loaded.'
-          : emptyTrashDescription(allTrashedItems?.length ?? 0)
+        status === 'pending'
+          ? 'Loading trashed items...'
+          : status === 'error'
+            ? 'Trash contents could not be loaded.'
+            : emptyTrashDescription(allTrashedItems?.length ?? 0)
       }
       confirmLabel="Empty Trash"
       confirmVariant="destructive"
@@ -52,7 +54,13 @@ export function PermanentDeleteConfirmDialog({
       onClose={onClose}
       onConfirm={onConfirm}
       title="Permanently Delete"
-      description={trashedItems ? permanentDeleteDescription(item, trashedItems) : 'Loading...'}
+      description={
+        status === 'error'
+          ? 'Trash contents could not be loaded.'
+          : trashedItems
+            ? permanentDeleteDescription(item, trashedItems)
+            : 'Loading...'
+      }
       confirmLabel="Delete Forever"
       confirmVariant="destructive"
     />

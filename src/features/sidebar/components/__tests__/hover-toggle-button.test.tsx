@@ -11,11 +11,25 @@ describe('HoverToggleButton', () => {
       />,
     )
 
-    expect(screen.getByText('Icon').parentElement).toHaveClass('group-hover:opacity-0')
-    expect(screen.getByText('Icon').parentElement).not.toHaveClass('group-hover:transition-opacity')
-    expect(screen.getByText('Chevron').parentElement).toHaveClass('group-hover:opacity-100')
-    expect(screen.getByText('Chevron').parentElement).not.toHaveClass(
+    expect(screen.getByTestId('hover-toggle-default')).toHaveClass('group-hover:opacity-0')
+    expect(screen.getByTestId('hover-toggle-default')).not.toHaveClass(
       'group-hover:transition-opacity',
     )
+    expect(screen.getByTestId('hover-toggle-hover')).toHaveClass('group-hover:opacity-100')
+    expect(screen.getByTestId('hover-toggle-hover')).not.toHaveClass(
+      'group-hover:transition-opacity',
+    )
+  })
+
+  it('renders when either side is omitted', () => {
+    render(
+      <>
+        <HoverToggleButton nonHoverComponent={<span>Icon</span>} />
+        <HoverToggleButton hoverComponent={<span>Chevron</span>} />
+      </>,
+    )
+
+    expect(screen.getByText('Icon')).toBeInTheDocument()
+    expect(screen.getByText('Chevron')).toBeInTheDocument()
   })
 })

@@ -29,7 +29,7 @@ export async function purgeExpiredTrash(ctx: MutationCtx): Promise<void> {
 
       const expired = await ctx.db
         .query('sidebarItems')
-        .withIndex('by_campaign', (q) =>
+        .withIndex('by_campaign_deletionTime', (q) =>
           q.eq('campaignId', campaign._id).gt('deletionTime', 0).lt('deletionTime', cutoff),
         )
         .collect()

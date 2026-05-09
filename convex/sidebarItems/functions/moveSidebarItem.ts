@@ -147,15 +147,19 @@ async function executeTrash(ctx: CampaignMutationCtx, item: AnySidebarItem) {
 async function resolveRestoreTargetParentId(
   ctx: CampaignMutationCtx,
   parentId: Id<'sidebarItems'> | null | undefined,
-): Promise<Id<'sidebarItems'> | null> {
-  if (!parentId) return null
+): Promise<{ parentId: Id<'sidebarItems'> | null; parent: AnySidebarItem | null }> {
+  if (!parentId) return { parentId: null, parent: null }
 
-  const parent = await getSidebarItem(ctx, parentId)
+  const parent = (await getSidebarItem(ctx, parentId)) as AnySidebarItem | null
   if (!parent) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Parent not found')
   }
 
-  return normalizeRestoreTargetParentId(parentId, parent.location)
+  const normalizedParentId = normalizeRestoreTargetParentId(parentId, parent.location)
+  return {
+    parentId: normalizedParentId,
+    parent: normalizedParentId === null ? null : parent,
+  }
 }
 
 async function executeRestore(
@@ -172,13 +176,14 @@ async function executeRestore(
     name?: string
   },
 ) {
-  const restoreParentId = await resolveRestoreTargetParentId(ctx, parentId)
+  const restoreTarget = await resolveRestoreTargetParentId(ctx, parentId)
+  const restoreParentId = restoreTarget.parentId
   const requestedName = name ? assertSidebarItemName(name) : null
   const restoreParent =
     restoreParentId === null
       ? null
       : await checkItemAccess(ctx, {
-          rawItem: await getSidebarItem(ctx, restoreParentId),
+          rawItem: restoreTarget.parent,
           requiredLevel: PERMISSION_LEVEL.NONE,
         })
   assertSidebarOperationAllowed(
@@ -335,6 +340,11 @@ async function collectMoveChildrenMap(
     rootFolderIds: folders.map((folder) => folder._id),
     maxDepth: MAX_SIDEBAR_MOVE_DEPTH,
     getChildren: async (parentId) => {
+      if (!folderLocations.has(parentId)) {
+        console.warn(
+          `Missing sidebar folder location while collecting move children for ${parentId}; falling back to sidebar`,
+        )
+      }
       const location = folderLocations.get(parentId) ?? SIDEBAR_ITEM_LOCATION.sidebar
       const children = await getSidebarItemRowsByParentLocation(ctx, {
         parentId,
@@ -540,7 +550,9 @@ export async function moveSidebarItems(
   }
 
   const effectiveTargetParentId =
-    action === 'restore' ? await resolveRestoreTargetParentId(ctx, targetParentId) : targetParentId
+    action === 'restore'
+      ? (await resolveRestoreTargetParentId(ctx, targetParentId)).parentId
+      : targetParentId
   const targetItems = await getSidebarItemsByParent(ctx, { parentId: effectiveTargetParentId })
   const folders = [...sourceItems, ...targetItems].filter(
     (item) => item.type === SIDEBAR_ITEM_TYPES.folders,

@@ -50,7 +50,9 @@ export function buildSidebarItemMaps(data: Array<AnySidebarItem>): SidebarItemMa
 export function collectDescendantIds(
   folderId: Id<'sidebarItems'>,
   items: Array<AnySidebarItem>,
+  itemsMap?: ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>,
 ): Set<Id<'sidebarItems'>> {
-  if (!items.some((item) => item._id === folderId)) return new Set()
+  const hasFolder = itemsMap ? itemsMap.has(folderId) : items.some((item) => item._id === folderId)
+  if (!hasFolder) return new Set()
   return collectDescendantIdsFromItems(folderId, items)
 }

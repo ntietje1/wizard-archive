@@ -23,7 +23,7 @@ export interface MenuDialogState {
   closeSidebarItemDialog: () => void
   closeEmptyTrashDialog: () => void
   clearEditorContent: () => void
-  emptyTrashBin: () => Promise<void>
+  emptyTrashBin: () => Promise<boolean>
 }
 
 export function MenuDialogs({
@@ -94,8 +94,8 @@ export function MenuDialogs({
           onConfirm={async () => {
             if (!campaignId) return
             try {
-              await emptyTrashBin()
-              toast.success('Trash emptied')
+              const emptied = await emptyTrashBin()
+              if (emptied) toast.success('Trash emptied')
             } catch (error) {
               handleError(error, 'Failed to empty trash')
             }

@@ -54,6 +54,15 @@ describe('collectDescendantIdsFromItems', () => {
     )
   })
 
+  it('throws when a non-root cycle appears in descendants', () => {
+    const folderA = item('folder_2', 'folder_3' as Id<'sidebarItems'>, SIDEBAR_ITEM_TYPES.folders)
+    const folderB = item('folder_3', folderA._id, SIDEBAR_ITEM_TYPES.folders)
+
+    expect(() => collectDescendantIdsFromItems(folderA._id, [folderA, folderB])).toThrow(
+      'appears as its own descendant',
+    )
+  })
+
   it('throws when maxDepth is less than one', () => {
     const root = item('folder_1', null, SIDEBAR_ITEM_TYPES.folders)
 
@@ -62,13 +71,51 @@ describe('collectDescendantIdsFromItems', () => {
     )
   })
 
-  it('throws when max depth is exceeded', () => {
+  it('throws when maxDepth is negative', () => {
+    const root = item('folder_1', null, SIDEBAR_ITEM_TYPES.folders)
+
+    expect(() => collectDescendantIdsFromItems(root._id, [root], { maxDepth: -1 })).toThrow(
+      'maxDepth must be an integer greater than or equal to 1',
+    )
+  })
+
+  it('throws when maxDepth is not an integer', () => {
+    const root = item('folder_1', null, SIDEBAR_ITEM_TYPES.folders)
+
+    expect(() => collectDescendantIdsFromItems(root._id, [root], { maxDepth: 1.5 })).toThrow(
+      'maxDepth must be an integer greater than or equal to 1',
+    )
+  })
+
+  it('allows traversal when maxDepth equals the deepest descendant folder depth', () => {
     const root = item('folder_1', null, SIDEBAR_ITEM_TYPES.folders)
     const childFolder = item('folder_2', root._id, SIDEBAR_ITEM_TYPES.folders)
     const leaf = item('note_1', childFolder._id)
 
-    expect(() =>
+    expect(
       collectDescendantIdsFromItems(root._id, [root, childFolder, leaf], { maxDepth: 1 }),
+    ).toEqual(new Set([childFolder._id, leaf._id]))
+  })
+
+  it('allows traversal when maxDepth exceeds the tree depth', () => {
+    const root = item('folder_1', null, SIDEBAR_ITEM_TYPES.folders)
+    const childFolder = item('folder_2', root._id, SIDEBAR_ITEM_TYPES.folders)
+    const leaf = item('note_1', childFolder._id)
+
+    expect(
+      collectDescendantIdsFromItems(root._id, [root, childFolder, leaf], { maxDepth: 2 }),
+    ).toEqual(new Set([childFolder._id, leaf._id]))
+  })
+
+  it('throws when max depth is exceeded', () => {
+    const root = item('folder_1', null, SIDEBAR_ITEM_TYPES.folders)
+    const childFolder = item('folder_2', root._id, SIDEBAR_ITEM_TYPES.folders)
+    const grandchildFolder = item('folder_3', childFolder._id, SIDEBAR_ITEM_TYPES.folders)
+
+    expect(() =>
+      collectDescendantIdsFromItems(root._id, [root, childFolder, grandchildFolder], {
+        maxDepth: 1,
+      }),
     ).toThrow('Max sidebar tree depth exceeded')
   })
 

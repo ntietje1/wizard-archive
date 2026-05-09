@@ -88,8 +88,10 @@ function evaluateTargetParent(
   const parentAccess = evaluateParentAccess(target)
   if (!parentAccess.ok) return parentAccess
   if (target.parentId === null) return ok()
+  const parent = target.parent
+  if (!parent) return reject('not_found', 'Parent not found')
 
-  if (target.parent?.location !== targetLocation) {
+  if (parent.location !== targetLocation) {
     return reject('different_location', 'Cannot move items into a folder in a different location')
   }
 

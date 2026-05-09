@@ -20,6 +20,7 @@ function createMonitorCtx(items: Array<AnySidebarItem>): DndMonitorCtx {
   return {
     itemsMap,
     trashedItemsMap: new Map(),
+    allItemsMap: itemsMap,
     getAncestorIds: vi.fn(() => []),
     dndContext: {
       moveItems: vi.fn(),
@@ -103,6 +104,9 @@ describe('useElementDragMonitor', () => {
         }
       }) => void
     }
+    // `source.data` models a normalization edge case: firstChild is the actual dragged
+    // element, sidebarItemIds contains the normalized folder root, and
+    // sidebarDragPreviewItemIds keeps folder plus children visible in the preview.
     const source = {
       data: {
         sidebarItemId: firstChild._id,

@@ -20,6 +20,8 @@ export interface ItemCardProps<T extends AnySidebarItem> {
 
 export function ItemCard({
   item,
+  onClick,
+  isLoading,
   parentId,
   visibleItemIds,
   itemSurface,
@@ -29,6 +31,8 @@ export function ItemCard({
       return (
         <FolderCard
           item={item}
+          onClick={onClick}
+          isLoading={isLoading}
           parentId={parentId}
           visibleItemIds={visibleItemIds}
           itemSurface={itemSurface}
@@ -38,6 +42,8 @@ export function ItemCard({
       return (
         <NoteCard
           item={item}
+          onClick={onClick}
+          isLoading={isLoading}
           parentId={parentId}
           visibleItemIds={visibleItemIds}
           itemSurface={itemSurface}
@@ -47,6 +53,8 @@ export function ItemCard({
       return (
         <MapCard
           item={item}
+          onClick={onClick}
+          isLoading={isLoading}
           parentId={parentId}
           visibleItemIds={visibleItemIds}
           itemSurface={itemSurface}
@@ -56,6 +64,8 @@ export function ItemCard({
       return (
         <FileCard
           item={item}
+          onClick={onClick}
+          isLoading={isLoading}
           parentId={parentId}
           visibleItemIds={visibleItemIds}
           itemSurface={itemSurface}
@@ -65,6 +75,8 @@ export function ItemCard({
       return (
         <CanvasCard
           item={item}
+          onClick={onClick}
+          isLoading={isLoading}
           parentId={parentId}
           visibleItemIds={visibleItemIds}
           itemSurface={itemSurface}

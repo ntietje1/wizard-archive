@@ -36,7 +36,9 @@ export async function syncNoteLinks(
   const [sidebarItems, existingLinks] = await Promise.all([
     ctx.db
       .query('sidebarItems')
-      .withIndex('by_campaign', (q) => q.eq('campaignId', campaignId).eq('deletionTime', null))
+      .withIndex('by_campaign_deletionTime', (q) =>
+        q.eq('campaignId', campaignId).eq('deletionTime', null),
+      )
       .collect(),
     ctx.db
       .query('noteLinks')

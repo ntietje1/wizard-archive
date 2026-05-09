@@ -15,12 +15,12 @@ interface SidebarRowProps extends ComponentPropsWithRef<'div'> {
 }
 
 export function SidebarRow({
+  ref,
   icon: Icon,
   label,
   rightSlot,
   isActive,
   className,
-  ref,
   ...props
 }: SidebarRowProps) {
   const visualState = { isSelected: false, isViewing: isActive === true, isMultiSelected: false }
@@ -28,6 +28,7 @@ export function SidebarRow({
   return (
     <div
       ref={ref}
+      data-active={isActive === true ? 'true' : 'false'}
       className={cn(
         'flex items-center w-full h-8 px-1 rounded-sm group',
         sidebarItemBackgroundClass(visualState),

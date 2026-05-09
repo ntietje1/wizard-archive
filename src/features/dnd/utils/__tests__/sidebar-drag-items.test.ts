@@ -22,6 +22,19 @@ describe('resolveNormalizedDraggedSidebarItems', () => {
     expect(items).toEqual([folder])
   })
 
+  it('keeps multiple independent root items unchanged', () => {
+    const note = createNote()
+    const secondNote = createNote()
+    const folder = createFolder()
+
+    const items = resolveNormalizedDraggedSidebarItems({
+      sourceData: { sidebarItemIds: [note._id, secondNote._id, folder._id] },
+      activeItemsMap: itemMap([note, secondNote, folder]),
+    })
+
+    expect(items).toEqual([note, secondNote, folder])
+  })
+
   it('skips trashed items unless requested', () => {
     const active = createNote()
     const trashed = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })

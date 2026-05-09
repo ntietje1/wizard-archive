@@ -26,6 +26,7 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
   const { handleDrop: handleDropFiles } = useFileDropHandler()
   const { itemsMap, getAncestorSidebarItems } = useActiveSidebarItems()
   const { itemsMap: trashedItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
+  const allItemsMap = new Map<Id<'sidebarItems'>, AnySidebarItem>([...itemsMap, ...trashedItemsMap])
 
   const setFolderState = useSidebarUIStore((s) => s.setFolderState)
 
@@ -56,6 +57,7 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
   ctxRef.current = {
     itemsMap,
     trashedItemsMap,
+    allItemsMap,
     getAncestorIds,
     dndContext,
     handleDropFiles,

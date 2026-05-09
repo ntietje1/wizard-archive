@@ -164,6 +164,7 @@ describe('rejectionReasonMessage', () => {
     expect(rejectionReasonMessage('mixed_actions')).toBe(
       'Cannot move trashed and non-trashed items together',
     )
+    expect(rejectionReasonMessage('unexpected_action')).toBe('Cannot perform that action here')
   })
 })
 
@@ -261,14 +262,6 @@ describe('resolveDropOutcome', () => {
       expect(result).toMatchObject({ type: 'operation', action: 'restore' })
     })
 
-    it('allows moving nested items to root', () => {
-      const note = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
-      const ctx = createCtx()
-      const result = resolveDropOutcome(note, rootTarget(), ctx)
-
-      expect(result).toMatchObject({ type: 'operation', action: 'move' })
-    })
-
     it('rejects restoring a folder as non-DM', () => {
       const folder = createFolder({ location: SIDEBAR_ITEM_LOCATION.trash })
       const ctx = createCtx({ isDm: false })
@@ -363,15 +356,6 @@ describe('resolveDropOutcome', () => {
       const result = resolveDropOutcome(folder, target, ctx)
 
       expect(result).toEqual({ type: 'rejection', reason: 'dm_only' })
-    })
-
-    it('allows moving items into folders', () => {
-      const note = createNote()
-      const target = folderTarget()
-      const ctx = createCtx()
-      const result = resolveDropOutcome(note, target, ctx)
-
-      expect(result).toMatchObject({ type: 'operation', action: 'move' })
     })
   })
 

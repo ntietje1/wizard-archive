@@ -53,6 +53,10 @@ export function SidebarShareButton({
   buttonClassName,
 }: {
   item: AnySidebarItem
+  /**
+   * Optional color/state classes for the inner button. Avoid overriding size-6 or padding classes;
+   * the surrounding action slot is fixed at h-6 w-6.
+   */
   buttonClassName?: string
 }) {
   const { isDm } = useCampaign()

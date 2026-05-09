@@ -115,6 +115,7 @@ export type DropRejectionReason =
   | 'dm_only'
   | 'trashed_item'
   | 'mixed_actions'
+  | 'unexpected_action'
 
 // ─── Outcome Types ──────────────────────────────────────────────────
 
@@ -282,6 +283,8 @@ export function rejectionReasonMessage(reason: DropRejectionReason): string {
       return 'The item is trashed and cannot be used'
     case 'mixed_actions':
       return 'Cannot move trashed and non-trashed items together'
+    case 'unexpected_action':
+      return 'Cannot perform that action here'
     default:
       return assertNever(reason)
   }
@@ -500,7 +503,7 @@ export function getDroppableMoveItems(
   const operations: Array<MoveDropOperation> = []
   for (const { item, outcome } of resolvedItems) {
     if (!outcome) continue
-    if (outcome.type !== 'operation') return { status: 'blocked', reason: 'missing_data' }
+    if (outcome.type !== 'operation') return { status: 'none' }
     if (!isMoveDropAction(outcome.action)) return { status: 'none' }
     operations.push({ item, action: outcome.action })
   }
@@ -555,7 +558,7 @@ function getTrashCommand(
     const outcome = resolveDropOutcome(item, target, ctx)
     if (!outcome) continue
     if (outcome.type === 'rejection') return { status: 'blocked', reason: outcome.reason }
-    if (outcome.action !== 'trash') return { status: 'blocked', reason: 'missing_data' }
+    if (outcome.action !== 'trash') return { status: 'blocked', reason: 'unexpected_action' }
     trashItems.push(item)
   }
 

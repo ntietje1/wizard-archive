@@ -6,6 +6,7 @@ import type { DropResult } from '~/features/file-upload/utils/folder-reader'
 export interface DndMonitorCtx {
   itemsMap: ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>
   trashedItemsMap: ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>
+  allItemsMap: ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>
   getAncestorIds: (id: Id<'sidebarItems'>) => Array<Id<'sidebarItems'>>
   dndContext: DndContext
   handleDropFiles: (

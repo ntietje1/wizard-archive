@@ -25,6 +25,8 @@ export function resolveContextSelectedItems({
     const selectedItem = allItemsMap.get(selectedId) ?? (selectedId === item._id ? item : undefined)
     if (selectedItem) {
       resolvedItems.push(selectedItem)
+    } else if (import.meta.env.DEV) {
+      console.warn(`Context menu selection referenced missing sidebar item ${selectedId}`)
     }
   }
 

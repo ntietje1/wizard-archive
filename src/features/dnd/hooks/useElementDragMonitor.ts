@@ -20,7 +20,7 @@ import { assertNever } from '~/shared/utils/utils'
 
 function resolveDraggedItem(sourceData: Record<string, unknown>, ctx: DndMonitorCtx) {
   const sid = getDragItemId(sourceData)
-  return sid ? (ctx.itemsMap.get(sid) ?? ctx.trashedItemsMap.get(sid) ?? null) : null
+  return sid ? (ctx.allItemsMap.get(sid) ?? null) : null
 }
 
 function resolveDraggedItems(sourceData: Record<string, unknown>, ctx: DndMonitorCtx) {
@@ -33,9 +33,8 @@ function resolveDraggedItems(sourceData: Record<string, unknown>, ctx: DndMonito
 }
 
 function resolveDraggedPreviewItems(sourceData: Record<string, unknown>, ctx: DndMonitorCtx) {
-  const allItemsMap = new Map([...ctx.itemsMap, ...ctx.trashedItemsMap])
   return getDragPreviewItemIds(sourceData)
-    .map((id) => allItemsMap.get(id))
+    .map((id) => ctx.allItemsMap.get(id))
     .filter((item): item is NonNullable<typeof item> => Boolean(item))
 }
 

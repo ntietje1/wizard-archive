@@ -16,7 +16,9 @@ const alphaSort: SortOptions = {
   direction: SORT_DIRECTIONS.Ascending,
 }
 
-function parentMap(items: Array<AnySidebarItem>) {
+function parentMap(
+  items: Array<AnySidebarItem>,
+): Map<Id<'sidebarItems'> | null, Array<AnySidebarItem>> {
   const map = new Map<Id<'sidebarItems'> | null, Array<AnySidebarItem>>()
   for (const item of items) {
     let siblings = map.get(item.parentId)

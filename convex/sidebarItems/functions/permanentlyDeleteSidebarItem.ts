@@ -108,6 +108,8 @@ export async function permanentlyDeleteSidebarItems(
   ctx: CampaignMutationCtx,
   { sourceItemIds }: { sourceItemIds: Array<Id<'sidebarItems'>> },
 ): Promise<Array<Id<'sidebarItems'>>> {
+  if (sourceItemIds.length === 0) return []
+
   if (sourceItemIds.length > MAX_PERMANENT_DELETE_BATCH_SIZE) {
     throwClientError(
       ERROR_CODE.VALIDATION_FAILED,

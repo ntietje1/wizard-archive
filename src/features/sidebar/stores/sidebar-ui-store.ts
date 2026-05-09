@@ -128,7 +128,9 @@ function surfaceIdentity(surface: ActiveItemSurface | null): ItemSurfaceIdentity
 }
 
 function sameSurfaceIdentity(a: ItemSurfaceIdentity | null, b: ItemSurfaceIdentity | null) {
-  return a?.surface === b?.surface && a?.parentId === b?.parentId
+  if (a === null && b === null) return true
+  if (a === null || b === null) return false
+  return a.surface === b.surface && a.parentId === b.parentId
 }
 
 function sameVisibleIds(a: Array<Id<'sidebarItems'>>, b: Array<Id<'sidebarItems'>>) {

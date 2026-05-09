@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type {
   ConflictDecision,
   ConflictDecisionAction,
@@ -14,22 +14,24 @@ import {
   DialogTitle,
 } from '~/features/shadcn/components/dialog'
 
+type ConflictDecisions = Partial<Record<ItemOperationConflict['sourceItemId'], ConflictDecision>>
+
 export function ItemOperationConflictDialog({
   conflicts,
   onResolve,
   onCancel,
 }: {
   conflicts: Array<ItemOperationConflict>
-  onResolve: (
-    decisions: Partial<Record<ItemOperationConflict['sourceItemId'], ConflictDecision>>,
-  ) => void
+  onResolve: (decisions: ConflictDecisions) => void
   onCancel: () => void
 }) {
   const [index, setIndex] = useState(0)
   const [applyToAll, setApplyToAll] = useState(false)
-  const [decisions, setDecisions] = useState<
-    Partial<Record<ItemOperationConflict['sourceItemId'], ConflictDecision>>
-  >({})
+  const [decisions, setDecisions] = useState<ConflictDecisions>({})
+
+  useEffect(() => {
+    if (conflicts.length === 0) onResolve({})
+  }, [conflicts.length, onResolve])
 
   const conflict = conflicts[index]
   if (!conflict) return null
@@ -41,9 +43,7 @@ export function ItemOperationConflictDialog({
     }
 
     if (applyToAll) {
-      const decisionsForRemaining: Partial<
-        Record<ItemOperationConflict['sourceItemId'], ConflictDecision>
-      > = {}
+      const decisionsForRemaining: ConflictDecisions = {}
       for (const itemConflict of conflicts) {
         if (!(itemConflict.sourceItemId in decisions)) {
           decisionsForRemaining[itemConflict.sourceItemId] = { action }
@@ -73,7 +73,7 @@ export function ItemOperationConflictDialog({
     <Dialog open={true} onOpenChange={(open) => !open && onCancel()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Replace or Skip Files</DialogTitle>
+          <DialogTitle>Resolve File Conflict</DialogTitle>
           <DialogDescription>
             The destination already has an item named {conflict.destinationName}.
           </DialogDescription>

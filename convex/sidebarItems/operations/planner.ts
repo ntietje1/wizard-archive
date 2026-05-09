@@ -200,6 +200,7 @@ function addDuplicateFolderMergeOperations(
   context.operations.push({
     sourceItemId: item._id,
     action: 'mergeFolder',
+    targetParentId: context.targetParentId,
     destinationItemId: conflictTarget._id,
   })
   return 'ready'

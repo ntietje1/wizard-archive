@@ -18,8 +18,9 @@ async function isStorageUsedByAnotherMap(
   const maps = await db
     .query('gameMaps')
     .withIndex('by_imageStorageId', (q) => q.eq('imageStorageId', storageId))
-    .collect()
-  return maps.some((map) => map.sidebarItemId !== sidebarItemId)
+    .filter((q) => q.neq(q.field('sidebarItemId'), sidebarItemId))
+    .first()
+  return maps !== null
 }
 
 export const gameMapTriggers: SidebarItemTriggerHandlers = {
@@ -32,11 +33,12 @@ export const gameMapTriggers: SidebarItemTriggerHandlers = {
         .unique(),
     ])
     const imageStorageId = ext?.imageStorageId ?? null
-    if (imageStorageId && !(await isStorageUsedByAnotherMap(db, imageStorageId, item.id))) {
-      await storage.delete(imageStorageId)
-    }
     await asyncMap(pins, (p) => db.delete('mapPins', p._id))
     if (ext) await db.delete('gameMaps', ext._id)
-    return imageStorageId
+    if (imageStorageId && !(await isStorageUsedByAnotherMap(db, imageStorageId, item.id))) {
+      await storage.delete(imageStorageId)
+      return new Set([imageStorageId])
+    }
+    return new Set()
   },
 }

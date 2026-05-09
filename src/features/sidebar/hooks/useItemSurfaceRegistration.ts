@@ -37,13 +37,17 @@ export function useItemSurfaceRegistration({
 
   useEffect(() => {
     setActiveItemSurface(latestSurfaceRef.current)
+  }, [surface, parentId, visibleItemIdsKey, setActiveItemSurface])
+
+  useEffect(() => {
     return () => {
+      const registeredSurface = latestSurfaceRef.current
       const currentSurface = useSidebarUIStore.getState().activeItemSurface
-      if (sameRegisteredSurface(currentSurface, latestSurfaceRef.current)) {
+      if (sameRegisteredSurface(currentSurface, registeredSurface)) {
         setActiveItemSurface(null)
       }
     }
-  }, [surface, parentId, visibleItemIdsKey, setActiveItemSurface])
+  }, [setActiveItemSurface])
 
   const activateSurface = () => {
     setActiveItemSurface(latestSurfaceRef.current)

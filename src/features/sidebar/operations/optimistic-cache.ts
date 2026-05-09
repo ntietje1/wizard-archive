@@ -19,6 +19,10 @@ function nextOptimisticIdIndex() {
   return optimisticIdIndex
 }
 
+export function resetOptimisticIdIndex() {
+  optimisticIdIndex = 0
+}
+
 function trashItemTreeInSnapshot(
   itemId: Id<'sidebarItems'>,
   sidebar: Array<AnySidebarItem>,
@@ -195,7 +199,7 @@ export function applyOptimisticPermanentDeleteItemsToSnapshot(
   }
 
   return {
-    sidebar: snapshot.sidebar,
+    sidebar: [...snapshot.sidebar],
     trash: snapshot.trash.filter((item) => !deletedIds.has(item._id)),
   }
 }

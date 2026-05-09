@@ -181,6 +181,7 @@ import type * as sidebarItems_functions_setPreviewImage from "../sidebarItems/fu
 import type * as sidebarItems_functions_treeOperations from "../sidebarItems/functions/treeOperations.js";
 import type * as sidebarItems_internalMutations from "../sidebarItems/internalMutations.js";
 import type * as sidebarItems_mutations from "../sidebarItems/mutations.js";
+import type * as sidebarItems_operations___tests___testSidebarItem from "../sidebarItems/operations/__tests__/testSidebarItem.js";
 import type * as sidebarItems_operations_capabilities from "../sidebarItems/operations/capabilities.js";
 import type * as sidebarItems_operations_childrenMap from "../sidebarItems/operations/childrenMap.js";
 import type * as sidebarItems_operations_operationTargets from "../sidebarItems/operations/operationTargets.js";
@@ -430,6 +431,7 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/functions/treeOperations": typeof sidebarItems_functions_treeOperations;
   "sidebarItems/internalMutations": typeof sidebarItems_internalMutations;
   "sidebarItems/mutations": typeof sidebarItems_mutations;
+  "sidebarItems/operations/__tests__/testSidebarItem": typeof sidebarItems_operations___tests___testSidebarItem;
   "sidebarItems/operations/capabilities": typeof sidebarItems_operations_capabilities;
   "sidebarItems/operations/childrenMap": typeof sidebarItems_operations_childrenMap;
   "sidebarItems/operations/operationTargets": typeof sidebarItems_operations_operationTargets;

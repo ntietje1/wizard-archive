@@ -56,7 +56,7 @@ export const sidebarItemsTables = {
       'deletionTime',
     ])
     .index('by_campaign_slug', ['campaignId', 'slug', 'deletionTime'])
-    .index('by_campaign', ['campaignId', 'deletionTime'])
+    .index('by_campaign_deletionTime', ['campaignId', 'deletionTime'])
     .index('by_previewStorageId', ['previewStorageId']),
 
   notes: defineTable({

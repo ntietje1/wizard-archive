@@ -30,6 +30,7 @@ type DuplicateReplaceOperation = {
 type DuplicateMergeFolderOperation = {
   sourceItemId: Id<'sidebarItems'>
   action: 'mergeFolder'
+  targetParentId: Id<'sidebarItems'> | null
   destinationItemId: Id<'sidebarItems'>
 }
 

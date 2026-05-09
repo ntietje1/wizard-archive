@@ -1,50 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { PERMISSION_LEVEL } from '../../../permissions/types'
-import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../../types/baseTypes'
+import { createSidebarItem } from './testSidebarItem'
 import { planMoveOperations } from '../planner'
 import { normalizeTopLevelSelectedItems } from '../selection'
 import type { Id } from '../../../_generated/dataModel'
 import type { AnySidebarItem } from '../../types/types'
 
-function item(
-  id: string,
-  name: string,
-  type: AnySidebarItem['type'] = SIDEBAR_ITEM_TYPES.notes,
-  overrides: Partial<AnySidebarItem> = {},
-): AnySidebarItem {
-  return {
-    _id: id as Id<'sidebarItems'>,
-    _creationTime: 1,
-    name: name as AnySidebarItem['name'],
-    slug: name.toLowerCase() as AnySidebarItem['slug'],
-    campaignId: 'campaign' as Id<'campaigns'>,
-    iconName: null,
-    color: null,
-    type,
-    parentId: null,
-    allPermissionLevel: null,
-    location: SIDEBAR_ITEM_LOCATION.sidebar,
-    previewStorageId: null,
-    previewLockedUntil: null,
-    previewClaimToken: null,
-    previewUpdatedAt: null,
-    updatedTime: null,
-    updatedBy: null,
-    createdBy: 'user' as Id<'userProfiles'>,
-    deletionTime: null,
-    deletedBy: null,
-    shares: [],
-    isBookmarked: false,
-    myPermissionLevel: PERMISSION_LEVEL.FULL_ACCESS,
-    previewUrl: null,
-    ...overrides,
-  } as AnySidebarItem
-}
-
 describe('sidebar operation domain', () => {
   it('normalizes parent and child selection to parent only and plans no-op move', () => {
-    const folder = item('folder-1', 'Folder', SIDEBAR_ITEM_TYPES.folders)
-    const child = item('note-1', 'Child', SIDEBAR_ITEM_TYPES.notes, {
+    const folder = createSidebarItem('folder-1', 'Folder', SIDEBAR_ITEM_TYPES.folders)
+    const child = createSidebarItem('note-1', 'Child', SIDEBAR_ITEM_TYPES.notes, {
       parentId: folder._id,
     })
     const itemsMap = new Map<Id<'sidebarItems'>, AnySidebarItem>([
@@ -66,5 +31,71 @@ describe('sidebar operation domain', () => {
       conflicts: [],
       operations: [],
     })
+  })
+
+  it('keeps unrelated selected roots and plans a real move', () => {
+    const noteA = createSidebarItem('note-1', 'A')
+    const noteB = createSidebarItem('note-2', 'B')
+    const targetFolder = createSidebarItem('folder-1', 'Folder', SIDEBAR_ITEM_TYPES.folders)
+    const itemsMap = new Map<Id<'sidebarItems'>, AnySidebarItem>([
+      [noteA._id, noteA],
+      [noteB._id, noteB],
+      [targetFolder._id, targetFolder],
+    ])
+
+    const selectedRoots = normalizeTopLevelSelectedItems([noteA, noteB], itemsMap)
+    const plan = planMoveOperations({
+      items: selectedRoots,
+      targetParentId: targetFolder._id,
+      targetItems: [],
+    })
+
+    expect(selectedRoots.map((selected) => selected._id)).toEqual([noteA._id, noteB._id])
+    expect(plan).toEqual({
+      status: 'ready',
+      conflicts: [],
+      operations: [
+        { sourceItemId: noteA._id, action: 'move', targetParentId: targetFolder._id },
+        { sourceItemId: noteB._id, action: 'move', targetParentId: targetFolder._id },
+      ],
+    })
+  })
+
+  it('normalizes multi-level selected descendants to the highest selected ancestor', () => {
+    const grandparent = createSidebarItem('folder-1', 'Grandparent', SIDEBAR_ITEM_TYPES.folders)
+    const parent = createSidebarItem('folder-2', 'Parent', SIDEBAR_ITEM_TYPES.folders, {
+      parentId: grandparent._id,
+    })
+    const child = createSidebarItem('note-1', 'Child', SIDEBAR_ITEM_TYPES.notes, {
+      parentId: parent._id,
+    })
+    const itemsMap = new Map<Id<'sidebarItems'>, AnySidebarItem>([
+      [grandparent._id, grandparent],
+      [parent._id, parent],
+      [child._id, child],
+    ])
+
+    expect(normalizeTopLevelSelectedItems([grandparent, parent, child], itemsMap)).toEqual([
+      grandparent,
+    ])
+  })
+
+  it('surfaces circular parent references during move planning', () => {
+    const folderA = createSidebarItem('folder-1', 'A', SIDEBAR_ITEM_TYPES.folders, {
+      parentId: 'folder-2' as Id<'sidebarItems'>,
+    })
+    const folderB = createSidebarItem('folder-2', 'B', SIDEBAR_ITEM_TYPES.folders, {
+      parentId: folderA._id,
+    })
+
+    expect(() =>
+      normalizeTopLevelSelectedItems(
+        [folderA],
+        new Map<Id<'sidebarItems'>, AnySidebarItem>([
+          [folderA._id, folderA],
+          [folderB._id, folderB],
+        ]),
+      ),
+    ).toThrow('Cycle detected while normalizing selected sidebar item')
   })
 })

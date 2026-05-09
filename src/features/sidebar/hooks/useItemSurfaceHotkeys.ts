@@ -147,7 +147,10 @@ function handlePaste(event: KeyboardEvent, context: HotkeyHandlerContext): boole
 
 function handleDelete(event: KeyboardEvent, context: HotkeyHandlerContext): boolean {
   if (event.key !== 'Delete' && event.key !== 'Backspace') return false
-  if (context.selectedItems.length === 0) return true
+  if (context.selectedItems.length === 0) {
+    event.preventDefault()
+    return true
+  }
 
   event.preventDefault()
   if (context.activeItemSurface.surface === 'trash') {

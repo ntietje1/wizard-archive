@@ -10,8 +10,9 @@ async function isStorageUsedByAnotherFile(
   const files = await db
     .query('files')
     .withIndex('by_storageId', (q) => q.eq('storageId', storageId))
-    .collect()
-  return files.some((file) => file.sidebarItemId !== sidebarItemId)
+    .filter((q) => q.neq(q.field('sidebarItemId'), sidebarItemId))
+    .first()
+  return files !== null
 }
 
 export const fileTriggers: SidebarItemTriggerHandlers = {
@@ -20,10 +21,14 @@ export const fileTriggers: SidebarItemTriggerHandlers = {
       .query('files')
       .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', item.id))
       .unique()
-    if (ext?.storageId && !(await isStorageUsedByAnotherFile(db, ext.storageId, item.id))) {
+    if (!ext) return new Set()
+
+    await db.delete('files', ext._id)
+
+    if (ext.storageId && !(await isStorageUsedByAnotherFile(db, ext.storageId, item.id))) {
       await storage.delete(ext.storageId)
+      return new Set([ext.storageId])
     }
-    if (ext) await db.delete('files', ext._id)
-    return ext?.storageId ?? null
+    return new Set()
   },
 }

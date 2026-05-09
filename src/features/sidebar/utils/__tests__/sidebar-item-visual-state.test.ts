@@ -12,7 +12,7 @@ import {
 } from '../sidebar-item-visual-state'
 import { createNote } from '~/test/factories/sidebar-item-factory'
 
-describe('getSidebarItemVisualState', () => {
+describe('sidebar item visual state utilities', () => {
   it('keeps selection separate from the currently viewed item', () => {
     const viewed = createNote()
     const selected = createNote()
@@ -63,6 +63,32 @@ describe('getSidebarItemVisualState', () => {
     ).toEqual({ isSelected: false, isViewing: true, isMultiSelected: false })
   })
 
+  it('uses safe defaults when selection inputs are missing', () => {
+    const item = createNote()
+
+    expect(
+      getSidebarItemVisualState({
+        item,
+        selectedItemIds: undefined,
+        selectedSlug: undefined,
+      }),
+    ).toEqual({ isSelected: false, isViewing: false, isMultiSelected: false })
+    expect(
+      getSidebarItemVisualState({
+        item,
+        selectedItemIds: null,
+        selectedSlug: null,
+      }),
+    ).toEqual({ isSelected: false, isViewing: false, isMultiSelected: false })
+    expect(
+      getSidebarItemVisualState({
+        item,
+        selectedItemIds: [],
+        selectedSlug: undefined,
+      }),
+    ).toEqual({ isSelected: false, isViewing: false, isMultiSelected: false })
+  })
+
   it('uses purple for selected backgrounds unless the viewed item is the only selection', () => {
     expect(
       sidebarItemBackgroundClass({
@@ -101,70 +127,28 @@ describe('getSidebarItemVisualState', () => {
     ).toBe('hover:bg-muted-foreground/6 dark:hover:bg-muted/50')
   })
 
-  it('keeps names muted until hover or viewing', () => {
-    expect(
-      sidebarItemNameClass({ isSelected: true, isViewing: false, isMultiSelected: false }),
-    ).toBe('text-foreground/70 group-hover:text-foreground/90')
-    expect(
-      sidebarItemNameClass({ isSelected: false, isViewing: true, isMultiSelected: false }),
-    ).toBe('text-foreground')
-    expect(
-      sidebarItemNameClass({ isSelected: true, isViewing: true, isMultiSelected: false }),
-    ).toBe('text-foreground')
-    expect(
-      sidebarItemNameClass({ isSelected: false, isViewing: false, isMultiSelected: false }),
-    ).toBe('text-foreground/70 group-hover:text-foreground/90')
-  })
-
-  it('keeps icons muted until hover or viewing', () => {
-    expect(
-      sidebarItemIconClass({ isSelected: true, isViewing: false, isMultiSelected: false }),
-    ).toBe('text-foreground/70 group-hover:text-foreground/90')
-    expect(
-      sidebarItemIconClass({ isSelected: false, isViewing: true, isMultiSelected: false }),
-    ).toBe('text-foreground')
-    expect(
-      sidebarItemIconClass({ isSelected: true, isViewing: true, isMultiSelected: false }),
-    ).toBe('text-foreground')
-    expect(
-      sidebarItemIconClass({ isSelected: false, isViewing: false, isMultiSelected: false }),
-    ).toBe('text-foreground/70 group-hover:text-foreground/90')
-  })
-
-  it('keeps action buttons on the same text color rules as names and icons', () => {
-    expect(
-      sidebarItemActionButtonClass({
-        isSelected: true,
-        isViewing: false,
-        isMultiSelected: false,
-      }),
-    ).toBe('text-foreground/70 group-hover:text-foreground/90')
-    expect(
-      sidebarItemActionButtonClass({
-        isSelected: false,
-        isViewing: true,
-        isMultiSelected: false,
-      }),
-    ).toBe('text-foreground')
-    expect(
-      sidebarItemActionButtonClass({
-        isSelected: true,
-        isViewing: true,
-        isMultiSelected: false,
-      }),
-    ).toBe('text-foreground')
-    expect(
-      sidebarItemActionButtonClass({
-        isSelected: false,
-        isViewing: false,
-        isMultiSelected: false,
-      }),
-    ).toBe('text-foreground/70 group-hover:text-foreground/90')
+  it.each([
+    ['name', sidebarItemNameClass],
+    ['icon', sidebarItemIconClass],
+    ['action button', sidebarItemActionButtonClass],
+  ] as const)('keeps %s colors muted until hover or viewing', (_label, classForState) => {
+    expect(classForState({ isSelected: true, isViewing: false, isMultiSelected: false })).toBe(
+      'text-foreground/70 group-hover:text-foreground/90',
+    )
+    expect(classForState({ isSelected: false, isViewing: true, isMultiSelected: false })).toBe(
+      'text-foreground',
+    )
+    expect(classForState({ isSelected: true, isViewing: true, isMultiSelected: false })).toBe(
+      'text-foreground',
+    )
+    expect(classForState({ isSelected: false, isViewing: false, isMultiSelected: false })).toBe(
+      'text-foreground/70 group-hover:text-foreground/90',
+    )
   })
 
   it('uses the same action group reveal behavior for sidebar-like item rows', () => {
-    expect(sidebarItemActionGroupClass()).toBe(
-      'flex items-center shrink-0 w-0 overflow-hidden opacity-0 group-hover:w-auto group-hover:overflow-visible group-hover:opacity-100 has-[[data-share-open]]:w-auto has-[[data-share-open]]:overflow-visible has-[[data-share-open]]:opacity-100',
+    expect(sidebarItemActionGroupClass).toBe(
+      'flex items-center shrink-0 invisible opacity-0 pointer-events-none group-hover:visible group-hover:opacity-100 group-hover:pointer-events-auto has-[[data-share-open]]:visible has-[[data-share-open]]:opacity-100 has-[[data-share-open]]:pointer-events-auto',
     )
   })
 
@@ -220,5 +204,15 @@ describe('getSidebarItemVisualState', () => {
     expect(
       sidebarItemHoverFillClass({ isSelected: true, isViewing: false, isMultiSelected: false }),
     ).toBe('fill-primary/16 dark:fill-primary/28')
+  })
+
+  it('uses fallback classes for omitted visual flags', () => {
+    expect(sidebarItemBackgroundClass()).toContain('hover:bg-muted-foreground')
+    expect(sidebarItemNameClass()).toBe('text-foreground/70 group-hover:text-foreground/90')
+    expect(sidebarItemIconClass()).toBe('text-foreground/70 group-hover:text-foreground/90')
+    expect(sidebarItemActionButtonClass()).toBe('text-foreground/70 group-hover:text-foreground/90')
+    expect(sidebarItemHoverOverlayClass()).toBe('opacity-0 group-hover:opacity-100')
+    expect(sidebarItemFolderFillClass()).toBe('fill-card')
+    expect(sidebarItemHoverFillClass()).toContain('fill-muted-foreground')
   })
 })

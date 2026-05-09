@@ -56,6 +56,25 @@ function assertSidebarItemsBatchSize(sourceItemIds: Array<Id<'sidebarItems'>>) {
   }
 }
 
+function assertDecisionsBelongToBatch({
+  decisions,
+  sourceItemIds,
+}: {
+  decisions?: Array<{ sourceItemId: Id<'sidebarItems'> }>
+  sourceItemIds: Array<Id<'sidebarItems'>>
+}) {
+  if (!decisions) return
+
+  const sourceItemIdSet = new Set(sourceItemIds)
+  const invalidDecision = decisions.find((decision) => !sourceItemIdSet.has(decision.sourceItemId))
+  if (!invalidDecision) return
+
+  throwClientError(
+    ERROR_CODE.VALIDATION_FAILED,
+    `Conflict decision source item ${invalidDecision.sourceItemId} is not in the operation batch`,
+  )
+}
+
 export const moveSidebarItem = campaignMutation({
   args: {
     itemId: v.id('sidebarItems'),
@@ -90,6 +109,7 @@ export const moveSidebarItems = campaignMutation({
   returns: v.array(v.id('sidebarItems')),
   handler: async (ctx, args): Promise<Array<Id<'sidebarItems'>>> => {
     assertSidebarItemsBatchSize(args.sourceItemIds)
+    assertDecisionsBelongToBatch(args)
     return await moveSidebarItemsFn(ctx, args)
   },
 })
@@ -164,6 +184,7 @@ export const duplicateSidebarItems = campaignMutation({
   returns: v.array(v.id('sidebarItems')),
   handler: async (ctx, args): Promise<Array<Id<'sidebarItems'>>> => {
     assertSidebarItemsBatchSize(args.sourceItemIds)
+    assertDecisionsBelongToBatch(args)
     return await duplicateSidebarItemsFn(ctx, args)
   },
 })

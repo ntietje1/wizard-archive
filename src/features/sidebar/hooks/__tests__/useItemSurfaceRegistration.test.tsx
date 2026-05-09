@@ -72,7 +72,7 @@ describe('useItemSurfaceRegistration', () => {
 
     rerender({ visibleItemIds: [first, second] })
 
-    expect(storeUpdates).toBeGreaterThan(updatesAfterMount)
+    expect(storeUpdates).toBe(updatesAfterMount + 1)
     expect(useSidebarUIStore.getState().activeItemSurface).toEqual({
       surface: 'trash',
       parentId: null,
@@ -80,6 +80,7 @@ describe('useItemSurfaceRegistration', () => {
     })
 
     unmount()
+    expect(useSidebarUIStore.getState().activeItemSurface).toBeNull()
     unsubscribe()
   })
 
@@ -109,7 +110,7 @@ describe('useItemSurfaceRegistration', () => {
 
     rerender({ surface: 'folder-view', parentId: folderId })
 
-    expect(storeUpdates).toBeGreaterThan(updatesAfterMount)
+    expect(storeUpdates).toBe(updatesAfterMount + 1)
     expect(useSidebarUIStore.getState().activeItemSurface).toEqual({
       surface: 'folder-view',
       parentId: folderId,
@@ -117,6 +118,7 @@ describe('useItemSurfaceRegistration', () => {
     })
 
     unmount()
+    expect(useSidebarUIStore.getState().activeItemSurface).toBeNull()
     unsubscribe()
   })
 })

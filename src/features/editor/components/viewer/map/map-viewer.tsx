@@ -431,11 +431,14 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
         }
         if (validationErrors.length > 0) {
           const uniqueErrors = [...new Set(validationErrors)]
-          toast.error(
-            uniqueErrors.length === 1
-              ? uniqueErrors[0]
-              : `${uniqueErrors.length} items could not be pinned: ${uniqueErrors[0]}`,
-          )
+          const [firstError, ...otherErrors] = uniqueErrors
+          const message =
+            otherErrors.length === 0
+              ? firstError
+              : `${firstError}; ${otherErrors.slice(0, 2).join('; ')}${
+                  otherErrors.length > 2 ? `; and ${otherErrors.length - 2} more` : ''
+                }`
+          toast.error(message)
         }
         if (validItemIds.length === 0) {
           return
@@ -467,33 +470,31 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
               ),
             }),
           )
-          const results = await batches.reduce<Promise<Array<boolean>>>(
-            (previousResults, batch) =>
-              previousResults.then((accumulated) =>
-                Promise.all(
-                  batch.itemIds.map((itemId, batchIndex) => {
-                    const index = batch.start + batchIndex
-                    const col = index % PIN_DROP_OFFSET_MAX_PER_ROW
-                    const row = Math.floor(index / PIN_DROP_OFFSET_MAX_PER_ROW)
-                    const rowSize = Math.min(
-                      PIN_DROP_OFFSET_MAX_PER_ROW,
-                      validItemIds.length - row * PIN_DROP_OFFSET_MAX_PER_ROW,
-                    )
-                    const dx = (col - (rowSize - 1) / 2) * PIN_DROP_OFFSET_STEP_PERCENT
-                    const dy = row * PIN_DROP_OFFSET_STEP_PERCENT
-                    return createPinAtPositionRef.current(
-                      itemId,
-                      {
-                        x: Math.max(0, Math.min(100, position.x + dx)),
-                        y: Math.max(0, Math.min(100, position.y + dy)),
-                      },
-                      { suppressToast: true },
-                    )
-                  }),
-                ).then((batchResults) => [...accumulated, ...batchResults]),
-              ),
-            Promise.resolve([]),
-          )
+          const results: Array<boolean> = []
+          for (const batch of batches) {
+            const batchResults = await Promise.all(
+              batch.itemIds.map((itemId, itemIndexInBatch) => {
+                const index = batch.start + itemIndexInBatch
+                const col = index % PIN_DROP_OFFSET_MAX_PER_ROW
+                const row = Math.floor(index / PIN_DROP_OFFSET_MAX_PER_ROW)
+                const rowSize = Math.min(
+                  PIN_DROP_OFFSET_MAX_PER_ROW,
+                  validItemIds.length - row * PIN_DROP_OFFSET_MAX_PER_ROW,
+                )
+                const dx = (col - (rowSize - 1) / 2) * PIN_DROP_OFFSET_STEP_PERCENT
+                const dy = row * PIN_DROP_OFFSET_STEP_PERCENT
+                return createPinAtPositionRef.current(
+                  itemId,
+                  {
+                    x: Math.max(0, Math.min(100, position.x + dx)),
+                    y: Math.max(0, Math.min(100, position.y + dy)),
+                  },
+                  { suppressToast: true },
+                )
+              }),
+            )
+            results.push(...batchResults)
+          }
           const placedCount = results.filter(Boolean).length
           const failedCount = results.length - placedCount
           if (failedCount > 0) {

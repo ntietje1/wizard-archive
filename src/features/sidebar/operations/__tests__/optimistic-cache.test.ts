@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import {
@@ -6,6 +6,7 @@ import {
   applyOptimisticDuplicateOperationsToSnapshot,
   applyOptimisticMoveOperationsToSnapshot,
   applyOptimisticTrashItemsToSnapshot,
+  resetOptimisticIdIndex,
 } from '../optimistic-cache'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 
@@ -13,6 +14,10 @@ const MOVE_TS = 1000
 const DELETION_TS = 900
 
 describe('optimistic sidebar operation cache transforms', () => {
+  beforeEach(() => {
+    resetOptimisticIdIndex()
+  })
+
   it('moves an active item to another parent', () => {
     const folder = createFolder({ name: 'Folder' })
     const note = createNote({ name: 'Note' })
@@ -95,6 +100,11 @@ describe('optimistic sidebar operation cache transforms', () => {
       location: SIDEBAR_ITEM_LOCATION.trash,
       deletionTime: MOVE_TS,
     })
+    expect(next.trash[1]).toMatchObject({
+      parentId: destination._id,
+      location: SIDEBAR_ITEM_LOCATION.trash,
+      deletionTime: MOVE_TS,
+    })
   })
 
   it('duplicates a folder tree with temporary ids', () => {
@@ -134,7 +144,14 @@ describe('optimistic sidebar operation cache transforms', () => {
 
     const next = applyOptimisticDuplicateOperationsToSnapshot(
       { sidebar: [source, destination], trash: [] },
-      [{ action: 'mergeFolder', sourceItemId: source._id, destinationItemId: destination._id }],
+      [
+        {
+          action: 'mergeFolder',
+          sourceItemId: source._id,
+          destinationItemId: destination._id,
+          targetParentId: null,
+        },
+      ],
       MOVE_TS,
     )
 

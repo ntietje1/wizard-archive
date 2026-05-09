@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
@@ -13,6 +13,7 @@ export function useEmptyTrashBin() {
   const pendingEmptyRef = useRef(false)
   const snapshotRef = useRef<Array<AnySidebarItem> | undefined>(undefined)
   const isMountedRef = useRef(true)
+  const [isEmptying, setIsEmptying] = useState(false)
 
   useEffect(() => {
     return () => {
@@ -21,12 +22,13 @@ export function useEmptyTrashBin() {
   }, [])
 
   const emptyTrashBin = async () => {
-    if (!campaignId) return
+    if (!campaignId) return false
     if (pendingEmptyRef.current) {
-      throw new Error('Trash is already being emptied')
+      return false
     }
 
     pendingEmptyRef.current = true
+    setIsEmptying(true)
     snapshotRef.current = cache.get(SIDEBAR_ITEM_LOCATION.trash)
     if (isMountedRef.current) {
       cache.update(SIDEBAR_ITEM_LOCATION.trash, () => [])
@@ -34,6 +36,7 @@ export function useEmptyTrashBin() {
 
     try {
       await emptyTrashBinMutation.mutateAsync({})
+      return true
     } catch (err) {
       if (isMountedRef.current) {
         cache.update(SIDEBAR_ITEM_LOCATION.trash, () => snapshotRef.current ?? [])
@@ -42,8 +45,9 @@ export function useEmptyTrashBin() {
     } finally {
       pendingEmptyRef.current = false
       snapshotRef.current = undefined
+      if (isMountedRef.current) setIsEmptying(false)
     }
   }
 
-  return { emptyTrashBin }
+  return { emptyTrashBin, isEmptying }
 }

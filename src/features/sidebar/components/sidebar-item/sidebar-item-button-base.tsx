@@ -5,6 +5,7 @@ import type { SidebarItemButtonProps } from './types'
 import { Button } from '~/features/shadcn/components/button'
 import { HoverToggleButton } from '~/features/sidebar/components/hover-toggle-button'
 import { cn } from '~/features/shadcn/lib/utils'
+import { sidebarItemRowPaddingStyle } from '~/features/sidebar/components/sidebar-item/sidebar-item-layout'
 import {
   sidebarItemActionButtonClass,
   sidebarItemActionGroupClass,
@@ -31,10 +32,7 @@ export function SidebarItemButtonBase({
 }: SidebarItemButtonProps) {
   const { visualState, focused, renaming, expanded, showChevron, indentLevel = 0 } = presentation
   const actionButtonClassName = sidebarItemActionButtonClass(visualState)
-  const rowPadding = {
-    paddingLeft: `${4 + indentLevel * 16}px`,
-    paddingRight: '4px',
-  }
+  const rowPadding = sidebarItemRowPaddingStyle(indentLevel)
   const nameContent = onFinishRename ? (
     <EditableName
       initialName={name}
@@ -60,6 +58,7 @@ export function SidebarItemButtonBase({
       )}
       style={rowPadding}
       data-item-selection-target="true"
+      data-testid={`selectable-row-${name}`}
       role="option"
       aria-selected={visualState.isSelected}
       onContextMenu={onContextMenu}
@@ -84,7 +83,10 @@ export function SidebarItemButtonBase({
                 onToggleExpanded(e)
               }}
             >
-              <div className={cn('flex items-center justify-center', expanded && 'rotate-90')}>
+              <div
+                data-testid="chevron-wrapper"
+                className={cn('flex items-center justify-center', expanded && 'rotate-90')}
+              >
                 <ChevronRight className="size-3" />
               </div>
             </Button>
@@ -112,7 +114,7 @@ export function SidebarItemButtonBase({
 
       {/* Action Buttons */}
       {!renaming && (
-        <div className={sidebarItemActionGroupClass()}>
+        <div className={sidebarItemActionGroupClass}>
           {shareButton}
           <div className="relative size-6 shrink-0 flex items-center justify-center">
             <Button

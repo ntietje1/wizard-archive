@@ -7,6 +7,7 @@ import { useSidebarItemOperationsValue } from '../useSidebarItemOperations'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { buildSidebarItemMaps } from '~/features/sidebar/utils/sidebar-item-maps'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
+import { testId } from '~/test/helpers/test-id'
 
 const moveSidebarItems = vi.fn()
 const duplicateSidebarItems = vi.fn()
@@ -14,6 +15,7 @@ const permanentlyDeleteSidebarItems = vi.fn()
 
 let sidebarItems: Array<AnySidebarItem> = []
 let trashItems: Array<AnySidebarItem> = []
+let mutationHookCallIndex = 0
 
 vi.mock('sonner', () => ({
   toast: {
@@ -50,18 +52,22 @@ vi.mock('~/features/sidebar/hooks/useSidebarItemsCache', () => ({
 }))
 
 vi.mock('~/shared/hooks/useCampaignMutation', () => ({
-  useCampaignMutation: () => ({
-    mutateAsync: (args: Record<string, unknown>) => {
-      if ('action' in args) return moveSidebarItems(args)
-      if ('targetParentId' in args) return duplicateSidebarItems(args)
-      return permanentlyDeleteSidebarItems(args)
-    },
-  }),
+  useCampaignMutation: () => {
+    const handlerIndex = mutationHookCallIndex++ % 3
+    const handler =
+      handlerIndex === 0
+        ? moveSidebarItems
+        : handlerIndex === 1
+          ? permanentlyDeleteSidebarItems
+          : duplicateSidebarItems
+    return { mutateAsync: handler }
+  },
 }))
 
 describe('useSidebarItemOperationsValue', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mutationHookCallIndex = 0
     sidebarItems = []
     trashItems = []
     useSidebarUIStore.setState({
@@ -126,6 +132,49 @@ describe('useSidebarItemOperationsValue', () => {
       targetParentId: null,
       action: 'restore',
       decisions: undefined,
+    })
+  })
+
+  it('duplicates normalized roots through the batch duplicate mutation', async () => {
+    const folder = createFolder({ name: 'Folder' })
+    const child = createNote({ name: 'Child', parentId: folder._id })
+    const target = createFolder({ name: 'Target' })
+    sidebarItems = [folder, child, target]
+    duplicateSidebarItems.mockResolvedValue([testId<'sidebarItems'>('copy_1')])
+
+    const { result } = renderHook(() => useSidebarItemOperationsValue())
+    await act(async () => {
+      await result.current.duplicateItems([folder, child], target._id)
+    })
+
+    expect(duplicateSidebarItems).toHaveBeenCalledWith({
+      sourceItemIds: [folder._id],
+      targetParentId: target._id,
+      decisions: undefined,
+    })
+  })
+
+  it('permanently deletes normalized roots through the batch delete mutation', async () => {
+    const folder = createFolder({
+      name: 'Folder',
+      location: SIDEBAR_ITEM_LOCATION.trash,
+      parentId: null,
+    })
+    const child = createNote({
+      name: 'Child',
+      location: SIDEBAR_ITEM_LOCATION.trash,
+      parentId: folder._id,
+    })
+    trashItems = [folder, child]
+    permanentlyDeleteSidebarItems.mockResolvedValue([folder._id])
+
+    const { result } = renderHook(() => useSidebarItemOperationsValue())
+    await act(async () => {
+      await result.current.permanentlyDeleteItems([folder, child])
+    })
+
+    expect(permanentlyDeleteSidebarItems).toHaveBeenCalledWith({
+      sourceItemIds: [folder._id],
     })
   })
 })

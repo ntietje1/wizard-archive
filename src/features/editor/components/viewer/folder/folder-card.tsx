@@ -62,10 +62,12 @@ function FolderSvg({
   dropState = 'none',
   isSelected = false,
   isViewing = false,
+  isMultiSelected = false,
 }: {
   dropState?: DropState
   isSelected?: boolean
   isViewing?: boolean
+  isMultiSelected?: boolean
 }) {
   const isDrop = dropState !== 'none'
   const strokeClass =
@@ -77,7 +79,7 @@ function FolderSvg({
   const strokeWidth = isDrop ? 'stroke-[3]' : 'stroke-2'
   const tintClass =
     dropState === 'trash' ? 'fill-destructive/5' : dropState === 'valid' ? 'fill-ring/5' : undefined
-  const visualState = { isSelected, isViewing, isMultiSelected: false }
+  const visualState = { isSelected, isViewing, isMultiSelected }
   const fillClass = sidebarItemFolderFillClass(visualState)
   const hoverFillClass = sidebarItemHoverFillClass(visualState)
   const hoverOverlayClass = sidebarItemHoverOverlayClass(visualState)
@@ -208,6 +210,7 @@ function FolderCardInner({
             dropState={dropState}
             isSelected={visualState.isSelected}
             isViewing={visualState.isViewing}
+            isMultiSelected={visualState.isMultiSelected}
           />
 
           <div className="relative z-[2] pt-3 px-2">

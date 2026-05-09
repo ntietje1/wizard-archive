@@ -117,6 +117,30 @@ export function useSidebarItemOperationsValue() {
     return resolvedItems
   }
 
+  const isItemOrDescendantOfDeletedRoot = (
+    item: AnySidebarItem,
+    deletedIds: ReadonlySet<Id<'sidebarItems'>>,
+  ) => {
+    if (deletedIds.has(item._id)) return true
+    let parentId = item.parentId
+    const seen = new Set<Id<'sidebarItems'>>()
+    while (parentId && !seen.has(parentId)) {
+      if (deletedIds.has(parentId)) return true
+      seen.add(parentId)
+      parentId = allItemsMap.get(parentId)?.parentId ?? null
+    }
+    return false
+  }
+
+  const shouldClearEditorForDeletedRoots = (items: Array<AnySidebarItem>) => {
+    const currentSlug = getSelectedSlug()
+    if (!currentSlug) return false
+    const currentItem = Array.from(allItemsMap.values()).find((item) => item.slug === currentSlug)
+    if (!currentItem) return false
+    const deletedIds = new Set(items.map((item) => item._id))
+    return isItemOrDescendantOfDeletedRoot(currentItem, deletedIds)
+  }
+
   const selectedItems = normalizeTopLevelSelectedItems(
     resolveItemsById(selectedItemIds),
     allItemsMap,
@@ -357,8 +381,7 @@ export function useSidebarItemOperationsValue() {
         action: 'trash',
       })
       if (movedIds.length > 0) {
-        const currentSlug = getSelectedSlug()
-        if (items.some((item) => item.slug === currentSlug)) {
+        if (shouldClearEditorForDeletedRoots(items)) {
           await clearEditorContent()
         }
         toast.success(
@@ -382,8 +405,7 @@ export function useSidebarItemOperationsValue() {
         sourceItemIds: items.map((item) => item._id),
       })
       if (deletedIds.length > 0) {
-        const currentSlug = getSelectedSlug()
-        if (items.some((item) => item.slug === currentSlug)) {
+        if (shouldClearEditorForDeletedRoots(items)) {
           await clearEditorContent()
         }
         toast.success(
@@ -507,32 +529,45 @@ export function useSidebarItemOperationsValue() {
     closePermanentDeleteDialog()
   }
 
-  const dialog = pendingConflictRequest ? (
-    <ItemOperationConflictDialog
-      key={`${pendingConflictRequest.kind}-${pendingConflictRequest.conflicts.map((conflict) => `${conflict.sourceItemId}:${conflict.destinationItemId}`).join(':')}`}
-      conflicts={pendingConflictRequest.conflicts}
-      onResolve={(decisions) => {
-        void resolveConflicts(decisions)
-      }}
-      onCancel={() => setPendingConflictRequest(null)}
-    />
-  ) : pendingPermanentDeleteItems && pendingPermanentDeleteItems.length === 1 ? (
-    <PermanentDeleteConfirmDialog
-      item={pendingPermanentDeleteItems[0]}
-      onClose={closePermanentDeleteDialog}
-      onConfirm={() => confirmPermanentDelete(pendingPermanentDeleteItems)}
-    />
-  ) : pendingPermanentDeleteItems && pendingPermanentDeleteItems.length > 1 ? (
-    <ConfirmationDialog
-      isOpen={true}
-      onClose={closePermanentDeleteDialog}
-      onConfirm={() => confirmPermanentDelete(pendingPermanentDeleteItems)}
-      title="Permanently Delete Items"
-      description={`This will permanently delete ${pendingPermanentDeleteItems.length} selected items and cannot be undone.`}
-      confirmLabel="Delete Forever"
-      confirmVariant="destructive"
-    />
-  ) : null
+  const renderDialog = () => {
+    if (pendingConflictRequest) {
+      return (
+        <ItemOperationConflictDialog
+          key={`${pendingConflictRequest.kind}-${pendingConflictRequest.conflicts.map((conflict) => `${conflict.sourceItemId}:${conflict.destinationItemId}`).join(':')}`}
+          conflicts={pendingConflictRequest.conflicts}
+          onResolve={(decisions) => {
+            void resolveConflicts(decisions)
+          }}
+          onCancel={() => setPendingConflictRequest(null)}
+        />
+      )
+    }
+
+    if (!pendingPermanentDeleteItems) return null
+    if (pendingPermanentDeleteItems.length === 1) {
+      return (
+        <PermanentDeleteConfirmDialog
+          item={pendingPermanentDeleteItems[0]}
+          onClose={closePermanentDeleteDialog}
+          onConfirm={() => confirmPermanentDelete(pendingPermanentDeleteItems)}
+        />
+      )
+    }
+
+    return (
+      <ConfirmationDialog
+        isOpen={true}
+        onClose={closePermanentDeleteDialog}
+        onConfirm={() => confirmPermanentDelete(pendingPermanentDeleteItems)}
+        title="Permanently Delete Items"
+        description={`This will permanently delete ${pendingPermanentDeleteItems.length} selected items and cannot be undone.`}
+        confirmLabel="Delete Forever"
+        confirmVariant="destructive"
+      />
+    )
+  }
+
+  const dialog = renderDialog()
 
   return {
     selectedItems,

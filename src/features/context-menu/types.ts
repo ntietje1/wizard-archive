@@ -115,9 +115,16 @@ export interface EditorMenuContext {
   surface: ViewContext
   /** Item under the context-click target, when the menu opened on a concrete item. */
   item?: AnySidebarItem
-  /** Main selected item for commands; falls back to item when there is no selection. */
+  /**
+   * Main selected item for commands. When selectedItems is non-empty, this should be the first
+   * selected item unless explicitly set to another item inside selectedItems.
+   */
   primaryItem?: AnySidebarItem
-  /** Ordered full item objects for the active selection; undefined means no selection context, [] means the selection surface is active but empty. */
+  /**
+   * Ordered full item objects for the active selection; undefined means no selection context,
+   * [] means the selection surface is active but empty. primaryItem must not point outside this
+   * array when the array is non-empty.
+   */
   selectedItems?: Array<AnySidebarItem>
   currentUserId?: string
   memberRole?: CampaignMemberRole
@@ -134,3 +141,7 @@ export interface EditorMenuContext {
 export type MenuContext = EditorMenuContext
 
 export type Predicate = (context: EditorMenuContext) => boolean
+
+export function getPrimaryItem(context: EditorMenuContext): AnySidebarItem | undefined {
+  return context.primaryItem ?? context.item
+}

@@ -257,7 +257,7 @@ function TrashPopoverItem({
           </div>
         </div>
       </Link>
-      <div className={sidebarItemActionGroupClass()}>
+      <div className={sidebarItemActionGroupClass}>
         <Button
           variant="ghost"
           size="sm"

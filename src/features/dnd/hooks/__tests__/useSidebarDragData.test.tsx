@@ -115,6 +115,25 @@ describe('useSidebarDragData', () => {
     })
   })
 
+  it('keeps selected children as separate drag ids when their parent is not selected', () => {
+    const folder = createFolder()
+    const firstChild = createNote({ parentId: folder._id })
+    const secondChild = createNote({ parentId: folder._id })
+
+    mockSidebarItems([folder, firstChild, secondChild])
+    useSidebarUIStore.setState({
+      selectedItemIds: [firstChild._id, secondChild._id],
+    })
+
+    const { result } = renderHook(() => useSidebarDragData(firstChild))
+
+    expect(result.current).toEqual({
+      sidebarItemId: firstChild._id,
+      sidebarItemIds: [firstChild._id, secondChild._id],
+      sidebarDragPreviewItemIds: [firstChild._id, secondChild._id],
+    })
+  })
+
   it('can include selected active and trashed items in drag data', () => {
     const active = createNote()
     const trashed = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })

@@ -91,11 +91,7 @@ function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
   }
 
   const handlePermanentDelete = () => {
-    try {
-      itemOperations.confirmPermanentDeleteItems([item])
-    } catch (error) {
-      handleError(error, 'Failed to delete item')
-    }
+    itemOperations.confirmPermanentDeleteItems([item])
   }
 
   return (
@@ -142,7 +138,7 @@ function RootTrashBanner() {
 
 function EmptyTrashButton() {
   const { campaignId } = useCampaign()
-  const { emptyTrashBin } = useEmptyTrashBin()
+  const { emptyTrashBin, isEmptying } = useEmptyTrashBin()
   const { data: allTrashedItems = [] } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
   const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false)
 
@@ -150,8 +146,8 @@ function EmptyTrashButton() {
     if (!campaignId) return
 
     try {
-      await emptyTrashBin()
-      toast.success('Trash emptied')
+      const emptied = await emptyTrashBin()
+      if (emptied) toast.success('Trash emptied')
     } catch (error) {
       handleError(error, 'Failed to empty trash')
     }
@@ -160,7 +156,11 @@ function EmptyTrashButton() {
 
   return (
     <>
-      <BannerButton variant="destructive" onClick={() => setConfirmEmptyTrash(true)}>
+      <BannerButton
+        variant="destructive"
+        disabled={isEmptying}
+        onClick={() => setConfirmEmptyTrash(true)}
+      >
         Empty Trash
       </BannerButton>
       {confirmEmptyTrash && (
