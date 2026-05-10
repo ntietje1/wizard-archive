@@ -11,10 +11,17 @@ import { Button } from '~/features/shadcn/components/button'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
-import { useIsSelectedItem } from '~/features/sidebar/hooks/useSelectedItem'
+import { useSidebarItemVisualState } from '~/features/sidebar/hooks/useSelectedItem'
 import { useContextMenu } from '~/features/context-menu/hooks/useContextMenu'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
+import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
+import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
+import {
+  sidebarItemBackgroundClass,
+  sidebarItemIconClass,
+  sidebarItemNameClass,
+} from '~/features/sidebar/utils/sidebar-item-visual-state'
 
 function getFileTypeIcon(
   contentType: string | null | undefined,
@@ -48,23 +55,36 @@ function FileCardSkeleton() {
       <Card className="w-full h-full flex flex-col p-2 relative rounded-md">
         <div className="flex items-center justify-between mb-2">
           <div className="bg-muted rounded-md h-5 w-32" />
-          <div className="bg-muted rounded-md w-6 h-6" />
+          <div className="bg-muted rounded-md size-6" />
         </div>
         <div className="flex items-center justify-center flex-1">
-          <div className="bg-muted rounded-md w-12 h-12" />
+          <div className="bg-muted rounded-md size-12" />
         </div>
       </Card>
     </div>
   )
 }
 
-function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
+function FileCardInner({
+  item: file,
+  onClick,
+  parentId,
+  visibleItemIds,
+  itemSurface = 'folder-view',
+}: ItemCardProps<SidebarFile>) {
   const ref = useRef<HTMLDivElement>(null)
   const linkProps = useEditorLinkProps(file)
   const { setLastSelectedItem } = useLastEditorItem()
   const canDrag = hasAtLeastPermissionLevel(file.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
-  const isSelected = useIsSelectedItem(file)
+  const visualState = useSidebarItemVisualState(file)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
+  const resolvedVisibleItemIds = visibleItemIds ?? [file._id]
+  const { handleItemClick, handleItemContextMenu } = useItemSelectionInteractions(file, {
+    surface: itemSurface,
+    parentId: parentId ?? null,
+    visibleItemIds: resolvedVisibleItemIds,
+  })
+  const dragData = useSidebarDragData(file)
 
   const FileIcon = getFileTypeIcon(file.contentType, file.name)
   const [erroredUrl, setErroredUrl] = useState<string | null>(null)
@@ -72,7 +92,7 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
 
   const { isDraggingRef } = useDraggable({
     ref,
-    data: { sidebarItemId: file._id },
+    data: dragData,
     canDrag,
   })
 
@@ -81,8 +101,11 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
       <Link
         {...linkProps}
         activeOptions={{ includeSearch: false }}
+        aria-label={file.name}
+        data-item-selection-target="true"
         className="block w-full h-full [&.active]:pointer-events-auto"
         draggable={false}
+        onContextMenu={handleItemContextMenu}
         onClick={(e) => {
           if (isDraggingRef.current) {
             e.preventDefault()
@@ -90,34 +113,41 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
           }
           if (onClick) {
             e.preventDefault()
+            handleItemClick(e)
             onClick()
             return
           }
-          setLastSelectedItem(file.slug)
+          handleItemClick(e, () => setLastSelectedItem(file.slug))
         }}
       >
         <Card
           className={cn(
-            'w-full h-full cursor-pointer group flex flex-col p-2 relative rounded-md hover:bg-muted/70',
-            isSelected && 'ring-ring ring-2',
+            'w-full h-full cursor-pointer group flex flex-col p-2 relative rounded-md',
+            sidebarItemBackgroundClass(visualState),
           )}
         >
           {/* Top Section: Title + Menu Button */}
           <div className="flex items-center justify-between mb-1 min-w-0">
-            <CardTitle className="p-1 text-sm font-medium text-foreground truncate select-none flex-1 min-w-0">
+            <CardTitle
+              className={cn(
+                'p-1 text-sm font-medium truncate select-none flex-1 min-w-0',
+                sidebarItemNameClass(visualState),
+              )}
+            >
               {file.name}
             </CardTitle>
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm flex-shrink-0 ml-2 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="size-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm flex-shrink-0 ml-2 opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
+                handleItemContextMenu(e)
                 handleMoreOptions(e)
               }}
             >
-              <MoreVertical className="h-4 w-4" />
+              <MoreVertical className="size-4" />
             </Button>
           </div>
 
@@ -133,7 +163,7 @@ function FileCardInner({ item: file, onClick }: ItemCardProps<SidebarFile>) {
                 loading="lazy"
               />
             ) : (
-              <FileIcon className="w-12 h-12 select-none text-muted-foreground" />
+              <FileIcon className={cn('size-12 select-none', sidebarItemIconClass(visualState))} />
             )}
           </div>
         </Card>

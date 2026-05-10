@@ -6,6 +6,7 @@ import {
 } from '~/features/sidebar/hooks/useSidebarItems'
 import { useSortOptions } from '~/features/sidebar/hooks/useSortOptions'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
+import { useItemSurfaceRegistration } from '~/features/sidebar/hooks/useItemSurfaceRegistration'
 
 export function BookmarkedItemsList() {
   const { data: filteredItems, status } = useFilteredSidebarItems()
@@ -13,8 +14,14 @@ export function BookmarkedItemsList() {
   const renamingId = useSidebarUIStore((s) => s.renamingId)
   const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
 
-  const bookmarked = filteredItems.filter((item) => item.isBookmarked === true)
+  const bookmarked = filteredItems.filter((item) => item.isBookmarked)
   const bookmarkedItems = sortItemsByOptions(sortOptions, bookmarked) ?? []
+  const visibleItemIds = bookmarkedItems.map((item) => item._id)
+  const { activateSurface, handleSurfacePointerDown } = useItemSurfaceRegistration({
+    surface: 'bookmarks',
+    parentId: null,
+    visibleItemIds,
+  })
 
   if (status !== 'success') {
     return <BookmarkedItemsLoading />
@@ -22,19 +29,25 @@ export function BookmarkedItemsList() {
 
   return (
     <div className="flex-1 flex min-h-0 min-w-0 overflow-hidden">
-      <ScrollArea className="flex-1 min-h-0 min-w-0 w-full">
+      <ScrollArea
+        className="flex-1 min-h-0 min-w-0 w-full"
+        onFocusCapture={activateSurface}
+        onPointerDownCapture={handleSurfacePointerDown}
+        onContextMenuCapture={activateSurface}
+      >
         <div className="p-1 min-w-0 w-full max-w-full">
-          {bookmarkedItems?.map((item) => (
+          {bookmarkedItems.map((item) => (
             <FlatSidebarItem
               key={item._id}
               item={item}
               isExpanded={false}
               renamingId={renamingId}
               setRenamingId={setRenamingId}
+              visibleItemIds={visibleItemIds}
             />
           ))}
 
-          {bookmarkedItems && bookmarkedItems.length === 0 && (
+          {bookmarkedItems.length === 0 && (
             <div className="flex flex-col gap-2 mx-8 my-4 text-muted-foreground items-center text-sm text-center">
               No bookmarked items
             </div>

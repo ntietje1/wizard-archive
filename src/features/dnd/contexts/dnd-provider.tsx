@@ -3,29 +3,30 @@ import { ClientOnly } from '@tanstack/react-router'
 import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type { DndContext } from '~/features/dnd/utils/dnd-registry'
+import type { DndExecutionContext, DndMonitorCtx } from '~/features/dnd/types'
 import type { DndValue } from '~/features/dnd/hooks/useDnd'
-import type { DndMonitorCtx } from '~/features/dnd/types'
-import { resolveDropTarget } from '~/features/dnd/utils/dnd-registry'
+import { resolveDropTarget } from '~/features/dnd/utils/drop-target-data'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useFileDropHandler } from '~/features/dnd/hooks/useFileDropHandler'
-import { useMoveSidebarItem } from '~/features/sidebar/hooks/useMoveSidebarItem'
+import { useSidebarItemOperations } from '~/features/sidebar/operations/useSidebarItemOperations'
 import { useActiveSidebarItems, useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { DndProviderContext } from '~/features/dnd/hooks/useDnd'
 import { DragOverlayPortal } from '~/features/dnd/components/drag-overlay'
+import { DndBatchDecisionDialog } from '~/features/dnd/components/dnd-batch-decision-dialog'
 import { useElementDragMonitor } from '~/features/dnd/hooks/useElementDragMonitor'
 import { useExternalDragMonitor } from '~/features/dnd/hooks/useExternalDragMonitor'
 
 export function DndProvider({ children }: { children: React.ReactNode }) {
   const { campaign, campaignId, isDm } = useCampaign()
-  const campaignName = campaign.data?.name
+  const campaignName = campaign.data?.name ?? null
   const { navigateToItem } = useEditorNavigation()
-  const { moveItem } = useMoveSidebarItem()
+  const itemOperations = useSidebarItemOperations()
   const { handleDrop: handleDropFiles } = useFileDropHandler()
-  const { itemsMap, parentItemsMap, getAncestorSidebarItems } = useActiveSidebarItems()
+  const { itemsMap, getAncestorSidebarItems } = useActiveSidebarItems()
   const { itemsMap: trashedItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
+  const allItemsMap = new Map<Id<'sidebarItems'>, AnySidebarItem>([...itemsMap, ...trashedItemsMap])
 
   const setFolderState = useSidebarUIStore((s) => s.setFolderState)
 
@@ -33,24 +34,27 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
     if (campaignId) setFolderState(campaignId, folderId, true)
   }
 
-  const hasSiblingNameConflict = (
-    name: string,
-    parentId: Id<'sidebarItems'> | null,
-    excludeId?: Id<'sidebarItems'>,
-  ): boolean => {
-    const siblings = parentItemsMap.get(parentId) ?? []
-    const normalized = name.trim().toLowerCase()
-    return siblings.some((s) => s.name.trim().toLowerCase() === normalized && s._id !== excludeId)
-  }
-
-  const dndContext: DndContext = {
-    moveItem,
+  const dndContext: DndExecutionContext = {
+    moveItems: async (items, parentId) => {
+      await itemOperations.moveItems(items, parentId)
+    },
+    // DnD "copy" is the filesystem duplicate operation at the drop destination.
+    copyItems: async (items, parentId) => {
+      await itemOperations.duplicateItems(items, parentId)
+    },
+    restoreItems: async (items, parentId) => {
+      await itemOperations.restoreItems(items, parentId)
+    },
+    trashItems: async (items) => {
+      await itemOperations.trashItems(items)
+    },
     navigateToItem,
+    setFolderOpen,
+  }
+  const dropPlanningContext = {
     campaignId: campaignId ?? null,
     campaignName,
     isDm: isDm ?? false,
-    setFolderOpen,
-    hasSiblingNameConflict,
   }
 
   const resolveItem = (id: Id<'sidebarItems'>): AnySidebarItem | null =>
@@ -65,8 +69,10 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
   ctxRef.current = {
     itemsMap,
     trashedItemsMap,
+    allItemsMap,
     getAncestorIds,
     dndContext,
+    dropPlanningContext,
     handleDropFiles,
     campaignId: campaignId ?? null,
   }
@@ -83,7 +89,10 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
     <DndProviderContext.Provider value={value}>
       <div className="flex flex-col flex-1 min-h-0">{children}</div>
       <ClientOnly fallback={null}>
-        <DragOverlayPortal overlayRef={overlayRef} dragState={dragState} />
+        <>
+          <DragOverlayPortal overlayRef={overlayRef} dragState={dragState} />
+          <DndBatchDecisionDialog />
+        </>
       </ClientOnly>
     </DndProviderContext.Provider>
   )

@@ -22,6 +22,8 @@ function formatSingleAction(action: string, metadata: Record<string, unknown> | 
   switch (action) {
     case 'created':
       return 'created this item'
+    case 'copied':
+      return `copied from "${str(metadata?.copiedFromName)}"`
     case 'renamed':
       return `renamed "${str(metadata?.from)}" to "${str(metadata?.to)}"`
     case 'moved':

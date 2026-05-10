@@ -11,11 +11,9 @@ const {
   createNoteMock,
   createFileMock,
   createCanvasMock,
-  deleteSidebarItemMock,
   getLinkAtMock,
   handleErrorMock,
   loggerErrorMock,
-  moveSidebarItemMock,
   navigateMock,
   navigateToItemMock,
   useCampaignMock,
@@ -29,11 +27,9 @@ const {
   createNoteMock: vi.fn(),
   createFileMock: vi.fn(),
   createCanvasMock: vi.fn(),
-  deleteSidebarItemMock: vi.fn(),
   getLinkAtMock: vi.fn(),
   handleErrorMock: vi.fn(),
   loggerErrorMock: vi.fn(),
-  moveSidebarItemMock: vi.fn(),
   navigateMock: vi.fn(),
   navigateToItemMock: vi.fn(),
   useCampaignMock: vi.fn(),
@@ -74,12 +70,6 @@ vi.mock('convex/_generated/api', () => ({
         createCanvas: 'createCanvas',
       },
     },
-    sidebarItems: {
-      mutations: {
-        moveSidebarItem: 'moveSidebarItem',
-        permanentlyDeleteSidebarItem: 'permanentlyDeleteSidebarItem',
-      },
-    },
   },
 }))
 
@@ -88,8 +78,6 @@ const mutationMap = {
   createMap: createMapMock,
   createFile: createFileMock,
   createCanvas: createCanvasMock,
-  moveSidebarItem: moveSidebarItemMock,
-  permanentlyDeleteSidebarItem: deleteSidebarItemMock,
   createNote: createNoteMock,
 } satisfies Record<string, ReturnType<typeof vi.fn>>
 
@@ -231,10 +219,6 @@ describe('LinkClickHandler', () => {
     createMapMock.mockReset()
     createFileMock.mockReset()
     createCanvasMock.mockReset()
-    moveSidebarItemMock.mockReset()
-    moveSidebarItemMock.mockResolvedValue('moved-item')
-    deleteSidebarItemMock.mockReset()
-    deleteSidebarItemMock.mockResolvedValue(null)
     getLinkAtMock.mockReset()
     handleErrorMock.mockReset()
     loggerErrorMock.mockReset()
@@ -496,8 +480,6 @@ describe('LinkClickHandler', () => {
       }),
     )
     expect(createFolderMock).not.toHaveBeenCalled()
-    expect(moveSidebarItemMock).not.toHaveBeenCalled()
-    expect(deleteSidebarItemMock).not.toHaveBeenCalled()
   })
 
   it('passes the full missing folder chain when creating the note', async () => {

@@ -35,12 +35,10 @@ describe('cross-action debounce independence on game maps', () => {
 
       // Now add a pin — should get a snapshot
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
-      await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignId,
         mapId: result.mapId,
-        x: 10,
-        y: 20,
-        itemId: noteId,
+        pins: [{ itemId: noteId, x: 10, y: 20 }],
       })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
@@ -198,12 +196,10 @@ describe('rollback of game map pin with non-note itemId', () => {
       })
 
       // Add a pin for the folder
-      await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignId,
         mapId,
-        x: 25,
-        y: 75,
-        itemId: folderId,
+        pins: [{ itemId: folderId, x: 25, y: 75 }],
       })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
@@ -271,12 +267,10 @@ describe('snapshot captures state at time of mutation', () => {
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       // Add a pin at position (10, 20)
-      await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignId,
         mapId,
-        x: 10,
-        y: 20,
-        itemId: noteId,
+        pins: [{ itemId: noteId, x: 10, y: 20 }],
       })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
@@ -297,7 +291,7 @@ describe('snapshot captures state at time of mutation', () => {
 
       expect(snapshot).not.toBeNull()
       const data: GameMapSnapshotData = JSON.parse(new TextDecoder().decode(snapshot!.data))
-      // Pin should be at (10, 20) and visible=false (default from createItemPin)
+      // Pin should be at (10, 20) and visible=false (default from createItemPins)
       expect(data.pins).toHaveLength(1)
       expect(data.pins[0].x).toBe(10)
       expect(data.pins[0].y).toBe(20)
@@ -401,20 +395,16 @@ describe('no duplicate snapshots from concurrent mutations', () => {
       const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       // Two rapid pin adds — both run before scheduled functions complete
-      await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignId,
         mapId,
-        x: 10,
-        y: 20,
-        itemId: n1,
+        pins: [{ itemId: n1, x: 10, y: 20 }],
       })
       // Don't run scheduled functions yet — simulate rapid second call
-      await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignId,
         mapId,
-        x: 30,
-        y: 40,
-        itemId: n2,
+        pins: [{ itemId: n2, x: 30, y: 40 }],
       })
 
       // Now run all scheduled functions
@@ -445,6 +435,52 @@ describe('no duplicate snapshots from concurrent mutations', () => {
 
         // With 2 pin adds, should have at most 2 snapshots
         expect(allSnapshots.length).toBeLessThanOrEqual(2)
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('bulk pin add creates one snapshot entry for the batch', async () => {
+    vi.useFakeTimers()
+    try {
+      const ctx = await setupCampaignContext(t)
+      const dmAuth = asDm(ctx)
+
+      const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+      const { noteId: n1 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+      const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+      const pinIds = await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
+        campaignId: ctx.campaignId,
+        mapId,
+        pins: [
+          { itemId: n1, x: 10, y: 20 },
+          { itemId: n2, x: 30, y: 40 },
+        ],
+      })
+      expect(pinIds).toHaveLength(2)
+
+      await t.finishAllScheduledFunctions(vi.runAllTimers)
+
+      await t.run(async (dbCtx) => {
+        const pins = await dbCtx.db
+          .query('mapPins')
+          .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
+          .collect()
+        expect(pins.map((pin) => pin.itemId).sort()).toEqual([n1, n2].sort())
+
+        const entries = await dbCtx.db
+          .query('editHistory')
+          .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_added'))
+          .collect()
+        expect(entries).toHaveLength(1)
+
+        const snapshots = await dbCtx.db
+          .query('documentSnapshots')
+          .withIndex('by_item', (q) => q.eq('itemId', mapId))
+          .collect()
+        expect(snapshots).toHaveLength(1)
       })
     } finally {
       vi.useRealTimers()

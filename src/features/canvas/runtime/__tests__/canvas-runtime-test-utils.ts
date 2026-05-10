@@ -78,6 +78,7 @@ function createCanvasCommands(): CanvasCommands {
 function createCanvasDocumentWriter(): CanvasDocumentWriter {
   return {
     createNode: vi.fn(),
+    createNodes: vi.fn(),
     patchNodeData: vi.fn(),
     patchEdges: vi.fn(),
     resizeNode: vi.fn(),

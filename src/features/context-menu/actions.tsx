@@ -1,9 +1,7 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { useConvex } from '@convex-dev/react-query'
-import JSZip from 'jszip'
 import { api } from 'convex/_generated/api'
-import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import type { MenuDialogState } from './menu-dialogs'
 import type { PermissionLevel } from 'convex/permissions/types'
@@ -12,23 +10,24 @@ import type { ActionHandlers } from './menu-registry'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import { handleError, logger } from '~/shared/utils/logger'
+import { resolveContextOperationItems } from './selection-context'
+import { handleError } from '~/shared/utils/logger'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
-import { getSelectedSlug } from '~/features/sidebar/hooks/useSelectedItem'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
 import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
-import { useDeleteSidebarItem } from '~/features/sidebar/hooks/useDeleteSidebarItem'
-import { useMoveSidebarItem } from '~/features/sidebar/hooks/useMoveSidebarItem'
+import { useEmptyTrashBin } from '~/features/sidebar/hooks/useEmptyTrashBin'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useToggleBookmark } from '~/features/sidebar/hooks/useBookmarks'
-import { isFile, isFolder, isGameMap, isNote } from '~/features/sidebar/utils/sidebar-item-utils'
-import { assertNever } from '~/shared/utils/utils'
+import { isFile, isGameMap } from '~/features/sidebar/utils/sidebar-item-utils'
 import { useSession } from '~/features/sidebar/hooks/useGameSession'
-import { convertBlocksToMarkdown } from '~/features/editor/utils/text-to-blocks'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useSidebarItemOperations } from '~/features/sidebar/operations/useSidebarItemOperations'
+import { createDownloadActions } from './download-actions'
+import { createCreationActions } from './creation-actions'
+import { createFilesystemActions } from './filesystem-actions'
 
 interface UseMenuActionsOptions {
   onDialogOpen?: () => void
@@ -41,22 +40,36 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
   const { openParentFolders } = useOpenParentFolders()
   const { createItem } = useCreateSidebarItem()
-  const { moveItem } = useMoveSidebarItem()
-  const { permanentlyDeleteItem, emptyTrashBin } = useDeleteSidebarItem()
+  const { emptyTrashBin } = useEmptyTrashBin()
   const { getDefaultName } = useSidebarValidation()
   const { campaignId } = useCampaign()
   const convex = useConvex()
   const { endCurrentSession, startSession: startNewSession } = useSession()
   const toggleBookmarkMutation = useToggleBookmark()
   const { parentItemsMap } = useActiveSidebarItems()
+  const itemOperations = useSidebarItemOperations()
+  const getNormalizedContextItems = (ctx: MenuContext) =>
+    itemOperations.normalizeItems(resolveContextOperationItems(ctx))
+  const downloadActions = createDownloadActions({ campaignId, convex })
+  const creationActions = createCreationActions({
+    campaignId,
+    createItem,
+    getDefaultName,
+    openParentFolders,
+    navigateToItem,
+  })
 
   const [deleteFolderDialog, setDeleteFolderDialog] = useState<Folder | null>(null)
   const [editMapDialog, setEditMapDialog] = useState<Id<'sidebarItems'> | null>(null)
   const [editFileDialog, setEditFileDialog] = useState<Id<'sidebarItems'> | null>(null)
   const [editSidebarItemDialog, setEditSidebarItemDialog] = useState<AnySidebarItem | null>(null)
-  const [confirmPermanentDeleteItem, setConfirmPermanentDeleteItem] =
-    useState<AnySidebarItem | null>(null)
   const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false)
+  const filesystemActions = createFilesystemActions({
+    itemOperations,
+    parentItemsMap,
+    setDeleteFolderDialog,
+    onDialogOpen,
+  })
 
   const actions: ActionHandlers = {
     open: (ctx: MenuContext) => {
@@ -70,136 +83,9 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       setRenamingId(ctx.item._id)
     },
 
-    delete: async (ctx: MenuContext) => {
-      if (!ctx.item) return
-      const item = ctx.item
-
-      // Non-empty folders: show confirmation dialog
-      if (isFolder(item)) {
-        const children = parentItemsMap.get(item._id)
-        if (children && children.length > 0) {
-          setDeleteFolderDialog(item)
-          onDialogOpen?.()
-          return
-        }
-      }
-
-      // Everything else (including empty folders): trash immediately
-      try {
-        await moveItem(item, { location: SIDEBAR_ITEM_LOCATION.trash })
-        const currentSlug = getSelectedSlug()
-        if (item.slug === currentSlug) {
-          await clearEditorContent()
-        }
-        toast.success('Moved to trash')
-      } catch (error) {
-        handleError(error, 'Failed to move item to trash')
-      }
-    },
-
     showInSidebar: (ctx: MenuContext) => {
       if (!ctx.item) return
       openParentFolders(ctx.item._id)
-    },
-
-    createNote: async (ctx: MenuContext) => {
-      if (!campaignId) return
-      if (ctx.item && !isFolder(ctx.item)) {
-        logger.error('Invalid parent type')
-        return
-      }
-      try {
-        const result = await createItem({
-          type: SIDEBAR_ITEM_TYPES.notes,
-          campaignId,
-          parentTarget: { kind: 'direct', parentId: ctx.item?._id ?? null },
-          name: getDefaultName(SIDEBAR_ITEM_TYPES.notes, ctx.item?._id ?? null),
-        })
-        openParentFolders(result.id)
-        void navigateToItem(result.slug)
-      } catch (error) {
-        handleError(error, 'Failed to create note')
-      }
-    },
-
-    createFolder: async (ctx: MenuContext) => {
-      if (!campaignId) return
-      if (ctx.item && !isFolder(ctx.item)) {
-        logger.error('Invalid parent type')
-        return
-      }
-      try {
-        const result = await createItem({
-          type: SIDEBAR_ITEM_TYPES.folders,
-          campaignId,
-          parentTarget: { kind: 'direct', parentId: ctx.item?._id ?? null },
-          name: getDefaultName(SIDEBAR_ITEM_TYPES.folders, ctx.item?._id ?? null),
-        })
-        openParentFolders(result.id)
-        void navigateToItem(result.slug)
-      } catch (error) {
-        handleError(error, 'Failed to create folder')
-      }
-    },
-
-    createMap: async (ctx: MenuContext) => {
-      if (!campaignId) return
-      if (ctx.item && !isFolder(ctx.item)) {
-        logger.error('Invalid parent type')
-        return
-      }
-      try {
-        const result = await createItem({
-          type: SIDEBAR_ITEM_TYPES.gameMaps,
-          campaignId,
-          parentTarget: { kind: 'direct', parentId: ctx.item?._id ?? null },
-          name: getDefaultName(SIDEBAR_ITEM_TYPES.gameMaps, ctx.item?._id ?? null),
-        })
-        openParentFolders(result.id)
-        void navigateToItem(result.slug)
-      } catch (error) {
-        handleError(error, 'Failed to create map')
-      }
-    },
-
-    createFile: async (ctx: MenuContext) => {
-      if (!campaignId) return
-      if (ctx.item && !isFolder(ctx.item)) {
-        logger.error('Invalid parent type')
-        return
-      }
-      try {
-        const result = await createItem({
-          type: SIDEBAR_ITEM_TYPES.files,
-          campaignId,
-          parentTarget: { kind: 'direct', parentId: ctx.item?._id ?? null },
-          name: getDefaultName(SIDEBAR_ITEM_TYPES.files, ctx.item?._id ?? null),
-        })
-        openParentFolders(result.id)
-        void navigateToItem(result.slug)
-      } catch (error) {
-        handleError(error, 'Failed to create file')
-      }
-    },
-
-    createCanvas: async (ctx: MenuContext) => {
-      if (!campaignId) return
-      if (ctx.item && !isFolder(ctx.item)) {
-        logger.error('Invalid parent type')
-        return
-      }
-      try {
-        const result = await createItem({
-          type: SIDEBAR_ITEM_TYPES.canvases,
-          campaignId,
-          parentTarget: { kind: 'direct', parentId: ctx.item?._id ?? null },
-          name: getDefaultName(SIDEBAR_ITEM_TYPES.canvases, ctx.item?._id ?? null),
-        })
-        openParentFolders(result.id)
-        void navigateToItem(result.slug)
-      } catch (error) {
-        handleError(error, 'Failed to create canvas')
-      }
     },
 
     editMap: (ctx: MenuContext) => {
@@ -224,22 +110,30 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     },
 
     pinToMap: (ctx: MenuContext) => {
-      if (!ctx.item || !ctx.activeMap) return
-
-      if (ctx.activeMap.pins.some((pin) => pin.item?._id === ctx.item?._id)) {
-        toast.error('Item is already pinned on this map')
-        // TODO: add highlight of pin here
+      if (!ctx.activeMap) return
+      const pinnedItemIds = new Set(ctx.activeMap.pins.map((pin) => pin.itemId))
+      const itemIds: Array<Id<'sidebarItems'>> = []
+      for (const item of getNormalizedContextItems(ctx)) {
+        if (item._id !== ctx.activeMap._id && !pinnedItemIds.has(item._id)) {
+          itemIds.push(item._id)
+        }
+      }
+      if (itemIds.length === 0) {
+        toast.error('Selected items are already pinned on this map')
         return
       }
 
-      // Dispatch event to map viewer to enter pin placement mode
       const event = new CustomEvent('map-pin-placement-request', {
         detail: {
-          itemId: ctx.item._id,
+          itemIds,
         },
       })
       window.dispatchEvent(event)
-      toast.info('Click on the map to place the pin')
+      toast.info(
+        itemIds.length === 1
+          ? 'Click on the map to place the pin'
+          : 'Click on the map to place pins',
+      )
     },
 
     goToMapPin: (ctx: MenuContext) => {
@@ -329,289 +223,65 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     },
 
     setGeneralAccessLevel: async (ctx: MenuContext, level: PermissionLevel | null) => {
-      if (!campaignId || !ctx.item) return
+      if (!campaignId) return
+      const items = getNormalizedContextItems(ctx)
+      if (items.length === 0) return
 
       try {
-        await convex.mutation(api.sidebarShares.mutations.setAllPlayersPermission, {
+        await convex.mutation(api.sidebarShares.mutations.setAllPlayersPermissionForSidebarItems, {
           campaignId,
-          sidebarItemId: ctx.item._id,
+          sidebarItemIds: items.map((item) => item._id),
           permissionLevel: level,
         })
+        const target = items.length === 1 ? 'item' : `${items.length} items`
         if (level === null) {
-          toast.success('Reset to default access')
+          toast.success(`Reset ${target} to default access`)
         } else if (level === PERMISSION_LEVEL.NONE) {
-          toast.success('Access set to none')
+          toast.success(`Access set to none for ${target}`)
         } else {
-          toast.success(`Access set to ${level}`)
+          toast.success(`Access set to ${level} for ${target}`)
         }
       } catch (error) {
         handleError(error, 'Failed to update access level')
       }
     },
 
-    downloadFile: (ctx: MenuContext) => {
-      if (!ctx.item || !isFile(ctx.item)) return
-
-      if (!ctx.item.downloadUrl) {
-        toast.error('Download URL not available')
-        return
-      }
-
-      try {
-        const fileName = ctx.item.name
-        const link = document.createElement('a')
-        link.href = ctx.item.downloadUrl
-        link.download = fileName
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        toast.success('Download started')
-      } catch (error) {
-        handleError(error, 'Failed to download file')
-      }
-    },
-
-    downloadNote: async (ctx: MenuContext) => {
-      if (!ctx.item || !isNote(ctx.item) || !campaignId) return
-
-      try {
-        const fullItem = await convex.query(api.sidebarItems.queries.getSidebarItem, {
-          campaignId,
-          id: ctx.item._id,
-        })
-        if (!fullItem || fullItem.type !== SIDEBAR_ITEM_TYPES.notes) {
-          toast.error('Failed to load note content')
-          return
-        }
-
-        const visibleContent = fullItem.content.filter((block) => {
-          const meta = fullItem.blockMeta[block.id]
-          if (!meta) return true
-          return meta.myPermissionLevel !== PERMISSION_LEVEL.NONE
-        })
-        const markdown = convertBlocksToMarkdown(visibleContent)
-        const baseName = ctx.item.name
-        const fileName = baseName.endsWith('.md') ? baseName : `${baseName}.md`
-
-        const blob = new Blob([markdown], { type: 'text/markdown' })
-        const link = document.createElement('a')
-        link.href = URL.createObjectURL(blob)
-        link.download = fileName
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        URL.revokeObjectURL(link.href)
-
-        toast.success('Download started')
-      } catch (error) {
-        handleError(error, 'Failed to download note')
-      }
-    },
-
-    downloadMap: (ctx: MenuContext) => {
-      if (!ctx.item || !isGameMap(ctx.item)) return
-
-      if (!ctx.item.imageUrl) {
-        toast.error('Map image URL not available')
-        return
-      }
-
-      try {
-        const mapName = ctx.item.name
-        const link = document.createElement('a')
-        link.href = ctx.item.imageUrl
-        link.download = mapName
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        toast.success('Download started')
-      } catch (error) {
-        handleError(error, 'Failed to download map')
-      }
-    },
-
-    downloadFolder: async (ctx: MenuContext) => {
-      if (!ctx.item || !isFolder(ctx.item) || !campaignId) return
-
-      const toastId = toast.loading('Preparing download...')
-
-      try {
-        const { folderName, items } = await convex.query(
-          api.folders.queries.getFolderContentsForDownload,
-          { campaignId, folderId: ctx.item._id },
-        )
-
-        if (items.length === 0) {
-          toast.dismiss(toastId)
-          toast.info('Folder is empty')
-          return
-        }
-
-        toast.loading('Downloading items...', { id: toastId })
-
-        const zip = new JSZip()
-
-        const downloadPromises: Array<Promise<void>> = items.map(async (item) => {
-          // TODO: pull this out to shared utility, also use in campaign export
-          // combine downloadFolder and downloadAll
-          try {
-            switch (item.type) {
-              case SIDEBAR_ITEM_TYPES.files:
-              case SIDEBAR_ITEM_TYPES.gameMaps: {
-                if (!item.downloadUrl) {
-                  logger.warn(`No download URL for: ${item.path}`)
-                  return
-                }
-                const response = await fetch(item.downloadUrl)
-                if (!response.ok) {
-                  logger.warn(`Failed to fetch: ${item.path}`)
-                  return
-                }
-                const blob = await response.blob()
-                zip.file(item.path, blob)
-                break
-              }
-              case SIDEBAR_ITEM_TYPES.notes: {
-                const markdown = convertBlocksToMarkdown(item.content)
-                zip.file(item.path, markdown)
-                break
-              }
-              default:
-                assertNever(item)
-            }
-          } catch (error) {
-            logger.warn(`Failed to process: ${item.path}`, error)
-          }
-        })
-
-        await Promise.all(downloadPromises)
-
-        toast.loading('Creating zip file...', { id: toastId })
-
-        const zipBlob = await zip.generateAsync({ type: 'blob' })
-        const zipFileName = `${folderName}.zip`
-
-        const link = document.createElement('a')
-        link.href = URL.createObjectURL(zipBlob)
-        link.download = zipFileName
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        URL.revokeObjectURL(link.href)
-
-        toast.dismiss(toastId)
-        toast.success(`Downloaded ${items.length} item(s)`)
-      } catch (error) {
-        toast.dismiss(toastId)
-        handleError(error, 'Failed to download folder')
-      }
-    },
-
-    downloadAll: async () => {
-      if (!campaignId) return
-
-      const toastId = toast.loading('Preparing download...')
-
-      try {
-        const { items } = await convex.query(api.folders.queries.getRootContentsForDownload, {
-          campaignId,
-        })
-
-        if (items.length === 0) {
-          toast.dismiss(toastId)
-          toast.info('No items to download')
-          return
-        }
-
-        toast.loading('Downloading items...', { id: toastId })
-
-        const zip = new JSZip()
-
-        const downloadPromises = items.map(async (item) => {
-          try {
-            switch (item.type) {
-              case SIDEBAR_ITEM_TYPES.files:
-              case SIDEBAR_ITEM_TYPES.gameMaps: {
-                if (!item.downloadUrl) {
-                  logger.warn(`No download URL for: ${item.path}`)
-                  return
-                }
-                const response = await fetch(item.downloadUrl)
-                if (!response.ok) {
-                  logger.warn(`Failed to fetch: ${item.path}`)
-                  return
-                }
-                const blob = await response.blob()
-                zip.file(item.path, blob)
-                break
-              }
-              case SIDEBAR_ITEM_TYPES.notes: {
-                const markdown = convertBlocksToMarkdown(item.content)
-                zip.file(item.path, markdown)
-                break
-              }
-              default:
-                assertNever(item)
-            }
-          } catch (error) {
-            logger.warn(`Failed to process: ${item.path}`, error)
-          }
-        })
-
-        await Promise.all(downloadPromises)
-
-        toast.loading('Creating zip file...', { id: toastId })
-
-        const zipBlob = await zip.generateAsync({ type: 'blob' })
-        const zipFileName = 'campaign-export.zip'
-
-        const link = document.createElement('a')
-        link.href = URL.createObjectURL(zipBlob)
-        link.download = zipFileName
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        URL.revokeObjectURL(link.href)
-
-        toast.dismiss(toastId)
-        toast.success(`Downloaded ${items.length} item(s)`)
-      } catch (error) {
-        toast.dismiss(toastId)
-        handleError(error, 'Failed to download')
-      }
-    },
-
-    restore: async (ctx: MenuContext) => {
-      if (!ctx.item) return
-      try {
-        await moveItem(ctx.item, { location: SIDEBAR_ITEM_LOCATION.sidebar })
-        toast.success('Item restored')
-      } catch (error) {
-        handleError(error, 'Failed to restore item')
-      }
-    },
-
-    permanentlyDelete: (ctx: MenuContext) => {
-      if (!ctx.item) return
-      setConfirmPermanentDeleteItem(ctx.item)
-      onDialogOpen?.()
-    },
+    ...creationActions,
+    ...downloadActions,
+    ...filesystemActions,
 
     emptyTrash: () => {
       setConfirmEmptyTrash(true)
       onDialogOpen?.()
     },
 
-    toggleBookmark: (ctx: MenuContext) => {
-      if (!campaignId || !ctx.item) return
+    toggleBookmark: async (ctx: MenuContext) => {
+      if (!campaignId) return
+      const items = getNormalizedContextItems(ctx)
+      if (items.length === 0) return
 
-      toggleBookmarkMutation
-        .mutateAsync({
-          sidebarItemId: ctx.item._id,
-        })
-        .catch((error) => {
-          handleError(error, 'Failed to toggle bookmark')
-        })
+      const results = await Promise.allSettled(
+        items.map((item) =>
+          toggleBookmarkMutation.mutateAsync({
+            sidebarItemId: item._id,
+          }),
+        ),
+      )
+      const failures = results.filter((result) => result.status === 'rejected')
+      const successCount = results.length - failures.length
+      if (failures.length > 0) {
+        const error = new Error(`${failures.length} of ${items.length} bookmark updates failed`)
+        if (successCount === 0) {
+          handleError(
+            error,
+            items.length === 1 ? 'Failed to toggle bookmark' : 'Failed to toggle bookmarks',
+          )
+          return
+        }
+        toast.error(`${successCount} bookmarks updated, ${failures.length} failed`)
+        return
+      }
+      toast.success(items.length === 1 ? 'Bookmark updated' : 'Bookmarks updated')
     },
   }
 
@@ -627,20 +297,17 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     editMapDialog,
     editFileDialog,
     editSidebarItemDialog,
-    confirmPermanentDeleteItem,
     confirmEmptyTrash,
     campaignId,
     closeFolderDialog: makeCloseHandler(setDeleteFolderDialog),
     closeMapDialog: makeCloseHandler(setEditMapDialog),
     closeFileDialog: makeCloseHandler(setEditFileDialog),
     closeSidebarItemDialog: makeCloseHandler(setEditSidebarItemDialog),
-    closePermanentDeleteDialog: makeCloseHandler(setConfirmPermanentDeleteItem),
     closeEmptyTrashDialog: () => {
       setConfirmEmptyTrash(false)
       onDialogClose?.()
     },
     clearEditorContent,
-    permanentlyDeleteItem,
     emptyTrashBin,
   }
 

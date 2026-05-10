@@ -9,15 +9,22 @@ import { TrashBanner } from '~/features/editor/components/deleted-item-banner'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import { TRASH_DROP_ZONE_TYPE } from '~/features/dnd/utils/dnd-registry'
+import { TRASH_DROP_ZONE_TYPE } from '~/features/dnd/utils/drop-target-data'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
+import { useItemSurfaceRegistration } from '~/features/sidebar/hooks/useItemSurfaceRegistration'
 
 export function TrashPageViewer() {
   const dropRef = useRef<HTMLDivElement>(null)
 
   const { parentItemsMap, status } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
   const rootTrashedItems = parentItemsMap.get(null) ?? []
+  const visibleItemIds = rootTrashedItems.map((item) => item._id)
+  const { handleSurfacePointerDown } = useItemSurfaceRegistration({
+    surface: 'trash',
+    parentId: null,
+    visibleItemIds,
+  })
 
   const { isDropTarget } = useDndDropTarget({
     ref: dropRef,
@@ -56,10 +63,15 @@ export function TrashPageViewer() {
           <>
             <TrashBanner />
             <ScrollArea className="flex-1 min-h-0">
-              <div className="w-full min-w-0">
+              <div className="w-full min-w-0" onPointerDownCapture={handleSurfacePointerDown}>
                 <ContentGrid className="p-6 min-h-0">
                   {rootTrashedItems.map((item) => (
-                    <ItemCard key={item._id} item={item} />
+                    <ItemCard
+                      key={item._id}
+                      item={item}
+                      itemSurface="trash"
+                      visibleItemIds={visibleItemIds}
+                    />
                   ))}
                 </ContentGrid>
               </div>

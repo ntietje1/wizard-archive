@@ -20,7 +20,6 @@ export const embedNodeContextMenuContributors = [
           icon: SquareArrowOutUpRight,
           group: 'navigation',
           priority: 0,
-          scope: 'selection',
           onSelect: async () => {
             await services.openEmbedTarget(target)
           },

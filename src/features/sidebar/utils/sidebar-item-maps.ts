@@ -1,6 +1,7 @@
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
+import { collectDescendantIdsFromItems } from 'convex/sidebarItems/operations/tree'
 import { isFolder } from '~/features/sidebar/utils/sidebar-item-utils'
 
 export interface SidebarItemMaps {
@@ -49,30 +50,9 @@ export function buildSidebarItemMaps(data: Array<AnySidebarItem>): SidebarItemMa
 export function collectDescendantIds(
   folderId: Id<'sidebarItems'>,
   items: Array<AnySidebarItem>,
+  itemsMap?: ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>,
 ): Set<Id<'sidebarItems'>> {
-  const childrenByParent = new Map<Id<'sidebarItems'>, Array<AnySidebarItem>>()
-  for (const item of items) {
-    if (!item.parentId) continue
-    const siblings = childrenByParent.get(item.parentId)
-    if (siblings) {
-      siblings.push(item)
-    } else {
-      childrenByParent.set(item.parentId, [item])
-    }
-  }
-
-  const result = new Set<Id<'sidebarItems'>>()
-  const stack: Array<Id<'sidebarItems'>> = [folderId]
-  while (stack.length > 0) {
-    const currentId = stack.pop()!
-    const children = childrenByParent.get(currentId)
-    if (!children) continue
-    for (const child of children) {
-      if (result.has(child._id)) continue
-      result.add(child._id)
-      if (isFolder(child)) stack.push(child._id)
-    }
-  }
-
-  return result
+  const hasFolder = itemsMap ? itemsMap.has(folderId) : items.some((item) => item._id === folderId)
+  if (!hasFolder) return new Set()
+  return collectDescendantIdsFromItems(folderId, items)
 }

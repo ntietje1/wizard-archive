@@ -249,10 +249,11 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       { id: testBlockNoteId('block-a'), type: 'paragraph', props: {}, children: [] },
     ])
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: noteId,
-      location: 'trash',
+      sourceItemIds: [noteId],
+      targetParentId: null,
+      action: 'trash',
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {

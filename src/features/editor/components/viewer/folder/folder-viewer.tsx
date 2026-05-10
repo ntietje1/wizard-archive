@@ -12,6 +12,7 @@ import { ContentGrid } from '~/features/campaigns/components/content-grid/conten
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
+import { useItemSurfaceRegistration } from '~/features/sidebar/hooks/useItemSurfaceRegistration'
 
 export function FolderViewer({ item: folder }: EditorViewerProps<FolderWithContent>) {
   const { parentItemsMap, status } = useFilteredSidebarItems()
@@ -24,6 +25,12 @@ export function FolderViewer({ item: folder }: EditorViewerProps<FolderWithConte
   const children = isDeleted
     ? (trashedParentItemsMap.get(folder._id) ?? [])
     : (parentItemsMap.get(folder._id) ?? [])
+  const visibleItemIds = children.map((child) => child._id)
+  const { handleSurfacePointerDown } = useItemSurfaceRegistration({
+    surface: 'folder-view',
+    parentId: folder._id,
+    visibleItemIds,
+  })
 
   const hasFullAccess =
     !isDeleted && hasAtLeastPermissionLevel(folder.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
@@ -45,7 +52,11 @@ export function FolderViewer({ item: folder }: EditorViewerProps<FolderWithConte
         className="flex flex-col h-full w-full min-h-0"
         item={folder}
       >
-        <DroppableFolderZone folder={folder} className="flex flex-col h-full w-full min-h-0">
+        <DroppableFolderZone
+          folder={folder}
+          className="flex flex-col h-full w-full min-h-0"
+          onPointerDownCapture={handleSurfacePointerDown}
+        >
           {hasFullAccess ? (
             <CreateNewDashboard parentId={folder._id} folderPath={folderPath} />
           ) : (
@@ -65,11 +76,18 @@ export function FolderViewer({ item: folder }: EditorViewerProps<FolderWithConte
       item={folder}
     >
       <DroppableFolderZone folder={folder} className="flex flex-col h-full w-full min-h-0">
-        <ScrollArea className="flex-1 min-h-0">
+        <ScrollArea className="flex-1 min-h-0" onPointerDownCapture={handleSurfacePointerDown}>
           <div className="w-full min-w-0">
             <ContentGrid className="p-6 min-h-0">
               {children.map((childItem) => {
-                return <ItemCard key={childItem._id} item={childItem} parentId={folder._id} />
+                return (
+                  <ItemCard
+                    key={childItem._id}
+                    item={childItem}
+                    parentId={folder._id}
+                    visibleItemIds={visibleItemIds}
+                  />
+                )
               })}
               {hasFullAccess && <NewItemCard parentId={folder._id} />}
             </ContentGrid>

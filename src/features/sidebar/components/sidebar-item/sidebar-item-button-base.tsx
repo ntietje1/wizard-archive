@@ -1,4 +1,3 @@
-import { memo } from 'react'
 import { Link } from '@tanstack/react-router'
 import { ChevronRight, MoreHorizontal } from 'lucide-react'
 import { EditableName } from './editable-item-name'
@@ -6,16 +5,22 @@ import type { SidebarItemButtonProps } from './types'
 import { Button } from '~/features/shadcn/components/button'
 import { HoverToggleButton } from '~/features/sidebar/components/hover-toggle-button'
 import { cn } from '~/features/shadcn/lib/utils'
+import { sidebarItemRowPaddingStyle } from '~/features/sidebar/components/sidebar-item/sidebar-item-layout'
+import {
+  sidebarItemActionButtonClass,
+  sidebarItemActionGroupClass,
+  sidebarItemBackgroundClass,
+  sidebarItemIconClass,
+  sidebarItemNameClass,
+} from '~/features/sidebar/utils/sidebar-item-visual-state'
 
-function SidebarItemButtonBaseComponent({
+export function SidebarItemButtonBase({
   icon: Icon,
   name,
-  isExpanded = false,
-  isSelected = false,
-  isRenaming = false,
-  showChevron = true,
+  presentation,
   linkProps,
   onClick,
+  onContextMenu,
   onMoreOptions = () => {},
   onToggleExpanded = () => {},
   onFinishRename,
@@ -25,18 +30,22 @@ function SidebarItemButtonBaseComponent({
   excludeId,
   shareButton,
 }: SidebarItemButtonProps) {
+  const { visualState, focused, renaming, expanded, showChevron, indentLevel = 0 } = presentation
+  const actionButtonClassName = sidebarItemActionButtonClass(visualState)
+  const rowPadding = sidebarItemRowPaddingStyle(indentLevel)
   const nameContent = onFinishRename ? (
     <EditableName
       initialName={name}
-      isRenaming={isRenaming}
+      isRenaming={renaming}
       onFinishRename={onFinishRename}
       onCancelRename={onCancelRename}
+      displayClassName={sidebarItemIconClass(visualState)}
       campaignId={campaignId}
       parentId={parentId}
       excludeId={excludeId}
     />
   ) : (
-    <span className="truncate ml-1">{name}</span>
+    <span className={cn('truncate ml-1', sidebarItemNameClass(visualState))}>{name}</span>
   )
 
   return (
@@ -45,21 +54,29 @@ function SidebarItemButtonBaseComponent({
         'relative flex items-center w-full h-8 px-1 rounded-sm',
         'group',
         '[[data-item-dragging]_&]:bg-primary/10',
-        isSelected && 'bg-muted',
-        !isSelected && 'hover:bg-muted/70',
+        sidebarItemBackgroundClass(visualState),
       )}
+      style={rowPadding}
+      data-item-selection-target="true"
+      data-testid={`selectable-row-${name}`}
+      role="option"
+      aria-selected={visualState.isSelected}
+      onContextMenu={onContextMenu}
     >
       {/* Icon / Chevron Toggle */}
       <HoverToggleButton
-        className="relative h-6 w-6 shrink-0 flex items-center justify-center text-muted-foreground"
-        nonHoverComponent={<Icon className="h-4 w-4 shrink-0" />}
+        className={cn(
+          'relative size-6 shrink-0 flex items-center justify-center',
+          sidebarItemIconClass(visualState),
+        )}
+        nonHoverComponent={<Icon className="size-4 shrink-0" />}
         hoverComponent={
           showChevron ? (
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 w-6 hover:text-foreground hover:bg-muted-foreground/10 rounded-sm"
-              aria-label={isExpanded ? 'Collapse folder' : 'Expand folder'}
+              className="size-6 hover:text-foreground hover:bg-muted-foreground/10 rounded-sm"
+              aria-label={expanded ? 'Collapse folder' : 'Expand folder'}
               onClick={(e) => {
                 e.stopPropagation()
                 e.preventDefault()
@@ -67,22 +84,20 @@ function SidebarItemButtonBaseComponent({
               }}
             >
               <div
-                className={cn(
-                  'flex items-center justify-center transition-transform duration-100 ease-out',
-                  isExpanded && 'rotate-90',
-                )}
+                data-testid="chevron-wrapper"
+                className={cn('flex items-center justify-center', expanded && 'rotate-90')}
               >
-                <ChevronRight className="h-3 w-3" />
+                <ChevronRight className="size-3" />
               </div>
             </Button>
           ) : (
-            <Icon className="h-4 w-4 shrink-0" />
+            <Icon className="size-4 shrink-0" />
           )
         }
       />
 
       {/* Item Name */}
-      {isRenaming || !linkProps ? (
+      {renaming || !linkProps ? (
         <div className="flex items-center min-w-0 flex-1 h-full rounded-sm">{nameContent}</div>
       ) : (
         <Link
@@ -90,6 +105,7 @@ function SidebarItemButtonBaseComponent({
           activeOptions={{ includeSearch: false }}
           className="flex items-center min-w-0 flex-1 h-full rounded-sm select-none"
           draggable={false}
+          tabIndex={focused ? 0 : -1}
           onClick={onClick}
         >
           {nameContent}
@@ -97,21 +113,24 @@ function SidebarItemButtonBaseComponent({
       )}
 
       {/* Action Buttons */}
-      {!isRenaming && (
-        <div className="flex items-center shrink-0 w-0 overflow-hidden opacity-0 group-hover:w-auto group-hover:overflow-visible group-hover:opacity-100 has-[[data-share-open]]:w-auto has-[[data-share-open]]:overflow-visible has-[[data-share-open]]:opacity-100 group-hover:transition-opacity">
+      {!renaming && (
+        <div className={sidebarItemActionGroupClass}>
           {shareButton}
-          <div className="relative h-6 w-6 shrink-0 flex items-center justify-center">
+          <div className="relative size-6 shrink-0 flex items-center justify-center">
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm"
+              className={cn(
+                'size-6 p-0 hover:bg-muted-foreground/10 rounded-sm',
+                actionButtonClassName,
+              )}
               aria-label="More options"
               onClick={(e) => {
                 e.preventDefault()
                 onMoreOptions(e)
               }}
             >
-              <MoreHorizontal className="h-4 w-4" />
+              <MoreHorizontal className="size-4" />
             </Button>
           </div>
         </div>
@@ -119,5 +138,3 @@ function SidebarItemButtonBaseComponent({
     </div>
   )
 }
-
-export const SidebarItemButtonBase = memo(SidebarItemButtonBaseComponent)

@@ -8,6 +8,7 @@ import {
   expectValidationFailed,
 } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
+import { SIDEBAR_ITEM_LOCATION } from '../../sidebarItems/types/baseTypes'
 
 describe('createMap', () => {
   const t = createTestContext()
@@ -225,13 +226,13 @@ describe('pin CRUD', () => {
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    const pinId = await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
-      campaignId: ctx.campaignId,
-      mapId,
-      x: 100,
-      y: 200,
-      itemId: noteId,
-    })
+    const pinId = (
+      await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
+        campaignId: ctx.campaignId,
+        mapId,
+        pins: [{ itemId: noteId, x: 100, y: 100 }],
+      })
+    )[0]!
 
     expect(pinId).toBeDefined()
 
@@ -241,9 +242,203 @@ describe('pin CRUD', () => {
       expect(pin!.mapId).toBe(mapId)
       expect(pin!.itemId).toBe(noteId)
       expect(pin!.x).toBe(100)
-      expect(pin!.y).toBe(200)
+      expect(pin!.y).toBe(100)
       expect(pin!.visible).toBe(false)
     })
+  })
+
+  it('accepts boundary pin coordinates', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+    const first = await createNote(t, ctx.campaignId, ctx.dm.profile._id, { name: 'First' })
+    const second = await createNote(t, ctx.campaignId, ctx.dm.profile._id, { name: 'Second' })
+
+    const pinIds = await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
+      campaignId: ctx.campaignId,
+      mapId,
+      pins: [
+        { itemId: first.noteId, x: 0, y: 0 },
+        { itemId: second.noteId, x: 100, y: 100 },
+      ],
+    })
+
+    expect(pinIds).toHaveLength(2)
+    await t.run(async (dbCtx) => {
+      const firstPin = await dbCtx.db.get('mapPins', pinIds[0]!)
+      const secondPin = await dbCtx.db.get('mapPins', pinIds[1]!)
+      expect(firstPin?.x).toBe(0)
+      expect(firstPin?.y).toBe(0)
+      expect(secondPin?.x).toBe(100)
+      expect(secondPin?.y).toBe(100)
+    })
+  })
+
+  it('rejects out-of-range and non-finite pin coordinates before inserting pins', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+    for (const pin of [
+      { itemId: noteId, x: -1, y: 50 },
+      { itemId: noteId, x: 101, y: 50 },
+      { itemId: noteId, x: Number.NEGATIVE_INFINITY, y: 50 },
+      { itemId: noteId, x: 50, y: -1 },
+      { itemId: noteId, x: 50, y: 101 },
+      { itemId: noteId, x: 50, y: Number.NEGATIVE_INFINITY },
+      { itemId: noteId, x: Number.NaN, y: 50 },
+      { itemId: noteId, x: 50, y: Number.POSITIVE_INFINITY },
+    ]) {
+      await expectValidationFailed(
+        dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
+          campaignId: ctx.campaignId,
+          mapId,
+          pins: [pin],
+        }),
+      )
+    }
+
+    await t.run(async (dbCtx) => {
+      const pins = await dbCtx.db
+        .query('mapPins')
+        .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
+        .collect()
+      expect(pins).toHaveLength(0)
+    })
+  })
+
+  it('creates multiple pins in one batch', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+    const first = await createNote(t, ctx.campaignId, ctx.dm.profile._id, { name: 'First' })
+    const second = await createNote(t, ctx.campaignId, ctx.dm.profile._id, { name: 'Second' })
+
+    const pinIds = await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
+      campaignId: ctx.campaignId,
+      mapId,
+      pins: [
+        { itemId: first.noteId, x: 10, y: 20 },
+        { itemId: second.noteId, x: 30, y: 40 },
+      ],
+    })
+
+    expect(pinIds).toHaveLength(2)
+
+    await t.run(async (dbCtx) => {
+      const pins = await dbCtx.db
+        .query('mapPins')
+        .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
+        .collect()
+      expect(pins.map((pin) => pin.itemId).sort()).toEqual([first.noteId, second.noteId].sort())
+      const historyRows = await dbCtx.db
+        .query('editHistory')
+        .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_added'))
+        .collect()
+      expect(historyRows).toHaveLength(1)
+    })
+  })
+
+  it('rejects oversized batch pin requests before inserting pins', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+    await expectValidationFailed(
+      dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
+        campaignId: ctx.campaignId,
+        mapId,
+        pins: Array.from({ length: 101 }, (_, index) => ({
+          itemId: noteId,
+          x: index,
+          y: index,
+        })),
+      }),
+    )
+
+    await t.run(async (dbCtx) => {
+      const pins = await dbCtx.db
+        .query('mapPins')
+        .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
+        .collect()
+      expect(pins).toHaveLength(0)
+    })
+  })
+
+  it('rejects duplicate item ids in one pin batch', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+    await expectValidationFailed(
+      dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
+        campaignId: ctx.campaignId,
+        mapId,
+        pins: [
+          { itemId: noteId, x: 10, y: 20 },
+          { itemId: noteId, x: 30, y: 40 },
+        ],
+      }),
+    )
+
+    await t.run(async (dbCtx) => {
+      const pins = await dbCtx.db
+        .query('mapPins')
+        .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
+        .collect()
+      expect(pins).toHaveLength(0)
+    })
+  })
+
+  it('rejects a batch pin that includes an invalid item', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+    await expectValidationFailed(
+      dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
+        campaignId: ctx.campaignId,
+        mapId,
+        pins: [
+          { itemId: noteId, x: 10, y: 20 },
+          { itemId: mapId, x: 30, y: 40 },
+        ],
+      }),
+    )
+  })
+
+  it('rejects a batch pin that includes a trashed item', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+    await t.run(async (dbCtx) => {
+      await dbCtx.db.patch('sidebarItems', noteId, {
+        deletionTime: Date.now(),
+        deletedBy: ctx.dm.profile._id,
+        location: SIDEBAR_ITEM_LOCATION.trash,
+      })
+    })
+
+    await expectValidationFailed(
+      dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
+        campaignId: ctx.campaignId,
+        mapId,
+        pins: [{ itemId: noteId, x: 10, y: 20 }],
+      }),
+    )
   })
 
   it('rejects duplicate pin for same item', async () => {
@@ -253,21 +448,17 @@ describe('pin CRUD', () => {
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+    await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
       campaignId: ctx.campaignId,
       mapId,
-      x: 10,
-      y: 20,
-      itemId: noteId,
+      pins: [{ itemId: noteId, x: 10, y: 20 }],
     })
 
     await expectValidationFailed(
-      dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignId,
         mapId,
-        x: 30,
-        y: 40,
-        itemId: noteId,
+        pins: [{ itemId: noteId, x: 30, y: 40 }],
       }),
     )
   })
@@ -279,12 +470,10 @@ describe('pin CRUD', () => {
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
 
     await expectValidationFailed(
-      dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignId,
         mapId,
-        x: 10,
-        y: 20,
-        itemId: mapId,
+        pins: [{ itemId: mapId, x: 10, y: 20 }],
       }),
     )
   })
@@ -296,13 +485,13 @@ describe('pin CRUD', () => {
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    const pinId = await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
-      campaignId: ctx.campaignId,
-      mapId,
-      x: 10,
-      y: 20,
-      itemId: noteId,
-    })
+    const pinId = (
+      await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
+        campaignId: ctx.campaignId,
+        mapId,
+        pins: [{ itemId: noteId, x: 10, y: 20 }],
+      })
+    )[0]!
 
     await dmAuth.mutation(api.gameMaps.mutations.updateItemPin, {
       campaignId: ctx.campaignId,
@@ -325,13 +514,13 @@ describe('pin CRUD', () => {
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    const pinId = await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
-      campaignId: ctx.campaignId,
-      mapId,
-      x: 10,
-      y: 20,
-      itemId: noteId,
-    })
+    const pinId = (
+      await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
+        campaignId: ctx.campaignId,
+        mapId,
+        pins: [{ itemId: noteId, x: 10, y: 20 }],
+      })
+    )[0]!
 
     await dmAuth.mutation(api.gameMaps.mutations.updatePinVisibility, {
       campaignId: ctx.campaignId,
@@ -352,13 +541,13 @@ describe('pin CRUD', () => {
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    const pinId = await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
-      campaignId: ctx.campaignId,
-      mapId,
-      x: 10,
-      y: 20,
-      itemId: noteId,
-    })
+    const pinId = (
+      await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
+        campaignId: ctx.campaignId,
+        mapId,
+        pins: [{ itemId: noteId, x: 10, y: 20 }],
+      })
+    )[0]!
 
     await dmAuth.mutation(api.gameMaps.mutations.removeItemPin, {
       campaignId: ctx.campaignId,
@@ -387,12 +576,10 @@ describe('pin CRUD', () => {
     })
 
     await expectPermissionDenied(
-      playerAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      playerAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignId,
         mapId,
-        x: 10,
-        y: 20,
-        itemId: noteId,
+        pins: [{ itemId: noteId, x: 10, y: 20 }],
       }),
     )
   })
@@ -412,13 +599,13 @@ describe('pin CRUD', () => {
       permissionLevel: 'edit',
     })
 
-    const pinId = await playerAuth.mutation(api.gameMaps.mutations.createItemPin, {
-      campaignId: ctx.campaignId,
-      mapId,
-      x: 10,
-      y: 20,
-      itemId: noteId,
-    })
+    const pinId = (
+      await playerAuth.mutation(api.gameMaps.mutations.createItemPins, {
+        campaignId: ctx.campaignId,
+        mapId,
+        pins: [{ itemId: noteId, x: 10, y: 20 }],
+      })
+    )[0]!
     expect(pinId).toBeDefined()
   })
 })
@@ -435,12 +622,10 @@ describe('getMap', () => {
     })
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+    await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
       campaignId: ctx.campaignId,
       mapId,
-      x: 10,
-      y: 20,
-      itemId: noteId,
+      pins: [{ itemId: noteId, x: 10, y: 20 }],
     })
 
     const result = await dmAuth.query(api.gameMaps.queries.getMap, {

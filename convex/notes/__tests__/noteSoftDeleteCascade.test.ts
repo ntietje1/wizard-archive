@@ -29,10 +29,11 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
       parentBlockId: testBlockNoteId('root'),
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: noteId,
-      location: 'trash',
+      sourceItemIds: [noteId],
+      targetParentId: null,
+      action: 'trash',
     })
 
     await t.run(async (dbCtx) => {
@@ -64,10 +65,11 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
       campaignMemberId: ctx.player.memberId,
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: noteId,
-      location: 'trash',
+      sourceItemIds: [noteId],
+      targetParentId: null,
+      action: 'trash',
     })
 
     await t.run(async (dbCtx) => {
@@ -102,16 +104,18 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
       campaignMemberId: ctx.player.memberId,
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: noteId,
-      location: 'trash',
+      sourceItemIds: [noteId],
+      targetParentId: null,
+      action: 'trash',
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: noteId,
-      location: 'sidebar',
+      sourceItemIds: [noteId],
+      targetParentId: null,
+      action: 'restore',
     })
 
     await t.run(async (dbCtx) => {
@@ -154,10 +158,11 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
       documentId: noteId,
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: noteId,
-      location: 'trash',
+      sourceItemIds: [noteId],
+      targetParentId: null,
+      action: 'trash',
     })
 
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {

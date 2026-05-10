@@ -54,9 +54,9 @@ describe('campaign lifecycle', () => {
     const itemsWithNoAccess = playerSidebarItems.filter((item) => item.myPermissionLevel === 'none')
     expect(itemsWithNoAccess.length).toBe(playerSidebarItems.length)
 
-    await dm.authed.mutation(api.sidebarShares.mutations.setAllPlayersPermission, {
+    await dm.authed.mutation(api.sidebarShares.mutations.setAllPlayersPermissionForSidebarItems, {
       campaignId,
-      sidebarItemId: folderId,
+      sidebarItemIds: [folderId],
       permissionLevel: 'view',
     })
 

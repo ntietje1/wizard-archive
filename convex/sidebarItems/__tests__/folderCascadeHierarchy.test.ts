@@ -63,10 +63,11 @@ describe('folder cascade hierarchy', () => {
         campaignMemberId: ctx.player.memberId,
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: folderId,
-        location: 'trash',
+        sourceItemIds: [folderId],
+        targetParentId: null,
+        action: 'trash',
       })
 
       const afterTrash = await t.run(async (dbCtx) => ({
@@ -101,10 +102,11 @@ describe('folder cascade hierarchy', () => {
       expect(afterTrash.share).not.toBeNull()
       expect(afterTrash.bookmark).not.toBeNull()
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: folderId,
-        location: 'sidebar',
+        sourceItemIds: [folderId],
+        targetParentId: null,
+        action: 'restore',
       })
 
       const afterRestore = await t.run(async (dbCtx) => ({
@@ -223,14 +225,15 @@ describe('folder cascade hierarchy', () => {
         }
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: folderId,
-        location: 'trash',
+        sourceItemIds: [folderId],
+        targetParentId: null,
+        action: 'trash',
       })
-      await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: folderId,
+        sourceItemIds: [folderId],
       })
 
       const afterDelete = await t.run(async (dbCtx) => ({
@@ -294,10 +297,11 @@ describe('folder cascade hierarchy', () => {
       })
       const block = await createBlock(t, leaf, ctx.campaignId)
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: root,
-        location: 'trash',
+        sourceItemIds: [root],
+        targetParentId: null,
+        action: 'trash',
       })
 
       const afterTrash = await t.run(async (dbCtx) => ({
@@ -318,10 +322,11 @@ describe('folder cascade hierarchy', () => {
       expect(afterTrash.leaf!.deletionTime).not.toBeNull()
       expect(afterTrash.block).not.toBeNull()
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: root,
-        location: 'sidebar',
+        sourceItemIds: [root],
+        targetParentId: null,
+        action: 'restore',
       })
 
       const afterRestore = await t.run(async (dbCtx) => ({
@@ -408,14 +413,15 @@ describe('folder cascade hierarchy', () => {
         }
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: root,
-        location: 'trash',
+        sourceItemIds: [root],
+        targetParentId: null,
+        action: 'trash',
       })
-      await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: root,
+        sourceItemIds: [root],
       })
 
       const afterDelete = await t.run(async (dbCtx) => ({

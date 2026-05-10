@@ -5,6 +5,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ContextMenuHost } from '../context-menu-host'
 import type { ContextMenuHostRef } from '../context-menu-host'
 import type { BuiltContextMenu } from '../../types'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '~/features/shadcn/components/select'
 
 const leafItem = {
   id: 'item-1',
@@ -13,7 +20,6 @@ const leafItem = {
   checked: false,
   group: 'group-1',
   priority: 0,
-  scope: 'target' as const,
   onSelect: vi.fn(),
 }
 
@@ -24,7 +30,6 @@ const submenuItem = {
   checked: false,
   group: 'group-1',
   priority: 0,
-  scope: 'target' as const,
   onSelect: vi.fn(),
 }
 
@@ -49,7 +54,6 @@ const submenuParent = {
   checked: false,
   group: 'group-1',
   priority: 0,
-  scope: 'target' as const,
   onSelect: vi.fn(),
   children: [submenuItem],
 }
@@ -89,6 +93,28 @@ const groupedSubmenuMenu: BuiltContextMenu = {
     },
   ],
   flatItems: [groupedSubmenuParent, submenuItem, secondSubmenuItem, thirdSubmenuItem],
+  isEmpty: false,
+}
+
+const customSubmenuMenu: BuiltContextMenu = {
+  groups: [
+    {
+      id: 'group-1',
+      items: [
+        {
+          id: 'share-submenu',
+          label: 'Share...',
+          disabled: false,
+          checked: false,
+          group: 'group-1',
+          priority: 0,
+          onSelect: vi.fn(),
+          submenuContent: <div data-testid="share-panel">Share panel</div>,
+        },
+      ],
+    },
+  ],
+  flatItems: [],
   isEmpty: false,
 }
 
@@ -206,6 +232,32 @@ describe('ContextMenuHost', () => {
     expect(pasteItem).toBeVisible()
   })
 
+  it('runs the menu item action without clicking the trigger underneath', async () => {
+    const user = userEvent.setup()
+    const triggerClick = vi.fn()
+
+    render(
+      <ContextMenuHost menu={simpleMenu}>
+        <button type="button" data-testid="context-trigger" onClick={triggerClick}>
+          Sidebar item
+        </button>
+      </ContextMenuHost>,
+    )
+
+    fireEvent.contextMenu(screen.getByTestId('context-trigger'), {
+      bubbles: true,
+      cancelable: true,
+      clientX: 24,
+      clientY: 32,
+      button: 2,
+    })
+
+    await user.click(await screen.findByRole('menuitem', { name: 'Paste' }))
+
+    expect(leafItem.onSelect).toHaveBeenCalledTimes(1)
+    expect(triggerClick).not.toHaveBeenCalled()
+  })
+
   it('opens hover submenus without collapsing the root menu', async () => {
     const user = userEvent.setup()
 
@@ -253,5 +305,118 @@ describe('ContextMenuHost', () => {
 
     await screen.findByRole('menuitem', { name: 'Flip H' })
     expect(document.body.querySelectorAll('[data-slot="context-menu-separator"]')).toHaveLength(2)
+  })
+
+  it('renders custom submenu content without running the parent action', async () => {
+    const user = userEvent.setup()
+    const shareItem = customSubmenuMenu.groups[0]!.items[0]!
+
+    render(
+      <ContextMenuHost menu={customSubmenuMenu}>
+        <div data-testid="context-trigger">Canvas surface</div>
+      </ContextMenuHost>,
+    )
+
+    fireEvent.contextMenu(screen.getByTestId('context-trigger'), {
+      bubbles: true,
+      cancelable: true,
+      clientX: 24,
+      clientY: 32,
+      button: 2,
+    })
+
+    const shareTrigger = await screen.findByRole('menuitem', { name: 'Share...' })
+    await user.hover(shareTrigger)
+
+    expect(await screen.findByTestId('share-panel')).toBeVisible()
+    expect(shareItem.onSelect).not.toHaveBeenCalled()
+  })
+
+  it('positions custom submenu content next to the menu item instead of fixed to the viewport', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <ContextMenuHost menu={customSubmenuMenu}>
+        <div data-testid="context-trigger">Canvas surface</div>
+      </ContextMenuHost>,
+    )
+
+    fireEvent.contextMenu(screen.getByTestId('context-trigger'), {
+      bubbles: true,
+      cancelable: true,
+      clientX: 24,
+      clientY: 32,
+      button: 2,
+    })
+
+    await user.hover(await screen.findByRole('menuitem', { name: 'Share...' }))
+
+    const sharePanel = await screen.findByTestId('share-panel')
+    const submenuContent = sharePanel.closest('[data-slot="context-menu-rich-submenu-content"]')
+    expect(submenuContent).toHaveClass('absolute')
+    expect(submenuContent).toHaveClass('top-0')
+    expect(submenuContent).toHaveClass('left-full')
+    expect(submenuContent).not.toHaveStyle({ position: 'fixed' })
+  })
+
+  it('keeps custom submenu content interactive when it opens a nested select', async () => {
+    const user = userEvent.setup()
+    const onValueChange = vi.fn()
+    const menu: BuiltContextMenu = {
+      groups: [
+        {
+          id: 'group-1',
+          items: [
+            {
+              id: 'share-submenu',
+              label: 'Share...',
+              disabled: false,
+              checked: false,
+              group: 'group-1',
+              priority: 0,
+              onSelect: vi.fn(),
+              submenuContent: (
+                <div data-testid="share-panel">
+                  <Select value="view" onValueChange={onValueChange}>
+                    <SelectTrigger aria-label="Access">
+                      <SelectValue>View</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent portal={false}>
+                      <SelectItem value="view">View</SelectItem>
+                      <SelectItem value="edit">Edit</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ),
+            },
+          ],
+        },
+      ],
+      flatItems: [],
+      isEmpty: false,
+    }
+
+    render(
+      <ContextMenuHost menu={menu}>
+        <button type="button" data-testid="context-trigger">
+          Sidebar item
+        </button>
+      </ContextMenuHost>,
+    )
+
+    fireEvent.contextMenu(screen.getByTestId('context-trigger'), {
+      bubbles: true,
+      cancelable: true,
+      clientX: 24,
+      clientY: 32,
+      button: 2,
+    })
+
+    await user.hover(await screen.findByRole('menuitem', { name: 'Share...' }))
+    await user.click(await screen.findByRole('combobox', { name: 'Access' }))
+    await user.click(await screen.findByRole('option', { name: 'Edit' }))
+
+    expect(onValueChange).toHaveBeenCalledWith('edit', expect.anything())
+    expect(screen.getByTestId('share-panel')).toBeVisible()
   })
 })

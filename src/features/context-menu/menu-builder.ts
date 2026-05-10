@@ -4,7 +4,6 @@ import type {
   ContextMenuContributor,
   ContextMenuGroupConfig,
   ContextMenuItemSpec,
-  ContextMenuScope,
   ContextMenuSurfaceId,
   ResolvedContextMenuItem,
 } from './types'
@@ -64,6 +63,9 @@ function resolveContextMenuItem<
     ?.map((child) => resolveContextMenuItem(child, context, services, commands))
     .filter((child): child is ResolvedContextMenuItem => child !== null)
     .sort((a, b) => a.priority - b.priority)
+  const submenuContent = item.submenuContent
+    ? resolveValue(item.submenuContent, context, services, payload)
+    : undefined
 
   const label = item.label ?? command?.label
   if (!label) {
@@ -92,10 +94,10 @@ function resolveContextMenuItem<
         : false,
     group: item.group,
     priority: item.priority ?? 0,
-    scope: item.scope ?? 'base',
     variant: item.variant,
     className: item.className,
     children: children && children.length > 0 ? children : undefined,
+    submenuContent,
     onSelect: async () => {
       if (item.onSelect) {
         await item.onSelect(context, services, payload)
@@ -107,20 +109,6 @@ function resolveContextMenuItem<
   }
 }
 
-function suppressDuplicateSelectionItems(items: Array<ResolvedContextMenuItem>) {
-  const targetCommandIds = new Set(
-    items
-      .filter((item) => item.scope === 'target')
-      .map((item) => item.commandId)
-      .filter(Boolean),
-  )
-
-  return items.filter(
-    (item) =>
-      !(item.scope === 'selection' && item.commandId && targetCommandIds.has(item.commandId)),
-  )
-}
-
 export function buildMenu<TContext extends { surface: ContextMenuSurfaceId }, TServices>({
   context,
   services,
@@ -128,14 +116,12 @@ export function buildMenu<TContext extends { surface: ContextMenuSurfaceId }, TS
   commands,
   groupConfig,
 }: BuildContextMenuOptions<TContext, TServices>): BuiltContextMenu {
-  const resolvedItems = suppressDuplicateSelectionItems(
-    contributors
-      .filter((contributor) => contributor.surfaces.includes(context.surface))
-      .filter((contributor) => contributor.applies?.(context, services) ?? true)
-      .flatMap((contributor) => contributor.getItems(context, services))
-      .map((item) => resolveContextMenuItem(item, context, services, commands))
-      .filter((item): item is ResolvedContextMenuItem => item !== null),
-  )
+  const resolvedItems = contributors
+    .filter((contributor) => contributor.surfaces.includes(context.surface))
+    .filter((contributor) => contributor.applies?.(context, services) ?? true)
+    .flatMap((contributor) => contributor.getItems(context, services))
+    .map((item) => resolveContextMenuItem(item, context, services, commands))
+    .filter((item): item is ResolvedContextMenuItem => item !== null)
 
   if (resolvedItems.length === 0) {
     return { groups: [], flatItems: [], isEmpty: true }
@@ -169,5 +155,3 @@ export function buildMenu<TContext extends { surface: ContextMenuSurfaceId }, TS
     isEmpty: false,
   }
 }
-
-export type { ContextMenuScope }

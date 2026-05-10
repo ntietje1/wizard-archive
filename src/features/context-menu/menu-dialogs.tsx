@@ -1,5 +1,5 @@
 import { toast } from 'sonner'
-import { EmptyTrashConfirmDialog, PermanentDeleteConfirmDialog } from './hooks/trash-utils'
+import { EmptyTrashConfirmDialog } from './components/dialogs/trash-confirm-dialogs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
@@ -15,18 +15,15 @@ export interface MenuDialogState {
   editMapDialog: Id<'sidebarItems'> | null
   editFileDialog: Id<'sidebarItems'> | null
   editSidebarItemDialog: AnySidebarItem | null
-  confirmPermanentDeleteItem: AnySidebarItem | null
   confirmEmptyTrash: boolean
   campaignId: Id<'campaigns'> | undefined
   closeFolderDialog: () => void
   closeMapDialog: () => void
   closeFileDialog: () => void
   closeSidebarItemDialog: () => void
-  closePermanentDeleteDialog: () => void
   closeEmptyTrashDialog: () => void
   clearEditorContent: () => void
-  permanentlyDeleteItem: (item: AnySidebarItem) => Promise<void>
-  emptyTrashBin: () => Promise<void>
+  emptyTrashBin: () => Promise<boolean>
 }
 
 export function MenuDialogs({
@@ -34,17 +31,14 @@ export function MenuDialogs({
   editMapDialog,
   editFileDialog,
   editSidebarItemDialog,
-  confirmPermanentDeleteItem,
   confirmEmptyTrash,
   campaignId,
   closeFolderDialog,
   closeMapDialog,
   closeFileDialog,
   closeSidebarItemDialog,
-  closePermanentDeleteDialog,
   closeEmptyTrashDialog,
   clearEditorContent,
-  permanentlyDeleteItem,
   emptyTrashBin,
 }: MenuDialogState) {
   return (
@@ -100,32 +94,12 @@ export function MenuDialogs({
           onConfirm={async () => {
             if (!campaignId) return
             try {
-              await emptyTrashBin()
-              toast.success('Trash emptied')
+              const emptied = await emptyTrashBin()
+              if (emptied) toast.success('Trash emptied')
             } catch (error) {
               handleError(error, 'Failed to empty trash')
             }
             closeEmptyTrashDialog()
-          }}
-        />
-      )}
-
-      {confirmPermanentDeleteItem && (
-        <PermanentDeleteConfirmDialog
-          item={confirmPermanentDeleteItem}
-          onClose={closePermanentDeleteDialog}
-          onConfirm={async () => {
-            try {
-              await permanentlyDeleteItem(confirmPermanentDeleteItem)
-              toast.success('Item permanently deleted')
-              const currentSlug = getSelectedSlug()
-              if (confirmPermanentDeleteItem.slug === currentSlug) {
-                clearEditorContent()
-              }
-            } catch (error) {
-              handleError(error, 'Failed to delete item')
-            }
-            closePermanentDeleteDialog()
           }}
         />
       )}

@@ -21,6 +21,17 @@ import {
   patchYUndoPluginDestroy,
 } from '~/features/editor/utils/patch-yundo-destroy'
 
+/**
+ * Receives the current editor lifecycle state. editor is null during teardown,
+ * doc/provider are null for static editors, and doc/provider are non-null for
+ * collaborative editors.
+ */
+type NoteEditorChangeHandler = (
+  editor: CustomBlockNoteEditor | null,
+  doc: Doc | null,
+  provider: ConvexYjsProvider | null,
+) => void
+
 type NoteContentProps = {
   noteId?: Id<'sidebarItems'>
   content: Array<CustomBlock>
@@ -28,7 +39,7 @@ type NoteContentProps = {
   className?: string
   style?: CSSProperties
   children?: React.ReactNode
-  onEditorChange?: (editor: CustomBlockNoteEditor | null, doc: Doc | null) => void
+  onEditorChange?: NoteEditorChangeHandler
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -111,7 +122,7 @@ function CollaborativeEditorLoader({
   content: Array<CustomBlock>
   style?: CSSProperties
   children?: React.ReactNode
-  onEditorChange?: (editor: CustomBlockNoteEditor | null, doc: Doc | null) => void
+  onEditorChange?: NoteEditorChangeHandler
 }) {
   const profileQuery = useAuthQuery(api.users.queries.getUserProfile, {})
   const profile = profileQuery.data
@@ -164,7 +175,7 @@ function StaticEditorInner({
   content: Array<CustomBlock>
   style?: CSSProperties
   children?: React.ReactNode
-  onEditorChange?: (editor: CustomBlockNoteEditor | null, doc: Doc | null) => void
+  onEditorChange?: NoteEditorChangeHandler
 }) {
   const initialContentRef = useRef(content)
   const linkResolver = useLinkResolver(noteId)
@@ -200,7 +211,7 @@ function StaticEditorInner({
     createEditor,
     destroyEditor,
     onEditorChange: (nextEditor) => {
-      onEditorChange?.(nextEditor, null)
+      onEditorChange?.(nextEditor, null, null)
     },
   })
 
@@ -240,7 +251,7 @@ function CollaborativeEditorInner({
   style?: CSSProperties
   user: { name: string; color: string }
   children?: React.ReactNode
-  onEditorChange?: (editor: CustomBlockNoteEditor | null, doc: Doc | null) => void
+  onEditorChange?: NoteEditorChangeHandler
 }) {
   const linkResolver = useLinkResolver(noteId)
   const userRef = useRef(user)
@@ -295,7 +306,7 @@ function CollaborativeEditorInner({
     createEditor,
     destroyEditor,
     onEditorChange: (nextEditor) => {
-      onEditorChange?.(nextEditor, doc)
+      onEditorChange?.(nextEditor, doc, provider)
     },
   })
 

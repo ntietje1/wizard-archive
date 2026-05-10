@@ -375,7 +375,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
 describe('game map pin mutations — snapshot scheduling', () => {
   const t = createTestContext()
 
-  it('createItemPin creates snapshot on first pin add', async () => {
+  it('createItemPins creates snapshot on first pin add', async () => {
     vi.useFakeTimers()
     try {
       const ctx = await setupCampaignContext(t)
@@ -384,12 +384,10 @@ describe('game map pin mutations — snapshot scheduling', () => {
       const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-      await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignId,
         mapId,
-        x: 10,
-        y: 20,
-        itemId: noteId,
+        pins: [{ itemId: noteId, x: 10, y: 20 }],
       })
 
       await t.finishAllScheduledFunctions(vi.runAllTimers)
@@ -430,21 +428,17 @@ describe('game map pin mutations — snapshot scheduling', () => {
       const { noteId: n1 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-      await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignId,
         mapId,
-        x: 10,
-        y: 20,
-        itemId: n1,
+        pins: [{ itemId: n1, x: 10, y: 20 }],
       })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
-      await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignId,
         mapId,
-        x: 30,
-        y: 40,
-        itemId: n2,
+        pins: [{ itemId: n2, x: 30, y: 40 }],
       })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
@@ -481,13 +475,13 @@ describe('game map pin mutations — snapshot scheduling', () => {
       const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-      const pinId = await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      const pinIds = await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignId,
         mapId,
-        x: 10,
-        y: 20,
-        itemId: noteId,
+        pins: [{ itemId: noteId, x: 10, y: 20 }],
       })
+      expect(pinIds).toHaveLength(1)
+      const pinId = pinIds[0]!
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
       await dmAuth.mutation(api.gameMaps.mutations.removeItemPin, {
@@ -525,13 +519,13 @@ describe('game map pin mutations — snapshot scheduling', () => {
       const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-      const pinId = await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      const pinIds = await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignId,
         mapId,
-        x: 10,
-        y: 20,
-        itemId: noteId,
+        pins: [{ itemId: noteId, x: 10, y: 20 }],
       })
+      expect(pinIds).toHaveLength(1)
+      const pinId = pinIds[0]!
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
       await dmAuth.mutation(api.gameMaps.mutations.updateItemPin, {
@@ -571,13 +565,13 @@ describe('game map pin mutations — snapshot scheduling', () => {
       const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-      const pinId = await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      const pinIds = await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignId,
         mapId,
-        x: 10,
-        y: 20,
-        itemId: noteId,
+        pins: [{ itemId: noteId, x: 10, y: 20 }],
       })
+      expect(pinIds).toHaveLength(1)
+      const pinId = pinIds[0]!
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
       await dmAuth.mutation(api.gameMaps.mutations.updatePinVisibility, {
@@ -661,22 +655,18 @@ describe('game map pin mutations — snapshot scheduling', () => {
       const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       // Pin on map1
-      await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignId,
         mapId: map1,
-        x: 10,
-        y: 20,
-        itemId: n1,
+        pins: [{ itemId: n1, x: 10, y: 20 }],
       })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
       // Pin on map2 — different map, should get its own snapshot
-      await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignId,
         mapId: map2,
-        x: 30,
-        y: 40,
-        itemId: n2,
+        pins: [{ itemId: n2, x: 30, y: 40 }],
       })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
@@ -711,12 +701,10 @@ describe('rollbackToSnapshot', () => {
       const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-      await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignId,
         mapId,
-        x: 10,
-        y: 20,
-        itemId: noteId,
+        pins: [{ itemId: noteId, x: 10, y: 20 }],
       })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 

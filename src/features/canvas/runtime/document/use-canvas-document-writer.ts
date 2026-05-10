@@ -41,6 +41,30 @@ export function createCanvasDocumentWriter({
         })
       })
     },
+    createNodes: (nodes) => {
+      if (nodes.length === 0) return
+      transactCanvasMap(nodesMap, () => {
+        measureCanvasPerformance(
+          'canvas.document.nodes.create',
+          { nodeCount: nodes.length },
+          () => {
+            let nextZIndex = getNextCanvasElementZIndex([
+              ...Array.from(nodesMap.values()),
+              ...Array.from(edgesMap.values()),
+            ])
+            for (const node of nodes) {
+              createCanvasNodeCommand({
+                nodesMap,
+                node,
+                sanitizeNode: sanitizeNodeForPersistence,
+                nextZIndex,
+              })
+              nextZIndex += 1
+            }
+          },
+        )
+      })
+    },
     patchNodeData: (updates) => {
       if (updates.size === 0) return
       transactCanvasMap(nodesMap, () => {

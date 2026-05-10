@@ -486,7 +486,7 @@ export async function createMapPin(
   },
 ) {
   const defaults = {
-    mapId: mapId,
+    mapId,
     x: 0,
     y: 0,
     visible: true,

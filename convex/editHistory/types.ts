@@ -13,6 +13,7 @@ import type { SidebarItemType } from '../sidebarItems/types/baseTypes'
 
 export const SHARED_HISTORY_ACTION = {
   created: 'created',
+  copied: 'copied',
   renamed: 'renamed',
   moved: 'moved',
   trashed: 'trashed',
@@ -29,6 +30,7 @@ export const SHARED_HISTORY_ACTION = {
 
 export type SharedHistoryMetadataMap = {
   created: null
+  copied: { copiedFromItemId: Id<'sidebarItems'>; copiedFromName: string }
   renamed: { from: string; to: string }
   moved: { from: string | null; to: string | null }
   trashed: null

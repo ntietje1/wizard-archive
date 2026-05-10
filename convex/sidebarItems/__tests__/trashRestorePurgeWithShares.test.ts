@@ -42,10 +42,11 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     })
 
     // Trash the folder
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: folderId,
-      location: 'trash',
+      sourceItemIds: [folderId],
+      targetParentId: null,
+      action: 'trash',
     })
 
     // Verify parent sidebarItems are trashed; shares and bookmarks are untouched (no cascade soft-delete)
@@ -65,10 +66,11 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     expect(afterTrash.bookmark).not.toBeNull()
 
     // Restore the folder
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: folderId,
-      location: 'sidebar',
+      sourceItemIds: [folderId],
+      targetParentId: null,
+      action: 'restore',
     })
 
     // Verify everything is restored
@@ -96,14 +98,15 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     expect(noteAfterRestore.myPermissionLevel).toBe('view')
 
     // Trash again and permanently delete
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: folderId,
-      location: 'trash',
+      sourceItemIds: [folderId],
+      targetParentId: null,
+      action: 'trash',
     })
-    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: folderId,
+      sourceItemIds: [folderId],
     })
 
     // Verify all hard-deleted
@@ -136,15 +139,17 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
       permissionLevel: 'edit',
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: noteId,
-      location: 'trash',
+      sourceItemIds: [noteId],
+      targetParentId: null,
+      action: 'trash',
     })
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: noteId,
-      location: 'sidebar',
+      sourceItemIds: [noteId],
+      targetParentId: null,
+      action: 'restore',
     })
 
     const note = await playerAuth.query(api.sidebarItems.queries.getSidebarItem, {
@@ -152,6 +157,57 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
       id: noteId,
     })
     expect(note.myPermissionLevel).toBe('edit')
+  })
+
+  it('trashes and restores multiple roots with nested descendants through the batch path', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const dmId = ctx.dm.profile._id
+
+    const { folderId } = await createFolder(t, ctx.campaignId, dmId, {
+      name: 'Batch Folder',
+    })
+    const { noteId: childNoteId } = await createNote(t, ctx.campaignId, dmId, {
+      parentId: folderId,
+      name: 'Nested Note',
+    })
+    const { noteId: siblingNoteId } = await createNote(t, ctx.campaignId, dmId, {
+      name: 'Sibling Note',
+    })
+
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      campaignId: ctx.campaignId,
+      sourceItemIds: [folderId, siblingNoteId],
+      targetParentId: null,
+      action: 'trash',
+    })
+
+    const afterTrash = await t.run(async (dbCtx) =>
+      Promise.all([
+        dbCtx.db.get('sidebarItems', folderId),
+        dbCtx.db.get('sidebarItems', childNoteId),
+        dbCtx.db.get('sidebarItems', siblingNoteId),
+      ]),
+    )
+    expect(afterTrash.map((item) => item?.location)).toEqual(['trash', 'trash', 'trash'])
+
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      campaignId: ctx.campaignId,
+      sourceItemIds: [folderId, siblingNoteId],
+      targetParentId: null,
+      action: 'restore',
+    })
+
+    const afterRestore = await t.run(async (dbCtx) =>
+      Promise.all([
+        dbCtx.db.get('sidebarItems', folderId),
+        dbCtx.db.get('sidebarItems', childNoteId),
+        dbCtx.db.get('sidebarItems', siblingNoteId),
+      ]),
+    )
+    expect(afterRestore.map((item) => item?.location)).toEqual(['sidebar', 'sidebar', 'sidebar'])
+    expect(afterRestore[0]?.parentId).toBeNull()
+    expect(afterRestore[2]?.parentId).toBeNull()
   })
 
   it('purge hard-deletes blockShares', async () => {
@@ -171,18 +227,19 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
       campaignMemberId: ctx.player.memberId,
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: noteId,
-      location: 'trash',
+      sourceItemIds: [noteId],
+      targetParentId: null,
+      action: 'trash',
     })
 
     const afterTrash = await t.run(async (dbCtx) => dbCtx.db.get('blockShares', blockShareId))
     expect(afterTrash).not.toBeNull()
 
-    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
       campaignId: ctx.campaignId,
-      itemId: noteId,
+      sourceItemIds: [noteId],
     })
 
     const afterPurge = await t.run(async (dbCtx) => dbCtx.db.get('blockShares', blockShareId))

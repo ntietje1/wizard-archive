@@ -6,6 +6,13 @@ export function resetSidebarUIStore() {
     renamingId: null,
     pendingItemName: '',
     selectedSlug: null,
+    selectedItemIds: [],
+    anchorItemId: null,
+    focusedItemId: null,
+    selectionSurface: null,
+    focusSurface: null,
+    activeItemSurface: null,
+    itemClipboard: null,
     viewAsPlayerId: null,
   })
 }

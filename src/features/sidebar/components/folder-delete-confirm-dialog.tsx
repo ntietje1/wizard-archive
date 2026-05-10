@@ -1,11 +1,9 @@
-import { toast } from 'sonner'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { Folder } from 'convex/folders/types'
 import { handleError } from '~/shared/utils/logger'
 import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
-import { useMoveSidebarItem } from '~/features/sidebar/hooks/useMoveSidebarItem'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { collectDescendantIds } from '~/features/sidebar/utils/sidebar-item-maps'
+import { useSidebarItemOperations } from '~/features/sidebar/operations/useSidebarItemOperations'
 
 interface FolderDeleteConfirmDialogProps {
   folder: Folder
@@ -19,16 +17,15 @@ export function FolderDeleteConfirmDialog({
   onConfirm,
   onClose,
 }: FolderDeleteConfirmDialogProps) {
-  const { moveItem } = useMoveSidebarItem()
+  const itemOperations = useSidebarItemOperations()
   const { data } = useActiveSidebarItems()
 
   const descendantCount = collectDescendantIds(folder._id, data).size
 
   const handleConfirm = async () => {
     try {
-      await moveItem(folder, { location: SIDEBAR_ITEM_LOCATION.trash })
+      await itemOperations.trashItems([folder])
       onConfirm?.()
-      toast.success('Moved to trash')
     } catch (error) {
       handleError(error, 'Failed to move folder to trash')
     }

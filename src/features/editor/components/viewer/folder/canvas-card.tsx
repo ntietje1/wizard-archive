@@ -10,10 +10,17 @@ import { Button } from '~/features/shadcn/components/button'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
-import { useIsSelectedItem } from '~/features/sidebar/hooks/useSelectedItem'
+import { useSidebarItemVisualState } from '~/features/sidebar/hooks/useSelectedItem'
 import { useContextMenu } from '~/features/context-menu/hooks/useContextMenu'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
+import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
+import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
+import {
+  sidebarItemBackgroundClass,
+  sidebarItemIconClass,
+  sidebarItemNameClass,
+} from '~/features/sidebar/utils/sidebar-item-visual-state'
 
 function CanvasCardSkeleton() {
   return (
@@ -21,7 +28,7 @@ function CanvasCardSkeleton() {
       <Card className="w-full h-full flex flex-col p-2 relative rounded-md">
         <div className="flex items-center justify-between mb-2">
           <div className="bg-muted rounded-md h-5 w-32" />
-          <div className="bg-muted rounded-md w-6 h-6" />
+          <div className="bg-muted rounded-md size-6" />
         </div>
         <div className="w-full flex-1 bg-muted relative rounded-sm overflow-hidden">
           <div className="bg-muted w-full h-full" />
@@ -31,19 +38,31 @@ function CanvasCardSkeleton() {
   )
 }
 
-function CanvasCardInner({ item: canvas, onClick }: ItemCardProps<Canvas>) {
+function CanvasCardInner({
+  item: canvas,
+  onClick,
+  parentId,
+  visibleItemIds,
+  itemSurface = 'folder-view',
+}: ItemCardProps<Canvas>) {
   const ref = useRef<HTMLDivElement>(null)
   const [erroredUrl, setErroredUrl] = useState<string | null>(null)
   const imageError = erroredUrl === canvas.previewUrl
   const linkProps = useEditorLinkProps(canvas)
   const { setLastSelectedItem } = useLastEditorItem()
   const canDrag = hasAtLeastPermissionLevel(canvas.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
-  const isSelected = useIsSelectedItem(canvas)
+  const visualState = useSidebarItemVisualState(canvas)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
+  const { handleItemClick, handleItemContextMenu } = useItemSelectionInteractions(canvas, {
+    surface: itemSurface,
+    parentId: parentId ?? null,
+    visibleItemIds: visibleItemIds ?? [canvas._id],
+  })
+  const dragData = useSidebarDragData(canvas)
 
   const { isDraggingRef } = useDraggable({
     ref,
-    data: { sidebarItemId: canvas._id },
+    data: dragData,
     canDrag,
     dragOpacity: '0.2',
   })
@@ -53,8 +72,11 @@ function CanvasCardInner({ item: canvas, onClick }: ItemCardProps<Canvas>) {
       <Link
         {...linkProps}
         activeOptions={{ includeSearch: false }}
+        aria-label={canvas.name}
+        data-item-selection-target="true"
         className="block w-full h-full [&.active]:pointer-events-auto"
         draggable={false}
+        onContextMenu={handleItemContextMenu}
         onClick={(e) => {
           if (isDraggingRef.current) {
             e.preventDefault()
@@ -62,34 +84,41 @@ function CanvasCardInner({ item: canvas, onClick }: ItemCardProps<Canvas>) {
           }
           if (onClick) {
             e.preventDefault()
+            handleItemClick(e)
             onClick()
             return
           }
-          setLastSelectedItem(canvas.slug)
+          handleItemClick(e, () => setLastSelectedItem(canvas.slug))
         }}
       >
         <Card
           className={cn(
-            'w-full h-full cursor-pointer group flex flex-col p-2 relative rounded-md hover:bg-muted/70',
-            isSelected && 'ring-ring ring-2',
+            'w-full h-full cursor-pointer group flex flex-col p-2 relative rounded-md',
+            sidebarItemBackgroundClass(visualState),
           )}
         >
           <div className="flex items-center justify-between mb-1 min-w-0">
-            <CardTitle className="p-1 text-sm font-medium text-foreground truncate select-none flex-1 min-w-0">
+            <CardTitle
+              className={cn(
+                'p-1 text-sm font-medium truncate select-none flex-1 min-w-0',
+                sidebarItemNameClass(visualState),
+              )}
+            >
               {canvas.name}
             </CardTitle>
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm flex-shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-ring transition-opacity"
+              className="size-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm flex-shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-ring transition-opacity"
               aria-label="More options"
               onClick={(e) => {
                 e.preventDefault()
                 e.stopPropagation()
+                handleItemContextMenu(e)
                 handleMoreOptions(e)
               }}
             >
-              <MoreVertical className="h-4 w-4" />
+              <MoreVertical className="size-4" />
             </Button>
           </div>
 
@@ -104,7 +133,7 @@ function CanvasCardInner({ item: canvas, onClick }: ItemCardProps<Canvas>) {
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                <Grid2x2Plus className="w-12 h-12 text-muted-foreground" />
+                <Grid2x2Plus className={cn('size-12', sidebarItemIconClass(visualState))} />
               </div>
             )}
             <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10" />

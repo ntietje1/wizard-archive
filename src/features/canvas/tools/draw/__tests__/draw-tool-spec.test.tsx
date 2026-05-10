@@ -200,6 +200,7 @@ function createDrawEnvironment({
     },
     commands: {
       createNode,
+      createNodes: () => undefined,
       patchNodeData: () => undefined,
       patchEdges: () => undefined,
       resizeNode: () => undefined,

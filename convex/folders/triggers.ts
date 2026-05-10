@@ -7,6 +7,6 @@ export const folderTriggers: SidebarItemTriggerHandlers = {
       .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', item.id))
       .unique()
     if (ext) await db.delete('folders', ext._id)
-    return null
+    return new Set()
   },
 }

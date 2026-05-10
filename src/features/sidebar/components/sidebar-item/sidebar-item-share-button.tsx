@@ -1,61 +1,56 @@
 import { useState } from 'react'
 import { Share2 } from 'lucide-react'
+import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { Button } from '~/features/shadcn/components/button'
 import { Popover, PopoverContent, PopoverTrigger } from '~/features/shadcn/components/popover'
-import { SharePermissionMenu } from '~/features/sharing/components/share-permission-menu'
-import { useSidebarItemsShare } from '~/features/sharing/hooks/useSidebarItemsShare'
+import { SidebarItemsSharePanel } from '~/features/sharing/components/sidebar-items-share-panel'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
+import { cn } from '~/features/shadcn/lib/utils'
+import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
+import { useActiveSidebarItems, useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { resolveContextSelectedItems } from '~/features/context-menu/selection-context'
 
-function SharePopoverContent({ item }: { item: AnySidebarItem }) {
-  const { campaign } = useCampaign()
-  const items = [item]
-
-  const {
-    isPending,
-    isMutating,
-    shareItems,
-    allPlayersPermissionLevel,
-    inheritedAllPermissionLevel,
-    inheritedFromFolderName,
-    isFolder,
-    inheritShares,
-    setMemberPermission,
-    clearMemberPermission,
-    setAllPlayersPermission,
-    setInheritShares,
-  } = useSidebarItemsShare(items)
-
-  const dmUserProfile = campaign.data?.dmUserProfile
-
-  return (
-    <SharePermissionMenu
-      dmUserProfile={dmUserProfile}
-      isPending={isPending}
-      isMutating={isMutating}
-      shareItems={shareItems}
-      allPlayersPermissionLevel={allPlayersPermissionLevel}
-      inheritedAllPermissionLevel={inheritedAllPermissionLevel}
-      inheritedFromFolderName={inheritedFromFolderName}
-      isFolder={isFolder}
-      inheritShares={inheritShares}
-      onSetMemberPermission={setMemberPermission}
-      onClearMemberPermission={clearMemberPermission}
-      onSetAllPlayersPermission={setAllPlayersPermission}
-      onSetInheritShares={setInheritShares}
-    />
-  )
-}
-
-export function SidebarShareButton({ item }: { item: AnySidebarItem }) {
+export function SidebarShareButton({
+  item,
+  buttonClassName,
+}: {
+  item: AnySidebarItem
+  /**
+   * Optional color/state classes for the inner button. Avoid overriding size-6 or padding classes;
+   * the surrounding action slot is fixed at size-6.
+   */
+  buttonClassName?: string
+}) {
   const { isDm } = useCampaign()
-  const [open, setOpen] = useState(false)
 
   if (!isDm) return null
 
+  return <SidebarShareButtonPopover item={item} buttonClassName={buttonClassName} />
+}
+
+function SidebarShareButtonPopover({
+  item,
+  buttonClassName,
+}: {
+  item: AnySidebarItem
+  buttonClassName?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const selectedItemIds = useSidebarUIStore((s) => s.selectedItemIds)
+  const { itemsMap } = useActiveSidebarItems()
+  const { itemsMap: trashedItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
+  const shareItems = resolveContextSelectedItems({
+    item,
+    selectedItemIds,
+    activeItemsMap: itemsMap,
+    trashedItemsMap,
+    canUseItemSelection: true,
+  })
+
   return (
     <div
-      className="relative h-6 w-6 shrink-0 flex items-center justify-center"
+      className="relative size-6 shrink-0 flex items-center justify-center"
       {...(open ? { 'data-share-open': '' } : {})}
     >
       <Popover open={open} onOpenChange={setOpen}>
@@ -65,16 +60,16 @@ export function SidebarShareButton({ item }: { item: AnySidebarItem }) {
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm"
+              className={cn('size-6 p-0 hover:bg-muted-foreground/10 rounded-sm', buttonClassName)}
               onClick={(e) => e.stopPropagation()}
               aria-label="Share"
             >
-              <Share2 className="h-3.5 w-3.5" />
+              <Share2 className="size-3.5" />
             </Button>
           }
         />
         <PopoverContent align="start" side="right" sideOffset={4} className="w-auto p-2">
-          {open && <SharePopoverContent item={item} />}
+          {open && <SidebarItemsSharePanel items={shareItems} />}
         </PopoverContent>
       </Popover>
     </div>

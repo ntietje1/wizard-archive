@@ -1,16 +1,16 @@
 import { describe, expect, it, vi } from 'vitest'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import type { DropPlanningContext } from '~/features/dnd/utils/drop-planning-context'
 import type {
   CanvasDropZoneData,
-  DndContext,
   EmptyEditorDropZoneData,
   MapDropZoneData,
   NoteEditorDropZoneData,
   ResolvedSidebarItemDropData,
   SidebarRootDropZoneData,
   TrashDropZoneData,
-} from '~/features/dnd/utils/dnd-registry'
+} from '~/features/dnd/utils/drop-target-data'
 import type { Id } from 'convex/_generated/dataModel'
 import {
   createFile,
@@ -19,6 +19,18 @@ import {
   createNote,
 } from '~/test/factories/sidebar-item-factory'
 import {
+  getDragItemId,
+  getDragItemIds,
+  getDragPreviewItemIds,
+} from '~/features/dnd/utils/drag-source-data'
+import { rejectionReasonMessage } from '~/features/dnd/utils/drop-rejections'
+import { resolveDropOutcome } from '~/features/dnd/utils/drop-outcome-planner'
+import {
+  getDroppableMoveItems,
+  resolveGlobalDropCommand,
+} from '~/features/dnd/utils/global-drop-planner'
+import { resolveSurfaceDropCommand } from '~/features/dnd/utils/surface-drop-planner'
+import {
   CANVAS_DROP_ZONE_TYPE,
   EMPTY_EDITOR_DROP_TYPE,
   MAP_DROP_ZONE_TYPE,
@@ -26,28 +38,32 @@ import {
   SIDEBAR_ROOT_DROP_TYPE,
   TRASH_DROP_ZONE_TYPE,
   canDropFilesOnTarget,
-  getDragItemId,
   getDropTargetKey,
   getHighlightId,
-  rejectionReasonMessage,
-  resolveDropOutcome,
   resolveDropTarget,
-} from '~/features/dnd/utils/dnd-registry'
+} from '~/features/dnd/utils/drop-target-data'
 import { testId } from '~/test/helpers/test-id'
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
-function createCtx(overrides?: Partial<DndContext>): DndContext {
+function createCtx(overrides?: Partial<DropPlanningContext>): DropPlanningContext {
   return {
-    moveItem: vi.fn(),
-    navigateToItem: vi.fn(),
     campaignId: testId<'campaigns'>('campaign_1'),
     campaignName: 'Test Campaign',
     isDm: true,
-    setFolderOpen: vi.fn(),
-    hasSiblingNameConflict: () => false,
     ...overrides,
   }
+}
+
+function resolveTestDropCommand(
+  items: Parameters<typeof resolveGlobalDropCommand>[0],
+  target: Parameters<typeof resolveGlobalDropCommand>[1],
+  ctx: DropPlanningContext,
+) {
+  const globalCommand = resolveGlobalDropCommand(items, target, ctx)
+  return globalCommand.status === 'noop'
+    ? resolveSurfaceDropCommand(items, target, ctx)
+    : globalCommand
 }
 
 function trashTarget(): TrashDropZoneData {
@@ -110,6 +126,35 @@ describe('getDragItemId', () => {
   })
 })
 
+describe('getDragItemIds', () => {
+  it('extracts batch sidebar ids from source data', () => {
+    expect(getDragItemIds({ sidebarItemIds: ['note_1', 'map_1'] })).toEqual(['note_1', 'map_1'])
+  })
+
+  it('does not fall back to legacy single-id source data', () => {
+    expect(getDragItemIds({ sidebarItemId: 'note_1' })).toEqual([])
+  })
+
+  it('ignores non-string batch ids', () => {
+    expect(getDragItemIds({ sidebarItemIds: ['note_1', 42, null] })).toEqual(['note_1'])
+  })
+})
+
+describe('getDragPreviewItemIds', () => {
+  it('uses explicit preview ids when operation ids are normalized', () => {
+    expect(
+      getDragPreviewItemIds({
+        sidebarItemIds: ['folder_1'],
+        sidebarDragPreviewItemIds: ['folder_1', 'note_1', 'note_2'],
+      }),
+    ).toEqual(['folder_1', 'note_1', 'note_2'])
+  })
+
+  it('falls back to operation ids when explicit preview ids are missing', () => {
+    expect(getDragPreviewItemIds({ sidebarItemIds: ['folder_1'] })).toEqual(['folder_1'])
+  })
+})
+
 // ─── rejectionReasonMessage ────────────────────────────────────────
 
 describe('rejectionReasonMessage', () => {
@@ -117,8 +162,10 @@ describe('rejectionReasonMessage', () => {
     expect(rejectionReasonMessage('no_permission')).toBe('No permission to move here')
     expect(rejectionReasonMessage('circular')).toBe('Cannot move folder into itself')
     expect(rejectionReasonMessage('self_pin')).toBe('Cannot pin map to itself')
+    expect(rejectionReasonMessage('self_link')).toBe('Cannot link note to itself')
     expect(rejectionReasonMessage('self_embed')).toBe('Cannot embed canvas into itself')
     expect(rejectionReasonMessage('already_pinned')).toBe('Already pinned to this map')
+    expect(rejectionReasonMessage('wrong_campaign')).toBe('Item belongs to another campaign')
     expect(rejectionReasonMessage('not_folder')).toBe('Cannot drop here')
     expect(rejectionReasonMessage('missing_data')).toBe('Missing data')
     expect(rejectionReasonMessage('trashed_folder')).toBe('Trashed folders are uneditable')
@@ -127,6 +174,10 @@ describe('rejectionReasonMessage', () => {
     )
     expect(rejectionReasonMessage('dm_only')).toBe('Only the DM can do this')
     expect(rejectionReasonMessage('trashed_item')).toBe('The item is trashed and cannot be used')
+    expect(rejectionReasonMessage('mixed_actions')).toBe(
+      'Cannot move trashed and non-trashed items together',
+    )
+    expect(rejectionReasonMessage('unexpected_action')).toBe('Cannot perform that action here')
   })
 })
 
@@ -224,22 +275,6 @@ describe('resolveDropOutcome', () => {
       expect(result).toMatchObject({ type: 'operation', action: 'restore' })
     })
 
-    it('rejects restore when name conflicts at root', () => {
-      const note = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
-      const ctx = createCtx({ hasSiblingNameConflict: () => true })
-      const result = resolveDropOutcome(note, rootTarget(), ctx)
-
-      expect(result).toEqual({ type: 'rejection', reason: 'name_conflict' })
-    })
-
-    it('rejects move when name conflicts at root', () => {
-      const note = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
-      const ctx = createCtx({ hasSiblingNameConflict: () => true })
-      const result = resolveDropOutcome(note, rootTarget(), ctx)
-
-      expect(result).toEqual({ type: 'rejection', reason: 'name_conflict' })
-    })
-
     it('rejects restoring a folder as non-DM', () => {
       const folder = createFolder({ location: SIDEBAR_ITEM_LOCATION.trash })
       const ctx = createCtx({ isDm: false })
@@ -327,15 +362,6 @@ describe('resolveDropOutcome', () => {
       expect(result).toMatchObject({ type: 'operation', action: 'restore' })
     })
 
-    it('rejects restoring when name conflicts in target folder', () => {
-      const note = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
-      const target = folderTarget()
-      const ctx = createCtx({ hasSiblingNameConflict: () => true })
-      const result = resolveDropOutcome(note, target, ctx)
-
-      expect(result).toEqual({ type: 'rejection', reason: 'name_conflict' })
-    })
-
     it('rejects restoring a folder as non-DM', () => {
       const folder = createFolder({ location: SIDEBAR_ITEM_LOCATION.trash })
       const target = folderTarget()
@@ -343,15 +369,6 @@ describe('resolveDropOutcome', () => {
       const result = resolveDropOutcome(folder, target, ctx)
 
       expect(result).toEqual({ type: 'rejection', reason: 'dm_only' })
-    })
-
-    it('rejects move when name conflicts in target folder', () => {
-      const note = createNote()
-      const target = folderTarget()
-      const ctx = createCtx({ hasSiblingNameConflict: () => true })
-      const result = resolveDropOutcome(note, target, ctx)
-
-      expect(result).toEqual({ type: 'rejection', reason: 'name_conflict' })
     })
   })
 
@@ -481,6 +498,328 @@ describe('resolveDropOutcome', () => {
       const result = resolveDropOutcome(note, target, createCtx())
 
       expect(result).toBeNull()
+    })
+  })
+})
+
+describe('getDroppableMoveItems', () => {
+  it('returns noop when every selected item is already in the target folder', () => {
+    const target = folderTarget()
+    const first = createNote({ parentId: target._id })
+    const second = createNote({ parentId: target._id })
+    const result = getDroppableMoveItems([first, second], target, createCtx())
+
+    expect(result).toEqual({ status: 'noop' })
+  })
+
+  it('returns noop when every selected active item is already at root', () => {
+    const first = createNote({ parentId: null })
+    const second = createNote({ parentId: null })
+    const result = getDroppableMoveItems([first, second], rootTarget(), createCtx())
+
+    expect(result).toEqual({ status: 'noop' })
+  })
+
+  it('returns movable items while ignoring selected items already in the target folder', () => {
+    const target = folderTarget()
+    const alreadyInside = createNote({ parentId: target._id })
+    const outside = createNote({ parentId: testId<'sidebarItems'>('folder_other') })
+    const result = getDroppableMoveItems([alreadyInside, outside], target, createCtx())
+
+    expect(result).toEqual({
+      status: 'ready',
+      action: 'move',
+      items: [outside],
+      parentId: target._id,
+    })
+  })
+
+  it('blocks the whole batch when any selected item has a real rejection', () => {
+    const folder = createFolder()
+    const target = folderTarget({ ancestorIds: [folder._id] })
+    const note = createNote()
+    const result = getDroppableMoveItems([folder, note], target, createCtx())
+
+    expect(result).toEqual({ status: 'blocked', reason: 'circular' })
+  })
+
+  it('blocks mixed move and restore batches with a specific reason', () => {
+    const target = folderTarget()
+    const active = createNote()
+    const trashed = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
+    const result = getDroppableMoveItems([active, trashed], target, createCtx())
+
+    expect(result).toEqual({ status: 'blocked', reason: 'mixed_actions' })
+  })
+})
+
+describe('resolveTestDropCommand', () => {
+  it('returns a no-op command when every selected item is already in the target folder', () => {
+    const target = folderTarget()
+    const first = createNote({ parentId: target._id })
+    const second = createNote({ parentId: target._id })
+
+    expect(resolveTestDropCommand([first, second], target, createCtx())).toEqual({ status: 'noop' })
+  })
+
+  it('returns one batch move command while ignoring selected items already in the target folder', () => {
+    const target = folderTarget()
+    const alreadyInside = createNote({ parentId: target._id })
+    const outside = createNote({ parentId: testId<'sidebarItems'>('folder_other') })
+
+    expect(resolveTestDropCommand([alreadyInside, outside], target, createCtx())).toEqual({
+      status: 'ready',
+      action: 'move',
+      items: [outside],
+      parentId: target._id,
+    })
+  })
+
+  it('returns one batch trash command for active selected items', () => {
+    const first = createNote()
+    const second = createNote()
+
+    expect(resolveTestDropCommand([first, second], trashTarget(), createCtx())).toEqual({
+      status: 'ready',
+      action: 'trash',
+      items: [first, second],
+      parentId: null,
+    })
+  })
+
+  it('returns one batch pin command for map drops', () => {
+    const first = createNote()
+    const second = createNote()
+    const target = mapTarget()
+
+    expect(resolveTestDropCommand([first, second], target, createCtx())).toMatchObject({
+      status: 'ready',
+      action: 'pin',
+      items: [first, second],
+      rejectedItems: [],
+      target,
+      label: 'Pin 2 items to "World Map"',
+    })
+  })
+
+  it('returns a partial pin command when some items cannot be pinned', () => {
+    const map = createGameMap()
+    const note = createNote()
+    const alreadyPinned = createNote()
+    const target = mapTarget(map._id, { pinnedItemIds: [alreadyPinned._id] })
+
+    expect(resolveTestDropCommand([note, map, alreadyPinned], target, createCtx())).toMatchObject({
+      status: 'partial',
+      action: 'pin',
+      items: [note],
+      rejectedItems: [
+        { item: map, reason: 'self_pin' },
+        { item: alreadyPinned, reason: 'already_pinned' },
+      ],
+      target,
+      label: 'Pin to "World Map"',
+    })
+  })
+
+  it('returns one batch link command for note editor drops', () => {
+    const targetNote = createNote()
+    const first = createNote()
+    const second = createNote()
+    const target = noteEditorTarget(targetNote._id)
+
+    expect(resolveTestDropCommand([first, second], target, createCtx())).toMatchObject({
+      status: 'ready',
+      action: 'link',
+      items: [first, second],
+      rejectedItems: [],
+      target,
+      label: 'Add 2 links here',
+    })
+  })
+
+  it('returns a partial link command when the target note is part of the drag', () => {
+    const targetNote = createNote()
+    const other = createNote()
+    const target = noteEditorTarget(targetNote._id)
+
+    expect(resolveTestDropCommand([targetNote, other], target, createCtx())).toMatchObject({
+      status: 'partial',
+      action: 'link',
+      items: [other],
+      rejectedItems: [{ item: targetNote, reason: 'self_link' }],
+      target,
+      label: 'Add link here',
+    })
+  })
+
+  it('returns a failed batch command when every item is rejected', () => {
+    const targetNote = createNote()
+    const target = noteEditorTarget(targetNote._id)
+
+    expect(resolveTestDropCommand([targetNote], target, createCtx())).toMatchObject({
+      status: 'failed',
+      action: 'link',
+      items: [],
+      rejectedItems: [{ item: targetNote, reason: 'self_link' }],
+      target,
+      label: 'No items can be linked here',
+    })
+  })
+
+  it('keeps pin, link, and embed commands out of the global command path', () => {
+    const note = createNote()
+
+    expect(resolveGlobalDropCommand([note], mapTarget(), createCtx())).toEqual({ status: 'noop' })
+    expect(resolveGlobalDropCommand([note], noteEditorTarget(), createCtx())).toEqual({
+      status: 'noop',
+    })
+    expect(resolveGlobalDropCommand([note], canvasTarget(), createCtx())).toEqual({
+      status: 'noop',
+    })
+  })
+
+  it('resolves pin, link, and embed through the surface command path', () => {
+    const note = createNote()
+
+    expect(resolveSurfaceDropCommand([note], mapTarget(), createCtx())).toMatchObject({
+      status: 'ready',
+      action: 'pin',
+      items: [note],
+    })
+    expect(resolveSurfaceDropCommand([note], noteEditorTarget(), createCtx())).toMatchObject({
+      status: 'ready',
+      action: 'link',
+      items: [note],
+    })
+    expect(resolveSurfaceDropCommand([note], canvasTarget(), createCtx())).toMatchObject({
+      status: 'ready',
+      action: 'embed',
+      items: [note],
+    })
+  })
+
+  it('returns one batch embed command for canvas drops', () => {
+    const canvas = createGameMap({ _id: testId<'sidebarItems'>('canvas_1') })
+    const first = createNote()
+    const second = createNote()
+    const target = canvasTarget(canvas._id)
+
+    expect(resolveTestDropCommand([first, second], target, createCtx())).toMatchObject({
+      status: 'ready',
+      action: 'embed',
+      items: [first, second],
+      rejectedItems: [],
+      target,
+      label: 'Embed 2 items in canvas',
+    })
+  })
+
+  it('blocks the command when any selected item has a real rejection', () => {
+    const folder = createFolder()
+    const target = folderTarget({ ancestorIds: [folder._id] })
+    const note = createNote()
+
+    expect(resolveTestDropCommand([folder, note], target, createCtx())).toMatchObject({
+      status: 'blocked',
+      reason: 'circular',
+    })
+  })
+
+  it('blocks mixed move and restore commands with a specific reason', () => {
+    const target = folderTarget()
+    const active = createNote()
+    const trashed = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
+
+    expect(resolveTestDropCommand([active, trashed], target, createCtx())).toEqual({
+      status: 'blocked',
+      reason: 'mixed_actions',
+    })
+  })
+
+  it('returns a copy command for ctrl-dragging active items into a folder', () => {
+    const note = createNote({ parentId: null })
+    const target = folderTarget()
+
+    expect(resolveGlobalDropCommand([note], target, createCtx(), { copy: true })).toEqual({
+      status: 'ready',
+      action: 'copy',
+      items: [note],
+      parentId: target._id,
+    })
+  })
+
+  it('returns a copy command for ctrl-dragging active items to root', () => {
+    const note = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
+
+    expect(resolveGlobalDropCommand([note], rootTarget(), createCtx(), { copy: true })).toEqual({
+      status: 'ready',
+      action: 'copy',
+      items: [note],
+      parentId: null,
+    })
+  })
+
+  it('blocks ctrl-drag copy to root for non-DM users', () => {
+    const note = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
+
+    expect(
+      resolveGlobalDropCommand([note], rootTarget(), createCtx({ isDm: false }), { copy: true }),
+    ).toEqual({
+      status: 'blocked',
+      reason: 'dm_only',
+    })
+  })
+
+  it('blocks ctrl-drag copy when the source item is trashed', () => {
+    const note = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
+    const target = folderTarget()
+
+    expect(resolveGlobalDropCommand([note], target, createCtx(), { copy: true })).toEqual({
+      status: 'blocked',
+      reason: 'trashed_item',
+    })
+  })
+
+  it('blocks ctrl-drag copy when the target folder lacks permission', () => {
+    const note = createNote()
+    const target = folderTarget({ myPermissionLevel: PERMISSION_LEVEL.VIEW })
+
+    expect(resolveGlobalDropCommand([note], target, createCtx(), { copy: true })).toEqual({
+      status: 'blocked',
+      reason: 'no_permission',
+    })
+  })
+
+  it('blocks ctrl-drag copy of a folder into its descendant', () => {
+    const folder = createFolder()
+    const target = folderTarget({ ancestorIds: [folder._id] })
+
+    expect(resolveGlobalDropCommand([folder], target, createCtx(), { copy: true })).toEqual({
+      status: 'blocked',
+      reason: 'circular',
+    })
+  })
+
+  it('copies into the same parent instead of treating ctrl-drag as a no-op', () => {
+    const target = folderTarget()
+    const note = createNote({ parentId: target._id })
+
+    expect(resolveGlobalDropCommand([note], target, createCtx(), { copy: true })).toEqual({
+      status: 'ready',
+      action: 'copy',
+      items: [note],
+      parentId: target._id,
+    })
+  })
+
+  it('does not copy to trash on ctrl-drag', () => {
+    const note = createNote()
+
+    expect(resolveGlobalDropCommand([note], trashTarget(), createCtx(), { copy: true })).toEqual({
+      status: 'ready',
+      action: 'trash',
+      items: [note],
+      parentId: null,
     })
   })
 })
@@ -668,6 +1007,16 @@ describe('resolveDropTarget', () => {
     expect(result).toEqual(raw)
   })
 
+  it('returns null for known zones missing required ids', () => {
+    expect(
+      resolveDropTarget({ type: CANVAS_DROP_ZONE_TYPE }, emptyMap, emptyMap, vi.fn()),
+    ).toBeNull()
+    expect(resolveDropTarget({ type: MAP_DROP_ZONE_TYPE }, emptyMap, emptyMap, vi.fn())).toBeNull()
+    expect(
+      resolveDropTarget({ type: NOTE_EDITOR_DROP_TYPE }, emptyMap, emptyMap, vi.fn()),
+    ).toBeNull()
+  })
+
   it('returns null for unknown zone type', () => {
     const result = resolveDropTarget({ type: 'something-unknown' }, emptyMap, emptyMap, vi.fn())
 
@@ -681,76 +1030,86 @@ describe('resolveDropTarget', () => {
   })
 })
 
-// ─── Operation execution ───────────────────────────────────────────
+// ─── Batch Commands ────────────────────────────────────────────────
 
-describe('operation execution', () => {
-  it('trash operation calls moveItem with trash location', async () => {
+describe('batch commands', () => {
+  it('trash operation returns a batch trash command', () => {
     const note = createNote()
     const ctx = createCtx()
-    const result = resolveDropOutcome(note, trashTarget(), ctx)
+    const result = resolveTestDropCommand([note], trashTarget(), ctx)
 
-    expect(result?.type).toBe('operation')
-    await (result as { execute: () => Promise<void> }).execute()
-    expect(ctx.moveItem).toHaveBeenCalledWith(note, {
-      location: SIDEBAR_ITEM_LOCATION.trash,
+    expect(result).toMatchObject({
+      status: 'ready',
+      action: 'trash',
+      items: [note],
+      parentId: null,
     })
   })
 
-  it('root move operation calls moveItem with null parentId', async () => {
+  it('root move operation returns a batch move command with null parentId', () => {
     const note = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
     const ctx = createCtx()
-    const result = resolveDropOutcome(note, rootTarget(), ctx)
+    const result = resolveTestDropCommand([note], rootTarget(), ctx)
 
-    await (result as { execute: () => Promise<void> }).execute()
-    expect(ctx.moveItem).toHaveBeenCalledWith(note, { parentId: null })
-  })
-
-  it('folder move operation calls moveItem and opens folder', async () => {
-    const note = createNote()
-    const target = folderTarget()
-    const ctx = createCtx()
-    const result = resolveDropOutcome(note, target, ctx)
-
-    await (result as { execute: () => Promise<void> }).execute()
-    expect(ctx.moveItem).toHaveBeenCalledWith(note, {
-      parentId: target._id,
-    })
-    expect(ctx.setFolderOpen).toHaveBeenCalledWith(target._id)
-  })
-
-  it('restore to root calls moveItem with sidebar location', async () => {
-    const note = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
-    const ctx = createCtx()
-    const result = resolveDropOutcome(note, rootTarget(), ctx)
-
-    await (result as { execute: () => Promise<void> }).execute()
-    expect(ctx.moveItem).toHaveBeenCalledWith(note, {
+    expect(result).toMatchObject({
+      status: 'ready',
+      action: 'move',
+      items: [note],
       parentId: null,
-      location: SIDEBAR_ITEM_LOCATION.sidebar,
     })
   })
 
-  it('restore to folder calls moveItem and opens folder', async () => {
+  it('folder move operation returns a batch move command for the folder parentId', () => {
+    const note = createNote()
+    const target = folderTarget()
+    const ctx = createCtx()
+    const result = resolveTestDropCommand([note], target, ctx)
+
+    expect(result).toMatchObject({
+      status: 'ready',
+      action: 'move',
+      items: [note],
+      parentId: target._id,
+    })
+  })
+
+  it('restore to root returns a batch restore command', () => {
+    const note = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
+    const ctx = createCtx()
+    const result = resolveTestDropCommand([note], rootTarget(), ctx)
+
+    expect(result).toMatchObject({
+      status: 'ready',
+      action: 'restore',
+      items: [note],
+      parentId: null,
+    })
+  })
+
+  it('restore to folder returns a batch restore command for the folder parentId', () => {
     const note = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
     const target = folderTarget()
     const ctx = createCtx()
-    const result = resolveDropOutcome(note, target, ctx)
+    const result = resolveTestDropCommand([note], target, ctx)
 
-    await (result as { execute: () => Promise<void> }).execute()
-    expect(ctx.moveItem).toHaveBeenCalledWith(note, {
+    expect(result).toMatchObject({
+      status: 'ready',
+      action: 'restore',
+      items: [note],
       parentId: target._id,
-      location: SIDEBAR_ITEM_LOCATION.sidebar,
     })
-    expect(ctx.setFolderOpen).toHaveBeenCalledWith(target._id)
   })
 
-  it('empty editor open calls navigateToItem', async () => {
+  it('empty editor open returns the item for the monitor to navigate', () => {
     const note = createNote()
     const ctx = createCtx()
-    const result = resolveDropOutcome(note, emptyEditorTarget(), ctx)
+    const result = resolveTestDropCommand([note], emptyEditorTarget(), ctx)
 
-    await (result as { execute: () => Promise<void> }).execute()
-    expect(ctx.navigateToItem).toHaveBeenCalledWith(note.slug, true)
+    expect(result).toMatchObject({
+      status: 'ready',
+      action: 'open',
+      item: note,
+    })
   })
 
   it('pin operation has null execute (handled by monitor)', () => {

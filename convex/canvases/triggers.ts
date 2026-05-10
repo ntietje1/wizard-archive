@@ -9,6 +9,6 @@ export const canvasTriggers: SidebarItemTriggerHandlers = {
       .unique()
     if (ext) await db.delete('canvases', ext._id)
     await deleteYjsDocument({ db }, item.id)
-    return null
+    return new Set()
   },
 }

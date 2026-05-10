@@ -1,68 +1,23 @@
 import { v } from 'convex/values'
 import { dmMutation } from '../functions'
-import {
-  permissionLevelValidator,
-  sidebarItemTypeValidator,
-} from '../sidebarItems/schema/validators'
-import { shareSidebarItem as shareSidebarItemFn } from './functions/shareSidebarItem'
-import { unshareSidebarItem as unshareSidebarItemFn } from './functions/unshareSidebarItem'
-import { setAllPlayersPermission as setAllPlayersPermissionFn } from './functions/setAllPlayersPermission'
+import { permissionLevelValidator } from '../sidebarItems/schema/validators'
+import { setAllPlayersPermissionForSidebarItems as setAllPlayersPermissionForSidebarItemsFn } from './functions/setAllPlayersPermissionForSidebarItems'
 import { setFolderInheritShares as setFolderInheritSharesFn } from './functions/setFolderInheritShares'
+import {
+  clearSidebarItemsMemberPermission as clearSidebarItemsMemberPermissionFn,
+  setSidebarItemsMemberPermission as setSidebarItemsMemberPermissionFn,
+} from './functions/sidebarItemShareMutations'
 
-/**
- * Share a sidebar item with a specific member.
- * Creates or updates an individual share record.
- */
-export const shareSidebarItem = dmMutation({
+export const setSidebarItemsMemberPermission = dmMutation({
   args: {
-    sidebarItemId: v.id('sidebarItems'),
-    sidebarItemType: sidebarItemTypeValidator,
-    campaignMemberId: v.id('campaignMembers'),
-    permissionLevel: v.optional(permissionLevelValidator),
-  },
-  returns: v.id('sidebarItemShares'),
-  handler: async (ctx, args) => {
-    return await shareSidebarItemFn(ctx, {
-      sidebarItemId: args.sidebarItemId,
-      campaignMemberId: args.campaignMemberId,
-      permissionLevel: args.permissionLevel ?? null,
-    })
-  },
-})
-
-/**
- * Unshare a sidebar item from a specific member.
- * Deletes the individual share record.
- */
-export const unshareSidebarItem = dmMutation({
-  args: {
-    sidebarItemId: v.id('sidebarItems'),
-    campaignMemberId: v.id('campaignMembers'),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    return await unshareSidebarItemFn(ctx, {
-      sidebarItemId: args.sidebarItemId,
-      campaignMemberId: args.campaignMemberId,
-    })
-  },
-})
-
-/**
- * Update the permission level for a specific member's share on a sidebar item.
- * If level is 'none', removes the share. If no share exists for other levels, creates one.
- */
-export const updateSidebarItemSharePermission = dmMutation({
-  args: {
-    sidebarItemId: v.id('sidebarItems'),
-    sidebarItemType: sidebarItemTypeValidator,
+    sidebarItemIds: v.array(v.id('sidebarItems')),
     campaignMemberId: v.id('campaignMembers'),
     permissionLevel: permissionLevelValidator,
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await shareSidebarItemFn(ctx, {
-      sidebarItemId: args.sidebarItemId,
+    await setSidebarItemsMemberPermissionFn(ctx, {
+      sidebarItemIds: args.sidebarItemIds,
       campaignMemberId: args.campaignMemberId,
       permissionLevel: args.permissionLevel,
     })
@@ -70,22 +25,33 @@ export const updateSidebarItemSharePermission = dmMutation({
   },
 })
 
-/**
- * Set the default permission level for all players on a sidebar item.
- * Sets allPermissionLevel on the item directly.
- * Individual share overrides are preserved independently.
- */
-export const setAllPlayersPermission = dmMutation({
+export const clearSidebarItemsMemberPermission = dmMutation({
   args: {
-    sidebarItemId: v.id('sidebarItems'),
+    sidebarItemIds: v.array(v.id('sidebarItems')),
+    campaignMemberId: v.id('campaignMembers'),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await clearSidebarItemsMemberPermissionFn(ctx, {
+      sidebarItemIds: args.sidebarItemIds,
+      campaignMemberId: args.campaignMemberId,
+    })
+    return null
+  },
+})
+
+export const setAllPlayersPermissionForSidebarItems = dmMutation({
+  args: {
+    sidebarItemIds: v.array(v.id('sidebarItems')),
     permissionLevel: v.nullable(permissionLevelValidator),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    return await setAllPlayersPermissionFn(ctx, {
-      sidebarItemId: args.sidebarItemId,
+    await setAllPlayersPermissionForSidebarItemsFn(ctx, {
+      sidebarItemIds: args.sidebarItemIds,
       permissionLevel: args.permissionLevel,
     })
+    return null
   },
 })
 

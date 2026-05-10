@@ -1,6 +1,8 @@
 import { act, renderHook } from '@testing-library/react'
+import { BlockNoteEditor } from '@blocknote/core'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useNoteEditorState } from '../useNoteEditorState'
+import { editorSchema } from 'convex/notes/editorSpecs'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import { testId } from '~/test/helpers/test-id'
 
@@ -61,9 +63,12 @@ describe('useNoteEditorState', () => {
     const { result, unmount } = renderHook(() =>
       useNoteEditorState(testId<'sidebarItems'>('note-id')),
     )
+    const mockEditor = BlockNoteEditor.create({ schema: editorSchema }) as CustomBlockNoteEditor
+    const collaborativeDoc = null
+    const collaborativeProvider = null
 
     act(() => {
-      result.current.onEditorChange({} as unknown as CustomBlockNoteEditor, null)
+      result.current.onEditorChange(mockEditor, collaborativeDoc, collaborativeProvider)
     })
 
     expect(claimEditorSpy).toHaveBeenCalledTimes(1)
@@ -71,5 +76,7 @@ describe('useNoteEditorState', () => {
     unmount()
 
     expect(releaseEditor).toHaveBeenCalledTimes(1)
+
+    mockEditor._tiptapEditor.destroy()
   })
 })

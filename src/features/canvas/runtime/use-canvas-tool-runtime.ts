@@ -17,6 +17,7 @@ import { canvasToolSpecs } from '../tools/canvas-tool-modules'
 import type { CanvasToolRuntime, CanvasToolId } from '../tools/canvas-tool-types'
 import type { CanvasConnection } from '../types/canvas-domain-types'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
+import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
 
 interface UseCanvasToolRuntimeOptions {
   activeTool: CanvasToolId
@@ -34,6 +35,7 @@ interface UseCanvasToolRuntimeOptions {
   selection: ReturnType<typeof useCanvasSelectionController>
   session: ReturnType<typeof useCanvasSessionState>
   viewportController: ReturnType<typeof createCanvasViewportController>
+  provider: ConvexYjsProvider | null
 }
 
 export function useCanvasToolRuntime({
@@ -52,6 +54,7 @@ export function useCanvasToolRuntime({
   selection,
   session,
   viewportController,
+  provider,
 }: UseCanvasToolRuntimeOptions) {
   const interaction = pointerRouter.interaction
   const cursorPresence = useCanvasCursorPresence({
@@ -91,7 +94,8 @@ export function useCanvasToolRuntime({
     canvasId,
     canEdit,
     isSelectMode,
-    createNode: documentWriter.createNode,
+    createNodes: documentWriter.createNodes,
+    provider,
     screenToCanvasPosition: viewportController.screenToCanvasPosition,
   })
   const contextMenu = useCanvasContextMenu({

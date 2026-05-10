@@ -10,12 +10,13 @@ import {
   createSidebarShare,
 } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
+import { expectValidationFailed } from '../../_test/assertions.helper'
 
 describe('trash workflows', () => {
   const t = createTestContext()
 
   describe('trash and restore with name conflicts', () => {
-    it('deduplicates name when restoring a note whose name is now taken', async () => {
+    it('requires a conflict decision when restoring a note whose name is now taken', async () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
@@ -23,20 +24,37 @@ describe('trash workflows', () => {
         name: 'Meeting Notes',
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: original.noteId,
-        location: 'trash',
+        sourceItemIds: [original.noteId],
+        targetParentId: null,
+        action: 'trash',
       })
 
       await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
         name: 'Meeting Notes',
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      await expectValidationFailed(
+        dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+          campaignId: ctx.campaignId,
+          sourceItemIds: [original.noteId],
+          targetParentId: null,
+          action: 'restore',
+        }),
+      )
+
+      const stillTrashed = await t.run(async (dbCtx) =>
+        dbCtx.db.get('sidebarItems', original.noteId),
+      )
+      expect(stillTrashed?.location).toBe('trash')
+
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: original.noteId,
-        location: 'sidebar',
+        sourceItemIds: [original.noteId],
+        targetParentId: null,
+        action: 'restore',
+        decisions: [{ sourceItemId: original.noteId, action: 'keepBoth' }],
       })
 
       const restored = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', original.noteId))
@@ -79,10 +97,11 @@ describe('trash workflows', () => {
         campaignMemberId: ctx.player.memberId,
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: folder.folderId,
-        location: 'trash',
+        sourceItemIds: [folder.folderId],
+        targetParentId: null,
+        action: 'trash',
       })
 
       const [trashedFolder, trashedNoteA, trashedNoteB, trashedShare, trashedBookmark] =
@@ -108,10 +127,11 @@ describe('trash workflows', () => {
       expect(trashedBookmark).not.toBeNull()
       expect(trashedBookmark!.sidebarItemId).toBe(noteA.noteId)
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: folder.folderId,
-        location: 'sidebar',
+        sourceItemIds: [folder.folderId],
+        targetParentId: null,
+        action: 'restore',
       })
 
       const [restoredFolder, restoredNoteA, restoredNoteB, restoredShare, restoredBookmark] =
@@ -140,6 +160,160 @@ describe('trash workflows', () => {
       expect(restoredBookmark).not.toBeNull()
       expect(restoredBookmark!.sidebarItemId).toBe(noteA.noteId)
       expect(restoredBookmark!.campaignMemberId).toBe(ctx.player.memberId)
+    })
+
+    it('bulk restore ignores redundant nested descendants and preserves hierarchy', async () => {
+      const ctx = await setupCampaignContext(t)
+      const dmAuth = asDm(ctx)
+
+      const folder = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: 'FolderA',
+      })
+      const childFolder = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: 'ChildFolder',
+        parentId: folder.folderId,
+      })
+      const nestedNote = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: 'NestedNote',
+        parentId: childFolder.folderId,
+      })
+
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+        campaignId: ctx.campaignId,
+        sourceItemIds: [folder.folderId],
+        targetParentId: null,
+        action: 'trash',
+      })
+
+      const movedIds = await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+        campaignId: ctx.campaignId,
+        sourceItemIds: [folder.folderId, nestedNote.noteId],
+        targetParentId: null,
+        action: 'restore',
+      })
+
+      const [restoredFolder, restoredChildFolder, restoredNestedNote] = await t.run(async (dbCtx) =>
+        Promise.all([
+          dbCtx.db.get('sidebarItems', folder.folderId),
+          dbCtx.db.get('sidebarItems', childFolder.folderId),
+          dbCtx.db.get('sidebarItems', nestedNote.noteId),
+        ]),
+      )
+
+      expect(movedIds.restoredSourceItemIds).toEqual([folder.folderId])
+      expect(restoredFolder!.location).toBe('sidebar')
+      expect(restoredFolder!.parentId).toBeNull()
+      expect(restoredChildFolder!.location).toBe('sidebar')
+      expect(restoredChildFolder!.parentId).toBe(folder.folderId)
+      expect(restoredNestedNote!.location).toBe('sidebar')
+      expect(restoredNestedNote!.parentId).toBe(childFolder.folderId)
+    })
+
+    it('restores a trashed folder when the trash surface target points at that folder', async () => {
+      const ctx = await setupCampaignContext(t)
+      const dmAuth = asDm(ctx)
+
+      const folder = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: 'FolderA',
+      })
+
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+        campaignId: ctx.campaignId,
+        sourceItemIds: [folder.folderId],
+        targetParentId: null,
+        action: 'trash',
+      })
+
+      const movedIds = await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+        campaignId: ctx.campaignId,
+        sourceItemIds: [folder.folderId],
+        targetParentId: folder.folderId,
+        action: 'restore',
+      })
+
+      const restoredFolder = await t.run((dbCtx) => dbCtx.db.get('sidebarItems', folder.folderId))
+
+      expect(movedIds.restoredSourceItemIds).toEqual([folder.folderId])
+      expect(restoredFolder!.location).toBe('sidebar')
+      expect(restoredFolder!.parentId).toBeNull()
+    })
+
+    it('restores a child from a trashed folder surface to the sidebar root', async () => {
+      const ctx = await setupCampaignContext(t)
+      const dmAuth = asDm(ctx)
+
+      const folder = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: 'FolderA',
+      })
+      const nestedNote = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: 'NestedNote',
+        parentId: folder.folderId,
+      })
+
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+        campaignId: ctx.campaignId,
+        sourceItemIds: [folder.folderId],
+        targetParentId: null,
+        action: 'trash',
+      })
+
+      const movedIds = await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+        campaignId: ctx.campaignId,
+        sourceItemIds: [nestedNote.noteId],
+        targetParentId: folder.folderId,
+        action: 'restore',
+      })
+
+      const [trashedFolder, restoredNote] = await t.run((dbCtx) =>
+        Promise.all([
+          dbCtx.db.get('sidebarItems', folder.folderId),
+          dbCtx.db.get('sidebarItems', nestedNote.noteId),
+        ]),
+      )
+
+      expect(movedIds.restoredSourceItemIds).toEqual([nestedNote.noteId])
+      expect(trashedFolder!.location).toBe('trash')
+      expect(restoredNote!.location).toBe('sidebar')
+      expect(restoredNote!.parentId).toBeNull()
+    })
+
+    it('bulk trash uses the batch move path and ignores redundant nested descendants', async () => {
+      const ctx = await setupCampaignContext(t)
+      const dmAuth = asDm(ctx)
+
+      const folder = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: 'FolderA',
+      })
+      const nestedNote = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: 'NestedNote',
+        parentId: folder.folderId,
+      })
+      const siblingNote = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: 'SiblingNote',
+      })
+
+      const movedIds = await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+        campaignId: ctx.campaignId,
+        sourceItemIds: [folder.folderId, nestedNote.noteId, siblingNote.noteId],
+        targetParentId: null,
+        action: 'trash',
+      })
+
+      const [trashedFolder, trashedNestedNote, trashedSiblingNote] = await t.run(async (dbCtx) =>
+        Promise.all([
+          dbCtx.db.get('sidebarItems', folder.folderId),
+          dbCtx.db.get('sidebarItems', nestedNote.noteId),
+          dbCtx.db.get('sidebarItems', siblingNote.noteId),
+        ]),
+      )
+
+      expect(movedIds.trashedSourceItemIds).toEqual([folder.folderId, siblingNote.noteId])
+      expect(trashedFolder!.location).toBe('trash')
+      expect(trashedFolder!.parentId).toBeNull()
+      expect(trashedNestedNote!.location).toBe('trash')
+      expect(trashedNestedNote!.parentId).toBe(folder.folderId)
+      expect(trashedSiblingNote!.location).toBe('trash')
+      expect(trashedSiblingNote!.parentId).toBeNull()
     })
   })
 
@@ -179,15 +353,16 @@ describe('trash workflows', () => {
         campaignMemberId: ctx.player.memberId,
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: folder.folderId,
-        location: 'trash',
+        sourceItemIds: [folder.folderId],
+        targetParentId: null,
+        action: 'trash',
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItem, {
+      await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: folder.folderId,
+        sourceItemIds: [folder.folderId],
       })
 
       const [
@@ -215,6 +390,50 @@ describe('trash workflows', () => {
       expect(deletedBlock).toBeNull()
       expect(deletedBlockShare).toBeNull()
     })
+
+    it('bulk permanently deletes unrelated items and ignores redundant nested descendants', async () => {
+      const ctx = await setupCampaignContext(t)
+      const dmAuth = asDm(ctx)
+
+      const folder = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: 'ToDelete',
+      })
+      const childNote = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: 'ChildNote',
+        parentId: folder.folderId,
+      })
+      const siblingNote = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: 'SiblingNote',
+      })
+
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+        campaignId: ctx.campaignId,
+        sourceItemIds: [folder.folderId, siblingNote.noteId],
+        targetParentId: null,
+        action: 'trash',
+      })
+
+      const deletedIds = await dmAuth.mutation(
+        api.sidebarItems.mutations.permanentlyDeleteSidebarItems,
+        {
+          campaignId: ctx.campaignId,
+          sourceItemIds: [folder.folderId, childNote.noteId, siblingNote.noteId],
+        },
+      )
+
+      const [deletedFolder, deletedChildNote, deletedSiblingNote] = await t.run(async (dbCtx) =>
+        Promise.all([
+          dbCtx.db.get('sidebarItems', folder.folderId),
+          dbCtx.db.get('sidebarItems', childNote.noteId),
+          dbCtx.db.get('sidebarItems', siblingNote.noteId),
+        ]),
+      )
+
+      expect(deletedIds.deletedRootItemIds).toEqual([folder.folderId, siblingNote.noteId])
+      expect(deletedFolder).toBeNull()
+      expect(deletedChildNote).toBeNull()
+      expect(deletedSiblingNote).toBeNull()
+    })
   })
 
   describe('empty trash', () => {
@@ -236,20 +455,11 @@ describe('trash workflows', () => {
         parentId: folder.folderId,
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
+      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
         campaignId: ctx.campaignId,
-        itemId: note1.noteId,
-        location: 'trash',
-      })
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
-        campaignId: ctx.campaignId,
-        itemId: note2.noteId,
-        location: 'trash',
-      })
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItem, {
-        campaignId: ctx.campaignId,
-        itemId: folder.folderId,
-        location: 'trash',
+        sourceItemIds: [note1.noteId, note2.noteId, folder.folderId],
+        targetParentId: null,
+        action: 'trash',
       })
 
       await dmAuth.mutation(api.sidebarItems.mutations.emptyTrashBin, {

@@ -358,12 +358,10 @@ describe('rollback metadata integrity', () => {
       const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-      await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignId,
         mapId,
-        x: 10,
-        y: 20,
-        itemId: noteId,
+        pins: [{ itemId: noteId, x: 10, y: 20 }],
       })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
@@ -457,21 +455,17 @@ describe('map rollback with deleted pin targets', () => {
       const { noteId: n1 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-      await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignId,
         mapId,
-        x: 10,
-        y: 20,
-        itemId: n1,
+        pins: [{ itemId: n1, x: 10, y: 20 }],
       })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
-      await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignId,
         mapId,
-        x: 30,
-        y: 40,
-        itemId: n2,
+        pins: [{ itemId: n2, x: 30, y: 40 }],
       })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
@@ -521,12 +515,10 @@ describe('sequential rollbacks', () => {
       const { noteId: n1 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-      await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignId,
         mapId,
-        x: 10,
-        y: 20,
-        itemId: n1,
+        pins: [{ itemId: n1, x: 10, y: 20 }],
       })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
@@ -537,12 +529,10 @@ describe('sequential rollbacks', () => {
           .first()
       })
 
-      await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignId,
         mapId,
-        x: 30,
-        y: 40,
-        itemId: n2,
+        pins: [{ itemId: n2, x: 30, y: 40 }],
       })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
@@ -597,12 +587,10 @@ describe('sequential rollbacks', () => {
       const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-      await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignId,
         mapId,
-        x: 10,
-        y: 20,
-        itemId: noteId,
+        pins: [{ itemId: noteId, x: 10, y: 20 }],
       })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
@@ -653,12 +641,10 @@ describe('map rollback restores image state', () => {
       const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-      await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignId,
         mapId,
-        x: 10,
-        y: 20,
-        itemId: noteId,
+        pins: [{ itemId: noteId, x: 10, y: 20 }],
       })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 

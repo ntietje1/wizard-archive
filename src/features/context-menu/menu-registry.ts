@@ -1,16 +1,19 @@
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { PermissionLevel } from 'convex/permissions/types'
+import { createElement } from 'react'
 import {
   ArrowUpLeft,
   ArrowUpRight,
   Bookmark,
   Download,
+  ClipboardPaste,
   Eye,
   EyeOff,
   File,
   FileEdit,
   FilePlus,
   FileTypeIcon,
+  Files,
   FolderDown,
   FolderPlus,
   Grid2x2Plus,
@@ -22,6 +25,7 @@ import {
   Pencil,
   Plus,
   RotateCcw,
+  Share2,
   SquareArrowOutUpRight,
   Trash2,
 } from 'lucide-react'
@@ -33,6 +37,7 @@ import type {
   ContextMenuItemSpec,
   EditorMenuContext,
 } from './types'
+import { resolveContextOperationItems } from './selection-context'
 import {
   RIGHT_SIDEBAR_CONTENT,
   RIGHT_SIDEBAR_PANEL_ID,
@@ -40,6 +45,7 @@ import {
 import { usePanelPreferenceStore } from '~/features/settings/stores/panel-preference-store'
 import { logger } from '~/shared/utils/logger'
 import { assertNever } from '~/shared/utils/utils'
+import { SidebarItemsSharePanel } from '~/features/sharing/components/sidebar-items-share-panel'
 
 function isPanelContentActive(contentId: string): boolean {
   const panel = usePanelPreferenceStore.getState().panels[RIGHT_SIDEBAR_PANEL_ID]
@@ -71,6 +77,15 @@ function getTypeName(context: EditorMenuContext): string {
   }
 }
 
+function getUnpinnedMapItems(context: EditorMenuContext) {
+  if (!context.activeMap) return []
+  const pins = context.activeMap.pins ?? []
+  const pinnedItemIds = new Set(pins.map((pin) => pin.itemId))
+  return resolveContextOperationItems(context).filter(
+    (item) => item._id !== context.activeMap?._id && !pinnedItemIds.has(item._id),
+  )
+}
+
 export type ActionHandlers = {
   open: (context: EditorMenuContext) => void
   rename: (context: EditorMenuContext) => void
@@ -93,12 +108,11 @@ export type ActionHandlers = {
   startSession: (context: EditorMenuContext) => void
   endSession: (context: EditorMenuContext) => void
   setGeneralAccessLevel: (context: EditorMenuContext, level: PermissionLevel | null) => void
-  downloadFile: (context: EditorMenuContext) => void
-  downloadNote: (context: EditorMenuContext) => void
-  downloadMap: (context: EditorMenuContext) => void
-  downloadFolder: (context: EditorMenuContext) => void
+  downloadItems: (context: EditorMenuContext) => void
   downloadAll: (context: EditorMenuContext) => void
   toggleBookmark: (context: EditorMenuContext) => void
+  paste: (context: EditorMenuContext) => void
+  duplicate: (context: EditorMenuContext) => void
   restore: (context: EditorMenuContext) => void
   permanentlyDelete: (context: EditorMenuContext) => void
   emptyTrash: (context: EditorMenuContext) => void
@@ -146,12 +160,11 @@ export const editorContextMenuCommands = {
   togglePinVisibility: createActionCommand('togglePinVisibility'),
   startSession: createActionCommand('startSession'),
   endSession: createActionCommand('endSession'),
-  downloadFile: createActionCommand('downloadFile'),
-  downloadNote: createActionCommand('downloadNote'),
-  downloadMap: createActionCommand('downloadMap'),
-  downloadFolder: createActionCommand('downloadFolder'),
+  downloadItems: createActionCommand('downloadItems'),
   downloadAll: createActionCommand('downloadAll'),
   toggleBookmark: createActionCommand('toggleBookmark'),
+  paste: createActionCommand('paste'),
+  duplicate: createActionCommand('duplicate'),
   restore: createActionCommand('restore'),
   permanentlyDelete: createActionCommand('permanentlyDelete'),
   emptyTrash: createActionCommand('emptyTrash'),
@@ -267,7 +280,9 @@ export const editorContextMenuContributors = [
         group: 'primary',
         priority: 0,
         applies: (context) =>
-          (p.inSidebar(context) || p.hasPinContext(context)) && context.item !== undefined,
+          p.isSingleSelection(context) &&
+          (p.inSidebar(context) || p.hasPinContext(context)) &&
+          context.item !== undefined,
       },
       {
         id: 'go-to-map-pin',
@@ -289,7 +304,8 @@ export const editorContextMenuContributors = [
         icon: Bookmark,
         group: 'primary',
         priority: 2,
-        applies: (context) => p.inSidebar(context) && p.isSidebarItem(context),
+        applies: (context) =>
+          p.inView('sidebar', 'folder-view')(context) && p.isSidebarItem(context),
         isChecked: (context) => context.item?.isBookmarked ?? false,
       },
       {
@@ -308,7 +324,7 @@ export const editorContextMenuContributors = [
         icon: RotateCcw,
         group: 'primary',
         priority: 4,
-        applies: (context) => p.isItemTrashed(context) && p.isSidebarItem(context),
+        applies: (context) => p.allSelectedItemsTrashed(context) && p.isSidebarItem(context),
       },
     ],
   },
@@ -337,15 +353,18 @@ export const editorContextMenuContributors = [
       {
         id: 'pin-to-map',
         commandId: 'pinToMap',
-        label: 'Pin to Map',
+        label: (context) => {
+          const itemCount = getUnpinnedMapItems(context).length
+          return itemCount > 1 ? `Pin ${itemCount} items to Map` : 'Pin to Map'
+        },
         icon: MapPin,
         group: 'pin-actions',
         priority: 1,
         applies: (context) =>
-          p.hasEditAccess(context) &&
+          p.allSelectedItemsHaveEditAccess(context) &&
           p.inSidebar(context) &&
           p.isSidebarItem(context) &&
-          !p.isPinnedOnActiveMap(context) &&
+          getUnpinnedMapItems(context).length > 0 &&
           p.isNotActiveMap(context),
       },
       {
@@ -439,58 +458,50 @@ export const editorContextMenuContributors = [
     ],
   },
   {
+    id: 'editor-share',
+    surfaces: ['sidebar', 'folder-view', 'favorites', 'topbar'],
+    getItems: () => [
+      {
+        id: 'share-items',
+        label: (context) => {
+          const itemCount = resolveContextOperationItems(context).length
+          return itemCount > 1 ? `Share ${itemCount} items...` : 'Share...'
+        },
+        icon: Share2,
+        group: 'share',
+        priority: 78,
+        submenuContent: (context) =>
+          createElement(SidebarItemsSharePanel, {
+            items: resolveContextOperationItems(context),
+          }),
+        applies: (context) =>
+          p.isDm(context) &&
+          p.isSidebarItem(context) &&
+          p.allSelectedItemsHaveFullAccess(context) &&
+          p.allSelectedItemsNotTrashed(context) &&
+          !p.hasPinContext(context),
+      },
+    ],
+  },
+  {
     id: 'editor-download',
     surfaces: ['sidebar', 'folder-view', 'topbar', 'map-view'],
     getItems: () => [
       {
-        id: 'download-file',
-        commandId: 'downloadFile',
-        label: 'Download',
+        id: 'download-items',
+        commandId: 'downloadItems',
+        label: (context) => {
+          const itemCount = resolveContextOperationItems(context).length
+          return itemCount > 1 ? `Download ${itemCount} items` : 'Download'
+        },
         icon: Download,
         group: 'download',
         priority: 80,
         applies: (context) =>
+          p.allSelectedItemsHaveViewAccess(context) &&
           p.isSidebarItem(context) &&
-          p.isType(SIDEBAR_ITEM_TYPES.files)(context) &&
+          p.allSelectedItemsNotTrashed(context) &&
           !p.hasPinContext(context),
-      },
-      {
-        id: 'download-note',
-        commandId: 'downloadNote',
-        label: 'Download',
-        icon: Download,
-        group: 'download',
-        priority: 80,
-        applies: (context) =>
-          p.hasViewAccess(context) &&
-          p.isSidebarItem(context) &&
-          p.isType(SIDEBAR_ITEM_TYPES.notes)(context) &&
-          !p.hasMapContext(context),
-      },
-      {
-        id: 'download-map',
-        commandId: 'downloadMap',
-        label: 'Download Map Image',
-        icon: Download,
-        group: 'download',
-        priority: 80,
-        applies: (context) =>
-          p.isSidebarItem(context) &&
-          p.isType(SIDEBAR_ITEM_TYPES.gameMaps)(context) &&
-          !p.hasMapContext(context),
-      },
-      {
-        id: 'download-folder',
-        commandId: 'downloadFolder',
-        label: 'Download',
-        icon: FolderDown,
-        group: 'download',
-        priority: 81,
-        applies: (context) =>
-          p.hasViewAccess(context) &&
-          p.isSidebarItem(context) &&
-          p.isType(SIDEBAR_ITEM_TYPES.folders)(context) &&
-          !p.hasMapContext(context),
       },
       {
         id: 'download-all',
@@ -500,6 +511,36 @@ export const editorContextMenuContributors = [
         group: 'download',
         priority: 82,
         applies: (context) => p.atRoot(context) && p.inSidebar(context),
+      },
+    ],
+  },
+  {
+    id: 'editor-clipboard',
+    surfaces: ['sidebar', 'folder-view'],
+    getItems: () => [
+      {
+        id: 'paste',
+        commandId: 'paste',
+        label: 'Paste',
+        icon: ClipboardPaste,
+        group: 'edit',
+        priority: 87,
+        applies: (context) =>
+          p.canWrite(context) &&
+          p.inView('sidebar', 'folder-view')(context) &&
+          (p.atRoot(context) || p.isType(SIDEBAR_ITEM_TYPES.folders)(context)),
+      },
+      {
+        id: 'duplicate',
+        commandId: 'duplicate',
+        label: 'Duplicate',
+        icon: Files,
+        group: 'edit',
+        priority: 88,
+        applies: (context) =>
+          p.hasSelection(context) &&
+          p.allSelectedItemsNotTrashed(context) &&
+          p.allSelectedItemsHaveFullAccess(context),
       },
     ],
   },
@@ -515,6 +556,7 @@ export const editorContextMenuContributors = [
         group: 'edit',
         priority: 90,
         applies: (context) =>
+          p.isSingleSelection(context) &&
           p.hasFullAccess(context) &&
           p.inSidebar(context) &&
           p.isItemNotTrashed(context) &&
@@ -528,6 +570,7 @@ export const editorContextMenuContributors = [
         group: 'edit',
         priority: 99,
         applies: (context) =>
+          p.isSingleSelection(context) &&
           p.hasFullAccess(context) &&
           p.isItemNotTrashed(context) &&
           p.isType(SIDEBAR_ITEM_TYPES.gameMaps)(context),
@@ -540,6 +583,7 @@ export const editorContextMenuContributors = [
         group: 'edit',
         priority: 99,
         applies: (context) =>
+          p.isSingleSelection(context) &&
           p.hasFullAccess(context) &&
           p.isItemNotTrashed(context) &&
           p.isType(SIDEBAR_ITEM_TYPES.files)(context),
@@ -552,6 +596,7 @@ export const editorContextMenuContributors = [
         group: 'edit',
         priority: 99,
         applies: (context) =>
+          p.isSingleSelection(context) &&
           p.hasFullAccess(context) &&
           p.isSidebarItem(context) &&
           p.isItemNotTrashed(context) &&
@@ -572,9 +617,9 @@ export const editorContextMenuContributors = [
         priority: 100,
         variant: 'danger',
         applies: (context) =>
-          p.hasFullAccess(context) &&
+          p.allSelectedItemsHaveFullAccess(context) &&
           p.isSidebarItem(context) &&
-          p.isItemNotTrashed(context) &&
+          p.allSelectedItemsNotTrashed(context) &&
           (p.inView('sidebar')(context) ||
             p.inView('folder-view')(context) ||
             p.inView('topbar')(context)),
@@ -587,7 +632,7 @@ export const editorContextMenuContributors = [
         group: 'danger',
         priority: 100,
         variant: 'danger',
-        applies: (context) => p.isItemTrashed(context) && p.isSidebarItem(context),
+        applies: (context) => p.allSelectedItemsTrashed(context) && p.isSidebarItem(context),
       },
       {
         id: 'empty-trash',

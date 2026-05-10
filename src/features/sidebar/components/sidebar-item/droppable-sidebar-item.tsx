@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import type { Folder } from 'convex/folders/types'
-import { canDropFilesOnTarget } from '~/features/dnd/utils/dnd-registry'
+import { canDropFilesOnTarget } from '~/features/dnd/utils/drop-target-data'
 import { useSidebarItemDropTarget } from '~/features/dnd/hooks/useSidebarItemDropTarget'
 import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'

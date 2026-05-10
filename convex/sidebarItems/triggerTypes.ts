@@ -11,5 +11,5 @@ export type SidebarItemTriggerHandlers = {
     db: DatabaseWriter,
     storage: MutationCtx['storage'],
     item: CascadeItem,
-  ) => Promise<Id<'_storage'> | null>
+  ) => Promise<ReadonlySet<Id<'_storage'>>>
 }

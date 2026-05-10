@@ -7,8 +7,10 @@ import type { Id } from '../../_generated/dataModel'
 import { getSidebarItem } from '../functions/getSidebarItem'
 import { getSidebarItemsByParent } from '../functions/getSidebarItemsByParent'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
+import { evaluateMoveToParent } from '../operations/capabilities'
 import type { AnySidebarItem } from '../types/types'
-import { requireItemAccess } from './access'
+import { assertSidebarOperationAllowed } from '../functions/operationCapability'
+import { checkItemAccess, requireItemAccess } from './access'
 import { assertSidebarItemName, checkNameConflict } from './name'
 import { validateNoCircularParentAsync } from './parent'
 import {
@@ -35,7 +37,7 @@ export async function checkUniqueNameUnderParent(
   return checkNameConflict(name, siblings, excludeId)
 }
 
-async function ensureSidebarItemNameAvailable(
+export async function ensureSidebarItemNameAvailable(
   ctx: CampaignQueryCtx,
   {
     parentId,
@@ -54,7 +56,7 @@ async function ensureSidebarItemNameAvailable(
   }
 }
 
-export async function validateSidebarParentChange(
+export async function validateNoCircularSidebarParentChange(
   ctx: CampaignQueryCtx,
   {
     item,
@@ -70,26 +72,38 @@ export async function validateSidebarParentChange(
   if (!result.valid) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, result.error)
   }
+}
 
+export async function validateSidebarParentChange(
+  ctx: CampaignQueryCtx,
+  {
+    item,
+    newParentId,
+  }: {
+    item: AnySidebarItem
+    newParentId: Id<'sidebarItems'> | null
+  },
+): Promise<void> {
+  await validateNoCircularSidebarParentChange(ctx, { item, newParentId })
+  let parent: AnySidebarItem | null = null
   if (newParentId) {
     const parentFromDb = await getSidebarItem(ctx, newParentId)
     if (!parentFromDb) {
       throwClientError(ERROR_CODE.NOT_FOUND, 'Parent not found')
     }
-    if (parentFromDb.type !== SIDEBAR_ITEM_TYPES.folders) {
-      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Parent must be a folder')
-    }
-    if (parentFromDb.location !== item.location) {
-      throwClientError(
-        ERROR_CODE.VALIDATION_FAILED,
-        'Cannot move items into a folder in a different location',
-      )
-    }
-    await requireItemAccess(ctx, {
+    // checkItemAccess with PERMISSION_LEVEL.NONE intentionally normalizes parentFromDb for evaluateMoveToParent.
+    parent = await checkItemAccess(ctx, {
       rawItem: parentFromDb,
-      requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
+      requiredLevel: PERMISSION_LEVEL.NONE,
     })
   }
+
+  assertSidebarOperationAllowed(
+    evaluateMoveToParent({ role: ctx.membership.role }, item, {
+      parentId: newParentId,
+      parent,
+    }),
+  )
 }
 
 export async function validateSidebarCreateParent(
@@ -119,16 +133,18 @@ export async function validateSidebarMove(
   {
     item,
     newParentId,
+    name,
   }: {
     item: AnySidebarItem
     newParentId: Id<'sidebarItems'> | null
+    name?: SidebarItemName
   },
 ): Promise<void> {
   await validateSidebarParentChange(ctx, { item, newParentId })
 
   await ensureSidebarItemNameAvailable(ctx, {
     parentId: newParentId,
-    name: assertSidebarItemName(item.name),
+    name: name ?? assertSidebarItemName(item.name),
     excludeId: item._id,
   })
 }
@@ -148,9 +164,11 @@ async function checkSlugConflict(
   const conflict = await ctx.db
     .query('sidebarItems')
     .withIndex('by_campaign_slug', (q) => q.eq('campaignId', campaignId).eq('slug', slug))
-    .unique()
-  if (!conflict) return false
-  return excludeId ? conflict._id !== excludeId : true
+    .first()
+  if (!excludeId) {
+    return conflict !== null
+  }
+  return conflict !== null && conflict._id !== excludeId
 }
 
 export async function findUniqueSidebarItemSlug(

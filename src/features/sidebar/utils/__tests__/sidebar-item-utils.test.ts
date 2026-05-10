@@ -206,4 +206,29 @@ describe('buildBreadcrumbs', () => {
     })
     expect(buildBreadcrumbs(note, buildMap([note]))).toBe('')
   })
+
+  it('stops when an item points to itself as parent', () => {
+    const note = createNote()
+    const selfParentNote = { ...note, parentId: note._id }
+    expect(buildBreadcrumbs(selfParentNote, buildMap([selfParentNote]))).toBe('')
+  })
+
+  it('stops when ancestor folders contain a cycle', () => {
+    const grandparent = createFolder({
+      _id: testId<'sidebarItems'>('folder_bc_cycle_gp'),
+      name: 'Grandparent',
+      parentId: null,
+    })
+    const parent = createFolder({
+      _id: testId<'sidebarItems'>('folder_bc_cycle_p'),
+      name: 'Parent',
+      parentId: grandparent._id,
+    })
+    const cyclicGrandparent = { ...grandparent, parentId: parent._id }
+    const note = createNote({ parentId: parent._id })
+
+    expect(buildBreadcrumbs(note, buildMap([cyclicGrandparent, parent, note]))).toBe(
+      'Grandparent/Parent/',
+    )
+  })
 })

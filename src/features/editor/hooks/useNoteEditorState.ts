@@ -5,6 +5,7 @@ import { useYjsPreviewUpload } from '~/features/previews/hooks/use-yjs-preview-u
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { Doc } from 'yjs'
 import type { Id } from 'convex/_generated/dataModel'
+import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
 
 const BLOCKNOTE_EDITOR_SELECTOR = '.bn-editor'
 
@@ -15,9 +16,13 @@ export function useNoteEditorState(noteId: Id<'sidebarItems'>) {
   const releaseEditorRef = useRef<(() => void) | null>(null)
 
   const onEditorChange = useCallback(
-    (newEditor: CustomBlockNoteEditor | null, newDoc: Doc | null) => {
+    (
+      newEditor: CustomBlockNoteEditor | null,
+      newDoc: Doc | null,
+      provider: ConvexYjsProvider | null,
+    ) => {
       releaseEditorRef.current?.()
-      releaseEditorRef.current = claimEditor(newEditor)
+      releaseEditorRef.current = claimEditor(newEditor, provider)
       setDoc(newDoc)
     },
     [claimEditor],

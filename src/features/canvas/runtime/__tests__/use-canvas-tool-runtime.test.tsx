@@ -92,7 +92,8 @@ describe('useCanvasToolRuntime', () => {
       canvasId: 'canvas-id',
       canEdit: true,
       isSelectMode: true,
-      createNode: harness.documentWriter.createNode,
+      createNodes: harness.documentWriter.createNodes,
+      provider: null,
       screenToCanvasPosition: harness.viewportController.screenToCanvasPosition,
     })
     expect(contextMenuSpy).toHaveBeenCalledWith({
@@ -194,6 +195,7 @@ function createToolRuntimeHarness() {
     commands: {},
     documentWriter: {
       createNode: vi.fn(),
+      createNodes: vi.fn(),
       createEdge: vi.fn(),
     },
     edgesMap,
@@ -225,6 +227,7 @@ function createToolRuntimeHarness() {
       getZoom: () => 1,
       screenToCanvasPosition: vi.fn((point) => point),
     },
+    provider: null,
   }
 
   return harness as typeof harness & UseCanvasToolRuntimeOptions

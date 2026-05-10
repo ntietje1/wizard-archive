@@ -1,4 +1,3 @@
-import { memo } from 'react'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
 import { DraggableSidebarItem } from './draggable-sidebar-item'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
@@ -8,33 +7,48 @@ import { useFolderState } from '~/features/sidebar/hooks/useFolderState'
 import { useContextMenu } from '~/features/context-menu/hooks/useContextMenu'
 import { useEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
-import { useIsSelectedItem } from '~/features/sidebar/hooks/useSelectedItem'
+import {
+  useIsFocusedItem,
+  useSidebarItemVisualState,
+} from '~/features/sidebar/hooks/useSelectedItem'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
+import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
+import type { MouseEvent } from 'react'
 
 interface FlatSidebarItemProps {
   item: AnySidebarItem
   isExpanded: boolean
   renamingId: Id<'sidebarItems'> | null
   setRenamingId: (id: Id<'sidebarItems'> | null) => void
+  visibleItemIds: Array<Id<'sidebarItems'>>
 }
 
-function FlatSidebarItemComponent({
+export function FlatSidebarItem({
   item,
   isExpanded,
   renamingId,
   setRenamingId,
+  visibleItemIds,
 }: FlatSidebarItemProps) {
   const { editItem } = useEditSidebarItem()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
   const linkProps = useEditorLinkProps(item)
   const { setLastSelectedItem } = useLastEditorItem()
-  const isSelected = useIsSelectedItem(item)
+  const visualState = useSidebarItemVisualState(item)
+  const isFocused = useIsFocusedItem(item)
   const { toggleExpanded } = useFolderState(item._id)
+  const { handleItemClick, handleItemContextMenu } = useItemSelectionInteractions(item, {
+    surface: 'bookmarks',
+    parentId: null,
+    visibleItemIds,
+  })
 
   const icon = getSidebarItemIcon(item)
 
-  const handleClick = () => setLastSelectedItem(item.slug)
+  const selectBookmarkedItem = (event: MouseEvent) => {
+    handleItemClick(event, () => setLastSelectedItem(item.slug))
+  }
 
   const handleFinishRename = async (name: string) => {
     await editItem({ item, name })
@@ -51,16 +65,23 @@ function FlatSidebarItemComponent({
         <SidebarItemButtonBase
           icon={icon}
           name={item.name}
-          isSelected={isSelected}
-          isExpanded={isExpanded}
-          isRenaming={renamingId === item._id}
+          presentation={{
+            visualState,
+            focused: isFocused,
+            expanded: isExpanded,
+            renaming: renamingId === item._id,
+            showChevron: false,
+          }}
           linkProps={linkProps}
-          onClick={handleClick}
+          onClick={selectBookmarkedItem}
+          onContextMenu={handleItemContextMenu}
           onToggleExpanded={toggleExpanded}
-          onMoreOptions={handleMoreOptions}
+          onMoreOptions={(event) => {
+            handleItemContextMenu(event)
+            handleMoreOptions(event)
+          }}
           onFinishRename={handleFinishRename}
           onCancelRename={handleCancelRename}
-          showChevron={false}
           campaignId={item.campaignId}
           parentId={item.parentId}
           excludeId={item._id}
@@ -69,5 +90,3 @@ function FlatSidebarItemComponent({
     </DraggableSidebarItem>
   )
 }
-
-export const FlatSidebarItem = memo(FlatSidebarItemComponent)
