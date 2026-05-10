@@ -48,8 +48,6 @@ function createActions(): ActionHandlers {
     downloadItems: vi.fn(),
     downloadAll: vi.fn(),
     toggleBookmark: vi.fn(),
-    copy: vi.fn(),
-    cut: vi.fn(),
     paste: vi.fn(),
     duplicate: vi.fn(),
     restore: vi.fn(),
@@ -106,15 +104,15 @@ describe('buildMenu', () => {
     expect(ids).toContain('delete')
     expect(ids).toContain('download-items')
     expect(ids).toContain('toggle-bookmark')
-    expect(ids).toContain('copy')
-    expect(ids).toContain('cut')
     expect(ids).toContain('duplicate')
+    expect(ids).not.toContain('copy')
+    expect(ids).not.toContain('cut')
     expect(ids).not.toContain('rename')
     expect(ids).not.toContain('edit-item')
     expect(ids).not.toContain('show-in-sidebar')
   })
 
-  it('folder view uses the same multi-selection clipboard menu as the sidebar', () => {
+  it('folder view keeps batch actions without exposing copy or cut', () => {
     const selectedItems = [createNote(), createFile()]
     const menu = buildMenu({
       context: sidebarCtx({
@@ -130,11 +128,11 @@ describe('buildMenu', () => {
     })
 
     const ids = menu.flatItems.map((i) => i.id)
-    expect(ids).toContain('copy')
-    expect(ids).toContain('cut')
     expect(ids).toContain('duplicate')
     expect(ids).toContain('delete')
     expect(ids).toContain('toggle-bookmark')
+    expect(ids).not.toContain('copy')
+    expect(ids).not.toContain('cut')
     expect(ids).not.toContain('rename')
   })
 

@@ -18,7 +18,7 @@ import {
 import { resolveNormalizedDraggedSidebarItems } from '~/features/dnd/utils/sidebar-drag-items'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import type { DropOutcome } from '~/features/dnd/utils/drop-outcome'
-import type { GlobalDropCommand } from '~/features/dnd/utils/global-drop-planner'
+import type { GlobalDropCommand, GlobalDropOptions } from '~/features/dnd/utils/global-drop-planner'
 import { assertNever } from '~/shared/utils/utils'
 
 function resolveDraggedItem(sourceData: Record<string, unknown>, ctx: DndMonitorCtx) {
@@ -88,6 +88,9 @@ async function executeDropCommand(ctx: DndMonitorCtx, command: GlobalDropCommand
       case 'move':
         await ctx.dndContext.moveItems(command.items, command.parentId)
         break
+      case 'copy':
+        await ctx.dndContext.copyItems(command.items, command.parentId)
+        break
       case 'restore':
         await ctx.dndContext.restoreItems(command.items, command.parentId)
         break
@@ -112,6 +115,7 @@ async function executeElementDrop(
   ctx: DndMonitorCtx,
   sourceData: Record<string, unknown>,
   targetData: Record<string, unknown>,
+  options: GlobalDropOptions,
 ) {
   const draggedItems = resolveDraggedItems(sourceData, ctx)
   if (draggedItems.length === 0) return
@@ -126,8 +130,12 @@ async function executeElementDrop(
 
   await executeDropCommand(
     ctx,
-    resolveGlobalDropCommand(draggedItems, resolvedTarget, ctx.dropPlanningContext),
+    resolveGlobalDropCommand(draggedItems, resolvedTarget, ctx.dropPlanningContext, options),
   )
+}
+
+function globalDropOptionsFromInput(input: { ctrlKey?: boolean }): GlobalDropOptions {
+  return { copy: input.ctrlKey === true }
 }
 
 export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
@@ -229,16 +237,23 @@ export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
         const topTarget = location.current.dropTargets[0]
         const rawDropTarget = topTarget ? topTarget.data : null
         const key = getDropTargetKey(rawDropTarget)
+        const options = globalDropOptionsFromInput(input)
+        const feedbackKey = `${key ?? 'none'}:${options.copy ? 'copy' : 'default'}`
 
-        if (key !== lastDropTargetKeyRef.current) {
-          lastDropTargetKeyRef.current = key
+        if (feedbackKey !== lastDropTargetKeyRef.current) {
+          lastDropTargetKeyRef.current = feedbackKey
           const ctx = ctxRef.current
           if (!ctx) return
 
           const dropTarget = resolveMonitorDropTarget(rawDropTarget, ctx)
           const draggedItems = resolveDraggedItems(source.data, ctx)
           const draggedPreviewItems = resolveDraggedPreviewItems(source.data, ctx)
-          const feedback = resolveDropFeedback(draggedItems, dropTarget, ctx.dropPlanningContext)
+          const feedback = resolveDropFeedback(
+            draggedItems,
+            dropTarget,
+            ctx.dropPlanningContext,
+            options,
+          )
 
           setDragState((prev) => {
             if (!prev) return null
@@ -269,7 +284,14 @@ export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
         if (!topTarget) return
 
         const ctx = ctxRef.current
-        if (ctx) await executeElementDrop(ctx, source.data, topTarget.data)
+        if (ctx) {
+          await executeElementDrop(
+            ctx,
+            source.data,
+            topTarget.data,
+            globalDropOptionsFromInput(location.current.input),
+          )
+        }
       },
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps

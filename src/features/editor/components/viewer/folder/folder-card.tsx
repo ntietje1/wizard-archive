@@ -28,35 +28,35 @@ import {
 } from '~/features/sidebar/utils/sidebar-item-visual-state'
 
 const H = 140
+const W = 400
 const R = 4
 const TAB_W = 80
 const TAB_H = 12
 const NOTCH_W = 12
 
-/** Tab + notch fill */
-const TAB_FILL = [
-  `M ${R},0`,
-  `L ${TAB_W},0`,
-  `L ${TAB_W + NOTCH_W},${TAB_H}`,
-  `L ${TAB_W + NOTCH_W},${TAB_H + 1}`,
-  `L ${R},${TAB_H + 1}`,
-  `L ${R},${TAB_H + R}`,
-  `L 0,${TAB_H + R}`,
-  `L 0,${R}`,
-  `A ${R},${R} 0 0,1 ${R},0`,
-  'Z',
-].join(' ')
-
-/** Tab + notch outline */
-const TAB_STROKE = [
+const FOLDER_SHAPE = [
   `M 0,${TAB_H + R}`,
   `L 0,${R}`,
   `A ${R},${R} 0 0,1 ${R},0`,
   `L ${TAB_W},0`,
   `L ${TAB_W + NOTCH_W},${TAB_H}`,
+  `L ${W - R},${TAB_H}`,
+  `A ${R},${R} 0 0,1 ${W},${TAB_H + R}`,
+  `L ${W},${H - R}`,
+  `A ${R},${R} 0 0,1 ${W - R},${H}`,
+  `L ${R},${H}`,
+  `A ${R},${R} 0 0,1 0,${H - R}`,
+  'Z',
 ].join(' ')
 
 type DropState = 'none' | 'valid' | 'trash'
+
+function folderStrokeClass(dropState: DropState, isSelected: boolean, isViewing: boolean) {
+  if (dropState === 'trash') return 'stroke-destructive'
+  if (dropState === 'valid') return 'stroke-ring'
+  if (isSelected && !isViewing) return 'stroke-primary/60'
+  return 'stroke-border'
+}
 
 function FolderSvg({
   dropState = 'none',
@@ -70,13 +70,9 @@ function FolderSvg({
   isMultiSelected?: boolean
 }) {
   const isDrop = dropState !== 'none'
-  const strokeClass =
-    dropState === 'trash'
-      ? 'stroke-destructive'
-      : dropState === 'valid'
-        ? 'stroke-ring'
-        : 'stroke-border'
+  const strokeClass = folderStrokeClass(dropState, isSelected, isViewing)
   const strokeWidth = isDrop ? 'stroke-[3]' : 'stroke-2'
+  const focusStrokeClass = 'group-focus-visible/folder-card:stroke-ring'
   const tintClass =
     dropState === 'trash' ? 'fill-destructive/5' : dropState === 'valid' ? 'fill-ring/5' : undefined
   const visualState = { isSelected, isViewing, isMultiSelected }
@@ -85,37 +81,23 @@ function FolderSvg({
   const hoverOverlayClass = sidebarItemHoverOverlayClass(visualState)
 
   return (
-    <svg className={cn('absolute inset-0 w-full h-full overflow-visible')}>
-      <rect
-        y={TAB_H}
-        width="100%"
-        height={H - TAB_H}
-        rx={R}
-        className={cn(fillClass, '[paint-order:stroke]', strokeWidth, strokeClass)}
+    <svg
+      className={cn('absolute inset-0 w-full h-full overflow-visible')}
+      viewBox={`0 0 ${W} ${H}`}
+      preserveAspectRatio="none"
+    >
+      <path
+        d={FOLDER_SHAPE}
+        className={cn(
+          fillClass,
+          '[paint-order:stroke]',
+          strokeWidth,
+          strokeClass,
+          focusStrokeClass,
+        )}
       />
-      <path d={TAB_STROKE} className={cn('fill-none', strokeWidth, strokeClass)} />
-      <path d={TAB_FILL} className={fillClass} />
-      {tintClass && (
-        <>
-          <rect
-            y={TAB_H + 1}
-            width="100%"
-            height={H - TAB_H - 1}
-            rx={R}
-            className={cn(tintClass, 'stroke-none')}
-          />
-          <path d={TAB_FILL} className={tintClass} />
-        </>
-      )}
-      {/* Hover fill — clipped to folder shape */}
-      <rect
-        y={TAB_H + 1}
-        width="100%"
-        height={H - TAB_H - 1}
-        rx={R}
-        className={cn(hoverFillClass, 'stroke-none', hoverOverlayClass)}
-      />
-      <path d={TAB_FILL} className={cn(hoverFillClass, hoverOverlayClass)} />
+      {tintClass && <path d={FOLDER_SHAPE} className={cn(tintClass, 'stroke-none')} />}
+      <path d={FOLDER_SHAPE} className={cn(hoverFillClass, 'stroke-none', hoverOverlayClass)} />
     </svg>
   )
 }
@@ -188,7 +170,7 @@ function FolderCardInner({
         activeOptions={{ includeSearch: false }}
         aria-label={folder.name}
         data-item-selection-target="true"
-        className="block h-full [&.active]:pointer-events-auto"
+        className="group/folder-card block h-full outline-none [&.active]:pointer-events-auto"
         draggable={false}
         onContextMenu={handleItemContextMenu}
         onClick={(e) => {
@@ -205,7 +187,7 @@ function FolderCardInner({
           handleItemClick(e, () => setLastSelectedItem(folder.slug))
         }}
       >
-        <div className={cn('relative block w-full h-full cursor-pointer group rounded-md')}>
+        <div className="relative block w-full h-full cursor-pointer group">
           <FolderSvg
             dropState={dropState}
             isSelected={visualState.isSelected}

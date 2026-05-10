@@ -200,7 +200,7 @@ describe('trash workflows', () => {
         ]),
       )
 
-      expect(movedIds).toEqual([folder.folderId])
+      expect(movedIds.restoredSourceItemIds).toEqual([folder.folderId])
       expect(restoredFolder!.location).toBe('sidebar')
       expect(restoredFolder!.parentId).toBeNull()
       expect(restoredChildFolder!.location).toBe('sidebar')
@@ -233,7 +233,7 @@ describe('trash workflows', () => {
 
       const restoredFolder = await t.run((dbCtx) => dbCtx.db.get('sidebarItems', folder.folderId))
 
-      expect(movedIds).toEqual([folder.folderId])
+      expect(movedIds.restoredSourceItemIds).toEqual([folder.folderId])
       expect(restoredFolder!.location).toBe('sidebar')
       expect(restoredFolder!.parentId).toBeNull()
     })
@@ -271,7 +271,7 @@ describe('trash workflows', () => {
         ]),
       )
 
-      expect(movedIds).toEqual([nestedNote.noteId])
+      expect(movedIds.restoredSourceItemIds).toEqual([nestedNote.noteId])
       expect(trashedFolder!.location).toBe('trash')
       expect(restoredNote!.location).toBe('sidebar')
       expect(restoredNote!.parentId).toBeNull()
@@ -307,7 +307,7 @@ describe('trash workflows', () => {
         ]),
       )
 
-      expect(movedIds).toEqual([folder.folderId, siblingNote.noteId])
+      expect(movedIds.trashedSourceItemIds).toEqual([folder.folderId, siblingNote.noteId])
       expect(trashedFolder!.location).toBe('trash')
       expect(trashedFolder!.parentId).toBeNull()
       expect(trashedNestedNote!.location).toBe('trash')
@@ -429,7 +429,7 @@ describe('trash workflows', () => {
         ]),
       )
 
-      expect(deletedIds).toEqual([folder.folderId, siblingNote.noteId])
+      expect(deletedIds.deletedRootItemIds).toEqual([folder.folderId, siblingNote.noteId])
       expect(deletedFolder).toBeNull()
       expect(deletedChildNote).toBeNull()
       expect(deletedSiblingNote).toBeNull()

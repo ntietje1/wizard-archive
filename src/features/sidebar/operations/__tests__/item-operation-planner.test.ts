@@ -90,6 +90,23 @@ describe('planDuplicateOperations', () => {
     ])
   })
 
+  it('auto keeps both when duplicating an item into its current parent', () => {
+    const source = item('note-1', 'Scene')
+    const result = planDuplicateOperations({
+      items: [source],
+      targetParentId: null,
+      targetItems: [source, item('note-2', 'Scene 2')],
+    })
+
+    expect(result).toEqual({
+      status: 'ready',
+      conflicts: [],
+      operations: [
+        { sourceItemId: 'note-1', action: 'copy', targetParentId: null, name: 'Scene 3' },
+      ],
+    })
+  })
+
   it('maps replace to replace for files and mergeFolder for folders', () => {
     const fileResult = planDuplicateOperations({
       items: [item('file-1', 'Handout', SIDEBAR_ITEM_TYPES.files)],
@@ -121,6 +138,49 @@ describe('planDuplicateOperations', () => {
         destinationItemId: 'folder-2',
       },
     ])
+  })
+
+  it('propagates folder replace decisions to descendant duplicate conflicts', () => {
+    const sourceFolder = item('folder-1', 'Scenes', SIDEBAR_ITEM_TYPES.folders)
+    const destinationFolder = item('folder-2', 'Scenes', SIDEBAR_ITEM_TYPES.folders)
+    const sourceChild = item('note-1', 'Ambush', SIDEBAR_ITEM_TYPES.notes, {
+      parentId: sourceFolder._id,
+    })
+    const destinationChild = item('note-2', 'Ambush', SIDEBAR_ITEM_TYPES.notes, {
+      parentId: destinationFolder._id,
+    })
+
+    const result = planDuplicateOperations({
+      items: [sourceFolder],
+      targetParentId: null,
+      targetItems: [destinationFolder],
+      decisions: decisions({ 'folder-1': { action: 'replace' } }),
+      getChildren: (parentId) => {
+        if (parentId === sourceFolder._id) return [sourceChild]
+        if (parentId === destinationFolder._id) return [destinationChild]
+        return []
+      },
+    })
+
+    expect(result).toEqual({
+      status: 'ready',
+      conflicts: [],
+      operations: [
+        {
+          sourceItemId: sourceChild._id,
+          action: 'replace',
+          targetParentId: destinationFolder._id,
+          destinationItemId: destinationChild._id,
+          name: 'Ambush',
+        },
+        {
+          sourceItemId: sourceFolder._id,
+          action: 'mergeFolder',
+          targetParentId: null,
+          destinationItemId: destinationFolder._id,
+        },
+      ],
+    })
   })
 
   it('supports skip and cancel decisions', () => {
@@ -274,7 +334,7 @@ describe('planMoveOperations', () => {
     })
   })
 
-  it('surfaces child conflicts before folder merge cleanup operations are ready', () => {
+  it('propagates folder replace decisions to descendant move conflicts', () => {
     const sourceFolder = item('folder-1', 'Scenes', SIDEBAR_ITEM_TYPES.folders, {
       parentId: 'source-root' as Id<'sidebarItems'>,
     })
@@ -298,14 +358,25 @@ describe('planMoveOperations', () => {
       },
     })
 
-    expect(result.status).toBe('needs-decision')
-    expect(result.conflicts).toEqual([
-      expect.objectContaining({
-        sourceItemId: sourceChild._id,
-        destinationItemId: destinationChild._id,
-      }),
-    ])
-    expect(result.operations).toEqual([])
+    expect(result).toEqual({
+      status: 'ready',
+      conflicts: [],
+      operations: [
+        {
+          sourceItemId: sourceChild._id,
+          action: 'replace',
+          targetParentId: destinationFolder._id,
+          destinationItemId: destinationChild._id,
+          name: 'Ambush',
+        },
+        {
+          sourceItemId: sourceFolder._id,
+          action: 'mergeFolder',
+          targetParentId: null,
+          destinationItemId: destinationFolder._id,
+        },
+      ],
+    })
   })
 
   it('moves resolved folder merge children before cleaning up the source folder', () => {

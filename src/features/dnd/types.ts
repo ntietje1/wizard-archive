@@ -6,6 +6,7 @@ import type { DropResult } from '~/features/file-upload/utils/folder-reader'
 
 export interface DndExecutionContext {
   moveItems: (items: Array<AnySidebarItem>, parentId?: Id<'sidebarItems'> | null) => Promise<void>
+  copyItems: (items: Array<AnySidebarItem>, parentId?: Id<'sidebarItems'> | null) => Promise<void>
   restoreItems: (
     items: Array<AnySidebarItem>,
     parentId?: Id<'sidebarItems'> | null,

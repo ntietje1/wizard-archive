@@ -109,24 +109,73 @@ describe('item surface hotkey utilities', () => {
     ).toBe(note)
   })
 
-  it('pastes into a focused selected folder and otherwise uses the active surface parent', () => {
-    const surfaceParentId = testId<'sidebarItems'>('parent_1')
-    const note = createNote()
-    const folder = createFolder()
+  it('pastes sidebar-tree selections into their common parent folder', () => {
+    const parent = createFolder()
+    const note = createNote({ parentId: parent._id })
+    const folder = createFolder({ parentId: parent._id })
 
     expect(
       getKeyboardPasteParentId({
         selectedItems: [note, folder],
-        focusedItemId: folder._id,
-        surfaceParentId,
+        surface: 'sidebar',
+        surfaceParentId: null,
       }),
-    ).toBe(folder._id)
+    ).toBe(parent._id)
+  })
+
+  it('pastes sidebar-tree root selections at root', () => {
+    const folder = createFolder({ parentId: null })
+
     expect(
       getKeyboardPasteParentId({
-        selectedItems: [note, folder],
-        focusedItemId: note._id,
-        surfaceParentId,
+        selectedItems: [folder],
+        surface: 'sidebar',
+        surfaceParentId: null,
       }),
-    ).toBe(surfaceParentId)
+    ).toBeNull()
+  })
+
+  it('uses the active surface parent when selected sidebar-tree items span folders', () => {
+    const firstParent = createFolder()
+    const secondParent = createFolder()
+    const first = createNote({ parentId: firstParent._id })
+    const second = createNote({ parentId: secondParent._id })
+
+    expect(
+      getKeyboardPasteParentId({
+        selectedItems: [first, second],
+        surface: 'sidebar',
+        surfaceParentId: null,
+      }),
+    ).toBeNull()
+  })
+
+  it('uses a non-null active surface parent when selected sidebar-tree items span folders', () => {
+    const surfaceParent = createFolder()
+    const firstParent = createFolder()
+    const secondParent = createFolder()
+    const first = createNote({ parentId: firstParent._id })
+    const second = createNote({ parentId: secondParent._id })
+
+    expect(
+      getKeyboardPasteParentId({
+        selectedItems: [first, second],
+        surface: 'sidebar',
+        surfaceParentId: surfaceParent._id,
+      }),
+    ).toBe(surfaceParent._id)
+  })
+
+  it('uses the active surface parent for folder views regardless of selected child folders', () => {
+    const parent = createFolder()
+    const childFolder = createFolder({ parentId: parent._id })
+
+    expect(
+      getKeyboardPasteParentId({
+        selectedItems: [childFolder],
+        surface: 'folder-view',
+        surfaceParentId: parent._id,
+      }),
+    ).toBe(parent._id)
   })
 })

@@ -9,6 +9,8 @@ import { getSlug } from '~/features/sidebar/utils/sidebar-item-utils'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { addRecentItem } from '~/features/search/hooks/use-recent-items'
 
+const EMPTY_CUT_ITEM_IDS: Array<AnySidebarItem['_id']> = []
+
 export function useSelectedItemSync() {
   const editorMatch = useMatch({
     from: '/_app/_authed/campaigns/$dmUsername/$campaignSlug/editor',
@@ -34,12 +36,14 @@ export function useSidebarItemVisualState(item: AnySidebarItem) {
     useShallow((s) => ({
       selectedItemIds: s.selectedItemIds,
       selectedSlug: s.selectedSlug,
+      cutItemIds: s.itemClipboard?.mode === 'cut' ? s.itemClipboard.itemIds : EMPTY_CUT_ITEM_IDS,
     })),
   )
   return getSidebarItemVisualState({
     item,
     selectedItemIds: selection.selectedItemIds,
     selectedSlug: selection.selectedSlug,
+    cutItemIds: selection.cutItemIds,
   })
 }
 

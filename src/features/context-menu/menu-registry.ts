@@ -6,7 +6,6 @@ import {
   ArrowUpRight,
   Bookmark,
   Download,
-  ClipboardCopy,
   ClipboardPaste,
   Eye,
   EyeOff,
@@ -26,7 +25,6 @@ import {
   Pencil,
   Plus,
   RotateCcw,
-  Scissors,
   Share2,
   SquareArrowOutUpRight,
   Trash2,
@@ -113,8 +111,6 @@ export type ActionHandlers = {
   downloadItems: (context: EditorMenuContext) => void
   downloadAll: (context: EditorMenuContext) => void
   toggleBookmark: (context: EditorMenuContext) => void
-  copy: (context: EditorMenuContext) => void
-  cut: (context: EditorMenuContext) => void
   paste: (context: EditorMenuContext) => void
   duplicate: (context: EditorMenuContext) => void
   restore: (context: EditorMenuContext) => void
@@ -167,8 +163,6 @@ export const editorContextMenuCommands = {
   downloadItems: createActionCommand('downloadItems'),
   downloadAll: createActionCommand('downloadAll'),
   toggleBookmark: createActionCommand('toggleBookmark'),
-  copy: createActionCommand('copy'),
-  cut: createActionCommand('cut'),
   paste: createActionCommand('paste'),
   duplicate: createActionCommand('duplicate'),
   restore: createActionCommand('restore'),
@@ -524,27 +518,6 @@ export const editorContextMenuContributors = [
     id: 'editor-clipboard',
     surfaces: ['sidebar', 'folder-view'],
     getItems: () => [
-      {
-        id: 'copy',
-        commandId: 'copy',
-        label: 'Copy',
-        icon: ClipboardCopy,
-        group: 'edit',
-        priority: 85,
-        applies: (context) => p.hasSelection(context) && p.allSelectedItemsNotTrashed(context),
-      },
-      {
-        id: 'cut',
-        commandId: 'cut',
-        label: 'Cut',
-        icon: Scissors,
-        group: 'edit',
-        priority: 86,
-        applies: (context) =>
-          p.hasSelection(context) &&
-          p.allSelectedItemsNotTrashed(context) &&
-          p.allSelectedItemsHaveFullAccess(context),
-      },
       {
         id: 'paste',
         commandId: 'paste',

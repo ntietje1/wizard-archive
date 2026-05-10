@@ -38,6 +38,10 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
     moveItems: async (items, parentId) => {
       await itemOperations.moveItems(items, parentId)
     },
+    // DnD "copy" is the filesystem duplicate operation at the drop destination.
+    copyItems: async (items, parentId) => {
+      await itemOperations.duplicateItems(items, parentId)
+    },
     restoreItems: async (items, parentId) => {
       await itemOperations.restoreItems(items, parentId)
     },

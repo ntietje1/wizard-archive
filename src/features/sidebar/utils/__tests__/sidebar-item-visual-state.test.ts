@@ -23,7 +23,7 @@ describe('sidebar item visual state utilities', () => {
         selectedItemIds: [selected._id],
         selectedSlug: viewed.slug,
       }),
-    ).toEqual({ isSelected: false, isViewing: true, isMultiSelected: false })
+    ).toEqual({ isSelected: false, isViewing: true, isMultiSelected: false, isCut: false })
   })
 
   it('marks the viewed item selected without treating a single selection as multi-selected', () => {
@@ -35,7 +35,7 @@ describe('sidebar item visual state utilities', () => {
         selectedItemIds: [item._id],
         selectedSlug: item.slug,
       }),
-    ).toEqual({ isSelected: true, isViewing: true, isMultiSelected: false })
+    ).toEqual({ isSelected: true, isViewing: true, isMultiSelected: false, isCut: false })
   })
 
   it('marks the viewed item multi-selected when another item is selected too', () => {
@@ -48,7 +48,7 @@ describe('sidebar item visual state utilities', () => {
         selectedItemIds: [viewed._id, selected._id],
         selectedSlug: viewed.slug,
       }),
-    ).toEqual({ isSelected: true, isViewing: true, isMultiSelected: true })
+    ).toEqual({ isSelected: true, isViewing: true, isMultiSelected: true, isCut: false })
   })
 
   it('does not treat route selection as item selection', () => {
@@ -60,7 +60,7 @@ describe('sidebar item visual state utilities', () => {
         selectedItemIds: [],
         selectedSlug: item.slug,
       }),
-    ).toEqual({ isSelected: false, isViewing: true, isMultiSelected: false })
+    ).toEqual({ isSelected: false, isViewing: true, isMultiSelected: false, isCut: false })
   })
 
   it('uses safe defaults when selection inputs are missing', () => {
@@ -72,21 +72,43 @@ describe('sidebar item visual state utilities', () => {
         selectedItemIds: undefined,
         selectedSlug: undefined,
       }),
-    ).toEqual({ isSelected: false, isViewing: false, isMultiSelected: false })
+    ).toEqual({ isSelected: false, isViewing: false, isMultiSelected: false, isCut: false })
     expect(
       getSidebarItemVisualState({
         item,
         selectedItemIds: null,
         selectedSlug: null,
       }),
-    ).toEqual({ isSelected: false, isViewing: false, isMultiSelected: false })
+    ).toEqual({ isSelected: false, isViewing: false, isMultiSelected: false, isCut: false })
     expect(
       getSidebarItemVisualState({
         item,
         selectedItemIds: [],
         selectedSlug: undefined,
       }),
-    ).toEqual({ isSelected: false, isViewing: false, isMultiSelected: false })
+    ).toEqual({ isSelected: false, isViewing: false, isMultiSelected: false, isCut: false })
+  })
+
+  it('marks items that are in the cut clipboard', () => {
+    const cutItem = createNote()
+    const otherItem = createNote()
+
+    expect(
+      getSidebarItemVisualState({
+        item: cutItem,
+        selectedItemIds: [],
+        selectedSlug: null,
+        cutItemIds: [cutItem._id],
+      }),
+    ).toEqual({ isSelected: false, isViewing: false, isMultiSelected: false, isCut: true })
+    expect(
+      getSidebarItemVisualState({
+        item: otherItem,
+        selectedItemIds: [],
+        selectedSlug: null,
+        cutItemIds: [cutItem._id],
+      }),
+    ).toEqual({ isSelected: false, isViewing: false, isMultiSelected: false, isCut: false })
   })
 
   it('uses purple for selected backgrounds unless the viewed item is the only selection', () => {
@@ -127,6 +149,27 @@ describe('sidebar item visual state utilities', () => {
     ).toBe('hover:bg-muted-foreground/6 dark:hover:bg-muted/50')
   })
 
+  it('dims cut item backgrounds without changing their selection color rule', () => {
+    expect(
+      sidebarItemBackgroundClass({
+        isSelected: true,
+        isViewing: false,
+        isMultiSelected: false,
+        isCut: true,
+      }),
+    ).toBe(
+      'bg-primary/12 hover:bg-primary/16 dark:bg-primary/20 dark:hover:bg-primary/28 opacity-60',
+    )
+    expect(
+      sidebarItemBackgroundClass({
+        isSelected: false,
+        isViewing: true,
+        isMultiSelected: false,
+        isCut: true,
+      }),
+    ).toBe('bg-muted-foreground/10 dark:bg-muted/70 opacity-60')
+  })
+
   it.each([
     ['name', sidebarItemNameClass],
     ['icon', sidebarItemIconClass],
@@ -146,10 +189,11 @@ describe('sidebar item visual state utilities', () => {
     )
   })
 
-  it('uses the same action group reveal behavior for sidebar-like item rows', () => {
+  it('reveals action buttons on hover or while the share popover is open, not focus', () => {
     expect(sidebarItemActionGroupClass).toBe(
-      'flex items-center shrink-0 w-0 overflow-hidden opacity-0 pointer-events-none group-hover:w-auto group-hover:overflow-visible group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:w-auto group-focus-within:overflow-visible group-focus-within:opacity-100 group-focus-within:pointer-events-auto has-[[data-share-open]]:w-auto has-[[data-share-open]]:overflow-visible has-[[data-share-open]]:opacity-100 has-[[data-share-open]]:pointer-events-auto',
+      'flex items-center shrink-0 w-0 overflow-hidden opacity-0 pointer-events-none group-hover:w-auto group-hover:overflow-visible group-hover:opacity-100 group-hover:pointer-events-auto has-[[data-share-open]]:w-auto has-[[data-share-open]]:overflow-visible has-[[data-share-open]]:opacity-100 has-[[data-share-open]]:pointer-events-auto',
     )
+    expect(sidebarItemActionGroupClass).not.toContain('group-focus-within')
   })
 
   it('does not stack hover overlays onto viewed items', () => {

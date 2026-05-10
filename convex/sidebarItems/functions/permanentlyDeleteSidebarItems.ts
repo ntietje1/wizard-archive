@@ -17,6 +17,9 @@ import type { AnySidebarItemRow } from '../types/types'
 const MAX_PERMANENT_DELETE_DEPTH = 50
 const MAX_PERMANENT_DELETE_BATCH_SIZE = 100
 type PermanentDeleteSource = AnySidebarItemRow & { myPermissionLevel: PermissionLevel }
+export type PermanentlyDeleteSidebarItemsResult = {
+  deletedRootItemIds: Array<Id<'sidebarItems'>>
+}
 
 async function loadPermanentDeleteSource(
   ctx: CampaignMutationCtx,
@@ -107,8 +110,8 @@ async function normalizePermanentDeleteRoots(
 export async function permanentlyDeleteSidebarItems(
   ctx: CampaignMutationCtx,
   { sourceItemIds }: { sourceItemIds: Array<Id<'sidebarItems'>> },
-): Promise<Array<Id<'sidebarItems'>>> {
-  if (sourceItemIds.length === 0) return []
+): Promise<PermanentlyDeleteSidebarItemsResult> {
+  if (sourceItemIds.length === 0) return { deletedRootItemIds: [] }
 
   if (sourceItemIds.length > MAX_PERMANENT_DELETE_BATCH_SIZE) {
     throwClientError(
@@ -126,5 +129,5 @@ export async function permanentlyDeleteSidebarItems(
     await hardDeleteTree(ctx, item)
   }
 
-  return rootItems.map((item) => item._id)
+  return { deletedRootItemIds: rootItems.map((item) => item._id) }
 }

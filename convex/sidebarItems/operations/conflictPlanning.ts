@@ -7,6 +7,7 @@ export type PlannerItemStatus = 'ready' | 'cancelled' | 'needs-decision'
 
 export type ConflictPlanningContext = {
   decisions: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
+  defaultConflictDecision?: ConflictDecision
   conflicts: Array<ItemOperationConflict>
 }
 
@@ -49,7 +50,7 @@ export function applyConflictDecision(
   conflictTarget: OperationPlannerItem,
   handlers: ConflictDecisionHandlers,
 ): PlannerItemStatus {
-  const decision = context.decisions[item._id]
+  const decision = context.decisions[item._id] ?? context.defaultConflictDecision
   if (!decision) {
     context.conflicts.push(createConflict(item, conflictTarget))
     return 'needs-decision'
@@ -87,6 +88,7 @@ export function addPlannedFolderMergeOperations<TOperation>({
     depth: number
     conflicts: Array<ItemOperationConflict>
     operations: Array<TOperation>
+    defaultConflictDecision?: ConflictDecision
   }
   item: OperationPlannerItem
   conflictTarget: OperationPlannerItem
@@ -95,6 +97,7 @@ export function addPlannedFolderMergeOperations<TOperation>({
     targetParentId: Id<'sidebarItems'>
     targetItems: Array<OperationPlannerItem>
     decisions: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
+    defaultConflictDecision?: ConflictDecision
     getChildren: (parentId: Id<'sidebarItems'>) => Array<OperationPlannerItem>
     depth: number
   }) =>
@@ -113,6 +116,7 @@ export function addPlannedFolderMergeOperations<TOperation>({
       targetParentId: conflictTarget._id,
       targetItems: context.getChildren(conflictTarget._id),
       decisions: context.decisions,
+      defaultConflictDecision: context.decisions[item._id] ?? context.defaultConflictDecision,
       getChildren: context.getChildren,
       depth: context.depth + 1,
     })

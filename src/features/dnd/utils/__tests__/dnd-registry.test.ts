@@ -735,6 +735,93 @@ describe('resolveTestDropCommand', () => {
       reason: 'mixed_actions',
     })
   })
+
+  it('returns a copy command for ctrl-dragging active items into a folder', () => {
+    const note = createNote({ parentId: null })
+    const target = folderTarget()
+
+    expect(resolveGlobalDropCommand([note], target, createCtx(), { copy: true })).toEqual({
+      status: 'ready',
+      action: 'copy',
+      items: [note],
+      parentId: target._id,
+    })
+  })
+
+  it('returns a copy command for ctrl-dragging active items to root', () => {
+    const note = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
+
+    expect(resolveGlobalDropCommand([note], rootTarget(), createCtx(), { copy: true })).toEqual({
+      status: 'ready',
+      action: 'copy',
+      items: [note],
+      parentId: null,
+    })
+  })
+
+  it('blocks ctrl-drag copy to root for non-DM users', () => {
+    const note = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
+
+    expect(
+      resolveGlobalDropCommand([note], rootTarget(), createCtx({ isDm: false }), { copy: true }),
+    ).toEqual({
+      status: 'blocked',
+      reason: 'dm_only',
+    })
+  })
+
+  it('blocks ctrl-drag copy when the source item is trashed', () => {
+    const note = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
+    const target = folderTarget()
+
+    expect(resolveGlobalDropCommand([note], target, createCtx(), { copy: true })).toEqual({
+      status: 'blocked',
+      reason: 'trashed_item',
+    })
+  })
+
+  it('blocks ctrl-drag copy when the target folder lacks permission', () => {
+    const note = createNote()
+    const target = folderTarget({ myPermissionLevel: PERMISSION_LEVEL.VIEW })
+
+    expect(resolveGlobalDropCommand([note], target, createCtx(), { copy: true })).toEqual({
+      status: 'blocked',
+      reason: 'no_permission',
+    })
+  })
+
+  it('blocks ctrl-drag copy of a folder into its descendant', () => {
+    const folder = createFolder()
+    const target = folderTarget({ ancestorIds: [folder._id] })
+
+    expect(resolveGlobalDropCommand([folder], target, createCtx(), { copy: true })).toEqual({
+      status: 'blocked',
+      reason: 'circular',
+    })
+  })
+
+  it('copies into the same parent instead of treating ctrl-drag as a no-op', () => {
+    const target = folderTarget()
+    const note = createNote({ parentId: target._id })
+
+    expect(resolveGlobalDropCommand([note], target, createCtx(), { copy: true })).toEqual({
+      status: 'ready',
+      action: 'copy',
+      items: [note],
+      parentId: target._id,
+    })
+  })
+
+  it('does not copy to trash on ctrl-drag', () => {
+    const note = createNote()
+
+    expect(resolveGlobalDropCommand([note], trashTarget(), createCtx(), { copy: true })).toEqual({
+      status: 'ready',
+      action: 'trash',
+      items: [note],
+      parentId: null,
+    })
+  })
 })
 
 // ─── canDropFilesOnTarget ──────────────────────────────────────────

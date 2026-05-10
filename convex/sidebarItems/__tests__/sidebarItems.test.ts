@@ -384,7 +384,9 @@ describe('moveSidebarItems', () => {
       destination: await dbCtx.db.get('sidebarItems', destinationNote),
     }))
 
-    expect(movedIds).toEqual([sourceNote])
+    expect(movedIds.movedSourceItemIds).toEqual([sourceNote])
+    expect(movedIds.mergedSourceItemIds).toEqual([])
+    expect(movedIds.skippedSourceItemIds).toEqual([])
     expect(rows.source?.parentId).toBe(destinationFolder)
     expect(rows.source?.location).toBe('sidebar')
     expect(rows.source?.name).toBe('Scene')
@@ -433,7 +435,9 @@ describe('moveSidebarItems', () => {
       skippedChild: await dbCtx.db.get('sidebarItems', skippedChild),
     }))
 
-    expect(movedIds).toEqual([destinationFolder])
+    expect(movedIds.movedSourceItemIds).toEqual([])
+    expect(movedIds.mergedSourceItemIds).toEqual([sourceFolder])
+    expect(movedIds.skippedSourceItemIds).toEqual([skippedChild])
     expect(rows.sourceFolder?.location).toBe('sidebar')
     expect(rows.skippedChild?.location).toBe('sidebar')
     expect(rows.skippedChild?.parentId).toBe(sourceFolder)

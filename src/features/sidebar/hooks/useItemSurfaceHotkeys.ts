@@ -47,6 +47,7 @@ interface HotkeyHandlerContext {
   itemOperations: ItemSurfaceHotkeyOperations
   setSelectedItemIds: (ids: Array<AnySidebarItem['_id']>) => void
   clearItemSelection: () => void
+  setItemClipboard: ReturnType<typeof useSidebarUIStore.getState>['setItemClipboard']
   setRenamingId: ReturnType<typeof useSidebarUIStore.getState>['setRenamingId']
   moveFocus: ReturnType<typeof useSidebarUIStore.getState>['moveFocus']
   navigateToItem: ReturnType<typeof useEditorNavigation>['navigateToItem']
@@ -103,6 +104,11 @@ function handleEscape(event: KeyboardEvent, context: HotkeyHandlerContext): bool
   if (event.key !== 'Escape') return false
 
   event.preventDefault()
+  if (context.itemClipboard) {
+    context.setItemClipboard(null)
+    return true
+  }
+
   context.clearItemSelection()
   return true
 }
@@ -135,7 +141,7 @@ function handlePaste(event: KeyboardEvent, context: HotkeyHandlerContext): boole
   event.preventDefault()
   const pasteParentId = getKeyboardPasteParentId({
     selectedItems: context.selectedItems,
-    focusedItemId: context.focusedItemId,
+    surface: context.activeItemSurface.surface,
     surfaceParentId: context.activeItemSurface.parentId,
   })
 
@@ -219,6 +225,7 @@ export function useItemSurfaceHotkeys(itemOperations: ItemSurfaceHotkeyOperation
   const itemClipboard = useSidebarUIStore((s) => s.itemClipboard)
   const setSelectedItemIds = useSidebarUIStore((s) => s.setSelectedItemIds)
   const clearItemSelection = useSidebarUIStore((s) => s.clearItemSelection)
+  const setItemClipboard = useSidebarUIStore((s) => s.setItemClipboard)
   const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
   const moveFocus = useSidebarUIStore((s) => s.moveFocus)
 
@@ -243,6 +250,7 @@ export function useItemSurfaceHotkeys(itemOperations: ItemSurfaceHotkeyOperation
         itemOperations: itemOperationsRef.current,
         setSelectedItemIds,
         clearItemSelection,
+        setItemClipboard,
         setRenamingId,
         moveFocus,
         navigateToItem,
@@ -265,6 +273,7 @@ export function useItemSurfaceHotkeys(itemOperations: ItemSurfaceHotkeyOperation
     navigateToItem,
     openParentFolders,
     setSelectedItemIds,
+    setItemClipboard,
     selectedItemIds,
     setLastSelectedItem,
     setRenamingId,

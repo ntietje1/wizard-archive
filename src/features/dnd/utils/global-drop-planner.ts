@@ -1,10 +1,13 @@
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
+import { evaluateDuplicate } from 'convex/sidebarItems/operations/capabilities'
 import type { DropOutcome } from './drop-outcome'
 import { resolveDropOutcome } from './drop-outcome-planner'
+import { actorFromDropPlanningContext } from './drop-planning-context'
 import type { DropPlanningContext } from './drop-planning-context'
 import type { DropRejectionReason } from './drop-rejections'
+import { toDropRejectionReason } from './drop-rejections'
 import {
   EMPTY_EDITOR_DROP_TYPE,
   SIDEBAR_ROOT_DROP_TYPE,
@@ -29,6 +32,9 @@ type DroppableMoveItemsResult =
   | { status: 'none' }
 
 type MoveDropAction = 'move' | 'restore'
+export type GlobalDropOptions = {
+  copy?: boolean
+}
 
 type ResolvedMoveDropItem = {
   item: AnySidebarItem
@@ -45,7 +51,7 @@ export type GlobalDropCommand =
   | { status: 'blocked'; reason: DropRejectionReason }
   | {
       status: 'ready'
-      action: 'move' | 'restore' | 'trash'
+      action: 'move' | 'copy' | 'restore' | 'trash'
       items: Array<AnySidebarItem>
       parentId: Id<'sidebarItems'> | null
     }
@@ -122,6 +128,37 @@ function getOpenCommand(
     : { status: 'noop' }
 }
 
+function getCopyCommand(
+  items: Array<AnySidebarItem>,
+  target: SidebarDropData,
+  ctx: DropPlanningContext,
+): GlobalDropCommand {
+  if (target.type !== SIDEBAR_ROOT_DROP_TYPE && target.type !== SIDEBAR_ITEM_TYPES.folders) {
+    return { status: 'noop' }
+  }
+
+  const parentId = target.type === SIDEBAR_ITEM_TYPES.folders ? target._id : null
+  for (const item of items) {
+    if (
+      target.type === SIDEBAR_ITEM_TYPES.folders &&
+      item.type === SIDEBAR_ITEM_TYPES.folders &&
+      (target._id === item._id || target.ancestorIds?.includes(item._id))
+    ) {
+      return { status: 'blocked', reason: 'circular' }
+    }
+
+    const capability = evaluateDuplicate(actorFromDropPlanningContext(ctx), item, {
+      parentId,
+      parent: target.type === SIDEBAR_ITEM_TYPES.folders ? target : null,
+    })
+    if (!capability.ok) {
+      return { status: 'blocked', reason: toDropRejectionReason(capability.code) }
+    }
+  }
+
+  return { status: 'ready', action: 'copy', items, parentId }
+}
+
 function getTrashCommand(
   items: Array<AnySidebarItem>,
   target: SidebarDropData,
@@ -146,11 +183,16 @@ export function resolveGlobalDropCommand(
   items: Array<AnySidebarItem>,
   target: SidebarDropData,
   ctx: DropPlanningContext,
+  options: GlobalDropOptions = {},
 ): GlobalDropCommand {
   if (items.length === 0) return { status: 'noop' }
 
   if (target.type === TRASH_DROP_ZONE_TYPE) {
     return getTrashCommand(items, target, ctx)
+  }
+
+  if (options.copy) {
+    return getCopyCommand(items, target, ctx)
   }
 
   const moveItems = getDroppableMoveItems(items, target, ctx)
@@ -176,6 +218,8 @@ export function dropCommandFailureMessage(
   switch (command.action) {
     case 'move':
       return 'Failed to move items'
+    case 'copy':
+      return 'Failed to copy items'
     case 'restore':
       return 'Failed to restore items'
     case 'trash':

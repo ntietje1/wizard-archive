@@ -79,12 +79,7 @@ function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
 
   const handleRestore = async () => {
     try {
-      const movedIds = await itemOperations.restoreItems([item])
-      if (movedIds.length > 0) {
-        toast.success('Item restored')
-      } else {
-        toast.info('Item already restored')
-      }
+      await itemOperations.restoreItems([item])
     } catch (error) {
       handleError(error, 'Failed to restore item')
     }

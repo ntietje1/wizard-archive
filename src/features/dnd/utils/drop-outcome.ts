@@ -1,6 +1,14 @@
 import type { DropRejectionReason } from './drop-rejections'
 
-export type DragDropAction = 'move' | 'trash' | 'restore' | 'pin' | 'embed' | 'open' | 'link'
+export type DragDropAction =
+  | 'move'
+  | 'copy'
+  | 'trash'
+  | 'restore'
+  | 'pin'
+  | 'embed'
+  | 'open'
+  | 'link'
 
 type OperationOutcome = {
   type: 'operation'

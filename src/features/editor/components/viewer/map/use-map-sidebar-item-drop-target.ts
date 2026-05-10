@@ -75,12 +75,12 @@ export function useMapSidebarItemDropTarget({
           execute: async (pinCommand) => {
             const itemIds = pinCommand.items.map((item) => item._id)
             if (itemIds.length === 0) return
-            await createItemPinsMutation.mutateAsync({
+            const pinIds = await createItemPinsMutation.mutateAsync({
               mapId: mapRef.current._id,
               pins: buildMapPinPlacementInputs(itemIds, position),
             })
             toast.success(
-              itemIds.length === 1 ? 'Pin placed on map' : `${itemIds.length} pins placed on map`,
+              pinIds.length === 1 ? 'Pin placed on map' : `${pinIds.length} pins placed on map`,
             )
           },
         })

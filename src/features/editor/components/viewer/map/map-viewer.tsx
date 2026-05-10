@@ -354,12 +354,25 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
     position: PinPosition,
   ) => {
     try {
-      await createItemPinsMutation.mutateAsync({
+      const pinIds = await createItemPinsMutation.mutateAsync({
         mapId: map._id,
         pins: buildMapPinPlacementInputs(itemIds, position),
       })
+      if (!Array.isArray(pinIds)) {
+        throw new Error('Map pin creation returned an invalid result')
+      }
+      if (pinIds.length === 0) {
+        toast.error(itemIds.length === 1 ? 'Pin was not placed' : 'No pins were placed')
+        return false
+      }
+      if (pinIds.length < itemIds.length) {
+        toast.success(
+          `${pinIds.length} pins placed on map, ${itemIds.length - pinIds.length} skipped`,
+        )
+        return true
+      }
       toast.success(
-        itemIds.length === 1 ? 'Pin placed on map' : `${itemIds.length} pins placed on map`,
+        pinIds.length === 1 ? 'Pin placed on map' : `${pinIds.length} pins placed on map`,
       )
       return true
     } catch (error) {

@@ -1,4 +1,3 @@
-import { toast } from 'sonner'
 import type { ActionHandlers } from './menu-registry'
 import type { MenuContext } from './types'
 import { resolveContextOperationItems } from './selection-context'
@@ -11,7 +10,7 @@ import { handleError } from '~/shared/utils/logger'
 
 type FilesystemActions = Pick<
   ActionHandlers,
-  'delete' | 'restore' | 'permanentlyDelete' | 'copy' | 'cut' | 'paste' | 'duplicate'
+  'delete' | 'restore' | 'permanentlyDelete' | 'paste' | 'duplicate'
 >
 
 export function createFilesystemActions({
@@ -27,6 +26,15 @@ export function createFilesystemActions({
 }): FilesystemActions {
   const normalizedContextItems = (ctx: MenuContext) =>
     itemOperations.normalizeItems(resolveContextOperationItems(ctx))
+  const getPasteTargetParentId = (ctx: MenuContext) => {
+    if (ctx.item && isFolder(ctx.item)) return ctx.item._id
+
+    const items = normalizedContextItems(ctx)
+    if (items.length === 0) return undefined
+
+    const parentId = items[0]?.parentId ?? null
+    return items.every((item) => item.parentId === parentId) ? parentId : undefined
+  }
 
   return {
     delete: async (ctx) => {
@@ -57,14 +65,7 @@ export function createFilesystemActions({
       const items = normalizedContextItems(ctx)
       if (items.length === 0) return
       try {
-        const movedIds = await itemOperations.restoreItems(items)
-        if (movedIds.length === 0) {
-          toast.info('No items restored')
-        } else {
-          toast.success(
-            movedIds.length === 1 ? 'Item restored' : `${movedIds.length} items restored`,
-          )
-        }
+        await itemOperations.restoreItems(items)
       } catch (error) {
         handleError(
           error,
@@ -81,10 +82,8 @@ export function createFilesystemActions({
       }
     },
 
-    copy: (ctx) => itemOperations.copyItems(normalizedContextItems(ctx)),
-    cut: (ctx) => itemOperations.cutItems(normalizedContextItems(ctx)),
     paste: async (ctx) => {
-      const targetParentId = ctx.item && isFolder(ctx.item) ? ctx.item._id : undefined
+      const targetParentId = getPasteTargetParentId(ctx)
       try {
         await itemOperations.pasteClipboard(targetParentId)
       } catch (error) {

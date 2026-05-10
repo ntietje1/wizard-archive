@@ -248,7 +248,7 @@ function DmRow({ profile }: { profile: UserProfile }) {
         <SelectTrigger size="sm" className="min-w-[110px] h-7 text-xs">
           <SelectValue>Full access</SelectValue>
         </SelectTrigger>
-        <SelectContent positionerClassName={OVERLAY_Z_INDEX}>
+        <SelectContent positionerClassName={OVERLAY_Z_INDEX} portal={false}>
           <SelectItem value="full_access">Full access</SelectItem>
         </SelectContent>
       </Select>
@@ -304,6 +304,7 @@ function PlayerRow({
           align="end"
           alignItemWithTrigger={false}
           positionerClassName={OVERLAY_Z_INDEX}
+          portal={false}
         >
           {selectValue === 'mixed' && (
             <>
@@ -419,6 +420,7 @@ function AllPlayersRow({
           align="end"
           alignItemWithTrigger={false}
           positionerClassName={OVERLAY_Z_INDEX}
+          portal={false}
         >
           {selectValue === 'mixed' && (
             <>

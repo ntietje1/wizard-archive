@@ -24,6 +24,7 @@ function createMonitorCtx(items: Array<AnySidebarItem>): DndMonitorCtx {
     getAncestorIds: vi.fn(() => []),
     dndContext: {
       moveItems: vi.fn(),
+      copyItems: vi.fn(),
       restoreItems: vi.fn(),
       trashItems: vi.fn(),
       navigateToItem: vi.fn(),
@@ -273,5 +274,52 @@ describe('useElementDragMonitor', () => {
       label: 'Pin to "World Map"',
     })
     expect(result.current.dragState?.rejectedItemCount).toBe(1)
+  })
+
+  it('executes ctrl-drag note drops onto folders as one copy operation', async () => {
+    const note = createNote()
+    const target = createFolder()
+    const ctx = createMonitorCtx([note, target])
+    const ctxRef = {
+      current: ctx,
+    } as React.RefObject<DndMonitorCtx>
+
+    renderHook(() => useElementDragMonitor(ctxRef))
+    expect(monitorForElements).toHaveBeenCalledTimes(1)
+    const monitor = monitorForElements.mock.calls[0]?.[0] as {
+      onDrop: (args: {
+        source: { data: Record<string, unknown> }
+        location: {
+          current: {
+            input: { clientX: number; clientY: number; ctrlKey: boolean }
+            dropTargets: Array<{ data: Record<string, unknown> }>
+          }
+        }
+      }) => Promise<void>
+    }
+
+    await act(async () => {
+      await monitor.onDrop({
+        source: {
+          data: {
+            sidebarItemId: note._id,
+            sidebarItemIds: [note._id] satisfies Array<Id<'sidebarItems'>>,
+          },
+        },
+        location: {
+          current: {
+            input: { clientX: 20, clientY: 30, ctrlKey: true },
+            dropTargets: [
+              {
+                data: { sidebarItemId: target._id },
+              },
+            ],
+          },
+        },
+      })
+    })
+
+    expect(ctx.dndContext.copyItems).toHaveBeenCalledWith([note], target._id)
+    expect(ctx.dndContext.moveItems).not.toHaveBeenCalled()
   })
 })

@@ -1,11 +1,15 @@
 import { useState } from 'react'
 import { Share2 } from 'lucide-react'
+import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { Button } from '~/features/shadcn/components/button'
 import { Popover, PopoverContent, PopoverTrigger } from '~/features/shadcn/components/popover'
 import { SidebarItemsSharePanel } from '~/features/sharing/components/sidebar-items-share-panel'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { cn } from '~/features/shadcn/lib/utils'
+import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
+import { useActiveSidebarItems, useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { resolveContextSelectedItems } from '~/features/context-menu/selection-context'
 
 export function SidebarShareButton({
   item,
@@ -19,9 +23,30 @@ export function SidebarShareButton({
   buttonClassName?: string
 }) {
   const { isDm } = useCampaign()
-  const [open, setOpen] = useState(false)
 
   if (!isDm) return null
+
+  return <SidebarShareButtonPopover item={item} buttonClassName={buttonClassName} />
+}
+
+function SidebarShareButtonPopover({
+  item,
+  buttonClassName,
+}: {
+  item: AnySidebarItem
+  buttonClassName?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const selectedItemIds = useSidebarUIStore((s) => s.selectedItemIds)
+  const { itemsMap } = useActiveSidebarItems()
+  const { itemsMap: trashedItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
+  const shareItems = resolveContextSelectedItems({
+    item,
+    selectedItemIds,
+    activeItemsMap: itemsMap,
+    trashedItemsMap,
+    canUseItemSelection: true,
+  })
 
   return (
     <div
@@ -44,7 +69,7 @@ export function SidebarShareButton({
           }
         />
         <PopoverContent align="start" side="right" sideOffset={4} className="w-auto p-2">
-          {open && <SidebarItemsSharePanel items={[item]} />}
+          {open && <SidebarItemsSharePanel items={shareItems} />}
         </PopoverContent>
       </Popover>
     </div>

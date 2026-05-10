@@ -1,6 +1,6 @@
-import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { ItemSurface } from '~/features/sidebar/stores/sidebar-ui-store'
 
 export function getKeyboardOpenItem({
   selectedItems,
@@ -13,20 +13,24 @@ export function getKeyboardOpenItem({
   return selectedItems.find((item) => item._id === focusedItemId) ?? selectedItems[0]
 }
 
+function commonSelectedParentId(
+  selectedItems: Array<AnySidebarItem>,
+): Id<'sidebarItems'> | null | undefined {
+  if (selectedItems.length === 0) return undefined
+  const parentId = selectedItems[0].parentId
+  return selectedItems.every((item) => item.parentId === parentId) ? parentId : undefined
+}
+
 export function getKeyboardPasteParentId({
   selectedItems,
-  focusedItemId,
+  surface,
   surfaceParentId,
 }: {
   selectedItems: Array<AnySidebarItem>
-  focusedItemId: Id<'sidebarItems'> | null
+  surface: ItemSurface
   surfaceParentId: Id<'sidebarItems'> | null
 }): Id<'sidebarItems'> | null {
-  const focusedItem = selectedItems.find((item) => item._id === focusedItemId)
-  const candidate = selectedItems.length === 1 ? selectedItems[0] : focusedItem
-  return candidate &&
-    candidate.type === SIDEBAR_ITEM_TYPES.folders &&
-    candidate.location !== SIDEBAR_ITEM_LOCATION.trash
-    ? candidate._id
-    : surfaceParentId
+  if (surface !== 'sidebar' && surface !== 'bookmarks') return surfaceParentId
+  const selectedParentId = commonSelectedParentId(selectedItems)
+  return selectedParentId === undefined ? surfaceParentId : selectedParentId
 }

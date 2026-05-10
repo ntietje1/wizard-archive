@@ -1,5 +1,6 @@
 import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { toast } from 'sonner'
 import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
@@ -17,6 +18,37 @@ let sidebarItems: Array<AnySidebarItem> = []
 let trashItems: Array<AnySidebarItem> = []
 let mutationHookCallIndex = 0
 
+function moveResult(overrides: Partial<Awaited<ReturnType<typeof moveSidebarItems>>> = {}) {
+  return {
+    affectedItemIds: [],
+    movedSourceItemIds: [],
+    restoredSourceItemIds: [],
+    trashedSourceItemIds: [],
+    mergedSourceItemIds: [],
+    skippedSourceItemIds: [],
+    noopSourceItemIds: [],
+    ...overrides,
+  }
+}
+
+function duplicateResult(
+  overrides: Partial<Awaited<ReturnType<typeof duplicateSidebarItems>>> = {},
+) {
+  return {
+    createdItemIds: [],
+    createdRootItemIds: [],
+    copiedSourceItemIds: [],
+    replacedSourceItemIds: [],
+    mergedSourceItemIds: [],
+    skippedSourceItemIds: [],
+    ...overrides,
+  }
+}
+
+function permanentDeleteResult(deletedRootItemIds: Array<Id<'sidebarItems'>> = []) {
+  return { deletedRootItemIds }
+}
+
 vi.mock('sonner', () => ({
   toast: {
     success: vi.fn(),
@@ -26,7 +58,10 @@ vi.mock('sonner', () => ({
 }))
 
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
-  useCampaign: () => ({ campaignId: 'campaign_1' as Id<'campaigns'> }),
+  useCampaign: () => ({
+    campaignId: 'campaign_1' as Id<'campaigns'>,
+    campaign: { data: { myMembership: { userId: null } } },
+  }),
 }))
 
 vi.mock('~/features/sidebar/hooks/useEditorNavigation', () => ({
@@ -85,7 +120,9 @@ describe('useSidebarItemOperationsValue', () => {
     const child = createNote({ name: 'Child', parentId: folder._id })
     const target = createFolder({ name: 'Target' })
     sidebarItems = [folder, child, target]
-    moveSidebarItems.mockResolvedValue([folder._id])
+    moveSidebarItems.mockResolvedValue(
+      moveResult({ affectedItemIds: [folder._id], movedSourceItemIds: [folder._id] }),
+    )
     useSidebarUIStore.getState().setActiveItemSurface({
       surface: 'sidebar',
       parentId: null,
@@ -115,7 +152,9 @@ describe('useSidebarItemOperationsValue', () => {
       parentId: null,
     })
     trashItems = [folder]
-    moveSidebarItems.mockResolvedValue([folder._id])
+    moveSidebarItems.mockResolvedValue(
+      moveResult({ affectedItemIds: [folder._id], restoredSourceItemIds: [folder._id] }),
+    )
     useSidebarUIStore.getState().setActiveItemSurface({
       surface: 'folder-view',
       parentId: folder._id,
@@ -144,7 +183,9 @@ describe('useSidebarItemOperationsValue', () => {
     const existing = createNote({ name: 'Meeting Notes', parentId: null })
     sidebarItems = [existing]
     trashItems = [trashed]
-    moveSidebarItems.mockResolvedValue([trashed._id])
+    moveSidebarItems.mockResolvedValue(
+      moveResult({ affectedItemIds: [trashed._id], restoredSourceItemIds: [trashed._id] }),
+    )
 
     const { result } = renderHook(() => useSidebarItemOperationsValue())
     await act(async () => {
@@ -156,7 +197,9 @@ describe('useSidebarItemOperationsValue', () => {
     render(result.current.dialog)
     expect(screen.getByRole('heading', { name: 'Resolve File Conflict' })).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Keep Both' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Use incoming Meeting Notes' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Use existing Meeting Notes' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Apply selected conflict choices' }))
 
     await waitFor(() => {
       expect(moveSidebarItems).toHaveBeenCalledWith({
@@ -173,7 +216,14 @@ describe('useSidebarItemOperationsValue', () => {
     const child = createNote({ name: 'Child', parentId: folder._id })
     const target = createFolder({ name: 'Target' })
     sidebarItems = [folder, child, target]
-    duplicateSidebarItems.mockResolvedValue([testId<'sidebarItems'>('copy_1')])
+    const createdId = testId<'sidebarItems'>('copy_1')
+    duplicateSidebarItems.mockResolvedValue(
+      duplicateResult({
+        createdItemIds: [createdId],
+        createdRootItemIds: [createdId],
+        copiedSourceItemIds: [folder._id],
+      }),
+    )
 
     const { result } = renderHook(() => useSidebarItemOperationsValue())
     await act(async () => {
@@ -184,6 +234,99 @@ describe('useSidebarItemOperationsValue', () => {
       sourceItemIds: [folder._id],
       targetParentId: target._id,
       decisions: undefined,
+    })
+    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([createdId])
+  })
+
+  it('counts only created roots in duplicate conflict feedback', async () => {
+    const target = createFolder({ name: 'Target' })
+    const first = createNote({ name: 'Scene A' })
+    const second = createNote({ name: 'Scene B' })
+    const existingFirst = createNote({ name: 'Scene A', parentId: target._id })
+    const existingSecond = createNote({ name: 'Scene B', parentId: target._id })
+    const createdId = testId<'sidebarItems'>('copy_1')
+    sidebarItems = [target, first, second, existingFirst, existingSecond]
+    duplicateSidebarItems.mockResolvedValue(
+      duplicateResult({
+        createdItemIds: [createdId],
+        createdRootItemIds: [createdId],
+        replacedSourceItemIds: [first._id],
+        skippedSourceItemIds: [second._id],
+      }),
+    )
+
+    const { result } = renderHook(() => useSidebarItemOperationsValue())
+    await act(async () => {
+      await result.current.duplicateItems([first, second], target._id)
+    })
+
+    render(result.current.dialog)
+    fireEvent.click(screen.getByRole('button', { name: 'Decide for each item' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Use incoming Scene A' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Use existing Scene B' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Apply selected conflict choices' }))
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith('Item copied')
+    })
+    expect(toast.success).not.toHaveBeenCalledWith('2 items copied')
+    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([createdId])
+  })
+
+  it('clears a cut clipboard without moving when pasting every item into its current parent', async () => {
+    const folder = createFolder({ name: 'Folder' })
+    const first = createNote({ name: 'First', parentId: folder._id })
+    const second = createNote({ name: 'Second', parentId: folder._id })
+    sidebarItems = [folder, first, second]
+    useSidebarUIStore.getState().setActiveItemSurface({
+      surface: 'folder-view',
+      parentId: folder._id,
+      visibleItemIds: [first._id, second._id],
+    })
+    useSidebarUIStore.getState().setSelectedItemIds([first._id, second._id], first._id)
+    useSidebarUIStore.getState().setItemClipboard({
+      mode: 'cut',
+      campaignId: testId<'campaigns'>('campaign_1'),
+      itemIds: [first._id, second._id],
+    })
+
+    const { result } = renderHook(() => useSidebarItemOperationsValue())
+    await act(async () => {
+      await result.current.pasteClipboard(folder._id)
+    })
+
+    expect(moveSidebarItems).not.toHaveBeenCalled()
+    expect(useSidebarUIStore.getState().itemClipboard).toBeNull()
+    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([first._id, second._id])
+    expect(useSidebarUIStore.getState().anchorItemId).toBe(first._id)
+  })
+
+  it('keeps copy and cut selection unchanged while updating the clipboard', () => {
+    const first = createNote({ name: 'First' })
+    const second = createNote({ name: 'Second' })
+    sidebarItems = [first, second]
+    useSidebarUIStore.getState().setSelectedItemIds([first._id, second._id], first._id)
+
+    const { result } = renderHook(() => useSidebarItemOperationsValue())
+
+    act(() => {
+      result.current.copyItems([first, second])
+    })
+    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([first._id, second._id])
+    expect(useSidebarUIStore.getState().itemClipboard).toEqual({
+      mode: 'copy',
+      campaignId: testId<'campaigns'>('campaign_1'),
+      itemIds: [first._id, second._id],
+    })
+
+    act(() => {
+      result.current.cutItems([first, second])
+    })
+    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([first._id, second._id])
+    expect(useSidebarUIStore.getState().itemClipboard).toEqual({
+      mode: 'cut',
+      campaignId: testId<'campaigns'>('campaign_1'),
+      itemIds: [first._id, second._id],
     })
   })
 
@@ -199,7 +342,7 @@ describe('useSidebarItemOperationsValue', () => {
       parentId: folder._id,
     })
     trashItems = [folder, child]
-    permanentlyDeleteSidebarItems.mockResolvedValue([folder._id])
+    permanentlyDeleteSidebarItems.mockResolvedValue(permanentDeleteResult([folder._id]))
 
     const { result } = renderHook(() => useSidebarItemOperationsValue())
     await act(async () => {
@@ -209,5 +352,62 @@ describe('useSidebarItemOperationsValue', () => {
     expect(permanentlyDeleteSidebarItems).toHaveBeenCalledWith({
       sourceItemIds: [folder._id],
     })
+  })
+
+  it('removes trashed item roots and their selected descendants from selection', async () => {
+    const folder = createFolder({ name: 'Folder' })
+    const child = createNote({ name: 'Child', parentId: folder._id })
+    const unrelated = createNote({ name: 'Unrelated' })
+    sidebarItems = [folder, child, unrelated]
+    moveSidebarItems.mockResolvedValue(
+      moveResult({ affectedItemIds: [folder._id], trashedSourceItemIds: [folder._id] }),
+    )
+    useSidebarUIStore.getState().setActiveItemSurface({
+      surface: 'sidebar',
+      parentId: null,
+      visibleItemIds: [folder._id, child._id, unrelated._id],
+    })
+    useSidebarUIStore
+      .getState()
+      .setSelectedItemIds([folder._id, child._id, unrelated._id], folder._id)
+
+    const { result } = renderHook(() => useSidebarItemOperationsValue())
+    await act(async () => {
+      await result.current.trashItems([folder, child])
+    })
+
+    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([unrelated._id])
+    expect(useSidebarUIStore.getState().anchorItemId).toBe(unrelated._id)
+  })
+
+  it('removes permanently deleted trash roots and descendants from selection', async () => {
+    const folder = createFolder({
+      name: 'Folder',
+      location: SIDEBAR_ITEM_LOCATION.trash,
+      parentId: null,
+    })
+    const child = createNote({
+      name: 'Child',
+      location: SIDEBAR_ITEM_LOCATION.trash,
+      parentId: folder._id,
+    })
+    const unrelated = createNote({
+      name: 'Unrelated',
+      location: SIDEBAR_ITEM_LOCATION.trash,
+      parentId: null,
+    })
+    trashItems = [folder, child, unrelated]
+    permanentlyDeleteSidebarItems.mockResolvedValue(permanentDeleteResult([folder._id]))
+    useSidebarUIStore
+      .getState()
+      .setSelectedItemIds([folder._id, child._id, unrelated._id], folder._id)
+
+    const { result } = renderHook(() => useSidebarItemOperationsValue())
+    await act(async () => {
+      await result.current.permanentlyDeleteItems([folder, child])
+    })
+
+    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([unrelated._id])
+    expect(useSidebarUIStore.getState().anchorItemId).toBe(unrelated._id)
   })
 })

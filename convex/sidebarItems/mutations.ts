@@ -8,6 +8,9 @@ import { claimPreviewGeneration as claimPreviewGenerationFn } from './functions/
 import { setPreviewImage as setPreviewImageFn } from './functions/setPreviewImage'
 import { duplicateSidebarItems as duplicateSidebarItemsFn } from './functions/duplicateSidebarItems'
 import type { Id } from '../_generated/dataModel'
+import type { MoveSidebarItemsResult } from './functions/moveSidebarItems'
+import type { PermanentlyDeleteSidebarItemsResult } from './functions/permanentlyDeleteSidebarItems'
+import type { DuplicateSidebarItemsResult } from './functions/duplicateSidebarItems'
 
 export const OPERATION_DECISION_ACTION = {
   skip: 'skip',
@@ -40,6 +43,31 @@ export const operationDecisionValidator = v.object({
   ),
 })
 
+const sidebarItemIdsResultValidator = v.array(v.id('sidebarItems'))
+
+const moveSidebarItemsResultValidator = v.object({
+  affectedItemIds: sidebarItemIdsResultValidator,
+  movedSourceItemIds: sidebarItemIdsResultValidator,
+  restoredSourceItemIds: sidebarItemIdsResultValidator,
+  trashedSourceItemIds: sidebarItemIdsResultValidator,
+  mergedSourceItemIds: sidebarItemIdsResultValidator,
+  skippedSourceItemIds: sidebarItemIdsResultValidator,
+  noopSourceItemIds: sidebarItemIdsResultValidator,
+})
+
+const permanentlyDeleteSidebarItemsResultValidator = v.object({
+  deletedRootItemIds: sidebarItemIdsResultValidator,
+})
+
+const duplicateSidebarItemsResultValidator = v.object({
+  createdItemIds: sidebarItemIdsResultValidator,
+  createdRootItemIds: sidebarItemIdsResultValidator,
+  copiedSourceItemIds: sidebarItemIdsResultValidator,
+  replacedSourceItemIds: sidebarItemIdsResultValidator,
+  mergedSourceItemIds: sidebarItemIdsResultValidator,
+  skippedSourceItemIds: sidebarItemIdsResultValidator,
+})
+
 function assertSidebarItemsBatchSize(sourceItemIds: Array<Id<'sidebarItems'>>) {
   if (sourceItemIds.length > MAX_SIDEBAR_ITEMS_BATCH_SIZE) {
     throwClientError(
@@ -62,8 +90,8 @@ export const moveSidebarItems = campaignMutation({
     ),
     decisions: v.optional(v.array(operationDecisionValidator)),
   },
-  returns: v.array(v.id('sidebarItems')),
-  handler: async (ctx, args): Promise<Array<Id<'sidebarItems'>>> => {
+  returns: moveSidebarItemsResultValidator,
+  handler: async (ctx, args): Promise<MoveSidebarItemsResult> => {
     assertSidebarItemsBatchSize(args.sourceItemIds)
     return await moveSidebarItemsFn(ctx, args)
   },
@@ -73,8 +101,8 @@ export const permanentlyDeleteSidebarItems = campaignMutation({
   args: {
     sourceItemIds: v.array(v.id('sidebarItems')),
   },
-  returns: v.array(v.id('sidebarItems')),
-  handler: async (ctx, args): Promise<Array<Id<'sidebarItems'>>> => {
+  returns: permanentlyDeleteSidebarItemsResultValidator,
+  handler: async (ctx, args): Promise<PermanentlyDeleteSidebarItemsResult> => {
     assertSidebarItemsBatchSize(args.sourceItemIds)
     return await permanentlyDeleteSidebarItemsFn(ctx, { sourceItemIds: args.sourceItemIds })
   },
@@ -125,8 +153,8 @@ export const duplicateSidebarItems = campaignMutation({
     targetParentId: v.nullable(v.id('sidebarItems')),
     decisions: v.optional(v.array(operationDecisionValidator)),
   },
-  returns: v.array(v.id('sidebarItems')),
-  handler: async (ctx, args): Promise<Array<Id<'sidebarItems'>>> => {
+  returns: duplicateSidebarItemsResultValidator,
+  handler: async (ctx, args): Promise<DuplicateSidebarItemsResult> => {
     assertSidebarItemsBatchSize(args.sourceItemIds)
     return await duplicateSidebarItemsFn(ctx, args)
   },

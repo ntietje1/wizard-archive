@@ -6,6 +6,7 @@ import { assertSidebarItemName } from '../validation/name'
 import { deduplicateName } from './defaultItemName'
 import { planDuplicateOperations } from '../operations/duplicatePlanner'
 import { collectSidebarChildrenMap } from '../operations/childrenMap'
+import { normalizeTopLevelSelectedItems } from '../operations/selection'
 import { prepareSidebarItemCreate } from '../validation/orchestration'
 import { getSidebarItem } from './getSidebarItem'
 import { getSidebarItemsByParent } from './getSidebarItemsByParent'
@@ -28,6 +29,15 @@ const MAX_SIDEBAR_DUPLICATE_DEPTH = 50
 type DuplicateCopyOrReplaceOperation = Extract<DuplicateOperation, { action: 'copy' | 'replace' }>
 type ExecutableDuplicateOperation = Exclude<DuplicateOperation, { action: 'skip' }>
 
+export type DuplicateSidebarItemsResult = {
+  createdItemIds: Array<Id<'sidebarItems'>>
+  createdRootItemIds: Array<Id<'sidebarItems'>>
+  copiedSourceItemIds: Array<Id<'sidebarItems'>>
+  replacedSourceItemIds: Array<Id<'sidebarItems'>>
+  mergedSourceItemIds: Array<Id<'sidebarItems'>>
+  skippedSourceItemIds: Array<Id<'sidebarItems'>>
+}
+
 export const DUPLICATE_OPERATION_ACTION = {
   copy: 'copy',
   skip: 'skip',
@@ -36,7 +46,30 @@ export const DUPLICATE_OPERATION_ACTION = {
 } as const
 
 type DuplicateCtx = {
-  createdItemIds: Array<Id<'sidebarItems'>>
+  result: DuplicateSidebarItemsResult
+}
+
+function createEmptyDuplicateResult(): DuplicateSidebarItemsResult {
+  return {
+    createdItemIds: [],
+    createdRootItemIds: [],
+    copiedSourceItemIds: [],
+    replacedSourceItemIds: [],
+    mergedSourceItemIds: [],
+    skippedSourceItemIds: [],
+  }
+}
+
+function applySkippedDecisions(
+  result: DuplicateSidebarItemsResult,
+  decisions: Array<OperationDecision> | undefined,
+) {
+  const skipped = new Set(result.skippedSourceItemIds)
+  for (const decision of decisions ?? []) {
+    if (decision.action !== 'skip' || skipped.has(decision.sourceItemId)) continue
+    result.skippedSourceItemIds.push(decision.sourceItemId)
+    skipped.add(decision.sourceItemId)
+  }
 }
 
 async function getUniqueName(
@@ -60,11 +93,13 @@ async function insertDuplicateSidebarItem(
     parentId,
     name,
     duplicateCtx,
+    isRoot = false,
   }: {
     source: AnySidebarItemRow
     parentId: Id<'sidebarItems'> | null
     name: SidebarItemName
     duplicateCtx: DuplicateCtx
+    isRoot?: boolean
   },
 ): Promise<Id<'sidebarItems'>> {
   const prepared = await prepareSidebarItemCreate(ctx, {
@@ -105,7 +140,8 @@ async function insertDuplicateSidebarItem(
     },
   })
 
-  duplicateCtx.createdItemIds.push(itemId)
+  duplicateCtx.result.createdItemIds.push(itemId)
+  if (isRoot) duplicateCtx.result.createdRootItemIds.push(itemId)
   return itemId
 }
 
@@ -166,31 +202,55 @@ async function collectDuplicateChildrenMap(
   })
 }
 
+function normalizeDuplicateRootIds(
+  sourceItems: Array<AnySidebarItem>,
+  childrenMap: Awaited<ReturnType<typeof collectDuplicateChildrenMap>>,
+): Set<Id<'sidebarItems'>> {
+  const allItems = new Map<Id<'sidebarItems'>, Pick<AnySidebarItem, '_id' | 'parentId'>>()
+
+  for (const sourceItem of sourceItems) {
+    allItems.set(sourceItem._id, sourceItem)
+  }
+  for (const children of childrenMap.values()) {
+    for (const child of children) {
+      allItems.set(child._id, child)
+    }
+  }
+
+  return new Set(normalizeTopLevelSelectedItems(sourceItems, allItems).map((item) => item._id))
+}
+
 async function executeDuplicateOperations(
   ctx: CampaignMutationCtx,
   operations: Array<DuplicateOperation>,
-): Promise<Array<Id<'sidebarItems'>>> {
+  rootSourceIds: ReadonlySet<Id<'sidebarItems'>>,
+): Promise<DuplicateSidebarItemsResult> {
   const duplicateCtx: DuplicateCtx = {
-    createdItemIds: [],
+    result: createEmptyDuplicateResult(),
   }
 
   for (const operation of operations) {
-    if (operation.action === DUPLICATE_OPERATION_ACTION.skip) continue
-    await executeDuplicateOperation(ctx, operation, duplicateCtx)
+    if (operation.action === DUPLICATE_OPERATION_ACTION.skip) {
+      duplicateCtx.result.skippedSourceItemIds.push(operation.sourceItemId)
+      continue
+    }
+    await executeDuplicateOperation(ctx, operation, duplicateCtx, rootSourceIds)
   }
 
-  return duplicateCtx.createdItemIds
+  return duplicateCtx.result
 }
 
 async function executeDuplicateOperation(
   ctx: CampaignMutationCtx,
   operation: ExecutableDuplicateOperation,
   duplicateCtx: DuplicateCtx,
+  rootSourceIds: ReadonlySet<Id<'sidebarItems'>>,
 ) {
   const source = await loadDuplicableOperationSource(ctx, operation.sourceItemId)
 
   if (operation.action === DUPLICATE_OPERATION_ACTION.mergeFolder) {
     await logDuplicateFolderMerge(ctx, source, operation.destinationItemId)
+    duplicateCtx.result.mergedSourceItemIds.push(source._id)
     return
   }
 
@@ -204,7 +264,13 @@ async function executeDuplicateOperation(
     parentId,
     name: await resolveDuplicateName(ctx, operation, source, parentId),
     duplicateCtx,
+    isRoot: rootSourceIds.has(source._id),
   })
+  if (operation.action === DUPLICATE_OPERATION_ACTION.replace) {
+    duplicateCtx.result.replacedSourceItemIds.push(source._id)
+  } else {
+    duplicateCtx.result.copiedSourceItemIds.push(source._id)
+  }
 
   if (source.type === SIDEBAR_ITEM_TYPES.folders) {
     await duplicateChildrenIntoFolder(ctx, {
@@ -337,24 +403,19 @@ async function loadDuplicableSources(
   return sourceItems
 }
 
-async function planDuplicateSidebarItems(
-  ctx: CampaignMutationCtx,
-  {
-    sourceItems,
-    targetParentId,
-    targetItems,
-    decisions,
-  }: {
-    sourceItems: Array<AnySidebarItem>
-    targetParentId: Id<'sidebarItems'> | null
-    targetItems: Array<AnySidebarItem>
-    decisions?: Array<OperationDecision>
-  },
-) {
-  const folderIds = [...sourceItems, ...targetItems]
-    .filter((item) => item.type === SIDEBAR_ITEM_TYPES.folders)
-    .map((item) => item._id)
-  const childrenMap = await collectDuplicateChildrenMap(ctx, folderIds)
+function planDuplicateSidebarItems({
+  sourceItems,
+  targetParentId,
+  targetItems,
+  decisions,
+  childrenMap,
+}: {
+  sourceItems: Array<AnySidebarItem>
+  targetParentId: Id<'sidebarItems'> | null
+  targetItems: Array<AnySidebarItem>
+  decisions?: Array<OperationDecision>
+  childrenMap: Awaited<ReturnType<typeof collectDuplicateChildrenMap>>
+}) {
   return planDuplicateOperations({
     items: sourceItems,
     targetParentId,
@@ -362,6 +423,17 @@ async function planDuplicateSidebarItems(
     decisions: toDecisionRecord(decisions),
     getChildren: (parentId) => childrenMap.get(parentId) ?? [],
   })
+}
+
+async function collectDuplicatePlanningChildrenMap(
+  ctx: CampaignMutationCtx,
+  sourceItems: Array<AnySidebarItem>,
+  targetItems: Array<AnySidebarItem>,
+) {
+  const folderIds = [...sourceItems, ...targetItems]
+    .filter((item) => item.type === SIDEBAR_ITEM_TYPES.folders)
+    .map((item) => item._id)
+  return collectDuplicateChildrenMap(ctx, folderIds)
 }
 
 export async function duplicateSidebarItems(
@@ -375,23 +447,28 @@ export async function duplicateSidebarItems(
     targetParentId: Id<'sidebarItems'> | null
     decisions?: Array<OperationDecision>
   },
-): Promise<Array<Id<'sidebarItems'>>> {
+): Promise<DuplicateSidebarItemsResult> {
   const targetItems = await getSidebarItemsByParent(ctx, { parentId: targetParentId })
   const sourceItems = await loadDuplicableSources(ctx, {
     sourceItemIds,
     targetParentId,
   })
-  const plan = await planDuplicateSidebarItems(ctx, {
+  const childrenMap = await collectDuplicatePlanningChildrenMap(ctx, sourceItems, targetItems)
+  const rootSourceIds = normalizeDuplicateRootIds(sourceItems, childrenMap)
+  const plan = planDuplicateSidebarItems({
     sourceItems,
     targetParentId,
     targetItems,
     decisions,
+    childrenMap,
   })
 
-  if (plan.status === 'cancelled') return []
+  if (plan.status === 'cancelled') return createEmptyDuplicateResult()
   if (plan.status === 'needs-decision') {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Operation requires conflict decisions')
   }
 
-  return await executeDuplicateOperations(ctx, plan.operations)
+  const result = await executeDuplicateOperations(ctx, plan.operations, rootSourceIds)
+  applySkippedDecisions(result, decisions)
+  return result
 }

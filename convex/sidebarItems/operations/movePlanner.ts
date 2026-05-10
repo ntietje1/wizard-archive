@@ -22,6 +22,7 @@ type MovePlannerContext = {
   targetParentId: Id<'sidebarItems'> | null
   targetItems: Array<OperationPlannerItem>
   decisions: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
+  defaultConflictDecision?: ConflictDecision
   getChildren?: (parentId: Id<'sidebarItems'>) => Array<OperationPlannerItem>
   depth: number
   movingIds: Set<Id<'sidebarItems'>>
@@ -116,6 +117,7 @@ export function planMoveOperations({
   targetParentId,
   targetItems,
   decisions = {},
+  defaultConflictDecision,
   getChildren,
   depth = 0,
 }: {
@@ -123,6 +125,7 @@ export function planMoveOperations({
   targetParentId: Id<'sidebarItems'> | null
   targetItems: Array<OperationPlannerItem>
   decisions?: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
+  defaultConflictDecision?: ConflictDecision
   getChildren?: (parentId: Id<'sidebarItems'>) => Array<OperationPlannerItem>
   depth?: number
 }): MoveOperationPlan {
@@ -135,6 +138,7 @@ export function planMoveOperations({
     targetParentId,
     targetItems,
     decisions,
+    defaultConflictDecision,
     getChildren,
     depth,
     movingIds,

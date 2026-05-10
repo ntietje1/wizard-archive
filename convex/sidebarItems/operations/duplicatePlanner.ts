@@ -21,6 +21,7 @@ type DuplicatePlannerContext = {
   targetParentId: Id<'sidebarItems'> | null
   targetItems: Array<OperationPlannerItem>
   decisions: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
+  defaultConflictDecision?: ConflictDecision
   getChildren?: (parentId: Id<'sidebarItems'>) => Array<OperationPlannerItem>
   depth: number
   conflicts: Array<ItemOperationConflict>
@@ -87,6 +88,11 @@ function planDuplicateItem(
     return 'ready'
   }
 
+  if (conflictTarget._id === item._id && item.parentId === context.targetParentId) {
+    addCopyOperation(context, item)
+    return 'ready'
+  }
+
   return applyConflictDecision(context, item, conflictTarget, {
     keepBoth: () => addCopyOperation(context, item),
     replace: () => addReplaceOperation(context, item, conflictTarget),
@@ -110,6 +116,7 @@ export function planDuplicateOperations({
   targetParentId,
   targetItems,
   decisions = {},
+  defaultConflictDecision,
   getChildren,
   depth = 0,
 }: {
@@ -117,6 +124,7 @@ export function planDuplicateOperations({
   targetParentId: Id<'sidebarItems'> | null
   targetItems: Array<OperationPlannerItem>
   decisions?: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
+  defaultConflictDecision?: ConflictDecision
   getChildren?: (parentId: Id<'sidebarItems'>) => Array<OperationPlannerItem>
   depth?: number
 }): DuplicateOperationPlan {
@@ -127,6 +135,7 @@ export function planDuplicateOperations({
     targetParentId,
     targetItems,
     decisions,
+    defaultConflictDecision,
     getChildren,
     depth,
     conflicts: [],

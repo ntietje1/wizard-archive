@@ -59,8 +59,7 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
 
   const handleRestore = async (item: AnySidebarItem) => {
     try {
-      const movedIds = await itemOperations.restoreItems([item])
-      if (movedIds.length > 0) toast.success('Item restored')
+      await itemOperations.restoreItems([item])
     } catch (error) {
       handleError(error, 'Failed to restore item')
     }

@@ -36,6 +36,15 @@ const clearDeletion = { deletionTime: null, deletedBy: null }
 type MoveMergeFolderOperation = Extract<MoveOperation, { action: 'mergeFolder' }>
 type ExecutableMoveOperation = Exclude<MoveOperation, { action: 'skip' }>
 export type MoveSidebarItemsAction = 'move' | 'restore' | 'trash'
+export type MoveSidebarItemsResult = {
+  affectedItemIds: Array<Id<'sidebarItems'>>
+  movedSourceItemIds: Array<Id<'sidebarItems'>>
+  restoredSourceItemIds: Array<Id<'sidebarItems'>>
+  trashedSourceItemIds: Array<Id<'sidebarItems'>>
+  mergedSourceItemIds: Array<Id<'sidebarItems'>>
+  skippedSourceItemIds: Array<Id<'sidebarItems'>>
+  noopSourceItemIds: Array<Id<'sidebarItems'>>
+}
 
 export const MOVE_OPERATION_ACTION = {
   move: 'move',
@@ -45,6 +54,30 @@ export const MOVE_OPERATION_ACTION = {
 } as const
 
 const MAX_SIDEBAR_MOVE_DEPTH = 50
+
+function createEmptyMoveResult(): MoveSidebarItemsResult {
+  return {
+    affectedItemIds: [],
+    movedSourceItemIds: [],
+    restoredSourceItemIds: [],
+    trashedSourceItemIds: [],
+    mergedSourceItemIds: [],
+    skippedSourceItemIds: [],
+    noopSourceItemIds: [],
+  }
+}
+
+function applySkippedDecisions(
+  result: MoveSidebarItemsResult,
+  decisions: Array<OperationDecision> | undefined,
+) {
+  const skipped = new Set(result.skippedSourceItemIds)
+  for (const decision of decisions ?? []) {
+    if (decision.action !== 'skip' || skipped.has(decision.sourceItemId)) continue
+    result.skippedSourceItemIds.push(decision.sourceItemId)
+    skipped.add(decision.sourceItemId)
+  }
+}
 
 async function resyncRelativeLinksForMovedItems(
   ctx: CampaignMutationCtx,
@@ -288,16 +321,36 @@ async function getSidebarItemRowsByParentLocation(
 async function executeMoveOperations(
   ctx: CampaignMutationCtx,
   operations: Array<MoveOperation>,
-): Promise<Array<Id<'sidebarItems'>>> {
-  const movedIds: Array<Id<'sidebarItems'>> = []
+  action: MoveSidebarItemsAction,
+  rootSourceIds: Array<Id<'sidebarItems'>>,
+): Promise<MoveSidebarItemsResult> {
+  const result = createEmptyMoveResult()
+  const operationSourceIds = new Set<Id<'sidebarItems'>>()
 
   for (const operation of operations) {
-    if (operation.action === MOVE_OPERATION_ACTION.skip) continue
-    const movedId = await executeMoveOperation(ctx, operation)
-    if (movedId) movedIds.push(movedId)
+    operationSourceIds.add(operation.sourceItemId)
+    if (operation.action === MOVE_OPERATION_ACTION.skip) {
+      result.skippedSourceItemIds.push(operation.sourceItemId)
+      continue
+    }
+
+    const affectedId = await executeMoveOperation(ctx, operation)
+    if (!affectedId) continue
+
+    result.affectedItemIds.push(affectedId)
+    if (operation.action === MOVE_OPERATION_ACTION.mergeFolder) {
+      result.mergedSourceItemIds.push(affectedId)
+    } else if (action === 'restore') {
+      result.restoredSourceItemIds.push(affectedId)
+    } else {
+      result.movedSourceItemIds.push(affectedId)
+    }
   }
 
-  return movedIds
+  result.noopSourceItemIds.push(
+    ...rootSourceIds.filter((sourceItemId) => !operationSourceIds.has(sourceItemId)),
+  )
+  return result
 }
 
 async function executeMoveOperation(
@@ -307,7 +360,8 @@ async function executeMoveOperation(
   const source = await loadMovableSource(ctx, operation.sourceItemId)
 
   if (operation.action === MOVE_OPERATION_ACTION.mergeFolder) {
-    return await executeMergeFolderMove(ctx, source, operation)
+    await executeMergeFolderMove(ctx, source, operation)
+    return source._id
   }
 
   if (operation.action === MOVE_OPERATION_ACTION.replace) {
@@ -409,17 +463,21 @@ async function normalizeOperationRoots(
 async function trashSidebarItems(
   ctx: CampaignMutationCtx,
   sourceItems: Array<AnySidebarItem>,
-): Promise<Array<Id<'sidebarItems'>>> {
+): Promise<MoveSidebarItemsResult> {
   const rootItems = await normalizeOperationRoots(ctx, sourceItems)
-  const movedIds: Array<Id<'sidebarItems'>> = []
+  const result = createEmptyMoveResult()
 
   for (const item of rootItems) {
-    if (item.location === SIDEBAR_ITEM_LOCATION.trash) continue
+    if (item.location === SIDEBAR_ITEM_LOCATION.trash) {
+      result.noopSourceItemIds.push(item._id)
+      continue
+    }
     await trashSidebarItemTree(ctx, item)
-    movedIds.push(item._id)
+    result.affectedItemIds.push(item._id)
+    result.trashedSourceItemIds.push(item._id)
   }
 
-  return movedIds
+  return result
 }
 
 function assertRestoreActionSources(sourceItems: Array<AnySidebarItem>) {
@@ -442,7 +500,7 @@ export async function moveSidebarItems(
     action?: MoveSidebarItemsAction
     decisions?: Array<OperationDecision>
   },
-): Promise<Array<Id<'sidebarItems'>>> {
+): Promise<MoveSidebarItemsResult> {
   const sourceItems = await loadMovableSources(ctx, sourceItemIds)
 
   if (action === 'trash') {
@@ -470,7 +528,7 @@ export async function moveSidebarItems(
     getChildren: (parentId) => childrenMap.get(parentId) ?? [],
   })
 
-  if (plan.status === 'cancelled') return []
+  if (plan.status === 'cancelled') return createEmptyMoveResult()
   if (plan.status === 'needs-decision') {
     const conflictSummary = plan.conflicts
       .map((conflict) => `${conflict.sourceName} -> ${conflict.destinationName}`)
@@ -481,5 +539,13 @@ export async function moveSidebarItems(
     )
   }
 
-  return await executeMoveOperations(ctx, plan.operations)
+  const rootSourceItems = await normalizeOperationRoots(ctx, sourceItems)
+  const result = await executeMoveOperations(
+    ctx,
+    plan.operations,
+    action,
+    rootSourceItems.map((item) => item._id),
+  )
+  applySkippedDecisions(result, decisions)
+  return result
 }

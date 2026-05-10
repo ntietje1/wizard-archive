@@ -30,6 +30,29 @@ function isItemOrDescendantOfDeletedRoot(
   return false
 }
 
+/**
+ * Filters selected IDs after deleting root items.
+ * Uses selectedItemIds as the current selection, rootItems as deleted roots, and
+ * allItemsMap to detect descendants via isItemOrDescendantOfDeletedRoot.
+ */
+export function removeItemsUnderRootsFromSelection({
+  selectedItemIds,
+  rootItems,
+  allItemsMap,
+}: {
+  selectedItemIds: Array<Id<'sidebarItems'>>
+  rootItems: Array<AnySidebarItem>
+  allItemsMap: ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>
+}) {
+  const deletedIds = new Set(rootItems.map((item) => item._id))
+  return selectedItemIds.filter((selectedId) => {
+    const selectedItem = allItemsMap.get(selectedId)
+    return selectedItem
+      ? !isItemOrDescendantOfDeletedRoot(selectedItem, deletedIds, allItemsMap)
+      : false
+  })
+}
+
 export function shouldClearEditorForDeletedRoots({
   deletedItems,
   currentSlug,
