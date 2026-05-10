@@ -3,11 +3,14 @@ import { PERMISSION_LEVEL } from '../../permissions/types'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
+import { ERROR_CODE, throwClientError } from '../../errors'
 import type { CampaignMutationCtx } from '../../functions'
 import type { PermissionLevel } from '../../permissions/types'
 import type { Id } from '../../_generated/dataModel'
 
-export const setAllPlayersPermission = async (
+const MAX_SHARE_ITEMS_PER_REQUEST = 100
+
+const applyAllPlayersPermissionToSidebarItem = async (
   ctx: CampaignMutationCtx,
   {
     sidebarItemId,
@@ -38,4 +41,30 @@ export const setAllPlayersPermission = async (
       previousLevel: item.allPermissionLevel ?? null,
     },
   })
+}
+
+export const setAllPlayersPermissionForSidebarItems = async (
+  ctx: CampaignMutationCtx,
+  {
+    sidebarItemIds,
+    permissionLevel,
+  }: {
+    sidebarItemIds: Array<Id<'sidebarItems'>>
+    permissionLevel: PermissionLevel | null
+  },
+): Promise<void> => {
+  if (sidebarItemIds.length > MAX_SHARE_ITEMS_PER_REQUEST) {
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      `Cannot update more than ${MAX_SHARE_ITEMS_PER_REQUEST} items at once`,
+    )
+  }
+  await Promise.all(
+    sidebarItemIds.map((sidebarItemId) =>
+      applyAllPlayersPermissionToSidebarItem(ctx, {
+        sidebarItemId,
+        permissionLevel,
+      }),
+    ),
+  )
 }

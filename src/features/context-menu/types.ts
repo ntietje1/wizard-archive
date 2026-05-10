@@ -1,3 +1,4 @@
+import type React from 'react'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { BlockNoteId } from 'convex/blocks/types'
 import type { CampaignMemberRole } from 'convex/campaigns/types'
@@ -10,8 +11,6 @@ import type { VIEW_CONTEXT } from './constants'
 export type ViewContext = (typeof VIEW_CONTEXT)[keyof typeof VIEW_CONTEXT]
 
 export type ContextMenuSurfaceId = ViewContext | 'canvas'
-
-export type ContextMenuScope = 'base' | 'selection' | 'target'
 
 type ContextMenuResolver<TValue, TContext, TServices, TPayload = unknown> =
   | TValue
@@ -54,7 +53,6 @@ export interface ContextMenuItemSpec<TContext, TServices, TPayload = unknown> {
   ) => void | Promise<void>
   group: string
   priority: number
-  scope?: ContextMenuScope
   children?:
     | Array<ContextMenuItemSpec<TContext, TServices, unknown>>
     | ((
@@ -62,6 +60,7 @@ export interface ContextMenuItemSpec<TContext, TServices, TPayload = unknown> {
         services: TServices,
         payload: TPayload | undefined,
       ) => Array<ContextMenuItemSpec<TContext, TServices, unknown>>)
+  submenuContent?: ContextMenuResolver<React.ReactNode, TContext, TServices, TPayload>
   variant?: 'default' | 'danger' | 'share'
   className?: string
 }
@@ -86,10 +85,10 @@ export interface ResolvedContextMenuItem {
   checked: boolean
   group: string
   priority: number
-  scope: ContextMenuScope
   variant?: 'default' | 'danger' | 'share'
   className?: string
   children?: Array<ResolvedContextMenuItem>
+  submenuContent?: React.ReactNode
   onSelect: () => void | Promise<void>
 }
 
@@ -141,7 +140,3 @@ export interface EditorMenuContext {
 export type MenuContext = EditorMenuContext
 
 export type Predicate = (context: EditorMenuContext) => boolean
-
-export function getPrimaryItem(context: EditorMenuContext): AnySidebarItem | undefined {
-  return context.primaryItem ?? context.item
-}

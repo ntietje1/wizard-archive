@@ -5,7 +5,7 @@ import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissi
 import { MoreVertical } from 'lucide-react'
 import type { ItemCardProps } from './item-card'
 import type { Folder } from 'convex/folders/types'
-import { canDropFilesOnTarget } from '~/features/dnd/utils/dnd-registry'
+import { canDropFilesOnTarget } from '~/features/dnd/utils/drop-target-data'
 import { CardTitle } from '~/features/shadcn/components/card'
 import { Button } from '~/features/shadcn/components/button'
 import { useEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'

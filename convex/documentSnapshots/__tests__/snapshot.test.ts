@@ -90,30 +90,24 @@ describe('game map operations are rollbackable after every operation', () => {
     const { noteId: n3 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     // Add 3 pins in quick succession
-    await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+    await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
       campaignId: ctx.campaignId,
       mapId,
-      x: 10,
-      y: 20,
-      itemId: n1,
+      pins: [{ itemId: n1, x: 10, y: 20 }],
     })
     await t.finishAllScheduledFunctions(vi.runAllTimers)
 
-    await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+    await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
       campaignId: ctx.campaignId,
       mapId,
-      x: 30,
-      y: 40,
-      itemId: n2,
+      pins: [{ itemId: n2, x: 30, y: 40 }],
     })
     await t.finishAllScheduledFunctions(vi.runAllTimers)
 
-    await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+    await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
       campaignId: ctx.campaignId,
       mapId,
-      x: 50,
-      y: 60,
-      itemId: n3,
+      pins: [{ itemId: n3, x: 50, y: 60 }],
     })
     await t.finishAllScheduledFunctions(vi.runAllTimers)
 
@@ -138,22 +132,18 @@ describe('game map operations are rollbackable after every operation', () => {
     const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     // Add pin
-    await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+    await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
       campaignId: ctx.campaignId,
       mapId,
-      x: 10,
-      y: 20,
-      itemId: n1,
+      pins: [{ itemId: n1, x: 10, y: 20 }],
     })
     await t.finishAllScheduledFunctions(vi.runAllTimers)
 
     // Add another pin
-    await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+    await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
       campaignId: ctx.campaignId,
       mapId,
-      x: 30,
-      y: 40,
-      itemId: n2,
+      pins: [{ itemId: n2, x: 30, y: 40 }],
     })
     await t.finishAllScheduledFunctions(vi.runAllTimers)
 
@@ -195,13 +185,13 @@ describe('game map operations are rollbackable after every operation', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     // Add pin
-    const pinId = await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+    const pinIds = await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
       campaignId: ctx.campaignId,
       mapId,
-      x: 10,
-      y: 20,
-      itemId: noteId,
+      pins: [{ itemId: noteId, x: 10, y: 20 }],
     })
+    expect(pinIds).toHaveLength(1)
+    const pinId = pinIds[0]!
     await t.finishAllScheduledFunctions(vi.runAllTimers)
 
     // Move pin
@@ -235,13 +225,13 @@ describe('game map operations are rollbackable after every operation', () => {
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    const pinId = await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+    const pinIds = await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
       campaignId: ctx.campaignId,
       mapId,
-      x: 10,
-      y: 20,
-      itemId: noteId,
+      pins: [{ itemId: noteId, x: 10, y: 20 }],
     })
+    expect(pinIds).toHaveLength(1)
+    const pinId = pinIds[0]!
     await t.finishAllScheduledFunctions(vi.runAllTimers)
 
     await dmAuth.mutation(api.gameMaps.mutations.removeItemPin, {
@@ -271,13 +261,13 @@ describe('game map operations are rollbackable after every operation', () => {
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    const pinId = await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+    const pinIds = await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
       campaignId: ctx.campaignId,
       mapId,
-      x: 10,
-      y: 20,
-      itemId: noteId,
+      pins: [{ itemId: noteId, x: 10, y: 20 }],
     })
+    expect(pinIds).toHaveLength(1)
+    const pinId = pinIds[0]!
     await t.finishAllScheduledFunctions(vi.runAllTimers)
 
     await dmAuth.mutation(api.gameMaps.mutations.updatePinVisibility, {
@@ -319,12 +309,10 @@ describe('snapshot exists when history entry claims hasSnapshot=true', () => {
       const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-      await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignId,
         mapId,
-        x: 10,
-        y: 20,
-        itemId: noteId,
+        pins: [{ itemId: noteId, x: 10, y: 20 }],
       })
 
       // Run scheduled functions so the async snapshot is created
@@ -406,13 +394,13 @@ describe('rollback data integrity', () => {
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
       // Add pin at original position
-      const pinId = await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+      const pinIds = await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
         campaignId: ctx.campaignId,
         mapId,
-        x: 10,
-        y: 20,
-        itemId: noteId,
+        pins: [{ itemId: noteId, x: 10, y: 20 }],
       })
+      expect(pinIds).toHaveLength(1)
+      const pinId = pinIds[0]!
       await t.finishAllScheduledFunctions(vi.runAllTimers)
 
       // Get the history entry for the pin add
@@ -525,12 +513,10 @@ describe('rollback edge cases', () => {
     const { mapId } = await createGameMap(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await dmAuth.mutation(api.gameMaps.mutations.createItemPin, {
+    await dmAuth.mutation(api.gameMaps.mutations.createItemPins, {
       campaignId: ctx.campaignId,
       mapId,
-      x: 10,
-      y: 20,
-      itemId: noteId,
+      pins: [{ itemId: noteId, x: 10, y: 20 }],
     })
     await t.finishAllScheduledFunctions(vi.runAllTimers)
 

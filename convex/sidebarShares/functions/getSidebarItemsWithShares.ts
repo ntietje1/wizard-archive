@@ -2,6 +2,7 @@ import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { requireItemAccess } from '../../sidebarItems/validation/access'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { resolveInheritedPermissions } from './sidebarItemPermissions'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { CampaignQueryCtx } from '../../functions'
@@ -9,14 +10,8 @@ import type { Id } from '../../_generated/dataModel'
 import type { PermissionLevel } from '../../permissions/types'
 import type { SidebarItemShare } from '../types'
 
-export const getSidebarItemWithShares = async (
-  ctx: CampaignQueryCtx,
-  {
-    sidebarItemId,
-  }: {
-    sidebarItemId: Id<'sidebarItems'>
-  },
-): Promise<{
+export interface SidebarItemWithShares {
+  sidebarItemId: Id<'sidebarItems'>
   allPermissionLevel: PermissionLevel | null
   inheritShares: boolean | null
   shares: Array<SidebarItemShare>
@@ -24,8 +19,16 @@ export const getSidebarItemWithShares = async (
   inheritedFromFolderName: string | null
   memberInheritedPermissions: Record<Id<'campaignMembers'>, PermissionLevel>
   memberInheritedFromFolderNames: Record<Id<'campaignMembers'>, string>
-}> => {
+}
+
+async function getShareInfoForSidebarItem(
+  ctx: CampaignQueryCtx,
+  sidebarItemId: Id<'sidebarItems'>,
+): Promise<SidebarItemWithShares> {
   const itemFromDb = await getSidebarItem(ctx, sidebarItemId)
+  if (itemFromDb && itemFromDb.campaignId !== ctx.campaign._id) {
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Item does not belong to this campaign')
+  }
   const item = await requireItemAccess(ctx, {
     rawItem: itemFromDb,
     requiredLevel: PERMISSION_LEVEL.VIEW,
@@ -39,11 +42,6 @@ export const getSidebarItemWithShares = async (
     .filter((m) => m.role === CAMPAIGN_MEMBER_ROLE.Player)
     .map((m) => m._id)
 
-  let inheritShares: boolean | null = null
-  if (item.type === SIDEBAR_ITEM_TYPES.folders) {
-    inheritShares = item.inheritShares
-  }
-
   const shares = await ctx.db
     .query('sidebarItemShares')
     .withIndex('by_campaign_item_member', (q) =>
@@ -52,7 +50,7 @@ export const getSidebarItemWithShares = async (
     .collect()
 
   const inherited = await resolveInheritedPermissions(ctx, {
-    parentId: item.parentId ?? null,
+    parentId: item.parentId,
     campaignId: item.campaignId,
     memberIds: playerMemberIds,
   })
@@ -61,23 +59,29 @@ export const getSidebarItemWithShares = async (
   const memberInheritedFromFolderNames: Record<Id<'campaignMembers'>, string> = {}
   for (const memberId of playerMemberIds) {
     const entry = inherited.members[memberId]
-    if (entry) {
-      memberInheritedPermissions[memberId] = entry.level
-      if (entry.folderName) {
-        memberInheritedFromFolderNames[memberId] = entry.folderName
-      }
-    } else {
-      memberInheritedPermissions[memberId] = PERMISSION_LEVEL.NONE
+    memberInheritedPermissions[memberId] = entry?.level ?? PERMISSION_LEVEL.NONE
+    if (entry?.folderName) {
+      memberInheritedFromFolderNames[memberId] = entry.folderName
     }
   }
 
   return {
+    sidebarItemId,
     allPermissionLevel: item.allPermissionLevel,
-    inheritShares,
+    inheritShares: item.type === SIDEBAR_ITEM_TYPES.folders ? item.inheritShares : null,
     shares,
     inheritedAllPermissionLevel: inherited.allPlayers.level,
     inheritedFromFolderName: inherited.allPlayers.folderName,
     memberInheritedPermissions,
     memberInheritedFromFolderNames,
   }
+}
+
+export async function getSidebarItemsWithShares(
+  ctx: CampaignQueryCtx,
+  { sidebarItemIds }: { sidebarItemIds: Array<Id<'sidebarItems'>> },
+): Promise<Array<SidebarItemWithShares>> {
+  return await Promise.all(
+    sidebarItemIds.map((sidebarItemId) => getShareInfoForSidebarItem(ctx, sidebarItemId)),
+  )
 }

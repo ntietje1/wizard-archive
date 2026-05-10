@@ -3,9 +3,9 @@ import { campaignQuery } from '../functions'
 import { customBlockValidator } from '../blocks/schema'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 import {
-  getFolderContentsForDownload as getFolderContentsForDownloadFn,
   getRootContentsForDownload as getRootContentsForDownloadFn,
-} from './functions/getFolderContentsForDownload'
+  getSidebarItemsForDownload as getSidebarItemsForDownloadFn,
+} from './functions/getItemsForDownload'
 
 const downloadItemValidator = v.union(
   v.object({
@@ -28,19 +28,6 @@ const downloadItemValidator = v.union(
   }),
 )
 
-export const getFolderContentsForDownload = campaignQuery({
-  args: {
-    folderId: v.id('sidebarItems'),
-  },
-  returns: v.object({
-    folderName: v.string(),
-    items: v.array(downloadItemValidator),
-  }),
-  handler: async (ctx, args) => {
-    return await getFolderContentsForDownloadFn(ctx, args.folderId)
-  },
-})
-
 export const getRootContentsForDownload = campaignQuery({
   args: {},
   returns: v.object({
@@ -48,5 +35,17 @@ export const getRootContentsForDownload = campaignQuery({
   }),
   handler: async (ctx) => {
     return await getRootContentsForDownloadFn(ctx)
+  },
+})
+
+export const getSidebarItemsForDownload = campaignQuery({
+  args: {
+    sourceItemIds: v.array(v.id('sidebarItems')),
+  },
+  returns: v.object({
+    items: v.array(downloadItemValidator),
+  }),
+  handler: async (ctx, args) => {
+    return await getSidebarItemsForDownloadFn(ctx, args.sourceItemIds)
   },
 })

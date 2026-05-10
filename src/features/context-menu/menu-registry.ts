@@ -1,5 +1,6 @@
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { PermissionLevel } from 'convex/permissions/types'
+import { createElement } from 'react'
 import {
   ArrowUpLeft,
   ArrowUpRight,
@@ -26,6 +27,7 @@ import {
   Plus,
   RotateCcw,
   Scissors,
+  Share2,
   SquareArrowOutUpRight,
   Trash2,
 } from 'lucide-react'
@@ -37,6 +39,7 @@ import type {
   ContextMenuItemSpec,
   EditorMenuContext,
 } from './types'
+import { resolveContextOperationItems } from './selection-context'
 import {
   RIGHT_SIDEBAR_CONTENT,
   RIGHT_SIDEBAR_PANEL_ID,
@@ -44,6 +47,7 @@ import {
 import { usePanelPreferenceStore } from '~/features/settings/stores/panel-preference-store'
 import { logger } from '~/shared/utils/logger'
 import { assertNever } from '~/shared/utils/utils'
+import { SidebarItemsSharePanel } from '~/features/sharing/components/sidebar-items-share-panel'
 
 function isPanelContentActive(contentId: string): boolean {
   const panel = usePanelPreferenceStore.getState().panels[RIGHT_SIDEBAR_PANEL_ID]
@@ -75,6 +79,15 @@ function getTypeName(context: EditorMenuContext): string {
   }
 }
 
+function getUnpinnedMapItems(context: EditorMenuContext) {
+  if (!context.activeMap) return []
+  const pins = context.activeMap.pins ?? []
+  const pinnedItemIds = new Set(pins.map((pin) => pin.itemId))
+  return resolveContextOperationItems(context).filter(
+    (item) => item._id !== context.activeMap?._id && !pinnedItemIds.has(item._id),
+  )
+}
+
 export type ActionHandlers = {
   open: (context: EditorMenuContext) => void
   rename: (context: EditorMenuContext) => void
@@ -97,10 +110,7 @@ export type ActionHandlers = {
   startSession: (context: EditorMenuContext) => void
   endSession: (context: EditorMenuContext) => void
   setGeneralAccessLevel: (context: EditorMenuContext, level: PermissionLevel | null) => void
-  downloadFile: (context: EditorMenuContext) => void
-  downloadNote: (context: EditorMenuContext) => void
-  downloadMap: (context: EditorMenuContext) => void
-  downloadFolder: (context: EditorMenuContext) => void
+  downloadItems: (context: EditorMenuContext) => void
   downloadAll: (context: EditorMenuContext) => void
   toggleBookmark: (context: EditorMenuContext) => void
   copy: (context: EditorMenuContext) => void
@@ -154,10 +164,7 @@ export const editorContextMenuCommands = {
   togglePinVisibility: createActionCommand('togglePinVisibility'),
   startSession: createActionCommand('startSession'),
   endSession: createActionCommand('endSession'),
-  downloadFile: createActionCommand('downloadFile'),
-  downloadNote: createActionCommand('downloadNote'),
-  downloadMap: createActionCommand('downloadMap'),
-  downloadFolder: createActionCommand('downloadFolder'),
+  downloadItems: createActionCommand('downloadItems'),
   downloadAll: createActionCommand('downloadAll'),
   toggleBookmark: createActionCommand('toggleBookmark'),
   copy: createActionCommand('copy'),
@@ -352,7 +359,10 @@ export const editorContextMenuContributors = [
       {
         id: 'pin-to-map',
         commandId: 'pinToMap',
-        label: 'Pin to Map',
+        label: (context) => {
+          const itemCount = getUnpinnedMapItems(context).length
+          return itemCount > 1 ? `Pin ${itemCount} items to Map` : 'Pin to Map'
+        },
         icon: MapPin,
         group: 'pin-actions',
         priority: 1,
@@ -360,7 +370,7 @@ export const editorContextMenuContributors = [
           p.allSelectedItemsHaveEditAccess(context) &&
           p.inSidebar(context) &&
           p.isSidebarItem(context) &&
-          !p.isPinnedOnActiveMap(context) &&
+          getUnpinnedMapItems(context).length > 0 &&
           p.isNotActiveMap(context),
       },
       {
@@ -454,58 +464,50 @@ export const editorContextMenuContributors = [
     ],
   },
   {
+    id: 'editor-share',
+    surfaces: ['sidebar', 'folder-view', 'favorites', 'topbar'],
+    getItems: () => [
+      {
+        id: 'share-items',
+        label: (context) => {
+          const itemCount = resolveContextOperationItems(context).length
+          return itemCount > 1 ? `Share ${itemCount} items...` : 'Share...'
+        },
+        icon: Share2,
+        group: 'share',
+        priority: 78,
+        submenuContent: (context) =>
+          createElement(SidebarItemsSharePanel, {
+            items: resolveContextOperationItems(context),
+          }),
+        applies: (context) =>
+          p.isDm(context) &&
+          p.isSidebarItem(context) &&
+          p.allSelectedItemsHaveFullAccess(context) &&
+          p.allSelectedItemsNotTrashed(context) &&
+          !p.hasPinContext(context),
+      },
+    ],
+  },
+  {
     id: 'editor-download',
     surfaces: ['sidebar', 'folder-view', 'topbar', 'map-view'],
     getItems: () => [
       {
-        id: 'download-file',
-        commandId: 'downloadFile',
-        label: 'Download',
+        id: 'download-items',
+        commandId: 'downloadItems',
+        label: (context) => {
+          const itemCount = resolveContextOperationItems(context).length
+          return itemCount > 1 ? `Download ${itemCount} items` : 'Download'
+        },
         icon: Download,
         group: 'download',
         priority: 80,
         applies: (context) =>
+          p.allSelectedItemsHaveViewAccess(context) &&
           p.isSidebarItem(context) &&
-          p.isType(SIDEBAR_ITEM_TYPES.files)(context) &&
+          p.allSelectedItemsNotTrashed(context) &&
           !p.hasPinContext(context),
-      },
-      {
-        id: 'download-note',
-        commandId: 'downloadNote',
-        label: 'Download',
-        icon: Download,
-        group: 'download',
-        priority: 80,
-        applies: (context) =>
-          p.hasViewAccess(context) &&
-          p.isSidebarItem(context) &&
-          p.isType(SIDEBAR_ITEM_TYPES.notes)(context) &&
-          !p.hasMapContext(context),
-      },
-      {
-        id: 'download-map',
-        commandId: 'downloadMap',
-        label: 'Download Map Image',
-        icon: Download,
-        group: 'download',
-        priority: 80,
-        applies: (context) =>
-          p.isSidebarItem(context) &&
-          p.isType(SIDEBAR_ITEM_TYPES.gameMaps)(context) &&
-          !p.hasMapContext(context),
-      },
-      {
-        id: 'download-folder',
-        commandId: 'downloadFolder',
-        label: 'Download',
-        icon: FolderDown,
-        group: 'download',
-        priority: 81,
-        applies: (context) =>
-          p.hasViewAccess(context) &&
-          p.isSidebarItem(context) &&
-          p.isType(SIDEBAR_ITEM_TYPES.folders)(context) &&
-          !p.hasMapContext(context),
       },
       {
         id: 'download-all',

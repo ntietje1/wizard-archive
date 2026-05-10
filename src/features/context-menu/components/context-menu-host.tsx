@@ -43,10 +43,10 @@ interface MenuItemContentProps {
 function MenuItemContent({ IconComponent, checked, label, shortcut }: MenuItemContentProps) {
   return (
     <>
-      {IconComponent && <IconComponent className="mr-2 h-4 w-4" />}
+      {IconComponent && <IconComponent className="mr-2 size-4" />}
       <span className="flex-1">{label}</span>
       {shortcut && <span className="ml-2 text-xs text-muted-foreground">{shortcut}</span>}
-      {checked && <CheckIcon className="ml-2 h-4 w-4" />}
+      {checked && <CheckIcon className="ml-2 size-4" />}
     </>
   )
 }
@@ -54,7 +54,7 @@ function MenuItemContent({ IconComponent, checked, label, shortcut }: MenuItemCo
 function ContextMenuResolvedItem({ menuItem, onAction }: ContextMenuResolvedItemProps) {
   const IconComponent = menuItem.icon
 
-  if (menuItem.children && menuItem.children.length > 0) {
+  if ((menuItem.children && menuItem.children.length > 0) || menuItem.submenuContent) {
     return (
       <ContextMenuSub>
         <ContextMenuSubTrigger
@@ -72,15 +72,17 @@ function ContextMenuResolvedItem({ menuItem, onAction }: ContextMenuResolvedItem
             shortcut={menuItem.shortcut}
           />
         </ContextMenuSubTrigger>
-        <ContextMenuSubContent>
-          {menuItem.children.map((child, index) => (
-            <React.Fragment key={child.id}>
-              {index > 0 && child.group !== menuItem.children?.[index - 1]?.group && (
-                <ContextMenuSeparator />
-              )}
-              <ContextMenuResolvedItem menuItem={child} onAction={onAction} />
-            </React.Fragment>
-          ))}
+        <ContextMenuSubContent className={cn(menuItem.submenuContent && 'w-auto p-2')}>
+          {/* Rich submenu content owns rendering when provided; children are the menu-item fallback. */}
+          {menuItem.submenuContent ??
+            menuItem.children?.map((child, index) => (
+              <React.Fragment key={child.id}>
+                {index > 0 && child.group !== menuItem.children?.[index - 1]?.group && (
+                  <ContextMenuSeparator />
+                )}
+                <ContextMenuResolvedItem menuItem={child} onAction={onAction} />
+              </React.Fragment>
+            ))}
         </ContextMenuSubContent>
       </ContextMenuSub>
     )

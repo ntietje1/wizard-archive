@@ -214,9 +214,9 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
     expect(before).not.toBeNull()
     expect(Object.keys(before!.blockMeta)).toContain(block.blockNoteId)
 
-    await dmAuth.mutation(api.sidebarShares.mutations.unshareSidebarItem, {
+    await dmAuth.mutation(api.sidebarShares.mutations.clearSidebarItemsMemberPermission, {
       campaignId: ctx.campaignId,
-      sidebarItemId: note.noteId,
+      sidebarItemIds: [note.noteId],
       campaignMemberId: ctx.player.memberId,
     })
 
@@ -225,6 +225,43 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
       noteId: note.noteId,
     })
     expect(after).toBeNull()
+  })
+
+  it('clears sidebar member permissions for multiple notes', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const playerAuth = asPlayer(ctx)
+
+    const first = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const second = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+    for (const note of [first, second]) {
+      await createSidebarShare(t, {
+        campaignId: ctx.campaignId,
+        sidebarItemId: note.noteId,
+        sidebarItemType: 'note',
+        campaignMemberId: ctx.player.memberId,
+      })
+    }
+
+    await dmAuth.mutation(api.sidebarShares.mutations.clearSidebarItemsMemberPermission, {
+      campaignId: ctx.campaignId,
+      sidebarItemIds: [first.noteId, second.noteId],
+      campaignMemberId: ctx.player.memberId,
+    })
+
+    await expect(
+      playerAuth.query(api.notes.queries.getNote, {
+        campaignId: ctx.campaignId,
+        noteId: first.noteId,
+      }),
+    ).resolves.toBeNull()
+    await expect(
+      playerAuth.query(api.notes.queries.getNote, {
+        campaignId: ctx.campaignId,
+        noteId: second.noteId,
+      }),
+    ).resolves.toBeNull()
   })
 
   it('share status transitions: not_shared → all_shared → individually_shared → not_shared', async () => {

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import type { BatchDropCommand, DropOutcome } from '~/features/dnd/utils/dnd-registry'
+import type { DropOutcome } from '~/features/dnd/utils/drop-outcome'
+import type { SurfaceBatchDropCommand } from '~/features/dnd/utils/surface-drop-planner'
 import type { Id } from 'convex/_generated/dataModel'
 import type { DropResult } from '~/features/file-upload/utils/folder-reader'
 
@@ -9,7 +10,7 @@ export type FileDropOverride = (
 ) => Promise<void>
 
 export type DndBatchDecision = {
-  command: Extract<BatchDropCommand, { status: 'partial' | 'failed' }>
+  command: Extract<SurfaceBatchDropCommand, { status: 'partial' | 'failed' }>
   onConfirm: () => Promise<void>
 }
 

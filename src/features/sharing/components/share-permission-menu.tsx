@@ -4,7 +4,10 @@ import type { PermissionLevel } from 'convex/permissions/types'
 import type { CampaignMember } from 'convex/campaigns/types'
 import type { UserProfile } from 'convex/users/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { ShareItemWithPermission } from '~/features/sharing/hooks/useSidebarItemsShare'
+import type {
+  NullableAggregatePermissionLevel,
+  ShareItemWithPermission,
+} from '~/features/sharing/hooks/useSidebarItemsShare'
 import usePersistedState from '~/shared/hooks/usePersistedState'
 import {
   Select,
@@ -20,6 +23,7 @@ import { Switch } from '~/features/shadcn/components/switch'
 import { UserProfileImage } from '~/shared/components/user-profile-image'
 
 type PermissionLevelOrDefault = PermissionLevel | 'default'
+type PermissionSelectValue = PermissionLevelOrDefault | 'mixed'
 
 const PERMISSION_LABELS: Record<PermissionLevel, string> = {
   [PERMISSION_LEVEL.NONE]: 'None',
@@ -28,7 +32,10 @@ const PERMISSION_LABELS: Record<PermissionLevel, string> = {
   [PERMISSION_LEVEL.FULL_ACCESS]: 'Full access',
 }
 
-function permissionLabel(level: PermissionLevel | null): string {
+const OVERLAY_Z_INDEX = 'z-[10000]'
+
+function permissionLabel(level: NullableAggregatePermissionLevel): string {
+  if (level === 'mixed') return 'Mixed'
   return PERMISSION_LABELS[level ?? PERMISSION_LEVEL.NONE] ?? 'None'
 }
 
@@ -39,16 +46,22 @@ function getDisplayName(profile: UserProfile): string {
 function RowTooltip({
   text,
   className,
+  positionerClassName,
   children,
 }: {
   text: string
   className?: string
+  positionerClassName?: string
   children: React.ReactNode
 }) {
   return (
     <Tooltip>
       <TooltipTrigger render={<div className={className} />}>{children}</TooltipTrigger>
-      <TooltipContent side="left" className="max-w-[220px]">
+      <TooltipContent
+        side="left"
+        className="max-w-[220px]"
+        positionerClassName={positionerClassName}
+      >
         {text}
       </TooltipContent>
     </Tooltip>
@@ -58,12 +71,13 @@ function RowTooltip({
 // --- Main component ---
 
 interface SharePermissionMenuProps {
+  title?: string
   dmUserProfile?: UserProfile
   isPending: boolean
   isMutating: boolean
   shareItems: Array<ShareItemWithPermission>
-  allPlayersPermissionLevel: PermissionLevel | null
-  inheritedAllPermissionLevel: PermissionLevel | null
+  allPlayersPermissionLevel: NullableAggregatePermissionLevel
+  inheritedAllPermissionLevel: NullableAggregatePermissionLevel
   inheritedFromFolderName: string | null
   isFolder?: boolean
   inheritShares?: boolean
@@ -74,6 +88,7 @@ interface SharePermissionMenuProps {
 }
 
 export function SharePermissionMenu({
+  title = 'Share',
   dmUserProfile,
   isPending,
   isMutating,
@@ -94,7 +109,7 @@ export function SharePermissionMenu({
   if (isPending) {
     return (
       <div className="py-2 px-1">
-        <div className="text-xs text-muted-foreground">Loading...</div>
+        <div className="text-xs text-muted-foreground">Loading&hellip;</div>
       </div>
     )
   }
@@ -104,6 +119,9 @@ export function SharePermissionMenu({
 
   function getPlayerInfoText(item: ShareItemWithPermission): string {
     const name = getDisplayName(item.member.userProfile)
+    if (item.permissionLevel === 'mixed' || item.inheritedPermissionLevel === 'mixed') {
+      return `${name}'s access differs across the selected items`
+    }
     if (item.hasExplicitShare) {
       return `${name}'s access has been explicitly set`
     }
@@ -130,7 +148,7 @@ export function SharePermissionMenu({
 
   return (
     <div className="flex flex-col gap-0.5 min-w-[300px]">
-      <div className="text-sm font-medium px-1 pb-1">Share</div>
+      <div className="text-sm font-medium px-1 pb-1">{title}</div>
       <div className="h-px bg-border mb-0.5" />
 
       {dmUserProfile && <DmRow profile={dmUserProfile} />}
@@ -181,7 +199,7 @@ export function SharePermissionMenu({
           <div className="h-px bg-border my-0.5" />
           <Tooltip>
             <TooltipTrigger
-              render={<div className="flex items-center justify-between px-1 py-1 gap-2" />}
+              render={<div className="flex items-center justify-between p-1 gap-2" />}
             >
               <span className="text-sm truncate flex-1">Copy permissions to new items</span>
               <Switch
@@ -191,7 +209,11 @@ export function SharePermissionMenu({
                 onCheckedChange={onSetInheritShares}
               />
             </TooltipTrigger>
-            <TooltipContent side="left" className="max-w-[220px]">
+            <TooltipContent
+              side="left"
+              className="max-w-[220px]"
+              positionerClassName={OVERLAY_Z_INDEX}
+            >
               All items and folders inside this folder will share the same permissions
             </TooltipContent>
           </Tooltip>
@@ -208,6 +230,7 @@ function DmRow({ profile }: { profile: UserProfile }) {
     <RowTooltip
       text="DMs always have full access"
       className="flex items-center gap-2.5 px-1 py-1.5"
+      positionerClassName={OVERLAY_Z_INDEX}
     >
       <UserProfileImage
         imageUrl={profile.imageUrl}
@@ -225,7 +248,7 @@ function DmRow({ profile }: { profile: UserProfile }) {
         <SelectTrigger size="sm" className="min-w-[110px] h-7 text-xs">
           <SelectValue>Full access</SelectValue>
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent positionerClassName={OVERLAY_Z_INDEX}>
           <SelectItem value="full_access">Full access</SelectItem>
         </SelectContent>
       </Select>
@@ -246,10 +269,14 @@ function PlayerRow({
 }) {
   const { member, hasExplicitShare, permissionLevel, inheritedPermissionLevel } = shareItem
   const profile = member.userProfile
-  const selectValue: PermissionLevelOrDefault = hasExplicitShare ? permissionLevel : 'default'
+  const selectValue: PermissionSelectValue = hasExplicitShare ? permissionLevel : 'default'
 
   return (
-    <RowTooltip text={infoText} className="flex items-center gap-2.5 px-1 py-1.5 select-none">
+    <RowTooltip
+      text={infoText}
+      className="flex items-center gap-2.5 px-1 py-1.5 select-none"
+      positionerClassName={OVERLAY_Z_INDEX}
+    >
       <UserProfileImage
         imageUrl={profile.imageUrl}
         name={profile.name}
@@ -265,14 +292,27 @@ function PlayerRow({
       <Select
         value={selectValue}
         onValueChange={(val) => {
-          if (val !== null) onChange(val)
+          if (val !== null && val !== 'mixed') onChange(val)
         }}
         disabled={disabled}
       >
         <SelectTrigger size="sm" className="min-w-[110px] h-7 text-xs">
           <SelectValue>{permissionLabel(permissionLevel)}</SelectValue>
         </SelectTrigger>
-        <SelectContent className="p-1" align="end" alignItemWithTrigger={false}>
+        <SelectContent
+          className="p-1"
+          align="end"
+          alignItemWithTrigger={false}
+          positionerClassName={OVERLAY_Z_INDEX}
+        >
+          {selectValue === 'mixed' && (
+            <>
+              <SelectItem value="mixed" disabled>
+                Mixed
+              </SelectItem>
+              <SelectSeparator />
+            </>
+          )}
           {!hasExplicitShare && (
             <SelectItem value="default">
               Default ({permissionLabel(inheritedPermissionLevel)})
@@ -309,9 +349,9 @@ function AllPlayersRow({
   onToggleExpand,
   onChange,
 }: {
-  selectValue: PermissionLevelOrDefault
+  selectValue: PermissionSelectValue
   selectLabel: string
-  inheritedLevel: PermissionLevel | null
+  inheritedLevel: NullableAggregatePermissionLevel
   disabled: boolean
   expanded: boolean
   label: string
@@ -340,7 +380,11 @@ function AllPlayersRow({
   ]
 
   return (
-    <RowTooltip text={infoText} className="flex items-center gap-2.5 px-1 py-1.5 select-none">
+    <RowTooltip
+      text={infoText}
+      className="flex items-center gap-2.5 px-1 py-1.5 select-none"
+      positionerClassName={OVERLAY_Z_INDEX}
+    >
       <button
         type="button"
         className="flex items-center gap-2.5 flex-1 min-w-0 hover:opacity-80 transition-opacity"
@@ -351,26 +395,39 @@ function AllPlayersRow({
             <AvatarStack members={inheritingMembers} />
           ) : (
             <div className="flex items-center justify-center size-6 rounded-lg bg-muted">
-              <Users className="h-3.5 w-3.5 text-muted-foreground" />
+              <Users className="size-3.5 text-muted-foreground" />
             </div>
           )}
         </div>
         <span className="text-sm font-medium truncate flex items-center gap-1">
           {label}
-          <Chevron className="h-3.5 w-3.5 text-muted-foreground shrink-0 pt-0.5" />
+          <Chevron className="size-3.5 text-muted-foreground shrink-0 pt-0.5" />
         </span>
       </button>
       <Select
         value={selectValue}
         onValueChange={(val) => {
-          if (val !== null) onChange(val)
+          if (val !== null && val !== 'mixed') onChange(val)
         }}
         disabled={disabled}
       >
         <SelectTrigger size="sm" className="min-w-[110px] h-7 text-xs">
           <SelectValue>{selectLabel}</SelectValue>
         </SelectTrigger>
-        <SelectContent className="p-1" align="end" alignItemWithTrigger={false}>
+        <SelectContent
+          className="p-1"
+          align="end"
+          alignItemWithTrigger={false}
+          positionerClassName={OVERLAY_Z_INDEX}
+        >
+          {selectValue === 'mixed' && (
+            <>
+              <SelectItem value="mixed" disabled>
+                Mixed
+              </SelectItem>
+              <SelectSeparator />
+            </>
+          )}
           {options.map((opt) => (
             <SelectItem key={opt.value} value={opt.value}>
               {opt.label}
@@ -384,19 +441,19 @@ function AllPlayersRow({
 
 function AvatarStack({ members }: { members: Array<CampaignMember> }) {
   return (
-    <div className="flex items-center -space-x-2">
-      {members.slice(0, 3).map((member) => (
+    <div className="flex items-center">
+      {members.slice(0, 3).map((member, index) => (
         <UserProfileImage
           key={member._id}
           imageUrl={member.userProfile.imageUrl}
           name={member.userProfile.name}
           email={member.userProfile.email}
           size="sm"
-          className="ring-2 ring-background"
+          className={`${index > 0 ? '-ml-2 ' : ''}ring-2 ring-background`}
         />
       ))}
       {members.length > 3 && (
-        <Avatar size="sm" className="ring-2 ring-background">
+        <Avatar size="sm" className="-ml-2 ring-2 ring-background">
           <AvatarFallback>+{members.length - 3}</AvatarFallback>
         </Avatar>
       )}
@@ -438,7 +495,7 @@ function ExpandedPlayerList({
 
   if (!hasAnyPlayers) {
     return (
-      <div className="px-1 py-1">
+      <div className="p-1">
         <div className="text-xs text-muted-foreground">No players in this campaign yet.</div>
       </div>
     )

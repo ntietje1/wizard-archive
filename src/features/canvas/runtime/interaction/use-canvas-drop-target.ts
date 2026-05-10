@@ -3,20 +3,20 @@ import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/ad
 import { createEmbedCanvasNode } from '../../nodes/embed/embed-node-creation'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CanvasDocumentNode } from 'convex/canvases/validation'
-import type { CanvasDropZoneData } from '~/features/dnd/utils/dnd-registry'
+import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
+import type { CanvasDropZoneData } from '~/features/dnd/utils/drop-target-data'
 import type { FileDropOverride } from '~/features/dnd/stores/dnd-store'
 import { handleError } from '~/shared/utils/logger'
 import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'
 import { useFileDropHandler } from '~/features/dnd/hooks/useFileDropHandler'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
+import { CANVAS_DROP_ZONE_TYPE } from '~/features/dnd/utils/drop-target-data'
 import {
-  CANVAS_DROP_ZONE_TYPE,
-  rejectionReasonMessage,
-  resolveDropCommand,
-} from '~/features/dnd/utils/dnd-registry'
-import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import { resolveNormalizedDraggedSidebarItems } from '~/features/dnd/utils/sidebar-drag-items'
+  executeSurfaceDropCommand,
+  resolveSidebarSurfaceDropCommand,
+} from '~/features/dnd/utils/surface-drop-command'
+import { useActiveSidebarItems, useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
 
@@ -39,6 +39,7 @@ export function useCanvasDropTarget({
 }: UseCanvasDropTargetOptions) {
   const dropOverlayRef = useRef<HTMLDivElement>(null)
   const { itemsMap } = useActiveSidebarItems()
+  const { itemsMap: trashedItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
   const { campaignId } = useCampaign()
 
   const dropData: CanvasDropZoneData = {
@@ -69,6 +70,8 @@ export function useCanvasDropTarget({
   screenToCanvasPositionRef.current = screenToCanvasPosition
   const itemsMapRef = useRef(itemsMap)
   itemsMapRef.current = itemsMap
+  const trashedItemsMapRef = useRef(trashedItemsMap)
+  trashedItemsMapRef.current = trashedItemsMap
 
   useEffect(() => {
     return monitorForElements({
@@ -88,46 +91,31 @@ export function useCanvasDropTarget({
         })
 
         try {
-          const sidebarItems = resolveNormalizedDraggedSidebarItems({
+          const command = resolveSidebarSurfaceDropCommand({
             sourceData: source.data,
             activeItemsMap: itemsMapRef.current,
-          })
-          const command = resolveDropCommand(
-            sidebarItems,
-            { type: CANVAS_DROP_ZONE_TYPE, canvasId: canvasIdRef.current },
-            {
-              moveItems: () => Promise.resolve(),
-              restoreItems: () => Promise.resolve(),
-              trashItems: () => Promise.resolve(),
-              navigateToItem: () => Promise.resolve(),
+            trashedItemsMap: trashedItemsMapRef.current,
+            target: { type: CANVAS_DROP_ZONE_TYPE, canvasId: canvasIdRef.current },
+            planningContext: {
               campaignId: campaignId ?? null,
-              campaignName: undefined,
-              isDm: true,
-              setFolderOpen: () => undefined,
             },
-          )
-          if (command.status === 'blocked') {
-            handleError(new Error(rejectionReasonMessage(command.reason)), 'Cannot drop items here')
-            return
-          }
-          if (command.status === 'noop' || command.action !== 'embed') return
-
-          const createEmbeds = async () => {
-            const nodes = command.items.map((sidebarItem, index) =>
-              createEmbedCanvasNode(sidebarItem._id, {
-                x: position.x + index * STACK_OFFSET,
-                y: position.y + index * STACK_OFFSET,
-              }),
-            )
-            createNodesRef.current(nodes)
-            await providerRef.current?.flushUpdates()
-          }
-
-          if (command.status === 'partial' || command.status === 'failed') {
-            useDndStore.getState().setBatchDecision({ command, onConfirm: createEmbeds })
-            return
-          }
-          void createEmbeds().catch((error) => handleError(error, 'Failed to add items to canvas'))
+          })
+          void executeSurfaceDropCommand({
+            command,
+            action: 'embed',
+            setBatchDecision: useDndStore.getState().setBatchDecision,
+            failureMessage: 'Failed to add items to canvas',
+            execute: async (embedCommand) => {
+              const nodes = embedCommand.items.map((sidebarItem, index) =>
+                createEmbedCanvasNode(sidebarItem._id, {
+                  x: position.x + index * STACK_OFFSET,
+                  y: position.y + index * STACK_OFFSET,
+                }),
+              )
+              createNodesRef.current(nodes)
+              await providerRef.current?.flushUpdates()
+            },
+          }).catch((error) => handleError(error, 'Failed to add items to canvas'))
         } catch (error) {
           handleError(error, 'Failed to resolve dragged sidebar items')
         }
@@ -149,19 +137,25 @@ export function useCanvasDropTarget({
         const results = await Promise.allSettled(
           files.map((f) => uploadRef.current(f.file, null, { navigate: false })),
         )
-        results.forEach((result, i) => {
+        const nodes: Array<CanvasDocumentNode> = []
+        results.forEach((result) => {
           if (result.status === 'rejected') {
             handleError(result.reason, 'Failed to upload file to canvas')
             return
           }
           if (!result.value) return
-          createNodesRef.current([
+          const index = nodes.length
+          nodes.push(
             createEmbedCanvasNode(result.value.id, {
-              x: basePosition.x + i * STACK_OFFSET,
-              y: basePosition.y + i * STACK_OFFSET,
+              x: basePosition.x + index * STACK_OFFSET,
+              y: basePosition.y + index * STACK_OFFSET,
             }),
-          ])
+          )
         })
+        if (nodes.length > 0) {
+          createNodesRef.current(nodes)
+          await providerRef.current?.flushUpdates()
+        }
       } catch (error) {
         handleError(error, 'Failed to upload files to canvas')
       }

@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '~/features/shadcn/components/dialog'
-import { rejectionReasonMessage } from '~/features/dnd/utils/dnd-registry'
+import { rejectionReasonMessage } from '~/features/dnd/utils/drop-rejections'
 import { handleError } from '~/shared/utils/logger'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 

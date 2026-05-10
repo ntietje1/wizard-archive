@@ -4,17 +4,18 @@ import { PERMISSION_LEVEL } from '../../permissions/types'
 import { logEditHistory } from '../../editHistory/log'
 import { assertSidebarItemName } from '../validation/name'
 import { deduplicateName } from './defaultItemName'
-import { planDuplicateOperations } from '../operations/planner'
+import { planDuplicateOperations } from '../operations/duplicatePlanner'
 import { collectSidebarChildrenMap } from '../operations/childrenMap'
 import { prepareSidebarItemCreate } from '../validation/orchestration'
 import { getSidebarItem } from './getSidebarItem'
 import { getSidebarItemsByParent } from './getSidebarItemsByParent'
-import { moveSidebarItems } from './moveSidebarItems'
 import { checkItemAccess, requireItemAccess } from '../validation/access'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { evaluateDuplicate } from '../operations/capabilities'
 import { assertSidebarOperationAllowed } from './operationCapability'
 import { toDecisionRecord } from './operationDecisions'
+import { trashSidebarItemTree } from './trashSidebarItemTree'
+import { cloneStorageId, copyDuplicateSidebarItemContent } from './duplicateSidebarItemContent'
 import type { OperationDecision } from './operationDecisions'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
@@ -24,8 +25,6 @@ import type { SidebarItemIconName } from '../validation/icon'
 import type { SidebarItemName } from '../validation/name'
 
 const MAX_SIDEBAR_DUPLICATE_DEPTH = 50
-const DUPLICATE_INSERT_CONCURRENCY = 100
-
 type DuplicateCopyOrReplaceOperation = Extract<DuplicateOperation, { action: 'copy' | 'replace' }>
 type ExecutableDuplicateOperation = Exclude<DuplicateOperation, { action: 'skip' }>
 
@@ -40,20 +39,6 @@ type DuplicateCtx = {
   createdItemIds: Array<Id<'sidebarItems'>>
 }
 
-function cloneStorageId(storageId: Id<'_storage'> | null): Id<'_storage'> | null {
-  // Files and images intentionally share immutable Convex storage references.
-  return storageId
-}
-
-async function insertWithBoundedConcurrency<T>(
-  items: Array<T>,
-  insert: (item: T) => Promise<unknown>,
-) {
-  for (let index = 0; index < items.length; index += DUPLICATE_INSERT_CONCURRENCY) {
-    await Promise.all(items.slice(index, index + DUPLICATE_INSERT_CONCURRENCY).map(insert))
-  }
-}
-
 async function getUniqueName(
   ctx: CampaignMutationCtx,
   parentId: Id<'sidebarItems'> | null,
@@ -65,56 +50,6 @@ async function getUniqueName(
       requestedName,
       siblings.map((sibling) => sibling.name),
     ),
-  )
-}
-
-async function copyYjsUpdates(
-  ctx: CampaignMutationCtx,
-  sourceItemId: Id<'sidebarItems'>,
-  targetItemId: Id<'sidebarItems'>,
-) {
-  const updates = await ctx.db
-    .query('yjsUpdates')
-    .withIndex('by_document_seq', (q) => q.eq('documentId', sourceItemId))
-    .order('asc')
-    .collect()
-
-  await insertWithBoundedConcurrency(updates, (update) =>
-    ctx.db.insert('yjsUpdates', {
-      documentId: targetItemId,
-      update: update.update,
-      seq: update.seq,
-      isSnapshot: update.isSnapshot,
-    }),
-  )
-}
-
-async function copyNoteBlocks(
-  ctx: CampaignMutationCtx,
-  sourceItemId: Id<'sidebarItems'>,
-  targetItemId: Id<'sidebarItems'>,
-) {
-  const blocks = await ctx.db
-    .query('blocks')
-    .withIndex('by_campaign_note_block', (q) =>
-      q.eq('campaignId', ctx.campaign._id).eq('noteId', sourceItemId),
-    )
-    .collect()
-
-  await insertWithBoundedConcurrency(blocks, (block) =>
-    ctx.db.insert('blocks', {
-      noteId: targetItemId,
-      blockNoteId: block.blockNoteId,
-      position: block.position,
-      parentBlockId: block.parentBlockId,
-      depth: block.depth,
-      type: block.type,
-      props: block.props,
-      inlineContent: block.inlineContent,
-      plainText: block.plainText,
-      campaignId: ctx.campaign._id,
-      shareStatus: block.shareStatus,
-    }),
   )
 }
 
@@ -158,70 +93,7 @@ async function insertDuplicateSidebarItem(
     deletedBy: null,
   })
 
-  switch (source.type) {
-    case SIDEBAR_ITEM_TYPES.notes:
-      await ctx.db.insert('notes', { sidebarItemId: itemId })
-      await copyNoteBlocks(ctx, source._id, itemId)
-      await copyYjsUpdates(ctx, source._id, itemId)
-      break
-    case SIDEBAR_ITEM_TYPES.folders: {
-      const sourceFolder = await ctx.db
-        .query('folders')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', source._id))
-        .unique()
-      if (!sourceFolder) {
-        throwClientError(
-          ERROR_CODE.NOT_FOUND,
-          `Missing folders companion row for sidebar item ${source._id}`,
-        )
-      }
-      await ctx.db.insert('folders', {
-        sidebarItemId: itemId,
-        inheritShares: sourceFolder.inheritShares,
-      })
-      break
-    }
-    case SIDEBAR_ITEM_TYPES.gameMaps: {
-      const sourceMap = await ctx.db
-        .query('gameMaps')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', source._id))
-        .unique()
-      if (!sourceMap) {
-        throwClientError(
-          ERROR_CODE.NOT_FOUND,
-          `Missing gameMaps companion row for sidebar item ${source._id}`,
-        )
-      }
-      await ctx.db.insert('gameMaps', {
-        sidebarItemId: itemId,
-        imageStorageId: cloneStorageId(sourceMap.imageStorageId),
-      })
-      break
-    }
-    case SIDEBAR_ITEM_TYPES.files: {
-      const sourceFile = await ctx.db
-        .query('files')
-        .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', source._id))
-        .unique()
-      if (!sourceFile) {
-        throwClientError(
-          ERROR_CODE.NOT_FOUND,
-          `Missing files companion row for sidebar item ${source._id}`,
-        )
-      }
-      await ctx.db.insert('files', {
-        sidebarItemId: itemId,
-        storageId: cloneStorageId(sourceFile.storageId),
-      })
-      break
-    }
-    case SIDEBAR_ITEM_TYPES.canvases:
-      await ctx.db.insert('canvases', { sidebarItemId: itemId })
-      await copyYjsUpdates(ctx, source._id, itemId)
-      break
-    default:
-      source satisfies never
-  }
+  await copyDuplicateSidebarItemContent(ctx, source, itemId)
 
   await logEditHistory(ctx, {
     itemId,
@@ -408,11 +280,11 @@ async function trashDuplicateReplacement(
   if (destination.type === SIDEBAR_ITEM_TYPES.folders) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Folders are merged instead of replaced')
   }
-  await moveSidebarItems(ctx, {
-    sourceItemIds: [destination._id],
-    targetParentId: null,
-    action: 'trash',
+  const trashableDestination = await requireItemAccess(ctx, {
+    rawItem: destination,
+    requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
+  await trashSidebarItemTree(ctx, trashableDestination)
 }
 
 async function resolveDuplicateName(

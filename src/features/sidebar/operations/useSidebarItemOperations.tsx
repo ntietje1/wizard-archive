@@ -5,7 +5,9 @@ import { api } from 'convex/_generated/api'
 import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
-import { planDuplicateOperations, planMoveOperations } from 'convex/sidebarItems/operations/planner'
+import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
+import { planDuplicateOperations } from 'convex/sidebarItems/operations/duplicatePlanner'
+import { planMoveOperations } from 'convex/sidebarItems/operations/movePlanner'
 import { normalizeTopLevelSelectedItems } from 'convex/sidebarItems/operations/selection'
 import {
   getPasteTargetParentId,
@@ -36,6 +38,7 @@ import { getSelectedSlug } from '~/features/sidebar/hooks/useSelectedItem'
 import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { handleError } from '~/shared/utils/logger'
+import { resolveItemsById, shouldClearEditorForDeletedRoots } from './delete-selection-helpers'
 
 type PendingDuplicateRequest = {
   kind: 'duplicate'
@@ -102,47 +105,15 @@ export function useSidebarItemOperationsValue() {
     useState<Array<AnySidebarItem> | null>(null)
 
   const allItemsMap = new Map<Id<'sidebarItems'>, AnySidebarItem>([...itemsMap, ...trashedItemsMap])
+  const itemBySlug = new Map<SidebarItemSlug, AnySidebarItem>(
+    Array.from(allItemsMap.values(), (item) => [item.slug, item] as const),
+  )
 
   const normalizeItems = (items: Array<AnySidebarItem>) =>
     normalizeTopLevelSelectedItems(items, allItemsMap)
 
-  const resolveItemsById = (ids: Array<Id<'sidebarItems'>>) => {
-    const resolvedItems: Array<AnySidebarItem> = []
-    for (const id of ids) {
-      const item = allItemsMap.get(id)
-      if (item) {
-        resolvedItems.push(item)
-      }
-    }
-    return resolvedItems
-  }
-
-  const isItemOrDescendantOfDeletedRoot = (
-    item: AnySidebarItem,
-    deletedIds: ReadonlySet<Id<'sidebarItems'>>,
-  ) => {
-    if (deletedIds.has(item._id)) return true
-    let parentId = item.parentId
-    const seen = new Set<Id<'sidebarItems'>>()
-    while (parentId && !seen.has(parentId)) {
-      if (deletedIds.has(parentId)) return true
-      seen.add(parentId)
-      parentId = allItemsMap.get(parentId)?.parentId ?? null
-    }
-    return false
-  }
-
-  const shouldClearEditorForDeletedRoots = (items: Array<AnySidebarItem>) => {
-    const currentSlug = getSelectedSlug()
-    if (!currentSlug) return false
-    const currentItem = Array.from(allItemsMap.values()).find((item) => item.slug === currentSlug)
-    if (!currentItem) return false
-    const deletedIds = new Set(items.map((item) => item._id))
-    return isItemOrDescendantOfDeletedRoot(currentItem, deletedIds)
-  }
-
   const selectedItems = normalizeTopLevelSelectedItems(
-    resolveItemsById(selectedItemIds),
+    resolveItemsById(selectedItemIds, allItemsMap),
     allItemsMap,
   )
 
@@ -381,7 +352,14 @@ export function useSidebarItemOperationsValue() {
         action: 'trash',
       })
       if (movedIds.length > 0) {
-        if (shouldClearEditorForDeletedRoots(items)) {
+        if (
+          shouldClearEditorForDeletedRoots({
+            deletedItems: items,
+            currentSlug: getSelectedSlug(),
+            itemBySlug,
+            allItemsMap,
+          })
+        ) {
           await clearEditorContent()
         }
         toast.success(
@@ -405,7 +383,14 @@ export function useSidebarItemOperationsValue() {
         sourceItemIds: items.map((item) => item._id),
       })
       if (deletedIds.length > 0) {
-        if (shouldClearEditorForDeletedRoots(items)) {
+        if (
+          shouldClearEditorForDeletedRoots({
+            deletedItems: items,
+            currentSlug: getSelectedSlug(),
+            itemBySlug,
+            allItemsMap,
+          })
+        ) {
           await clearEditorContent()
         }
         toast.success(
@@ -500,7 +485,7 @@ export function useSidebarItemOperationsValue() {
 
   const pasteClipboard = async (targetParentId = getPasteTargetParentId(activeItemSurface)) => {
     if (!campaignId || !itemClipboard || itemClipboard.campaignId !== campaignId) return
-    let items = resolveItemsById(itemClipboard.itemIds)
+    let items = resolveItemsById(itemClipboard.itemIds, allItemsMap)
     items = normalizeItems(items)
     if (items.length === 0) return
 

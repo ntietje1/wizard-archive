@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { SIDEBAR_ROOT_DROP_TYPE, canDropFilesOnTarget } from '~/features/dnd/utils/dnd-registry'
+import { SIDEBAR_ROOT_DROP_TYPE, canDropFilesOnTarget } from '~/features/dnd/utils/drop-target-data'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'

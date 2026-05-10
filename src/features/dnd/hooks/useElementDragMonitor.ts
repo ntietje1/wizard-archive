@@ -3,19 +3,22 @@ import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/ad
 import type { DragOverlayState } from '~/features/dnd/components/drag-overlay'
 import type { DndMonitorCtx } from '~/features/dnd/types'
 import { handleError } from '~/shared/utils/logger'
+import { getDragItemId, getDragPreviewItemIds } from '~/features/dnd/utils/drag-source-data'
 import {
-  getDragItemId,
-  getDragPreviewItemIds,
   getDropTargetKey,
   getHighlightId,
-  rejectionReasonMessage,
-  resolveDropCommand,
-  resolveDropOutcome,
   resolveDropTarget,
-} from '~/features/dnd/utils/dnd-registry'
+} from '~/features/dnd/utils/drop-target-data'
+import { rejectionReasonMessage } from '~/features/dnd/utils/drop-rejections'
+import { resolveDropFeedback } from '~/features/dnd/utils/drop-feedback'
+import {
+  dropCommandFailureMessage,
+  resolveGlobalDropCommand,
+} from '~/features/dnd/utils/global-drop-planner'
 import { resolveNormalizedDraggedSidebarItems } from '~/features/dnd/utils/sidebar-drag-items'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
-import type { DropCommand, DropOutcome, SidebarDropData } from '~/features/dnd/utils/dnd-registry'
+import type { DropOutcome } from '~/features/dnd/utils/drop-outcome'
+import type { GlobalDropCommand } from '~/features/dnd/utils/global-drop-planner'
 import { assertNever } from '~/shared/utils/utils'
 
 function resolveDraggedItem(sourceData: Record<string, unknown>, ctx: DndMonitorCtx) {
@@ -51,80 +54,6 @@ function resolveMonitorDropTarget(
     : null
 }
 
-function resolveDragFeedback({
-  ctx,
-  draggedItems,
-  dropTarget,
-}: {
-  ctx: DndMonitorCtx
-  draggedItems: ReturnType<typeof resolveDraggedItems>
-  dropTarget: SidebarDropData | null
-}): { outcome: DropOutcome | null; rejectedItemCount?: number } {
-  const draggedItem = draggedItems[0] ?? null
-  const command = dropTarget
-    ? resolveDropCommand(draggedItems, dropTarget, ctx.dndContext)
-    : { status: 'noop' as const }
-
-  switch (command.status) {
-    case 'ready':
-      if (command.action === 'pin' || command.action === 'link' || command.action === 'embed') {
-        return {
-          outcome: {
-            type: 'operation',
-            action: command.action,
-            label: command.label,
-            execute: null,
-          },
-        }
-      }
-      return {
-        outcome: resolveDropOutcome(
-          command.action === 'open' ? draggedItem : (command.items[0] ?? null),
-          dropTarget,
-          ctx.dndContext,
-        ),
-      }
-    case 'partial':
-    case 'failed':
-      return {
-        outcome: {
-          type: 'operation',
-          action: command.action,
-          label: command.label,
-          execute: null,
-        },
-        rejectedItemCount: command.rejectedItems.length,
-      }
-    case 'noop':
-      return { outcome: null }
-    case 'blocked':
-      return { outcome: { type: 'rejection', reason: command.reason } }
-    default:
-      return assertNever(command)
-  }
-}
-
-function dropCommandFailureMessage(command: Extract<DropCommand, { status: 'ready' }>) {
-  switch (command.action) {
-    case 'move':
-      return 'Failed to move items'
-    case 'restore':
-      return 'Failed to restore items'
-    case 'trash':
-      return 'Failed to move items to trash'
-    case 'open':
-      return 'Failed to open item'
-    case 'pin':
-      return 'Failed to pin item'
-    case 'link':
-      return 'Failed to create link'
-    case 'embed':
-      return 'Failed to embed item'
-    default:
-      return assertNever(command)
-  }
-}
-
 function resetElementDragState({
   overlayRef,
   lastDropTargetKeyRef,
@@ -148,9 +77,8 @@ function resetElementDragState({
   setIsDraggingElement(false)
 }
 
-async function executeDropCommand(ctx: DndMonitorCtx, command: DropCommand) {
+async function executeDropCommand(ctx: DndMonitorCtx, command: GlobalDropCommand) {
   if (command.status === 'noop') return
-  if (command.status === 'partial' || command.status === 'failed') return
   if (command.status === 'blocked') {
     handleError(new Error(rejectionReasonMessage(command.reason)), 'Cannot drop items here')
     return
@@ -167,11 +95,7 @@ async function executeDropCommand(ctx: DndMonitorCtx, command: DropCommand) {
         await ctx.dndContext.trashItems(command.items)
         break
       case 'open':
-        await command.execute()
-        break
-      case 'pin':
-      case 'link':
-      case 'embed':
+        await ctx.dndContext.navigateToItem(command.item.slug, true)
         break
       default:
         assertNever(command)
@@ -200,7 +124,10 @@ async function executeElementDrop(
   )
   if (!resolvedTarget) return
 
-  await executeDropCommand(ctx, resolveDropCommand(draggedItems, resolvedTarget, ctx.dndContext))
+  await executeDropCommand(
+    ctx,
+    resolveGlobalDropCommand(draggedItems, resolvedTarget, ctx.dropPlanningContext),
+  )
 }
 
 export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
@@ -311,7 +238,7 @@ export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
           const dropTarget = resolveMonitorDropTarget(rawDropTarget, ctx)
           const draggedItems = resolveDraggedItems(source.data, ctx)
           const draggedPreviewItems = resolveDraggedPreviewItems(source.data, ctx)
-          const feedback = resolveDragFeedback({ ctx, draggedItems, dropTarget })
+          const feedback = resolveDropFeedback(draggedItems, dropTarget, ctx.dropPlanningContext)
 
           setDragState((prev) => {
             if (!prev) return null

@@ -78,6 +78,16 @@ describe('item surface hotkey utilities', () => {
     expect(isItemSurfaceInteractionTarget(blank)).toBe(false)
   })
 
+  it('detects context menu content as an item-surface interaction target', () => {
+    const menu = document.createElement('div')
+    menu.dataset.slot = 'context-menu-content'
+    const menuItem = document.createElement('div')
+    menu.append(menuItem)
+
+    expect(isItemSurfaceInteractionTarget(menu)).toBe(true)
+    expect(isItemSurfaceInteractionTarget(menuItem)).toBe(true)
+  })
+
   it('opens the focused selected item during multi-selection', () => {
     const note = createNote()
     const folder = createFolder()

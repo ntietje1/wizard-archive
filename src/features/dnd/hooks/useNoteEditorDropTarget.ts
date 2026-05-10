@@ -1,19 +1,18 @@
 import { useEffect, useRef } from 'react'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import type { Id } from 'convex/_generated/dataModel'
+import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
+import { NOTE_EDITOR_DROP_TYPE } from '~/features/dnd/utils/drop-target-data'
 import {
-  NOTE_EDITOR_DROP_TYPE,
-  rejectionReasonMessage,
-  resolveDropCommand,
-} from '~/features/dnd/utils/dnd-registry'
+  executeSurfaceDropCommand,
+  resolveSidebarSurfaceDropCommand,
+} from '~/features/dnd/utils/surface-drop-command'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
-import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useActiveSidebarItems, useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { getMinDisambiguationPath } from 'convex/links/linkResolution'
 import { useNoteEditorStore } from '~/features/editor/stores/note-editor-store'
-import { resolveNormalizedDraggedSidebarItems } from '~/features/dnd/utils/sidebar-drag-items'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { handleError } from '~/shared/utils/logger'
 
 export function useNoteEditorDropTarget({
   ref,
@@ -30,12 +29,15 @@ export function useNoteEditorDropTarget({
   })
 
   const { data: allItems, itemsMap } = useActiveSidebarItems()
+  const { itemsMap: trashedItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
   const { campaignId } = useCampaign()
   const setBatchDecision = useDndStore((s) => s.setBatchDecision)
   const allItemsRef = useRef(allItems)
   allItemsRef.current = allItems
   const itemsMapRef = useRef(itemsMap)
   itemsMapRef.current = itemsMap
+  const trashedItemsMapRef = useRef(trashedItemsMap)
+  trashedItemsMapRef.current = trashedItemsMap
 
   useEffect(() => {
     return monitorForElements({
@@ -45,67 +47,54 @@ export function useNoteEditorDropTarget({
         if (topTarget.data.type !== NOTE_EDITOR_DROP_TYPE) return
         if (topTarget.data.noteId !== noteId) return
 
-        const items = resolveNormalizedDraggedSidebarItems({
-          sourceData: source.data,
-          activeItemsMap: itemsMapRef.current,
-        })
-        if (items.length === 0) return
-
         const { clientX, clientY } = location.current.input
         const { editor } = useNoteEditorStore.getState()
         if (!editor) return
-        const tiptap = editor._tiptapEditor
-        const posResult = tiptap.view.posAtCoords({
-          left: clientX,
-          top: clientY,
-        })
-        if (!posResult) return
 
-        const command = resolveDropCommand(
-          items,
-          { type: NOTE_EDITOR_DROP_TYPE, noteId },
-          {
-            moveItems: () => Promise.resolve(),
-            restoreItems: () => Promise.resolve(),
-            trashItems: () => Promise.resolve(),
-            navigateToItem: () => Promise.resolve(),
+        const command = resolveSidebarSurfaceDropCommand({
+          sourceData: source.data,
+          activeItemsMap: itemsMapRef.current,
+          trashedItemsMap: trashedItemsMapRef.current,
+          target: { type: NOTE_EDITOR_DROP_TYPE, noteId },
+          planningContext: {
             campaignId: campaignId ?? null,
-            campaignName: undefined,
-            isDm: true,
-            setFolderOpen: () => undefined,
           },
-        )
-
-        if (command.status === 'blocked') {
-          handleError(new Error(rejectionReasonMessage(command.reason)), 'Cannot drop items here')
-          return
-        }
-        if (command.status === 'noop' || command.action !== 'link') return
-
-        const links = command.items.map((item) => {
-          const pathParts = getMinDisambiguationPath(item, allItemsRef.current, itemsMapRef.current)
-          const itemName = item.name.trim() || 'Untitled'
-          const finalPathParts = pathParts.length === 0 ? [itemName] : pathParts
-          const path = finalPathParts.join('/')
-          const linkText = finalPathParts.length > 1 ? `${path}|${itemName}` : path
-          return `[[${linkText}]]`
         })
 
-        const insertLinks = async () => {
-          if (links.length === 0) return
-          const { editor: currentEditor, provider: currentProvider } = useNoteEditorStore.getState()
-          const currentTiptap = currentEditor?._tiptapEditor
-          if (!currentTiptap) return
-          currentTiptap.chain().focus().insertContent(links.join('\n')).run()
-          await currentProvider?.flushUpdates()
-        }
+        void executeSurfaceDropCommand({
+          command,
+          action: 'link',
+          setBatchDecision,
+          failureMessage: 'Failed to add links',
+          execute: async (linkCommand) => {
+            const links = linkCommand.items.map((item) => {
+              const pathParts = getMinDisambiguationPath(
+                item,
+                allItemsRef.current,
+                itemsMapRef.current,
+              )
+              const itemName = item.name.trim() || 'Untitled'
+              const finalPathParts = pathParts.length === 0 ? [itemName] : pathParts
+              const path = finalPathParts.join('/')
+              const linkText = finalPathParts.length > 1 ? `${path}|${itemName}` : path
+              return `[[${linkText}]]`
+            })
+            if (links.length === 0) return
 
-        if (command.status === 'partial' || command.status === 'failed') {
-          setBatchDecision({ command, onConfirm: insertLinks })
-          return
-        }
+            const { editor: currentEditor, provider: currentProvider } =
+              useNoteEditorStore.getState()
+            const currentTiptap = currentEditor?._tiptapEditor
+            if (!currentTiptap) return
+            const posResult = currentTiptap.view.posAtCoords({
+              left: clientX,
+              top: clientY,
+            })
+            if (!posResult) return
 
-        void insertLinks().catch((error) => handleError(error, 'Failed to add links'))
+            currentTiptap.chain().focus().insertContentAt(posResult.pos, links.join('\n')).run()
+            await currentProvider?.flushUpdates()
+          },
+        })
       },
     })
   }, [campaignId, noteId, setBatchDecision])

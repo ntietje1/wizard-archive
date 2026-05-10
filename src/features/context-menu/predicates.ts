@@ -40,6 +40,18 @@ function selectedItemHasEditAccess(ctx: PredicateContext, itemIndex: number): bo
   return hasEditAccess(ctx)
 }
 
+function selectedItemHasViewAccess(ctx: PredicateContext, itemIndex: number): boolean {
+  if (ctx.selectedItems !== undefined) {
+    const permissionLevel = ctx.selectedItems[itemIndex]?.myPermissionLevel
+    return (
+      permissionLevel === PERMISSION_LEVEL.VIEW ||
+      permissionLevel === PERMISSION_LEVEL.EDIT ||
+      permissionLevel === PERMISSION_LEVEL.FULL_ACCESS
+    )
+  }
+  return hasViewAccess(ctx)
+}
+
 function selectedItemIsTrashed(ctx: PredicateContext, itemIndex: number): boolean {
   if (ctx.selectedItems !== undefined) {
     return ctx.selectedItems[itemIndex]?.location === SIDEBAR_ITEM_LOCATION.trash
@@ -98,10 +110,6 @@ export const hasPinContext: Predicate = (ctx) => {
   return Boolean(ctx.activePin && ctx.activeMap)
 }
 
-export const hasMapContext: Predicate = (ctx) => {
-  return Boolean(ctx.activeMap)
-}
-
 export const hasActiveSession: Predicate = (ctx) => {
   return ctx.hasActiveSession === true
 }
@@ -138,6 +146,11 @@ export const allSelectedItemsHaveFullAccess: Predicate = (ctx) => {
 export const allSelectedItemsHaveEditAccess: Predicate = (ctx) => {
   const items = selectedItems(ctx)
   return items.length > 0 && items.every((_, index) => selectedItemHasEditAccess(ctx, index))
+}
+
+export const allSelectedItemsHaveViewAccess: Predicate = (ctx) => {
+  const items = selectedItems(ctx)
+  return items.length > 0 && items.every((_, index) => selectedItemHasViewAccess(ctx, index))
 }
 
 export const allSelectedItemsTrashed: Predicate = (ctx) => {

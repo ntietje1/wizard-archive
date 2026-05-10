@@ -6,7 +6,7 @@ import {
   CANVAS_DROP_ZONE_TYPE,
   MAP_DROP_ZONE_TYPE,
   NOTE_EDITOR_DROP_TYPE,
-} from '~/features/dnd/utils/dnd-registry'
+} from '~/features/dnd/utils/drop-target-data'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { createGameMap, createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'

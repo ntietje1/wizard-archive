@@ -14,12 +14,20 @@ import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import type { CustomBlock } from '../../notes/editorSpecs'
 
 /** Extract the text of the first inline content entry from a block's content */
-function getFirstInlineText(block: CustomBlock): string | undefined {
-  const content = (block as { content?: Array<{ text?: string }> }).content
-  return content?.[0]?.text
+function hasInlineTextContent(block: unknown): block is { content?: Array<{ text?: string }> } {
+  return (
+    typeof block === 'object' &&
+    block !== null &&
+    Array.isArray('content' in block ? block.content : undefined)
+  )
 }
 
-describe('getFolderContentsForDownload — collectItemsRecursively', () => {
+function getFirstInlineText(block: CustomBlock): string | undefined {
+  const unknownBlock: unknown = block
+  return hasInlineTextContent(unknownBlock) ? unknownBlock.content?.[0]?.text : undefined
+}
+
+describe('getSidebarItemsForDownload — collectItemsRecursively', () => {
   const t = createTestContext()
 
   it('empty folder returns empty items array', async () => {
@@ -30,12 +38,11 @@ describe('getFolderContentsForDownload — collectItemsRecursively', () => {
       name: 'Empty',
     })
 
-    const result = await dmAuth.query(api.folders.queries.getFolderContentsForDownload, {
+    const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
       campaignId: ctx.campaignId,
-      folderId,
+      sourceItemIds: [folderId],
     })
 
-    expect(result.folderName).toBe('Empty')
     expect(result.items).toEqual([])
   })
 
@@ -56,9 +63,9 @@ describe('getFolderContentsForDownload — collectItemsRecursively', () => {
       plainText: 'Hello',
     })
 
-    const result = await dmAuth.query(api.folders.queries.getFolderContentsForDownload, {
+    const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
       campaignId: ctx.campaignId,
-      folderId,
+      sourceItemIds: [folderId],
     })
 
     expect(result.items.length).toBe(1)
@@ -95,9 +102,9 @@ describe('getFolderContentsForDownload — collectItemsRecursively', () => {
       plainText: 'Child',
     })
 
-    const result = await dmAuth.query(api.folders.queries.getFolderContentsForDownload, {
+    const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
       campaignId: ctx.campaignId,
-      folderId,
+      sourceItemIds: [folderId],
     })
 
     expect(result.items.length).toBe(1)
@@ -125,9 +132,9 @@ describe('getFolderContentsForDownload — collectItemsRecursively', () => {
       name: 'report.pdf',
     })
 
-    const result = await dmAuth.query(api.folders.queries.getFolderContentsForDownload, {
+    const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
       campaignId: ctx.campaignId,
-      folderId,
+      sourceItemIds: [folderId],
     })
 
     expect(result.items.length).toBe(1)
@@ -153,9 +160,9 @@ describe('getFolderContentsForDownload — collectItemsRecursively', () => {
       name: 'Dungeon',
     })
 
-    const result = await dmAuth.query(api.folders.queries.getFolderContentsForDownload, {
+    const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
       campaignId: ctx.campaignId,
-      folderId,
+      sourceItemIds: [folderId],
     })
 
     expect(result.items.length).toBe(1)
@@ -181,9 +188,9 @@ describe('getFolderContentsForDownload — collectItemsRecursively', () => {
       name: 'Deep Note',
     })
 
-    const result = await dmAuth.query(api.folders.queries.getFolderContentsForDownload, {
+    const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
       campaignId: ctx.campaignId,
-      folderId: parentId,
+      sourceItemIds: [parentId],
     })
 
     expect(result.items.length).toBe(1)
@@ -218,9 +225,9 @@ describe('getFolderContentsForDownload — collectItemsRecursively', () => {
       name: 'Sub Note',
     })
 
-    const result = await dmAuth.query(api.folders.queries.getFolderContentsForDownload, {
+    const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
       campaignId: ctx.campaignId,
-      folderId,
+      sourceItemIds: [folderId],
     })
 
     expect(result.items.length).toBe(4)
@@ -248,14 +255,13 @@ describe('getFolderContentsForDownload — collectItemsRecursively', () => {
       name: 'readme.md',
     })
 
-    const result = await dmAuth.query(api.folders.queries.getFolderContentsForDownload, {
+    const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
       campaignId: ctx.campaignId,
-      folderId,
+      sourceItemIds: [folderId],
     })
 
     expect(result.items.length).toBe(1)
     expect(result.items[0].name).toBe('readme.md')
-    expect(result.items[0].name).not.toBe('readme.md.md')
   })
 
   it('deep nesting (3+ levels) — paths include all ancestors', async () => {
@@ -278,9 +284,9 @@ describe('getFolderContentsForDownload — collectItemsRecursively', () => {
       name: 'deep.png',
     })
 
-    const result = await dmAuth.query(api.folders.queries.getFolderContentsForDownload, {
+    const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
       campaignId: ctx.campaignId,
-      folderId: l0,
+      sourceItemIds: [l0],
     })
 
     expect(result.items.length).toBe(1)
@@ -303,9 +309,9 @@ describe('getFolderContentsForDownload — collectItemsRecursively', () => {
       name: 'Visible Note',
     })
 
-    const result = await dmAuth.query(api.folders.queries.getFolderContentsForDownload, {
+    const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
       campaignId: ctx.campaignId,
-      folderId,
+      sourceItemIds: [folderId],
     })
 
     expect(result.items.length).toBe(1)
@@ -336,9 +342,9 @@ describe('getFolderContentsForDownload — collectItemsRecursively', () => {
       plainText: 'First',
     })
 
-    const result = await dmAuth.query(api.folders.queries.getFolderContentsForDownload, {
+    const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
       campaignId: ctx.campaignId,
-      folderId,
+      sourceItemIds: [folderId],
     })
 
     expect(result.items.length).toBe(1)
@@ -388,9 +394,9 @@ describe('getFolderContentsForDownload — collectItemsRecursively', () => {
       plainText: 'Nested child 2',
     })
 
-    const result = await dmAuth.query(api.folders.queries.getFolderContentsForDownload, {
+    const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
       campaignId: ctx.campaignId,
-      folderId,
+      sourceItemIds: [folderId],
     })
 
     expect(result.items.length).toBe(1)
@@ -421,9 +427,9 @@ describe('getFolderContentsForDownload — collectItemsRecursively', () => {
       name: 'Blank',
     })
 
-    const result = await dmAuth.query(api.folders.queries.getFolderContentsForDownload, {
+    const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
       campaignId: ctx.campaignId,
-      folderId,
+      sourceItemIds: [folderId],
     })
 
     expect(result.items.length).toBe(1)
@@ -469,5 +475,83 @@ describe('getRootContentsForDownload — collectItemsRecursively at root', () =>
     expect(note).toBeDefined()
     expect(note?.path).toBe('PathTest.md')
     expect(note?.path?.startsWith('/')).toBe(false)
+  })
+})
+
+describe('getSidebarItemsForDownload', () => {
+  const t = createTestContext()
+
+  it('collects one note directly', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Direct Note',
+    })
+    await createBlock(t, noteId, ctx.campaignId, {
+      position: 0,
+      inlineContent: [{ type: 'text', text: 'Hello', styles: {} }],
+      plainText: 'Hello',
+    })
+
+    const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
+      campaignId: ctx.campaignId,
+      sourceItemIds: [noteId],
+    })
+
+    expect(result.items).toHaveLength(1)
+    expect(result.items[0].name).toBe('Direct Note.md')
+    expect(result.items[0].path).toBe('Direct Note.md')
+  })
+
+  it('collects mixed direct items and folder contents without duplicating descendants', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Folder',
+    })
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      parentId: folderId,
+      name: 'Nested',
+    })
+    const { fileId } = await createFile(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Root.pdf',
+    })
+
+    const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
+      campaignId: ctx.campaignId,
+      sourceItemIds: [folderId, noteId, fileId],
+    })
+
+    expect(result.items.map((item) => item.path).sort()).toEqual(
+      ['Folder/Nested.md', 'Root.pdf'].sort(),
+    )
+  })
+
+  it('deduplicates same-named direct download paths like keep-both naming', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const { folderId: firstFolderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'First Folder',
+    })
+    const { folderId: secondFolderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Second Folder',
+    })
+    const { noteId: firstNoteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      parentId: firstFolderId,
+      name: 'Shared Name',
+    })
+    const { noteId: secondNoteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      parentId: secondFolderId,
+      name: 'Shared Name',
+    })
+
+    const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
+      campaignId: ctx.campaignId,
+      sourceItemIds: [firstNoteId, secondNoteId],
+    })
+
+    expect(result.items.map((item) => item.path).sort()).toEqual(
+      ['Shared Name.md', 'Shared Name 2.md'].sort(),
+    )
   })
 })

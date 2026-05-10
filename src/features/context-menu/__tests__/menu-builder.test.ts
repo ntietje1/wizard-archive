@@ -15,7 +15,12 @@ import {
   editorContextMenuContributors,
   groupConfig,
 } from '~/features/context-menu/menu-registry'
-import { createFile, createFolder, createNote } from '~/test/factories/sidebar-item-factory'
+import {
+  createFile,
+  createFolder,
+  createGameMap,
+  createNote,
+} from '~/test/factories/sidebar-item-factory'
 
 function createActions(): ActionHandlers {
   return {
@@ -40,10 +45,7 @@ function createActions(): ActionHandlers {
     startSession: vi.fn(),
     endSession: vi.fn(),
     setGeneralAccessLevel: vi.fn(),
-    downloadFile: vi.fn(),
-    downloadNote: vi.fn(),
-    downloadMap: vi.fn(),
-    downloadFolder: vi.fn(),
+    downloadItems: vi.fn(),
     downloadAll: vi.fn(),
     toggleBookmark: vi.fn(),
     copy: vi.fn(),
@@ -102,12 +104,14 @@ describe('buildMenu', () => {
 
     const ids = menu.flatItems.map((i) => i.id)
     expect(ids).toContain('delete')
+    expect(ids).toContain('download-items')
     expect(ids).toContain('toggle-bookmark')
     expect(ids).toContain('copy')
     expect(ids).toContain('cut')
     expect(ids).toContain('duplicate')
     expect(ids).not.toContain('rename')
     expect(ids).not.toContain('edit-item')
+    expect(ids).not.toContain('show-in-sidebar')
   })
 
   it('folder view uses the same multi-selection clipboard menu as the sidebar', () => {
@@ -190,7 +194,7 @@ describe('buildMenu', () => {
     expect(ids).not.toContain('delete')
   })
 
-  it('file item shows download-file action', () => {
+  it('file item shows the unified download action', () => {
     const menu = buildMenu({
       context: sidebarCtx({ item: createFile() }),
       services,
@@ -199,7 +203,65 @@ describe('buildMenu', () => {
       groupConfig,
     })
     const ids = menu.flatItems.map((i) => i.id)
-    expect(ids).toContain('download-file')
+    expect(ids).toContain('download-items')
+    expect(ids).not.toContain('download-file')
+  })
+
+  it('mixed multi-selection shows one unified download action', () => {
+    const selectedItems = [createNote(), createFile(), createGameMap()]
+    const menu = buildMenu({
+      context: sidebarCtx({
+        item: selectedItems[0],
+        primaryItem: selectedItems[0],
+        selectedItems,
+      }),
+      services,
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+
+    const ids = menu.flatItems.map((i) => i.id)
+    expect(ids.filter((id) => id.startsWith('download'))).toEqual(['download-items'])
+  })
+
+  it('renders share as submenu content instead of an action command', () => {
+    const note = createNote()
+    const menu = buildMenu({
+      context: sidebarCtx({ item: note }),
+      services,
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+
+    const shareItem = menu.flatItems.find((i) => i.id === 'share-items')
+    expect(shareItem?.commandId).toBeUndefined()
+    expect(shareItem?.submenuContent).toBeDefined()
+  })
+
+  it('multi-selection can pin multiple selected items to a map', () => {
+    const selectedItems = [createNote(), createFile()]
+    const activeMap = createGameMap()
+    const menu = buildMenu({
+      context: sidebarCtx({
+        item: selectedItems[0],
+        primaryItem: selectedItems[0],
+        selectedItems,
+        activeMap: {
+          ...activeMap,
+          ancestors: [],
+          pins: [],
+        },
+      }),
+      services,
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+
+    const ids = menu.flatItems.map((i) => i.id)
+    expect(ids).toContain('pin-to-map')
   })
 
   it('trashed item shows restore and permanently-delete', () => {
@@ -255,7 +317,7 @@ describe('buildMenu', () => {
     expect(menu.groups).toEqual([])
   })
 
-  it('suppresses duplicate selection-scoped commands when a target-scoped item exists', () => {
+  it('preserves contributor items without scope-based suppression', () => {
     const commands = {
       duplicate: {
         id: 'duplicate',
@@ -274,7 +336,6 @@ describe('buildMenu', () => {
             label: 'Duplicate selection',
             group: 'edit',
             priority: 0,
-            scope: 'selection',
           },
         ],
       },
@@ -288,7 +349,6 @@ describe('buildMenu', () => {
             label: 'Duplicate target',
             group: 'edit',
             priority: 1,
-            scope: 'target',
           },
         ],
       },
@@ -302,6 +362,9 @@ describe('buildMenu', () => {
       groupConfig,
     })
 
-    expect(menu.flatItems.map((item) => item.id)).toEqual(['target-duplicate'])
+    expect(menu.flatItems.map((item) => item.id)).toEqual([
+      'selection-duplicate',
+      'target-duplicate',
+    ])
   })
 })

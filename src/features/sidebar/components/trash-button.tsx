@@ -8,7 +8,7 @@ import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
 import { useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import { TRASH_DROP_ZONE_TYPE } from '~/features/dnd/utils/dnd-registry'
+import { TRASH_DROP_ZONE_TYPE } from '~/features/dnd/utils/drop-target-data'
 import { cn } from '~/features/shadcn/lib/utils'
 
 export function TrashButton() {

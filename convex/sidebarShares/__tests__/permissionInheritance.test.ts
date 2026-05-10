@@ -23,10 +23,9 @@ describe('permission inheritance through nested folder trees', () => {
       inheritShares: [true, true, true, true],
     })
 
-    await dmAuth.mutation(api.sidebarShares.mutations.shareSidebarItem, {
+    await dmAuth.mutation(api.sidebarShares.mutations.setSidebarItemsMemberPermission, {
       campaignId: ctx.campaignId,
-      sidebarItemId: folders[0],
-      sidebarItemType: 'folder',
+      sidebarItemIds: [folders[0]],
       campaignMemberId: ctx.player.memberId,
       permissionLevel: 'view',
     })
@@ -48,10 +47,9 @@ describe('permission inheritance through nested folder trees', () => {
       inheritShares: [true, true, true],
     })
 
-    await dmAuth.mutation(api.sidebarShares.mutations.shareSidebarItem, {
+    await dmAuth.mutation(api.sidebarShares.mutations.setSidebarItemsMemberPermission, {
       campaignId: ctx.campaignId,
-      sidebarItemId: folders[0],
-      sidebarItemType: 'folder',
+      sidebarItemIds: [folders[0]],
       campaignMemberId: ctx.player.memberId,
       permissionLevel: 'view',
     })
@@ -86,10 +84,9 @@ describe('permission inheritance through nested folder trees', () => {
       inheritShares: [false, true, true],
     })
 
-    await dmAuth.mutation(api.sidebarShares.mutations.shareSidebarItem, {
+    await dmAuth.mutation(api.sidebarShares.mutations.setSidebarItemsMemberPermission, {
       campaignId: ctx.campaignId,
-      sidebarItemId: folders[0],
-      sidebarItemType: 'folder',
+      sidebarItemIds: [folders[0]],
       campaignMemberId: ctx.player.memberId,
       permissionLevel: 'view',
     })
@@ -124,17 +121,16 @@ describe('permission inheritance through nested folder trees', () => {
       inheritShares: [true, true, true],
     })
 
-    await dmAuth.mutation(api.sidebarShares.mutations.shareSidebarItem, {
+    await dmAuth.mutation(api.sidebarShares.mutations.setSidebarItemsMemberPermission, {
       campaignId: ctx.campaignId,
-      sidebarItemId: folders[0],
-      sidebarItemType: 'folder',
+      sidebarItemIds: [folders[0]],
       campaignMemberId: ctx.player.memberId,
       permissionLevel: 'view',
     })
 
-    await dmAuth.mutation(api.sidebarShares.mutations.setAllPlayersPermission, {
+    await dmAuth.mutation(api.sidebarShares.mutations.setAllPlayersPermissionForSidebarItems, {
       campaignId: ctx.campaignId,
-      sidebarItemId: folders[1],
+      sidebarItemIds: [folders[1]],
       permissionLevel: 'edit',
     })
 
@@ -155,18 +151,16 @@ describe('permission inheritance through nested folder trees', () => {
       inheritShares: [true, true],
     })
 
-    await dmAuth.mutation(api.sidebarShares.mutations.shareSidebarItem, {
+    await dmAuth.mutation(api.sidebarShares.mutations.setSidebarItemsMemberPermission, {
       campaignId: ctx.campaignId,
-      sidebarItemId: folders[0],
-      sidebarItemType: 'folder',
+      sidebarItemIds: [folders[0]],
       campaignMemberId: ctx.player.memberId,
       permissionLevel: 'view',
     })
 
-    await dmAuth.mutation(api.sidebarShares.mutations.shareSidebarItem, {
+    await dmAuth.mutation(api.sidebarShares.mutations.setSidebarItemsMemberPermission, {
       campaignId: ctx.campaignId,
-      sidebarItemId: leaf,
-      sidebarItemType: 'note',
+      sidebarItemIds: [leaf],
       campaignMemberId: ctx.player.memberId,
       permissionLevel: 'edit',
     })
@@ -189,10 +183,9 @@ describe('permission inheritance through nested folder trees', () => {
       inheritShares: [true, true],
     })
 
-    await dmAuth.mutation(api.sidebarShares.mutations.shareSidebarItem, {
+    await dmAuth.mutation(api.sidebarShares.mutations.setSidebarItemsMemberPermission, {
       campaignId: campaignId,
-      sidebarItemId: folders[0],
-      sidebarItemType: 'folder',
+      sidebarItemIds: [folders[0]],
       campaignMemberId: p1.memberId,
       permissionLevel: 'view',
     })
@@ -210,9 +203,9 @@ describe('permission inheritance through nested folder trees', () => {
       }),
     )
 
-    await dmAuth.mutation(api.sidebarShares.mutations.setAllPlayersPermission, {
+    await dmAuth.mutation(api.sidebarShares.mutations.setAllPlayersPermissionForSidebarItems, {
       campaignId: campaignId,
-      sidebarItemId: folders[0],
+      sidebarItemIds: [folders[0]],
       permissionLevel: 'view',
     })
 

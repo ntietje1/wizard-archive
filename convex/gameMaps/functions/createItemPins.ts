@@ -12,27 +12,16 @@ import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
 const MAX_ITEM_PINS_PER_REQUEST = 100
+const MIN_PIN_COORDINATE = 0
+const MAX_PIN_COORDINATE = 100
 
-export async function createItemPin(
-  ctx: CampaignMutationCtx,
-  {
-    mapId,
-    x,
-    y,
-    itemId,
-  }: {
-    mapId: Id<'sidebarItems'>
-    x: number
-    y: number
-    itemId: Id<'sidebarItems'>
-  },
-): Promise<Id<'mapPins'>> {
-  const [pinId] = await createItemPins(ctx, {
-    mapId,
-    pins: [{ itemId, x, y }],
-  })
-  if (!pinId) throwClientError(ERROR_CODE.VALIDATION_FAILED, 'No pin created')
-  return pinId
+function assertPinCoordinate(value: number, axis: 'x' | 'y') {
+  if (!Number.isFinite(value) || value < MIN_PIN_COORDINATE || value > MAX_PIN_COORDINATE) {
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      `Pin ${axis} coordinate must be between ${MIN_PIN_COORDINATE} and ${MAX_PIN_COORDINATE}`,
+    )
+  }
 }
 
 export async function createItemPins(
@@ -62,6 +51,17 @@ export async function createItemPins(
       ERROR_CODE.VALIDATION_FAILED,
       `Cannot create more than ${MAX_ITEM_PINS_PER_REQUEST} pins at once`,
     )
+  }
+  for (const pin of pins) {
+    assertPinCoordinate(pin.x, 'x')
+    assertPinCoordinate(pin.y, 'y')
+  }
+  const requestedItemIds = new Set<Id<'sidebarItems'>>()
+  for (const pin of pins) {
+    if (requestedItemIds.has(pin.itemId)) {
+      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Duplicate item id in pin request')
+    }
+    requestedItemIds.add(pin.itemId)
   }
 
   const items = (await Promise.all(pins.map((pin) => ctx.db.get('sidebarItems', pin.itemId)))).map(
@@ -108,7 +108,7 @@ export async function createItemPins(
   const pinIds = await Promise.all(
     pins.map((pin) =>
       ctx.db.insert('mapPins', {
-        mapId: mapId,
+        mapId,
         itemId: pin.itemId,
         x: pin.x,
         y: pin.y,

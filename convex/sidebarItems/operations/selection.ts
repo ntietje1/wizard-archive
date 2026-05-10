@@ -28,10 +28,8 @@ export function normalizeTopLevelSelectedItems<T extends Pick<AnySidebarItem, '_
       if (seen.has(parentId)) break
       seen.add(parentId)
       const parent = allItemsMap.get(parentId)
-      if (!parent) {
-        console.warn(`Missing parent ${parentId} while normalizing selection for item ${item._id}`)
-        break
-      }
+      // Stale frontend maps can be missing ancestors; keep normalization best-effort.
+      if (!parent) break
       if (parentId === item._id) {
         throw new Error(`Cycle detected while normalizing selected sidebar item ${item._id}`)
       }

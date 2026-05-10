@@ -1,16 +1,16 @@
 import { describe, expect, it, vi } from 'vitest'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import type { DropPlanningContext } from '~/features/dnd/utils/drop-planning-context'
 import type {
   CanvasDropZoneData,
-  DndContext,
   EmptyEditorDropZoneData,
   MapDropZoneData,
   NoteEditorDropZoneData,
   ResolvedSidebarItemDropData,
   SidebarRootDropZoneData,
   TrashDropZoneData,
-} from '~/features/dnd/utils/dnd-registry'
+} from '~/features/dnd/utils/drop-target-data'
 import type { Id } from 'convex/_generated/dataModel'
 import {
   createFile,
@@ -19,6 +19,18 @@ import {
   createNote,
 } from '~/test/factories/sidebar-item-factory'
 import {
+  getDragItemId,
+  getDragItemIds,
+  getDragPreviewItemIds,
+} from '~/features/dnd/utils/drag-source-data'
+import { rejectionReasonMessage } from '~/features/dnd/utils/drop-rejections'
+import { resolveDropOutcome } from '~/features/dnd/utils/drop-outcome-planner'
+import {
+  getDroppableMoveItems,
+  resolveGlobalDropCommand,
+} from '~/features/dnd/utils/global-drop-planner'
+import { resolveSurfaceDropCommand } from '~/features/dnd/utils/surface-drop-planner'
+import {
   CANVAS_DROP_ZONE_TYPE,
   EMPTY_EDITOR_DROP_TYPE,
   MAP_DROP_ZONE_TYPE,
@@ -26,33 +38,32 @@ import {
   SIDEBAR_ROOT_DROP_TYPE,
   TRASH_DROP_ZONE_TYPE,
   canDropFilesOnTarget,
-  getDragItemId,
-  getDragItemIds,
-  getDragPreviewItemIds,
   getDropTargetKey,
   getHighlightId,
-  getDroppableMoveItems,
-  rejectionReasonMessage,
-  resolveDropCommand,
-  resolveDropOutcome,
   resolveDropTarget,
-} from '~/features/dnd/utils/dnd-registry'
+} from '~/features/dnd/utils/drop-target-data'
 import { testId } from '~/test/helpers/test-id'
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
-function createCtx(overrides?: Partial<DndContext>): DndContext {
+function createCtx(overrides?: Partial<DropPlanningContext>): DropPlanningContext {
   return {
-    moveItems: vi.fn(),
-    restoreItems: vi.fn(),
-    trashItems: vi.fn(),
-    navigateToItem: vi.fn(),
     campaignId: testId<'campaigns'>('campaign_1'),
     campaignName: 'Test Campaign',
     isDm: true,
-    setFolderOpen: vi.fn(),
     ...overrides,
   }
+}
+
+function resolveTestDropCommand(
+  items: Parameters<typeof resolveGlobalDropCommand>[0],
+  target: Parameters<typeof resolveGlobalDropCommand>[1],
+  ctx: DropPlanningContext,
+) {
+  const globalCommand = resolveGlobalDropCommand(items, target, ctx)
+  return globalCommand.status === 'noop'
+    ? resolveSurfaceDropCommand(items, target, ctx)
+    : globalCommand
 }
 
 function trashTarget(): TrashDropZoneData {
@@ -542,13 +553,13 @@ describe('getDroppableMoveItems', () => {
   })
 })
 
-describe('resolveDropCommand', () => {
+describe('resolveTestDropCommand', () => {
   it('returns a no-op command when every selected item is already in the target folder', () => {
     const target = folderTarget()
     const first = createNote({ parentId: target._id })
     const second = createNote({ parentId: target._id })
 
-    expect(resolveDropCommand([first, second], target, createCtx())).toEqual({ status: 'noop' })
+    expect(resolveTestDropCommand([first, second], target, createCtx())).toEqual({ status: 'noop' })
   })
 
   it('returns one batch move command while ignoring selected items already in the target folder', () => {
@@ -556,7 +567,7 @@ describe('resolveDropCommand', () => {
     const alreadyInside = createNote({ parentId: target._id })
     const outside = createNote({ parentId: testId<'sidebarItems'>('folder_other') })
 
-    expect(resolveDropCommand([alreadyInside, outside], target, createCtx())).toEqual({
+    expect(resolveTestDropCommand([alreadyInside, outside], target, createCtx())).toEqual({
       status: 'ready',
       action: 'move',
       items: [outside],
@@ -568,7 +579,7 @@ describe('resolveDropCommand', () => {
     const first = createNote()
     const second = createNote()
 
-    expect(resolveDropCommand([first, second], trashTarget(), createCtx())).toEqual({
+    expect(resolveTestDropCommand([first, second], trashTarget(), createCtx())).toEqual({
       status: 'ready',
       action: 'trash',
       items: [first, second],
@@ -581,7 +592,7 @@ describe('resolveDropCommand', () => {
     const second = createNote()
     const target = mapTarget()
 
-    expect(resolveDropCommand([first, second], target, createCtx())).toMatchObject({
+    expect(resolveTestDropCommand([first, second], target, createCtx())).toMatchObject({
       status: 'ready',
       action: 'pin',
       items: [first, second],
@@ -597,7 +608,7 @@ describe('resolveDropCommand', () => {
     const alreadyPinned = createNote()
     const target = mapTarget(map._id, { pinnedItemIds: [alreadyPinned._id] })
 
-    expect(resolveDropCommand([note, map, alreadyPinned], target, createCtx())).toMatchObject({
+    expect(resolveTestDropCommand([note, map, alreadyPinned], target, createCtx())).toMatchObject({
       status: 'partial',
       action: 'pin',
       items: [note],
@@ -616,7 +627,7 @@ describe('resolveDropCommand', () => {
     const second = createNote()
     const target = noteEditorTarget(targetNote._id)
 
-    expect(resolveDropCommand([first, second], target, createCtx())).toMatchObject({
+    expect(resolveTestDropCommand([first, second], target, createCtx())).toMatchObject({
       status: 'ready',
       action: 'link',
       items: [first, second],
@@ -631,7 +642,7 @@ describe('resolveDropCommand', () => {
     const other = createNote()
     const target = noteEditorTarget(targetNote._id)
 
-    expect(resolveDropCommand([targetNote, other], target, createCtx())).toMatchObject({
+    expect(resolveTestDropCommand([targetNote, other], target, createCtx())).toMatchObject({
       status: 'partial',
       action: 'link',
       items: [other],
@@ -645,13 +656,45 @@ describe('resolveDropCommand', () => {
     const targetNote = createNote()
     const target = noteEditorTarget(targetNote._id)
 
-    expect(resolveDropCommand([targetNote], target, createCtx())).toMatchObject({
+    expect(resolveTestDropCommand([targetNote], target, createCtx())).toMatchObject({
       status: 'failed',
       action: 'link',
       items: [],
       rejectedItems: [{ item: targetNote, reason: 'self_link' }],
       target,
-      label: 'Add 0 links here',
+      label: 'No items can be linked here',
+    })
+  })
+
+  it('keeps pin, link, and embed commands out of the global command path', () => {
+    const note = createNote()
+
+    expect(resolveGlobalDropCommand([note], mapTarget(), createCtx())).toEqual({ status: 'noop' })
+    expect(resolveGlobalDropCommand([note], noteEditorTarget(), createCtx())).toEqual({
+      status: 'noop',
+    })
+    expect(resolveGlobalDropCommand([note], canvasTarget(), createCtx())).toEqual({
+      status: 'noop',
+    })
+  })
+
+  it('resolves pin, link, and embed through the surface command path', () => {
+    const note = createNote()
+
+    expect(resolveSurfaceDropCommand([note], mapTarget(), createCtx())).toMatchObject({
+      status: 'ready',
+      action: 'pin',
+      items: [note],
+    })
+    expect(resolveSurfaceDropCommand([note], noteEditorTarget(), createCtx())).toMatchObject({
+      status: 'ready',
+      action: 'link',
+      items: [note],
+    })
+    expect(resolveSurfaceDropCommand([note], canvasTarget(), createCtx())).toMatchObject({
+      status: 'ready',
+      action: 'embed',
+      items: [note],
     })
   })
 
@@ -661,7 +704,7 @@ describe('resolveDropCommand', () => {
     const second = createNote()
     const target = canvasTarget(canvas._id)
 
-    expect(resolveDropCommand([first, second], target, createCtx())).toMatchObject({
+    expect(resolveTestDropCommand([first, second], target, createCtx())).toMatchObject({
       status: 'ready',
       action: 'embed',
       items: [first, second],
@@ -676,7 +719,7 @@ describe('resolveDropCommand', () => {
     const target = folderTarget({ ancestorIds: [folder._id] })
     const note = createNote()
 
-    expect(resolveDropCommand([folder, note], target, createCtx())).toMatchObject({
+    expect(resolveTestDropCommand([folder, note], target, createCtx())).toMatchObject({
       status: 'blocked',
       reason: 'circular',
     })
@@ -687,7 +730,7 @@ describe('resolveDropCommand', () => {
     const active = createNote()
     const trashed = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
 
-    expect(resolveDropCommand([active, trashed], target, createCtx())).toEqual({
+    expect(resolveTestDropCommand([active, trashed], target, createCtx())).toEqual({
       status: 'blocked',
       reason: 'mixed_actions',
     })
@@ -877,6 +920,16 @@ describe('resolveDropTarget', () => {
     expect(result).toEqual(raw)
   })
 
+  it('returns null for known zones missing required ids', () => {
+    expect(
+      resolveDropTarget({ type: CANVAS_DROP_ZONE_TYPE }, emptyMap, emptyMap, vi.fn()),
+    ).toBeNull()
+    expect(resolveDropTarget({ type: MAP_DROP_ZONE_TYPE }, emptyMap, emptyMap, vi.fn())).toBeNull()
+    expect(
+      resolveDropTarget({ type: NOTE_EDITOR_DROP_TYPE }, emptyMap, emptyMap, vi.fn()),
+    ).toBeNull()
+  })
+
   it('returns null for unknown zone type', () => {
     const result = resolveDropTarget({ type: 'something-unknown' }, emptyMap, emptyMap, vi.fn())
 
@@ -896,7 +949,7 @@ describe('batch commands', () => {
   it('trash operation returns a batch trash command', () => {
     const note = createNote()
     const ctx = createCtx()
-    const result = resolveDropCommand([note], trashTarget(), ctx)
+    const result = resolveTestDropCommand([note], trashTarget(), ctx)
 
     expect(result).toMatchObject({
       status: 'ready',
@@ -909,7 +962,7 @@ describe('batch commands', () => {
   it('root move operation returns a batch move command with null parentId', () => {
     const note = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
     const ctx = createCtx()
-    const result = resolveDropCommand([note], rootTarget(), ctx)
+    const result = resolveTestDropCommand([note], rootTarget(), ctx)
 
     expect(result).toMatchObject({
       status: 'ready',
@@ -923,7 +976,7 @@ describe('batch commands', () => {
     const note = createNote()
     const target = folderTarget()
     const ctx = createCtx()
-    const result = resolveDropCommand([note], target, ctx)
+    const result = resolveTestDropCommand([note], target, ctx)
 
     expect(result).toMatchObject({
       status: 'ready',
@@ -936,7 +989,7 @@ describe('batch commands', () => {
   it('restore to root returns a batch restore command', () => {
     const note = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
     const ctx = createCtx()
-    const result = resolveDropCommand([note], rootTarget(), ctx)
+    const result = resolveTestDropCommand([note], rootTarget(), ctx)
 
     expect(result).toMatchObject({
       status: 'ready',
@@ -950,7 +1003,7 @@ describe('batch commands', () => {
     const note = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
     const target = folderTarget()
     const ctx = createCtx()
-    const result = resolveDropCommand([note], target, ctx)
+    const result = resolveTestDropCommand([note], target, ctx)
 
     expect(result).toMatchObject({
       status: 'ready',
@@ -960,13 +1013,16 @@ describe('batch commands', () => {
     })
   })
 
-  it('empty editor open calls navigateToItem', async () => {
+  it('empty editor open returns the item for the monitor to navigate', () => {
     const note = createNote()
     const ctx = createCtx()
-    const result = resolveDropCommand([note], emptyEditorTarget(), ctx)
+    const result = resolveTestDropCommand([note], emptyEditorTarget(), ctx)
 
-    await (result as { execute: () => Promise<void> }).execute()
-    expect(ctx.navigateToItem).toHaveBeenCalledWith(note.slug, true)
+    expect(result).toMatchObject({
+      status: 'ready',
+      action: 'open',
+      item: note,
+    })
   })
 
   it('pin operation has null execute (handled by monitor)', () => {

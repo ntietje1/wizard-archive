@@ -373,10 +373,10 @@ describe('updateFolder', () => {
   })
 })
 
-describe('getFolderContentsForDownload', () => {
+describe('getSidebarItemsForDownload - folder downloads', () => {
   const t = createTestContext()
 
-  it('returns folder name and items', async () => {
+  it('returns folder items', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
@@ -392,12 +392,11 @@ describe('getFolderContentsForDownload', () => {
       name: 'data.csv',
     })
 
-    const result = await dmAuth.query(api.folders.queries.getFolderContentsForDownload, {
+    const result = await dmAuth.query(api.folders.queries.getSidebarItemsForDownload, {
       campaignId: ctx.campaignId,
-      folderId,
+      sourceItemIds: [folderId],
     })
 
-    expect(result.folderName).toBe('Downloads')
     expect(result.items.length).toBe(2)
     expect(result.items.every((i) => 'name' in i && 'path' in i && 'type' in i)).toBe(true)
   })
@@ -409,9 +408,9 @@ describe('getFolderContentsForDownload', () => {
     const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     await expectPermissionDenied(
-      playerAuth.query(api.folders.queries.getFolderContentsForDownload, {
+      playerAuth.query(api.folders.queries.getSidebarItemsForDownload, {
         campaignId: ctx.campaignId,
-        folderId,
+        sourceItemIds: [folderId],
       }),
     )
   })
@@ -437,12 +436,11 @@ describe('getFolderContentsForDownload', () => {
       permissionLevel: 'view',
     })
 
-    const result = await playerAuth.query(api.folders.queries.getFolderContentsForDownload, {
+    const result = await playerAuth.query(api.folders.queries.getSidebarItemsForDownload, {
       campaignId: ctx.campaignId,
-      folderId,
+      sourceItemIds: [folderId],
     })
 
-    expect(result.folderName).toBe('Shared Downloads')
     expect(result.items.length).toBe(1)
     expect(result.items[0].name).toBe('Shared Note.md')
   })
@@ -452,9 +450,9 @@ describe('getFolderContentsForDownload', () => {
     const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
     await expectNotAuthenticated(
-      t.query(api.folders.queries.getFolderContentsForDownload, {
+      t.query(api.folders.queries.getSidebarItemsForDownload, {
         campaignId: ctx.campaignId,
-        folderId,
+        sourceItemIds: [folderId],
       }),
     )
   })

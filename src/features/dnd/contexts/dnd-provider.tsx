@@ -3,10 +3,9 @@ import { ClientOnly } from '@tanstack/react-router'
 import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type { DndContext } from '~/features/dnd/utils/dnd-registry'
+import type { DndExecutionContext, DndMonitorCtx } from '~/features/dnd/types'
 import type { DndValue } from '~/features/dnd/hooks/useDnd'
-import type { DndMonitorCtx } from '~/features/dnd/types'
-import { resolveDropTarget } from '~/features/dnd/utils/dnd-registry'
+import { resolveDropTarget } from '~/features/dnd/utils/drop-target-data'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useFileDropHandler } from '~/features/dnd/hooks/useFileDropHandler'
@@ -21,7 +20,7 @@ import { useExternalDragMonitor } from '~/features/dnd/hooks/useExternalDragMoni
 
 export function DndProvider({ children }: { children: React.ReactNode }) {
   const { campaign, campaignId, isDm } = useCampaign()
-  const campaignName = campaign.data?.name
+  const campaignName = campaign.data?.name ?? null
   const { navigateToItem } = useEditorNavigation()
   const itemOperations = useSidebarItemOperations()
   const { handleDrop: handleDropFiles } = useFileDropHandler()
@@ -35,15 +34,23 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
     if (campaignId) setFolderState(campaignId, folderId, true)
   }
 
-  const dndContext: DndContext = {
-    moveItems: itemOperations.moveItems,
-    restoreItems: itemOperations.restoreItems,
-    trashItems: itemOperations.trashItems,
+  const dndContext: DndExecutionContext = {
+    moveItems: async (items, parentId) => {
+      await itemOperations.moveItems(items, parentId)
+    },
+    restoreItems: async (items, parentId) => {
+      await itemOperations.restoreItems(items, parentId)
+    },
+    trashItems: async (items) => {
+      await itemOperations.trashItems(items)
+    },
     navigateToItem,
+    setFolderOpen,
+  }
+  const dropPlanningContext = {
     campaignId: campaignId ?? null,
     campaignName,
     isDm: isDm ?? false,
-    setFolderOpen,
   }
 
   const resolveItem = (id: Id<'sidebarItems'>): AnySidebarItem | null =>
@@ -61,6 +68,7 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
     allItemsMap,
     getAncestorIds,
     dndContext,
+    dropPlanningContext,
     handleDropFiles,
     campaignId: campaignId ?? null,
   }

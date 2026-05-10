@@ -4,7 +4,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { DndMonitorCtx } from '~/features/dnd/types'
 import { useElementDragMonitor } from '~/features/dnd/hooks/useElementDragMonitor'
-import { MAP_DROP_ZONE_TYPE, SIDEBAR_ROOT_DROP_TYPE } from '~/features/dnd/utils/dnd-registry'
+import { MAP_DROP_ZONE_TYPE, SIDEBAR_ROOT_DROP_TYPE } from '~/features/dnd/utils/drop-target-data'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
 
@@ -27,10 +27,12 @@ function createMonitorCtx(items: Array<AnySidebarItem>): DndMonitorCtx {
       restoreItems: vi.fn(),
       trashItems: vi.fn(),
       navigateToItem: vi.fn(),
+      setFolderOpen: vi.fn(),
+    },
+    dropPlanningContext: {
       campaignId: testId<'campaigns'>('campaign_1'),
       campaignName: 'Test Campaign',
       isDm: true,
-      setFolderOpen: vi.fn(),
     },
     handleDropFiles: vi.fn(),
     campaignId: testId<'campaigns'>('campaign_1'),

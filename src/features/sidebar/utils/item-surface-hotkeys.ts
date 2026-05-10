@@ -23,6 +23,8 @@ export function isModifierShortcut(event: KeyboardEvent, key: string): boolean {
 export function isItemSurfaceInteractionTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
   return (
-    target.closest('a[href],button:not([disabled]),[data-item-selection-target="true"]') !== null
+    target.closest(
+      'a[href],button:not([disabled]),[data-item-selection-target="true"],[data-slot="context-menu-content"]',
+    ) !== null
   )
 }

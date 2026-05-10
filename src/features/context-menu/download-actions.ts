@@ -1,0 +1,281 @@
+import { toast } from 'sonner'
+import JSZip from 'jszip'
+import { api } from 'convex/_generated/api'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import type { useConvex } from '@convex-dev/react-query'
+import type { ActionHandlers } from './menu-registry'
+import type { MenuContext } from './types'
+import type { Id } from 'convex/_generated/dataModel'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import { resolveContextOperationItems } from './selection-context'
+import { handleError, logger } from '~/shared/utils/logger'
+import { isFile, isGameMap, isNote } from '~/features/sidebar/utils/sidebar-item-utils'
+import { convertBlocksToMarkdown } from '~/features/editor/utils/text-to-blocks'
+import { assertNever } from '~/shared/utils/utils'
+
+type ConvexClient = ReturnType<typeof useConvex>
+type DownloadActions = Pick<ActionHandlers, 'downloadItems' | 'downloadAll'>
+
+type DownloadZipItem =
+  | { type: typeof SIDEBAR_ITEM_TYPES.files; downloadUrl: string | null; path: string }
+  | { type: typeof SIDEBAR_ITEM_TYPES.gameMaps; downloadUrl: string | null; path: string }
+  | {
+      type: typeof SIDEBAR_ITEM_TYPES.notes
+      content: Parameters<typeof convertBlocksToMarkdown>[0]
+      path: string
+    }
+
+const DOWNLOAD_FETCH_TIMEOUT_MS = 30_000
+
+function ensureMdFileName(name: string) {
+  return name.endsWith('.md') ? name : `${name}.md`
+}
+
+function sanitizeZipPath(path: string) {
+  return path
+    .split('/')
+    .filter((part) => part.length > 0 && part !== '.' && part !== '..')
+    .join('/')
+}
+
+function downloadBlobUrl(url: string, fileName: string) {
+  const link = document.createElement('a')
+  link.href = url
+  link.download = fileName
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
+
+function downloadBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob)
+  downloadBlobUrl(url, fileName)
+  URL.revokeObjectURL(url)
+}
+
+async function fetchWithTimeout(url: string) {
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), DOWNLOAD_FETCH_TIMEOUT_MS)
+  try {
+    return await fetch(url, { signal: controller.signal })
+  } finally {
+    window.clearTimeout(timeout)
+  }
+}
+
+async function addZipItem(zip: JSZip, item: DownloadZipItem): Promise<boolean> {
+  const path = sanitizeZipPath(item.path)
+  if (!path) {
+    logger.warn(`Skipping download item with invalid path: ${item.path}`)
+    return false
+  }
+
+  switch (item.type) {
+    case SIDEBAR_ITEM_TYPES.files:
+    case SIDEBAR_ITEM_TYPES.gameMaps: {
+      if (!item.downloadUrl) {
+        logger.warn(`No download URL for: ${item.path}`)
+        return false
+      }
+      const response = await fetchWithTimeout(item.downloadUrl)
+      if (!response.ok) {
+        logger.warn(`Failed to fetch: ${item.path}`)
+        return false
+      }
+      zip.file(path, await response.blob())
+      return true
+    }
+    case SIDEBAR_ITEM_TYPES.notes:
+      zip.file(path, convertBlocksToMarkdown(item.content))
+      return true
+    default:
+      assertNever(item)
+  }
+}
+
+async function downloadZip({
+  items,
+  fileName,
+  emptyMessage,
+}: {
+  items: Array<DownloadZipItem>
+  fileName: string
+  emptyMessage: string
+}) {
+  if (items.length === 0) {
+    toast.info(emptyMessage)
+    return
+  }
+
+  const zip = new JSZip()
+  const results = await Promise.all(
+    items.map(async (item) => {
+      try {
+        return await addZipItem(zip, item)
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          logger.warn(`Timed out fetching: ${item.path}`, error)
+          return false
+        }
+        logger.warn(`Failed to process: ${item.path}`, error)
+        return false
+      }
+    }),
+  )
+  const successCount = results.filter(Boolean).length
+  if (successCount === 0) {
+    toast.info(emptyMessage)
+    return
+  }
+
+  downloadBlob(await zip.generateAsync({ type: 'blob' }), fileName)
+  toast.success(`Downloaded ${successCount} item(s)`)
+}
+
+async function downloadSingleNote({
+  campaignId,
+  convex,
+  item,
+}: {
+  campaignId: Id<'campaigns'>
+  convex: ConvexClient
+  item: AnySidebarItem
+}) {
+  const toastId = toast.loading('Preparing download...')
+  try {
+    const result = await convex.query(api.folders.queries.getSidebarItemsForDownload, {
+      campaignId,
+      sourceItemIds: [item._id],
+    })
+    const note = result.items[0]
+    if (!note || note.type !== SIDEBAR_ITEM_TYPES.notes) {
+      toast.error('Failed to load note content')
+      return
+    }
+    downloadBlob(
+      new Blob([convertBlocksToMarkdown(note.content)], { type: 'text/markdown' }),
+      ensureMdFileName(note.name),
+    )
+    toast.success('Download started')
+  } catch (error) {
+    handleError(error, 'Failed to download note')
+  } finally {
+    toast.dismiss(toastId)
+  }
+}
+
+async function downloadItemsArchive({
+  campaignId,
+  convex,
+  items,
+}: {
+  campaignId: Id<'campaigns'>
+  convex: ConvexClient
+  items: Array<AnySidebarItem>
+}) {
+  const toastId = toast.loading('Preparing download...')
+  try {
+    const result = await convex.query(api.folders.queries.getSidebarItemsForDownload, {
+      campaignId,
+      sourceItemIds: items.map((downloadItem) => downloadItem._id),
+    })
+    toast.loading('Downloading items...', { id: toastId })
+    await downloadZip({
+      items: result.items,
+      fileName: items.length === 1 ? `${items[0].name}.zip` : 'selected-items.zip',
+      emptyMessage: 'No items to download',
+    })
+  } catch (error) {
+    handleError(error, 'Failed to download')
+  } finally {
+    toast.dismiss(toastId)
+  }
+}
+
+function downloadDirectUrl({
+  url,
+  fileName,
+  missingUrlMessage,
+  failureMessage,
+}: {
+  url: string | null
+  fileName: string
+  missingUrlMessage: string
+  failureMessage: string
+}) {
+  if (!url) {
+    toast.error(missingUrlMessage)
+    return
+  }
+
+  try {
+    downloadBlobUrl(url, fileName)
+    toast.success('Download started')
+  } catch (error) {
+    handleError(error, failureMessage)
+  }
+}
+
+export function createDownloadActions({
+  campaignId,
+  convex,
+}: {
+  campaignId: Id<'campaigns'> | undefined
+  convex: ConvexClient
+}): DownloadActions {
+  return {
+    downloadItems: async (ctx: MenuContext) => {
+      const items = resolveContextOperationItems(ctx)
+      if (!campaignId || items.length === 0) return
+      const [item] = items
+
+      if (items.length === 1 && item && isFile(item)) {
+        downloadDirectUrl({
+          url: item.downloadUrl,
+          fileName: item.name,
+          missingUrlMessage: 'Download URL not available',
+          failureMessage: 'Failed to download file',
+        })
+        return
+      }
+
+      if (items.length === 1 && item && isGameMap(item)) {
+        downloadDirectUrl({
+          url: item.imageUrl,
+          fileName: item.name,
+          missingUrlMessage: 'Map image URL not available',
+          failureMessage: 'Failed to download map',
+        })
+        return
+      }
+
+      if (items.length === 1 && item && isNote(item)) {
+        await downloadSingleNote({ campaignId, convex, item })
+        return
+      }
+
+      await downloadItemsArchive({ campaignId, convex, items })
+    },
+
+    downloadAll: async () => {
+      if (!campaignId) return
+
+      const toastId = toast.loading('Preparing download...')
+      try {
+        const { items } = await convex.query(api.folders.queries.getRootContentsForDownload, {
+          campaignId,
+        })
+        toast.loading('Downloading items...', { id: toastId })
+        await downloadZip({
+          items,
+          fileName: 'campaign-export.zip',
+          emptyMessage: 'No items to download',
+        })
+      } catch (error) {
+        handleError(error, 'Failed to download')
+      } finally {
+        toast.dismiss(toastId)
+      }
+    },
+  }
+}

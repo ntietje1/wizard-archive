@@ -2,7 +2,7 @@ import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { normalizeTopLevelSelectedItems } from 'convex/sidebarItems/operations/selection'
-import { getDragItemIds } from '~/features/dnd/utils/dnd-registry'
+import { getDragItemIds } from '~/features/dnd/utils/drag-source-data'
 
 export function resolveNormalizedDraggedSidebarItems({
   sourceData,

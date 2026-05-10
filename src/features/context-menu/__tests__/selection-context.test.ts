@@ -3,6 +3,7 @@ import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import {
+  resolveContextOperationItems,
   resolveContextPrimaryItem,
   resolveContextSelectedItems,
 } from '~/features/context-menu/selection-context'
@@ -167,6 +168,54 @@ describe('resolveContextSelectedItems', () => {
     })
 
     expect(selectedItems).toEqual([active, trashed])
+  })
+})
+
+describe('resolveContextOperationItems', () => {
+  it('uses selected items when the clicked item is part of the selection', () => {
+    const note = createNote()
+    const folder = createFolder()
+
+    expect(
+      resolveContextOperationItems({
+        item: note,
+        selectedItems: [note, folder],
+      }),
+    ).toEqual([note, folder])
+  })
+
+  it('falls back to the clicked item when there is no selection', () => {
+    const note = createNote()
+
+    expect(resolveContextOperationItems({ item: note })).toEqual([note])
+  })
+
+  it('uses only the clicked item when it is outside the current selection', () => {
+    const clicked = createNote()
+    const selected = createFolder()
+
+    expect(
+      resolveContextOperationItems({
+        item: clicked,
+        selectedItems: [selected],
+      }),
+    ).toEqual([clicked])
+  })
+
+  it('uses no items for root context without selected items', () => {
+    expect(resolveContextOperationItems({})).toEqual([])
+  })
+
+  it('normalizes selected descendants under selected folders', () => {
+    const folder = createFolder()
+    const child = createNote({ parentId: folder._id })
+
+    expect(
+      resolveContextOperationItems({
+        item: child,
+        selectedItems: [folder, child],
+      }),
+    ).toEqual([folder])
   })
 })
 

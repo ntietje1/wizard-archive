@@ -2,41 +2,30 @@ import { v } from 'convex/values'
 import { permissionLevelValidator } from '../sidebarItems/schema/validators'
 import { dmQuery } from '../functions'
 import { sidebarItemShareValidator } from './schema'
-import { getSidebarItemShares as getSidebarItemSharesFn } from './functions/getSidebarItemShares'
-import { getSidebarItemWithShares as getSidebarItemWithSharesFn } from './functions/getSidebarItemWithShares'
+import { getSidebarItemsWithShares as getSidebarItemsWithSharesFn } from './functions/getSidebarItemsWithShares'
 
-export const getSidebarItemShares = dmQuery({
+export const getSidebarItemsWithShares = dmQuery({
   args: {
-    sidebarItemId: v.id('sidebarItems'),
+    sidebarItemIds: v.array(v.id('sidebarItems')),
   },
-  returns: v.array(sidebarItemShareValidator),
+  returns: v.array(
+    v.object({
+      sidebarItemId: v.id('sidebarItems'),
+      allPermissionLevel: v.nullable(permissionLevelValidator),
+      inheritShares: v.nullable(v.boolean()),
+      shares: v.array(sidebarItemShareValidator),
+      inheritedAllPermissionLevel: v.nullable(permissionLevelValidator),
+      inheritedFromFolderName: v.nullable(v.string()),
+      memberInheritedPermissions: v.record(v.id('campaignMembers'), permissionLevelValidator),
+      memberInheritedFromFolderNames: v.record(v.id('campaignMembers'), v.string()),
+    }),
+  ),
   handler: async (ctx, args) => {
-    return await getSidebarItemSharesFn(ctx, {
-      sidebarItemId: args.sidebarItemId,
-    })
-  },
-})
-
-/**
- * Get share info for a sidebar item.
- * Returns allPermissionLevel, individual shares, and inherited permissions.
- */
-export const getSidebarItemWithShares = dmQuery({
-  args: {
-    sidebarItemId: v.id('sidebarItems'),
-  },
-  returns: v.object({
-    allPermissionLevel: v.nullable(permissionLevelValidator),
-    inheritShares: v.nullable(v.boolean()),
-    shares: v.array(sidebarItemShareValidator),
-    inheritedAllPermissionLevel: v.nullable(permissionLevelValidator),
-    inheritedFromFolderName: v.nullable(v.string()),
-    memberInheritedPermissions: v.record(v.id('campaignMembers'), permissionLevelValidator),
-    memberInheritedFromFolderNames: v.record(v.id('campaignMembers'), v.string()),
-  }),
-  handler: async (ctx, args) => {
-    return await getSidebarItemWithSharesFn(ctx, {
-      sidebarItemId: args.sidebarItemId,
+    if (args.sidebarItemIds.length > 100) {
+      throw new Error('Cannot load shares for more than 100 items at once')
+    }
+    return await getSidebarItemsWithSharesFn(ctx, {
+      sidebarItemIds: args.sidebarItemIds,
     })
   },
 })

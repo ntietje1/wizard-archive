@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { SIDEBAR_ITEM_TYPES } from '../../types/baseTypes'
 import { createSidebarItem } from './testSidebarItem'
-import { planMoveOperations } from '../planner'
+import { planMoveOperations } from '../movePlanner'
 import { normalizeTopLevelSelectedItems } from '../selection'
 import type { Id } from '../../../_generated/dataModel'
 import type { AnySidebarItem } from '../../types/types'

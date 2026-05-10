@@ -1,8 +1,8 @@
 import { createPortal } from 'react-dom'
 import { AlertTriangle, Ban } from 'lucide-react'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type { DropOutcome } from '~/features/dnd/utils/dnd-registry'
-import { rejectionReasonMessage } from '~/features/dnd/utils/dnd-registry'
+import type { DropOutcome } from '~/features/dnd/utils/drop-outcome'
+import { rejectionReasonMessage } from '~/features/dnd/utils/drop-rejections'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 
 export type DragOverlayState = {

@@ -12,25 +12,23 @@ import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { resyncNoteLinksForNotes } from '../../links/functions/resyncNoteLinksForNotes'
 import { getSidebarItemsByParent } from './getSidebarItemsByParent'
-import { deduplicateName } from './defaultItemName'
-import { planMoveOperations } from '../operations/planner'
+import { planMoveOperations } from '../operations/movePlanner'
 import { collectSidebarChildrenMap } from '../operations/childrenMap'
 import { normalizeTopLevelSelectedItems } from '../operations/selection'
-import { trashTree, restoreTreeDescendants } from './treeOperations'
+import { restoreTreeDescendants } from './treeOperations'
 import { getSidebarItem } from './getSidebarItem'
 import { collectDescendants } from './collectDescendants'
-import { evaluateRestore, evaluateTrash } from '../operations/capabilities'
+import { evaluateRestore } from '../operations/capabilities'
 import { normalizeRestoreTargetParentId } from '../operations/operationTargets'
 import { assertSidebarOperationAllowed } from './operationCapability'
 import { toDecisionRecord } from './operationDecisions'
+import { trashSidebarItemTree } from './trashSidebarItemTree'
 import type { OperationDecision } from './operationDecisions'
 import type { SidebarItemLocation } from '../types/baseTypes'
 import type { AnySidebarItem, AnySidebarItemRow } from '../types/types'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import { assertSidebarItemName } from '../validation/name'
-import type { SidebarItemName } from '../validation/name'
-import type { SidebarItemSlug } from '../validation/slug'
 import type { MoveOperation } from '../operations/types'
 
 const clearDeletion = { deletionTime: null, deletedBy: null }
@@ -79,51 +77,11 @@ async function resyncRelativeLinksForMovedItems(
   await resyncNoteLinksForNotes(ctx, { noteIds: descendantNoteIds })
 }
 
-/**
- * Resolves name/slug conflicts for an item being restored.
- * Returns a patch object with the unique name/slug if they differ from current.
- */
-async function resolveRestoreConflicts(
-  ctx: CampaignMutationCtx,
-  item: AnySidebarItemRow,
-): Promise<{ name?: SidebarItemName; slug?: SidebarItemSlug }> {
-  const siblings = await getSidebarItemsByParent(ctx, {
-    parentId: item.parentId,
-  })
-  const otherNames = siblings.filter((s) => s._id !== item._id).map((s) => s.name)
-
-  const uniqueName = assertSidebarItemName(deduplicateName(item.name, otherNames))
-  const uniqueSlug = await findUniqueSidebarItemSlug(ctx, {
-    itemId: item._id,
-    name: uniqueName,
-  })
-
-  const patch: { name?: SidebarItemName; slug?: SidebarItemSlug } = {}
-  if (uniqueName !== item.name) patch.name = uniqueName
-  if (uniqueSlug !== item.slug) patch.slug = uniqueSlug
-  return patch
-}
-
 async function loadMovableSource(ctx: CampaignMutationCtx, itemId: Id<'sidebarItems'>) {
   const itemFromDb = await getSidebarItem(ctx, itemId)
   return await requireItemAccess(ctx, {
     rawItem: itemFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
-  })
-}
-
-async function executeTrash(ctx: CampaignMutationCtx, item: AnySidebarItem) {
-  assertSidebarOperationAllowed(evaluateTrash({ role: ctx.membership.role }, item))
-
-  await trashTree(ctx, item, {
-    deletionTime: Date.now(),
-    deletedBy: ctx.membership.userId,
-  })
-
-  await logEditHistory(ctx, {
-    itemId: item._id,
-    itemType: item.type,
-    action: EDIT_HISTORY_ACTION.trashed,
   })
 }
 
@@ -181,7 +139,6 @@ async function executeRestore(
     newParentId: restoreParentId,
   })
 
-  const itemForRestore = { ...item, parentId: restoreParentId }
   if (requestedName) {
     await ensureSidebarItemNameAvailable(ctx, {
       parentId: restoreParentId,
@@ -197,7 +154,7 @@ async function executeRestore(
           name: requestedName,
         }),
       }
-    : await resolveRestoreConflicts(ctx, itemForRestore)
+    : {}
 
   await ctx.db.patch('sidebarItems', item._id, {
     ...clearDeletion,
@@ -395,7 +352,7 @@ async function executeMergeFolderMove(
   // Merge-folder plans move children before this operation; the source can be trashed only once empty.
   const remainingChildren = await getSidebarItemsByParent(ctx, { parentId: source._id })
   if (remainingChildren.length === 0) {
-    await executeTrash(ctx, source)
+    await trashSidebarItemTree(ctx, source)
   }
   return destination._id
 }
@@ -417,7 +374,7 @@ async function trashMoveReplacement(
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Folders are merged instead of replaced')
   }
 
-  await executeTrash(ctx, destination)
+  await trashSidebarItemTree(ctx, destination)
 }
 
 async function loadMovableSources(
@@ -458,7 +415,7 @@ async function trashSidebarItems(
 
   for (const item of rootItems) {
     if (item.location === SIDEBAR_ITEM_LOCATION.trash) continue
-    await executeTrash(ctx, item)
+    await trashSidebarItemTree(ctx, item)
     movedIds.push(item._id)
   }
 

@@ -56,7 +56,6 @@ function buildCanvasReorderItems(): Array<CanvasContextMenuItem> {
     icon: action.icon,
     group: 'reorder',
     priority,
-    scope: 'selection',
     payload: createCanvasReorderPayload(action.direction),
   }))
 }
@@ -91,7 +90,6 @@ function buildCanvasArrangeItems(): Array<CanvasContextMenuItem> {
     label: action.label,
     group: getCanvasArrangeGroup(action.id),
     priority,
-    scope: 'selection',
     payload: createCanvasArrangePayload(action.id),
   }))
 }
@@ -205,7 +203,6 @@ const canvasSelectionContributor: CanvasContextMenuContributor = {
       icon: CANVAS_REORDER_SUBMENU_ICON,
       group: 'reorder',
       priority: 0,
-      scope: 'selection',
       applies: (ctx) => ctx.canEdit,
       children: () => buildCanvasReorderItems(),
     },
@@ -215,7 +212,6 @@ const canvasSelectionContributor: CanvasContextMenuContributor = {
       icon: AlignHorizontalSpaceBetween,
       group: 'reorder',
       priority: 1,
-      scope: 'selection',
       applies: (ctx) => ctx.canEdit && ctx.selection.nodeIds.size > 1,
       children: () => buildCanvasArrangeItems(),
     },
@@ -224,7 +220,6 @@ const canvasSelectionContributor: CanvasContextMenuContributor = {
       commandId: 'canvas-selection-cut',
       group: 'edit',
       priority: 1,
-      scope: 'selection',
       applies: (ctx, _nextServices, _payload) => ctx.canEdit,
     },
     {
@@ -232,14 +227,12 @@ const canvasSelectionContributor: CanvasContextMenuContributor = {
       commandId: 'canvas-selection-copy',
       group: 'edit',
       priority: 2,
-      scope: 'selection',
     },
     {
       id: 'canvas-selection-duplicate',
       commandId: 'canvas-selection-duplicate',
       group: 'edit',
       priority: 3,
-      scope: 'selection',
       applies: (ctx) => ctx.canEdit,
     },
     {
@@ -247,7 +240,6 @@ const canvasSelectionContributor: CanvasContextMenuContributor = {
       commandId: 'canvas-selection-delete',
       group: 'danger',
       priority: 99,
-      scope: 'selection',
       variant: 'danger',
       applies: (ctx) => ctx.canEdit,
     },

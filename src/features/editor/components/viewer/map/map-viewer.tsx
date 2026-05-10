@@ -1,26 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
-import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { ClientOnly } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import { Ban, Image } from 'lucide-react'
 import { toast } from 'sonner'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
+import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { EditorContextMenuRef } from '~/features/context-menu/components/editor-context-menu'
-import {
-  MAP_DROP_ZONE_TYPE,
-  rejectionReasonMessage,
-  resolveDropCommand,
-} from '~/features/dnd/utils/dnd-registry'
+import { MAP_DROP_ZONE_TYPE } from '~/features/dnd/utils/drop-target-data'
+import { rejectionReasonMessage } from '~/features/dnd/utils/drop-rejections'
 import { handleError } from '~/shared/utils/logger'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
-import { resolveNormalizedDraggedSidebarItems } from '~/features/dnd/utils/sidebar-drag-items'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { useMapView } from '~/features/editor/hooks/useMapView'
 import { MapViewProvider } from '~/features/editor/contexts/map-view-context'
@@ -34,15 +30,10 @@ import { FileUploadSection } from '~/features/file-upload/components/file-upload
 import { MapPinsLayer } from './map-pins-layer'
 import { useMapImageStatus } from './use-map-image-status'
 import { useMapRenderPins } from './use-map-render-pins'
-import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-
-interface PinPosition {
-  x: number
-  y: number
-}
-
-const PIN_DROP_OFFSET_STEP_PERCENT = 2
-const PIN_DROP_OFFSET_MAX_PER_ROW = 8
+import { useActiveSidebarItems, useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useMapSidebarItemDropTarget } from './use-map-sidebar-item-drop-target'
+import { buildMapPinPlacementInputs, getImagePinPosition } from './map-pin-placement'
+import type { PinPosition } from './map-pin-placement'
 
 interface MapPinContextMenuWrapperProps {
   pinId: Id<'mapPins'>
@@ -152,12 +143,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
   const pinsContainerRef = useRef<HTMLDivElement>(null)
   const transformWrapperRef = useRef<ReactZoomPanPinchRef>(null)
   const { itemsMap } = useActiveSidebarItems()
-  const itemsMapRef = useRef(itemsMap)
-  itemsMapRef.current = itemsMap
-  // Keep a ref to `map` so the monitorForElements closure doesn't go stale
-  // when pins are added/removed (which would otherwise re-register the monitor).
-  const mapRef = useRef(map)
-  mapRef.current = map
+  const { itemsMap: trashedItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
   const [hoveredPinId, setHoveredPinId] = useState<Id<'mapPins'> | null>(null)
   const { imageLoaded, imageError, handleImageLoad, handleImageError } = useMapImageStatus(
     map._id,
@@ -197,8 +183,8 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
     pinId: Id<'mapPins'>
     position: PinPosition
   } | null>(null)
-  const [pendingPinItem, setPendingPinItem] = useState<{
-    itemId: Id<'sidebarItems'>
+  const [pendingPinItems, setPendingPinItems] = useState<{
+    itemIds: Array<Id<'sidebarItems'>>
   } | null>(null)
   const [pendingPinMove, setPendingPinMove] = useState<{
     pinId: Id<'mapPins'>
@@ -217,9 +203,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
   const draggedPinPositionRef = useRef<PinPosition | null>(null)
   const justFinishedDraggingRef = useRef<Id<'mapPins'> | null>(null)
 
-  const createItemPinMutation = useCampaignMutation(api.gameMaps.mutations.createItemPin)
   const createItemPinsMutation = useCampaignMutation(api.gameMaps.mutations.createItemPins)
-
   const updateItemPinMutation = useCampaignMutation(api.gameMaps.mutations.updateItemPin)
 
   const handleTransformChange = (
@@ -245,8 +229,8 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
   useEffect(() => {
     const handleKeyDown = (e: globalThis.KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (pendingPinItem) {
-          setPendingPinItem(null)
+        if (pendingPinItems) {
+          setPendingPinItems(null)
           toast.info('Pin placement cancelled')
         }
         if (pendingPinMove) {
@@ -269,15 +253,18 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [pendingPinItem, pendingPinMove, draggingPin])
+  }, [pendingPinItems, pendingPinMove, draggingPin])
 
   useEffect(() => {
-    const handlePinPlacementRequest = (event: CustomEvent<{ itemId: Id<'sidebarItems'> }>) => {
+    const handlePinPlacementRequest = (
+      event: CustomEvent<{ itemIds: Array<Id<'sidebarItems'>> }>,
+    ) => {
       if (imageError) {
         toast.error('Cannot place pin: map image failed to load')
         return
       }
-      setPendingPinItem(event.detail)
+      if (event.detail.itemIds.length === 0) return
+      setPendingPinItems(event.detail)
     }
 
     window.addEventListener('map-pin-placement-request', handlePinPlacementRequest as EventListener)
@@ -359,158 +346,34 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
     }
   }, [draggingPin, updateItemPinMutation])
 
-  const getPercentageFromClick = (e: React.MouseEvent): PinPosition => {
-    if (!imageRef.current) return { x: 0, y: 0 }
-
-    const rect = imageRef.current.getBoundingClientRect()
-    const x = ((e.clientX - rect.left) / rect.width) * 100
-    const y = ((e.clientY - rect.top) / rect.height) * 100
-
-    return {
-      x: Math.max(0, Math.min(100, x)),
-      y: Math.max(0, Math.min(100, y)),
-    }
-  }
-
-  const createPinAtPosition = async (
-    itemId: Id<'sidebarItems'>,
-    position: PinPosition,
-    options: { suppressToast?: boolean } = {},
-  ) => {
-    try {
-      await createItemPinMutation.mutateAsync({
-        mapId: map._id,
-        x: position.x,
-        y: position.y,
-        itemId,
-      })
-      if (!options.suppressToast) {
-        toast.success('Pin placed on map')
-      }
-      return true
-    } catch (error) {
-      handleError(error, 'Failed to place pin')
-      return false
-    }
-  }
-  const setBatchDecision = useDndStore((s) => s.setBatchDecision)
+  const getPercentageFromClick = (e: React.MouseEvent): PinPosition | null =>
+    getImagePinPosition(imageRef.current, e)
 
   const createPinsAtPosition = async (
     itemIds: Array<Id<'sidebarItems'>>,
     position: PinPosition,
   ) => {
-    if (itemIds.length === 0) return
-    const pinInputs = itemIds.map((itemId, index) => {
-      const col = index % PIN_DROP_OFFSET_MAX_PER_ROW
-      const row = Math.floor(index / PIN_DROP_OFFSET_MAX_PER_ROW)
-      const rowSize = Math.min(
-        PIN_DROP_OFFSET_MAX_PER_ROW,
-        itemIds.length - row * PIN_DROP_OFFSET_MAX_PER_ROW,
+    try {
+      await createItemPinsMutation.mutateAsync({
+        mapId: map._id,
+        pins: buildMapPinPlacementInputs(itemIds, position),
+      })
+      toast.success(
+        itemIds.length === 1 ? 'Pin placed on map' : `${itemIds.length} pins placed on map`,
       )
-      const dx = (col - (rowSize - 1) / 2) * PIN_DROP_OFFSET_STEP_PERCENT
-      const dy = row * PIN_DROP_OFFSET_STEP_PERCENT
-      return {
-        itemId,
-        x: Math.max(0, Math.min(100, position.x + dx)),
-        y: Math.max(0, Math.min(100, position.y + dy)),
-      }
-    })
-
-    await createItemPinsMutation.mutateAsync({
-      mapId: mapRef.current._id,
-      pins: pinInputs,
-    })
-    toast.success(
-      itemIds.length === 1 ? 'Pin placed on map' : `${itemIds.length} pins placed on map`,
-    )
+      return true
+    } catch (error) {
+      handleError(error, itemIds.length === 1 ? 'Failed to place pin' : 'Failed to place pins')
+      return false
+    }
   }
-  const createPinsAtPositionRef = useRef(createPinsAtPosition)
-  createPinsAtPositionRef.current = createPinsAtPosition
-
-  useEffect(() => {
-    // The monitor is registered once; mutable refs above keep drop handling on current map state.
-    return monitorForElements({
-      onDrop: ({ source, location }) => {
-        const topTarget = location.current.dropTargets[0]
-        if (!topTarget) return
-
-        const targetData = topTarget.data
-        if (targetData.type !== MAP_DROP_ZONE_TYPE) return
-        if (targetData.mapId !== mapRef.current._id) return
-        const acceptedPinItemIds = mapRef.current.pins.map((pin) => pin.itemId)
-        let items: ReturnType<typeof resolveNormalizedDraggedSidebarItems>
-        try {
-          items = resolveNormalizedDraggedSidebarItems({
-            sourceData: source.data,
-            activeItemsMap: itemsMapRef.current,
-          })
-        } catch (error) {
-          handleError(error, 'Failed to resolve dragged sidebar items')
-          return
-        }
-        if (items.length === 0) return
-
-        const { clientX, clientY } = location.current.input
-        if (!imageRef.current) {
-          toast.error('No image loaded - cannot place pin')
-          return
-        }
-
-        const rect = imageRef.current.getBoundingClientRect()
-        const x = ((clientX - rect.left) / rect.width) * 100
-        const y = ((clientY - rect.top) / rect.height) * 100
-
-        const position = {
-          x: Math.max(0, Math.min(100, x)),
-          y: Math.max(0, Math.min(100, y)),
-        }
-
-        const command = resolveDropCommand(
-          items,
-          {
-            type: MAP_DROP_ZONE_TYPE,
-            mapId: mapRef.current._id,
-            mapName: mapRef.current.name,
-            pinnedItemIds: acceptedPinItemIds,
-          },
-          {
-            moveItems: () => Promise.resolve(),
-            restoreItems: () => Promise.resolve(),
-            trashItems: () => Promise.resolve(),
-            navigateToItem: () => Promise.resolve(),
-            campaignId: mapRef.current.campaignId,
-            campaignName: undefined,
-            isDm: true,
-            setFolderOpen: () => undefined,
-          },
-        )
-
-        if (command.status === 'blocked') {
-          handleError(new Error(rejectionReasonMessage(command.reason)), 'Cannot drop items here')
-          return
-        }
-        if (command.status === 'noop' || command.action !== 'pin') return
-
-        const executePins = async () => {
-          await createPinsAtPositionRef.current(
-            command.items.map((item) => item._id),
-            position,
-          )
-        }
-        if (command.status === 'partial' || command.status === 'failed') {
-          setBatchDecision({ command, onConfirm: executePins })
-          return
-        }
-        void executePins().catch((error) => handleError(error, 'Failed to place pins'))
-      },
-    })
-  }, [setBatchDecision])
+  useMapSidebarItemDropTarget({ map, imageRef, itemsMap, trashedItemsMap })
 
   const handlePlacePin = async (position: PinPosition) => {
-    if (!pendingPinItem || !map._id) return
+    if (!pendingPinItems || !map._id) return
 
-    await createPinAtPosition(pendingPinItem.itemId, position)
-    setPendingPinItem(null)
+    await createPinsAtPosition(pendingPinItems.itemIds, position)
+    setPendingPinItems(null)
   }
 
   const handleMovePin = async (position: PinPosition) => {
@@ -530,13 +393,17 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
   }
 
   const handleMapClick = (e: React.MouseEvent) => {
-    if (!pendingPinItem && !pendingPinMove) return
+    if (!pendingPinItems && !pendingPinMove) return
 
     e.preventDefault()
     e.stopPropagation()
     const position = getPercentageFromClick(e)
+    if (!position) {
+      toast.error('No image loaded - cannot place pin')
+      return
+    }
 
-    if (pendingPinItem) {
+    if (pendingPinItems) {
       void handlePlacePin(position)
     } else if (pendingPinMove) {
       void handleMovePin(position)
@@ -606,7 +473,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
   const mapImageContextMenuRef = useRef<EditorContextMenuRef>(null)
 
   const handleMapImageContextMenu = (e: React.MouseEvent) => {
-    if (pendingPinItem) return
+    if (pendingPinItems) return
 
     e.preventDefault()
     e.stopPropagation()
@@ -623,7 +490,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
     lastMousePositionRef.current = { clientX: e.clientX, clientY: e.clientY }
   }
 
-  const shouldDisablePanning = !!pendingPinItem || !!pendingPinMove || !!draggingPin
+  const shouldDisablePanning = !!pendingPinItems || !!pendingPinMove || !!draggingPin
 
   return (
     <ClientOnly fallback={<MapViewerSkeleton />}>
@@ -665,7 +532,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
                   )}
                 >
                   <p className="text-sm font-medium flex items-center gap-1.5">
-                    {mapDragOutcome.type === 'rejection' && <Ban className="w-4 h-4 shrink-0" />}
+                    {mapDragOutcome.type === 'rejection' && <Ban className="size-4 shrink-0" />}
                     {mapDragOutcome.type === 'operation'
                       ? 'Release to place pin here'
                       : rejectionReasonMessage(mapDragOutcome.reason)}
@@ -702,16 +569,24 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
                     role="application"
                     aria-label="Map canvas"
                     className="relative"
-                    onClick={pendingPinItem || pendingPinMove ? handleMapClick : undefined}
+                    onClick={pendingPinItems || pendingPinMove ? handleMapClick : undefined}
                     onMouseMove={handleMouseMove}
                     onContextMenu={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
-                      if (pendingPinItem) {
+                      if (pendingPinItems) {
                         const position = getPercentageFromClick(e)
+                        if (!position) {
+                          toast.error('No image loaded - cannot place pin')
+                          return
+                        }
                         void handlePlacePin(position)
                       } else if (pendingPinMove) {
                         const position = getPercentageFromClick(e)
+                        if (!position) {
+                          toast.error('No image loaded - cannot move pin')
+                          return
+                        }
                         void handleMovePin(position)
                       } else {
                         handleMapImageContextMenu(e)
@@ -728,7 +603,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
                       onError={handleImageError}
                       style={{
                         cursor:
-                          pendingPinItem || pendingPinMove
+                          pendingPinItems || pendingPinMove
                             ? 'crosshair'
                             : draggingPin
                               ? 'grabbing'
@@ -763,10 +638,12 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
           </div>
 
           {/* Pin placement mode banner */}
-          {pendingPinItem && (
+          {pendingPinItems && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[2000] bg-primary text-primary-foreground px-4 py-2 rounded-md shadow-lg">
               <p className="text-sm font-medium">
-                Click on map to place pin. Press Escape to cancel.
+                {pendingPinItems.itemIds.length === 1
+                  ? 'Click on map to place pin. Press Escape to cancel.'
+                  : `Click on map to place ${pendingPinItems.itemIds.length} pins. Press Escape to cancel.`}
               </p>
             </div>
           )}
@@ -845,7 +722,7 @@ function MapImageUpload({ mapId }: { mapId: Id<'sidebarItems'> }) {
     >
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
-          <Image className="h-10 w-10 mx-auto text-muted-foreground" />
+          <Image className="size-10 mx-auto text-muted-foreground" />
           <h2 className="text-lg font-medium">Upload Map Image</h2>
           <p className="text-sm text-muted-foreground">
             Upload an image to create your map. You can pin items to it later.

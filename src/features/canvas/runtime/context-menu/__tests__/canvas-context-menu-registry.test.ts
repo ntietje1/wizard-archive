@@ -178,7 +178,6 @@ describe('buildCanvasContextMenu', () => {
 
     const pasteItem = menu.flatItems.find((item) => item.id === 'canvas-paste')
     expect(pasteItem).toBeDefined()
-    expect(pasteItem?.scope).toBe('base')
     expect(pasteItem?.disabled).toBe(false)
     expect(pasteCommand.canRun).toHaveBeenCalledWith()
 
