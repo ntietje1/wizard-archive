@@ -104,8 +104,8 @@ export function ItemOperationConflictDialog({
   const visibleMode = hasBulkScreen ? mode : 'per-item'
   const conflictDescription =
     conflicts.length === 1
-      ? `The destination already has an item named ${conflict.destinationName}.`
-      : `${conflicts.length} items have names that already exist in this destination.`
+      ? `The destination already has an item named ${conflict.destinationName}. Select one or both to keep.`
+      : `${conflicts.length} items have names that already exist in this destination. Select which ones to keep.`
   const bulkActions = hasBulkScreen
     ? BULK_ACTIONS
     : BULK_ACTIONS.filter((action) => action.action !== 'per-item')
