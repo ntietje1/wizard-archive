@@ -10,6 +10,11 @@ on:
       release_notes:
         description: Short note to attach to the Cloudflare Worker version
         required: false
+      deploy_convex:
+        description: Deploy production Convex backend before uploading the Worker candidate
+        required: true
+        type: boolean
+        default: false
 
 concurrency:
   group: prepare-production-candidate
@@ -43,7 +48,6 @@ jobs:
           trap 'rm -f "$worker_env_file" "$candidate_worker_env_file" "$convex_env_file"' EXIT
 
           for var_name in \
-            CONVEX_DEPLOY_KEY \
             CLOUDFLARE_API_TOKEN \
             VITE_CONVEX_URL \
             VITE_CONVEX_SITE_URL \
@@ -57,6 +61,11 @@ jobs:
               exit 1
             fi
           done
+
+          if [[ "${DEPLOY_CONVEX}" == "true" && -z "${CONVEX_DEPLOY_KEY:-}" ]]; then
+            echo "Missing required environment variable: CONVEX_DEPLOY_KEY" >&2
+            exit 1
+          fi
 
           site_host="${VITE_SITE_URL#*://}"
           site_host="${site_host%%/*}"
@@ -75,12 +84,20 @@ jobs:
 
           candidate_host="candidate.${site_apex_host}"
           candidate_site_url="https://${candidate_host}"
+          convex_site_host="${VITE_CONVEX_SITE_URL#*://}"
+          convex_site_host="${convex_site_host%%/*}"
+          if [[ -z "$convex_site_host" ]]; then
+            echo "Unable to derive Convex site host from VITE_CONVEX_SITE_URL" >&2
+            exit 1
+          fi
 
-          export BETTER_AUTH_ALLOWED_HOSTS="${site_apex_host},${site_www_host},${candidate_host}"
+          export BETTER_AUTH_ALLOWED_HOSTS="${site_apex_host},${site_www_host},${candidate_host},${convex_site_host}"
 
           bash scripts/write-worker-env.sh "$worker_env_file"
           VITE_SITE_URL="$candidate_site_url" bash scripts/write-worker-env.sh "$candidate_worker_env_file"
-          bash scripts/write-convex-env.sh "$convex_env_file"
+          if [[ "${DEPLOY_CONVEX}" == "true" ]]; then
+            bash scripts/write-convex-env.sh "$convex_env_file"
+          fi
 
           release_sha="$(git rev-parse HEAD)"
           release_message="$RELEASE_NOTES"
@@ -92,8 +109,12 @@ jobs:
           vp run lint:convex
           vp build --mode production
 
-          vp exec convex env set --from-file "$convex_env_file" --force
-          vp exec convex deploy
+          if [[ "${DEPLOY_CONVEX}" == "true" ]]; then
+            vp exec convex env set --from-file "$convex_env_file" --force
+            vp exec convex deploy
+          else
+            echo "Skipping production Convex deploy because deploy_convex=false"
+          fi
 
           vp exec wrangler versions upload \
             --config dist/server/wrangler.json \
@@ -111,6 +132,7 @@ jobs:
         env:
           CONVEX_DEPLOY_KEY: '${{ secrets.CONVEX_DEPLOY_KEY }}'
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          DEPLOY_CONVEX: ${{ inputs.deploy_convex }}
           RELEASE_NOTES: ${{ inputs.release_notes }}
           VITE_CONVEX_URL: ${{ secrets.VITE_CONVEX_URL }}
           VITE_CONVEX_SITE_URL: ${{ secrets.VITE_CONVEX_SITE_URL }}

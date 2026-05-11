@@ -6,15 +6,16 @@ Production releases are manual. The GitHub workflow prepares a candidate, and Cl
 
 1. Run the **Prepare Production Candidate** GitHub workflow.
 2. Use `main` unless releasing a specific commit or branch.
-3. Add a short release note.
-4. Wait for the workflow to finish.
-5. Smoke-test the candidate at `https://candidate.wizardarchive.com`:
+3. Leave **Deploy production Convex backend** disabled for frontend-only releases. Enable it only when the release intentionally includes production Convex backend changes.
+4. Add a short release note.
+5. Wait for the workflow to finish.
+6. Smoke-test the candidate at `https://candidate.wizardarchive.com`:
    - `/`
    - `/campaigns`
    - `/api/auth/get-session`
    - Google sign-in with a selected test account
-6. In Cloudflare, open the `wizard-archive` Worker and promote the uploaded candidate version.
-7. Smoke-test production:
+7. In Cloudflare, open the `wizard-archive` Worker and promote the uploaded candidate version.
+8. Smoke-test production:
    - `https://wizardarchive.com/`
    - `https://www.wizardarchive.com/`
    - `https://wizardarchive.com/campaigns`
@@ -32,7 +33,9 @@ Rollback is safe only when the Convex backend is still compatible with the previ
 
 ## Convex changes
 
-For normal backward-compatible Convex changes, release through the standard candidate flow.
+The production candidate workflow only deploys Convex when **Deploy production Convex backend** is enabled. Leave it disabled for frontend-only releases.
+
+For normal backward-compatible Convex changes, release through the standard candidate flow with **Deploy production Convex backend** enabled.
 
 For breaking schema or API changes, split the work across releases:
 
