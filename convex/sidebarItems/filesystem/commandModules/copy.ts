@@ -6,7 +6,8 @@ import { assertSidebarItemName } from '../../validation/name'
 import { deduplicateName } from '../../functions/defaultItemName'
 import { planCopyOperations } from '../copyPlanner'
 import { collectSidebarChildrenMap } from '../children'
-import { normalizeTopLevelSelectedItemsWithDescendants } from '../selection'
+import { normalizeSelectedRoots } from '../selection'
+import { addSidebarItemAncestorsToMap } from '../ancestors'
 import type { OperationPlannerItem } from '../selection'
 import { getSidebarItem } from '../../functions/getSidebarItem'
 import { getActiveSidebarItemRowsByParent } from '../../functions/getSidebarItemsByParent'
@@ -195,13 +196,20 @@ async function collectCopyChildrenMap(
   })
 }
 
-function normalizeCopyRootIds(
-  sourceItems: Array<AnySidebarItem>,
+function buildCopyItemsMap(
+  items: Array<AnySidebarItem | OperationPlannerItem>,
   childrenMap: Awaited<ReturnType<typeof collectCopyChildrenMap>>,
-): Set<Id<'sidebarItems'>> {
-  return new Set(
-    normalizeTopLevelSelectedItemsWithDescendants(sourceItems, childrenMap).map((item) => item._id),
-  )
+) {
+  const map = new Map<Id<'sidebarItems'>, Pick<AnySidebarItem, '_id' | 'parentId'>>()
+  for (const item of items) {
+    map.set(item._id, item)
+  }
+  for (const children of childrenMap.values()) {
+    for (const child of children) {
+      map.set(child._id, child)
+    }
+  }
+  return map
 }
 
 async function executeCopyOperations(
@@ -411,15 +419,18 @@ function planCopyEffects({
   targetItems,
   decisions,
   childrenMap,
+  itemsById,
 }: {
   sourceItems: Array<AnySidebarItem>
   targetParentId: Id<'sidebarItems'> | null
   targetItems: Array<OperationPlannerItem>
   decisions?: Array<OperationDecision>
   childrenMap: Awaited<ReturnType<typeof collectCopyChildrenMap>>
+  itemsById: ReadonlyMap<Id<'sidebarItems'>, Pick<AnySidebarItem, '_id' | 'parentId'>>
 }) {
   return planCopyOperations({
     items: sourceItems,
+    itemsById,
     targetParentId,
     targetItems,
     decisions: toDecisionRecord(decisions),
@@ -458,13 +469,22 @@ async function executeCopyPlan(
     targetParentId,
   })
   const childrenMap = await collectCopyPlanningChildrenMap(ctx, sourceItems, targetItems)
-  const rootSourceIds = normalizeCopyRootIds(sourceItems, childrenMap)
+  const itemsById = buildCopyItemsMap([...sourceItems, ...targetItems], childrenMap)
+  await addSidebarItemAncestorsToMap(ctx, {
+    items: sourceItems,
+    itemsById,
+    maxDepth: MAX_COPY_DEPTH,
+  })
+  const rootSourceIds = new Set(
+    normalizeSelectedRoots(sourceItems, itemsById).map((item) => item._id),
+  )
   const plan = planCopyEffects({
     sourceItems,
     targetParentId,
     targetItems,
     decisions,
     childrenMap,
+    itemsById,
   })
 
   if (plan.status === 'needs-decision') {

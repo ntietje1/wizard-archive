@@ -6,7 +6,7 @@ import {
   findNameConflict,
 } from './conflicts'
 import type { PlannerItemStatus } from './conflicts'
-import { normalizePlannerRootItemsStrict } from './selection'
+import { normalizeSelectedRoots } from './selection'
 import type { OperationPlannerItem } from './selection'
 import type { Id } from '../../_generated/dataModel'
 import type {
@@ -32,6 +32,7 @@ type MovePlannerContext = {
   decisions: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
   defaultConflictDecision?: ConflictDecision
   getChildren?: (parentId: Id<'sidebarItems'>) => Array<OperationPlannerItem>
+  itemsById: ReadonlyMap<Id<'sidebarItems'>, Pick<OperationPlannerItem, '_id' | 'parentId'>>
   depth: number
   movingIds: Set<Id<'sidebarItems'>>
   conflicts: Array<ItemOperationConflict>
@@ -123,9 +124,11 @@ export function planMoveOperations({
   decisions = {},
   defaultConflictDecision,
   getChildren,
+  itemsById,
   depth = 0,
 }: {
   items: Array<OperationPlannerItem>
+  itemsById: ReadonlyMap<Id<'sidebarItems'>, Pick<OperationPlannerItem, '_id' | 'parentId'>>
   targetParentId: Id<'sidebarItems'> | null
   targetItems: Array<OperationPlannerItem>
   decisions?: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
@@ -138,7 +141,7 @@ export function planMoveOperations({
       `Max sidebar move planning depth exceeded at depth ${depth} for target ${targetParentId ?? 'root'} with items ${formatItemIdsForError(items)}`,
     )
   }
-  const topLevelItems = normalizePlannerRootItemsStrict(items, getChildren, depth)
+  const topLevelItems = normalizeSelectedRoots(items, itemsById)
   const movingIds = new Set(topLevelItems.map((item) => item._id))
   const context: MovePlannerContext = {
     targetParentId,
@@ -146,6 +149,7 @@ export function planMoveOperations({
     decisions,
     defaultConflictDecision,
     getChildren,
+    itemsById,
     depth,
     movingIds,
     conflicts: [],

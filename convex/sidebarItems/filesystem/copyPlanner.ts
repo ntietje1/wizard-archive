@@ -5,7 +5,7 @@ import {
   findNameConflict,
 } from './conflicts'
 import type { PlannerItemStatus } from './conflicts'
-import { normalizePlannerRootItemsStrict } from './selection'
+import { normalizeSelectedRoots } from './selection'
 import type { OperationPlannerItem } from './selection'
 import type { Id } from '../../_generated/dataModel'
 import type {
@@ -23,6 +23,7 @@ type CopyPlannerContext = {
   decisions: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
   defaultConflictDecision?: ConflictDecision
   getChildren?: (parentId: Id<'sidebarItems'>) => Array<OperationPlannerItem>
+  itemsById: ReadonlyMap<Id<'sidebarItems'>, Pick<OperationPlannerItem, '_id' | 'parentId'>>
   depth: number
   conflicts: Array<ItemOperationConflict>
   operations: Array<CopyOperation>
@@ -111,9 +112,11 @@ export function planCopyOperations({
   decisions = {},
   defaultConflictDecision,
   getChildren,
+  itemsById,
   depth = 0,
 }: {
   items: Array<OperationPlannerItem>
+  itemsById: ReadonlyMap<Id<'sidebarItems'>, Pick<OperationPlannerItem, '_id' | 'parentId'>>
   targetParentId: Id<'sidebarItems'> | null
   targetItems: Array<OperationPlannerItem>
   decisions?: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
@@ -130,13 +133,14 @@ export function planCopyOperations({
     decisions,
     defaultConflictDecision,
     getChildren,
+    itemsById,
     depth,
     conflicts: [],
     operations: [],
     reservedNames: targetItems.map((item) => item.name),
   }
 
-  for (const item of normalizePlannerRootItemsStrict(items, getChildren, depth)) {
+  for (const item of normalizeSelectedRoots(items, itemsById)) {
     planCopyItem(context, item)
   }
 

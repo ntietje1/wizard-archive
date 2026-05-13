@@ -116,6 +116,7 @@ export function addPlannedFolderMergeOperations<TOperation>({
     targetParentId: Id<'sidebarItems'> | null
     decisions: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
     getChildren?: (parentId: Id<'sidebarItems'>) => Array<OperationPlannerItem>
+    itemsById: ReadonlyMap<Id<'sidebarItems'>, Pick<OperationPlannerItem, '_id' | 'parentId'>>
     depth: number
     conflicts: Array<ItemOperationConflict>
     operations: Array<TOperation>
@@ -130,6 +131,7 @@ export function addPlannedFolderMergeOperations<TOperation>({
     decisions: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
     defaultConflictDecision?: ConflictDecision
     getChildren: (parentId: Id<'sidebarItems'>) => Array<OperationPlannerItem>
+    itemsById: ReadonlyMap<Id<'sidebarItems'>, Pick<OperationPlannerItem, '_id' | 'parentId'>>
     depth: number
   }) =>
     | { status: 'needs-decision'; conflicts: Array<ItemOperationConflict>; operations: [] }
@@ -148,6 +150,7 @@ export function addPlannedFolderMergeOperations<TOperation>({
       decisions: context.decisions,
       defaultConflictDecision: context.decisions[item._id] ?? context.defaultConflictDecision,
       getChildren: context.getChildren,
+      itemsById: context.itemsById,
       depth: context.depth + 1,
     })
     if (childPlan.status === 'needs-decision') {

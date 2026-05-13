@@ -25,7 +25,6 @@ import {
   resolveContextPrimaryItem,
   resolveContextSelectedItems,
 } from '~/features/context-menu/selection-context'
-import { useFileSystem } from '~/features/filesystem/useFileSystem'
 
 export type EditorContextMenuRef = ContextMenuHostRef
 
@@ -55,7 +54,6 @@ export function EditorContextMenu({
   onDialogClose,
 }: EditorContextMenuProps) {
   const menuActions = useMenuActions({ onDialogOpen, onDialogClose })
-  const filesystem = useFileSystem()
   const { campaign } = useCampaign()
   const { currentSession } = useSession()
   const mapView = useMapViewOptional()
@@ -69,14 +67,13 @@ export function EditorContextMenu({
     viewContext === VIEW_CONTEXT.SIDEBAR ||
     viewContext === VIEW_CONTEXT.FOLDER_VIEW ||
     viewContext === VIEW_CONTEXT.TRASH_VIEW
-  const rawSelectedItems = resolveContextSelectedItems({
+  const selectedItems = resolveContextSelectedItems({
     item,
     selectedItemIds,
     activeItemsMap: itemsMap,
     trashedItemsMap,
     canUseItemSelection,
   })
-  const selectedItems = filesystem.resolveContextItems({ item, selectedItems: rawSelectedItems })
   const primaryItem = resolveContextPrimaryItem({ item, selectedItems })
 
   const menuContext = {

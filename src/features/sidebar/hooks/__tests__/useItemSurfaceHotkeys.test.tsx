@@ -73,8 +73,6 @@ function createFileSystem(overrides?: Partial<FileSystemValue>): FileSystemValue
     executeDropCommand: vi.fn().mockResolvedValue(undefined),
     canUndo: false,
     canRedo: false,
-    resolveOperationItems: (items) => items,
-    resolveContextItems: (context) => context.selectedItems ?? (context.item ? [context.item] : []),
     ...overrides,
   }
 }

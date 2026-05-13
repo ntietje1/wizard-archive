@@ -1,10 +1,28 @@
 import { describe, expect, it } from 'vitest'
 import { SIDEBAR_ITEM_TYPES } from '../../types/baseTypes'
 import { createSidebarItem } from './testSidebarItem'
-import { planMoveOperations } from '../movePlanner'
-import { normalizeTopLevelSelectedItemsBestEffort } from '../selection'
+import { planMoveOperations as planMoveOperationsBase } from '../movePlanner'
+import { normalizeSelectedRoots } from '../selection'
+import type { OperationPlannerItem } from '../selection'
 import type { Id } from '../../../_generated/dataModel'
 import type { AnySidebarItem } from '../../types/types'
+
+function planMoveOperations(args: Omit<Parameters<typeof planMoveOperationsBase>[0], 'itemsById'>) {
+  const itemsById = new Map<Id<'sidebarItems'>, OperationPlannerItem>()
+  const ensureAncestor = (parentId: Id<'sidebarItems'> | null) => {
+    if (!parentId || itemsById.has(parentId)) return
+    itemsById.set(parentId, createSidebarItem(parentId, parentId, SIDEBAR_ITEM_TYPES.folders))
+  }
+  for (const item of [...args.items, ...args.targetItems]) {
+    itemsById.set(item._id, item)
+    ensureAncestor(item.parentId)
+    for (const child of args.getChildren?.(item._id) ?? []) {
+      itemsById.set(child._id, child)
+      ensureAncestor(child.parentId)
+    }
+  }
+  return planMoveOperationsBase({ ...args, itemsById })
+}
 
 describe('filesystem operation domain', () => {
   it('normalizes parent and child selection to parent only and plans no-op move', () => {
@@ -17,7 +35,7 @@ describe('filesystem operation domain', () => {
       [child._id, child],
     ])
 
-    const selectedRoots = normalizeTopLevelSelectedItemsBestEffort([folder, child], itemsMap)
+    const selectedRoots = normalizeSelectedRoots([folder, child], itemsMap)
     const plan = planMoveOperations({
       items: selectedRoots,
       targetParentId: null,
@@ -43,7 +61,7 @@ describe('filesystem operation domain', () => {
       [targetFolder._id, targetFolder],
     ])
 
-    const selectedRoots = normalizeTopLevelSelectedItemsBestEffort([noteA, noteB], itemsMap)
+    const selectedRoots = normalizeSelectedRoots([noteA, noteB], itemsMap)
     const plan = planMoveOperations({
       items: selectedRoots,
       targetParentId: targetFolder._id,
@@ -75,12 +93,10 @@ describe('filesystem operation domain', () => {
       [child._id, child],
     ])
 
-    expect(
-      normalizeTopLevelSelectedItemsBestEffort([grandparent, parent, child], itemsMap),
-    ).toEqual([grandparent])
+    expect(normalizeSelectedRoots([grandparent, parent, child], itemsMap)).toEqual([grandparent])
   })
 
-  it('detects circular parent references during selection normalization without throwing', () => {
+  it('throws on circular parent references during selection normalization', () => {
     const folderA = createSidebarItem('folder-1', 'A', SIDEBAR_ITEM_TYPES.folders, {
       parentId: 'folder-2' as Id<'sidebarItems'>,
     })
@@ -88,19 +104,19 @@ describe('filesystem operation domain', () => {
       parentId: folderA._id,
     })
 
-    expect(
-      normalizeTopLevelSelectedItemsBestEffort(
+    expect(() =>
+      normalizeSelectedRoots(
         [folderA],
         new Map<Id<'sidebarItems'>, AnySidebarItem>([
           [folderA._id, folderA],
           [folderB._id, folderB],
         ]),
       ),
-    ).toEqual([folderA])
+    ).toThrow(/Cycle detected/)
   })
 
   it('handles empty selection and plans no operations', () => {
-    expect(normalizeTopLevelSelectedItemsBestEffort([], new Map())).toEqual([])
+    expect(normalizeSelectedRoots([], new Map())).toEqual([])
     expect(
       planMoveOperations({
         items: [],

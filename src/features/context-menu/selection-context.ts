@@ -1,6 +1,24 @@
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type { EditorMenuContext } from './types'
+import { normalizeSelectedRoots } from 'convex/sidebarItems/filesystem/selection'
+
+function resolveSelectedItemsById({
+  selectedItemIds,
+  allItemsMap,
+}: {
+  selectedItemIds: Array<Id<'sidebarItems'>>
+  allItemsMap: ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>
+}): Array<AnySidebarItem> | null {
+  const items: Array<AnySidebarItem> = []
+  for (const selectedItemId of selectedItemIds) {
+    const item = allItemsMap.get(selectedItemId)
+    if (!item) {
+      return null
+    }
+    items.push(item)
+  }
+  return items
+}
 
 export function resolveContextSelectedItems({
   item,
@@ -15,20 +33,13 @@ export function resolveContextSelectedItems({
   trashedItemsMap: ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>
   canUseItemSelection: boolean
 }): Array<AnySidebarItem> {
-  const allItemsMap = new Map([...trashedItemsMap, ...activeItemsMap])
+  const allItemsMap = new Map([...activeItemsMap, ...trashedItemsMap])
   if (!canUseItemSelection || !item || !selectedItemIds.includes(item._id)) {
-    return item ? [item] : []
+    return item ? normalizeSelectedRoots([item], allItemsMap) : []
   }
 
-  const resolvedItems: Array<AnySidebarItem> = []
-  for (const selectedId of selectedItemIds) {
-    const selectedItem = allItemsMap.get(selectedId) ?? (selectedId === item._id ? item : undefined)
-    if (selectedItem) {
-      resolvedItems.push(selectedItem)
-    }
-  }
-
-  return resolvedItems
+  const selectedItems = resolveSelectedItemsById({ selectedItemIds, allItemsMap })
+  return selectedItems ? normalizeSelectedRoots(selectedItems, allItemsMap) : []
 }
 
 export function resolveContextPrimaryItem({
@@ -39,18 +50,4 @@ export function resolveContextPrimaryItem({
   selectedItems: Array<AnySidebarItem>
 }): AnySidebarItem | undefined {
   return selectedItems[0] ?? item
-}
-
-export function resolveRawContextItems(
-  context: Pick<EditorMenuContext, 'item' | 'primaryItem' | 'selectedItems'>,
-): Array<AnySidebarItem> {
-  if (context.selectedItems && context.selectedItems.length > 0) {
-    const clickedItem = context.primaryItem ?? context.item
-    if (clickedItem && !context.selectedItems.some((item) => item._id === clickedItem._id)) {
-      return [clickedItem]
-    }
-    return context.selectedItems
-  }
-  const item = context.primaryItem ?? context.item
-  return item ? [item] : []
 }

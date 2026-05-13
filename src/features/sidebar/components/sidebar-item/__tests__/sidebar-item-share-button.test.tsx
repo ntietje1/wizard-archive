@@ -110,7 +110,7 @@ describe('SidebarShareButton', () => {
     expect(await screen.findByTestId('share-panel')).toHaveTextContent('Selected')
   })
 
-  it('falls back to the clicked row when active sidebar data is stale', async () => {
+  it('does not invent a share target when selected sidebar data is stale', async () => {
     const user = userEvent.setup()
     const clicked = createNote({ name: 'Clicked' })
     useSidebarUIStore.setState({
@@ -122,6 +122,6 @@ describe('SidebarShareButton', () => {
 
     await user.click(screen.getByRole('button', { name: 'Share' }))
 
-    expect(await screen.findByTestId('share-panel')).toHaveTextContent('Clicked')
+    expect(await screen.findByTestId('share-panel')).toBeEmptyDOMElement()
   })
 })

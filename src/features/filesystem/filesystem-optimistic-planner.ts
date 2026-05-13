@@ -1,5 +1,6 @@
 import { planCopyOperations } from 'convex/sidebarItems/filesystem/copyPlanner'
 import { planMoveOperations } from 'convex/sidebarItems/filesystem/movePlanner'
+import { normalizeSelectedRoots } from 'convex/sidebarItems/filesystem/selection'
 import { validateCreateParentTarget } from 'convex/sidebarItems/validation/parent'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
@@ -43,7 +44,6 @@ type PlannerArgs = {
   activeItemSurface: SidebarOperationSurface | null
   currentUserId: Id<'userProfiles'> | null
   campaignId: Id<'campaigns'>
-  resolveOperationItems: (items: Array<AnySidebarItem>) => Array<AnySidebarItem>
 }
 
 type CommandPlannerArgs<TCommand extends FileSystemCommand> = Omit<PlannerArgs, 'command'> & {
@@ -57,9 +57,10 @@ function readyWithPatches(patches: OptimisticPatchSet) {
 function planCopy(args: CommandPlannerArgs<CopyFileSystemCommand>) {
   const loadedItems = args.readModel.getItems(args.command.itemIds)
   assertAllCommandItemsLoaded(args.command.itemIds, loadedItems)
-  const items = args.resolveOperationItems(loadedItems)
+  const items = normalizeSelectedRoots(loadedItems, args.readModel.itemsById)
   const plan = planCopyOperations({
     items,
+    itemsById: args.readModel.itemsById,
     targetParentId: args.command.targetParentId,
     targetItems: args.readModel.getChildren(args.command.targetParentId),
     decisions: args.decisions,
@@ -81,6 +82,7 @@ function planMoveOrRestore(
   for (const [targetParentId, groupItems] of groups) {
     const plan = planMoveOperations({
       items: groupItems,
+      itemsById: args.readModel.itemsById,
       targetParentId,
       targetItems: args.readModel.getChildren(targetParentId),
       decisions: args.decisions,
@@ -103,7 +105,7 @@ function groupMoveItemsByTarget(
   const { command } = args
   const loadedItems = args.readModel.getItems(command.itemIds)
   assertAllCommandItemsLoaded(command.itemIds, loadedItems)
-  const items = args.resolveOperationItems(loadedItems)
+  const items = normalizeSelectedRoots(loadedItems, args.readModel.itemsById)
   const groups = new Map<Id<'sidebarItems'> | null, Array<AnySidebarItem>>()
 
   for (const item of items) {
@@ -133,7 +135,7 @@ function resolveMoveTargetParentId(
 function planTrash(args: CommandPlannerArgs<TrashFileSystemCommand>) {
   const loadedItems = args.readModel.getItems(args.command.itemIds)
   assertAllCommandItemsLoaded(args.command.itemIds, loadedItems)
-  const items = args.resolveOperationItems(loadedItems)
+  const items = normalizeSelectedRoots(loadedItems, args.readModel.itemsById)
   return readyWithPatches(
     buildOptimisticTrashPatches(args.snapshot, items, Date.now(), args.currentUserId),
   )
@@ -142,7 +144,7 @@ function planTrash(args: CommandPlannerArgs<TrashFileSystemCommand>) {
 function planDeleteForever(args: CommandPlannerArgs<DeleteForeverFileSystemCommand>) {
   const loadedItems = args.readModel.getItems(args.command.itemIds)
   assertAllCommandItemsLoaded(args.command.itemIds, loadedItems)
-  const items = args.resolveOperationItems(loadedItems)
+  const items = normalizeSelectedRoots(loadedItems, args.readModel.itemsById)
   return readyWithPatches(buildOptimisticDeleteForeverPatches(args.snapshot, items))
 }
 

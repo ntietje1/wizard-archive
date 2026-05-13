@@ -1,6 +1,6 @@
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import { normalizeFileSystemOperationItems } from '~/features/filesystem/normalizeFileSystemOperationItems'
+import { normalizeSelectedRoots } from 'convex/sidebarItems/filesystem/selection'
 import { getDragItemIds } from '~/features/dnd/utils/drag-source-data'
 
 export function resolveNormalizedDraggedSidebarItems({
@@ -22,11 +22,15 @@ export function resolveNormalizedDraggedSidebarItems({
   ])
   const excluded = new Set(excludeItemIds)
   const draggedItems = getDragItemIds(sourceData)
-    .map((id) => allItemsMap.get(id))
-    .filter((item): item is AnySidebarItem => {
-      if (!item) return false
-      return !excluded.has(item._id) && (includeTrashed || !item.isTrashed)
+    .filter((id) => !excluded.has(id))
+    .map((id) => {
+      const item = allItemsMap.get(id)
+      if (!item) {
+        throw new Error(`Drag source references missing sidebar item ${id}`)
+      }
+      return item
     })
+    .filter((item) => includeTrashed || !item.isTrashed)
 
-  return normalizeFileSystemOperationItems(draggedItems, allItemsMap)
+  return normalizeSelectedRoots(draggedItems, allItemsMap)
 }

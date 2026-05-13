@@ -159,4 +159,19 @@ describe('useSidebarDragData', () => {
       sidebarDragPreviewItemIds: [active._id, trashed._id],
     })
   })
+
+  it('prevents selection drags when selected item data is stale', () => {
+    const active = createNote()
+    const missing = createNote()
+    mockSidebarItems([active])
+    useSidebarUIStore.setState({ selectedItemIds: [active._id, missing._id] })
+
+    const { result } = renderHook(() => useSidebarDragData(active))
+
+    expect(result.current).toEqual({
+      sidebarItemId: active._id,
+      sidebarItemIds: [],
+      sidebarDragPreviewItemIds: [],
+    })
+  })
 })

@@ -1,5 +1,4 @@
 import type { ActionHandlers } from './menu-registry'
-import type { MenuContext } from './types'
 import type { Folder } from 'convex/folders/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
@@ -23,15 +22,9 @@ export function createFilesystemActions({
   setDeleteFolderDialog: (folder: Folder) => void
   onDialogOpen?: () => void
 }): FilesystemActions {
-  const resolveFilesystemContext = (ctx: MenuContext) => {
-    return {
-      normalizedItems: filesystem.resolveContextItems(ctx),
-    }
-  }
-
   return {
     delete: async (ctx) => {
-      const { normalizedItems: items } = resolveFilesystemContext(ctx)
+      const items = ctx.selectedItems ?? []
       if (items.length === 0) return
 
       if (items.length === 1 && isFolder(items[0])) {
@@ -48,7 +41,7 @@ export function createFilesystemActions({
     },
 
     restore: async (ctx) => {
-      const { normalizedItems: items } = resolveFilesystemContext(ctx)
+      const items = ctx.selectedItems ?? []
       if (items.length === 0) return
       await filesystem.restoreItems(
         items.map((item) => item._id),
@@ -57,7 +50,7 @@ export function createFilesystemActions({
     },
 
     permanentlyDelete: (ctx) => {
-      const { normalizedItems: items } = resolveFilesystemContext(ctx)
+      const items = ctx.selectedItems ?? []
       if (items.length === 0) return
       if (filesystem.confirmDeleteForever(items.map((item) => item._id))) {
         onDialogOpen?.()
@@ -68,12 +61,12 @@ export function createFilesystemActions({
       await filesystem.paste(
         getContextMenuPasteParentId({
           clickedItem: ctx.item,
-          operationItems: resolveFilesystemContext(ctx).normalizedItems,
+          operationItems: ctx.selectedItems ?? [],
         }),
       )
     },
     duplicate: async (ctx) => {
-      const { normalizedItems: items } = resolveFilesystemContext(ctx)
+      const items = ctx.selectedItems ?? []
       if (items.length === 0) return
       await filesystem.copyItems(
         items.map((item) => item._id),

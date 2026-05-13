@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import { normalizeSelectedRoots } from 'convex/sidebarItems/filesystem/selection'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
@@ -27,7 +28,6 @@ interface ResolvedHotkeySelection {
 }
 
 interface HotkeyFileSystemActions {
-  resolveOperationItems: (items: Array<AnySidebarItem>) => Array<AnySidebarItem>
   cancelClipboard: () => boolean
   cut: (itemIds: Array<AnySidebarItem['_id']>) => void
   copy: (itemIds: Array<AnySidebarItem['_id']>) => void
@@ -40,8 +40,6 @@ interface HotkeyFileSystemActions {
 interface HotkeyHandlerContext {
   campaignId: ReturnType<typeof useCampaign>['campaignId']
   activeItemSurface: ActiveItemSurface
-  activeItemsMap: Map<AnySidebarItem['_id'], AnySidebarItem>
-  trashedItemsMap: Map<AnySidebarItem['_id'], AnySidebarItem>
   selectedItems: Array<AnySidebarItem>
   selectedIds: Array<AnySidebarItem['_id']>
   focusedItemId: AnySidebarItem['_id'] | null
@@ -57,22 +55,27 @@ interface HotkeyHandlerContext {
 
 function resolveItems(
   ids: Array<AnySidebarItem['_id']>,
-  activeItemsMap: Map<AnySidebarItem['_id'], AnySidebarItem>,
-  trashedItemsMap: Map<AnySidebarItem['_id'], AnySidebarItem>,
+  allItemsMap: Map<AnySidebarItem['_id'], AnySidebarItem>,
 ): Array<AnySidebarItem> {
-  return ids
-    .map((id) => activeItemsMap.get(id) ?? trashedItemsMap.get(id))
-    .filter((item): item is AnySidebarItem => Boolean(item))
+  return ids.map((id) => {
+    const item = allItemsMap.get(id)
+    if (!item) {
+      throw new Error(`Hotkey selection references missing sidebar item ${id}`)
+    }
+    return item
+  })
 }
 
 function resolveSelection(
   ids: Array<AnySidebarItem['_id']>,
   activeItemsMap: Map<AnySidebarItem['_id'], AnySidebarItem>,
   trashedItemsMap: Map<AnySidebarItem['_id'], AnySidebarItem>,
-  filesystem: HotkeyFileSystemActions,
 ): ResolvedHotkeySelection {
-  const rawSelectedItems = resolveItems(ids, activeItemsMap, trashedItemsMap)
-  const selectedItems = filesystem.resolveOperationItems(rawSelectedItems)
+  const allItemsMap = new Map<AnySidebarItem['_id'], AnySidebarItem>([
+    ...activeItemsMap,
+    ...trashedItemsMap,
+  ])
+  const selectedItems = normalizeSelectedRoots(resolveItems(ids, allItemsMap), allItemsMap)
 
   return {
     selectedItems,
@@ -226,18 +229,11 @@ export function useItemSurfaceHotkeys(filesystem: HotkeyFileSystemActions) {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!activeItemSurface || isEditableHotkeyTarget(event.target)) return
 
-      const selection = resolveSelection(
-        selectedItemIds,
-        activeItemsMap,
-        trashedItemsMap,
-        filesystemRef.current,
-      )
+      const selection = resolveSelection(selectedItemIds, activeItemsMap, trashedItemsMap)
 
       handleItemSurfaceHotkey(event, {
         campaignId,
         activeItemSurface,
-        activeItemsMap,
-        trashedItemsMap,
         focusedItemId,
         filesystem: filesystemRef.current,
         setSelectedItemIds,

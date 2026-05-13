@@ -1,6 +1,5 @@
 import { createContext, use } from 'react'
 import type { Id } from 'convex/_generated/dataModel'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { SidebarItemColor } from 'convex/sidebarItems/validation/color'
 import type { SidebarItemIconName } from 'convex/sidebarItems/validation/icon'
@@ -62,12 +61,6 @@ export type FileSystemValue = {
   executeDropCommand: (command: FileSystemGlobalDropCommand) => Promise<void>
   canUndo: boolean
   canRedo: boolean
-  resolveOperationItems: (items: Array<AnySidebarItem>) => Array<AnySidebarItem>
-  resolveContextItems: (context: {
-    item?: AnySidebarItem
-    primaryItem?: AnySidebarItem
-    selectedItems?: Array<AnySidebarItem>
-  }) => Array<AnySidebarItem>
 }
 
 export const FileSystemContext = createContext<FileSystemValue | null>(null)

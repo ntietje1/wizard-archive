@@ -45,8 +45,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const toggleBookmarkMutation = useToggleBookmark()
   const { parentItemsMap } = useActiveSidebarItems()
   const filesystemActionsApi = useFileSystem()
-  const getNormalizedContextItems = (ctx: MenuContext) =>
-    filesystemActionsApi.resolveContextItems(ctx)
   const downloadActions = createDownloadActions({ campaignId, convex })
   const creationActions = createCreationActions({
     campaignId,
@@ -110,7 +108,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       if (!ctx.activeMap) return
       const pinnedItemIds = new Set(ctx.activeMap.pins.map((pin) => pin.itemId))
       const itemIds: Array<Id<'sidebarItems'>> = []
-      for (const item of getNormalizedContextItems(ctx)) {
+      for (const item of ctx.selectedItems ?? []) {
         if (item._id !== ctx.activeMap._id && !pinnedItemIds.has(item._id)) {
           itemIds.push(item._id)
         }
@@ -221,7 +219,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
 
     setGeneralAccessLevel: async (ctx: MenuContext, level: PermissionLevel | null) => {
       if (!campaignId) return
-      const items = getNormalizedContextItems(ctx)
+      const items = ctx.selectedItems ?? []
       if (items.length === 0) return
 
       try {
@@ -254,7 +252,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
 
     toggleBookmark: async (ctx: MenuContext) => {
       if (!campaignId) return
-      const items = getNormalizedContextItems(ctx)
+      const items = ctx.selectedItems ?? []
       if (items.length === 0) return
 
       const results = await Promise.allSettled(

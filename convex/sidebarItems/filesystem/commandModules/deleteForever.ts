@@ -7,7 +7,8 @@ import { isTrashedSidebarItem } from '../../types/status'
 import { getSidebarItem } from '../../functions/getSidebarItem'
 import { assertSidebarOperationAllowed, evaluatePermanentDelete } from '../capabilities'
 import { collectSidebarChildrenMap } from '../children'
-import { normalizeTopLevelSelectedItemsWithDescendants } from '../selection'
+import { normalizeSelectedRoots } from '../selection'
+import { addSidebarItemAncestorsToMap } from '../ancestors'
 import { createFileSystemWriteSession } from '../deltas'
 import { FILE_SYSTEM_EVENT_TYPE, fileSystemSelfEvents } from '../receipts'
 import type { CampaignMutationCtx } from '../../../functions'
@@ -95,7 +96,21 @@ async function normalizePermanentDeleteRoots(
       throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Max permanent delete planning depth exceeded')
     },
   })
-  return normalizeTopLevelSelectedItemsWithDescendants(sourceItems, childrenMap)
+  const itemsById = new Map<Id<'sidebarItems'>, Pick<AnySidebarItemRow, '_id' | 'parentId'>>()
+  for (const item of sourceItems) {
+    itemsById.set(item._id, item)
+  }
+  for (const children of childrenMap.values()) {
+    for (const child of children) {
+      itemsById.set(child._id, child)
+    }
+  }
+  await addSidebarItemAncestorsToMap(ctx, {
+    items: sourceItems,
+    itemsById,
+    maxDepth: MAX_PERMANENT_DELETE_DEPTH,
+  })
+  return normalizeSelectedRoots(sourceItems, itemsById)
 }
 
 export async function executeDeleteForeverCommand(

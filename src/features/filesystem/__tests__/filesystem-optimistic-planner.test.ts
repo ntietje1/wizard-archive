@@ -38,7 +38,6 @@ describe('filesystem optimistic planning', () => {
       activeItemSurface: { parentId: null },
       currentUserId: null,
       campaignId,
-      resolveOperationItems: (items) => items,
     })
 
     expect(plan.status).toBe('ready')
@@ -69,7 +68,6 @@ describe('filesystem optimistic planning', () => {
       activeItemSurface: { parentId: null },
       currentUserId: null,
       campaignId,
-      resolveOperationItems: (items) => items,
     })
 
     expect(plan.status).toBe('ready')
@@ -101,7 +99,6 @@ describe('filesystem optimistic planning', () => {
       activeItemSurface: { parentId: activeFolder._id },
       currentUserId: null,
       campaignId,
-      resolveOperationItems: (items) => items,
     })
 
     expect(plan.status).toBe('ready')

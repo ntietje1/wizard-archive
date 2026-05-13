@@ -24,8 +24,6 @@ function createFileSystem(overrides?: Partial<FileSystemValue>) {
     executeDropCommand: vi.fn(),
     canUndo: false,
     canRedo: false,
-    resolveOperationItems: (items) => items,
-    resolveContextItems: (context) => context.selectedItems ?? (context.item ? [context.item] : []),
     ...overrides,
   } satisfies FileSystemValue
 }

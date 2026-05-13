@@ -12,6 +12,7 @@ import type {
   ConflictDecision,
   ItemOperationConflict,
 } from 'convex/sidebarItems/filesystem/operationTypes'
+import { normalizeSelectedRoots } from 'convex/sidebarItems/filesystem/selection'
 import { FileSystemPermanentDeleteDialog } from './filesystem-dialogs'
 import { ItemOperationConflictDialog } from './item-operation-conflict-dialog'
 import { shouldRecordFileSystemUndo, useFileSystemUndoStore } from './filesystem-undo-store'
@@ -40,7 +41,6 @@ import {
   getReceiptRenamedSlug,
   getReceiptToastMessage,
 } from './filesystem-receipt-selectors'
-import { normalizeFileSystemOperationItems } from './normalizeFileSystemOperationItems'
 import { toast } from 'sonner'
 import { getPasteTargetParentId } from './filesystem-targets'
 import { fileSystemDropCommandFailureMessage } from './filesystem-drop-planner'
@@ -113,24 +113,10 @@ function useFileSystemValue(): FileSystemProviderState {
 
   const cacheAdapter = createFileSystemCacheAdapter(cache)
 
-  const resolveOperationItems = (
+  const normalizeOperationItems = (
     items: Array<AnySidebarItem>,
     model = cacheAdapter.getReadModel(),
-  ) => normalizeFileSystemOperationItems(items, model.itemsById)
-
-  const resolveContextItems: FileSystemValue['resolveContextItems'] = (context) => {
-    const clickedItem = context.primaryItem ?? context.item
-    if (context.selectedItems && context.selectedItems.length > 0) {
-      if (
-        clickedItem &&
-        !context.selectedItems.some((selectedItem) => selectedItem._id === clickedItem._id)
-      ) {
-        return resolveOperationItems([clickedItem])
-      }
-      return resolveOperationItems(context.selectedItems)
-    }
-    return clickedItem ? resolveOperationItems([clickedItem]) : []
-  }
+  ) => normalizeSelectedRoots(items, model.itemsById)
 
   const applyReceiptSideEffects = async (receipt: FileSystemTransactionReceipt) => {
     await applyFileSystemReceiptEffects({
@@ -177,7 +163,6 @@ function useFileSystemValue(): FileSystemProviderState {
       activeItemSurface,
       currentUserId: campaign.data?.myMembership?.userId ?? null,
       campaignId,
-      resolveOperationItems: (items) => resolveOperationItems(items, currentReadModel),
     })
     if (plan.status === 'needsDecision') {
       setPendingConflict({ command, conflicts: plan.conflicts })
@@ -258,7 +243,7 @@ function useFileSystemValue(): FileSystemProviderState {
   const copy = (itemIds: Array<Id<'sidebarItems'>>) => {
     if (!campaignId || itemIds.length === 0) return
     const currentReadModel = cacheAdapter.getReadModel()
-    const items = resolveOperationItems(currentReadModel.getItems(itemIds), currentReadModel)
+    const items = normalizeOperationItems(currentReadModel.getItems(itemIds), currentReadModel)
     if (items.length === 0) return
     setFileSystemClipboard({ mode: 'copy', campaignId, itemIds: items.map((item) => item._id) })
   }
@@ -266,7 +251,7 @@ function useFileSystemValue(): FileSystemProviderState {
   const cut = (itemIds: Array<Id<'sidebarItems'>>) => {
     if (!campaignId || itemIds.length === 0) return
     const currentReadModel = cacheAdapter.getReadModel()
-    const items = resolveOperationItems(currentReadModel.getItems(itemIds), currentReadModel)
+    const items = normalizeOperationItems(currentReadModel.getItems(itemIds), currentReadModel)
     if (items.length === 0) return
     setFileSystemClipboard({ mode: 'cut', campaignId, itemIds: items.map((item) => item._id) })
   }
@@ -280,7 +265,7 @@ function useFileSystemValue(): FileSystemProviderState {
   const paste = async (targetParentId = getPasteTargetParentId(activeItemSurface)) => {
     if (!campaignId || !clipboard || clipboard.campaignId !== campaignId) return
     const currentReadModel = cacheAdapter.getReadModel()
-    const items = resolveOperationItems(
+    const items = normalizeOperationItems(
       currentReadModel.getItems(Array.from(clipboard.itemIds)),
       currentReadModel,
     )
@@ -405,7 +390,7 @@ function useFileSystemValue(): FileSystemProviderState {
 
   const confirmDeleteForever: FileSystemValue['confirmDeleteForever'] = (itemIds) => {
     const currentReadModel = cacheAdapter.getReadModel()
-    const items = resolveOperationItems(currentReadModel.getItems(itemIds), currentReadModel)
+    const items = normalizeOperationItems(currentReadModel.getItems(itemIds), currentReadModel)
     if (items.length === 0) return false
     setPendingDeleteForeverItems(items)
     return true
@@ -466,8 +451,6 @@ function useFileSystemValue(): FileSystemProviderState {
       executeDropCommand,
       canUndo: undoStack.length > 0,
       canRedo: redoStack.length > 0,
-      resolveOperationItems,
-      resolveContextItems,
     },
     dialog: (
       <>

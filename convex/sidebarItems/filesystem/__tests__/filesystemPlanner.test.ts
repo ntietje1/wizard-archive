@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { SIDEBAR_ITEM_TYPES } from '../../types/baseTypes'
 import { PERMISSION_LEVEL } from '../../../permissions/types'
-import { planCopyOperations } from '../copyPlanner'
-import { planMoveOperations } from '../movePlanner'
+import { planCopyOperations as planCopyOperationsBase } from '../copyPlanner'
+import { planMoveOperations as planMoveOperationsBase } from '../movePlanner'
+import type { OperationPlannerItem } from '../selection'
 import type { ConflictDecision } from '../operationTypes'
 import type { AnySidebarItem } from '../../types/types'
 import type { Id } from '../../../_generated/dataModel'
@@ -44,6 +45,43 @@ function item(
 
 function decisions(values: Record<string, ConflictDecision>) {
   return values as Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
+}
+
+function buildItemsById(
+  roots: Array<OperationPlannerItem>,
+  getChildren?: (parentId: Id<'sidebarItems'>) => Array<OperationPlannerItem>,
+) {
+  const itemsById = new Map<Id<'sidebarItems'>, OperationPlannerItem>()
+  const ensureAncestor = (parentId: Id<'sidebarItems'> | null) => {
+    if (!parentId || itemsById.has(parentId)) return
+    itemsById.set(parentId, item(parentId, parentId, SIDEBAR_ITEM_TYPES.folders))
+  }
+  const visit = (plannerItem: OperationPlannerItem) => {
+    if (itemsById.has(plannerItem._id)) return
+    itemsById.set(plannerItem._id, plannerItem)
+    ensureAncestor(plannerItem.parentId)
+    for (const child of getChildren?.(plannerItem._id) ?? []) {
+      visit(child)
+    }
+  }
+  for (const root of roots) {
+    visit(root)
+  }
+  return itemsById
+}
+
+function planCopyOperations(args: Omit<Parameters<typeof planCopyOperationsBase>[0], 'itemsById'>) {
+  return planCopyOperationsBase({
+    ...args,
+    itemsById: buildItemsById([...args.items, ...args.targetItems], args.getChildren),
+  })
+}
+
+function planMoveOperations(args: Omit<Parameters<typeof planMoveOperationsBase>[0], 'itemsById'>) {
+  return planMoveOperationsBase({
+    ...args,
+    itemsById: buildItemsById([...args.items, ...args.targetItems], args.getChildren),
+  })
 }
 
 describe('planCopyOperations', () => {

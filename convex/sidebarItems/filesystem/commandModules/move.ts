@@ -18,7 +18,8 @@ import { resyncNoteLinksForNotes } from '../../../links/functions/resyncNoteLink
 import { getActiveSidebarItemRowsByParent } from '../../functions/getSidebarItemsByParent'
 import { planMoveOperations } from '../movePlanner'
 import { collectSidebarChildrenMap } from '../children'
-import { normalizeTopLevelSelectedItemsWithDescendants } from '../selection'
+import { normalizeSelectedRoots } from '../selection'
+import { addSidebarItemAncestorsToMap } from '../ancestors'
 import { getSidebarItem } from '../../functions/getSidebarItem'
 import { collectDescendants } from '../../functions/collectDescendants'
 import { assertSidebarOperationAllowed, evaluateRestore } from '../capabilities'
@@ -478,7 +479,29 @@ async function normalizeOperationRoots(
 ) {
   const folders = sourceItems.filter((item) => item.type === SIDEBAR_ITEM_TYPES.folders)
   const childrenMap = await collectMoveChildrenMap(ctx, folders)
-  return normalizeTopLevelSelectedItemsWithDescendants(sourceItems, childrenMap)
+  const itemsById = buildOperationItemsMap(sourceItems, childrenMap)
+  await addSidebarItemAncestorsToMap(ctx, {
+    items: sourceItems,
+    itemsById,
+    maxDepth: MAX_SIDEBAR_MOVE_DEPTH,
+  })
+  return normalizeSelectedRoots(sourceItems, itemsById)
+}
+
+function buildOperationItemsMap(
+  items: Array<Pick<AnySidebarItemRow, '_id' | 'parentId'>>,
+  childrenMap: Map<Id<'sidebarItems'>, Array<AnySidebarItemRow>>,
+) {
+  const map = new Map<Id<'sidebarItems'>, Pick<AnySidebarItem, '_id' | 'parentId'>>()
+  for (const item of items) {
+    map.set(item._id, item)
+  }
+  for (const children of childrenMap.values()) {
+    for (const child of children) {
+      map.set(child._id, child)
+    }
+  }
+  return map
 }
 
 async function trashSidebarItems(
@@ -545,8 +568,15 @@ async function executeMovePlan(
     (item) => item.type === SIDEBAR_ITEM_TYPES.folders,
   )
   const childrenMap = await collectMoveChildrenMap(ctx, folders)
+  const itemsById = buildOperationItemsMap([...sourceItems, ...targetItems], childrenMap)
+  await addSidebarItemAncestorsToMap(ctx, {
+    items: sourceItems,
+    itemsById,
+    maxDepth: MAX_SIDEBAR_MOVE_DEPTH,
+  })
   const plan = planMoveOperations({
     items: sourceItems,
+    itemsById,
     targetParentId: effectiveTargetParentId,
     targetItems,
     decisions: toDecisionRecord(decisions),
@@ -563,7 +593,7 @@ async function executeMovePlan(
     )
   }
 
-  const rootSourceItems = await normalizeOperationRoots(ctx, sourceItems)
+  const rootSourceItems = normalizeSelectedRoots(sourceItems, itemsById)
   const result = await executeMoveOperations(
     ctx,
     plan.operations,
