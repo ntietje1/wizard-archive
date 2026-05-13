@@ -8,6 +8,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { validateCreateItemLocally } from 'convex/sidebarItems/validation/parent'
 import { useFileSystem } from '~/features/filesystem/useFileSystem'
+import { deduplicateName } from 'convex/sidebarItems/functions/defaultItemName'
 
 interface CreateItemBase {
   name: string
@@ -42,14 +43,21 @@ export function useCreateFileSystemItem() {
 
   const createItem = async (args: CreateItemArgs): Promise<CreateItemResult> => {
     const trimmedName = args.name.trim()
+    const candidateName =
+      args.parentTarget.kind === 'direct'
+        ? deduplicateName(
+            trimmedName,
+            (parentItemsMap.get(args.parentTarget.parentId) ?? []).map((item) => item.name),
+          )
+        : trimmedName
     const nameResult = validateCreateItem({
       ...args,
-      name: trimmedName,
+      name: candidateName,
     })
     if (!nameResult.valid) {
       throw new Error(nameResult.error)
     }
-    const normalizedName = assertSidebarItemName(trimmedName)
+    const normalizedName = assertSidebarItemName(candidateName)
 
     const iconName =
       args.iconName === undefined ? undefined : coerceSidebarItemIconNameForInput(args.iconName)

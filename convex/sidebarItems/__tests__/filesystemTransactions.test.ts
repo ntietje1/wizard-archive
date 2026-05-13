@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { api } from '../../_generated/api'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createTestContext } from '../../_test/setup.helper'
-import { createFolder, createNote } from '../../_test/factories.helper'
+import { createCampaignWithDm, createFolder, createNote } from '../../_test/factories.helper'
+import { makeYjsUpdateWithBlocks } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
 
 describe('filesystem transactions', () => {
   const t = createTestContext()
@@ -29,6 +30,111 @@ describe('filesystem transactions', () => {
     expect(active[0]).toMatchObject({ status: 'active', location: 'sidebar' })
     expect(trashed.map((item) => item.name)).toEqual(['Trashed'])
     expect(trashed[0]).toMatchObject({ status: 'trashed', location: 'sidebar' })
+  })
+
+  it('rejects filesystem commands that reference another campaign item or parent', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const otherCampaign = await createCampaignWithDm(t, ctx.dm.profile)
+    const { noteId: localNoteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Local',
+    })
+    const { folderId: otherFolderId } = await createFolder(
+      t,
+      otherCampaign.campaignId,
+      ctx.dm.profile._id,
+      { name: 'Other Folder' },
+    )
+    const { noteId: otherNoteId } = await createNote(
+      t,
+      otherCampaign.campaignId,
+      ctx.dm.profile._id,
+      { name: 'Other Note' },
+    )
+    const { noteId: otherTrashedNoteId } = await createNote(
+      t,
+      otherCampaign.campaignId,
+      ctx.dm.profile._id,
+      {
+        name: 'Other Trash',
+        status: 'trashed',
+        deletionTime: Date.now(),
+        deletedBy: ctx.dm.profile._id,
+      },
+    )
+
+    const commands = [
+      { type: 'rename' as const, itemId: otherNoteId, name: 'Renamed' },
+      { type: 'move' as const, itemIds: [otherNoteId], targetParentId: null },
+      { type: 'trash' as const, itemIds: [otherNoteId] },
+      { type: 'copy' as const, itemIds: [otherNoteId], targetParentId: null },
+      { type: 'restore' as const, itemIds: [otherTrashedNoteId], targetParentId: null },
+      { type: 'deleteForever' as const, itemIds: [otherTrashedNoteId] },
+      { type: 'move' as const, itemIds: [localNoteId], targetParentId: otherFolderId },
+      { type: 'copy' as const, itemIds: [localNoteId], targetParentId: otherFolderId },
+    ]
+
+    for (const command of commands) {
+      await expect(
+        dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+          campaignId: ctx.campaignId,
+          command,
+        }),
+      ).rejects.toThrow()
+    }
+
+    const otherItems = await dmAuth.query(api.sidebarItems.queries.getActiveSidebarItems, {
+      campaignId: otherCampaign.campaignId,
+    })
+    expect(otherItems.map((item) => item.name).sort()).toEqual(['Other Folder', 'Other Note'])
+  })
+
+  it('keeps undo-hidden items out of direct queries and active parent targets', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const { folderId: hiddenFolderId, slug: hiddenFolderSlug } = await createFolder(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+      {
+        name: 'Hidden',
+        status: 'undoHidden',
+      },
+    )
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Visible',
+    })
+
+    await expect(
+      dmAuth.query(api.sidebarItems.queries.getSidebarItem, {
+        campaignId: ctx.campaignId,
+        id: hiddenFolderId,
+      }),
+    ).rejects.toThrow('This item could not be found')
+    await expect(
+      dmAuth.query(api.sidebarItems.queries.getSidebarItemBySlug, {
+        campaignId: ctx.campaignId,
+        slug: hiddenFolderSlug,
+      }),
+    ).resolves.toBeNull()
+
+    await expect(
+      dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+        campaignId: ctx.campaignId,
+        command: {
+          type: 'create',
+          itemType: 'note',
+          name: 'Child',
+          parentTarget: { kind: 'direct', parentId: hiddenFolderId },
+        },
+      }),
+    ).rejects.toThrow('Parent not found')
+    await expect(
+      dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+        campaignId: ctx.campaignId,
+        command: { type: 'move', itemIds: [noteId], targetParentId: hiddenFolderId },
+      }),
+    ).rejects.toThrow('Parent not found')
   })
 
   it('returns event receipts instead of bucket arrays and records copy as undoable', async () => {
@@ -63,10 +169,8 @@ describe('filesystem transactions', () => {
       async (dbCtx) => await dbCtx.db.get('filesystemTransactions', receipt.transactionId!),
     )
     expect(transaction?.events).toEqual(receipt.events)
-    expect(transaction?.receiptPatches).toEqual(receipt.patches)
+    expect(transaction?.changes).toHaveLength(receipt.patches.length)
     expect(transaction?.requestFingerprint).toEqual(expect.any(String))
-    expect(transaction?.forwardPatches).toHaveLength(receipt.patches.length)
-    expect(transaction?.inversePatches).toHaveLength(receipt.patches.length)
   })
 
   it('rejects reusing a client operation id for a different filesystem command', async () => {
@@ -410,10 +514,14 @@ describe('filesystem transactions', () => {
       'Scene',
     ])
 
-    await dmAuth.mutation(api.sidebarItems.filesystem.mutations.undoFileSystemTransaction, {
-      campaignId: ctx.campaignId,
-      transactionId: receipt.transactionId!,
-    })
+    const undoReceipt = await dmAuth.mutation(
+      api.sidebarItems.filesystem.mutations.undoFileSystemTransaction,
+      {
+        campaignId: ctx.campaignId,
+        transactionId: receipt.transactionId!,
+      },
+    )
+    expect(undoReceipt.patches.every((patch) => patch.type === 'updateSidebarItem')).toBe(true)
     const activeAfterUndo = await dmAuth.query(api.sidebarItems.queries.getActiveSidebarItems, {
       campaignId: ctx.campaignId,
     })
@@ -430,10 +538,16 @@ describe('filesystem transactions', () => {
     expect(hiddenAfterUndo).toHaveLength(1)
     expect(hiddenAfterUndo[0]?.status).toBe('undoHidden')
 
-    await dmAuth.mutation(api.sidebarItems.filesystem.mutations.redoFileSystemTransaction, {
-      campaignId: ctx.campaignId,
-      transactionId: receipt.transactionId!,
-    })
+    const redoReceipt = await dmAuth.mutation(
+      api.sidebarItems.filesystem.mutations.redoFileSystemTransaction,
+      {
+        campaignId: ctx.campaignId,
+        transactionId: receipt.transactionId!,
+      },
+    )
+    expect(redoReceipt.patches.filter((patch) => patch.type === 'upsertSidebarItem')).toHaveLength(
+      3,
+    )
     const activeAfterRedo = await dmAuth.query(api.sidebarItems.queries.getActiveSidebarItems, {
       campaignId: ctx.campaignId,
     })
@@ -471,6 +585,124 @@ describe('filesystem transactions', () => {
     const note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', noteId))
     expect(note?.name).toBe('Original')
     expect(note?.previewLockedUntil).toEqual(expect.any(Number))
+  })
+
+  it('rejects undoing a created item after the created row changes', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const createReceipt = await dmAuth.mutation(
+      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
+      {
+        campaignId: ctx.campaignId,
+        command: {
+          type: 'create',
+          itemType: 'note',
+          name: 'Draft',
+          parentTarget: { kind: 'direct', parentId: null },
+        },
+      },
+    )
+    const created = createReceipt.events.find((event) => event.type === 'created')
+    expect(created).toBeDefined()
+
+    await dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+      campaignId: ctx.campaignId,
+      command: { type: 'rename', itemId: created!.itemId, name: 'Draft Revised' },
+    })
+
+    await expect(
+      dmAuth.mutation(api.sidebarItems.filesystem.mutations.undoFileSystemTransaction, {
+        campaignId: ctx.campaignId,
+        transactionId: createReceipt.transactionId!,
+      }),
+    ).rejects.toThrow('Filesystem transaction can no longer be applied cleanly')
+
+    const note = await t.run(async (dbCtx) => await dbCtx.db.get('sidebarItems', created!.itemId))
+    expect(note).toMatchObject({ name: 'Draft Revised', status: 'active' })
+  })
+
+  it('resyncs relative note links after transaction undo and redo moves', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const dmId = ctx.dm.profile._id
+    const { folderId: folderA } = await createFolder(t, ctx.campaignId, dmId, {
+      name: 'Folder A',
+    })
+    const { folderId: folderB } = await createFolder(t, ctx.campaignId, dmId, {
+      name: 'Folder B',
+    })
+    const { noteId: targetId } = await createNote(t, ctx.campaignId, dmId, {
+      name: 'Target',
+      parentId: folderA,
+    })
+    const { noteId: sourceId } = await createNote(t, ctx.campaignId, dmId, {
+      name: 'Source',
+      parentId: folderA,
+    })
+
+    await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+      campaignId: ctx.campaignId,
+      documentId: sourceId,
+      update: makeYjsUpdateWithBlocks([
+        {
+          id: 'block-a',
+          type: 'paragraph',
+          props: {},
+          content: [{ type: 'text', text: '[[./Target]]', styles: {} }],
+          children: [],
+        },
+      ]),
+    })
+    await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+      campaignId: ctx.campaignId,
+      documentId: sourceId,
+    })
+
+    const moveReceipt = await dmAuth.mutation(
+      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
+      {
+        campaignId: ctx.campaignId,
+        command: { type: 'move', itemIds: [sourceId], targetParentId: folderB },
+      },
+    )
+    let links = await t.run(async (dbCtx) => {
+      return await dbCtx.db
+        .query('noteLinks')
+        .withIndex('by_campaign_source', (q) =>
+          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceId),
+        )
+        .collect()
+    })
+    expect(links[0]?.targetItemId).toBeNull()
+
+    await dmAuth.mutation(api.sidebarItems.filesystem.mutations.undoFileSystemTransaction, {
+      campaignId: ctx.campaignId,
+      transactionId: moveReceipt.transactionId!,
+    })
+    links = await t.run(async (dbCtx) => {
+      return await dbCtx.db
+        .query('noteLinks')
+        .withIndex('by_campaign_source', (q) =>
+          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceId),
+        )
+        .collect()
+    })
+    expect(links[0]?.targetItemId).toBe(targetId)
+
+    await dmAuth.mutation(api.sidebarItems.filesystem.mutations.redoFileSystemTransaction, {
+      campaignId: ctx.campaignId,
+      transactionId: moveReceipt.transactionId!,
+    })
+    links = await t.run(async (dbCtx) => {
+      return await dbCtx.db
+        .query('noteLinks')
+        .withIndex('by_campaign_source', (q) =>
+          q.eq('campaignId', ctx.campaignId).eq('sourceNoteId', sourceId),
+        )
+        .collect()
+    })
+    expect(links[0]?.targetItemId).toBeNull()
   })
 
   it('prunes old transactions after the undo history limit', async () => {
@@ -600,6 +832,36 @@ describe('filesystem transactions', () => {
     )
   })
 
+  it('prunes non-undoable transaction history separately from undo history', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    for (let index = 0; index < 52; index += 1) {
+      await dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+        campaignId: ctx.campaignId,
+        clientOperationId: `non-undoable-prune-${index}`,
+        command: { type: 'emptyTrash' },
+      })
+    }
+
+    const nonUndoableTransactions = await t.run(async (dbCtx) => {
+      return await dbCtx.db
+        .query('filesystemTransactions')
+        .withIndex('by_campaign_actor_undoable', (q) =>
+          q
+            .eq('campaignId', ctx.campaignId)
+            .eq('actorMemberId', ctx.dm.memberId)
+            .eq('undoable', false),
+        )
+        .collect()
+    })
+
+    expect(nonUndoableTransactions).toHaveLength(50)
+    expect(
+      nonUndoableTransactions.map((transaction) => transaction.clientOperationId),
+    ).not.toContain('non-undoable-prune-0')
+  })
+
   it('undoes and redoes a replace conflict without a second planning pass', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
@@ -702,7 +964,7 @@ describe('filesystem transactions', () => {
     expect(retryReceipt.patches).toEqual(receipt.patches)
   })
 
-  it('rejects empty trash when too many items would be deleted at once', async () => {
+  it('rejects empty trash when the bounded transaction would silently leave rows behind', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     for (let index = 0; index < 101; index += 1) {
@@ -719,6 +981,10 @@ describe('filesystem transactions', () => {
         campaignId: ctx.campaignId,
         command: { type: 'emptyTrash' },
       }),
-    ).rejects.toThrow('Empty trash cannot delete more than 100 items at once')
+    ).rejects.toThrow('Empty Trash can delete at most 100 items at once')
+    const remainingTrash = await dmAuth.query(api.sidebarItems.queries.getTrashedSidebarItems, {
+      campaignId: ctx.campaignId,
+    })
+    expect(remainingTrash).toHaveLength(101)
   })
 })

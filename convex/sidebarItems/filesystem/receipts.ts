@@ -93,6 +93,8 @@ export type SidebarItemPatchFields = {
   deletedBy: Id<'userProfiles'> | null
 }
 export type SidebarItemFieldPatch = Partial<SidebarItemPatchFields>
+export type SidebarItemPatchPrecondition = SidebarItemFieldPatch &
+  Partial<Pick<Doc<'sidebarItems'>, 'type' | 'createdBy'>>
 
 export type FileSystemPatch =
   | {
@@ -102,7 +104,7 @@ export type FileSystemPatch =
   | {
       type: 'updateSidebarItem'
       itemId: Id<'sidebarItems'>
-      before: SidebarItemFieldPatch
+      before: SidebarItemPatchPrecondition
       fields: SidebarItemFieldPatch
     }
   | {
@@ -111,12 +113,28 @@ export type FileSystemPatch =
       snapshot: Doc<'sidebarItems'>
     }
 
+export type FileSystemChange =
+  | {
+      type: 'insertSidebarItem'
+      itemId: Id<'sidebarItems'>
+      after: Doc<'sidebarItems'>
+    }
+  | {
+      type: 'updateSidebarItem'
+      itemId: Id<'sidebarItems'>
+      before: Doc<'sidebarItems'>
+      after: Doc<'sidebarItems'>
+    }
+  | {
+      type: 'removeSidebarItem'
+      itemId: Id<'sidebarItems'>
+      before: Doc<'sidebarItems'>
+    }
+
 export type FileSystemDelta = {
   command: FileSystemCommand
   events: Array<FileSystemEvent>
-  receiptPatches: Array<FileSystemPatch>
-  forwardPatches: Array<FileSystemPatch>
-  inversePatches: Array<FileSystemPatch>
+  changes: Array<FileSystemChange>
   undoable: boolean
 }
 
@@ -211,8 +229,6 @@ export type FileSystemTransactionReceipt = {
   command: FileSystemCommand
   events: Array<FileSystemEvent>
   patches: Array<FileSystemPatch>
-  forwardPatches: Array<FileSystemPatch>
-  inversePatches: Array<FileSystemPatch>
   summary: FileSystemReceiptMessage
   undoable: boolean
 }

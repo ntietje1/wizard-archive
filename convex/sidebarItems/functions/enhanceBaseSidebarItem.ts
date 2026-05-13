@@ -8,13 +8,11 @@ import {
   isTrashedSidebarItem,
   normalizeSidebarItemLifecycle,
 } from '../types/status'
-import type { AnySidebarItemFromDb } from '../types/types'
+import type { AnySidebarItemRow } from '../types/types'
 import type { EnhanceSidebarItem, NormalizeSidebarItem } from '../types/baseTypes'
 import type { CampaignQueryCtx } from '../../functions'
 
-function normalizeSidebarItemFields<T extends AnySidebarItemFromDb>(
-  item: T,
-): NormalizeSidebarItem<T> {
+function normalizeSidebarItemFields<T extends AnySidebarItemRow>(item: T): NormalizeSidebarItem<T> {
   return {
     ...normalizeSidebarItemLifecycle(item),
     name: assertSidebarItemName(item.name),
@@ -24,7 +22,7 @@ function normalizeSidebarItemFields<T extends AnySidebarItemFromDb>(
   }
 }
 
-export async function enhanceBase<T extends AnySidebarItemFromDb>(
+export async function enhanceBase<T extends AnySidebarItemRow>(
   ctx: CampaignQueryCtx,
   { item }: { item: T },
 ): Promise<EnhanceSidebarItem<T>> {

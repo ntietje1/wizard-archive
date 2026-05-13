@@ -2,19 +2,19 @@ import { ERROR_CODE, throwClientError } from '../../../errors'
 import { logEditHistory } from '../../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../../editHistory/types'
 import { PERMISSION_LEVEL } from '../../../permissions/types'
-import { getSidebarItem } from '../../functions/getSidebarItem'
-import { requireItemAccess } from '../../validation/access'
 import { requireOptionalSidebarItemName } from '../../validation/name'
 import { requireOptionalSidebarItemColor } from '../../validation/color'
 import { requireOptionalSidebarItemIconName } from '../../validation/icon'
 import { prepareSidebarItemRename } from '../../validation/orchestration'
 import { FILE_SYSTEM_EVENT_TYPE } from '../receipts'
 import { createFileSystemWriteSession } from '../deltas'
+import { getSidebarItemRow } from '../sidebarItemRows'
+import { requireSidebarItemRowAccess } from '../access'
+import type { AccessibleSidebarItemRow } from '../access'
 import type { CampaignMutationCtx } from '../../../functions'
 import type { EditHistoryChange } from '../../../editHistory/types'
 import type { RenameFileSystemCommand } from '../commands'
 import type { FileSystemDelta, SidebarItemFieldPatch } from '../receipts'
-import type { AnySidebarItem } from '../../types/types'
 
 type SidebarItemUpdates = SidebarItemFieldPatch
 
@@ -32,9 +32,9 @@ export async function executeRenameCommand(
   },
 ): Promise<FileSystemDelta> {
   const session = createFileSystemWriteSession(ctx)
-  const rawItem = await getSidebarItem(ctx, command.itemId)
+  const rawItem = await getSidebarItemRow(ctx, command.itemId)
   if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
-  const item = await requireItemAccess(ctx, {
+  const item = await requireSidebarItemRowAccess(ctx, {
     rawItem,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
@@ -71,7 +71,7 @@ export async function executeRenameCommand(
 
 async function collectRenameChanges(
   ctx: CampaignMutationCtx,
-  item: AnySidebarItem,
+  item: AccessibleSidebarItemRow,
   command: RenameFileSystemCommand,
 ): Promise<RenameChangeSet> {
   const changeSet: RenameChangeSet = { updates: {}, changes: [] }
@@ -81,7 +81,7 @@ async function collectRenameChanges(
 
 async function collectSidebarMetadataChanges(
   ctx: CampaignMutationCtx,
-  item: AnySidebarItem,
+  item: AccessibleSidebarItemRow,
   command: RenameFileSystemCommand,
   changeSet: RenameChangeSet,
 ): Promise<void> {
@@ -118,7 +118,7 @@ async function collectSidebarMetadataChanges(
   }
 }
 
-function buildRenameEvents(item: AnySidebarItem, updates: SidebarItemUpdates) {
+function buildRenameEvents(item: AccessibleSidebarItemRow, updates: SidebarItemUpdates) {
   if (typeof updates.slug !== 'string')
     return [{ type: FILE_SYSTEM_EVENT_TYPE.noop, itemId: item._id }]
   return [

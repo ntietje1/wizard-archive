@@ -121,10 +121,12 @@ export function addPlannedFolderMergeOperations<TOperation>({
     conflicts: Array<ItemOperationConflict>
     operations: Array<TOperation>
     defaultConflictDecision?: ConflictDecision
+    mode: 'copy' | 'move'
   }
   item: OperationPlannerItem
   conflictTarget: OperationPlannerItem
   planChildren: (args: {
+    mode: 'copy' | 'move'
     items: Array<OperationPlannerItem>
     targetParentId: Id<'sidebarItems'>
     targetItems: Array<OperationPlannerItem>
@@ -144,6 +146,7 @@ export function addPlannedFolderMergeOperations<TOperation>({
 }): PlannerItemStatus {
   if (context.getChildren) {
     const childPlan = planChildren({
+      mode: context.mode,
       items: context.getChildren(item._id),
       targetParentId: conflictTarget._id,
       targetItems: context.getChildren(conflictTarget._id),

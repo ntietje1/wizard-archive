@@ -2,7 +2,7 @@ import type { Doc, Id } from '../../_generated/dataModel'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import type { FileSystemPatch, SidebarItemFieldPatch } from './receipts'
 import { diffSidebarItemFields } from './patches'
-import type { MoveOperation } from './operationTypes'
+import type { TransferOperation } from './operationTypes'
 import { collectDescendantIdsFromItems } from './tree'
 
 type PatchProjectionItem = Extract<FileSystemPatch, { type: 'upsertSidebarItem' }>['item']
@@ -127,7 +127,7 @@ function projectReplacementDestination<T extends SidebarItemPatchRow>({
 }: {
   patches: OptimisticPatchPair
   activeItems: Array<T>
-  operation: MoveOperation
+  operation: TransferOperation
   now: number
 }) {
   if (operation.action !== 'replace' || !operation.destinationItemId) return
@@ -147,7 +147,7 @@ function projectMergeFolderOperation<T extends SidebarItemPatchRow>({
   patches: OptimisticPatchPair
   activeItems: Array<T>
   activeItemsById: ReadonlyMap<Id<'sidebarItems'>, T>
-  operation: Extract<MoveOperation, { action: 'mergeFolder' }>
+  operation: Extract<TransferOperation, { action: 'mergeFolder' }>
   now: number
 }) {
   const source = activeItemsById.get(operation.sourceItemId)
@@ -166,7 +166,7 @@ function projectMoveOrRestoreOperation<T extends SidebarItemPatchRow>({
   activeItemsById: ReadonlyMap<Id<'sidebarItems'>, T>
   trashItems: Array<T>
   trashItemsById: ReadonlyMap<Id<'sidebarItems'>, T>
-  operation: Extract<MoveOperation, { action: 'move' | 'replace' }>
+  operation: Extract<TransferOperation, { action: 'place' | 'replace' }>
 }) {
   const source = activeItemsById.get(operation.sourceItemId)
   if (source) {
@@ -192,7 +192,7 @@ export function projectMoveOperations<T extends SidebarItemPatchRow>({
 }: {
   activeItems: Array<T>
   trashItems: Array<T>
-  operations: Array<MoveOperation>
+  operations: Array<TransferOperation>
   now: number
 }): OptimisticPatchPair {
   const activeItemsById = new Map(activeItems.map((item) => [item._id, item]))

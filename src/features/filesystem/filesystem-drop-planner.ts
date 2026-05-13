@@ -32,7 +32,7 @@ export type FileSystemGlobalDropTarget =
       ancestorIds?: Array<Id<'sidebarItems'>>
     }
 
-type FileSystemGlobalDropCommand =
+export type FileSystemGlobalDropCommand =
   | { status: 'noop' }
   | { status: 'blocked'; reason: FileSystemGlobalDropRejectionReason }
   | {

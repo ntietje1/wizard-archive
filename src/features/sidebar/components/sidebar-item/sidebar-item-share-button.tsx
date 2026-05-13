@@ -11,7 +11,7 @@ import {
   useActiveSidebarItems,
   useTrashSidebarItems,
 } from '~/features/sidebar/hooks/useSidebarItems'
-import { resolveContextSelectedItems } from '~/features/context-menu/selection-context'
+import { resolveClickedSidebarOperationItems } from '~/features/filesystem/filesystem-operation-selection'
 
 export function SidebarShareButton({
   item,
@@ -42,7 +42,7 @@ function SidebarShareButtonPopover({
   const selectedItemIds = useSidebarUIStore((s) => s.selectedItemIds)
   const { itemsMap } = useActiveSidebarItems()
   const { itemsMap: trashedItemsMap } = useTrashSidebarItems()
-  const shareItems = resolveContextSelectedItems({
+  const shareItems = resolveClickedSidebarOperationItems({
     item,
     selectedItemIds,
     activeItemsMap: itemsMap,

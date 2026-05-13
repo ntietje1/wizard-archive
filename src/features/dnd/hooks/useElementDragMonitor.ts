@@ -3,21 +3,23 @@ import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/ad
 import type { DragOverlayState } from '~/features/dnd/components/drag-overlay'
 import type { DndMonitorCtx } from '~/features/dnd/types'
 import type { Id } from 'convex/_generated/dataModel'
-import { getDragItemId, getDragPreviewItemIds } from '~/features/dnd/utils/drag-source-data'
+import {
+  getDragItemId,
+  getDragItemIds,
+  getDragPreviewItemIds,
+} from '~/features/dnd/utils/drag-source-data'
 import {
   getDropTargetKey,
   getHighlightId,
   resolveDropTarget,
   EMPTY_EDITOR_DROP_TYPE,
 } from '~/features/dnd/utils/drop-target-data'
-import {
-  resolveDropFeedback,
-  toGlobalFileSystemDropTarget,
-} from '~/features/dnd/utils/drop-feedback'
+import { resolveDropFeedback } from '~/features/dnd/utils/drop-feedback'
 import type { FileSystemDropOptions } from 'convex/sidebarItems/filesystem/intentPlanning'
-import { resolveNormalizedDraggedSidebarItems } from '~/features/dnd/utils/sidebar-drag-items'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import type { DropOutcome } from '~/features/dnd/utils/drop-outcome'
+import { resolveGlobalFileSystemDrop } from '~/features/filesystem/filesystem-dnd-facade'
+import { resolveSidebarOperationItems } from '~/features/filesystem/filesystem-operation-selection'
 
 function resolveDraggedItem(sourceData: Record<string, unknown>, ctx: DndMonitorCtx) {
   const sid = getDragItemId(sourceData)
@@ -25,8 +27,8 @@ function resolveDraggedItem(sourceData: Record<string, unknown>, ctx: DndMonitor
 }
 
 function resolveDraggedItems(sourceData: Record<string, unknown>, ctx: DndMonitorCtx) {
-  return resolveNormalizedDraggedSidebarItems({
-    sourceData,
+  return resolveSidebarOperationItems({
+    itemIds: getDragItemIds(sourceData),
     activeItemsMap: ctx.itemsMap,
     trashedItemsMap: ctx.trashedItemsMap,
     includeTrashed: true,
@@ -99,12 +101,17 @@ async function executeElementDrop(
     return
   }
 
-  const globalTarget = toGlobalFileSystemDropTarget(resolvedTarget, ctx.dropPlanningContext)
-  if (!globalTarget) return
+  const globalDrop = resolveGlobalFileSystemDrop(
+    draggedItems,
+    resolvedTarget,
+    ctx.dropPlanningContext,
+    options,
+  )
+  if (!globalDrop || globalDrop.command.status !== 'ready') return
 
   await ctx.dndContext.executeFileSystemDrop({
     itemIds: draggedItems.map((item) => item._id),
-    target: globalTarget,
+    target: globalDrop.target,
     options,
   })
 }

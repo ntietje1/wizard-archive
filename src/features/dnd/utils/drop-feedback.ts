@@ -2,43 +2,15 @@ import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { DropOutcome } from './drop-outcome'
 import type { DropPlanningContext } from './drop-planning-context'
 import { resolveSurfaceDropCommand } from './surface-drop-planner'
-import {
-  EMPTY_EDITOR_DROP_TYPE,
-  SIDEBAR_ROOT_DROP_TYPE,
-  TRASH_DROP_ZONE_TYPE,
-} from './drop-target-data'
-import type { ResolvedSidebarItemDropData, SidebarDropData } from './drop-target-data'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { EMPTY_EDITOR_DROP_TYPE } from './drop-target-data'
+import type { SidebarDropData } from './drop-target-data'
 import type { FileSystemDropOptions } from 'convex/sidebarItems/filesystem/intentPlanning'
-import type { FileSystemGlobalDropTarget } from '~/features/filesystem/filesystem-drop-planner'
-import { resolveGlobalFileSystemDropCommand } from '~/features/filesystem/filesystem-drop-planner'
+import { resolveGlobalFileSystemDrop } from '~/features/filesystem/filesystem-dnd-facade'
 import { assertNever } from '~/shared/utils/utils'
 
 type DropFeedback = {
   outcome: DropOutcome | null
   rejectedItemCount?: number
-}
-
-export function toGlobalFileSystemDropTarget(
-  dropTarget: SidebarDropData,
-  ctx: DropPlanningContext,
-): FileSystemGlobalDropTarget | null {
-  switch (dropTarget.type) {
-    case TRASH_DROP_ZONE_TYPE:
-      return { type: 'trash' }
-    case SIDEBAR_ROOT_DROP_TYPE:
-      return { type: 'root', label: ctx.campaignName || 'Root' }
-    case SIDEBAR_ITEM_TYPES.folders: {
-      const folderTarget = dropTarget as ResolvedSidebarItemDropData
-      return {
-        type: 'folder',
-        folder: folderTarget,
-        ancestorIds: folderTarget.ancestorIds,
-      }
-    }
-    default:
-      return null
-  }
 }
 
 export function resolveDropFeedback(
@@ -59,14 +31,9 @@ export function resolveDropFeedback(
     }
   }
 
-  const globalTarget = toGlobalFileSystemDropTarget(dropTarget, ctx)
-  if (globalTarget) {
-    const globalCommand = resolveGlobalFileSystemDropCommand(
-      draggedItems,
-      globalTarget,
-      ctx,
-      options,
-    )
+  const globalDrop = resolveGlobalFileSystemDrop(draggedItems, dropTarget, ctx, options)
+  if (globalDrop) {
+    const globalCommand = globalDrop.command
     switch (globalCommand.status) {
       case 'ready':
         return {

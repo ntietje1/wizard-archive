@@ -160,7 +160,7 @@ describe('useSidebarDragData', () => {
     })
   })
 
-  it('prevents selection drags when selected item data is stale', () => {
+  it('prunes stale selected ids when building drag data', () => {
     const active = createNote()
     const missing = createNote()
     mockSidebarItems([active])
@@ -170,8 +170,8 @@ describe('useSidebarDragData', () => {
 
     expect(result.current).toEqual({
       sidebarItemId: active._id,
-      sidebarItemIds: [],
-      sidebarDragPreviewItemIds: [],
+      sidebarItemIds: [active._id],
+      sidebarDragPreviewItemIds: [active._id],
     })
   })
 })

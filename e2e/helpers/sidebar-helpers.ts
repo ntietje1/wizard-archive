@@ -115,6 +115,7 @@ export async function createNote(page: Page, name: string) {
   await expect(sidebarLink(page, name)).toBeVisible({
     timeout: SIDEBAR_WAIT_TIMEOUT,
   })
+  await waitForFilesystemIdle(page)
 }
 
 export async function createFolder(page: Page, name: string) {
@@ -127,6 +128,7 @@ export async function createFolder(page: Page, name: string) {
   await expect(sidebarLink(page, name)).toBeVisible({
     timeout: SIDEBAR_WAIT_TIMEOUT,
   })
+  await waitForFilesystemIdle(page)
 }
 
 export async function openItem(page: Page, name: string) {
@@ -166,16 +168,62 @@ export async function selectSidebarItems(page: Page, names: Array<string>) {
       index === 0
         ? ({ timeout: 5000 } satisfies Parameters<Locator['click']>[0])
         : ({ modifiers: [modifier], timeout: 5000 } satisfies Parameters<Locator['click']>[0])
+    await clickUntilSelected(page, name, options)
+  }
+}
+
+async function clickUntilSelected(
+  page: Page,
+  name: string,
+  options: Parameters<Locator['click']>[0],
+) {
+  const row = selectableSidebarRow(page, name)
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if ((await row.getAttribute('aria-selected').catch(() => null)) === 'true') return
+    await clickSidebarSelectionTarget(page, name, options, attempt)
     try {
-      await sidebarLink(page, name).click(options)
+      await expect(row).toHaveAttribute('aria-selected', 'true', { timeout: 2500 })
+      return
     } catch {
-      await page
-        .locator('a')
-        .filter({ hasText: name })
-        .first()
-        .click({ ...options, force: true })
+      // Retry the same visible user action; under load the first click can be lost to navigation.
     }
-    await expectSelected(page, name)
+  }
+  await expectSelected(page, name)
+}
+
+async function clickSidebarSelectionTarget(
+  page: Page,
+  name: string,
+  options: Parameters<Locator['click']>[0],
+  attempt: number,
+) {
+  try {
+    if (attempt === 0) {
+      await sidebarLink(page, name).click(options)
+      return
+    }
+    await clickSidebarLinkByCoordinates(page, name, options?.modifiers ?? [])
+  } catch {
+    await page
+      .locator('a')
+      .filter({ hasText: name })
+      .first()
+      .click({ ...options, force: true })
+  }
+}
+
+async function clickSidebarLinkByCoordinates(
+  page: Page,
+  name: string,
+  modifiers: NonNullable<Parameters<Locator['click']>[0]>['modifiers'],
+) {
+  const box = await sidebarLink(page, name).boundingBox()
+  if (!box) throw new Error(`Unable to resolve sidebar link bounds for "${name}"`)
+  for (const modifier of modifiers ?? []) await page.keyboard.down(modifier)
+  try {
+    await page.mouse.click(box.x + Math.min(24, box.width / 2), box.y + box.height / 2)
+  } finally {
+    for (const modifier of modifiers ?? []) await page.keyboard.up(modifier)
   }
 }
 
@@ -197,20 +245,20 @@ export async function dragSidebarItemToSidebarItem(
 
   const modifier = options.modifier ? await getBrowserPrimaryModifier(page) : null
   if (modifier) await page.keyboard.down(modifier)
-  await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceBox.y + sourceBox.height / 2)
-  await page.mouse.down()
-  await page.mouse.move(
-    sourceBox.x + sourceBox.width / 2 + 12,
-    sourceBox.y + sourceBox.height / 2,
-    {
-      steps: 4,
-    },
-  )
-  await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, {
-    steps: 12,
-  })
-  await page.mouse.up()
-  if (modifier) await page.keyboard.up(modifier)
+  try {
+    await source.dragTo(target, {
+      sourcePosition: {
+        x: Math.min(24, sourceBox.width / 2),
+        y: sourceBox.height / 2,
+      },
+      targetPosition: {
+        x: Math.min(24, targetBox.width / 2),
+        y: targetBox.height / 2,
+      },
+    })
+  } finally {
+    if (modifier) await page.keyboard.up(modifier)
+  }
 }
 
 export async function selectFolderItems(page: Page, folderName: string, names: Array<string>) {

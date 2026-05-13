@@ -1,7 +1,7 @@
 import { createCanvasCompanion } from '../../canvases/functions/canvasCompanion'
 import { assertNever } from '../../common/types'
 import { createFileCompanion } from '../../files/functions/fileCompanion'
-import { createFolderCompanion } from '../../folders/functions/folderHelpers'
+import { createFolderCompanion } from '../../folders/functions/folderCompanion'
 import { createMapCompanion } from '../../gameMaps/functions/mapCompanion'
 import { createNoteCompanion } from '../../notes/functions/noteCompanion'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'

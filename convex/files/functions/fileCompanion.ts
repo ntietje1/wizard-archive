@@ -9,10 +9,8 @@ export async function createFileCompanion(
   ctx: CampaignMutationCtx,
   {
     fileId,
-    storageId = null,
   }: {
     fileId: Id<'sidebarItems'>
-    storageId?: Id<'_storage'> | null
   },
 ): Promise<void> {
   const sidebarItem = await ctx.db.get('sidebarItems', fileId)
@@ -20,14 +18,16 @@ export async function createFileCompanion(
   if (sidebarItem.type !== SIDEBAR_ITEM_TYPES.files) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'File companion requires a file sidebar item')
   }
-  if (storageId) {
-    const storage = await ctx.db.system.get('_storage', storageId)
-    if (!storage) throwClientError(ERROR_CODE.NOT_FOUND, 'File storage object not found')
+  const existingFile = await ctx.db
+    .query('files')
+    .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileId))
+    .unique()
+  if (existingFile) {
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'File companion already exists')
   }
-
   await ctx.db.insert('files', {
     sidebarItemId: fileId,
-    storageId: storageId ?? null,
+    storageId: null,
   })
 
   await logEditHistory(ctx, {

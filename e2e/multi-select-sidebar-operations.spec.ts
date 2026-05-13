@@ -114,7 +114,7 @@ test.describe.serial('sidebar and folder multi-select item operations', () => {
     })
   })
 
-  test.fixme('drags a selected group into a sidebar folder', async ({ page }) => {
+  test('drags a selected group into a sidebar folder', async ({ page }) => {
     await page.goto('/campaigns')
     await navigateToCampaign(page, campaignName)
     await createNote(page, dragNoteA)
@@ -133,7 +133,7 @@ test.describe.serial('sidebar and folder multi-select item operations', () => {
     })
   })
 
-  test.fixme('keeps moved sidebar items selected after confirmed move result settles', async ({
+  test('keeps moved sidebar items selected after confirmed move result settles', async ({
     page,
   }) => {
     await page.goto('/campaigns')

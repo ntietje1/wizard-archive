@@ -1,8 +1,8 @@
 import * as Y from 'yjs'
-import { saveAllBlocksForNote } from '../../blocks/functions/saveAllBlocksForNote'
-import { syncNoteLinks } from '../../links/functions/syncNoteLinks'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { createYjsDocument } from '../../yjsSync/functions/createYjsDocument'
+import { saveAllBlocksForNote } from '../../blocks/functions/saveAllBlocksForNote'
+import { syncNoteLinks } from '../../links/functions/syncNoteLinks'
 import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
 import { blocksToYDoc } from '../blocknote'
 import { logEditHistory } from '../../editHistory/log'
@@ -16,10 +16,8 @@ export async function createNoteCompanion(
   ctx: CampaignMutationCtx,
   {
     noteId,
-    content,
   }: {
     noteId: Id<'sidebarItems'>
-    content?: Array<CustomBlock>
   },
 ): Promise<void> {
   const sidebarItem = await ctx.db.get(noteId)
@@ -39,24 +37,7 @@ export async function createNoteCompanion(
     sidebarItemId: noteId,
   })
 
-  let initialState: ArrayBuffer | undefined
-  if (content && content.length > 0) {
-    const persistedBlocks = await saveAllBlocksForNote(ctx, { noteId, content })
-    await syncNoteLinks(ctx, {
-      noteId,
-      campaignId: ctx.campaign._id,
-      blocks: persistedBlocks,
-    })
-
-    const doc = blocksToYDoc(content, 'document')
-    try {
-      initialState = uint8ToArrayBuffer(Y.encodeStateAsUpdate(doc))
-    } finally {
-      doc.destroy()
-    }
-  }
-
-  await createYjsDocument(ctx, { documentId: noteId, initialState })
+  await createYjsDocument(ctx, { documentId: noteId })
 
   await logEditHistory(ctx, {
     itemId: noteId,

@@ -26,7 +26,8 @@ import {
   getDragPreviewItemIds,
 } from '~/features/dnd/utils/drag-source-data'
 import { rejectionReasonMessage } from '~/features/dnd/utils/drop-rejections'
-import { resolveGlobalFileSystemDropCommand } from '~/features/filesystem/filesystem-drop-planner'
+import type { resolveGlobalFileSystemDropCommand } from '~/features/filesystem/filesystem-drop-planner'
+import { resolveGlobalFileSystemDrop } from '~/features/filesystem/filesystem-dnd-facade'
 import { resolveSurfaceDropCommand } from '~/features/dnd/utils/surface-drop-planner'
 import {
   CANVAS_DROP_ZONE_TYPE,
@@ -41,7 +42,7 @@ import {
   resolveDropTarget,
 } from '~/features/dnd/utils/drop-target-data'
 import { testId } from '~/test/helpers/test-id'
-import { resolveDropFeedback, toGlobalFileSystemDropTarget } from '../drop-feedback'
+import { resolveDropFeedback } from '../drop-feedback'
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
@@ -71,10 +72,7 @@ function resolveTestGlobalDropCommand(
   ctx: DropPlanningContext,
   options?: Parameters<typeof resolveGlobalFileSystemDropCommand>[3],
 ) {
-  const globalTarget = toGlobalFileSystemDropTarget(target, ctx)
-  return globalTarget
-    ? resolveGlobalFileSystemDropCommand(items, globalTarget, ctx, options)
-    : { status: 'noop' as const }
+  return resolveGlobalFileSystemDrop(items, target, ctx, options)?.command ?? { status: 'noop' }
 }
 
 function resolveDropOutcome(

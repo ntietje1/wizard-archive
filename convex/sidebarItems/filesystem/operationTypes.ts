@@ -7,38 +7,14 @@ export type ConflictDecision = {
   action: ConflictDecisionAction
 }
 
-type CopyItemOperation = {
+type PlaceTransferOperation = {
   sourceItemId: Id<'sidebarItems'>
-  action: 'copy'
-  targetParentId: Id<'sidebarItems'> | null
-  name: string
-}
-
-type CopyReplaceOperation = {
-  sourceItemId: Id<'sidebarItems'>
-  action: 'replace'
-  targetParentId: Id<'sidebarItems'> | null
-  destinationItemId: Id<'sidebarItems'>
-  name: string
-}
-
-type CopyMergeFolderOperation = {
-  sourceItemId: Id<'sidebarItems'>
-  action: 'mergeFolder'
-  targetParentId: Id<'sidebarItems'> | null
-  destinationItemId: Id<'sidebarItems'>
-}
-
-export type CopyOperation = CopyItemOperation | CopyReplaceOperation | CopyMergeFolderOperation
-
-type MoveItemOperation = {
-  sourceItemId: Id<'sidebarItems'>
-  action: 'move'
+  action: 'place'
   targetParentId: Id<'sidebarItems'> | null
   name?: string
 }
 
-type MoveReplaceOperation = {
+type ReplaceTransferOperation = {
   sourceItemId: Id<'sidebarItems'>
   action: 'replace'
   targetParentId: Id<'sidebarItems'> | null
@@ -46,14 +22,17 @@ type MoveReplaceOperation = {
   name: string
 }
 
-type MoveMergeFolderOperation = {
+type MergeFolderTransferOperation = {
   sourceItemId: Id<'sidebarItems'>
   action: 'mergeFolder'
   targetParentId: Id<'sidebarItems'> | null
   destinationItemId: Id<'sidebarItems'>
 }
 
-export type MoveOperation = MoveItemOperation | MoveReplaceOperation | MoveMergeFolderOperation
+export type TransferOperation =
+  | PlaceTransferOperation
+  | ReplaceTransferOperation
+  | MergeFolderTransferOperation
 
 export type ItemOperationConflict = {
   kind: 'name-conflict'
@@ -77,6 +56,4 @@ export type OperationPlan<TOperation> =
       operations: []
     }
 
-export type CopyOperationPlan = OperationPlan<CopyOperation>
-
-export type MoveOperationPlan = OperationPlan<MoveOperation>
+export type TransferOperationPlan = OperationPlan<TransferOperation>

@@ -2,6 +2,7 @@ import { PERMISSION_LEVEL } from '../../permissions/types'
 import { checkItemAccess } from '../validation/access'
 import { enhanceSidebarItemWithContent } from './enhanceSidebarItem'
 import { getSidebarItem } from './getSidebarItem'
+import { isUndoHiddenSidebarItem } from '../types/status'
 import type { SidebarItemSlug } from '../validation/slug'
 import type { AnySidebarItemWithContent } from '../types/types'
 import type { CampaignQueryCtx } from '../../functions'
@@ -16,6 +17,7 @@ export const getSidebarItemBySlug = async (
     .unique()
 
   if (!raw) return null
+  if (isUndoHiddenSidebarItem(raw)) return null
 
   const item = await getSidebarItem(ctx, raw._id)
   if (!item) return null

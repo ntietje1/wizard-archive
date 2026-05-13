@@ -19,13 +19,15 @@ import { logEditHistory } from '../../editHistory/log'
 import { assertSidebarOperationAllowed, evaluateTrash } from './capabilities'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
-import type { AnySidebarItem, AnySidebarItemRow } from '../types/types'
+import type { AnySidebarItemRow } from '../types/types'
 import type { InsertFilesystemSidebarItemArgs } from './sidebarItemWriter'
 import type {
+  FileSystemChange,
   FileSystemDelta,
   FileSystemEvent,
   FileSystemPatch,
   SidebarItemFieldPatch,
+  SidebarItemPatchPrecondition,
 } from './receipts'
 import type { FileSystemCommand } from './commands'
 
@@ -90,62 +92,119 @@ function snapshotsMatch(
   )
 }
 
-function pushChangedItemPatch(
-  receiptPatches: Array<FileSystemPatch>,
-  forwardPatches: Array<FileSystemPatch>,
-  inversePatches: Array<FileSystemPatch>,
-  itemId: Id<'sidebarItems'>,
-  before: SidebarItemSnapshot,
-  after: SidebarItemSnapshot,
-) {
+function changedItemPatch(before: SidebarItemSnapshot, after: SidebarItemSnapshot) {
   const { changed, previous } = diffSidebarItemFields(before, after)
-  if (Object.keys(changed).length === 0) return
-  const patch = {
+  if (Object.keys(changed).length === 0) return null
+  return {
     type: 'updateSidebarItem' as const,
-    itemId,
+    itemId: before._id,
     before: previous,
     fields: changed,
   }
-  receiptPatches.push(patch)
-  forwardPatches.push(patch)
-  inversePatches.push({
-    type: 'updateSidebarItem',
-    itemId,
-    before: changed,
-    fields: previous,
-  })
 }
 
-function pushInsertedItemPatch(
-  receiptPatches: Array<FileSystemPatch>,
-  forwardPatches: Array<FileSystemPatch>,
-  inversePatches: Array<FileSystemPatch>,
-  itemId: Id<'sidebarItems'>,
-  after: SidebarItemSnapshot,
-) {
+function insertedItemForwardPatch(after: SidebarItemSnapshot): FileSystemPatch {
   const hidden = undoHiddenSidebarItemFields()
   const afterFields = lifecyclePatchFields(after)
-  receiptPatches.push({ type: 'upsertSidebarItem', item: after })
-  forwardPatches.push({
+  return {
     type: 'updateSidebarItem',
-    itemId,
+    itemId: after._id,
     before: hidden,
     fields: afterFields,
-  })
-  inversePatches.push({
-    type: 'updateSidebarItem',
-    itemId,
-    before: afterFields,
-    fields: hidden,
-  })
+  }
 }
 
-function pushRemovedItemPatch(
-  receiptPatches: Array<FileSystemPatch>,
-  itemId: Id<'sidebarItems'>,
-  before: SidebarItemSnapshot,
-) {
-  receiptPatches.push({ type: 'removeSidebarItem', itemId, snapshot: before })
+function insertedItemInversePatch(after: SidebarItemSnapshot): FileSystemPatch {
+  return {
+    type: 'updateSidebarItem',
+    itemId: after._id,
+    before: insertedItemUndoPrecondition(after),
+    fields: undoHiddenSidebarItemFields(),
+  }
+}
+
+function insertedItemUndoPrecondition(after: SidebarItemSnapshot): SidebarItemPatchPrecondition {
+  return {
+    type: after.type,
+    name: assertSidebarItemName(after.name),
+    slug: assertSidebarItemSlug(after.slug),
+    iconName: after.iconName === null ? null : assertSidebarItemIconName(after.iconName),
+    color: after.color === null ? null : assertSidebarItemColor(after.color),
+    parentId: after.parentId,
+    location: after.location,
+    status: after.status,
+    previewStorageId: after.previewStorageId,
+    previewLockedUntil: after.previewLockedUntil,
+    previewClaimToken: after.previewClaimToken,
+    previewUpdatedAt: after.previewUpdatedAt,
+    updatedTime: after.updatedTime,
+    updatedBy: after.updatedBy,
+    deletionTime: after.deletionTime,
+    deletedBy: after.deletedBy,
+    createdBy: after.createdBy,
+  }
+}
+
+export function receiptPatchesFromChangeSet(changes: Array<FileSystemChange>) {
+  const patches: Array<FileSystemPatch> = []
+  for (const change of changes) {
+    switch (change.type) {
+      case 'insertSidebarItem':
+        patches.push({ type: 'upsertSidebarItem', item: change.after })
+        break
+      case 'updateSidebarItem': {
+        const patch = changedItemPatch(change.before, change.after)
+        if (patch) patches.push(patch)
+        break
+      }
+      case 'removeSidebarItem':
+        patches.push({
+          type: 'removeSidebarItem',
+          itemId: change.itemId,
+          snapshot: change.before,
+        })
+        break
+    }
+  }
+  return patches
+}
+
+export function redoPatchesFromChangeSet(changes: Array<FileSystemChange>) {
+  const patches: Array<FileSystemPatch> = []
+  for (const change of changes) {
+    switch (change.type) {
+      case 'insertSidebarItem':
+        patches.push(insertedItemForwardPatch(change.after))
+        break
+      case 'updateSidebarItem': {
+        const patch = changedItemPatch(change.before, change.after)
+        if (patch) patches.push(patch)
+        break
+      }
+    }
+  }
+  return patches
+}
+
+export function undoPatchesFromChangeSet(changes: Array<FileSystemChange>) {
+  const patches: Array<FileSystemPatch> = []
+  for (const change of changes) {
+    switch (change.type) {
+      case 'insertSidebarItem':
+        patches.push(insertedItemInversePatch(change.after))
+        break
+      case 'updateSidebarItem': {
+        const patch = changedItemPatch(change.after, change.before)
+        if (patch) patches.push(patch)
+        break
+      }
+    }
+  }
+  return patches
+}
+
+function changeSetIsUndoable(changes: Array<FileSystemChange>) {
+  return changes.length > 0 && changes.every((change) => change.type !== 'removeSidebarItem')
 }
 
 export type FileSystemWriteSession = {
@@ -153,7 +212,7 @@ export type FileSystemWriteSession = {
     args: InsertFilesystemSidebarItemArgs,
   ) => Promise<{ itemId: Id<'sidebarItems'>; slug: string }>
   updateSidebarItem: (itemId: Id<'sidebarItems'>, fields: SidebarItemFieldPatch) => Promise<void>
-  trashSidebarTree: (item: AnySidebarItem) => Promise<void>
+  trashSidebarTree: (item: AnySidebarItemRow) => Promise<void>
   restoreSidebarTree: (item: AnySidebarItemRow, rootFields: SidebarItemFieldPatch) => Promise<void>
   deleteSidebarTree: (item: AnySidebarItemRow) => Promise<void>
   build: (args: {
@@ -180,10 +239,7 @@ async function collectTreeSnapshot(
 }
 
 export function createFileSystemWriteSession(ctx: CampaignMutationCtx): FileSystemWriteSession {
-  const receiptPatches: Array<FileSystemPatch> = []
-  const forwardPatches: Array<FileSystemPatch> = []
-  const inversePatches: Array<FileSystemPatch> = []
-  let hasRemovedRows = false
+  const changes: Array<FileSystemChange> = []
 
   const recordChangedItem = (
     itemId: Id<'sidebarItems'>,
@@ -192,11 +248,10 @@ export function createFileSystemWriteSession(ctx: CampaignMutationCtx): FileSyst
   ) => {
     if (snapshotsMatch(before, after)) return
     if (after) {
-      pushChangedItemPatch(receiptPatches, forwardPatches, inversePatches, itemId, before, after)
+      changes.push({ type: 'updateSidebarItem', itemId, before, after })
       return
     }
-    hasRemovedRows = true
-    pushRemovedItemPatch(receiptPatches, itemId, before)
+    changes.push({ type: 'removeSidebarItem', itemId, before })
   }
 
   const recordTreeUpdatePatches = (
@@ -216,7 +271,7 @@ export function createFileSystemWriteSession(ctx: CampaignMutationCtx): FileSyst
     const after = { ...before, ...fields }
     if (snapshotsMatch(before, after)) return
     await ctx.db.patch('sidebarItems', itemId, fields)
-    pushChangedItemPatch(receiptPatches, forwardPatches, inversePatches, itemId, before, after)
+    changes.push({ type: 'updateSidebarItem', itemId, before, after })
   }
 
   const insertSidebarItem: FileSystemWriteSession['insertSidebarItem'] = async (args) => {
@@ -226,7 +281,7 @@ export function createFileSystemWriteSession(ctx: CampaignMutationCtx): FileSyst
     if (!item) {
       throwClientError(ERROR_CODE.NOT_FOUND, 'Inserted item not found')
     }
-    pushInsertedItemPatch(receiptPatches, forwardPatches, inversePatches, itemId, item)
+    changes.push({ type: 'insertSidebarItem', itemId, after: item })
     return inserted
   }
 
@@ -271,7 +326,13 @@ export function createFileSystemWriteSession(ctx: CampaignMutationCtx): FileSyst
         afterById.set(descendant._id, toSidebarItemSnapshot(descendant))
       }
     }
-    recordTreeUpdatePatches(beforeItems, (before) => afterById.get(before._id) ?? before)
+    recordTreeUpdatePatches(beforeItems, (before) => {
+      const after = afterById.get(before._id)
+      if (!after) {
+        throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Restored tree state is incomplete')
+      }
+      return after
+    })
   }
 
   const deleteSidebarTree: FileSystemWriteSession['deleteSidebarTree'] = async (item) => {
@@ -281,13 +342,11 @@ export function createFileSystemWriteSession(ctx: CampaignMutationCtx): FileSyst
   }
 
   const build: FileSystemWriteSession['build'] = ({ command, events, undoable = true }) => {
-    const canUndo = undoable && !hasRemovedRows && inversePatches.length > 0
+    const canUndo = undoable && changeSetIsUndoable(changes)
     return Promise.resolve({
       command,
       events,
-      receiptPatches,
-      forwardPatches: canUndo ? forwardPatches : [],
-      inversePatches: canUndo ? inversePatches : [],
+      changes,
       undoable: canUndo,
     })
   }

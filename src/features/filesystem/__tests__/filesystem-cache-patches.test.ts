@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { SIDEBAR_ITEM_STATUS } from 'convex/sidebarItems/types/baseTypes'
 import type { SidebarCacheSnapshot } from '../filesystem-cache-patches'
 import { createFileSystemCacheAdapter } from '../filesystem-cache-adapter'
@@ -6,7 +6,6 @@ import {
   applyFileSystemPatchesToSnapshot,
   invertFileSystemPatches,
 } from '../filesystem-cache-patches'
-import { resetOptimisticIdIndex } from '../filesystem-optimistic-patches'
 import {
   projectMoveOperations,
   projectTrashRoots,
@@ -16,10 +15,6 @@ import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 const NOW = 1000
 
 describe('filesystem cache patches', () => {
-  beforeEach(() => {
-    resetOptimisticIdIndex()
-  })
-
   it('applies and inverts update patches across sidebar and trash caches', () => {
     const folder = createFolder()
     const note = createNote()
@@ -65,6 +60,32 @@ describe('filesystem cache patches', () => {
     ).toEqual({ sidebar: [], trash: [] })
   })
 
+  it('treats missing undo-hidden updates as already reconciled by active and trash subscriptions', () => {
+    const note = createNote()
+
+    expect(
+      applyFileSystemPatchesToSnapshot({ sidebar: [], trash: [] }, [
+        {
+          type: 'updateSidebarItem',
+          itemId: note._id,
+          before: { status: note.status },
+          fields: { status: SIDEBAR_ITEM_STATUS.undoHidden },
+        },
+      ]),
+    ).toEqual({ sidebar: [], trash: [] })
+
+    expect(() =>
+      applyFileSystemPatchesToSnapshot({ sidebar: [], trash: [] }, [
+        {
+          type: 'updateSidebarItem',
+          itemId: note._id,
+          before: { name: note.name },
+          fields: { name: 'Renamed' as typeof note.name },
+        },
+      ]),
+    ).toThrow(/missing sidebar item/)
+  })
+
   it('builds optimistic move and trash patches without mutating snapshots directly', () => {
     const folder = createFolder()
     const note = createNote()
@@ -72,7 +93,7 @@ describe('filesystem cache patches', () => {
     const move = projectMoveOperations({
       activeItems: snapshot.sidebar,
       trashItems: snapshot.trash,
-      operations: [{ action: 'move', sourceItemId: note._id, targetParentId: folder._id }],
+      operations: [{ action: 'place', sourceItemId: note._id, targetParentId: folder._id }],
       now: NOW,
     })
     const moved = applyFileSystemPatchesToSnapshot(snapshot, move.forwardPatches)

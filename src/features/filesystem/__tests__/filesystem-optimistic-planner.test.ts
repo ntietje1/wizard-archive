@@ -46,11 +46,8 @@ describe('filesystem optimistic planning', () => {
           itemIds: [source._id],
           targetParentId: null,
         },
-        events: [],
         receiptPatches: [],
-        forwardPatches: [],
         inversePatches: [],
-        undoable: false,
       },
     })
   })
@@ -141,6 +138,6 @@ describe('filesystem optimistic planning', () => {
     const applied = applyFileSystemPatchesToSnapshot(snapshot, plan.preview.receiptPatches)
     const restored = applied.sidebar.find((item) => item._id === trashed._id)
     expect(restored).toBeDefined()
-    expect(restored?.parentId).toBeNull()
+    expect(restored!.parentId).toBeNull()
   })
 })

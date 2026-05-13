@@ -21,10 +21,7 @@ import {
   useActiveSidebarItems,
   useTrashSidebarItems,
 } from '~/features/sidebar/hooks/useSidebarItems'
-import {
-  resolveContextPrimaryItem,
-  resolveContextSelectedItems,
-} from '~/features/context-menu/selection-context'
+import { resolveClickedSidebarOperationItems } from '~/features/filesystem/filesystem-operation-selection'
 
 export type EditorContextMenuRef = ContextMenuHostRef
 
@@ -67,14 +64,14 @@ export function EditorContextMenu({
     viewContext === VIEW_CONTEXT.SIDEBAR ||
     viewContext === VIEW_CONTEXT.FOLDER_VIEW ||
     viewContext === VIEW_CONTEXT.TRASH_VIEW
-  const selectedItems = resolveContextSelectedItems({
+  const selectedItems = resolveClickedSidebarOperationItems({
     item,
     selectedItemIds,
     activeItemsMap: itemsMap,
     trashedItemsMap,
     canUseItemSelection,
   })
-  const primaryItem = resolveContextPrimaryItem({ item, selectedItems })
+  const primaryItem = selectedItems[0] ?? item
 
   const menuContext = {
     surface: viewContext,

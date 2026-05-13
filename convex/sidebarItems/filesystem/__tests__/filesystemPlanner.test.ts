@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { SIDEBAR_ITEM_TYPES } from '../../types/baseTypes'
 import { PERMISSION_LEVEL } from '../../../permissions/types'
-import { planCopyOperations as planCopyOperationsBase } from '../copyPlanner'
-import { planMoveOperations as planMoveOperationsBase } from '../movePlanner'
+import { planTransferOperations } from '../transferPlanner'
 import type { OperationPlannerItem } from '../selection'
 import type { ConflictDecision } from '../operationTypes'
 import type { AnySidebarItem } from '../../types/types'
@@ -70,24 +69,30 @@ function buildItemsById(
   return itemsById
 }
 
-function planCopyOperations(args: Omit<Parameters<typeof planCopyOperationsBase>[0], 'itemsById'>) {
-  return planCopyOperationsBase({
+function planCopyTransfer(
+  args: Omit<Parameters<typeof planTransferOperations>[0], 'itemsById' | 'mode'>,
+) {
+  return planTransferOperations({
     ...args,
+    mode: 'copy',
     itemsById: buildItemsById([...args.items, ...args.targetItems], args.getChildren),
   })
 }
 
-function planMoveOperations(args: Omit<Parameters<typeof planMoveOperationsBase>[0], 'itemsById'>) {
-  return planMoveOperationsBase({
+function planMoveTransfer(
+  args: Omit<Parameters<typeof planTransferOperations>[0], 'itemsById' | 'mode'>,
+) {
+  return planTransferOperations({
     ...args,
+    mode: 'move',
     itemsById: buildItemsById([...args.items, ...args.targetItems], args.getChildren),
   })
 }
 
-describe('planCopyOperations', () => {
+describe('copy transfer planning', () => {
   it('returns no operations for empty inputs', () => {
     expect(
-      planCopyOperations({
+      planCopyTransfer({
         items: [],
         targetParentId: null,
         targetItems: [],
@@ -96,7 +101,7 @@ describe('planCopyOperations', () => {
   })
 
   it('returns a conflict when an incoming item matches a destination sibling name', () => {
-    const result = planCopyOperations({
+    const result = planCopyTransfer({
       items: [item('note-1', 'Scene')],
       targetParentId: null,
       targetItems: [item('note-2', 'Scene')],
@@ -115,7 +120,7 @@ describe('planCopyOperations', () => {
   })
 
   it('maps keep-both conflicts to copy operations with deduplicated names', () => {
-    const result = planCopyOperations({
+    const result = planCopyTransfer({
       items: [item('note-1', 'Scene')],
       targetParentId: null,
       targetItems: [item('note-2', 'Scene'), item('note-3', 'Scene 2')],
@@ -124,13 +129,13 @@ describe('planCopyOperations', () => {
 
     expect(result.status).toBe('ready')
     expect(result.operations).toEqual([
-      { sourceItemId: 'note-1', action: 'copy', targetParentId: null, name: 'Scene 3' },
+      { sourceItemId: 'note-1', action: 'place', targetParentId: null, name: 'Scene 3' },
     ])
   })
 
   it('auto keeps both when duplicating an item into its current parent', () => {
     const source = item('note-1', 'Scene')
-    const result = planCopyOperations({
+    const result = planCopyTransfer({
       items: [source],
       targetParentId: null,
       targetItems: [source, item('note-2', 'Scene 2')],
@@ -140,19 +145,19 @@ describe('planCopyOperations', () => {
       status: 'ready',
       conflicts: [],
       operations: [
-        { sourceItemId: 'note-1', action: 'copy', targetParentId: null, name: 'Scene 3' },
+        { sourceItemId: 'note-1', action: 'place', targetParentId: null, name: 'Scene 3' },
       ],
     })
   })
 
   it('maps replace to replace for files and mergeFolder for folders', () => {
-    const fileResult = planCopyOperations({
+    const fileResult = planCopyTransfer({
       items: [item('file-1', 'Handout', SIDEBAR_ITEM_TYPES.files)],
       targetParentId: null,
       targetItems: [item('file-2', 'Handout', SIDEBAR_ITEM_TYPES.files)],
       decisions: decisions({ 'file-1': { action: 'replace' } }),
     })
-    const folderResult = planCopyOperations({
+    const folderResult = planCopyTransfer({
       items: [item('folder-1', 'Locations', SIDEBAR_ITEM_TYPES.folders)],
       targetParentId: null,
       targetItems: [item('folder-2', 'Locations', SIDEBAR_ITEM_TYPES.folders)],
@@ -188,7 +193,7 @@ describe('planCopyOperations', () => {
       parentId: destinationFolder._id,
     })
 
-    const result = planCopyOperations({
+    const result = planCopyTransfer({
       items: [sourceFolder],
       targetParentId: null,
       targetItems: [destinationFolder],
@@ -222,7 +227,7 @@ describe('planCopyOperations', () => {
   })
 
   it('supports skip decisions', () => {
-    const skipResult = planCopyOperations({
+    const skipResult = planCopyTransfer({
       items: [item('note-1', 'Scene')],
       targetParentId: null,
       targetItems: [item('note-2', 'Scene')],
@@ -238,7 +243,7 @@ describe('planCopyOperations', () => {
       parentId: sourceFolder._id,
     })
 
-    const result = planCopyOperations({
+    const result = planCopyTransfer({
       items: [sourceFolder, sourceChild],
       targetParentId: null,
       targetItems: [],
@@ -251,7 +256,7 @@ describe('planCopyOperations', () => {
       operations: [
         {
           sourceItemId: sourceFolder._id,
-          action: 'copy',
+          action: 'place',
           targetParentId: null,
           name: 'Scenes',
         },
@@ -260,7 +265,7 @@ describe('planCopyOperations', () => {
   })
 
   it('surfaces multiple unresolved duplicate conflicts together', () => {
-    const result = planCopyOperations({
+    const result = planCopyTransfer({
       items: [item('note-1', 'Scene'), item('note-2', 'Clue')],
       targetParentId: null,
       targetItems: [item('note-3', 'Scene'), item('note-4', 'Clue')],
@@ -271,10 +276,10 @@ describe('planCopyOperations', () => {
   })
 })
 
-describe('planMoveOperations', () => {
+describe('move transfer planning', () => {
   it('returns no operations for empty inputs', () => {
     expect(
-      planMoveOperations({
+      planMoveTransfer({
         items: [],
         targetParentId: null,
         targetItems: [],
@@ -287,7 +292,7 @@ describe('planMoveOperations', () => {
       parentId: 'source-folder' as Id<'sidebarItems'>,
     })
     const destination = item('note-2', 'Scene')
-    const result = planMoveOperations({
+    const result = planMoveTransfer({
       items: [source],
       targetParentId: null,
       targetItems: [destination],
@@ -303,7 +308,7 @@ describe('planMoveOperations', () => {
   })
 
   it('renames incoming move operations when keeping both', () => {
-    const result = planMoveOperations({
+    const result = planMoveTransfer({
       items: [
         item('note-1', 'Scene', SIDEBAR_ITEM_TYPES.notes, {
           parentId: 'source-folder' as Id<'sidebarItems'>,
@@ -318,13 +323,13 @@ describe('planMoveOperations', () => {
       status: 'ready',
       conflicts: [],
       operations: [
-        { sourceItemId: 'note-1', action: 'move', targetParentId: null, name: 'Scene 3' },
+        { sourceItemId: 'note-1', action: 'place', targetParentId: null, name: 'Scene 3' },
       ],
     })
   })
 
   it('renames later incoming items that collide with earlier incoming names', () => {
-    const result = planMoveOperations({
+    const result = planMoveTransfer({
       items: [
         item('note-1', 'Scene', SIDEBAR_ITEM_TYPES.notes, {
           parentId: 'source-folder-a' as Id<'sidebarItems'>,
@@ -341,8 +346,8 @@ describe('planMoveOperations', () => {
       status: 'ready',
       conflicts: [],
       operations: [
-        { sourceItemId: 'note-1', action: 'move', targetParentId: null },
-        { sourceItemId: 'note-2', action: 'move', targetParentId: null, name: 'Scene 2' },
+        { sourceItemId: 'note-1', action: 'place', targetParentId: null },
+        { sourceItemId: 'note-2', action: 'place', targetParentId: null, name: 'Scene 2' },
       ],
     })
   })
@@ -352,7 +357,7 @@ describe('planMoveOperations', () => {
       parentId: 'source-root' as Id<'sidebarItems'>,
     })
 
-    const result = planMoveOperations({
+    const result = planMoveTransfer({
       items: [source, source],
       targetParentId: null,
       targetItems: [],
@@ -361,7 +366,7 @@ describe('planMoveOperations', () => {
     expect(result).toEqual({
       status: 'ready',
       conflicts: [],
-      operations: [{ sourceItemId: source._id, action: 'move', targetParentId: null }],
+      operations: [{ sourceItemId: source._id, action: 'place', targetParentId: null }],
     })
   })
 
@@ -377,7 +382,7 @@ describe('planMoveOperations', () => {
       parentId: destinationFolder._id,
     })
 
-    const result = planMoveOperations({
+    const result = planMoveTransfer({
       items: [sourceFolder],
       targetParentId: null,
       targetItems: [destinationFolder],
@@ -422,7 +427,7 @@ describe('planMoveOperations', () => {
       parentId: destinationFolder._id,
     })
 
-    const result = planMoveOperations({
+    const result = planMoveTransfer({
       items: [sourceFolder],
       targetParentId: null,
       targetItems: [destinationFolder],
@@ -443,7 +448,7 @@ describe('planMoveOperations', () => {
       operations: [
         {
           sourceItemId: sourceChild._id,
-          action: 'move',
+          action: 'place',
           targetParentId: destinationFolder._id,
           name: 'Ambush 2',
         },
@@ -458,7 +463,7 @@ describe('planMoveOperations', () => {
   })
 
   it('maps folder replace decisions to merge-folder move operations', () => {
-    const result = planMoveOperations({
+    const result = planMoveTransfer({
       items: [
         item('folder-1', 'Scenes', SIDEBAR_ITEM_TYPES.folders, {
           parentId: 'source-folder' as Id<'sidebarItems'>,
@@ -491,7 +496,7 @@ describe('planMoveOperations', () => {
       parentId: sourceFolder._id,
     })
 
-    const result = planMoveOperations({
+    const result = planMoveTransfer({
       items: [sourceFolder, sourceChild],
       targetParentId: null,
       targetItems: [],
@@ -504,7 +509,7 @@ describe('planMoveOperations', () => {
       operations: [
         {
           sourceItemId: sourceFolder._id,
-          action: 'move',
+          action: 'place',
           targetParentId: null,
         },
       ],
@@ -522,7 +527,7 @@ describe('planMoveOperations', () => {
       parentId: middle._id,
     })
 
-    const result = planMoveOperations({
+    const result = planMoveTransfer({
       items: [root, middle, leaf],
       targetParentId: null,
       targetItems: [],
@@ -536,7 +541,7 @@ describe('planMoveOperations', () => {
     expect(result).toEqual({
       status: 'ready',
       conflicts: [],
-      operations: [{ sourceItemId: root._id, action: 'move', targetParentId: null }],
+      operations: [{ sourceItemId: root._id, action: 'place', targetParentId: null }],
     })
   })
 })

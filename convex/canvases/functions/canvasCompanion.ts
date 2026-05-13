@@ -4,6 +4,7 @@ import { createYjsDocument } from '../../yjsSync/functions/createYjsDocument'
 import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
+import { ERROR_CODE, throwClientError } from '../../errors'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 
@@ -11,11 +12,21 @@ export async function createCanvasCompanion(
   ctx: CampaignMutationCtx,
   { canvasId }: { canvasId: Id<'sidebarItems'> },
 ): Promise<void> {
+  const sidebarItem = await ctx.db.get('sidebarItems', canvasId)
+  if (!sidebarItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Canvas sidebar item not found')
+  if (sidebarItem.type !== SIDEBAR_ITEM_TYPES.canvases) {
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      'Canvas companion requires a canvas sidebar item',
+    )
+  }
   const existingCanvas = await ctx.db
     .query('canvases')
     .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', canvasId))
     .unique()
-  if (existingCanvas) return
+  if (existingCanvas) {
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Canvas companion already exists')
+  }
 
   await ctx.db.insert('canvases', {
     sidebarItemId: canvasId,

@@ -38,6 +38,27 @@ export function getReceiptRemovedRootIds(
     .map((event) => event.itemId)
 }
 
+export type ReceiptRemovedItemSnapshot = {
+  _id: Id<'sidebarItems'>
+  parentId: Id<'sidebarItems'> | null
+  slug: SidebarItemSlug
+}
+
+export function getReceiptRemovedItemSnapshots(
+  receipt: FileSystemTransactionReceipt,
+): Array<ReceiptRemovedItemSnapshot> {
+  return receipt.patches.flatMap((patch) => {
+    if (patch.type !== 'removeSidebarItem') return []
+    return [
+      {
+        _id: patch.snapshot._id,
+        parentId: patch.snapshot.parentId,
+        slug: assertSidebarItemSlug(patch.snapshot.slug),
+      },
+    ]
+  })
+}
+
 export function getReceiptSelectedRootIds(
   receipt: FileSystemTransactionReceipt,
 ): Array<Id<'sidebarItems'>> {

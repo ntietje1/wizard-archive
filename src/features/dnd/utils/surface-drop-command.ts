@@ -1,6 +1,5 @@
 import { rejectionReasonMessage } from './drop-rejections'
 import { resolveSurfaceDropCommand } from './surface-drop-planner'
-import { resolveNormalizedDraggedSidebarItems } from './sidebar-drag-items'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SurfaceDropPlanningContext } from './drop-planning-context'
@@ -8,6 +7,8 @@ import type { SurfaceBatchDropCommand, SurfaceDropCommand } from './surface-drop
 import type { SidebarDropData } from './drop-target-data'
 import type { DndBatchDecision } from '~/features/dnd/stores/dnd-store'
 import { handleError } from '~/shared/utils/logger'
+import { getDragItemIds } from './drag-source-data'
+import { resolveSidebarOperationItems } from '~/features/filesystem/filesystem-operation-selection'
 
 type SurfaceAction = SurfaceBatchDropCommand['action']
 
@@ -35,8 +36,8 @@ export function resolveSidebarSurfaceDropCommand({
   target: SidebarDropData
   planningContext: SurfaceDropPlanningContext
 }): SurfaceDropCommand {
-  const sidebarItems = resolveNormalizedDraggedSidebarItems({
-    sourceData,
+  const sidebarItems = resolveSidebarOperationItems({
+    itemIds: getDragItemIds(sourceData),
     activeItemsMap,
     trashedItemsMap,
     includeTrashed: true,
@@ -63,11 +64,17 @@ export async function executeSurfaceDropCommand<TAction extends SurfaceAction>({
   }
   if (!isBatchDropCommand(command) || !commandMatchesAction(command, action)) return
 
-  const run = async () => {
-    await execute(command)
+  const run = () => execute(command)
+
+  if (command.status === 'failed') {
+    handleError(
+      new Error(rejectionReasonMessage(command.rejectedItems[0]?.reason ?? 'unexpected_action')),
+      'Cannot drop items here',
+    )
+    return
   }
 
-  if (command.status === 'partial' || command.status === 'failed') {
+  if (command.status === 'partial') {
     setBatchDecision({
       command,
       onConfirm: async () => {

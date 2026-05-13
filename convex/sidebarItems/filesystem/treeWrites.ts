@@ -43,6 +43,7 @@ export async function trashTree(
   item: AnySidebarItemRow,
   deletion: { deletionTime: number; deletedBy: Id<'userProfiles'> },
 ): Promise<number> {
+  // FileSystemWriteSession records trash patches from this exact field contract.
   return applyToTree(ctx, item, async (_, i) => {
     const patch = {
       location: SIDEBAR_ITEM_LOCATION.sidebar,

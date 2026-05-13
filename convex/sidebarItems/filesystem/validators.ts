@@ -155,7 +155,7 @@ const sidebarItemSnapshotValidator = v.object({
   ...sidebarItemTableFields,
 })
 
-const sidebarItemPatchFieldsValidator = v.object({
+const sidebarItemPatchCommonFields = {
   name: v.optional(sidebarItemNameValidator),
   slug: v.optional(sidebarItemSlugValidator),
   iconName: v.optional(v.nullable(sidebarItemIconNameValidator)),
@@ -171,6 +171,14 @@ const sidebarItemPatchFieldsValidator = v.object({
   updatedBy: v.optional(v.nullable(v.id('userProfiles'))),
   deletionTime: v.optional(v.nullable(v.number())),
   deletedBy: v.optional(v.nullable(v.id('userProfiles'))),
+}
+
+const sidebarItemPatchFieldsValidator = v.object(sidebarItemPatchCommonFields)
+
+const sidebarItemPatchPreconditionValidator = v.object({
+  ...sidebarItemPatchCommonFields,
+  type: v.optional(sidebarItemTypeValidator),
+  createdBy: v.optional(v.id('userProfiles')),
 })
 
 export const fileSystemPatchValidator = v.union(
@@ -181,7 +189,7 @@ export const fileSystemPatchValidator = v.union(
   v.object({
     type: v.literal('updateSidebarItem'),
     itemId: v.id('sidebarItems'),
-    before: sidebarItemPatchFieldsValidator,
+    before: sidebarItemPatchPreconditionValidator,
     fields: sidebarItemPatchFieldsValidator,
   }),
   v.object({
@@ -191,14 +199,31 @@ export const fileSystemPatchValidator = v.union(
   }),
 )
 
+export const fileSystemChangeValidator = v.union(
+  v.object({
+    type: v.literal('insertSidebarItem'),
+    itemId: v.id('sidebarItems'),
+    after: sidebarItemSnapshotValidator,
+  }),
+  v.object({
+    type: v.literal('updateSidebarItem'),
+    itemId: v.id('sidebarItems'),
+    before: sidebarItemSnapshotValidator,
+    after: sidebarItemSnapshotValidator,
+  }),
+  v.object({
+    type: v.literal('removeSidebarItem'),
+    itemId: v.id('sidebarItems'),
+    before: sidebarItemSnapshotValidator,
+  }),
+)
+
 export const fileSystemTransactionReceiptValidator = v.object({
   transactionId: v.nullable(v.id('filesystemTransactions')),
   direction: v.union(v.literal('forward'), v.literal('undo'), v.literal('redo')),
   command: fileSystemCommandValidator,
   events: v.array(fileSystemEventValidator),
   patches: v.array(fileSystemPatchValidator),
-  forwardPatches: v.array(fileSystemPatchValidator),
-  inversePatches: v.array(fileSystemPatchValidator),
   summary: fileSystemSummaryValidator,
   undoable: v.boolean(),
 })

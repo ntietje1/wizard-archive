@@ -5,16 +5,20 @@ import type { FileSystemReadModel } from 'convex/sidebarItems/filesystem/readMod
 import { parseSidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import {
+  getReceiptRemovedItemSnapshots,
   getReceiptNavigationSlug,
   getReceiptRemovedRootIds,
   getReceiptSelectedRootIds,
 } from './filesystem-receipt-selectors'
+import type { ReceiptRemovedItemSnapshot } from './filesystem-receipt-selectors'
 import { logger } from '~/shared/utils/logger'
 
+type ReceiptEffectItem = Pick<AnySidebarItem, '_id' | 'parentId' | 'slug'>
+
 function isItemOrDescendantOfRoot(
-  item: AnySidebarItem,
+  item: ReceiptEffectItem,
   rootIds: ReadonlySet<Id<'sidebarItems'>>,
-  allItemsMap: ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>,
+  allItemsMap: ReadonlyMap<Id<'sidebarItems'>, ReceiptEffectItem>,
 ) {
   if (rootIds.has(item._id)) return true
   let parentId = item.parentId
@@ -33,8 +37,8 @@ function removeItemsUnderRootsFromSelection({
   allItemsMap,
 }: {
   selectedItemIds: Array<Id<'sidebarItems'>>
-  rootItems: Array<AnySidebarItem>
-  allItemsMap: ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>
+  rootItems: Array<ReceiptEffectItem>
+  allItemsMap: ReadonlyMap<Id<'sidebarItems'>, ReceiptEffectItem>
 }) {
   const rootIds = new Set(rootItems.map((item) => item._id))
   return selectedItemIds.filter((selectedId) => {
@@ -49,16 +53,42 @@ function shouldClearEditorForDeletedRoots({
   getItemBySlug,
   allItemsMap,
 }: {
-  deletedItems: Array<AnySidebarItem>
+  deletedItems: Array<ReceiptEffectItem>
   currentSlug: SidebarItemSlug | null
-  getItemBySlug: (slug: SidebarItemSlug) => AnySidebarItem | undefined
-  allItemsMap: ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>
+  getItemBySlug: (slug: SidebarItemSlug) => ReceiptEffectItem | undefined
+  allItemsMap: ReadonlyMap<Id<'sidebarItems'>, ReceiptEffectItem>
 }) {
   if (!currentSlug) return false
-  const currentItem = getItemBySlug(currentSlug)
+  const currentItem =
+    getItemBySlug(currentSlug) ?? deletedItems.find((item) => item.slug === currentSlug)
   if (!currentItem) return false
   const deletedIds = new Set(deletedItems.map((item) => item._id))
   return isItemOrDescendantOfRoot(currentItem, deletedIds, allItemsMap)
+}
+
+function mergeRemovedItems({
+  rootIds,
+  readModel,
+  removedSnapshots,
+}: {
+  rootIds: Array<Id<'sidebarItems'>>
+  readModel: FileSystemReadModel<AnySidebarItem>
+  removedSnapshots: Array<ReceiptRemovedItemSnapshot>
+}): {
+  rootItems: Array<ReceiptEffectItem>
+  allItemsMap: ReadonlyMap<Id<'sidebarItems'>, ReceiptEffectItem>
+} {
+  const allItemsMap = new Map<Id<'sidebarItems'>, ReceiptEffectItem>(readModel.itemsById)
+  for (const snapshot of removedSnapshots) {
+    allItemsMap.set(snapshot._id, snapshot)
+  }
+
+  const snapshotById = new Map(removedSnapshots.map((item) => [item._id, item] as const))
+  const rootItems = rootIds.flatMap((itemId) => {
+    const item = readModel.itemsById.get(itemId) ?? snapshotById.get(itemId)
+    return item ? [item] : []
+  })
+  return { rootItems, allItemsMap }
 }
 
 export async function applyFileSystemReceiptEffects({
@@ -87,11 +117,15 @@ export async function applyFileSystemReceiptEffects({
   const removedRootItemIds = getReceiptRemovedRootIds(receipt)
   if (removedRootItemIds.length > 0) {
     const currentSelectedItemIds = getSelectedItemIds()
-    const removedItems = readModel.getItems(removedRootItemIds)
+    const { rootItems: removedItems, allItemsMap } = mergeRemovedItems({
+      rootIds: removedRootItemIds,
+      readModel,
+      removedSnapshots: getReceiptRemovedItemSnapshots(receipt),
+    })
     const remainingSelection = removeItemsUnderRootsFromSelection({
       selectedItemIds: currentSelectedItemIds,
       rootItems: removedItems,
-      allItemsMap: readModel.itemsById,
+      allItemsMap,
     })
     if (remainingSelection.length !== currentSelectedItemIds.length) {
       setSelectedItemIds(remainingSelection)
@@ -101,13 +135,13 @@ export async function applyFileSystemReceiptEffects({
         deletedItems: removedItems,
         currentSlug: currentSidebarSlug,
         getItemBySlug: readModel.getItemBySlug,
-        allItemsMap: readModel.itemsById,
+        allItemsMap,
       })
     ) {
       try {
         await clearEditorContent()
       } catch (error) {
-        logger.error('Failed to clear editor content after filesystem receipt', error)
+        logger.error(error)
       }
     }
   }
@@ -118,10 +152,7 @@ export async function applyFileSystemReceiptEffects({
     try {
       await navigateToItem(parsedNavigationSlug, true)
     } catch (error) {
-      logger.error('Failed to navigate after filesystem receipt', {
-        slug: parsedNavigationSlug,
-        error,
-      })
+      logger.error(error)
     }
   }
 }

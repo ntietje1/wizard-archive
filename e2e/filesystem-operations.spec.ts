@@ -21,7 +21,6 @@ import {
   renameOpenedItem,
   restoreTrashItem,
   selectSidebarItems,
-  sidebarLink,
   waitForFilesystemIdle,
 } from './helpers/sidebar-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
@@ -32,7 +31,6 @@ import {
   pressRedo,
   pressSelectAll,
   pressUndo,
-  getBrowserPrimaryModifier,
 } from './helpers/keyboard-helpers'
 
 const campaignName = testName('E2E Filesystem')
@@ -60,14 +58,12 @@ async function copySidebarItemsIntoFolder(
 ) {
   await openItem(page, folderName)
   await page.keyboard.press('Escape')
-  for (const itemName of itemNames) {
-    await sidebarLink(page, itemName).click({ modifiers: [await getBrowserPrimaryModifier(page)] })
-    await expectSelected(page, itemName)
-  }
+  await selectSidebarItems(page, itemNames)
   await pressCopy(page)
   await openContextMenu(page, folderName)
   await page.getByRole('menuitem', { name: 'Paste' }).click()
   if (options.expectCompleted !== false) {
+    await openItem(page, folderName)
     await expectFolderItemVisible(page, folderName, itemNames[0])
   }
 }
@@ -423,19 +419,21 @@ test.describe.serial('filesystem command operations', () => {
     await createFolder(page, targetFolder)
     await createNote(page, keepA)
     await createNote(page, keepB)
-    await copySidebarItemsIntoFolder(page, [keepA, keepB], targetFolder, { expectCompleted: false })
+    await copySidebarItemsIntoFolder(page, [keepA, keepB], targetFolder)
     await expectFolderItemVisible(page, targetFolder, keepA)
     await expectFolderItemVisible(page, targetFolder, keepB)
 
     await copySidebarItemsIntoFolder(page, [keepA, keepB], targetFolder, { expectCompleted: false })
     await expect(page.getByRole('dialog', { name: conflictDialogName })).toBeVisible()
     await page.getByRole('button', { name: 'Keep both items' }).click()
+    await openItem(page, targetFolder)
     await expectFolderItemVisible(page, targetFolder, `${keepA} 2`)
     await expectFolderItemVisible(page, targetFolder, `${keepB} 2`)
 
     await copySidebarItemsIntoFolder(page, [keepA, keepB], targetFolder, { expectCompleted: false })
     await expect(page.getByRole('dialog', { name: conflictDialogName })).toBeVisible()
     await page.getByRole('button', { name: 'Skip these items' }).click()
+    await openItem(page, targetFolder)
     await expectFolderItemHidden(page, targetFolder, `${keepA} 3`)
     await expectFolderItemHidden(page, targetFolder, `${keepB} 3`)
 
@@ -455,11 +453,12 @@ test.describe.serial('filesystem command operations', () => {
     await page.getByRole('button', { name: `Use existing ${perItemA}` }).click()
     await page.getByRole('button', { name: `Use existing ${perItemB}` }).click()
     await applyChoicesButton.click()
+    await openItem(page, targetFolder)
     await expectFolderItemVisible(page, targetFolder, `${perItemA} 2`)
     await expectFolderItemHidden(page, targetFolder, `${perItemB} 2`)
   })
 
-  test.fixme('multi-select drag keeps moved items selected after backend settlement', async ({
+  test('multi-select drag keeps moved items selected after backend settlement', async ({
     page,
   }) => {
     const targetFolder = uniqueName('Drag Target')
@@ -481,7 +480,7 @@ test.describe.serial('filesystem command operations', () => {
     await expectFolderItemVisible(page, targetFolder, dragB)
   })
 
-  test.fixme('ctrl-drag copies selected items into a folder', async ({ page }) => {
+  test('ctrl-drag copies selected items into a folder', async ({ page }) => {
     const targetFolder = uniqueName('Ctrl Drag Target')
     const dragCopyA = uniqueName('Ctrl Drag Copy A')
     const dragCopyB = uniqueName('Ctrl Drag Copy B')

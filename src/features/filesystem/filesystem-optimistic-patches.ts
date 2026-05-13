@@ -3,7 +3,7 @@ import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { diffSidebarItemFields } from 'convex/sidebarItems/filesystem/patches'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type { FileSystemDelta } from 'convex/sidebarItems/filesystem/receipts'
+import type { FileSystemPatch } from 'convex/sidebarItems/filesystem/receipts'
 import type {
   CreateFileSystemCommand,
   RenameFileSystemCommand,
@@ -14,10 +14,6 @@ import { logger } from '~/shared/utils/logger'
 
 const OPTIMISTIC_ID_PREFIX = 'optimistic-'
 let optimisticIdIndex = 0
-
-export function resetOptimisticIdIndex() {
-  optimisticIdIndex = 0
-}
 
 function nextOptimisticIdIndex() {
   optimisticIdIndex += 1
@@ -34,6 +30,12 @@ function optimisticSlug(name: string, index: number): SidebarItemSlug {
   }-optimistic-${index}` as SidebarItemSlug
 }
 
+type FileSystemOptimisticPreview = {
+  command: CreateFileSystemCommand | RenameFileSystemCommand
+  receiptPatches: Array<FileSystemPatch>
+  inversePatches: Array<FileSystemPatch>
+}
+
 export function buildOptimisticCreatePreview({
   command,
   parentId,
@@ -46,16 +48,13 @@ export function buildOptimisticCreatePreview({
   currentUserId: Id<'userProfiles'> | null
   campaignId: Id<'campaigns'>
   now?: number
-}): FileSystemDelta {
+}): FileSystemOptimisticPreview {
   if (!currentUserId) {
     logger.warn('Skipping optimistic filesystem create because current user id is unavailable')
     return {
       command,
-      events: [],
       receiptPatches: [],
-      forwardPatches: [],
       inversePatches: [],
-      undoable: false,
     }
   }
 
@@ -90,21 +89,18 @@ export function buildOptimisticCreatePreview({
     previewUrl: null,
   } as AnySidebarItem
 
-  const receiptPatches: FileSystemDelta['receiptPatches'] = [{ type: 'upsertSidebarItem', item }]
+  const receiptPatches: Array<FileSystemPatch> = [{ type: 'upsertSidebarItem', item }]
   return {
     command,
-    events: [],
     receiptPatches,
-    forwardPatches: receiptPatches,
     inversePatches: [{ type: 'removeSidebarItem', itemId: item._id, snapshot: item }],
-    undoable: false,
   }
 }
 
 export function buildOptimisticRenamePreview(
   snapshot: SidebarCacheSnapshot,
   command: RenameFileSystemCommand,
-): FileSystemDelta {
+): FileSystemOptimisticPreview {
   const item =
     snapshot.sidebar.find((candidate) => candidate._id === command.itemId) ??
     snapshot.trash.find((candidate) => candidate._id === command.itemId)
@@ -112,11 +108,8 @@ export function buildOptimisticRenamePreview(
     // The item may have been removed by a concurrent update before the optimistic rename applies.
     return {
       command,
-      events: [],
       receiptPatches: [],
-      forwardPatches: [],
       inversePatches: [],
-      undoable: false,
     }
   }
 
@@ -127,17 +120,14 @@ export function buildOptimisticRenamePreview(
     ...(command.color !== undefined ? { color: command.color } : {}),
   } as AnySidebarItem)
 
-  const receiptPatches: FileSystemDelta['receiptPatches'] = [
+  const receiptPatches: Array<FileSystemPatch> = [
     { type: 'updateSidebarItem', itemId: item._id, before: previous, fields },
   ]
   return {
     command,
-    events: [],
     receiptPatches,
-    forwardPatches: receiptPatches,
     inversePatches: [
       { type: 'updateSidebarItem', itemId: item._id, before: fields, fields: previous },
     ],
-    undoable: false,
   }
 }

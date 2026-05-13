@@ -1,16 +1,11 @@
 import { create } from 'zustand'
-import type {
-  FileSystemPatch,
-  FileSystemTransactionReceipt,
-} from 'convex/sidebarItems/filesystem/receipts'
+import type { FileSystemTransactionReceipt } from 'convex/sidebarItems/filesystem/receipts'
 import type { Id } from 'convex/_generated/dataModel'
 
 const MAX_FILE_SYSTEM_HISTORY = 50
 
 type FileSystemHistoryEntry = {
   transactionId: Id<'filesystemTransactions'>
-  forwardPatches: Array<FileSystemPatch>
-  inversePatches: Array<FileSystemPatch>
 }
 
 type FileSystemUndoState = {
@@ -47,19 +42,12 @@ export const useFileSystemUndoStore = create<FileSystemUndoState>((set, get) => 
   reset: () => set({ campaignId: null, undoStack: [], redoStack: [] }),
   pushUndo: (receipt, options) =>
     set((state) => {
-      return receipt.transactionId === null ||
-        !receipt.undoable ||
-        receipt.inversePatches.length === 0
+      return receipt.transactionId === null || !receipt.undoable
         ? state
         : {
-            undoStack: [
-              ...state.undoStack,
-              {
-                transactionId: receipt.transactionId,
-                forwardPatches: receipt.forwardPatches,
-                inversePatches: receipt.inversePatches,
-              },
-            ].slice(-MAX_FILE_SYSTEM_HISTORY),
+            undoStack: [...state.undoStack, { transactionId: receipt.transactionId }].slice(
+              -MAX_FILE_SYSTEM_HISTORY,
+            ),
             redoStack: options?.preserveRedo ? state.redoStack : [],
           }
     }),

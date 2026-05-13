@@ -16,8 +16,6 @@ function receipt(
     command: { type: 'move', itemIds: [], targetParentId: null },
     events,
     patches: [],
-    forwardPatches: [],
-    inversePatches: [],
     summary: {
       kind: 'moved',
       affectedCount: events.length,

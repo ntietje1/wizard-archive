@@ -4,13 +4,13 @@ import { PERMISSION_LEVEL } from '../../../permissions/types'
 import { hasAtLeastPermissionLevel } from '../../../permissions/hasAtLeastPermissionLevel'
 import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../../types/baseTypes'
 import { isTrashedSidebarItem } from '../../types/status'
-import { getSidebarItem } from '../../functions/getSidebarItem'
 import { assertSidebarOperationAllowed, evaluatePermanentDelete } from '../capabilities'
 import { collectSidebarChildrenMap } from '../children'
 import { normalizeSelectedRoots } from '../selection'
 import { addSidebarItemAncestorsToMap } from '../ancestors'
 import { createFileSystemWriteSession } from '../deltas'
 import { FILE_SYSTEM_EVENT_TYPE, fileSystemSelfEvents } from '../receipts'
+import { getSidebarItemRow } from '../sidebarItemRows'
 import type { CampaignMutationCtx } from '../../../functions'
 import type { DeleteForeverFileSystemCommand } from '../commands'
 import type { FileSystemDelta } from '../receipts'
@@ -27,7 +27,7 @@ async function loadPermanentDeleteSource(
   ctx: CampaignMutationCtx,
   itemId: Id<'sidebarItems'>,
 ): Promise<PermanentDeleteSource> {
-  const rawItem = await getSidebarItem(ctx, itemId)
+  const rawItem = await getSidebarItemRow(ctx, itemId)
   if (!rawItem) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
   }

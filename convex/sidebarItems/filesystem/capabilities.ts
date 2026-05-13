@@ -84,6 +84,10 @@ function evaluateParentAccess(target: OperationTargetSnapshot): SidebarOperation
     return reject('trashed_folder', 'Trashed folders are uneditable')
   }
 
+  if (!isActiveSidebarItem(target.parent)) {
+    return reject('invalid_target', 'Parent not found')
+  }
+
   if (!hasFullAccess(target.parent.myPermissionLevel)) {
     return reject('no_target_permission', 'You do not have sufficient permission for this folder')
   }

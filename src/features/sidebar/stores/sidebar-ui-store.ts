@@ -119,12 +119,6 @@ function surfaceIdentity(surface: ActiveItemSurface | null): ItemSurfaceIdentity
   return { surface: surface.surface, parentId: surface.parentId }
 }
 
-function sameSurfaceIdentity(a: ItemSurfaceIdentity | null, b: ItemSurfaceIdentity | null) {
-  if (a === null && b === null) return true
-  if (a === null || b === null) return false
-  return a.surface === b.surface && a.parentId === b.parentId
-}
-
 function sameVisibleIds(a: Array<Id<'sidebarItems'>>, b: Array<Id<'sidebarItems'>>) {
   return a.length === b.length && a.every((id, index) => id === b[index])
 }
@@ -360,18 +354,12 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
               activeItemSurface: null,
               focusedItemId: null,
               focusSurface: null,
-              selectedItemIds: [],
-              anchorItemId: null,
-              selectionSurface: null,
             }
           }
 
-          const previousIdentity = surfaceIdentity(state.activeItemSurface)
-          const isSameSurfaceIdentity = sameSurfaceIdentity(previousIdentity, nextIdentity)
-          const preserveSelection =
+          const selectedIdsVisible =
             state.selectedItemIds.length > 0 &&
-            (isSameSurfaceIdentity ||
-              selectionBelongsToSurface(state.selectedItemIds, surface.visibleItemIds))
+            selectionBelongsToSurface(state.selectedItemIds, surface.visibleItemIds)
           const focusedItemId =
             state.focusedItemId && surface.visibleItemIds.includes(state.focusedItemId)
               ? state.focusedItemId
@@ -382,9 +370,7 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
             activeItemSurface: surface,
             focusedItemId,
             focusSurface,
-            selectedItemIds: preserveSelection ? state.selectedItemIds : [],
-            anchorItemId: preserveSelection ? state.anchorItemId : null,
-            selectionSurface: preserveSelection ? nextIdentity : null,
+            selectionSurface: selectedIdsVisible ? nextIdentity : state.selectionSurface,
           }
         }),
 

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
@@ -9,12 +9,15 @@ import { FileSystemProvider } from '../filesystem-provider'
 import { useFileSystem } from '../useFileSystem'
 import { useFileSystemUndoStore } from '../filesystem-undo-store'
 import { createNote } from '~/test/factories/sidebar-item-factory'
+import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 
 let sidebarItems: Array<AnySidebarItem> = []
 let trashItems: Array<AnySidebarItem> = []
 const executeMutateAsync = vi.fn()
 const undoMutateAsync = vi.fn()
 const redoMutateAsync = vi.fn()
+const clearEditorContentMock = vi.fn()
+const navigateToItemMock = vi.fn()
 
 vi.mock('convex/_generated/api', () => ({
   api: {
@@ -72,8 +75,8 @@ vi.mock('~/features/sidebar/hooks/useSidebarItemsCache', () => ({
 
 vi.mock('~/features/sidebar/hooks/useEditorNavigation', () => ({
   useEditorNavigation: () => ({
-    clearEditorContent: vi.fn(),
-    navigateToItem: vi.fn(),
+    clearEditorContent: clearEditorContentMock,
+    navigateToItem: navigateToItemMock,
   }),
 }))
 
@@ -106,14 +109,6 @@ function createReceipt(
     status: SIDEBAR_ITEM_STATUS.active,
   })
   const patches = [{ type: 'upsertSidebarItem' as const, item }]
-  const inversePatches = [
-    {
-      type: 'updateSidebarItem' as const,
-      itemId: item._id,
-      before: { status: SIDEBAR_ITEM_STATUS.active },
-      fields: { status: SIDEBAR_ITEM_STATUS.undoHidden },
-    },
-  ]
   return {
     transactionId,
     direction: 'forward',
@@ -131,8 +126,6 @@ function createReceipt(
       },
     ],
     patches,
-    forwardPatches: patches,
-    inversePatches,
     summary: {
       kind: 'created',
       affectedCount: 1,
@@ -141,6 +134,24 @@ function createReceipt(
       skippedCount: 0,
     },
     undoable: true,
+  }
+}
+
+function createDeleteForeverReceipt(item: AnySidebarItem): FileSystemTransactionReceipt {
+  return {
+    transactionId: 'transaction_delete_forever' as Id<'filesystemTransactions'>,
+    direction: 'forward',
+    command: { type: 'deleteForever', itemIds: [item._id] },
+    events: [{ type: 'deletedForever', itemId: item._id }],
+    patches: [{ type: 'removeSidebarItem', itemId: item._id, snapshot: item }],
+    summary: {
+      kind: 'deletedForever',
+      affectedCount: 1,
+      createdCount: 0,
+      mergedCount: 0,
+      skippedCount: 0,
+    },
+    undoable: false,
   }
 }
 
@@ -198,14 +209,31 @@ function FileSystemButtons() {
   )
 }
 
+function EmptyTrashButton() {
+  const filesystem = useFileSystem()
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        void filesystem.emptyTrash()
+      }}
+    >
+      Empty Trash
+    </button>
+  )
+}
+
 describe('FileSystemProvider', () => {
   beforeEach(() => {
     sidebarItems = []
     trashItems = []
     useFileSystemUndoStore.getState().reset()
+    useSidebarUIStore.getState().clearSelectionForCampaignChange()
     executeMutateAsync.mockReset()
     undoMutateAsync.mockReset()
     redoMutateAsync.mockReset()
+    clearEditorContentMock.mockReset()
+    navigateToItemMock.mockReset()
     executeMutateAsync.mockResolvedValue(createReceipt())
     vi.stubGlobal('crypto', { randomUUID: () => 'operation-1' })
   })
@@ -306,6 +334,34 @@ describe('FileSystemProvider', () => {
     )
   })
 
+  it('selects created roots after redo', async () => {
+    const staleItem = createNote({ _id: 'stale_item' as Id<'sidebarItems'>, name: 'Stale' })
+    const createdItemId = 'item_1' as Id<'sidebarItems'>
+    sidebarItems = [staleItem]
+    executeMutateAsync.mockResolvedValueOnce(createReceipt())
+    undoMutateAsync.mockResolvedValueOnce(createReceipt())
+    redoMutateAsync.mockResolvedValueOnce(createReceipt())
+    useSidebarUIStore.getState().setSelectedItemIds([staleItem._id])
+
+    render(
+      <FileSystemProvider>
+        <FileSystemButtons />
+      </FileSystemProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }))
+    await waitFor(() => expect(useFileSystemUndoStore.getState().undoStack).toHaveLength(1))
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+    await waitFor(() => expect(useFileSystemUndoStore.getState().redoStack).toHaveLength(1))
+    useSidebarUIStore.getState().setSelectedItemIds([staleItem._id])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Redo' }))
+
+    await waitFor(() =>
+      expect(useSidebarUIStore.getState().selectedItemIds).toEqual([createdItemId]),
+    )
+  })
+
   it('does not push failed operations into undo', async () => {
     executeMutateAsync.mockRejectedValueOnce(new Error('create failed'))
     render(
@@ -320,6 +376,80 @@ describe('FileSystemProvider', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
     expect(undoMutateAsync).not.toHaveBeenCalled()
+  })
+
+  it('does not run undo while another filesystem operation is pending', async () => {
+    let resolveCreate: (receipt: FileSystemTransactionReceipt) => void = () => {}
+    executeMutateAsync.mockReturnValueOnce(
+      new Promise<FileSystemTransactionReceipt>((resolve) => {
+        resolveCreate = resolve
+      }),
+    )
+    undoMutateAsync.mockResolvedValueOnce({
+      ...createReceipt('transaction_2' as Id<'filesystemTransactions'>),
+      direction: 'undo',
+    })
+    render(
+      <FileSystemProvider>
+        <FileSystemButtons />
+      </FileSystemProvider>,
+    )
+    act(() => {
+      useFileSystemUndoStore.getState().pushUndo(createReceipt())
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }))
+    await waitFor(() => expect(executeMutateAsync).toHaveBeenCalledTimes(1))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+    expect(undoMutateAsync).not.toHaveBeenCalled()
+
+    act(() => resolveCreate(createReceipt('transaction_2' as Id<'filesystemTransactions'>)))
+    await waitFor(() => expect(useFileSystemUndoStore.getState().undoStack).toHaveLength(2))
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+    await waitFor(() =>
+      expect(undoMutateAsync).toHaveBeenCalledWith({ transactionId: 'transaction_2' }),
+    )
+  })
+
+  it('clears trash selection and editor state from delete receipt snapshots', async () => {
+    const item = createNote({
+      _id: 'trash_item' as Id<'sidebarItems'>,
+      name: 'Trash Item',
+      slug: 'trash-item',
+      status: SIDEBAR_ITEM_STATUS.trashed,
+    })
+    trashItems = [item]
+    executeMutateAsync.mockResolvedValueOnce(createDeleteForeverReceipt(item))
+    useSidebarUIStore.getState().setSelected(item.slug)
+    useSidebarUIStore.getState().setSelectedItemIds([item._id])
+
+    render(
+      <FileSystemProvider>
+        <EmptyTrashButton />
+      </FileSystemProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Empty Trash' }))
+
+    await waitFor(() => expect(executeMutateAsync).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(useSidebarUIStore.getState().selectedItemIds).toEqual([]))
+    expect(clearEditorContentMock).toHaveBeenCalled()
+  })
+
+  it('records undo before reporting a receipt side-effect failure', async () => {
+    navigateToItemMock.mockRejectedValueOnce(new Error('navigation failed'))
+
+    render(
+      <FileSystemProvider>
+        <CreateButton />
+      </FileSystemProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+    await waitFor(() => expect(executeMutateAsync).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(useFileSystemUndoStore.getState().undoStack).toHaveLength(1))
   })
 
   it('generates a fresh client operation id for each forward command', async () => {

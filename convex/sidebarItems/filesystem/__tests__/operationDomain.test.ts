@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { SIDEBAR_ITEM_TYPES } from '../../types/baseTypes'
 import { createSidebarItem } from './testSidebarItem'
-import { planMoveOperations as planMoveOperationsBase } from '../movePlanner'
+import { planTransferOperations } from '../transferPlanner'
 import { normalizeSelectedRoots } from '../selection'
 import type { OperationPlannerItem } from '../selection'
 import type { Id } from '../../../_generated/dataModel'
 import type { AnySidebarItem } from '../../types/types'
 
-function planMoveOperations(args: Omit<Parameters<typeof planMoveOperationsBase>[0], 'itemsById'>) {
+function planMoveTransfer(
+  args: Omit<Parameters<typeof planTransferOperations>[0], 'itemsById' | 'mode'>,
+) {
   const itemsById = new Map<Id<'sidebarItems'>, OperationPlannerItem>()
   const ensureAncestor = (parentId: Id<'sidebarItems'> | null) => {
     if (!parentId || itemsById.has(parentId)) return
@@ -21,7 +23,7 @@ function planMoveOperations(args: Omit<Parameters<typeof planMoveOperationsBase>
       ensureAncestor(child.parentId)
     }
   }
-  return planMoveOperationsBase({ ...args, itemsById })
+  return planTransferOperations({ ...args, mode: 'move', itemsById })
 }
 
 describe('filesystem operation domain', () => {
@@ -36,7 +38,7 @@ describe('filesystem operation domain', () => {
     ])
 
     const selectedRoots = normalizeSelectedRoots([folder, child], itemsMap)
-    const plan = planMoveOperations({
+    const plan = planMoveTransfer({
       items: selectedRoots,
       targetParentId: null,
       targetItems: [],
@@ -62,7 +64,7 @@ describe('filesystem operation domain', () => {
     ])
 
     const selectedRoots = normalizeSelectedRoots([noteA, noteB], itemsMap)
-    const plan = planMoveOperations({
+    const plan = planMoveTransfer({
       items: selectedRoots,
       targetParentId: targetFolder._id,
       targetItems: [],
@@ -73,8 +75,8 @@ describe('filesystem operation domain', () => {
       status: 'ready',
       conflicts: [],
       operations: [
-        { sourceItemId: noteA._id, action: 'move', targetParentId: targetFolder._id },
-        { sourceItemId: noteB._id, action: 'move', targetParentId: targetFolder._id },
+        { sourceItemId: noteA._id, action: 'place', targetParentId: targetFolder._id },
+        { sourceItemId: noteB._id, action: 'place', targetParentId: targetFolder._id },
       ],
     })
   })
@@ -118,7 +120,7 @@ describe('filesystem operation domain', () => {
   it('handles empty selection and plans no operations', () => {
     expect(normalizeSelectedRoots([], new Map())).toEqual([])
     expect(
-      planMoveOperations({
+      planMoveTransfer({
         items: [],
         targetParentId: null,
         targetItems: [],
@@ -135,7 +137,7 @@ describe('filesystem operation domain', () => {
     const target = createSidebarItem('note-2', 'Conflict')
 
     expect(
-      planMoveOperations({
+      planMoveTransfer({
         items: [source],
         targetParentId: null,
         targetItems: [target],
@@ -164,7 +166,7 @@ describe('filesystem operation domain', () => {
     })
 
     expect(
-      planMoveOperations({
+      planMoveTransfer({
         items: [child],
         targetParentId: parent._id,
         targetItems: [],

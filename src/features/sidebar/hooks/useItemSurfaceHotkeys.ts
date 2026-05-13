@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import { normalizeSelectedRoots } from 'convex/sidebarItems/filesystem/selection'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
@@ -16,6 +15,8 @@ import {
 } from '~/features/sidebar/utils/item-surface-hotkeys'
 import { getKeyboardOpenItem } from '~/features/sidebar/utils/item-surface-keyboard'
 import { getKeyboardPasteParentId } from '~/features/filesystem/filesystem-targets'
+import { resolveSidebarOperationItems } from '~/features/filesystem/filesystem-operation-selection'
+import { selectionBelongsToSurface } from 'convex/sidebarItems/filesystem/selection'
 import { handleError } from '~/shared/utils/logger'
 
 type ActiveItemSurface = NonNullable<
@@ -52,28 +53,17 @@ interface HotkeyHandlerContext {
   openParentFolders: ReturnType<typeof useOpenParentFolders>['openParentFolders']
 }
 
-function resolveItems(
-  ids: Array<AnySidebarItem['_id']>,
-  allItemsMap: Map<AnySidebarItem['_id'], AnySidebarItem>,
-): Array<AnySidebarItem> {
-  return ids
-    .map((id) => allItemsMap.get(id))
-    .filter((item): item is AnySidebarItem => Boolean(item))
-}
-
 function resolveSelection(
   ids: Array<AnySidebarItem['_id']>,
   activeItemsMap: Map<AnySidebarItem['_id'], AnySidebarItem>,
   trashedItemsMap: Map<AnySidebarItem['_id'], AnySidebarItem>,
 ): ResolvedHotkeySelection {
-  const allItemsMap = new Map<AnySidebarItem['_id'], AnySidebarItem>([
-    ...activeItemsMap,
-    ...trashedItemsMap,
-  ])
-  const selectedItems = normalizeSelectedRoots(resolveItems(ids, allItemsMap), allItemsMap)
-
   return {
-    selectedItems,
+    selectedItems: resolveSidebarOperationItems({
+      itemIds: ids,
+      activeItemsMap,
+      trashedItemsMap,
+    }),
   }
 }
 
@@ -101,12 +91,15 @@ function handleEscape(event: KeyboardEvent, context: HotkeyHandlerContext): bool
   if (event.key !== 'Escape') return false
 
   event.preventDefault()
-  if (context.filesystem.cancelClipboard()) {
-    return true
-  }
-
-  context.clearItemSelection()
+  clearSelectionOrClipboard(context.filesystem, context.clearItemSelection)
   return true
+}
+
+function clearSelectionOrClipboard(
+  filesystem: Pick<HotkeyFileSystemActions, 'cancelClipboard'>,
+  clearItemSelection: () => void,
+) {
+  if (!filesystem.cancelClipboard()) clearItemSelection()
 }
 
 function handleCopyCut(event: KeyboardEvent, context: HotkeyHandlerContext): boolean {
@@ -210,53 +203,68 @@ export function useItemSurfaceHotkeys(filesystem: HotkeyFileSystemActions) {
   const { navigateToItem } = useEditorNavigation()
   const { setLastSelectedItem } = useLastEditorItem()
   const { openParentFolders } = useOpenParentFolders()
-
-  const activeItemSurface = useSidebarUIStore((s) => s.activeItemSurface)
-  const selectedItemIds = useSidebarUIStore((s) => s.selectedItemIds)
-  const focusedItemId = useSidebarUIStore((s) => s.focusedItemId)
-  const setSelectedItemIds = useSidebarUIStore((s) => s.setSelectedItemIds)
-  const clearItemSelection = useSidebarUIStore((s) => s.clearItemSelection)
-  const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
-  const moveFocus = useSidebarUIStore((s) => s.moveFocus)
+  const contextRef = useRef({
+    activeItemsMap,
+    campaignId,
+    navigateToItem,
+    openParentFolders,
+    setLastSelectedItem,
+    trashedItemsMap,
+  })
+  contextRef.current = {
+    activeItemsMap,
+    campaignId,
+    navigateToItem,
+    openParentFolders,
+    setLastSelectedItem,
+    trashedItemsMap,
+  }
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!activeItemSurface || isEditableHotkeyTarget(event.target)) return
+      const store = useSidebarUIStore.getState()
+      const { activeItemSurface, focusedItemId, selectedItemIds } = store
+      if (isEditableHotkeyTarget(event.target)) return
 
-      const selection = resolveSelection(selectedItemIds, activeItemsMap, trashedItemsMap)
+      if (event.key === 'Escape' && !activeItemSurface) {
+        event.preventDefault()
+        clearSelectionOrClipboard(filesystemRef.current, store.clearItemSelection)
+        return
+      }
+
+      if (!activeItemSurface) return
+
+      const currentContext = contextRef.current
+      const surfaceSelectedItemIds = selectionBelongsToSurface(
+        selectedItemIds,
+        activeItemSurface.visibleItemIds,
+      )
+        ? selectedItemIds
+        : []
+      const selection = resolveSelection(
+        surfaceSelectedItemIds,
+        currentContext.activeItemsMap,
+        currentContext.trashedItemsMap,
+      )
 
       handleItemSurfaceHotkey(event, {
-        campaignId,
+        campaignId: currentContext.campaignId,
         activeItemSurface,
         focusedItemId,
-        selectedIds: selectedItemIds,
+        selectedIds: surfaceSelectedItemIds,
         filesystem: filesystemRef.current,
-        setSelectedItemIds,
-        clearItemSelection,
-        setRenamingId,
-        moveFocus,
-        navigateToItem,
-        setLastSelectedItem,
-        openParentFolders,
+        setSelectedItemIds: store.setSelectedItemIds,
+        clearItemSelection: store.clearItemSelection,
+        setRenamingId: store.setRenamingId,
+        moveFocus: store.moveFocus,
+        navigateToItem: currentContext.navigateToItem,
+        setLastSelectedItem: currentContext.setLastSelectedItem,
+        openParentFolders: currentContext.openParentFolders,
         ...selection,
       })
     }
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [
-    activeItemSurface,
-    activeItemsMap,
-    campaignId,
-    clearItemSelection,
-    focusedItemId,
-    moveFocus,
-    navigateToItem,
-    openParentFolders,
-    setSelectedItemIds,
-    selectedItemIds,
-    setLastSelectedItem,
-    setRenamingId,
-    trashedItemsMap,
-  ])
+  }, [])
 }

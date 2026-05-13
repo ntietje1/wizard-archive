@@ -6,11 +6,6 @@ import { assertSidebarItemName } from 'convex/sidebarItems/validation/name'
 import type { SidebarItemName } from 'convex/sidebarItems/validation/name'
 import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type { GameMap } from 'convex/gameMaps/types'
-import type { SidebarFile } from 'convex/files/types'
-import type { Canvas } from 'convex/canvases/types'
-import type { Note } from 'convex/notes/types'
-import type { Folder } from 'convex/folders/types'
 import { getSelectedSlug } from '~/features/sidebar/hooks/useSelectedItem'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
@@ -23,36 +18,9 @@ interface EditItemBase {
   color?: string | null
 }
 
-type EditNoteArgs = EditItemBase & {
-  item: Note
-}
-
-type EditFolderArgs = EditItemBase & {
-  item: Folder
-}
-
-type EditMapArgs = EditItemBase & {
-  item: GameMap
-}
-
-type EditFileArgs = EditItemBase & {
-  item: SidebarFile
-}
-
-type EditCanvasArgs = EditItemBase & {
-  item: Canvas
-}
-
 type EditItemResult = { slug: SidebarItemSlug }
 
-interface EditItemFn {
-  (args: EditNoteArgs): Promise<EditItemResult>
-  (args: EditFolderArgs): Promise<EditItemResult>
-  (args: EditMapArgs): Promise<EditItemResult>
-  (args: EditFileArgs): Promise<EditItemResult>
-  (args: EditCanvasArgs): Promise<EditItemResult>
-  (args: EditItemBase & { item: AnySidebarItem }): Promise<EditItemResult>
-}
+type EditItemFn = (args: EditItemBase & { item: AnySidebarItem }) => Promise<EditItemResult>
 
 type NormalizedSidebarMetadataUpdate = {
   name?: SidebarItemName

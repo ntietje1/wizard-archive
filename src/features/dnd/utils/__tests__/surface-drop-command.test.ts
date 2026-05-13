@@ -1,8 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { NOTE_EDITOR_DROP_TYPE } from '~/features/dnd/utils/drop-target-data'
-import { resolveSidebarSurfaceDropCommand } from '~/features/dnd/utils/surface-drop-command'
+import {
+  executeSurfaceDropCommand,
+  resolveSidebarSurfaceDropCommand,
+} from '~/features/dnd/utils/surface-drop-command'
 import { createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
 
@@ -32,5 +35,29 @@ describe('resolveSidebarSurfaceDropCommand', () => {
       items: [active],
       rejectedItems: [{ item: trashed, reason: 'trashed_item' }],
     })
+  })
+
+  it('does not open a batch decision dialog when every surface item is rejected', async () => {
+    const rejected = createNote({ status: 'trashed' })
+    const setBatchDecision = vi.fn()
+    const execute = vi.fn()
+
+    await executeSurfaceDropCommand({
+      command: {
+        status: 'failed',
+        action: 'link',
+        target: { type: NOTE_EDITOR_DROP_TYPE, noteId: testId<'sidebarItems'>('note_target') },
+        items: [],
+        rejectedItems: [{ item: rejected, reason: 'trashed_item' }],
+        label: 'Item cannot be linked',
+      },
+      action: 'link',
+      setBatchDecision,
+      execute,
+      failureMessage: 'Failed to link items',
+    })
+
+    expect(setBatchDecision).not.toHaveBeenCalled()
+    expect(execute).not.toHaveBeenCalled()
   })
 })

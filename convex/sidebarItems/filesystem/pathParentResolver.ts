@@ -1,10 +1,11 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
-import { findSidebarChildByName } from '../../folders/functions/folderHelpers'
 import { validateSidebarCreateParent } from '../validation/orchestration'
 import { CREATE_PARENT_TARGET_KIND } from '../validation/parent'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { assertSidebarItemLifecycleConsistency, isActiveSidebarItem } from '../types/status'
 import { initializeEmptySidebarItemCompanion } from './companionInitialization'
+import { findActiveSidebarChildByName } from './siblings'
+import { getSidebarItemRow } from './sidebarItemRows'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 import type { ParsedCreateParentTarget } from '../validation/parent'
@@ -15,7 +16,7 @@ async function getParentFolderId(
   ctx: CampaignMutationCtx,
   parentId: Id<'sidebarItems'>,
 ): Promise<Id<'sidebarItems'> | null> {
-  const currentFolder = await ctx.db.get('sidebarItems', parentId)
+  const currentFolder = await getSidebarItemRow(ctx, parentId)
   if (currentFolder) assertSidebarItemLifecycleConsistency(currentFolder)
   if (!currentFolder || !isActiveSidebarItem(currentFolder)) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Parent not found')
@@ -35,7 +36,7 @@ async function resolveOrCreateChildFolder(
     segment: SidebarItemName
   },
 ): Promise<Id<'sidebarItems'>> {
-  const existing = await findSidebarChildByName(ctx, {
+  const existing = await findActiveSidebarChildByName(ctx, {
     parentId,
     name: segment,
   })

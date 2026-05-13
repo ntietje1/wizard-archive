@@ -1,13 +1,13 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
-import { getSidebarItem } from '../functions/getSidebarItem'
-import type { QueryCtx } from '../../_generated/server'
+import { getSidebarItemRow } from './sidebarItemRows'
 import type { Id } from '../../_generated/dataModel'
+import type { CampaignQueryCtx } from '../../functions'
 import type { AnySidebarItem } from '../types/types'
 
 export async function addSidebarItemAncestorsToMap<
   T extends Pick<AnySidebarItem, '_id' | 'parentId'>,
 >(
-  ctx: Pick<QueryCtx, 'db'>,
+  ctx: CampaignQueryCtx,
   {
     items,
     itemsById,
@@ -31,7 +31,7 @@ export async function addSidebarItemAncestorsToMap<
         depth += 1
         continue
       }
-      const parent = await getSidebarItem(ctx, parentId)
+      const parent = await getSidebarItemRow(ctx, parentId)
       if (!parent) {
         throwClientError(ERROR_CODE.NOT_FOUND, 'Sidebar item ancestor not found')
       }

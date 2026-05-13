@@ -11,16 +11,14 @@ import {
   validateSidebarMove,
   validateNoCircularSidebarParentChange,
 } from '../../validation/orchestration'
-import { checkItemAccess, requireItemAccess } from '../../validation/access'
 import { logEditHistory } from '../../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../../editHistory/types'
 import { resyncNoteLinksForNotes } from '../../../links/functions/resyncNoteLinksForNotes'
 import { getActiveSidebarItemRowsByParent } from '../../functions/getSidebarItemsByParent'
-import { planMoveOperations } from '../movePlanner'
+import { planTransferOperations } from '../transferPlanner'
 import { collectSidebarChildrenMap } from '../children'
 import { normalizeSelectedRoots } from '../selection'
 import { addSidebarItemAncestorsToMap } from '../ancestors'
-import { getSidebarItem } from '../../functions/getSidebarItem'
 import { collectDescendants } from '../../functions/collectDescendants'
 import { assertSidebarOperationAllowed, evaluateRestore } from '../capabilities'
 import { normalizeRestoreTargetParentId } from '../targets'
@@ -29,13 +27,16 @@ import { getSidebarItemStatus, isTrashedSidebarItem } from '../../types/status'
 import { createFileSystemWriteSession } from '../deltas'
 import { FILE_SYSTEM_EVENT_TYPE } from '../receipts'
 import { createFileSystemReadModel } from '../readModel'
+import { getSidebarItemRow } from '../sidebarItemRows'
+import { checkSidebarItemRowAccess, requireSidebarItemRowAccess } from '../access'
+import type { AccessibleSidebarItemRow } from '../access'
 import type { OperationDecision } from '../conflicts'
 import type { SidebarItemStatus } from '../../types/baseTypes'
-import type { AnySidebarItem, AnySidebarItemRow } from '../../types/types'
+import type { AnySidebarItemRow } from '../../types/types'
 import type { CampaignMutationCtx } from '../../../functions'
 import type { Id } from '../../../_generated/dataModel'
 import { assertSidebarItemName } from '../../validation/name'
-import type { MoveOperation } from '../operationTypes'
+import type { TransferOperation } from '../operationTypes'
 import type { FileSystemWriteSession } from '../deltas'
 import type {
   FileSystemOperationDecision,
@@ -47,8 +48,8 @@ import type { FileSystemDelta, FileSystemEvent } from '../receipts'
 
 const clearDeletion = { deletionTime: null, deletedBy: null }
 
-type MoveMergeFolderOperation = Extract<MoveOperation, { action: 'mergeFolder' }>
-type ExecutableMoveOperation = MoveOperation
+type MoveMergeFolderOperation = Extract<TransferOperation, { action: 'mergeFolder' }>
+type ExecutableMoveOperation = TransferOperation
 type MoveCommandAction = 'move' | 'restore' | 'trash'
 type MoveCommandResult = {
   events: Array<FileSystemEvent>
@@ -63,7 +64,7 @@ type MoveSelfEventType =
   | typeof FILE_SYSTEM_EVENT_TYPE.noop
 
 const MOVE_OPERATION_ACTION = {
-  move: 'move',
+  place: 'place',
   replace: 'replace',
   mergeFolder: 'mergeFolder',
 } as const
@@ -140,8 +141,8 @@ async function resyncRelativeLinksForMovedItems(
 }
 
 async function loadMovableSource(ctx: CampaignMutationCtx, itemId: Id<'sidebarItems'>) {
-  const itemFromDb = await getSidebarItem(ctx, itemId)
-  return await requireItemAccess(ctx, {
+  const itemFromDb = await getSidebarItemRow(ctx, itemId)
+  return await requireSidebarItemRowAccess(ctx, {
     rawItem: itemFromDb,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
@@ -150,10 +151,10 @@ async function loadMovableSource(ctx: CampaignMutationCtx, itemId: Id<'sidebarIt
 async function resolveRestoreTargetParentId(
   ctx: CampaignMutationCtx,
   parentId: Id<'sidebarItems'> | null | undefined,
-): Promise<{ parentId: Id<'sidebarItems'> | null; parent: AnySidebarItem | null }> {
+): Promise<{ parentId: Id<'sidebarItems'> | null; parent: AnySidebarItemRow | null }> {
   if (!parentId) return { parentId: null, parent: null }
 
-  const parent = (await getSidebarItem(ctx, parentId)) as AnySidebarItem | null
+  const parent = await getSidebarItemRow(ctx, parentId)
   if (!parent) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Parent not found')
   }
@@ -173,7 +174,7 @@ async function executeRestore(
     name,
     session,
   }: {
-    item: AnySidebarItem
+    item: AccessibleSidebarItemRow
     parentId?: Id<'sidebarItems'> | null
     name?: string
     session: FileSystemWriteSession
@@ -185,7 +186,7 @@ async function executeRestore(
   const restoreParent =
     restoreParentId === null
       ? null
-      : await checkItemAccess(ctx, {
+      : await checkSidebarItemRowAccess(ctx, {
           rawItem: restoreTarget.parent,
           requiredLevel: PERMISSION_LEVEL.NONE,
         })
@@ -246,7 +247,7 @@ async function executeParentMove(
     name,
     session,
   }: {
-    item: AnySidebarItem
+    item: AccessibleSidebarItemRow
     parentId: Id<'sidebarItems'> | null
     name?: string
     session: FileSystemWriteSession
@@ -259,8 +260,8 @@ async function executeParentMove(
     name: requestedName ?? undefined,
   })
 
-  const oldParent = item.parentId ? await getSidebarItem(ctx, item.parentId) : null
-  const newParent = parentId ? await getSidebarItem(ctx, parentId) : null
+  const oldParent = item.parentId ? await getSidebarItemRow(ctx, item.parentId) : null
+  const newParent = parentId ? await getSidebarItemRow(ctx, parentId) : null
   const renamePatch =
     requestedName && requestedName !== item.name
       ? {
@@ -297,7 +298,7 @@ async function executeParentMove(
 
 async function collectMoveChildrenMap(
   ctx: CampaignMutationCtx,
-  folders: Array<Pick<AnySidebarItem, '_id' | 'status'>>,
+  folders: Array<Pick<AccessibleSidebarItemRow, '_id' | 'status'>>,
 ) {
   const folderStatuses = new Map(folders.map((folder) => [folder._id, folder.status]))
 
@@ -349,7 +350,7 @@ async function getSidebarItemRowsByParentStatus(
 
 async function executeMoveOperations(
   ctx: CampaignMutationCtx,
-  operations: Array<MoveOperation>,
+  operations: Array<TransferOperation>,
   action: MoveCommandAction,
   rootSourceIds: Array<Id<'sidebarItems'>>,
   session: FileSystemWriteSession,
@@ -419,7 +420,7 @@ async function executeMoveOperation(
 
 async function executeMergeFolderMove(
   ctx: CampaignMutationCtx,
-  source: AnySidebarItem,
+  source: AccessibleSidebarItemRow,
   operation: MoveMergeFolderOperation,
   session: FileSystemWriteSession,
 ): Promise<Id<'sidebarItems'>> {
@@ -427,8 +428,8 @@ async function executeMergeFolderMove(
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Only folders can be merged')
   }
 
-  const rawDestination = await getSidebarItem(ctx, operation.destinationItemId)
-  const destination = await requireItemAccess(ctx, {
+  const rawDestination = await getSidebarItemRow(ctx, operation.destinationItemId)
+  const destination = await requireSidebarItemRowAccess(ctx, {
     rawItem: rawDestination,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
@@ -453,8 +454,8 @@ async function trashMoveReplacement(
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Replace requires a destination item')
   }
 
-  const rawDestination = await getSidebarItem(ctx, destinationItemId)
-  const destination = await requireItemAccess(ctx, {
+  const rawDestination = await getSidebarItemRow(ctx, destinationItemId)
+  const destination = await requireSidebarItemRowAccess(ctx, {
     rawItem: rawDestination,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
@@ -476,7 +477,7 @@ async function loadMovableSources(
 
 async function normalizeOperationRoots(
   ctx: CampaignMutationCtx,
-  sourceItems: Array<AnySidebarItem>,
+  sourceItems: Array<AccessibleSidebarItemRow>,
 ) {
   const folders = sourceItems.filter((item) => item.type === SIDEBAR_ITEM_TYPES.folders)
   const childrenMap = await collectMoveChildrenMap(ctx, folders)
@@ -490,20 +491,20 @@ async function normalizeOperationRoots(
 }
 
 function buildOperationReadModel(
-  items: Array<Pick<AnySidebarItemRow, '_id' | 'parentId' | 'status' | 'slug'>>,
+  items: Array<Pick<AnySidebarItemRow, '_id' | 'parentId' | 'status'>>,
   childrenMap: Map<Id<'sidebarItems'>, Array<AnySidebarItemRow>>,
 ) {
   const rowsById = new Map<
     Id<'sidebarItems'>,
-    Pick<AnySidebarItemRow, '_id' | 'parentId' | 'status' | 'slug'>
+    Pick<AnySidebarItemRow, '_id' | 'parentId' | 'status'>
   >()
   for (const item of items) {
-    rowsById.set(item._id, item)
+    rowsById.set(item._id, { _id: item._id, parentId: item.parentId, status: item.status })
   }
   for (const children of childrenMap.values()) {
     for (const child of children) {
       if (rowsById.has(child._id)) continue
-      rowsById.set(child._id, child)
+      rowsById.set(child._id, { _id: child._id, parentId: child.parentId, status: child.status })
     }
   }
   return createFileSystemReadModel(Array.from(rowsById.values()))
@@ -511,7 +512,7 @@ function buildOperationReadModel(
 
 async function trashSidebarItems(
   ctx: CampaignMutationCtx,
-  sourceItems: Array<AnySidebarItem>,
+  sourceItems: Array<AccessibleSidebarItemRow>,
   session: FileSystemWriteSession,
 ): Promise<MoveCommandResult> {
   const rootItems = await normalizeOperationRoots(ctx, sourceItems)
@@ -529,7 +530,7 @@ async function trashSidebarItems(
   return result
 }
 
-function assertRestoreActionSources(sourceItems: Array<AnySidebarItem>) {
+function assertRestoreActionSources(sourceItems: Array<AccessibleSidebarItemRow>) {
   const invalidItem = sourceItems.find((item) => !isTrashedSidebarItem(item))
   if (!invalidItem) return
 
@@ -579,7 +580,8 @@ async function executeMovePlan(
     itemsById: readModel.itemsById,
     maxDepth: MAX_SIDEBAR_MOVE_DEPTH,
   })
-  const plan = planMoveOperations({
+  const plan = planTransferOperations({
+    mode: 'move',
     items: sourceItems,
     itemsById: readModel.itemsById,
     targetParentId: effectiveTargetParentId,

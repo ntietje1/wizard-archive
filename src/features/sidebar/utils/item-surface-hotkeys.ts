@@ -2,8 +2,13 @@ export function isEditableHotkeyTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
 
   const tagName = target.tagName.toLowerCase()
-  if (tagName === 'input' || tagName === 'textarea' || tagName === 'select') {
-    return !(target as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement).disabled
+  if (tagName === 'input' || tagName === 'textarea') {
+    const input = target as HTMLInputElement | HTMLTextAreaElement
+    return !input.disabled && !input.readOnly
+  }
+
+  if (tagName === 'select') {
+    return !(target as HTMLSelectElement).disabled
   }
 
   return Boolean(target.isContentEditable)

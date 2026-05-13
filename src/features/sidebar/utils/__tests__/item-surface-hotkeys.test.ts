@@ -34,7 +34,11 @@ describe('item surface hotkey utilities', () => {
 
   it('suppresses hotkeys from editable targets', () => {
     const input = document.createElement('input')
+    const readonlyInput = document.createElement('input')
+    readonlyInput.readOnly = true
     const textarea = document.createElement('textarea')
+    const readonlyTextarea = document.createElement('textarea')
+    readonlyTextarea.readOnly = true
     const select = document.createElement('select')
     const editable = document.createElement('div')
     editable.setAttribute('contenteditable', 'true')
@@ -45,7 +49,9 @@ describe('item surface hotkey utilities', () => {
     const plain = document.createElement('button')
 
     expect(isEditableHotkeyTarget(input)).toBe(true)
+    expect(isEditableHotkeyTarget(readonlyInput)).toBe(false)
     expect(isEditableHotkeyTarget(textarea)).toBe(true)
+    expect(isEditableHotkeyTarget(readonlyTextarea)).toBe(false)
     expect(isEditableHotkeyTarget(select)).toBe(true)
     expect(isEditableHotkeyTarget(editable)).toBe(true)
     expect(isEditableHotkeyTarget(nonEditable)).toBe(false)

@@ -3,9 +3,9 @@ import { v } from 'convex/values'
 import { permissionLevelValidator } from './validators'
 import { sidebarItemTableFields } from './sidebarItemFields'
 import {
+  fileSystemChangeValidator,
   fileSystemCommandValidator,
   fileSystemEventValidator,
-  fileSystemPatchValidator,
 } from '../filesystem/validators'
 import { sidebarItemShareValidator } from '../../sidebarShares/schema'
 import { convexValidatorFields } from '../../common/schema'
@@ -73,9 +73,7 @@ export const sidebarItemsTables = {
     requestFingerprint: v.string(),
     command: fileSystemCommandValidator,
     events: v.array(fileSystemEventValidator),
-    receiptPatches: v.array(fileSystemPatchValidator),
-    forwardPatches: v.array(fileSystemPatchValidator),
-    inversePatches: v.array(fileSystemPatchValidator),
+    changes: v.array(fileSystemChangeValidator),
     undoable: v.boolean(),
   })
     .index('by_campaign_actor', ['campaignId', 'actorMemberId'])

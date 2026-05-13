@@ -35,7 +35,13 @@ export async function executeEmptyTrashCommand(
     .withIndex('by_campaign_status_deletionTime', (q) =>
       q.eq('campaignId', ctx.campaign._id).eq('status', SIDEBAR_ITEM_STATUS.trashed),
     )
-    .take(MAX_EMPTY_TRASH_AFFECTED_ITEMS)
+    .take(MAX_EMPTY_TRASH_AFFECTED_ITEMS + 1)
+  if (trashedItems.length > MAX_EMPTY_TRASH_AFFECTED_ITEMS) {
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      `Empty Trash can delete at most ${MAX_EMPTY_TRASH_AFFECTED_ITEMS} items at once`,
+    )
+  }
   const rootItems = selectRootTrashItems(trashedItems)
 
   for (const item of rootItems) {

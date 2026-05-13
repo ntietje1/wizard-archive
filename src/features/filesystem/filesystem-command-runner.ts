@@ -4,8 +4,6 @@ import type {
 } from 'convex/sidebarItems/filesystem/receipts'
 import { logger } from '~/shared/utils/logger'
 
-let mutationQueue = Promise.resolve()
-
 export async function runFileSystemMutation({
   patches,
   mutate,
@@ -22,34 +20,50 @@ export async function runFileSystemMutation({
   onSuccess: (receipt: FileSystemTransactionReceipt) => Promise<void> | void
   onError: (error: unknown) => Promise<void> | void
 }): Promise<FileSystemTransactionReceipt | null> {
-  const run = async () => {
-    try {
-      applyPatchArray(applyPatches, patches.apply)
-      const receipt = await mutate()
-      applyPatchArray(applyPatches, [...patches.rollback, ...receipt.patches])
-      try {
-        await onSuccess(receipt)
-      } catch (successError) {
-        logger.error(successError)
-      }
-      return receipt
-    } catch (error) {
-      applyPatchArray(applyPatches, patches.rollback)
-      try {
-        await onError(error)
-      } catch (errorError) {
-        logger.error(errorError)
-      }
-      return null
-    }
+  try {
+    applyPatchArray(applyPatches, patches.apply)
+  } catch (error) {
+    await reportFileSystemError(onError, error)
+    return null
   }
 
-  const result = mutationQueue.then(run, run)
-  mutationQueue = result.then(
-    () => undefined,
-    () => undefined,
-  )
-  return await result
+  let receipt: FileSystemTransactionReceipt
+  try {
+    receipt = await mutate()
+  } catch (error) {
+    try {
+      applyPatchArray(applyPatches, patches.rollback)
+    } catch (rollbackError) {
+      await reportFileSystemError(onError, rollbackError)
+    }
+    await reportFileSystemError(onError, error)
+    return null
+  }
+
+  try {
+    applyPatchArray(applyPatches, [...patches.rollback, ...receipt.patches])
+  } catch (error) {
+    await reportFileSystemError(onError, error)
+  }
+
+  try {
+    await onSuccess(receipt)
+    return receipt
+  } catch (error) {
+    await reportFileSystemError(onError, error)
+    return null
+  }
+}
+
+async function reportFileSystemError(
+  onError: (error: unknown) => Promise<void> | void,
+  error: unknown,
+) {
+  try {
+    await onError(error)
+  } catch (reportError) {
+    logger.error(reportError)
+  }
 }
 
 function applyPatchArray(

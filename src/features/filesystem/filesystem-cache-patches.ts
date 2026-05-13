@@ -77,14 +77,30 @@ function materializeCacheSnapshot(
   return { sidebar, trash }
 }
 
+function patchIsAlreadyReconciledByVisibleQueries(
+  patch: FileSystemPatch,
+  snapshot: SidebarCacheSnapshot,
+) {
+  if (patch.type !== 'updateSidebarItem') return false
+  if (patch.fields.status !== SIDEBAR_ITEM_STATUS.undoHidden) return false
+
+  return (
+    !snapshot.sidebar.some((item) => item._id === patch.itemId) &&
+    !snapshot.trash.some((item) => item._id === patch.itemId)
+  )
+}
+
 export function applyFileSystemPatchesToSnapshot(
   snapshot: SidebarCacheSnapshot,
   patches: Array<FileSystemPatch>,
 ): SidebarCacheSnapshot {
   const order = buildIndexedSnapshot(snapshot)
+  const applicablePatches = patches.filter(
+    (patch) => !patchIsAlreadyReconciledByVisibleQueries(patch, snapshot),
+  )
   const { items } = applyPatchesToItemSnapshot(
     { items: [...snapshot.sidebar, ...snapshot.trash] },
-    patches,
+    applicablePatches,
   )
   return materializeCacheSnapshot(order, items.map(enhancePatchRowForSidebarCache))
 }

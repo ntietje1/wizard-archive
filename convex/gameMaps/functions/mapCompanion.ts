@@ -9,10 +9,8 @@ export async function createMapCompanion(
   ctx: CampaignMutationCtx,
   {
     mapId,
-    imageStorageId,
   }: {
     mapId: Id<'sidebarItems'>
-    imageStorageId?: Id<'_storage'> | null
   },
 ): Promise<Id<'gameMaps'>> {
   const sidebarItem = await ctx.db.get('sidebarItems', mapId)
@@ -24,11 +22,13 @@ export async function createMapCompanion(
     .query('gameMaps')
     .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapId))
     .unique()
-  if (existingMap) return existingMap._id
+  if (existingMap) {
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Map companion already exists')
+  }
 
   const gameMapId = await ctx.db.insert('gameMaps', {
     sidebarItemId: mapId,
-    imageStorageId: imageStorageId ?? null,
+    imageStorageId: null,
   })
 
   await logEditHistory(ctx, {

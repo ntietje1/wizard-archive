@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
@@ -120,6 +120,8 @@ function useFileSystemValue(): FileSystemProviderState {
     useState<Array<AnySidebarItem> | null>(null)
   const [pendingTrashFolder, setPendingTrashFolder] = useState<AnySidebarItem | null>(null)
   const [pendingOperationCount, setPendingOperationCount] = useState(0)
+  const pendingOperationCountRef = useRef(0)
+  const mutationQueueRef = useRef(Promise.resolve())
 
   useEffect(() => {
     if (!campaignId) return
@@ -146,19 +148,25 @@ function useFileSystemValue(): FileSystemProviderState {
     })
   }
 
-  const applyReceiptSideEffectsInBackground = (receipt: FileSystemTransactionReceipt) => {
-    void applyReceiptSideEffects(receipt).catch((error) =>
-      handleError(error, 'Filesystem side effects failed'),
-    )
-  }
-
   const withPendingOperation = async <T,>(operation: () => Promise<T>): Promise<T> => {
+    pendingOperationCountRef.current += 1
     setPendingOperationCount((count) => count + 1)
     try {
       return await operation()
     } finally {
+      pendingOperationCountRef.current = Math.max(0, pendingOperationCountRef.current - 1)
       setPendingOperationCount((count) => Math.max(0, count - 1))
     }
+  }
+
+  const runQueuedMutation = (operation: () => Promise<FileSystemTransactionReceipt | null>) => {
+    // mutationQueueRef is a Promise chain; using operation for both outcomes keeps later mutations serialized after failures.
+    const result = mutationQueueRef.current.then(operation, operation)
+    mutationQueueRef.current = result.then(
+      () => undefined,
+      () => undefined,
+    )
+    return result
   }
 
   const executeCommand = async (
@@ -187,27 +195,29 @@ function useFileSystemValue(): FileSystemProviderState {
     const clientOperationId = createClientOperationId()
 
     return await withPendingOperation(() =>
-      runFileSystemMutation({
-        patches: {
-          apply: plan.preview.receiptPatches,
-          rollback: plan.preview.inversePatches,
-        },
-        applyPatches: cacheAdapter.applyPatches,
-        mutate: async () =>
-          (await executeMutation.mutateAsync({
-            command,
-            decisions: toDecisionArray(decisions),
-            clientOperationId,
-          })) as FileSystemTransactionReceipt,
-        onSuccess: (receipt) => {
-          toastReceipt(receipt)
-          applyReceiptSideEffectsInBackground(receipt)
-          if (shouldRecordFileSystemUndo(receipt)) {
-            useFileSystemUndoStore.getState().pushUndo(receipt)
-          }
-        },
-        onError: (error) => handleError(error, 'Filesystem operation failed'),
-      }),
+      runQueuedMutation(() =>
+        runFileSystemMutation({
+          patches: {
+            apply: plan.preview.receiptPatches,
+            rollback: plan.preview.inversePatches,
+          },
+          applyPatches: cacheAdapter.applyPatches,
+          mutate: async () =>
+            (await executeMutation.mutateAsync({
+              command,
+              decisions: toDecisionArray(decisions),
+              clientOperationId,
+            })) as FileSystemTransactionReceipt,
+          onSuccess: async (receipt) => {
+            if (shouldRecordFileSystemUndo(receipt)) {
+              useFileSystemUndoStore.getState().pushUndo(receipt)
+            }
+            await applyReceiptSideEffects(receipt)
+            toastReceipt(receipt)
+          },
+          onError: (error) => handleError(error, 'Filesystem operation failed'),
+        }),
+      ),
     )
   }
 
@@ -324,6 +334,7 @@ function useFileSystemValue(): FileSystemProviderState {
   }
 
   const undo: FileSystemValue['undo'] = async () => {
+    if (pendingOperationCountRef.current > 0) return
     const entry = useFileSystemUndoStore.getState().peekUndo()
     if (!entry) return
     if (!entry.transactionId) {
@@ -331,28 +342,28 @@ function useFileSystemValue(): FileSystemProviderState {
       return
     }
     await withPendingOperation(() =>
-      runFileSystemMutation({
-        patches: {
-          apply: entry.inversePatches,
-          rollback: entry.forwardPatches,
-        },
-        applyPatches: cacheAdapter.applyPatches,
-        mutate: async () =>
-          (await undoMutation.mutateAsync({
-            transactionId: entry.transactionId,
-          })) as FileSystemTransactionReceipt,
-        onSuccess: (receipt) => {
-          toastReceipt(receipt)
-          useFileSystemUndoStore.getState().removeUndo()
-          useFileSystemUndoStore.getState().pushRedoEntry(entry)
-          applyReceiptSideEffectsInBackground(receipt)
-        },
-        onError: (error) => handleError(error, 'Filesystem undo failed'),
-      }),
+      runQueuedMutation(() =>
+        runFileSystemMutation({
+          patches: { apply: [], rollback: [] },
+          applyPatches: cacheAdapter.applyPatches,
+          mutate: async () =>
+            (await undoMutation.mutateAsync({
+              transactionId: entry.transactionId,
+            })) as FileSystemTransactionReceipt,
+          onSuccess: async (receipt) => {
+            useFileSystemUndoStore.getState().removeUndo()
+            useFileSystemUndoStore.getState().pushRedoEntry(entry)
+            await applyReceiptSideEffects(receipt)
+            toastReceipt(receipt)
+          },
+          onError: (error) => handleError(error, 'Filesystem undo failed'),
+        }),
+      ),
     )
   }
 
   const redo: FileSystemValue['redo'] = async () => {
+    if (pendingOperationCountRef.current > 0) return
     const entry = useFileSystemUndoStore.getState().peekRedo()
     if (!entry) return
     if (!entry.transactionId) {
@@ -360,24 +371,23 @@ function useFileSystemValue(): FileSystemProviderState {
       return
     }
     await withPendingOperation(() =>
-      runFileSystemMutation({
-        patches: {
-          apply: entry.forwardPatches,
-          rollback: entry.inversePatches,
-        },
-        applyPatches: cacheAdapter.applyPatches,
-        mutate: async () =>
-          (await redoMutation.mutateAsync({
-            transactionId: entry.transactionId,
-          })) as FileSystemTransactionReceipt,
-        onSuccess: (receipt) => {
-          toastReceipt(receipt)
-          useFileSystemUndoStore.getState().removeRedo()
-          useFileSystemUndoStore.getState().pushUndoEntry(entry, { preserveRedo: true })
-          applyReceiptSideEffectsInBackground(receipt)
-        },
-        onError: (error) => handleError(error, 'Filesystem redo failed'),
-      }),
+      runQueuedMutation(() =>
+        runFileSystemMutation({
+          patches: { apply: [], rollback: [] },
+          applyPatches: cacheAdapter.applyPatches,
+          mutate: async () =>
+            (await redoMutation.mutateAsync({
+              transactionId: entry.transactionId,
+            })) as FileSystemTransactionReceipt,
+          onSuccess: async (receipt) => {
+            useFileSystemUndoStore.getState().removeRedo()
+            useFileSystemUndoStore.getState().pushUndoEntry(entry, { preserveRedo: true })
+            await applyReceiptSideEffects(receipt)
+            toastReceipt(receipt)
+          },
+          onError: (error) => handleError(error, 'Filesystem redo failed'),
+        }),
+      ),
     )
   }
 
@@ -487,8 +497,8 @@ function useFileSystemValue(): FileSystemProviderState {
       undo,
       redo,
       executeDrop,
-      canUndo: undoStack.length > 0,
-      canRedo: redoStack.length > 0,
+      canUndo: pendingOperationCount === 0 && undoStack.length > 0,
+      canRedo: pendingOperationCount === 0 && redoStack.length > 0,
     },
     dialog: (
       <>

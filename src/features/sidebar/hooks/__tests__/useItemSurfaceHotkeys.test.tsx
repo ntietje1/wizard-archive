@@ -12,6 +12,7 @@ import {
 } from '~/features/filesystem/filesystem-clipboard-store'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { resetSidebarUIStore } from '~/test/helpers/store-helpers'
+import { testId } from '~/test/helpers/test-id'
 
 let sidebarItems: Array<AnySidebarItem> = []
 let trashItems: Array<AnySidebarItem> = []
@@ -146,6 +147,21 @@ describe('useItemSurfaceHotkeys', () => {
     expect(filesystem.confirmDeleteForever).not.toHaveBeenCalled()
   })
 
+  it('clears item selection on Escape even when no item surface is active', () => {
+    const note = createNote()
+    sidebarItems = [note]
+    useSidebarUIStore.getState().setSelectedItemIds([note._id], note._id)
+
+    const filesystem = createFileSystem()
+    renderHook(() => useItemSurfaceHotkeys(filesystem))
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    })
+
+    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([])
+  })
+
   it('pastes into the current folder surface instead of a selected child folder', () => {
     const parentFolder = createFolder()
     const selectedChildFolder = createFolder({ parentId: parentFolder._id })
@@ -217,5 +233,47 @@ describe('useItemSurfaceHotkeys', () => {
     })
 
     expect(filesystem.paste).toHaveBeenCalledWith(parentFolder._id)
+  })
+
+  it('uses the latest selected item ids when a hotkey fires before React rerenders', () => {
+    const staleNote = createNote()
+    const currentNote = createNote()
+    sidebarItems = [staleNote, currentNote]
+    useSidebarUIStore.getState().setActiveItemSurface({
+      surface: 'sidebar',
+      parentId: null,
+      visibleItemIds: [staleNote._id, currentNote._id],
+    })
+    useSidebarUIStore.getState().setSelectedItemIds([staleNote._id], staleNote._id)
+    const filesystem = createFileSystem()
+
+    renderHook(() => useItemSurfaceHotkeys(filesystem))
+    useSidebarUIStore.getState().setSelectedItemIds([currentNote._id], currentNote._id)
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete' }))
+    })
+
+    expect(filesystem.requestTrashItems).toHaveBeenCalledWith([currentNote._id])
+  })
+
+  it('ignores selected ids that are not visible in the active surface', () => {
+    const hiddenNote = createNote()
+    sidebarItems = [hiddenNote]
+    useSidebarUIStore.getState().setActiveItemSurface({
+      surface: 'folder-view',
+      parentId: testId<'sidebarItems'>('folder_1'),
+      visibleItemIds: [],
+    })
+    useSidebarUIStore.getState().setSelectedItemIds([hiddenNote._id], hiddenNote._id)
+    const filesystem = createFileSystem()
+
+    renderHook(() => useItemSurfaceHotkeys(filesystem))
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete' }))
+    })
+
+    expect(filesystem.requestTrashItems).not.toHaveBeenCalled()
   })
 })

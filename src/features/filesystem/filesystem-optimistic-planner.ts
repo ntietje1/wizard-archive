@@ -1,12 +1,11 @@
-import { planCopyOperations } from 'convex/sidebarItems/filesystem/copyPlanner'
-import { planMoveOperations } from 'convex/sidebarItems/filesystem/movePlanner'
+import { planTransferOperations } from 'convex/sidebarItems/filesystem/transferPlanner'
 import { normalizeSelectedRoots } from 'convex/sidebarItems/filesystem/selection'
 import {
   projectDeleteForeverRoots,
   projectMoveOperations,
   projectTrashRoots,
 } from 'convex/sidebarItems/filesystem/patchProjection'
-import type { FileSystemDelta } from 'convex/sidebarItems/filesystem/receipts'
+import type { FileSystemPatch } from 'convex/sidebarItems/filesystem/receipts'
 import {
   CREATE_PARENT_TARGET_KIND,
   validateCreateParentTarget,
@@ -26,7 +25,7 @@ import type {
 import type {
   ConflictDecision,
   ItemOperationConflict,
-  MoveOperation,
+  TransferOperation,
 } from 'convex/sidebarItems/filesystem/operationTypes'
 import {
   buildOptimisticCreatePreview,
@@ -38,8 +37,14 @@ import { getRestoreTargetParentId } from './filesystem-targets'
 import type { SidebarOperationSurface } from './filesystem-targets'
 
 type FileSystemOptimisticPlan =
-  | { status: 'ready'; preview: FileSystemDelta }
+  | { status: 'ready'; preview: FileSystemOptimisticPreview }
   | { status: 'needsDecision'; conflicts: Array<ItemOperationConflict> }
+
+type FileSystemOptimisticPreview = {
+  command: FileSystemCommand
+  receiptPatches: Array<FileSystemPatch>
+  inversePatches: Array<FileSystemPatch>
+}
 
 type PlannerArgs = {
   command: FileSystemCommand
@@ -57,7 +62,7 @@ type CommandPlannerArgs<TCommand extends FileSystemCommand> = Omit<PlannerArgs, 
 
 function ready(
   command: FileSystemCommand,
-  patches: Pick<FileSystemDelta, 'forwardPatches' | 'inversePatches'> = {
+  patches: { forwardPatches: Array<FileSystemPatch>; inversePatches: Array<FileSystemPatch> } = {
     forwardPatches: [],
     inversePatches: [],
   },
@@ -66,11 +71,8 @@ function ready(
     status: 'ready',
     preview: {
       command,
-      events: [],
       receiptPatches: patches.forwardPatches,
-      forwardPatches: patches.forwardPatches,
       inversePatches: patches.inversePatches,
-      undoable: false,
     },
   }
 }
@@ -78,7 +80,8 @@ function ready(
 function planCopy(args: CommandPlannerArgs<CopyFileSystemCommand>) {
   const loadedItems = args.readModel.requireItems(args.command.itemIds)
   const items = normalizeSelectedRoots(loadedItems, args.readModel.itemsById)
-  const plan = planCopyOperations({
+  const plan = planTransferOperations({
+    mode: 'copy',
     items,
     itemsById: args.readModel.itemsById,
     targetParentId: args.command.targetParentId,
@@ -96,11 +99,12 @@ function planMoveOrRestore(
   args: CommandPlannerArgs<MoveFileSystemCommand | RestoreFileSystemCommand>,
 ) {
   const groups = groupMoveItemsByTarget(args)
-  const operations: Array<MoveOperation> = []
+  const operations: Array<TransferOperation> = []
   const conflicts: Array<ItemOperationConflict> = []
 
   for (const [targetParentId, groupItems] of groups) {
-    const plan = planMoveOperations({
+    const plan = planTransferOperations({
+      mode: 'move',
       items: groupItems,
       itemsById: args.readModel.itemsById,
       targetParentId,
