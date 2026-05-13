@@ -1,4 +1,3 @@
-import { hardDeleteItem } from '../../sidebarItems/functions/hardDeleteItem'
 import type { Id } from '../../_generated/dataModel'
 import type { DmMutationCtx } from '../../functions'
 
@@ -7,11 +6,11 @@ export async function deleteCampaign(ctx: DmMutationCtx): Promise<Id<'campaigns'
 
   const allItems = await ctx.db
     .query('sidebarItems')
-    .withIndex('by_campaign_location_parent_name', (q) => q.eq('campaignId', campaignId))
+    .withIndex('by_campaign_deletionTime', (q) => q.eq('campaignId', campaignId))
     .collect()
 
   for (const item of allItems) {
-    await hardDeleteItem(ctx, item)
+    await ctx.db.delete('sidebarItems', item._id)
   }
 
   const sessions = await ctx.db

@@ -1,30 +1,21 @@
 import { useEffect, useRef } from 'react'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
-import { useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import {
+  useActiveSidebarItems,
+  useTrashSidebarItems,
+} from '~/features/sidebar/hooks/useSidebarItems'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import {
   isEditableHotkeyTarget,
   isModifierShortcut,
 } from '~/features/sidebar/utils/item-surface-hotkeys'
-import {
-  getKeyboardOpenItem,
-  getKeyboardPasteParentId,
-} from '~/features/sidebar/utils/item-surface-keyboard'
+import { getKeyboardOpenItem } from '~/features/sidebar/utils/item-surface-keyboard'
+import { getKeyboardPasteParentId } from '~/features/filesystem/filesystem-targets'
 import { handleError } from '~/shared/utils/logger'
-
-export interface ItemSurfaceHotkeyOperations {
-  copyItems: (items: Array<AnySidebarItem>) => void
-  cutItems: (items: Array<AnySidebarItem>) => void
-  pasteClipboard: (targetParentId?: AnySidebarItem['_id'] | null) => Promise<void>
-  trashItems: (items: Array<AnySidebarItem>) => Promise<unknown>
-  confirmPermanentDeleteItems: (items: Array<AnySidebarItem>) => boolean
-  normalizeItems: (items: Array<AnySidebarItem>) => Array<AnySidebarItem>
-}
 
 type ActiveItemSurface = NonNullable<
   ReturnType<typeof useSidebarUIStore.getState>['activeItemSurface']
@@ -35,6 +26,17 @@ interface ResolvedHotkeySelection {
   selectedIds: Array<AnySidebarItem['_id']>
 }
 
+interface HotkeyFileSystemActions {
+  resolveOperationItems: (items: Array<AnySidebarItem>) => Array<AnySidebarItem>
+  cancelClipboard: () => boolean
+  cut: (itemIds: Array<AnySidebarItem['_id']>) => void
+  copy: (itemIds: Array<AnySidebarItem['_id']>) => void
+  canPaste: boolean
+  paste: (targetParentId?: AnySidebarItem['_id'] | null) => Promise<void>
+  confirmDeleteForever: (itemIds: Array<AnySidebarItem['_id']>) => boolean
+  trashItems: (itemIds: Array<AnySidebarItem['_id']>) => Promise<void>
+}
+
 interface HotkeyHandlerContext {
   campaignId: ReturnType<typeof useCampaign>['campaignId']
   activeItemSurface: ActiveItemSurface
@@ -43,11 +45,9 @@ interface HotkeyHandlerContext {
   selectedItems: Array<AnySidebarItem>
   selectedIds: Array<AnySidebarItem['_id']>
   focusedItemId: AnySidebarItem['_id'] | null
-  itemClipboard: ReturnType<typeof useSidebarUIStore.getState>['itemClipboard']
-  itemOperations: ItemSurfaceHotkeyOperations
+  filesystem: HotkeyFileSystemActions
   setSelectedItemIds: (ids: Array<AnySidebarItem['_id']>) => void
   clearItemSelection: () => void
-  setItemClipboard: ReturnType<typeof useSidebarUIStore.getState>['setItemClipboard']
   setRenamingId: ReturnType<typeof useSidebarUIStore.getState>['setRenamingId']
   moveFocus: ReturnType<typeof useSidebarUIStore.getState>['moveFocus']
   navigateToItem: ReturnType<typeof useEditorNavigation>['navigateToItem']
@@ -69,10 +69,10 @@ function resolveSelection(
   ids: Array<AnySidebarItem['_id']>,
   activeItemsMap: Map<AnySidebarItem['_id'], AnySidebarItem>,
   trashedItemsMap: Map<AnySidebarItem['_id'], AnySidebarItem>,
-  itemOperations: ItemSurfaceHotkeyOperations,
+  filesystem: HotkeyFileSystemActions,
 ): ResolvedHotkeySelection {
   const rawSelectedItems = resolveItems(ids, activeItemsMap, trashedItemsMap)
-  const selectedItems = itemOperations.normalizeItems(rawSelectedItems)
+  const selectedItems = filesystem.resolveOperationItems(rawSelectedItems)
 
   return {
     selectedItems,
@@ -104,8 +104,7 @@ function handleEscape(event: KeyboardEvent, context: HotkeyHandlerContext): bool
   if (event.key !== 'Escape') return false
 
   event.preventDefault()
-  if (context.itemClipboard) {
-    context.setItemClipboard(null)
+  if (context.filesystem.cancelClipboard()) {
     return true
   }
 
@@ -121,20 +120,16 @@ function handleCopyCut(event: KeyboardEvent, context: HotkeyHandlerContext): boo
 
   event.preventDefault()
   if (isCut) {
-    context.itemOperations.cutItems(context.selectedItems)
+    context.filesystem.cut(context.selectedIds)
   } else {
-    context.itemOperations.copyItems(context.selectedItems)
+    context.filesystem.copy(context.selectedIds)
   }
   return true
 }
 
 function handlePaste(event: KeyboardEvent, context: HotkeyHandlerContext): boolean {
   if (!isModifierShortcut(event, 'v')) return false
-  if (
-    !context.campaignId ||
-    !context.itemClipboard ||
-    context.itemClipboard.campaignId !== context.campaignId
-  ) {
+  if (!context.campaignId || !context.filesystem.canPaste) {
     return false
   }
 
@@ -145,8 +140,8 @@ function handlePaste(event: KeyboardEvent, context: HotkeyHandlerContext): boole
     surfaceParentId: context.activeItemSurface.parentId,
   })
 
-  void context.itemOperations
-    .pasteClipboard(pasteParentId)
+  void context.filesystem
+    .paste(pasteParentId)
     .catch((error) => handleError(error, 'Failed to paste items'))
   return true
 }
@@ -160,12 +155,12 @@ function handleDelete(event: KeyboardEvent, context: HotkeyHandlerContext): bool
 
   event.preventDefault()
   if (context.activeItemSurface.surface === 'trash') {
-    context.itemOperations.confirmPermanentDeleteItems(context.selectedItems)
+    context.filesystem.confirmDeleteForever(context.selectedIds)
     return true
   }
 
-  void context.itemOperations
-    .trashItems(context.selectedItems)
+  void context.filesystem
+    .trashItems(context.selectedIds)
     .catch((error) => handleError(error, 'Failed to move items to trash'))
   return true
 }
@@ -209,12 +204,12 @@ function handleItemSurfaceHotkey(event: KeyboardEvent, context: HotkeyHandlerCon
   )
 }
 
-export function useItemSurfaceHotkeys(itemOperations: ItemSurfaceHotkeyOperations) {
-  const itemOperationsRef = useRef(itemOperations)
-  itemOperationsRef.current = itemOperations
+export function useItemSurfaceHotkeys(filesystem: HotkeyFileSystemActions) {
+  const filesystemRef = useRef(filesystem)
+  filesystemRef.current = filesystem
   const { campaignId } = useCampaign()
-  const { itemsMap: activeItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.sidebar)
-  const { itemsMap: trashedItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
+  const { itemsMap: activeItemsMap } = useActiveSidebarItems()
+  const { itemsMap: trashedItemsMap } = useTrashSidebarItems()
   const { navigateToItem } = useEditorNavigation()
   const { setLastSelectedItem } = useLastEditorItem()
   const { openParentFolders } = useOpenParentFolders()
@@ -222,10 +217,8 @@ export function useItemSurfaceHotkeys(itemOperations: ItemSurfaceHotkeyOperation
   const activeItemSurface = useSidebarUIStore((s) => s.activeItemSurface)
   const selectedItemIds = useSidebarUIStore((s) => s.selectedItemIds)
   const focusedItemId = useSidebarUIStore((s) => s.focusedItemId)
-  const itemClipboard = useSidebarUIStore((s) => s.itemClipboard)
   const setSelectedItemIds = useSidebarUIStore((s) => s.setSelectedItemIds)
   const clearItemSelection = useSidebarUIStore((s) => s.clearItemSelection)
-  const setItemClipboard = useSidebarUIStore((s) => s.setItemClipboard)
   const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
   const moveFocus = useSidebarUIStore((s) => s.moveFocus)
 
@@ -237,7 +230,7 @@ export function useItemSurfaceHotkeys(itemOperations: ItemSurfaceHotkeyOperation
         selectedItemIds,
         activeItemsMap,
         trashedItemsMap,
-        itemOperationsRef.current,
+        filesystemRef.current,
       )
 
       handleItemSurfaceHotkey(event, {
@@ -246,11 +239,9 @@ export function useItemSurfaceHotkeys(itemOperations: ItemSurfaceHotkeyOperation
         activeItemsMap,
         trashedItemsMap,
         focusedItemId,
-        itemClipboard,
-        itemOperations: itemOperationsRef.current,
+        filesystem: filesystemRef.current,
         setSelectedItemIds,
         clearItemSelection,
-        setItemClipboard,
         setRenamingId,
         moveFocus,
         navigateToItem,
@@ -268,12 +259,10 @@ export function useItemSurfaceHotkeys(itemOperations: ItemSurfaceHotkeyOperation
     campaignId,
     clearItemSelection,
     focusedItemId,
-    itemClipboard,
     moveFocus,
     navigateToItem,
     openParentFolders,
     setSelectedItemIds,
-    setItemClipboard,
     selectedItemIds,
     setLastSelectedItem,
     setRenamingId,

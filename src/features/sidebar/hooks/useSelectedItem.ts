@@ -4,12 +4,13 @@ import { useShallow } from 'zustand/shallow'
 import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
+import { useCutFileSystemItemIds } from '~/features/filesystem/filesystem-clipboard-store'
 import { getSidebarItemVisualState } from '~/features/sidebar/utils/sidebar-item-visual-state'
 import { getSlug } from '~/features/sidebar/utils/sidebar-item-utils'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { addRecentItem } from '~/features/search/hooks/use-recent-items'
 
-const EMPTY_CUT_ITEM_IDS: Array<AnySidebarItem['_id']> = []
+const EMPTY_CUT_ITEM_IDS: ReadonlyArray<AnySidebarItem['_id']> = []
 
 export function useSelectedItemSync() {
   const editorMatch = useMatch({
@@ -32,18 +33,18 @@ export function useSelectedItemSync() {
 }
 
 export function useSidebarItemVisualState(item: AnySidebarItem) {
+  const cutItemIds = useCutFileSystemItemIds()
   const selection = useSidebarUIStore(
     useShallow((s) => ({
       selectedItemIds: s.selectedItemIds,
       selectedSlug: s.selectedSlug,
-      cutItemIds: s.itemClipboard?.mode === 'cut' ? s.itemClipboard.itemIds : EMPTY_CUT_ITEM_IDS,
     })),
   )
   return getSidebarItemVisualState({
     item,
     selectedItemIds: selection.selectedItemIds,
     selectedSlug: selection.selectedSlug,
-    cutItemIds: selection.cutItemIds,
+    cutItemIds: cutItemIds ?? EMPTY_CUT_ITEM_IDS,
   })
 }
 

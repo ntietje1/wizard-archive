@@ -1,17 +1,17 @@
 import { useRef } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { DndExecutionContext, DndMonitorCtx } from '~/features/dnd/types'
 import type { DndValue } from '~/features/dnd/hooks/useDnd'
 import { resolveDropTarget } from '~/features/dnd/utils/drop-target-data'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useFileDropHandler } from '~/features/dnd/hooks/useFileDropHandler'
-import { useSidebarItemOperations } from '~/features/sidebar/operations/useSidebarItemOperations'
-import { useActiveSidebarItems, useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
+import { useFileSystem } from '~/features/filesystem/useFileSystem'
+import {
+  useActiveSidebarItems,
+  useTrashSidebarItems,
+} from '~/features/sidebar/hooks/useSidebarItems'
 import { DndProviderContext } from '~/features/dnd/hooks/useDnd'
 import { DragOverlayPortal } from '~/features/dnd/components/drag-overlay'
 import { DndBatchDecisionDialog } from '~/features/dnd/components/dnd-batch-decision-dialog'
@@ -21,35 +21,14 @@ import { useExternalDragMonitor } from '~/features/dnd/hooks/useExternalDragMoni
 export function DndProvider({ children }: { children: React.ReactNode }) {
   const { campaign, campaignId, isDm } = useCampaign()
   const campaignName = campaign.data?.name ?? null
-  const { navigateToItem } = useEditorNavigation()
-  const itemOperations = useSidebarItemOperations()
+  const filesystem = useFileSystem()
   const { handleDrop: handleDropFiles } = useFileDropHandler()
   const { itemsMap, getAncestorSidebarItems } = useActiveSidebarItems()
-  const { itemsMap: trashedItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
+  const { itemsMap: trashedItemsMap } = useTrashSidebarItems()
   const allItemsMap = new Map<Id<'sidebarItems'>, AnySidebarItem>([...itemsMap, ...trashedItemsMap])
 
-  const setFolderState = useSidebarUIStore((s) => s.setFolderState)
-
-  const setFolderOpen = (folderId: Id<'sidebarItems'>) => {
-    if (campaignId) setFolderState(campaignId, folderId, true)
-  }
-
   const dndContext: DndExecutionContext = {
-    moveItems: async (items, parentId) => {
-      await itemOperations.moveItems(items, parentId)
-    },
-    // DnD "copy" is the filesystem duplicate operation at the drop destination.
-    copyItems: async (items, parentId) => {
-      await itemOperations.duplicateItems(items, parentId)
-    },
-    restoreItems: async (items, parentId) => {
-      await itemOperations.restoreItems(items, parentId)
-    },
-    trashItems: async (items) => {
-      await itemOperations.trashItems(items)
-    },
-    navigateToItem,
-    setFolderOpen,
+    executeFileSystemDropCommand: filesystem.executeDropCommand,
   }
   const dropPlanningContext = {
     campaignId: campaignId ?? null,

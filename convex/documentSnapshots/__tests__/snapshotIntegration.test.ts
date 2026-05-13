@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
+import {
+  createNoteViaFilesystem,
+  createGameMapViaFilesystem,
+  createCanvasViaFilesystem,
+} from '../../_test/filesystemSetup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createGameMap, createNote } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
@@ -18,7 +23,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      const { noteId } = await createNoteViaFilesystem(dmAuth, {
         campaignId: ctx.campaignId,
         name: 'Snapshot Note',
         parentTarget: { kind: 'direct', parentId: null },
@@ -53,7 +58,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      const { noteId } = await createNoteViaFilesystem(dmAuth, {
         campaignId: ctx.campaignId,
         name: 'History Entry Note',
         parentTarget: { kind: 'direct', parentId: null },
@@ -87,7 +92,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      const { noteId } = await createNoteViaFilesystem(dmAuth, {
         campaignId: ctx.campaignId,
         name: 'Rapid Edit Note',
         parentTarget: { kind: 'direct', parentId: null },
@@ -136,7 +141,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      const { noteId } = await createNoteViaFilesystem(dmAuth, {
         campaignId: ctx.campaignId,
         name: 'Interval Note',
         parentTarget: { kind: 'direct', parentId: null },
@@ -210,7 +215,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      const { noteId } = await createNoteViaFilesystem(dmAuth, {
         campaignId: ctx.campaignId,
         name: 'Burst Note',
         parentTarget: { kind: 'direct', parentId: null },
@@ -252,7 +257,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      const { noteId } = await createNoteViaFilesystem(dmAuth, {
         campaignId: ctx.campaignId,
         name: 'Updated Time Note',
         parentTarget: { kind: 'direct', parentId: null },
@@ -287,7 +292,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { canvasId } = await dmAuth.mutation(api.canvases.mutations.createCanvas, {
+      const { canvasId } = await createCanvasViaFilesystem(dmAuth, {
         campaignId: ctx.campaignId,
         name: 'Snapshot Canvas',
         parentTarget: { kind: 'direct', parentId: null },
@@ -332,7 +337,7 @@ describe('pushUpdate trailing-edge snapshot scheduling', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      const { noteId } = await createNoteViaFilesystem(dmAuth, {
         campaignId: ctx.campaignId,
         name: 'Deleted Note',
         parentTarget: { kind: 'direct', parentId: null },
@@ -613,14 +618,14 @@ describe('game map pin mutations — snapshot scheduling', () => {
         return await dbCtx.storage.store(new Blob(['test']))
       })
 
-      const result = await dmAuth.mutation(api.gameMaps.mutations.createMap, {
+      const result = await createGameMapViaFilesystem(dmAuth, {
         campaignId: ctx.campaignId,
         name: 'Test Map',
         parentTarget: { kind: 'direct', parentId: null },
         imageStorageId: storageId,
       })
 
-      await dmAuth.mutation(api.gameMaps.mutations.updateMap, {
+      await dmAuth.mutation(api.gameMaps.mutations.updateMapImage, {
         campaignId: ctx.campaignId,
         mapId: result.mapId,
         imageStorageId: null,

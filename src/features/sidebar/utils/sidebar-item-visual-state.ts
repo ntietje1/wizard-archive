@@ -21,7 +21,7 @@ export function getSidebarItemVisualState({
   item: AnySidebarItem
   selectedItemIds?: Array<Id<'sidebarItems'>> | null
   selectedSlug?: SidebarItemSlug | null
-  cutItemIds?: Array<Id<'sidebarItems'>> | null
+  cutItemIds?: ReadonlyArray<Id<'sidebarItems'>> | null
 }): SidebarItemVisualState {
   const selectedIds = selectedItemIds ?? []
   const cutIds = cutItemIds ?? []

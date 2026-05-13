@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { NOTE_EDITOR_DROP_TYPE } from '~/features/dnd/utils/drop-target-data'
@@ -16,7 +15,7 @@ describe('resolveSidebarSurfaceDropCommand', () => {
     const active = createNote({ name: 'Active' })
     const trashed = createNote({
       name: 'Trashed',
-      location: SIDEBAR_ITEM_LOCATION.trash,
+      status: 'trashed',
     })
 
     expect(

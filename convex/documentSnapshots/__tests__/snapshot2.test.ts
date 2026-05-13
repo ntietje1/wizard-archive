@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 import * as Y from 'yjs'
 import { createTestContext } from '../../_test/setup.helper'
+import {
+  createNoteViaFilesystem,
+  createGameMapViaFilesystem,
+  createCanvasViaFilesystem,
+} from '../../_test/filesystemSetup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createGameMap, createNote } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
@@ -19,14 +24,14 @@ describe('cross-action debounce independence on game maps', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const result = await dmAuth.mutation(api.gameMaps.mutations.createMap, {
+      const result = await createGameMapViaFilesystem(dmAuth, {
         campaignId: ctx.campaignId,
         name: 'Cross Action Map',
         parentTarget: { kind: 'direct', parentId: null },
       })
 
       // Change the image — property changes don't create snapshots
-      await dmAuth.mutation(api.gameMaps.mutations.updateMap, {
+      await dmAuth.mutation(api.gameMaps.mutations.updateMapImage, {
         campaignId: ctx.campaignId,
         mapId: result.mapId,
         imageStorageId: null,
@@ -70,7 +75,7 @@ describe('updateMap creates correct number of history entries', () => {
       return await dbCtx.storage.store(new Blob(['test']))
     })
 
-    const result = await dmAuth.mutation(api.gameMaps.mutations.createMap, {
+    const result = await createGameMapViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Single Entry Map',
       parentTarget: { kind: 'direct', parentId: null },
@@ -87,7 +92,7 @@ describe('updateMap creates correct number of history entries', () => {
     })
 
     // Change image to null (remove)
-    await dmAuth.mutation(api.gameMaps.mutations.updateMap, {
+    await dmAuth.mutation(api.gameMaps.mutations.updateMapImage, {
       campaignId: ctx.campaignId,
       mapId: result.mapId,
       imageStorageId: null,
@@ -108,7 +113,7 @@ describe('updateMap creates correct number of history entries', () => {
     expect(imageEntry).toBeDefined()
   })
 
-  it('changing name and image should create a single merged history entry', async () => {
+  it('records filesystem rename and map image updates as separate history entries', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
@@ -116,7 +121,7 @@ describe('updateMap creates correct number of history entries', () => {
       return await dbCtx.storage.store(new Blob(['test']))
     })
 
-    const result = await dmAuth.mutation(api.gameMaps.mutations.createMap, {
+    const result = await createGameMapViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Multi Update Map',
       parentTarget: { kind: 'direct', parentId: null },
@@ -131,10 +136,18 @@ describe('updateMap creates correct number of history entries', () => {
       return entries.length
     })
 
-    await dmAuth.mutation(api.gameMaps.mutations.updateMap, {
+    await dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+      campaignId: ctx.campaignId,
+      command: {
+        type: 'rename',
+        itemId: result.mapId,
+        name: 'Renamed Map',
+      },
+    })
+
+    await dmAuth.mutation(api.gameMaps.mutations.updateMapImage, {
       campaignId: ctx.campaignId,
       mapId: result.mapId,
-      name: 'Renamed Map',
       imageStorageId: null,
     })
 
@@ -146,16 +159,13 @@ describe('updateMap creates correct number of history entries', () => {
     })
 
     const newEntries = afterEntries.length - beforeCount
-    // logEditHistory with changes merges multiple changes into a single 'updated' entry
-    expect(newEntries).toBe(1)
+    expect(newEntries).toBe(2)
 
-    const entry = afterEntries[afterEntries.length - 1]
-    expect(entry.action).toBe('updated')
-    expect(entry.metadata).not.toBeNull()
-    expect(Array.isArray((entry.metadata as Record<string, unknown>).changes)).toBe(true)
-    const changes = (entry.metadata as { changes: Array<{ action: string }> }).changes
-    const changeActions = changes.map((c) => c.action).sort()
-    expect(changeActions).toEqual(['map_image_removed', 'renamed'])
+    const newEntriesList = afterEntries.slice(beforeCount)
+    expect(newEntriesList.map((entry) => entry.action).sort()).toEqual([
+      'map_image_removed',
+      'renamed',
+    ])
   })
 })
 
@@ -182,6 +192,7 @@ describe('rollback of game map pin with non-note itemId', () => {
           color: null,
           allPermissionLevel: null,
           location: 'sidebar',
+          status: 'active',
           previewStorageId: null,
           previewLockedUntil: null,
           previewClaimToken: null,
@@ -311,7 +322,7 @@ describe('canvas snapshot uses yjs_state format', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { canvasId } = await dmAuth.mutation(api.canvases.mutations.createCanvas, {
+      const { canvasId } = await createCanvasViaFilesystem(dmAuth, {
         campaignId: ctx.campaignId,
         name: 'Test Canvas',
         parentTarget: { kind: 'direct', parentId: null },
@@ -349,7 +360,7 @@ describe('Note snapshots use yjs_state format', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      const { noteId } = await createNoteViaFilesystem(dmAuth, {
         campaignId: ctx.campaignId,
         name: 'Snapshot Type Check',
         parentTarget: { kind: 'direct', parentId: null },
@@ -475,6 +486,7 @@ describe('no duplicate snapshots from concurrent mutations', () => {
           .withIndex('by_item_action', (q) => q.eq('itemId', mapId).eq('action', 'map_pin_added'))
           .collect()
         expect(entries).toHaveLength(1)
+        expect(entries[0].hasSnapshot).toBe(true)
 
         const snapshots = await dbCtx.db
           .query('documentSnapshots')

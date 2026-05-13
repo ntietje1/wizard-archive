@@ -1,6 +1,5 @@
-import { SIDEBAR_ITEM_LOCATION } from '../../sidebarItems/types/baseTypes'
 import { getSidebarItemAncestors } from '../../folders/functions/getSidebarItemAncestors'
-import { enhanceBase } from '../../sidebarItems/functions/enhanceSidebarItem'
+import { enhanceBase } from '../../sidebarItems/functions/enhanceBaseSidebarItem'
 import type { CampaignQueryCtx } from '../../functions'
 import type { FileFromDb, FileWithContent, SidebarFile } from '../types'
 
@@ -27,7 +26,7 @@ export const enhanceFileWithContent = async (
 ): Promise<FileWithContent> => {
   const ancestors = await getSidebarItemAncestors(ctx, {
     initialParentId: file.parentId,
-    isTrashed: file.location === SIDEBAR_ITEM_LOCATION.trash,
+    isTrashed: file.isTrashed,
   })
   return {
     ...file,

@@ -1,6 +1,5 @@
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import { normalizeTopLevelSelectedItems } from 'convex/sidebarItems/operations/selection'
 import type { EditorMenuContext } from './types'
 
 export function resolveContextSelectedItems({
@@ -29,7 +28,7 @@ export function resolveContextSelectedItems({
     }
   }
 
-  return normalizeTopLevelSelectedItems(resolvedItems, allItemsMap)
+  return resolvedItems
 }
 
 export function resolveContextPrimaryItem({
@@ -42,7 +41,7 @@ export function resolveContextPrimaryItem({
   return selectedItems[0] ?? item
 }
 
-export function resolveContextOperationItems(
+export function resolveRawContextItems(
   context: Pick<EditorMenuContext, 'item' | 'primaryItem' | 'selectedItems'>,
 ): Array<AnySidebarItem> {
   if (context.selectedItems && context.selectedItems.length > 0) {
@@ -50,8 +49,7 @@ export function resolveContextOperationItems(
     if (clickedItem && !context.selectedItems.some((item) => item._id === clickedItem._id)) {
       return [clickedItem]
     }
-    const selectedItemsMap = new Map(context.selectedItems.map((item) => [item._id, item]))
-    return normalizeTopLevelSelectedItems(context.selectedItems, selectedItemsMap)
+    return context.selectedItems
   }
   const item = context.primaryItem ?? context.item
   return item ? [item] : []

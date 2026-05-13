@@ -1,0 +1,503 @@
+import { useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
+import { api } from 'convex/_generated/api'
+import type { Id } from 'convex/_generated/dataModel'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type {
+  FileSystemCommand,
+  FileSystemOperationDecision,
+} from 'convex/sidebarItems/filesystem/commands'
+import type { FileSystemTransactionReceipt } from 'convex/sidebarItems/filesystem/receipts'
+import type {
+  ConflictDecision,
+  ItemOperationConflict,
+} from 'convex/sidebarItems/filesystem/operationTypes'
+import { FileSystemPermanentDeleteDialog } from './filesystem-dialogs'
+import { ItemOperationConflictDialog } from './item-operation-conflict-dialog'
+import { shouldRecordFileSystemUndo, useFileSystemUndoStore } from './filesystem-undo-store'
+import { runFileSystemMutation } from './filesystem-command-runner'
+import { FileSystemContext } from './useFileSystem'
+import type { FileSystemValue } from './useFileSystem'
+import { setFileSystemClipboard, useFileSystemClipboard } from './filesystem-clipboard-store'
+import { useFileSystemUndoHotkeys } from './filesystem-hotkeys'
+import { planFileSystemOptimisticCommand } from './filesystem-optimistic-planner'
+import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
+import {
+  useActiveSidebarItems,
+  useTrashSidebarItems,
+} from '~/features/sidebar/hooks/useSidebarItems'
+import { useSidebarItemsCache } from '~/features/sidebar/hooks/useSidebarItemsCache'
+import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
+import { useItemSurfaceHotkeys } from '~/features/sidebar/hooks/useItemSurfaceHotkeys'
+import { getSelectedSlug } from '~/features/sidebar/hooks/useSelectedItem'
+import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
+import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
+import { handleError, logger } from '~/shared/utils/logger'
+import { createFileSystemCacheAdapter } from './filesystem-cache-adapter'
+import { applyFileSystemReceiptEffects } from './filesystem-receipt-effects'
+import {
+  getCreatedItemResult,
+  getReceiptRenamedSlug,
+  getReceiptToastMessage,
+} from './filesystem-receipt-selectors'
+import { normalizeFileSystemOperationItems } from './normalizeFileSystemOperationItems'
+import { toast } from 'sonner'
+import { getPasteTargetParentId } from './filesystem-targets'
+import { fileSystemDropCommandFailureMessage } from './filesystem-drop-planner'
+import { assertNever } from '~/shared/utils/utils'
+
+type PendingConflict = {
+  command: FileSystemCommand
+  conflicts: Array<ItemOperationConflict>
+}
+
+function createClientOperationId() {
+  return globalThis.crypto?.randomUUID?.() ?? `filesystem-${Date.now()}-${Math.random()}`
+}
+
+function toDecisionArray(
+  decisions?: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>,
+): Array<FileSystemOperationDecision> | undefined {
+  if (!decisions) return undefined
+  const result: Array<FileSystemOperationDecision> = []
+  for (const [sourceItemId, decision] of Object.entries(decisions)) {
+    if (decision) {
+      result.push({ sourceItemId: sourceItemId as Id<'sidebarItems'>, action: decision.action })
+    }
+  }
+  return result
+}
+
+function toastReceipt(receipt: FileSystemTransactionReceipt) {
+  const message = getReceiptToastMessage(receipt)
+  if (!message) return
+  toast[message.type](message.text)
+}
+
+type FileSystemProviderState = {
+  value: FileSystemValue
+  dialog: ReactNode
+}
+
+function useFileSystemValue(): FileSystemProviderState {
+  const { campaignId, campaign } = useCampaign()
+  useActiveSidebarItems()
+  useTrashSidebarItems()
+  const cache = useSidebarItemsCache()
+  const { clearEditorContent, navigateToItem } = useEditorNavigation()
+  const executeMutation = useCampaignMutation(
+    api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
+  )
+  const undoMutation = useCampaignMutation(
+    api.sidebarItems.filesystem.mutations.undoFileSystemTransaction,
+  )
+  const redoMutation = useCampaignMutation(
+    api.sidebarItems.filesystem.mutations.redoFileSystemTransaction,
+  )
+  const activeItemSurface = useSidebarUIStore((s) => s.activeItemSurface)
+  const setFolderState = useSidebarUIStore((s) => s.setFolderState)
+  const clipboard = useFileSystemClipboard()
+  const setSelectedItemIds = useSidebarUIStore((s) => s.setSelectedItemIds)
+  const undoStack = useFileSystemUndoStore((s) => s.undoStack)
+  const redoStack = useFileSystemUndoStore((s) => s.redoStack)
+  const [pendingConflict, setPendingConflict] = useState<PendingConflict | null>(null)
+  const [pendingDeleteForeverItems, setPendingDeleteForeverItems] =
+    useState<Array<AnySidebarItem> | null>(null)
+  const [pendingOperationCount, setPendingOperationCount] = useState(0)
+
+  useEffect(() => {
+    if (!campaignId) return
+    useFileSystemUndoStore.getState().setCampaign(campaignId)
+    setFileSystemClipboard(null)
+  }, [campaignId])
+
+  const cacheAdapter = createFileSystemCacheAdapter(cache)
+
+  const resolveOperationItems = (
+    items: Array<AnySidebarItem>,
+    model = cacheAdapter.getReadModel(),
+  ) => normalizeFileSystemOperationItems(items, model.itemsById)
+
+  const resolveContextItems: FileSystemValue['resolveContextItems'] = (context) => {
+    const clickedItem = context.primaryItem ?? context.item
+    if (context.selectedItems && context.selectedItems.length > 0) {
+      if (
+        clickedItem &&
+        !context.selectedItems.some((selectedItem) => selectedItem._id === clickedItem._id)
+      ) {
+        return resolveOperationItems([clickedItem])
+      }
+      return resolveOperationItems(context.selectedItems)
+    }
+    return clickedItem ? resolveOperationItems([clickedItem]) : []
+  }
+
+  const applyReceiptSideEffects = async (receipt: FileSystemTransactionReceipt) => {
+    await applyFileSystemReceiptEffects({
+      receipt,
+      readModel: cacheAdapter.getReadModel(),
+      currentSlug: getSelectedSlug(),
+      getSelectedItemIds: () => useSidebarUIStore.getState().selectedItemIds,
+      setSelectedItemIds,
+      clearEditorContent,
+      navigateToItem,
+    })
+  }
+
+  const applyReceiptSideEffectsInBackground = (receipt: FileSystemTransactionReceipt) => {
+    void applyReceiptSideEffects(receipt).catch((error) =>
+      handleError(error, 'Filesystem side effects failed'),
+    )
+  }
+
+  const withPendingOperation = async <T,>(operation: () => Promise<T>): Promise<T> => {
+    setPendingOperationCount((count) => count + 1)
+    try {
+      return await operation()
+    } finally {
+      setPendingOperationCount((count) => Math.max(0, count - 1))
+    }
+  }
+
+  const executeCommand = async (
+    command: FileSystemCommand,
+    {
+      decisions,
+    }: {
+      decisions?: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
+    } = {},
+  ): Promise<FileSystemTransactionReceipt | null> => {
+    if (!campaignId) return null
+    const currentReadModel = cacheAdapter.getReadModel()
+    const plan = planFileSystemOptimisticCommand({
+      command,
+      decisions,
+      snapshot: cacheAdapter.getSnapshot(),
+      readModel: currentReadModel,
+      activeItemSurface,
+      currentUserId: campaign.data?.myMembership?.userId ?? null,
+      campaignId,
+      resolveOperationItems: (items) => resolveOperationItems(items, currentReadModel),
+    })
+    if (plan.status === 'needsDecision') {
+      setPendingConflict({ command, conflicts: plan.conflicts })
+      return null
+    }
+    const clientOperationId = createClientOperationId()
+
+    return await withPendingOperation(() =>
+      runFileSystemMutation({
+        optimistic: plan,
+        applyPatches: cacheAdapter.applyPatches,
+        mutate: async () =>
+          (await executeMutation.mutateAsync({
+            command,
+            decisions: toDecisionArray(decisions),
+            clientOperationId,
+          })) as FileSystemTransactionReceipt,
+        onSuccess: (receipt) => {
+          toastReceipt(receipt)
+          applyReceiptSideEffectsInBackground(receipt)
+          if (shouldRecordFileSystemUndo(receipt)) {
+            useFileSystemUndoStore.getState().pushUndo(receipt)
+          }
+        },
+        onError: (error) => handleError(error, 'Filesystem operation failed'),
+      }),
+    )
+  }
+
+  const createItem: FileSystemValue['createItem'] = async (input) => {
+    const receipt = await executeCommand({
+      type: 'create',
+      itemType: input.itemType,
+      name: input.name,
+      parentTarget: input.parentTarget,
+      iconName: input.iconName,
+      color: input.color,
+    })
+    return getCreatedItemResult(receipt)
+  }
+
+  const renameItem: FileSystemValue['renameItem'] = async (input) => {
+    const receipt = await executeCommand({
+      type: 'rename',
+      itemId: input.itemId,
+      name: input.name,
+      iconName: input.iconName,
+      color: input.color,
+    })
+    if (!receipt) return null
+    return { slug: getReceiptRenamedSlug(receipt) }
+  }
+
+  const moveItems: FileSystemValue['moveItems'] = async (itemIds, targetParentId) => {
+    await executeCommand({ type: 'move', itemIds, targetParentId })
+  }
+
+  const copyItems: FileSystemValue['copyItems'] = async (itemIds, targetParentId) => {
+    await executeCommand({ type: 'copy', itemIds, targetParentId })
+  }
+
+  const trashItems: FileSystemValue['trashItems'] = async (itemIds) => {
+    await executeCommand({ type: 'trash', itemIds })
+  }
+
+  const restoreItems: FileSystemValue['restoreItems'] = async (itemIds, targetParentId = null) => {
+    await executeCommand({ type: 'restore', itemIds, targetParentId })
+  }
+
+  const deleteForever: FileSystemValue['deleteForever'] = async (itemIds) => {
+    await executeCommand({ type: 'deleteForever', itemIds })
+  }
+
+  const emptyTrash: FileSystemValue['emptyTrash'] = async () => {
+    await executeCommand({ type: 'emptyTrash' })
+  }
+
+  const copy = (itemIds: Array<Id<'sidebarItems'>>) => {
+    if (!campaignId || itemIds.length === 0) return
+    const currentReadModel = cacheAdapter.getReadModel()
+    const items = resolveOperationItems(currentReadModel.getItems(itemIds), currentReadModel)
+    if (items.length === 0) return
+    setFileSystemClipboard({ mode: 'copy', campaignId, itemIds: items.map((item) => item._id) })
+  }
+
+  const cut = (itemIds: Array<Id<'sidebarItems'>>) => {
+    if (!campaignId || itemIds.length === 0) return
+    const currentReadModel = cacheAdapter.getReadModel()
+    const items = resolveOperationItems(currentReadModel.getItems(itemIds), currentReadModel)
+    if (items.length === 0) return
+    setFileSystemClipboard({ mode: 'cut', campaignId, itemIds: items.map((item) => item._id) })
+  }
+
+  const cancelClipboard = () => {
+    if (!clipboard) return false
+    setFileSystemClipboard(null)
+    return true
+  }
+
+  const paste = async (targetParentId = getPasteTargetParentId(activeItemSurface)) => {
+    if (!campaignId || !clipboard || clipboard.campaignId !== campaignId) return
+    const currentReadModel = cacheAdapter.getReadModel()
+    const items = resolveOperationItems(
+      currentReadModel.getItems(Array.from(clipboard.itemIds)),
+      currentReadModel,
+    )
+    if (items.length === 0) return
+
+    if (clipboard.mode === 'copy') {
+      await copyItems(
+        items.map((item) => item._id),
+        targetParentId,
+      )
+      return
+    }
+
+    if (items.every((item) => item.parentId === targetParentId)) {
+      setFileSystemClipboard(null)
+      return
+    }
+
+    await moveItems(
+      items.map((item) => item._id),
+      targetParentId,
+    )
+    setFileSystemClipboard(null)
+  }
+
+  const undo: FileSystemValue['undo'] = async () => {
+    const entry = useFileSystemUndoStore.getState().peekUndo()
+    if (!entry) return
+    if (!entry.transactionId) {
+      logger.error('Filesystem undo entry is missing a transaction id', entry)
+      return
+    }
+    await withPendingOperation(() =>
+      runFileSystemMutation({
+        optimistic: {
+          forwardPatches: entry.inversePatches,
+          inversePatches: entry.forwardPatches,
+        },
+        applyPatches: cacheAdapter.applyPatches,
+        mutate: async () =>
+          (await undoMutation.mutateAsync({
+            transactionId: entry.transactionId,
+          })) as FileSystemTransactionReceipt,
+        onSuccess: (receipt) => {
+          toastReceipt(receipt)
+          useFileSystemUndoStore.getState().removeUndo()
+          useFileSystemUndoStore.getState().pushRedoEntry(entry)
+          applyReceiptSideEffectsInBackground(receipt)
+        },
+        onError: (error) => handleError(error, 'Filesystem undo failed'),
+      }),
+    )
+  }
+
+  const redo: FileSystemValue['redo'] = async () => {
+    const entry = useFileSystemUndoStore.getState().peekRedo()
+    if (!entry) return
+    if (!entry.transactionId) {
+      logger.error('Filesystem redo entry is missing a transaction id', entry)
+      return
+    }
+    await withPendingOperation(() =>
+      runFileSystemMutation({
+        optimistic: {
+          forwardPatches: entry.forwardPatches,
+          inversePatches: entry.inversePatches,
+        },
+        applyPatches: cacheAdapter.applyPatches,
+        mutate: async () =>
+          (await redoMutation.mutateAsync({
+            transactionId: entry.transactionId,
+          })) as FileSystemTransactionReceipt,
+        onSuccess: (receipt) => {
+          toastReceipt(receipt)
+          useFileSystemUndoStore.getState().removeRedo()
+          useFileSystemUndoStore.getState().pushUndoEntry(entry, { preserveRedo: true })
+          applyReceiptSideEffectsInBackground(receipt)
+        },
+        onError: (error) => handleError(error, 'Filesystem redo failed'),
+      }),
+    )
+  }
+
+  const executeDropCommand: FileSystemValue['executeDropCommand'] = async (command) => {
+    if (command.status !== 'ready') return
+    try {
+      switch (command.action) {
+        case 'move':
+          await moveItems(
+            command.items.map((item) => item._id),
+            command.parentId,
+          )
+          break
+        case 'copy':
+          await copyItems(
+            command.items.map((item) => item._id),
+            command.parentId,
+          )
+          break
+        case 'restore':
+          await restoreItems(
+            command.items.map((item) => item._id),
+            command.parentId,
+          )
+          break
+        case 'trash':
+          await trashItems(command.items.map((item) => item._id))
+          break
+        case 'open':
+          await navigateToItem(command.item.slug, true)
+          break
+        default:
+          return assertNever(command)
+      }
+      if ('parentId' in command && command.parentId && campaignId) {
+        setFolderState(campaignId, command.parentId, true)
+      }
+    } catch (error) {
+      handleError(error, fileSystemDropCommandFailureMessage(command))
+    }
+  }
+
+  const confirmDeleteForever: FileSystemValue['confirmDeleteForever'] = (itemIds) => {
+    const currentReadModel = cacheAdapter.getReadModel()
+    const items = resolveOperationItems(currentReadModel.getItems(itemIds), currentReadModel)
+    if (items.length === 0) return false
+    setPendingDeleteForeverItems(items)
+    return true
+  }
+
+  const resolveConflicts = async (
+    decisions: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>,
+  ) => {
+    if (!pendingConflict) return
+    const command = pendingConflict.command
+    setPendingConflict(null)
+    await executeCommand(command, { decisions })
+  }
+
+  const conflictDialog = pendingConflict ? (
+    <ItemOperationConflictDialog
+      key={pendingConflict.conflicts
+        .map((conflict) => `${conflict.sourceItemId}:${conflict.destinationItemId}`)
+        .join(':')}
+      conflicts={pendingConflict.conflicts}
+      onResolve={(decisions) => {
+        void resolveConflicts(decisions)
+      }}
+      onCancel={() => setPendingConflict(null)}
+    />
+  ) : null
+
+  const deleteForeverDialog = pendingDeleteForeverItems ? (
+    <FileSystemPermanentDeleteDialog
+      items={pendingDeleteForeverItems}
+      onClose={() => setPendingDeleteForeverItems(null)}
+      onConfirm={() => {
+        const itemIds = pendingDeleteForeverItems.map((item) => item._id)
+        setPendingDeleteForeverItems(null)
+        void deleteForever(itemIds)
+      }}
+    />
+  ) : null
+
+  return {
+    value: {
+      createItem,
+      renameItem,
+      moveItems,
+      copyItems,
+      trashItems,
+      restoreItems,
+      deleteForever,
+      emptyTrash,
+      confirmDeleteForever,
+      copy,
+      cut,
+      cancelClipboard,
+      canPaste: Boolean(campaignId && clipboard?.campaignId === campaignId),
+      paste,
+      undo,
+      redo,
+      executeDropCommand,
+      canUndo: undoStack.length > 0,
+      canRedo: redoStack.length > 0,
+      resolveOperationItems,
+      resolveContextItems,
+    },
+    dialog: (
+      <>
+        <div
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          data-testid="filesystem-operation-status"
+          data-state={pendingOperationCount > 0 ? 'pending' : 'idle'}
+          className="sr-only"
+        >
+          {pendingOperationCount > 0 ? 'Filesystem operation in progress' : null}
+        </div>
+        {conflictDialog}
+        {deleteForeverDialog}
+      </>
+    ),
+  }
+}
+
+export function FileSystemProvider({ children }: { children: ReactNode }) {
+  const { value, dialog } = useFileSystemValue()
+  useFileSystemUndoHotkeys(value)
+
+  useItemSurfaceHotkeys(value)
+
+  return (
+    <FileSystemContext.Provider value={value}>
+      {children}
+      {dialog}
+    </FileSystemContext.Provider>
+  )
+}

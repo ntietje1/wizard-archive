@@ -1,5 +1,4 @@
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import { Trash2 } from 'lucide-react'
 import { EditableBreadcrumb, EditableName } from './editable-breadcrumb'
 import { EditorViewModeToggleButton } from './topbar-item-content/note-buttons'
@@ -12,10 +11,52 @@ import { cn } from '~/features/shadcn/lib/utils'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useActiveSidebarItems, useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import {
+  useActiveSidebarItems,
+  useTrashSidebarItems,
+} from '~/features/sidebar/hooks/useSidebarItems'
 import { RIGHT_SIDEBAR_CONTENT } from '~/features/editor/components/right-sidebar/constants'
 import { useRightSidebar } from '~/features/editor/hooks/useRightSidebar'
 import { formatRelativeTime } from '~/shared/utils/format-relative-time'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { Id } from 'convex/_generated/dataModel'
+
+function TrashTopbarTitle({ itemCount }: { itemCount: number }) {
+  return (
+    <div className="flex items-center gap-2 min-w-0">
+      <Trash2 className="size-4 text-muted-foreground shrink-0" />
+      <span className="font-medium truncate">Trash</span>
+      <span className="text-sm text-muted-foreground shrink-0">
+        {`${itemCount} item${itemCount !== 1 ? 's' : ''}`}
+      </span>
+    </div>
+  )
+}
+
+function EmptyEditorTitle({
+  campaignId,
+  setPendingItemName,
+}: {
+  campaignId: Id<'campaigns'> | null | undefined
+  setPendingItemName: (name: string) => void
+}) {
+  return (
+    <EditableName
+      initialName=""
+      defaultName="Untitled Item"
+      onChange={setPendingItemName}
+      campaignId={campaignId ?? undefined}
+      parentId={null}
+    />
+  )
+}
+
+function itemTimestampLabel(item: AnySidebarItem | null | undefined) {
+  if (!item) return null
+  return item.updatedTime
+    ? `Edited ${formatRelativeTime(item.updatedTime)}`
+    : `Created ${formatRelativeTime(item._creationTime)}`
+}
 
 export function FileTopbar() {
   const { canEdit, viewAsPlayerId } = useEditorMode()
@@ -27,7 +68,7 @@ export function FileTopbar() {
 
   const isTrashView = editorSearch.trash === true && !item
 
-  const { parentItemsMap: trashedParentItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
+  const { parentItemsMap: trashedParentItemsMap } = useTrashSidebarItems()
   const rootTrashedItems = trashedParentItemsMap.get(null) ?? []
 
   const canRename =
@@ -40,11 +81,7 @@ export function FileTopbar() {
   const rightSidebar = useRightSidebar()
   const toggleHistory = () => rightSidebar.toggle(RIGHT_SIDEBAR_CONTENT.history)
 
-  const timestampLabel = item
-    ? item.updatedTime
-      ? `Edited ${formatRelativeTime(item.updatedTime)}`
-      : `Created ${formatRelativeTime(item._creationTime)}`
-    : null
+  const timestampLabel = itemTimestampLabel(item)
 
   const middleContent = (
     <ItemButtonWrapper isTrashView={isTrashView}>
@@ -57,15 +94,7 @@ export function FileTopbar() {
       <div className="flex items-center py-0.5 pl-3 pr-1 shrink-0 w-full min-w-0 overflow-hidden gap-4 border-b">
         <div className={cn('flex-1 min-w-0', isNotSharedWithPlayer && 'opacity-50')}>
           {isLoading && <div className="bg-muted rounded-md h-5 w-32 my-0.5" />}
-          {isTrashView && (
-            <div className="flex items-center gap-2 min-w-0">
-              <Trash2 className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="font-medium truncate">Trash</span>
-              <span className="text-sm text-muted-foreground shrink-0">
-                {`${rootTrashedItems.length} item${rootTrashedItems.length !== 1 ? 's' : ''}`}
-              </span>
-            </div>
-          )}
+          {isTrashView && <TrashTopbarTitle itemCount={rootTrashedItems.length} />}
           {item && (
             <EditableBreadcrumb
               key={item._id}
@@ -75,13 +104,7 @@ export function FileTopbar() {
             />
           )}
           {isEmptyEditor && (
-            <EditableName
-              initialName=""
-              defaultName="Untitled Item"
-              onChange={setPendingItemName}
-              campaignId={campaignId}
-              parentId={null}
-            />
+            <EmptyEditorTitle campaignId={campaignId} setPendingItemName={setPendingItemName} />
           )}
         </div>
 

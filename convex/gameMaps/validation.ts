@@ -1,5 +1,5 @@
 import type { Id } from '../_generated/dataModel'
-import { SIDEBAR_ITEM_LOCATION } from '../sidebarItems/types/baseTypes'
+import { isSidebarItemTrashed } from '../sidebarItems/functions/sidebarItemLifecycle'
 import type { AnySidebarItem } from '../sidebarItems/types/types'
 
 export type PinDropValidationCode =
@@ -29,13 +29,13 @@ export function validatePinDropTarget({
   campaignId,
 }: {
   mapId: Id<'sidebarItems'>
-  item: Pick<AnySidebarItem, '_id' | 'campaignId' | 'location'>
+  item: Pick<AnySidebarItem, '_id' | 'campaignId' | 'location' | 'status'>
   existingPinItemIds: ReadonlyArray<Id<'sidebarItems'>>
   campaignId: Id<'campaigns'> | null
 }): PinDropValidationCode | null {
   if (item._id === mapId) return 'self_pin'
   if (existingPinItemIds.includes(item._id)) return 'already_pinned'
-  if (item.location === SIDEBAR_ITEM_LOCATION.trash) return 'trashed_item'
+  if (isSidebarItemTrashed(item)) return 'trashed_item'
   if (campaignId && item.campaignId !== campaignId) return 'wrong_campaign'
   return null
 }

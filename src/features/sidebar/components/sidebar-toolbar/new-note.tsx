@@ -4,14 +4,14 @@ import { FilePlus, Loader2 } from 'lucide-react'
 import { handleError } from '~/shared/utils/logger'
 import { Button } from '~/features/shadcn/components/button'
 import { TooltipButton } from '~/shared/components/tooltip-button'
-import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
+import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
 
 export function NewNoteButton() {
-  const { createItem } = useCreateSidebarItem()
+  const { createItem } = useCreateFileSystemItem()
   const { getDefaultName } = useSidebarValidation()
   const { campaignId } = useCampaign()
   const { navigateToItem } = useEditorNavigation()
@@ -24,7 +24,6 @@ export function NewNoteButton() {
     try {
       const result = await createItem({
         type: SIDEBAR_ITEM_TYPES.notes,
-        campaignId,
         parentTarget: { kind: 'direct', parentId: null },
         name: getDefaultName(SIDEBAR_ITEM_TYPES.notes, null),
       })
@@ -45,11 +44,7 @@ export function NewNoteButton() {
         disabled={isPending}
         aria-label="Create new note"
       >
-        {isPending ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <FilePlus className="h-4 w-4" />
-        )}
+        {isPending ? <Loader2 className="size-4 animate-spin" /> : <FilePlus className="size-4" />}
       </Button>
     </TooltipButton>
   )

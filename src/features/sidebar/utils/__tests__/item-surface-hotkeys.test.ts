@@ -4,7 +4,8 @@ import {
   isItemSurfaceInteractionTarget,
   isModifierShortcut,
 } from '../item-surface-hotkeys'
-import { getKeyboardOpenItem, getKeyboardPasteParentId } from '../item-surface-keyboard'
+import { getKeyboardOpenItem } from '../item-surface-keyboard'
+import { getKeyboardPasteParentId } from '~/features/filesystem/filesystem-targets'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
 

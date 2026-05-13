@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import type * as ParentValidation from 'convex/sidebarItems/validation/parent'
 import { LinkClickHandler } from '../link-click-handler'
 import type { LinkType } from '~/features/editor/utils/link-decoration'
 
@@ -19,7 +20,7 @@ const {
   useCampaignMock,
   useEditorDomElementMock,
   useEditorModeMock,
-  useActiveSidebarItemsMock,
+  activeSidebarItemsMock,
   openMock,
 } = vi.hoisted(() => ({
   createFolderMock: vi.fn(),
@@ -35,7 +36,7 @@ const {
   useCampaignMock: vi.fn(),
   useEditorDomElementMock: vi.fn(),
   useEditorModeMock: vi.fn(),
-  useActiveSidebarItemsMock: vi.fn(),
+  activeSidebarItemsMock: vi.fn(),
   openMock: vi.fn(),
 }))
 
@@ -81,6 +82,29 @@ const mutationMap = {
   createNote: createNoteMock,
 } satisfies Record<string, ReturnType<typeof vi.fn>>
 
+function getEntityId(
+  created:
+    | {
+        id?: string
+        noteId?: string
+        folderId?: string
+        mapId?: string
+        fileId?: string
+        canvasId?: string
+      }
+    | null
+    | undefined,
+) {
+  return (
+    created?.id ??
+    created?.noteId ??
+    created?.folderId ??
+    created?.mapId ??
+    created?.fileId ??
+    created?.canvasId
+  )
+}
+
 vi.mock('~/shared/hooks/useAppMutation', () => ({
   useAppMutation: (mutation: string) => ({
     mutateAsync:
@@ -115,8 +139,48 @@ vi.mock('~/features/editor/hooks/useEditorDomElement', () => ({
 }))
 
 vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
-  useActiveSidebarItems: () => useActiveSidebarItemsMock(),
+  useActiveSidebarItems: () => activeSidebarItemsMock(),
 }))
+
+vi.mock('~/features/filesystem/useCreateFileSystemItem', async () => {
+  const { validateCreateItemLocally } = await vi.importActual<typeof ParentValidation>(
+    'convex/sidebarItems/validation/parent',
+  )
+
+  return {
+    useCreateFileSystemItem: () => ({
+      createItem: async (args: { type: string; name: string; parentTarget: unknown }) => {
+        const createByType = {
+          [SIDEBAR_ITEM_TYPES.notes]: createNoteMock,
+          [SIDEBAR_ITEM_TYPES.folders]: createFolderMock,
+          [SIDEBAR_ITEM_TYPES.gameMaps]: createMapMock,
+          [SIDEBAR_ITEM_TYPES.files]: createFileMock,
+          [SIDEBAR_ITEM_TYPES.canvases]: createCanvasMock,
+        }[args.type]
+        if (!createByType) {
+          throw new Error(`Unexpected create type: ${args.type}`)
+        }
+        const created = await createByType(args)
+        return {
+          id: getEntityId(created),
+          slug: created?.slug,
+          type: args.type,
+        }
+      },
+      validateCreateItem: (args: { name: string; parentTarget: unknown }) => {
+        const sidebarItems = activeSidebarItemsMock()
+        return validateCreateItemLocally(
+          {
+            name: args.name,
+            parentTarget: args.parentTarget as ParentValidation.CreateParentTarget,
+          },
+          sidebarItems.itemsMap,
+          sidebarItems.parentItemsMap,
+        )
+      },
+    }),
+  }
+})
 
 vi.mock('~/features/editor/utils/link-hit-testing', () => ({
   getLinkAt: (...args: Array<unknown>) => getLinkAtMock(...args),
@@ -165,7 +229,7 @@ describe('LinkClickHandler', () => {
     useEditorDomElementMock.mockReturnValue(editorEl)
     useCampaignMock.mockReturnValue({ campaign: { data: { _id: 'campaign-1' } } })
     useEditorModeMock.mockReturnValue({ editorMode: 'editor' })
-    useActiveSidebarItemsMock.mockReturnValue({
+    activeSidebarItemsMock.mockReturnValue({
       data: [
         { _id: 'folder-1', name: 'Lore', parentId: null, type: SIDEBAR_ITEM_TYPES.folders },
         {
@@ -319,7 +383,6 @@ describe('LinkClickHandler', () => {
     expect(createFolderMock).not.toHaveBeenCalled()
     expect(createNoteMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        campaignId: 'campaign-1',
         name: 'Ghost Note',
         parentTarget: {
           kind: 'path',
@@ -362,7 +425,6 @@ describe('LinkClickHandler', () => {
     expect(createFolderMock).not.toHaveBeenCalled()
     expect(createNoteMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        campaignId: 'campaign-1',
         name: 'Ghost Note',
         parentTarget: {
           kind: 'path',
@@ -415,7 +477,6 @@ describe('LinkClickHandler', () => {
     expect(createNoteMock).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
-        campaignId: 'campaign-1',
         name: 'Ghost Note',
         parentTarget: {
           kind: 'path',
@@ -427,7 +488,6 @@ describe('LinkClickHandler', () => {
     expect(createNoteMock).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
-        campaignId: 'campaign-1',
         name: 'Ghost Note',
         parentTarget: {
           kind: 'path',
@@ -470,7 +530,6 @@ describe('LinkClickHandler', () => {
     })
     expect(createNoteMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        campaignId: 'campaign-1',
         name: 'Ghost Note',
         parentTarget: {
           kind: 'path',
@@ -502,7 +561,6 @@ describe('LinkClickHandler', () => {
     expect(createFolderMock).not.toHaveBeenCalled()
     expect(createNoteMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        campaignId: 'campaign-1',
         name: 'Ghost Note',
         parentTarget: {
           kind: 'path',
@@ -535,7 +593,6 @@ describe('LinkClickHandler', () => {
     expect(createFolderMock).not.toHaveBeenCalled()
     expect(createNoteMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        campaignId: 'campaign-1',
         name: 'Ghost Note',
         parentTarget: {
           kind: 'path',
@@ -547,7 +604,7 @@ describe('LinkClickHandler', () => {
   })
 
   it('creates relative ghost notes from the source note parent folder', async () => {
-    useActiveSidebarItemsMock.mockReturnValue({
+    activeSidebarItemsMock.mockReturnValue({
       data: [
         { _id: 'folder-1', name: 'Lore', parentId: null, type: SIDEBAR_ITEM_TYPES.folders },
         {
@@ -613,7 +670,6 @@ describe('LinkClickHandler', () => {
     })
     expect(createNoteMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        campaignId: 'campaign-1',
         name: 'Ghost Note',
         parentTarget: {
           kind: 'path',

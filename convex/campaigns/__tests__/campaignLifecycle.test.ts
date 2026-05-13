@@ -3,6 +3,7 @@ import { createTestContext } from '../../_test/setup.helper'
 import { setupUser } from '../../_test/identities.helper'
 import { createFile, createFolder, createGameMap, createNote } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
+import { SIDEBAR_ITEM_STATUS } from '../../sidebarItems/types/baseTypes'
 
 describe('campaign lifecycle', () => {
   const t = createTestContext()
@@ -46,8 +47,22 @@ describe('campaign lifecycle', () => {
     await createGameMap(t, campaignId, dm.profile._id)
 
     const playerSidebarItems = await player.authed.query(
-      api.sidebarItems.queries.getSidebarItemsByLocation,
-      { campaignId, location: 'sidebar' },
+      api.sidebarItems.queries.getActiveSidebarItems,
+      { campaignId },
+    )
+    const expectedActiveItems = await t.run(async (ctx) => {
+      return await ctx.db
+        .query('sidebarItems')
+        .withIndex('by_campaign_status_parent_name_deletionTime', (q) =>
+          q.eq('campaignId', campaignId).eq('status', SIDEBAR_ITEM_STATUS.active),
+        )
+        .collect()
+    })
+    expect(playerSidebarItems.map((item) => item._id)).toEqual(
+      expectedActiveItems.map((item) => item._id),
+    )
+    expect(playerSidebarItems.every((item) => item.status === SIDEBAR_ITEM_STATUS.active)).toBe(
+      true,
     )
     expect(playerSidebarItems.length).toBeGreaterThanOrEqual(4)
 
@@ -61,8 +76,8 @@ describe('campaign lifecycle', () => {
     })
 
     const playerSidebarAfterShare = await player.authed.query(
-      api.sidebarItems.queries.getSidebarItemsByLocation,
-      { campaignId, location: 'sidebar' },
+      api.sidebarItems.queries.getActiveSidebarItems,
+      { campaignId },
     )
     const folderItem = playerSidebarAfterShare.find((item) => item._id === folderId)
     expect(folderItem).toBeDefined()
@@ -92,7 +107,7 @@ describe('campaign lifecycle', () => {
     const remainingNotes = await t.run(async (ctx) => {
       return await ctx.db
         .query('sidebarItems')
-        .withIndex('by_campaign_location_parent_name', (q) => q.eq('campaignId', campaignId))
+        .withIndex('by_campaign_deletionTime', (q) => q.eq('campaignId', campaignId))
         .collect()
     })
     expect(remainingNotes).toHaveLength(0)

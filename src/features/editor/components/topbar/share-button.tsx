@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import { ChevronDown, ChevronUp, Lock, Users } from 'lucide-react'
 import { Button } from '~/features/shadcn/components/button'
 import { Popover, PopoverContent, PopoverTrigger } from '~/features/shadcn/components/popover'
@@ -21,7 +20,7 @@ export function ShareButton() {
     return null
   }
 
-  const isItemTrashed = item?.location === SIDEBAR_ITEM_LOCATION.trash
+  const isItemTrashed = item?.isTrashed === true
   const isDisabled = isItemLoading || !item || isItemTrashed || !canShare || isMutating || isPending
   const isShared = Boolean(item && aggregateShareStatus && aggregateShareStatus !== 'not_shared')
   const hasShareData = Boolean(item)

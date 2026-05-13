@@ -10,13 +10,11 @@ import type { ActionHandlers } from './menu-registry'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import { resolveContextOperationItems } from './selection-context'
 import { handleError } from '~/shared/utils/logger'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
-import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
-import { useEmptyTrashBin } from '~/features/sidebar/hooks/useEmptyTrashBin'
+import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
@@ -24,7 +22,7 @@ import { useToggleBookmark } from '~/features/sidebar/hooks/useBookmarks'
 import { isFile, isGameMap } from '~/features/sidebar/utils/sidebar-item-utils'
 import { useSession } from '~/features/sidebar/hooks/useGameSession'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import { useSidebarItemOperations } from '~/features/sidebar/operations/useSidebarItemOperations'
+import { useFileSystem } from '~/features/filesystem/useFileSystem'
 import { createDownloadActions } from './download-actions'
 import { createCreationActions } from './creation-actions'
 import { createFilesystemActions } from './filesystem-actions'
@@ -39,17 +37,16 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const { navigateToItem, clearEditorContent } = useEditorNavigation()
   const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
   const { openParentFolders } = useOpenParentFolders()
-  const { createItem } = useCreateSidebarItem()
-  const { emptyTrashBin } = useEmptyTrashBin()
+  const { createItem } = useCreateFileSystemItem()
   const { getDefaultName } = useSidebarValidation()
   const { campaignId } = useCampaign()
   const convex = useConvex()
   const { endCurrentSession, startSession: startNewSession } = useSession()
   const toggleBookmarkMutation = useToggleBookmark()
   const { parentItemsMap } = useActiveSidebarItems()
-  const itemOperations = useSidebarItemOperations()
+  const filesystemActionsApi = useFileSystem()
   const getNormalizedContextItems = (ctx: MenuContext) =>
-    itemOperations.normalizeItems(resolveContextOperationItems(ctx))
+    filesystemActionsApi.resolveContextItems(ctx)
   const downloadActions = createDownloadActions({ campaignId, convex })
   const creationActions = createCreationActions({
     campaignId,
@@ -65,7 +62,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const [editSidebarItemDialog, setEditSidebarItemDialog] = useState<AnySidebarItem | null>(null)
   const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false)
   const filesystemActions = createFilesystemActions({
-    itemOperations,
+    filesystem: filesystemActionsApi,
     parentItemsMap,
     setDeleteFolderDialog,
     onDialogOpen,
@@ -308,7 +305,15 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       onDialogClose?.()
     },
     clearEditorContent,
-    emptyTrashBin,
+    emptyTrash: async () => {
+      try {
+        await filesystemActionsApi.emptyTrash()
+        setConfirmEmptyTrash(false)
+        onDialogClose?.()
+      } catch (error) {
+        handleError(error, 'Failed to empty trash')
+      }
+    },
   }
 
   return {

@@ -3,7 +3,6 @@ import { persist } from 'zustand/middleware'
 import { useShallow } from 'zustand/shallow'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
-import { selectionBelongsToSurface } from 'convex/sidebarItems/operations/selection'
 
 export type ItemSurface = 'sidebar' | 'folder-view' | 'bookmarks' | 'trash'
 
@@ -11,12 +10,6 @@ export interface ActiveItemSurface {
   surface: ItemSurface
   parentId: Id<'sidebarItems'> | null
   visibleItemIds: Array<Id<'sidebarItems'>>
-}
-
-export interface SidebarItemClipboard {
-  mode: 'copy' | 'cut'
-  campaignId: Id<'campaigns'>
-  itemIds: Array<Id<'sidebarItems'>>
 }
 
 interface ItemSurfaceIdentity {
@@ -41,7 +34,6 @@ interface SidebarUIState {
   selectionSurface: ItemSurfaceIdentity | null
   focusSurface: ItemSurfaceIdentity | null
   activeItemSurface: ActiveItemSurface | null
-  itemClipboard: SidebarItemClipboard | null
   viewAsPlayerId: Id<'campaignMembers'> | null
 }
 
@@ -71,7 +63,6 @@ interface SidebarUIActions {
     visibleItemIds?: Array<Id<'sidebarItems'>>,
   ) => void
   setActiveItemSurface: (surface: ActiveItemSurface | null) => void
-  setItemClipboard: (clipboard: SidebarItemClipboard | null) => void
   clearSelectionForCampaignChange: () => void
   setViewAsPlayerId: (id: Id<'campaignMembers'> | null) => void
 }
@@ -102,6 +93,14 @@ function updateCampaignState(
 
 function uniqueIds(ids: Array<Id<'sidebarItems'>>): Array<Id<'sidebarItems'>> {
   return Array.from(new Set(ids))
+}
+
+function selectionBelongsToSurface(
+  selectedIds: Array<Id<'sidebarItems'>>,
+  visibleItemIds: Array<Id<'sidebarItems'>>,
+): boolean {
+  const visibleIds = new Set(visibleItemIds)
+  return selectedIds.every((id) => visibleIds.has(id))
 }
 
 function selectRange(
@@ -178,7 +177,6 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
       selectionSurface: null,
       focusSurface: null,
       activeItemSurface: null,
-      itemClipboard: null,
       viewAsPlayerId: null,
 
       setRenamingId: (id) => set({ renamingId: id }),
@@ -397,8 +395,6 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
           }
         }),
 
-      setItemClipboard: (clipboard) => set({ itemClipboard: clipboard }),
-
       clearSelectionForCampaignChange: () =>
         set({
           selectedItemIds: [],
@@ -407,7 +403,6 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
           selectionSurface: null,
           focusSurface: null,
           activeItemSurface: null,
-          itemClipboard: null,
         }),
 
       setViewAsPlayerId: (id) => set({ viewAsPlayerId: id }),

@@ -10,7 +10,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from '~/features/shadcn/components/context-menu'
-import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
+import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
@@ -26,7 +26,7 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
   const triggerRef = useRef<HTMLDivElement>(null)
 
   const { campaignId } = useCampaign()
-  const { createItem } = useCreateSidebarItem()
+  const { createItem } = useCreateFileSystemItem()
   const { getDefaultName } = useSidebarValidation()
   const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
@@ -46,7 +46,7 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
     }
   }
 
-  const handleClick = (e: React.MouseEvent) => {
+  const openCreateMenu = (e: React.MouseEvent) => {
     e.preventDefault()
     openMenuAt(e.clientX, e.clientY)
   }
@@ -56,7 +56,6 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
     try {
       const result = await createItem({
         type,
-        campaignId,
         parentTarget: { kind: 'direct', parentId },
         name: getDefaultName(type, parentId),
       })
@@ -74,7 +73,7 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
           <div ref={triggerRef} className="h-[140px]">
             <Card
               className="w-full h-full cursor-pointer rounded-md border-dashed flex items-center justify-center hover:bg-muted/70 hover:border-solid"
-              onClick={handleClick}
+              onClick={openCreateMenu}
               role="button"
               tabIndex={0}
               onKeyDown={(e) => {
@@ -85,26 +84,26 @@ export function NewItemCard({ parentId }: NewItemCardProps) {
                 }
               }}
             >
-              <Plus className="h-6 w-6 text-muted-foreground" />
+              <Plus className="size-6 text-muted-foreground" />
             </Card>
           </div>
         }
       />
       <ContextMenuContent className="w-48">
         <ContextMenuItem onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.notes)}>
-          <FilePlus className="h-4 w-4 mr-2" />
+          <FilePlus className="size-4 mr-2" />
           New Note
         </ContextMenuItem>
         <ContextMenuItem onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.folders)}>
-          <FolderPlus className="h-4 w-4 mr-2" />
+          <FolderPlus className="size-4 mr-2" />
           New Folder
         </ContextMenuItem>
         <ContextMenuItem onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.gameMaps)}>
-          <MapPin className="h-4 w-4 mr-2" />
+          <MapPin className="size-4 mr-2" />
           New Map
         </ContextMenuItem>
         <ContextMenuItem onClick={() => handleCreate(SIDEBAR_ITEM_TYPES.files)}>
-          <File className="h-4 w-4 mr-2" />
+          <File className="size-4 mr-2" />
           New File
         </ContextMenuItem>
       </ContextMenuContent>

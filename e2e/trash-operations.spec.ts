@@ -1,6 +1,13 @@
 import { expect, test } from '@playwright/test'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
-import { createNote, openContextMenu } from './helpers/sidebar-helpers'
+import {
+  createNote,
+  expectTrashItemVisible,
+  openContextMenu,
+  openTrashPopover,
+  permanentlyDeleteTrashItem,
+  waitForFilesystemIdle,
+} from './helpers/sidebar-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
 const campaignName = testName('E2E Trash Ops')
@@ -59,50 +66,57 @@ test.describe.serial('trash: empty & permanent delete', () => {
     await expect(sidebar.getByRole('link', { name: note1, exact: true })).not.toBeVisible({
       timeout: 10000,
     })
+    await waitForFilesystemIdle(page)
   })
 
   test('permanently delete one item from trash', async ({ page }) => {
     await page.goto('/campaigns')
     await navigateToCampaign(page, campaignName)
+    const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
+    const activeNote = sidebar.getByRole('link', { name: note1, exact: true })
+    const isActiveNoteVisible = await activeNote
+      .waitFor({ state: 'visible', timeout: 1000 })
+      .then(() => true)
+      .catch(() => false)
+    if (isActiveNoteVisible) {
+      await openContextMenu(page, note1)
+      await page.getByRole('menuitem', { name: /move to trash/i }).click()
+      await expect(activeNote).not.toBeVisible({ timeout: 10000 })
+      await waitForFilesystemIdle(page)
+    }
+    await openTrashPopover(page)
+    await expectTrashItemVisible(page, note1)
 
-    // Open trash popover
-    await page.getByRole('button', { name: /^trash/i }).click()
-    await expect(page.getByText(note1)).toBeVisible({ timeout: 5000 })
-
-    // Hover over the note text to reveal action buttons, then click delete
-    await page.getByText(note1).hover()
-    await page.getByRole('button', { name: 'Delete forever' }).click()
-
-    // Confirm permanent deletion
-    const confirmDialog = page.getByRole('dialog', {
-      name: /permanently delete/i,
-    })
-    await confirmDialog.getByRole('button', { name: /delete forever/i }).click()
-
-    await expect(confirmDialog).not.toBeVisible({ timeout: 10000 })
+    await permanentlyDeleteTrashItem(page, note1)
     await expect(page.getByText(note1)).not.toBeVisible({ timeout: 5000 })
+    await waitForFilesystemIdle(page)
   })
 
   test('empty trash removes all trashed items', async ({ page }) => {
     await page.goto('/campaigns')
     await navigateToCampaign(page, campaignName)
+    const emptyNoteA = `Empty Trash A ${Date.now()}`
+    const emptyNoteB = `Empty Trash B ${Date.now()}`
+    await createNote(page, emptyNoteA)
+    await createNote(page, emptyNoteB)
 
     // Move remaining notes to trash
-    await openContextMenu(page, note2)
+    await openContextMenu(page, emptyNoteA)
     await page.getByRole('menuitem', { name: /move to trash/i }).click()
-    await expect(page.getByRole('link', { name: note2, exact: true })).not.toBeVisible({
+    await expect(page.getByRole('link', { name: emptyNoteA, exact: true })).not.toBeVisible({
       timeout: 10000,
     })
+    await waitForFilesystemIdle(page)
 
-    await openContextMenu(page, note3)
+    await openContextMenu(page, emptyNoteB)
     await page.getByRole('menuitem', { name: /move to trash/i }).click()
-    await expect(page.getByRole('link', { name: note3, exact: true })).not.toBeVisible({
+    await expect(page.getByRole('link', { name: emptyNoteB, exact: true })).not.toBeVisible({
       timeout: 10000,
     })
+    await waitForFilesystemIdle(page)
 
-    // Open trash popover and empty
-    await page.getByRole('button', { name: /^trash/i }).click()
-    await expect(page.getByText(note2)).toBeVisible({ timeout: 5000 })
+    await openTrashPopover(page)
+    await expectTrashItemVisible(page, emptyNoteA)
 
     await page.getByRole('button', { name: /empty trash/i }).click()
 
@@ -113,5 +127,6 @@ test.describe.serial('trash: empty & permanent delete', () => {
     await expect(page.getByText(/trash is empty/i)).toBeVisible({
       timeout: 10000,
     })
+    await waitForFilesystemIdle(page)
   })
 })

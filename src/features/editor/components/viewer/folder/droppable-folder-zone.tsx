@@ -1,6 +1,5 @@
 import { useRef } from 'react'
 import type { PointerEventHandler, ReactNode } from 'react'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { Folder } from 'convex/folders/types'
 import { canDropFilesOnTarget } from '~/features/dnd/utils/drop-target-data'
 import { cn } from '~/features/shadcn/lib/utils'
@@ -39,6 +38,7 @@ export function DroppableFolderZone({
   const isDraggingFiles = useDndStore((s) => s.isDraggingFiles)
   const fileDragHoveredId = useDndStore((s) => s.fileDragHoveredId)
   const isFileDragTarget = isDraggingFiles && fileDragHoveredId === folder._id
+  const isNotTrashed = !folder.isTrashed
 
   const activeHighlight =
     isDropTarget && isTrashAction
@@ -53,10 +53,8 @@ export function DroppableFolderZone({
       onPointerDownCapture={onPointerDownCapture}
       className={cn(
         className,
-        folder.location !== SIDEBAR_ITEM_LOCATION.trash && isDropTarget && activeHighlight,
-        folder.location !== SIDEBAR_ITEM_LOCATION.trash &&
-          isFileDragTarget &&
-          'ring-2 ring-inset ring-ring/40 bg-ring/5',
+        isNotTrashed && isDropTarget && activeHighlight,
+        isNotTrashed && isFileDragTarget && 'ring-2 ring-inset ring-ring/40 bg-ring/5',
       )}
     >
       {children}

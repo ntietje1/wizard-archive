@@ -1,4 +1,3 @@
-import { toast } from 'sonner'
 import { EmptyTrashConfirmDialog } from './components/dialogs/trash-confirm-dialogs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
@@ -23,7 +22,7 @@ export interface MenuDialogState {
   closeSidebarItemDialog: () => void
   closeEmptyTrashDialog: () => void
   clearEditorContent: () => void
-  emptyTrashBin: () => Promise<boolean>
+  emptyTrash: () => Promise<void>
 }
 
 export function MenuDialogs({
@@ -39,7 +38,7 @@ export function MenuDialogs({
   closeSidebarItemDialog,
   closeEmptyTrashDialog,
   clearEditorContent,
-  emptyTrashBin,
+  emptyTrash,
 }: MenuDialogState) {
   return (
     <>
@@ -94,8 +93,7 @@ export function MenuDialogs({
           onConfirm={async () => {
             if (!campaignId) return
             try {
-              const emptied = await emptyTrashBin()
-              if (emptied) toast.success('Trash emptied')
+              await emptyTrash()
             } catch (error) {
               handleError(error, 'Failed to empty trash')
             }

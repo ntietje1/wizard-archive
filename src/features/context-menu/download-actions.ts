@@ -7,7 +7,7 @@ import type { ActionHandlers } from './menu-registry'
 import type { MenuContext } from './types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import { resolveContextOperationItems } from './selection-context'
+import { resolveRawContextItems } from './selection-context'
 import { handleError, logger } from '~/shared/utils/logger'
 import { isFile, isGameMap, isNote } from '~/features/sidebar/utils/sidebar-item-utils'
 import { convertBlocksToMarkdown } from '~/features/editor/utils/text-to-blocks'
@@ -225,7 +225,7 @@ export function createDownloadActions({
 }): DownloadActions {
   return {
     downloadItems: async (ctx: MenuContext) => {
-      const items = resolveContextOperationItems(ctx)
+      const items = resolveRawContextItems(ctx)
       if (!campaignId || items.length === 0) return
       const [item] = items
 

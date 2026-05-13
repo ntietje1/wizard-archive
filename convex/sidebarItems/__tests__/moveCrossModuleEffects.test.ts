@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
-import { createFolder, createNote, createSidebarShare } from '../../_test/factories.helper'
+import {
+  executeMoveCommand,
+  createFolder,
+  createNote,
+  createSidebarShare,
+} from '../../_test/factories.helper'
 import {
   expectNotFound,
   expectPermissionDenied,
@@ -10,7 +15,7 @@ import {
 import { api } from '../../_generated/api'
 import { makeYjsUpdateWithBlocks } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
 
-describe('moveSidebarItems cross-module effects', () => {
+describe('executeMoveCommand cross-module effects', () => {
   const t = createTestContext()
 
   it('moving note into shared folder makes it visible via inheritance', async () => {
@@ -42,7 +47,7 @@ describe('moveSidebarItems cross-module effects', () => {
       }),
     )
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [noteId],
       targetParentId: sharedFolder,
@@ -84,7 +89,7 @@ describe('moveSidebarItems cross-module effects', () => {
     })
     expect(noteBefore.myPermissionLevel).toBe('view')
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [noteId],
       targetParentId: null,
@@ -111,7 +116,7 @@ describe('moveSidebarItems cross-module effects', () => {
       name: 'Child Note',
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [folderId],
       targetParentId: null,
@@ -142,7 +147,7 @@ describe('moveSidebarItems cross-module effects', () => {
     })
 
     await expectValidationFailed(
-      dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [parent],
         targetParentId: child,
@@ -167,7 +172,7 @@ describe('moveSidebarItems cross-module effects', () => {
     })
 
     await expectPermissionDenied(
-      playerAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      executeMoveCommand(playerAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [folderId],
         targetParentId: null,
@@ -193,7 +198,7 @@ describe('moveSidebarItems cross-module effects', () => {
       permissionLevel: 'full_access',
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [folderId],
       targetParentId: null,
@@ -201,7 +206,7 @@ describe('moveSidebarItems cross-module effects', () => {
     })
 
     await expectPermissionDenied(
-      playerAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      executeMoveCommand(playerAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [folderId],
         targetParentId: null,
@@ -260,7 +265,7 @@ describe('moveSidebarItems cross-module effects', () => {
     expect(links[0].targetItemId).toBe(targetId)
     expect(links[0].query).toBe('./Target')
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [sourceId],
       targetParentId: folderB,
@@ -332,7 +337,7 @@ describe('moveSidebarItems cross-module effects', () => {
     expect(links).toHaveLength(1)
     expect(links[0].targetItemId).toBe(targetId)
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [districtId],
       targetParentId: elsewhereId,

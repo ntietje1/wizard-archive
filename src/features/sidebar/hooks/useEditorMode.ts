@@ -3,7 +3,6 @@ import { useQueryClient } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { EDITOR_MODE } from 'convex/editors/types'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Editor, EditorMode } from 'convex/editors/types'
@@ -14,7 +13,7 @@ import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 
-export interface EditorModeContextType {
+interface EditorModeContextType {
   editorMode: EditorMode
   viewAsPlayerId: Id<'campaignMembers'> | undefined
   canEdit: boolean
@@ -68,7 +67,7 @@ export function useEditorMode(): EditorModeContextType {
 
   const rawEditorMode = editorQuery.data?.editorMode ?? EDITOR_MODE.EDITOR
 
-  const isDeleted = currentItem?.location === SIDEBAR_ITEM_LOCATION.trash
+  const isDeleted = currentItem?.isTrashed === true
   const canEdit =
     !isDeleted &&
     hasAtLeastPermissionLevel(

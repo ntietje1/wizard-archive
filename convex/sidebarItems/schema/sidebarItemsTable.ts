@@ -1,37 +1,14 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
+import { permissionLevelValidator } from './validators'
+import { sidebarItemTableFields } from './sidebarItemFields'
 import {
-  sidebarItemColorValidator,
-  sidebarItemIconNameValidator,
-  permissionLevelValidator,
-  sidebarItemLocationValidator,
-  sidebarItemNameValidator,
-  sidebarItemSlugValidator,
-  sidebarItemTypeValidator,
-} from './validators'
+  fileSystemCommandValidator,
+  fileSystemEventValidator,
+  fileSystemPatchValidator,
+} from '../filesystem/validators'
 import { sidebarItemShareValidator } from '../../sidebarShares/schema'
 import { convexValidatorFields } from '../../common/schema'
-
-const sidebarItemTableFields = {
-  name: sidebarItemNameValidator,
-  slug: sidebarItemSlugValidator,
-  campaignId: v.id('campaigns'),
-  iconName: v.nullable(sidebarItemIconNameValidator),
-  color: v.nullable(sidebarItemColorValidator),
-  type: sidebarItemTypeValidator,
-  parentId: v.nullable(v.id('sidebarItems')),
-  allPermissionLevel: v.nullable(permissionLevelValidator),
-  location: sidebarItemLocationValidator,
-  previewStorageId: v.nullable(v.id('_storage')),
-  previewLockedUntil: v.nullable(v.number()),
-  previewClaimToken: v.nullable(v.string()),
-  previewUpdatedAt: v.nullable(v.number()),
-  updatedTime: v.nullable(v.number()),
-  updatedBy: v.nullable(v.id('userProfiles')),
-  createdBy: v.id('userProfiles'),
-  deletionTime: v.nullable(v.number()),
-  deletedBy: v.nullable(v.id('userProfiles')),
-}
 
 export const sidebarItemValidatorFields = {
   ...convexValidatorFields('sidebarItems'),
@@ -40,6 +17,8 @@ export const sidebarItemValidatorFields = {
   isBookmarked: v.boolean(),
   myPermissionLevel: permissionLevelValidator,
   previewUrl: v.nullable(v.string()),
+  isActive: v.boolean(),
+  isTrashed: v.boolean(),
 }
 
 const extensionBaseFields = {
@@ -48,13 +27,14 @@ const extensionBaseFields = {
 
 export const sidebarItemsTables = {
   sidebarItems: defineTable(sidebarItemTableFields)
-    .index('by_campaign_location_parent_name', [
+    .index('by_campaign_status_parent_name_deletionTime', [
       'campaignId',
-      'location',
+      'status',
       'parentId',
       'name',
       'deletionTime',
     ])
+    .index('by_campaign_status_deletionTime', ['campaignId', 'status', 'deletionTime'])
     .index('by_campaign_slug', ['campaignId', 'slug', 'deletionTime'])
     .index('by_campaign_deletionTime', ['campaignId', 'deletionTime'])
     .index('by_previewStorageId', ['previewStorageId']),
@@ -85,4 +65,24 @@ export const sidebarItemsTables = {
   canvases: defineTable({
     ...extensionBaseFields,
   }).index('by_sidebarItemId', ['sidebarItemId']),
+
+  filesystemTransactions: defineTable({
+    campaignId: v.id('campaigns'),
+    actorMemberId: v.id('campaignMembers'),
+    clientOperationId: v.nullable(v.string()),
+    requestFingerprint: v.string(),
+    command: fileSystemCommandValidator,
+    events: v.array(fileSystemEventValidator),
+    receiptPatches: v.array(fileSystemPatchValidator),
+    forwardPatches: v.array(fileSystemPatchValidator),
+    inversePatches: v.array(fileSystemPatchValidator),
+    undoable: v.boolean(),
+  })
+    .index('by_campaign_actor', ['campaignId', 'actorMemberId'])
+    .index('by_campaign_actor_undoable', ['campaignId', 'actorMemberId', 'undoable'])
+    .index('by_campaign_actor_clientOperationId', [
+      'campaignId',
+      'actorMemberId',
+      'clientOperationId',
+    ]),
 }

@@ -8,6 +8,7 @@ import type { Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 import type { CustomBlock } from '../../notes/editorSpecs'
 import type { Block } from '../types'
+import { isSidebarItemActive } from '../../sidebarItems/functions/sidebarItemLifecycle'
 
 export async function saveAllBlocksForNote(
   ctx: CampaignMutationCtx,
@@ -15,7 +16,7 @@ export async function saveAllBlocksForNote(
 ): Promise<Array<Block>> {
   const note = await ctx.db.get('sidebarItems', noteId)
   if (!note) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
-  if (note.deletionTime !== null) return []
+  if (!isSidebarItemActive(note)) return []
   const campaignId = note.campaignId
 
   const existingBlocks = await ctx.db
@@ -91,7 +92,10 @@ export async function saveAllBlocksForNote(
 
   return flatBlocks.map((flat) => {
     const block = finalBlocksMap.get(flat.blockNoteId)
-    if (!block) throw new Error(`Block ${flat.blockNoteId} missing after saveAllBlocksForNote`)
+    if (!block) {
+      // Invariant: every incoming flat block has just been inserted or updated above.
+      throw new Error(`Block ${flat.blockNoteId} missing after saveAllBlocksForNote`)
+    }
     return block
   })
 }

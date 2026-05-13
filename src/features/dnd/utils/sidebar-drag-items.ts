@@ -1,7 +1,6 @@
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import { normalizeTopLevelSelectedItems } from 'convex/sidebarItems/operations/selection'
+import { normalizeFileSystemOperationItems } from '~/features/filesystem/normalizeFileSystemOperationItems'
 import { getDragItemIds } from '~/features/dnd/utils/drag-source-data'
 
 export function resolveNormalizedDraggedSidebarItems({
@@ -26,10 +25,8 @@ export function resolveNormalizedDraggedSidebarItems({
     .map((id) => allItemsMap.get(id))
     .filter((item): item is AnySidebarItem => {
       if (!item) return false
-      return (
-        !excluded.has(item._id) && (includeTrashed || item.location !== SIDEBAR_ITEM_LOCATION.trash)
-      )
+      return !excluded.has(item._id) && (includeTrashed || !item.isTrashed)
     })
 
-  return normalizeTopLevelSelectedItems(draggedItems, allItemsMap)
+  return normalizeFileSystemOperationItems(draggedItems, allItemsMap)
 }

@@ -1,9 +1,7 @@
 import { useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { toast } from 'sonner'
 import { TRASH_RETENTION_DAYS } from 'convex/common/constants'
 import { RotateCcw, SquareArrowOutUpRight, Trash2 } from 'lucide-react'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { handleError } from '~/shared/utils/logger'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
@@ -11,9 +9,8 @@ import { Button, buttonVariants } from '~/features/shadcn/components/button'
 import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
-import { useEmptyTrashBin } from '~/features/sidebar/hooks/useEmptyTrashBin'
-import { useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import { useSidebarItemOperations } from '~/features/sidebar/operations/useSidebarItemOperations'
+import { useTrashSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useFileSystem } from '~/features/filesystem/useFileSystem'
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
 import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
 import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
@@ -21,10 +18,7 @@ import { useSidebarItemVisualState } from '~/features/sidebar/hooks/useSelectedI
 import { useItemSurfaceRegistration } from '~/features/sidebar/hooks/useItemSurfaceRegistration'
 import { cn } from '~/features/shadcn/lib/utils'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
-import {
-  emptyTrashDescription,
-  permanentDeleteDescription,
-} from '~/features/sidebar/utils/trash-utils'
+import { emptyTrashDescription } from '~/features/sidebar/utils/trash-utils'
 import { EDITOR_ROUTE, useEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import {
   sidebarItemActionButtonClass,
@@ -39,10 +33,10 @@ interface TrashPopoverContentProps {
 }
 
 export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
-  const { campaignId, isDm, dmUsername, campaignSlug } = useCampaign()
+  const { isDm, dmUsername, campaignSlug } = useCampaign()
   const { setLastSelectedItem } = useLastEditorItem()
 
-  const { data: allTrashedItems, parentItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
+  const { data: allTrashedItems, parentItemsMap } = useTrashSidebarItems()
   const rootTrashedItems = parentItemsMap.get(null) ?? []
   const visibleItemIds = rootTrashedItems.map((item) => item._id)
   const { activateSurface, handleSurfacePointerDown } = useItemSurfaceRegistration({
@@ -51,35 +45,29 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
     visibleItemIds,
   })
 
-  const { emptyTrashBin } = useEmptyTrashBin()
-  const itemOperations = useSidebarItemOperations()
+  const filesystem = useFileSystem()
 
-  const [confirmDeleteItem, setConfirmDeleteItem] = useState<AnySidebarItem | null>(null)
   const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false)
 
   const handleRestore = async (item: AnySidebarItem) => {
     try {
-      await itemOperations.restoreItems([item])
+      await filesystem.restoreItems([item._id], null)
     } catch (error) {
       handleError(error, 'Failed to restore item')
     }
   }
 
-  const handlePermanentDelete = async (item: AnySidebarItem) => {
+  const handlePermanentDelete = (item: AnySidebarItem) => {
     try {
-      await itemOperations.permanentlyDeleteItems([item])
+      filesystem.confirmDeleteForever([item._id])
     } catch (error) {
-      handleError(error, 'Failed to delete item')
+      handleError(error, 'Failed to permanently delete item')
     }
-    setConfirmDeleteItem(null)
   }
 
   const handleEmptyTrash = async () => {
-    if (!campaignId) return
-
     try {
-      await emptyTrashBin()
-      toast.success('Trash emptied')
+      await filesystem.emptyTrash()
     } catch (error) {
       handleError(error, 'Failed to empty trash')
     }
@@ -129,7 +117,7 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
               key={item._id}
               item={item}
               onRestore={handleRestore}
-              onPermanentDelete={setConfirmDeleteItem}
+              onPermanentDelete={handlePermanentDelete}
               onClick={handleItemClick}
               deletionTimeLabel={getDeletionTimeLabel(item)}
               visibleItemIds={visibleItemIds}
@@ -159,18 +147,6 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
           </Button>
         )}
       </div>
-
-      {confirmDeleteItem && (
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={() => setConfirmDeleteItem(null)}
-          onConfirm={() => handlePermanentDelete(confirmDeleteItem)}
-          title="Permanently Delete"
-          description={permanentDeleteDescription(confirmDeleteItem, allTrashedItems)}
-          confirmLabel="Delete Forever"
-          confirmVariant="destructive"
-        />
-      )}
 
       {confirmEmptyTrash && (
         <ConfirmationDialog

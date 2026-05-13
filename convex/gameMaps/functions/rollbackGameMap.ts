@@ -8,6 +8,7 @@ import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import type { GameMapSnapshotData } from '../types'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
+import { isSidebarItemActive } from '../../sidebarItems/functions/sidebarItemLifecycle'
 
 export async function rollbackGameMap(
   ctx: CampaignMutationCtx,
@@ -82,7 +83,7 @@ export async function rollbackGameMap(
   const pinTargetChecks = await asyncMap(parsed.pins, async (pin) => {
     try {
       const item = await ctx.db.get('sidebarItems', pin.itemId)
-      return { pin, exists: item !== null && !item.deletionTime }
+      return { pin, exists: item !== null && isSidebarItemActive(item) }
     } catch {
       return { pin, exists: false }
     }

@@ -14,6 +14,17 @@ export async function pressUndo(page: Page) {
 }
 
 export async function pressRedo(page: Page) {
-  const modifier = await getBrowserPrimaryModifier(page)
-  await page.keyboard.press(modifier === 'Meta' ? 'Meta+Shift+Z' : 'Control+Y')
+  await page.keyboard.press(`${await getBrowserPrimaryModifier(page)}+Shift+Z`)
+}
+
+export async function pressCopy(page: Page) {
+  await page.keyboard.press(`${await getBrowserPrimaryModifier(page)}+C`)
+}
+
+export async function pressCut(page: Page) {
+  await page.keyboard.press(`${await getBrowserPrimaryModifier(page)}+X`)
+}
+
+export async function pressPaste(page: Page) {
+  await page.keyboard.press(`${await getBrowserPrimaryModifier(page)}+V`)
 }

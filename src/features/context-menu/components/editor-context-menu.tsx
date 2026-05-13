@@ -1,5 +1,3 @@
-import { forwardRef } from 'react'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import { useMenuActions } from '../actions'
 import { VIEW_CONTEXT } from '../constants'
 import { buildMenu } from '../menu-builder'
@@ -13,20 +11,26 @@ import { ContextMenuHost } from './context-menu-host'
 import type { ContextMenuHostRef } from './context-menu-host'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { ViewContext } from '../types'
+import type { Ref } from 'react'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useMapViewOptional } from '~/features/editor/hooks/useMapView'
 import { useBlockNoteContextMenuOptional } from '~/features/editor/hooks/useBlockNoteContextMenu'
 import { useSession } from '~/features/sidebar/hooks/useGameSession'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
-import { useActiveSidebarItems, useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import {
+  useActiveSidebarItems,
+  useTrashSidebarItems,
+} from '~/features/sidebar/hooks/useSidebarItems'
 import {
   resolveContextPrimaryItem,
   resolveContextSelectedItems,
 } from '~/features/context-menu/selection-context'
+import { useFileSystem } from '~/features/filesystem/useFileSystem'
 
 export type EditorContextMenuRef = ContextMenuHostRef
 
 interface EditorContextMenuProps {
+  ref?: Ref<EditorContextMenuRef>
   viewContext: ViewContext
   item?: AnySidebarItem
   isTrashView?: boolean
@@ -38,84 +42,80 @@ interface EditorContextMenuProps {
   onDialogClose?: () => void
 }
 
-export const EditorContextMenu = forwardRef<EditorContextMenuRef, EditorContextMenuProps>(
-  (
-    {
-      viewContext,
-      item,
-      isTrashView,
-      children,
-      className,
-      menuClassName = 'w-48 z-[9999]',
-      onClose,
-      onDialogOpen,
-      onDialogClose,
-    },
-    ref,
-  ) => {
-    const menuActions = useMenuActions({ onDialogOpen, onDialogClose })
-    const { campaign } = useCampaign()
-    const { currentSession } = useSession()
-    const mapView = useMapViewOptional()
-    const blockNoteContext = useBlockNoteContextMenuOptional()
-    const selectedItemIds = useSidebarUIStore((s) => s.selectedItemIds)
-    const { itemsMap } = useActiveSidebarItems()
-    const { itemsMap: trashedItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
-    // Item selection is intentionally scoped to sidebar, folder, and trash surfaces.
-    // Update this when adding a VIEW_CONTEXT that should share filesystem selection.
-    const canUseItemSelection =
-      viewContext === VIEW_CONTEXT.SIDEBAR ||
-      viewContext === VIEW_CONTEXT.FOLDER_VIEW ||
-      viewContext === VIEW_CONTEXT.TRASH_VIEW
-    const selectedItems = resolveContextSelectedItems({
-      item,
-      selectedItemIds,
-      activeItemsMap: itemsMap,
-      trashedItemsMap,
-      canUseItemSelection,
-    })
-    const primaryItem = resolveContextPrimaryItem({ item, selectedItems })
+export function EditorContextMenu({
+  ref,
+  viewContext,
+  item,
+  isTrashView,
+  children,
+  className,
+  menuClassName = 'w-48 z-[9999]',
+  onClose,
+  onDialogOpen,
+  onDialogClose,
+}: EditorContextMenuProps) {
+  const menuActions = useMenuActions({ onDialogOpen, onDialogClose })
+  const filesystem = useFileSystem()
+  const { campaign } = useCampaign()
+  const { currentSession } = useSession()
+  const mapView = useMapViewOptional()
+  const blockNoteContext = useBlockNoteContextMenuOptional()
+  const selectedItemIds = useSidebarUIStore((s) => s.selectedItemIds)
+  const { itemsMap } = useActiveSidebarItems()
+  const { itemsMap: trashedItemsMap } = useTrashSidebarItems()
+  // Item selection is intentionally scoped to sidebar, folder, and trash surfaces.
+  // Update this when adding a VIEW_CONTEXT that should share filesystem selection.
+  const canUseItemSelection =
+    viewContext === VIEW_CONTEXT.SIDEBAR ||
+    viewContext === VIEW_CONTEXT.FOLDER_VIEW ||
+    viewContext === VIEW_CONTEXT.TRASH_VIEW
+  const rawSelectedItems = resolveContextSelectedItems({
+    item,
+    selectedItemIds,
+    activeItemsMap: itemsMap,
+    trashedItemsMap,
+    canUseItemSelection,
+  })
+  const selectedItems = filesystem.resolveContextItems({ item, selectedItems: rawSelectedItems })
+  const primaryItem = resolveContextPrimaryItem({ item, selectedItems })
 
-    const menuContext = {
-      surface: viewContext,
-      item,
-      primaryItem,
-      selectedItems,
-      isItemTrashed: item?.location === SIDEBAR_ITEM_LOCATION.trash,
-      isTrashView: isTrashView || viewContext === VIEW_CONTEXT.TRASH_VIEW,
-      currentUserId: campaign.data?.myMembership?.userId,
-      memberRole: campaign.data?.myMembership?.role,
-      permissionLevel: item?.myPermissionLevel,
-      activeMap: mapView?.activeMap ?? undefined,
-      activePin: mapView?.activePin ?? undefined,
-      hasActiveSession: !!currentSession.data,
-      editor: blockNoteContext?.editor ?? undefined,
-      blockNoteId: blockNoteContext?.blockNoteId,
-    }
+  const menuContext = {
+    surface: viewContext,
+    item,
+    primaryItem,
+    selectedItems,
+    isItemTrashed: item?.isTrashed === true,
+    isTrashView: isTrashView || viewContext === VIEW_CONTEXT.TRASH_VIEW,
+    currentUserId: campaign.data?.myMembership?.userId,
+    memberRole: campaign.data?.myMembership?.role,
+    permissionLevel: item?.myPermissionLevel,
+    activeMap: mapView?.activeMap ?? undefined,
+    activePin: mapView?.activePin ?? undefined,
+    hasActiveSession: !!currentSession.data,
+    editor: blockNoteContext?.editor ?? undefined,
+    blockNoteId: blockNoteContext?.blockNoteId,
+  }
 
-    const menu = buildMenu({
-      context: menuContext,
-      services: { actions: menuActions.actions },
-      contributors: editorContextMenuContributors,
-      commands: editorContextMenuCommands,
-      groupConfig,
-    })
+  const menu = buildMenu({
+    context: menuContext,
+    services: { actions: menuActions.actions },
+    contributors: editorContextMenuContributors,
+    commands: editorContextMenuCommands,
+    groupConfig,
+  })
 
-    return (
-      <>
-        <ContextMenuHost
-          ref={ref}
-          menu={menu}
-          className={className}
-          menuClassName={menuClassName}
-          onClose={onClose}
-        >
-          {children}
-        </ContextMenuHost>
-        <MenuDialogs {...menuActions.dialogState} />
-      </>
-    )
-  },
-)
-
-EditorContextMenu.displayName = 'EditorContextMenu'
+  return (
+    <>
+      <ContextMenuHost
+        ref={ref}
+        menu={menu}
+        className={className}
+        menuClassName={menuClassName}
+        onClose={onClose}
+      >
+        {children}
+      </ContextMenuHost>
+      <MenuDialogs {...menuActions.dialogState} />
+    </>
+  )
+}

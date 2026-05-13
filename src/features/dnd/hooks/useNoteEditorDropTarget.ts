@@ -1,14 +1,16 @@
 import { useEffect, useRef } from 'react'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import type { Id } from 'convex/_generated/dataModel'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import { NOTE_EDITOR_DROP_TYPE } from '~/features/dnd/utils/drop-target-data'
 import {
   executeSurfaceDropCommand,
   resolveSidebarSurfaceDropCommand,
 } from '~/features/dnd/utils/surface-drop-command'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
-import { useActiveSidebarItems, useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import {
+  useActiveSidebarItems,
+  useTrashSidebarItems,
+} from '~/features/sidebar/hooks/useSidebarItems'
 import { getMinDisambiguationPath } from 'convex/links/linkResolution'
 import { useNoteEditorStore } from '~/features/editor/stores/note-editor-store'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
@@ -29,7 +31,7 @@ export function useNoteEditorDropTarget({
   })
 
   const { data: allItems, itemsMap } = useActiveSidebarItems()
-  const { itemsMap: trashedItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
+  const { itemsMap: trashedItemsMap } = useTrashSidebarItems()
   const { campaignId } = useCampaign()
   const setBatchDecision = useDndStore((s) => s.setBatchDecision)
   const allItemsRef = useRef(allItems)

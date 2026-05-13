@@ -27,7 +27,7 @@ function makeItem(id: string, name: string, parentId: string | null = null): Any
     type: 'notes',
     color: null,
     iconName: null,
-    location: 'sidebar',
+    status: 'active',
     myPermissionLevel: 'edit',
     isBookmarked: false,
     inheritShares: true,

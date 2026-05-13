@@ -1,57 +1,82 @@
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { DropOutcome } from './drop-outcome'
-import { resolveDropOutcome } from './drop-outcome-planner'
 import type { DropPlanningContext } from './drop-planning-context'
-import { resolveGlobalDropCommand } from './global-drop-planner'
-import type { GlobalDropOptions } from './global-drop-planner'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { resolveSurfaceDropCommand } from './surface-drop-planner'
-import type { SidebarDropData } from './drop-target-data'
+import {
+  EMPTY_EDITOR_DROP_TYPE,
+  SIDEBAR_ROOT_DROP_TYPE,
+  TRASH_DROP_ZONE_TYPE,
+} from './drop-target-data'
+import type { ResolvedSidebarItemDropData, SidebarDropData } from './drop-target-data'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import type {
+  FileSystemGlobalDropOptions,
+  FileSystemGlobalDropTarget,
+} from '~/features/filesystem/filesystem-drop-planner'
+import { resolveGlobalFileSystemDropCommand } from '~/features/filesystem/filesystem-drop-planner'
 import { assertNever } from '~/shared/utils/utils'
 
-export type DropFeedback = {
+type DropFeedback = {
   outcome: DropOutcome | null
   rejectedItemCount?: number
+}
+
+export function toGlobalFileSystemDropTarget(
+  dropTarget: SidebarDropData,
+  ctx: DropPlanningContext,
+): FileSystemGlobalDropTarget | null {
+  switch (dropTarget.type) {
+    case TRASH_DROP_ZONE_TYPE:
+      return { type: 'trash' }
+    case EMPTY_EDITOR_DROP_TYPE:
+      return { type: 'open' }
+    case SIDEBAR_ROOT_DROP_TYPE:
+      return { type: 'root', label: ctx.campaignName || 'Root' }
+    case SIDEBAR_ITEM_TYPES.folders:
+      return {
+        type: 'folder',
+        folder: dropTarget as ResolvedSidebarItemDropData,
+        ancestorIds: (dropTarget as ResolvedSidebarItemDropData).ancestorIds,
+      }
+    default:
+      return null
+  }
 }
 
 export function resolveDropFeedback(
   draggedItems: Array<AnySidebarItem> | null | undefined,
   dropTarget: SidebarDropData | null,
   ctx: DropPlanningContext,
-  options: GlobalDropOptions = {},
+  options: FileSystemGlobalDropOptions = {},
 ): DropFeedback {
   if (!dropTarget) return { outcome: null }
   if (!draggedItems || draggedItems.length === 0) return { outcome: null }
 
-  const globalCommand = resolveGlobalDropCommand(draggedItems, dropTarget, ctx, options)
-  switch (globalCommand.status) {
-    case 'ready':
-      if (globalCommand.action === 'copy') {
+  const globalTarget = toGlobalFileSystemDropTarget(dropTarget, ctx)
+  if (globalTarget) {
+    const globalCommand = resolveGlobalFileSystemDropCommand(
+      draggedItems,
+      globalTarget,
+      ctx,
+      options,
+    )
+    switch (globalCommand.status) {
+      case 'ready':
         return {
           outcome: {
             type: 'operation',
-            action: 'copy',
-            label:
-              dropTarget.type === SIDEBAR_ITEM_TYPES.folders
-                ? `Copy to "${dropTarget.name || 'Unnamed folder'}"`
-                : `Copy to "${ctx.campaignName || 'Root'}"`,
+            action: globalCommand.action,
+            label: globalCommand.label,
             execute: null,
           },
         }
-      }
-      return {
-        outcome: resolveDropOutcome(
-          globalCommand.action === 'open' ? globalCommand.item : (globalCommand.items[0] ?? null),
-          dropTarget,
-          ctx,
-        ),
-      }
-    case 'blocked':
-      return { outcome: { type: 'rejection', reason: globalCommand.reason } }
-    case 'noop':
-      break
-    default:
-      return assertNever(globalCommand)
+      case 'blocked':
+        return { outcome: { type: 'rejection', reason: globalCommand.reason } }
+      case 'noop':
+        break
+      default:
+        return assertNever(globalCommand)
+    }
   }
 
   const surfaceCommand = resolveSurfaceDropCommand(draggedItems, dropTarget, ctx)

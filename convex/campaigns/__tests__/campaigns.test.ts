@@ -899,7 +899,7 @@ describe('deleteCampaign', () => {
 
       const sidebarItems = await dbCtx.db
         .query('sidebarItems')
-        .withIndex('by_campaign_location_parent_name', (q) => q.eq('campaignId', ctx.campaignId))
+        .withIndex('by_campaign_deletionTime', (q) => q.eq('campaignId', ctx.campaignId))
         .collect()
       expect(sidebarItems).toHaveLength(0)
 

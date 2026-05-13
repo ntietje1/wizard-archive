@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import {
-  resolveContextOperationItems,
   resolveContextPrimaryItem,
   resolveContextSelectedItems,
+  resolveRawContextItems,
 } from '~/features/context-menu/selection-context'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 
@@ -50,7 +49,7 @@ describe('resolveContextSelectedItems', () => {
     expect(selectedItems).toEqual([item])
   })
 
-  it('resolves and normalizes selected roots', () => {
+  it('resolves selected items without applying filesystem normalization', () => {
     const folder = createFolder()
     const child = createNote({ parentId: folder._id })
     const selectedItems = resolveContextSelectedItems({
@@ -64,10 +63,10 @@ describe('resolveContextSelectedItems', () => {
       canUseItemSelection: true,
     })
 
-    expect(selectedItems).toEqual([folder])
+    expect(selectedItems).toEqual([folder, child])
   })
 
-  it('normalizes deeper hierarchy selections to the highest selected ancestor', () => {
+  it('preserves deeper hierarchy selections for filesystem to normalize later', () => {
     const grandparent = createFolder()
     const parent = createFolder({ parentId: grandparent._id })
     const child = createNote({ parentId: parent._id })
@@ -84,7 +83,7 @@ describe('resolveContextSelectedItems', () => {
       canUseItemSelection: true,
     })
 
-    expect(selectedItems).toEqual([grandparent])
+    expect(selectedItems).toEqual([grandparent, parent, child])
   })
 
   it('keeps a selected child when its parent is not selected', () => {
@@ -142,7 +141,7 @@ describe('resolveContextSelectedItems', () => {
   })
 
   it('resolves selected trash items from the trash map', () => {
-    const trashed = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
+    const trashed = createNote({ status: 'trashed' })
 
     const selectedItems = resolveContextSelectedItems({
       item: trashed,
@@ -157,7 +156,7 @@ describe('resolveContextSelectedItems', () => {
 
   it('resolves mixed active and trash selections from both maps', () => {
     const active = createNote()
-    const trashed = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
+    const trashed = createNote({ status: 'trashed' })
 
     const selectedItems = resolveContextSelectedItems({
       item: active,
@@ -171,13 +170,13 @@ describe('resolveContextSelectedItems', () => {
   })
 })
 
-describe('resolveContextOperationItems', () => {
+describe('resolveRawContextItems', () => {
   it('uses selected items when the clicked item is part of the selection', () => {
     const note = createNote()
     const folder = createFolder()
 
     expect(
-      resolveContextOperationItems({
+      resolveRawContextItems({
         item: note,
         selectedItems: [note, folder],
       }),
@@ -187,7 +186,7 @@ describe('resolveContextOperationItems', () => {
   it('falls back to the clicked item when there is no selection', () => {
     const note = createNote()
 
-    expect(resolveContextOperationItems({ item: note })).toEqual([note])
+    expect(resolveRawContextItems({ item: note })).toEqual([note])
   })
 
   it('uses only the clicked item when it is outside the current selection', () => {
@@ -195,7 +194,7 @@ describe('resolveContextOperationItems', () => {
     const selected = createFolder()
 
     expect(
-      resolveContextOperationItems({
+      resolveRawContextItems({
         item: clicked,
         selectedItems: [selected],
       }),
@@ -203,19 +202,19 @@ describe('resolveContextOperationItems', () => {
   })
 
   it('uses no items for root context without selected items', () => {
-    expect(resolveContextOperationItems({})).toEqual([])
+    expect(resolveRawContextItems({})).toEqual([])
   })
 
-  it('normalizes selected descendants under selected folders', () => {
+  it('preserves selected descendants under selected folders', () => {
     const folder = createFolder()
     const child = createNote({ parentId: folder._id })
 
     expect(
-      resolveContextOperationItems({
+      resolveRawContextItems({
         item: child,
         selectedItems: [folder, child],
       }),
-    ).toEqual([folder])
+    ).toEqual([folder, child])
   })
 })
 

@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { ActionHandlers } from '~/features/context-menu/menu-registry'
 import type {
   ContextMenuCommand,
@@ -138,10 +137,7 @@ describe('buildMenu', () => {
 
   it('hides active-item operations when any selected root is trashed', () => {
     const deletionTime = 1_700_000_000_000
-    const selectedItems = [
-      createNote(),
-      createFile({ location: SIDEBAR_ITEM_LOCATION.trash, deletionTime }),
-    ]
+    const selectedItems = [createNote(), createFile({ status: 'trashed', deletionTime })]
     const menu = buildMenu({
       context: sidebarCtx({
         item: selectedItems[0],

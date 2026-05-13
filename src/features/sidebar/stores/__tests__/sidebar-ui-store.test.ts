@@ -344,21 +344,19 @@ describe('selection', () => {
     expect(useSidebarUIStore.getState().anchorItemId).toBe(a)
   })
 
-  it('clearSelectionForCampaignChange clears selection and item clipboard', () => {
+  it('clearSelectionForCampaignChange clears selection state', () => {
     useSidebarUIStore
       .getState()
       .setSelectedItemIds([testId<'sidebarItems'>('note_1')], testId<'sidebarItems'>('note_1'))
-    useSidebarUIStore.getState().setItemClipboard({
-      mode: 'copy',
-      campaignId: testId<'campaigns'>('campaign_1'),
-      itemIds: [testId<'sidebarItems'>('note_1')],
-    })
 
     useSidebarUIStore.getState().clearSelectionForCampaignChange()
 
     expect(useSidebarUIStore.getState().selectedItemIds).toEqual([])
     expect(useSidebarUIStore.getState().anchorItemId).toBeNull()
-    expect(useSidebarUIStore.getState().itemClipboard).toBeNull()
+    expect(useSidebarUIStore.getState().focusedItemId).toBeNull()
+    expect(useSidebarUIStore.getState().selectionSurface).toBeNull()
+    expect(useSidebarUIStore.getState().focusSurface).toBeNull()
+    expect(useSidebarUIStore.getState().activeItemSurface).toBeNull()
   })
 })
 

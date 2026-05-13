@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { resolveNormalizedDraggedSidebarItems } from '~/features/dnd/utils/sidebar-drag-items'
@@ -37,7 +36,7 @@ describe('resolveNormalizedDraggedSidebarItems', () => {
 
   it('skips trashed items unless requested', () => {
     const active = createNote()
-    const trashed = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
+    const trashed = createNote({ status: 'trashed' })
 
     const items = resolveNormalizedDraggedSidebarItems({
       sourceData: { sidebarItemIds: [active._id, trashed._id] },
@@ -49,7 +48,7 @@ describe('resolveNormalizedDraggedSidebarItems', () => {
   })
 
   it('can include trashed items for move and restore decisions', () => {
-    const trashed = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
+    const trashed = createNote({ status: 'trashed' })
 
     const items = resolveNormalizedDraggedSidebarItems({
       sourceData: { sidebarItemIds: [trashed._id] },

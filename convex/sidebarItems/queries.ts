@@ -1,29 +1,43 @@
 import { v } from 'convex/values'
 import { campaignQuery } from '../functions'
-import { SIDEBAR_ITEM_LOCATION } from './types/baseTypes'
+import { SIDEBAR_ITEM_STATUS } from './types/baseTypes'
 import { fetchCampaignSidebarItems } from './functions/fetchCampaignSidebarItems'
 import { getSidebarItemsByParent as getSidebarItemsByParentFn } from './functions/getSidebarItemsByParent'
 import { getSidebarItemBySlug as getSidebarItemBySlugFn } from './functions/getSidebarItemBySlug'
 import { anySidebarItemValidator } from './schema/anySidebarItemValidator'
-import { sidebarItemLocationValidator, sidebarItemSlugValidator } from './schema/validators'
+import { sidebarItemSlugValidator } from './schema/validators'
 import { anySidebarItemWithContentValidator } from './schema/anySidebarItemWithContentValidator'
 import { getSidebarItemWithContent } from './functions/getSidebarItemWithContent'
 import { ERROR_CODE, throwClientError } from '../errors'
 import { requireSidebarItemSlug } from './validation/slug'
+import { logger } from '../common/logger'
 
-export const getSidebarItemsByLocation = campaignQuery({
-  args: {
-    location: sidebarItemLocationValidator,
-  },
+export const getActiveSidebarItems = campaignQuery({
+  args: {},
   returns: v.array(anySidebarItemValidator),
-  handler: async (ctx, args) => {
-    const items = await fetchCampaignSidebarItems(ctx, {
-      location: args.location,
+  handler: async (ctx) => {
+    return await fetchCampaignSidebarItems(ctx, {
+      status: SIDEBAR_ITEM_STATUS.active,
     })
-    if (args.location === SIDEBAR_ITEM_LOCATION.trash) {
-      items.sort((a, b) => (b.deletionTime ?? 0) - (a.deletionTime ?? 0))
+  },
+})
+
+export const getTrashedSidebarItems = campaignQuery({
+  args: {},
+  returns: v.array(anySidebarItemValidator),
+  handler: async (ctx) => {
+    const items = await fetchCampaignSidebarItems(ctx, {
+      status: SIDEBAR_ITEM_STATUS.trashed,
+    })
+    const missingDeletionTime = items.filter((item) => item.deletionTime == null)
+    if (missingDeletionTime.length > 0) {
+      logger.warn('Ignoring trashed sidebar items without deletionTime', {
+        itemIds: missingDeletionTime.map((item) => item._id),
+      })
     }
-    return items
+    const sortableItems = items.filter((item) => item.deletionTime != null)
+    sortableItems.sort((a, b) => b.deletionTime! - a.deletionTime!)
+    return sortableItems
   },
 })
 

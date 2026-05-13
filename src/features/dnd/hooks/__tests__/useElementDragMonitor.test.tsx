@@ -23,12 +23,7 @@ function createMonitorCtx(items: Array<AnySidebarItem>): DndMonitorCtx {
     allItemsMap: itemsMap,
     getAncestorIds: vi.fn(() => []),
     dndContext: {
-      moveItems: vi.fn(),
-      copyItems: vi.fn(),
-      restoreItems: vi.fn(),
-      trashItems: vi.fn(),
-      navigateToItem: vi.fn(),
-      setFolderOpen: vi.fn(),
+      executeFileSystemDropCommand: vi.fn(),
     },
     dropPlanningContext: {
       campaignId: testId<'campaigns'>('campaign_1'),
@@ -319,7 +314,14 @@ describe('useElementDragMonitor', () => {
       })
     })
 
-    expect(ctx.dndContext.copyItems).toHaveBeenCalledWith([note], target._id)
-    expect(ctx.dndContext.moveItems).not.toHaveBeenCalled()
+    expect(ctx.dndContext.executeFileSystemDropCommand).toHaveBeenCalledTimes(1)
+    expect(ctx.dndContext.executeFileSystemDropCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'ready',
+        action: 'copy',
+        items: [note],
+        parentId: target._id,
+      }),
+    )
   })
 })

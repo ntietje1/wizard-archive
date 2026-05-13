@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
+import { createNoteViaFilesystem } from '../../_test/filesystemSetup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
-import { createFolder } from '../../_test/factories.helper'
+import { executeMoveCommand, createFolder } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
 
@@ -30,7 +31,7 @@ describe('hard delete YJS cleanup', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Doomed Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -38,15 +39,16 @@ describe('hard delete YJS cleanup', () => {
 
     expect(await queryYjsUpdates(noteId)).toHaveLength(1)
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [noteId],
       targetParentId: null,
       action: 'trash',
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.emptyTrashBin, {
+    await dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
       campaignId: ctx.campaignId,
+      command: { type: 'emptyTrash' },
     })
 
     expect(await queryYjsUpdates(noteId)).toHaveLength(0)
@@ -56,7 +58,7 @@ describe('hard delete YJS cleanup', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Awareness Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -71,15 +73,16 @@ describe('hard delete YJS cleanup', () => {
 
     expect(await queryYjsAwareness(noteId)).toHaveLength(1)
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [noteId],
       targetParentId: null,
       action: 'trash',
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.emptyTrashBin, {
+    await dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
       campaignId: ctx.campaignId,
+      command: { type: 'emptyTrash' },
     })
 
     expect(await queryYjsAwareness(noteId)).toHaveLength(0)
@@ -91,7 +94,7 @@ describe('hard delete YJS cleanup', () => {
 
     const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Nested Note',
       parentTarget: { kind: 'direct', parentId: folderId },
@@ -108,15 +111,16 @@ describe('hard delete YJS cleanup', () => {
 
     expect(await queryYjsAwareness(noteId)).toHaveLength(1)
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [folderId],
       targetParentId: null,
       action: 'trash',
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.emptyTrashBin, {
+    await dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
       campaignId: ctx.campaignId,
+      command: { type: 'emptyTrash' },
     })
 
     expect(await queryYjsUpdates(noteId)).toHaveLength(0)

@@ -1,5 +1,4 @@
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
 import { ItemCard } from './item-card'
 import { NewItemCard } from './new-item-card'
@@ -7,7 +6,10 @@ import { DroppableFolderZone } from './droppable-folder-zone'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { FolderWithContent } from 'convex/folders/types'
 import { CreateNewDashboard } from '~/features/editor/components/create-new-dashboard'
-import { useFilteredSidebarItems, useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import {
+  useFilteredSidebarItems,
+  useTrashSidebarItems,
+} from '~/features/sidebar/hooks/useSidebarItems'
 import { ContentGrid } from '~/features/campaigns/components/content-grid/content-grid'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
@@ -16,11 +18,9 @@ import { useItemSurfaceRegistration } from '~/features/sidebar/hooks/useItemSurf
 
 export function FolderViewer({ item: folder }: EditorViewerProps<FolderWithContent>) {
   const { parentItemsMap, status } = useFilteredSidebarItems()
-  const { parentItemsMap: trashedParentItemsMap, status: trashedStatus } = useSidebarItems(
-    SIDEBAR_ITEM_LOCATION.trash,
-  )
+  const { parentItemsMap: trashedParentItemsMap, status: trashedStatus } = useTrashSidebarItems()
 
-  const isDeleted = folder.location === SIDEBAR_ITEM_LOCATION.trash
+  const isDeleted = folder.isTrashed
   const effectiveStatus = isDeleted ? trashedStatus : status
   const children = isDeleted
     ? (trashedParentItemsMap.get(folder._id) ?? [])

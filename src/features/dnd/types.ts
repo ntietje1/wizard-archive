@@ -1,19 +1,11 @@
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import type { DropPlanningContext } from '~/features/dnd/utils/drop-planning-context'
 import type { DropResult } from '~/features/file-upload/utils/folder-reader'
+import type { FileSystemGlobalDropCommand } from '~/features/filesystem/filesystem-drop-planner'
 
 export interface DndExecutionContext {
-  moveItems: (items: Array<AnySidebarItem>, parentId?: Id<'sidebarItems'> | null) => Promise<void>
-  copyItems: (items: Array<AnySidebarItem>, parentId?: Id<'sidebarItems'> | null) => Promise<void>
-  restoreItems: (
-    items: Array<AnySidebarItem>,
-    parentId?: Id<'sidebarItems'> | null,
-  ) => Promise<void>
-  trashItems: (items: Array<AnySidebarItem>) => Promise<void>
-  navigateToItem: (slug: SidebarItemSlug, replace?: boolean) => Promise<void>
-  setFolderOpen: (folderId: Id<'sidebarItems'>) => void
+  executeFileSystemDropCommand: (command: FileSystemGlobalDropCommand) => Promise<void>
 }
 
 export interface DndMonitorCtx {

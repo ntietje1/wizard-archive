@@ -8,11 +8,11 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { getLinkAt } from '~/features/editor/utils/link-hit-testing'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useEditorDomElement } from '~/features/editor/hooks/useEditorDomElement'
-import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
+import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { CREATE_PARENT_TARGET_KIND } from 'convex/sidebarItems/validation/parent'
-import type { CreateItemArgs } from '~/features/sidebar/hooks/useCreateSidebarItem'
+import type { CreateItemArgs } from '~/features/filesystem/useCreateFileSystemItem'
 import type { ValidationResult } from 'convex/sidebarItems/validation/name'
 
 interface TooltipState {
@@ -41,7 +41,6 @@ function buildGhostCreateArgs(
   }
 
   return {
-    campaignId,
     type: SIDEBAR_ITEM_TYPES.notes,
     name: link.itemName,
     parentTarget: {
@@ -131,6 +130,67 @@ function getLinkCreationKey(link: ReturnType<typeof getLinkAt>): string | null {
   return `${link.pathKind}:${link.itemPath.join('/') || link.itemName}`
 }
 
+function stopLinkClick(e: MouseEvent) {
+  e.preventDefault()
+  e.stopPropagation()
+}
+
+function getInternalLinkNavigation(link: LinkAtPoint & { href: string }) {
+  const url = new URL(link.href, window.location.origin)
+  const search: Record<string, string> = {}
+  url.searchParams.forEach((value, key) => {
+    search[key] = value
+  })
+  if (link.heading) search.heading = link.heading
+  return { url, search }
+}
+
+function handleExternalLinkClick({
+  e,
+  link,
+  editorMode,
+  isCtrlClick,
+}: {
+  e: MouseEvent
+  link: LinkAtPoint
+  editorMode: 'editor' | 'viewer'
+  isCtrlClick: boolean
+}) {
+  if (link.type !== 'md-external' || !link.href) return false
+  if (editorMode === 'editor' && !isCtrlClick) return true
+
+  stopLinkClick(e)
+  window.open(link.href, '_blank', 'noopener,noreferrer')
+  return true
+}
+
+function handleExistingLinkClick({
+  e,
+  link,
+  editorMode,
+  isCtrlClick,
+  navigate,
+}: {
+  e: MouseEvent
+  link: LinkAtPoint
+  editorMode: 'editor' | 'viewer'
+  isCtrlClick: boolean
+  navigate: (args: { to: string; search: Record<string, string> }) => unknown
+}) {
+  if (!link.exists || !link.href) return false
+  if (editorMode === 'editor' && !isCtrlClick) return true
+
+  stopLinkClick(e)
+  const { url, search } = getInternalLinkNavigation(link as LinkAtPoint & { href: string })
+  if (editorMode === 'viewer' && isCtrlClick) {
+    if (link.heading) url.searchParams.set('heading', link.heading)
+    window.open(url.toString(), '_blank', 'noopener,noreferrer')
+  } else {
+    void navigate({ to: url.pathname, search })
+  }
+  return true
+}
+
 export function LinkClickHandler({
   editor,
   sourceNoteId,
@@ -143,20 +203,20 @@ export function LinkClickHandler({
   const { campaign } = useCampaign()
   const campaignData = campaign.data
   const { editorMode } = useEditorMode()
-  const { createItem, validateCreateItem } = useCreateSidebarItem()
+  const { createItem, validateCreateItem } = useCreateFileSystemItem()
   const { itemsMap } = useActiveSidebarItems()
   const editorEl = useEditorDomElement(editor)
   const sourceParentId = sourceNoteId ? itemsMap.get(sourceNoteId)?.parentId : undefined
 
   const [tooltip, setTooltip] = useState<TooltipState>(HIDDEN_TOOLTIP)
-  const [ctrlHeld, setCtrlHeld] = useState(false)
+  const ctrlHeldRef = useRef(false)
   const mousePosRef = useRef<{ x: number; y: number } | null>(null)
   const creatingLinksRef = useRef(new Set<string>())
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Control' || e.key === 'Meta') {
-        setCtrlHeld(true)
+        ctrlHeldRef.current = true
         const mousePos = mousePosRef.current
         if (mousePos) {
           const link = getLinkAt(mousePos.x, mousePos.y)
@@ -174,12 +234,12 @@ export function LinkClickHandler({
     }
     const onKeyUp = (e: KeyboardEvent) => {
       if (e.key === 'Control' || e.key === 'Meta') {
-        setCtrlHeld(false)
+        ctrlHeldRef.current = false
         setTooltip(HIDDEN_TOOLTIP)
       }
     }
     const onBlur = () => {
-      setCtrlHeld(false)
+      ctrlHeldRef.current = false
       setTooltip(HIDDEN_TOOLTIP)
     }
 
@@ -200,7 +260,7 @@ export function LinkClickHandler({
       mousePosRef.current = { x: e.clientX, y: e.clientY }
 
       const link = getLinkAt(e.clientX, e.clientY)
-      if (!ctrlHeld) {
+      if (!ctrlHeldRef.current) {
         setTooltip(HIDDEN_TOOLTIP)
         return
       }
@@ -227,7 +287,7 @@ export function LinkClickHandler({
       editorEl.removeEventListener('mousemove', onMouseMove)
       editorEl.removeEventListener('mouseleave', onMouseLeave)
     }
-  }, [campaignData?._id, ctrlHeld, editorEl, editorMode, sourceParentId, validateCreateItem])
+  }, [campaignData?._id, editorEl, editorMode, sourceParentId, validateCreateItem])
 
   useEffect(() => {
     if (!editorEl) return
@@ -238,39 +298,8 @@ export function LinkClickHandler({
 
       const isCtrlClick = e.ctrlKey || e.metaKey
 
-      if (link.type === 'md-external' && link.href) {
-        if (editorMode === 'editor' && !isCtrlClick) return
-        e.preventDefault()
-        e.stopPropagation()
-        window.open(link.href, '_blank', 'noopener,noreferrer')
-        return
-      }
-
-      if (link.exists && link.href) {
-        const url = new URL(link.href, window.location.origin)
-        const searchParams: Record<string, string> = {}
-        url.searchParams.forEach((v, k) => {
-          searchParams[k] = v
-        })
-        if (link.heading) searchParams.heading = link.heading
-
-        if (editorMode === 'editor') {
-          if (!isCtrlClick) return
-          e.preventDefault()
-          e.stopPropagation()
-          void navigate({ to: url.pathname, search: searchParams })
-        } else {
-          e.preventDefault()
-          e.stopPropagation()
-          if (isCtrlClick) {
-            if (link.heading) url.searchParams.set('heading', link.heading)
-            window.open(url.toString(), '_blank', 'noopener,noreferrer')
-          } else {
-            void navigate({ to: url.pathname, search: searchParams })
-          }
-        }
-        return
-      }
+      if (handleExternalLinkClick({ e, link, editorMode, isCtrlClick })) return
+      if (handleExistingLinkClick({ e, link, editorMode, isCtrlClick, navigate })) return
 
       const feedback = getGhostLinkFeedback({
         link,
@@ -278,24 +307,25 @@ export function LinkClickHandler({
         sourceParentId,
         validateCreateItem,
       })
-      if (feedback && isCtrlClick) {
-        e.preventDefault()
-        e.stopPropagation()
-        setTooltip(HIDDEN_TOOLTIP)
+      if (!feedback || !isCtrlClick) {
+        return
+      }
 
-        const creationKey = getLinkCreationKey(link)
-        if (!creationKey || creatingLinksRef.current.has(creationKey)) return
-        if (!feedback.isValid) return
+      stopLinkClick(e)
+      setTooltip(HIDDEN_TOOLTIP)
 
-        creatingLinksRef.current.add(creationKey)
-        try {
-          const result = await createItem(feedback.createArgs)
-          if (result) void navigateToItem(result.slug)
-        } catch (error) {
-          handleError(error, 'Failed to create note')
-        } finally {
-          creatingLinksRef.current.delete(creationKey)
-        }
+      const creationKey = getLinkCreationKey(link)
+      if (!creationKey || creatingLinksRef.current.has(creationKey)) return
+      if (!feedback.isValid) return
+
+      creatingLinksRef.current.add(creationKey)
+      try {
+        const result = await createItem(feedback.createArgs)
+        if (result) void navigateToItem(result.slug)
+      } catch (error) {
+        handleError(error, 'Failed to create note')
+      } finally {
+        creatingLinksRef.current.delete(creationKey)
       }
     }
 
@@ -316,12 +346,11 @@ export function LinkClickHandler({
     <>
       {tooltip.show && (
         <div
-          className="wiki-link-tooltip"
+          className="wiki-link-tooltip z-50"
           style={{
             position: 'fixed',
             top: tooltip.y,
             left: tooltip.x,
-            zIndex: 9999,
           }}
         >
           {tooltip.text}

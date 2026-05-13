@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
-import {
-  normalizeTopLevelSelectedItems,
-  selectionBelongsToSurface,
-} from 'convex/sidebarItems/operations/selection'
+import { normalizeFileSystemOperationItems } from '~/features/filesystem/normalizeFileSystemOperationItems'
 import { buildVisibleSidebarItemIds } from '~/features/sidebar/utils/item-selection-order'
 import type { SortOptions } from 'convex/editors/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
@@ -29,6 +26,14 @@ function parentMap(
     siblings.push(item)
   }
   return map
+}
+
+function selectionBelongsToSurface(
+  selectedIds: Array<Id<'sidebarItems'>>,
+  visibleItemIds: Array<Id<'sidebarItems'>>,
+) {
+  const visibleIds = new Set(visibleItemIds)
+  return selectedIds.every((id) => visibleIds.has(id))
 }
 
 describe('buildVisibleSidebarItemIds', () => {
@@ -62,7 +67,7 @@ describe('buildVisibleSidebarItemIds', () => {
   })
 })
 
-describe('normalizeTopLevelSelectedItems', () => {
+describe('normalizeFileSystemOperationItems', () => {
   it('removes descendants when their ancestor folder is selected', () => {
     const folder = createFolder({ name: 'Folder' })
     const child = createNote({ name: 'Child', parentId: folder._id })
@@ -75,7 +80,7 @@ describe('normalizeTopLevelSelectedItems', () => {
       [sibling._id, sibling],
     ])
 
-    const result = normalizeTopLevelSelectedItems([child, folder, grandchild, sibling], itemsMap)
+    const result = normalizeFileSystemOperationItems([child, folder, grandchild, sibling], itemsMap)
 
     expect(result.map((item) => item._id)).toEqual([folder._id, sibling._id])
   })
@@ -88,7 +93,7 @@ describe('normalizeTopLevelSelectedItems', () => {
       [second._id, second],
     ])
 
-    const result = normalizeTopLevelSelectedItems([second, first], itemsMap)
+    const result = normalizeFileSystemOperationItems([second, first], itemsMap)
 
     expect(result.map((item) => item._id)).toEqual([second._id, first._id])
   })
@@ -101,7 +106,7 @@ describe('normalizeTopLevelSelectedItems', () => {
       [second._id, second],
     ])
 
-    const result = normalizeTopLevelSelectedItems([first, second, first], itemsMap)
+    const result = normalizeFileSystemOperationItems([first, second, first], itemsMap)
 
     expect(result.map((item) => item._id)).toEqual([first._id, second._id])
   })
@@ -119,9 +124,49 @@ describe('normalizeTopLevelSelectedItems', () => {
       [parentB._id, parentB],
     ])
 
-    const result = normalizeTopLevelSelectedItems([cycledFirst, cycledFirst], itemsMap)
+    const result = normalizeFileSystemOperationItems([cycledFirst, cycledFirst], itemsMap)
 
     expect(result.map((item) => item._id)).toEqual([first._id])
+  })
+
+  it('handles missing items in the map gracefully', () => {
+    const first = createNote({ name: 'First' })
+    const missingParent = createFolder({ name: 'Missing Parent' })
+    const child = createNote({ name: 'Child', parentId: missingParent._id })
+    const itemsMap = new Map<Id<'sidebarItems'>, AnySidebarItem>([[first._id, first]])
+
+    const result = normalizeFileSystemOperationItems([first, child], itemsMap)
+
+    expect(result.map((item) => item._id)).toEqual([first._id, child._id])
+  })
+
+  it('handles broken references without throwing', () => {
+    const first = createNote({ name: 'First' })
+    const child = createNote({
+      name: 'Child',
+      parentId: testId<'sidebarItems'>('missing-parent'),
+    })
+    const itemsMap = new Map<Id<'sidebarItems'>, AnySidebarItem>([
+      [first._id, first],
+      [child._id, child],
+    ])
+
+    expect(() => normalizeFileSystemOperationItems([child, first], itemsMap)).not.toThrow()
+    expect(normalizeFileSystemOperationItems([child, first], itemsMap)).toEqual([child, first])
+  })
+
+  it('ignores null, undefined, and duplicate inputs', () => {
+    const first = createNote({ name: 'First' })
+    const second = createNote({ name: 'Second' })
+    const itemsMap = new Map<Id<'sidebarItems'>, AnySidebarItem>([
+      [first._id, first],
+      [second._id, second],
+    ])
+    const rawItems = [first, null, undefined, second, first]
+
+    const result = normalizeFileSystemOperationItems(rawItems, itemsMap)
+
+    expect(result.map((item) => item._id)).toEqual([first._id, second._id])
   })
 })
 

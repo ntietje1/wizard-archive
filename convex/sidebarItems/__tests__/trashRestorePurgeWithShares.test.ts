@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import {
+  executeMoveCommand,
+  executeDeleteForeverCommand,
   createBlock,
   createBlockShare,
   createBookmark,
@@ -42,7 +44,7 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     })
 
     // Trash the folder
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [folderId],
       targetParentId: null,
@@ -58,15 +60,15 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
         bookmark: await dbCtx.db.get('bookmarks', bookmarkId),
       }
     })
-    expect(afterTrash.folder!.location).toBe('trash')
+    expect(afterTrash.folder!.status).toBe('trashed')
     expect(afterTrash.folder!.deletionTime).not.toBeNull()
-    expect(afterTrash.note!.location).toBe('trash')
+    expect(afterTrash.note!.status).toBe('trashed')
     expect(afterTrash.note!.deletionTime).not.toBeNull()
     expect(afterTrash.share).not.toBeNull()
     expect(afterTrash.bookmark).not.toBeNull()
 
     // Restore the folder
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [folderId],
       targetParentId: null,
@@ -98,13 +100,13 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     expect(noteAfterRestore.myPermissionLevel).toBe('view')
 
     // Trash again and permanently delete
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [folderId],
       targetParentId: null,
       action: 'trash',
     })
-    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
+    await executeDeleteForeverCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [folderId],
     })
@@ -139,13 +141,13 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
       permissionLevel: 'edit',
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [noteId],
       targetParentId: null,
       action: 'trash',
     })
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [noteId],
       targetParentId: null,
@@ -175,7 +177,7 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
       name: 'Sibling Note',
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [folderId, siblingNoteId],
       targetParentId: null,
@@ -189,9 +191,9 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
         dbCtx.db.get('sidebarItems', siblingNoteId),
       ]),
     )
-    expect(afterTrash.map((item) => item?.location)).toEqual(['trash', 'trash', 'trash'])
+    expect(afterTrash.map((item) => item?.status)).toEqual(['trashed', 'trashed', 'trashed'])
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [folderId, siblingNoteId],
       targetParentId: null,
@@ -227,7 +229,7 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
       campaignMemberId: ctx.player.memberId,
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [noteId],
       targetParentId: null,
@@ -237,7 +239,7 @@ describe('trash -> restore -> purge lifecycle with shares', () => {
     const afterTrash = await t.run(async (dbCtx) => dbCtx.db.get('blockShares', blockShareId))
     expect(afterTrash).not.toBeNull()
 
-    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
+    await executeDeleteForeverCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [noteId],
     })

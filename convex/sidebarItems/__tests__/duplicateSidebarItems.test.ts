@@ -3,16 +3,21 @@ import { api } from '../../_generated/api'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import {
+  executeMoveCommand,
+  executeCopyCommand,
+  executeDeleteForeverCommand,
+  copiedRootItemIds,
   createFile,
   createFolder,
   createGameMap,
   createNote,
   createBlock,
+  filesystemEventItemIds,
 } from '../../_test/factories.helper'
 import { expectValidationFailed } from '../../_test/assertions.helper'
 import type { Id } from '../../_generated/dataModel'
 
-describe('duplicateSidebarItems', () => {
+describe('executeCopyCommand', () => {
   const t = createTestContext()
 
   async function setupImmutableStorageDuplicate() {
@@ -36,7 +41,7 @@ describe('duplicateSidebarItems', () => {
       imageStorageId: mapStorageId,
     })
 
-    const result = await dmAuth.mutation(api.sidebarItems.mutations.duplicateSidebarItems, {
+    const result = await executeCopyCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [fileId, mapId],
       targetParentId: null,
@@ -45,7 +50,7 @@ describe('duplicateSidebarItems', () => {
         { sourceItemId: mapId, action: 'keepBoth' },
       ],
     })
-    const [copiedFileItemId, copiedMapItemId] = result.createdRootItemIds
+    const [copiedFileItemId, copiedMapItemId] = copiedRootItemIds(result)
     if (!copiedFileItemId || !copiedMapItemId) {
       throw new Error('Expected duplicated file and map ids')
     }
@@ -73,7 +78,7 @@ describe('duplicateSidebarItems', () => {
       name: 'Scene B',
     })
 
-    const result = await dmAuth.mutation(api.sidebarItems.mutations.duplicateSidebarItems, {
+    const result = await executeCopyCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [firstId, secondId],
       targetParentId: null,
@@ -85,7 +90,7 @@ describe('duplicateSidebarItems', () => {
 
     const copiedItems = await t.run(async (dbCtx) => {
       return await Promise.all(
-        result.createdRootItemIds.map((itemId) => dbCtx.db.get('sidebarItems', itemId)),
+        copiedRootItemIds(result).map((itemId) => dbCtx.db.get('sidebarItems', itemId)),
       )
     })
 
@@ -108,13 +113,13 @@ describe('duplicateSidebarItems', () => {
       parentId: folderId,
     })
 
-    const result = await dmAuth.mutation(api.sidebarItems.mutations.duplicateSidebarItems, {
+    const result = await executeCopyCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [noteId],
       targetParentId: folderId,
     })
 
-    const [copiedId] = result.createdRootItemIds
+    const [copiedId] = copiedRootItemIds(result)
     if (!copiedId) throw new Error('Expected copied item')
     const copied = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', copiedId))
 
@@ -135,21 +140,28 @@ describe('duplicateSidebarItems', () => {
     })
     await createBlock(t, noteId, ctx.campaignId, { plainText: 'Hidden archers' })
 
-    const result = await dmAuth.mutation(api.sidebarItems.mutations.duplicateSidebarItems, {
+    const result = await executeCopyCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [folderId],
       targetParentId: null,
       decisions: [{ sourceItemId: folderId, action: 'keepBoth' }],
     })
 
-    expect(result.createdItemIds).toHaveLength(2)
-    expect(result.createdRootItemIds).toHaveLength(1)
+    expect(filesystemEventItemIds(result, 'copied')).toHaveLength(1)
+    expect(copiedRootItemIds(result)).toHaveLength(1)
 
     const rows = await t.run(async (dbCtx) => {
-      const [copiedFolderId, copiedNoteId] = result.createdItemIds
-      if (!copiedFolderId || !copiedNoteId) throw new Error('Expected copied folder and note')
+      const [copiedFolderId] = filesystemEventItemIds(result, 'copied')
+      if (!copiedFolderId) throw new Error('Expected copied folder')
       const copiedFolder = await dbCtx.db.get('sidebarItems', copiedFolderId)
-      const copiedNote = await dbCtx.db.get('sidebarItems', copiedNoteId)
+      const copiedNote = await dbCtx.db
+        .query('sidebarItems')
+        .withIndex('by_campaign_status_parent_name_deletionTime', (q) =>
+          q.eq('campaignId', ctx.campaignId).eq('status', 'active').eq('parentId', copiedFolderId),
+        )
+        .unique()
+      if (!copiedNote) throw new Error('Expected copied note')
+      const copiedNoteId = copiedNote._id
       const copiedBlocks = await dbCtx.db
         .query('blocks')
         .withIndex('by_campaign_note_block', (q) =>
@@ -163,7 +175,7 @@ describe('duplicateSidebarItems', () => {
     expect(rows.copiedFolder?.name).toBe('Encounters 2')
     // Nested items keep their names because the copied folder creates a conflict-free parent.
     expect(rows.copiedNote?.name).toBe('Ambush')
-    expect(rows.copiedNote?.parentId).toBe(result.createdRootItemIds[0])
+    expect(rows.copiedNote?.parentId).toBe(copiedRootItemIds(result)[0])
     expect(rows.copiedBlocks.map((block) => block.plainText)).toEqual(['Hidden archers'])
     const copiedFromIds = rows.history
       .filter((entry) => entry.action === 'copied')
@@ -194,14 +206,14 @@ describe('duplicateSidebarItems', () => {
     })
 
     await expectValidationFailed(
-      dmAuth.mutation(api.sidebarItems.mutations.duplicateSidebarItems, {
+      executeCopyCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [sourceId],
         targetParentId: destinationFolderId,
       }),
     )
 
-    const result = await dmAuth.mutation(api.sidebarItems.mutations.duplicateSidebarItems, {
+    const result = await executeCopyCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [sourceId],
       targetParentId: destinationFolderId,
@@ -209,7 +221,7 @@ describe('duplicateSidebarItems', () => {
     })
 
     const rows = await t.run(async (dbCtx) => {
-      const [copiedId] = result.createdRootItemIds
+      const [copiedId] = copiedRootItemIds(result)
       if (!copiedId) throw new Error('Expected copied item')
       return {
         replaced: await dbCtx.db.get('sidebarItems', destinationId),
@@ -217,11 +229,43 @@ describe('duplicateSidebarItems', () => {
       }
     })
 
-    expect(rows.replaced?.location).toBe('trash')
+    expect(rows.replaced?.status).toBe('trashed')
     expect(rows.replaced?.deletionTime).toEqual(expect.any(Number))
     expect(rows.copied?.location).toBe('sidebar')
     expect(rows.copied?.parentId).toBe(destinationFolderId)
     expect(rows.copied?.name).toBe('Scene')
+  })
+
+  it('records copy replace receipts as undoable transactions', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const { noteId: sourceId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Scene',
+    })
+    const { folderId: destinationFolderId } = await createFolder(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+      { name: 'Destination' },
+    )
+    await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Scene',
+      parentId: destinationFolderId,
+    })
+
+    const receipt = await dmAuth.mutation(
+      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
+      {
+        campaignId: ctx.campaignId,
+        command: { type: 'copy', itemIds: [sourceId], targetParentId: destinationFolderId },
+        decisions: [{ sourceItemId: sourceId, action: 'replace' }],
+      },
+    )
+
+    expect(
+      receipt.events.filter((event) => event.type === 'replaced').map((event) => event.itemId),
+    ).toEqual([sourceId])
+    expect(receipt.undoable).toBe(true)
   })
 
   it('reports skipped and replaced conflicting roots separately', async () => {
@@ -245,7 +289,7 @@ describe('duplicateSidebarItems', () => {
       sourceIds.push(noteId)
     }
 
-    const result = await dmAuth.mutation(api.sidebarItems.mutations.duplicateSidebarItems, {
+    const result = await executeCopyCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: sourceIds,
       targetParentId: destinationFolderId,
@@ -255,9 +299,9 @@ describe('duplicateSidebarItems', () => {
       })),
     })
 
-    expect(result.createdRootItemIds).toHaveLength(1)
-    expect(result.replacedSourceItemIds).toEqual([sourceIds[0]])
-    expect(result.skippedSourceItemIds).toEqual(sourceIds.slice(1))
+    expect(copiedRootItemIds(result)).toHaveLength(1)
+    expect(filesystemEventItemIds(result, 'replaced')).toEqual([sourceIds[0]])
+    expect(filesystemEventItemIds(result, 'skipped')).toEqual(sourceIds.slice(1))
   })
 
   it('propagates folder replace decisions through descendant duplicate conflicts', async () => {
@@ -287,17 +331,50 @@ describe('duplicateSidebarItems', () => {
       parentId: destinationFolderId,
     })
 
-    const result = await dmAuth.mutation(api.sidebarItems.mutations.duplicateSidebarItems, {
+    const result = await executeCopyCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [sourceFolderId],
       targetParentId: targetFolderId,
       decisions: [{ sourceItemId: sourceFolderId, action: 'replace' }],
     })
 
-    expect(result.createdRootItemIds).toEqual([])
-    expect(result.createdItemIds).toHaveLength(1)
-    expect(result.replacedSourceItemIds).toEqual([sourceChildId])
-    expect(result.mergedSourceItemIds).toEqual([sourceFolderId])
+    expect(copiedRootItemIds(result)).toEqual([])
+    expect(filesystemEventItemIds(result, 'copied')).toHaveLength(0)
+    expect(filesystemEventItemIds(result, 'replaced')).toEqual([sourceChildId])
+    expect(filesystemEventItemIds(result, 'mergedFolder')).toEqual([sourceFolderId])
+  })
+
+  it('records copy folder merge receipts as undoable transactions', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const { folderId: sourceFolderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Scenes',
+    })
+    await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Encounter',
+      parentId: sourceFolderId,
+    })
+    const { folderId: targetFolderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Archive',
+    })
+    await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Scenes',
+      parentId: targetFolderId,
+    })
+
+    const receipt = await dmAuth.mutation(
+      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
+      {
+        campaignId: ctx.campaignId,
+        command: { type: 'copy', itemIds: [sourceFolderId], targetParentId: targetFolderId },
+        decisions: [{ sourceItemId: sourceFolderId, action: 'replace' }],
+      },
+    )
+
+    expect(
+      receipt.events.filter((event) => event.type === 'mergedFolder').map((event) => event.itemId),
+    ).toEqual([sourceFolderId])
+    expect(receipt.undoable).toBe(true)
   })
 
   it('shares immutable file, map, and preview storage ids when duplicating', async () => {
@@ -335,13 +412,13 @@ describe('duplicateSidebarItems', () => {
       copiedMapItemId,
     } = await setupImmutableStorageDuplicate()
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [fileId, mapId],
       targetParentId: null,
       action: 'trash',
     })
-    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
+    await executeDeleteForeverCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [fileId, mapId],
     })
@@ -383,7 +460,7 @@ describe('duplicateSidebarItems', () => {
     })
 
     await expectValidationFailed(
-      dmAuth.mutation(api.sidebarItems.mutations.duplicateSidebarItems, {
+      executeCopyCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [noteId],
         targetParentId: folderId,

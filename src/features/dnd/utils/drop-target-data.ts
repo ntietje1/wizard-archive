@@ -1,8 +1,7 @@
-import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
-import { logger } from '~/shared/utils/logger'
 
 export const CANVAS_DROP_ZONE_TYPE = 'canvas-drop-zone' as const
 export const EMPTY_EDITOR_DROP_TYPE = 'empty-editor' as const
@@ -122,7 +121,7 @@ export function canDropFilesOnTarget(target: SidebarDropData | null): boolean {
     case SIDEBAR_ROOT_DROP_TYPE:
       return true
     case SIDEBAR_ITEM_TYPES.folders:
-      return target.location !== SIDEBAR_ITEM_LOCATION.trash
+      return !target.isTrashed
     default:
       return false
   }
@@ -153,43 +152,40 @@ export function getHighlightId(target: SidebarDropData | null): string | null {
   }
 }
 
-export function resolveDropTarget(
+function resolveSidebarItemDropTarget(
   rawData: Record<string, unknown>,
   itemsMap: ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>,
   trashedItemsMap: ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>,
   getAncestorIds: (id: Id<'sidebarItems'>) => Array<Id<'sidebarItems'>>,
-): SidebarDropData | null {
-  const sidebarItemId = rawData.sidebarItemId
-  if (typeof sidebarItemId === 'string') {
-    if (isCustomDropZoneType(rawData.type)) {
-      logger.warn('Sidebar drop target data included both sidebarItemId and custom drop type', {
-        type: rawData.type,
-      })
-      return null
-    }
-    const id = sidebarItemId as Id<'sidebarItems'>
-    const item = itemsMap.get(id) ?? trashedItemsMap.get(id)
-    return item ? { ...item, ancestorIds: getAncestorIds(item._id) } : null
-  }
+): ResolvedSidebarItemDropData | null {
+  if (isCustomDropZoneType(rawData.type)) return null
 
+  const id = rawData.sidebarItemId as Id<'sidebarItems'>
+  const item = itemsMap.get(id) ?? trashedItemsMap.get(id)
+  return item ? { ...item, ancestorIds: getAncestorIds(item._id) } : null
+}
+
+function resolveMapDropTarget(rawData: Record<string, unknown>): MapDropZoneData | null {
+  if (typeof rawData.mapId !== 'string' || typeof rawData.mapName !== 'string') return null
+
+  return {
+    type: MAP_DROP_ZONE_TYPE,
+    mapId: rawData.mapId as Id<'sidebarItems'>,
+    mapName: rawData.mapName,
+    pinnedItemIds: Array.isArray(rawData.pinnedItemIds)
+      ? rawData.pinnedItemIds.filter((id): id is Id<'sidebarItems'> => typeof id === 'string')
+      : undefined,
+  }
+}
+
+function resolveCustomDropTarget(rawData: Record<string, unknown>): SidebarDropData | null {
   switch (rawData.type) {
     case CANVAS_DROP_ZONE_TYPE:
       return typeof rawData.canvasId === 'string'
         ? { type: CANVAS_DROP_ZONE_TYPE, canvasId: rawData.canvasId as Id<'sidebarItems'> }
         : null
     case MAP_DROP_ZONE_TYPE:
-      return typeof rawData.mapId === 'string' && typeof rawData.mapName === 'string'
-        ? {
-            type: MAP_DROP_ZONE_TYPE,
-            mapId: rawData.mapId as Id<'sidebarItems'>,
-            mapName: rawData.mapName,
-            pinnedItemIds: Array.isArray(rawData.pinnedItemIds)
-              ? rawData.pinnedItemIds.filter(
-                  (id): id is Id<'sidebarItems'> => typeof id === 'string',
-                )
-              : undefined,
-          }
-        : null
+      return resolveMapDropTarget(rawData)
     case NOTE_EDITOR_DROP_TYPE:
       return typeof rawData.noteId === 'string'
         ? { type: NOTE_EDITOR_DROP_TYPE, noteId: rawData.noteId as Id<'sidebarItems'> }
@@ -203,4 +199,16 @@ export function resolveDropTarget(
     default:
       return null
   }
+}
+
+export function resolveDropTarget(
+  rawData: Record<string, unknown>,
+  itemsMap: ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>,
+  trashedItemsMap: ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>,
+  getAncestorIds: (id: Id<'sidebarItems'>) => Array<Id<'sidebarItems'>>,
+): SidebarDropData | null {
+  if (typeof rawData.sidebarItemId === 'string') {
+    return resolveSidebarItemDropTarget(rawData, itemsMap, trashedItemsMap, getAncestorIds)
+  }
+  return resolveCustomDropTarget(rawData)
 }

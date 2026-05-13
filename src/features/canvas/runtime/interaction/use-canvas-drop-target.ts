@@ -3,7 +3,6 @@ import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/ad
 import { createEmbedCanvasNode } from '../../nodes/embed/embed-node-creation'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CanvasDocumentNode } from 'convex/canvases/validation'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { CanvasDropZoneData } from '~/features/dnd/utils/drop-target-data'
 import type { FileDropOverride } from '~/features/dnd/stores/dnd-store'
 import { handleError } from '~/shared/utils/logger'
@@ -16,7 +15,10 @@ import {
   executeSurfaceDropCommand,
   resolveSidebarSurfaceDropCommand,
 } from '~/features/dnd/utils/surface-drop-command'
-import { useActiveSidebarItems, useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import {
+  useActiveSidebarItems,
+  useTrashSidebarItems,
+} from '~/features/sidebar/hooks/useSidebarItems'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
 
@@ -39,7 +41,7 @@ export function useCanvasDropTarget({
 }: UseCanvasDropTargetOptions) {
   const dropOverlayRef = useRef<HTMLDivElement>(null)
   const { itemsMap } = useActiveSidebarItems()
-  const { itemsMap: trashedItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
+  const { itemsMap: trashedItemsMap } = useTrashSidebarItems()
   const { campaignId } = useCampaign()
 
   const dropData: CanvasDropZoneData = {

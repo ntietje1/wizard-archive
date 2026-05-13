@@ -8,7 +8,7 @@ import { getSidebarItemsByParent } from '../../sidebarItems/functions/getSidebar
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { requireItemAccess } from '../../sidebarItems/validation/access'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
-import { normalizeTopLevelSelectedItems } from '../../sidebarItems/operations/selection'
+import { normalizeTopLevelSelectedItemsBestEffort } from '../../sidebarItems/filesystem/selection'
 import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sidebarItemPermissions'
 import { hasAtLeastPermissionLevel } from '../../permissions/hasAtLeastPermissionLevel'
 import { PERMISSION_LEVEL } from '../../permissions/types'
@@ -270,7 +270,7 @@ export async function getSidebarItemsForDownload(
 
   const { sourceItems, allItemsMap } = await getDownloadSourceItems(ctx, sourceItemIds)
   await addMissingAncestorsToItemMap(ctx, { sourceItems, allItemsMap })
-  const normalizedItems = normalizeTopLevelSelectedItems(sourceItems, allItemsMap)
+  const normalizedItems = normalizeTopLevelSelectedItemsBestEffort(sourceItems, allItemsMap)
   const items: Array<DownloadItem> = []
   const downloadContext: DownloadBuildContext = { reservedPaths: new Set() }
 

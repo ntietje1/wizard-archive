@@ -1,7 +1,6 @@
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
-import { useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useTrashSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import {
   emptyTrashDescription,
   permanentDeleteDescription,
@@ -14,7 +13,13 @@ export function EmptyTrashConfirmDialog({
   onClose: () => void
   onConfirm: () => Promise<void>
 }) {
-  const { data: allTrashedItems, status } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
+  const { data: allTrashedItems, status } = useTrashSidebarItems()
+  const description =
+    status === 'pending'
+      ? 'Loading trashed items...'
+      : status === 'error'
+        ? 'Trash contents could not be loaded.'
+        : emptyTrashDescription(allTrashedItems?.length ?? 0)
 
   return (
     <ConfirmationDialog
@@ -23,13 +28,7 @@ export function EmptyTrashConfirmDialog({
       onClose={onClose}
       onConfirm={onConfirm}
       title="Empty Trash"
-      description={
-        status === 'pending'
-          ? 'Loading trashed items...'
-          : status === 'error'
-            ? 'Trash contents could not be loaded.'
-            : emptyTrashDescription(allTrashedItems?.length ?? 0)
-      }
+      description={description}
       confirmLabel="Empty Trash"
       confirmVariant="destructive"
     />
@@ -45,7 +44,13 @@ export function PermanentDeleteConfirmDialog({
   onClose: () => void
   onConfirm: () => Promise<void>
 }) {
-  const { data: trashedItems, status } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
+  const { data: trashedItems, status } = useTrashSidebarItems()
+  const description =
+    status === 'pending'
+      ? 'Loading trashed items...'
+      : status === 'error'
+        ? 'Trash contents could not be loaded.'
+        : permanentDeleteDescription(item, trashedItems ?? [])
 
   return (
     <ConfirmationDialog
@@ -54,13 +59,7 @@ export function PermanentDeleteConfirmDialog({
       onClose={onClose}
       onConfirm={onConfirm}
       title="Permanently Delete"
-      description={
-        status === 'error'
-          ? 'Trash contents could not be loaded.'
-          : trashedItems
-            ? permanentDeleteDescription(item, trashedItems)
-            : 'Loading...'
-      }
+      description={description}
       confirmLabel="Delete Forever"
       confirmVariant="destructive"
     />

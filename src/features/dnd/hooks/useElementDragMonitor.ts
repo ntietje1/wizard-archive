@@ -10,16 +10,15 @@ import {
   resolveDropTarget,
 } from '~/features/dnd/utils/drop-target-data'
 import { rejectionReasonMessage } from '~/features/dnd/utils/drop-rejections'
-import { resolveDropFeedback } from '~/features/dnd/utils/drop-feedback'
 import {
-  dropCommandFailureMessage,
-  resolveGlobalDropCommand,
-} from '~/features/dnd/utils/global-drop-planner'
+  resolveDropFeedback,
+  toGlobalFileSystemDropTarget,
+} from '~/features/dnd/utils/drop-feedback'
+import { resolveGlobalFileSystemDropCommand } from '~/features/filesystem/filesystem-drop-planner'
+import type { FileSystemGlobalDropOptions } from '~/features/filesystem/filesystem-drop-planner'
 import { resolveNormalizedDraggedSidebarItems } from '~/features/dnd/utils/sidebar-drag-items'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import type { DropOutcome } from '~/features/dnd/utils/drop-outcome'
-import type { GlobalDropCommand, GlobalDropOptions } from '~/features/dnd/utils/global-drop-planner'
-import { assertNever } from '~/shared/utils/utils'
 
 function resolveDraggedItem(sourceData: Record<string, unknown>, ctx: DndMonitorCtx) {
   const sid = getDragItemId(sourceData)
@@ -77,45 +76,23 @@ function resetElementDragState({
   setIsDraggingElement(false)
 }
 
-async function executeDropCommand(ctx: DndMonitorCtx, command: GlobalDropCommand) {
+async function executeDropCommand(
+  ctx: DndMonitorCtx,
+  command: ReturnType<typeof resolveGlobalFileSystemDropCommand>,
+) {
   if (command.status === 'noop') return
   if (command.status === 'blocked') {
     handleError(new Error(rejectionReasonMessage(command.reason)), 'Cannot drop items here')
     return
   }
-  try {
-    switch (command.action) {
-      case 'move':
-        await ctx.dndContext.moveItems(command.items, command.parentId)
-        break
-      case 'copy':
-        await ctx.dndContext.copyItems(command.items, command.parentId)
-        break
-      case 'restore':
-        await ctx.dndContext.restoreItems(command.items, command.parentId)
-        break
-      case 'trash':
-        await ctx.dndContext.trashItems(command.items)
-        break
-      case 'open':
-        await ctx.dndContext.navigateToItem(command.item.slug, true)
-        break
-      default:
-        assertNever(command)
-    }
-    if ('parentId' in command && command.parentId) {
-      ctx.dndContext.setFolderOpen(command.parentId)
-    }
-  } catch (error) {
-    handleError(error, dropCommandFailureMessage(command))
-  }
+  await ctx.dndContext.executeFileSystemDropCommand(command)
 }
 
 async function executeElementDrop(
   ctx: DndMonitorCtx,
   sourceData: Record<string, unknown>,
   targetData: Record<string, unknown>,
-  options: GlobalDropOptions,
+  options: FileSystemGlobalDropOptions,
 ) {
   const draggedItems = resolveDraggedItems(sourceData, ctx)
   if (draggedItems.length === 0) return
@@ -127,14 +104,21 @@ async function executeElementDrop(
     ctx.getAncestorIds,
   )
   if (!resolvedTarget) return
+  const globalTarget = toGlobalFileSystemDropTarget(resolvedTarget, ctx.dropPlanningContext)
+  if (!globalTarget) return
 
   await executeDropCommand(
     ctx,
-    resolveGlobalDropCommand(draggedItems, resolvedTarget, ctx.dropPlanningContext, options),
+    resolveGlobalFileSystemDropCommand(
+      draggedItems,
+      globalTarget,
+      ctx.dropPlanningContext,
+      options,
+    ),
   )
 }
 
-function globalDropOptionsFromInput(input: { ctrlKey?: boolean }): GlobalDropOptions {
+function globalDropOptionsFromInput(input: { ctrlKey?: boolean }): FileSystemGlobalDropOptions {
   return { copy: input.ctrlKey === true }
 }
 

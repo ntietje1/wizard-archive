@@ -155,9 +155,8 @@ describe('multi-player share + membership removal cascade', () => {
       status: 'Removed',
     })
 
-    const items = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByLocation, {
+    const items = await dmAuth.query(api.sidebarItems.queries.getActiveSidebarItems, {
       campaignId,
-      location: 'sidebar',
     })
     const noteItem = items.find((i) => i._id === noteId)
     expect(noteItem).toBeDefined()

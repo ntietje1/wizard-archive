@@ -1,16 +1,23 @@
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
-import { useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import {
+  SIDEBAR_ITEMS_VIEW,
+  useActiveSidebarItems,
+  useSidebarItems,
+  useTrashSidebarItems,
+} from '~/features/sidebar/hooks/useSidebarItems'
 import { buildSidebarItemMaps } from '~/features/sidebar/utils/sidebar-item-maps'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { resetSidebarUIStore } from '~/test/helpers/store-helpers'
 
 vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
+  SIDEBAR_ITEMS_VIEW: { active: 'active', trash: 'trash' },
+  useActiveSidebarItems: vi.fn(),
   useSidebarItems: vi.fn(),
+  useTrashSidebarItems: vi.fn(),
 }))
 
 function sidebarItemsValue(items: Array<AnySidebarItem>) {
@@ -25,17 +32,21 @@ function mockSidebarItems(
   activeItems: Array<AnySidebarItem>,
   trashedItems: Array<AnySidebarItem> = [],
 ) {
-  vi.mocked(useSidebarItems).mockImplementation((location) =>
-    location === SIDEBAR_ITEM_LOCATION.sidebar
-      ? sidebarItemsValue(activeItems)
-      : sidebarItemsValue(trashedItems),
-  )
+  vi.mocked(useActiveSidebarItems).mockReturnValue(sidebarItemsValue(activeItems))
+  vi.mocked(useTrashSidebarItems).mockReturnValue(sidebarItemsValue(trashedItems))
+  vi.mocked(useSidebarItems).mockImplementation((view) => {
+    if (view === SIDEBAR_ITEMS_VIEW.active) return sidebarItemsValue(activeItems)
+    if (view === SIDEBAR_ITEMS_VIEW.trash) return sidebarItemsValue(trashedItems)
+    throw new Error(`Unexpected sidebar items view: ${String(view)}`)
+  })
 }
 
 describe('useSidebarDragData', () => {
   beforeEach(() => {
     resetSidebarUIStore()
     vi.mocked(useSidebarItems).mockReset()
+    vi.mocked(useActiveSidebarItems).mockReset()
+    vi.mocked(useTrashSidebarItems).mockReset()
   })
 
   it('uses only the current item when no items are selected', () => {
@@ -136,7 +147,7 @@ describe('useSidebarDragData', () => {
 
   it('can include selected active and trashed items in drag data', () => {
     const active = createNote()
-    const trashed = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
+    const trashed = createNote({ status: 'trashed' })
     mockSidebarItems([active], [trashed])
     useSidebarUIStore.setState({ selectedItemIds: [active._id, trashed._id] })
 

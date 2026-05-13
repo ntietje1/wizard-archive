@@ -1,7 +1,11 @@
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../campaigns/types'
 import type { SidebarItemColor } from '../sidebarItems/validation/color'
 import type { SidebarItemIconName } from '../sidebarItems/validation/icon'
-import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
+import {
+  SIDEBAR_ITEM_LOCATION,
+  SIDEBAR_ITEM_STATUS,
+  SIDEBAR_ITEM_TYPES,
+} from '../sidebarItems/types/baseTypes'
 import { SHARE_STATUS } from '../blockShares/types'
 import { slugify } from '../common/slug'
 import { assertCampaignSlug } from '../campaigns/validation'
@@ -10,18 +14,122 @@ import { assertSidebarItemSlug } from '../sidebarItems/validation/slug'
 import { assertUsername } from '../users/validation'
 import { makeYjsUpdateWithBlocks } from '../yjsSync/__tests__/makeYjsUpdate.helper'
 import type { TestBlock } from '../yjsSync/__tests__/makeYjsUpdate.helper'
-import type { TestConvex } from 'convex-test'
-import type { Id } from '../_generated/dataModel'
+import type { TestConvex, TestConvexForDataModel } from 'convex-test'
+import { api } from '../_generated/api'
+import type { DataModel, Id } from '../_generated/dataModel'
 import type schema from '../schema'
-import type { SidebarItemLocation, SidebarItemType } from '../sidebarItems/types/baseTypes'
+import type {
+  SidebarItemLocation,
+  SidebarItemStatus,
+  SidebarItemType,
+} from '../sidebarItems/types/baseTypes'
 import type { PermissionLevel } from '../permissions/types'
 import type { ShareStatus } from '../blockShares/types'
 import type { BlockNoteId, BlockProps, BlockType, InlineContent } from '../blocks/types'
 import type { CustomBlock } from '../notes/editorSpecs'
 import type { SidebarItemName } from '../sidebarItems/validation/name'
+import type { FileSystemOperationDecision } from '../sidebarItems/filesystem/commands'
+import type {
+  FileSystemEvent,
+  FileSystemEventType,
+  FileSystemTransactionReceipt,
+} from '../sidebarItems/filesystem/receipts'
 import { createHash } from 'crypto'
 
 type T = TestConvex<typeof schema>
+type AuthedContext = TestConvexForDataModel<DataModel>
+
+export async function executeMoveCommand(
+  client: AuthedContext,
+  args: {
+    campaignId: Id<'campaigns'>
+    sourceItemIds: Array<Id<'sidebarItems'>>
+    targetParentId: Id<'sidebarItems'> | null
+    action?: 'move' | 'restore' | 'trash'
+    decisions?: Array<FileSystemOperationDecision>
+  },
+): Promise<FileSystemTransactionReceipt> {
+  const action = args.action ?? 'move'
+  const command =
+    action === 'trash'
+      ? ({
+          type: 'trash',
+          itemIds: args.sourceItemIds,
+        } as const)
+      : ({
+          type: action,
+          itemIds: args.sourceItemIds,
+          targetParentId: args.targetParentId,
+        } as const)
+  return await client.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+    campaignId: args.campaignId,
+    command,
+    decisions: args.decisions,
+  })
+}
+
+export async function executeCopyCommand(
+  client: AuthedContext,
+  args: {
+    campaignId: Id<'campaigns'>
+    sourceItemIds: Array<Id<'sidebarItems'>>
+    targetParentId: Id<'sidebarItems'> | null
+    decisions?: Array<FileSystemOperationDecision>
+  },
+): Promise<FileSystemTransactionReceipt> {
+  return await client.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+    campaignId: args.campaignId,
+    command: {
+      type: 'copy',
+      itemIds: args.sourceItemIds,
+      targetParentId: args.targetParentId,
+    },
+    decisions: args.decisions,
+  })
+}
+
+export async function executeDeleteForeverCommand(
+  client: AuthedContext,
+  args: {
+    campaignId: Id<'campaigns'>
+    sourceItemIds: Array<Id<'sidebarItems'>>
+  },
+): Promise<FileSystemTransactionReceipt> {
+  return await client.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+    campaignId: args.campaignId,
+    command: {
+      type: 'deleteForever',
+      itemIds: args.sourceItemIds,
+    },
+  })
+}
+
+export async function executeEmptyTrashCommand(
+  client: AuthedContext,
+  args: {
+    campaignId: Id<'campaigns'>
+  },
+): Promise<FileSystemTransactionReceipt> {
+  return await client.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+    campaignId: args.campaignId,
+    command: { type: 'emptyTrash' },
+  })
+}
+
+export function filesystemEventItemIds(
+  receipt: Pick<FileSystemTransactionReceipt, 'events'>,
+  type: FileSystemEventType,
+) {
+  return receipt.events.filter((event) => event.type === type).map((event) => event.itemId)
+}
+
+export function copiedRootItemIds(receipt: Pick<FileSystemTransactionReceipt, 'events'>) {
+  return receipt.events
+    .filter(
+      (event): event is Extract<FileSystemEvent, { type: 'copied' }> => event.type === 'copied',
+    )
+    .map((event) => event.itemId)
+}
 
 /** Create a test block content object typed as CustomBlock */
 export function testBlock(
@@ -170,6 +278,7 @@ const sidebarItemBase = (
   parentId: null
   allPermissionLevel: PermissionLevel | null
   location: SidebarItemLocation
+  status: SidebarItemStatus
   previewStorageId: null
   previewLockedUntil: null
   previewClaimToken: null
@@ -183,6 +292,7 @@ const sidebarItemBase = (
   parentId: null,
   allPermissionLevel: null,
   location: SIDEBAR_ITEM_LOCATION.sidebar,
+  status: SIDEBAR_ITEM_STATUS.active,
   previewStorageId: null,
   previewLockedUntil: null,
   previewClaimToken: null,
@@ -196,6 +306,7 @@ type CommonSidebarItemOverrides = Partial<{
   parentId: Id<'sidebarItems'> | null
   allPermissionLevel: PermissionLevel | null
   location: SidebarItemLocation
+  status: SidebarItemStatus
   iconName: SidebarItemIconName | null
   color: SidebarItemColor | null
   deletionTime: number | null
@@ -231,11 +342,18 @@ async function insertSidebarItem(
   } = overrides ?? {}
   const validatedSlug =
     slug !== undefined ? assertSidebarItemSlug(slug) : assertSidebarItemSlug(slugify(name))
+  const requestedStatus =
+    sidebarOverrides.status ??
+    (sidebarOverrides.deletionTime !== undefined && sidebarOverrides.deletionTime !== null
+      ? SIDEBAR_ITEM_STATUS.trashed
+      : SIDEBAR_ITEM_STATUS.active)
 
   const sharedData = {
     ...sidebarItemBase(campaignId, creatorProfileId, name),
     type,
     ...sidebarOverrides,
+    location: sidebarOverrides.location ?? SIDEBAR_ITEM_LOCATION.sidebar,
+    status: requestedStatus,
     slug: validatedSlug,
   }
 

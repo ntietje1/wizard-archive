@@ -4,8 +4,7 @@ import { reconstructBlockTree } from '../../blocks/functions/reconstructBlockTre
 import { getSidebarItemAncestors } from '../../folders/functions/getSidebarItemAncestors'
 import { enforceBlockSharePermissionsOrNull } from '../../blockShares/functions/getBlockPermissionLevel'
 import { getBlockSharesByBlock } from '../../blockShares/functions/getBlockSharesForBlock'
-import { SIDEBAR_ITEM_LOCATION } from '../../sidebarItems/types/baseTypes'
-import { enhanceBase } from '../../sidebarItems/functions/enhanceSidebarItem'
+import { enhanceBase } from '../../sidebarItems/functions/enhanceBaseSidebarItem'
 import { SHARE_STATUS } from '../../blockShares/types'
 import type { CampaignQueryCtx } from '../../functions'
 import type { BlockMeta, Note, NoteFromDb, NoteWithContent } from '../types'
@@ -24,7 +23,7 @@ export const enhanceNoteWithContent = async (
   const [ancestors = [], allBlocks = []] = await Promise.all([
     getSidebarItemAncestors(ctx, {
       initialParentId: note.parentId,
-      isTrashed: note.location === SIDEBAR_ITEM_LOCATION.trash,
+      isTrashed: note.isTrashed,
     }),
     getAllBlocksByNote(ctx, { noteId: note._id }),
   ])

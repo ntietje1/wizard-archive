@@ -3,7 +3,7 @@ import { CampaignProvider } from '~/features/campaigns/contexts/campaign-context
 import { SidebarItemsProvider } from '~/features/sidebar/contexts/all-sidebar-items-provider'
 import { SidebarLayout } from '~/features/sidebar/components/sidebar-layout'
 import { DndProvider } from '~/features/dnd/contexts/dnd-provider'
-import { SidebarItemOperationsProvider } from '~/features/sidebar/operations/sidebar-item-operations-provider'
+import { FileSystemProvider } from '~/features/filesystem/filesystem-provider'
 import { ViewAsBanner } from '~/features/editor/components/view-as-banner'
 import { ErrorBoundary } from '~/shared/components/error-boundary'
 import { ErrorFallback } from '~/shared/components/error-fallback'
@@ -17,7 +17,7 @@ export function CampaignLayout() {
   return (
     <CampaignProvider>
       <SidebarItemsProvider>
-        <SidebarItemOperationsProvider>
+        <FileSystemProvider>
           <DndProvider>
             <ClientOnly fallback={null}>
               <SearchDialog />
@@ -31,7 +31,7 @@ export function CampaignLayout() {
               <ViewAsBanner />
             </div>
           </DndProvider>
-        </SidebarItemOperationsProvider>
+        </FileSystemProvider>
       </SidebarItemsProvider>
     </CampaignProvider>
   )

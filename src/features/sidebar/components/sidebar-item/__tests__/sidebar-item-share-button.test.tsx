@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import { SidebarShareButton } from '../sidebar-item-share-button'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { SidebarItemsValue } from '~/features/sidebar/hooks/useSidebarItems'
@@ -32,8 +31,8 @@ function renderShareButton(item: AnySidebarItem, activeItems: Array<AnySidebarIt
   return render(
     <SidebarItemsContext.Provider
       value={{
-        [SIDEBAR_ITEM_LOCATION.sidebar]: sidebarItemsValue(activeItems),
-        [SIDEBAR_ITEM_LOCATION.trash]: sidebarItemsValue([]),
+        active: sidebarItemsValue(activeItems),
+        trash: sidebarItemsValue([]),
       }}
     >
       <SidebarShareButton item={item} />

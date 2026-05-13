@@ -37,7 +37,7 @@ import type {
   ContextMenuItemSpec,
   EditorMenuContext,
 } from './types'
-import { resolveContextOperationItems } from './selection-context'
+import { resolveRawContextItems } from './selection-context'
 import {
   RIGHT_SIDEBAR_CONTENT,
   RIGHT_SIDEBAR_PANEL_ID,
@@ -81,7 +81,7 @@ function getUnpinnedMapItems(context: EditorMenuContext) {
   if (!context.activeMap) return []
   const pins = context.activeMap.pins ?? []
   const pinnedItemIds = new Set(pins.map((pin) => pin.itemId))
-  return resolveContextOperationItems(context).filter(
+  return resolveRawContextItems(context).filter(
     (item) => item._id !== context.activeMap?._id && !pinnedItemIds.has(item._id),
   )
 }
@@ -118,7 +118,7 @@ export type ActionHandlers = {
   emptyTrash: (context: EditorMenuContext) => void
 }
 
-export interface EditorContextMenuServices {
+interface EditorContextMenuServices {
   actions: ActionHandlers
 }
 
@@ -464,7 +464,7 @@ export const editorContextMenuContributors = [
       {
         id: 'share-items',
         label: (context) => {
-          const itemCount = resolveContextOperationItems(context).length
+          const itemCount = resolveRawContextItems(context).length
           return itemCount > 1 ? `Share ${itemCount} items...` : 'Share...'
         },
         icon: Share2,
@@ -472,7 +472,7 @@ export const editorContextMenuContributors = [
         priority: 78,
         submenuContent: (context) =>
           createElement(SidebarItemsSharePanel, {
-            items: resolveContextOperationItems(context),
+            items: resolveRawContextItems(context),
           }),
         applies: (context) =>
           p.isDm(context) &&
@@ -491,7 +491,7 @@ export const editorContextMenuContributors = [
         id: 'download-items',
         commandId: 'downloadItems',
         label: (context) => {
-          const itemCount = resolveContextOperationItems(context).length
+          const itemCount = resolveRawContextItems(context).length
           return itemCount > 1 ? `Download ${itemCount} items` : 'Download'
         },
         icon: Download,

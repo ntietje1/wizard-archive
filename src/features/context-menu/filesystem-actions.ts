@@ -1,12 +1,11 @@
 import type { ActionHandlers } from './menu-registry'
 import type { MenuContext } from './types'
-import { resolveContextOperationItems } from './selection-context'
 import type { Folder } from 'convex/folders/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemOperationsValue } from '~/features/sidebar/operations/useSidebarItemOperations'
 import { isFolder } from '~/features/sidebar/utils/sidebar-item-utils'
-import { handleError } from '~/shared/utils/logger'
+import type { FileSystemValue } from '~/features/filesystem/useFileSystem'
+import { getContextMenuPasteParentId } from '~/features/filesystem/filesystem-targets'
 
 type FilesystemActions = Pick<
   ActionHandlers,
@@ -14,31 +13,25 @@ type FilesystemActions = Pick<
 >
 
 export function createFilesystemActions({
-  itemOperations,
+  filesystem,
   parentItemsMap,
   setDeleteFolderDialog,
   onDialogOpen,
 }: {
-  itemOperations: SidebarItemOperationsValue
+  filesystem: FileSystemValue
   parentItemsMap: ReadonlyMap<Id<'sidebarItems'> | null, Array<AnySidebarItem>>
   setDeleteFolderDialog: (folder: Folder) => void
   onDialogOpen?: () => void
 }): FilesystemActions {
-  const normalizedContextItems = (ctx: MenuContext) =>
-    itemOperations.normalizeItems(resolveContextOperationItems(ctx))
-  const getPasteTargetParentId = (ctx: MenuContext) => {
-    if (ctx.item && isFolder(ctx.item)) return ctx.item._id
-
-    const items = normalizedContextItems(ctx)
-    if (items.length === 0) return undefined
-
-    const parentId = items[0]?.parentId ?? null
-    return items.every((item) => item.parentId === parentId) ? parentId : undefined
+  const resolveFilesystemContext = (ctx: MenuContext) => {
+    return {
+      normalizedItems: filesystem.resolveContextItems(ctx),
+    }
   }
 
   return {
     delete: async (ctx) => {
-      const items = normalizedContextItems(ctx)
+      const { normalizedItems: items } = resolveFilesystemContext(ctx)
       if (items.length === 0) return
 
       if (items.length === 1 && isFolder(items[0])) {
@@ -51,56 +44,41 @@ export function createFilesystemActions({
         }
       }
 
-      try {
-        await itemOperations.trashItems(items)
-      } catch (error) {
-        handleError(
-          error,
-          items.length === 1 ? 'Failed to move item to trash' : 'Failed to move items to trash',
-        )
-      }
+      await filesystem.trashItems(items.map((item) => item._id))
     },
 
     restore: async (ctx) => {
-      const items = normalizedContextItems(ctx)
+      const { normalizedItems: items } = resolveFilesystemContext(ctx)
       if (items.length === 0) return
-      try {
-        await itemOperations.restoreItems(items)
-      } catch (error) {
-        handleError(
-          error,
-          items.length === 1 ? 'Failed to restore item' : 'Failed to restore items',
-        )
-      }
+      await filesystem.restoreItems(
+        items.map((item) => item._id),
+        null,
+      )
     },
 
     permanentlyDelete: (ctx) => {
-      const items = normalizedContextItems(ctx)
+      const { normalizedItems: items } = resolveFilesystemContext(ctx)
       if (items.length === 0) return
-      if (itemOperations.confirmPermanentDeleteItems(items)) {
+      if (filesystem.confirmDeleteForever(items.map((item) => item._id))) {
         onDialogOpen?.()
       }
     },
 
     paste: async (ctx) => {
-      const targetParentId = getPasteTargetParentId(ctx)
-      try {
-        await itemOperations.pasteClipboard(targetParentId)
-      } catch (error) {
-        handleError(error, 'Failed to paste items')
-      }
+      await filesystem.paste(
+        getContextMenuPasteParentId({
+          clickedItem: ctx.item,
+          operationItems: resolveFilesystemContext(ctx).normalizedItems,
+        }),
+      )
     },
     duplicate: async (ctx) => {
-      const items = normalizedContextItems(ctx)
-      const targetParentId = ctx.item?.parentId ?? null
-      try {
-        await itemOperations.duplicateItems(items, targetParentId)
-      } catch (error) {
-        handleError(
-          error,
-          items.length === 1 ? 'Failed to duplicate item' : 'Failed to duplicate items',
-        )
-      }
+      const { normalizedItems: items } = resolveFilesystemContext(ctx)
+      if (items.length === 0) return
+      await filesystem.copyItems(
+        items.map((item) => item._id),
+        ctx.item?.parentId ?? null,
+      )
     },
   }
 }

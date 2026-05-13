@@ -2,7 +2,6 @@ import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { VIEW_CONTEXT } from './constants'
 import type { Predicate, ViewContext } from './types'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 
 type PredicateContext = Parameters<Predicate>[0]
@@ -54,7 +53,8 @@ function selectedItemHasViewAccess(ctx: PredicateContext, itemIndex: number): bo
 
 function selectedItemIsTrashed(ctx: PredicateContext, itemIndex: number): boolean {
   if (ctx.selectedItems !== undefined) {
-    return ctx.selectedItems[itemIndex]?.location === SIDEBAR_ITEM_LOCATION.trash
+    const item = ctx.selectedItems[itemIndex]
+    return item?.isTrashed === true
   }
   return isItemTrashed(ctx)
 }

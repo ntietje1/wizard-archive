@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
+import { createNoteViaFilesystem } from '../../_test/filesystemSetup.helper'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import { createNote, createSidebarShare } from '../../_test/factories.helper'
 import {
@@ -49,7 +50,7 @@ describe('pushUpdate', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Test Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -68,7 +69,7 @@ describe('pushUpdate', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Test Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -100,7 +101,7 @@ describe('pushUpdate', () => {
     const dmAuth = asDm(ctx)
     const playerAuth = asPlayer(ctx)
 
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Shared Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -128,7 +129,7 @@ describe('pushUpdate', () => {
     const dmAuth = asDm(ctx)
     const playerAuth = asPlayer(ctx)
 
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'View Only Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -175,7 +176,7 @@ describe('pushUpdate', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      const { noteId } = await createNoteViaFilesystem(dmAuth, {
         campaignId: ctx.campaignId,
         name: 'Compact Note',
         parentTarget: { kind: 'direct', parentId: null },
@@ -209,7 +210,7 @@ describe('pushUpdate', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'No Compact Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -270,7 +271,7 @@ describe('pushAwareness', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Awareness Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -302,7 +303,7 @@ describe('pushAwareness', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Upsert Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -337,7 +338,7 @@ describe('pushAwareness', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Multi Client Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -372,7 +373,7 @@ describe('pushAwareness', () => {
     const dmAuth = asDm(ctx)
     const playerAuth = asPlayer(ctx)
 
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'View Share Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -425,7 +426,7 @@ describe('removeAwareness', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Remove Awareness Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -458,7 +459,7 @@ describe('removeAwareness', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'No-op Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -477,7 +478,7 @@ describe('removeAwareness', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Selective Remove Note',
       parentTarget: { kind: 'direct', parentId: null },

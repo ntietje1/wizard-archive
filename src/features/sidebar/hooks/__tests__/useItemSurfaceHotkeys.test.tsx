@@ -1,27 +1,36 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { useItemSurfaceHotkeys } from '../useItemSurfaceHotkeys'
-import type { ItemSurfaceHotkeyOperations } from '../useItemSurfaceHotkeys'
 import { buildSidebarItemMaps } from '~/features/sidebar/utils/sidebar-item-maps'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
+import type { FileSystemValue } from '~/features/filesystem/useFileSystem'
+import {
+  setFileSystemClipboard,
+  useFileSystemClipboardStore,
+} from '~/features/filesystem/filesystem-clipboard-store'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { resetSidebarUIStore } from '~/test/helpers/store-helpers'
 
 let sidebarItems: Array<AnySidebarItem> = []
 let trashItems: Array<AnySidebarItem> = []
+let clipboardCanPaste = false
 
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
   useCampaign: () => ({ campaignId: 'campaign_1' as Id<'campaigns'> }),
 }))
 
 vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
-  useSidebarItems: (location: string) => ({
-    data: location === SIDEBAR_ITEM_LOCATION.trash ? trashItems : sidebarItems,
+  useActiveSidebarItems: () => ({
+    data: sidebarItems,
     status: 'success',
-    ...buildSidebarItemMaps(location === SIDEBAR_ITEM_LOCATION.trash ? trashItems : sidebarItems),
+    ...buildSidebarItemMaps(sidebarItems),
+  }),
+  useTrashSidebarItems: () => ({
+    data: trashItems,
+    status: 'success',
+    ...buildSidebarItemMaps(trashItems),
   }),
 }))
 
@@ -37,20 +46,44 @@ vi.mock('~/features/sidebar/hooks/useOpenParentFolders', () => ({
   useOpenParentFolders: () => ({ openParentFolders: vi.fn() }),
 }))
 
-function createOperations(): ItemSurfaceHotkeyOperations {
+function createFileSystem(overrides?: Partial<FileSystemValue>): FileSystemValue {
   return {
-    copyItems: vi.fn(),
-    cutItems: vi.fn(),
-    pasteClipboard: vi.fn().mockResolvedValue(undefined),
+    createItem: vi.fn().mockResolvedValue(undefined),
+    renameItem: vi.fn().mockResolvedValue(undefined),
+    moveItems: vi.fn().mockResolvedValue(undefined),
+    copyItems: vi.fn().mockResolvedValue(undefined),
     trashItems: vi.fn().mockResolvedValue(undefined),
-    confirmPermanentDeleteItems: vi.fn(),
-    normalizeItems: (items) => items,
+    restoreItems: vi.fn().mockResolvedValue(undefined),
+    deleteForever: vi.fn().mockResolvedValue(undefined),
+    emptyTrash: vi.fn().mockResolvedValue(undefined),
+    confirmDeleteForever: vi.fn(),
+    copy: vi.fn(),
+    cut: vi.fn(),
+    cancelClipboard: vi.fn(() => {
+      const store = useFileSystemClipboardStore.getState()
+      if (!store.clipboard) return false
+      store.clearClipboard()
+      clipboardCanPaste = false
+      return true
+    }),
+    canPaste: clipboardCanPaste,
+    paste: vi.fn().mockResolvedValue(undefined),
+    undo: vi.fn(),
+    redo: vi.fn(),
+    executeDropCommand: vi.fn().mockResolvedValue(undefined),
+    canUndo: false,
+    canRedo: false,
+    resolveOperationItems: (items) => items,
+    resolveContextItems: (context) => context.selectedItems ?? (context.item ? [context.item] : []),
+    ...overrides,
   }
 }
 
 describe('useItemSurfaceHotkeys', () => {
   beforeEach(() => {
     resetSidebarUIStore()
+    useFileSystemClipboardStore.getState().clearClipboard()
+    clipboardCanPaste = false
     sidebarItems = []
     trashItems = []
   })
@@ -64,26 +97,27 @@ describe('useItemSurfaceHotkeys', () => {
       visibleItemIds: [note._id],
     })
     useSidebarUIStore.getState().setSelectedItemIds([note._id], note._id)
-    useSidebarUIStore.getState().setItemClipboard({
+    setFileSystemClipboard({
       mode: 'cut',
       campaignId: 'campaign_1' as Id<'campaigns'>,
       itemIds: [note._id],
     })
+    clipboardCanPaste = true
 
-    const operations = createOperations()
-    renderHook(() => useItemSurfaceHotkeys(operations))
+    const filesystem = createFileSystem()
+    renderHook(() => useItemSurfaceHotkeys(filesystem))
 
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
     })
 
-    expect(useSidebarUIStore.getState().itemClipboard).toBeNull()
+    expect(useFileSystemClipboardStore.getState().clipboard).toBeNull()
     expect(useSidebarUIStore.getState().selectedItemIds).toEqual([note._id])
-    expect(operations.copyItems).not.toHaveBeenCalled()
-    expect(operations.cutItems).not.toHaveBeenCalled()
-    expect(operations.pasteClipboard).not.toHaveBeenCalled()
-    expect(operations.trashItems).not.toHaveBeenCalled()
-    expect(operations.confirmPermanentDeleteItems).not.toHaveBeenCalled()
+    expect(filesystem.copy).not.toHaveBeenCalled()
+    expect(filesystem.cut).not.toHaveBeenCalled()
+    expect(filesystem.paste).not.toHaveBeenCalled()
+    expect(filesystem.trashItems).not.toHaveBeenCalled()
+    expect(filesystem.confirmDeleteForever).not.toHaveBeenCalled()
   })
 
   it('clears item selection on Escape when no clipboard operation is active', () => {
@@ -96,20 +130,20 @@ describe('useItemSurfaceHotkeys', () => {
     })
     useSidebarUIStore.getState().setSelectedItemIds([note._id], note._id)
 
-    const operations = createOperations()
-    renderHook(() => useItemSurfaceHotkeys(operations))
+    const filesystem = createFileSystem()
+    renderHook(() => useItemSurfaceHotkeys(filesystem))
 
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
     })
 
-    expect(useSidebarUIStore.getState().itemClipboard).toBeNull()
+    expect(useFileSystemClipboardStore.getState().clipboard).toBeNull()
     expect(useSidebarUIStore.getState().selectedItemIds).toEqual([])
-    expect(operations.copyItems).not.toHaveBeenCalled()
-    expect(operations.cutItems).not.toHaveBeenCalled()
-    expect(operations.pasteClipboard).not.toHaveBeenCalled()
-    expect(operations.trashItems).not.toHaveBeenCalled()
-    expect(operations.confirmPermanentDeleteItems).not.toHaveBeenCalled()
+    expect(filesystem.copy).not.toHaveBeenCalled()
+    expect(filesystem.cut).not.toHaveBeenCalled()
+    expect(filesystem.paste).not.toHaveBeenCalled()
+    expect(filesystem.trashItems).not.toHaveBeenCalled()
+    expect(filesystem.confirmDeleteForever).not.toHaveBeenCalled()
   })
 
   it('pastes into the current folder surface instead of a selected child folder', () => {
@@ -125,20 +159,21 @@ describe('useItemSurfaceHotkeys', () => {
     useSidebarUIStore
       .getState()
       .setSelectedItemIds([selectedChildFolder._id], selectedChildFolder._id)
-    useSidebarUIStore.getState().setItemClipboard({
+    setFileSystemClipboard({
       mode: 'copy',
       campaignId: 'campaign_1' as Id<'campaigns'>,
       itemIds: [clipboardItem._id],
     })
-    const operations = createOperations()
+    clipboardCanPaste = true
+    const filesystem = createFileSystem()
 
-    renderHook(() => useItemSurfaceHotkeys(operations))
+    renderHook(() => useItemSurfaceHotkeys(filesystem))
 
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'v', ctrlKey: true }))
     })
 
-    expect(operations.pasteClipboard).toHaveBeenCalledWith(parentFolder._id)
+    expect(filesystem.paste).toHaveBeenCalledWith(parentFolder._id)
   })
 
   it('pastes into the sidebar root instead of a selected root folder', () => {
@@ -151,20 +186,21 @@ describe('useItemSurfaceHotkeys', () => {
       visibleItemIds: [selectedFolder._id],
     })
     useSidebarUIStore.getState().setSelectedItemIds([selectedFolder._id], selectedFolder._id)
-    useSidebarUIStore.getState().setItemClipboard({
+    setFileSystemClipboard({
       mode: 'copy',
       campaignId: 'campaign_1' as Id<'campaigns'>,
       itemIds: [clipboardItem._id],
     })
-    const operations = createOperations()
+    clipboardCanPaste = true
+    const filesystem = createFileSystem()
 
-    renderHook(() => useItemSurfaceHotkeys(operations))
+    renderHook(() => useItemSurfaceHotkeys(filesystem))
 
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'v', ctrlKey: true }))
     })
 
-    expect(operations.pasteClipboard).toHaveBeenCalledWith(null)
+    expect(filesystem.paste).toHaveBeenCalledWith(null)
   })
 
   it('pastes sidebar-tree selections into the selected items common parent folder', () => {
@@ -181,19 +217,20 @@ describe('useItemSurfaceHotkeys', () => {
     useSidebarUIStore
       .getState()
       .setSelectedItemIds([selectedNote._id, selectedFolder._id], selectedNote._id)
-    useSidebarUIStore.getState().setItemClipboard({
+    setFileSystemClipboard({
       mode: 'copy',
       campaignId: 'campaign_1' as Id<'campaigns'>,
       itemIds: [clipboardItem._id],
     })
-    const operations = createOperations()
+    clipboardCanPaste = true
+    const filesystem = createFileSystem()
 
-    renderHook(() => useItemSurfaceHotkeys(operations))
+    renderHook(() => useItemSurfaceHotkeys(filesystem))
 
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'v', ctrlKey: true }))
     })
 
-    expect(operations.pasteClipboard).toHaveBeenCalledWith(parentFolder._id)
+    expect(filesystem.paste).toHaveBeenCalledWith(parentFolder._id)
   })
 })
