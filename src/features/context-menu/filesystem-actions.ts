@@ -1,8 +1,4 @@
 import type { ActionHandlers } from './menu-registry'
-import type { Folder } from 'convex/folders/types'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type { Id } from 'convex/_generated/dataModel'
-import { isFolder } from '~/features/sidebar/utils/sidebar-item-utils'
 import type { FileSystemValue } from '~/features/filesystem/useFileSystem'
 import { getContextMenuPasteParentId } from '~/features/filesystem/filesystem-targets'
 
@@ -11,15 +7,16 @@ type FilesystemActions = Pick<
   'delete' | 'restore' | 'permanentlyDelete' | 'paste' | 'duplicate'
 >
 
+const RESTORE_TO_ORIGINAL_LOCATION = null
+
 export function createFilesystemActions({
   filesystem,
-  parentItemsMap,
-  setDeleteFolderDialog,
   onDialogOpen,
 }: {
-  filesystem: FileSystemValue
-  parentItemsMap: ReadonlyMap<Id<'sidebarItems'> | null, Array<AnySidebarItem>>
-  setDeleteFolderDialog: (folder: Folder) => void
+  filesystem: Pick<
+    FileSystemValue,
+    'requestTrashItems' | 'restoreItems' | 'confirmDeleteForever' | 'paste' | 'duplicateItems'
+  >
   onDialogOpen?: () => void
 }): FilesystemActions {
   return {
@@ -27,17 +24,9 @@ export function createFilesystemActions({
       const items = ctx.selectedItems ?? []
       if (items.length === 0) return
 
-      if (items.length === 1 && isFolder(items[0])) {
-        const item = items[0]
-        const children = parentItemsMap.get(item._id)
-        if (children && children.length > 0) {
-          setDeleteFolderDialog(item)
-          onDialogOpen?.()
-          return
-        }
+      if (await filesystem.requestTrashItems(items.map((item) => item._id))) {
+        onDialogOpen?.()
       }
-
-      await filesystem.trashItems(items.map((item) => item._id))
     },
 
     restore: async (ctx) => {
@@ -45,7 +34,7 @@ export function createFilesystemActions({
       if (items.length === 0) return
       await filesystem.restoreItems(
         items.map((item) => item._id),
-        null,
+        RESTORE_TO_ORIGINAL_LOCATION,
       )
     },
 
@@ -58,17 +47,16 @@ export function createFilesystemActions({
     },
 
     paste: async (ctx) => {
-      await filesystem.paste(
-        getContextMenuPasteParentId({
-          clickedItem: ctx.item,
-          operationItems: ctx.selectedItems ?? [],
-        }),
-      )
+      const parentId = getContextMenuPasteParentId({
+        clickedItem: ctx.item,
+        operationItems: ctx.selectedItems ?? [],
+      })
+      await filesystem.paste(parentId)
     },
     duplicate: async (ctx) => {
       const items = ctx.selectedItems ?? []
       if (items.length === 0) return
-      await filesystem.copyItems(
+      await filesystem.duplicateItems(
         items.map((item) => item._id),
         ctx.item?.parentId ?? null,
       )

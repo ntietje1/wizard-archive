@@ -4,6 +4,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { DndMonitorCtx } from '~/features/dnd/types'
 import { useElementDragMonitor } from '~/features/dnd/hooks/useElementDragMonitor'
+import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { MAP_DROP_ZONE_TYPE, SIDEBAR_ROOT_DROP_TYPE } from '~/features/dnd/utils/drop-target-data'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
@@ -14,6 +15,35 @@ vi.mock('@atlaskit/pragmatic-drag-and-drop/element/adapter', () => ({
   monitorForElements: (args: unknown) => monitorForElements(args),
 }))
 
+type DragSource = { data: Record<string, unknown> }
+type DragStartArgs = {
+  source: DragSource
+  location: { current: { input: { clientX: number; clientY: number } } }
+}
+type DragArgs = {
+  source: DragSource
+  location: {
+    current: {
+      input: { clientX: number; clientY: number }
+      dropTargets: Array<{ data: Record<string, unknown> }>
+    }
+  }
+}
+type DropArgs = {
+  source: DragSource
+  location: {
+    current: {
+      input: { clientX: number; clientY: number; ctrlKey?: boolean }
+      dropTargets: Array<{ data: Record<string, unknown> }>
+    }
+  }
+}
+type ElementMonitor = {
+  onDragStart: (args: DragStartArgs) => void
+  onDrag: (args: DragArgs) => void
+  onDrop: (args: DropArgs) => Promise<void>
+}
+
 function createMonitorCtx(items: Array<AnySidebarItem>): DndMonitorCtx {
   const itemsMap = new Map(items.map((item) => [item._id, item]))
 
@@ -23,7 +53,8 @@ function createMonitorCtx(items: Array<AnySidebarItem>): DndMonitorCtx {
     allItemsMap: itemsMap,
     getAncestorIds: vi.fn(() => []),
     dndContext: {
-      executeFileSystemDropCommand: vi.fn(),
+      executeFileSystemDrop: vi.fn(),
+      openItem: vi.fn(),
     },
     dropPlanningContext: {
       campaignId: testId<'campaigns'>('campaign_1'),
@@ -35,10 +66,53 @@ function createMonitorCtx(items: Array<AnySidebarItem>): DndMonitorCtx {
   }
 }
 
+function getElementMonitor(): ElementMonitor {
+  expect(monitorForElements).toHaveBeenCalledTimes(1)
+  return monitorForElements.mock.calls[0]?.[0] as ElementMonitor
+}
+
+function createSidebarSource(
+  itemId: Id<'sidebarItems'>,
+  itemIds: Array<Id<'sidebarItems'>>,
+  previewItemIds?: Array<Id<'sidebarItems'>>,
+): DragSource {
+  return {
+    data: {
+      sidebarItemId: itemId,
+      sidebarItemIds: itemIds,
+      ...(previewItemIds ? { sidebarDragPreviewItemIds: previewItemIds } : {}),
+    },
+  }
+}
+
+function startDrag(monitor: ElementMonitor, source: DragSource) {
+  monitor.onDragStart({
+    source,
+    location: { current: { input: { clientX: 10, clientY: 20 } } },
+  })
+}
+
+function dragOver(
+  monitor: ElementMonitor,
+  source: DragSource,
+  dropTargets: DragArgs['location']['current']['dropTargets'],
+) {
+  monitor.onDrag({
+    source,
+    location: {
+      current: {
+        input: { clientX: 20, clientY: 30 },
+        dropTargets,
+      },
+    },
+  })
+}
+
 describe('useElementDragMonitor', () => {
   beforeEach(() => {
     monitorForElements.mockReset()
     monitorForElements.mockReturnValue(vi.fn())
+    useDndStore.getState().setSidebarDragPreviewItemIds([])
   })
 
   it('shows a multi-item overlay immediately when a selected group starts dragging', () => {
@@ -49,32 +123,15 @@ describe('useElementDragMonitor', () => {
     } as React.RefObject<DndMonitorCtx>
 
     const { result } = renderHook(() => useElementDragMonitor(ctxRef))
-    expect(monitorForElements).toHaveBeenCalled()
-    const monitor = monitorForElements.mock.calls[0]?.[0] as {
-      onDragStart: (args: {
-        source: { data: Record<string, unknown> }
-        location: { current: { input: { clientX: number; clientY: number } } }
-      }) => void
-    }
+    const monitor = getElementMonitor()
 
     act(() => {
-      monitor.onDragStart({
-        source: {
-          data: {
-            sidebarItemId: first._id,
-            sidebarItemIds: [first._id, second._id] satisfies Array<Id<'sidebarItems'>>,
-          },
-        },
-        location: {
-          current: {
-            input: { clientX: 10, clientY: 20 },
-          },
-        },
-      })
+      startDrag(monitor, createSidebarSource(first._id, [first._id, second._id]))
     })
 
     expect(result.current.dragState?.draggedItem).toBe(first)
     expect(result.current.dragState?.draggedItemCount).toBe(2)
+    expect(useDndStore.getState().sidebarDragPreviewItemIds).toEqual([first._id, second._id])
   })
 
   it('counts explicitly selected descendants in the overlay even when drag operations are normalized', () => {
@@ -86,59 +143,30 @@ describe('useElementDragMonitor', () => {
     } as React.RefObject<DndMonitorCtx>
 
     const { result } = renderHook(() => useElementDragMonitor(ctxRef))
-    expect(monitorForElements).toHaveBeenCalled()
-    const monitor = monitorForElements.mock.calls[0]?.[0] as {
-      onDragStart: (args: {
-        source: { data: Record<string, unknown> }
-        location: { current: { input: { clientX: number; clientY: number } } }
-      }) => void
-      onDrag: (args: {
-        source: { data: Record<string, unknown> }
-        location: {
-          current: {
-            input: { clientX: number; clientY: number }
-            dropTargets: Array<{ data: Record<string, unknown> }>
-          }
-        }
-      }) => void
-    }
+    const monitor = getElementMonitor()
     // `source.data` models a normalization edge case: firstChild is the actual dragged
     // element, sidebarItemIds contains the normalized folder root, and
     // sidebarDragPreviewItemIds keeps folder plus children visible in the preview.
-    const source = {
-      data: {
-        sidebarItemId: firstChild._id,
-        sidebarItemIds: [folder._id] satisfies Array<Id<'sidebarItems'>>,
-        sidebarDragPreviewItemIds: [folder._id, firstChild._id, secondChild._id] satisfies Array<
-          Id<'sidebarItems'>
-        >,
-      },
-    }
+    const source = createSidebarSource(
+      firstChild._id,
+      [folder._id],
+      [folder._id, firstChild._id, secondChild._id],
+    )
 
     act(() => {
-      monitor.onDragStart({
-        source,
-        location: {
-          current: {
-            input: { clientX: 10, clientY: 20 },
-          },
-        },
-      })
+      startDrag(monitor, source)
     })
 
     expect(result.current.dragState?.draggedItem).toBe(folder)
     expect(result.current.dragState?.draggedItemCount).toBe(3)
+    expect(useDndStore.getState().sidebarDragPreviewItemIds).toEqual([
+      folder._id,
+      firstChild._id,
+      secondChild._id,
+    ])
 
     act(() => {
-      monitor.onDrag({
-        source,
-        location: {
-          current: {
-            input: { clientX: 20, clientY: 30 },
-            dropTargets: [{ data: { type: SIDEBAR_ROOT_DROP_TYPE } }],
-          },
-        },
-      })
+      dragOver(monitor, source, [{ data: { type: SIDEBAR_ROOT_DROP_TYPE } }])
     })
 
     expect(result.current.dragState?.draggedItemCount).toBe(3)
@@ -152,52 +180,21 @@ describe('useElementDragMonitor', () => {
     } as React.RefObject<DndMonitorCtx>
 
     const { result } = renderHook(() => useElementDragMonitor(ctxRef))
-    expect(monitorForElements).toHaveBeenCalledTimes(1)
-    const monitor = monitorForElements.mock.calls[0]?.[0] as {
-      onDragStart: (args: {
-        source: { data: Record<string, unknown> }
-        location: { current: { input: { clientX: number; clientY: number } } }
-      }) => void
-      onDrag: (args: {
-        source: { data: Record<string, unknown> }
-        location: {
-          current: {
-            input: { clientX: number; clientY: number }
-            dropTargets: Array<{ data: Record<string, unknown> }>
-          }
-        }
-      }) => void
-    }
-    const source = {
-      data: {
-        sidebarItemId: first._id,
-        sidebarItemIds: [first._id, second._id] satisfies Array<Id<'sidebarItems'>>,
-      },
-    }
+    const monitor = getElementMonitor()
+    const source = createSidebarSource(first._id, [first._id, second._id])
 
     act(() => {
-      monitor.onDragStart({
-        source,
-        location: { current: { input: { clientX: 10, clientY: 20 } } },
-      })
-      monitor.onDrag({
-        source,
-        location: {
-          current: {
-            input: { clientX: 20, clientY: 30 },
-            dropTargets: [
-              {
-                data: {
-                  type: MAP_DROP_ZONE_TYPE,
-                  mapId: testId<'sidebarItems'>('map_1'),
-                  mapName: 'World Map',
-                  pinnedItemIds: [],
-                },
-              },
-            ],
+      startDrag(monitor, source)
+      dragOver(monitor, source, [
+        {
+          data: {
+            type: MAP_DROP_ZONE_TYPE,
+            mapId: testId<'sidebarItems'>('map_1'),
+            mapName: 'World Map',
+            pinnedItemIds: [],
           },
         },
-      })
+      ])
     })
 
     expect(result.current.dragState?.outcome).toMatchObject({
@@ -215,58 +212,27 @@ describe('useElementDragMonitor', () => {
     } as React.RefObject<DndMonitorCtx>
 
     const { result } = renderHook(() => useElementDragMonitor(ctxRef))
-    expect(monitorForElements).toHaveBeenCalledTimes(1)
-    const monitor = monitorForElements.mock.calls[0]?.[0] as {
-      onDragStart: (args: {
-        source: { data: Record<string, unknown> }
-        location: { current: { input: { clientX: number; clientY: number } } }
-      }) => void
-      onDrag: (args: {
-        source: { data: Record<string, unknown> }
-        location: {
-          current: {
-            input: { clientX: number; clientY: number }
-            dropTargets: Array<{ data: Record<string, unknown> }>
-          }
-        }
-      }) => void
-    }
-    const source = {
-      data: {
-        sidebarItemId: first._id,
-        sidebarItemIds: [first._id, second._id] satisfies Array<Id<'sidebarItems'>>,
-      },
-    }
+    const monitor = getElementMonitor()
+    const source = createSidebarSource(first._id, [first._id, second._id])
 
     act(() => {
-      monitor.onDragStart({
-        source,
-        location: { current: { input: { clientX: 10, clientY: 20 } } },
-      })
-      monitor.onDrag({
-        source,
-        location: {
-          current: {
-            input: { clientX: 20, clientY: 30 },
-            dropTargets: [
-              {
-                data: {
-                  type: MAP_DROP_ZONE_TYPE,
-                  mapId: testId<'sidebarItems'>('map_1'),
-                  mapName: 'World Map',
-                  pinnedItemIds: [second._id],
-                },
-              },
-            ],
+      startDrag(monitor, source)
+      dragOver(monitor, source, [
+        {
+          data: {
+            type: MAP_DROP_ZONE_TYPE,
+            mapId: testId<'sidebarItems'>('map_1'),
+            mapName: 'World Map',
+            pinnedItemIds: [second._id],
           },
         },
-      })
+      ])
     })
 
     expect(result.current.dragState?.outcome).toMatchObject({
       type: 'operation',
       action: 'pin',
-      label: 'Pin to "World Map"',
+      label: 'Pin item to "World Map"',
     })
     expect(result.current.dragState?.rejectedItemCount).toBe(1)
   })
@@ -280,27 +246,11 @@ describe('useElementDragMonitor', () => {
     } as React.RefObject<DndMonitorCtx>
 
     renderHook(() => useElementDragMonitor(ctxRef))
-    expect(monitorForElements).toHaveBeenCalledTimes(1)
-    const monitor = monitorForElements.mock.calls[0]?.[0] as {
-      onDrop: (args: {
-        source: { data: Record<string, unknown> }
-        location: {
-          current: {
-            input: { clientX: number; clientY: number; ctrlKey: boolean }
-            dropTargets: Array<{ data: Record<string, unknown> }>
-          }
-        }
-      }) => Promise<void>
-    }
+    const monitor = getElementMonitor()
 
     await act(async () => {
       await monitor.onDrop({
-        source: {
-          data: {
-            sidebarItemId: note._id,
-            sidebarItemIds: [note._id] satisfies Array<Id<'sidebarItems'>>,
-          },
-        },
+        source: createSidebarSource(note._id, [note._id]),
         location: {
           current: {
             input: { clientX: 20, clientY: 30, ctrlKey: true },
@@ -314,13 +264,15 @@ describe('useElementDragMonitor', () => {
       })
     })
 
-    expect(ctx.dndContext.executeFileSystemDropCommand).toHaveBeenCalledTimes(1)
-    expect(ctx.dndContext.executeFileSystemDropCommand).toHaveBeenCalledWith(
+    expect(ctx.dndContext.executeFileSystemDrop).toHaveBeenCalledTimes(1)
+    expect(ctx.dndContext.executeFileSystemDrop).toHaveBeenCalledWith(
       expect.objectContaining({
-        status: 'ready',
-        action: 'copy',
-        items: [note],
-        parentId: target._id,
+        itemIds: [note._id],
+        target: expect.objectContaining({
+          type: 'folder',
+          folder: expect.objectContaining({ _id: target._id }),
+        }),
+        options: { copy: true },
       }),
     )
   })

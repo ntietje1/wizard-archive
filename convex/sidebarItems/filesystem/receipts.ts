@@ -108,7 +108,7 @@ export type FileSystemPatch =
   | {
       type: 'removeSidebarItem'
       itemId: Id<'sidebarItems'>
-      snapshot?: Doc<'sidebarItems'>
+      snapshot: Doc<'sidebarItems'>
     }
 
 export type FileSystemDelta = {
@@ -205,14 +205,14 @@ export function summarizeFileSystemReceipt(
 
 export type FileSystemTransactionDirection = 'forward' | 'undo' | 'redo'
 
-export type FileSystemTransactionSummary = FileSystemReceiptMessage
-
 export type FileSystemTransactionReceipt = {
   transactionId: Id<'filesystemTransactions'> | null
   direction: FileSystemTransactionDirection
   command: FileSystemCommand
   events: Array<FileSystemEvent>
   patches: Array<FileSystemPatch>
-  summary: FileSystemTransactionSummary
+  forwardPatches: Array<FileSystemPatch>
+  inversePatches: Array<FileSystemPatch>
+  summary: FileSystemReceiptMessage
   undoable: boolean
 }

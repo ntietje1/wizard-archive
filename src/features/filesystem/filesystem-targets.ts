@@ -13,7 +13,7 @@ export function getPasteTargetParentId(
   activeItemSurface: SidebarOperationSurface | null,
   targetParentId?: Id<'sidebarItems'> | null,
 ): Id<'sidebarItems'> | null {
-  return targetParentId !== undefined ? targetParentId : (activeItemSurface?.parentId ?? null)
+  return targetParentId === undefined ? (activeItemSurface?.parentId ?? null) : targetParentId
 }
 
 export function getRestoreTargetParentId<
@@ -29,14 +29,6 @@ export function getRestoreTargetParentId<
   return resolvedParentId
 }
 
-function getCommonParentId(
-  items: Array<Pick<AnySidebarItem, 'parentId'>>,
-): Id<'sidebarItems'> | null | undefined {
-  if (items.length === 0) return undefined
-  const parentId = items[0].parentId
-  return items.every((item) => item.parentId === parentId) ? parentId : undefined
-}
-
 export function getKeyboardPasteParentId({
   selectedItems,
   surface,
@@ -47,8 +39,14 @@ export function getKeyboardPasteParentId({
   surfaceParentId: Id<'sidebarItems'> | null
 }): Id<'sidebarItems'> | null {
   if (surface !== 'sidebar' && surface !== 'bookmarks') return surfaceParentId
-  const selectedParentId = getCommonParentId(selectedItems)
-  return selectedParentId === undefined ? surfaceParentId : selectedParentId
+  if (selectedItems.length === 0) return surfaceParentId
+
+  const [firstItem] = selectedItems
+  if (selectedItems.every((item) => item.parentId === firstItem.parentId)) {
+    return firstItem.parentId
+  }
+
+  return surfaceParentId
 }
 
 export function getContextMenuPasteParentId({
@@ -59,5 +57,12 @@ export function getContextMenuPasteParentId({
   operationItems: Array<AnySidebarItem>
 }): Id<'sidebarItems'> | null | undefined {
   if (clickedItem?.type === SIDEBAR_ITEM_TYPES.folders) return clickedItem._id
-  return getCommonParentId(operationItems)
+  if (operationItems.length === 0) return undefined
+
+  const [firstItem] = operationItems
+  if (operationItems.every((item) => item.parentId === firstItem.parentId)) {
+    return firstItem.parentId
+  }
+
+  return undefined
 }

@@ -30,7 +30,7 @@ export function BookmarkedItemsList() {
   return (
     <div className="flex-1 flex min-h-0 min-w-0 overflow-hidden">
       <ScrollArea
-        className="flex-1 min-h-0 min-w-0 w-full"
+        className="group/sidebar-surface flex-1 min-h-0 min-w-0 w-full"
         onFocusCapture={activateSurface}
         onPointerDownCapture={handleSurfacePointerDown}
         onContextMenuCapture={activateSurface}

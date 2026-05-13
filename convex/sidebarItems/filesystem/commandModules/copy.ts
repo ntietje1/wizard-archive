@@ -22,6 +22,7 @@ import {
 } from '../../functions/duplicateSidebarItemContent'
 import { createFileSystemWriteSession } from '../deltas'
 import { FILE_SYSTEM_EVENT_TYPE } from '../receipts'
+import { createFileSystemReadModel } from '../readModel'
 import type { OperationDecision } from '../conflicts'
 import type { CampaignMutationCtx } from '../../../functions'
 import type { Id } from '../../../_generated/dataModel'
@@ -196,20 +197,20 @@ async function collectCopyChildrenMap(
   })
 }
 
-function buildCopyItemsMap(
+function buildCopyReadModel(
   items: Array<AnySidebarItem | OperationPlannerItem>,
-  childrenMap: Awaited<ReturnType<typeof collectCopyChildrenMap>>,
+  childrenMap: ReadonlyMap<Id<'sidebarItems'>, Array<OperationPlannerItem>>,
 ) {
-  const map = new Map<Id<'sidebarItems'>, Pick<AnySidebarItem, '_id' | 'parentId'>>()
+  const rowsById = new Map<Id<'sidebarItems'>, AnySidebarItem | OperationPlannerItem>()
   for (const item of items) {
-    map.set(item._id, item)
+    rowsById.set(item._id, item)
   }
   for (const children of childrenMap.values()) {
     for (const child of children) {
-      map.set(child._id, child)
+      rowsById.set(child._id, child)
     }
   }
-  return map
+  return createFileSystemReadModel(Array.from(rowsById.values()))
 }
 
 async function executeCopyOperations(
@@ -425,7 +426,7 @@ function planCopyEffects({
   targetParentId: Id<'sidebarItems'> | null
   targetItems: Array<OperationPlannerItem>
   decisions?: Array<OperationDecision>
-  childrenMap: Awaited<ReturnType<typeof collectCopyChildrenMap>>
+  childrenMap: ReadonlyMap<Id<'sidebarItems'>, Array<OperationPlannerItem>>
   itemsById: ReadonlyMap<Id<'sidebarItems'>, Pick<AnySidebarItem, '_id' | 'parentId'>>
 }) {
   return planCopyOperations({
@@ -469,14 +470,14 @@ async function executeCopyPlan(
     targetParentId,
   })
   const childrenMap = await collectCopyPlanningChildrenMap(ctx, sourceItems, targetItems)
-  const itemsById = buildCopyItemsMap([...sourceItems, ...targetItems], childrenMap)
+  const readModel = buildCopyReadModel([...sourceItems, ...targetItems], childrenMap)
   await addSidebarItemAncestorsToMap(ctx, {
     items: sourceItems,
-    itemsById,
+    itemsById: readModel.itemsById,
     maxDepth: MAX_COPY_DEPTH,
   })
   const rootSourceIds = new Set(
-    normalizeSelectedRoots(sourceItems, itemsById).map((item) => item._id),
+    normalizeSelectedRoots(sourceItems, readModel.itemsById).map((item) => item._id),
   )
   const plan = planCopyEffects({
     sourceItems,
@@ -484,7 +485,7 @@ async function executeCopyPlan(
     targetItems,
     decisions,
     childrenMap,
-    itemsById,
+    itemsById: readModel.itemsById,
   })
 
   if (plan.status === 'needs-decision') {

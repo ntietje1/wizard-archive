@@ -9,7 +9,8 @@ import type { FileSystemDelta } from '../receipts'
 import type { AnySidebarItemRow } from '../../types/types'
 import type { Id } from '../../../_generated/dataModel'
 
-export const MAX_EMPTY_TRASH_AFFECTED_ITEMS = 100
+// Keep empty-trash transactions bounded so one click cannot cause long DB work or UX pauses.
+const MAX_EMPTY_TRASH_AFFECTED_ITEMS = 100
 
 function selectRootTrashItems(items: Array<AnySidebarItemRow>): Array<AnySidebarItemRow> {
   const itemIds = new Set<Id<'sidebarItems'>>(items.map((item) => item._id))
@@ -34,13 +35,7 @@ export async function executeEmptyTrashCommand(
     .withIndex('by_campaign_status_deletionTime', (q) =>
       q.eq('campaignId', ctx.campaign._id).eq('status', SIDEBAR_ITEM_STATUS.trashed),
     )
-    .take(MAX_EMPTY_TRASH_AFFECTED_ITEMS + 1)
-  if (trashedItems.length > MAX_EMPTY_TRASH_AFFECTED_ITEMS) {
-    throwClientError(
-      ERROR_CODE.VALIDATION_FAILED,
-      `Empty trash cannot delete more than ${MAX_EMPTY_TRASH_AFFECTED_ITEMS} items at once`,
-    )
-  }
+    .take(MAX_EMPTY_TRASH_AFFECTED_ITEMS)
   const rootItems = selectRootTrashItems(trashedItems)
 
   for (const item of rootItems) {

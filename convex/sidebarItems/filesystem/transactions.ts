@@ -105,12 +105,20 @@ export async function loadTransactionReceipt(
       : direction === 'redo'
         ? (transaction.forwardPatches as Array<FileSystemPatch>)
         : (transaction.receiptPatches as Array<FileSystemPatch>)
+  const forwardPatches = transaction.undoable
+    ? (transaction.forwardPatches as Array<FileSystemPatch>)
+    : []
+  const inversePatches = transaction.undoable
+    ? (transaction.inversePatches as Array<FileSystemPatch>)
+    : []
   return {
     transactionId,
     direction,
     command,
     events: transaction.events,
     patches,
+    forwardPatches,
+    inversePatches,
     summary: summarizeFileSystemReceipt(command, transaction.events),
     undoable: transaction.undoable,
   }
@@ -166,6 +174,8 @@ export async function recordFilesystemTransaction(
     direction: 'forward',
     command: delta.command,
     patches: delta.receiptPatches,
+    forwardPatches: delta.undoable ? delta.forwardPatches : [],
+    inversePatches: delta.undoable ? delta.inversePatches : [],
     summary: summarizeFileSystemReceipt(delta.command, delta.events),
     undoable: delta.undoable,
   }
@@ -268,6 +278,8 @@ export async function applyFilesystemTransactionDirection(
     direction,
     command,
     patches,
+    forwardPatches: source.forwardPatches as Array<FileSystemPatch>,
+    inversePatches: source.inversePatches as Array<FileSystemPatch>,
     summary: summarizeFileSystemReceipt(command, source.events),
     undoable: true,
   }

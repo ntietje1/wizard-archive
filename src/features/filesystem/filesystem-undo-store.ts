@@ -2,68 +2,13 @@ import { create } from 'zustand'
 import type {
   FileSystemPatch,
   FileSystemTransactionReceipt,
-  SidebarItemFieldPatch,
 } from 'convex/sidebarItems/filesystem/receipts'
-import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_STATUS } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
-import { logger } from '~/shared/utils/logger'
 
 const MAX_FILE_SYSTEM_HISTORY = 50
 
-function tryInvertReceiptPatches(
-  receipt: FileSystemTransactionReceipt,
-): Array<FileSystemPatch> | null {
-  try {
-    return invertReceiptPatchesForUndo(receipt.patches)
-  } catch (error) {
-    logger.error('Failed to invert filesystem patches', error)
-    return null
-  }
-}
-
-function undoHiddenFields(): SidebarItemFieldPatch {
-  return {
-    location: SIDEBAR_ITEM_LOCATION.sidebar,
-    status: SIDEBAR_ITEM_STATUS.undoHidden,
-    deletionTime: null,
-    deletedBy: null,
-  }
-}
-
-function invertReceiptPatchesForUndo(patches: Array<FileSystemPatch>): Array<FileSystemPatch> {
-  return patches.map((patch): FileSystemPatch => {
-    if (patch.type === 'upsertSidebarItem') {
-      const hidden = undoHiddenFields()
-      return {
-        type: 'updateSidebarItem',
-        itemId: patch.item._id,
-        before: {
-          location: patch.item.location,
-          status: patch.item.status,
-          deletionTime: patch.item.deletionTime,
-          deletedBy: patch.item.deletedBy,
-        },
-        fields: hidden,
-      }
-    }
-    if (patch.type === 'removeSidebarItem') {
-      if (!patch.snapshot) {
-        throw new Error(`Cannot invert remove patch without a snapshot for ${patch.itemId}`)
-      }
-      return { type: 'upsertSidebarItem', item: patch.snapshot }
-    }
-    return {
-      type: 'updateSidebarItem',
-      itemId: patch.itemId,
-      before: patch.fields,
-      fields: patch.before,
-    }
-  })
-}
-
 type FileSystemHistoryEntry = {
   transactionId: Id<'filesystemTransactions'>
-  summary: FileSystemTransactionReceipt['summary']
   forwardPatches: Array<FileSystemPatch>
   inversePatches: Array<FileSystemPatch>
 }
@@ -102,17 +47,17 @@ export const useFileSystemUndoStore = create<FileSystemUndoState>((set, get) => 
   reset: () => set({ campaignId: null, undoStack: [], redoStack: [] }),
   pushUndo: (receipt, options) =>
     set((state) => {
-      const inversePatches = tryInvertReceiptPatches(receipt)
-      return receipt.transactionId === null || !inversePatches
+      return receipt.transactionId === null ||
+        !receipt.undoable ||
+        receipt.inversePatches.length === 0
         ? state
         : {
             undoStack: [
               ...state.undoStack,
               {
                 transactionId: receipt.transactionId,
-                summary: receipt.summary,
-                forwardPatches: receipt.patches,
-                inversePatches,
+                forwardPatches: receipt.forwardPatches,
+                inversePatches: receipt.inversePatches,
               },
             ].slice(-MAX_FILE_SYSTEM_HISTORY),
             redoStack: options?.preserveRedo ? state.redoStack : [],

@@ -41,7 +41,7 @@ export function SidebarList() {
 
   return (
     <ScrollArea
-      className="flex-1 min-h-0 min-w-0 w-full p-1"
+      className="group/sidebar-surface flex-1 min-h-0 min-w-0 w-full p-1"
       onFocusCapture={activateSurface}
       onPointerDownCapture={handleSurfacePointerDown}
       onContextMenuCapture={activateSurface}

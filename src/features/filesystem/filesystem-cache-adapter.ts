@@ -1,15 +1,15 @@
 import type { FileSystemPatch } from 'convex/sidebarItems/filesystem/receipts'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import { createFileSystemReadModel } from 'convex/sidebarItems/filesystem/readModel'
+import type { FileSystemReadModel } from 'convex/sidebarItems/filesystem/readModel'
 import { applyFileSystemPatchesToSnapshot } from './filesystem-cache-patches'
 import type { SidebarCacheSnapshot } from './filesystem-cache-patches'
-import { createFileSystemReadModel } from './filesystem-read-model'
-import type { FileSystemReadModel } from './filesystem-read-model'
 import { SIDEBAR_ITEMS_VIEW } from '~/features/sidebar/hooks/useSidebarItems'
 import type { SidebarItemsView } from '~/features/sidebar/hooks/useSidebarItems'
 
 type FileSystemCacheAdapter = {
   getSnapshot: () => SidebarCacheSnapshot
-  getReadModel: () => FileSystemReadModel
+  getReadModel: () => FileSystemReadModel<AnySidebarItem>
   applyPatches: (patches: Array<FileSystemPatch>) => void
 }
 
@@ -22,13 +22,15 @@ type SidebarItemsCache = {
 }
 
 export function createFileSystemCacheAdapter(cache: SidebarItemsCache): FileSystemCacheAdapter {
-  let cachedReadModel: FileSystemReadModel | null = null
+  let cachedReadModel: FileSystemReadModel<AnySidebarItem> | null = null
   const getSnapshot = (): SidebarCacheSnapshot => ({
     sidebar: cache.get(SIDEBAR_ITEMS_VIEW.active),
     trash: cache.get(SIDEBAR_ITEMS_VIEW.trash),
   })
   const getReadModel = () => {
-    cachedReadModel ??= createFileSystemReadModel(getSnapshot())
+    if (cachedReadModel) return cachedReadModel
+    const snapshot = getSnapshot()
+    cachedReadModel = createFileSystemReadModel([...snapshot.sidebar, ...snapshot.trash])
     return cachedReadModel
   }
   const replaceSnapshot = (updater: (prev: SidebarCacheSnapshot) => SidebarCacheSnapshot) => {

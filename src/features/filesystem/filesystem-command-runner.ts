@@ -4,21 +4,19 @@ import type {
 } from 'convex/sidebarItems/filesystem/receipts'
 import { logger } from '~/shared/utils/logger'
 
-type OptimisticPatchPlan = {
-  forwardPatches: Array<FileSystemPatch>
-  inversePatches: Array<FileSystemPatch>
-}
-
 let mutationQueue = Promise.resolve()
 
 export async function runFileSystemMutation({
-  optimistic,
+  patches,
   mutate,
   applyPatches,
   onSuccess,
   onError,
 }: {
-  optimistic: OptimisticPatchPlan
+  patches: {
+    apply: Array<FileSystemPatch>
+    rollback: Array<FileSystemPatch>
+  }
   mutate: () => Promise<FileSystemTransactionReceipt>
   applyPatches: (patches: Array<FileSystemPatch>) => void
   onSuccess: (receipt: FileSystemTransactionReceipt) => Promise<void> | void
@@ -26,9 +24,9 @@ export async function runFileSystemMutation({
 }): Promise<FileSystemTransactionReceipt | null> {
   const run = async () => {
     try {
-      applyPatchArray(applyPatches, optimistic.forwardPatches)
+      applyPatchArray(applyPatches, patches.apply)
       const receipt = await mutate()
-      applyPatchArray(applyPatches, [...optimistic.inversePatches, ...receipt.patches])
+      applyPatchArray(applyPatches, [...patches.rollback, ...receipt.patches])
       try {
         await onSuccess(receipt)
       } catch (successError) {
@@ -36,7 +34,7 @@ export async function runFileSystemMutation({
       }
       return receipt
     } catch (error) {
-      applyPatchArray(applyPatches, optimistic.inversePatches)
+      applyPatchArray(applyPatches, patches.rollback)
       try {
         await onError(error)
       } catch (errorError) {

@@ -94,7 +94,7 @@ export async function createItemPins(
       campaignId: rawItem.campaignId,
     })
     if (dropValidationError === 'trashed_item') {
-      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'The item is trashed and cannot be used')
+      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Restore the item before pinning it to a map')
     }
     const validationError = validatePinTarget(mapId, item._id, nextPinItemIds)
     if (validationError) {

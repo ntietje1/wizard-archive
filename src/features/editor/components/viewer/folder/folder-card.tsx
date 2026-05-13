@@ -17,15 +17,12 @@ import { useDraggable } from '~/features/dnd/hooks/useDraggable'
 import { useSidebarItemDropTarget } from '~/features/dnd/hooks/useSidebarItemDropTarget'
 import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
+import { useIsSidebarItemDragging } from '~/features/dnd/hooks/useIsSidebarItemDragging'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
 import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
-import {
-  sidebarItemFolderFillClass,
-  sidebarItemHoverFillClass,
-  sidebarItemHoverOverlayClass,
-  sidebarItemNameClass,
-} from '~/features/sidebar/utils/sidebar-item-visual-state'
+import { folderItemFolderFillClass } from './folder-item-visual-state'
+import { sidebarItemNameClass } from '~/features/sidebar/utils/sidebar-item-visual-state'
 
 const H = 140
 const W = 400
@@ -51,10 +48,10 @@ const FOLDER_SHAPE = [
 
 type DropState = 'none' | 'valid' | 'trash'
 
-function folderStrokeClass(dropState: DropState, isSelected: boolean, isViewing: boolean) {
+function folderStrokeClass(dropState: DropState, { isSelected = false }: { isSelected?: boolean }) {
   if (dropState === 'trash') return 'stroke-destructive'
   if (dropState === 'valid') return 'stroke-ring'
-  if (isSelected && !isViewing) return 'stroke-primary/60'
+  if (isSelected) return 'stroke-primary/70 dark:stroke-primary/80'
   return 'stroke-border'
 }
 
@@ -69,16 +66,12 @@ function FolderSvg({
   isViewing?: boolean
   isMultiSelected?: boolean
 }) {
-  const isDrop = dropState !== 'none'
-  const strokeClass = folderStrokeClass(dropState, isSelected, isViewing)
-  const strokeWidth = isDrop ? 'stroke-[3]' : 'stroke-2'
-  const focusStrokeClass = 'group-focus-visible/folder-card:stroke-ring'
+  const visualState = { isSelected, isViewing, isMultiSelected }
+  const strokeClass = folderStrokeClass(dropState, visualState)
+  const strokeWidth = 'stroke-[1.25px]'
   const tintClass =
     dropState === 'trash' ? 'fill-destructive/5' : dropState === 'valid' ? 'fill-ring/5' : undefined
-  const visualState = { isSelected, isViewing, isMultiSelected }
-  const fillClass = sidebarItemFolderFillClass(visualState)
-  const hoverFillClass = sidebarItemHoverFillClass(visualState)
-  const hoverOverlayClass = sidebarItemHoverOverlayClass(visualState)
+  const fillClass = folderItemFolderFillClass(visualState)
 
   return (
     <svg
@@ -86,18 +79,8 @@ function FolderSvg({
       viewBox={`0 0 ${W} ${H}`}
       preserveAspectRatio="none"
     >
-      <path
-        d={FOLDER_SHAPE}
-        className={cn(
-          fillClass,
-          '[paint-order:stroke]',
-          strokeWidth,
-          strokeClass,
-          focusStrokeClass,
-        )}
-      />
+      <path d={FOLDER_SHAPE} className={cn(fillClass, strokeWidth, strokeClass)} />
       {tintClass && <path d={FOLDER_SHAPE} className={cn(tintClass, 'stroke-none')} />}
-      <path d={FOLDER_SHAPE} className={cn(hoverFillClass, 'stroke-none', hoverOverlayClass)} />
     </svg>
   )
 }
@@ -133,6 +116,7 @@ function FolderCardInner({
     visibleItemIds: visibleItemIds ?? [folder._id],
   })
   const dragData = useSidebarDragData(folder)
+  const isDragging = useIsSidebarItemDragging(folder._id)
 
   const isDropTarget = useDndStore((s) => s.sidebarDragTargetId === folder._id)
   const isTrashAction = useDndStore(
@@ -145,7 +129,6 @@ function FolderCardInner({
     ref,
     data: dragData,
     canDrag,
-    dragOpacity: '0.2',
   })
 
   useSidebarItemDropTarget({ ref, item: folder })
@@ -164,7 +147,7 @@ function FolderCardInner({
     !isDropTarget && !isFileDragTarget ? 'none' : isDropTarget && isTrashAction ? 'trash' : 'valid'
 
   const cardContent = (
-    <div ref={ref} className="h-[140px]">
+    <div ref={ref} className={cn('h-[140px]', isDragging && 'opacity-50')}>
       <Link
         {...linkProps}
         activeOptions={{ includeSearch: false }}

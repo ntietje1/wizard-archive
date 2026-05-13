@@ -31,17 +31,10 @@ describe('filesystem command runner', () => {
         deletedBy: null,
       },
     }
-    const showCreated: FileSystemPatch = {
-      type: 'updateSidebarItem',
-      itemId: created._id,
-      before: hideCreated.fields,
-      fields: hideCreated.before,
-    }
-
     const receipt = await runFileSystemMutation({
-      optimistic: {
-        forwardPatches: [{ type: 'upsertSidebarItem', item: created }],
-        inversePatches: [hideCreated],
+      patches: {
+        apply: [{ type: 'upsertSidebarItem', item: created }],
+        rollback: [hideCreated],
       },
       applyPatches,
       mutate: () =>
@@ -55,7 +48,9 @@ describe('filesystem command runner', () => {
             parentTarget: { kind: 'direct', parentId: created.parentId },
           },
           events: [{ type: 'created', itemId: created._id, slug: created.slug }],
-          patches: [showCreated],
+          patches: [{ type: 'upsertSidebarItem', item: created }],
+          forwardPatches: [{ type: 'upsertSidebarItem', item: created }],
+          inversePatches: [hideCreated],
           summary: {
             kind: 'created',
             affectedCount: 1,

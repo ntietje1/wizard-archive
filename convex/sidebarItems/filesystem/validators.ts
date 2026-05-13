@@ -13,7 +13,7 @@ import { FILE_SYSTEM_COMMAND_TYPE } from './commands'
 import { FILE_SYSTEM_EVENT_TYPE } from './receipts'
 import { createParentTargetValidator } from '../validation/parent'
 
-export const createCommandValidator = v.object({
+const createCommandValidator = v.object({
   type: v.literal(FILE_SYSTEM_COMMAND_TYPE.create),
   itemType: sidebarItemTypeValidator,
   name: sidebarItemNameValidator,
@@ -22,7 +22,7 @@ export const createCommandValidator = v.object({
   color: v.optional(sidebarItemColorValidator),
 })
 
-export const renameCommandValidator = v.object({
+const renameCommandValidator = v.object({
   type: v.literal(FILE_SYSTEM_COMMAND_TYPE.rename),
   itemId: v.id('sidebarItems'),
   name: v.optional(sidebarItemNameValidator),
@@ -30,35 +30,35 @@ export const renameCommandValidator = v.object({
   color: v.optional(v.nullable(sidebarItemColorValidator)),
 })
 
-export const moveCommandValidator = v.object({
+const moveCommandValidator = v.object({
   type: v.literal(FILE_SYSTEM_COMMAND_TYPE.move),
   itemIds: v.array(v.id('sidebarItems')),
   targetParentId: v.nullable(v.id('sidebarItems')),
 })
 
-export const copyCommandValidator = v.object({
+const copyCommandValidator = v.object({
   type: v.literal(FILE_SYSTEM_COMMAND_TYPE.copy),
   itemIds: v.array(v.id('sidebarItems')),
   targetParentId: v.nullable(v.id('sidebarItems')),
 })
 
-export const trashCommandValidator = v.object({
+const trashCommandValidator = v.object({
   type: v.literal(FILE_SYSTEM_COMMAND_TYPE.trash),
   itemIds: v.array(v.id('sidebarItems')),
 })
 
-export const restoreCommandValidator = v.object({
+const restoreCommandValidator = v.object({
   type: v.literal(FILE_SYSTEM_COMMAND_TYPE.restore),
   itemIds: v.array(v.id('sidebarItems')),
   targetParentId: v.nullable(v.id('sidebarItems')),
 })
 
-export const deleteForeverCommandValidator = v.object({
+const deleteForeverCommandValidator = v.object({
   type: v.literal(FILE_SYSTEM_COMMAND_TYPE.deleteForever),
   itemIds: v.array(v.id('sidebarItems')),
 })
 
-export const emptyTrashCommandValidator = v.object({
+const emptyTrashCommandValidator = v.object({
   type: v.literal(FILE_SYSTEM_COMMAND_TYPE.emptyTrash),
 })
 
@@ -132,7 +132,7 @@ export const fileSystemEventValidator = v.union(
   }),
 )
 
-export const fileSystemSummaryValidator = v.object({
+const fileSystemSummaryValidator = v.object({
   kind: v.union(
     v.literal('created'),
     v.literal('renamed'),
@@ -187,7 +187,7 @@ export const fileSystemPatchValidator = v.union(
   v.object({
     type: v.literal('removeSidebarItem'),
     itemId: v.id('sidebarItems'),
-    snapshot: v.optional(sidebarItemSnapshotValidator),
+    snapshot: sidebarItemSnapshotValidator,
   }),
 )
 
@@ -197,6 +197,8 @@ export const fileSystemTransactionReceiptValidator = v.object({
   command: fileSystemCommandValidator,
   events: v.array(fileSystemEventValidator),
   patches: v.array(fileSystemPatchValidator),
+  forwardPatches: v.array(fileSystemPatchValidator),
+  inversePatches: v.array(fileSystemPatchValidator),
   summary: fileSystemSummaryValidator,
   undoable: v.boolean(),
 })

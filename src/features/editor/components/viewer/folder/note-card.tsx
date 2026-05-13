@@ -16,8 +16,9 @@ import { EditorContextMenu } from '~/features/context-menu/components/editor-con
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
 import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
 import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
+import { useIsSidebarItemDragging } from '~/features/dnd/hooks/useIsSidebarItemDragging'
+import { folderItemBackgroundClass, folderItemOutlineClass } from './folder-item-visual-state'
 import {
-  sidebarItemBackgroundClass,
   sidebarItemIconClass,
   sidebarItemNameClass,
 } from '~/features/sidebar/utils/sidebar-item-visual-state'
@@ -57,6 +58,7 @@ function NoteCardInner({
     visibleItemIds: visibleItemIds ?? [note._id],
   })
   const dragData = useSidebarDragData(note)
+  const isDragging = useIsSidebarItemDragging(note._id)
   const [erroredUrl, setErroredUrl] = useState<string | null>(null)
   const imgError = erroredUrl === note.previewUrl
 
@@ -67,7 +69,7 @@ function NoteCardInner({
   })
 
   const cardContent = (
-    <div ref={ref} className="w-full h-[140px]">
+    <div ref={ref} className={cn('w-full h-[140px]', isDragging && 'opacity-50')}>
       <Link
         {...linkProps}
         activeOptions={{ includeSearch: false }}
@@ -93,7 +95,8 @@ function NoteCardInner({
         <Card
           className={cn(
             'w-full h-full cursor-pointer group flex flex-col p-2 relative rounded-md',
-            sidebarItemBackgroundClass(visualState),
+            folderItemBackgroundClass(visualState),
+            folderItemOutlineClass(visualState),
           )}
         >
           <div className="flex items-center justify-between mb-1 min-w-0">

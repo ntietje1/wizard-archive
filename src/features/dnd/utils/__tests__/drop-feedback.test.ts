@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { DropPlanningContext } from '~/features/dnd/utils/drop-planning-context'
 import {
   CANVAS_DROP_ZONE_TYPE,
   MAP_DROP_ZONE_TYPE,
   SIDEBAR_ROOT_DROP_TYPE,
 } from '~/features/dnd/utils/drop-target-data'
-import type { SidebarDropData } from '~/features/dnd/utils/drop-target-data'
+import type { ResolvedSidebarItemDropData } from '~/features/dnd/utils/drop-target-data'
+import type { SidebarItemName } from 'convex/sidebarItems/validation/name'
 import { resolveDropFeedback } from '~/features/dnd/utils/drop-feedback'
 import { createFolder, createGameMap, createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
@@ -19,6 +19,12 @@ function planningContext(overrides?: Partial<DropPlanningContext>): DropPlanning
     isDm: true,
     ...overrides,
   }
+}
+
+function createFolderDropData(
+  overrides?: Parameters<typeof createFolder>[0],
+): ResolvedSidebarItemDropData {
+  return { ...createFolder(overrides), ancestorIds: [] }
 }
 
 describe('resolveDropFeedback', () => {
@@ -38,8 +44,7 @@ describe('resolveDropFeedback', () => {
       outcome: {
         type: 'operation',
         action: 'move',
-        label: 'Move to "Test Campaign"',
-        execute: null,
+        label: 'Move item to "Test Campaign"',
       },
     })
   })
@@ -55,8 +60,7 @@ describe('resolveDropFeedback', () => {
       outcome: {
         type: 'operation',
         action: 'copy',
-        label: 'Copy to "Test Campaign"',
-        execute: null,
+        label: 'Copy item to "Test Campaign"',
       },
     })
   })
@@ -74,25 +78,22 @@ describe('resolveDropFeedback', () => {
       outcome: {
         type: 'operation',
         action: 'copy',
-        label: 'Copy to "Destination"',
-        execute: null,
+        label: 'Copy 2 items to "Destination"',
       },
     })
   })
 
   it('falls back to an unnamed folder label for copy feedback', () => {
     const note = createNote()
-    const folder = {
-      ...createFolder({ name: 'Destination' }),
-      name: '',
-      ancestorIds: [],
-      type: SIDEBAR_ITEM_TYPES.folders,
-    } as unknown as SidebarDropData
+    const folder: ResolvedSidebarItemDropData = {
+      ...createFolderDropData(),
+      name: '' as SidebarItemName,
+    }
 
     expect(resolveDropFeedback([note], folder, planningContext(), { copy: true })).toMatchObject({
       outcome: {
         action: 'copy',
-        label: 'Copy to "Unnamed folder"',
+        label: 'Copy item to "Unnamed folder"',
       },
     })
   })
@@ -116,8 +117,7 @@ describe('resolveDropFeedback', () => {
       outcome: {
         type: 'operation',
         action: 'pin',
-        label: 'Pin to "World Map"',
-        execute: null,
+        label: 'Pin item to "World Map"',
       },
     })
   })
@@ -153,7 +153,6 @@ describe('resolveDropFeedback', () => {
         type: 'operation',
         action: 'embed',
         label: 'Embed 2 items in canvas',
-        execute: null,
       },
     })
   })
@@ -177,10 +176,29 @@ describe('resolveDropFeedback', () => {
       outcome: {
         type: 'operation',
         action: 'pin',
-        label: 'Pin to "World Map"',
-        execute: null,
+        label: 'Pin item to "World Map"',
       },
       rejectedItemCount: 1,
+    })
+  })
+
+  it('uses rejection feedback when a single item cannot be dropped on a surface target', () => {
+    const note = createNote()
+
+    expect(
+      resolveDropFeedback(
+        [note],
+        {
+          type: CANVAS_DROP_ZONE_TYPE,
+          canvasId: note._id,
+        },
+        planningContext(),
+      ),
+    ).toEqual({
+      outcome: {
+        type: 'rejection',
+        reason: 'self_embed',
+      },
     })
   })
 

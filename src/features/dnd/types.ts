@@ -2,10 +2,11 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { DropPlanningContext } from '~/features/dnd/utils/drop-planning-context'
 import type { DropResult } from '~/features/file-upload/utils/folder-reader'
-import type { FileSystemGlobalDropCommand } from '~/features/filesystem/filesystem-drop-planner'
+import type { FileSystemDropIntent } from '~/features/filesystem/useFileSystem'
 
 export interface DndExecutionContext {
-  executeFileSystemDropCommand: (command: FileSystemGlobalDropCommand) => Promise<void>
+  executeFileSystemDrop: (intent: FileSystemDropIntent) => Promise<void>
+  openItem: (item: AnySidebarItem) => Promise<void>
 }
 
 export interface DndMonitorCtx {

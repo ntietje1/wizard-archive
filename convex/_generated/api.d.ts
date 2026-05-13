@@ -105,7 +105,6 @@ import type * as folders_functions_enhanceFolder from "../folders/functions/enha
 import type * as folders_functions_folderHelpers from "../folders/functions/folderHelpers.js";
 import type * as folders_functions_getItemsForDownload from "../folders/functions/getItemsForDownload.js";
 import type * as folders_functions_getSidebarItemAncestors from "../folders/functions/getSidebarItemAncestors.js";
-import type * as folders_mutations from "../folders/mutations.js";
 import type * as folders_queries from "../folders/queries.js";
 import type * as folders_triggers from "../folders/triggers.js";
 import type * as folders_types from "../folders/types.js";
@@ -175,11 +174,14 @@ import type * as sidebarItems_filesystem_companionInitialization from "../sideba
 import type * as sidebarItems_filesystem_conflicts from "../sidebarItems/filesystem/conflicts.js";
 import type * as sidebarItems_filesystem_copyPlanner from "../sidebarItems/filesystem/copyPlanner.js";
 import type * as sidebarItems_filesystem_deltas from "../sidebarItems/filesystem/deltas.js";
+import type * as sidebarItems_filesystem_intentPlanning from "../sidebarItems/filesystem/intentPlanning.js";
 import type * as sidebarItems_filesystem_movePlanner from "../sidebarItems/filesystem/movePlanner.js";
 import type * as sidebarItems_filesystem_mutations from "../sidebarItems/filesystem/mutations.js";
 import type * as sidebarItems_filesystem_operationTypes from "../sidebarItems/filesystem/operationTypes.js";
+import type * as sidebarItems_filesystem_patchProjection from "../sidebarItems/filesystem/patchProjection.js";
 import type * as sidebarItems_filesystem_patches from "../sidebarItems/filesystem/patches.js";
 import type * as sidebarItems_filesystem_pathParentResolver from "../sidebarItems/filesystem/pathParentResolver.js";
+import type * as sidebarItems_filesystem_readModel from "../sidebarItems/filesystem/readModel.js";
 import type * as sidebarItems_filesystem_receipts from "../sidebarItems/filesystem/receipts.js";
 import type * as sidebarItems_filesystem_selection from "../sidebarItems/filesystem/selection.js";
 import type * as sidebarItems_filesystem_sidebarItemWriter from "../sidebarItems/filesystem/sidebarItemWriter.js";
@@ -369,7 +371,6 @@ declare const fullApi: ApiFromModules<{
   "folders/functions/folderHelpers": typeof folders_functions_folderHelpers;
   "folders/functions/getItemsForDownload": typeof folders_functions_getItemsForDownload;
   "folders/functions/getSidebarItemAncestors": typeof folders_functions_getSidebarItemAncestors;
-  "folders/mutations": typeof folders_mutations;
   "folders/queries": typeof folders_queries;
   "folders/triggers": typeof folders_triggers;
   "folders/types": typeof folders_types;
@@ -439,11 +440,14 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/filesystem/conflicts": typeof sidebarItems_filesystem_conflicts;
   "sidebarItems/filesystem/copyPlanner": typeof sidebarItems_filesystem_copyPlanner;
   "sidebarItems/filesystem/deltas": typeof sidebarItems_filesystem_deltas;
+  "sidebarItems/filesystem/intentPlanning": typeof sidebarItems_filesystem_intentPlanning;
   "sidebarItems/filesystem/movePlanner": typeof sidebarItems_filesystem_movePlanner;
   "sidebarItems/filesystem/mutations": typeof sidebarItems_filesystem_mutations;
   "sidebarItems/filesystem/operationTypes": typeof sidebarItems_filesystem_operationTypes;
+  "sidebarItems/filesystem/patchProjection": typeof sidebarItems_filesystem_patchProjection;
   "sidebarItems/filesystem/patches": typeof sidebarItems_filesystem_patches;
   "sidebarItems/filesystem/pathParentResolver": typeof sidebarItems_filesystem_pathParentResolver;
+  "sidebarItems/filesystem/readModel": typeof sidebarItems_filesystem_readModel;
   "sidebarItems/filesystem/receipts": typeof sidebarItems_filesystem_receipts;
   "sidebarItems/filesystem/selection": typeof sidebarItems_filesystem_selection;
   "sidebarItems/filesystem/sidebarItemWriter": typeof sidebarItems_filesystem_sidebarItemWriter;

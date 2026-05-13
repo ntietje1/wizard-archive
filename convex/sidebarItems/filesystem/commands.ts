@@ -16,9 +16,6 @@ export const FILE_SYSTEM_COMMAND_TYPE = {
   emptyTrash: 'emptyTrash',
 } as const
 
-export type FileSystemCommandType =
-  (typeof FILE_SYSTEM_COMMAND_TYPE)[keyof typeof FILE_SYSTEM_COMMAND_TYPE]
-
 export type CreateFileSystemCommand = {
   type: typeof FILE_SYSTEM_COMMAND_TYPE.create
   itemType: SidebarItemType

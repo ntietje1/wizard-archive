@@ -8,6 +8,7 @@ import { resolveDropTarget } from '~/features/dnd/utils/drop-target-data'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useFileDropHandler } from '~/features/dnd/hooks/useFileDropHandler'
 import { useFileSystem } from '~/features/filesystem/useFileSystem'
+import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import {
   useActiveSidebarItems,
   useTrashSidebarItems,
@@ -22,13 +23,15 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
   const { campaign, campaignId, isDm } = useCampaign()
   const campaignName = campaign.data?.name ?? null
   const filesystem = useFileSystem()
+  const { navigateToItem } = useEditorNavigation()
   const { handleDrop: handleDropFiles } = useFileDropHandler()
   const { itemsMap, getAncestorSidebarItems } = useActiveSidebarItems()
   const { itemsMap: trashedItemsMap } = useTrashSidebarItems()
   const allItemsMap = new Map<Id<'sidebarItems'>, AnySidebarItem>([...itemsMap, ...trashedItemsMap])
 
   const dndContext: DndExecutionContext = {
-    executeFileSystemDropCommand: filesystem.executeDropCommand,
+    executeFileSystemDrop: filesystem.executeDrop,
+    openItem: (item) => navigateToItem(item.slug, true),
   }
   const dropPlanningContext = {
     campaignId: campaignId ?? null,

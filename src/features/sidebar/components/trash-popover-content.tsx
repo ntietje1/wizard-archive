@@ -13,6 +13,7 @@ import { useTrashSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useFileSystem } from '~/features/filesystem/useFileSystem'
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
 import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
+import { useIsSidebarItemDragging } from '~/features/dnd/hooks/useIsSidebarItemDragging'
 import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
 import { useSidebarItemVisualState } from '~/features/sidebar/hooks/useSelectedItem'
 import { useItemSurfaceRegistration } from '~/features/sidebar/hooks/useItemSurfaceRegistration'
@@ -106,7 +107,7 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
       </div>
 
       <ScrollArea
-        className="max-h-[300px]"
+        className="group/sidebar-surface max-h-[300px]"
         onFocusCapture={activateSurface}
         onPointerDownCapture={handleSurfacePointerDown}
         onContextMenuCapture={activateSurface}
@@ -182,6 +183,7 @@ function TrashPopoverItem({
   const ref = useRef<HTMLDivElement>(null)
   const linkProps = useEditorLinkProps(item)
   const dragData = useSidebarDragData(item)
+  const isDragging = useIsSidebarItemDragging(item._id)
   const visualState = useSidebarItemVisualState(item)
   const { handleItemClick, handleItemContextMenu } = useItemSelectionInteractions(item, {
     surface: 'trash',
@@ -202,6 +204,7 @@ function TrashPopoverItem({
       data-item-selection-target="true"
       className={cn(
         'flex items-center w-full py-1 px-1 rounded-sm group min-w-0',
+        isDragging && 'opacity-50',
         sidebarItemBackgroundClass(visualState),
       )}
       onContextMenu={handleItemContextMenu}

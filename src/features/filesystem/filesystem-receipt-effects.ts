@@ -1,6 +1,7 @@
 import type { Id } from 'convex/_generated/dataModel'
 import type { FileSystemTransactionReceipt } from 'convex/sidebarItems/filesystem/receipts'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { FileSystemReadModel } from 'convex/sidebarItems/filesystem/readModel'
 import { parseSidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import {
@@ -8,7 +9,6 @@ import {
   getReceiptRemovedRootIds,
   getReceiptSelectedRootIds,
 } from './filesystem-receipt-selectors'
-import type { FileSystemReadModel } from './filesystem-read-model'
 import { logger } from '~/shared/utils/logger'
 
 function isItemOrDescendantOfRoot(
@@ -71,7 +71,7 @@ export async function applyFileSystemReceiptEffects({
   navigateToItem,
 }: {
   receipt: FileSystemTransactionReceipt
-  readModel: FileSystemReadModel
+  readModel: FileSystemReadModel<AnySidebarItem>
   currentSlug: string | null
   getSelectedItemIds: () => Array<Id<'sidebarItems'>>
   setSelectedItemIds: (itemIds: Array<Id<'sidebarItems'>>) => void

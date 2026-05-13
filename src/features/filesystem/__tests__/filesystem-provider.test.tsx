@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
 import type { FileSystemTransactionReceipt } from 'convex/sidebarItems/filesystem/receipts'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
@@ -8,6 +8,7 @@ import type { SidebarItemName } from 'convex/sidebarItems/validation/name'
 import { FileSystemProvider } from '../filesystem-provider'
 import { useFileSystem } from '../useFileSystem'
 import { useFileSystemUndoStore } from '../filesystem-undo-store'
+import { createNote } from '~/test/factories/sidebar-item-factory'
 
 let sidebarItems: Array<AnySidebarItem> = []
 let trashItems: Array<AnySidebarItem> = []
@@ -98,6 +99,21 @@ vi.mock('~/shared/hooks/useCampaignMutation', () => ({
 function createReceipt(
   transactionId: Id<'filesystemTransactions'> = 'transaction_1' as Id<'filesystemTransactions'>,
 ): FileSystemTransactionReceipt {
+  const item = createNote({
+    _id: 'item_1' as Id<'sidebarItems'>,
+    name: 'Scene',
+    slug: 'scene',
+    status: SIDEBAR_ITEM_STATUS.active,
+  })
+  const patches = [{ type: 'upsertSidebarItem' as const, item }]
+  const inversePatches = [
+    {
+      type: 'updateSidebarItem' as const,
+      itemId: item._id,
+      before: { status: SIDEBAR_ITEM_STATUS.active },
+      fields: { status: SIDEBAR_ITEM_STATUS.undoHidden },
+    },
+  ]
   return {
     transactionId,
     direction: 'forward',
@@ -110,11 +126,13 @@ function createReceipt(
     events: [
       {
         type: 'created',
-        itemId: 'item_1' as Id<'sidebarItems'>,
+        itemId: item._id,
         slug: 'scene',
       },
     ],
-    patches: [],
+    patches,
+    forwardPatches: patches,
+    inversePatches,
     summary: {
       kind: 'created',
       affectedCount: 1,

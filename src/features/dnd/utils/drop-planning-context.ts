@@ -1,7 +1,7 @@
 import type { Id } from 'convex/_generated/dataModel'
-import type { FileSystemDropPlanningContext } from '~/features/filesystem/filesystem-drop-planner'
 
-export interface DropPlanningContext extends FileSystemDropPlanningContext {
+export interface DropPlanningContext {
+  isDm: boolean
   campaignId: Id<'campaigns'> | null
   campaignName: string | null
 }

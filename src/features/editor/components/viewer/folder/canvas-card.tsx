@@ -16,8 +16,9 @@ import { EditorContextMenu } from '~/features/context-menu/components/editor-con
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
 import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
 import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
+import { useIsSidebarItemDragging } from '~/features/dnd/hooks/useIsSidebarItemDragging'
+import { folderItemBackgroundClass, folderItemOutlineClass } from './folder-item-visual-state'
 import {
-  sidebarItemBackgroundClass,
   sidebarItemIconClass,
   sidebarItemNameClass,
 } from '~/features/sidebar/utils/sidebar-item-visual-state'
@@ -59,16 +60,16 @@ function CanvasCardInner({
     visibleItemIds: visibleItemIds ?? [canvas._id],
   })
   const dragData = useSidebarDragData(canvas)
+  const isDragging = useIsSidebarItemDragging(canvas._id)
 
   const { isDraggingRef } = useDraggable({
     ref,
     data: dragData,
     canDrag,
-    dragOpacity: '0.2',
   })
 
   const cardContent = (
-    <div ref={ref} className="w-full h-[140px]">
+    <div ref={ref} className={cn('w-full h-[140px]', isDragging && 'opacity-50')}>
       <Link
         {...linkProps}
         activeOptions={{ includeSearch: false }}
@@ -94,7 +95,8 @@ function CanvasCardInner({
         <Card
           className={cn(
             'w-full h-full cursor-pointer group flex flex-col p-2 relative rounded-md',
-            sidebarItemBackgroundClass(visualState),
+            folderItemBackgroundClass(visualState),
+            folderItemOutlineClass(visualState),
           )}
         >
           <div className="flex items-center justify-between mb-1 min-w-0">

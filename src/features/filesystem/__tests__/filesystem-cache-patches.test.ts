@@ -6,11 +6,11 @@ import {
   applyFileSystemPatchesToSnapshot,
   invertFileSystemPatches,
 } from '../filesystem-cache-patches'
+import { resetOptimisticIdIndex } from '../filesystem-optimistic-patches'
 import {
-  buildOptimisticMovePatches,
-  buildOptimisticTrashPatches,
-  resetOptimisticIdIndex,
-} from '../filesystem-optimistic-patches'
+  projectMoveOperations,
+  projectTrashRoots,
+} from 'convex/sidebarItems/filesystem/patchProjection'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 
 const NOW = 1000
@@ -69,11 +69,12 @@ describe('filesystem cache patches', () => {
     const folder = createFolder()
     const note = createNote()
     const snapshot: SidebarCacheSnapshot = { sidebar: [folder, note], trash: [] }
-    const move = buildOptimisticMovePatches(
-      snapshot,
-      [{ action: 'move', sourceItemId: note._id, targetParentId: folder._id }],
-      NOW,
-    )
+    const move = projectMoveOperations({
+      activeItems: snapshot.sidebar,
+      trashItems: snapshot.trash,
+      operations: [{ action: 'move', sourceItemId: note._id, targetParentId: folder._id }],
+      now: NOW,
+    })
     const moved = applyFileSystemPatchesToSnapshot(snapshot, move.forwardPatches)
 
     expect(moved.sidebar.find((item) => item._id === note._id)?.parentId).toBe(folder._id)
@@ -84,7 +85,10 @@ describe('filesystem cache patches', () => {
       )?.parentId,
     ).toBeNull()
 
-    const trash = buildOptimisticTrashPatches(snapshot, [note], NOW)
+    const trash = projectTrashRoots(snapshot.sidebar, [note._id], {
+      now: NOW,
+      userId: null,
+    })
     const trashed = applyFileSystemPatchesToSnapshot(snapshot, trash.forwardPatches)
     expect(trashed.trash).toEqual([
       expect.objectContaining({
@@ -115,7 +119,10 @@ describe('filesystem cache patches', () => {
     expect(readModel.getItem(note._id)).toBe(note)
     expect(readModel.getItems([note._id, trashed._id])).toEqual([note, trashed])
     expect(readModel.getItemBySlug(note.slug)).toBe(note)
-    expect(readModel.getChildren(null).map((item) => item._id)).toEqual([folder._id, note._id])
+    expect(readModel.getActiveChildren(null).map((item) => item._id)).toEqual([
+      folder._id,
+      note._id,
+    ])
 
     adapter.applyPatches([
       {

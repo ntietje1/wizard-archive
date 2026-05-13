@@ -1,7 +1,16 @@
 import { planCopyOperations } from 'convex/sidebarItems/filesystem/copyPlanner'
 import { planMoveOperations } from 'convex/sidebarItems/filesystem/movePlanner'
 import { normalizeSelectedRoots } from 'convex/sidebarItems/filesystem/selection'
-import { validateCreateParentTarget } from 'convex/sidebarItems/validation/parent'
+import {
+  projectDeleteForeverRoots,
+  projectMoveOperations,
+  projectTrashRoots,
+} from 'convex/sidebarItems/filesystem/patchProjection'
+import type { FileSystemDelta } from 'convex/sidebarItems/filesystem/receipts'
+import {
+  CREATE_PARENT_TARGET_KIND,
+  validateCreateParentTarget,
+} from 'convex/sidebarItems/validation/parent'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type {
@@ -20,27 +29,23 @@ import type {
   MoveOperation,
 } from 'convex/sidebarItems/filesystem/operationTypes'
 import {
-  buildOptimisticDeleteForeverPatches,
-  buildOptimisticCreatePatches,
-  buildOptimisticMovePatches,
-  buildOptimisticRenamePatches,
-  buildOptimisticTrashPatches,
+  buildOptimisticCreatePreview,
+  buildOptimisticRenamePreview,
 } from './filesystem-optimistic-patches'
-import type { OptimisticPatchSet } from './filesystem-optimistic-patches'
 import type { SidebarCacheSnapshot } from './filesystem-cache-patches'
-import type { FileSystemReadModel } from './filesystem-read-model'
+import type { FileSystemReadModel } from 'convex/sidebarItems/filesystem/readModel'
 import { getRestoreTargetParentId } from './filesystem-targets'
 import type { SidebarOperationSurface } from './filesystem-targets'
 
 type FileSystemOptimisticPlan =
-  | ({ status: 'ready' } & OptimisticPatchSet)
+  | { status: 'ready'; preview: FileSystemDelta }
   | { status: 'needsDecision'; conflicts: Array<ItemOperationConflict> }
 
 type PlannerArgs = {
   command: FileSystemCommand
   decisions?: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
   snapshot: SidebarCacheSnapshot
-  readModel: FileSystemReadModel
+  readModel: FileSystemReadModel<AnySidebarItem>
   activeItemSurface: SidebarOperationSurface | null
   currentUserId: Id<'userProfiles'> | null
   campaignId: Id<'campaigns'>
@@ -50,26 +55,41 @@ type CommandPlannerArgs<TCommand extends FileSystemCommand> = Omit<PlannerArgs, 
   command: TCommand
 }
 
-function readyWithPatches(patches: OptimisticPatchSet) {
-  return { status: 'ready' as const, ...patches }
+function ready(
+  command: FileSystemCommand,
+  patches: Pick<FileSystemDelta, 'forwardPatches' | 'inversePatches'> = {
+    forwardPatches: [],
+    inversePatches: [],
+  },
+): FileSystemOptimisticPlan {
+  return {
+    status: 'ready',
+    preview: {
+      command,
+      events: [],
+      receiptPatches: patches.forwardPatches,
+      forwardPatches: patches.forwardPatches,
+      inversePatches: patches.inversePatches,
+      undoable: false,
+    },
+  }
 }
 
 function planCopy(args: CommandPlannerArgs<CopyFileSystemCommand>) {
-  const loadedItems = args.readModel.getItems(args.command.itemIds)
-  assertAllCommandItemsLoaded(args.command.itemIds, loadedItems)
+  const loadedItems = args.readModel.requireItems(args.command.itemIds)
   const items = normalizeSelectedRoots(loadedItems, args.readModel.itemsById)
   const plan = planCopyOperations({
     items,
     itemsById: args.readModel.itemsById,
     targetParentId: args.command.targetParentId,
-    targetItems: args.readModel.getChildren(args.command.targetParentId),
+    targetItems: args.readModel.getActiveChildren(args.command.targetParentId),
     decisions: args.decisions,
-    getChildren: args.readModel.getChildren,
+    getChildren: args.readModel.getActiveChildren,
   })
   if (plan.status === 'needs-decision')
     return { status: 'needsDecision' as const, conflicts: plan.conflicts }
 
-  return readyWithPatches({ forwardPatches: [], inversePatches: [] })
+  return ready(args.command)
 }
 
 function planMoveOrRestore(
@@ -84,9 +104,9 @@ function planMoveOrRestore(
       items: groupItems,
       itemsById: args.readModel.itemsById,
       targetParentId,
-      targetItems: args.readModel.getChildren(targetParentId),
+      targetItems: args.readModel.getActiveChildren(targetParentId),
       decisions: args.decisions,
-      getChildren: args.readModel.getChildren,
+      getChildren: args.readModel.getActiveChildren,
     })
     if (plan.status === 'needs-decision') {
       conflicts.push(...plan.conflicts)
@@ -96,15 +116,22 @@ function planMoveOrRestore(
   }
   if (conflicts.length > 0) return { status: 'needsDecision' as const, conflicts }
 
-  return readyWithPatches(buildOptimisticMovePatches(args.snapshot, operations))
+  return ready(
+    args.command,
+    projectMoveOperations({
+      activeItems: args.snapshot.sidebar,
+      trashItems: args.snapshot.trash,
+      operations,
+      now: Date.now(),
+    }),
+  )
 }
 
 function groupMoveItemsByTarget(
   args: CommandPlannerArgs<MoveFileSystemCommand | RestoreFileSystemCommand>,
 ) {
   const { command } = args
-  const loadedItems = args.readModel.getItems(command.itemIds)
-  assertAllCommandItemsLoaded(command.itemIds, loadedItems)
+  const loadedItems = args.readModel.requireItems(command.itemIds)
   const items = normalizeSelectedRoots(loadedItems, args.readModel.itemsById)
   const groups = new Map<Id<'sidebarItems'> | null, Array<AnySidebarItem>>()
 
@@ -133,51 +160,48 @@ function resolveMoveTargetParentId(
 }
 
 function planTrash(args: CommandPlannerArgs<TrashFileSystemCommand>) {
-  const loadedItems = args.readModel.getItems(args.command.itemIds)
-  assertAllCommandItemsLoaded(args.command.itemIds, loadedItems)
+  const loadedItems = args.readModel.requireItems(args.command.itemIds)
   const items = normalizeSelectedRoots(loadedItems, args.readModel.itemsById)
-  return readyWithPatches(
-    buildOptimisticTrashPatches(args.snapshot, items, Date.now(), args.currentUserId),
+  const rootIds = items.map((item) => item._id)
+  return ready(
+    args.command,
+    projectTrashRoots(args.snapshot.sidebar, rootIds, {
+      now: Date.now(),
+      userId: args.currentUserId,
+    }),
   )
 }
 
 function planDeleteForever(args: CommandPlannerArgs<DeleteForeverFileSystemCommand>) {
-  const loadedItems = args.readModel.getItems(args.command.itemIds)
-  assertAllCommandItemsLoaded(args.command.itemIds, loadedItems)
+  const loadedItems = args.readModel.requireItems(args.command.itemIds)
   const items = normalizeSelectedRoots(loadedItems, args.readModel.itemsById)
-  return readyWithPatches(buildOptimisticDeleteForeverPatches(args.snapshot, items))
+  const rootIds = items.map((item) => item._id)
+  return ready(args.command, projectDeleteForeverRoots(args.snapshot.trash, rootIds))
 }
 
-function assertAllCommandItemsLoaded(
-  itemIds: Array<Id<'sidebarItems'>>,
-  items: Array<AnySidebarItem>,
-): void {
-  const loadedIds = new Set(items.map((item) => item._id))
-  const missingIds = itemIds.filter((itemId) => !loadedIds.has(itemId))
-  if (missingIds.length > 0) {
-    throw new Error(`Filesystem command references missing sidebar items: ${missingIds.join(', ')}`)
+function planCreate(args: CommandPlannerArgs<CreateFileSystemCommand>): FileSystemOptimisticPlan {
+  if (args.command.parentTarget.kind !== CREATE_PARENT_TARGET_KIND.direct) {
+    return ready(args.command)
   }
-}
-
-function planCreate(args: CommandPlannerArgs<CreateFileSystemCommand>) {
   const parent = validateCreateParentTarget(
     args.command.parentTarget,
     args.readModel.itemsById,
-    args.readModel.childrenByParent,
+    args.readModel.activeChildrenByParent,
   )
-  if (!parent.valid) return readyWithPatches({ forwardPatches: [], inversePatches: [] })
-  return readyWithPatches(
-    buildOptimisticCreatePatches({
+  if (!parent.valid) return ready(args.command)
+  return {
+    status: 'ready',
+    preview: buildOptimisticCreatePreview({
       command: args.command,
       parentId: parent.parentId,
       currentUserId: args.currentUserId,
       campaignId: args.campaignId,
     }),
-  )
+  }
 }
 
-function planRename(args: CommandPlannerArgs<RenameFileSystemCommand>) {
-  return readyWithPatches(buildOptimisticRenamePatches(args.snapshot, args.command))
+function planRename(args: CommandPlannerArgs<RenameFileSystemCommand>): FileSystemOptimisticPlan {
+  return { status: 'ready', preview: buildOptimisticRenamePreview(args.snapshot, args.command) }
 }
 
 export function planFileSystemOptimisticCommand(args: PlannerArgs): FileSystemOptimisticPlan {
@@ -196,6 +220,6 @@ export function planFileSystemOptimisticCommand(args: PlannerArgs): FileSystemOp
     case 'rename':
       return planRename({ ...args, command: args.command })
     case 'emptyTrash':
-      return readyWithPatches({ forwardPatches: [], inversePatches: [] })
+      return ready(args.command)
   }
 }

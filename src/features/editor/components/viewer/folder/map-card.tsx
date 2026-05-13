@@ -16,8 +16,9 @@ import { EditorContextMenu } from '~/features/context-menu/components/editor-con
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
 import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
 import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
+import { useIsSidebarItemDragging } from '~/features/dnd/hooks/useIsSidebarItemDragging'
+import { folderItemBackgroundClass, folderItemOutlineClass } from './folder-item-visual-state'
 import {
-  sidebarItemBackgroundClass,
   sidebarItemIconClass,
   sidebarItemNameClass,
 } from '~/features/sidebar/utils/sidebar-item-visual-state'
@@ -57,6 +58,7 @@ function MapCardInner({
     visibleItemIds: visibleItemIds ?? [map._id],
   })
   const dragData = useSidebarDragData(map)
+  const isDragging = useIsSidebarItemDragging(map._id)
 
   const previewUrl = map.previewUrl ?? null
 
@@ -64,11 +66,10 @@ function MapCardInner({
     ref,
     data: dragData,
     canDrag,
-    dragOpacity: '0.2',
   })
 
   const cardContent = (
-    <div ref={ref} className="w-full h-[140px]">
+    <div ref={ref} className={cn('w-full h-[140px]', isDragging && 'opacity-50')}>
       <Link
         {...linkProps}
         activeOptions={{ includeSearch: false }}
@@ -94,7 +95,8 @@ function MapCardInner({
         <Card
           className={cn(
             'w-full h-full cursor-pointer group flex flex-col p-2 relative rounded-md',
-            sidebarItemBackgroundClass(visualState),
+            folderItemBackgroundClass(visualState),
+            folderItemOutlineClass(visualState),
           )}
         >
           {/* Top Section: Title + Menu Button */}

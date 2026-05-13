@@ -3,6 +3,7 @@ import type { FileSystemGlobalDropRejectionReason } from '~/features/filesystem/
 
 export type DropRejectionReason =
   | FileSystemGlobalDropRejectionReason
+  | 'unexpected_action'
   | 'self_pin'
   | 'self_link'
   | 'self_embed'
@@ -35,7 +36,7 @@ export function rejectionReasonMessage(reason: DropRejectionReason): string {
     case 'dm_only':
       return 'Only the DM can do this'
     case 'trashed_item':
-      return 'The item is trashed and cannot be used'
+      return 'Restore the item before dropping it here'
     case 'wrong_campaign':
       return 'Item belongs to another campaign'
     case 'wrong_trash_state':

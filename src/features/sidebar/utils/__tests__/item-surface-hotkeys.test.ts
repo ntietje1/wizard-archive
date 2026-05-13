@@ -79,6 +79,18 @@ describe('item surface hotkey utilities', () => {
     expect(isItemSurfaceInteractionTarget(blank)).toBe(false)
   })
 
+  it('detects SVG descendants inside selectable surfaces', () => {
+    const item = document.createElement('a')
+    item.href = '/folder'
+    item.dataset.itemSelectionTarget = 'true'
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+    svg.append(path)
+    item.append(svg)
+
+    expect(isItemSurfaceInteractionTarget(path)).toBe(true)
+  })
+
   it('detects context menu content as an item-surface interaction target', () => {
     const menu = document.createElement('div')
     menu.dataset.slot = 'context-menu-content'

@@ -200,7 +200,7 @@ describe('rejectionReasonMessage', () => {
       'An item with this name already exists here',
     )
     expect(rejectionReasonMessage('dm_only')).toBe('Only the DM can do this')
-    expect(rejectionReasonMessage('trashed_item')).toBe('The item is trashed and cannot be used')
+    expect(rejectionReasonMessage('trashed_item')).toBe('Restore the item before dropping it here')
     expect(rejectionReasonMessage('mixed_actions')).toBe(
       'Cannot move trashed and non-trashed items together',
     )
@@ -496,7 +496,6 @@ describe('resolveDropOutcome', () => {
       const result = resolveDropOutcome(note, canvasTarget(), createCtx())
 
       expect(result).toMatchObject({ type: 'operation', action: 'embed' })
-      expect((result as { execute: null }).execute).toBeNull()
     })
   })
 
@@ -556,8 +555,7 @@ describe('global filesystem drop planning', () => {
     expect(result).toMatchObject({
       status: 'ready',
       action: 'move',
-      items: [outside],
-      parentId: target._id,
+      command: { type: 'move', itemIds: [outside._id], targetParentId: target._id },
     })
   })
 
@@ -597,8 +595,7 @@ describe('resolveTestDropCommand', () => {
     expect(resolveTestDropCommand([alreadyInside, outside], target, createCtx())).toMatchObject({
       status: 'ready',
       action: 'move',
-      items: [outside],
-      parentId: target._id,
+      command: { type: 'move', itemIds: [outside._id], targetParentId: target._id },
     })
   })
 
@@ -609,7 +606,7 @@ describe('resolveTestDropCommand', () => {
     expect(resolveTestDropCommand([first, second], trashTarget(), createCtx())).toMatchObject({
       status: 'ready',
       action: 'trash',
-      items: [first, second],
+      command: { type: 'trash', itemIds: [first._id, second._id] },
     })
   })
 
@@ -643,7 +640,7 @@ describe('resolveTestDropCommand', () => {
         { item: alreadyPinned, reason: 'already_pinned' },
       ],
       target,
-      label: 'Pin to "World Map"',
+      label: 'Pin item to "World Map"',
     })
   })
 
@@ -688,7 +685,7 @@ describe('resolveTestDropCommand', () => {
       items: [],
       rejectedItems: [{ item: targetNote, reason: 'self_link' }],
       target,
-      label: 'No items can be linked here',
+      label: 'This item cannot be linked here',
     })
   })
 
@@ -772,8 +769,7 @@ describe('resolveTestDropCommand', () => {
       {
         status: 'ready',
         action: 'copy',
-        items: [note],
-        parentId: target._id,
+        command: { type: 'copy', itemIds: [note._id], targetParentId: target._id },
       },
     )
   })
@@ -786,8 +782,7 @@ describe('resolveTestDropCommand', () => {
     ).toMatchObject({
       status: 'ready',
       action: 'copy',
-      items: [note],
-      parentId: null,
+      command: { type: 'copy', itemIds: [note._id], targetParentId: null },
     })
   })
 
@@ -842,8 +837,7 @@ describe('resolveTestDropCommand', () => {
       {
         status: 'ready',
         action: 'copy',
-        items: [note],
-        parentId: target._id,
+        command: { type: 'copy', itemIds: [note._id], targetParentId: target._id },
       },
     )
   })
@@ -856,7 +850,7 @@ describe('resolveTestDropCommand', () => {
     ).toMatchObject({
       status: 'ready',
       action: 'trash',
-      items: [note],
+      command: { type: 'trash', itemIds: [note._id] },
     })
   })
 })
@@ -1079,7 +1073,7 @@ describe('batch commands', () => {
     expect(result).toMatchObject({
       status: 'ready',
       action: 'trash',
-      items: [note],
+      command: { type: 'trash', itemIds: [note._id] },
     })
   })
 
@@ -1091,8 +1085,7 @@ describe('batch commands', () => {
     expect(result).toMatchObject({
       status: 'ready',
       action: 'move',
-      items: [note],
-      parentId: null,
+      command: { type: 'move', itemIds: [note._id], targetParentId: null },
     })
   })
 
@@ -1105,8 +1098,7 @@ describe('batch commands', () => {
     expect(result).toMatchObject({
       status: 'ready',
       action: 'move',
-      items: [note],
-      parentId: target._id,
+      command: { type: 'move', itemIds: [note._id], targetParentId: target._id },
     })
   })
 
@@ -1118,8 +1110,7 @@ describe('batch commands', () => {
     expect(result).toMatchObject({
       status: 'ready',
       action: 'restore',
-      items: [note],
-      parentId: null,
+      command: { type: 'restore', itemIds: [note._id], targetParentId: null },
     })
   })
 
@@ -1132,36 +1123,32 @@ describe('batch commands', () => {
     expect(result).toMatchObject({
       status: 'ready',
       action: 'restore',
-      items: [note],
-      parentId: target._id,
+      command: { type: 'restore', itemIds: [note._id], targetParentId: target._id },
     })
   })
 
-  it('empty editor open returns the item for the monitor to navigate', () => {
+  it('empty editor open is DnD feedback, not a filesystem command', () => {
     const note = createNote()
     const ctx = createCtx()
-    const result = resolveTestDropCommand([note], emptyEditorTarget(), ctx)
 
-    expect(result).toMatchObject({
-      status: 'ready',
+    expect(resolveTestDropCommand([note], emptyEditorTarget(), ctx)).toEqual({ status: 'noop' })
+    expect(resolveDropFeedback([note], emptyEditorTarget(), ctx).outcome).toMatchObject({
+      type: 'operation',
       action: 'open',
-      item: note,
     })
   })
 
-  it('pin operation has null execute (handled by monitor)', () => {
+  it('pin operation is handled by the monitor', () => {
     const note = createNote()
     const result = resolveDropOutcome(note, mapTarget(), createCtx())
 
     expect(result).toMatchObject({ type: 'operation', action: 'pin' })
-    expect((result as { execute: null }).execute).toBeNull()
   })
 
-  it('link operation has null execute (handled by monitor)', () => {
+  it('link operation is handled by the monitor', () => {
     const note = createNote()
     const result = resolveDropOutcome(note, noteEditorTarget(), createCtx())
 
     expect(result).toMatchObject({ type: 'operation', action: 'link' })
-    expect((result as { execute: null }).execute).toBeNull()
   })
 })

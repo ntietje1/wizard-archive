@@ -28,6 +28,7 @@ import { toDecisionRecord } from '../conflicts'
 import { getSidebarItemStatus, isTrashedSidebarItem } from '../../types/status'
 import { createFileSystemWriteSession } from '../deltas'
 import { FILE_SYSTEM_EVENT_TYPE } from '../receipts'
+import { createFileSystemReadModel } from '../readModel'
 import type { OperationDecision } from '../conflicts'
 import type { SidebarItemStatus } from '../../types/baseTypes'
 import type { AnySidebarItem, AnySidebarItemRow } from '../../types/types'
@@ -61,7 +62,7 @@ type MoveSelfEventType =
   | typeof FILE_SYSTEM_EVENT_TYPE.mergedFolder
   | typeof FILE_SYSTEM_EVENT_TYPE.noop
 
-export const MOVE_OPERATION_ACTION = {
+const MOVE_OPERATION_ACTION = {
   move: 'move',
   replace: 'replace',
   mergeFolder: 'mergeFolder',
@@ -479,7 +480,7 @@ async function normalizeOperationRoots(
 ) {
   const folders = sourceItems.filter((item) => item.type === SIDEBAR_ITEM_TYPES.folders)
   const childrenMap = await collectMoveChildrenMap(ctx, folders)
-  const itemsById = buildOperationItemsMap(sourceItems, childrenMap)
+  const itemsById = buildOperationReadModel(sourceItems, childrenMap).itemsById
   await addSidebarItemAncestorsToMap(ctx, {
     items: sourceItems,
     itemsById,
@@ -488,20 +489,24 @@ async function normalizeOperationRoots(
   return normalizeSelectedRoots(sourceItems, itemsById)
 }
 
-function buildOperationItemsMap(
-  items: Array<Pick<AnySidebarItemRow, '_id' | 'parentId'>>,
+function buildOperationReadModel(
+  items: Array<Pick<AnySidebarItemRow, '_id' | 'parentId' | 'status' | 'slug'>>,
   childrenMap: Map<Id<'sidebarItems'>, Array<AnySidebarItemRow>>,
 ) {
-  const map = new Map<Id<'sidebarItems'>, Pick<AnySidebarItem, '_id' | 'parentId'>>()
+  const rowsById = new Map<
+    Id<'sidebarItems'>,
+    Pick<AnySidebarItemRow, '_id' | 'parentId' | 'status' | 'slug'>
+  >()
   for (const item of items) {
-    map.set(item._id, item)
+    rowsById.set(item._id, item)
   }
   for (const children of childrenMap.values()) {
     for (const child of children) {
-      map.set(child._id, child)
+      if (rowsById.has(child._id)) continue
+      rowsById.set(child._id, child)
     }
   }
-  return map
+  return createFileSystemReadModel(Array.from(rowsById.values()))
 }
 
 async function trashSidebarItems(
@@ -568,15 +573,15 @@ async function executeMovePlan(
     (item) => item.type === SIDEBAR_ITEM_TYPES.folders,
   )
   const childrenMap = await collectMoveChildrenMap(ctx, folders)
-  const itemsById = buildOperationItemsMap([...sourceItems, ...targetItems], childrenMap)
+  const readModel = buildOperationReadModel([...sourceItems, ...targetItems], childrenMap)
   await addSidebarItemAncestorsToMap(ctx, {
     items: sourceItems,
-    itemsById,
+    itemsById: readModel.itemsById,
     maxDepth: MAX_SIDEBAR_MOVE_DEPTH,
   })
   const plan = planMoveOperations({
     items: sourceItems,
-    itemsById,
+    itemsById: readModel.itemsById,
     targetParentId: effectiveTargetParentId,
     targetItems,
     decisions: toDecisionRecord(decisions),
@@ -593,7 +598,7 @@ async function executeMovePlan(
     )
   }
 
-  const rootSourceItems = normalizeSelectedRoots(sourceItems, itemsById)
+  const rootSourceItems = normalizeSelectedRoots(sourceItems, readModel.itemsById)
   const result = await executeMoveOperations(
     ctx,
     plan.operations,

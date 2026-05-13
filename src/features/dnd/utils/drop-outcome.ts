@@ -6,7 +6,6 @@ type OperationOutcome = {
   type: 'operation'
   action: DragDropAction
   label: string
-  execute: null
 }
 
 type RejectionOutcome = {

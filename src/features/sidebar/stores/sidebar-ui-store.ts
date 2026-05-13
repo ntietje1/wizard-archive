@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware'
 import { useShallow } from 'zustand/shallow'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
+import { selectionBelongsToSurface } from 'convex/sidebarItems/filesystem/selection'
 
 export type ItemSurface = 'sidebar' | 'folder-view' | 'bookmarks' | 'trash'
 
@@ -93,14 +94,6 @@ function updateCampaignState(
 
 function uniqueIds(ids: Array<Id<'sidebarItems'>>): Array<Id<'sidebarItems'>> {
   return Array.from(new Set(ids))
-}
-
-function selectionBelongsToSurface(
-  selectedIds: Array<Id<'sidebarItems'>>,
-  visibleItemIds: Array<Id<'sidebarItems'>>,
-): boolean {
-  const visibleIds = new Set(visibleItemIds)
-  return selectedIds.every((id) => visibleIds.has(id))
 }
 
 function selectRange(

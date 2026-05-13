@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
+import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type {
   FileSystemCommand,
@@ -43,7 +44,12 @@ import {
 } from './filesystem-receipt-selectors'
 import { toast } from 'sonner'
 import { getPasteTargetParentId } from './filesystem-targets'
-import { fileSystemDropCommandFailureMessage } from './filesystem-drop-planner'
+import {
+  fileSystemDropCommandFailureMessage,
+  resolveGlobalFileSystemDropCommand,
+} from './filesystem-drop-planner'
+import { isFolder } from '~/features/sidebar/utils/sidebar-item-utils'
+import { FolderDeleteConfirmDialog } from '~/features/sidebar/components/folder-delete-confirm-dialog'
 import { assertNever } from '~/shared/utils/utils'
 
 type PendingConflict = {
@@ -71,7 +77,16 @@ function toDecisionArray(
 function toastReceipt(receipt: FileSystemTransactionReceipt) {
   const message = getReceiptToastMessage(receipt)
   if (!message) return
-  toast[message.type](message.text)
+  switch (message.type) {
+    case 'success':
+      toast.success(message.text)
+      return
+    case 'info':
+      toast.info(message.text)
+      return
+    default:
+      return assertNever(message)
+  }
 }
 
 type FileSystemProviderState = {
@@ -103,6 +118,7 @@ function useFileSystemValue(): FileSystemProviderState {
   const [pendingConflict, setPendingConflict] = useState<PendingConflict | null>(null)
   const [pendingDeleteForeverItems, setPendingDeleteForeverItems] =
     useState<Array<AnySidebarItem> | null>(null)
+  const [pendingTrashFolder, setPendingTrashFolder] = useState<AnySidebarItem | null>(null)
   const [pendingOperationCount, setPendingOperationCount] = useState(0)
 
   useEffect(() => {
@@ -172,7 +188,10 @@ function useFileSystemValue(): FileSystemProviderState {
 
     return await withPendingOperation(() =>
       runFileSystemMutation({
-        optimistic: plan,
+        patches: {
+          apply: plan.preview.receiptPatches,
+          rollback: plan.preview.inversePatches,
+        },
         applyPatches: cacheAdapter.applyPatches,
         mutate: async () =>
           (await executeMutation.mutateAsync({
@@ -216,23 +235,34 @@ function useFileSystemValue(): FileSystemProviderState {
     return { slug: getReceiptRenamedSlug(receipt) }
   }
 
-  const moveItems: FileSystemValue['moveItems'] = async (itemIds, targetParentId) => {
-    await executeCommand({ type: 'move', itemIds, targetParentId })
-  }
-
-  const copyItems: FileSystemValue['copyItems'] = async (itemIds, targetParentId) => {
+  const duplicateItems: FileSystemValue['duplicateItems'] = async (itemIds, targetParentId) => {
     await executeCommand({ type: 'copy', itemIds, targetParentId })
   }
 
-  const trashItems: FileSystemValue['trashItems'] = async (itemIds) => {
+  const trashItems = async (itemIds: Array<Id<'sidebarItems'>>) => {
     await executeCommand({ type: 'trash', itemIds })
+  }
+
+  const requestTrashItems: FileSystemValue['requestTrashItems'] = async (itemIds) => {
+    const currentReadModel = cacheAdapter.getReadModel()
+    const items = normalizeOperationItems(currentReadModel.getItems(itemIds), currentReadModel)
+    if (items.length === 0) return false
+    if (items.length === 1) {
+      const item = items[0]
+      if (isFolder(item) && currentReadModel.getActiveChildren(item._id).length > 0) {
+        setPendingTrashFolder(item)
+        return true
+      }
+    }
+    await trashItems(items.map((item) => item._id))
+    return false
   }
 
   const restoreItems: FileSystemValue['restoreItems'] = async (itemIds, targetParentId = null) => {
     await executeCommand({ type: 'restore', itemIds, targetParentId })
   }
 
-  const deleteForever: FileSystemValue['deleteForever'] = async (itemIds) => {
+  const deleteForever = async (itemIds: Array<Id<'sidebarItems'>>) => {
     await executeCommand({ type: 'deleteForever', itemIds })
   }
 
@@ -262,8 +292,9 @@ function useFileSystemValue(): FileSystemProviderState {
     return true
   }
 
-  const paste = async (targetParentId = getPasteTargetParentId(activeItemSurface)) => {
+  const paste: FileSystemValue['paste'] = async (targetParentId) => {
     if (!campaignId || !clipboard || clipboard.campaignId !== campaignId) return
+    const resolvedTargetParentId = getPasteTargetParentId(activeItemSurface, targetParentId)
     const currentReadModel = cacheAdapter.getReadModel()
     const items = normalizeOperationItems(
       currentReadModel.getItems(Array.from(clipboard.itemIds)),
@@ -272,22 +303,23 @@ function useFileSystemValue(): FileSystemProviderState {
     if (items.length === 0) return
 
     if (clipboard.mode === 'copy') {
-      await copyItems(
+      await duplicateItems(
         items.map((item) => item._id),
-        targetParentId,
+        resolvedTargetParentId,
       )
       return
     }
 
-    if (items.every((item) => item.parentId === targetParentId)) {
+    if (items.every((item) => item.parentId === resolvedTargetParentId)) {
       setFileSystemClipboard(null)
       return
     }
 
-    await moveItems(
-      items.map((item) => item._id),
-      targetParentId,
-    )
+    await executeCommand({
+      type: 'move',
+      itemIds: items.map((item) => item._id),
+      targetParentId: resolvedTargetParentId,
+    })
     setFileSystemClipboard(null)
   }
 
@@ -300,9 +332,9 @@ function useFileSystemValue(): FileSystemProviderState {
     }
     await withPendingOperation(() =>
       runFileSystemMutation({
-        optimistic: {
-          forwardPatches: entry.inversePatches,
-          inversePatches: entry.forwardPatches,
+        patches: {
+          apply: entry.inversePatches,
+          rollback: entry.forwardPatches,
         },
         applyPatches: cacheAdapter.applyPatches,
         mutate: async () =>
@@ -329,9 +361,9 @@ function useFileSystemValue(): FileSystemProviderState {
     }
     await withPendingOperation(() =>
       runFileSystemMutation({
-        optimistic: {
-          forwardPatches: entry.forwardPatches,
-          inversePatches: entry.inversePatches,
+        patches: {
+          apply: entry.forwardPatches,
+          rollback: entry.inversePatches,
         },
         applyPatches: cacheAdapter.applyPatches,
         mutate: async () =>
@@ -349,39 +381,36 @@ function useFileSystemValue(): FileSystemProviderState {
     )
   }
 
-  const executeDropCommand: FileSystemValue['executeDropCommand'] = async (command) => {
+  const executeDrop: FileSystemValue['executeDrop'] = async ({ itemIds, target, options }) => {
+    const currentReadModel = cacheAdapter.getReadModel()
+    const items = normalizeOperationItems(currentReadModel.getItems(itemIds), currentReadModel)
+    if (items.length === 0) return
+
+    const command = resolveGlobalFileSystemDropCommand(
+      items,
+      target,
+      { isDm: campaign.data?.myMembership?.role === CAMPAIGN_MEMBER_ROLE.DM },
+      options,
+    )
+    if (command.status === 'noop') return
+    if (command.status === 'blocked') {
+      handleError(new Error(command.reason), 'Cannot drop items here')
+      return
+    }
     if (command.status !== 'ready') return
     try {
       switch (command.action) {
         case 'move':
-          await moveItems(
-            command.items.map((item) => item._id),
-            command.parentId,
-          )
-          break
         case 'copy':
-          await copyItems(
-            command.items.map((item) => item._id),
-            command.parentId,
-          )
-          break
         case 'restore':
-          await restoreItems(
-            command.items.map((item) => item._id),
-            command.parentId,
-          )
-          break
         case 'trash':
-          await trashItems(command.items.map((item) => item._id))
-          break
-        case 'open':
-          await navigateToItem(command.item.slug, true)
+          await executeCommand(command.command)
           break
         default:
-          return assertNever(command)
+          assertNever(command.action)
       }
-      if ('parentId' in command && command.parentId && campaignId) {
-        setFolderState(campaignId, command.parentId, true)
+      if (command.command.type !== 'trash' && command.command.targetParentId && campaignId) {
+        setFolderState(campaignId, command.command.targetParentId, true)
       }
     } catch (error) {
       handleError(error, fileSystemDropCommandFailureMessage(command))
@@ -430,15 +459,24 @@ function useFileSystemValue(): FileSystemProviderState {
     />
   ) : null
 
+  const trashFolderDialog =
+    pendingTrashFolder && isFolder(pendingTrashFolder) ? (
+      <FolderDeleteConfirmDialog
+        key={`trash-folder-${pendingTrashFolder._id}`}
+        folder={pendingTrashFolder}
+        isDeleting={true}
+        onTrash={() => trashItems([pendingTrashFolder._id])}
+        onClose={() => setPendingTrashFolder(null)}
+      />
+    ) : null
+
   return {
     value: {
       createItem,
       renameItem,
-      moveItems,
-      copyItems,
-      trashItems,
+      duplicateItems,
+      requestTrashItems,
       restoreItems,
-      deleteForever,
       emptyTrash,
       confirmDeleteForever,
       copy,
@@ -448,7 +486,7 @@ function useFileSystemValue(): FileSystemProviderState {
       paste,
       undo,
       redo,
-      executeDropCommand,
+      executeDrop,
       canUndo: undoStack.length > 0,
       canRedo: redoStack.length > 0,
     },
@@ -466,6 +504,7 @@ function useFileSystemValue(): FileSystemProviderState {
         </div>
         {conflictDialog}
         {deleteForeverDialog}
+        {trashFolderDialog}
       </>
     ),
   }

@@ -7,11 +7,9 @@ function createFileSystem(overrides?: Partial<FileSystemValue>) {
   return {
     createItem: vi.fn(),
     renameItem: vi.fn(),
-    moveItems: vi.fn(),
-    copyItems: vi.fn(),
-    trashItems: vi.fn(),
+    duplicateItems: vi.fn(),
+    requestTrashItems: vi.fn().mockResolvedValue(false),
     restoreItems: vi.fn(),
-    deleteForever: vi.fn(),
     emptyTrash: vi.fn(),
     confirmDeleteForever: vi.fn(),
     copy: vi.fn(),
@@ -21,7 +19,7 @@ function createFileSystem(overrides?: Partial<FileSystemValue>) {
     paste: vi.fn(),
     undo: vi.fn(),
     redo: vi.fn(),
-    executeDropCommand: vi.fn(),
+    executeDrop: vi.fn(),
     canUndo: false,
     canRedo: false,
     ...overrides,
@@ -34,8 +32,6 @@ describe('createFilesystemActions', () => {
     const filesystem = createFileSystem()
     const actions = createFilesystemActions({
       filesystem,
-      parentItemsMap: new Map(),
-      setDeleteFolderDialog: vi.fn(),
     })
 
     actions.paste({ surface: 'sidebar', item: folder })
@@ -50,8 +46,6 @@ describe('createFilesystemActions', () => {
     const filesystem = createFileSystem()
     const actions = createFilesystemActions({
       filesystem,
-      parentItemsMap: new Map(),
-      setDeleteFolderDialog: vi.fn(),
     })
 
     actions.paste({
@@ -71,8 +65,6 @@ describe('createFilesystemActions', () => {
     const filesystem = createFileSystem()
     const actions = createFilesystemActions({
       filesystem,
-      parentItemsMap: new Map(),
-      setDeleteFolderDialog: vi.fn(),
     })
 
     actions.paste({

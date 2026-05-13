@@ -50,11 +50,9 @@ function createFileSystem(overrides?: Partial<FileSystemValue>): FileSystemValue
   return {
     createItem: vi.fn().mockResolvedValue(undefined),
     renameItem: vi.fn().mockResolvedValue(undefined),
-    moveItems: vi.fn().mockResolvedValue(undefined),
-    copyItems: vi.fn().mockResolvedValue(undefined),
-    trashItems: vi.fn().mockResolvedValue(undefined),
+    duplicateItems: vi.fn().mockResolvedValue(undefined),
+    requestTrashItems: vi.fn().mockResolvedValue(false),
     restoreItems: vi.fn().mockResolvedValue(undefined),
-    deleteForever: vi.fn().mockResolvedValue(undefined),
     emptyTrash: vi.fn().mockResolvedValue(undefined),
     confirmDeleteForever: vi.fn(),
     copy: vi.fn(),
@@ -70,11 +68,20 @@ function createFileSystem(overrides?: Partial<FileSystemValue>): FileSystemValue
     paste: vi.fn().mockResolvedValue(undefined),
     undo: vi.fn(),
     redo: vi.fn(),
-    executeDropCommand: vi.fn().mockResolvedValue(undefined),
+    executeDrop: vi.fn().mockResolvedValue(undefined),
     canUndo: false,
     canRedo: false,
     ...overrides,
   }
+}
+
+function setupClipboardForPaste(mode: 'copy' | 'cut', itemIds: Array<Id<'sidebarItems'>>) {
+  setFileSystemClipboard({
+    mode,
+    campaignId: 'campaign_1' as Id<'campaigns'>,
+    itemIds,
+  })
+  clipboardCanPaste = true
 }
 
 describe('useItemSurfaceHotkeys', () => {
@@ -95,12 +102,7 @@ describe('useItemSurfaceHotkeys', () => {
       visibleItemIds: [note._id],
     })
     useSidebarUIStore.getState().setSelectedItemIds([note._id], note._id)
-    setFileSystemClipboard({
-      mode: 'cut',
-      campaignId: 'campaign_1' as Id<'campaigns'>,
-      itemIds: [note._id],
-    })
-    clipboardCanPaste = true
+    setupClipboardForPaste('cut', [note._id])
 
     const filesystem = createFileSystem()
     renderHook(() => useItemSurfaceHotkeys(filesystem))
@@ -114,7 +116,7 @@ describe('useItemSurfaceHotkeys', () => {
     expect(filesystem.copy).not.toHaveBeenCalled()
     expect(filesystem.cut).not.toHaveBeenCalled()
     expect(filesystem.paste).not.toHaveBeenCalled()
-    expect(filesystem.trashItems).not.toHaveBeenCalled()
+    expect(filesystem.requestTrashItems).not.toHaveBeenCalled()
     expect(filesystem.confirmDeleteForever).not.toHaveBeenCalled()
   })
 
@@ -140,7 +142,7 @@ describe('useItemSurfaceHotkeys', () => {
     expect(filesystem.copy).not.toHaveBeenCalled()
     expect(filesystem.cut).not.toHaveBeenCalled()
     expect(filesystem.paste).not.toHaveBeenCalled()
-    expect(filesystem.trashItems).not.toHaveBeenCalled()
+    expect(filesystem.requestTrashItems).not.toHaveBeenCalled()
     expect(filesystem.confirmDeleteForever).not.toHaveBeenCalled()
   })
 
@@ -157,12 +159,7 @@ describe('useItemSurfaceHotkeys', () => {
     useSidebarUIStore
       .getState()
       .setSelectedItemIds([selectedChildFolder._id], selectedChildFolder._id)
-    setFileSystemClipboard({
-      mode: 'copy',
-      campaignId: 'campaign_1' as Id<'campaigns'>,
-      itemIds: [clipboardItem._id],
-    })
-    clipboardCanPaste = true
+    setupClipboardForPaste('copy', [clipboardItem._id])
     const filesystem = createFileSystem()
 
     renderHook(() => useItemSurfaceHotkeys(filesystem))
@@ -184,12 +181,7 @@ describe('useItemSurfaceHotkeys', () => {
       visibleItemIds: [selectedFolder._id],
     })
     useSidebarUIStore.getState().setSelectedItemIds([selectedFolder._id], selectedFolder._id)
-    setFileSystemClipboard({
-      mode: 'copy',
-      campaignId: 'campaign_1' as Id<'campaigns'>,
-      itemIds: [clipboardItem._id],
-    })
-    clipboardCanPaste = true
+    setupClipboardForPaste('copy', [clipboardItem._id])
     const filesystem = createFileSystem()
 
     renderHook(() => useItemSurfaceHotkeys(filesystem))
@@ -215,12 +207,7 @@ describe('useItemSurfaceHotkeys', () => {
     useSidebarUIStore
       .getState()
       .setSelectedItemIds([selectedNote._id, selectedFolder._id], selectedNote._id)
-    setFileSystemClipboard({
-      mode: 'copy',
-      campaignId: 'campaign_1' as Id<'campaigns'>,
-      itemIds: [clipboardItem._id],
-    })
-    clipboardCanPaste = true
+    setupClipboardForPaste('copy', [clipboardItem._id])
     const filesystem = createFileSystem()
 
     renderHook(() => useItemSurfaceHotkeys(filesystem))

@@ -54,7 +54,7 @@ export function FolderViewer({ item: folder }: EditorViewerProps<FolderWithConte
       >
         <DroppableFolderZone
           folder={folder}
-          className="flex flex-col h-full w-full min-h-0"
+          className="group/sidebar-surface flex flex-col h-full w-full min-h-0"
           onPointerDownCapture={handleSurfacePointerDown}
         >
           {hasFullAccess ? (
@@ -75,7 +75,10 @@ export function FolderViewer({ item: folder }: EditorViewerProps<FolderWithConte
       className="flex flex-col h-full w-full min-h-0"
       item={folder}
     >
-      <DroppableFolderZone folder={folder} className="flex flex-col h-full w-full min-h-0">
+      <DroppableFolderZone
+        folder={folder}
+        className="group/sidebar-surface flex flex-col h-full w-full min-h-0"
+      >
         <ScrollArea className="flex-1 min-h-0" onPointerDownCapture={handleSurfacePointerDown}>
           <div className="w-full min-w-0">
             <ContentGrid className="p-6 min-h-0">

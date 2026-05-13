@@ -1,21 +1,16 @@
-import {
-  SIDEBAR_ITEM_LOCATION,
-  SIDEBAR_ITEM_STATUS,
-  SIDEBAR_ITEM_TYPES,
-} from 'convex/sidebarItems/types/baseTypes'
-import { collectDescendantIdsFromItems } from 'convex/sidebarItems/filesystem/tree'
+import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_STATUS } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { diffSidebarItemFields } from 'convex/sidebarItems/filesystem/patches'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type { FileSystemPatch } from 'convex/sidebarItems/filesystem/receipts'
-import type { MoveOperation } from 'convex/sidebarItems/filesystem/operationTypes'
+import type { FileSystemDelta } from 'convex/sidebarItems/filesystem/receipts'
 import type {
   CreateFileSystemCommand,
   RenameFileSystemCommand,
 } from 'convex/sidebarItems/filesystem/commands'
 import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import type { SidebarCacheSnapshot } from './filesystem-cache-patches'
+import { logger } from '~/shared/utils/logger'
 
 const OPTIMISTIC_ID_PREFIX = 'optimistic-'
 let optimisticIdIndex = 0
@@ -29,49 +24,6 @@ function nextOptimisticIdIndex() {
   return optimisticIdIndex
 }
 
-function updatePatch(
-  item: AnySidebarItem,
-  after: Partial<AnySidebarItem>,
-): { forward: FileSystemPatch; inverse: FileSystemPatch } {
-  const { changed: fields, previous } = diffSidebarItemFields(item, {
-    ...item,
-    ...after,
-  } as AnySidebarItem)
-  return {
-    forward: { type: 'updateSidebarItem', itemId: item._id, before: previous, fields },
-    inverse: { type: 'updateSidebarItem', itemId: item._id, before: fields, fields: previous },
-  }
-}
-
-function pushUpdate(
-  patches: OptimisticPatchSet,
-  item: AnySidebarItem,
-  after: Partial<AnySidebarItem>,
-) {
-  const patch = updatePatch(item, after)
-  patches.forwardPatches.push(patch.forward)
-  patches.inversePatches.push(patch.inverse)
-}
-
-function pushUpsert(patches: OptimisticPatchSet, item: AnySidebarItem) {
-  patches.forwardPatches.push({ type: 'upsertSidebarItem', item })
-  patches.inversePatches.push({ type: 'removeSidebarItem', itemId: item._id, snapshot: item })
-}
-
-function pushRemove(patches: OptimisticPatchSet, item: AnySidebarItem) {
-  patches.forwardPatches.push({ type: 'removeSidebarItem', itemId: item._id, snapshot: item })
-  patches.inversePatches.push({ type: 'upsertSidebarItem', item })
-}
-
-export type OptimisticPatchSet = {
-  forwardPatches: Array<FileSystemPatch>
-  inversePatches: Array<FileSystemPatch>
-}
-
-function emptyPatchSet(): OptimisticPatchSet {
-  return { forwardPatches: [], inversePatches: [] }
-}
-
 function optimisticSlug(name: string, index: number): SidebarItemSlug {
   return `${
     name
@@ -82,7 +34,7 @@ function optimisticSlug(name: string, index: number): SidebarItemSlug {
   }-optimistic-${index}` as SidebarItemSlug
 }
 
-export function buildOptimisticCreatePatches({
+export function buildOptimisticCreatePreview({
   command,
   parentId,
   currentUserId,
@@ -94,8 +46,19 @@ export function buildOptimisticCreatePatches({
   currentUserId: Id<'userProfiles'> | null
   campaignId: Id<'campaigns'>
   now?: number
-}): OptimisticPatchSet {
-  const patches = emptyPatchSet()
+}): FileSystemDelta {
+  if (!currentUserId) {
+    logger.warn('Skipping optimistic filesystem create because current user id is unavailable')
+    return {
+      command,
+      events: [],
+      receiptPatches: [],
+      forwardPatches: [],
+      inversePatches: [],
+      undoable: false,
+    }
+  }
+
   const index = nextOptimisticIdIndex()
   const item: AnySidebarItem = {
     _id: `${OPTIMISTIC_ID_PREFIX}create-${now}-${index}` as Id<'sidebarItems'>,
@@ -114,7 +77,7 @@ export function buildOptimisticCreatePatches({
     previewUpdatedAt: null,
     updatedTime: null,
     updatedBy: null,
-    createdBy: currentUserId ?? ('optimistic-user' as Id<'userProfiles'>),
+    createdBy: currentUserId,
     deletionTime: null,
     deletedBy: null,
     isActive: true,
@@ -126,182 +89,55 @@ export function buildOptimisticCreatePatches({
     myPermissionLevel: PERMISSION_LEVEL.FULL_ACCESS,
     previewUrl: null,
   } as AnySidebarItem
-  pushUpsert(patches, item)
-  return patches
+
+  const receiptPatches: FileSystemDelta['receiptPatches'] = [{ type: 'upsertSidebarItem', item }]
+  return {
+    command,
+    events: [],
+    receiptPatches,
+    forwardPatches: receiptPatches,
+    inversePatches: [{ type: 'removeSidebarItem', itemId: item._id, snapshot: item }],
+    undoable: false,
+  }
 }
 
-export function buildOptimisticRenamePatches(
+export function buildOptimisticRenamePreview(
   snapshot: SidebarCacheSnapshot,
   command: RenameFileSystemCommand,
-): OptimisticPatchSet {
-  const patches = emptyPatchSet()
+): FileSystemDelta {
   const item =
     snapshot.sidebar.find((candidate) => candidate._id === command.itemId) ??
     snapshot.trash.find((candidate) => candidate._id === command.itemId)
-  if (!item) return patches
+  if (!item) {
+    // The item may have been removed by a concurrent update before the optimistic rename applies.
+    return {
+      command,
+      events: [],
+      receiptPatches: [],
+      forwardPatches: [],
+      inversePatches: [],
+      undoable: false,
+    }
+  }
 
-  pushUpdate(patches, item, {
+  const { changed: fields, previous } = diffSidebarItemFields(item, {
+    ...item,
     ...(command.name !== undefined ? { name: command.name as AnySidebarItem['name'] } : {}),
     ...(command.iconName !== undefined ? { iconName: command.iconName } : {}),
     ...(command.color !== undefined ? { color: command.color } : {}),
-  })
-  return patches
-}
+  } as AnySidebarItem)
 
-function sourceTree(item: AnySidebarItem, items: Array<AnySidebarItem>) {
-  if (item.type !== SIDEBAR_ITEM_TYPES.folders) return [item]
-  const descendantIds = collectDescendantIdsFromItems(item._id, items)
-  return items.filter((candidate) => candidate._id === item._id || descendantIds.has(candidate._id))
-}
-
-function trashTree(
-  patches: OptimisticPatchSet,
-  item: AnySidebarItem,
-  items: Array<AnySidebarItem>,
-  now: number,
-  deletedBy: Id<'userProfiles'> | null = null,
-) {
-  for (const candidate of sourceTree(item, items)) {
-    pushUpdate(patches, candidate, {
-      parentId: candidate._id === item._id ? null : candidate.parentId,
-      location: SIDEBAR_ITEM_LOCATION.sidebar,
-      status: SIDEBAR_ITEM_STATUS.trashed,
-      deletionTime: now,
-      deletedBy,
-    })
+  const receiptPatches: FileSystemDelta['receiptPatches'] = [
+    { type: 'updateSidebarItem', itemId: item._id, before: previous, fields },
+  ]
+  return {
+    command,
+    events: [],
+    receiptPatches,
+    forwardPatches: receiptPatches,
+    inversePatches: [
+      { type: 'updateSidebarItem', itemId: item._id, before: fields, fields: previous },
+    ],
+    undoable: false,
   }
-}
-
-function restoreTree(
-  patches: OptimisticPatchSet,
-  item: AnySidebarItem,
-  trash: Array<AnySidebarItem>,
-  targetParentId: Id<'sidebarItems'> | null,
-) {
-  for (const candidate of sourceTree(item, trash)) {
-    pushUpdate(patches, candidate, {
-      parentId: candidate._id === item._id ? targetParentId : candidate.parentId,
-      location: SIDEBAR_ITEM_LOCATION.sidebar,
-      status: SIDEBAR_ITEM_STATUS.active,
-      deletionTime: null,
-      deletedBy: null,
-    })
-  }
-}
-
-function trashReplacementDestination({
-  patches,
-  operation,
-  sidebarMap,
-  snapshot,
-  now,
-}: {
-  patches: OptimisticPatchSet
-  operation: MoveOperation
-  sidebarMap: ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>
-  snapshot: SidebarCacheSnapshot
-  now: number
-}) {
-  if (operation.action !== 'replace' || !operation.destinationItemId) return
-  const destination = sidebarMap.get(operation.destinationItemId)
-  if (destination) trashTree(patches, destination, snapshot.sidebar, now)
-}
-
-function applyMergeFolderOptimisticPatch({
-  patches,
-  operation,
-  sidebarMap,
-  snapshot,
-  now,
-}: {
-  patches: OptimisticPatchSet
-  operation: MoveOperation
-  sidebarMap: ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>
-  snapshot: SidebarCacheSnapshot
-  now: number
-}) {
-  if (operation.action !== 'mergeFolder') return false
-  const source = sidebarMap.get(operation.sourceItemId)
-  const hasChildren = snapshot.sidebar.some((item) => item.parentId === operation.sourceItemId)
-  // The backend moves merge children individually; the folder row is trashed only once emptied.
-  if (source && !hasChildren) trashTree(patches, source, snapshot.sidebar, now)
-  return true
-}
-
-function applyMoveOrRestoreOptimisticPatch({
-  patches,
-  operation,
-  sidebarMap,
-  trashMap,
-  snapshot,
-}: {
-  patches: OptimisticPatchSet
-  operation: Extract<MoveOperation, { action: 'move' | 'replace' }>
-  sidebarMap: ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>
-  trashMap: ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>
-  snapshot: SidebarCacheSnapshot
-}) {
-  const source = sidebarMap.get(operation.sourceItemId) ?? trashMap.get(operation.sourceItemId)
-  if (!source) return
-  if (trashMap.has(source._id)) {
-    restoreTree(patches, source, snapshot.trash, operation.targetParentId)
-    return
-  }
-  pushUpdate(patches, source, {
-    parentId: operation.targetParentId,
-    ...(operation.name ? { name: operation.name as AnySidebarItem['name'] } : {}),
-  })
-}
-
-export function buildOptimisticMovePatches(
-  snapshot: SidebarCacheSnapshot,
-  operations: Array<MoveOperation>,
-  now = Date.now(),
-): OptimisticPatchSet {
-  const patches = emptyPatchSet()
-  const sidebarMap = new Map(snapshot.sidebar.map((item) => [item._id, item]))
-  const trashMap = new Map(snapshot.trash.map((item) => [item._id, item]))
-
-  for (const operation of operations) {
-    trashReplacementDestination({ patches, operation, sidebarMap, snapshot, now })
-    if (operation.action === 'mergeFolder') {
-      applyMergeFolderOptimisticPatch({ patches, operation, sidebarMap, snapshot, now })
-      continue
-    }
-    applyMoveOrRestoreOptimisticPatch({
-      patches,
-      operation,
-      sidebarMap,
-      trashMap,
-      snapshot,
-    })
-  }
-
-  return patches
-}
-
-export function buildOptimisticTrashPatches(
-  snapshot: SidebarCacheSnapshot,
-  items: Array<AnySidebarItem>,
-  now = Date.now(),
-  deletedBy?: Id<'userProfiles'> | null,
-): OptimisticPatchSet {
-  const patches = emptyPatchSet()
-  for (const item of items) {
-    trashTree(patches, item, snapshot.sidebar, now, deletedBy ?? null)
-  }
-  return patches
-}
-
-export function buildOptimisticDeleteForeverPatches(
-  snapshot: SidebarCacheSnapshot,
-  items: Array<AnySidebarItem>,
-): OptimisticPatchSet {
-  const patches = emptyPatchSet()
-  for (const item of items) {
-    for (const candidate of sourceTree(item, snapshot.trash)) {
-      pushRemove(patches, candidate)
-    }
-  }
-  return patches
 }

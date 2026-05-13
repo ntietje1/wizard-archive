@@ -14,6 +14,7 @@ import type { Folder } from 'convex/folders/types'
 import { getSelectedSlug } from '~/features/sidebar/hooks/useSelectedItem'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
+import type { SidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { useFileSystem } from '~/features/filesystem/useFileSystem'
 
 interface EditItemBase {
@@ -58,8 +59,6 @@ type NormalizedSidebarMetadataUpdate = {
   iconName?: SidebarItemIconName | null
   color?: SidebarItemColor | null
 }
-
-type SidebarValidation = ReturnType<typeof useSidebarValidation>
 
 function normalizeSidebarMetadataUpdate(
   args: EditItemBase & { item: AnySidebarItem },

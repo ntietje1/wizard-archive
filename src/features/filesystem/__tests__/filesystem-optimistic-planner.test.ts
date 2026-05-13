@@ -20,6 +20,41 @@ function createTestCache(snapshot: SidebarCacheSnapshot) {
 }
 
 describe('filesystem optimistic planning', () => {
+  it('predicts copy conflicts but waits for authoritative created rows', () => {
+    const source = createNote({ name: 'Source' })
+    const snapshot: SidebarCacheSnapshot = { sidebar: [source], trash: [] }
+    const cache = createTestCache(snapshot)
+
+    const plan = planFileSystemOptimisticCommand({
+      command: {
+        type: 'copy',
+        itemIds: [source._id],
+        targetParentId: null,
+      },
+      snapshot: cache.snapshot,
+      readModel: cache.readModel,
+      activeItemSurface: { parentId: null },
+      currentUserId: null,
+      campaignId,
+    })
+
+    expect(plan).toEqual({
+      status: 'ready',
+      preview: {
+        command: {
+          type: 'copy',
+          itemIds: [source._id],
+          targetParentId: null,
+        },
+        events: [],
+        receiptPatches: [],
+        forwardPatches: [],
+        inversePatches: [],
+        undoable: false,
+      },
+    })
+  })
+
   it('plans moves against the command target parent', () => {
     const left = createFolder({ name: 'Left' })
     const first = createNote({ name: 'First' })
@@ -42,7 +77,7 @@ describe('filesystem optimistic planning', () => {
 
     expect(plan.status).toBe('ready')
     if (plan.status !== 'ready') return
-    const applied = applyFileSystemPatchesToSnapshot(snapshot, plan.forwardPatches ?? [])
+    const applied = applyFileSystemPatchesToSnapshot(snapshot, plan.preview.receiptPatches)
     const movedFirst = applied.sidebar.find((item) => item._id === first._id)
     const movedSecond = applied.sidebar.find((item) => item._id === second._id)
     expect(movedFirst).toBeDefined()
@@ -72,7 +107,7 @@ describe('filesystem optimistic planning', () => {
 
     expect(plan.status).toBe('ready')
     if (plan.status !== 'ready') return
-    const applied = applyFileSystemPatchesToSnapshot(snapshot, plan.forwardPatches ?? [])
+    const applied = applyFileSystemPatchesToSnapshot(snapshot, plan.preview.receiptPatches)
     const restoredFirst = applied.sidebar.find((item) => item._id === first._id)
     const restoredSecond = applied.sidebar.find((item) => item._id === second._id)
     expect(restoredFirst).toBeDefined()
@@ -103,7 +138,9 @@ describe('filesystem optimistic planning', () => {
 
     expect(plan.status).toBe('ready')
     if (plan.status !== 'ready') return
-    const applied = applyFileSystemPatchesToSnapshot(snapshot, plan.forwardPatches ?? [])
-    expect(applied.sidebar.find((item) => item._id === trashed._id)?.parentId).toBeNull()
+    const applied = applyFileSystemPatchesToSnapshot(snapshot, plan.preview.receiptPatches)
+    const restored = applied.sidebar.find((item) => item._id === trashed._id)
+    expect(restored).toBeDefined()
+    expect(restored?.parentId).toBeNull()
   })
 })

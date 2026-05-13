@@ -8,7 +8,6 @@ import type { PermissionLevel } from 'convex/permissions/types'
 import type { MenuContext } from './types'
 import type { ActionHandlers } from './menu-registry'
 import type { Id } from 'convex/_generated/dataModel'
-import type { Folder } from 'convex/folders/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { handleError } from '~/shared/utils/logger'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
@@ -21,7 +20,6 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useToggleBookmark } from '~/features/sidebar/hooks/useBookmarks'
 import { isFile, isGameMap } from '~/features/sidebar/utils/sidebar-item-utils'
 import { useSession } from '~/features/sidebar/hooks/useGameSession'
-import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useFileSystem } from '~/features/filesystem/useFileSystem'
 import { createDownloadActions } from './download-actions'
 import { createCreationActions } from './creation-actions'
@@ -34,7 +32,7 @@ interface UseMenuActionsOptions {
 
 export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const { onDialogOpen, onDialogClose } = options
-  const { navigateToItem, clearEditorContent } = useEditorNavigation()
+  const { navigateToItem } = useEditorNavigation()
   const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
   const { openParentFolders } = useOpenParentFolders()
   const { createItem } = useCreateFileSystemItem()
@@ -43,7 +41,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const convex = useConvex()
   const { endCurrentSession, startSession: startNewSession } = useSession()
   const toggleBookmarkMutation = useToggleBookmark()
-  const { parentItemsMap } = useActiveSidebarItems()
   const filesystemActionsApi = useFileSystem()
   const downloadActions = createDownloadActions({ campaignId, convex })
   const creationActions = createCreationActions({
@@ -54,15 +51,12 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     navigateToItem,
   })
 
-  const [deleteFolderDialog, setDeleteFolderDialog] = useState<Folder | null>(null)
   const [editMapDialog, setEditMapDialog] = useState<Id<'sidebarItems'> | null>(null)
   const [editFileDialog, setEditFileDialog] = useState<Id<'sidebarItems'> | null>(null)
   const [editSidebarItemDialog, setEditSidebarItemDialog] = useState<AnySidebarItem | null>(null)
   const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false)
   const filesystemActions = createFilesystemActions({
     filesystem: filesystemActionsApi,
-    parentItemsMap,
-    setDeleteFolderDialog,
     onDialogOpen,
   })
 
@@ -288,13 +282,11 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   }
 
   const dialogState: MenuDialogState = {
-    deleteFolderDialog,
     editMapDialog,
     editFileDialog,
     editSidebarItemDialog,
     confirmEmptyTrash,
     campaignId,
-    closeFolderDialog: makeCloseHandler(setDeleteFolderDialog),
     closeMapDialog: makeCloseHandler(setEditMapDialog),
     closeFileDialog: makeCloseHandler(setEditFileDialog),
     closeSidebarItemDialog: makeCloseHandler(setEditSidebarItemDialog),
@@ -302,7 +294,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       setConfirmEmptyTrash(false)
       onDialogClose?.()
     },
-    clearEditorContent,
     emptyTrash: async () => {
       try {
         await filesystemActionsApi.emptyTrash()

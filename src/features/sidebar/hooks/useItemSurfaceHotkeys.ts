@@ -24,17 +24,16 @@ type ActiveItemSurface = NonNullable<
 
 interface ResolvedHotkeySelection {
   selectedItems: Array<AnySidebarItem>
-  selectedIds: Array<AnySidebarItem['_id']>
 }
 
-interface HotkeyFileSystemActions {
+export interface HotkeyFileSystemActions {
   cancelClipboard: () => boolean
   cut: (itemIds: Array<AnySidebarItem['_id']>) => void
   copy: (itemIds: Array<AnySidebarItem['_id']>) => void
   canPaste: boolean
   paste: (targetParentId?: AnySidebarItem['_id'] | null) => Promise<void>
   confirmDeleteForever: (itemIds: Array<AnySidebarItem['_id']>) => boolean
-  trashItems: (itemIds: Array<AnySidebarItem['_id']>) => Promise<void>
+  requestTrashItems: (itemIds: Array<AnySidebarItem['_id']>) => Promise<boolean>
 }
 
 interface HotkeyHandlerContext {
@@ -57,13 +56,9 @@ function resolveItems(
   ids: Array<AnySidebarItem['_id']>,
   allItemsMap: Map<AnySidebarItem['_id'], AnySidebarItem>,
 ): Array<AnySidebarItem> {
-  return ids.map((id) => {
-    const item = allItemsMap.get(id)
-    if (!item) {
-      throw new Error(`Hotkey selection references missing sidebar item ${id}`)
-    }
-    return item
-  })
+  return ids
+    .map((id) => allItemsMap.get(id))
+    .filter((item): item is AnySidebarItem => Boolean(item))
 }
 
 function resolveSelection(
@@ -79,7 +74,6 @@ function resolveSelection(
 
   return {
     selectedItems,
-    selectedIds: selectedItems.map((item) => item._id),
   }
 }
 
@@ -163,7 +157,7 @@ function handleDelete(event: KeyboardEvent, context: HotkeyHandlerContext): bool
   }
 
   void context.filesystem
-    .trashItems(context.selectedIds)
+    .requestTrashItems(context.selectedIds)
     .catch((error) => handleError(error, 'Failed to move items to trash'))
   return true
 }
@@ -235,6 +229,7 @@ export function useItemSurfaceHotkeys(filesystem: HotkeyFileSystemActions) {
         campaignId,
         activeItemSurface,
         focusedItemId,
+        selectedIds: selectedItemIds,
         filesystem: filesystemRef.current,
         setSelectedItemIds,
         clearItemSelection,
