@@ -1,25 +1,42 @@
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
-import type { Id } from 'convex/_generated/dataModel'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
-import { useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import { normalizeTopLevelSelectedItems } from 'convex/sidebarItems/operations/selection'
+import { selectionBelongsToSurface } from 'convex/sidebarItems/filesystem/selection'
+import {
+  useActiveSidebarItems,
+  useTrashSidebarItems,
+} from '~/features/sidebar/hooks/useSidebarItems'
+import { resolveSidebarOperationItems } from '~/features/filesystem/filesystem-operation-selection'
 
 export function useSidebarDragData(item: AnySidebarItem) {
   const selectedItemIds = useSidebarUIStore((s) => s.selectedItemIds)
-  const { itemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.sidebar)
-  const { itemsMap: trashedItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
-  const allItemsMap = new Map<Id<'sidebarItems'>, AnySidebarItem>([...itemsMap, ...trashedItemsMap])
-  const selectedItems = selectedItemIds
-    .map((id) => allItemsMap.get(id))
-    .filter((selectedItem): selectedItem is AnySidebarItem => Boolean(selectedItem))
-  const isDraggingSelection = selectedItemIds.includes(item._id)
-  const itemIds = isDraggingSelection
-    ? normalizeTopLevelSelectedItems(selectedItems, allItemsMap).map(
-        (selectedItem) => selectedItem._id,
-      )
+  const activeItemSurface = useSidebarUIStore((s) => s.activeItemSurface)
+  const { itemsMap } = useActiveSidebarItems()
+  const { itemsMap: trashedItemsMap } = useTrashSidebarItems()
+  const activeItemsMap = new Map(itemsMap)
+  const trashItemsMap = new Map(trashedItemsMap)
+  if (item.isTrashed) {
+    trashItemsMap.set(item._id, item)
+  } else {
+    activeItemsMap.set(item._id, item)
+  }
+  const allItemsMap = new Map([...activeItemsMap, ...trashItemsMap])
+  const selectedItems = selectedItemIds.flatMap((id) => {
+    const selectedItem = allItemsMap.get(id)
+    return selectedItem ? [selectedItem] : []
+  })
+  const belongsToActiveSurfaceSelection =
+    activeItemSurface !== null &&
+    activeItemSurface.visibleItemIds.includes(item._id) &&
+    selectionBelongsToSurface(selectedItemIds, activeItemSurface.visibleItemIds)
+  const belongsToSelection = belongsToActiveSurfaceSelection && selectedItemIds.includes(item._id)
+  const itemIds = belongsToSelection
+    ? resolveSidebarOperationItems({
+        itemIds: selectedItemIds,
+        activeItemsMap,
+        trashedItemsMap: trashItemsMap,
+      }).map((selectedItem) => selectedItem._id)
     : [item._id]
-  const previewItemIds = isDraggingSelection
+  const previewItemIds = belongsToSelection
     ? selectedItems.map((selectedItem) => selectedItem._id)
     : [item._id]
 

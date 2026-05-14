@@ -18,7 +18,7 @@ import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarge
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { Button } from '~/features/shadcn/components/button'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
-import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
+import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
 import { handleError } from '~/shared/utils/logger'
@@ -38,7 +38,7 @@ function EditorLoading() {
 }
 
 export function EditorContent() {
-  const { item, editorSearch, isLoading, hasRequestedItem } = useCurrentItem()
+  const { item, contentItem, editorSearch, isLoading, hasRequestedItem } = useCurrentItem()
   const { isDm } = useCampaign()
   const { viewAsPlayerId } = useEditorMode()
   const { itemsMap } = useActiveSidebarItems()
@@ -67,9 +67,13 @@ export function EditorContent() {
     return <EmptyEditorContent />
   }
 
+  if (!contentItem) {
+    return <EditorLoading />
+  }
+
   return (
     <Suspense fallback={<EditorLoading />}>
-      <SidebarItemEditor item={item} search={editorSearch} />
+      <SidebarItemEditor item={contentItem} search={editorSearch} />
     </Suspense>
   )
 }
@@ -118,7 +122,7 @@ function NotSharedContent() {
   const { viewAsPlayerId } = useEditorMode()
   const { data: allItems } = useActiveSidebarItems()
   const campaignMembersQuery = useCampaignMembers()
-  const { createItem } = useCreateSidebarItem()
+  const { createItem } = useCreateFileSystemItem()
   const { getDefaultName } = useSidebarValidation()
   const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
@@ -147,7 +151,6 @@ function NotSharedContent() {
     try {
       const result = await createItem({
         type: SIDEBAR_ITEM_TYPES.notes,
-        campaignId,
         parentTarget: { kind: 'direct', parentId: null },
         name: getDefaultName(SIDEBAR_ITEM_TYPES.notes, null),
       })

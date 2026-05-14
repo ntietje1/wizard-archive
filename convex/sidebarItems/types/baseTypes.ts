@@ -10,10 +10,25 @@ import type { ConvexValidatorFields } from '../../common/types'
 
 export const SIDEBAR_ITEM_LOCATION = {
   sidebar: 'sidebar',
-  trash: 'trash',
 } as const
 
 export type SidebarItemLocation = (typeof SIDEBAR_ITEM_LOCATION)[keyof typeof SIDEBAR_ITEM_LOCATION]
+
+/**
+ * Lifecycle visibility for a sidebar item.
+ *
+ * `location` is retained for future true storage locations; filesystem writes keep it as
+ * `sidebar`. Trash visibility is represented by `status: 'trashed'`, with
+ * `deletionTime`/`deletedBy` recording the deletion metadata. `undoHidden` is an internal state for
+ * rows hidden by local undo while preserving row IDs for deterministic redo.
+ */
+export const SIDEBAR_ITEM_STATUS = {
+  active: 'active',
+  trashed: 'trashed',
+  undoHidden: 'undoHidden',
+} as const
+
+export type SidebarItemStatus = (typeof SIDEBAR_ITEM_STATUS)[keyof typeof SIDEBAR_ITEM_STATUS]
 
 export const SIDEBAR_ITEM_TYPES = {
   notes: 'note',
@@ -24,6 +39,13 @@ export const SIDEBAR_ITEM_TYPES = {
 } as const
 
 export type SidebarItemType = (typeof SIDEBAR_ITEM_TYPES)[keyof typeof SIDEBAR_ITEM_TYPES]
+
+export function assertSidebarItemType(type: string): SidebarItemType {
+  if ((Object.values(SIDEBAR_ITEM_TYPES) as Array<string>).includes(type)) {
+    return type as SidebarItemType
+  }
+  throw new Error(`Invalid sidebar item type: ${type}`)
+}
 
 export type SidebarItemNormalizedFields = {
   name: SidebarItemName
@@ -44,6 +66,8 @@ type SidebarItemEnhancementFields = {
   isBookmarked: boolean
   myPermissionLevel: PermissionLevel
   previewUrl: string | null
+  isActive: boolean
+  isTrashed: boolean
 }
 
 export type NormalizeSidebarItem<T extends SidebarItemPersistedStringFields> = Omit<
@@ -64,7 +88,9 @@ export type SidebarItemRow<T extends SidebarItemType> = ConvexValidatorFields<'s
   parentId: Id<'sidebarItems'> | null
   type: T
   allPermissionLevel: PermissionLevel | null
+  // Currently only "sidebar"; kept as the future true placement field.
   location: SidebarItemLocation
+  status: SidebarItemStatus
   previewStorageId: Id<'_storage'> | null
   previewLockedUntil: number | null
   previewClaimToken: string | null

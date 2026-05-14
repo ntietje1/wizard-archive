@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
-import { createFile, createFolder, createGameMap } from '../../_test/factories.helper'
+import {
+  executeMoveCommand,
+  executeDeleteForeverCommand,
+  executeEmptyTrashCommand,
+  createFile,
+  createFolder,
+  createGameMap,
+} from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 
 describe('storage lifecycle with file/map deletion', () => {
@@ -15,13 +22,13 @@ describe('storage lifecycle with file/map deletion', () => {
       name: 'Delete Me',
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [fileId],
       targetParentId: null,
       action: 'trash',
     })
-    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
+    await executeDeleteForeverCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [fileId],
     })
@@ -38,13 +45,13 @@ describe('storage lifecycle with file/map deletion', () => {
       name: 'Delete Map',
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [mapId],
       targetParentId: null,
       action: 'trash',
     })
-    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
+    await executeDeleteForeverCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [mapId],
     })
@@ -72,7 +79,7 @@ describe('storage lifecycle with file/map deletion', () => {
     expect(map).toBeNull()
   })
 
-  it('emptyTrashBin cleans up files inside trashed folders', async () => {
+  it('emptyTrash cleans up files inside trashed folders', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const dmId = ctx.dm.profile._id
@@ -85,16 +92,14 @@ describe('storage lifecycle with file/map deletion', () => {
       name: 'Nested File',
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [folderId],
       targetParentId: null,
       action: 'trash',
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.emptyTrashBin, {
-      campaignId: ctx.campaignId,
-    })
+    await executeEmptyTrashCommand(dmAuth, { campaignId: ctx.campaignId })
 
     const [folder, file] = await t.run(async (dbCtx) => [
       await dbCtx.db.get('sidebarItems', folderId),
@@ -113,13 +118,13 @@ describe('storage lifecycle with file/map deletion', () => {
       storageId: null,
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [fileId],
       targetParentId: null,
       action: 'trash',
     })
-    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
+    await executeDeleteForeverCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [fileId],
     })
@@ -137,13 +142,13 @@ describe('storage lifecycle with file/map deletion', () => {
       imageStorageId: null,
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [mapId],
       targetParentId: null,
       action: 'trash',
     })
-    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
+    await executeDeleteForeverCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [mapId],
     })

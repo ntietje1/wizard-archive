@@ -132,7 +132,7 @@ describe('campaign deletion cascade', () => {
     })
     const { noteId: trashedNoteId } = await createNote(t, ctx.campaignId, dmId, {
       name: 'Trashed Note',
-      location: 'trash',
+      status: 'trashed',
       deletionTime: Date.now(),
       deletedBy: dmId,
     })

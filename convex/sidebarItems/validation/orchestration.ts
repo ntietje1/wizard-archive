@@ -5,11 +5,13 @@ import { PERMISSION_LEVEL } from '../../permissions/types'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import { getSidebarItem } from '../functions/getSidebarItem'
-import { getSidebarItemsByParent } from '../functions/getSidebarItemsByParent'
+import { getActiveSidebarItemRowsByParent } from '../functions/getSidebarItemsByParent'
+import { deduplicateName } from '../functions/defaultItemName'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
-import { evaluateMoveToParent } from '../operations/capabilities'
+import { isActiveSidebarItem } from '../types/status'
+import { assertSidebarOperationAllowed, evaluateMoveToParent } from '../filesystem/capabilities'
+import type { OperationSidebarItem } from '../filesystem/capabilities'
 import type { AnySidebarItem } from '../types/types'
-import { assertSidebarOperationAllowed } from '../functions/operationCapability'
 import { checkItemAccess, requireItemAccess } from './access'
 import { assertSidebarItemName, checkNameConflict } from './name'
 import { validateNoCircularParentAsync } from './parent'
@@ -20,6 +22,9 @@ import {
 } from './slug'
 import type { SidebarItemName, ValidationResult } from './name'
 import type { SidebarItemSlug } from './slug'
+
+const MAX_SIDEBAR_PARENT_DEPTH = 100
+type NamedOperationSidebarItem = OperationSidebarItem & Pick<AnySidebarItem, 'name'>
 
 export async function checkUniqueNameUnderParent(
   ctx: CampaignQueryCtx,
@@ -33,7 +38,7 @@ export async function checkUniqueNameUnderParent(
     excludeId?: Id<'sidebarItems'>
   },
 ): Promise<ValidationResult> {
-  const siblings = await getSidebarItemsByParent(ctx, { parentId })
+  const siblings = await getActiveSidebarItemRowsByParent(ctx, { parentId })
   return checkNameConflict(name, siblings, excludeId)
 }
 
@@ -49,7 +54,7 @@ export async function ensureSidebarItemNameAvailable(
     excludeId?: Id<'sidebarItems'>
   },
 ): Promise<void> {
-  const siblings = await getSidebarItemsByParent(ctx, { parentId })
+  const siblings = await getActiveSidebarItemRowsByParent(ctx, { parentId })
   const uniqueResult = checkNameConflict(name, siblings, excludeId)
   if (!uniqueResult.valid) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, uniqueResult.error)
@@ -62,12 +67,15 @@ export async function validateNoCircularSidebarParentChange(
     item,
     newParentId,
   }: {
-    item: AnySidebarItem
+    item: OperationSidebarItem
     newParentId: Id<'sidebarItems'> | null
   },
 ): Promise<void> {
   const result = await validateNoCircularParentAsync(item._id, newParentId, (currentId) =>
-    ctx.db.get('sidebarItems', currentId),
+    ctx.db.get('sidebarItems', currentId).then((parent) => {
+      if (!parent || parent.campaignId !== ctx.campaign._id) return null
+      return parent
+    }),
   )
   if (!result.valid) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, result.error)
@@ -80,7 +88,7 @@ export async function validateSidebarParentChange(
     item,
     newParentId,
   }: {
-    item: AnySidebarItem
+    item: OperationSidebarItem
     newParentId: Id<'sidebarItems'> | null
   },
 ): Promise<void> {
@@ -97,11 +105,33 @@ export async function validateSidebarParentChange(
       requiredLevel: PERMISSION_LEVEL.NONE,
     })
   }
+  const ancestorIds: Array<Id<'sidebarItems'>> = []
+  let currentParentId = parent?.parentId ?? null
+  const visitedParentIds = new Set<Id<'sidebarItems'>>()
+  while (currentParentId) {
+    if (visitedParentIds.has(currentParentId)) {
+      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Existing sidebar parent cycle detected')
+    }
+    if (ancestorIds.length >= MAX_SIDEBAR_PARENT_DEPTH) {
+      throwClientError(
+        ERROR_CODE.VALIDATION_FAILED,
+        'Sidebar parent depth exceeds maximum allowed depth',
+      )
+    }
+    visitedParentIds.add(currentParentId)
+    ancestorIds.push(currentParentId)
+    const currentParent = await ctx.db.get('sidebarItems', currentParentId)
+    if (currentParent && currentParent.campaignId !== ctx.campaign._id) {
+      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Existing sidebar parent is invalid')
+    }
+    currentParentId = currentParent?.parentId ?? null
+  }
 
   assertSidebarOperationAllowed(
     evaluateMoveToParent({ role: ctx.membership.role }, item, {
       parentId: newParentId,
       parent,
+      ancestorIds,
     }),
   )
 }
@@ -114,6 +144,9 @@ export async function validateSidebarCreateParent(
   if (parentId) {
     const parentItem = await getSidebarItem(ctx, parentId)
     if (!parentItem) {
+      throwClientError(ERROR_CODE.NOT_FOUND, 'Parent not found')
+    }
+    if (!isActiveSidebarItem(parentItem)) {
       throwClientError(ERROR_CODE.NOT_FOUND, 'Parent not found')
     }
     if (parentItem.type !== SIDEBAR_ITEM_TYPES.folders) {
@@ -135,7 +168,7 @@ export async function validateSidebarMove(
     newParentId,
     name,
   }: {
-    item: AnySidebarItem
+    item: NamedOperationSidebarItem
     newParentId: Id<'sidebarItems'> | null
     name?: SidebarItemName
   },
@@ -181,25 +214,20 @@ export async function findUniqueSidebarItemSlug(
     name: string
   },
 ): Promise<SidebarItemSlug> {
-  try {
-    const candidateSlug = await findUniqueSlug(
-      name,
-      (candidate) =>
-        checkSlugConflict(ctx, {
-          campaignId: ctx.campaign._id,
-          slug: candidate,
-          excludeId: itemId,
-        }),
-      {
-        maxLength: SIDEBAR_ITEM_SLUG_MAX_LENGTH,
-        isValidCandidate: (candidate) => validateSidebarItemSlug(candidate) === null,
-      },
-    )
-    return assertSidebarItemSlug(candidateSlug)
-  } catch (error) {
-    console.error('Failed to generate unique slug:', error)
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Failed to generate a valid slug for this item')
-  }
+  const candidateSlug = await findUniqueSlug(
+    name,
+    (candidate) =>
+      checkSlugConflict(ctx, {
+        campaignId: ctx.campaign._id,
+        slug: candidate,
+        excludeId: itemId,
+      }),
+    {
+      maxLength: SIDEBAR_ITEM_SLUG_MAX_LENGTH,
+      isValidCandidate: (candidate) => validateSidebarItemSlug(candidate) === null,
+    },
+  )
+  return assertSidebarItemSlug(candidateSlug)
 }
 
 export async function prepareSidebarItemCreate(
@@ -213,11 +241,17 @@ export async function prepareSidebarItemCreate(
   },
 ): Promise<{ name: SidebarItemName; slug: SidebarItemSlug }> {
   await validateSidebarCreateParent(ctx, { parentId })
-  await ensureSidebarItemNameAvailable(ctx, { parentId, name })
+  const siblings = await getActiveSidebarItemRowsByParent(ctx, { parentId })
+  const uniqueName = assertSidebarItemName(
+    deduplicateName(
+      name,
+      siblings.map((sibling) => sibling.name),
+    ),
+  )
 
-  const slug = await findUniqueSidebarItemSlug(ctx, { name })
+  const slug = await findUniqueSidebarItemSlug(ctx, { name: uniqueName })
 
-  return { name, slug }
+  return { name: uniqueName, slug }
 }
 
 export async function prepareSidebarItemRename(
@@ -226,7 +260,7 @@ export async function prepareSidebarItemRename(
     item,
     newName,
   }: {
-    item: AnySidebarItem
+    item: NamedOperationSidebarItem
     newName: SidebarItemName
   },
 ): Promise<{ name: SidebarItemName; slug: SidebarItemSlug } | null> {

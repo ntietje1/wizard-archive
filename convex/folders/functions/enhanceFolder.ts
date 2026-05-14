@@ -1,5 +1,4 @@
-import { SIDEBAR_ITEM_LOCATION } from '../../sidebarItems/types/baseTypes'
-import { enhanceBase } from '../../sidebarItems/functions/enhanceSidebarItem'
+import { enhanceBase } from '../../sidebarItems/functions/enhanceBaseSidebarItem'
 import { getSidebarItemAncestors } from './getSidebarItemAncestors'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Folder, FolderFromDb, FolderWithContent } from '../types'
@@ -17,7 +16,7 @@ export const enhanceFolderWithContent = async (
 ): Promise<FolderWithContent> => {
   const ancestors = await getSidebarItemAncestors(ctx, {
     initialParentId: folder.parentId,
-    isTrashed: folder.location === SIDEBAR_ITEM_LOCATION.trash,
+    isTrashed: folder.isTrashed,
   })
   return {
     ...folder,

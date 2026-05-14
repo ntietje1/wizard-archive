@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import { SidebarShareButton } from '../sidebar-item-share-button'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { SidebarItemsValue } from '~/features/sidebar/hooks/useSidebarItems'
@@ -32,13 +31,23 @@ function renderShareButton(item: AnySidebarItem, activeItems: Array<AnySidebarIt
   return render(
     <SidebarItemsContext.Provider
       value={{
-        [SIDEBAR_ITEM_LOCATION.sidebar]: sidebarItemsValue(activeItems),
-        [SIDEBAR_ITEM_LOCATION.trash]: sidebarItemsValue([]),
+        active: sidebarItemsValue(activeItems),
+        trash: sidebarItemsValue([]),
       }}
     >
       <SidebarShareButton item={item} />
     </SidebarItemsContext.Provider>,
   )
+}
+
+function setActiveSurface(items: Array<AnySidebarItem>) {
+  useSidebarUIStore.setState({
+    activeItemSurface: {
+      surface: 'sidebar',
+      parentId: null,
+      visibleItemIds: items.map((item) => item._id),
+    },
+  })
 }
 
 describe('SidebarShareButton', () => {
@@ -61,6 +70,7 @@ describe('SidebarShareButton', () => {
       selectedItemIds: [first._id, second._id],
       anchorItemId: first._id,
     })
+    setActiveSurface([first, second])
 
     renderShareButton(first, [first, second])
 
@@ -77,6 +87,7 @@ describe('SidebarShareButton', () => {
       selectedItemIds: [selected._id],
       anchorItemId: selected._id,
     })
+    setActiveSurface([selected, clicked])
 
     renderShareButton(clicked, [selected, clicked])
 
@@ -103,6 +114,7 @@ describe('SidebarShareButton', () => {
       selectedItemIds: [selected._id],
       anchorItemId: selected._id,
     })
+    setActiveSurface([selected])
 
     renderShareButton(selected, [selected])
 
@@ -111,7 +123,7 @@ describe('SidebarShareButton', () => {
     expect(await screen.findByTestId('share-panel')).toHaveTextContent('Selected')
   })
 
-  it('falls back to the clicked row when active sidebar data is stale', async () => {
+  it('does not invent a share target when selected sidebar data is stale', async () => {
     const user = userEvent.setup()
     const clicked = createNote({ name: 'Clicked' })
     useSidebarUIStore.setState({

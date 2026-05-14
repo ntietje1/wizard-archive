@@ -16,6 +16,7 @@ export type DndBatchDecision = {
 
 interface DndState {
   sidebarDragTargetId: string | null
+  sidebarDragPreviewItemIds: Array<Id<'sidebarItems'>>
   dragOutcome: DropOutcome | null
   fileDragHoveredId: Id<'sidebarItems'> | null
   isDraggingFiles: boolean
@@ -26,6 +27,7 @@ interface DndState {
 
 interface DndActions {
   setSidebarDragTargetId: (id: string | null) => void
+  setSidebarDragPreviewItemIds: (ids: Array<Id<'sidebarItems'>>) => void
   setDragOutcome: (outcome: DropOutcome | null) => void
   setFileDragHoveredId: (id: Id<'sidebarItems'> | null) => void
   setIsDraggingFiles: (isDragging: boolean) => void
@@ -34,8 +36,9 @@ interface DndActions {
   setBatchDecision: (decision: DndBatchDecision | null) => void
 }
 
-export const useDndStore = create<DndState & DndActions>()((set) => ({
+export const useDndStore = create<DndState & DndActions>()((set, get) => ({
   sidebarDragTargetId: null,
+  sidebarDragPreviewItemIds: [],
   dragOutcome: null,
   fileDragHoveredId: null,
   isDraggingFiles: false,
@@ -48,6 +51,10 @@ export const useDndStore = create<DndState & DndActions>()((set) => ({
       if (state.sidebarDragTargetId === id) return state
       return { sidebarDragTargetId: id }
     }),
+  setSidebarDragPreviewItemIds: (ids) => {
+    if (get().sidebarDragPreviewItemIds === ids) return
+    set({ sidebarDragPreviewItemIds: ids })
+  },
   setDragOutcome: (outcome) => set({ dragOutcome: outcome }),
   setFileDragHoveredId: (id) => set({ fileDragHoveredId: id }),
   setIsDraggingFiles: (isDragging) => set({ isDraggingFiles: isDragging }),

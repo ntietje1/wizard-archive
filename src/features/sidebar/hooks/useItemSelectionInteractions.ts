@@ -1,4 +1,5 @@
 import { useShallow } from 'zustand/shallow'
+import type { MouseEvent } from 'react'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { getItemSelectionIntent } from '~/features/sidebar/utils/item-selection-intent'
 import type { ItemSelectionModifierState } from '~/features/sidebar/utils/item-selection-intent'
@@ -39,20 +40,30 @@ export function useItemSelectionInteractions(
   }
 
   const handleItemClick = (
-    event: ItemSelectionModifierState & { preventDefault: () => void },
+    event: ItemSelectionModifierState & {
+      preventDefault: () => void
+      currentTarget: EventTarget | null
+    },
     onOpen?: () => void,
   ) => {
     activateSurface()
     const intent = getItemSelectionIntent(event)
+    const focusSelectionTarget = () => {
+      if (event.currentTarget instanceof HTMLElement) {
+        event.currentTarget.focus()
+      }
+    }
 
     if (intent === 'range') {
       event.preventDefault()
+      focusSelectionTarget()
       selectItemRange(item._id, visibleItemIds)
       return
     }
 
     if (intent === 'toggle') {
       event.preventDefault()
+      focusSelectionTarget()
       toggleItemSelection(item._id)
       return
     }
@@ -62,7 +73,7 @@ export function useItemSelectionInteractions(
     onOpen?.()
   }
 
-  const handleItemContextMenu = (_event: unknown) => {
+  const handleItemContextMenu = (_event: MouseEvent) => {
     activateSurface()
     normalizeContextSelection(item._id, visibleItemIds)
   }

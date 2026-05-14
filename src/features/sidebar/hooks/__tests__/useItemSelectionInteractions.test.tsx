@@ -12,17 +12,13 @@ beforeEach(() => {
 
 function clickEvent(
   modifiers: Partial<ItemSelectionModifierState> = {},
-): ItemSelectionModifierState & { preventDefault: () => void } {
-  const event = new MouseEvent('click', {
+): ItemSelectionModifierState & { preventDefault: () => void; currentTarget: HTMLElement } {
+  return {
     shiftKey: modifiers.shiftKey ?? false,
     metaKey: modifiers.metaKey ?? false,
     ctrlKey: modifiers.ctrlKey ?? false,
-  })
-  return {
-    shiftKey: event.shiftKey,
-    metaKey: event.metaKey,
-    ctrlKey: event.ctrlKey,
     preventDefault: () => undefined,
+    currentTarget: document.createElement('button'),
   }
 }
 

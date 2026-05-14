@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import * as Y from 'yjs'
 import { createTestContext } from '../../_test/setup.helper'
+import { createNoteViaFilesystem } from '../../_test/filesystemSetup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
-import { api } from '../../_generated/api'
 
 describe('createNote YJS integration', () => {
   const t = createTestContext()
@@ -11,7 +11,7 @@ describe('createNote YJS integration', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Test Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -33,7 +33,7 @@ describe('createNote YJS integration', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Empty Note',
       parentTarget: { kind: 'direct', parentId: null },

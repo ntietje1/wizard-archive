@@ -6,14 +6,12 @@ interface UseDraggableOptions<T extends Record<string, unknown>> {
   ref: React.RefObject<HTMLElement | null>
   data: T
   canDrag: boolean
-  dragOpacity?: string
 }
 
 export function useDraggable<T extends Record<string, unknown>>({
   ref,
   data,
   canDrag,
-  dragOpacity = '0.5',
 }: UseDraggableOptions<T>) {
   const isDraggingRef = useRef(false)
   const dataRef = useRef(data)
@@ -31,16 +29,14 @@ export function useDraggable<T extends Record<string, unknown>>({
       },
       onDragStart: () => {
         isDraggingRef.current = true
-        el.style.opacity = dragOpacity
         el.setAttribute('data-item-dragging', '')
       },
       onDrop: () => {
         isDraggingRef.current = false
-        el.style.opacity = ''
         el.removeAttribute('data-item-dragging')
       },
     })
-  }, [ref, canDrag, dragOpacity])
+  }, [ref, canDrag])
 
   return { isDraggingRef }
 }

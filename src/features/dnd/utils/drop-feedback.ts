@@ -1,15 +1,17 @@
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { DropOutcome } from './drop-outcome'
-import { resolveDropOutcome } from './drop-outcome-planner'
 import type { DropPlanningContext } from './drop-planning-context'
-import { resolveGlobalDropCommand } from './global-drop-planner'
-import type { GlobalDropOptions } from './global-drop-planner'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { resolveSurfaceDropCommand } from './surface-drop-planner'
+import { EMPTY_EDITOR_DROP_TYPE } from './drop-target-data'
 import type { SidebarDropData } from './drop-target-data'
+import type { FileSystemDropOptions } from 'convex/sidebarItems/filesystem/intentPlanning'
+import {
+  resolveFileSystemDropTarget,
+  resolveGlobalFileSystemDropCommand,
+} from '~/features/filesystem/filesystem-drop-planner'
 import { assertNever } from '~/shared/utils/utils'
 
-export type DropFeedback = {
+type DropFeedback = {
   outcome: DropOutcome | null
   rejectedItemCount?: number
 }
@@ -18,40 +20,44 @@ export function resolveDropFeedback(
   draggedItems: Array<AnySidebarItem> | null | undefined,
   dropTarget: SidebarDropData | null,
   ctx: DropPlanningContext,
-  options: GlobalDropOptions = {},
+  options: FileSystemDropOptions = {},
 ): DropFeedback {
   if (!dropTarget) return { outcome: null }
   if (!draggedItems || draggedItems.length === 0) return { outcome: null }
+  if (dropTarget.type === EMPTY_EDITOR_DROP_TYPE) {
+    return {
+      outcome: {
+        type: 'operation',
+        action: 'open',
+        label: 'Open in editor',
+      },
+    }
+  }
 
-  const globalCommand = resolveGlobalDropCommand(draggedItems, dropTarget, ctx, options)
-  switch (globalCommand.status) {
-    case 'ready':
-      if (globalCommand.action === 'copy') {
+  const fileSystemTarget = resolveFileSystemDropTarget(dropTarget, ctx)
+  if (fileSystemTarget) {
+    const globalCommand = resolveGlobalFileSystemDropCommand(
+      draggedItems,
+      fileSystemTarget,
+      ctx,
+      options,
+    )
+    switch (globalCommand.status) {
+      case 'ready':
         return {
           outcome: {
             type: 'operation',
-            action: 'copy',
-            label:
-              dropTarget.type === SIDEBAR_ITEM_TYPES.folders
-                ? `Copy to "${dropTarget.name || 'Unnamed folder'}"`
-                : `Copy to "${ctx.campaignName || 'Root'}"`,
-            execute: null,
+            action: globalCommand.action,
+            label: globalCommand.label,
           },
         }
-      }
-      return {
-        outcome: resolveDropOutcome(
-          globalCommand.action === 'open' ? globalCommand.item : (globalCommand.items[0] ?? null),
-          dropTarget,
-          ctx,
-        ),
-      }
-    case 'blocked':
-      return { outcome: { type: 'rejection', reason: globalCommand.reason } }
-    case 'noop':
-      break
-    default:
-      return assertNever(globalCommand)
+      case 'blocked':
+        return { outcome: { type: 'rejection', reason: globalCommand.reason } }
+      case 'noop':
+        break
+      default:
+        return assertNever(globalCommand)
+    }
   }
 
   const surfaceCommand = resolveSurfaceDropCommand(draggedItems, dropTarget, ctx)
@@ -62,19 +68,23 @@ export function resolveDropFeedback(
           type: 'operation',
           action: surfaceCommand.action,
           label: surfaceCommand.label,
-          execute: null,
         },
       }
     case 'partial':
-    case 'failed':
       return {
         outcome: {
           type: 'operation',
           action: surfaceCommand.action,
           label: surfaceCommand.label,
-          execute: null,
         },
         rejectedItemCount: surfaceCommand.rejectedItems.length,
+      }
+    case 'failed':
+      return {
+        outcome: {
+          type: 'rejection',
+          reason: surfaceCommand.rejectedItems[0]?.reason ?? 'unexpected_action',
+        },
       }
     case 'blocked':
       return { outcome: { type: 'rejection', reason: surfaceCommand.reason } }

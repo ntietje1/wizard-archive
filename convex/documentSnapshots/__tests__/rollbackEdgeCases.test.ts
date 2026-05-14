@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import * as Y from 'yjs'
 import { createTestContext } from '../../_test/setup.helper'
+import {
+  createNoteViaFilesystem,
+  createCanvasViaFilesystem,
+} from '../../_test/filesystemSetup.helper'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import { createGameMap, createNote, createSidebarShare } from '../../_test/factories.helper'
 import { expectNotFound, expectPermissionDenied } from '../../_test/assertions.helper'
@@ -21,7 +25,7 @@ describe('rollback permission checks', () => {
       const dmAuth = asDm(ctx)
       const playerAuth = asPlayer(ctx)
 
-      const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      const { noteId } = await createNoteViaFilesystem(dmAuth, {
         campaignId: ctx.campaignId,
         name: 'Protected Note',
         parentTarget: { kind: 'direct', parentId: null },
@@ -67,7 +71,7 @@ describe('rollback permission checks', () => {
       const dmAuth = asDm(ctx)
       const playerAuth = asPlayer(ctx)
 
-      const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      const { noteId } = await createNoteViaFilesystem(dmAuth, {
         campaignId: ctx.campaignId,
         name: 'Private Note',
         parentTarget: { kind: 'direct', parentId: null },
@@ -136,7 +140,7 @@ describe('rollback error handling', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      const { noteId } = await createNoteViaFilesystem(dmAuth, {
         campaignId: ctx.campaignId,
         name: 'No Snapshot Note',
         parentTarget: { kind: 'direct', parentId: null },
@@ -173,7 +177,7 @@ describe('note rollback data integrity', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      const { noteId } = await createNoteViaFilesystem(dmAuth, {
         campaignId: ctx.campaignId,
         name: 'Rollback Content Note',
         parentTarget: { kind: 'direct', parentId: null },
@@ -262,7 +266,7 @@ describe('canvas rollback data integrity', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { canvasId } = await dmAuth.mutation(api.canvases.mutations.createCanvas, {
+      const { canvasId } = await createCanvasViaFilesystem(dmAuth, {
         campaignId: ctx.campaignId,
         name: 'Rollback Canvas',
         parentTarget: { kind: 'direct', parentId: null },
@@ -400,7 +404,7 @@ describe('rollback metadata integrity', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      const { noteId } = await createNoteViaFilesystem(dmAuth, {
         campaignId: ctx.campaignId,
         name: 'Timestamp Note',
         parentTarget: { kind: 'direct', parentId: null },
@@ -668,7 +672,7 @@ describe('map rollback restores image state', () => {
         return await dbCtx.storage.store(new Blob(['different-image']))
       })
 
-      await dmAuth.mutation(api.gameMaps.mutations.updateMap, {
+      await dmAuth.mutation(api.gameMaps.mutations.updateMapImage, {
         campaignId: ctx.campaignId,
         mapId,
         imageStorageId: newStorageId,

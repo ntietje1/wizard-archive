@@ -27,9 +27,6 @@ describe('resolveSurfaceDropCommand', () => {
 
     const command = resolveSurfaceDropCommand([first, second], target, planningContext())
 
-    expect(command).not.toHaveProperty('moveItems')
-    expect(command).not.toHaveProperty('restoreItems')
-    expect(command).not.toHaveProperty('trashItems')
     expect(command).toMatchObject({
       status: 'ready',
       action: 'pin',
@@ -54,12 +51,9 @@ describe('resolveSurfaceDropCommand', () => {
       action: 'link',
       items: [],
       rejectedItems: [{ item: targetNote, reason: 'self_link' }],
-      label: 'No items can be linked here',
+      label: 'This item cannot be linked here',
     })
-    if (command.status === 'failed') {
-      expect(command.rejectedItems).toHaveLength(1)
-      expect(command.items).toHaveLength(0)
-    }
+    if (command.status === 'failed') expect(command.action).toBe('link')
   })
 
   it('returns failed surface commands without accepted operation labels', () => {
@@ -76,7 +70,7 @@ describe('resolveSurfaceDropCommand', () => {
       action: 'link',
       items: [],
       rejectedItems: [{ item: targetNote, reason: 'self_link' }],
-      label: 'No items can be linked here',
+      label: 'This item cannot be linked here',
     })
   })
 

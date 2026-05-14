@@ -9,6 +9,15 @@ const ALLOWED_MIME_TYPES = ['application/pdf'] as const
 // Text file extensions for fallback detection
 const TEXT_EXTENSIONS = ['.txt', '.md'] as const
 
+export const FILE_UPLOAD_ACCEPT_PATTERN = [
+  'image/*',
+  'video/*',
+  'audio/*',
+  'text/*',
+  ...ALLOWED_MIME_TYPES,
+  ...TEXT_EXTENSIONS,
+].join(',')
+
 /**
  * Check if a content type is allowed for upload
  */

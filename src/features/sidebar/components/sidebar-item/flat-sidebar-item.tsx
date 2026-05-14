@@ -2,7 +2,7 @@ import { SidebarItemButtonBase } from './sidebar-item-button-base'
 import { DraggableSidebarItem } from './draggable-sidebar-item'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
-import { useEditSidebarItem } from '~/features/sidebar/hooks/useEditSidebarItem'
+import { useEditFileSystemItem } from '~/features/filesystem/useEditFileSystemItem'
 import { useFolderState } from '~/features/sidebar/hooks/useFolderState'
 import { useContextMenu } from '~/features/context-menu/hooks/useContextMenu'
 import { useEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
@@ -14,6 +14,7 @@ import {
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
+import { isOptimisticSidebarItem } from '~/features/filesystem/optimistic-sidebar-items'
 import type { MouseEvent } from 'react'
 
 interface FlatSidebarItemProps {
@@ -31,7 +32,7 @@ export function FlatSidebarItem({
   setRenamingId,
   visibleItemIds,
 }: FlatSidebarItemProps) {
-  const { editItem } = useEditSidebarItem()
+  const { editItem } = useEditFileSystemItem()
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
   const linkProps = useEditorLinkProps(item)
   const { setLastSelectedItem } = useLastEditorItem()
@@ -45,6 +46,7 @@ export function FlatSidebarItem({
   })
 
   const icon = getSidebarItemIcon(item)
+  const isPending = isOptimisticSidebarItem(item)
 
   const selectBookmarkedItem = (event: MouseEvent) => {
     handleItemClick(event, () => setLastSelectedItem(item.slug))
@@ -60,8 +62,13 @@ export function FlatSidebarItem({
   }
 
   return (
-    <DraggableSidebarItem item={item}>
-      <EditorContextMenu ref={contextMenuRef} viewContext="sidebar" item={item}>
+    <DraggableSidebarItem item={item} disabled={isPending}>
+      <EditorContextMenu
+        ref={contextMenuRef}
+        viewContext="sidebar"
+        item={item}
+        disabled={isPending}
+      >
         <SidebarItemButtonBase
           icon={icon}
           name={item.name}
@@ -71,6 +78,7 @@ export function FlatSidebarItem({
             expanded: isExpanded,
             renaming: renamingId === item._id,
             showChevron: false,
+            pending: isPending,
           }}
           linkProps={linkProps}
           onClick={selectBookmarkedItem}

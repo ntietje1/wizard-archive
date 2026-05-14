@@ -11,7 +11,7 @@ import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { handleError } from '~/shared/utils/logger'
 import { FormDialog } from '~/shared/components/form-dialog'
 import { useNameValidation } from '~/shared/hooks/useNameValidation'
-import { useEditSidebarItem } from '~/features/sidebar/hooks/useEditSidebarItem'
+import { useEditFileSystemItem } from '~/features/filesystem/useEditFileSystemItem'
 import { Label } from '~/features/shadcn/components/label'
 import { Button } from '~/features/shadcn/components/button'
 import { getIconByName } from '~/shared/utils/category-icons'
@@ -35,7 +35,7 @@ interface SidebarItemEditDialogProps {
 }
 
 export function SidebarItemEditDialog({ item, isOpen, onClose }: SidebarItemEditDialogProps) {
-  const { editItem } = useEditSidebarItem()
+  const { editItem } = useEditFileSystemItem()
   const defaultValues: SidebarItemEditFormValues = {
     name: item.name ?? '',
     iconName: item.iconName ?? null,
@@ -178,7 +178,7 @@ export function SidebarItemEditDialog({ item, isOpen, onClose }: SidebarItemEdit
                 return (
                   <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
                     <PreviewIcon
-                      className="h-4 w-4 flex-shrink-0"
+                      className="size-4 flex-shrink-0"
                       style={values.color ? { color: values.color } : undefined}
                     />
                     <span className="truncate text-sm">

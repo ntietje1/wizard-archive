@@ -1,5 +1,4 @@
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
 import { ItemCard } from './item-card'
 import { NewItemCard } from './new-item-card'
@@ -7,7 +6,8 @@ import { DroppableFolderZone } from './droppable-folder-zone'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { FolderWithContent } from 'convex/folders/types'
 import { CreateNewDashboard } from '~/features/editor/components/create-new-dashboard'
-import { useFilteredSidebarItems, useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useTrashSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useFilteredSidebarItems } from '~/features/sidebar/hooks/useFilteredSidebarItems'
 import { ContentGrid } from '~/features/campaigns/components/content-grid/content-grid'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
@@ -16,17 +16,15 @@ import { useItemSurfaceRegistration } from '~/features/sidebar/hooks/useItemSurf
 
 export function FolderViewer({ item: folder }: EditorViewerProps<FolderWithContent>) {
   const { parentItemsMap, status } = useFilteredSidebarItems()
-  const { parentItemsMap: trashedParentItemsMap, status: trashedStatus } = useSidebarItems(
-    SIDEBAR_ITEM_LOCATION.trash,
-  )
+  const { parentItemsMap: trashedParentItemsMap, status: trashedStatus } = useTrashSidebarItems()
 
-  const isDeleted = folder.location === SIDEBAR_ITEM_LOCATION.trash
+  const isDeleted = folder.isTrashed
   const effectiveStatus = isDeleted ? trashedStatus : status
   const children = isDeleted
     ? (trashedParentItemsMap.get(folder._id) ?? [])
     : (parentItemsMap.get(folder._id) ?? [])
   const visibleItemIds = children.map((child) => child._id)
-  const { handleSurfacePointerDown } = useItemSurfaceRegistration({
+  const { activateSurface, handleSurfacePointerDown } = useItemSurfaceRegistration({
     surface: 'folder-view',
     parentId: folder._id,
     visibleItemIds,
@@ -54,8 +52,9 @@ export function FolderViewer({ item: folder }: EditorViewerProps<FolderWithConte
       >
         <DroppableFolderZone
           folder={folder}
-          className="flex flex-col h-full w-full min-h-0"
+          className="group/sidebar-surface flex flex-col h-full w-full min-h-0"
           onPointerDownCapture={handleSurfacePointerDown}
+          onFocusCapture={activateSurface}
         >
           {hasFullAccess ? (
             <CreateNewDashboard parentId={folder._id} folderPath={folderPath} />
@@ -75,7 +74,11 @@ export function FolderViewer({ item: folder }: EditorViewerProps<FolderWithConte
       className="flex flex-col h-full w-full min-h-0"
       item={folder}
     >
-      <DroppableFolderZone folder={folder} className="flex flex-col h-full w-full min-h-0">
+      <DroppableFolderZone
+        folder={folder}
+        className="group/sidebar-surface flex flex-col h-full w-full min-h-0"
+        onFocusCapture={activateSurface}
+      >
         <ScrollArea className="flex-1 min-h-0" onPointerDownCapture={handleSurfacePointerDown}>
           <div className="w-full min-w-0">
             <ContentGrid className="p-6 min-h-0">

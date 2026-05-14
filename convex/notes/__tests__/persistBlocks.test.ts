@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
+import { createNoteViaFilesystem } from '../../_test/filesystemSetup.helper'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import { createNote, createSidebarShare } from '../../_test/factories.helper'
 import { expectNotAuthenticated, expectPermissionDenied } from '../../_test/assertions.helper'
@@ -29,7 +30,7 @@ describe('persistBlocks', () => {
     const dmAuth = asDm(ctx)
     const playerAuth = asPlayer(ctx)
 
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Write Access Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -55,7 +56,7 @@ describe('persistBlocks', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Empty Doc Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -82,7 +83,7 @@ describe('persistBlocks', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Persist Blocks Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -115,7 +116,7 @@ describe('persistBlocks', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Content Note',
       parentTarget: { kind: 'direct', parentId: null },

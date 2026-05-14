@@ -12,7 +12,6 @@ export function resetSidebarUIStore() {
     selectionSurface: null,
     focusSurface: null,
     activeItemSurface: null,
-    itemClipboard: null,
     viewAsPlayerId: null,
   })
 }

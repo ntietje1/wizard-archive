@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import {
+  executeMoveCommand,
+  executeDeleteForeverCommand,
   createBlock,
   createBlockShare,
   createBookmark,
@@ -14,7 +16,6 @@ import {
   createSidebarShare,
 } from '../../_test/factories.helper'
 import { makeYjsUpdate } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
-import { api } from '../../_generated/api'
 
 describe('folder cascade hierarchy', () => {
   const t = createTestContext()
@@ -63,7 +64,7 @@ describe('folder cascade hierarchy', () => {
         campaignMemberId: ctx.player.memberId,
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      await executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [folderId],
         targetParentId: null,
@@ -84,15 +85,15 @@ describe('folder cascade hierarchy', () => {
         bookmark: await dbCtx.db.get('bookmarks', bookmark.bookmarkId),
       }))
 
-      expect(afterTrash.folder!.location).toBe('trash')
+      expect(afterTrash.folder!.status).toBe('trashed')
       expect(afterTrash.folder!.deletionTime).not.toBeNull()
-      expect(afterTrash.note!.location).toBe('trash')
+      expect(afterTrash.note!.status).toBe('trashed')
       expect(afterTrash.note!.deletionTime).not.toBeNull()
-      expect(afterTrash.canvas!.location).toBe('trash')
+      expect(afterTrash.canvas!.status).toBe('trashed')
       expect(afterTrash.canvas!.deletionTime).not.toBeNull()
-      expect(afterTrash.map!.location).toBe('trash')
+      expect(afterTrash.map!.status).toBe('trashed')
       expect(afterTrash.map!.deletionTime).not.toBeNull()
-      expect(afterTrash.file!.location).toBe('trash')
+      expect(afterTrash.file!.status).toBe('trashed')
       expect(afterTrash.file!.deletionTime).not.toBeNull()
       // Dependent records are NOT soft-deleted — they remain untouched when the parent is trashed
       expect(afterTrash.block).not.toBeNull()
@@ -102,7 +103,7 @@ describe('folder cascade hierarchy', () => {
       expect(afterTrash.share).not.toBeNull()
       expect(afterTrash.bookmark).not.toBeNull()
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      await executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [folderId],
         targetParentId: null,
@@ -225,13 +226,13 @@ describe('folder cascade hierarchy', () => {
         }
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      await executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [folderId],
         targetParentId: null,
         action: 'trash',
       })
-      await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
+      await executeDeleteForeverCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [folderId],
       })
@@ -297,7 +298,7 @@ describe('folder cascade hierarchy', () => {
       })
       const block = await createBlock(t, leaf, ctx.campaignId)
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      await executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [root],
         targetParentId: null,
@@ -312,17 +313,17 @@ describe('folder cascade hierarchy', () => {
         block: await dbCtx.db.get('blocks', block.blockDbId),
       }))
 
-      expect(afterTrash.root!.location).toBe('trash')
+      expect(afterTrash.root!.status).toBe('trashed')
       expect(afterTrash.root!.deletionTime).not.toBeNull()
-      expect(afterTrash.child!.location).toBe('trash')
+      expect(afterTrash.child!.status).toBe('trashed')
       expect(afterTrash.child!.deletionTime).not.toBeNull()
-      expect(afterTrash.grandchild!.location).toBe('trash')
+      expect(afterTrash.grandchild!.status).toBe('trashed')
       expect(afterTrash.grandchild!.deletionTime).not.toBeNull()
-      expect(afterTrash.leaf!.location).toBe('trash')
+      expect(afterTrash.leaf!.status).toBe('trashed')
       expect(afterTrash.leaf!.deletionTime).not.toBeNull()
       expect(afterTrash.block).not.toBeNull()
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      await executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [root],
         targetParentId: null,
@@ -413,13 +414,13 @@ describe('folder cascade hierarchy', () => {
         }
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      await executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [root],
         targetParentId: null,
         action: 'trash',
       })
-      await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
+      await executeDeleteForeverCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [root],
       })

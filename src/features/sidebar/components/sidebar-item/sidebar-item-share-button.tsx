@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Share2 } from 'lucide-react'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { Button } from '~/features/shadcn/components/button'
 import { Popover, PopoverContent, PopoverTrigger } from '~/features/shadcn/components/popover'
@@ -8,8 +7,9 @@ import { SidebarItemsSharePanel } from '~/features/sharing/components/sidebar-it
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
-import { useActiveSidebarItems, useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import { resolveContextSelectedItems } from '~/features/context-menu/selection-context'
+import { resolveClickedSidebarOperationItems } from '~/features/filesystem/filesystem-operation-selection'
+import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
+import { selectionBelongsToSurface } from 'convex/sidebarItems/filesystem/selection'
 
 export function SidebarShareButton({
   item,
@@ -38,14 +38,18 @@ function SidebarShareButtonPopover({
 }) {
   const [open, setOpen] = useState(false)
   const selectedItemIds = useSidebarUIStore((s) => s.selectedItemIds)
-  const { itemsMap } = useActiveSidebarItems()
-  const { itemsMap: trashedItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
-  const shareItems = resolveContextSelectedItems({
+  const activeItemSurface = useSidebarUIStore((s) => s.activeItemSurface)
+  const filesystemReadModel = useFileSystemReadModel()
+  const canUseItemSelection =
+    activeItemSurface !== null &&
+    activeItemSurface.visibleItemIds.includes(item._id) &&
+    selectionBelongsToSurface(selectedItemIds, activeItemSurface.visibleItemIds)
+  const shareItems = resolveClickedSidebarOperationItems({
     item,
     selectedItemIds,
-    activeItemsMap: itemsMap,
-    trashedItemsMap,
-    canUseItemSelection: true,
+    activeItemsMap: filesystemReadModel.activeItemsById,
+    trashedItemsMap: filesystemReadModel.trashedItemsById,
+    canUseItemSelection,
   })
 
   return (

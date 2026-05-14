@@ -2,7 +2,7 @@ import { ClientOnly } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { File } from 'lucide-react'
 import { api } from 'convex/_generated/api'
-import { validateFileForUpload } from 'convex/storage/validation'
+import { FILE_UPLOAD_ACCEPT_PATTERN, validateFileForUpload } from 'convex/storage/validation'
 import { AudioFileViewer } from './audio-file-viewer'
 import { ImageFileViewer } from './image-file-viewer'
 import { OtherFileViewer } from './other-file-viewer'
@@ -14,7 +14,7 @@ import type { FileWithContent } from 'convex/files/types'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { handleError } from '~/shared/utils/logger'
 import { useFileWithPreview } from '~/features/file-upload/hooks/useFileWithPreview'
-import { FileUploadSection } from '~/features/file-upload/components/file-upload-section'
+import { FileUploadEmptyState } from '~/features/file-upload/components/file-upload-empty-state'
 import { assertNever } from '~/shared/utils/utils'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 
@@ -45,7 +45,7 @@ function getFileType(
 }
 
 function FileUpload({ fileId }: { fileId: Id<'sidebarItems'> }) {
-  const updateFile = useCampaignMutation(api.files.mutations.updateFile)
+  const updateFileStorage = useCampaignMutation(api.files.mutations.updateFileStorage)
 
   const fileUpload = useFileWithPreview({
     isOpen: true,
@@ -53,7 +53,7 @@ function FileUpload({ fileId }: { fileId: Id<'sidebarItems'> }) {
     fileTypeValidator: validateFileForUpload,
     onUploadComplete: async (storageId) => {
       try {
-        await updateFile.mutateAsync({ fileId, storageId })
+        await updateFileStorage.mutateAsync({ fileId, storageId })
         toast.success('File uploaded')
       } catch (error) {
         handleError(error, 'Failed to attach file')
@@ -61,40 +61,16 @@ function FileUpload({ fileId }: { fileId: Id<'sidebarItems'> }) {
     },
   })
 
-  const handleFileSelected = (file: globalThis.File) => {
-    fileUpload.handleFileSelect(file)
-  }
-
   return (
-    <div
-      className="w-full h-full flex items-center justify-center p-8"
-      onDragEnter={fileUpload.handleDrag}
-      onDragLeave={fileUpload.handleDrag}
-      onDragOver={fileUpload.handleDrag}
-      onDrop={fileUpload.handleDrop}
-    >
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center space-y-2">
-          <File className="h-10 w-10 mx-auto text-muted-foreground" />
-          <h2 className="text-lg font-medium">Upload File</h2>
-          <p className="text-sm text-muted-foreground">Upload a file to add it to your campaign.</p>
-        </div>
-
-        <div className="space-y-4">
-          <FileUploadSection
-            fileUpload={fileUpload}
-            handleFileSelect={handleFileSelected}
-            isSubmitting={false}
-            acceptPattern="*"
-            dragDropText="Drag a file here or click to browse"
-          />
-
-          {fileUpload.uploadError && (
-            <p className="text-sm text-destructive text-center">{fileUpload.uploadError}</p>
-          )}
-        </div>
-      </div>
-    </div>
+    <FileUploadEmptyState
+      fileUpload={fileUpload}
+      icon={File}
+      title="Upload File"
+      description="Upload a file to add it to your campaign."
+      isSubmitting={fileUpload.isUploading || updateFileStorage.isPending}
+      acceptPattern={FILE_UPLOAD_ACCEPT_PATTERN}
+      dragDropText="Drag a file here or click to browse"
+    />
   )
 }
 

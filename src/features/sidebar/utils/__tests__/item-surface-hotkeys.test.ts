@@ -4,7 +4,8 @@ import {
   isItemSurfaceInteractionTarget,
   isModifierShortcut,
 } from '../item-surface-hotkeys'
-import { getKeyboardOpenItem, getKeyboardPasteParentId } from '../item-surface-keyboard'
+import { getKeyboardOpenItem } from '../item-surface-keyboard'
+import { getKeyboardPasteParentId } from '~/features/filesystem/filesystem-targets'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
 
@@ -33,22 +34,85 @@ describe('item surface hotkey utilities', () => {
 
   it('suppresses hotkeys from editable targets', () => {
     const input = document.createElement('input')
+    const readonlyInput = document.createElement('input')
+    readonlyInput.readOnly = true
     const textarea = document.createElement('textarea')
+    const readonlyTextarea = document.createElement('textarea')
+    readonlyTextarea.readOnly = true
     const select = document.createElement('select')
     const editable = document.createElement('div')
     editable.setAttribute('contenteditable', 'true')
     Object.defineProperty(editable, 'isContentEditable', { value: true })
+    const editableChild = document.createElement('span')
+    editable.append(editableChild)
     const nonEditable = document.createElement('div')
     nonEditable.setAttribute('contenteditable', 'false')
     Object.defineProperty(nonEditable, 'isContentEditable', { value: false })
     const plain = document.createElement('button')
 
     expect(isEditableHotkeyTarget(input)).toBe(true)
+    expect(isEditableHotkeyTarget(readonlyInput)).toBe(false)
     expect(isEditableHotkeyTarget(textarea)).toBe(true)
+    expect(isEditableHotkeyTarget(readonlyTextarea)).toBe(false)
     expect(isEditableHotkeyTarget(select)).toBe(true)
     expect(isEditableHotkeyTarget(editable)).toBe(true)
+    expect(isEditableHotkeyTarget(editableChild)).toBe(true)
     expect(isEditableHotkeyTarget(nonEditable)).toBe(false)
     expect(isEditableHotkeyTarget(plain)).toBe(false)
+  })
+
+  it('treats bare contenteditable attributes as editable targets', () => {
+    const editable = document.createElement('div')
+    editable.setAttribute('contenteditable', '')
+
+    expect(isEditableHotkeyTarget(editable)).toBe(true)
+  })
+
+  it('falls back to the active element for window-level editor shortcuts', () => {
+    const editable = document.createElement('div')
+    editable.tabIndex = 0
+    editable.setAttribute('contenteditable', 'true')
+    Object.defineProperty(editable, 'isContentEditable', { value: true })
+    document.body.append(editable)
+
+    editable.focus()
+
+    expect(isEditableHotkeyTarget(window)).toBe(true)
+
+    editable.remove()
+  })
+
+  it('does not treat focused non-editable elements as editable shortcut targets', () => {
+    const button = document.createElement('button')
+    document.body.append(button)
+
+    button.focus()
+
+    expect(isEditableHotkeyTarget(window)).toBe(false)
+
+    button.remove()
+  })
+
+  it('falls back to the current selection for editor shortcuts', () => {
+    const editable = document.createElement('div')
+    editable.setAttribute('contenteditable', 'true')
+    Object.defineProperty(editable, 'isContentEditable', { value: true })
+    const child = document.createElement('span')
+    child.textContent = 'selected text'
+    editable.append(child)
+    document.body.append(editable)
+
+    const range = document.createRange()
+    range.selectNodeContents(child)
+    const selection = window.getSelection()
+    if (!selection) throw new Error('Expected DOM selection')
+    selection.removeAllRanges()
+    selection.addRange(range)
+
+    expect(isEditableHotkeyTarget(window)).toBe(true)
+
+    selection.removeAllRanges()
+    editable.remove()
   })
 
   it('detects item controls inside selectable surfaces', () => {
@@ -76,6 +140,18 @@ describe('item surface hotkey utilities', () => {
     expect(isItemSurfaceInteractionTarget(interactiveChild)).toBe(true)
     expect(isItemSurfaceInteractionTarget(plainChild)).toBe(true)
     expect(isItemSurfaceInteractionTarget(blank)).toBe(false)
+  })
+
+  it('detects SVG descendants inside selectable surfaces', () => {
+    const item = document.createElement('a')
+    item.href = '/folder'
+    item.dataset.itemSelectionTarget = 'true'
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+    svg.append(path)
+    item.append(svg)
+
+    expect(isItemSurfaceInteractionTarget(path)).toBe(true)
   })
 
   it('detects context menu content as an item-surface interaction target', () => {

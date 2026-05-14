@@ -1,15 +1,17 @@
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { assertNever } from '../../common/types'
-import type { QueryCtx } from '../../_generated/server'
+import { isUndoHiddenSidebarItem } from '../types/status'
 import type { Id } from '../../_generated/dataModel'
+import type { CampaignQueryCtx } from '../../functions'
 import type { SidebarItemTypeKey, FromDbByType } from '../types/types'
 
 export async function getSidebarItem<K extends SidebarItemTypeKey = SidebarItemTypeKey>(
-  ctx: Pick<QueryCtx, 'db'>,
+  ctx: CampaignQueryCtx,
   id: Id<'sidebarItems'>,
 ): Promise<FromDbByType[K] | null> {
   const raw = await ctx.db.get('sidebarItems', id)
   if (!raw) return null
+  if (raw.campaignId !== ctx.campaign._id || isUndoHiddenSidebarItem(raw)) return null
   switch (raw.type) {
     case SIDEBAR_ITEM_TYPES.folders: {
       const ext = await ctx.db

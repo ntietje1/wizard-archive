@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
+import {
+  createNoteViaFilesystem,
+  createFolderViaFilesystem,
+  createFileViaFilesystem,
+  createGameMapViaFilesystem,
+  createCanvasViaFilesystem,
+} from '../../_test/filesystemSetup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createFolder, createNote } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
@@ -25,7 +32,6 @@ import {
   validateNoCircularParent,
   validateNoCircularParentAsync,
 } from '../validation/parent'
-import { validateLocalSidebarMove } from '../validation/move'
 import { validateItemSlug } from '../validation/slug'
 import type { Id } from '../../_generated/dataModel'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
@@ -325,101 +331,20 @@ describe('getAncestorIds', () => {
   })
 })
 
-describe('validateLocalSidebarMove', () => {
-  it('skips validation when moving to trash', () => {
-    const result = validateLocalSidebarMove(
-      {
-        itemId: testId<'sidebarItems'>('note'),
-        name: 'Alpha',
-        parentId: testId<'sidebarItems'>('folder'),
-        isTrashing: true,
-      },
-      {
-        getParent: () => undefined,
-        getSiblings: () => [{ _id: testId<'sidebarItems'>('other'), name: 'Alpha' }],
-      },
-    )
-
-    expect(result).toEqual({ valid: true })
-  })
-
-  it('returns the existing circular move error message', () => {
-    const tree: Record<string, { parentId: Id<'sidebarItems'> | null }> = {
-      child: { parentId: testId<'sidebarItems'>('item') },
-    }
-
-    const result = validateLocalSidebarMove(
-      {
-        itemId: testId<'sidebarItems'>('item'),
-        name: 'Alpha',
-        parentId: testId<'sidebarItems'>('child'),
-      },
-      {
-        getParent: (id) => tree[id],
-        getSiblings: () => [],
-      },
-    )
-
-    expect(result).toEqual({
-      valid: false,
-      error: 'Cannot move item: circular reference detected',
-    })
-  })
-
-  it('skips sibling conflicts when restoring from trash', () => {
-    const result = validateLocalSidebarMove(
-      {
-        itemId: testId<'sidebarItems'>('item'),
-        name: 'Alpha',
-        parentId: null,
-        isRestoring: true,
-      },
-      {
-        getParent: () => undefined,
-        getSiblings: () => [{ _id: testId<'sidebarItems'>('other'), name: 'Alpha' }],
-      },
-    )
-
-    expect(result).toEqual({ valid: true })
-  })
-
-  it('rejects missing target parents before other move validation', () => {
-    const result = validateLocalSidebarMove(
-      {
-        itemId: testId<'sidebarItems'>('item'),
-        name: 'Alpha',
-        parentId: testId<'sidebarItems'>('missing-parent'),
-      },
-      {
-        getParent: () => undefined,
-        getSiblings: () => [],
-      },
-    )
-
-    expect(result).toEqual({
-      valid: false,
-      error: 'Cannot move item: target parent does not exist',
-    })
-  })
-
-  it('checks sibling conflicts for regular moves', () => {
-    const result = validateLocalSidebarMove(
-      {
-        itemId: testId<'sidebarItems'>('item'),
-        name: 'Alpha',
-        parentId: null,
-      },
-      {
-        getParent: () => undefined,
-        getSiblings: () => [{ _id: testId<'sidebarItems'>('other'), name: 'Alpha' }],
-      },
-    )
-
-    expect(result.valid).toBe(false)
-  })
-})
-
 describe('validateCreateParentTarget', () => {
+  function createValidationItem(
+    id: string,
+    type: AnySidebarItem['type'],
+    parentId: Id<'sidebarItems'> | null = null,
+  ): AnySidebarItem {
+    return {
+      _id: testId<'sidebarItems'>(id),
+      type,
+      parentId,
+      name: id,
+    } as unknown as AnySidebarItem
+  }
+
   it('rejects path targets whose base parent is not a folder', () => {
     const noteId = testId<'sidebarItems'>('note-parent')
     const noteParent = {
@@ -444,6 +369,79 @@ describe('validateCreateParentTarget', () => {
       error: 'Parent is not a folder',
     })
   })
+
+  it('accepts a path target whose base parent is a folder', () => {
+    const folder = createValidationItem('folder-parent', SIDEBAR_ITEM_TYPES.folders)
+    const child = createValidationItem('folder-child', SIDEBAR_ITEM_TYPES.notes, folder._id)
+
+    const result = validateCreateParentTarget(
+      {
+        kind: 'path',
+        baseParentId: folder._id,
+        pathSegments: [],
+      },
+      new Map([[folder._id, folder]]),
+      new Map([[folder._id, [child]]]),
+    )
+
+    expect(result).toEqual({
+      valid: true,
+      parentId: folder._id,
+      siblings: [child],
+    })
+  })
+
+  it('uses root siblings when a root path target has no segments', () => {
+    const first = createValidationItem('first-root-child', SIDEBAR_ITEM_TYPES.notes)
+    const second = createValidationItem('second-root-child', SIDEBAR_ITEM_TYPES.folders)
+
+    const result = validateCreateParentTarget(
+      {
+        kind: 'path',
+        baseParentId: null,
+        pathSegments: [],
+      },
+      new Map([
+        [first._id, first],
+        [second._id, second],
+      ]),
+      new Map([[null, [first, second]]]),
+    )
+
+    expect(result).toEqual({
+      valid: true,
+      parentId: null,
+      siblings: [first, second],
+    })
+  })
+
+  it('rejects missing base parents', () => {
+    expect(
+      validateCreateParentTarget(
+        {
+          kind: 'path',
+          baseParentId: testId<'sidebarItems'>('missing-parent'),
+          pathSegments: [],
+        },
+        new Map(),
+        new Map(),
+      ),
+    ).toEqual({ valid: false, error: 'Parent not found' })
+  })
+
+  it('rejects empty path segments', () => {
+    expect(
+      validateCreateParentTarget(
+        {
+          kind: 'path',
+          baseParentId: null,
+          pathSegments: [''],
+        },
+        new Map(),
+        new Map(),
+      ),
+    ).toEqual({ valid: false, error: 'Path segments cannot be empty' })
+  })
 })
 
 describe('cross-table slug uniqueness', () => {
@@ -463,7 +461,7 @@ describe('cross-table slug uniqueness', () => {
       parentId: folderId,
     })
 
-    const result = await dmAuth.mutation(api.folders.mutations.createFolder, {
+    const result = await createFolderViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'test',
       parentTarget: { kind: 'direct', parentId: null },
@@ -510,10 +508,10 @@ describe('cross-table slug uniqueness', () => {
       slug: 'deleted-item',
       deletionTime: Date.now(),
       deletedBy: ctx.dm.profile._id,
-      location: 'trash',
+      status: 'trashed',
     })
 
-    const result = await dmAuth.mutation(api.folders.mutations.createFolder, {
+    const result = await createFolderViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'deleted-item',
       parentTarget: { kind: 'direct', parentId: null },
@@ -539,7 +537,7 @@ describe('cross-table slug uniqueness', () => {
     const dmAuth = asDm(ctx)
 
     await expect(
-      dmAuth.mutation(api.notes.mutations.createNote, {
+      createNoteViaFilesystem(dmAuth, {
         campaignId: ctx.campaignId,
         name: '🎉🎊',
         parentTarget: { kind: 'direct', parentId: null },
@@ -554,14 +552,14 @@ describe('cross-table slug uniqueness', () => {
     const firstName = 'a'.repeat(255)
     const secondName = `${'a'.repeat(253)} 2`
 
-    const first = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const first = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: firstName,
       parentTarget: { kind: 'direct', parentId: null },
       content: [],
     })
 
-    const second = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const second = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: secondName,
       parentTarget: { kind: 'direct', parentId: null },
@@ -579,12 +577,15 @@ describe('cross-table slug uniqueness', () => {
     const dmAuth = asDm(ctx)
 
     await expect(
-      dmAuth.mutation(api.notes.mutations.createNote, {
+      dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
         campaignId: ctx.campaignId,
-        name: 'bad-color-note',
-        parentTarget: { kind: 'direct', parentId: null },
-        color: 'red',
-        content: [],
+        command: {
+          type: 'create',
+          itemType: SIDEBAR_ITEM_TYPES.notes,
+          name: 'bad-color-note',
+          parentTarget: { kind: 'direct', parentId: null },
+          color: 'red' as never,
+        },
       }),
     ).rejects.toThrow('Color must be a 6- or 8-digit hex value')
   })
@@ -593,17 +594,20 @@ describe('cross-table slug uniqueness', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const folder = await dmAuth.mutation(api.folders.mutations.createFolder, {
+    const folder = await createFolderViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'folder-to-update',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     await expect(
-      dmAuth.mutation(api.folders.mutations.updateFolder, {
+      dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
         campaignId: ctx.campaignId,
-        folderId: folder.folderId,
-        iconName: 'InvalidIcon' as never,
+        command: {
+          type: 'rename',
+          itemId: folder.folderId,
+          iconName: 'InvalidIcon' as never,
+        },
       }),
     ).rejects.toThrow('Icon is not supported')
   })
@@ -612,12 +616,12 @@ describe('cross-table slug uniqueness', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const result = await dmAuth.mutation(api.files.mutations.createFile, {
+    const result = await createFileViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'file-with-color',
       parentTarget: { kind: 'direct', parentId: null },
       iconName: 'Shield',
-      color: '#ABCDEF',
+      color: coerceSidebarItemColorForInput('#ABCDEF'),
     })
 
     const item = await dmAuth.query(api.sidebarItems.queries.getSidebarItemBySlug, {
@@ -633,17 +637,20 @@ describe('cross-table slug uniqueness', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const map = await dmAuth.mutation(api.gameMaps.mutations.createMap, {
+    const map = await createGameMapViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'map-color',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
-    await dmAuth.mutation(api.gameMaps.mutations.updateMap, {
+    await dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
       campaignId: ctx.campaignId,
-      mapId: map.mapId,
-      iconName: 'Grid2x2Plus',
-      color: '#ABCDEF80',
+      command: {
+        type: 'rename',
+        itemId: map.mapId,
+        iconName: 'Grid2x2Plus',
+        color: '#ABCDEF80',
+      },
     })
 
     const item = await dmAuth.query(api.sidebarItems.queries.getSidebarItemBySlug, {
@@ -659,17 +666,20 @@ describe('cross-table slug uniqueness', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const canvas = await dmAuth.mutation(api.canvases.mutations.createCanvas, {
+    const canvas = await createCanvasViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'canvas-to-update',
       parentTarget: { kind: 'direct', parentId: null },
     })
 
     await expect(
-      dmAuth.mutation(api.canvases.mutations.updateCanvas, {
+      dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
         campaignId: ctx.campaignId,
-        canvasId: canvas.canvasId,
-        color: '#12',
+        command: {
+          type: 'rename',
+          itemId: canvas.canvasId,
+          color: '#12' as never,
+        },
       }),
     ).rejects.toThrow('Color must be a 6- or 8-digit hex value')
   })

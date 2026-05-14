@@ -1,4 +1,5 @@
 import { File, FileText, Image, Music, Upload, Video } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import type { UseFileWithPreviewReturn } from '~/features/file-upload/hooks/useFileWithPreview'
 import { Label } from '~/features/shadcn/components/label'
 import { Button } from '~/features/shadcn/components/button'
@@ -6,10 +7,9 @@ import { Card, CardContent } from '~/features/shadcn/components/card'
 import { Badge } from '~/features/shadcn/components/badge'
 import { Progress } from '~/features/shadcn/components/progress'
 
-export interface FileUploadSectionProps {
+interface FileUploadSectionProps {
   label?: string
   fileUpload: UseFileWithPreviewReturn
-  handleFileSelect: (file: File) => void
   isSubmitting: boolean
   acceptPattern: string
   dragDropText: string
@@ -59,10 +59,164 @@ function getFileExtension(fileName: string | undefined | null): string | null {
   return fileName.slice(lastDot + 1).toUpperCase()
 }
 
+function FileUploadInput({
+  fileUpload,
+  acceptPattern,
+  disabled,
+  previewMode = false,
+}: {
+  fileUpload: UseFileWithPreviewReturn
+  acceptPattern: string
+  disabled: boolean
+  previewMode?: boolean
+}) {
+  return (
+    <input
+      ref={fileUpload.fileInputRef}
+      type="file"
+      accept={acceptPattern}
+      disabled={disabled}
+      aria-label="Upload file"
+      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (file) {
+          fileUpload.handleFileSelect(file)
+        }
+      }}
+      className={`absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed ${
+        previewMode ? 'z-0' : ''
+      }`}
+      style={previewMode ? { pointerEvents: fileUpload.preview ? 'none' : 'auto' } : undefined}
+    />
+  )
+}
+
+function FileMetadataBadges({ fileName, fileSize }: { fileName?: string; fileSize: string }) {
+  const extension = getFileExtension(fileName)
+
+  return (
+    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+      <Badge variant="secondary" className="text-xs shrink-0">
+        {fileSize}
+      </Badge>
+      {extension ? (
+        <Badge variant="secondary" className="text-xs font-mono shrink-0">
+          {extension}
+        </Badge>
+      ) : null}
+    </div>
+  )
+}
+
+function FilePreviewUploadContent({
+  fileUpload,
+  fileName,
+  fileSize,
+  FileIcon,
+  acceptPattern,
+  disabled,
+}: {
+  fileUpload: UseFileWithPreviewReturn
+  fileName?: string
+  fileSize: string | null
+  FileIcon: LucideIcon
+  acceptPattern: string
+  disabled: boolean
+}) {
+  return (
+    <div
+      onDragEnter={fileUpload.handleDrag}
+      onDragLeave={fileUpload.handleDrag}
+      onDragOver={fileUpload.handleDrag}
+      onDrop={fileUpload.handleDrop}
+      className="relative w-full h-full flex items-center gap-4 cursor-pointer"
+    >
+      <div className="flex-shrink-0">
+        <div className="size-12 rounded-lg bg-muted flex items-center justify-center border border-border">
+          <FileIcon className="size-6 text-muted-foreground" />
+        </div>
+      </div>
+
+      <div className="flex-1 min-w-0 space-y-2 overflow-hidden">
+        <div className="min-w-0">
+          <p className="font-medium text-sm truncate">{fileName}</p>
+          {fileSize ? <FileMetadataBadges fileName={fileName} fileSize={fileSize} /> : null}
+        </div>
+        {fileUpload.isUploading && (
+          <Progress value={fileUpload.uploadProgress.percentage} className="h-1.5" />
+        )}
+      </div>
+
+      <div className="flex-shrink-0 relative z-20">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation()
+            e.preventDefault()
+            fileUpload.fileInputRef.current?.click()
+          }}
+          disabled={disabled}
+          className="opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-100 ease-out"
+        >
+          Replace
+        </Button>
+      </div>
+      {fileUpload.preview && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            window.open(fileUpload.preview, '_blank')
+          }}
+          className="absolute inset-0 w-full h-full z-10 cursor-pointer bg-transparent border-none"
+          aria-label="Open file preview"
+        />
+      )}
+      <FileUploadInput
+        fileUpload={fileUpload}
+        acceptPattern={acceptPattern}
+        disabled={disabled}
+        previewMode
+      />
+    </div>
+  )
+}
+
+function EmptyFileUploadContent({
+  fileUpload,
+  acceptPattern,
+  disabled,
+  dragDropText,
+}: {
+  fileUpload: UseFileWithPreviewReturn
+  acceptPattern: string
+  disabled: boolean
+  dragDropText: string
+}) {
+  return (
+    <div
+      onDragEnter={fileUpload.handleDrag}
+      onDragLeave={fileUpload.handleDrag}
+      onDragOver={fileUpload.handleDrag}
+      onDrop={fileUpload.handleDrop}
+      className="relative w-full h-full flex items-center justify-center cursor-pointer"
+    >
+      <div className="text-center pointer-events-none">
+        <div className="flex justify-center mb-3">
+          <Upload className="size-6 text-primary" />
+        </div>
+        <p className="text-sm font-medium text-foreground">{dragDropText}</p>
+      </div>
+      <FileUploadInput fileUpload={fileUpload} acceptPattern={acceptPattern} disabled={disabled} />
+    </div>
+  )
+}
+
 export function FileUploadSection({
   label,
   fileUpload,
-  handleFileSelect,
   isSubmitting,
   acceptPattern,
   dragDropText,
@@ -93,116 +247,21 @@ export function FileUploadSection({
       >
         <CardContent className="p-3 h-20 flex items-center">
           {fileUpload.preview ? (
-            <div
-              onDragEnter={fileUpload.handleDrag}
-              onDragLeave={fileUpload.handleDrag}
-              onDragOver={fileUpload.handleDrag}
-              onDrop={fileUpload.handleDrop}
-              className="relative w-full h-full flex items-center gap-4 cursor-pointer"
-            >
-              {/* File Icon */}
-              <div className="flex-shrink-0">
-                <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center border border-border">
-                  <FileIcon className="w-6 h-6 text-muted-foreground" />
-                </div>
-              </div>
-
-              {/* File Info */}
-              <div className="flex-1 min-w-0 space-y-2 overflow-hidden">
-                <div className="min-w-0">
-                  <p className="font-medium text-sm truncate">{fileName}</p>
-                  {fileSize && (
-                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                      <Badge variant="secondary" className="text-xs shrink-0">
-                        {fileSize}
-                      </Badge>
-                      {fileName && getFileExtension(fileName) && (
-                        <Badge variant="secondary" className="text-xs font-mono shrink-0">
-                          {getFileExtension(fileName)}
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-                </div>
-                {/* Upload Progress */}
-                {fileUpload.isUploading && (
-                  <Progress value={fileUpload.uploadProgress.percentage} className="h-1.5" />
-                )}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex-shrink-0 relative z-20">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    e.preventDefault()
-                    fileUpload.fileInputRef.current?.click()
-                  }}
-                  disabled={fileUpload.isUploading || isSubmitting}
-                  className="opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-100 ease-out"
-                >
-                  Replace
-                </Button>
-              </div>
-              {fileUpload.preview && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    window.open(fileUpload.preview, '_blank')
-                  }}
-                  className="absolute inset-0 w-full h-full z-10 cursor-pointer bg-transparent border-none"
-                  aria-label="Open file preview"
-                />
-              )}
-              <input
-                ref={fileUpload.fileInputRef}
-                type="file"
-                accept={acceptPattern}
-                disabled={fileUpload.isUploading || isSubmitting}
-                aria-label="Upload file"
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                  const file = e.target.files?.[0]
-                  if (file) {
-                    handleFileSelect(file)
-                  }
-                }}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-0"
-                style={{ pointerEvents: fileUpload.preview ? 'none' : 'auto' }}
-              />
-            </div>
+            <FilePreviewUploadContent
+              fileUpload={fileUpload}
+              fileName={fileName}
+              fileSize={fileSize}
+              FileIcon={FileIcon}
+              acceptPattern={acceptPattern}
+              disabled={fileUpload.isUploading || isSubmitting}
+            />
           ) : (
-            <div
-              onDragEnter={fileUpload.handleDrag}
-              onDragLeave={fileUpload.handleDrag}
-              onDragOver={fileUpload.handleDrag}
-              onDrop={fileUpload.handleDrop}
-              className="relative w-full h-full flex items-center justify-center cursor-pointer"
-            >
-              <div className="text-center pointer-events-none">
-                <div className="flex justify-center mb-3">
-                  <Upload className="w-6 h-6 text-primary" />
-                </div>
-                <p className="text-sm font-medium text-foreground">{dragDropText}</p>
-              </div>
-              <input
-                ref={fileUpload.fileInputRef}
-                type="file"
-                accept={acceptPattern}
-                disabled={fileUpload.isUploading || isSubmitting}
-                aria-label="Upload file"
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                  const file = e.target.files?.[0]
-                  if (file) {
-                    handleFileSelect(file)
-                  }
-                }}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
-              />
-            </div>
+            <EmptyFileUploadContent
+              fileUpload={fileUpload}
+              acceptPattern={acceptPattern}
+              disabled={fileUpload.isUploading || isSubmitting}
+              dragDropText={dragDropText}
+            />
           )}
         </CardContent>
       </Card>

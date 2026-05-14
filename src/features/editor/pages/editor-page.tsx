@@ -1,4 +1,3 @@
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import { EditorContent } from '../components/editor-content'
 import { FileTopbar } from '../components/topbar/file-topbar'
 import { TrashBanner } from '../components/deleted-item-banner'
@@ -31,6 +30,6 @@ export function EditorPage() {
 
 function EditorBanner() {
   const { item, isLoading } = useCurrentItem()
-  if (isLoading || !item || item.location !== SIDEBAR_ITEM_LOCATION.trash) return null
+  if (isLoading || !item || !item.isTrashed) return null
   return <TrashBanner item={item} />
 }

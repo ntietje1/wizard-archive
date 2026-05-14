@@ -363,7 +363,7 @@ describe('captureGameMapSnapshot', () => {
           campaignId: ctx.campaignId,
         })
       }),
-    ).rejects.toThrow(/map .* not found/)
+    ).rejects.toThrow(/sidebarItem not found for mapId/)
   })
 
   it('captures empty pin array when map has no pins', async () => {

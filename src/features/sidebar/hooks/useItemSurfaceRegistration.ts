@@ -19,6 +19,12 @@ function sameRegisteredSurface(a: ActiveItemSurface | null, b: ActiveItemSurface
   )
 }
 
+function sameSurfaceIdentity(a: ActiveItemSurface | null, b: ActiveItemSurface | null): boolean {
+  if (a === b) return true
+  if (!a || !b) return false
+  return a.surface === b.surface && a.parentId === b.parentId
+}
+
 export function useItemSurfaceRegistration({
   surface,
   parentId,
@@ -35,8 +41,12 @@ export function useItemSurfaceRegistration({
   const latestSurfaceRef = useRef(activeSurface)
   latestSurfaceRef.current = activeSurface
 
+  // Keep the active owner in sync with item list changes without letting an inactive surface steal focus.
   useEffect(() => {
-    setActiveItemSurface(latestSurfaceRef.current)
+    const currentSurface = useSidebarUIStore.getState().activeItemSurface
+    if (sameSurfaceIdentity(currentSurface, latestSurfaceRef.current)) {
+      setActiveItemSurface(latestSurfaceRef.current)
+    }
   }, [surface, parentId, visibleItemIdsKey, setActiveItemSurface])
 
   useEffect(() => {

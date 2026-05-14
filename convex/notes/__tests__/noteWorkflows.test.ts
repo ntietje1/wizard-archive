@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
+import { createNoteViaFilesystem } from '../../_test/filesystemSetup.helper'
 import {
   asDm,
   asPlayer,
@@ -152,7 +153,7 @@ describe('note lifecycle: create, share, edit, block sharing', () => {
       permissionLevel: 'view',
     })
 
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Nested Note',
       parentTarget: { kind: 'direct', parentId: folderId },

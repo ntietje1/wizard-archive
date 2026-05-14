@@ -1,9 +1,6 @@
 import { useRef } from 'react'
 import type { Folder } from 'convex/folders/types'
-import { canDropFilesOnTarget } from '~/features/dnd/utils/drop-target-data'
 import { useSidebarItemDropTarget } from '~/features/dnd/hooks/useSidebarItemDropTarget'
-import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'
-import { useDndStore } from '~/features/dnd/stores/dnd-store'
 
 interface DroppableSidebarItemProps {
   item: Folder
@@ -12,37 +9,21 @@ interface DroppableSidebarItemProps {
 
 export function DroppableSidebarItem({ item, children }: DroppableSidebarItemProps) {
   const ref = useRef<HTMLDivElement>(null)
+  const { isDropTarget, isTrashAction, isFileDropTarget } = useSidebarItemDropTarget({ ref, item })
 
-  useSidebarItemDropTarget({ ref, item })
-
-  const isDirectTarget = useDndStore((s) => s.sidebarDragTargetId === item._id)
-  const isTrashAction = useDndStore(
-    (s) => s.dragOutcome?.type === 'operation' && s.dragOutcome.action === 'trash',
-  )
-  const isDraggingFiles = useDndStore((s) => s.isDraggingFiles)
-
-  useExternalDropTarget({
-    ref,
-    parentId: item._id,
-    canAcceptFiles: canDropFilesOnTarget(item),
-  })
-
-  const fileDragHoveredId = useDndStore((s) => s.fileDragHoveredId)
-  const isFileDirectTarget = isDraggingFiles && fileDragHoveredId === item._id
-
-  const isHighlighted = isDirectTarget || isFileDirectTarget
-  const ringClass = isDirectTarget
+  const isHighlighted = isDropTarget || isFileDropTarget
+  const ringClass = isDropTarget
     ? isTrashAction
       ? 'before:ring-destructive/60'
       : 'before:ring-ring/60'
-    : isFileDirectTarget
+    : isFileDropTarget
       ? 'before:ring-ring/40'
       : ''
-  const bgClass = isDirectTarget
+  const bgClass = isDropTarget
     ? isTrashAction
       ? 'bg-destructive/5'
       : 'bg-ring/5'
-    : isFileDirectTarget
+    : isFileDropTarget
       ? 'bg-ring/5'
       : ''
 

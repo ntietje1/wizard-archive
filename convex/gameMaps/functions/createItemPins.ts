@@ -6,7 +6,6 @@ import { validatePinDropTarget, validatePinTarget } from '../validation'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
-import { logger } from '../../common/logger'
 import { captureGameMapSnapshot } from './captureGameMapSnapshot'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
@@ -94,7 +93,7 @@ export async function createItemPins(
       campaignId: rawItem.campaignId,
     })
     if (dropValidationError === 'trashed_item') {
-      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'The item is trashed and cannot be used')
+      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Restore the item before pinning it to a map')
     }
     const validationError = validatePinTarget(mapId, item._id, nextPinItemIds)
     if (validationError) {
@@ -133,16 +132,12 @@ export async function createItemPins(
     { hasSnapshot: false },
   )
 
-  try {
-    await captureGameMapSnapshot(ctx, {
-      mapId,
-      editHistoryId,
-      campaignId: rawItem.campaignId,
-    })
-    await ctx.db.patch('editHistory', editHistoryId, { hasSnapshot: true })
-  } catch (error) {
-    logger.warn(`createItemPins: failed to capture snapshot for map ${mapId}`, error)
-  }
+  await captureGameMapSnapshot(ctx, {
+    mapId,
+    editHistoryId,
+    campaignId: rawItem.campaignId,
+  })
+  await ctx.db.patch('editHistory', editHistoryId, { hasSnapshot: true })
 
   return pinIds
 }

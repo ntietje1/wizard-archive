@@ -3,7 +3,6 @@ import { useForm } from '@tanstack/react-form'
 import { api } from 'convex/_generated/api'
 import type { SidebarItemColor } from 'convex/sidebarItems/validation/color'
 import type { SidebarItemIconName } from 'convex/sidebarItems/validation/icon'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { toast } from 'sonner'
 import { Loader } from 'lucide-react'
 import { validateFileForUpload } from 'convex/storage/validation'
@@ -13,8 +12,7 @@ import { handleError } from '~/shared/utils/logger'
 import { IconPicker } from '~/features/sidebar/components/forms/icon-picker'
 import { ColorPicker } from '~/features/sidebar/components/forms/color-picker'
 import { useNameValidation } from '~/shared/hooks/useNameValidation'
-import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
-import { useEditSidebarItem } from '~/features/sidebar/hooks/useEditSidebarItem'
+import { useEditFileSystemItem } from '~/features/filesystem/useEditFileSystemItem'
 import { Label } from '~/features/shadcn/components/label'
 import { Button } from '~/features/shadcn/components/button'
 import { getIconByName } from '~/shared/utils/category-icons'
@@ -23,6 +21,8 @@ import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFold
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { GenericFileUploadSection } from '~/features/file-upload/components/generic-file-upload-section'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
+import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
+import { useCreateFile } from '~/features/files/hooks/useCreateFile'
 import {
   InputGroup,
   InputGroupAddon,
@@ -30,7 +30,7 @@ import {
   InputGroupInput,
 } from '~/features/shadcn/components/input-group'
 
-export interface FileFormValues {
+interface FileFormValues {
   name: string
   iconName: SidebarItemIconName | null
   color: SidebarItemColor | null
@@ -53,8 +53,9 @@ const defaultFileFormValues: FileFormValues = {
 export function FileForm({ fileId, campaignId, parentId, onClose, onSuccess }: FileFormProps) {
   const { openParentFolders } = useOpenParentFolders()
   const { navigateToItem } = useEditorNavigation()
-  const { editItem } = useEditSidebarItem()
-  const { createItem } = useCreateSidebarItem()
+  const { editItem } = useEditFileSystemItem()
+  const { createFile } = useCreateFile()
+  const updateFileStorage = useCampaignMutation(api.files.mutations.updateFileStorage)
   const { generatePdfPreviewIfNeeded } = usePdfPreviewUpload()
   const file = useCampaignQuery(api.files.queries.getFile, fileId ? { fileId } : 'skip')
 
@@ -65,7 +66,6 @@ export function FileForm({ fileId, campaignId, parentId, onClose, onSuccess }: F
     fileTypeValidator: validateFileForUpload,
   })
 
-  // Accept drag-and-drop anywhere on screen
   useEffect(() => {
     const handleDragOver = (e: DragEvent) => {
       e.preventDefault()
@@ -85,7 +85,6 @@ export function FileForm({ fileId, campaignId, parentId, onClose, onSuccess }: F
     }
   }, [fileUpload])
 
-  // Get initial values based on current props
   const defaultValues: FileFormValues = (() => {
     if (fileId && file.data) {
       return {
@@ -113,83 +112,94 @@ export function FileForm({ fileId, campaignId, parentId, onClose, onSuccess }: F
     excludeId: fileId,
   })
 
-  async function handleSubmit(values: FileFormValues) {
+  async function resolveFinalStorageId() {
+    if (fileUpload.file) {
+      try {
+        return await fileUpload.handleSubmit()
+      } catch (error) {
+        handleError(error, 'Failed to save file')
+        return undefined
+      }
+    }
+    if (file.data?.storageId && !fileUpload.removed) {
+      return file.data.storageId
+    }
+    return undefined
+  }
+
+  function resolveFinalName(values: FileFormValues) {
+    return (
+      values.name.trim() ||
+      fileUpload.file?.name ||
+      fileUpload.fileMetadata?.name ||
+      file.data?.name ||
+      ''
+    )
+  }
+
+  async function updateExistingFile(values: FileFormValues, storageId: Id<'_storage'>) {
+    if (!fileId || !file.data) return false
     try {
-      let finalStorageId: Id<'_storage'> | undefined = undefined
+      const { slug } = await editItem({
+        item: file.data,
+        name: resolveFinalName(values),
+        iconName: values.iconName,
+        color: values.color,
+      })
+      await updateFileStorage.mutateAsync({ fileId, storageId })
 
       if (fileUpload.file) {
-        // New file was selected, commit the upload
-        try {
-          finalStorageId = await fileUpload.handleSubmit()
-        } catch (error) {
-          handleError(error, 'Failed to save file')
-          return
-        }
-      } else if (file.data?.storageId && !fileUpload.removed) {
-        // Keep existing file if it hasn't been removed
-        finalStorageId = file.data.storageId
+        generatePdfPreviewIfNeeded(fileUpload.file, fileId).catch((err: unknown) =>
+          handleError(err, 'PDF preview generation failed'),
+        )
       }
 
-      // Validate that file is required
+      toast.success('File updated')
+      onSuccess?.(slug)
+      return true
+    } catch (error) {
+      handleError(error, 'Failed to save file')
+      return true
+    }
+  }
+
+  async function createNewFile(values: FileFormValues, storageId: Id<'_storage'>) {
+    if (!campaignId) return false
+    const { id: newFileId, slug: newFileSlug } = await createFile({
+      name: resolveFinalName(values),
+      iconName: values.iconName ?? undefined,
+      color: values.color ?? undefined,
+      parentTarget: { kind: 'direct', parentId: parentId ?? null },
+      storageId,
+    })
+    if (fileUpload.file) {
+      generatePdfPreviewIfNeeded(fileUpload.file, newFileId).catch((err: unknown) =>
+        handleError(err, 'PDF preview generation failed'),
+      )
+    }
+
+    openParentFolders(newFileId)
+    void navigateToItem(newFileSlug)
+    toast.success('File created')
+    onSuccess?.(newFileSlug)
+    onClose()
+    return true
+  }
+
+  async function handleSubmit(values: FileFormValues) {
+    try {
+      const finalStorageId = await resolveFinalStorageId()
       if (!finalStorageId) {
         toast.error('File is required')
         return
       }
 
-      // Use file's actual name if name field is empty
-      const finalName =
-        values.name.trim() ||
-        fileUpload.file?.name ||
-        fileUpload.fileMetadata?.name ||
-        file.data?.name ||
-        ''
+      const handled =
+        (await updateExistingFile(values, finalStorageId)) ||
+        (await createNewFile(values, finalStorageId))
 
-      if (fileId && file.data) {
-        try {
-          const { slug } = await editItem({
-            item: file.data,
-            name: finalName,
-            storageId: finalStorageId,
-            iconName: values.iconName,
-            color: values.color,
-          })
-
-          if (fileUpload.file) {
-            generatePdfPreviewIfNeeded(fileUpload.file, fileId).catch((err: unknown) =>
-              handleError(err, 'PDF preview generation failed'),
-            )
-          }
-
-          toast.success('File updated')
-          onSuccess?.(slug)
-        } catch (error) {
-          handleError(error, 'Failed to save file')
-          return
-        }
-      } else if (campaignId) {
-        const { id: newFileId, slug: newFileSlug } = await createItem({
-          type: SIDEBAR_ITEM_TYPES.files,
-          campaignId,
-          name: finalName,
-          storageId: finalStorageId,
-          iconName: values.iconName ?? undefined,
-          color: values.color ?? undefined,
-          parentTarget: { kind: 'direct', parentId: parentId ?? null },
-        })
-        if (fileUpload.file) {
-          generatePdfPreviewIfNeeded(fileUpload.file, newFileId).catch((err: unknown) =>
-            handleError(err, 'PDF preview generation failed'),
-          )
-        }
-
-        openParentFolders(newFileId)
-        void navigateToItem(newFileSlug)
-        toast.success('File created')
-        onSuccess?.(newFileSlug)
-        onClose()
-      } else {
+      if (!handled) {
         toast.error('Invalid form state: missing file or campaign ID')
-        return
       }
     } catch (error) {
       handleError(error, 'Failed to save file')
@@ -280,7 +290,7 @@ export function FileForm({ fileId, campaignId, parentId, onClose, onSuccess }: F
               const PreviewIcon = getIconByName(values.iconName ?? 'File')
               return (
                 <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
-                  <PreviewIcon className="h-4 w-4 flex-shrink-0" />
+                  <PreviewIcon className="size-4 flex-shrink-0" />
                   <span className="truncate text-sm">{values.name || 'Untitled File'}</span>
                 </div>
               )
@@ -291,12 +301,7 @@ export function FileForm({ fileId, campaignId, parentId, onClose, onSuccess }: F
 
       <div className="space-y-2">
         <Label>File</Label>
-        <GenericFileUploadSection
-          label=""
-          fileUpload={fileUpload}
-          handleFileSelect={fileUpload.handleFileSelect}
-          isSubmitting={isDisabled}
-        />
+        <GenericFileUploadSection label="" fileUpload={fileUpload} isSubmitting={isDisabled} />
         {fileUpload.uploadError ? (
           <p className="text-sm text-destructive">{fileUpload.uploadError}</p>
         ) : !hasFile ? (

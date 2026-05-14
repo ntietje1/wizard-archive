@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
+import { createNoteViaFilesystem } from '../../_test/filesystemSetup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import {
+  executeMoveCommand,
   createBlock,
   createNote as createNoteRecord,
   testBlock,
@@ -89,7 +91,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
   it('updates existing blocks in place rather than reinserting', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Update Test',
       parentTarget: { kind: 'direct', parentId: null },
@@ -132,7 +134,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
   it('hard-deletes blocks removed from document', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Delete Test',
       parentTarget: { kind: 'direct', parentId: null },
@@ -161,7 +163,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
   it('hard-deletes blockShares when their block is removed', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Share Cascade Test',
       parentTarget: { kind: 'direct', parentId: null },
@@ -197,7 +199,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
   it('preserves shareStatus on existing blocks during persist', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Preserve Share Test',
       parentTarget: { kind: 'direct', parentId: null },
@@ -239,7 +241,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
   it('does not insert or delete blocks when note is soft-deleted', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Soft Delete Guard',
       parentTarget: { kind: 'direct', parentId: null },
@@ -249,7 +251,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       { id: testBlockNoteId('block-a'), type: 'paragraph', props: {}, children: [] },
     ])
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [noteId],
       targetParentId: null,
@@ -282,7 +284,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
   it('deletes all existing blocks when document content becomes empty', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Empty Content Test',
       parentTarget: { kind: 'direct', parentId: null },
@@ -317,7 +319,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
   it('persists deeply nested blocks with correct hierarchy', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Nested Test',
       parentTarget: { kind: 'direct', parentId: null },
@@ -379,7 +381,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
   it('replaces factory-seeded blocks not present in Yjs payload', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Coexist Test',
       parentTarget: { kind: 'direct', parentId: null },
@@ -416,7 +418,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
   it('persists 5-level deep nesting via YDoc pipeline', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Deep Nesting',
       parentTarget: { kind: 'direct', parentId: null },
@@ -483,7 +485,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
   it('handles simultaneous insert, update, and delete in a single persist', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Mixed Ops',
       parentTarget: { kind: 'direct', parentId: null },

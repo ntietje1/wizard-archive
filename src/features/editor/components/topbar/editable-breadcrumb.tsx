@@ -3,11 +3,10 @@ import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem, AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
-import type { SidebarItemName } from 'convex/sidebarItems/validation/name'
 import type { EditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useNameValidation } from '~/shared/hooks/useNameValidation'
-import { useEditSidebarItem } from '~/features/sidebar/hooks/useEditSidebarItem'
+import { useEditFileSystemItem } from '~/features/filesystem/useEditFileSystemItem'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { NameValidationFeedback } from '~/features/sidebar/components/name-validation-feedback'
@@ -16,7 +15,7 @@ import { handleError } from '~/shared/utils/logger'
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
 
 interface EditableNameProps {
-  initialName: SidebarItemName | ''
+  initialName: string
   defaultName?: string
   onRename?: (newName: string) => Promise<void>
   onChange?: (name: string) => void
@@ -38,16 +37,11 @@ export function EditableName({
   disabled,
   showNotSharedTooltip,
 }: EditableNameProps) {
-  const [name, setName] = useState<string>(initialName)
-  const prevInitialNameRef = useRef(initialName)
+  const [draftName, setDraftName] = useState<string>('')
   const [isEditing, setIsEditing] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-
-  if (prevInitialNameRef.current !== initialName && !isEditing) {
-    prevInitialNameRef.current = initialName
-    setName(initialName)
-  }
+  const name = isEditing ? draftName : initialName
 
   const { hasError, validationError, checkNameUnique } = useNameValidation({
     name,
@@ -58,13 +52,13 @@ export function EditableName({
     excludeId,
   })
 
-  const handleBlur = async () => {
+  const finishRename = async () => {
     if (isSubmitting) return
     const trimmedName = name.trim()
     const isNameChanged = trimmedName !== initialName.trim()
 
     if (!isNameChanged) {
-      setName(initialName)
+      setDraftName('')
       setIsEditing(false)
       return
     }
@@ -75,7 +69,7 @@ export function EditableName({
       const error = checkNameUnique(trimmedName)
       if (error) {
         toast.error(error)
-        setName(initialName)
+        setDraftName('')
         onChange?.(initialName)
         setIsEditing(false)
         return
@@ -84,20 +78,23 @@ export function EditableName({
       setIsEditing(false)
     } catch (error) {
       handleError(error, 'Failed to rename item')
-      setName(initialName)
+      setDraftName('')
       onChange?.(initialName)
+      setIsEditing(false)
+    } finally {
+      setIsSubmitting(false)
     }
-    setIsSubmitting(false)
   }
 
-  const handleFocus = () => {
+  const startRenaming = () => {
     if (!isEditing && !disabled) {
+      setDraftName(initialName)
       setIsEditing(true)
     }
   }
 
   const handleCancel = () => {
-    setName(initialName)
+    setDraftName('')
     onChange?.(initialName)
     setIsEditing(false)
     inputRef.current?.blur()
@@ -117,11 +114,11 @@ export function EditableName({
         readOnly={!isEditing || disabled}
         disabled={isSubmitting || disabled}
         onChange={(e) => {
-          setName(e.target.value)
+          setDraftName(e.target.value)
           onChange?.(e.target.value)
         }}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
+        onFocus={startRenaming}
+        onBlur={finishRename}
         aria-invalid={hasError}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
@@ -191,12 +188,20 @@ interface EditableBreadcrumbProps {
   showNotSharedTooltip?: boolean
 }
 
-export function EditableBreadcrumb({
+interface SidebarItemBreadcrumbProps {
+  item: AnySidebarItem
+  ancestors: Array<AnySidebarItem>
+  canRename: boolean
+  showNotSharedTooltip?: boolean
+}
+
+export function SidebarItemBreadcrumb({
   item,
+  ancestors,
   canRename,
   showNotSharedTooltip,
-}: EditableBreadcrumbProps) {
-  const { editItem } = useEditSidebarItem()
+}: SidebarItemBreadcrumbProps) {
+  const { editItem } = useEditFileSystemItem()
   const { setLastSelectedItem } = useLastEditorItem()
   const { dmUsername, campaignSlug } = useCampaign()
   const routeParams = { dmUsername, campaignSlug }
@@ -208,7 +213,7 @@ export function EditableBreadcrumb({
   return (
     <div className="flex items-center min-w-0 flex-1 overflow-hidden">
       <div className="flex items-center min-w-0 overflow-hidden flex-shrink pr-1">
-        {item.ancestors.map((ancestor) => (
+        {ancestors.map((ancestor) => (
           <BreadcrumbAncestor
             key={ancestor._id}
             ancestor={ancestor}
@@ -228,4 +233,8 @@ export function EditableBreadcrumb({
       />
     </div>
   )
+}
+
+export function EditableBreadcrumb(props: EditableBreadcrumbProps) {
+  return <SidebarItemBreadcrumb {...props} ancestors={props.item.ancestors} />
 }

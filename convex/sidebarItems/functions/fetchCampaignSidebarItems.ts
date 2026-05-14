@@ -1,20 +1,30 @@
 import { asyncMap } from 'convex-helpers'
 import { enhanceSidebarItem } from './enhanceSidebarItem'
 import { getSidebarItem } from './getSidebarItem'
-import type { SidebarItemLocation } from '../types/baseTypes'
+import type { Doc } from '../../_generated/dataModel'
+import type { SIDEBAR_ITEM_STATUS, SidebarItemStatus } from '../types/baseTypes'
 import type { AnySidebarItem } from '../types/types'
 import type { CampaignQueryCtx } from '../../functions'
 
-export const fetchCampaignSidebarItems = async (
+type VisibleSidebarItemStatus = Exclude<SidebarItemStatus, typeof SIDEBAR_ITEM_STATUS.undoHidden>
+
+async function collectRawItemsByStatus(
   ctx: CampaignQueryCtx,
-  { location }: { location: SidebarItemLocation },
-): Promise<Array<AnySidebarItem>> => {
-  const rawItems = await ctx.db
+  status: VisibleSidebarItemStatus,
+): Promise<Array<Doc<'sidebarItems'>>> {
+  return await ctx.db
     .query('sidebarItems')
-    .withIndex('by_campaign_location_parent_name', (q) =>
-      q.eq('campaignId', ctx.campaign._id).eq('location', location),
+    .withIndex('by_campaign_status_parent_name_deletionTime', (q) =>
+      q.eq('campaignId', ctx.campaign._id).eq('status', status),
     )
     .collect()
+}
+
+export const fetchCampaignSidebarItems = async (
+  ctx: CampaignQueryCtx,
+  { status }: { status: VisibleSidebarItemStatus },
+): Promise<Array<AnySidebarItem>> => {
+  const rawItems = await collectRawItemsByStatus(ctx, status)
 
   return (
     await asyncMap(rawItems, async (raw) => {

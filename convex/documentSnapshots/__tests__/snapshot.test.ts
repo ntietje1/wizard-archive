@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as Y from 'yjs'
 import { createTestContext } from '../../_test/setup.helper'
+import { createNoteViaFilesystem } from '../../_test/filesystemSetup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createGameMap, createNote } from '../../_test/factories.helper'
 import { expectNotFound } from '../../_test/assertions.helper'
@@ -21,7 +22,7 @@ describe('note snapshots capture Y.Doc state directly', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      const { noteId } = await createNoteViaFilesystem(dmAuth, {
         campaignId: ctx.campaignId,
         name: 'Content Test Note',
         parentTarget: { kind: 'direct', parentId: null },
@@ -345,7 +346,7 @@ describe('snapshot exists when history entry claims hasSnapshot=true', () => {
       const ctx = await setupCampaignContext(t)
       const dmAuth = asDm(ctx)
 
-      const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+      const { noteId } = await createNoteViaFilesystem(dmAuth, {
         campaignId: ctx.campaignId,
         name: 'Async Race Note',
         parentTarget: { kind: 'direct', parentId: null },
@@ -485,7 +486,7 @@ describe('rollback edge cases', () => {
   })
 
   it('getSnapshotForHistoryEntry returns null when hasSnapshot is false', async () => {
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'No Snapshot Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -530,6 +531,7 @@ describe('rollback edge cases', () => {
 
     await t.run(async (dbCtx) => {
       await dbCtx.db.patch('sidebarItems', mapId, {
+        status: 'trashed',
         deletionTime: Date.now(),
         deletedBy: ctx.dm.profile._id,
       })

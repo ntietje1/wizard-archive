@@ -3,7 +3,6 @@ import { useForm } from '@tanstack/react-form'
 import { api } from 'convex/_generated/api'
 import type { SidebarItemColor } from 'convex/sidebarItems/validation/color'
 import type { SidebarItemIconName } from 'convex/sidebarItems/validation/icon'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { toast } from 'sonner'
 import { Loader } from 'lucide-react'
 import type { Id } from 'convex/_generated/dataModel'
@@ -11,8 +10,7 @@ import { handleError } from '~/shared/utils/logger'
 import { IconPicker } from '~/features/sidebar/components/forms/icon-picker'
 import { ColorPicker } from '~/features/sidebar/components/forms/color-picker'
 import { useNameValidation } from '~/shared/hooks/useNameValidation'
-import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
-import { useEditSidebarItem } from '~/features/sidebar/hooks/useEditSidebarItem'
+import { useEditFileSystemItem } from '~/features/filesystem/useEditFileSystemItem'
 import { getIconByName } from '~/shared/utils/category-icons'
 import { Label } from '~/features/shadcn/components/label'
 import { Button } from '~/features/shadcn/components/button'
@@ -21,6 +19,8 @@ import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFold
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { ImageUploadSection } from '~/features/file-upload/components/image-upload-section'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
+import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
+import { useCreateMap } from '~/features/game-maps/hooks/useCreateMap'
 import {
   InputGroup,
   InputGroupAddon,
@@ -28,7 +28,7 @@ import {
   InputGroupInput,
 } from '~/features/shadcn/components/input-group'
 
-export interface MapFormValues {
+interface MapFormValues {
   name: string
   iconName: SidebarItemIconName | null
   color: SidebarItemColor | null
@@ -51,8 +51,9 @@ const defaultMapFormValues: MapFormValues = {
 export function MapForm({ mapId, campaignId, parentId, onClose, onSuccess }: MapFormProps) {
   const { openParentFolders } = useOpenParentFolders()
   const { navigateToItem } = useEditorNavigation()
-  const { editItem } = useEditSidebarItem()
-  const { createItem } = useCreateSidebarItem()
+  const { editItem } = useEditFileSystemItem()
+  const { createMap } = useCreateMap()
+  const updateMapImage = useCampaignMutation(api.gameMaps.mutations.updateMapImage)
   const map = useCampaignQuery(api.gameMaps.queries.getMap, mapId ? { mapId } : 'skip')
 
   const imageUpload = useFileWithPreview({
@@ -67,7 +68,6 @@ export function MapForm({ mapId, campaignId, parentId, onClose, onSuccess }: Map
     },
   })
 
-  // Accept drag-and-drop anywhere on screen
   useEffect(() => {
     const handleDragOver = (e: DragEvent) => {
       e.preventDefault()
@@ -87,7 +87,6 @@ export function MapForm({ mapId, campaignId, parentId, onClose, onSuccess }: Map
     }
   }, [imageUpload])
 
-  // Get initial values based on current props
   const defaultValues: MapFormValues = (() => {
     if (mapId && map.data) {
       return {
@@ -115,63 +114,72 @@ export function MapForm({ mapId, campaignId, parentId, onClose, onSuccess }: Map
     excludeId: mapId,
   })
 
+  async function resolveFinalImageStorageId() {
+    if (imageUpload.file) {
+      try {
+        return await imageUpload.handleSubmit()
+      } catch (error) {
+        handleError(error, 'Failed to save image')
+        return undefined
+      }
+    }
+    if (map.data?.imageStorageId && !imageUpload.removed) {
+      return map.data.imageStorageId
+    }
+    return undefined
+  }
+
+  async function updateExistingMap(values: MapFormValues, imageStorageId: Id<'_storage'>) {
+    if (!mapId || !map.data) return false
+    try {
+      const { slug } = await editItem({
+        item: map.data,
+        name: values.name,
+        iconName: values.iconName,
+        color: values.color,
+      })
+      await updateMapImage.mutateAsync({ mapId, imageStorageId })
+
+      toast.success('Map updated')
+      onSuccess?.(slug)
+      return true
+    } catch (error) {
+      handleError(error, 'Failed to save map')
+      return true
+    }
+  }
+
+  async function createNewMap(values: MapFormValues, imageStorageId: Id<'_storage'>) {
+    if (!campaignId) return false
+    const { id: newMapId, slug: newMapSlug } = await createMap({
+      name: values.name,
+      iconName: values.iconName ?? undefined,
+      color: values.color ?? undefined,
+      parentTarget: { kind: 'direct', parentId: parentId ?? null },
+      imageStorageId,
+    })
+    openParentFolders(newMapId)
+    void navigateToItem(newMapSlug)
+    toast.success('Map created')
+    onSuccess?.(newMapSlug)
+    onClose()
+    return true
+  }
+
   async function handleSubmit(values: MapFormValues) {
     try {
-      let finalImageStorageId: Id<'_storage'> | undefined = undefined
-
-      if (imageUpload.file) {
-        // New file was selected, commit the upload
-        try {
-          finalImageStorageId = await imageUpload.handleSubmit()
-        } catch (error) {
-          handleError(error, 'Failed to save image')
-          return
-        }
-      } else if (map.data?.imageStorageId && !imageUpload.removed) {
-        // Keep existing image if it hasn't been removed
-        finalImageStorageId = map.data.imageStorageId
-      }
-
-      // Validate that image is required
+      const finalImageStorageId = await resolveFinalImageStorageId()
       if (!finalImageStorageId) {
         toast.error('Map image is required')
         return
       }
 
-      if (mapId && map.data) {
-        try {
-          const { slug } = await editItem({
-            item: map.data,
-            name: values.name,
-            imageStorageId: finalImageStorageId,
-            iconName: values.iconName,
-            color: values.color,
-          })
+      const handled =
+        (await updateExistingMap(values, finalImageStorageId)) ||
+        (await createNewMap(values, finalImageStorageId))
 
-          toast.success('Map updated')
-          onSuccess?.(slug)
-        } catch (error) {
-          handleError(error, 'Failed to save map')
-          return
-        }
-      } else if (campaignId) {
-        const { id: newMapId, slug: newMapSlug } = await createItem({
-          type: SIDEBAR_ITEM_TYPES.gameMaps,
-          campaignId,
-          name: values.name,
-          imageStorageId: finalImageStorageId,
-          iconName: values.iconName ?? undefined,
-          color: values.color ?? undefined,
-          parentTarget: { kind: 'direct', parentId: parentId ?? null },
-        })
-        openParentFolders(newMapId)
-        void navigateToItem(newMapSlug)
-        toast.success('Map created')
-        onSuccess?.(newMapSlug)
-        onClose()
-      } else {
+      if (!handled) {
         toast.error('Invalid form state: missing map or campaign ID')
-        return
       }
     } catch (error) {
       handleError(error, 'Failed to save map')
@@ -235,9 +243,7 @@ export function MapForm({ mapId, campaignId, parentId, onClose, onSuccess }: Map
         )}
       </form.Field>
 
-      {/* Icon and Color Row */}
       <div className="flex items-end gap-4">
-        {/* Icon Field */}
         <form.Field name="iconName">
           {(field) => (
             <div className="space-y-2">
@@ -251,7 +257,6 @@ export function MapForm({ mapId, campaignId, parentId, onClose, onSuccess }: Map
           )}
         </form.Field>
 
-        {/* Color Field */}
         <form.Field name="color">
           {(field) => (
             <div className="space-y-2">
@@ -264,7 +269,6 @@ export function MapForm({ mapId, campaignId, parentId, onClose, onSuccess }: Map
           )}
         </form.Field>
 
-        {/* Preview */}
         <div className="flex-1">
           <Label className="text-muted-foreground text-xs">Preview</Label>
           <form.Subscribe selector={(s) => s.values}>
@@ -272,7 +276,7 @@ export function MapForm({ mapId, campaignId, parentId, onClose, onSuccess }: Map
               const PreviewIcon = getIconByName(values.iconName ?? 'MapPin')
               return (
                 <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
-                  <PreviewIcon className="h-4 w-4 flex-shrink-0" />
+                  <PreviewIcon className="size-4 flex-shrink-0" />
                   <span className="truncate text-sm">{values.name || 'Untitled Map'}</span>
                 </div>
               )
@@ -283,12 +287,7 @@ export function MapForm({ mapId, campaignId, parentId, onClose, onSuccess }: Map
 
       <div className="space-y-2">
         <Label>Map Image</Label>
-        <ImageUploadSection
-          label=""
-          fileUpload={imageUpload}
-          handleFileSelect={imageUpload.handleFileSelect}
-          isSubmitting={isDisabled}
-        />
+        <ImageUploadSection label="" fileUpload={imageUpload} isSubmitting={isDisabled} />
         {!hasImage && <p className="text-sm text-destructive">Map image is required</p>}
       </div>
 

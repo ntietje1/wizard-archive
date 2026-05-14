@@ -2,17 +2,12 @@ import { createContext, useContext } from 'react'
 import { keepPreviousData } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
-import { PERMISSION_LEVEL } from 'convex/permissions/types'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { UseQueryResult } from '@tanstack/react-query'
 import type { SortOptions } from 'convex/editors/types'
-import type { SidebarItemLocation } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { SidebarItemMaps } from '~/features/sidebar/utils/sidebar-item-maps'
-import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { assertNever } from '~/shared/utils/utils'
 import { buildSidebarItemMaps } from '~/features/sidebar/utils/sidebar-item-maps'
 
@@ -29,18 +24,33 @@ export interface SidebarItemsValue extends SidebarItemMaps {
 // Context — all locations, eagerly loaded
 // ---------------------------------------------------------------------------
 
-type SidebarItemsContextValue = Record<SidebarItemLocation, SidebarItemsValue>
+export const SIDEBAR_ITEMS_VIEW = {
+  active: 'active',
+  trash: 'trash',
+} as const
+
+export type SidebarItemsView = (typeof SIDEBAR_ITEMS_VIEW)[keyof typeof SIDEBAR_ITEMS_VIEW]
+
+type SidebarItemsContextValue = Record<SidebarItemsView, SidebarItemsValue>
 
 export const SidebarItemsContext = createContext<SidebarItemsContextValue | null>(null)
 
-function useSidebarItemQuery(location: SidebarItemLocation): SidebarItemsValue {
+function useSidebarItemQuery(view: SidebarItemsView): SidebarItemsValue {
   const { campaignId } = useCampaign()
+  const query = (() => {
+    switch (view) {
+      case SIDEBAR_ITEMS_VIEW.active:
+        return api.sidebarItems.queries.getActiveSidebarItems
+      case SIDEBAR_ITEMS_VIEW.trash:
+        return api.sidebarItems.queries.getTrashedSidebarItems
+      default:
+        return assertNever(view)
+    }
+  })()
 
-  const result = useAuthQuery(
-    api.sidebarItems.queries.getSidebarItemsByLocation,
-    campaignId ? { campaignId, location } : 'skip',
-    { placeholderData: keepPreviousData },
-  )
+  const result = useAuthQuery(query, campaignId ? { campaignId } : 'skip', {
+    placeholderData: keepPreviousData,
+  })
 
   const data: Array<AnySidebarItem> = result.data ?? []
 
@@ -52,50 +62,32 @@ function useSidebarItemQuery(location: SidebarItemLocation): SidebarItemsValue {
 }
 
 export const useSidebarItemsQueries = (): SidebarItemsContextValue => {
-  const sidebar = useSidebarItemQuery(SIDEBAR_ITEM_LOCATION.sidebar)
-  const trash = useSidebarItemQuery(SIDEBAR_ITEM_LOCATION.trash)
-  return { sidebar, trash }
+  const active = useSidebarItemQuery(SIDEBAR_ITEMS_VIEW.active)
+  const trash = useSidebarItemQuery(SIDEBAR_ITEMS_VIEW.trash)
+  return { active, trash }
 }
 
 // ---------------------------------------------------------------------------
 // Consumer hooks
 // ---------------------------------------------------------------------------
 
-export const useSidebarItems = (location: SidebarItemLocation): SidebarItemsValue => {
+export const useSidebarItems = (view: SidebarItemsView): SidebarItemsValue => {
   const ctx = useContext(SidebarItemsContext)
   if (!ctx) {
     throw new Error('useSidebarItems must be used within a SidebarItemsProvider')
   }
-  return ctx[location]
+  return ctx[view]
 }
 
 export const useActiveSidebarItems = (): SidebarItemsValue =>
-  useSidebarItems(SIDEBAR_ITEM_LOCATION.sidebar)
+  useSidebarItems(SIDEBAR_ITEMS_VIEW.active)
+
+export const useTrashSidebarItems = (): SidebarItemsValue =>
+  useSidebarItems(SIDEBAR_ITEMS_VIEW.trash)
 
 export const useOptionalActiveSidebarItems = (): SidebarItemsValue | null => {
   const ctx = useContext(SidebarItemsContext)
-  return ctx?.[SIDEBAR_ITEM_LOCATION.sidebar] ?? null
-}
-
-// ---------------------------------------------------------------------------
-// Filtered (permission-gated) view of active items
-// ---------------------------------------------------------------------------
-
-export const useFilteredSidebarItems = (): SidebarItemsValue => {
-  const { isDm } = useCampaign()
-  const { viewAsPlayerId } = useEditorMode()
-  const allItems = useActiveSidebarItems()
-
-  const permOpts = { isDm, viewAsPlayerId, allItemsMap: allItems.itemsMap }
-  const filteredData = allItems.data.filter((item) =>
-    effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.VIEW, permOpts),
-  )
-
-  return {
-    data: filteredData,
-    status: allItems.status,
-    ...buildSidebarItemMaps(filteredData),
-  }
+  return ctx?.active ?? null
 }
 
 // ---------------------------------------------------------------------------

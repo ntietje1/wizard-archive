@@ -1,4 +1,4 @@
-import type { MouseEvent, ReactNode } from 'react'
+import type { MouseEvent, ReactNode, Ref } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemName } from 'convex/sidebarItems/validation/name'
@@ -19,6 +19,7 @@ interface SidebarItemPresentation {
   renaming: boolean
   expanded: boolean
   showChevron: boolean
+  pending?: boolean
   indentLevel?: number
 }
 
@@ -32,4 +33,5 @@ export interface SidebarItemButtonProps extends SidebarItemHandlers {
   parentId: Id<'sidebarItems'> | null
   excludeId?: Id<'sidebarItems'>
   shareButton?: ReactNode
+  rowRef?: Ref<HTMLDivElement>
 }

@@ -27,7 +27,7 @@ function mockItem(id: string, name: string): AnySidebarItem {
     createdBy: 'user-1' as Id<'userProfiles'>,
     deletionTime: null,
     deletedBy: null,
-    location: 'sidebar',
+    status: 'active',
   } as unknown as AnySidebarItem
 }
 

@@ -1,6 +1,7 @@
-import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
-import { enhanceSidebarItem } from '../../sidebarItems/functions/enhanceSidebarItem'
+import { enhanceBase } from '../../sidebarItems/functions/enhanceBaseSidebarItem'
+import { isTrashedSidebarItem } from '../../sidebarItems/types/status'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { Folder } from '../types'
@@ -25,10 +26,10 @@ export async function getSidebarItemAncestors(
     if (!item || item.type !== SIDEBAR_ITEM_TYPES.folders) {
       break
     }
-    if (isTrashed && item.location !== SIDEBAR_ITEM_LOCATION.trash) {
+    if ((isTrashed ?? false) !== isTrashedSidebarItem(item)) {
       break
     }
-    const folder = await enhanceSidebarItem(ctx, { item })
+    const folder = await enhanceBase(ctx, { item })
 
     ancestors.unshift(folder)
     currentParentId = folder.parentId

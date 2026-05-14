@@ -1,9 +1,15 @@
 import { asyncMap } from 'convex-helpers'
-import { SIDEBAR_ITEM_LOCATION } from '../../sidebarItems/types/baseTypes'
+import { enhanceCanvas } from '../../canvases/functions/enhanceCanvas'
+import { enhanceFile } from '../../files/functions/enhanceFile'
+import { enhanceFolder } from '../../folders/functions/enhanceFolder'
 import { getSidebarItemAncestors } from '../../folders/functions/getSidebarItemAncestors'
-import { enhanceBase, enhanceSidebarItem } from '../../sidebarItems/functions/enhanceSidebarItem'
+import { enhanceBase } from '../../sidebarItems/functions/enhanceBaseSidebarItem'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
+import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import { enhanceNote } from '../../notes/functions/enhanceNote'
+import { assertNever } from '../../common/types'
 import type { CampaignQueryCtx } from '../../functions'
+import type { AnySidebarItem, AnySidebarItemFromDb } from '../../sidebarItems/types/types'
 import type { GameMap, GameMapFromDb, GameMapWithContent, MapPin, MapPinWithItem } from '../types'
 
 export const enhanceGameMap = async (
@@ -27,13 +33,33 @@ const enhanceMapPin = async (
 ): Promise<MapPinWithItem | null> => {
   const item = await getSidebarItem(ctx, pin.itemId)
   if (item) {
-    const enhancedItem = await enhanceSidebarItem(ctx, { item })
+    const enhancedItem = await enhancePinnedItem(ctx, { item })
     return {
       ...pin,
       item: enhancedItem,
     }
   }
   return null
+}
+
+const enhancePinnedItem = async (
+  ctx: CampaignQueryCtx,
+  { item }: { item: AnySidebarItemFromDb },
+): Promise<AnySidebarItem> => {
+  switch (item.type) {
+    case SIDEBAR_ITEM_TYPES.files:
+      return enhanceFile(ctx, { file: item })
+    case SIDEBAR_ITEM_TYPES.gameMaps:
+      return enhanceGameMap(ctx, { gameMap: item })
+    case SIDEBAR_ITEM_TYPES.folders:
+      return enhanceFolder(ctx, { folder: item })
+    case SIDEBAR_ITEM_TYPES.notes:
+      return enhanceNote(ctx, { note: item })
+    case SIDEBAR_ITEM_TYPES.canvases:
+      return enhanceCanvas(ctx, { canvas: item })
+    default:
+      return assertNever(item)
+  }
 }
 
 export const enhanceGameMapWithContent = async (
@@ -43,7 +69,7 @@ export const enhanceGameMapWithContent = async (
   const [ancestors, rawPins] = await Promise.all([
     getSidebarItemAncestors(ctx, {
       initialParentId: gameMap.parentId,
-      isTrashed: gameMap.location === SIDEBAR_ITEM_LOCATION.trash,
+      isTrashed: gameMap.isTrashed,
     }),
     ctx.db
       .query('mapPins')

@@ -1,4 +1,4 @@
-import { SIDEBAR_ITEM_LOCATION } from '../sidebarItems/types/baseTypes'
+import { isTrashedSidebarItem } from '../sidebarItems/types/status'
 import type { AnySidebarItem } from '../sidebarItems/types/types'
 import type { Id } from '../_generated/dataModel'
 
@@ -10,11 +10,11 @@ export function validateCanvasEmbedDropTarget({
   campaignId,
 }: {
   canvasId: Id<'sidebarItems'>
-  item: Pick<AnySidebarItem, '_id' | 'campaignId' | 'location'>
+  item: Pick<AnySidebarItem, '_id' | 'campaignId' | 'location' | 'status'>
   campaignId: Id<'campaigns'> | null
 }): CanvasEmbedDropValidationCode | null {
   if (item._id === canvasId) return 'self_embed'
-  if (item.location === SIDEBAR_ITEM_LOCATION.trash) return 'trashed_item'
+  if (isTrashedSidebarItem(item)) return 'trashed_item'
   if (campaignId && item.campaignId !== campaignId) return 'wrong_campaign'
   return null
 }

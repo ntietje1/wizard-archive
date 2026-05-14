@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
+import {
+  createNoteViaFilesystem,
+  createFolderViaFilesystem,
+} from '../../_test/filesystemSetup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createBlock } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
@@ -83,12 +87,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId: targetId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId: targetId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Target Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
-    const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -122,12 +126,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    await dmAuth.mutation(api.notes.mutations.createNote, {
+    await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Target Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
-    const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -166,12 +170,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId: targetId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId: targetId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Capital',
       parentTarget: { kind: 'direct', parentId: null },
     })
-    const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -211,7 +215,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -251,7 +255,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -282,7 +286,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -319,12 +323,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    await dmAuth.mutation(api.notes.mutations.createNote, {
+    await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Target Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
-    const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -371,12 +375,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId: targetId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId: targetId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Target Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
-    const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -441,12 +445,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    await dmAuth.mutation(api.notes.mutations.createNote, {
+    await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Target Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
-    const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -506,12 +510,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId: targetId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId: targetId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Target Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
-    const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -556,12 +560,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId: targetId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId: targetId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Target Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
-    const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -588,7 +592,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -615,7 +619,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -636,7 +640,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       syntax: 'wiki',
     })
 
-    const { noteId: targetId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId: targetId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Future Target',
       parentTarget: { kind: 'direct', parentId: null },
@@ -659,12 +663,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { noteId: targetId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId: targetId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Target Note',
       parentTarget: { kind: 'direct', parentId: null },
     })
-    const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -703,17 +707,17 @@ describe('persistNoteBlocks — note link reconciliation', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const { folderId: worldId } = await dmAuth.mutation(api.folders.mutations.createFolder, {
+    const { folderId: worldId } = await createFolderViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'World',
       parentTarget: { kind: 'direct', parentId: null },
     })
-    const { noteId: targetId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId: targetId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Capital',
       parentTarget: { kind: 'direct', parentId: worldId },
     })
-    const { noteId: sourceId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId: sourceId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Source Note',
       parentTarget: { kind: 'direct', parentId: worldId },

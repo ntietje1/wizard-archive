@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
+import { createNoteViaFilesystem } from '../../_test/filesystemSetup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createNote } from '../../_test/factories.helper'
-import { api } from '../../_generated/api'
 import { shouldCompact } from '../functions/compactUpdates'
 import { uint8ToArrayBuffer } from '../functions/uint8ToArrayBuffer'
 import { createYjsDocument } from '../functions/createYjsDocument'
@@ -67,7 +67,7 @@ describe('createYjsDocument', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const result = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const result = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Test Note',
       parentTarget: { kind: 'direct', parentId: null },
@@ -84,9 +84,14 @@ describe('createYjsDocument', () => {
     })
   })
 
-  it('does not create duplicate if called twice', async () => {
+  it('remains idempotent across multiple creation attempts', async () => {
     const ctx = await setupCampaignContext(t)
-    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+    const dmAuth = asDm(ctx)
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'Idempotent Note',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
 
     await t.run(async (dbCtx) => {
       await createYjsDocument(dbCtx, { documentId: noteId })

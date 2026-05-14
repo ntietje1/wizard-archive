@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware'
 import { useShallow } from 'zustand/shallow'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
-import { selectionBelongsToSurface } from 'convex/sidebarItems/operations/selection'
+import { selectionBelongsToSurface } from 'convex/sidebarItems/filesystem/selection'
 
 export type ItemSurface = 'sidebar' | 'folder-view' | 'bookmarks' | 'trash'
 
@@ -11,12 +11,6 @@ export interface ActiveItemSurface {
   surface: ItemSurface
   parentId: Id<'sidebarItems'> | null
   visibleItemIds: Array<Id<'sidebarItems'>>
-}
-
-export interface SidebarItemClipboard {
-  mode: 'copy' | 'cut'
-  campaignId: Id<'campaigns'>
-  itemIds: Array<Id<'sidebarItems'>>
 }
 
 interface ItemSurfaceIdentity {
@@ -41,7 +35,6 @@ interface SidebarUIState {
   selectionSurface: ItemSurfaceIdentity | null
   focusSurface: ItemSurfaceIdentity | null
   activeItemSurface: ActiveItemSurface | null
-  itemClipboard: SidebarItemClipboard | null
   viewAsPlayerId: Id<'campaignMembers'> | null
 }
 
@@ -71,7 +64,6 @@ interface SidebarUIActions {
     visibleItemIds?: Array<Id<'sidebarItems'>>,
   ) => void
   setActiveItemSurface: (surface: ActiveItemSurface | null) => void
-  setItemClipboard: (clipboard: SidebarItemClipboard | null) => void
   clearSelectionForCampaignChange: () => void
   setViewAsPlayerId: (id: Id<'campaignMembers'> | null) => void
 }
@@ -127,12 +119,6 @@ function surfaceIdentity(surface: ActiveItemSurface | null): ItemSurfaceIdentity
   return { surface: surface.surface, parentId: surface.parentId }
 }
 
-function sameSurfaceIdentity(a: ItemSurfaceIdentity | null, b: ItemSurfaceIdentity | null) {
-  if (a === null && b === null) return true
-  if (a === null || b === null) return false
-  return a.surface === b.surface && a.parentId === b.parentId
-}
-
 function sameVisibleIds(a: Array<Id<'sidebarItems'>>, b: Array<Id<'sidebarItems'>>) {
   return a.length === b.length && a.every((id, index) => id === b[index])
 }
@@ -178,7 +164,6 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
       selectionSurface: null,
       focusSurface: null,
       activeItemSurface: null,
-      itemClipboard: null,
       viewAsPlayerId: null,
 
       setRenamingId: (id) => set({ renamingId: id }),
@@ -369,18 +354,12 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
               activeItemSurface: null,
               focusedItemId: null,
               focusSurface: null,
-              selectedItemIds: [],
-              anchorItemId: null,
-              selectionSurface: null,
             }
           }
 
-          const previousIdentity = surfaceIdentity(state.activeItemSurface)
-          const isSameSurfaceIdentity = sameSurfaceIdentity(previousIdentity, nextIdentity)
-          const preserveSelection =
+          const selectedIdsVisible =
             state.selectedItemIds.length > 0 &&
-            (isSameSurfaceIdentity ||
-              selectionBelongsToSurface(state.selectedItemIds, surface.visibleItemIds))
+            selectionBelongsToSurface(state.selectedItemIds, surface.visibleItemIds)
           const focusedItemId =
             state.focusedItemId && surface.visibleItemIds.includes(state.focusedItemId)
               ? state.focusedItemId
@@ -391,13 +370,9 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
             activeItemSurface: surface,
             focusedItemId,
             focusSurface,
-            selectedItemIds: preserveSelection ? state.selectedItemIds : [],
-            anchorItemId: preserveSelection ? state.anchorItemId : null,
-            selectionSurface: preserveSelection ? nextIdentity : null,
+            selectionSurface: selectedIdsVisible ? nextIdentity : state.selectionSurface,
           }
         }),
-
-      setItemClipboard: (clipboard) => set({ itemClipboard: clipboard }),
 
       clearSelectionForCampaignChange: () =>
         set({
@@ -407,7 +382,6 @@ export const useSidebarUIStore = create<SidebarUIState & SidebarUIActions>()(
           selectionSurface: null,
           focusSurface: null,
           activeItemSurface: null,
-          itemClipboard: null,
         }),
 
       setViewAsPlayerId: (id) => set({ viewAsPlayerId: id }),

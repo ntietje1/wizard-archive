@@ -3,28 +3,28 @@ import { handleError } from '~/shared/utils/logger'
 import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { collectDescendantIds } from '~/features/sidebar/utils/sidebar-item-maps'
-import { useSidebarItemOperations } from '~/features/sidebar/operations/useSidebarItemOperations'
 
 interface FolderDeleteConfirmDialogProps {
   folder: Folder
   isDeleting: boolean
+  onTrash: () => Promise<void>
   onConfirm?: () => void
   onClose: () => void
 }
 export function FolderDeleteConfirmDialog({
   folder,
   isDeleting,
+  onTrash,
   onConfirm,
   onClose,
 }: FolderDeleteConfirmDialogProps) {
-  const itemOperations = useSidebarItemOperations()
   const { data } = useActiveSidebarItems()
 
   const descendantCount = collectDescendantIds(folder._id, data).size
 
-  const handleConfirm = async () => {
+  const handleConfirm = async (): Promise<void> => {
     try {
-      await itemOperations.trashItems([folder])
+      await onTrash()
       onConfirm?.()
     } catch (error) {
       handleError(error, 'Failed to move folder to trash')

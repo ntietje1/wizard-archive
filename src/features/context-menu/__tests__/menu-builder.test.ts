@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { ActionHandlers } from '~/features/context-menu/menu-registry'
 import type {
   ContextMenuCommand,
@@ -68,7 +67,7 @@ function sidebarCtx(overrides: Partial<MenuContext> = {}): MenuContext {
 
 describe('buildMenu', () => {
   const actions = createActions()
-  const services = { actions }
+  const services = { actions, filesystem: { canPasteIntoTarget: () => false } }
 
   it('DM sees edit and delete actions on a note in sidebar', () => {
     const menu = buildMenu({
@@ -136,12 +135,30 @@ describe('buildMenu', () => {
     expect(ids).not.toContain('rename')
   })
 
+  it('shows Paste only when the filesystem clipboard can paste', () => {
+    const folder = createFolder()
+    const menuWithoutClipboard = buildMenu({
+      context: sidebarCtx({ item: folder }),
+      services,
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+    const menuWithClipboard = buildMenu({
+      context: sidebarCtx({ item: folder }),
+      services: { ...services, filesystem: { canPasteIntoTarget: () => true } },
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+
+    expect(menuWithoutClipboard.flatItems.map((item) => item.id)).not.toContain('paste')
+    expect(menuWithClipboard.flatItems.map((item) => item.id)).toContain('paste')
+  })
+
   it('hides active-item operations when any selected root is trashed', () => {
     const deletionTime = 1_700_000_000_000
-    const selectedItems = [
-      createNote(),
-      createFile({ location: SIDEBAR_ITEM_LOCATION.trash, deletionTime }),
-    ]
+    const selectedItems = [createNote(), createFile({ status: 'trashed', deletionTime })]
     const menu = buildMenu({
       context: sidebarCtx({
         item: selectedItems[0],
@@ -264,7 +281,7 @@ describe('buildMenu', () => {
 
   it('trashed item shows restore and permanently-delete', () => {
     const ctx: MenuContext = {
-      item: createNote(),
+      item: createNote({ status: 'trashed', deletionTime: Date.now() }),
       surface: VIEW_CONTEXT.TRASH_VIEW,
       isItemTrashed: true,
       isTrashView: true,
@@ -282,6 +299,40 @@ describe('buildMenu', () => {
     expect(ids).toContain('restore')
     expect(ids).toContain('permanently-delete')
     expect(ids).toContain('empty-trash')
+  })
+
+  it('does not expose folder trash or restore actions to players', () => {
+    const activeFolder = createFolder()
+    const trashFolder = createFolder({ status: 'trashed', deletionTime: Date.now() })
+    const activeMenu = buildMenu({
+      context: sidebarCtx({
+        item: activeFolder,
+        memberRole: CAMPAIGN_MEMBER_ROLE.Player,
+        permissionLevel: PERMISSION_LEVEL.FULL_ACCESS,
+      }),
+      services,
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+    const trashMenu = buildMenu({
+      context: sidebarCtx({
+        item: trashFolder,
+        surface: VIEW_CONTEXT.TRASH_VIEW,
+        isItemTrashed: true,
+        isTrashView: true,
+        memberRole: CAMPAIGN_MEMBER_ROLE.Player,
+        permissionLevel: PERMISSION_LEVEL.FULL_ACCESS,
+      }),
+      services,
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+
+    expect(activeMenu.flatItems.map((item) => item.id)).not.toContain('delete')
+    expect(trashMenu.flatItems.map((item) => item.id)).not.toContain('restore')
+    expect(trashMenu.flatItems.map((item) => item.id)).not.toContain('permanently-delete')
   })
 
   it('root context (no item) shows "New..." and download-all for DM in sidebar', () => {

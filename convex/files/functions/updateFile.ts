@@ -1,122 +1,73 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
-import { prepareSidebarItemRename } from '../../sidebarItems/validation/orchestration'
-import { requireItemAccess } from '../../sidebarItems/validation/access'
-import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
-import { PERMISSION_LEVEL } from '../../permissions/types'
-import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
-import type { SidebarItemName } from '../../sidebarItems/validation/name'
-import type { SidebarItemColor } from '../../sidebarItems/validation/color'
-import type { SidebarItemIconName } from '../../sidebarItems/validation/icon'
+import { applySidebarItemContentUpdate } from '../../sidebarItems/functions/applySidebarItemContentUpdate'
 import type { EditHistoryChange } from '../../editHistory/types'
-import type { SidebarItemSlug } from '../../sidebarItems/validation/slug'
 import type { WithoutSystemFields } from 'convex/server'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 
-export async function updateFile(
+export async function applyFileStorageUpdate(
   ctx: CampaignMutationCtx,
   {
     fileId,
-    name,
     storageId,
-    iconName,
-    color,
   }: {
     fileId: Id<'sidebarItems'>
-    name?: SidebarItemName
-    storageId?: Id<'_storage'> | null
-    iconName?: SidebarItemIconName | null
-    color?: SidebarItemColor | null
+    storageId: Id<'_storage'> | null
   },
-): Promise<{ fileId: Id<'sidebarItems'>; slug: SidebarItemSlug }> {
-  const rawItem = await getSidebarItem(ctx, fileId)
-  if (!rawItem) throwClientError(ERROR_CODE.NOT_FOUND, 'File not found')
-  const file = await requireItemAccess(ctx, {
-    rawItem,
-    requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
-  })
+): Promise<{
+  sidebarUpdates: Partial<WithoutSystemFields<Doc<'sidebarItems'>>>
+  changes: Array<EditHistoryChange>
+}> {
+  const ext = await ctx.db
+    .query('files')
+    .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileId))
+    .unique()
+  if (ext) {
+    await ctx.db.patch('files', ext._id, { storageId })
+  }
 
-  let newSlug: SidebarItemSlug | undefined
-  const updates: Partial<WithoutSystemFields<Doc<'sidebarItems'>>> = {}
-  const changes: Array<EditHistoryChange> = []
-
-  if (name !== undefined) {
-    const rename = await prepareSidebarItemRename(ctx, {
-      item: file,
-      newName: name,
-    })
-    if (rename) {
-      updates.name = rename.name
-      newSlug = rename.slug
-      updates.slug = rename.slug
-      changes.push({
-        action: EDIT_HISTORY_ACTION.renamed,
-        metadata: { from: file.name, to: rename.name },
-      })
+  if (storageId) {
+    const metadata = await ctx.db.system.get('_storage', storageId)
+    if (!metadata) {
+      throwClientError(ERROR_CODE.NOT_FOUND, `Storage object ${storageId} not found`)
+    }
+    const isImage = metadata.contentType?.startsWith('image/') ?? false
+    return {
+      sidebarUpdates: {
+        previewStorageId: isImage ? storageId : null,
+        previewUpdatedAt: isImage ? Date.now() : null,
+      },
+      changes: [{ action: EDIT_HISTORY_ACTION.file_replaced, metadata: null }],
     }
   }
-  if (storageId !== undefined) {
-    const ext = await ctx.db
-      .query('files')
-      .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileId))
-      .unique()
-    if (ext) {
-      await ctx.db.patch('files', ext._id, { storageId })
-    }
-    if (storageId) {
-      const metadata = await ctx.db.system.get('_storage', storageId)
-      if (metadata?.contentType?.startsWith('image/')) {
-        updates.previewStorageId = storageId
-        updates.previewUpdatedAt = Date.now()
-      } else {
-        updates.previewStorageId = null
-        updates.previewUpdatedAt = null
-      }
-      changes.push({
-        action: EDIT_HISTORY_ACTION.file_replaced,
-        metadata: null,
-      })
-    } else {
-      updates.previewStorageId = null
-      updates.previewUpdatedAt = null
-      changes.push({
-        action: EDIT_HISTORY_ACTION.file_removed,
-        metadata: null,
-      })
-    }
-  }
-  if (iconName !== undefined && iconName !== file.iconName) {
-    updates.iconName = iconName
-    changes.push({
-      action: EDIT_HISTORY_ACTION.icon_changed,
-      metadata: { from: file.iconName, to: iconName },
-    })
-  }
-  if (color !== undefined && color !== file.color) {
-    updates.color = color
-    changes.push({
-      action: EDIT_HISTORY_ACTION.color_changed,
-      metadata: { from: file.color, to: color },
-    })
-  }
 
-  if (changes.length === 0) {
-    return { fileId: file._id, slug: file.slug }
+  return {
+    sidebarUpdates: {
+      previewStorageId: null,
+      previewUpdatedAt: null,
+    },
+    changes: [{ action: EDIT_HISTORY_ACTION.file_removed, metadata: null }],
   }
+}
 
-  await ctx.db.patch('sidebarItems', fileId, {
-    ...updates,
-    updatedTime: Date.now(),
-    updatedBy: ctx.membership.userId,
-  })
-
-  await logEditHistory(ctx, {
-    itemId: file._id,
+export async function updateFileStorage(
+  ctx: CampaignMutationCtx,
+  {
+    fileId,
+    storageId,
+  }: {
+    fileId: Id<'sidebarItems'>
+    storageId: Id<'_storage'> | null
+  },
+): Promise<{ fileId: Id<'sidebarItems'> }> {
+  const result = await applySidebarItemContentUpdate({
+    ctx,
+    itemId: fileId,
     itemType: SIDEBAR_ITEM_TYPES.files,
-    changes,
+    notFoundMessage: 'File not found',
+    apply: () => applyFileStorageUpdate(ctx, { fileId, storageId }),
   })
-
-  return { fileId: file._id, slug: newSlug ?? file.slug }
+  return { fileId: result.itemId }
 }

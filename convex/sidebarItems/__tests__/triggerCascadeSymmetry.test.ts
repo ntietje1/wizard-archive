@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import {
+  executeMoveCommand,
+  executeDeleteForeverCommand,
   createBlock,
   createBlockShare,
   createBookmark,
@@ -14,7 +16,6 @@ import {
   createSidebarShare,
 } from '../../_test/factories.helper'
 import { makeYjsUpdate } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
-import { api } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
 import type { SidebarItemType } from '../types/baseTypes'
 
@@ -31,7 +32,7 @@ describe('trigger cascade symmetry', () => {
     const { mapId } = await createGameMap(t, ctx.campaignId, dmId)
     const sourceItemIds = [noteId, canvasId, mapId]
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds,
       targetParentId: null,
@@ -41,9 +42,9 @@ describe('trigger cascade symmetry', () => {
     const afterTrash = await t.run(async (dbCtx) =>
       Promise.all(sourceItemIds.map((itemId) => dbCtx.db.get('sidebarItems', itemId))),
     )
-    expect(afterTrash.map((item) => item?.location)).toEqual(['trash', 'trash', 'trash'])
+    expect(afterTrash.map((item) => item?.status)).toEqual(['trashed', 'trashed', 'trashed'])
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds,
       targetParentId: null,
@@ -56,13 +57,13 @@ describe('trigger cascade symmetry', () => {
     expect(afterRestore.map((item) => item?.location)).toEqual(['sidebar', 'sidebar', 'sidebar'])
     expect(afterRestore.map((item) => item?.parentId)).toEqual([null, null, null])
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds,
       targetParentId: null,
       action: 'trash',
     })
-    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
+    await executeDeleteForeverCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds,
     })
@@ -97,7 +98,7 @@ describe('trigger cascade symmetry', () => {
         ]),
       )
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      await executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [noteId],
         targetParentId: null,
@@ -115,7 +116,7 @@ describe('trigger cascade symmetry', () => {
       expect(afterTrash[1]).toEqual(beforeTrash[1])
       expect(afterTrash[2]).toEqual(beforeTrash[2])
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      await executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [noteId],
         targetParentId: null,
@@ -157,13 +158,13 @@ describe('trigger cascade symmetry', () => {
         }),
       )
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      await executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [noteId],
         targetParentId: null,
         action: 'trash',
       })
-      await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
+      await executeDeleteForeverCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [noteId],
       })
@@ -200,7 +201,7 @@ describe('trigger cascade symmetry', () => {
         }),
       )
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      await executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [canvasId],
         targetParentId: null,
@@ -210,7 +211,7 @@ describe('trigger cascade symmetry', () => {
       const afterTrash = await t.run(async (dbCtx) => dbCtx.db.get('yjsUpdates', yjsUpdateId))
       expect(afterTrash).not.toBeNull()
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      await executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [canvasId],
         targetParentId: null,
@@ -237,13 +238,13 @@ describe('trigger cascade symmetry', () => {
         }),
       )
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      await executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [canvasId],
         targetParentId: null,
         action: 'trash',
       })
-      await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
+      await executeDeleteForeverCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [canvasId],
       })
@@ -270,7 +271,7 @@ describe('trigger cascade symmetry', () => {
       const pin1 = await createMapPin(t, mapId, { itemId: pinnedNote })
       const pin2 = await createMapPin(t, mapId, { itemId: pinnedNote })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      await executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [mapId],
         targetParentId: null,
@@ -283,7 +284,7 @@ describe('trigger cascade symmetry', () => {
       expect(afterTrash[0]).not.toBeNull()
       expect(afterTrash[1]).not.toBeNull()
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      await executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [mapId],
         targetParentId: null,
@@ -314,13 +315,13 @@ describe('trigger cascade symmetry', () => {
         return ext!._id
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      await executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [mapId],
         targetParentId: null,
         action: 'trash',
       })
-      await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
+      await executeDeleteForeverCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [mapId],
       })
@@ -354,7 +355,7 @@ describe('trigger cascade symmetry', () => {
         return ext!._id
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      await executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [fileId],
         targetParentId: null,
@@ -364,7 +365,7 @@ describe('trigger cascade symmetry', () => {
       const afterTrash = await t.run(async (dbCtx) => dbCtx.db.get('files', extId))
       expect(afterTrash).not.toBeNull()
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      await executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [fileId],
         targetParentId: null,
@@ -390,13 +391,13 @@ describe('trigger cascade symmetry', () => {
         return ext!._id
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      await executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [fileId],
         targetParentId: null,
         action: 'trash',
       })
-      await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
+      await executeDeleteForeverCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [fileId],
       })
@@ -427,7 +428,7 @@ describe('trigger cascade symmetry', () => {
         return ext!._id
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      await executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [folderId],
         targetParentId: null,
@@ -438,7 +439,7 @@ describe('trigger cascade symmetry', () => {
       expect(afterTrash).not.toBeNull()
       expect(afterTrash!.inheritShares).toBe(true)
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      await executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [folderId],
         targetParentId: null,
@@ -465,13 +466,13 @@ describe('trigger cascade symmetry', () => {
         return ext!._id
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      await executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [folderId],
         targetParentId: null,
         action: 'trash',
       })
-      await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
+      await executeDeleteForeverCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [folderId],
       })
@@ -509,7 +510,7 @@ describe('trigger cascade symmetry', () => {
         campaignMemberId: ctx.player.memberId,
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      await executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [itemId],
         targetParentId: null,
@@ -525,7 +526,7 @@ describe('trigger cascade symmetry', () => {
       expect(afterTrash[0]).not.toBeNull()
       expect(afterTrash[1]).not.toBeNull()
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      await executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [itemId],
         targetParentId: null,
@@ -565,13 +566,13 @@ describe('trigger cascade symmetry', () => {
         campaignMemberId: ctx.player.memberId,
       })
 
-      await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      await executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [itemId],
         targetParentId: null,
         action: 'trash',
       })
-      await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
+      await executeDeleteForeverCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [itemId],
       })

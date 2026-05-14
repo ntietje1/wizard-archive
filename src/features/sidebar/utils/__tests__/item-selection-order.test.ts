@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
-import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import {
-  normalizeTopLevelSelectedItems,
+  normalizeSelectedRoots,
   selectionBelongsToSurface,
-} from 'convex/sidebarItems/operations/selection'
+} from 'convex/sidebarItems/filesystem/selection'
+import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { buildVisibleSidebarItemIds } from '~/features/sidebar/utils/item-selection-order'
 import type { SortOptions } from 'convex/editors/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
@@ -62,7 +62,7 @@ describe('buildVisibleSidebarItemIds', () => {
   })
 })
 
-describe('normalizeTopLevelSelectedItems', () => {
+describe('normalizeSelectedRoots', () => {
   it('removes descendants when their ancestor folder is selected', () => {
     const folder = createFolder({ name: 'Folder' })
     const child = createNote({ name: 'Child', parentId: folder._id })
@@ -75,7 +75,7 @@ describe('normalizeTopLevelSelectedItems', () => {
       [sibling._id, sibling],
     ])
 
-    const result = normalizeTopLevelSelectedItems([child, folder, grandchild, sibling], itemsMap)
+    const result = normalizeSelectedRoots([child, folder, grandchild, sibling], itemsMap)
 
     expect(result.map((item) => item._id)).toEqual([folder._id, sibling._id])
   })
@@ -88,7 +88,7 @@ describe('normalizeTopLevelSelectedItems', () => {
       [second._id, second],
     ])
 
-    const result = normalizeTopLevelSelectedItems([second, first], itemsMap)
+    const result = normalizeSelectedRoots([second, first], itemsMap)
 
     expect(result.map((item) => item._id)).toEqual([second._id, first._id])
   })
@@ -101,17 +101,16 @@ describe('normalizeTopLevelSelectedItems', () => {
       [second._id, second],
     ])
 
-    const result = normalizeTopLevelSelectedItems([first, second, first], itemsMap)
+    const result = normalizeSelectedRoots([first, second, first], itemsMap)
 
     expect(result.map((item) => item._id)).toEqual([first._id, second._id])
   })
 
-  it('deduplicates repeated selected items even when ancestor data has a cycle', () => {
-    const first = createNote({ name: 'First' })
+  it('throws when ancestor data has a cycle', () => {
     const baseParentA = createFolder({ name: 'Parent A' })
     const parentB = createFolder({ name: 'Parent B', parentId: baseParentA._id })
     const parentA = { ...baseParentA, parentId: parentB._id }
-    const cycledFirst = { ...first, parentId: parentA._id }
+    const cycledFirst = createNote({ name: 'First', parentId: parentA._id })
     // parentA and parentB point at each other; cycledFirst enters that cycle.
     const itemsMap = new Map<Id<'sidebarItems'>, AnySidebarItem>([
       [cycledFirst._id, cycledFirst],
@@ -119,9 +118,21 @@ describe('normalizeTopLevelSelectedItems', () => {
       [parentB._id, parentB],
     ])
 
-    const result = normalizeTopLevelSelectedItems([cycledFirst, cycledFirst], itemsMap)
+    expect(() => normalizeSelectedRoots([cycledFirst], itemsMap)).toThrow(/Cycle detected/)
+  })
 
-    expect(result.map((item) => item._id)).toEqual([first._id])
+  it('throws for missing ancestors', () => {
+    const first = createNote({ name: 'First' })
+    const child = createNote({
+      name: 'Child',
+      parentId: testId<'sidebarItems'>('missing-parent'),
+    })
+    const itemsMap = new Map<Id<'sidebarItems'>, AnySidebarItem>([
+      [first._id, first],
+      [child._id, child],
+    ])
+
+    expect(() => normalizeSelectedRoots([child, first], itemsMap)).toThrow(/Missing sidebar item/)
   })
 })
 

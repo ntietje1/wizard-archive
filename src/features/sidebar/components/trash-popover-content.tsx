@@ -1,30 +1,27 @@
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import { Link } from '@tanstack/react-router'
-import { toast } from 'sonner'
 import { TRASH_RETENTION_DAYS } from 'convex/common/constants'
 import { RotateCcw, SquareArrowOutUpRight, Trash2 } from 'lucide-react'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { handleError } from '~/shared/utils/logger'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { Button, buttonVariants } from '~/features/shadcn/components/button'
-import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
-import { useEmptyTrashBin } from '~/features/sidebar/hooks/useEmptyTrashBin'
-import { useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import { useSidebarItemOperations } from '~/features/sidebar/operations/useSidebarItemOperations'
+import { useTrashSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useFileSystem } from '~/features/filesystem/useFileSystem'
+import {
+  canDeleteSidebarItemsForever,
+  canRestoreSidebarItems,
+} from '~/features/filesystem/filesystem-capabilities'
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
 import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
+import { useIsSidebarItemDragging } from '~/features/dnd/hooks/useIsSidebarItemDragging'
 import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
 import { useSidebarItemVisualState } from '~/features/sidebar/hooks/useSelectedItem'
 import { useItemSurfaceRegistration } from '~/features/sidebar/hooks/useItemSurfaceRegistration'
 import { cn } from '~/features/shadcn/lib/utils'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
-import {
-  emptyTrashDescription,
-  permanentDeleteDescription,
-} from '~/features/sidebar/utils/trash-utils'
 import { EDITOR_ROUTE, useEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import {
   sidebarItemActionButtonClass,
@@ -39,10 +36,11 @@ interface TrashPopoverContentProps {
 }
 
 export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
-  const { campaignId, isDm, dmUsername, campaignSlug } = useCampaign()
+  const { isDm, dmUsername, campaignSlug, campaign } = useCampaign()
+  const memberRole = campaign.data?.myMembership?.role
   const { setLastSelectedItem } = useLastEditorItem()
 
-  const { data: allTrashedItems, parentItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
+  const { parentItemsMap } = useTrashSidebarItems()
   const rootTrashedItems = parentItemsMap.get(null) ?? []
   const visibleItemIds = rootTrashedItems.map((item) => item._id)
   const { activateSurface, handleSurfacePointerDown } = useItemSurfaceRegistration({
@@ -51,39 +49,22 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
     visibleItemIds,
   })
 
-  const { emptyTrashBin } = useEmptyTrashBin()
-  const itemOperations = useSidebarItemOperations()
-
-  const [confirmDeleteItem, setConfirmDeleteItem] = useState<AnySidebarItem | null>(null)
-  const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false)
+  const filesystem = useFileSystem()
 
   const handleRestore = async (item: AnySidebarItem) => {
     try {
-      await itemOperations.restoreItems([item])
+      await filesystem.restoreItems([item._id], null)
     } catch (error) {
       handleError(error, 'Failed to restore item')
     }
   }
 
-  const handlePermanentDelete = async (item: AnySidebarItem) => {
+  const handlePermanentDelete = (item: AnySidebarItem) => {
     try {
-      await itemOperations.permanentlyDeleteItems([item])
+      filesystem.confirmDeleteForever([item._id])
     } catch (error) {
-      handleError(error, 'Failed to delete item')
+      handleError(error, 'Failed to permanently delete item')
     }
-    setConfirmDeleteItem(null)
-  }
-
-  const handleEmptyTrash = async () => {
-    if (!campaignId) return
-
-    try {
-      await emptyTrashBin()
-      toast.success('Trash emptied')
-    } catch (error) {
-      handleError(error, 'Failed to empty trash')
-    }
-    setConfirmEmptyTrash(false)
   }
 
   const handleItemClick = (item: AnySidebarItem) => {
@@ -118,7 +99,7 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
       </div>
 
       <ScrollArea
-        className="max-h-[300px]"
+        className="group/sidebar-surface max-h-[300px]"
         onFocusCapture={activateSurface}
         onPointerDownCapture={handleSurfacePointerDown}
         onContextMenuCapture={activateSurface}
@@ -129,10 +110,12 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
               key={item._id}
               item={item}
               onRestore={handleRestore}
-              onPermanentDelete={setConfirmDeleteItem}
+              onPermanentDelete={handlePermanentDelete}
               onClick={handleItemClick}
               deletionTimeLabel={getDeletionTimeLabel(item)}
               visibleItemIds={visibleItemIds}
+              canRestore={canRestoreSidebarItems(memberRole, [item])}
+              canDeleteForever={canDeleteSidebarItemsForever(memberRole, [item])}
             />
           ))}
 
@@ -153,36 +136,12 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
             variant="ghost"
             size="sm"
             className="text-xs text-destructive hover:text-destructive h-6 px-2 shrink-0"
-            onClick={() => setConfirmEmptyTrash(true)}
+            onClick={() => filesystem.confirmEmptyTrash()}
           >
             Empty Trash
           </Button>
         )}
       </div>
-
-      {confirmDeleteItem && (
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={() => setConfirmDeleteItem(null)}
-          onConfirm={() => handlePermanentDelete(confirmDeleteItem)}
-          title="Permanently Delete"
-          description={permanentDeleteDescription(confirmDeleteItem, allTrashedItems)}
-          confirmLabel="Delete Forever"
-          confirmVariant="destructive"
-        />
-      )}
-
-      {confirmEmptyTrash && (
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={() => setConfirmEmptyTrash(false)}
-          onConfirm={handleEmptyTrash}
-          title="Empty Trash"
-          description={emptyTrashDescription(allTrashedItems.length)}
-          confirmLabel="Empty Trash"
-          confirmVariant="destructive"
-        />
-      )}
     </div>
   )
 }
@@ -194,6 +153,8 @@ function TrashPopoverItem({
   onClick,
   deletionTimeLabel,
   visibleItemIds,
+  canRestore,
+  canDeleteForever,
 }: {
   item: AnySidebarItem
   onRestore: (item: AnySidebarItem) => void
@@ -201,11 +162,14 @@ function TrashPopoverItem({
   onClick: (item: AnySidebarItem) => void
   deletionTimeLabel: string
   visibleItemIds: Array<AnySidebarItem['_id']>
+  canRestore: boolean
+  canDeleteForever: boolean
 }) {
   const Icon = getSidebarItemIcon(item)
   const ref = useRef<HTMLDivElement>(null)
   const linkProps = useEditorLinkProps(item)
   const dragData = useSidebarDragData(item)
+  const isDragging = useIsSidebarItemDragging(item._id)
   const visualState = useSidebarItemVisualState(item)
   const { handleItemClick, handleItemContextMenu } = useItemSelectionInteractions(item, {
     surface: 'trash',
@@ -226,6 +190,7 @@ function TrashPopoverItem({
       data-item-selection-target="true"
       className={cn(
         'flex items-center w-full py-1 px-1 rounded-sm group min-w-0',
+        isDragging && 'opacity-50',
         sidebarItemBackgroundClass(visualState),
       )}
       onContextMenu={handleItemContextMenu}
@@ -257,40 +222,44 @@ function TrashPopoverItem({
         </div>
       </Link>
       <div className={sidebarItemActionGroupClass}>
-        <Button
-          variant="ghost"
-          size="sm"
-          className={cn(
-            'size-6 p-0 hover:bg-muted-foreground/10 rounded-sm',
-            sidebarItemActionButtonClass(visualState),
-          )}
-          onClick={(event) => {
-            event.preventDefault()
-            event.stopPropagation()
-            handleItemContextMenu(event)
-            onRestore(item)
-          }}
-          aria-label="Restore"
-        >
-          <RotateCcw className="size-3.5" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className={cn(
-            'size-6 p-0 hover:text-destructive hover:bg-muted-foreground/10 rounded-sm',
-            sidebarItemActionButtonClass(visualState),
-          )}
-          onClick={(event) => {
-            event.preventDefault()
-            event.stopPropagation()
-            handleItemContextMenu(event)
-            onPermanentDelete(item)
-          }}
-          aria-label="Delete forever"
-        >
-          <Trash2 className="size-3.5" />
-        </Button>
+        {canRestore && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              'size-6 p-0 hover:bg-muted-foreground/10 rounded-sm',
+              sidebarItemActionButtonClass(visualState),
+            )}
+            onClick={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              handleItemContextMenu(event)
+              onRestore(item)
+            }}
+            aria-label="Restore"
+          >
+            <RotateCcw className="size-3.5" />
+          </Button>
+        )}
+        {canDeleteForever && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              'size-6 p-0 hover:text-destructive hover:bg-muted-foreground/10 rounded-sm',
+              sidebarItemActionButtonClass(visualState),
+            )}
+            onClick={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              handleItemContextMenu(event)
+              onPermanentDelete(item)
+            }}
+            aria-label="Delete forever"
+          >
+            <Trash2 className="size-3.5" />
+          </Button>
+        )}
       </div>
     </div>
   )

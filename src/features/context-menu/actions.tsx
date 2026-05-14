@@ -8,26 +8,21 @@ import type { PermissionLevel } from 'convex/permissions/types'
 import type { MenuContext } from './types'
 import type { ActionHandlers } from './menu-registry'
 import type { Id } from 'convex/_generated/dataModel'
-import type { Folder } from 'convex/folders/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import { resolveContextOperationItems } from './selection-context'
 import { handleError } from '~/shared/utils/logger'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
-import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
-import { useEmptyTrashBin } from '~/features/sidebar/hooks/useEmptyTrashBin'
+import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useToggleBookmark } from '~/features/sidebar/hooks/useBookmarks'
 import { isFile, isGameMap } from '~/features/sidebar/utils/sidebar-item-utils'
 import { useSession } from '~/features/sidebar/hooks/useGameSession'
-import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import { useSidebarItemOperations } from '~/features/sidebar/operations/useSidebarItemOperations'
+import { useFileSystem } from '~/features/filesystem/useFileSystem'
 import { createDownloadActions } from './download-actions'
 import { createCreationActions } from './creation-actions'
-import { createFilesystemActions } from './filesystem-actions'
 
 interface UseMenuActionsOptions {
   onDialogOpen?: () => void
@@ -36,20 +31,16 @@ interface UseMenuActionsOptions {
 
 export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const { onDialogOpen, onDialogClose } = options
-  const { navigateToItem, clearEditorContent } = useEditorNavigation()
+  const { navigateToItem } = useEditorNavigation()
   const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
   const { openParentFolders } = useOpenParentFolders()
-  const { createItem } = useCreateSidebarItem()
-  const { emptyTrashBin } = useEmptyTrashBin()
+  const { createItem } = useCreateFileSystemItem()
   const { getDefaultName } = useSidebarValidation()
   const { campaignId } = useCampaign()
   const convex = useConvex()
   const { endCurrentSession, startSession: startNewSession } = useSession()
   const toggleBookmarkMutation = useToggleBookmark()
-  const { parentItemsMap } = useActiveSidebarItems()
-  const itemOperations = useSidebarItemOperations()
-  const getNormalizedContextItems = (ctx: MenuContext) =>
-    itemOperations.normalizeItems(resolveContextOperationItems(ctx))
+  const filesystemActionsApi = useFileSystem()
   const downloadActions = createDownloadActions({ campaignId, convex })
   const creationActions = createCreationActions({
     campaignId,
@@ -59,17 +50,9 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     navigateToItem,
   })
 
-  const [deleteFolderDialog, setDeleteFolderDialog] = useState<Folder | null>(null)
   const [editMapDialog, setEditMapDialog] = useState<Id<'sidebarItems'> | null>(null)
   const [editFileDialog, setEditFileDialog] = useState<Id<'sidebarItems'> | null>(null)
   const [editSidebarItemDialog, setEditSidebarItemDialog] = useState<AnySidebarItem | null>(null)
-  const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false)
-  const filesystemActions = createFilesystemActions({
-    itemOperations,
-    parentItemsMap,
-    setDeleteFolderDialog,
-    onDialogOpen,
-  })
 
   const actions: ActionHandlers = {
     open: (ctx: MenuContext) => {
@@ -113,7 +96,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
       if (!ctx.activeMap) return
       const pinnedItemIds = new Set(ctx.activeMap.pins.map((pin) => pin.itemId))
       const itemIds: Array<Id<'sidebarItems'>> = []
-      for (const item of getNormalizedContextItems(ctx)) {
+      for (const item of ctx.selectedItems ?? []) {
         if (item._id !== ctx.activeMap._id && !pinnedItemIds.has(item._id)) {
           itemIds.push(item._id)
         }
@@ -224,7 +207,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
 
     setGeneralAccessLevel: async (ctx: MenuContext, level: PermissionLevel | null) => {
       if (!campaignId) return
-      const items = getNormalizedContextItems(ctx)
+      const items = ctx.selectedItems ?? []
       if (items.length === 0) return
 
       try {
@@ -248,16 +231,53 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
 
     ...creationActions,
     ...downloadActions,
-    ...filesystemActions,
+
+    delete: async (ctx: MenuContext) => {
+      const items = ctx.selectedItems ?? []
+      if (items.length > 0) {
+        await filesystemActionsApi.requestTrashItems(items.map((item) => item._id))
+      }
+    },
+
+    restore: async (ctx: MenuContext) => {
+      const items = ctx.selectedItems ?? []
+      if (items.length > 0) {
+        await filesystemActionsApi.restoreItems(
+          items.map((item) => item._id),
+          null,
+        )
+      }
+    },
+
+    permanentlyDelete: (ctx: MenuContext) => {
+      const items = ctx.selectedItems ?? []
+      if (items.length > 0) {
+        filesystemActionsApi.confirmDeleteForever(items.map((item) => item._id))
+      }
+    },
+
+    paste: async (ctx: MenuContext) => {
+      await filesystemActionsApi.pasteIntoTarget({
+        clickedItem: ctx.item,
+        operationItems: ctx.selectedItems ?? [],
+      })
+    },
+
+    duplicate: async (ctx: MenuContext) => {
+      const items = ctx.selectedItems ?? []
+      if (items.length > 0) {
+        await filesystemActionsApi.duplicateItems(items.map((item) => item._id))
+      }
+    },
 
     emptyTrash: () => {
-      setConfirmEmptyTrash(true)
+      filesystemActionsApi.confirmEmptyTrash()
       onDialogOpen?.()
     },
 
     toggleBookmark: async (ctx: MenuContext) => {
       if (!campaignId) return
-      const items = getNormalizedContextItems(ctx)
+      const items = ctx.selectedItems ?? []
       if (items.length === 0) return
 
       const results = await Promise.allSettled(
@@ -293,26 +313,18 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   }
 
   const dialogState: MenuDialogState = {
-    deleteFolderDialog,
     editMapDialog,
     editFileDialog,
     editSidebarItemDialog,
-    confirmEmptyTrash,
     campaignId,
-    closeFolderDialog: makeCloseHandler(setDeleteFolderDialog),
     closeMapDialog: makeCloseHandler(setEditMapDialog),
     closeFileDialog: makeCloseHandler(setEditFileDialog),
     closeSidebarItemDialog: makeCloseHandler(setEditSidebarItemDialog),
-    closeEmptyTrashDialog: () => {
-      setConfirmEmptyTrash(false)
-      onDialogClose?.()
-    },
-    clearEditorContent,
-    emptyTrashBin,
   }
 
   return {
     actions,
+    filesystem: filesystemActionsApi,
     dialogState,
   }
 }

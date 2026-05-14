@@ -15,7 +15,7 @@ describe('purgeExpiredTrash', () => {
     const expiredTime = Date.now() - THIRTY_ONE_DAYS_MS
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      location: 'trash',
+      status: 'trashed',
       deletionTime: expiredTime,
       deletedBy: ctx.dm.profile._id,
     })
@@ -33,7 +33,7 @@ describe('purgeExpiredTrash', () => {
     const recentTime = Date.now() - TWENTY_NINE_DAYS_MS
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      location: 'trash',
+      status: 'trashed',
       deletionTime: recentTime,
       deletedBy: ctx.dm.profile._id,
     })
@@ -51,7 +51,7 @@ describe('purgeExpiredTrash', () => {
     const expiredTime = Date.now() - THIRTY_ONE_DAYS_MS
 
     const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
-      location: 'trash',
+      status: 'trashed',
       deletionTime: expiredTime,
       deletedBy: ctx.dm.profile._id,
     })
@@ -60,7 +60,7 @@ describe('purgeExpiredTrash', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       parentId: folderId,
-      location: 'trash',
+      status: 'trashed',
       deletionTime: recentTime,
       deletedBy: ctx.dm.profile._id,
     })
@@ -82,13 +82,13 @@ describe('purgeExpiredTrash', () => {
     const recentTime = Date.now() - TWENTY_NINE_DAYS_MS
 
     const { noteId: expiredNote } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      location: 'trash',
+      status: 'trashed',
       deletionTime: expiredTime,
       deletedBy: ctx.dm.profile._id,
     })
 
     const { noteId: recentNote } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      location: 'trash',
+      status: 'trashed',
       deletionTime: recentTime,
       deletedBy: ctx.dm.profile._id,
     })

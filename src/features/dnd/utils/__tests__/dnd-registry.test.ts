@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { DropPlanningContext } from '~/features/dnd/utils/drop-planning-context'
 import type {
   CanvasDropZoneData,
@@ -8,6 +9,7 @@ import type {
   MapDropZoneData,
   NoteEditorDropZoneData,
   ResolvedSidebarItemDropData,
+  SidebarDropData,
   SidebarRootDropZoneData,
   TrashDropZoneData,
 } from '~/features/dnd/utils/drop-target-data'
@@ -24,11 +26,10 @@ import {
   getDragPreviewItemIds,
 } from '~/features/dnd/utils/drag-source-data'
 import { rejectionReasonMessage } from '~/features/dnd/utils/drop-rejections'
-import { resolveDropOutcome } from '~/features/dnd/utils/drop-outcome-planner'
 import {
-  getDroppableMoveItems,
-  resolveGlobalDropCommand,
-} from '~/features/dnd/utils/global-drop-planner'
+  resolveFileSystemDropTarget,
+  resolveGlobalFileSystemDropCommand as resolveFileSystemCommand,
+} from '~/features/filesystem/filesystem-drop-planner'
 import { resolveSurfaceDropCommand } from '~/features/dnd/utils/surface-drop-planner'
 import {
   CANVAS_DROP_ZONE_TYPE,
@@ -43,6 +44,7 @@ import {
   resolveDropTarget,
 } from '~/features/dnd/utils/drop-target-data'
 import { testId } from '~/test/helpers/test-id'
+import { resolveDropFeedback } from '../drop-feedback'
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
@@ -56,14 +58,42 @@ function createCtx(overrides?: Partial<DropPlanningContext>): DropPlanningContex
 }
 
 function resolveTestDropCommand(
-  items: Parameters<typeof resolveGlobalDropCommand>[0],
-  target: Parameters<typeof resolveGlobalDropCommand>[1],
+  items: Parameters<typeof resolveFileSystemCommand>[0],
+  target: SidebarDropData,
   ctx: DropPlanningContext,
 ) {
-  const globalCommand = resolveGlobalDropCommand(items, target, ctx)
+  const globalCommand = resolveTestGlobalDropCommand(items, target, ctx)
   return globalCommand.status === 'noop'
     ? resolveSurfaceDropCommand(items, target, ctx)
     : globalCommand
+}
+
+function resolveTestGlobalDropCommand(
+  items: Parameters<typeof resolveFileSystemCommand>[0],
+  target: SidebarDropData,
+  ctx: DropPlanningContext,
+  options?: Parameters<typeof resolveFileSystemCommand>[3],
+) {
+  const fileSystemTarget = resolveFileSystemDropTarget(target, ctx)
+  return fileSystemTarget
+    ? resolveFileSystemCommand(items, fileSystemTarget, ctx, options)
+    : { status: 'noop' }
+}
+
+function resolveDropOutcome(
+  item: AnySidebarItem | null,
+  target: SidebarDropData | null,
+  ctx: DropPlanningContext,
+) {
+  if (!item || !target) return null
+  const feedback = resolveDropFeedback([item], target, ctx)
+  if (feedback.outcome?.type === 'operation' && feedback.rejectedItemCount === 1) {
+    const command = resolveSurfaceDropCommand([item], target, ctx)
+    if (command.status === 'failed') {
+      return { type: 'rejection' as const, reason: command.rejectedItems[0]?.reason }
+    }
+  }
+  return feedback.outcome
 }
 
 function trashTarget(): TrashDropZoneData {
@@ -131,7 +161,7 @@ describe('getDragItemIds', () => {
     expect(getDragItemIds({ sidebarItemIds: ['note_1', 'map_1'] })).toEqual(['note_1', 'map_1'])
   })
 
-  it('does not fall back to legacy single-id source data', () => {
+  it('does not fall back to single-id source data', () => {
     expect(getDragItemIds({ sidebarItemId: 'note_1' })).toEqual([])
   })
 
@@ -173,7 +203,7 @@ describe('rejectionReasonMessage', () => {
       'An item with this name already exists here',
     )
     expect(rejectionReasonMessage('dm_only')).toBe('Only the DM can do this')
-    expect(rejectionReasonMessage('trashed_item')).toBe('The item is trashed and cannot be used')
+    expect(rejectionReasonMessage('trashed_item')).toBe('Restore the item before dropping it here')
     expect(rejectionReasonMessage('mixed_actions')).toBe(
       'Cannot move trashed and non-trashed items together',
     )
@@ -228,7 +258,7 @@ describe('resolveDropOutcome', () => {
     })
 
     it('returns null for already-trashed item', () => {
-      const note = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
+      const note = createNote({ status: 'trashed' })
       const result = resolveDropOutcome(note, trashTarget(), createCtx())
 
       expect(result).toBeNull()
@@ -269,14 +299,14 @@ describe('resolveDropOutcome', () => {
     })
 
     it('allows restoring trashed item to root', () => {
-      const note = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
+      const note = createNote({ status: 'trashed' })
       const result = resolveDropOutcome(note, rootTarget(), createCtx())
 
       expect(result).toMatchObject({ type: 'operation', action: 'restore' })
     })
 
     it('rejects restoring a folder as non-DM', () => {
-      const folder = createFolder({ location: SIDEBAR_ITEM_LOCATION.trash })
+      const folder = createFolder({ status: 'trashed' })
       const ctx = createCtx({ isDm: false })
       const result = resolveDropOutcome(folder, rootTarget(), ctx)
 
@@ -317,7 +347,7 @@ describe('resolveDropOutcome', () => {
     it('rejects drop on trashed folder', () => {
       const note = createNote()
       const target = folderTarget({
-        location: SIDEBAR_ITEM_LOCATION.trash,
+        status: 'trashed',
       } satisfies Partial<ResolvedSidebarItemDropData>)
       const result = resolveDropOutcome(note, target, createCtx())
 
@@ -355,7 +385,7 @@ describe('resolveDropOutcome', () => {
     })
 
     it('allows restoring trashed item into folder', () => {
-      const note = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
+      const note = createNote({ status: 'trashed' })
       const target = folderTarget()
       const result = resolveDropOutcome(note, target, createCtx())
 
@@ -363,7 +393,7 @@ describe('resolveDropOutcome', () => {
     })
 
     it('rejects restoring a folder as non-DM', () => {
-      const folder = createFolder({ location: SIDEBAR_ITEM_LOCATION.trash })
+      const folder = createFolder({ status: 'trashed' })
       const target = folderTarget()
       const ctx = createCtx({ isDm: false })
       const result = resolveDropOutcome(folder, target, ctx)
@@ -424,7 +454,7 @@ describe('resolveDropOutcome', () => {
     })
 
     it('rejects linking a trashed item', () => {
-      const note = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
+      const note = createNote({ status: 'trashed' })
       const result = resolveDropOutcome(note, noteEditorTarget(), createCtx())
 
       expect(result).toEqual({ type: 'rejection', reason: 'trashed_item' })
@@ -450,7 +480,7 @@ describe('resolveDropOutcome', () => {
     })
 
     it('rejects embedding a trashed item', () => {
-      const note = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
+      const note = createNote({ status: 'trashed' })
       const result = resolveDropOutcome(note, canvasTarget(), createCtx())
 
       expect(result).toEqual({ type: 'rejection', reason: 'trashed_item' })
@@ -469,7 +499,6 @@ describe('resolveDropOutcome', () => {
       const result = resolveDropOutcome(note, canvasTarget(), createCtx())
 
       expect(result).toMatchObject({ type: 'operation', action: 'embed' })
-      expect((result as { execute: null }).execute).toBeNull()
     })
   })
 
@@ -502,12 +531,12 @@ describe('resolveDropOutcome', () => {
   })
 })
 
-describe('getDroppableMoveItems', () => {
+describe('global filesystem drop planning', () => {
   it('returns noop when every selected item is already in the target folder', () => {
     const target = folderTarget()
     const first = createNote({ parentId: target._id })
     const second = createNote({ parentId: target._id })
-    const result = getDroppableMoveItems([first, second], target, createCtx())
+    const result = resolveTestGlobalDropCommand([first, second], target, createCtx())
 
     expect(result).toEqual({ status: 'noop' })
   })
@@ -515,7 +544,7 @@ describe('getDroppableMoveItems', () => {
   it('returns noop when every selected active item is already at root', () => {
     const first = createNote({ parentId: null })
     const second = createNote({ parentId: null })
-    const result = getDroppableMoveItems([first, second], rootTarget(), createCtx())
+    const result = resolveTestGlobalDropCommand([first, second], rootTarget(), createCtx())
 
     expect(result).toEqual({ status: 'noop' })
   })
@@ -524,13 +553,12 @@ describe('getDroppableMoveItems', () => {
     const target = folderTarget()
     const alreadyInside = createNote({ parentId: target._id })
     const outside = createNote({ parentId: testId<'sidebarItems'>('folder_other') })
-    const result = getDroppableMoveItems([alreadyInside, outside], target, createCtx())
+    const result = resolveTestGlobalDropCommand([alreadyInside, outside], target, createCtx())
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       status: 'ready',
       action: 'move',
-      items: [outside],
-      parentId: target._id,
+      command: { type: 'move', itemIds: [outside._id], targetParentId: target._id },
     })
   })
 
@@ -538,7 +566,7 @@ describe('getDroppableMoveItems', () => {
     const folder = createFolder()
     const target = folderTarget({ ancestorIds: [folder._id] })
     const note = createNote()
-    const result = getDroppableMoveItems([folder, note], target, createCtx())
+    const result = resolveTestGlobalDropCommand([folder, note], target, createCtx())
 
     expect(result).toEqual({ status: 'blocked', reason: 'circular' })
   })
@@ -546,8 +574,8 @@ describe('getDroppableMoveItems', () => {
   it('blocks mixed move and restore batches with a specific reason', () => {
     const target = folderTarget()
     const active = createNote()
-    const trashed = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
-    const result = getDroppableMoveItems([active, trashed], target, createCtx())
+    const trashed = createNote({ status: 'trashed' })
+    const result = resolveTestGlobalDropCommand([active, trashed], target, createCtx())
 
     expect(result).toEqual({ status: 'blocked', reason: 'mixed_actions' })
   })
@@ -567,11 +595,10 @@ describe('resolveTestDropCommand', () => {
     const alreadyInside = createNote({ parentId: target._id })
     const outside = createNote({ parentId: testId<'sidebarItems'>('folder_other') })
 
-    expect(resolveTestDropCommand([alreadyInside, outside], target, createCtx())).toEqual({
+    expect(resolveTestDropCommand([alreadyInside, outside], target, createCtx())).toMatchObject({
       status: 'ready',
       action: 'move',
-      items: [outside],
-      parentId: target._id,
+      command: { type: 'move', itemIds: [outside._id], targetParentId: target._id },
     })
   })
 
@@ -579,11 +606,10 @@ describe('resolveTestDropCommand', () => {
     const first = createNote()
     const second = createNote()
 
-    expect(resolveTestDropCommand([first, second], trashTarget(), createCtx())).toEqual({
+    expect(resolveTestDropCommand([first, second], trashTarget(), createCtx())).toMatchObject({
       status: 'ready',
       action: 'trash',
-      items: [first, second],
-      parentId: null,
+      command: { type: 'trash', itemIds: [first._id, second._id] },
     })
   })
 
@@ -617,7 +643,7 @@ describe('resolveTestDropCommand', () => {
         { item: alreadyPinned, reason: 'already_pinned' },
       ],
       target,
-      label: 'Pin to "World Map"',
+      label: 'Pin item to "World Map"',
     })
   })
 
@@ -662,18 +688,20 @@ describe('resolveTestDropCommand', () => {
       items: [],
       rejectedItems: [{ item: targetNote, reason: 'self_link' }],
       target,
-      label: 'No items can be linked here',
+      label: 'This item cannot be linked here',
     })
   })
 
   it('keeps pin, link, and embed commands out of the global command path', () => {
     const note = createNote()
 
-    expect(resolveGlobalDropCommand([note], mapTarget(), createCtx())).toEqual({ status: 'noop' })
-    expect(resolveGlobalDropCommand([note], noteEditorTarget(), createCtx())).toEqual({
+    expect(resolveTestGlobalDropCommand([note], mapTarget(), createCtx())).toEqual({
       status: 'noop',
     })
-    expect(resolveGlobalDropCommand([note], canvasTarget(), createCtx())).toEqual({
+    expect(resolveTestGlobalDropCommand([note], noteEditorTarget(), createCtx())).toEqual({
+      status: 'noop',
+    })
+    expect(resolveTestGlobalDropCommand([note], canvasTarget(), createCtx())).toEqual({
       status: 'noop',
     })
   })
@@ -728,7 +756,7 @@ describe('resolveTestDropCommand', () => {
   it('blocks mixed move and restore commands with a specific reason', () => {
     const target = folderTarget()
     const active = createNote()
-    const trashed = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
+    const trashed = createNote({ status: 'trashed' })
 
     expect(resolveTestDropCommand([active, trashed], target, createCtx())).toEqual({
       status: 'blocked',
@@ -740,22 +768,24 @@ describe('resolveTestDropCommand', () => {
     const note = createNote({ parentId: null })
     const target = folderTarget()
 
-    expect(resolveGlobalDropCommand([note], target, createCtx(), { copy: true })).toEqual({
-      status: 'ready',
-      action: 'copy',
-      items: [note],
-      parentId: target._id,
-    })
+    expect(resolveTestGlobalDropCommand([note], target, createCtx(), { copy: true })).toMatchObject(
+      {
+        status: 'ready',
+        action: 'copy',
+        command: { type: 'copy', itemIds: [note._id], targetParentId: target._id },
+      },
+    )
   })
 
   it('returns a copy command for ctrl-dragging active items to root', () => {
     const note = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
 
-    expect(resolveGlobalDropCommand([note], rootTarget(), createCtx(), { copy: true })).toEqual({
+    expect(
+      resolveTestGlobalDropCommand([note], rootTarget(), createCtx(), { copy: true }),
+    ).toMatchObject({
       status: 'ready',
       action: 'copy',
-      items: [note],
-      parentId: null,
+      command: { type: 'copy', itemIds: [note._id], targetParentId: null },
     })
   })
 
@@ -763,7 +793,9 @@ describe('resolveTestDropCommand', () => {
     const note = createNote({ parentId: testId<'sidebarItems'>('folder_1') })
 
     expect(
-      resolveGlobalDropCommand([note], rootTarget(), createCtx({ isDm: false }), { copy: true }),
+      resolveTestGlobalDropCommand([note], rootTarget(), createCtx({ isDm: false }), {
+        copy: true,
+      }),
     ).toEqual({
       status: 'blocked',
       reason: 'dm_only',
@@ -771,10 +803,10 @@ describe('resolveTestDropCommand', () => {
   })
 
   it('blocks ctrl-drag copy when the source item is trashed', () => {
-    const note = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
+    const note = createNote({ status: 'trashed' })
     const target = folderTarget()
 
-    expect(resolveGlobalDropCommand([note], target, createCtx(), { copy: true })).toEqual({
+    expect(resolveTestGlobalDropCommand([note], target, createCtx(), { copy: true })).toEqual({
       status: 'blocked',
       reason: 'trashed_item',
     })
@@ -784,7 +816,7 @@ describe('resolveTestDropCommand', () => {
     const note = createNote()
     const target = folderTarget({ myPermissionLevel: PERMISSION_LEVEL.VIEW })
 
-    expect(resolveGlobalDropCommand([note], target, createCtx(), { copy: true })).toEqual({
+    expect(resolveTestGlobalDropCommand([note], target, createCtx(), { copy: true })).toEqual({
       status: 'blocked',
       reason: 'no_permission',
     })
@@ -794,7 +826,7 @@ describe('resolveTestDropCommand', () => {
     const folder = createFolder()
     const target = folderTarget({ ancestorIds: [folder._id] })
 
-    expect(resolveGlobalDropCommand([folder], target, createCtx(), { copy: true })).toEqual({
+    expect(resolveTestGlobalDropCommand([folder], target, createCtx(), { copy: true })).toEqual({
       status: 'blocked',
       reason: 'circular',
     })
@@ -804,22 +836,24 @@ describe('resolveTestDropCommand', () => {
     const target = folderTarget()
     const note = createNote({ parentId: target._id })
 
-    expect(resolveGlobalDropCommand([note], target, createCtx(), { copy: true })).toEqual({
-      status: 'ready',
-      action: 'copy',
-      items: [note],
-      parentId: target._id,
-    })
+    expect(resolveTestGlobalDropCommand([note], target, createCtx(), { copy: true })).toMatchObject(
+      {
+        status: 'ready',
+        action: 'copy',
+        command: { type: 'copy', itemIds: [note._id], targetParentId: target._id },
+      },
+    )
   })
 
   it('does not copy to trash on ctrl-drag', () => {
     const note = createNote()
 
-    expect(resolveGlobalDropCommand([note], trashTarget(), createCtx(), { copy: true })).toEqual({
+    expect(
+      resolveTestGlobalDropCommand([note], trashTarget(), createCtx(), { copy: true }),
+    ).toMatchObject({
       status: 'ready',
       action: 'trash',
-      items: [note],
-      parentId: null,
+      command: { type: 'trash', itemIds: [note._id] },
     })
   })
 })
@@ -861,7 +895,8 @@ describe('canDropFilesOnTarget', () => {
 
   it('returns false for trashed folder', () => {
     const target = folderTarget({
-      location: SIDEBAR_ITEM_LOCATION.trash,
+      status: 'trashed',
+      isTrashed: true,
     } satisfies Partial<ResolvedSidebarItemDropData>)
     expect(canDropFilesOnTarget(target)).toBe(false)
   })
@@ -964,7 +999,7 @@ describe('resolveDropTarget', () => {
   })
 
   it('resolves sidebar item from trashedItemsMap', () => {
-    const note = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
+    const note = createNote({ status: 'trashed' })
     const itemsMap: ReadonlyMap<Id<'sidebarItems'>, typeof note> = new Map()
     const trashedMap: ReadonlyMap<Id<'sidebarItems'>, typeof note> = new Map([[note._id, note]])
     const getAncestorIds = vi.fn(() => [])
@@ -1041,8 +1076,7 @@ describe('batch commands', () => {
     expect(result).toMatchObject({
       status: 'ready',
       action: 'trash',
-      items: [note],
-      parentId: null,
+      command: { type: 'trash', itemIds: [note._id] },
     })
   })
 
@@ -1054,8 +1088,7 @@ describe('batch commands', () => {
     expect(result).toMatchObject({
       status: 'ready',
       action: 'move',
-      items: [note],
-      parentId: null,
+      command: { type: 'move', itemIds: [note._id], targetParentId: null },
     })
   })
 
@@ -1068,26 +1101,24 @@ describe('batch commands', () => {
     expect(result).toMatchObject({
       status: 'ready',
       action: 'move',
-      items: [note],
-      parentId: target._id,
+      command: { type: 'move', itemIds: [note._id], targetParentId: target._id },
     })
   })
 
   it('restore to root returns a batch restore command', () => {
-    const note = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
+    const note = createNote({ status: 'trashed' })
     const ctx = createCtx()
     const result = resolveTestDropCommand([note], rootTarget(), ctx)
 
     expect(result).toMatchObject({
       status: 'ready',
       action: 'restore',
-      items: [note],
-      parentId: null,
+      command: { type: 'restore', itemIds: [note._id], targetParentId: null },
     })
   })
 
   it('restore to folder returns a batch restore command for the folder parentId', () => {
-    const note = createNote({ location: SIDEBAR_ITEM_LOCATION.trash })
+    const note = createNote({ status: 'trashed' })
     const target = folderTarget()
     const ctx = createCtx()
     const result = resolveTestDropCommand([note], target, ctx)
@@ -1095,36 +1126,32 @@ describe('batch commands', () => {
     expect(result).toMatchObject({
       status: 'ready',
       action: 'restore',
-      items: [note],
-      parentId: target._id,
+      command: { type: 'restore', itemIds: [note._id], targetParentId: target._id },
     })
   })
 
-  it('empty editor open returns the item for the monitor to navigate', () => {
+  it('empty editor open is DnD feedback, not a filesystem command', () => {
     const note = createNote()
     const ctx = createCtx()
-    const result = resolveTestDropCommand([note], emptyEditorTarget(), ctx)
 
-    expect(result).toMatchObject({
-      status: 'ready',
+    expect(resolveTestDropCommand([note], emptyEditorTarget(), ctx)).toEqual({ status: 'noop' })
+    expect(resolveDropFeedback([note], emptyEditorTarget(), ctx).outcome).toMatchObject({
+      type: 'operation',
       action: 'open',
-      item: note,
     })
   })
 
-  it('pin operation has null execute (handled by monitor)', () => {
+  it('pin operation is handled by the monitor', () => {
     const note = createNote()
     const result = resolveDropOutcome(note, mapTarget(), createCtx())
 
     expect(result).toMatchObject({ type: 'operation', action: 'pin' })
-    expect((result as { execute: null }).execute).toBeNull()
   })
 
-  it('link operation has null execute (handled by monitor)', () => {
+  it('link operation is handled by the monitor', () => {
     const note = createNote()
     const result = resolveDropOutcome(note, noteEditorTarget(), createCtx())
 
     expect(result).toMatchObject({ type: 'operation', action: 'link' })
-    expect((result as { execute: null }).execute).toBeNull()
   })
 })

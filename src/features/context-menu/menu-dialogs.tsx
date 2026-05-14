@@ -1,63 +1,30 @@
-import { toast } from 'sonner'
-import { EmptyTrashConfirmDialog } from './components/dialogs/trash-confirm-dialogs'
 import type { Id } from 'convex/_generated/dataModel'
-import type { Folder } from 'convex/folders/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import { handleError } from '~/shared/utils/logger'
 import { MapDialog } from '~/features/editor/components/forms/map-form/map-dialog'
 import { FileDialog } from '~/features/editor/components/forms/file-form/file-dialog'
 import { SidebarItemEditDialog } from '~/features/sidebar/components/forms/sidebar-item-edit-dialog'
-import { FolderDeleteConfirmDialog } from '~/features/sidebar/components/folder-delete-confirm-dialog'
-import { getSelectedSlug } from '~/features/sidebar/hooks/useSelectedItem'
 
 export interface MenuDialogState {
-  deleteFolderDialog: Folder | null
   editMapDialog: Id<'sidebarItems'> | null
   editFileDialog: Id<'sidebarItems'> | null
   editSidebarItemDialog: AnySidebarItem | null
-  confirmEmptyTrash: boolean
   campaignId: Id<'campaigns'> | undefined
-  closeFolderDialog: () => void
   closeMapDialog: () => void
   closeFileDialog: () => void
   closeSidebarItemDialog: () => void
-  closeEmptyTrashDialog: () => void
-  clearEditorContent: () => void
-  emptyTrashBin: () => Promise<boolean>
 }
 
 export function MenuDialogs({
-  deleteFolderDialog,
   editMapDialog,
   editFileDialog,
   editSidebarItemDialog,
-  confirmEmptyTrash,
   campaignId,
-  closeFolderDialog,
   closeMapDialog,
   closeFileDialog,
   closeSidebarItemDialog,
-  closeEmptyTrashDialog,
-  clearEditorContent,
-  emptyTrashBin,
 }: MenuDialogState) {
   return (
     <>
-      {deleteFolderDialog && (
-        <FolderDeleteConfirmDialog
-          key={`delete-folder-${deleteFolderDialog._id}`}
-          folder={deleteFolderDialog}
-          isDeleting={true}
-          onConfirm={() => {
-            const currentSlug = getSelectedSlug()
-            if (deleteFolderDialog.slug === currentSlug) {
-              clearEditorContent()
-            }
-          }}
-          onClose={closeFolderDialog}
-        />
-      )}
-
       {editMapDialog && campaignId && (
         <MapDialog
           key={`edit-map-${editMapDialog}`}
@@ -85,22 +52,6 @@ export function MenuDialogs({
           item={editSidebarItemDialog}
           isOpen={true}
           onClose={closeSidebarItemDialog}
-        />
-      )}
-
-      {confirmEmptyTrash && (
-        <EmptyTrashConfirmDialog
-          onClose={closeEmptyTrashDialog}
-          onConfirm={async () => {
-            if (!campaignId) return
-            try {
-              const emptied = await emptyTrashBin()
-              if (emptied) toast.success('Trash emptied')
-            } catch (error) {
-              handleError(error, 'Failed to empty trash')
-            }
-            closeEmptyTrashDialog()
-          }}
         />
       )}
     </>

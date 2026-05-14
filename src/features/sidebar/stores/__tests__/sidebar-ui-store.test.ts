@@ -258,7 +258,7 @@ describe('selection', () => {
     expect(useSidebarUIStore.getState().focusedItemId).toBe(noteId)
   })
 
-  it('clears item selection when a different active surface cannot see the selected ids', () => {
+  it('preserves item selection when a different active surface cannot see the selected ids', () => {
     const folderId = testId<'sidebarItems'>('folder_1')
     const noteId = testId<'sidebarItems'>('note_1')
 
@@ -274,10 +274,13 @@ describe('selection', () => {
       visibleItemIds: [],
     })
 
-    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([])
-    expect(useSidebarUIStore.getState().anchorItemId).toBeNull()
+    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([noteId])
+    expect(useSidebarUIStore.getState().anchorItemId).toBe(noteId)
     expect(useSidebarUIStore.getState().focusedItemId).toBeNull()
-    expect(useSidebarUIStore.getState().selectionSurface).toBeNull()
+    expect(useSidebarUIStore.getState().selectionSurface).toEqual({
+      surface: 'sidebar',
+      parentId: null,
+    })
   })
 
   it('preserves item selection when the same surface updates after selected items move away', () => {
@@ -302,7 +305,7 @@ describe('selection', () => {
     expect(useSidebarUIStore.getState().focusedItemId).toBeNull()
   })
 
-  it('clears item selection when the active surface unregisters', () => {
+  it('preserves item selection when the active surface transiently unregisters', () => {
     const noteId = testId<'sidebarItems'>('note_1')
     const mapId = testId<'sidebarItems'>('map_1')
 
@@ -314,10 +317,40 @@ describe('selection', () => {
     useSidebarUIStore.getState().setSelectedItemIds([noteId, mapId], noteId)
     useSidebarUIStore.getState().setActiveItemSurface(null)
 
-    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([])
-    expect(useSidebarUIStore.getState().anchorItemId).toBeNull()
+    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([noteId, mapId])
+    expect(useSidebarUIStore.getState().anchorItemId).toBe(noteId)
     expect(useSidebarUIStore.getState().activeItemSurface).toBeNull()
-    expect(useSidebarUIStore.getState().selectionSurface).toBeNull()
+    expect(useSidebarUIStore.getState().selectionSurface).toEqual({
+      surface: 'sidebar',
+      parentId: null,
+    })
+  })
+
+  it('preserves transient item selection when the next active surface cannot see it', () => {
+    const noteId = testId<'sidebarItems'>('note_1')
+    const folderViewSurface = {
+      surface: 'folder-view' as const,
+      parentId: testId<'sidebarItems'>('folder_1'),
+      visibleItemIds: [],
+    }
+
+    useSidebarUIStore.getState().setActiveItemSurface({
+      surface: 'sidebar',
+      parentId: null,
+      visibleItemIds: [noteId],
+    })
+    useSidebarUIStore.getState().setSelectedItemIds([noteId], noteId)
+    useSidebarUIStore.getState().setActiveItemSurface(null)
+    useSidebarUIStore.getState().setActiveItemSurface(folderViewSurface)
+
+    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([noteId])
+    expect(useSidebarUIStore.getState().anchorItemId).toBe(noteId)
+    expect(useSidebarUIStore.getState().focusedItemId).toBeNull()
+    expect(useSidebarUIStore.getState().activeItemSurface).toEqual(folderViewSurface)
+    expect(useSidebarUIStore.getState().selectionSurface).toEqual({
+      surface: 'sidebar',
+      parentId: null,
+    })
   })
 
   it('setSelected preserves item-id selections when route selection changes', () => {
@@ -344,21 +377,19 @@ describe('selection', () => {
     expect(useSidebarUIStore.getState().anchorItemId).toBe(a)
   })
 
-  it('clearSelectionForCampaignChange clears selection and item clipboard', () => {
+  it('clearSelectionForCampaignChange clears selection state', () => {
     useSidebarUIStore
       .getState()
       .setSelectedItemIds([testId<'sidebarItems'>('note_1')], testId<'sidebarItems'>('note_1'))
-    useSidebarUIStore.getState().setItemClipboard({
-      mode: 'copy',
-      campaignId: testId<'campaigns'>('campaign_1'),
-      itemIds: [testId<'sidebarItems'>('note_1')],
-    })
 
     useSidebarUIStore.getState().clearSelectionForCampaignChange()
 
     expect(useSidebarUIStore.getState().selectedItemIds).toEqual([])
     expect(useSidebarUIStore.getState().anchorItemId).toBeNull()
-    expect(useSidebarUIStore.getState().itemClipboard).toBeNull()
+    expect(useSidebarUIStore.getState().focusedItemId).toBeNull()
+    expect(useSidebarUIStore.getState().selectionSurface).toBeNull()
+    expect(useSidebarUIStore.getState().focusSurface).toBeNull()
+    expect(useSidebarUIStore.getState().activeItemSurface).toBeNull()
   })
 })
 

@@ -1,6 +1,5 @@
-import { SIDEBAR_ITEM_LOCATION } from '../../sidebarItems/types/baseTypes'
 import { getSidebarItemAncestors } from '../../folders/functions/getSidebarItemAncestors'
-import { enhanceBase } from '../../sidebarItems/functions/enhanceSidebarItem'
+import { enhanceBase } from '../../sidebarItems/functions/enhanceBaseSidebarItem'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Canvas, CanvasFromDb, CanvasWithContent } from '../types'
 
@@ -17,7 +16,7 @@ export const enhanceCanvasWithContent = async (
 ): Promise<CanvasWithContent> => {
   const ancestors = await getSidebarItemAncestors(ctx, {
     initialParentId: canvas.parentId,
-    isTrashed: canvas.location === SIDEBAR_ITEM_LOCATION.trash,
+    isTrashed: canvas.isTrashed,
   })
 
   return {

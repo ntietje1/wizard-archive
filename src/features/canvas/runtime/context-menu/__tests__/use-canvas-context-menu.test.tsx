@@ -22,8 +22,8 @@ const sidebarItemsState = vi.hoisted(() => ({
   itemsMap: new Map(),
 }))
 
-vi.mock('~/features/sidebar/hooks/useCreateSidebarItem', () => ({
-  useCreateSidebarItem: () => ({
+vi.mock('~/features/filesystem/useCreateFileSystemItem', () => ({
+  useCreateFileSystemItem: () => ({
     createItem: vi.fn(),
   }),
 }))
@@ -134,7 +134,7 @@ function createMockSidebarItem(overrides: Partial<AnySidebarItem> = {}): AnySide
     color: null,
     slug: 'sidebar-item' as AnySidebarItem['slug'],
     allPermissionLevel: null,
-    location: 'sidebar',
+    status: 'active',
     previewStorageId: null,
     previewLockedUntil: null,
     previewClaimToken: null,
@@ -303,6 +303,7 @@ describe('useCanvasContextMenu', () => {
       await textItem!.onSelect()
     })
 
+    expect(createNode).toHaveBeenCalledTimes(1)
     const createdNode = createNode.mock.calls[0]?.[0] as Node
     expect(createdNode).toEqual(
       expect.objectContaining({

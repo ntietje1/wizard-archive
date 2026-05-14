@@ -1,6 +1,6 @@
 import usePersistedState from '~/shared/hooks/usePersistedState'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useFilteredSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useFilteredSidebarItems } from '~/features/sidebar/hooks/useFilteredSidebarItems'
 import { logger } from '~/shared/utils/logger'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { parseSidebarItemSlug } from 'convex/sidebarItems/validation/slug'

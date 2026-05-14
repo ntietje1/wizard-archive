@@ -60,28 +60,33 @@ export type SurfaceDropCommand =
   | SurfaceBatchDropCommand
 
 function getBatchLabel(batchTarget: BatchDropTarget, count: number) {
-  if (count === 0) {
-    switch (batchTarget.action) {
-      case 'pin':
-        return `No items can be pinned to "${batchTarget.target.mapName}"`
-      case 'link':
-        return 'No items can be linked here'
-      case 'embed':
-        return 'No items can be embedded in canvas'
-      default:
-        return assertNever(batchTarget)
-    }
-  }
-
   switch (batchTarget.action) {
     case 'pin':
       return count === 1
-        ? `Pin to "${batchTarget.target.mapName}"`
+        ? `Pin item to "${batchTarget.target.mapName}"`
         : `Pin ${count} items to "${batchTarget.target.mapName}"`
     case 'link':
       return count === 1 ? 'Add link here' : `Add ${count} links here`
     case 'embed':
-      return count === 1 ? 'Embed in canvas' : `Embed ${count} items in canvas`
+      return count === 1 ? 'Embed item in canvas' : `Embed ${count} items in canvas`
+    default:
+      return assertNever(batchTarget)
+  }
+}
+
+function getFailedLabel(batchTarget: BatchDropTarget, rejectedCount: number) {
+  const isSingleItem = rejectedCount === 1
+  switch (batchTarget.action) {
+    case 'pin':
+      return isSingleItem
+        ? `This item cannot be pinned to "${batchTarget.target.mapName}"`
+        : `No items can be pinned to "${batchTarget.target.mapName}"`
+    case 'link':
+      return isSingleItem ? 'This item cannot be linked here' : 'No items can be linked here'
+    case 'embed':
+      return isSingleItem
+        ? 'This item cannot be embedded in canvas'
+        : 'No items can be embedded in canvas'
     default:
       return assertNever(batchTarget)
   }
@@ -93,33 +98,31 @@ function createSurfaceBatchCommand(
   items: Array<AnySidebarItem>,
   rejectedItems: Array<DropRejectedItem>,
 ): SurfaceBatchDropCommand {
+  const base = {
+    status,
+    items,
+    rejectedItems,
+    label: getBatchLabel(batchTarget, items.length),
+  }
+
   switch (batchTarget.action) {
     case 'pin':
       return {
-        status,
+        ...base,
         action: 'pin',
-        items,
-        rejectedItems,
         target: batchTarget.target,
-        label: getBatchLabel(batchTarget, items.length),
       }
     case 'link':
       return {
-        status,
+        ...base,
         action: 'link',
-        items,
-        rejectedItems,
         target: batchTarget.target,
-        label: getBatchLabel(batchTarget, items.length),
       }
     case 'embed':
       return {
-        status,
+        ...base,
         action: 'embed',
-        items,
-        rejectedItems,
         target: batchTarget.target,
-        label: getBatchLabel(batchTarget, items.length),
       }
     default:
       return assertNever(batchTarget)
@@ -130,33 +133,31 @@ function createFailedSurfaceBatchCommand(
   batchTarget: BatchDropTarget,
   rejectedItems: Array<DropRejectedItem>,
 ): SurfaceBatchDropCommand {
+  const base = {
+    status: 'failed' as const,
+    items: [] as [],
+    rejectedItems,
+    label: getFailedLabel(batchTarget, rejectedItems.length),
+  }
+
   switch (batchTarget.action) {
     case 'pin':
       return {
-        status: 'failed',
+        ...base,
         action: 'pin',
-        items: [],
-        rejectedItems,
         target: batchTarget.target,
-        label: getBatchLabel(batchTarget, 0),
       }
     case 'link':
       return {
-        status: 'failed',
+        ...base,
         action: 'link',
-        items: [],
-        rejectedItems,
         target: batchTarget.target,
-        label: getBatchLabel(batchTarget, 0),
       }
     case 'embed':
       return {
-        status: 'failed',
+        ...base,
         action: 'embed',
-        items: [],
-        rejectedItems,
         target: batchTarget.target,
-        label: getBatchLabel(batchTarget, 0),
       }
     default:
       return assertNever(batchTarget)

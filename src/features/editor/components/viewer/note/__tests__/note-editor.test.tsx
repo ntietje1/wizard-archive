@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NoteEditor } from '../note-editor'
 import type { NoteWithContent } from 'convex/notes/types'
@@ -73,16 +74,18 @@ describe('NoteEditor', () => {
     mockOpenBlockNoteContextMenu.mockReset()
   })
 
-  it('uses the CSS-first editor surface class instead of pointer focus handlers', () => {
+  it('uses the CSS-first editor surface class instead of pointer focus handlers', async () => {
+    const user = userEvent.setup()
     render(<NoteEditor item={createNote()} />)
 
     expect(screen.getByTestId('note-content')).toHaveClass('note-editor-surface')
 
     const wrapper = screen.getByTestId('note-editor-wrapper')
-    fireEvent.pointerDown(wrapper, { button: 0, clientX: 20, clientY: 80 })
-    fireEvent.pointerUp(wrapper, { button: 0, clientX: 40, clientY: 80 })
+    await user.pointer([
+      { keys: '[MouseLeft>]', target: wrapper, coords: { clientX: 20, clientY: 80 } },
+      { keys: '[/MouseLeft]', target: wrapper, coords: { clientX: 40, clientY: 80 } },
+    ])
 
-    expect(screen.getByTestId('note-content')).toBeInTheDocument()
     expect(mockOpenBlockNoteContextMenu).not.toHaveBeenCalled()
   })
 
@@ -111,7 +114,7 @@ function createNote(): NoteWithContent {
     deletionTime: null,
     iconName: null,
     isBookmarked: false,
-    location: 'sidebar',
+    status: 'active',
     myPermissionLevel: 'full_access',
     name: 'Note',
     parentId: null,

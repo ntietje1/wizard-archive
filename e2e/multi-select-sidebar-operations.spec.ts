@@ -1,7 +1,14 @@
 import { expect, test } from '@playwright/test'
 import type { Locator } from '@playwright/test'
 import { createCampaign, deleteCampaign, navigateToCampaign } from './helpers/campaign-helpers'
-import { createFolder, createNote, openItem } from './helpers/sidebar-helpers'
+import {
+  createFolder,
+  createNote,
+  dragSidebarItemToSidebarItem,
+  openItem,
+  selectSidebarItems,
+  sidebarLink,
+} from './helpers/sidebar-helpers'
 import { AUTH_STORAGE_PATH, testName } from './helpers/constants'
 
 const campaignName = testName('MS')
@@ -15,8 +22,14 @@ const selectedMoveNoteA = `Selected Move Note A ${Date.now()}`
 const selectedMoveNoteB = `Selected Move Note B ${Date.now()}`
 const VISIBILITY_TIMEOUT = 15000
 
-function sidebarSelectionRow(sidebar: Locator, itemName: string) {
-  return sidebar.getByTestId(`selectable-row-${itemName}`)
+async function sidebarSelectionRow(
+  sidebar: Locator,
+  itemName: string,
+  timeout = VISIBILITY_TIMEOUT,
+) {
+  const row = sidebar.getByTestId(`selectable-row-${itemName}`)
+  await expect(row).toHaveCount(1, { timeout })
+  return row
 }
 
 test.describe.serial('sidebar and folder multi-select item operations', () => {
@@ -51,33 +64,26 @@ test.describe.serial('sidebar and folder multi-select item operations', () => {
     await context.close()
   })
 
-  test('duplicates a multi-selection from the context menu using keep both for conflicts', async ({
+  test('duplicates a multi-selection from the context menu using same-parent keep-both names', async ({
     page,
   }) => {
     await page.goto('/campaigns')
     await navigateToCampaign(page, campaignName)
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-    const first = sidebar.getByRole('link', { name: noteA, exact: true })
-    const second = sidebar.getByRole('link', { name: noteB, exact: true })
+    await selectSidebarItems(page, [noteA, noteB])
+    await sidebarLink(page, noteB).click({ button: 'right' })
 
-    await first.click()
-    await second.click({ modifiers: ['ControlOrMeta'] })
-    await second.click({ button: 'right' })
-
-    await expect(page.getByRole('menuitem', { name: 'Copy' })).toBeVisible()
-    await expect(page.getByRole('menuitem', { name: 'Cut' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Copy' })).toHaveCount(0)
+    await expect(page.getByRole('menuitem', { name: 'Cut' })).toHaveCount(0)
     await expect(page.getByRole('menuitem', { name: 'Duplicate' })).toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Rename' })).toHaveCount(0)
 
     await page.getByRole('menuitem', { name: 'Duplicate' }).click()
-    await expect(page.getByRole('dialog', { name: 'Resolve File Conflict' })).toBeVisible()
-    await page.getByRole('checkbox', { name: 'Apply to all remaining conflicts' }).click()
-    await page.getByRole('button', { name: 'Keep Both' }).click()
 
-    await expect(sidebar.getByRole('link', { name: `${noteA} 2`, exact: true })).toBeVisible({
+    await expect(sidebar.getByRole('link', { name: `${noteA} 1`, exact: true })).toBeVisible({
       timeout: VISIBILITY_TIMEOUT,
     })
-    await expect(sidebar.getByRole('link', { name: `${noteB} 2`, exact: true })).toBeVisible({
+    await expect(sidebar.getByRole('link', { name: `${noteB} 1`, exact: true })).toBeVisible({
       timeout: VISIBILITY_TIMEOUT,
     })
     await expect(sidebar.getByRole('link', { name: noteA, exact: true })).toBeVisible()
@@ -89,12 +95,10 @@ test.describe.serial('sidebar and folder multi-select item operations', () => {
   }) => {
     await page.goto('/campaigns')
     await navigateToCampaign(page, campaignName)
-    const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
+    const copyNote = `Hotkey Copy Note ${Date.now()}`
+    await createNote(page, copyNote)
 
-    await sidebar.getByRole('link', { name: noteA, exact: true }).click()
-    await sidebar
-      .getByRole('link', { name: noteC, exact: true })
-      .click({ modifiers: ['ControlOrMeta'] })
+    await selectSidebarItems(page, [noteA, copyNote])
     await page.keyboard.press(process.platform === 'darwin' ? 'Meta+C' : 'Control+C')
 
     await openItem(page, folderName)
@@ -105,7 +109,7 @@ test.describe.serial('sidebar and folder multi-select item operations', () => {
     await expect(folderContents.getByRole('link', { name: noteA, exact: true })).toBeVisible({
       timeout: VISIBILITY_TIMEOUT,
     })
-    await expect(folderContents.getByRole('link', { name: noteC, exact: true })).toBeVisible({
+    await expect(folderContents.getByRole('link', { name: copyNote, exact: true })).toBeVisible({
       timeout: VISIBILITY_TIMEOUT,
     })
   })
@@ -115,14 +119,9 @@ test.describe.serial('sidebar and folder multi-select item operations', () => {
     await navigateToCampaign(page, campaignName)
     await createNote(page, dragNoteA)
     await createNote(page, dragNoteB)
-    const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-    const first = sidebar.getByRole('link', { name: dragNoteA, exact: true })
-    const second = sidebar.getByRole('link', { name: dragNoteB, exact: true })
-    const folder = sidebar.getByRole('link', { name: folderName, exact: true })
-
-    await first.click()
-    await second.click({ modifiers: ['ControlOrMeta'] })
-    await first.dragTo(folder)
+    await page.keyboard.press('Escape')
+    await selectSidebarItems(page, [dragNoteA, dragNoteB])
+    await dragSidebarItemToSidebarItem(page, dragNoteA, folderName)
 
     await openItem(page, folderName)
     const folderContents = page.getByRole('group', { name: `${folderName} folder contents` })
@@ -143,20 +142,16 @@ test.describe.serial('sidebar and folder multi-select item operations', () => {
     await createNote(page, selectedMoveNoteB)
 
     const sidebar = page.getByRole('navigation', { name: 'Sidebar' })
-    const first = sidebar.getByRole('link', { name: selectedMoveNoteA, exact: true })
-    const second = sidebar.getByRole('link', { name: selectedMoveNoteB, exact: true })
-    const folder = sidebar.getByRole('link', { name: folderName, exact: true })
+    await page.keyboard.press('Escape')
+    await selectSidebarItems(page, [selectedMoveNoteA, selectedMoveNoteB])
+    await dragSidebarItemToSidebarItem(page, selectedMoveNoteA, folderName)
 
-    await first.click()
-    await second.click({ modifiers: ['ControlOrMeta'] })
-    await first.dragTo(folder)
-
-    await expect(sidebarSelectionRow(sidebar, selectedMoveNoteA)).toHaveAttribute(
+    await expect(await sidebarSelectionRow(sidebar, selectedMoveNoteA)).toHaveAttribute(
       'aria-selected',
       'true',
       { timeout: VISIBILITY_TIMEOUT },
     )
-    await expect(sidebarSelectionRow(sidebar, selectedMoveNoteB)).toHaveAttribute(
+    await expect(await sidebarSelectionRow(sidebar, selectedMoveNoteB)).toHaveAttribute(
       'aria-selected',
       'true',
       { timeout: VISIBILITY_TIMEOUT },

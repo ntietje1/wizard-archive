@@ -18,10 +18,11 @@ import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/val
 import type * as Y from 'yjs'
 import type { ContextMenuHostRef } from '~/features/context-menu/components/context-menu-host'
 import type { BuiltContextMenu } from '~/features/context-menu/types'
-import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
+import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
+import { logger } from '~/shared/utils/logger'
 
 interface UseCanvasContextMenuOptions {
   activeTool: string
@@ -73,7 +74,7 @@ export function useCanvasContextMenu({
     context: CanvasContextMenuContext
     contributors: ReadonlyArray<CanvasContextMenuContributor>
   } | null>(null)
-  const { createItem } = useCreateSidebarItem()
+  const { createItem } = useCreateFileSystemItem()
   const { getDefaultName } = useSidebarValidation()
   const { navigateToItem } = useEditorNavigation()
   const { itemsMap } = useActiveSidebarItems()
@@ -109,7 +110,6 @@ export function useCanvasContextMenu({
       try {
         const result = await createItem({
           type,
-          campaignId,
           parentTarget: { kind: 'direct', parentId: canvasParentId },
           name: getDefaultName(type, canvasParentId),
         })
@@ -122,9 +122,10 @@ export function useCanvasContextMenu({
           setSelection: selection.setSelection,
         })
       } catch (error) {
-        console.error('Failed to create embedded sidebar item from canvas context menu', {
+        logger.error('Failed to create embedded sidebar item from canvas context menu', {
           campaignId,
           canvasParentId,
+          pointerPosition,
           type,
           error,
         })
@@ -136,14 +137,25 @@ export function useCanvasContextMenu({
         return null
       }
 
-      return createAndSelectTextCanvasNode({
-        pointerPosition,
-        screenToCanvasPosition,
-        createNode,
-        setSelection: selection.setSelection,
-        setPendingEditNodeId,
-        setPendingEditNodePoint,
-      })
+      try {
+        return createAndSelectTextCanvasNode({
+          pointerPosition,
+          screenToCanvasPosition,
+          createNode,
+          setSelection: selection.setSelection,
+          setPendingEditNodeId,
+          setPendingEditNodePoint,
+        })
+      } catch (error) {
+        logger.error('Failed to create text node from canvas context menu', {
+          campaignId,
+          canvasParentId,
+          pointerPosition,
+          type: 'text',
+          error,
+        })
+        return null
+      }
     },
   } satisfies CanvasContextMenuServices
 

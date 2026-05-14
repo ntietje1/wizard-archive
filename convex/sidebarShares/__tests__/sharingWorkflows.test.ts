@@ -82,10 +82,9 @@ describe('sharing workflows', () => {
       permissionLevel: 'view',
     })
 
-    const itemsAfterFirst = await playerAuth.query(
-      api.sidebarItems.queries.getSidebarItemsByLocation,
-      { campaignId: ctx.campaignId, location: 'sidebar' },
-    )
+    const itemsAfterFirst = await playerAuth.query(api.sidebarItems.queries.getActiveSidebarItems, {
+      campaignId: ctx.campaignId,
+    })
     const visibleAfterFirst = itemsAfterFirst.filter((item) => item.myPermissionLevel !== 'none')
     expect(visibleAfterFirst).toHaveLength(1)
     expect(visibleAfterFirst[0]._id).toBe(note1Id)
@@ -97,8 +96,8 @@ describe('sharing workflows', () => {
     })
 
     const itemsAfterSecond = await playerAuth.query(
-      api.sidebarItems.queries.getSidebarItemsByLocation,
-      { campaignId: ctx.campaignId, location: 'sidebar' },
+      api.sidebarItems.queries.getActiveSidebarItems,
+      { campaignId: ctx.campaignId },
     )
     const visibleAfterSecond = itemsAfterSecond.filter((item) => item.myPermissionLevel !== 'none')
     expect(visibleAfterSecond).toHaveLength(2)

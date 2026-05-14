@@ -1,7 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
+import {
+  createNoteViaFilesystem,
+  createFolderViaFilesystem,
+} from '../../_test/filesystemSetup.helper'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
-import { createFolder, createNote, createSidebarShare } from '../../_test/factories.helper'
+import {
+  executeMoveCommand,
+  executeDeleteForeverCommand,
+  createFolder,
+  createNote,
+  createSidebarShare,
+  filesystemEventItemIds,
+} from '../../_test/factories.helper'
 import {
   expectNotFound,
   expectPermissionDenied,
@@ -9,7 +20,7 @@ import {
 } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 
-describe('getSidebarItemsByLocation', () => {
+describe('sidebar item list queries', () => {
   const t = createTestContext()
 
   it('returns sidebar items', async () => {
@@ -19,46 +30,43 @@ describe('getSidebarItemsByLocation', () => {
     await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     await createFolder(t, ctx.campaignId, ctx.dm.profile._id)
 
-    const items = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByLocation, {
+    const items = await dmAuth.query(api.sidebarItems.queries.getActiveSidebarItems, {
       campaignId: ctx.campaignId,
-      location: 'sidebar',
     })
 
     expect(items.length).toBe(2)
   })
 
-  it('excludes trash items from sidebar location', async () => {
+  it('excludes trashed items from active results', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
     await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      location: 'trash',
+      status: 'trashed',
       deletionTime: Date.now(),
       deletedBy: ctx.dm.profile._id,
     })
 
-    const items = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByLocation, {
+    const items = await dmAuth.query(api.sidebarItems.queries.getActiveSidebarItems, {
       campaignId: ctx.campaignId,
-      location: 'sidebar',
     })
 
     expect(items.length).toBe(1)
   })
 
-  it('returns trash items for trash location', async () => {
+  it('returns trashed items', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
     await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      location: 'trash',
+      status: 'trashed',
       deletionTime: Date.now(),
       deletedBy: ctx.dm.profile._id,
     })
 
-    const items = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByLocation, {
+    const items = await dmAuth.query(api.sidebarItems.queries.getTrashedSidebarItems, {
       campaignId: ctx.campaignId,
-      location: 'trash',
     })
 
     expect(items.length).toBe(1)
@@ -79,9 +87,8 @@ describe('getSidebarItemsByLocation', () => {
       permissionLevel: 'view',
     })
 
-    const items = await playerAuth.query(api.sidebarItems.queries.getSidebarItemsByLocation, {
+    const items = await playerAuth.query(api.sidebarItems.queries.getActiveSidebarItems, {
       campaignId: ctx.campaignId,
-      location: 'sidebar',
     })
 
     const shared = items.find((i) => i._id === sharedNote)
@@ -142,7 +149,7 @@ describe('getSidebarItemsByParent', () => {
     await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       deletionTime: Date.now(),
       deletedBy: ctx.dm.profile._id,
-      location: 'trash',
+      status: 'trashed',
     })
 
     const items = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByParent, {
@@ -259,7 +266,7 @@ describe('getSidebarItemBySlug', () => {
   })
 })
 
-describe('moveSidebarItems', () => {
+describe('executeMoveCommand', () => {
   const t = createTestContext()
 
   it('moves item to a different parent', async () => {
@@ -276,7 +283,7 @@ describe('moveSidebarItems', () => {
       parentId: folderA,
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [noteId],
       targetParentId: folderB,
@@ -320,7 +327,7 @@ describe('moveSidebarItems', () => {
       parentId: destinationFolder,
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [sourceNote],
       targetParentId: destinationFolder,
@@ -333,7 +340,7 @@ describe('moveSidebarItems', () => {
     }))
 
     expect(rows.moved?.parentId).toBe(destinationFolder)
-    expect(rows.moved?.name).toBe('Scene 2')
+    expect(rows.moved?.name).toBe('Scene 1')
     expect(rows.sourceSibling?.parentId).toBe(sourceFolder)
     expect(rows.sourceSibling?.name).toBe('Scene 2')
   })
@@ -365,14 +372,14 @@ describe('moveSidebarItems', () => {
     })
 
     await expectValidationFailed(
-      dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [sourceNote],
         targetParentId: destinationFolder,
       }),
     )
 
-    const movedIds = await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [sourceNote],
       targetParentId: destinationFolder,
@@ -384,14 +391,48 @@ describe('moveSidebarItems', () => {
       destination: await dbCtx.db.get('sidebarItems', destinationNote),
     }))
 
-    expect(movedIds.movedSourceItemIds).toEqual([sourceNote])
-    expect(movedIds.mergedSourceItemIds).toEqual([])
-    expect(movedIds.skippedSourceItemIds).toEqual([])
     expect(rows.source?.parentId).toBe(destinationFolder)
     expect(rows.source?.location).toBe('sidebar')
     expect(rows.source?.name).toBe('Scene')
-    expect(rows.destination?.location).toBe('trash')
+    expect(rows.destination?.status).toBe('trashed')
     expect(rows.destination?.deletionTime).toEqual(expect.any(Number))
+  })
+
+  it('records move replace receipts as undoable transactions', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const { folderId: destinationFolder } = await createFolder(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+      { name: 'Destination' },
+    )
+    const { noteId: sourceNote } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Scene',
+    })
+    const { noteId: replacedDestinationId } = await createNote(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+      {
+        name: 'Scene',
+        parentId: destinationFolder,
+      },
+    )
+
+    const receipt = await dmAuth.mutation(
+      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
+      {
+        campaignId: ctx.campaignId,
+        command: { type: 'move', itemIds: [sourceNote], targetParentId: destinationFolder },
+        decisions: [{ sourceItemId: sourceNote, action: 'replace' }],
+      },
+    )
+
+    expect(
+      receipt.events.filter((event) => event.type === 'replaced').map((event) => event.itemId),
+    ).toEqual([replacedDestinationId])
+    expect(receipt.undoable).toBe(true)
   })
 
   it('batch folder merge leaves non-empty skipped source folders in sidebar', async () => {
@@ -420,7 +461,7 @@ describe('moveSidebarItems', () => {
       parentId: destinationFolder,
     })
 
-    const movedIds = await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    const movedIds = await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [sourceFolder],
       targetParentId: null,
@@ -435,12 +476,40 @@ describe('moveSidebarItems', () => {
       skippedChild: await dbCtx.db.get('sidebarItems', skippedChild),
     }))
 
-    expect(movedIds.movedSourceItemIds).toEqual([])
-    expect(movedIds.mergedSourceItemIds).toEqual([sourceFolder])
-    expect(movedIds.skippedSourceItemIds).toEqual([skippedChild])
+    expect(filesystemEventItemIds(movedIds, 'moved')).toEqual([])
+    expect(filesystemEventItemIds(movedIds, 'mergedFolder')).toEqual([destinationFolder])
+    expect(filesystemEventItemIds(movedIds, 'skipped')).toEqual([skippedChild])
     expect(rows.sourceFolder?.location).toBe('sidebar')
     expect(rows.skippedChild?.location).toBe('sidebar')
     expect(rows.skippedChild?.parentId).toBe(sourceFolder)
+  })
+
+  it('records move folder merge receipts as undoable transactions', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const { folderId: sourceFolder } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Scenes',
+    })
+    const { folderId: destinationFolder } = await createFolder(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+      { name: 'Scenes' },
+    )
+
+    const receipt = await dmAuth.mutation(
+      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
+      {
+        campaignId: ctx.campaignId,
+        command: { type: 'move', itemIds: [sourceFolder], targetParentId: null },
+        decisions: [{ sourceItemId: sourceFolder, action: 'replace' }],
+      },
+    )
+
+    expect(
+      receipt.events.filter((event) => event.type === 'mergedFolder').map((event) => event.itemId),
+    ).toEqual([destinationFolder])
+    expect(receipt.undoable).toBe(true)
   })
 
   it('batch folder merge trashes empty source folders after all children move', async () => {
@@ -465,14 +534,11 @@ describe('moveSidebarItems', () => {
       parentId: sourceFolder,
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [sourceFolder],
       targetParentId: null,
-      decisions: [
-        { sourceItemId: sourceFolder, action: 'replace' },
-        { sourceItemId: movedChild, action: 'keepBoth' },
-      ],
+      decisions: [{ sourceItemId: sourceFolder, action: 'replace' }],
     })
 
     const rows = await t.run(async (dbCtx) => ({
@@ -482,7 +548,7 @@ describe('moveSidebarItems', () => {
 
     expect(rows.movedChild?.parentId).toBe(destinationFolder)
     expect(rows.movedChild?.location).toBe('sidebar')
-    expect(rows.sourceFolder?.location).toBe('trash')
+    expect(rows.sourceFolder?.status).toBe('trashed')
     expect(rows.sourceFolder?.deletionTime).toEqual(expect.any(Number))
   })
 
@@ -492,16 +558,15 @@ describe('moveSidebarItems', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [noteId],
       targetParentId: null,
       action: 'trash',
     })
 
-    const trashItems = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByLocation, {
+    const trashItems = await dmAuth.query(api.sidebarItems.queries.getTrashedSidebarItems, {
       campaignId: ctx.campaignId,
-      location: 'trash',
     })
     expect(trashItems.some((i) => i._id === noteId)).toBe(true)
   })
@@ -512,23 +577,22 @@ describe('moveSidebarItems', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [noteId],
       targetParentId: null,
       action: 'trash',
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [noteId],
       targetParentId: null,
       action: 'restore',
     })
 
-    const sidebarItems = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByLocation, {
+    const sidebarItems = await dmAuth.query(api.sidebarItems.queries.getActiveSidebarItems, {
       campaignId: ctx.campaignId,
-      location: 'sidebar',
     })
     expect(sidebarItems.some((i) => i._id === noteId)).toBe(true)
   })
@@ -546,7 +610,7 @@ describe('moveSidebarItems', () => {
     })
 
     await expectValidationFailed(
-      dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      executeMoveCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [parentFolder],
         targetParentId: childFolder,
@@ -565,7 +629,7 @@ describe('moveSidebarItems', () => {
       parentId: folderId,
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [noteId],
       targetParentId: null,
@@ -593,7 +657,7 @@ describe('moveSidebarItems', () => {
     })
 
     await expectPermissionDenied(
-      playerAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      executeMoveCommand(playerAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [noteId],
         targetParentId: null,
@@ -611,7 +675,7 @@ describe('moveSidebarItems', () => {
     })
 
     await expectPermissionDenied(
-      playerAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      executeMoveCommand(playerAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [folderId],
         targetParentId: null,
@@ -629,7 +693,7 @@ describe('moveSidebarItems', () => {
       allPermissionLevel: 'full_access',
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [folderId],
       targetParentId: null,
@@ -637,7 +701,7 @@ describe('moveSidebarItems', () => {
     })
 
     await expectPermissionDenied(
-      playerAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+      executeMoveCommand(playerAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [folderId],
         targetParentId: null,
@@ -654,7 +718,7 @@ describe('create item with parentTarget paths', () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
 
-    const result = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const result = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Leaf Note',
       parentTarget: {
@@ -694,13 +758,17 @@ describe('create item with parentTarget paths', () => {
     const dmAuth = asDm(ctx)
 
     await expectValidationFailed(
-      dmAuth.mutation(api.notes.mutations.createNote, {
+      dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
         campaignId: ctx.campaignId,
-        name: '   ',
-        parentTarget: {
-          kind: 'path',
-          baseParentId: null,
-          pathSegments: ['Arc One', 'Arc Two'],
+        command: {
+          type: 'create',
+          itemType: 'note',
+          name: '   ' as never,
+          parentTarget: {
+            kind: 'path',
+            baseParentId: null,
+            pathSegments: ['Arc One', 'Arc Two'],
+          },
         },
       }),
     )
@@ -722,7 +790,7 @@ describe('create item with parentTarget paths', () => {
       name: 'Base Folder',
     })
 
-    const result = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const result = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Leaf Note',
       parentTarget: {
@@ -778,7 +846,7 @@ describe('create item with parentTarget paths', () => {
       parentId: arcOneId,
     })
 
-    await dmAuth.mutation(api.folders.mutations.createFolder, {
+    await createFolderViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Leaf Folder',
       parentTarget: {
@@ -825,7 +893,7 @@ describe('create item with parentTarget paths', () => {
       parentId: arcOneId,
     })
 
-    await dmAuth.mutation(api.folders.mutations.createFolder, {
+    await createFolderViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Leaf Folder',
       parentTarget: {
@@ -875,7 +943,7 @@ describe('create item with parentTarget paths', () => {
     })
 
     await expectValidationFailed(
-      dmAuth.mutation(api.notes.mutations.createNote, {
+      createNoteViaFilesystem(dmAuth, {
         campaignId: ctx.campaignId,
         name: 'Leaf Note',
         parentTarget: {
@@ -901,7 +969,7 @@ describe('create item with parentTarget paths', () => {
     })
 
     await expectValidationFailed(
-      dmAuth.mutation(api.notes.mutations.createNote, {
+      createNoteViaFilesystem(dmAuth, {
         campaignId: ctx.campaignId,
         name: 'Leaf Note',
         parentTarget: {
@@ -934,7 +1002,7 @@ describe('create item with parentTarget paths', () => {
       name: 'Base Folder',
     })
 
-    const result = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const result = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Leaf Note',
       parentTarget: {
@@ -971,7 +1039,7 @@ describe('create item with parentTarget paths', () => {
       parentId: worldId,
     })
 
-    const result = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const result = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Leaf Note',
       parentTarget: {
@@ -1001,7 +1069,7 @@ describe('create item with parentTarget paths', () => {
     const dmAuth = asDm(ctx)
 
     await expectValidationFailed(
-      dmAuth.mutation(api.notes.mutations.createNote, {
+      createNoteViaFilesystem(dmAuth, {
         campaignId: ctx.campaignId,
         name: 'Leaf Note',
         parentTarget: {
@@ -1019,7 +1087,7 @@ describe('create item with parentTarget paths', () => {
   })
 })
 
-describe('permanentlyDeleteSidebarItems', () => {
+describe('executeDeleteForeverCommand', () => {
   const t = createTestContext()
 
   it('only works on trashed items', async () => {
@@ -1029,7 +1097,7 @@ describe('permanentlyDeleteSidebarItems', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await expectNotFound(
-      dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
+      executeDeleteForeverCommand(dmAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [noteId],
       }),
@@ -1042,14 +1110,14 @@ describe('permanentlyDeleteSidebarItems', () => {
 
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [noteId],
       targetParentId: null,
       action: 'trash',
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
+    await executeDeleteForeverCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [noteId],
     })
@@ -1069,7 +1137,7 @@ describe('permanentlyDeleteSidebarItems', () => {
       allPermissionLevel: 'full_access',
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [folderId],
       targetParentId: null,
@@ -1077,7 +1145,7 @@ describe('permanentlyDeleteSidebarItems', () => {
     })
 
     await expectPermissionDenied(
-      playerAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
+      executeDeleteForeverCommand(playerAuth, {
         campaignId: ctx.campaignId,
         sourceItemIds: [folderId],
       }),
@@ -1099,14 +1167,14 @@ describe('permanentlyDeleteSidebarItems', () => {
       permissionLevel: 'full_access',
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [noteId],
       targetParentId: null,
       action: 'trash',
     })
 
-    await playerAuth.mutation(api.sidebarItems.mutations.permanentlyDeleteSidebarItems, {
+    await executeDeleteForeverCommand(playerAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [noteId],
     })
@@ -1116,7 +1184,7 @@ describe('permanentlyDeleteSidebarItems', () => {
   })
 })
 
-describe('emptyTrashBin', () => {
+describe('emptyTrash filesystem command', () => {
   const t = createTestContext()
 
   it('deletes all trash items', async () => {
@@ -1126,20 +1194,20 @@ describe('emptyTrashBin', () => {
     const { noteId: n1 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
     const { noteId: n2 } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [n1, n2],
       targetParentId: null,
       action: 'trash',
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.emptyTrashBin, {
+    await dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
       campaignId: ctx.campaignId,
+      command: { type: 'emptyTrash' },
     })
 
-    const trashItems = await dmAuth.query(api.sidebarItems.queries.getSidebarItemsByLocation, {
+    const trashItems = await dmAuth.query(api.sidebarItems.queries.getTrashedSidebarItems, {
       campaignId: ctx.campaignId,
-      location: 'trash',
     })
     expect(trashItems.length).toBe(0)
 
@@ -1154,8 +1222,9 @@ describe('emptyTrashBin', () => {
     const playerAuth = asPlayer(ctx)
 
     await expectPermissionDenied(
-      playerAuth.mutation(api.sidebarItems.mutations.emptyTrashBin, {
+      playerAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
         campaignId: ctx.campaignId,
+        command: { type: 'emptyTrash' },
       }),
     )
   })

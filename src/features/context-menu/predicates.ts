@@ -1,8 +1,8 @@
 import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { VIEW_CONTEXT } from './constants'
+import { getSidebarFilesystemCapabilities } from '~/features/filesystem/filesystem-capabilities'
 import type { Predicate, ViewContext } from './types'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 
 type PredicateContext = Parameters<Predicate>[0]
@@ -21,6 +21,12 @@ export const hasSelection: Predicate = (ctx) =>
 
 function selectedItems(ctx: PredicateContext) {
   return ctx.selectedItems ?? (ctx.item ? [ctx.item] : [])
+}
+
+function selectedFilesystemItems(ctx: PredicateContext) {
+  const items = selectedItems(ctx)
+  if (ctx.selectedItems !== undefined || ctx.permissionLevel === undefined) return items
+  return items.map((item) => ({ ...item, myPermissionLevel: ctx.permissionLevel }))
 }
 
 function selectedItemHasFullAccess(ctx: PredicateContext, itemIndex: number): boolean {
@@ -54,7 +60,8 @@ function selectedItemHasViewAccess(ctx: PredicateContext, itemIndex: number): bo
 
 function selectedItemIsTrashed(ctx: PredicateContext, itemIndex: number): boolean {
   if (ctx.selectedItems !== undefined) {
-    return ctx.selectedItems[itemIndex]?.location === SIDEBAR_ITEM_LOCATION.trash
+    const item = ctx.selectedItems[itemIndex]
+    return item?.isTrashed === true
   }
   return isItemTrashed(ctx)
 }
@@ -153,19 +160,19 @@ export const allSelectedItemsHaveViewAccess: Predicate = (ctx) => {
   return items.length > 0 && items.every((_, index) => selectedItemHasViewAccess(ctx, index))
 }
 
-export const allSelectedItemsTrashed: Predicate = (ctx) => {
-  const items = selectedItems(ctx)
-  return items.length > 0 && items.every((_, index) => selectedItemIsTrashed(ctx, index))
-}
-
 export const allSelectedItemsNotTrashed: Predicate = (ctx) => {
   const items = selectedItems(ctx)
   return items.length > 0 && items.every((_, index) => !selectedItemIsTrashed(ctx, index))
 }
 
-export const canWrite: Predicate = (ctx) => {
-  return ctx.item ? hasEditAccess(ctx) : isDm(ctx)
-}
+export const canTrashSelectedItems: Predicate = (ctx) =>
+  getSidebarFilesystemCapabilities(ctx.memberRole, selectedFilesystemItems(ctx)).canTrash
+
+export const canRestoreSelectedItems: Predicate = (ctx) =>
+  getSidebarFilesystemCapabilities(ctx.memberRole, selectedFilesystemItems(ctx)).canRestore
+
+export const canDeleteSelectedItemsForever: Predicate = (ctx) =>
+  getSidebarFilesystemCapabilities(ctx.memberRole, selectedFilesystemItems(ctx)).canDeleteForever
 
 export const isItemTrashed: Predicate = (ctx) => ctx.isItemTrashed === true
 

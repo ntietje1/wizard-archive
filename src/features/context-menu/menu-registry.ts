@@ -37,7 +37,6 @@ import type {
   ContextMenuItemSpec,
   EditorMenuContext,
 } from './types'
-import { resolveContextOperationItems } from './selection-context'
 import {
   RIGHT_SIDEBAR_CONTENT,
   RIGHT_SIDEBAR_PANEL_ID,
@@ -46,6 +45,7 @@ import { usePanelPreferenceStore } from '~/features/settings/stores/panel-prefer
 import { logger } from '~/shared/utils/logger'
 import { assertNever } from '~/shared/utils/utils'
 import { SidebarItemsSharePanel } from '~/features/sharing/components/sidebar-items-share-panel'
+import type { FileSystemValue } from '~/features/filesystem/useFileSystem'
 
 function isPanelContentActive(contentId: string): boolean {
   const panel = usePanelPreferenceStore.getState().panels[RIGHT_SIDEBAR_PANEL_ID]
@@ -81,7 +81,7 @@ function getUnpinnedMapItems(context: EditorMenuContext) {
   if (!context.activeMap) return []
   const pins = context.activeMap.pins ?? []
   const pinnedItemIds = new Set(pins.map((pin) => pin.itemId))
-  return resolveContextOperationItems(context).filter(
+  return (context.selectedItems ?? []).filter(
     (item) => item._id !== context.activeMap?._id && !pinnedItemIds.has(item._id),
   )
 }
@@ -118,8 +118,9 @@ export type ActionHandlers = {
   emptyTrash: (context: EditorMenuContext) => void
 }
 
-export interface EditorContextMenuServices {
+interface EditorContextMenuServices {
   actions: ActionHandlers
+  filesystem: Pick<FileSystemValue, 'canPasteIntoTarget'>
 }
 
 type EditorContextMenuItem = ContextMenuItemSpec<EditorMenuContext, EditorContextMenuServices>
@@ -324,7 +325,7 @@ export const editorContextMenuContributors = [
         icon: RotateCcw,
         group: 'primary',
         priority: 4,
-        applies: (context) => p.allSelectedItemsTrashed(context) && p.isSidebarItem(context),
+        applies: (context) => p.canRestoreSelectedItems(context) && p.isSidebarItem(context),
       },
     ],
   },
@@ -464,7 +465,7 @@ export const editorContextMenuContributors = [
       {
         id: 'share-items',
         label: (context) => {
-          const itemCount = resolveContextOperationItems(context).length
+          const itemCount = context.selectedItems?.length ?? 0
           return itemCount > 1 ? `Share ${itemCount} items...` : 'Share...'
         },
         icon: Share2,
@@ -472,7 +473,7 @@ export const editorContextMenuContributors = [
         priority: 78,
         submenuContent: (context) =>
           createElement(SidebarItemsSharePanel, {
-            items: resolveContextOperationItems(context),
+            items: context.selectedItems ?? [],
           }),
         applies: (context) =>
           p.isDm(context) &&
@@ -491,7 +492,7 @@ export const editorContextMenuContributors = [
         id: 'download-items',
         commandId: 'downloadItems',
         label: (context) => {
-          const itemCount = resolveContextOperationItems(context).length
+          const itemCount = context.selectedItems?.length ?? 0
           return itemCount > 1 ? `Download ${itemCount} items` : 'Download'
         },
         icon: Download,
@@ -525,10 +526,12 @@ export const editorContextMenuContributors = [
         icon: ClipboardPaste,
         group: 'edit',
         priority: 87,
-        applies: (context) =>
-          p.canWrite(context) &&
+        applies: (context, services) =>
           p.inView('sidebar', 'folder-view')(context) &&
-          (p.atRoot(context) || p.isType(SIDEBAR_ITEM_TYPES.folders)(context)),
+          services.filesystem.canPasteIntoTarget({
+            clickedItem: context.item,
+            operationItems: context.selectedItems ?? [],
+          }),
       },
       {
         id: 'duplicate',
@@ -617,9 +620,8 @@ export const editorContextMenuContributors = [
         priority: 100,
         variant: 'danger',
         applies: (context) =>
-          p.allSelectedItemsHaveFullAccess(context) &&
+          p.canTrashSelectedItems(context) &&
           p.isSidebarItem(context) &&
-          p.allSelectedItemsNotTrashed(context) &&
           (p.inView('sidebar')(context) ||
             p.inView('folder-view')(context) ||
             p.inView('topbar')(context)),
@@ -632,7 +634,7 @@ export const editorContextMenuContributors = [
         group: 'danger',
         priority: 100,
         variant: 'danger',
-        applies: (context) => p.allSelectedItemsTrashed(context) && p.isSidebarItem(context),
+        applies: (context) => p.canDeleteSelectedItemsForever(context) && p.isSidebarItem(context),
       },
       {
         id: 'empty-trash',

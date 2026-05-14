@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
+import { createNoteViaFilesystem } from '../../_test/filesystemSetup.helper'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import {
+  executeMoveCommand,
   createBlock,
   createBlockShare,
   createNote,
@@ -29,7 +31,7 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
       parentBlockId: testBlockNoteId('root'),
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [noteId],
       targetParentId: null,
@@ -65,7 +67,7 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
       campaignMemberId: ctx.player.memberId,
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [noteId],
       targetParentId: null,
@@ -104,14 +106,14 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
       campaignMemberId: ctx.player.memberId,
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [noteId],
       targetParentId: null,
       action: 'trash',
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [noteId],
       targetParentId: null,
@@ -140,7 +142,7 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
   it('persist is a no-op when note is soft-deleted', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
-    const { noteId } = await dmAuth.mutation(api.notes.mutations.createNote, {
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
       campaignId: ctx.campaignId,
       name: 'Persist Guard',
       parentTarget: { kind: 'direct', parentId: null },
@@ -158,7 +160,7 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
       documentId: noteId,
     })
 
-    await dmAuth.mutation(api.sidebarItems.mutations.moveSidebarItems, {
+    await executeMoveCommand(dmAuth, {
       campaignId: ctx.campaignId,
       sourceItemIds: [noteId],
       targetParentId: null,

@@ -6,7 +6,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { LucideIcon } from 'lucide-react'
 import { handleError } from '~/shared/utils/logger'
 import { Button } from '~/features/shadcn/components/button'
-import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
+import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
@@ -58,7 +58,7 @@ interface CreateNewDashboardProps {
 
 export function CreateNewDashboard({ parentId, folderPath }: CreateNewDashboardProps) {
   const { campaignId } = useCampaign()
-  const { createItem } = useCreateSidebarItem()
+  const { createItem } = useCreateFileSystemItem()
   const { getDefaultName } = useSidebarValidation()
   const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
@@ -76,7 +76,6 @@ export function CreateNewDashboard({ parentId, folderPath }: CreateNewDashboardP
       const name = pendingItemName.trim() || getDefaultName(type, parentId)
       const result = await createItem({
         type,
-        campaignId,
         parentTarget: { kind: 'direct', parentId },
         name,
       })

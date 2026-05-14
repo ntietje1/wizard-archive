@@ -2,24 +2,24 @@ import { useEffect, useRef, useState } from 'react'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import type { DragOverlayState } from '~/features/dnd/components/drag-overlay'
 import type { DndMonitorCtx } from '~/features/dnd/types'
-import { handleError } from '~/shared/utils/logger'
-import { getDragItemId, getDragPreviewItemIds } from '~/features/dnd/utils/drag-source-data'
+import type { Id } from 'convex/_generated/dataModel'
+import {
+  getDragItemId,
+  getDragItemIds,
+  getDragPreviewItemIds,
+} from '~/features/dnd/utils/drag-source-data'
 import {
   getDropTargetKey,
   getHighlightId,
   resolveDropTarget,
+  EMPTY_EDITOR_DROP_TYPE,
 } from '~/features/dnd/utils/drop-target-data'
-import { rejectionReasonMessage } from '~/features/dnd/utils/drop-rejections'
 import { resolveDropFeedback } from '~/features/dnd/utils/drop-feedback'
-import {
-  dropCommandFailureMessage,
-  resolveGlobalDropCommand,
-} from '~/features/dnd/utils/global-drop-planner'
-import { resolveNormalizedDraggedSidebarItems } from '~/features/dnd/utils/sidebar-drag-items'
+import type { FileSystemDropOptions } from 'convex/sidebarItems/filesystem/intentPlanning'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import type { DropOutcome } from '~/features/dnd/utils/drop-outcome'
-import type { GlobalDropCommand, GlobalDropOptions } from '~/features/dnd/utils/global-drop-planner'
-import { assertNever } from '~/shared/utils/utils'
+import { resolveFileSystemDropTarget } from '~/features/filesystem/filesystem-drop-planner'
+import { resolveSidebarOperationItems } from '~/features/filesystem/filesystem-operation-selection'
 
 function resolveDraggedItem(sourceData: Record<string, unknown>, ctx: DndMonitorCtx) {
   const sid = getDragItemId(sourceData)
@@ -27,8 +27,8 @@ function resolveDraggedItem(sourceData: Record<string, unknown>, ctx: DndMonitor
 }
 
 function resolveDraggedItems(sourceData: Record<string, unknown>, ctx: DndMonitorCtx) {
-  return resolveNormalizedDraggedSidebarItems({
-    sourceData,
+  return resolveSidebarOperationItems({
+    itemIds: getDragItemIds(sourceData),
     activeItemsMap: ctx.itemsMap,
     trashedItemsMap: ctx.trashedItemsMap,
     includeTrashed: true,
@@ -61,6 +61,7 @@ function resetElementDragState({
   setSidebarDragTargetId,
   setDragOutcome,
   setIsDraggingElement,
+  setSidebarDragPreviewItemIds,
 }: {
   overlayRef: React.RefObject<HTMLDivElement | null>
   lastDropTargetKeyRef: React.MutableRefObject<string | null>
@@ -68,54 +69,22 @@ function resetElementDragState({
   setSidebarDragTargetId: (id: string | null) => void
   setDragOutcome: (outcome: DropOutcome | null) => void
   setIsDraggingElement: (isDragging: boolean) => void
+  setSidebarDragPreviewItemIds: (ids: Array<Id<'sidebarItems'>>) => void
 }) {
   if (overlayRef.current) overlayRef.current.style.display = 'none'
   lastDropTargetKeyRef.current = null
   setDragState(null)
   setSidebarDragTargetId(null)
+  setSidebarDragPreviewItemIds([])
   setDragOutcome(null)
   setIsDraggingElement(false)
-}
-
-async function executeDropCommand(ctx: DndMonitorCtx, command: GlobalDropCommand) {
-  if (command.status === 'noop') return
-  if (command.status === 'blocked') {
-    handleError(new Error(rejectionReasonMessage(command.reason)), 'Cannot drop items here')
-    return
-  }
-  try {
-    switch (command.action) {
-      case 'move':
-        await ctx.dndContext.moveItems(command.items, command.parentId)
-        break
-      case 'copy':
-        await ctx.dndContext.copyItems(command.items, command.parentId)
-        break
-      case 'restore':
-        await ctx.dndContext.restoreItems(command.items, command.parentId)
-        break
-      case 'trash':
-        await ctx.dndContext.trashItems(command.items)
-        break
-      case 'open':
-        await ctx.dndContext.navigateToItem(command.item.slug, true)
-        break
-      default:
-        assertNever(command)
-    }
-    if ('parentId' in command && command.parentId) {
-      ctx.dndContext.setFolderOpen(command.parentId)
-    }
-  } catch (error) {
-    handleError(error, dropCommandFailureMessage(command))
-  }
 }
 
 async function executeElementDrop(
   ctx: DndMonitorCtx,
   sourceData: Record<string, unknown>,
   targetData: Record<string, unknown>,
-  options: GlobalDropOptions,
+  options: FileSystemDropOptions,
 ) {
   const draggedItems = resolveDraggedItems(sourceData, ctx)
   if (draggedItems.length === 0) return
@@ -127,14 +96,22 @@ async function executeElementDrop(
     ctx.getAncestorIds,
   )
   if (!resolvedTarget) return
+  if (resolvedTarget.type === EMPTY_EDITOR_DROP_TYPE) {
+    await ctx.dndContext.openItem(draggedItems[0])
+    return
+  }
 
-  await executeDropCommand(
-    ctx,
-    resolveGlobalDropCommand(draggedItems, resolvedTarget, ctx.dropPlanningContext, options),
-  )
+  const fileSystemTarget = resolveFileSystemDropTarget(resolvedTarget, ctx.dropPlanningContext)
+  if (!fileSystemTarget) return
+
+  await ctx.dndContext.executeFileSystemDrop({
+    itemIds: draggedItems.map((item) => item._id),
+    target: fileSystemTarget,
+    options,
+  })
 }
 
-function globalDropOptionsFromInput(input: { ctrlKey?: boolean }): GlobalDropOptions {
+function globalDropOptionsFromInput(input: { ctrlKey?: boolean }): FileSystemDropOptions {
   return { copy: input.ctrlKey === true }
 }
 
@@ -142,6 +119,7 @@ export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
   const setSidebarDragTargetId = useDndStore((s) => s.setSidebarDragTargetId)
   const setDragOutcome = useDndStore((s) => s.setDragOutcome)
   const setIsDraggingElement = useDndStore((s) => s.setIsDraggingElement)
+  const setSidebarDragPreviewItemIds = useDndStore((s) => s.setSidebarDragPreviewItemIds)
 
   const [dragState, setDragState] = useState<DragOverlayState>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
@@ -219,6 +197,7 @@ export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
 
         lastDropTargetKeyRef.current = null
         setDragOutcome(null)
+        setSidebarDragPreviewItemIds(draggedPreviewItems.map((item) => item._id))
         setIsDraggingElement(true)
         if (draggedItem) {
           setDragState({
@@ -278,6 +257,7 @@ export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
           setSidebarDragTargetId,
           setDragOutcome,
           setIsDraggingElement,
+          setSidebarDragPreviewItemIds,
         })
 
         const topTarget = location.current.dropTargets[0]
@@ -295,7 +275,7 @@ export function useElementDragMonitor(ctxRef: React.RefObject<DndMonitorCtx>) {
       },
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setSidebarDragTargetId, setDragOutcome, setIsDraggingElement])
+  }, [setSidebarDragTargetId, setDragOutcome, setIsDraggingElement, setSidebarDragPreviewItemIds])
 
   return { overlayRef, dragState }
 }

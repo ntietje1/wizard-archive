@@ -1,5 +1,4 @@
 import { asyncMap } from 'convex-helpers'
-import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { GAME_MAP_SNAPSHOT_TYPE } from '../types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
@@ -21,8 +20,12 @@ export async function captureGameMapSnapshot(
     campaignId: Id<'campaigns'>
   },
 ): Promise<void> {
-  const [map, pins] = await Promise.all([
-    getSidebarItem<'gameMaps'>(ctx, mapId),
+  const [sidebarItem, map, pins] = await Promise.all([
+    ctx.db.get('sidebarItems', mapId),
+    ctx.db
+      .query('gameMaps')
+      .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', mapId))
+      .unique(),
     ctx.db
       .query('mapPins')
       .withIndex('by_map_item', (q) => q.eq('mapId', mapId))
@@ -30,8 +33,16 @@ export async function captureGameMapSnapshot(
       .collect(),
   ])
 
+  if (!sidebarItem) {
+    throw new Error(`sidebarItem not found for mapId ${mapId}`)
+  }
+  if (sidebarItem.campaignId !== campaignId) {
+    throw new Error(
+      `campaignId mismatch for mapId ${mapId} (possible auth issue) expected ${campaignId} got ${sidebarItem.campaignId}`,
+    )
+  }
   if (!map) {
-    throw new Error(`captureGameMapSnapshot: map ${mapId} not found`)
+    throw new Error(`map not found for mapId ${mapId}`)
   }
 
   const pinItems = await asyncMap(pins, (pin) => ctx.db.get('sidebarItems', pin.itemId))

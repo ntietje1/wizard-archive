@@ -1,30 +1,39 @@
-import { useState } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import { FilePlus, Loader2 } from 'lucide-react'
-import { handleError } from '~/shared/utils/logger'
+import { FilePlus } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { toast } from 'sonner'
+import { handleError, logger } from '~/shared/utils/logger'
 import { Button } from '~/features/shadcn/components/button'
 import { TooltipButton } from '~/shared/components/tooltip-button'
-import { useCreateSidebarItem } from '~/features/sidebar/hooks/useCreateSidebarItem'
+import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
 import { useSidebarValidation } from '~/features/sidebar/hooks/useSidebarValidation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
 
 export function NewNoteButton() {
-  const { createItem } = useCreateSidebarItem()
+  const { createItem } = useCreateFileSystemItem()
   const { getDefaultName } = useSidebarValidation()
   const { campaignId } = useCampaign()
   const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
-  const [isPending, setIsPending] = useState(false)
+  const creationPendingRef = useRef(false)
+  const [creationPending, setCreationPending] = useState(false)
 
   const handleNewNote = async () => {
-    if (!campaignId || isPending) return
-    setIsPending(true)
+    if (creationPendingRef.current) {
+      toast.info('Note creation in progress')
+      return
+    }
+    if (!campaignId) {
+      logger.warn('Cannot create note without a campaign id')
+      return
+    }
+    creationPendingRef.current = true
+    setCreationPending(true)
     try {
       const result = await createItem({
         type: SIDEBAR_ITEM_TYPES.notes,
-        campaignId,
         parentTarget: { kind: 'direct', parentId: null },
         name: getDefaultName(SIDEBAR_ITEM_TYPES.notes, null),
       })
@@ -32,8 +41,10 @@ export function NewNoteButton() {
       void navigateToItem(result.slug)
     } catch (error) {
       handleError(error, 'Failed to create note')
+    } finally {
+      creationPendingRef.current = false
+      setCreationPending(false)
     }
-    setIsPending(false)
   }
 
   return (
@@ -42,14 +53,10 @@ export function NewNoteButton() {
         variant="ghost"
         size="icon"
         onClick={handleNewNote}
-        disabled={isPending}
         aria-label="Create new note"
+        aria-busy={creationPending}
       >
-        {isPending ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <FilePlus className="h-4 w-4" />
-        )}
+        <FilePlus className="size-4" />
       </Button>
     </TooltipButton>
   )

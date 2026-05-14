@@ -1,30 +1,20 @@
 import { useEffect, useRef } from 'react'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
-import { useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import {
   isEditableHotkeyTarget,
   isModifierShortcut,
 } from '~/features/sidebar/utils/item-surface-hotkeys'
-import {
-  getKeyboardOpenItem,
-  getKeyboardPasteParentId,
-} from '~/features/sidebar/utils/item-surface-keyboard'
+import { getKeyboardOpenItem } from '~/features/sidebar/utils/item-surface-keyboard'
+import { getKeyboardPasteParentId } from '~/features/filesystem/filesystem-targets'
+import { resolveSidebarOperationItems } from '~/features/filesystem/filesystem-operation-selection'
+import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
+import { selectionBelongsToSurface } from 'convex/sidebarItems/filesystem/selection'
 import { handleError } from '~/shared/utils/logger'
-
-export interface ItemSurfaceHotkeyOperations {
-  copyItems: (items: Array<AnySidebarItem>) => void
-  cutItems: (items: Array<AnySidebarItem>) => void
-  pasteClipboard: (targetParentId?: AnySidebarItem['_id'] | null) => Promise<void>
-  trashItems: (items: Array<AnySidebarItem>) => Promise<unknown>
-  confirmPermanentDeleteItems: (items: Array<AnySidebarItem>) => boolean
-  normalizeItems: (items: Array<AnySidebarItem>) => Array<AnySidebarItem>
-}
 
 type ActiveItemSurface = NonNullable<
   ReturnType<typeof useSidebarUIStore.getState>['activeItemSurface']
@@ -32,22 +22,27 @@ type ActiveItemSurface = NonNullable<
 
 interface ResolvedHotkeySelection {
   selectedItems: Array<AnySidebarItem>
-  selectedIds: Array<AnySidebarItem['_id']>
+}
+
+interface HotkeyFileSystemActions {
+  cancelClipboard: () => boolean
+  cut: (itemIds: Array<AnySidebarItem['_id']>) => void
+  copy: (itemIds: Array<AnySidebarItem['_id']>) => void
+  canPaste: boolean
+  paste: (targetParentId?: AnySidebarItem['_id'] | null) => Promise<void>
+  confirmDeleteForever: (itemIds: Array<AnySidebarItem['_id']>) => void
+  requestTrashItems: (itemIds: Array<AnySidebarItem['_id']>) => Promise<void>
 }
 
 interface HotkeyHandlerContext {
   campaignId: ReturnType<typeof useCampaign>['campaignId']
   activeItemSurface: ActiveItemSurface
-  activeItemsMap: Map<AnySidebarItem['_id'], AnySidebarItem>
-  trashedItemsMap: Map<AnySidebarItem['_id'], AnySidebarItem>
   selectedItems: Array<AnySidebarItem>
   selectedIds: Array<AnySidebarItem['_id']>
   focusedItemId: AnySidebarItem['_id'] | null
-  itemClipboard: ReturnType<typeof useSidebarUIStore.getState>['itemClipboard']
-  itemOperations: ItemSurfaceHotkeyOperations
+  filesystem: HotkeyFileSystemActions
   setSelectedItemIds: (ids: Array<AnySidebarItem['_id']>) => void
   clearItemSelection: () => void
-  setItemClipboard: ReturnType<typeof useSidebarUIStore.getState>['setItemClipboard']
   setRenamingId: ReturnType<typeof useSidebarUIStore.getState>['setRenamingId']
   moveFocus: ReturnType<typeof useSidebarUIStore.getState>['moveFocus']
   navigateToItem: ReturnType<typeof useEditorNavigation>['navigateToItem']
@@ -55,28 +50,17 @@ interface HotkeyHandlerContext {
   openParentFolders: ReturnType<typeof useOpenParentFolders>['openParentFolders']
 }
 
-function resolveItems(
-  ids: Array<AnySidebarItem['_id']>,
-  activeItemsMap: Map<AnySidebarItem['_id'], AnySidebarItem>,
-  trashedItemsMap: Map<AnySidebarItem['_id'], AnySidebarItem>,
-): Array<AnySidebarItem> {
-  return ids
-    .map((id) => activeItemsMap.get(id) ?? trashedItemsMap.get(id))
-    .filter((item): item is AnySidebarItem => Boolean(item))
-}
-
 function resolveSelection(
   ids: Array<AnySidebarItem['_id']>,
   activeItemsMap: Map<AnySidebarItem['_id'], AnySidebarItem>,
   trashedItemsMap: Map<AnySidebarItem['_id'], AnySidebarItem>,
-  itemOperations: ItemSurfaceHotkeyOperations,
 ): ResolvedHotkeySelection {
-  const rawSelectedItems = resolveItems(ids, activeItemsMap, trashedItemsMap)
-  const selectedItems = itemOperations.normalizeItems(rawSelectedItems)
-
   return {
-    selectedItems,
-    selectedIds: selectedItems.map((item) => item._id),
+    selectedItems: resolveSidebarOperationItems({
+      itemIds: ids,
+      activeItemsMap,
+      trashedItemsMap,
+    }),
   }
 }
 
@@ -104,13 +88,15 @@ function handleEscape(event: KeyboardEvent, context: HotkeyHandlerContext): bool
   if (event.key !== 'Escape') return false
 
   event.preventDefault()
-  if (context.itemClipboard) {
-    context.setItemClipboard(null)
-    return true
-  }
-
-  context.clearItemSelection()
+  clearSelectionOrClipboard(context.filesystem, context.clearItemSelection)
   return true
+}
+
+function clearSelectionOrClipboard(
+  filesystem: Pick<HotkeyFileSystemActions, 'cancelClipboard'>,
+  clearItemSelection: () => void,
+) {
+  if (!filesystem.cancelClipboard()) clearItemSelection()
 }
 
 function handleCopyCut(event: KeyboardEvent, context: HotkeyHandlerContext): boolean {
@@ -121,20 +107,16 @@ function handleCopyCut(event: KeyboardEvent, context: HotkeyHandlerContext): boo
 
   event.preventDefault()
   if (isCut) {
-    context.itemOperations.cutItems(context.selectedItems)
+    context.filesystem.cut(context.selectedIds)
   } else {
-    context.itemOperations.copyItems(context.selectedItems)
+    context.filesystem.copy(context.selectedIds)
   }
   return true
 }
 
 function handlePaste(event: KeyboardEvent, context: HotkeyHandlerContext): boolean {
   if (!isModifierShortcut(event, 'v')) return false
-  if (
-    !context.campaignId ||
-    !context.itemClipboard ||
-    context.itemClipboard.campaignId !== context.campaignId
-  ) {
+  if (!context.campaignId || !context.filesystem.canPaste) {
     return false
   }
 
@@ -145,8 +127,8 @@ function handlePaste(event: KeyboardEvent, context: HotkeyHandlerContext): boole
     surfaceParentId: context.activeItemSurface.parentId,
   })
 
-  void context.itemOperations
-    .pasteClipboard(pasteParentId)
+  void context.filesystem
+    .paste(pasteParentId)
     .catch((error) => handleError(error, 'Failed to paste items'))
   return true
 }
@@ -160,12 +142,12 @@ function handleDelete(event: KeyboardEvent, context: HotkeyHandlerContext): bool
 
   event.preventDefault()
   if (context.activeItemSurface.surface === 'trash') {
-    context.itemOperations.confirmPermanentDeleteItems(context.selectedItems)
+    context.filesystem.confirmDeleteForever(context.selectedIds)
     return true
   }
 
-  void context.itemOperations
-    .trashItems(context.selectedItems)
+  void context.filesystem
+    .requestTrashItems(context.selectedIds)
     .catch((error) => handleError(error, 'Failed to move items to trash'))
   return true
 }
@@ -209,74 +191,76 @@ function handleItemSurfaceHotkey(event: KeyboardEvent, context: HotkeyHandlerCon
   )
 }
 
-export function useItemSurfaceHotkeys(itemOperations: ItemSurfaceHotkeyOperations) {
-  const itemOperationsRef = useRef(itemOperations)
-  itemOperationsRef.current = itemOperations
+export function useItemSurfaceHotkeys(filesystem: HotkeyFileSystemActions) {
+  const filesystemRef = useRef(filesystem)
+  filesystemRef.current = filesystem
   const { campaignId } = useCampaign()
-  const { itemsMap: activeItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.sidebar)
-  const { itemsMap: trashedItemsMap } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
+  const filesystemReadModel = useFileSystemReadModel()
   const { navigateToItem } = useEditorNavigation()
   const { setLastSelectedItem } = useLastEditorItem()
   const { openParentFolders } = useOpenParentFolders()
-
-  const activeItemSurface = useSidebarUIStore((s) => s.activeItemSurface)
-  const selectedItemIds = useSidebarUIStore((s) => s.selectedItemIds)
-  const focusedItemId = useSidebarUIStore((s) => s.focusedItemId)
-  const itemClipboard = useSidebarUIStore((s) => s.itemClipboard)
-  const setSelectedItemIds = useSidebarUIStore((s) => s.setSelectedItemIds)
-  const clearItemSelection = useSidebarUIStore((s) => s.clearItemSelection)
-  const setItemClipboard = useSidebarUIStore((s) => s.setItemClipboard)
-  const setRenamingId = useSidebarUIStore((s) => s.setRenamingId)
-  const moveFocus = useSidebarUIStore((s) => s.moveFocus)
+  const contextRef = useRef({
+    activeItemsMap: filesystemReadModel.activeItemsById,
+    campaignId,
+    navigateToItem,
+    openParentFolders,
+    setLastSelectedItem,
+    trashedItemsMap: filesystemReadModel.trashedItemsById,
+  })
+  contextRef.current = {
+    activeItemsMap: filesystemReadModel.activeItemsById,
+    campaignId,
+    navigateToItem,
+    openParentFolders,
+    setLastSelectedItem,
+    trashedItemsMap: filesystemReadModel.trashedItemsById,
+  }
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!activeItemSurface || isEditableHotkeyTarget(event.target)) return
+      const store = useSidebarUIStore.getState()
+      const { activeItemSurface, focusedItemId, selectedItemIds } = store
+      if (isEditableHotkeyTarget(event.target)) return
 
-      const selection = resolveSelection(
+      if (event.key === 'Escape' && !activeItemSurface) {
+        event.preventDefault()
+        clearSelectionOrClipboard(filesystemRef.current, store.clearItemSelection)
+        return
+      }
+
+      if (!activeItemSurface) return
+
+      const currentContext = contextRef.current
+      const surfaceSelectedItemIds = selectionBelongsToSurface(
         selectedItemIds,
-        activeItemsMap,
-        trashedItemsMap,
-        itemOperationsRef.current,
+        activeItemSurface.visibleItemIds,
+      )
+        ? selectedItemIds
+        : []
+      const selection = resolveSelection(
+        surfaceSelectedItemIds,
+        currentContext.activeItemsMap,
+        currentContext.trashedItemsMap,
       )
 
       handleItemSurfaceHotkey(event, {
-        campaignId,
+        campaignId: currentContext.campaignId,
         activeItemSurface,
-        activeItemsMap,
-        trashedItemsMap,
         focusedItemId,
-        itemClipboard,
-        itemOperations: itemOperationsRef.current,
-        setSelectedItemIds,
-        clearItemSelection,
-        setItemClipboard,
-        setRenamingId,
-        moveFocus,
-        navigateToItem,
-        setLastSelectedItem,
-        openParentFolders,
+        selectedIds: surfaceSelectedItemIds,
+        filesystem: filesystemRef.current,
+        setSelectedItemIds: store.setSelectedItemIds,
+        clearItemSelection: store.clearItemSelection,
+        setRenamingId: store.setRenamingId,
+        moveFocus: store.moveFocus,
+        navigateToItem: currentContext.navigateToItem,
+        setLastSelectedItem: currentContext.setLastSelectedItem,
+        openParentFolders: currentContext.openParentFolders,
         ...selection,
       })
     }
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [
-    activeItemSurface,
-    activeItemsMap,
-    campaignId,
-    clearItemSelection,
-    focusedItemId,
-    itemClipboard,
-    moveFocus,
-    navigateToItem,
-    openParentFolders,
-    setSelectedItemIds,
-    setItemClipboard,
-    selectedItemIds,
-    setLastSelectedItem,
-    setRenamingId,
-    trashedItemsMap,
-  ])
+  }, [])
 }

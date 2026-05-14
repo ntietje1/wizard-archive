@@ -1,20 +1,13 @@
-import { useState } from 'react'
-import { toast } from 'sonner'
 import { TRASH_RETENTION_DAYS } from 'convex/common/constants'
 import { RotateCcw, Trash2 } from 'lucide-react'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { handleError } from '~/shared/utils/logger'
-import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
 import { Banner, BannerButton } from '~/shared/components/banner'
-import { useEmptyTrashBin } from '~/features/sidebar/hooks/useEmptyTrashBin'
-import { useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
 import { getItemTypeLabel } from '~/features/sidebar/utils/sidebar-item-utils'
-import { emptyTrashDescription } from '~/features/sidebar/utils/trash-utils'
-import { useSidebarItemOperations } from '~/features/sidebar/operations/useSidebarItemOperations'
+import { useFileSystem } from '~/features/filesystem/useFileSystem'
 
 function daysAgo(timestamp: number): number {
   return Math.floor((Date.now() - timestamp) / (1000 * 60 * 60 * 24))
@@ -51,8 +44,8 @@ export function TrashBanner({ item }: TrashBannerProps) {
 }
 
 function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
-  const isDeleted = item.location === SIDEBAR_ITEM_LOCATION.trash
-  const itemOperations = useSidebarItemOperations()
+  const isDeleted = item.isTrashed
+  const filesystem = useFileSystem()
 
   const deletionTime = item.deletionTime
   const deletedById = item.deletedBy
@@ -79,14 +72,14 @@ function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
 
   const handleRestore = async () => {
     try {
-      await itemOperations.restoreItems([item])
+      await filesystem.restoreItems([item._id], null)
     } catch (error) {
       handleError(error, 'Failed to restore item')
     }
   }
 
   const handlePermanentDelete = () => {
-    itemOperations.confirmPermanentDeleteItems([item])
+    filesystem.confirmDeleteForever([item._id])
   }
 
   return (
@@ -133,42 +126,15 @@ function RootTrashBanner() {
 
 function EmptyTrashButton() {
   const { campaignId } = useCampaign()
-  const { emptyTrashBin, isEmptying } = useEmptyTrashBin()
-  const { data: allTrashedItems = [] } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
-  const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false)
-
-  const handleEmptyTrash = async () => {
-    if (!campaignId) return
-
-    try {
-      const emptied = await emptyTrashBin()
-      if (emptied) toast.success('Trash emptied')
-    } catch (error) {
-      handleError(error, 'Failed to empty trash')
-    }
-    setConfirmEmptyTrash(false)
-  }
+  const filesystem = useFileSystem()
 
   return (
-    <>
-      <BannerButton
-        variant="destructive"
-        disabled={isEmptying}
-        onClick={() => setConfirmEmptyTrash(true)}
-      >
-        Empty Trash
-      </BannerButton>
-      {confirmEmptyTrash && (
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={() => setConfirmEmptyTrash(false)}
-          onConfirm={handleEmptyTrash}
-          title="Empty Trash"
-          description={emptyTrashDescription(allTrashedItems.length)}
-          confirmLabel="Empty Trash"
-          confirmVariant="destructive"
-        />
-      )}
-    </>
+    <BannerButton
+      variant="destructive"
+      disabled={!campaignId}
+      onClick={() => filesystem.confirmEmptyTrash()}
+    >
+      Empty Trash
+    </BannerButton>
   )
 }

@@ -1,9 +1,7 @@
 import { FlatSidebarItem } from './sidebar-item/flat-sidebar-item'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
-import {
-  sortItemsByOptions,
-  useFilteredSidebarItems,
-} from '~/features/sidebar/hooks/useSidebarItems'
+import { sortItemsByOptions } from '~/features/sidebar/hooks/useSidebarItems'
+import { useFilteredSidebarItems } from '~/features/sidebar/hooks/useFilteredSidebarItems'
 import { useSortOptions } from '~/features/sidebar/hooks/useSortOptions'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useItemSurfaceRegistration } from '~/features/sidebar/hooks/useItemSurfaceRegistration'
@@ -30,7 +28,7 @@ export function BookmarkedItemsList() {
   return (
     <div className="flex-1 flex min-h-0 min-w-0 overflow-hidden">
       <ScrollArea
-        className="flex-1 min-h-0 min-w-0 w-full"
+        className="group/sidebar-surface flex-1 min-h-0 min-w-0 w-full"
         onFocusCapture={activateSurface}
         onPointerDownCapture={handleSurfacePointerDown}
         onContextMenuCapture={activateSurface}

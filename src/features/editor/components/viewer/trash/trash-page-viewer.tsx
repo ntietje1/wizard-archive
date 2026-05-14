@@ -1,6 +1,5 @@
 import { useRef } from 'react'
 import { Trash2 } from 'lucide-react'
-import { SIDEBAR_ITEM_LOCATION } from 'convex/sidebarItems/types/baseTypes'
 import { ItemCard } from '../folder/item-card'
 import { ContentGrid } from '~/features/campaigns/components/content-grid/content-grid'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
@@ -8,7 +7,7 @@ import { EditorContextMenu } from '~/features/context-menu/components/editor-con
 import { TrashBanner } from '~/features/editor/components/deleted-item-banner'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
-import { useSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useTrashSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { TRASH_DROP_ZONE_TYPE } from '~/features/dnd/utils/drop-target-data'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
@@ -17,7 +16,7 @@ import { useItemSurfaceRegistration } from '~/features/sidebar/hooks/useItemSurf
 export function TrashPageViewer() {
   const dropRef = useRef<HTMLDivElement>(null)
 
-  const { parentItemsMap, status } = useSidebarItems(SIDEBAR_ITEM_LOCATION.trash)
+  const { parentItemsMap, status } = useTrashSidebarItems()
   const rootTrashedItems = parentItemsMap.get(null) ?? []
   const visibleItemIds = rootTrashedItems.map((item) => item._id)
   const { handleSurfacePointerDown } = useItemSurfaceRegistration({
@@ -40,7 +39,7 @@ export function TrashPageViewer() {
       <div
         ref={dropRef}
         className={cn(
-          'flex flex-col h-full w-full min-h-0',
+          'group/sidebar-surface flex flex-col h-full w-full min-h-0',
           isTrashDrag
             ? 'ring-2 ring-inset ring-destructive/60 bg-destructive/5'
             : isDropTarget && 'ring-2 ring-inset ring-ring/60 bg-ring/5',
@@ -56,7 +55,7 @@ export function TrashPageViewer() {
           </div>
         ) : rootTrashedItems.length === 0 ? (
           <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
-            <Trash2 className="h-10 w-10 opacity-30" />
+            <Trash2 className="size-10 opacity-30" />
             <p className="text-sm">Trash is empty</p>
           </div>
         ) : (

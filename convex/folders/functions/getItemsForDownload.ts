@@ -8,7 +8,8 @@ import { getSidebarItemsByParent } from '../../sidebarItems/functions/getSidebar
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { requireItemAccess } from '../../sidebarItems/validation/access'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
-import { normalizeTopLevelSelectedItems } from '../../sidebarItems/operations/selection'
+import { normalizeSelectedRoots } from '../../sidebarItems/filesystem/selection'
+import { addSidebarItemAncestorsToMap } from '../../sidebarItems/filesystem/ancestors'
 import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sidebarItemPermissions'
 import { hasAtLeastPermissionLevel } from '../../permissions/hasAtLeastPermissionLevel'
 import { PERMISSION_LEVEL } from '../../permissions/types'
@@ -24,6 +25,7 @@ type DownloadBuildContext = {
 }
 
 const MAX_DEDUP_ATTEMPTS = 100
+const MAX_DOWNLOAD_ANCESTOR_DEPTH = 50
 
 function buildPath(currentPath: string, name: string) {
   return currentPath ? `${currentPath}/${name}` : name
@@ -213,27 +215,6 @@ async function getDownloadSourceItems(
   return { sourceItems, allItemsMap }
 }
 
-async function addMissingAncestorsToItemMap(
-  ctx: CampaignQueryCtx,
-  {
-    sourceItems,
-    allItemsMap,
-  }: {
-    sourceItems: Array<AnySidebarItem>
-    allItemsMap: Map<Id<'sidebarItems'>, Pick<AnySidebarItem, '_id' | 'parentId'>>
-  },
-): Promise<void> {
-  for (const item of sourceItems) {
-    let parentId = item.parentId
-    while (parentId && !allItemsMap.has(parentId)) {
-      const parent = await getSidebarItem(ctx, parentId)
-      if (!parent) break
-      allItemsMap.set(parent._id, parent)
-      parentId = parent.parentId
-    }
-  }
-}
-
 async function collectDownloadItemsForSource(
   ctx: CampaignQueryCtx,
   {
@@ -269,8 +250,12 @@ export async function getSidebarItemsForDownload(
   if (sourceItemIds.length === 0) return { items: [] }
 
   const { sourceItems, allItemsMap } = await getDownloadSourceItems(ctx, sourceItemIds)
-  await addMissingAncestorsToItemMap(ctx, { sourceItems, allItemsMap })
-  const normalizedItems = normalizeTopLevelSelectedItems(sourceItems, allItemsMap)
+  await addSidebarItemAncestorsToMap(ctx, {
+    items: sourceItems,
+    itemsById: allItemsMap,
+    maxDepth: MAX_DOWNLOAD_ANCESTOR_DEPTH,
+  })
+  const normalizedItems = normalizeSelectedRoots(sourceItems, allItemsMap)
   const items: Array<DownloadItem> = []
   const downloadContext: DownloadBuildContext = { reservedPaths: new Set() }
 
