@@ -453,6 +453,7 @@ describe('FileSystemProvider', () => {
     expect(useSidebarUIStore.getState().selectedItemIds).toEqual([optimisticItem._id])
     expect(useSidebarUIStore.getState().selectedSlug).toBe(optimisticItem.slug)
     expect(navigateToItemMock).toHaveBeenCalledWith(optimisticItem.slug)
+    expect(toastLoadingMock).toHaveBeenCalledWith('Creating item...')
 
     act(() => resolveCreate(createReceipt()))
 
@@ -461,6 +462,7 @@ describe('FileSystemProvider', () => {
         'item_1' as Id<'sidebarItems'>,
       ]),
     )
+    await waitFor(() => expect(toastDismissMock).toHaveBeenCalledWith('toast-id'))
     expect(navigateToItemMock).toHaveBeenCalledWith('scene', true)
   })
 
@@ -516,7 +518,7 @@ describe('FileSystemProvider', () => {
 
     await waitFor(() => expect(undoMutateAsync).toHaveBeenCalledTimes(1))
     expect(sidebarItems[0]?.name).toBe('New Name')
-    expect(toastLoadingMock).toHaveBeenCalledWith('Undoing…')
+    expect(toastLoadingMock).toHaveBeenCalledWith('Undoing...')
     expect(screen.getByTestId('filesystem-operation-status')).toHaveAttribute(
       'data-state',
       'pending',
@@ -649,7 +651,7 @@ describe('FileSystemProvider', () => {
 
     await waitFor(() => expect(redoMutateAsync).toHaveBeenCalledTimes(1))
     expect(sidebarItems[0]?.name).toBe('Old Name')
-    expect(toastLoadingMock).toHaveBeenCalledWith('Redoing…')
+    expect(toastLoadingMock).toHaveBeenCalledWith('Redoing...')
 
     act(() => resolveRedo(createRenameReceipt({ direction: 'redo' })))
 
@@ -794,6 +796,10 @@ describe('FileSystemProvider', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }))
     await waitFor(() => expect(executeMutateAsync).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(toastDismissMock).toHaveBeenCalledWith('toast-id'))
+    expect(toastDismissMock.mock.invocationCallOrder[0]).toBeLessThan(
+      toastErrorMock.mock.invocationCallOrder[0],
+    )
     expect(useFileSystemUndoStore.getState().undoStack).toHaveLength(0)
 
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
@@ -851,11 +857,13 @@ describe('FileSystemProvider', () => {
     expect(useFileSystemClipboardStore.getState().clipboard).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Paste' }))
     expect(executeMutateAsync).not.toHaveBeenCalled()
+    expect(toastLoadingMock).not.toHaveBeenCalled()
 
     fireEvent.click(screen.getByRole('button', { name: 'Cut' }))
     expect(useFileSystemClipboardStore.getState().clipboard).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Paste' }))
     expect(executeMutateAsync).not.toHaveBeenCalled()
+    expect(toastLoadingMock).not.toHaveBeenCalled()
   })
 
   it('keeps a cut clipboard when conflict resolution is cancelled', async () => {
@@ -885,6 +893,7 @@ describe('FileSystemProvider', () => {
 
     await screen.findByRole('dialog', { name: 'Resolve File Conflict' })
     expect(executeMutateAsync).not.toHaveBeenCalled()
+    expect(toastLoadingMock).not.toHaveBeenCalled()
     expect(useFileSystemClipboardStore.getState().clipboard).toMatchObject({
       mode: 'cut',
       itemIds: [source._id],

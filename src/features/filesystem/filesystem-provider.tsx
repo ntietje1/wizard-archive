@@ -50,6 +50,10 @@ import {
   getReceiptRenamedSlug,
   getReceiptToastMessage,
 } from './filesystem-receipt-selectors'
+import {
+  getCommandProgressToastText,
+  getHistoryProgressToastText,
+} from './filesystem-progress-messages'
 import { toast } from 'sonner'
 import {
   fileSystemDropCommandFailureMessage,
@@ -202,6 +206,7 @@ function useFileSystemValue(): FileSystemProviderState {
     onMutationFailure,
     onSuccess,
     errorMessage,
+    progressMessage,
   }: {
     apply: Array<FileSystemPatch>
     rollback: Array<FileSystemPatch>
@@ -210,6 +215,7 @@ function useFileSystemValue(): FileSystemProviderState {
     onMutationFailure?: () => Promise<void> | void
     onSuccess: (receipt: FileSystemTransactionReceipt) => Promise<void> | void
     errorMessage: string
+    progressMessage?: string
   }): Promise<FileSystemTransactionReceipt | null> => {
     try {
       applyPatchArray(cacheAdapter.applyPatches, apply)
@@ -231,19 +237,28 @@ function useFileSystemValue(): FileSystemProviderState {
       return null
     }
 
-    let receipt: FileSystemTransactionReceipt
+    let receipt: FileSystemTransactionReceipt | null = null
+    let mutationError: unknown = null
+    const progressToastId = progressMessage ? toast.loading(progressMessage) : null
     try {
       receipt = await mutate()
     } catch (error) {
+      mutationError = error
+    } finally {
+      if (progressToastId) toast.dismiss(progressToastId)
+    }
+
+    if (mutationError) {
       try {
         applyPatchArray(cacheAdapter.applyPatches, rollback)
         await onMutationFailure?.()
       } catch (rollbackError) {
         reportFileSystemError(rollbackError, errorMessage)
       }
-      reportFileSystemError(error, errorMessage)
+      reportFileSystemError(mutationError, errorMessage)
       return null
     }
+    if (!receipt) return null
 
     try {
       applyPatchArray(cacheAdapter.applyPatches, [...rollback, ...receipt.patches])
@@ -323,6 +338,7 @@ function useFileSystemValue(): FileSystemProviderState {
               decisions: toDecisionArray(decisions),
               clientOperationId,
             })) as FileSystemTransactionReceipt,
+          progressMessage: getCommandProgressToastText(command),
           onSuccess: async (receipt) => {
             if (shouldRecordFileSystemUndo(receipt)) {
               useFileSystemUndoStore.getState().pushUndo(receipt)
@@ -349,6 +365,7 @@ function useFileSystemValue(): FileSystemProviderState {
           await applyReceiptSideEffects(receipt)
         },
         errorMessage: 'Failed to discard incomplete item',
+        progressMessage: 'Discarding item...',
       }),
     )
   }
@@ -476,41 +493,35 @@ function useFileSystemValue(): FileSystemProviderState {
     const entry = direction === 'undo' ? undoStore.peekUndo() : undoStore.peekRedo()
     if (!entry) return
 
-    const progressToastId = toast.loading(direction === 'undo' ? 'Undoing…' : 'Redoing…')
-    let receipt: FileSystemTransactionReceipt | null = null
-    try {
-      receipt = await withPendingOperation(() =>
-        runQueuedMutation(() =>
-          runOptimisticMutation({
-            apply: [],
-            rollback: [],
-            mutate: async () =>
-              direction === 'undo'
-                ? ((await undoMutation.mutateAsync({
-                    transactionId: entry.transactionId,
-                  })) as FileSystemTransactionReceipt)
-                : ((await redoMutation.mutateAsync({
-                    transactionId: entry.transactionId,
-                  })) as FileSystemTransactionReceipt),
-            onSuccess: async (historyReceipt) => {
-              const store = useFileSystemUndoStore.getState()
-              if (direction === 'undo') {
-                store.removeUndo()
-                store.pushRedoEntry(entry)
-              } else {
-                store.removeRedo()
-                store.pushUndoEntry(entry, { preserveRedo: true })
-              }
-              await applyReceiptSideEffects(historyReceipt)
-            },
-            errorMessage:
-              direction === 'undo' ? 'Filesystem undo failed' : 'Filesystem redo failed',
-          }),
-        ),
-      )
-    } finally {
-      toast.dismiss(progressToastId)
-    }
+    const receipt = await withPendingOperation(() =>
+      runQueuedMutation(() =>
+        runOptimisticMutation({
+          apply: [],
+          rollback: [],
+          mutate: async () =>
+            direction === 'undo'
+              ? ((await undoMutation.mutateAsync({
+                  transactionId: entry.transactionId,
+                })) as FileSystemTransactionReceipt)
+              : ((await redoMutation.mutateAsync({
+                  transactionId: entry.transactionId,
+                })) as FileSystemTransactionReceipt),
+          onSuccess: async (historyReceipt) => {
+            const store = useFileSystemUndoStore.getState()
+            if (direction === 'undo') {
+              store.removeUndo()
+              store.pushRedoEntry(entry)
+            } else {
+              store.removeRedo()
+              store.pushUndoEntry(entry, { preserveRedo: true })
+            }
+            await applyReceiptSideEffects(historyReceipt)
+          },
+          errorMessage: direction === 'undo' ? 'Filesystem undo failed' : 'Filesystem redo failed',
+          progressMessage: getHistoryProgressToastText(direction),
+        }),
+      ),
+    )
     if (receipt) toastReceipt(receipt)
   }
 
