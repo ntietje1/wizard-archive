@@ -16,7 +16,9 @@ export function getPasteTargetParentId(
   return targetParentId === undefined ? (activeItemSurface?.parentId ?? null) : targetParentId
 }
 
-export function getRestoreTargetParentId<T extends { status: SidebarItemStatus }>(
+export function getRestoreTargetParentId<
+  T extends { status?: SidebarItemStatus; location?: string },
+>(
   activeItemSurface: SidebarOperationSurface | null,
   itemsMap: ReadonlyMap<Id<'sidebarItems'>, T>,
   targetParentId?: Id<'sidebarItems'> | null,

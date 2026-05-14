@@ -10,7 +10,10 @@ export { sidebarItemIconNameValidator } from '../validation/icon'
 
 export const sidebarItemNameValidator = zodToConvex(sidebarItemNameValueSchema)
 
-export const sidebarItemLocationValidator = v.literal(SIDEBAR_ITEM_LOCATION.sidebar)
+export const sidebarItemLocationValidator = v.union(
+  v.literal(SIDEBAR_ITEM_LOCATION.sidebar),
+  v.literal(SIDEBAR_ITEM_LOCATION.trash),
+)
 
 export const sidebarItemStatusValidator = v.union(
   v.literal(SIDEBAR_ITEM_STATUS.active),

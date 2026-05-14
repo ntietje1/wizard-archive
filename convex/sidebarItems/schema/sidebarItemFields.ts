@@ -20,7 +20,7 @@ export const sidebarItemTableFields = {
   parentId: v.nullable(v.id('sidebarItems')),
   allPermissionLevel: v.nullable(permissionLevelValidator),
   location: sidebarItemLocationValidator,
-  status: sidebarItemStatusValidator,
+  status: v.optional(sidebarItemStatusValidator),
   previewStorageId: v.nullable(v.id('_storage')),
   previewLockedUntil: v.nullable(v.number()),
   previewClaimToken: v.nullable(v.string()),

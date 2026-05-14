@@ -1,12 +1,15 @@
 import { SIDEBAR_ITEM_STATUS } from '../types/baseTypes'
+import { getSidebarItemStatus } from '../types/status'
 import type { Id } from '../../_generated/dataModel'
+import type { SidebarItemStatus } from '../types/baseTypes'
 import type { SidebarItemSlug } from '../validation/slug'
 
 export type FileSystemReadModelItem = {
   _id: Id<'sidebarItems'>
   slug?: string
   parentId: Id<'sidebarItems'> | null
-  status: string
+  status?: SidebarItemStatus
+  location?: string
 }
 
 export type FileSystemReadModel<T extends FileSystemReadModelItem> = {
@@ -39,7 +42,7 @@ export function createFileSystemReadModel<T extends FileSystemReadModelItem>(
       }
       itemsBySlug.set(slug, item)
     }
-    if (item.status === SIDEBAR_ITEM_STATUS.active) {
+    if (getSidebarItemStatus(item) === SIDEBAR_ITEM_STATUS.active) {
       const children = activeChildrenByParent.get(item.parentId)
       if (children) {
         children.push(item)

@@ -27,7 +27,9 @@ import type {
 } from './receipts'
 import type { FileSystemCommand } from './commands'
 
-type SidebarItemSnapshot = Doc<'sidebarItems'>
+type SidebarItemSnapshot = Omit<Doc<'sidebarItems'>, 'status'> & {
+  status: (typeof SIDEBAR_ITEM_STATUS)[keyof typeof SIDEBAR_ITEM_STATUS]
+}
 
 const UNDOABLE_UPDATE_FIELD_KEYS = [
   'name',
@@ -40,7 +42,9 @@ const UNDOABLE_UPDATE_FIELD_KEYS = [
   'deletedBy',
 ] as const satisfies ReadonlyArray<keyof SidebarItemFieldPatch>
 
-function toSidebarItemSnapshot(item: AnySidebarItemRow | SidebarItemSnapshot): SidebarItemSnapshot {
+function toSidebarItemSnapshot(
+  item: AnySidebarItemRow | Doc<'sidebarItems'> | SidebarItemSnapshot,
+): SidebarItemSnapshot {
   return {
     _id: item._id,
     _creationTime: item._creationTime,
@@ -53,7 +57,7 @@ function toSidebarItemSnapshot(item: AnySidebarItemRow | SidebarItemSnapshot): S
     allPermissionLevel: item.allPermissionLevel,
     type: assertSidebarItemType(item.type),
     location: item.location,
-    status: item.status,
+    status: getSidebarItemStatus(item),
     previewStorageId: item.previewStorageId,
     previewLockedUntil: item.previewLockedUntil,
     previewClaimToken: item.previewClaimToken,
@@ -68,7 +72,7 @@ function toSidebarItemSnapshot(item: AnySidebarItemRow | SidebarItemSnapshot): S
 
 function lifecyclePatchFields(item: SidebarItemSnapshot): SidebarItemFieldPatch {
   return {
-    status: item.status,
+    status: getSidebarItemStatus(item),
     deletionTime: item.deletionTime,
     deletedBy: item.deletedBy,
   }
@@ -167,10 +171,13 @@ export function receiptPatchesFromChangeSet(changes: Array<FileSystemChange>) {
   for (const change of changes) {
     switch (change.type) {
       case 'insertSidebarItem':
-        patches.push({ type: 'upsertSidebarItem', item: change.after })
+        patches.push({ type: 'upsertSidebarItem', item: toSidebarItemSnapshot(change.after) })
         break
       case 'updateSidebarItem': {
-        const patch = changedItemPatch(change.before, change.after)
+        const patch = changedItemPatch(
+          toSidebarItemSnapshot(change.before),
+          toSidebarItemSnapshot(change.after),
+        )
         if (patch) patches.push(patch)
         break
       }
@@ -191,10 +198,13 @@ export function redoPatchesFromChangeSet(changes: Array<FileSystemChange>) {
   for (const change of changes) {
     switch (change.type) {
       case 'insertSidebarItem':
-        patches.push(insertedItemForwardPatch(change.after))
+        patches.push(insertedItemForwardPatch(toSidebarItemSnapshot(change.after)))
         break
       case 'updateSidebarItem': {
-        const patch = changedUndoableItemPatch(change.before, change.after)
+        const patch = changedUndoableItemPatch(
+          toSidebarItemSnapshot(change.before),
+          toSidebarItemSnapshot(change.after),
+        )
         if (patch) patches.push(patch)
         break
       }
@@ -208,10 +218,13 @@ export function undoPatchesFromChangeSet(changes: Array<FileSystemChange>) {
   for (const change of changes) {
     switch (change.type) {
       case 'insertSidebarItem':
-        patches.push(insertedItemInversePatch(change.after))
+        patches.push(insertedItemInversePatch(toSidebarItemSnapshot(change.after)))
         break
       case 'updateSidebarItem': {
-        const patch = changedUndoableItemPatch(change.after, change.before)
+        const patch = changedUndoableItemPatch(
+          toSidebarItemSnapshot(change.after),
+          toSidebarItemSnapshot(change.before),
+        )
         if (patch) patches.push(patch)
         break
       }
@@ -285,10 +298,11 @@ export function createFileSystemWriteSession(ctx: CampaignMutationCtx): FileSyst
     if (!before) {
       throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
     }
-    const after = { ...before, ...fields }
-    if (snapshotsMatch(before, after)) return
+    const beforeSnapshot = toSidebarItemSnapshot(before)
+    const after = toSidebarItemSnapshot({ ...before, ...fields })
+    if (snapshotsMatch(beforeSnapshot, after)) return
     await ctx.db.patch('sidebarItems', itemId, fields)
-    changes.push({ type: 'updateSidebarItem', itemId, before, after })
+    changes.push({ type: 'updateSidebarItem', itemId, before: beforeSnapshot, after })
   }
 
   const insertSidebarItem: FileSystemWriteSession['insertSidebarItem'] = async (args) => {

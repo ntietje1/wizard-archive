@@ -10,6 +10,7 @@ import type { ConvexValidatorFields } from '../../common/types'
 
 export const SIDEBAR_ITEM_LOCATION = {
   sidebar: 'sidebar',
+  trash: 'trash',
 } as const
 
 export type SidebarItemLocation = (typeof SIDEBAR_ITEM_LOCATION)[keyof typeof SIDEBAR_ITEM_LOCATION]
@@ -88,9 +89,10 @@ export type SidebarItemRow<T extends SidebarItemType> = ConvexValidatorFields<'s
   parentId: Id<'sidebarItems'> | null
   type: T
   allPermissionLevel: PermissionLevel | null
-  // Currently only "sidebar"; kept as the future true placement field.
+  // During the production migration window this also accepts legacy "trash" rows.
+  // Filesystem writes keep using "sidebar"; the migration normalizes legacy trash rows.
   location: SidebarItemLocation
-  status: SidebarItemStatus
+  status?: SidebarItemStatus
   previewStorageId: Id<'_storage'> | null
   previewLockedUntil: number | null
   previewClaimToken: string | null

@@ -3,7 +3,8 @@ import type { Id } from '../../_generated/dataModel'
 import type { SidebarItemStatus } from './baseTypes'
 
 export type SidebarItemLifecycleFields = {
-  status: SidebarItemStatus
+  status?: SidebarItemStatus
+  location?: string
   deletionTime?: number | null
   deletedBy?: Id<'userProfiles'> | null
 }
@@ -31,7 +32,8 @@ export function assertSidebarItemLifecycleConsistency(item: SidebarItemLifecycle
 }
 
 export function getSidebarItemStatus(item: SidebarItemLifecycleFields): SidebarItemStatus {
-  return item.status
+  if (item.status) return item.status
+  return item.location === 'trash' ? SIDEBAR_ITEM_STATUS.trashed : SIDEBAR_ITEM_STATUS.active
 }
 
 export function isActiveSidebarItem(item: SidebarItemLifecycleFields): boolean {
@@ -49,9 +51,10 @@ export function isUndoHiddenSidebarItem(item: SidebarItemLifecycleFields): boole
 export function normalizeSidebarItemLifecycle<T extends SidebarItemLifecycleFields>(
   item: T,
 ): T & { status: SidebarItemStatus } {
-  assertSidebarItemLifecycleConsistency(item)
+  const status = getSidebarItemStatus(item)
+  assertSidebarItemLifecycleConsistency({ ...item, status })
   return {
     ...item,
-    status: item.status,
+    status,
   }
 }

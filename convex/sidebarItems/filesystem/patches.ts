@@ -69,7 +69,7 @@ function deepEqual(before: unknown, after: unknown): boolean {
 export function setPatchField(
   patch: SidebarItemFieldPatch,
   key: keyof SidebarItemPatchFields,
-  value: SidebarItemPatchFields[keyof SidebarItemPatchFields],
+  value: SidebarItemPatchFields[keyof SidebarItemPatchFields] | undefined,
 ) {
   if (value !== undefined) {
     ;(patch as Record<keyof SidebarItemPatchFields, unknown>)[key] = value

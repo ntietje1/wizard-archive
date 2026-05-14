@@ -271,7 +271,9 @@ async function collectMoveChildrenMap(
   ctx: CampaignMutationCtx,
   folders: Array<Pick<AccessibleSidebarItemRow, '_id' | 'status'>>,
 ) {
-  const folderStatuses = new Map(folders.map((folder) => [folder._id, folder.status]))
+  const folderStatuses = new Map(
+    folders.map((folder) => [folder._id, getSidebarItemStatus(folder)]),
+  )
 
   return await collectSidebarChildrenMap({
     rootFolderIds: folders.map((folder) => folder._id),
@@ -289,7 +291,7 @@ async function collectMoveChildrenMap(
       })
       for (const child of children) {
         if (child.type === SIDEBAR_ITEM_TYPES.folders) {
-          folderStatuses.set(child._id, child.status)
+          folderStatuses.set(child._id, getSidebarItemStatus(child))
         }
       }
       return children
@@ -489,12 +491,20 @@ function buildOperationReadModel(
     Pick<AnySidebarItemRow, '_id' | 'parentId' | 'status'>
   >()
   for (const item of items) {
-    rowsById.set(item._id, { _id: item._id, parentId: item.parentId, status: item.status })
+    rowsById.set(item._id, {
+      _id: item._id,
+      parentId: item.parentId,
+      status: getSidebarItemStatus(item),
+    })
   }
   for (const children of childrenMap.values()) {
     for (const child of children) {
       if (rowsById.has(child._id)) continue
-      rowsById.set(child._id, { _id: child._id, parentId: child.parentId, status: child.status })
+      rowsById.set(child._id, {
+        _id: child._id,
+        parentId: child.parentId,
+        status: getSidebarItemStatus(child),
+      })
     }
   }
   return createFileSystemReadModel(Array.from(rowsById.values()))
