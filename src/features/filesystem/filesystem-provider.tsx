@@ -266,6 +266,22 @@ function useFileSystemValue(): FileSystemProviderState {
     return getCreatedItemResult(receipt)
   }
 
+  const discardCreatedItem: FileSystemValue['discardCreatedItem'] = async (transactionId) => {
+    await withPendingOperation(() =>
+      runFileSystemMutation({
+        patches: { apply: [], rollback: [] },
+        applyPatches: cacheAdapter.applyPatches,
+        mutate: async () =>
+          (await undoMutation.mutateAsync({ transactionId })) as FileSystemTransactionReceipt,
+        onSuccess: async (receipt) => {
+          useFileSystemUndoStore.getState().removeUndoTransaction(transactionId)
+          await applyReceiptSideEffects(receipt)
+        },
+        onError: (error) => handleError(error, 'Failed to discard incomplete item'),
+      }),
+    )
+  }
+
   const renameItem: FileSystemValue['renameItem'] = async (input) => {
     const receipt = await executeCommand(createFileSystemRenameCommand(input))
     if (!receipt) return null
@@ -489,6 +505,7 @@ function useFileSystemValue(): FileSystemProviderState {
   return {
     value: {
       createItem,
+      discardCreatedItem,
       renameItem,
       duplicateItems,
       requestTrashItems,

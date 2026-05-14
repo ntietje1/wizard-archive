@@ -9,13 +9,14 @@ import {
 function receipt(
   direction: FileSystemTransactionReceipt['direction'],
   events: FileSystemTransactionReceipt['events'],
+  patches: FileSystemTransactionReceipt['patches'] = [],
 ): FileSystemTransactionReceipt {
   return {
     transactionId: 'transaction_1' as Id<'filesystemTransactions'>,
     direction,
     command: { type: 'move', itemIds: [], targetParentId: null },
     events,
-    patches: [],
+    patches,
     summary: {
       kind: 'moved',
       affectedCount: events.length,
@@ -45,10 +46,45 @@ describe('filesystem receipt selectors', () => {
   it('treats undoing restore as removing the restored item from active selection', () => {
     const itemId = 'item_1' as Id<'sidebarItems'>
 
-    expect(getReceiptRemovedRootIds(receipt('undo', [{ type: 'restored', itemId }]))).toEqual([
-      itemId,
-    ])
+    expect(
+      getReceiptRemovedRootIds(
+        receipt(
+          'undo',
+          [{ type: 'restored', itemId }],
+          [
+            {
+              type: 'updateSidebarItem',
+              itemId,
+              before: { status: 'active' },
+              fields: { status: 'trashed' },
+            },
+          ],
+        ),
+      ),
+    ).toEqual([itemId])
     expect(getReceiptSelectedRootIds(receipt('undo', [{ type: 'restored', itemId }]))).toEqual([])
+  })
+
+  it('derives removed visible items from patches even when events only name the merge root', () => {
+    const mergedFolderId = 'folder_1' as Id<'sidebarItems'>
+    const copiedChildId = 'child_1' as Id<'sidebarItems'>
+
+    expect(
+      getReceiptRemovedRootIds(
+        receipt(
+          'undo',
+          [{ type: 'mergedFolder', itemId: mergedFolderId, sourceItemId: mergedFolderId }],
+          [
+            {
+              type: 'updateSidebarItem',
+              itemId: copiedChildId,
+              before: { status: 'active' },
+              fields: { status: 'undoHidden' },
+            },
+          ],
+        ),
+      ),
+    ).toEqual([copiedChildId])
   })
 
   it('selects the created copy, not the replaced source bookkeeping event', () => {

@@ -50,6 +50,7 @@ vi.mock('~/features/sidebar/hooks/useOpenParentFolders', () => ({
 function createFileSystem(overrides?: Partial<FileSystemValue>): FileSystemValue {
   return {
     createItem: vi.fn().mockResolvedValue(undefined),
+    discardCreatedItem: vi.fn().mockResolvedValue(undefined),
     renameItem: vi.fn().mockResolvedValue(undefined),
     duplicateItems: vi.fn().mockResolvedValue(undefined),
     requestTrashItems: vi.fn().mockResolvedValue(false),

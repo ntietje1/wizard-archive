@@ -122,9 +122,27 @@ export async function createFolder(page: Page, name: string) {
 }
 
 export async function openItem(page: Page, name: string) {
+  if (
+    await folderContents(page, name)
+      .isVisible()
+      .catch(() => false)
+  )
+    return
+
   const itemName = page.getByRole('textbox', { name: 'Item name' })
   if ((await itemName.inputValue().catch(() => null)) === name) return
+
   await sidebarLink(page, name).click({ timeout: 5000 })
+  await expect
+    .poll(
+      async () =>
+        (await itemName.inputValue().catch(() => null)) === name ||
+        (await folderContents(page, name)
+          .isVisible()
+          .catch(() => false)),
+      { timeout: SIDEBAR_WAIT_TIMEOUT },
+    )
+    .toBe(true)
 }
 
 export async function openContextMenu(page: Page, itemName: string) {
@@ -230,18 +248,6 @@ export async function dragSidebarItemToSidebarItem(
     })
   } finally {
     if (modifier) await page.keyboard.up(modifier)
-  }
-}
-
-export async function selectFolderItems(page: Page, folderName: string, names: Array<string>) {
-  const modifier = await getBrowserPrimaryModifier(page)
-  for (const [index, name] of names.entries()) {
-    const options =
-      index === 0
-        ? ({ timeout: 5000 } satisfies Parameters<Locator['click']>[0])
-        : ({ modifiers: [modifier], timeout: 5000 } satisfies Parameters<Locator['click']>[0])
-    await folderItemLink(page, folderName, name).click(options)
-    await expectSelected(page, name)
   }
 }
 

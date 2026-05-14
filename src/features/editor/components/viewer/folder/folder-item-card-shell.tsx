@@ -74,6 +74,7 @@ export function FolderItemCardShell<TItem extends AnySidebarItem>({
           {...linkProps}
           activeOptions={{ includeSearch: false }}
           aria-label={item.name}
+          aria-selected={visualState.isSelected}
           data-item-selection-target="true"
           className="block w-full h-full [&.active]:pointer-events-auto"
           draggable={false}

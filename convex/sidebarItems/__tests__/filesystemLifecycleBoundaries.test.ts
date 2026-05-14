@@ -118,4 +118,91 @@ describe('filesystem command lifecycle boundaries', () => {
     const rootFolder = await t.run((dbCtx) => dbCtx.db.get('sidebarItems', rootFolderId))
     expect(rootFolder?.status).toBe('active')
   })
+
+  it('rejects permanent delete when one selected folder exceeds the affected-row limit', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Large Trash Folder',
+      status: 'trashed',
+      deletionTime: Date.now(),
+      deletedBy: ctx.dm.profile._id,
+    })
+    for (let index = 0; index < 100; index += 1) {
+      await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: `Trashed Child ${index}`,
+        parentId: folderId,
+        status: 'trashed',
+        deletionTime: Date.now(),
+        deletedBy: ctx.dm.profile._id,
+      })
+    }
+
+    await expect(
+      executeCommand(dmAuth, ctx.campaignId, {
+        type: 'deleteForever',
+        itemIds: [folderId],
+      }),
+    ).rejects.toThrow('Permanent delete can delete at most 100 items at once')
+
+    const folder = await t.run((dbCtx) => dbCtx.db.get('sidebarItems', folderId))
+    expect(folder?.status).toBe('trashed')
+  })
+
+  it('rejects empty trash when one folder subtree exceeds the affected-row limit', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Large Trash Folder',
+      status: 'trashed',
+      deletionTime: Date.now(),
+      deletedBy: ctx.dm.profile._id,
+    })
+    for (let index = 0; index < 100; index += 1) {
+      await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+        name: `Trashed Child ${index}`,
+        parentId: folderId,
+        status: 'trashed',
+        deletionTime: Date.now(),
+        deletedBy: ctx.dm.profile._id,
+      })
+    }
+
+    await expect(executeCommand(dmAuth, ctx.campaignId, { type: 'emptyTrash' })).rejects.toThrow(
+      'Empty Trash can delete at most 100 items at once',
+    )
+
+    const folder = await t.run((dbCtx) => dbCtx.db.get('sidebarItems', folderId))
+    expect(folder?.status).toBe('trashed')
+  })
+
+  it('rejects copy and move decisions that do not correspond to actual conflicts', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Source',
+    })
+    const { folderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Destination',
+    })
+
+    await expect(
+      dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+        campaignId: ctx.campaignId,
+        command: { type: 'copy', itemIds: [noteId], targetParentId: folderId },
+        decisions: [{ sourceItemId: noteId, action: 'skip' }],
+      }),
+    ).rejects.toThrow('Conflict decision does not match an item with a conflict')
+
+    await expect(
+      dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+        campaignId: ctx.campaignId,
+        command: { type: 'move', itemIds: [noteId], targetParentId: folderId },
+        decisions: [{ sourceItemId: noteId, action: 'skip' }],
+      }),
+    ).rejects.toThrow('Conflict decision does not match an item with a conflict')
+
+    const note = await t.run((dbCtx) => dbCtx.db.get('sidebarItems', noteId))
+    expect(note?.parentId).toBeNull()
+  })
 })

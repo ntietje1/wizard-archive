@@ -250,6 +250,41 @@ describe('filesystem transactions', () => {
     )
   })
 
+  it('rejects stale redo when an undo-hidden created item name was reused', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const receipt = await dmAuth.mutation(
+      api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
+      {
+        campaignId: ctx.campaignId,
+        command: {
+          type: 'create',
+          itemType: 'note',
+          name: 'Draft',
+          parentTarget: { kind: 'direct', parentId: null },
+        },
+      },
+    )
+    await dmAuth.mutation(api.sidebarItems.filesystem.mutations.undoFileSystemTransaction, {
+      campaignId: ctx.campaignId,
+      transactionId: receipt.transactionId!,
+    })
+    await createNote(t, ctx.campaignId, ctx.dm.profile._id, { name: 'Draft' })
+
+    await expect(
+      dmAuth.mutation(api.sidebarItems.filesystem.mutations.redoFileSystemTransaction, {
+        campaignId: ctx.campaignId,
+        transactionId: receipt.transactionId!,
+      }),
+    ).rejects.toThrow('Filesystem transaction can no longer be applied cleanly')
+
+    const active = await dmAuth.query(api.sidebarItems.queries.getActiveSidebarItems, {
+      campaignId: ctx.campaignId,
+    })
+    expect(active.filter((item) => item.name === 'Draft')).toHaveLength(1)
+  })
+
   it('returns the original transaction id for undo and redo receipts', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)

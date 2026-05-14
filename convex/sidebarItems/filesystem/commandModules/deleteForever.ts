@@ -86,7 +86,7 @@ async function getTrashChildren(
 async function normalizePermanentDeleteRoots(
   ctx: CampaignMutationCtx,
   sourceItems: Array<PermanentDeleteSource>,
-): Promise<Array<PermanentDeleteSource>> {
+): Promise<{ rootItems: Array<PermanentDeleteSource>; affectedItemCount: number }> {
   const folders = sourceItems.filter((item) => item.type === SIDEBAR_ITEM_TYPES.folders)
   const childrenMap = await collectSidebarChildrenMap<AnySidebarItemRow>({
     rootFolderIds: folders.map((folder) => folder._id),
@@ -97,12 +97,15 @@ async function normalizePermanentDeleteRoots(
     },
   })
   const itemsById = new Map<Id<'sidebarItems'>, Pick<AnySidebarItemRow, '_id' | 'parentId'>>()
+  const affectedItemIds = new Set<Id<'sidebarItems'>>()
   for (const item of sourceItems) {
     itemsById.set(item._id, item)
+    affectedItemIds.add(item._id)
   }
   for (const children of childrenMap.values()) {
     for (const child of children) {
       itemsById.set(child._id, child)
+      affectedItemIds.add(child._id)
     }
   }
   await addSidebarItemAncestorsToMap(ctx, {
@@ -110,7 +113,10 @@ async function normalizePermanentDeleteRoots(
     itemsById,
     maxDepth: MAX_PERMANENT_DELETE_DEPTH,
   })
-  return normalizeSelectedRoots(sourceItems, itemsById)
+  return {
+    rootItems: normalizeSelectedRoots(sourceItems, itemsById),
+    affectedItemCount: affectedItemIds.size,
+  }
 }
 
 export async function executeDeleteForeverCommand(
@@ -141,7 +147,13 @@ export async function executeDeleteForeverCommand(
   const sourceItems = await Promise.all(
     command.itemIds.map((itemId) => loadPermanentDeleteSource(ctx, itemId)),
   )
-  const rootItems = await normalizePermanentDeleteRoots(ctx, sourceItems)
+  const { rootItems, affectedItemCount } = await normalizePermanentDeleteRoots(ctx, sourceItems)
+  if (affectedItemCount > MAX_PERMANENT_DELETE_BATCH_SIZE) {
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      `Permanent delete can delete at most ${MAX_PERMANENT_DELETE_BATCH_SIZE} items at once`,
+    )
+  }
 
   for (const item of rootItems) {
     await session.deleteSidebarTree(item)

@@ -242,7 +242,7 @@ function createUndoCreateReceipt(item: AnySidebarItem): FileSystemTransactionRec
       {
         type: 'updateSidebarItem',
         itemId: item._id,
-        before: { status: SIDEBAR_ITEM_STATUS.active },
+        before: { status: SIDEBAR_ITEM_STATUS.active, parentId: item.parentId, slug: item.slug },
         fields: { status: SIDEBAR_ITEM_STATUS.undoHidden },
       },
     ],

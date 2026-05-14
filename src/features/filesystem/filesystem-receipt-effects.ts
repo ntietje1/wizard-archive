@@ -71,12 +71,10 @@ function mergeRemovedItems({
   rootIds,
   readModel,
   removedSnapshots,
-  removedEventItems,
 }: {
   rootIds: Array<Id<'sidebarItems'>>
   readModel: FileSystemReadModel<AnySidebarItem>
   removedSnapshots: Array<ReceiptRemovedItemSnapshot>
-  removedEventItems: Array<ReceiptEffectItem>
 }): {
   rootItems: Array<ReceiptEffectItem>
   allItemsMap: ReadonlyMap<Id<'sidebarItems'>, ReceiptEffectItem>
@@ -86,30 +84,16 @@ function mergeRemovedItems({
   for (const snapshot of removedSnapshots) {
     allItemsMap.set(snapshot._id, snapshot)
   }
-  for (const item of removedEventItems) {
-    allItemsMap.set(item._id, item)
-  }
 
   const snapshotById = new Map(removedSnapshots.map((item) => [item._id, item] as const))
-  const eventItemById = new Map(removedEventItems.map((item) => [item._id, item] as const))
   const allItemsBySlug = new Map<SidebarItemSlug, ReceiptEffectItem>(
     Array.from(allItemsMap.values(), (item) => [item.slug, item] as const),
   )
   const rootItems = rootIds.flatMap((itemId) => {
-    const item =
-      readModel.itemsById.get(itemId) ?? snapshotById.get(itemId) ?? eventItemById.get(itemId)
+    const item = readModel.itemsById.get(itemId) ?? snapshotById.get(itemId)
     return item ? [item] : []
   })
   return { rootItems, allItemsMap, allItemsBySlug }
-}
-
-function getRemovedEventItems(receipt: FileSystemTransactionReceipt): Array<ReceiptEffectItem> {
-  if (receipt.direction !== 'undo') return []
-  return receipt.events.flatMap((event) => {
-    if (event.type !== 'created') return []
-    const slug = parseSidebarItemSlug(event.slug)
-    return slug ? [{ _id: event.itemId, parentId: null, slug }] : []
-  })
 }
 
 export async function applyFileSystemReceiptEffects({
@@ -146,7 +130,6 @@ export async function applyFileSystemReceiptEffects({
       rootIds: removedRootItemIds,
       readModel,
       removedSnapshots: getReceiptRemovedItemSnapshots(receipt),
-      removedEventItems: getRemovedEventItems(receipt),
     })
     const remainingSelection = removeItemsUnderRootsFromSelection({
       selectedItemIds: currentSelectedItemIds,

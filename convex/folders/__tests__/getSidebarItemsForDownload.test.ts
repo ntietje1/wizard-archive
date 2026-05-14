@@ -551,7 +551,7 @@ describe('getSidebarItemsForDownload', () => {
     })
 
     expect(result.items.map((item) => item.path).sort()).toEqual(
-      ['Shared Name.md', 'Shared Name 2.md'].sort(),
+      ['Shared Name.md', 'Shared Name 1.md'].sort(),
     )
   })
 })

@@ -6,6 +6,7 @@ import type { SidebarItemIconName } from 'convex/sidebarItems/validation/icon'
 import type { CreateParentTarget } from 'convex/sidebarItems/validation/parent'
 import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
+import { useFileSystem } from '~/features/filesystem/useFileSystem'
 
 interface CreateMapArgs {
   name: string
@@ -17,6 +18,7 @@ interface CreateMapArgs {
 
 export function useCreateMap() {
   const { createItem } = useCreateFileSystemItem()
+  const filesystem = useFileSystem()
   const updateMapImage = useCampaignMutation(api.gameMaps.mutations.updateMapImage)
 
   const createMap = async (args: CreateMapArgs) => {
@@ -28,10 +30,15 @@ export function useCreateMap() {
       parentTarget: args.parentTarget,
     })
 
-    await updateMapImage.mutateAsync({
-      mapId: created.id,
-      imageStorageId: args.imageStorageId,
-    })
+    try {
+      await updateMapImage.mutateAsync({
+        mapId: created.id,
+        imageStorageId: args.imageStorageId,
+      })
+    } catch (error) {
+      await filesystem.discardCreatedItem(created.transactionId)
+      throw error
+    }
 
     return created
   }

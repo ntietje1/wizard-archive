@@ -152,6 +152,7 @@ function FolderCardInner({
         {...linkProps}
         activeOptions={{ includeSearch: false }}
         aria-label={folder.name}
+        aria-selected={visualState.isSelected}
         data-item-selection-target="true"
         className="group/folder-card block h-full outline-none [&.active]:pointer-events-auto"
         draggable={false}

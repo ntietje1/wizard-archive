@@ -2,11 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import { createFolder, createNote, createSidebarShare } from '../../_test/factories.helper'
-import {
-  expectNotFound,
-  expectPermissionDenied,
-  expectValidationFailed,
-} from '../../_test/assertions.helper'
+import { expectNotFound, expectPermissionDenied } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
 
@@ -140,7 +136,7 @@ describe('setSidebarItemsMemberPermission', () => {
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, otherCtx.campaignId, otherCtx.dm.profile._id)
 
-    await expectValidationFailed(
+    await expectNotFound(
       dmAuth.mutation(api.sidebarShares.mutations.setSidebarItemsMemberPermission, {
         campaignId: ctx.campaignId,
         sidebarItemIds: [noteId],
@@ -290,7 +286,7 @@ describe('getSidebarItemsWithShares', () => {
     const dmAuth = asDm(ctx)
     const { noteId } = await createNote(t, otherCtx.campaignId, otherCtx.dm.profile._id)
 
-    await expectValidationFailed(
+    await expectNotFound(
       dmAuth.query(api.sidebarShares.queries.getSidebarItemsWithShares, {
         campaignId: ctx.campaignId,
         sidebarItemIds: [noteId],

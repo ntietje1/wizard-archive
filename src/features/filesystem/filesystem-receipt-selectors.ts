@@ -50,11 +50,14 @@ function isNavigationEvent(
 export function getReceiptRemovedRootIds(
   receipt: FileSystemTransactionReceipt,
 ): Array<Id<'sidebarItems'>> {
-  const events = groupReceiptEvents(receipt)
-  if (receipt.direction === 'undo') {
-    return [...events.created, ...events.copied, ...events.restored].map((event) => event.itemId)
-  }
-  return [...events.trashed, ...events.deletedForever].map((event) => event.itemId)
+  return receipt.patches.flatMap((patch) => {
+    if (patch.type === 'removeSidebarItem') return [patch.itemId]
+    if (patch.type !== 'updateSidebarItem') return []
+    return patch.fields.status === SIDEBAR_ITEM_STATUS.undoHidden ||
+      patch.fields.status === SIDEBAR_ITEM_STATUS.trashed
+      ? [patch.itemId]
+      : []
+  })
 }
 
 export type ReceiptRemovedItemSnapshot = {
@@ -77,7 +80,12 @@ export function getReceiptRemovedItemSnapshots(
       ]
     }
     if (patch.type !== 'updateSidebarItem') return []
-    if (patch.fields.status !== SIDEBAR_ITEM_STATUS.undoHidden) return []
+    if (
+      patch.fields.status !== SIDEBAR_ITEM_STATUS.undoHidden &&
+      patch.fields.status !== SIDEBAR_ITEM_STATUS.trashed
+    ) {
+      return []
+    }
     if (typeof patch.before.slug !== 'string' || !('parentId' in patch.before)) return []
     return [
       {
@@ -122,10 +130,15 @@ export function getReceiptNavigationSlug(
 export function getCreatedItemResult(receipt: FileSystemTransactionReceipt | null): {
   id: Id<'sidebarItems'>
   slug: SidebarItemSlug
+  transactionId: Id<'filesystemTransactions'>
 } | null {
   const created = receipt ? groupReceiptEvents(receipt).created[0] : null
-  if (!created?.slug) return null
-  return { id: created.itemId, slug: assertSidebarItemSlug(created.slug) }
+  if (!created?.slug || !receipt?.transactionId) return null
+  return {
+    id: created.itemId,
+    slug: assertSidebarItemSlug(created.slug),
+    transactionId: receipt.transactionId,
+  }
 }
 
 export function getReceiptRenamedSlug(
@@ -149,6 +162,9 @@ function copiedMessage(message: FileSystemReceiptMessage) {
 const successMessageFormatters: Partial<
   Record<FileSystemMessageKind, (message: FileSystemReceiptMessage) => string | null>
 > = {
+  created: (message) =>
+    message.affectedCount === 1 ? 'Item created' : `${message.affectedCount} items created`,
+  renamed: () => 'Item renamed',
   copied: copiedMessage,
   moved: (message) =>
     message.affectedCount === 1 ? 'Item moved' : `${message.affectedCount} items moved`,
@@ -164,10 +180,33 @@ const successMessageFormatters: Partial<
       : `${message.affectedCount} items permanently deleted`,
 }
 
-function directionPrefix(receipt: FileSystemTransactionReceipt): string | null {
-  if (receipt.direction === 'undo') return 'Undo'
-  if (receipt.direction === 'redo') return 'Redo'
-  return null
+const undoMessageFormatters: Partial<
+  Record<FileSystemMessageKind, (message: FileSystemReceiptMessage) => string | null>
+> = {
+  created: (message) =>
+    message.affectedCount === 1 ? 'Removed created item' : `Removed ${message.affectedCount} items`,
+  renamed: () => 'Reverted rename',
+  copied: (message) =>
+    message.createdCount === 1
+      ? 'Removed copied item'
+      : `Removed ${message.createdCount} copied items`,
+  moved: (message) =>
+    message.affectedCount === 1 ? 'Moved item back' : `Moved ${message.affectedCount} items back`,
+  restored: (message) =>
+    message.affectedCount === 1
+      ? 'Moved item to trash'
+      : `Moved ${message.affectedCount} items to trash`,
+  trashed: (message) =>
+    message.affectedCount === 1 ? 'Item restored' : `${message.affectedCount} items restored`,
+}
+
+function formatReceiptMessage(receipt: FileSystemTransactionReceipt) {
+  if (receipt.direction === 'undo') {
+    return undoMessageFormatters[receipt.summary.kind]?.(receipt.summary) ?? null
+  }
+  const text = successMessageFormatters[receipt.summary.kind]?.(receipt.summary) ?? null
+  if (!text || receipt.direction !== 'redo') return text
+  return `Redo: ${text}`
 }
 
 export function getReceiptToastMessage(receipt: FileSystemTransactionReceipt) {
@@ -176,10 +215,8 @@ export function getReceiptToastMessage(receipt: FileSystemTransactionReceipt) {
     return summary.skippedCount > 0 ? { type: 'info' as const, text: 'No items changed' } : null
   }
 
-  const formatter = successMessageFormatters[summary.kind]
-  const text = formatter?.(summary)
+  const text = formatReceiptMessage(receipt)
   if (!text) return null
 
-  const prefix = directionPrefix(receipt)
-  return { type: 'success' as const, text: prefix ? `${prefix}: ${text}` : text }
+  return { type: 'success' as const, text }
 }

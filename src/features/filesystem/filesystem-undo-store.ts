@@ -18,6 +18,7 @@ type FileSystemUndoState = {
   pushUndoEntry: (entry: FileSystemHistoryEntry, options?: { preserveRedo?: boolean }) => void
   peekUndo: () => FileSystemHistoryEntry | null
   removeUndo: () => void
+  removeUndoTransaction: (transactionId: Id<'filesystemTransactions'>) => void
   pushRedoEntry: (entry: FileSystemHistoryEntry) => void
   peekRedo: () => FileSystemHistoryEntry | null
   removeRedo: () => void
@@ -62,6 +63,10 @@ export const useFileSystemUndoStore = create<FileSystemUndoState>((set, get) => 
     if (stack.length === 0) return
     set({ undoStack: stack.slice(0, -1) })
   },
+  removeUndoTransaction: (transactionId) =>
+    set((state) => ({
+      undoStack: state.undoStack.filter((entry) => entry.transactionId !== transactionId),
+    })),
   pushRedoEntry: (entry) =>
     set((state) => ({
       redoStack: [...state.redoStack, entry].slice(-MAX_FILE_SYSTEM_HISTORY),

@@ -52,6 +52,7 @@ export function DroppableFolderZone({
       ref={ref}
       role="group"
       aria-label={`${folder.name} folder contents`}
+      tabIndex={-1}
       onPointerDownCapture={onPointerDownCapture}
       onFocusCapture={onFocusCapture}
       className={cn(

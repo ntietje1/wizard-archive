@@ -11,6 +11,10 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
 import { useTrashSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useFileSystem } from '~/features/filesystem/useFileSystem'
+import {
+  canDeleteSidebarItemsForever,
+  canRestoreSidebarItems,
+} from '~/features/filesystem/filesystem-capabilities'
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
 import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
 import { useIsSidebarItemDragging } from '~/features/dnd/hooks/useIsSidebarItemDragging'
@@ -34,7 +38,8 @@ interface TrashPopoverContentProps {
 }
 
 export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
-  const { isDm, dmUsername, campaignSlug } = useCampaign()
+  const { isDm, dmUsername, campaignSlug, campaign } = useCampaign()
+  const memberRole = campaign.data?.myMembership?.role
   const { setLastSelectedItem } = useLastEditorItem()
 
   const { data: allTrashedItems, parentItemsMap } = useTrashSidebarItems()
@@ -122,6 +127,8 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
               onClick={handleItemClick}
               deletionTimeLabel={getDeletionTimeLabel(item)}
               visibleItemIds={visibleItemIds}
+              canRestore={canRestoreSidebarItems(memberRole, [item])}
+              canDeleteForever={canDeleteSidebarItemsForever(memberRole, [item])}
             />
           ))}
 
@@ -171,6 +178,8 @@ function TrashPopoverItem({
   onClick,
   deletionTimeLabel,
   visibleItemIds,
+  canRestore,
+  canDeleteForever,
 }: {
   item: AnySidebarItem
   onRestore: (item: AnySidebarItem) => void
@@ -178,6 +187,8 @@ function TrashPopoverItem({
   onClick: (item: AnySidebarItem) => void
   deletionTimeLabel: string
   visibleItemIds: Array<AnySidebarItem['_id']>
+  canRestore: boolean
+  canDeleteForever: boolean
 }) {
   const Icon = getSidebarItemIcon(item)
   const ref = useRef<HTMLDivElement>(null)
@@ -236,40 +247,44 @@ function TrashPopoverItem({
         </div>
       </Link>
       <div className={sidebarItemActionGroupClass}>
-        <Button
-          variant="ghost"
-          size="sm"
-          className={cn(
-            'size-6 p-0 hover:bg-muted-foreground/10 rounded-sm',
-            sidebarItemActionButtonClass(visualState),
-          )}
-          onClick={(event) => {
-            event.preventDefault()
-            event.stopPropagation()
-            handleItemContextMenu(event)
-            onRestore(item)
-          }}
-          aria-label="Restore"
-        >
-          <RotateCcw className="size-3.5" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className={cn(
-            'size-6 p-0 hover:text-destructive hover:bg-muted-foreground/10 rounded-sm',
-            sidebarItemActionButtonClass(visualState),
-          )}
-          onClick={(event) => {
-            event.preventDefault()
-            event.stopPropagation()
-            handleItemContextMenu(event)
-            onPermanentDelete(item)
-          }}
-          aria-label="Delete forever"
-        >
-          <Trash2 className="size-3.5" />
-        </Button>
+        {canRestore && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              'size-6 p-0 hover:bg-muted-foreground/10 rounded-sm',
+              sidebarItemActionButtonClass(visualState),
+            )}
+            onClick={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              handleItemContextMenu(event)
+              onRestore(item)
+            }}
+            aria-label="Restore"
+          >
+            <RotateCcw className="size-3.5" />
+          </Button>
+        )}
+        {canDeleteForever && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              'size-6 p-0 hover:text-destructive hover:bg-muted-foreground/10 rounded-sm',
+              sidebarItemActionButtonClass(visualState),
+            )}
+            onClick={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              handleItemContextMenu(event)
+              onPermanentDelete(item)
+            }}
+            aria-label="Delete forever"
+          >
+            <Trash2 className="size-3.5" />
+          </Button>
+        )}
       </div>
     </div>
   )

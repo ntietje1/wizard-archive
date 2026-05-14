@@ -14,6 +14,7 @@ export type ConflictPlanningContext = {
   decisions: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
   defaultConflictDecision?: ConflictDecision
   conflicts: Array<ItemOperationConflict>
+  usedDecisionSourceIds?: Set<Id<'sidebarItems'>>
 }
 
 export type ConflictDecisionHandlers = {
@@ -41,6 +42,19 @@ export function toDecisionRecord(
     record[decision.sourceItemId] = { action: decision.action }
   }
   return record
+}
+
+export function assertSkippedDecisionsWereUsed(
+  decisions: Array<OperationDecision> | undefined,
+  usedDecisionSourceIds: ReadonlySet<Id<'sidebarItems'>>,
+) {
+  for (const decision of decisions ?? []) {
+    if (usedDecisionSourceIds.has(decision.sourceItemId) || decision.action !== 'skip') continue
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      'Conflict decision does not match an item with a conflict',
+    )
+  }
 }
 
 export function normalizedName(name: string): string {
@@ -76,10 +90,14 @@ export function applyConflictDecision(
   conflictTarget: OperationPlannerItem,
   handlers: ConflictDecisionHandlers,
 ): PlannerItemStatus {
-  const decision = context.decisions[item._id] ?? context.defaultConflictDecision
+  const explicitDecision = context.decisions[item._id]
+  const decision = explicitDecision ?? context.defaultConflictDecision
   if (!decision) {
     context.conflicts.push(createConflict(item, conflictTarget))
     return 'needs-decision'
+  }
+  if (explicitDecision) {
+    context.usedDecisionSourceIds?.add(item._id)
   }
 
   switch (decision.action) {
@@ -122,6 +140,7 @@ export function addPlannedFolderMergeOperations<TOperation>({
     operations: Array<TOperation>
     defaultConflictDecision?: ConflictDecision
     mode: 'copy' | 'move'
+    usedDecisionSourceIds?: Set<Id<'sidebarItems'>>
   }
   item: OperationPlannerItem
   conflictTarget: OperationPlannerItem
@@ -132,6 +151,7 @@ export function addPlannedFolderMergeOperations<TOperation>({
     targetItems: Array<OperationPlannerItem>
     decisions: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
     defaultConflictDecision?: ConflictDecision
+    usedDecisionSourceIds?: Set<Id<'sidebarItems'>>
     getChildren: (parentId: Id<'sidebarItems'>) => Array<OperationPlannerItem>
     itemsById: ReadonlyMap<Id<'sidebarItems'>, Pick<OperationPlannerItem, '_id' | 'parentId'>>
     depth: number
@@ -152,6 +172,7 @@ export function addPlannedFolderMergeOperations<TOperation>({
       targetItems: context.getChildren(conflictTarget._id),
       decisions: context.decisions,
       defaultConflictDecision: context.decisions[item._id] ?? context.defaultConflictDecision,
+      usedDecisionSourceIds: context.usedDecisionSourceIds,
       getChildren: context.getChildren,
       itemsById: context.itemsById,
       depth: context.depth + 1,

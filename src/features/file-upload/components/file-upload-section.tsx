@@ -7,7 +7,7 @@ import { Card, CardContent } from '~/features/shadcn/components/card'
 import { Badge } from '~/features/shadcn/components/badge'
 import { Progress } from '~/features/shadcn/components/progress'
 
-export interface FileUploadSectionProps {
+interface FileUploadSectionProps {
   label?: string
   fileUpload: UseFileWithPreviewReturn
   isSubmitting: boolean

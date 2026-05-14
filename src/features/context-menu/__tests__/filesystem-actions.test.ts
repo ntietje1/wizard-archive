@@ -6,6 +6,7 @@ import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 function createFileSystem(overrides?: Partial<FileSystemValue>) {
   return {
     createItem: vi.fn(),
+    discardCreatedItem: vi.fn(),
     renameItem: vi.fn(),
     duplicateItems: vi.fn(),
     requestTrashItems: vi.fn().mockResolvedValue(false),

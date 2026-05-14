@@ -24,6 +24,7 @@ export type CreateItemArgs = CreateItemBase & {
 type CreateItemResult = {
   id: Id<'sidebarItems'>
   slug: SidebarItemSlug
+  transactionId: Id<'filesystemTransactions'>
 }
 
 export function useCreateFileSystemItem() {
@@ -74,7 +75,7 @@ export function useCreateFileSystemItem() {
     if (!created) {
       throw new Error(`Failed to create ${args.type}`)
     }
-    return { id: created.id, slug: created.slug }
+    return created
   }
 
   return { createItem, validateCreateItem }

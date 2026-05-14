@@ -34,6 +34,7 @@ type TransferPlannerContext = {
   conflicts: Array<ItemOperationConflict>
   operations: Array<TransferOperation>
   reservedNames: Array<string>
+  usedDecisionSourceIds?: Set<Id<'sidebarItems'>>
 }
 
 function formatItemIdsForError(items: Array<OperationPlannerItem>): string {
@@ -138,6 +139,7 @@ export function planTransferOperations({
   targetItems,
   decisions = {},
   defaultConflictDecision,
+  usedDecisionSourceIds,
   getChildren,
   itemsById,
   depth = 0,
@@ -149,6 +151,7 @@ export function planTransferOperations({
   targetItems: Array<OperationPlannerItem>
   decisions?: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
   defaultConflictDecision?: ConflictDecision
+  usedDecisionSourceIds?: Set<Id<'sidebarItems'>>
   getChildren?: (parentId: Id<'sidebarItems'>) => Array<OperationPlannerItem>
   depth?: number
 }): TransferOperationPlan {
@@ -171,6 +174,7 @@ export function planTransferOperations({
     movingIds,
     conflicts: [],
     operations: [],
+    usedDecisionSourceIds,
     reservedNames:
       mode === 'copy'
         ? Array.from(new Set(targetItems.map((item) => item.name)))

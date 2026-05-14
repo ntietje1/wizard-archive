@@ -15,7 +15,7 @@ import { isActiveSidebarItem } from '../../types/status'
 import { assertSidebarOperationAllowed, evaluateCopy } from '../capabilities'
 import { checkSidebarItemRowAccess, requireSidebarItemRowAccess } from '../access'
 import type { AccessibleSidebarItemRow } from '../access'
-import { toDecisionRecord } from '../conflicts'
+import { assertSkippedDecisionsWereUsed, toDecisionRecord } from '../conflicts'
 import {
   cloneStorageId,
   copyDuplicateSidebarItemContent,
@@ -416,6 +416,7 @@ function planCopyEffects({
   decisions,
   childrenMap,
   itemsById,
+  usedDecisionSourceIds,
 }: {
   sourceItems: Array<AccessibleSidebarItemRow>
   targetParentId: Id<'sidebarItems'> | null
@@ -426,6 +427,7 @@ function planCopyEffects({
     Id<'sidebarItems'>,
     Pick<AccessibleSidebarItemRow, '_id' | 'parentId' | 'status'>
   >
+  usedDecisionSourceIds?: Set<Id<'sidebarItems'>>
 }) {
   return planTransferOperations({
     mode: 'copy',
@@ -434,6 +436,7 @@ function planCopyEffects({
     targetParentId,
     targetItems,
     decisions: toDecisionRecord(decisions),
+    usedDecisionSourceIds,
     getChildren: (parentId) => childrenMap.get(parentId) ?? [],
   })
 }
@@ -478,6 +481,7 @@ async function executeCopyPlan(
   const rootSourceIds = new Set(
     normalizeSelectedRoots(sourceItems, readModel.itemsById).map((item) => item._id),
   )
+  const usedDecisionSourceIds = new Set<Id<'sidebarItems'>>()
   const plan = planCopyEffects({
     sourceItems,
     targetParentId,
@@ -485,7 +489,9 @@ async function executeCopyPlan(
     decisions,
     childrenMap,
     itemsById: readModel.itemsById,
+    usedDecisionSourceIds,
   })
+  assertSkippedDecisionsWereUsed(decisions, usedDecisionSourceIds)
 
   if (plan.status === 'needs-decision') {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Operation requires conflict decisions')

@@ -325,7 +325,7 @@ export const editorContextMenuContributors = [
         icon: RotateCcw,
         group: 'primary',
         priority: 4,
-        applies: (context) => p.allSelectedItemsTrashed(context) && p.isSidebarItem(context),
+        applies: (context) => p.canRestoreSelectedItems(context) && p.isSidebarItem(context),
       },
     ],
   },
@@ -619,9 +619,8 @@ export const editorContextMenuContributors = [
         priority: 100,
         variant: 'danger',
         applies: (context) =>
-          p.allSelectedItemsHaveFullAccess(context) &&
+          p.canTrashSelectedItems(context) &&
           p.isSidebarItem(context) &&
-          p.allSelectedItemsNotTrashed(context) &&
           (p.inView('sidebar')(context) ||
             p.inView('folder-view')(context) ||
             p.inView('topbar')(context)),
@@ -634,7 +633,7 @@ export const editorContextMenuContributors = [
         group: 'danger',
         priority: 100,
         variant: 'danger',
-        applies: (context) => p.allSelectedItemsTrashed(context) && p.isSidebarItem(context),
+        applies: (context) => p.canDeleteSelectedItemsForever(context) && p.isSidebarItem(context),
       },
       {
         id: 'empty-trash',

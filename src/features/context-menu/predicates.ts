@@ -1,6 +1,11 @@
 import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { VIEW_CONTEXT } from './constants'
+import {
+  canDeleteSidebarItemsForever,
+  canRestoreSidebarItems,
+  canTrashSidebarItems,
+} from '~/features/filesystem/filesystem-capabilities'
 import type { Predicate, ViewContext } from './types'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 
@@ -20,6 +25,12 @@ export const hasSelection: Predicate = (ctx) =>
 
 function selectedItems(ctx: PredicateContext) {
   return ctx.selectedItems ?? (ctx.item ? [ctx.item] : [])
+}
+
+function selectedFilesystemItems(ctx: PredicateContext) {
+  const items = selectedItems(ctx)
+  if (ctx.selectedItems !== undefined || ctx.permissionLevel === undefined) return items
+  return items.map((item) => ({ ...item, myPermissionLevel: ctx.permissionLevel }))
 }
 
 function selectedItemHasFullAccess(ctx: PredicateContext, itemIndex: number): boolean {
@@ -153,15 +164,19 @@ export const allSelectedItemsHaveViewAccess: Predicate = (ctx) => {
   return items.length > 0 && items.every((_, index) => selectedItemHasViewAccess(ctx, index))
 }
 
-export const allSelectedItemsTrashed: Predicate = (ctx) => {
-  const items = selectedItems(ctx)
-  return items.length > 0 && items.every((_, index) => selectedItemIsTrashed(ctx, index))
-}
-
 export const allSelectedItemsNotTrashed: Predicate = (ctx) => {
   const items = selectedItems(ctx)
   return items.length > 0 && items.every((_, index) => !selectedItemIsTrashed(ctx, index))
 }
+
+export const canTrashSelectedItems: Predicate = (ctx) =>
+  canTrashSidebarItems(ctx.memberRole, selectedFilesystemItems(ctx))
+
+export const canRestoreSelectedItems: Predicate = (ctx) =>
+  canRestoreSidebarItems(ctx.memberRole, selectedFilesystemItems(ctx))
+
+export const canDeleteSelectedItemsForever: Predicate = (ctx) =>
+  canDeleteSidebarItemsForever(ctx.memberRole, selectedFilesystemItems(ctx))
 
 export const canWrite: Predicate = (ctx) => {
   return ctx.item ? hasEditAccess(ctx) : isDm(ctx)

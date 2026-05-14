@@ -22,6 +22,7 @@ type CreateFileSystemItemInput = {
 type CreatedFileSystemItem = {
   id: Id<'sidebarItems'>
   slug: SidebarItemSlug
+  transactionId: Id<'filesystemTransactions'>
 }
 
 type RenameFileSystemItemInput = {
@@ -39,6 +40,7 @@ export type FileSystemDropIntent = {
 
 export type FileSystemValue = {
   createItem: (input: CreateFileSystemItemInput) => Promise<CreatedFileSystemItem | null>
+  discardCreatedItem: (transactionId: Id<'filesystemTransactions'>) => Promise<void>
   renameItem: (input: RenameFileSystemItemInput) => Promise<{ slug: SidebarItemSlug | null } | null>
   duplicateItems: (itemIds: Array<Id<'sidebarItems'>>) => Promise<void>
   requestTrashItems: (itemIds: Array<Id<'sidebarItems'>>) => Promise<void>

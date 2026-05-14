@@ -281,7 +281,7 @@ describe('buildMenu', () => {
 
   it('trashed item shows restore and permanently-delete', () => {
     const ctx: MenuContext = {
-      item: createNote(),
+      item: createNote({ status: 'trashed', deletionTime: Date.now() }),
       surface: VIEW_CONTEXT.TRASH_VIEW,
       isItemTrashed: true,
       isTrashView: true,
@@ -299,6 +299,40 @@ describe('buildMenu', () => {
     expect(ids).toContain('restore')
     expect(ids).toContain('permanently-delete')
     expect(ids).toContain('empty-trash')
+  })
+
+  it('does not expose folder trash or restore actions to players', () => {
+    const activeFolder = createFolder()
+    const trashFolder = createFolder({ status: 'trashed', deletionTime: Date.now() })
+    const activeMenu = buildMenu({
+      context: sidebarCtx({
+        item: activeFolder,
+        memberRole: CAMPAIGN_MEMBER_ROLE.Player,
+        permissionLevel: PERMISSION_LEVEL.FULL_ACCESS,
+      }),
+      services,
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+    const trashMenu = buildMenu({
+      context: sidebarCtx({
+        item: trashFolder,
+        surface: VIEW_CONTEXT.TRASH_VIEW,
+        isItemTrashed: true,
+        isTrashView: true,
+        memberRole: CAMPAIGN_MEMBER_ROLE.Player,
+        permissionLevel: PERMISSION_LEVEL.FULL_ACCESS,
+      }),
+      services,
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+
+    expect(activeMenu.flatItems.map((item) => item.id)).not.toContain('delete')
+    expect(trashMenu.flatItems.map((item) => item.id)).not.toContain('restore')
+    expect(trashMenu.flatItems.map((item) => item.id)).not.toContain('permanently-delete')
   })
 
   it('root context (no item) shows "New..." and download-all for DM in sidebar', () => {

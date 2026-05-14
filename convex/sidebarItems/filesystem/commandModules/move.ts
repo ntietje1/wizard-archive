@@ -18,7 +18,7 @@ import { addSidebarItemAncestorsToMap } from '../ancestors'
 import { collectDescendants } from '../../functions/collectDescendants'
 import { assertSidebarOperationAllowed, evaluateRestore } from '../capabilities'
 import { normalizeRestoreTargetParentId } from '../targets'
-import { toDecisionRecord } from '../conflicts'
+import { assertSkippedDecisionsWereUsed, toDecisionRecord } from '../conflicts'
 import { getSidebarItemStatus, isActiveSidebarItem, isTrashedSidebarItem } from '../../types/status'
 import { createFileSystemWriteSession } from '../deltas'
 import { FILE_SYSTEM_EVENT_TYPE } from '../receipts'
@@ -616,6 +616,7 @@ async function executeMovePlan(
     itemsById: readModel.itemsById,
     maxDepth: MAX_SIDEBAR_MOVE_DEPTH,
   })
+  const usedDecisionSourceIds = new Set<Id<'sidebarItems'>>()
   const plan = planTransferOperations({
     mode: 'move',
     items: sourceItems,
@@ -623,8 +624,10 @@ async function executeMovePlan(
     targetParentId: effectiveTargetParentId,
     targetItems,
     decisions: toDecisionRecord(decisions),
+    usedDecisionSourceIds,
     getChildren: (parentId) => childrenMap.get(parentId) ?? [],
   })
+  assertSkippedDecisionsWereUsed(decisions, usedDecisionSourceIds)
 
   if (plan.status === 'needs-decision') {
     const conflictSummary = plan.conflicts
