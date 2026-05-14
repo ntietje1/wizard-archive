@@ -88,7 +88,7 @@ export async function copyNoteCompanion(
   sourceItemId: Id<'sidebarItems'>,
   targetItemId: Id<'sidebarItems'>,
 ) {
-  const targetItem = await ctx.db.get(targetItemId)
+  const targetItem = await ctx.db.get('sidebarItems', targetItemId)
   if (!targetItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Note target item not found')
   if (targetItem.type !== SIDEBAR_ITEM_TYPES.notes) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Note companion requires a note item')
@@ -115,7 +115,7 @@ export async function setNoteContent(
     content: Array<CustomBlock>
   },
 ): Promise<void> {
-  const sidebarItem = await ctx.db.get(noteId)
+  const sidebarItem = await ctx.db.get('sidebarItems', noteId)
   if (!sidebarItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Note sidebar item not found')
   if (sidebarItem.type !== SIDEBAR_ITEM_TYPES.notes) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Note content requires a note sidebar item')

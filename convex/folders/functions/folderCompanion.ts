@@ -26,7 +26,7 @@ export async function copyFolderCompanion(
   sourceItemId: Id<'sidebarItems'>,
   targetItemId: Id<'sidebarItems'>,
 ) {
-  const targetItem = await ctx.db.get(targetItemId)
+  const targetItem = await ctx.db.get('sidebarItems', targetItemId)
   if (!targetItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Folder target item not found')
   if (targetItem.type !== SIDEBAR_ITEM_TYPES.folders) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Folder companion requires a folder item')

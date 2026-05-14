@@ -281,7 +281,7 @@ export function createFileSystemWriteSession(ctx: CampaignMutationCtx): FileSyst
   }
 
   const updateSidebarItem: FileSystemWriteSession['updateSidebarItem'] = async (itemId, fields) => {
-    const before = await ctx.db.get(itemId)
+    const before = await ctx.db.get('sidebarItems', itemId)
     if (!before) {
       throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
     }
@@ -294,7 +294,7 @@ export function createFileSystemWriteSession(ctx: CampaignMutationCtx): FileSyst
   const insertSidebarItem: FileSystemWriteSession['insertSidebarItem'] = async (args) => {
     const inserted = await insertFilesystemSidebarItem(ctx, args)
     const itemId = inserted.itemId
-    const item = await ctx.db.get(itemId)
+    const item = await ctx.db.get('sidebarItems', itemId)
     if (!item) {
       throwClientError(ERROR_CODE.NOT_FOUND, 'Inserted item not found')
     }

@@ -116,7 +116,7 @@ export async function loadTransactionReceipt(
   transactionId: Id<'filesystemTransactions'>,
   direction: FileSystemTransactionDirection,
 ): Promise<FileSystemTransactionReceipt> {
-  const transaction = await ctx.db.get(transactionId)
+  const transaction = await ctx.db.get('filesystemTransactions', transactionId)
   if (!transaction) throwClientError(ERROR_CODE.NOT_FOUND, 'Filesystem transaction not found')
   const command = transaction.command as FileSystemCommand
   const changes = transaction.changes as FileSystemDelta['changes']
@@ -187,7 +187,7 @@ export async function recordFilesystemTransaction(
 
 async function applyPatch(ctx: CampaignMutationCtx, patch: FileSystemPatch) {
   assertUndoablePatch(patch)
-  const item = await ctx.db.get(patch.itemId)
+  const item = await ctx.db.get('sidebarItems', patch.itemId)
   if (!item || item.campaignId !== ctx.campaign._id) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Filesystem item no longer exists')
   }
@@ -231,7 +231,7 @@ async function collectRedoNameCheckInputs(
       clearedActiveItemIds.add(patch.itemId)
     }
     if (!patchRestoresActiveItem(patch)) continue
-    const item = await ctx.db.get(patch.itemId)
+    const item = await ctx.db.get('sidebarItems', patch.itemId)
     if (!item || item.campaignId !== ctx.campaign._id) {
       throwClientError(ERROR_CODE.NOT_FOUND, 'Filesystem item no longer exists')
     }
@@ -342,7 +342,7 @@ async function noteIdsAffectedByPathPatch(
   patch: FileSystemPatch,
 ): Promise<Array<Id<'sidebarItems'>>> {
   if (!patchChangesPathOrVisibility(patch)) return []
-  const item = await ctx.db.get(patch.itemId)
+  const item = await ctx.db.get('sidebarItems', patch.itemId)
   if (!item || item.campaignId !== ctx.campaign._id) return []
   if (item.type === SIDEBAR_ITEM_TYPES.notes) return [item._id]
   if (item.type !== SIDEBAR_ITEM_TYPES.folders || item.status === SIDEBAR_ITEM_STATUS.undoHidden) {
@@ -375,7 +375,7 @@ async function pruneOldFilesystemTransactions(ctx: CampaignMutationCtx) {
       ctx,
       undoPatchesFromChangeSet(transaction.changes as FileSystemDelta['changes']),
     )
-    await ctx.db.delete(transaction._id)
+    await ctx.db.delete('filesystemTransactions', transaction._id)
   }
 
   await pruneOldNonUndoableFilesystemTransactions(ctx)
@@ -394,7 +394,7 @@ async function pruneOldNonUndoableFilesystemTransactions(ctx: CampaignMutationCt
     .take(MAX_FILESYSTEM_NON_UNDOABLE_HISTORY + 1)
 
   for (const transaction of transactions.slice(MAX_FILESYSTEM_NON_UNDOABLE_HISTORY)) {
-    await ctx.db.delete(transaction._id)
+    await ctx.db.delete('filesystemTransactions', transaction._id)
   }
 }
 
@@ -415,7 +415,7 @@ async function hardDeleteUndoHiddenCreatedRows(
 
   const hiddenItems: Array<AnySidebarItemRow> = []
   for (const itemId of hiddenItemIds) {
-    const item = await ctx.db.get(itemId)
+    const item = await ctx.db.get('sidebarItems', itemId)
     if (item?.campaignId === ctx.campaign._id && item.status === SIDEBAR_ITEM_STATUS.undoHidden) {
       hiddenItems.push(item)
     }
@@ -437,7 +437,7 @@ export async function applyFilesystemTransactionDirection(
     direction: 'undo' | 'redo'
   },
 ): Promise<FileSystemTransactionReceipt> {
-  const source = await ctx.db.get(transactionId)
+  const source = await ctx.db.get('filesystemTransactions', transactionId)
   if (!source) throwClientError(ERROR_CODE.NOT_FOUND, 'Filesystem transaction not found')
   if (source.campaignId !== ctx.campaign._id || source.actorMemberId !== ctx.membership._id) {
     throwClientError(ERROR_CODE.PERMISSION_DENIED, 'Filesystem transaction is not available')

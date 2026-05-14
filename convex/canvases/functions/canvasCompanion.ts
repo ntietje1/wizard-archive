@@ -41,7 +41,7 @@ export async function copyCanvasCompanion(
   sourceItemId: Id<'sidebarItems'>,
   targetItemId: Id<'sidebarItems'>,
 ) {
-  const targetItem = await ctx.db.get(targetItemId)
+  const targetItem = await ctx.db.get('sidebarItems', targetItemId)
   if (!targetItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Canvas target item not found')
   if (targetItem.type !== SIDEBAR_ITEM_TYPES.canvases) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Canvas companion requires a canvas item')

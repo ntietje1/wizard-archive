@@ -81,7 +81,7 @@ export async function restoreTreeDescendants(
     }
     assertSidebarItemLifecycleConsistency({ ...i, ...patch })
     await ctx.db.patch('sidebarItems', i._id, patch)
-    const restoredItem = await ctx.db.get(i._id)
+    const restoredItem = await ctx.db.get('sidebarItems', i._id)
     if (restoredItem) restored.push(restoredItem)
   })
   return restored

@@ -610,7 +610,7 @@ describe('filesystem transactions', () => {
     )
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(noteId, { previewLockedUntil: Date.now() + 1000 })
+      await dbCtx.db.patch('sidebarItems', noteId, { previewLockedUntil: Date.now() + 1000 })
     })
 
     await dmAuth.mutation(api.sidebarItems.filesystem.mutations.undoFileSystemTransaction, {

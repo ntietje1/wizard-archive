@@ -30,7 +30,7 @@ export async function copyFileCompanion(
   sourceItemId: Id<'sidebarItems'>,
   targetItemId: Id<'sidebarItems'>,
 ) {
-  const targetItem = await ctx.db.get(targetItemId)
+  const targetItem = await ctx.db.get('sidebarItems', targetItemId)
   if (!targetItem) throwClientError(ERROR_CODE.NOT_FOUND, 'File target item not found')
   if (targetItem.type !== SIDEBAR_ITEM_TYPES.files) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'File companion requires a file item')
