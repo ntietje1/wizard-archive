@@ -136,6 +136,7 @@ import type * as links_linkParsers from "../links/linkParsers.js";
 import type * as links_linkResolution from "../links/linkResolution.js";
 import type * as links_queries from "../links/queries.js";
 import type * as links_types from "../links/types.js";
+import type * as migrations from "../migrations.js";
 import type * as notes_blocknote from "../notes/blocknote.js";
 import type * as notes_editorSpecs from "../notes/editorSpecs.js";
 import type * as notes_functions_captureNoteSnapshot from "../notes/functions/captureNoteSnapshot.js";
@@ -401,6 +402,7 @@ declare const fullApi: ApiFromModules<{
   "links/linkResolution": typeof links_linkResolution;
   "links/queries": typeof links_queries;
   "links/types": typeof links_types;
+  migrations: typeof migrations;
   "notes/blocknote": typeof notes_blocknote;
   "notes/editorSpecs": typeof notes_editorSpecs;
   "notes/functions/captureNoteSnapshot": typeof notes_functions_captureNoteSnapshot;
@@ -560,5 +562,6 @@ export declare const internal: FilterApi<
 
 export declare const components: {
   betterAuth: import("@convex-dev/better-auth/_generated/component.js").ComponentApi<"betterAuth">;
+  migrations: import("@convex-dev/migrations/_generated/component.js").ComponentApi<"migrations">;
   resend: import("@convex-dev/resend/_generated/component.js").ComponentApi<"resend">;
 };

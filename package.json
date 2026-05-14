@@ -35,6 +35,7 @@
     "@blocknote/react": "^0.46.2",
     "@blocknote/shadcn": "^0.46.2",
     "@convex-dev/better-auth": "0.11.3",
+    "@convex-dev/migrations": "^0.3.4",
     "@convex-dev/react-query": "0.1.0",
     "@convex-dev/resend": "^0.2.3",
     "@tailwindcss/postcss": "^4.1.12",
