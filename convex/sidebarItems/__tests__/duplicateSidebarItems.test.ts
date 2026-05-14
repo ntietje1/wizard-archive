@@ -94,7 +94,7 @@ describe('executeCopyCommand', () => {
       )
     })
 
-    expect(copiedItems.map((item) => item?.name)).toEqual(['Scene A 2', 'Scene B 2'])
+    expect(copiedItems.map((item) => item?.name)).toEqual(['Scene A 1', 'Scene B 1'])
     expect(copiedItems.map((item) => item?.parentId)).toEqual([null, null])
   })
 
@@ -123,7 +123,7 @@ describe('executeCopyCommand', () => {
     if (!copiedId) throw new Error('Expected copied item')
     const copied = await t.run(async (dbCtx) => dbCtx.db.get('sidebarItems', copiedId))
 
-    expect(copied?.name).toBe('Ambush 3')
+    expect(copied?.name).toBe('Ambush 1')
     expect(copied?.parentId).toBe(folderId)
   })
 
@@ -172,7 +172,7 @@ describe('executeCopyCommand', () => {
       return { copiedFolder, copiedNote, copiedBlocks, history }
     })
 
-    expect(rows.copiedFolder?.name).toBe('Encounters 2')
+    expect(rows.copiedFolder?.name).toBe('Encounters 1')
     // Nested items keep their names because the copied folder creates a conflict-free parent.
     expect(rows.copiedNote?.name).toBe('Ambush')
     expect(rows.copiedNote?.parentId).toBe(copiedRootItemIds(result)[0])

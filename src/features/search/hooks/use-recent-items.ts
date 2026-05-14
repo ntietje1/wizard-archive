@@ -1,6 +1,6 @@
 import usePersistedState from '~/shared/hooks/usePersistedState'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useFilteredSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { logger } from '~/shared/utils/logger'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { parseSidebarItemSlug } from 'convex/sidebarItems/validation/slug'
@@ -74,7 +74,7 @@ export function addRecentItem(campaignId: string, slug: SidebarItemSlug) {
 
 export function useRecentItems(): Array<SearchResult> {
   const { campaignId } = useCampaign()
-  const { data: items } = useFilteredSidebarItems()
+  const { data: items } = useActiveSidebarItems()
 
   const [entries] = usePersistedState<Array<RecentEntry>>(
     campaignId ? storageKey(campaignId) : null,

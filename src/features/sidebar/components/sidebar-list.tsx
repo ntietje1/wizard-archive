@@ -1,8 +1,6 @@
 import { SidebarItem } from './sidebar-item/sidebar-item'
-import {
-  sortItemsByOptions,
-  useFilteredSidebarItems,
-} from '~/features/sidebar/hooks/useSidebarItems'
+import { sortItemsByOptions } from '~/features/sidebar/hooks/useSidebarItems'
+import { useFilteredSidebarItems } from '~/features/sidebar/hooks/useFilteredSidebarItems'
 import { useSortOptions } from '~/features/sidebar/hooks/useSortOptions'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'

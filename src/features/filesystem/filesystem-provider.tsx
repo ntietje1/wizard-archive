@@ -34,7 +34,7 @@ import { useItemSurfaceHotkeys } from '~/features/sidebar/hooks/useItemSurfaceHo
 import { getSelectedSlug } from '~/features/sidebar/hooks/useSelectedItem'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
-import { handleError, logger } from '~/shared/utils/logger'
+import { handleError } from '~/shared/utils/logger'
 import { createFileSystemCacheAdapter } from './filesystem-cache-adapter'
 import { applyFileSystemReceiptEffects } from './filesystem-receipt-effects'
 import {
@@ -193,6 +193,8 @@ function useFileSystemValue(): FileSystemProviderState {
       return null
     }
     const clientOperationId = createClientOperationId()
+    const optimisticItem = plan.preview.optimisticItem
+    const previousSlug = getSelectedSlug()
 
     return await withPendingOperation(() =>
       runQueuedMutation(() =>
@@ -202,6 +204,34 @@ function useFileSystemValue(): FileSystemProviderState {
             rollback: plan.preview.inversePatches,
           },
           applyPatches: cacheAdapter.applyPatches,
+          onOptimisticApplied: optimisticItem
+            ? async () => {
+                if (optimisticItem.parentId) {
+                  setFolderState(campaignId, optimisticItem.parentId, true)
+                }
+                setSelectedItemIds([optimisticItem._id], optimisticItem._id)
+                useSidebarUIStore.getState().setSelected(optimisticItem.slug)
+                await navigateToItem(optimisticItem.slug)
+              }
+            : undefined,
+          onMutationFailure: optimisticItem
+            ? async () => {
+                const state = useSidebarUIStore.getState()
+                if (
+                  state.selectedSlug !== optimisticItem.slug &&
+                  !state.selectedItemIds.includes(optimisticItem._id)
+                ) {
+                  return
+                }
+                state.clearItemSelection()
+                if (previousSlug) {
+                  state.setSelected(previousSlug)
+                  await navigateToItem(previousSlug, true)
+                } else {
+                  await clearEditorContent()
+                }
+              }
+            : undefined,
           mutate: async () =>
             (await executeMutation.mutateAsync({
               command,
@@ -337,58 +367,62 @@ function useFileSystemValue(): FileSystemProviderState {
     if (pendingOperationCountRef.current > 0) return
     const entry = useFileSystemUndoStore.getState().peekUndo()
     if (!entry) return
-    if (!entry.transactionId) {
-      logger.error('Filesystem undo entry is missing a transaction id', entry)
-      return
+    const progressToastId = toast.loading('Undoing…')
+    let receipt: FileSystemTransactionReceipt | null = null
+    try {
+      receipt = await withPendingOperation(() =>
+        runQueuedMutation(() =>
+          runFileSystemMutation({
+            patches: { apply: [], rollback: [] },
+            applyPatches: cacheAdapter.applyPatches,
+            mutate: async () =>
+              (await undoMutation.mutateAsync({
+                transactionId: entry.transactionId,
+              })) as FileSystemTransactionReceipt,
+            onSuccess: async (undoReceipt) => {
+              useFileSystemUndoStore.getState().removeUndo()
+              useFileSystemUndoStore.getState().pushRedoEntry(entry)
+              await applyReceiptSideEffects(undoReceipt)
+            },
+            onError: (error) => handleError(error, 'Filesystem undo failed'),
+          }),
+        ),
+      )
+    } finally {
+      toast.dismiss(progressToastId)
     }
-    await withPendingOperation(() =>
-      runQueuedMutation(() =>
-        runFileSystemMutation({
-          patches: { apply: [], rollback: [] },
-          applyPatches: cacheAdapter.applyPatches,
-          mutate: async () =>
-            (await undoMutation.mutateAsync({
-              transactionId: entry.transactionId,
-            })) as FileSystemTransactionReceipt,
-          onSuccess: async (receipt) => {
-            useFileSystemUndoStore.getState().removeUndo()
-            useFileSystemUndoStore.getState().pushRedoEntry(entry)
-            await applyReceiptSideEffects(receipt)
-            toastReceipt(receipt)
-          },
-          onError: (error) => handleError(error, 'Filesystem undo failed'),
-        }),
-      ),
-    )
+    if (receipt) toastReceipt(receipt)
   }
 
   const redo: FileSystemValue['redo'] = async () => {
     if (pendingOperationCountRef.current > 0) return
     const entry = useFileSystemUndoStore.getState().peekRedo()
     if (!entry) return
-    if (!entry.transactionId) {
-      logger.error('Filesystem redo entry is missing a transaction id', entry)
-      return
+    const progressToastId = toast.loading('Redoing…')
+    let receipt: FileSystemTransactionReceipt | null = null
+    try {
+      receipt = await withPendingOperation(() =>
+        runQueuedMutation(() =>
+          runFileSystemMutation({
+            patches: { apply: [], rollback: [] },
+            applyPatches: cacheAdapter.applyPatches,
+            mutate: async () =>
+              (await redoMutation.mutateAsync({
+                transactionId: entry.transactionId,
+              })) as FileSystemTransactionReceipt,
+            onSuccess: async (redoReceipt) => {
+              useFileSystemUndoStore.getState().removeRedo()
+              useFileSystemUndoStore.getState().pushUndoEntry(entry, { preserveRedo: true })
+              await applyReceiptSideEffects(redoReceipt)
+            },
+            onError: (error) => handleError(error, 'Filesystem redo failed'),
+          }),
+        ),
+      )
+    } finally {
+      toast.dismiss(progressToastId)
     }
-    await withPendingOperation(() =>
-      runQueuedMutation(() =>
-        runFileSystemMutation({
-          patches: { apply: [], rollback: [] },
-          applyPatches: cacheAdapter.applyPatches,
-          mutate: async () =>
-            (await redoMutation.mutateAsync({
-              transactionId: entry.transactionId,
-            })) as FileSystemTransactionReceipt,
-          onSuccess: async (receipt) => {
-            useFileSystemUndoStore.getState().removeRedo()
-            useFileSystemUndoStore.getState().pushUndoEntry(entry, { preserveRedo: true })
-            await applyReceiptSideEffects(receipt)
-            toastReceipt(receipt)
-          },
-          onError: (error) => handleError(error, 'Filesystem redo failed'),
-        }),
-      ),
-    )
+    if (receipt) toastReceipt(receipt)
   }
 
   const executeDrop: FileSystemValue['executeDrop'] = async ({ itemIds, target, options }) => {

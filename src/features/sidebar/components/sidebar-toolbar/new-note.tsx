@@ -1,7 +1,6 @@
-import { useState } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import { FilePlus, Loader2 } from 'lucide-react'
-import { handleError } from '~/shared/utils/logger'
+import { FilePlus } from 'lucide-react'
+import { handleError, logger } from '~/shared/utils/logger'
 import { Button } from '~/features/shadcn/components/button'
 import { TooltipButton } from '~/shared/components/tooltip-button'
 import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
@@ -16,11 +15,12 @@ export function NewNoteButton() {
   const { campaignId } = useCampaign()
   const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
-  const [isPending, setIsPending] = useState(false)
 
   const handleNewNote = async () => {
-    if (!campaignId || isPending) return
-    setIsPending(true)
+    if (!campaignId) {
+      logger.warn('Cannot create note without a campaign id')
+      return
+    }
     try {
       const result = await createItem({
         type: SIDEBAR_ITEM_TYPES.notes,
@@ -32,19 +32,12 @@ export function NewNoteButton() {
     } catch (error) {
       handleError(error, 'Failed to create note')
     }
-    setIsPending(false)
   }
 
   return (
     <TooltipButton tooltip="New note" side="bottom">
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={handleNewNote}
-        disabled={isPending}
-        aria-label="Create new note"
-      >
-        {isPending ? <Loader2 className="size-4 animate-spin" /> : <FilePlus className="size-4" />}
+      <Button variant="ghost" size="icon" onClick={handleNewNote} aria-label="Create new note">
+        <FilePlus className="size-4" />
       </Button>
     </TooltipButton>
   )

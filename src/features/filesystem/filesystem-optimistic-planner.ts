@@ -10,6 +10,8 @@ import {
   CREATE_PARENT_TARGET_KIND,
   validateCreateParentTarget,
 } from 'convex/sidebarItems/validation/parent'
+import { deduplicateName } from 'convex/sidebarItems/functions/defaultItemName'
+import { assertSidebarItemName } from 'convex/sidebarItems/validation/name'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type {
@@ -30,6 +32,7 @@ import type {
 import {
   buildOptimisticCreatePreview,
   buildOptimisticRenamePreview,
+  expectedOptimisticCreateSlug,
 } from './filesystem-optimistic-patches'
 import type { SidebarCacheSnapshot } from './filesystem-cache-patches'
 import type { FileSystemReadModel } from 'convex/sidebarItems/filesystem/readModel'
@@ -44,6 +47,7 @@ type FileSystemOptimisticPreview = {
   command: FileSystemCommand
   receiptPatches: Array<FileSystemPatch>
   inversePatches: Array<FileSystemPatch>
+  optimisticItem?: AnySidebarItem
 }
 
 type PlannerArgs = {
@@ -193,6 +197,16 @@ function planCreate(args: CommandPlannerArgs<CreateFileSystemCommand>): FileSyst
     args.readModel.activeChildrenByParent,
   )
   if (!parent.valid) return ready(args.command)
+  const name = assertSidebarItemName(
+    deduplicateName(
+      args.command.name,
+      args.readModel.getActiveChildren(parent.parentId).map((item) => item.name),
+    ),
+  )
+  const slug = expectedOptimisticCreateSlug(
+    name,
+    new Set([...args.readModel.itemsById.values()].map((item) => item.slug)),
+  )
   return {
     status: 'ready',
     preview: buildOptimisticCreatePreview({
@@ -200,6 +214,8 @@ function planCreate(args: CommandPlannerArgs<CreateFileSystemCommand>): FileSyst
       parentId: parent.parentId,
       currentUserId: args.currentUserId,
       campaignId: args.campaignId,
+      name,
+      slug,
     }),
   }
 }

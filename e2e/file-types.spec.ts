@@ -110,8 +110,8 @@ startxref
     })
     await page.getByLabel('Upload file').setInputFiles(pdfPath)
 
-    // Second file upload creates "Untitled File 2"
-    await expect(page.getByRole('link', { name: /untitled file 2/i })).toBeVisible({
+    // Second file upload creates "Untitled File 1"
+    await expect(page.getByRole('link', { name: /untitled file 1/i })).toBeVisible({
       timeout: 15000,
     })
   })

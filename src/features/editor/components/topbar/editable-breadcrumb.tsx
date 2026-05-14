@@ -81,8 +81,10 @@ export function EditableName({
       handleError(error, 'Failed to rename item')
       setDraftName('')
       onChange?.(initialName)
+      setIsEditing(false)
+    } finally {
+      setIsSubmitting(false)
     }
-    setIsSubmitting(false)
   }
 
   const startRenaming = () => {
@@ -187,11 +189,19 @@ interface EditableBreadcrumbProps {
   showNotSharedTooltip?: boolean
 }
 
-export function EditableBreadcrumb({
+interface SidebarItemBreadcrumbProps {
+  item: AnySidebarItem
+  ancestors: Array<AnySidebarItem>
+  canRename: boolean
+  showNotSharedTooltip?: boolean
+}
+
+export function SidebarItemBreadcrumb({
   item,
+  ancestors,
   canRename,
   showNotSharedTooltip,
-}: EditableBreadcrumbProps) {
+}: SidebarItemBreadcrumbProps) {
   const { editItem } = useEditFileSystemItem()
   const { setLastSelectedItem } = useLastEditorItem()
   const { dmUsername, campaignSlug } = useCampaign()
@@ -204,7 +214,7 @@ export function EditableBreadcrumb({
   return (
     <div className="flex items-center min-w-0 flex-1 overflow-hidden">
       <div className="flex items-center min-w-0 overflow-hidden flex-shrink pr-1">
-        {item.ancestors.map((ancestor) => (
+        {ancestors.map((ancestor) => (
           <BreadcrumbAncestor
             key={ancestor._id}
             ancestor={ancestor}
@@ -224,4 +234,8 @@ export function EditableBreadcrumb({
       />
     </div>
   )
+}
+
+export function EditableBreadcrumb(props: EditableBreadcrumbProps) {
+  return <SidebarItemBreadcrumb {...props} ancestors={props.item.ancestors} />
 }

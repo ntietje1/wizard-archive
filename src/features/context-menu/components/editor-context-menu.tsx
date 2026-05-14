@@ -33,6 +33,7 @@ interface EditorContextMenuProps {
   children?: React.ReactNode
   className?: string
   menuClassName?: string
+  disabled?: boolean
   onClose?: () => void
   onDialogOpen?: () => void
   onDialogClose?: () => void
@@ -46,6 +47,7 @@ export function EditorContextMenu({
   children,
   className,
   menuClassName = 'w-48 z-[9999]',
+  disabled = false,
   onClose,
   onDialogOpen,
   onDialogClose,
@@ -100,16 +102,22 @@ export function EditorContextMenu({
 
   return (
     <>
-      <ContextMenuHost
-        ref={ref}
-        menu={menu}
-        className={className}
-        menuClassName={menuClassName}
-        onClose={onClose}
-      >
-        {children}
-      </ContextMenuHost>
-      <MenuDialogs {...menuActions.dialogState} />
+      {disabled ? (
+        children
+      ) : (
+        <>
+          <ContextMenuHost
+            ref={ref}
+            menu={menu}
+            className={className}
+            menuClassName={menuClassName}
+            onClose={onClose}
+          >
+            {children}
+          </ContextMenuHost>
+          <MenuDialogs {...menuActions.dialogState} />
+        </>
+      )}
     </>
   )
 }

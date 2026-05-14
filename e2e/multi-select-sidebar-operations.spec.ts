@@ -80,10 +80,10 @@ test.describe.serial('sidebar and folder multi-select item operations', () => {
 
     await page.getByRole('menuitem', { name: 'Duplicate' }).click()
 
-    await expect(sidebar.getByRole('link', { name: `${noteA} 2`, exact: true })).toBeVisible({
+    await expect(sidebar.getByRole('link', { name: `${noteA} 1`, exact: true })).toBeVisible({
       timeout: VISIBILITY_TIMEOUT,
     })
-    await expect(sidebar.getByRole('link', { name: `${noteB} 2`, exact: true })).toBeVisible({
+    await expect(sidebar.getByRole('link', { name: `${noteB} 1`, exact: true })).toBeVisible({
       timeout: VISIBILITY_TIMEOUT,
     })
     await expect(sidebar.getByRole('link', { name: noteA, exact: true })).toBeVisible()

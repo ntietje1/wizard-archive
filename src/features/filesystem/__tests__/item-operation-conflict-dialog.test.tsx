@@ -100,7 +100,7 @@ describe('ItemOperationConflictDialog', () => {
     expect(screen.queryByText('Existing item: Existing 1')).not.toBeInTheDocument()
   })
 
-  it('opens a single conflict directly in the per-item chooser', () => {
+  it('opens a single conflict on the bulk screen with Windows-style copy', () => {
     render(
       <ItemOperationConflictDialog
         conflicts={[createConflict(1)]}
@@ -109,10 +109,33 @@ describe('ItemOperationConflictDialog', () => {
       />,
     )
 
+    expect(
+      screen.getByText('There is already an item with the name "Existing 1" in this destination.'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Replace the item in the destination' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Skip this item' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Keep both items' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Compare each item' })).toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: 'Incoming' })).not.toBeInTheDocument()
+  })
+
+  it('opens a single conflict comparison from the bulk screen', () => {
+    render(
+      <ItemOperationConflictDialog
+        conflicts={[createConflict(1)]}
+        onResolve={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Compare each item' }))
+
     expect(screen.getByRole('columnheader', { name: 'Incoming' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Existing' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Use incoming Incoming 1' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Decide for each item' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Compare each item' })).not.toBeInTheDocument()
   })
 
   it('renders one per-conflict row with incoming and existing choices', () => {
@@ -151,6 +174,7 @@ describe('ItemOperationConflictDialog', () => {
       />,
     )
 
+    fireEvent.click(screen.getByRole('button', { name: 'Compare each item' }))
     const incomingButton = screen.getByRole('button', { name: 'Use incoming Incoming 1' })
     expect(incomingButton).toHaveAttribute('aria-pressed', 'false')
 
@@ -169,6 +193,7 @@ describe('ItemOperationConflictDialog', () => {
       />,
     )
 
+    fireEvent.click(screen.getByRole('button', { name: 'Compare each item' }))
     fireEvent.click(screen.getByRole('button', { name: 'Use incoming Incoming 1' }))
     fireEvent.click(screen.getByRole('button', { name: 'Apply selected conflict choices' }))
 
@@ -187,6 +212,7 @@ describe('ItemOperationConflictDialog', () => {
       />,
     )
 
+    fireEvent.click(screen.getByRole('button', { name: 'Compare each item' }))
     fireEvent.click(screen.getByRole('button', { name: 'Use existing Existing 1' }))
     fireEvent.click(screen.getByRole('button', { name: 'Apply selected conflict choices' }))
 
@@ -205,6 +231,7 @@ describe('ItemOperationConflictDialog', () => {
       />,
     )
 
+    fireEvent.click(screen.getByRole('button', { name: 'Compare each item' }))
     fireEvent.click(screen.getByRole('button', { name: 'Use incoming Incoming 1' }))
     fireEvent.click(screen.getByRole('button', { name: 'Use existing Existing 1' }))
     fireEvent.click(screen.getByRole('button', { name: 'Apply selected conflict choices' }))
@@ -223,6 +250,7 @@ describe('ItemOperationConflictDialog', () => {
       />,
     )
 
+    fireEvent.click(screen.getByRole('button', { name: 'Compare each item' }))
     expect(screen.getByRole('button', { name: 'Apply selected conflict choices' })).toBeDisabled()
   })
 

@@ -1,17 +1,38 @@
 export function isEditableHotkeyTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false
+  const candidates: Array<Element> = []
+  if (typeof Element !== 'undefined' && target instanceof Element) candidates.push(target)
+  if (globalThis.document?.activeElement) candidates.push(globalThis.document.activeElement)
+  const selectionNode = globalThis.getSelection?.()?.anchorNode
+  const selectionElement =
+    typeof Element !== 'undefined' && selectionNode instanceof Element
+      ? selectionNode
+      : selectionNode?.parentElement
+  if (selectionElement) candidates.push(selectionElement)
 
-  const tagName = target.tagName.toLowerCase()
+  for (const candidate of candidates) {
+    if (isEditableElementOrDescendant(candidate)) return true
+  }
+
+  return false
+}
+
+function isEditableElementOrDescendant(target: Element): boolean {
+  const editableTarget = target.closest(
+    'input, textarea, select, [contenteditable]:not([contenteditable="false"])',
+  )
+  if (!(editableTarget instanceof HTMLElement)) return false
+
+  const tagName = editableTarget.tagName.toLowerCase()
   if (tagName === 'input' || tagName === 'textarea') {
-    const input = target as HTMLInputElement | HTMLTextAreaElement
+    const input = editableTarget as HTMLInputElement | HTMLTextAreaElement
     return !input.disabled && !input.readOnly
   }
 
   if (tagName === 'select') {
-    return !(target as HTMLSelectElement).disabled
+    return !(editableTarget as HTMLSelectElement).disabled
   }
 
-  return Boolean(target.isContentEditable)
+  return true
 }
 
 export function isModifierShortcut(event: KeyboardEvent, key: string): boolean {

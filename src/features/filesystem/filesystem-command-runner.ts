@@ -8,6 +8,8 @@ export async function runFileSystemMutation({
   patches,
   mutate,
   applyPatches,
+  onOptimisticApplied,
+  onMutationFailure,
   onSuccess,
   onError,
 }: {
@@ -17,6 +19,8 @@ export async function runFileSystemMutation({
   }
   mutate: () => Promise<FileSystemTransactionReceipt>
   applyPatches: (patches: Array<FileSystemPatch>) => void
+  onOptimisticApplied?: () => Promise<void> | void
+  onMutationFailure?: () => Promise<void> | void
   onSuccess: (receipt: FileSystemTransactionReceipt) => Promise<void> | void
   onError: (error: unknown) => Promise<void> | void
 }): Promise<FileSystemTransactionReceipt | null> {
@@ -27,6 +31,14 @@ export async function runFileSystemMutation({
     return null
   }
 
+  if (onOptimisticApplied) {
+    try {
+      await onOptimisticApplied()
+    } catch (error) {
+      await reportFileSystemError(onError, error)
+    }
+  }
+
   let receipt: FileSystemTransactionReceipt
   try {
     receipt = await mutate()
@@ -35,6 +47,13 @@ export async function runFileSystemMutation({
       applyPatchArray(applyPatches, patches.rollback)
     } catch (rollbackError) {
       await reportFileSystemError(onError, rollbackError)
+    }
+    if (onMutationFailure) {
+      try {
+        await onMutationFailure()
+      } catch (failureError) {
+        await reportFileSystemError(onError, failureError)
+      }
     }
     await reportFileSystemError(onError, error)
     return null

@@ -38,7 +38,7 @@ function EditorLoading() {
 }
 
 export function EditorContent() {
-  const { item, editorSearch, isLoading, hasRequestedItem } = useCurrentItem()
+  const { item, contentItem, editorSearch, isLoading, hasRequestedItem } = useCurrentItem()
   const { isDm } = useCampaign()
   const { viewAsPlayerId } = useEditorMode()
   const { itemsMap } = useActiveSidebarItems()
@@ -67,9 +67,13 @@ export function EditorContent() {
     return <EmptyEditorContent />
   }
 
+  if (!contentItem) {
+    return <EditorLoading />
+  }
+
   return (
     <Suspense fallback={<EditorLoading />}>
-      <SidebarItemEditor item={item} search={editorSearch} />
+      <SidebarItemEditor item={contentItem} search={editorSearch} />
     </Suspense>
   )
 }

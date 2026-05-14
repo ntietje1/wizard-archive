@@ -2,15 +2,12 @@ import { createContext, useContext } from 'react'
 import { keepPreviousData } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
 import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
-import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import type { UseQueryResult } from '@tanstack/react-query'
 import type { SortOptions } from 'convex/editors/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { SidebarItemMaps } from '~/features/sidebar/utils/sidebar-item-maps'
-import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { assertNever } from '~/shared/utils/utils'
 import { buildSidebarItemMaps } from '~/features/sidebar/utils/sidebar-item-maps'
 
@@ -91,27 +88,6 @@ export const useTrashSidebarItems = (): SidebarItemsValue =>
 export const useOptionalActiveSidebarItems = (): SidebarItemsValue | null => {
   const ctx = useContext(SidebarItemsContext)
   return ctx?.active ?? null
-}
-
-// ---------------------------------------------------------------------------
-// Filtered (permission-gated) view of active items
-// ---------------------------------------------------------------------------
-
-export const useFilteredSidebarItems = (): SidebarItemsValue => {
-  const { isDm } = useCampaign()
-  const { viewAsPlayerId } = useEditorMode()
-  const allItems = useActiveSidebarItems()
-
-  const permOpts = { isDm, viewAsPlayerId, allItemsMap: allItems.itemsMap }
-  const filteredData = allItems.data.filter((item) =>
-    effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.VIEW, permOpts),
-  )
-
-  return {
-    data: filteredData,
-    status: allItems.status,
-    ...buildSidebarItemMaps(filteredData),
-  }
 }
 
 // ---------------------------------------------------------------------------

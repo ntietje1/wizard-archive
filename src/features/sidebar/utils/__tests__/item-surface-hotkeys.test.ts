@@ -43,6 +43,8 @@ describe('item surface hotkey utilities', () => {
     const editable = document.createElement('div')
     editable.setAttribute('contenteditable', 'true')
     Object.defineProperty(editable, 'isContentEditable', { value: true })
+    const editableChild = document.createElement('span')
+    editable.append(editableChild)
     const nonEditable = document.createElement('div')
     nonEditable.setAttribute('contenteditable', 'false')
     Object.defineProperty(nonEditable, 'isContentEditable', { value: false })
@@ -54,8 +56,63 @@ describe('item surface hotkey utilities', () => {
     expect(isEditableHotkeyTarget(readonlyTextarea)).toBe(false)
     expect(isEditableHotkeyTarget(select)).toBe(true)
     expect(isEditableHotkeyTarget(editable)).toBe(true)
+    expect(isEditableHotkeyTarget(editableChild)).toBe(true)
     expect(isEditableHotkeyTarget(nonEditable)).toBe(false)
     expect(isEditableHotkeyTarget(plain)).toBe(false)
+  })
+
+  it('treats bare contenteditable attributes as editable targets', () => {
+    const editable = document.createElement('div')
+    editable.setAttribute('contenteditable', '')
+
+    expect(isEditableHotkeyTarget(editable)).toBe(true)
+  })
+
+  it('falls back to the active element for window-level editor shortcuts', () => {
+    const editable = document.createElement('div')
+    editable.tabIndex = 0
+    editable.setAttribute('contenteditable', 'true')
+    Object.defineProperty(editable, 'isContentEditable', { value: true })
+    document.body.append(editable)
+
+    editable.focus()
+
+    expect(isEditableHotkeyTarget(window)).toBe(true)
+
+    editable.remove()
+  })
+
+  it('does not treat focused non-editable elements as editable shortcut targets', () => {
+    const button = document.createElement('button')
+    document.body.append(button)
+
+    button.focus()
+
+    expect(isEditableHotkeyTarget(window)).toBe(false)
+
+    button.remove()
+  })
+
+  it('falls back to the current selection for editor shortcuts', () => {
+    const editable = document.createElement('div')
+    editable.setAttribute('contenteditable', 'true')
+    Object.defineProperty(editable, 'isContentEditable', { value: true })
+    const child = document.createElement('span')
+    child.textContent = 'selected text'
+    editable.append(child)
+    document.body.append(editable)
+
+    const range = document.createRange()
+    range.selectNodeContents(child)
+    const selection = window.getSelection()
+    if (!selection) throw new Error('Expected DOM selection')
+    selection.removeAllRanges()
+    selection.addRange(range)
+
+    expect(isEditableHotkeyTarget(window)).toBe(true)
+
+    selection.removeAllRanges()
+    editable.remove()
   })
 
   it('detects item controls inside selectable surfaces', () => {

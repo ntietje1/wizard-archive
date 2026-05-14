@@ -10,9 +10,14 @@ import { cn } from '~/features/shadcn/lib/utils'
 interface DraggableSidebarItemProps {
   item: AnySidebarItem
   children: React.ReactNode
+  disabled?: boolean
 }
 
-export function DraggableSidebarItem({ item, children }: DraggableSidebarItemProps) {
+export function DraggableSidebarItem({
+  item,
+  children,
+  disabled = false,
+}: DraggableSidebarItemProps) {
   const ref = useRef<HTMLDivElement>(null)
 
   const canDrag = hasAtLeastPermissionLevel(item.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
@@ -22,7 +27,7 @@ export function DraggableSidebarItem({ item, children }: DraggableSidebarItemPro
   useDraggable({
     ref,
     data: dragData,
-    canDrag,
+    canDrag: canDrag && !disabled,
   })
 
   return (

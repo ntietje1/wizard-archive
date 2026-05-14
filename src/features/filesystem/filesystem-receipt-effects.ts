@@ -70,10 +70,12 @@ function mergeRemovedItems({
   rootIds,
   readModel,
   removedSnapshots,
+  removedEventItems,
 }: {
   rootIds: Array<Id<'sidebarItems'>>
   readModel: FileSystemReadModel<AnySidebarItem>
   removedSnapshots: Array<ReceiptRemovedItemSnapshot>
+  removedEventItems: Array<ReceiptEffectItem>
 }): {
   rootItems: Array<ReceiptEffectItem>
   allItemsMap: ReadonlyMap<Id<'sidebarItems'>, ReceiptEffectItem>
@@ -82,13 +84,27 @@ function mergeRemovedItems({
   for (const snapshot of removedSnapshots) {
     allItemsMap.set(snapshot._id, snapshot)
   }
+  for (const item of removedEventItems) {
+    allItemsMap.set(item._id, item)
+  }
 
   const snapshotById = new Map(removedSnapshots.map((item) => [item._id, item] as const))
+  const eventItemById = new Map(removedEventItems.map((item) => [item._id, item] as const))
   const rootItems = rootIds.flatMap((itemId) => {
-    const item = readModel.itemsById.get(itemId) ?? snapshotById.get(itemId)
+    const item =
+      readModel.itemsById.get(itemId) ?? snapshotById.get(itemId) ?? eventItemById.get(itemId)
     return item ? [item] : []
   })
   return { rootItems, allItemsMap }
+}
+
+function getRemovedEventItems(receipt: FileSystemTransactionReceipt): Array<ReceiptEffectItem> {
+  if (receipt.direction !== 'undo') return []
+  return receipt.events.flatMap((event) => {
+    if (event.type !== 'created') return []
+    const slug = parseSidebarItemSlug(event.slug)
+    return slug ? [{ _id: event.itemId, parentId: null, slug }] : []
+  })
 }
 
 export async function applyFileSystemReceiptEffects({
@@ -121,6 +137,7 @@ export async function applyFileSystemReceiptEffects({
       rootIds: removedRootItemIds,
       readModel,
       removedSnapshots: getReceiptRemovedItemSnapshots(receipt),
+      removedEventItems: getRemovedEventItems(receipt),
     })
     const remainingSelection = removeItemsUnderRootsFromSelection({
       selectedItemIds: currentSelectedItemIds,
@@ -141,7 +158,13 @@ export async function applyFileSystemReceiptEffects({
       try {
         await clearEditorContent()
       } catch (error) {
-        logger.error(error)
+        logger.error('Failed to clear editor content after filesystem receipt', {
+          transactionId: receipt.transactionId,
+          direction: receipt.direction,
+          currentSlug,
+          removedRootItemIds,
+          error,
+        })
       }
     }
   }
@@ -152,7 +175,14 @@ export async function applyFileSystemReceiptEffects({
     try {
       await navigateToItem(parsedNavigationSlug, true)
     } catch (error) {
-      logger.error(error)
+      logger.error('Failed to navigate after filesystem receipt', {
+        transactionId: receipt.transactionId,
+        direction: receipt.direction,
+        currentSlug,
+        navigationSlug,
+        parsedNavigationSlug,
+        error,
+      })
     }
   }
 }

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import type { MouseEvent } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
@@ -23,6 +24,7 @@ import { sortItemsByOptions } from '~/features/sidebar/hooks/useSidebarItems'
 import { useSortOptions } from '~/features/sidebar/hooks/useSortOptions'
 import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
 import { sidebarItemActionButtonClass } from '~/features/sidebar/utils/sidebar-item-visual-state'
+import { isOptimisticSidebarItem } from '~/features/filesystem/optimistic-sidebar-items'
 
 interface SidebarItemProps {
   item: AnySidebarItem
@@ -50,6 +52,15 @@ export function SidebarItem({ item, parentItemsMap, visibleItemIds, depth = 0 }:
 
   const isFolder = item.type === SIDEBAR_ITEM_TYPES.folders
   const icon = getSidebarItemIcon(item)
+  const isPending = isOptimisticSidebarItem(item)
+  const shouldScrollPendingItem = isPending && visibleItemIds.includes(item._id)
+  const rowRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!shouldScrollPendingItem) return
+    rowRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+    rowRef.current?.focus()
+  }, [shouldScrollPendingItem])
 
   const children = isFolder ? parentItemsMap.get(item._id) : undefined
 
@@ -69,8 +80,13 @@ export function SidebarItem({ item, parentItemsMap, visibleItemIds, depth = 0 }:
   }
 
   const itemButton = (
-    <DraggableSidebarItem item={item}>
-      <EditorContextMenu ref={contextMenuRef} viewContext="sidebar" item={item}>
+    <DraggableSidebarItem item={item} disabled={isPending}>
+      <EditorContextMenu
+        ref={contextMenuRef}
+        viewContext="sidebar"
+        item={item}
+        disabled={isPending}
+      >
         <SidebarItemButtonBase
           icon={icon}
           name={item.name}
@@ -79,7 +95,8 @@ export function SidebarItem({ item, parentItemsMap, visibleItemIds, depth = 0 }:
             focused: isFocused,
             expanded: isExpanded,
             renaming: renamingId === item._id,
-            showChevron: isFolder,
+            showChevron: isFolder && !isPending,
+            pending: isPending,
             indentLevel: depth,
           }}
           linkProps={linkProps}
@@ -96,17 +113,20 @@ export function SidebarItem({ item, parentItemsMap, visibleItemIds, depth = 0 }:
           parentId={item.parentId}
           excludeId={item._id}
           shareButton={
-            <SidebarShareButton
-              item={item}
-              buttonClassName={sidebarItemActionButtonClass(visualState)}
-            />
+            isPending ? null : (
+              <SidebarShareButton
+                item={item}
+                buttonClassName={sidebarItemActionButtonClass(visualState)}
+              />
+            )
           }
+          rowRef={rowRef}
         />
       </EditorContextMenu>
     </DraggableSidebarItem>
   )
 
-  if (isFolder) {
+  if (isFolder && !isPending) {
     return (
       <DroppableSidebarItem item={item}>
         <Collapsible open={isExpanded} onOpenChange={toggleExpanded}>

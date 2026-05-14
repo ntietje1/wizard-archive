@@ -129,7 +129,7 @@ describe('copy transfer planning', () => {
 
     expect(result.status).toBe('ready')
     expect(result.operations).toEqual([
-      { sourceItemId: 'note-1', action: 'place', targetParentId: null, name: 'Scene 3' },
+      { sourceItemId: 'note-1', action: 'place', targetParentId: null, name: 'Scene 1' },
     ])
   })
 
@@ -145,7 +145,7 @@ describe('copy transfer planning', () => {
       status: 'ready',
       conflicts: [],
       operations: [
-        { sourceItemId: 'note-1', action: 'place', targetParentId: null, name: 'Scene 3' },
+        { sourceItemId: 'note-1', action: 'place', targetParentId: null, name: 'Scene 1' },
       ],
     })
   })
@@ -323,7 +323,7 @@ describe('move transfer planning', () => {
       status: 'ready',
       conflicts: [],
       operations: [
-        { sourceItemId: 'note-1', action: 'place', targetParentId: null, name: 'Scene 3' },
+        { sourceItemId: 'note-1', action: 'place', targetParentId: null, name: 'Scene 1' },
       ],
     })
   })
@@ -347,7 +347,7 @@ describe('move transfer planning', () => {
       conflicts: [],
       operations: [
         { sourceItemId: 'note-1', action: 'place', targetParentId: null },
-        { sourceItemId: 'note-2', action: 'place', targetParentId: null, name: 'Scene 2' },
+        { sourceItemId: 'note-2', action: 'place', targetParentId: null, name: 'Scene 1' },
       ],
     })
   })
@@ -450,7 +450,7 @@ describe('move transfer planning', () => {
           sourceItemId: sourceChild._id,
           action: 'place',
           targetParentId: destinationFolder._id,
-          name: 'Ambush 2',
+          name: 'Ambush 1',
         },
         {
           sourceItemId: sourceFolder._id,

@@ -5,6 +5,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { FileSystemTransactionReceipt } from 'convex/sidebarItems/filesystem/receipts'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { SidebarItemName } from 'convex/sidebarItems/validation/name'
+import { assertSidebarItemName } from 'convex/sidebarItems/validation/name'
 import { FileSystemProvider } from '../filesystem-provider'
 import { useFileSystem } from '../useFileSystem'
 import { useFileSystemUndoStore } from '../filesystem-undo-store'
@@ -18,6 +19,11 @@ const undoMutateAsync = vi.fn()
 const redoMutateAsync = vi.fn()
 const clearEditorContentMock = vi.fn()
 const navigateToItemMock = vi.fn()
+const toastLoadingMock = vi.hoisted(() => vi.fn(() => 'toast-id'))
+const toastDismissMock = vi.hoisted(() => vi.fn())
+const toastSuccessMock = vi.hoisted(() => vi.fn())
+const toastInfoMock = vi.hoisted(() => vi.fn())
+const toastErrorMock = vi.hoisted(() => vi.fn())
 
 vi.mock('convex/_generated/api', () => ({
   api: {
@@ -99,6 +105,16 @@ vi.mock('~/shared/hooks/useCampaignMutation', () => ({
   },
 }))
 
+vi.mock('sonner', () => ({
+  toast: {
+    loading: toastLoadingMock,
+    dismiss: toastDismissMock,
+    success: toastSuccessMock,
+    info: toastInfoMock,
+    error: toastErrorMock,
+  },
+}))
+
 function createReceipt(
   transactionId: Id<'filesystemTransactions'> = 'transaction_1' as Id<'filesystemTransactions'>,
 ): FileSystemTransactionReceipt {
@@ -152,6 +168,81 @@ function createDeleteForeverReceipt(item: AnySidebarItem): FileSystemTransaction
       skippedCount: 0,
     },
     undoable: false,
+  }
+}
+
+function createRenameReceipt({
+  transactionId = 'transaction_rename' as Id<'filesystemTransactions'>,
+  direction = 'forward',
+  before = 'Old Name',
+  after = 'New Name',
+}: {
+  transactionId?: Id<'filesystemTransactions'>
+  direction?: FileSystemTransactionReceipt['direction']
+  before?: string
+  after?: string
+} = {}): FileSystemTransactionReceipt {
+  const itemId = 'rename_item' as Id<'sidebarItems'>
+  const beforeName = assertSidebarItemName(before)
+  const afterName = assertSidebarItemName(after)
+  return {
+    transactionId,
+    direction,
+    command: { type: 'rename', itemId, name: afterName },
+    events: [
+      {
+        type: 'renamed',
+        itemId,
+        slug: 'new-name',
+        previousSlug: 'old-name',
+      },
+    ],
+    patches: [
+      {
+        type: 'updateSidebarItem',
+        itemId,
+        before: { name: beforeName },
+        fields: { name: afterName },
+      },
+    ],
+    summary: {
+      kind: 'renamed',
+      affectedCount: 1,
+      createdCount: 0,
+      mergedCount: 0,
+      skippedCount: 0,
+    },
+    undoable: true,
+  }
+}
+
+function createUndoCreateReceipt(item: AnySidebarItem): FileSystemTransactionReceipt {
+  return {
+    transactionId: 'transaction_create' as Id<'filesystemTransactions'>,
+    direction: 'undo',
+    command: {
+      type: 'create',
+      itemType: item.type,
+      name: item.name,
+      parentTarget: { kind: 'direct', parentId: item.parentId },
+    },
+    events: [{ type: 'created', itemId: item._id, slug: item.slug }],
+    patches: [
+      {
+        type: 'updateSidebarItem',
+        itemId: item._id,
+        before: { status: SIDEBAR_ITEM_STATUS.active },
+        fields: { status: SIDEBAR_ITEM_STATUS.undoHidden },
+      },
+    ],
+    summary: {
+      kind: 'created',
+      affectedCount: 1,
+      createdCount: 1,
+      mergedCount: 0,
+      skippedCount: 0,
+    },
+    undoable: true,
   }
 }
 
@@ -232,6 +323,11 @@ describe('FileSystemProvider', () => {
     executeMutateAsync.mockReset()
     undoMutateAsync.mockReset()
     redoMutateAsync.mockReset()
+    toastLoadingMock.mockClear()
+    toastDismissMock.mockClear()
+    toastSuccessMock.mockClear()
+    toastInfoMock.mockClear()
+    toastErrorMock.mockClear()
     clearEditorContentMock.mockReset()
     navigateToItemMock.mockReset()
     executeMutateAsync.mockResolvedValue(createReceipt())
@@ -251,6 +347,39 @@ describe('FileSystemProvider', () => {
     expect(executeMutateAsync).toHaveBeenCalledWith(
       expect.objectContaining({ clientOperationId: 'operation-1' }),
     )
+  })
+
+  it('selects and navigates to the optimistic item while create is pending', async () => {
+    let resolveCreate: (receipt: FileSystemTransactionReceipt) => void = () => {}
+    executeMutateAsync.mockReturnValueOnce(
+      new Promise<FileSystemTransactionReceipt>((resolve) => {
+        resolveCreate = resolve
+      }),
+    )
+    render(
+      <FileSystemProvider>
+        <CreateButton />
+      </FileSystemProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+    await waitFor(() => expect(sidebarItems).toHaveLength(1))
+    const optimisticItem = sidebarItems[0]
+    expect(String(optimisticItem._id)).toMatch(/^optimistic-create-/)
+    expect(optimisticItem.slug).toBe('scene')
+    expect(useSidebarUIStore.getState().selectedItemIds).toEqual([optimisticItem._id])
+    expect(useSidebarUIStore.getState().selectedSlug).toBe(optimisticItem.slug)
+    expect(navigateToItemMock).toHaveBeenCalledWith(optimisticItem.slug)
+
+    act(() => resolveCreate(createReceipt()))
+
+    await waitFor(() =>
+      expect(useSidebarUIStore.getState().selectedItemIds).toEqual([
+        'item_1' as Id<'sidebarItems'>,
+      ]),
+    )
+    expect(navigateToItemMock).toHaveBeenCalledWith('scene', true)
   })
 
   it('runs undo and redo through transaction mutations', async () => {
@@ -281,6 +410,175 @@ describe('FileSystemProvider', () => {
     await waitFor(() =>
       expect(redoMutateAsync).toHaveBeenCalledWith({ transactionId: 'transaction_1' }),
     )
+  })
+
+  it('keeps undo state stable while pending and applies the server receipt when it resolves', async () => {
+    const item = createNote({ _id: 'rename_item' as Id<'sidebarItems'>, name: 'New Name' })
+    sidebarItems = [item]
+    let resolveUndo: (receipt: FileSystemTransactionReceipt) => void = () => {}
+    undoMutateAsync.mockReturnValueOnce(
+      new Promise<FileSystemTransactionReceipt>((resolve) => {
+        resolveUndo = resolve
+      }),
+    )
+    render(
+      <FileSystemProvider>
+        <FileSystemButtons />
+      </FileSystemProvider>,
+    )
+    act(() => {
+      useFileSystemUndoStore.getState().pushUndo(createRenameReceipt())
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+
+    await waitFor(() => expect(undoMutateAsync).toHaveBeenCalledTimes(1))
+    expect(sidebarItems[0]?.name).toBe('New Name')
+    expect(toastLoadingMock).toHaveBeenCalledWith('Undoing…')
+    expect(screen.getByTestId('filesystem-operation-status')).toHaveAttribute(
+      'data-state',
+      'pending',
+    )
+
+    act(() =>
+      resolveUndo(
+        createRenameReceipt({ direction: 'undo', before: 'New Name', after: 'Old Name' }),
+      ),
+    )
+
+    await waitFor(() => expect(sidebarItems[0]?.name).toBe('Old Name'))
+    await waitFor(() => expect(toastDismissMock).toHaveBeenCalledWith('toast-id'))
+  })
+
+  it('leaves visible state unchanged when undo fails and preserves the undo stack', async () => {
+    const item = createNote({ _id: 'rename_item' as Id<'sidebarItems'>, name: 'New Name' })
+    sidebarItems = [item]
+    undoMutateAsync.mockRejectedValueOnce(new Error('undo failed'))
+    render(
+      <FileSystemProvider>
+        <FileSystemButtons />
+      </FileSystemProvider>,
+    )
+    act(() => {
+      useFileSystemUndoStore.getState().pushUndo(createRenameReceipt())
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+
+    expect(sidebarItems[0]?.name).toBe('New Name')
+    await waitFor(() => expect(undoMutateAsync).toHaveBeenCalledTimes(1))
+    expect(useFileSystemUndoStore.getState().undoStack).toHaveLength(1)
+    expect(useFileSystemUndoStore.getState().redoStack).toHaveLength(0)
+    expect(toastDismissMock).toHaveBeenCalledWith('toast-id')
+  })
+
+  it('clears the editor when undo hides the currently viewed created item', async () => {
+    const item = createNote({
+      _id: 'created_item' as Id<'sidebarItems'>,
+      name: 'Scene',
+      slug: 'scene',
+      status: SIDEBAR_ITEM_STATUS.active,
+    })
+    sidebarItems = [item]
+    undoMutateAsync.mockResolvedValueOnce(createUndoCreateReceipt(item))
+    render(
+      <FileSystemProvider>
+        <FileSystemButtons />
+      </FileSystemProvider>,
+    )
+    useSidebarUIStore.getState().setSelected(item.slug)
+    act(() => {
+      useFileSystemUndoStore
+        .getState()
+        .pushUndo(createReceipt('transaction_create' as Id<'filesystemTransactions'>))
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+
+    await waitFor(() => expect(undoMutateAsync).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(clearEditorContentMock).toHaveBeenCalledTimes(1))
+  })
+
+  it('keeps redo state stable while pending and applies the server receipt when it resolves', async () => {
+    const item = createNote({ _id: 'rename_item' as Id<'sidebarItems'>, name: 'Old Name' })
+    sidebarItems = [item]
+    let resolveRedo: (receipt: FileSystemTransactionReceipt) => void = () => {}
+    redoMutateAsync.mockReturnValueOnce(
+      new Promise<FileSystemTransactionReceipt>((resolve) => {
+        resolveRedo = resolve
+      }),
+    )
+    render(
+      <FileSystemProvider>
+        <FileSystemButtons />
+      </FileSystemProvider>,
+    )
+    act(() => {
+      useFileSystemUndoStore.getState().pushUndo(createRenameReceipt())
+      const entry = useFileSystemUndoStore.getState().peekUndo()
+      if (!entry) throw new Error('Expected undo entry')
+      useFileSystemUndoStore.getState().removeUndo()
+      useFileSystemUndoStore.getState().pushRedoEntry(entry)
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Redo' }))
+
+    await waitFor(() => expect(redoMutateAsync).toHaveBeenCalledTimes(1))
+    expect(sidebarItems[0]?.name).toBe('Old Name')
+    expect(toastLoadingMock).toHaveBeenCalledWith('Redoing…')
+
+    act(() => resolveRedo(createRenameReceipt({ direction: 'redo' })))
+
+    await waitFor(() => expect(sidebarItems[0]?.name).toBe('New Name'))
+    await waitFor(() => expect(toastDismissMock).toHaveBeenCalledWith('toast-id'))
+  })
+
+  it('leaves visible state unchanged when redo fails and preserves the redo stack', async () => {
+    const item = createNote({ _id: 'rename_item' as Id<'sidebarItems'>, name: 'Old Name' })
+    sidebarItems = [item]
+    redoMutateAsync.mockRejectedValueOnce(new Error('redo failed'))
+    render(
+      <FileSystemProvider>
+        <FileSystemButtons />
+      </FileSystemProvider>,
+    )
+    act(() => {
+      useFileSystemUndoStore.getState().pushUndo(createRenameReceipt())
+      const entry = useFileSystemUndoStore.getState().peekUndo()
+      if (!entry) throw new Error('Expected undo entry')
+      useFileSystemUndoStore.getState().removeUndo()
+      useFileSystemUndoStore.getState().pushRedoEntry(entry)
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Redo' }))
+
+    expect(sidebarItems[0]?.name).toBe('Old Name')
+    await waitFor(() => expect(redoMutateAsync).toHaveBeenCalledTimes(1))
+    expect(useFileSystemUndoStore.getState().undoStack).toHaveLength(0)
+    expect(useFileSystemUndoStore.getState().redoStack).toHaveLength(1)
+    expect(toastDismissMock).toHaveBeenCalledWith('toast-id')
+  })
+
+  it('keeps additional undo and redo calls gated while a transaction is pending', async () => {
+    const item = createNote({ _id: 'rename_item' as Id<'sidebarItems'>, name: 'New Name' })
+    sidebarItems = [item]
+    undoMutateAsync.mockReturnValueOnce(new Promise<FileSystemTransactionReceipt>(() => {}))
+    render(
+      <FileSystemProvider>
+        <FileSystemButtons />
+      </FileSystemProvider>,
+    )
+    act(() => {
+      useFileSystemUndoStore.getState().pushUndo(createRenameReceipt())
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Redo' }))
+
+    await waitFor(() => expect(undoMutateAsync).toHaveBeenCalledTimes(1))
+    expect(redoMutateAsync).not.toHaveBeenCalled()
+    expect(toastLoadingMock).toHaveBeenCalledTimes(1)
   })
 
   it('keeps original transaction ids through multiple undo and redo operations', async () => {

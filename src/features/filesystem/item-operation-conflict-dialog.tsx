@@ -26,27 +26,32 @@ type ConflictRowSelection = {
 
 const BULK_ACTIONS: Array<{
   action: BulkDecisionAction | 'per-item'
-  label: string
+  singleLabel: string
+  multipleLabel: string
   icon: typeof RefreshCw
 }> = [
   {
     action: 'replace',
-    label: 'Replace the items in the destination',
+    singleLabel: 'Replace the item in the destination',
+    multipleLabel: 'Replace the items in the destination',
     icon: RefreshCw,
   },
   {
     action: 'skip',
-    label: 'Skip these items',
+    singleLabel: 'Skip this item',
+    multipleLabel: 'Skip these items',
     icon: CircleSlash,
   },
   {
     action: 'keepBoth',
-    label: 'Keep both items',
+    singleLabel: 'Keep both items',
+    multipleLabel: 'Keep both items',
     icon: Files,
   },
   {
     action: 'per-item',
-    label: 'Decide for each item',
+    singleLabel: 'Compare each item',
+    multipleLabel: 'Decide for each item',
     icon: ListChecks,
   },
 ]
@@ -78,9 +83,7 @@ export function ItemOperationConflictDialog({
   onResolve: (decisions: ConflictDecisions) => void
   onCancel: () => void
 }) {
-  const [mode, setMode] = useState<'bulk' | 'per-item'>(() =>
-    conflicts.length > 1 ? 'bulk' : 'per-item',
-  )
+  const [mode, setMode] = useState<'bulk' | 'per-item'>('bulk')
   const [rowSelections, setRowSelections] = useState(() => createInitialSelections(conflicts))
 
   useEffect(() => {
@@ -96,15 +99,10 @@ export function ItemOperationConflictDialog({
 
   const conflict = conflicts[0]
   if (!conflict) return null
-  const hasBulkScreen = conflicts.length > 1
-  const visibleMode = hasBulkScreen ? mode : 'per-item'
-  const conflictDescription =
-    conflicts.length === 1
-      ? `The destination already has an item named ${conflict.destinationName}. Select one or both to keep.`
-      : `${conflicts.length} items have names that already exist in this destination. Select which ones to keep.`
-  const bulkActions = hasBulkScreen
-    ? BULK_ACTIONS
-    : BULK_ACTIONS.filter((action) => action.action !== 'per-item')
+  const isSingleConflict = conflicts.length === 1
+  const conflictDescription = isSingleConflict
+    ? `There is already an item with the name "${conflict.destinationName}" in this destination.`
+    : `${conflicts.length} items have names that already exist in this destination. Select which ones to keep.`
   const conflictChoices = (
     <table className="w-full border-collapse" aria-label="Conflict choices">
       <thead>
@@ -133,7 +131,7 @@ export function ItemOperationConflictDialog({
                   className={cn(
                     'grid h-auto min-h-16 w-full grid-cols-[auto_1fr_auto] items-center gap-2 border border-border p-3 text-left whitespace-normal',
                     selection.incoming &&
-                      '!border-primary !bg-primary/20 !text-foreground !hover:bg-primary/25',
+                      'border-primary bg-primary/20 text-foreground hover:bg-primary/25',
                   )}
                   onClick={() => toggleRowSelection(itemConflict.sourceItemId, 'incoming')}
                 >
@@ -161,7 +159,7 @@ export function ItemOperationConflictDialog({
                   className={cn(
                     'grid h-auto min-h-16 w-full grid-cols-[auto_1fr_auto] items-center gap-2 border border-border p-3 text-left whitespace-normal',
                     selection.existing &&
-                      '!border-primary !bg-primary/20 !text-foreground !hover:bg-primary/25',
+                      'border-primary bg-primary/20 text-foreground hover:bg-primary/25',
                   )}
                   onClick={() => toggleRowSelection(itemConflict.sourceItemId, 'existing')}
                 >
@@ -228,30 +226,27 @@ export function ItemOperationConflictDialog({
   }
 
   const cancelPerItemDecisions = () => {
-    if (hasBulkScreen) {
-      setMode('bulk')
-      return
-    }
-    onCancel()
+    setMode('bulk')
   }
 
   return (
     <Dialog open={true} onOpenChange={(open) => !open && onCancel()}>
-      <DialogContent className={visibleMode === 'per-item' ? 'max-w-3xl' : 'max-w-lg'}>
+      <DialogContent className={mode === 'per-item' ? 'max-w-3xl' : 'max-w-lg'}>
         <DialogHeader>
           <DialogTitle>Resolve File Conflict</DialogTitle>
           <DialogDescription>{conflictDescription}</DialogDescription>
         </DialogHeader>
 
-        {visibleMode === 'bulk' ? (
+        {mode === 'bulk' ? (
           <>
             <div className="grid grid-cols-1 gap-3">
-              {bulkActions.map((action) => {
+              {BULK_ACTIONS.map((action) => {
                 const Icon = action.icon
+                const label = isSingleConflict ? action.singleLabel : action.multipleLabel
                 return (
                   <Button
                     key={action.action}
-                    aria-label={action.label}
+                    aria-label={label}
                     variant={action.action === 'replace' ? 'default' : 'outline'}
                     className="h-auto min-h-14 justify-start gap-3 p-4 text-left whitespace-normal"
                     onClick={() =>
@@ -261,7 +256,7 @@ export function ItemOperationConflictDialog({
                     }
                   >
                     <Icon className="size-5" />
-                    <span className="font-medium">{action.label}</span>
+                    <span className="font-medium">{label}</span>
                   </Button>
                 )
               })}

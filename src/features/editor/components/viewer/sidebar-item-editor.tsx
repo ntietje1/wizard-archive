@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import type { AnySidebarItem, AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
 import { assertNever } from '~/shared/utils/utils'
 import { NoteEditor } from '~/features/editor/components/viewer/note/note-editor'
 import { MapViewer } from '~/features/editor/components/viewer/map/map-viewer'
@@ -13,7 +13,7 @@ import { ErrorBoundary } from '~/shared/components/error-boundary'
 import { ErrorFallback } from '~/shared/components/error-fallback'
 import { useHistoryPreviewStore } from '~/features/editor/stores/history-preview-store'
 
-export interface EditorViewerProps<T extends AnySidebarItem> {
+export interface EditorViewerProps<T extends AnySidebarItemWithContent> {
   item: T
   search?: unknown
 }
@@ -37,20 +37,21 @@ export function SidebarItemEditor({ item, search }: EditorViewerProps<AnySidebar
     )
   }
 
+  const loadedItem = item
   const content = (() => {
-    switch (item.type) {
+    switch (loadedItem.type) {
       case SIDEBAR_ITEM_TYPES.notes:
-        return <NoteEditor item={item} search={search} />
+        return <NoteEditor item={loadedItem} search={search} />
       case SIDEBAR_ITEM_TYPES.gameMaps:
-        return <MapViewer key={item._id} item={item} search={search} />
+        return <MapViewer key={loadedItem._id} item={loadedItem} search={search} />
       case SIDEBAR_ITEM_TYPES.folders:
-        return <FolderViewer key={item._id} item={item} search={search} />
+        return <FolderViewer key={loadedItem._id} item={loadedItem} search={search} />
       case SIDEBAR_ITEM_TYPES.files:
-        return <FileViewer key={item._id} item={item} search={search} />
+        return <FileViewer key={loadedItem._id} item={loadedItem} search={search} />
       case SIDEBAR_ITEM_TYPES.canvases:
-        return <CanvasViewer key={item._id} item={item} search={search} />
+        return <CanvasViewer key={loadedItem._id} item={loadedItem} search={search} />
       default:
-        return assertNever(item)
+        return assertNever(loadedItem)
     }
   })()
 

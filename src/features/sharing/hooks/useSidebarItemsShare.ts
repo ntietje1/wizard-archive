@@ -13,6 +13,7 @@ import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
+import { isOptimisticSidebarItem } from '~/features/filesystem/optimistic-sidebar-items'
 
 type MixedPermissionLevel = 'mixed'
 export type AggregatePermissionLevel = PermissionLevel | MixedPermissionLevel
@@ -80,6 +81,32 @@ function getDefaultMemberPermission(
   return info.memberInheritedPermissions.get(memberId) ?? PERMISSION_LEVEL.NONE
 }
 
+function canLoadShareData({
+  campaignId,
+  isDm,
+  hasPersistedItems,
+}: {
+  campaignId: Id<'campaigns'> | undefined
+  isDm: boolean | undefined
+  hasPersistedItems: boolean
+}): boolean {
+  return Boolean(campaignId) && Boolean(isDm) && hasPersistedItems
+}
+
+function canRunShareMutation({
+  campaignId,
+  isDm,
+  isMutating,
+  hasPersistedItems,
+}: {
+  campaignId: Id<'campaigns'> | undefined
+  isDm: boolean | undefined
+  isMutating: boolean
+  hasPersistedItems: boolean
+}): boolean {
+  return Boolean(campaignId) && Boolean(isDm) && hasPersistedItems && !isMutating
+}
+
 export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
   const { campaign, isDm } = useCampaign()
   const campaignData = campaign.data
@@ -87,11 +114,15 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
   const playerMembers =
     campaignMembersQuery.data?.filter((m) => m.role === CAMPAIGN_MEMBER_ROLE.Player) ?? []
   const itemIds = items.map((item) => item._id)
+  const hasPersistedItems =
+    items.length > 0 && items.every((item) => !isOptimisticSidebarItem(item))
   const singleItem = items.length === 1 ? items[0] : undefined
 
   const query = useCampaignQuery(
     api.sidebarShares.queries.getSidebarItemsWithShares,
-    campaignData?._id && itemIds.length > 0 && isDm ? { sidebarItemIds: itemIds } : 'skip',
+    canLoadShareData({ campaignId: campaignData?._id, isDm, hasPersistedItems })
+      ? { sidebarItemIds: itemIds }
+      : 'skip',
   )
 
   const setMemberPermissionMutation = useCampaignMutation(
@@ -111,6 +142,12 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
     clearMemberPermissionMutation.isPending ||
     setAllPlayersPermissionMutation.isPending ||
     setFolderInheritSharesMutation.isPending
+  const canMutateShares = canRunShareMutation({
+    campaignId: campaignData?._id,
+    isDm,
+    isMutating,
+    hasPersistedItems,
+  })
 
   const itemShareInfoMap = (() => {
     const map = new Map<Id<'sidebarItems'>, SidebarItemShareInfo>()
@@ -198,7 +235,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
   }
 
   const toggleShareStatus = async () => {
-    if (!campaignData?._id || isMutating || items.length === 0 || !hasCompleteData) return
+    if (!canMutateShares || !hasCompleteData) return
 
     try {
       const isCurrentlyShared = aggregateShareStatus !== AGGREGATE_SHARE_STATUS.NOT_SHARED
@@ -226,7 +263,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
   }
 
   const toggleShareWithMember = async (memberId: Id<'campaignMembers'>) => {
-    if (!campaignData?._id || isMutating || items.length === 0 || !hasCompleteData) return
+    if (!canMutateShares || !hasCompleteData) return
 
     try {
       if (getShareState(memberId) === 'all') {
@@ -268,7 +305,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
       : false
 
   const setInheritShares = async (enabled: boolean) => {
-    if (!campaignData?._id || isMutating || !singleItem || !isFolder) return
+    if (!canMutateShares || !singleItem || !isFolder) return
 
     try {
       await setFolderInheritSharesMutation.mutateAsync({
@@ -281,7 +318,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
   }
 
   const setMemberPermission = async (memberId: Id<'campaignMembers'>, level: PermissionLevel) => {
-    if (!campaignData?._id || isMutating || itemIds.length === 0) return
+    if (!canMutateShares) return
 
     try {
       await setMemberPermissionMutation.mutateAsync({
@@ -295,7 +332,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
   }
 
   const setAllPlayersPermission = async (level: PermissionLevel | null) => {
-    if (!campaignData?._id || isMutating || itemIds.length === 0) return
+    if (!canMutateShares) return
 
     try {
       await setAllPlayersPermissionMutation.mutateAsync({
@@ -308,7 +345,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
   }
 
   const clearMemberPermission = async (memberId: Id<'campaignMembers'>) => {
-    if (!campaignData?._id || isMutating || itemIds.length === 0) return
+    if (!canMutateShares) return
 
     try {
       await clearMemberPermissionMutation.mutateAsync({
@@ -367,6 +404,6 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
     clearMemberPermission,
     setAllPlayersPermission,
     setInheritShares,
-    canShare: isDm && items.length > 0,
+    canShare: Boolean(isDm) && hasPersistedItems,
   }
 }

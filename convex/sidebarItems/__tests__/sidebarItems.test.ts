@@ -340,7 +340,7 @@ describe('executeMoveCommand', () => {
     }))
 
     expect(rows.moved?.parentId).toBe(destinationFolder)
-    expect(rows.moved?.name).toBe('Scene 2')
+    expect(rows.moved?.name).toBe('Scene 1')
     expect(rows.sourceSibling?.parentId).toBe(sourceFolder)
     expect(rows.sourceSibling?.name).toBe('Scene 2')
   })

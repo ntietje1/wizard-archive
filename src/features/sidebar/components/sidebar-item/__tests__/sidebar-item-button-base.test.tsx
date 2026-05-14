@@ -3,7 +3,6 @@ import { Folder } from 'lucide-react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { assertSidebarItemName } from 'convex/sidebarItems/validation/name'
 import { SidebarItemButtonBase } from '../sidebar-item-button-base'
-import { sidebarItemRowPaddingStyle } from '../sidebar-item-layout'
 
 const nameValidationState = vi.hoisted(() => ({
   hasError: false,
@@ -40,8 +39,10 @@ describe('SidebarItemButtonBase', () => {
       />,
     )
 
-    const chevronWrapper = screen.getByTestId('chevron-wrapper')
+    const collapseButton = screen.getByRole('button', { name: 'Collapse folder' })
+    const chevronWrapper = collapseButton.querySelector('.rotate-90')
 
+    expect(chevronWrapper).not.toBeNull()
     expect(chevronWrapper).toHaveClass('rotate-90')
     expect(chevronWrapper).not.toHaveClass('transition-transform')
     expect(chevronWrapper).not.toHaveClass('duration-100')
@@ -68,10 +69,9 @@ describe('SidebarItemButtonBase', () => {
     )
 
     const row = screen.getByRole('option')
-    const expectedPadding = sidebarItemRowPaddingStyle(1)
 
     expect(row).toHaveClass('w-full')
-    expect(row).toHaveStyle(expectedPadding)
+    expect(row).toHaveStyle({ paddingLeft: '20px', paddingRight: '4px' })
   })
 
   it('shows validation errors while renaming', async () => {
@@ -97,5 +97,28 @@ describe('SidebarItemButtonBase', () => {
 
     expect(screen.getByRole('textbox')).toHaveAttribute('aria-invalid', 'true')
     expect(await screen.findByText('A sibling already uses this name')).toBeInTheDocument()
+  })
+
+  it('marks pending rows busy and hides row actions', () => {
+    render(
+      <SidebarItemButtonBase
+        icon={Folder}
+        name={assertSidebarItemName('Creating Quest')}
+        presentation={{
+          visualState: { isSelected: true, isViewing: true, isMultiSelected: false },
+          focused: false,
+          renaming: false,
+          expanded: false,
+          showChevron: false,
+          pending: true,
+        }}
+        onFinishRename={vi.fn()}
+        onCancelRename={vi.fn()}
+        parentId={null}
+      />,
+    )
+
+    expect(screen.getByRole('option')).toHaveAttribute('aria-busy', 'true')
+    expect(screen.queryByRole('button', { name: 'More options' })).not.toBeInTheDocument()
   })
 })

@@ -14,6 +14,7 @@ import {
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
+import { isOptimisticSidebarItem } from '~/features/filesystem/optimistic-sidebar-items'
 import type { MouseEvent } from 'react'
 
 interface FlatSidebarItemProps {
@@ -45,6 +46,7 @@ export function FlatSidebarItem({
   })
 
   const icon = getSidebarItemIcon(item)
+  const isPending = isOptimisticSidebarItem(item)
 
   const selectBookmarkedItem = (event: MouseEvent) => {
     handleItemClick(event, () => setLastSelectedItem(item.slug))
@@ -60,8 +62,13 @@ export function FlatSidebarItem({
   }
 
   return (
-    <DraggableSidebarItem item={item}>
-      <EditorContextMenu ref={contextMenuRef} viewContext="sidebar" item={item}>
+    <DraggableSidebarItem item={item} disabled={isPending}>
+      <EditorContextMenu
+        ref={contextMenuRef}
+        viewContext="sidebar"
+        item={item}
+        disabled={isPending}
+      >
         <SidebarItemButtonBase
           icon={icon}
           name={item.name}
@@ -71,6 +78,7 @@ export function FlatSidebarItem({
             expanded: isExpanded,
             renaming: renamingId === item._id,
             showChevron: false,
+            pending: isPending,
           }}
           linkProps={linkProps}
           onClick={selectBookmarkedItem}

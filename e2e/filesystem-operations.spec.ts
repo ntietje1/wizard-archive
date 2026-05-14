@@ -79,6 +79,7 @@ async function createUntitledNote(page: Page) {
     await noteCard.click()
     await expect(page).not.toHaveURL(previousUrl, { timeout: 10000 })
   }
+  await waitForFilesystemIdle(page)
 }
 
 test.describe.serial('filesystem command operations', () => {
@@ -244,8 +245,8 @@ test.describe.serial('filesystem command operations', () => {
 
   test('copy, duplicate, undo, and redo use same-parent keep-both behavior', async ({ page }) => {
     const sourceName = uniqueName('Copy Source')
-    const copiedName = `${sourceName} 2`
-    const duplicatedName = `${sourceName} 3`
+    const copiedName = `${sourceName} 1`
+    const duplicatedName = `${sourceName} 2`
 
     await createNote(page, sourceName)
     await selectSidebarItems(page, [sourceName])
@@ -305,8 +306,8 @@ test.describe.serial('filesystem command operations', () => {
     await pressSelectAll(page)
     await pressCopy(page)
     await pressPaste(page)
-    await expectFolderItemVisible(page, targetFolder, `${folderSourceA} 2`)
-    await expectFolderItemVisible(page, targetFolder, `${folderSourceB} 2`)
+    await expectFolderItemVisible(page, targetFolder, `${folderSourceA} 1`)
+    await expectFolderItemVisible(page, targetFolder, `${folderSourceB} 1`)
     await expectNoConflictDialog(page)
 
     await selectSidebarItems(page, [cutSource])
@@ -427,15 +428,15 @@ test.describe.serial('filesystem command operations', () => {
     await expect(page.getByRole('dialog', { name: conflictDialogName })).toBeVisible()
     await page.getByRole('button', { name: 'Keep both items' }).click()
     await openItem(page, targetFolder)
-    await expectFolderItemVisible(page, targetFolder, `${keepA} 2`)
-    await expectFolderItemVisible(page, targetFolder, `${keepB} 2`)
+    await expectFolderItemVisible(page, targetFolder, `${keepA} 1`)
+    await expectFolderItemVisible(page, targetFolder, `${keepB} 1`)
 
     await copySidebarItemsIntoFolder(page, [keepA, keepB], targetFolder, { expectCompleted: false })
     await expect(page.getByRole('dialog', { name: conflictDialogName })).toBeVisible()
     await page.getByRole('button', { name: 'Skip these items' }).click()
     await openItem(page, targetFolder)
-    await expectFolderItemHidden(page, targetFolder, `${keepA} 3`)
-    await expectFolderItemHidden(page, targetFolder, `${keepB} 3`)
+    await expectFolderItemHidden(page, targetFolder, `${keepA} 2`)
+    await expectFolderItemHidden(page, targetFolder, `${keepB} 2`)
 
     await createNote(page, perItemA)
     await createNote(page, perItemB)
@@ -454,8 +455,8 @@ test.describe.serial('filesystem command operations', () => {
     await page.getByRole('button', { name: `Use existing ${perItemB}` }).click()
     await applyChoicesButton.click()
     await openItem(page, targetFolder)
-    await expectFolderItemVisible(page, targetFolder, `${perItemA} 2`)
-    await expectFolderItemHidden(page, targetFolder, `${perItemB} 2`)
+    await expectFolderItemVisible(page, targetFolder, `${perItemA} 1`)
+    await expectFolderItemHidden(page, targetFolder, `${perItemB} 1`)
   })
 
   test('multi-select drag keeps moved items selected after backend settlement', async ({

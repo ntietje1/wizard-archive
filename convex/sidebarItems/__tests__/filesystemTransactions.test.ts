@@ -218,7 +218,7 @@ describe('filesystem transactions', () => {
     const afterCopy = await dmAuth.query(api.sidebarItems.queries.getActiveSidebarItems, {
       campaignId: ctx.campaignId,
     })
-    expect(afterCopy.map((item) => item.name).sort()).toEqual(['Scene', 'Scene 2'])
+    expect(afterCopy.map((item) => item.name).sort()).toEqual(['Scene', 'Scene 1'])
 
     const undoReceipt = await dmAuth.mutation(
       api.sidebarItems.filesystem.mutations.undoFileSystemTransaction,
@@ -244,7 +244,7 @@ describe('filesystem transactions', () => {
     const afterRedo = await dmAuth.query(api.sidebarItems.queries.getActiveSidebarItems, {
       campaignId: ctx.campaignId,
     })
-    expect(afterRedo.map((item) => item.name).sort()).toEqual(['Scene', 'Scene 2'])
+    expect(afterRedo.map((item) => item.name).sort()).toEqual(['Scene', 'Scene 1'])
     expect(afterRedo.map((item) => item._id).sort()).toEqual(
       afterCopy.map((item) => item._id).sort(),
     )

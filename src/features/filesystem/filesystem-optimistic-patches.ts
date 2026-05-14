@@ -1,6 +1,13 @@
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_STATUS } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { diffSidebarItemFields } from 'convex/sidebarItems/filesystem/patches'
+import { appendSuffix, slugify } from 'convex/common/slug'
+import {
+  assertSidebarItemSlug,
+  SIDEBAR_ITEM_SLUG_MAX_LENGTH,
+  validateSidebarItemSlug,
+} from 'convex/sidebarItems/validation/slug'
+import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { FileSystemPatch } from 'convex/sidebarItems/filesystem/receipts'
@@ -8,11 +15,10 @@ import type {
   CreateFileSystemCommand,
   RenameFileSystemCommand,
 } from 'convex/sidebarItems/filesystem/commands'
-import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import type { SidebarCacheSnapshot } from './filesystem-cache-patches'
+import { OPTIMISTIC_SIDEBAR_ITEM_ID_PREFIX } from './optimistic-sidebar-items'
 import { logger } from '~/shared/utils/logger'
 
-const OPTIMISTIC_ID_PREFIX = 'optimistic-'
 let optimisticIdIndex = 0
 
 function nextOptimisticIdIndex() {
@@ -20,20 +26,27 @@ function nextOptimisticIdIndex() {
   return optimisticIdIndex
 }
 
-function optimisticSlug(name: string, index: number): SidebarItemSlug {
-  return `${
-    name
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '') || 'item'
-  }-optimistic-${index}` as SidebarItemSlug
+export function expectedOptimisticCreateSlug(
+  name: string,
+  existingSlugs: ReadonlySet<string>,
+): SidebarItemSlug {
+  const normalized = slugify(name)
+  if (!normalized) return assertSidebarItemSlug('item')
+
+  for (let suffix = 1; suffix <= 1000; suffix++) {
+    const candidate = appendSuffix(normalized, suffix, SIDEBAR_ITEM_SLUG_MAX_LENGTH)
+    if (validateSidebarItemSlug(candidate) || existingSlugs.has(candidate)) continue
+    return assertSidebarItemSlug(candidate)
+  }
+
+  return assertSidebarItemSlug(appendSuffix(normalized, Date.now(), SIDEBAR_ITEM_SLUG_MAX_LENGTH))
 }
 
 type FileSystemOptimisticPreview = {
   command: CreateFileSystemCommand | RenameFileSystemCommand
   receiptPatches: Array<FileSystemPatch>
   inversePatches: Array<FileSystemPatch>
+  optimisticItem?: AnySidebarItem
 }
 
 export function buildOptimisticCreatePreview({
@@ -41,12 +54,16 @@ export function buildOptimisticCreatePreview({
   parentId,
   currentUserId,
   campaignId,
+  name,
+  slug,
   now = Date.now(),
 }: {
   command: CreateFileSystemCommand
   parentId: Id<'sidebarItems'> | null
   currentUserId: Id<'userProfiles'> | null
   campaignId: Id<'campaigns'>
+  name: AnySidebarItem['name']
+  slug: SidebarItemSlug
   now?: number
 }): FileSystemOptimisticPreview {
   if (!currentUserId) {
@@ -60,10 +77,10 @@ export function buildOptimisticCreatePreview({
 
   const index = nextOptimisticIdIndex()
   const item: AnySidebarItem = {
-    _id: `${OPTIMISTIC_ID_PREFIX}create-${now}-${index}` as Id<'sidebarItems'>,
+    _id: `${OPTIMISTIC_SIDEBAR_ITEM_ID_PREFIX}create-${now}-${index}` as Id<'sidebarItems'>,
     _creationTime: now,
-    name: command.name as AnySidebarItem['name'],
-    slug: optimisticSlug(command.name, index),
+    name,
+    slug,
     campaignId,
     parentId,
     type: command.itemType,
@@ -94,6 +111,7 @@ export function buildOptimisticCreatePreview({
     command,
     receiptPatches,
     inversePatches: [{ type: 'removeSidebarItem', itemId: item._id, snapshot: item }],
+    optimisticItem: item,
   }
 }
 

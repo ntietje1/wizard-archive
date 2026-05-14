@@ -17,7 +17,15 @@ describe('filesystem undo recording', () => {
     useFileSystemUndoStore.getState().reset()
   })
 
-  const receipt = (id: string, name: string): FileSystemTransactionReceipt => {
+  const receipt = ({
+    id,
+    name,
+    direction = 'forward',
+  }: {
+    id: string
+    name: string
+    direction?: FileSystemTransactionReceipt['direction']
+  }): FileSystemTransactionReceipt => {
     const sidebarItemName = assertSidebarItemName(name)
     const forwardPatch = {
       type: 'updateSidebarItem' as const,
@@ -27,7 +35,7 @@ describe('filesystem undo recording', () => {
     }
     return {
       transactionId: id as Id<'filesystemTransactions'>,
-      direction: 'forward',
+      direction,
       command: { type: 'rename', itemId, name: sidebarItemName },
       events: [{ type: 'renamed', itemId, slug: name, previousSlug: 'previous' }],
       patches: [forwardPatch],
@@ -68,8 +76,8 @@ describe('filesystem undo recording', () => {
   it('preserves remaining redo entries when recording a redone transaction', () => {
     const store = useFileSystemUndoStore.getState()
     store.setCampaign('campaign-1' as Id<'campaigns'>)
-    store.pushUndo(receipt('tx-1', 'First'))
-    store.pushUndo(receipt('tx-2', 'Second'))
+    store.pushUndo(receipt({ id: 'tx-1', name: 'First' }))
+    store.pushUndo(receipt({ id: 'tx-2', name: 'Second' }))
 
     const secondUndo = store.peekUndo()
     assertNotNull(secondUndo, 'Expected an undo entry for tx-2')
@@ -93,7 +101,7 @@ describe('filesystem undo recording', () => {
     expect(store.peekUndo()?.transactionId).toBe('tx-1')
   })
 
-  it('stores only the transaction id for undoable create receipts', () => {
+  it('stores only the transaction id for undoable receipts', () => {
     const created = createNote()
     const store = useFileSystemUndoStore.getState()
     store.setCampaign(created.campaignId)
@@ -121,5 +129,19 @@ describe('filesystem undo recording', () => {
     const entry = store.peekUndo()
     assertNotNull(entry, 'Expected an undo entry for the created item')
     expect(entry).toEqual({ transactionId })
+  })
+
+  it('moves redo entries with their transaction id intact', () => {
+    const store = useFileSystemUndoStore.getState()
+    const renameReceipt = receipt({ id: transactionId, name: 'next' })
+    store.pushUndo(renameReceipt)
+
+    const undoEntry = store.peekUndo()
+    assertNotNull(undoEntry, 'Expected undo entry')
+    store.removeUndo()
+    store.pushRedoEntry(undoEntry)
+
+    const redoEntry = store.peekRedo()
+    expect(redoEntry).toEqual(undoEntry)
   })
 })
