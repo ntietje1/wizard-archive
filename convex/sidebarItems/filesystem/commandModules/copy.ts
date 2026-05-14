@@ -40,10 +40,6 @@ const MAX_COPY_DEPTH = 50
 type CopyOrReplaceOperation = Extract<TransferOperation, { action: 'place' | 'replace' }>
 type ExecutableCopyOperation = TransferOperation
 
-type CopyCommandResult = {
-  events: Array<FileSystemEvent>
-}
-
 const COPY_OPERATION_ACTION = {
   place: 'place',
   replace: 'replace',
@@ -51,28 +47,22 @@ const COPY_OPERATION_ACTION = {
 } as const
 
 type CopyCommandContext = {
-  result: CopyCommandResult
+  events: Array<FileSystemEvent>
   session: FileSystemWriteSession
 }
 
-function createEmptyCopyCommandResult(): CopyCommandResult {
-  return {
-    events: [],
-  }
-}
-
 function applySkippedDecisions(
-  result: CopyCommandResult,
+  events: Array<FileSystemEvent>,
   decisions: Array<OperationDecision> | undefined,
 ) {
   const skipped = new Set(
-    result.events
+    events
       .filter((event) => event.type === FILE_SYSTEM_EVENT_TYPE.skipped)
       .map((event) => event.itemId),
   )
   for (const decision of decisions ?? []) {
     if (decision.action !== 'skip' || skipped.has(decision.sourceItemId)) continue
-    result.events.push({
+    events.push({
       type: FILE_SYSTEM_EVENT_TYPE.skipped,
       itemId: decision.sourceItemId,
       sourceItemId: decision.sourceItemId,
@@ -135,7 +125,7 @@ async function insertCopiedSidebarItem(
   })
 
   if (isRoot) {
-    copyContext.result.events.push({
+    copyContext.events.push({
       type: FILE_SYSTEM_EVENT_TYPE.copied,
       itemId,
       sourceItemId: source._id,
@@ -222,9 +212,9 @@ async function executeCopyOperations(
   operations: Array<TransferOperation>,
   rootSourceIds: ReadonlySet<Id<'sidebarItems'>>,
   session: FileSystemWriteSession,
-): Promise<CopyCommandResult> {
+): Promise<Array<FileSystemEvent>> {
   const copyContext: CopyCommandContext = {
-    result: createEmptyCopyCommandResult(),
+    events: [],
     session,
   }
 
@@ -232,7 +222,7 @@ async function executeCopyOperations(
     await executeCopyOperation(ctx, operation, copyContext, rootSourceIds)
   }
 
-  return copyContext.result
+  return copyContext.events
 }
 
 async function executeCopyOperation(
@@ -244,18 +234,20 @@ async function executeCopyOperation(
   const source = await loadCopyableOperationSource(ctx, operation.sourceItemId)
 
   if (operation.action === COPY_OPERATION_ACTION.mergeFolder) {
-    await logCopyFolderMerge(ctx, source, operation.destinationItemId)
-    copyContext.result.events.push({
+    const destinationId = await logCopyFolderMerge(ctx, source, operation.destinationItemId)
+    copyContext.events.push({
       type: FILE_SYSTEM_EVENT_TYPE.mergedFolder,
-      itemId: source._id,
+      itemId: destinationId,
       sourceItemId: source._id,
     })
     return
   }
 
   const parentId = operation.targetParentId ?? null
+  let replacementDestinationId: Id<'sidebarItems'> | null = null
   if (operation.action === COPY_OPERATION_ACTION.replace) {
-    await trashCopyReplacement(ctx, operation.destinationItemId, copyContext.session)
+    replacementDestinationId = operation.destinationItemId
+    await trashCopyReplacement(ctx, replacementDestinationId, copyContext.session)
   }
 
   const copiedId = await insertCopiedSidebarItem(ctx, {
@@ -265,10 +257,10 @@ async function executeCopyOperation(
     copyContext,
     isRoot: rootSourceIds.has(source._id),
   })
-  if (operation.action === COPY_OPERATION_ACTION.replace) {
-    copyContext.result.events.push({
+  if (replacementDestinationId) {
+    copyContext.events.push({
       type: FILE_SYSTEM_EVENT_TYPE.replaced,
-      itemId: source._id,
+      itemId: replacementDestinationId,
       sourceItemId: source._id,
     })
   }
@@ -309,7 +301,7 @@ async function logCopyFolderMerge(
   ctx: CampaignMutationCtx,
   source: AccessibleSidebarItemRow,
   destinationItemId: Id<'sidebarItems'> | undefined,
-) {
+): Promise<Id<'sidebarItems'>> {
   if (source.type !== SIDEBAR_ITEM_TYPES.folders || !destinationItemId) {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Only folders can be merged')
   }
@@ -331,16 +323,14 @@ async function logCopyFolderMerge(
       copiedFromName: source.name,
     },
   })
+  return destination._id
 }
 
 async function trashCopyReplacement(
   ctx: CampaignMutationCtx,
-  destinationItemId: Id<'sidebarItems'> | undefined,
+  destinationItemId: Id<'sidebarItems'>,
   session: FileSystemWriteSession,
 ) {
-  if (!destinationItemId) {
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Replace requires a destination item')
-  }
   const destination = await getSidebarItemRow(ctx, destinationItemId)
   if (!destination) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Destination item not found')
@@ -472,7 +462,7 @@ async function executeCopyPlan(
     decisions?: Array<OperationDecision>
     session: FileSystemWriteSession
   },
-): Promise<CopyCommandResult> {
+): Promise<Array<FileSystemEvent>> {
   const targetItems = await getActiveSidebarItemRowsByParent(ctx, { parentId: targetParentId })
   const sourceItems = await loadCopyableSources(ctx, {
     sourceItemIds,
@@ -501,9 +491,9 @@ async function executeCopyPlan(
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Operation requires conflict decisions')
   }
 
-  const result = await executeCopyOperations(ctx, plan.operations, rootSourceIds, session)
-  applySkippedDecisions(result, decisions)
-  return result
+  const events = await executeCopyOperations(ctx, plan.operations, rootSourceIds, session)
+  applySkippedDecisions(events, decisions)
+  return events
 }
 
 export async function executeCopyCommand(
@@ -517,7 +507,7 @@ export async function executeCopyCommand(
   },
 ): Promise<FileSystemDelta> {
   const session = createFileSystemWriteSession(ctx)
-  const result = await executeCopyPlan(ctx, {
+  const events = await executeCopyPlan(ctx, {
     sourceItemIds: command.itemIds,
     targetParentId: command.targetParentId,
     decisions,
@@ -526,6 +516,6 @@ export async function executeCopyCommand(
 
   return await session.build({
     command,
-    events: result.events,
+    events,
   })
 }

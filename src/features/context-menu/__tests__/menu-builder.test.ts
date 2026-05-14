@@ -67,7 +67,7 @@ function sidebarCtx(overrides: Partial<MenuContext> = {}): MenuContext {
 
 describe('buildMenu', () => {
   const actions = createActions()
-  const services = { actions }
+  const services = { actions, filesystem: { canPaste: false } }
 
   it('DM sees edit and delete actions on a note in sidebar', () => {
     const menu = buildMenu({
@@ -133,6 +133,27 @@ describe('buildMenu', () => {
     expect(ids).not.toContain('copy')
     expect(ids).not.toContain('cut')
     expect(ids).not.toContain('rename')
+  })
+
+  it('shows Paste only when the filesystem clipboard can paste', () => {
+    const folder = createFolder()
+    const menuWithoutClipboard = buildMenu({
+      context: sidebarCtx({ item: folder }),
+      services,
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+    const menuWithClipboard = buildMenu({
+      context: sidebarCtx({ item: folder }),
+      services: { ...services, filesystem: { canPaste: true } },
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+
+    expect(menuWithoutClipboard.flatItems.map((item) => item.id)).not.toContain('paste')
+    expect(menuWithClipboard.flatItems.map((item) => item.id)).toContain('paste')
   })
 
   it('hides active-item operations when any selected root is trashed', () => {

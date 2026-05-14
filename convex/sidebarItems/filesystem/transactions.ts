@@ -211,9 +211,7 @@ function patchChangesPathOrVisibility(
 ): patch is Extract<FileSystemPatch, { type: 'updateSidebarItem' }> {
   return (
     patch.type === 'updateSidebarItem' &&
-    (patch.fields.parentId !== undefined ||
-      patch.fields.status !== undefined ||
-      patch.fields.location !== undefined)
+    (patch.fields.parentId !== undefined || patch.fields.status !== undefined)
   )
 }
 

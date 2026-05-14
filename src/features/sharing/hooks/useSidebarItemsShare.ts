@@ -16,7 +16,7 @@ import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
 import { isOptimisticSidebarItem } from '~/features/filesystem/optimistic-sidebar-items'
 
 type MixedPermissionLevel = 'mixed'
-export type AggregatePermissionLevel = PermissionLevel | MixedPermissionLevel
+type AggregatePermissionLevel = PermissionLevel | MixedPermissionLevel
 export type NullableAggregatePermissionLevel = PermissionLevel | MixedPermissionLevel | null
 
 export interface ShareItemWithPermission extends ShareItem {

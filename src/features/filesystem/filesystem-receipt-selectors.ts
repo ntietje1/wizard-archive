@@ -1,4 +1,5 @@
 import type { Id } from 'convex/_generated/dataModel'
+import { SIDEBAR_ITEM_STATUS } from 'convex/sidebarItems/types/baseTypes'
 import type {
   FileSystemEvent,
   FileSystemMessageKind,
@@ -12,8 +13,29 @@ function pluralize(count: number, singular: string, plural = `${singular}s`) {
   return count === 1 ? singular : plural
 }
 
-function isCreatedRootEvent(event: FileSystemEvent) {
-  return event.type === 'created' || event.type === 'copied'
+type ReceiptEventGroups = ReturnType<typeof createReceiptEventGroups>
+
+const receiptEventGroupsCache = new WeakMap<FileSystemTransactionReceipt, ReceiptEventGroups>()
+
+function createReceiptEventGroups(receipt: FileSystemTransactionReceipt) {
+  return {
+    created: receipt.events.filter((event) => event.type === 'created'),
+    renamed: receipt.events.filter((event) => event.type === 'renamed'),
+    copied: receipt.events.filter((event) => event.type === 'copied'),
+    moved: receipt.events.filter((event) => event.type === 'moved'),
+    trashed: receipt.events.filter((event) => event.type === 'trashed'),
+    restored: receipt.events.filter((event) => event.type === 'restored'),
+    mergedFolder: receipt.events.filter((event) => event.type === 'mergedFolder'),
+    deletedForever: receipt.events.filter((event) => event.type === 'deletedForever'),
+  }
+}
+
+function groupReceiptEvents(receipt: FileSystemTransactionReceipt) {
+  const cached = receiptEventGroupsCache.get(receipt)
+  if (cached) return cached
+  const groups = createReceiptEventGroups(receipt)
+  receiptEventGroupsCache.set(receipt, groups)
+  return groups
 }
 
 function isNavigationEvent(
@@ -28,14 +50,11 @@ function isNavigationEvent(
 export function getReceiptRemovedRootIds(
   receipt: FileSystemTransactionReceipt,
 ): Array<Id<'sidebarItems'>> {
+  const events = groupReceiptEvents(receipt)
   if (receipt.direction === 'undo') {
-    return receipt.events
-      .filter((event) => isCreatedRootEvent(event) || event.type === 'restored')
-      .map((event) => event.itemId)
+    return [...events.created, ...events.copied, ...events.restored].map((event) => event.itemId)
   }
-  return receipt.events
-    .filter((event) => event.type === 'trashed' || event.type === 'deletedForever')
-    .map((event) => event.itemId)
+  return [...events.trashed, ...events.deletedForever].map((event) => event.itemId)
 }
 
 export type ReceiptRemovedItemSnapshot = {
@@ -48,12 +67,23 @@ export function getReceiptRemovedItemSnapshots(
   receipt: FileSystemTransactionReceipt,
 ): Array<ReceiptRemovedItemSnapshot> {
   return receipt.patches.flatMap((patch) => {
-    if (patch.type !== 'removeSidebarItem') return []
+    if (patch.type === 'removeSidebarItem') {
+      return [
+        {
+          _id: patch.snapshot._id,
+          parentId: patch.snapshot.parentId,
+          slug: assertSidebarItemSlug(patch.snapshot.slug),
+        },
+      ]
+    }
+    if (patch.type !== 'updateSidebarItem') return []
+    if (patch.fields.status !== SIDEBAR_ITEM_STATUS.undoHidden) return []
+    if (typeof patch.before.slug !== 'string' || !('parentId' in patch.before)) return []
     return [
       {
-        _id: patch.snapshot._id,
-        parentId: patch.snapshot.parentId,
-        slug: assertSidebarItemSlug(patch.snapshot.slug),
+        _id: patch.itemId,
+        parentId: patch.before.parentId ?? null,
+        slug: assertSidebarItemSlug(patch.before.slug),
       },
     ]
   })
@@ -62,20 +92,18 @@ export function getReceiptRemovedItemSnapshots(
 export function getReceiptSelectedRootIds(
   receipt: FileSystemTransactionReceipt,
 ): Array<Id<'sidebarItems'>> {
-  const selectedEventTypes =
+  const events = groupReceiptEvents(receipt)
+  const selectedEvents =
     receipt.direction === 'undo'
-      ? new Set<FileSystemEvent['type']>(['moved', 'trashed'])
-      : new Set<FileSystemEvent['type']>([
-          'created',
-          'copied',
-          'moved',
-          'restored',
-          'replaced',
-          'mergedFolder',
-        ])
-  return receipt.events
-    .filter((event) => selectedEventTypes.has(event.type))
-    .map((event) => event.itemId)
+      ? [...events.moved, ...events.trashed]
+      : [
+          ...events.created,
+          ...events.copied,
+          ...events.moved,
+          ...events.restored,
+          ...events.mergedFolder,
+        ]
+  return selectedEvents.map((event) => event.itemId)
 }
 
 export function getReceiptNavigationSlug(
@@ -84,7 +112,10 @@ export function getReceiptNavigationSlug(
 ): string | null {
   if (receipt.direction === 'undo') return null
 
-  const event = receipt.events.find((candidate) => isNavigationEvent(candidate, currentSlug))
+  const events = groupReceiptEvents(receipt)
+  const event = [...events.created, ...events.renamed].find((candidate) =>
+    isNavigationEvent(candidate, currentSlug),
+  )
   return event?.slug ?? null
 }
 
@@ -92,7 +123,7 @@ export function getCreatedItemResult(receipt: FileSystemTransactionReceipt | nul
   id: Id<'sidebarItems'>
   slug: SidebarItemSlug
 } | null {
-  const created = receipt?.events.find((event) => event.type === 'created')
+  const created = receipt ? groupReceiptEvents(receipt).created[0] : null
   if (!created?.slug) return null
   return { id: created.itemId, slug: assertSidebarItemSlug(created.slug) }
 }
@@ -100,7 +131,7 @@ export function getCreatedItemResult(receipt: FileSystemTransactionReceipt | nul
 export function getReceiptRenamedSlug(
   receipt: FileSystemTransactionReceipt | null,
 ): SidebarItemSlug | null {
-  const renamed = receipt?.events.find((event) => event.type === 'renamed')
+  const renamed = receipt ? groupReceiptEvents(receipt).renamed[0] : null
   return renamed?.slug ? assertSidebarItemSlug(renamed.slug) : null
 }
 

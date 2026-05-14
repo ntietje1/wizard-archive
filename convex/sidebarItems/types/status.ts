@@ -1,9 +1,8 @@
 import { SIDEBAR_ITEM_STATUS } from './baseTypes'
 import type { Id } from '../../_generated/dataModel'
-import type { SidebarItemLocation, SidebarItemStatus } from './baseTypes'
+import type { SidebarItemStatus } from './baseTypes'
 
 export type SidebarItemLifecycleFields = {
-  location: SidebarItemLocation
   status: SidebarItemStatus
   deletionTime?: number | null
   deletedBy?: Id<'userProfiles'> | null

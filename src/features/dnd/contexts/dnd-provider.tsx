@@ -9,15 +9,12 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useFileDropHandler } from '~/features/dnd/hooks/useFileDropHandler'
 import { useFileSystem } from '~/features/filesystem/useFileSystem'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
-import {
-  useActiveSidebarItems,
-  useTrashSidebarItems,
-} from '~/features/sidebar/hooks/useSidebarItems'
 import { DndProviderContext } from '~/features/dnd/hooks/useDnd'
 import { DragOverlayPortal } from '~/features/dnd/components/drag-overlay'
 import { DndBatchDecisionDialog } from '~/features/dnd/components/dnd-batch-decision-dialog'
 import { useElementDragMonitor } from '~/features/dnd/hooks/useElementDragMonitor'
 import { useExternalDragMonitor } from '~/features/dnd/hooks/useExternalDragMonitor'
+import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
 
 export function DndProvider({ children }: { children: React.ReactNode }) {
   const { campaign, campaignId, isDm } = useCampaign()
@@ -25,9 +22,7 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
   const filesystem = useFileSystem()
   const { navigateToItem } = useEditorNavigation()
   const { handleDrop: handleDropFiles } = useFileDropHandler()
-  const { itemsMap, getAncestorSidebarItems } = useActiveSidebarItems()
-  const { itemsMap: trashedItemsMap } = useTrashSidebarItems()
-  const allItemsMap = new Map<Id<'sidebarItems'>, AnySidebarItem>([...itemsMap, ...trashedItemsMap])
+  const filesystemReadModel = useFileSystemReadModel()
 
   const dndContext: DndExecutionContext = {
     executeFileSystemDrop: filesystem.executeDrop,
@@ -40,18 +35,23 @@ export function DndProvider({ children }: { children: React.ReactNode }) {
   }
 
   const resolveItem = (id: Id<'sidebarItems'>): AnySidebarItem | null =>
-    itemsMap.get(id) ?? trashedItemsMap.get(id) ?? null
+    filesystemReadModel.allItemsById.get(id) ?? null
 
-  const getAncestorIds = (id: Id<'sidebarItems'>) => getAncestorSidebarItems(id).map((a) => a._id)
+  const getAncestorIds = filesystemReadModel.getActiveAncestorIds
 
   const resolveDropTargetWrapped = (rawData: Record<string, unknown>) =>
-    resolveDropTarget(rawData, itemsMap, trashedItemsMap, getAncestorIds)
+    resolveDropTarget(
+      rawData,
+      filesystemReadModel.activeItemsById,
+      filesystemReadModel.trashedItemsById,
+      getAncestorIds,
+    )
 
   const ctxRef = useRef<DndMonitorCtx>(null!)
   ctxRef.current = {
-    itemsMap,
-    trashedItemsMap,
-    allItemsMap,
+    itemsMap: filesystemReadModel.activeItemsById,
+    trashedItemsMap: filesystemReadModel.trashedItemsById,
+    allItemsMap: filesystemReadModel.allItemsById,
     getAncestorIds,
     dndContext,
     dropPlanningContext,

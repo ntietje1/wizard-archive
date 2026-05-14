@@ -248,10 +248,15 @@ describe('executeCopyCommand', () => {
       ctx.dm.profile._id,
       { name: 'Destination' },
     )
-    await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Scene',
-      parentId: destinationFolderId,
-    })
+    const { noteId: replacedDestinationId } = await createNote(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+      {
+        name: 'Scene',
+        parentId: destinationFolderId,
+      },
+    )
 
     const receipt = await dmAuth.mutation(
       api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
@@ -264,7 +269,7 @@ describe('executeCopyCommand', () => {
 
     expect(
       receipt.events.filter((event) => event.type === 'replaced').map((event) => event.itemId),
-    ).toEqual([sourceId])
+    ).toEqual([replacedDestinationId])
     expect(receipt.undoable).toBe(true)
   })
 
@@ -278,15 +283,17 @@ describe('executeCopyCommand', () => {
       { name: 'Destination' },
     )
     const sourceIds: Array<Id<'sidebarItems'>> = []
+    const destinationIds: Array<Id<'sidebarItems'>> = []
 
     for (let index = 1; index <= 9; index += 1) {
       const name = `Scene ${index}`
       const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, { name })
-      await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+      const { noteId: destinationId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
         name,
         parentId: destinationFolderId,
       })
       sourceIds.push(noteId)
+      destinationIds.push(destinationId)
     }
 
     const result = await executeCopyCommand(dmAuth, {
@@ -300,7 +307,7 @@ describe('executeCopyCommand', () => {
     })
 
     expect(copiedRootItemIds(result)).toHaveLength(1)
-    expect(filesystemEventItemIds(result, 'replaced')).toEqual([sourceIds[0]])
+    expect(filesystemEventItemIds(result, 'replaced')).toEqual([destinationIds[0]])
     expect(filesystemEventItemIds(result, 'skipped')).toEqual(sourceIds.slice(1))
   })
 
@@ -313,7 +320,7 @@ describe('executeCopyCommand', () => {
     const { folderId: targetFolderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Archive',
     })
-    const { noteId: sourceChildId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+    await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Encounter',
       parentId: sourceFolderId,
     })
@@ -326,7 +333,7 @@ describe('executeCopyCommand', () => {
         parentId: targetFolderId,
       },
     )
-    await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
+    const { noteId: destinationChildId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Encounter',
       parentId: destinationFolderId,
     })
@@ -340,8 +347,8 @@ describe('executeCopyCommand', () => {
 
     expect(copiedRootItemIds(result)).toEqual([])
     expect(filesystemEventItemIds(result, 'copied')).toHaveLength(0)
-    expect(filesystemEventItemIds(result, 'replaced')).toEqual([sourceChildId])
-    expect(filesystemEventItemIds(result, 'mergedFolder')).toEqual([sourceFolderId])
+    expect(filesystemEventItemIds(result, 'replaced')).toEqual([destinationChildId])
+    expect(filesystemEventItemIds(result, 'mergedFolder')).toEqual([destinationFolderId])
   })
 
   it('records copy folder merge receipts as undoable transactions', async () => {
@@ -357,10 +364,15 @@ describe('executeCopyCommand', () => {
     const { folderId: targetFolderId } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Archive',
     })
-    await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Scenes',
-      parentId: targetFolderId,
-    })
+    const { folderId: destinationFolderId } = await createFolder(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+      {
+        name: 'Scenes',
+        parentId: targetFolderId,
+      },
+    )
 
     const receipt = await dmAuth.mutation(
       api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
@@ -373,7 +385,7 @@ describe('executeCopyCommand', () => {
 
     expect(
       receipt.events.filter((event) => event.type === 'mergedFolder').map((event) => event.itemId),
-    ).toEqual([sourceFolderId])
+    ).toEqual([destinationFolderId])
     expect(receipt.undoable).toBe(true)
   })
 

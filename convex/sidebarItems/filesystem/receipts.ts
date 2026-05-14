@@ -4,10 +4,11 @@ import type { SidebarItemColor } from '../validation/color'
 import type { SidebarItemIconName } from '../validation/icon'
 import type { SidebarItemName } from '../validation/name'
 import type { SidebarItemSlug } from '../validation/slug'
-import type { SidebarItemLocation, SidebarItemStatus } from '../types/baseTypes'
+import type { SidebarItemStatus } from '../types/baseTypes'
 
 export const FILE_SYSTEM_EVENT_TYPE = {
   created: 'created',
+  updated: 'updated',
   renamed: 'renamed',
   moved: 'moved',
   copied: 'copied',
@@ -25,6 +26,7 @@ export type FileSystemEventType =
 
 export type FileSystemEvent =
   | { type: typeof FILE_SYSTEM_EVENT_TYPE.created; itemId: Id<'sidebarItems'>; slug: string }
+  | { type: typeof FILE_SYSTEM_EVENT_TYPE.updated; itemId: Id<'sidebarItems'> }
   | {
       type: typeof FILE_SYSTEM_EVENT_TYPE.renamed
       itemId: Id<'sidebarItems'>
@@ -81,7 +83,6 @@ export type SidebarItemPatchFields = {
   iconName: SidebarItemIconName | null
   color: SidebarItemColor | null
   parentId: Id<'sidebarItems'> | null
-  location: SidebarItemLocation
   status: SidebarItemStatus
   previewStorageId: Id<'_storage'> | null
   previewLockedUntil: number | null
@@ -197,7 +198,11 @@ export function messageKindForFileSystemCommand(
     case 'create':
       return 'created'
     case 'rename':
-      return events.some((event) => event.type === FILE_SYSTEM_EVENT_TYPE.renamed)
+      return events.some(
+        (event) =>
+          event.type === FILE_SYSTEM_EVENT_TYPE.renamed ||
+          event.type === FILE_SYSTEM_EVENT_TYPE.updated,
+      )
         ? 'renamed'
         : 'noop'
     case 'copy':

@@ -1,4 +1,4 @@
-import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
+import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { findUniqueSidebarItemSlug } from '../validation/orchestration'
 import { collectDescendants } from '../functions/collectDescendants'
 import {
@@ -11,8 +11,12 @@ import type { Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
 import type { AnySidebarItemRow } from '../types/types'
 import type { SidebarItemName } from '../validation/name'
+import type { SidebarItemFieldPatch } from './receipts'
 
 type ItemOperation = (ctx: MutationCtx, item: AnySidebarItemRow) => Promise<void>
+export type TrashTreePatch = Required<
+  Pick<SidebarItemFieldPatch, 'status' | 'deletionTime' | 'deletedBy' | 'parentId'>
+>
 
 async function applyToTree(
   ctx: MutationCtx,
@@ -43,10 +47,8 @@ export async function trashTree(
   item: AnySidebarItemRow,
   deletion: { deletionTime: number; deletedBy: Id<'userProfiles'> },
 ): Promise<number> {
-  // FileSystemWriteSession records trash patches from this exact field contract.
   return applyToTree(ctx, item, async (_, i) => {
-    const patch = {
-      location: SIDEBAR_ITEM_LOCATION.sidebar,
+    const patch: TrashTreePatch = {
       status: SIDEBAR_ITEM_STATUS.trashed,
       deletionTime: deletion.deletionTime,
       deletedBy: deletion.deletedBy,
@@ -74,13 +76,13 @@ export async function restoreTreeDescendants(
     const patch = {
       deletionTime: null,
       deletedBy: null,
-      location: SIDEBAR_ITEM_LOCATION.sidebar,
       status: SIDEBAR_ITEM_STATUS.active,
       slug,
     }
     assertSidebarItemLifecycleConsistency({ ...i, ...patch })
     await ctx.db.patch('sidebarItems', i._id, patch)
-    restored.push({ ...i, ...patch })
+    const restoredItem = await ctx.db.get(i._id)
+    if (restoredItem) restored.push(restoredItem)
   })
   return restored
 }

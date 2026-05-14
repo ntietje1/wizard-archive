@@ -9,7 +9,8 @@ import { assertSidebarItemName } from 'convex/sidebarItems/validation/name'
 import { FileSystemProvider } from '../filesystem-provider'
 import { useFileSystem } from '../useFileSystem'
 import { useFileSystemUndoStore } from '../filesystem-undo-store'
-import { createNote } from '~/test/factories/sidebar-item-factory'
+import { useFileSystemClipboardStore } from '../filesystem-clipboard-store'
+import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 
 let sidebarItems: Array<AnySidebarItem> = []
@@ -57,12 +58,22 @@ vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
   useActiveSidebarItems: () => ({
     data: sidebarItems,
     itemsMap: new Map(sidebarItems.map((item) => [item._id, item] as const)),
-    parentItemsMap: new Map([[null, sidebarItems]]),
+    parentItemsMap: sidebarItems.reduce((map, item) => {
+      const siblings = map.get(item.parentId) ?? []
+      siblings.push(item)
+      map.set(item.parentId, siblings)
+      return map
+    }, new Map<Id<'sidebarItems'> | null, Array<AnySidebarItem>>()),
   }),
   useTrashSidebarItems: () => ({
     data: trashItems,
     itemsMap: new Map(trashItems.map((item) => [item._id, item] as const)),
-    parentItemsMap: new Map([[null, trashItems]]),
+    parentItemsMap: trashItems.reduce((map, item) => {
+      const siblings = map.get(item.parentId) ?? []
+      siblings.push(item)
+      map.set(item.parentId, siblings)
+      return map
+    }, new Map<Id<'sidebarItems'> | null, Array<AnySidebarItem>>()),
   }),
 }))
 
@@ -246,6 +257,53 @@ function createUndoCreateReceipt(item: AnySidebarItem): FileSystemTransactionRec
   }
 }
 
+function createUndoCopiedFolderReceipt({
+  folder,
+  child,
+}: {
+  folder: AnySidebarItem
+  child: AnySidebarItem
+}): FileSystemTransactionReceipt {
+  return {
+    transactionId: 'transaction_copy_folder' as Id<'filesystemTransactions'>,
+    direction: 'undo',
+    command: {
+      type: 'copy',
+      itemIds: ['source_folder' as Id<'sidebarItems'>],
+      targetParentId: null,
+    },
+    events: [
+      { type: 'copied', itemId: folder._id, sourceItemId: 'source_folder' as Id<'sidebarItems'> },
+    ],
+    patches: [
+      {
+        type: 'updateSidebarItem',
+        itemId: folder._id,
+        before: {
+          status: SIDEBAR_ITEM_STATUS.active,
+          parentId: folder.parentId,
+          slug: folder.slug,
+        },
+        fields: { status: SIDEBAR_ITEM_STATUS.undoHidden },
+      },
+      {
+        type: 'updateSidebarItem',
+        itemId: child._id,
+        before: { status: SIDEBAR_ITEM_STATUS.active, parentId: folder._id, slug: child.slug },
+        fields: { status: SIDEBAR_ITEM_STATUS.undoHidden },
+      },
+    ],
+    summary: {
+      kind: 'copied',
+      affectedCount: 2,
+      createdCount: 1,
+      mergedCount: 0,
+      skippedCount: 0,
+    },
+    undoable: true,
+  }
+}
+
 function CreateButton() {
   const filesystem = useFileSystem()
   return (
@@ -314,11 +372,35 @@ function EmptyTrashButton() {
   )
 }
 
+function ClipboardButtons({
+  itemId,
+  targetParentId = null,
+}: {
+  itemId: Id<'sidebarItems'>
+  targetParentId?: Id<'sidebarItems'> | null
+}) {
+  const filesystem = useFileSystem()
+  return (
+    <>
+      <button type="button" onClick={() => filesystem.copy([itemId])}>
+        Copy
+      </button>
+      <button type="button" onClick={() => filesystem.cut([itemId])}>
+        Cut
+      </button>
+      <button type="button" onClick={() => void filesystem.paste(targetParentId)}>
+        Paste
+      </button>
+    </>
+  )
+}
+
 describe('FileSystemProvider', () => {
   beforeEach(() => {
     sidebarItems = []
     trashItems = []
     useFileSystemUndoStore.getState().reset()
+    useFileSystemClipboardStore.getState().clearClipboard()
     useSidebarUIStore.getState().clearSelectionForCampaignChange()
     executeMutateAsync.mockReset()
     undoMutateAsync.mockReset()
@@ -497,6 +579,48 @@ describe('FileSystemProvider', () => {
 
     await waitFor(() => expect(undoMutateAsync).toHaveBeenCalledTimes(1))
     await waitFor(() => expect(clearEditorContentMock).toHaveBeenCalledTimes(1))
+  })
+
+  it('clears descendant selection and editor state when undo hides a copied folder tree', async () => {
+    const folder = createFolder({
+      _id: 'copied_folder' as Id<'sidebarItems'>,
+      name: 'Copied Folder',
+      slug: 'copied-folder',
+      status: SIDEBAR_ITEM_STATUS.active,
+    })
+    const child = createNote({
+      _id: 'copied_child' as Id<'sidebarItems'>,
+      name: 'Copied Child',
+      slug: 'copied-child',
+      parentId: folder._id,
+      status: SIDEBAR_ITEM_STATUS.active,
+    })
+    sidebarItems = [folder, child]
+    undoMutateAsync.mockResolvedValueOnce(createUndoCopiedFolderReceipt({ folder, child }))
+    useSidebarUIStore.getState().setSelected(child.slug)
+    useSidebarUIStore.getState().setSelectedItemIds([child._id])
+
+    render(
+      <FileSystemProvider>
+        <FileSystemButtons />
+      </FileSystemProvider>,
+    )
+    act(() => {
+      useFileSystemUndoStore.getState().pushUndo({
+        ...createReceipt('transaction_copy_folder' as Id<'filesystemTransactions'>),
+        command: {
+          type: 'copy',
+          itemIds: ['source_folder' as Id<'sidebarItems'>],
+          targetParentId: null,
+        },
+      })
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+
+    await waitFor(() => expect(undoMutateAsync).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(useSidebarUIStore.getState().selectedItemIds).toEqual([]))
+    expect(clearEditorContentMock).toHaveBeenCalledTimes(1)
   })
 
   it('keeps redo state stable while pending and applies the server receipt when it resolves', async () => {
@@ -708,6 +832,73 @@ describe('FileSystemProvider', () => {
     await waitFor(() =>
       expect(undoMutateAsync).toHaveBeenCalledWith({ transactionId: 'transaction_2' }),
     )
+  })
+
+  it('does not copy or cut trashed items into the filesystem clipboard', () => {
+    const trashedItem = createNote({
+      _id: 'trashed_clipboard_item' as Id<'sidebarItems'>,
+      name: 'Trashed Clipboard Item',
+      status: SIDEBAR_ITEM_STATUS.trashed,
+    })
+    trashItems = [trashedItem]
+    render(
+      <FileSystemProvider>
+        <ClipboardButtons itemId={trashedItem._id} />
+      </FileSystemProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy' }))
+    expect(useFileSystemClipboardStore.getState().clipboard).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Paste' }))
+    expect(executeMutateAsync).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cut' }))
+    expect(useFileSystemClipboardStore.getState().clipboard).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Paste' }))
+    expect(executeMutateAsync).not.toHaveBeenCalled()
+  })
+
+  it('keeps a cut clipboard when conflict resolution is cancelled', async () => {
+    const source = createNote({
+      _id: 'cut_source' as Id<'sidebarItems'>,
+      name: 'Shared Name',
+      parentId: null,
+    })
+    const target = createFolder({
+      _id: 'target_folder' as Id<'sidebarItems'>,
+      name: 'Target Folder',
+    })
+    const conflictingChild = createNote({
+      _id: 'existing_child' as Id<'sidebarItems'>,
+      name: 'Shared Name',
+      parentId: target._id,
+    })
+    sidebarItems = [source, target, conflictingChild]
+    render(
+      <FileSystemProvider>
+        <ClipboardButtons itemId={source._id} targetParentId={target._id} />
+      </FileSystemProvider>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cut' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Paste' }))
+
+    await screen.findByRole('dialog', { name: 'Resolve File Conflict' })
+    expect(executeMutateAsync).not.toHaveBeenCalled()
+    expect(useFileSystemClipboardStore.getState().clipboard).toMatchObject({
+      mode: 'cut',
+      itemIds: [source._id],
+    })
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Resolve File Conflict' })).toBeNull(),
+    )
+    expect(useFileSystemClipboardStore.getState().clipboard).toMatchObject({
+      mode: 'cut',
+      itemIds: [source._id],
+    })
   })
 
   it('clears trash selection and editor state from delete receipt snapshots', async () => {

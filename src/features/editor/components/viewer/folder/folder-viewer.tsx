@@ -24,7 +24,7 @@ export function FolderViewer({ item: folder }: EditorViewerProps<FolderWithConte
     ? (trashedParentItemsMap.get(folder._id) ?? [])
     : (parentItemsMap.get(folder._id) ?? [])
   const visibleItemIds = children.map((child) => child._id)
-  const { handleSurfacePointerDown } = useItemSurfaceRegistration({
+  const { activateSurface, handleSurfacePointerDown } = useItemSurfaceRegistration({
     surface: 'folder-view',
     parentId: folder._id,
     visibleItemIds,
@@ -54,6 +54,7 @@ export function FolderViewer({ item: folder }: EditorViewerProps<FolderWithConte
           folder={folder}
           className="group/sidebar-surface flex flex-col h-full w-full min-h-0"
           onPointerDownCapture={handleSurfacePointerDown}
+          onFocusCapture={activateSurface}
         >
           {hasFullAccess ? (
             <CreateNewDashboard parentId={folder._id} folderPath={folderPath} />
@@ -76,6 +77,7 @@ export function FolderViewer({ item: folder }: EditorViewerProps<FolderWithConte
       <DroppableFolderZone
         folder={folder}
         className="group/sidebar-surface flex flex-col h-full w-full min-h-0"
+        onFocusCapture={activateSurface}
       >
         <ScrollArea className="flex-1 min-h-0" onPointerDownCapture={handleSurfacePointerDown}>
           <div className="w-full min-w-0">

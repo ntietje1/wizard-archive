@@ -7,7 +7,6 @@ export const SIDEBAR_ITEM_PATCH_FIELD_KEYS = [
   'iconName',
   'color',
   'parentId',
-  'location',
   'status',
   'previewStorageId',
   'previewLockedUntil',

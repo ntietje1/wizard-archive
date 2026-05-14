@@ -11,16 +11,13 @@ import { cn } from '~/features/shadcn/lib/utils'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import {
-  useActiveSidebarItems,
-  useTrashSidebarItems,
-} from '~/features/sidebar/hooks/useSidebarItems'
 import { RIGHT_SIDEBAR_CONTENT } from '~/features/editor/components/right-sidebar/constants'
 import { useRightSidebar } from '~/features/editor/hooks/useRightSidebar'
 import { formatRelativeTime } from '~/shared/utils/format-relative-time'
 import type { AnySidebarItem, AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { isOptimisticSidebarItem } from '~/features/filesystem/optimistic-sidebar-items'
+import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
 
 function TrashTopbarTitle({ itemCount }: { itemCount: number }) {
   return (
@@ -36,14 +33,16 @@ function TrashTopbarTitle({ itemCount }: { itemCount: number }) {
 
 function EmptyEditorTitle({
   campaignId,
+  pendingItemName,
   setPendingItemName,
 }: {
   campaignId: Id<'campaigns'> | null | undefined
+  pendingItemName: string
   setPendingItemName: (name: string) => void
 }) {
   return (
     <EditableName
-      initialName=""
+      initialName={pendingItemName}
       defaultName="Untitled Item"
       onChange={setPendingItemName}
       campaignId={campaignId ?? undefined}
@@ -86,6 +85,7 @@ type FileTopbarTitleState =
   | {
       kind: 'empty'
       campaignId: Id<'campaigns'> | null | undefined
+      pendingItemName: string
       setPendingItemName: (name: string) => void
     }
   | { kind: 'none' }
@@ -111,6 +111,7 @@ function FileTopbarTitle({ title }: { title: FileTopbarTitleState }) {
       {title.kind === 'empty' && (
         <EmptyEditorTitle
           campaignId={title.campaignId}
+          pendingItemName={title.pendingItemName}
           setPendingItemName={title.setPendingItemName}
         />
       )}
@@ -121,18 +122,18 @@ function FileTopbarTitle({ title }: { title: FileTopbarTitleState }) {
 export function FileTopbar() {
   const { canEdit, viewAsPlayerId } = useEditorMode()
   const { item, editorSearch, isLoading, hasRequestedItem } = useCurrentItem()
-  const { itemsMap } = useActiveSidebarItems()
+  const filesystemReadModel = useFileSystemReadModel()
+  const pendingItemName = useSidebarUIStore((s) => s.pendingItemName)
   const setPendingItemName = useSidebarUIStore((s) => s.setPendingItemName)
   const { isDm, campaignId } = useCampaign()
-  const permOpts = { isDm, viewAsPlayerId, allItemsMap: itemsMap }
+  const permOpts = { isDm, viewAsPlayerId, allItemsMap: filesystemReadModel.activeItemsById }
 
   const isTrashView = editorSearch.trash === true && !item
   const isPendingItem = isOptimisticSidebarItem(item)
   const loadedItem: AnySidebarItemWithContent | null =
     item && !isPendingItem ? (item as AnySidebarItemWithContent) : null
 
-  const { parentItemsMap: trashedParentItemsMap } = useTrashSidebarItems()
-  const rootTrashedItems = trashedParentItemsMap.get(null) ?? []
+  const rootTrashedItems = filesystemReadModel.trashItems.filter((candidate) => !candidate.parentId)
 
   const canRename =
     !!item &&
@@ -153,12 +154,16 @@ export function FileTopbar() {
     if (isLoading) return { kind: 'loading' }
     if (isTrashView) return { kind: 'trash', itemCount: rootTrashedItems.length }
     if (item && isPendingItem) {
-      return { kind: 'pending', item, ancestors: buildAncestorTrail(item, itemsMap) }
+      return {
+        kind: 'pending',
+        item,
+        ancestors: buildAncestorTrail(item, filesystemReadModel.activeItemsById),
+      }
     }
     if (loadedItem) {
       return { kind: 'item', item: loadedItem, canRename, isNotShared: isNotSharedWithPlayer }
     }
-    if (isEmptyEditor) return { kind: 'empty', campaignId, setPendingItemName }
+    if (isEmptyEditor) return { kind: 'empty', campaignId, pendingItemName, setPendingItemName }
     return { kind: 'none' }
   })()
 

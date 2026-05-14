@@ -45,6 +45,7 @@ import { usePanelPreferenceStore } from '~/features/settings/stores/panel-prefer
 import { logger } from '~/shared/utils/logger'
 import { assertNever } from '~/shared/utils/utils'
 import { SidebarItemsSharePanel } from '~/features/sharing/components/sidebar-items-share-panel'
+import type { FileSystemValue } from '~/features/filesystem/useFileSystem'
 
 function isPanelContentActive(contentId: string): boolean {
   const panel = usePanelPreferenceStore.getState().panels[RIGHT_SIDEBAR_PANEL_ID]
@@ -119,6 +120,7 @@ export type ActionHandlers = {
 
 interface EditorContextMenuServices {
   actions: ActionHandlers
+  filesystem: Pick<FileSystemValue, 'canPaste'>
 }
 
 type EditorContextMenuItem = ContextMenuItemSpec<EditorMenuContext, EditorContextMenuServices>
@@ -524,7 +526,8 @@ export const editorContextMenuContributors = [
         icon: ClipboardPaste,
         group: 'edit',
         priority: 87,
-        applies: (context) =>
+        applies: (context, services) =>
+          services.filesystem.canPaste &&
           p.canWrite(context) &&
           p.inView('sidebar', 'folder-view')(context) &&
           (p.atRoot(context) || p.isType(SIDEBAR_ITEM_TYPES.folders)(context)),

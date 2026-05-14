@@ -6,6 +6,7 @@ import {
   applyFileSystemPatchesToSnapshot,
   invertFileSystemPatches,
 } from '../filesystem-cache-patches'
+import { OPTIMISTIC_SIDEBAR_ITEM_ID_PREFIX } from '../optimistic-sidebar-items'
 import {
   projectMoveOperations,
   projectTrashRoots,
@@ -13,6 +14,17 @@ import {
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 
 const NOW = 1000
+
+function rawSidebarRow(item: ReturnType<typeof createNote>) {
+  const { shares, isBookmarked, myPermissionLevel, previewUrl, isActive, isTrashed, ...row } = item
+  void shares
+  void isBookmarked
+  void myPermissionLevel
+  void previewUrl
+  void isActive
+  void isTrashed
+  return row
+}
 
 describe('filesystem cache patches', () => {
   it('applies and inverts update patches across sidebar and trash caches', () => {
@@ -84,6 +96,61 @@ describe('filesystem cache patches', () => {
         },
       ]),
     ).toThrow(/missing sidebar item/)
+  })
+
+  it('does not insert raw authoritative rows that have not arrived through sidebar queries', () => {
+    const note = createNote()
+
+    expect(
+      applyFileSystemPatchesToSnapshot({ sidebar: [], trash: [] }, [
+        { type: 'upsertSidebarItem', item: rawSidebarRow(note) },
+      ]),
+    ).toEqual({ sidebar: [], trash: [] })
+  })
+
+  it('keeps optimistic and restored cache rows without fabricating authoritative query fields', () => {
+    const note = createNote()
+    const optimistic = {
+      ...note,
+      _id: `${OPTIMISTIC_SIDEBAR_ITEM_ID_PREFIX}1` as typeof note._id,
+    }
+    const withOptimistic = applyFileSystemPatchesToSnapshot({ sidebar: [], trash: [] }, [
+      { type: 'upsertSidebarItem', item: optimistic },
+    ])
+
+    expect(withOptimistic.sidebar).toEqual([expect.objectContaining({ _id: optimistic._id })])
+
+    const restored = applyFileSystemPatchesToSnapshot({ sidebar: [], trash: [] }, [
+      { type: 'upsertSidebarItem', item: note },
+    ])
+    expect(restored.sidebar).toEqual([expect.objectContaining({ _id: note._id })])
+  })
+
+  it('keeps optimistic rows while applying authoritative updates for existing rows', () => {
+    const existing = createNote({ name: 'Existing' })
+    const created = createNote({ name: 'Created' })
+    const optimistic = {
+      ...created,
+      _id: `${OPTIMISTIC_SIDEBAR_ITEM_ID_PREFIX}created` as typeof created._id,
+    }
+
+    const updated = applyFileSystemPatchesToSnapshot(
+      { sidebar: [existing, optimistic], trash: [] },
+      [
+        {
+          type: 'updateSidebarItem',
+          itemId: existing._id,
+          before: { name: existing.name },
+          fields: { name: 'Renamed Existing' as typeof existing.name },
+        },
+        { type: 'upsertSidebarItem', item: rawSidebarRow(created) },
+      ],
+    )
+
+    expect(updated.sidebar).toEqual([
+      expect.objectContaining({ _id: existing._id, name: 'Renamed Existing' }),
+      expect.objectContaining({ _id: optimistic._id }),
+    ])
   })
 
   it('builds optimistic move and trash patches without mutating snapshots directly', () => {

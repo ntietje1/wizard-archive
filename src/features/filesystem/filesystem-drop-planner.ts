@@ -65,7 +65,6 @@ function toDropRejectionReason(
     case 'invalid_target':
       return 'missing_data'
     case 'not_folder':
-    case 'different_location':
       return 'not_folder'
     default:
       return assertNever(code)

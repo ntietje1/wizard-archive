@@ -1,41 +1,45 @@
 import { describe, expect, it, vi } from 'vitest'
-import { SIDEBAR_ITEM_STATUS } from 'convex/sidebarItems/types/baseTypes'
 import type { FileSystemPatch } from 'convex/sidebarItems/filesystem/receipts'
 import { assertSidebarItemName } from 'convex/sidebarItems/validation/name'
 import { runFileSystemMutation } from '../filesystem-command-runner'
 import { applyFileSystemPatchesToSnapshot } from '../filesystem-cache-patches'
 import type { SidebarCacheSnapshot } from '../filesystem-cache-patches'
+import { OPTIMISTIC_SIDEBAR_ITEM_ID_PREFIX } from '../optimistic-sidebar-items'
 import { createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
 
+function rawSidebarRow(item: ReturnType<typeof createNote>) {
+  const { shares, isBookmarked, myPermissionLevel, previewUrl, isActive, isTrashed, ...row } = item
+  void shares
+  void isBookmarked
+  void myPermissionLevel
+  void previewUrl
+  void isActive
+  void isTrashed
+  return row
+}
+
 describe('filesystem command runner', () => {
-  it('reconciles optimistic rollback and authoritative patches as one cache update', async () => {
+  it('rolls back optimistic rows and waits for sidebar queries to insert authoritative rows', async () => {
     const created = createNote()
+    const optimistic = {
+      ...created,
+      _id: `${OPTIMISTIC_SIDEBAR_ITEM_ID_PREFIX}create-1` as typeof created._id,
+    }
     let snapshot: SidebarCacheSnapshot = { sidebar: [], trash: [] }
     const applyPatches = (patches: Array<FileSystemPatch>) => {
       snapshot = applyFileSystemPatchesToSnapshot(snapshot, patches)
     }
 
-    const hideCreated: FileSystemPatch = {
-      type: 'updateSidebarItem',
-      itemId: created._id,
-      before: {
-        location: created.location,
-        status: created.status,
-        deletionTime: created.deletionTime,
-        deletedBy: created.deletedBy,
-      },
-      fields: {
-        location: created.location,
-        status: SIDEBAR_ITEM_STATUS.undoHidden,
-        deletionTime: null,
-        deletedBy: null,
-      },
+    const removeOptimistic: FileSystemPatch = {
+      type: 'removeSidebarItem',
+      itemId: optimistic._id,
+      snapshot: optimistic,
     }
     const receipt = await runFileSystemMutation({
       patches: {
-        apply: [{ type: 'upsertSidebarItem', item: created }],
-        rollback: [hideCreated],
+        apply: [{ type: 'upsertSidebarItem', item: optimistic }],
+        rollback: [removeOptimistic],
       },
       applyPatches,
       mutate: () =>
@@ -49,7 +53,7 @@ describe('filesystem command runner', () => {
             parentTarget: { kind: 'direct', parentId: created.parentId },
           },
           events: [{ type: 'created', itemId: created._id, slug: created.slug }],
-          patches: [{ type: 'upsertSidebarItem', item: created }],
+          patches: [{ type: 'upsertSidebarItem', item: rawSidebarRow(created) }],
           summary: {
             kind: 'created',
             affectedCount: 1,
@@ -64,7 +68,7 @@ describe('filesystem command runner', () => {
     })
 
     expect(receipt).not.toBeNull()
-    expect(snapshot.sidebar).toEqual([expect.objectContaining({ _id: created._id })])
+    expect(snapshot.sidebar).toEqual([])
   })
 
   it('reports success-side failures instead of silently treating the command as complete', async () => {

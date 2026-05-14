@@ -1,5 +1,6 @@
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
+import { selectionBelongsToSurface } from 'convex/sidebarItems/filesystem/selection'
 import {
   useActiveSidebarItems,
   useTrashSidebarItems,
@@ -8,6 +9,7 @@ import { resolveSidebarOperationItems } from '~/features/filesystem/filesystem-o
 
 export function useSidebarDragData(item: AnySidebarItem) {
   const selectedItemIds = useSidebarUIStore((s) => s.selectedItemIds)
+  const activeItemSurface = useSidebarUIStore((s) => s.activeItemSurface)
   const { itemsMap } = useActiveSidebarItems()
   const { itemsMap: trashedItemsMap } = useTrashSidebarItems()
   const activeItemsMap = new Map(itemsMap)
@@ -22,16 +24,19 @@ export function useSidebarDragData(item: AnySidebarItem) {
     const selectedItem = allItemsMap.get(id)
     return selectedItem ? [selectedItem] : []
   })
-  const belongsToSelection = selectedItemIds.includes(item._id)
-  const isDraggingSelection = belongsToSelection
-  const itemIds = isDraggingSelection
+  const belongsToActiveSurfaceSelection =
+    activeItemSurface !== null &&
+    activeItemSurface.visibleItemIds.includes(item._id) &&
+    selectionBelongsToSurface(selectedItemIds, activeItemSurface.visibleItemIds)
+  const belongsToSelection = belongsToActiveSurfaceSelection && selectedItemIds.includes(item._id)
+  const itemIds = belongsToSelection
     ? resolveSidebarOperationItems({
         itemIds: selectedItemIds,
         activeItemsMap,
         trashedItemsMap: trashItemsMap,
       }).map((selectedItem) => selectedItem._id)
     : [item._id]
-  const previewItemIds = isDraggingSelection
+  const previewItemIds = belongsToSelection
     ? selectedItems.map((selectedItem) => selectedItem._id)
     : [item._id]
 

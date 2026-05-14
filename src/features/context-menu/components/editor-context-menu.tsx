@@ -17,11 +17,8 @@ import { useMapViewOptional } from '~/features/editor/hooks/useMapView'
 import { useBlockNoteContextMenuOptional } from '~/features/editor/hooks/useBlockNoteContextMenu'
 import { useSession } from '~/features/sidebar/hooks/useGameSession'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
-import {
-  useActiveSidebarItems,
-  useTrashSidebarItems,
-} from '~/features/sidebar/hooks/useSidebarItems'
 import { resolveClickedSidebarOperationItems } from '~/features/filesystem/filesystem-operation-selection'
+import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
 
 export type EditorContextMenuRef = ContextMenuHostRef
 
@@ -58,8 +55,7 @@ export function EditorContextMenu({
   const mapView = useMapViewOptional()
   const blockNoteContext = useBlockNoteContextMenuOptional()
   const selectedItemIds = useSidebarUIStore((s) => s.selectedItemIds)
-  const { itemsMap } = useActiveSidebarItems()
-  const { itemsMap: trashedItemsMap } = useTrashSidebarItems()
+  const filesystemReadModel = useFileSystemReadModel()
   // Item selection is intentionally scoped to sidebar, folder, and trash surfaces.
   // Update this when adding a VIEW_CONTEXT that should share filesystem selection.
   const canUseItemSelection =
@@ -69,8 +65,8 @@ export function EditorContextMenu({
   const selectedItems = resolveClickedSidebarOperationItems({
     item,
     selectedItemIds,
-    activeItemsMap: itemsMap,
-    trashedItemsMap,
+    activeItemsMap: filesystemReadModel.activeItemsById,
+    trashedItemsMap: filesystemReadModel.trashedItemsById,
     canUseItemSelection,
   })
   const primaryItem = selectedItems[0] ?? item
@@ -94,7 +90,7 @@ export function EditorContextMenu({
 
   const menu = buildMenu({
     context: menuContext,
-    services: { actions: menuActions.actions },
+    services: { actions: menuActions.actions, filesystem: menuActions.filesystem },
     contributors: editorContextMenuContributors,
     commands: editorContextMenuCommands,
     groupConfig,

@@ -41,6 +41,14 @@ function mockSidebarItems(
   })
 }
 
+function setActiveSurface(visibleItems: Array<AnySidebarItem>, surface = 'sidebar' as const) {
+  useSidebarUIStore.getState().setActiveItemSurface({
+    surface,
+    parentId: null,
+    visibleItemIds: visibleItems.map((item) => item._id),
+  })
+}
+
 describe('useSidebarDragData', () => {
   beforeEach(() => {
     resetSidebarUIStore()
@@ -95,6 +103,7 @@ describe('useSidebarDragData', () => {
     const first = createNote()
     const second = createNote()
     mockSidebarItems([first, second])
+    setActiveSurface([first, second])
     useSidebarUIStore.setState({ selectedItemIds: [first._id, second._id] })
 
     const { result } = renderHook(() => useSidebarDragData(first))
@@ -113,6 +122,7 @@ describe('useSidebarDragData', () => {
     const activeItems = [folder, firstChild, secondChild]
 
     mockSidebarItems(activeItems)
+    setActiveSurface(activeItems)
     useSidebarUIStore.setState({
       selectedItemIds: [folder._id, firstChild._id, secondChild._id],
     })
@@ -132,6 +142,7 @@ describe('useSidebarDragData', () => {
     const secondChild = createNote({ parentId: folder._id })
 
     mockSidebarItems([folder, firstChild, secondChild])
+    setActiveSurface([folder, firstChild, secondChild])
     useSidebarUIStore.setState({
       selectedItemIds: [firstChild._id, secondChild._id],
     })
@@ -145,18 +156,19 @@ describe('useSidebarDragData', () => {
     })
   })
 
-  it('can include selected active and trashed items in drag data', () => {
+  it('does not include selected items from another surface', () => {
     const active = createNote()
     const trashed = createNote({ status: 'trashed' })
     mockSidebarItems([active], [trashed])
+    setActiveSurface([active])
     useSidebarUIStore.setState({ selectedItemIds: [active._id, trashed._id] })
 
     const { result } = renderHook(() => useSidebarDragData(active))
 
     expect(result.current).toEqual({
       sidebarItemId: active._id,
-      sidebarItemIds: [active._id, trashed._id],
-      sidebarDragPreviewItemIds: [active._id, trashed._id],
+      sidebarItemIds: [active._id],
+      sidebarDragPreviewItemIds: [active._id],
     })
   })
 
@@ -164,6 +176,7 @@ describe('useSidebarDragData', () => {
     const active = createNote()
     const missing = createNote()
     mockSidebarItems([active])
+    setActiveSurface([active])
     useSidebarUIStore.setState({ selectedItemIds: [active._id, missing._id] })
 
     const { result } = renderHook(() => useSidebarDragData(active))

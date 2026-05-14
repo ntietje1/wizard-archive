@@ -4,10 +4,6 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
 import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFolders'
-import {
-  useActiveSidebarItems,
-  useTrashSidebarItems,
-} from '~/features/sidebar/hooks/useSidebarItems'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import {
   isEditableHotkeyTarget,
@@ -16,6 +12,7 @@ import {
 import { getKeyboardOpenItem } from '~/features/sidebar/utils/item-surface-keyboard'
 import { getKeyboardPasteParentId } from '~/features/filesystem/filesystem-targets'
 import { resolveSidebarOperationItems } from '~/features/filesystem/filesystem-operation-selection'
+import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
 import { selectionBelongsToSurface } from 'convex/sidebarItems/filesystem/selection'
 import { handleError } from '~/shared/utils/logger'
 
@@ -27,14 +24,14 @@ interface ResolvedHotkeySelection {
   selectedItems: Array<AnySidebarItem>
 }
 
-export interface HotkeyFileSystemActions {
+interface HotkeyFileSystemActions {
   cancelClipboard: () => boolean
   cut: (itemIds: Array<AnySidebarItem['_id']>) => void
   copy: (itemIds: Array<AnySidebarItem['_id']>) => void
   canPaste: boolean
   paste: (targetParentId?: AnySidebarItem['_id'] | null) => Promise<void>
-  confirmDeleteForever: (itemIds: Array<AnySidebarItem['_id']>) => boolean
-  requestTrashItems: (itemIds: Array<AnySidebarItem['_id']>) => Promise<boolean>
+  confirmDeleteForever: (itemIds: Array<AnySidebarItem['_id']>) => void
+  requestTrashItems: (itemIds: Array<AnySidebarItem['_id']>) => Promise<void>
 }
 
 interface HotkeyHandlerContext {
@@ -198,26 +195,25 @@ export function useItemSurfaceHotkeys(filesystem: HotkeyFileSystemActions) {
   const filesystemRef = useRef(filesystem)
   filesystemRef.current = filesystem
   const { campaignId } = useCampaign()
-  const { itemsMap: activeItemsMap } = useActiveSidebarItems()
-  const { itemsMap: trashedItemsMap } = useTrashSidebarItems()
+  const filesystemReadModel = useFileSystemReadModel()
   const { navigateToItem } = useEditorNavigation()
   const { setLastSelectedItem } = useLastEditorItem()
   const { openParentFolders } = useOpenParentFolders()
   const contextRef = useRef({
-    activeItemsMap,
+    activeItemsMap: filesystemReadModel.activeItemsById,
     campaignId,
     navigateToItem,
     openParentFolders,
     setLastSelectedItem,
-    trashedItemsMap,
+    trashedItemsMap: filesystemReadModel.trashedItemsById,
   })
   contextRef.current = {
-    activeItemsMap,
+    activeItemsMap: filesystemReadModel.activeItemsById,
     campaignId,
     navigateToItem,
     openParentFolders,
     setLastSelectedItem,
-    trashedItemsMap,
+    trashedItemsMap: filesystemReadModel.trashedItemsById,
   }
 
   useEffect(() => {

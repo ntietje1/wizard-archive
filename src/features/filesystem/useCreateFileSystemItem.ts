@@ -5,10 +5,10 @@ import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import { assertSidebarItemName } from 'convex/sidebarItems/validation/name'
 import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import type { Id } from 'convex/_generated/dataModel'
-import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { validateCreateItemLocally } from 'convex/sidebarItems/validation/parent'
 import { useFileSystem } from '~/features/filesystem/useFileSystem'
 import { deduplicateName } from 'convex/sidebarItems/functions/defaultItemName'
+import { useFileSystemReadModel } from './useFileSystemReadModel'
 
 interface CreateItemBase {
   name: string
@@ -27,7 +27,7 @@ type CreateItemResult = {
 }
 
 export function useCreateFileSystemItem() {
-  const { itemsMap, parentItemsMap } = useActiveSidebarItems()
+  const { readModel } = useFileSystemReadModel()
   const filesystem = useFileSystem()
 
   const validateCreateItem = (args: CreateItemArgs) => {
@@ -36,8 +36,8 @@ export function useCreateFileSystemItem() {
         name: args.name,
         parentTarget: args.parentTarget,
       },
-      itemsMap,
-      parentItemsMap,
+      readModel.itemsById,
+      readModel.activeChildrenByParent,
     )
   }
 
@@ -47,7 +47,7 @@ export function useCreateFileSystemItem() {
       args.parentTarget.kind === 'direct'
         ? deduplicateName(
             trimmedName,
-            (parentItemsMap.get(args.parentTarget.parentId) ?? []).map((item) => item.name),
+            readModel.getActiveChildren(args.parentTarget.parentId).map((item) => item.name),
           )
         : trimmedName
     const nameResult = validateCreateItem({

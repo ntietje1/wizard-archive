@@ -8,19 +8,17 @@ import type { Id } from '../../../_generated/dataModel'
 import type { AnySidebarItem } from '../../types/types'
 
 function planMoveTransfer(
-  args: Omit<Parameters<typeof planTransferOperations>[0], 'itemsById' | 'mode'>,
+  args: Omit<Parameters<typeof planTransferOperations>[0], 'itemsById' | 'mode'> & {
+    graphItems?: Array<OperationPlannerItem>
+  },
 ) {
   const itemsById = new Map<Id<'sidebarItems'>, OperationPlannerItem>()
-  const ensureAncestor = (parentId: Id<'sidebarItems'> | null) => {
-    if (!parentId || itemsById.has(parentId)) return
-    itemsById.set(parentId, createSidebarItem(parentId, parentId, SIDEBAR_ITEM_TYPES.folders))
-  }
-  for (const item of [...args.items, ...args.targetItems]) {
+  // Later sources intentionally win: graphItems > targetItems > items, and getChildren entries
+  // are merged after their parent so test fixtures can override duplicate rows explicitly.
+  for (const item of [...args.items, ...args.targetItems, ...(args.graphItems ?? [])]) {
     itemsById.set(item._id, item)
-    ensureAncestor(item.parentId)
     for (const child of args.getChildren?.(item._id) ?? []) {
       itemsById.set(child._id, child)
-      ensureAncestor(child.parentId)
     }
   }
   return planTransferOperations({ ...args, mode: 'move', itemsById })
@@ -170,6 +168,7 @@ describe('filesystem operation domain', () => {
         items: [child],
         targetParentId: parent._id,
         targetItems: [],
+        graphItems: [parent],
       }),
     ).toEqual({
       status: 'ready',

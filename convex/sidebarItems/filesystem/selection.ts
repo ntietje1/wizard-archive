@@ -25,7 +25,7 @@ export function normalizeSelectedRoots<T extends SidebarItemTreeNode>(
 
 export type OperationPlannerItem = Pick<
   AnySidebarItemRow,
-  '_id' | 'parentId' | 'name' | 'type' | 'location' | 'status'
+  '_id' | 'parentId' | 'name' | 'type' | 'status'
 >
 
 function normalizeRootItems<T extends SidebarItemTreeNode>(

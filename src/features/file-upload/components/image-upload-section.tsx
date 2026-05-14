@@ -4,21 +4,14 @@ import type { UseFileWithPreviewReturn } from '~/features/file-upload/hooks/useF
 interface ImageUploadSectionProps {
   label?: string
   fileUpload: UseFileWithPreviewReturn
-  handleFileSelect: (file: File) => void
   isSubmitting: boolean
 }
 
-export function ImageUploadSection({
-  label,
-  fileUpload,
-  handleFileSelect,
-  isSubmitting,
-}: ImageUploadSectionProps) {
+export function ImageUploadSection({ label, fileUpload, isSubmitting }: ImageUploadSectionProps) {
   return (
     <FileUploadSection
       label={label}
       fileUpload={fileUpload}
-      handleFileSelect={handleFileSelect}
       isSubmitting={isSubmitting}
       acceptPattern="image/*"
       dragDropText="Drag an image here or click to browse"

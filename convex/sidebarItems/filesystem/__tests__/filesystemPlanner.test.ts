@@ -51,14 +51,9 @@ function buildItemsById(
   getChildren?: (parentId: Id<'sidebarItems'>) => Array<OperationPlannerItem>,
 ) {
   const itemsById = new Map<Id<'sidebarItems'>, OperationPlannerItem>()
-  const ensureAncestor = (parentId: Id<'sidebarItems'> | null) => {
-    if (!parentId || itemsById.has(parentId)) return
-    itemsById.set(parentId, item(parentId, parentId, SIDEBAR_ITEM_TYPES.folders))
-  }
   const visit = (plannerItem: OperationPlannerItem) => {
     if (itemsById.has(plannerItem._id)) return
     itemsById.set(plannerItem._id, plannerItem)
-    ensureAncestor(plannerItem.parentId)
     for (const child of getChildren?.(plannerItem._id) ?? []) {
       visit(child)
     }
@@ -70,22 +65,32 @@ function buildItemsById(
 }
 
 function planCopyTransfer(
-  args: Omit<Parameters<typeof planTransferOperations>[0], 'itemsById' | 'mode'>,
+  args: Omit<Parameters<typeof planTransferOperations>[0], 'itemsById' | 'mode'> & {
+    graphItems?: Array<OperationPlannerItem>
+  },
 ) {
   return planTransferOperations({
     ...args,
     mode: 'copy',
-    itemsById: buildItemsById([...args.items, ...args.targetItems], args.getChildren),
+    itemsById: buildItemsById(
+      [...args.items, ...args.targetItems, ...(args.graphItems ?? [])],
+      args.getChildren,
+    ),
   })
 }
 
 function planMoveTransfer(
-  args: Omit<Parameters<typeof planTransferOperations>[0], 'itemsById' | 'mode'>,
+  args: Omit<Parameters<typeof planTransferOperations>[0], 'itemsById' | 'mode'> & {
+    graphItems?: Array<OperationPlannerItem>
+  },
 ) {
   return planTransferOperations({
     ...args,
     mode: 'move',
-    itemsById: buildItemsById([...args.items, ...args.targetItems], args.getChildren),
+    itemsById: buildItemsById(
+      [...args.items, ...args.targetItems, ...(args.graphItems ?? [])],
+      args.getChildren,
+    ),
   })
 }
 
@@ -296,6 +301,7 @@ describe('move transfer planning', () => {
       items: [source],
       targetParentId: null,
       targetItems: [destination],
+      graphItems: [item('source-folder', 'Source Folder', SIDEBAR_ITEM_TYPES.folders)],
     })
 
     expect(result.status).toBe('needs-decision')
@@ -317,6 +323,7 @@ describe('move transfer planning', () => {
       targetParentId: null,
       targetItems: [item('note-2', 'Scene'), item('note-3', 'Scene 2')],
       decisions: decisions({ 'note-1': { action: 'keepBoth' } }),
+      graphItems: [item('source-folder', 'Source Folder', SIDEBAR_ITEM_TYPES.folders)],
     })
 
     expect(result).toEqual({
@@ -340,6 +347,10 @@ describe('move transfer planning', () => {
       ],
       targetParentId: null,
       targetItems: [],
+      graphItems: [
+        item('source-folder-a', 'Source Folder A', SIDEBAR_ITEM_TYPES.folders),
+        item('source-folder-b', 'Source Folder B', SIDEBAR_ITEM_TYPES.folders),
+      ],
     })
 
     expect(result).toEqual({
@@ -361,6 +372,7 @@ describe('move transfer planning', () => {
       items: [source, source],
       targetParentId: null,
       targetItems: [],
+      graphItems: [item('source-root', 'Source Root', SIDEBAR_ITEM_TYPES.folders)],
     })
 
     expect(result).toEqual({
@@ -387,6 +399,7 @@ describe('move transfer planning', () => {
       targetParentId: null,
       targetItems: [destinationFolder],
       decisions: decisions({ 'folder-1': { action: 'replace' } }),
+      graphItems: [item('source-root', 'Source Root', SIDEBAR_ITEM_TYPES.folders)],
       getChildren: (parentId) => {
         if (parentId === sourceFolder._id) return [sourceChild]
         if (parentId === destinationFolder._id) return [destinationChild]
@@ -435,6 +448,7 @@ describe('move transfer planning', () => {
         'folder-1': { action: 'replace' },
         'note-1': { action: 'keepBoth' },
       }),
+      graphItems: [item('source-root', 'Source Root', SIDEBAR_ITEM_TYPES.folders)],
       getChildren: (parentId) => {
         if (parentId === sourceFolder._id) return [sourceChild]
         if (parentId === destinationFolder._id) return [destinationChild]
@@ -472,6 +486,7 @@ describe('move transfer planning', () => {
       targetParentId: null,
       targetItems: [item('folder-2', 'Scenes', SIDEBAR_ITEM_TYPES.folders)],
       decisions: decisions({ 'folder-1': { action: 'replace' } }),
+      graphItems: [item('source-folder', 'Source Folder', SIDEBAR_ITEM_TYPES.folders)],
     })
 
     expect(result).toEqual({
@@ -500,6 +515,7 @@ describe('move transfer planning', () => {
       items: [sourceFolder, sourceChild],
       targetParentId: null,
       targetItems: [],
+      graphItems: [item('source-root', 'Source Root', SIDEBAR_ITEM_TYPES.folders)],
       getChildren: (parentId) => (parentId === sourceFolder._id ? [sourceChild] : []),
     })
 
@@ -531,6 +547,7 @@ describe('move transfer planning', () => {
       items: [root, middle, leaf],
       targetParentId: null,
       targetItems: [],
+      graphItems: [item('source-root', 'Source Root', SIDEBAR_ITEM_TYPES.folders)],
       getChildren: (parentId) => {
         if (parentId === root._id) return [middle]
         if (parentId === middle._id) return [leaf]

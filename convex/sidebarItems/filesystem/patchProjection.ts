@@ -1,5 +1,5 @@
 import type { Doc, Id } from '../../_generated/dataModel'
-import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
+import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import type { FileSystemPatch, SidebarItemFieldPatch } from './receipts'
 import { diffSidebarItemFields } from './patches'
 import type { TransferOperation } from './operationTypes'
@@ -71,7 +71,6 @@ export function projectTrashRoots<T extends SidebarItemPatchRow>(
     for (const item of treeItems(items, rootId)) {
       pushUpdate(patches, item, {
         parentId: item._id === rootId ? null : item.parentId,
-        location: SIDEBAR_ITEM_LOCATION.sidebar,
         status: SIDEBAR_ITEM_STATUS.trashed,
         deletionTime: metadata.now,
         deletedBy: metadata.userId,
@@ -91,7 +90,6 @@ export function projectRestoreRoots<T extends SidebarItemPatchRow>(
     for (const item of treeItems(items, rootId)) {
       pushUpdate(patches, item, {
         parentId: item._id === rootId ? targetParentId : item.parentId,
-        location: SIDEBAR_ITEM_LOCATION.sidebar,
         status: SIDEBAR_ITEM_STATUS.active,
         deletionTime: null,
         deletedBy: null,

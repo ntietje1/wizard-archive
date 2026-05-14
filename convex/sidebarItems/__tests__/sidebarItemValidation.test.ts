@@ -577,12 +577,15 @@ describe('cross-table slug uniqueness', () => {
     const dmAuth = asDm(ctx)
 
     await expect(
-      createNoteViaFilesystem(dmAuth, {
+      dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
         campaignId: ctx.campaignId,
-        name: 'bad-color-note',
-        parentTarget: { kind: 'direct', parentId: null },
-        color: 'red' as never,
-        content: [],
+        command: {
+          type: 'create',
+          itemType: SIDEBAR_ITEM_TYPES.notes,
+          name: 'bad-color-note',
+          parentTarget: { kind: 'direct', parentId: null },
+          color: 'red' as never,
+        },
       }),
     ).rejects.toThrow('Color must be a 6- or 8-digit hex value')
   })

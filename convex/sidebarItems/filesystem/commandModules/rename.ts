@@ -10,6 +10,7 @@ import { FILE_SYSTEM_EVENT_TYPE } from '../receipts'
 import { createFileSystemWriteSession } from '../deltas'
 import { getSidebarItemRow } from '../sidebarItemRows'
 import { requireSidebarItemRowAccess } from '../access'
+import { isActiveSidebarItem } from '../../types/status'
 import type { AccessibleSidebarItemRow } from '../access'
 import type { CampaignMutationCtx } from '../../../functions'
 import type { EditHistoryChange } from '../../../editHistory/types'
@@ -38,6 +39,9 @@ export async function executeRenameCommand(
     rawItem,
     requiredLevel: PERMISSION_LEVEL.FULL_ACCESS,
   })
+  if (!isActiveSidebarItem(item)) {
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Only active items can be renamed')
+  }
 
   const { updates, changes } = await collectRenameChanges(ctx, item, command)
 
@@ -119,8 +123,9 @@ async function collectSidebarMetadataChanges(
 }
 
 function buildRenameEvents(item: AccessibleSidebarItemRow, updates: SidebarItemUpdates) {
-  if (typeof updates.slug !== 'string')
-    return [{ type: FILE_SYSTEM_EVENT_TYPE.noop, itemId: item._id }]
+  if (typeof updates.slug !== 'string') {
+    return [{ type: FILE_SYSTEM_EVENT_TYPE.updated, itemId: item._id }]
+  }
   return [
     {
       type: FILE_SYSTEM_EVENT_TYPE.renamed,

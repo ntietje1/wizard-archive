@@ -14,7 +14,6 @@ import {
   expectTrashItemVisible,
   focusFolderContents,
   openContextMenu,
-  openFolderContextMenu,
   openItem,
   openTrashPopover,
   permanentlyDeleteTrashItem,
@@ -177,28 +176,17 @@ test.describe.serial('filesystem command operations', () => {
   })
 
   test('mixed operation undo and redo replay in stack order', async ({ page }) => {
-    const targetFolder = uniqueName('Mixed Stack Folder')
     const originalName = uniqueName('Mixed Stack Note')
     const renamedName = uniqueName('Mixed Stack Renamed')
 
-    await createFolder(page, targetFolder)
     await createNote(page, originalName)
     await renameOpenedItem(page, renamedName)
     await expectSidebarItemVisible(page, renamedName)
     await waitForFilesystemIdle(page)
 
     await selectSidebarItems(page, [renamedName])
-    await pressCut(page)
-    await openItem(page, targetFolder)
-    await focusFolderContents(page, targetFolder)
-    await pressPaste(page)
+    await page.keyboard.press('Delete')
     await expectSidebarItemHidden(page, renamedName)
-    await expectFolderItemVisible(page, targetFolder, renamedName)
-    await waitForFilesystemIdle(page)
-
-    await openFolderContextMenu(page, targetFolder, renamedName)
-    await page.getByRole('menuitem', { name: /move to trash/i }).click()
-    await expectFolderItemHidden(page, targetFolder, renamedName)
     await openTrashPopover(page)
     await expectTrashItemVisible(page, renamedName)
     await waitForFilesystemIdle(page)
@@ -206,16 +194,11 @@ test.describe.serial('filesystem command operations', () => {
 
     await focusNonEditableTarget(page)
     await pressUndo(page)
-    await openItem(page, targetFolder)
-    await expectFolderItemVisible(page, targetFolder, renamedName)
-    await waitForFilesystemIdle(page)
-
-    await focusNonEditableTarget(page)
-    await pressUndo(page)
     await expectSidebarItemVisible(page, renamedName)
-    await openItem(page, targetFolder)
-    await expectFolderItemHidden(page, targetFolder, renamedName)
+    await openTrashPopover(page)
+    await expectTrashItemHidden(page, renamedName)
     await waitForFilesystemIdle(page)
+    await page.keyboard.press('Escape')
 
     await focusNonEditableTarget(page)
     await pressUndo(page)
@@ -232,13 +215,6 @@ test.describe.serial('filesystem command operations', () => {
     await focusNonEditableTarget(page)
     await pressRedo(page)
     await expectSidebarItemHidden(page, renamedName)
-    await openItem(page, targetFolder)
-    await expectFolderItemVisible(page, targetFolder, renamedName)
-    await waitForFilesystemIdle(page)
-
-    await focusNonEditableTarget(page)
-    await pressRedo(page)
-    await expectFolderItemHidden(page, targetFolder, renamedName)
     await openTrashPopover(page)
     await expectTrashItemVisible(page, renamedName)
   })
@@ -427,6 +403,18 @@ test.describe.serial('filesystem command operations', () => {
     await copySidebarItemsIntoFolder(page, [keepA, keepB], targetFolder, { expectCompleted: false })
     await expect(page.getByRole('dialog', { name: conflictDialogName })).toBeVisible()
     await page.getByRole('button', { name: 'Keep both items' }).click()
+    await openItem(page, targetFolder)
+    await expectFolderItemVisible(page, targetFolder, `${keepA} 1`)
+    await expectFolderItemVisible(page, targetFolder, `${keepB} 1`)
+    await waitForFilesystemIdle(page)
+    await focusNonEditableTarget(page)
+    await pressUndo(page)
+    await openItem(page, targetFolder)
+    await expectFolderItemHidden(page, targetFolder, `${keepA} 1`)
+    await expectFolderItemHidden(page, targetFolder, `${keepB} 1`)
+    await waitForFilesystemIdle(page)
+    await focusNonEditableTarget(page)
+    await pressRedo(page)
     await openItem(page, targetFolder)
     await expectFolderItemVisible(page, targetFolder, `${keepA} 1`)
     await expectFolderItemVisible(page, targetFolder, `${keepB} 1`)

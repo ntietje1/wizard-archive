@@ -1,15 +1,11 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
-import {
-  SIDEBAR_ITEM_LOCATION,
-  SIDEBAR_ITEM_STATUS,
-  SIDEBAR_ITEM_TYPES,
-  assertSidebarItemType,
-} from '../types/baseTypes'
+import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES, assertSidebarItemType } from '../types/baseTypes'
 import { getSidebarItemStatus } from '../types/status'
 import { collectDescendants } from '../functions/collectDescendants'
 import { hardDeleteTree, restoreTreeDescendants, trashTree } from './treeWrites'
+import type { TrashTreePatch } from './treeWrites'
 import { insertFilesystemSidebarItem } from './sidebarItemWriter'
-import { diffSidebarItemFields, valuesMatch } from './patches'
+import { diffSidebarItemFields, setPatchField, valuesMatch } from './patches'
 import { assertSidebarItemColor } from '../validation/color'
 import { assertSidebarItemIconName } from '../validation/icon'
 import { assertSidebarItemName } from '../validation/name'
@@ -32,6 +28,17 @@ import type {
 import type { FileSystemCommand } from './commands'
 
 type SidebarItemSnapshot = Doc<'sidebarItems'>
+
+const UNDOABLE_UPDATE_FIELD_KEYS = [
+  'name',
+  'slug',
+  'iconName',
+  'color',
+  'parentId',
+  'status',
+  'deletionTime',
+  'deletedBy',
+] as const satisfies ReadonlyArray<keyof SidebarItemFieldPatch>
 
 function toSidebarItemSnapshot(item: AnySidebarItemRow | SidebarItemSnapshot): SidebarItemSnapshot {
   return {
@@ -61,7 +68,6 @@ function toSidebarItemSnapshot(item: AnySidebarItemRow | SidebarItemSnapshot): S
 
 function lifecyclePatchFields(item: SidebarItemSnapshot): SidebarItemFieldPatch {
   return {
-    location: item.location,
     status: item.status,
     deletionTime: item.deletionTime,
     deletedBy: item.deletedBy,
@@ -70,7 +76,6 @@ function lifecyclePatchFields(item: SidebarItemSnapshot): SidebarItemFieldPatch 
 
 function undoHiddenSidebarItemFields(): SidebarItemFieldPatch {
   return {
-    location: SIDEBAR_ITEM_LOCATION.sidebar,
     status: SIDEBAR_ITEM_STATUS.undoHidden,
     deletionTime: null,
     deletedBy: null,
@@ -103,6 +108,25 @@ function changedItemPatch(before: SidebarItemSnapshot, after: SidebarItemSnapsho
   }
 }
 
+function changedUndoableItemPatch(before: SidebarItemSnapshot, after: SidebarItemSnapshot) {
+  const fields: SidebarItemFieldPatch = {}
+  const precondition: SidebarItemFieldPatch = {}
+
+  for (const key of UNDOABLE_UPDATE_FIELD_KEYS) {
+    if (valuesMatch(before[key], after[key])) continue
+    setPatchField(fields, key, after[key])
+    setPatchField(precondition, key, before[key])
+  }
+
+  if (Object.keys(fields).length === 0) return null
+  return {
+    type: 'updateSidebarItem' as const,
+    itemId: before._id,
+    before: precondition,
+    fields,
+  }
+}
+
 function insertedItemForwardPatch(after: SidebarItemSnapshot): FileSystemPatch {
   const hidden = undoHiddenSidebarItemFields()
   const afterFields = lifecyclePatchFields(after)
@@ -131,14 +155,7 @@ function insertedItemUndoPrecondition(after: SidebarItemSnapshot): SidebarItemPa
     iconName: after.iconName === null ? null : assertSidebarItemIconName(after.iconName),
     color: after.color === null ? null : assertSidebarItemColor(after.color),
     parentId: after.parentId,
-    location: after.location,
     status: after.status,
-    previewStorageId: after.previewStorageId,
-    previewLockedUntil: after.previewLockedUntil,
-    previewClaimToken: after.previewClaimToken,
-    previewUpdatedAt: after.previewUpdatedAt,
-    updatedTime: after.updatedTime,
-    updatedBy: after.updatedBy,
     deletionTime: after.deletionTime,
     deletedBy: after.deletedBy,
     createdBy: after.createdBy,
@@ -177,7 +194,7 @@ export function redoPatchesFromChangeSet(changes: Array<FileSystemChange>) {
         patches.push(insertedItemForwardPatch(change.after))
         break
       case 'updateSidebarItem': {
-        const patch = changedItemPatch(change.before, change.after)
+        const patch = changedUndoableItemPatch(change.before, change.after)
         if (patch) patches.push(patch)
         break
       }
@@ -194,7 +211,7 @@ export function undoPatchesFromChangeSet(changes: Array<FileSystemChange>) {
         patches.push(insertedItemInversePatch(change.after))
         break
       case 'updateSidebarItem': {
-        const patch = changedItemPatch(change.after, change.before)
+        const patch = changedUndoableItemPatch(change.after, change.before)
         if (patch) patches.push(patch)
         break
       }
@@ -301,14 +318,18 @@ export function createFileSystemWriteSession(ctx: CampaignMutationCtx): FileSyst
       itemType: item.type,
       action: EDIT_HISTORY_ACTION.trashed,
     })
-    recordTreeUpdatePatches(beforeItems, (before) => ({
-      ...before,
-      location: SIDEBAR_ITEM_LOCATION.sidebar,
-      status: SIDEBAR_ITEM_STATUS.trashed,
-      deletionTime: deletion.deletionTime,
-      deletedBy: deletion.deletedBy,
-      parentId: before._id === item._id ? null : before.parentId,
-    }))
+    recordTreeUpdatePatches(beforeItems, (before) => {
+      const patch: TrashTreePatch = {
+        status: SIDEBAR_ITEM_STATUS.trashed,
+        deletionTime: deletion.deletionTime,
+        deletedBy: deletion.deletedBy,
+        parentId: before._id === item._id ? null : before.parentId,
+      }
+      return {
+        ...before,
+        ...patch,
+      }
+    })
   }
 
   const restoreSidebarTree: FileSystemWriteSession['restoreSidebarTree'] = async (

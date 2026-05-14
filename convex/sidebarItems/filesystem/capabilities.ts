@@ -2,7 +2,7 @@ import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { hasAtLeastPermissionLevel } from '../../permissions/hasAtLeastPermissionLevel'
-import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { isActiveSidebarItem, isTrashedSidebarItem } from '../types/status'
 import type { CampaignMemberRole } from '../../campaigns/types'
 import type { PermissionLevel } from '../../permissions/types'
@@ -21,7 +21,6 @@ export type SidebarOperationRejectionCode =
   | 'dm_only'
   | 'circular'
   | 'missing_ancestor_ids'
-  | 'different_location'
   | 'invalid_target'
 
 export type SidebarOperationCapability =
@@ -32,10 +31,7 @@ export type OperationActorSnapshot = {
   role: CampaignMemberRole
 }
 
-export type OperationSidebarItem = Pick<
-  AnySidebarItem,
-  '_id' | 'type' | 'location' | 'status' | 'parentId'
-> & {
+export type OperationSidebarItem = Pick<AnySidebarItem, '_id' | 'type' | 'status' | 'parentId'> & {
   myPermissionLevel?: PermissionLevel | null
 }
 
@@ -104,16 +100,10 @@ function evaluateRootCreationAccess(actor: OperationActorSnapshot): SidebarOpera
 function evaluateTargetParent(
   item: OperationSidebarItem,
   target: OperationTargetSnapshot,
-  targetLocation: OperationSidebarItem['location'],
 ): SidebarOperationCapability {
   const parentAccess = evaluateParentAccess(target)
   if (!parentAccess.ok) return parentAccess
   if (target.parentId === null) return ok()
-  const parent = target.parent
-
-  if (parent!.location !== targetLocation) {
-    return reject('different_location', 'Cannot move items into a folder in a different location')
-  }
 
   if (item.type === SIDEBAR_ITEM_TYPES.folders) {
     if (!target.ancestorIds) {
@@ -132,17 +122,25 @@ export function evaluateMoveToParent(
   item: OperationSidebarItem,
   target: OperationTargetSnapshot,
 ): SidebarOperationCapability {
+  if (!isActiveSidebarItem(item)) {
+    return reject('trashed_item', 'Only active items can be moved')
+  }
+
   if (!hasFullAccess(item.myPermissionLevel)) {
     return reject('no_source_permission', 'You do not have sufficient permission for this item')
   }
 
-  return evaluateTargetParent(item, target, item.location)
+  return evaluateTargetParent(item, target)
 }
 
 export function evaluateTrash(
   actor: OperationActorSnapshot,
   item: OperationSidebarItem,
 ): SidebarOperationCapability {
+  if (!isActiveSidebarItem(item) && !isTrashedSidebarItem(item)) {
+    return reject('invalid_target', 'Only active items can be moved to trash')
+  }
+
   if (isTrashedSidebarItem(item)) {
     return reject('already_trashed', 'This item is already in the trash')
   }
@@ -175,7 +173,7 @@ export function evaluateRestore(
     return reject('dm_only', 'Only the DM can restore folders')
   }
 
-  return evaluateTargetParent(item, target, SIDEBAR_ITEM_LOCATION.sidebar)
+  return evaluateTargetParent(item, target)
 }
 
 export function evaluatePermanentDelete(
@@ -213,7 +211,7 @@ export function evaluateCopy(
   }
 
   if (target.parentId === null) return evaluateRootCreationAccess(actor)
-  return evaluateTargetParent(item, target, item.location)
+  return evaluateTargetParent(item, target)
 }
 
 export function evaluatePasteTarget(

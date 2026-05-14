@@ -40,17 +40,14 @@ export type FileSystemDropIntent = {
 export type FileSystemValue = {
   createItem: (input: CreateFileSystemItemInput) => Promise<CreatedFileSystemItem | null>
   renameItem: (input: RenameFileSystemItemInput) => Promise<{ slug: SidebarItemSlug | null } | null>
-  duplicateItems: (
-    itemIds: Array<Id<'sidebarItems'>>,
-    targetParentId: Id<'sidebarItems'> | null,
-  ) => Promise<void>
-  requestTrashItems: (itemIds: Array<Id<'sidebarItems'>>) => Promise<boolean>
+  duplicateItems: (itemIds: Array<Id<'sidebarItems'>>) => Promise<void>
+  requestTrashItems: (itemIds: Array<Id<'sidebarItems'>>) => Promise<void>
   restoreItems: (
     itemIds: Array<Id<'sidebarItems'>>,
     targetParentId?: Id<'sidebarItems'> | null,
   ) => Promise<void>
   emptyTrash: () => Promise<void>
-  confirmDeleteForever: (itemIds: Array<Id<'sidebarItems'>>) => boolean
+  confirmDeleteForever: (itemIds: Array<Id<'sidebarItems'>>) => void
   copy: (itemIds: Array<Id<'sidebarItems'>>) => void
   cut: (itemIds: Array<Id<'sidebarItems'>>) => void
   cancelClipboard: () => boolean

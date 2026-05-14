@@ -57,7 +57,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false)
   const filesystemActions = createFilesystemActions({
     filesystem: filesystemActionsApi,
-    onDialogOpen,
   })
 
   const actions: ActionHandlers = {
@@ -307,6 +306,7 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
 
   return {
     actions,
+    filesystem: filesystemActionsApi,
     dialogState,
   }
 }

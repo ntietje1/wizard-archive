@@ -1,10 +1,6 @@
 import { ERROR_CODE, throwClientError } from '../../../errors'
 import { PERMISSION_LEVEL } from '../../../permissions/types'
-import {
-  SIDEBAR_ITEM_LOCATION,
-  SIDEBAR_ITEM_STATUS,
-  SIDEBAR_ITEM_TYPES,
-} from '../../types/baseTypes'
+import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../../types/baseTypes'
 import {
   ensureSidebarItemNameAvailable,
   findUniqueSidebarItemSlug,
@@ -23,7 +19,7 @@ import { collectDescendants } from '../../functions/collectDescendants'
 import { assertSidebarOperationAllowed, evaluateRestore } from '../capabilities'
 import { normalizeRestoreTargetParentId } from '../targets'
 import { toDecisionRecord } from '../conflicts'
-import { getSidebarItemStatus, isTrashedSidebarItem } from '../../types/status'
+import { getSidebarItemStatus, isActiveSidebarItem, isTrashedSidebarItem } from '../../types/status'
 import { createFileSystemWriteSession } from '../deltas'
 import { FILE_SYSTEM_EVENT_TYPE } from '../receipts'
 import { createFileSystemReadModel } from '../readModel'
@@ -51,9 +47,6 @@ const clearDeletion = { deletionTime: null, deletedBy: null }
 type MoveMergeFolderOperation = Extract<TransferOperation, { action: 'mergeFolder' }>
 type ExecutableMoveOperation = TransferOperation
 type MoveCommandAction = 'move' | 'restore' | 'trash'
-type MoveCommandResult = {
-  events: Array<FileSystemEvent>
-}
 type MoveSelfEventType =
   | typeof FILE_SYSTEM_EVENT_TYPE.moved
   | typeof FILE_SYSTEM_EVENT_TYPE.trashed
@@ -71,14 +64,8 @@ const MOVE_OPERATION_ACTION = {
 
 const MAX_SIDEBAR_MOVE_DEPTH = 50
 
-function createEmptyMoveResult(): MoveCommandResult {
-  return {
-    events: [],
-  }
-}
-
 function pushSelfEvent(
-  result: MoveCommandResult,
+  events: Array<FileSystemEvent>,
   type: MoveSelfEventType,
   itemId: Id<'sidebarItems'>,
 ) {
@@ -87,24 +74,33 @@ function pushSelfEvent(
     type === FILE_SYSTEM_EVENT_TYPE.replaced ||
     type === FILE_SYSTEM_EVENT_TYPE.mergedFolder
   ) {
-    result.events.push({ type, itemId, sourceItemId: itemId })
+    events.push({ type, itemId, sourceItemId: itemId })
     return
   }
-  result.events.push({ type, itemId })
+  events.push({ type, itemId })
+}
+
+function pushPairedEvent(
+  events: Array<FileSystemEvent>,
+  type: typeof FILE_SYSTEM_EVENT_TYPE.replaced | typeof FILE_SYSTEM_EVENT_TYPE.mergedFolder,
+  itemId: Id<'sidebarItems'>,
+  sourceItemId: Id<'sidebarItems'>,
+) {
+  events.push({ type, itemId, sourceItemId })
 }
 
 function applySkippedDecisions(
-  result: MoveCommandResult,
+  events: Array<FileSystemEvent>,
   decisions: Array<OperationDecision> | undefined,
 ) {
   const skipped = new Set(
-    result.events
+    events
       .filter((event) => event.type === FILE_SYSTEM_EVENT_TYPE.skipped)
       .map((event) => event.itemId),
   )
   for (const decision of decisions ?? []) {
     if (decision.action !== 'skip' || skipped.has(decision.sourceItemId)) continue
-    pushSelfEvent(result, FILE_SYSTEM_EVENT_TYPE.skipped, decision.sourceItemId)
+    pushSelfEvent(events, FILE_SYSTEM_EVENT_TYPE.skipped, decision.sourceItemId)
     skipped.add(decision.sourceItemId)
   }
 }
@@ -222,7 +218,6 @@ async function executeRestore(
   await session.restoreSidebarTree(item, {
     ...clearDeletion,
     ...conflictPatch,
-    location: SIDEBAR_ITEM_LOCATION.sidebar,
     status: SIDEBAR_ITEM_STATUS.active,
     parentId: restoreParentId,
   })
@@ -354,53 +349,69 @@ async function executeMoveOperations(
   action: MoveCommandAction,
   rootSourceIds: Array<Id<'sidebarItems'>>,
   session: FileSystemWriteSession,
-): Promise<MoveCommandResult> {
-  const result = createEmptyMoveResult()
+): Promise<Array<FileSystemEvent>> {
+  const events: Array<FileSystemEvent> = []
   const operationSourceIds = new Set<Id<'sidebarItems'>>()
 
   for (const operation of operations) {
     operationSourceIds.add(operation.sourceItemId)
-    const affectedId = await executeMoveOperation(ctx, operation, session)
+    const affectedId = await executeMoveOperation(ctx, operation, action, session)
     if (!affectedId) continue
 
     if (operation.action === MOVE_OPERATION_ACTION.replace) {
-      pushSelfEvent(result, FILE_SYSTEM_EVENT_TYPE.replaced, operation.sourceItemId)
+      pushSelfEvent(events, FILE_SYSTEM_EVENT_TYPE.moved, affectedId)
+      if (!operation.destinationItemId) {
+        throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Replace requires a destination item')
+      }
+      pushPairedEvent(
+        events,
+        FILE_SYSTEM_EVENT_TYPE.replaced,
+        operation.destinationItemId,
+        operation.sourceItemId,
+      )
       continue
     } else if (operation.action === MOVE_OPERATION_ACTION.mergeFolder) {
-      pushSelfEvent(result, FILE_SYSTEM_EVENT_TYPE.mergedFolder, affectedId)
+      pushPairedEvent(
+        events,
+        FILE_SYSTEM_EVENT_TYPE.mergedFolder,
+        affectedId,
+        operation.sourceItemId,
+      )
     } else if (action === 'restore') {
-      pushSelfEvent(result, FILE_SYSTEM_EVENT_TYPE.restored, affectedId)
+      pushSelfEvent(events, FILE_SYSTEM_EVENT_TYPE.restored, affectedId)
     } else {
-      pushSelfEvent(result, FILE_SYSTEM_EVENT_TYPE.moved, affectedId)
+      pushSelfEvent(events, FILE_SYSTEM_EVENT_TYPE.moved, affectedId)
     }
   }
 
   for (const sourceItemId of rootSourceIds) {
     if (!operationSourceIds.has(sourceItemId)) {
-      pushSelfEvent(result, FILE_SYSTEM_EVENT_TYPE.noop, sourceItemId)
+      pushSelfEvent(events, FILE_SYSTEM_EVENT_TYPE.noop, sourceItemId)
     }
   }
-  return result
+  return events
 }
 
 async function executeMoveOperation(
   ctx: CampaignMutationCtx,
   operation: ExecutableMoveOperation,
+  action: MoveCommandAction,
   session: FileSystemWriteSession,
 ): Promise<Id<'sidebarItems'> | null> {
   const source = await loadMovableSource(ctx, operation.sourceItemId)
 
   if (operation.action === MOVE_OPERATION_ACTION.mergeFolder) {
-    // Merge events are keyed to the incoming root because UI feedback counts selected source roots.
-    await executeMergeFolderMove(ctx, source, operation, session)
-    return source._id
+    return await executeMergeFolderMove(ctx, source, operation, session)
   }
 
   if (operation.action === MOVE_OPERATION_ACTION.replace) {
     await trashMoveReplacement(ctx, operation.destinationItemId, session)
   }
 
-  if (isTrashedSidebarItem(source)) {
+  if (action === 'restore') {
+    if (!isTrashedSidebarItem(source)) {
+      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Only trashed items can be restored')
+    }
     await executeRestore(ctx, {
       item: source,
       parentId: operation.targetParentId,
@@ -408,6 +419,9 @@ async function executeMoveOperation(
       session,
     })
   } else {
+    if (!isActiveSidebarItem(source)) {
+      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Only active items can be moved')
+    }
     await executeParentMove(ctx, {
       item: source,
       parentId: operation.targetParentId,
@@ -514,20 +528,20 @@ async function trashSidebarItems(
   ctx: CampaignMutationCtx,
   sourceItems: Array<AccessibleSidebarItemRow>,
   session: FileSystemWriteSession,
-): Promise<MoveCommandResult> {
+): Promise<Array<FileSystemEvent>> {
   const rootItems = await normalizeOperationRoots(ctx, sourceItems)
-  const result = createEmptyMoveResult()
+  const events: Array<FileSystemEvent> = []
 
   for (const item of rootItems) {
     if (isTrashedSidebarItem(item)) {
-      pushSelfEvent(result, FILE_SYSTEM_EVENT_TYPE.noop, item._id)
+      pushSelfEvent(events, FILE_SYSTEM_EVENT_TYPE.noop, item._id)
       continue
     }
     await session.trashSidebarTree(item)
-    pushSelfEvent(result, FILE_SYSTEM_EVENT_TYPE.trashed, item._id)
+    pushSelfEvent(events, FILE_SYSTEM_EVENT_TYPE.trashed, item._id)
   }
 
-  return result
+  return events
 }
 
 function assertRestoreActionSources(sourceItems: Array<AccessibleSidebarItemRow>) {
@@ -535,6 +549,25 @@ function assertRestoreActionSources(sourceItems: Array<AccessibleSidebarItemRow>
   if (!invalidItem) return
 
   throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Only trashed items can be restored')
+}
+
+function assertMoveActionSources(sourceItems: Array<AccessibleSidebarItemRow>) {
+  const invalidItem = sourceItems.find((item) => !isActiveSidebarItem(item))
+  if (!invalidItem) return
+
+  throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Only active items can be moved')
+}
+
+function assertTrashActionSources(sourceItems: Array<AccessibleSidebarItemRow>) {
+  const invalidItem = sourceItems.find(
+    (item) => !isActiveSidebarItem(item) && !isTrashedSidebarItem(item),
+  )
+  if (!invalidItem) return
+
+  throwClientError(
+    ERROR_CODE.VALIDATION_FAILED,
+    'Only active or trashed items can be used as sources for trash actions',
+  )
 }
 
 async function executeMovePlan(
@@ -552,15 +585,18 @@ async function executeMovePlan(
     decisions?: Array<OperationDecision>
     session: FileSystemWriteSession
   },
-): Promise<MoveCommandResult> {
+): Promise<Array<FileSystemEvent>> {
   const sourceItems = await loadMovableSources(ctx, sourceItemIds)
 
   if (action === 'trash') {
+    assertTrashActionSources(sourceItems)
     return await trashSidebarItems(ctx, sourceItems, session)
   }
 
   if (action === 'restore') {
     assertRestoreActionSources(sourceItems)
+  } else {
+    assertMoveActionSources(sourceItems)
   }
 
   const effectiveTargetParentId =
@@ -601,15 +637,15 @@ async function executeMovePlan(
   }
 
   const rootSourceItems = normalizeSelectedRoots(sourceItems, readModel.itemsById)
-  const result = await executeMoveOperations(
+  const events = await executeMoveOperations(
     ctx,
     plan.operations,
     action,
     rootSourceItems.map((item) => item._id),
     session,
   )
-  applySkippedDecisions(result, decisions)
-  return result
+  applySkippedDecisions(events, decisions)
+  return events
 }
 
 export async function executeMoveCommand(
@@ -625,7 +661,7 @@ export async function executeMoveCommand(
   },
 ): Promise<FileSystemDelta> {
   const session = createFileSystemWriteSession(ctx)
-  const result = await executeMovePlan(ctx, {
+  const events = await executeMovePlan(ctx, {
     sourceItemIds: command.itemIds,
     targetParentId: command.type === 'trash' ? null : command.targetParentId,
     action,
@@ -635,6 +671,6 @@ export async function executeMoveCommand(
 
   return await session.build({
     command,
-    events: result.events,
+    events,
   })
 }

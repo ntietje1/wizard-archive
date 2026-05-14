@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import type { PointerEventHandler, ReactNode } from 'react'
+import type { FocusEventHandler, PointerEventHandler, ReactNode } from 'react'
 import type { Folder } from 'convex/folders/types'
 import { canDropFilesOnTarget } from '~/features/dnd/utils/drop-target-data'
 import { cn } from '~/features/shadcn/lib/utils'
@@ -12,6 +12,7 @@ interface DroppableFolderZoneProps {
   children: ReactNode
   className?: string
   onPointerDownCapture?: PointerEventHandler<HTMLDivElement>
+  onFocusCapture?: FocusEventHandler<HTMLDivElement>
 }
 
 export function DroppableFolderZone({
@@ -19,6 +20,7 @@ export function DroppableFolderZone({
   children,
   className,
   onPointerDownCapture,
+  onFocusCapture,
 }: DroppableFolderZoneProps) {
   const ref = useRef<HTMLDivElement>(null)
 
@@ -51,6 +53,7 @@ export function DroppableFolderZone({
       role="group"
       aria-label={`${folder.name} folder contents`}
       onPointerDownCapture={onPointerDownCapture}
+      onFocusCapture={onFocusCapture}
       className={cn(
         className,
         isNotTrashed && isDropTarget && activeHighlight,

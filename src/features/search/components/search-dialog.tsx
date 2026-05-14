@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import type { RefObject } from 'react'
 import { cn } from '~/features/shadcn/lib/utils'
 import { PanelRightIcon, SearchIcon, ExternalLinkIcon, XIcon } from 'lucide-react'
 import { api } from 'convex/_generated/api'
@@ -25,16 +26,152 @@ import { SearchResultItem } from './search-result-item'
 import { mergeSearchResults } from '../utils/merge-search-results'
 import { useRecentItems } from '../hooks/use-recent-items'
 import type { SearchResult } from '../utils/merge-search-results'
+import { useDebouncedValue } from '~/shared/hooks/useDebouncedValue'
+import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
 
-function useDebouncedValue<T>(value: T, delay: number): T {
-  const [debounced, setDebounced] = useState(value)
+function SearchResultsPanel({
+  showPreview,
+  hasQuery,
+  results,
+  recentItems,
+  displayItems,
+  selectedIndex,
+  selectedItemRef,
+  itemsMap,
+  query,
+  isBodySearchPending,
+  onSelect,
+  onHover,
+}: {
+  showPreview: boolean
+  hasQuery: boolean
+  results: Array<SearchResult>
+  recentItems: Array<SearchResult>
+  displayItems: Array<SearchResult>
+  selectedIndex: number
+  selectedItemRef: RefObject<HTMLDivElement | null>
+  itemsMap: Parameters<typeof buildBreadcrumbs>[1]
+  query: string
+  isBodySearchPending: boolean
+  onSelect: (result: SearchResult) => void
+  onHover: (index: number) => void
+}) {
+  const status = hasQuery
+    ? results.length > 0
+      ? `${results.length} result${results.length === 1 ? '' : 's'}`
+      : 'No results'
+    : recentItems.length > 0
+      ? 'Recent'
+      : ''
 
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delay)
-    return () => clearTimeout(timer)
-  }, [value, delay])
+  return (
+    <div
+      className={cn(
+        showPreview ? 'w-1/2 border-r border-border' : 'w-full',
+        'flex flex-col min-h-0',
+      )}
+    >
+      <div
+        role="status"
+        aria-live="polite"
+        className="px-3 py-1.5 text-xs text-muted-foreground font-medium"
+      >
+        {status}
+      </div>
+      <ScrollArea className="flex-1">
+        <div id="search-results-list" role="listbox" aria-label="Search results" className="p-1">
+          {!hasQuery && recentItems.length === 0 && (
+            <div className="px-3 py-8 text-center text-sm text-muted-foreground">
+              Type to search your vault
+            </div>
+          )}
+          {hasQuery && results.length === 0 && !isBodySearchPending && (
+            <div className="px-3 py-8 text-center text-sm text-muted-foreground">
+              No results found
+            </div>
+          )}
+          {displayItems.map((result, index) => (
+            <div
+              key={`${result.itemId}-${result.matchType}`}
+              ref={index === selectedIndex ? selectedItemRef : undefined}
+            >
+              <SearchResultItem
+                id={`search-result-${index}`}
+                icon={getSidebarItemIcon(result.item)}
+                title={
+                  hasQuery && result.matchType === 'title' ? (
+                    <HighlightedText text={result.item.name} query={query} />
+                  ) : (
+                    result.item.name
+                  )
+                }
+                subtitle={buildBreadcrumbs(result.item, itemsMap) || undefined}
+                detail={
+                  hasQuery && result.matchType === 'body' && result.matchText ? (
+                    <HighlightedText text={result.matchText} query={query} />
+                  ) : undefined
+                }
+                isSelected={index === selectedIndex}
+                onClick={() => onSelect(result)}
+                onMouseEnter={() => onHover(index)}
+              />
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
+    </div>
+  )
+}
 
-  return debounced
+function SearchPreviewPanel({
+  hasQuery,
+  selectedResult,
+  selectedContentItem,
+  isPreviewLoading,
+  onOpen,
+}: {
+  hasQuery: boolean
+  selectedResult?: SearchResult
+  selectedContentItem?: AnySidebarItemWithContent
+  isPreviewLoading: boolean
+  onOpen: (result: SearchResult) => void
+}) {
+  return (
+    <div className="w-1/2 flex flex-col min-h-0">
+      {selectedResult ? (
+        <>
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+            <span className="text-sm font-medium truncate">{selectedResult.item.name}</span>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => onOpen(selectedResult)}
+              aria-label="Open result"
+            >
+              <ExternalLinkIcon className="size-3.5" />
+            </Button>
+          </div>
+          <div className="flex-1 min-h-0">
+            {isPreviewLoading ? (
+              <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+                Loading preview…
+              </div>
+            ) : selectedContentItem ? (
+              <SidebarItemPreviewContent item={selectedContentItem} />
+            ) : (
+              <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+                Failed to load preview
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
+          {hasQuery ? 'Select a result to preview' : ''}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function SearchDialog() {
@@ -135,10 +272,9 @@ export function SearchDialog() {
         <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
           <SearchIcon className="size-4 shrink-0 text-muted-foreground" />
           <input
-            role="combobox"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search..."
+            placeholder="Search…"
             aria-label="Search"
             aria-expanded={true}
             aria-controls="search-results-list"
@@ -163,108 +299,29 @@ export function SearchDialog() {
         </div>
 
         <div className="flex flex-1 min-h-0">
-          <div
-            className={cn(
-              showPreview ? 'w-1/2 border-r border-border' : 'w-full',
-              'flex flex-col min-h-0',
-            )}
-          >
-            <div
-              role="status"
-              aria-live="polite"
-              className="px-3 py-1.5 text-xs text-muted-foreground font-medium"
-            >
-              {hasQuery
-                ? results.length > 0
-                  ? `${results.length} result${results.length === 1 ? '' : 's'}`
-                  : 'No results'
-                : recentItems.length > 0
-                  ? 'Recent'
-                  : ''}
-            </div>
-            <ScrollArea className="flex-1">
-              <div
-                id="search-results-list"
-                role="listbox"
-                aria-label="Search results"
-                className="p-1"
-              >
-                {!hasQuery && recentItems.length === 0 && (
-                  <div className="px-3 py-8 text-center text-sm text-muted-foreground">
-                    Type to search your vault
-                  </div>
-                )}
-                {hasQuery && results.length === 0 && !bodyQuery.isPending && (
-                  <div className="px-3 py-8 text-center text-sm text-muted-foreground">
-                    No results found
-                  </div>
-                )}
-                {displayItems.map((result, index) => (
-                  <div
-                    key={`${result.itemId}-${result.matchType}`}
-                    ref={index === selectedIndex ? selectedItemRef : undefined}
-                  >
-                    <SearchResultItem
-                      id={`search-result-${index}`}
-                      icon={getSidebarItemIcon(result.item)}
-                      title={
-                        hasQuery && result.matchType === 'title' ? (
-                          <HighlightedText text={result.item.name} query={debouncedQuery} />
-                        ) : (
-                          result.item.name
-                        )
-                      }
-                      subtitle={buildBreadcrumbs(result.item, itemsMap) || undefined}
-                      detail={
-                        hasQuery && result.matchType === 'body' && result.matchText ? (
-                          <HighlightedText text={result.matchText} query={debouncedQuery} />
-                        ) : undefined
-                      }
-                      isSelected={index === selectedIndex}
-                      onClick={() => handleSelect(result)}
-                      onMouseEnter={() => setSelectedIndex(index)}
-                    />
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-          </div>
+          <SearchResultsPanel
+            showPreview={showPreview}
+            hasQuery={hasQuery}
+            results={results}
+            recentItems={recentItems}
+            displayItems={displayItems}
+            selectedIndex={selectedIndex}
+            selectedItemRef={selectedItemRef}
+            itemsMap={itemsMap}
+            query={debouncedQuery}
+            isBodySearchPending={bodyQuery.isPending}
+            onSelect={handleSelect}
+            onHover={setSelectedIndex}
+          />
 
           {showPreview && (
-            <div className="w-1/2 flex flex-col min-h-0">
-              {selectedResult ? (
-                <>
-                  <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-                    <span className="text-sm font-medium truncate">{selectedResult.item.name}</span>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => handleSelect(selectedResult)}
-                      aria-label="Open result"
-                    >
-                      <ExternalLinkIcon className="size-3.5" />
-                    </Button>
-                  </div>
-                  <div className="flex-1 min-h-0">
-                    {isPreviewLoading ? (
-                      <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
-                        Loading preview...
-                      </div>
-                    ) : selectedContentItem ? (
-                      <SidebarItemPreviewContent item={selectedContentItem} />
-                    ) : (
-                      <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
-                        Failed to load preview
-                      </div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
-                  {hasQuery ? 'Select a result to preview' : ''}
-                </div>
-              )}
-            </div>
+            <SearchPreviewPanel
+              hasQuery={hasQuery}
+              selectedResult={selectedResult}
+              selectedContentItem={selectedContentItem}
+              isPreviewLoading={isPreviewLoading}
+              onOpen={handleSelect}
+            />
           )}
         </div>
 

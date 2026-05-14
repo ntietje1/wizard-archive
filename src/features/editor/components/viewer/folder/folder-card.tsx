@@ -211,7 +211,11 @@ function FolderCardInner({
   )
 
   return (
-    <EditorContextMenu ref={contextMenuRef} viewContext="folder-view" item={folder}>
+    <EditorContextMenu
+      ref={contextMenuRef}
+      viewContext={itemSurface === 'trash' ? 'trash-view' : 'folder-view'}
+      item={folder}
+    >
       {cardContent}
     </EditorContextMenu>
   )

@@ -1,28 +1,13 @@
-import { useRef, useState } from 'react'
-import { ClientOnly, Link } from '@tanstack/react-router'
-import { PERMISSION_LEVEL } from 'convex/permissions/types'
-import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
-import { File as FileIconLucide, FileText, Image, MoreVertical, Music, Video } from 'lucide-react'
+import { useState } from 'react'
+import { ClientOnly } from '@tanstack/react-router'
+import { File as FileIconLucide, FileText, Image, Music, Video } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { ItemCardProps } from './item-card'
 import type { SidebarFile } from 'convex/files/types'
-import { Card, CardTitle } from '~/features/shadcn/components/card'
-import { Button } from '~/features/shadcn/components/button'
+import { Card } from '~/features/shadcn/components/card'
 import { cn } from '~/features/shadcn/lib/utils'
-import { useEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
-import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
-import { useSidebarItemVisualState } from '~/features/sidebar/hooks/useSelectedItem'
-import { useContextMenu } from '~/features/context-menu/hooks/useContextMenu'
-import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
-import { useDraggable } from '~/features/dnd/hooks/useDraggable'
-import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
-import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
-import { useIsSidebarItemDragging } from '~/features/dnd/hooks/useIsSidebarItemDragging'
-import { folderItemBackgroundClass, folderItemOutlineClass } from './folder-item-visual-state'
-import {
-  sidebarItemIconClass,
-  sidebarItemNameClass,
-} from '~/features/sidebar/utils/sidebar-item-visual-state'
+import { sidebarItemIconClass } from '~/features/sidebar/utils/sidebar-item-visual-state'
+import { FolderItemCardShell } from './folder-item-card-shell'
 
 function getFileTypeIcon(
   contentType: string | null | undefined,
@@ -66,118 +51,32 @@ function FileCardSkeleton() {
   )
 }
 
-function FileCardInner({
-  item: file,
-  onClick,
-  parentId,
-  visibleItemIds,
-  itemSurface = 'folder-view',
-}: ItemCardProps<SidebarFile>) {
-  const ref = useRef<HTMLDivElement>(null)
-  const linkProps = useEditorLinkProps(file)
-  const { setLastSelectedItem } = useLastEditorItem()
-  const canDrag = hasAtLeastPermissionLevel(file.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
-  const visualState = useSidebarItemVisualState(file)
-  const { contextMenuRef, handleMoreOptions } = useContextMenu()
-  const resolvedVisibleItemIds = visibleItemIds ?? [file._id]
-  const { handleItemClick, handleItemContextMenu } = useItemSelectionInteractions(file, {
-    surface: itemSurface,
-    parentId: parentId ?? null,
-    visibleItemIds: resolvedVisibleItemIds,
-  })
-  const dragData = useSidebarDragData(file)
-  const isDragging = useIsSidebarItemDragging(file._id)
-
+function FileCardInner({ item: file, ...props }: ItemCardProps<SidebarFile>) {
   const FileIcon = getFileTypeIcon(file.contentType, file.name)
   const [erroredUrl, setErroredUrl] = useState<string | null>(null)
   const imageError = erroredUrl === file.previewUrl
 
-  const { isDraggingRef } = useDraggable({
-    ref,
-    data: dragData,
-    canDrag,
-  })
-
-  const cardContent = (
-    <div ref={ref} className={cn('w-full h-[140px]', isDragging && 'opacity-50')}>
-      <Link
-        {...linkProps}
-        activeOptions={{ includeSearch: false }}
-        aria-label={file.name}
-        data-item-selection-target="true"
-        className="block w-full h-full [&.active]:pointer-events-auto"
-        draggable={false}
-        onContextMenu={handleItemContextMenu}
-        onClick={(e) => {
-          if (isDraggingRef.current) {
-            e.preventDefault()
-            return
-          }
-          if (onClick) {
-            e.preventDefault()
-            handleItemClick(e)
-            onClick()
-            return
-          }
-          handleItemClick(e, () => setLastSelectedItem(file.slug))
-        }}
-      >
-        <Card
-          className={cn(
-            'w-full h-full cursor-pointer group flex flex-col p-2 relative rounded-md',
-            folderItemBackgroundClass(visualState),
-            folderItemOutlineClass(visualState),
-          )}
-        >
-          {/* Top Section: Title + Menu Button */}
-          <div className="flex items-center justify-between mb-1 min-w-0">
-            <CardTitle
-              className={cn(
-                'p-1 text-sm font-medium truncate select-none flex-1 min-w-0',
-                sidebarItemNameClass(visualState),
-              )}
-            >
-              {file.name}
-            </CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="size-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10 rounded-sm flex-shrink-0 ml-2 opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                handleItemContextMenu(e)
-                handleMoreOptions(e)
-              }}
-            >
-              <MoreVertical className="size-4" />
-            </Button>
-          </div>
-
-          {/* Preview / Icon Section */}
-          <div className="w-full flex-1 bg-muted relative rounded-sm overflow-hidden flex items-center justify-center">
-            {file.previewUrl && !imageError ? (
-              <img
-                src={file.previewUrl}
-                alt={file.name}
-                className="w-full h-full object-cover"
-                onError={() => setErroredUrl(file.previewUrl)}
-                draggable={false}
-                loading="lazy"
-              />
-            ) : (
-              <FileIcon className={cn('size-12 select-none', sidebarItemIconClass(visualState))} />
-            )}
-          </div>
-        </Card>
-      </Link>
-    </div>
-  )
-
   return (
-    <EditorContextMenu ref={contextMenuRef} viewContext="folder-view" item={file}>
-      {cardContent}
-    </EditorContextMenu>
+    <FolderItemCardShell
+      {...props}
+      item={file}
+      renderPreview={(visualState) => (
+        <div className="w-full flex-1 bg-muted relative rounded-sm overflow-hidden flex items-center justify-center">
+          {file.previewUrl && !imageError ? (
+            <img
+              src={file.previewUrl}
+              alt={file.name}
+              className="w-full h-full object-cover"
+              onError={() => setErroredUrl(file.previewUrl)}
+              draggable={false}
+              loading="lazy"
+            />
+          ) : (
+            <FileIcon className={cn('size-12 select-none', sidebarItemIconClass(visualState))} />
+          )}
+        </div>
+      )}
+    />
   )
 }
 

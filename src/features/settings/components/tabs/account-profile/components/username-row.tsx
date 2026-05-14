@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useLocation, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { api } from 'convex/_generated/api'
@@ -20,15 +20,7 @@ import {
   DialogTitle,
 } from '~/features/shadcn/components/dialog'
 import { SettingsSubDialogContent } from '~/features/settings/components/settings-sub-dialog'
-
-function useDebouncedValue<T>(value: T, delay: number): T {
-  const [debounced, setDebounced] = useState(value)
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delay)
-    return () => clearTimeout(timer)
-  }, [value, delay])
-  return debounced
-}
+import { useDebouncedValue } from '~/shared/hooks/useDebouncedValue'
 
 function useUsernameValidation(raw: string, currentUsername: string) {
   const normalizedUsername = normalizeUsernameInput(raw)
@@ -141,7 +133,7 @@ function UsernameChangeDialog({ profile, onClose }: { profile: UserProfile; onCl
       </div>
       <DialogFooter showCloseButton>
         <Button onClick={handleSave} disabled={!canSubmit || isLoading}>
-          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
+          {isLoading ? <Loader2 className="size-4 animate-spin" /> : 'Save'}
         </Button>
       </DialogFooter>
     </>

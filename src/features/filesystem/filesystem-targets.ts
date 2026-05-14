@@ -1,6 +1,6 @@
 import type { Id } from 'convex/_generated/dataModel'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import type { SidebarItemLocation, SidebarItemStatus } from 'convex/sidebarItems/types/baseTypes'
+import type { SidebarItemStatus } from 'convex/sidebarItems/types/baseTypes'
 import { isTrashedSidebarItem } from 'convex/sidebarItems/types/status'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { ItemSurface } from '~/features/sidebar/stores/sidebar-ui-store'
@@ -16,9 +16,7 @@ export function getPasteTargetParentId(
   return targetParentId === undefined ? (activeItemSurface?.parentId ?? null) : targetParentId
 }
 
-export function getRestoreTargetParentId<
-  T extends { location: SidebarItemLocation; status: SidebarItemStatus },
->(
+export function getRestoreTargetParentId<T extends { status: SidebarItemStatus }>(
   activeItemSurface: SidebarOperationSurface | null,
   itemsMap: ReadonlyMap<Id<'sidebarItems'>, T>,
   targetParentId?: Id<'sidebarItems'> | null,

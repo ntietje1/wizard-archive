@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
@@ -8,6 +8,7 @@ const createItemMock = vi.hoisted(() => vi.fn())
 const navigateToItemMock = vi.hoisted(() => vi.fn())
 const openParentFoldersMock = vi.hoisted(() => vi.fn())
 const handleErrorMock = vi.hoisted(() => vi.fn())
+const toastInfoMock = vi.hoisted(() => vi.fn())
 
 vi.mock('~/features/filesystem/useCreateFileSystemItem', () => ({
   useCreateFileSystemItem: () => ({ createItem: createItemMock }),
@@ -34,15 +35,20 @@ vi.mock('~/shared/utils/logger', () => ({
   logger: { warn: vi.fn() },
 }))
 
+vi.mock('sonner', () => ({
+  toast: { info: toastInfoMock },
+}))
+
 describe('NewNoteButton', () => {
   beforeEach(() => {
     createItemMock.mockReset()
     navigateToItemMock.mockReset()
     openParentFoldersMock.mockReset()
     handleErrorMock.mockReset()
+    toastInfoMock.mockReset()
   })
 
-  it('stays clickable while note creation is pending', async () => {
+  it('stays enabled but ignores duplicate clicks while note creation is pending', async () => {
     const user = userEvent.setup()
     createItemMock.mockReturnValue(new Promise(() => {}))
 
@@ -55,7 +61,8 @@ describe('NewNoteButton', () => {
 
     await user.click(button)
 
-    expect(createItemMock).toHaveBeenCalledTimes(2)
+    expect(createItemMock).toHaveBeenCalledTimes(1)
+    expect(toastInfoMock).toHaveBeenCalledWith('Note creation in progress')
   })
 
   it('opens and navigates to a successfully created note', async () => {
@@ -66,11 +73,13 @@ describe('NewNoteButton', () => {
 
     await user.click(screen.getByRole('button', { name: 'Create new note' }))
 
-    expect(createItemMock).toHaveBeenCalledWith({
-      type: SIDEBAR_ITEM_TYPES.notes,
-      parentTarget: { kind: 'direct', parentId: null },
-      name: 'New Note',
-    })
+    await waitFor(() =>
+      expect(createItemMock).toHaveBeenCalledWith({
+        type: SIDEBAR_ITEM_TYPES.notes,
+        parentTarget: { kind: 'direct', parentId: null },
+        name: 'New Note',
+      }),
+    )
     expect(openParentFoldersMock).toHaveBeenCalledWith('note_1')
     expect(navigateToItemMock).toHaveBeenCalledWith('new-note')
   })
@@ -85,7 +94,9 @@ describe('NewNoteButton', () => {
     const button = screen.getByRole('button', { name: 'Create new note' })
     await user.click(button)
 
-    expect(handleErrorMock).toHaveBeenCalledWith(error, 'Failed to create note')
-    expect(button).toBeEnabled()
+    await waitFor(() => {
+      expect(handleErrorMock).toHaveBeenCalledWith(error, 'Failed to create note')
+      expect(button).toBeEnabled()
+    })
   })
 })

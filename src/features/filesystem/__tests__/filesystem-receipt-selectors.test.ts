@@ -50,4 +50,19 @@ describe('filesystem receipt selectors', () => {
     ])
     expect(getReceiptSelectedRootIds(receipt('undo', [{ type: 'restored', itemId }]))).toEqual([])
   })
+
+  it('selects the created copy, not the replaced source bookkeeping event', () => {
+    const copiedItemId = 'copied_item' as Id<'sidebarItems'>
+    const sourceItemId = 'source_item' as Id<'sidebarItems'>
+    const replacedItemId = 'replaced_item' as Id<'sidebarItems'>
+
+    expect(
+      getReceiptSelectedRootIds(
+        receipt('forward', [
+          { type: 'copied', itemId: copiedItemId, sourceItemId },
+          { type: 'replaced', itemId: replacedItemId, sourceItemId },
+        ]),
+      ),
+    ).toEqual([copiedItemId])
+  })
 })

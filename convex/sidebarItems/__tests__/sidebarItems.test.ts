@@ -410,10 +410,15 @@ describe('executeMoveCommand', () => {
     const { noteId: sourceNote } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Scene',
     })
-    await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
-      name: 'Scene',
-      parentId: destinationFolder,
-    })
+    const { noteId: replacedDestinationId } = await createNote(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+      {
+        name: 'Scene',
+        parentId: destinationFolder,
+      },
+    )
 
     const receipt = await dmAuth.mutation(
       api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
@@ -426,7 +431,7 @@ describe('executeMoveCommand', () => {
 
     expect(
       receipt.events.filter((event) => event.type === 'replaced').map((event) => event.itemId),
-    ).toEqual([sourceNote])
+    ).toEqual([replacedDestinationId])
     expect(receipt.undoable).toBe(true)
   })
 
@@ -472,7 +477,7 @@ describe('executeMoveCommand', () => {
     }))
 
     expect(filesystemEventItemIds(movedIds, 'moved')).toEqual([])
-    expect(filesystemEventItemIds(movedIds, 'mergedFolder')).toEqual([sourceFolder])
+    expect(filesystemEventItemIds(movedIds, 'mergedFolder')).toEqual([destinationFolder])
     expect(filesystemEventItemIds(movedIds, 'skipped')).toEqual([skippedChild])
     expect(rows.sourceFolder?.location).toBe('sidebar')
     expect(rows.skippedChild?.location).toBe('sidebar')
@@ -485,7 +490,12 @@ describe('executeMoveCommand', () => {
     const { folderId: sourceFolder } = await createFolder(t, ctx.campaignId, ctx.dm.profile._id, {
       name: 'Scenes',
     })
-    await createFolder(t, ctx.campaignId, ctx.dm.profile._id, { name: 'Scenes' })
+    const { folderId: destinationFolder } = await createFolder(
+      t,
+      ctx.campaignId,
+      ctx.dm.profile._id,
+      { name: 'Scenes' },
+    )
 
     const receipt = await dmAuth.mutation(
       api.sidebarItems.filesystem.mutations.executeFileSystemCommand,
@@ -498,7 +508,7 @@ describe('executeMoveCommand', () => {
 
     expect(
       receipt.events.filter((event) => event.type === 'mergedFolder').map((event) => event.itemId),
-    ).toEqual([sourceFolder])
+    ).toEqual([destinationFolder])
     expect(receipt.undoable).toBe(true)
   })
 

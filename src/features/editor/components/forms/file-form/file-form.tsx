@@ -301,12 +301,7 @@ export function FileForm({ fileId, campaignId, parentId, onClose, onSuccess }: F
 
       <div className="space-y-2">
         <Label>File</Label>
-        <GenericFileUploadSection
-          label=""
-          fileUpload={fileUpload}
-          handleFileSelect={fileUpload.handleFileSelect}
-          isSubmitting={isDisabled}
-        />
+        <GenericFileUploadSection label="" fileUpload={fileUpload} isSubmitting={isDisabled} />
         {fileUpload.uploadError ? (
           <p className="text-sm text-destructive">{fileUpload.uploadError}</p>
         ) : !hasFile ? (

@@ -21,6 +21,13 @@ import { runFileSystemMutation } from './filesystem-command-runner'
 import { FileSystemContext } from './useFileSystem'
 import type { FileSystemValue } from './useFileSystem'
 import { setFileSystemClipboard, useFileSystemClipboard } from './filesystem-clipboard-store'
+import {
+  createFileSystemClipboard,
+  createFileSystemCreateCommand,
+  createFileSystemDuplicateCommand,
+  createFileSystemRenameCommand,
+  resolveFileSystemClipboardCommand,
+} from './filesystem-command-intents'
 import { useFileSystemUndoHotkeys } from './filesystem-hotkeys'
 import { planFileSystemOptimisticCommand } from './filesystem-optimistic-planner'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
@@ -43,7 +50,6 @@ import {
   getReceiptToastMessage,
 } from './filesystem-receipt-selectors'
 import { toast } from 'sonner'
-import { getPasteTargetParentId } from './filesystem-targets'
 import {
   fileSystemDropCommandFailureMessage,
   resolveGlobalFileSystemDropCommand,
@@ -55,6 +61,7 @@ import { assertNever } from '~/shared/utils/utils'
 type PendingConflict = {
   command: FileSystemCommand
   conflicts: Array<ItemOperationConflict>
+  onSuccess?: () => void
 }
 
 function createClientOperationId() {
@@ -173,8 +180,10 @@ function useFileSystemValue(): FileSystemProviderState {
     command: FileSystemCommand,
     {
       decisions,
+      onSuccess,
     }: {
       decisions?: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
+      onSuccess?: () => void
     } = {},
   ): Promise<FileSystemTransactionReceipt | null> => {
     if (!campaignId) return null
@@ -189,7 +198,7 @@ function useFileSystemValue(): FileSystemProviderState {
       campaignId,
     })
     if (plan.status === 'needsDecision') {
-      setPendingConflict({ command, conflicts: plan.conflicts })
+      setPendingConflict({ command, conflicts: plan.conflicts, onSuccess })
       return null
     }
     const clientOperationId = createClientOperationId()
@@ -243,6 +252,7 @@ function useFileSystemValue(): FileSystemProviderState {
               useFileSystemUndoStore.getState().pushUndo(receipt)
             }
             await applyReceiptSideEffects(receipt)
+            onSuccess?.()
             toastReceipt(receipt)
           },
           onError: (error) => handleError(error, 'Filesystem operation failed'),
@@ -252,31 +262,19 @@ function useFileSystemValue(): FileSystemProviderState {
   }
 
   const createItem: FileSystemValue['createItem'] = async (input) => {
-    const receipt = await executeCommand({
-      type: 'create',
-      itemType: input.itemType,
-      name: input.name,
-      parentTarget: input.parentTarget,
-      iconName: input.iconName,
-      color: input.color,
-    })
+    const receipt = await executeCommand(createFileSystemCreateCommand(input))
     return getCreatedItemResult(receipt)
   }
 
   const renameItem: FileSystemValue['renameItem'] = async (input) => {
-    const receipt = await executeCommand({
-      type: 'rename',
-      itemId: input.itemId,
-      name: input.name,
-      iconName: input.iconName,
-      color: input.color,
-    })
+    const receipt = await executeCommand(createFileSystemRenameCommand(input))
     if (!receipt) return null
     return { slug: getReceiptRenamedSlug(receipt) }
   }
 
-  const duplicateItems: FileSystemValue['duplicateItems'] = async (itemIds, targetParentId) => {
-    await executeCommand({ type: 'copy', itemIds, targetParentId })
+  const duplicateItems: FileSystemValue['duplicateItems'] = async (itemIds) => {
+    const command = createFileSystemDuplicateCommand(itemIds, cacheAdapter.getReadModel())
+    if (command) await executeCommand(command)
   }
 
   const trashItems = async (itemIds: Array<Id<'sidebarItems'>>) => {
@@ -286,16 +284,15 @@ function useFileSystemValue(): FileSystemProviderState {
   const requestTrashItems: FileSystemValue['requestTrashItems'] = async (itemIds) => {
     const currentReadModel = cacheAdapter.getReadModel()
     const items = normalizeOperationItems(currentReadModel.getItems(itemIds), currentReadModel)
-    if (items.length === 0) return false
+    if (items.length === 0) return
     if (items.length === 1) {
       const item = items[0]
       if (isFolder(item) && currentReadModel.getActiveChildren(item._id).length > 0) {
         setPendingTrashFolder(item)
-        return true
+        return
       }
     }
     await trashItems(items.map((item) => item._id))
-    return false
   }
 
   const restoreItems: FileSystemValue['restoreItems'] = async (itemIds, targetParentId = null) => {
@@ -311,19 +308,15 @@ function useFileSystemValue(): FileSystemProviderState {
   }
 
   const copy = (itemIds: Array<Id<'sidebarItems'>>) => {
-    if (!campaignId || itemIds.length === 0) return
-    const currentReadModel = cacheAdapter.getReadModel()
-    const items = normalizeOperationItems(currentReadModel.getItems(itemIds), currentReadModel)
-    if (items.length === 0) return
-    setFileSystemClipboard({ mode: 'copy', campaignId, itemIds: items.map((item) => item._id) })
+    setFileSystemClipboard(
+      createFileSystemClipboard('copy', itemIds, campaignId, cacheAdapter.getReadModel()),
+    )
   }
 
   const cut = (itemIds: Array<Id<'sidebarItems'>>) => {
-    if (!campaignId || itemIds.length === 0) return
-    const currentReadModel = cacheAdapter.getReadModel()
-    const items = normalizeOperationItems(currentReadModel.getItems(itemIds), currentReadModel)
-    if (items.length === 0) return
-    setFileSystemClipboard({ mode: 'cut', campaignId, itemIds: items.map((item) => item._id) })
+    setFileSystemClipboard(
+      createFileSystemClipboard('cut', itemIds, campaignId, cacheAdapter.getReadModel()),
+    )
   }
 
   const cancelClipboard = () => {
@@ -333,72 +326,37 @@ function useFileSystemValue(): FileSystemProviderState {
   }
 
   const paste: FileSystemValue['paste'] = async (targetParentId) => {
-    if (!campaignId || !clipboard || clipboard.campaignId !== campaignId) return
-    const resolvedTargetParentId = getPasteTargetParentId(activeItemSurface, targetParentId)
-    const currentReadModel = cacheAdapter.getReadModel()
-    const items = normalizeOperationItems(
-      currentReadModel.getItems(Array.from(clipboard.itemIds)),
-      currentReadModel,
-    )
-    if (items.length === 0) return
-
-    if (clipboard.mode === 'copy') {
-      await duplicateItems(
-        items.map((item) => item._id),
-        resolvedTargetParentId,
-      )
-      return
-    }
-
-    if (items.every((item) => item.parentId === resolvedTargetParentId)) {
-      setFileSystemClipboard(null)
-      return
-    }
-
-    await executeCommand({
-      type: 'move',
-      itemIds: items.map((item) => item._id),
-      targetParentId: resolvedTargetParentId,
+    const resolved = resolveFileSystemClipboardCommand({
+      clipboard,
+      campaignId,
+      activeItemSurface,
+      targetParentId,
+      readModel: cacheAdapter.getReadModel(),
     })
-    setFileSystemClipboard(null)
+    if (!resolved.command) {
+      if (resolved.clearClipboard) setFileSystemClipboard(null)
+      return
+    }
+    await executeCommand(resolved.command, {
+      onSuccess: resolved.clearClipboard ? () => setFileSystemClipboard(null) : undefined,
+    })
   }
 
   const undo: FileSystemValue['undo'] = async () => {
-    if (pendingOperationCountRef.current > 0) return
-    const entry = useFileSystemUndoStore.getState().peekUndo()
-    if (!entry) return
-    const progressToastId = toast.loading('Undoing…')
-    let receipt: FileSystemTransactionReceipt | null = null
-    try {
-      receipt = await withPendingOperation(() =>
-        runQueuedMutation(() =>
-          runFileSystemMutation({
-            patches: { apply: [], rollback: [] },
-            applyPatches: cacheAdapter.applyPatches,
-            mutate: async () =>
-              (await undoMutation.mutateAsync({
-                transactionId: entry.transactionId,
-              })) as FileSystemTransactionReceipt,
-            onSuccess: async (undoReceipt) => {
-              useFileSystemUndoStore.getState().removeUndo()
-              useFileSystemUndoStore.getState().pushRedoEntry(entry)
-              await applyReceiptSideEffects(undoReceipt)
-            },
-            onError: (error) => handleError(error, 'Filesystem undo failed'),
-          }),
-        ),
-      )
-    } finally {
-      toast.dismiss(progressToastId)
-    }
-    if (receipt) toastReceipt(receipt)
+    await runHistoryCommand('undo')
   }
 
   const redo: FileSystemValue['redo'] = async () => {
+    await runHistoryCommand('redo')
+  }
+
+  async function runHistoryCommand(direction: 'undo' | 'redo') {
     if (pendingOperationCountRef.current > 0) return
-    const entry = useFileSystemUndoStore.getState().peekRedo()
+    const undoStore = useFileSystemUndoStore.getState()
+    const entry = direction === 'undo' ? undoStore.peekUndo() : undoStore.peekRedo()
     if (!entry) return
-    const progressToastId = toast.loading('Redoing…')
+
+    const progressToastId = toast.loading(direction === 'undo' ? 'Undoing…' : 'Redoing…')
     let receipt: FileSystemTransactionReceipt | null = null
     try {
       receipt = await withPendingOperation(() =>
@@ -407,15 +365,29 @@ function useFileSystemValue(): FileSystemProviderState {
             patches: { apply: [], rollback: [] },
             applyPatches: cacheAdapter.applyPatches,
             mutate: async () =>
-              (await redoMutation.mutateAsync({
-                transactionId: entry.transactionId,
-              })) as FileSystemTransactionReceipt,
-            onSuccess: async (redoReceipt) => {
-              useFileSystemUndoStore.getState().removeRedo()
-              useFileSystemUndoStore.getState().pushUndoEntry(entry, { preserveRedo: true })
-              await applyReceiptSideEffects(redoReceipt)
+              direction === 'undo'
+                ? ((await undoMutation.mutateAsync({
+                    transactionId: entry.transactionId,
+                  })) as FileSystemTransactionReceipt)
+                : ((await redoMutation.mutateAsync({
+                    transactionId: entry.transactionId,
+                  })) as FileSystemTransactionReceipt),
+            onSuccess: async (historyReceipt) => {
+              const store = useFileSystemUndoStore.getState()
+              if (direction === 'undo') {
+                store.removeUndo()
+                store.pushRedoEntry(entry)
+              } else {
+                store.removeRedo()
+                store.pushUndoEntry(entry, { preserveRedo: true })
+              }
+              await applyReceiptSideEffects(historyReceipt)
             },
-            onError: (error) => handleError(error, 'Filesystem redo failed'),
+            onError: (error) =>
+              handleError(
+                error,
+                direction === 'undo' ? 'Filesystem undo failed' : 'Filesystem redo failed',
+              ),
           }),
         ),
       )
@@ -464,9 +436,8 @@ function useFileSystemValue(): FileSystemProviderState {
   const confirmDeleteForever: FileSystemValue['confirmDeleteForever'] = (itemIds) => {
     const currentReadModel = cacheAdapter.getReadModel()
     const items = normalizeOperationItems(currentReadModel.getItems(itemIds), currentReadModel)
-    if (items.length === 0) return false
+    if (items.length === 0) return
     setPendingDeleteForeverItems(items)
-    return true
   }
 
   const resolveConflicts = async (
@@ -474,8 +445,9 @@ function useFileSystemValue(): FileSystemProviderState {
   ) => {
     if (!pendingConflict) return
     const command = pendingConflict.command
+    const onSuccess = pendingConflict.onSuccess
     setPendingConflict(null)
-    await executeCommand(command, { decisions })
+    await executeCommand(command, { decisions, onSuccess })
   }
 
   const conflictDialog = pendingConflict ? (

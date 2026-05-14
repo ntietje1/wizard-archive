@@ -3,7 +3,6 @@ import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem, AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
-import type { SidebarItemName } from 'convex/sidebarItems/validation/name'
 import type { EditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useNameValidation } from '~/shared/hooks/useNameValidation'
@@ -16,7 +15,7 @@ import { handleError } from '~/shared/utils/logger'
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
 
 interface EditableNameProps {
-  initialName: SidebarItemName | ''
+  initialName: string
   defaultName?: string
   onRename?: (newName: string) => Promise<void>
   onChange?: (name: string) => void

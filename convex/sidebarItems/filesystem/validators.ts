@@ -3,7 +3,6 @@ import { sidebarItemTableFields } from '../schema/sidebarItemFields'
 import {
   sidebarItemColorValidator,
   sidebarItemIconNameValidator,
-  sidebarItemLocationValidator,
   sidebarItemNameValidator,
   sidebarItemSlugValidator,
   sidebarItemStatusValidator,
@@ -85,6 +84,10 @@ export const fileSystemEventValidator = v.union(
     slug: v.string(),
   }),
   v.object({
+    type: v.literal(FILE_SYSTEM_EVENT_TYPE.updated),
+    itemId: v.id('sidebarItems'),
+  }),
+  v.object({
     type: v.literal(FILE_SYSTEM_EVENT_TYPE.renamed),
     itemId: v.id('sidebarItems'),
     slug: v.string(),
@@ -161,7 +164,6 @@ const sidebarItemPatchCommonFields = {
   iconName: v.optional(v.nullable(sidebarItemIconNameValidator)),
   color: v.optional(v.nullable(sidebarItemColorValidator)),
   parentId: v.optional(v.nullable(v.id('sidebarItems'))),
-  location: v.optional(sidebarItemLocationValidator),
   status: v.optional(sidebarItemStatusValidator),
   previewStorageId: v.optional(v.nullable(v.id('_storage'))),
   previewLockedUntil: v.optional(v.nullable(v.number())),

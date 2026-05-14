@@ -3,7 +3,7 @@ import { create } from 'zustand'
 
 type FileSystemClipboardMode = 'copy' | 'cut'
 
-type FileSystemClipboard = {
+export type FileSystemClipboard = {
   mode: FileSystemClipboardMode
   campaignId: Id<'campaigns'>
   itemIds: ReadonlyArray<Id<'sidebarItems'>>

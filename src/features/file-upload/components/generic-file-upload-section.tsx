@@ -1,26 +1,24 @@
 import { FileUploadSection } from './file-upload-section'
 import type { UseFileWithPreviewReturn } from '~/features/file-upload/hooks/useFileWithPreview'
+import { FILE_UPLOAD_ACCEPT_PATTERN } from 'convex/storage/validation'
 
 interface GenericFileUploadSectionProps {
   label?: string
   fileUpload: UseFileWithPreviewReturn
-  handleFileSelect: (file: File) => void
   isSubmitting: boolean
 }
 
 export function GenericFileUploadSection({
   label,
   fileUpload,
-  handleFileSelect,
   isSubmitting,
 }: GenericFileUploadSectionProps) {
   return (
     <FileUploadSection
       label={label}
       fileUpload={fileUpload}
-      handleFileSelect={handleFileSelect}
       isSubmitting={isSubmitting}
-      acceptPattern="*/*"
+      acceptPattern={FILE_UPLOAD_ACCEPT_PATTERN}
       dragDropText="Drag a file here or click to browse"
     />
   )

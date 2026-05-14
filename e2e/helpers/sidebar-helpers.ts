@@ -13,16 +13,6 @@ export function sidebarLink(page: Page, name: string) {
   return sidebarNavigation(page).getByRole('link', { name, exact: true })
 }
 
-function slugifyItemName(name: string) {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[\s_]+/g, '-')
-    .replace(/[^a-z0-9-]/g, '')
-    .replace(/-+/g, '-')
-    .replace(/^-+|-+$/g, '')
-}
-
 export function selectableSidebarRow(page: Page, name: string) {
   return sidebarNavigation(page).getByTestId(`selectable-row-${name}`).first()
 }
@@ -134,25 +124,11 @@ export async function createFolder(page: Page, name: string) {
 export async function openItem(page: Page, name: string) {
   const itemName = page.getByRole('textbox', { name: 'Item name' })
   if ((await itemName.inputValue().catch(() => null)) === name) return
-  try {
-    await sidebarLink(page, name).click({ timeout: 5000 })
-  } catch {
-    const url = new URL(page.url())
-    url.searchParams.set('item', slugifyItemName(name))
-    await page.goto(url.toString(), { waitUntil: 'domcontentloaded', timeout: 10000 })
-  }
+  await sidebarLink(page, name).click({ timeout: 5000 })
 }
 
 export async function openContextMenu(page: Page, itemName: string) {
-  try {
-    await sidebarLink(page, itemName).click({ button: 'right', timeout: 5000 })
-  } catch {
-    await page
-      .locator('a')
-      .filter({ hasText: itemName })
-      .first()
-      .click({ button: 'right', force: true, timeout: 5000 })
-  }
+  await sidebarLink(page, itemName).click({ button: 'right', timeout: 5000 })
   await expect(page.getByRole('menu')).toBeVisible({ timeout: 5000 })
 }
 
@@ -204,11 +180,7 @@ async function clickSidebarSelectionTarget(
     }
     await clickSidebarLinkByCoordinates(page, name, options?.modifiers ?? [])
   } catch {
-    await page
-      .locator('a')
-      .filter({ hasText: name })
-      .first()
-      .click({ ...options, force: true })
+    if (attempt >= 2) throw new Error(`Unable to click sidebar item "${name}"`)
   }
 }
 
@@ -268,11 +240,7 @@ export async function selectFolderItems(page: Page, folderName: string, names: A
       index === 0
         ? ({ timeout: 5000 } satisfies Parameters<Locator['click']>[0])
         : ({ modifiers: [modifier], timeout: 5000 } satisfies Parameters<Locator['click']>[0])
-    try {
-      await folderItemLink(page, folderName, name).click(options)
-    } catch {
-      await folderItemLink(page, folderName, name).click({ ...options, force: true })
-    }
+    await folderItemLink(page, folderName, name).click(options)
     await expectSelected(page, name)
   }
 }
@@ -283,7 +251,9 @@ export async function trashUntitledNotes(page: Page) {
   for (let index = 0; index < MAX_UNTITLED_TRASH_ATTEMPTS; index += 1) {
     const count = await untitledLinks.count()
     if (count === 0) return
-    await untitledRows.first().getByRole('button', { name: 'More options' }).click({ force: true })
+    const row = untitledRows.first()
+    await row.hover()
+    await row.getByRole('button', { name: 'More options' }).click()
     await page.getByRole('menuitem', { name: 'Move to Trash' }).click()
     await expect.poll(async () => await untitledLinks.count()).toBeLessThan(count)
   }

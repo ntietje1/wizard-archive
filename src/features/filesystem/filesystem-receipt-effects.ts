@@ -52,15 +52,16 @@ function shouldClearEditorForDeletedRoots({
   currentSlug,
   getItemBySlug,
   allItemsMap,
+  allItemsBySlug,
 }: {
   deletedItems: Array<ReceiptEffectItem>
   currentSlug: SidebarItemSlug | null
   getItemBySlug: (slug: SidebarItemSlug) => ReceiptEffectItem | undefined
   allItemsMap: ReadonlyMap<Id<'sidebarItems'>, ReceiptEffectItem>
+  allItemsBySlug: ReadonlyMap<SidebarItemSlug, ReceiptEffectItem>
 }) {
   if (!currentSlug) return false
-  const currentItem =
-    getItemBySlug(currentSlug) ?? deletedItems.find((item) => item.slug === currentSlug)
+  const currentItem = getItemBySlug(currentSlug) ?? allItemsBySlug.get(currentSlug) ?? undefined
   if (!currentItem) return false
   const deletedIds = new Set(deletedItems.map((item) => item._id))
   return isItemOrDescendantOfRoot(currentItem, deletedIds, allItemsMap)
@@ -79,6 +80,7 @@ function mergeRemovedItems({
 }): {
   rootItems: Array<ReceiptEffectItem>
   allItemsMap: ReadonlyMap<Id<'sidebarItems'>, ReceiptEffectItem>
+  allItemsBySlug: ReadonlyMap<SidebarItemSlug, ReceiptEffectItem>
 } {
   const allItemsMap = new Map<Id<'sidebarItems'>, ReceiptEffectItem>(readModel.itemsById)
   for (const snapshot of removedSnapshots) {
@@ -90,12 +92,15 @@ function mergeRemovedItems({
 
   const snapshotById = new Map(removedSnapshots.map((item) => [item._id, item] as const))
   const eventItemById = new Map(removedEventItems.map((item) => [item._id, item] as const))
+  const allItemsBySlug = new Map<SidebarItemSlug, ReceiptEffectItem>(
+    Array.from(allItemsMap.values(), (item) => [item.slug, item] as const),
+  )
   const rootItems = rootIds.flatMap((itemId) => {
     const item =
       readModel.itemsById.get(itemId) ?? snapshotById.get(itemId) ?? eventItemById.get(itemId)
     return item ? [item] : []
   })
-  return { rootItems, allItemsMap }
+  return { rootItems, allItemsMap, allItemsBySlug }
 }
 
 function getRemovedEventItems(receipt: FileSystemTransactionReceipt): Array<ReceiptEffectItem> {
@@ -133,7 +138,11 @@ export async function applyFileSystemReceiptEffects({
   const removedRootItemIds = getReceiptRemovedRootIds(receipt)
   if (removedRootItemIds.length > 0) {
     const currentSelectedItemIds = getSelectedItemIds()
-    const { rootItems: removedItems, allItemsMap } = mergeRemovedItems({
+    const {
+      rootItems: removedItems,
+      allItemsMap,
+      allItemsBySlug,
+    } = mergeRemovedItems({
       rootIds: removedRootItemIds,
       readModel,
       removedSnapshots: getReceiptRemovedItemSnapshots(receipt),
@@ -153,6 +162,7 @@ export async function applyFileSystemReceiptEffects({
         currentSlug: currentSidebarSlug,
         getItemBySlug: readModel.getItemBySlug,
         allItemsMap,
+        allItemsBySlug,
       })
     ) {
       try {

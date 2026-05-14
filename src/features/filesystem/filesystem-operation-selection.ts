@@ -2,7 +2,7 @@ import { normalizeSelectedRoots } from 'convex/sidebarItems/filesystem/selection
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 
-export type SidebarItemMap = ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>
+type SidebarItemMap = ReadonlyMap<Id<'sidebarItems'>, AnySidebarItem>
 
 function combinedItemMap(activeItemsMap: SidebarItemMap, trashedItemsMap: SidebarItemMap) {
   return new Map<Id<'sidebarItems'>, AnySidebarItem>([...trashedItemsMap, ...activeItemsMap])

@@ -25,7 +25,7 @@ import { cn } from '~/features/shadcn/lib/utils'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'
 import usePersistedState from '~/shared/hooks/usePersistedState'
 import { useFileWithPreview } from '~/features/file-upload/hooks/useFileWithPreview'
-import { FileUploadSection } from '~/features/file-upload/components/file-upload-section'
+import { FileUploadEmptyState } from '~/features/file-upload/components/file-upload-empty-state'
 import { MapPinsLayer } from './map-pins-layer'
 import { useMapImageStatus } from './use-map-image-status'
 import { useMapRenderPins } from './use-map-render-pins'
@@ -206,6 +206,153 @@ function MapModeBanner({ children }: { children: React.ReactNode }) {
   )
 }
 
+function setPinElementPosition(pinEl: HTMLElement, position: PinPosition) {
+  Object.assign(pinEl.style, {
+    left: `${position.x}%`,
+    top: `${position.y}%`,
+  })
+}
+
+function MapCanvasStage({
+  map,
+  mapContainerRef,
+  transformWrapperRef,
+  imageRef,
+  pinsContainerRef,
+  imageLoaded,
+  imageError,
+  savedTransform,
+  mapCursor,
+  shouldDisablePanning,
+  mapDragOutcome,
+  pins,
+  isPinGhost,
+  hoveredPinId,
+  draggingPinId,
+  moveModePinId,
+  hasPinAction,
+  onTransformChange,
+  onImageLoad,
+  onImageError,
+  onMapClick,
+  onMapKeyboardAction,
+  onMapCanvasContextMenu,
+  onPinHover,
+  onPinClick,
+  onPinContextMenu,
+  onPinDragStart,
+}: {
+  map: GameMapWithContent
+  mapContainerRef: React.RefObject<HTMLDivElement | null>
+  transformWrapperRef: React.RefObject<ReactZoomPanPinchRef | null>
+  imageRef: React.RefObject<HTMLImageElement | null>
+  pinsContainerRef: React.RefObject<HTMLDivElement | null>
+  imageLoaded: boolean
+  imageError: boolean
+  savedTransform: MapTransformState
+  mapCursor: string
+  shouldDisablePanning: boolean
+  mapDragOutcome: DropOutcome | null
+  pins: Array<MapPinWithItem>
+  isPinGhost: (pin: MapPinWithItem) => boolean
+  hoveredPinId: Id<'mapPins'> | null
+  draggingPinId: Id<'mapPins'> | null
+  moveModePinId: Id<'mapPins'> | null
+  hasPinAction: boolean
+  onTransformChange: (
+    ref: unknown,
+    state: { scale: number; positionX: number; positionY: number },
+  ) => void
+  onImageLoad: () => void
+  onImageError: () => void
+  onMapClick: (event: React.MouseEvent) => void
+  onMapKeyboardAction: () => void
+  onMapCanvasContextMenu: (event: React.MouseEvent) => void
+  onPinHover: (pinId: Id<'mapPins'> | null) => void
+  onPinClick: (event: React.MouseEvent | React.KeyboardEvent, pin: MapPinWithItem) => void
+  onPinContextMenu: (event: React.MouseEvent, pin: MapPinWithItem) => void
+  onPinDragStart: (event: React.MouseEvent, pin: MapPinWithItem) => void
+}) {
+  return (
+    <div ref={mapContainerRef} className="flex-1 relative min-h-0">
+      <MapDropFeedbackOverlay outcome={mapDragOutcome} />
+      {map.imageUrl && !imageLoaded && !imageError && (
+        <div className="absolute inset-0 z-[999] flex items-center justify-center">
+          <LoadingSpinner size="lg" />
+        </div>
+      )}
+      {map.imageUrl ? (
+        <TransformWrapper
+          ref={transformWrapperRef}
+          initialScale={savedTransform.scale}
+          initialPositionX={savedTransform.positionX}
+          initialPositionY={savedTransform.positionY}
+          minScale={0.5}
+          maxScale={4}
+          wheel={{ step: 0.1 }}
+          doubleClick={{ disabled: false }}
+          panning={{ disabled: shouldDisablePanning }}
+          limitToBounds={false}
+          centerOnInit={false}
+          onTransformed={onTransformChange}
+        >
+          <TransformComponent
+            wrapperClass="!w-full !h-full"
+            contentClass="!w-full !h-full flex items-center justify-center"
+          >
+            <div
+              role="application"
+              aria-label="Map canvas"
+              tabIndex={hasPinAction ? 0 : undefined}
+              className="relative"
+              onClick={hasPinAction ? onMapClick : undefined}
+              onKeyDown={(event) => {
+                if (!hasPinAction) return
+                if (event.key !== 'Enter' && event.key !== ' ') return
+                event.preventDefault()
+                onMapKeyboardAction()
+              }}
+              onContextMenu={onMapCanvasContextMenu}
+            >
+              <img
+                ref={imageRef}
+                src={map.imageUrl ?? undefined}
+                alt={map.name || 'Map'}
+                className="select-none pointer-events-auto"
+                draggable={false}
+                onLoad={onImageLoad}
+                onError={onImageError}
+                style={{
+                  cursor: mapCursor,
+                  display: 'block',
+                }}
+              />
+
+              {imageLoaded && (
+                <MapPinsLayer
+                  ref={pinsContainerRef}
+                  pins={pins}
+                  isPinGhost={isPinGhost}
+                  hoveredPinId={hoveredPinId}
+                  draggingPinId={draggingPinId}
+                  moveModePinId={moveModePinId}
+                  interactive
+                  onHover={onPinHover}
+                  onClick={onPinClick}
+                  onContextMenu={onPinContextMenu}
+                  onDragStart={onPinDragStart}
+                />
+              )}
+            </div>
+          </TransformComponent>
+        </TransformWrapper>
+      ) : (
+        <MapImageUpload mapId={map._id} />
+      )}
+    </div>
+  )
+}
+
 export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) {
   const imageRef = useRef<HTMLImageElement>(null)
   const pinsContainerRef = useRef<HTMLDivElement>(null)
@@ -303,8 +450,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
             `[data-pin-id="${draggingPin.pin._id}"]`,
           ) as HTMLElement | null
           if (pinEl) {
-            pinEl.style.left = `${draggingPin.pin.x}%`
-            pinEl.style.top = `${draggingPin.pin.y}%`
+            setPinElementPosition(pinEl, draggingPin.pin)
           }
           setDraggingPin(null)
           draggedPinPositionRef.current = null
@@ -368,8 +514,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
       }
       draggedPinPositionRef.current = newPos
       if (pinEl) {
-        pinEl.style.left = `${newPos.x}%`
-        pinEl.style.top = `${newPos.y}%`
+        setPinElementPosition(pinEl, newPos)
       }
     }
 
@@ -481,6 +626,14 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
       void handlePlacePin(position)
     } else if (pendingPinMove) {
       void handleMovePin(position)
+    }
+  }
+
+  const handleMapKeyboardAction = () => {
+    if (pendingPinItems) {
+      void handlePlacePin({ x: 50, y: 50 })
+    } else if (pendingPinMove) {
+      void handleMovePin({ x: 50, y: 50 })
     }
   }
 
@@ -606,77 +759,35 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
             onReset={handleResetTransform}
           />
 
-          <div ref={mapContainerRef} className="flex-1 relative min-h-0">
-            <MapDropFeedbackOverlay outcome={mapDragOutcome} />
-            {map.imageUrl && !imageLoaded && !imageError && (
-              <div className="absolute inset-0 z-[999] flex items-center justify-center">
-                <LoadingSpinner size="lg" />
-              </div>
-            )}
-            {map.imageUrl ? (
-              <TransformWrapper
-                ref={transformWrapperRef}
-                initialScale={savedTransform.scale}
-                initialPositionX={savedTransform.positionX}
-                initialPositionY={savedTransform.positionY}
-                minScale={0.5}
-                maxScale={4}
-                wheel={{ step: 0.1 }}
-                doubleClick={{ disabled: false }}
-                panning={{ disabled: shouldDisablePanning }}
-                limitToBounds={false}
-                centerOnInit={false}
-                onTransformed={handleTransformChange}
-              >
-                <TransformComponent
-                  wrapperClass="!w-full !h-full"
-                  contentClass="!w-full !h-full flex items-center justify-center"
-                >
-                  <div
-                    role="application"
-                    aria-label="Map canvas"
-                    className="relative"
-                    onClick={pendingPinItems || pendingPinMove ? handleMapClick : undefined}
-                    onContextMenu={handleMapCanvasContextMenu}
-                  >
-                    <img
-                      ref={imageRef}
-                      src={map.imageUrl ?? undefined}
-                      alt={map.name || 'Map'}
-                      className="select-none pointer-events-auto"
-                      draggable={false}
-                      onLoad={handleImageLoad}
-                      onError={handleImageError}
-                      style={{
-                        cursor: mapCursor,
-                        display: 'block',
-                      }}
-                    />
-
-                    {/* Pins container — only render after the image has loaded so
-                        percentage-based positions resolve correctly */}
-                    {imageLoaded && (
-                      <MapPinsLayer
-                        ref={pinsContainerRef}
-                        pins={pins}
-                        isPinGhost={isPinGhost}
-                        hoveredPinId={hoveredPinId}
-                        draggingPinId={draggingPin?.pin._id ?? null}
-                        moveModePinId={pendingPinMove?.pinId ?? null}
-                        interactive={true}
-                        onHover={setHoveredPinId}
-                        onClick={handlePinClick}
-                        onContextMenu={handlePinContextMenu}
-                        onDragStart={handlePinDragStart}
-                      />
-                    )}
-                  </div>
-                </TransformComponent>
-              </TransformWrapper>
-            ) : (
-              <MapImageUpload mapId={map._id} />
-            )}
-          </div>
+          <MapCanvasStage
+            map={map}
+            mapContainerRef={mapContainerRef}
+            transformWrapperRef={transformWrapperRef}
+            imageRef={imageRef}
+            pinsContainerRef={pinsContainerRef}
+            imageLoaded={imageLoaded}
+            imageError={imageError}
+            savedTransform={savedTransform}
+            mapCursor={mapCursor}
+            shouldDisablePanning={shouldDisablePanning}
+            mapDragOutcome={mapDragOutcome}
+            pins={pins}
+            isPinGhost={isPinGhost}
+            hoveredPinId={hoveredPinId}
+            draggingPinId={draggingPin?.pin._id ?? null}
+            moveModePinId={pendingPinMove?.pinId ?? null}
+            hasPinAction={Boolean(pendingPinItems || pendingPinMove)}
+            onTransformChange={handleTransformChange}
+            onImageLoad={handleImageLoad}
+            onImageError={handleImageError}
+            onMapClick={handleMapClick}
+            onMapKeyboardAction={handleMapKeyboardAction}
+            onMapCanvasContextMenu={handleMapCanvasContextMenu}
+            onPinHover={setHoveredPinId}
+            onPinClick={handlePinClick}
+            onPinContextMenu={handlePinContextMenu}
+            onPinDragStart={handlePinDragStart}
+          />
 
           <MapModeBanners
             pendingPinItems={pendingPinItems}
@@ -728,42 +839,16 @@ function MapImageUpload({ mapId }: { mapId: Id<'sidebarItems'> }) {
     },
   })
 
-  const handleFileSelected = (file: globalThis.File) => {
-    fileUpload.handleFileSelect(file)
-  }
-
   return (
-    <div
-      className="w-full h-full flex items-center justify-center p-8"
-      onDragEnter={fileUpload.handleDrag}
-      onDragLeave={fileUpload.handleDrag}
-      onDragOver={fileUpload.handleDrag}
-      onDrop={fileUpload.handleDrop}
-    >
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center space-y-2">
-          <Image className="size-10 mx-auto text-muted-foreground" />
-          <h2 className="text-lg font-medium">Upload Map Image</h2>
-          <p className="text-sm text-muted-foreground">
-            Upload an image to create your map. You can pin items to it later.
-          </p>
-        </div>
-
-        <div className="space-y-4">
-          <FileUploadSection
-            fileUpload={fileUpload}
-            handleFileSelect={handleFileSelected}
-            isSubmitting={false}
-            acceptPattern="image/*"
-            dragDropText="Drag an image here or click to browse"
-          />
-
-          {fileUpload.uploadError && (
-            <p className="text-sm text-destructive text-center">{fileUpload.uploadError}</p>
-          )}
-        </div>
-      </div>
-    </div>
+    <FileUploadEmptyState
+      fileUpload={fileUpload}
+      icon={Image}
+      title="Upload Map Image"
+      description="Upload an image to create your map. You can pin items to it later."
+      isSubmitting={false}
+      acceptPattern="image/*"
+      dragDropText="Drag an image here or click to browse"
+    />
   )
 }
 

@@ -287,12 +287,7 @@ export function MapForm({ mapId, campaignId, parentId, onClose, onSuccess }: Map
 
       <div className="space-y-2">
         <Label>Map Image</Label>
-        <ImageUploadSection
-          label=""
-          fileUpload={imageUpload}
-          handleFileSelect={imageUpload.handleFileSelect}
-          isSubmitting={isDisabled}
-        />
+        <ImageUploadSection label="" fileUpload={imageUpload} isSubmitting={isDisabled} />
         {!hasImage && <p className="text-sm text-destructive">Map image is required</p>}
       </div>
 

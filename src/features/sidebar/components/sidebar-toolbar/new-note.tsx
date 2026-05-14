@@ -1,5 +1,7 @@
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { FilePlus } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { handleError, logger } from '~/shared/utils/logger'
 import { Button } from '~/features/shadcn/components/button'
 import { TooltipButton } from '~/shared/components/tooltip-button'
@@ -15,12 +17,20 @@ export function NewNoteButton() {
   const { campaignId } = useCampaign()
   const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
+  const creationPendingRef = useRef(false)
+  const [creationPending, setCreationPending] = useState(false)
 
   const handleNewNote = async () => {
+    if (creationPendingRef.current) {
+      toast.info('Note creation in progress')
+      return
+    }
     if (!campaignId) {
       logger.warn('Cannot create note without a campaign id')
       return
     }
+    creationPendingRef.current = true
+    setCreationPending(true)
     try {
       const result = await createItem({
         type: SIDEBAR_ITEM_TYPES.notes,
@@ -31,12 +41,21 @@ export function NewNoteButton() {
       void navigateToItem(result.slug)
     } catch (error) {
       handleError(error, 'Failed to create note')
+    } finally {
+      creationPendingRef.current = false
+      setCreationPending(false)
     }
   }
 
   return (
     <TooltipButton tooltip="New note" side="bottom">
-      <Button variant="ghost" size="icon" onClick={handleNewNote} aria-label="Create new note">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={handleNewNote}
+        aria-label="Create new note"
+        aria-busy={creationPending}
+      >
         <FilePlus className="size-4" />
       </Button>
     </TooltipButton>
