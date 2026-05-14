@@ -137,13 +137,6 @@ export async function executeDeleteForeverCommand(
     })
   }
 
-  if (command.itemIds.length > MAX_PERMANENT_DELETE_BATCH_SIZE) {
-    throwClientError(
-      ERROR_CODE.VALIDATION_FAILED,
-      `Batch size cannot exceed ${MAX_PERMANENT_DELETE_BATCH_SIZE} items`,
-    )
-  }
-
   const sourceItems = await Promise.all(
     command.itemIds.map((itemId) => loadPermanentDeleteSource(ctx, itemId)),
   )

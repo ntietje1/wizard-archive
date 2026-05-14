@@ -2,7 +2,7 @@ import type { Doc, Id } from '../../_generated/dataModel'
 import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import type { FileSystemPatch, SidebarItemFieldPatch } from './receipts'
 import { diffSidebarItemFields } from './patches'
-import type { TransferOperation } from './operationTypes'
+import type { TransferOperation } from './transferPlanner'
 import { collectDescendantIdsFromItems } from './tree'
 
 type PatchProjectionItem = Extract<FileSystemPatch, { type: 'upsertSidebarItem' }>['item']

@@ -12,7 +12,7 @@ function actor(role: CampaignMemberRole | undefined) {
   return { role: role ?? CAMPAIGN_MEMBER_ROLE.Player }
 }
 
-export function canTrashSidebarItems(
+function canTrashSidebarItems(
   role: CampaignMemberRole | undefined,
   items: Array<OperationSidebarItem>,
 ) {
@@ -41,4 +41,15 @@ export function canDeleteSidebarItemsForever(
   items: Array<OperationSidebarItem>,
 ) {
   return items.length > 0 && items.every((item) => evaluatePermanentDelete(actor(role), item).ok)
+}
+
+export function getSidebarFilesystemCapabilities(
+  role: CampaignMemberRole | undefined,
+  items: Array<OperationSidebarItem>,
+) {
+  return {
+    canTrash: canTrashSidebarItems(role, items),
+    canRestore: canRestoreSidebarItems(role, items),
+    canDeleteForever: canDeleteSidebarItemsForever(role, items),
+  }
 }

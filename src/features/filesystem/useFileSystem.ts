@@ -7,6 +7,7 @@ import type { SidebarItemName } from 'convex/sidebarItems/validation/name'
 import type { CreateParentTarget } from 'convex/sidebarItems/validation/parent'
 import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
 import type { FileSystemDropOptions } from 'convex/sidebarItems/filesystem/intentPlanning'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { FileSystemGlobalDropTarget } from './filesystem-drop-planner'
 
 // Public filesystem API. Callers describe user intent; this module owns command construction,
@@ -22,8 +23,9 @@ type CreateFileSystemItemInput = {
 type CreatedFileSystemItem = {
   id: Id<'sidebarItems'>
   slug: SidebarItemSlug
-  transactionId: Id<'filesystemTransactions'>
 }
+
+type CreateFileSystemItemInitializer = (created: CreatedFileSystemItem) => Promise<void> | void
 
 type RenameFileSystemItemInput = {
   itemId: Id<'sidebarItems'>
@@ -38,9 +40,16 @@ export type FileSystemDropIntent = {
   options?: FileSystemDropOptions
 }
 
+type FileSystemPasteTargetInput = {
+  clickedItem?: AnySidebarItem
+  operationItems: Array<AnySidebarItem>
+}
+
 export type FileSystemValue = {
-  createItem: (input: CreateFileSystemItemInput) => Promise<CreatedFileSystemItem | null>
-  discardCreatedItem: (transactionId: Id<'filesystemTransactions'>) => Promise<void>
+  createItem: (
+    input: CreateFileSystemItemInput,
+    initialize?: CreateFileSystemItemInitializer,
+  ) => Promise<CreatedFileSystemItem | null>
   renameItem: (input: RenameFileSystemItemInput) => Promise<{ slug: SidebarItemSlug | null } | null>
   duplicateItems: (itemIds: Array<Id<'sidebarItems'>>) => Promise<void>
   requestTrashItems: (itemIds: Array<Id<'sidebarItems'>>) => Promise<void>
@@ -48,12 +57,14 @@ export type FileSystemValue = {
     itemIds: Array<Id<'sidebarItems'>>,
     targetParentId?: Id<'sidebarItems'> | null,
   ) => Promise<void>
-  emptyTrash: () => Promise<void>
+  confirmEmptyTrash: () => void
   confirmDeleteForever: (itemIds: Array<Id<'sidebarItems'>>) => void
   copy: (itemIds: Array<Id<'sidebarItems'>>) => void
   cut: (itemIds: Array<Id<'sidebarItems'>>) => void
   cancelClipboard: () => boolean
   canPaste: boolean
+  canPasteIntoTarget: (input: FileSystemPasteTargetInput) => boolean
+  pasteIntoTarget: (input: FileSystemPasteTargetInput) => Promise<void>
   paste: (targetParentId?: Id<'sidebarItems'> | null) => Promise<void>
   undo: () => Promise<void>
   redo: () => Promise<void>

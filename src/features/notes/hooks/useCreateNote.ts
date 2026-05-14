@@ -16,15 +16,16 @@ export function useCreateNote() {
   const setNoteContent = useCampaignMutation(api.notes.mutations.setNoteContent)
 
   const createNote = async (args: CreateNoteArgs) => {
-    const created = await createItem({
-      type: SIDEBAR_ITEM_TYPES.notes,
-      name: args.name,
-      parentTarget: args.parentTarget,
-    })
-
-    await setNoteContent.mutateAsync({ noteId: created.id, content: args.content })
-
-    return created
+    return await createItem(
+      {
+        type: SIDEBAR_ITEM_TYPES.notes,
+        name: args.name,
+        parentTarget: args.parentTarget,
+      },
+      async (created) => {
+        await setNoteContent.mutateAsync({ noteId: created.id, content: args.content })
+      },
+    )
   }
 
   return { createNote }

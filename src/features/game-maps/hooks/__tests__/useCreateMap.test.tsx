@@ -4,18 +4,11 @@ import type { Id } from 'convex/_generated/dataModel'
 import { useCreateMap } from '../useCreateMap'
 
 const createItemMock = vi.hoisted(() => vi.fn())
-const discardCreatedItemMock = vi.hoisted(() => vi.fn())
 const updateMapImageMock = vi.hoisted(() => vi.fn())
 
 vi.mock('~/features/filesystem/useCreateFileSystemItem', () => ({
   useCreateFileSystemItem: () => ({
     createItem: createItemMock,
-  }),
-}))
-
-vi.mock('~/features/filesystem/useFileSystem', () => ({
-  useFileSystem: () => ({
-    discardCreatedItem: discardCreatedItemMock,
   }),
 }))
 
@@ -28,14 +21,17 @@ vi.mock('~/shared/hooks/useCampaignMutation', () => ({
 describe('useCreateMap', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    createItemMock.mockResolvedValue({
-      id: 'map_1' as Id<'sidebarItems'>,
-      slug: 'world-map',
-      transactionId: 'transaction_1' as Id<'filesystemTransactions'>,
+    createItemMock.mockImplementation(async (_args, initialize) => {
+      const created = {
+        id: 'map_1' as Id<'sidebarItems'>,
+        slug: 'world-map',
+      }
+      await initialize?.(created)
+      return created
     })
   })
 
-  it('discards the filesystem item when map image initialization fails', async () => {
+  it('initializes map image storage through the filesystem create flow', async () => {
     const error = new Error('image failed')
     updateMapImageMock.mockRejectedValueOnce(error)
     const { result } = renderHook(() => useCreateMap())
@@ -48,6 +44,9 @@ describe('useCreateMap', () => {
       }),
     ).rejects.toThrow(error)
 
-    expect(discardCreatedItemMock).toHaveBeenCalledWith('transaction_1')
+    expect(updateMapImageMock).toHaveBeenCalledWith({
+      mapId: 'map_1',
+      imageStorageId: 'storage_1',
+    })
   })
 })

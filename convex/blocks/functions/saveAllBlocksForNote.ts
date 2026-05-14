@@ -8,7 +8,7 @@ import type { Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 import type { CustomBlock } from '../../notes/editorSpecs'
 import type { Block } from '../types'
-import { isSidebarItemActive } from '../../sidebarItems/functions/sidebarItemLifecycle'
+import { isActiveSidebarItem } from '../../sidebarItems/types/status'
 
 export async function saveAllBlocksForNote(
   ctx: CampaignMutationCtx,
@@ -16,7 +16,7 @@ export async function saveAllBlocksForNote(
 ): Promise<Array<Block>> {
   const note = await ctx.db.get('sidebarItems', noteId)
   if (!note) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
-  if (!isSidebarItemActive(note)) return []
+  if (!isActiveSidebarItem(note)) return []
   const campaignId = note.campaignId
 
   const existingBlocks = await ctx.db

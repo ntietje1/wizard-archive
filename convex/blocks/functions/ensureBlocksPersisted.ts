@@ -4,7 +4,7 @@ import { saveAllBlocksForNote } from './saveAllBlocksForNote'
 import { syncNoteLinks } from '../../links/functions/syncNoteLinks'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import { isSidebarItemActive } from '../../sidebarItems/functions/sidebarItemLifecycle'
+import { isActiveSidebarItem } from '../../sidebarItems/types/status'
 
 export async function ensureBlocksPersisted(
   ctx: CampaignMutationCtx,
@@ -16,7 +16,7 @@ export async function ensureBlocksPersisted(
     const persistedBlocks = await saveAllBlocksForNote(ctx, { noteId, content: blocks })
 
     const note = await ctx.db.get('sidebarItems', noteId)
-    if (note && isSidebarItemActive(note)) {
+    if (note && isActiveSidebarItem(note)) {
       await syncNoteLinks(ctx, {
         noteId,
         campaignId: note.campaignId,

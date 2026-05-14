@@ -5,7 +5,10 @@ import { resolveSurfaceDropCommand } from './surface-drop-planner'
 import { EMPTY_EDITOR_DROP_TYPE } from './drop-target-data'
 import type { SidebarDropData } from './drop-target-data'
 import type { FileSystemDropOptions } from 'convex/sidebarItems/filesystem/intentPlanning'
-import { resolveGlobalFileSystemDrop } from '~/features/filesystem/filesystem-dnd-facade'
+import {
+  resolveFileSystemDropTarget,
+  resolveGlobalFileSystemDropCommand,
+} from '~/features/filesystem/filesystem-drop-planner'
 import { assertNever } from '~/shared/utils/utils'
 
 type DropFeedback = {
@@ -31,9 +34,14 @@ export function resolveDropFeedback(
     }
   }
 
-  const globalDrop = resolveGlobalFileSystemDrop(draggedItems, dropTarget, ctx, options)
-  if (globalDrop) {
-    const globalCommand = globalDrop.command
+  const fileSystemTarget = resolveFileSystemDropTarget(dropTarget, ctx)
+  if (fileSystemTarget) {
+    const globalCommand = resolveGlobalFileSystemDropCommand(
+      draggedItems,
+      fileSystemTarget,
+      ctx,
+      options,
+    )
     switch (globalCommand.status) {
       case 'ready':
         return {

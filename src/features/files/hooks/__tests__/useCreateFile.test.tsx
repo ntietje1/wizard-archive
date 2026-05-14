@@ -4,18 +4,11 @@ import type { Id } from 'convex/_generated/dataModel'
 import { useCreateFile } from '../useCreateFile'
 
 const createItemMock = vi.hoisted(() => vi.fn())
-const discardCreatedItemMock = vi.hoisted(() => vi.fn())
 const updateFileStorageMock = vi.hoisted(() => vi.fn())
 
 vi.mock('~/features/filesystem/useCreateFileSystemItem', () => ({
   useCreateFileSystemItem: () => ({
     createItem: createItemMock,
-  }),
-}))
-
-vi.mock('~/features/filesystem/useFileSystem', () => ({
-  useFileSystem: () => ({
-    discardCreatedItem: discardCreatedItemMock,
   }),
 }))
 
@@ -28,14 +21,17 @@ vi.mock('~/shared/hooks/useCampaignMutation', () => ({
 describe('useCreateFile', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    createItemMock.mockResolvedValue({
-      id: 'file_1' as Id<'sidebarItems'>,
-      slug: 'handout',
-      transactionId: 'transaction_1' as Id<'filesystemTransactions'>,
+    createItemMock.mockImplementation(async (_args, initialize) => {
+      const created = {
+        id: 'file_1' as Id<'sidebarItems'>,
+        slug: 'handout',
+      }
+      await initialize?.(created)
+      return created
     })
   })
 
-  it('discards the filesystem item when file storage initialization fails', async () => {
+  it('initializes file storage through the filesystem create flow', async () => {
     const error = new Error('upload failed')
     updateFileStorageMock.mockRejectedValueOnce(error)
     const { result } = renderHook(() => useCreateFile())
@@ -48,6 +44,9 @@ describe('useCreateFile', () => {
       }),
     ).rejects.toThrow(error)
 
-    expect(discardCreatedItemMock).toHaveBeenCalledWith('transaction_1')
+    expect(updateFileStorageMock).toHaveBeenCalledWith({
+      fileId: 'file_1',
+      storageId: 'storage_1',
+    })
   })
 })

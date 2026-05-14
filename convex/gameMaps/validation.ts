@@ -1,5 +1,5 @@
 import type { Id } from '../_generated/dataModel'
-import { isSidebarItemTrashed } from '../sidebarItems/functions/sidebarItemLifecycle'
+import { isTrashedSidebarItem } from '../sidebarItems/types/status'
 import type { AnySidebarItem } from '../sidebarItems/types/types'
 
 export type PinDropValidationCode =
@@ -35,7 +35,7 @@ export function validatePinDropTarget({
 }): PinDropValidationCode | null {
   if (item._id === mapId) return 'self_pin'
   if (existingPinItemIds.includes(item._id)) return 'already_pinned'
-  if (isSidebarItemTrashed(item)) return 'trashed_item'
+  if (isTrashedSidebarItem(item)) return 'trashed_item'
   if (campaignId && item.campaignId !== campaignId) return 'wrong_campaign'
   return null
 }

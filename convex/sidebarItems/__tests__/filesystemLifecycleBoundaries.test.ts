@@ -186,21 +186,23 @@ describe('filesystem command lifecycle boundaries', () => {
       name: 'Destination',
     })
 
-    await expect(
-      dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
-        campaignId: ctx.campaignId,
-        command: { type: 'copy', itemIds: [noteId], targetParentId: folderId },
-        decisions: [{ sourceItemId: noteId, action: 'skip' }],
-      }),
-    ).rejects.toThrow('Conflict decision does not match an item with a conflict')
+    for (const action of ['skip', 'replace', 'keepBoth'] as const) {
+      await expect(
+        dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+          campaignId: ctx.campaignId,
+          command: { type: 'copy', itemIds: [noteId], targetParentId: folderId },
+          decisions: [{ sourceItemId: noteId, action }],
+        }),
+      ).rejects.toThrow('Conflict decision does not match an item with a conflict')
 
-    await expect(
-      dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
-        campaignId: ctx.campaignId,
-        command: { type: 'move', itemIds: [noteId], targetParentId: folderId },
-        decisions: [{ sourceItemId: noteId, action: 'skip' }],
-      }),
-    ).rejects.toThrow('Conflict decision does not match an item with a conflict')
+      await expect(
+        dmAuth.mutation(api.sidebarItems.filesystem.mutations.executeFileSystemCommand, {
+          campaignId: ctx.campaignId,
+          command: { type: 'move', itemIds: [noteId], targetParentId: folderId },
+          decisions: [{ sourceItemId: noteId, action }],
+        }),
+      ).rejects.toThrow('Conflict decision does not match an item with a conflict')
+    }
 
     const note = await t.run((dbCtx) => dbCtx.db.get('sidebarItems', noteId))
     expect(note?.parentId).toBeNull()

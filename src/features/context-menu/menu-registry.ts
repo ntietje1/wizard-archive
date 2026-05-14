@@ -120,7 +120,7 @@ export type ActionHandlers = {
 
 interface EditorContextMenuServices {
   actions: ActionHandlers
-  filesystem: Pick<FileSystemValue, 'canPaste'>
+  filesystem: Pick<FileSystemValue, 'canPasteIntoTarget'>
 }
 
 type EditorContextMenuItem = ContextMenuItemSpec<EditorMenuContext, EditorContextMenuServices>
@@ -527,10 +527,11 @@ export const editorContextMenuContributors = [
         group: 'edit',
         priority: 87,
         applies: (context, services) =>
-          services.filesystem.canPaste &&
-          p.canWrite(context) &&
           p.inView('sidebar', 'folder-view')(context) &&
-          (p.atRoot(context) || p.isType(SIDEBAR_ITEM_TYPES.folders)(context)),
+          services.filesystem.canPasteIntoTarget({
+            clickedItem: context.item,
+            operationItems: context.selectedItems ?? [],
+          }),
       },
       {
         id: 'duplicate',

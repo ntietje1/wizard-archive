@@ -50,12 +50,11 @@ vi.mock('~/features/sidebar/hooks/useOpenParentFolders', () => ({
 function createFileSystem(overrides?: Partial<FileSystemValue>): FileSystemValue {
   return {
     createItem: vi.fn().mockResolvedValue(undefined),
-    discardCreatedItem: vi.fn().mockResolvedValue(undefined),
     renameItem: vi.fn().mockResolvedValue(undefined),
     duplicateItems: vi.fn().mockResolvedValue(undefined),
     requestTrashItems: vi.fn().mockResolvedValue(false),
     restoreItems: vi.fn().mockResolvedValue(undefined),
-    emptyTrash: vi.fn().mockResolvedValue(undefined),
+    confirmEmptyTrash: vi.fn(),
     confirmDeleteForever: vi.fn(),
     copy: vi.fn(),
     cut: vi.fn(),
@@ -67,6 +66,8 @@ function createFileSystem(overrides?: Partial<FileSystemValue>): FileSystemValue
       return true
     }),
     canPaste: clipboardCanPaste,
+    canPasteIntoTarget: vi.fn(() => clipboardCanPaste),
+    pasteIntoTarget: vi.fn().mockResolvedValue(undefined),
     paste: vi.fn().mockResolvedValue(undefined),
     undo: vi.fn(),
     redo: vi.fn(),

@@ -12,13 +12,14 @@ import { EDIT_HISTORY_ACTION } from '../../../editHistory/types'
 import { resyncNoteLinksForNotes } from '../../../links/functions/resyncNoteLinksForNotes'
 import { getActiveSidebarItemRowsByParent } from '../../functions/getSidebarItemsByParent'
 import { planTransferOperations } from '../transferPlanner'
+import type { TransferOperation } from '../transferPlanner'
 import { collectSidebarChildrenMap } from '../children'
 import { normalizeSelectedRoots } from '../selection'
 import { addSidebarItemAncestorsToMap } from '../ancestors'
 import { collectDescendants } from '../../functions/collectDescendants'
 import { assertSidebarOperationAllowed, evaluateRestore } from '../capabilities'
-import { normalizeRestoreTargetParentId } from '../targets'
-import { assertSkippedDecisionsWereUsed, toDecisionRecord } from '../conflicts'
+import { toDecisionRecord } from '../conflicts'
+import type { OperationDecision } from '../conflicts'
 import { getSidebarItemStatus, isActiveSidebarItem, isTrashedSidebarItem } from '../../types/status'
 import { createFileSystemWriteSession } from '../deltas'
 import { FILE_SYSTEM_EVENT_TYPE } from '../receipts'
@@ -26,13 +27,11 @@ import { createFileSystemReadModel } from '../readModel'
 import { getSidebarItemRow } from '../sidebarItemRows'
 import { checkSidebarItemRowAccess, requireSidebarItemRowAccess } from '../access'
 import type { AccessibleSidebarItemRow } from '../access'
-import type { OperationDecision } from '../conflicts'
 import type { SidebarItemStatus } from '../../types/baseTypes'
 import type { AnySidebarItemRow } from '../../types/types'
 import type { CampaignMutationCtx } from '../../../functions'
 import type { Id } from '../../../_generated/dataModel'
 import { assertSidebarItemName } from '../../validation/name'
-import type { TransferOperation } from '../operationTypes'
 import type { FileSystemWriteSession } from '../deltas'
 import type {
   FileSystemOperationDecision,
@@ -45,7 +44,6 @@ import type { FileSystemDelta, FileSystemEvent } from '../receipts'
 const clearDeletion = { deletionTime: null, deletedBy: null }
 
 type MoveMergeFolderOperation = Extract<TransferOperation, { action: 'mergeFolder' }>
-type ExecutableMoveOperation = TransferOperation
 type MoveCommandAction = 'move' | 'restore' | 'trash'
 type MoveSelfEventType =
   | typeof FILE_SYSTEM_EVENT_TYPE.moved
@@ -55,12 +53,6 @@ type MoveSelfEventType =
   | typeof FILE_SYSTEM_EVENT_TYPE.replaced
   | typeof FILE_SYSTEM_EVENT_TYPE.mergedFolder
   | typeof FILE_SYSTEM_EVENT_TYPE.noop
-
-const MOVE_OPERATION_ACTION = {
-  place: 'place',
-  replace: 'replace',
-  mergeFolder: 'mergeFolder',
-} as const
 
 const MAX_SIDEBAR_MOVE_DEPTH = 50
 
@@ -87,22 +79,6 @@ function pushPairedEvent(
   sourceItemId: Id<'sidebarItems'>,
 ) {
   events.push({ type, itemId, sourceItemId })
-}
-
-function applySkippedDecisions(
-  events: Array<FileSystemEvent>,
-  decisions: Array<OperationDecision> | undefined,
-) {
-  const skipped = new Set(
-    events
-      .filter((event) => event.type === FILE_SYSTEM_EVENT_TYPE.skipped)
-      .map((event) => event.itemId),
-  )
-  for (const decision of decisions ?? []) {
-    if (decision.action !== 'skip' || skipped.has(decision.sourceItemId)) continue
-    pushSelfEvent(events, FILE_SYSTEM_EVENT_TYPE.skipped, decision.sourceItemId)
-    skipped.add(decision.sourceItemId)
-  }
 }
 
 async function resyncRelativeLinksForMovedItems(
@@ -155,7 +131,7 @@ async function resolveRestoreTargetParentId(
     throwClientError(ERROR_CODE.NOT_FOUND, 'Parent not found')
   }
 
-  const normalizedParentId = normalizeRestoreTargetParentId(parentId, parent)
+  const normalizedParentId = isTrashedSidebarItem(parent) ? null : parentId
   return {
     parentId: normalizedParentId,
     parent: normalizedParentId === null ? null : parent,
@@ -358,7 +334,7 @@ async function executeMoveOperations(
     const affectedId = await executeMoveOperation(ctx, operation, action, session)
     if (!affectedId) continue
 
-    if (operation.action === MOVE_OPERATION_ACTION.replace) {
+    if (operation.action === 'replace') {
       pushSelfEvent(events, FILE_SYSTEM_EVENT_TYPE.moved, affectedId)
       if (!operation.destinationItemId) {
         throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Replace requires a destination item')
@@ -370,7 +346,7 @@ async function executeMoveOperations(
         operation.sourceItemId,
       )
       continue
-    } else if (operation.action === MOVE_OPERATION_ACTION.mergeFolder) {
+    } else if (operation.action === 'mergeFolder') {
       pushPairedEvent(
         events,
         FILE_SYSTEM_EVENT_TYPE.mergedFolder,
@@ -394,17 +370,17 @@ async function executeMoveOperations(
 
 async function executeMoveOperation(
   ctx: CampaignMutationCtx,
-  operation: ExecutableMoveOperation,
+  operation: TransferOperation,
   action: MoveCommandAction,
   session: FileSystemWriteSession,
 ): Promise<Id<'sidebarItems'> | null> {
   const source = await loadMovableSource(ctx, operation.sourceItemId)
 
-  if (operation.action === MOVE_OPERATION_ACTION.mergeFolder) {
+  if (operation.action === 'mergeFolder') {
     return await executeMergeFolderMove(ctx, source, operation, session)
   }
 
-  if (operation.action === MOVE_OPERATION_ACTION.replace) {
+  if (operation.action === 'replace') {
     await trashMoveReplacement(ctx, operation.destinationItemId, session)
   }
 
@@ -616,7 +592,6 @@ async function executeMovePlan(
     itemsById: readModel.itemsById,
     maxDepth: MAX_SIDEBAR_MOVE_DEPTH,
   })
-  const usedDecisionSourceIds = new Set<Id<'sidebarItems'>>()
   const plan = planTransferOperations({
     mode: 'move',
     items: sourceItems,
@@ -624,10 +599,8 @@ async function executeMovePlan(
     targetParentId: effectiveTargetParentId,
     targetItems,
     decisions: toDecisionRecord(decisions),
-    usedDecisionSourceIds,
     getChildren: (parentId) => childrenMap.get(parentId) ?? [],
   })
-  assertSkippedDecisionsWereUsed(decisions, usedDecisionSourceIds)
 
   if (plan.status === 'needs-decision') {
     const conflictSummary = plan.conflicts
@@ -647,7 +620,13 @@ async function executeMovePlan(
     rootSourceItems.map((item) => item._id),
     session,
   )
-  applySkippedDecisions(events, decisions)
+  for (const sourceItemId of plan.skippedSourceItemIds ?? []) {
+    events.push({
+      type: FILE_SYSTEM_EVENT_TYPE.skipped,
+      itemId: sourceItemId,
+      sourceItemId,
+    })
+  }
   return events
 }
 

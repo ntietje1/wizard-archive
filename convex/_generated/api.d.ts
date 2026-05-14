@@ -176,7 +176,6 @@ import type * as sidebarItems_filesystem_conflicts from "../sidebarItems/filesys
 import type * as sidebarItems_filesystem_deltas from "../sidebarItems/filesystem/deltas.js";
 import type * as sidebarItems_filesystem_intentPlanning from "../sidebarItems/filesystem/intentPlanning.js";
 import type * as sidebarItems_filesystem_mutations from "../sidebarItems/filesystem/mutations.js";
-import type * as sidebarItems_filesystem_operationTypes from "../sidebarItems/filesystem/operationTypes.js";
 import type * as sidebarItems_filesystem_patchProjection from "../sidebarItems/filesystem/patchProjection.js";
 import type * as sidebarItems_filesystem_patches from "../sidebarItems/filesystem/patches.js";
 import type * as sidebarItems_filesystem_pathParentResolver from "../sidebarItems/filesystem/pathParentResolver.js";
@@ -186,7 +185,6 @@ import type * as sidebarItems_filesystem_selection from "../sidebarItems/filesys
 import type * as sidebarItems_filesystem_siblings from "../sidebarItems/filesystem/siblings.js";
 import type * as sidebarItems_filesystem_sidebarItemRows from "../sidebarItems/filesystem/sidebarItemRows.js";
 import type * as sidebarItems_filesystem_sidebarItemWriter from "../sidebarItems/filesystem/sidebarItemWriter.js";
-import type * as sidebarItems_filesystem_targets from "../sidebarItems/filesystem/targets.js";
 import type * as sidebarItems_filesystem_transactions from "../sidebarItems/filesystem/transactions.js";
 import type * as sidebarItems_filesystem_transferPlanner from "../sidebarItems/filesystem/transferPlanner.js";
 import type * as sidebarItems_filesystem_tree from "../sidebarItems/filesystem/tree.js";
@@ -197,7 +195,6 @@ import type * as sidebarItems_functions_claimPreviewGeneration from "../sidebarI
 import type * as sidebarItems_functions_collectDescendants from "../sidebarItems/functions/collectDescendants.js";
 import type * as sidebarItems_functions_defaultItemName from "../sidebarItems/functions/defaultItemName.js";
 import type * as sidebarItems_functions_downloadTypes from "../sidebarItems/functions/downloadTypes.js";
-import type * as sidebarItems_functions_duplicateSidebarItemContent from "../sidebarItems/functions/duplicateSidebarItemContent.js";
 import type * as sidebarItems_functions_enhanceBaseSidebarItem from "../sidebarItems/functions/enhanceBaseSidebarItem.js";
 import type * as sidebarItems_functions_enhanceSidebarItem from "../sidebarItems/functions/enhanceSidebarItem.js";
 import type * as sidebarItems_functions_fetchCampaignSidebarItems from "../sidebarItems/functions/fetchCampaignSidebarItems.js";
@@ -207,7 +204,6 @@ import type * as sidebarItems_functions_getSidebarItemWithContent from "../sideb
 import type * as sidebarItems_functions_getSidebarItemsByParent from "../sidebarItems/functions/getSidebarItemsByParent.js";
 import type * as sidebarItems_functions_purgeExpiredTrash from "../sidebarItems/functions/purgeExpiredTrash.js";
 import type * as sidebarItems_functions_setPreviewImage from "../sidebarItems/functions/setPreviewImage.js";
-import type * as sidebarItems_functions_sidebarItemLifecycle from "../sidebarItems/functions/sidebarItemLifecycle.js";
 import type * as sidebarItems_internalMutations from "../sidebarItems/internalMutations.js";
 import type * as sidebarItems_mutations from "../sidebarItems/mutations.js";
 import type * as sidebarItems_queries from "../sidebarItems/queries.js";
@@ -259,6 +255,7 @@ import type * as yjsSync_constants from "../yjsSync/constants.js";
 import type * as yjsSync_functions_captureYjsState from "../yjsSync/functions/captureYjsState.js";
 import type * as yjsSync_functions_checkYjsAccess from "../yjsSync/functions/checkYjsAccess.js";
 import type * as yjsSync_functions_compactUpdates from "../yjsSync/functions/compactUpdates.js";
+import type * as yjsSync_functions_copyYjsUpdates from "../yjsSync/functions/copyYjsUpdates.js";
 import type * as yjsSync_functions_createYjsDocument from "../yjsSync/functions/createYjsDocument.js";
 import type * as yjsSync_functions_deleteYjsDocument from "../yjsSync/functions/deleteYjsDocument.js";
 import type * as yjsSync_functions_reconstructYDoc from "../yjsSync/functions/reconstructYDoc.js";
@@ -444,7 +441,6 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/filesystem/deltas": typeof sidebarItems_filesystem_deltas;
   "sidebarItems/filesystem/intentPlanning": typeof sidebarItems_filesystem_intentPlanning;
   "sidebarItems/filesystem/mutations": typeof sidebarItems_filesystem_mutations;
-  "sidebarItems/filesystem/operationTypes": typeof sidebarItems_filesystem_operationTypes;
   "sidebarItems/filesystem/patchProjection": typeof sidebarItems_filesystem_patchProjection;
   "sidebarItems/filesystem/patches": typeof sidebarItems_filesystem_patches;
   "sidebarItems/filesystem/pathParentResolver": typeof sidebarItems_filesystem_pathParentResolver;
@@ -454,7 +450,6 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/filesystem/siblings": typeof sidebarItems_filesystem_siblings;
   "sidebarItems/filesystem/sidebarItemRows": typeof sidebarItems_filesystem_sidebarItemRows;
   "sidebarItems/filesystem/sidebarItemWriter": typeof sidebarItems_filesystem_sidebarItemWriter;
-  "sidebarItems/filesystem/targets": typeof sidebarItems_filesystem_targets;
   "sidebarItems/filesystem/transactions": typeof sidebarItems_filesystem_transactions;
   "sidebarItems/filesystem/transferPlanner": typeof sidebarItems_filesystem_transferPlanner;
   "sidebarItems/filesystem/tree": typeof sidebarItems_filesystem_tree;
@@ -465,7 +460,6 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/functions/collectDescendants": typeof sidebarItems_functions_collectDescendants;
   "sidebarItems/functions/defaultItemName": typeof sidebarItems_functions_defaultItemName;
   "sidebarItems/functions/downloadTypes": typeof sidebarItems_functions_downloadTypes;
-  "sidebarItems/functions/duplicateSidebarItemContent": typeof sidebarItems_functions_duplicateSidebarItemContent;
   "sidebarItems/functions/enhanceBaseSidebarItem": typeof sidebarItems_functions_enhanceBaseSidebarItem;
   "sidebarItems/functions/enhanceSidebarItem": typeof sidebarItems_functions_enhanceSidebarItem;
   "sidebarItems/functions/fetchCampaignSidebarItems": typeof sidebarItems_functions_fetchCampaignSidebarItems;
@@ -475,7 +469,6 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/functions/getSidebarItemsByParent": typeof sidebarItems_functions_getSidebarItemsByParent;
   "sidebarItems/functions/purgeExpiredTrash": typeof sidebarItems_functions_purgeExpiredTrash;
   "sidebarItems/functions/setPreviewImage": typeof sidebarItems_functions_setPreviewImage;
-  "sidebarItems/functions/sidebarItemLifecycle": typeof sidebarItems_functions_sidebarItemLifecycle;
   "sidebarItems/internalMutations": typeof sidebarItems_internalMutations;
   "sidebarItems/mutations": typeof sidebarItems_mutations;
   "sidebarItems/queries": typeof sidebarItems_queries;
@@ -527,6 +520,7 @@ declare const fullApi: ApiFromModules<{
   "yjsSync/functions/captureYjsState": typeof yjsSync_functions_captureYjsState;
   "yjsSync/functions/checkYjsAccess": typeof yjsSync_functions_checkYjsAccess;
   "yjsSync/functions/compactUpdates": typeof yjsSync_functions_compactUpdates;
+  "yjsSync/functions/copyYjsUpdates": typeof yjsSync_functions_copyYjsUpdates;
   "yjsSync/functions/createYjsDocument": typeof yjsSync_functions_createYjsDocument;
   "yjsSync/functions/deleteYjsDocument": typeof yjsSync_functions_deleteYjsDocument;
   "yjsSync/functions/reconstructYDoc": typeof yjsSync_functions_reconstructYDoc;

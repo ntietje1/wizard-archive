@@ -27,8 +27,8 @@ import type {
 import type {
   ConflictDecision,
   ItemOperationConflict,
-  TransferOperation,
-} from 'convex/sidebarItems/filesystem/operationTypes'
+} from 'convex/sidebarItems/filesystem/conflicts'
+import type { TransferOperation } from 'convex/sidebarItems/filesystem/transferPlanner'
 import {
   buildOptimisticCreatePreview,
   buildOptimisticRenamePreview,
@@ -44,7 +44,6 @@ type FileSystemOptimisticPlan =
   | { status: 'needsDecision'; conflicts: Array<ItemOperationConflict> }
 
 type FileSystemOptimisticPreview = {
-  command: FileSystemCommand
   receiptPatches: Array<FileSystemPatch>
   inversePatches: Array<FileSystemPatch>
   optimisticItem?: AnySidebarItem
@@ -65,7 +64,6 @@ type CommandPlannerArgs<TCommand extends FileSystemCommand> = Omit<PlannerArgs, 
 }
 
 function ready(
-  command: FileSystemCommand,
   patches: { forwardPatches: Array<FileSystemPatch>; inversePatches: Array<FileSystemPatch> } = {
     forwardPatches: [],
     inversePatches: [],
@@ -74,7 +72,6 @@ function ready(
   return {
     status: 'ready',
     preview: {
-      command,
       receiptPatches: patches.forwardPatches,
       inversePatches: patches.inversePatches,
     },
@@ -96,7 +93,7 @@ function planCopy(args: CommandPlannerArgs<CopyFileSystemCommand>) {
   if (plan.status === 'needs-decision')
     return { status: 'needsDecision' as const, conflicts: plan.conflicts }
 
-  return ready(args.command)
+  return ready()
 }
 
 function planMoveOrRestore(
@@ -125,7 +122,6 @@ function planMoveOrRestore(
   if (conflicts.length > 0) return { status: 'needsDecision' as const, conflicts }
 
   return ready(
-    args.command,
     projectMoveOperations({
       activeItems: args.snapshot.sidebar,
       trashItems: args.snapshot.trash,
@@ -172,7 +168,6 @@ function planTrash(args: CommandPlannerArgs<TrashFileSystemCommand>) {
   const items = normalizeSelectedRoots(loadedItems, args.readModel.itemsById)
   const rootIds = items.map((item) => item._id)
   return ready(
-    args.command,
     projectTrashRoots(args.snapshot.sidebar, rootIds, {
       now: Date.now(),
       userId: args.currentUserId,
@@ -184,19 +179,19 @@ function planDeleteForever(args: CommandPlannerArgs<DeleteForeverFileSystemComma
   const loadedItems = args.readModel.requireItems(args.command.itemIds)
   const items = normalizeSelectedRoots(loadedItems, args.readModel.itemsById)
   const rootIds = items.map((item) => item._id)
-  return ready(args.command, projectDeleteForeverRoots(args.snapshot.trash, rootIds))
+  return ready(projectDeleteForeverRoots(args.snapshot.trash, rootIds))
 }
 
 function planCreate(args: CommandPlannerArgs<CreateFileSystemCommand>): FileSystemOptimisticPlan {
   if (args.command.parentTarget.kind !== CREATE_PARENT_TARGET_KIND.direct) {
-    return ready(args.command)
+    return ready()
   }
   const parent = validateCreateParentTarget(
     args.command.parentTarget,
     args.readModel.itemsById,
     args.readModel.activeChildrenByParent,
   )
-  if (!parent.valid) return ready(args.command)
+  if (!parent.valid) return ready()
   const name = assertSidebarItemName(
     deduplicateName(
       args.command.name,
@@ -240,6 +235,6 @@ export function planFileSystemOptimisticCommand(args: PlannerArgs): FileSystemOp
     case 'rename':
       return planRename({ ...args, command: args.command })
     case 'emptyTrash':
-      return ready(args.command)
+      return ready()
   }
 }

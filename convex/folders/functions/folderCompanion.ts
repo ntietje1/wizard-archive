@@ -9,21 +9,6 @@ export async function createFolderCompanion(
   ctx: CampaignMutationCtx,
   { folderId }: { folderId: Id<'sidebarItems'> },
 ): Promise<void> {
-  const sidebarItem = await ctx.db.get('sidebarItems', folderId)
-  if (!sidebarItem || sidebarItem.type !== SIDEBAR_ITEM_TYPES.folders) {
-    throwClientError(
-      ERROR_CODE.VALIDATION_FAILED,
-      'Invalid sidebarItem: must exist and be a folder',
-    )
-  }
-  const existingFolder = await ctx.db
-    .query('folders')
-    .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', folderId))
-    .unique()
-  if (existingFolder) {
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Folder companion already exists')
-  }
-
   await ctx.db.insert('folders', {
     sidebarItemId: folderId,
     inheritShares: false,
@@ -33,5 +18,38 @@ export async function createFolderCompanion(
     itemId: folderId,
     itemType: SIDEBAR_ITEM_TYPES.folders,
     action: EDIT_HISTORY_ACTION.created,
+  })
+}
+
+export async function copyFolderCompanion(
+  ctx: CampaignMutationCtx,
+  sourceItemId: Id<'sidebarItems'>,
+  targetItemId: Id<'sidebarItems'>,
+) {
+  const targetItem = await ctx.db.get(targetItemId)
+  if (!targetItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Folder target item not found')
+  if (targetItem.type !== SIDEBAR_ITEM_TYPES.folders) {
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Folder companion requires a folder item')
+  }
+  const existingFolder = await ctx.db
+    .query('folders')
+    .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', targetItemId))
+    .unique()
+  if (existingFolder) {
+    throwClientError(ERROR_CODE.CONFLICT, 'Folder companion already exists')
+  }
+  const sourceFolder = await ctx.db
+    .query('folders')
+    .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', sourceItemId))
+    .unique()
+  if (!sourceFolder) {
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      `Missing folder companion for sidebar item ${sourceItemId}`,
+    )
+  }
+  await ctx.db.insert('folders', {
+    sidebarItemId: targetItemId,
+    inheritShares: sourceFolder.inheritShares,
   })
 }

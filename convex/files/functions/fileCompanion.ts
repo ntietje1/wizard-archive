@@ -13,18 +13,6 @@ export async function createFileCompanion(
     fileId: Id<'sidebarItems'>
   },
 ): Promise<void> {
-  const sidebarItem = await ctx.db.get('sidebarItems', fileId)
-  if (!sidebarItem) throwClientError(ERROR_CODE.NOT_FOUND, 'File sidebar item not found')
-  if (sidebarItem.type !== SIDEBAR_ITEM_TYPES.files) {
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'File companion requires a file sidebar item')
-  }
-  const existingFile = await ctx.db
-    .query('files')
-    .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', fileId))
-    .unique()
-  if (existingFile) {
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'File companion already exists')
-  }
   await ctx.db.insert('files', {
     sidebarItemId: fileId,
     storageId: null,
@@ -34,5 +22,44 @@ export async function createFileCompanion(
     itemId: fileId,
     itemType: SIDEBAR_ITEM_TYPES.files,
     action: EDIT_HISTORY_ACTION.created,
+  })
+}
+
+export async function copyFileCompanion(
+  ctx: CampaignMutationCtx,
+  sourceItemId: Id<'sidebarItems'>,
+  targetItemId: Id<'sidebarItems'>,
+) {
+  const targetItem = await ctx.db.get(targetItemId)
+  if (!targetItem) throwClientError(ERROR_CODE.NOT_FOUND, 'File target item not found')
+  if (targetItem.type !== SIDEBAR_ITEM_TYPES.files) {
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'File companion requires a file item')
+  }
+  const existingFile = await ctx.db
+    .query('files')
+    .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', targetItemId))
+    .unique()
+  if (existingFile) {
+    throwClientError(ERROR_CODE.CONFLICT, 'File companion already exists')
+  }
+  const sourceFile = await ctx.db
+    .query('files')
+    .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', sourceItemId))
+    .unique()
+  if (!sourceFile) {
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      `Missing file companion for sidebar item ${sourceItemId}`,
+    )
+  }
+  if (sourceFile.storageId) {
+    const storageObject = await ctx.db.system.get('_storage', sourceFile.storageId)
+    if (!storageObject) {
+      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Source file storage blob not found')
+    }
+  }
+  await ctx.db.insert('files', {
+    sidebarItemId: targetItemId,
+    storageId: sourceFile.storageId,
   })
 }

@@ -43,7 +43,6 @@ export function expectedOptimisticCreateSlug(
 }
 
 type FileSystemOptimisticPreview = {
-  command: CreateFileSystemCommand | RenameFileSystemCommand
   receiptPatches: Array<FileSystemPatch>
   inversePatches: Array<FileSystemPatch>
   optimisticItem?: AnySidebarItem
@@ -69,7 +68,6 @@ export function buildOptimisticCreatePreview({
   if (!currentUserId) {
     logger.warn('Skipping optimistic filesystem create because current user id is unavailable')
     return {
-      command,
       receiptPatches: [],
       inversePatches: [],
     }
@@ -108,7 +106,6 @@ export function buildOptimisticCreatePreview({
 
   const receiptPatches: Array<FileSystemPatch> = [{ type: 'upsertSidebarItem', item }]
   return {
-    command,
     receiptPatches,
     inversePatches: [{ type: 'removeSidebarItem', itemId: item._id, snapshot: item }],
     optimisticItem: item,
@@ -125,7 +122,6 @@ export function buildOptimisticRenamePreview(
   if (!item) {
     // The item may have been removed by a concurrent update before the optimistic rename applies.
     return {
-      command,
       receiptPatches: [],
       inversePatches: [],
     }
@@ -142,7 +138,6 @@ export function buildOptimisticRenamePreview(
     { type: 'updateSidebarItem', itemId: item._id, before: previous, fields },
   ]
   return {
-    command,
     receiptPatches,
     inversePatches: [
       { type: 'updateSidebarItem', itemId: item._id, before: fields, fields: previous },

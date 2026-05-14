@@ -5,7 +5,6 @@ import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissi
 import { MoreVertical } from 'lucide-react'
 import type { ItemCardProps } from './item-card'
 import type { Folder } from 'convex/folders/types'
-import { canDropFilesOnTarget } from '~/features/dnd/utils/drop-target-data'
 import { CardTitle } from '~/features/shadcn/components/card'
 import { Button } from '~/features/shadcn/components/button'
 import { useEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
@@ -15,8 +14,6 @@ import { useContextMenu } from '~/features/context-menu/hooks/useContextMenu'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
 import { useSidebarItemDropTarget } from '~/features/dnd/hooks/useSidebarItemDropTarget'
-import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'
-import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { useIsSidebarItemDragging } from '~/features/dnd/hooks/useIsSidebarItemDragging'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
@@ -118,11 +115,6 @@ function FolderCardInner({
   const dragData = useSidebarDragData(folder)
   const isDragging = useIsSidebarItemDragging(folder._id)
 
-  const isDropTarget = useDndStore((s) => s.sidebarDragTargetId === folder._id)
-  const isTrashAction = useDndStore(
-    (s) => s.dragOutcome?.type === 'operation' && s.dragOutcome.action === 'trash',
-  )
-
   const canDrag = hasAtLeastPermissionLevel(folder.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
 
   const { isDraggingRef } = useDraggable({
@@ -131,20 +123,13 @@ function FolderCardInner({
     canDrag,
   })
 
-  useSidebarItemDropTarget({ ref, item: folder })
-
-  useExternalDropTarget({
+  const { isDropTarget, isTrashAction, isFileDropTarget } = useSidebarItemDropTarget({
     ref,
-    parentId: folder._id,
-    canAcceptFiles: canDropFilesOnTarget(folder),
+    item: folder,
   })
 
-  const isDraggingFiles = useDndStore((s) => s.isDraggingFiles)
-  const fileDragHoveredId = useDndStore((s) => s.fileDragHoveredId)
-  const isFileDragTarget = isDraggingFiles && fileDragHoveredId === folder._id
-
   const dropState: DropState =
-    !isDropTarget && !isFileDragTarget ? 'none' : isDropTarget && isTrashAction ? 'trash' : 'valid'
+    !isDropTarget && !isFileDropTarget ? 'none' : isDropTarget && isTrashAction ? 'trash' : 'valid'
 
   const cardContent = (
     <div ref={ref} className={cn('h-[140px]', isDragging && 'opacity-50')}>

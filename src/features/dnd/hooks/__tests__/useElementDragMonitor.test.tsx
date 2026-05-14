@@ -24,7 +24,7 @@ type DragArgs = {
   source: DragSource
   location: {
     current: {
-      input: { clientX: number; clientY: number }
+      input: { clientX: number; clientY: number; ctrlKey?: boolean }
       dropTargets: Array<{ data: Record<string, unknown> }>
     }
   }
@@ -247,6 +247,26 @@ describe('useElementDragMonitor', () => {
 
     renderHook(() => useElementDragMonitor(ctxRef))
     const monitor = getElementMonitor()
+
+    act(() => {
+      monitor.onDrag({
+        source: createSidebarSource(note._id, [note._id]),
+        location: {
+          current: {
+            input: { clientX: 20, clientY: 30, ctrlKey: true },
+            dropTargets: [
+              {
+                data: { sidebarItemId: target._id },
+              },
+            ],
+          },
+        },
+      })
+    })
+    expect(useDndStore.getState().dragOutcome).toMatchObject({
+      type: 'operation',
+      action: 'copy',
+    })
 
     await act(async () => {
       await monitor.onDrop({

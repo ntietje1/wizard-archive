@@ -1,16 +1,12 @@
-import { useState } from 'react'
 import { TRASH_RETENTION_DAYS } from 'convex/common/constants'
 import { RotateCcw, Trash2 } from 'lucide-react'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { handleError } from '~/shared/utils/logger'
-import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
 import { Banner, BannerButton } from '~/shared/components/banner'
-import { useTrashSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
 import { getItemTypeLabel } from '~/features/sidebar/utils/sidebar-item-utils'
-import { emptyTrashDescription } from '~/features/sidebar/utils/trash-utils'
 import { useFileSystem } from '~/features/filesystem/useFileSystem'
 
 function daysAgo(timestamp: number): number {
@@ -131,46 +127,14 @@ function RootTrashBanner() {
 function EmptyTrashButton() {
   const { campaignId } = useCampaign()
   const filesystem = useFileSystem()
-  const { data: allTrashedItems = [] } = useTrashSidebarItems()
-  const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false)
-  const [isEmptying, setIsEmptying] = useState(false)
-
-  const handleEmptyTrash = async () => {
-    if (!campaignId) {
-      return
-    }
-
-    try {
-      setIsEmptying(true)
-      await filesystem.emptyTrash()
-    } catch (error) {
-      handleError(error, 'Failed to empty trash')
-    } finally {
-      setIsEmptying(false)
-      setConfirmEmptyTrash(false)
-    }
-  }
 
   return (
-    <>
-      <BannerButton
-        variant="destructive"
-        disabled={isEmptying || !campaignId}
-        onClick={() => setConfirmEmptyTrash(true)}
-      >
-        Empty Trash
-      </BannerButton>
-      {confirmEmptyTrash && (
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={() => setConfirmEmptyTrash(false)}
-          onConfirm={handleEmptyTrash}
-          title="Empty Trash"
-          description={emptyTrashDescription(allTrashedItems.length)}
-          confirmLabel="Empty Trash"
-          confirmVariant="destructive"
-        />
-      )}
-    </>
+    <BannerButton
+      variant="destructive"
+      disabled={!campaignId}
+      onClick={() => filesystem.confirmEmptyTrash()}
+    >
+      Empty Trash
+    </BannerButton>
   )
 }

@@ -45,10 +45,6 @@ describe('executeCopyCommand', () => {
       campaignId: ctx.campaignId,
       sourceItemIds: [fileId, mapId],
       targetParentId: null,
-      decisions: [
-        { sourceItemId: fileId, action: 'keepBoth' },
-        { sourceItemId: mapId, action: 'keepBoth' },
-      ],
     })
     const [copiedFileItemId, copiedMapItemId] = copiedRootItemIds(result)
     if (!copiedFileItemId || !copiedMapItemId) {
@@ -68,7 +64,7 @@ describe('executeCopyCommand', () => {
     }
   }
 
-  it('duplicates multiple root items into the same parent with keep-both decisions', async () => {
+  it('duplicates multiple root items into the same parent with automatic keep-both names', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
     const { noteId: firstId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id, {
@@ -82,10 +78,6 @@ describe('executeCopyCommand', () => {
       campaignId: ctx.campaignId,
       sourceItemIds: [firstId, secondId],
       targetParentId: null,
-      decisions: [
-        { sourceItemId: firstId, action: 'keepBoth' },
-        { sourceItemId: secondId, action: 'keepBoth' },
-      ],
     })
 
     const copiedItems = await t.run(async (dbCtx) => {
@@ -144,7 +136,6 @@ describe('executeCopyCommand', () => {
       campaignId: ctx.campaignId,
       sourceItemIds: [folderId],
       targetParentId: null,
-      decisions: [{ sourceItemId: folderId, action: 'keepBoth' }],
     })
 
     expect(filesystemEventItemIds(result, 'copied')).toHaveLength(1)

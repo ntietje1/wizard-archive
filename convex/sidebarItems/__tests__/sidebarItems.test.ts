@@ -538,10 +538,7 @@ describe('executeMoveCommand', () => {
       campaignId: ctx.campaignId,
       sourceItemIds: [sourceFolder],
       targetParentId: null,
-      decisions: [
-        { sourceItemId: sourceFolder, action: 'replace' },
-        { sourceItemId: movedChild, action: 'keepBoth' },
-      ],
+      decisions: [{ sourceItemId: sourceFolder, action: 'replace' }],
     })
 
     const rows = await t.run(async (dbCtx) => ({

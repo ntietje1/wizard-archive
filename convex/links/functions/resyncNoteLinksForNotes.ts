@@ -3,7 +3,7 @@ import { syncNoteLinks } from './syncNoteLinks'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Block } from '../../blocks/types'
 import type { Id } from '../../_generated/dataModel'
-import { isSidebarItemActive } from '../../sidebarItems/functions/sidebarItemLifecycle'
+import { isActiveSidebarItem } from '../../sidebarItems/types/status'
 
 export async function resyncNoteLinksForNotes(
   ctx: CampaignMutationCtx,
@@ -18,7 +18,7 @@ export async function resyncNoteLinksForNotes(
         !note ||
         note.campaignId !== ctx.campaign._id ||
         note.type !== SIDEBAR_ITEM_TYPES.notes ||
-        !isSidebarItemActive(note)
+        !isActiveSidebarItem(note)
       ) {
         return
       }

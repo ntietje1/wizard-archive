@@ -24,7 +24,6 @@ export type CreateItemArgs = CreateItemBase & {
 type CreateItemResult = {
   id: Id<'sidebarItems'>
   slug: SidebarItemSlug
-  transactionId: Id<'filesystemTransactions'>
 }
 
 export function useCreateFileSystemItem() {
@@ -42,7 +41,10 @@ export function useCreateFileSystemItem() {
     )
   }
 
-  const createItem = async (args: CreateItemArgs): Promise<CreateItemResult> => {
+  const createItem = async (
+    args: CreateItemArgs,
+    initialize?: (created: CreateItemResult) => Promise<void> | void,
+  ): Promise<CreateItemResult> => {
     const trimmedName = args.name.trim()
     const candidateName =
       args.parentTarget.kind === 'direct'
@@ -65,13 +67,16 @@ export function useCreateFileSystemItem() {
 
     const color = args.color === undefined ? undefined : coerceSidebarItemColorForInput(args.color)
 
-    const created = await filesystem.createItem({
-      itemType: args.type,
-      name: normalizedName,
-      parentTarget: args.parentTarget,
-      iconName,
-      color,
-    })
+    const created = await filesystem.createItem(
+      {
+        itemType: args.type,
+        name: normalizedName,
+        parentTarget: args.parentTarget,
+        iconName,
+        color,
+      },
+      initialize,
+    )
     if (!created) {
       throw new Error(`Failed to create ${args.type}`)
     }

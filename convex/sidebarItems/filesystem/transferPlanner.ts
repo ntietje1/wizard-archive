@@ -5,21 +5,48 @@ import {
   applyConflictDecision,
   findNameConflict,
 } from './conflicts'
+import { ERROR_CODE, throwClientError } from '../../errors'
 import { normalizeSelectedRoots } from './selection'
-import type { PlannerItemStatus } from './conflicts'
+import type { ConflictDecision, ItemOperationConflict, PlannerItemStatus } from './conflicts'
 import type { OperationPlannerItem } from './selection'
 import type { Id } from '../../_generated/dataModel'
-import type {
-  ConflictDecision,
-  ItemOperationConflict,
-  TransferOperation,
-  TransferOperationPlan,
-} from './operationTypes'
 
 const MAX_OPERATION_DEPTH = 50
 const MAX_ERROR_ITEMS = 10
 
 export type TransferMode = 'copy' | 'move'
+export type TransferOperation =
+  | {
+      sourceItemId: Id<'sidebarItems'>
+      action: 'place'
+      targetParentId: Id<'sidebarItems'> | null
+      name?: string
+    }
+  | {
+      sourceItemId: Id<'sidebarItems'>
+      action: 'replace'
+      targetParentId: Id<'sidebarItems'> | null
+      destinationItemId: Id<'sidebarItems'>
+      name: string
+    }
+  | {
+      sourceItemId: Id<'sidebarItems'>
+      action: 'mergeFolder'
+      targetParentId: Id<'sidebarItems'> | null
+      destinationItemId: Id<'sidebarItems'>
+    }
+export type TransferOperationPlan =
+  | {
+      status: 'ready'
+      conflicts: []
+      operations: Array<TransferOperation>
+      skippedSourceItemIds?: Array<Id<'sidebarItems'>>
+    }
+  | {
+      status: 'needs-decision'
+      conflicts: Array<ItemOperationConflict>
+      operations: []
+    }
 
 type TransferPlannerContext = {
   mode: TransferMode
@@ -34,7 +61,8 @@ type TransferPlannerContext = {
   conflicts: Array<ItemOperationConflict>
   operations: Array<TransferOperation>
   reservedNames: Array<string>
-  usedDecisionSourceIds?: Set<Id<'sidebarItems'>>
+  usedDecisionSourceIds: Set<Id<'sidebarItems'>>
+  skippedSourceItemIds: Set<Id<'sidebarItems'>>
 }
 
 function formatItemIdsForError(items: Array<OperationPlannerItem>): string {
@@ -132,6 +160,22 @@ function planTransferItem(
   })
 }
 
+function assertDecisionsMatchConflicts({
+  decisions,
+  usedDecisionSourceIds,
+}: {
+  decisions: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
+  usedDecisionSourceIds: ReadonlySet<Id<'sidebarItems'>>
+}) {
+  for (const sourceItemId of Object.keys(decisions) as Array<Id<'sidebarItems'>>) {
+    if (usedDecisionSourceIds.has(sourceItemId)) continue
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      'Conflict decision does not match an item with a conflict',
+    )
+  }
+}
+
 export function planTransferOperations({
   mode,
   items,
@@ -139,7 +183,8 @@ export function planTransferOperations({
   targetItems,
   decisions = {},
   defaultConflictDecision,
-  usedDecisionSourceIds,
+  usedDecisionSourceIds = new Set<Id<'sidebarItems'>>(),
+  skippedSourceItemIds = new Set<Id<'sidebarItems'>>(),
   getChildren,
   itemsById,
   depth = 0,
@@ -152,6 +197,7 @@ export function planTransferOperations({
   decisions?: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
   defaultConflictDecision?: ConflictDecision
   usedDecisionSourceIds?: Set<Id<'sidebarItems'>>
+  skippedSourceItemIds?: Set<Id<'sidebarItems'>>
   getChildren?: (parentId: Id<'sidebarItems'>) => Array<OperationPlannerItem>
   depth?: number
 }): TransferOperationPlan {
@@ -175,6 +221,7 @@ export function planTransferOperations({
     conflicts: [],
     operations: [],
     usedDecisionSourceIds,
+    skippedSourceItemIds,
     reservedNames:
       mode === 'copy'
         ? Array.from(new Set(targetItems.map((item) => item.name)))
@@ -189,9 +236,19 @@ export function planTransferOperations({
     planTransferItem(context, item)
   }
 
+  if (depth === 0) {
+    assertDecisionsMatchConflicts({ decisions, usedDecisionSourceIds })
+  }
+
   if (context.conflicts.length > 0) {
     return { status: 'needs-decision', conflicts: context.conflicts, operations: [] }
   }
 
-  return { status: 'ready', conflicts: [], operations: context.operations }
+  const skippedIds = Array.from(context.skippedSourceItemIds)
+  return {
+    status: 'ready',
+    conflicts: [],
+    operations: context.operations,
+    ...(skippedIds.length > 0 ? { skippedSourceItemIds: skippedIds } : {}),
+  }
 }

@@ -1,20 +1,29 @@
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import type { Id } from '../../_generated/dataModel'
-import type {
-  ConflictDecision,
-  ConflictDecisionAction,
-  ItemOperationConflict,
-} from './operationTypes'
 import type { OperationPlannerItem } from './selection'
 
 export type PlannerItemStatus = 'ready' | 'needs-decision'
+export type ConflictDecisionAction = 'replace' | 'skip' | 'keepBoth'
+export type ConflictDecision = {
+  action: ConflictDecisionAction
+}
+export type ItemOperationConflict = {
+  kind: 'name-conflict'
+  sourceItemId: Id<'sidebarItems'>
+  destinationItemId: Id<'sidebarItems'>
+  sourceName: string
+  destinationName: string
+  sourceType: OperationPlannerItem['type']
+  destinationType: OperationPlannerItem['type']
+}
 
 export type ConflictPlanningContext = {
   decisions: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
   defaultConflictDecision?: ConflictDecision
   conflicts: Array<ItemOperationConflict>
-  usedDecisionSourceIds?: Set<Id<'sidebarItems'>>
+  usedDecisionSourceIds: Set<Id<'sidebarItems'>>
+  skippedSourceItemIds: Set<Id<'sidebarItems'>>
 }
 
 export type ConflictDecisionHandlers = {
@@ -42,19 +51,6 @@ export function toDecisionRecord(
     record[decision.sourceItemId] = { action: decision.action }
   }
   return record
-}
-
-export function assertSkippedDecisionsWereUsed(
-  decisions: Array<OperationDecision> | undefined,
-  usedDecisionSourceIds: ReadonlySet<Id<'sidebarItems'>>,
-) {
-  for (const decision of decisions ?? []) {
-    if (usedDecisionSourceIds.has(decision.sourceItemId) || decision.action !== 'skip') continue
-    throwClientError(
-      ERROR_CODE.VALIDATION_FAILED,
-      'Conflict decision does not match an item with a conflict',
-    )
-  }
 }
 
 export function normalizedName(name: string): string {
@@ -97,11 +93,12 @@ export function applyConflictDecision(
     return 'needs-decision'
   }
   if (explicitDecision) {
-    context.usedDecisionSourceIds?.add(item._id)
+    context.usedDecisionSourceIds.add(item._id)
   }
 
   switch (decision.action) {
     case 'skip':
+      context.skippedSourceItemIds.add(item._id)
       return 'ready'
     case 'keepBoth':
       handlers.keepBoth()
@@ -140,7 +137,8 @@ export function addPlannedFolderMergeOperations<TOperation>({
     operations: Array<TOperation>
     defaultConflictDecision?: ConflictDecision
     mode: 'copy' | 'move'
-    usedDecisionSourceIds?: Set<Id<'sidebarItems'>>
+    usedDecisionSourceIds: Set<Id<'sidebarItems'>>
+    skippedSourceItemIds: Set<Id<'sidebarItems'>>
   }
   item: OperationPlannerItem
   conflictTarget: OperationPlannerItem
@@ -151,13 +149,19 @@ export function addPlannedFolderMergeOperations<TOperation>({
     targetItems: Array<OperationPlannerItem>
     decisions: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
     defaultConflictDecision?: ConflictDecision
-    usedDecisionSourceIds?: Set<Id<'sidebarItems'>>
+    usedDecisionSourceIds: Set<Id<'sidebarItems'>>
+    skippedSourceItemIds: Set<Id<'sidebarItems'>>
     getChildren: (parentId: Id<'sidebarItems'>) => Array<OperationPlannerItem>
     itemsById: ReadonlyMap<Id<'sidebarItems'>, Pick<OperationPlannerItem, '_id' | 'parentId'>>
     depth: number
   }) =>
     | { status: 'needs-decision'; conflicts: Array<ItemOperationConflict>; operations: [] }
-    | { status: 'ready'; conflicts: []; operations: Array<TOperation> }
+    | {
+        status: 'ready'
+        conflicts: []
+        operations: Array<TOperation>
+        skippedSourceItemIds?: Array<Id<'sidebarItems'>>
+      }
   createMergeOperation: (args: {
     sourceItemId: Id<'sidebarItems'>
     targetParentId: Id<'sidebarItems'> | null
@@ -173,6 +177,7 @@ export function addPlannedFolderMergeOperations<TOperation>({
       decisions: context.decisions,
       defaultConflictDecision: context.decisions[item._id] ?? context.defaultConflictDecision,
       usedDecisionSourceIds: context.usedDecisionSourceIds,
+      skippedSourceItemIds: context.skippedSourceItemIds,
       getChildren: context.getChildren,
       itemsById: context.itemsById,
       depth: context.depth + 1,

@@ -4,7 +4,6 @@ import type { FileSystemReadModel } from 'convex/sidebarItems/filesystem/readMod
 import { normalizeSelectedRoots } from 'convex/sidebarItems/filesystem/selection'
 import { isActiveSidebarItem } from 'convex/sidebarItems/types/status'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type { FileSystemValue } from './useFileSystem'
 import type { FileSystemClipboard } from './filesystem-clipboard-store'
 import { getPasteTargetParentId } from './filesystem-targets'
 
@@ -20,31 +19,6 @@ function normalizeActiveItems(
     readModel.getItems(itemIds).filter(isActiveSidebarItem),
     readModel.itemsById,
   )
-}
-
-export function createFileSystemCreateCommand(
-  input: Parameters<FileSystemValue['createItem']>[0],
-): FileSystemCommand {
-  return {
-    type: 'create',
-    itemType: input.itemType,
-    name: input.name,
-    parentTarget: input.parentTarget,
-    iconName: input.iconName,
-    color: input.color,
-  }
-}
-
-export function createFileSystemRenameCommand(
-  input: Parameters<FileSystemValue['renameItem']>[0],
-): FileSystemCommand {
-  return {
-    type: 'rename',
-    itemId: input.itemId,
-    name: input.name,
-    iconName: input.iconName,
-    color: input.color,
-  }
 }
 
 export function createFileSystemDuplicateCommand(

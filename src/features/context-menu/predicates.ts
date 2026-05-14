@@ -1,11 +1,7 @@
 import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { VIEW_CONTEXT } from './constants'
-import {
-  canDeleteSidebarItemsForever,
-  canRestoreSidebarItems,
-  canTrashSidebarItems,
-} from '~/features/filesystem/filesystem-capabilities'
+import { getSidebarFilesystemCapabilities } from '~/features/filesystem/filesystem-capabilities'
 import type { Predicate, ViewContext } from './types'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 
@@ -170,17 +166,13 @@ export const allSelectedItemsNotTrashed: Predicate = (ctx) => {
 }
 
 export const canTrashSelectedItems: Predicate = (ctx) =>
-  canTrashSidebarItems(ctx.memberRole, selectedFilesystemItems(ctx))
+  getSidebarFilesystemCapabilities(ctx.memberRole, selectedFilesystemItems(ctx)).canTrash
 
 export const canRestoreSelectedItems: Predicate = (ctx) =>
-  canRestoreSidebarItems(ctx.memberRole, selectedFilesystemItems(ctx))
+  getSidebarFilesystemCapabilities(ctx.memberRole, selectedFilesystemItems(ctx)).canRestore
 
 export const canDeleteSelectedItemsForever: Predicate = (ctx) =>
-  canDeleteSidebarItemsForever(ctx.memberRole, selectedFilesystemItems(ctx))
-
-export const canWrite: Predicate = (ctx) => {
-  return ctx.item ? hasEditAccess(ctx) : isDm(ctx)
-}
+  getSidebarFilesystemCapabilities(ctx.memberRole, selectedFilesystemItems(ctx)).canDeleteForever
 
 export const isItemTrashed: Predicate = (ctx) => ctx.isItemTrashed === true
 

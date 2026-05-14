@@ -2,12 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { SIDEBAR_ITEM_STATUS } from 'convex/sidebarItems/types/baseTypes'
 import type { SidebarCacheSnapshot } from '../filesystem-cache-patches'
 import { createFileSystemCacheAdapter } from '../filesystem-cache-adapter'
-import {
-  applyFileSystemPatchesToSnapshot,
-  invertFileSystemPatches,
-} from '../filesystem-cache-patches'
+import { applyFileSystemPatchesToSnapshot } from '../filesystem-cache-patches'
 import { OPTIMISTIC_SIDEBAR_ITEM_ID_PREFIX } from '../optimistic-sidebar-items'
 import {
+  invertFileSystemPatches,
   projectMoveOperations,
   projectTrashRoots,
 } from 'convex/sidebarItems/filesystem/patchProjection'
@@ -16,13 +14,15 @@ import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 const NOW = 1000
 
 function rawSidebarRow(item: ReturnType<typeof createNote>) {
-  const { shares, isBookmarked, myPermissionLevel, previewUrl, isActive, isTrashed, ...row } = item
-  void shares
-  void isBookmarked
-  void myPermissionLevel
-  void previewUrl
-  void isActive
-  void isTrashed
+  const {
+    shares: _shares,
+    isBookmarked: _isBookmarked,
+    myPermissionLevel: _myPermissionLevel,
+    previewUrl: _previewUrl,
+    isActive: _isActive,
+    isTrashed: _isTrashed,
+    ...row
+  } = item
   return row
 }
 

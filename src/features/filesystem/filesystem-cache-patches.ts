@@ -2,10 +2,7 @@ import { SIDEBAR_ITEM_STATUS } from 'convex/sidebarItems/types/baseTypes'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { FileSystemPatch } from 'convex/sidebarItems/filesystem/receipts'
-import {
-  applyFileSystemPatchesToSnapshot as applyPatchesToItemSnapshot,
-  invertFileSystemPatches,
-} from 'convex/sidebarItems/filesystem/patchProjection'
+import { applyFileSystemPatchesToSnapshot as applyPatchesToItemSnapshot } from 'convex/sidebarItems/filesystem/patchProjection'
 import type { AnySidebarItem, AnySidebarItemRow } from 'convex/sidebarItems/types/types'
 import { isOptimisticSidebarItemId } from './optimistic-sidebar-items'
 
@@ -137,5 +134,3 @@ export function applyFileSystemPatchesToSnapshot(
     }),
   }
 }
-
-export { invertFileSystemPatches }

@@ -67,7 +67,7 @@ function sidebarCtx(overrides: Partial<MenuContext> = {}): MenuContext {
 
 describe('buildMenu', () => {
   const actions = createActions()
-  const services = { actions, filesystem: { canPaste: false } }
+  const services = { actions, filesystem: { canPasteIntoTarget: () => false } }
 
   it('DM sees edit and delete actions on a note in sidebar', () => {
     const menu = buildMenu({
@@ -146,7 +146,7 @@ describe('buildMenu', () => {
     })
     const menuWithClipboard = buildMenu({
       context: sidebarCtx({ item: folder }),
-      services: { ...services, filesystem: { canPaste: true } },
+      services: { ...services, filesystem: { canPasteIntoTarget: () => true } },
       contributors: editorContextMenuContributors,
       commands: editorContextMenuCommands,
       groupConfig,

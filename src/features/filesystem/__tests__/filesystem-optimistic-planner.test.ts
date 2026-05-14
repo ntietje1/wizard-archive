@@ -41,11 +41,6 @@ describe('filesystem optimistic planning', () => {
     expect(plan).toEqual({
       status: 'ready',
       preview: {
-        command: {
-          type: 'copy',
-          itemIds: [source._id],
-          targetParentId: null,
-        },
         receiptPatches: [],
         inversePatches: [],
       },

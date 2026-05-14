@@ -18,7 +18,7 @@ import { resolveDropFeedback } from '~/features/dnd/utils/drop-feedback'
 import type { FileSystemDropOptions } from 'convex/sidebarItems/filesystem/intentPlanning'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import type { DropOutcome } from '~/features/dnd/utils/drop-outcome'
-import { resolveGlobalFileSystemDrop } from '~/features/filesystem/filesystem-dnd-facade'
+import { resolveFileSystemDropTarget } from '~/features/filesystem/filesystem-drop-planner'
 import { resolveSidebarOperationItems } from '~/features/filesystem/filesystem-operation-selection'
 
 function resolveDraggedItem(sourceData: Record<string, unknown>, ctx: DndMonitorCtx) {
@@ -101,17 +101,12 @@ async function executeElementDrop(
     return
   }
 
-  const globalDrop = resolveGlobalFileSystemDrop(
-    draggedItems,
-    resolvedTarget,
-    ctx.dropPlanningContext,
-    options,
-  )
-  if (!globalDrop || globalDrop.command.status !== 'ready') return
+  const fileSystemTarget = resolveFileSystemDropTarget(resolvedTarget, ctx.dropPlanningContext)
+  if (!fileSystemTarget) return
 
   await ctx.dndContext.executeFileSystemDrop({
     itemIds: draggedItems.map((item) => item._id),
-    target: globalDrop.target,
+    target: fileSystemTarget,
     options,
   })
 }

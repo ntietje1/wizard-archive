@@ -364,7 +364,7 @@ function EmptyTrashButton() {
     <button
       type="button"
       onClick={() => {
-        void filesystem.emptyTrash()
+        filesystem.confirmEmptyTrash()
       }}
     >
       Empty Trash
@@ -920,13 +920,15 @@ describe('FileSystemProvider', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Empty Trash' }))
+    await screen.findByRole('dialog', { name: 'Empty Trash' })
+    fireEvent.click(screen.getAllByRole('button', { name: 'Empty Trash' }).at(-1)!)
 
     await waitFor(() => expect(executeMutateAsync).toHaveBeenCalledTimes(1))
     await waitFor(() => expect(useSidebarUIStore.getState().selectedItemIds).toEqual([]))
     expect(clearEditorContentMock).toHaveBeenCalled()
   })
 
-  it('records undo before reporting a receipt side-effect failure', async () => {
+  it('rolls back optimistic create state when optimistic navigation fails', async () => {
     navigateToItemMock.mockRejectedValueOnce(new Error('navigation failed'))
 
     render(
@@ -937,8 +939,10 @@ describe('FileSystemProvider', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }))
 
-    await waitFor(() => expect(executeMutateAsync).toHaveBeenCalledTimes(1))
-    await waitFor(() => expect(useFileSystemUndoStore.getState().undoStack).toHaveLength(1))
+    await waitFor(() => expect(toastErrorMock).toHaveBeenCalledTimes(1))
+    expect(executeMutateAsync).not.toHaveBeenCalled()
+    expect(sidebarItems).toEqual([])
+    expect(useFileSystemUndoStore.getState().undoStack).toHaveLength(0)
   })
 
   it('generates a fresh client operation id for each forward command', async () => {

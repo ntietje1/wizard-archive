@@ -5,6 +5,7 @@ import { logEditHistory } from '../../../editHistory/log'
 import { assertSidebarItemName } from '../../validation/name'
 import { deduplicateName } from '../../functions/defaultItemName'
 import { planTransferOperations } from '../transferPlanner'
+import type { TransferOperation } from '../transferPlanner'
 import { collectSidebarChildrenMap } from '../children'
 import { normalizeSelectedRoots } from '../selection'
 import { addSidebarItemAncestorsToMap } from '../ancestors'
@@ -15,21 +16,21 @@ import { isActiveSidebarItem } from '../../types/status'
 import { assertSidebarOperationAllowed, evaluateCopy } from '../capabilities'
 import { checkSidebarItemRowAccess, requireSidebarItemRowAccess } from '../access'
 import type { AccessibleSidebarItemRow } from '../access'
-import { assertSkippedDecisionsWereUsed, toDecisionRecord } from '../conflicts'
-import {
-  cloneStorageId,
-  copyDuplicateSidebarItemContent,
-} from '../../functions/duplicateSidebarItemContent'
+import { toDecisionRecord } from '../conflicts'
+import type { OperationDecision } from '../conflicts'
+import { copyCanvasCompanion } from '../../../canvases/functions/canvasCompanion'
+import { copyFileCompanion } from '../../../files/functions/fileCompanion'
+import { copyFolderCompanion } from '../../../folders/functions/folderCompanion'
+import { copyMapCompanion } from '../../../gameMaps/functions/mapCompanion'
+import { copyNoteCompanion } from '../../../notes/functions/noteCompanion'
 import { createFileSystemWriteSession } from '../deltas'
 import { FILE_SYSTEM_EVENT_TYPE } from '../receipts'
 import { createFileSystemReadModel } from '../readModel'
 import { getSidebarItemRow } from '../sidebarItemRows'
-import type { OperationDecision } from '../conflicts'
 import type { CampaignMutationCtx } from '../../../functions'
 import type { Id } from '../../../_generated/dataModel'
 import type { CopyFileSystemCommand, FileSystemOperationDecision } from '../commands'
 import type { AnySidebarItemRow } from '../../types/types'
-import type { TransferOperation } from '../operationTypes'
 import type { SidebarItemColor } from '../../validation/color'
 import type { SidebarItemIconName } from '../../validation/icon'
 import type { SidebarItemName } from '../../validation/name'
@@ -38,36 +39,35 @@ import type { FileSystemDelta, FileSystemEvent } from '../receipts'
 
 const MAX_COPY_DEPTH = 50
 type CopyOrReplaceOperation = Extract<TransferOperation, { action: 'place' | 'replace' }>
-type ExecutableCopyOperation = TransferOperation
-
-const COPY_OPERATION_ACTION = {
-  place: 'place',
-  replace: 'replace',
-  mergeFolder: 'mergeFolder',
-} as const
 
 type CopyCommandContext = {
   events: Array<FileSystemEvent>
   session: FileSystemWriteSession
 }
 
-function applySkippedDecisions(
-  events: Array<FileSystemEvent>,
-  decisions: Array<OperationDecision> | undefined,
+async function copySidebarItemContent(
+  ctx: CampaignMutationCtx,
+  source: AnySidebarItemRow,
+  targetItemId: Id<'sidebarItems'>,
 ) {
-  const skipped = new Set(
-    events
-      .filter((event) => event.type === FILE_SYSTEM_EVENT_TYPE.skipped)
-      .map((event) => event.itemId),
-  )
-  for (const decision of decisions ?? []) {
-    if (decision.action !== 'skip' || skipped.has(decision.sourceItemId)) continue
-    events.push({
-      type: FILE_SYSTEM_EVENT_TYPE.skipped,
-      itemId: decision.sourceItemId,
-      sourceItemId: decision.sourceItemId,
-    })
-    skipped.add(decision.sourceItemId)
+  switch (source.type) {
+    case SIDEBAR_ITEM_TYPES.notes:
+      await copyNoteCompanion(ctx, source._id, targetItemId)
+      return
+    case SIDEBAR_ITEM_TYPES.folders:
+      await copyFolderCompanion(ctx, source._id, targetItemId)
+      return
+    case SIDEBAR_ITEM_TYPES.gameMaps:
+      await copyMapCompanion(ctx, source._id, targetItemId)
+      return
+    case SIDEBAR_ITEM_TYPES.files:
+      await copyFileCompanion(ctx, source._id, targetItemId)
+      return
+    case SIDEBAR_ITEM_TYPES.canvases:
+      await copyCanvasCompanion(ctx, source._id, targetItemId)
+      return
+    default:
+      source satisfies never
   }
 }
 
@@ -101,7 +101,7 @@ async function insertCopiedSidebarItem(
     isRoot?: boolean
   },
 ): Promise<Id<'sidebarItems'>> {
-  const previewStorageId = cloneStorageId(source.previewStorageId)
+  const previewStorageId = source.previewStorageId
   const { itemId } = await copyContext.session.insertSidebarItem({
     type: source.type,
     name,
@@ -112,7 +112,7 @@ async function insertCopiedSidebarItem(
     previewUpdatedAt: previewStorageId ? (source.previewUpdatedAt ?? Date.now()) : undefined,
   })
 
-  await copyDuplicateSidebarItemContent(ctx, source, itemId)
+  await copySidebarItemContent(ctx, source, itemId)
 
   await logEditHistory(ctx, {
     itemId,
@@ -227,13 +227,13 @@ async function executeCopyOperations(
 
 async function executeCopyOperation(
   ctx: CampaignMutationCtx,
-  operation: ExecutableCopyOperation,
+  operation: TransferOperation,
   copyContext: CopyCommandContext,
   rootSourceIds: ReadonlySet<Id<'sidebarItems'>>,
 ) {
-  const source = await loadCopyableOperationSource(ctx, operation.sourceItemId)
+  const source = await validateSidebarItemCopyable(ctx, operation.sourceItemId)
 
-  if (operation.action === COPY_OPERATION_ACTION.mergeFolder) {
+  if (operation.action === 'mergeFolder') {
     const destinationId = await logCopyFolderMerge(ctx, source, operation.destinationItemId)
     copyContext.events.push({
       type: FILE_SYSTEM_EVENT_TYPE.mergedFolder,
@@ -245,7 +245,7 @@ async function executeCopyOperation(
 
   const parentId = operation.targetParentId ?? null
   let replacementDestinationId: Id<'sidebarItems'> | null = null
-  if (operation.action === COPY_OPERATION_ACTION.replace) {
+  if (operation.action === 'replace') {
     replacementDestinationId = operation.destinationItemId
     await trashCopyReplacement(ctx, replacementDestinationId, copyContext.session)
   }
@@ -272,13 +272,6 @@ async function executeCopyOperation(
       copyContext,
     })
   }
-}
-
-async function loadCopyableOperationSource(
-  ctx: CampaignMutationCtx,
-  sourceItemId: Id<'sidebarItems'>,
-) {
-  return await validateSidebarItemCopyable(ctx, sourceItemId)
 }
 
 async function validateSidebarItemCopyable(
@@ -352,7 +345,7 @@ async function resolveCopyName(
   parentId: Id<'sidebarItems'> | null,
 ) {
   if (operation.name) return assertSidebarItemName(operation.name)
-  if (operation.action === COPY_OPERATION_ACTION.replace) {
+  if (operation.action === 'replace') {
     return assertSidebarItemName(source.name)
   }
   return await getUniqueName(ctx, parentId, source.name)
@@ -416,7 +409,6 @@ function planCopyEffects({
   decisions,
   childrenMap,
   itemsById,
-  usedDecisionSourceIds,
 }: {
   sourceItems: Array<AccessibleSidebarItemRow>
   targetParentId: Id<'sidebarItems'> | null
@@ -427,7 +419,6 @@ function planCopyEffects({
     Id<'sidebarItems'>,
     Pick<AccessibleSidebarItemRow, '_id' | 'parentId' | 'status'>
   >
-  usedDecisionSourceIds?: Set<Id<'sidebarItems'>>
 }) {
   return planTransferOperations({
     mode: 'copy',
@@ -436,7 +427,6 @@ function planCopyEffects({
     targetParentId,
     targetItems,
     decisions: toDecisionRecord(decisions),
-    usedDecisionSourceIds,
     getChildren: (parentId) => childrenMap.get(parentId) ?? [],
   })
 }
@@ -481,7 +471,6 @@ async function executeCopyPlan(
   const rootSourceIds = new Set(
     normalizeSelectedRoots(sourceItems, readModel.itemsById).map((item) => item._id),
   )
-  const usedDecisionSourceIds = new Set<Id<'sidebarItems'>>()
   const plan = planCopyEffects({
     sourceItems,
     targetParentId,
@@ -489,16 +478,20 @@ async function executeCopyPlan(
     decisions,
     childrenMap,
     itemsById: readModel.itemsById,
-    usedDecisionSourceIds,
   })
-  assertSkippedDecisionsWereUsed(decisions, usedDecisionSourceIds)
 
   if (plan.status === 'needs-decision') {
     throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Operation requires conflict decisions')
   }
 
   const events = await executeCopyOperations(ctx, plan.operations, rootSourceIds, session)
-  applySkippedDecisions(events, decisions)
+  for (const sourceItemId of plan.skippedSourceItemIds ?? []) {
+    events.push({
+      type: FILE_SYSTEM_EVENT_TYPE.skipped,
+      itemId: sourceItemId,
+      sourceItemId,
+    })
+  }
   return events
 }
 

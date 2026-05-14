@@ -23,7 +23,6 @@ import { useSession } from '~/features/sidebar/hooks/useGameSession'
 import { useFileSystem } from '~/features/filesystem/useFileSystem'
 import { createDownloadActions } from './download-actions'
 import { createCreationActions } from './creation-actions'
-import { createFilesystemActions } from './filesystem-actions'
 
 interface UseMenuActionsOptions {
   onDialogOpen?: () => void
@@ -54,10 +53,6 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
   const [editMapDialog, setEditMapDialog] = useState<Id<'sidebarItems'> | null>(null)
   const [editFileDialog, setEditFileDialog] = useState<Id<'sidebarItems'> | null>(null)
   const [editSidebarItemDialog, setEditSidebarItemDialog] = useState<AnySidebarItem | null>(null)
-  const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false)
-  const filesystemActions = createFilesystemActions({
-    filesystem: filesystemActionsApi,
-  })
 
   const actions: ActionHandlers = {
     open: (ctx: MenuContext) => {
@@ -236,10 +231,47 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
 
     ...creationActions,
     ...downloadActions,
-    ...filesystemActions,
+
+    delete: async (ctx: MenuContext) => {
+      const items = ctx.selectedItems ?? []
+      if (items.length > 0) {
+        await filesystemActionsApi.requestTrashItems(items.map((item) => item._id))
+      }
+    },
+
+    restore: async (ctx: MenuContext) => {
+      const items = ctx.selectedItems ?? []
+      if (items.length > 0) {
+        await filesystemActionsApi.restoreItems(
+          items.map((item) => item._id),
+          null,
+        )
+      }
+    },
+
+    permanentlyDelete: (ctx: MenuContext) => {
+      const items = ctx.selectedItems ?? []
+      if (items.length > 0) {
+        filesystemActionsApi.confirmDeleteForever(items.map((item) => item._id))
+      }
+    },
+
+    paste: async (ctx: MenuContext) => {
+      await filesystemActionsApi.pasteIntoTarget({
+        clickedItem: ctx.item,
+        operationItems: ctx.selectedItems ?? [],
+      })
+    },
+
+    duplicate: async (ctx: MenuContext) => {
+      const items = ctx.selectedItems ?? []
+      if (items.length > 0) {
+        await filesystemActionsApi.duplicateItems(items.map((item) => item._id))
+      }
+    },
 
     emptyTrash: () => {
-      setConfirmEmptyTrash(true)
+      filesystemActionsApi.confirmEmptyTrash()
       onDialogOpen?.()
     },
 
@@ -284,24 +316,10 @@ export function useMenuActions(options: UseMenuActionsOptions = {}) {
     editMapDialog,
     editFileDialog,
     editSidebarItemDialog,
-    confirmEmptyTrash,
     campaignId,
     closeMapDialog: makeCloseHandler(setEditMapDialog),
     closeFileDialog: makeCloseHandler(setEditFileDialog),
     closeSidebarItemDialog: makeCloseHandler(setEditSidebarItemDialog),
-    closeEmptyTrashDialog: () => {
-      setConfirmEmptyTrash(false)
-      onDialogClose?.()
-    },
-    emptyTrash: async () => {
-      try {
-        await filesystemActionsApi.emptyTrash()
-        setConfirmEmptyTrash(false)
-        onDialogClose?.()
-      } catch (error) {
-        handleError(error, 'Failed to empty trash')
-      }
-    },
   }
 
   return {

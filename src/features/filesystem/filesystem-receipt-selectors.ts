@@ -13,10 +13,6 @@ function pluralize(count: number, singular: string, plural = `${singular}s`) {
   return count === 1 ? singular : plural
 }
 
-type ReceiptEventGroups = ReturnType<typeof createReceiptEventGroups>
-
-const receiptEventGroupsCache = new WeakMap<FileSystemTransactionReceipt, ReceiptEventGroups>()
-
 function createReceiptEventGroups(receipt: FileSystemTransactionReceipt) {
   return {
     created: receipt.events.filter((event) => event.type === 'created'),
@@ -28,14 +24,6 @@ function createReceiptEventGroups(receipt: FileSystemTransactionReceipt) {
     mergedFolder: receipt.events.filter((event) => event.type === 'mergedFolder'),
     deletedForever: receipt.events.filter((event) => event.type === 'deletedForever'),
   }
-}
-
-function groupReceiptEvents(receipt: FileSystemTransactionReceipt) {
-  const cached = receiptEventGroupsCache.get(receipt)
-  if (cached) return cached
-  const groups = createReceiptEventGroups(receipt)
-  receiptEventGroupsCache.set(receipt, groups)
-  return groups
 }
 
 function isNavigationEvent(
@@ -100,7 +88,7 @@ export function getReceiptRemovedItemSnapshots(
 export function getReceiptSelectedRootIds(
   receipt: FileSystemTransactionReceipt,
 ): Array<Id<'sidebarItems'>> {
-  const events = groupReceiptEvents(receipt)
+  const events = createReceiptEventGroups(receipt)
   const selectedEvents =
     receipt.direction === 'undo'
       ? [...events.moved, ...events.trashed]
@@ -120,7 +108,7 @@ export function getReceiptNavigationSlug(
 ): string | null {
   if (receipt.direction === 'undo') return null
 
-  const events = groupReceiptEvents(receipt)
+  const events = createReceiptEventGroups(receipt)
   const event = [...events.created, ...events.renamed].find((candidate) =>
     isNavigationEvent(candidate, currentSlug),
   )
@@ -132,7 +120,7 @@ export function getCreatedItemResult(receipt: FileSystemTransactionReceipt | nul
   slug: SidebarItemSlug
   transactionId: Id<'filesystemTransactions'>
 } | null {
-  const created = receipt ? groupReceiptEvents(receipt).created[0] : null
+  const created = receipt ? createReceiptEventGroups(receipt).created[0] : null
   if (!created?.slug || !receipt?.transactionId) return null
   return {
     id: created.itemId,
@@ -144,7 +132,7 @@ export function getCreatedItemResult(receipt: FileSystemTransactionReceipt | nul
 export function getReceiptRenamedSlug(
   receipt: FileSystemTransactionReceipt | null,
 ): SidebarItemSlug | null {
-  const renamed = receipt ? groupReceiptEvents(receipt).renamed[0] : null
+  const renamed = receipt ? createReceiptEventGroups(receipt).renamed[0] : null
   return renamed?.slug ? assertSidebarItemSlug(renamed.slug) : null
 }
 

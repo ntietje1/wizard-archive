@@ -26,8 +26,10 @@ import {
   getDragPreviewItemIds,
 } from '~/features/dnd/utils/drag-source-data'
 import { rejectionReasonMessage } from '~/features/dnd/utils/drop-rejections'
-import type { resolveGlobalFileSystemDropCommand } from '~/features/filesystem/filesystem-drop-planner'
-import { resolveGlobalFileSystemDrop } from '~/features/filesystem/filesystem-dnd-facade'
+import {
+  resolveFileSystemDropTarget,
+  resolveGlobalFileSystemDropCommand as resolveFileSystemCommand,
+} from '~/features/filesystem/filesystem-drop-planner'
 import { resolveSurfaceDropCommand } from '~/features/dnd/utils/surface-drop-planner'
 import {
   CANVAS_DROP_ZONE_TYPE,
@@ -56,7 +58,7 @@ function createCtx(overrides?: Partial<DropPlanningContext>): DropPlanningContex
 }
 
 function resolveTestDropCommand(
-  items: Parameters<typeof resolveGlobalFileSystemDropCommand>[0],
+  items: Parameters<typeof resolveFileSystemCommand>[0],
   target: SidebarDropData,
   ctx: DropPlanningContext,
 ) {
@@ -67,12 +69,15 @@ function resolveTestDropCommand(
 }
 
 function resolveTestGlobalDropCommand(
-  items: Parameters<typeof resolveGlobalFileSystemDropCommand>[0],
+  items: Parameters<typeof resolveFileSystemCommand>[0],
   target: SidebarDropData,
   ctx: DropPlanningContext,
-  options?: Parameters<typeof resolveGlobalFileSystemDropCommand>[3],
+  options?: Parameters<typeof resolveFileSystemCommand>[3],
 ) {
-  return resolveGlobalFileSystemDrop(items, target, ctx, options)?.command ?? { status: 'noop' }
+  const fileSystemTarget = resolveFileSystemDropTarget(target, ctx)
+  return fileSystemTarget
+    ? resolveFileSystemCommand(items, fileSystemTarget, ctx, options)
+    : { status: 'noop' }
 }
 
 function resolveDropOutcome(

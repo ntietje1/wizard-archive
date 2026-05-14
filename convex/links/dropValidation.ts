@@ -1,4 +1,4 @@
-import { isSidebarItemTrashed } from '../sidebarItems/functions/sidebarItemLifecycle'
+import { isTrashedSidebarItem } from '../sidebarItems/types/status'
 import type { AnySidebarItem } from '../sidebarItems/types/types'
 import type { Id } from '../_generated/dataModel'
 
@@ -20,7 +20,7 @@ export function validateNoteLinkDropTarget({
   campaignId: Id<'campaigns'> | null
 }): NoteLinkDropValidationCode | null {
   if (item._id === noteId) return 'self_link'
-  if (isSidebarItemTrashed(item)) return 'trashed_item'
+  if (isTrashedSidebarItem(item)) return 'trashed_item'
   if (campaignId && item.campaignId !== campaignId) return 'wrong_campaign'
   return null
 }

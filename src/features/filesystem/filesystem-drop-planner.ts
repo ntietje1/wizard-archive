@@ -4,7 +4,14 @@ import { planFileSystemDropIntent } from 'convex/sidebarItems/filesystem/intentP
 import type { FileSystemDropOptions } from 'convex/sidebarItems/filesystem/intentPlanning'
 import type { FileSystemCommand } from 'convex/sidebarItems/filesystem/commands'
 import type { Id } from 'convex/_generated/dataModel'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { DropPlanningContext } from '~/features/dnd/utils/drop-planning-context'
+import { SIDEBAR_ROOT_DROP_TYPE, TRASH_DROP_ZONE_TYPE } from '~/features/dnd/utils/drop-target-data'
+import type {
+  ResolvedSidebarItemDropData,
+  SidebarDropData,
+} from '~/features/dnd/utils/drop-target-data'
 import { assertNever } from '~/shared/utils/utils'
 
 export type FileSystemGlobalDropRejectionReason =
@@ -32,7 +39,7 @@ export type FileSystemGlobalDropTarget =
       ancestorIds?: Array<Id<'sidebarItems'>>
     }
 
-export type FileSystemGlobalDropCommand =
+type FileSystemGlobalDropCommand =
   | { status: 'noop' }
   | { status: 'blocked'; reason: FileSystemGlobalDropRejectionReason }
   | {
@@ -41,6 +48,28 @@ export type FileSystemGlobalDropCommand =
       command: Extract<FileSystemCommand, { type: 'move' | 'copy' | 'restore' | 'trash' }>
       label: string
     }
+
+export function resolveFileSystemDropTarget(
+  dropTarget: SidebarDropData,
+  ctx: DropPlanningContext,
+): FileSystemGlobalDropTarget | null {
+  switch (dropTarget.type) {
+    case TRASH_DROP_ZONE_TYPE:
+      return { type: 'trash' }
+    case SIDEBAR_ROOT_DROP_TYPE:
+      return { type: 'root', label: ctx.campaignName || 'Root' }
+    case SIDEBAR_ITEM_TYPES.folders: {
+      const folderTarget = dropTarget as ResolvedSidebarItemDropData
+      return {
+        type: 'folder',
+        folder: folderTarget,
+        ancestorIds: folderTarget.ancestorIds,
+      }
+    }
+    default:
+      return null
+  }
+}
 
 function toDropRejectionReason(
   code: SidebarOperationRejectionCode,

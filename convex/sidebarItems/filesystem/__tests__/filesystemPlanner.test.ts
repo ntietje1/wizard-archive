@@ -3,7 +3,7 @@ import { SIDEBAR_ITEM_TYPES } from '../../types/baseTypes'
 import { PERMISSION_LEVEL } from '../../../permissions/types'
 import { planTransferOperations } from '../transferPlanner'
 import type { OperationPlannerItem } from '../selection'
-import type { ConflictDecision } from '../operationTypes'
+import type { ConflictDecision } from '../conflicts'
 import type { AnySidebarItem } from '../../types/types'
 import type { Id } from '../../../_generated/dataModel'
 
