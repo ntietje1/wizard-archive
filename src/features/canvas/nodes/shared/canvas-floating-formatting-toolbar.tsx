@@ -50,6 +50,8 @@ interface CanvasFloatingFormattingToolbarProps {
 
 const FLOATING_FORMATTING_TOOLBAR_Z_INDEX = 60
 const FLOATING_FORMATTING_COLOR_PALETTE_Z_INDEX = 70
+const CANVAS_ZOOM_INVERSE_STYLE_FACTOR = 'max(var(--canvas-zoom, 1), 0.0001)'
+const FLOATING_FORMATTING_TOOLBAR_TOP_OFFSET = '0.5rem'
 
 export function CanvasFloatingFormattingToolbar({
   defaultTextColor = textColorCanvasProperty.defaultValue.color,
@@ -155,108 +157,118 @@ export function CanvasFloatingFormattingToolbar({
 
   return (
     <div
-      className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-[calc(100%+0.5rem)] pointer-events-auto nodrag nopan nowheel"
-      style={{ zIndex: FLOATING_FORMATTING_TOOLBAR_Z_INDEX }}
+      className="absolute left-1/2 top-0 pointer-events-auto nodrag nopan nowheel"
+      style={{
+        transform: `translate(-50%, calc((-100% - ${FLOATING_FORMATTING_TOOLBAR_TOP_OFFSET}) / ${CANVAS_ZOOM_INVERSE_STYLE_FACTOR}))`,
+        zIndex: FLOATING_FORMATTING_TOOLBAR_Z_INDEX,
+      }}
     >
       <div
-        role="toolbar"
-        aria-label="Canvas formatting toolbar"
-        className="flex items-center gap-1 rounded-lg border bg-background/95 p-1 shadow-md backdrop-blur-sm"
-        onPointerDown={(event) => {
-          captureSelection()
-          // This relies on DropdownMenuTrigger emitting data-slot="dropdown-menu-trigger".
-          if (eventStartedOnDropdownTrigger(event)) {
-            return
-          }
-
-          preventEditorBlur(event)
+        style={{
+          transform: `scale(calc(1 / ${CANVAS_ZOOM_INVERSE_STYLE_FACTOR}))`,
+          transformOrigin: 'center top',
         }}
       >
-        <DropdownMenu
-          modal={false}
-          open={blockTypeMenuOpen}
-          onOpenChange={handleBlockTypeMenuOpenChange}
-        >
-          <DropdownMenuTrigger
-            nativeButton
-            render={
-              <Button
-                variant="outline"
-                size="sm"
-                className="min-w-36 justify-between gap-2"
-                aria-label="Block type"
-                title="Block type"
-              >
-                <span className="flex items-center gap-2">
-                  <BlockTypeIcon className="size-4" />
-                  <span className="truncate">{blockTypeLabel}</span>
-                </span>
-                <ChevronDown className="size-4 text-muted-foreground" />
-              </Button>
+        <div
+          role="toolbar"
+          aria-label="Canvas formatting toolbar"
+          className="flex items-center gap-1 rounded-lg border bg-background/95 p-1 shadow-md backdrop-blur-sm"
+          onPointerDown={(event) => {
+            captureSelection()
+            // This relies on DropdownMenuTrigger emitting data-slot="dropdown-menu-trigger".
+            if (eventStartedOnDropdownTrigger(event)) {
+              return
             }
-          />
-          <DropdownMenuContent
-            align="center"
-            className="min-w-44"
-            finalFocus={false}
-            onPointerDownCapture={(event) => {
-              captureSelection()
-              stopPropagation(event)
-            }}
-            onPointerUpCapture={stopPropagation}
-            onClick={stopPropagation}
+
+            preventEditorBlur(event)
+          }}
+        >
+          <DropdownMenu
+            modal={false}
+            open={blockTypeMenuOpen}
+            onOpenChange={handleBlockTypeMenuOpenChange}
           >
-            <DropdownMenuRadioGroup
-              value={snapshot.activeBlockTypeId ?? ''}
-              onValueChange={handleBlockTypeChange}
+            <DropdownMenuTrigger
+              nativeButton
+              render={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="min-w-36 justify-between gap-2"
+                  aria-label="Block type"
+                  title="Block type"
+                >
+                  <span className="flex items-center gap-2">
+                    <BlockTypeIcon className="size-4" />
+                    <span className="truncate">{blockTypeLabel}</span>
+                  </span>
+                  <ChevronDown className="size-4 text-muted-foreground" />
+                </Button>
+              }
+            />
+            <DropdownMenuContent
+              align="center"
+              className="min-w-44"
+              finalFocus={false}
+              onPointerDownCapture={(event) => {
+                captureSelection()
+                stopPropagation(event)
+              }}
+              onPointerUpCapture={stopPropagation}
+              onClick={stopPropagation}
             >
-              {snapshot.supportedBlockTypes.map((option) => {
-                const Icon = option.icon
+              <DropdownMenuRadioGroup
+                value={snapshot.activeBlockTypeId ?? ''}
+                onValueChange={handleBlockTypeChange}
+              >
+                {snapshot.supportedBlockTypes.map((option) => {
+                  const Icon = option.icon
 
-                return (
-                  <DropdownMenuRadioItem key={option.id} value={option.id} className="gap-2">
-                    <Icon className="size-4" />
-                    {option.label}
-                  </DropdownMenuRadioItem>
-                )
-              })}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+                  return (
+                    <DropdownMenuRadioItem key={option.id} value={option.id} className="gap-2">
+                      <Icon className="size-4" />
+                      {option.label}
+                    </DropdownMenuRadioItem>
+                  )
+                })}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-        <Separator orientation="vertical" className="h-6" />
+          <Separator orientation="vertical" className="h-6" />
 
-        <TextColorControls
-          activeColor={snapshot.activeTextColor}
-          disabled={snapshot.hasTextSelection && !textColorStyleExistsInSchema(editor)}
-          onColorChange={setTextColor}
-        />
-
-        <Separator orientation="vertical" className="h-6" />
-
-        {INLINE_STYLE_OPTIONS.map(({ id, icon: Icon, label }) => (
-          <ToolbarButton
-            key={id}
-            active={!!snapshot.activeStyles[id]}
-            disabled={!snapshot.canFormatInline || !styleExistsInSchema(editor, id)}
-            icon={Icon}
-            label={label}
-            onClick={() => toggleInlineStyle(id)}
+          <TextColorControls
+            activeColor={snapshot.activeTextColor}
+            disabled={snapshot.hasTextSelection && !textColorStyleExistsInSchema(editor)}
+            onColorChange={setTextColor}
           />
-        ))}
 
-        <Separator orientation="vertical" className="h-6" />
+          <Separator orientation="vertical" className="h-6" />
 
-        {TEXT_ALIGNMENT_OPTIONS.map(({ id, icon: Icon, label }) => (
-          <ToolbarButton
-            key={id}
-            active={snapshot.activeAlignment === id}
-            disabled={!snapshot.canAlign}
-            icon={Icon}
-            label={label}
-            onClick={() => setTextAlignment(id)}
-          />
-        ))}
+          {INLINE_STYLE_OPTIONS.map(({ id, icon: Icon, label }) => (
+            <ToolbarButton
+              key={id}
+              active={!!snapshot.activeStyles[id]}
+              disabled={!snapshot.canFormatInline || !styleExistsInSchema(editor, id)}
+              icon={Icon}
+              label={label}
+              onClick={() => toggleInlineStyle(id)}
+            />
+          ))}
+
+          <Separator orientation="vertical" className="h-6" />
+
+          {TEXT_ALIGNMENT_OPTIONS.map(({ id, icon: Icon, label }) => (
+            <ToolbarButton
+              key={id}
+              active={snapshot.activeAlignment === id}
+              disabled={!snapshot.canAlign}
+              icon={Icon}
+              label={label}
+              onClick={() => setTextAlignment(id)}
+            />
+          ))}
+        </div>
       </div>
     </div>
   )
