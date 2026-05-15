@@ -1,11 +1,7 @@
 import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { findUniqueSidebarItemSlug } from '../validation/orchestration'
 import { collectDescendants } from '../functions/collectDescendants'
-import {
-  assertSidebarItemLifecycleConsistency,
-  getSidebarItemStatus,
-  isTrashedSidebarItem,
-} from '../types/status'
+import { assertSidebarItemLifecycleConsistency, isTrashedSidebarItem } from '../types/status'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
@@ -26,7 +22,7 @@ async function applyToTree(
   if (item.type === SIDEBAR_ITEM_TYPES.folders) {
     const descendants = await collectDescendants(ctx, {
       campaignId: item.campaignId,
-      status: getSidebarItemStatus(item),
+      status: item.status,
       folderId: item._id,
     })
 

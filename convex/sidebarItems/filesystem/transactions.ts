@@ -8,7 +8,6 @@ import {
 import { hasMismatchedPrecondition } from './patches'
 import { summarizeFileSystemReceipt } from './receipts'
 import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
-import { getSidebarItemStatus } from '../types/status'
 import { collectDescendants } from '../functions/collectDescendants'
 import { resyncNoteLinksForNotes } from '../../links/functions/resyncNoteLinksForNotes'
 import { hardDeleteTree } from './treeWrites'
@@ -350,7 +349,7 @@ async function noteIdsAffectedByPathPatch(
   }
   const descendants = await collectDescendants(ctx, {
     campaignId: item.campaignId,
-    status: getSidebarItemStatus(item),
+    status: item.status,
     folderId: item._id,
   })
   return descendants

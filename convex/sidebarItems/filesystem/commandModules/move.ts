@@ -20,7 +20,7 @@ import { collectDescendants } from '../../functions/collectDescendants'
 import { assertSidebarOperationAllowed, evaluateRestore } from '../capabilities'
 import { toDecisionRecord } from '../conflicts'
 import type { OperationDecision } from '../conflicts'
-import { getSidebarItemStatus, isActiveSidebarItem, isTrashedSidebarItem } from '../../types/status'
+import { isActiveSidebarItem, isTrashedSidebarItem } from '../../types/status'
 import { createFileSystemWriteSession } from '../deltas'
 import { FILE_SYSTEM_EVENT_TYPE } from '../receipts'
 import { createFileSystemReadModel } from '../readModel'
@@ -263,7 +263,7 @@ async function executeParentMove(
 
   await resyncRelativeLinksForMovedItems(ctx, {
     item,
-    status: getSidebarItemStatus(item),
+    status: item.status,
   })
 }
 
@@ -271,9 +271,7 @@ async function collectMoveChildrenMap(
   ctx: CampaignMutationCtx,
   folders: Array<Pick<AccessibleSidebarItemRow, '_id' | 'status'>>,
 ) {
-  const folderStatuses = new Map(
-    folders.map((folder) => [folder._id, getSidebarItemStatus(folder)]),
-  )
+  const folderStatuses = new Map(folders.map((folder) => [folder._id, folder.status]))
 
   return await collectSidebarChildrenMap({
     rootFolderIds: folders.map((folder) => folder._id),
@@ -291,7 +289,7 @@ async function collectMoveChildrenMap(
       })
       for (const child of children) {
         if (child.type === SIDEBAR_ITEM_TYPES.folders) {
-          folderStatuses.set(child._id, getSidebarItemStatus(child))
+          folderStatuses.set(child._id, child.status)
         }
       }
       return children
@@ -494,7 +492,7 @@ function buildOperationReadModel(
     rowsById.set(item._id, {
       _id: item._id,
       parentId: item.parentId,
-      status: getSidebarItemStatus(item),
+      status: item.status,
     })
   }
   for (const children of childrenMap.values()) {
@@ -503,7 +501,7 @@ function buildOperationReadModel(
       rowsById.set(child._id, {
         _id: child._id,
         parentId: child.parentId,
-        status: getSidebarItemStatus(child),
+        status: child.status,
       })
     }
   }

@@ -12,7 +12,7 @@ import { addSidebarItemAncestorsToMap } from '../ancestors'
 import type { OperationPlannerItem } from '../selection'
 import { getActiveSidebarItemRowsByParent } from '../../functions/getSidebarItemsByParent'
 import { SIDEBAR_ITEM_TYPES } from '../../types/baseTypes'
-import { getSidebarItemStatus, isActiveSidebarItem } from '../../types/status'
+import { isActiveSidebarItem } from '../../types/status'
 import { assertSidebarOperationAllowed, evaluateCopy } from '../capabilities'
 import { checkSidebarItemRowAccess, requireSidebarItemRowAccess } from '../access'
 import type { AccessibleSidebarItemRow } from '../access'
@@ -200,7 +200,7 @@ function buildCopyReadModel(
     rowsById.set(item._id, {
       _id: item._id,
       parentId: item.parentId,
-      status: getSidebarItemStatus(item),
+      status: item.status,
     })
   }
   for (const children of childrenMap.values()) {
@@ -208,7 +208,7 @@ function buildCopyReadModel(
       rowsById.set(child._id, {
         _id: child._id,
         parentId: child.parentId,
-        status: getSidebarItemStatus(child),
+        status: child.status,
       })
     }
   }
