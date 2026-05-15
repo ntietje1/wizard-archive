@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
-import { applyCanvasBackgroundViewport } from './canvas-background-viewport'
+import { useCanvasBackgroundViewport } from './canvas-background-viewport'
 import { resolveCanvasReadOnlyPreviewViewport } from './canvas-read-only-preview-fit'
 import { createCanvasDomRuntime } from '../system/canvas-dom-runtime'
 import { createCanvasEngine } from '../system/canvas-engine'
@@ -66,7 +66,7 @@ export function useCanvasReadOnlyPreviewRuntime({
     surfaceRef,
     viewportController,
   })
-  useCanvasReadOnlyPreviewBackground({ backgroundRef, canvasEngine })
+  useCanvasBackgroundViewport({ backgroundRef, canvasEngine })
 
   useEffect(() => () => domRuntime.destroy(), [domRuntime])
   useEffect(() => () => canvasEngine.destroy(), [canvasEngine])
@@ -86,23 +86,6 @@ export function useCanvasReadOnlyPreviewRuntime({
     surfaceRef,
     viewportRef,
   }
-}
-
-function useCanvasReadOnlyPreviewBackground({
-  backgroundRef,
-  canvasEngine,
-}: {
-  backgroundRef: RefObject<HTMLElement | null>
-  canvasEngine: ReturnType<typeof createCanvasEngine>
-}) {
-  useEffect(() => {
-    const syncBackground = () => {
-      applyCanvasBackgroundViewport(backgroundRef.current, canvasEngine.getSnapshot().viewport)
-    }
-
-    syncBackground()
-    return canvasEngine.subscribeViewportChange(syncBackground)
-  }, [backgroundRef, canvasEngine])
 }
 
 function useCanvasReadOnlyPreviewFit({

@@ -316,7 +316,7 @@ function CanvasPreviewTextNode({
         invalid={invalid}
         variant={{
           containerClassName: 'min-h-[30px] min-w-[80px] rounded-lg',
-          contentClassName: 'h-full w-full overflow-hidden',
+          contentClassName: 'h-full w-full overflow-hidden pt-2',
           invalidContentLabel: 'Invalid text content',
           textClassName: 'text-sm',
         }}
