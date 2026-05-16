@@ -21,6 +21,10 @@ const renderModeState = vi.hoisted(() => ({
 const contentItemState = vi.hoisted((): { data: Record<string, unknown> } => ({
   data: {},
 }))
+const activeItemsState = vi.hoisted(() => ({
+  itemsMap: new Map<string, Record<string, unknown>>(),
+  status: 'success' as 'pending' | 'error' | 'success',
+}))
 
 vi.mock('~/features/previews/components/sidebar-item-preview-content', () => ({
   SidebarItemPreviewContent: (props: unknown) => {
@@ -119,20 +123,31 @@ vi.mock('../../shared/canvas-floating-formatting-toolbar', () => ({
 }))
 
 vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
-  useActiveSidebarItems: () => ({
-    // EmbedNode resolves nested content from the active sidebar items map during render.
-    itemsMap: new Map([
-      ['canvas-1', { name: 'Canvas Item' }],
-      ['file-1', { name: 'File Item' }],
-      ['map-1', { name: 'Map Item' }],
-      ['note-1', { name: 'Note Item' }],
-    ]),
-  }),
+  useActiveSidebarItems: () => activeItemsState,
 }))
 
 vi.mock('~/features/sidebar/hooks/useSidebarItemById', () => ({
   useSidebarItemById: () => ({
     data: contentItemState.data,
+    error: null,
+    isLoading: false,
+  }),
+}))
+
+vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
+  useCampaign: () => ({
+    isDm: true,
+  }),
+}))
+
+vi.mock('~/features/sidebar/stores/sidebar-ui-store', () => ({
+  useSidebarUIStore: (selector: (state: { viewAsPlayerId: null }) => unknown) =>
+    selector({ viewAsPlayerId: null }),
+}))
+
+vi.mock('~/features/players/hooks/useCampaignMembers', () => ({
+  useCampaignMembers: () => ({
+    data: [],
   }),
 }))
 
@@ -157,6 +172,13 @@ describe('EmbedNode', () => {
   beforeEach(() => {
     renderModeState.interactive = true
     setEditingEmbedId.mockClear()
+    activeItemsState.itemsMap = new Map([
+      ['canvas-1', { name: 'Canvas Item' }],
+      ['file-1', { name: 'File Item' }],
+      ['map-1', { name: 'Map Item' }],
+      ['note-1', { name: 'Note Item' }],
+    ])
+    activeItemsState.status = 'success'
     contentItemState.data = {
       _id: 'canvas-1',
       type: SIDEBAR_ITEM_TYPES.canvases,
@@ -345,6 +367,35 @@ describe('EmbedNode', () => {
         textColor: 'var(--t-purple)',
       }),
     )
+  })
+
+  it('passes embedded notes whole to NoteContent so it owns visibility filtering', () => {
+    contentItemState.data = {
+      _id: 'note-1',
+      type: SIDEBAR_ITEM_TYPES.notes,
+      name: 'Note Item',
+      content: [],
+      blockMeta: {},
+    }
+
+    renderEmbedNode('node-1', 'note-1')
+
+    expect(embedNoteSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        note: contentItemState.data,
+      }),
+    )
+    expect(embedNoteSpy.mock.calls[0]?.[0]).not.toHaveProperty('content')
+  })
+
+  it('renders the shared unavailable state instead of rich content when an embedded item is not shared', () => {
+    contentItemState.data = undefined as unknown as Record<string, unknown>
+
+    renderEmbedNode('node-1', 'canvas-1')
+
+    expect(screen.getByText("This item isn't shared with you.")).toBeInTheDocument()
+    expect(screen.queryByTestId('embedded-canvas-content')).not.toBeInTheDocument()
+    expect(embeddedCanvasSpy).not.toHaveBeenCalled()
   })
 })
 

@@ -1,5 +1,6 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { CanvasBackground } from './canvas-background'
+import { useCanvasBackgroundViewport } from './canvas-background-viewport'
 import { cn } from '~/features/shadcn/lib/utils'
 import type { CanvasEngine } from '../system/canvas-engine-types'
 import type { CanvasDomRuntime } from '../system/canvas-dom-runtime'
@@ -32,6 +33,19 @@ export function CanvasSceneViewport({
   surfaceOverlay,
   surfaceProps,
 }: CanvasSceneViewportProps) {
+  const ownBackgroundRef = useRef<HTMLDivElement | null>(null)
+  const setBackgroundRef = useCallback(
+    (element: HTMLDivElement | null) => {
+      ownBackgroundRef.current = element
+      if (backgroundRef) {
+        backgroundRef.current = element
+      }
+    },
+    [backgroundRef],
+  )
+
+  useCanvasBackgroundViewport({ backgroundRef: ownBackgroundRef, canvasEngine: engine })
+
   useEffect(() => {
     const unregister = domRuntime.registerViewportElement(viewportRef.current)
     const snapshot = engine.getSnapshot()
@@ -50,7 +64,7 @@ export function CanvasSceneViewport({
       data-testid={testId}
       {...surfaceProps}
     >
-      <CanvasBackground backgroundRef={backgroundRef} testId={backgroundTestId} />
+      <CanvasBackground backgroundRef={setBackgroundRef} testId={backgroundTestId} />
       <div
         ref={viewportRef}
         data-canvas-viewport="true"

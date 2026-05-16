@@ -10,6 +10,7 @@ import { CanvasSelectionResizeOverlay } from './canvas-selection-resize-overlay'
 import { CanvasSceneViewport } from './canvas-scene-viewport'
 import { CanvasNodeResizeMetadataProvider } from '../nodes/shared/canvas-node-resize-metadata-provider'
 import { useCanvasConnectionGesture } from '../runtime/interaction/canvas-connection-gesture'
+import { isCanvasInteractiveKeyboardTarget } from '../runtime/interaction/canvas-keyboard-targets'
 import { isCanvasEmptyPaneTarget } from '../runtime/interaction/canvas-pane-targets'
 import { useCanvasEngine } from '../react/use-canvas-engine'
 import { useCanvasViewportRuntime } from '../runtime/providers/canvas-runtime'
@@ -96,6 +97,10 @@ export function CanvasScene({
 
   const handlePaneKeyDown = (event: ReactKeyboardEvent) => {
     if (event.key === ' ') {
+      if (isCanvasInteractiveKeyboardTarget(event.target)) {
+        return
+      }
+
       event.preventDefault()
       return
     }

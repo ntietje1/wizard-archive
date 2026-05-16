@@ -36,6 +36,19 @@ export function canvasBoundsToScreenBounds(bounds: Bounds, viewport: CanvasViewp
   }
 }
 
+export function canvasNodeTopCenterToScreenPoint(
+  node: { position: { x: number; y: number }; width: number; height: number },
+  viewport: CanvasViewport,
+) {
+  return canvasPointToScreenPoint(
+    {
+      x: node.position.x + node.width / 2,
+      y: node.position.y,
+    },
+    viewport,
+  )
+}
+
 export function canvasPointsToScreenPoints<TPoint extends { x: number; y: number }>(
   points: ReadonlyArray<TPoint>,
   viewport: CanvasViewport,

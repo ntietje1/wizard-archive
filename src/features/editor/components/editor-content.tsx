@@ -1,4 +1,4 @@
-import { Suspense, lazy, useRef, useState } from 'react'
+import { Suspense, lazy, useRef, useTransition } from 'react'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { TrashPageViewer } from './viewer/trash/trash-page-viewer'
@@ -9,13 +9,14 @@ import { getSlug } from '~/features/sidebar/utils/sidebar-item-utils'
 import { cn } from '~/features/shadcn/lib/utils'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
 import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useSidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
+import type { SidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
 import { Button } from '~/features/shadcn/components/button'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
@@ -42,6 +43,7 @@ export function EditorContent() {
   const { isDm } = useCampaign()
   const { viewAsPlayerId } = useEditorMode()
   const { itemsMap } = useActiveSidebarItems()
+  const requestedSlug = getSlug(editorSearch)
 
   const canView =
     !!item &&
@@ -50,6 +52,14 @@ export function EditorContent() {
       viewAsPlayerId,
       allItemsMap: itemsMap,
     })
+  const availabilityState = useSidebarItemAvailabilityState({
+    lookup: { kind: 'slug', slug: requestedSlug },
+    readableItem: contentItem,
+    readableItemLoading: isLoading,
+    canView,
+    subject: 'page',
+    fallbackLabel: 'Page',
+  })
 
   if (isLoading) {
     return <EditorLoading />
@@ -62,7 +72,7 @@ export function EditorContent() {
 
   if (!canView) {
     if (hasRequestedItem) {
-      return <NotSharedContent />
+      return <UnavailableEditorContent state={availabilityState} requestedSlug={requestedSlug} />
     }
     return <EmptyEditorContent />
   }
@@ -116,68 +126,49 @@ function EmptyEditorContent() {
   )
 }
 
-function NotSharedContent() {
-  const { isDm, campaignId } = useCampaign()
-  const { editorSearch } = useCurrentItem()
-  const { viewAsPlayerId } = useEditorMode()
-  const { data: allItems } = useActiveSidebarItems()
-  const campaignMembersQuery = useCampaignMembers()
+function UnavailableEditorContent({
+  state,
+  requestedSlug,
+}: {
+  state: SidebarItemAvailabilityState
+  requestedSlug: string | null
+}) {
+  const { campaignId } = useCampaign()
   const { createItem } = useCreateFileSystemItem()
   const { getDefaultName } = useSidebarValidation()
   const { navigateToItem } = useEditorNavigation()
   const { openParentFolders } = useOpenParentFolders()
-  const [isPending, setIsPending] = useState(false)
+  const [isPending, startCreateTransition] = useTransition()
 
-  const requestedSlug = getSlug(editorSearch)
-
-  // Check if the item exists in the full sidebar list (DM sees all items)
-  const itemExists = requestedSlug && allItems.some((i) => i.slug === requestedSlug)
-
-  // Resolve the viewed player's display name
-  const viewAsPlayerName = (() => {
-    if (!viewAsPlayerId) return undefined
-    const member = campaignMembersQuery.data?.find((m) => m._id === viewAsPlayerId)
-    if (!member) return undefined
-    return (
-      member.userProfile.name ||
-      (member.userProfile.username ? `@${member.userProfile.username}` : undefined)
-    )
-  })()
-
-  const handleCreate = async () => {
+  const handleCreate = () => {
     if (!campaignId || !requestedSlug || isPending) return
 
-    setIsPending(true)
-    try {
-      const result = await createItem({
-        type: SIDEBAR_ITEM_TYPES.notes,
-        parentTarget: { kind: 'direct', parentId: null },
-        name: getDefaultName(SIDEBAR_ITEM_TYPES.notes, null),
-      })
-      openParentFolders(result.id)
-      void navigateToItem(result.slug)
-    } catch (error) {
-      handleError(error, 'Failed to create note')
-    }
-    setIsPending(false)
+    startCreateTransition(async () => {
+      try {
+        const result = await createItem({
+          type: SIDEBAR_ITEM_TYPES.notes,
+          parentTarget: { kind: 'direct', parentId: null },
+          name: getDefaultName(SIDEBAR_ITEM_TYPES.notes, null),
+        })
+        openParentFolders(result.id)
+        await navigateToItem(result.slug)
+      } catch (error) {
+        handleError(error, 'Failed to create note')
+      }
+    })
   }
 
-  const getMessage = () => {
-    if (itemExists) {
-      const target = viewAsPlayerName ?? 'you'
-      return `This page isn't shared with ${target}.`
-    }
-    if (isDm) {
-      return "This page doesn't exist."
-    }
-    return "This page doesn't exist or isn't shared with you."
+  // UnavailableEditorContent is only rendered when canView is false; an
+  // available state prop here would violate that caller invariant.
+  if (state.status === 'available') {
+    return null
   }
 
   return (
     <div className="flex-1 min-h-0 flex items-center justify-center">
       <div className="text-center text-muted-foreground">
-        <p>{getMessage()}</p>
-        {!itemExists && isDm && requestedSlug && (
+        <p>{state.message}</p>
+        {state.status === 'not_found' && requestedSlug && (
           <p className="mt-2">
             <Button variant="link" onClick={handleCreate} disabled={isPending}>
               Create it

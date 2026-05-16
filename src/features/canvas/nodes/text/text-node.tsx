@@ -18,7 +18,7 @@ export function TextNode(props: CanvasNodeComponentProps<CanvasRichTextNodeInput
         minWidth: CANVAS_NODE_MIN_SIZE,
         minHeight: CANVAS_NODE_MIN_SIZE,
         containerClassName: 'rounded-lg',
-        contentClassName: 'h-full w-full overflow-hidden',
+        contentClassName: 'h-full w-full overflow-hidden pt-2',
         textClassName: 'text-sm',
       }}
     />

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
+import { isCanvasTextEntryTarget } from '../interaction/canvas-keyboard-targets'
 import type { CanvasCommands } from './use-canvas-commands'
 import type {
   CanvasHistoryController,
@@ -14,20 +15,6 @@ interface UseCanvasKeyboardShortcutsOptions extends Pick<CanvasHistoryController
   edgesMap: Y.Map<CanvasDocumentEdge>
   selection: Pick<CanvasSelectionController, 'getSnapshot' | 'setSelection' | 'clearSelection'>
   commands: Pick<CanvasCommands, 'copy' | 'cut' | 'paste' | 'delete'>
-}
-
-function isEditableKeyboardTarget(target: EventTarget | null) {
-  if (!(target instanceof Element)) {
-    return false
-  }
-
-  return (
-    target instanceof HTMLInputElement ||
-    target instanceof HTMLTextAreaElement ||
-    target instanceof HTMLSelectElement ||
-    target.matches('[contenteditable="true"]') ||
-    target.closest('[contenteditable="true"]') !== null
-  )
 }
 
 const TOOL_SHORTCUTS = new Map([
@@ -156,7 +143,7 @@ function handleCanvasKeyDown(current: UseCanvasKeyboardShortcutsOptions, event: 
 
   const key = event.key.toLowerCase()
 
-  if (isEditableKeyboardTarget(event.target) || handleEscapeShortcut(current, key)) {
+  if (isCanvasTextEntryTarget(event.target) || handleEscapeShortcut(current, key)) {
     return
   }
 

@@ -30,6 +30,7 @@ vi.mock('../canvas-node-renderer', () => ({
   CanvasNodeRenderer: () => (
     <>
       <div data-node-id="source" data-testid="source-node">
+        <div contentEditable data-testid="source-editable-text" />
         <div
           data-canvas-node-handle="true"
           data-handle-id="right"
@@ -244,6 +245,19 @@ describe('CanvasScene connection creation', () => {
 
     expect(screen.queryByTestId('canvas-connection-preview')).toBeNull()
     expect(createEdgeFromConnection).not.toHaveBeenCalled()
+  })
+
+  it('allows spaces typed inside editable canvas text', () => {
+    renderScene()
+
+    const event = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      key: ' ',
+    })
+    screen.getByTestId('source-editable-text').dispatchEvent(event)
+
+    expect(event.defaultPrevented).toBe(false)
   })
 
   it('ignores move, cancel, and up events from other pointers', async () => {

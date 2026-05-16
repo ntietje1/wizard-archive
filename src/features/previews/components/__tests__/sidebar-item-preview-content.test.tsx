@@ -62,10 +62,22 @@ describe('SidebarItemPreviewContent', () => {
   })
 
   it('routes note previews to the read-only note preview', () => {
-    render(<SidebarItemPreviewContent item={createNoteItem()} />)
+    const note = createNoteItem()
+
+    render(<SidebarItemPreviewContent item={note} />)
 
     expect(screen.getByText('note-preview')).toBeInTheDocument()
-    expect(notePreviewSpy).toHaveBeenCalledWith({ content: [] })
+    expect(notePreviewSpy).toHaveBeenCalledWith({ note })
+  })
+
+  it('passes note previews whole to NoteContent so it owns visibility filtering', () => {
+    const note = createNoteItem({
+      content: [{ id: 'block-1', type: 'paragraph' }] as NoteWithContent['content'],
+    })
+
+    render(<SidebarItemPreviewContent item={note} />)
+
+    expect(notePreviewSpy).toHaveBeenCalledWith({ note })
   })
 
   it('routes folder previews to the simple folder preview', () => {

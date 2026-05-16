@@ -288,12 +288,10 @@ describe('CanvasFloatingFormattingToolbar', () => {
       .getByRole('menuitemradio', { name: 'Select Red text color' })
       .closest('[data-slot="dropdown-menu-content"]')
 
-    expect(readZIndex(palette, 'text color palette')).toBeGreaterThan(
-      readZIndex(toolbar.parentElement, 'toolbar wrapper'),
-    )
-    expect(readZIndex(toolbar.parentElement, 'toolbar wrapper')).toBeGreaterThan(
-      readZIndex(overlay, 'selection overlay'),
-    )
+    const toolbarWrapperZIndex = readNearestAncestorZIndex(toolbar, 'toolbar wrapper')
+
+    expect(readZIndex(palette, 'text color palette')).toBeGreaterThan(toolbarWrapperZIndex)
+    expect(toolbarWrapperZIndex).toBeGreaterThan(readZIndex(overlay, 'selection overlay'))
   })
 
   it('applies preset text color to selected rich text', () => {
@@ -706,6 +704,21 @@ function readZIndex(element: Element | null, label = 'element'): number {
   const zIndex = window.getComputedStyle(element!).zIndex
   expect(zIndex, `${label} should have a numeric z-index, received "${zIndex}"`).toMatch(/^-?\d+$/)
   return Number.parseInt(zIndex, 10)
+}
+
+function readNearestAncestorZIndex(element: Element, label: string): number {
+  let current = element.parentElement
+
+  while (current) {
+    const zIndex = window.getComputedStyle(current).zIndex
+    if (/^-?\d+$/.test(zIndex)) {
+      return Number.parseInt(zIndex, 10)
+    }
+
+    current = current.parentElement
+  }
+
+  expect.fail(`${label} should have an ancestor with a numeric z-index`)
 }
 
 const proseMirrorTestSchema = new Schema({

@@ -10,6 +10,9 @@ export const CANVAS_ARRANGE_ACTIONS = [
   { id: 'alignRight', label: 'Align Right' },
   { id: 'alignTop', label: 'Align Top' },
   { id: 'alignBottom', label: 'Align Bottom' },
+  { id: 'alignCenter', label: 'Align Center' },
+  { id: 'alignVertical', label: 'Align V' },
+  { id: 'alignHorizontal', label: 'Align H' },
   { id: 'distributeHorizontal', label: 'Distribute H' },
   { id: 'distributeVertical', label: 'Distribute V' },
   { id: 'flipHorizontal', label: 'Flip H' },
@@ -77,6 +80,18 @@ function getNodeBoundsOffset(node: ArrangeableNode): CanvasPosition {
   }
 }
 
+function alignNodes(
+  nodes: ReadonlyArray<ArrangeableNode>,
+  positions: Map<string, CanvasPosition>,
+  getPosition: (node: ArrangeableNode, nodeOffset: CanvasPosition) => CanvasPosition,
+) {
+  for (const node of nodes) {
+    setNodePosition(positions, node, getPosition(node, getNodeBoundsOffset(node)))
+  }
+
+  return positions
+}
+
 function distributeHorizontal(nodes: ReadonlyArray<ArrangeableNode>) {
   const sortedNodes = [...nodes].sort((left, right) => left.bounds.x - right.bounds.x)
   const positions = positionMapFromNodes(nodes)
@@ -128,51 +143,51 @@ export function createCanvasArrangePlan(
   const aggregate = getAggregateBounds(nodes)
   const right = aggregate.x + aggregate.width
   const bottom = aggregate.y + aggregate.height
+  const centerX = aggregate.x + aggregate.width / 2
+  const centerY = aggregate.y + aggregate.height / 2
   const positions = positionMapFromNodes(nodes)
 
   switch (action) {
     case 'alignLeft':
-      for (const node of nodes) {
-        const nodeOffset = getNodeBoundsOffset(node)
-        setNodePosition(positions, node, {
-          x: aggregate.x + nodeOffset.x,
-          y: node.node.position.y,
-        })
-      }
-      return positions
+      return alignNodes(nodes, positions, (node, nodeOffset) => ({
+        x: aggregate.x + nodeOffset.x,
+        y: node.node.position.y,
+      }))
     case 'alignRight':
-      for (const node of nodes) {
-        const nodeOffset = getNodeBoundsOffset(node)
-        setNodePosition(positions, node, {
-          x: right - node.bounds.width + nodeOffset.x,
-          y: node.node.position.y,
-        })
-      }
-      return positions
+      return alignNodes(nodes, positions, (node, nodeOffset) => ({
+        x: right - node.bounds.width + nodeOffset.x,
+        y: node.node.position.y,
+      }))
     case 'alignTop':
-      for (const node of nodes) {
-        const nodeOffset = getNodeBoundsOffset(node)
-        setNodePosition(positions, node, {
-          x: node.node.position.x,
-          y: aggregate.y + nodeOffset.y,
-        })
-      }
-      return positions
+      return alignNodes(nodes, positions, (node, nodeOffset) => ({
+        x: node.node.position.x,
+        y: aggregate.y + nodeOffset.y,
+      }))
     case 'alignBottom':
-      for (const node of nodes) {
-        const nodeOffset = getNodeBoundsOffset(node)
-        setNodePosition(positions, node, {
-          x: node.node.position.x,
-          y: bottom - node.bounds.height + nodeOffset.y,
-        })
-      }
-      return positions
+      return alignNodes(nodes, positions, (node, nodeOffset) => ({
+        x: node.node.position.x,
+        y: bottom - node.bounds.height + nodeOffset.y,
+      }))
+    case 'alignCenter':
+      return alignNodes(nodes, positions, (node, nodeOffset) => ({
+        x: centerX - node.bounds.width / 2 + nodeOffset.x,
+        y: centerY - node.bounds.height / 2 + nodeOffset.y,
+      }))
+    case 'alignVertical':
+      return alignNodes(nodes, positions, (node, nodeOffset) => ({
+        x: centerX - node.bounds.width / 2 + nodeOffset.x,
+        y: node.node.position.y,
+      }))
+    case 'alignHorizontal':
+      return alignNodes(nodes, positions, (node, nodeOffset) => ({
+        x: node.node.position.x,
+        y: centerY - node.bounds.height / 2 + nodeOffset.y,
+      }))
     case 'distributeHorizontal':
       return distributeHorizontal(nodes)
     case 'distributeVertical':
       return distributeVertical(nodes)
     case 'flipHorizontal': {
-      const centerX = aggregate.x + aggregate.width / 2
       for (const node of nodes) {
         const nodeCenterX = node.bounds.x + node.bounds.width / 2
         setNodePosition(positions, node, {
@@ -183,7 +198,6 @@ export function createCanvasArrangePlan(
       return positions
     }
     case 'flipVertical': {
-      const centerY = aggregate.y + aggregate.height / 2
       for (const node of nodes) {
         const nodeCenterY = node.bounds.y + node.bounds.height / 2
         setNodePosition(positions, node, {

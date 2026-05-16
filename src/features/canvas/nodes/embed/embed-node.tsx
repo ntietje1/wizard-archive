@@ -16,7 +16,7 @@ import { registerCanvasRichTextFormattingSession } from '../shared/canvas-rich-t
 import { useCanvasEditableNodeSession } from '../shared/use-canvas-editable-node-session'
 import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
 import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
-import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
+import { useSidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
 import { cn } from '~/features/shadcn/lib/utils'
 import { CanvasNodeConnectionHandles } from '../shared/canvas-node-connection-handles'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
@@ -34,6 +34,7 @@ import { useIsInteractiveCanvasRenderMode } from '../../runtime/providers/use-ca
 import { useCanvasViewportZoom } from '../../react/use-canvas-engine'
 import type { CanvasNodeComponentProps } from '../canvas-node-types'
 import type { CanvasDocumentWriter } from '../../tools/canvas-tool-types'
+import { EmbeddedSidebarItemUnavailable } from './embedded-sidebar-item-unavailable'
 
 const EMBED_FLOATING_LABEL_GAP_PX = 6
 const EMBED_FLOATING_LABEL_LINE_HEIGHT_PX = 16
@@ -50,12 +51,20 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
   const normalizedData = normalizeEmbedNodeData(data)
   const interactiveRenderMode = useIsInteractiveCanvasRenderMode()
   const sidebarItemId = normalizedData.sidebarItemId
-  const { itemsMap } = useActiveSidebarItems()
-  const item = sidebarItemId ? itemsMap.get(sidebarItemId) : undefined
+  const contentQuery = useSidebarItemById(sidebarItemId)
+  const itemState = useSidebarItemAvailabilityState({
+    lookup: { kind: 'id', id: sidebarItemId },
+    readableItem: contentQuery.data,
+    readableItemLoading: contentQuery.isLoading,
+    readableItemError: contentQuery.error,
+    canView: contentQuery.data !== undefined,
+    subject: 'item',
+    fallbackLabel: 'Embedded item',
+  })
+  const contentItem = itemState.status === 'available' ? itemState.item : undefined
   const [editor, setEditor] = useState<CustomBlockNoteEditor | null>(null)
   const { documentWriter } = useCanvasDocumentRuntime()
   const { patchNodeData } = documentWriter
-  const { data: contentItem } = useSidebarItemById(sidebarItemId)
   const { domRuntime } = useCanvasViewportRuntime()
   const { canEdit, editSession } = useCanvasInteractionRuntime()
   const surfaceRef = useRef<HTMLDivElement | null>(null)
@@ -71,8 +80,8 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
   const defaultTextColor = getCanvasNodeDefaultTextColor(normalizedData)
 
   const zoom = useCanvasViewportZoom()
-  const label = item?.name ?? 'Missing item'
-  const isMissing = !item
+  const label = itemState.label
+  const isUnavailable = itemState.status !== 'available' && itemState.status !== 'loading'
   const showFloatingLabel = !showsFormattingToolbar
 
   useEffect(() => domRuntime.registerNodeSurfaceElement(id, surfaceRef.current), [domRuntime, id])
@@ -113,7 +122,7 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
           />
           <CanvasNodeConnectionHandles />
           {showFloatingLabel && (
-            <EmbedFloatingLabel label={label} missing={isMissing} zoom={zoom} />
+            <EmbedFloatingLabel label={label} missing={isUnavailable} zoom={zoom} />
           )}
         </>
       }
@@ -138,11 +147,11 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
           editableSession.handleDoubleClick(event)
         }}
       >
-        {!isMissing && (
-          <div className="h-full w-full min-h-0 min-w-0">
+        <div className="h-full w-full min-h-0 min-w-0">
+          {itemState.status === 'available' ? (
             <EmbedRichContent
               nodeId={id}
-              contentItem={contentItem}
+              contentItem={itemState.item}
               isEditing={isEditing}
               isExclusivelySelected={editableSession.isExclusivelySelected}
               interactiveRenderMode={interactiveRenderMode}
@@ -151,8 +160,10 @@ export function EmbedNode({ id, data, dragging }: CanvasNodeComponentProps<Embed
               pendingActivationRef={editableSession.pendingActivationRef}
               textColor={normalizedData.textColor}
             />
-          </div>
-        )}
+          ) : (
+            <EmbeddedSidebarItemUnavailable state={itemState} />
+          )}
+        </div>
       </div>
     </ResizableNodeWrapper>
   )
@@ -206,7 +217,7 @@ function EmbedRichContent({
   textColor,
 }: {
   nodeId: string
-  contentItem: AnySidebarItemWithContent | undefined
+  contentItem: AnySidebarItemWithContent
   isEditing: boolean
   isExclusivelySelected: boolean
   interactiveRenderMode: boolean
@@ -215,19 +226,10 @@ function EmbedRichContent({
   pendingActivationRef: PendingRichEmbedActivationRef
   textColor: string | null
 }): React.ReactElement | null {
-  if (!contentItem) {
-    return (
-      <div className="h-full flex items-center justify-center opacity-50">
-        <div className="h-3 w-3 rounded-full border-2 border-muted-foreground border-t-transparent animate-spin" />
-      </div>
-    )
-  }
-
   if (contentItem.type === SIDEBAR_ITEM_TYPES.notes) {
     return (
       <EmbedNoteContent
-        noteId={contentItem._id}
-        content={contentItem.content}
+        note={contentItem}
         editable={isEditing}
         isExclusivelySelected={isExclusivelySelected}
         onActivated={onActivated}

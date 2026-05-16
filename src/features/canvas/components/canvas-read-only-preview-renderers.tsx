@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { CanvasNodeContentRenderer } from './canvas-node-content-renderer'
 import { areArraysEqual } from './canvas-renderer-utils'
 import { CanvasPathEdgeVisual } from '../edges/shared/canvas-path-edge'
+import { EmbeddedSidebarItemUnavailable } from '../nodes/embed/embedded-sidebar-item-unavailable'
 import {
   areCanvasPreviewEdgeRendersEqual,
   areCanvasPreviewNodeShellsEqual,
@@ -22,6 +23,7 @@ import { readResizeObserverBorderBoxSize } from '../system/canvas-element-size'
 import { resolveCanvasScreenMinimumStrokeWidth } from '../utils/canvas-screen-stroke-width'
 import { SidebarItemPreviewContent } from '~/features/previews/components/sidebar-item-preview-content'
 import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
+import { useSidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
 import { cn } from '~/features/shadcn/lib/utils'
 import type { CanvasNodeRendererMap } from './canvas-node-content-renderer'
 import type { CanvasNodeComponentProps } from '../nodes/canvas-node-types'
@@ -259,7 +261,16 @@ function CanvasPreviewNodeFrame({
 
 function CanvasPreviewEmbedNode({ data, dragging }: CanvasNodeComponentProps<EmbedNodeData>) {
   const normalizedData = normalizeEmbedNodeData(data)
-  const { data: contentItem, isLoading, error } = useSidebarItemById(normalizedData.sidebarItemId)
+  const contentQuery = useSidebarItemById(normalizedData.sidebarItemId)
+  const itemState = useSidebarItemAvailabilityState({
+    lookup: { kind: 'id', id: normalizedData.sidebarItemId },
+    readableItem: contentQuery.data,
+    readableItemLoading: contentQuery.isLoading,
+    readableItemError: contentQuery.error,
+    canView: contentQuery.data !== undefined,
+    subject: 'item',
+    fallbackLabel: 'Embedded item',
+  })
 
   return (
     <CanvasPreviewNodeFrame nodeType="embed" dragging={!!dragging}>
@@ -272,30 +283,11 @@ function CanvasPreviewEmbedNode({ data, dragging }: CanvasNodeComponentProps<Emb
           minWidth: DEFAULT_EMBED_MIN_WIDTH,
         }}
       >
-        {contentItem ? <SidebarItemPreviewContent item={contentItem} /> : null}
-        {!contentItem && isLoading ? (
-          <div
-            className="flex h-full items-center justify-center opacity-50"
-            role="status"
-            aria-live="polite"
-          >
-            <div
-              className="h-3 w-3 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent"
-              aria-hidden={true}
-            />
-            <span className="sr-only">Loading embedded item</span>
-          </div>
-        ) : null}
-        {!contentItem && error ? (
-          <div className="flex h-full items-center justify-center px-4 text-center text-xs text-muted-foreground">
-            Failed to load embedded item
-          </div>
-        ) : null}
-        {!contentItem && !isLoading && !error ? (
-          <div className="flex h-full items-center justify-center px-4 text-center text-xs text-muted-foreground">
-            Embedded item unavailable
-          </div>
-        ) : null}
+        {itemState.status === 'available' ? (
+          <SidebarItemPreviewContent item={itemState.item} />
+        ) : (
+          <EmbeddedSidebarItemUnavailable state={itemState} />
+        )}
       </div>
     </CanvasPreviewNodeFrame>
   )
@@ -316,7 +308,7 @@ function CanvasPreviewTextNode({
         invalid={invalid}
         variant={{
           containerClassName: 'min-h-[30px] min-w-[80px] rounded-lg',
-          contentClassName: 'h-full w-full overflow-hidden',
+          contentClassName: 'h-full w-full overflow-hidden pt-2',
           invalidContentLabel: 'Invalid text content',
           textClassName: 'text-sm',
         }}

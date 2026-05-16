@@ -70,6 +70,9 @@ function getCanvasArrangeGroup(action: CanvasArrangeAction): string {
     case 'alignRight':
     case 'alignTop':
     case 'alignBottom':
+    case 'alignCenter':
+    case 'alignVertical':
+    case 'alignHorizontal':
       return 'arrange-align'
     case 'distributeHorizontal':
     case 'distributeVertical':

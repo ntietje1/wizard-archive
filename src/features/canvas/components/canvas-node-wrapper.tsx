@@ -1,6 +1,7 @@
 import { memo, useEffect, useRef } from 'react'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useCanvasEngine, useCanvasEngineSelector } from '../react/use-canvas-engine'
+import { isCanvasInteractiveKeyboardTarget } from '../runtime/interaction/canvas-keyboard-targets'
 import { useCanvasViewportRuntime } from '../runtime/providers/canvas-runtime'
 import type { CanvasInternalNode } from '../system/canvas-engine-types'
 import type { CanvasDocumentNode } from 'convex/canvases/validation'
@@ -77,7 +78,7 @@ export const CanvasNodeWrapper = memo(function CanvasNodeWrapper({
   const getCurrentNode = () => canvasEngine.getSnapshot().nodeLookup.get(nodeId)?.node ?? null
   const handleNodeKeyDown = (event: ReactKeyboardEvent) => {
     if (event.key === 'Enter' || event.key === ' ') {
-      if (event.target !== event.currentTarget && isInteractiveKeyboardTarget(event.target)) {
+      if (event.target !== event.currentTarget && isCanvasInteractiveKeyboardTarget(event.target)) {
         return
       }
 
@@ -142,25 +143,6 @@ function selectCanvasNodeShellSnapshot(
     zIndex: internalNode.zIndex,
     visible: internalNode.visible,
   }
-}
-
-function isInteractiveKeyboardTarget(target: EventTarget | null) {
-  return (
-    target instanceof Element &&
-    Boolean(
-      target.closest(
-        [
-          'input',
-          'textarea',
-          'select',
-          'button',
-          'a[href]',
-          '[contenteditable="true"]',
-          '.canvas-rich-text-editor',
-        ].join(','),
-      ),
-    )
-  )
 }
 
 function areCanvasNodeShellSnapshotsEqual(
