@@ -3,7 +3,10 @@ import type { PointerEvent } from 'react'
 import type { Id } from 'convex/_generated/dataModel'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import type { ActiveItemSurface, ItemSurface } from '~/features/sidebar/stores/sidebar-ui-store'
-import { isItemSurfaceInteractionTarget } from '~/features/sidebar/utils/item-surface-hotkeys'
+import {
+  ITEM_SURFACE_HOTKEY_TARGET_ATTRIBUTE,
+  isItemSurfaceInteractionTarget,
+} from '~/features/sidebar/utils/item-surface-hotkeys'
 
 function sameVisibleIds(a: Array<Id<'sidebarItems'>>, b: Array<Id<'sidebarItems'>>): boolean {
   return a.length === b.length && a.every((id, index) => id === b[index])
@@ -70,5 +73,9 @@ export function useItemSurfaceRegistration({
     }
   }
 
-  return { activeSurface, activateSurface, handleSurfacePointerDown }
+  const itemSurfaceHotkeyProps = {
+    [ITEM_SURFACE_HOTKEY_TARGET_ATTRIBUTE]: 'true',
+  }
+
+  return { activeSurface, activateSurface, handleSurfacePointerDown, itemSurfaceHotkeyProps }
 }

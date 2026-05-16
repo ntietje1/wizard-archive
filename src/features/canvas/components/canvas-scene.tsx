@@ -17,7 +17,11 @@ import { useCanvasViewportRuntime } from '../runtime/providers/canvas-runtime'
 import type { CanvasConnection } from '../types/canvas-domain-types'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
-import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react'
+import type {
+  KeyboardEvent as ReactKeyboardEvent,
+  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent,
+} from 'react'
 
 type CanvasSceneHandlers = {
   createEdgeFromConnection: (connection: CanvasConnection) => void
@@ -108,6 +112,17 @@ export function CanvasScene({
     connectionGesture.onEscapeKeyDown(event)
   }
 
+  const handlePointerDownCapture = (event: ReactPointerEvent) => {
+    if (!isCanvasInteractiveKeyboardTarget(event.target)) {
+      const target = event.currentTarget
+      if (target instanceof HTMLElement) {
+        target.focus({ preventScroll: true })
+      }
+    }
+
+    connectionGesture.onPointerDownCapture(event)
+  }
+
   return (
     <CanvasNodeResizeMetadataProvider>
       <CanvasSceneViewport
@@ -137,7 +152,7 @@ export function CanvasScene({
           onMouseMove: sceneHandlers.onMouseMove,
           onMouseLeave: sceneHandlers.onMouseLeave,
           onKeyDown: handlePaneKeyDown,
-          onPointerDownCapture: connectionGesture.onPointerDownCapture,
+          onPointerDownCapture: handlePointerDownCapture,
         }}
       >
         <CanvasEdgeRenderer

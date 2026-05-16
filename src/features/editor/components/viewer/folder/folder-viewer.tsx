@@ -24,11 +24,12 @@ export function FolderViewer({ item: folder }: EditorViewerProps<FolderWithConte
     ? (trashedParentItemsMap.get(folder._id) ?? [])
     : (parentItemsMap.get(folder._id) ?? [])
   const visibleItemIds = children.map((child) => child._id)
-  const { activateSurface, handleSurfacePointerDown } = useItemSurfaceRegistration({
-    surface: 'folder-view',
-    parentId: folder._id,
-    visibleItemIds,
-  })
+  const { activateSurface, handleSurfacePointerDown, itemSurfaceHotkeyProps } =
+    useItemSurfaceRegistration({
+      surface: 'folder-view',
+      parentId: folder._id,
+      visibleItemIds,
+    })
 
   const hasFullAccess =
     !isDeleted && hasAtLeastPermissionLevel(folder.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
@@ -55,6 +56,7 @@ export function FolderViewer({ item: folder }: EditorViewerProps<FolderWithConte
           className="group/sidebar-surface flex flex-col h-full w-full min-h-0"
           onPointerDownCapture={handleSurfacePointerDown}
           onFocusCapture={activateSurface}
+          {...itemSurfaceHotkeyProps}
         >
           {hasFullAccess ? (
             <CreateNewDashboard parentId={folder._id} folderPath={folderPath} />
@@ -78,6 +80,7 @@ export function FolderViewer({ item: folder }: EditorViewerProps<FolderWithConte
         folder={folder}
         className="group/sidebar-surface flex flex-col h-full w-full min-h-0"
         onFocusCapture={activateSurface}
+        {...itemSurfaceHotkeyProps}
       >
         <ScrollArea className="flex-1 min-h-0" onPointerDownCapture={handleSurfacePointerDown}>
           <div className="w-full min-w-0">

@@ -1,15 +1,12 @@
 import { useRef } from 'react'
-import type { FocusEventHandler, PointerEventHandler, ReactNode } from 'react'
+import type { HTMLAttributes, ReactNode } from 'react'
 import type { Folder } from 'convex/folders/types'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useSidebarItemDropTarget } from '~/features/dnd/hooks/useSidebarItemDropTarget'
 
-interface DroppableFolderZoneProps {
+interface DroppableFolderZoneProps extends HTMLAttributes<HTMLDivElement> {
   folder: Folder
   children: ReactNode
-  className?: string
-  onPointerDownCapture?: PointerEventHandler<HTMLDivElement>
-  onFocusCapture?: FocusEventHandler<HTMLDivElement>
 }
 
 export function DroppableFolderZone({
@@ -18,6 +15,7 @@ export function DroppableFolderZone({
   className,
   onPointerDownCapture,
   onFocusCapture,
+  ...props
 }: DroppableFolderZoneProps) {
   const ref = useRef<HTMLDivElement>(null)
   const { isDropTarget, isTrashAction, isFileDropTarget } = useSidebarItemDropTarget({
@@ -44,6 +42,7 @@ export function DroppableFolderZone({
         isNotTrashed && isDropTarget && activeHighlight,
         isNotTrashed && isFileDropTarget && 'ring-2 ring-inset ring-ring/40 bg-ring/5',
       )}
+      {...props}
     >
       {children}
     </div>

@@ -1,6 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { handleError } from '~/shared/utils/logger'
-import { isEditableHotkeyTarget } from '~/features/sidebar/utils/item-surface-hotkeys'
+import {
+  isEditableHotkeyTarget,
+  isItemSurfaceHotkeyTarget,
+} from '~/features/sidebar/utils/item-surface-hotkeys'
 
 type UndoRedoHandlers = {
   canUndo: boolean
@@ -35,6 +38,7 @@ export function useFileSystemUndoHotkeys({ canUndo, canRedo, undo, redo }: UndoR
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (isOperationInFlightRef.current || isEditableHotkeyTarget(event.target)) return
+      if (!isItemSurfaceHotkeyTarget(event.target)) return
 
       if (isFileSystemRedoShortcut(event)) {
         if (!handlersRef.current.canRedo) return

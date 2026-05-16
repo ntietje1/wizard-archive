@@ -220,6 +220,72 @@ describe('useCanvasKeyboardShortcuts', () => {
     expect(copySnapshotSpy).not.toHaveBeenCalled()
     expect(preventDefaultSpy).not.toHaveBeenCalled()
   })
+
+  it('ignores canvas history shortcuts when the event target is outside the canvas surface', () => {
+    const surface = document.createElement('div')
+    const outside = document.createElement('button')
+    document.body.append(surface, outside)
+    const history = {
+      undo: vi.fn(),
+      redo: vi.fn(),
+    }
+
+    renderHook(() =>
+      useCanvasKeyboardShortcuts({
+        ...history,
+        canEdit: true,
+        surfaceRef: { current: surface },
+        nodesMap: new Map() as never,
+        edgesMap: new Map() as never,
+        selection: {
+          getSnapshot: getSelectionSnapshotSpy,
+          setSelection: vi.fn(),
+          clearSelection: vi.fn(),
+        },
+        commands: createCommands(),
+      }),
+    )
+
+    dispatchKeyboardShortcut(createKeyboardShortcutEvent('z', { ctrlKey: true, target: outside }))
+
+    expect(history.undo).not.toHaveBeenCalled()
+
+    surface.remove()
+    outside.remove()
+  })
+
+  it('runs canvas history shortcuts when the canvas surface owns focus', () => {
+    const surface = document.createElement('div')
+    surface.tabIndex = -1
+    document.body.append(surface)
+    surface.focus()
+    const history = {
+      undo: vi.fn(),
+      redo: vi.fn(),
+    }
+
+    renderHook(() =>
+      useCanvasKeyboardShortcuts({
+        ...history,
+        canEdit: true,
+        surfaceRef: { current: surface },
+        nodesMap: new Map() as never,
+        edgesMap: new Map() as never,
+        selection: {
+          getSnapshot: getSelectionSnapshotSpy,
+          setSelection: vi.fn(),
+          clearSelection: vi.fn(),
+        },
+        commands: createCommands(),
+      }),
+    )
+
+    dispatchKeyboardShortcut(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true }))
+
+    expect(history.undo).toHaveBeenCalledTimes(1)
+
+    surface.remove()
+  })
 })
 
 function dispatchKeyboardShortcut(event: KeyboardEvent) {

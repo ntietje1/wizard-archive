@@ -1,16 +1,21 @@
 import { useEffect, useRef } from 'react'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
-import { isCanvasTextEntryTarget } from '../interaction/canvas-keyboard-targets'
+import {
+  isCanvasHotkeyTarget,
+  isCanvasTextEntryTarget,
+} from '../interaction/canvas-keyboard-targets'
 import type { CanvasCommands } from './use-canvas-commands'
 import type {
   CanvasHistoryController,
   CanvasSelectionController,
 } from '../../tools/canvas-tool-types'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
+import type { RefObject } from 'react'
 import type * as Y from 'yjs'
 
 interface UseCanvasKeyboardShortcutsOptions extends Pick<CanvasHistoryController, 'undo' | 'redo'> {
   canEdit: boolean
+  surfaceRef?: RefObject<HTMLElement | null>
   nodesMap: Y.Map<CanvasDocumentNode>
   edgesMap: Y.Map<CanvasDocumentEdge>
   selection: Pick<CanvasSelectionController, 'getSnapshot' | 'setSelection' | 'clearSelection'>
@@ -138,6 +143,10 @@ function handleClipboardShortcut(
 
 function handleCanvasKeyDown(current: UseCanvasKeyboardShortcutsOptions, event: KeyboardEvent) {
   if (event.repeat) {
+    return
+  }
+
+  if (!isCanvasHotkeyTarget(current.surfaceRef?.current ?? null, event.target)) {
     return
   }
 

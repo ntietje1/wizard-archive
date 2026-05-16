@@ -7,6 +7,7 @@ import { useOpenParentFolders } from '~/features/sidebar/hooks/useOpenParentFold
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import {
   isEditableHotkeyTarget,
+  isItemSurfaceHotkeyTarget,
   isModifierShortcut,
 } from '~/features/sidebar/utils/item-surface-hotkeys'
 import { getKeyboardOpenItem } from '~/features/sidebar/utils/item-surface-keyboard'
@@ -221,6 +222,7 @@ export function useItemSurfaceHotkeys(filesystem: HotkeyFileSystemActions) {
       const store = useSidebarUIStore.getState()
       const { activeItemSurface, focusedItemId, selectedItemIds } = store
       if (isEditableHotkeyTarget(event.target)) return
+      const isTargetingItemSurface = isItemSurfaceHotkeyTarget(event.target)
 
       if (event.key === 'Escape' && !activeItemSurface) {
         event.preventDefault()
@@ -229,6 +231,7 @@ export function useItemSurfaceHotkeys(filesystem: HotkeyFileSystemActions) {
       }
 
       if (!activeItemSurface) return
+      if (!isTargetingItemSurface) return
 
       const currentContext = contextRef.current
       const surfaceSelectedItemIds = selectionBelongsToSurface(

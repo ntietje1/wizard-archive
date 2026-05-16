@@ -1,4 +1,17 @@
+export const ITEM_SURFACE_HOTKEY_TARGET_ATTRIBUTE = 'data-item-surface-hotkey-target'
+const ITEM_SURFACE_HOTKEY_TARGET_SELECTOR = `[${ITEM_SURFACE_HOTKEY_TARGET_ATTRIBUTE}="true"]`
+
 export function isEditableHotkeyTarget(target: EventTarget | null): boolean {
+  const candidates = getHotkeyTargetCandidates(target)
+
+  for (const candidate of candidates) {
+    if (isEditableElementOrDescendant(candidate)) return true
+  }
+
+  return false
+}
+
+function getHotkeyTargetCandidates(target: EventTarget | null): Array<Element> {
   const candidates: Array<Element> = []
   if (typeof Element !== 'undefined' && target instanceof Element) candidates.push(target)
   if (globalThis.document?.activeElement) candidates.push(globalThis.document.activeElement)
@@ -9,11 +22,7 @@ export function isEditableHotkeyTarget(target: EventTarget | null): boolean {
       : selectionNode?.parentElement
   if (selectionElement) candidates.push(selectionElement)
 
-  for (const candidate of candidates) {
-    if (isEditableElementOrDescendant(candidate)) return true
-  }
-
-  return false
+  return candidates
 }
 
 function isEditableElementOrDescendant(target: Element): boolean {
@@ -52,5 +61,11 @@ export function isItemSurfaceInteractionTarget(target: EventTarget | null): bool
     target.closest(
       'a[href],button:not([disabled]),[data-item-selection-target="true"],[data-slot="context-menu-content"]',
     ) !== null
+  )
+}
+
+export function isItemSurfaceHotkeyTarget(target: EventTarget | null): boolean {
+  return getHotkeyTargetCandidates(target).some(
+    (candidate) => candidate.closest(ITEM_SURFACE_HOTKEY_TARGET_SELECTOR) !== null,
   )
 }

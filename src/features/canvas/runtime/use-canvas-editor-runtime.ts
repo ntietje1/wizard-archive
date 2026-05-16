@@ -62,6 +62,7 @@ export function useCanvasEditorRuntime({
 
   const document = useCanvasDocumentRuntime({
     canEdit,
+    canvasSurfaceRef: core.canvasSurfaceRef,
     canvasEngine: core.canvasEngine,
     edgesMap,
     nodesMap,
