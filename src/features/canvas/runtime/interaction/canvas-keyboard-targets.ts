@@ -12,10 +12,10 @@ const INTERACTIVE_KEYBOARD_TARGET_SELECTOR = [TEXT_ENTRY_TARGET_SELECTOR, 'butto
   ',',
 )
 
-export function isCanvasTextEntryTarget(target: EventTarget | null) {
-  return target instanceof Element && Boolean(target.closest(TEXT_ENTRY_TARGET_SELECTOR))
+export function isCanvasTextEntryTarget(target: EventTarget | null): target is Element {
+  return target instanceof Element && target.closest(TEXT_ENTRY_TARGET_SELECTOR) !== null
 }
 
-export function isCanvasInteractiveKeyboardTarget(target: EventTarget | null) {
-  return target instanceof Element && Boolean(target.closest(INTERACTIVE_KEYBOARD_TARGET_SELECTOR))
+export function isCanvasInteractiveKeyboardTarget(target: EventTarget | null): target is Element {
+  return target instanceof Element && target.closest(INTERACTIVE_KEYBOARD_TARGET_SELECTOR) !== null
 }

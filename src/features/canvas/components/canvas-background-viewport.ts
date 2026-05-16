@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useLayoutEffect } from 'react'
 import type { CanvasEngine } from '../system/canvas-engine-types'
 import type { CanvasViewport } from '../types/canvas-domain-types'
 import type { RefObject } from 'react'
@@ -28,7 +28,7 @@ export function useCanvasBackgroundViewport({
   backgroundRef: RefObject<HTMLElement | null>
   canvasEngine: CanvasEngine
 }) {
-  useEffect(() => {
+  useLayoutEffect(() => {
     const syncBackground = () => {
       applyCanvasBackgroundViewport(backgroundRef.current, canvasEngine.getSnapshot().viewport)
     }
