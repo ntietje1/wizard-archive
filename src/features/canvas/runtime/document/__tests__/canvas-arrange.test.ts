@@ -120,6 +120,21 @@ describe('createCanvasArrangePlan', () => {
       { id: 'b', x: 10, y: 50 },
       { id: 'c', x: 80, y: 40 },
     ])
+    expect(planPositions(createCanvasArrangePlan(nodesMap, selection, 'alignCenter'))).toEqual([
+      { id: 'a', x: 40, y: 35 },
+      { id: 'b', x: 30, y: 30 },
+      { id: 'c', x: 45, y: 25 },
+    ])
+    expect(planPositions(createCanvasArrangePlan(nodesMap, selection, 'alignVertical'))).toEqual([
+      { id: 'a', x: 40, y: 10 },
+      { id: 'b', x: 30, y: 50 },
+      { id: 'c', x: 45, y: 25 },
+    ])
+    expect(planPositions(createCanvasArrangePlan(nodesMap, selection, 'alignHorizontal'))).toEqual([
+      { id: 'a', x: 30, y: 35 },
+      { id: 'b', x: 10, y: 30 },
+      { id: 'c', x: 80, y: 25 },
+    ])
   })
 
   it('preserves node position offsets when aligning bounds to a shared edge', () => {
@@ -149,6 +164,21 @@ describe('createCanvasArrangePlan', () => {
       { id: 'a', x: 5, y: 103 },
       { id: 'b', x: 47, y: 94 },
       { id: 'c', x: 110, y: 75 },
+    ])
+    expect(planPositions(createCanvasArrangePlan(nodesMap, selection, 'alignCenter'))).toEqual([
+      { id: 'a', x: 65, y: 53 },
+      { id: 'b', x: 62, y: 49 },
+      { id: 'c', x: 60, y: 35 },
+    ])
+    expect(planPositions(createCanvasArrangePlan(nodesMap, selection, 'alignVertical'))).toEqual([
+      { id: 'a', x: 65, y: 23 },
+      { id: 'b', x: 62, y: 4 },
+      { id: 'c', x: 60, y: 75 },
+    ])
+    expect(planPositions(createCanvasArrangePlan(nodesMap, selection, 'alignHorizontal'))).toEqual([
+      { id: 'a', x: 5, y: 53 },
+      { id: 'b', x: 47, y: 49 },
+      { id: 'c', x: 110, y: 35 },
     ])
   })
 

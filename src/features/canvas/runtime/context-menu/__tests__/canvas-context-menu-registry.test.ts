@@ -5,11 +5,11 @@ import {
   parseCanvasReorderDirection,
 } from '../canvas-context-menu-registry'
 import type {
-  CanvasContextMenuCommands,
   CanvasContextMenuContext,
   CanvasContextMenuServices,
 } from '../canvas-context-menu-types'
 import { testId } from '~/test/helpers/test-id'
+import { createCommands } from './canvas-context-menu-test-utils'
 
 function createServices(
   overrides: Partial<CanvasContextMenuServices> = {},
@@ -21,49 +21,6 @@ function createServices(
     selectAllCanvasItems: vi.fn(),
     createAndEmbedSidebarItem: vi.fn(() => Promise.resolve(null)),
     createTextNode: vi.fn(() => null),
-    ...overrides,
-  }
-}
-
-function createCommands(
-  overrides: Partial<CanvasContextMenuCommands> = {},
-): CanvasContextMenuCommands {
-  return {
-    copy: {
-      id: 'copy',
-      canRun: vi.fn(() => true),
-      run: vi.fn(() => true),
-    },
-    cut: {
-      id: 'cut',
-      canRun: vi.fn(() => true),
-      run: vi.fn(() => true),
-    },
-    paste: {
-      id: 'paste',
-      canRun: vi.fn(() => false),
-      run: vi.fn(() => null),
-    },
-    duplicate: {
-      id: 'duplicate',
-      canRun: vi.fn(() => true),
-      run: vi.fn(() => null),
-    },
-    delete: {
-      id: 'delete',
-      canRun: vi.fn(() => true),
-      run: vi.fn(() => true),
-    },
-    reorder: {
-      id: 'reorder',
-      canRun: vi.fn(() => true),
-      run: vi.fn(() => true),
-    },
-    arrange: {
-      id: 'arrange',
-      canRun: vi.fn(() => true),
-      run: vi.fn(() => true),
-    },
     ...overrides,
   }
 }
@@ -187,12 +144,18 @@ describe('buildCanvasContextMenu', () => {
       'canvas-selection-arrange-alignRight',
       'canvas-selection-arrange-alignTop',
       'canvas-selection-arrange-alignBottom',
+      'canvas-selection-arrange-alignCenter',
+      'canvas-selection-arrange-alignVertical',
+      'canvas-selection-arrange-alignHorizontal',
       'canvas-selection-arrange-distributeHorizontal',
       'canvas-selection-arrange-distributeVertical',
       'canvas-selection-arrange-flipHorizontal',
       'canvas-selection-arrange-flipVertical',
     ])
     expect(arrangeItem?.children?.map((item) => item.group)).toEqual([
+      'arrange-align',
+      'arrange-align',
+      'arrange-align',
       'arrange-align',
       'arrange-align',
       'arrange-align',

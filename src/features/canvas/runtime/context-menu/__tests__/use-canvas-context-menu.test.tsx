@@ -15,7 +15,7 @@ import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import * as Y from 'yjs'
 import { testId } from '~/test/helpers/test-id'
-import type { CanvasContextMenuCommands } from '../canvas-context-menu-types'
+import { createCommands } from './canvas-context-menu-test-utils'
 import type { CanvasSelectionSnapshot } from '../../../system/canvas-selection'
 
 const sidebarItemsState = vi.hoisted(() => ({
@@ -77,49 +77,6 @@ function createContextMenuDoc() {
 
 function createContextMenuEvent(clientX: number, clientY: number) {
   return new MouseEvent('contextmenu', { clientX, clientY }) as unknown as ReactMouseEvent
-}
-
-function createCommands(
-  overrides: Partial<CanvasContextMenuCommands> = {},
-): CanvasContextMenuCommands {
-  return {
-    copy: {
-      id: 'copy',
-      canRun: vi.fn(() => true),
-      run: vi.fn(() => true),
-    },
-    cut: {
-      id: 'cut',
-      canRun: vi.fn(() => true),
-      run: vi.fn(() => true),
-    },
-    paste: {
-      id: 'paste',
-      canRun: vi.fn(() => false),
-      run: vi.fn(() => null),
-    },
-    duplicate: {
-      id: 'duplicate',
-      canRun: vi.fn(() => true),
-      run: vi.fn(() => null),
-    },
-    delete: {
-      id: 'delete',
-      canRun: vi.fn(() => true),
-      run: vi.fn(() => true),
-    },
-    reorder: {
-      id: 'reorder',
-      canRun: vi.fn(() => true),
-      run: vi.fn(() => true),
-    },
-    arrange: {
-      id: 'arrange',
-      canRun: vi.fn(() => true),
-      run: vi.fn(() => true),
-    },
-    ...overrides,
-  }
 }
 
 function createMockSidebarItem(overrides: Partial<AnySidebarItem> = {}): AnySidebarItem {
