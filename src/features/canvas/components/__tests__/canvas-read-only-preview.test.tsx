@@ -2,18 +2,41 @@ import { act, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasReadOnlyPreview } from '../canvas-read-only-preview'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
+import { createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
 
+const contentItemState = vi.hoisted(() => ({
+  data: undefined as Record<string, unknown> | undefined,
+  error: null as Error | null,
+  isLoading: false,
+}))
+const activeItemsState = vi.hoisted(() => ({
+  itemsMap: new Map<string, Record<string, unknown>>(),
+  status: 'success' as 'pending' | 'error' | 'success',
+}))
+
 vi.mock('~/features/sidebar/hooks/useSidebarItemById', () => ({
-  useSidebarItemById: () => ({
-    data: {
-      _id: 'note-1',
-      content: [],
-      name: 'Note',
-      type: 'notes',
-    },
-    error: null,
-    isLoading: false,
+  useSidebarItemById: () => contentItemState,
+}))
+
+vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
+  useActiveSidebarItems: () => activeItemsState,
+}))
+
+vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
+  useCampaign: () => ({
+    isDm: true,
+  }),
+}))
+
+vi.mock('~/features/sidebar/stores/sidebar-ui-store', () => ({
+  useSidebarUIStore: (selector: (state: { viewAsPlayerId: null }) => unknown) =>
+    selector({ viewAsPlayerId: null }),
+}))
+
+vi.mock('~/features/players/hooks/useCampaignMembers', () => ({
+  useCampaignMembers: () => ({
+    data: [],
   }),
 }))
 
@@ -26,6 +49,18 @@ let animationFrameCallbacks: Array<FrameRequestCallback> = []
 
 describe('CanvasReadOnlyPreview', () => {
   beforeEach(() => {
+    const note = {
+      ...createNote({
+        _id: testId<'sidebarItems'>('note-1'),
+        name: 'Note',
+      }),
+      content: [],
+    }
+    contentItemState.data = note
+    contentItemState.error = null
+    contentItemState.isLoading = false
+    activeItemsState.itemsMap = new Map([[note._id, note]])
+    activeItemsState.status = 'success'
     resizeObservers.length = 0
     animationFrameCallbacks = []
     vi.stubGlobal('ResizeObserver', MockResizeObserver)
@@ -72,6 +107,31 @@ describe('CanvasReadOnlyPreview', () => {
         color: 'var(--t-purple)',
       })
     })
+  })
+
+  it('uses the shared unavailable item state for read-only embedded nodes', async () => {
+    contentItemState.data = undefined
+
+    render(
+      <CanvasReadOnlyPreview
+        nodes={[
+          {
+            id: 'embed-1',
+            type: 'embed',
+            position: { x: 0, y: 0 },
+            width: 240,
+            height: 180,
+            data: {
+              sidebarItemId: testId<'sidebarItems'>('note-1'),
+            },
+          } satisfies CanvasDocumentNode,
+        ]}
+        edges={[]}
+      />,
+    )
+
+    expect(await screen.findByText("This item isn't shared with you.")).toBeInTheDocument()
+    expect(screen.queryByTestId('sidebar-item-preview-content')).not.toBeInTheDocument()
   })
 
   it('renders non-interactive preview nodes and edges without pointer targeting', async () => {
