@@ -1,13 +1,26 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { CanvasSceneViewport } from '../canvas-scene-viewport'
 import { createCanvasDomRuntime } from '../../system/canvas-dom-runtime'
 import { createCanvasEngine } from '../../system/canvas-engine'
+import { CANVAS_BACKGROUND_GRID_SIZE } from '../canvas-background-viewport'
 
 describe('CanvasSceneViewport', () => {
+  let domRuntime: ReturnType<typeof createCanvasDomRuntime> | null = null
+  let engine: ReturnType<typeof createCanvasEngine> | null = null
+
+  afterEach(() => {
+    engine?.destroy()
+    domRuntime?.destroy()
+    engine = null
+    domRuntime = null
+  })
+
   it('scales and pans the live canvas background from the viewport', async () => {
-    const domRuntime = createCanvasDomRuntime()
-    const engine = createCanvasEngine({ domRuntime })
+    domRuntime = createCanvasDomRuntime()
+    engine = createCanvasEngine({ domRuntime })
+    const zoom = 3
+    const expectedGridSize = `${(CANVAS_BACKGROUND_GRID_SIZE * Math.sqrt(zoom)).toFixed(3)}px`
 
     render(
       <CanvasSceneViewport
@@ -23,17 +36,14 @@ describe('CanvasSceneViewport', () => {
     )
 
     act(() => {
-      engine.setViewportLive({ x: 42, y: -18, zoom: 3 })
+      engine?.setViewportLive({ x: 42, y: -18, zoom })
     })
 
     await waitFor(() => {
       expect(screen.getByTestId('canvas-background')).toHaveStyle({
         backgroundPosition: '42px -18px',
-        backgroundSize: '62.354px 62.354px',
+        backgroundSize: `${expectedGridSize} ${expectedGridSize}`,
       })
     })
-
-    engine.destroy()
-    domRuntime.destroy()
   })
 })

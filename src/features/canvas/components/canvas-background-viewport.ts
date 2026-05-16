@@ -3,7 +3,7 @@ import type { CanvasEngine } from '../system/canvas-engine-types'
 import type { CanvasViewport } from '../types/canvas-domain-types'
 import type { RefObject } from 'react'
 
-const CANVAS_BACKGROUND_GRID_SIZE = 36
+export const CANVAS_BACKGROUND_GRID_SIZE = 36
 
 export function applyCanvasBackgroundViewport(
   element: HTMLElement | null,
