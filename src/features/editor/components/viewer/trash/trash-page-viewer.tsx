@@ -19,7 +19,7 @@ export function TrashPageViewer() {
   const { parentItemsMap, status } = useTrashSidebarItems()
   const rootTrashedItems = parentItemsMap.get(null) ?? []
   const visibleItemIds = rootTrashedItems.map((item) => item._id)
-  const { handleSurfacePointerDown } = useItemSurfaceRegistration({
+  const { handleSurfacePointerDown, itemSurfaceHotkeyProps } = useItemSurfaceRegistration({
     surface: 'trash',
     parentId: null,
     visibleItemIds,
@@ -38,6 +38,7 @@ export function TrashPageViewer() {
     <EditorContextMenu viewContext="trash-view" className="flex flex-col h-full w-full min-h-0">
       <div
         ref={dropRef}
+        {...itemSurfaceHotkeyProps}
         className={cn(
           'group/sidebar-surface flex flex-col h-full w-full min-h-0',
           isTrashDrag

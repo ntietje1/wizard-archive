@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   isEditableHotkeyTarget,
+  isItemSurfaceHotkeyTarget,
   isItemSurfaceInteractionTarget,
   isModifierShortcut,
 } from '../item-surface-hotkeys'
@@ -162,6 +163,29 @@ describe('item surface hotkey utilities', () => {
 
     expect(isItemSurfaceInteractionTarget(menu)).toBe(true)
     expect(isItemSurfaceInteractionTarget(menuItem)).toBe(true)
+  })
+
+  it('detects item surface hotkey ownership from the target or active element', () => {
+    const surface = document.createElement('div')
+    surface.dataset.itemSurfaceHotkeyTarget = 'true'
+    const child = document.createElement('button')
+    surface.append(child)
+    document.body.append(surface)
+
+    const outside = document.createElement('button')
+    document.body.append(outside)
+
+    expect(isItemSurfaceHotkeyTarget(child)).toBe(true)
+    expect(isItemSurfaceHotkeyTarget(outside)).toBe(false)
+
+    child.focus()
+    expect(isItemSurfaceHotkeyTarget(window)).toBe(true)
+
+    outside.focus()
+    expect(isItemSurfaceHotkeyTarget(window)).toBe(false)
+
+    surface.remove()
+    outside.remove()
   })
 
   it('opens the focused selected item during multi-selection', () => {

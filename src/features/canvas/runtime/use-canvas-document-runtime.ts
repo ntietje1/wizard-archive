@@ -10,9 +10,11 @@ import type { useCanvasSelectionController } from './selection/use-canvas-select
 import type { useCanvasSessionState } from './session/use-canvas-session-state'
 import type { createCanvasEngine } from '../system/canvas-engine'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
+import type { RefObject } from 'react'
 
 interface UseCanvasDocumentRuntimeOptions {
   canEdit: boolean
+  canvasSurfaceRef: RefObject<HTMLDivElement | null>
   canvasEngine: ReturnType<typeof createCanvasEngine>
   edgesMap: Y.Map<CanvasDocumentEdge>
   nodesMap: Y.Map<CanvasDocumentNode>
@@ -22,6 +24,7 @@ interface UseCanvasDocumentRuntimeOptions {
 
 export function useCanvasDocumentRuntime({
   canEdit,
+  canvasSurfaceRef,
   canvasEngine,
   edgesMap,
   nodesMap,
@@ -52,6 +55,7 @@ export function useCanvasDocumentRuntime({
     undo: history.undo,
     redo: history.redo,
     canEdit,
+    surfaceRef: canvasSurfaceRef,
     nodesMap,
     edgesMap,
     selection,

@@ -43,11 +43,12 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
   const { parentItemsMap } = useTrashSidebarItems()
   const rootTrashedItems = parentItemsMap.get(null) ?? []
   const visibleItemIds = rootTrashedItems.map((item) => item._id)
-  const { activateSurface, handleSurfacePointerDown } = useItemSurfaceRegistration({
-    surface: 'trash',
-    parentId: null,
-    visibleItemIds,
-  })
+  const { activateSurface, handleSurfacePointerDown, itemSurfaceHotkeyProps } =
+    useItemSurfaceRegistration({
+      surface: 'trash',
+      parentId: null,
+      visibleItemIds,
+    })
 
   const filesystem = useFileSystem()
 
@@ -103,6 +104,7 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
         onFocusCapture={activateSurface}
         onPointerDownCapture={handleSurfacePointerDown}
         onContextMenuCapture={activateSurface}
+        {...itemSurfaceHotkeyProps}
       >
         <div className="px-1">
           {rootTrashedItems.map((item) => (

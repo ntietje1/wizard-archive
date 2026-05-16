@@ -27,11 +27,12 @@ export function SidebarList() {
     expandedFolderIds,
     sortOptions,
   })
-  const { activateSurface, handleSurfacePointerDown } = useItemSurfaceRegistration({
-    surface: 'sidebar',
-    parentId: null,
-    visibleItemIds,
-  })
+  const { activateSurface, handleSurfacePointerDown, itemSurfaceHotkeyProps } =
+    useItemSurfaceRegistration({
+      surface: 'sidebar',
+      parentId: null,
+      visibleItemIds,
+    })
 
   if (status !== 'success') {
     return null
@@ -43,6 +44,7 @@ export function SidebarList() {
       onFocusCapture={activateSurface}
       onPointerDownCapture={handleSurfacePointerDown}
       onContextMenuCapture={activateSurface}
+      {...itemSurfaceHotkeyProps}
     >
       {rootItems.map((item) => (
         <SidebarItem

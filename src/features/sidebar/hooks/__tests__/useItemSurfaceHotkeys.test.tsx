@@ -111,7 +111,7 @@ describe('useItemSurfaceHotkeys', () => {
     renderHook(() => useItemSurfaceHotkeys(filesystem))
 
     act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+      dispatchItemSurfaceKeyboardEvent('Escape')
     })
 
     expect(useFileSystemClipboardStore.getState().clipboard).toBeNull()
@@ -137,7 +137,7 @@ describe('useItemSurfaceHotkeys', () => {
     renderHook(() => useItemSurfaceHotkeys(filesystem))
 
     act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+      dispatchItemSurfaceKeyboardEvent('Escape')
     })
 
     expect(useFileSystemClipboardStore.getState().clipboard).toBeNull()
@@ -183,7 +183,7 @@ describe('useItemSurfaceHotkeys', () => {
     renderHook(() => useItemSurfaceHotkeys(filesystem))
 
     act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'v', ctrlKey: true }))
+      dispatchItemSurfaceKeyboardEvent('v', { ctrlKey: true })
     })
 
     expect(filesystem.paste).toHaveBeenCalledWith(parentFolder._id)
@@ -205,7 +205,7 @@ describe('useItemSurfaceHotkeys', () => {
     renderHook(() => useItemSurfaceHotkeys(filesystem))
 
     act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'v', ctrlKey: true }))
+      dispatchItemSurfaceKeyboardEvent('v', { ctrlKey: true })
     })
 
     expect(filesystem.paste).toHaveBeenCalledWith(null)
@@ -231,7 +231,7 @@ describe('useItemSurfaceHotkeys', () => {
     renderHook(() => useItemSurfaceHotkeys(filesystem))
 
     act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'v', ctrlKey: true }))
+      dispatchItemSurfaceKeyboardEvent('v', { ctrlKey: true })
     })
 
     expect(filesystem.paste).toHaveBeenCalledWith(parentFolder._id)
@@ -253,7 +253,7 @@ describe('useItemSurfaceHotkeys', () => {
     useSidebarUIStore.getState().setSelectedItemIds([currentNote._id], currentNote._id)
 
     act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete' }))
+      dispatchItemSurfaceKeyboardEvent('Delete')
     })
 
     expect(filesystem.requestTrashItems).toHaveBeenCalledWith([currentNote._id])
@@ -273,9 +273,57 @@ describe('useItemSurfaceHotkeys', () => {
     renderHook(() => useItemSurfaceHotkeys(filesystem))
 
     act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete' }))
+      dispatchItemSurfaceKeyboardEvent('Delete')
     })
 
     expect(filesystem.requestTrashItems).not.toHaveBeenCalled()
   })
+
+  it('does not delete the active item surface selection from an outside target', () => {
+    const note = createNote()
+    sidebarItems = [note]
+    useSidebarUIStore.getState().setActiveItemSurface({
+      surface: 'sidebar',
+      parentId: null,
+      visibleItemIds: [note._id],
+    })
+    useSidebarUIStore.getState().setSelectedItemIds([note._id], note._id)
+    const filesystem = createFileSystem()
+    const outsideTarget = document.createElement('button')
+    document.body.append(outsideTarget)
+
+    renderHook(() => useItemSurfaceHotkeys(filesystem))
+
+    act(() => {
+      window.dispatchEvent(createKeyboardEvent('Delete', { target: outsideTarget }))
+    })
+
+    expect(filesystem.requestTrashItems).not.toHaveBeenCalled()
+
+    outsideTarget.remove()
+  })
 })
+
+function createKeyboardEvent(
+  key: string,
+  options: KeyboardEventInit & { target?: EventTarget | null } = {},
+) {
+  const { target, ...eventInit } = options
+  const event = new KeyboardEvent('keydown', { key, bubbles: true, ...eventInit })
+
+  if (target) {
+    Object.defineProperty(event, 'target', { value: target })
+  }
+
+  return event
+}
+
+function dispatchItemSurfaceKeyboardEvent(key: string, options: KeyboardEventInit = {}) {
+  const target = document.createElement('div')
+  target.dataset.itemSurfaceHotkeyTarget = 'true'
+  document.body.append(target)
+
+  window.dispatchEvent(createKeyboardEvent(key, { ...options, target }))
+
+  target.remove()
+}

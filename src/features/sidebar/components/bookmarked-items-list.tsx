@@ -15,11 +15,12 @@ export function BookmarkedItemsList() {
   const bookmarked = filteredItems.filter((item) => item.isBookmarked)
   const bookmarkedItems = sortItemsByOptions(sortOptions, bookmarked) ?? []
   const visibleItemIds = bookmarkedItems.map((item) => item._id)
-  const { activateSurface, handleSurfacePointerDown } = useItemSurfaceRegistration({
-    surface: 'bookmarks',
-    parentId: null,
-    visibleItemIds,
-  })
+  const { activateSurface, handleSurfacePointerDown, itemSurfaceHotkeyProps } =
+    useItemSurfaceRegistration({
+      surface: 'bookmarks',
+      parentId: null,
+      visibleItemIds,
+    })
 
   if (status !== 'success') {
     return <BookmarkedItemsLoading />
@@ -32,6 +33,7 @@ export function BookmarkedItemsList() {
         onFocusCapture={activateSurface}
         onPointerDownCapture={handleSurfacePointerDown}
         onContextMenuCapture={activateSurface}
+        {...itemSurfaceHotkeyProps}
       >
         <div className="p-1 min-w-0 w-full max-w-full">
           {bookmarkedItems.map((item) => (
