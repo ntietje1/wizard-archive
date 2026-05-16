@@ -88,7 +88,7 @@ export function useSidebarItemAvailabilityState({
     return {
       status: 'error',
       label,
-      message: `Failed to load ${subject}.`,
+      message: `Failed to load ${subject}: ${getErrorMessage(readableItemError)}`,
     }
   }
 
@@ -105,6 +105,10 @@ export function useSidebarItemAvailabilityState({
     label,
     message: `This ${subject} doesn't exist or isn't shared with you.`,
   }
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error)
 }
 
 function findAvailabilityMetadata(

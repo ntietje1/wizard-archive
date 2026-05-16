@@ -158,6 +158,8 @@ function UnavailableEditorContent({
     })
   }
 
+  // UnavailableEditorContent is only rendered when canView is false; an
+  // available state prop here would violate that caller invariant.
   if (state.status === 'available') {
     return null
   }

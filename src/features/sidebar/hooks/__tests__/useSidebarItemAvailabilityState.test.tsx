@@ -182,6 +182,26 @@ describe('useSidebarItemAvailabilityState', () => {
       label: 'Secret Note',
     })
   })
+
+  it('returns the readable item error when metadata fails to load', () => {
+    activeItemsState.data = []
+    activeItemsState.itemsMap = new Map()
+    activeItemsState.status = 'error'
+
+    const { result } = renderHook(() =>
+      useSidebarItemAvailabilityState({
+        lookup: { kind: 'id', id: createItemId('note-1') },
+        readableItem: null,
+        readableItemError: new Error('fetch failed'),
+        canView: false,
+        subject: 'item',
+        fallbackLabel: 'Embedded item',
+      }),
+    )
+
+    expect(result.current.status).toBe('error')
+    expect(result.current.message).toContain('fetch failed')
+  })
 })
 
 function createItemId(value: string) {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react'
-import type { CustomBlock, CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
-import type { Id } from 'convex/_generated/dataModel'
+import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import type { NoteWithContent } from 'convex/notes/types'
 import type { Doc } from 'yjs'
 import type { PendingRichEmbedActivationRef } from './use-rich-embed-lifecycle'
 import { NoteContent } from '~/features/editor/components/note-content'
@@ -15,8 +15,7 @@ interface EmbedNoteEditorState {
 }
 
 export function EmbedNoteContent({
-  noteId,
-  content,
+  note,
   editable,
   isExclusivelySelected,
   onActivated,
@@ -24,8 +23,7 @@ export function EmbedNoteContent({
   pendingActivationRef,
   textColor,
 }: {
-  noteId: Id<'sidebarItems'>
-  content: Array<CustomBlock>
+  note: NoteWithContent
   editable: boolean
   isExclusivelySelected: boolean
   onActivated?: () => void
@@ -104,8 +102,7 @@ export function EmbedNoteContent({
         contentClassName={editable ? 'note-editor-scroll-content' : undefined}
       >
         <NoteContent
-          noteId={noteId}
-          content={content}
+          note={note}
           editable={editable}
           style={textStyle}
           onEditorChange={onEditorChange}

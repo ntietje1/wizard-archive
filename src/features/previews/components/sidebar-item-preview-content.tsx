@@ -10,7 +10,7 @@ import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
 export function SidebarItemPreviewContent({ item }: { item: AnySidebarItemWithContent }) {
   switch (item.type) {
     case SIDEBAR_ITEM_TYPES.notes:
-      return <NotePreviewContent content={item.content} />
+      return <NotePreviewContent note={item} />
     case SIDEBAR_ITEM_TYPES.folders:
       return <FolderListContentSimple folderId={item._id} />
     case SIDEBAR_ITEM_TYPES.gameMaps:

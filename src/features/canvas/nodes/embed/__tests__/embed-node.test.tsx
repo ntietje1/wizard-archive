@@ -369,6 +369,25 @@ describe('EmbedNode', () => {
     )
   })
 
+  it('passes embedded notes whole to NoteContent so it owns visibility filtering', () => {
+    contentItemState.data = {
+      _id: 'note-1',
+      type: SIDEBAR_ITEM_TYPES.notes,
+      name: 'Note Item',
+      content: [],
+      blockMeta: {},
+    }
+
+    renderEmbedNode('node-1', 'note-1')
+
+    expect(embedNoteSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        note: contentItemState.data,
+      }),
+    )
+    expect(embedNoteSpy.mock.calls[0]?.[0]).not.toHaveProperty('content')
+  })
+
   it('renders the shared unavailable state instead of rich content when an embedded item is not shared', () => {
     contentItemState.data = undefined as unknown as Record<string, unknown>
 

@@ -229,8 +229,7 @@ function EmbedRichContent({
   if (contentItem.type === SIDEBAR_ITEM_TYPES.notes) {
     return (
       <EmbedNoteContent
-        noteId={contentItem._id}
-        content={contentItem.content}
+        note={contentItem}
         editable={isEditing}
         isExclusivelySelected={isExclusivelySelected}
         onActivated={onActivated}

@@ -2,8 +2,10 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { EmbedNoteContent } from '../embed-note-content'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import type { NoteWithContent } from 'convex/notes/types'
 import type * as ReactModule from 'react'
 import type { ReactNode, Ref } from 'react'
+import { createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
 
 const mockEditor = vi.hoisted(() => ({ id: 'editor' }) as unknown as CustomBlockNoteEditor)
@@ -63,8 +65,7 @@ describe('EmbedNoteContent', () => {
     const pendingActivationRef = { current: null }
     render(
       <EmbedNoteContent
-        noteId={testId<'sidebarItems'>('note-id')}
-        content={[]}
+        note={createTestNote()}
         editable={true}
         isExclusivelySelected={true}
         pendingActivationRef={pendingActivationRef}
@@ -94,8 +95,7 @@ describe('EmbedNoteContent', () => {
     const pendingActivationRef = { current: null }
     render(
       <EmbedNoteContent
-        noteId={testId<'sidebarItems'>('note-id')}
-        content={[]}
+        note={createTestNote()}
         editable={false}
         isExclusivelySelected={true}
         pendingActivationRef={pendingActivationRef}
@@ -117,8 +117,7 @@ describe('EmbedNoteContent', () => {
     const pendingActivationRef = { current: null }
     render(
       <EmbedNoteContent
-        noteId={testId<'sidebarItems'>('note-id')}
-        content={[]}
+        note={createTestNote()}
         editable={true}
         isExclusivelySelected={false}
         pendingActivationRef={pendingActivationRef}
@@ -142,8 +141,7 @@ describe('EmbedNoteContent', () => {
     const pendingActivationRef = { current: null }
     const { unmount } = render(
       <EmbedNoteContent
-        noteId={testId<'sidebarItems'>('note-id')}
-        content={[]}
+        note={createTestNote()}
         editable={true}
         isExclusivelySelected={true}
         onCanvasEditorChange={onCanvasEditorChange}
@@ -163,8 +161,7 @@ describe('EmbedNoteContent', () => {
     const pendingActivationRef = { current: null }
     render(
       <EmbedNoteContent
-        noteId={testId<'sidebarItems'>('note-id')}
-        content={[]}
+        note={createTestNote()}
         editable={true}
         isExclusivelySelected={true}
         pendingActivationRef={pendingActivationRef}
@@ -182,3 +179,12 @@ describe('EmbedNoteContent', () => {
     )
   })
 })
+
+function createTestNote(): NoteWithContent {
+  return {
+    ...createNote({ _id: testId<'sidebarItems'>('note-id') }),
+    ancestors: [],
+    content: [],
+    blockMeta: {},
+  }
+}

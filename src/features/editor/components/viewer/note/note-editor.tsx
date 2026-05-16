@@ -9,7 +9,6 @@ import { openBlockNoteContextMenu } from '~/features/editor/hooks/useBlockNoteCo
 import { BlockNoteContextMenuProvider } from '~/features/editor/contexts/blocknote-context-menu-context'
 import { isNote } from '~/features/sidebar/utils/sidebar-item-utils'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
-import { useFilteredNoteContent } from '~/features/editor/hooks/useFilteredNoteContent'
 import { useNoteEditorState } from '~/features/editor/hooks/useNoteEditorState'
 import { useScrollPersistence } from '~/features/editor/hooks/useScrollPersistence'
 import { useScrollToHeading } from '~/features/editor/hooks/useScrollToHeading'
@@ -17,9 +16,8 @@ import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 
 export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
   const { editorMode, canEdit } = useEditorMode()
-  const { content: filteredContent, isViewOnly } = useFilteredNoteContent(note)
 
-  const editable = !isViewOnly && editorMode === EDITOR_MODE.EDITOR && canEdit
+  const editable = editorMode === EDITOR_MODE.EDITOR && canEdit
 
   const { onEditorChange, wrapperRef } = useNoteEditorState(note._id)
   const viewportRef = useRef<HTMLDivElement>(null)
@@ -67,8 +65,7 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
           >
             <NoteContent
               key={note._id}
-              noteId={note._id}
-              content={filteredContent}
+              note={note}
               editable={editable}
               onEditorChange={onEditorChange}
               className="note-editor-surface"

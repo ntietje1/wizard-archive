@@ -8,16 +8,21 @@ import { EDITOR_MODE } from 'convex/editors/types'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { testId } from '~/test/helpers/test-id'
 
+const noteContentSpy = vi.hoisted(() => vi.fn())
+
 vi.mock('@tanstack/react-router', () => ({
   ClientOnly: ({ children }: { children: ReactNode }) => children,
 }))
 
 vi.mock('../../../note-content', () => ({
-  NoteContent: ({ className, children }: { className?: string; children?: ReactNode }) => (
-    <div className={className} data-testid="note-content">
-      {children}
-    </div>
-  ),
+  NoteContent: (props: { className?: string; children?: ReactNode }) => {
+    noteContentSpy(props)
+    return (
+      <div className={props.className} data-testid="note-content">
+        {props.children}
+      </div>
+    )
+  },
 }))
 
 vi.mock('../../../extensions/blocknote-context-menu/blocknote-context-menu-handler', () => ({
@@ -39,13 +44,6 @@ vi.mock('~/features/sidebar/utils/sidebar-item-utils', () => ({
 
 vi.mock('~/features/sidebar/hooks/useEditorMode', () => ({
   useEditorMode: () => ({ canEdit: true, editorMode: EDITOR_MODE.EDITOR }),
-}))
-
-vi.mock('~/features/editor/hooks/useFilteredNoteContent', () => ({
-  useFilteredNoteContent: (note: NoteWithContent) => ({
-    content: note.content,
-    isViewOnly: false,
-  }),
 }))
 
 vi.mock('~/features/editor/hooks/useNoteEditorState', () => ({
@@ -72,6 +70,7 @@ vi.mock('~/features/shadcn/components/scroll-area', () => ({
 describe('NoteEditor', () => {
   beforeEach(() => {
     mockOpenBlockNoteContextMenu.mockReset()
+    noteContentSpy.mockReset()
   })
 
   it('uses the CSS-first editor surface class instead of pointer focus handlers', async () => {
@@ -87,6 +86,19 @@ describe('NoteEditor', () => {
     ])
 
     expect(mockOpenBlockNoteContextMenu).not.toHaveBeenCalled()
+  })
+
+  it('passes the whole note to NoteContent so it owns visibility filtering', () => {
+    const note = createNote()
+
+    render(<NoteEditor item={note} />)
+
+    expect(noteContentSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        note,
+      }),
+    )
+    expect(noteContentSpy.mock.calls[0]?.[0]).not.toHaveProperty('content')
   })
 
   it('keeps untrusted right-click context menu events ignored', () => {
