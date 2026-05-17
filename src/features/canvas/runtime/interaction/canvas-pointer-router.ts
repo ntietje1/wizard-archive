@@ -30,6 +30,7 @@ type ActivePointerGesture =
   | {
       kind: 'selection'
       pointerId: number
+      activeTool: CanvasToolId
       startTargetKind: CanvasPointerTarget['kind']
       controller: ReturnType<typeof createCanvasSelectionGestureController>
       startPoint: { x: number; y: number }
@@ -64,6 +65,7 @@ export interface CanvasPointerRouterOptions {
     | 'setGesturePreview'
   >
   getShiftPressed: () => boolean
+  setActiveTool: (tool: CanvasToolId) => void
 }
 
 export interface CanvasPointerRouter {
@@ -174,6 +176,7 @@ export function createCanvasPointerRouter(): CanvasPointerRouter {
       beginSelectionGesture(
         event,
         target,
+        currentOptions.activeTool,
         createRectangleSelectionGesture(currentOptions, interaction),
       )
       return
@@ -181,7 +184,12 @@ export function createCanvasPointerRouter(): CanvasPointerRouter {
 
     if (currentOptions.activeTool === 'lasso' && target.kind !== 'blocked-interactive-child') {
       claimCanvasPointerEvent(event)
-      beginSelectionGesture(event, target, createLassoSelectionGesture(currentOptions, interaction))
+      beginSelectionGesture(
+        event,
+        target,
+        currentOptions.activeTool,
+        createLassoSelectionGesture(currentOptions, interaction),
+      )
       return
     }
 
@@ -205,6 +213,7 @@ export function createCanvasPointerRouter(): CanvasPointerRouter {
   const beginSelectionGesture = (
     event: PointerEvent,
     target: CanvasPointerTarget,
+    activeTool: CanvasToolId,
     controller: ReturnType<typeof createCanvasSelectionGestureController>,
   ) => {
     const input = getPointerInput(event)
@@ -213,6 +222,7 @@ export function createCanvasPointerRouter(): CanvasPointerRouter {
     activeGesture = {
       kind: 'selection',
       pointerId: event.pointerId,
+      activeTool,
       startTargetKind: target.kind,
       controller,
       startPoint: input.clientPoint,
@@ -252,6 +262,9 @@ export function createCanvasPointerRouter(): CanvasPointerRouter {
       const committed = activeGesture.controller.commit(getPointerInput(event))
       if (!committed) {
         maybeClearSelectionFromPointGesture(event, activeGesture)
+      }
+      if (activeGesture.activeTool === 'lasso') {
+        requireOptions(options).setActiveTool('select')
       }
       endActiveGesture()
       return

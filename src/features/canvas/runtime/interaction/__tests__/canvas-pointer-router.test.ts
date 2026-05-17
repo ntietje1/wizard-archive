@@ -258,6 +258,22 @@ describe('createCanvasPointerRouter', () => {
     detach()
   })
 
+  it('returns to the pointer tool when a lasso gesture finishes', () => {
+    const { surface, node } = createCanvasDom()
+    const setActiveTool = vi.fn()
+    const router = createCanvasPointerRouter()
+    router.setOptions(createRouterOptions({ activeTool: 'lasso', setActiveTool }))
+    const detach = router.attach(surface)
+
+    node.dispatchEvent(createPointerEvent('pointerdown', { clientX: 0, clientY: 0 }))
+    window.dispatchEvent(createPointerEvent('pointermove', { clientX: 100, clientY: 0 }))
+    window.dispatchEvent(createPointerEvent('pointerup', { clientX: 100, clientY: 100 }))
+
+    expect(setActiveTool).toHaveBeenCalledExactlyOnceWith('select')
+
+    detach()
+  })
+
   it('routes non-selection tool gestures through fixed handlers for the whole gesture', () => {
     const { surface, viewport } = createCanvasDom()
     const initialHandlers: CanvasToolHandlers = {
@@ -360,6 +376,7 @@ describe('createCanvasPointerRouter', () => {
 function createRouterOptions({
   activeTool,
   activeToolHandlers = {},
+  setActiveTool = vi.fn(),
   nodeDragController = null,
   selection = createSelectionMock(),
   nodes = [],
@@ -368,6 +385,7 @@ function createRouterOptions({
 }: {
   activeTool: CanvasToolId
   activeToolHandlers?: CanvasToolHandlers
+  setActiveTool?: CanvasPointerRouterOptions['setActiveTool']
   nodeDragController?: CanvasPointerRouterOptions['nodeDragController']
   selection?: ReturnType<typeof createSelectionMock>
   nodes?: Array<Node>
@@ -385,6 +403,7 @@ function createRouterOptions({
     getShiftPressed: () => false,
     nodeDragController,
     selection,
+    setActiveTool,
     viewportController: {
       getZoom: () => 1,
       screenToCanvasPosition: ({ x, y }) => ({ x, y }),

@@ -74,11 +74,6 @@ vi.mock('~/features/editor/utils/destroy-blocknote-editor', () => ({
   destroyBlockNoteEditor: vi.fn(),
 }))
 
-vi.mock('~/features/editor/utils/patch-yundo-destroy', () => ({
-  patchYSyncAfterTypeChanged: vi.fn(),
-  patchYUndoPluginDestroy: vi.fn(),
-}))
-
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
   useCampaign: () => campaignState,
 }))

@@ -102,7 +102,9 @@ describe('filesystem undo/redo hotkeys', () => {
     )
 
     act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true }))
+      surface.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true }),
+      )
     })
 
     expect(undo).toHaveBeenCalledTimes(1)

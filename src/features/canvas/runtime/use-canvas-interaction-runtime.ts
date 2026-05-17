@@ -145,6 +145,7 @@ export function useCanvasInteractionRuntime({
       getShiftPressed: () => modifiers.shiftPressed,
       nodeDragController: dragHandlers,
       selection,
+      setActiveTool: (tool) => useCanvasToolStore.getState().setActiveTool(tool),
       viewportController,
     },
   })
