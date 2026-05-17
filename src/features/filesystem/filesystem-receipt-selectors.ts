@@ -28,10 +28,12 @@ function createReceiptEventGroups(receipt: FileSystemTransactionReceipt) {
 
 function isNavigationEvent(
   event: FileSystemEvent,
+  direction: FileSystemTransactionReceipt['direction'],
   currentSlug: string | null,
 ): event is Extract<FileSystemEvent, { type: 'created' | 'renamed' }> {
   return (
-    event.type === 'created' || (event.type === 'renamed' && event.previousSlug === currentSlug)
+    (event.type === 'created' && direction === 'forward') ||
+    (event.type === 'renamed' && event.previousSlug === currentSlug)
   )
 }
 
@@ -110,7 +112,7 @@ export function getReceiptNavigationSlug(
 
   const events = createReceiptEventGroups(receipt)
   const event = [...events.created, ...events.renamed].find((candidate) =>
-    isNavigationEvent(candidate, currentSlug),
+    isNavigationEvent(candidate, receipt.direction, currentSlug),
   )
   return event?.slug ?? null
 }

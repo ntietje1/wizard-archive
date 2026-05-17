@@ -19,10 +19,6 @@ import { useOwnedBlockNoteEditor } from '~/features/editor/hooks/useOwnedBlockNo
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { getCursorColor } from '~/features/editor/utils/cursor-colors'
 import { destroyBlockNoteEditor } from '~/features/editor/utils/destroy-blocknote-editor'
-import {
-  patchYSyncAfterTypeChanged,
-  patchYUndoPluginDestroy,
-} from '~/features/editor/utils/patch-yundo-destroy'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
@@ -397,15 +393,6 @@ function CollaborativeEditorInner({
       if (!isCustomBlockNoteEditor(createdEditor)) {
         throw new Error('Created editor does not match CustomBlockNoteEditor')
       }
-
-      try {
-        patchYUndoPluginDestroy(createdEditor._tiptapEditor.view)
-        patchYSyncAfterTypeChanged(createdEditor._tiptapEditor.view)
-      } catch (error) {
-        destroyNoteEditor(createdEditor, noteId, 'collaborative')
-        throw error
-      }
-
       return createdEditor
     } catch (error) {
       console.error('Error creating BlockNoteEditor for collaborative note content', {

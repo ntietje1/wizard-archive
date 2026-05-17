@@ -758,13 +758,13 @@ describe('FileSystemProvider', () => {
     )
   })
 
-  it('selects created roots after redo', async () => {
+  it('selects created roots after redo without navigating', async () => {
     const staleItem = createNote({ _id: 'stale_item' as Id<'sidebarItems'>, name: 'Stale' })
     const createdItemId = 'item_1' as Id<'sidebarItems'>
     sidebarItems = [staleItem]
     executeMutateAsync.mockResolvedValueOnce(createReceipt())
-    undoMutateAsync.mockResolvedValueOnce(createReceipt())
-    redoMutateAsync.mockResolvedValueOnce(createReceipt())
+    undoMutateAsync.mockResolvedValueOnce({ ...createReceipt(), direction: 'undo' })
+    redoMutateAsync.mockResolvedValueOnce({ ...createReceipt(), direction: 'redo' })
     useSidebarUIStore.getState().setSelectedItemIds([staleItem._id])
 
     render(
@@ -778,12 +778,14 @@ describe('FileSystemProvider', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
     await waitFor(() => expect(useFileSystemUndoStore.getState().redoStack).toHaveLength(1))
     useSidebarUIStore.getState().setSelectedItemIds([staleItem._id])
+    navigateToItemMock.mockClear()
 
     fireEvent.click(screen.getByRole('button', { name: 'Redo' }))
 
     await waitFor(() =>
       expect(useSidebarUIStore.getState().selectedItemIds).toEqual([createdItemId]),
     )
+    expect(navigateToItemMock).not.toHaveBeenCalled()
   })
 
   it('does not push failed operations into undo', async () => {
