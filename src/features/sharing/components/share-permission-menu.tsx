@@ -21,6 +21,7 @@ import { Avatar, AvatarFallback } from '~/features/shadcn/components/avatar'
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
 import { Switch } from '~/features/shadcn/components/switch'
 import { UserProfileImage } from '~/shared/components/user-profile-image'
+import { getUserDisplayName } from '~/shared/utils/user-display-name'
 
 type PermissionLevelOrDefault = PermissionLevel | 'default'
 type PermissionSelectValue = PermissionLevelOrDefault | 'mixed'
@@ -37,10 +38,6 @@ const OVERLAY_Z_INDEX = 'z-[10000]'
 function permissionLabel(level: NullableAggregatePermissionLevel): string {
   if (level === 'mixed') return 'Mixed'
   return PERMISSION_LABELS[level ?? PERMISSION_LEVEL.NONE] ?? 'None'
-}
-
-function getDisplayName(profile: UserProfile): string {
-  return profile.name || profile.username || 'Player'
 }
 
 function RowTooltip({
@@ -118,7 +115,7 @@ export function SharePermissionMenu({
   const inheritingShareItems = shareItems.filter((s) => !s.hasExplicitShare)
 
   function getPlayerInfoText(item: ShareItemWithPermission): string {
-    const name = getDisplayName(item.member.userProfile)
+    const name = getUserDisplayName(item.member.userProfile)
     if (item.permissionLevel === 'mixed' || item.inheritedPermissionLevel === 'mixed') {
       return `${name}'s access differs across the selected items`
     }
@@ -239,7 +236,7 @@ function DmRow({ profile }: { profile: UserProfile }) {
         size="sm"
       />
       <div className="flex flex-col flex-1 min-w-0 select-none">
-        <span className="text-sm font-medium truncate">{getDisplayName(profile)}</span>
+        <span className="text-sm font-medium truncate">{getUserDisplayName(profile)}</span>
         {profile.username && (
           <span className="text-xs text-muted-foreground truncate">@{profile.username}</span>
         )}
@@ -284,7 +281,7 @@ function PlayerRow({
         size="sm"
       />
       <div className="flex flex-col flex-1 min-w-0">
-        <span className="text-sm font-medium truncate">{getDisplayName(profile)}</span>
+        <span className="text-sm font-medium truncate">{getUserDisplayName(profile)}</span>
         {profile.username && (
           <span className="text-xs text-muted-foreground truncate">@{profile.username}</span>
         )}

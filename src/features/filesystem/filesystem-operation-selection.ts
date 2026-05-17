@@ -55,16 +55,13 @@ export function resolveClickedSidebarOperationItems({
   trashedItemsMap: SidebarItemMap
   canUseItemSelection: boolean
 }): Array<AnySidebarItem> {
+  const allItemsMap = combinedItemMap(activeItemsMap, trashedItemsMap)
+  if (item) allItemsMap.set(item._id, item)
+
   if (!canUseItemSelection || !item || !selectedItemIds.includes(item._id)) {
     if (!item) return []
-    const allItemsMap = combinedItemMap(activeItemsMap, trashedItemsMap)
-    allItemsMap.set(item._id, item)
     return normalizeSelectedRoots([item], allItemsMap)
   }
 
-  return resolveSidebarOperationItems({
-    itemIds: selectedItemIds,
-    activeItemsMap,
-    trashedItemsMap,
-  })
+  return normalizeSelectedRoots(resolveItems(selectedItemIds, allItemsMap), allItemsMap)
 }

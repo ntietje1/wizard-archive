@@ -1,5 +1,5 @@
-import React, { forwardRef, useImperativeHandle, useRef } from 'react'
-import { CheckIcon, ChevronRightIcon } from 'lucide-react'
+import React, { useImperativeHandle, useRef } from 'react'
+import { CheckIcon } from 'lucide-react'
 import type { BuiltContextMenu, ResolvedContextMenuItem } from '../types'
 import { handleError } from '~/shared/utils/logger'
 import {
@@ -21,6 +21,7 @@ export interface ContextMenuHostRef {
 }
 
 interface ContextMenuHostProps {
+  ref: React.Ref<ContextMenuHostRef>
   menu: BuiltContextMenu
   children?: React.ReactNode
   className?: string
@@ -31,16 +32,62 @@ interface ContextMenuHostProps {
 interface ContextMenuResolvedItemProps {
   menuItem: ResolvedContextMenuItem
   onAction: (menuItem: ResolvedContextMenuItem) => Promise<void>
+  activeSubmenuPath: ReadonlyArray<string>
+  setActiveSubmenuPath: React.Dispatch<React.SetStateAction<Array<string>>>
+  parentSubmenuPath: ReadonlyArray<string>
 }
 
 interface MenuItemContentProps {
   IconComponent: ResolvedContextMenuItem['icon']
   checked: boolean
   label: string
+  content?: React.ReactNode
   shortcut?: string
 }
 
-function MenuItemContent({ IconComponent, checked, label, shortcut }: MenuItemContentProps) {
+type RichSubmenuSide = 'left' | 'right'
+
+const RICH_SUBMENU_GAP_PX = 4
+const RICH_SUBMENU_FALLBACK_WIDTH_PX = 300
+const ROOT_SUBMENU_PATH: ReadonlyArray<string> = []
+
+function submenuPathIsActive(
+  submenuPath: ReadonlyArray<string>,
+  activeSubmenuPath: ReadonlyArray<string>,
+): boolean {
+  if (activeSubmenuPath.length < submenuPath.length) return false
+  for (let index = 0; index < submenuPath.length; index += 1) {
+    if (activeSubmenuPath[index] !== submenuPath[index]) return false
+  }
+  return true
+}
+
+function getRichSubmenuSide(trigger: HTMLElement, content: HTMLElement): RichSubmenuSide {
+  const triggerRect = trigger.getBoundingClientRect()
+  const contentRect = content.getBoundingClientRect()
+  const contentWidth = contentRect.width || content.offsetWidth || RICH_SUBMENU_FALLBACK_WIDTH_PX
+  const rightSpace = window.innerWidth - triggerRect.right - RICH_SUBMENU_GAP_PX
+  const leftSpace = triggerRect.left - RICH_SUBMENU_GAP_PX
+
+  return rightSpace < contentWidth && leftSpace > rightSpace ? 'left' : 'right'
+}
+
+function MenuItemContent({
+  IconComponent,
+  checked,
+  label,
+  content,
+  shortcut,
+}: MenuItemContentProps) {
+  if (content) {
+    return (
+      <>
+        {content}
+        {checked && <CheckIcon className="ml-2 size-4" />}
+      </>
+    )
+  }
+
   return (
     <>
       {IconComponent && <IconComponent className="mr-2 size-4" />}
@@ -58,15 +105,60 @@ function menuItemHasRichSubmenu(menuItem: ResolvedContextMenuItem): boolean {
   )
 }
 
-function ContextMenuRichSubmenuItem({ menuItem }: { menuItem: ResolvedContextMenuItem }) {
+function ContextMenuRichSubmenuItem({
+  menuItem,
+  activeSubmenuPath,
+  setActiveSubmenuPath,
+  parentSubmenuPath,
+}: {
+  menuItem: ResolvedContextMenuItem
+  activeSubmenuPath: ReadonlyArray<string>
+  setActiveSubmenuPath: React.Dispatch<React.SetStateAction<Array<string>>>
+  parentSubmenuPath: ReadonlyArray<string>
+}) {
   const IconComponent = menuItem.icon
-  const [open, setOpen] = React.useState(false)
+  const triggerRef = React.useRef<HTMLDivElement>(null)
+  const contentRef = React.useRef<HTMLDivElement>(null)
+  const [side, setSide] = React.useState<RichSubmenuSide>('right')
+  const submenuPath = [...parentSubmenuPath, menuItem.id]
+  const open = submenuPathIsActive(submenuPath, activeSubmenuPath)
+
+  React.useLayoutEffect(() => {
+    if (!open) return
+
+    const updatePanelSide = () => {
+      const trigger = triggerRef.current
+      const content = contentRef.current
+      if (!trigger || !content) return
+
+      setSide(getRichSubmenuSide(trigger, content))
+    }
+
+    updatePanelSide()
+    window.addEventListener('resize', updatePanelSide)
+
+    const content = contentRef.current
+    let resizeObserver: ResizeObserver | null = null
+    if (typeof ResizeObserver !== 'undefined' && content) {
+      resizeObserver = new ResizeObserver(updatePanelSide)
+      resizeObserver.observe(content)
+    }
+
+    return () => {
+      window.removeEventListener('resize', updatePanelSide)
+      resizeObserver?.disconnect()
+    }
+  }, [open])
 
   const openPanel = () => {
     if (menuItem.disabled) return
-    setOpen(true)
+    setActiveSubmenuPath(submenuPath)
   }
-  const closePanel = () => setOpen(false)
+  const closePanel = () => {
+    setActiveSubmenuPath((currentPath) =>
+      submenuPathIsActive(submenuPath, currentPath) ? [...parentSubmenuPath] : currentPath,
+    )
+  }
   const belongsToSubmenuInteraction = (container: HTMLElement, target: EventTarget | null) => {
     if (!(target instanceof Element)) return false
     return container.contains(target) || Boolean(target.closest('[data-slot="select-content"]'))
@@ -97,6 +189,7 @@ function ContextMenuRichSubmenuItem({ menuItem }: { menuItem: ResolvedContextMen
       onBlur={closePanelWhenFocusLeaves}
     >
       <div
+        ref={triggerRef}
         role="menuitem"
         aria-haspopup="menu"
         aria-expanded={open}
@@ -129,15 +222,19 @@ function ContextMenuRichSubmenuItem({ menuItem }: { menuItem: ResolvedContextMen
           IconComponent={IconComponent}
           checked={menuItem.checked}
           label={menuItem.label}
+          content={menuItem.content}
           shortcut={menuItem.shortcut}
         />
-        <ChevronRightIcon className="ml-auto" />
       </div>
       {open && !menuItem.disabled && (
         <div
+          ref={contentRef}
           role="presentation"
           data-slot="context-menu-rich-submenu-content"
-          className="absolute left-full top-0 z-[9999] ml-1 min-w-36 rounded-lg bg-popover p-2 text-popover-foreground shadow-lg ring-1 ring-foreground/10"
+          className={cn(
+            'absolute top-0 z-[9999] min-w-36 rounded-lg bg-popover p-2 text-popover-foreground shadow-lg ring-1 ring-foreground/10',
+            side === 'left' ? 'right-full mr-1' : 'left-full ml-1',
+          )}
           onPointerEnter={openPanel}
           onMouseEnter={openPanel}
           onPointerLeave={closePanelWhenPointerLeaves}
@@ -153,16 +250,44 @@ function ContextMenuRichSubmenuItem({ menuItem }: { menuItem: ResolvedContextMen
   )
 }
 
-function ContextMenuResolvedItem({ menuItem, onAction }: ContextMenuResolvedItemProps) {
+function ContextMenuResolvedItem({
+  menuItem,
+  onAction,
+  activeSubmenuPath,
+  setActiveSubmenuPath,
+  parentSubmenuPath,
+}: ContextMenuResolvedItemProps) {
   const IconComponent = menuItem.icon
 
   if (menuItem.submenuContent) {
-    return <ContextMenuRichSubmenuItem menuItem={menuItem} />
+    return (
+      <ContextMenuRichSubmenuItem
+        menuItem={menuItem}
+        activeSubmenuPath={activeSubmenuPath}
+        setActiveSubmenuPath={setActiveSubmenuPath}
+        parentSubmenuPath={parentSubmenuPath}
+      />
+    )
   }
 
   if (menuItem.children && menuItem.children.length > 0) {
+    const submenuPath = [...parentSubmenuPath, menuItem.id]
+    const open = submenuPathIsActive(submenuPath, activeSubmenuPath)
+
     return (
-      <ContextMenuSub>
+      <ContextMenuSub
+        open={open}
+        onOpenChange={(nextOpen) => {
+          if (nextOpen) {
+            setActiveSubmenuPath(submenuPath)
+            return
+          }
+
+          setActiveSubmenuPath((currentPath) =>
+            submenuPathIsActive(submenuPath, currentPath) ? [...parentSubmenuPath] : currentPath,
+          )
+        }}
+      >
         <ContextMenuSubTrigger
           className={cn(
             menuItem.variant === 'danger' && 'text-destructive focus:text-destructive',
@@ -170,11 +295,22 @@ function ContextMenuResolvedItem({ menuItem, onAction }: ContextMenuResolvedItem
             menuItem.className,
           )}
           disabled={menuItem.disabled}
+          onPointerEnter={() => {
+            if (!menuItem.disabled) {
+              setActiveSubmenuPath(submenuPath)
+            }
+          }}
+          onMouseEnter={() => {
+            if (!menuItem.disabled) {
+              setActiveSubmenuPath(submenuPath)
+            }
+          }}
         >
           <MenuItemContent
             IconComponent={IconComponent}
             checked={menuItem.checked}
             label={menuItem.label}
+            content={menuItem.content}
             shortcut={menuItem.shortcut}
           />
         </ContextMenuSubTrigger>
@@ -184,7 +320,13 @@ function ContextMenuResolvedItem({ menuItem, onAction }: ContextMenuResolvedItem
               {index > 0 && child.group !== menuItem.children?.[index - 1]?.group && (
                 <ContextMenuSeparator />
               )}
-              <ContextMenuResolvedItem menuItem={child} onAction={onAction} />
+              <ContextMenuResolvedItem
+                menuItem={child}
+                onAction={onAction}
+                activeSubmenuPath={activeSubmenuPath}
+                setActiveSubmenuPath={setActiveSubmenuPath}
+                parentSubmenuPath={submenuPath}
+              />
             </React.Fragment>
           ))}
         </ContextMenuSubContent>
@@ -195,11 +337,15 @@ function ContextMenuResolvedItem({ menuItem, onAction }: ContextMenuResolvedItem
   return (
     <ContextMenuItem
       variant={menuItem.variant === 'danger' ? 'destructive' : 'default'}
+      closeOnClick={menuItem.closeOnSelect !== false}
       className={cn(
         menuItem.variant === 'share' && 'text-primary focus:text-primary',
         menuItem.className,
       )}
       disabled={menuItem.disabled}
+      aria-label={menuItem.content ? menuItem.label : undefined}
+      onPointerEnter={() => setActiveSubmenuPath([...parentSubmenuPath])}
+      onMouseEnter={() => setActiveSubmenuPath([...parentSubmenuPath])}
       onClick={async (event) => {
         event.preventDefault()
         event.stopPropagation()
@@ -213,97 +359,108 @@ function ContextMenuResolvedItem({ menuItem, onAction }: ContextMenuResolvedItem
         IconComponent={IconComponent}
         checked={menuItem.checked}
         label={menuItem.label}
+        content={menuItem.content}
         shortcut={menuItem.shortcut}
       />
     </ContextMenuItem>
   )
 }
 
-export const ContextMenuHost = forwardRef<ContextMenuHostRef, ContextMenuHostProps>(
-  ({ menu, children, className, menuClassName = 'w-48 z-[9999]', onClose }, ref) => {
-    const menuRef = useRef<ContextMenuRef>(null)
-    const actionInProgressRef = useRef(false)
-    const hasRichSubmenu = menu.groups.some((group) =>
-      group.items.some((menuItem) => menuItemHasRichSubmenu(menuItem)),
-    )
+export function ContextMenuHost({
+  ref,
+  menu,
+  children,
+  className,
+  menuClassName = 'w-48 z-[9999]',
+  onClose,
+}: ContextMenuHostProps) {
+  const menuRef = useRef<ContextMenuRef>(null)
+  const actionInProgressRef = useRef(false)
+  const [activeSubmenuPath, setActiveSubmenuPath] = React.useState<Array<string>>([])
+  const hasRichSubmenu = menu.groups.some((group) =>
+    group.items.some((menuItem) => menuItemHasRichSubmenu(menuItem)),
+  )
 
-    useImperativeHandle(
-      ref,
-      () => ({
-        open: (position) => {
-          if (menu.isEmpty) {
-            return
-          }
+  useImperativeHandle(
+    ref,
+    () => ({
+      open: (position) => {
+        if (menu.isEmpty) {
+          return
+        }
 
-          menuRef.current?.openAt(position)
-        },
-        close: () => {
-          menuRef.current?.close()
-        },
-      }),
-      [menu.isEmpty],
-    )
+        menuRef.current?.openAt(position)
+      },
+      close: () => {
+        menuRef.current?.close()
+      },
+    }),
+    [menu.isEmpty],
+  )
 
-    const handleAction = async (menuItem: ResolvedContextMenuItem) => {
-      if (actionInProgressRef.current) {
-        return
-      }
+  const handleAction = async (menuItem: ResolvedContextMenuItem) => {
+    if (actionInProgressRef.current) {
+      return
+    }
 
-      actionInProgressRef.current = true
-      try {
-        await menuItem.onSelect()
-      } catch (error) {
-        handleError(error, 'Menu action failed')
-      } finally {
-        actionInProgressRef.current = false
+    actionInProgressRef.current = true
+    try {
+      await menuItem.onSelect()
+    } catch (error) {
+      handleError(error, 'Menu action failed')
+    } finally {
+      actionInProgressRef.current = false
+      if (menuItem.closeOnSelect !== false) {
         menuRef.current?.close()
       }
     }
+  }
 
-    return (
-      <div className={cn('relative w-full', className)}>
-        <ContextMenu
-          ref={menuRef}
-          onOpenChange={(open) => {
-            if (!open) {
-              onClose?.()
-            }
-          }}
-        >
-          {children ? (
-            <ContextMenuTrigger render={<div style={{ display: 'contents' }}>{children}</div>} />
-          ) : null}
-          {!menu.isEmpty ? (
-            <ContextMenuContent
-              className={cn(menuClassName, hasRichSubmenu && 'overflow-visible')}
-              side="bottom"
-              align="start"
-              sideOffset={4}
-              data-no-dnd
-              onContextMenu={(event) => {
-                event.preventDefault()
-                event.stopPropagation()
-                event.nativeEvent.stopImmediatePropagation?.()
-              }}
-            >
-              {menu.groups.map((group, index) => (
-                <React.Fragment key={group.id}>
-                  {index > 0 && <ContextMenuSeparator />}
-                  {group.items.map((menuItem) => (
-                    <ContextMenuResolvedItem
-                      key={menuItem.id}
-                      menuItem={menuItem}
-                      onAction={handleAction}
-                    />
-                  ))}
-                </React.Fragment>
-              ))}
-            </ContextMenuContent>
-          ) : null}
-        </ContextMenu>
-      </div>
-    )
-  },
-)
-
-ContextMenuHost.displayName = 'ContextMenuHost'
+  return (
+    <div className={cn('relative w-full', className)}>
+      <ContextMenu
+        ref={menuRef}
+        onOpenChange={(open) => {
+          if (!open) {
+            setActiveSubmenuPath([])
+            onClose?.()
+          }
+        }}
+      >
+        {children ? (
+          <ContextMenuTrigger render={<div style={{ display: 'contents' }}>{children}</div>} />
+        ) : null}
+        {!menu.isEmpty ? (
+          <ContextMenuContent
+            className={cn(menuClassName, hasRichSubmenu && 'overflow-visible')}
+            side="bottom"
+            align="start"
+            sideOffset={4}
+            data-no-dnd
+            onContextMenu={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              event.nativeEvent.stopImmediatePropagation?.()
+            }}
+          >
+            {menu.groups.map((group, index) => (
+              <React.Fragment key={group.id}>
+                {index > 0 && <ContextMenuSeparator />}
+                {group.items.map((menuItem) => (
+                  <ContextMenuResolvedItem
+                    key={menuItem.id}
+                    menuItem={menuItem}
+                    onAction={handleAction}
+                    activeSubmenuPath={activeSubmenuPath}
+                    setActiveSubmenuPath={setActiveSubmenuPath}
+                    parentSubmenuPath={ROOT_SUBMENU_PATH}
+                  />
+                ))}
+              </React.Fragment>
+            ))}
+          </ContextMenuContent>
+        ) : null}
+      </ContextMenu>
+    </div>
+  )
+}

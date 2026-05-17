@@ -3,6 +3,7 @@ import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
 import { Banner, BannerButton } from '~/shared/components/banner'
+import { getCampaignMemberDisplayName } from '~/shared/utils/user-display-name'
 
 export function ViewAsBanner() {
   const { viewAsPlayerId, setViewAsPlayerId } = useEditorMode()
@@ -12,10 +13,7 @@ export function ViewAsBanner() {
     (member) => member._id === viewAsPlayerId && member.role === CAMPAIGN_MEMBER_ROLE.Player,
   )
 
-  const displayName = playerMember
-    ? playerMember.userProfile.name ||
-      (playerMember.userProfile.username ? `@${playerMember.userProfile.username}` : 'Player')
-    : null
+  const displayName = playerMember ? getCampaignMemberDisplayName(playerMember) : null
 
   const isActive = !!(viewAsPlayerId && displayName)
 

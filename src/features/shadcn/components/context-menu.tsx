@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Menu as MenuPrimitive } from '@base-ui/react/menu'
-import { CheckIcon, ChevronRightIcon } from 'lucide-react'
+import { CheckIcon } from 'lucide-react'
 import { cn } from '~/features/shadcn/lib/utils'
 
 type VirtualAnchor = {
@@ -345,7 +345,6 @@ function ContextMenuSubTrigger({
       {...props}
     >
       {children}
-      <ChevronRightIcon className="ml-auto" />
     </MenuPrimitive.SubmenuTrigger>
   )
 }

@@ -11,6 +11,7 @@ import { ContextMenuHost } from './context-menu-host'
 import type { ContextMenuHostRef } from './context-menu-host'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { ViewContext } from '../types'
+import { useRef } from 'react'
 import type { Ref } from 'react'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useMapViewOptional } from '~/features/editor/hooks/useMapView'
@@ -19,6 +20,9 @@ import { useSession } from '~/features/sidebar/hooks/useGameSession'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { resolveClickedSidebarOperationItems } from '~/features/filesystem/filesystem-operation-selection'
 import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
+import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
+import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
+import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
 
 export type EditorContextMenuRef = ContextMenuHostRef
 
@@ -49,6 +53,8 @@ export function EditorContextMenu({
   onDialogOpen,
   onDialogClose,
 }: EditorContextMenuProps) {
+  const fallbackRef = useRef<EditorContextMenuRef>(null)
+  const hostRef = ref ?? fallbackRef
   const menuActions = useMenuActions({ onDialogOpen, onDialogClose })
   const { campaign } = useCampaign()
   const { currentSession } = useSession()
@@ -56,6 +62,10 @@ export function EditorContextMenu({
   const blockNoteContext = useBlockNoteContextMenuOptional()
   const selectedItemIds = useSidebarUIStore((s) => s.selectedItemIds)
   const filesystemReadModel = useFileSystemReadModel()
+  const editorMode = useEditorMode()
+  const campaignMembersQuery = useCampaignMembers()
+  const playerMembers =
+    campaignMembersQuery.data?.filter((member) => member.role === CAMPAIGN_MEMBER_ROLE.Player) ?? []
   // Item selection is intentionally scoped to sidebar, folder, and trash surfaces.
   // Update this when adding a VIEW_CONTEXT that should share filesystem selection.
   const canUseItemSelection =
@@ -90,7 +100,16 @@ export function EditorContextMenu({
 
   const menu = buildMenu({
     context: menuContext,
-    services: { actions: menuActions.actions, filesystem: menuActions.filesystem },
+    services: {
+      actions: menuActions.actions,
+      filesystem: menuActions.filesystem,
+      editorMode,
+      viewAsPlayer: {
+        viewAsPlayerId: editorMode.viewAsPlayerId,
+        playerMembers,
+        setViewAsPlayerId: editorMode.setViewAsPlayerId,
+      },
+    },
     contributors: editorContextMenuContributors,
     commands: editorContextMenuCommands,
     groupConfig,
@@ -103,7 +122,7 @@ export function EditorContextMenu({
       ) : (
         <>
           <ContextMenuHost
-            ref={ref}
+            ref={hostRef}
             menu={menu}
             className={className}
             menuClassName={menuClassName}

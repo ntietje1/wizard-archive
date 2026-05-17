@@ -107,6 +107,23 @@ describe('SidebarShareButton', () => {
     expect(await screen.findByTestId('share-panel')).toHaveTextContent('Clicked')
   })
 
+  it('shares the selected item group without depending on active surface registration', async () => {
+    const user = userEvent.setup()
+    const first = createNote({ name: 'First' })
+    const second = createNote({ name: 'Second' })
+    useSidebarUIStore.setState({
+      selectedItemIds: [first._id, second._id],
+      anchorItemId: first._id,
+      activeItemSurface: null,
+    })
+
+    renderShareButton(first, [first, second])
+
+    await user.click(screen.getByRole('button', { name: 'Share' }))
+
+    expect(await screen.findByTestId('share-panel')).toHaveTextContent('First, Second')
+  })
+
   it('shares a single selected item when the row belongs to that selection', async () => {
     const user = userEvent.setup()
     const selected = createNote({ name: 'Selected' })

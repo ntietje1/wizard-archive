@@ -4,6 +4,7 @@ import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem, AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
+import { getCampaignMemberDisplayName } from '~/shared/utils/user-display-name'
 
 type SidebarItemAvailabilitySubject = 'item' | 'page'
 
@@ -146,8 +147,5 @@ function resolveAccessTarget({
     return 'you'
   }
 
-  return (
-    member.userProfile.name ||
-    (member.userProfile.username ? `@${member.userProfile.username}` : 'you')
-  )
+  return getCampaignMemberDisplayName(member, 'you')
 }

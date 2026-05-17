@@ -7,6 +7,7 @@ import {
   ContextMenuLabel,
   ContextMenuSeparator,
 } from '~/features/shadcn/components/context-menu'
+import { getUserDisplayName } from '~/shared/utils/user-display-name'
 
 interface ShareMenuContentProps {
   /**
@@ -90,11 +91,7 @@ interface ShareMenuItemProps {
 
 function ShareMenuItem({ shareItem, isMutating, onToggle }: ShareMenuItemProps) {
   const profile = shareItem.member.userProfile
-  const displayText = profile.name
-    ? profile.name
-    : profile.username
-      ? `@${profile.username}`
-      : 'Player'
+  const displayText = getUserDisplayName(profile)
   const isChecked = shareItem.shareState === 'all'
   const isIndeterminate = shareItem.shareState === 'some'
 

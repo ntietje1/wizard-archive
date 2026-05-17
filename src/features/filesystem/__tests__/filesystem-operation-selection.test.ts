@@ -24,6 +24,21 @@ describe('filesystem operation selection', () => {
     expect(items).toEqual([item])
   })
 
+  it('keeps the clicked item in a selected operation even if read-model maps are stale', () => {
+    const item = createNote()
+    const stale = createNote()
+
+    const items = resolveClickedSidebarOperationItems({
+      item,
+      selectedItemIds: [item._id, stale._id],
+      activeItemsMap: new Map<Id<'sidebarItems'>, AnySidebarItem>(),
+      trashedItemsMap: new Map<Id<'sidebarItems'>, AnySidebarItem>(),
+      canUseItemSelection: true,
+    })
+
+    expect(items).toEqual([item])
+  })
+
   it('falls back to the clicked item when the clicked item is outside the selection', () => {
     const clicked = createNote()
     const selected = createNote()
