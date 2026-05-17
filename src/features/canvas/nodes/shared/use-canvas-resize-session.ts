@@ -355,7 +355,6 @@ export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
   }, [removeWindowListeners])
 
   if (
-    !canEdit ||
     !interactiveRenderMode ||
     !selection ||
     selection.nodes.some((node) => node.dragging || node.metadata.dragging)
@@ -421,9 +420,9 @@ export function useCanvasResizeSession(): CanvasSelectionResizeSession | null {
 
   return {
     bounds: selection.bounds,
-    dragNodeId: getSelectionDragNodeId(selection),
+    dragNodeId: canEdit ? getSelectionDragNodeId(selection) : undefined,
     overlayRef: resizeOverlayRef,
-    zones,
+    zones: canEdit ? zones : [],
   }
 }
 

@@ -100,6 +100,16 @@ describe('ResizableNodeWrapper', () => {
     expect(screen.queryByTestId('selection-border')).toBeNull()
   })
 
+  it('shows read-only selection bounds without resize zones for a single selected node', () => {
+    renderSelectionResize({ canEdit: false })
+
+    expect(screen.getByTestId('canvas-selection-resize-wrapper')).toBeInTheDocument()
+    expect(screen.getByTestId('canvas-selection-resize-fill')).toBeInTheDocument()
+    expect(screen.getByTestId('canvas-selection-resize-outline')).toBeInTheDocument()
+    expect(screen.queryByTestId('canvas-node-selection-indicator')).toBeNull()
+    expect(screen.queryAllByTestId(/canvas-selection-resize-zone-/)).toHaveLength(0)
+  })
+
   it('renders one resize wrapper for multiple selected nodes', () => {
     renderSelectionResize({
       nodes: [
@@ -601,6 +611,7 @@ describe('ResizableNodeWrapper', () => {
 })
 
 function renderSelectionResize({
+  canEdit = true,
   draggingNodeIds = new Set<string>(),
   lockedAspectRatio,
   nodes = [createNode('node-1', { x: 10, y: 20 }, 80, 40)],
@@ -608,6 +619,7 @@ function renderSelectionResize({
   selectedEdgeIds = new Set<string>(),
   selectedNodeIds = new Set(['node-1']),
 }: {
+  canEdit?: boolean
   draggingNodeIds?: ReadonlySet<string>
   lockedAspectRatio?: number
   nodes?: Array<Node>
@@ -616,6 +628,7 @@ function renderSelectionResize({
   selectedNodeIds?: ReadonlySet<string>
 } = {}) {
   const runtime = createCanvasRuntime({
+    canEdit,
     nodeActions: {
       onResizeMany: vi.fn(),
       onResizeManyCancel: vi.fn(),

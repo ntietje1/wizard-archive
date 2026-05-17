@@ -104,8 +104,9 @@ export function useCanvasInteractionRuntime({
     localDraggingIdsRef,
     getShiftPressed: () => modifiers.shiftPressed,
     getPrimaryPressed: () => modifiers.primaryPressed,
-    getCanStartDrag: () => useCanvasToolStore.getState().activeTool === 'select',
+    getCanStartDrag: () => canEdit && useCanvasToolStore.getState().activeTool === 'select',
   })
+  const canUsePointerTool = activeTool === 'select'
 
   useCanvasPerformanceProbeRuntime({
     canvasId,
@@ -141,9 +142,9 @@ export function useCanvasInteractionRuntime({
       activeToolHandlers,
       awareness: session.awareness.presence,
       canvasEngine,
-      enabled: canEdit,
+      enabled: canEdit || canUsePointerTool,
       getShiftPressed: () => modifiers.shiftPressed,
-      nodeDragController: dragHandlers,
+      nodeDragController: canEdit ? dragHandlers : null,
       selection,
       setActiveTool: (tool) => useCanvasToolStore.getState().setActiveTool(tool),
       viewportController,
