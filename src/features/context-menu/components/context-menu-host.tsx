@@ -183,7 +183,7 @@ function ContextMenuRichSubmenuItem({
 
   return (
     <div
-      className="relative"
+      className="relative w-full"
       onPointerLeave={closePanelWhenPointerLeaves}
       onMouseLeave={closePanelWhenMouseLeaves}
       onBlur={closePanelWhenFocusLeaves}
@@ -196,7 +196,7 @@ function ContextMenuRichSubmenuItem({
         tabIndex={menuItem.disabled ? -1 : 0}
         data-slot="context-menu-sub-trigger"
         className={cn(
-          "focus:bg-accent focus:text-accent-foreground data-open:bg-accent data-open:text-accent-foreground gap-1.5 rounded-md px-1.5 py-1 text-sm [&_svg:not([class*='size-'])]:size-4 flex cursor-default items-center outline-hidden select-none data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+          "focus:bg-accent focus:text-accent-foreground data-open:bg-accent data-open:text-accent-foreground gap-1.5 rounded-md px-1.5 py-1 text-sm [&_svg:not([class*='size-'])]:size-4 flex w-full cursor-default items-center outline-hidden select-none data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0",
           menuItem.variant === 'danger' && 'text-destructive focus:text-destructive',
           menuItem.variant === 'share' && 'text-primary focus:text-primary',
           menuItem.className,
