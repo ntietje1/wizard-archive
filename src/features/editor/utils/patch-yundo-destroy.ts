@@ -42,14 +42,19 @@ export function runYjsHistoryCommand(view: EditorView, direction: 'undo' | 'redo
   if (!undoManager) return
 
   const selectionBookmark = createRelativeSelectionBookmark(view)
-  if (direction === 'redo') {
-    undoManager.redo()
-  } else {
-    undoManager.undo()
-  }
-  if (selectionBookmark) {
-    restoreSelectionBookmark(view, selectionBookmark)
-    setTimeout(() => restoreSelectionBookmark(view, selectionBookmark), 0)
+  try {
+    if (direction === 'redo') {
+      undoManager.redo()
+    } else {
+      undoManager.undo()
+    }
+  } catch (error) {
+    logger.error(`[runYjsHistoryCommand] Failed to ${direction}`, error)
+  } finally {
+    if (selectionBookmark) {
+      restoreSelectionBookmark(view, selectionBookmark)
+      setTimeout(() => restoreSelectionBookmark(view, selectionBookmark), 0)
+    }
   }
 }
 

@@ -33,5 +33,7 @@ export function isCanvasHotkeyTarget(
   }
 
   const activeElement = globalThis.document?.activeElement
+  // Canvas keyboard handling calls focus() on the surface, so keep hotkeys active
+  // when focus is inside the canvas even if the key event target is outside it.
   return activeElement instanceof Element && surfaceElement.contains(activeElement)
 }

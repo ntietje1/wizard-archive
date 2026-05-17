@@ -92,7 +92,6 @@ function useNoteYjsUndoShortcutPatch(editor: CustomBlockNoteEditor, editable: bo
 
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
       if (!isHistoryShortcut(event) || !isEventInsideNoteSurface(event, editor, surface)) return
-      patchEditorYjsUndo(editor)
       event.preventDefault()
       event.stopPropagation()
       runYjsHistoryCommand(editor._tiptapEditor.view, getHistoryDirection(event))

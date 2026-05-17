@@ -25,6 +25,9 @@ export async function getCampaignIdFromRoute({
     dmUsername,
     slug,
   })
+  if (!campaign) {
+    throw new Error(`Campaign not found for dmUsername=${dmUsername}, slug=${slug}`)
+  }
   return campaign._id
 }
 
@@ -52,7 +55,22 @@ async function createE2EConvexClient() {
     throw new Error('VITE_CONVEX_URL is required for E2E Convex helpers')
   }
 
-  const storage = JSON.parse(await readFile(AUTH_STORAGE_PATH, 'utf8')) as StorageState
+  let authStorage: string
+  try {
+    authStorage = await readFile(AUTH_STORAGE_PATH, 'utf8')
+  } catch (error) {
+    throw new Error(`Error reading auth storage at ${AUTH_STORAGE_PATH}: ${getErrorMessage(error)}`)
+  }
+
+  let storage: StorageState
+  try {
+    storage = JSON.parse(authStorage) as StorageState
+  } catch (error) {
+    throw new Error(
+      `Error parsing auth storage JSON at ${AUTH_STORAGE_PATH}: ${getErrorMessage(error)}`,
+    )
+  }
+
   const jwt = storage.cookies.find((cookie) => cookie.name === CONVEX_AUTH_COOKIE)?.value
   if (!jwt) {
     throw new Error(`Missing ${CONVEX_AUTH_COOKIE} in ${AUTH_STORAGE_PATH}`)
@@ -61,4 +79,8 @@ async function createE2EConvexClient() {
   const client = new ConvexHttpClient(convexUrl)
   client.setAuth(jwt)
   return client
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error)
 }
