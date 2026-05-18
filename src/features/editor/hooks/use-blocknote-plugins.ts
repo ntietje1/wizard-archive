@@ -7,8 +7,7 @@ import {
 } from '~/features/editor/utils/patch-yundo-destroy'
 import type { LinkResolver } from '~/features/editor/hooks/useLinkResolver'
 import { useDisableAutolink } from '~/features/editor/hooks/useDisableAutolink'
-import { useMdLinkExtension } from '~/features/editor/hooks/useMdLinkExtension'
-import { useWikiLinkExtension } from '~/features/editor/hooks/useWikiLinkExtension'
+import { useLinkDecorations } from '~/features/editor/hooks/useLinkDecorations'
 
 export function useBlockNotePlugins({
   editor,
@@ -20,8 +19,7 @@ export function useBlockNotePlugins({
   linkResolver: LinkResolver
 }) {
   const isViewerMode = !editable || linkResolver.isViewerMode
-  useWikiLinkExtension(editor, linkResolver, isViewerMode)
-  useMdLinkExtension(editor, linkResolver, isViewerMode)
+  useLinkDecorations(editor, linkResolver, isViewerMode)
   useDisableAutolink(editor)
   useYjsUndoPatches(editor)
   return useNoteYjsUndoShortcutPatch(editor, !isViewerMode)

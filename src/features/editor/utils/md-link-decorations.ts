@@ -1,9 +1,7 @@
-import { Decoration, DecorationSet } from '@tiptap/pm/view'
+import { Decoration } from '@tiptap/pm/view'
 import type { ParsedMdLinkFields } from 'convex/links/linkParsers'
 import type { ResolvedLink } from 'convex/links/types'
-import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { createLinkDecorationState, LINK_ROLE } from './link-decoration'
-import { overlapsSelection } from './link-extension-utils'
 
 export interface MdLinkDecorationMatch {
   from: number
@@ -87,21 +85,4 @@ export function buildMdLinkDecorationEntries(
   })
 
   return decorations
-}
-
-export function buildMdLinkDecorations(
-  doc: ProseMirrorNode,
-  matches: Array<MdLinkDecorationMatch>,
-  isViewerMode: boolean,
-  selFrom: number,
-  selTo: number,
-): DecorationSet {
-  const decorations = matches.flatMap((match) =>
-    buildMdLinkDecorationEntries(match, {
-      isViewerMode,
-      isActive: !isViewerMode && overlapsSelection(match.from, match.to, selFrom, selTo),
-    }),
-  )
-
-  return DecorationSet.create(doc, decorations)
 }

@@ -39,6 +39,7 @@ export function StaticBlockNoteEditor({
   note,
   noteId,
   content,
+  linkViewerMode,
   style,
   children,
   onEditorChange,
@@ -46,11 +47,12 @@ export function StaticBlockNoteEditor({
   note?: NoteWithContent
   noteId?: Id<'sidebarItems'>
   content: Array<CustomBlock>
+  linkViewerMode: boolean
   style?: CSSProperties
   children?: React.ReactNode
   onEditorChange?: NoteEditorChangeHandler
 }) {
-  const linkResolver = useLinkResolver(noteId)
+  const linkResolver = useLinkResolver(noteId, { isViewerMode: linkViewerMode })
   const initializedEditorRef = useRef<CustomBlockNoteEditor | null>(null)
   const instanceIdentity = noteId ?? 'raw-static-note-content'
 
@@ -108,6 +110,7 @@ export function CollaborativeBlockNoteEditor({
   doc,
   provider,
   instanceId,
+  linkViewerMode,
   style,
   user,
   children,
@@ -118,12 +121,13 @@ export function CollaborativeBlockNoteEditor({
   doc: Doc
   provider: ConvexYjsProvider
   instanceId: number
+  linkViewerMode: boolean
   style?: CSSProperties
   user: { name: string; color: string }
   children?: React.ReactNode
   onEditorChange?: NoteEditorChangeHandler
 }) {
-  const linkResolver = useLinkResolver(noteId)
+  const linkResolver = useLinkResolver(noteId, { isViewerMode: linkViewerMode })
   const userRef = useRef(user)
   const forceOpenLinkPopover = useRef<(() => void) | null>(null)
   userRef.current = user

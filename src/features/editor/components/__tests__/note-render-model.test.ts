@@ -39,6 +39,7 @@ describe('resolveNoteRenderModel', () => {
 
     expect(model.source).toBe('live')
     expect(model.renderMode).toBe('static-with-collaboration')
+    expect(model.linkViewerMode).toBe(true)
     expect(model.content).toEqual([visible])
   })
 
@@ -60,6 +61,35 @@ describe('resolveNoteRenderModel', () => {
 
     expect(model.source).toBe('live')
     expect(model.renderMode).toBe('collaborative')
+    expect(model.linkViewerMode).toBe(false)
+    expect(model.content).toEqual([block])
+  })
+
+  it('keeps read-only live notes in viewer link mode', () => {
+    const block = createBlock('viewable')
+    const note = createNoteWithContent({
+      content: [block],
+      myPermissionLevel: PERMISSION_LEVEL.VIEW,
+      blockMeta: {
+        [block.id]: {
+          myPermissionLevel: PERMISSION_LEVEL.VIEW,
+          shareStatus: SHARE_STATUS.ALL_SHARED,
+          sharedWith: [],
+        },
+      },
+    })
+
+    const model = resolveNoteRenderModel({
+      source: { kind: 'live', note },
+      requestedEditable: false,
+      isDm: false,
+      viewAsPlayerId: undefined,
+      allItemsMap: new Map([[note._id, note]]),
+    })
+
+    expect(model.source).toBe('live')
+    expect(model.renderMode).toBe('static')
+    expect(model.linkViewerMode).toBe(true)
     expect(model.content).toEqual([block])
   })
 
@@ -76,6 +106,7 @@ describe('resolveNoteRenderModel', () => {
 
     expect(model.source).toBe('raw')
     expect(model.renderMode).toBe('static')
+    expect(model.linkViewerMode).toBe(true)
     expect(model.content).toEqual([block])
   })
 })

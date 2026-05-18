@@ -2,7 +2,6 @@ import { useCallback, useMemo } from 'react'
 import { normalizeSidebarItemColorOrDefault } from 'convex/sidebarItems/validation/color'
 import { isDangerousUrl } from 'convex/links/linkParsers'
 import { resolveParsedItemPath } from 'convex/links/linkResolution'
-import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import type { ParsedLinkData, ResolvedLink } from 'convex/links/types'
@@ -18,13 +17,15 @@ export interface LinkResolver {
 
 const EMPTY_ITEMS: Array<AnySidebarItem> = []
 
-export function useLinkResolver(sourceNoteId?: Id<'sidebarItems'>): LinkResolver {
+export function useLinkResolver(
+  sourceNoteId?: Id<'sidebarItems'>,
+  options: { isViewerMode: boolean } = { isViewerMode: false },
+): LinkResolver {
   const { data: sidebarItems, itemsMap } = useActiveSidebarItems()
   const { dmUsername, campaignSlug } = useCampaign()
-  const { editorMode, viewAsPlayerId } = useEditorMode()
 
   const allItems = sidebarItems ?? EMPTY_ITEMS
-  const isViewerMode = editorMode === 'viewer' || viewAsPlayerId !== undefined
+  const { isViewerMode } = options
   const sourceParentId = sourceNoteId ? itemsMap.get(sourceNoteId)?.parentId : undefined
 
   const resolveLink = useCallback(

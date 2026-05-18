@@ -6,16 +6,11 @@ import type { LinkResolver } from '~/features/editor/hooks/useLinkResolver'
 
 const mockPatchYSyncAfterTypeChanged = vi.hoisted(() => vi.fn())
 const mockPatchYUndoPluginDestroy = vi.hoisted(() => vi.fn())
-const mockUseWikiLinkExtension = vi.hoisted(() => vi.fn())
-const mockUseMdLinkExtension = vi.hoisted(() => vi.fn())
+const mockUseLinkDecorations = vi.hoisted(() => vi.fn())
 const mockUseDisableAutolink = vi.hoisted(() => vi.fn())
 
-vi.mock('~/features/editor/hooks/useWikiLinkExtension', () => ({
-  useWikiLinkExtension: mockUseWikiLinkExtension,
-}))
-
-vi.mock('~/features/editor/hooks/useMdLinkExtension', () => ({
-  useMdLinkExtension: mockUseMdLinkExtension,
+vi.mock('~/features/editor/hooks/useLinkDecorations', () => ({
+  useLinkDecorations: mockUseLinkDecorations,
 }))
 
 vi.mock('~/features/editor/hooks/useDisableAutolink', () => ({
@@ -43,8 +38,7 @@ describe('useBlockNotePlugins', () => {
 
     renderHook(() => useBlockNotePlugins({ editor, editable: true, linkResolver: resolver }))
 
-    expect(mockUseWikiLinkExtension).toHaveBeenCalledWith(editor, resolver, false)
-    expect(mockUseMdLinkExtension).toHaveBeenCalledWith(editor, resolver, false)
+    expect(mockUseLinkDecorations).toHaveBeenCalledWith(editor, resolver, false)
     expect(mockUseDisableAutolink).toHaveBeenCalledWith(editor)
     expect(mockPatchYUndoPluginDestroy).toHaveBeenCalledWith(view)
     expect(mockPatchYSyncAfterTypeChanged).toHaveBeenCalledWith(view)
@@ -82,8 +76,7 @@ function expectViewerPluginSetup({
   view: unknown
   addEventListenerSpy: ReturnType<typeof vi.spyOn>
 }) {
-  expect(mockUseWikiLinkExtension).toHaveBeenCalledWith(editor, resolver, true)
-  expect(mockUseMdLinkExtension).toHaveBeenCalledWith(editor, resolver, true)
+  expect(mockUseLinkDecorations).toHaveBeenCalledWith(editor, resolver, true)
   expect(mockUseDisableAutolink).toHaveBeenCalledWith(editor)
   expect(mockPatchYUndoPluginDestroy).toHaveBeenCalledWith(view)
   expect(mockPatchYSyncAfterTypeChanged).toHaveBeenCalledWith(view)

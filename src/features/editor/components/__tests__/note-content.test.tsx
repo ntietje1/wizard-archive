@@ -21,12 +21,20 @@ const activeItemsState = vi.hoisted(() => ({
 }))
 
 vi.mock('../blocknote-editor-instance', () => ({
-  StaticBlockNoteEditor: (props: { content: Array<CustomBlock> }) => {
-    noteViewSpy({ surface: 'static', editor: { document: props.content } })
+  StaticBlockNoteEditor: (props: { content: Array<CustomBlock>; linkViewerMode: boolean }) => {
+    noteViewSpy({
+      surface: 'static',
+      editor: { document: props.content },
+      linkViewerMode: props.linkViewerMode,
+    })
     return <div data-testid="static-note-editor" />
   },
-  CollaborativeBlockNoteEditor: (props: { note?: NoteWithContent }) => {
-    noteViewSpy({ surface: 'collaborative', editor: { document: props.note?.content ?? [] } })
+  CollaborativeBlockNoteEditor: (props: { note?: NoteWithContent; linkViewerMode: boolean }) => {
+    noteViewSpy({
+      surface: 'collaborative',
+      editor: { document: props.note?.content ?? [] },
+      linkViewerMode: props.linkViewerMode,
+    })
     return <div data-testid="collaborative-note-editor" />
   },
 }))
@@ -156,6 +164,40 @@ describe('NoteContent', () => {
         expect.objectContaining({
           editor: expect.objectContaining({
             document: [allSharedBlock, playerSharedBlock],
+          }),
+        }),
+      )
+    })
+  })
+
+  it('keeps DM view-as static rendering in viewer link mode while collaboration stays warm', async () => {
+    const playerId = testId<'campaignMembers'>('player-1')
+    const visibleBlock = createBlock('visible-block')
+    campaignState.isDm = true
+    editorModeState.viewAsPlayerId = playerId
+
+    const note = createNoteWithContent({
+      content: [visibleBlock],
+      myPermissionLevel: PERMISSION_LEVEL.FULL_ACCESS,
+      blockMeta: {
+        [visibleBlock.id]: {
+          myPermissionLevel: PERMISSION_LEVEL.VIEW,
+          shareStatus: SHARE_STATUS.ALL_SHARED,
+          sharedWith: [],
+        },
+      },
+    })
+    activeItemsState.itemsMap = new Map([[note._id, note]])
+
+    render(<NoteContent note={note} editable />)
+
+    await waitFor(() => {
+      expect(noteViewSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          surface: 'static',
+          linkViewerMode: true,
+          editor: expect.objectContaining({
+            document: [visibleBlock],
           }),
         }),
       )

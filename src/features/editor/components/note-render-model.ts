@@ -15,12 +15,14 @@ export type NoteRenderModel =
   | {
       source: 'raw'
       renderMode: 'static'
+      linkViewerMode: true
       noteId: Id<'sidebarItems'> | undefined
       content: Array<CustomBlock>
     }
   | {
       source: 'live'
       renderMode: 'collaborative' | 'static' | 'static-with-collaboration'
+      linkViewerMode: boolean
       note: NoteWithContent
       content: Array<CustomBlock>
     }
@@ -42,6 +44,7 @@ export function resolveNoteRenderModel({
     return {
       source: 'raw',
       renderMode: 'static',
+      linkViewerMode: true,
       noteId: source.noteId,
       content: source.content,
     }
@@ -60,6 +63,7 @@ export function resolveNoteRenderModel({
     return {
       source: 'live',
       renderMode: 'collaborative',
+      linkViewerMode: false,
       note,
       content: note.content,
     }
@@ -68,6 +72,7 @@ export function resolveNoteRenderModel({
   return {
     source: 'live',
     renderMode: requestedEditable && hasRealEditAccess ? 'static-with-collaboration' : 'static',
+    linkViewerMode: true,
     note,
     content:
       hasRealEditAccess && !isViewAs

@@ -66,6 +66,7 @@ export function NoteContent({
         note={sourceNote}
         noteId={sourceNoteId}
         content={model.content}
+        linkViewerMode={model.linkViewerMode}
         style={style}
         onEditorChange={onEditorChange}
       >
@@ -104,6 +105,7 @@ function NoteContentWithSession({
         note={model.note}
         noteId={model.note._id}
         content={model.content}
+        linkViewerMode={model.linkViewerMode}
         style={style}
         onEditorChange={onEditorChange}
       >
@@ -123,6 +125,7 @@ function NoteContentWithSession({
       doc={session.doc}
       provider={session.provider}
       instanceId={session.instanceId}
+      linkViewerMode={model.linkViewerMode}
       style={style}
       user={session.user}
       onEditorChange={onEditorChange}
