@@ -51,6 +51,10 @@ export function HeroSection() {
           {publicSite.trial.short} Demo project coming soon.
         </p>
 
+        <div className="mt-16 w-full max-w-4xl">
+          <AssetPlaceholder label="Hero product clip: campaign sidebar, active note, linked map, sharing controls, and a player preview showing the prepare-to-play workflow in one screen" />
+        </div>
+
         <ul className="mt-6 flex max-w-3xl flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
           {trustHighlights.map((highlight) => (
             <li key={highlight} className="flex items-center gap-1.5">
@@ -59,13 +63,6 @@ export function HeroSection() {
             </li>
           ))}
         </ul>
-
-        <div className="mt-16 w-full max-w-4xl">
-          <AssetPlaceholder
-            label="Hero product clip: campaign sidebar, active note, linked map, sharing controls, and a player preview showing the prepare-to-play workflow in one screen"
-            showPlayButton
-          />
-        </div>
       </LandingContainer>
     </section>
   )

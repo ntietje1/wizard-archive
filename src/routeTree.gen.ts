@@ -15,7 +15,6 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as FaqRouteImport } from './routes/faq'
 import { Route as DemoRouteImport } from './routes/demo'
-import { Route as ContactRouteImport } from './routes/contact'
 import { Route as CommunityRouteImport } from './routes/community'
 import { Route as BillingRouteImport } from './routes/billing'
 import { Route as AppRouteImport } from './routes/_app'
@@ -65,11 +64,6 @@ const FaqRoute = FaqRouteImport.update({
 const DemoRoute = DemoRouteImport.update({
   id: '/demo',
   path: '/demo',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ContactRoute = ContactRouteImport.update({
-  id: '/contact',
-  path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CommunityRoute = CommunityRouteImport.update({
@@ -184,7 +178,6 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/billing': typeof BillingRoute
   '/community': typeof CommunityRoute
-  '/contact': typeof ContactRoute
   '/demo': typeof DemoRoute
   '/faq': typeof FaqRoute
   '/pricing': typeof PricingRoute
@@ -211,7 +204,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/billing': typeof BillingRoute
   '/community': typeof CommunityRoute
-  '/contact': typeof ContactRoute
   '/demo': typeof DemoRoute
   '/faq': typeof FaqRoute
   '/pricing': typeof PricingRoute
@@ -236,7 +228,6 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/billing': typeof BillingRoute
   '/community': typeof CommunityRoute
-  '/contact': typeof ContactRoute
   '/demo': typeof DemoRoute
   '/faq': typeof FaqRoute
   '/pricing': typeof PricingRoute
@@ -266,7 +257,6 @@ export interface FileRouteTypes {
     | '/'
     | '/billing'
     | '/community'
-    | '/contact'
     | '/demo'
     | '/faq'
     | '/pricing'
@@ -293,7 +283,6 @@ export interface FileRouteTypes {
     | '/'
     | '/billing'
     | '/community'
-    | '/contact'
     | '/demo'
     | '/faq'
     | '/pricing'
@@ -317,7 +306,6 @@ export interface FileRouteTypes {
     | '/_app'
     | '/billing'
     | '/community'
-    | '/contact'
     | '/demo'
     | '/faq'
     | '/pricing'
@@ -347,7 +335,6 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   BillingRoute: typeof BillingRoute
   CommunityRoute: typeof CommunityRoute
-  ContactRoute: typeof ContactRoute
   DemoRoute: typeof DemoRoute
   FaqRoute: typeof FaqRoute
   PricingRoute: typeof PricingRoute
@@ -399,13 +386,6 @@ declare module '@tanstack/react-router' {
       path: '/demo'
       fullPath: '/demo'
       preLoaderRoute: typeof DemoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/contact': {
-      id: '/contact'
-      path: '/contact'
-      fullPath: '/contact'
-      preLoaderRoute: typeof ContactRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/community': {
@@ -659,7 +639,6 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   BillingRoute: BillingRoute,
   CommunityRoute: CommunityRoute,
-  ContactRoute: ContactRoute,
   DemoRoute: DemoRoute,
   FaqRoute: FaqRoute,
   PricingRoute: PricingRoute,

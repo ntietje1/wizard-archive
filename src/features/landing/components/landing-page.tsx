@@ -1,6 +1,5 @@
 import { AudienceSection } from '~/features/landing/components/audience-section'
 import { CampaignWorkspaceSection } from '~/features/landing/components/campaign-workspace-section'
-import { CoreToolsBento } from '~/features/landing/components/core-tools-bento'
 import { FaqSection } from '~/features/landing/components/faq-section'
 import { FeatureCanvases } from '~/features/landing/components/feature-canvases'
 import { FeatureMaps } from '~/features/landing/components/feature-maps'
@@ -10,6 +9,7 @@ import { HeroSection } from '~/features/landing/components/hero-section'
 import { LandingFooter } from '~/features/landing/components/landing-footer'
 import { NavBar } from '~/features/landing/components/nav-bar'
 import { PricingSection } from '~/features/landing/components/pricing-section'
+import { TemplatesSection } from '~/features/landing/components/templates-section'
 import { TrustSection } from '~/features/landing/components/trust-section'
 
 export function LandingPage() {
@@ -23,7 +23,7 @@ export function LandingPage() {
         <AudienceSection />
         <FeatureMaps />
         <FeatureCanvases />
-        <CoreToolsBento />
+        <TemplatesSection />
         <PricingSection />
         <TrustSection />
         <FaqSection />

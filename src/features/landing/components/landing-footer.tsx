@@ -51,7 +51,6 @@ export function LandingFooter() {
               { label: 'Pricing', href: publicSite.routes.pricing },
               { label: 'FAQ', href: publicSite.routes.faq },
               { label: 'Privacy & Security', href: publicSite.routes.security },
-              { label: 'Contact', href: publicSite.routes.contact },
             ]}
           />
 
