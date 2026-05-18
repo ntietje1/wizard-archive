@@ -13,6 +13,7 @@ import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { UserProfileImage } from '~/shared/components/user-profile-image'
 import { formatRelativeTime } from '~/shared/utils/format-relative-time'
 import { cn } from '~/features/shadcn/lib/utils'
+import { getUserDisplayName } from '~/shared/utils/user-display-name'
 
 function str(value: unknown, fallback = '(unknown)'): string {
   return typeof value === 'string' ? value : fallback
@@ -23,7 +24,7 @@ function formatSingleAction(action: string, metadata: Record<string, unknown> | 
     case 'created':
       return 'created this item'
     case 'copied':
-      return `copied from "${str(metadata?.copiedFromName)}"`
+      return `copied from "${str(metadata?.copiedFromName, '(unnamed)')}"`
     case 'renamed':
       return `renamed "${str(metadata?.from)}" to "${str(metadata?.to)}"`
     case 'moved':
@@ -194,9 +195,7 @@ export function HistoryPanel({ itemId }: { itemId: Id<'sidebarItems'> }) {
               const member = membersMap.get(entry.campaignMemberId)
               const profile = member?.userProfile
               const isCurrentUser = entry.campaignMemberId === myMemberId
-              const displayName = isCurrentUser
-                ? 'You'
-                : (profile?.name ?? (profile?.username ? `@${profile.username}` : 'Unknown'))
+              const displayName = isCurrentUser ? 'You' : getUserDisplayName(profile, 'Unknown')
               const description = formatActionDescription(entry)
               const isSelected = previewingEntryId === entry._id
               const hasSnapshot = entry.hasSnapshot

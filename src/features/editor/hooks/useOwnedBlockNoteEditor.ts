@@ -3,21 +3,27 @@ import { useEffect, useRef, useState } from 'react'
 export function useOwnedBlockNoteEditor<TEditor>({
   createEditor,
   destroyEditor,
+  identity,
   onEditorChange,
 }: {
   createEditor: () => TEditor | null
   destroyEditor: (editor: TEditor) => void
+  identity?: unknown
   onEditorChange?: (editor: TEditor | null) => void
 }) {
   const [editor, setEditor] = useState<TEditor | null>(null)
+  const createEditorRef = useRef(createEditor)
+  const destroyEditorRef = useRef(destroyEditor)
   const editorRef = useRef<TEditor | null>(null)
   const onEditorChangeRef = useRef(onEditorChange)
 
+  createEditorRef.current = createEditor
+  destroyEditorRef.current = destroyEditor
   editorRef.current = editor
   onEditorChangeRef.current = onEditorChange
 
   useEffect(() => {
-    const nextEditor = createEditor()
+    const nextEditor = createEditorRef.current()
     if (!nextEditor) {
       return
     }
@@ -29,7 +35,7 @@ export function useOwnedBlockNoteEditor<TEditor>({
       const shouldClearEditor = editorRef.current === nextEditor
 
       try {
-        destroyEditor(nextEditor)
+        destroyEditorRef.current(nextEditor)
       } finally {
         if (shouldClearEditor) {
           setEditor(null)
@@ -37,7 +43,7 @@ export function useOwnedBlockNoteEditor<TEditor>({
         }
       }
     }
-  }, [createEditor, destroyEditor])
+  }, [identity])
 
   return editor
 }

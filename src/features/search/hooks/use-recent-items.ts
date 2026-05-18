@@ -1,6 +1,5 @@
 import usePersistedState from '~/shared/hooks/usePersistedState'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
-import { useFilteredSidebarItems } from '~/features/sidebar/hooks/useFilteredSidebarItems'
 import { logger } from '~/shared/utils/logger'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { parseSidebarItemSlug } from 'convex/sidebarItems/validation/slug'
@@ -72,18 +71,16 @@ export function addRecentItem(campaignId: string, slug: SidebarItemSlug) {
   }
 }
 
-export function useRecentItems(): Array<SearchResult> {
+export function useRecentItems(items: Array<AnySidebarItem>): Array<SearchResult> {
   const { campaignId } = useCampaign()
-  const { data: items } = useFilteredSidebarItems()
 
   const [entries] = usePersistedState<Array<RecentEntry>>(
     campaignId ? storageKey(campaignId) : null,
     [],
   )
 
-  const safeItems = items ?? []
   const slugToItem = new Map<SidebarItemSlug, AnySidebarItem>()
-  for (const item of safeItems) {
+  for (const item of items) {
     slugToItem.set(item.slug, item)
   }
 

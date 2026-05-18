@@ -74,4 +74,4 @@ export function sidebarItemActionButtonClass(visualState: SidebarItemVisualState
 }
 
 export const sidebarItemActionGroupClass =
-  'flex items-center shrink-0 opacity-0 group-hover:opacity-100 has-[[data-share-open]]:opacity-100'
+  'flex w-0 shrink-0 items-center overflow-hidden opacity-0 group-hover:w-auto group-hover:overflow-visible group-hover:opacity-100 has-[[data-share-open]]:w-auto has-[[data-share-open]]:overflow-visible has-[[data-share-open]]:opacity-100'

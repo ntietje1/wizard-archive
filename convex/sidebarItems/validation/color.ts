@@ -5,7 +5,7 @@ import { parseOrThrowClientValidation } from '../../common/zod'
 
 export type SidebarItemColor = BrandedString<'SidebarItemColor'>
 
-export const DEFAULT_SIDEBAR_ITEM_COLOR = '#14b8a6' as const
+export const DEFAULT_SIDEBAR_ITEM_COLOR = '#9a6dd7' as const
 
 const SIDEBAR_ITEM_HEX_COLOR_REGEX = /^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
 

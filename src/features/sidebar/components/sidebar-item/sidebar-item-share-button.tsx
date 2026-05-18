@@ -9,7 +9,6 @@ import { cn } from '~/features/shadcn/lib/utils'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { resolveClickedSidebarOperationItems } from '~/features/filesystem/filesystem-operation-selection'
 import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
-import { selectionBelongsToSurface } from 'convex/sidebarItems/filesystem/selection'
 
 export function SidebarShareButton({
   item,
@@ -38,18 +37,13 @@ function SidebarShareButtonPopover({
 }) {
   const [open, setOpen] = useState(false)
   const selectedItemIds = useSidebarUIStore((s) => s.selectedItemIds)
-  const activeItemSurface = useSidebarUIStore((s) => s.activeItemSurface)
   const filesystemReadModel = useFileSystemReadModel()
-  const canUseItemSelection =
-    activeItemSurface !== null &&
-    activeItemSurface.visibleItemIds.includes(item._id) &&
-    selectionBelongsToSurface(selectedItemIds, activeItemSurface.visibleItemIds)
   const shareItems = resolveClickedSidebarOperationItems({
     item,
     selectedItemIds,
     activeItemsMap: filesystemReadModel.activeItemsById,
     trashedItemsMap: filesystemReadModel.trashedItemsById,
-    canUseItemSelection,
+    canUseItemSelection: true,
   })
 
   return (

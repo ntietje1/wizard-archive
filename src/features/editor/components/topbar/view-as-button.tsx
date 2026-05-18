@@ -16,6 +16,7 @@ import { TooltipButton } from '~/shared/components/tooltip-button'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
+import { ViewAsPlayerRow } from '../view-as-player-row'
 
 const label = 'View as player'
 
@@ -28,6 +29,14 @@ export const ViewAsPlayerButton = () => {
   const [isOpen, setIsOpen] = useState(false)
 
   const isPending = campaignMembersQuery.isPending
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen && viewAsPlayerId) {
+      setIsOpen(false)
+      return
+    }
+
+    setIsOpen(nextOpen)
+  }
 
   if (!isDm) {
     return null
@@ -36,7 +45,7 @@ export const ViewAsPlayerButton = () => {
   return (
     <EmptyContextMenu>
       <TooltipButton tooltip={label} side="bottom">
-        <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+        <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
           <DropdownMenuTrigger
             nativeButton
             render={
@@ -49,21 +58,28 @@ export const ViewAsPlayerButton = () => {
                 disabled={isPending}
                 aria-label={label}
                 title={label}
+                onClick={(event) => {
+                  if (!viewAsPlayerId) return
+                  event.preventDefault()
+                  event.stopPropagation()
+                  setViewAsPlayerId(undefined)
+                  setIsOpen(false)
+                }}
               >
-                <Eye className="h-4 w-4" />
+                <Eye className="size-4" />
               </Button>
             }
           />
-          <DropdownMenuContent className="w-56 max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto z-[9999]">
+          <DropdownMenuContent className="w-max min-w-56 max-w-[min(24rem,calc(100vw-1rem))] max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto z-[9999]">
             <DropdownMenuGroup>
               <DropdownMenuLabel className="pb-0 pt-0.5">View as player</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {isPending ? (
-                <div className="px-2 py-2">
-                  <div className="text-xs text-muted-foreground">Loading players...</div>
+                <div className="p-2">
+                  <div className="text-xs text-muted-foreground">Loading players&hellip;</div>
                 </div>
               ) : playerMembers.length === 0 ? (
-                <div className="px-2 py-2">
+                <div className="p-2">
                   <div className="text-xs text-muted-foreground">
                     No other players in this campaign.
                   </div>
@@ -71,13 +87,6 @@ export const ViewAsPlayerButton = () => {
               ) : (
                 <>
                   {playerMembers.map((member) => {
-                    const profile = member.userProfile
-                    const displayName = profile.name || profile.username || 'Player'
-                    const displayText = profile.name
-                      ? profile.name
-                      : profile.username
-                        ? `@${profile.username}`
-                        : 'Player'
                     const isSelected = viewAsPlayerId === member._id
 
                     return (
@@ -91,19 +100,7 @@ export const ViewAsPlayerButton = () => {
                         }}
                         className="pl-2 pr-8 py-1.5 [&>span:first-child]:!left-auto [&>span:first-child]:!right-2"
                       >
-                        <span className="flex min-w-0 flex-col leading-tight flex-1 pr-6">
-                          <span className="truncate font-medium" title={displayName}>
-                            {displayText}
-                          </span>
-                          {profile.name && profile.username && (
-                            <span
-                              className="truncate text-xs text-muted-foreground"
-                              title={`@${profile.username}`}
-                            >
-                              @{profile.username}
-                            </span>
-                          )}
-                        </span>
+                        <ViewAsPlayerRow member={member} />
                       </DropdownMenuCheckboxItem>
                     )
                   })}

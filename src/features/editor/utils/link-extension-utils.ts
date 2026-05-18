@@ -1,28 +1,13 @@
 import { createSelectionStabilizerPlugin } from './selection-stabilizer'
-import type { RefObject } from 'react'
 import type { Plugin, PluginKey } from '@tiptap/pm/state'
 import type { EditorView } from '@tiptap/pm/view'
 
-/**
- * Check if a range overlaps with the selection
- */
-export function overlapsSelection(
-  matchFrom: number,
-  matchTo: number,
-  selFrom: number,
-  selTo: number,
-): boolean {
-  return selFrom <= matchTo && selTo >= matchFrom
-}
-
-/** Minimal interface for the tiptap editor methods we use */
 interface TiptapEditorLike {
   view: EditorView | undefined
   registerPlugin: (
     plugin: Plugin,
     handlePlugins?: (newPlugin: Plugin, plugins: Array<Plugin>) => Array<Plugin>,
   ) => void
-  unregisterPlugin: (keyOrName: PluginKey | string) => void
 }
 
 interface RegisterPluginsOptions {
@@ -30,26 +15,10 @@ interface RegisterPluginsOptions {
   pluginKey: PluginKey
   stabilizerKey: PluginKey
   createDecorationPlugin: () => Plugin
-  pluginRef: RefObject<Plugin | null>
 }
 
-function replacePlugin(
-  plugins: Array<Plugin>,
-  pluginToAdd: Plugin,
-  keyOrName: PluginKey | string,
-): Array<Plugin> {
-  const name = (() => {
-    if (typeof keyOrName === 'string') {
-      return `${keyOrName}$`
-    }
-
-    const pluginKey = (keyOrName as unknown as { key?: string }).key
-    if (!pluginKey) {
-      throw new Error('replacePlugin expected a PluginKey with a defined key value')
-    }
-
-    return pluginKey
-  })()
+function replacePlugin(plugins: Array<Plugin>, pluginToAdd: Plugin, key: PluginKey): Array<Plugin> {
+  const name = getPluginKeyName(key)
 
   return [
     ...plugins.filter((plugin) => {
@@ -60,27 +29,36 @@ function replacePlugin(
   ]
 }
 
-/**
- * Registers decoration and stabilizer plugins for link extensions.
- * Returns a cleanup function.
- */
+function getPluginKeyName(pluginKey: PluginKey): string {
+  const name = (pluginKey as unknown as { key?: string }).key
+  if (!name) {
+    throw new Error('replacePlugin expected a PluginKey with a defined key value')
+  }
+
+  return name
+}
+
 export function registerLinkPlugins({
   tiptapEditor,
   pluginKey,
   stabilizerKey,
   createDecorationPlugin,
-  pluginRef,
 }: RegisterPluginsOptions): () => void {
   let cancelled = false
   let frameId: number | null = null
 
   const registerPluginWhenReady = () => {
-    if (!tiptapEditor.view) {
+    const view = getMountedEditorView(tiptapEditor)
+    if (!view) {
       frameId = requestAnimationFrame(registerPluginWhenReady)
       return
     }
 
     if (cancelled) return
+    if (pluginKey.getState(view.state) !== undefined) {
+      forceRebuildLinkDecorations(view, pluginKey)
+      return
+    }
 
     const stabilizerPlugin = createSelectionStabilizerPlugin(stabilizerKey)
     const decorationPlugin = createDecorationPlugin()
@@ -91,33 +69,34 @@ export function registerLinkPlugins({
     tiptapEditor.registerPlugin(decorationPlugin, (newPlugin, plugins) =>
       replacePlugin(plugins, newPlugin, pluginKey),
     )
-    pluginRef.current = decorationPlugin
-
-    try {
-      const { tr } = tiptapEditor.view.state
-      tiptapEditor.view.dispatch(tr.setMeta(pluginKey, true))
-    } catch {
-      // View might not be ready
-    }
   }
 
-  registerPluginWhenReady()
+  frameId = requestAnimationFrame(registerPluginWhenReady)
 
   return () => {
     cancelled = true
     if (frameId !== null) {
       cancelAnimationFrame(frameId)
     }
-    try {
-      tiptapEditor.unregisterPlugin(stabilizerKey)
-    } catch {
-      // Plugin might already be unregistered
-    }
-    try {
-      tiptapEditor.unregisterPlugin(pluginKey)
-    } catch {
-      // Plugin might already be unregistered
-    }
-    pluginRef.current = null
+  }
+}
+
+function forceRebuildLinkDecorations(view: EditorView, pluginKey: PluginKey) {
+  try {
+    const { tr } = view.state
+    view.dispatch(tr.setMeta(pluginKey, true))
+  } catch {
+    // The view can disappear while BlockNote is mounting or unmounting.
+  }
+}
+
+function getMountedEditorView(tiptapEditor: TiptapEditorLike) {
+  try {
+    const view = tiptapEditor.view
+    if (!view) return undefined
+    void view.dom
+    return view
+  } catch {
+    return undefined
   }
 }

@@ -1,9 +1,7 @@
-import { Decoration, DecorationSet } from '@tiptap/pm/view'
+import { Decoration } from '@tiptap/pm/view'
 import type { ParsedWikiLinkFields } from 'convex/links/linkParsers'
 import type { ResolvedLink } from 'convex/links/types'
-import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { createLinkDecorationState, LINK_ROLE } from './link-decoration'
-import { overlapsSelection } from './link-extension-utils'
 
 export interface WikiLinkDecorationMatch {
   from: number
@@ -86,21 +84,4 @@ export function buildWikiLinkDecorationEntries(
   })
 
   return decorations
-}
-
-export function buildWikiLinkDecorations(
-  doc: ProseMirrorNode,
-  matches: Array<WikiLinkDecorationMatch>,
-  isViewerMode: boolean,
-  selFrom: number,
-  selTo: number,
-): DecorationSet {
-  const decorations = matches.flatMap((match) =>
-    buildWikiLinkDecorationEntries(match, {
-      isViewerMode,
-      isActive: !isViewerMode && overlapsSelection(match.from, match.to, selFrom, selTo),
-    }),
-  )
-
-  return DecorationSet.create(doc, decorations)
 }

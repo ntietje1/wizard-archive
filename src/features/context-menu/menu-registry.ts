@@ -1,10 +1,12 @@
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { EDITOR_MODE } from 'convex/editors/types'
 import type { PermissionLevel } from 'convex/permissions/types'
 import { createElement } from 'react'
 import {
   ArrowUpLeft,
   ArrowUpRight,
   Bookmark,
+  BookOpen,
   Download,
   ClipboardPaste,
   Eye,
@@ -36,6 +38,8 @@ import type {
   ContextMenuGroupConfig,
   ContextMenuItemSpec,
   EditorMenuContext,
+  EditorModeMenuService,
+  ViewAsPlayerMenuService,
 } from './types'
 import {
   RIGHT_SIDEBAR_CONTENT,
@@ -46,6 +50,8 @@ import { logger } from '~/shared/utils/logger'
 import { assertNever } from '~/shared/utils/utils'
 import { SidebarItemsSharePanel } from '~/features/sharing/components/sidebar-items-share-panel'
 import type { FileSystemValue } from '~/features/filesystem/useFileSystem'
+import { ViewAsPlayerRow } from '~/features/editor/components/view-as-player-row'
+import { getCampaignMemberDisplayName } from '~/shared/utils/user-display-name'
 
 function isPanelContentActive(contentId: string): boolean {
   const panel = usePanelPreferenceStore.getState().panels[RIGHT_SIDEBAR_PANEL_ID]
@@ -121,6 +127,8 @@ export type ActionHandlers = {
 interface EditorContextMenuServices {
   actions: ActionHandlers
   filesystem: Pick<FileSystemValue, 'canPasteIntoTarget'>
+  editorMode: EditorModeMenuService
+  viewAsPlayer: ViewAsPlayerMenuService
 }
 
 type EditorContextMenuItem = ContextMenuItemSpec<EditorMenuContext, EditorContextMenuServices>
@@ -130,6 +138,27 @@ type EditorContextMenuContributor = ContextMenuContributor<
 >
 
 type SimpleActionKey = Exclude<keyof ActionHandlers, 'setGeneralAccessLevel'>
+
+function nextEditorMode(currentMode: EditorModeMenuService['editorMode']) {
+  return currentMode === EDITOR_MODE.EDITOR ? EDITOR_MODE.VIEWER : EDITOR_MODE.EDITOR
+}
+
+function createViewAsPlayerItems(
+  services: EditorContextMenuServices,
+): Array<EditorContextMenuItem> {
+  return services.viewAsPlayer.playerMembers.map((member, index) => ({
+    id: `view-as-player-${index}`,
+    commandId: 'setViewAsPlayer',
+    payload: member._id,
+    label: getCampaignMemberDisplayName(member),
+    content: createElement(ViewAsPlayerRow, { member }),
+    group: 'view-as-player',
+    priority: index,
+    isChecked: (_context, itemServices, playerId) =>
+      itemServices.viewAsPlayer.viewAsPlayerId === playerId,
+    closeOnSelect: false,
+  }))
+}
 
 function createActionCommand(
   id: SimpleActionKey,
@@ -197,6 +226,21 @@ export const editorContextMenuCommands = {
       if (!context.blockNoteId) return
       const block = context.editor?.getBlock(context.blockNoteId)
       logger.debug(block?.content)
+    },
+  },
+  toggleReadingMode: {
+    id: 'toggleReadingMode',
+    run: (_context, services) => {
+      services.editorMode.setEditorMode(nextEditorMode(services.editorMode.editorMode))
+    },
+  },
+  setViewAsPlayer: {
+    id: 'setViewAsPlayer',
+    run: (_context, services, payload) => {
+      const playerId = payload as ViewAsPlayerMenuService['viewAsPlayerId']
+      services.viewAsPlayer.setViewAsPlayerId(
+        services.viewAsPlayer.viewAsPlayerId === playerId ? undefined : playerId,
+      )
     },
   },
 } satisfies Record<string, ContextMenuCommand<EditorMenuContext, EditorContextMenuServices>>
@@ -413,6 +457,19 @@ export const editorContextMenuContributors = [
     surfaces: ['topbar'],
     getItems: () => [
       {
+        id: 'toggle-reading-mode',
+        commandId: 'toggleReadingMode',
+        label: 'Reading Mode',
+        icon: BookOpen,
+        group: 'panels',
+        priority: 69,
+        applies: (context, itemServices) =>
+          p.isSidebarItem(context) && itemServices.editorMode.canEdit === true,
+        isChecked: (_itemContext, itemServices) =>
+          itemServices.editorMode.editorMode === EDITOR_MODE.VIEWER,
+        closeOnSelect: false,
+      },
+      {
         id: 'panel-history',
         commandId: 'activatePanel',
         payload: RIGHT_SIDEBAR_CONTENT.history,
@@ -461,7 +518,22 @@ export const editorContextMenuContributors = [
   {
     id: 'editor-share',
     surfaces: ['sidebar', 'folder-view', 'favorites', 'topbar'],
-    getItems: () => [
+    getItems: (_shareContext, shareServices) => [
+      {
+        id: 'view-as-player',
+        label: 'View as Player',
+        icon: Eye,
+        group: 'share',
+        priority: 79,
+        applies: (context, itemServices) =>
+          p.inView('topbar')(context) &&
+          p.isDm(context) &&
+          p.isSidebarItem(context) &&
+          itemServices.viewAsPlayer.playerMembers.length > 0,
+        isChecked: (_itemContext, itemServices) =>
+          itemServices.viewAsPlayer.viewAsPlayerId !== undefined,
+        children: () => createViewAsPlayerItems(shareServices),
+      },
       {
         id: 'share-items',
         label: (context) => {

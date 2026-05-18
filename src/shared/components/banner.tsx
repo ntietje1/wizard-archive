@@ -11,9 +11,12 @@ const bannerVariants = {
 const buttonVariants = {
   accent: 'text-accent-foreground hover:text-accent-foreground hover:bg-foreground/5',
   destructive: 'text-destructive hover:text-destructive hover:bg-destructive/15',
+  'on-destructive':
+    'bg-transparent text-white hover:bg-transparent hover:text-white dark:text-white dark:hover:text-white',
 }
 
 type BannerVariant = keyof typeof bannerVariants
+type BannerButtonVariant = keyof typeof buttonVariants
 
 interface BannerProps {
   icon: ReactNode
@@ -52,7 +55,7 @@ export function Banner({
 interface BannerButtonProps {
   onClick: () => void
   children: ReactNode
-  variant?: BannerVariant
+  variant?: BannerButtonVariant
   disabled?: boolean
 }
 

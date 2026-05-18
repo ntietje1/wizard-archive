@@ -37,6 +37,107 @@ function resolveValue<TValue, TContext, TServices, TPayload>(
     : value
 }
 
+function resolveShortcut<TContext, TServices, TPayload>(
+  item: ContextMenuItemSpec<TContext, TServices, TPayload>,
+  command: ContextMenuCommand<TContext, TServices, TPayload> | undefined,
+  context: TContext,
+  services: TServices,
+  payload: TPayload | undefined,
+) {
+  const shortcut = item.shortcut ?? command?.shortcut
+  return shortcut ? resolveValue(shortcut, context, services, payload) : undefined
+}
+
+function resolveDisabled<TContext, TServices, TPayload>(
+  item: ContextMenuItemSpec<TContext, TServices, TPayload>,
+  command: ContextMenuCommand<TContext, TServices, TPayload> | undefined,
+  context: TContext,
+  services: TServices,
+  payload: TPayload | undefined,
+) {
+  const isEnabled = item.isEnabled ?? command?.isEnabled
+  return isEnabled ? !isEnabled(context, services, payload) : false
+}
+
+function resolveChecked<TContext, TServices, TPayload>(
+  item: ContextMenuItemSpec<TContext, TServices, TPayload>,
+  command: ContextMenuCommand<TContext, TServices, TPayload> | undefined,
+  context: TContext,
+  services: TServices,
+  payload: TPayload | undefined,
+) {
+  const isChecked = item.isChecked ?? command?.isChecked
+  return isChecked ? isChecked(context, services, payload) : false
+}
+
+function withSubmenuEllipsis(label: string, hasSubmenu: boolean): string {
+  if (!hasSubmenu || label.endsWith('...')) return label
+  return `${label}...`
+}
+
+function resolveChildren<TContext extends { surface: ContextMenuSurfaceId }, TServices, TPayload>(
+  item: ContextMenuItemSpec<TContext, TServices, TPayload>,
+  context: TContext,
+  services: TServices,
+  commands: CommandMap<TContext, TServices>,
+  payload: TPayload | undefined,
+): Array<ResolvedContextMenuItem> | undefined {
+  const childrenSource =
+    typeof item.children === 'function' ? item.children(context, services, payload) : item.children
+  if (!childrenSource) return undefined
+
+  const children = childrenSource
+    .map((child) => resolveContextMenuItem(child, context, services, commands))
+    .filter((child): child is ResolvedContextMenuItem => child !== null)
+    .sort((a, b) => a.priority - b.priority)
+
+  return children.length > 0 ? children : undefined
+}
+
+function resolveSubmenuContent<TContext, TServices, TPayload>(
+  item: ContextMenuItemSpec<TContext, TServices, TPayload>,
+  context: TContext,
+  services: TServices,
+  payload: TPayload | undefined,
+) {
+  return item.submenuContent
+    ? resolveValue(item.submenuContent, context, services, payload)
+    : undefined
+}
+
+function resolveLabel<TContext, TServices, TPayload>(
+  item: ContextMenuItemSpec<TContext, TServices, TPayload>,
+  command: ContextMenuCommand<TContext, TServices, TPayload> | undefined,
+  context: TContext,
+  services: TServices,
+  payload: TPayload | undefined,
+  hasSubmenu: boolean,
+) {
+  const labelSource = item.label ?? command?.label
+  if (!labelSource) {
+    throw new Error(`Missing context-menu label for item "${item.id}"`)
+  }
+
+  return withSubmenuEllipsis(resolveValue(labelSource, context, services, payload), hasSubmenu)
+}
+
+function createOnSelect<TContext, TServices, TPayload>(
+  item: ContextMenuItemSpec<TContext, TServices, TPayload>,
+  command: ContextMenuCommand<TContext, TServices, TPayload> | undefined,
+  context: TContext,
+  services: TServices,
+  payload: TPayload | undefined,
+) {
+  return async () => {
+    if (item.onSelect) {
+      await item.onSelect(context, services, payload)
+      return
+    }
+    if (!command) return
+    await command.run(context, services, payload)
+  }
+}
+
 function resolveContextMenuItem<
   TContext extends { surface: ContextMenuSurfaceId },
   TServices,
@@ -57,55 +158,27 @@ function resolveContextMenuItem<
     throw new Error(`Missing context-menu command "${item.commandId}"`)
   }
 
-  const childrenSource =
-    typeof item.children === 'function' ? item.children(context, services, payload) : item.children
-  const children = childrenSource
-    ?.map((child) => resolveContextMenuItem(child, context, services, commands))
-    .filter((child): child is ResolvedContextMenuItem => child !== null)
-    .sort((a, b) => a.priority - b.priority)
-  const submenuContent = item.submenuContent
-    ? resolveValue(item.submenuContent, context, services, payload)
-    : undefined
-
-  const label = item.label ?? command?.label
-  if (!label) {
-    throw new Error(`Missing context-menu label for item "${item.id}"`)
-  }
+  const children = resolveChildren(item, context, services, commands, payload)
+  const submenuContent = resolveSubmenuContent(item, context, services, payload)
+  const hasSubmenu = children !== undefined || submenuContent !== undefined
 
   return {
     id: item.id,
     commandId: item.commandId,
-    label: resolveValue(label, context, services, payload),
+    label: resolveLabel(item, command, context, services, payload, hasSubmenu),
+    content: item.content ? resolveValue(item.content, context, services, payload) : undefined,
     icon: item.icon ?? command?.icon,
-    shortcut: item.shortcut
-      ? resolveValue(item.shortcut, context, services, payload)
-      : command?.shortcut
-        ? resolveValue(command.shortcut, context, services, payload)
-        : undefined,
-    disabled: item.isEnabled
-      ? !item.isEnabled(context, services, payload)
-      : command?.isEnabled
-        ? !command.isEnabled(context, services, payload)
-        : false,
-    checked: item.isChecked
-      ? item.isChecked(context, services, payload)
-      : command?.isChecked
-        ? command.isChecked(context, services, payload)
-        : false,
+    shortcut: resolveShortcut(item, command, context, services, payload),
+    disabled: resolveDisabled(item, command, context, services, payload),
+    checked: resolveChecked(item, command, context, services, payload),
     group: item.group,
     priority: item.priority ?? 0,
     variant: item.variant,
     className: item.className,
-    children: children && children.length > 0 ? children : undefined,
+    closeOnSelect: item.closeOnSelect ?? true,
+    children,
     submenuContent,
-    onSelect: async () => {
-      if (item.onSelect) {
-        await item.onSelect(context, services, payload)
-        return
-      }
-      if (!command) return
-      await command.run(context, services, payload)
-    },
+    onSelect: createOnSelect(item, command, context, services, payload),
   }
 }
 

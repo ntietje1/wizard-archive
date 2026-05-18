@@ -123,20 +123,20 @@ export function useCanvasEditorRuntime({
     remoteResizeDimensions: session.remoteResizeDimensions,
   })
 
-  const isSelectMode = activeTool === 'select'
+  const canUsePointerTool = activeTool === 'select'
   const sceneHandlers = useMemo(
     () => ({
       activeToolHandlers: tools.activeToolHandlers,
       cursorPresence: tools.cursorPresence,
       createEdgeFromConnection: tools.createEdgeFromConnection,
       onNodeClick: (event: ReactMouseEvent, node: CanvasDocumentNode) => {
-        if (!canEdit || !isSelectMode) {
+        if (!canUsePointerTool) {
           return
         }
         tools.activeToolHandlers.onNodeClick?.(event, node)
       },
       onEdgeClick: (event: ReactMouseEvent, edge: CanvasDocumentEdge) => {
-        if (!canEdit || !isSelectMode) {
+        if (!canUsePointerTool) {
           return
         }
         tools.activeToolHandlers.onEdgeClick?.(event, edge)
@@ -145,8 +145,7 @@ export function useCanvasEditorRuntime({
       onMouseLeave: tools.cursorPresence.onMouseLeave,
     }),
     [
-      canEdit,
-      isSelectMode,
+      canUsePointerTool,
       tools.activeToolHandlers,
       tools.createEdgeFromConnection,
       tools.cursorPresence,

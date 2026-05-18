@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createRef } from 'react'
+import type { ComponentProps } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ContextMenuHost } from '../context-menu-host'
 import type { ContextMenuHostRef } from '../context-menu-host'
@@ -47,6 +48,12 @@ const thirdSubmenuItem = {
   group: 'group-3',
 }
 
+const alignSubmenuItem = {
+  ...submenuItem,
+  id: 'submenu-item-align',
+  label: 'Center',
+}
+
 const submenuParent = {
   id: 'submenu-parent',
   label: 'Reorder',
@@ -56,6 +63,13 @@ const submenuParent = {
   priority: 0,
   onSelect: vi.fn(),
   children: [submenuItem],
+}
+
+const secondSubmenuParent = {
+  ...submenuParent,
+  id: 'submenu-parent-align',
+  label: 'Align',
+  children: [alignSubmenuItem],
 }
 
 const groupedSubmenuParent = {
@@ -74,6 +88,55 @@ const simpleMenu: BuiltContextMenu = {
   isEmpty: false,
 }
 
+const persistentItem = {
+  id: 'item-persistent',
+  label: 'Reading Mode',
+  disabled: false,
+  checked: false,
+  group: 'group-1',
+  priority: 0,
+  closeOnSelect: false,
+  onSelect: vi.fn(),
+}
+
+const persistentMenu: BuiltContextMenu = {
+  groups: [
+    {
+      id: 'group-1',
+      items: [persistentItem],
+    },
+  ],
+  flatItems: [persistentItem],
+  isEmpty: false,
+}
+
+const richContentItem = {
+  id: 'item-rich',
+  label: 'Mina',
+  disabled: false,
+  checked: false,
+  group: 'group-1',
+  priority: 0,
+  content: (
+    <span>
+      <span>Mina</span>
+      <span>@mina</span>
+    </span>
+  ),
+  onSelect: vi.fn(),
+}
+
+const richContentMenu: BuiltContextMenu = {
+  groups: [
+    {
+      id: 'group-1',
+      items: [richContentItem],
+    },
+  ],
+  flatItems: [richContentItem],
+  isEmpty: false,
+}
+
 const submenuMenu: BuiltContextMenu = {
   groups: [
     {
@@ -82,6 +145,17 @@ const submenuMenu: BuiltContextMenu = {
     },
   ],
   flatItems: [leafItem, submenuParent, submenuItem],
+  isEmpty: false,
+}
+
+const siblingSubmenuMenu: BuiltContextMenu = {
+  groups: [
+    {
+      id: 'group-1',
+      items: [submenuParent, secondSubmenuParent],
+    },
+  ],
+  flatItems: [submenuParent, submenuItem, secondSubmenuParent, alignSubmenuItem],
   isEmpty: false,
 }
 
@@ -118,6 +192,42 @@ const customSubmenuMenu: BuiltContextMenu = {
   isEmpty: false,
 }
 
+const siblingCustomSubmenuMenu: BuiltContextMenu = {
+  groups: [
+    {
+      id: 'group-1',
+      items: [
+        {
+          id: 'share-submenu',
+          label: 'Share...',
+          disabled: false,
+          checked: false,
+          group: 'group-1',
+          priority: 0,
+          onSelect: vi.fn(),
+          submenuContent: <div data-testid="share-panel">Share panel</div>,
+        },
+        {
+          id: 'view-as-submenu',
+          label: 'View as Player...',
+          disabled: false,
+          checked: false,
+          group: 'group-1',
+          priority: 1,
+          onSelect: vi.fn(),
+          submenuContent: <div data-testid="view-as-panel">View as panel</div>,
+        },
+      ],
+    },
+  ],
+  flatItems: [],
+  isEmpty: false,
+}
+
+function TestContextMenuHost(props: Omit<ComponentProps<typeof ContextMenuHost>, 'ref'>) {
+  return <ContextMenuHost ref={createRef<ContextMenuHostRef>()} {...props} />
+}
+
 describe('ContextMenuHost', () => {
   afterEach(() => {
     vi.clearAllMocks()
@@ -141,9 +251,9 @@ describe('ContextMenuHost', () => {
     const user = userEvent.setup()
 
     render(
-      <ContextMenuHost menu={simpleMenu}>
+      <TestContextMenuHost menu={simpleMenu}>
         <div data-testid="context-trigger">Canvas surface</div>
-      </ContextMenuHost>,
+      </TestContextMenuHost>,
     )
 
     const trigger = screen.getByTestId('context-trigger')
@@ -180,9 +290,9 @@ describe('ContextMenuHost', () => {
 
   it('closes immediately on outside left pointerdown', async () => {
     render(
-      <ContextMenuHost menu={simpleMenu}>
+      <TestContextMenuHost menu={simpleMenu}>
         <div data-testid="context-trigger">Canvas surface</div>
-      </ContextMenuHost>,
+      </TestContextMenuHost>,
     )
 
     fireEvent.contextMenu(screen.getByTestId('context-trigger'), {
@@ -211,9 +321,9 @@ describe('ContextMenuHost', () => {
     const user = userEvent.setup()
 
     render(
-      <ContextMenuHost menu={simpleMenu}>
+      <TestContextMenuHost menu={simpleMenu}>
         <div data-testid="context-trigger">Canvas surface</div>
-      </ContextMenuHost>,
+      </TestContextMenuHost>,
     )
 
     fireEvent.contextMenu(screen.getByTestId('context-trigger'), {
@@ -237,11 +347,11 @@ describe('ContextMenuHost', () => {
     const triggerClick = vi.fn()
 
     render(
-      <ContextMenuHost menu={simpleMenu}>
+      <TestContextMenuHost menu={simpleMenu}>
         <button type="button" data-testid="context-trigger" onClick={triggerClick}>
           Sidebar item
         </button>
-      </ContextMenuHost>,
+      </TestContextMenuHost>,
     )
 
     fireEvent.contextMenu(screen.getByTestId('context-trigger'), {
@@ -258,13 +368,56 @@ describe('ContextMenuHost', () => {
     expect(triggerClick).not.toHaveBeenCalled()
   })
 
+  it('keeps the menu open after actions that opt out of closing', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <TestContextMenuHost menu={persistentMenu}>
+        <div data-testid="context-trigger">Topbar</div>
+      </TestContextMenuHost>,
+    )
+
+    fireEvent.contextMenu(screen.getByTestId('context-trigger'), {
+      bubbles: true,
+      cancelable: true,
+      clientX: 24,
+      clientY: 32,
+      button: 2,
+    })
+
+    await user.click(await screen.findByRole('menuitem', { name: 'Reading Mode' }))
+
+    expect(persistentItem.onSelect).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('menu')).toBeVisible()
+    expect(screen.getByRole('menuitem', { name: 'Reading Mode' })).toBeVisible()
+  })
+
+  it('renders custom item content while preserving the menu item label', async () => {
+    render(
+      <TestContextMenuHost menu={richContentMenu}>
+        <div data-testid="context-trigger">Topbar</div>
+      </TestContextMenuHost>,
+    )
+
+    fireEvent.contextMenu(screen.getByTestId('context-trigger'), {
+      bubbles: true,
+      cancelable: true,
+      clientX: 24,
+      clientY: 32,
+      button: 2,
+    })
+
+    expect(await screen.findByRole('menuitem', { name: 'Mina' })).toBeVisible()
+    expect(screen.getByText('@mina')).toBeVisible()
+  })
+
   it('opens hover submenus without collapsing the root menu', async () => {
     const user = userEvent.setup()
 
     render(
-      <ContextMenuHost menu={submenuMenu}>
+      <TestContextMenuHost menu={submenuMenu}>
         <div data-testid="context-trigger">Canvas surface</div>
-      </ContextMenuHost>,
+      </TestContextMenuHost>,
     )
 
     fireEvent.contextMenu(screen.getByTestId('context-trigger'), {
@@ -281,15 +434,16 @@ describe('ContextMenuHost', () => {
     const sendToBackItem = await screen.findByRole('menuitem', { name: 'Send to back' })
     expect(screen.getAllByRole('menu')).toHaveLength(2)
     expect(reorderItem).toBeVisible()
+    expect(reorderItem.querySelector('svg')).not.toBeInTheDocument()
     expect(sendToBackItem).toBeVisible()
   })
 
   it('renders separators between submenu child groups', async () => {
     const user = userEvent.setup()
     render(
-      <ContextMenuHost menu={groupedSubmenuMenu}>
+      <TestContextMenuHost menu={groupedSubmenuMenu}>
         <div data-testid="context-trigger">Canvas surface</div>
-      </ContextMenuHost>,
+      </TestContextMenuHost>,
     )
 
     fireEvent.contextMenu(screen.getByTestId('context-trigger'), {
@@ -307,14 +461,68 @@ describe('ContextMenuHost', () => {
     expect(document.body.querySelectorAll('[data-slot="context-menu-separator"]')).toHaveLength(2)
   })
 
+  it('keeps normal sibling submenus mutually exclusive', async () => {
+    const user = userEvent.setup()
+    render(
+      <TestContextMenuHost menu={siblingSubmenuMenu}>
+        <div data-testid="context-trigger">Canvas surface</div>
+      </TestContextMenuHost>,
+    )
+
+    fireEvent.contextMenu(screen.getByTestId('context-trigger'), {
+      bubbles: true,
+      cancelable: true,
+      clientX: 24,
+      clientY: 32,
+      button: 2,
+    })
+
+    await user.hover(await screen.findByRole('menuitem', { name: 'Reorder' }))
+    expect(await screen.findByRole('menuitem', { name: 'Send to back' })).toBeVisible()
+
+    await user.hover(await screen.findByRole('menuitem', { name: 'Align' }))
+
+    expect(await screen.findByRole('menuitem', { name: 'Center' })).toBeVisible()
+    await waitFor(() => {
+      expect(screen.queryByRole('menuitem', { name: 'Send to back' })).not.toBeInTheDocument()
+    })
+  })
+
+  it('keeps rich sibling submenus mutually exclusive', async () => {
+    const user = userEvent.setup()
+    render(
+      <TestContextMenuHost menu={siblingCustomSubmenuMenu}>
+        <div data-testid="context-trigger">Canvas surface</div>
+      </TestContextMenuHost>,
+    )
+
+    fireEvent.contextMenu(screen.getByTestId('context-trigger'), {
+      bubbles: true,
+      cancelable: true,
+      clientX: 24,
+      clientY: 32,
+      button: 2,
+    })
+
+    await user.hover(await screen.findByRole('menuitem', { name: 'Share...' }))
+    expect(await screen.findByTestId('share-panel')).toBeVisible()
+
+    await user.hover(await screen.findByRole('menuitem', { name: 'View as Player...' }))
+
+    expect(await screen.findByTestId('view-as-panel')).toBeVisible()
+    await waitFor(() => {
+      expect(screen.queryByTestId('share-panel')).not.toBeInTheDocument()
+    })
+  })
+
   it('renders custom submenu content without running the parent action', async () => {
     const user = userEvent.setup()
     const shareItem = customSubmenuMenu.groups[0]!.items[0]!
 
     render(
-      <ContextMenuHost menu={customSubmenuMenu}>
+      <TestContextMenuHost menu={customSubmenuMenu}>
         <div data-testid="context-trigger">Canvas surface</div>
-      </ContextMenuHost>,
+      </TestContextMenuHost>,
     )
 
     fireEvent.contextMenu(screen.getByTestId('context-trigger'), {
@@ -329,6 +537,7 @@ describe('ContextMenuHost', () => {
     await user.hover(shareTrigger)
 
     expect(await screen.findByTestId('share-panel')).toBeVisible()
+    expect(shareTrigger.querySelector('svg')).not.toBeInTheDocument()
     expect(shareItem.onSelect).not.toHaveBeenCalled()
   })
 
@@ -336,9 +545,9 @@ describe('ContextMenuHost', () => {
     const user = userEvent.setup()
 
     render(
-      <ContextMenuHost menu={customSubmenuMenu}>
+      <TestContextMenuHost menu={customSubmenuMenu}>
         <div data-testid="context-trigger">Canvas surface</div>
-      </ContextMenuHost>,
+      </TestContextMenuHost>,
     )
 
     fireEvent.contextMenu(screen.getByTestId('context-trigger'), {
@@ -357,6 +566,52 @@ describe('ContextMenuHost', () => {
     expect(submenuContent).toHaveClass('top-0')
     expect(submenuContent).toHaveClass('left-full')
     expect(submenuContent).not.toHaveStyle({ position: 'fixed' })
+  })
+
+  it('opens custom submenu content to the left when the right side does not have room', async () => {
+    const user = userEvent.setup()
+    const originalInnerWidth = window.innerWidth
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 })
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+      function (this: HTMLElement) {
+        if (this.getAttribute('data-slot') === 'context-menu-sub-trigger') {
+          return DOMRect.fromRect({ x: 880, y: 40, width: 120, height: 28 })
+        }
+        if (this.getAttribute('data-slot') === 'context-menu-rich-submenu-content') {
+          return DOMRect.fromRect({ x: 1000, y: 40, width: 300, height: 160 })
+        }
+        return DOMRect.fromRect()
+      },
+    )
+
+    try {
+      render(
+        <TestContextMenuHost menu={customSubmenuMenu}>
+          <div data-testid="context-trigger">Canvas surface</div>
+        </TestContextMenuHost>,
+      )
+
+      fireEvent.contextMenu(screen.getByTestId('context-trigger'), {
+        bubbles: true,
+        cancelable: true,
+        clientX: 24,
+        clientY: 32,
+        button: 2,
+      })
+
+      await user.hover(await screen.findByRole('menuitem', { name: 'Share...' }))
+
+      const sharePanel = await screen.findByTestId('share-panel')
+      const submenuContent = sharePanel.closest('[data-slot="context-menu-rich-submenu-content"]')
+      await waitFor(() => {
+        expect(submenuContent).toHaveClass('absolute')
+        expect(submenuContent).toHaveClass('top-0')
+        expect(submenuContent).toHaveClass('right-full')
+        expect(submenuContent).not.toHaveStyle({ position: 'fixed' })
+      })
+    } finally {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: originalInnerWidth })
+    }
   })
 
   it('keeps custom submenu content interactive when it opens a nested select', async () => {
@@ -397,11 +652,11 @@ describe('ContextMenuHost', () => {
     }
 
     render(
-      <ContextMenuHost menu={menu}>
+      <TestContextMenuHost menu={menu}>
         <button type="button" data-testid="context-trigger">
           Sidebar item
         </button>
-      </ContextMenuHost>,
+      </TestContextMenuHost>,
     )
 
     fireEvent.contextMenu(screen.getByTestId('context-trigger'), {

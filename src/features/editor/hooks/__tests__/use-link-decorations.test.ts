@@ -6,8 +6,7 @@ import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { ParsedLinkData, ResolvedLink } from 'convex/links/types'
 import type { Plugin } from '@tiptap/pm/state'
 import type { LinkResolver } from '../useLinkResolver'
-import { useMdLinkExtension } from '../useMdLinkExtension'
-import { useWikiLinkExtension } from '../useWikiLinkExtension'
+import { useLinkDecorations } from '../useLinkDecorations'
 
 const { mockRegisterLinkPlugins } = vi.hoisted(() => ({
   mockRegisterLinkPlugins: vi.fn(),
@@ -56,22 +55,6 @@ function createResolver(isViewerMode: boolean): LinkResolver {
   }
 }
 
-function getContentDecoration(state: EditorState) {
-  const decoration = state.plugins[0]
-    ?.getState(state)
-    ?.decorations.find()
-    .find(
-      (entry: { type: { attrs?: Record<string, string> } }) =>
-        entry.type.attrs?.['data-link-role'] === 'content',
-    )
-
-  if (!decoration) {
-    throw new Error('content decoration missing')
-  }
-
-  return decoration
-}
-
 function getContentDecorations(plugin: Plugin, state: EditorState) {
   return plugin
     .getState(state)
@@ -92,7 +75,7 @@ function createEditorState(plugin: Plugin, text: string) {
   })
 }
 
-describe('link extension hooks', () => {
+describe('useLinkDecorations', () => {
   beforeEach(() => {
     mockRegisterLinkPlugins.mockReset()
     mockRegisterLinkPlugins.mockReturnValue(vi.fn())
@@ -102,64 +85,57 @@ describe('link extension hooks', () => {
     vi.clearAllMocks()
   })
 
-  it('registers the wiki link plugin with the expected keys and rebuilds on selection/doc changes', () => {
+  it('registers one combined link plugin for wiki and markdown links', () => {
     const editor = {
       _tiptapEditor: {},
     } as CustomBlockNoteEditor
     const resolver = createResolver(false)
 
-    renderHook(() => useWikiLinkExtension(editor, resolver))
+    renderHook(() => useLinkDecorations(editor, resolver))
 
     expect(mockRegisterLinkPlugins).toHaveBeenCalledTimes(1)
     const options = mockRegisterLinkPlugins.mock.calls[0][0]
-    expect(options.pluginKey.key).toContain('wikiLinkDecoration')
-    expect(options.stabilizerKey.key).toContain('wikiLinkSelectionStabilizer')
+    expect(options.pluginKey.key).toContain('linkDecoration')
+    expect(options.stabilizerKey.key).toContain('linkSelectionStabilizer')
 
     const plugin = options.createDecorationPlugin()
-    const initialState = createEditorState(plugin, 'Intro [[Lore]] outro')
-    const initialContent = getContentDecoration(initialState)
-    expect(initialContent.type.attrs['data-link-active']).toBe('false')
+    const state = createEditorState(plugin, 'Intro [[Lore]] and [Capital](Lore/Capital)')
+    const contentDecorations = getContentDecorations(plugin, state)
 
-    const activeState = initialState.apply(
-      initialState.tr.setSelection(TextSelection.create(initialState.doc, initialContent.from + 1)),
-    )
-    expect(getContentDecoration(activeState).type.attrs['data-link-active']).toBe('true')
-
-    const docChangedState = activeState.apply(
-      activeState.tr.insertText(' [[Ghost Lore]]', activeState.doc.content.size - 1),
-    )
-    const contentDecorations = getContentDecorations(plugin, docChangedState)
     expect(contentDecorations).toHaveLength(2)
+    expect(contentDecorations[0].type.attrs['data-link-type']).toBe('wiki')
+    expect(contentDecorations[1].type.attrs['data-link-type']).toBe('md-internal')
   })
 
-  it('registers the md link plugin with the expected keys and updates viewer mode without re-registering', () => {
+  it('updates active and viewer state without re-registering', () => {
     const editor = {
       _tiptapEditor: {},
     } as CustomBlockNoteEditor
     const { rerender } = renderHook(
       ({ resolver, isViewerMode }: { resolver: LinkResolver; isViewerMode?: boolean }) =>
-        useMdLinkExtension(editor, resolver, isViewerMode),
+        useLinkDecorations(editor, resolver, isViewerMode),
       { initialProps: { resolver: createResolver(false), isViewerMode: false } },
     )
+    const options = mockRegisterLinkPlugins.mock.calls[0][0]
+    const plugin = options.createDecorationPlugin()
+    const initialState = createEditorState(plugin, 'Intro [[Lore]] outro')
+    const initialContent = getContentDecorations(plugin, initialState)[0]
 
-    expect(mockRegisterLinkPlugins).toHaveBeenCalledTimes(1)
-    let options = mockRegisterLinkPlugins.mock.calls[0][0]
-    expect(options.pluginKey.key).toContain('mdLinkDecoration')
-    expect(options.stabilizerKey.key).toContain('mdLinkSelectionStabilizer')
+    expect(initialContent.type.attrs['data-link-active']).toBe('false')
 
-    let plugin = options.createDecorationPlugin()
-    let state = createEditorState(plugin, 'See [Capital](Lore/Capital)')
-    expect(getContentDecoration(state).type.attrs['data-link-viewer']).toBe('false')
-
-    state = state.apply(state.tr.insertText(' [Ghost](Ghost/Note)', state.doc.content.size - 1))
-    const contentDecorations = getContentDecorations(plugin, state)
-    expect(contentDecorations).toHaveLength(2)
+    const activeState = initialState.apply(
+      initialState.tr.setSelection(TextSelection.create(initialState.doc, initialContent.from + 1)),
+    )
+    expect(getContentDecorations(plugin, activeState)[0].type.attrs['data-link-active']).toBe(
+      'true',
+    )
 
     rerender({ resolver: createResolver(true), isViewerMode: true })
 
     expect(mockRegisterLinkPlugins).toHaveBeenCalledTimes(1)
-    plugin = options.createDecorationPlugin()
-    state = createEditorState(plugin, 'See [Capital](Lore/Capital)')
-    expect(getContentDecoration(state).type.attrs['data-link-viewer']).toBe('true')
+    const viewerState = createEditorState(plugin, 'Intro [[Lore]] outro')
+    expect(getContentDecorations(plugin, viewerState)[0].type.attrs['data-link-viewer']).toBe(
+      'true',
+    )
   })
 })

@@ -8,6 +8,7 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
 import { getItemTypeLabel } from '~/features/sidebar/utils/sidebar-item-utils'
 import { useFileSystem } from '~/features/filesystem/useFileSystem'
+import { getUserDisplayName } from '~/shared/utils/user-display-name'
 
 function daysAgo(timestamp: number): number {
   return Math.floor((Date.now() - timestamp) / (1000 * 60 * 60 * 24))
@@ -21,12 +22,12 @@ function useDeletedByName(deletedById: Id<'userProfiles'> | null) {
 
   const dmProfile = campaign.data?.dmUserProfile
   if (dmProfile && dmProfile._id === deletedById) {
-    return dmProfile.name || dmProfile.username
+    return getUserDisplayName(dmProfile, 'Someone')
   }
 
   const member = members?.find((mem) => mem.userProfile._id === deletedById)
   if (member) {
-    return member.userProfile.name || member.userProfile.username
+    return getUserDisplayName(member.userProfile, 'Someone')
   }
 
   return 'Someone'
@@ -91,7 +92,7 @@ function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
             variant="destructive"
             actions={
               <>
-                <BannerButton onClick={handleRestore}>
+                <BannerButton variant="on-destructive" onClick={handleRestore}>
                   <RotateCcw className="size-3 mr-0.5" />
                   Restore
                 </BannerButton>

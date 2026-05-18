@@ -3,18 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Id } from 'convex/_generated/dataModel'
 import { useLinkResolver } from '../useLinkResolver'
 
-const { useCampaignMock, useEditorModeMock, useActiveSidebarItemsMock } = vi.hoisted(() => ({
+const { useCampaignMock, useActiveSidebarItemsMock } = vi.hoisted(() => ({
   useCampaignMock: vi.fn(),
-  useEditorModeMock: vi.fn(),
   useActiveSidebarItemsMock: vi.fn(),
 }))
 
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
   useCampaign: () => useCampaignMock(),
-}))
-
-vi.mock('~/features/sidebar/hooks/useEditorMode', () => ({
-  useEditorMode: () => useEditorModeMock(),
 }))
 
 vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
@@ -26,10 +21,6 @@ describe('useLinkResolver', () => {
     useCampaignMock.mockReturnValue({
       dmUsername: 'dm',
       campaignSlug: 'world',
-    })
-    useEditorModeMock.mockReturnValue({
-      editorMode: 'editor',
-      viewAsPlayerId: undefined,
     })
     useActiveSidebarItemsMock.mockReturnValue({
       data: [],
@@ -57,6 +48,12 @@ describe('useLinkResolver', () => {
       href: 'https://example.com/docs',
       isExternal: true,
     })
+  })
+
+  it('uses explicit caller-owned viewer mode', () => {
+    const { result } = renderHook(() => useLinkResolver(undefined, { isViewerMode: true }))
+
+    expect(result.current.isViewerMode).toBe(true)
   })
 
   it.each([

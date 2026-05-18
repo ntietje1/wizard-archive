@@ -1,7 +1,6 @@
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { Trash2 } from 'lucide-react'
 import { EditableBreadcrumb, EditableName, SidebarItemBreadcrumb } from './editable-breadcrumb'
-import { EditorViewModeToggleButton } from './topbar-item-content/note-buttons'
 import { ItemButtonWrapper } from './topbar-item-content/item-button-wrapper'
 import { Button } from '~/features/shadcn/components/button'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
@@ -145,9 +144,14 @@ export function FileTopbar() {
     item && viewAsPlayerId && !effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.VIEW, permOpts),
   )
   const isEmptyEditor = !item && !hasRequestedItem && !isTrashView
+  const canOpenHistory =
+    !!item && !isPendingItem && effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.EDIT, permOpts)
 
   const rightSidebar = useRightSidebar()
-  const toggleHistory = () => rightSidebar.toggle(RIGHT_SIDEBAR_CONTENT.history)
+  const toggleHistory = () => {
+    if (!canOpenHistory) return
+    rightSidebar.toggle(RIGHT_SIDEBAR_CONTENT.history)
+  }
 
   const timestampLabel = itemTimestampLabel(item)
   const title: FileTopbarTitleState = (() => {
@@ -167,11 +171,7 @@ export function FileTopbar() {
     return { kind: 'none' }
   })()
 
-  const middleContent = (
-    <ItemButtonWrapper isTrashView={isTrashView}>
-      {canEdit && <EditorViewModeToggleButton disabled={!item} />}
-    </ItemButtonWrapper>
-  )
+  const middleContent = <ItemButtonWrapper isTrashView={isTrashView} />
 
   return (
     <EditorContextMenu

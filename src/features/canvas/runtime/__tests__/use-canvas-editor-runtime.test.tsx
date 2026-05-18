@@ -4,6 +4,7 @@ import { useCanvasEditorRuntime } from '../use-canvas-editor-runtime'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import type { CanvasCommands } from '../document/use-canvas-commands'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
+import type { MouseEvent as ReactMouseEvent } from 'react'
 import * as Y from 'yjs'
 import { testId } from '~/test/helpers/test-id'
 
@@ -314,8 +315,12 @@ describe('useCanvasEditorRuntime', () => {
     contextMenuSpy.mockReset()
     toolHandlersSpy.mockReset()
     clearToolTransientStateSpy.mockReset()
+    toolHandlersMock.onNodeClick.mockReset()
+    toolHandlersMock.onEdgeClick.mockReset()
     selectionControllerMock.clear.mockReset()
     selectionControllerMock.clearSelection.mockReset()
+    selectionControllerMock.toggleNode.mockReset()
+    selectionControllerMock.toggleEdge.mockReset()
     session.editSession.setEditingEmbedId.mockReset()
     session.editSession.setPendingEditNodeId.mockReset()
     session.editSession.setPendingEditNodePoint.mockReset()
@@ -369,6 +374,7 @@ describe('useCanvasEditorRuntime', () => {
       undo: historyMock.undo,
       redo: historyMock.redo,
       canEdit: true,
+      surfaceRef: expect.any(Object),
       nodesMap,
       edgesMap,
       selection: selectionControllerMock,
@@ -530,6 +536,120 @@ describe('useCanvasEditorRuntime', () => {
     expect(session.editSession.setEditingEmbedId).not.toHaveBeenCalled()
     expect(session.editSession.setPendingEditNodeId).not.toHaveBeenCalled()
     expect(session.editSession.setPendingEditNodePoint).not.toHaveBeenCalled()
+
+    doc.destroy()
+  })
+
+  it('routes pointer node selection through select tool handlers for view-only users', () => {
+    const { doc, nodesMap, edgesMap } = createTestCanvasDoc()
+
+    const { result } = renderHook(() =>
+      useCanvasEditorRuntime({
+        nodesMap,
+        edgesMap,
+        canvasId: testId<'sidebarItems'>('canvas-id'),
+        campaignId: testId<'campaigns'>('campaign-id'),
+        canvasParentId: null,
+        canEdit: false,
+        provider: null,
+        doc,
+        initialViewport: { x: 0, y: 0, zoom: 1 },
+      }),
+    )
+
+    act(() => {
+      result.current.sceneHandlers.onNodeClick(
+        new MouseEvent('click') as unknown as ReactMouseEvent,
+        {
+          id: 'node-1',
+          type: 'embed',
+          data: {},
+          position: { x: 0, y: 0 },
+        },
+      )
+    })
+
+    expect(toolHandlersMock.onNodeClick).toHaveBeenCalledExactlyOnceWith(
+      expect.any(MouseEvent),
+      expect.objectContaining({ id: 'node-1' }),
+    )
+    expect(selectionControllerMock.toggleNode).not.toHaveBeenCalled()
+
+    doc.destroy()
+  })
+
+  it('enables view-only pointer interactions without node dragging', () => {
+    const { doc, nodesMap, edgesMap } = createTestCanvasDoc()
+
+    renderHook(() =>
+      useCanvasEditorRuntime({
+        nodesMap,
+        edgesMap,
+        canvasId: testId<'sidebarItems'>('canvas-id'),
+        campaignId: testId<'campaigns'>('campaign-id'),
+        canvasParentId: null,
+        canEdit: false,
+        provider: null,
+        doc,
+        initialViewport: { x: 0, y: 0, zoom: 1 },
+      }),
+    )
+
+    expect(pointerRouterSpy).toHaveBeenCalledWith({
+      router: pointerRouterMock,
+      surfaceRef: expect.any(Object),
+      options: expect.objectContaining({
+        activeTool: 'select',
+        enabled: true,
+        nodeDragController: null,
+      }),
+    })
+
+    doc.destroy()
+  })
+
+  it('keeps view-only edit tools inert when local tool state is stale', () => {
+    const { doc, nodesMap, edgesMap } = createTestCanvasDoc()
+    act(() => {
+      useCanvasToolStore.getState().setActiveTool('draw')
+    })
+
+    const { result } = renderHook(() =>
+      useCanvasEditorRuntime({
+        nodesMap,
+        edgesMap,
+        canvasId: testId<'sidebarItems'>('canvas-id'),
+        campaignId: testId<'campaigns'>('campaign-id'),
+        canvasParentId: null,
+        canEdit: false,
+        provider: null,
+        doc,
+        initialViewport: { x: 0, y: 0, zoom: 1 },
+      }),
+    )
+
+    act(() => {
+      result.current.sceneHandlers.onNodeClick(
+        new MouseEvent('click') as unknown as ReactMouseEvent,
+        {
+          id: 'node-1',
+          type: 'embed',
+          data: {},
+          position: { x: 0, y: 0 },
+        },
+      )
+    })
+
+    expect(toolHandlersMock.onNodeClick).not.toHaveBeenCalled()
+    expect(selectionControllerMock.toggleNode).not.toHaveBeenCalled()
+    expect(pointerRouterSpy).toHaveBeenCalledWith({
+      router: pointerRouterMock,
+      surfaceRef: expect.any(Object),
+      options: expect.objectContaining({
+        activeTool: 'draw',
+        enabled: false,
+      }),
+    })
 
     doc.destroy()
   })

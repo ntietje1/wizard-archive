@@ -1,10 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
 import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
+import { EDITOR_MODE } from 'convex/editors/types'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import type { ActionHandlers } from '~/features/context-menu/menu-registry'
 import type {
   ContextMenuCommand,
   ContextMenuContributor,
+  EditorModeMenuService,
+  ViewAsPlayerMenuService,
   MenuContext,
 } from '~/features/context-menu/types'
 import { VIEW_CONTEXT } from '~/features/context-menu/constants'
@@ -55,6 +58,39 @@ function createActions(): ActionHandlers {
   }
 }
 
+function createServices({
+  editorMode: editorModeOverrides,
+  viewAsPlayer: viewAsPlayerOverrides,
+}: {
+  editorMode?: Partial<typeof baseEditorModeService>
+  viewAsPlayer?: Partial<typeof baseViewAsPlayerService>
+} = {}) {
+  return {
+    actions: createActions(),
+    filesystem: { canPasteIntoTarget: () => false },
+    editorMode: { ...baseEditorModeService, ...editorModeOverrides },
+    viewAsPlayer: { ...baseViewAsPlayerService, ...viewAsPlayerOverrides },
+  }
+}
+
+const baseEditorModeService: EditorModeMenuService = {
+  editorMode: EDITOR_MODE.EDITOR,
+  canEdit: true,
+  setEditorMode: vi.fn(),
+}
+
+const baseViewAsPlayerService: ViewAsPlayerMenuService = {
+  viewAsPlayerId: undefined,
+  setViewAsPlayerId: vi.fn(),
+  playerMembers: [
+    {
+      _id: 'player-1' as never,
+      role: CAMPAIGN_MEMBER_ROLE.Player,
+      userProfile: { name: 'Mina', username: 'mina', imageUrl: 'https://example.com/mina.png' },
+    } as unknown as ViewAsPlayerMenuService['playerMembers'][number],
+  ],
+}
+
 function sidebarCtx(overrides: Partial<MenuContext> = {}): MenuContext {
   return {
     item: createNote(),
@@ -66,8 +102,7 @@ function sidebarCtx(overrides: Partial<MenuContext> = {}): MenuContext {
 }
 
 describe('buildMenu', () => {
-  const actions = createActions()
-  const services = { actions, filesystem: { canPasteIntoTarget: () => false } }
+  const services = createServices()
 
   it('DM sees edit and delete actions on a note in sidebar', () => {
     const menu = buildMenu({
@@ -188,6 +223,7 @@ describe('buildMenu', () => {
     })
     const createNew = menu.flatItems.find((i) => i.id === 'create-new-submenu')
     expect(createNew).toBeDefined()
+    expect(createNew).toMatchObject({ label: 'New...' })
     expect(createNew!.children).toBeDefined()
     expect(createNew!.children!.length).toBeGreaterThan(0)
   })
@@ -352,6 +388,189 @@ describe('buildMenu', () => {
     const ids = menu.flatItems.map((i) => i.id)
     expect(ids).toContain('create-new-submenu')
     expect(ids).toContain('download-all')
+  })
+
+  it('shows reading mode only in the topbar context menu for editable items', () => {
+    const note = createNote()
+    const topbarMenu = buildMenu({
+      context: sidebarCtx({
+        surface: VIEW_CONTEXT.TOPBAR,
+        item: note,
+        primaryItem: note,
+        selectedItems: [note],
+      }),
+      services: createServices(),
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+    const sidebarMenu = buildMenu({
+      context: sidebarCtx({ item: note }),
+      services: createServices(),
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+    const readOnlyTopbarMenu = buildMenu({
+      context: sidebarCtx({
+        surface: VIEW_CONTEXT.TOPBAR,
+        item: note,
+        primaryItem: note,
+        selectedItems: [note],
+      }),
+      services: createServices({ editorMode: { canEdit: false } }),
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+
+    expect(topbarMenu.flatItems.map((menuItem) => menuItem.id)).toContain('toggle-reading-mode')
+    expect(sidebarMenu.flatItems.map((menuItem) => menuItem.id)).not.toContain(
+      'toggle-reading-mode',
+    )
+    expect(readOnlyTopbarMenu.flatItems.map((menuItem) => menuItem.id)).not.toContain(
+      'toggle-reading-mode',
+    )
+  })
+
+  it('checks reading mode in viewer mode and toggles without closing the menu', async () => {
+    const setEditorMode = vi.fn()
+    const note = createNote()
+    const menu = buildMenu({
+      context: sidebarCtx({
+        surface: VIEW_CONTEXT.TOPBAR,
+        item: note,
+        primaryItem: note,
+        selectedItems: [note],
+      }),
+      services: createServices({ editorMode: { editorMode: EDITOR_MODE.VIEWER, setEditorMode } }),
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+
+    const readingModeItem = menu.flatItems.find((menuItem) => menuItem.id === 'toggle-reading-mode')
+
+    expect(readingModeItem).toMatchObject({
+      label: 'Reading Mode',
+      checked: true,
+      closeOnSelect: false,
+    })
+
+    await readingModeItem?.onSelect()
+
+    expect(setEditorMode).toHaveBeenCalledExactlyOnceWith(EDITOR_MODE.EDITOR)
+  })
+
+  it('shows view as player with rich player submenu rows in the topbar context menu for DMs with players', () => {
+    const note = createNote()
+    const topbarMenu = buildMenu({
+      context: sidebarCtx({
+        surface: VIEW_CONTEXT.TOPBAR,
+        item: note,
+        primaryItem: note,
+        selectedItems: [note],
+      }),
+      services: createServices(),
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+    const sidebarMenu = buildMenu({
+      context: sidebarCtx({ item: note }),
+      services: createServices(),
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+    const playerTopbarMenu = buildMenu({
+      context: sidebarCtx({
+        surface: VIEW_CONTEXT.TOPBAR,
+        item: note,
+        primaryItem: note,
+        selectedItems: [note],
+        memberRole: CAMPAIGN_MEMBER_ROLE.Player,
+      }),
+      services: createServices(),
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+    const noPlayersTopbarMenu = buildMenu({
+      context: sidebarCtx({
+        surface: VIEW_CONTEXT.TOPBAR,
+        item: note,
+        primaryItem: note,
+        selectedItems: [note],
+      }),
+      services: createServices({ viewAsPlayer: { playerMembers: [] } }),
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+
+    const viewAsItem = topbarMenu.flatItems.find((menuItem) => menuItem.id === 'view-as-player')
+    const playerItem = viewAsItem?.children?.find((menuItem) => menuItem.id === 'view-as-player-0')
+    const topbarItemIds = topbarMenu.flatItems.map((menuItem) => menuItem.id)
+
+    expect(viewAsItem).toMatchObject({
+      label: 'View as Player...',
+      group: 'share',
+      checked: false,
+    })
+    expect(topbarItemIds.indexOf('share-items')).toBeLessThan(
+      topbarItemIds.indexOf('view-as-player'),
+    )
+    expect(playerItem).toMatchObject({
+      label: 'Mina',
+      checked: false,
+      closeOnSelect: false,
+    })
+    expect(playerItem?.content).toBeDefined()
+    expect(sidebarMenu.flatItems.map((menuItem) => menuItem.id)).not.toContain('view-as-player')
+    expect(playerTopbarMenu.flatItems.map((menuItem) => menuItem.id)).not.toContain(
+      'view-as-player',
+    )
+    expect(noPlayersTopbarMenu.flatItems.map((menuItem) => menuItem.id)).not.toContain(
+      'view-as-player',
+    )
+  })
+
+  it('checks the viewed player and clears view-as when selecting that player again', async () => {
+    const setViewAsPlayerId = vi.fn()
+    const note = createNote()
+    const menu = buildMenu({
+      context: sidebarCtx({
+        surface: VIEW_CONTEXT.TOPBAR,
+        item: note,
+        primaryItem: note,
+        selectedItems: [note],
+      }),
+      services: createServices({
+        viewAsPlayer: { viewAsPlayerId: 'player-1' as never, setViewAsPlayerId },
+      }),
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+
+    const viewAsItem = menu.flatItems.find((menuItem) => menuItem.id === 'view-as-player')
+    const playerItem = viewAsItem?.children?.find((menuItem) => menuItem.id === 'view-as-player-0')
+
+    expect(viewAsItem).toMatchObject({
+      label: 'View as Player...',
+      group: 'share',
+      checked: true,
+    })
+    expect(playerItem).toMatchObject({
+      label: 'Mina',
+      checked: true,
+      closeOnSelect: false,
+    })
+
+    await playerItem?.onSelect()
+
+    expect(setViewAsPlayerId).toHaveBeenCalledExactlyOnceWith(undefined)
   })
 
   it('returns isEmpty: true when no items match', () => {

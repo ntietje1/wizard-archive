@@ -1,9 +1,11 @@
 import type React from 'react'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { BlockNoteId } from 'convex/blocks/types'
-import type { CampaignMemberRole } from 'convex/campaigns/types'
+import type { CampaignMember, CampaignMemberRole } from 'convex/campaigns/types'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { PermissionLevel } from 'convex/permissions/types'
+import type { EditorMode } from 'convex/editors/types'
+import type { Id } from 'convex/_generated/dataModel'
 import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
 import type { LucideIcon } from 'lucide-react'
 import type { VIEW_CONTEXT } from './constants'
@@ -41,6 +43,7 @@ export interface ContextMenuItemSpec<TContext, TServices, TPayload = unknown> {
   commandId?: string
   payload?: TPayload
   label?: ContextMenuResolver<string, TContext, TServices, TPayload>
+  content?: ContextMenuResolver<React.ReactNode, TContext, TServices, TPayload>
   icon?: LucideIcon
   shortcut?: ContextMenuResolver<string | undefined, TContext, TServices, TPayload>
   applies?: ContextMenuPredicate<TContext, TServices, TPayload>
@@ -63,6 +66,7 @@ export interface ContextMenuItemSpec<TContext, TServices, TPayload = unknown> {
   submenuContent?: ContextMenuResolver<React.ReactNode, TContext, TServices, TPayload>
   variant?: 'default' | 'danger' | 'share'
   className?: string
+  closeOnSelect?: boolean
 }
 
 export interface ContextMenuContributor<TContext, TServices> {
@@ -79,6 +83,7 @@ export interface ResolvedContextMenuItem {
   id: string
   commandId?: string
   label: string
+  content?: React.ReactNode
   icon?: LucideIcon
   shortcut?: string
   disabled: boolean
@@ -87,6 +92,7 @@ export interface ResolvedContextMenuItem {
   priority: number
   variant?: 'default' | 'danger' | 'share'
   className?: string
+  closeOnSelect?: boolean
   children?: Array<ResolvedContextMenuItem>
   submenuContent?: React.ReactNode
   onSelect: () => void | Promise<void>
@@ -135,6 +141,18 @@ export interface EditorMenuContext {
   hasActiveSession?: boolean
   editor?: CustomBlockNoteEditor
   blockNoteId?: BlockNoteId
+}
+
+export interface EditorModeMenuService {
+  editorMode: EditorMode
+  canEdit: boolean
+  setEditorMode: (editorMode: EditorMode) => void
+}
+
+export interface ViewAsPlayerMenuService {
+  viewAsPlayerId: Id<'campaignMembers'> | undefined
+  playerMembers: Array<CampaignMember>
+  setViewAsPlayerId: (playerId: Id<'campaignMembers'> | undefined) => void
 }
 
 export type MenuContext = EditorMenuContext
