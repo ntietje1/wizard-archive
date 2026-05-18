@@ -1,82 +1,47 @@
-import { render } from '@testing-library/react'
+import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { NoteView } from '../note-view'
+import { useBlockNotePlugins } from '../use-blocknote-plugins'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { LinkResolver } from '~/features/editor/hooks/useLinkResolver'
 
 const mockPatchYSyncAfterTypeChanged = vi.hoisted(() => vi.fn())
 const mockPatchYUndoPluginDestroy = vi.hoisted(() => vi.fn())
-
-vi.mock('@blocknote/shadcn', () => ({
-  BlockNoteView: ({
-    children,
-    editor,
-    className,
-    style,
-  }: React.HTMLAttributes<HTMLDivElement> & {
-    children?: React.ReactNode
-    editor: CustomBlockNoteEditor
-  }) => (
-    <div className={className} data-testid="block-note-view" style={style}>
-      <div
-        data-testid="block-note-editable"
-        ref={(node) => {
-          const dom = editor._tiptapEditor.view.dom
-          if (node && !node.contains(dom)) node.append(dom)
-        }}
-      />
-      {children}
-    </div>
-  ),
-}))
-
-vi.mock('@blocknote/react', () => ({
-  SideMenuController: () => null,
-}))
-
-vi.mock('../extensions/prevent-external-drop/prevent-external-drop', () => ({
-  PreventExternalDrop: () => null,
-}))
-
-vi.mock('../extensions/side-menu/side-menu', () => ({
-  SideMenuRenderer: () => null,
-}))
-
-vi.mock('../extensions/slash-menu/slash-menu', () => ({
-  SlashMenu: () => null,
-}))
+const mockUseWikiLinkExtension = vi.hoisted(() => vi.fn())
+const mockUseMdLinkExtension = vi.hoisted(() => vi.fn())
+const mockUseDisableAutolink = vi.hoisted(() => vi.fn())
 
 vi.mock('~/features/editor/hooks/useWikiLinkExtension', () => ({
-  useWikiLinkExtension: vi.fn(),
+  useWikiLinkExtension: mockUseWikiLinkExtension,
 }))
 
 vi.mock('~/features/editor/hooks/useMdLinkExtension', () => ({
-  useMdLinkExtension: vi.fn(),
+  useMdLinkExtension: mockUseMdLinkExtension,
 }))
 
 vi.mock('~/features/editor/hooks/useDisableAutolink', () => ({
-  useDisableAutolink: vi.fn(),
-}))
-
-vi.mock('~/features/settings/hooks/useTheme', () => ({
-  useResolvedTheme: () => 'light',
+  useDisableAutolink: mockUseDisableAutolink,
 }))
 
 vi.mock('~/features/editor/utils/patch-yundo-destroy', () => ({
   patchYSyncAfterTypeChanged: mockPatchYSyncAfterTypeChanged,
   patchYUndoPluginDestroy: mockPatchYUndoPluginDestroy,
+  runYjsHistoryCommand: vi.fn(),
 }))
 
-describe('NoteView', () => {
+describe('useBlockNotePlugins', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('patches collaborative Yjs undo on the mounted editor view', () => {
+  it('sets up editor plugins and collaborative undo patches through one hook', () => {
     const { editor, view } = createEditor()
+    const resolver = createLinkResolver()
 
-    render(<NoteView editor={editor} editable linkResolver={createLinkResolver()} />)
+    renderHook(() => useBlockNotePlugins({ editor, editable: true, linkResolver: resolver }))
 
+    expect(mockUseWikiLinkExtension).toHaveBeenCalledWith(editor, resolver, false)
+    expect(mockUseMdLinkExtension).toHaveBeenCalledWith(editor, resolver, false)
+    expect(mockUseDisableAutolink).toHaveBeenCalledWith(editor)
     expect(mockPatchYUndoPluginDestroy).toHaveBeenCalledWith(view)
     expect(mockPatchYSyncAfterTypeChanged).toHaveBeenCalledWith(view)
   })
@@ -100,7 +65,6 @@ function createEditor() {
 
   return {
     editor,
-    dom,
     view,
   }
 }

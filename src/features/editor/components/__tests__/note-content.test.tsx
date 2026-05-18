@@ -20,58 +20,25 @@ const activeItemsState = vi.hoisted(() => ({
   itemsMap: new Map(),
 }))
 
-vi.mock('@blocknote/core', () => ({
-  BlockNoteEditor: {
-    create: vi.fn((options?: { initialContent?: Array<CustomBlock> }) => ({
-      document: options?.initialContent ?? [],
-      replaceBlocks: vi.fn(),
-      _tiptapEditor: { destroy: vi.fn(), view: {} },
-    })),
+vi.mock('../blocknote-editor-instance', () => ({
+  StaticBlockNoteEditor: (props: { content: Array<CustomBlock> }) => {
+    noteViewSpy({ surface: 'static', editor: { document: props.content } })
+    return <div data-testid="static-note-editor" />
+  },
+  CollaborativeBlockNoteEditor: (props: { note?: NoteWithContent }) => {
+    noteViewSpy({ surface: 'collaborative', editor: { document: props.note?.content ?? [] } })
+    return <div data-testid="collaborative-note-editor" />
   },
 }))
 
-vi.mock('convex/notes/editorSpecs', () => ({
-  editorSchema: {},
-}))
-
-vi.mock('../note-view', () => ({
-  NoteView: (props: { editor: { document: Array<CustomBlock> } }) => {
-    noteViewSpy(props)
-    return <div data-testid="note-view" />
-  },
-}))
-
-vi.mock('~/features/editor/hooks/useOwnedBlockNoteEditor', () => ({
-  useOwnedBlockNoteEditor: ({ createEditor }: { createEditor: () => unknown }) => createEditor(),
-}))
-
-vi.mock('~/features/editor/hooks/useLinkResolver', () => ({
-  useLinkResolver: () => vi.fn(),
-}))
-
-vi.mock('~/features/editor/hooks/useNoteYjsCollaboration', () => ({
-  useNoteYjsCollaboration: () => ({
-    doc: null,
-    provider: null,
-    instanceId: 'test-instance',
-    isLoading: true,
+vi.mock('~/features/editor/hooks/use-note-collaboration-session', () => ({
+  useNoteCollaborationSession: () => ({
+    doc: {},
+    provider: {},
+    instanceId: 1,
+    isLoading: false,
+    user: { name: 'Test User', color: '#61afef' },
   }),
-}))
-
-vi.mock('~/shared/hooks/useAuthQuery', () => ({
-  useAuthQuery: () => ({ data: null }),
-}))
-
-vi.mock('../extensions/link-click-handler', () => ({
-  LinkClickHandler: () => null,
-}))
-
-vi.mock('../extensions/wiki-link/wiki-link-autocomplete', () => ({
-  WikiLinkAutocomplete: () => null,
-}))
-
-vi.mock('~/features/editor/utils/destroy-blocknote-editor', () => ({
-  destroyBlockNoteEditor: vi.fn(),
 }))
 
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({

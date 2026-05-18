@@ -1,6 +1,5 @@
 import { renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { useCallback } from 'react'
 import { useOwnedBlockNoteEditor } from '../useOwnedBlockNoteEditor'
 
 describe('useOwnedBlockNoteEditor', () => {
@@ -12,14 +11,11 @@ describe('useOwnedBlockNoteEditor', () => {
 
     const { result, rerender, unmount } = renderHook(
       ({ contentKey }: { contentKey: string }) => {
-        const create = useCallback(() => createEditor(), [])
-        const destroy = useCallback((editor: typeof createdEditor) => destroyEditor(editor), [])
-
         return {
           contentKey,
           editor: useOwnedBlockNoteEditor({
-            createEditor: create,
-            destroyEditor: destroy,
+            createEditor: () => createEditor(),
+            destroyEditor: (editor) => destroyEditor(editor),
             onEditorChange,
           }),
         }

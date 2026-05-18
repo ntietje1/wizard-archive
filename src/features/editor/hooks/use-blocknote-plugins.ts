@@ -1,85 +1,37 @@
-import { BlockNoteView } from '@blocknote/shadcn'
-import { SideMenuController } from '@blocknote/react'
 import { useEffect, useRef } from 'react'
-import { PreventExternalDrop } from './extensions/prevent-external-drop/prevent-external-drop'
-import { SideMenuRenderer } from './extensions/side-menu/side-menu'
-import { SlashMenu } from './extensions/slash-menu/slash-menu'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
-import type { NoteWithContent } from 'convex/notes/types'
-import type { CSSProperties, ReactNode } from 'react'
-import './extensions/wiki-link/wiki-link.css'
-import './extensions/md-link/md-link.css'
-import { useWikiLinkExtension } from '~/features/editor/hooks/useWikiLinkExtension'
-import { useMdLinkExtension } from '~/features/editor/hooks/useMdLinkExtension'
-import { useDisableAutolink } from '~/features/editor/hooks/useDisableAutolink'
-import { useResolvedTheme } from '~/features/settings/hooks/useTheme'
 import {
   patchYSyncAfterTypeChanged,
   patchYUndoPluginDestroy,
   runYjsHistoryCommand,
 } from '~/features/editor/utils/patch-yundo-destroy'
 import type { LinkResolver } from '~/features/editor/hooks/useLinkResolver'
+import { useDisableAutolink } from '~/features/editor/hooks/useDisableAutolink'
+import { useMdLinkExtension } from '~/features/editor/hooks/useMdLinkExtension'
+import { useWikiLinkExtension } from '~/features/editor/hooks/useWikiLinkExtension'
 
-interface NoteViewProps {
-  editor: CustomBlockNoteEditor
-  note?: NoteWithContent | undefined
-  editable: boolean
-  linkResolver: LinkResolver
-  className?: string
-  style?: CSSProperties
-  children?: ReactNode
-}
-
-export function NoteView({
+export function useBlockNotePlugins({
   editor,
-  note,
   editable,
   linkResolver,
-  className,
-  style,
-  children,
-}: NoteViewProps) {
-  const resolvedTheme = useResolvedTheme()
+}: {
+  editor: CustomBlockNoteEditor
+  editable: boolean
+  linkResolver: LinkResolver
+}) {
   const isViewerMode = !editable || linkResolver.isViewerMode
   useWikiLinkExtension(editor, linkResolver, isViewerMode)
   useMdLinkExtension(editor, linkResolver, isViewerMode)
   useDisableAutolink(editor)
   useYjsUndoPatches(editor)
-  const noteSurfaceRef = useNoteYjsUndoShortcutPatch(editor, !isViewerMode)
-
-  return (
-    <div ref={noteSurfaceRef} className="contents">
-      <BlockNoteView
-        className={className}
-        editor={editor}
-        style={style}
-        theme={resolvedTheme}
-        editable={editable}
-        sideMenu={false}
-        formattingToolbar={false}
-        slashMenu={false}
-        linkToolbar={false}
-      >
-        {editable && (
-          <>
-            <PreventExternalDrop />
-            {note && (
-              <SideMenuController
-                sideMenu={(props) => <SideMenuRenderer {...props} note={note} />}
-              />
-            )}
-            <SlashMenu editor={editor} />
-          </>
-        )}
-        {children}
-      </BlockNoteView>
-    </div>
-  )
+  return useNoteYjsUndoShortcutPatch(editor, !isViewerMode)
 }
 
 function useYjsUndoPatches(editor: CustomBlockNoteEditor) {
   useEffect(() => {
-    patchEditorYjsUndo(editor)
+    const view = editor._tiptapEditor.view
+    patchYUndoPluginDestroy(view)
+    patchYSyncAfterTypeChanged(view)
   }, [editor])
 }
 
@@ -137,10 +89,4 @@ function isEventInsideNoteSurface(
     target instanceof Node &&
     (surface.contains(target) || editor._tiptapEditor.view.dom.contains(target))
   )
-}
-
-function patchEditorYjsUndo(editor: CustomBlockNoteEditor) {
-  const view = editor._tiptapEditor.view
-  patchYUndoPluginDestroy(view)
-  patchYSyncAfterTypeChanged(view)
 }

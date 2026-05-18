@@ -57,7 +57,8 @@ describe('registerLinkPlugins', () => {
     })
 
     expect(requestAnimationFrameSpy).not.toHaveBeenCalled()
-    expect(unregisterPlugin).not.toHaveBeenCalled()
+    expect(unregisterPlugin).toHaveBeenNthCalledWith(1, stabilizerKey)
+    expect(unregisterPlugin).toHaveBeenNthCalledWith(2, pluginKey)
     expect(registerPlugin).toHaveBeenNthCalledWith(1, stabilizerPlugin, expect.any(Function))
     expect(registerPlugin).toHaveBeenNthCalledWith(2, decorationPlugin, expect.any(Function))
     expect(pluginRef.current).toBe(decorationPlugin)
@@ -67,8 +68,8 @@ describe('registerLinkPlugins', () => {
 
     cleanup()
 
-    expect(unregisterPlugin).toHaveBeenNthCalledWith(1, stabilizerKey)
-    expect(unregisterPlugin).toHaveBeenNthCalledWith(2, pluginKey)
+    expect(unregisterPlugin).toHaveBeenNthCalledWith(3, stabilizerKey)
+    expect(unregisterPlugin).toHaveBeenNthCalledWith(4, pluginKey)
   })
 
   it('waits for the editor view before registering plugins', () => {
@@ -110,7 +111,8 @@ describe('registerLinkPlugins', () => {
     } as never
     queuedFrame?.(0)
 
-    expect(unregisterPlugin).not.toHaveBeenCalled()
+    expect(unregisterPlugin).toHaveBeenNthCalledWith(1, stabilizerKey)
+    expect(unregisterPlugin).toHaveBeenNthCalledWith(2, pluginKey)
     expect(registerPlugin).toHaveBeenNthCalledWith(1, stabilizerPlugin, expect.any(Function))
     expect(registerPlugin).toHaveBeenNthCalledWith(2, decorationPlugin, expect.any(Function))
     expect(pluginRef.current).toBe(decorationPlugin)

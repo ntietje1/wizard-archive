@@ -85,6 +85,8 @@ export function registerLinkPlugins({
     const stabilizerPlugin = createSelectionStabilizerPlugin(stabilizerKey)
     const decorationPlugin = createDecorationPlugin()
 
+    unregisterPluginIfPresent(tiptapEditor, stabilizerKey)
+    unregisterPluginIfPresent(tiptapEditor, pluginKey)
     tiptapEditor.registerPlugin(stabilizerPlugin, (newPlugin, plugins) =>
       replacePlugin(plugins, newPlugin, stabilizerKey),
     )
@@ -108,16 +110,16 @@ export function registerLinkPlugins({
     if (frameId !== null) {
       cancelAnimationFrame(frameId)
     }
-    try {
-      tiptapEditor.unregisterPlugin(stabilizerKey)
-    } catch {
-      // Plugin might already be unregistered
-    }
-    try {
-      tiptapEditor.unregisterPlugin(pluginKey)
-    } catch {
-      // Plugin might already be unregistered
-    }
+    unregisterPluginIfPresent(tiptapEditor, stabilizerKey)
+    unregisterPluginIfPresent(tiptapEditor, pluginKey)
     pluginRef.current = null
+  }
+}
+
+function unregisterPluginIfPresent(tiptapEditor: TiptapEditorLike, keyOrName: PluginKey | string) {
+  try {
+    tiptapEditor.unregisterPlugin(keyOrName)
+  } catch {
+    // Plugin might already be unregistered.
   }
 }
