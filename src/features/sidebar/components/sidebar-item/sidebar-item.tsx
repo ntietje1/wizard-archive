@@ -53,6 +53,7 @@ export function SidebarItem({ item, parentItemsMap, visibleItemIds, depth = 0 }:
   const isFolder = item.type === SIDEBAR_ITEM_TYPES.folders
   const icon = getSidebarItemIcon(item)
   const isPending = isOptimisticSidebarItem(item)
+  const children = isFolder && isExpanded ? parentItemsMap.get(item._id) : undefined
   const shouldScrollPendingItem = isPending && visibleItemIds.includes(item._id)
   const rowRef = useRef<HTMLDivElement | null>(null)
 
@@ -61,8 +62,6 @@ export function SidebarItem({ item, parentItemsMap, visibleItemIds, depth = 0 }:
     rowRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
     rowRef.current?.focus()
   }, [shouldScrollPendingItem])
-
-  const children = isFolder ? parentItemsMap.get(item._id) : undefined
 
   const sortedChildren = sortItemsByOptions(sortOptions, children) ?? []
 
@@ -136,7 +135,7 @@ export function SidebarItem({ item, parentItemsMap, visibleItemIds, depth = 0 }:
               duration: isExpanded ? 0.2 : 0.15,
               ease: 'easeInOut',
             }}
-            keepRendered
+            keepRendered={false}
           >
             {sortedChildren.map((childItem) => (
               <SidebarItem

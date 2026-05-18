@@ -20,11 +20,11 @@ export function ViewAsBanner() {
   return (
     <>
       {isActive && (
-        <div className="fixed inset-0 z-50 pointer-events-none border-[3px] border-primary/60 dark:border-primary/70 fade-in-delayed-fast" />
+        <div className="fixed inset-0 z-50 pointer-events-none border-[3px] border-primary/60 dark:border-primary/70" />
       )}
 
       {isActive && (
-        <div className="overflow-hidden fade-in-delayed-fast">
+        <div className="overflow-hidden">
           <Banner
             icon={<Eye className="h-3.5 w-3.5" />}
             variant="accent"

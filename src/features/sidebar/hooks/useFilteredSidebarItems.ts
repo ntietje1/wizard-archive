@@ -14,6 +14,10 @@ export function FilteredSidebarItemsProvider({ children }: { children: React.Rea
   const { viewAsPlayerId } = useEditorMode()
   const allItems = useActiveSidebarItems()
 
+  if (isDm && !viewAsPlayerId) {
+    return createElement(FilteredSidebarItemsContext.Provider, { value: allItems }, children)
+  }
+
   const permOpts = { isDm, viewAsPlayerId, allItemsMap: allItems.itemsMap }
   const filteredData = allItems.data.filter((item) =>
     effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.VIEW, permOpts),

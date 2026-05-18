@@ -92,7 +92,10 @@ function ItemTrashBanner({ item }: { item: AnySidebarItem }) {
             variant="destructive"
             actions={
               <>
-                <BannerButton onClick={handleRestore}>
+                <BannerButton
+                  onClick={handleRestore}
+                  className="bg-transparent text-white hover:bg-transparent hover:text-white dark:text-white dark:hover:text-white"
+                >
                   <RotateCcw className="size-3 mr-0.5" />
                   Restore
                 </BannerButton>

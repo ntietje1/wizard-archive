@@ -1,8 +1,9 @@
-import { render, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { FileText } from 'lucide-react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Id } from 'convex/_generated/dataModel'
-import { createNote } from '~/test/factories/sidebar-item-factory'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { SidebarItem } from '../sidebar-item'
 
 const scrollIntoViewMock = vi.fn()
@@ -154,5 +155,29 @@ describe('SidebarItem', () => {
     )
 
     await waitFor(() => expect(scrollIntoViewMock).toHaveBeenCalledTimes(2))
+  })
+
+  it('does not render descendants of collapsed folders', () => {
+    const folder = createFolder({
+      _id: 'folder_1' as Id<'sidebarItems'>,
+      name: 'Encounters',
+      slug: 'encounters',
+    })
+    const child = createNote({
+      _id: 'note_1' as Id<'sidebarItems'>,
+      name: 'Hidden Scene',
+      slug: 'hidden-scene',
+      parentId: folder._id,
+    })
+    const parentItemsMap = new Map<Id<'sidebarItems'> | null, Array<AnySidebarItem>>([
+      [folder._id, [child]],
+    ])
+
+    render(
+      <SidebarItem item={folder} parentItemsMap={parentItemsMap} visibleItemIds={[folder._id]} />,
+    )
+
+    expect(screen.getByTestId('selectable-row-Encounters')).toBeInTheDocument()
+    expect(screen.queryByTestId('selectable-row-Hidden Scene')).not.toBeInTheDocument()
   })
 })

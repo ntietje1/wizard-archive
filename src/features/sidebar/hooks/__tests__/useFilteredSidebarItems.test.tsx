@@ -8,6 +8,9 @@ import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 const activeItems = vi.hoisted(() => ({
   data: [] as Array<AnySidebarItem>,
 }))
+const campaignState = vi.hoisted(() => ({
+  isDm: false,
+}))
 const effectiveHasAtLeastPermissionMock = vi.hoisted(() => vi.fn())
 const useAuthQueryMock = vi.hoisted(() => vi.fn())
 
@@ -23,7 +26,7 @@ vi.mock('convex/_generated/api', () => ({
 }))
 
 vi.mock('~/features/campaigns/hooks/useCampaign', () => ({
-  useCampaign: () => ({ campaignId: 'campaign_1', isDm: false }),
+  useCampaign: () => ({ campaignId: 'campaign_1', isDm: campaignState.isDm }),
 }))
 
 vi.mock('~/features/sidebar/hooks/useEditorMode', () => ({
@@ -45,6 +48,7 @@ describe('useFilteredSidebarItems', () => {
       createNote({ name: 'First', slug: 'first' }),
       createNote({ name: 'Second', slug: 'second' }),
     ]
+    campaignState.isDm = false
     effectiveHasAtLeastPermissionMock.mockReset()
     effectiveHasAtLeastPermissionMock.mockReturnValue(true)
     useAuthQueryMock.mockReset()
@@ -65,5 +69,16 @@ describe('useFilteredSidebarItems', () => {
     expect(result.current[0].data).toEqual(activeItems.data)
     expect(result.current[1].data).toEqual(activeItems.data)
     expect(effectiveHasAtLeastPermissionMock).toHaveBeenCalledTimes(activeItems.data.length)
+  })
+
+  it('uses the active sidebar value directly for DM view', () => {
+    campaignState.isDm = true
+
+    const { result } = renderHook(() => useFilteredSidebarItems(), {
+      wrapper: SidebarItemsProvider,
+    })
+
+    expect(result.current.data).toBe(activeItems.data)
+    expect(effectiveHasAtLeastPermissionMock).not.toHaveBeenCalled()
   })
 })

@@ -54,6 +54,7 @@ interface BannerButtonProps {
   children: ReactNode
   variant?: BannerVariant
   disabled?: boolean
+  className?: string
 }
 
 export function BannerButton({
@@ -61,12 +62,13 @@ export function BannerButton({
   children,
   variant = 'accent',
   disabled,
+  className,
 }: BannerButtonProps) {
   return (
     <Button
       variant="ghost"
       size="sm"
-      className={cn('h-5 px-1.5 text-xs', buttonVariants[variant])}
+      className={cn('h-5 px-1.5 text-xs', buttonVariants[variant], className)}
       onClick={onClick}
       disabled={disabled}
     >
