@@ -1,4 +1,5 @@
 import { ArrowUpLeft, ArrowUpRight, History, List, X } from 'lucide-react'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { RIGHT_SIDEBAR_CONTENT } from './constants'
 import { HistoryPanel } from './history-panel'
 import { BackLinksPanel } from './back-links-panel'
@@ -6,31 +7,51 @@ import { OutgoingLinksPanel } from './outgoing-links-panel'
 import { OutlinePanel } from './outline-panel'
 import type { RightSidebarContentId } from './constants'
 import type { Id } from 'convex/_generated/dataModel'
+import type { LucideIcon } from 'lucide-react'
 import { Button } from '~/features/shadcn/components/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/features/shadcn/components/tooltip'
 import { cn } from '~/features/shadcn/lib/utils'
 import { assertNever } from '~/shared/utils/utils'
 
-const TABS = [
+type SidebarItemType = (typeof SIDEBAR_ITEM_TYPES)[keyof typeof SIDEBAR_ITEM_TYPES]
+
+interface RightSidebarTab {
+  id: RightSidebarContentId
+  label: string
+  icon: LucideIcon
+  applysTo: Array<SidebarItemType>
+}
+
+const TABS: Array<RightSidebarTab> = [
   {
     id: RIGHT_SIDEBAR_CONTENT.history,
     label: 'History',
     icon: History,
+    applysTo: [
+      SIDEBAR_ITEM_TYPES.notes,
+      SIDEBAR_ITEM_TYPES.folders,
+      SIDEBAR_ITEM_TYPES.gameMaps,
+      SIDEBAR_ITEM_TYPES.files,
+      SIDEBAR_ITEM_TYPES.canvases,
+    ],
   },
   {
     id: RIGHT_SIDEBAR_CONTENT.backlinks,
     label: 'Back Links',
     icon: ArrowUpLeft,
+    applysTo: [SIDEBAR_ITEM_TYPES.notes],
   },
   {
     id: RIGHT_SIDEBAR_CONTENT.outgoing,
     label: 'Outgoing Links',
     icon: ArrowUpRight,
+    applysTo: [SIDEBAR_ITEM_TYPES.notes],
   },
   {
     id: RIGHT_SIDEBAR_CONTENT.outline,
     label: 'Outline',
     icon: List,
+    applysTo: [SIDEBAR_ITEM_TYPES.notes],
   },
 ] as const
 
@@ -59,20 +80,24 @@ function PanelContent({
 
 export function RightSidebar({
   itemId,
+  itemType,
   activeContentId,
   onContentChange,
   onClose,
 }: {
   itemId: Id<'sidebarItems'>
+  itemType: SidebarItemType
   activeContentId: RightSidebarContentId
   onContentChange: (contentId: RightSidebarContentId) => void
   onClose: () => void
 }) {
+  const tabs = TABS.filter((tab) => tab.applysTo.includes(itemType))
+
   return (
     <div className="flex flex-col h-full bg-background">
       <div className="flex items-center justify-between px-1 py-0.5 border-b border-border shrink-0">
         <div className="flex items-center gap-0.5">
-          {TABS.map((tab) => (
+          {tabs.map((tab) => (
             <Tooltip key={tab.id}>
               <TooltipTrigger
                 render={
@@ -80,7 +105,7 @@ export function RightSidebar({
                     type="button"
                     aria-label={tab.label}
                     className={cn(
-                      'inline-flex items-center justify-center h-6 w-6 rounded-md text-sm hover:bg-accent hover:text-accent-foreground transition-colors',
+                      'inline-flex size-6 items-center justify-center rounded-md text-sm hover:bg-accent hover:text-accent-foreground transition-colors',
                       activeContentId === tab.id
                         ? 'bg-accent text-accent-foreground'
                         : 'text-muted-foreground',
@@ -89,7 +114,7 @@ export function RightSidebar({
                   />
                 }
               >
-                <tab.icon className="h-3.5 w-3.5" />
+                <tab.icon className="size-3.5" />
               </TooltipTrigger>
               <TooltipContent side="bottom">{tab.label}</TooltipContent>
             </Tooltip>
@@ -98,11 +123,11 @@ export function RightSidebar({
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6"
+          className="size-6"
           onClick={onClose}
           aria-label="Close sidebar"
         >
-          <X className="h-4 w-4" />
+          <X className="size-4" />
         </Button>
       </div>
 

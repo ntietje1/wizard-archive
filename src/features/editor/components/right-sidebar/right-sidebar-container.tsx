@@ -21,11 +21,14 @@ export function RightSidebarContainer() {
     }
   }, [sidebar, item?._id])
 
-  if (!item || item.type !== SIDEBAR_ITEM_TYPES.notes) return null
+  if (!item) return null
+
+  const isNote = item.type === SIDEBAR_ITEM_TYPES.notes
+  const activeContentId = isNote ? sidebar.activeContentId : RIGHT_SIDEBAR_CONTENT.history
 
   return (
     <>
-      {!sidebar.visible && (
+      {isNote && !sidebar.visible && (
         <div className="absolute top-2 right-2 z-10">
           <Tooltip>
             <TooltipTrigger
@@ -33,13 +36,13 @@ export function RightSidebarContainer() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                  className="size-7 text-muted-foreground hover:text-foreground"
                   onClick={() => sidebar.open(RIGHT_SIDEBAR_CONTENT.outline)}
                   aria-label="Open outline"
                 />
               }
             >
-              <List className="h-4 w-4" />
+              <List className="size-4" />
             </TooltipTrigger>
             <TooltipContent side="left">Outline</TooltipContent>
           </Tooltip>
@@ -57,7 +60,8 @@ export function RightSidebarContainer() {
         >
           <RightSidebar
             itemId={item._id}
-            activeContentId={sidebar.activeContentId}
+            itemType={item.type}
+            activeContentId={activeContentId}
             onContentChange={sidebar.setActiveContent}
             onClose={sidebar.close}
           />

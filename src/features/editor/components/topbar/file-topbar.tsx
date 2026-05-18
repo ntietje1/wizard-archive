@@ -144,9 +144,14 @@ export function FileTopbar() {
     item && viewAsPlayerId && !effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.VIEW, permOpts),
   )
   const isEmptyEditor = !item && !hasRequestedItem && !isTrashView
+  const canOpenHistory =
+    !!item && !isPendingItem && effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.EDIT, permOpts)
 
   const rightSidebar = useRightSidebar()
-  const toggleHistory = () => rightSidebar.toggle(RIGHT_SIDEBAR_CONTENT.history)
+  const toggleHistory = () => {
+    if (!canOpenHistory) return
+    rightSidebar.toggle(RIGHT_SIDEBAR_CONTENT.history)
+  }
 
   const timestampLabel = itemTimestampLabel(item)
   const title: FileTopbarTitleState = (() => {
