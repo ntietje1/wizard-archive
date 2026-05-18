@@ -1,4 +1,5 @@
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { createContext, createElement, useContext } from 'react'
 import type { SidebarItemsValue } from './useSidebarItems'
 import { useActiveSidebarItems } from './useSidebarItems'
 import { useEditorMode } from './useEditorMode'
@@ -6,7 +7,9 @@ import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
 import { buildSidebarItemMaps } from '~/features/sidebar/utils/sidebar-item-maps'
 
-export const useFilteredSidebarItems = (): SidebarItemsValue => {
+const FilteredSidebarItemsContext = createContext<SidebarItemsValue | null>(null)
+
+export function FilteredSidebarItemsProvider({ children }: { children: React.ReactNode }) {
   const { isDm } = useCampaign()
   const { viewAsPlayerId } = useEditorMode()
   const allItems = useActiveSidebarItems()
@@ -16,9 +19,23 @@ export const useFilteredSidebarItems = (): SidebarItemsValue => {
     effectiveHasAtLeastPermission(item, PERMISSION_LEVEL.VIEW, permOpts),
   )
 
-  return {
-    data: filteredData,
-    status: allItems.status,
-    ...buildSidebarItemMaps(filteredData),
+  return createElement(
+    FilteredSidebarItemsContext.Provider,
+    {
+      value: {
+        data: filteredData,
+        status: allItems.status,
+        ...buildSidebarItemMaps(filteredData),
+      },
+    },
+    children,
+  )
+}
+
+export const useFilteredSidebarItems = (): SidebarItemsValue => {
+  const ctx = useContext(FilteredSidebarItemsContext)
+  if (!ctx) {
+    throw new Error('useFilteredSidebarItems must be used within a FilteredSidebarItemsProvider')
   }
+  return ctx
 }

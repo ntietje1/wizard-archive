@@ -130,7 +130,7 @@ export function CollaborativeBlockNoteEditor({
 
   useEffect(() => {
     provider.setUser({ name: user.name, color: user.color })
-  }, [provider, user.color, user.name])
+  }, [provider, user])
 
   const editor = useOwnedBlockNoteEditor({
     identity: instanceId,

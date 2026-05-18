@@ -1,5 +1,5 @@
-import { renderHook } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { render, renderHook } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useBlockNotePlugins } from '../use-blocknote-plugins'
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { LinkResolver } from '~/features/editor/hooks/useLinkResolver'
@@ -33,6 +33,10 @@ describe('useBlockNotePlugins', () => {
     vi.clearAllMocks()
   })
 
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it('sets up editor plugins and collaborative undo patches through one hook', () => {
     const { editor, view } = createEditor()
     const resolver = createLinkResolver()
@@ -45,7 +49,65 @@ describe('useBlockNotePlugins', () => {
     expect(mockPatchYUndoPluginDestroy).toHaveBeenCalledWith(view)
     expect(mockPatchYSyncAfterTypeChanged).toHaveBeenCalledWith(view)
   })
+
+  it('uses viewer link mode for non-editable editors while keeping passive plugins active', () => {
+    const addEventListenerSpy = vi.spyOn(window, 'addEventListener')
+    const { editor, view } = createEditor()
+    const resolver = createLinkResolver()
+
+    renderPluginSurface({ editor, editable: false, linkResolver: resolver })
+
+    expectViewerPluginSetup({ editor, resolver, view, addEventListenerSpy })
+  })
+
+  it('uses viewer link mode and skips shortcut registration when the resolver is in viewer mode', () => {
+    const addEventListenerSpy = vi.spyOn(window, 'addEventListener')
+    const { editor, view } = createEditor()
+    const resolver = createLinkResolver({ isViewerMode: true })
+
+    renderPluginSurface({ editor, editable: true, linkResolver: resolver })
+
+    expectViewerPluginSetup({ editor, resolver, view, addEventListenerSpy })
+  })
 })
+
+function expectViewerPluginSetup({
+  editor,
+  resolver,
+  view,
+  addEventListenerSpy,
+}: {
+  editor: CustomBlockNoteEditor
+  resolver: LinkResolver
+  view: unknown
+  addEventListenerSpy: ReturnType<typeof vi.spyOn>
+}) {
+  expect(mockUseWikiLinkExtension).toHaveBeenCalledWith(editor, resolver, true)
+  expect(mockUseMdLinkExtension).toHaveBeenCalledWith(editor, resolver, true)
+  expect(mockUseDisableAutolink).toHaveBeenCalledWith(editor)
+  expect(mockPatchYUndoPluginDestroy).toHaveBeenCalledWith(view)
+  expect(mockPatchYSyncAfterTypeChanged).toHaveBeenCalledWith(view)
+  expect(addEventListenerSpy).not.toHaveBeenCalledWith('keydown', expect.any(Function), {
+    capture: true,
+  })
+}
+
+function renderPluginSurface({
+  editor,
+  editable,
+  linkResolver,
+}: {
+  editor: CustomBlockNoteEditor
+  editable: boolean
+  linkResolver: LinkResolver
+}) {
+  function PluginSurface() {
+    const surfaceRef = useBlockNotePlugins({ editor, editable, linkResolver })
+    return <div ref={surfaceRef} />
+  }
+
+  return render(<PluginSurface />)
+}
 
 function createEditor() {
   const dom = document.createElement('div')
@@ -79,11 +141,12 @@ function createBlock(id: string) {
   } as unknown as CustomBlockNoteEditor['document'][number]
 }
 
-function createLinkResolver(): LinkResolver {
+function createLinkResolver(overrides: Partial<LinkResolver> = {}): LinkResolver {
   return {
     isViewerMode: false,
     resolveLink: vi.fn(),
     allItems: [],
     itemsMap: new Map(),
+    ...overrides,
   }
 }

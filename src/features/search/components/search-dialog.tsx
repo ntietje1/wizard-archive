@@ -206,7 +206,7 @@ export function SearchDialog() {
     debouncedQuery.trim() ? { query: debouncedQuery } : 'skip',
   )
 
-  const recentItems = useRecentItems()
+  const recentItems = useRecentItems(items)
 
   const results = debouncedQuery.trim()
     ? mergeSearchResults(titleMatches, bodyQuery.data ?? undefined, itemsMap, debouncedQuery)

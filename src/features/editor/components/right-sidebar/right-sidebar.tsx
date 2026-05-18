@@ -19,7 +19,7 @@ interface RightSidebarTab {
   id: RightSidebarContentId
   label: string
   icon: LucideIcon
-  applysTo: Array<SidebarItemType>
+  appliesTo: Array<SidebarItemType>
 }
 
 const TABS: Array<RightSidebarTab> = [
@@ -27,7 +27,7 @@ const TABS: Array<RightSidebarTab> = [
     id: RIGHT_SIDEBAR_CONTENT.history,
     label: 'History',
     icon: History,
-    applysTo: [
+    appliesTo: [
       SIDEBAR_ITEM_TYPES.notes,
       SIDEBAR_ITEM_TYPES.folders,
       SIDEBAR_ITEM_TYPES.gameMaps,
@@ -39,19 +39,19 @@ const TABS: Array<RightSidebarTab> = [
     id: RIGHT_SIDEBAR_CONTENT.backlinks,
     label: 'Back Links',
     icon: ArrowUpLeft,
-    applysTo: [SIDEBAR_ITEM_TYPES.notes],
+    appliesTo: [SIDEBAR_ITEM_TYPES.notes],
   },
   {
     id: RIGHT_SIDEBAR_CONTENT.outgoing,
     label: 'Outgoing Links',
     icon: ArrowUpRight,
-    applysTo: [SIDEBAR_ITEM_TYPES.notes],
+    appliesTo: [SIDEBAR_ITEM_TYPES.notes],
   },
   {
     id: RIGHT_SIDEBAR_CONTENT.outline,
     label: 'Outline',
     icon: List,
-    applysTo: [SIDEBAR_ITEM_TYPES.notes],
+    appliesTo: [SIDEBAR_ITEM_TYPES.notes],
   },
 ] as const
 
@@ -91,7 +91,7 @@ export function RightSidebar({
   onContentChange: (contentId: RightSidebarContentId) => void
   onClose: () => void
 }) {
-  const tabs = TABS.filter((tab) => tab.applysTo.includes(itemType))
+  const tabs = TABS.filter((tab) => tab.appliesTo.includes(itemType))
 
   return (
     <div className="flex flex-col h-full bg-background">

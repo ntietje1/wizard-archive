@@ -11,7 +11,9 @@ export function getUserDisplayName(
   profile: UserDisplayProfile | null | undefined,
   fallback = 'Player',
 ) {
-  return profile?.name ? profile.name : profile?.username ? `@${profile.username}` : fallback
+  if (profile?.name) return profile.name
+  if (profile?.username) return `@${profile.username}`
+  return fallback
 }
 
 export function getCampaignMemberDisplayName(

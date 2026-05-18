@@ -91,9 +91,11 @@ function NoteContentWithSession({
   children?: React.ReactNode
   onEditorChange?: NoteEditorChangeHandler
 }) {
+  const canEdit =
+    model.renderMode === 'collaborative' || model.renderMode === 'static-with-collaboration'
   const session = useNoteCollaborationSession({
     noteId: model.note._id,
-    canEdit: true,
+    canEdit,
   })
 
   if (model.renderMode === 'static-with-collaboration') {
