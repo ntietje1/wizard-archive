@@ -11,7 +11,6 @@ export const publicSite = {
     pricing: '/pricing',
     faq: '/faq',
     community: '/community',
-    contact: '/contact',
     security: '/security',
     privacy: '/privacy',
     terms: '/terms',

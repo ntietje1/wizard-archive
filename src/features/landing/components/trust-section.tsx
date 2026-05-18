@@ -7,7 +7,7 @@ const trustPoints = [
   'Players join free',
   'Markdown export',
   'No data selling',
-  'No AI training on private content',
+  'No AI training or AI features',
 ]
 
 export function TrustSection() {
@@ -29,11 +29,13 @@ export function TrustSection() {
               </p>
             </div>
           </div>
-          <ul className="mt-6 grid gap-3 text-sm text-muted-foreground">
+          <ul className="mt-6 grid gap-3">
             {trustPoints.map((point) => (
-              <li key={point} className="flex items-center gap-2">
-                <Check className="size-4 shrink-0 text-primary" aria-hidden="true" />
-                {point}
+              <li key={point} className="flex items-start gap-3 text-sm text-muted-foreground">
+                <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md bg-primary/15 text-primary">
+                  <Check className="size-3.5" aria-hidden="true" />
+                </span>
+                <span>{point}</span>
               </li>
             ))}
           </ul>
