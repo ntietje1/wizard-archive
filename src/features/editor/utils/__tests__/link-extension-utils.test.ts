@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { PluginKey } from '@tiptap/pm/state'
-import type { Plugin } from '@tiptap/pm/state'
+import { EditorState, Plugin, PluginKey } from '@tiptap/pm/state'
+import { Schema } from '@tiptap/pm/model'
 import { registerLinkPlugins } from '../link-extension-utils'
 
 const { mockCreateSelectionStabilizerPlugin } = vi.hoisted(() => ({
@@ -11,6 +11,28 @@ vi.mock('../selection-stabilizer', () => ({
   createSelectionStabilizerPlugin: (...args: Array<unknown>) =>
     mockCreateSelectionStabilizerPlugin(...args),
 }))
+
+const schema = new Schema({
+  nodes: {
+    doc: { content: 'text*' },
+    text: { group: 'inline' },
+  },
+})
+
+function createStateWithPluginState(pluginKey: PluginKey, value: unknown) {
+  return EditorState.create({
+    schema,
+    plugins: [
+      new Plugin({
+        key: pluginKey,
+        state: {
+          init: () => value,
+          apply: (_tr, current) => current,
+        },
+      }),
+    ],
+  })
+}
 
 describe('registerLinkPlugins', () => {
   const pluginKey = new PluginKey('linkDecoration')
@@ -167,11 +189,13 @@ describe('registerLinkPlugins', () => {
     const stabilizerPlugin = { name: 'stabilizer' } as unknown as Plugin
     const setMeta = vi.fn().mockReturnValue('meta-tr')
     const dispatch = vi.fn()
-    const state = { tr: { setMeta } } as Record<string, unknown>
+    let state: unknown = { tr: { setMeta } }
     const tiptapEditor = {
       view: {
         dom: document.createElement('div'),
-        state,
+        get state() {
+          return state
+        },
         dispatch,
       },
       registerPlugin,
@@ -186,7 +210,7 @@ describe('registerLinkPlugins', () => {
       createDecorationPlugin: () => firstDecorationPlugin,
     })
     requestAnimationFrameSpy.mock.calls[0][0](0)
-    state[(pluginKey as unknown as { key: string }).key] = {}
+    state = createStateWithPluginState(pluginKey, {})
     firstCleanup()
 
     registerLinkPlugins({

@@ -75,13 +75,19 @@ export function useLinkDecorations(
     if (!previous || previous.editor !== editor) return
     if (previous.resolver === resolver && previous.isViewerMode === isViewerMode) return
 
-    try {
-      const view = editor?._tiptapEditor?.view
-      if (view) {
+    const view = editor?._tiptapEditor?.view
+    if (view) {
+      try {
         view.dispatch(view.state.tr.setMeta(PLUGIN_KEY, true))
+      } catch (error) {
+        if (editor?._tiptapEditor?.view === view) {
+          console.error('useLinkDecorations dispatch failed', {
+            pluginKey: PLUGIN_KEY,
+            editor,
+            error,
+          })
+        }
       }
-    } catch {
-      // The view can disappear while BlockNote is mounting or unmounting.
     }
   }, [editor, resolver, isViewerMode])
 }
@@ -120,12 +126,7 @@ function createLinkDecorationPlugin(
           const newOverlapping = matches.filter(
             (match) => selFrom <= match.to && selTo >= match.from,
           )
-          const overlappingChanged =
-            oldOverlapping.length !== newOverlapping.length ||
-            oldOverlapping.some(
-              (old, index) =>
-                old.from !== newOverlapping[index]?.from || old.to !== newOverlapping[index]?.to,
-            )
+          const overlappingChanged = !linkRangesEqual(oldOverlapping, newOverlapping)
 
           if (overlappingChanged) {
             return createPluginState(newEditorState.doc, resolver, isViewerMode, selFrom, selTo)
@@ -145,6 +146,17 @@ function createLinkDecorationPlugin(
       },
     },
   })
+}
+
+function linkRangesEqual(left: Array<LinkRange>, right: Array<LinkRange>): boolean {
+  return (
+    left.length === right.length &&
+    left.every((leftRange) =>
+      right.some(
+        (rightRange) => leftRange.from === rightRange.from && leftRange.to === rightRange.to,
+      ),
+    )
+  )
 }
 
 function createPluginState(
