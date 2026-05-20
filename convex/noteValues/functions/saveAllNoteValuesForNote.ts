@@ -400,7 +400,7 @@ export async function saveAllNoteValuesForNote(
       errorMessage: definition.errorMessage,
     }
     if (row) {
-      await ctx.db.patch(row._id, fields)
+      await ctx.db.patch('noteValues', row._id, fields)
     } else {
       await ctx.db.insert('noteValues', fields)
     }

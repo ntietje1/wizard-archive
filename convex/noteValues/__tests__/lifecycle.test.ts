@@ -131,7 +131,7 @@ describe('note value lifecycle', () => {
     )
     expect(block).not.toBeNull()
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(block!._id, {
+      await dbCtx.db.patch('blocks', block!._id, {
         shareStatus: SHARE_STATUS.INDIVIDUALLY_SHARED,
       })
     })
@@ -469,7 +469,7 @@ describe('note value lifecycle', () => {
     })
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(noteId, { status: 'undoHidden' })
+      await dbCtx.db.patch('sidebarItems', noteId, { status: 'undoHidden' })
     })
 
     const states = await dmAuth.query(api.noteValues.queries.getNoteValueStates, {

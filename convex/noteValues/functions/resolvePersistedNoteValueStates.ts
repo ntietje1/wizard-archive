@@ -43,7 +43,7 @@ async function loadDefinitionsForNote(
     return cached
   }
 
-  const note = await ctx.db.get(noteId)
+  const note = await ctx.db.get('sidebarItems', noteId)
   if (!note || note.campaignId !== campaignId || !isActiveSidebarItem(note)) {
     rowsByNoteId.set(noteId, [])
     return []

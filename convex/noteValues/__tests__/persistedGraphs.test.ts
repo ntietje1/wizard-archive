@@ -407,7 +407,7 @@ describe('persisted note value graphs', () => {
     })
 
     await t.run(async (dbCtx) => {
-      await dbCtx.db.patch(sourceNoteId, { status: 'undoHidden' })
+      await dbCtx.db.patch('sidebarItems', sourceNoteId, { status: 'undoHidden' })
     })
 
     const states = await dmAuth.query(api.noteValues.queries.getNoteValueStates, {

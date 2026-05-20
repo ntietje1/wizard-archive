@@ -67,7 +67,9 @@ async function copyNoteBlocks(
     ),
   )
 
-  const persistedBlocks = await Promise.all(copiedBlockIds.map((blockId) => ctx.db.get(blockId)))
+  const persistedBlocks = await Promise.all(
+    copiedBlockIds.map((blockId) => ctx.db.get('blocks', blockId)),
+  )
   return persistedBlocks.map((block) => {
     if (!block) {
       throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Failed to load copied note block')
