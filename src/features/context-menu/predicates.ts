@@ -94,6 +94,9 @@ export const hasBlockNoteEditor: Predicate = (ctx) => ctx.editor !== undefined
 
 export const hasBlockNoteId: Predicate = (ctx) => ctx.blockNoteId !== undefined
 
+export const hasEditableValueInlineId: Predicate = (ctx) =>
+  ctx.valueInlineId !== undefined && ctx.valueInlineEditable === true
+
 export const atRoot: Predicate = (ctx) => !isSidebarItem(ctx)
 
 export const hasActiveMap: Predicate = (ctx) => Boolean(ctx.activeMap)

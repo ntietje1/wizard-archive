@@ -96,6 +96,10 @@ export function EditorContextMenu({
     hasActiveSession: !!currentSession.data,
     editor: blockNoteContext?.editor ?? undefined,
     blockNoteId: blockNoteContext?.blockNoteId,
+    valueInlineId: blockNoteContext?.valueInlineId,
+    valueInlineInstanceId: blockNoteContext?.valueInlineInstanceId,
+    valueInlineEditable: blockNoteContext?.valueInlineEditable,
+    openValueInline: blockNoteContext?.openValueInline,
   }
 
   const menu = buildMenu({

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
@@ -14,6 +14,7 @@ import { Button } from '~/features/shadcn/components/button'
 import { FormDialog } from '~/shared/components/form-dialog'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+import { useSlugFieldFeedback } from '~/shared/hooks/useSlugFieldFeedback'
 import { handleError } from '~/shared/utils/logger'
 
 interface CampaignDialogProps {
@@ -59,8 +60,11 @@ function CampaignForm({ mode, onClose, campaign, campaigns }: Omit<CampaignDialo
   campaignsRef.current = campaigns
 
   const [initialSlug] = useState(() => Math.random().toString(36).substring(2, 15))
-  const [showSlugFeedback, setShowSlugFeedback] = useState(false)
-  const slugFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const {
+    showFeedback: showSlugFeedback,
+    scheduleFeedback: scheduleSlugFeedback,
+    showFeedbackNow: showSlugFeedbackNow,
+  } = useSlugFieldFeedback()
 
   const form = useForm({
     defaultValues:
@@ -109,31 +113,6 @@ function CampaignForm({ mode, onClose, campaign, campaigns }: Omit<CampaignDialo
   const handleClose = () => {
     if (form.state.isSubmitting) return
     onClose()
-  }
-
-  useEffect(() => {
-    return () => {
-      if (slugFeedbackTimerRef.current) {
-        clearTimeout(slugFeedbackTimerRef.current)
-      }
-    }
-  }, [])
-
-  const scheduleSlugFeedback = () => {
-    setShowSlugFeedback(false)
-    if (slugFeedbackTimerRef.current) {
-      clearTimeout(slugFeedbackTimerRef.current)
-    }
-    slugFeedbackTimerRef.current = setTimeout(() => {
-      setShowSlugFeedback(true)
-    }, 400)
-  }
-
-  const showSlugFeedbackNow = () => {
-    if (slugFeedbackTimerRef.current) {
-      clearTimeout(slugFeedbackTimerRef.current)
-    }
-    setShowSlugFeedback(true)
   }
 
   const validateSlug = (value: string): string | null => {

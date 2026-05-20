@@ -50,6 +50,7 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
   awareness: Awareness
   synced = false
   lastAppliedSeq = -1
+  isApplyingRemoteUpdate = false
 
   private documentId: YjsDocumentId
   private config: ConvexYjsProviderConfig
@@ -97,12 +98,17 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
     if (this.destroyed) return
 
     let applied = false
-    for (const entry of updates) {
-      if (entry.seq > this.lastAppliedSeq) {
-        Y.applyUpdate(this.doc, new Uint8Array(entry.update), this)
-        this.lastAppliedSeq = entry.seq
-        applied = true
+    this.isApplyingRemoteUpdate = true
+    try {
+      for (const entry of updates) {
+        if (entry.seq > this.lastAppliedSeq) {
+          Y.applyUpdate(this.doc, new Uint8Array(entry.update), this)
+          this.lastAppliedSeq = entry.seq
+          applied = true
+        }
       }
+    } finally {
+      this.isApplyingRemoteUpdate = false
     }
 
     if (applied && !this.synced) {
@@ -166,6 +172,10 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
       })
   }
 
+  flushPendingUpdates(): Promise<boolean> {
+    return this.flushAllUpdates()
+  }
+
   // -- Document update batching --
 
   private handleDocUpdate = (update: Uint8Array, origin: unknown) => {
@@ -218,6 +228,26 @@ export class ConvexYjsProvider extends ObservableV2<ProviderEvents> {
         if (this.pendingUpdates.length > 0) this.scheduleFlush()
       })
     return this.pushInFlightPromise
+  }
+
+  private async flushAllUpdates(): Promise<boolean> {
+    this.clearUpdateTimers()
+
+    let attempts = 0
+    while ((this.pushInFlight || this.pendingUpdates.length > 0) && attempts < 10) {
+      attempts += 1
+      if (this.pushInFlight) {
+        await this.pushInFlightPromise
+      } else {
+        await this.flushUpdates()
+      }
+    }
+
+    if (this.pushInFlight || this.pendingUpdates.length > 0) {
+      logger.error('[YJS] flush did not drain all pending updates for', this.documentId)
+      return false
+    }
+    return true
   }
 
   private scheduleFlush() {

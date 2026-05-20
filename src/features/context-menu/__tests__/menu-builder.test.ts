@@ -433,6 +433,50 @@ describe('buildMenu', () => {
     )
   })
 
+  it('shows value editing only for editable value inline content', () => {
+    const valueMenu = buildMenu({
+      context: sidebarCtx({
+        surface: VIEW_CONTEXT.NOTE_VIEW,
+        item: undefined,
+        selectedItems: [],
+        valueInlineId: 'value-1',
+        valueInlineEditable: true,
+      }),
+      services: createServices(),
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+    const readonlyValueMenu = buildMenu({
+      context: sidebarCtx({
+        surface: VIEW_CONTEXT.NOTE_VIEW,
+        item: undefined,
+        selectedItems: [],
+        valueInlineId: 'value-1',
+        valueInlineEditable: false,
+      }),
+      services: createServices(),
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+    const generalNoteMenu = buildMenu({
+      context: sidebarCtx({
+        surface: VIEW_CONTEXT.NOTE_VIEW,
+        item: undefined,
+        selectedItems: [],
+      }),
+      services: createServices(),
+      contributors: editorContextMenuContributors,
+      commands: editorContextMenuCommands,
+      groupConfig,
+    })
+
+    expect(valueMenu.flatItems.map((item) => item.id)).toContain('edit-value-inline')
+    expect(readonlyValueMenu.flatItems.map((item) => item.id)).not.toContain('edit-value-inline')
+    expect(generalNoteMenu.flatItems.map((item) => item.id)).not.toContain('edit-value-inline')
+  })
+
   it('checks reading mode in viewer mode and toggles without closing the menu', async () => {
     const setEditorMode = vi.fn()
     const note = createNote()

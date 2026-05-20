@@ -28,6 +28,7 @@ import {
   Plus,
   RotateCcw,
   Share2,
+  Sigma,
   SquareArrowOutUpRight,
   Trash2,
 } from 'lucide-react'
@@ -228,6 +229,13 @@ export const editorContextMenuCommands = {
       logger.debug(block?.content)
     },
   },
+  editValueInline: {
+    id: 'editValueInline',
+    run: (context) => {
+      if (!context.valueInlineId) return
+      context.openValueInline?.(context.valueInlineId, context.valueInlineInstanceId)
+    },
+  },
   toggleReadingMode: {
     id: 'toggleReadingMode',
     run: (_context, services) => {
@@ -289,6 +297,21 @@ const createSubmenuItems: Array<EditorContextMenuItem> = [
 ]
 
 export const editorContextMenuContributors = [
+  {
+    id: 'editor-value-inline',
+    surfaces: ['note-view'],
+    getItems: () => [
+      {
+        id: 'edit-value-inline',
+        commandId: 'editValueInline',
+        label: 'Edit Value',
+        icon: Sigma,
+        group: 'primary',
+        priority: 0,
+        applies: (context) => p.hasEditableValueInlineId(context),
+      },
+    ],
+  },
   {
     id: 'editor-tests',
     surfaces: ['note-view'],

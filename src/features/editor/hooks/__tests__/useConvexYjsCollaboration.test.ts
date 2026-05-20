@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { useConvexYjsCollaboration } from '../useConvexYjsCollaboration'
 import type { Id } from 'convex/_generated/dataModel'
+import { waitForMicrotasks } from '~/test/helpers/async'
 
 const DOCUMENT_ID = 'test-doc-id' as Id<'sidebarItems'>
 const OTHER_DOCUMENT_ID = 'other-doc-id' as Id<'sidebarItems'>
@@ -188,10 +189,10 @@ describe('useConvexYjsCollaboration', () => {
     expect(mockApplyRemoteAwareness).toHaveBeenCalledWith(awarenessEntries)
   })
 
-  it('destroys provider on unmount', () => {
+  it('destroys provider on unmount', async () => {
     const { unmount } = renderHook(() => useConvexYjsCollaboration(DOCUMENT_ID, USER, true))
     unmount()
-    expect(mockProviderDestroy).toHaveBeenCalled()
+    await waitForMicrotasks(() => expect(mockProviderDestroy).toHaveBeenCalled())
   })
 
   it('generates a new instanceId for each mount', () => {
@@ -215,7 +216,7 @@ describe('useConvexYjsCollaboration', () => {
     expect(lastProviderInstance.writable).toBe(false)
   })
 
-  it('recreates provider when documentId changes', () => {
+  it('recreates provider when documentId changes', async () => {
     const { result, rerender } = renderHook(
       ({ docId }) => useConvexYjsCollaboration(docId, USER, true),
       { initialProps: { docId: DOCUMENT_ID } },
@@ -226,8 +227,34 @@ describe('useConvexYjsCollaboration', () => {
 
     rerender({ docId: OTHER_DOCUMENT_ID })
 
-    expect(mockProviderDestroy).toHaveBeenCalled()
+    await waitForMicrotasks(() => expect(mockProviderDestroy).toHaveBeenCalled())
     expect(MockConvexYjsProvider.mock.calls.length).toBeGreaterThan(constructorCallsBefore)
     expect(result.current.instanceId).toBeGreaterThan(firstInstanceId)
+  })
+
+  it('awaits onBeforeDestroy before destroying provider', async () => {
+    const onBeforeDestroy = vi.fn().mockResolvedValue(undefined)
+
+    const { unmount } = renderHook(() =>
+      useConvexYjsCollaboration(DOCUMENT_ID, USER, true, {
+        onBeforeDestroy,
+      }),
+    )
+
+    unmount()
+
+    await waitForMicrotasks(() =>
+      expect(onBeforeDestroy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          documentId: DOCUMENT_ID,
+          doc: expect.anything(),
+          provider: expect.anything(),
+        }),
+      ),
+    )
+    await waitForMicrotasks(() => expect(mockProviderDestroy).toHaveBeenCalled())
+    expect(onBeforeDestroy.mock.invocationCallOrder[0]).toBeLessThan(
+      mockProviderDestroy.mock.invocationCallOrder[0],
+    )
   })
 })

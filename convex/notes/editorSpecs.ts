@@ -1,6 +1,7 @@
 import {
   BlockNoteSchema,
   COLORS_DEFAULT,
+  createInlineContentSpec,
   createStyleSpec,
   defaultBlockSpecs,
   defaultInlineContentSpecs,
@@ -17,13 +18,32 @@ import type {
   PartialInlineContent,
   StyleSpecs,
 } from '@blocknote/core'
+import { noteValueInlineConfig } from '../../shared/note-values/block-config'
+import type { NoteValueProps } from '../../shared/note-values/types'
 
 // remove link from inline content specs
 const { link: _link, ...remainingInlineContentSpecs } = defaultInlineContentSpecs
 
+const valueInlineSpec = createInlineContentSpec(noteValueInlineConfig, {
+  render: (inlineContent) => {
+    const element = document.createElement('span')
+    element.textContent = inlineContent.props.slug || 'value'
+    element.dataset.valueInline = 'true'
+    return { dom: element }
+  },
+  toExternalHTML: (inlineContent) => {
+    const element = document.createElement('span')
+    element.textContent = inlineContent.props.slug || 'value'
+    return { dom: element }
+  },
+})
+
 export const customInlineContentSpecs = {
   ...remainingInlineContentSpecs,
-} as InlineContentSpecs
+  value: valueInlineSpec,
+} as InlineContentSpecs & {
+  value: typeof valueInlineSpec
+}
 
 const textColorStyleSpec = createStyleSpec(
   {
@@ -62,7 +82,7 @@ export const customStyleSpecs = {
 
 export const customBlockSpecs = {
   ...defaultBlockSpecs,
-} as BlockSpecs
+} satisfies BlockSpecs
 
 export const editorSchema = BlockNoteSchema.create({
   blockSpecs: customBlockSpecs,
@@ -84,13 +104,25 @@ export type CustomPartialBlock = PartialBlock<
 
 export type CustomInlineContent = InlineContent<CustomInlineContentSchema, CustomStyleSchema>
 
-export type CustomPartialInlineContent = PartialInlineContent<
-  CustomInlineContentSchema,
-  CustomStyleSchema
->
+export interface CustomValuePartialInlineContent {
+  type: 'value'
+  props: NoteValueProps
+  content?: undefined
+}
 
-export type CustomBlockNoteEditor = BlockNoteEditor<
+export type CustomPartialInlineContent =
+  | PartialInlineContent<CustomInlineContentSchema, CustomStyleSchema>
+  | Array<CustomValuePartialInlineContent>
+
+type BaseCustomBlockNoteEditor = BlockNoteEditor<
   CustomBlockSchema,
   CustomInlineContentSchema,
   CustomStyleSchema
 >
+
+export type CustomBlockNoteEditor = BaseCustomBlockNoteEditor & {
+  insertInlineContent(
+    content: CustomPartialInlineContent,
+    options?: { updateSelection?: boolean },
+  ): void
+}

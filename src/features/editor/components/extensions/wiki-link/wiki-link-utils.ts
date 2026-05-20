@@ -1,5 +1,22 @@
 import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 
+export interface WikiLinkContextEditor {
+  _tiptapEditor?: {
+    state: {
+      selection: {
+        from: number
+        $from: {
+          start: () => number
+          end: () => number
+        }
+      }
+      doc: {
+        textBetween: (from: number, to: number) => string
+      }
+    }
+  }
+}
+
 /**
  * Check if the cursor is currently inside a wikilink [[...]]
  */
@@ -30,7 +47,7 @@ export function splitWikiLinkTargetAndDisplayName(query: string): {
  * Returns the full query text (before AND after cursor) and start position.
  */
 export function getWikiLinkContext(
-  editor: CustomBlockNoteEditor,
+  editor: WikiLinkContextEditor,
 ): { query: string; startPos: number; endPos: number } | null {
   const tiptap = editor._tiptapEditor
   if (!tiptap) return null

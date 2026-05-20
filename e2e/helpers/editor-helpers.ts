@@ -31,16 +31,21 @@ export async function applyFormatting(page: Page, shortcut: string) {
 
 export async function openSlashMenu(page: Page) {
   const editor = await getEditor(page)
-  await editor.focus()
+  const paragraphs = editor.locator('p')
+  if ((await paragraphs.count()) > 0) {
+    await paragraphs.last().click()
+  } else {
+    await editor.click()
+  }
   await page.keyboard.type('/')
-  const menu = page.getByRole('listbox')
+  const menu = page.locator('[data-testid="slash-menu"] [role="listbox"]')
   await expect(menu).toBeVisible({ timeout: 5000 })
   return menu
 }
 
 export async function selectSlashMenuItem(page: Page, itemName: string | RegExp) {
-  await openSlashMenu(page)
-  await page.getByRole('option', { name: itemName }).click()
+  const menu = await openSlashMenu(page)
+  await menu.getByRole('option', { name: itemName }).click()
   await page.waitForTimeout(300)
 }
 

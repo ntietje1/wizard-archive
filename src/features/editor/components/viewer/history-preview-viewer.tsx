@@ -6,7 +6,7 @@ import { api } from 'convex/_generated/api'
 import { Loader2 } from 'lucide-react'
 import { SNAPSHOT_TYPE } from 'convex/documentSnapshots/schema'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import { editorSchema } from 'convex/notes/editorSpecs'
+import { createEditorSchema } from '../../editorSchema'
 import { HistoryPreviewBanner } from './history-preview-banner'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CustomBlock } from 'convex/notes/editorSpecs'
@@ -38,7 +38,7 @@ export function HistoryPreviewViewer({ entryId }: { entryId: Id<'editHistory'> }
   if (snapshotQuery.isLoading || historyEntry.isLoading) {
     return (
       <div className="flex-1 min-h-0 flex items-center justify-center">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        <Loader2 className="size-5 animate-spin text-muted-foreground" />
       </div>
     )
   }
@@ -72,7 +72,7 @@ export function HistoryPreviewViewer({ entryId }: { entryId: Id<'editHistory'> }
       <HistoryPreviewBanner entryId={entryId} entryTime={entryTime} canEdit={canEdit} />
       {snapshot.snapshotType === SNAPSHOT_TYPE.yjs_state &&
         snapshot.itemType === SIDEBAR_ITEM_TYPES.notes && (
-          <NoteYjsSnapshotPreview data={snapshot.data} />
+          <NoteYjsSnapshotPreview noteId={snapshot.itemId} data={snapshot.data} />
         )}
       {snapshot.snapshotType === SNAPSHOT_TYPE.yjs_state &&
         snapshot.itemType === SIDEBAR_ITEM_TYPES.canvases && (
@@ -93,17 +93,23 @@ export function HistoryPreviewViewer({ entryId }: { entryId: Id<'editHistory'> }
   )
 }
 
-function NoteYjsSnapshotPreview({ data }: { data: ArrayBuffer }) {
+function NoteYjsSnapshotPreview({
+  noteId,
+  data,
+}: {
+  noteId: Id<'sidebarItems'>
+  data: ArrayBuffer
+}) {
   const blocks = useMemo(() => {
     const doc = new Y.Doc()
     try {
       Y.applyUpdate(doc, new Uint8Array(data))
       const editor = BlockNoteEditor.create({
-        schema: editorSchema,
+        schema: createEditorSchema(),
         _headless: true,
       })
       try {
-        return yDocToBlocks(editor, doc, 'document') as Array<CustomBlock>
+        return yDocToBlocks(editor, doc, 'document') as unknown as Array<CustomBlock>
       } finally {
         destroyBlockNoteEditor(editor)
       }
@@ -117,7 +123,12 @@ function NoteYjsSnapshotPreview({ data }: { data: ArrayBuffer }) {
 
   return (
     <ScrollArea className="flex-1 min-h-0">
-      <NoteContent content={blocks} editable={false} className="mx-auto w-full max-w-3xl mt-2" />
+      <NoteContent
+        noteId={noteId}
+        content={blocks}
+        editable={false}
+        className="mx-auto w-full max-w-3xl mt-2"
+      />
     </ScrollArea>
   )
 }
@@ -197,7 +208,7 @@ function GameMapSnapshotPreview({ data }: { data: ArrayBuffer }) {
         </div>
       ) : imageUrl.isLoading ? (
         <div className="flex items-center justify-center min-h-48">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <Loader2 className="size-5 animate-spin text-muted-foreground" />
         </div>
       ) : (
         <div className="flex items-center justify-center min-h-48 text-muted-foreground">

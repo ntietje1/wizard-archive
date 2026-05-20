@@ -10,7 +10,6 @@ import {
   blockNoteBlockSchema,
   blockTypeSchema,
   inlineContentSchema,
-  tableContentSchema,
 } from './blockSchemas'
 import { convexValidatorFields } from '../common/schema'
 
@@ -27,9 +26,7 @@ export const customBlockValidator = zodToConvex(blockNoteBlockSchema) as unknown
 
 // --- Table definition ---
 
-const blockInlineContentSchema = z.nullable(
-  z.union([z.array(inlineContentSchema), tableContentSchema]),
-)
+const blockInlineContentSchema = z.nullable(z.array(inlineContentSchema))
 const blockPropsSchema = z.record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
 
 const blockTableFields = {

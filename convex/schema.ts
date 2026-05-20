@@ -15,10 +15,12 @@ import { documentSnapshotsTables } from './documentSnapshots/schema'
 import { sidebarItemsTables } from './sidebarItems/schema/sidebarItemsTable'
 import { blocksTables } from './blocks/schema'
 import { noteLinksTables } from './links/schema'
+import { noteValuesTables } from './noteValues/schema'
 
 export default defineSchema({
   ...blocksTables,
   ...noteLinksTables,
+  ...noteValuesTables,
   ...editorTables,
   ...campaignTables,
   ...userTables,

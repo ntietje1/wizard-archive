@@ -1,18 +1,20 @@
 import * as Y from 'yjs'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { createYjsDocument } from '../../yjsSync/functions/createYjsDocument'
-import { saveAllBlocksForNote } from '../../blocks/functions/saveAllBlocksForNote'
-import { syncNoteLinks } from '../../links/functions/syncNoteLinks'
 import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
 import { copyYjsUpdates } from '../../yjsSync/functions/copyYjsUpdates'
 import { blocksToYDoc } from '../blocknote'
+import {
+  syncNoteIndexesFromBlocks,
+  syncNoteDerivedDataFromPersistedBlocks,
+} from './syncNoteDerivedData'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { CustomBlock } from '../editorSpecs'
-import type { BlockNoteId } from '../../blocks/types'
+import type { Block } from '../../blocks/types'
 
 export async function createNoteCompanion(
   ctx: CampaignMutationCtx,
@@ -39,7 +41,7 @@ async function copyNoteBlocks(
   ctx: CampaignMutationCtx,
   sourceItemId: Id<'sidebarItems'>,
   targetItemId: Id<'sidebarItems'>,
-) {
+): Promise<Array<Block>> {
   const blocks = await ctx.db
     .query('blocks')
     .withIndex('by_campaign_note_block', (q) =>
@@ -47,40 +49,37 @@ async function copyNoteBlocks(
     )
     .collect()
 
-  const blockNoteIdMap = new Map<BlockNoteId, BlockNoteId>()
-  for (const block of blocks) {
-    blockNoteIdMap.set(block.blockNoteId, crypto.randomUUID() as BlockNoteId)
+  const blocksInParentOrder = [...blocks].sort(
+    (a, b) => a.depth - b.depth || (a.position ?? 0) - (b.position ?? 0),
+  )
+  const sourceBlockNoteIds = new Set(blocks.map((block) => block.blockNoteId))
+  const copiedBlocks: Array<Block> = []
+
+  for (const block of blocksInParentOrder) {
+    const blockId = await ctx.db.insert('blocks', {
+      noteId: targetItemId,
+      blockNoteId: block.blockNoteId,
+      position: block.position,
+      parentBlockId:
+        block.parentBlockId && sourceBlockNoteIds.has(block.parentBlockId)
+          ? block.parentBlockId
+          : null,
+      depth: block.depth,
+      type: block.type,
+      props: block.props,
+      inlineContent: block.inlineContent,
+      plainText: block.plainText,
+      campaignId: ctx.campaign._id,
+      shareStatus: block.shareStatus,
+    })
+    const copiedBlock = await ctx.db.get('blocks', blockId)
+    if (!copiedBlock) {
+      throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Failed to load copied note block')
+    }
+    copiedBlocks.push(copiedBlock)
   }
 
-  await Promise.all(
-    blocks.map((block) => {
-      const blockNoteId = blockNoteIdMap.get(block.blockNoteId)
-      if (!blockNoteId) {
-        throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Failed to remap duplicated note block')
-      }
-      let parentBlockId: BlockNoteId | null = null
-      if (block.parentBlockId) {
-        const mappedParentBlockId = blockNoteIdMap.get(block.parentBlockId)
-        if (!mappedParentBlockId) {
-          throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Failed to remap parent note block')
-        }
-        parentBlockId = mappedParentBlockId
-      }
-      return ctx.db.insert('blocks', {
-        noteId: targetItemId,
-        blockNoteId,
-        position: block.position,
-        parentBlockId,
-        depth: block.depth,
-        type: block.type,
-        props: block.props,
-        inlineContent: block.inlineContent,
-        plainText: block.plainText,
-        campaignId: ctx.campaign._id,
-        shareStatus: block.shareStatus,
-      })
-    }),
-  )
+  return copiedBlocks
 }
 
 export async function copyNoteCompanion(
@@ -101,8 +100,12 @@ export async function copyNoteCompanion(
     throwClientError(ERROR_CODE.CONFLICT, 'Note companion already exists')
   }
   await ctx.db.insert('notes', { sidebarItemId: targetItemId })
-  await copyNoteBlocks(ctx, sourceItemId, targetItemId)
+  const copiedBlocks = await copyNoteBlocks(ctx, sourceItemId, targetItemId)
   await copyYjsUpdates(ctx, sourceItemId, targetItemId)
+  await syncNoteDerivedDataFromPersistedBlocks(ctx, {
+    noteId: targetItemId,
+    blocks: copiedBlocks,
+  })
 }
 
 export async function setNoteContent(
@@ -126,12 +129,7 @@ export async function setNoteContent(
     .unique()
   if (!note) throwClientError(ERROR_CODE.NOT_FOUND, 'Note companion not found')
 
-  const persistedBlocks = await saveAllBlocksForNote(ctx, { noteId, content })
-  await syncNoteLinks(ctx, {
-    noteId,
-    campaignId: ctx.campaign._id,
-    blocks: persistedBlocks,
-  })
+  await syncNoteIndexesFromBlocks(ctx, { noteId, content })
   if (content.length === 0) {
     const doc = new Y.Doc()
     const latest = await ctx.db

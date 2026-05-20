@@ -54,8 +54,8 @@ describe('block type coverage', () => {
 // --- Inline content coverage -----------------------------------------------
 
 describe('inline content coverage', () => {
-  it('text is the only inline content type (link removed)', () => {
-    expect(Object.keys(customInlineContentSpecs)).toEqual(['text'])
+  it('supports text and value inline content only (link removed)', () => {
+    expect(Object.keys(customInlineContentSpecs)).toEqual(['text', 'value'])
   })
 })
 
@@ -167,6 +167,25 @@ describe('valid blocks are accepted', () => {
           },
         ],
       },
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts inline value content in a paragraph', () => {
+    const result = blockNoteBlockSchema.safeParse({
+      id: testBlockNoteId('value-1'),
+      type: 'paragraph',
+      props: {},
+      content: [
+        {
+          type: 'value',
+          props: {
+            valueId: 'value-1',
+            slug: 'attack_bonus',
+            expressionSource: '[[strength_mod]] + [[prof_bonus]]',
+          },
+        },
+      ],
     })
     expect(result.success).toBe(true)
   })

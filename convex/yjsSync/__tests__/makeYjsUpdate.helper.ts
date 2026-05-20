@@ -5,6 +5,7 @@ import type { CustomPartialBlock } from '../../notes/editorSpecs'
 export type TestInlineContent = {
   type: string
   text?: string
+  props?: Record<string, unknown>
   styles?: Record<string, boolean | string>
 }
 

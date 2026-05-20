@@ -96,6 +96,24 @@ describe('flat block content validation', () => {
     expect(result.success).toBe(true)
   })
 
+  it('accepts a paragraph with inline value content', () => {
+    const result = flatBlockContentSchema.safeParse({
+      type: 'paragraph',
+      props: {},
+      content: [
+        {
+          type: 'value',
+          props: {
+            valueId: 'value-1',
+            slug: 'strength_mod',
+            expressionSource: 'floor(([[strength]] - 10) / 2)',
+          },
+        },
+      ],
+    })
+    expect(result.success).toBe(true)
+  })
+
   it('rejects a heading with invalid level', () => {
     const result = flatBlockContentSchema.safeParse({
       type: 'heading',

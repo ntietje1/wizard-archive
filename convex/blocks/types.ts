@@ -6,7 +6,6 @@ import type {
   blockTypeSchema,
   flatBlockContentSchema,
   inlineContentSchema,
-  tableContentSchema,
 } from './blockSchemas'
 import type { ConvexValidatorFields } from '../common/types'
 
@@ -18,9 +17,7 @@ export type BlockNoteId = z.infer<typeof blockNoteIdSchema>
 
 export type BlockProps = FlatBlockContent['props']
 
-export type InlineContent =
-  | Array<z.infer<typeof inlineContentSchema>>
-  | z.infer<typeof tableContentSchema>
+export type InlineContent = Array<z.infer<typeof inlineContentSchema>>
 
 export type BlockShareInfo = {
   blockNoteId: BlockNoteId

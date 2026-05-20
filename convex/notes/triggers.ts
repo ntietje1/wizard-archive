@@ -4,7 +4,7 @@ import type { SidebarItemTriggerHandlers } from '../sidebarItems/triggerTypes'
 
 export const noteTriggers: SidebarItemTriggerHandlers = {
   onHardDelete: async (db, _storage, item) => {
-    const [blocks, blockShares, ext, outgoingLinks, incomingLinks] = await Promise.all([
+    const [blocks, blockShares, ext, outgoingLinks, incomingLinks, noteValues] = await Promise.all([
       db
         .query('blocks')
         .withIndex('by_campaign_note_block', (q) =>
@@ -33,9 +33,16 @@ export const noteTriggers: SidebarItemTriggerHandlers = {
           q.eq('campaignId', item.campaignId).eq('targetItemId', item.id),
         )
         .collect(),
+      db
+        .query('noteValues')
+        .withIndex('by_campaign_note', (q) =>
+          q.eq('campaignId', item.campaignId).eq('noteId', item.id),
+        )
+        .collect(),
     ])
     await asyncMap(blocks, (b) => db.delete('blocks', b._id))
     await asyncMap(blockShares, (bs) => db.delete('blockShares', bs._id))
+    await asyncMap(noteValues, (value) => db.delete('noteValues', value._id))
     if (ext) await db.delete('notes', ext._id)
     await deleteYjsDocument({ db }, item.id)
     await asyncMap([...outgoingLinks, ...incomingLinks], (link) => db.delete('noteLinks', link._id))
