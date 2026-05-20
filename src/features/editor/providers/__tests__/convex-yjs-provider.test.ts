@@ -157,6 +157,21 @@ describe('ConvexYjsProvider', () => {
 
       expect(syncHandler).toHaveBeenCalledTimes(1)
     })
+
+    it('marks the provider while applying remote updates', () => {
+      const remoteUpdateFlags: Array<boolean> = []
+      doc.on('update', (_update, origin) => {
+        if (origin === provider) {
+          remoteUpdateFlags.push(provider.isApplyingRemoteUpdate)
+        }
+      })
+
+      const { update, seq } = createRemoteUpdate(0)
+      provider.applyRemoteUpdates([{ update, seq }])
+
+      expect(remoteUpdateFlags).toEqual([true])
+      expect(provider.isApplyingRemoteUpdate).toBe(false)
+    })
   })
 
   describe('remote awareness', () => {
@@ -309,6 +324,39 @@ describe('ConvexYjsProvider', () => {
 
       provider.writable = false
       expect(config.pushUpdate).toHaveBeenCalledTimes(1)
+    })
+
+    it('flushPendingUpdates sends pending doc updates immediately', async () => {
+      doc.getXmlFragment('document').insert(0, [new Y.XmlElement('p')])
+      expect(config.pushUpdate).not.toHaveBeenCalled()
+
+      await expect(provider.flushPendingUpdates()).resolves.toBe(true)
+
+      expect(config.pushUpdate).toHaveBeenCalledTimes(1)
+    })
+
+    it('flushPendingUpdates waits for an in-flight push and drains queued updates', async () => {
+      let resolveFirstPush!: (value: { seq: number }) => void
+      const firstPush = new Promise<{ seq: number }>((resolve) => {
+        resolveFirstPush = resolve
+      })
+      ;(config.pushUpdate as ReturnType<typeof vi.fn>)
+        .mockReturnValueOnce(firstPush)
+        .mockResolvedValue({ seq: 2 })
+
+      doc.getXmlFragment('document').insert(0, [new Y.XmlElement('p')])
+      vi.advanceTimersByTime(50)
+      expect(config.pushUpdate).toHaveBeenCalledTimes(1)
+
+      doc.getXmlFragment('document').insert(1, [new Y.XmlElement('p')])
+      const flushPromise = provider.flushPendingUpdates()
+      await Promise.resolve()
+      expect(config.pushUpdate).toHaveBeenCalledTimes(1)
+
+      resolveFirstPush({ seq: 1 })
+      await expect(flushPromise).resolves.toBe(true)
+
+      expect(config.pushUpdate).toHaveBeenCalledTimes(2)
     })
   })
 

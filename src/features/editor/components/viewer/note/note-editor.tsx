@@ -1,7 +1,6 @@
 import { useRef } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
 import { EDITOR_MODE } from 'convex/editors/types'
-import { BlockNoteContextMenuHandler } from '../../extensions/blocknote-context-menu/blocknote-context-menu-handler'
 import { NoteContent } from '../../note-content'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { NoteWithContent } from 'convex/notes/types'
@@ -13,6 +12,34 @@ import { useNoteEditorState } from '~/features/editor/hooks/useNoteEditorState'
 import { useScrollPersistence } from '~/features/editor/hooks/useScrollPersistence'
 import { useScrollToHeading } from '~/features/editor/hooks/useScrollToHeading'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
+import type { BlockNoteId } from 'convex/blocks/types'
+
+function getContextMenuTarget(target: EventTarget | null): Element | null {
+  if (target instanceof Element) {
+    return target
+  }
+  if (target instanceof Node) {
+    return target.parentElement
+  }
+  return null
+}
+
+function getBlockNoteContextFromTarget(
+  target: Element,
+  editable: boolean,
+): {
+  blockNoteId: BlockNoteId | undefined
+  valueInlineId: string | undefined
+  valueInlineEditable: boolean
+} {
+  const blockElement = target.closest('[data-node-type="blockContainer"]')
+  const valueInlineElement = target.closest('[data-note-value-id]')
+  return {
+    blockNoteId: blockElement?.getAttribute('data-id') as BlockNoteId | undefined,
+    valueInlineId: valueInlineElement?.getAttribute('data-note-value-id') ?? undefined,
+    valueInlineEditable: editable && valueInlineElement !== null,
+  }
+}
 
 export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
   const { editorMode, canEdit } = useEditorMode()
@@ -32,21 +59,37 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
     )
   }
 
-  const handleWrapperContextMenu = (e: React.MouseEvent) => {
-    if (!e.isTrusted) return
-
-    const target = e.target as HTMLElement
-    if (target.closest('.bn-editor')) return
-
+  const openNoteContextMenu = (e: React.MouseEvent, target: Element) => {
     e.preventDefault()
     e.stopPropagation()
+
+    const isBlockNoteContext = target.closest('.bn-editor') !== null
+    const blockNoteContext = isBlockNoteContext
+      ? getBlockNoteContextFromTarget(target, editable)
+      : { blockNoteId: undefined, valueInlineId: undefined, valueInlineEditable: false }
 
     openBlockNoteContextMenu({
       position: { x: e.clientX, y: e.clientY },
       viewContext: 'note-view',
       item: undefined,
-      blockNoteId: undefined,
+      ...blockNoteContext,
     })
+  }
+
+  const handleWrapperMouseDownCapture = (e: React.MouseEvent) => {
+    if (e.button !== 2) return
+    if (!e.isTrusted) return
+
+    const target = getContextMenuTarget(e.target)
+    if (!target || target.closest('.bn-editor') === null) return
+    openNoteContextMenu(e, target)
+  }
+
+  const handleWrapperContextMenu = (e: React.MouseEvent) => {
+    if (!e.isTrusted) return
+    const target = getContextMenuTarget(e.target)
+    if (!target) return
+    openNoteContextMenu(e, target)
   }
 
   return (
@@ -56,6 +99,7 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
           ref={wrapperRef}
           className="flex flex-col flex-1 min-h-0"
           data-testid="note-editor-wrapper"
+          onMouseDownCapture={handleWrapperMouseDownCapture}
           onContextMenu={handleWrapperContextMenu}
         >
           <ScrollArea
@@ -69,9 +113,7 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
               editable={editable}
               onEditorChange={onEditorChange}
               className="note-editor-surface"
-            >
-              <BlockNoteContextMenuHandler />
-            </NoteContent>
+            />
           </ScrollArea>
         </div>
       </BlockNoteContextMenuProvider>

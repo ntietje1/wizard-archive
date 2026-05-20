@@ -9,26 +9,23 @@ export interface BlockNoteContextMenuEvent {
   viewContext: ViewContext
   item?: AnySidebarItem
   blockNoteId?: BlockNoteId
+  valueInlineId?: string
+  valueInlineEditable?: boolean
 }
 
 export interface BlockNoteContextMenuContextType {
   editor: CustomBlockNoteEditor | null
   setEditor: (editor: CustomBlockNoteEditor | null) => void
   blockNoteId: BlockNoteId | undefined
-  setBlockNoteId: (blockNoteId: BlockNoteId | undefined) => void
+  valueInlineId: string | undefined
+  valueInlineEditable: boolean
+  openValueInline: (valueId: string) => void
+  registerValueInlineEdit: (valueId: string, edit: () => void) => () => void
 }
 
 export const BlockNoteContextMenuContext = createContext<BlockNoteContextMenuContextType | null>(
   null,
 )
-
-export function useBlockNoteContextMenu(): BlockNoteContextMenuContextType {
-  const context = useContext(BlockNoteContextMenuContext)
-  if (!context) {
-    throw new Error('useBlockNoteContextMenu must be used within a BlockNoteContextMenuProvider')
-  }
-  return context
-}
 
 export function useBlockNoteContextMenuOptional(): BlockNoteContextMenuContextType | null {
   return useContext(BlockNoteContextMenuContext)

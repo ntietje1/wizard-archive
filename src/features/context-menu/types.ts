@@ -141,6 +141,9 @@ export interface EditorMenuContext {
   hasActiveSession?: boolean
   editor?: CustomBlockNoteEditor
   blockNoteId?: BlockNoteId
+  valueInlineId?: string
+  valueInlineEditable?: boolean
+  openValueInline?: (valueId: string) => void
 }
 
 export interface EditorModeMenuService {

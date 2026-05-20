@@ -1,9 +1,13 @@
 import { extractPlainText } from './extractPlainText'
 import type { CustomBlock } from '../../notes/editorSpecs'
-import type { BlockNoteId, FlatBlockContent } from '../types'
+import type { BlockNoteId, FlatBlockContent, InlineContent } from '../types'
 
 function toFlatBlockContent(block: CustomBlock): FlatBlockContent {
   return { type: block.type, props: block.props, content: block.content } as FlatBlockContent
+}
+
+function toPersistedInlineContent(block: CustomBlock): InlineContent | null {
+  return block.content === undefined ? null : (block.content as InlineContent)
 }
 
 export function flattenBlocks(blocks: Array<CustomBlock>) {
@@ -14,7 +18,7 @@ export function flattenBlocks(blocks: Array<CustomBlock>) {
     position: number,
   ) {
     const plainText = extractPlainText(toFlatBlockContent(block))
-    const inlineContent = block.content !== undefined ? block.content : null
+    const inlineContent = toPersistedInlineContent(block)
     return {
       blockNoteId: block.id,
       parentBlockId,

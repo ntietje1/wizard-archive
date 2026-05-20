@@ -2,14 +2,20 @@ import { describe, expect, it } from 'vitest'
 import { flattenBlocks } from '../functions/flattenBlocks'
 import { reconstructBlockTree } from '../functions/reconstructBlockTree'
 import { testBlockNoteId } from '../../_test/factories.helper'
-import type { Block } from '../types'
+import type { Block, InlineContent } from '../types'
 import type { CustomBlock } from '../../notes/editorSpecs'
 import type { Id } from '../../_generated/dataModel'
+import type { z } from 'zod'
+import type { tableContentSchema } from '../blockSchemas'
 
-function makeBlock(
-  label: string,
-  overrides?: Partial<CustomBlock> & { children?: Array<CustomBlock> },
-): CustomBlock {
+type TableContent = z.infer<typeof tableContentSchema>
+type TestBlockOverrides = Partial<Omit<CustomBlock, 'content' | 'props' | 'children'>> & {
+  content?: unknown
+  props?: unknown
+  children?: Array<CustomBlock>
+}
+
+function makeBlock(label: string, overrides?: TestBlockOverrides): CustomBlock {
   return {
     id: testBlockNoteId(label),
     type: 'paragraph',
@@ -106,7 +112,7 @@ describe('flattenBlocks', () => {
         content: [
           { type: 'text', text: 'Hello', styles: {} },
           { type: 'text', text: 'world', styles: {} },
-        ] as CustomBlock['content'],
+        ] satisfies InlineContent,
       }),
     ]
     const result = flattenBlocks(blocks)
@@ -121,7 +127,7 @@ describe('flattenBlocks', () => {
           type: 'tableContent',
           columnWidths: [100],
           rows: [{ cells: [[{ type: 'text', text: 'Cell', styles: {} }]] }],
-        } as CustomBlock['content'],
+        } satisfies TableContent,
       }),
     ]
     const result = flattenBlocks(blocks)
@@ -176,11 +182,11 @@ describe('flattenBlocks', () => {
     const original = [
       makeBlock('h1', {
         type: 'heading',
-        props: { level: 1 } as unknown as CustomBlock['props'],
-        content: [{ type: 'text', text: 'Title', styles: {} }] as CustomBlock['content'],
+        props: { level: 1 },
+        content: [{ type: 'text', text: 'Title', styles: {} }] satisfies InlineContent,
         children: [
           makeBlock('p1', {
-            content: [{ type: 'text', text: 'Paragraph', styles: {} }] as CustomBlock['content'],
+            content: [{ type: 'text', text: 'Paragraph', styles: {} }] satisfies InlineContent,
             children: [makeBlock('nested', { type: 'bulletListItem' })],
           }),
         ],
@@ -364,17 +370,17 @@ describe('flatten ↔ reconstruct symmetry', () => {
         content: [
           { type: 'text', text: 'Hello', styles: { bold: true } },
           { type: 'text', text: ' world', styles: {} },
-        ] as CustomBlock['content'],
+        ] satisfies InlineContent,
       }),
       makeBlock('h1', {
         type: 'heading',
-        props: { level: 2, textColor: 'red' } as unknown as CustomBlock['props'],
-        content: [{ type: 'text', text: 'Header', styles: {} }] as CustomBlock['content'],
+        props: { level: 2, textColor: 'red' },
+        content: [{ type: 'text', text: 'Header', styles: {} }] satisfies InlineContent,
       }),
       makeBlock('div', { type: 'divider', content: undefined }),
       makeBlock('tbl', {
         type: 'table',
-        props: { textColor: 'blue' } as unknown as CustomBlock['props'],
+        props: { textColor: 'blue' },
         content: {
           type: 'tableContent',
           columnWidths: [100, null],
@@ -386,7 +392,7 @@ describe('flatten ↔ reconstruct symmetry', () => {
               ],
             },
           ],
-        } as CustomBlock['content'],
+        } satisfies TableContent,
       }),
     ]
 
@@ -397,31 +403,29 @@ describe('flatten ↔ reconstruct symmetry', () => {
     const original = [
       makeBlock('root', {
         type: 'toggleListItem',
-        content: [
-          { type: 'text', text: 'Root', styles: { italic: true } },
-        ] as CustomBlock['content'],
+        content: [{ type: 'text', text: 'Root', styles: { italic: true } }] satisfies InlineContent,
         children: [
           makeBlock('c1', {
             type: 'numberedListItem',
-            props: { start: 5 } as unknown as CustomBlock['props'],
-            content: [{ type: 'text', text: 'Numbered', styles: {} }] as CustomBlock['content'],
+            props: { start: 5 },
+            content: [{ type: 'text', text: 'Numbered', styles: {} }] satisfies InlineContent,
             children: [
               makeBlock('gc1', {
                 type: 'checkListItem',
-                props: { checked: true } as unknown as CustomBlock['props'],
-                content: [{ type: 'text', text: 'Done', styles: {} }] as CustomBlock['content'],
+                props: { checked: true },
+                content: [{ type: 'text', text: 'Done', styles: {} }] satisfies InlineContent,
               }),
               makeBlock('gc2', {
                 type: 'codeBlock',
-                props: { language: 'typescript' } as unknown as CustomBlock['props'],
+                props: { language: 'typescript' },
                 content: [
                   { type: 'text', text: 'const x = 1', styles: {} },
-                ] as CustomBlock['content'],
+                ] satisfies InlineContent,
               }),
             ],
           }),
           makeBlock('c2', {
-            content: [{ type: 'text', text: 'Sibling', styles: {} }] as CustomBlock['content'],
+            content: [{ type: 'text', text: 'Sibling', styles: {} }] satisfies InlineContent,
           }),
         ],
       }),
@@ -446,10 +450,10 @@ describe('flatten ↔ reconstruct symmetry', () => {
     const original = [
       makeBlock('x', {
         type: 'quote',
-        props: { textColor: 'green' } as unknown as CustomBlock['props'],
+        props: { textColor: 'green' },
         content: [
           { type: 'text', text: 'Quote', styles: { strike: true } },
-        ] as CustomBlock['content'],
+        ] satisfies InlineContent,
         children: [
           makeBlock('y', {
             children: [makeBlock('z', { type: 'divider', content: undefined })],

@@ -8,6 +8,7 @@ import {
 import type { Heading, HeadingLevel } from 'convex/blocks/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { NoteValueRuntimeState } from '../../../../../../shared/note-values/types'
 import { buildBreadcrumbs, getItemTypeLabel } from '~/features/sidebar/utils/sidebar-item-utils'
 import { filterSuggestionItems } from '~/features/editor/utils/filter-suggestion-items'
 
@@ -29,6 +30,15 @@ export interface HeadingSuggestion {
   title: string
   level: HeadingLevel
   fullPath: Array<string>
+}
+
+export interface ValueSuggestion {
+  kind: 'value'
+  key: string
+  title: string
+  slug: string
+  formattedValue: string
+  value: NoteValueRuntimeState<Id<'sidebarItems'>>
 }
 
 interface DisplayNameAutocompleteContext {
@@ -53,10 +63,18 @@ export interface HeadingAutocompleteContext {
   resolvedItem: AnySidebarItem
 }
 
+export interface ValueAutocompleteContext {
+  mode: 'value'
+  notePathRaw: string
+  valueQuery: string
+  resolvedItem: AnySidebarItem
+}
+
 export type AutocompleteContext =
   | DisplayNameAutocompleteContext
   | FileAutocompleteContext
   | HeadingAutocompleteContext
+  | ValueAutocompleteContext
 
 interface EmptyAutocompleteModel {
   mode: 'empty'
@@ -77,6 +95,12 @@ export type ActiveAutocompleteModel =
       suggestions: Array<HeadingSuggestion>
       totalCount: number
     }
+  | {
+      mode: 'value'
+      context: ValueAutocompleteContext
+      suggestions: Array<ValueSuggestion>
+      totalCount: number
+    }
 
 type WikiLinkAutocompleteModel = EmptyAutocompleteModel | ActiveAutocompleteModel
 
@@ -94,6 +118,11 @@ export function getWikiLinkAutocompleteContext(
 
   const hashIdx = query.indexOf('#')
   if (hashIdx === -1) {
+    const valueContext = getValueAutocompleteContext(query, allItems, itemsMap, sourceParentId)
+    if (valueContext) {
+      return valueContext
+    }
+
     const { pathKind, completedFolderPath, fileQuery } = parseAutocompleteFileQuery(query)
     return {
       mode: 'file',
@@ -118,11 +147,13 @@ export function buildWikiLinkAutocompleteModel({
   sidebarItems,
   itemsMap,
   headings,
+  values = [],
 }: {
   context: AutocompleteContext | null
   sidebarItems: Array<AnySidebarItem>
   itemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>
   headings: Array<Heading>
+  values?: Array<NoteValueRuntimeState<Id<'sidebarItems'>>>
 }): WikiLinkAutocompleteModel {
   if (!context || context.mode === 'display-name') {
     return { mode: 'empty', suggestions: [], totalCount: 0 }
@@ -142,6 +173,16 @@ export function buildWikiLinkAutocompleteModel({
     }
   }
 
+  if (context.mode === 'value') {
+    const suggestions = buildValueSuggestions(values, context.valueQuery)
+    return {
+      mode: 'value',
+      context,
+      suggestions: suggestions.slice(0, SUGGESTION_LIMIT),
+      totalCount: suggestions.length,
+    }
+  }
+
   const suggestions = buildFileSuggestions(sidebarItems, itemsMap, context)
   return {
     mode: 'file',
@@ -149,6 +190,18 @@ export function buildWikiLinkAutocompleteModel({
     suggestions: suggestions.slice(0, SUGGESTION_LIMIT),
     totalCount: suggestions.length,
   }
+}
+
+export function buildValueReferenceText(
+  suggestion: ValueSuggestion,
+  context: ValueAutocompleteContext,
+) {
+  return `[[${context.notePathRaw}.${suggestion.slug}]]`
+}
+
+export function clampAutocompleteSelectedIndex(selectedIndex: number, suggestionCount: number) {
+  if (suggestionCount <= 0) return 0
+  return Math.min(Math.max(selectedIndex, 0), suggestionCount - 1)
 }
 
 export function buildInsertedFileLinkText(
@@ -226,6 +279,51 @@ function parseAutocompleteFileQuery(query: string): {
     pathKind,
     completedFolderPath: segments.slice(0, -1).filter(Boolean),
     fileQuery: segments.at(-1) ?? '',
+  }
+}
+
+function getValueAutocompleteContext(
+  query: string,
+  allItems: Array<AnySidebarItem>,
+  itemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>,
+  sourceParentId: Id<'sidebarItems'> | null | undefined,
+): ValueAutocompleteContext | null {
+  const dotIdx = query.lastIndexOf('.')
+  if (dotIdx === -1) {
+    return null
+  }
+
+  const notePathRaw = query.slice(0, dotIdx).trim()
+  const valueQuery = query.slice(dotIdx + 1).trim()
+  if (!notePathRaw) {
+    return null
+  }
+
+  const parsed = parseWikiLinkText(notePathRaw)
+  if (
+    parsed.displayName !== null ||
+    parsed.headingPath.length > 0 ||
+    parsed.itemPath.length === 0
+  ) {
+    return null
+  }
+
+  const resolvedItem = resolveParsedItemPath(
+    parsed.pathKind,
+    parsed.itemPath,
+    allItems,
+    itemsMap,
+    sourceParentId,
+  )
+  if (!resolvedItem || resolvedItem.type !== SIDEBAR_ITEM_TYPES.notes) {
+    return null
+  }
+
+  return {
+    mode: 'value',
+    notePathRaw,
+    valueQuery,
+    resolvedItem,
   }
 }
 
@@ -395,6 +493,21 @@ function buildHeadingSuggestion(heading: Heading, fullPath: Array<string>): Head
     level: heading.level,
     fullPath,
   }
+}
+
+function buildValueSuggestions(
+  values: Array<NoteValueRuntimeState<Id<'sidebarItems'>>>,
+  query: string,
+): Array<ValueSuggestion> {
+  const suggestions = values.map((value) => ({
+    kind: 'value' as const,
+    key: value.valueId,
+    title: value.slug,
+    slug: value.slug,
+    formattedValue: value.formattedValue,
+    value,
+  }))
+  return query ? filterSuggestionItems(suggestions, query) : suggestions
 }
 
 function buildHeadingFullPaths(headings: Array<Heading>) {

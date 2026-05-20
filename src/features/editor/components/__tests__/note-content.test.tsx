@@ -5,47 +5,90 @@ import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { NoteContent } from '../note-content'
 import { createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
+import type * as BlockNoteCore from '@blocknote/core'
 import type { Id } from 'convex/_generated/dataModel'
-import type { CustomBlock } from 'convex/notes/editorSpecs'
+import type { CustomBlock, CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
 import type { NoteWithContent } from 'convex/notes/types'
+import type { ReactNode } from 'react'
 
-const noteViewSpy = vi.hoisted(() => vi.fn())
-const campaignState = vi.hoisted(() => ({
-  isDm: false as boolean | undefined,
-}))
-const editorModeState = vi.hoisted(() => ({
-  viewAsPlayerId: undefined as Id<'campaignMembers'> | undefined,
-}))
-const activeItemsState = vi.hoisted(() => ({
-  itemsMap: new Map(),
-}))
+const { activeItemsState, blockNoteCreateMock, campaignState, editorModeState, noteViewSpy } =
+  vi.hoisted(() => ({
+    activeItemsState: { itemsMap: new Map() },
+    blockNoteCreateMock: vi.fn((options: { initialContent?: Array<CustomBlock> }) => ({
+      document: options.initialContent ?? [],
+      replaceBlocks: vi.fn(function replaceBlocks(
+        this: { document: Array<CustomBlock> },
+        _oldBlocks: Array<CustomBlock>,
+        newBlocks: Array<CustomBlock>,
+      ) {
+        this.document = newBlocks
+      }),
+      _tiptapEditor: { destroy: vi.fn() },
+    })),
+    campaignState: { isDm: false as boolean | undefined },
+    editorModeState: { viewAsPlayerId: undefined as Id<'campaignMembers'> | undefined },
+    noteViewSpy: vi.fn(),
+  }))
 
-vi.mock('../blocknote-editor-instance', () => ({
-  StaticBlockNoteEditor: (props: { content: Array<CustomBlock>; linkViewerMode: boolean }) => {
-    noteViewSpy({
-      surface: 'static',
-      editor: { document: props.content },
-      linkViewerMode: props.linkViewerMode,
-    })
-    return <div data-testid="static-note-editor" />
+vi.mock('@blocknote/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof BlockNoteCore>()
+  return {
+    ...actual,
+    BlockNoteEditor: {
+      create: blockNoteCreateMock,
+    },
+  }
+})
+
+vi.mock('../note-view', () => ({
+  NoteView: ({
+    editor,
+    editable,
+    note,
+    noteId,
+    children,
+  }: {
+    editor: CustomBlockNoteEditor
+    editable: boolean
+    note?: NoteWithContent
+    noteId?: Id<'sidebarItems'>
+    children?: ReactNode
+  }) => {
+    noteViewSpy({ editor, editable, note, noteId })
+    return <div data-testid="note-view">{children}</div>
   },
-  CollaborativeBlockNoteEditor: (props: { note?: NoteWithContent; linkViewerMode: boolean }) => {
-    noteViewSpy({
-      surface: 'collaborative',
-      editor: { document: props.note?.content ?? [] },
-      linkViewerMode: props.linkViewerMode,
-    })
-    return <div data-testid="collaborative-note-editor" />
-  },
 }))
 
-vi.mock('~/features/editor/hooks/use-note-collaboration-session', () => ({
-  useNoteCollaborationSession: () => ({
-    doc: {},
-    provider: {},
+vi.mock('../extensions/link-click-handler', () => ({
+  LinkClickHandler: () => null,
+}))
+
+vi.mock('../extensions/wiki-link/wiki-link-autocomplete', () => ({
+  WikiLinkAutocomplete: () => null,
+}))
+
+vi.mock('~/features/editor/hooks/useLinkResolver', () => ({
+  useLinkResolver: (
+    _noteId: Id<'sidebarItems'> | undefined,
+    options: { isViewerMode: boolean },
+  ) => ({
+    isViewerMode: options.isViewerMode,
+    resolveLink: vi.fn(),
+  }),
+}))
+
+vi.mock('~/features/editor/hooks/useNoteYjsCollaboration', () => ({
+  useNoteYjsCollaboration: () => ({
+    doc: { getXmlFragment: vi.fn(() => ({})) },
+    provider: { setUser: vi.fn() },
     instanceId: 1,
     isLoading: false,
-    user: { name: 'Test User', color: '#61afef' },
+  }),
+}))
+
+vi.mock('~/shared/hooks/useAuthQuery', () => ({
+  useAuthQuery: () => ({
+    data: { _id: testId<'userProfiles'>('user-1'), name: 'Test User' },
   }),
 }))
 
@@ -63,10 +106,11 @@ vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
 
 describe('NoteContent', () => {
   beforeEach(() => {
-    noteViewSpy.mockReset()
+    activeItemsState.itemsMap = new Map()
+    blockNoteCreateMock.mockClear()
     campaignState.isDm = false
     editorModeState.viewAsPlayerId = undefined
-    activeItemsState.itemsMap = new Map()
+    noteViewSpy.mockReset()
   })
 
   it('filters live note blocks before rendering read-only content', async () => {
@@ -89,15 +133,18 @@ describe('NoteContent', () => {
     await waitFor(() => {
       expect(noteViewSpy).toHaveBeenCalledWith(
         expect.objectContaining({
+          editable: false,
           editor: expect.objectContaining({
             document: [visibleBlock],
           }),
+          note,
+          noteId: note._id,
         }),
       )
     })
   })
 
-  it('renders every live note block when the note is editable', async () => {
+  it('renders collaborative editing when the note is editable', async () => {
     const visibleBlock = createBlock('visible-block')
     const hiddenBlock = createBlock('hidden-block')
     const note = createNoteWithContent({
@@ -117,12 +164,16 @@ describe('NoteContent', () => {
     await waitFor(() => {
       expect(noteViewSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          editor: expect.objectContaining({
-            document: [visibleBlock, hiddenBlock],
-          }),
+          editable: true,
+          note,
         }),
       )
     })
+    expect(blockNoteCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        collaboration: expect.any(Object),
+      }),
+    )
   })
 
   it('filters live note blocks using player visibility in DM view-as mode', async () => {
@@ -162,6 +213,7 @@ describe('NoteContent', () => {
     await waitFor(() => {
       expect(noteViewSpy).toHaveBeenCalledWith(
         expect.objectContaining({
+          editable: false,
           editor: expect.objectContaining({
             document: [allSharedBlock, playerSharedBlock],
           }),
@@ -170,7 +222,7 @@ describe('NoteContent', () => {
     })
   })
 
-  it('keeps DM view-as static rendering in viewer link mode while collaboration stays warm', async () => {
+  it('keeps DM view-as rendering static and in viewer link mode', async () => {
     const playerId = testId<'campaignMembers'>('player-1')
     const visibleBlock = createBlock('visible-block')
     campaignState.isDm = true
@@ -194,14 +246,18 @@ describe('NoteContent', () => {
     await waitFor(() => {
       expect(noteViewSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          surface: 'static',
-          linkViewerMode: true,
+          editable: false,
           editor: expect.objectContaining({
             document: [visibleBlock],
           }),
         }),
       )
     })
+    expect(blockNoteCreateMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        collaboration: expect.any(Object),
+      }),
+    )
   })
 })
 

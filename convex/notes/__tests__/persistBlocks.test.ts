@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { createNoteViaFilesystem } from '../../_test/filesystemSetup.helper'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
-import { createNote, createSidebarShare } from '../../_test/factories.helper'
+import { createNote, createSidebarShare, testBlockNoteId } from '../../_test/factories.helper'
 import { expectNotAuthenticated, expectPermissionDenied } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
 import {
@@ -181,6 +181,59 @@ describe('persistBlocks', () => {
         depth: 0,
         position: 1,
         plainText: 'Some paragraph text',
+      })
+    })
+  })
+
+  it('rebuilds extracted noteValues when inline values are persisted', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'Value Note',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+
+    await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+      campaignId: ctx.campaignId,
+      documentId: noteId,
+      update: makeYjsUpdateWithBlocks([
+        {
+          id: testBlockNoteId('value-paragraph'),
+          type: 'paragraph',
+          props: {},
+          content: [
+            {
+              type: 'value',
+              props: {
+                valueId: 'value-1',
+                slug: 'prof_bonus',
+                expressionSource: '2',
+              },
+            },
+          ],
+        },
+      ]),
+    })
+
+    await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+      campaignId: ctx.campaignId,
+      documentId: noteId,
+    })
+
+    await t.run(async (dbCtx) => {
+      const rows = await dbCtx.db
+        .query('noteValues')
+        .withIndex('by_campaign_note', (q) =>
+          q.eq('campaignId', ctx.campaignId).eq('noteId', noteId),
+        )
+        .collect()
+
+      expect(rows).toHaveLength(1)
+      expect(rows[0]).toMatchObject({
+        slug: 'prof_bonus',
+        expressionSource: '2',
       })
     })
   })

@@ -1,6 +1,6 @@
 import { BlockNoteEditor } from '@blocknote/core'
 import type { Link, StyledText } from '@blocknote/core'
-import { editorSchema } from 'convex/notes/editorSpecs'
+import { createEditorSchema } from '../editorSchema'
 import escapeHtml from 'escape-html'
 import type { CustomBlock, CustomPartialBlock, CustomStyleSchema } from 'convex/notes/editorSpecs'
 
@@ -9,7 +9,7 @@ type ParsedInlineContent = StyledText<CustomStyleSchema> | Link<CustomStyleSchem
 
 type ParsedBlock = {
   type: string
-  props?: Record<string, string>
+  props?: Record<string, string | number | boolean>
   content?: Array<ParsedInlineContent>
   children?: Array<ParsedBlock>
 }
@@ -20,9 +20,11 @@ function textNode(text: string): StyledText<CustomStyleSchema> {
 
 export function convertBlocksToMarkdown(blocks: Array<CustomPartialBlock>): string {
   const editor = BlockNoteEditor.create({
-    schema: editorSchema,
+    schema: createEditorSchema(),
   })
-  return editor.blocksToMarkdownLossy(blocks)
+  return editor.blocksToMarkdownLossy(
+    blocks as unknown as Parameters<typeof editor.blocksToMarkdownLossy>[0],
+  )
 }
 
 export function isMarkdownFile(fileName: string, mimeType: string): boolean {
@@ -40,13 +42,15 @@ export function convertTextContentToBlocks(
   fileName: string,
   mimeType: string,
 ): Array<CustomBlock> {
-  const editor = BlockNoteEditor.create({ schema: editorSchema })
+  const editor = BlockNoteEditor.create({ schema: createEditorSchema() })
 
   if (isMarkdownFile(fileName, mimeType)) {
-    return flattenLinksToBlocks(editor.tryParseMarkdownToBlocks(textContent))
+    return flattenLinksToBlocks(
+      editor.tryParseMarkdownToBlocks(textContent) as unknown as Array<ParsedBlock>,
+    )
   } else {
     const html = convertTextToHTML(textContent)
-    return flattenLinksToBlocks(editor.tryParseHTMLToBlocks(html))
+    return flattenLinksToBlocks(editor.tryParseHTMLToBlocks(html) as unknown as Array<ParsedBlock>)
   }
 }
 
@@ -58,8 +62,8 @@ function flattenLinksToBlocks(parserOutput: Array<ParsedBlock>): Array<CustomBlo
     const block = blocks[i]
 
     if (block.type === 'image') {
-      const url = block.props?.url ?? ''
-      const caption = block.props?.caption ?? block.props?.name ?? ''
+      const url = String(block.props?.url ?? '')
+      const caption = String(block.props?.caption ?? block.props?.name ?? '')
       const escapedCaption = caption.replace(/\\/g, '\\\\').replace(/]/g, '\\]')
       const escapedUrl = url.replace(/\\/g, '\\\\').replace(/\)/g, '\\)')
       blocks[i] = {

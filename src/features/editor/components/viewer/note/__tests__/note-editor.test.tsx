@@ -25,10 +25,6 @@ vi.mock('../../../note-content', () => ({
   },
 }))
 
-vi.mock('../../../extensions/blocknote-context-menu/blocknote-context-menu-handler', () => ({
-  BlockNoteContextMenuHandler: () => null,
-}))
-
 vi.mock('~/features/editor/contexts/blocknote-context-menu-context', () => ({
   BlockNoteContextMenuProvider: ({ children }: { children: ReactNode }) => children,
 }))

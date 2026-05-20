@@ -9,7 +9,9 @@ import {
   buildContinuedHeadingLinkText,
   buildInsertedFileLinkText,
   buildInsertedHeadingLinkText,
+  buildValueReferenceText,
   buildWikiLinkAutocompleteModel,
+  clampAutocompleteSelectedIndex,
   getWikiLinkAutocompleteContext,
 } from './wiki-link-autocomplete-model'
 import type {
@@ -19,21 +21,42 @@ import type {
   FileSuggestion,
   HeadingAutocompleteContext,
   HeadingSuggestion,
+  ValueAutocompleteContext,
+  ValueSuggestion,
 } from './wiki-link-autocomplete-model'
-import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import type {
+  CustomBlockNoteEditor,
+  CustomValuePartialInlineContent,
+} from 'convex/notes/editorSpecs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { ReactNode } from 'react'
+import { getUniqueValueSlug } from '../../../../../../shared/note-values/constants'
+import { extractNoteValueDefinitions } from '../../../../../../shared/note-values/extract-definitions'
 import { useFilteredSidebarItems } from '~/features/sidebar/hooks/useFilteredSidebarItems'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { SearchResultItem } from '~/features/search/components/search-result-item'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { useEditorDomElement } from '~/features/editor/hooks/useEditorDomElement'
+import { useScrollSelectedItemIntoView } from '~/shared/hooks/use-scroll-selected-item-into-view'
+import { createUuidV4 } from '~/shared/utils/create-uuid-v4'
 
 interface MenuState {
   show: boolean
   query: string
   pos: DOMRect | null
+}
+
+function getAutocompleteAnchorRect(
+  tiptap: CustomBlockNoteEditor['_tiptapEditor'],
+  pos: number,
+): DOMRect | null {
+  try {
+    const coords = tiptap?.view?.coordsAtPos(pos)
+    return coords ? new DOMRect(coords.left, coords.top, 0, coords.bottom - coords.top) : null
+  } catch {
+    return null
+  }
 }
 
 function menuFromWikiContext(
@@ -42,8 +65,7 @@ function menuFromWikiContext(
   tiptap: CustomBlockNoteEditor['_tiptapEditor'],
   preservedDisplayNameRef: React.RefObject<string | null>,
 ) {
-  const coords = tiptap?.view?.coordsAtPos(startPos)
-  const pos = coords ? new DOMRect(coords.left, coords.top, 0, coords.bottom - coords.top) : null
+  const pos = getAutocompleteAnchorRect(tiptap, startPos)
 
   if (preservedDisplayNameRef.current === null) {
     return { show: true, query, pos }
@@ -61,9 +83,11 @@ function useResetSelectedIndex(
   const resetKey =
     context?.mode === 'heading'
       ? `heading\u001f${context.completedHeadingPath.join('#')}`
-      : context?.mode === 'file'
-        ? `file\u001f${context.completedFolderPath.join('/')}`
-        : (context?.mode ?? '')
+      : context?.mode === 'value'
+        ? `value\u001f${context.resolvedItem._id}`
+        : context?.mode === 'file'
+          ? `file\u001f${context.completedFolderPath.join('/')}`
+          : (context?.mode ?? '')
   const prevResetKeyRef = useRef(resetKey)
 
   useEffect(() => {
@@ -151,8 +175,7 @@ function useForceOpenAutocomplete({
     if (!ctx) return
 
     const { targetQuery, displayName } = splitWikiLinkTargetAndDisplayName(ctx.query)
-    const coords = tiptap.view?.coordsAtPos(ctx.startPos)
-    const pos = coords ? new DOMRect(coords.left, coords.top, 0, coords.bottom - coords.top) : null
+    const pos = getAutocompleteAnchorRect(tiptap, ctx.startPos)
 
     hasEditedRef.current = true
     preservedDisplayNameRef.current = displayName
@@ -200,6 +223,7 @@ function useAutocompleteKeyboard({
   editorEl,
   insertFileLink,
   insertHeadingLink,
+  insertValueInline,
   menuShowing,
   selectedIndex,
   setSelectedIndex,
@@ -213,6 +237,7 @@ function useAutocompleteKeyboard({
   editorEl: HTMLElement | null
   insertFileLink: (suggestion: FileSuggestion, ctx: FileAutocompleteContext) => void
   insertHeadingLink: (suggestion: HeadingSuggestion, ctx: HeadingAutocompleteContext) => void
+  insertValueInline: (suggestion: ValueSuggestion, ctx: ValueAutocompleteContext) => void
   menuShowing: boolean
   selectedIndex: number
   setSelectedIndex: React.Dispatch<React.SetStateAction<number>>
@@ -233,7 +258,13 @@ function useAutocompleteKeyboard({
           break
         case 'Enter':
           event.preventDefault()
-          insertSelectedSuggestion(model, selectedIndex, insertFileLink, insertHeadingLink)
+          insertSelectedSuggestion(
+            model,
+            selectedIndex,
+            insertFileLink,
+            insertHeadingLink,
+            insertValueInline,
+          )
           break
         case 'Tab':
           event.preventDefault()
@@ -241,6 +272,7 @@ function useAutocompleteKeyboard({
             model,
             selectedIndex,
             insertFileLink,
+            insertValueInline,
             continueFileLink,
             continueHeadingLink,
             continueFolderPath,
@@ -264,6 +296,7 @@ function useAutocompleteKeyboard({
     editorEl,
     insertFileLink,
     insertHeadingLink,
+    insertValueInline,
     menuShowing,
     model,
     selectedIndex,
@@ -276,14 +309,22 @@ function insertSelectedSuggestion(
   selectedIndex: number,
   insertFileLink: (suggestion: FileSuggestion, ctx: FileAutocompleteContext) => void,
   insertHeadingLink: (suggestion: HeadingSuggestion, ctx: HeadingAutocompleteContext) => void,
+  insertValueInline: (suggestion: ValueSuggestion, ctx: ValueAutocompleteContext) => void,
 ) {
+  const activeIndex = clampAutocompleteSelectedIndex(selectedIndex, model.suggestions.length)
   if (model.mode === 'file') {
-    const suggestion = model.suggestions[selectedIndex]
+    const suggestion = model.suggestions[activeIndex]
     if (suggestion) insertFileLink(suggestion, model.context)
     return
   }
 
-  const suggestion = model.suggestions[selectedIndex]
+  if (model.mode === 'value') {
+    const suggestion = model.suggestions[activeIndex]
+    if (suggestion) insertValueInline(suggestion, model.context)
+    return
+  }
+
+  const suggestion = model.suggestions[activeIndex]
   if (suggestion) insertHeadingLink(suggestion, model.context)
 }
 
@@ -291,13 +332,22 @@ function continueSelectedSuggestion(
   model: ActiveAutocompleteModel,
   selectedIndex: number,
   insertFileLink: (suggestion: FileSuggestion, ctx: FileAutocompleteContext) => void,
+  insertValueInline: (suggestion: ValueSuggestion, ctx: ValueAutocompleteContext) => void,
   continueFileLink: (suggestion: FileSuggestion, ctx: FileAutocompleteContext) => void,
   continueHeadingLink: (suggestion: HeadingSuggestion, ctx: HeadingAutocompleteContext) => void,
   continueFolderPath: (suggestion: FileSuggestion, ctx: FileAutocompleteContext) => void,
   closeMenu: () => void,
 ) {
+  const activeIndex = clampAutocompleteSelectedIndex(selectedIndex, model.suggestions.length)
+  if (model.mode === 'value') {
+    const suggestion = model.suggestions[activeIndex]
+    if (suggestion) insertValueInline(suggestion, model.context)
+    else closeMenu()
+    return
+  }
+
   if (model.mode === 'heading') {
-    const suggestion = model.suggestions[selectedIndex]
+    const suggestion = model.suggestions[activeIndex]
     if (!suggestion) {
       closeMenu()
       return
@@ -306,7 +356,7 @@ function continueSelectedSuggestion(
     return
   }
 
-  const suggestion = model.suggestions[selectedIndex]
+  const suggestion = model.suggestions[activeIndex]
   if (!suggestion) {
     closeMenu()
     return
@@ -342,7 +392,6 @@ export function WikiLinkAutocomplete({
   const hasEditedRef = useRef(false)
   const isDraggingRef = useRef(false)
   const preservedDisplayNameRef = useRef<string | null>(null)
-  const selectedItemRef = useRef<HTMLDivElement>(null)
 
   const sourceParentId = sourceNoteId ? itemsMap.get(sourceNoteId)?.parentId : undefined
   const context = menu.show
@@ -353,18 +402,19 @@ export function WikiLinkAutocomplete({
     api.blocks.queries.getHeadingsByNote,
     context?.mode === 'heading' ? { noteId: context.resolvedItem._id } : 'skip',
   )
+  const valuesQuery = useCampaignQuery(
+    api.noteValues.queries.getNoteValueStates,
+    context?.mode === 'value' ? { noteId: context.resolvedItem._id } : 'skip',
+  )
   const model = buildWikiLinkAutocompleteModel({
     context,
     sidebarItems,
     itemsMap,
     headings: headingsQuery.data ?? [],
+    values: valuesQuery.data ?? [],
   })
 
   useResetSelectedIndex(context, setSelectedIndex)
-
-  useEffect(() => {
-    selectedItemRef.current?.scrollIntoView({ block: 'nearest' })
-  }, [selectedIndex])
 
   useAutocompleteTransactions({
     editor,
@@ -432,6 +482,33 @@ export function WikiLinkAutocomplete({
     [closeMenu, replaceActiveWikiLink],
   )
 
+  const insertValueInline = useCallback(
+    (suggestion: ValueSuggestion, ctx: ValueAutocompleteContext) => {
+      if (!editor) return
+      const wikiCtx = getWikiLinkContext(editor)
+      const tiptap = editor._tiptapEditor
+      if (!wikiCtx || !tiptap) return
+
+      const existingSlugs = sourceNoteId
+        ? extractNoteValueDefinitions(editor.document, sourceNoteId).map(
+            (definition) => definition.slug,
+          )
+        : []
+      tiptap.chain().focus().setTextSelection({ from: wikiCtx.startPos, to: wikiCtx.endPos }).run()
+      const valueInline: CustomValuePartialInlineContent = {
+        type: 'value',
+        props: {
+          valueId: createUuidV4(),
+          slug: getUniqueValueSlug(suggestion.slug, existingSlugs),
+          expressionSource: buildValueReferenceText(suggestion, ctx),
+        },
+      }
+      editor.insertInlineContent([valueInline], { updateSelection: true })
+      closeMenu()
+    },
+    [closeMenu, editor, sourceNoteId],
+  )
+
   const continueFileLink = useCallback(
     (suggestion: FileSuggestion, ctx: FileAutocompleteContext) => {
       replaceActiveWikiLink(`[[${buildContinuedFileLinkText(suggestion, ctx)}#`)
@@ -455,6 +532,13 @@ export function WikiLinkAutocomplete({
 
   const activeModel = model.mode === 'empty' ? null : model
 
+  useEffect(() => {
+    if (!activeModel) return
+    setSelectedIndex((index) =>
+      clampAutocompleteSelectedIndex(index, activeModel.suggestions.length),
+    )
+  }, [activeModel])
+
   useAutocompleteKeyboard({
     closeMenu,
     continueFileLink,
@@ -463,6 +547,7 @@ export function WikiLinkAutocomplete({
     editorEl,
     insertFileLink,
     insertHeadingLink,
+    insertValueInline,
     menuShowing: menu.show,
     model: activeModel,
     selectedIndex,
@@ -476,11 +561,12 @@ export function WikiLinkAutocomplete({
       headingsPending={model.mode === 'heading' && headingsQuery.isPending}
       insertFileLink={insertFileLink}
       insertHeadingLink={insertHeadingLink}
+      insertValueInline={insertValueInline}
       menuPos={menu.pos}
       model={model}
       selectedIndex={selectedIndex}
-      selectedItemRef={selectedItemRef}
       setSelectedIndex={setSelectedIndex}
+      valuesPending={model.mode === 'value' && valuesQuery.isPending}
     />
   )
 }
@@ -489,20 +575,22 @@ function AutocompleteMenu({
   headingsPending,
   insertFileLink,
   insertHeadingLink,
+  insertValueInline,
   menuPos,
   model,
   selectedIndex,
-  selectedItemRef,
   setSelectedIndex,
+  valuesPending,
 }: {
   headingsPending: boolean
   insertFileLink: (suggestion: FileSuggestion, ctx: FileAutocompleteContext) => void
   insertHeadingLink: (suggestion: HeadingSuggestion, ctx: HeadingAutocompleteContext) => void
+  insertValueInline: (suggestion: ValueSuggestion, ctx: ValueAutocompleteContext) => void
   menuPos: DOMRect
   model: ActiveAutocompleteModel
   selectedIndex: number
-  selectedItemRef: React.RefObject<HTMLDivElement | null>
   setSelectedIndex: (index: number) => void
+  valuesPending: boolean
 }) {
   return createPortal(
     <div
@@ -516,19 +604,23 @@ function AutocompleteMenu({
       <div className="w-[340px] max-w-[90vw] max-h-80 flex flex-col bg-popover text-popover-foreground rounded-lg shadow-md border border-border text-[13px] overflow-hidden">
         <HeadingHeader model={model} />
         <ScrollArea className="flex-1 max-h-[calc(320px-32px)]">
-          {headingsPending ? (
-            <EmptyState>Loading headings…</EmptyState>
+          {headingsPending || valuesPending ? (
+            <EmptyState>{headingsPending ? 'Loading headings…' : 'Loading values…'}</EmptyState>
           ) : model.suggestions.length === 0 ? (
             <EmptyState>
-              {model.mode === 'heading' ? 'No headings found' : 'No matches found'}
+              {model.mode === 'heading'
+                ? 'No headings found'
+                : model.mode === 'value'
+                  ? 'No values found'
+                  : 'No matches found'}
             </EmptyState>
           ) : (
             <SuggestionsList
               insertFileLink={insertFileLink}
               insertHeadingLink={insertHeadingLink}
+              insertValueInline={insertValueInline}
               model={model}
               selectedIndex={selectedIndex}
-              selectedItemRef={selectedItemRef}
               setSelectedIndex={setSelectedIndex}
             />
           )}
@@ -560,18 +652,22 @@ function HeadingHeader({ model }: { model: ActiveAutocompleteModel }) {
 function SuggestionsList({
   insertFileLink,
   insertHeadingLink,
+  insertValueInline,
   model,
   selectedIndex,
-  selectedItemRef,
   setSelectedIndex,
 }: {
   insertFileLink: (suggestion: FileSuggestion, ctx: FileAutocompleteContext) => void
   insertHeadingLink: (suggestion: HeadingSuggestion, ctx: HeadingAutocompleteContext) => void
+  insertValueInline: (suggestion: ValueSuggestion, ctx: ValueAutocompleteContext) => void
   model: ActiveAutocompleteModel
   selectedIndex: number
-  selectedItemRef: React.RefObject<HTMLDivElement | null>
   setSelectedIndex: (index: number) => void
 }) {
+  const selectedItemRef = useScrollSelectedItemIntoView<HTMLDivElement>(
+    model.suggestions[selectedIndex]?.key ?? selectedIndex,
+  )
+
   if (model.mode === 'heading') {
     return (
       <div className="p-0.5" role="listbox">
@@ -581,6 +677,25 @@ function SuggestionsList({
             context={model.context}
             index={index}
             insertLink={insertHeadingLink}
+            selectedIndex={selectedIndex}
+            selectedItemRef={selectedItemRef}
+            setSelectedIndex={setSelectedIndex}
+            suggestion={suggestion}
+          />
+        ))}
+      </div>
+    )
+  }
+
+  if (model.mode === 'value') {
+    return (
+      <div className="p-0.5" role="listbox">
+        {model.suggestions.map((suggestion, index) => (
+          <ValueItem
+            key={suggestion.key}
+            context={model.context}
+            index={index}
+            insertValue={insertValueInline}
             selectedIndex={selectedIndex}
             selectedItemRef={selectedItemRef}
             setSelectedIndex={setSelectedIndex}
@@ -653,6 +768,51 @@ function HeadingItem({
       </span>
       <span className="shrink-0 h-4 px-1.5 text-[10px] font-medium rounded-sm bg-muted text-muted-foreground border border-border inline-flex items-center">
         H{suggestion.level}
+      </span>
+    </div>
+  )
+}
+
+function ValueItem({
+  context,
+  index,
+  insertValue,
+  selectedIndex,
+  selectedItemRef,
+  setSelectedIndex,
+  suggestion,
+}: {
+  context: ValueAutocompleteContext
+  index: number
+  insertValue: (suggestion: ValueSuggestion, ctx: ValueAutocompleteContext) => void
+  selectedIndex: number
+  selectedItemRef: React.RefObject<HTMLDivElement | null>
+  setSelectedIndex: (index: number) => void
+  suggestion: ValueSuggestion
+}) {
+  return (
+    <div
+      ref={index === selectedIndex ? selectedItemRef : undefined}
+      role="option"
+      aria-selected={index === selectedIndex}
+      tabIndex={-1}
+      onClick={() => insertValue(suggestion, context)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') insertValue(suggestion, context)
+      }}
+      onMouseEnter={() => setSelectedIndex(index)}
+      className={`flex items-center justify-between gap-2 px-2 py-1 rounded-sm cursor-default select-none ${
+        index === selectedIndex ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'
+      }`}
+    >
+      <span className="min-w-0">
+        <span className="block truncate font-medium">{suggestion.title}</span>
+        <span className="block truncate text-xs text-muted-foreground">
+          {suggestion.formattedValue}
+        </span>
+      </span>
+      <span className="shrink-0 h-4 px-1.5 text-[10px] font-medium rounded-sm bg-muted text-muted-foreground border border-border inline-flex items-center">
+        value
       </span>
     </div>
   )

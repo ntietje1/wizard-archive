@@ -6,8 +6,10 @@ import { ConvexYjsProvider } from '../providers/convex-yjs-provider'
 import type { YjsDocumentId } from 'convex/yjsSync/functions/types'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
+import { logger } from '~/shared/utils/logger'
 
 type YjsState = {
+  documentId: YjsDocumentId
   doc: Y.Doc
   provider: ConvexYjsProvider
   instanceId: number
@@ -19,21 +21,27 @@ export function useConvexYjsCollaboration(
   documentId: YjsDocumentId,
   user: { name: string; color: string },
   canEdit: boolean,
+  options?: {
+    onBeforeDestroy?: (state: {
+      documentId: YjsDocumentId
+      doc: Y.Doc
+      provider: ConvexYjsProvider
+    }) => Promise<void> | void
+  },
 ) {
   const convex = useConvex()
   const { campaignId } = useCampaign()
   const [state, setState] = useState<YjsState | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [afterSeq, setAfterSeq] = useState<number | undefined>(undefined)
+  const onBeforeDestroy = options?.onBeforeDestroy
 
   useEffect(() => {
     setIsLoading(true)
     setAfterSeq(undefined)
+    setState(null)
 
-    if (!campaignId) {
-      setState(null)
-      return
-    }
+    if (!campaignId) return
 
     const doc = new Y.Doc()
     const provider = new ConvexYjsProvider(doc, documentId, {
@@ -56,24 +64,40 @@ export function useConvexYjsCollaboration(
           documentId,
         }),
     })
+    const beforeDestroy = onBeforeDestroy
 
-    setState({ doc, provider, instanceId: nextInstanceId++ })
+    setState({ documentId, doc, provider, instanceId: nextInstanceId++ })
 
     return () => {
-      provider.destroy()
-      doc.destroy()
-      setState(null)
+      Promise.resolve(
+        beforeDestroy?.({
+          documentId,
+          doc,
+          provider,
+        }),
+      )
+        .catch((err: unknown) => {
+          logger.error('[YJS] onBeforeDestroy failed in useConvexYjsCollaboration:', err)
+        })
+        .finally(() => {
+          provider.destroy()
+          doc.destroy()
+        })
     }
+    // onBeforeDestroy is intentionally snapshotted with the provider it cleans up.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [documentId, convex, campaignId])
+
+  const currentState = state?.documentId === documentId ? state : null
 
   const { name, color } = user
   useEffect(() => {
-    if (state) state.provider.setUser({ name, color })
-  }, [state, name, color])
+    if (currentState) currentState.provider.setUser({ name, color })
+  }, [currentState, name, color])
 
   useEffect(() => {
-    if (state) state.provider.writable = canEdit
-  }, [state, canEdit])
+    if (currentState) currentState.provider.writable = canEdit
+  }, [currentState, canEdit])
 
   const [error, setError] = useState<Error | null>(null)
 
@@ -88,32 +112,32 @@ export function useConvexYjsCollaboration(
       setError(updatesResult.error)
       return
     }
-    if (updatesResult.data && state) {
+    if (updatesResult.data && currentState) {
       setError(null)
-      state.provider.applyRemoteUpdates(updatesResult.data)
+      currentState.provider.applyRemoteUpdates(updatesResult.data)
       if (updatesResult.data.length > 0) {
-        setAfterSeq(state.provider.lastAppliedSeq)
+        setAfterSeq(currentState.provider.lastAppliedSeq)
       }
       if (isLoading) setIsLoading(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [updatesResult.data, updatesResult.isError, updatesResult.error, state])
+  }, [updatesResult.data, updatesResult.isError, updatesResult.error, currentState])
 
   const awarenessResult = useCampaignQuery(api.yjsSync.queries.getAwareness, {
     documentId,
   })
 
   useEffect(() => {
-    if (awarenessResult.data && state) {
-      state.provider.applyRemoteAwareness(awarenessResult.data)
+    if (awarenessResult.data && currentState) {
+      currentState.provider.applyRemoteAwareness(awarenessResult.data)
     }
-  }, [awarenessResult.data, state])
+  }, [awarenessResult.data, currentState])
 
   return {
-    doc: state?.doc ?? null,
-    provider: state?.provider ?? null,
-    instanceId: state?.instanceId ?? 0,
-    isLoading: isLoading || !state,
+    doc: currentState?.doc ?? null,
+    provider: currentState?.provider ?? null,
+    instanceId: currentState?.instanceId ?? 0,
+    isLoading: isLoading || !currentState,
     error,
   }
 }

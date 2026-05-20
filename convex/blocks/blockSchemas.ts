@@ -20,7 +20,21 @@ const styledTextSchema = z.strictObject({
   styles: stylesSchema,
 })
 
-export const inlineContentSchema = styledTextSchema
+export const valuePropsSchema = z.strictObject({
+  valueId: z.string(),
+  slug: z.string(),
+  expressionSource: z.string(),
+})
+
+export const valueInlineContentSchema = z.strictObject({
+  type: z.literal('value'),
+  props: valuePropsSchema,
+})
+
+export const inlineContentSchema = z.discriminatedUnion('type', [
+  styledTextSchema,
+  valueInlineContentSchema,
+])
 
 export const tableContentSchema = z.strictObject({
   type: z.literal('tableContent'),
@@ -311,7 +325,7 @@ function createPartialBlockSchema(
       z.strictObject({
         ...schema.shape,
         props: schema.shape.props.optional(),
-        content: schema.shape.content,
+        content: 'content' in schema.shape ? schema.shape.content : z.undefined().optional(),
         id: blockNoteIdSchema.optional(),
         children: z.array(partialBlockSchema).optional(),
       }),

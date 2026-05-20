@@ -1,15 +1,35 @@
-import { resolveNoteRenderModel } from './note-render-model'
-import { CollaborativeBlockNoteEditor, StaticBlockNoteEditor } from './blocknote-editor-instance'
-import { useNoteCollaborationSession } from '~/features/editor/hooks/use-note-collaboration-session'
-import type { NoteEditorChangeHandler } from './blocknote-editor-instance'
-import type { Id } from 'convex/_generated/dataModel'
-import type { CustomBlock } from 'convex/notes/editorSpecs'
-import type { NoteRenderModel } from './note-render-model'
-import type { NoteWithContent } from 'convex/notes/types'
-import type { CSSProperties } from 'react'
+import { BlockNoteEditor } from '@blocknote/core'
+import { useEffect, useRef } from 'react'
+import { SHARE_STATUS } from 'convex/blockShares/types'
+import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { createEditorSchema } from '../editorSchema'
+import { NoteView } from './note-view'
+import { LinkClickHandler } from './extensions/link-click-handler'
+import { WikiLinkAutocomplete } from './extensions/wiki-link/wiki-link-autocomplete'
+import { useLinkResolver } from '~/features/editor/hooks/useLinkResolver'
+import { useOwnedBlockNoteEditor } from '~/features/editor/hooks/useOwnedBlockNoteEditor'
+import { useNoteYjsCollaboration } from '~/features/editor/hooks/useNoteYjsCollaboration'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
+import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
+import { getCursorColor } from '~/features/editor/utils/cursor-colors'
+import { destroyBlockNoteEditor } from '~/features/editor/utils/destroy-blocknote-editor'
+import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
+import { assertNever } from '~/shared/utils/utils'
+import { api } from 'convex/_generated/api'
+import type { Doc } from 'yjs'
+import type { Id } from 'convex/_generated/dataModel'
+import type { CustomBlock, CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import type { BlockMeta, NoteWithContent } from 'convex/notes/types'
+import type { CSSProperties } from 'react'
+import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
+
+export type NoteEditorChangeHandler = (
+  editor: CustomBlockNoteEditor | null,
+  doc: Doc | null,
+  provider: ConvexYjsProvider | null,
+) => void
 
 type NoteContentBaseProps = {
   editable: boolean
@@ -43,94 +63,273 @@ export function NoteContent({
   children,
   onEditorChange,
 }: NoteContentProps) {
-  const { isDm } = useCampaign()
-  const { viewAsPlayerId } = useEditorMode()
-  const { itemsMap } = useActiveSidebarItems()
-  const model = resolveNoteRenderModel({
-    source: note ? { kind: 'live', note } : { kind: 'raw', noteId, content },
-    requestedEditable: editable,
-    isDm,
-    viewAsPlayerId,
-    allItemsMap: itemsMap,
-  })
-  const sourceNoteId = model.source === 'live' ? model.note._id : model.noteId
-  const sourceNote = model.source === 'live' ? model.note : undefined
-
+  const renderState = useNoteRenderState({ note, noteId, content, editable })
   const editor =
-    model.source === 'live' && model.renderMode !== 'static' ? (
-      <NoteContentWithSession model={model} style={style} onEditorChange={onEditorChange}>
+    renderState.kind === 'editable' ? (
+      <EditableNoteEditor note={renderState.note} style={style} onEditorChange={onEditorChange}>
         {children}
-      </NoteContentWithSession>
+      </EditableNoteEditor>
     ) : (
-      <StaticBlockNoteEditor
-        note={sourceNote}
-        noteId={sourceNoteId}
-        content={model.content}
-        linkViewerMode={model.linkViewerMode}
+      <StaticNoteEditor
+        note={renderState.note}
+        noteId={renderState.noteId}
+        content={renderState.content}
+        evaluateValuesFromEditor={renderState.evaluateValuesFromEditor}
         style={style}
         onEditorChange={onEditorChange}
       >
         {children}
-      </StaticBlockNoteEditor>
+      </StaticNoteEditor>
     )
 
   return (
-    <div className={model.renderMode === 'collaborative' ? 'note-editor-fill-height' : undefined}>
+    <div className={renderState.kind === 'editable' ? 'note-editor-fill-height' : undefined}>
       <div className={className}>{editor}</div>
     </div>
   )
 }
 
-function NoteContentWithSession({
-  model,
+function useNoteRenderState({
+  note,
+  noteId,
+  content,
+  editable,
+}: {
+  note?: NoteWithContent
+  noteId?: Id<'sidebarItems'>
+  content?: Array<CustomBlock>
+  editable: boolean
+}):
+  | { kind: 'editable'; note: NoteWithContent }
+  | {
+      kind: 'static'
+      note?: NoteWithContent
+      noteId?: Id<'sidebarItems'>
+      content: Array<CustomBlock>
+      evaluateValuesFromEditor: boolean
+    } {
+  const { isDm } = useCampaign()
+  const { viewAsPlayerId } = useEditorMode()
+  const { itemsMap } = useActiveSidebarItems()
+
+  if (!note) {
+    return {
+      kind: 'static',
+      noteId,
+      content: content ?? [],
+      evaluateValuesFromEditor: true,
+    }
+  }
+
+  const hasEditAccess = effectiveHasAtLeastPermission(note, PERMISSION_LEVEL.EDIT, {
+    isDm,
+    viewAsPlayerId: undefined,
+    allItemsMap: itemsMap,
+  })
+  const isViewAs = Boolean(isDm && viewAsPlayerId)
+
+  if (editable && hasEditAccess && !isViewAs) {
+    return { kind: 'editable', note }
+  }
+
+  const hasFullContent = hasEditAccess && !isViewAs
+
+  return {
+    kind: 'static',
+    note,
+    noteId: note._id,
+    content: hasFullContent ? note.content : filterViewableBlocks(note, { isDm, viewAsPlayerId }),
+    evaluateValuesFromEditor: hasFullContent,
+  }
+}
+
+function StaticNoteEditor({
+  note,
+  noteId,
+  content,
+  evaluateValuesFromEditor,
   style,
   children,
   onEditorChange,
 }: {
-  model: Extract<NoteRenderModel, { source: 'live' }>
+  note?: NoteWithContent
+  noteId?: Id<'sidebarItems'>
+  content: Array<CustomBlock>
+  evaluateValuesFromEditor: boolean
   style?: CSSProperties
   children?: React.ReactNode
   onEditorChange?: NoteEditorChangeHandler
 }) {
-  const canEdit =
-    model.renderMode === 'collaborative' || model.renderMode === 'static-with-collaboration'
-  const session = useNoteCollaborationSession({
-    noteId: model.note._id,
-    canEdit,
+  const linkResolver = useLinkResolver(noteId, { isViewerMode: true })
+  const initializedEditorRef = useRef<CustomBlockNoteEditor | null>(null)
+  const editor = useOwnedBlockNoteEditor({
+    identity: noteId ?? 'raw-static-note-content',
+    createEditor: () =>
+      BlockNoteEditor.create({
+        schema: createEditorSchema(),
+        initialContent: content.length > 0 ? content : undefined,
+      }) as unknown as CustomBlockNoteEditor,
+    destroyEditor: destroyBlockNoteEditor,
+    onEditorChange: (nextEditor) => onEditorChange?.(nextEditor, null, null),
   })
 
-  if (model.renderMode === 'static-with-collaboration') {
-    return (
-      <StaticBlockNoteEditor
-        note={model.note}
-        noteId={model.note._id}
-        content={model.content}
-        linkViewerMode={model.linkViewerMode}
+  useEffect(() => {
+    if (!editor) return
+    if (initializedEditorRef.current !== editor) {
+      initializedEditorRef.current = editor
+      return
+    }
+    editor.replaceBlocks(editor.document, content)
+  }, [editor, content])
+
+  if (!editor) return null
+
+  return (
+    <>
+      <NoteView
+        editor={editor}
+        note={note}
+        noteId={noteId}
+        editable={false}
+        evaluateValuesFromEditor={evaluateValuesFromEditor}
+        linkResolver={linkResolver}
         style={style}
-        onEditorChange={onEditorChange}
       >
         {children}
-      </StaticBlockNoteEditor>
-    )
+      </NoteView>
+      <LinkClickHandler editor={editor} sourceNoteId={noteId} />
+    </>
+  )
+}
+
+function EditableNoteEditor({
+  note,
+  style,
+  children,
+  onEditorChange,
+}: {
+  note: NoteWithContent
+  style?: CSSProperties
+  children?: React.ReactNode
+  onEditorChange?: NoteEditorChangeHandler
+}) {
+  const profileQuery = useAuthQuery(api.users.queries.getUserProfile, {})
+  const profile = profileQuery.data
+  const user = {
+    name: profile?.name ?? profile?.username ?? 'Anonymous',
+    color: profile ? getCursorColor(profile._id) : '#61afef',
   }
+  const session = useNoteYjsCollaboration(note._id, user, true)
 
   if (session.isLoading || !session.doc || !session.provider) {
-    return null
+    return <div aria-label="Loading note content" className="min-h-8" />
   }
 
   return (
-    <CollaborativeBlockNoteEditor
-      note={model.note}
-      noteId={model.note._id}
+    <CollaborativeNoteEditor
+      key={session.instanceId}
+      note={note}
       doc={session.doc}
       provider={session.provider}
-      instanceId={session.instanceId}
-      linkViewerMode={model.linkViewerMode}
+      user={user}
       style={style}
-      user={session.user}
       onEditorChange={onEditorChange}
     >
       {children}
-    </CollaborativeBlockNoteEditor>
+    </CollaborativeNoteEditor>
   )
+}
+
+function CollaborativeNoteEditor({
+  note,
+  doc,
+  provider,
+  user,
+  style,
+  children,
+  onEditorChange,
+}: {
+  note: NoteWithContent
+  doc: Doc
+  provider: ConvexYjsProvider
+  user: { name: string; color: string }
+  style?: CSSProperties
+  children?: React.ReactNode
+  onEditorChange?: NoteEditorChangeHandler
+}) {
+  const linkResolver = useLinkResolver(note._id, { isViewerMode: false })
+  const forceOpenLinkPopover = useRef<(() => void) | null>(null)
+  const editor = useOwnedBlockNoteEditor({
+    identity: provider,
+    createEditor: () =>
+      BlockNoteEditor.create({
+        schema: createEditorSchema(),
+        collaboration: {
+          provider,
+          fragment: doc.getXmlFragment('document'),
+          user,
+          showCursorLabels: 'activity',
+        },
+      }) as unknown as CustomBlockNoteEditor,
+    destroyEditor: destroyBlockNoteEditor,
+    onEditorChange: (nextEditor) => onEditorChange?.(nextEditor, doc, provider),
+  })
+
+  useEffect(() => {
+    provider.setUser({ name: user.name, color: user.color })
+  }, [provider, user.name, user.color])
+
+  if (!editor) return null
+
+  return (
+    <>
+      <NoteView editor={editor} note={note} editable linkResolver={linkResolver} style={style}>
+        {children}
+      </NoteView>
+      <LinkClickHandler editor={editor} sourceNoteId={note._id} />
+      <WikiLinkAutocomplete
+        editor={editor}
+        onForceOpenRef={forceOpenLinkPopover}
+        sourceNoteId={note._id}
+      />
+    </>
+  )
+}
+
+function filterViewableBlocks(
+  note: NoteWithContent,
+  {
+    isDm,
+    viewAsPlayerId,
+  }: {
+    isDm: boolean | undefined
+    viewAsPlayerId: Id<'campaignMembers'> | undefined
+  },
+): Array<CustomBlock> {
+  if (isDm && viewAsPlayerId) {
+    return note.content.filter((block) => {
+      const meta = note.blockMeta[block.id]
+      if (!meta) return false
+      return canViewBlockAsPlayer(meta, viewAsPlayerId)
+    })
+  }
+
+  return note.content.filter((block) => {
+    const meta = note.blockMeta[block.id]
+    if (!meta) return false
+    return meta.myPermissionLevel !== PERMISSION_LEVEL.NONE
+  })
+}
+
+function canViewBlockAsPlayer(meta: BlockMeta, viewAsPlayerId: Id<'campaignMembers'>): boolean {
+  switch (meta.shareStatus) {
+    case SHARE_STATUS.ALL_SHARED:
+      return true
+    case SHARE_STATUS.INDIVIDUALLY_SHARED:
+      return meta.sharedWith.includes(viewAsPlayerId)
+    case SHARE_STATUS.NOT_SHARED:
+      return false
+    default:
+      return assertNever(meta.shareStatus)
+  }
 }
