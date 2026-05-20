@@ -301,14 +301,15 @@ function registerValueTransferPlugin(
   let frameId: number | null = null
 
   const registerWhenReady = () => {
+    if (cancelled) return
     const tiptapEditor = getTiptapEditor()
     if (!tiptapEditor) {
-      frameId = requestAnimationFrame(registerWhenReady)
+      if (!cancelled) frameId = requestAnimationFrame(registerWhenReady)
       return
     }
     const view = getMountedEditorView(tiptapEditor)
     if (!view) {
-      frameId = requestAnimationFrame(registerWhenReady)
+      if (!cancelled) frameId = requestAnimationFrame(registerWhenReady)
       return
     }
     if (cancelled || valueTransferPluginKey.getState(view.state) !== undefined) {

@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest'
+import { renderHook } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Fragment, Schema, Slice } from '@tiptap/pm/model'
 import { noteValueInlineConfig } from '../../../../../shared/note-values/block-config'
-import { createValueTransferPlugin } from '../value-transfer-plugin'
+import { createValueTransferPlugin, useValueTransferBehavior } from '../value-transfer-plugin'
 import type { EditorView } from '@tiptap/pm/view'
 
 const schema = new Schema({
@@ -75,6 +76,10 @@ function transformPastedSlice(
   expect(transformPasted).toBeDefined()
   return transformPasted?.call(plugin, slice, view, false)
 }
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 describe('value transfer plugin', () => {
   it('marks value inline content as draggable editor content', () => {
@@ -183,5 +188,22 @@ describe('value transfer plugin', () => {
     const plugin = createValueTransferPlugin()
 
     expect(plugin.props.handleDrop).toBeUndefined()
+  })
+
+  it('does not schedule a plugin registration retry after cleanup', () => {
+    const requestAnimationFrameMock = vi.fn((_callback: FrameRequestCallback) => 1)
+    const cancelAnimationFrameMock = vi.fn()
+    vi.stubGlobal('requestAnimationFrame', requestAnimationFrameMock)
+    vi.stubGlobal('cancelAnimationFrame', cancelAnimationFrameMock)
+    const editor: { _tiptapEditor?: never } = {}
+
+    const { unmount } = renderHook(() => useValueTransferBehavior(editor, true))
+
+    expect(requestAnimationFrameMock).toHaveBeenCalledOnce()
+    unmount()
+    requestAnimationFrameMock.mock.calls[0][0](0)
+
+    expect(cancelAnimationFrameMock).toHaveBeenCalledWith(1)
+    expect(requestAnimationFrameMock).toHaveBeenCalledOnce()
   })
 })
