@@ -6,17 +6,26 @@ import type { CustomBlock, CustomBlockNoteEditor } from 'convex/notes/editorSpec
 import type { Id } from 'convex/_generated/dataModel'
 import type { ReactNode } from 'react'
 
-const { blockNoteCreateMock, campaignState, editorModeState } = vi.hoisted(() => ({
-  blockNoteCreateMock: vi.fn((options: { initialContent?: Array<unknown> }) => ({
-    document: options.initialContent ?? [],
-    replaceBlocks: vi.fn(),
-    _tiptapEditor: {
-      destroy: vi.fn(),
+const { blockNoteCreateMock, campaignState, editorModeState, sidebarItemsState } = vi.hoisted(
+  () => ({
+    blockNoteCreateMock: vi.fn((options: { initialContent?: Array<unknown> }) => ({
+      document: options.initialContent ?? [],
+      replaceBlocks: vi.fn(),
+      _tiptapEditor: {
+        destroy: vi.fn(),
+      },
+    })),
+    campaignState: { isDm: true },
+    editorModeState: { viewAsPlayerId: undefined as Id<'campaignMembers'> | undefined },
+    sidebarItemsState: {
+      data: [],
+      status: 'success',
+      itemsMap: new Map(),
+      parentItemsMap: new Map(),
+      getAncestorSidebarItems: vi.fn(() => []),
     },
-  })),
-  campaignState: { isDm: true },
-  editorModeState: { viewAsPlayerId: undefined as Id<'campaignMembers'> | undefined },
-}))
+  }),
+)
 
 vi.mock('@blocknote/core', async (importOriginal) => {
   const actual = await importOriginal<typeof BlockNoteCore>()
@@ -65,9 +74,8 @@ vi.mock('~/features/sidebar/hooks/useEditorMode', () => ({
 }))
 
 vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
-  useActiveSidebarItems: () => ({
-    itemsMap: new Map(),
-  }),
+  useActiveSidebarItems: () => sidebarItemsState,
+  useTrashSidebarItems: () => sidebarItemsState,
 }))
 
 describe('NoteContent static viewer', () => {
