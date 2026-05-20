@@ -95,7 +95,7 @@ function isInternalMoveDrag(view: EditorView) {
 }
 
 export function useValueTransferBehavior(
-  editor: { _tiptapEditor: TiptapEditorLike },
+  editor: { _tiptapEditor?: TiptapEditorLike },
   enabled: boolean,
   getExistingSlugs: () => Iterable<string> = () => [],
 ) {
@@ -104,7 +104,10 @@ export function useValueTransferBehavior(
 
   useEffect(() => {
     if (!enabled) return
-    return registerValueTransferPlugin(editor._tiptapEditor, () => getExistingSlugsRef.current())
+    return registerValueTransferPlugin(
+      () => editor._tiptapEditor,
+      () => getExistingSlugsRef.current(),
+    )
   }, [editor, enabled])
 }
 
@@ -291,13 +294,18 @@ function collectCopiedValueSlugs(
 }
 
 function registerValueTransferPlugin(
-  tiptapEditor: TiptapEditorLike,
+  getTiptapEditor: () => TiptapEditorLike | undefined,
   getExistingSlugs: () => Iterable<string>,
 ): () => void {
   let cancelled = false
   let frameId: number | null = null
 
   const registerWhenReady = () => {
+    const tiptapEditor = getTiptapEditor()
+    if (!tiptapEditor) {
+      frameId = requestAnimationFrame(registerWhenReady)
+      return
+    }
     const view = getMountedEditorView(tiptapEditor)
     if (!view) {
       frameId = requestAnimationFrame(registerWhenReady)

@@ -103,6 +103,19 @@ export function isValidValueSlug(slug: string): boolean {
 }
 
 export function sanitizeValueSlug(input: string, fallback = NOTE_VALUE_DEFAULT_SLUG): string {
+  const normalizedFallback = fallback
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .replace(/_+/g, '_')
+
+  const validFallback =
+    NOTE_VALUE_SLUG_REGEX.test(normalizedFallback) &&
+    !NOTE_VALUE_RESERVED_IDENTIFIER_SET.has(normalizedFallback)
+      ? normalizedFallback
+      : NOTE_VALUE_DEFAULT_SLUG
+
   const normalized = input
     .trim()
     .toLowerCase()
@@ -110,18 +123,18 @@ export function sanitizeValueSlug(input: string, fallback = NOTE_VALUE_DEFAULT_S
     .replace(/^_+|_+$/g, '')
     .replace(/_+/g, '_')
 
-  let slug = normalized || fallback
+  let slug = normalized || validFallback
   if (!/^[a-z]/.test(slug)) {
-    slug = `${fallback}_${slug}`.replace(/_+/g, '_')
+    slug = `${validFallback}_${slug}`.replace(/_+/g, '_')
   }
   if (NOTE_VALUE_RESERVED_IDENTIFIER_SET.has(slug)) {
     slug = `${slug}_value`
   }
   if (!NOTE_VALUE_SLUG_REGEX.test(slug)) {
-    slug = fallback
+    slug = validFallback
   }
   if (NOTE_VALUE_RESERVED_IDENTIFIER_SET.has(slug)) {
-    slug = `${fallback}_value`
+    slug = `${validFallback}_value`
   }
   return slug
 }

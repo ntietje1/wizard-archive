@@ -8,6 +8,7 @@ export function ValueInlineChip({
   hasError,
   isLoading = false,
   valueId,
+  valueInstanceId,
   state,
   spanRef,
   className,
@@ -20,6 +21,7 @@ export function ValueInlineChip({
   hasError: boolean
   isLoading?: boolean
   valueId?: string
+  valueInstanceId?: string
   state?: string
   spanRef?: Ref<HTMLSpanElement>
 } & ComponentProps<'span'>) {
@@ -33,6 +35,7 @@ export function ValueInlineChip({
       )}
       data-testid="note-value-inline"
       data-note-value-id={valueId}
+      data-note-value-instance-id={valueInstanceId}
       data-note-value-slug={slug}
       data-note-value-state={state}
       draggable={draggable}

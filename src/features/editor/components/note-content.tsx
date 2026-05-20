@@ -9,9 +9,9 @@ import { WikiLinkAutocomplete } from './extensions/wiki-link/wiki-link-autocompl
 import { useLinkResolver } from '~/features/editor/hooks/useLinkResolver'
 import { useOwnedBlockNoteEditor } from '~/features/editor/hooks/useOwnedBlockNoteEditor'
 import { useNoteYjsCollaboration } from '~/features/editor/hooks/useNoteYjsCollaboration'
-import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
+import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { getCursorColor } from '~/features/editor/utils/cursor-colors'
 import { destroyBlockNoteEditor } from '~/features/editor/utils/destroy-blocknote-editor'
@@ -110,7 +110,7 @@ function useNoteRenderState({
     } {
   const { isDm } = useCampaign()
   const { viewAsPlayerId } = useEditorMode()
-  const { itemsMap } = useActiveSidebarItems()
+  const { allItemsById } = useFileSystemReadModel()
 
   if (!note) {
     return {
@@ -124,7 +124,7 @@ function useNoteRenderState({
   const hasEditAccess = effectiveHasAtLeastPermission(note, PERMISSION_LEVEL.EDIT, {
     isDm,
     viewAsPlayerId: undefined,
-    allItemsMap: itemsMap,
+    allItemsMap: allItemsById,
   })
   const isViewAs = Boolean(isDm && viewAsPlayerId)
 

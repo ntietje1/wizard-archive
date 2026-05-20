@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { getUniqueValueSlug } from '../../../../../shared/note-values/constants'
+import { getUniqueValueSlug, sanitizeValueSlug } from '../../../../../shared/note-values/constants'
+import { deduplicateNumericSuffix } from '../../../../../shared/deduplicateNumericSuffix'
 
 describe('getUniqueValueSlug', () => {
   it('uses base, then base_1, base_2, and so on', () => {
@@ -23,5 +24,21 @@ describe('getUniqueValueSlug', () => {
     expect(getUniqueValueSlug('roll_1778718519495', ['roll_1778718519495'])).toBe(
       'roll_1778718519495_1',
     )
+  })
+
+  it('sanitizes invalid fallback slugs before using them', () => {
+    expect(sanitizeValueSlug('', 'Invalid Fallback')).toBe('invalid_fallback')
+    expect(sanitizeValueSlug('', '123')).toBe('value')
+    expect(sanitizeValueSlug('', 'min')).toBe('value')
+  })
+
+  it('keeps deduplicated candidates within maxLength', () => {
+    expect(
+      deduplicateNumericSuffix('abcde', ['abcde', 'abc1', 'abc2', 'abc3', 'abc4'], {
+        separator: '',
+        maxLength: 3,
+        errorLabel: 'test value',
+      }),
+    ).toHaveLength(3)
   })
 })

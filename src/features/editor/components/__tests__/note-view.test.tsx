@@ -124,6 +124,15 @@ describe('NoteView', () => {
 
     expect(event).toBe(false)
     expect(runYjsHistoryCommandSpy).toHaveBeenCalledWith(editor._tiptapEditor.view, 'undo')
+
+    runYjsHistoryCommandSpy.mockClear()
+    const metaEvent = fireEvent.keyDown(screen.getByTestId('blocknote-view'), {
+      metaKey: true,
+      key: 'z',
+    })
+
+    expect(metaEvent).toBe(false)
+    expect(runYjsHistoryCommandSpy).toHaveBeenCalledWith(editor._tiptapEditor.view, 'undo')
   })
 })
 

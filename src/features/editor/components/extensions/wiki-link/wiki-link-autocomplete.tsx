@@ -625,7 +625,10 @@ function AutocompleteMenu({
             />
           )}
         </ScrollArea>
-        <AutocompleteFooter truncatedCount={model.totalCount - model.suggestions.length} />
+        <AutocompleteFooter
+          mode={model.mode}
+          truncatedCount={model.totalCount - model.suggestions.length}
+        />
       </div>
     </div>,
     document.body,
@@ -851,13 +854,19 @@ function FileItem({
   )
 }
 
-function AutocompleteFooter({ truncatedCount }: { truncatedCount: number }) {
+function AutocompleteFooter({
+  mode,
+  truncatedCount,
+}: {
+  mode: ActiveAutocompleteModel['mode']
+  truncatedCount: number
+}) {
   return (
     <div className="flex items-center justify-evenly gap-3 px-2 py-1 text-[10px] text-muted-foreground border-t border-border/50">
       {truncatedCount > 0 && <span>+{truncatedCount} more</span>}
       <span>↑↓ navigate</span>
       <span>↵ select</span>
-      <span>tab continue</span>
+      <span>{mode === 'value' ? 'tab insert' : 'tab continue'}</span>
       <span>esc close</span>
     </div>
   )

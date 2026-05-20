@@ -104,6 +104,10 @@ vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
   useActiveSidebarItems: () => activeItemsState,
 }))
 
+vi.mock('~/features/filesystem/useFileSystemReadModel', () => ({
+  useFileSystemReadModel: () => ({ allItemsById: activeItemsState.itemsMap }),
+}))
+
 describe('NoteContent', () => {
   beforeEach(() => {
     activeItemsState.itemsMap = new Map()

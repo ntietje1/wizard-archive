@@ -233,7 +233,7 @@ export const editorContextMenuCommands = {
     id: 'editValueInline',
     run: (context) => {
       if (!context.valueInlineId) return
-      context.openValueInline?.(context.valueInlineId)
+      context.openValueInline?.(context.valueInlineId, context.valueInlineInstanceId)
     },
   },
   toggleReadingMode: {

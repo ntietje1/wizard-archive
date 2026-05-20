@@ -354,7 +354,16 @@ function handleAutocompleteKeyDown(
     )
     return
   }
-  if (!context || suggestions.length === 0) {
+  if (!context) {
+    return
+  }
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    event.stopPropagation()
+    setContext(null)
+    return
+  }
+  if (suggestions.length === 0) {
     return
   }
   if (event.key === 'ArrowDown') {
@@ -368,10 +377,6 @@ function handleAutocompleteKeyDown(
     if (activeSuggestion) {
       applySuggestion(activeSuggestion)
     }
-  } else if (event.key === 'Escape') {
-    event.preventDefault()
-    event.stopPropagation()
-    setContext(null)
   }
 }
 

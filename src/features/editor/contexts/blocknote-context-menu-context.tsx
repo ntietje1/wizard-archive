@@ -25,20 +25,38 @@ export function BlockNoteContextMenuProvider({ children }: BlockNoteContextMenuP
   const currentEditor = editorOverride ?? storeEditor
   const [menuState, setMenuState] = useState<BlockNoteContextMenuEvent | null>(null)
   const contextMenuRef = useRef<EditorContextMenuRef>(null)
-  const valueInlineEditorsRef = useRef(new Map<string, () => void>())
+  const valueInlineEditorsRef = useRef(new Map<string, Map<string, () => void>>())
 
-  const openValueInline = useCallback((valueId: string) => {
-    valueInlineEditorsRef.current.get(valueId)?.()
+  const openValueInline = useCallback((valueId: string, instanceId: string | undefined) => {
+    const editorsByInstanceId = valueInlineEditorsRef.current.get(valueId)
+    if (!editorsByInstanceId) return
+    const edit = instanceId
+      ? editorsByInstanceId.get(instanceId)
+      : editorsByInstanceId.values().next().value
+    edit?.()
   }, [])
 
-  const registerValueInlineEdit = useCallback((valueId: string, edit: () => void) => {
-    valueInlineEditorsRef.current.set(valueId, edit)
-    return () => {
-      if (valueInlineEditorsRef.current.get(valueId) === edit) {
-        valueInlineEditorsRef.current.delete(valueId)
+  const registerValueInlineEdit = useCallback(
+    (valueId: string, instanceId: string, edit: () => void) => {
+      let editorsByInstanceId = valueInlineEditorsRef.current.get(valueId)
+      if (!editorsByInstanceId) {
+        editorsByInstanceId = new Map()
+        valueInlineEditorsRef.current.set(valueId, editorsByInstanceId)
       }
-    }
-  }, [])
+      editorsByInstanceId.set(instanceId, edit)
+      return () => {
+        const currentEditorsByInstanceId = valueInlineEditorsRef.current.get(valueId)
+        if (!currentEditorsByInstanceId) return
+        if (currentEditorsByInstanceId.get(instanceId) === edit) {
+          currentEditorsByInstanceId.delete(instanceId)
+        }
+        if (currentEditorsByInstanceId.size === 0) {
+          valueInlineEditorsRef.current.delete(valueId)
+        }
+      }
+    },
+    [],
+  )
 
   useEffect(() => {
     const handleOpenRequest = (e: CustomEvent<BlockNoteContextMenuEvent>) => {
@@ -65,6 +83,7 @@ export function BlockNoteContextMenuProvider({ children }: BlockNoteContextMenuP
         setEditor: setEditorOverride,
         blockNoteId: menuState?.blockNoteId,
         valueInlineId: menuState?.valueInlineId,
+        valueInlineInstanceId: menuState?.valueInlineInstanceId,
         valueInlineEditable: menuState?.valueInlineEditable === true,
         openValueInline,
         registerValueInlineEdit,

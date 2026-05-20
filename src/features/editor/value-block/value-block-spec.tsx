@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef } from 'react'
+import { useEffect, useId, useReducer, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import type { CSSProperties, Dispatch, MouseEvent as ReactMouseEvent, RefObject } from 'react'
 import { CircleHelp } from 'lucide-react'
@@ -363,6 +363,7 @@ export function ValueInlineContent({
   const popoverRef = useRef<HTMLDivElement>(null)
   const slugInputRef = useRef<HTMLInputElement>(null)
   const expressionInputRef = useRef<HTMLInputElement>(null)
+  const valueInstanceId = useId()
   const latestPropsRef = useRef(inlineContent.props)
   const openPopoverFromContextMenuRef = useRef<() => void>(() => {})
   const stopWatchingDragStartRef = useRef<(() => void) | null>(null)
@@ -401,10 +402,10 @@ export function ValueInlineContent({
 
   useEffect(() => {
     if (!editable) return
-    return registerValueInlineEdit?.(inlineContent.props.valueId, () => {
+    return registerValueInlineEdit?.(inlineContent.props.valueId, valueInstanceId, () => {
       openPopoverFromContextMenuRef.current()
     })
-  }, [editable, inlineContent.props.valueId, registerValueInlineEdit])
+  }, [editable, inlineContent.props.valueId, registerValueInlineEdit, valueInstanceId])
 
   useEffect(() => {
     if (!popoverState.open) return
@@ -515,6 +516,7 @@ export function ValueInlineContent({
         hasError={hasError}
         isLoading={chipIsLoading}
         valueId={inlineContent.props.valueId}
+        valueInstanceId={valueInstanceId}
         state={state?.status ?? 'pending'}
       />
     )
@@ -528,6 +530,7 @@ export function ValueInlineContent({
       hasError={chipHasError}
       isLoading={chipIsLoading}
       valueId={inlineContent.props.valueId}
+      valueInstanceId={valueInstanceId}
       state={state?.status ?? 'pending'}
       draggable
       role="button"

@@ -142,8 +142,9 @@ export interface EditorMenuContext {
   editor?: CustomBlockNoteEditor
   blockNoteId?: BlockNoteId
   valueInlineId?: string
+  valueInlineInstanceId?: string
   valueInlineEditable?: boolean
-  openValueInline?: (valueId: string) => void
+  openValueInline?: (valueId: string, instanceId: string | undefined) => void
 }
 
 export interface EditorModeMenuService {

@@ -98,7 +98,10 @@ export function deduplicateNumericSuffix(
     const baseLimit = maxLength === undefined ? undefined : maxLength - suffix.length
     const candidateBase =
       baseLimit === undefined ? dedupeBase : dedupeBase.slice(0, Math.max(0, baseLimit))
-    const candidate = `${candidateBase}${suffix}`
+    let candidate = `${candidateBase}${suffix}`
+    if (maxLength !== undefined && candidate.length > maxLength) {
+      candidate = candidate.slice(0, maxLength)
+    }
     if (!existing.has(normalize(candidate))) {
       return candidate
     }

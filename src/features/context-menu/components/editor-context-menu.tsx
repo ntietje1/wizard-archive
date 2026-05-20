@@ -97,6 +97,7 @@ export function EditorContextMenu({
     editor: blockNoteContext?.editor ?? undefined,
     blockNoteId: blockNoteContext?.blockNoteId,
     valueInlineId: blockNoteContext?.valueInlineId,
+    valueInlineInstanceId: blockNoteContext?.valueInlineInstanceId,
     valueInlineEditable: blockNoteContext?.valueInlineEditable,
     openValueInline: blockNoteContext?.openValueInline,
   }

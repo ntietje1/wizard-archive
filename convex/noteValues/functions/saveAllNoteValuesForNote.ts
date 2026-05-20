@@ -15,6 +15,7 @@ import type { CustomBlock } from '../../notes/editorSpecs'
 import type { AnySidebarItemRow } from '../../sidebarItems/types/types'
 import type {
   FormulaReferenceToken,
+  NoteValueAuthoringDefinition,
   NoteValueBinding,
   NoteValueCompiledFormula,
   NoteValueDefinition,
@@ -22,6 +23,7 @@ import type {
 } from '../../../shared/note-values/types'
 
 type ExternalFormulaReferenceToken = Extract<FormulaReferenceToken, { kind: 'external' }>
+type ParsedNotePath = ReturnType<typeof parseWikiLinkText>
 
 function resolvePersistedValue<TNoteId>(
   matches: Array<string> | undefined,
@@ -81,6 +83,107 @@ function resolveExternalNoteId({
   }
 
   return resolvedItem._id
+}
+
+function parseNotePath(notePathRaw: string): ParsedNotePath | null {
+  const parsed = parseWikiLinkText(notePathRaw)
+  if (
+    parsed.displayName !== null ||
+    parsed.headingPath.length > 0 ||
+    parsed.itemPath.length === 0
+  ) {
+    return null
+  }
+  return parsed
+}
+
+function resolveDurableExternalBinding(
+  binding: NoteValueBinding<Id<'sidebarItems'>> | null,
+): NoteValueResolution<Id<'sidebarItems'>> | null {
+  return binding
+    ? {
+        ok: true,
+        noteId: binding.targetNoteId,
+        valueId: binding.targetValueId,
+      }
+    : null
+}
+
+function resolveLocalSlug({
+  authoredDefinitions,
+  noteId,
+  slug,
+}: {
+  authoredDefinitions: Array<NoteValueAuthoringDefinition<Id<'sidebarItems'>>>
+  noteId: Id<'sidebarItems'>
+  slug: string
+}): NoteValueResolution<Id<'sidebarItems'>> {
+  const localMatch = authoredDefinitions.filter((candidate) => candidate.slug === slug)
+  if (localMatch.length === 0) {
+    return {
+      ok: false,
+      errorCode: 'unknown_reference',
+      errorMessage: `Unknown reference "[[${slug}]]"`,
+    }
+  }
+  if (localMatch.length > 1) {
+    return {
+      ok: false,
+      errorCode: 'duplicate_slug',
+      errorMessage: `Slug "${slug}" is duplicated in this note`,
+    }
+  }
+  return {
+    ok: true,
+    noteId,
+    valueId: localMatch[0].valueId,
+  }
+}
+
+function resolveParsedItem({
+  parsed,
+  sidebarItems,
+  itemsMap,
+  sourceParentId,
+}: {
+  parsed: ParsedNotePath
+  sidebarItems: Array<AnySidebarItemRow>
+  itemsMap: Map<Id<'sidebarItems'>, AnySidebarItemRow>
+  sourceParentId: Id<'sidebarItems'> | null
+}): AnySidebarItemRow | null {
+  const resolvedItem = resolveParsedItemPath(
+    parsed.pathKind,
+    parsed.itemPath,
+    sidebarItems,
+    itemsMap,
+    sourceParentId,
+  )
+  return resolvedItem?.type === SIDEBAR_ITEM_TYPES.notes ? resolvedItem : null
+}
+
+function resolvePersistedForItem({
+  persistedLookup,
+  resolvedItem,
+  slug,
+  notePathRaw,
+}: {
+  persistedLookup: Map<Id<'sidebarItems'>, Map<string, Array<string>>>
+  resolvedItem: AnySidebarItemRow
+  slug: string
+  notePathRaw: string
+}): NoteValueResolution<Id<'sidebarItems'>> {
+  const persistedMatch = resolvePersistedValue<Id<'sidebarItems'>>(
+    persistedLookup.get(resolvedItem._id)?.get(slug),
+    resolvedItem._id,
+    slug,
+  )
+  if (!persistedMatch.ok && persistedMatch.errorCode === 'unknown_reference') {
+    return {
+      ...persistedMatch,
+      errorMessage: `Unknown reference "[[${notePathRaw}.${slug}]]"`,
+    }
+  }
+  return persistedMatch
 }
 
 function createDurableExternalBindingResolver<TNoteId>({
@@ -288,23 +391,8 @@ export async function saveAllNoteValuesForNote(
         slug,
         sourceDefinition,
       ): NoteValueResolution<Id<'sidebarItems'>> => {
-        const resolveDurableExternalBinding = () => {
-          const binding = takeDurableExternalBinding(sourceDefinition)
-          return binding
-            ? ({
-                ok: true,
-                noteId: binding.targetNoteId,
-                valueId: binding.targetValueId,
-              } satisfies NoteValueResolution<Id<'sidebarItems'>>)
-            : null
-        }
-
-        const parsed = parseWikiLinkText(notePathRaw)
-        if (
-          parsed.displayName !== null ||
-          parsed.headingPath.length > 0 ||
-          parsed.itemPath.length === 0
-        ) {
+        const parsed = parseNotePath(notePathRaw)
+        if (!parsed) {
           return {
             ok: false,
             errorCode: 'parse_error',
@@ -312,19 +400,20 @@ export async function saveAllNoteValuesForNote(
           }
         }
 
-        const durableResolution = resolveDurableExternalBinding()
+        const durableResolution = resolveDurableExternalBinding(
+          takeDurableExternalBinding(sourceDefinition),
+        )
         if (durableResolution) {
           return durableResolution
         }
 
-        const resolvedItem = resolveParsedItemPath(
-          parsed.pathKind,
-          parsed.itemPath,
+        const resolvedItem = resolveParsedItem({
+          parsed,
           sidebarItems,
           itemsMap,
-          note.parentId,
-        )
-        if (!resolvedItem || resolvedItem.type !== SIDEBAR_ITEM_TYPES.notes) {
+          sourceParentId: note.parentId,
+        })
+        if (!resolvedItem) {
           return {
             ok: false,
             errorCode: 'unknown_reference',
@@ -333,44 +422,19 @@ export async function saveAllNoteValuesForNote(
         }
 
         if (resolvedItem._id === noteId) {
-          const localMatch = authoredDefinitions.filter((candidate) => candidate.slug === slug)
-          if (localMatch.length === 0) {
-            return {
-              ok: false,
-              errorCode: 'unknown_reference',
-              errorMessage: `Unknown reference "[[${slug}]]"`,
-            }
-          }
-          if (localMatch.length > 1) {
-            return {
-              ok: false,
-              errorCode: 'duplicate_slug',
-              errorMessage: `Slug "${slug}" is duplicated in this note`,
-            }
-          }
-          return {
-            ok: true,
+          return resolveLocalSlug({
+            authoredDefinitions,
             noteId,
-            valueId: localMatch[0].valueId,
-          }
+            slug,
+          })
         }
 
-        const persistedMatch = resolvePersistedValue<Id<'sidebarItems'>>(
-          persistedLookup.get(resolvedItem._id)?.get(slug),
-          resolvedItem._id,
+        return resolvePersistedForItem({
+          persistedLookup,
+          resolvedItem,
           slug,
-        )
-        if (!persistedMatch.ok) {
-          if (persistedMatch.errorCode === 'unknown_reference') {
-            return {
-              ...persistedMatch,
-              errorMessage: `Unknown reference "[[${notePathRaw}.${slug}]]"`,
-            }
-          }
-          return persistedMatch
-        }
-
-        return persistedMatch
+          notePathRaw,
+        })
       },
     })
 

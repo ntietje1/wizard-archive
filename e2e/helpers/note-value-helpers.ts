@@ -81,7 +81,7 @@ export async function createValueInline(
   await closeValuePopover(page)
 
   const resolvedSlug =
-    options.slug ?? (await value.getAttribute('data-note-value-slug')) ?? sanitizeValueSlug('value')
+    (await value.getAttribute('data-note-value-slug')) ?? options.slug ?? sanitizeValueSlug('value')
   const resolvedValue = getValueInlineBySlug(page, resolvedSlug)
   await expect(resolvedValue).toBeVisible()
   return resolvedValue

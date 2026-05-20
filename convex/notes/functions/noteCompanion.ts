@@ -49,33 +49,37 @@ async function copyNoteBlocks(
     )
     .collect()
 
-  const copiedBlockIds = await Promise.all(
-    blocks.map((block) =>
-      ctx.db.insert('blocks', {
-        noteId: targetItemId,
-        blockNoteId: block.blockNoteId,
-        position: block.position,
-        parentBlockId: block.parentBlockId,
-        depth: block.depth,
-        type: block.type,
-        props: block.props,
-        inlineContent: block.inlineContent,
-        plainText: block.plainText,
-        campaignId: ctx.campaign._id,
-        shareStatus: block.shareStatus,
-      }),
-    ),
+  const blocksInParentOrder = [...blocks].sort(
+    (a, b) => a.depth - b.depth || (a.position ?? 0) - (b.position ?? 0),
   )
+  const sourceBlockNoteIds = new Set(blocks.map((block) => block.blockNoteId))
+  const copiedBlocks: Array<Block> = []
 
-  const persistedBlocks = await Promise.all(
-    copiedBlockIds.map((blockId) => ctx.db.get('blocks', blockId)),
-  )
-  return persistedBlocks.map((block) => {
-    if (!block) {
+  for (const block of blocksInParentOrder) {
+    const blockId = await ctx.db.insert('blocks', {
+      noteId: targetItemId,
+      blockNoteId: block.blockNoteId,
+      position: block.position,
+      parentBlockId:
+        block.parentBlockId && sourceBlockNoteIds.has(block.parentBlockId)
+          ? block.parentBlockId
+          : null,
+      depth: block.depth,
+      type: block.type,
+      props: block.props,
+      inlineContent: block.inlineContent,
+      plainText: block.plainText,
+      campaignId: ctx.campaign._id,
+      shareStatus: block.shareStatus,
+    })
+    const copiedBlock = await ctx.db.get('blocks', blockId)
+    if (!copiedBlock) {
       throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Failed to load copied note block')
     }
-    return block
-  })
+    copiedBlocks.push(copiedBlock)
+  }
+
+  return copiedBlocks
 }
 
 export async function copyNoteCompanion(

@@ -1,5 +1,5 @@
 import * as Y from 'yjs'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { ConvexYjsProvider } from '../providers/convex-yjs-provider'
@@ -34,11 +34,15 @@ export function useConvexYjsCollaboration(
   const [state, setState] = useState<YjsState | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [afterSeq, setAfterSeq] = useState<number | undefined>(undefined)
+  const [error, setError] = useState<Error | null>(null)
   const onBeforeDestroy = options?.onBeforeDestroy
+  const latestOnBeforeDestroyRef = useRef(onBeforeDestroy)
+  latestOnBeforeDestroyRef.current = onBeforeDestroy
 
   useEffect(() => {
     setIsLoading(true)
     setAfterSeq(undefined)
+    setError(null)
     setState(null)
 
     if (!campaignId) return
@@ -64,13 +68,12 @@ export function useConvexYjsCollaboration(
           documentId,
         }),
     })
-    const beforeDestroy = onBeforeDestroy
 
     setState({ documentId, doc, provider, instanceId: nextInstanceId++ })
 
     return () => {
       Promise.resolve(
-        beforeDestroy?.({
+        latestOnBeforeDestroyRef.current?.({
           documentId,
           doc,
           provider,
@@ -84,8 +87,6 @@ export function useConvexYjsCollaboration(
           doc.destroy()
         })
     }
-    // onBeforeDestroy is intentionally snapshotted with the provider it cleans up.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [documentId, convex, campaignId])
 
   const currentState = state?.documentId === documentId ? state : null
@@ -98,8 +99,6 @@ export function useConvexYjsCollaboration(
   useEffect(() => {
     if (currentState) currentState.provider.writable = canEdit
   }, [currentState, canEdit])
-
-  const [error, setError] = useState<Error | null>(null)
 
   const updatesResult = useCampaignQuery(api.yjsSync.queries.getUpdates, {
     documentId,

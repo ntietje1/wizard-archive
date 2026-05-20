@@ -132,6 +132,7 @@ describe('flattenBlocks', () => {
     ]
     const result = flattenBlocks(blocks)
     expect(result[0].plainText).toBe('Cell')
+    expect(result[0].inlineContent).toBeNull()
   })
 
   it('sets inlineContent to null when block has no content', () => {
@@ -364,7 +365,7 @@ function flattenRoundTrip(blocks: Array<CustomBlock>): Array<Record<string, unkn
 }
 
 describe('flatten ↔ reconstruct symmetry', () => {
-  it('preserves id, type, props, and content through round-trip', () => {
+  it('preserves id, type, props, and inline content through round-trip', () => {
     const original = [
       makeBlock('p1', {
         content: [
@@ -378,22 +379,6 @@ describe('flatten ↔ reconstruct symmetry', () => {
         content: [{ type: 'text', text: 'Header', styles: {} }] satisfies InlineContent,
       }),
       makeBlock('div', { type: 'divider', content: undefined }),
-      makeBlock('tbl', {
-        type: 'table',
-        props: { textColor: 'blue' },
-        content: {
-          type: 'tableContent',
-          columnWidths: [100, null],
-          rows: [
-            {
-              cells: [
-                [{ type: 'text', text: 'A', styles: {} }],
-                [{ type: 'text', text: 'B', styles: {} }],
-              ],
-            },
-          ],
-        } satisfies TableContent,
-      }),
     ]
 
     expect(flattenRoundTrip(original)).toEqual(normalizeTree(original))

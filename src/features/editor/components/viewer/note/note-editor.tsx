@@ -30,6 +30,7 @@ function getBlockNoteContextFromTarget(
 ): {
   blockNoteId: BlockNoteId | undefined
   valueInlineId: string | undefined
+  valueInlineInstanceId: string | undefined
   valueInlineEditable: boolean
 } {
   const blockElement = target.closest('[data-node-type="blockContainer"]')
@@ -37,6 +38,8 @@ function getBlockNoteContextFromTarget(
   return {
     blockNoteId: blockElement?.getAttribute('data-id') as BlockNoteId | undefined,
     valueInlineId: valueInlineElement?.getAttribute('data-note-value-id') ?? undefined,
+    valueInlineInstanceId:
+      valueInlineElement?.getAttribute('data-note-value-instance-id') ?? undefined,
     valueInlineEditable: editable && valueInlineElement !== null,
   }
 }
@@ -48,6 +51,7 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
 
   const { onEditorChange, wrapperRef } = useNoteEditorState(note._id)
   const viewportRef = useRef<HTMLDivElement>(null)
+  const contextMenuHandledRef = useRef(false)
   const { hasHeadingParam } = useScrollToHeading(note.content)
   useScrollPersistence(note._id, viewportRef, hasHeadingParam)
 
@@ -66,7 +70,12 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
     const isBlockNoteContext = target.closest('.bn-editor') !== null
     const blockNoteContext = isBlockNoteContext
       ? getBlockNoteContextFromTarget(target, editable)
-      : { blockNoteId: undefined, valueInlineId: undefined, valueInlineEditable: false }
+      : {
+          blockNoteId: undefined,
+          valueInlineId: undefined,
+          valueInlineInstanceId: undefined,
+          valueInlineEditable: false,
+        }
 
     openBlockNoteContextMenu({
       position: { x: e.clientX, y: e.clientY },
@@ -82,11 +91,21 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
 
     const target = getContextMenuTarget(e.target)
     if (!target || target.closest('.bn-editor') === null) return
+    contextMenuHandledRef.current = true
+    window.setTimeout(() => {
+      contextMenuHandledRef.current = false
+    }, 0)
     openNoteContextMenu(e, target)
   }
 
   const handleWrapperContextMenu = (e: React.MouseEvent) => {
     if (!e.isTrusted) return
+    if (contextMenuHandledRef.current) {
+      e.preventDefault()
+      e.stopPropagation()
+      contextMenuHandledRef.current = false
+      return
+    }
     const target = getContextMenuTarget(e.target)
     if (!target) return
     openNoteContextMenu(e, target)
