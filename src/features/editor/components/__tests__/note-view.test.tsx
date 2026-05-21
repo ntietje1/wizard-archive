@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NoteView } from '../note-view'
-import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { NoteWithContent } from 'convex/notes/types'
 import type { ReactNode } from 'react'
 import { testId } from '~/test/helpers/test-id'

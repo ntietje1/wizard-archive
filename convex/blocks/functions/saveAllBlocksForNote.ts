@@ -5,17 +5,20 @@ import { flattenBlocks } from './flattenBlocks'
 import { insertBlock } from './insertBlock'
 import { updateBlock } from './updateBlock'
 import type { Id } from '../../_generated/dataModel'
-import type { CampaignMutationCtx } from '../../functions'
-import type { CustomBlock } from '../../notes/editorSpecs'
-import type { Block } from '../types'
+import type { MutationCtx } from '../../_generated/server'
+import type { Block, CustomBlock } from '../types'
+import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { isActiveSidebarItem } from '../../sidebarItems/types/status'
 
 export async function saveAllBlocksForNote(
-  ctx: CampaignMutationCtx,
+  ctx: Pick<MutationCtx, 'db'>,
   { noteId, content }: { noteId: Id<'sidebarItems'>; content: Array<CustomBlock> },
 ): Promise<Array<Block>> {
   const note = await ctx.db.get('sidebarItems', noteId)
   if (!note) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
+  if (note.type !== SIDEBAR_ITEM_TYPES.notes) {
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Block projection requires a note item')
+  }
   if (!isActiveSidebarItem(note)) return []
   const campaignId = note.campaignId
 
@@ -49,6 +52,7 @@ export async function saveAllBlocksForNote(
         position: flat.position,
         type: flat.type,
         props: flat.props,
+        content: flat.content,
         inlineContent: flat.inlineContent,
         plainText: flat.plainText,
       })
@@ -64,6 +68,7 @@ export async function saveAllBlocksForNote(
       position: flat.position,
       type: flat.type,
       props: flat.props,
+      content: flat.content,
       inlineContent: flat.inlineContent,
       plainText: flat.plainText,
       shareStatus: SHARE_STATUS.NOT_SHARED,

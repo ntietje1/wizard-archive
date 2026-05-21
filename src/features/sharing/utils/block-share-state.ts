@@ -2,7 +2,7 @@ import { SHARE_STATUS } from 'convex/blockShares/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { BlockShareInfo } from 'convex/blocks/types'
 import type { CampaignMember } from 'convex/campaigns/types'
-import type { CustomBlock } from 'convex/notes/editorSpecs'
+import type { CustomBlock } from '~/features/editor/editor-specs'
 
 export interface ShareItem {
   key: string

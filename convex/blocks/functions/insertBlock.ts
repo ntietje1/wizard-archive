@@ -1,11 +1,11 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
 import type { ShareStatus } from '../../blockShares/types'
 import type { Id } from '../../_generated/dataModel'
-import type { CampaignMutationCtx } from '../../functions'
-import type { BlockNoteId, BlockProps, BlockType, InlineContent } from '../types'
+import type { MutationCtx } from '../../_generated/server'
+import type { BlockNoteId, BlockProps, BlockType, InlineContent, TableContent } from '../types'
 
 export async function insertBlock(
-  ctx: CampaignMutationCtx,
+  ctx: Pick<MutationCtx, 'db'>,
   params: {
     noteId: Id<'sidebarItems'>
     campaignId: Id<'campaigns'>
@@ -15,6 +15,7 @@ export async function insertBlock(
     position: number | null
     type: BlockType
     props: BlockProps
+    content: InlineContent | TableContent | null
     inlineContent: InlineContent | null
     plainText: string
     shareStatus: ShareStatus
@@ -35,6 +36,7 @@ export async function insertBlock(
     position: params.position,
     type: params.type,
     props: params.props,
+    content: params.content,
     inlineContent: params.inlineContent,
     plainText: params.plainText,
     shareStatus: params.shareStatus,

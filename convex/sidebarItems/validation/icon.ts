@@ -1,8 +1,5 @@
-import { zodToConvex } from 'convex-helpers/server/zod4'
-import { z } from 'zod'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import type { SidebarItemType } from '../types/baseTypes'
-import { parseOrThrowClientValidation } from '../../common/zod'
 
 export const SIDEBAR_ITEM_ICON_NAMES = [
   'Apple',
@@ -43,14 +40,6 @@ export type SidebarItemIconName = (typeof SIDEBAR_ITEM_ICON_NAMES)[number]
 
 const SIDEBAR_ITEM_ICON_NAME_SET = new Set<string>(SIDEBAR_ITEM_ICON_NAMES)
 
-export const sidebarItemIconNameSchema = z
-  .string()
-  .refine((value): value is SidebarItemIconName => SIDEBAR_ITEM_ICON_NAME_SET.has(value), {
-    message: 'Icon is not supported',
-  })
-
-export const sidebarItemIconNameValidator = zodToConvex(sidebarItemIconNameSchema)
-
 export const DEFAULT_SIDEBAR_ITEM_ICON_NAME_BY_TYPE: Record<SidebarItemType, SidebarItemIconName> =
   {
     [SIDEBAR_ITEM_TYPES.notes]: 'FileText',
@@ -65,25 +54,23 @@ export function getDefaultSidebarItemIconName(type: SidebarItemType): SidebarIte
 }
 
 export function validateSidebarItemIconName(iconName: string): string | null {
-  const result = sidebarItemIconNameSchema.safeParse(iconName)
-  return result.success ? null : (result.error.issues[0]?.message ?? 'Invalid icon')
+  return SIDEBAR_ITEM_ICON_NAME_SET.has(iconName) ? null : 'Icon is not supported'
 }
 
 export function parseSidebarItemIconName(iconName: string): SidebarItemIconName | null {
-  const result = sidebarItemIconNameSchema.safeParse(iconName)
-  return result.success ? result.data : null
+  return SIDEBAR_ITEM_ICON_NAME_SET.has(iconName) ? (iconName as SidebarItemIconName) : null
 }
 
 export function assertSidebarItemIconName(iconName: string): SidebarItemIconName {
-  const result = sidebarItemIconNameSchema.safeParse(iconName)
-  if (!result.success) {
-    throw new Error(result.error.issues[0]?.message ?? 'Invalid icon')
+  const error = validateSidebarItemIconName(iconName)
+  if (error) {
+    throw new Error(error)
   }
-  return result.data
+  return iconName as SidebarItemIconName
 }
 
 export function requireSidebarItemIconName(iconName: string): SidebarItemIconName {
-  return parseOrThrowClientValidation(sidebarItemIconNameSchema, iconName, 'Invalid icon')
+  return assertSidebarItemIconName(iconName)
 }
 
 export function requireOptionalSidebarItemIconName(

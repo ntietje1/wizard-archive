@@ -3,8 +3,7 @@ import { campaignMutation } from '../functions'
 import { internal } from '../_generated/api'
 import { yjsDocumentIdValidator } from './schema'
 import { checkYjsReadAccess, checkYjsWriteAccess } from './functions/checkYjsAccess'
-import { shouldCompact } from './functions/compactUpdates'
-import { SNAPSHOT_IDLE_MS } from './constants'
+import { shouldCompact, SNAPSHOT_IDLE_MS } from './constants'
 
 export const pushUpdate = campaignMutation({
   args: {
@@ -31,7 +30,7 @@ export const pushUpdate = campaignMutation({
     })
 
     if (shouldCompact(seq)) {
-      await ctx.scheduler.runAfter(0, internal.yjsSync.internalMutations.compact, { documentId })
+      await ctx.scheduler.runAfter(0, internal.yjsSync.internalActions.compact, { documentId })
     }
 
     await ctx.scheduler.runAfter(

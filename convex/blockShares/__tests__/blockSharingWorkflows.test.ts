@@ -7,12 +7,73 @@ import {
   createSidebarShare,
   syncBlocksToYjs,
 } from '../../_test/factories.helper'
+import { expectPermissionDenied } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
+import type { Id } from '../../_generated/dataModel'
+
+async function getBlockDbId(
+  t: ReturnType<typeof createTestContext>,
+  {
+    campaignId,
+    noteId,
+    blockNoteId,
+  }: { campaignId: Id<'campaigns'>; noteId: Id<'sidebarItems'>; blockNoteId: string },
+) {
+  const block = await t.run(async (dbCtx) => {
+    return await dbCtx.db
+      .query('blocks')
+      .withIndex('by_campaign_note_block', (q) =>
+        q.eq('campaignId', campaignId).eq('noteId', noteId).eq('blockNoteId', blockNoteId),
+      )
+      .unique()
+  })
+  expect(block).not.toBeNull()
+  return block!._id
+}
 
 describe('block sharing workflows', () => {
   const t = createTestContext()
 
   describe('granular block sharing', () => {
+    it('does not project pending Yjs blocks for non-DM share attempts', async () => {
+      const ctx = await setupMultiPlayerContext(t, 1)
+      const player = ctx.players[0]
+      const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+      await createSidebarShare(t, {
+        campaignId: ctx.campaignId,
+        sidebarItemId: note.noteId,
+        sidebarItemType: 'note',
+        campaignMemberId: player.memberId,
+        permissionLevel: 'edit',
+      })
+      await syncBlocksToYjs(t, note.noteId, [
+        { id: 'pending-block', type: 'paragraph', content: [{ type: 'text', text: 'Draft' }] },
+      ])
+
+      await expectPermissionDenied(
+        player.authed.action(api.blockShares.actions.setBlocksShareStatus, {
+          campaignId: ctx.campaignId,
+          noteId: note.noteId,
+          blockNoteIds: ['pending-block'],
+          status: 'all_shared',
+        }),
+      )
+
+      const projectedBlock = await t.run(async (dbCtx) => {
+        return await dbCtx.db
+          .query('blocks')
+          .withIndex('by_campaign_note_block', (q) =>
+            q
+              .eq('campaignId', ctx.campaignId)
+              .eq('noteId', note.noteId)
+              .eq('blockNoteId', 'pending-block'),
+          )
+          .unique()
+      })
+      expect(projectedBlock).toBeNull()
+    })
+
     it('controls per-player block visibility through share status transitions', async () => {
       const ctx = await setupMultiPlayerContext(t, 2)
       const dmAuth = asDm(ctx)
@@ -40,14 +101,14 @@ describe('block sharing workflows', () => {
         campaignMemberId: p2.memberId,
       })
 
-      await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
+      await dmAuth.action(api.blockShares.actions.setBlocksShareStatus, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
         blockNoteIds: [block1.blockNoteId, block2.blockNoteId],
         status: 'individually_shared',
       })
 
-      await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
+      await dmAuth.action(api.blockShares.actions.shareBlocks, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
         blockNoteIds: [block1.blockNoteId],
@@ -71,7 +132,7 @@ describe('block sharing workflows', () => {
       expect(b2Info!.shareStatus).toBe('individually_shared')
       expect(b2Info!.sharedMemberIds).toHaveLength(0)
 
-      await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
+      await dmAuth.action(api.blockShares.actions.setBlocksShareStatus, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
         blockNoteIds: [block1.blockNoteId, block2.blockNoteId],
@@ -87,7 +148,7 @@ describe('block sharing workflows', () => {
         expect(b.shareStatus).toBe('all_shared')
       }
 
-      await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
+      await dmAuth.action(api.blockShares.actions.setBlocksShareStatus, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
         blockNoteIds: [block1.blockNoteId, block2.blockNoteId],
@@ -123,18 +184,24 @@ describe('block sharing workflows', () => {
         campaignMemberId: p1.memberId,
       })
 
-      await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
+      await dmAuth.action(api.blockShares.actions.setBlocksShareStatus, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
         blockNoteIds: [block.blockNoteId],
         status: 'individually_shared',
       })
 
-      await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
+      await dmAuth.action(api.blockShares.actions.shareBlocks, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
         blockNoteIds: [block.blockNoteId],
         campaignMemberId: p1.memberId,
+      })
+
+      const blockDbId = await getBlockDbId(t, {
+        campaignId: ctx.campaignId,
+        noteId: note.noteId,
+        blockNoteId: block.blockNoteId,
       })
 
       const beforeUnshare = await t.run(async (dbCtx) => {
@@ -143,14 +210,14 @@ describe('block sharing workflows', () => {
           .withIndex('by_campaign_block_member', (q) =>
             q
               .eq('campaignId', ctx.campaignId)
-              .eq('blockId', block.blockDbId)
+              .eq('blockId', blockDbId)
               .eq('campaignMemberId', p1.memberId),
           )
           .unique()
       })
       expect(beforeUnshare).not.toBeNull()
 
-      await dmAuth.mutation(api.blockShares.mutations.unshareBlocks, {
+      await dmAuth.action(api.blockShares.actions.unshareBlocks, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
         blockNoteIds: [block.blockNoteId],
@@ -163,14 +230,19 @@ describe('block sharing workflows', () => {
           .withIndex('by_campaign_block_member', (q) =>
             q
               .eq('campaignId', ctx.campaignId)
-              .eq('blockId', block.blockDbId)
+              .eq('blockId', blockDbId)
               .eq('campaignMemberId', p1.memberId),
           )
           .unique()
       })
       expect(afterUnshare).toBeNull()
 
-      const blockAfter = await t.run(async (dbCtx) => dbCtx.db.get('blocks', block.blockDbId))
+      const blockAfter = await dmAuth.query(api.blocks.queries.getBlockWithShares, {
+        campaignId: ctx.campaignId,
+        noteId: note.noteId,
+        blockNoteId: block.blockNoteId,
+      })
+      expect(blockAfter).not.toBeNull()
       expect(blockAfter!.shareStatus).toBe('not_shared')
     })
   })
@@ -183,6 +255,7 @@ describe('block sharing workflows', () => {
 
       const note = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
       const block = await createBlock(t, note.noteId, ctx.campaignId)
+      await syncBlocksToYjs(t, note.noteId, [{ id: block.blockNoteId, type: 'paragraph' }])
 
       await createSidebarShare(t, {
         campaignId: ctx.campaignId,
@@ -191,27 +264,20 @@ describe('block sharing workflows', () => {
         campaignMemberId: p1.memberId,
       })
 
-      await dmAuth.mutation(api.blockShares.mutations.unshareBlocks, {
+      await dmAuth.action(api.blockShares.actions.unshareBlocks, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
         blockNoteIds: [block.blockNoteId],
         campaignMemberId: p1.memberId,
       })
 
-      const shareRow = await t.run(async (dbCtx) => {
-        return dbCtx.db
-          .query('blockShares')
-          .withIndex('by_campaign_block_member', (q) =>
-            q
-              .eq('campaignId', ctx.campaignId)
-              .eq('blockId', block.blockDbId)
-              .eq('campaignMemberId', p1.memberId),
-          )
-          .unique()
+      const blockAfter = await dmAuth.query(api.blocks.queries.getBlockWithShares, {
+        campaignId: ctx.campaignId,
+        noteId: note.noteId,
+        blockNoteId: block.blockNoteId,
       })
-      expect(shareRow).toBeNull()
-
-      const blockAfter = await t.run(async (dbCtx) => dbCtx.db.get('blocks', block.blockDbId))
+      expect(blockAfter).not.toBeNull()
+      expect(blockAfter!.shares).toHaveLength(0)
       expect(blockAfter!.shareStatus).toBe('not_shared')
     })
   })
@@ -233,25 +299,31 @@ describe('block sharing workflows', () => {
         campaignMemberId: p1.memberId,
       })
 
-      await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
+      await dmAuth.action(api.blockShares.actions.setBlocksShareStatus, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
         blockNoteIds: [block.blockNoteId],
         status: 'individually_shared',
       })
 
-      await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
+      await dmAuth.action(api.blockShares.actions.shareBlocks, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
         blockNoteIds: [block.blockNoteId],
         campaignMemberId: p1.memberId,
       })
 
-      await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
+      await dmAuth.action(api.blockShares.actions.shareBlocks, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
         blockNoteIds: [block.blockNoteId],
         campaignMemberId: p1.memberId,
+      })
+
+      const blockDbId = await getBlockDbId(t, {
+        campaignId: ctx.campaignId,
+        noteId: note.noteId,
+        blockNoteId: block.blockNoteId,
       })
 
       const allShares = await t.run(async (dbCtx) => {
@@ -260,7 +332,7 @@ describe('block sharing workflows', () => {
           .withIndex('by_campaign_block_member', (q) =>
             q
               .eq('campaignId', ctx.campaignId)
-              .eq('blockId', block.blockDbId)
+              .eq('blockId', blockDbId)
               .eq('campaignMemberId', p1.memberId),
           )
           .collect()
@@ -288,14 +360,14 @@ describe('block sharing workflows', () => {
       const block = await createBlock(t, note.noteId, ctx.campaignId)
       await syncBlocksToYjs(t, note.noteId, [{ id: block.blockNoteId, type: 'paragraph' }])
 
-      await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
+      await dmAuth.action(api.blockShares.actions.setBlocksShareStatus, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
         blockNoteIds: [block.blockNoteId],
         status: 'individually_shared',
       })
 
-      await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
+      await dmAuth.action(api.blockShares.actions.shareBlocks, {
         campaignId: ctx.campaignId,
         noteId: note.noteId,
         blockNoteIds: [block.blockNoteId],

@@ -12,6 +12,7 @@ import {
   makeYjsUpdateWithBlocks,
 } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
 import type { GameMapSnapshotData } from '../../gameMaps/types'
+import type { TestBlock } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
 
 describe('note snapshots capture Y.Doc state directly', () => {
   const t = createTestContext()
@@ -28,7 +29,7 @@ describe('note snapshots capture Y.Doc state directly', () => {
         parentTarget: { kind: 'direct', parentId: null },
       })
 
-      const blocks = [
+      const blocks: Array<TestBlock> = [
         {
           id: 'block-1',
           type: 'paragraph',

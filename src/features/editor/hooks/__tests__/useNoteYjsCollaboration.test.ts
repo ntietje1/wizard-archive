@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import * as Y from 'yjs'
 import {
   LIVE_YJS_PERSIST_DEBOUNCE_MS,
   PERSIST_INTERVAL_MS,
@@ -13,17 +12,18 @@ const NOTE_ID = 'test-note-id' as Id<'sidebarItems'>
 const OTHER_NOTE_ID = 'other-test-note-id' as Id<'sidebarItems'>
 const USER = { name: 'Test User', color: '#ff0000' }
 
-const { mockMutation, mockConvexClient, mockUseAuthQuery, mockInvalidateQueries } = vi.hoisted(
-  () => {
+const { mockAction, mockMutation, mockConvexClient, mockUseAuthQuery, mockInvalidateQueries } =
+  vi.hoisted(() => {
     const mutation = vi.fn().mockResolvedValue(null)
+    const action = vi.fn().mockResolvedValue(null)
     return {
+      mockAction: action,
       mockMutation: mutation,
-      mockConvexClient: { mutation },
+      mockConvexClient: { action, mutation },
       mockUseAuthQuery: vi.fn().mockReturnValue({ data: undefined }),
       mockInvalidateQueries: vi.fn().mockResolvedValue(undefined),
     }
-  },
-)
+  })
 
 vi.mock('convex/_generated/api', () => ({
   api: {
@@ -36,7 +36,7 @@ vi.mock('convex/_generated/api', () => ({
       },
     },
     notes: {
-      mutations: {
+      actions: {
         persistNoteBlocks: 'persistNoteBlocks',
       },
     },
@@ -99,6 +99,8 @@ vi.mock('../../providers/convex-yjs-provider', () => ({
 describe('useNoteYjsCollaboration', () => {
   beforeEach(() => {
     vi.useFakeTimers()
+    mockAction.mockClear()
+    mockAction.mockResolvedValue(null)
     mockMutation.mockClear()
     mockMutation.mockResolvedValue(null)
     mockInvalidateQueries.mockClear()
@@ -133,10 +135,8 @@ describe('useNoteYjsCollaboration', () => {
         callOrder.push('flush')
         return Promise.resolve()
       })
-      mockMutation.mockImplementation((mutationName: string) => {
-        if (mutationName === 'persistNoteBlocks') {
-          callOrder.push('persist')
-        }
+      mockAction.mockImplementation((actionName: string) => {
+        if (actionName === 'persistNoteBlocks') callOrder.push('persist')
         return Promise.resolve(null)
       })
 
@@ -149,7 +149,7 @@ describe('useNoteYjsCollaboration', () => {
       await flushMicrotasks(10)
 
       expect(mockFlushPendingUpdates).toHaveBeenCalled()
-      expect(mockMutation).toHaveBeenCalledWith('persistNoteBlocks', {
+      expect(mockAction).toHaveBeenCalledWith('persistNoteBlocks', {
         campaignId: 'test-campaign-id',
         documentId: NOTE_ID,
       })
@@ -171,7 +171,7 @@ describe('useNoteYjsCollaboration', () => {
       await vi.advanceTimersByTimeAsync(LIVE_YJS_PERSIST_DEBOUNCE_MS)
       await flushMicrotasks(10)
 
-      expect(mockMutation).toHaveBeenCalledWith('persistNoteBlocks', {
+      expect(mockAction).toHaveBeenCalledWith('persistNoteBlocks', {
         campaignId: 'test-campaign-id',
         documentId: NOTE_ID,
       })
@@ -190,7 +190,7 @@ describe('useNoteYjsCollaboration', () => {
       await flushMicrotasks(10)
 
       expect(mockFlushPendingUpdates).toHaveBeenCalled()
-      expect(mockMutation).toHaveBeenCalledWith('persistNoteBlocks', {
+      expect(mockAction).toHaveBeenCalledWith('persistNoteBlocks', {
         campaignId: 'test-campaign-id',
         documentId: NOTE_ID,
       })
@@ -203,7 +203,7 @@ describe('useNoteYjsCollaboration', () => {
 
       const { result } = renderHook(() => useNoteYjsCollaboration(NOTE_ID, USER, true))
       await flushMicrotasks(10)
-      mockMutation.mockClear()
+      mockAction.mockClear()
 
       result.current.provider!.isApplyingRemoteUpdate = true
       result.current.doc!.transact(() => {
@@ -214,7 +214,7 @@ describe('useNoteYjsCollaboration', () => {
       await vi.advanceTimersByTimeAsync(LIVE_YJS_PERSIST_DEBOUNCE_MS)
       await flushMicrotasks(10)
 
-      expect(mockMutation).not.toHaveBeenCalledWith('persistNoteBlocks', expect.anything())
+      expect(mockAction).not.toHaveBeenCalledWith('persistNoteBlocks', expect.anything())
     })
 
     it('calls persistNoteBlocks after interval when canEdit and loaded', async () => {
@@ -226,7 +226,7 @@ describe('useNoteYjsCollaboration', () => {
 
       await vi.advanceTimersByTimeAsync(PERSIST_INTERVAL_MS)
       await flushMicrotasks(10)
-      expect(mockMutation).toHaveBeenCalledWith('persistNoteBlocks', {
+      expect(mockAction).toHaveBeenCalledWith('persistNoteBlocks', {
         campaignId: 'test-campaign-id',
         documentId: NOTE_ID,
       })
@@ -244,9 +244,7 @@ describe('useNoteYjsCollaboration', () => {
       await vi.advanceTimersByTimeAsync(PERSIST_INTERVAL_MS)
       await flushMicrotasks(10)
 
-      const persistCalls = mockMutation.mock.calls.filter(
-        ([mutationName]) => mutationName === 'persistNoteBlocks',
-      )
+      const persistCalls = mockAction.mock.calls
       expect(persistCalls).toHaveLength(2)
     })
 
@@ -258,7 +256,7 @@ describe('useNoteYjsCollaboration', () => {
       renderHook(() => useNoteYjsCollaboration(NOTE_ID, USER, false))
 
       vi.advanceTimersByTime(PERSIST_INTERVAL_MS)
-      expect(mockMutation).not.toHaveBeenCalledWith('persistNoteBlocks', expect.anything())
+      expect(mockAction).not.toHaveBeenCalledWith('persistNoteBlocks', expect.anything())
     })
 
     it('does not persist while still loading', () => {
@@ -267,7 +265,7 @@ describe('useNoteYjsCollaboration', () => {
       renderHook(() => useNoteYjsCollaboration(NOTE_ID, USER, true))
 
       vi.advanceTimersByTime(PERSIST_INTERVAL_MS)
-      expect(mockMutation).not.toHaveBeenCalledWith('persistNoteBlocks', expect.anything())
+      expect(mockAction).not.toHaveBeenCalledWith('persistNoteBlocks', expect.anything())
     })
 
     it('stops persist interval when canEdit changes to false', async () => {
@@ -282,19 +280,19 @@ describe('useNoteYjsCollaboration', () => {
 
       await vi.advanceTimersByTimeAsync(PERSIST_INTERVAL_MS)
       await flushMicrotasks(10)
-      expect(mockMutation).toHaveBeenCalledWith('persistNoteBlocks', {
+      expect(mockAction).toHaveBeenCalledWith('persistNoteBlocks', {
         campaignId: 'test-campaign-id',
         documentId: NOTE_ID,
       })
 
-      mockMutation.mockClear()
+      mockAction.mockClear()
       rerender({ canEdit: false })
       await flushMicrotasks(10)
-      mockMutation.mockClear()
+      mockAction.mockClear()
 
       await vi.advanceTimersByTimeAsync(PERSIST_INTERVAL_MS * 2)
       await flushMicrotasks(10)
-      expect(mockMutation).not.toHaveBeenCalledWith('persistNoteBlocks', expect.anything())
+      expect(mockAction).not.toHaveBeenCalledWith('persistNoteBlocks', expect.anything())
     })
 
     it('cleans up interval and destroys provider on unmount', async () => {
@@ -305,24 +303,19 @@ describe('useNoteYjsCollaboration', () => {
       const { unmount } = renderHook(() => useNoteYjsCollaboration(NOTE_ID, USER, true))
       await flushMicrotasks(10)
 
-      mockMutation.mockClear()
+      mockAction.mockClear()
       unmount()
       await flushMicrotasks(10)
 
       expect(mockFlushPendingUpdates).toHaveBeenCalled()
-      const mutationCountAfterCleanup = mockMutation.mock.calls.length
+      const actionCountAfterCleanup = mockAction.mock.calls.length
 
       vi.advanceTimersByTime(PERSIST_INTERVAL_MS * 2)
-      expect(mockMutation.mock.calls.length).toBe(mutationCountAfterCleanup)
+      expect(mockAction.mock.calls.length).toBe(actionCountAfterCleanup)
 
       await Promise.resolve()
       await flushMicrotasks(10)
-      expect(mockMutation).toHaveBeenCalledWith('pushUpdate', {
-        campaignId: 'test-campaign-id',
-        documentId: NOTE_ID,
-        update: expect.any(ArrayBuffer),
-      })
-      expect(mockMutation).toHaveBeenCalledWith('persistNoteBlocks', {
+      expect(mockAction).toHaveBeenCalledWith('persistNoteBlocks', {
         campaignId: 'test-campaign-id',
         documentId: NOTE_ID,
       })
@@ -346,60 +339,15 @@ describe('useNoteYjsCollaboration', () => {
       unmount()
 
       await Promise.resolve()
-      expect(mockMutation).not.toHaveBeenCalledWith('persistNoteBlocks', expect.anything())
+      expect(mockAction).not.toHaveBeenCalledWith('persistNoteBlocks', expect.anything())
 
       resolveFlush()
       await flushMicrotasks(10)
 
-      expect(mockMutation).toHaveBeenCalledWith('pushUpdate', {
-        campaignId: 'test-campaign-id',
-        documentId: NOTE_ID,
-        update: expect.any(ArrayBuffer),
-      })
-      expect(mockMutation).toHaveBeenCalledWith('persistNoteBlocks', {
+      expect(mockAction).toHaveBeenCalledWith('persistNoteBlocks', {
         campaignId: 'test-campaign-id',
         documentId: NOTE_ID,
       })
-    })
-
-    it('captures the final cleanup snapshot before awaiting provider flush', async () => {
-      mockUseAuthQuery.mockReturnValue({
-        data: [{ seq: 0, update: new ArrayBuffer(0) }],
-      })
-
-      let resolveFlush!: () => void
-      mockFlushPendingUpdates.mockReturnValueOnce(
-        new Promise<void>((resolve) => {
-          resolveFlush = resolve
-        }),
-      )
-
-      const { result, unmount } = renderHook(() => useNoteYjsCollaboration(NOTE_ID, USER, true))
-      await flushMicrotasks(10)
-
-      const doc = result.current.doc!
-      doc.getMap('document-test').set('value', 'before-teardown')
-
-      unmount()
-      await Promise.resolve()
-
-      doc.getMap('document-test').set('value', 'after-teardown')
-      resolveFlush()
-      await flushMicrotasks(10)
-
-      const pushUpdateCall = mockMutation.mock.calls.find(
-        ([mutationName]) => mutationName === 'pushUpdate',
-      )
-      expect(pushUpdateCall).toBeDefined()
-
-      const pushedDoc = new Y.Doc()
-      try {
-        const [, args] = pushUpdateCall!
-        Y.applyUpdate(pushedDoc, new Uint8Array(args.update))
-        expect(pushedDoc.getMap('document-test').get('value')).toBe('before-teardown')
-      } finally {
-        pushedDoc.destroy()
-      }
     })
 
     it('persists the previous note when noteId changes', async () => {
@@ -421,7 +369,7 @@ describe('useNoteYjsCollaboration', () => {
       rerender({ noteId: OTHER_NOTE_ID })
 
       await Promise.resolve()
-      expect(mockMutation).not.toHaveBeenCalledWith('persistNoteBlocks', {
+      expect(mockAction).not.toHaveBeenCalledWith('persistNoteBlocks', {
         campaignId: 'test-campaign-id',
         documentId: NOTE_ID,
       })
@@ -429,12 +377,7 @@ describe('useNoteYjsCollaboration', () => {
       resolveFlush()
       await flushMicrotasks(10)
 
-      expect(mockMutation).toHaveBeenCalledWith('pushUpdate', {
-        campaignId: 'test-campaign-id',
-        documentId: NOTE_ID,
-        update: expect.any(ArrayBuffer),
-      })
-      expect(mockMutation).toHaveBeenCalledWith('persistNoteBlocks', {
+      expect(mockAction).toHaveBeenCalledWith('persistNoteBlocks', {
         campaignId: 'test-campaign-id',
         documentId: NOTE_ID,
       })

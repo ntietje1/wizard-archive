@@ -2,13 +2,14 @@ import { describe, expect, it } from 'vitest'
 import { flattenBlocks } from '../functions/flattenBlocks'
 import { reconstructBlockTree } from '../functions/reconstructBlockTree'
 import { testBlockNoteId } from '../../_test/factories.helper'
-import type { Block, InlineContent } from '../types'
-import type { CustomBlock } from '../../notes/editorSpecs'
+import type { Block, CustomBlock, InlineContent } from '../types'
 import type { Id } from '../../_generated/dataModel'
-import type { z } from 'zod'
-import type { tableContentSchema } from '../blockSchemas'
 
-type TableContent = z.infer<typeof tableContentSchema>
+type TableContent = {
+  type: 'tableContent'
+  columnWidths: Array<number>
+  rows: Array<{ cells: Array<InlineContent> }>
+}
 type TestBlockOverrides = Partial<Omit<CustomBlock, 'content' | 'props' | 'children'>> & {
   content?: unknown
   props?: unknown
@@ -39,6 +40,7 @@ function toFakeBlocks(flat: ReturnType<typeof flattenBlocks>): Array<Block> {
         position: f.position,
         type: f.type,
         props: f.props,
+        content: f.content,
         inlineContent: f.inlineContent,
         plainText: f.plainText,
         shareStatus: 'not_shared',
@@ -133,6 +135,31 @@ describe('flattenBlocks', () => {
     const result = flattenBlocks(blocks)
     expect(result[0].plainText).toBe('Cell')
     expect(result[0].inlineContent).toBeNull()
+  })
+
+  it('rejects malformed value inline content', () => {
+    const blocks = [
+      makeBlock('bad-value', {
+        content: [{ type: 'value', props: { slug: 'missing-fields' } }],
+      }),
+    ]
+
+    expect(() => flattenBlocks(blocks)).toThrow(/Malformed inline content/)
+  })
+
+  it('rejects malformed table cell content', () => {
+    const blocks = [
+      makeBlock('bad-table', {
+        type: 'table',
+        content: {
+          type: 'tableContent',
+          columnWidths: [null],
+          rows: [{ cells: [{ type: 'tableCell', content: [{ type: 'text' }] }] }],
+        },
+      }),
+    ]
+
+    expect(() => flattenBlocks(blocks)).toThrow(/Malformed block content/)
   })
 
   it('sets inlineContent to null when block has no content', () => {

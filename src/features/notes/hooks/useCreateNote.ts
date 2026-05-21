@@ -1,9 +1,13 @@
 import { api } from 'convex/_generated/api'
-import type { CustomBlock } from 'convex/notes/editorSpecs'
+import type { CustomBlock } from '~/features/editor/editor-specs'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { encodeStateAsUpdate } from 'yjs'
+import { useConvex } from '@convex-dev/react-query'
 import type { CreateParentTarget } from 'convex/sidebarItems/validation/parent'
 import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
+import { blocksToYDoc } from '~/features/editor/blocknote-yjs'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
+import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 
 interface CreateNoteArgs {
   name: string
@@ -13,7 +17,9 @@ interface CreateNoteArgs {
 
 export function useCreateNote() {
   const { createItem } = useCreateFileSystemItem()
-  const setNoteContent = useCampaignMutation(api.notes.mutations.setNoteContent)
+  const convex = useConvex()
+  const { campaignId } = useCampaign()
+  const pushUpdate = useCampaignMutation(api.yjsSync.mutations.pushUpdate)
 
   const createNote = async (args: CreateNoteArgs) => {
     return await createItem(
@@ -23,10 +29,31 @@ export function useCreateNote() {
         parentTarget: args.parentTarget,
       },
       async (created) => {
-        await setNoteContent.mutateAsync({ noteId: created.id, content: args.content })
+        if (args.content.length > 0) {
+          if (!campaignId) throw new Error('useCreateNote requires a campaign context')
+          const doc = blocksToYDoc(args.content, 'document')
+          try {
+            await pushUpdate.mutateAsync({
+              documentId: created.id,
+              update: toArrayBuffer(encodeStateAsUpdate(doc)),
+            })
+            await convex.action(api.notes.actions.persistNoteBlocks, {
+              campaignId,
+              documentId: created.id,
+            })
+          } finally {
+            doc.destroy()
+          }
+        }
       },
     )
   }
 
   return { createNote }
+}
+
+function toArrayBuffer(update: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(update.byteLength)
+  copy.set(update)
+  return copy.buffer
 }

@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { NoteContent } from '../note-content'
 import type * as BlockNoteCore from '@blocknote/core'
-import type { CustomBlock, CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import type { CustomBlock, CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { ReactNode } from 'react'
 

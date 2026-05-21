@@ -1,4 +1,4 @@
-import * as Y from 'yjs'
+import type * as Y from 'yjs'
 import { useEffect, useRef } from 'react'
 import { convexQuery, useConvex } from '@convex-dev/react-query'
 import { useQueryClient } from '@tanstack/react-query'
@@ -42,14 +42,6 @@ function stopPersistLifecycle(lifecycle: PersistLifecycle) {
     clearTimeout(lifecycle.timeoutId)
     lifecycle.timeoutId = null
   }
-}
-
-function encodeDocUpdateAsArrayBuffer(doc: Y.Doc): ArrayBuffer {
-  const update = Y.encodeStateAsUpdate(doc)
-  return update.buffer.slice(
-    update.byteOffset,
-    update.byteOffset + update.byteLength,
-  ) as ArrayBuffer
 }
 
 async function invalidatePersistedNoteQueries({
@@ -100,7 +92,7 @@ async function persistNoteBlocksNow({
   queryClient: QueryClient
   sidebarItems: ActiveSidebarItems
 }) {
-  await convex.mutation(api.notes.mutations.persistNoteBlocks, {
+  await convex.action(api.notes.actions.persistNoteBlocks, {
     campaignId,
     documentId: noteId,
   })
@@ -134,7 +126,6 @@ export function useNoteYjsCollaboration(
   const persistLifecycle = persistLifecycleRef.current.value
 
   const cleanupPersist = async ({
-    doc,
     documentId,
     provider,
   }: {
@@ -149,7 +140,6 @@ export function useNoteYjsCollaboration(
     }
 
     const activeCampaignId = campaignId
-    const finalUpdate = encodeDocUpdateAsArrayBuffer(doc)
 
     try {
       const flushed = await provider.flushPendingUpdates()
@@ -164,16 +154,6 @@ export function useNoteYjsCollaboration(
       await persistLifecycle.persistPromise
     } catch {
       // The scheduled persist path logs failures already.
-    }
-
-    try {
-      await convexRef.current.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: activeCampaignId,
-        documentId,
-        update: finalUpdate,
-      })
-    } catch (err: unknown) {
-      logger.error(`[Notes] final Yjs sync failed for ${documentId}:`, err)
     }
 
     try {

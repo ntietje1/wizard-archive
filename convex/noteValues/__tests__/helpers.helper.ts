@@ -145,7 +145,7 @@ export async function replaceNoteDocumentAndPersist(
     })
   })
 
-  await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+  await dmAuth.action(api.notes.actions.persistNoteBlocks, {
     campaignId,
     documentId: noteId,
   })

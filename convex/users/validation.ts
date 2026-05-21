@@ -1,39 +1,37 @@
-import { createCanonicalSlugHelpers, slugify } from '../common/slug'
-import { parseOrThrowClientValidation } from '../common/zod'
+import { createSlugHelpers } from '../common/slug'
 import type { BrandedString } from '../common/slug'
-import { z } from 'zod'
-import { USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH } from './constants'
+import { USERNAME_MAX_LENGTH } from './constants'
+import type { SlugOptions } from '../../shared/slugs'
 
 export type Username = BrandedString<'Username'>
 
-const usernameHelpers = createCanonicalSlugHelpers({
-  brand: 'Username',
+export const USERNAME_SLUG_OPTIONS = {
   label: 'Username',
-  minLength: USERNAME_MIN_LENGTH,
+  minLength: 4,
   maxLength: USERNAME_MAX_LENGTH,
-  fallbackMessage: 'Invalid username',
+} satisfies SlugOptions
+
+const usernameHelpers = createSlugHelpers<'Username'>({
+  ...USERNAME_SLUG_OPTIONS,
 })
 
-export const usernameValueSchema = usernameHelpers.valueSchema
-export const usernameSchema = usernameHelpers.schema
+const storedUsernameHelpers = createSlugHelpers<'Username'>({
+  label: USERNAME_SLUG_OPTIONS.label,
+  maxLength: USERNAME_SLUG_OPTIONS.maxLength,
+})
+
 export const usernameValidator = usernameHelpers.validator
 export const validateUsername = usernameHelpers.validate
 export const parseUsername = usernameHelpers.parse
 export const assertUsername = usernameHelpers.assert
+export const assertStoredUsername = storedUsernameHelpers.assert
 
-const emailSchema = z.email('Please enter a valid email address')
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export function normalizeUsernameInput(input: string): string {
-  return slugify(input)
+  return input.trim().toLowerCase()
 }
 
 export function validateEmail(email: string): string | null {
-  const result = emailSchema.safeParse(email)
-  return result.success
-    ? null
-    : (result.error.issues[0]?.message ?? 'Please enter a valid email address')
-}
-
-export function requireUsername(username: string): Username {
-  return parseOrThrowClientValidation(usernameSchema, username, 'Invalid username')
+  return EMAIL_REGEX.test(email) ? null : 'Please enter a valid email address'
 }

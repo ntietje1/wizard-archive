@@ -4,7 +4,7 @@ import {
   customBlockSpecs,
   customInlineContentSpecs,
   customStyleSpecs,
-} from 'convex/notes/editorSpecs'
+} from '~/features/editor/editor-specs'
 import type {
   BlockNoteEditor,
   BlockSpecs,

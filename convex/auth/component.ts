@@ -1,104 +1,57 @@
-import { betterAuth } from 'better-auth/minimal'
-import { createClient } from '@convex-dev/better-auth'
-import { convex } from '@convex-dev/better-auth/plugins'
-import { requireRunMutationCtx } from '@convex-dev/better-auth/utils'
-import { multiSession, twoFactor } from 'better-auth/plugins'
-import authConfig from '../auth.config'
-import {
-  changeEmailConfirmationEmail,
-  deleteAccountVerificationEmail,
-  passwordResetEmail,
-  resend,
-  verificationEmail,
-} from '../email'
-import { components, internal } from '../_generated/api'
+import { v } from 'convex/values'
+import { internalMutation } from '../_generated/server'
 import { onCreateUser } from './functions/onCreateUser'
 import { onUpdateUser } from './functions/onUpdateUser'
 import { onDeleteUser } from './functions/onDeleteUser'
-import { getAuthBaseUrlConfig } from './authBaseUrl'
-import type { AuthFunctions, GenericCtx } from '@convex-dev/better-auth'
-import type { DataModel } from '../_generated/dataModel'
 
-const authFunctions: AuthFunctions = internal.auth.component
+const authUserDocValidator = v.object({
+  _id: v.string(),
+  _creationTime: v.number(),
+  email: v.string(),
+  name: v.string(),
+  image: v.optional(v.union(v.string(), v.null())),
+  emailVerified: v.boolean(),
+  twoFactorEnabled: v.optional(v.union(v.boolean(), v.null())),
+})
 
-export const authComponent = createClient<DataModel>(components.betterAuth, {
-  authFunctions,
-  triggers: {
-    user: {
-      onCreate: async (ctx, user) => onCreateUser(ctx, user),
-      onUpdate: async (ctx, newUser, oldUser) => onUpdateUser(ctx, newUser, oldUser),
-      onDelete: async (ctx, user) => onDeleteUser(ctx, user),
-    },
+const deletedAuthUserDocValidator = v.object({
+  _id: v.string(),
+  _creationTime: v.number(),
+})
+
+export const onCreate = internalMutation({
+  args: {
+    doc: authUserDocValidator,
+    model: v.string(),
+  },
+  handler: async (ctx, { doc, model }) => {
+    if (model === 'user') {
+      await onCreateUser(ctx, doc)
+    }
   },
 })
 
-export const createAuth = (ctx: GenericCtx<DataModel>) => {
-  const baseURL = getAuthBaseUrlConfig(process.env.BETTER_AUTH_ALLOWED_HOSTS)
-  const googleClientId = process.env.GOOGLE_CLIENT_ID
-  const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET
-  const googleProvider =
-    googleClientId && googleClientSecret
-      ? {
-          google: {
-            clientId: googleClientId,
-            clientSecret: googleClientSecret,
-          },
-        }
-      : {}
+export const onUpdate = internalMutation({
+  args: {
+    oldDoc: authUserDocValidator,
+    newDoc: authUserDocValidator,
+    model: v.string(),
+  },
+  handler: async (ctx, { oldDoc, newDoc, model }) => {
+    if (model === 'user') {
+      await onUpdateUser(ctx, newDoc, oldDoc)
+    }
+  },
+})
 
-  return betterAuth({
-    secret: process.env.BETTER_AUTH_SECRET,
-    baseURL,
-    database: authComponent.adapter(ctx),
-    session: {
-      expiresIn: 60 * 60 * 24 * 30,
-      updateAge: 60 * 60 * 24 * 7,
-      cookieCache: {
-        enabled: true,
-        maxAge: 60 * 10,
-      },
-      deferSessionRefresh: true,
-    },
-    emailAndPassword: {
-      enabled: true,
-      requireEmailVerification: true,
-      async sendResetPassword({ user, url }) {
-        await resend.sendEmail(requireRunMutationCtx(ctx), passwordResetEmail(user.email, url))
-      },
-    },
-    emailVerification: {
-      sendOnSignUp: true,
-      autoSignInAfterVerification: true,
-      async sendVerificationEmail({ user, url }) {
-        if (user.emailVerified) return
-        await resend.sendEmail(requireRunMutationCtx(ctx), verificationEmail(user.email, url))
-      },
-    },
-    user: {
-      deleteUser: {
-        enabled: true,
-        async sendDeleteAccountVerification({ user, url }) {
-          await resend.sendEmail(
-            requireRunMutationCtx(ctx),
-            deleteAccountVerificationEmail(user.email, url),
-          )
-        },
-      },
-      changeEmail: {
-        enabled: true,
-        async sendChangeEmailConfirmation({ user, newEmail, url }) {
-          await resend.sendEmail(
-            requireRunMutationCtx(ctx),
-            changeEmailConfirmationEmail(user.email, newEmail, url),
-          )
-        },
-      },
-    },
-    socialProviders: {
-      ...googleProvider,
-    },
-    plugins: [convex({ authConfig }), twoFactor(), multiSession()],
-  })
-}
-
-export const { onCreate, onUpdate, onDelete } = authComponent.triggersApi()
+export const onDelete = internalMutation({
+  args: {
+    doc: deletedAuthUserDocValidator,
+    model: v.string(),
+  },
+  handler: async (ctx, { doc, model }) => {
+    if (model === 'user') {
+      await onDeleteUser(ctx, doc)
+    }
+  },
+})

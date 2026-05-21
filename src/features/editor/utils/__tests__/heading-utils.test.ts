@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { CustomBlock } from 'convex/notes/editorSpecs'
+import type { CustomBlock } from '~/features/editor/editor-specs'
 import {
   extractHeadingsFromContent,
   findHeadingByText,

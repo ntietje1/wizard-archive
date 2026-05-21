@@ -1,5 +1,5 @@
 import type { Heading, HeadingLevel } from 'convex/blocks/types'
-import type { CustomBlock } from 'convex/notes/editorSpecs'
+import type { CustomBlock } from '~/features/editor/editor-specs'
 
 function isTextNode(item: unknown): item is { type: 'text'; text?: string } {
   return typeof item === 'object' && item !== null && 'type' in item && item.type === 'text'

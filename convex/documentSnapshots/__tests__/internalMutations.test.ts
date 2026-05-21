@@ -6,9 +6,8 @@ import { createCanvas, createGameMap, createMapPin, createNote } from '../../_te
 import { SNAPSHOT_TYPE } from '../schema'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { makeYjsUpdate } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
-import { captureCanvasSnapshot } from '../../canvases/functions/captureCanvasSnapshot'
-import { captureNoteSnapshot } from '../../notes/functions/captureNoteSnapshot'
 import { captureGameMapSnapshot } from '../../gameMaps/functions/captureGameMapSnapshot'
+import { internal } from '../../_generated/api'
 import type { LogEditHistoryArgs } from '../../editHistory/types'
 import type { Id } from '../../_generated/dataModel'
 import type { GameMapSnapshotData } from '../../gameMaps/types'
@@ -60,12 +59,13 @@ describe('captureCanvasSnapshot', () => {
       hasSnapshot: true,
     })
 
-    await t.run(async (dbCtx) => {
-      await captureCanvasSnapshot(dbCtx, {
-        canvasId,
-        editHistoryId,
-        campaignId: ctx.campaignId,
-      })
+    await t.action(internal.yjsSync.internalActions.captureSnapshot, {
+      documentId: canvasId,
+      itemType: SIDEBAR_ITEM_TYPES.canvases,
+      snapshotType: SNAPSHOT_TYPE.yjs_state,
+      editHistoryId,
+      campaignId: ctx.campaignId,
+      maxSeq: 0,
     })
 
     await t.run(async (dbCtx) => {
@@ -139,12 +139,13 @@ describe('captureCanvasSnapshot', () => {
       hasSnapshot: true,
     })
 
-    await t.run(async (dbCtx) => {
-      await captureCanvasSnapshot(dbCtx, {
-        canvasId,
-        editHistoryId,
-        campaignId: ctx.campaignId,
-      })
+    await t.action(internal.yjsSync.internalActions.captureSnapshot, {
+      documentId: canvasId,
+      itemType: SIDEBAR_ITEM_TYPES.canvases,
+      snapshotType: SNAPSHOT_TYPE.yjs_state,
+      editHistoryId,
+      campaignId: ctx.campaignId,
+      maxSeq: 1,
     })
 
     await t.run(async (dbCtx) => {
@@ -189,12 +190,13 @@ describe('captureNoteSnapshot', () => {
       hasSnapshot: true,
     })
 
-    await t.run(async (dbCtx) => {
-      await captureNoteSnapshot(dbCtx, {
-        noteId,
-        editHistoryId,
-        campaignId: ctx.campaignId,
-      })
+    await t.action(internal.yjsSync.internalActions.captureSnapshot, {
+      documentId: noteId,
+      itemType: SIDEBAR_ITEM_TYPES.notes,
+      snapshotType: SNAPSHOT_TYPE.yjs_state,
+      editHistoryId,
+      campaignId: ctx.campaignId,
+      maxSeq: 0,
     })
 
     await t.run(async (dbCtx) => {

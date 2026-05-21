@@ -1,4 +1,4 @@
-import { assertUsername } from '../validation'
+import { assertStoredUsername } from '../validation'
 import type { Username } from '../validation'
 import type { QueryCtx } from '../../_generated/server'
 import type { Doc, Id } from '../../_generated/dataModel'
@@ -7,7 +7,7 @@ import type { UserProfile, UserProfileFromDb } from '../types'
 function toUserProfileFromDb(profile: Doc<'userProfiles'>): UserProfileFromDb {
   return {
     ...profile,
-    username: assertUsername(profile.username),
+    username: assertStoredUsername(profile.username),
   }
 }
 

@@ -816,7 +816,7 @@ describe('updateCampaign', () => {
     await expectValidationFailed(
       dmAuth.mutation(api.campaigns.mutations.updateCampaign, {
         campaignId: ctx.campaignId,
-        slug: 'a',
+        slug: 'invalid slug',
       }),
     )
   })

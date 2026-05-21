@@ -1,4 +1,5 @@
-import { NOTE_VALUE_FUNCTION_BY_NAME, formatNoteValue, isValidValueSlug } from './constants'
+import { validateSlug } from '../slugs'
+import { NOTE_VALUE_FUNCTION_BY_NAME, NOTE_VALUE_SLUG_OPTIONS, formatNoteValue } from './constants'
 import { NOTE_VALUE_ERROR_CODES } from './types'
 import type {
   NoteValueAuthoringDefinition,
@@ -522,7 +523,7 @@ function compileNoteValueExpression<TNoteId>(
   definition: NoteValueAuthoringDefinition<TNoteId>,
   options: CompileExpressionOptions<TNoteId>,
 ): NoteValueCompileData<TNoteId> {
-  if (!isValidValueSlug(definition.slug)) {
+  if (validateSlug(definition.slug, NOTE_VALUE_SLUG_OPTIONS) !== null) {
     return makeCompileError('invalid_slug', `Slug "${definition.slug}" is invalid`)
   }
 

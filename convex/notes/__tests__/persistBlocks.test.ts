@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
-import { createNoteViaFilesystem } from '../../_test/filesystemSetup.helper'
+import {
+  createCanvasViaFilesystem,
+  createNoteViaFilesystem,
+} from '../../_test/filesystemSetup.helper'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import { createNote, createSidebarShare, testBlockNoteId } from '../../_test/factories.helper'
-import { expectNotAuthenticated, expectPermissionDenied } from '../../_test/assertions.helper'
-import { api } from '../../_generated/api'
+import {
+  expectNotAuthenticated,
+  expectPermissionDenied,
+  expectValidationFailed,
+} from '../../_test/assertions.helper'
+import { api, internal } from '../../_generated/api'
 import {
   makeYjsUpdate,
   makeYjsUpdateWithBlocks,
@@ -18,7 +25,7 @@ describe('persistBlocks', () => {
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
 
     await expectNotAuthenticated(
-      t.mutation(api.notes.mutations.persistNoteBlocks, {
+      t.action(api.notes.actions.persistNoteBlocks, {
         campaignId: ctx.campaignId,
         documentId: noteId,
       }),
@@ -45,9 +52,27 @@ describe('persistBlocks', () => {
     })
 
     await expectPermissionDenied(
-      playerAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+      playerAuth.action(api.notes.actions.persistNoteBlocks, {
         campaignId: ctx.campaignId,
         documentId: noteId,
+      }),
+    )
+  })
+
+  it('rejects non-note documents', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { canvasId } = await createCanvasViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'Projection Canvas',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+
+    await expectValidationFailed(
+      dmAuth.action(api.notes.actions.persistNoteBlocks, {
+        campaignId: ctx.campaignId,
+        documentId: canvasId,
       }),
     )
   })
@@ -62,7 +87,7 @@ describe('persistBlocks', () => {
       parentTarget: { kind: 'direct', parentId: null },
     })
 
-    const result = await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+    const result = await dmAuth.action(api.notes.actions.persistNoteBlocks, {
       campaignId: ctx.campaignId,
       documentId: noteId,
     })
@@ -95,7 +120,7 @@ describe('persistBlocks', () => {
       update: makeYjsUpdate(),
     })
 
-    const result = await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+    const result = await dmAuth.action(api.notes.actions.persistNoteBlocks, {
       campaignId: ctx.campaignId,
       documentId: noteId,
     })
@@ -148,7 +173,7 @@ describe('persistBlocks', () => {
       ]),
     })
 
-    const result = await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+    const result = await dmAuth.action(api.notes.actions.persistNoteBlocks, {
       campaignId: ctx.campaignId,
       documentId: noteId,
     })
@@ -185,6 +210,116 @@ describe('persistBlocks', () => {
     })
   })
 
+  it('rejects malformed nested blocks before syncing derived data', async () => {
+    const ctx = await setupCampaignContext(t)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+    await expect(
+      t.mutation(internal.notes.internalMutations.syncDerivedDataFromBlocks, {
+        noteId,
+        content: [
+          {
+            id: 'root',
+            type: 'paragraph',
+            props: {},
+            content: [],
+            children: [{ id: 'child', type: 'unknown', props: {}, content: [] }],
+          },
+        ],
+      }),
+    ).rejects.toThrow(/Block type is invalid/)
+  })
+
+  it('rejects malformed table content before syncing derived data', async () => {
+    const ctx = await setupCampaignContext(t)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+    await expect(
+      t.mutation(internal.notes.internalMutations.syncDerivedDataFromBlocks, {
+        noteId,
+        content: [
+          {
+            id: 'table',
+            type: 'table',
+            props: {},
+            content: {
+              type: 'tableContent',
+              columnWidths: [null],
+              rows: [{ cells: [{ type: 'tableCell', content: [{ type: 'text' }] }] }],
+            } as never,
+          },
+        ],
+      }),
+    ).rejects.toThrow()
+  })
+
+  it('persists non-text BlockNote blocks from canonical Yjs updates', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+
+    const { noteId } = await createNoteViaFilesystem(dmAuth, {
+      campaignId: ctx.campaignId,
+      name: 'Rich Content Note',
+      parentTarget: { kind: 'direct', parentId: null },
+    })
+
+    await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
+      campaignId: ctx.campaignId,
+      documentId: noteId,
+      update: makeYjsUpdateWithBlocks([
+        {
+          id: 'table-block-1',
+          type: 'table',
+          props: { textColor: 'default' },
+          content: {
+            type: 'tableContent',
+            columnWidths: [null, null],
+            rows: [
+              {
+                cells: [
+                  [{ type: 'text', text: 'A', styles: {} }],
+                  [{ type: 'text', text: 'B', styles: {} }],
+                ],
+              },
+            ],
+          },
+          children: [],
+        },
+        {
+          id: 'image-block-1',
+          type: 'image',
+          props: {
+            name: 'Preview',
+            url: 'https://example.com/image.png',
+            caption: 'A caption',
+            backgroundColor: 'default',
+            textAlignment: 'left',
+            showPreview: true,
+            previewWidth: 320,
+          },
+          children: [],
+        },
+      ]),
+    })
+
+    await dmAuth.action(api.notes.actions.persistNoteBlocks, {
+      campaignId: ctx.campaignId,
+      documentId: noteId,
+    })
+
+    await t.run(async (dbCtx) => {
+      const blocks = await dbCtx.db
+        .query('blocks')
+        .filter((q) => q.eq(q.field('noteId'), noteId))
+        .collect()
+
+      expect(blocks.map((block) => block.blockNoteId).sort()).toEqual([
+        'image-block-1',
+        'table-block-1',
+      ])
+    })
+  })
+
   it('rebuilds extracted noteValues when inline values are persisted', async () => {
     const ctx = await setupCampaignContext(t)
     const dmAuth = asDm(ctx)
@@ -217,7 +352,7 @@ describe('persistBlocks', () => {
       ]),
     })
 
-    await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+    await dmAuth.action(api.notes.actions.persistNoteBlocks, {
       campaignId: ctx.campaignId,
       documentId: noteId,
     })

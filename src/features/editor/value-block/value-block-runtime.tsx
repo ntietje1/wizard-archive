@@ -5,10 +5,11 @@ import {
   evaluateNoteValueAuthoringDefinitions,
 } from '../../../../shared/note-values/formula'
 import { extractNoteValueDefinitions } from '../../../../shared/note-values/extract-definitions'
-import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { Id } from 'convex/_generated/dataModel'
 import type {
   NoteValueAuthoringDefinition,
+  NoteValueResolution,
   NoteValueRuntimeState,
 } from '../../../../shared/note-values/types'
 import { NoteValueRuntimeContext } from './value-block-runtime-context'
@@ -80,19 +81,67 @@ function evaluateSameNoteAuthoringStates({
   externalStates: Array<NoteValueRuntimeState<Id<'sidebarItems'>>>
   externalNoteIdByPath: Map<string, Id<'sidebarItems'>>
 }) {
-  const externalValueByNoteAndSlug = new Map(
-    externalStates.map((state) => [`${state.noteId}:${state.slug}`, state]),
-  )
+  const definitionsBySlug = new Map<
+    string,
+    Array<NoteValueAuthoringDefinition<Id<'sidebarItems'>>>
+  >()
+  for (const definition of definitions) {
+    const matches = definitionsBySlug.get(definition.slug)
+    if (matches) matches.push(definition)
+    else definitionsBySlug.set(definition.slug, [definition])
+  }
+  const externalValuesByNoteAndSlug = new Map<
+    string,
+    Array<NoteValueRuntimeState<Id<'sidebarItems'>>>
+  >()
+  for (const state of externalStates) {
+    const key = `${state.noteId}:${state.slug}`
+    const states = externalValuesByNoteAndSlug.get(key)
+    if (states) states.push(state)
+    else externalValuesByNoteAndSlug.set(key, [state])
+  }
   const externalStateByTarget = new Map(
     externalStates.map((state) => [`${state.noteId}:${state.valueId}`, state]),
   )
   return evaluateNoteValueAuthoringDefinitions(definitions, {
     currentNoteId: noteId,
-    resolveExternal: (notePathRaw, slug) => {
+    resolveExternal: (notePathRaw, slug): NoteValueResolution<Id<'sidebarItems'>> => {
       const externalNoteId = externalNoteIdByPath.get(notePathRaw)
-      const state = externalNoteId
-        ? externalValueByNoteAndSlug.get(`${externalNoteId}:${slug}`)
+      if (externalNoteId === noteId) {
+        const matches = definitionsBySlug.get(slug) ?? []
+        if (matches.length > 1) {
+          return {
+            ok: false,
+            errorCode: 'duplicate_slug',
+            errorMessage: `Slug "${slug}" is duplicated in this note`,
+          }
+        }
+        const definition = matches[0]
+        if (definition) {
+          return {
+            ok: true,
+            noteId,
+            valueId: definition.valueId,
+          }
+        }
+        return {
+          ok: false,
+          errorCode: 'unknown_reference',
+          errorMessage: `Unknown reference "[[${notePathRaw}.${slug}]]"`,
+        }
+      }
+
+      const states = externalNoteId
+        ? externalValuesByNoteAndSlug.get(`${externalNoteId}:${slug}`)
         : undefined
+      if (states && states.length > 1) {
+        return {
+          ok: false,
+          errorCode: 'duplicate_slug',
+          errorMessage: `Slug "${slug}" is duplicated in the target note`,
+        }
+      }
+      const state = states?.[0]
       if (state) {
         return {
           ok: true,
@@ -133,7 +182,7 @@ function getExternalNoteIdByPathForDefinitions({
         itemsMap,
         sourceParentId,
       )
-      if (externalNoteId && externalNoteId !== noteId) {
+      if (externalNoteId) {
         noteIdByPath.set(reference.notePathRaw, externalNoteId)
       }
     }
@@ -174,7 +223,7 @@ export function NoteValueRuntimeProvider({
         itemsMap,
       })
     : new Map<string, Id<'sidebarItems'>>()
-  const externalNoteIds = [...new Set(externalNoteIdByPath.values())]
+  const externalNoteIds = [...new Set(externalNoteIdByPath.values())].filter((id) => id !== noteId)
   const externalStatesQuery = useCampaignQuery(
     api.noteValues.queries.getNoteValueStatesByNotes,
     externalNoteIds.length > 0 ? { noteIds: externalNoteIds } : 'skip',
@@ -196,6 +245,10 @@ export function NoteValueRuntimeProvider({
       stateByValueId.set(state.valueId, state)
     }
   }
+  const authoredValueStates = authoredDefinitions.flatMap((definition) => {
+    const state = stateByValueId.get(definition.valueId)
+    return state ? [state] : []
+  })
 
   return (
     <NoteValueRuntimeContext.Provider
@@ -203,6 +256,7 @@ export function NoteValueRuntimeProvider({
         noteId,
         editable,
         authoredDefinitions,
+        authoredValueStates,
         stateByValueId,
         sidebarItems,
         itemsMap,

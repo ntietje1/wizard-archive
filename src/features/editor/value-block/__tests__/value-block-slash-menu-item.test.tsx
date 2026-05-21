@@ -15,8 +15,8 @@ describe('value slash menu item', () => {
 
     createValueReferenceSlashMenuItem(editor as never).onItemClick?.()
 
-    expect(updateBlock).toHaveBeenCalledWith(block, {
-      content: [
+    expect(editor.insertInlineContent).toHaveBeenCalledWith(
+      [
         {
           type: 'value',
           props: expect.objectContaining({
@@ -25,7 +25,9 @@ describe('value slash menu item', () => {
           }),
         },
       ],
-    })
+      { updateSelection: true },
+    )
+    expect(updateBlock).not.toHaveBeenCalled()
   })
 
   it('replaces the active slash query before inserting a value', () => {

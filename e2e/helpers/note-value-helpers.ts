@@ -1,6 +1,10 @@
 import { expect } from '@playwright/test'
 import type { Locator, Page } from '@playwright/test'
-import { sanitizeValueSlug } from '../../shared/note-values/constants'
+import {
+  NOTE_VALUE_DEFAULT_SLUG,
+  NOTE_VALUE_SLUG_OPTIONS,
+} from '../../shared/note-values/constants'
+import { parseSlug, slugify } from '../../shared/slugs'
 import { openSlashMenu } from './editor-helpers'
 
 type CreateValueInlineOptions = {
@@ -80,8 +84,14 @@ export async function createValueInline(
 
   await closeValuePopover(page)
 
+  const fallbackSlug = slugify(options.slug ?? NOTE_VALUE_DEFAULT_SLUG, {
+    fallback: NOTE_VALUE_DEFAULT_SLUG,
+    maxLength: NOTE_VALUE_SLUG_OPTIONS.maxLength,
+  })
   const resolvedSlug =
-    (await value.getAttribute('data-note-value-slug')) ?? options.slug ?? sanitizeValueSlug('value')
+    (await value.getAttribute('data-note-value-slug')) ??
+    parseSlug(options.slug ?? '', NOTE_VALUE_SLUG_OPTIONS) ??
+    fallbackSlug
   const resolvedValue = getValueInlineBySlug(page, resolvedSlug)
   await expect(resolvedValue).toBeVisible()
   return resolvedValue

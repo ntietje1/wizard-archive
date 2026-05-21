@@ -1,14 +1,11 @@
 import { v } from 'convex/values'
-import { zodToConvex } from 'convex-helpers/server/zod4'
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { sidebarItemNameValueSchema } from '../validation/name'
 
-export { sidebarItemSlugValidator } from '../validation/slug'
-export { sidebarItemColorValidator } from '../validation/color'
-export { sidebarItemIconNameValidator } from '../validation/icon'
-
-export const sidebarItemNameValidator = zodToConvex(sidebarItemNameValueSchema)
+export const sidebarItemSlugValidator = v.string()
+export const sidebarItemNameValidator = v.string()
+export const sidebarItemColorValidator = v.string()
+export const sidebarItemIconNameValidator = v.string()
 
 export const sidebarItemLocationValidator = v.literal(SIDEBAR_ITEM_LOCATION.sidebar)
 

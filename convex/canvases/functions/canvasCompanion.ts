@@ -1,7 +1,5 @@
-import * as Y from 'yjs'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { createYjsDocument } from '../../yjsSync/functions/createYjsDocument'
-import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
 import { copyYjsUpdates } from '../../yjsSync/functions/copyYjsUpdates'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
@@ -17,23 +15,13 @@ export async function createCanvasCompanion(
     sidebarItemId: canvasId,
   })
 
-  const doc = new Y.Doc()
-  try {
-    // Yjs map reads intentionally initialize empty CRDT maps so peers can observe them.
-    doc.getMap('nodes')
-    doc.getMap('edges')
-    const initialState = uint8ToArrayBuffer(Y.encodeStateAsUpdate(doc))
+  await createYjsDocument(ctx, { documentId: canvasId })
 
-    await createYjsDocument(ctx, { documentId: canvasId, initialState })
-
-    await logEditHistory(ctx, {
-      itemId: canvasId,
-      itemType: SIDEBAR_ITEM_TYPES.canvases,
-      action: EDIT_HISTORY_ACTION.created,
-    })
-  } finally {
-    doc.destroy()
-  }
+  await logEditHistory(ctx, {
+    itemId: canvasId,
+    itemType: SIDEBAR_ITEM_TYPES.canvases,
+    action: EDIT_HISTORY_ACTION.created,
+  })
 }
 
 export async function copyCanvasCompanion(

@@ -7,11 +7,11 @@ import {
   collectFormulaReferences,
   compileNoteValueDefinitions,
 } from '../../../shared/note-values/formula'
-import { extractNoteValueDefinitions } from './extractNoteValueDefinitions'
 import { noteValueRowToDefinition } from './noteValueRows'
+import { extractNoteValueDefinitions } from '../../../shared/note-values/extract-definitions'
 import type { Id } from '../../_generated/dataModel'
-import type { CampaignMutationCtx } from '../../functions'
-import type { CustomBlock } from '../../notes/editorSpecs'
+import type { MutationCtx } from '../../_generated/server'
+import type { CustomBlock } from '../../blocks/types'
 import type { AnySidebarItemRow } from '../../sidebarItems/types/types'
 import type {
   FormulaReferenceToken,
@@ -274,7 +274,7 @@ async function buildReferencedExternalValueLookup({
   itemsMap,
   sourceParentId,
 }: {
-  ctx: CampaignMutationCtx
+  ctx: Pick<MutationCtx, 'db'>
   campaignId: Id<'campaigns'>
   currentNoteId: Id<'sidebarItems'>
   externalReferences: Array<ExternalFormulaReferenceToken>
@@ -324,7 +324,7 @@ async function buildReferencedExternalValueLookup({
 }
 
 export async function saveAllNoteValuesForNote(
-  ctx: CampaignMutationCtx,
+  ctx: Pick<MutationCtx, 'db'>,
   {
     noteId,
     content,

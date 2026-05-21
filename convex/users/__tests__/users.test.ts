@@ -57,6 +57,17 @@ describe('getUserProfile', () => {
     expect(result).not.toHaveProperty('profileImage')
     expect(result).not.toHaveProperty('imageStorageId')
   })
+
+  it('allows existing short usernames to be read', async () => {
+    const { authed, profile } = await setupAuthedUser(t)
+    await t.run(async (ctx) => {
+      await ctx.db.patch('userProfiles', profile._id, { username: 'abc' })
+    })
+
+    const result = await authed.query(api.users.queries.getUserProfile, {})
+
+    expect(result?.username).toBe('abc')
+  })
 })
 
 describe('checkUsernameExists', () => {
@@ -116,11 +127,11 @@ describe('updateUsername', () => {
     expect(profile?.username).toBe('mynewname')
   })
 
-  it('rejects username shorter than 2 characters', async () => {
+  it('rejects username shorter than 4 characters', async () => {
     const { authed } = await setupAuthedUser(t)
 
     await expectValidationFailed(
-      authed.mutation(api.users.mutations.updateUsername, { username: 'a' }),
+      authed.mutation(api.users.mutations.updateUsername, { username: 'abc' }),
     )
   })
 
@@ -135,14 +146,14 @@ describe('updateUsername', () => {
     )
   })
 
-  it('accepts username at minimum boundary of 2 characters', async () => {
+  it('accepts username at minimum boundary of 4 characters', async () => {
     const { authed } = await setupAuthedUser(t)
 
     const result = await authed.mutation(api.users.mutations.updateUsername, {
-      username: 'ab',
+      username: 'abcd',
     })
 
-    expect(result).toBe('ab')
+    expect(result).toBe('abcd')
   })
 
   it('accepts username at maximum boundary of 30 characters', async () => {

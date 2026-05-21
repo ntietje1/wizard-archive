@@ -33,8 +33,14 @@ export function useValueReferenceAuthoring({
   externalNotePathRaw?: string | null
   includeNoteValuePreviews?: boolean
 }) {
-  const { authoredDefinitions, noteId, sidebarItems, itemsMap, stateByValueId } =
-    useNoteValueRuntime()
+  const {
+    authoredDefinitions,
+    authoredValueStates,
+    noteId,
+    sidebarItems,
+    itemsMap,
+    stateByValueId,
+  } = useNoteValueRuntime()
   const sourceParentId = noteId ? itemsMap.get(noteId)?.parentId : undefined
 
   const baseNoteCandidates: Array<ValueReferenceCandidate> = sidebarItems
@@ -54,13 +60,19 @@ export function useValueReferenceAuthoring({
   const noteCandidateIds = baseNoteCandidates.flatMap((candidate) =>
     candidate.noteId ? [candidate.noteId] : [],
   )
+  const persistedPreviewNoteIds = noteCandidateIds.filter(
+    (candidateNoteId) => candidateNoteId !== noteId,
+  )
   const notePreviewValuesQuery = useCampaignQuery(
     api.noteValues.queries.getNoteValueStatesByNotes,
-    includeNoteValuePreviews && noteCandidateIds.length > 0
-      ? { noteIds: noteCandidateIds }
+    includeNoteValuePreviews && persistedPreviewNoteIds.length > 0
+      ? { noteIds: persistedPreviewNoteIds }
       : 'skip',
   )
   const previewValuesByNoteId = groupValuesByNoteId(notePreviewValuesQuery.data ?? [])
+  if (noteId) {
+    previewValuesByNoteId.set(noteId, authoredValueStates)
+  }
   const noteCandidates = baseNoteCandidates.map((candidate) => ({
     ...candidate,
     previewValues: candidate.noteId ? (previewValuesByNoteId.get(candidate.noteId) ?? []) : [],
@@ -73,11 +85,14 @@ export function useValueReferenceAuthoring({
     ? itemsMap.get(resolvedExternalNoteId)
     : undefined
 
+  const shouldLoadPersistedExternalValues =
+    resolvedExternalNoteId !== null && resolvedExternalNoteId !== noteId
   const selectedNoteValuesQuery = useCampaignQuery(
     api.noteValues.queries.getNoteValueStates,
-    resolvedExternalNoteId ? { noteId: resolvedExternalNoteId } : 'skip',
+    shouldLoadPersistedExternalValues ? { noteId: resolvedExternalNoteId } : 'skip',
   )
-  const selectedNoteValues = selectedNoteValuesQuery.data ?? []
+  const selectedNoteValues =
+    resolvedExternalNoteId === noteId ? authoredValueStates : (selectedNoteValuesQuery.data ?? [])
 
   const sameNoteCandidates = authoredDefinitions.map((definition) => {
     const state = stateByValueId.get(definition.valueId)
@@ -108,7 +123,8 @@ export function useValueReferenceAuthoring({
     noteCandidates,
     externalValueCandidates,
     selectedExternalNote,
-    externalValuesStatus: selectedNoteValuesQuery.status,
+    externalValuesStatus:
+      resolvedExternalNoteId === noteId ? 'success' : selectedNoteValuesQuery.status,
   }
 }
 

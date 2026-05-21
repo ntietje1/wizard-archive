@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { Id } from 'convex/_generated/dataModel'
 import { handleError } from '~/shared/utils/logger'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'

@@ -20,7 +20,7 @@ import { assertNever } from '~/shared/utils/utils'
 import { api } from 'convex/_generated/api'
 import type { Doc } from 'yjs'
 import type { Id } from 'convex/_generated/dataModel'
-import type { CustomBlock, CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import type { CustomBlock, CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { BlockMeta, NoteWithContent } from 'convex/notes/types'
 import type { CSSProperties } from 'react'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
@@ -167,7 +167,12 @@ function StaticNoteEditor({
     createEditor: () =>
       BlockNoteEditor.create({
         schema: createEditorSchema(),
-        initialContent: content.length > 0 ? content : undefined,
+        initialContent:
+          content.length > 0
+            ? (content as NonNullable<
+                Parameters<typeof BlockNoteEditor.create>[0]
+              >['initialContent'])
+            : undefined,
       }) as unknown as CustomBlockNoteEditor,
     destroyEditor: destroyBlockNoteEditor,
     onEditorChange: (nextEditor) => onEditorChange?.(nextEditor, null, null),
@@ -179,7 +184,10 @@ function StaticNoteEditor({
       initializedEditorRef.current = editor
       return
     }
-    editor.replaceBlocks(editor.document, content)
+    editor.replaceBlocks(
+      editor.document,
+      content as Parameters<CustomBlockNoteEditor['replaceBlocks']>[1],
+    )
   }, [editor, content])
 
   if (!editor) return null

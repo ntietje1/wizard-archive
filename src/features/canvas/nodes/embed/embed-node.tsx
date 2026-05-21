@@ -19,7 +19,7 @@ import { useSidebarItemById } from '~/features/sidebar/hooks/useSidebarItemById'
 import { useSidebarItemAvailabilityState } from '~/features/sidebar/hooks/useSidebarItemAvailabilityState'
 import { cn } from '~/features/shadcn/lib/utils'
 import { CanvasNodeConnectionHandles } from '../shared/canvas-node-connection-handles'
-import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import {
   getCanvasNodeDefaultTextColor,
   getCanvasNodeSurfaceStyle,

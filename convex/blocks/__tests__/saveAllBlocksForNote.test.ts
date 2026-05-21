@@ -17,6 +17,7 @@ import {
 } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
 import { saveAllBlocksForNote } from '../functions/saveAllBlocksForNote'
 import type { CampaignMutationCtx } from '../../functions'
+import type { TableContent } from '../types'
 
 async function pushAndPersist(
   dmAuth: ReturnType<typeof asDm>,
@@ -29,7 +30,7 @@ async function pushAndPersist(
     documentId: noteId,
     update: makeYjsUpdateWithBlocks(blocks),
   })
-  await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+  await dmAuth.action(api.notes.actions.persistNoteBlocks, {
     campaignId,
     documentId: noteId,
   })
@@ -37,6 +38,39 @@ async function pushAndPersist(
 
 describe('saveAllBlocksForNote — upsert and delete behavior', () => {
   const t = createTestContext()
+
+  it('persists table content when inserting a new block', async () => {
+    const ctx = await setupCampaignContext(t)
+    const { noteId } = await createNoteRecord(t, ctx.campaignId, ctx.dm.profile._id, {
+      name: 'Table Insert Test',
+    })
+    const tableContent: TableContent = {
+      type: 'tableContent',
+      columnWidths: [120],
+      rows: [
+        {
+          cells: [[{ type: 'text', text: 'Cell value', styles: {} }]],
+        },
+      ],
+    }
+
+    const persistedBlocks = await t.run(async (dbCtx) => {
+      return await saveAllBlocksForNote(dbCtx as unknown as CampaignMutationCtx, {
+        noteId,
+        content: [
+          testBlock('table-block', {
+            type: 'table',
+            props: { textColor: 'default' },
+            content: tableContent,
+          }),
+        ],
+      })
+    })
+
+    expect(persistedBlocks).toHaveLength(1)
+    expect(persistedBlocks[0].content).toEqual(tableContent)
+    expect(persistedBlocks[0].inlineContent).toBeNull()
+  })
 
   it('returns final persisted rows in document order and excludes deleted blocks', async () => {
     const ctx = await setupCampaignContext(t)
@@ -115,7 +149,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       return blocks.find((b) => b.blockNoteId === testBlockNoteId('block-a'))!
     })
 
-    await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+    await dmAuth.action(api.notes.actions.persistNoteBlocks, {
       campaignId: ctx.campaignId,
       documentId: noteId,
     })
@@ -223,7 +257,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       await dbCtx.db.patch('blocks', blocks[0]._id, { shareStatus: 'all_shared' })
     })
 
-    await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+    await dmAuth.action(api.notes.actions.persistNoteBlocks, {
       campaignId: ctx.campaignId,
       documentId: noteId,
     })
@@ -266,7 +300,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
         { id: testBlockNoteId('block-b'), type: 'paragraph', props: {}, children: [] },
       ]),
     })
-    await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+    await dmAuth.action(api.notes.actions.persistNoteBlocks, {
       campaignId: ctx.campaignId,
       documentId: noteId,
     })
@@ -302,7 +336,7 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       documentId: noteId,
       update: makeYjsUpdate(),
     })
-    await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+    await dmAuth.action(api.notes.actions.persistNoteBlocks, {
       campaignId: ctx.campaignId,
       documentId: noteId,
     })

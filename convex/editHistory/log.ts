@@ -1,6 +1,6 @@
 import { EDIT_HISTORY_ACTION } from './types'
-import type { CampaignMutationCtx } from '../functions'
-import type { Id } from '../_generated/dataModel'
+import type { Doc, Id } from '../_generated/dataModel'
+import type { MutationCtx } from '../_generated/server'
 import type {
   EditHistoryAction,
   EditHistoryChange,
@@ -9,13 +9,18 @@ import type {
 } from './types'
 import type { SidebarItemType } from '../sidebarItems/types/baseTypes'
 
+type EditHistoryCtx = Pick<MutationCtx, 'db'> & {
+  campaign: Pick<Doc<'campaigns'>, '_id'>
+  membership: Pick<Doc<'campaignMembers'>, '_id'>
+}
+
 type LogEditHistoryBase = {
   itemId: Id<'sidebarItems'>
   itemType: SidebarItemType
 }
 
 async function insertEditHistory(
-  ctx: CampaignMutationCtx,
+  ctx: EditHistoryCtx,
   args: LogEditHistoryArgs,
   options?: { hasSnapshot?: boolean },
 ): Promise<Id<'editHistory'>> {
@@ -39,7 +44,7 @@ function toLogEditHistoryArgs<T extends EditHistoryAction>(
 }
 
 export async function logEditHistory(
-  ctx: CampaignMutationCtx,
+  ctx: EditHistoryCtx,
   args: LogEditHistoryArgs | (LogEditHistoryBase & { changes: Array<EditHistoryChange> }),
   options?: { hasSnapshot?: boolean },
 ): Promise<Id<'editHistory'>> {

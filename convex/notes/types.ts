@@ -1,4 +1,4 @@
-import type { CustomBlock } from './editorSpecs'
+import type { CustomBlock } from '../blocks/types'
 import type {
   SIDEBAR_ITEM_TYPES,
   SidebarItem,

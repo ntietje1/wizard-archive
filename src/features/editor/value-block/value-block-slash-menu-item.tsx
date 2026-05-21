@@ -1,22 +1,13 @@
 import type { DefaultReactSuggestionItem } from '@blocknote/react'
 import { Sigma } from 'lucide-react'
-import type { CustomBlock, CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import type { CustomBlock, CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import {
   NOTE_VALUE_DEFAULT_SLUG,
-  getUniqueValueSlug,
+  NOTE_VALUE_SLUG_OPTIONS,
 } from '../../../../shared/note-values/constants'
+import { deduplicateSlug } from '../../../../shared/slugs'
 import type { NoteValueProps } from '../../../../shared/note-values/types'
-
-function isTextInlineContent(item: unknown): item is { type: 'text'; text: string } {
-  return (
-    typeof item === 'object' &&
-    item !== null &&
-    'type' in item &&
-    item.type === 'text' &&
-    'text' in item &&
-    typeof item.text === 'string'
-  )
-}
+import { createUuidV4 } from '~/shared/utils/create-uuid-v4'
 
 function isValueInlineContent(item: unknown): item is { type: 'value'; props: { slug: string } } {
   return (
@@ -42,8 +33,8 @@ export function createValueReferenceSlashMenuItem(
     onItemClick: () => {
       const existingSlugs = collectEditorValueSlugs(editor.document)
       insertValueInlineForSlashMenu(editor, {
-        valueId: crypto.randomUUID(),
-        slug: getUniqueValueSlug(NOTE_VALUE_DEFAULT_SLUG, existingSlugs),
+        valueId: createUuidV4(),
+        slug: deduplicateSlug(NOTE_VALUE_DEFAULT_SLUG, existingSlugs, NOTE_VALUE_SLUG_OPTIONS),
         expressionSource: '0',
       })
     },
@@ -100,22 +91,7 @@ function insertValueInlineForSlashMenu(editor: CustomBlockNoteEditor, props: Not
     return
   }
 
-  const cursor = editor.getTextCursorPosition()
-  const content = cursor.block.content
-  const shouldReplaceCurrent =
-    Array.isArray(content) &&
-    (content.length === 0 ||
-      (content.length === 1 && isTextInlineContent(content[0]) && content[0].text === '/'))
-
-  if (shouldReplaceCurrent) {
-    editor.updateBlock(cursor.block, {
-      content: [valueInline] as never,
-    })
-    editor.setTextCursorPosition(cursor.block, 'end')
-    return
-  }
-
-  editor.insertInlineContent([valueInline] as never, { updateSelection: true })
+  editor.insertInlineContent([valueInline], { updateSelection: true })
 }
 
 function replaceActiveSlashQuery(
@@ -139,6 +115,6 @@ function replaceActiveSlashQuery(
 
   const from = $from.start() + slashIndex
   tiptap.chain().focus().setTextSelection({ from, to: selection.from }).run()
-  editor.insertInlineContent([valueInline] as never, { updateSelection: true })
+  editor.insertInlineContent([valueInline], { updateSelection: true })
   return true
 }

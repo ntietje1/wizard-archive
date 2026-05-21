@@ -1,12 +1,12 @@
 import { v } from 'convex/values'
 import { authQuery, campaignQuery, dmQuery } from '../functions'
-import { usernameValidator } from '../users/validation'
+import { assertUsername, usernameValidator } from '../users/validation'
 import { getCampaignMembers } from './functions/getCampaignMembers'
 import { getCampaignRequests as getCampaignRequestsFn } from './functions/getCampaignRequests'
 import { campaignMemberValidator, campaignValidator } from './schema'
 import { getUserCampaigns as getUserCampaignsFn } from './functions/getUserCampaigns'
 import { getCampaignBySlug as getCampaignBySlugFn } from './functions/getCampaign'
-import { campaignSlugValidator, requireCampaignSlug, requireCampaignUsername } from './validation'
+import { assertCampaignSlug, campaignSlugValidator } from './validation'
 
 import type { Campaign, CampaignMember } from './types'
 
@@ -26,8 +26,8 @@ export const getCampaignBySlug = authQuery({
   returns: campaignValidator,
   handler: async (ctx, args): Promise<Campaign> => {
     return await getCampaignBySlugFn(ctx, {
-      dmUsername: requireCampaignUsername(args.dmUsername),
-      slug: requireCampaignSlug(args.slug),
+      dmUsername: assertUsername(args.dmUsername),
+      slug: assertCampaignSlug(args.slug),
     })
   },
 })

@@ -28,6 +28,7 @@ export const enhanceNoteWithContent = async (
     getAllBlocksByNote(ctx, { noteId: note._id }),
   ])
 
+  const permittedBlocks: Array<(typeof allBlocks)[number]> = []
   const blockMetaEntries = await asyncMap(allBlocks, async (block) => {
     const [result, blockShares] = await Promise.all([
       enforceBlockSharePermissionsOrNull(ctx, { block }),
@@ -36,6 +37,7 @@ export const enhanceNoteWithContent = async (
         : Promise.resolve([]),
     ])
     if (!result) return null
+    permittedBlocks.push(block)
     return {
       blockNoteId: block.blockNoteId,
       meta: {
@@ -50,7 +52,7 @@ export const enhanceNoteWithContent = async (
     if (entry) blockMeta[entry.blockNoteId] = entry.meta
   }
 
-  const content = reconstructBlockTree(allBlocks)
+  const content = reconstructBlockTree(permittedBlocks)
   return {
     ...note,
     content,

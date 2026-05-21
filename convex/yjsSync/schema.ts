@@ -1,15 +1,18 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
+import { convexValidatorFields } from '../common/schema'
 
 export const yjsDocumentIdValidator = v.id('sidebarItems')
 
+const yjsUpdateFields = {
+  documentId: yjsDocumentIdValidator,
+  update: v.bytes(),
+  seq: v.number(),
+  isSnapshot: v.boolean(),
+}
+
 export const yjsSyncTables = {
-  yjsUpdates: defineTable({
-    documentId: yjsDocumentIdValidator,
-    update: v.bytes(),
-    seq: v.number(),
-    isSnapshot: v.boolean(),
-  }).index('by_document_seq', ['documentId', 'seq']),
+  yjsUpdates: defineTable(yjsUpdateFields).index('by_document_seq', ['documentId', 'seq']),
 
   yjsAwareness: defineTable({
     documentId: yjsDocumentIdValidator,
@@ -22,3 +25,8 @@ export const yjsSyncTables = {
     .index('by_document_client', ['documentId', 'clientId'])
     .index('by_updatedAt', ['updatedAt']),
 }
+
+export const yjsUpdateValidator = v.object({
+  ...convexValidatorFields('yjsUpdates'),
+  ...yjsUpdateFields,
+})

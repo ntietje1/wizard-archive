@@ -384,10 +384,10 @@ describe('note value formulas', () => {
     })
   })
 
-  it('returns invalid slug errors for malformed or reserved slugs', () => {
+  it('returns invalid slug errors for malformed slugs', () => {
     const definitions = compileDefinitions([
       authoredValue('note-1', 'block-1', 'value-1', 'Bad Slug', '1'),
-      authoredValue('note-1', 'block-2', 'value-2', 'self', '1'),
+      authoredValue('note-1', 'block-2', 'value-2', '_bad-slug', '1'),
     ])
 
     expect(definitions).toHaveLength(2)
@@ -399,6 +399,15 @@ describe('note value formulas', () => {
     const definitions = compileDefinitions([
       authoredValue('note-1', 'block-1', 'value-1', 'attack-bonus', '1'),
       authoredValue('note-1', 'block-2', 'value-2', 'total', '[[attack-bonus]] + 1'),
+    ])
+
+    expect(definitions.map((definition) => definition.compileStatus)).toEqual(['ok', 'ok'])
+  })
+
+  it('allows value slugs that match function names', () => {
+    const definitions = compileDefinitions([
+      authoredValue('note-1', 'block-1', 'value-1', 'min', '1'),
+      authoredValue('note-1', 'block-2', 'value-2', 'total', '[[min]] + min(2, 3)'),
     ])
 
     expect(definitions.map((definition) => definition.compileStatus)).toEqual(['ok', 'ok'])

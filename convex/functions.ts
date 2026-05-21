@@ -1,11 +1,11 @@
 import { customQuery, customMutation, customCtx } from 'convex-helpers/server/customFunctions'
 import { v } from 'convex/values'
-import { query, mutation } from './_generated/server'
+import { query, mutation, internalQuery } from './_generated/server'
 import { triggers } from './triggers'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS, CAMPAIGN_STATUS } from './campaigns/types'
 import { assertCampaignSlug } from './campaigns/validation'
 import { ERROR_CODE, throwClientError } from './errors'
-import { assertUsername } from './users/validation'
+import { assertStoredUsername } from './users/validation'
 import { getUserProfileById } from './users/functions/getUserProfile'
 import type { CustomCtx } from 'convex-helpers/server/customFunctions'
 import type { MutationCtx, QueryCtx } from './_generated/server'
@@ -18,7 +18,7 @@ import type { CampaignFromDb, CampaignMember } from './campaigns/types'
 function toAuthenticatedProfile(profile: Doc<'userProfiles'>): AuthUser['profile'] {
   return {
     ...profile,
-    username: assertUsername(profile.username),
+    username: assertStoredUsername(profile.username),
   }
 }
 
@@ -122,6 +122,32 @@ export const campaignQuery = customQuery(authQuery, {
   },
 })
 
+const authInternalQuery = customQuery(
+  internalQuery,
+  customCtx(async (ctx) => {
+    const user = await authenticate(ctx)
+    return { user }
+  }),
+)
+
+export const campaignInternalQuery = customQuery(authInternalQuery, {
+  args: campaignArgs,
+  input: async (ctx, { campaignId }) => {
+    assertAuthenticatedCtx(ctx)
+    const { campaign, membership } = await checkMembership(ctx, campaignId)
+    return { ctx: { campaign, membership }, args: {} }
+  },
+})
+
+export const dmInternalQuery = customQuery(authInternalQuery, {
+  args: campaignArgs,
+  input: async (ctx, { campaignId }) => {
+    assertAuthenticatedCtx(ctx)
+    const { campaign, membership } = await checkDmMembership(ctx, campaignId)
+    return { ctx: { campaign, membership }, args: {} }
+  },
+})
+
 export const campaignMutation = customMutation(authMutation, {
   args: campaignArgs,
   input: async (ctx, { campaignId }) => {
@@ -155,5 +181,7 @@ export type AuthQueryCtx = CustomCtx<typeof authQuery>
 export type AuthMutationCtx = CustomCtx<typeof authMutation>
 export type CampaignQueryCtx = CustomCtx<typeof campaignQuery>
 export type CampaignMutationCtx = CustomCtx<typeof campaignMutation>
+export type CampaignInternalQueryCtx = CustomCtx<typeof campaignInternalQuery>
 export type DmQueryCtx = CustomCtx<typeof dmQuery>
 export type DmMutationCtx = CustomCtx<typeof dmMutation>
+export type DmInternalQueryCtx = CustomCtx<typeof dmInternalQuery>

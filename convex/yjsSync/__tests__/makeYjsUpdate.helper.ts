@@ -1,46 +1,32 @@
 import * as Y from 'yjs'
-import { blocksToYDoc } from '../../notes/blocknote'
-import type { CustomPartialBlock } from '../../notes/editorSpecs'
+import { blocksToYDoc } from '../../../src/features/editor/blocknote-yjs'
+import type { CustomPartialBlock } from '../../../src/features/editor/editor-specs'
 
-export type TestInlineContent = {
-  type: string
-  text?: string
-  props?: Record<string, unknown>
-  styles?: Record<string, boolean | string>
-}
+export type TestBlock = CustomPartialBlock
+type TestInlineContentArray = Extract<
+  NonNullable<CustomPartialBlock['content']>,
+  ReadonlyArray<unknown>
+>
+export type TestInlineContent = TestInlineContentArray[number]
 
-/**
- * Simplified block type for tests. BlockNote's `PartialBlock` has an optional
- * `type` discriminant which prevents TypeScript from narrowing per-variant in
- * object literals. This type captures the shape tests actually use while
- * keeping basic structural checking.
- */
-export type TestBlock = {
-  id?: string
-  type: string
-  props?: Record<string, unknown>
-  content?: Array<TestInlineContent>
-  children?: Array<TestBlock>
+function toArrayBuffer(update: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(update.byteLength)
+  copy.set(update)
+  return copy.buffer
 }
 
 export function makeYjsUpdate(): ArrayBuffer {
   const doc = new Y.Doc()
-  // Side-effect: ensures the 'document' fragment exists in the Y.Doc state before encoding
   doc.getXmlFragment('document')
-  const update = Y.encodeStateAsUpdate(doc)
-  const ab = update.buffer.slice(update.byteOffset, update.byteOffset + update.byteLength)
+  const update = toArrayBuffer(Y.encodeStateAsUpdate(doc))
   doc.destroy()
-  return ab as ArrayBuffer
+  return update
 }
 
 export function makeYjsUpdateWithBlocks(blocks: Array<TestBlock>): ArrayBuffer {
-  const doc = blocksToYDoc(blocks as Array<CustomPartialBlock>, 'document')
+  const doc = blocksToYDoc(blocks, 'document')
   try {
-    const update = Y.encodeStateAsUpdate(doc)
-    return update.buffer.slice(
-      update.byteOffset,
-      update.byteOffset + update.byteLength,
-    ) as ArrayBuffer
+    return toArrayBuffer(Y.encodeStateAsUpdate(doc))
   } finally {
     doc.destroy()
   }

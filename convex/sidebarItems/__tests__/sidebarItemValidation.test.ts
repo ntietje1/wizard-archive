@@ -32,7 +32,7 @@ import {
   validateNoCircularParent,
   validateNoCircularParentAsync,
 } from '../validation/parent'
-import { validateItemSlug } from '../validation/slug'
+import { validateSidebarItemSlug } from '../validation/slug'
 import type { Id } from '../../_generated/dataModel'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
 import type { AnySidebarItem } from '../types/types'
@@ -127,44 +127,51 @@ describe('validateItemName', () => {
   })
 })
 
-describe('validateItemSlug', () => {
+describe('validateSidebarItemSlug', () => {
   it('accepts a valid slug', () => {
-    expect(validateItemSlug('my-note')).toEqual({ valid: true })
+    expect(validateSidebarItemSlug('my-note')).toBeNull()
   })
 
   it('rejects empty string', () => {
-    expect(validateItemSlug('').valid).toBe(false)
+    expect(validateSidebarItemSlug('')).not.toBeNull()
   })
 
-  it('rejects slugs shorter than 3 characters', () => {
-    expect(validateItemSlug('ab').valid).toBe(false)
+  it('accepts single-character slugs', () => {
+    expect(validateSidebarItemSlug('a')).toBeNull()
   })
 
   it('rejects uppercase letters', () => {
-    expect(validateItemSlug('My-Note').valid).toBe(false)
+    expect(validateSidebarItemSlug('My-Note')).not.toBeNull()
   })
 
   it('rejects spaces', () => {
-    expect(validateItemSlug('my note').valid).toBe(false)
+    expect(validateSidebarItemSlug('my note')).not.toBeNull()
   })
 
-  it('rejects consecutive hyphens', () => {
-    expect(validateItemSlug('my--note').valid).toBe(false)
+  it('accepts underscores', () => {
+    expect(validateSidebarItemSlug('my_note')).toBeNull()
   })
 
-  it('rejects leading or trailing hyphens', () => {
-    expect(validateItemSlug('-note').valid).toBe(false)
-    expect(validateItemSlug('note-').valid).toBe(false)
+  it('rejects consecutive separators', () => {
+    expect(validateSidebarItemSlug('my--note')).not.toBeNull()
+    expect(validateSidebarItemSlug('my-_note')).not.toBeNull()
+  })
+
+  it('rejects leading or trailing separators', () => {
+    expect(validateSidebarItemSlug('-note')).not.toBeNull()
+    expect(validateSidebarItemSlug('note-')).not.toBeNull()
+    expect(validateSidebarItemSlug('_note')).not.toBeNull()
+    expect(validateSidebarItemSlug('note_')).not.toBeNull()
   })
 
   it('accepts exactly 255 characters', () => {
     const slug = 'a'.repeat(255)
-    expect(validateItemSlug(slug)).toEqual({ valid: true })
+    expect(validateSidebarItemSlug(slug)).toBeNull()
   })
 
   it('rejects 256 characters', () => {
     const slug = 'a'.repeat(256)
-    expect(validateItemSlug(slug).valid).toBe(false)
+    expect(validateSidebarItemSlug(slug)).not.toBeNull()
   })
 })
 
@@ -467,7 +474,7 @@ describe('cross-table slug uniqueness', () => {
       parentTarget: { kind: 'direct', parentId: null },
     })
 
-    expect(result.slug).toBe('test-2')
+    expect(result.slug).toBe('test-1')
   })
 
   it('allows same slug in different campaigns', async () => {
@@ -517,7 +524,7 @@ describe('cross-table slug uniqueness', () => {
       parentTarget: { kind: 'direct', parentId: null },
     })
 
-    expect(result.slug).toBe('deleted-item-2')
+    expect(result.slug).toBe('deleted-item-1')
   })
 
   it('rejects invalid slugs at the query boundary', async () => {
@@ -566,8 +573,8 @@ describe('cross-table slug uniqueness', () => {
       content: [],
     })
 
-    expect(validateItemSlug(first.slug)).toEqual({ valid: true })
-    expect(validateItemSlug(second.slug)).toEqual({ valid: true })
+    expect(validateSidebarItemSlug(first.slug)).toBeNull()
+    expect(validateSidebarItemSlug(second.slug)).toBeNull()
     expect(first.slug.length).toBeLessThanOrEqual(255)
     expect(second.slug.length).toBeLessThanOrEqual(255)
   })

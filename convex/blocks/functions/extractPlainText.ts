@@ -30,12 +30,12 @@ function collectInlineTextItems(items: Array<unknown>): Array<{ text?: string }>
 }
 
 function collectTableTextItems(
-  rows: Array<{ cells: Array<Array<unknown>> }>,
+  rows: Array<{ cells: Array<Array<unknown> | { content?: Array<unknown> }> }>,
 ): Array<{ text?: string }> {
   const texts: Array<{ text?: string }> = []
   for (const row of rows) {
     for (const cell of row.cells) {
-      texts.push(...collectInlineTextItems(cell))
+      texts.push(...collectInlineTextItems(Array.isArray(cell) ? cell : (cell.content ?? [])))
     }
   }
   return texts

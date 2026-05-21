@@ -48,22 +48,23 @@ describe('validateSearch', () => {
     expect(validateSearch({ item: 'Bad-Slug' })).toEqual({})
     expect(validateSearch({ item: '-leading-hyphen' })).toEqual({})
     expect(validateSearch({ item: 'trailing-hyphen-' })).toEqual({})
-    expect(validateSearch({ item: 'double--hyphen' })).toEqual({})
     expect(validateSearch({ item: 'special@char' })).toEqual({})
   })
   it('accepts valid slugs with numbers', () => {
     expect(validateSearch({ item: 'item-123' })).toEqual({ item: 'item-123' })
   })
 
-  it('enforces minimum length of 3 for item slugs', () => {
-    expect(validateSearch({ item: 'a' })).toEqual({})
-    expect(validateSearch({ item: 'aa' })).toEqual({})
-    expect(validateSearch({ item: 'abc' })).toEqual({ item: 'abc' })
+  it('accepts non-empty item slugs without a minimum length', () => {
+    expect(validateSearch({ item: 'a' })).toEqual({ item: 'a' })
+    expect(validateSearch({ item: 'aa' })).toEqual({ item: 'aa' })
   })
 
-  it('accepts multi-part slugs with hyphens', () => {
+  it('accepts multi-part slugs with hyphens and underscores', () => {
     expect(validateSearch({ item: 'a-b' })).toEqual({ item: 'a-b' })
+    expect(validateSearch({ item: 'a_b' })).toEqual({ item: 'a_b' })
     expect(validateSearch({ item: 'a-b-c' })).toEqual({ item: 'a-b-c' })
+    expect(validateSearch({ item: 'double--hyphen' })).toEqual({})
+    expect(validateSearch({ item: 'mixed-_separator' })).toEqual({})
   })
 
   it('does not enforce minimum length for headings', () => {

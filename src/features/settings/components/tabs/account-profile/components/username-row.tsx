@@ -104,7 +104,7 @@ function UsernameChangeDialog({ profile, onClose }: { profile: UserProfile; onCl
           <Input
             id="edit-username"
             value={username}
-            onChange={(e) => setUsername(normalizeUsernameInput(e.target.value))}
+            onChange={(e) => setUsername(e.target.value)}
             disabled={isLoading}
             onKeyDown={(e) => e.key === 'Enter' && handleSave()}
             className="pr-8"
@@ -120,7 +120,7 @@ function UsernameChangeDialog({ profile, onClose }: { profile: UserProfile; onCl
           <p className="text-xs text-destructive">{displayError}</p>
         ) : (
           <p className="text-xs text-muted-foreground">
-            Lowercase letters, numbers, and hyphens only. Must be unique.
+            Lowercase letters, numbers, hyphens, and underscores only. Must be unique.
           </p>
         )}
       </div>

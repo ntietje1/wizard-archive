@@ -1,10 +1,11 @@
 import { api } from 'convex/_generated/api'
+import { useMutation } from '@tanstack/react-query'
+import { useConvex } from '@convex-dev/react-query'
 import { SHARE_STATUS } from 'convex/blockShares/types'
-import type { CustomBlock } from 'convex/notes/editorSpecs'
+import type { CustomBlock } from '~/features/editor/editor-specs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { NoteWithContent } from 'convex/notes/types'
 import { handleError } from '~/shared/utils/logger'
-import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { resolveBlockShareState } from '~/features/sharing/utils/block-share-state'
@@ -15,7 +16,8 @@ export {
 } from '~/features/sharing/utils/block-share-state'
 
 export function useBlocksShare(blocks: Array<CustomBlock>, note: NoteWithContent) {
-  const { campaign } = useCampaign()
+  const { campaign, campaignId } = useCampaign()
+  const convex = useConvex()
   const campaignData = campaign.data
   const blockNoteIds = blocks.map((b) => b.id)
 
@@ -24,9 +26,36 @@ export function useBlocksShare(blocks: Array<CustomBlock>, note: NoteWithContent
     blockNoteIds.length > 0 && campaignData ? { noteId: note._id, blockNoteIds } : 'skip',
   )
 
-  const setBlocksShareStatus = useCampaignMutation(api.blockShares.mutations.setBlocksShareStatus)
-  const shareBlocks = useCampaignMutation(api.blockShares.mutations.shareBlocks)
-  const unshareBlocks = useCampaignMutation(api.blockShares.mutations.unshareBlocks)
+  const setBlocksShareStatus = useMutation({
+    mutationFn: (args: {
+      noteId: Id<'sidebarItems'>
+      blockNoteIds: Array<string>
+      status: (typeof SHARE_STATUS)[keyof typeof SHARE_STATUS]
+    }) => {
+      if (!campaignId) throw new Error('Block sharing requires a campaign context')
+      return convex.action(api.blockShares.actions.setBlocksShareStatus, { ...args, campaignId })
+    },
+  })
+  const shareBlocks = useMutation({
+    mutationFn: (args: {
+      noteId: Id<'sidebarItems'>
+      blockNoteIds: Array<string>
+      campaignMemberId: Id<'campaignMembers'>
+    }) => {
+      if (!campaignId) throw new Error('Block sharing requires a campaign context')
+      return convex.action(api.blockShares.actions.shareBlocks, { ...args, campaignId })
+    },
+  })
+  const unshareBlocks = useMutation({
+    mutationFn: (args: {
+      noteId: Id<'sidebarItems'>
+      blockNoteIds: Array<string>
+      campaignMemberId: Id<'campaignMembers'>
+    }) => {
+      if (!campaignId) throw new Error('Block sharing requires a campaign context')
+      return convex.action(api.blockShares.actions.unshareBlocks, { ...args, campaignId })
+    },
+  })
 
   const isMutating =
     setBlocksShareStatus.isPending || shareBlocks.isPending || unshareBlocks.isPending

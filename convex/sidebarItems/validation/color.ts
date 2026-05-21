@@ -1,7 +1,4 @@
-import { zodToConvex } from 'convex-helpers/server/zod4'
-import { z } from 'zod'
 import type { BrandedString } from '../../common/slug'
-import { parseOrThrowClientValidation } from '../../common/zod'
 
 export type SidebarItemColor = BrandedString<'SidebarItemColor'>
 
@@ -9,21 +6,12 @@ export const DEFAULT_SIDEBAR_ITEM_COLOR = '#9a6dd7' as const
 
 const SIDEBAR_ITEM_HEX_COLOR_REGEX = /^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
 
-export const sidebarItemColorSchema = z
-  .string()
-  .regex(SIDEBAR_ITEM_HEX_COLOR_REGEX, 'Color must be a 6- or 8-digit hex value')
-  .transform((value) => value.toLowerCase() as SidebarItemColor)
-
-export const sidebarItemColorValidator = zodToConvex(sidebarItemColorSchema)
-
 export function validateSidebarItemColor(color: string): string | null {
-  const result = sidebarItemColorSchema.safeParse(color)
-  return result.success ? null : (result.error.issues[0]?.message ?? 'Invalid color')
+  return SIDEBAR_ITEM_HEX_COLOR_REGEX.test(color) ? null : 'Color must be a 6- or 8-digit hex value'
 }
 
 export function parseSidebarItemColor(color: string): SidebarItemColor | null {
-  const result = sidebarItemColorSchema.safeParse(color)
-  return result.success ? result.data : null
+  return validateSidebarItemColor(color) === null ? (color.toLowerCase() as SidebarItemColor) : null
 }
 
 export function assertSidebarItemColor(color: string): SidebarItemColor {
@@ -35,7 +23,7 @@ export function assertSidebarItemColor(color: string): SidebarItemColor {
 }
 
 export function requireSidebarItemColor(color: string): SidebarItemColor {
-  return parseOrThrowClientValidation(sidebarItemColorSchema, color, 'Invalid color')
+  return assertSidebarItemColor(color)
 }
 
 export function requireOptionalSidebarItemColor(

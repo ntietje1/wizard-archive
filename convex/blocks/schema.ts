@@ -1,43 +1,28 @@
-import { z } from 'zod'
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
-import { zodToConvex } from 'convex-helpers/server/zod4'
 import { literals } from 'convex-helpers/validators'
-import type { Validator } from 'convex/values'
-import type { CustomBlock } from '../notes/editorSpecs'
-import {
-  blockNoteIdSchema,
-  blockNoteBlockSchema,
-  blockTypeSchema,
-  inlineContentSchema,
-} from './blockSchemas'
 import { convexValidatorFields } from '../common/schema'
+import { BLOCK_TYPES } from '../../shared/blockTypes'
+import { blockContentValidator, inlineContentArrayValidator } from './inlineContentValidators'
 
-// --- Convex validators (all zodToConvex conversions live here) ---
-
-export const blockNoteIdValidator = zodToConvex(blockNoteIdSchema)
+export const blockNoteIdValidator = v.string()
 
 export const blockShareStatusValidator = literals('all_shared', 'not_shared', 'individually_shared')
 
-export const customBlockValidator = zodToConvex(blockNoteBlockSchema) as unknown as Validator<
-  CustomBlock,
-  'required'
->
+export const blockTypeValidator = literals(...BLOCK_TYPES)
 
-// --- Table definition ---
-
-const blockInlineContentSchema = z.nullable(z.array(inlineContentSchema))
-const blockPropsSchema = z.record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
+const blockPropsValidator = v.record(v.string(), v.union(v.string(), v.number(), v.boolean()))
 
 const blockTableFields = {
   noteId: v.id('sidebarItems'),
-  blockNoteId: zodToConvex(blockNoteIdSchema),
+  blockNoteId: blockNoteIdValidator,
   position: v.nullable(v.number()),
-  parentBlockId: v.nullable(zodToConvex(blockNoteIdSchema)),
+  parentBlockId: v.nullable(blockNoteIdValidator),
   depth: v.number(),
-  type: zodToConvex(blockTypeSchema),
-  props: zodToConvex(blockPropsSchema),
-  inlineContent: zodToConvex(blockInlineContentSchema),
+  type: blockTypeValidator,
+  props: blockPropsValidator,
+  content: v.optional(v.nullable(blockContentValidator)),
+  inlineContent: v.nullable(inlineContentArrayValidator),
   plainText: v.string(),
   campaignId: v.id('campaigns'),
   shareStatus: v.nullable(blockShareStatusValidator),

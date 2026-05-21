@@ -7,7 +7,7 @@ import { createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
 import type * as BlockNoteCore from '@blocknote/core'
 import type { Id } from 'convex/_generated/dataModel'
-import type { CustomBlock, CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import type { CustomBlock, CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { NoteWithContent } from 'convex/notes/types'
 import type { ReactNode } from 'react'
 

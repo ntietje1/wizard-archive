@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react'
-import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { NoteWithContent } from 'convex/notes/types'
 import type { Doc } from 'yjs'
 import type { PendingRichEmbedActivationRef } from './use-rich-embed-lifecycle'

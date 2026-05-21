@@ -1,41 +1,86 @@
 import type { Id } from '../_generated/dataModel'
-import { canvasPartialBlockNoteDocumentSchema } from '../blocks/blockSchemas'
-import { logger } from '../common/logger'
-import { z } from 'zod'
+import type { CustomPartialBlock } from '../blocks/types'
 
 function clampNumber(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
 }
 
-const finiteNumberSchema = z.number().finite()
-const canvasUnknownRecordSchema = z.object({}).catchall(z.unknown())
-const canvasPositionSchema = z.object({
-  x: finiteNumberSchema,
-  y: finiteNumberSchema,
-})
-const canvasBoundsSchema = z.object({
-  x: finiteNumberSchema,
-  y: finiteNumberSchema,
-  width: finiteNumberSchema,
-  height: finiteNumberSchema,
-})
-const canvasBoundsDimensionsSchema = z.object({
-  width: finiteNumberSchema,
-  height: finiteNumberSchema,
-})
-const canvasPointSchema = z.tuple([finiteNumberSchema, finiteNumberSchema, finiteNumberSchema])
-const canvasSidebarItemIdSchema = z
-  .string()
-  .min(1)
-  .transform((value) => value as Id<'sidebarItems'>)
-const canvasLockedAspectRatioSchema = finiteNumberSchema.refine((value) => value > 0)
-const canvasNodeSurfaceColorSchema = z.union([z.string(), z.null()])
-const canvasNodeSurfaceOpacitySchema = finiteNumberSchema.transform((value) =>
-  clampNumber(value, 0, 100),
-)
-const canvasNodeBorderWidthSchema = finiteNumberSchema.transform((value) =>
-  clampNumber(value, 0, 99),
-)
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value)
+}
+
+function hasOnlyKeys(value: Record<string, unknown>, keys: ReadonlySet<string>): boolean {
+  return Object.keys(value).every((key) => keys.has(key))
+}
+
+function parsePoint(value: unknown): [number, number, number] | null {
+  if (
+    !Array.isArray(value) ||
+    value.length !== 3 ||
+    !isFiniteNumber(value[0]) ||
+    !isFiniteNumber(value[1]) ||
+    !isFiniteNumber(value[2])
+  ) {
+    return null
+  }
+  return [value[0], value[1], value[2]]
+}
+
+function parsePoints(value: unknown): Array<[number, number, number]> | null {
+  if (!Array.isArray(value) || value.length === 0) {
+    return null
+  }
+
+  const points = value.map(parsePoint)
+  return points.every((point) => point !== null)
+    ? (points as Array<[number, number, number]>)
+    : null
+}
+
+const surfaceStyleKeys = new Set([
+  'textColor',
+  'backgroundColor',
+  'backgroundOpacity',
+  'borderStroke',
+  'borderOpacity',
+  'borderWidth',
+])
+
+function parseSurfaceStyles(value: Record<string, unknown>): Partial<CanvasEmbedNodeData> | null {
+  const styles: Partial<CanvasEmbedNodeData> = {}
+
+  for (const key of surfaceStyleKeys) {
+    if (!(key in value)) continue
+
+    switch (key) {
+      case 'textColor':
+      case 'backgroundColor':
+      case 'borderStroke': {
+        const color = parseCanvasNodeSurfaceColor(value[key])
+        if (color === undefined) return null
+        styles[key] = color
+        break
+      }
+      case 'backgroundOpacity':
+      case 'borderOpacity': {
+        if (!isFiniteNumber(value[key])) return null
+        styles[key] = parseCanvasNodeSurfaceOpacity(value[key])
+        break
+      }
+      case 'borderWidth': {
+        if (!isFiniteNumber(value[key])) return null
+        styles.borderWidth = parseCanvasNodeBorderWidth(value[key])
+        break
+      }
+    }
+  }
+
+  return styles
+}
 
 export interface CanvasViewportValue {
   x: number
@@ -138,7 +183,7 @@ export interface ParsedCanvasReorderPayload {
 }
 
 export type ParsedCanvasResizingAwarenessState = Record<string, ParsedCanvasResizeAwarenessEntry>
-export type ParsedCanvasRichTextContent = z.infer<typeof canvasPartialBlockNoteDocumentSchema>
+export type ParsedCanvasRichTextContent = Array<CustomPartialBlock>
 export type CanvasNodeType = 'embed' | 'stroke' | 'text'
 export type CanvasEdgeType = 'bezier' | 'straight' | 'step'
 
@@ -182,305 +227,275 @@ export interface CanvasDocumentEdge {
   className?: string
 }
 
-export const canvasViewportSchema = z.object({
-  x: finiteNumberSchema,
-  y: finiteNumberSchema,
-  zoom: finiteNumberSchema,
-})
-
-const canvasSurfaceStylingSchema = {
-  textColor: canvasNodeSurfaceColorSchema.optional(),
-  backgroundColor: canvasNodeSurfaceColorSchema.optional(),
-  backgroundOpacity: canvasNodeSurfaceOpacitySchema.optional(),
-  borderStroke: canvasNodeSurfaceColorSchema.optional(),
-  borderOpacity: canvasNodeSurfaceOpacitySchema.optional(),
-  borderWidth: canvasNodeBorderWidthSchema.optional(),
-} as const
-
-export const canvasEmbedNodeDataSchema: z.ZodType<CanvasEmbedNodeData> = z
-  .object({
-    sidebarItemId: canvasSidebarItemIdSchema.optional(),
-    lockedAspectRatio: canvasLockedAspectRatioSchema.optional(),
-    ...canvasSurfaceStylingSchema,
-  })
-  .strict()
-
-export const canvasTextNodeDataSchema: z.ZodType<CanvasTextNodeData> = z
-  .object({
-    content: z.unknown().optional(),
-    ...canvasSurfaceStylingSchema,
-  })
-  .strict()
-
-export const canvasStrokeNodeDataSchema: z.ZodType<CanvasStrokeNodeData> = z
-  .object({
-    points: z.array(canvasPointSchema).min(1),
-    color: z.string(),
-    size: finiteNumberSchema,
-    opacity: canvasNodeSurfaceOpacitySchema.optional(),
-    bounds: canvasBoundsSchema,
-  })
-  .strict()
-
-const canvasDocumentNodeBaseSchema = z
-  .object({
-    id: z.string(),
-    position: canvasPositionSchema,
-    width: finiteNumberSchema.optional(),
-    height: finiteNumberSchema.optional(),
-    hidden: z.boolean().optional(),
-    zIndex: finiteNumberSchema.optional(),
-    className: z.string().optional(),
-  })
-  .strict()
-
-export const canvasDocumentNodeSchema: z.ZodType<CanvasDocumentNode> = z.discriminatedUnion(
-  'type',
-  [
-    canvasDocumentNodeBaseSchema
-      .extend({
-        type: z.literal('embed'),
-        data: canvasEmbedNodeDataSchema,
-      })
-      .strict(),
-    canvasDocumentNodeBaseSchema
-      .extend({
-        type: z.literal('stroke'),
-        data: canvasStrokeNodeDataSchema,
-      })
-      .strict(),
-    canvasDocumentNodeBaseSchema
-      .extend({
-        type: z.literal('text'),
-        data: canvasTextNodeDataSchema,
-      })
-      .strict(),
-  ],
-)
-
-export const canvasBoundsDimensionsOnlySchema: z.ZodType<ParsedCanvasBoundsDimensions> =
-  canvasBoundsDimensionsSchema
-
-export const canvasStrokeSelectionDataSchema: z.ZodType<ParsedCanvasStrokeSelectionData> = z
-  .object({
-    points: z.array(canvasPointSchema).min(1),
-    size: finiteNumberSchema,
-    bounds: canvasBoundsSchema,
-  })
-  .catchall(z.unknown())
-
-export const canvasPoint2DSchema: z.ZodType<ParsedCanvasPoint2D> = z.object({
-  x: finiteNumberSchema,
-  y: finiteNumberSchema,
-})
-
-export const canvasAwarenessUserSchema: z.ZodType<ParsedCanvasAwarenessUser> = z
-  .object({
-    name: z.string(),
-    color: z.string(),
-  })
-  .catchall(z.unknown())
-
-export const canvasResizeAwarenessEntrySchema: z.ZodType<ParsedCanvasResizeAwarenessEntry> = z
-  .object({
-    x: finiteNumberSchema,
-    y: finiteNumberSchema,
-    width: finiteNumberSchema.min(0),
-    height: finiteNumberSchema.min(0),
-  })
-  .catchall(z.unknown())
-
-export const canvasDrawAwarenessStateSchema: z.ZodType<ParsedCanvasDrawAwarenessState> = z
-  .object({
-    points: z.array(canvasPointSchema).min(1),
-    color: z.string(),
-    size: finiteNumberSchema.positive(),
-    opacity: canvasNodeSurfaceOpacitySchema,
-  })
-  .catchall(z.unknown())
-
-export const canvasSelectAwarenessStateSchema: z.ZodType<ParsedCanvasSelectAwarenessState> = z
-  .object({
-    type: z.literal('rect'),
-    x: finiteNumberSchema,
-    y: finiteNumberSchema,
-    width: finiteNumberSchema.min(0),
-    height: finiteNumberSchema.min(0),
-  })
-  .catchall(z.unknown())
-
-export const canvasLassoAwarenessStateSchema: z.ZodType<ParsedCanvasLassoAwarenessState> = z
-  .object({
-    type: z.literal('lasso'),
-    points: z.array(canvasPoint2DSchema),
-  })
-  .catchall(z.unknown())
-
-export const canvasResizingAwarenessStateSchema: z.ZodType<ParsedCanvasResizingAwarenessState> =
-  z.record(z.string(), canvasResizeAwarenessEntrySchema)
-
-export const canvasSelectionAwarenessStateSchema = z.array(z.string())
-export const canvasNodeTypeSchema = z.enum(['embed', 'stroke', 'text'])
-export const canvasEdgeTypeSchema = z.enum(['bezier', 'straight', 'step'])
-export const canvasReorderPayloadSchema: z.ZodType<ParsedCanvasReorderPayload> = z
-  .object({
-    kind: z.literal('reorder'),
-    direction: z.enum(['sendToBack', 'sendBackward', 'bringForward', 'bringToFront']),
-  })
-  .catchall(z.unknown())
-
-const embeddedCanvasStableIdSchema = z.object({
-  id: z.string().min(1),
-})
-
-const canvasDocumentEdgeSchema = z
-  .object({
-    id: z.string(),
-    source: z.string(),
-    target: z.string(),
-    type: canvasEdgeTypeSchema,
-    sourceHandle: z.union([z.string(), z.null()]).optional(),
-    targetHandle: z.union([z.string(), z.null()]).optional(),
-    style: z.unknown().optional(),
-    hidden: z.boolean().optional(),
-    zIndex: finiteNumberSchema.optional(),
-    className: z.string().optional(),
-  })
-  .strict()
-
 export function parseCanvasViewport(value: unknown): CanvasViewportValue | null {
-  const result = canvasViewportSchema.safeParse(value)
-  return result.success ? result.data : null
-}
-
-export function parseCanvasDocumentNode(value: unknown): CanvasDocumentNode | null {
-  const result = canvasDocumentNodeSchema.safeParse(value)
-  return result.success ? result.data : null
+  if (!isRecord(value)) return null
+  const { x, y, zoom } = value
+  return isFiniteNumber(x) && isFiniteNumber(y) && isFiniteNumber(zoom) ? { x, y, zoom } : null
 }
 
 export function parseCanvasSidebarItemId(value: unknown): Id<'sidebarItems'> | undefined {
-  const result = canvasSidebarItemIdSchema.safeParse(value)
-  return result.success ? result.data : undefined
+  return typeof value === 'string' && value.length > 0 ? (value as Id<'sidebarItems'>) : undefined
 }
 
 export function parseCanvasLockedAspectRatio(value: unknown): number | undefined {
-  const result = canvasLockedAspectRatioSchema.safeParse(value)
-  return result.success ? result.data : undefined
+  return isFiniteNumber(value) && value > 0 ? value : undefined
 }
 
 export function parseCanvasNodeSurfaceColor(value: unknown): string | null | undefined {
-  const result = canvasNodeSurfaceColorSchema.safeParse(value)
-  return result.success ? result.data : undefined
+  return typeof value === 'string' || value === null ? value : undefined
 }
 
 export function parseCanvasNodeSurfaceOpacity(value: unknown, fallback = 100): number {
-  const result = canvasNodeSurfaceOpacitySchema.safeParse(value)
-  return result.success ? result.data : fallback
+  return isFiniteNumber(value) ? clampNumber(value, 0, 100) : fallback
 }
 
 export function parseCanvasNodeBorderWidth(value: unknown, fallback = 1): number {
-  const result = canvasNodeBorderWidthSchema.safeParse(value)
-  return result.success ? result.data : fallback
-}
-
-export function parseCanvasStrokeNodeData(value: unknown): CanvasStrokeNodeData | null {
-  const result = canvasStrokeNodeDataSchema.safeParse(value)
-  return result.success ? result.data : null
+  return isFiniteNumber(value) ? clampNumber(value, 0, 99) : fallback
 }
 
 export function parseCanvasBounds(value: unknown): ParsedCanvasBounds | null {
-  const result = canvasBoundsSchema.safeParse(value)
-  return result.success ? result.data : null
+  if (!isRecord(value)) return null
+  const { x, y, width, height } = value
+  return isFiniteNumber(x) && isFiniteNumber(y) && isFiniteNumber(width) && isFiniteNumber(height)
+    ? { x, y, width, height }
+    : null
 }
 
 export function parseCanvasBoundsDimensions(value: unknown): ParsedCanvasBoundsDimensions | null {
-  const result = canvasBoundsDimensionsOnlySchema.safeParse(value)
-  return result.success ? result.data : null
+  if (!isRecord(value)) return null
+  const { width, height } = value
+  return isFiniteNumber(width) && isFiniteNumber(height) ? { width, height } : null
+}
+
+export function parseCanvasStrokeNodeData(value: unknown): CanvasStrokeNodeData | null {
+  if (
+    !isRecord(value) ||
+    !hasOnlyKeys(value, new Set(['points', 'color', 'size', 'opacity', 'bounds']))
+  ) {
+    return null
+  }
+
+  const points = parsePoints(value.points)
+  const bounds = parseCanvasBounds(value.bounds)
+  if (!points || typeof value.color !== 'string' || !isFiniteNumber(value.size) || !bounds) {
+    return null
+  }
+  if (value.opacity !== undefined && !isFiniteNumber(value.opacity)) {
+    return null
+  }
+
+  return {
+    points,
+    color: value.color,
+    size: value.size,
+    ...(value.opacity !== undefined
+      ? { opacity: parseCanvasNodeSurfaceOpacity(value.opacity) }
+      : {}),
+    bounds,
+  }
 }
 
 export function parseCanvasStrokeSelectionData(
   value: unknown,
 ): ParsedCanvasStrokeSelectionData | null {
-  const result = canvasStrokeSelectionDataSchema.safeParse(value)
-  return result.success ? result.data : null
+  if (!isRecord(value) || !hasOnlyKeys(value, new Set(['points', 'size', 'bounds']))) return null
+  const points = parsePoints(value.points)
+  const bounds = parseCanvasBounds(value.bounds)
+  return points && isFiniteNumber(value.size) && bounds
+    ? { points, size: value.size, bounds }
+    : null
 }
 
 export function parseCanvasPoint2D(value: unknown): ParsedCanvasPoint2D | null {
-  const result = canvasPoint2DSchema.safeParse(value)
-  return result.success ? result.data : null
+  if (!isRecord(value)) return null
+  const { x, y } = value
+  return isFiniteNumber(x) && isFiniteNumber(y) ? { x, y } : null
 }
 
 export function parseCanvasAwarenessUser(value: unknown): ParsedCanvasAwarenessUser | null {
-  const result = canvasAwarenessUserSchema.safeParse(value)
-  return result.success ? result.data : null
+  if (!isRecord(value)) return null
+  return typeof value.name === 'string' && typeof value.color === 'string'
+    ? { name: value.name, color: value.color }
+    : null
 }
 
 export function parseCanvasAwarenessPresence(value: unknown): Record<string, unknown> | null {
-  const result = canvasUnknownRecordSchema.safeParse(value)
-  return result.success ? result.data : null
+  return isRecord(value) ? value : null
 }
 
 export function parseCanvasDrawAwarenessState(
   value: unknown,
 ): ParsedCanvasDrawAwarenessState | null {
-  const result = canvasDrawAwarenessStateSchema.safeParse(value)
-  return result.success ? result.data : null
+  if (!isRecord(value)) return null
+  const points = parsePoints(value.points)
+  return points &&
+    typeof value.color === 'string' &&
+    isFiniteNumber(value.size) &&
+    value.size > 0 &&
+    isFiniteNumber(value.opacity)
+    ? {
+        points,
+        color: value.color,
+        size: value.size,
+        opacity: parseCanvasNodeSurfaceOpacity(value.opacity),
+      }
+    : null
 }
 
 export function parseCanvasSelectAwarenessState(
   value: unknown,
 ): ParsedCanvasSelectAwarenessState | null {
-  const result = canvasSelectAwarenessStateSchema.safeParse(value)
-  return result.success ? result.data : null
+  if (!isRecord(value) || value.type !== 'rect') return null
+  const { x, y, width, height } = value
+  return isFiniteNumber(x) &&
+    isFiniteNumber(y) &&
+    isFiniteNumber(width) &&
+    width >= 0 &&
+    isFiniteNumber(height) &&
+    height >= 0
+    ? { type: 'rect', x, y, width, height }
+    : null
 }
 
 export function parseCanvasLassoAwarenessState(
   value: unknown,
 ): ParsedCanvasLassoAwarenessState | null {
-  const result = canvasLassoAwarenessStateSchema.safeParse(value)
-  return result.success ? result.data : null
+  if (!isRecord(value) || value.type !== 'lasso' || !Array.isArray(value.points)) {
+    return null
+  }
+
+  const points = value.points.map(parseCanvasPoint2D)
+  return points.every((point) => point !== null)
+    ? { type: 'lasso', points: points as Array<ParsedCanvasPoint2D> }
+    : null
 }
 
 export function parseCanvasResizingAwarenessState(
   value: unknown,
 ): ParsedCanvasResizingAwarenessState | null {
-  const result = canvasResizingAwarenessStateSchema.safeParse(value)
-  return result.success ? result.data : null
+  if (!isRecord(value)) return null
+
+  const entries: ParsedCanvasResizingAwarenessState = {}
+  for (const [key, entry] of Object.entries(value)) {
+    const parsed = parseCanvasBounds(entry)
+    if (!parsed || parsed.width < 0 || parsed.height < 0) {
+      return null
+    }
+    entries[key] = parsed
+  }
+  return entries
 }
 
 export function parseCanvasSelectionAwarenessState(value: unknown): Array<string> | null {
-  const result = canvasSelectionAwarenessStateSchema.safeParse(value)
-  return result.success ? result.data : null
+  return Array.isArray(value) && value.every((item) => typeof item === 'string') ? value : null
 }
 
 export function parseCanvasReorderPayload(value: unknown): ParsedCanvasReorderPayload | null {
-  const result = canvasReorderPayloadSchema.safeParse(value)
-  return result.success ? result.data : null
+  if (!isRecord(value) || value.kind !== 'reorder') return null
+  const direction = value.direction
+  return direction === 'sendToBack' ||
+    direction === 'sendBackward' ||
+    direction === 'bringForward' ||
+    direction === 'bringToFront'
+    ? { kind: 'reorder', direction }
+    : null
 }
 
 export function parseCanvasRichTextContent(value: unknown): ParsedCanvasRichTextContent | null {
-  const result = canvasPartialBlockNoteDocumentSchema.safeParse(value)
-  return result.success ? result.data : null
+  if (!Array.isArray(value)) return null
+  return value.every(parseCanvasRichTextBlock) ? (value as ParsedCanvasRichTextContent) : null
+}
+
+const canvasRichTextBlockTypes = new Set([
+  'paragraph',
+  'heading',
+  'bulletListItem',
+  'numberedListItem',
+  'checkListItem',
+  'quote',
+  'codeBlock',
+])
+
+const booleanInlineStyleKeys = new Set(['bold', 'italic', 'underline', 'strike', 'code'])
+const stringInlineStyleKeys = new Set(['textColor', 'backgroundColor'])
+
+function parseCanvasRichTextBlock(value: unknown): boolean {
+  if (!isRecord(value) || typeof value.type !== 'string') return false
+  if (!canvasRichTextBlockTypes.has(value.type)) return false
+  if (value.content !== undefined && !parseCanvasRichTextInlineContent(value.content)) return false
+  if (value.children !== undefined && !parseCanvasRichTextContent(value.children)) return false
+  return true
+}
+
+function parseCanvasRichTextInlineContent(value: unknown): boolean {
+  return Array.isArray(value) && value.every(parseCanvasRichTextInlineItem)
+}
+
+function parseCanvasRichTextInlineItem(value: unknown): boolean {
+  if (!isRecord(value) || value.type !== 'text' || typeof value.text !== 'string') return false
+  if (value.styles === undefined) return true
+  if (!isRecord(value.styles)) return false
+
+  for (const [key, styleValue] of Object.entries(value.styles)) {
+    if (booleanInlineStyleKeys.has(key) && typeof styleValue !== 'boolean') return false
+    if (stringInlineStyleKeys.has(key) && typeof styleValue !== 'string') return false
+    if (!booleanInlineStyleKeys.has(key) && !stringInlineStyleKeys.has(key)) return false
+  }
+  return true
 }
 
 export function parseEmbeddedCanvasStableId(value: unknown): string | undefined {
-  const result = embeddedCanvasStableIdSchema.safeParse(value)
-  return result.success ? result.data.id : undefined
+  return isRecord(value) && typeof value.id === 'string' && value.id.length > 0
+    ? value.id
+    : undefined
 }
 
+const embedDataKeys = new Set(['sidebarItemId', 'lockedAspectRatio', ...surfaceStyleKeys])
+const textDataKeys = new Set(['content', ...surfaceStyleKeys])
+const documentNodeKeys = new Set([
+  'id',
+  'type',
+  'position',
+  'data',
+  'width',
+  'height',
+  'hidden',
+  'zIndex',
+  'className',
+])
+
 export function parseCanvasEmbedNodeData(value: unknown): CanvasEmbedNodeData | null {
-  const result = canvasEmbedNodeDataSchema.safeParse(value)
-  return result.success ? result.data : null
+  if (!isRecord(value) || !hasOnlyKeys(value, embedDataKeys)) return null
+
+  const data: CanvasEmbedNodeData = {}
+  if ('sidebarItemId' in value) {
+    const sidebarItemId = parseCanvasSidebarItemId(value.sidebarItemId)
+    if (sidebarItemId === undefined) return null
+    data.sidebarItemId = sidebarItemId
+  }
+  if ('lockedAspectRatio' in value) {
+    const lockedAspectRatio = parseCanvasLockedAspectRatio(value.lockedAspectRatio)
+    if (lockedAspectRatio === undefined) return null
+    data.lockedAspectRatio = lockedAspectRatio
+  }
+
+  const styles = parseSurfaceStyles(value)
+  return styles ? { ...data, ...styles } : null
 }
 
 export function parseCanvasTextNodeData(value: unknown): CanvasTextNodeData | null {
-  const result = canvasTextNodeDataSchema.safeParse(value)
-  return result.success ? result.data : null
+  if (!isRecord(value) || !hasOnlyKeys(value, textDataKeys)) return null
+
+  const data: CanvasTextNodeData = {}
+  if (value.content !== undefined) {
+    data.content = value.content
+  }
+  const styles = parseSurfaceStyles(value)
+  return styles ? { ...data, ...styles } : null
 }
 
 export function parseCanvasNodeType(value: unknown): CanvasNodeType | null {
-  const result = canvasNodeTypeSchema.safeParse(value)
-  return result.success ? result.data : null
+  return value === 'embed' || value === 'stroke' || value === 'text' ? value : null
 }
 
 export function parseCanvasNodeDataByType(type: 'embed', value: unknown): CanvasEmbedNodeData | null
@@ -504,74 +519,151 @@ export function parseCanvasNodeDataByType(type: CanvasNodeType, value: unknown) 
   }
 }
 
-export function parseCanvasDocumentNodes(value: unknown): Array<CanvasDocumentNode> | null {
-  if (!Array.isArray(value)) {
-    return null
-  }
-
-  return value.flatMap((node, index) => {
-    const parsedNode = parseCanvasDocumentNode(node)
-    if (parsedNode) {
-      return [parsedNode]
-    }
-
-    logger.warn('parseCanvasDocumentNodes: dropped malformed canvas document node', {
-      index,
-      nodeId: getCanvasNodeLogField(node, 'id'),
-      nodeType: getCanvasNodeLogField(node, 'type'),
-    })
-    return []
-  })
+function hasValidSharedDocumentFields(value: Record<string, unknown>): boolean {
+  return (
+    (value.hidden === undefined || typeof value.hidden === 'boolean') &&
+    (value.zIndex === undefined || isFiniteNumber(value.zIndex)) &&
+    (value.className === undefined || typeof value.className === 'string')
+  )
 }
 
-function getCanvasNodeLogField(node: unknown, field: 'id' | 'type'): unknown {
-  if (!node || typeof node !== 'object') {
-    return undefined
+function pickSharedDocumentFields(value: Record<string, unknown>) {
+  return {
+    ...(value.hidden !== undefined ? { hidden: value.hidden as boolean } : {}),
+    ...(value.zIndex !== undefined ? { zIndex: value.zIndex as number } : {}),
+    ...(value.className !== undefined ? { className: value.className as string } : {}),
   }
+}
 
-  return (node as Record<string, unknown>)[field]
+function hasValidOptionalNodeFields(value: Record<string, unknown>): boolean {
+  return (
+    hasValidSharedDocumentFields(value) &&
+    (value.width === undefined || isFiniteNumber(value.width)) &&
+    (value.height === undefined || isFiniteNumber(value.height))
+  )
+}
+
+function pickCanvasDocumentNodeFields(value: Record<string, unknown>) {
+  return {
+    ...(value.width !== undefined ? { width: value.width as number } : {}),
+    ...(value.height !== undefined ? { height: value.height as number } : {}),
+    ...pickSharedDocumentFields(value),
+  }
+}
+
+export function parseCanvasDocumentNode(value: unknown): CanvasDocumentNode | null {
+  if (!isRecord(value) || !hasOnlyKeys(value, documentNodeKeys)) return null
+  if (typeof value.id !== 'string') return null
+
+  const type = parseCanvasNodeType(value.type)
+  const position = parseCanvasPoint2D(value.position)
+  if (!type || !position) return null
+
+  const data = parseCanvasNodeDataByType(type, value.data)
+  if (!data) return null
+  if (!hasValidOptionalNodeFields(value)) return null
+
+  return {
+    id: value.id,
+    type,
+    position,
+    data,
+    ...pickCanvasDocumentNodeFields(value),
+  } as CanvasDocumentNode
 }
 
 export function parseCanvasEdgeType(value: unknown): CanvasEdgeType | null {
-  const result = canvasEdgeTypeSchema.safeParse(value)
-  return result.success ? result.data : null
+  return value === 'bezier' || value === 'straight' || value === 'step' ? value : null
 }
 
 export function parseCanvasEdgeStyle(value: unknown): CanvasEdgeStyle | null {
-  const result = z
-    .object({
-      stroke: z.string().min(1).optional(),
-      strokeWidth: finiteNumberSchema.min(0).optional(),
-      // SVG edge opacity is a CSS alpha value, unlike node surface opacity stored on a 0-100 UI scale.
-      opacity: finiteNumberSchema.transform((opacity) => clampNumber(opacity, 0, 1)).optional(),
-    })
-    .strict()
-    .safeParse(value)
-
-  return result.success ? result.data : null
-}
-
-export function parseCanvasDocumentEdge(value: unknown): CanvasDocumentEdge | null {
-  const result = canvasDocumentEdgeSchema.safeParse(value)
-  if (!result.success) {
+  if (!isRecord(value) || !hasOnlyKeys(value, new Set(['stroke', 'strokeWidth', 'opacity']))) {
+    return null
+  }
+  if (value.stroke !== undefined && (typeof value.stroke !== 'string' || value.stroke.length < 1)) {
+    return null
+  }
+  if (
+    value.strokeWidth !== undefined &&
+    (!isFiniteNumber(value.strokeWidth) || value.strokeWidth < 0)
+  ) {
+    return null
+  }
+  if (value.opacity !== undefined && !isFiniteNumber(value.opacity)) {
     return null
   }
 
   return {
-    ...result.data,
-    type: result.data.type,
-    style:
-      result.data.style === undefined ? undefined : (parseCanvasEdgeStyle(result.data.style) ?? {}),
+    ...(value.stroke !== undefined ? { stroke: value.stroke } : {}),
+    ...(value.strokeWidth !== undefined ? { strokeWidth: value.strokeWidth } : {}),
+    ...(value.opacity !== undefined ? { opacity: clampNumber(value.opacity, 0, 1) } : {}),
   }
 }
 
-export function parseCanvasDocumentEdges(value: unknown): Array<CanvasDocumentEdge> | null {
-  if (!Array.isArray(value)) {
+const documentEdgeKeys = new Set([
+  'id',
+  'source',
+  'target',
+  'type',
+  'sourceHandle',
+  'targetHandle',
+  'style',
+  'hidden',
+  'zIndex',
+  'className',
+])
+
+function hasValidOptionalEdgeFields(value: Record<string, unknown>): boolean {
+  return (
+    hasValidSharedDocumentFields(value) &&
+    (value.sourceHandle === undefined ||
+      value.sourceHandle === null ||
+      typeof value.sourceHandle === 'string') &&
+    (value.targetHandle === undefined ||
+      value.targetHandle === null ||
+      typeof value.targetHandle === 'string')
+  )
+}
+
+function pickCanvasDocumentEdgeFields(value: Record<string, unknown>) {
+  return {
+    ...(value.sourceHandle !== undefined
+      ? { sourceHandle: value.sourceHandle as string | null }
+      : {}),
+    ...(value.targetHandle !== undefined
+      ? { targetHandle: value.targetHandle as string | null }
+      : {}),
+    ...pickSharedDocumentFields(value),
+  }
+}
+
+export function parseCanvasDocumentEdge(value: unknown): CanvasDocumentEdge | null {
+  if (!isRecord(value) || !hasOnlyKeys(value, documentEdgeKeys)) return null
+  if (
+    typeof value.id !== 'string' ||
+    typeof value.source !== 'string' ||
+    typeof value.target !== 'string'
+  ) {
     return null
   }
 
-  return value.flatMap((edge) => {
-    const parsedEdge = parseCanvasDocumentEdge(edge)
-    return parsedEdge ? [parsedEdge] : []
-  })
+  const type = parseCanvasEdgeType(value.type)
+  if (!type) return null
+  if (!hasValidOptionalEdgeFields(value)) return null
+
+  let style: CanvasEdgeStyle | undefined
+  if (value.style !== undefined) {
+    const parsedStyle = parseCanvasEdgeStyle(value.style)
+    if (!parsedStyle) return null
+    style = parsedStyle
+  }
+
+  return {
+    id: value.id,
+    source: value.source,
+    target: value.target,
+    type,
+    ...pickCanvasDocumentEdgeFields(value),
+    ...(style !== undefined ? { style } : {}),
+  }
 }

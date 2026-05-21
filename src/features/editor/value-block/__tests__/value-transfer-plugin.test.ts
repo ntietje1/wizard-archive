@@ -97,8 +97,8 @@ describe('value transfer plugin', () => {
 
     expect(transformed).toBeInstanceOf(Slice)
     expect(valuePropsFromSlice(transformed as Slice)).toEqual([
-      { valueId: 'new-value-1', slug: 'prof_bonus_1', expressionSource: '3' },
-      { valueId: 'new-value-2', slug: 'prof_bonus_2', expressionSource: '3' },
+      { valueId: 'new-value-1', slug: 'prof_bonus-1', expressionSource: '3' },
+      { valueId: 'new-value-2', slug: 'prof_bonus-2', expressionSource: '3' },
     ])
   })
 
@@ -122,8 +122,8 @@ describe('value transfer plugin', () => {
     const transformed = transformPastedSlice(plugin, slice)
 
     expect(valuePropsFromSlice(transformed as Slice)).toEqual([
-      { valueId: 'new-base', slug: 'base_1', expressionSource: '1' },
-      { valueId: 'new-total', slug: 'total_1', expressionSource: '[[base_1]] + [[External.base]]' },
+      { valueId: 'new-base', slug: 'base-1', expressionSource: '1' },
+      { valueId: 'new-total', slug: 'total-1', expressionSource: '[[base-1]] + [[External.base]]' },
     ])
   })
 
@@ -164,8 +164,8 @@ describe('value transfer plugin', () => {
     expect(transformed).toBeInstanceOf(Slice)
     expect(transformed).not.toBe(slice)
     expect(valuePropsFromSlice(transformed as Slice)).toEqual([
-      { valueId: 'copy-value-1', slug: 'prof_bonus_1', expressionSource: '3' },
-      { valueId: 'copy-value-2', slug: 'prof_bonus_2', expressionSource: '3' },
+      { valueId: 'copy-value-1', slug: 'prof_bonus-1', expressionSource: '3' },
+      { valueId: 'copy-value-2', slug: 'prof_bonus-2', expressionSource: '3' },
     ])
   })
 

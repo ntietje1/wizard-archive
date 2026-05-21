@@ -26,7 +26,7 @@ describe('compact', () => {
       })
     }
 
-    await t.mutation(internal.yjsSync.internalMutations.compact, {
+    await t.action(internal.yjsSync.internalActions.compact, {
       documentId: noteId,
     })
 
@@ -56,7 +56,7 @@ describe('compact', () => {
       })
     }
 
-    await t.mutation(internal.yjsSync.internalMutations.compact, {
+    await t.action(internal.yjsSync.internalActions.compact, {
       documentId: noteId,
     })
 
@@ -84,7 +84,7 @@ describe('compact', () => {
       })
     })
 
-    await t.mutation(internal.yjsSync.internalMutations.compact, {
+    await t.action(internal.yjsSync.internalActions.compact, {
       documentId: noteId,
     })
 
@@ -139,7 +139,7 @@ describe('compact', () => {
       })
     })
 
-    await t.mutation(internal.yjsSync.internalMutations.compact, {
+    await t.action(internal.yjsSync.internalActions.compact, {
       documentId: noteId,
     })
 

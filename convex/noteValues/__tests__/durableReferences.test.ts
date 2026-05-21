@@ -92,14 +92,15 @@ describe('note value durable references', () => {
     noteId: Parameters<typeof replaceNoteDocumentAndPersist>[2]['noteId'],
     valueId: string,
   ) {
-    return await t.run(async (dbCtx) => {
+    const rows = await t.run(async (dbCtx) => {
       return await dbCtx.db
         .query('noteValues')
-        .withIndex('by_campaign_note_valueId', (q) =>
-          q.eq('campaignId', ctx.campaignId).eq('noteId', noteId).eq('valueId', valueId),
+        .withIndex('by_campaign_note', (q) =>
+          q.eq('campaignId', ctx.campaignId).eq('noteId', noteId),
         )
         .collect()
     })
+    return rows.filter((row) => row.valueId === valueId)
   }
 
   it('keeps durable external bindings working after source note rename and dependent re-persist', async () => {

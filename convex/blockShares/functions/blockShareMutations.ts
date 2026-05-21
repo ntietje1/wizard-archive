@@ -4,13 +4,18 @@ import { findBlockByBlockNoteId } from '../../blocks/functions/findBlockByBlockN
 import { updateBlock } from '../../blocks/functions/updateBlock'
 import { SHARE_STATUS } from '../types'
 import type { NoteFromDb } from '../../notes/types'
-import type { CampaignMutationCtx } from '../../functions'
-import type { Id } from '../../_generated/dataModel'
+import type { Doc, Id } from '../../_generated/dataModel'
+import type { MutationCtx } from '../../_generated/server'
 import type { ShareStatus } from '../types'
 import type { BlockNoteId } from '../../blocks/types'
 
+export type BlockShareMutationCtx = Pick<MutationCtx, 'db'> & {
+  campaign: Pick<Doc<'campaigns'>, '_id' | 'currentSessionId'>
+  membership: Pick<Doc<'campaignMembers'>, '_id'>
+}
+
 async function findBlockOrThrow(
-  ctx: CampaignMutationCtx,
+  ctx: BlockShareMutationCtx,
   { noteId, blockNoteId }: { noteId: Id<'sidebarItems'>; blockNoteId: BlockNoteId },
 ): Promise<Id<'blocks'>> {
   const block = await findBlockByBlockNoteId(ctx, { noteId, blockNoteId })
@@ -19,7 +24,7 @@ async function findBlockOrThrow(
 }
 
 async function addBlockShare(
-  ctx: CampaignMutationCtx,
+  ctx: BlockShareMutationCtx,
   {
     noteId,
     blockId,
@@ -65,7 +70,7 @@ async function addBlockShare(
 }
 
 async function removeBlockShare(
-  ctx: CampaignMutationCtx,
+  ctx: BlockShareMutationCtx,
   { blockId, campaignMemberId }: { blockId: Id<'blocks'>; campaignMemberId: Id<'campaignMembers'> },
 ): Promise<void> {
   const block = await ctx.db.get('blocks', blockId)
@@ -87,7 +92,7 @@ async function removeBlockShare(
 }
 
 async function clearBlockShares(
-  ctx: CampaignMutationCtx,
+  ctx: BlockShareMutationCtx,
   { blockId }: { blockId: Id<'blocks'> },
 ): Promise<void> {
   const block = await ctx.db.get('blocks', blockId)
@@ -104,7 +109,7 @@ async function clearBlockShares(
 }
 
 export async function shareBlockWithMemberHelper(
-  ctx: CampaignMutationCtx,
+  ctx: BlockShareMutationCtx,
   {
     note,
     blockNoteId,
@@ -129,7 +134,7 @@ export async function shareBlockWithMemberHelper(
 }
 
 export async function unshareBlockFromMemberHelper(
-  ctx: CampaignMutationCtx,
+  ctx: BlockShareMutationCtx,
   {
     note,
     blockNoteId,
@@ -164,7 +169,7 @@ export async function unshareBlockFromMemberHelper(
 }
 
 export async function setBlockShareStatusHelper(
-  ctx: CampaignMutationCtx,
+  ctx: BlockShareMutationCtx,
   {
     note,
     blockNoteId,

@@ -3,7 +3,7 @@ import {
   customBlockSpecs as baseBlockSpecs,
   customInlineContentSpecs as baseInlineContentSpecs,
   customStyleSpecs,
-} from 'convex/notes/editorSpecs'
+} from './editor-specs'
 import { createReactValueInlineSpec } from './value-block/value-block-react-spec'
 
 const { value: _value, ...remainingInlineContentSpecs } = baseInlineContentSpecs

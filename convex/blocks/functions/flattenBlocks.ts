@@ -1,7 +1,12 @@
 import { extractPlainText } from './extractPlainText'
-import { inlineContentSchema } from '../blockSchemas'
-import type { CustomBlock } from '../../notes/editorSpecs'
-import type { BlockNoteId, FlatBlockContent, InlineContent } from '../types'
+import { isInlineContentItem, isTableContent } from '../inlineContentValidators'
+import type {
+  BlockNoteId,
+  CustomBlock,
+  FlatBlockContent,
+  InlineContent,
+  TableContent,
+} from '../types'
 
 function toFlatBlockContent(block: CustomBlock): FlatBlockContent {
   return { type: block.type, props: block.props, content: block.content } as FlatBlockContent
@@ -25,10 +30,24 @@ function toPersistedInlineContentItem(item: unknown): unknown {
 
 function toPersistedInlineContent(block: CustomBlock): InlineContent | null {
   if (!Array.isArray(block.content)) return null
-  const result = inlineContentSchema
-    .array()
-    .safeParse(block.content.map((item) => toPersistedInlineContentItem(item)))
-  return result.success ? result.data : null
+  const result: InlineContent = []
+  for (const item of block.content) {
+    const persistedItem = toPersistedInlineContentItem(item)
+    if (!isInlineContentItem(persistedItem)) {
+      throw new Error(`[flattenBlocks] Malformed inline content in block ${block.id}`)
+    }
+    result.push(persistedItem)
+  }
+  return result
+}
+
+function toPersistedContent(block: CustomBlock): InlineContent | TableContent | null {
+  if (!block.content) return null
+  if (Array.isArray(block.content)) return toPersistedInlineContent(block)
+  if (!isTableContent(block.content)) {
+    throw new Error(`[flattenBlocks] Malformed block content in block ${block.id}`)
+  }
+  return block.content
 }
 
 export function flattenBlocks(blocks: Array<CustomBlock>) {
@@ -39,7 +58,8 @@ export function flattenBlocks(blocks: Array<CustomBlock>) {
     position: number,
   ) {
     const plainText = extractPlainText(toFlatBlockContent(block))
-    const inlineContent = toPersistedInlineContent(block)
+    const content = toPersistedContent(block)
+    const inlineContent = Array.isArray(content) ? content : null
     return {
       blockNoteId: block.id,
       parentBlockId,
@@ -47,6 +67,7 @@ export function flattenBlocks(blocks: Array<CustomBlock>) {
       position,
       type: block.type,
       props: block.props,
+      content,
       inlineContent,
       plainText,
     }

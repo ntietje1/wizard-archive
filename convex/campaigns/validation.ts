@@ -2,27 +2,18 @@ import {
   CAMPAIGN_NAME_MAX_LENGTH,
   CAMPAIGN_NAME_MIN_LENGTH,
   CAMPAIGN_SLUG_MAX_LENGTH,
-  CAMPAIGN_SLUG_MIN_LENGTH,
 } from './constants'
-import { createCanonicalSlugHelpers } from '../common/slug'
-import { parseOrThrowClientValidation } from '../common/zod'
+import { createSlugHelpers } from '../common/slug'
 import type { BrandedString } from '../common/slug'
 import { ERROR_CODE, throwClientError } from '../errors'
-import { requireUsername } from '../users/validation'
-import type { Username } from '../users/validation'
 
 export type CampaignSlug = BrandedString<'CampaignSlug'>
 
-const campaignSlugHelpers = createCanonicalSlugHelpers({
-  brand: 'CampaignSlug',
+const campaignSlugHelpers = createSlugHelpers<'CampaignSlug'>({
   label: 'Campaign link',
-  minLength: CAMPAIGN_SLUG_MIN_LENGTH,
   maxLength: CAMPAIGN_SLUG_MAX_LENGTH,
-  fallbackMessage: 'Invalid campaign link',
 })
 
-export const campaignSlugValueSchema = campaignSlugHelpers.valueSchema
-export const campaignSlugSchema = campaignSlugHelpers.schema
 export const campaignSlugValidator = campaignSlugHelpers.validator
 export const validateCampaignSlug = campaignSlugHelpers.validate
 export const parseCampaignSlug = campaignSlugHelpers.parse
@@ -49,12 +40,4 @@ export function prepareCampaignName(name: string): string {
 
 export function prepareCampaignDescription(description?: string): string | undefined {
   return description?.trim()
-}
-
-export function requireCampaignSlug(slug: string): CampaignSlug {
-  return parseOrThrowClientValidation(campaignSlugSchema, slug, 'Invalid campaign link')
-}
-
-export function requireCampaignUsername(username: string): Username {
-  return requireUsername(username)
 }

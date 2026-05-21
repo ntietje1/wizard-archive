@@ -1,23 +1,76 @@
-import type { z } from 'zod'
-import type { ShareStatus } from '../blockShares/types'
 import type { Id } from '../_generated/dataModel'
-import type {
-  blockNoteIdSchema,
-  blockTypeSchema,
-  flatBlockContentSchema,
-  inlineContentSchema,
-} from './blockSchemas'
+import type { ShareStatus } from '../blockShares/types'
 import type { ConvexValidatorFields } from '../common/types'
+import type { NoteValueProps } from '../../shared/note-values/types'
+import type { BlockType } from '../../shared/blockTypes'
 
-export type FlatBlockContent = z.infer<typeof flatBlockContentSchema>
+export type { BlockType } from '../../shared/blockTypes'
 
-export type BlockType = z.infer<typeof blockTypeSchema>
+export type BlockNoteId = string
 
-export type BlockNoteId = z.infer<typeof blockNoteIdSchema>
+export type BlockProps = Record<string, string | number | boolean>
 
-export type BlockProps = FlatBlockContent['props']
+export type InlineContentItem =
+  | {
+      type: 'text'
+      text: string
+      styles?: {
+        bold?: boolean
+        italic?: boolean
+        underline?: boolean
+        strike?: boolean
+        code?: boolean
+        textColor?: string
+        backgroundColor?: string
+      }
+    }
+  | {
+      type: 'value'
+      props: NoteValueProps
+      content?: undefined
+    }
 
-export type InlineContent = Array<z.infer<typeof inlineContentSchema>>
+export type InlineContent = Array<InlineContentItem>
+export type CustomInlineContent = InlineContentItem
+
+export type TableContent = {
+  type: 'tableContent'
+  columnWidths: Array<number | null>
+  headerRows?: number
+  headerCols?: number
+  rows: Array<{
+    cells: Array<
+      | Array<InlineContentItem>
+      | {
+          type: 'tableCell'
+          content: Array<InlineContentItem>
+          props?: Record<string, string | number | boolean | null>
+        }
+    >
+  }>
+}
+
+export type FlatBlockContent = {
+  type: BlockType
+  props: BlockProps
+  content?: InlineContent | TableContent
+}
+
+export type CustomBlock = {
+  id: BlockNoteId
+  type: BlockType
+  props: BlockProps
+  content?: InlineContent | TableContent
+  children?: Array<CustomBlock>
+}
+
+export type CustomPartialBlock = Partial<Omit<CustomBlock, 'children'>> & {
+  children?: Array<CustomPartialBlock>
+}
+
+export type EditorBlockInput = Omit<CustomBlock, 'children'> & {
+  children?: Array<unknown>
+}
 
 export type BlockShareInfo = {
   blockNoteId: BlockNoteId
@@ -42,6 +95,7 @@ export type Block = ConvexValidatorFields<'blocks'> & {
   depth: number
   type: BlockType
   props: BlockProps
+  content?: InlineContent | TableContent | null
   inlineContent: InlineContent | null
   plainText: string
   campaignId: Id<'campaigns'>

@@ -169,9 +169,6 @@ importers:
       yjs:
         specifier: ^13.6.29
         version: 13.6.29
-      zod:
-        specifier: ^4.3.6
-        version: 4.3.6
       zustand:
         specifier: ^5.0.11
         version: 5.0.11(@types/react@19.1.11)(react@19.1.1)(use-sync-external-store@1.6.0(react@19.1.1))

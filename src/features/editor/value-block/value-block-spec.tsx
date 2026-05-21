@@ -2,7 +2,11 @@ import { useEffect, useId, useReducer, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import type { CSSProperties, Dispatch, MouseEvent as ReactMouseEvent, RefObject } from 'react'
 import { CircleHelp } from 'lucide-react'
-import { NOTE_VALUE_FUNCTIONS, validateValueSlug } from '../../../../shared/note-values/constants'
+import {
+  NOTE_VALUE_FUNCTIONS,
+  NOTE_VALUE_SLUG_OPTIONS,
+} from '../../../../shared/note-values/constants'
+import { validateSlug } from '../../../../shared/slugs'
 import type { NoteValueProps, NoteValueRuntimeState } from '../../../../shared/note-values/types'
 import { FormulaInput } from './formula-input'
 import { useNoteValueRuntime } from './value-block-runtime-context'
@@ -218,7 +222,7 @@ function getValueSlugError(
   valueId: string,
   definitions: ReturnType<typeof useNoteValueRuntime>['authoredDefinitions'],
 ): string | null {
-  const validationError = validateValueSlug(slug)
+  const validationError = validateSlug(slug, NOTE_VALUE_SLUG_OPTIONS)
   if (validationError) return validationError
   const isDuplicate = definitions.some(
     (definition) => definition.valueId !== valueId && definition.slug === slug,

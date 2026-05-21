@@ -155,7 +155,7 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
         { id: testBlockNoteId('block-a'), type: 'paragraph', props: {}, children: [] },
       ]),
     })
-    await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+    await dmAuth.action(api.notes.actions.persistNoteBlocks, {
       campaignId: ctx.campaignId,
       documentId: noteId,
     })
@@ -174,7 +174,7 @@ describe('note soft-delete does NOT cascade to blocks and blockShares', () => {
         { id: testBlockNoteId('block-b'), type: 'heading', props: { level: 1 }, children: [] },
       ]),
     })
-    await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+    await dmAuth.action(api.notes.actions.persistNoteBlocks, {
       campaignId: ctx.campaignId,
       documentId: noteId,
     })

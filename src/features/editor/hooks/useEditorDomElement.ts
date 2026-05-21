@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 
 /**
  * Returns editor.domElement, waiting for it to become available.

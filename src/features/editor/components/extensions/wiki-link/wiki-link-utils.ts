@@ -1,4 +1,4 @@
-import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 
 export interface WikiLinkContextEditor {
   _tiptapEditor?: {

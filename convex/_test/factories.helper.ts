@@ -25,8 +25,14 @@ import type {
 } from '../sidebarItems/types/baseTypes'
 import type { PermissionLevel } from '../permissions/types'
 import type { ShareStatus } from '../blockShares/types'
-import type { BlockNoteId, BlockProps, BlockType, InlineContent } from '../blocks/types'
-import type { CustomBlock } from '../notes/editorSpecs'
+import type {
+  BlockNoteId,
+  BlockProps,
+  BlockType,
+  CustomBlock,
+  InlineContent,
+  TableContent,
+} from '../blocks/types'
 import type { SidebarItemName } from '../sidebarItems/validation/name'
 import type { FileSystemOperationDecision } from '../sidebarItems/filesystem/commands'
 import type {
@@ -130,10 +136,11 @@ export function copiedRootItemIds(receipt: Pick<FileSystemTransactionReceipt, 'e
     .map((event) => event.itemId)
 }
 
-/** Create a test block content object typed as CustomBlock */
 export function testBlock(
   id: string,
-  overrides?: Partial<{ type: string; props: Record<string, unknown>; content: Array<unknown> }>,
+  overrides?: Partial<Omit<CustomBlock, 'id' | 'children'>> & {
+    children?: Array<CustomBlock>
+  },
 ): CustomBlock {
   return {
     id: testBlockNoteId(id),
@@ -522,6 +529,7 @@ export async function createBlock(
     depth: number
     type: BlockType
     props: BlockProps
+    content: InlineContent | TableContent | null
     inlineContent: InlineContent | null
     plainText: string
     shareStatus: ShareStatus | null
@@ -537,6 +545,7 @@ export async function createBlock(
     depth: 0,
     type: 'paragraph' as const,
     props: {},
+    content: null,
     inlineContent: null,
     plainText: '',
     campaignId,

@@ -8,7 +8,7 @@ import {
   parseWikiLinkText,
 } from 'convex/links/linkParsers'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
-import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { LinkResolver } from './useLinkResolver'
 import type { MdLinkDecorationMatch } from '~/features/editor/utils/md-link-decorations'
 import type { WikiLinkDecorationMatch } from '~/features/editor/utils/wiki-link-decorations'

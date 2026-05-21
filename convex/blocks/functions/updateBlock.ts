@@ -1,11 +1,11 @@
 import type { WithoutSystemFields } from 'convex/server'
 import type { Doc, Id } from '../../_generated/dataModel'
-import type { CampaignMutationCtx } from '../../functions'
+import type { MutationCtx } from '../../_generated/server'
 import type { ShareStatus } from '../../blockShares/types'
-import type { BlockNoteId, BlockProps, BlockType, InlineContent } from '../types'
+import type { BlockNoteId, BlockProps, BlockType, InlineContent, TableContent } from '../types'
 
 export async function updateBlock(
-  ctx: CampaignMutationCtx,
+  ctx: Pick<MutationCtx, 'db'>,
   params: {
     blockDbId: Id<'blocks'>
     parentBlockId?: BlockNoteId | null
@@ -13,6 +13,7 @@ export async function updateBlock(
     position?: number
     type?: BlockType
     props?: BlockProps
+    content?: InlineContent | TableContent | null
     inlineContent?: InlineContent | null
     plainText?: string
     shareStatus?: ShareStatus
@@ -28,6 +29,7 @@ export async function updateBlock(
   if (fields.position !== undefined) updates.position = fields.position
   if (fields.type !== undefined) updates.type = fields.type
   if (fields.props !== undefined) updates.props = fields.props
+  if (fields.content !== undefined) updates.content = fields.content
   if (fields.inlineContent !== undefined) updates.inlineContent = fields.inlineContent
   if (fields.plainText !== undefined) updates.plainText = fields.plainText
   if (fields.shareStatus !== undefined) updates.shareStatus = fields.shareStatus

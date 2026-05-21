@@ -9,7 +9,7 @@ import {
   createSidebarShare,
   executeCopyCommand,
 } from '../../_test/factories.helper'
-import { api } from '../../_generated/api'
+import { api, internal } from '../../_generated/api'
 import { SHARE_STATUS } from '../../blockShares/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { makeYjsUpdateWithBlocks } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
@@ -222,7 +222,7 @@ describe('note value lifecycle', () => {
         update: makeYjsUpdateWithBlocks(originalBlocks),
       })
       await t.finishAllScheduledFunctions(vi.runAllTimers)
-      await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+      await dmAuth.action(api.notes.actions.persistNoteBlocks, {
         campaignId: ctx.campaignId,
         documentId: noteId,
       })
@@ -268,6 +268,9 @@ describe('note value lifecycle', () => {
       await dmAuth.mutation(api.documentSnapshots.mutations.rollbackToSnapshot, {
         campaignId: ctx.campaignId,
         editHistoryId: snapshotEntry!._id,
+      })
+      await t.action(internal.notes.internalActions.persistNoteBlocksFromYjs, {
+        documentId: noteId,
       })
 
       states = await dmAuth.query(api.noteValues.queries.getNoteValueStates, {
@@ -432,7 +435,7 @@ describe('note value lifecycle', () => {
       rawValue: 5,
     })
 
-    await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+    await dmAuth.action(api.notes.actions.persistNoteBlocks, {
       campaignId: ctx.campaignId,
       documentId: sourceNoteId,
     })
@@ -529,7 +532,7 @@ describe('note value lifecycle', () => {
         .sort((a, b) => a.blockNoteId.localeCompare(b.blockNoteId))
     })
 
-    await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+    await dmAuth.action(api.notes.actions.persistNoteBlocks, {
       campaignId: ctx.campaignId,
       documentId: noteId,
     })

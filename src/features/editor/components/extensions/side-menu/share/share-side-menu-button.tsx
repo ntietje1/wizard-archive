@@ -6,7 +6,7 @@ import {
   useExtensionState,
 } from '@blocknote/react'
 import { Share2 } from 'lucide-react'
-import type { CustomBlock, CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import type { CustomBlock, CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { NoteWithContent } from 'convex/notes/types'
 import type { AggregateShareStatus } from '~/features/sharing/hooks/useBlocksShare'
 import { AGGREGATE_SHARE_STATUS, useBlocksShare } from '~/features/sharing/hooks/useBlocksShare'

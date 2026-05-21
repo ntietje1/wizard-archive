@@ -1,15 +1,12 @@
 import { useMemo } from 'react'
 import * as Y from 'yjs'
-import { BlockNoteEditor } from '@blocknote/core'
-import { yDocToBlocks } from '@blocknote/core/yjs'
 import { api } from 'convex/_generated/api'
 import { Loader2 } from 'lucide-react'
 import { SNAPSHOT_TYPE } from 'convex/documentSnapshots/schema'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import { createEditorSchema } from '../../editorSchema'
 import { HistoryPreviewBanner } from './history-preview-banner'
 import type { Id } from 'convex/_generated/dataModel'
-import type { CustomBlock } from 'convex/notes/editorSpecs'
+import type { CustomBlock } from '~/features/editor/editor-specs'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 import type { GameMapSnapshotData } from 'convex/gameMaps/types'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
@@ -20,7 +17,7 @@ import { NoteContent } from '~/features/editor/components/note-content'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { PinMarker } from '~/features/editor/components/viewer/map/pin-marker'
 import { resolvePinColor, resolvePinIcon } from '~/features/editor/components/viewer/map/pin-utils'
-import { destroyBlockNoteEditor } from '~/features/editor/utils/destroy-blocknote-editor'
+import { yDocToBlocks } from '~/features/editor/blocknote-yjs'
 import { logger } from '~/shared/utils/logger'
 
 export function HistoryPreviewViewer({ entryId }: { entryId: Id<'editHistory'> }) {
@@ -104,15 +101,7 @@ function NoteYjsSnapshotPreview({
     const doc = new Y.Doc()
     try {
       Y.applyUpdate(doc, new Uint8Array(data))
-      const editor = BlockNoteEditor.create({
-        schema: createEditorSchema(),
-        _headless: true,
-      })
-      try {
-        return yDocToBlocks(editor, doc, 'document') as unknown as Array<CustomBlock>
-      } finally {
-        destroyBlockNoteEditor(editor)
-      }
+      return yDocToBlocks(doc, 'document')
     } catch (error) {
       logger.error('Failed to parse note snapshot:', error)
       return [] as Array<CustomBlock>

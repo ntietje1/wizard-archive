@@ -1,6 +1,4 @@
 import type { BrandedString } from '../../common/slug'
-import { parseOrThrowClientValidation } from '../../common/zod'
-import { z } from 'zod'
 import { slugify } from '../../common/slug'
 import type { Id } from '../../_generated/dataModel'
 
@@ -27,47 +25,39 @@ export type ValidationResult = { valid: true } | { valid: false; error: string }
 
 export type SidebarItemName = BrandedString<'SidebarItemName'>
 
-export const sidebarItemNameValueSchema = z
-  .string()
-  .refine((value) => value.trim().length > 0, 'Name is required')
-  .refine((value) => value === value.trim(), 'Name cannot start or end with whitespace')
-  .max(
-    SIDEBAR_ITEM_NAME_MAX_LENGTH,
-    `Name must be ${SIDEBAR_ITEM_NAME_MAX_LENGTH} characters or fewer`,
-  )
-  .refine(
-    (value) => !SIDEBAR_ITEM_FORBIDDEN_NAME_CHARS.test(value),
-    `Name cannot contain any of: ${SIDEBAR_ITEM_FORBIDDEN_NAME_CHARS_DISPLAY}`,
-  )
-  .refine((value) => !hasSidebarItemControlChars(value), 'Name cannot contain control characters')
-  .refine(
-    (value) => !value.startsWith('.') && !value.endsWith('.'),
-    'Name cannot start or end with a dot',
-  )
-  .refine((value) => slugify(value).length > 0, 'Name must contain at least one letter or number')
-
-export const sidebarItemNameSchema = sidebarItemNameValueSchema.transform(
-  (value) => value as SidebarItemName,
-)
-
-function zodResultToValidationResult(result: z.ZodSafeParseResult<string>): ValidationResult {
-  if (result.success) {
-    return { valid: true }
-  }
-
-  return {
-    valid: false,
-    error: result.error.issues[0]?.message ?? 'Invalid value',
-  }
-}
-
 export function validateItemName(name: string): ValidationResult {
-  return zodResultToValidationResult(sidebarItemNameValueSchema.safeParse(name))
+  if (name.trim().length === 0) {
+    return { valid: false, error: 'Name is required' }
+  }
+  if (name !== name.trim()) {
+    return { valid: false, error: 'Name cannot start or end with whitespace' }
+  }
+  if (name.length > SIDEBAR_ITEM_NAME_MAX_LENGTH) {
+    return {
+      valid: false,
+      error: `Name must be ${SIDEBAR_ITEM_NAME_MAX_LENGTH} characters or fewer`,
+    }
+  }
+  if (SIDEBAR_ITEM_FORBIDDEN_NAME_CHARS.test(name)) {
+    return {
+      valid: false,
+      error: `Name cannot contain any of: ${SIDEBAR_ITEM_FORBIDDEN_NAME_CHARS_DISPLAY}`,
+    }
+  }
+  if (hasSidebarItemControlChars(name)) {
+    return { valid: false, error: 'Name cannot contain control characters' }
+  }
+  if (name.startsWith('.') || name.endsWith('.')) {
+    return { valid: false, error: 'Name cannot start or end with a dot' }
+  }
+  if (slugify(name).length === 0) {
+    return { valid: false, error: 'Name must contain at least one letter or number' }
+  }
+  return { valid: true }
 }
 
 export function parseSidebarItemName(name: string): SidebarItemName | null {
-  const result = sidebarItemNameSchema.safeParse(name)
-  return result.success ? result.data : null
+  return validateItemName(name).valid ? (name as SidebarItemName) : null
 }
 
 export function assertSidebarItemName(name: string): SidebarItemName {
@@ -85,7 +75,7 @@ export function assertSidebarItemName(name: string): SidebarItemName {
 }
 
 export function requireSidebarItemName(name: string): SidebarItemName {
-  return parseOrThrowClientValidation(sidebarItemNameSchema, name, 'Invalid sidebar item name')
+  return assertSidebarItemName(name)
 }
 
 export function requireOptionalSidebarItemName(

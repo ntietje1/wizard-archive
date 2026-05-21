@@ -5,12 +5,16 @@ import {
   parseWikiLinkText,
 } from '../linkParsers'
 import { resolveParsedItemPath } from '../linkResolution'
-import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
+import type { MutationCtx } from '../../_generated/server'
 import type { ParsedLinkData, LinkSyntax } from '../types'
 import type { Block } from '../../blocks/types'
 import type { AnySidebarItemRow } from '../../sidebarItems/types/types'
 import { SIDEBAR_ITEM_STATUS } from '../../sidebarItems/types/baseTypes'
+
+type CampaignScopedMutationCtx = Pick<MutationCtx, 'db'> & {
+  campaign: Pick<Doc<'campaigns'>, '_id'>
+}
 
 interface NoteLinkRow {
   sourceNoteId: Id<'sidebarItems'>
@@ -30,7 +34,7 @@ type NoteLinkDiff = {
 }
 
 export async function syncNoteLinks(
-  ctx: CampaignMutationCtx,
+  ctx: CampaignScopedMutationCtx,
   {
     noteId,
     campaignId,
@@ -41,6 +45,10 @@ export async function syncNoteLinks(
     blocks: Array<Block>
   },
 ): Promise<void> {
+  if (campaignId !== ctx.campaign._id) {
+    throw new Error('syncNoteLinks campaignId must match the mutation campaign context')
+  }
+
   const [sidebarItems, existingLinks] = await Promise.all([
     ctx.db
       .query('sidebarItems')
