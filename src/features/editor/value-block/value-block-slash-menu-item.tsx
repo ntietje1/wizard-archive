@@ -1,36 +1,15 @@
 import type { DefaultReactSuggestionItem } from '@blocknote/react'
 import { Sigma } from 'lucide-react'
-import type { CustomBlock, CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import {
   NOTE_VALUE_DEFAULT_SLUG,
-  getUniqueValueSlug,
+  NOTE_VALUE_SLUG_OPTIONS,
 } from '../../../../shared/note-values/constants'
-import type { NoteValueProps } from '../../../../shared/note-values/types'
-
-function isTextInlineContent(item: unknown): item is { type: 'text'; text: string } {
-  return (
-    typeof item === 'object' &&
-    item !== null &&
-    'type' in item &&
-    item.type === 'text' &&
-    'text' in item &&
-    typeof item.text === 'string'
-  )
-}
-
-function isValueInlineContent(item: unknown): item is { type: 'value'; props: { slug: string } } {
-  return (
-    typeof item === 'object' &&
-    item !== null &&
-    'type' in item &&
-    item.type === 'value' &&
-    'props' in item &&
-    typeof item.props === 'object' &&
-    item.props !== null &&
-    'slug' in item.props &&
-    typeof item.props.slug === 'string'
-  )
-}
+import { extractNoteValueDefinitions } from '../../../../shared/note-values/extract-definitions'
+import { NOTE_VALUE_PROP_DEFAULTS } from '../../../../shared/note-values/schema'
+import { deduplicateSlug } from '../../../../shared/slugs'
+import type { NoteValueProps } from '../../../../shared/note-values/schema'
+import { createUuidV4 } from '~/shared/utils/create-uuid-v4'
 
 export function createValueReferenceSlashMenuItem(
   editor: CustomBlockNoteEditor,
@@ -40,55 +19,17 @@ export function createValueReferenceSlashMenuItem(
     subtext: 'Create a referenceable value or formula',
     icon: <Sigma />,
     onItemClick: () => {
-      const existingSlugs = collectEditorValueSlugs(editor.document)
+      const existingSlugs = extractNoteValueDefinitions(editor.document, null).map(
+        (definition) => definition.slug,
+      )
       insertValueInlineForSlashMenu(editor, {
-        valueId: crypto.randomUUID(),
-        slug: getUniqueValueSlug(NOTE_VALUE_DEFAULT_SLUG, existingSlugs),
-        expressionSource: '0',
+        valueId: createUuidV4(),
+        slug: deduplicateSlug(NOTE_VALUE_DEFAULT_SLUG, existingSlugs, NOTE_VALUE_SLUG_OPTIONS),
+        expressionSource: NOTE_VALUE_PROP_DEFAULTS.expressionSource,
       })
     },
     aliases: ['formula', 'stat', 'property'],
   }
-}
-
-function collectEditorValueSlugs(editorBlocks: Array<CustomBlock>): Array<string> {
-  const slugs: Array<string> = []
-  for (const block of editorBlocks) {
-    slugs.push(...collectValueSlugs(block))
-  }
-  return slugs
-}
-
-function collectValueSlugs(editorBlock: CustomBlock): Array<string> {
-  const slugs = collectValueSlugsFromContent(editorBlock.content)
-  for (const child of editorBlock.children ?? []) {
-    slugs.push(...collectValueSlugs(child))
-  }
-  return slugs
-}
-
-function collectValueSlugsFromContent(content: CustomBlock['content']): Array<string> {
-  if (Array.isArray(content)) {
-    return collectInlineValueSlugs(content)
-  }
-  if (content?.type === 'tableContent') {
-    return content.rows.flatMap((row) =>
-      row.cells.flatMap((cell) =>
-        collectInlineValueSlugs(Array.isArray(cell) ? cell : cell.content),
-      ),
-    )
-  }
-  return []
-}
-
-function collectInlineValueSlugs(items: Array<unknown>): Array<string> {
-  const slugs: Array<string> = []
-  for (const item of items) {
-    if (isValueInlineContent(item)) {
-      slugs.push(item.props.slug)
-    }
-  }
-  return slugs
 }
 
 function insertValueInlineForSlashMenu(editor: CustomBlockNoteEditor, props: NoteValueProps) {
@@ -100,22 +41,7 @@ function insertValueInlineForSlashMenu(editor: CustomBlockNoteEditor, props: Not
     return
   }
 
-  const cursor = editor.getTextCursorPosition()
-  const content = cursor.block.content
-  const shouldReplaceCurrent =
-    Array.isArray(content) &&
-    (content.length === 0 ||
-      (content.length === 1 && isTextInlineContent(content[0]) && content[0].text === '/'))
-
-  if (shouldReplaceCurrent) {
-    editor.updateBlock(cursor.block, {
-      content: [valueInline] as never,
-    })
-    editor.setTextCursorPosition(cursor.block, 'end')
-    return
-  }
-
-  editor.insertInlineContent([valueInline] as never, { updateSelection: true })
+  editor.insertInlineContent([valueInline], { updateSelection: true })
 }
 
 function replaceActiveSlashQuery(
@@ -139,6 +65,6 @@ function replaceActiveSlashQuery(
 
   const from = $from.start() + slashIndex
   tiptap.chain().focus().setTextSelection({ from, to: selection.from }).run()
-  editor.insertInlineContent([valueInline] as never, { updateSelection: true })
+  editor.insertInlineContent([valueInline], { updateSelection: true })
   return true
 }

@@ -16,7 +16,7 @@ import type {
   CanvasDocumentNode as Node,
   CanvasEdgeType,
   CanvasNodeType,
-} from 'convex/canvases/validation'
+} from '~/features/canvas/domain/validation'
 import type { CanvasEdgePatch } from '../../edges/canvas-edge-types'
 import type { CanvasCommands } from '../../runtime/document/use-canvas-commands'
 import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'

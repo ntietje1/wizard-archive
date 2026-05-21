@@ -1,6 +1,6 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { PERMISSION_LEVEL } from '../../permissions/types'
-import { SHARE_STATUS } from '../types'
+import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Block } from '../../blocks/types'
 import type { PermissionLevel } from '../../permissions/types'

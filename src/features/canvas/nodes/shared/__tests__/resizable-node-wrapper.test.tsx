@@ -14,7 +14,7 @@ import { CanvasNodeResizeMetadataProvider } from '../canvas-node-resize-metadata
 import { ResizableNodeWrapper } from '../resizable-node-wrapper'
 import { resolveSelectionResizeUpdates } from '../use-canvas-resize-session'
 import type { CanvasNodeResizeUpdate } from '../../../tools/canvas-tool-types'
-import type { CanvasDocumentNode as Node } from 'convex/canvases/validation'
+import type { CanvasDocumentNode as Node } from '~/features/canvas/domain/validation'
 
 const modifierState = vi.hoisted(() => ({
   shiftPressed: false,

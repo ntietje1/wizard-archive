@@ -5,7 +5,7 @@ import { PreventExternalDrop } from './extensions/prevent-external-drop/prevent-
 import { SideMenuRenderer } from './extensions/side-menu/side-menu'
 import { SlashMenu } from './extensions/slash-menu/slash-menu'
 import { NoteValueRuntimeProvider } from '../value-block/value-block-runtime'
-import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { NoteWithContent } from 'convex/notes/types'
 import type { CSSProperties, ReactNode, RefObject } from 'react'

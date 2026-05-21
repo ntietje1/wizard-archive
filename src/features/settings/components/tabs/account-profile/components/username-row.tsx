@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useReducer, useState } from 'react'
 import { useLocation, useNavigate } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { api } from 'convex/_generated/api'
-import { USERNAME_MAX_LENGTH } from 'convex/users/constants'
+import { USERNAME_MAX_LENGTH } from 'shared/users/constants'
 import { getClientErrorMessage } from 'convex/errors'
-import { normalizeUsernameInput, parseUsername, validateUsername } from 'convex/users/validation'
+import { normalizeUsernameInput, parseUsername, validateUsername } from 'shared/users/validation'
 import { AlertTriangle, Loader2 } from 'lucide-react'
 import { SettingsRow } from './settings-row'
 import type { UserProfile } from 'convex/users/types'
@@ -50,23 +50,26 @@ function useUsernameValidation(raw: string, currentUsername: string) {
 function UsernameChangeDialog({ profile, onClose }: { profile: UserProfile; onClose: () => void }) {
   const navigate = useNavigate()
   const location = useLocation()
-  const [username, setUsername] = useState<string>(profile.username)
-  const [isLoading, setIsLoading] = useState(false)
-  const [submitError, setSubmitError] = useState('')
+  const [state, updateState] = useReducer(
+    (
+      current: { username: string; isLoading: boolean; submitError: string },
+      patch: Partial<{ username: string; isLoading: boolean; submitError: string }>,
+    ) => ({ ...current, ...patch }),
+    { username: profile.username, isLoading: false, submitError: '' },
+  )
 
   const {
     normalizedUsername,
     error: validationError,
     canSubmit,
     isChecking,
-  } = useUsernameValidation(username, profile.username)
+  } = useUsernameValidation(state.username, profile.username)
 
   const updateUsername = useAppMutation(api.users.mutations.updateUsername)
 
   const handleSave = async () => {
     if (!canSubmit) return
-    setSubmitError('')
-    setIsLoading(true)
+    updateState({ submitError: '', isLoading: true })
     try {
       const newUsername = await updateUsername.mutateAsync({
         username: normalizedUsername,
@@ -83,15 +86,16 @@ function UsernameChangeDialog({ profile, onClose }: { profile: UserProfile; onCl
         })
       }
     } catch (error) {
-      setSubmitError(
-        getClientErrorMessage(error) ??
+      updateState({
+        submitError:
+          getClientErrorMessage(error) ??
           (error instanceof Error ? error.message : 'Failed to update username'),
-      )
+      })
     }
-    setIsLoading(false)
+    updateState({ isLoading: false })
   }
 
-  const displayError = validationError ?? submitError
+  const displayError = validationError ?? state.submitError
 
   return (
     <>
@@ -103,9 +107,9 @@ function UsernameChangeDialog({ profile, onClose }: { profile: UserProfile; onCl
         <div className="relative">
           <Input
             id="edit-username"
-            value={username}
-            onChange={(e) => setUsername(normalizeUsernameInput(e.target.value))}
-            disabled={isLoading}
+            value={state.username}
+            onChange={(e) => updateState({ username: e.target.value })}
+            disabled={state.isLoading}
             onKeyDown={(e) => e.key === 'Enter' && handleSave()}
             className="pr-8"
             maxLength={USERNAME_MAX_LENGTH}
@@ -120,7 +124,7 @@ function UsernameChangeDialog({ profile, onClose }: { profile: UserProfile; onCl
           <p className="text-xs text-destructive">{displayError}</p>
         ) : (
           <p className="text-xs text-muted-foreground">
-            Lowercase letters, numbers, and hyphens only. Must be unique.
+            Lowercase letters, numbers, hyphens, and underscores only. Must be unique.
           </p>
         )}
       </div>
@@ -132,8 +136,8 @@ function UsernameChangeDialog({ profile, onClose }: { profile: UserProfile; onCl
         </p>
       </div>
       <DialogFooter showCloseButton>
-        <Button onClick={handleSave} disabled={!canSubmit || isLoading}>
-          {isLoading ? <Loader2 className="size-4 animate-spin" /> : 'Save'}
+        <Button onClick={handleSave} disabled={!canSubmit || state.isLoading}>
+          {state.isLoading ? <Loader2 className="size-4 animate-spin" /> : 'Save'}
         </Button>
       </DialogFooter>
     </>

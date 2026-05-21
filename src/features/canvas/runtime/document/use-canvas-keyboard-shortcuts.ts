@@ -9,7 +9,7 @@ import type {
   CanvasHistoryController,
   CanvasSelectionController,
 } from '../../tools/canvas-tool-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type { RefObject } from 'react'
 import type * as Y from 'yjs'
 

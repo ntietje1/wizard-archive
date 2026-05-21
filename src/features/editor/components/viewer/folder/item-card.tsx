@@ -1,4 +1,4 @@
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { NoteCard } from './note-card'
 import { FolderCard } from './folder-card'
 import { MapCard } from './map-card'

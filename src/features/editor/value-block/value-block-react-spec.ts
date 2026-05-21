@@ -3,7 +3,7 @@ import { createReactInlineContentSpec } from '@blocknote/react'
 import { noteValueInlineConfig } from '../../../../shared/note-values/block-config'
 import { ValueInlineContent } from './value-block-spec'
 
-const valueInlineSpec = createReactInlineContentSpec(noteValueInlineConfig, {
+export const reactValueInlineSpec = createReactInlineContentSpec(noteValueInlineConfig, {
   render: (props) =>
     createElement(ValueInlineContent, {
       inlineContent: props.inlineContent,
@@ -16,7 +16,3 @@ const valueInlineSpec = createReactInlineContentSpec(noteValueInlineConfig, {
       props.inlineContent.props.slug || props.inlineContent.props.expressionSource || 'value',
     ),
 })
-
-export function createReactValueInlineSpec() {
-  return valueInlineSpec
-}

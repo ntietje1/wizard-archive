@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ChevronDown, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
-import { CAMPAIGN_MEMBER_STATUS } from 'convex/campaigns/types'
+import { CAMPAIGN_MEMBER_STATUS } from '~/features/campaigns/campaign-types'
 import { api } from 'convex/_generated/api'
 import { MemberRow } from './member-row'
 import type { CampaignMember } from 'convex/campaigns/types'

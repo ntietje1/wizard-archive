@@ -5,9 +5,9 @@ import userEvent from '@testing-library/user-event'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Note } from 'convex/notes/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { NoteValueProps } from '../../../../../shared/note-values/schema'
 import type {
   NoteValueAuthoringDefinition,
-  NoteValueProps,
   NoteValueRuntimeState,
 } from '../../../../../shared/note-values/types'
 import {
@@ -129,6 +129,7 @@ function renderInlineValue({
           noteId: 'note-1' as Id<'sidebarItems'>,
           editable,
           authoredDefinitions,
+          authoredValueStates: currentRuntimeStates,
           stateByValueId: new Map(currentRuntimeStates.map((state) => [state.valueId, state])),
           sidebarItems,
           itemsMap: new Map(sidebarItems.map((item) => [item._id, item])),
@@ -150,6 +151,11 @@ function renderInlineValue({
 
 function makeRuntimeProviderEditor(
   expressionSource: string,
+  extraValues: Array<{
+    valueId: string
+    slug: string
+    expressionSource: string
+  }> = [],
 ): Parameters<typeof NoteValueRuntimeProvider>[0]['editor'] {
   return {
     document: [
@@ -166,6 +172,14 @@ function makeRuntimeProviderEditor(
               expressionSource,
             },
           },
+          ...extraValues.map((value) => ({
+            type: 'value',
+            props: {
+              valueId: value.valueId,
+              slug: value.slug,
+              expressionSource: value.expressionSource,
+            },
+          })),
         ],
         children: [],
       },
@@ -183,12 +197,14 @@ function renderRuntimeProviderChip({
   persistedStates,
   externalStates = [],
   sidebarItems = [],
+  extraValues = [],
 }: {
   expressionSource: string
   evaluateValuesFromEditor?: boolean
   persistedStates: Array<NoteValueRuntimeState<Id<'sidebarItems'>>>
   externalStates?: Array<NoteValueRuntimeState<Id<'sidebarItems'>>>
   sidebarItems?: Array<AnySidebarItem>
+  extraValues?: Parameters<typeof makeRuntimeProviderEditor>[1]
 }) {
   useActiveSidebarItemsMock.mockReturnValue({
     data: sidebarItems,
@@ -216,7 +232,7 @@ function renderRuntimeProviderChip({
 
   render(
     <NoteValueRuntimeProvider
-      editor={makeRuntimeProviderEditor(expressionSource)}
+      editor={makeRuntimeProviderEditor(expressionSource, extraValues)}
       noteId={'note-1' as Id<'sidebarItems'>}
       editable={false}
       evaluateValuesFromEditor={evaluateValuesFromEditor}
@@ -303,7 +319,7 @@ describe('inline value chip runtime', () => {
     )
   })
 
-  it('does not resolve the current note path as an external value dependency', () => {
+  it('resolves the current note path as a same-note value dependency', () => {
     const currentNote = noteItem('note-1' as Id<'sidebarItems'>, 'Current Note')
 
     renderRuntimeProviderChip({
@@ -313,7 +329,25 @@ describe('inline value chip runtime', () => {
     })
 
     expect(screen.getByTestId('provider-value-state')).toHaveTextContent(
-      'error:Unknown reference "draft_total":Unknown reference "draft_total"',
+      'error:Cyclic dependency detected:Cyclic dependency detected',
+    )
+  })
+
+  it('reports duplicate authored slugs when the current note path is used', () => {
+    const currentNote = noteItem('note-1' as Id<'sidebarItems'>, 'Current Note')
+
+    renderRuntimeProviderChip({
+      expressionSource: '[[Current Note.shared]]',
+      persistedStates: [],
+      sidebarItems: [currentNote],
+      extraValues: [
+        { valueId: 'value-2', slug: 'shared', expressionSource: '1' },
+        { valueId: 'value-3', slug: 'shared', expressionSource: '2' },
+      ],
+    })
+
+    expect(screen.getByTestId('provider-value-state')).toHaveTextContent(
+      'Slug "shared" is duplicated in this note',
     )
   })
 
@@ -612,6 +646,42 @@ describe('inline value chip runtime', () => {
     expect(noteSuggestion).toHaveTextContent('2')
     expect(noteSuggestion).toHaveTextContent('save_dc')
     expect(noteSuggestion).toHaveTextContent('15')
+  })
+
+  it('shows authored values after selecting the current note in formula autocomplete', async () => {
+    const user = userEvent.setup()
+    const currentNote = noteItem('note-1' as Id<'sidebarItems'>, 'Current Note')
+    renderInlineValue({
+      sidebarItems: [currentNote],
+      authoredDefinitions: [
+        {
+          noteId: 'note-1' as Id<'sidebarItems'>,
+          blockNoteId: 'block-2',
+          valueId: 'value-2',
+          slug: 'strength',
+          expressionSource: '18',
+        },
+      ],
+      runtimeStates: [
+        runtimeState(),
+        runtimeState({
+          blockNoteId: 'block-2',
+          valueId: 'value-2',
+          slug: 'strength',
+          rawValue: 18,
+          formattedValue: '18',
+        }),
+      ],
+    })
+
+    await user.click(screen.getByTestId('note-value-inline'))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Value formula' }), {
+      target: { value: '[[Current Note.' },
+    })
+
+    const suggestion = screen.getByRole('option', { name: /strength/ })
+    expect(suggestion).toHaveTextContent('strength')
+    expect(suggestion).toHaveTextContent('18')
   })
 
   it('scrolls the selected formula autocomplete option into view during keyboard navigation', async () => {

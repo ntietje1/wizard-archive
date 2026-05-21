@@ -2,6 +2,7 @@ import { renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Fragment, Schema, Slice } from '@tiptap/pm/model'
 import { noteValueInlineConfig } from '../../../../../shared/note-values/block-config'
+import { NOTE_VALUE_PROP_DEFAULTS } from '../../../../../shared/note-values/schema'
 import { createValueTransferPlugin, useValueTransferBehavior } from '../value-transfer-plugin'
 import type { EditorView } from '@tiptap/pm/view'
 
@@ -20,9 +21,9 @@ const schema = new Schema({
       group: 'inline',
       atom: true,
       attrs: {
-        valueId: { default: '' },
-        slug: { default: '' },
-        expressionSource: { default: '' },
+        valueId: { default: NOTE_VALUE_PROP_DEFAULTS.valueId },
+        slug: { default: NOTE_VALUE_PROP_DEFAULTS.slug },
+        expressionSource: { default: NOTE_VALUE_PROP_DEFAULTS.expressionSource },
       },
       toDOM: (node) => ['span', node.attrs],
       parseDOM: [{ tag: 'span' }],
@@ -97,8 +98,8 @@ describe('value transfer plugin', () => {
 
     expect(transformed).toBeInstanceOf(Slice)
     expect(valuePropsFromSlice(transformed as Slice)).toEqual([
-      { valueId: 'new-value-1', slug: 'prof_bonus_1', expressionSource: '3' },
-      { valueId: 'new-value-2', slug: 'prof_bonus_2', expressionSource: '3' },
+      { valueId: 'new-value-1', slug: 'prof_bonus-1', expressionSource: '3' },
+      { valueId: 'new-value-2', slug: 'prof_bonus-2', expressionSource: '3' },
     ])
   })
 
@@ -122,8 +123,8 @@ describe('value transfer plugin', () => {
     const transformed = transformPastedSlice(plugin, slice)
 
     expect(valuePropsFromSlice(transformed as Slice)).toEqual([
-      { valueId: 'new-base', slug: 'base_1', expressionSource: '1' },
-      { valueId: 'new-total', slug: 'total_1', expressionSource: '[[base_1]] + [[External.base]]' },
+      { valueId: 'new-base', slug: 'base-1', expressionSource: '1' },
+      { valueId: 'new-total', slug: 'total-1', expressionSource: '[[base-1]] + [[External.base]]' },
     ])
   })
 
@@ -164,8 +165,8 @@ describe('value transfer plugin', () => {
     expect(transformed).toBeInstanceOf(Slice)
     expect(transformed).not.toBe(slice)
     expect(valuePropsFromSlice(transformed as Slice)).toEqual([
-      { valueId: 'copy-value-1', slug: 'prof_bonus_1', expressionSource: '3' },
-      { valueId: 'copy-value-2', slug: 'prof_bonus_2', expressionSource: '3' },
+      { valueId: 'copy-value-1', slug: 'prof_bonus-1', expressionSource: '3' },
+      { valueId: 'copy-value-2', slug: 'prof_bonus-2', expressionSource: '3' },
     ])
   })
 

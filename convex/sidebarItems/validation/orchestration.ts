@@ -1,4 +1,4 @@
-import { findUniqueSlug } from '../../common/slug'
+import { deduplicateSlug, slugify } from '../../../shared/slugs'
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { PERMISSION_LEVEL } from '../../permissions/types'
@@ -13,15 +13,13 @@ import { assertSidebarOperationAllowed, evaluateMoveToParent } from '../filesyst
 import type { OperationSidebarItem } from '../filesystem/capabilities'
 import type { AnySidebarItem } from '../types/types'
 import { checkItemAccess, requireItemAccess } from './access'
-import { assertSidebarItemName, checkNameConflict } from './name'
+import { assertSidebarItemName } from './name'
+import { checkNameConflict } from '../../../shared/sidebar-items/name'
 import { validateNoCircularParentAsync } from './parent'
-import {
-  SIDEBAR_ITEM_SLUG_MAX_LENGTH,
-  assertSidebarItemSlug,
-  validateSidebarItemSlug,
-} from './slug'
-import type { SidebarItemName, ValidationResult } from './name'
-import type { SidebarItemSlug } from './slug'
+import { SIDEBAR_ITEM_SLUG_MAX_LENGTH } from '../../../shared/sidebar-items/slug'
+import { assertSidebarItemSlug } from './slug'
+import type { SidebarItemName, ValidationResult } from '../../../shared/sidebar-items/name'
+import type { SidebarItemSlug } from '../../../shared/sidebar-items/slug'
 
 const MAX_SIDEBAR_PARENT_DEPTH = 100
 type NamedOperationSidebarItem = OperationSidebarItem & Pick<AnySidebarItem, 'name'>
@@ -214,20 +212,29 @@ export async function findUniqueSidebarItemSlug(
     name: string
   },
 ): Promise<SidebarItemSlug> {
-  const candidateSlug = await findUniqueSlug(
-    name,
-    (candidate) =>
-      checkSlugConflict(ctx, {
-        campaignId: ctx.campaign._id,
-        slug: candidate,
-        excludeId: itemId,
-      }),
-    {
+  const baseSlug = slugify(name, {
+    fallback: 'item',
+    maxLength: SIDEBAR_ITEM_SLUG_MAX_LENGTH,
+  })
+  const conflicts = new Set<string>()
+
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const candidateSlug = deduplicateSlug(baseSlug, conflicts, {
+      label: 'Slug',
       maxLength: SIDEBAR_ITEM_SLUG_MAX_LENGTH,
-      isValidCandidate: (candidate) => validateSidebarItemSlug(candidate) === null,
-    },
-  )
-  return assertSidebarItemSlug(candidateSlug)
+    })
+    const conflict = await checkSlugConflict(ctx, {
+      campaignId: ctx.campaign._id,
+      slug: candidateSlug,
+      excludeId: itemId,
+    })
+    if (!conflict) {
+      return assertSidebarItemSlug(candidateSlug)
+    }
+    conflicts.add(candidateSlug)
+  }
+
+  throwClientError(ERROR_CODE.VALIDATION_FAILED, `Failed to find unique slug for "${name}"`)
 }
 
 export async function prepareSidebarItemCreate(

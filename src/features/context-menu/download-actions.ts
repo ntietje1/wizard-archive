@@ -1,7 +1,7 @@
 import { toast } from 'sonner'
 import JSZip from 'jszip'
 import { api } from 'convex/_generated/api'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import type { useConvex } from '@convex-dev/react-query'
 import type { ActionHandlers } from './menu-registry'
 import type { MenuContext } from './types'

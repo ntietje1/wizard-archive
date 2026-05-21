@@ -30,7 +30,8 @@
     "noUncheckedSideEffectImports": true,
     "paths": {
       "~/*": ["./src/*"],
-      "convex/*": ["./convex/*"]
+      "convex/*": ["./convex/*"],
+      "shared/*": ["./shared/*"]
     },
 
     "esModuleInterop": true,

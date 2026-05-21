@@ -5,7 +5,7 @@ import type {
   CanvasSelectionController,
 } from '../../tools/canvas-tool-types'
 import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type * as Y from 'yjs'
 import { logger } from '~/shared/utils/logger'
 import { areStringSetsEqual } from '../../utils/canvas-selection-utils'

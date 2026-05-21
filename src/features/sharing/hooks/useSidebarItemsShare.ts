@@ -1,14 +1,15 @@
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
-import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { CAMPAIGN_MEMBER_ROLE } from '~/features/campaigns/campaign-types'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import type { PermissionLevel } from 'convex/permissions/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type { AggregateShareStatus, ShareItem } from '~/features/sharing/hooks/useBlocksShare'
+import type { AggregateShareStatus, ShareItem } from '~/features/sharing/utils/block-share-state'
+import type { CampaignMember } from 'convex/campaigns/types'
 import { handleError } from '~/shared/utils/logger'
-import { AGGREGATE_SHARE_STATUS } from '~/features/sharing/hooks/useBlocksShare'
+import { AGGREGATE_SHARE_STATUS } from '~/features/sharing/utils/block-share-state'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
@@ -18,6 +19,7 @@ import { isOptimisticSidebarItem } from '~/features/filesystem/optimistic-sideba
 type MixedPermissionLevel = 'mixed'
 type AggregatePermissionLevel = PermissionLevel | MixedPermissionLevel
 export type NullableAggregatePermissionLevel = PermissionLevel | MixedPermissionLevel | null
+type CampaignMemberId = CampaignMember['_id']
 
 export interface ShareItemWithPermission extends ShareItem {
   permissionLevel: AggregatePermissionLevel
@@ -29,12 +31,12 @@ export interface ShareItemWithPermission extends ShareItem {
 interface SidebarItemShareInfo {
   itemId: Id<'sidebarItems'>
   allPermissionLevel: PermissionLevel | null
-  sharedMemberIds: Set<Id<'campaignMembers'>>
-  memberPermissions: Map<Id<'campaignMembers'>, PermissionLevel>
+  sharedMemberIds: Set<CampaignMemberId>
+  memberPermissions: Map<CampaignMemberId, PermissionLevel>
   inheritedAllPermissionLevel: PermissionLevel | null
   inheritedFromFolderName: string | null
-  memberInheritedPermissions: Map<Id<'campaignMembers'>, PermissionLevel>
-  memberInheritedFromFolderNames: Map<Id<'campaignMembers'>, string>
+  memberInheritedPermissions: Map<CampaignMemberId, PermissionLevel>
+  memberInheritedFromFolderNames: Map<CampaignMemberId, string>
 }
 
 function hasPermissionAccess(level: PermissionLevel | null | undefined): boolean {
@@ -67,7 +69,7 @@ function aggregateOptionalStrings(values: Array<string | null | undefined>): str
 
 function getExplicitMemberPermission(
   info: SidebarItemShareInfo,
-  memberId: Id<'campaignMembers'>,
+  memberId: CampaignMemberId,
 ): PermissionLevel | null {
   if (!info.sharedMemberIds.has(memberId)) return null
   return info.memberPermissions.get(memberId) ?? PERMISSION_LEVEL.VIEW
@@ -75,7 +77,7 @@ function getExplicitMemberPermission(
 
 function getDefaultMemberPermission(
   info: SidebarItemShareInfo,
-  memberId: Id<'campaignMembers'>,
+  memberId: CampaignMemberId,
 ): PermissionLevel {
   if (info.allPermissionLevel !== null) return info.allPermissionLevel
   return info.memberInheritedPermissions.get(memberId) ?? PERMISSION_LEVEL.NONE
@@ -152,8 +154,8 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
   const itemShareInfoMap = (() => {
     const map = new Map<Id<'sidebarItems'>, SidebarItemShareInfo>()
     for (const itemShareData of query.data ?? []) {
-      const sharedMemberIds = new Set<Id<'campaignMembers'>>()
-      const memberPermissions = new Map<Id<'campaignMembers'>, PermissionLevel>()
+      const sharedMemberIds = new Set<CampaignMemberId>()
+      const memberPermissions = new Map<CampaignMemberId, PermissionLevel>()
       for (const share of itemShareData.shares) {
         sharedMemberIds.add(share.campaignMemberId)
         memberPermissions.set(
@@ -164,11 +166,11 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
 
       const memberInheritedPermissions = new Map(
         Object.entries(itemShareData.memberInheritedPermissions),
-      ) as Map<Id<'campaignMembers'>, PermissionLevel>
+      ) as Map<CampaignMemberId, PermissionLevel>
 
       const memberInheritedFromFolderNames = new Map(
         Object.entries(itemShareData.memberInheritedFromFolderNames),
-      ) as Map<Id<'campaignMembers'>, string>
+      ) as Map<CampaignMemberId, string>
 
       map.set(itemShareData.sidebarItemId, {
         itemId: itemShareData.sidebarItemId,
@@ -217,7 +219,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
       : AGGREGATE_SHARE_STATUS.NOT_SHARED
   })()
 
-  const getShareState = (memberId: Id<'campaignMembers'>): 'all' | 'some' | 'none' => {
+  const getShareState = (memberId: CampaignMemberId): 'all' | 'some' | 'none' => {
     if (!hasCompleteData) return 'none'
 
     const sharedCount = itemShareInfos.filter((info) => {
@@ -262,7 +264,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
     }
   }
 
-  const toggleShareWithMember = async (memberId: Id<'campaignMembers'>) => {
+  const toggleShareWithMember = async (memberId: CampaignMemberId) => {
     if (!canMutateShares || !hasCompleteData) return
 
     try {
@@ -317,7 +319,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
     }
   }
 
-  const setMemberPermission = async (memberId: Id<'campaignMembers'>, level: PermissionLevel) => {
+  const setMemberPermission = async (memberId: CampaignMemberId, level: PermissionLevel) => {
     if (!canMutateShares) return
 
     try {
@@ -344,7 +346,7 @@ export function useSidebarItemsShare(items: Array<AnySidebarItem>) {
     }
   }
 
-  const clearMemberPermission = async (memberId: Id<'campaignMembers'>) => {
+  const clearMemberPermission = async (memberId: CampaignMemberId) => {
     if (!canMutateShares) return
 
     try {

@@ -10,7 +10,6 @@ import { api } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
 import { makeYjsUpdateWithBlocks } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
 import { syncNoteLinks } from '../../links/functions/syncNoteLinks'
-import type { CampaignMutationCtx } from '../../functions'
 import type { Block } from '../../blocks/types'
 
 async function pushAndPersist(
@@ -24,7 +23,7 @@ async function pushAndPersist(
     documentId: noteId,
     update: makeYjsUpdateWithBlocks(blocks),
   })
-  await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+  await dmAuth.action(api.notes.actions.persistNoteBlocks, {
     campaignId,
     documentId: noteId,
   })
@@ -33,20 +32,12 @@ async function pushAndPersist(
 type FactoryBlock = Awaited<ReturnType<typeof createBlock>>
 
 function toBlock(noteId: Id<'sidebarItems'>, block: FactoryBlock): Block {
+  const { blockDbId, ...fields } = block
   return {
-    _id: block.blockDbId,
+    ...fields,
+    _id: blockDbId,
     _creationTime: 0,
     noteId,
-    blockNoteId: block.blockNoteId,
-    position: block.position,
-    parentBlockId: block.parentBlockId,
-    depth: block.depth,
-    type: block.type,
-    props: block.props,
-    inlineContent: block.inlineContent,
-    plainText: block.plainText,
-    campaignId: block.campaignId,
-    shareStatus: block.shareStatus,
   }
 }
 
@@ -57,11 +48,16 @@ async function runSync(
   blocks: Array<Block>,
 ) {
   await t.run(async (dbCtx) => {
-    await syncNoteLinks(dbCtx as unknown as CampaignMutationCtx, {
-      noteId,
-      campaignId,
-      blocks,
-    })
+    const campaign = await dbCtx.db.get('campaigns', campaignId)
+    if (!campaign) throw new Error('Campaign not found')
+    await syncNoteLinks(
+      { ...dbCtx, campaign },
+      {
+        noteId,
+        campaignId,
+        blocks,
+      },
+    )
   })
 }
 
@@ -391,13 +387,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       plainText: '[[Target Note|Old Alias]]',
     })
 
-    await t.run(async (dbCtx) => {
-      await syncNoteLinks(dbCtx as unknown as CampaignMutationCtx, {
-        noteId: sourceId,
-        campaignId: ctx.campaignId,
-        blocks: [toBlock(sourceId, originalBlock)],
-      })
-    })
+    await runSync(t, ctx.campaignId, sourceId, [toBlock(sourceId, originalBlock)])
 
     const originalLink = await t.run(async (dbCtx) => {
       const links = await dbCtx.db
@@ -409,18 +399,12 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       return links[0]
     })
 
-    await t.run(async (dbCtx) => {
-      await syncNoteLinks(dbCtx as unknown as CampaignMutationCtx, {
-        noteId: sourceId,
-        campaignId: ctx.campaignId,
-        blocks: [
-          {
-            ...toBlock(sourceId, originalBlock),
-            plainText: '[New Label](Target Note)',
-          },
-        ],
-      })
-    })
+    await runSync(t, ctx.campaignId, sourceId, [
+      {
+        ...toBlock(sourceId, originalBlock),
+        plainText: '[New Label](Target Note)',
+      },
+    ])
 
     await t.run(async (dbCtx) => {
       const links = await dbCtx.db
@@ -465,13 +449,10 @@ describe('persistNoteBlocks — note link reconciliation', () => {
       plainText: '[[Target Note]]',
     })
 
-    await t.run(async (dbCtx) => {
-      await syncNoteLinks(dbCtx as unknown as CampaignMutationCtx, {
-        noteId: sourceId,
-        campaignId: ctx.campaignId,
-        blocks: [toBlock(sourceId, blockA), toBlock(sourceId, blockB)],
-      })
-    })
+    await runSync(t, ctx.campaignId, sourceId, [
+      toBlock(sourceId, blockA),
+      toBlock(sourceId, blockB),
+    ])
 
     const originalLinks = await t.run(async (dbCtx) => {
       return await dbCtx.db
@@ -482,13 +463,7 @@ describe('persistNoteBlocks — note link reconciliation', () => {
         .collect()
     })
 
-    await t.run(async (dbCtx) => {
-      await syncNoteLinks(dbCtx as unknown as CampaignMutationCtx, {
-        noteId: sourceId,
-        campaignId: ctx.campaignId,
-        blocks: [toBlock(sourceId, blockB)],
-      })
-    })
+    await runSync(t, ctx.campaignId, sourceId, [toBlock(sourceId, blockB)])
 
     await t.run(async (dbCtx) => {
       const links = await dbCtx.db

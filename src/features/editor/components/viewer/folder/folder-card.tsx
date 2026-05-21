@@ -14,7 +14,7 @@ import { useContextMenu } from '~/features/context-menu/hooks/useContextMenu'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
 import { useSidebarItemDropTarget } from '~/features/dnd/hooks/useSidebarItemDropTarget'
-import { useIsSidebarItemDragging } from '~/features/dnd/hooks/useIsSidebarItemDragging'
+import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
 import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
@@ -113,7 +113,7 @@ function FolderCardInner({
     visibleItemIds: visibleItemIds ?? [folder._id],
   })
   const dragData = useSidebarDragData(folder)
-  const isDragging = useIsSidebarItemDragging(folder._id)
+  const isDragging = useDndStore((state) => state.sidebarDragPreviewItemIds.includes(folder._id))
 
   const canDrag = hasAtLeastPermissionLevel(folder.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { SIDEBAR_ITEM_STATUS } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_STATUS } from 'shared/sidebar-items/types'
 import type { SidebarCacheSnapshot } from '../filesystem-cache-patches'
 import { createFileSystemCacheAdapter } from '../filesystem-cache-adapter'
 import { applyFileSystemPatchesToSnapshot } from '../filesystem-cache-patches'

@@ -5,7 +5,9 @@ import { buildSidebarItemMaps } from '~/features/sidebar/utils/sidebar-item-maps
 import { createNote } from '~/test/factories/sidebar-item-factory'
 import { WikiLinkAutocomplete } from '../wiki-link-autocomplete'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
+import { NoteValueRuntimeContext } from '~/features/editor/value-block/value-block-runtime-context'
+import type { Id } from 'convex/_generated/dataModel'
 
 const filteredSidebarItemsMock = vi.hoisted(() => vi.fn())
 const activeSidebarItemsMock = vi.hoisted(() => vi.fn())
@@ -30,7 +32,7 @@ function sidebarValue(data: Array<AnySidebarItem>) {
   }
 }
 
-function createEditorStub() {
+function createEditorStub(text = '[[') {
   const domElement = document.createElement('div')
   document.body.append(domElement)
   let transactionHandler: ((payload: { transaction: { docChanged: boolean } }) => void) | null =
@@ -41,14 +43,14 @@ function createEditorStub() {
     _tiptapEditor: {
       state: {
         selection: {
-          from: 2,
+          from: text.length,
           $from: {
             start: () => 0,
-            end: () => 2,
+            end: () => text.length,
           },
         },
         doc: {
-          textBetween: (from: number, to: number) => (from === 0 && to === 2 ? '[[' : ''),
+          textBetween: (from: number, to: number) => text.slice(from, to),
         },
       },
       view: {
@@ -92,5 +94,74 @@ describe('WikiLinkAutocomplete', () => {
     await waitFor(() => {
       expect(screen.queryByText('Hidden Note')).not.toBeInTheDocument()
     })
+  })
+
+  it('uses live current-note values for qualified value autocomplete', async () => {
+    const currentNote = createNote({
+      _id: 'note-1' as Id<'sidebarItems'>,
+      name: 'Current Note',
+      myPermissionLevel: PERMISSION_LEVEL.VIEW,
+    })
+
+    activeSidebarItemsMock.mockReturnValue(sidebarValue([currentNote]))
+    filteredSidebarItemsMock.mockReturnValue(sidebarValue([currentNote]))
+
+    const { editor, openAutocomplete } = createEditorStub('[[Current Note.')
+    render(
+      <NoteValueRuntimeContext.Provider
+        value={{
+          noteId: currentNote._id,
+          editable: true,
+          authoredDefinitions: [
+            {
+              noteId: currentNote._id,
+              blockNoteId: 'block-1',
+              valueId: 'value-1',
+              slug: 'draft_value',
+              expressionSource: '1',
+            },
+          ],
+          authoredValueStates: [
+            {
+              noteId: currentNote._id,
+              blockNoteId: 'block-1',
+              valueId: 'value-1',
+              slug: 'draft_value',
+              status: 'ok',
+              rawValue: 1,
+              formattedValue: '1',
+              errorCode: null,
+              errorMessage: null,
+            },
+          ],
+          stateByValueId: new Map([
+            [
+              'value-1',
+              {
+                noteId: currentNote._id,
+                blockNoteId: 'block-1',
+                valueId: 'value-1',
+                slug: 'draft_value',
+                status: 'ok',
+                rawValue: 1,
+                formattedValue: '1',
+                errorCode: null,
+                errorMessage: null,
+              },
+            ],
+          ]),
+          sidebarItems: [currentNote],
+          itemsMap: new Map([[currentNote._id, currentNote]]),
+        }}
+      >
+        <WikiLinkAutocomplete editor={editor} sourceNoteId={currentNote._id} />
+      </NoteValueRuntimeContext.Provider>,
+    )
+
+    act(() => {
+      openAutocomplete()
+    })
+
+    expect(await screen.findByRole('option', { name: /draft_value/ })).toBeInTheDocument()
   })
 })

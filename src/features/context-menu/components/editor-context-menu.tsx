@@ -11,23 +11,21 @@ import { ContextMenuHost } from './context-menu-host'
 import type { ContextMenuHostRef } from './context-menu-host'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { ViewContext } from '../types'
-import { useRef } from 'react'
+import { use, useRef } from 'react'
 import type { Ref } from 'react'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useMapViewOptional } from '~/features/editor/hooks/useMapView'
-import { useBlockNoteContextMenuOptional } from '~/features/editor/hooks/useBlockNoteContextMenu'
+import { BlockNoteContextMenuContext } from '~/features/editor/hooks/useBlockNoteContextMenu'
 import { useSession } from '~/features/sidebar/hooks/useGameSession'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { resolveClickedSidebarOperationItems } from '~/features/filesystem/filesystem-operation-selection'
 import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
-import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
-
-export type EditorContextMenuRef = ContextMenuHostRef
+import { CAMPAIGN_MEMBER_ROLE } from '~/features/campaigns/campaign-types'
 
 interface EditorContextMenuProps {
-  ref?: Ref<EditorContextMenuRef>
+  ref?: Ref<ContextMenuHostRef>
   viewContext: ViewContext
   item?: AnySidebarItem
   isTrashView?: boolean
@@ -53,13 +51,13 @@ export function EditorContextMenu({
   onDialogOpen,
   onDialogClose,
 }: EditorContextMenuProps) {
-  const fallbackRef = useRef<EditorContextMenuRef>(null)
+  const fallbackRef = useRef<ContextMenuHostRef>(null)
   const hostRef = ref ?? fallbackRef
   const menuActions = useMenuActions({ onDialogOpen, onDialogClose })
   const { campaign } = useCampaign()
   const { currentSession } = useSession()
   const mapView = useMapViewOptional()
-  const blockNoteContext = useBlockNoteContextMenuOptional()
+  const blockNoteContext = use(BlockNoteContextMenuContext)
   const selectedItemIds = useSidebarUIStore((s) => s.selectedItemIds)
   const filesystemReadModel = useFileSystemReadModel()
   const editorMode = useEditorMode()

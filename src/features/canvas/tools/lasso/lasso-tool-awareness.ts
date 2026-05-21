@@ -1,4 +1,4 @@
-import { parseCanvasLassoAwarenessState } from 'convex/canvases/validation'
+import { parseCanvasLassoAwarenessState } from '~/features/canvas/domain/validation'
 import type { CanvasAwarenessPresenceWriter } from '../canvas-tool-types'
 import type { RemoteUser, SelectingState } from '../../utils/canvas-awareness-types'
 import { logger } from '~/shared/utils/logger'

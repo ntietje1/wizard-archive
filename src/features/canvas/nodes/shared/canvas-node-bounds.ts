@@ -1,6 +1,6 @@
-import { parseCanvasBoundsDimensions } from 'convex/canvases/validation'
+import { parseCanvasBoundsDimensions } from '~/features/canvas/domain/validation'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
-import type { CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
 
 export function getCanvasNodeBounds(node: CanvasDocumentNode): Bounds | null {
   const fallbackBounds =

@@ -1,7 +1,7 @@
 import { SuggestionMenuController, getDefaultReactSlashMenuItems } from '@blocknote/react'
 import { isInsideWikiLink } from '../wiki-link/wiki-link-utils'
 import type { DefaultReactSuggestionItem, SuggestionMenuProps } from '@blocknote/react'
-import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import { createValueReferenceSlashMenuItem } from '../../../value-block/value-block-slash-menu-item'
 import { filterSuggestionItems } from '~/features/editor/utils/filter-suggestion-items'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'

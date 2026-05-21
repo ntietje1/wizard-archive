@@ -1,4 +1,4 @@
-import * as Y from 'yjs'
+import type * as Y from 'yjs'
 import { useEffect, useRef } from 'react'
 import { convexQuery, useConvex } from '@convex-dev/react-query'
 import { useQueryClient } from '@tanstack/react-query'
@@ -44,12 +44,25 @@ function stopPersistLifecycle(lifecycle: PersistLifecycle) {
   }
 }
 
-function encodeDocUpdateAsArrayBuffer(doc: Y.Doc): ArrayBuffer {
-  const update = Y.encodeStateAsUpdate(doc)
-  return update.buffer.slice(
-    update.byteOffset,
-    update.byteOffset + update.byteLength,
-  ) as ArrayBuffer
+function persistLifecycleKey(
+  noteId: Id<'sidebarItems'>,
+  campaignId: Id<'campaigns'> | null | undefined,
+) {
+  return `${noteId}:${campaignId ?? ''}`
+}
+
+async function flushProviderForPersist(provider: ConvexYjsProvider, label: string) {
+  try {
+    const flushed = await provider.flushPendingUpdates()
+    if (flushed === false) {
+      logger.error(`[Notes] ${label} flush did not drain all updates`)
+      return false
+    }
+    return true
+  } catch (err: unknown) {
+    logger.error(`[Notes] ${label} flush failed:`, err)
+    return false
+  }
 }
 
 async function invalidatePersistedNoteQueries({
@@ -100,7 +113,7 @@ async function persistNoteBlocksNow({
   queryClient: QueryClient
   sidebarItems: ActiveSidebarItems
 }) {
-  await convex.mutation(api.notes.mutations.persistNoteBlocks, {
+  await convex.action(api.notes.actions.persistNoteBlocks, {
     campaignId,
     documentId: noteId,
   })
@@ -123,57 +136,45 @@ export function useNoteYjsCollaboration(
   queryClientRef.current = queryClient
   sidebarItemsRef.current = sidebarItems
 
-  const lifecycleKey = `${noteId}:${campaignId ?? ''}`
-  const persistLifecycleRef = useRef<{ key: string; value: PersistLifecycle } | null>(null)
-  if (!persistLifecycleRef.current || persistLifecycleRef.current.key !== lifecycleKey) {
-    persistLifecycleRef.current = {
-      key: lifecycleKey,
-      value: createPersistLifecycle(),
-    }
+  const persistLifecyclesRef = useRef(new Map<string, PersistLifecycle>())
+  const lifecycleKey = persistLifecycleKey(noteId, campaignId)
+  let persistLifecycle = persistLifecyclesRef.current.get(lifecycleKey)
+  if (!persistLifecycle) {
+    persistLifecycle = createPersistLifecycle()
+    persistLifecyclesRef.current.set(lifecycleKey, persistLifecycle)
   }
-  const persistLifecycle = persistLifecycleRef.current.value
 
   const cleanupPersist = async ({
-    doc,
+    campaignId: cleanupCampaignId,
     documentId,
     provider,
   }: {
     doc: Y.Doc
+    campaignId: Id<'campaigns'>
     documentId: Id<'sidebarItems'>
     provider: ConvexYjsProvider
   }) => {
-    stopPersistLifecycle(persistLifecycle)
+    const lifecycle = persistLifecyclesRef.current.get(
+      persistLifecycleKey(documentId, cleanupCampaignId),
+    )
+    if (lifecycle) stopPersistLifecycle(lifecycle)
 
-    if (!canEdit || !campaignId) {
+    if (!canEdit) {
       return
     }
 
-    const activeCampaignId = campaignId
-    const finalUpdate = encodeDocUpdateAsArrayBuffer(doc)
+    const activeCampaignId = cleanupCampaignId
 
-    try {
-      const flushed = await provider.flushPendingUpdates()
-      if (!flushed) {
-        logger.error(`[Notes] flush before persist did not drain all updates for ${documentId}`)
+    if (!(await flushProviderForPersist(provider, `cleanup persist for ${documentId}`))) {
+      return
+    }
+
+    if (lifecycle) {
+      try {
+        await lifecycle.persistPromise
+      } catch {
+        // The scheduled persist path logs failures already.
       }
-    } catch (err: unknown) {
-      logger.error(`[Notes] flush before persist failed for ${documentId}:`, err)
-    }
-
-    try {
-      await persistLifecycle.persistPromise
-    } catch {
-      // The scheduled persist path logs failures already.
-    }
-
-    try {
-      await convexRef.current.mutation(api.yjsSync.mutations.pushUpdate, {
-        campaignId: activeCampaignId,
-        documentId,
-        update: finalUpdate,
-      })
-    } catch (err: unknown) {
-      logger.error(`[Notes] final Yjs sync failed for ${documentId}:`, err)
     }
 
     try {
@@ -197,7 +198,7 @@ export function useNoteYjsCollaboration(
     if (!canEdit || result.isLoading || !campaignId) return
 
     const activeCampaignId = campaignId
-    const lifecycle = persistLifecycleRef.current?.value
+    const lifecycle = persistLifecyclesRef.current.get(lifecycleKey)
     if (!lifecycle) return
     lifecycle.active = true
 
@@ -215,10 +216,11 @@ export function useNoteYjsCollaboration(
       lifecycle.persistPromise = (async () => {
         try {
           if (result.provider) {
-            const flushed = await result.provider.flushPendingUpdates()
-            if (!flushed) {
-              logger.error(`[Notes] persist flush did not drain all updates for ${noteId}`)
-            }
+            const flushed = await flushProviderForPersist(
+              result.provider,
+              `interval persist for ${noteId}`,
+            )
+            if (!flushed) return
           }
           await persistNoteBlocksNow({
             campaignId: activeCampaignId,
@@ -246,7 +248,7 @@ export function useNoteYjsCollaboration(
     return () => {
       stopPersistLifecycle(lifecycle)
     }
-  }, [noteId, canEdit, result.isLoading, campaignId, result.provider])
+  }, [noteId, canEdit, result.isLoading, campaignId, lifecycleKey, result.provider])
 
   useEffect(() => {
     if (!canEdit || result.isLoading || !campaignId || !result.doc || !result.provider) {
@@ -255,7 +257,7 @@ export function useNoteYjsCollaboration(
 
     const activeCampaignId = campaignId
     const provider = result.provider
-    const lifecycle = persistLifecycleRef.current?.value
+    const lifecycle = persistLifecyclesRef.current.get(lifecycleKey)
     if (!lifecycle) return
     let timeoutId: ReturnType<typeof setTimeout> | null = null
     let active = true
@@ -279,10 +281,8 @@ export function useNoteYjsCollaboration(
       lifecycle.isPersisting = true
       lifecycle.persistPromise = (async () => {
         try {
-          const flushed = await provider.flushPendingUpdates()
-          if (!flushed) {
-            logger.error(`[Notes] live Yjs flush did not drain all updates for ${noteId}`)
-          }
+          const flushed = await flushProviderForPersist(provider, `live persist for ${noteId}`)
+          if (!flushed) return
           await persistNoteBlocksNow({
             campaignId: activeCampaignId,
             convex: convexRef.current,
@@ -318,7 +318,7 @@ export function useNoteYjsCollaboration(
       }
       result.doc?.off('update', handleDocUpdate)
     }
-  }, [campaignId, canEdit, noteId, result.doc, result.isLoading, result.provider])
+  }, [campaignId, canEdit, lifecycleKey, noteId, result.doc, result.isLoading, result.provider])
 
   return result
 }

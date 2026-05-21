@@ -2,8 +2,8 @@ import { act, renderHook } from '@testing-library/react'
 import { BlockNoteEditor } from '@blocknote/core'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useNoteEditorState } from '../useNoteEditorState'
-import { editorSchema } from 'convex/notes/editorSpecs'
-import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import { editorSchema } from '~/features/editor/editor-specs'
+import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import { testId } from '~/test/helpers/test-id'
 
 const previewSpy = vi.hoisted(() => vi.fn())

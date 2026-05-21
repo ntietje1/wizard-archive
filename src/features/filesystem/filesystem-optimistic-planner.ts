@@ -11,7 +11,7 @@ import {
   validateCreateParentTarget,
 } from 'convex/sidebarItems/validation/parent'
 import { deduplicateName } from 'convex/sidebarItems/functions/defaultItemName'
-import { assertSidebarItemName } from 'convex/sidebarItems/validation/name'
+import { assertSidebarItemName } from 'shared/sidebar-items/name'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type {

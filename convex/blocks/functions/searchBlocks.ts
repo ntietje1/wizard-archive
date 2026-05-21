@@ -1,6 +1,6 @@
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignQueryCtx } from '../../functions'
-import type { BlockNoteId, BlockType } from '../types'
+import type { BlockNoteId, BlockType } from '../../../shared/editor-blocks/types'
 
 export interface BlockSearchResult {
   blockNoteId: BlockNoteId

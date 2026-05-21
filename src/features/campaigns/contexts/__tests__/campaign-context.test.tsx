@@ -1,7 +1,7 @@
 import { createElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
+import { CAMPAIGN_MEMBER_ROLE } from '~/features/campaigns/campaign-types'
 import type { ReactNode } from 'react'
 import { CampaignProvider } from '~/features/campaigns/contexts/campaign-context'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'

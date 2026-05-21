@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { ItemOperationConflictDialog } from '../item-operation-conflict-dialog'
 import type { ItemOperationConflict } from 'convex/sidebarItems/filesystem/conflicts'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { testId } from '~/test/helpers/test-id'
 
 function createConflict(

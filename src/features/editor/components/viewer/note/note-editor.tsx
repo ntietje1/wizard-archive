@@ -12,7 +12,7 @@ import { useNoteEditorState } from '~/features/editor/hooks/useNoteEditorState'
 import { useScrollPersistence } from '~/features/editor/hooks/useScrollPersistence'
 import { useScrollToHeading } from '~/features/editor/hooks/useScrollToHeading'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
-import type { BlockNoteId } from 'convex/blocks/types'
+import type { BlockNoteId } from 'shared/editor-blocks/types'
 
 function getContextMenuTarget(target: EventTarget | null): Element | null {
   if (target instanceof Element) {

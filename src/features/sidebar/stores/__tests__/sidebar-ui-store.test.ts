@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { assertSidebarItemSlug } from 'convex/sidebarItems/validation/slug'
+import { assertSidebarItemSlug } from 'shared/sidebar-items/slug'
 import {
   useCampaignSidebarActions,
   useSidebarUIStore,

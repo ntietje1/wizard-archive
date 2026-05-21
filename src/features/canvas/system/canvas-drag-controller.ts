@@ -8,7 +8,7 @@ import {
 import type { CanvasEngine } from './canvas-engine-types'
 import type { CanvasDragGuide } from '../utils/canvas-snap-guides'
 import type { CanvasPosition } from '../types/canvas-domain-types'
-import type { CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
 
 export interface CanvasDragEvent {
   sourceEvent: PointerEvent | MouseEvent

@@ -8,7 +8,7 @@ import type {
   CanvasNodeComponentProps,
 } from '../../nodes/canvas-node-types'
 import type { CanvasNodeRendererMap } from '../canvas-node-content-renderer'
-import type { CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
 
 function TextRenderer({
   id,

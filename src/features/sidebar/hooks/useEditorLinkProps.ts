@@ -1,6 +1,6 @@
-import type { CampaignSlug } from 'convex/campaigns/validation'
-import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
-import type { Username } from 'convex/users/validation'
+import type { CampaignSlug } from 'shared/campaigns/validation'
+import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
+import type { Username } from 'shared/users/validation'
 import type { EditorSearch } from '~/features/sidebar/utils/validate-search'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 

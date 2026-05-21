@@ -1,19 +1,18 @@
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../campaigns/types'
-import type { SidebarItemColor } from '../sidebarItems/validation/color'
-import type { SidebarItemIconName } from '../sidebarItems/validation/icon'
+import type { SidebarItemColor } from '../../shared/sidebar-items/color'
+import type { SidebarItemIconName } from '../../shared/sidebar-items/icon'
 import {
   SIDEBAR_ITEM_LOCATION,
   SIDEBAR_ITEM_STATUS,
   SIDEBAR_ITEM_TYPES,
 } from '../sidebarItems/types/baseTypes'
-import { SHARE_STATUS } from '../blockShares/types'
-import { slugify } from '../common/slug'
+import { SHARE_STATUS } from '../../shared/editor-blocks/share-status'
+import { slugify } from '../../shared/slugs'
 import { assertCampaignSlug } from '../campaigns/validation'
 import { assertSidebarItemName } from '../sidebarItems/validation/name'
 import { assertSidebarItemSlug } from '../sidebarItems/validation/slug'
 import { assertUsername } from '../users/validation'
 import { makeYjsUpdateWithBlocks } from '../yjsSync/__tests__/makeYjsUpdate.helper'
-import type { TestBlock } from '../yjsSync/__tests__/makeYjsUpdate.helper'
 import type { TestConvex, TestConvexForDataModel } from 'convex-test'
 import { api } from '../_generated/api'
 import type { DataModel, Id } from '../_generated/dataModel'
@@ -24,10 +23,18 @@ import type {
   SidebarItemType,
 } from '../sidebarItems/types/baseTypes'
 import type { PermissionLevel } from '../permissions/types'
-import type { ShareStatus } from '../blockShares/types'
-import type { BlockNoteId, BlockProps, BlockType, InlineContent } from '../blocks/types'
-import type { CustomBlock } from '../notes/editorSpecs'
-import type { SidebarItemName } from '../sidebarItems/validation/name'
+import type { ShareStatus } from '../../shared/editor-blocks/share-status'
+import type {
+  BlockNoteId,
+  BlockProps,
+  BlockType,
+  CustomBlock,
+  CustomPartialBlock,
+  InlineContent,
+  TableContent,
+} from '../../shared/editor-blocks/types'
+import type { BlockInsert } from '../blocks/types'
+import type { SidebarItemName } from '../../shared/sidebar-items/name'
 import type { FileSystemOperationDecision } from '../sidebarItems/filesystem/commands'
 import type {
   FileSystemEvent,
@@ -130,10 +137,11 @@ export function copiedRootItemIds(receipt: Pick<FileSystemTransactionReceipt, 'e
     .map((event) => event.itemId)
 }
 
-/** Create a test block content object typed as CustomBlock */
 export function testBlock(
   id: string,
-  overrides?: Partial<{ type: string; props: Record<string, unknown>; content: Array<unknown> }>,
+  overrides?: Partial<Omit<CustomBlock, 'id' | 'children'>> & {
+    children?: Array<CustomBlock>
+  },
 ): CustomBlock {
   return {
     id: testBlockNoteId(id),
@@ -522,6 +530,7 @@ export async function createBlock(
     depth: number
     type: BlockType
     props: BlockProps
+    content: InlineContent | TableContent | null
     inlineContent: InlineContent | null
     plainText: string
     shareStatus: ShareStatus | null
@@ -529,20 +538,22 @@ export async function createBlock(
 ) {
   const n = nextId()
   const shareStatus: ShareStatus | null = SHARE_STATUS.NOT_SHARED
+  const type = overrides?.type ?? 'paragraph'
   const defaults = {
     noteId: noteId,
     blockNoteId: testBlockNoteId(`block-${n}`),
     position: null,
     parentBlockId: null,
     depth: 0,
-    type: 'paragraph' as const,
-    props: {},
+    type,
+    props: type === 'heading' ? { level: 1 } : {},
+    content: null,
     inlineContent: null,
     plainText: '',
     campaignId,
     shareStatus,
   }
-  const data = { ...defaults, ...overrides }
+  const data = { ...defaults, ...overrides } as BlockInsert
   if (data.parentBlockId !== null && overrides?.depth === undefined) {
     throw new Error('createBlock: depth must be explicitly provided when parentBlockId is set')
   }
@@ -689,7 +700,7 @@ export async function setupFolderTree(
 export async function syncBlocksToYjs(
   t: T,
   noteId: Id<'sidebarItems'>,
-  blocks: Array<TestBlock>,
+  blocks: Array<CustomPartialBlock>,
 ): Promise<void> {
   const update = makeYjsUpdateWithBlocks(blocks)
   await t.run(async (ctx) => {

@@ -58,11 +58,11 @@ describe('CampaignDialog', () => {
 
     expect(input).toHaveValue('my-campaign')
     expect(
-      screen.queryByText('Campaign link can only contain single hyphens'),
+      screen.queryByText('Campaign link can only contain single separators'),
     ).not.toBeInTheDocument()
   })
 
-  it('shows validation error for consecutive hyphens', async () => {
+  it('rejects consecutive separators', async () => {
     const user = userEvent.setup()
     renderCampaignDialog()
 
@@ -71,7 +71,10 @@ describe('CampaignDialog', () => {
     await user.type(input, 'my--campaign')
     await user.tab()
 
-    expect(screen.getByText('Campaign link can only contain single hyphens')).toBeInTheDocument()
+    expect(input).toHaveValue('my--campaign')
+    expect(
+      screen.getByText('Campaign link cannot contain consecutive separators'),
+    ).toBeInTheDocument()
   })
 
   it('keeps invalid slug characters visible and shows validation feedback', async () => {
@@ -112,7 +115,9 @@ describe('CampaignDialog', () => {
     await user.type(input, 'my-campaign-')
     await user.tab()
 
-    expect(screen.getByText('Campaign link cannot start or end with a hyphen')).toBeInTheDocument()
+    expect(
+      screen.getByText('Campaign link cannot start or end with a separator'),
+    ).toBeInTheDocument()
   })
 
   it('explains leading hyphen slug errors after validation runs', async () => {
@@ -124,7 +129,9 @@ describe('CampaignDialog', () => {
     await user.type(input, '-my-campaign')
     await user.tab()
 
-    expect(screen.getByText('Campaign link cannot start or end with a hyphen')).toBeInTheDocument()
+    expect(
+      screen.getByText('Campaign link cannot start or end with a separator'),
+    ).toBeInTheDocument()
   })
 
   it('shows duplicate feedback for duplicate valid campaign slugs', async () => {

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { assertSidebarItemSlug } from 'convex/sidebarItems/validation/slug'
+import { assertSidebarItemSlug } from 'shared/sidebar-items/slug'
 import { addRecentItem } from '~/features/search/hooks/use-recent-items'
 
 describe('addRecentItem', () => {

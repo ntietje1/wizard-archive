@@ -1,4 +1,4 @@
-import { parseCanvasDocumentEdge, parseCanvasEdgeType } from 'convex/canvases/validation'
+import { parseCanvasDocumentEdge, parseCanvasEdgeType } from '~/features/canvas/domain/validation'
 import { buildBezierCanvasEdgeGeometryFromEdge } from './bezier/bezier-canvas-edge-geometry'
 import { buildStepCanvasEdgeGeometryFromEdge } from './step/step-canvas-edge-geometry'
 import { buildStraightCanvasEdgeGeometryFromEdge } from './straight/straight-canvas-edge-geometry'
@@ -6,7 +6,6 @@ import {
   canvasEdgeGeometryContainsPoint,
   canvasEdgeGeometryIntersectsPolygon,
   canvasEdgeGeometryIntersectsRectangle,
-  getCanvasEdgeGeometryBounds,
 } from './shared/canvas-edge-geometry'
 import { normalizeCanvasEdgeStyle } from './shared/canvas-edge-style'
 import { getCanvasStrokeEdgeProperties } from './shared/canvas-edge-properties'
@@ -26,7 +25,7 @@ import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
   CanvasEdgeType,
-} from 'convex/canvases/validation'
+} from '~/features/canvas/domain/validation'
 
 type NormalizedCanvasEdgeEntry = {
   rawEdge: CanvasDocumentEdge
@@ -135,7 +134,7 @@ function isCanvasEdgeSelectionCandidate(
     return true
   }
 
-  const bounds = getCanvasEdgeGeometryBounds(geometry)
+  const bounds = boundsFromPoints(geometry.hitPoints)
   return !bounds || rectIntersectsBounds(candidateBounds, bounds)
 }
 

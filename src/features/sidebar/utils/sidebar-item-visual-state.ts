@@ -1,5 +1,5 @@
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
+import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 
 export interface SidebarItemVisualState {

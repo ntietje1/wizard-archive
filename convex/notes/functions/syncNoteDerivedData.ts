@@ -1,17 +1,19 @@
-import { reconstructYDoc } from '../../yjsSync/functions/reconstructYDoc'
-import { yDocToBlocks } from '../blocknote'
 import { saveAllBlocksForNote } from '../../blocks/functions/saveAllBlocksForNote'
 import { reconstructBlockTree } from '../../blocks/functions/reconstructBlockTree'
 import { syncNoteLinks } from '../../links/functions/syncNoteLinks'
 import { saveAllNoteValuesForNote } from '../../noteValues/functions/saveAllNoteValuesForNote'
 import { isActiveSidebarItem } from '../../sidebarItems/types/status'
-import type { Id } from '../../_generated/dataModel'
-import type { CampaignMutationCtx } from '../../functions'
-import type { CustomBlock } from '../editorSpecs'
+import type { Doc, Id } from '../../_generated/dataModel'
+import type { MutationCtx } from '../../_generated/server'
+import type { CustomBlock } from '../../../shared/editor-blocks/types'
 import type { Block } from '../../blocks/types'
 
+type CampaignScopedMutationCtx = Pick<MutationCtx, 'db'> & {
+  campaign: Pick<Doc<'campaigns'>, '_id'>
+}
+
 export async function syncNoteDerivedDataFromPersistedBlocks(
-  ctx: CampaignMutationCtx,
+  ctx: CampaignScopedMutationCtx,
   {
     noteId,
     blocks,
@@ -40,7 +42,7 @@ export async function syncNoteDerivedDataFromPersistedBlocks(
 }
 
 export async function syncNoteIndexesFromBlocks(
-  ctx: CampaignMutationCtx,
+  ctx: CampaignScopedMutationCtx,
   {
     noteId,
     content,
@@ -54,20 +56,4 @@ export async function syncNoteIndexesFromBlocks(
     noteId,
     blocks: persistedBlocks,
   })
-}
-
-export async function syncNoteDerivedDataFromYDoc(
-  ctx: CampaignMutationCtx,
-  { noteId }: { noteId: Id<'sidebarItems'> },
-): Promise<void> {
-  const { doc } = await reconstructYDoc(ctx, noteId)
-  try {
-    const blocks = yDocToBlocks(doc, 'document')
-    await syncNoteIndexesFromBlocks(ctx, {
-      noteId,
-      content: blocks,
-    })
-  } finally {
-    doc.destroy()
-  }
 }

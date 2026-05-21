@@ -1,5 +1,5 @@
 import type { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
-import type { CustomBlock } from '../../notes/editorSpecs'
+import type { CustomBlock } from '../../../shared/editor-blocks/types'
 
 /**
  * A downloadable sidebar artifact. `downloadUrl` is nullable for binary-backed

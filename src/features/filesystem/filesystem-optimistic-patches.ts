@@ -1,13 +1,9 @@
-import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_STATUS } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_STATUS } from 'shared/sidebar-items/types'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { diffSidebarItemFields } from 'convex/sidebarItems/filesystem/patches'
-import { appendSuffix, slugify } from 'convex/common/slug'
-import {
-  assertSidebarItemSlug,
-  SIDEBAR_ITEM_SLUG_MAX_LENGTH,
-  validateSidebarItemSlug,
-} from 'convex/sidebarItems/validation/slug'
-import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
+import { deduplicateSlug, slugify } from '../../../shared/slugs'
+import { assertSidebarItemSlug, SIDEBAR_ITEM_SLUG_MAX_LENGTH } from 'shared/sidebar-items/slug'
+import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { FileSystemPatch } from 'convex/sidebarItems/filesystem/receipts'
@@ -30,16 +26,16 @@ export function expectedOptimisticCreateSlug(
   name: string,
   existingSlugs: ReadonlySet<string>,
 ): SidebarItemSlug {
-  const normalized = slugify(name)
-  if (!normalized) return assertSidebarItemSlug('item')
-
-  for (let suffix = 1; suffix <= 1000; suffix++) {
-    const candidate = appendSuffix(normalized, suffix, SIDEBAR_ITEM_SLUG_MAX_LENGTH)
-    if (validateSidebarItemSlug(candidate) || existingSlugs.has(candidate)) continue
-    return assertSidebarItemSlug(candidate)
-  }
-
-  return assertSidebarItemSlug(appendSuffix(normalized, Date.now(), SIDEBAR_ITEM_SLUG_MAX_LENGTH))
+  const normalized = slugify(name, {
+    fallback: 'item',
+    maxLength: SIDEBAR_ITEM_SLUG_MAX_LENGTH,
+  })
+  return assertSidebarItemSlug(
+    deduplicateSlug(normalized, existingSlugs, {
+      label: 'Slug',
+      maxLength: SIDEBAR_ITEM_SLUG_MAX_LENGTH,
+    }),
+  )
 }
 
 type FileSystemOptimisticPreview = {

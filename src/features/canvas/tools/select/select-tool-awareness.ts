@@ -1,4 +1,4 @@
-import { parseCanvasSelectAwarenessState } from 'convex/canvases/validation'
+import { parseCanvasSelectAwarenessState } from '~/features/canvas/domain/validation'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
 import type { CanvasAwarenessPresenceWriter } from '../canvas-tool-types'
 import type { RemoteUser, SelectingState } from '../../utils/canvas-awareness-types'

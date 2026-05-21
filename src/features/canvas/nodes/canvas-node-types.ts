@@ -3,7 +3,7 @@ import type {
   CanvasNodeType,
   CanvasStrokeNodeData,
   CanvasTextNodeData,
-} from 'convex/canvases/validation'
+} from '~/features/canvas/domain/validation'
 import type { EmbedNodeData } from './embed/embed-node-data'
 import type {
   CanvasRichTextNodeData,

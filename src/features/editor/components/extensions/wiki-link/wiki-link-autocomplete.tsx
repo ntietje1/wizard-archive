@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { use, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { api } from 'convex/_generated/api'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { getWikiLinkContext, splitWikiLinkTargetAndDisplayName } from './wiki-link-utils'
 import {
   buildContinuedFolderPathText,
@@ -27,11 +27,12 @@ import type {
 import type {
   CustomBlockNoteEditor,
   CustomValuePartialInlineContent,
-} from 'convex/notes/editorSpecs'
+} from '~/features/editor/editor-specs'
 import type { Id } from 'convex/_generated/dataModel'
 import type { ReactNode } from 'react'
-import { getUniqueValueSlug } from '../../../../../../shared/note-values/constants'
+import { NOTE_VALUE_SLUG_OPTIONS } from '../../../../../../shared/note-values/constants'
 import { extractNoteValueDefinitions } from '../../../../../../shared/note-values/extract-definitions'
+import { deduplicateSlug } from '../../../../../../shared/slugs'
 import { useFilteredSidebarItems } from '~/features/sidebar/hooks/useFilteredSidebarItems'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
@@ -40,6 +41,7 @@ import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { useEditorDomElement } from '~/features/editor/hooks/useEditorDomElement'
 import { useScrollSelectedItemIntoView } from '~/shared/hooks/use-scroll-selected-item-into-view'
 import { createUuidV4 } from '~/shared/utils/create-uuid-v4'
+import { NoteValueRuntimeContext } from '~/features/editor/value-block/value-block-runtime-context'
 
 interface MenuState {
   show: boolean
@@ -371,6 +373,54 @@ function continueSelectedSuggestion(
   }
 }
 
+function useWikiAutocompleteModelData({
+  itemsMap,
+  menu,
+  sidebarItems,
+  sourceNoteId,
+}: {
+  itemsMap: ReturnType<typeof useFilteredSidebarItems>['itemsMap']
+  menu: MenuState
+  sidebarItems: ReturnType<typeof useFilteredSidebarItems>['data']
+  sourceNoteId?: Id<'sidebarItems'>
+}) {
+  const valueRuntime = use(NoteValueRuntimeContext)
+  const sourceParentId = sourceNoteId ? itemsMap.get(sourceNoteId)?.parentId : undefined
+  const context = menu.show
+    ? getWikiLinkAutocompleteContext(menu.query, sidebarItems, itemsMap, sourceParentId)
+    : null
+
+  const headingsQuery = useCampaignQuery(
+    api.blocks.queries.getHeadingsByNote,
+    context?.mode === 'heading' ? { noteId: context.resolvedItem._id } : 'skip',
+  )
+
+  const selectedValueNoteId = context?.mode === 'value' ? context.resolvedItem._id : null
+  const shouldLoadPersistedValues =
+    selectedValueNoteId !== null && selectedValueNoteId !== valueRuntime?.noteId
+  const valuesQuery = useCampaignQuery(
+    api.noteValues.queries.getNoteValueStates,
+    shouldLoadPersistedValues ? { noteId: selectedValueNoteId } : 'skip',
+  )
+  const values =
+    selectedValueNoteId !== null && selectedValueNoteId === valueRuntime?.noteId
+      ? valueRuntime.authoredValueStates
+      : (valuesQuery.data ?? [])
+
+  return {
+    context,
+    headingsPending: headingsQuery.isPending,
+    model: buildWikiLinkAutocompleteModel({
+      context,
+      sidebarItems,
+      itemsMap,
+      headings: headingsQuery.data ?? [],
+      values,
+    }),
+    valuesPending: valuesQuery.isPending,
+  }
+}
+
 export function WikiLinkAutocomplete({
   editor,
   onForceOpenRef,
@@ -392,26 +442,11 @@ export function WikiLinkAutocomplete({
   const hasEditedRef = useRef(false)
   const isDraggingRef = useRef(false)
   const preservedDisplayNameRef = useRef<string | null>(null)
-
-  const sourceParentId = sourceNoteId ? itemsMap.get(sourceNoteId)?.parentId : undefined
-  const context = menu.show
-    ? getWikiLinkAutocompleteContext(menu.query, sidebarItems, itemsMap, sourceParentId)
-    : null
-
-  const headingsQuery = useCampaignQuery(
-    api.blocks.queries.getHeadingsByNote,
-    context?.mode === 'heading' ? { noteId: context.resolvedItem._id } : 'skip',
-  )
-  const valuesQuery = useCampaignQuery(
-    api.noteValues.queries.getNoteValueStates,
-    context?.mode === 'value' ? { noteId: context.resolvedItem._id } : 'skip',
-  )
-  const model = buildWikiLinkAutocompleteModel({
-    context,
+  const { context, headingsPending, model, valuesPending } = useWikiAutocompleteModelData({
+    menu,
     sidebarItems,
     itemsMap,
-    headings: headingsQuery.data ?? [],
-    values: valuesQuery.data ?? [],
+    sourceNoteId,
   })
 
   useResetSelectedIndex(context, setSelectedIndex)
@@ -499,7 +534,7 @@ export function WikiLinkAutocomplete({
         type: 'value',
         props: {
           valueId: createUuidV4(),
-          slug: getUniqueValueSlug(suggestion.slug, existingSlugs),
+          slug: deduplicateSlug(suggestion.slug, existingSlugs, NOTE_VALUE_SLUG_OPTIONS),
           expressionSource: buildValueReferenceText(suggestion, ctx),
         },
       }
@@ -558,7 +593,7 @@ export function WikiLinkAutocomplete({
 
   return (
     <AutocompleteMenu
-      headingsPending={model.mode === 'heading' && headingsQuery.isPending}
+      headingsPending={model.mode === 'heading' && headingsPending}
       insertFileLink={insertFileLink}
       insertHeadingLink={insertHeadingLink}
       insertValueInline={insertValueInline}
@@ -566,7 +601,7 @@ export function WikiLinkAutocomplete({
       model={model}
       selectedIndex={selectedIndex}
       setSelectedIndex={setSelectedIndex}
-      valuesPending={model.mode === 'value' && valuesQuery.isPending}
+      valuesPending={model.mode === 'value' && valuesPending}
     />
   )
 }

@@ -8,7 +8,10 @@ import {
 } from '../../../../shared/note-values/authoring'
 import type { FormulaAutocompleteContext } from '../../../../shared/note-values/authoring'
 import { collectFormulaReferences } from '../../../../shared/note-values/formula'
-import type { NoteValueRuntimeState } from '../../../../shared/note-values/types'
+import type {
+  FormulaReferenceToken,
+  NoteValueRuntimeState,
+} from '../../../../shared/note-values/types'
 import { getFormulaSuggestions } from './formula-suggestions'
 import type { FormulaSuggestion } from './formula-suggestions'
 import { useNoteValueRuntime } from './value-block-runtime-context'
@@ -24,7 +27,9 @@ interface FormulaDependency {
   key: string
   slug: string
   valueId: string
-  state: NoteValueRuntimeState<Id<'sidebarItems'>> | undefined
+  displayedValue: string
+  hasError: boolean
+  state: 'ok' | 'error' | 'pending'
 }
 
 interface FormulaDependenciesResult {
@@ -47,12 +52,107 @@ function getLocalValueBySlug(localValues: Array<{ valueId: string; slug: string 
   return valuesBySlug
 }
 
-function getExternalStateByKey(externalStates: Array<NoteValueRuntimeState<Id<'sidebarItems'>>>) {
-  const statesByKey = new Map<string, NoteValueRuntimeState<Id<'sidebarItems'>>>()
+function getExternalStatesByKey(externalStates: Array<NoteValueRuntimeState<Id<'sidebarItems'>>>) {
+  const statesByKey = new Map<string, Array<NoteValueRuntimeState<Id<'sidebarItems'>>>>()
   for (const state of externalStates) {
-    statesByKey.set(getExternalValueKey(state.noteId, state.slug), state)
+    const key = getExternalValueKey(state.noteId, state.slug)
+    const states = statesByKey.get(key)
+    if (states) states.push(state)
+    else statesByKey.set(key, [state])
   }
   return statesByKey
+}
+
+function duplicateExternalSlugDependency({
+  noteId,
+  slug,
+}: {
+  noteId: Id<'sidebarItems'>
+  slug: string
+}): FormulaDependency {
+  return {
+    key: `${noteId}:${slug}:duplicate`,
+    slug,
+    valueId: `${noteId}:${slug}:duplicate`,
+    displayedValue: `Slug "${slug}" is duplicated in the target note`,
+    hasError: true,
+    state: 'error',
+  }
+}
+
+function addDependency(
+  dependencies: Array<FormulaDependency>,
+  seen: Set<string>,
+  dependency: FormulaDependency | null,
+) {
+  if (!dependency || seen.has(dependency.key)) return
+  seen.add(dependency.key)
+  dependencies.push(dependency)
+}
+
+function getLocalDependency(
+  localValue: { valueId: string; slug: string } | undefined,
+  stateByValueId: Map<string, NoteValueRuntimeState<Id<'sidebarItems'>>>,
+): FormulaDependency | null {
+  if (!localValue) return null
+  const state = stateByValueId.get(localValue.valueId)
+  return {
+    key: localValue.valueId,
+    slug: localValue.slug,
+    valueId: localValue.valueId,
+    displayedValue: getDisplayedValue(state),
+    hasError: getHasError(state),
+    state: state?.status ?? 'pending',
+  }
+}
+
+function getExternalDependency(
+  externalNoteId: Id<'sidebarItems'> | undefined,
+  slug: string,
+  externalStatesByKey: Map<string, Array<NoteValueRuntimeState<Id<'sidebarItems'>>>>,
+): FormulaDependency | null {
+  if (!externalNoteId) return null
+  const matchingStates = externalStatesByKey.get(getExternalValueKey(externalNoteId, slug))
+  if (matchingStates && matchingStates.length > 1) {
+    return duplicateExternalSlugDependency({ noteId: externalNoteId, slug })
+  }
+  const externalState = matchingStates?.[0]
+  if (!externalState) return null
+  return {
+    key: `${externalState.noteId}:${externalState.valueId}`,
+    slug: externalState.slug,
+    valueId: externalState.valueId,
+    displayedValue: getDisplayedValue(externalState),
+    hasError: getHasError(externalState),
+    state: externalState.status,
+  }
+}
+
+function getReferenceDependency({
+  reference,
+  localValueBySlug,
+  stateByValueId,
+  externalNoteIdByPath,
+  externalStatesByKey,
+  noteId,
+}: {
+  reference: FormulaReferenceToken
+  localValueBySlug: Map<string, { valueId: string; slug: string }>
+  stateByValueId: Map<string, NoteValueRuntimeState<Id<'sidebarItems'>>>
+  externalNoteIdByPath: Map<string, Id<'sidebarItems'>>
+  externalStatesByKey: Map<string, Array<NoteValueRuntimeState<Id<'sidebarItems'>>>>
+  noteId: Id<'sidebarItems'> | undefined
+}) {
+  if (reference.kind === 'self') {
+    return getLocalDependency(localValueBySlug.get(reference.slug), stateByValueId)
+  }
+
+  const externalNoteId = externalNoteIdByPath.get(reference.notePathRaw)
+  if (externalNoteId === noteId) {
+    return getLocalDependency(localValueBySlug.get(reference.slug), stateByValueId)
+  }
+
+  return getExternalDependency(externalNoteId, reference.slug, externalStatesByKey)
 }
 
 function getReferencedDependencies(
@@ -61,42 +161,27 @@ function getReferencedDependencies(
   stateByValueId: Map<string, NoteValueRuntimeState<Id<'sidebarItems'>>>,
   externalStates: Array<NoteValueRuntimeState<Id<'sidebarItems'>>>,
   externalNoteIdByPath: Map<string, Id<'sidebarItems'>>,
+  noteId: Id<'sidebarItems'> | undefined,
 ): FormulaDependenciesResult {
   const dependencies: Array<FormulaDependency> = []
   const seen = new Set<string>()
   const references = collectFormulaReferences(expressionSource)
   const localValueBySlug = getLocalValueBySlug(localValues)
-  const externalStateByKey = getExternalStateByKey(externalStates)
+  const externalStatesByKey = getExternalStatesByKey(externalStates)
 
   for (const reference of references) {
-    if (reference.kind === 'self') {
-      const localValue = localValueBySlug.get(reference.slug)
-      if (!localValue || seen.has(localValue.valueId)) continue
-      seen.add(localValue.valueId)
-      dependencies.push({
-        key: localValue.valueId,
-        slug: localValue.slug,
-        valueId: localValue.valueId,
-        state: stateByValueId.get(localValue.valueId),
-      })
-      continue
-    }
-
-    const externalNoteId = externalNoteIdByPath.get(reference.notePathRaw)
-    const externalState = externalNoteId
-      ? externalStateByKey.get(getExternalValueKey(externalNoteId, reference.slug))
-      : undefined
-    const externalValueKey = externalState
-      ? `${externalState.noteId}:${externalState.valueId}`
-      : null
-    if (!externalState || !externalValueKey || seen.has(externalValueKey)) continue
-    seen.add(externalValueKey)
-    dependencies.push({
-      key: externalValueKey,
-      slug: externalState.slug,
-      valueId: externalState.valueId,
-      state: externalState,
-    })
+    addDependency(
+      dependencies,
+      seen,
+      getReferenceDependency({
+        reference,
+        localValueBySlug,
+        stateByValueId,
+        externalNoteIdByPath,
+        externalStatesByKey,
+        noteId,
+      }),
+    )
   }
 
   return {
@@ -208,7 +293,7 @@ function useFormulaDependencies({
     itemsMap,
     sourceParentId,
   })
-  const externalNoteIds = [...new Set(externalNoteIdByPath.values())]
+  const externalNoteIds = [...new Set(externalNoteIdByPath.values())].filter((id) => id !== noteId)
   const externalStatesQuery = useCampaignQuery(
     api.noteValues.queries.getNoteValueStatesByNotes,
     externalNoteIds.length > 0 ? { noteIds: externalNoteIds } : 'skip',
@@ -220,6 +305,7 @@ function useFormulaDependencies({
     stateByValueId,
     externalStatesQuery.data ?? [],
     externalNoteIdByPath,
+    noteId,
   )
 }
 
@@ -302,10 +388,10 @@ function FormulaDependencyChips({ dependencies }: { dependencies: FormulaDepende
         <ValueInlineChip
           key={dependency.key}
           slug={dependency.slug}
-          displayedValue={getDisplayedValue(dependency.state)}
-          hasError={getHasError(dependency.state)}
+          displayedValue={dependency.displayedValue}
+          hasError={dependency.hasError}
           valueId={dependency.valueId}
-          state={dependency.state?.status ?? 'pending'}
+          state={dependency.state}
         />
       ))}
       {dependencies.hasMore ? (

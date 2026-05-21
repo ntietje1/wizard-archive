@@ -1,5 +1,5 @@
 import { Eye, X } from 'lucide-react'
-import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
+import { CAMPAIGN_MEMBER_ROLE } from '~/features/campaigns/campaign-types'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
 import { Banner, BannerButton } from '~/shared/components/banner'

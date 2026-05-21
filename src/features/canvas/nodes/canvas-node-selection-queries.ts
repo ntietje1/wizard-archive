@@ -1,4 +1,4 @@
-import { parseCanvasStrokeSelectionData } from 'convex/canvases/validation'
+import { parseCanvasStrokeSelectionData } from '~/features/canvas/domain/validation'
 import { getStrokeSelectionBounds } from './stroke/stroke-node-interactions'
 import { getCanvasNodeBounds } from './shared/canvas-node-bounds'
 import {
@@ -12,7 +12,7 @@ import { boundsFromPoints, rectIntersectsBounds } from '../utils/canvas-geometry
 import type { Point2D } from '../utils/canvas-awareness-types'
 import type { Bounds } from '../utils/canvas-geometry-utils'
 import type { CanvasNodeSelectionContext } from './canvas-node-types'
-import type { CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
 
 function getSelectionNode(node: CanvasDocumentNode): AnyNormalizedCanvasNode | null {
   return normalizeCanvasNode(node)

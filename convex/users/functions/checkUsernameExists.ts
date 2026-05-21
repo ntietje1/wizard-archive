@@ -1,4 +1,4 @@
-import type { Username } from '../validation'
+import type { Username } from '../../../shared/users/validation'
 import type { AuthQueryCtx } from '../../functions'
 
 export async function checkUsernameExists(

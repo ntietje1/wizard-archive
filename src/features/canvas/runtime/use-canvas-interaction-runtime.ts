@@ -17,7 +17,7 @@ import type { createCanvasViewportController } from '../system/canvas-viewport-c
 import { canvasToolSpecs } from '../tools/canvas-tool-modules'
 import type { CanvasToolHandlers, CanvasToolId } from '../tools/canvas-tool-types'
 import type { CanvasSelectionSnapshot } from '../system/canvas-selection'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 
 const SELECTION_INCOMPATIBLE_TOOLS = new Set<CanvasToolId>(['draw', 'erase', 'text', 'edge'])
 

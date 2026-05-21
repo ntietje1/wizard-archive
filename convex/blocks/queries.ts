@@ -1,10 +1,13 @@
 import { v } from 'convex/values'
-import { zodToConvex } from 'convex-helpers/server/zod4'
 import { campaignQuery, dmQuery } from '../functions'
 import { blockShareValidator } from '../blockShares/schema'
 import { campaignMemberValidator } from '../campaigns/schema'
-import { blockNoteIdValidator, blockShareStatusValidator, blockValidator } from './schema'
-import { blockTypeSchema } from './blockSchemas'
+import {
+  blockNoteIdValidator,
+  blockShareStatusValidator,
+  blockTypeValidator,
+  blockValidator,
+} from './schema'
 import { getBlockWithShares as getBlockWithSharesFn } from './functions/getBlockWithShares'
 import { getBlocksWithShares as getBlocksWithSharesFn } from './functions/getBlocksWithShares'
 import { getHeadingsByNote as getHeadingsByNoteFn } from './functions/getHeadingsByNote'
@@ -76,7 +79,7 @@ const blockSearchResultValidator = v.object({
   blockNoteId: blockNoteIdValidator,
   noteId: v.id('sidebarItems'),
   plainText: v.string(),
-  type: zodToConvex(blockTypeSchema),
+  type: blockTypeValidator,
 })
 
 export const searchBlocks = campaignQuery({

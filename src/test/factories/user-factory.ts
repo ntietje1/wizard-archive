@@ -1,5 +1,5 @@
 import type { UserProfile } from 'convex/users/types'
-import { assertUsername } from 'convex/users/validation'
+import { assertUsername } from 'shared/users/validation'
 import { testId } from '~/test/helpers/test-id'
 
 let userCounter = 0

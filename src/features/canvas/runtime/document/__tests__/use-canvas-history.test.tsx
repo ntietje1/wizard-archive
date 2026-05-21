@@ -6,16 +6,20 @@ import type { RenderHookResult } from '@testing-library/react'
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from 'convex/canvases/validation'
+} from '~/features/canvas/domain/validation'
 
 type TextNode = Extract<Node, { type: 'text' }>
+
+function textContent(text: string): TextNode['data']['content'] {
+  return [{ type: 'paragraph', content: [{ type: 'text', text }] }]
+}
 
 function createNode(id: string): TextNode {
   return {
     id,
     type: 'text',
     position: { x: 0, y: 0 },
-    data: { content: id },
+    data: { content: textContent(id) },
   }
 }
 
@@ -278,20 +282,20 @@ describe('useCanvasHistory', () => {
 
     act(() => {
       doc.transact(() => {
-        nodesMap.set('a', { ...createNode('a'), data: { content: 'updated-a' } })
-        nodesMap.set('b', { ...createNode('b'), data: { content: 'updated-b' } })
+        nodesMap.set('a', { ...createNode('a'), data: { content: textContent('updated-a') } })
+        nodesMap.set('b', { ...createNode('b'), data: { content: textContent('updated-b') } })
       })
     })
 
-    expect(nodesMap.get('a')?.data).toMatchObject({ content: 'updated-a' })
-    expect(nodesMap.get('b')?.data).toMatchObject({ content: 'updated-b' })
+    expect(nodesMap.get('a')?.data).toMatchObject({ content: textContent('updated-a') })
+    expect(nodesMap.get('b')?.data).toMatchObject({ content: textContent('updated-b') })
 
     act(() => {
       hook.result.current.undo()
     })
 
-    expect(nodesMap.get('a')?.data).toMatchObject({ content: 'a' })
-    expect(nodesMap.get('b')?.data).toMatchObject({ content: 'b' })
+    expect(nodesMap.get('a')?.data).toMatchObject({ content: textContent('a') })
+    expect(nodesMap.get('b')?.data).toMatchObject({ content: textContent('b') })
     expect(hook.result.current.canUndo).toBe(false)
     expect(hook.result.current.canRedo).toBe(true)
   })

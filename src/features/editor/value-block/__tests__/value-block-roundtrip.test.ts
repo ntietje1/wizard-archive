@@ -1,14 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { BlockNoteEditor } from '@blocknote/core'
 import { blocksToYDoc as bnBlocksToYDoc } from '@blocknote/core/yjs'
-import { createEditorSchema } from '../../editorSchema'
-import { yDocToBlocks } from 'convex/notes/blocknote'
-import type { CustomBlockNoteEditor, CustomPartialBlock } from 'convex/notes/editorSpecs'
+import { createEditorSchema } from '../../editor-specs'
+import { yDocToBlocks } from '~/features/editor/blocknote-yjs'
+import type { CustomPartialBlock } from 'shared/editor-blocks/types'
+import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 
 function createTestEditor(initialContent: Array<CustomPartialBlock>): CustomBlockNoteEditor {
   return BlockNoteEditor.create({
     schema: createEditorSchema(),
-    initialContent,
+    initialContent: initialContent as NonNullable<
+      Parameters<typeof BlockNoteEditor.create>[0]
+    >['initialContent'],
   }) as CustomBlockNoteEditor
 }
 

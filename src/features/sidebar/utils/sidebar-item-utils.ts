@@ -1,20 +1,14 @@
-import { getDefaultSidebarItemIconName } from 'convex/sidebarItems/validation/icon'
-import type { SidebarItemIconName } from 'convex/sidebarItems/validation/icon'
-import { DEFAULT_SIDEBAR_ITEM_COLOR } from 'convex/sidebarItems/validation/color'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
+import type { SidebarItemType } from 'shared/sidebar-items/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
+import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Note } from 'convex/notes/types'
 import type { Folder } from 'convex/folders/types'
 import type { GameMap } from 'convex/gameMaps/types'
 import type { SidebarFile } from 'convex/files/types'
-import type { Canvas } from 'convex/canvases/types'
 import type { EditorSearch } from '~/features/sidebar/utils/validate-search'
 import { assertNever } from '~/shared/utils/utils'
-
-export const DEFAULT_ITEM_COLOR = DEFAULT_SIDEBAR_ITEM_COLOR
 
 export const getSlug = (search: EditorSearch): SidebarItemSlug | null => {
   return search.item ?? null
@@ -58,13 +52,6 @@ export function isGameMap(item: AnySidebarItem | null | undefined): item is Game
  */
 export function isFile(item: AnySidebarItem | null | undefined): item is SidebarFile {
   return isSidebarItemType(item, SIDEBAR_ITEM_TYPES.files)
-}
-
-/**
- * Type guard to check if a sidebar item is a Canvas.
- */
-export function isCanvas(item: AnySidebarItem | null | undefined): item is Canvas {
-  return isSidebarItemType(item, SIDEBAR_ITEM_TYPES.canvases)
 }
 
 /**
@@ -131,8 +118,4 @@ export function getTypeName(type: SidebarItemType): string {
     default:
       return assertNever(type)
   }
-}
-
-export function getDefaultIconName(type: SidebarItemType): SidebarItemIconName {
-  return getDefaultSidebarItemIconName(type)
 }

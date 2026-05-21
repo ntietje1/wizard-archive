@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { api } from 'convex/_generated/api'
-import { parseEmbeddedCanvasStableId } from 'convex/canvases/validation'
+import { parseEmbeddedCanvasStableId } from '~/features/canvas/domain/validation'
 import * as Y from 'yjs'
 import { yMapToArray } from '../../utils/canvas-yjs-utils'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import type { Id } from 'convex/_generated/dataModel'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 
 function useYMapAsArray<T>(doc: Y.Doc, mapName: string): Array<T> {
   const snapshotRef = useRef<Array<T>>([])

@@ -1,4 +1,4 @@
-import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
+import { CAMPAIGN_MEMBER_ROLE } from '~/features/campaigns/campaign-types'
 import { Eye } from 'lucide-react'
 import { useState } from 'react'
 import { EmptyContextMenu } from '~/features/context-menu/components/empty-context-menu'

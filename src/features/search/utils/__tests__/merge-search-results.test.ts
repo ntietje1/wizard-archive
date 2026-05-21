@@ -3,8 +3,8 @@ import { mergeSearchResults } from '~/features/search/utils/merge-search-results
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { BlockSearchResult } from 'convex/blocks/functions/searchBlocks'
 import type { Id } from 'convex/_generated/dataModel'
-import { assertSidebarItemName } from 'convex/sidebarItems/validation/name'
-import { assertSidebarItemSlug } from 'convex/sidebarItems/validation/slug'
+import { assertSidebarItemName } from 'shared/sidebar-items/name'
+import { assertSidebarItemSlug } from 'shared/sidebar-items/slug'
 
 function mockItem(id: string, name: string): AnySidebarItem {
   return {

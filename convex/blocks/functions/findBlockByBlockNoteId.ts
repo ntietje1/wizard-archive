@@ -1,10 +1,11 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
-import type { Block, BlockNoteId } from '../types'
+import type { BlockNoteId } from '../../../shared/editor-blocks/types'
+import type { Block } from '../types'
 import type { Id } from '../../_generated/dataModel'
-import type { CampaignQueryCtx } from '../../functions'
+import type { QueryCtx } from '../../_generated/server'
 
 export const findBlockByBlockNoteId = async (
-  ctx: CampaignQueryCtx,
+  ctx: Pick<QueryCtx, 'db'>,
   { noteId, blockNoteId }: { noteId: Id<'sidebarItems'>; blockNoteId: BlockNoteId },
 ): Promise<Block | null> => {
   const note = await ctx.db.get('sidebarItems', noteId)

@@ -1,13 +1,13 @@
 import { v } from 'convex/values'
 import { authMutation, dmMutation } from '../functions'
-import { usernameValidator } from '../users/validation'
+import { assertUsername, usernameValidator } from '../users/validation'
 import { createCampaign as createCampaignFn } from './functions/createCampaign'
 import { joinCampaign as joinCampaignFn } from './functions/joinCampaign'
 import { updateCampaign as updateCampaignFn } from './functions/updateCampaign'
 import { deleteCampaign as deleteCampaignFn } from './functions/deleteCampaign'
 import { updateCampaignMemberStatus as updateCampaignMemberStatusFn } from './functions/updateCampaignMemberStatus'
 import { campaignMemberStatusValidator } from './schema'
-import { campaignSlugValidator, requireCampaignSlug, requireCampaignUsername } from './validation'
+import { assertCampaignSlug, campaignSlugValidator } from './validation'
 import type { Id } from '../_generated/dataModel'
 import type { CampaignMemberStatus } from './types'
 
@@ -21,7 +21,7 @@ export const createCampaign = authMutation({
   handler: async (ctx, args): Promise<Id<'campaigns'>> => {
     return createCampaignFn(ctx, {
       name: args.name,
-      slug: requireCampaignSlug(args.slug),
+      slug: assertCampaignSlug(args.slug),
       description: args.description,
     })
   },
@@ -35,8 +35,8 @@ export const joinCampaign = authMutation({
   returns: campaignMemberStatusValidator,
   handler: async (ctx, args): Promise<CampaignMemberStatus> => {
     return joinCampaignFn(ctx, {
-      dmUsername: requireCampaignUsername(args.dmUsername),
-      slug: requireCampaignSlug(args.slug),
+      dmUsername: assertUsername(args.dmUsername),
+      slug: assertCampaignSlug(args.slug),
     })
   },
 })
@@ -52,7 +52,7 @@ export const updateCampaign = dmMutation({
     return updateCampaignFn(ctx, {
       name: args.name,
       description: args.description,
-      slug: args.slug ? requireCampaignSlug(args.slug) : undefined,
+      slug: args.slug ? assertCampaignSlug(args.slug) : undefined,
     })
   },
 })

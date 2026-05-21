@@ -1,10 +1,10 @@
-import { validateSidebarItemNameWithSiblings } from 'convex/sidebarItems/validation/name'
+import { validateSidebarItemNameWithSiblings } from 'shared/sidebar-items/name'
 import { validateNoCircularParent } from 'convex/sidebarItems/validation/parent'
 import { findUniqueDefaultName } from 'convex/sidebarItems/functions/defaultItemName'
-import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
+import type { SidebarItemType } from 'shared/sidebar-items/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemName, ValidationResult } from 'convex/sidebarItems/validation/name'
+import type { SidebarItemName, ValidationResult } from 'shared/sidebar-items/name'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 
 export interface SidebarValidation {

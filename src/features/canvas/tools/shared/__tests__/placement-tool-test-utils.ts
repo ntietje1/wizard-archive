@@ -1,6 +1,6 @@
 import type { CanvasToolId, CanvasToolRuntime } from '../../canvas-tool-types'
 import type { CanvasSelectionSnapshot } from '../../../system/canvas-selection'
-import type { CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
 
 export function createPointerEvent(
   x: number,

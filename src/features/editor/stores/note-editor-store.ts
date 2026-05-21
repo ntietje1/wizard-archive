@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
 
 interface NoteEditorStore {

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { validateEmail } from 'convex/users/validation'
+import { validateEmail } from 'shared/users/validation'
 import { Loader2, Mail } from 'lucide-react'
 import { toast } from 'sonner'
 import type { UserProfile } from 'convex/users/types'

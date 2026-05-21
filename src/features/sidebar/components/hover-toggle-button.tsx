@@ -1,6 +1,6 @@
 import { cn } from '~/features/shadcn/lib/utils'
 
-export interface HoverToggleButtonProps {
+interface HoverToggleButtonProps {
   nonHoverComponent?: React.ReactNode
   hoverComponent?: React.ReactNode
   className?: string

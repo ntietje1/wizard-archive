@@ -1,19 +1,14 @@
-import * as Y from 'yjs'
+import { internal } from '../../_generated/api'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'
 import { createYjsDocument } from '../../yjsSync/functions/createYjsDocument'
-import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
 import { copyYjsUpdates } from '../../yjsSync/functions/copyYjsUpdates'
-import { blocksToYDoc } from '../blocknote'
-import {
-  syncNoteIndexesFromBlocks,
-  syncNoteDerivedDataFromPersistedBlocks,
-} from './syncNoteDerivedData'
+import { syncNoteDerivedDataFromPersistedBlocks } from './syncNoteDerivedData'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { CustomBlock } from '../editorSpecs'
 import type { Block } from '../../blocks/types'
 
 export async function createNoteCompanion(
@@ -56,21 +51,21 @@ async function copyNoteBlocks(
   const copiedBlocks: Array<Block> = []
 
   for (const block of blocksInParentOrder) {
+    const {
+      _id,
+      _creationTime,
+      noteId: _sourceNoteId,
+      campaignId: _sourceCampaignId,
+      shareStatus: _sourceShareStatus,
+      parentBlockId,
+      ...blockFields
+    } = block
     const blockId = await ctx.db.insert('blocks', {
+      ...blockFields,
       noteId: targetItemId,
-      blockNoteId: block.blockNoteId,
-      position: block.position,
-      parentBlockId:
-        block.parentBlockId && sourceBlockNoteIds.has(block.parentBlockId)
-          ? block.parentBlockId
-          : null,
-      depth: block.depth,
-      type: block.type,
-      props: block.props,
-      inlineContent: block.inlineContent,
-      plainText: block.plainText,
+      parentBlockId: parentBlockId && sourceBlockNoteIds.has(parentBlockId) ? parentBlockId : null,
       campaignId: ctx.campaign._id,
-      shareStatus: block.shareStatus,
+      shareStatus: SHARE_STATUS.NOT_SHARED,
     })
     const copiedBlock = await ctx.db.get('blocks', blockId)
     if (!copiedBlock) {
@@ -106,64 +101,7 @@ export async function copyNoteCompanion(
     noteId: targetItemId,
     blocks: copiedBlocks,
   })
-}
-
-export async function setNoteContent(
-  ctx: CampaignMutationCtx,
-  {
-    noteId,
-    content,
-  }: {
-    noteId: Id<'sidebarItems'>
-    content: Array<CustomBlock>
-  },
-): Promise<void> {
-  const sidebarItem = await ctx.db.get('sidebarItems', noteId)
-  if (!sidebarItem) throwClientError(ERROR_CODE.NOT_FOUND, 'Note sidebar item not found')
-  if (sidebarItem.type !== SIDEBAR_ITEM_TYPES.notes) {
-    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'Note content requires a note sidebar item')
-  }
-  const note = await ctx.db
-    .query('notes')
-    .withIndex('by_sidebarItemId', (q) => q.eq('sidebarItemId', noteId))
-    .unique()
-  if (!note) throwClientError(ERROR_CODE.NOT_FOUND, 'Note companion not found')
-
-  await syncNoteIndexesFromBlocks(ctx, { noteId, content })
-  if (content.length === 0) {
-    const doc = new Y.Doc()
-    const latest = await ctx.db
-      .query('yjsUpdates')
-      .withIndex('by_document_seq', (q) => q.eq('documentId', noteId))
-      .order('desc')
-      .first()
-    try {
-      await ctx.db.insert('yjsUpdates', {
-        documentId: noteId,
-        update: uint8ToArrayBuffer(Y.encodeStateAsUpdate(doc)),
-        seq: (latest?.seq ?? -1) + 1,
-        isSnapshot: false,
-      })
-    } finally {
-      doc.destroy()
-    }
-    return
-  }
-
-  const doc = blocksToYDoc(content, 'document')
-  try {
-    const latest = await ctx.db
-      .query('yjsUpdates')
-      .withIndex('by_document_seq', (q) => q.eq('documentId', noteId))
-      .order('desc')
-      .first()
-    await ctx.db.insert('yjsUpdates', {
-      documentId: noteId,
-      update: uint8ToArrayBuffer(Y.encodeStateAsUpdate(doc)),
-      seq: (latest?.seq ?? -1) + 1,
-      isSnapshot: false,
-    })
-  } finally {
-    doc.destroy()
-  }
+  await ctx.scheduler.runAfter(0, internal.notes.internalActions.persistNoteBlocksFromYjs, {
+    documentId: targetItemId,
+  })
 }

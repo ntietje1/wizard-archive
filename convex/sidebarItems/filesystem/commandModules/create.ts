@@ -1,7 +1,7 @@
-import { requireSidebarItemName } from '../../validation/name'
+import { assertSidebarItemName } from '../../validation/name'
 import { requireCreateParentTarget } from '../../validation/parent'
-import { requireOptionalSidebarItemColor } from '../../validation/color'
-import { requireOptionalSidebarItemIconName } from '../../validation/icon'
+import { requireOptionalSidebarItemColor } from '../../../../shared/sidebar-items/color'
+import { requireOptionalSidebarItemIconName } from '../../../../shared/sidebar-items/icon'
 import { FILE_SYSTEM_EVENT_TYPE } from '../receipts'
 import { createFileSystemWriteSession } from '../deltas'
 import { initializeEmptySidebarItemCompanion } from '../companionInitialization'
@@ -22,7 +22,7 @@ async function createSidebarItem(
   session: FileSystemWriteSession,
   command: CreateFileSystemCommand,
 ): Promise<CreatedItem> {
-  const name = requireSidebarItemName(command.name)
+  const name = assertSidebarItemName(command.name)
   const parentTarget = requireCreateParentTarget(command.parentTarget)
   const iconName = requireOptionalSidebarItemIconName(command.iconName)
   const color = requireOptionalSidebarItemColor(command.color)

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ReactNode } from 'react'
-import type { CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
-import type { EditorContextMenuRef } from '~/features/context-menu/components/editor-context-menu'
+import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
+import type { ContextMenuHostRef } from '~/features/context-menu/components/context-menu-host'
 import type { BlockNoteContextMenuEvent } from '~/features/editor/hooks/useBlockNoteContextMenu'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { BlockNoteContextMenuContext } from '~/features/editor/hooks/useBlockNoteContextMenu'
@@ -24,7 +24,7 @@ export function BlockNoteContextMenuProvider({ children }: BlockNoteContextMenuP
 
   const currentEditor = editorOverride ?? storeEditor
   const [menuState, setMenuState] = useState<BlockNoteContextMenuEvent | null>(null)
-  const contextMenuRef = useRef<EditorContextMenuRef>(null)
+  const contextMenuRef = useRef<ContextMenuHostRef>(null)
   const valueInlineEditorsRef = useRef(new Map<string, Map<string, () => void>>())
 
   const openValueInline = useCallback((valueId: string, instanceId: string | undefined) => {

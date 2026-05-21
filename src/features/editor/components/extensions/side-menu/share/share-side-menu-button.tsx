@@ -6,10 +6,12 @@ import {
   useExtensionState,
 } from '@blocknote/react'
 import { Share2 } from 'lucide-react'
-import type { CustomBlock, CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import type { CustomBlock } from 'shared/editor-blocks/types'
+import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { NoteWithContent } from 'convex/notes/types'
-import type { AggregateShareStatus } from '~/features/sharing/hooks/useBlocksShare'
-import { AGGREGATE_SHARE_STATUS, useBlocksShare } from '~/features/sharing/hooks/useBlocksShare'
+import { AGGREGATE_SHARE_STATUS } from '~/features/sharing/utils/block-share-state'
+import type { AggregateShareStatus } from '~/features/sharing/utils/block-share-state'
+import { useBlocksShare } from '~/features/sharing/hooks/useBlocksShare'
 import { assertNever } from '~/shared/utils/utils'
 import {
   ContextMenu,

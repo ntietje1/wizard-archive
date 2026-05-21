@@ -9,7 +9,7 @@ import { sidebarItemSlugValidator } from './schema/validators'
 import { anySidebarItemWithContentValidator } from './schema/anySidebarItemWithContentValidator'
 import { getSidebarItemWithContent } from './functions/getSidebarItemWithContent'
 import { ERROR_CODE, throwClientError } from '../errors'
-import { requireSidebarItemSlug } from './validation/slug'
+import { assertSidebarItemSlug } from './validation/slug'
 import { logger } from '../common/logger'
 
 export const getActiveSidebarItems = campaignQuery({
@@ -73,7 +73,7 @@ export const getSidebarItemBySlug = campaignQuery({
   },
   returns: v.nullable(anySidebarItemWithContentValidator),
   handler: async (ctx, args) => {
-    const slug = requireSidebarItemSlug(args.slug)
+    const slug = assertSidebarItemSlug(args.slug)
     return await getSidebarItemBySlugFn(ctx, {
       slug,
     })

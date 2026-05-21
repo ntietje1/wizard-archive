@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import {
   blockNoteBlockSchema,
-  canvasAllowedBlockTypes,
   canvasPartialBlockNoteBlockSchema,
-} from '../blockSchemas'
+} from '../../../shared/editor-blocks/blockSchemas'
+import { CANVAS_BLOCK_TYPES } from '../../../shared/editor-blocks/blockRegistry'
 import {
-  customBlockSpecs,
   customInlineContentSpecs,
   customStyleSpecs,
-} from '../../notes/editorSpecs'
+} from '../../../shared/editor-blocks/editor-blocknote-schema'
+import { customBlockSpecs } from '../../../shared/editor-blocks/editor-blocknote-spec-factory'
+import { NOTE_VALUE_PROP_DEFAULTS } from '../../../shared/note-values/schema'
 import { testBlockNoteId } from '../../_test/factories.helper'
 
 // ---------------------------------------------------------------------------
@@ -161,8 +162,8 @@ describe('valid blocks are accepted', () => {
         rows: [
           {
             cells: [
-              [{ type: 'text', text: 'A', styles: {} }],
-              [{ type: 'text', text: 'B', styles: {} }],
+              { type: 'tableCell', content: [{ type: 'text', text: 'A', styles: {} }] },
+              { type: 'tableCell', content: [{ type: 'text', text: 'B', styles: {} }] },
             ],
           },
         ],
@@ -186,6 +187,16 @@ describe('valid blocks are accepted', () => {
           },
         },
       ],
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts note value inline props from the shared defaults', () => {
+    const result = blockNoteBlockSchema.safeParse({
+      id: testBlockNoteId('value-defaults'),
+      type: 'paragraph',
+      props: {},
+      content: [{ type: 'value', props: NOTE_VALUE_PROP_DEFAULTS }],
     })
     expect(result.success).toBe(true)
   })
@@ -215,6 +226,16 @@ describe('valid blocks are accepted', () => {
 describe('invalid blocks are rejected', () => {
   it('rejects a block with no id', () => {
     const result = blockNoteBlockSchema.safeParse({
+      type: 'paragraph',
+      props: {},
+      content: [],
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects an empty block id', () => {
+    const result = blockNoteBlockSchema.safeParse({
+      id: '',
       type: 'paragraph',
       props: {},
       content: [],
@@ -283,10 +304,10 @@ describe('invalid blocks are rejected', () => {
 describe('canvas block subset', () => {
   it('stays aligned with the note editor block family for supported types', () => {
     const supportedCanvasTypes = Object.keys(customBlockSpecs).filter((type) =>
-      canvasAllowedBlockTypes.includes(type as (typeof canvasAllowedBlockTypes)[number]),
+      CANVAS_BLOCK_TYPES.includes(type as (typeof CANVAS_BLOCK_TYPES)[number]),
     )
 
-    expect(supportedCanvasTypes.sort()).toEqual([...canvasAllowedBlockTypes].sort())
+    expect(supportedCanvasTypes.sort()).toEqual([...CANVAS_BLOCK_TYPES].sort())
   })
 
   it('accepts canvas-supported partial blocks from the note schema family', () => {
@@ -308,7 +329,7 @@ describe('canvas block subset', () => {
 
   it('rejects note block types that the canvas editor does not support', () => {
     const excludedTypes = Object.keys(customBlockSpecs).filter(
-      (type) => !canvasAllowedBlockTypes.includes(type as (typeof canvasAllowedBlockTypes)[number]),
+      (type) => !CANVAS_BLOCK_TYPES.includes(type as (typeof CANVAS_BLOCK_TYPES)[number]),
     )
 
     for (const type of excludedTypes) {

@@ -16,7 +16,7 @@ import { CANVAS_HANDLE_POSITION } from '~/features/canvas/types/canvas-domain-ty
 import type { Point2D } from '../../utils/canvas-awareness-types'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
 import type { CanvasHandlePosition } from '~/features/canvas/types/canvas-domain-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 
 const DEFAULT_CANVAS_EDGE_INTERACTION_WIDTH = 20
 const MIN_ZOOM = 1e-6
@@ -165,17 +165,13 @@ function getCanvasEdgePointThreshold(zoom: number): number {
   return DEFAULT_CANVAS_EDGE_INTERACTION_WIDTH / 2 / safeZoom
 }
 
-export function getCanvasEdgeGeometryBounds(geometry: CanvasEdgeGeometry): Bounds | null {
-  return boundsFromPoints(geometry.hitPoints)
-}
-
 export function canvasEdgeGeometryContainsPoint(
   geometry: CanvasEdgeGeometry,
   point: Point2D,
   zoom: number,
 ): boolean {
   const threshold = getCanvasEdgePointThreshold(zoom)
-  const bounds = getCanvasEdgeGeometryBounds(geometry)
+  const bounds = boundsFromPoints(geometry.hitPoints)
   if (
     bounds &&
     !rectIntersectsBounds(bounds, {
@@ -195,7 +191,7 @@ export function canvasEdgeGeometryIntersectsRectangle(
   geometry: CanvasEdgeGeometry,
   rect: Bounds,
 ): boolean {
-  const bounds = getCanvasEdgeGeometryBounds(geometry)
+  const bounds = boundsFromPoints(geometry.hitPoints)
   if (bounds && !rectIntersectsBounds(bounds, rect)) {
     return false
   }

@@ -5,7 +5,7 @@ import type { CanvasConnectionDraft } from '../runtime/interaction/canvas-connec
 import { useCanvasEngineSelector } from '../react/use-canvas-engine'
 import { useCanvasToolStore } from '../stores/canvas-tool-store'
 import type { CanvasInternalNode } from '../system/canvas-engine-types'
-import type { CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type { CSSProperties } from 'react'
 import { useShallow } from 'zustand/shallow'
 

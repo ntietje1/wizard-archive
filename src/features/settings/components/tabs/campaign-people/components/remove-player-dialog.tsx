@@ -1,6 +1,6 @@
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
-import { CAMPAIGN_MEMBER_STATUS } from 'convex/campaigns/types'
+import { CAMPAIGN_MEMBER_STATUS } from '~/features/campaigns/campaign-types'
 import { api } from 'convex/_generated/api'
 import type { CampaignMember } from 'convex/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'

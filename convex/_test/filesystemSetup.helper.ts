@@ -1,18 +1,19 @@
 import { api } from '../_generated/api'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 import { assertSidebarItemName } from '../sidebarItems/validation/name'
-import { assertSidebarItemColor } from '../sidebarItems/validation/color'
-import { assertSidebarItemIconName } from '../sidebarItems/validation/icon'
+import { assertSidebarItemColor } from '../../shared/sidebar-items/color'
+import { assertSidebarItemIconName } from '../../shared/sidebar-items/icon'
+import { makeYjsUpdateWithBlocks } from '../yjsSync/__tests__/makeYjsUpdate.helper'
 import type { DataModel, Id } from '../_generated/dataModel'
 import type { TestConvexForDataModel } from 'convex-test'
-import type { CustomBlock } from '../notes/editorSpecs'
+import type { CustomBlock } from '../../shared/editor-blocks/types'
 import type {
   FileSystemEvent,
   FileSystemTransactionReceipt,
 } from '../sidebarItems/filesystem/receipts'
 import type { CreateParentTarget } from '../sidebarItems/validation/parent'
-import type { SidebarItemColor } from '../sidebarItems/validation/color'
-import type { SidebarItemIconName } from '../sidebarItems/validation/icon'
+import type { SidebarItemColor } from '../../shared/sidebar-items/color'
+import type { SidebarItemIconName } from '../../shared/sidebar-items/icon'
 import type { SidebarItemType } from '../sidebarItems/types/baseTypes'
 
 type AuthedContext = TestConvexForDataModel<DataModel>
@@ -67,10 +68,14 @@ export async function createNoteViaFilesystem(
     itemType: SIDEBAR_ITEM_TYPES.notes,
   })
   if (args.content !== undefined) {
-    await client.mutation(api.notes.mutations.setNoteContent, {
+    await client.mutation(api.yjsSync.mutations.pushUpdate, {
       campaignId: args.campaignId,
-      noteId: created.itemId,
-      content: args.content,
+      documentId: created.itemId,
+      update: makeYjsUpdateWithBlocks(args.content),
+    })
+    await client.action(api.notes.actions.persistNoteBlocks, {
+      campaignId: args.campaignId,
+      documentId: created.itemId,
     })
   }
   return { noteId: created.itemId, slug: created.slug, receipt: created.receipt }

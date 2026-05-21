@@ -14,6 +14,7 @@ import {
   makeYjsUpdateWithBlocks,
 } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
 import type { GameMapSnapshotData } from '../../gameMaps/types'
+import type { CustomPartialBlock } from '../../../shared/editor-blocks/types'
 
 describe('rollback permission checks', () => {
   const t = createTestContext()
@@ -183,7 +184,7 @@ describe('note rollback data integrity', () => {
         parentTarget: { kind: 'direct', parentId: null },
       })
 
-      const originalBlocks = [
+      const originalBlocks: Array<CustomPartialBlock> = [
         {
           id: 'block-1',
           type: 'paragraph',
@@ -211,7 +212,7 @@ describe('note rollback data integrity', () => {
 
       vi.advanceTimersByTime(5 * 60 * 1000 + 1)
 
-      const modifiedBlocks = [
+      const modifiedBlocks: Array<CustomPartialBlock> = [
         {
           id: 'block-1',
           type: 'paragraph',
@@ -304,7 +305,7 @@ describe('canvas rollback data integrity', () => {
 
       vi.advanceTimersByTime(5 * 60 * 1000 + 1)
 
-      const modifiedBlocks = [
+      const modifiedBlocks: Array<CustomPartialBlock> = [
         {
           id: 'block-1',
           type: 'paragraph',

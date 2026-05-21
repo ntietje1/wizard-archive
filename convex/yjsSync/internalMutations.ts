@@ -1,20 +1,67 @@
 import { v } from 'convex/values'
 import { asyncMap } from 'convex-helpers'
 import { internalMutation } from '../_generated/server'
+import { internal } from '../_generated/api'
+import { snapshotTypeValidator } from '../documentSnapshots/schema'
 import { EDIT_HISTORY_ACTION } from '../editHistory/types'
-import { captureNoteSnapshot } from '../notes/functions/captureNoteSnapshot'
-import { captureCanvasSnapshot } from '../canvases/functions/captureCanvasSnapshot'
+import { createSnapshot } from '../documentSnapshots/functions/createSnapshot'
+import { NOTE_SNAPSHOT_TYPE } from '../notes/types'
+import { CANVAS_SNAPSHOT_TYPE } from '../canvases/types'
+import { sidebarItemTypeValidator } from '../sidebarItems/schema/validators'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 import { logger } from '../common/logger'
 import { yjsDocumentIdValidator } from './schema'
-import { compactUpdates } from './functions/compactUpdates'
 import { AWARENESS_TTL_MS, SNAPSHOT_MIN_INTERVAL_MS } from './constants'
-export const compact = internalMutation({
+
+export const replaceWithSnapshotUpdate = internalMutation({
   args: {
     documentId: yjsDocumentIdValidator,
+    updateIds: v.array(v.id('yjsUpdates')),
+    update: v.bytes(),
+    seq: v.number(),
   },
-  handler: async (ctx, { documentId }) => {
-    await compactUpdates(ctx, documentId)
+  returns: v.null(),
+  handler: async (ctx, { documentId, updateIds, update, seq }) => {
+    const latestContentEdit = await ctx.db
+      .query('editHistory')
+      .withIndex('by_item_action', (q) =>
+        q.eq('itemId', documentId).eq('action', EDIT_HISTORY_ACTION.content_edited),
+      )
+      .order('desc')
+      .first()
+    if (latestContentEdit && !latestContentEdit.hasSnapshot) return null
+
+    await asyncMap(updateIds, (updateId) => ctx.db.delete('yjsUpdates', updateId))
+    await ctx.db.insert('yjsUpdates', {
+      documentId,
+      update,
+      seq,
+      isSnapshot: true,
+    })
+    return null
+  },
+})
+
+export const createSnapshotFromYjsState = internalMutation({
+  args: {
+    itemId: v.id('sidebarItems'),
+    itemType: sidebarItemTypeValidator,
+    snapshotType: snapshotTypeValidator,
+    editHistoryId: v.id('editHistory'),
+    campaignId: v.id('campaigns'),
+    data: v.bytes(),
+  },
+  handler: async (ctx, args) => {
+    await createSnapshot(ctx, {
+      itemId: args.itemId,
+      itemType: args.itemType,
+      editHistoryId: args.editHistoryId,
+      campaignId: args.campaignId,
+      snapshotType: args.snapshotType,
+      data: args.data,
+    })
+
+    await ctx.db.patch('editHistory', args.editHistoryId, { hasSnapshot: true })
   },
 })
 
@@ -86,24 +133,15 @@ export const maybeCreateSnapshot = internalMutation({
       hasSnapshot: false,
     })
 
-    const snapshotArgs = {
+    await ctx.scheduler.runAfter(0, internal.yjsSync.internalActions.captureSnapshot, {
+      documentId: args.documentId,
+      itemType: doc.type,
+      snapshotType:
+        doc.type === SIDEBAR_ITEM_TYPES.notes ? NOTE_SNAPSHOT_TYPE : CANVAS_SNAPSHOT_TYPE,
       editHistoryId,
       campaignId: args.campaignId,
-    }
-
-    if (doc.type === SIDEBAR_ITEM_TYPES.notes) {
-      await captureNoteSnapshot(ctx, {
-        noteId: args.documentId,
-        ...snapshotArgs,
-      })
-    } else {
-      await captureCanvasSnapshot(ctx, {
-        canvasId: args.documentId,
-        ...snapshotArgs,
-      })
-    }
-
-    await ctx.db.patch('editHistory', editHistoryId, { hasSnapshot: true })
+      maxSeq: args.triggerSeq,
+    })
 
     return null
   },

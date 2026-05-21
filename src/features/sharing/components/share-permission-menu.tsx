@@ -3,7 +3,6 @@ import { ChevronDown, ChevronUp, Users } from 'lucide-react'
 import type { PermissionLevel } from 'convex/permissions/types'
 import type { CampaignMember } from 'convex/campaigns/types'
 import type { UserProfile } from 'convex/users/types'
-import type { Id } from 'convex/_generated/dataModel'
 import type {
   NullableAggregatePermissionLevel,
   ShareItemWithPermission,
@@ -25,6 +24,7 @@ import { getUserDisplayName } from '~/shared/utils/user-display-name'
 
 type PermissionLevelOrDefault = PermissionLevel | 'default'
 type PermissionSelectValue = PermissionLevelOrDefault | 'mixed'
+type ShareMemberId = ShareItemWithPermission['member']['_id']
 
 const PERMISSION_LABELS: Record<PermissionLevel, string> = {
   [PERMISSION_LEVEL.NONE]: 'None',
@@ -78,8 +78,8 @@ interface SharePermissionMenuProps {
   inheritedFromFolderName: string | null
   isFolder?: boolean
   inheritShares?: boolean
-  onSetMemberPermission: (memberId: Id<'campaignMembers'>, level: PermissionLevel) => Promise<void>
-  onClearMemberPermission: (memberId: Id<'campaignMembers'>) => Promise<void>
+  onSetMemberPermission: (memberId: ShareMemberId, level: PermissionLevel) => Promise<void>
+  onClearMemberPermission: (memberId: ShareMemberId) => Promise<void>
   onSetAllPlayersPermission: (level: PermissionLevel | null) => Promise<void>
   onSetInheritShares?: (enabled: boolean) => Promise<void>
 }
@@ -128,7 +128,7 @@ export function SharePermissionMenu({
     return `${name}'s access is based on the All Players permission level`
   }
 
-  function handlePlayerChange(memberId: Id<'campaignMembers'>, value: PermissionLevelOrDefault) {
+  function handlePlayerChange(memberId: ShareMemberId, value: PermissionLevelOrDefault) {
     if (value === 'default') {
       void onClearMemberPermission(memberId)
     } else {
@@ -473,7 +473,7 @@ function ExpandedPlayerList({
   hasAnyPlayers: boolean
   getInfoText: (item: ShareItemWithPermission) => string
   disabled: boolean
-  onPlayerChange: (memberId: Id<'campaignMembers'>, value: PermissionLevelOrDefault) => void
+  onPlayerChange: (memberId: ShareMemberId, value: PermissionLevelOrDefault) => void
 }) {
   if (inheritingItems.length > 0) {
     return (

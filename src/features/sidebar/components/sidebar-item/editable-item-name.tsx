@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemName } from 'convex/sidebarItems/validation/name'
+import type { SidebarItemName } from 'shared/sidebar-items/name'
 import { handleError } from '~/shared/utils/logger'
 import { useNameValidation } from '~/shared/hooks/useNameValidation'
 import { NameValidationFeedback } from '~/features/sidebar/components/name-validation-feedback'

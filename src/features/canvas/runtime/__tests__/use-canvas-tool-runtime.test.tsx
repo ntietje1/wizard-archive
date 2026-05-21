@@ -4,7 +4,7 @@ import { useCanvasToolRuntime } from '../use-canvas-tool-runtime'
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import { testId } from '~/test/helpers/test-id'
 import type { CanvasConnection } from '../../types/canvas-domain-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import * as Y from 'yjs'
 
 const cursorPresenceSpy = vi.hoisted(() => vi.fn())

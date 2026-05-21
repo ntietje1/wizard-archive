@@ -3,7 +3,7 @@ import {
   parseCanvasNodeBorderWidth,
   parseCanvasNodeSurfaceColor,
   parseCanvasNodeSurfaceOpacity,
-} from 'convex/canvases/validation'
+} from '~/features/canvas/domain/validation'
 import {
   fillCanvasProperty,
   linePaintCanvasProperty,
@@ -16,7 +16,7 @@ import {
 } from '../../properties/canvas-property-types'
 import { resolveCanvasScreenMinimumStrokeWidthCss } from '../../utils/canvas-screen-stroke-width'
 import type { CanvasNodeRenderDataByType, CanvasRuntimeNode } from '../canvas-node-types'
-import type { CanvasNodeType } from 'convex/canvases/validation'
+import type { CanvasNodeType } from '~/features/canvas/domain/validation'
 
 export interface CanvasNodeSurfaceStyleData {
   textColor?: string | null

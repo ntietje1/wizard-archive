@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import { campaignQuery } from '../functions'
-import { customBlockValidator } from '../blocks/schema'
+import { editorBlockInputValidator } from '../blocks/schema'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 import {
   getRootContentsForDownload as getRootContentsForDownloadFn,
@@ -18,7 +18,7 @@ const downloadItemValidator = v.union(
     type: v.literal(SIDEBAR_ITEM_TYPES.notes),
     name: v.string(),
     path: v.string(),
-    content: v.array(customBlockValidator),
+    content: v.array(editorBlockInputValidator),
   }),
   v.object({
     type: v.literal(SIDEBAR_ITEM_TYPES.gameMaps),

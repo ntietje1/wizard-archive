@@ -1,14 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { flattenBlocks } from '../functions/flattenBlocks'
 import { reconstructBlockTree } from '../functions/reconstructBlockTree'
+import { parseEditorBlocks } from '../parseEditorBlocks'
 import { testBlockNoteId } from '../../_test/factories.helper'
-import type { Block, InlineContent } from '../types'
-import type { CustomBlock } from '../../notes/editorSpecs'
+import type { CustomBlock, InlineContent } from '../../../shared/editor-blocks/types'
+import type { Block } from '../types'
 import type { Id } from '../../_generated/dataModel'
-import type { z } from 'zod'
-import type { tableContentSchema } from '../blockSchemas'
 
-type TableContent = z.infer<typeof tableContentSchema>
+type TableContent = {
+  type: 'tableContent'
+  columnWidths: Array<number>
+  rows: Array<{ cells: Array<{ type: 'tableCell'; content: InlineContent }> }>
+}
 type TestBlockOverrides = Partial<Omit<CustomBlock, 'content' | 'props' | 'children'>> & {
   content?: unknown
   props?: unknown
@@ -39,6 +42,7 @@ function toFakeBlocks(flat: ReturnType<typeof flattenBlocks>): Array<Block> {
         position: f.position,
         type: f.type,
         props: f.props,
+        content: f.content,
         inlineContent: f.inlineContent,
         plainText: f.plainText,
         shareStatus: 'not_shared',
@@ -49,6 +53,25 @@ function toFakeBlocks(flat: ReturnType<typeof flattenBlocks>): Array<Block> {
 describe('flattenBlocks', () => {
   it('returns empty array for empty input', () => {
     expect(flattenBlocks([])).toEqual([])
+  })
+
+  it('accepts BlockNote audio preview props before flattening', () => {
+    const [audioBlock] = parseEditorBlocks([
+      {
+        id: testBlockNoteId('audio'),
+        type: 'audio',
+        props: {
+          name: 'clip.mp3',
+          url: 'https://example.com/clip.mp3',
+          showPreview: true,
+        },
+      },
+    ])
+
+    expect(flattenBlocks([audioBlock])[0].props).toMatchObject({
+      name: 'clip.mp3',
+      showPreview: true,
+    })
   })
 
   it('flattens a single top-level block', () => {
@@ -126,13 +149,47 @@ describe('flattenBlocks', () => {
         content: {
           type: 'tableContent',
           columnWidths: [100],
-          rows: [{ cells: [[{ type: 'text', text: 'Cell', styles: {} }]] }],
+          rows: [
+            {
+              cells: [{ type: 'tableCell', content: [{ type: 'text', text: 'Cell', styles: {} }] }],
+            },
+          ],
         } satisfies TableContent,
       }),
     ]
     const result = flattenBlocks(blocks)
     expect(result[0].plainText).toBe('Cell')
     expect(result[0].inlineContent).toBeNull()
+  })
+
+  it('rejects malformed value inline content', () => {
+    expect(() =>
+      parseEditorBlocks([
+        {
+          id: testBlockNoteId('bad-value'),
+          type: 'paragraph',
+          props: {},
+          content: [{ type: 'value', props: { slug: 'missing-fields' } }],
+        },
+      ]),
+    ).toThrow(/VALIDATION_FAILED/)
+  })
+
+  it('rejects malformed table cell content', () => {
+    expect(() =>
+      parseEditorBlocks([
+        {
+          id: testBlockNoteId('bad-table'),
+          type: 'table',
+          props: {},
+          content: {
+            type: 'tableContent',
+            columnWidths: [null],
+            rows: [{ cells: [{ type: 'tableCell', content: [{ type: 'text' }] }] }],
+          },
+        },
+      ]),
+    ).toThrow(/VALIDATION_FAILED/)
   })
 
   it('sets inlineContent to null when block has no content', () => {

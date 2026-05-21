@@ -1,6 +1,7 @@
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { resolveCanvasEdgeType } from '../edges/canvas-edge-registry'
-import type { CanvasEdgeType } from 'convex/canvases/validation'
+import type { CanvasEdgeType } from '~/features/canvas/domain/validation'
+import type { Id } from 'convex/_generated/dataModel'
 import {
   useCanvasDocumentRuntime,
   useCanvasInteractionRuntime,
@@ -91,7 +92,8 @@ export function useCanvasToolbarModel() {
               ? node.data.sidebarItemId
               : null
           return sidebarItemId
-            ? activeSidebarItems?.itemsMap.get(sidebarItemId)?.type === SIDEBAR_ITEM_TYPES.notes
+            ? activeSidebarItems?.itemsMap.get(sidebarItemId as Id<'sidebarItems'>)?.type ===
+                SIDEBAR_ITEM_TYPES.notes
             : false
         },
         patchEdge,

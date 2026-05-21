@@ -1,11 +1,11 @@
-import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
+import { CAMPAIGN_MEMBER_ROLE } from '~/features/campaigns/campaign-types'
 import {
   evaluatePermanentDelete,
   evaluateRestore,
   evaluateTrash,
 } from 'convex/sidebarItems/filesystem/capabilities'
 import type { OperationSidebarItem } from 'convex/sidebarItems/filesystem/capabilities'
-import type { CampaignMemberRole } from 'convex/campaigns/types'
+import type { CampaignMemberRole } from '~/features/campaigns/campaign-types'
 import type { Id } from 'convex/_generated/dataModel'
 
 function actor(role: CampaignMemberRole | undefined) {

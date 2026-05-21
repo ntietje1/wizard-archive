@@ -6,7 +6,12 @@ import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import type { SelectionBookmark } from '@tiptap/pm/state'
 import type { EditorView } from '@tiptap/pm/view'
 import { rewriteSameNoteValueReferences } from '../../../../shared/note-values/authoring'
-import { getUniqueValueSlug, sanitizeValueSlug } from '../../../../shared/note-values/constants'
+import {
+  NOTE_VALUE_DEFAULT_SLUG,
+  NOTE_VALUE_SLUG_OPTIONS,
+} from '../../../../shared/note-values/constants'
+import { deduplicateSlug, parseSlug, slugify } from '../../../../shared/slugs'
+import { createUuidV4 } from '~/shared/utils/create-uuid-v4'
 
 const VALUE_NODE_TYPE = 'value'
 const VALUE_ID_ATTR = 'valueId'
@@ -18,6 +23,17 @@ const valueTransferPluginKey = new PluginKey('valueTransfer')
 type PendingValueMove = {
   selection: SelectionBookmark
   slice: Slice
+}
+
+function readValueSlug(value: unknown): string {
+  const raw = typeof value === 'string' ? value : ''
+  return (
+    parseSlug(raw, NOTE_VALUE_SLUG_OPTIONS) ??
+    slugify(raw, {
+      fallback: NOTE_VALUE_DEFAULT_SLUG,
+      maxLength: NOTE_VALUE_SLUG_OPTIONS.maxLength,
+    })
+  )
 }
 
 interface ValuePastePluginOptions {
@@ -34,7 +50,7 @@ interface TiptapEditorLike {
 }
 
 export function createValueTransferPlugin({
-  createId = () => crypto.randomUUID(),
+  createId = createUuidV4,
   getExistingSlugs = () => [],
 }: ValuePastePluginOptions = {}) {
   let pendingValueMove: PendingValueMove | null = null
@@ -118,7 +134,9 @@ function refreshValueInstancesInSlice(
 ) {
   const usedSlugs = new Set(getExistingSlugs())
   const copiedSlugs = collectCopiedValueSlugs(slice.content, usedSlugs)
-  const refreshed = refreshValueInstancesInFragment(slice.content, createId, copiedSlugs)
+  const refreshed = refreshValueInstancesInFragment(slice.content, createId, copiedSlugs, {
+    index: 0,
+  })
   return refreshed === slice.content ? slice : new Slice(refreshed, slice.openStart, slice.openEnd)
 }
 
@@ -221,6 +239,7 @@ function refreshValueInstancesInFragment(
   fragment: Fragment,
   createId: () => string,
   copiedSlugs: CopiedValueSlugs,
+  occurrence: { index: number },
 ): Fragment {
   const nodes: Array<ProseMirrorNode> = []
   let changed = false
@@ -230,16 +249,16 @@ function refreshValueInstancesInFragment(
       return
     }
 
-    const content = refreshValueInstancesInFragment(node.content, createId, copiedSlugs)
+    const content = refreshValueInstancesInFragment(node.content, createId, copiedSlugs, occurrence)
     if (node.type.name !== VALUE_NODE_TYPE) {
       nodes.push(content === node.content ? node : node.copy(content))
       changed ||= content !== node.content
       return
     }
 
-    const slug = sanitizeValueSlug(node.attrs[VALUE_SLUG_ATTR])
-    const valueId = String(node.attrs[VALUE_ID_ATTR] ?? '')
-    const nextSlug = copiedSlugs.byValueId.get(valueId) ?? slug
+    const slug = readValueSlug(node.attrs[VALUE_SLUG_ATTR])
+    const nextSlug = copiedSlugs.occurrences[occurrence.index] ?? slug
+    occurrence.index += 1
     const expressionSource = String(node.attrs[VALUE_EXPRESSION_ATTR] ?? '')
     changed = true
     nodes.push(
@@ -262,7 +281,7 @@ function refreshValueInstancesInFragment(
 }
 
 interface CopiedValueSlugs {
-  byValueId: Map<string, string>
+  occurrences: Array<string>
   byReferencedSlug: Map<string, string>
 }
 
@@ -270,7 +289,7 @@ function collectCopiedValueSlugs(
   fragment: Fragment,
   usedSlugs: Set<string>,
   copiedSlugs: CopiedValueSlugs = {
-    byValueId: new Map(),
+    occurrences: [],
     byReferencedSlug: new Map(),
   },
 ): CopiedValueSlugs {
@@ -278,11 +297,10 @@ function collectCopiedValueSlugs(
     if (node.isText) return
 
     if (node.type.name === VALUE_NODE_TYPE) {
-      const valueId = String(node.attrs[VALUE_ID_ATTR] ?? '')
-      const slug = sanitizeValueSlug(node.attrs[VALUE_SLUG_ATTR])
-      const nextSlug = getUniqueValueSlug(slug, usedSlugs)
+      const slug = readValueSlug(node.attrs[VALUE_SLUG_ATTR])
+      const nextSlug = deduplicateSlug(slug, usedSlugs, NOTE_VALUE_SLUG_OPTIONS)
       usedSlugs.add(nextSlug)
-      copiedSlugs.byValueId.set(valueId, nextSlug)
+      copiedSlugs.occurrences.push(nextSlug)
       if (!copiedSlugs.byReferencedSlug.has(slug)) {
         copiedSlugs.byReferencedSlug.set(slug, nextSlug)
       }

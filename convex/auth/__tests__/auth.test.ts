@@ -51,7 +51,7 @@ describe('onCreateUser', () => {
     expect(profile!.username).toBe('bobsmith')
   })
 
-  it('falls back to user{id-suffix} if neither email nor name', async () => {
+  it('falls back to a valid user id suffix if neither email nor name exists', async () => {
     await t.run(async (ctx) => {
       await onCreateUser(ctx, {
         _id: 'auth-abcd1234',
@@ -70,7 +70,29 @@ describe('onCreateUser', () => {
     })
 
     expect(profile).not.toBeNull()
-    expect(profile!.username).toBe('userabcd1234')
+    expect(profile!.username).toBe('user-abcd1234')
+  })
+
+  it('keeps generated usernames valid when the email prefix is too short', async () => {
+    await t.run(async (ctx) => {
+      await onCreateUser(ctx, {
+        _id: 'auth-short',
+        _creationTime: Date.now(),
+        email: 'abc@example.com',
+        name: 'Abc',
+        emailVerified: true,
+      })
+    })
+
+    const profile = await t.run(async (ctx) => {
+      return await ctx.db
+        .query('userProfiles')
+        .withIndex('by_user', (q) => q.eq('authUserId', 'auth-short'))
+        .unique()
+    })
+
+    expect(profile).not.toBeNull()
+    expect(profile!.username).toBe('user-abc')
   })
 
   it('deduplicates username on conflict', async () => {
@@ -108,7 +130,7 @@ describe('onCreateUser', () => {
     })
 
     expect(first!.username).toBe('dedup')
-    expect(second!.username).toBe('dedup-2')
+    expect(second!.username).toBe('dedup-1')
   })
 
   it('creates full userProfile with all fields', async () => {

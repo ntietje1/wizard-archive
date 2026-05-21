@@ -26,25 +26,25 @@ export type CanvasRuntimeProviderProps = {
   viewportController: CanvasViewportController
 }
 
-export interface CanvasDocumentRuntimeServices {
+interface CanvasDocumentRuntimeServices {
   commands: CanvasCommands
   documentWriter: CanvasDocumentWriter
   history: CanvasHistoryController
 }
 
-export interface CanvasInteractionRuntimeServices {
+interface CanvasInteractionRuntimeServices {
   canEdit: boolean
   editSession: CanvasEditSessionState
   nodeActions: CanvasNodeActions
   selection: CanvasSelectionController
 }
 
-export interface CanvasViewportRuntimeServices {
+interface CanvasViewportRuntimeServices {
   domRuntime: CanvasDomRuntime
   viewportController: CanvasViewportController
 }
 
-export interface CanvasCollaborationRuntimeServices {
+interface CanvasCollaborationRuntimeServices {
   remoteHighlights: ReadonlyMap<string, RemoteHighlight>
 }
 

@@ -9,8 +9,9 @@ import {
   expectPermissionDenied,
 } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
-import { COMPACT_INTERVAL } from '../functions/compactUpdates'
 import { makeYjsUpdate as makeEmptyYjsUpdate } from './makeYjsUpdate.helper'
+
+const COMPACTION_SEQ = 20
 
 function makeAwarenessState(): ArrayBuffer {
   return new Uint8Array([1, 2, 3, 4]).buffer
@@ -170,7 +171,7 @@ describe('pushUpdate', () => {
     )
   })
 
-  it('triggers compaction at COMPACT_INTERVAL', async () => {
+  it('defers compaction while a content snapshot is pending', async () => {
     vi.useFakeTimers()
     try {
       const ctx = await setupCampaignContext(t)
@@ -182,7 +183,7 @@ describe('pushUpdate', () => {
         parentTarget: { kind: 'direct', parentId: null },
       })
 
-      for (let i = 1; i <= COMPACT_INTERVAL; i++) {
+      for (let i = 1; i <= COMPACTION_SEQ; i++) {
         await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
           campaignId: ctx.campaignId,
           documentId: noteId,
@@ -198,8 +199,7 @@ describe('pushUpdate', () => {
           .withIndex('by_document_seq', (q) => q.eq('documentId', noteId))
           .collect()
 
-        expect(rows).toHaveLength(1)
-        expect(rows[0].isSnapshot).toBe(true)
+        expect(rows.length).toBeGreaterThan(1)
       })
     } finally {
       vi.useRealTimers()
@@ -216,7 +216,7 @@ describe('pushUpdate', () => {
       parentTarget: { kind: 'direct', parentId: null },
     })
 
-    for (let i = 1; i < COMPACT_INTERVAL; i++) {
+    for (let i = 1; i < COMPACTION_SEQ; i++) {
       await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
         campaignId: ctx.campaignId,
         documentId: noteId,

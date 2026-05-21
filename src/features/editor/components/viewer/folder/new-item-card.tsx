@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { File, FilePlus, FolderPlus, MapPin, Plus } from 'lucide-react'
-import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
+import type { SidebarItemType } from 'shared/sidebar-items/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { Card } from '~/features/shadcn/components/card'
 import {

@@ -1,6 +1,6 @@
 import type { UserIdentity } from 'convex/server'
 import type { Id } from '../_generated/dataModel'
-import type { Username } from './validation'
+import type { Username } from '../../shared/users/validation'
 
 export type ProfileImage =
   | { type: 'external'; url: string }

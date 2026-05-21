@@ -1,10 +1,8 @@
 import { BlockNoteSchema } from '@blocknote/core'
-import { parseCanvasRichTextContent } from 'convex/canvases/validation'
-import {
-  customBlockSpecs,
-  customInlineContentSpecs,
-  customStyleSpecs,
-} from 'convex/notes/editorSpecs'
+import { CANVAS_BLOCK_TYPES } from '../../../../../shared/editor-blocks/blockRegistry'
+import { customBlockSpecs } from '../../../../../shared/editor-blocks/editor-blocknote-spec-factory'
+import { parseCanvasRichTextDocument } from 'shared/editor-blocks/blockSchemas'
+import { customInlineContentSpecs, customStyleSpecs } from '~/features/editor/editor-dom-specs'
 import type {
   BlockNoteEditor,
   BlockSpecs,
@@ -13,15 +11,9 @@ import type {
   StyleSpecs,
 } from '@blocknote/core'
 
-const canvasRichTextBlockSpecs = {
-  paragraph: customBlockSpecs.paragraph,
-  heading: customBlockSpecs.heading,
-  bulletListItem: customBlockSpecs.bulletListItem,
-  numberedListItem: customBlockSpecs.numberedListItem,
-  checkListItem: customBlockSpecs.checkListItem,
-  quote: customBlockSpecs.quote,
-  codeBlock: customBlockSpecs.codeBlock,
-} as BlockSpecs
+const canvasRichTextBlockSpecs = Object.fromEntries(
+  CANVAS_BLOCK_TYPES.map((type) => [type, customBlockSpecs[type]]),
+) as BlockSpecs
 
 const canvasRichTextInlineContentSpecs: InlineContentSpecs = customInlineContentSpecs
 
@@ -94,7 +86,7 @@ export function readCanvasRichTextContentState(value: unknown): CanvasRichTextCo
     return createCanvasRichTextContentState('valid', createEmptyCanvasRichTextContent())
   }
 
-  const parsedContent = parseCanvasRichTextContent(value)
+  const parsedContent = parseCanvasRichTextDocument(value)
   if (!parsedContent) {
     return createCanvasRichTextContentState('invalid', createEmptyCanvasRichTextContent())
   }

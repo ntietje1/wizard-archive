@@ -4,11 +4,12 @@ import { describe, expect, it } from 'vitest'
 import { BlockNoteEditor } from '@blocknote/core'
 import { render } from '@testing-library/react'
 import { BlockNoteView } from '@blocknote/shadcn'
-import { createEditorSchema } from '../../editorSchema'
+import { createEditorSchema } from '../../editor-specs'
 import { ConvexYjsProvider } from '../../providers/convex-yjs-provider'
 import { NoteValueRuntimeContext } from '../value-block-runtime-context'
-import { blocksToYDoc as backendBlocksToYDoc, yDocToBlocks } from 'convex/notes/blocknote'
-import type { CustomBlockNoteEditor, CustomPartialBlock } from 'convex/notes/editorSpecs'
+import { blocksToYDoc as backendBlocksToYDoc, yDocToBlocks } from '~/features/editor/blocknote-yjs'
+import type { CustomPartialBlock } from 'shared/editor-blocks/types'
+import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { Id } from 'convex/_generated/dataModel'
 
 const TestBlockNoteView = BlockNoteView as React.ComponentType<{
@@ -38,12 +39,36 @@ const runtimeContextValue = {
   noteId: 'test-note' as Id<'sidebarItems'>,
   editable: true,
   authoredDefinitions: [],
+  authoredValueStates: [],
   stateByValueId: new Map(),
   sidebarItems: [],
   itemsMap: new Map(),
 }
 
 describe('inline value collaboration round-trip', () => {
+  it('converts valid blocks to a Yjs document', () => {
+    const doc = backendBlocksToYDoc(
+      [
+        {
+          id: 'paragraph-block-1',
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Hello', styles: {} }],
+        },
+      ],
+      'document',
+    )
+
+    try {
+      expect(doc).toBeInstanceOf(Y.Doc)
+    } finally {
+      doc.destroy()
+    }
+  })
+
+  it('rejects invalid block input before calling BlockNote conversion', () => {
+    expect(() => backendBlocksToYDoc([null] as never, 'document')).toThrow(TypeError)
+  })
+
   it('mounts an editor containing an inline value without duplicating ProseMirror plugins', () => {
     const doc = createInitialDoc([
       {

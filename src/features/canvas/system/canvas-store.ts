@@ -7,7 +7,7 @@ import type {
 } from './canvas-engine-types'
 import type { CanvasViewport } from '../types/canvas-domain-types'
 
-export interface CanvasStore {
+interface CanvasStore {
   getSnapshot: () => CanvasEngineSnapshot
   setSnapshot: (
     snapshot: Omit<CanvasEngineSnapshot, 'version'>,

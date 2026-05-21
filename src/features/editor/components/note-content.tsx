@@ -1,8 +1,8 @@
 import { BlockNoteEditor } from '@blocknote/core'
 import { useEffect, useRef } from 'react'
-import { SHARE_STATUS } from 'convex/blockShares/types'
+import { SHARE_STATUS } from 'shared/editor-blocks/share-status'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
-import { createEditorSchema } from '../editorSchema'
+import { createEditorSchema } from '../editor-specs'
 import { NoteView } from './note-view'
 import { LinkClickHandler } from './extensions/link-click-handler'
 import { WikiLinkAutocomplete } from './extensions/wiki-link/wiki-link-autocomplete'
@@ -20,12 +20,13 @@ import { assertNever } from '~/shared/utils/utils'
 import { api } from 'convex/_generated/api'
 import type { Doc } from 'yjs'
 import type { Id } from 'convex/_generated/dataModel'
-import type { CustomBlock, CustomBlockNoteEditor } from 'convex/notes/editorSpecs'
+import type { CustomBlock } from 'shared/editor-blocks/types'
+import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { BlockMeta, NoteWithContent } from 'convex/notes/types'
 import type { CSSProperties } from 'react'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
 
-export type NoteEditorChangeHandler = (
+type NoteEditorChangeHandler = (
   editor: CustomBlockNoteEditor | null,
   doc: Doc | null,
   provider: ConvexYjsProvider | null,
@@ -167,7 +168,12 @@ function StaticNoteEditor({
     createEditor: () =>
       BlockNoteEditor.create({
         schema: createEditorSchema(),
-        initialContent: content.length > 0 ? content : undefined,
+        initialContent:
+          content.length > 0
+            ? (content as NonNullable<
+                Parameters<typeof BlockNoteEditor.create>[0]
+              >['initialContent'])
+            : undefined,
       }) as unknown as CustomBlockNoteEditor,
     destroyEditor: destroyBlockNoteEditor,
     onEditorChange: (nextEditor) => onEditorChange?.(nextEditor, null, null),
@@ -179,7 +185,10 @@ function StaticNoteEditor({
       initializedEditorRef.current = editor
       return
     }
-    editor.replaceBlocks(editor.document, content)
+    editor.replaceBlocks(
+      editor.document,
+      content as Parameters<CustomBlockNoteEditor['replaceBlocks']>[1],
+    )
   }, [editor, content])
 
   if (!editor) return null

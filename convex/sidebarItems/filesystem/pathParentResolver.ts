@@ -9,7 +9,7 @@ import { getSidebarItemRow } from './sidebarItemRows'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 import type { ParsedCreateParentTarget } from '../validation/parent'
-import type { SidebarItemName } from '../validation/name'
+import type { SidebarItemName } from '../../../shared/sidebar-items/name'
 import type { FileSystemWriteSession } from './deltas'
 
 async function getParentFolderId(

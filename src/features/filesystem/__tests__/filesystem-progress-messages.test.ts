@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import { assertSidebarItemName } from 'convex/sidebarItems/validation/name'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
+import { assertSidebarItemName } from 'shared/sidebar-items/name'
 import type { Id } from 'convex/_generated/dataModel'
 import type { FileSystemCommand } from 'convex/sidebarItems/filesystem/commands'
 import {

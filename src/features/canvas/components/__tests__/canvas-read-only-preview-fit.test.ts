@@ -5,7 +5,7 @@ import {
   selectCanvasReadOnlyPreviewFitNodes,
 } from '../canvas-read-only-preview-fit'
 import type { CanvasEngineSnapshot, CanvasInternalNode } from '../../system/canvas-engine-types'
-import type { CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
 
 describe('canvas read-only preview fit', () => {
   it('uses fallback nodes before the engine has projected node ids', () => {

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { MouseEvent } from 'react'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
 import { SidebarShareButton } from './sidebar-item-share-button'
 import { DraggableSidebarItem } from './draggable-sidebar-item'

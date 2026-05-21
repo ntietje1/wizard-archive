@@ -5,10 +5,7 @@ import type { RefObject } from 'react'
 
 export const CANVAS_BACKGROUND_GRID_SIZE = 36
 
-export function applyCanvasBackgroundViewport(
-  element: HTMLElement | null,
-  viewport: CanvasViewport,
-) {
+function applyCanvasBackgroundViewport(element: HTMLElement | null, viewport: CanvasViewport) {
   if (!element) {
     return
   }

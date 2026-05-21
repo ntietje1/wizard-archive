@@ -8,10 +8,10 @@ import {
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from 'convex/canvases/validation'
+} from '~/features/canvas/domain/validation'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import * as Y from 'yjs'
 import { testId } from '~/test/helpers/test-id'

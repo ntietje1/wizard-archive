@@ -1,23 +1,13 @@
-import type { z } from 'zod'
-import type { ShareStatus } from '../blockShares/types'
-import type { Id } from '../_generated/dataModel'
+import type { WithoutSystemFields } from 'convex/server'
+import type { Doc, Id } from '../_generated/dataModel'
 import type {
-  blockNoteIdSchema,
-  blockTypeSchema,
-  flatBlockContentSchema,
-  inlineContentSchema,
-} from './blockSchemas'
-import type { ConvexValidatorFields } from '../common/types'
-
-export type FlatBlockContent = z.infer<typeof flatBlockContentSchema>
-
-export type BlockType = z.infer<typeof blockTypeSchema>
-
-export type BlockNoteId = z.infer<typeof blockNoteIdSchema>
-
-export type BlockProps = FlatBlockContent['props']
-
-export type InlineContent = Array<z.infer<typeof inlineContentSchema>>
+  BlockNoteId,
+  BlockType,
+  FlatBlockContent,
+  InlineContent,
+  TableContent,
+} from '../../shared/editor-blocks/types'
+import type { ShareStatus } from '../../shared/editor-blocks/share-status'
 
 export type BlockShareInfo = {
   blockNoteId: BlockNoteId
@@ -25,25 +15,34 @@ export type BlockShareInfo = {
   sharedMemberIds: Array<Id<'campaignMembers'>>
 }
 
-export type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6
-
-export type Heading = {
-  blockNoteId: BlockNoteId
-  text: string
-  level: HeadingLevel
-  normalizedText: string
-}
-
-export type Block = ConvexValidatorFields<'blocks'> & {
-  noteId: Id<'sidebarItems'>
+type PersistedBlockCommon = {
   blockNoteId: BlockNoteId
   position: number | null
   parentBlockId: BlockNoteId | null
   depth: number
-  type: BlockType
-  props: BlockProps
-  inlineContent: InlineContent | null
   plainText: string
-  campaignId: Id<'campaigns'>
-  shareStatus: ShareStatus | null
 }
+
+type InlineBlockType = Exclude<BlockType, 'table'>
+
+type PersistedInlineBlock = {
+  [Type in InlineBlockType]: {
+    type: Type
+    props: Extract<FlatBlockContent, { type: Type }>['props']
+    content?: InlineContent | null
+    inlineContent: InlineContent | null
+  }
+}[InlineBlockType]
+
+type PersistedTableBlock = {
+  type: 'table'
+  props: Extract<FlatBlockContent, { type: 'table' }>['props']
+  content?: TableContent | null
+  inlineContent: null
+}
+
+export type PersistedFlatBlock = PersistedBlockCommon & (PersistedInlineBlock | PersistedTableBlock)
+
+export type BlockInsert = WithoutSystemFields<Doc<'blocks'>>
+
+export type Block = Doc<'blocks'>

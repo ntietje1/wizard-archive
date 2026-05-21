@@ -3,7 +3,7 @@ import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
 import {
   DEFAULT_SIDEBAR_ITEM_COLOR,
   normalizeSidebarItemColorOrDefault,
-} from 'convex/sidebarItems/validation/color'
+} from 'shared/sidebar-items/color'
 import type { MapPinWithItem } from 'convex/gameMaps/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'

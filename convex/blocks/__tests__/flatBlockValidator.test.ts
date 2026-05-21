@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { customBlockSpecs } from '../../notes/editorSpecs'
-import { flatBlockContentSchema } from '../blockSchemas'
+import { customBlockSpecs } from '../../../shared/editor-blocks/editor-blocknote-spec-factory'
+import { flatBlockContentSchema } from '../../../shared/editor-blocks/blockSchemas'
 
 describe('flat block type coverage', () => {
   const editorBlockTypes = Object.keys(customBlockSpecs)
@@ -67,7 +67,9 @@ describe('flat block content validation', () => {
       content: {
         type: 'tableContent',
         columnWidths: [100, null],
-        rows: [{ cells: [[{ type: 'text', text: 'A', styles: {} }]] }],
+        rows: [
+          { cells: [{ type: 'tableCell', content: [{ type: 'text', text: 'A', styles: {} }] }] },
+        ],
       },
     })
     expect(result.success).toBe(true)

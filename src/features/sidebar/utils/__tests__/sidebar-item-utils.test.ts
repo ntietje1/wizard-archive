@@ -3,14 +3,13 @@ import {
   DEFAULT_SIDEBAR_ITEM_COLOR,
   isValidSidebarItemColor,
   normalizeSidebarItemColorOrDefault,
-} from 'convex/sidebarItems/validation/color'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import { assertSidebarItemSlug } from 'convex/sidebarItems/validation/slug'
+} from 'shared/sidebar-items/color'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
+import { assertSidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import {
   buildBreadcrumbs,
-  getDefaultIconName,
   getItemTypeLabel,
   getSidebarItemAs,
   getSlug,
@@ -89,16 +88,6 @@ describe('getSlug', () => {
 
   it('returns null when item is undefined', () => {
     expect(getSlug({})).toBeNull()
-  })
-})
-
-describe('getDefaultIconName', () => {
-  it('returns correct icon names for each type', () => {
-    expect(getDefaultIconName(SIDEBAR_ITEM_TYPES.notes)).toBe('FileText')
-    expect(getDefaultIconName(SIDEBAR_ITEM_TYPES.folders)).toBe('Folder')
-    expect(getDefaultIconName(SIDEBAR_ITEM_TYPES.gameMaps)).toBe('MapPin')
-    expect(getDefaultIconName(SIDEBAR_ITEM_TYPES.files)).toBe('File')
-    expect(getDefaultIconName(SIDEBAR_ITEM_TYPES.canvases)).toBe('Grid2x2Plus')
   })
 })
 

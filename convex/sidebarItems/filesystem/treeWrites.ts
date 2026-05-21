@@ -6,7 +6,7 @@ import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
 import type { AnySidebarItemRow } from '../types/types'
-import type { SidebarItemName } from '../validation/name'
+import type { SidebarItemName } from '../../../shared/sidebar-items/name'
 import type { SidebarItemFieldPatch } from './receipts'
 
 type ItemOperation = (ctx: MutationCtx, item: AnySidebarItemRow) => Promise<void>

@@ -1,8 +1,6 @@
 import { ArrowDown, ArrowDownToLine, ArrowUp, ArrowUpToLine } from 'lucide-react'
 import type { CanvasReorderDirection } from './canvas-reorder'
 
-export const CANVAS_REORDER_SUBMENU_ICON = ArrowUpToLine
-
 export const CANVAS_REORDER_ACTIONS = [
   {
     id: 'send-to-back',

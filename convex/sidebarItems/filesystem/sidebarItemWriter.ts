@@ -4,10 +4,10 @@ import { assertSidebarItemLifecycleConsistency } from '../types/status'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { SidebarItemType } from '../types/baseTypes'
-import type { SidebarItemColor } from '../validation/color'
-import type { SidebarItemIconName } from '../validation/icon'
-import type { SidebarItemName } from '../validation/name'
-import type { SidebarItemSlug } from '../validation/slug'
+import type { SidebarItemColor } from '../../../shared/sidebar-items/color'
+import type { SidebarItemIconName } from '../../../shared/sidebar-items/icon'
+import type { SidebarItemName } from '../../../shared/sidebar-items/name'
+import type { SidebarItemSlug } from '../../../shared/sidebar-items/slug'
 
 export type InsertFilesystemSidebarItemArgs = {
   type: SidebarItemType

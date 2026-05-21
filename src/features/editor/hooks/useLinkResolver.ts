@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react'
-import { normalizeSidebarItemColorOrDefault } from 'convex/sidebarItems/validation/color'
+import { normalizeSidebarItemColorOrDefault } from 'shared/sidebar-items/color'
 import { isDangerousUrl } from 'convex/links/linkParsers'
 import { resolveParsedItemPath } from 'convex/links/linkResolution'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'

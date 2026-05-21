@@ -1,4 +1,4 @@
-import type { CustomBlock } from './editorSpecs'
+import type { CustomBlock } from '../../shared/editor-blocks/types'
 import type {
   SIDEBAR_ITEM_TYPES,
   SidebarItem,
@@ -6,7 +6,7 @@ import type {
   SidebarItemWithContent,
 } from '../sidebarItems/types/baseTypes'
 import type { PermissionLevel } from '../permissions/types'
-import type { ShareStatus } from '../blockShares/types'
+import type { ShareStatus } from '../../shared/editor-blocks/share-status'
 import type { Id } from '../_generated/dataModel'
 
 export type NoteFromDb = SidebarItemFromDb<typeof SIDEBAR_ITEM_TYPES.notes>

@@ -1,3 +1,5 @@
+'use node'
+
 import { Resend } from '@convex-dev/resend'
 import { components } from './_generated/api'
 

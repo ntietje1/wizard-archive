@@ -2,7 +2,7 @@ import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { useMapViewStore } from '~/features/editor/stores/map-view-store'
 
-export interface MapViewContextType {
+interface MapViewContextType {
   activeMap: GameMapWithContent | null
   activePin: MapPinWithItem | null
   setActivePinId: (pinId: Id<'mapPins'> | null) => void

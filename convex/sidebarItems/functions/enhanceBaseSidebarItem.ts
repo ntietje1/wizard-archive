@@ -1,6 +1,6 @@
 import { getSidebarItemPermissionLevel } from '../../sidebarShares/functions/sidebarItemPermissions'
-import { assertSidebarItemColor } from '../validation/color'
-import { assertSidebarItemIconName } from '../validation/icon'
+import { assertSidebarItemColor } from '../../../shared/sidebar-items/color'
+import { assertSidebarItemIconName } from '../../../shared/sidebar-items/icon'
 import { assertSidebarItemName } from '../validation/name'
 import { assertSidebarItemSlug } from '../validation/slug'
 import {

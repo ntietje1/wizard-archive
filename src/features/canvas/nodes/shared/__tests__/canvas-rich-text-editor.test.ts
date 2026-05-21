@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { customStyleSpecs } from 'convex/notes/editorSpecs'
+import { customStyleSpecs } from '~/features/editor/editor-dom-specs'
 import {
   canvasRichTextEditorSchema,
   createEmptyCanvasRichTextContent,

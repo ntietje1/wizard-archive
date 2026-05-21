@@ -1,10 +1,11 @@
 import { useEffect } from 'react'
 import { useForm } from '@tanstack/react-form'
-import type { SidebarItemColor } from 'convex/sidebarItems/validation/color'
-import type { SidebarItemIconName } from 'convex/sidebarItems/validation/icon'
+import type { SidebarItemColor } from 'shared/sidebar-items/color'
+import { getDefaultSidebarItemIconName } from 'shared/sidebar-items/icon'
+import type { SidebarItemIconName } from 'shared/sidebar-items/icon'
 import { toast } from 'sonner'
 import { FileEdit, Loader } from 'lucide-react'
-import { getDefaultIconName, getTypeName } from '../../utils/sidebar-item-utils'
+import { getTypeName } from '../../utils/sidebar-item-utils'
 import { IconPicker } from './icon-picker'
 import { ColorPicker } from './color-picker'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
@@ -86,7 +87,7 @@ export function SidebarItemEditDialog({ item, isOpen, onClose }: SidebarItemEdit
   if (!isOpen) return null
 
   const typeName = getTypeName(item.type)
-  const defaultIconName = getDefaultIconName(item.type)
+  const defaultIconName = getDefaultSidebarItemIconName(item.type)
 
   return (
     <FormDialog

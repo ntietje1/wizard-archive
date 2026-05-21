@@ -689,7 +689,7 @@ describe('filesystem transactions', () => {
         },
       ]),
     })
-    await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+    await dmAuth.action(api.notes.actions.persistNoteBlocks, {
       campaignId: ctx.campaignId,
       documentId: sourceId,
     })

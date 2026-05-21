@@ -38,7 +38,7 @@ describe('share mutations with nested blocks', () => {
       },
     ])
 
-    await dmAuth.mutation(api.blockShares.mutations.shareBlocks, {
+    await dmAuth.action(api.blockShares.actions.shareBlocks, {
       campaignId: ctx.campaignId,
       noteId,
       blockNoteIds: [testBlockNoteId('child')],
@@ -90,7 +90,7 @@ describe('share mutations with nested blocks', () => {
       },
     ])
 
-    await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
+    await dmAuth.action(api.blockShares.actions.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId,
       blockNoteIds: [
@@ -148,7 +148,7 @@ describe('share mutations with nested blocks', () => {
       campaignMemberId: ctx.player.memberId,
     })
 
-    await dmAuth.mutation(api.blockShares.mutations.setBlocksShareStatus, {
+    await dmAuth.action(api.blockShares.actions.setBlocksShareStatus, {
       campaignId: ctx.campaignId,
       noteId,
       blockNoteIds: [testBlockNoteId('nested')],
@@ -210,7 +210,7 @@ describe('share mutations with nested blocks', () => {
         { id: testBlockNoteId('root'), type: 'paragraph', props: {}, children: [] },
       ]),
     })
-    await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+    await dmAuth.action(api.notes.actions.persistNoteBlocks, {
       campaignId: ctx.campaignId,
       documentId: noteId,
     })

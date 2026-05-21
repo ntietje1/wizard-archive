@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { CustomBlock } from 'convex/notes/editorSpecs'
+import type { CustomBlock, HeadingLevel } from 'shared/editor-blocks/types'
 import {
   extractHeadingsFromContent,
   findHeadingByText,
@@ -10,7 +10,7 @@ import {
 function heading(
   id: string,
   text: string,
-  level: number,
+  level: HeadingLevel,
   children: Array<CustomBlock> = [],
 ): CustomBlock {
   return {
@@ -62,10 +62,17 @@ describe('extractHeadingsFromContent', () => {
     expect(extractHeadingsFromContent(content)).toHaveLength(0)
   })
 
-  it('defaults to level 1 for invalid levels', () => {
-    const content: Array<CustomBlock> = [heading('b1', 'Bad Level', 7)]
-    const headings = extractHeadingsFromContent(content)
-    expect(headings[0].level).toBe(1)
+  it('skips headings with invalid levels', () => {
+    const content: Array<CustomBlock> = [
+      {
+        id: 'b1',
+        type: 'heading',
+        props: { level: 9 },
+        content: [{ type: 'text', text: 'Invalid', styles: {} }],
+        children: [],
+      } as unknown as CustomBlock,
+    ]
+    expect(extractHeadingsFromContent(content)).toHaveLength(0)
   })
 
   it('processes nested children', () => {

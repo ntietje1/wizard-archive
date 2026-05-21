@@ -12,7 +12,7 @@ import type { CanvasSelectionSnapshot } from '../../../system/canvas-selection'
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from 'convex/canvases/validation'
+} from '~/features/canvas/domain/validation'
 
 describe('classifyCanvasPointerTarget', () => {
   it('classifies pane, node, edge, handle, resize, interactive, and outside targets', () => {

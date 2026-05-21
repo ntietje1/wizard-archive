@@ -1,58 +1,43 @@
 import { extractPlainText } from './extractPlainText'
-import { inlineContentSchema } from '../blockSchemas'
-import type { CustomBlock } from '../../notes/editorSpecs'
-import type { BlockNoteId, FlatBlockContent, InlineContent } from '../types'
+import type { BlockNoteId, CustomBlock } from '../../../shared/editor-blocks/types'
+import type { PersistedFlatBlock } from '../types'
 
-function toFlatBlockContent(block: CustomBlock): FlatBlockContent {
-  return { type: block.type, props: block.props, content: block.content } as FlatBlockContent
-}
-
-function toPersistedInlineContentItem(item: unknown): unknown {
-  if (
-    typeof item !== 'object' ||
-    item === null ||
-    !('type' in item) ||
-    item.type !== 'value' ||
-    !('content' in item) ||
-    item.content !== undefined
-  ) {
-    return item
-  }
-
-  const { content: _content, ...persistedItem } = item
-  return persistedItem
-}
-
-function toPersistedInlineContent(block: CustomBlock): InlineContent | null {
-  if (!Array.isArray(block.content)) return null
-  const result = inlineContentSchema
-    .array()
-    .safeParse(block.content.map((item) => toPersistedInlineContentItem(item)))
-  return result.success ? result.data : null
-}
-
-export function flattenBlocks(blocks: Array<CustomBlock>) {
+export function flattenBlocks(blocks: Array<CustomBlock>): Array<PersistedFlatBlock> {
   function makeFlatBlock(
     block: CustomBlock,
     parentBlockId: BlockNoteId | null,
     depth: number,
     position: number,
-  ) {
-    const plainText = extractPlainText(toFlatBlockContent(block))
-    const inlineContent = toPersistedInlineContent(block)
-    return {
+  ): PersistedFlatBlock {
+    const base = {
       blockNoteId: block.id,
       parentBlockId,
       depth,
       position,
+      plainText: extractPlainText(block),
+    }
+
+    if (block.type === 'table') {
+      return {
+        ...base,
+        type: block.type,
+        props: block.props,
+        content: block.content ?? null,
+        inlineContent: null,
+      }
+    }
+
+    const content = block.content ?? null
+    return {
+      ...base,
       type: block.type,
       props: block.props,
-      inlineContent,
-      plainText,
-    }
+      content,
+      inlineContent: content,
+    } as PersistedFlatBlock
   }
 
-  const result: Array<ReturnType<typeof makeFlatBlock>> = []
+  const result: Array<PersistedFlatBlock> = []
 
   function walk(
     block: CustomBlock,

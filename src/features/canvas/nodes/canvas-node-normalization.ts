@@ -1,4 +1,4 @@
-import { parseCanvasDocumentNode } from 'convex/canvases/validation'
+import { parseCanvasDocumentNode } from '~/features/canvas/domain/validation'
 import { normalizeEmbedNodeData } from './embed/embed-node-data'
 import type { EmbedNodeData } from './embed/embed-node-data'
 import { normalizeCanvasRichTextNodeData } from './shared/canvas-rich-text-node-data'
@@ -6,7 +6,7 @@ import type { CanvasRichTextNodeData } from './shared/canvas-rich-text-node-data
 import { normalizeStrokeNodeData } from './stroke/stroke-node-model'
 import type { StrokeNodeData } from './stroke/stroke-node-model'
 import type { CanvasRuntimeNode } from './canvas-node-types'
-import type { CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import { assertNever } from '~/shared/utils/utils'
 
 type CanvasNormalizedEmbedNode = CanvasRuntimeNode<'embed', EmbedNodeData>

@@ -3,7 +3,7 @@ import { sortCanvasElementsByZIndex } from '../document/canvas-z-order'
 import { stripEphemeralCanvasNodeState } from '../../utils/canvas-node-persistence'
 import type { CanvasClipboardEntry } from './canvas-context-menu-types'
 import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type * as Y from 'yjs'
 
 const CANVAS_PASTE_OFFSET = 32

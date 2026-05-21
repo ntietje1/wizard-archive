@@ -1,5 +1,5 @@
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import { validateCanvasEmbedDropTarget } from 'convex/canvases/dropValidation'
+import { validateCanvasEmbedDropTarget } from '~/features/canvas/domain/dropValidation'
 import { validateNoteLinkDropTarget } from 'convex/links/dropValidation'
 import { validatePinDropTarget } from 'convex/gameMaps/validation'
 import { assertNever } from '~/shared/utils/utils'

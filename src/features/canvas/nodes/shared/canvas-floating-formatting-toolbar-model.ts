@@ -26,15 +26,11 @@ import { areCanvasPaintValuesEqual } from '../../properties/canvas-paint-values'
 import type { CanvasPaintValue } from '../../properties/canvas-property-types'
 import { readCanvasRichTextActiveStyles } from './canvas-rich-text-blocknote-adapter'
 import { resolveCanvasRichTextSelectionTextColor } from './canvas-rich-text-selection-colors'
+import { CANVAS_BLOCK_TYPES } from '../../../../../shared/editor-blocks/blockRegistry'
 
-type SupportedBlockType =
-  | 'paragraph'
-  | 'heading'
-  | 'bulletListItem'
-  | 'numberedListItem'
-  | 'checkListItem'
-  | 'quote'
-  | 'codeBlock'
+type SupportedBlockType = (typeof CANVAS_BLOCK_TYPES)[number]
+
+const CANVAS_BLOCK_TYPE_SET = new Set<string>(CANVAS_BLOCK_TYPES)
 
 export type InlineStyle = 'bold' | 'italic' | 'underline' | 'strike'
 export type TextAlignment = 'left' | 'center' | 'right'
@@ -316,6 +312,10 @@ function getActiveBlockTypeId(
 }
 
 function blockTypeOptionExists(editor: FormattingEditor, option: BlockTypeOption) {
+  if (!CANVAS_BLOCK_TYPE_SET.has(option.type)) {
+    return false
+  }
+
   const blockDefinition = editor.schema.blockSchema[option.type]
   if (!blockDefinition) {
     return false

@@ -2,7 +2,7 @@ import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
 import type { CanvasCommands } from '../document/use-canvas-commands'
 import type { ContextMenuContributor, ContextMenuItemSpec } from '~/features/context-menu/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
+import type { SidebarItemType } from 'shared/sidebar-items/types'
 import type { CanvasArrangeAction } from '../document/canvas-arrange'
 import type { CanvasReorderDirection } from '../document/canvas-reorder'
 import type {
@@ -10,7 +10,7 @@ import type {
   CanvasDocumentNode,
   CanvasEdgeType,
   CanvasNodeType,
-} from 'convex/canvases/validation'
+} from '~/features/canvas/domain/validation'
 
 export interface CanvasContextMenuPoint {
   x: number

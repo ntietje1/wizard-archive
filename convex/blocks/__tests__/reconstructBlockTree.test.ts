@@ -18,11 +18,6 @@ function makeFlatBlock(overrides: Partial<Block> & { blockNoteId: string }): Blo
     inlineContent: null,
     plainText: '',
     shareStatus: 'not_shared',
-    deletionTime: null,
-    deletedBy: null,
-    updatedTime: null,
-    updatedBy: null,
-    createdBy: 'userProfiles:u1' as Id<'userProfiles'>,
     ...overrides,
   } as Block
 }

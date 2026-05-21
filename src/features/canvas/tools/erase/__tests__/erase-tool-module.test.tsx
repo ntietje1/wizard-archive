@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { eraseToolSpec } from '../erase-tool-module'
 import { clearEraseToolLocalOverlay } from '../erase-tool-local-overlay'
 import { createMockCanvasToolRuntime } from '../../__tests__/helpers/create-mock-canvas-tool-runtime'
-import type { CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
 
 describe('eraseToolSpec', () => {
   afterEach(() => {

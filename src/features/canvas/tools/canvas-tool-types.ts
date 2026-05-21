@@ -17,7 +17,7 @@ import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
   CanvasEdgeType,
-} from 'convex/canvases/validation'
+} from '~/features/canvas/domain/validation'
 import type { ComponentType, MouseEvent as ReactMouseEvent, ReactNode } from 'react'
 
 export type CanvasToolId = 'select' | 'hand' | 'draw' | 'erase' | 'lasso' | 'text' | 'edge'

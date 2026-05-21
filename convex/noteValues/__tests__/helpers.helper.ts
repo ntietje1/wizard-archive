@@ -2,7 +2,8 @@ import { api } from '../../_generated/api'
 import { makeYjsUpdateWithBlocks } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
 import { executeMoveCommand, testBlockNoteId } from '../../_test/factories.helper'
 import type { Id, DataModel } from '../../_generated/dataModel'
-import type { TestBlock, TestInlineContent } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
+import type { TestInlineContent } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
+import type { CustomPartialBlock } from '../../../shared/editor-blocks/types'
 import type { TestConvex, TestConvexForDataModel } from 'convex-test'
 import type schema from '../../schema'
 
@@ -16,7 +17,7 @@ export function valueBlock({
   valueId: string
   slug: string
   expressionSource: string
-}): TestBlock {
+}): CustomPartialBlock {
   return {
     id,
     type: 'paragraph',
@@ -30,7 +31,7 @@ export function valueBlockWithGeneratedId(args: {
   valueId: string
   slug: string
   expressionSource: string
-}): TestBlock {
+}): CustomPartialBlock {
   return valueBlock({
     ...args,
     id: testBlockNoteId(args.idSeed),
@@ -62,7 +63,7 @@ export function paragraphWithGeneratedId({
 }: {
   idSeed: string
   content: Array<TestInlineContent>
-}): TestBlock {
+}): CustomPartialBlock {
   return {
     id: testBlockNoteId(idSeed),
     type: 'paragraph',
@@ -122,7 +123,7 @@ export async function replaceNoteDocumentAndPersist(
   }: {
     campaignId: Id<'campaigns'>
     noteId: Id<'sidebarItems'>
-    blocks: Array<TestBlock>
+    blocks: Array<CustomPartialBlock>
   },
 ) {
   const snapshot = makeYjsUpdateWithBlocks(blocks)
@@ -145,7 +146,7 @@ export async function replaceNoteDocumentAndPersist(
     })
   })
 
-  await dmAuth.mutation(api.notes.mutations.persistNoteBlocks, {
+  await dmAuth.action(api.notes.actions.persistNoteBlocks, {
     campaignId,
     documentId: noteId,
   })

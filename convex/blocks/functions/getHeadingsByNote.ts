@@ -1,9 +1,9 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignQueryCtx } from '../../functions'
-import type { Heading, HeadingLevel } from '../types'
-
-const VALID_HEADING_LEVELS = new Set<number>([1, 2, 3, 4, 5, 6])
+import { logger } from '../../common/logger'
+import { headingPropsSchema } from '../../../shared/editor-blocks/blockSchemas'
+import type { Heading } from '../../../shared/editor-blocks/types'
 
 export async function getHeadingsByNote(
   ctx: CampaignQueryCtx,
@@ -25,15 +25,19 @@ export async function getHeadingsByNote(
   for (const block of blocks) {
     const text = block.plainText
     if (!text) continue
-    const rawLevel = block.props.level
-    const level: HeadingLevel =
-      typeof rawLevel === 'number' && VALID_HEADING_LEVELS.has(rawLevel)
-        ? (rawLevel as HeadingLevel)
-        : 1
+    const props = headingPropsSchema.safeParse(block.props)
+    if (!props.success) {
+      logger.warn('Skipping heading block with invalid props', {
+        blockId: block._id,
+        noteId,
+        blockNoteId: block.blockNoteId,
+      })
+      continue
+    }
     headings.push({
       blockNoteId: block.blockNoteId,
       text,
-      level,
+      level: props.data.level,
       normalizedText: text.toLowerCase().trim().replace(/\s+/g, ' '),
     })
   }

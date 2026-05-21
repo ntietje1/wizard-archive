@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { extractPlainText } from '../functions/extractPlainText'
-import type { FlatBlockContent } from '../types'
+import type { FlatBlockContent } from '../../../shared/editor-blocks/types'
 
 describe('extractPlainText', () => {
   it('returns empty string for blocks with no content', () => {
@@ -35,8 +35,8 @@ describe('extractPlainText', () => {
         rows: [
           {
             cells: [
-              [{ type: 'text', text: 'Cell 1', styles: {} }],
-              [{ type: 'text', text: 'Cell 2', styles: {} }],
+              { type: 'tableCell', content: [{ type: 'text', text: 'Cell 1', styles: {} }] },
+              { type: 'tableCell', content: [{ type: 'text', text: 'Cell 2', styles: {} }] },
             ],
           },
         ],
@@ -53,8 +53,12 @@ describe('extractPlainText', () => {
         type: 'tableContent',
         columnWidths: [100],
         rows: [
-          { cells: [[{ type: 'text', text: 'Row 1', styles: {} }]] },
-          { cells: [[{ type: 'text', text: 'Row 2', styles: {} }]] },
+          {
+            cells: [{ type: 'tableCell', content: [{ type: 'text', text: 'Row 1', styles: {} }] }],
+          },
+          {
+            cells: [{ type: 'tableCell', content: [{ type: 'text', text: 'Row 2', styles: {} }] }],
+          },
         ],
       },
     }
@@ -70,7 +74,10 @@ describe('extractPlainText', () => {
         columnWidths: [100, 100],
         rows: [
           {
-            cells: [[], [{ type: 'text', text: 'Only', styles: {} }]],
+            cells: [
+              { type: 'tableCell', content: [] },
+              { type: 'tableCell', content: [{ type: 'text', text: 'Only', styles: {} }] },
+            ],
           },
         ],
       },
