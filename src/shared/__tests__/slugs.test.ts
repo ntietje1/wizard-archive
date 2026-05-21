@@ -38,6 +38,8 @@ describe('validateSlug', () => {
     expect(validateSlug('attack_')).toContain('separator')
     expect(validateSlug('attack--bonus')).toContain('consecutive separators')
     expect(validateSlug('attack-_bonus')).toContain('consecutive separators')
+    expect(validateSlug('attack_-bonus')).toContain('consecutive separators')
+    expect(validateSlug('attack__bonus')).toContain('consecutive separators')
   })
 
   it('uses configured labels and max lengths', () => {

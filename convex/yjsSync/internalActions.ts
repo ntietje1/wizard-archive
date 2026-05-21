@@ -12,12 +12,13 @@ export const compact = internalAction({
   args: {
     documentId: yjsDocumentIdValidator,
   },
+  returns: v.null(),
   handler: async (ctx, { documentId }) => {
     const updates = await ctx.runQuery(internal.yjsSync.internalQueries.listUpdatesForDocument, {
       documentId,
     })
     const compacted = compactYjsUpdates(updates)
-    if (!compacted) return
+    if (!compacted) return null
 
     await ctx.runMutation(internal.yjsSync.internalMutations.replaceWithSnapshotUpdate, {
       documentId,
@@ -25,6 +26,7 @@ export const compact = internalAction({
       update: compacted.update,
       seq: compacted.seq,
     })
+    return null
   },
 })
 
@@ -37,6 +39,7 @@ export const captureSnapshot = internalAction({
     campaignId: v.id('campaigns'),
     maxSeq: v.number(),
   },
+  returns: v.null(),
   handler: async (ctx, args) => {
     const updates = await ctx.runQuery(
       internal.yjsSync.internalQueries.listUpdatesForDocumentThroughSeq,
@@ -55,5 +58,6 @@ export const captureSnapshot = internalAction({
       campaignId: args.campaignId,
       data,
     })
+    return null
   },
 })

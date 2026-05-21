@@ -3,26 +3,35 @@ import { parseCampaignSlug, validateCampaignSlug } from '../../campaigns/validat
 import { parseSidebarItemSlug, validateSidebarItemSlug } from '../../sidebarItems/validation/slug'
 import { parseUsername, validateUsername } from '../../users/validation'
 
+const consecutiveSeparatorSlugs = ['name--link', 'name-_link', 'name_-link', 'name__link']
+
 describe('entity slug parsing', () => {
   it('uses the universal slug syntax for usernames', () => {
     expect(parseUsername('7_player')).toBe('7_player')
     expect(validateUsername('alice')).toBeNull()
     expect(validateUsername('alice_1')).toBeNull()
     expect(parseUsername('Invalid User')).toBeNull()
+    for (const slug of consecutiveSeparatorSlugs) {
+      expect(validateUsername(slug)).toContain('consecutive separators')
+    }
   })
 
   it('uses the universal slug syntax for campaign links', () => {
     expect(parseCampaignSlug('7_campaign')).toBe('7_campaign')
     expect(parseCampaignSlug('campaign-link')).toBe('campaign-link')
     expect(validateCampaignSlug('campaign_link')).toBeNull()
-    expect(validateCampaignSlug('campaign--link')).toContain('consecutive separators')
+    for (const slug of consecutiveSeparatorSlugs) {
+      expect(validateCampaignSlug(slug)).toContain('consecutive separators')
+    }
   })
 
   it('uses the universal slug syntax for sidebar items', () => {
     expect(parseSidebarItemSlug('7_lore')).toBe('7_lore')
     expect(parseSidebarItemSlug('lore-index')).toBe('lore-index')
     expect(validateSidebarItemSlug('lore_index')).toBeNull()
-    expect(validateSidebarItemSlug('lore-_index')).toContain('consecutive separators')
+    for (const slug of consecutiveSeparatorSlugs) {
+      expect(validateSidebarItemSlug(slug)).toContain('consecutive separators')
+    }
   })
 
   it('keeps only username minimum slug length', () => {
