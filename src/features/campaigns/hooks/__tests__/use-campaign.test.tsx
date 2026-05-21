@@ -68,7 +68,7 @@ describe('useCampaign', () => {
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.DM },
     })
     const value: CampaignContextType = {
-      dmUsername: assertUsername('dm'),
+      dmUsername: assertUsername('testdm'),
       campaignSlug: campaign.slug,
       campaign: mockAuthQuery(campaign),
       isDm: true,
@@ -87,7 +87,7 @@ describe('useCampaign', () => {
       myMembership: { role: CAMPAIGN_MEMBER_ROLE.Player },
     })
     const value: CampaignContextType = {
-      dmUsername: assertUsername('dm'),
+      dmUsername: assertUsername('testdm'),
       campaignSlug: campaign.slug,
       campaign: mockAuthQuery(campaign),
       isDm: false,

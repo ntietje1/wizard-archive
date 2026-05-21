@@ -298,7 +298,7 @@ export function parseCanvasStrokeNodeData(value: unknown): CanvasStrokeNodeData 
 export function parseCanvasStrokeSelectionData(
   value: unknown,
 ): ParsedCanvasStrokeSelectionData | null {
-  if (!isRecord(value) || !hasOnlyKeys(value, new Set(['points', 'size', 'bounds']))) return null
+  if (!isRecord(value)) return null
   const points = parsePoints(value.points)
   const bounds = parseCanvasBounds(value.bounds)
   return points && isFiniteNumber(value.size) && bounds

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { flattenBlocks } from '../functions/flattenBlocks'
 import { reconstructBlockTree } from '../functions/reconstructBlockTree'
+import { parseEditorBlocks } from '../parseEditorBlocks'
 import { testBlockNoteId } from '../../_test/factories.helper'
 import type { Block, CustomBlock, InlineContent } from '../types'
 import type { Id } from '../../_generated/dataModel'
@@ -51,6 +52,25 @@ function toFakeBlocks(flat: ReturnType<typeof flattenBlocks>): Array<Block> {
 describe('flattenBlocks', () => {
   it('returns empty array for empty input', () => {
     expect(flattenBlocks([])).toEqual([])
+  })
+
+  it('accepts BlockNote audio preview props before flattening', () => {
+    const [audioBlock] = parseEditorBlocks([
+      {
+        id: testBlockNoteId('audio'),
+        type: 'audio',
+        props: {
+          name: 'clip.mp3',
+          url: 'https://example.com/clip.mp3',
+          showPreview: true,
+        },
+      },
+    ])
+
+    expect(flattenBlocks([audioBlock])[0].props).toMatchObject({
+      name: 'clip.mp3',
+      showPreview: true,
+    })
   })
 
   it('flattens a single top-level block', () => {

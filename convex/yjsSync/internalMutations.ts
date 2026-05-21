@@ -20,7 +20,17 @@ export const replaceWithSnapshotUpdate = internalMutation({
     update: v.bytes(),
     seq: v.number(),
   },
+  returns: v.null(),
   handler: async (ctx, { documentId, updateIds, update, seq }) => {
+    const latestContentEdit = await ctx.db
+      .query('editHistory')
+      .withIndex('by_item_action', (q) =>
+        q.eq('itemId', documentId).eq('action', EDIT_HISTORY_ACTION.content_edited),
+      )
+      .order('desc')
+      .first()
+    if (latestContentEdit && !latestContentEdit.hasSnapshot) return null
+
     await asyncMap(updateIds, (updateId) => ctx.db.delete('yjsUpdates', updateId))
     await ctx.db.insert('yjsUpdates', {
       documentId,
@@ -28,6 +38,7 @@ export const replaceWithSnapshotUpdate = internalMutation({
       seq,
       isSnapshot: true,
     })
+    return null
   },
 })
 

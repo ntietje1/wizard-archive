@@ -15,14 +15,14 @@ describe('entity slug parsing', () => {
     expect(parseCampaignSlug('7_campaign')).toBe('7_campaign')
     expect(parseCampaignSlug('campaign-link')).toBe('campaign-link')
     expect(validateCampaignSlug('campaign_link')).toBeNull()
-    expect(validateCampaignSlug('campaign--link')).toBeNull()
+    expect(validateCampaignSlug('campaign--link')).toContain('consecutive separators')
   })
 
   it('uses the universal slug syntax for sidebar items', () => {
     expect(parseSidebarItemSlug('7_lore')).toBe('7_lore')
     expect(parseSidebarItemSlug('lore-index')).toBe('lore-index')
     expect(validateSidebarItemSlug('lore_index')).toBeNull()
-    expect(validateSidebarItemSlug('lore-_index')).toBeNull()
+    expect(validateSidebarItemSlug('lore-_index')).toContain('consecutive separators')
   })
 
   it('keeps only username minimum slug length', () => {

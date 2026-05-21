@@ -1,43 +1,60 @@
 import { v } from 'convex/values'
 import { internalMutation } from '../_generated/server'
 import { blockNoteIdValidator, blockShareStatusValidator } from '../blocks/schema'
+import { editorBlockInputValidator } from '../blocks/validators'
 import { setBlocksShareStatus as setBlocksShareStatusFn } from './functions/setBlocksShareStatus'
 import { shareBlocks as shareBlocksFn } from './functions/shareBlocks'
 import { unshareBlocks as unshareBlocksFn } from './functions/unshareBlocks'
+import { parseEditorBlocks } from '../blocks/parseEditorBlocks'
+import { authenticate, checkDmMembership } from '../functions'
+import { syncNoteIndexesFromBlocks } from '../notes/functions/syncNoteDerivedData'
 import { ERROR_CODE, throwClientError } from '../errors'
-import { projectNoteBlocksFromYjsInMutation } from '../notes/functions/projectNoteBlocksFromYjs'
+import type { CustomBlock } from '../blocks/types'
+import type { CampaignFromDb } from '../campaigns/types'
 import type { Id } from '../_generated/dataModel'
 import type { MutationCtx } from '../_generated/server'
 
-async function getCampaignOrThrow(ctx: MutationCtx, campaignId: Id<'campaigns'>) {
-  const campaign = await ctx.db.get('campaigns', campaignId)
-  if (!campaign) throwClientError(ERROR_CODE.NOT_FOUND, 'Campaign not found')
-  return campaign
+type ProjectedNoteArgs = {
+  campaignId: Id<'campaigns'>
+  noteId: Id<'sidebarItems'>
+  content: Array<CustomBlock>
 }
 
-async function getBlockShareCtx(
-  ctx: MutationCtx,
-  args: { campaignId: Id<'campaigns'>; actorCampaignMemberId: Id<'campaignMembers'> },
-) {
+async function getBlockShareCtx(ctx: MutationCtx, args: ProjectedNoteArgs) {
+  const user = await authenticate(ctx)
+  const { campaign, membership } = await checkDmMembership({ ...ctx, user }, args.campaignId)
+  await syncProjectedNote({ ...ctx, campaign }, { noteId: args.noteId, content: args.content })
   return {
     ...ctx,
-    campaign: await getCampaignOrThrow(ctx, args.campaignId),
-    membership: { _id: args.actorCampaignMemberId },
+    campaign,
+    membership,
   }
+}
+
+async function syncProjectedNote(
+  ctx: MutationCtx & { campaign: CampaignFromDb },
+  args: Pick<ProjectedNoteArgs, 'noteId' | 'content'>,
+) {
+  const note = await ctx.db.get('sidebarItems', args.noteId)
+  if (!note) throwClientError(ERROR_CODE.NOT_FOUND, 'Note not found')
+  if (note.campaignId !== ctx.campaign._id) {
+    throwClientError(ERROR_CODE.PERMISSION_DENIED, "You don't have access to this campaign")
+  }
+  await syncNoteIndexesFromBlocks(ctx, args)
 }
 
 export const setBlocksShareStatus = internalMutation({
   args: {
     campaignId: v.id('campaigns'),
-    actorCampaignMemberId: v.id('campaignMembers'),
     noteId: v.id('sidebarItems'),
     blockNoteIds: v.array(blockNoteIdValidator),
     status: blockShareStatusValidator,
+    content: v.array(editorBlockInputValidator),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await projectNoteBlocksFromYjsInMutation(ctx, args.noteId)
-    await setBlocksShareStatusFn(await getBlockShareCtx(ctx, args), args)
+    const content = parseEditorBlocks(args.content)
+    await setBlocksShareStatusFn(await getBlockShareCtx(ctx, { ...args, content }), args)
     return null
   },
 })
@@ -45,15 +62,15 @@ export const setBlocksShareStatus = internalMutation({
 export const shareBlocks = internalMutation({
   args: {
     campaignId: v.id('campaigns'),
-    actorCampaignMemberId: v.id('campaignMembers'),
     noteId: v.id('sidebarItems'),
     blockNoteIds: v.array(blockNoteIdValidator),
     campaignMemberId: v.id('campaignMembers'),
+    content: v.array(editorBlockInputValidator),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await projectNoteBlocksFromYjsInMutation(ctx, args.noteId)
-    await shareBlocksFn(await getBlockShareCtx(ctx, args), args)
+    const content = parseEditorBlocks(args.content)
+    await shareBlocksFn(await getBlockShareCtx(ctx, { ...args, content }), args)
     return null
   },
 })
@@ -61,15 +78,15 @@ export const shareBlocks = internalMutation({
 export const unshareBlocks = internalMutation({
   args: {
     campaignId: v.id('campaigns'),
-    actorCampaignMemberId: v.id('campaignMembers'),
     noteId: v.id('sidebarItems'),
     blockNoteIds: v.array(blockNoteIdValidator),
     campaignMemberId: v.id('campaignMembers'),
+    content: v.array(editorBlockInputValidator),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await projectNoteBlocksFromYjsInMutation(ctx, args.noteId)
-    await unshareBlocksFn(await getBlockShareCtx(ctx, args), args)
+    const content = parseEditorBlocks(args.content)
+    await unshareBlocksFn(await getBlockShareCtx(ctx, { ...args, content }), args)
     return null
   },
 })

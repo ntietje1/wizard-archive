@@ -350,6 +350,22 @@ describe('useNoteYjsCollaboration', () => {
       })
     })
 
+    it('does not project persisted blocks after a failed cleanup flush', async () => {
+      mockUseAuthQuery.mockReturnValue({
+        data: [{ seq: 0, update: new ArrayBuffer(0) }],
+      })
+      mockFlushPendingUpdates.mockResolvedValueOnce(false)
+
+      const { unmount } = renderHook(() => useNoteYjsCollaboration(NOTE_ID, USER, true))
+      await flushMicrotasks(10)
+
+      unmount()
+      await flushMicrotasks(10)
+
+      expect(mockFlushPendingUpdates).toHaveBeenCalled()
+      expect(mockAction).not.toHaveBeenCalledWith('persistNoteBlocks', expect.anything())
+    })
+
     it('persists the previous note when noteId changes', async () => {
       mockUseAuthQuery.mockReturnValue({
         data: [{ seq: 0, update: new ArrayBuffer(0) }],

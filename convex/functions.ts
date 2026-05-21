@@ -44,7 +44,7 @@ export async function authenticate(ctx: QueryCtx | MutationCtx): Promise<AuthUse
 // customQuery/customMutation, so input callbacks receive GenericQueryCtx /
 // GenericMutationCtx. This assertion narrows to the actual runtime shape
 // after authQuery/authMutation have run.
-type AuthenticatedCtx = QueryCtx & { user: AuthUser }
+type AuthenticatedCtx = (QueryCtx | MutationCtx) & { user: AuthUser }
 
 function assertAuthenticatedCtx(ctx: Record<string, any>): asserts ctx is AuthenticatedCtx {
   if (!('user' in ctx)) {
@@ -80,7 +80,7 @@ async function checkMembership(
   }
 }
 
-async function checkDmMembership(
+export async function checkDmMembership(
   ctx: AuthenticatedCtx,
   campaignId: Id<'campaigns'>,
 ): Promise<{ campaign: CampaignFromDb; membership: CampaignMember }> {

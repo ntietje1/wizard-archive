@@ -3,7 +3,7 @@ import { requireItemAccess } from '../../sidebarItems/validation/access'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
-import { projectNoteBlocksFromYjsInMutation } from './projectNoteBlocksFromYjs'
+import { internal } from '../../_generated/api'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 
@@ -23,5 +23,7 @@ export async function rollbackNote(
   })
 
   await rollbackYjsDocument(ctx, rawItem._id, snapshotData)
-  await projectNoteBlocksFromYjsInMutation(ctx, rawItem._id)
+  await ctx.scheduler.runAfter(0, internal.notes.internalActions.persistNoteBlocksFromYjs, {
+    documentId: rawItem._id,
+  })
 }

@@ -1,12 +1,10 @@
 'use node'
 
 import { betterAuth } from 'better-auth/minimal'
-import { createClient } from '@convex-dev/better-auth'
 import { convex } from '@convex-dev/better-auth/plugins'
 import { requireRunMutationCtx } from '@convex-dev/better-auth/utils'
 import { multiSession } from 'better-auth/plugins/multi-session'
 import { twoFactor } from 'better-auth/plugins/two-factor'
-import { components } from '../_generated/api'
 import authConfig from '../auth.config'
 import {
   changeEmailConfirmationEmail,
@@ -16,10 +14,9 @@ import {
   verificationEmail,
 } from '../email'
 import { getAuthBaseUrlConfig } from './authBaseUrl'
+import { authComponent } from './componentClient'
 import type { GenericCtx } from '@convex-dev/better-auth'
 import type { DataModel } from '../_generated/dataModel'
-
-const authClient = createClient<DataModel>(components.betterAuth)
 
 export const createAuth = (ctx: GenericCtx<DataModel>) => {
   const baseURL = getAuthBaseUrlConfig(process.env.BETTER_AUTH_ALLOWED_HOSTS)
@@ -42,7 +39,7 @@ export const createAuth = (ctx: GenericCtx<DataModel>) => {
   return betterAuth({
     secret,
     baseURL,
-    database: authClient.adapter(ctx),
+    database: authComponent.adapter(ctx),
     session: {
       expiresIn: 60 * 60 * 24 * 30,
       updateAge: 60 * 60 * 24 * 7,

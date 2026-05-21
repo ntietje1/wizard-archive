@@ -1,6 +1,12 @@
 {
   "functions": "convex/",
   "node": {
-    "externalPackages": ["@convex-dev/better-auth", "@convex-dev/resend", "better-auth", "yjs"]
+    "externalPackages": [
+      "@convex-dev/better-auth",
+      "@convex-dev/resend",
+      "better-auth",
+      "y-prosemirror",
+      "yjs"
+    ]
   }
 }

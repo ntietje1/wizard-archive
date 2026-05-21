@@ -1,5 +1,6 @@
 import type { BrandedString } from '../../common/slug'
 import { slugify } from '../../common/slug'
+import { ERROR_CODE, throwClientError } from '../../errors'
 import type { Id } from '../../_generated/dataModel'
 
 export const SIDEBAR_ITEM_NAME_MAX_LENGTH = 255
@@ -63,12 +64,15 @@ export function parseSidebarItemName(name: string): SidebarItemName | null {
 export function assertSidebarItemName(name: string): SidebarItemName {
   const result = validateItemName(name)
   if (!result.valid) {
-    throw new Error(result.error)
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, result.error)
   }
 
   const parsed = parseSidebarItemName(name)
   if (!parsed) {
-    throw new Error('Validated sidebar item name could not be parsed')
+    throwClientError(
+      ERROR_CODE.VALIDATION_FAILED,
+      'Validated sidebar item name could not be parsed',
+    )
   }
 
   return parsed

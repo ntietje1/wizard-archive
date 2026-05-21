@@ -7,6 +7,7 @@ import type { YjsDocumentId } from 'convex/yjsSync/functions/types'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { logger } from '~/shared/utils/logger'
+import type { Id } from 'convex/_generated/dataModel'
 
 type YjsState = {
   documentId: YjsDocumentId
@@ -24,6 +25,7 @@ export function useConvexYjsCollaboration(
   options?: {
     onBeforeDestroy?: (state: {
       documentId: YjsDocumentId
+      campaignId: Id<'campaigns'>
       doc: Y.Doc
       provider: ConvexYjsProvider
     }) => Promise<void> | void
@@ -35,9 +37,8 @@ export function useConvexYjsCollaboration(
   const [isLoading, setIsLoading] = useState(true)
   const [afterSeq, setAfterSeq] = useState<number | undefined>(undefined)
   const [error, setError] = useState<Error | null>(null)
-  const onBeforeDestroy = options?.onBeforeDestroy
-  const latestOnBeforeDestroyRef = useRef(onBeforeDestroy)
-  latestOnBeforeDestroyRef.current = onBeforeDestroy
+  const onBeforeDestroyRef = useRef(options?.onBeforeDestroy)
+  onBeforeDestroyRef.current = options?.onBeforeDestroy
 
   useEffect(() => {
     setIsLoading(true)
@@ -72,9 +73,11 @@ export function useConvexYjsCollaboration(
     setState({ documentId, doc, provider, instanceId: nextInstanceId++ })
 
     return () => {
+      const onBeforeDestroy = onBeforeDestroyRef.current
       Promise.resolve(
-        latestOnBeforeDestroyRef.current?.({
+        onBeforeDestroy?.({
           documentId,
+          campaignId,
           doc,
           provider,
         }),

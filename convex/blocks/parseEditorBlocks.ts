@@ -27,6 +27,7 @@ const MEDIA_PROP_KEYS = new Set([
   'previewWidth',
 ])
 const FILE_PROP_KEYS = new Set(['name', 'url', 'caption', 'backgroundColor'])
+const AUDIO_PROP_KEYS = new Set(['name', 'url', 'caption', 'backgroundColor', 'showPreview'])
 
 function fail(message: string): never {
   throwClientError(ERROR_CODE.VALIDATION_FAILED, message)
@@ -138,8 +139,18 @@ function parseMediaProps(type: 'image' | 'video', value: Record<string, unknown>
   }
 }
 
-function parseFileProps(type: 'audio' | 'file', value: Record<string, unknown>): BlockProps {
-  expectNoExtraProps(value, FILE_PROP_KEYS, type)
+function parseFileProps(value: Record<string, unknown>): BlockProps {
+  expectNoExtraProps(value, FILE_PROP_KEYS, 'file')
+  return parseFilePropsBase(value)
+}
+
+function parseAudioProps(value: Record<string, unknown>): BlockProps {
+  expectNoExtraProps(value, AUDIO_PROP_KEYS, 'audio')
+  const showPreview = readBoolean(value, 'showPreview')
+  return { ...parseFilePropsBase(value), ...(showPreview === undefined ? {} : { showPreview }) }
+}
+
+function parseFilePropsBase(value: Record<string, unknown>): BlockProps {
   const name = readString(value, 'name')
   const url = readString(value, 'url')
   const caption = readString(value, 'caption')
@@ -173,8 +184,8 @@ const PROP_PARSERS: Record<BlockType, (value: Record<string, unknown>) => BlockP
   },
   image: (value) => parseMediaProps('image', value),
   video: (value) => parseMediaProps('video', value),
-  audio: (value) => parseFileProps('audio', value),
-  file: (value) => parseFileProps('file', value),
+  audio: parseAudioProps,
+  file: parseFileProps,
   table: parseTableProps,
 }
 

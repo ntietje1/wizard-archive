@@ -45,6 +45,13 @@ const audioFilePropsValidator = v.object({
   caption: v.optional(v.string()),
   backgroundColor: v.optional(v.string()),
 })
+const audioPropsValidator = v.object({
+  name: v.optional(v.string()),
+  url: v.optional(v.string()),
+  caption: v.optional(v.string()),
+  backgroundColor: v.optional(v.string()),
+  showPreview: v.optional(v.boolean()),
+})
 const tablePropsValidator = v.object({
   textColor: v.optional(v.string()),
 })
@@ -125,7 +132,7 @@ const customBlockUnionValidator = v.union(
   v.object({
     ...baseFields,
     type: v.literal('audio'),
-    props: audioFilePropsValidator,
+    props: audioPropsValidator,
     content: optionalBlockContentValidator,
   }),
   v.object({

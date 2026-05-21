@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useReducer, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { Id } from 'convex/_generated/dataModel'
@@ -208,10 +208,32 @@ export function LinkClickHandler({
   const editorEl = useEditorDomElement(editor)
   const sourceParentId = sourceNoteId ? itemsMap.get(sourceNoteId)?.parentId : undefined
 
-  const [tooltip, setTooltip] = useState<TooltipState>(HIDDEN_TOOLTIP)
+  const [tooltip, setTooltip] = useReducer(
+    (_state: TooltipState, next: TooltipState) => next,
+    HIDDEN_TOOLTIP,
+  )
   const ctrlHeldRef = useRef(false)
   const mousePosRef = useRef<{ x: number; y: number } | null>(null)
   const creatingLinksRef = useRef(new Set<string>())
+  const tooltipActionsRef = useRef({
+    hide: () => setTooltip(HIDDEN_TOOLTIP),
+    showForPoint: (_x: number, _y: number) => {},
+  })
+  tooltipActionsRef.current = {
+    hide: () => setTooltip(HIDDEN_TOOLTIP),
+    showForPoint: (x: number, y: number) => {
+      const link = getLinkAt(x, y)
+      const feedback = getHoverFeedback({
+        link,
+        editorMode,
+        campaignId: campaignData?._id,
+        sourceParentId,
+        validateCreateItem,
+      })
+      const nextTooltip = feedback ? getTooltipState(link, feedback.tooltipText) : null
+      setTooltip(nextTooltip ?? HIDDEN_TOOLTIP)
+    },
+  }
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -219,28 +241,19 @@ export function LinkClickHandler({
         ctrlHeldRef.current = true
         const mousePos = mousePosRef.current
         if (mousePos) {
-          const link = getLinkAt(mousePos.x, mousePos.y)
-          const feedback = getHoverFeedback({
-            link,
-            editorMode,
-            campaignId: campaignData?._id,
-            sourceParentId,
-            validateCreateItem,
-          })
-          const nextTooltip = feedback ? getTooltipState(link, feedback.tooltipText) : null
-          setTooltip(nextTooltip ?? HIDDEN_TOOLTIP)
+          tooltipActionsRef.current.showForPoint(mousePos.x, mousePos.y)
         }
       }
     }
     const onKeyUp = (e: KeyboardEvent) => {
       if (e.key === 'Control' || e.key === 'Meta') {
         ctrlHeldRef.current = false
-        setTooltip(HIDDEN_TOOLTIP)
+        tooltipActionsRef.current.hide()
       }
     }
     const onBlur = () => {
       ctrlHeldRef.current = false
-      setTooltip(HIDDEN_TOOLTIP)
+      tooltipActionsRef.current.hide()
     }
 
     document.addEventListener('keydown', onKeyDown)
@@ -251,7 +264,7 @@ export function LinkClickHandler({
       document.removeEventListener('keyup', onKeyUp)
       window.removeEventListener('blur', onBlur)
     }
-  }, [campaignData?._id, editorMode, sourceParentId, validateCreateItem])
+  }, [])
 
   useEffect(() => {
     if (!editorEl) return
@@ -259,26 +272,17 @@ export function LinkClickHandler({
     const onMouseMove = (e: MouseEvent) => {
       mousePosRef.current = { x: e.clientX, y: e.clientY }
 
-      const link = getLinkAt(e.clientX, e.clientY)
       if (!ctrlHeldRef.current) {
-        setTooltip(HIDDEN_TOOLTIP)
+        tooltipActionsRef.current.hide()
         return
       }
 
-      const feedback = getHoverFeedback({
-        link,
-        editorMode,
-        campaignId: campaignData?._id,
-        sourceParentId,
-        validateCreateItem,
-      })
-      const nextTooltip = feedback ? getTooltipState(link, feedback.tooltipText) : null
-      setTooltip(nextTooltip ?? HIDDEN_TOOLTIP)
+      tooltipActionsRef.current.showForPoint(e.clientX, e.clientY)
     }
 
     const onMouseLeave = () => {
       mousePosRef.current = null
-      setTooltip(HIDDEN_TOOLTIP)
+      tooltipActionsRef.current.hide()
     }
 
     editorEl.addEventListener('mousemove', onMouseMove)
@@ -287,7 +291,7 @@ export function LinkClickHandler({
       editorEl.removeEventListener('mousemove', onMouseMove)
       editorEl.removeEventListener('mouseleave', onMouseLeave)
     }
-  }, [campaignData?._id, editorEl, editorMode, sourceParentId, validateCreateItem])
+  }, [editorEl])
 
   useEffect(() => {
     if (!editorEl) return

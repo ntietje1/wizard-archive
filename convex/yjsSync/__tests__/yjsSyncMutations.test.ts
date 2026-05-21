@@ -171,7 +171,7 @@ describe('pushUpdate', () => {
     )
   })
 
-  it('triggers compaction at the compaction sequence', async () => {
+  it('defers compaction while a content snapshot is pending', async () => {
     vi.useFakeTimers()
     try {
       const ctx = await setupCampaignContext(t)
@@ -199,8 +199,7 @@ describe('pushUpdate', () => {
           .withIndex('by_document_seq', (q) => q.eq('documentId', noteId))
           .collect()
 
-        expect(rows).toHaveLength(1)
-        expect(rows[0].isSnapshot).toBe(true)
+        expect(rows.length).toBeGreaterThan(1)
       })
     } finally {
       vi.useRealTimers()

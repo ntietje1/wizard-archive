@@ -11,6 +11,7 @@
 import type * as auth__createAuth from "../auth/_createAuth.js";
 import type * as auth_authBaseUrl from "../auth/authBaseUrl.js";
 import type * as auth_component from "../auth/component.js";
+import type * as auth_componentClient from "../auth/componentClient.js";
 import type * as auth_functions_onCreateUser from "../auth/functions/onCreateUser.js";
 import type * as auth_functions_onDeleteUser from "../auth/functions/onDeleteUser.js";
 import type * as auth_functions_onUpdateUser from "../auth/functions/onUpdateUser.js";
@@ -149,7 +150,6 @@ import type * as notes_blocknoteNode from "../notes/blocknoteNode.js";
 import type * as notes_functions_enhanceNote from "../notes/functions/enhanceNote.js";
 import type * as notes_functions_getNoteForDownload from "../notes/functions/getNoteForDownload.js";
 import type * as notes_functions_noteCompanion from "../notes/functions/noteCompanion.js";
-import type * as notes_functions_projectNoteBlocksFromYjs from "../notes/functions/projectNoteBlocksFromYjs.js";
 import type * as notes_functions_rollbackNote from "../notes/functions/rollbackNote.js";
 import type * as notes_functions_syncNoteDerivedData from "../notes/functions/syncNoteDerivedData.js";
 import type * as notes_internalActions from "../notes/internalActions.js";
@@ -287,6 +287,7 @@ declare const fullApi: ApiFromModules<{
   "auth/_createAuth": typeof auth__createAuth;
   "auth/authBaseUrl": typeof auth_authBaseUrl;
   "auth/component": typeof auth_component;
+  "auth/componentClient": typeof auth_componentClient;
   "auth/functions/onCreateUser": typeof auth_functions_onCreateUser;
   "auth/functions/onDeleteUser": typeof auth_functions_onDeleteUser;
   "auth/functions/onUpdateUser": typeof auth_functions_onUpdateUser;
@@ -425,7 +426,6 @@ declare const fullApi: ApiFromModules<{
   "notes/functions/enhanceNote": typeof notes_functions_enhanceNote;
   "notes/functions/getNoteForDownload": typeof notes_functions_getNoteForDownload;
   "notes/functions/noteCompanion": typeof notes_functions_noteCompanion;
-  "notes/functions/projectNoteBlocksFromYjs": typeof notes_functions_projectNoteBlocksFromYjs;
   "notes/functions/rollbackNote": typeof notes_functions_rollbackNote;
   "notes/functions/syncNoteDerivedData": typeof notes_functions_syncNoteDerivedData;
   "notes/internalActions": typeof notes_internalActions;
