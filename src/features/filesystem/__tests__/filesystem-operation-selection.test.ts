@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import { SIDEBAR_ITEM_STATUS } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_STATUS } from 'shared/sidebar-items/types'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import {
   resolveClickedSidebarOperationItems,

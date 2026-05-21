@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { extractPlainText } from '../functions/extractPlainText'
-import type { FlatBlockContent } from '../types'
+import type { FlatBlockContent } from '../../../shared/editor-blocks/types'
 
 describe('extractPlainText', () => {
   it('returns empty string for blocks with no content', () => {

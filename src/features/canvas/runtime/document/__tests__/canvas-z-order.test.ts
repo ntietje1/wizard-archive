@@ -6,7 +6,7 @@ import { applyCanvasZOrder, sortCanvasElementsByZIndex } from '../canvas-z-order
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from 'convex/canvases/validation'
+} from '~/features/canvas/domain/validation'
 import * as Y from 'yjs'
 
 function createNode(id: string, zIndex: number): Node {

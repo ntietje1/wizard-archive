@@ -7,7 +7,7 @@ import { CanvasRuntimeProvider } from '../../runtime/providers/canvas-runtime'
 import { createCanvasDomRuntime } from '../../system/canvas-dom-runtime'
 import { createCanvasEngine } from '../../system/canvas-engine'
 import type { CanvasConnection } from '../../types/canvas-domain-types'
-import type { CanvasDocumentNode as Node } from 'convex/canvases/validation'
+import type { CanvasDocumentNode as Node } from '~/features/canvas/domain/validation'
 import type { MouseEvent as ReactMouseEvent } from 'react'
 
 vi.mock('../canvas-background', () => ({

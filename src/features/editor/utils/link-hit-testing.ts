@@ -1,7 +1,7 @@
 import { LINK_ROLE } from './link-decoration'
 import type { LinkPathKind, LinkType } from './link-decoration'
 
-export interface ParsedLinkElement {
+interface ParsedLinkElement {
   element: Element
   exists: boolean
   pathKind: LinkPathKind
@@ -30,7 +30,7 @@ function getValidLinkType(type: string | null): LinkType | null {
   }
 }
 
-export function parseLinkElement(linkEl: Element): ParsedLinkElement | null {
+function parseLinkElement(linkEl: Element): ParsedLinkElement | null {
   const type = getValidLinkType(linkEl.getAttribute('data-link-type'))
   if (!type) return null
 

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { shouldRecordFileSystemUndo, useFileSystemUndoStore } from '../filesystem-undo-store'
 import type { Id } from 'convex/_generated/dataModel'
 import type { FileSystemTransactionReceipt } from 'convex/sidebarItems/filesystem/receipts'
-import { assertSidebarItemName } from 'convex/sidebarItems/validation/name'
+import { assertSidebarItemName } from 'shared/sidebar-items/name'
 import { createNote } from '~/test/factories/sidebar-item-factory'
 
 function assertNotNull<T>(value: T | null, message: string): asserts value is T {

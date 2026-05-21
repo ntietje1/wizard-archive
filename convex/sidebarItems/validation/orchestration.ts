@@ -13,11 +13,13 @@ import { assertSidebarOperationAllowed, evaluateMoveToParent } from '../filesyst
 import type { OperationSidebarItem } from '../filesystem/capabilities'
 import type { AnySidebarItem } from '../types/types'
 import { checkItemAccess, requireItemAccess } from './access'
-import { assertSidebarItemName, checkNameConflict } from './name'
+import { assertSidebarItemName } from './name'
+import { checkNameConflict } from '../../../shared/sidebar-items/name'
 import { validateNoCircularParentAsync } from './parent'
-import { SIDEBAR_ITEM_SLUG_MAX_LENGTH, assertSidebarItemSlug } from './slug'
-import type { SidebarItemName, ValidationResult } from './name'
-import type { SidebarItemSlug } from './slug'
+import { SIDEBAR_ITEM_SLUG_MAX_LENGTH } from '../../../shared/sidebar-items/slug'
+import { assertSidebarItemSlug } from './slug'
+import type { SidebarItemName, ValidationResult } from '../../../shared/sidebar-items/name'
+import type { SidebarItemSlug } from '../../../shared/sidebar-items/slug'
 
 const MAX_SIDEBAR_PARENT_DEPTH = 100
 type NamedOperationSidebarItem = OperationSidebarItem & Pick<AnySidebarItem, 'name'>

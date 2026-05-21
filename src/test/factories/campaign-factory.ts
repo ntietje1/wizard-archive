@@ -2,8 +2,8 @@ import {
   CAMPAIGN_MEMBER_ROLE,
   CAMPAIGN_MEMBER_STATUS,
   CAMPAIGN_STATUS,
-} from 'convex/campaigns/types'
-import { assertCampaignSlug } from 'convex/campaigns/validation'
+} from '~/features/campaigns/campaign-types'
+import { assertCampaignSlug } from 'shared/campaigns/validation'
 import { createUser } from './user-factory'
 import type { Campaign, CampaignMember } from 'convex/campaigns/types'
 import { testId } from '~/test/helpers/test-id'

@@ -1,4 +1,4 @@
-import type { BrandedString } from '../../common/slug'
+import type { BrandedString } from '../branded'
 
 export type SidebarItemColor = BrandedString<'SidebarItemColor'>
 
@@ -22,7 +22,7 @@ export function assertSidebarItemColor(color: string): SidebarItemColor {
   return parsed
 }
 
-export function requireSidebarItemColor(color: string): SidebarItemColor {
+function requireSidebarItemColor(color: string): SidebarItemColor {
   return assertSidebarItemColor(color)
 }
 

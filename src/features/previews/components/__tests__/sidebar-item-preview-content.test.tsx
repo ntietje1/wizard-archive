@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { SidebarItemPreviewContent } from '../sidebar-item-preview-content'
 import type { CanvasWithContent } from 'convex/canvases/types'
 import type { FileWithContent } from 'convex/files/types'

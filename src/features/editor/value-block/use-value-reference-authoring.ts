@@ -2,7 +2,7 @@ import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
 import { parseWikiLinkText } from 'convex/links/linkParsers'
 import { getMinDisambiguationPath, resolveParsedItemPath } from 'convex/links/linkResolution'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import {
   buildExternalNoteValuePrefix,
   buildSameNoteValueReference,

@@ -8,7 +8,7 @@ import type { CanvasSelectionSnapshot } from '../../../system/canvas-selection'
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from 'convex/canvases/validation'
+} from '~/features/canvas/domain/validation'
 import * as Y from 'yjs'
 
 function createNode(id: string, zIndex: number, width = 20, height = 10): Node {

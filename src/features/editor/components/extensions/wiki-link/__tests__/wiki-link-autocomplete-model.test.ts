@@ -9,7 +9,7 @@ import {
   buildWikiLinkAutocompleteModel,
   getWikiLinkAutocompleteContext,
 } from '../wiki-link-autocomplete-model'
-import type { Heading } from 'convex/blocks/types'
+import type { Heading } from 'shared/editor-blocks/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 

@@ -1,9 +1,54 @@
 import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import type { PermissionLevel } from 'convex/permissions/types'
+import type { CampaignMember } from 'convex/campaigns/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Folder } from 'convex/folders/types'
+
+type CampaignMemberId = CampaignMember['_id']
+
+function getMemberPermission(
+  item: AnySidebarItem | Folder,
+  memberId: CampaignMemberId,
+): PermissionLevel | null {
+  const memberShare = item.shares.find((s) => s.campaignMemberId === memberId)
+  return memberShare ? (memberShare.permissionLevel ?? PERMISSION_LEVEL.VIEW) : null
+}
+
+function getAllPlayersPermission(item: AnySidebarItem | Folder): PermissionLevel | null {
+  return item.allPermissionLevel ?? null
+}
+
+function resolveInheritedPermission(
+  item: AnySidebarItem,
+  memberId: CampaignMemberId,
+  allItemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>,
+): { level: PermissionLevel; source: string } | null {
+  let currentParentId = item.parentId
+  const seen = new Set<Id<'sidebarItems'>>()
+
+  while (currentParentId) {
+    if (seen.has(currentParentId)) return null
+    seen.add(currentParentId)
+
+    const folder = allItemsMap.get(currentParentId) as Folder | undefined
+    if (!folder) return null
+    currentParentId = folder.parentId
+
+    if (!folder.inheritShares) continue
+
+    const memberPermission = getMemberPermission(folder, memberId)
+    if (memberPermission !== null) return { level: memberPermission, source: folder.name }
+
+    const allPlayersPermission = getAllPlayersPermission(folder)
+    if (allPlayersPermission !== null) {
+      return { level: allPlayersPermission, source: folder.name }
+    }
+  }
+
+  return null
+}
 
 /**
  * Client-side permission resolution mirroring server logic.
@@ -11,51 +56,16 @@ import type { Folder } from 'convex/folders/types'
  */
 export function resolvePermissionLevel(
   item: AnySidebarItem,
-  memberId: Id<'campaignMembers'>,
+  memberId: CampaignMemberId,
   allItemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>,
 ): { level: PermissionLevel; source?: string } {
-  const memberShare = item.shares.find((s) => s.campaignMemberId === memberId)
-  if (memberShare) {
-    return { level: memberShare.permissionLevel ?? PERMISSION_LEVEL.VIEW }
-  }
+  const memberPermission = getMemberPermission(item, memberId)
+  if (memberPermission !== null) return { level: memberPermission }
 
-  if (item.allPermissionLevel !== null && item.allPermissionLevel !== undefined) {
-    return { level: item.allPermissionLevel }
-  }
+  const allPlayersPermission = getAllPlayersPermission(item)
+  if (allPlayersPermission !== null) return { level: allPlayersPermission }
 
-  let currentParentId = item.parentId
-  const seen = new Set<string>()
-
-  while (currentParentId) {
-    if (seen.has(currentParentId)) break
-    seen.add(currentParentId)
-
-    const folder = allItemsMap.get(currentParentId) as Folder
-    if (!folder) break
-
-    if (!folder.inheritShares) {
-      currentParentId = folder.parentId
-      continue
-    }
-
-    if (memberId) {
-      const folderShare = folder.shares.find((s) => s.campaignMemberId === memberId)
-      if (folderShare) {
-        return {
-          level: folderShare.permissionLevel ?? PERMISSION_LEVEL.VIEW,
-          source: folder.name,
-        }
-      }
-    }
-
-    if (folder.allPermissionLevel !== null && folder.allPermissionLevel !== undefined) {
-      return { level: folder.allPermissionLevel, source: folder.name }
-    }
-
-    currentParentId = folder.parentId
-  }
-
-  return { level: PERMISSION_LEVEL.NONE }
+  return resolveInheritedPermission(item, memberId, allItemsMap) ?? { level: PERMISSION_LEVEL.NONE }
 }
 
 /**
@@ -64,7 +74,7 @@ export function resolvePermissionLevel(
  */
 export function memberHasAtLeastPermission(
   item: AnySidebarItem,
-  memberId: Id<'campaignMembers'>,
+  memberId: CampaignMemberId,
   allItemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>,
   requiredLevel: PermissionLevel,
 ): boolean {
@@ -83,7 +93,7 @@ export function effectiveHasAtLeastPermission(
   requiredLevel: PermissionLevel,
   opts: {
     isDm: boolean | undefined
-    viewAsPlayerId: Id<'campaignMembers'> | null | undefined
+    viewAsPlayerId: CampaignMemberId | null | undefined
     allItemsMap: Map<Id<'sidebarItems'>, AnySidebarItem>
   },
 ): boolean {

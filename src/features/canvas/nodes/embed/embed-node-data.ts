@@ -1,5 +1,5 @@
 import type { Id } from 'convex/_generated/dataModel'
-import { parseCanvasEmbedNodeData } from 'convex/canvases/validation'
+import { parseCanvasEmbedNodeData } from '~/features/canvas/domain/validation'
 import { normalizeCanvasNodeSurfaceStyleData } from '../shared/canvas-node-surface-style'
 import type { CanvasNormalizedNodeSurfaceStyleData } from '../shared/canvas-node-surface-style'
 
@@ -13,7 +13,7 @@ export function normalizeEmbedNodeData(data: unknown): EmbedNodeData {
   const surfaceStyle = normalizeCanvasNodeSurfaceStyleData(parsedData ?? undefined)
 
   return {
-    sidebarItemId: parsedData?.sidebarItemId,
+    sidebarItemId: parsedData?.sidebarItemId as Id<'sidebarItems'> | undefined,
     lockedAspectRatio: parsedData?.lockedAspectRatio,
     ...surfaceStyle,
   }

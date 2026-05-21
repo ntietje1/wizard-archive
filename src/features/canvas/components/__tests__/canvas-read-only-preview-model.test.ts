@@ -6,7 +6,7 @@ import {
   selectCanvasPreviewNodeShell,
 } from '../canvas-read-only-preview-model'
 import type { CanvasEngineSnapshot, CanvasInternalNode } from '../../system/canvas-engine-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type {
   CanvasPreviewEdgeRender,
   CanvasPreviewEdgeType,

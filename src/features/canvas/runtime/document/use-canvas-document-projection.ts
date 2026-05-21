@@ -1,11 +1,14 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
-import { parseCanvasDocumentEdge, parseCanvasDocumentNode } from 'convex/canvases/validation'
+import {
+  parseCanvasDocumentEdge,
+  parseCanvasDocumentNode,
+} from '~/features/canvas/domain/validation'
 import { yMapToArray } from '../../utils/canvas-yjs-utils'
 import { measureCanvasPerformance } from '../performance/canvas-performance-metrics'
 import type { ResizingState } from '../../utils/canvas-awareness-types'
 import { sortCanvasElementsByZIndex } from './canvas-z-order'
 import type { CanvasDocumentNodePatch } from '~/features/canvas/types/canvas-domain-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type { CanvasEngine } from '../../system/canvas-engine-types'
 import type * as Y from 'yjs'
 

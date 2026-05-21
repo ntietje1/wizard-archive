@@ -16,7 +16,7 @@ export type CanvasResizeHandlePosition =
   | 'top-left'
 
 export type CanvasSideResizeHandlePosition = 'top' | 'right' | 'bottom' | 'left'
-export type CanvasCornerResizeHandlePosition = Exclude<
+type CanvasCornerResizeHandlePosition = Exclude<
   CanvasResizeHandlePosition,
   CanvasSideResizeHandlePosition
 >

@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useMatch } from '@tanstack/react-router'
 import { useShallow } from 'zustand/shallow'
-import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
+import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { useCutFileSystemItemIds } from '~/features/filesystem/filesystem-clipboard-store'

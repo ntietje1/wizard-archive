@@ -1,19 +1,19 @@
 import { api } from '../_generated/api'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 import { assertSidebarItemName } from '../sidebarItems/validation/name'
-import { assertSidebarItemColor } from '../sidebarItems/validation/color'
-import { assertSidebarItemIconName } from '../sidebarItems/validation/icon'
+import { assertSidebarItemColor } from '../../shared/sidebar-items/color'
+import { assertSidebarItemIconName } from '../../shared/sidebar-items/icon'
 import { makeYjsUpdateWithBlocks } from '../yjsSync/__tests__/makeYjsUpdate.helper'
 import type { DataModel, Id } from '../_generated/dataModel'
 import type { TestConvexForDataModel } from 'convex-test'
-import type { CustomBlock } from '../blocks/types'
+import type { CustomBlock } from '../../shared/editor-blocks/types'
 import type {
   FileSystemEvent,
   FileSystemTransactionReceipt,
 } from '../sidebarItems/filesystem/receipts'
 import type { CreateParentTarget } from '../sidebarItems/validation/parent'
-import type { SidebarItemColor } from '../sidebarItems/validation/color'
-import type { SidebarItemIconName } from '../sidebarItems/validation/icon'
+import type { SidebarItemColor } from '../../shared/sidebar-items/color'
+import type { SidebarItemIconName } from '../../shared/sidebar-items/icon'
 import type { SidebarItemType } from '../sidebarItems/types/baseTypes'
 
 type AuthedContext = TestConvexForDataModel<DataModel>

@@ -1,8 +1,8 @@
 import type { LucideIcon } from 'lucide-react'
-import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
+import type { SidebarItemType } from 'shared/sidebar-items/types'
 import { DEFAULT_SIDEBAR_ITEM_ICONS, getIconByName } from '~/shared/utils/category-icons'
 
-export type PinDisplayData = {
+type PinDisplayData = {
   color: string | null
   iconName: string | null
   itemType: SidebarItemType | null

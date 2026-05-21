@@ -5,7 +5,7 @@ import {
   convertTextToHTML,
   isMarkdownFile,
 } from '~/features/editor/utils/text-to-blocks'
-import type { CustomPartialBlock } from 'convex/blocks/types'
+import type { CustomPartialBlock } from 'shared/editor-blocks/types'
 
 // ---------------------------------------------------------------------------
 // Helpers

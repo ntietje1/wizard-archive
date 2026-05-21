@@ -17,7 +17,7 @@ import {
 } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
 import { saveAllBlocksForNote } from '../functions/saveAllBlocksForNote'
 import type { CampaignMutationCtx } from '../../functions'
-import type { TableContent } from '../types'
+import type { TableContent } from '../../../shared/editor-blocks/types'
 
 async function pushAndPersist(
   dmAuth: ReturnType<typeof asDm>,

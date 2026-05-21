@@ -3,10 +3,10 @@
 import * as Y from 'yjs'
 import { BlockNoteEditor } from '@blocknote/core'
 import { yDocToBlocks as blockNoteYDocToBlocks } from '@blocknote/core/yjs'
-import { headlessEditorSchema } from '../../shared/editor-blocknote-schema'
+import { headlessEditorSchema } from '../../shared/editor-blocks/editor-blocknote-schema'
 import { parseEditorBlocks } from '../blocks/parseEditorBlocks'
 import type { Doc } from '../_generated/dataModel'
-import type { CustomBlock } from '../blocks/types'
+import type { CustomBlock } from '../../shared/editor-blocks/types'
 
 const DOCUMENT_FRAGMENT_NAME = 'document'
 

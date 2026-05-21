@@ -1,12 +1,9 @@
-import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_STATUS } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_STATUS } from 'shared/sidebar-items/types'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { diffSidebarItemFields } from 'convex/sidebarItems/filesystem/patches'
 import { deduplicateSlug, slugify } from '../../../shared/slugs'
-import {
-  assertSidebarItemSlug,
-  SIDEBAR_ITEM_SLUG_MAX_LENGTH,
-} from 'convex/sidebarItems/validation/slug'
-import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
+import { assertSidebarItemSlug, SIDEBAR_ITEM_SLUG_MAX_LENGTH } from 'shared/sidebar-items/slug'
+import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { FileSystemPatch } from 'convex/sidebarItems/filesystem/receipts'

@@ -4,7 +4,7 @@ import { useCanvasEngine, useCanvasEngineSelector } from '../react/use-canvas-en
 import { isCanvasInteractiveKeyboardTarget } from '../runtime/interaction/canvas-keyboard-targets'
 import { useCanvasViewportRuntime } from '../runtime/providers/canvas-runtime'
 import type { CanvasInternalNode } from '../system/canvas-engine-types'
-import type { CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type {
   KeyboardEvent as ReactKeyboardEvent,
   MouseEvent as ReactMouseEvent,

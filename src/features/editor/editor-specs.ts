@@ -1,10 +1,10 @@
 import { BlockNoteSchema } from '@blocknote/core'
 import type { BlockNoteEditor, PartialInlineContent } from '@blocknote/core'
-import { customBlockSpecs } from '../../../shared/editor-blocknote-spec-factory'
+import { customBlockSpecs } from '../../../shared/editor-blocks/editor-blocknote-spec-factory'
 import { customInlineContentSpecs, customStyleSpecs } from './editor-dom-specs'
 import { reactValueInlineSpec } from './value-block/value-block-react-spec'
 import type { NoteValueProps } from '../../../shared/note-values/schema'
-import type { CustomBlock } from '../../../convex/blocks/types'
+import type { CustomBlock } from 'shared/editor-blocks/types'
 
 export const editorSchema = BlockNoteSchema.create({
   blockSpecs: customBlockSpecs,

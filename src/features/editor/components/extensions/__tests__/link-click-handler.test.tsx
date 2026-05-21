@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import type * as ParentValidation from 'convex/sidebarItems/validation/parent'
 import { LinkClickHandler } from '../link-click-handler'
 import type { LinkType } from '~/features/editor/utils/link-decoration'

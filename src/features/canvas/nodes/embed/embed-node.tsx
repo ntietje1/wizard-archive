@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import type { PendingRichEmbedActivationRef } from './use-rich-embed-lifecycle'
 import { normalizeEmbedNodeData } from './embed-node-data'
 import {

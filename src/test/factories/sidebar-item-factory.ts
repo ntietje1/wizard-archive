@@ -2,13 +2,13 @@ import {
   SIDEBAR_ITEM_LOCATION,
   SIDEBAR_ITEM_STATUS,
   SIDEBAR_ITEM_TYPES,
-} from 'convex/sidebarItems/types/baseTypes'
+} from 'shared/sidebar-items/types'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
-import type { SidebarItemColor } from 'convex/sidebarItems/validation/color'
-import type { SidebarItemIconName } from 'convex/sidebarItems/validation/icon'
-import { assertSidebarItemName } from 'convex/sidebarItems/validation/name'
-import type { SidebarItemName } from 'convex/sidebarItems/validation/name'
-import { assertSidebarItemSlug } from 'convex/sidebarItems/validation/slug'
+import type { SidebarItemColor } from 'shared/sidebar-items/color'
+import type { SidebarItemIconName } from 'shared/sidebar-items/icon'
+import { assertSidebarItemName } from 'shared/sidebar-items/name'
+import type { SidebarItemName } from 'shared/sidebar-items/name'
+import { assertSidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { Note } from 'convex/notes/types'
 import type { Folder } from 'convex/folders/types'
 import type { GameMap } from 'convex/gameMaps/types'
@@ -16,7 +16,7 @@ import type { SidebarFile } from 'convex/files/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { PermissionLevel } from 'convex/permissions/types'
 import type { SidebarItemShare } from 'convex/sidebarShares/types'
-import type { SidebarItemLocation, SidebarItemStatus } from 'convex/sidebarItems/types/baseTypes'
+import type { SidebarItemLocation, SidebarItemStatus } from 'shared/sidebar-items/types'
 import { testId } from '~/test/helpers/test-id'
 
 let itemCounter = 0

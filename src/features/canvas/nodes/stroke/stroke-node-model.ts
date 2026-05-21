@@ -4,7 +4,7 @@ import type {
   CanvasHandlePosition,
   CanvasPosition,
 } from '~/features/canvas/types/canvas-domain-types'
-import type { CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type { Point2D } from '../../utils/canvas-awareness-types'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
 

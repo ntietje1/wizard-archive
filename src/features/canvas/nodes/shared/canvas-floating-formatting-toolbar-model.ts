@@ -26,7 +26,7 @@ import { areCanvasPaintValuesEqual } from '../../properties/canvas-paint-values'
 import type { CanvasPaintValue } from '../../properties/canvas-property-types'
 import { readCanvasRichTextActiveStyles } from './canvas-rich-text-blocknote-adapter'
 import { resolveCanvasRichTextSelectionTextColor } from './canvas-rich-text-selection-colors'
-import { CANVAS_BLOCK_TYPES } from '../../../../../shared/blockRegistry'
+import { CANVAS_BLOCK_TYPES } from '../../../../../shared/editor-blocks/blockRegistry'
 
 type SupportedBlockType = (typeof CANVAS_BLOCK_TYPES)[number]
 

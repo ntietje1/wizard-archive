@@ -1,8 +1,8 @@
 import { useRef } from 'react'
-import type { EditorContextMenuRef } from '~/features/context-menu/components/editor-context-menu'
+import type { ContextMenuHostRef } from '~/features/context-menu/components/context-menu-host'
 
 export function useContextMenu() {
-  const contextMenuRef = useRef<EditorContextMenuRef>(null)
+  const contextMenuRef = useRef<ContextMenuHostRef>(null)
 
   const handleMoreOptions = (e: React.MouseEvent) => {
     e.stopPropagation()

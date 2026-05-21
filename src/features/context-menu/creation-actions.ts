@@ -1,8 +1,8 @@
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import type { ActionHandlers } from './menu-registry'
 import type { MenuContext } from './types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
+import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import { isFolder } from '~/features/sidebar/utils/sidebar-item-utils'
 import { handleError } from '~/shared/utils/logger'
 

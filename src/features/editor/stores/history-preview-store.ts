@@ -1,12 +1,12 @@
 import { create } from 'zustand'
 import type { Id } from 'convex/_generated/dataModel'
 
-export interface HistoryPreviewState {
+interface HistoryPreviewState {
   previewingEntryId: Id<'editHistory'> | null
   rollbackEntryId: Id<'editHistory'> | null
 }
 
-export interface HistoryPreviewActions {
+interface HistoryPreviewActions {
   setPreviewingEntry: (id: Id<'editHistory'> | null) => void
   clearPreview: () => void
   setRollbackEntryId: (id: Id<'editHistory'> | null) => void
@@ -24,9 +24,3 @@ export const useHistoryPreviewStore = create<HistoryPreviewState & HistoryPrevie
     clearRollbackEntryId: () => set({ rollbackEntryId: null }),
   }),
 )
-
-export const selectPreviewingEntryId = (s: HistoryPreviewState): Id<'editHistory'> | null =>
-  s.previewingEntryId
-
-export const selectRollbackEntryId = (s: HistoryPreviewState): Id<'editHistory'> | null =>
-  s.rollbackEntryId

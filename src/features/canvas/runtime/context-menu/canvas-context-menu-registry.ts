@@ -1,5 +1,6 @@
 import {
   AlignHorizontalSpaceBetween,
+  ArrowUpToLine,
   Copy,
   CopyPlus,
   CornerDownLeft,
@@ -14,13 +15,10 @@ import {
   Trash2,
   Type,
 } from 'lucide-react'
-import { parseCanvasReorderPayload } from 'convex/canvases/validation'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { parseCanvasReorderPayload } from '~/features/canvas/domain/validation'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { CANVAS_ARRANGE_ACTIONS } from '../document/canvas-arrange'
-import {
-  CANVAS_REORDER_ACTIONS,
-  CANVAS_REORDER_SUBMENU_ICON,
-} from '../document/canvas-reorder-actions'
+import { CANVAS_REORDER_ACTIONS } from '../document/canvas-reorder-actions'
 import { buildMenu } from '~/features/context-menu/menu-builder'
 import type { ContextMenuGroupConfig } from '~/features/context-menu/types'
 import type { CanvasArrangeAction } from '../document/canvas-arrange'
@@ -203,7 +201,7 @@ const canvasSelectionContributor: CanvasContextMenuContributor = {
     {
       id: 'canvas-selection-reorder',
       label: 'Reorder',
-      icon: CANVAS_REORDER_SUBMENU_ICON,
+      icon: ArrowUpToLine,
       group: 'reorder',
       priority: 0,
       applies: (ctx) => ctx.canEdit,

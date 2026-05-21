@@ -2,7 +2,7 @@ import { BlockNoteEditor } from '@blocknote/core'
 import type { Link, StyledText } from '@blocknote/core'
 import { createEditorSchema } from '../editor-specs'
 import escapeHtml from 'escape-html'
-import type { CustomBlock, CustomPartialBlock } from 'convex/blocks/types'
+import type { CustomBlock, CustomPartialBlock } from 'shared/editor-blocks/types'
 import type { CustomStyleSchema } from '~/features/editor/editor-specs'
 
 // Inline content from the parser — includes links that our editor schema excludes.

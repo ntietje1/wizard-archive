@@ -1,4 +1,4 @@
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { NotePreviewContent } from '~/features/editor/components/viewer/note/note-preview-content'
 import { FolderListContentSimple } from '~/features/editor/components/viewer/folder/folder-list-content-simple'
 import { MapImagePreview } from '~/features/editor/components/viewer/map/map-image-preview'

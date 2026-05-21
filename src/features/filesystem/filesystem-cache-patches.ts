@@ -1,4 +1,4 @@
-import { SIDEBAR_ITEM_STATUS } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_STATUS } from 'shared/sidebar-items/types'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { FileSystemPatch } from 'convex/sidebarItems/filesystem/receipts'

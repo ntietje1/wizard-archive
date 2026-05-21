@@ -1,4 +1,4 @@
-import { parseCanvasEdgeStyle } from 'convex/canvases/validation'
+import { parseCanvasEdgeStyle } from '~/features/canvas/domain/validation'
 import { resolveCanvasScreenMinimumStrokeWidthCss } from '../../utils/canvas-screen-stroke-width'
 import type { CSSProperties } from 'react'
 

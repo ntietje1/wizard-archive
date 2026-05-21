@@ -10,7 +10,7 @@ import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { EditorViewerProps } from '../sidebar-item-editor'
-import type { EditorContextMenuRef } from '~/features/context-menu/components/editor-context-menu'
+import type { ContextMenuHostRef } from '~/features/context-menu/components/context-menu-host'
 import { MAP_DROP_ZONE_TYPE } from '~/features/dnd/utils/drop-target-data'
 import { rejectionReasonMessage } from '~/features/dnd/utils/drop-rejections'
 import { handleError } from '~/shared/utils/logger'
@@ -51,7 +51,7 @@ function MapPinContextMenuWrapper({
   position,
   onClose,
 }: MapPinContextMenuWrapperProps) {
-  const contextMenuRef = useRef<EditorContextMenuRef>(null)
+  const contextMenuRef = useRef<ContextMenuHostRef>(null)
   const { setActivePinId } = useMapView()
   const dialogOpenRef = useRef(false)
 
@@ -109,7 +109,7 @@ function MapPinContextMenuWrapper({
 }
 
 interface MapImageContextMenuWrapperProps {
-  contextMenuRef: React.RefObject<EditorContextMenuRef | null>
+  contextMenuRef: React.RefObject<ContextMenuHostRef | null>
   map: GameMapWithContent
 }
 
@@ -693,7 +693,7 @@ export function MapViewer({ item: map }: EditorViewerProps<GameMapWithContent>) 
     setSavedTransform(DEFAULT_TRANSFORM)
   }
 
-  const mapImageContextMenuRef = useRef<EditorContextMenuRef>(null)
+  const mapImageContextMenuRef = useRef<ContextMenuHostRef>(null)
 
   const handleMapImageContextMenu = (e: React.MouseEvent) => {
     if (pendingPinItems) return

@@ -9,7 +9,7 @@ import { createCanvasNodeActions } from './interaction/create-canvas-node-action
 import type { useCanvasSelectionController } from './selection/use-canvas-selection-actions'
 import type { useCanvasSessionState } from './session/use-canvas-session-state'
 import type { createCanvasEngine } from '../system/canvas-engine'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type { RefObject } from 'react'
 
 interface UseCanvasDocumentRuntimeOptions {

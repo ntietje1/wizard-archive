@@ -5,7 +5,7 @@ import { getSidebarItemAncestors } from '../../folders/functions/getSidebarItemA
 import { enforceBlockSharePermissionsOrNull } from '../../blockShares/functions/getBlockPermissionLevel'
 import { getBlockSharesByBlock } from '../../blockShares/functions/getBlockSharesForBlock'
 import { enhanceBase } from '../../sidebarItems/functions/enhanceBaseSidebarItem'
-import { SHARE_STATUS } from '../../blockShares/types'
+import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'
 import type { CampaignQueryCtx } from '../../functions'
 import type { BlockMeta, Note, NoteFromDb, NoteWithContent } from '../types'
 

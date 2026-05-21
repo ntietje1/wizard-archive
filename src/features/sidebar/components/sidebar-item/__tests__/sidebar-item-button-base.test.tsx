@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { Folder } from 'lucide-react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { assertSidebarItemName } from 'convex/sidebarItems/validation/name'
+import { assertSidebarItemName } from 'shared/sidebar-items/name'
 import { SidebarItemButtonBase } from '../sidebar-item-button-base'
 
 const nameValidationState = vi.hoisted(() => ({

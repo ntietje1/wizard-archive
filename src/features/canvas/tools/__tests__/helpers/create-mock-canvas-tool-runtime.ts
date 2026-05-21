@@ -1,5 +1,5 @@
 import type { CanvasToolRuntime } from '../../canvas-tool-types'
-import type { CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
 
 export function createMockCanvasToolRuntime({
   deleteNodes = () => undefined,

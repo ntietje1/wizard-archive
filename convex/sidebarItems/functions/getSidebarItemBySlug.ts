@@ -3,7 +3,7 @@ import { checkItemAccess } from '../validation/access'
 import { enhanceSidebarItemWithContent } from './enhanceSidebarItem'
 import { getSidebarItem } from './getSidebarItem'
 import { isUndoHiddenSidebarItem } from '../types/status'
-import type { SidebarItemSlug } from '../validation/slug'
+import type { SidebarItemSlug } from '../../../shared/sidebar-items/slug'
 import type { AnySidebarItemWithContent } from '../types/types'
 import type { CampaignQueryCtx } from '../../functions'
 

@@ -1,7 +1,7 @@
 import { BlockNoteSchema } from '@blocknote/core'
-import { CANVAS_BLOCK_TYPES } from '../../../../../shared/blockRegistry'
-import { customBlockSpecs } from '../../../../../shared/editor-blocknote-spec-factory'
-import { parseCanvasRichTextDocument } from 'convex/blocks/blockSchemas'
+import { CANVAS_BLOCK_TYPES } from '../../../../../shared/editor-blocks/blockRegistry'
+import { customBlockSpecs } from '../../../../../shared/editor-blocks/editor-blocknote-spec-factory'
+import { parseCanvasRichTextDocument } from 'shared/editor-blocks/blockSchemas'
 import { customInlineContentSpecs, customStyleSpecs } from '~/features/editor/editor-dom-specs'
 import type {
   BlockNoteEditor,

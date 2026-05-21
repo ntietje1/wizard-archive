@@ -1,7 +1,7 @@
 import { SIDEBAR_ITEM_STATUS } from '../types/baseTypes'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
-import type { SidebarItemName } from '../validation/name'
+import type { SidebarItemName } from '../../../shared/sidebar-items/name'
 
 export async function findActiveSidebarChildByName(
   ctx: CampaignMutationCtx,

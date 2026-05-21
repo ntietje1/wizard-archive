@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
   blockNoteBlockSchema,
-  canvasAllowedBlockTypes,
   canvasPartialBlockNoteBlockSchema,
-} from '../blockSchemas'
-import { customInlineContentSpecs, customStyleSpecs } from '../../../shared/editor-blocknote-schema'
-import { customBlockSpecs } from '../../../shared/editor-blocknote-spec-factory'
+} from '../../../shared/editor-blocks/blockSchemas'
+import { CANVAS_BLOCK_TYPES } from '../../../shared/editor-blocks/blockRegistry'
+import {
+  customInlineContentSpecs,
+  customStyleSpecs,
+} from '../../../shared/editor-blocks/editor-blocknote-schema'
+import { customBlockSpecs } from '../../../shared/editor-blocks/editor-blocknote-spec-factory'
 import { NOTE_VALUE_PROP_DEFAULTS } from '../../../shared/note-values/schema'
 import { testBlockNoteId } from '../../_test/factories.helper'
 
@@ -301,10 +304,10 @@ describe('invalid blocks are rejected', () => {
 describe('canvas block subset', () => {
   it('stays aligned with the note editor block family for supported types', () => {
     const supportedCanvasTypes = Object.keys(customBlockSpecs).filter((type) =>
-      canvasAllowedBlockTypes.includes(type as (typeof canvasAllowedBlockTypes)[number]),
+      CANVAS_BLOCK_TYPES.includes(type as (typeof CANVAS_BLOCK_TYPES)[number]),
     )
 
-    expect(supportedCanvasTypes.sort()).toEqual([...canvasAllowedBlockTypes].sort())
+    expect(supportedCanvasTypes.sort()).toEqual([...CANVAS_BLOCK_TYPES].sort())
   })
 
   it('accepts canvas-supported partial blocks from the note schema family', () => {
@@ -326,7 +329,7 @@ describe('canvas block subset', () => {
 
   it('rejects note block types that the canvas editor does not support', () => {
     const excludedTypes = Object.keys(customBlockSpecs).filter(
-      (type) => !canvasAllowedBlockTypes.includes(type as (typeof canvasAllowedBlockTypes)[number]),
+      (type) => !CANVAS_BLOCK_TYPES.includes(type as (typeof CANVAS_BLOCK_TYPES)[number]),
     )
 
     for (const type of excludedTypes) {

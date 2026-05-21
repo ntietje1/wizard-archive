@@ -11,7 +11,7 @@ import {
 import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
-} from 'convex/canvases/validation'
+} from '~/features/canvas/domain/validation'
 
 describe('createCanvasEngine', () => {
   it('stores document nodes as ordered ids plus lookup entries', () => {

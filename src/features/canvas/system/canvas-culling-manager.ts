@@ -7,7 +7,7 @@ import {
 import type { CanvasCullingDiff, CanvasCullingSnapshot } from './canvas-culling'
 import type { CanvasEngineSnapshot } from './canvas-engine-types'
 
-export interface CanvasCullingManager {
+interface CanvasCullingManager {
   reconcile: (options: {
     snapshot: CanvasEngineSnapshot
     surfaceBounds: Pick<DOMRect, 'width' | 'height'> | null

@@ -1,6 +1,6 @@
 import { api } from 'convex/_generated/api'
-import type { CustomBlock } from 'convex/blocks/types'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import type { CustomBlock } from 'shared/editor-blocks/types'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { encodeStateAsUpdate } from 'yjs'
 import { useConvex } from '@convex-dev/react-query'
 import type { CreateParentTarget } from 'convex/sidebarItems/validation/parent'

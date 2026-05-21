@@ -1,4 +1,4 @@
-import { parseCanvasDocumentEdge, parseCanvasEdgeType } from 'convex/canvases/validation'
+import { parseCanvasDocumentEdge, parseCanvasEdgeType } from '~/features/canvas/domain/validation'
 import { buildBezierCanvasEdgeGeometryFromEdge } from './bezier/bezier-canvas-edge-geometry'
 import { buildStepCanvasEdgeGeometryFromEdge } from './step/step-canvas-edge-geometry'
 import { buildStraightCanvasEdgeGeometryFromEdge } from './straight/straight-canvas-edge-geometry'
@@ -25,7 +25,7 @@ import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
   CanvasEdgeType,
-} from 'convex/canvases/validation'
+} from '~/features/canvas/domain/validation'
 
 type NormalizedCanvasEdgeEntry = {
   rawEdge: CanvasDocumentEdge

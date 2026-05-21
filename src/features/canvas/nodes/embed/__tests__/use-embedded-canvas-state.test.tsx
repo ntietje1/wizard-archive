@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as Y from 'yjs'
-import { parseEmbeddedCanvasStableId } from 'convex/canvases/validation'
+import { parseEmbeddedCanvasStableId } from '~/features/canvas/domain/validation'
 import { useEmbeddedCanvasState } from '../use-embedded-canvas-state'
 import { testId } from '~/test/helpers/test-id'
 

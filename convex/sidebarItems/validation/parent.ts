@@ -3,10 +3,11 @@ import type { MaybePromise } from '../../common/async'
 import { v } from 'convex/values'
 import type { Id } from '../../_generated/dataModel'
 import { ERROR_CODE, throwClientError } from '../../errors'
+import { checkNameConflict, validateItemName } from '../../../shared/sidebar-items/name'
 import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
-import { checkNameConflict, requireSidebarItemName, validateItemName } from './name'
+import { assertSidebarItemName } from './name'
 import type { AnySidebarItem } from '../types/types'
-import type { SidebarItemName, ValidationResult } from './name'
+import type { SidebarItemName, ValidationResult } from '../../../shared/sidebar-items/name'
 
 export const CREATE_PARENT_TARGET_KIND = {
   direct: 'direct',
@@ -73,7 +74,7 @@ function requireParentPathSegment(segment: string): ParentPathSegment {
     return trimmedSegment
   }
 
-  return requireSidebarItemName(trimmedSegment)
+  return assertSidebarItemName(trimmedSegment)
 }
 
 export function requireCreateParentTarget(

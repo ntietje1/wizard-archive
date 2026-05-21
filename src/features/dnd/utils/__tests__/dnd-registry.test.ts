@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { DropPlanningContext } from '~/features/dnd/utils/drop-planning-context'

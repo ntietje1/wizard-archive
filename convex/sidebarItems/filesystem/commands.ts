@@ -1,7 +1,7 @@
 import type { Id } from '../../_generated/dataModel'
-import type { SidebarItemColor } from '../validation/color'
-import type { SidebarItemIconName } from '../validation/icon'
-import type { SidebarItemName } from '../validation/name'
+import type { SidebarItemColor } from '../../../shared/sidebar-items/color'
+import type { SidebarItemIconName } from '../../../shared/sidebar-items/icon'
+import type { SidebarItemName } from '../../../shared/sidebar-items/name'
 import type { CreateParentTarget } from '../validation/parent'
 import type { SidebarItemType } from '../types/baseTypes'
 

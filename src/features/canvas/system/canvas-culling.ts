@@ -1,12 +1,12 @@
 import { normalizeCanvasEdgeStyle } from '../edges/shared/canvas-edge-style'
-import { parseCanvasStrokeNodeData } from 'convex/canvases/validation'
+import { parseCanvasStrokeNodeData } from '~/features/canvas/domain/validation'
 import { getCanvasEdgeInteractionWidth } from '../edges/shared/canvas-edge-geometry'
 import { getCanvasNodeBounds } from '../nodes/shared/canvas-node-bounds'
 import type { CanvasSelectionState } from './canvas-selection'
 import type { Bounds } from '../utils/canvas-geometry-utils'
 import { rectIntersectsBounds } from '../utils/canvas-geometry-utils'
 import type { CanvasViewport } from '../types/canvas-domain-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 
 const CULLING_OVERSCAN_PX = 512
 const MIN_ZOOM = 1e-6

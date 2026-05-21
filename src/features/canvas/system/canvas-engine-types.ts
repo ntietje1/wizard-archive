@@ -11,7 +11,7 @@ import type {
   CanvasPosition,
   CanvasViewport,
 } from '../types/canvas-domain-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 
 export interface CanvasInternalNode {
   id: string

@@ -1,6 +1,6 @@
 import type { Id } from 'convex/_generated/dataModel'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
-import type { SidebarItemStatus } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
+import type { SidebarItemStatus } from 'shared/sidebar-items/types'
 import { isTrashedSidebarItem } from 'convex/sidebarItems/types/status'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { ItemSurface } from '~/features/sidebar/stores/sidebar-ui-store'

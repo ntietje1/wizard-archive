@@ -1,5 +1,5 @@
 import { normalizeCanvasEdgeStyle } from '../edges/shared/canvas-edge-style'
-import { parseCanvasStrokeNodeData } from 'convex/canvases/validation'
+import { parseCanvasStrokeNodeData } from '~/features/canvas/domain/validation'
 import { getCanvasNodeSurfaceStyle } from '../nodes/shared/canvas-node-surface-style'
 import { getCachedStrokeDetailPath } from '../nodes/stroke/stroke-path-cache'
 import {
@@ -17,7 +17,7 @@ import type {
   CanvasPosition,
   CanvasViewport,
 } from '../types/canvas-domain-types'
-import type { CanvasDocumentEdge } from 'convex/canvases/validation'
+import type { CanvasDocumentEdge } from '~/features/canvas/domain/validation'
 
 export type CanvasCameraState = 'idle' | 'moving'
 

@@ -5,7 +5,7 @@ import { NoteEditor } from '../note-editor'
 import type { NoteWithContent } from 'convex/notes/types'
 import type { ReactNode } from 'react'
 import { EDITOR_MODE } from 'convex/editors/types'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { testId } from '~/test/helpers/test-id'
 
 const noteContentSpy = vi.hoisted(() => vi.fn())

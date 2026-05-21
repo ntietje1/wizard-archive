@@ -9,7 +9,7 @@ import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
   CanvasEdgeType,
-} from 'convex/canvases/validation'
+} from '~/features/canvas/domain/validation'
 import type { Point2D } from '../utils/canvas-awareness-types'
 import { assertNever } from '~/shared/utils/utils'
 

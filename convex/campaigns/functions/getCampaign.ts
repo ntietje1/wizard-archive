@@ -1,6 +1,6 @@
 import { assertCampaignSlug } from '../validation'
-import type { CampaignSlug } from '../validation'
-import type { Username } from '../../users/validation'
+import type { CampaignSlug } from '../../../shared/campaigns/validation'
+import type { Username } from '../../../shared/users/validation'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { CAMPAIGN_MEMBER_STATUS, CAMPAIGN_STATUS } from '../types'
 import {

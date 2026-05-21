@@ -1,8 +1,9 @@
 import { deduplicateSlug, slugify } from '../../../shared/slugs'
-import { assertUsername, parseUsername, USERNAME_SLUG_OPTIONS } from '../../users/validation'
+import { assertUsername } from '../../users/validation'
+import { parseUsername, USERNAME_SLUG_OPTIONS } from '../../../shared/users/validation'
 import { USERNAME_MAX_LENGTH } from '../../users/constants'
 import type { MutationCtx } from '../../_generated/server'
-import type { Username } from '../../users/validation'
+import type { Username } from '../../../shared/users/validation'
 
 type AuthUserDoc = {
   _id: string

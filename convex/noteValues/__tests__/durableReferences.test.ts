@@ -8,7 +8,7 @@ import {
   replaceNoteDocumentAndPersist,
   valueBlockWithGeneratedId,
 } from './helpers.helper'
-import type { TestBlock } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
+import type { CustomPartialBlock } from '../../../shared/editor-blocks/types'
 
 type CampaignContext = Awaited<ReturnType<typeof setupCampaignContext>>
 type DmAuth = ReturnType<typeof asDm>
@@ -31,7 +31,7 @@ describe('note value durable references', () => {
     valueId = 'value-prof-bonus',
     slug = 'prof_bonus',
     expressionSource = '2',
-  } = {}): TestBlock {
+  } = {}): CustomPartialBlock {
     return valueBlockWithGeneratedId({
       idSeed,
       valueId,
@@ -40,7 +40,9 @@ describe('note value durable references', () => {
     })
   }
 
-  function attackBonusBlock(expressionSource = '3 + [[Source Note.prof_bonus]]'): TestBlock {
+  function attackBonusBlock(
+    expressionSource = '3 + [[Source Note.prof_bonus]]',
+  ): CustomPartialBlock {
     return valueBlockWithGeneratedId({
       idSeed: 'target-attack-bonus',
       valueId: 'value-attack-bonus',
@@ -53,7 +55,7 @@ describe('note value durable references', () => {
     ctx: CampaignContext,
     dmAuth: DmAuth,
     noteId: Parameters<typeof replaceNoteDocumentAndPersist>[2]['noteId'],
-    blocks: Array<TestBlock>,
+    blocks: Array<CustomPartialBlock>,
   ) {
     await replaceNoteDocumentAndPersist(t, dmAuth, {
       campaignId: ctx.campaignId,

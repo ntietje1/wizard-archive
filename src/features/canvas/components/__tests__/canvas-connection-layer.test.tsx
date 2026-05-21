@@ -19,7 +19,7 @@ import type {
   CanvasDocumentEdge as Edge,
   CanvasDocumentNode as Node,
   CanvasEdgeType,
-} from 'convex/canvases/validation'
+} from '~/features/canvas/domain/validation'
 
 const sourceNode: Node = {
   id: 'source',

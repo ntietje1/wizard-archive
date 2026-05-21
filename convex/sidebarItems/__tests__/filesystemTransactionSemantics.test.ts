@@ -3,7 +3,7 @@ import { api } from '../../_generated/api'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createTestContext } from '../../_test/setup.helper'
 import { createFolder, createNote } from '../../_test/factories.helper'
-import type { SidebarItemColor } from '../validation/color'
+import type { SidebarItemColor } from '../../../shared/sidebar-items/color'
 
 const CONTENT_UPDATED_TIMESTAMP = 9_999_999_999
 

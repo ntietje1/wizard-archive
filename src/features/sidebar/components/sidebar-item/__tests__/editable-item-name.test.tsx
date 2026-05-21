@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { EditableName } from '../editable-item-name'
-import { assertSidebarItemName } from 'convex/sidebarItems/validation/name'
+import { assertSidebarItemName } from 'shared/sidebar-items/name'
 
 vi.mock('~/shared/hooks/useNameValidation', () => ({
   useNameValidation: () => ({

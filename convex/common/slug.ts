@@ -1,13 +1,9 @@
 import { v } from 'convex/values'
+import { brandString } from '../../shared/branded'
 import { parseSlug as parseSharedSlug, validateSlug } from '../../shared/slugs'
 import { ERROR_CODE, throwClientError } from '../errors'
+import type { BrandedString } from '../../shared/branded'
 import type { SlugOptions } from '../../shared/slugs'
-
-export type BrandedString<Kind extends string> = string & { readonly __brand: Kind }
-
-function brandString<Kind extends string>(value: string): BrandedString<Kind> {
-  return value as BrandedString<Kind>
-}
 
 export function createSlugHelpers<Kind extends string>(slugOptions: SlugOptions) {
   const validator = v.string()

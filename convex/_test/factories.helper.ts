@@ -1,19 +1,18 @@
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../campaigns/types'
-import type { SidebarItemColor } from '../sidebarItems/validation/color'
-import type { SidebarItemIconName } from '../sidebarItems/validation/icon'
+import type { SidebarItemColor } from '../../shared/sidebar-items/color'
+import type { SidebarItemIconName } from '../../shared/sidebar-items/icon'
 import {
   SIDEBAR_ITEM_LOCATION,
   SIDEBAR_ITEM_STATUS,
   SIDEBAR_ITEM_TYPES,
 } from '../sidebarItems/types/baseTypes'
-import { SHARE_STATUS } from '../blockShares/types'
+import { SHARE_STATUS } from '../../shared/editor-blocks/share-status'
 import { slugify } from '../../shared/slugs'
 import { assertCampaignSlug } from '../campaigns/validation'
 import { assertSidebarItemName } from '../sidebarItems/validation/name'
 import { assertSidebarItemSlug } from '../sidebarItems/validation/slug'
 import { assertUsername } from '../users/validation'
 import { makeYjsUpdateWithBlocks } from '../yjsSync/__tests__/makeYjsUpdate.helper'
-import type { TestBlock } from '../yjsSync/__tests__/makeYjsUpdate.helper'
 import type { TestConvex, TestConvexForDataModel } from 'convex-test'
 import { api } from '../_generated/api'
 import type { DataModel, Id } from '../_generated/dataModel'
@@ -24,17 +23,18 @@ import type {
   SidebarItemType,
 } from '../sidebarItems/types/baseTypes'
 import type { PermissionLevel } from '../permissions/types'
-import type { ShareStatus } from '../blockShares/types'
+import type { ShareStatus } from '../../shared/editor-blocks/share-status'
 import type {
   BlockNoteId,
-  BlockInsert,
   BlockProps,
   BlockType,
   CustomBlock,
+  CustomPartialBlock,
   InlineContent,
   TableContent,
-} from '../blocks/types'
-import type { SidebarItemName } from '../sidebarItems/validation/name'
+} from '../../shared/editor-blocks/types'
+import type { BlockInsert } from '../blocks/types'
+import type { SidebarItemName } from '../../shared/sidebar-items/name'
 import type { FileSystemOperationDecision } from '../sidebarItems/filesystem/commands'
 import type {
   FileSystemEvent,
@@ -700,7 +700,7 @@ export async function setupFolderTree(
 export async function syncBlocksToYjs(
   t: T,
   noteId: Id<'sidebarItems'>,
-  blocks: Array<TestBlock>,
+  blocks: Array<CustomPartialBlock>,
 ): Promise<void> {
   const update = makeYjsUpdateWithBlocks(blocks)
   await t.run(async (ctx) => {

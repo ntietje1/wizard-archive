@@ -1,5 +1,5 @@
-import { headingPropsSchema } from 'convex/blocks/blockSchemas'
-import type { CustomBlock, Heading, InlineContent } from 'convex/blocks/types'
+import { headingPropsSchema } from 'shared/editor-blocks/blockSchemas'
+import type { CustomBlock, Heading, InlineContent } from 'shared/editor-blocks/types'
 
 function extractText(content: InlineContent | undefined): string {
   if (!content) return ''

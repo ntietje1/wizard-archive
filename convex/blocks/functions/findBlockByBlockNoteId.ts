@@ -1,5 +1,6 @@
 import { ERROR_CODE, throwClientError } from '../../errors'
-import type { Block, BlockNoteId } from '../types'
+import type { BlockNoteId } from '../../../shared/editor-blocks/types'
+import type { Block } from '../types'
 import type { Id } from '../../_generated/dataModel'
 import type { QueryCtx } from '../../_generated/server'
 

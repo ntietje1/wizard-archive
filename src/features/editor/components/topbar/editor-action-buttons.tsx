@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { MoreVertical } from 'lucide-react'
-import type { EditorContextMenuRef } from '~/features/context-menu/components/editor-context-menu'
+import type { ContextMenuHostRef } from '~/features/context-menu/components/context-menu-host'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { EmptyContextMenu } from '~/features/context-menu/components/empty-context-menu'
 import { Button } from '~/features/shadcn/components/button'
@@ -9,7 +9,7 @@ import { useCurrentItem } from '~/features/sidebar/hooks/useCurrentItem'
 
 export function ContextMenuButton({ isTrashView }: { isTrashView?: boolean }) {
   const { item } = useCurrentItem()
-  const topbarContextMenuRef = useRef<EditorContextMenuRef>(null)
+  const topbarContextMenuRef = useRef<ContextMenuHostRef>(null)
 
   const hasMenu = !!item || isTrashView
 

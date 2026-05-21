@@ -1,4 +1,5 @@
-import type { Id } from '../_generated/dataModel'
+import { parseCanvasRichTextDocument } from 'shared/editor-blocks/blockSchemas'
+import type { CanvasRichTextDocument } from 'shared/editor-blocks/blockSchemas'
 
 function clampNumber(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
@@ -81,7 +82,7 @@ function parseSurfaceStyles(value: Record<string, unknown>): Partial<CanvasEmbed
   return styles
 }
 
-export interface CanvasViewportValue {
+interface CanvasViewportValue {
   x: number
   y: number
   zoom: number
@@ -101,7 +102,7 @@ export interface CanvasStrokeNodeData {
 }
 
 export interface CanvasEmbedNodeData {
-  sidebarItemId?: Id<'sidebarItems'>
+  sidebarItemId?: string
   lockedAspectRatio?: number
   textColor?: string | null
   backgroundColor?: string | null
@@ -112,7 +113,7 @@ export interface CanvasEmbedNodeData {
 }
 
 export interface CanvasTextNodeData {
-  content?: unknown
+  content?: CanvasRichTextDocument
   textColor?: string | null
   backgroundColor?: string | null
   backgroundOpacity?: number
@@ -121,49 +122,49 @@ export interface CanvasTextNodeData {
   borderWidth?: number
 }
 
-export interface ParsedCanvasBounds {
+interface ParsedCanvasBounds {
   x: number
   y: number
   width: number
   height: number
 }
 
-export interface ParsedCanvasBoundsDimensions {
+interface ParsedCanvasBoundsDimensions {
   width: number
   height: number
 }
 
-export interface ParsedCanvasStrokeSelectionData {
+interface ParsedCanvasStrokeSelectionData {
   points: Array<[number, number, number]>
   size: number
   bounds: ParsedCanvasBounds
 }
 
-export interface ParsedCanvasPoint2D {
+interface ParsedCanvasPoint2D {
   x: number
   y: number
 }
 
-export interface ParsedCanvasAwarenessUser {
+interface ParsedCanvasAwarenessUser {
   name: string
   color: string
 }
 
-export interface ParsedCanvasResizeAwarenessEntry {
+interface ParsedCanvasResizeAwarenessEntry {
   x: number
   y: number
   width: number
   height: number
 }
 
-export interface ParsedCanvasDrawAwarenessState {
+interface ParsedCanvasDrawAwarenessState {
   points: Array<[number, number, number]>
   color: string
   size: number
   opacity: number
 }
 
-export interface ParsedCanvasSelectAwarenessState {
+interface ParsedCanvasSelectAwarenessState {
   type: 'rect'
   x: number
   y: number
@@ -171,17 +172,17 @@ export interface ParsedCanvasSelectAwarenessState {
   height: number
 }
 
-export interface ParsedCanvasLassoAwarenessState {
+interface ParsedCanvasLassoAwarenessState {
   type: 'lasso'
   points: Array<ParsedCanvasPoint2D>
 }
 
-export interface ParsedCanvasReorderPayload {
+interface ParsedCanvasReorderPayload {
   kind: 'reorder'
   direction: 'sendToBack' | 'sendBackward' | 'bringForward' | 'bringToFront'
 }
 
-export type ParsedCanvasResizingAwarenessState = Record<string, ParsedCanvasResizeAwarenessEntry>
+type ParsedCanvasResizingAwarenessState = Record<string, ParsedCanvasResizeAwarenessEntry>
 export type CanvasNodeType = 'embed' | 'stroke' | 'text'
 export type CanvasEdgeType = 'bezier' | 'straight' | 'step'
 
@@ -231,8 +232,8 @@ export function parseCanvasViewport(value: unknown): CanvasViewportValue | null 
   return isFiniteNumber(x) && isFiniteNumber(y) && isFiniteNumber(zoom) ? { x, y, zoom } : null
 }
 
-export function parseCanvasSidebarItemId(value: unknown): Id<'sidebarItems'> | undefined {
-  return typeof value === 'string' && value.length > 0 ? (value as Id<'sidebarItems'>) : undefined
+export function parseCanvasSidebarItemId(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined
 }
 
 export function parseCanvasLockedAspectRatio(value: unknown): number | undefined {
@@ -443,7 +444,9 @@ export function parseCanvasTextNodeData(value: unknown): CanvasTextNodeData | nu
 
   const data: CanvasTextNodeData = {}
   if (value.content !== undefined) {
-    data.content = value.content
+    const content = parseCanvasRichTextDocument(value.content)
+    if (!content) return null
+    data.content = content
   }
   const styles = parseSurfaceStyles(value)
   return styles ? { ...data, ...styles } : null

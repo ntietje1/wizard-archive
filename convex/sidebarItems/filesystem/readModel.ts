@@ -1,7 +1,7 @@
 import { SIDEBAR_ITEM_STATUS } from '../types/baseTypes'
 import type { Id } from '../../_generated/dataModel'
 import type { SidebarItemStatus } from '../types/baseTypes'
-import type { SidebarItemSlug } from '../validation/slug'
+import type { SidebarItemSlug } from '../../../shared/sidebar-items/slug'
 
 export type FileSystemReadModelItem = {
   _id: Id<'sidebarItems'>

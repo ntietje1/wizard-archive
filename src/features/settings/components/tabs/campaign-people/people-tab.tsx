@@ -1,6 +1,6 @@
 import { Loader2 } from 'lucide-react'
 import { api } from 'convex/_generated/api'
-import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'convex/campaigns/types'
+import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '~/features/campaigns/campaign-types'
 import { InviteLinkSection } from './components/invite-link-section'
 import { MembersSection } from './components/members-section'
 import { PendingRequestsSection } from './components/pending-requests-section'

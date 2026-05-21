@@ -6,7 +6,7 @@ import {
   canvasToolbarTools,
 } from '../canvas-tool-modules'
 import type { CanvasToolPropertyContext, CanvasToolRuntime } from '../canvas-tool-types'
-import type { CanvasEdgeType } from 'convex/canvases/validation'
+import type { CanvasEdgeType } from '~/features/canvas/domain/validation'
 
 const selectAwarenessClear = vi.hoisted(() => vi.fn())
 const selectOverlayClear = vi.hoisted(() => vi.fn())

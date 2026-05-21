@@ -1,8 +1,8 @@
 import {
   DEFAULT_SIDEBAR_ITEM_ICON_NAME_BY_TYPE,
   SIDEBAR_ITEM_ICON_NAMES,
-} from 'convex/sidebarItems/validation/icon'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+} from 'shared/sidebar-items/icon'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import {
   Apple,
   Axe,
@@ -39,9 +39,9 @@ import {
   User,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import type { SidebarItemIconName } from 'convex/sidebarItems/validation/icon'
+import type { SidebarItemIconName } from 'shared/sidebar-items/icon'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
+import type { SidebarItemType } from 'shared/sidebar-items/types'
 
 // Map of icon names to LucideIcon components
 const iconNameMap = {

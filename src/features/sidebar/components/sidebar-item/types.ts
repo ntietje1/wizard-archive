@@ -1,7 +1,7 @@
 import type { MouseEvent, ReactNode, Ref } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import type { Id } from 'convex/_generated/dataModel'
-import type { SidebarItemName } from 'convex/sidebarItems/validation/name'
+import type { SidebarItemName } from 'shared/sidebar-items/name'
 import type { EditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import type { SidebarItemVisualState } from '~/features/sidebar/utils/sidebar-item-visual-state'
 

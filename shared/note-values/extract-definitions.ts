@@ -1,4 +1,4 @@
-import type { CustomBlock, InlineContent } from '../../convex/blocks/types'
+import type { CustomBlock, InlineContent } from '../editor-blocks/types'
 import type { NoteValueAuthoringDefinition } from './types'
 
 function extractFromInlineContent<TNoteId>(

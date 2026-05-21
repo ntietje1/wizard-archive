@@ -5,7 +5,8 @@ import { saveAllNoteValuesForNote } from '../../noteValues/functions/saveAllNote
 import { isActiveSidebarItem } from '../../sidebarItems/types/status'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
-import type { Block, CustomBlock } from '../../blocks/types'
+import type { CustomBlock } from '../../../shared/editor-blocks/types'
+import type { Block } from '../../blocks/types'
 
 type CampaignScopedMutationCtx = Pick<MutationCtx, 'db'> & {
   campaign: Pick<Doc<'campaigns'>, '_id'>

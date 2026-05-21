@@ -1,6 +1,5 @@
 import { Minus } from 'lucide-react'
-import type { ShareItem } from '~/features/sharing/hooks/useBlocksShare'
-import type { Id } from 'convex/_generated/dataModel'
+import type { ShareItem } from '~/features/sharing/utils/block-share-state'
 import {
   ContextMenuCheckboxItem,
   ContextMenuGroup,
@@ -8,6 +7,8 @@ import {
   ContextMenuSeparator,
 } from '~/features/shadcn/components/context-menu'
 import { getUserDisplayName } from '~/shared/utils/user-display-name'
+
+type ShareMemberId = ShareItem['member']['_id']
 
 interface ShareMenuContentProps {
   /**
@@ -31,7 +32,7 @@ interface ShareMenuContentProps {
   /**
    * Callback when toggling share for a specific member
    */
-  onToggleShareWithMember: (memberId: Id<'campaignMembers'>) => Promise<void>
+  onToggleShareWithMember: (memberId: ShareMemberId) => Promise<void>
   /**
    * Optional message to show when there are unshareable items in the selection
    * (e.g., folders or nested blocks)
@@ -62,11 +63,11 @@ export function ShareMenuContent({
       )}
       <ContextMenuSeparator />
       {isPending ? (
-        <div className="px-2 py-2">
-          <div className="text-xs text-muted-foreground">Loading...</div>
+        <div className="p-2">
+          <div className="text-xs text-muted-foreground">Loading&hellip;</div>
         </div>
       ) : shareItems.length === 0 ? (
-        <div className="px-2 py-2">
+        <div className="p-2">
           <div className="text-xs text-muted-foreground">No players in this campaign yet.</div>
         </div>
       ) : (
@@ -86,7 +87,7 @@ export function ShareMenuContent({
 interface ShareMenuItemProps {
   shareItem: ShareItem
   isMutating: boolean
-  onToggle: (memberId: Id<'campaignMembers'>) => Promise<void>
+  onToggle: (memberId: ShareMemberId) => Promise<void>
 }
 
 function ShareMenuItem({ shareItem, isMutating, onToggle }: ShareMenuItemProps) {
@@ -113,8 +114,8 @@ function ShareMenuItem({ shareItem, isMutating, onToggle }: ShareMenuItemProps) 
         )}
       </span>
       {isIndeterminate && (
-        <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
-          <Minus className="h-3 w-3" />
+        <span className="absolute right-2 flex size-3.5 items-center justify-center">
+          <Minus className="size-3" />
         </span>
       )}
     </ContextMenuCheckboxItem>

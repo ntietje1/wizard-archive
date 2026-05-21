@@ -3,7 +3,7 @@ import { BlockNoteEditor } from '@blocknote/core'
 import { blocksToYDoc as bnBlocksToYDoc } from '@blocknote/core/yjs'
 import { createEditorSchema } from '../../editor-specs'
 import { yDocToBlocks } from '~/features/editor/blocknote-yjs'
-import type { CustomPartialBlock } from 'convex/blocks/types'
+import type { CustomPartialBlock } from 'shared/editor-blocks/types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 
 function createTestEditor(initialContent: Array<CustomPartialBlock>): CustomBlockNoteEditor {

@@ -1,4 +1,5 @@
-import type { Block, BlockNoteId, CustomBlock } from '../types'
+import type { BlockNoteId, CustomBlock } from '../../../shared/editor-blocks/types'
+import type { Block } from '../types'
 
 type ChildrenByParent = Map<BlockNoteId | null, Array<Block>>
 

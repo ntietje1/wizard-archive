@@ -1,10 +1,10 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { literals } from 'convex-helpers/validators'
-import { BLOCK_REGISTRY, BLOCK_TYPES } from '../../shared/blockRegistry'
-import { SHARE_STATUS_VALUES } from '../blockShares/types'
+import { BLOCK_REGISTRY, BLOCK_TYPES } from '../../shared/editor-blocks/blockRegistry'
+import { SHARE_STATUS_VALUES } from '../../shared/editor-blocks/share-status'
 import { convexValidatorFields } from '../common/schema'
-import type { BlockRegistryEntry } from '../../shared/blockRegistry'
+import type { BlockRegistryEntry } from '../../shared/editor-blocks/blockRegistry'
 
 export const blockNoteIdValidator = v.string()
 

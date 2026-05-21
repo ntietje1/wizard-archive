@@ -1,11 +1,11 @@
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { parseWikiLinkText } from 'convex/links/linkParsers'
 import {
   getMinDisambiguationPath,
   resolveParsedItemPath,
   resolveItemByPath,
 } from 'convex/links/linkResolution'
-import type { Heading, HeadingLevel } from 'convex/blocks/types'
+import type { Heading, HeadingLevel } from 'shared/editor-blocks/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { NoteValueRuntimeState } from '../../../../../../shared/note-values/types'

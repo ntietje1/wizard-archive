@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { forwardRef } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CanvasEditor } from '../canvas-viewer'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import * as Y from 'yjs'
 import { testId } from '~/test/helpers/test-id'
 

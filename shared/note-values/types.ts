@@ -1,4 +1,3 @@
-import type { Value } from 'convex/values'
 import type { NoteValueProps } from './schema'
 
 export const NOTE_VALUE_ERROR_CODES = [
@@ -36,7 +35,7 @@ export type NoteValueCompiledFormula =
     }
   | { kind: 'call'; callee: string; args: Array<NoteValueCompiledFormula> }
 
-export type PersistedNoteValueCompiledFormula = Value
+export type PersistedNoteValueCompiledFormula = NoteValueCompiledFormula
 
 export interface NoteValueCompileData<TNoteId = string> {
   compiledFormula: NoteValueCompiledFormula | null

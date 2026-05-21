@@ -2,7 +2,7 @@ import { createContext } from 'react'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { ViewContext } from '~/features/context-menu/types'
-import type { BlockNoteId } from 'convex/blocks/types'
+import type { BlockNoteId } from 'shared/editor-blocks/types'
 
 export interface BlockNoteContextMenuEvent {
   position: { x: number; y: number }
@@ -14,7 +14,7 @@ export interface BlockNoteContextMenuEvent {
   valueInlineEditable?: boolean
 }
 
-export interface BlockNoteContextMenuContextType {
+interface BlockNoteContextMenuContextType {
   editor: CustomBlockNoteEditor | null
   setEditor: (editor: CustomBlockNoteEditor | null) => void
   blockNoteId: BlockNoteId | undefined

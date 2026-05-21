@@ -11,7 +11,7 @@ import { noteValueRowToDefinition } from './noteValueRows'
 import { extractNoteValueDefinitions } from '../../../shared/note-values/extract-definitions'
 import type { Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
-import type { CustomBlock } from '../../blocks/types'
+import type { CustomBlock } from '../../../shared/editor-blocks/types'
 import type { AnySidebarItemRow } from '../../sidebarItems/types/types'
 import type {
   FormulaReferenceToken,

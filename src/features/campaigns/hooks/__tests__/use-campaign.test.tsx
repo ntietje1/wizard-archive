@@ -1,8 +1,8 @@
 import { createElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
-import { assertUsername } from 'convex/users/validation'
+import { CAMPAIGN_MEMBER_ROLE } from '~/features/campaigns/campaign-types'
+import { assertUsername } from 'shared/users/validation'
 import type { ReactNode } from 'react'
 import type { CampaignContextType } from '~/features/campaigns/hooks/useCampaign'
 import {

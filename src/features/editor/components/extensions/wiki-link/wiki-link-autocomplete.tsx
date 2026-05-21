@@ -1,7 +1,7 @@
 import { use, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { api } from 'convex/_generated/api'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { getWikiLinkContext, splitWikiLinkTargetAndDisplayName } from './wiki-link-utils'
 import {
   buildContinuedFolderPathText,

@@ -1,5 +1,6 @@
 import { extractPlainText } from './extractPlainText'
-import type { BlockNoteId, CustomBlock, PersistedFlatBlock } from '../types'
+import type { BlockNoteId, CustomBlock } from '../../../shared/editor-blocks/types'
+import type { PersistedFlatBlock } from '../types'
 
 export function flattenBlocks(blocks: Array<CustomBlock>): Array<PersistedFlatBlock> {
   function makeFlatBlock(

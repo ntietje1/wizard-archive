@@ -1,6 +1,6 @@
 import type { Id } from '../_generated/dataModel'
 import type { ConvexValidatorFields } from '../common/types'
-import type { CampaignSlug } from './validation'
+import type { CampaignSlug } from '../../shared/campaigns/validation'
 import type { UserProfile } from '../users/types'
 
 export const CAMPAIGN_STATUS = {

@@ -3,7 +3,7 @@ import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { Selection } from '@tiptap/pm/state'
 import { canvasRichTextEditorSchema, cloneCanvasRichTextContent } from './canvas-rich-text-editor'
 import type { CanvasRichTextContent, CanvasRichTextEditor } from './canvas-rich-text-editor'
-import { CANVAS_BLOCK_TYPES } from '../../../../../shared/blockRegistry'
+import { CANVAS_BLOCK_TYPES } from '../../../../../shared/editor-blocks/blockRegistry'
 import { logger } from '~/shared/utils/logger'
 
 export type CanvasRichTextSelectionSnapshot = Record<string, unknown>

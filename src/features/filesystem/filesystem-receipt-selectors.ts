@@ -1,13 +1,13 @@
 import type { Id } from 'convex/_generated/dataModel'
-import { SIDEBAR_ITEM_STATUS } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_STATUS } from 'shared/sidebar-items/types'
 import type {
   FileSystemEvent,
   FileSystemMessageKind,
   FileSystemReceiptMessage,
   FileSystemTransactionReceipt,
 } from 'convex/sidebarItems/filesystem/receipts'
-import { assertSidebarItemSlug } from 'convex/sidebarItems/validation/slug'
-import type { SidebarItemSlug } from 'convex/sidebarItems/validation/slug'
+import { assertSidebarItemSlug } from 'shared/sidebar-items/slug'
+import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 
 function pluralize(count: number, singular: string, plural = `${singular}s`) {
   return count === 1 ? singular : plural

@@ -4,7 +4,7 @@ import { CanvasEdgeRenderer } from '../canvas-edge-renderer'
 import { CanvasEngineProvider } from '../../react/canvas-engine-context'
 import { createCanvasDomRuntime } from '../../system/canvas-dom-runtime'
 import { createCanvasEngine } from '../../system/canvas-engine'
-import type { CanvasDocumentEdge } from 'convex/canvases/validation'
+import type { CanvasDocumentEdge } from '~/features/canvas/domain/validation'
 
 vi.mock('../canvas-edge-wrapper', () => ({
   CanvasEdgeWrapper: ({ edgeId }: { edgeId: string }) => <g data-testid={edgeId} />,

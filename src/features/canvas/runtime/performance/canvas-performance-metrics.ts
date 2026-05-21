@@ -3,7 +3,7 @@ import type {
   CanvasDocumentEdge,
   CanvasDocumentNode,
   CanvasTextDocumentNode,
-} from 'convex/canvases/validation'
+} from '~/features/canvas/domain/validation'
 import type { CanvasPosition } from '../../types/canvas-domain-types'
 
 interface CanvasPerformanceMetric {

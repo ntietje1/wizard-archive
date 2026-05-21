@@ -2,9 +2,9 @@ import { ERROR_CODE, throwClientError } from '../../../errors'
 import { logEditHistory } from '../../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../../editHistory/types'
 import { PERMISSION_LEVEL } from '../../../permissions/types'
-import { requireOptionalSidebarItemName } from '../../validation/name'
-import { requireOptionalSidebarItemColor } from '../../validation/color'
-import { requireOptionalSidebarItemIconName } from '../../validation/icon'
+import { assertSidebarItemName } from '../../validation/name'
+import { requireOptionalSidebarItemColor } from '../../../../shared/sidebar-items/color'
+import { requireOptionalSidebarItemIconName } from '../../../../shared/sidebar-items/icon'
 import { prepareSidebarItemRename } from '../../validation/orchestration'
 import { FILE_SYSTEM_EVENT_TYPE } from '../receipts'
 import { createFileSystemWriteSession } from '../deltas'
@@ -89,7 +89,7 @@ async function collectSidebarMetadataChanges(
   command: RenameFileSystemCommand,
   changeSet: RenameChangeSet,
 ): Promise<void> {
-  const name = requireOptionalSidebarItemName(command.name)
+  const name = command.name === undefined ? undefined : assertSidebarItemName(command.name)
   const iconName = requireOptionalSidebarItemIconName(command.iconName)
   const color = requireOptionalSidebarItemColor(command.color)
 

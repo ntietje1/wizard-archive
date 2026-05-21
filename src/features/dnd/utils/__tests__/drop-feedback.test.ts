@@ -7,7 +7,7 @@ import {
   SIDEBAR_ROOT_DROP_TYPE,
 } from '~/features/dnd/utils/drop-target-data'
 import type { ResolvedSidebarItemDropData } from '~/features/dnd/utils/drop-target-data'
-import type { SidebarItemName } from 'convex/sidebarItems/validation/name'
+import type { SidebarItemName } from 'shared/sidebar-items/name'
 import { resolveDropFeedback } from '~/features/dnd/utils/drop-feedback'
 import { createFolder, createGameMap, createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'

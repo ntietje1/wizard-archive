@@ -5,7 +5,7 @@ import {
   parseCanvasPoint2D,
   parseCanvasResizingAwarenessState,
   parseCanvasSelectionAwarenessState,
-} from 'convex/canvases/validation'
+} from '~/features/canvas/domain/validation'
 import type { Awareness } from 'y-protocols/awareness'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
 import { logger } from '~/shared/utils/logger'

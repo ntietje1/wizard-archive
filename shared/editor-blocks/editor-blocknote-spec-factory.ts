@@ -5,7 +5,7 @@ import {
   defaultInlineContentSpecs,
   defaultStyleSpecs,
 } from '@blocknote/core'
-import { noteValueInlineConfig } from './note-values/block-config'
+import { noteValueInlineConfig } from '../note-values/block-config'
 import type {
   BlockSpecs,
   CustomInlineContentImplementation,

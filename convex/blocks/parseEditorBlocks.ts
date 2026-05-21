@@ -1,6 +1,6 @@
 import { ERROR_CODE, throwClientError } from '../errors'
-import { blockNoteBlockSchema } from './blockSchemas'
-import type { CustomBlock } from './types'
+import { blockNoteBlockSchema } from '../../shared/editor-blocks/blockSchemas'
+import type { CustomBlock } from '../../shared/editor-blocks/types'
 
 const editorBlocksSchema = blockNoteBlockSchema.array()
 

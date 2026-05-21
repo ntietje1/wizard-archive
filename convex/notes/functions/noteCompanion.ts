@@ -1,6 +1,6 @@
 import { internal } from '../../_generated/api'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
-import { SHARE_STATUS } from '../../blockShares/types'
+import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'
 import { createYjsDocument } from '../../yjsSync/functions/createYjsDocument'
 import { copyYjsUpdates } from '../../yjsSync/functions/copyYjsUpdates'
 import { syncNoteDerivedDataFromPersistedBlocks } from './syncNoteDerivedData'

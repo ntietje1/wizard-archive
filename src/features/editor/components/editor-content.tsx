@@ -1,6 +1,6 @@
 import { Suspense, lazy, useRef, useTransition } from 'react'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { TrashPageViewer } from './viewer/trash/trash-page-viewer'
 import { CreateNewDashboard } from './create-new-dashboard'
 import { LoadingSpinner } from '~/shared/components/loading-spinner'

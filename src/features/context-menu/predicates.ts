@@ -1,9 +1,9 @@
-import { CAMPAIGN_MEMBER_ROLE } from 'convex/campaigns/types'
+import { CAMPAIGN_MEMBER_ROLE } from '~/features/campaigns/campaign-types'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { VIEW_CONTEXT } from './constants'
 import { getSidebarFilesystemCapabilities } from '~/features/filesystem/filesystem-capabilities'
 import type { Predicate, ViewContext } from './types'
-import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
+import type { SidebarItemType } from 'shared/sidebar-items/types'
 
 type PredicateContext = Parameters<Predicate>[0]
 

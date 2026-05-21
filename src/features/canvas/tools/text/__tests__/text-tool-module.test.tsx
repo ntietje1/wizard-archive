@@ -4,7 +4,7 @@ import {
   createPlacementEnvironment,
   createPointerEvent,
 } from '../../shared/__tests__/placement-tool-test-utils'
-import type { CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
 
 describe('textToolSpec', () => {
   it('creates a default-sized text node on click and requests editing at the click point', () => {

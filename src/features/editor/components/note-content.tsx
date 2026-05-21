@@ -1,6 +1,6 @@
 import { BlockNoteEditor } from '@blocknote/core'
 import { useEffect, useRef } from 'react'
-import { SHARE_STATUS } from 'convex/blockShares/types'
+import { SHARE_STATUS } from 'shared/editor-blocks/share-status'
 import { PERMISSION_LEVEL } from 'convex/permissions/types'
 import { createEditorSchema } from '../editor-specs'
 import { NoteView } from './note-view'
@@ -20,13 +20,13 @@ import { assertNever } from '~/shared/utils/utils'
 import { api } from 'convex/_generated/api'
 import type { Doc } from 'yjs'
 import type { Id } from 'convex/_generated/dataModel'
-import type { CustomBlock } from 'convex/blocks/types'
+import type { CustomBlock } from 'shared/editor-blocks/types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { BlockMeta, NoteWithContent } from 'convex/notes/types'
 import type { CSSProperties } from 'react'
 import type { ConvexYjsProvider } from '~/features/editor/providers/convex-yjs-provider'
 
-export type NoteEditorChangeHandler = (
+type NoteEditorChangeHandler = (
   editor: CustomBlockNoteEditor | null,
   doc: Doc | null,
   provider: ConvexYjsProvider | null,

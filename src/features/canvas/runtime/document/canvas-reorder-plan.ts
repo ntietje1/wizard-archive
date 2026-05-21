@@ -3,7 +3,7 @@ import { sortCanvasElementsByZIndex } from './canvas-z-order'
 import { stripEphemeralCanvasNodeState } from '../../utils/canvas-node-persistence'
 import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
 import type { CanvasReorderDirection } from './canvas-reorder'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type * as Y from 'yjs'
 
 export interface CanvasReorderPlan {

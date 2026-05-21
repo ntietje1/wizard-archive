@@ -1,19 +1,17 @@
 import { api } from 'convex/_generated/api'
 import { useMutation } from '@tanstack/react-query'
 import { useConvex } from '@convex-dev/react-query'
-import { SHARE_STATUS } from 'convex/blockShares/types'
-import type { CustomBlock } from 'convex/blocks/types'
+import { SHARE_STATUS } from 'shared/editor-blocks/share-status'
+import type { CustomBlock } from 'shared/editor-blocks/types'
 import type { Id } from 'convex/_generated/dataModel'
+import type { CampaignMember } from 'convex/campaigns/types'
 import type { NoteWithContent } from 'convex/notes/types'
 import { handleError } from '~/shared/utils/logger'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { resolveBlockShareState } from '~/features/sharing/utils/block-share-state'
-export {
-  AGGREGATE_SHARE_STATUS,
-  type AggregateShareStatus,
-  type ShareItem,
-} from '~/features/sharing/utils/block-share-state'
+
+type CampaignMemberId = CampaignMember['_id']
 
 export function useBlocksShare(blocks: Array<CustomBlock>, note: NoteWithContent) {
   const { campaign, campaignId } = useCampaign()
@@ -40,7 +38,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>, note: NoteWithContent
     mutationFn: (args: {
       noteId: Id<'sidebarItems'>
       blockNoteIds: Array<string>
-      campaignMemberId: Id<'campaignMembers'>
+      campaignMemberId: CampaignMemberId
     }) => {
       if (!campaignId) throw new Error('Block sharing requires a campaign context')
       return convex.action(api.blockShares.actions.shareBlocks, { ...args, campaignId })
@@ -50,7 +48,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>, note: NoteWithContent
     mutationFn: (args: {
       noteId: Id<'sidebarItems'>
       blockNoteIds: Array<string>
-      campaignMemberId: Id<'campaignMembers'>
+      campaignMemberId: CampaignMemberId
     }) => {
       if (!campaignId) throw new Error('Block sharing requires a campaign context')
       return convex.action(api.blockShares.actions.unshareBlocks, { ...args, campaignId })
@@ -92,7 +90,7 @@ export function useBlocksShare(blocks: Array<CustomBlock>, note: NoteWithContent
     }
   }
 
-  const toggleShareWithMember = async (memberId: Id<'campaignMembers'>) => {
+  const toggleShareWithMember = async (memberId: CampaignMemberId) => {
     if (!canMutate) return
     try {
       if (getShareStateForMember(memberId) === 'all') {

@@ -1,12 +1,14 @@
-import { SHARE_STATUS } from 'convex/blockShares/types'
-import type { Id } from 'convex/_generated/dataModel'
-import type { BlockShareInfo, CustomBlock } from 'convex/blocks/types'
+import { SHARE_STATUS } from 'shared/editor-blocks/share-status'
+import type { BlockShareInfo, CustomBlock } from 'shared/editor-blocks/types'
 import type { CampaignMember } from 'convex/campaigns/types'
+
+type CampaignMemberId = CampaignMember['_id']
+export type ShareState = 'all' | 'some' | 'none'
 
 export interface ShareItem {
   key: string
   member: CampaignMember
-  shareState: 'all' | 'some' | 'none'
+  shareState: ShareState
 }
 
 export const AGGREGATE_SHARE_STATUS = {
@@ -19,8 +21,6 @@ export const AGGREGATE_SHARE_STATUS = {
 export type AggregateShareStatus =
   (typeof AGGREGATE_SHARE_STATUS)[keyof typeof AGGREGATE_SHARE_STATUS]
 
-type ShareState = ShareItem['shareState']
-
 export function resolveBlockShareState({
   blocks,
   blockInfos,
@@ -28,7 +28,7 @@ export function resolveBlockShareState({
   playerMembers,
 }: {
   blocks: Array<CustomBlock>
-  blockInfos: Array<BlockShareInfo> | undefined
+  blockInfos: Array<BlockShareInfo<CampaignMemberId>> | undefined
   blockNoteIds: Array<string>
   playerMembers: Array<CampaignMember>
 }) {
@@ -45,15 +45,15 @@ export function resolveBlockShareState({
       member,
       shareState: getShareState(blocks, blockInfoMap, member._id),
     })),
-    getShareStateForMember: (memberId: Id<'campaignMembers'>) =>
+    getShareStateForMember: (memberId: CampaignMemberId) =>
       getShareState(blocks, blockInfoMap, memberId),
-    getBlocksToShareWithMember: (memberId: Id<'campaignMembers'>) =>
+    getBlocksToShareWithMember: (memberId: CampaignMemberId) =>
       getBlocksToShareWithMember(blocks, blockInfoMap, memberId),
   }
 }
 
-function createBlockInfoMap(blocks: Array<BlockShareInfo> | undefined) {
-  const map = new Map<string, BlockShareInfo>()
+function createBlockInfoMap(blocks: Array<BlockShareInfo<CampaignMemberId>> | undefined) {
+  const map = new Map<string, BlockShareInfo<CampaignMemberId>>()
   for (const block of blocks ?? []) {
     map.set(block.blockNoteId, block)
   }
@@ -62,14 +62,14 @@ function createBlockInfoMap(blocks: Array<BlockShareInfo> | undefined) {
 
 function getBlockShareStatus(
   block: CustomBlock,
-  blockInfoMap: Map<string, BlockShareInfo>,
-): BlockShareInfo['shareStatus'] {
+  blockInfoMap: Map<string, BlockShareInfo<CampaignMemberId>>,
+): BlockShareInfo<CampaignMemberId>['shareStatus'] {
   return blockInfoMap.get(block.id)?.shareStatus ?? SHARE_STATUS.NOT_SHARED
 }
 
 function getAggregateShareStatus(
   blocks: Array<CustomBlock>,
-  blockInfoMap: Map<string, BlockShareInfo>,
+  blockInfoMap: Map<string, BlockShareInfo<CampaignMemberId>>,
   hasCompleteData: boolean,
 ): AggregateShareStatus {
   if (!hasCompleteData || blocks.length === 0) return AGGREGATE_SHARE_STATUS.NOT_SHARED
@@ -90,8 +90,8 @@ function getAggregateShareStatus(
 
 function getShareState(
   blocks: Array<CustomBlock>,
-  blockInfoMap: Map<string, BlockShareInfo>,
-  memberId: Id<'campaignMembers'>,
+  blockInfoMap: Map<string, BlockShareInfo<CampaignMemberId>>,
+  memberId: CampaignMemberId,
 ): ShareState {
   if (blocks.length === 0) return 'none'
 
@@ -104,8 +104,8 @@ function getShareState(
 
 function isBlockSharedWithMember(
   block: CustomBlock,
-  blockInfoMap: Map<string, BlockShareInfo>,
-  memberId: Id<'campaignMembers'>,
+  blockInfoMap: Map<string, BlockShareInfo<CampaignMemberId>>,
+  memberId: CampaignMemberId,
 ) {
   const info = blockInfoMap.get(block.id)
   if (!info) return false
@@ -119,8 +119,8 @@ function isBlockSharedWithMember(
 
 function getBlocksToShareWithMember(
   blocks: Array<CustomBlock>,
-  blockInfoMap: Map<string, BlockShareInfo>,
-  memberId: Id<'campaignMembers'>,
+  blockInfoMap: Map<string, BlockShareInfo<CampaignMemberId>>,
+  memberId: CampaignMemberId,
 ) {
   return blocks.filter((block) => {
     const info = blockInfoMap.get(block.id)

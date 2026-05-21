@@ -1,4 +1,8 @@
-import type { FlatBlockContent, InlineContent, TableContent } from '../types'
+import type {
+  FlatBlockContent,
+  InlineContent,
+  TableContent,
+} from '../../../shared/editor-blocks/types'
 
 function collectTexts(items: Array<string>): string {
   return items.join(' ')

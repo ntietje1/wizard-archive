@@ -3,7 +3,8 @@ import { flattenBlocks } from '../functions/flattenBlocks'
 import { reconstructBlockTree } from '../functions/reconstructBlockTree'
 import { parseEditorBlocks } from '../parseEditorBlocks'
 import { testBlockNoteId } from '../../_test/factories.helper'
-import type { Block, CustomBlock, InlineContent } from '../types'
+import type { CustomBlock, InlineContent } from '../../../shared/editor-blocks/types'
+import type { Block } from '../types'
 import type { Id } from '../../_generated/dataModel'
 
 type TableContent = {

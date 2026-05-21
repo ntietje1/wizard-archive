@@ -1,5 +1,5 @@
 import type { Id } from 'convex/_generated/dataModel'
-import { parseCanvasViewport } from 'convex/canvases/validation'
+import { parseCanvasViewport } from '~/features/canvas/domain/validation'
 import { logger } from '~/shared/utils/logger'
 
 const DEFAULT_CANVAS_VIEWPORT = {

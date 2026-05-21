@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseCanvasRichTextDocument } from '../../blocks/blockSchemas'
+import { parseCanvasRichTextDocument } from 'shared/editor-blocks/blockSchemas'
 import {
   parseCanvasAwarenessUser,
   parseCanvasAwarenessPresence,

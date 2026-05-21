@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test'
-import { parseCampaignSlug, validateCampaignSlug } from '../../campaigns/validation'
-import { parseSidebarItemSlug, validateSidebarItemSlug } from '../../sidebarItems/validation/slug'
-import { parseUsername, validateUsername } from '../../users/validation'
+import { parseCampaignSlug, validateCampaignSlug } from '../../../shared/campaigns/validation'
+import { parseSidebarItemSlug, validateSidebarItemSlug } from '../../../shared/sidebar-items/slug'
+import { parseUsername, validateUsername } from '../../../shared/users/validation'
 
 const consecutiveSeparatorSlugs = ['name--link', 'name-_link', 'name_-link', 'name__link']
 

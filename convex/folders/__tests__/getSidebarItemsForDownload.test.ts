@@ -11,7 +11,7 @@ import {
 } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
-import type { CustomBlock } from '../../blocks/types'
+import type { CustomBlock } from '../../../shared/editor-blocks/types'
 
 /** Extract the text of the first inline content entry from a block's content */
 function hasInlineTextContent(block: unknown): block is { content?: Array<{ text?: string }> } {

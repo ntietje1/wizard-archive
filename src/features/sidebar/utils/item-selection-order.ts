@@ -1,10 +1,10 @@
 import type { SortOptions } from 'convex/editors/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { sortItemsByOptions } from '~/features/sidebar/hooks/useSidebarItems'
 
-export interface BuildVisibleSidebarItemIdsOptions {
+interface BuildVisibleSidebarItemIdsOptions {
   parentItemsMap: Map<Id<'sidebarItems'> | null, Array<AnySidebarItem>>
   expandedFolderIds: ReadonlySet<Id<'sidebarItems'>>
   sortOptions: SortOptions

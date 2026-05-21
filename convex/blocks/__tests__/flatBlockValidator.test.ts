@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { customBlockSpecs } from '../../../shared/editor-blocknote-spec-factory'
-import { flatBlockContentSchema } from '../blockSchemas'
+import { customBlockSpecs } from '../../../shared/editor-blocks/editor-blocknote-spec-factory'
+import { flatBlockContentSchema } from '../../../shared/editor-blocks/blockSchemas'
 
 describe('flat block type coverage', () => {
   const editorBlockTypes = Object.keys(customBlockSpecs)

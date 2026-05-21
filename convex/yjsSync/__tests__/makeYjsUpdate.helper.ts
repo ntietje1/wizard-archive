@@ -1,8 +1,7 @@
 import * as Y from 'yjs'
 import { blocksToYDoc } from '../../../src/features/editor/blocknote-yjs'
-import type { CustomPartialBlock } from '../../blocks/types'
+import type { CustomPartialBlock } from '../../../shared/editor-blocks/types'
 
-export type TestBlock = CustomPartialBlock
 type TestInlineContentArray = Extract<
   NonNullable<CustomPartialBlock['content']>,
   ReadonlyArray<unknown>
@@ -23,7 +22,7 @@ export function makeYjsUpdate(): ArrayBuffer {
   return update
 }
 
-export function makeYjsUpdateWithBlocks(blocks: Array<TestBlock>): ArrayBuffer {
+export function makeYjsUpdateWithBlocks(blocks: Array<CustomPartialBlock>): ArrayBuffer {
   const doc = blocksToYDoc(blocks, 'document')
   try {
     return toArrayBuffer(Y.encodeStateAsUpdate(doc))

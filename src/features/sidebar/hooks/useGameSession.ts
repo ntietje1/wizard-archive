@@ -6,7 +6,7 @@ import { handleError } from '~/shared/utils/logger'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 
-export type SessionContextValue = {
+type SessionContextValue = {
   currentSession: UseQueryResult<Session | null, Error>
   sessions: UseQueryResult<Array<Session>, Error>
   startSession: UseMutationResult<Id<'sessions'>, Error, { name?: string }>

@@ -2,7 +2,7 @@ import { COLORS_DEFAULT, defaultProps } from '@blocknote/core'
 import {
   createCustomInlineContentSpecs,
   createCustomStyleSpecs,
-} from '../../../shared/editor-blocknote-spec-factory'
+} from '../../../shared/editor-blocks/editor-blocknote-spec-factory'
 
 function renderValueInline(inlineContent: { props: { slug?: string } }) {
   const element = document.createElement('span')

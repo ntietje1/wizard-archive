@@ -2,12 +2,12 @@ import { asyncMap } from 'convex-helpers'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { findBlockByBlockNoteId } from '../../blocks/functions/findBlockByBlockNoteId'
 import { patchBlockMetadata } from '../../blocks/functions/patchBlockMetadata'
-import { SHARE_STATUS } from '../types'
+import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'
 import type { NoteFromDb } from '../../notes/types'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
-import type { ShareStatus } from '../types'
-import type { BlockNoteId } from '../../blocks/types'
+import type { ShareStatus } from '../../../shared/editor-blocks/share-status'
+import type { BlockNoteId } from '../../../shared/editor-blocks/types'
 
 export type BlockShareMutationCtx = Pick<MutationCtx, 'db'> & {
   campaign: Pick<Doc<'campaigns'>, '_id' | 'currentSessionId'>

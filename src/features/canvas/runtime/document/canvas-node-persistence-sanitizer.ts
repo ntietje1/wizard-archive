@@ -4,8 +4,8 @@ import {
   parseCanvasNodeType,
   parseCanvasPoint2D,
   parseCanvasDocumentNode,
-} from 'convex/canvases/validation'
-import type { CanvasDocumentNode } from 'convex/canvases/validation'
+} from '~/features/canvas/domain/validation'
+import type { CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import { logger } from '~/shared/utils/logger'
 
 function buildSafePersistedCanvasNode(node: CanvasDocumentNode): CanvasDocumentNode {

@@ -5,7 +5,7 @@ import type {
   CanvasDocumentNode,
   CanvasEdgeStyle,
   CanvasEdgeType,
-} from 'convex/canvases/validation'
+} from '~/features/canvas/domain/validation'
 
 export interface CanvasEdgeRendererProps<TType extends CanvasEdgeType = CanvasEdgeType> {
   id: string

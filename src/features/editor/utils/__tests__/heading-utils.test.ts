@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { CustomBlock, HeadingLevel } from 'convex/blocks/types'
+import type { CustomBlock, HeadingLevel } from 'shared/editor-blocks/types'
 import {
   extractHeadingsFromContent,
   findHeadingByText,

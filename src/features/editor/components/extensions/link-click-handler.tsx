@@ -10,10 +10,10 @@ import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useEditorDomElement } from '~/features/editor/hooks/useEditorDomElement'
 import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { CREATE_PARENT_TARGET_KIND } from 'convex/sidebarItems/validation/parent'
 import type { CreateItemArgs } from '~/features/filesystem/useCreateFileSystemItem'
-import type { ValidationResult } from 'convex/sidebarItems/validation/name'
+import type { ValidationResult } from 'shared/sidebar-items/name'
 
 interface TooltipState {
   show: boolean

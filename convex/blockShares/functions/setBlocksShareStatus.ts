@@ -7,8 +7,8 @@ import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import type { BlockShareMutationCtx } from './blockShareMutations'
 import type { Id } from '../../_generated/dataModel'
-import type { ShareStatus } from '../types'
-import type { BlockNoteId } from '../../blocks/types'
+import type { ShareStatus } from '../../../shared/editor-blocks/share-status'
+import type { BlockNoteId } from '../../../shared/editor-blocks/types'
 
 export const setBlocksShareStatus = async (
   ctx: BlockShareMutationCtx,

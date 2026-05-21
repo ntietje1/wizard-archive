@@ -24,7 +24,7 @@ function computeWidths(
   }
 }
 
-export type ResizableSidebarProps = {
+type ResizableSidebarProps = {
   side: 'left' | 'right'
   size: number
   visible: boolean

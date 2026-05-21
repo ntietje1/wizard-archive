@@ -25,7 +25,7 @@ import type {
   CanvasSelectionSnapshot,
 } from '../../system/canvas-selection'
 import type { Bounds } from '../../utils/canvas-geometry-utils'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 
 const MIN_SELECTION_DRAG_DISTANCE_PX = 1
 

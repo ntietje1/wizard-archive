@@ -1,10 +1,11 @@
 import { asyncMap } from 'convex-helpers'
 import { ERROR_CODE, throwClientError } from '../../errors'
-import { SHARE_STATUS } from '../../blockShares/types'
+import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'
 import { flattenBlocks } from './flattenBlocks'
 import type { Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
-import type { Block, BlockInsert, CustomBlock, PersistedFlatBlock } from '../types'
+import type { CustomBlock } from '../../../shared/editor-blocks/types'
+import type { Block, BlockInsert, PersistedFlatBlock } from '../types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { isActiveSidebarItem } from '../../sidebarItems/types/status'
 

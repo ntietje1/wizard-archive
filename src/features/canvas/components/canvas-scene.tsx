@@ -15,7 +15,7 @@ import { isCanvasEmptyPaneTarget } from '../runtime/interaction/canvas-pane-targ
 import { useCanvasEngine } from '../react/use-canvas-engine'
 import { useCanvasViewportRuntime } from '../runtime/providers/canvas-runtime'
 import type { CanvasConnection } from '../types/canvas-domain-types'
-import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
+import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type { RemoteUser } from '../utils/canvas-awareness-types'
 import type {
   KeyboardEvent as ReactKeyboardEvent,

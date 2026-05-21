@@ -1,5 +1,5 @@
-import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
-import type { SidebarItemType } from '../types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from './types'
+import type { SidebarItemType } from './types'
 
 export const SIDEBAR_ITEM_ICON_NAMES = [
   'Apple',
@@ -69,7 +69,7 @@ export function assertSidebarItemIconName(iconName: string): SidebarItemIconName
   return iconName as SidebarItemIconName
 }
 
-export function requireSidebarItemIconName(iconName: string): SidebarItemIconName {
+function requireSidebarItemIconName(iconName: string): SidebarItemIconName {
   return assertSidebarItemIconName(iconName)
 }
 

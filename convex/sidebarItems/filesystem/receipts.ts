@@ -1,9 +1,9 @@
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { FileSystemCommand } from './commands'
-import type { SidebarItemColor } from '../validation/color'
-import type { SidebarItemIconName } from '../validation/icon'
-import type { SidebarItemName } from '../validation/name'
-import type { SidebarItemSlug } from '../validation/slug'
+import type { SidebarItemColor } from '../../../shared/sidebar-items/color'
+import type { SidebarItemIconName } from '../../../shared/sidebar-items/icon'
+import type { SidebarItemName } from '../../../shared/sidebar-items/name'
+import type { SidebarItemSlug } from '../../../shared/sidebar-items/slug'
 import type { SidebarItemStatus } from '../types/baseTypes'
 
 export const FILE_SYSTEM_EVENT_TYPE = {

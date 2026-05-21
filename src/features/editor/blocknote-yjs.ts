@@ -1,9 +1,9 @@
 import type * as Y from 'yjs'
 import { BlockNoteEditor } from '@blocknote/core'
 import { blocksToYDoc as bnBlocksToYDoc, yDocToBlocks as bnYDocToBlocks } from '@blocknote/core/yjs'
-import { partialBlockNoteDocumentSchema } from '../../../convex/blocks/blockSchemas'
-import { headlessEditorSchema } from '../../../shared/editor-blocknote-schema'
-import type { CustomBlock, CustomPartialBlock } from '../../../convex/blocks/types'
+import { partialBlockNoteDocumentSchema } from '../../../shared/editor-blocks/blockSchemas'
+import { headlessEditorSchema } from '../../../shared/editor-blocks/editor-blocknote-schema'
+import type { CustomBlock, CustomPartialBlock } from '../../../shared/editor-blocks/types'
 
 function createHeadlessEditor() {
   return BlockNoteEditor.create({ schema: headlessEditorSchema, _headless: true })

@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
 import { assertNever } from '~/shared/utils/utils'
 import { NoteEditor } from '~/features/editor/components/viewer/note/note-editor'

@@ -7,9 +7,9 @@ export const LINK_ROLE = {
   bracketClose: 'bracket-close',
 } as const
 
-export type LinkRole = (typeof LINK_ROLE)[keyof typeof LINK_ROLE]
+type LinkRole = (typeof LINK_ROLE)[keyof typeof LINK_ROLE]
 export type LinkType = 'wiki' | 'md-internal' | 'md-external'
-export type LinkStatus = 'exists' | 'ghost' | 'external'
+type LinkStatus = 'exists' | 'ghost' | 'external'
 export type LinkPathKind = 'global' | 'relative'
 
 interface CreateLinkDecorationStateOptions {
@@ -25,7 +25,7 @@ interface CreateLinkDecorationStateOptions {
   isActive: boolean
 }
 
-export interface LinkDecorationState {
+interface LinkDecorationState {
   type: LinkType
   status: LinkStatus
   interaction: {

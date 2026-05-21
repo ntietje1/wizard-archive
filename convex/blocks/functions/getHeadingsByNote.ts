@@ -2,8 +2,8 @@ import { ERROR_CODE, throwClientError } from '../../errors'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignQueryCtx } from '../../functions'
 import { logger } from '../../common/logger'
-import { headingPropsSchema } from '../blockSchemas'
-import type { Heading } from '../types'
+import { headingPropsSchema } from '../../../shared/editor-blocks/blockSchemas'
+import type { Heading } from '../../../shared/editor-blocks/types'
 
 export async function getHeadingsByNote(
   ctx: CampaignQueryCtx,

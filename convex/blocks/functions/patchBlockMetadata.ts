@@ -1,9 +1,9 @@
 import type { WithoutSystemFields } from 'convex/server'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
-import { SHARE_STATUS_VALUES } from '../../blockShares/types'
-import type { ShareStatus } from '../../blockShares/types'
-import type { BlockNoteId } from '../types'
+import { SHARE_STATUS_VALUES } from '../../../shared/editor-blocks/share-status'
+import type { ShareStatus } from '../../../shared/editor-blocks/share-status'
+import type { BlockNoteId } from '../../../shared/editor-blocks/types'
 
 type BlockMetadataPatch = {
   blockDbId: Id<'blocks'>
