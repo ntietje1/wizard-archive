@@ -2,6 +2,7 @@ import { renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Fragment, Schema, Slice } from '@tiptap/pm/model'
 import { noteValueInlineConfig } from '../../../../../shared/note-values/block-config'
+import { NOTE_VALUE_PROP_DEFAULTS } from '../../../../../shared/note-values/schema'
 import { createValueTransferPlugin, useValueTransferBehavior } from '../value-transfer-plugin'
 import type { EditorView } from '@tiptap/pm/view'
 
@@ -20,9 +21,9 @@ const schema = new Schema({
       group: 'inline',
       atom: true,
       attrs: {
-        valueId: { default: '' },
-        slug: { default: '' },
-        expressionSource: { default: '' },
+        valueId: { default: NOTE_VALUE_PROP_DEFAULTS.valueId },
+        slug: { default: NOTE_VALUE_PROP_DEFAULTS.slug },
+        expressionSource: { default: NOTE_VALUE_PROP_DEFAULTS.expressionSource },
       },
       toDOM: (node) => ['span', node.attrs],
       parseDOM: [{ tag: 'span' }],

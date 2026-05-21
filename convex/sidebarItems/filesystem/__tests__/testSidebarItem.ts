@@ -4,7 +4,7 @@ import {
   SIDEBAR_ITEM_STATUS,
   SIDEBAR_ITEM_TYPES,
 } from '../../types/baseTypes'
-import { slugify } from '../../../common/slug'
+import { slugify } from '../../../../shared/slugs'
 import type { Id } from '../../../_generated/dataModel'
 import type { AnySidebarItem } from '../../types/types'
 

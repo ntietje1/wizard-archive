@@ -165,17 +165,13 @@ function getCanvasEdgePointThreshold(zoom: number): number {
   return DEFAULT_CANVAS_EDGE_INTERACTION_WIDTH / 2 / safeZoom
 }
 
-export function getCanvasEdgeGeometryBounds(geometry: CanvasEdgeGeometry): Bounds | null {
-  return boundsFromPoints(geometry.hitPoints)
-}
-
 export function canvasEdgeGeometryContainsPoint(
   geometry: CanvasEdgeGeometry,
   point: Point2D,
   zoom: number,
 ): boolean {
   const threshold = getCanvasEdgePointThreshold(zoom)
-  const bounds = getCanvasEdgeGeometryBounds(geometry)
+  const bounds = boundsFromPoints(geometry.hitPoints)
   if (
     bounds &&
     !rectIntersectsBounds(bounds, {
@@ -195,7 +191,7 @@ export function canvasEdgeGeometryIntersectsRectangle(
   geometry: CanvasEdgeGeometry,
   rect: Bounds,
 ): boolean {
-  const bounds = getCanvasEdgeGeometryBounds(geometry)
+  const bounds = boundsFromPoints(geometry.hitPoints)
   if (bounds && !rectIntersectsBounds(bounds, rect)) {
     return false
   }

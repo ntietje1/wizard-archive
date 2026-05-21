@@ -1,79 +1,42 @@
 import { extractPlainText } from './extractPlainText'
-import { isInlineContentItem, isTableContent } from '../inlineContentValidators'
-import type {
-  BlockNoteId,
-  CustomBlock,
-  FlatBlockContent,
-  InlineContent,
-  TableContent,
-} from '../types'
+import type { BlockNoteId, CustomBlock, PersistedFlatBlock } from '../types'
 
-function toFlatBlockContent(block: CustomBlock): FlatBlockContent {
-  return { type: block.type, props: block.props, content: block.content } as FlatBlockContent
-}
-
-function toPersistedInlineContentItem(item: unknown): unknown {
-  if (
-    typeof item !== 'object' ||
-    item === null ||
-    !('type' in item) ||
-    item.type !== 'value' ||
-    !('content' in item) ||
-    item.content !== undefined
-  ) {
-    return item
-  }
-
-  const { content: _content, ...persistedItem } = item
-  return persistedItem
-}
-
-function toPersistedInlineContent(block: CustomBlock): InlineContent | null {
-  if (!Array.isArray(block.content)) return null
-  const result: InlineContent = []
-  for (const item of block.content) {
-    const persistedItem = toPersistedInlineContentItem(item)
-    if (!isInlineContentItem(persistedItem)) {
-      throw new Error(`[flattenBlocks] Malformed inline content in block ${block.id}`)
-    }
-    result.push(persistedItem)
-  }
-  return result
-}
-
-function toPersistedContent(block: CustomBlock): InlineContent | TableContent | null {
-  if (!block.content) return null
-  if (Array.isArray(block.content)) return toPersistedInlineContent(block)
-  if (!isTableContent(block.content)) {
-    throw new Error(`[flattenBlocks] Malformed block content in block ${block.id}`)
-  }
-  return block.content
-}
-
-export function flattenBlocks(blocks: Array<CustomBlock>) {
+export function flattenBlocks(blocks: Array<CustomBlock>): Array<PersistedFlatBlock> {
   function makeFlatBlock(
     block: CustomBlock,
     parentBlockId: BlockNoteId | null,
     depth: number,
     position: number,
-  ) {
-    const plainText = extractPlainText(toFlatBlockContent(block))
-    const content = toPersistedContent(block)
-    const inlineContent = Array.isArray(content) ? content : null
-    return {
+  ): PersistedFlatBlock {
+    const base = {
       blockNoteId: block.id,
       parentBlockId,
       depth,
       position,
+      plainText: extractPlainText(block),
+    }
+
+    if (block.type === 'table') {
+      return {
+        ...base,
+        type: block.type,
+        props: block.props,
+        content: block.content ?? null,
+        inlineContent: null,
+      }
+    }
+
+    const content = block.content ?? null
+    return {
+      ...base,
       type: block.type,
       props: block.props,
       content,
-      inlineContent,
-      plainText,
-    }
+      inlineContent: content,
+    } as PersistedFlatBlock
   }
 
-  const result: Array<ReturnType<typeof makeFlatBlock>> = []
+  const result: Array<PersistedFlatBlock> = []
 
   function walk(
     block: CustomBlock,

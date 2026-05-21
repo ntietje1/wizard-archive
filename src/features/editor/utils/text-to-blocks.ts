@@ -1,12 +1,9 @@
 import { BlockNoteEditor } from '@blocknote/core'
 import type { Link, StyledText } from '@blocknote/core'
-import { createEditorSchema } from '../editorSchema'
+import { createEditorSchema } from '../editor-specs'
 import escapeHtml from 'escape-html'
-import type {
-  CustomBlock,
-  CustomPartialBlock,
-  CustomStyleSchema,
-} from '~/features/editor/editor-specs'
+import type { CustomBlock, CustomPartialBlock } from 'convex/blocks/types'
+import type { CustomStyleSchema } from '~/features/editor/editor-specs'
 
 // Inline content from the parser — includes links that our editor schema excludes.
 type ParsedInlineContent = StyledText<CustomStyleSchema> | Link<CustomStyleSchema>

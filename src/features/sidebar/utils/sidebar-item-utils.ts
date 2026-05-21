@@ -1,6 +1,3 @@
-import { getDefaultSidebarItemIconName } from 'convex/sidebarItems/validation/icon'
-import type { SidebarItemIconName } from 'convex/sidebarItems/validation/icon'
-import { DEFAULT_SIDEBAR_ITEM_COLOR } from 'convex/sidebarItems/validation/color'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import type { SidebarItemType } from 'convex/sidebarItems/types/baseTypes'
 import type { Id } from 'convex/_generated/dataModel'
@@ -13,8 +10,6 @@ import type { SidebarFile } from 'convex/files/types'
 import type { Canvas } from 'convex/canvases/types'
 import type { EditorSearch } from '~/features/sidebar/utils/validate-search'
 import { assertNever } from '~/shared/utils/utils'
-
-export const DEFAULT_ITEM_COLOR = DEFAULT_SIDEBAR_ITEM_COLOR
 
 export const getSlug = (search: EditorSearch): SidebarItemSlug | null => {
   return search.item ?? null
@@ -131,8 +126,4 @@ export function getTypeName(type: SidebarItemType): string {
     default:
       return assertNever(type)
   }
-}
-
-export function getDefaultIconName(type: SidebarItemType): SidebarItemIconName {
-  return getDefaultSidebarItemIconName(type)
 }

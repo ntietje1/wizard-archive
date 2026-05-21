@@ -1,5 +1,5 @@
 import { api } from 'convex/_generated/api'
-import type { CustomBlock } from '~/features/editor/editor-specs'
+import type { CustomBlock } from 'convex/blocks/types'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { encodeStateAsUpdate } from 'yjs'
 import { useConvex } from '@convex-dev/react-query'

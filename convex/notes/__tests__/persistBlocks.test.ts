@@ -148,8 +148,8 @@ describe('persistBlocks', () => {
     })
 
     const blockIds = {
-      heading: 'heading-block-1',
-      paragraph: 'paragraph-block-1',
+      heading: testBlockNoteId('heading-block-1'),
+      paragraph: testBlockNoteId('paragraph-block-1'),
     }
 
     await dmAuth.mutation(api.yjsSync.mutations.pushUpdate, {
@@ -219,15 +219,17 @@ describe('persistBlocks', () => {
         noteId,
         content: [
           {
-            id: 'root',
+            id: testBlockNoteId('root'),
             type: 'paragraph',
             props: {},
             content: [],
-            children: [{ id: 'child', type: 'unknown', props: {}, content: [] }],
+            children: [
+              { id: testBlockNoteId('child'), type: 'unknown', props: {}, content: [] } as never,
+            ],
           },
         ],
       }),
-    ).rejects.toThrow(/Block type is invalid/)
+    ).rejects.toThrow(/VALIDATION_FAILED/)
   })
 
   it('rejects malformed table content before syncing derived data', async () => {
@@ -239,7 +241,7 @@ describe('persistBlocks', () => {
         noteId,
         content: [
           {
-            id: 'table',
+            id: testBlockNoteId('table'),
             type: 'table',
             props: {},
             content: {
@@ -268,7 +270,7 @@ describe('persistBlocks', () => {
       documentId: noteId,
       update: makeYjsUpdateWithBlocks([
         {
-          id: 'table-block-1',
+          id: testBlockNoteId('table-block-1'),
           type: 'table',
           props: { textColor: 'default' },
           content: {
@@ -277,8 +279,8 @@ describe('persistBlocks', () => {
             rows: [
               {
                 cells: [
-                  [{ type: 'text', text: 'A', styles: {} }],
-                  [{ type: 'text', text: 'B', styles: {} }],
+                  { type: 'tableCell', content: [{ type: 'text', text: 'A', styles: {} }] },
+                  { type: 'tableCell', content: [{ type: 'text', text: 'B', styles: {} }] },
                 ],
               },
             ],
@@ -286,7 +288,7 @@ describe('persistBlocks', () => {
           children: [],
         },
         {
-          id: 'image-block-1',
+          id: testBlockNoteId('image-block-1'),
           type: 'image',
           props: {
             name: 'Preview',
@@ -314,8 +316,8 @@ describe('persistBlocks', () => {
         .collect()
 
       expect(blocks.map((block) => block.blockNoteId).sort()).toEqual([
-        'image-block-1',
-        'table-block-1',
+        testBlockNoteId('image-block-1'),
+        testBlockNoteId('table-block-1'),
       ])
     })
   })

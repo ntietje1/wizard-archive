@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import { campaignQuery } from '../functions'
-import { editorBlockInputValidator } from '../blocks/validators'
+import { editorBlockInputValidator } from '../blocks/schema'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 import {
   getRootContentsForDownload as getRootContentsForDownloadFn,

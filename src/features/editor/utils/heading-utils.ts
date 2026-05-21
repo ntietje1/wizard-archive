@@ -1,14 +1,10 @@
-import type { Heading, HeadingLevel } from 'convex/blocks/types'
-import type { CustomBlock } from '~/features/editor/editor-specs'
+import { headingPropsSchema } from 'convex/blocks/blockSchemas'
+import type { CustomBlock, Heading, InlineContent } from 'convex/blocks/types'
 
-function isTextNode(item: unknown): item is { type: 'text'; text?: string } {
-  return typeof item === 'object' && item !== null && 'type' in item && item.type === 'text'
-}
-
-function extractText(content: unknown): string {
-  if (!Array.isArray(content)) return ''
+function extractText(content: InlineContent | undefined): string {
+  if (!content) return ''
   return content
-    .filter(isTextNode)
+    .filter((item) => item.type === 'text')
     .map((c) => c.text ?? '')
     .join('')
 }
@@ -22,17 +18,14 @@ export function extractHeadingsFromContent(content: Array<CustomBlock>): Array<H
 
   const process = (block: CustomBlock) => {
     if (block.type === 'heading') {
-      const text = extractText(block.content)
+      const text = extractText(Array.isArray(block.content) ? block.content : undefined)
       if (text) {
-        const rawLevel = (block.props as { level?: number })?.level
-        const level =
-          rawLevel && Number.isInteger(rawLevel) && rawLevel >= 1 && rawLevel <= 6
-            ? (rawLevel as HeadingLevel)
-            : 1
+        const props = headingPropsSchema.safeParse(block.props)
+        if (!props.success) return
         headings.push({
           blockNoteId: block.id,
           text,
-          level,
+          level: props.data.level,
           normalizedText: normalizeHeadingText(text),
         })
       }

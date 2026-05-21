@@ -1,4 +1,4 @@
-import { deduplicateSlug, slugify } from '../../common/slug'
+import { deduplicateSlug, slugify } from '../../../shared/slugs'
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { PERMISSION_LEVEL } from '../../permissions/types'

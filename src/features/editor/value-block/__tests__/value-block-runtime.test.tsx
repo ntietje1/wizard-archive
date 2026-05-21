@@ -5,9 +5,9 @@ import userEvent from '@testing-library/user-event'
 import type { Id } from 'convex/_generated/dataModel'
 import type { Note } from 'convex/notes/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { NoteValueProps } from '../../../../../shared/note-values/schema'
 import type {
   NoteValueAuthoringDefinition,
-  NoteValueProps,
   NoteValueRuntimeState,
 } from '../../../../../shared/note-values/types'
 import {

@@ -3,8 +3,6 @@ import { parseSlug as parseSharedSlug, validateSlug } from '../../shared/slugs'
 import { ERROR_CODE, throwClientError } from '../errors'
 import type { SlugOptions } from '../../shared/slugs'
 
-export { deduplicateSlug, parseSlug, slugify, validateSlug } from '../../shared/slugs'
-
 export type BrandedString<Kind extends string> = string & { readonly __brand: Kind }
 
 function brandString<Kind extends string>(value: string): BrandedString<Kind> {

@@ -1,4 +1,4 @@
-import { deduplicateSlug, slugify } from '../../common/slug'
+import { deduplicateSlug, slugify } from '../../../shared/slugs'
 import { assertUsername, parseUsername, USERNAME_SLUG_OPTIONS } from '../../users/validation'
 import { USERNAME_MAX_LENGTH } from '../../users/constants'
 import type { MutationCtx } from '../../_generated/server'

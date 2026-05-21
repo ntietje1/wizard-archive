@@ -72,6 +72,45 @@ type EvaluateDependency<TNoteId> = (
   valueId: string,
 ) => NoteValueRuntimeState<TNoteId> | null
 
+export function isNoteValueCompiledFormula(value: unknown): value is NoteValueCompiledFormula {
+  if (!value || typeof value !== 'object') return false
+  const node = value as { kind?: unknown }
+  switch (node.kind) {
+    case 'number':
+      return typeof (value as { value?: unknown }).value === 'number'
+    case 'binding':
+      return typeof (value as { key?: unknown }).key === 'string'
+    case 'unary': {
+      const unary = value as { operator?: unknown; argument?: unknown }
+      return (
+        (unary.operator === '+' || unary.operator === '-') &&
+        isNoteValueCompiledFormula(unary.argument)
+      )
+    }
+    case 'binary': {
+      const binary = value as { operator?: unknown; left?: unknown; right?: unknown }
+      return (
+        (binary.operator === '+' ||
+          binary.operator === '-' ||
+          binary.operator === '*' ||
+          binary.operator === '/') &&
+        isNoteValueCompiledFormula(binary.left) &&
+        isNoteValueCompiledFormula(binary.right)
+      )
+    }
+    case 'call': {
+      const call = value as { callee?: unknown; args?: unknown }
+      return (
+        typeof call.callee === 'string' &&
+        Array.isArray(call.args) &&
+        call.args.every(isNoteValueCompiledFormula)
+      )
+    }
+    default:
+      return false
+  }
+}
+
 function makeCompileError<TNoteId>(
   errorCode: NoteValueErrorCode,
   errorMessage: string,

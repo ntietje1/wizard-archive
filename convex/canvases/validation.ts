@@ -1,5 +1,4 @@
 import type { Id } from '../_generated/dataModel'
-import type { CustomPartialBlock } from '../blocks/types'
 
 function clampNumber(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
@@ -183,7 +182,6 @@ export interface ParsedCanvasReorderPayload {
 }
 
 export type ParsedCanvasResizingAwarenessState = Record<string, ParsedCanvasResizeAwarenessEntry>
-export type ParsedCanvasRichTextContent = Array<CustomPartialBlock>
 export type CanvasNodeType = 'embed' | 'stroke' | 'text'
 export type CanvasEdgeType = 'bezier' | 'straight' | 'step'
 
@@ -399,49 +397,6 @@ export function parseCanvasReorderPayload(value: unknown): ParsedCanvasReorderPa
     direction === 'bringToFront'
     ? { kind: 'reorder', direction }
     : null
-}
-
-export function parseCanvasRichTextContent(value: unknown): ParsedCanvasRichTextContent | null {
-  if (!Array.isArray(value)) return null
-  return value.every(parseCanvasRichTextBlock) ? (value as ParsedCanvasRichTextContent) : null
-}
-
-const canvasRichTextBlockTypes = new Set([
-  'paragraph',
-  'heading',
-  'bulletListItem',
-  'numberedListItem',
-  'checkListItem',
-  'quote',
-  'codeBlock',
-])
-
-const booleanInlineStyleKeys = new Set(['bold', 'italic', 'underline', 'strike', 'code'])
-const stringInlineStyleKeys = new Set(['textColor', 'backgroundColor'])
-
-function parseCanvasRichTextBlock(value: unknown): boolean {
-  if (!isRecord(value) || typeof value.type !== 'string') return false
-  if (!canvasRichTextBlockTypes.has(value.type)) return false
-  if (value.content !== undefined && !parseCanvasRichTextInlineContent(value.content)) return false
-  if (value.children !== undefined && !parseCanvasRichTextContent(value.children)) return false
-  return true
-}
-
-function parseCanvasRichTextInlineContent(value: unknown): boolean {
-  return Array.isArray(value) && value.every(parseCanvasRichTextInlineItem)
-}
-
-function parseCanvasRichTextInlineItem(value: unknown): boolean {
-  if (!isRecord(value) || value.type !== 'text' || typeof value.text !== 'string') return false
-  if (value.styles === undefined) return true
-  if (!isRecord(value.styles)) return false
-
-  for (const [key, styleValue] of Object.entries(value.styles)) {
-    if (booleanInlineStyleKeys.has(key) && typeof styleValue !== 'boolean') return false
-    if (stringInlineStyleKeys.has(key) && typeof styleValue !== 'string') return false
-    if (!booleanInlineStyleKeys.has(key) && !stringInlineStyleKeys.has(key)) return false
-  }
-  return true
 }
 
 export function parseEmbeddedCanvasStableId(value: unknown): string | undefined {

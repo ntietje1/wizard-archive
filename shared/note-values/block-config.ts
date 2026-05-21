@@ -1,12 +1,12 @@
-const noteValuePropSchema = {
-  valueId: { default: '' },
-  slug: { default: '' },
-  expressionSource: { default: '0' },
-} as const
+import { NOTE_VALUE_PROP_DEFAULTS } from './schema'
 
 export const noteValueInlineConfig = {
   type: 'value',
-  propSchema: noteValuePropSchema,
+  propSchema: {
+    valueId: { default: NOTE_VALUE_PROP_DEFAULTS.valueId },
+    slug: { default: NOTE_VALUE_PROP_DEFAULTS.slug },
+    expressionSource: { default: NOTE_VALUE_PROP_DEFAULTS.expressionSource },
+  },
   content: 'none',
   meta: {
     draggable: true,

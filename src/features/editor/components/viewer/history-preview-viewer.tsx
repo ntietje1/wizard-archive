@@ -4,9 +4,13 @@ import { api } from 'convex/_generated/api'
 import { Loader2 } from 'lucide-react'
 import { SNAPSHOT_TYPE } from 'convex/documentSnapshots/schema'
 import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
+import {
+  DEFAULT_SIDEBAR_ITEM_COLOR,
+  normalizeSidebarItemColorOrDefault,
+} from 'convex/sidebarItems/validation/color'
 import { HistoryPreviewBanner } from './history-preview-banner'
 import type { Id } from 'convex/_generated/dataModel'
-import type { CustomBlock } from '~/features/editor/editor-specs'
+import type { CustomBlock } from 'convex/blocks/types'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
 import type { GameMapSnapshotData } from 'convex/gameMaps/types'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
@@ -16,7 +20,7 @@ import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { NoteContent } from '~/features/editor/components/note-content'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { PinMarker } from '~/features/editor/components/viewer/map/pin-marker'
-import { resolvePinColor, resolvePinIcon } from '~/features/editor/components/viewer/map/pin-utils'
+import { resolvePinIcon } from '~/features/editor/components/viewer/map/pin-utils'
 import { yDocToBlocks } from '~/features/editor/blocknote-yjs'
 import { logger } from '~/shared/utils/logger'
 
@@ -219,7 +223,10 @@ function SnapshotPin({ pin }: { pin: GameMapSnapshotData['pins'][number] }) {
         opacity: pin.visible ? 1 : 0.4,
       }}
     >
-      <PinMarker color={resolvePinColor(pin)} icon={resolvePinIcon(pin)} />
+      <PinMarker
+        color={normalizeSidebarItemColorOrDefault(pin.color, DEFAULT_SIDEBAR_ITEM_COLOR)}
+        icon={resolvePinIcon(pin)}
+      />
     </div>
   )
 }

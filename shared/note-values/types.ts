@@ -1,8 +1,5 @@
-export interface NoteValueProps {
-  valueId: string
-  slug: string
-  expressionSource: string
-}
+import type { Value } from 'convex/values'
+import type { NoteValueProps } from './schema'
 
 export const NOTE_VALUE_ERROR_CODES = [
   'empty_expression',
@@ -38,6 +35,8 @@ export type NoteValueCompiledFormula =
       right: NoteValueCompiledFormula
     }
   | { kind: 'call'; callee: string; args: Array<NoteValueCompiledFormula> }
+
+export type PersistedNoteValueCompiledFormula = Value
 
 export interface NoteValueCompileData<TNoteId = string> {
   compiledFormula: NoteValueCompiledFormula | null

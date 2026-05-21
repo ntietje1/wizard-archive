@@ -4,7 +4,7 @@ import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissi
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
 import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
-import { useIsSidebarItemDragging } from '~/features/dnd/hooks/useIsSidebarItemDragging'
+import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { cn } from '~/features/shadcn/lib/utils'
 
 interface DraggableSidebarItemProps {
@@ -22,7 +22,7 @@ export function DraggableSidebarItem({
 
   const canDrag = hasAtLeastPermissionLevel(item.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
   const dragData = useSidebarDragData(item)
-  const isDragging = useIsSidebarItemDragging(item._id)
+  const isDragging = useDndStore((state) => state.sidebarDragPreviewItemIds.includes(item._id))
 
   useDraggable({
     ref,

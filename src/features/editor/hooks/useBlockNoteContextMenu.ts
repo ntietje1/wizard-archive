@@ -1,4 +1,4 @@
-import { createContext, useContext } from 'react'
+import { createContext } from 'react'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { ViewContext } from '~/features/context-menu/types'
@@ -28,10 +28,6 @@ export interface BlockNoteContextMenuContextType {
 export const BlockNoteContextMenuContext = createContext<BlockNoteContextMenuContextType | null>(
   null,
 )
-
-export function useBlockNoteContextMenuOptional(): BlockNoteContextMenuContextType | null {
-  return useContext(BlockNoteContextMenuContext)
-}
 
 export function openBlockNoteContextMenu(event: BlockNoteContextMenuEvent) {
   window.dispatchEvent(

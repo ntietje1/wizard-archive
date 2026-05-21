@@ -1,6 +1,6 @@
 import * as Y from 'yjs'
 import { blocksToYDoc } from '../../../src/features/editor/blocknote-yjs'
-import type { CustomPartialBlock } from '../../../src/features/editor/editor-specs'
+import type { CustomPartialBlock } from '../../blocks/types'
 
 export type TestBlock = CustomPartialBlock
 type TestInlineContentArray = Extract<

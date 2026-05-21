@@ -16,7 +16,7 @@ import {
 } from '~/features/filesystem/filesystem-capabilities'
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
 import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
-import { useIsSidebarItemDragging } from '~/features/dnd/hooks/useIsSidebarItemDragging'
+import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
 import { useSidebarItemVisualState } from '~/features/sidebar/hooks/useSelectedItem'
 import { useItemSurfaceRegistration } from '~/features/sidebar/hooks/useItemSurfaceRegistration'
@@ -171,7 +171,7 @@ function TrashPopoverItem({
   const ref = useRef<HTMLDivElement>(null)
   const linkProps = useEditorLinkProps(item)
   const dragData = useSidebarDragData(item)
-  const isDragging = useIsSidebarItemDragging(item._id)
+  const isDragging = useDndStore((state) => state.sidebarDragPreviewItemIds.includes(item._id))
   const visualState = useSidebarItemVisualState(item)
   const { handleItemClick, handleItemContextMenu } = useItemSelectionInteractions(item, {
     surface: 'trash',

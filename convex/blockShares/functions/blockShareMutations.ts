@@ -1,7 +1,7 @@
 import { asyncMap } from 'convex-helpers'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { findBlockByBlockNoteId } from '../../blocks/functions/findBlockByBlockNoteId'
-import { updateBlock } from '../../blocks/functions/updateBlock'
+import { patchBlockMetadata } from '../../blocks/functions/patchBlockMetadata'
 import { SHARE_STATUS } from '../types'
 import type { NoteFromDb } from '../../notes/types'
 import type { Doc, Id } from '../../_generated/dataModel'
@@ -125,7 +125,7 @@ export async function shareBlockWithMemberHelper(
     blockNoteId,
   })
 
-  await updateBlock(ctx, {
+  await patchBlockMetadata(ctx, {
     blockDbId: blockId,
     shareStatus: SHARE_STATUS.INDIVIDUALLY_SHARED,
   })
@@ -161,7 +161,7 @@ export async function unshareBlockFromMemberHelper(
     .first()
 
   if (!remainingShare && block.shareStatus !== SHARE_STATUS.ALL_SHARED) {
-    await updateBlock(ctx, {
+    await patchBlockMetadata(ctx, {
       blockDbId: block._id,
       shareStatus: SHARE_STATUS.NOT_SHARED,
     })
@@ -181,7 +181,7 @@ export async function setBlockShareStatusHelper(
     blockNoteId,
   })
 
-  await updateBlock(ctx, {
+  await patchBlockMetadata(ctx, {
     blockDbId: blockId,
     shareStatus: status,
   })

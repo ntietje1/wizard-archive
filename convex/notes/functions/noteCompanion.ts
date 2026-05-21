@@ -51,20 +51,19 @@ async function copyNoteBlocks(
   const copiedBlocks: Array<Block> = []
 
   for (const block of blocksInParentOrder) {
+    const {
+      _id,
+      _creationTime,
+      noteId: _sourceNoteId,
+      campaignId: _sourceCampaignId,
+      shareStatus: _sourceShareStatus,
+      parentBlockId,
+      ...blockFields
+    } = block
     const blockId = await ctx.db.insert('blocks', {
+      ...blockFields,
       noteId: targetItemId,
-      blockNoteId: block.blockNoteId,
-      position: block.position,
-      parentBlockId:
-        block.parentBlockId && sourceBlockNoteIds.has(block.parentBlockId)
-          ? block.parentBlockId
-          : null,
-      depth: block.depth,
-      type: block.type,
-      props: block.props,
-      content: block.content,
-      inlineContent: block.inlineContent,
-      plainText: block.plainText,
+      parentBlockId: parentBlockId && sourceBlockNoteIds.has(parentBlockId) ? parentBlockId : null,
       campaignId: ctx.campaign._id,
       shareStatus: SHARE_STATUS.NOT_SHARED,
     })

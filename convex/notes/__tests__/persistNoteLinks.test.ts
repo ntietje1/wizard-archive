@@ -32,20 +32,12 @@ async function pushAndPersist(
 type FactoryBlock = Awaited<ReturnType<typeof createBlock>>
 
 function toBlock(noteId: Id<'sidebarItems'>, block: FactoryBlock): Block {
+  const { blockDbId, ...fields } = block
   return {
-    _id: block.blockDbId,
+    ...fields,
+    _id: blockDbId,
     _creationTime: 0,
     noteId,
-    blockNoteId: block.blockNoteId,
-    position: block.position,
-    parentBlockId: block.parentBlockId,
-    depth: block.depth,
-    type: block.type,
-    props: block.props,
-    inlineContent: block.inlineContent,
-    plainText: block.plainText,
-    campaignId: block.campaignId,
-    shareStatus: block.shareStatus,
   }
 }
 

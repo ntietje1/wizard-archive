@@ -1,4 +1,4 @@
-import { useEffect, useId, useReducer, useRef } from 'react'
+import { use, useEffect, useId, useReducer, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import type { CSSProperties, Dispatch, MouseEvent as ReactMouseEvent, RefObject } from 'react'
 import { CircleHelp } from 'lucide-react'
@@ -7,7 +7,8 @@ import {
   NOTE_VALUE_SLUG_OPTIONS,
 } from '../../../../shared/note-values/constants'
 import { validateSlug } from '../../../../shared/slugs'
-import type { NoteValueProps, NoteValueRuntimeState } from '../../../../shared/note-values/types'
+import type { NoteValueProps } from '../../../../shared/note-values/schema'
+import type { NoteValueRuntimeState } from '../../../../shared/note-values/types'
 import { FormulaInput } from './formula-input'
 import { useNoteValueRuntime } from './value-block-runtime-context'
 import { ValueInlineChip } from './value-inline-chip'
@@ -16,7 +17,7 @@ import { Input } from '~/features/shadcn/components/input'
 import { Label } from '~/features/shadcn/components/label'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useSlugFieldFeedback } from '~/shared/hooks/useSlugFieldFeedback'
-import { useBlockNoteContextMenuOptional } from '~/features/editor/hooks/useBlockNoteContextMenu'
+import { BlockNoteContextMenuContext } from '~/features/editor/hooks/useBlockNoteContextMenu'
 
 const POPOVER_WIDTH = 384
 const VIEWPORT_PADDING = 16
@@ -371,7 +372,7 @@ export function ValueInlineContent({
   const latestPropsRef = useRef(inlineContent.props)
   const openPopoverFromContextMenuRef = useRef<() => void>(() => {})
   const stopWatchingDragStartRef = useRef<(() => void) | null>(null)
-  const blockNoteContextMenu = useBlockNoteContextMenuOptional()
+  const blockNoteContextMenu = use(BlockNoteContextMenuContext)
   const registerValueInlineEdit = blockNoteContextMenu?.registerValueInlineEdit
   const inputId = `note-value-${inlineContent.props.valueId}`
   const slugInputId = `${inputId}-slug`

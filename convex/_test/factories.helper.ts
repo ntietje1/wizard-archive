@@ -7,7 +7,7 @@ import {
   SIDEBAR_ITEM_TYPES,
 } from '../sidebarItems/types/baseTypes'
 import { SHARE_STATUS } from '../blockShares/types'
-import { slugify } from '../common/slug'
+import { slugify } from '../../shared/slugs'
 import { assertCampaignSlug } from '../campaigns/validation'
 import { assertSidebarItemName } from '../sidebarItems/validation/name'
 import { assertSidebarItemSlug } from '../sidebarItems/validation/slug'
@@ -27,6 +27,7 @@ import type { PermissionLevel } from '../permissions/types'
 import type { ShareStatus } from '../blockShares/types'
 import type {
   BlockNoteId,
+  BlockInsert,
   BlockProps,
   BlockType,
   CustomBlock,
@@ -537,21 +538,22 @@ export async function createBlock(
 ) {
   const n = nextId()
   const shareStatus: ShareStatus | null = SHARE_STATUS.NOT_SHARED
+  const type = overrides?.type ?? 'paragraph'
   const defaults = {
     noteId: noteId,
     blockNoteId: testBlockNoteId(`block-${n}`),
     position: null,
     parentBlockId: null,
     depth: 0,
-    type: 'paragraph' as const,
-    props: {},
+    type,
+    props: type === 'heading' ? { level: 1 } : {},
     content: null,
     inlineContent: null,
     plainText: '',
     campaignId,
     shareStatus,
   }
-  const data = { ...defaults, ...overrides }
+  const data = { ...defaults, ...overrides } as BlockInsert
   if (data.parentBlockId !== null && overrides?.depth === undefined) {
     throw new Error('createBlock: depth must be explicitly provided when parentBlockId is set')
   }

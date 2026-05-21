@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useMatch, useNavigate } from '@tanstack/react-router'
-import type { CustomBlock } from '~/features/editor/editor-specs'
+import type { CustomBlock } from 'convex/blocks/types'
 import {
   extractHeadingsFromContent,
   resolveHeadingPath,

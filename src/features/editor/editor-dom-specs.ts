@@ -1,30 +1,21 @@
+import { COLORS_DEFAULT, defaultProps } from '@blocknote/core'
 import {
-  COLORS_DEFAULT,
-  createInlineContentSpec,
-  createStyleSpec,
-  defaultInlineContentSpecs,
-  defaultProps,
-  defaultStyleSpecs,
-} from '@blocknote/core'
-import { noteValueInlineConfig } from '../../../shared/note-values/block-config'
-import { customBlockSpecs } from '../../../shared/editor-blocknote-schema'
-import type { InlineContentSpecs, StyleSpecs } from '@blocknote/core'
+  createCustomInlineContentSpecs,
+  createCustomStyleSpecs,
+} from '../../../shared/editor-blocknote-spec-factory'
 
-const { link: _link, ...remainingInlineContentSpecs } = defaultInlineContentSpecs
+function renderValueInline(inlineContent: { props: { slug?: string } }) {
+  const element = document.createElement('span')
+  element.textContent = inlineContent.props.slug || 'value'
+  element.dataset.valueInline = 'true'
+  return { dom: element }
+}
 
-const valueInlineSpec = createInlineContentSpec(noteValueInlineConfig, {
-  render: (inlineContent) => {
-    const element = document.createElement('span')
-    element.textContent = inlineContent.props.slug || 'value'
-    element.dataset.valueInline = 'true'
-    return { dom: element }
-  },
-  toExternalHTML: (inlineContent) => {
-    const element = document.createElement('span')
-    element.textContent = inlineContent.props.slug || 'value'
-    return { dom: element }
-  },
-})
+function renderValueInlineExternalHtml(inlineContent: { props: { slug?: string } }) {
+  const element = document.createElement('span')
+  element.textContent = inlineContent.props.slug || 'value'
+  return { dom: element }
+}
 
 function renderTextColorStyle(value: string | undefined) {
   const span = document.createElement('span')
@@ -38,12 +29,15 @@ function renderTextColorStyle(value: string | undefined) {
   }
 }
 
-const textColorStyleSpec = createStyleSpec(
-  {
-    propSchema: 'string',
-    type: 'textColor',
+export const customInlineContentSpecs = createCustomInlineContentSpecs({
+  valueInline: {
+    render: renderValueInline,
+    toExternalHTML: renderValueInlineExternalHtml,
   },
-  {
+})
+
+export const customStyleSpecs = createCustomStyleSpecs({
+  textColor: {
     parse: (element) => {
       if (element.tagName === 'SPAN' && element.style.color) {
         return element.style.color
@@ -51,21 +45,7 @@ const textColorStyleSpec = createStyleSpec(
 
       return undefined
     },
-    render: (value) => renderTextColorStyle(value),
-    toExternalHTML: (value) => renderTextColorStyle(value),
+    render: renderTextColorStyle,
+    toExternalHTML: renderTextColorStyle,
   },
-)
-
-export { customBlockSpecs }
-
-export const customInlineContentSpecs = {
-  ...remainingInlineContentSpecs,
-  value: valueInlineSpec,
-} as InlineContentSpecs & {
-  value: typeof valueInlineSpec
-}
-
-export const customStyleSpecs = {
-  ...defaultStyleSpecs,
-  textColor: textColorStyleSpec,
-} satisfies StyleSpecs
+})

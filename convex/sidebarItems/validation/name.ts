@@ -1,5 +1,5 @@
 import type { BrandedString } from '../../common/slug'
-import { slugify } from '../../common/slug'
+import { slugify } from '../../../shared/slugs'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import type { Id } from '../../_generated/dataModel'
 

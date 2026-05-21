@@ -22,7 +22,7 @@ import { EditorContextMenu } from '~/features/context-menu/components/editor-con
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
 import { useItemSelectionInteractions } from '~/features/sidebar/hooks/useItemSelectionInteractions'
 import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
-import { useIsSidebarItemDragging } from '~/features/dnd/hooks/useIsSidebarItemDragging'
+import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { folderItemBackgroundClass, folderItemOutlineClass } from './folder-item-visual-state'
 
 export function FolderItemCardShell<TItem extends AnySidebarItem>({
@@ -46,7 +46,7 @@ export function FolderItemCardShell<TItem extends AnySidebarItem>({
     visibleItemIds: visibleItemIds ?? [item._id],
   })
   const dragData = useSidebarDragData(item)
-  const isDragging = useIsSidebarItemDragging(item._id)
+  const isDragging = useDndStore((state) => state.sidebarDragPreviewItemIds.includes(item._id))
   const canDrag = hasAtLeastPermissionLevel(item.myPermissionLevel, PERMISSION_LEVEL.FULL_ACCESS)
   const { isDraggingRef } = useDraggable({ ref, data: dragData, canDrag })
   const handleCardClick = (event: MouseEvent<HTMLAnchorElement>) => {

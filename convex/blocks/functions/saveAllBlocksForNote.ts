@@ -2,11 +2,9 @@ import { asyncMap } from 'convex-helpers'
 import { ERROR_CODE, throwClientError } from '../../errors'
 import { SHARE_STATUS } from '../../blockShares/types'
 import { flattenBlocks } from './flattenBlocks'
-import { insertBlock } from './insertBlock'
-import { updateBlock } from './updateBlock'
 import type { Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
-import type { Block, CustomBlock } from '../types'
+import type { Block, BlockInsert, CustomBlock, PersistedFlatBlock } from '../types'
 import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
 import { isActiveSidebarItem } from '../../sidebarItems/types/status'
 
@@ -45,32 +43,14 @@ export async function saveAllBlocksForNote(
   await asyncMap(flatBlocks, async (flat): Promise<void> => {
     const existing = existingBlocksMap.get(flat.blockNoteId)
     if (existing) {
-      await updateBlock(ctx, {
-        blockDbId: existing._id,
-        parentBlockId: flat.parentBlockId,
-        depth: flat.depth,
-        position: flat.position,
-        type: flat.type,
-        props: flat.props,
-        content: flat.content,
-        inlineContent: flat.inlineContent,
-        plainText: flat.plainText,
-      })
+      await replacePersistedBlock(ctx, existing._id, flat)
       return
     }
 
-    await insertBlock(ctx, {
+    await insertPersistedBlock(ctx, {
+      ...flat,
       noteId,
       campaignId,
-      blockNoteId: flat.blockNoteId,
-      parentBlockId: flat.parentBlockId,
-      depth: flat.depth,
-      position: flat.position,
-      type: flat.type,
-      props: flat.props,
-      content: flat.content,
-      inlineContent: flat.inlineContent,
-      plainText: flat.plainText,
       shareStatus: SHARE_STATUS.NOT_SHARED,
     })
   })
@@ -103,4 +83,40 @@ export async function saveAllBlocksForNote(
     }
     return block
   })
+}
+
+async function insertPersistedBlock(
+  ctx: Pick<MutationCtx, 'db'>,
+  params: BlockInsert,
+): Promise<Id<'blocks'>> {
+  validatePersistedBlockDepth(params)
+  return await ctx.db.insert('blocks', params)
+}
+
+async function replacePersistedBlock(
+  ctx: Pick<MutationCtx, 'db'>,
+  blockDbId: Id<'blocks'>,
+  block: PersistedFlatBlock,
+): Promise<void> {
+  validatePersistedBlockDepth(block)
+  await ctx.db.patch('blocks', blockDbId, {
+    parentBlockId: block.parentBlockId,
+    depth: block.depth,
+    position: block.position,
+    type: block.type,
+    props: block.props,
+    content: block.content,
+    inlineContent: block.inlineContent,
+    plainText: block.plainText,
+  })
+}
+
+function validatePersistedBlockDepth(block: Pick<PersistedFlatBlock, 'depth' | 'parentBlockId'>) {
+  if (block.depth < 0) throwClientError(ERROR_CODE.VALIDATION_FAILED, 'depth must be non-negative')
+  if (block.parentBlockId === null && block.depth !== 0) {
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'depth must be 0 when parentBlockId is null')
+  }
+  if (block.parentBlockId !== null && block.depth === 0) {
+    throwClientError(ERROR_CODE.VALIDATION_FAILED, 'depth must be > 0 when parentBlockId is set')
+  }
 }

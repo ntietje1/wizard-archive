@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import { internalMutation } from '../_generated/server'
-import { editorBlockInputValidator } from '../blocks/validators'
+import { editorBlockInputValidator } from '../blocks/schema'
 import { parseEditorBlocks } from '../blocks/parseEditorBlocks'
 import { syncNoteIndexesFromBlocks } from './functions/syncNoteDerivedData'
 import { ERROR_CODE, throwClientError } from '../errors'

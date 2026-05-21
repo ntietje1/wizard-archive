@@ -49,7 +49,9 @@ describe('saveAllBlocksForNote — upsert and delete behavior', () => {
       columnWidths: [120],
       rows: [
         {
-          cells: [[{ type: 'text', text: 'Cell value', styles: {} }]],
+          cells: [
+            { type: 'tableCell', content: [{ type: 'text', text: 'Cell value', styles: {} }] },
+          ],
         },
       ],
     }

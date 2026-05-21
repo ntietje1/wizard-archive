@@ -2,8 +2,7 @@ import { v } from 'convex/values'
 import { sidebarItemValidatorFields } from '../sidebarItems/schema/sidebarItemsTable'
 import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
 import { permissionLevelValidator } from '../sidebarItems/schema/validators'
-import { blockShareStatusValidator } from '../blocks/schema'
-import { editorBlockInputValidator } from '../blocks/validators'
+import { blockShareStatusValidator, editorBlockInputValidator } from '../blocks/schema'
 import { folderValidator } from '../folders/baseSchema'
 
 const noteValidatorFields = {

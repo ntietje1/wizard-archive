@@ -11,11 +11,11 @@ import { ContextMenuHost } from './context-menu-host'
 import type { ContextMenuHostRef } from './context-menu-host'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { ViewContext } from '../types'
-import { useRef } from 'react'
+import { use, useRef } from 'react'
 import type { Ref } from 'react'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useMapViewOptional } from '~/features/editor/hooks/useMapView'
-import { useBlockNoteContextMenuOptional } from '~/features/editor/hooks/useBlockNoteContextMenu'
+import { BlockNoteContextMenuContext } from '~/features/editor/hooks/useBlockNoteContextMenu'
 import { useSession } from '~/features/sidebar/hooks/useGameSession'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { resolveClickedSidebarOperationItems } from '~/features/filesystem/filesystem-operation-selection'
@@ -59,7 +59,7 @@ export function EditorContextMenu({
   const { campaign } = useCampaign()
   const { currentSession } = useSession()
   const mapView = useMapViewOptional()
-  const blockNoteContext = useBlockNoteContextMenuOptional()
+  const blockNoteContext = use(BlockNoteContextMenuContext)
   const selectedItemIds = useSidebarUIStore((s) => s.selectedItemIds)
   const filesystemReadModel = useFileSystemReadModel()
   const editorMode = useEditorMode()

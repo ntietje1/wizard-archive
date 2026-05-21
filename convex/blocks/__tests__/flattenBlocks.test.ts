@@ -9,7 +9,7 @@ import type { Id } from '../../_generated/dataModel'
 type TableContent = {
   type: 'tableContent'
   columnWidths: Array<number>
-  rows: Array<{ cells: Array<InlineContent> }>
+  rows: Array<{ cells: Array<{ type: 'tableCell'; content: InlineContent }> }>
 }
 type TestBlockOverrides = Partial<Omit<CustomBlock, 'content' | 'props' | 'children'>> & {
   content?: unknown
@@ -148,7 +148,11 @@ describe('flattenBlocks', () => {
         content: {
           type: 'tableContent',
           columnWidths: [100],
-          rows: [{ cells: [[{ type: 'text', text: 'Cell', styles: {} }]] }],
+          rows: [
+            {
+              cells: [{ type: 'tableCell', content: [{ type: 'text', text: 'Cell', styles: {} }] }],
+            },
+          ],
         } satisfies TableContent,
       }),
     ]
@@ -158,28 +162,33 @@ describe('flattenBlocks', () => {
   })
 
   it('rejects malformed value inline content', () => {
-    const blocks = [
-      makeBlock('bad-value', {
-        content: [{ type: 'value', props: { slug: 'missing-fields' } }],
-      }),
-    ]
-
-    expect(() => flattenBlocks(blocks)).toThrow(/Malformed inline content/)
+    expect(() =>
+      parseEditorBlocks([
+        {
+          id: testBlockNoteId('bad-value'),
+          type: 'paragraph',
+          props: {},
+          content: [{ type: 'value', props: { slug: 'missing-fields' } }],
+        },
+      ]),
+    ).toThrow(/VALIDATION_FAILED/)
   })
 
   it('rejects malformed table cell content', () => {
-    const blocks = [
-      makeBlock('bad-table', {
-        type: 'table',
-        content: {
-          type: 'tableContent',
-          columnWidths: [null],
-          rows: [{ cells: [{ type: 'tableCell', content: [{ type: 'text' }] }] }],
+    expect(() =>
+      parseEditorBlocks([
+        {
+          id: testBlockNoteId('bad-table'),
+          type: 'table',
+          props: {},
+          content: {
+            type: 'tableContent',
+            columnWidths: [null],
+            rows: [{ cells: [{ type: 'tableCell', content: [{ type: 'text' }] }] }],
+          },
         },
-      }),
-    ]
-
-    expect(() => flattenBlocks(blocks)).toThrow(/Malformed block content/)
+      ]),
+    ).toThrow(/VALIDATION_FAILED/)
   })
 
   it('sets inlineContent to null when block has no content', () => {

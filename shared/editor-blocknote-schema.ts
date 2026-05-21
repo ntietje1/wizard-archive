@@ -1,38 +1,18 @@
+import { BlockNoteSchema } from '@blocknote/core'
 import {
-  BlockNoteSchema,
-  createInlineContentSpec,
-  createStyleSpec,
-  defaultBlockSpecs,
-  defaultInlineContentSpecs,
-  defaultStyleSpecs,
-} from '@blocknote/core'
-import { noteValueInlineConfig } from './note-values/block-config'
-import type { BlockSpecs, InlineContentSpecs, StyleSpecs } from '@blocknote/core'
-
-const { link: _link, ...remainingInlineContentSpecs } = defaultInlineContentSpecs
+  createCustomInlineContentSpecs,
+  createCustomStyleSpecs,
+  customBlockSpecs,
+} from './editor-blocknote-spec-factory'
 
 function renderHeadlessSpec(): never {
   throw new Error('Headless editor schema cannot render DOM content')
 }
 
-const valueInlineSpec = createInlineContentSpec(noteValueInlineConfig, {
-  render: renderHeadlessSpec,
-})
-
-const customInlineContentSpecs = {
-  ...remainingInlineContentSpecs,
-  value: valueInlineSpec,
-} as InlineContentSpecs & {
-  value: typeof valueInlineSpec
-}
-
-const textColorStyleSpec = createStyleSpec(
-  {
-    propSchema: 'string',
-    type: 'textColor',
-  },
-  {
-    parse: (element) => {
+const headlessRenderers = {
+  valueInline: { render: renderHeadlessSpec },
+  textColor: {
+    parse: (element: HTMLElement) => {
       if (element.tagName === 'SPAN' && element.style.color) {
         return element.style.color
       }
@@ -41,16 +21,15 @@ const textColorStyleSpec = createStyleSpec(
     },
     render: renderHeadlessSpec,
   },
-)
+}
 
-const customStyleSpecs = {
-  ...defaultStyleSpecs,
-  textColor: textColorStyleSpec,
-} satisfies StyleSpecs
+export const customInlineContentSpecs = createCustomInlineContentSpecs({
+  valueInline: headlessRenderers.valueInline,
+})
 
-export const customBlockSpecs = {
-  ...defaultBlockSpecs,
-} satisfies BlockSpecs
+export const customStyleSpecs = createCustomStyleSpecs({
+  textColor: headlessRenderers.textColor,
+})
 
 export const headlessEditorSchema = BlockNoteSchema.create({
   blockSpecs: customBlockSpecs,

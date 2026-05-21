@@ -1,7 +1,10 @@
 import { v } from 'convex/values'
 import { internalMutation } from '../_generated/server'
-import { blockNoteIdValidator, blockShareStatusValidator } from '../blocks/schema'
-import { editorBlockInputValidator } from '../blocks/validators'
+import {
+  blockNoteIdValidator,
+  blockShareStatusValidator,
+  editorBlockInputValidator,
+} from '../blocks/schema'
 import { setBlocksShareStatus as setBlocksShareStatusFn } from './functions/setBlocksShareStatus'
 import { shareBlocks as shareBlocksFn } from './functions/shareBlocks'
 import { unshareBlocks as unshareBlocksFn } from './functions/unshareBlocks'

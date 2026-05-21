@@ -6,7 +6,6 @@ import {
   canvasEdgeGeometryContainsPoint,
   canvasEdgeGeometryIntersectsPolygon,
   canvasEdgeGeometryIntersectsRectangle,
-  getCanvasEdgeGeometryBounds,
 } from './shared/canvas-edge-geometry'
 import { normalizeCanvasEdgeStyle } from './shared/canvas-edge-style'
 import { getCanvasStrokeEdgeProperties } from './shared/canvas-edge-properties'
@@ -135,7 +134,7 @@ function isCanvasEdgeSelectionCandidate(
     return true
   }
 
-  const bounds = getCanvasEdgeGeometryBounds(geometry)
+  const bounds = boundsFromPoints(geometry.hitPoints)
   return !bounds || rectIntersectsBounds(candidateBounds, bounds)
 }
 

@@ -3,8 +3,6 @@ export type CanvasPosition = {
   y: number
 }
 
-export type { CanvasDocumentEdge, CanvasDocumentNode } from 'convex/canvases/validation'
-
 export type CanvasViewport = CanvasPosition & {
   zoom: number
 }

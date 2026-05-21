@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { parseCanvasRichTextDocument } from '../../blocks/blockSchemas'
 import {
   parseCanvasAwarenessUser,
   parseCanvasAwarenessPresence,
@@ -15,7 +16,6 @@ import {
   parseCanvasNodeSurfaceColor,
   parseCanvasNodeSurfaceOpacity,
   parseCanvasPoint2D,
-  parseCanvasRichTextContent,
   parseCanvasResizingAwarenessState,
   parseCanvasSelectionAwarenessState,
   parseCanvasSelectAwarenessState,
@@ -510,10 +510,10 @@ describe('canvas edge parsers', () => {
   })
 })
 
-describe('parseCanvasRichTextContent', () => {
+describe('parseCanvasRichTextDocument', () => {
   it('accepts canvas-supported rich-text blocks and rejects excluded block types', () => {
     expect(
-      parseCanvasRichTextContent([
+      parseCanvasRichTextDocument([
         {
           type: 'paragraph',
           content: [{ type: 'text', text: 'Hello', styles: { bold: true } }],
@@ -537,7 +537,7 @@ describe('parseCanvasRichTextContent', () => {
     ])
 
     expect(
-      parseCanvasRichTextContent([
+      parseCanvasRichTextDocument([
         {
           type: 'table',
           props: { textColor: 'default' },

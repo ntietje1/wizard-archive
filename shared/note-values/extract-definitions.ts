@@ -1,34 +1,14 @@
-import type { NoteValueAuthoringDefinition, NoteValueProps } from './types'
-
-type ValueInlineContent = {
-  type: 'value'
-  props: NoteValueProps
-}
-
-type InlineContent = ValueInlineContent | { type: string; props?: unknown }
-
-type TableCell = Array<InlineContent> | { content: Array<InlineContent> }
-
-type BlockWithValueContent = {
-  id: string
-  content?:
-    | Array<InlineContent>
-    | { type: 'tableContent'; rows: Array<{ cells: Array<TableCell> }> }
-  children?: Array<BlockWithValueContent>
-}
-
-function isValueInlineContent(content: InlineContent): content is ValueInlineContent {
-  return content.type === 'value'
-}
+import type { CustomBlock, InlineContent } from '../../convex/blocks/types'
+import type { NoteValueAuthoringDefinition } from './types'
 
 function extractFromInlineContent<TNoteId>(
-  content: Array<InlineContent>,
+  content: InlineContent,
   noteId: TNoteId,
   blockNoteId: string,
   definitions: Array<NoteValueAuthoringDefinition<TNoteId>>,
 ) {
   for (const item of content) {
-    if (isValueInlineContent(item)) {
+    if (item.type === 'value') {
       definitions.push({
         noteId,
         blockNoteId,
@@ -41,7 +21,7 @@ function extractFromInlineContent<TNoteId>(
 }
 
 function extractFromBlockContent<TNoteId>(
-  block: BlockWithValueContent,
+  block: CustomBlock,
   noteId: TNoteId,
   definitions: Array<NoteValueAuthoringDefinition<TNoteId>>,
 ) {
@@ -56,23 +36,18 @@ function extractFromBlockContent<TNoteId>(
 
   for (const row of block.content.rows) {
     for (const cell of row.cells) {
-      extractFromInlineContent(
-        Array.isArray(cell) ? cell : cell.content,
-        noteId,
-        block.id,
-        definitions,
-      )
+      extractFromInlineContent(cell.content, noteId, block.id, definitions)
     }
   }
 }
 
 export function extractNoteValueDefinitions<TNoteId>(
-  blocks: Array<BlockWithValueContent>,
+  blocks: Array<CustomBlock>,
   noteId: TNoteId,
 ): Array<NoteValueAuthoringDefinition<TNoteId>> {
   const definitions: Array<NoteValueAuthoringDefinition<TNoteId>> = []
 
-  const visit = (block: BlockWithValueContent) => {
+  const visit = (block: CustomBlock) => {
     extractFromBlockContent(block, noteId, definitions)
 
     for (const child of block.children ?? []) {

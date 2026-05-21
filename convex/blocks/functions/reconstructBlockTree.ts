@@ -53,11 +53,12 @@ function buildBlockTree(
 
     visited.add(block.blockNoteId)
     const childBlocks = buildBlockTree(childrenMap, block.blockNoteId, visited)
+    const content = block.type === 'table' ? block.content : (block.content ?? block.inlineContent)
     return {
       id: block.blockNoteId,
       type: block.type,
       props: block.props,
-      content: block.content ?? block.inlineContent ?? undefined,
+      content: content ?? undefined,
       children: childBlocks.length > 0 ? childBlocks : undefined,
     } as CustomBlock
   })

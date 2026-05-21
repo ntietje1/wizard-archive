@@ -10,7 +10,6 @@ import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import {
   buildBreadcrumbs,
-  getDefaultIconName,
   getItemTypeLabel,
   getSidebarItemAs,
   getSlug,
@@ -89,16 +88,6 @@ describe('getSlug', () => {
 
   it('returns null when item is undefined', () => {
     expect(getSlug({})).toBeNull()
-  })
-})
-
-describe('getDefaultIconName', () => {
-  it('returns correct icon names for each type', () => {
-    expect(getDefaultIconName(SIDEBAR_ITEM_TYPES.notes)).toBe('FileText')
-    expect(getDefaultIconName(SIDEBAR_ITEM_TYPES.folders)).toBe('Folder')
-    expect(getDefaultIconName(SIDEBAR_ITEM_TYPES.gameMaps)).toBe('MapPin')
-    expect(getDefaultIconName(SIDEBAR_ITEM_TYPES.files)).toBe('File')
-    expect(getDefaultIconName(SIDEBAR_ITEM_TYPES.canvases)).toBe('Grid2x2Plus')
   })
 })
 
