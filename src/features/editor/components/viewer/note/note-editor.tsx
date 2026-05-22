@@ -11,6 +11,8 @@ import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useNoteEditorState } from '~/features/editor/hooks/useNoteEditorState'
 import { useScrollPersistence } from '~/features/editor/hooks/useScrollPersistence'
 import { useScrollToHeading } from '~/features/editor/hooks/useScrollToHeading'
+import { NoteFormattingToolbar } from '~/features/editor/components/formatting-toolbar/note-formatting-toolbar'
+import { useNoteEditorStore } from '~/features/editor/stores/note-editor-store'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import type { BlockNoteId } from 'shared/editor-blocks/types'
 
@@ -50,6 +52,7 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
   const editable = editorMode === EDITOR_MODE.EDITOR && canEdit
 
   const { onEditorChange, wrapperRef } = useNoteEditorState(note._id)
+  const editor = useNoteEditorStore((s) => s.editor)
   const viewportRef = useRef<HTMLDivElement>(null)
   const contextMenuHandledRef = useRef(false)
   const { hasHeadingParam } = useScrollToHeading(note.content)
@@ -121,6 +124,7 @@ export function NoteEditor({ item: note }: EditorViewerProps<NoteWithContent>) {
           onMouseDownCapture={handleWrapperMouseDownCapture}
           onContextMenu={handleWrapperContextMenu}
         >
+          <NoteFormattingToolbar editor={editor} visible={editable} />
           <ScrollArea
             viewportRef={viewportRef}
             className="flex-1 min-h-0"

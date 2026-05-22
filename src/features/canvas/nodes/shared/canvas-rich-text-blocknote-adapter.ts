@@ -1,33 +1,13 @@
 import { BlockNoteEditor } from '@blocknote/core'
-import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
-import { Selection } from '@tiptap/pm/state'
 import { canvasRichTextEditorSchema, cloneCanvasRichTextContent } from './canvas-rich-text-editor'
 import type { CanvasRichTextContent, CanvasRichTextEditor } from './canvas-rich-text-editor'
-import { CANVAS_BLOCK_TYPES } from '../../../../../shared/editor-blocks/blockRegistry'
-import { logger } from '~/shared/utils/logger'
+import {
+  captureBlockNoteSelection,
+  restoreBlockNoteSelection,
+} from '~/features/editor/utils/blocknote-selection-adapter'
+import type { BlockNoteSelectionSnapshot } from '~/features/editor/utils/blocknote-selection-adapter'
 
-export type CanvasRichTextSelectionSnapshot = Record<string, unknown>
-
-type CanvasRichTextFocusableEditor = Pick<CanvasRichTextEditor, 'focus'>
-type CanvasRichTextStyleReader = Pick<CanvasRichTextEditor, 'getActiveStyles'>
-
-interface CanvasRichTextEditorView {
-  dispatch: (transaction: unknown) => void
-  focus: () => void
-  state: {
-    doc: unknown
-    selection: {
-      toJSON: () => CanvasRichTextSelectionSnapshot
-    }
-    tr: {
-      setSelection: (selection: Selection) => unknown
-    }
-  }
-}
-
-const EMPTY_CANVAS_RICH_TEXT_PLACEHOLDERS = Object.fromEntries(
-  CANVAS_BLOCK_TYPES.map((type) => [type, '']),
-)
+export type CanvasRichTextSelectionSnapshot = BlockNoteSelectionSnapshot
 
 export function createCanvasRichTextBlockNoteEditor({
   ariaLabel,
@@ -42,7 +22,13 @@ export function createCanvasRichTextBlockNoteEditor({
     placeholders: {
       emptyDocument: '',
       default: '',
-      ...EMPTY_CANVAS_RICH_TEXT_PLACEHOLDERS,
+      paragraph: '',
+      heading: '',
+      bulletListItem: '',
+      numberedListItem: '',
+      checkListItem: '',
+      quote: '',
+      codeBlock: '',
     },
     domAttributes: {
       editor: {
@@ -63,56 +49,14 @@ export function observeCanvasRichTextChanges(
 }
 
 export function captureCanvasRichTextSelection(
-  editor: CanvasRichTextFocusableEditor | null,
+  editor: Pick<CanvasRichTextEditor, 'focus'> | null,
 ): CanvasRichTextSelectionSnapshot | null {
-  return getCanvasRichTextEditorView(editor)?.state.selection.toJSON() ?? null
+  return captureBlockNoteSelection(editor)
 }
 
 export function restoreCanvasRichTextSelection(
-  editor: CanvasRichTextFocusableEditor,
+  editor: Pick<CanvasRichTextEditor, 'focus'>,
   selectionSnapshot: CanvasRichTextSelectionSnapshot | null,
 ) {
-  const view = getCanvasRichTextEditorView(editor)
-  if (!view) {
-    editor.focus()
-    return
-  }
-
-  if (selectionSnapshot) {
-    try {
-      const nextSelection = Selection.fromJSON(view.state.doc as ProseMirrorNode, selectionSnapshot)
-      view.dispatch(view.state.tr.setSelection(nextSelection))
-    } catch (error) {
-      if (import.meta.env.DEV) {
-        logger.debug(
-          'Failed to restore selection from snapshot, falling back to current editor selection',
-          error,
-        )
-      }
-    }
-  }
-
-  view.focus()
-}
-
-export function readCanvasRichTextActiveStyles<TStyle extends string>(
-  editor: CanvasRichTextStyleReader,
-): Partial<Record<TStyle, boolean>> {
-  return editor.getActiveStyles() as Partial<Record<TStyle, boolean>>
-}
-
-function getCanvasRichTextEditorView(
-  editor: CanvasRichTextFocusableEditor | null,
-): CanvasRichTextEditorView | null {
-  // BlockNote does not expose the ProseMirror view publicly in the current version used here.
-  // Keep this private access isolated so future BlockNote upgrades have one place to revisit.
-  const tiptapEditor = (editor as { _tiptapEditor?: { view?: CanvasRichTextEditorView } } | null)
-    ?._tiptapEditor
-  if (editor && (!tiptapEditor || typeof tiptapEditor !== 'object')) {
-    // Fail fast if BlockNote changes the private `_tiptapEditor -> view` path this adapter relies on.
-    throw new TypeError(
-      `getCanvasRichTextEditorView: unexpected BlockNote editor shape ${JSON.stringify(editor)}`,
-    )
-  }
-  return tiptapEditor?.view ?? null
+  restoreBlockNoteSelection(editor, selectionSnapshot)
 }

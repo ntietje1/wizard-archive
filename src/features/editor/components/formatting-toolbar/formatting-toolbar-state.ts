@@ -6,8 +6,8 @@ export interface BlockTypeMenuChangeDetails {
 }
 
 interface BlockTypeMenuState {
-  open: boolean
   ignoreOpeningClickClose: boolean
+  open: boolean
 }
 
 export function getNextBlockTypeMenuState({

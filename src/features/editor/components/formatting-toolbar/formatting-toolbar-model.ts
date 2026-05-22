@@ -15,75 +15,96 @@ import {
   Italic,
   List,
   ListOrdered,
+  ListTree,
   Pilcrow,
   Quote,
   Strikethrough,
   Underline,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { textColorCanvasProperty } from '../../properties/canvas-property-definitions'
-import { areCanvasPaintValuesEqual } from '../../properties/canvas-paint-values'
-import type { CanvasPaintValue } from '../../properties/canvas-property-types'
-import { readCanvasRichTextActiveStyles } from './canvas-rich-text-blocknote-adapter'
-import { resolveCanvasRichTextSelectionTextColor } from './canvas-rich-text-selection-colors'
-import { CANVAS_BLOCK_TYPES } from '../../../../../shared/editor-blocks/blockRegistry'
+import { textColorCanvasProperty } from '~/features/canvas/properties/canvas-property-definitions'
+import { areCanvasPaintValuesEqual } from '~/features/canvas/properties/canvas-paint-values'
+import type { CanvasPaintValue } from '~/features/canvas/properties/canvas-property-types'
+import { readBlockNoteActiveStyles } from '~/features/editor/utils/blocknote-selection-adapter'
+import { resolveCanvasRichTextSelectionTextColor } from '~/features/canvas/nodes/shared/canvas-rich-text-selection-colors'
 
-type SupportedBlockType = (typeof CANVAS_BLOCK_TYPES)[number]
-
-const CANVAS_BLOCK_TYPE_SET = new Set<string>(CANVAS_BLOCK_TYPES)
+type SupportedBlockType =
+  | 'paragraph'
+  | 'heading'
+  | 'bulletListItem'
+  | 'numberedListItem'
+  | 'checkListItem'
+  | 'toggleListItem'
+  | 'quote'
+  | 'codeBlock'
 
 export type InlineStyle = 'bold' | 'italic' | 'underline' | 'strike'
 export type TextAlignment = 'left' | 'center' | 'right'
+export type FormattingToolbarMode = 'compact' | 'full'
 
 export type FormattingEditor = Pick<
   BlockNoteEditor<any, any, any>,
-  | 'focus'
+  | 'addStyles'
   | 'document'
+  | 'focus'
   | 'getActiveStyles'
   | 'getSelection'
   | 'getSelectionCutBlocks'
   | 'getTextCursorPosition'
   | 'isEditable'
-  | 'addStyles'
   | 'onChange'
   | 'onSelectionChange'
   | 'removeStyles'
   | 'replaceBlocks'
+  | 'schema'
   | 'toggleStyles'
   | 'transact'
   | 'updateBlock'
-  | 'schema'
 >
 
 type FormattingBlock = ReturnType<FormattingEditor['getTextCursorPosition']>['block']
 
 export interface BlockTypeOption {
+  icon: LucideIcon
   id: string
   label: string
-  type: SupportedBlockType
+  modes: ReadonlyArray<FormattingToolbarMode>
   props?: Record<string, boolean | number | string>
-  icon: LucideIcon
+  type: SupportedBlockType
+}
+
+export interface SelectedFileBlock {
+  caption: string
+  id: string
+  type: string
+  url: string
 }
 
 export interface ToolbarSnapshot {
   activeAlignment: TextAlignment | null
+  activeBackgroundColor: string
   activeBlockTypeId: string | null
   activeStyles: Partial<Record<InlineStyle, boolean>>
   activeTextColor: { kind: 'value'; value: CanvasPaintValue } | { kind: 'mixed' }
   canAlign: boolean
   canFormatInline: boolean
   hasTextSelection: boolean
+  selectedFileBlock: SelectedFileBlock | null
   supportedBlockTypes: Array<BlockTypeOption>
 }
 
+const ALL_MODES: ReadonlyArray<FormattingToolbarMode> = ['compact', 'full']
+const FULL_ONLY: ReadonlyArray<FormattingToolbarMode> = ['full']
+
 const BLOCK_TYPE_OPTIONS: Array<BlockTypeOption> = [
-  { id: 'paragraph', label: 'Paragraph', type: 'paragraph', icon: Pilcrow },
+  { id: 'paragraph', label: 'Paragraph', type: 'paragraph', icon: Pilcrow, modes: ALL_MODES },
   {
     id: 'heading-1',
     label: 'Heading 1',
     type: 'heading',
     props: { level: 1, isToggleable: false },
     icon: Heading1,
+    modes: ALL_MODES,
   },
   {
     id: 'heading-2',
@@ -91,6 +112,7 @@ const BLOCK_TYPE_OPTIONS: Array<BlockTypeOption> = [
     type: 'heading',
     props: { level: 2, isToggleable: false },
     icon: Heading2,
+    modes: ALL_MODES,
   },
   {
     id: 'heading-3',
@@ -98,6 +120,7 @@ const BLOCK_TYPE_OPTIONS: Array<BlockTypeOption> = [
     type: 'heading',
     props: { level: 3, isToggleable: false },
     icon: Heading3,
+    modes: ALL_MODES,
   },
   {
     id: 'heading-4',
@@ -105,6 +128,7 @@ const BLOCK_TYPE_OPTIONS: Array<BlockTypeOption> = [
     type: 'heading',
     props: { level: 4, isToggleable: false },
     icon: Heading4,
+    modes: ALL_MODES,
   },
   {
     id: 'heading-5',
@@ -112,6 +136,7 @@ const BLOCK_TYPE_OPTIONS: Array<BlockTypeOption> = [
     type: 'heading',
     props: { level: 5, isToggleable: false },
     icon: Heading5,
+    modes: ALL_MODES,
   },
   {
     id: 'heading-6',
@@ -119,12 +144,56 @@ const BLOCK_TYPE_OPTIONS: Array<BlockTypeOption> = [
     type: 'heading',
     props: { level: 6, isToggleable: false },
     icon: Heading6,
+    modes: ALL_MODES,
   },
-  { id: 'bullet-list', label: 'Bullet List', type: 'bulletListItem', icon: List },
-  { id: 'numbered-list', label: 'Numbered List', type: 'numberedListItem', icon: ListOrdered },
-  { id: 'check-list', label: 'Checklist', type: 'checkListItem', icon: CheckSquare },
-  { id: 'quote', label: 'Quote', type: 'quote', icon: Quote },
-  { id: 'code-block', label: 'Code Block', type: 'codeBlock', icon: Code2 },
+  {
+    id: 'toggle-heading-1',
+    label: 'Toggle Heading 1',
+    type: 'heading',
+    props: { level: 1, isToggleable: true },
+    icon: Heading1,
+    modes: FULL_ONLY,
+  },
+  {
+    id: 'toggle-heading-2',
+    label: 'Toggle Heading 2',
+    type: 'heading',
+    props: { level: 2, isToggleable: true },
+    icon: Heading2,
+    modes: FULL_ONLY,
+  },
+  {
+    id: 'toggle-heading-3',
+    label: 'Toggle Heading 3',
+    type: 'heading',
+    props: { level: 3, isToggleable: true },
+    icon: Heading3,
+    modes: FULL_ONLY,
+  },
+  { id: 'bullet-list', label: 'Bullet List', type: 'bulletListItem', icon: List, modes: ALL_MODES },
+  {
+    id: 'numbered-list',
+    label: 'Numbered List',
+    type: 'numberedListItem',
+    icon: ListOrdered,
+    modes: ALL_MODES,
+  },
+  {
+    id: 'check-list',
+    label: 'Checklist',
+    type: 'checkListItem',
+    icon: CheckSquare,
+    modes: ALL_MODES,
+  },
+  {
+    id: 'toggle-list',
+    label: 'Toggle List',
+    type: 'toggleListItem',
+    icon: ListTree,
+    modes: FULL_ONLY,
+  },
+  { id: 'quote', label: 'Quote', type: 'quote', icon: Quote, modes: ALL_MODES },
+  { id: 'code-block', label: 'Code Block', type: 'codeBlock', icon: Code2, modes: ALL_MODES },
 ]
 
 export const INLINE_STYLE_OPTIONS: Array<{
@@ -150,30 +219,39 @@ export const TEXT_ALIGNMENT_OPTIONS: Array<{
 
 export const EMPTY_TOOLBAR_SNAPSHOT: ToolbarSnapshot = {
   activeAlignment: null,
+  activeBackgroundColor: 'default',
   activeBlockTypeId: null,
   activeStyles: {},
   activeTextColor: { kind: 'value', value: textColorCanvasProperty.defaultValue },
   canAlign: false,
   canFormatInline: false,
   hasTextSelection: false,
+  selectedFileBlock: null,
   supportedBlockTypes: [],
 }
 
-export function getVisibleToolbarSnapshot(
-  editor: FormattingEditor | null,
-  visible: boolean,
-  defaultTextColor: string,
-): ToolbarSnapshot {
+export function getVisibleToolbarSnapshot({
+  defaultTextColor,
+  editor,
+  mode,
+  visible,
+}: {
+  defaultTextColor: string
+  editor: FormattingEditor | null
+  mode: FormattingToolbarMode
+  visible: boolean
+}): ToolbarSnapshot {
   if (!editor || !visible || !editor.isEditable) {
     return EMPTY_TOOLBAR_SNAPSHOT
   }
 
-  return getToolbarSnapshot(editor, defaultTextColor)
+  return getToolbarSnapshot(editor, defaultTextColor, mode)
 }
 
 export function toolbarSnapshotsEqual(current: ToolbarSnapshot, next: ToolbarSnapshot) {
   if (
     current.activeAlignment !== next.activeAlignment ||
+    current.activeBackgroundColor !== next.activeBackgroundColor ||
     current.activeBlockTypeId !== next.activeBlockTypeId ||
     current.canAlign !== next.canAlign ||
     current.canFormatInline !== next.canFormatInline ||
@@ -191,6 +269,10 @@ export function toolbarSnapshotsEqual(current: ToolbarSnapshot, next: ToolbarSna
     next.activeTextColor.kind === 'value' &&
     !areCanvasPaintValuesEqual(current.activeTextColor.value, next.activeTextColor.value)
   ) {
+    return false
+  }
+
+  if (!selectedFileBlocksEqual(current.selectedFileBlock, next.selectedFileBlock)) {
     return false
   }
 
@@ -232,33 +314,42 @@ export function styleExistsInSchema(editor: FormattingEditor, style: InlineStyle
   )
 }
 
-export function textColorStyleExistsInSchema(editor: FormattingEditor) {
-  const styleDefinition = editor.schema.styleSchema.textColor
+export function stringStyleExistsInSchema(
+  editor: FormattingEditor,
+  style: 'backgroundColor' | 'textColor',
+) {
+  const styleDefinition = editor.schema.styleSchema[style]
   return (
-    !!styleDefinition &&
-    styleDefinition.type === 'textColor' &&
-    styleDefinition.propSchema === 'string'
+    !!styleDefinition && styleDefinition.type === style && styleDefinition.propSchema === 'string'
   )
 }
 
-function getToolbarSnapshot(editor: FormattingEditor, defaultTextColor: string): ToolbarSnapshot {
+function getToolbarSnapshot(
+  editor: FormattingEditor,
+  defaultTextColor: string,
+  mode: FormattingToolbarMode,
+): ToolbarSnapshot {
   const selection = editor.getSelection()
   const hasTextSelection = selection !== undefined
   const selectedBlocks = getSelectedBlocks(editor)
   const selectedTextBlocks = hasTextSelection
     ? editor.getSelectionCutBlocks().blocks
     : selectedBlocks
-  const supportedBlockTypes = BLOCK_TYPE_OPTIONS.filter((option) =>
-    blockTypeOptionExists(editor, option),
+  const supportedBlockTypes = BLOCK_TYPE_OPTIONS.filter(
+    (option) => option.modes.includes(mode) && blockTypeOptionExists(editor, option),
   )
-  const activeStyles = readCanvasRichTextActiveStyles<InlineStyle>(editor)
+  const activeStyles = readBlockNoteActiveStyles<InlineStyle>(editor)
   const alignableBlocks = selectedBlocks.filter((block) =>
     blockTypeSupportsProp(editor, block.type, 'textAlignment'),
   )
-  const activeTextColor = editor.getActiveStyles().textColor
+  const editorActiveStyles = editor.getActiveStyles()
+  const activeTextColor = editorActiveStyles.textColor
+  const activeBackgroundColor = editorActiveStyles.backgroundColor
 
   return {
     activeAlignment: getActiveAlignment(alignableBlocks),
+    activeBackgroundColor:
+      typeof activeBackgroundColor === 'string' ? activeBackgroundColor : 'default',
     activeBlockTypeId: getActiveBlockTypeId(selectedBlocks, supportedBlockTypes),
     activeStyles,
     activeTextColor: resolveCanvasRichTextSelectionTextColor({
@@ -270,6 +361,7 @@ function getToolbarSnapshot(editor: FormattingEditor, defaultTextColor: string):
     canAlign: alignableBlocks.length > 0,
     canFormatInline: selectedBlocks.some((block) => block.content !== undefined),
     hasTextSelection,
+    selectedFileBlock: getSelectedFileBlock(editor, selectedBlocks),
     supportedBlockTypes,
   }
 }
@@ -312,10 +404,6 @@ function getActiveBlockTypeId(
 }
 
 function blockTypeOptionExists(editor: FormattingEditor, option: BlockTypeOption) {
-  if (!CANVAS_BLOCK_TYPE_SET.has(option.type)) {
-    return false
-  }
-
   const blockDefinition = editor.schema.blockSchema[option.type]
   if (!blockDefinition) {
     return false
@@ -334,4 +422,44 @@ function matchesBlockTypeOption(block: FormattingBlock, option: BlockTypeOption)
   return Object.entries(option.props ?? {}).every(([propName, propValue]) => {
     return block.props[propName] === propValue
   })
+}
+
+function getSelectedFileBlock(
+  editor: FormattingEditor,
+  selectedBlocks: Array<FormattingBlock>,
+): SelectedFileBlock | null {
+  if (selectedBlocks.length !== 1) {
+    return null
+  }
+
+  const block = selectedBlocks[0]
+  if (!blockTypeSupportsProp(editor, block.type, 'url')) {
+    return null
+  }
+
+  const url = block.props.url
+  if (typeof url !== 'string') {
+    return null
+  }
+
+  const caption = blockTypeSupportsProp(editor, block.type, 'caption') ? block.props.caption : ''
+
+  return {
+    caption: typeof caption === 'string' ? caption : '',
+    id: block.id,
+    type: block.type,
+    url,
+  }
+}
+
+function selectedFileBlocksEqual(
+  current: SelectedFileBlock | null,
+  next: SelectedFileBlock | null,
+) {
+  return (
+    current?.id === next?.id &&
+    current?.caption === next?.caption &&
+    current?.type === next?.type &&
+    current?.url === next?.url
+  )
 }
