@@ -281,8 +281,8 @@
   --bn-colors-hovered-background: var(--accent);
 
   /* Selected state */
-  --bn-colors-selected-text: var(--primary-foreground);
-  --bn-colors-selected-background: var(--primary);
+  --bn-colors-selected-text: currentcolor;
+  --bn-colors-selected-background: color-mix(in srgb, var(--primary) 33%, transparent);
 
   /* Disabled state */
   --bn-colors-disabled-text: var(--muted-foreground);
@@ -443,96 +443,256 @@
   height: 100%;
 }
 
-:root .canvas-rich-text-editor [data-style-type='textColor'],
-:root .canvas-rich-text-editor [data-text-color],
-:root .canvas-rich-text-editor .bn-block:has(> .bn-block-content[data-text-color]) {
-  color: var(--canvas-rich-text-color, inherit);
-}
-
-:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--background)'],
-:root .canvas-rich-text-editor [data-text-color='var(--background)'],
+:root :is(.note-editor-surface, .canvas-rich-text-editor) [data-style-type='textColor'],
+:root :is(.note-editor-surface, .canvas-rich-text-editor) [data-text-color],
 :root
-  .canvas-rich-text-editor
-  .bn-block:has(> .bn-block-content[data-text-color='var(--background)']) {
-  --canvas-rich-text-color: var(--background);
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  .bn-block:has(> .bn-block-content[data-text-color]) {
+  color: var(--blocknote-format-text-color, inherit);
 }
 
-:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--foreground)'],
-:root .canvas-rich-text-editor [data-text-color='var(--foreground)'],
+:root :is(.note-editor-surface, .canvas-rich-text-editor) [data-style-type='backgroundColor'],
+:root :is(.note-editor-surface, .canvas-rich-text-editor) [data-background-color],
 :root
-  .canvas-rich-text-editor
-  .bn-block:has(> .bn-block-content[data-text-color='var(--foreground)']) {
-  --canvas-rich-text-color: var(--foreground);
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  .bn-block:has(> .bn-block-content[data-background-color]) {
+  background-color: var(--blocknote-format-background-color, transparent);
 }
 
-:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--border)'],
-:root .canvas-rich-text-editor [data-text-color='var(--border)'],
-:root .canvas-rich-text-editor .bn-block:has(> .bn-block-content[data-text-color='var(--border)']) {
-  --canvas-rich-text-color: var(--border);
-}
-
-:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--t-gray)'],
-:root .canvas-rich-text-editor [data-text-color='var(--t-gray)'],
-:root .canvas-rich-text-editor .bn-block:has(> .bn-block-content[data-text-color='var(--t-gray)']) {
-  --canvas-rich-text-color: var(--t-gray);
-}
-
-:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--t-brown)'],
-:root .canvas-rich-text-editor [data-text-color='var(--t-brown)'],
 :root
-  .canvas-rich-text-editor
-  .bn-block:has(> .bn-block-content[data-text-color='var(--t-brown)']) {
-  --canvas-rich-text-color: var(--t-brown);
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  :is(
+    [data-style-type='textColor'][data-value='var(--foreground)'],
+    [data-text-color='var(--foreground)'],
+    .bn-block:has(> .bn-block-content[data-text-color='var(--foreground)'])
+  ) {
+  --blocknote-format-text-color: var(--foreground);
 }
 
-:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--t-red)'],
-:root .canvas-rich-text-editor [data-text-color='var(--t-red)'],
-:root .canvas-rich-text-editor .bn-block:has(> .bn-block-content[data-text-color='var(--t-red)']) {
-  --canvas-rich-text-color: var(--t-red);
-}
-
-:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--t-orange)'],
-:root .canvas-rich-text-editor [data-text-color='var(--t-orange)'],
 :root
-  .canvas-rich-text-editor
-  .bn-block:has(> .bn-block-content[data-text-color='var(--t-orange)']) {
-  --canvas-rich-text-color: var(--t-orange);
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  :is(
+    [data-style-type='textColor'][data-value='var(--border)'],
+    [data-text-color='var(--border)'],
+    .bn-block:has(> .bn-block-content[data-text-color='var(--border)'])
+  ) {
+  --blocknote-format-text-color: var(--border);
 }
 
-:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--t-yellow)'],
-:root .canvas-rich-text-editor [data-text-color='var(--t-yellow)'],
 :root
-  .canvas-rich-text-editor
-  .bn-block:has(> .bn-block-content[data-text-color='var(--t-yellow)']) {
-  --canvas-rich-text-color: var(--t-yellow);
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  :is(
+    [data-style-type='textColor'][data-value='var(--t-gray)'],
+    [data-text-color='var(--t-gray)'],
+    .bn-block:has(> .bn-block-content[data-text-color='var(--t-gray)'])
+  ) {
+  --blocknote-format-text-color: var(--t-gray);
 }
 
-:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--t-green)'],
-:root .canvas-rich-text-editor [data-text-color='var(--t-green)'],
 :root
-  .canvas-rich-text-editor
-  .bn-block:has(> .bn-block-content[data-text-color='var(--t-green)']) {
-  --canvas-rich-text-color: var(--t-green);
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  :is(
+    [data-style-type='textColor'][data-value='var(--t-brown)'],
+    [data-text-color='var(--t-brown)'],
+    .bn-block:has(> .bn-block-content[data-text-color='var(--t-brown)'])
+  ) {
+  --blocknote-format-text-color: var(--t-brown);
 }
 
-:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--t-blue)'],
-:root .canvas-rich-text-editor [data-text-color='var(--t-blue)'],
-:root .canvas-rich-text-editor .bn-block:has(> .bn-block-content[data-text-color='var(--t-blue)']) {
-  --canvas-rich-text-color: var(--t-blue);
-}
-
-:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--t-purple)'],
-:root .canvas-rich-text-editor [data-text-color='var(--t-purple)'],
 :root
-  .canvas-rich-text-editor
-  .bn-block:has(> .bn-block-content[data-text-color='var(--t-purple)']) {
-  --canvas-rich-text-color: var(--t-purple);
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  :is(
+    [data-style-type='textColor'][data-value='var(--t-red)'],
+    [data-text-color='var(--t-red)'],
+    .bn-block:has(> .bn-block-content[data-text-color='var(--t-red)'])
+  ) {
+  --blocknote-format-text-color: var(--t-red);
 }
 
-:root .canvas-rich-text-editor [data-style-type='textColor'][data-value='var(--t-pink)'],
-:root .canvas-rich-text-editor [data-text-color='var(--t-pink)'],
-:root .canvas-rich-text-editor .bn-block:has(> .bn-block-content[data-text-color='var(--t-pink)']) {
-  --canvas-rich-text-color: var(--t-pink);
+:root
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  :is(
+    [data-style-type='textColor'][data-value='var(--t-orange)'],
+    [data-text-color='var(--t-orange)'],
+    .bn-block:has(> .bn-block-content[data-text-color='var(--t-orange)'])
+  ) {
+  --blocknote-format-text-color: var(--t-orange);
+}
+
+:root
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  :is(
+    [data-style-type='textColor'][data-value='var(--t-yellow)'],
+    [data-text-color='var(--t-yellow)'],
+    .bn-block:has(> .bn-block-content[data-text-color='var(--t-yellow)'])
+  ) {
+  --blocknote-format-text-color: var(--t-yellow);
+}
+
+:root
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  :is(
+    [data-style-type='textColor'][data-value='var(--t-green)'],
+    [data-text-color='var(--t-green)'],
+    .bn-block:has(> .bn-block-content[data-text-color='var(--t-green)'])
+  ) {
+  --blocknote-format-text-color: var(--t-green);
+}
+
+:root
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  :is(
+    [data-style-type='textColor'][data-value='var(--t-blue)'],
+    [data-text-color='var(--t-blue)'],
+    .bn-block:has(> .bn-block-content[data-text-color='var(--t-blue)'])
+  ) {
+  --blocknote-format-text-color: var(--t-blue);
+}
+
+:root
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  :is(
+    [data-style-type='textColor'][data-value='var(--t-purple)'],
+    [data-text-color='var(--t-purple)'],
+    .bn-block:has(> .bn-block-content[data-text-color='var(--t-purple)'])
+  ) {
+  --blocknote-format-text-color: var(--t-purple);
+}
+
+:root
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  :is(
+    [data-style-type='textColor'][data-value='var(--t-pink)'],
+    [data-text-color='var(--t-pink)'],
+    .bn-block:has(> .bn-block-content[data-text-color='var(--t-pink)'])
+  ) {
+  --blocknote-format-text-color: var(--t-pink);
+}
+
+:root
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  :is(
+    [data-style-type='backgroundColor'][data-value='var(--border)'],
+    [data-background-color='var(--border)'],
+    .bn-block:has(> .bn-block-content[data-background-color='var(--border)'])
+  ) {
+  --blocknote-format-background-color: var(--border);
+}
+
+:root
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  :is(
+    [data-style-type='backgroundColor'][data-value='var(--bg-gray)'],
+    [data-background-color='var(--bg-gray)'],
+    .bn-block:has(> .bn-block-content[data-background-color='var(--bg-gray)'])
+  ) {
+  --blocknote-format-background-color: var(--bg-gray);
+}
+
+:root
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  :is(
+    [data-style-type='backgroundColor'][data-value='var(--bg-brown)'],
+    [data-background-color='var(--bg-brown)'],
+    .bn-block:has(> .bn-block-content[data-background-color='var(--bg-brown)'])
+  ) {
+  --blocknote-format-background-color: var(--bg-brown);
+}
+
+:root
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  :is(
+    [data-style-type='backgroundColor'][data-value='var(--bg-red)'],
+    [data-background-color='var(--bg-red)'],
+    .bn-block:has(> .bn-block-content[data-background-color='var(--bg-red)'])
+  ) {
+  --blocknote-format-background-color: var(--bg-red);
+}
+
+:root
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  :is(
+    [data-style-type='backgroundColor'][data-value='var(--bg-orange)'],
+    [data-background-color='var(--bg-orange)'],
+    .bn-block:has(> .bn-block-content[data-background-color='var(--bg-orange)'])
+  ) {
+  --blocknote-format-background-color: var(--bg-orange);
+}
+
+:root
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  :is(
+    [data-style-type='backgroundColor'][data-value='var(--bg-yellow)'],
+    [data-background-color='var(--bg-yellow)'],
+    .bn-block:has(> .bn-block-content[data-background-color='var(--bg-yellow)'])
+  ) {
+  --blocknote-format-background-color: var(--bg-yellow);
+}
+
+:root
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  :is(
+    [data-style-type='backgroundColor'][data-value='var(--bg-green)'],
+    [data-background-color='var(--bg-green)'],
+    .bn-block:has(> .bn-block-content[data-background-color='var(--bg-green)'])
+  ) {
+  --blocknote-format-background-color: var(--bg-green);
+}
+
+:root
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  :is(
+    [data-style-type='backgroundColor'][data-value='var(--bg-blue)'],
+    [data-background-color='var(--bg-blue)'],
+    .bn-block:has(> .bn-block-content[data-background-color='var(--bg-blue)'])
+  ) {
+  --blocknote-format-background-color: var(--bg-blue);
+}
+
+:root
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  :is(
+    [data-style-type='backgroundColor'][data-value='var(--bg-purple)'],
+    [data-background-color='var(--bg-purple)'],
+    .bn-block:has(> .bn-block-content[data-background-color='var(--bg-purple)'])
+  ) {
+  --blocknote-format-background-color: var(--bg-purple);
+}
+
+:root
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  :is(
+    [data-style-type='backgroundColor'][data-value='var(--bg-pink)'],
+    [data-background-color='var(--bg-pink)'],
+    .bn-block:has(> .bn-block-content[data-background-color='var(--bg-pink)'])
+  ) {
+  --blocknote-format-background-color: var(--bg-pink);
+}
+
+:root :is(.note-editor-surface, .canvas-rich-text-editor) .bn-editor ::selection {
+  background-color: var(--bn-colors-selected-background);
+}
+
+:root :is(.note-editor-surface, .canvas-rich-text-editor) .bn-editor {
+  caret-color: var(--formatting-pending-text-color, auto);
+}
+
+:root :is(.note-editor-surface, .canvas-rich-text-editor) [data-show-selection] {
+  background-color: var(--blocknote-format-background-color, transparent);
+  background-image: linear-gradient(
+    var(--bn-colors-selected-background),
+    var(--bn-colors-selected-background)
+  );
+}
+
+:root
+  :is(.note-editor-surface, .canvas-rich-text-editor)
+  [data-show-selection]
+  :is([data-style-type='backgroundColor'], [data-background-color]) {
+  background-image: linear-gradient(
+    var(--bn-colors-selected-background),
+    var(--bn-colors-selected-background)
+  );
 }
 
 @layer utilities {

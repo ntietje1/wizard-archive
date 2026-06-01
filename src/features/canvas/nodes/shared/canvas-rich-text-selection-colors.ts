@@ -17,7 +17,7 @@ export function resolveCanvasRichTextSelectionTextColor({
   selectedBlocks: Array<CanvasRichTextColorBlock>
 }): CanvasPropertyValue<CanvasPaintValue> {
   if (!hasTextSelection) {
-    return { kind: 'value', value: { color: defaultTextColor, opacity: 100 } }
+    return { kind: 'value', value: { color: activeTextColor ?? defaultTextColor, opacity: 100 } }
   }
 
   const { colors, hasUnstyledText } = collectSelectedBlockTextColors(selectedBlocks)

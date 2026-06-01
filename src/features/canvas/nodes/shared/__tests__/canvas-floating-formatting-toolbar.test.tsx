@@ -1,23 +1,19 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
-import { Schema } from '@tiptap/pm/model'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { applyCanvasToolbarTextAlignment } from '../canvas-floating-formatting-toolbar-commands'
 import { CanvasFloatingFormattingToolbar } from '../canvas-floating-formatting-toolbar'
+import { applyFormattingToolbarTextAlignment as applyCanvasToolbarTextAlignment } from '~/features/editor/components/formatting-toolbar/formatting-toolbar-commands'
 import {
   EMPTY_TOOLBAR_SNAPSHOT,
   toolbarSnapshotsEqual,
-} from '../canvas-floating-formatting-toolbar-model'
-import { getNextBlockTypeMenuState } from '../canvas-floating-formatting-toolbar-state'
+} from '~/features/editor/components/formatting-toolbar/formatting-toolbar-model'
+import { getNextBlockTypeMenuState } from '~/features/editor/components/formatting-toolbar/formatting-toolbar-state'
+import {
+  createFormattingToolbarTestEditor as createEditor,
+  createHeadingBlock,
+  createParagraphBlock,
+} from '~/features/editor/components/formatting-toolbar/__tests__/formatting-toolbar-test-utils'
 import { CANVAS_SELECTION_OVERLAY_Z_INDEX } from '../../../components/canvas-screen-space-overlay-utils'
-
-type TestBlock = {
-  children?: Array<TestBlock>
-  content?: Array<unknown>
-  id: string
-  props: Record<string, unknown>
-  type: string
-}
 
 describe('CanvasFloatingFormattingToolbar', () => {
   it('compares formatting toolbar snapshots by rendered state', () => {
@@ -163,6 +159,12 @@ describe('CanvasFloatingFormattingToolbar', () => {
     expect(
       await screen.findByRole('menuitemradio', { name: 'Select Red text color' }),
     ).toBeInTheDocument()
+
+    await user.keyboard('{Escape}')
+    await user.click(screen.getByRole('button', { name: 'Highlight color' }))
+    expect(
+      await screen.findByRole('menuitemradio', { name: 'Select Red highlight color' }),
+    ).toBeInTheDocument()
   })
 
   it('ignores only the click-close from the same opening mouse gesture', () => {
@@ -233,16 +235,20 @@ describe('CanvasFloatingFormattingToolbar', () => {
 
     const blockTypeTrigger = screen.getByRole('button', { name: 'Block type' })
     const textColorTrigger = screen.getByRole('button', { name: 'Text color' })
+    const highlightColorTrigger = screen.getByRole('button', { name: 'Highlight color' })
     const blockTypeEvent = new MouseEvent('pointerdown', { bubbles: true, cancelable: true })
     const textColorEvent = new MouseEvent('pointerdown', { bubbles: true, cancelable: true })
+    const highlightColorEvent = new MouseEvent('pointerdown', { bubbles: true, cancelable: true })
 
     act(() => {
       blockTypeTrigger.dispatchEvent(blockTypeEvent)
       textColorTrigger.dispatchEvent(textColorEvent)
+      highlightColorTrigger.dispatchEvent(highlightColorEvent)
     })
 
     expect(blockTypeEvent.defaultPrevented).toBe(false)
     expect(textColorEvent.defaultPrevented).toBe(false)
+    expect(highlightColorEvent.defaultPrevented).toBe(false)
   })
 
   it('prevents text color swatch pointer down from blurring the active editor selection', () => {
@@ -286,12 +292,46 @@ describe('CanvasFloatingFormattingToolbar', () => {
 
     const palette = screen
       .getByRole('menuitemradio', { name: 'Select Red text color' })
-      .closest('[data-slot="dropdown-menu-content"]')
+      .closest('[data-formatting-color-palette]')
 
     const toolbarWrapperZIndex = readNearestAncestorZIndex(toolbar, 'toolbar wrapper')
 
     expect(readZIndex(palette, 'text color palette')).toBeGreaterThan(toolbarWrapperZIndex)
     expect(toolbarWrapperZIndex).toBeGreaterThan(readZIndex(overlay, 'selection overlay'))
+  })
+
+  it('applies preset highlight color to selected rich text', () => {
+    const editor = createEditor({
+      activeStyles: { backgroundColor: 'var(--bg-blue)' },
+      selectedBlocks: [createParagraphBlock('paragraph-1', { textAlignment: 'left' })],
+    })
+
+    render(<CanvasFloatingFormattingToolbar editor={editor as never} visible />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Highlight color' }))
+
+    expect(
+      screen.getByRole('menuitemradio', { name: 'Select Blue highlight color' }),
+    ).toHaveAttribute('aria-checked', 'true')
+
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Select Red highlight color' }))
+
+    expect(editor.addStyles).toHaveBeenCalledWith({ backgroundColor: 'var(--bg-red)' })
+    expect(editor.removeStyles).not.toHaveBeenCalled()
+  })
+
+  it('clears selected rich text highlight color from the canvas toolbar', () => {
+    const editor = createEditor({
+      activeStyles: { backgroundColor: 'var(--bg-red)' },
+      selectedBlocks: [createParagraphBlock('paragraph-1', { textAlignment: 'left' })],
+    })
+
+    render(<CanvasFloatingFormattingToolbar editor={editor as never} visible />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Highlight color' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Select No highlight' }))
+
+    expect(editor.removeStyles).toHaveBeenCalledWith({ backgroundColor: undefined })
   })
 
   it('applies preset text color to selected rich text', () => {
@@ -564,25 +604,8 @@ describe('CanvasFloatingFormattingToolbar', () => {
       ],
     })
 
-    render(
-      <CanvasFloatingFormattingToolbar
-        editor={editor as never}
-        visible
-        defaultTextColor="var(--foreground)"
-        onDefaultTextColorChange={vi.fn()}
-      />,
-    )
-
-    fireEvent.click(screen.getByRole('button', { name: 'Text color (mixed values)' }))
-
-    expect(screen.getByRole('menuitemradio', { name: 'Select Blue text color' })).toHaveAttribute(
-      'aria-checked',
-      'false',
-    )
-    expect(screen.getByRole('menuitemradio', { name: 'Select Red text color' })).toHaveAttribute(
-      'aria-checked',
-      'false',
-    )
+    renderToolbarAndOpenTextColor(editor, 'Text color (mixed values)')
+    expectMixedTextColorOptions()
   })
 
   it('shows mixed text color state when nested selected rich text contains multiple colors', () => {
@@ -604,25 +627,8 @@ describe('CanvasFloatingFormattingToolbar', () => {
       ],
     })
 
-    render(
-      <CanvasFloatingFormattingToolbar
-        editor={editor as never}
-        visible
-        defaultTextColor="var(--foreground)"
-        onDefaultTextColorChange={vi.fn()}
-      />,
-    )
-
-    fireEvent.click(screen.getByRole('button', { name: 'Text color (mixed values)' }))
-
-    expect(screen.getByRole('menuitemradio', { name: 'Select Blue text color' })).toHaveAttribute(
-      'aria-checked',
-      'false',
-    )
-    expect(screen.getByRole('menuitemradio', { name: 'Select Red text color' })).toHaveAttribute(
-      'aria-checked',
-      'false',
-    )
+    renderToolbarAndOpenTextColor(editor, 'Text color (mixed values)')
+    expectMixedTextColorOptions()
   })
 
   it('uses nested selected rich-text colors when the parent block has no text', () => {
@@ -644,16 +650,7 @@ describe('CanvasFloatingFormattingToolbar', () => {
       ],
     })
 
-    render(
-      <CanvasFloatingFormattingToolbar
-        editor={editor as never}
-        visible
-        defaultTextColor="var(--foreground)"
-        onDefaultTextColorChange={vi.fn()}
-      />,
-    )
-
-    fireEvent.click(screen.getByRole('button', { name: 'Text color' }))
+    renderToolbarAndOpenTextColor(editor)
 
     expect(screen.getByRole('menuitemradio', { name: 'Select Blue text color' })).toHaveAttribute(
       'aria-checked',
@@ -680,16 +677,7 @@ describe('CanvasFloatingFormattingToolbar', () => {
       ],
     })
 
-    render(
-      <CanvasFloatingFormattingToolbar
-        editor={editor as never}
-        visible
-        defaultTextColor="var(--foreground)"
-        onDefaultTextColorChange={vi.fn()}
-      />,
-    )
-
-    fireEvent.click(screen.getByRole('button', { name: 'Text color' }))
+    renderToolbarAndOpenTextColor(editor)
 
     expect(screen.getByRole('menuitemradio', { name: 'Select Red text color' })).toHaveAttribute(
       'aria-checked',
@@ -697,6 +685,30 @@ describe('CanvasFloatingFormattingToolbar', () => {
     )
   })
 })
+
+function renderToolbarAndOpenTextColor(editor: unknown, triggerName = 'Text color') {
+  render(
+    <CanvasFloatingFormattingToolbar
+      editor={editor as never}
+      visible
+      defaultTextColor="var(--foreground)"
+      onDefaultTextColorChange={vi.fn()}
+    />,
+  )
+
+  fireEvent.click(screen.getByRole('button', { name: triggerName }))
+}
+
+function expectMixedTextColorOptions() {
+  expect(screen.getByRole('menuitemradio', { name: 'Select Blue text color' })).toHaveAttribute(
+    'aria-checked',
+    'false',
+  )
+  expect(screen.getByRole('menuitemradio', { name: 'Select Red text color' })).toHaveAttribute(
+    'aria-checked',
+    'false',
+  )
+}
 
 function readZIndex(element: Element | null, label = 'element'): number {
   expect(element, `${label} should exist before reading z-index`).not.toBeNull()
@@ -719,192 +731,4 @@ function readNearestAncestorZIndex(element: Element, label: string): number {
   }
 
   expect.fail(`${label} should have an ancestor with a numeric z-index`)
-}
-
-const proseMirrorTestSchema = new Schema({
-  nodes: {
-    doc: { content: 'block+' },
-    paragraph: {
-      content: 'text*',
-      group: 'block',
-      parseDOM: [{ tag: 'p' }],
-      toDOM: () => ['p', 0],
-    },
-    text: { group: 'inline' },
-  },
-})
-
-function createProseMirrorTestDoc() {
-  return proseMirrorTestSchema.node('doc', null, [
-    proseMirrorTestSchema.node('paragraph', null, [proseMirrorTestSchema.text('hello')]),
-  ])
-}
-
-function createEditor({
-  activeStyles,
-  hasTextSelection = true,
-  selectionSnapshot = null,
-  selectedCutBlocks,
-  selectedBlocks,
-}: {
-  activeStyles: Record<string, unknown>
-  hasTextSelection?: boolean
-  selectionSnapshot?: Record<string, unknown> | null
-  selectedCutBlocks?: Array<TestBlock>
-  selectedBlocks: Array<TestBlock>
-}) {
-  let currentActiveStyles = activeStyles
-  let currentSelectedBlocks = selectedBlocks
-  let currentSelectedCutBlocks = selectedCutBlocks ?? selectedBlocks
-  const selectionListeners = new Set<() => void>()
-  const changeListeners = new Set<() => void>()
-  const focus = vi.fn()
-
-  const editor = {
-    _tiptapEditor: {
-      view: {
-        dispatch: vi.fn(),
-        focus,
-        state: {
-          doc: createProseMirrorTestDoc(),
-          selection: {
-            toJSON: vi.fn(() => selectionSnapshot),
-          },
-          tr: {
-            setSelection: vi.fn((selection: unknown) => selection),
-          },
-        },
-      },
-    },
-    focus,
-    document: currentSelectedBlocks,
-    getActiveStyles: vi.fn(() => currentActiveStyles),
-    getSelection: vi.fn(() => (hasTextSelection ? { blocks: currentSelectedBlocks } : undefined)),
-    getSelectionCutBlocks: vi.fn(() => ({
-      _meta: { endPos: 0, startPos: 0 },
-      blockCutAtEnd: undefined,
-      blockCutAtStart: undefined,
-      blocks: currentSelectedCutBlocks,
-    })),
-    getTextCursorPosition: vi.fn(() => ({
-      block: currentSelectedBlocks[0],
-      nextBlock: undefined,
-      parentBlock: undefined,
-      prevBlock: undefined,
-    })),
-    isEditable: true,
-    onChange: vi.fn((callback: () => void) => {
-      changeListeners.add(callback)
-      return () => changeListeners.delete(callback)
-    }),
-    onSelectionChange: vi.fn((callback: () => void) => {
-      selectionListeners.add(callback)
-      return () => selectionListeners.delete(callback)
-    }),
-    schema: {
-      blockSchema: {
-        bulletListItem: {
-          propSchema: {
-            backgroundColor: {},
-            textAlignment: {},
-            textColor: {},
-          },
-        },
-        checkListItem: {
-          propSchema: {
-            backgroundColor: {},
-            checked: {},
-            textAlignment: {},
-            textColor: {},
-          },
-        },
-        codeBlock: {
-          propSchema: {
-            language: {},
-          },
-        },
-        heading: {
-          propSchema: {
-            backgroundColor: {},
-            isToggleable: {},
-            level: {},
-            textAlignment: {},
-            textColor: {},
-          },
-        },
-        numberedListItem: {
-          propSchema: {
-            backgroundColor: {},
-            start: {},
-            textAlignment: {},
-            textColor: {},
-          },
-        },
-        paragraph: {
-          propSchema: {
-            backgroundColor: {},
-            textAlignment: {},
-            textColor: {},
-          },
-        },
-        quote: {
-          propSchema: {
-            backgroundColor: {},
-            textColor: {},
-          },
-        },
-      },
-      styleSchema: {
-        backgroundColor: { propSchema: 'string', type: 'backgroundColor' },
-        bold: { propSchema: 'boolean', type: 'bold' },
-        italic: { propSchema: 'boolean', type: 'italic' },
-        strike: { propSchema: 'boolean', type: 'strike' },
-        textColor: { propSchema: 'string', type: 'textColor' },
-        underline: { propSchema: 'boolean', type: 'underline' },
-      },
-    },
-    addStyles: vi.fn(),
-    removeStyles: vi.fn(),
-    replaceBlocks: vi.fn(),
-    setActiveStyles(nextActiveStyles: Record<string, unknown>) {
-      currentActiveStyles = nextActiveStyles
-      changeListeners.forEach((listener) => listener())
-    },
-    setSelection(nextSelectedBlocks: Array<TestBlock>) {
-      currentSelectedBlocks = nextSelectedBlocks
-      currentSelectedCutBlocks = nextSelectedBlocks
-      selectionListeners.forEach((listener) => listener())
-    },
-    toggleStyles: vi.fn(),
-    transact: vi.fn((callback: () => void) => callback()),
-    updateBlock: vi.fn(),
-  }
-
-  return editor
-}
-
-function createParagraphBlock(
-  id: string,
-  props: Record<string, unknown> & { content?: Array<unknown> },
-): TestBlock {
-  const { content, ...blockProps } = props
-  return {
-    id,
-    type: 'paragraph',
-    props: blockProps,
-    content: content ?? [{ text: 'hello' }],
-  }
-}
-
-function createHeadingBlock(id: string, level: number, textAlignment: string): TestBlock {
-  return {
-    id,
-    type: 'heading',
-    props: {
-      level,
-      isToggleable: false,
-      textAlignment,
-    },
-    content: [{ text: 'heading' }],
-  }
 }

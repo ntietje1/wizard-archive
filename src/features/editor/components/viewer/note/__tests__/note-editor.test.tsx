@@ -5,10 +5,12 @@ import { NoteEditor } from '../note-editor'
 import type { NoteWithContent } from 'convex/notes/types'
 import type { ReactNode } from 'react'
 import { EDITOR_MODE } from 'convex/editors/types'
-import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
+import { SIDEBAR_ITEM_TYPES } from 'convex/sidebarItems/types/baseTypes'
 import { testId } from '~/test/helpers/test-id'
 
 const noteContentSpy = vi.hoisted(() => vi.fn())
+const noteFormattingToolbarSpy = vi.hoisted(() => vi.fn())
+const mockUseEditorMode = vi.hoisted(() => vi.fn())
 
 vi.mock('@tanstack/react-router', () => ({
   ClientOnly: ({ children }: { children: ReactNode }) => children,
@@ -22,6 +24,13 @@ vi.mock('../../../note-content', () => ({
         {props.children}
       </div>
     )
+  },
+}))
+
+vi.mock('~/features/editor/components/formatting-toolbar/note-formatting-toolbar', () => ({
+  NoteFormattingToolbar: (props: { editor: unknown; visible: boolean }) => {
+    noteFormattingToolbarSpy(props)
+    return <div data-testid="note-formatting-toolbar" />
   },
 }))
 
@@ -39,7 +48,7 @@ vi.mock('~/features/sidebar/utils/sidebar-item-utils', () => ({
 }))
 
 vi.mock('~/features/sidebar/hooks/useEditorMode', () => ({
-  useEditorMode: () => ({ canEdit: true, editorMode: EDITOR_MODE.EDITOR }),
+  useEditorMode: mockUseEditorMode,
 }))
 
 vi.mock('~/features/editor/hooks/useNoteEditorState', () => ({
@@ -47,6 +56,11 @@ vi.mock('~/features/editor/hooks/useNoteEditorState', () => ({
     onEditorChange: vi.fn(),
     wrapperRef: { current: null },
   }),
+}))
+
+vi.mock('~/features/editor/stores/note-editor-store', () => ({
+  useNoteEditorStore: (selector: (store: { editor: null }) => unknown) =>
+    selector({ editor: null }),
 }))
 
 vi.mock('~/features/editor/hooks/useScrollPersistence', () => ({
@@ -67,6 +81,8 @@ describe('NoteEditor', () => {
   beforeEach(() => {
     mockOpenBlockNoteContextMenu.mockReset()
     noteContentSpy.mockReset()
+    noteFormattingToolbarSpy.mockReset()
+    mockUseEditorMode.mockReturnValue({ canEdit: true, editorMode: EDITOR_MODE.EDITOR })
   })
 
   it('uses the CSS-first editor surface class instead of pointer focus handlers', async () => {
@@ -95,6 +111,30 @@ describe('NoteEditor', () => {
       }),
     )
     expect(noteContentSpy.mock.calls[0]?.[0]).not.toHaveProperty('content')
+  })
+
+  it('places the full formatting toolbar above the note scroll area', () => {
+    render(<NoteEditor item={createNote()} />)
+
+    const toolbar = screen.getByTestId('note-formatting-toolbar')
+    const scrollArea = screen.getByTestId('note-scroll-area')
+
+    expect(toolbar.compareDocumentPosition(scrollArea)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(noteFormattingToolbarSpy).toHaveBeenCalledWith({
+      editor: null,
+      visible: true,
+    })
+  })
+
+  it('hides the formatting toolbar for non-editable notes', () => {
+    mockUseEditorMode.mockReturnValue({ canEdit: false, editorMode: EDITOR_MODE.VIEWER })
+
+    render(<NoteEditor item={createNote()} />)
+
+    expect(noteFormattingToolbarSpy).toHaveBeenCalledWith({
+      editor: null,
+      visible: false,
+    })
   })
 
   it('keeps untrusted right-click context menu events ignored', () => {

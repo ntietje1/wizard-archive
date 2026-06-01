@@ -22,6 +22,19 @@ export function getContrastColor(hexColor: string): string {
 }
 
 export const BASE_TEXT_COLORS: ReadonlyArray<NamedColorOption> = [
+  { color: 'var(--foreground)', label: 'Default' },
+  { color: 'var(--border)', label: 'Grey' },
+  { color: 'var(--t-brown)', label: 'Brown' },
+  { color: 'var(--t-red)', label: 'Red' },
+  { color: 'var(--t-orange)', label: 'Orange' },
+  { color: 'var(--t-yellow)', label: 'Yellow' },
+  { color: 'var(--t-green)', label: 'Green' },
+  { color: 'var(--t-blue)', label: 'Blue' },
+  { color: 'var(--t-purple)', label: 'Purple' },
+  { color: 'var(--t-pink)', label: 'Pink' },
+]
+
+export const BASE_STROKE_COLORS: ReadonlyArray<NamedColorOption> = [
   { color: 'var(--background)', label: 'Primary' },
   { color: 'var(--border)', label: 'Border' },
   { color: 'var(--foreground)', label: 'Reverse primary' },

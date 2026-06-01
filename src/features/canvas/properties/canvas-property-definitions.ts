@@ -1,4 +1,4 @@
-import { BASE_BG_COLORS, BASE_TEXT_COLORS } from '~/shared/utils/color'
+import { BASE_BG_COLORS, BASE_STROKE_COLORS, BASE_TEXT_COLORS } from '~/shared/utils/color'
 import { areCanvasPaintValuesEqual } from './canvas-paint-values'
 import type {
   CanvasPaintPreset,
@@ -60,7 +60,7 @@ export const linePaintCanvasProperty: CanvasPaintPropertyDefinition = {
   label: 'Stroke',
   equals: areCanvasPaintValuesEqual,
   defaultValue: DEFAULT_STROKE_VALUE,
-  options: createColorPresets(BASE_TEXT_COLORS),
+  options: createColorPresets(BASE_STROKE_COLORS),
 }
 
 export const fillCanvasProperty: CanvasPaintPropertyDefinition = {

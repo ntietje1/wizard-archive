@@ -14,15 +14,12 @@ import { areCanvasPaintValuesEqual } from '../properties/canvas-paint-values'
 import { useCanvasToolbarModel } from './use-canvas-toolbar-model'
 import type { CanvasCommands } from '../runtime/document/use-canvas-commands'
 import { ColorPickerPopover } from '~/shared/components/color-picker-popover'
+import { CheckerboardSwatch } from '~/shared/components/checkerboard-swatch'
 
 interface CanvasConditionalToolbarProps {
   canEdit: boolean
 }
 
-const CHECKERBOARD_PATTERN = [
-  'linear-gradient(45deg, currentColor 25%, transparent 25%, transparent 75%, currentColor 75%, currentColor)',
-  'linear-gradient(45deg, currentColor 25%, transparent 25%, transparent 75%, currentColor 75%, currentColor)',
-].join(', ')
 const CANVAS_EDGE_TYPE_OPTIONS: Array<{ type: CanvasEdgeType; label: string }> = [
   { type: 'bezier', label: 'Bezier' },
   { type: 'straight', label: 'Straight' },
@@ -189,16 +186,12 @@ function CanvasPropertyControls({
                 <button
                   type="button"
                   key={`${preset.label}-${preset.value.color}-${preset.value.opacity}`}
-                  className={`h-6 w-6 rounded-sm border border-border text-foreground/15 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 ${
+                  className={`h-6 w-6 rounded-sm border border-border focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 ${
                     disabled
                       ? 'cursor-not-allowed opacity-50'
                       : 'cursor-pointer transition-transform hover:scale-110'
                   }`}
                   style={{
-                    backgroundColor: 'var(--background)',
-                    backgroundImage: CHECKERBOARD_PATTERN,
-                    backgroundPosition: '0 0, 4px 4px',
-                    backgroundSize: '8px 8px',
                     outline:
                       paintValue && areCanvasPaintValuesEqual(paintValue, preset.value)
                         ? '2px solid var(--primary)'
@@ -214,13 +207,15 @@ function CanvasPropertyControls({
                   disabled={disabled}
                   title={preset.label}
                 >
-                  <span
-                    className="block h-full w-full rounded-sm"
-                    style={{
-                      backgroundColor: preset.value.color,
-                      opacity: preset.value.opacity / 100,
-                    }}
-                  />
+                  <CheckerboardSwatch className="h-full w-full rounded-sm">
+                    <span
+                      className="block h-full w-full rounded-sm"
+                      style={{
+                        backgroundColor: preset.value.color,
+                        opacity: preset.value.opacity / 100,
+                      }}
+                    />
+                  </CheckerboardSwatch>
                 </button>
               ))}
               <div className="mx-1 h-6 w-px bg-border" />
@@ -363,7 +358,7 @@ function StrokeSizeControl({
         />
       </div>
       <div className="mx-1 h-6 w-px bg-border" aria-hidden="true" />
-      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm border border-border focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-1">
+      <div className="flex size-6 shrink-0 items-center justify-center rounded-sm border border-border focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-1">
         <input
           aria-label="Stroke size input"
           className="block h-full w-full appearance-none cursor-text bg-transparent p-0 text-center text-xs leading-6 tabular-nums outline-none placeholder:text-muted-foreground"
@@ -422,7 +417,7 @@ function CanvasReorderControls({
             <button
               type="button"
               key={action.id}
-              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex size-8 cursor-pointer items-center justify-center rounded-md hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() =>
                 commands.reorder.run({
                   selection,
@@ -433,7 +428,7 @@ function CanvasReorderControls({
               aria-label={action.label}
               title={action.label}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="size-4" />
             </button>
           )
         })}
