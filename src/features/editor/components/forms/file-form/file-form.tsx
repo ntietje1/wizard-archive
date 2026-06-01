@@ -211,16 +211,12 @@ export function FileForm({ fileId, campaignId, parentId, onClose, onSuccess }: F
   const hasFile = !!(fileUpload.file || (file.data?.storageId && !fileUpload.removed))
 
   const isDisabled = form.state.isSubmitting || fileUpload.isUploading || isLoadingFile
+  const submitForm = () => {
+    void form.handleSubmit()
+  }
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault()
-        e.stopPropagation()
-        void form.handleSubmit()
-      }}
-      className="space-y-4"
-    >
+    <div className="space-y-4">
       <form.Field
         name="name"
         validators={{
@@ -315,7 +311,11 @@ export function FileForm({ fileId, campaignId, parentId, onClose, onSuccess }: F
             <Button type="button" variant="outline" onClick={onClose} disabled={isDisabled}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!hasFile || isDisabled || (fileId && !canSubmit)}>
+            <Button
+              type="button"
+              onClick={submitForm}
+              disabled={!hasFile || isDisabled || (fileId && !canSubmit)}
+            >
               {form.state.isSubmitting
                 ? fileId
                   ? 'Updating...'
@@ -327,6 +327,6 @@ export function FileForm({ fileId, campaignId, parentId, onClose, onSuccess }: F
           </div>
         )}
       </form.Subscribe>
-    </form>
+    </div>
   )
 }

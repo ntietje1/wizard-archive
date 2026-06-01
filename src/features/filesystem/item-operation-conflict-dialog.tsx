@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Check, CircleSlash, FileText, Files, ListChecks, RefreshCw } from 'lucide-react'
 import type {
   ConflictDecision,
@@ -85,17 +85,6 @@ export function ItemOperationConflictDialog({
 }) {
   const [mode, setMode] = useState<'bulk' | 'per-item'>('bulk')
   const [rowSelections, setRowSelections] = useState(() => createInitialSelections(conflicts))
-
-  useEffect(() => {
-    setRowSelections((current) => {
-      const nextSelections = createInitialSelections(conflicts)
-      for (const itemConflict of conflicts) {
-        const existingSelection = current[itemConflict.sourceItemId]
-        if (existingSelection) nextSelections[itemConflict.sourceItemId] = existingSelection
-      }
-      return nextSelections
-    })
-  }, [conflicts])
 
   const conflict = conflicts[0]
   if (!conflict) return null

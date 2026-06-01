@@ -42,7 +42,7 @@ export function SortMenu() {
             nativeButton
             render={
               <Button variant="ghost" size="icon" aria-label="Sort options">
-                <SortDesc className="h-4 w-4" />
+                <SortDesc className="size-4" />
               </Button>
             }
           />
@@ -50,25 +50,25 @@ export function SortMenu() {
             <DropdownMenuRadioGroup value={sortOptions.order} onValueChange={handleSortOrderChange}>
               <DropdownMenuRadioItem value={SORT_ORDERS.Alphabetical} className="whitespace-nowrap">
                 {sortOptions.direction === SORT_DIRECTIONS.Ascending ? (
-                  <ArrowUpAZ className="mr-2 h-4 w-4" />
+                  <ArrowUpAZ className="mr-2 size-4" />
                 ) : (
-                  <ArrowDownAZ className="mr-2 h-4 w-4" />
+                  <ArrowDownAZ className="mr-2 size-4" />
                 )}
                 Alphabetical
               </DropdownMenuRadioItem>
               <DropdownMenuRadioItem value={SORT_ORDERS.DateCreated} className="whitespace-nowrap">
                 {sortOptions.direction === SORT_DIRECTIONS.Ascending ? (
-                  <CalendarArrowUp className="mr-2 h-4 w-4" />
+                  <CalendarArrowUp className="mr-2 size-4" />
                 ) : (
-                  <CalendarArrowDown className="mr-2 h-4 w-4" />
+                  <CalendarArrowDown className="mr-2 size-4" />
                 )}
                 Date Created
               </DropdownMenuRadioItem>
               <DropdownMenuRadioItem value={SORT_ORDERS.DateModified} className="whitespace-nowrap">
                 {sortOptions.direction === SORT_DIRECTIONS.Ascending ? (
-                  <ClockArrowUp className="mr-2 h-4 w-4" />
+                  <ClockArrowUp className="mr-2 size-4" />
                 ) : (
-                  <ClockArrowDown className="mr-2 h-4 w-4" />
+                  <ClockArrowDown className="mr-2 size-4" />
                 )}
                 Date Modified
               </DropdownMenuRadioItem>
@@ -82,14 +82,14 @@ export function SortMenu() {
                 value={SORT_DIRECTIONS.Ascending}
                 className="whitespace-nowrap"
               >
-                <SortAsc className="mr-2 h-4 w-4" />
+                <SortAsc className="mr-2 size-4" />
                 Ascending
               </DropdownMenuRadioItem>
               <DropdownMenuRadioItem
                 value={SORT_DIRECTIONS.Descending}
                 className="whitespace-nowrap"
               >
-                <SortDesc className="mr-2 h-4 w-4" />
+                <SortDesc className="mr-2 size-4" />
                 Descending
               </DropdownMenuRadioItem>
             </DropdownMenuRadioGroup>

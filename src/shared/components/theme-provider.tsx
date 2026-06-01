@@ -68,6 +68,7 @@ export function ThemeProvider({
   const setTheme = (newTheme: Theme) => {
     setThemeMutation.mutate({ theme: newTheme })
   }
+  const themeContextValue = { theme, setTheme }
 
   useEffect(() => {
     applyThemeClass(resolved)
@@ -88,7 +89,7 @@ export function ThemeProvider({
   }, [theme])
 
   return (
-    <ThemeProviderContext.Provider value={{ theme, setTheme }}>
+    <ThemeProviderContext.Provider value={themeContextValue}>
       {children}
     </ThemeProviderContext.Provider>
   )

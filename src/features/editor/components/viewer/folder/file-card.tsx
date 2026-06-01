@@ -7,6 +7,7 @@ import type { SidebarFile } from 'convex/files/types'
 import { Card } from '~/features/shadcn/components/card'
 import { cn } from '~/features/shadcn/lib/utils'
 import { sidebarItemIconClass } from '~/features/sidebar/utils/sidebar-item-visual-state'
+import { useSidebarItemVisualState } from '~/features/sidebar/hooks/useSelectedItem'
 import { FolderItemCardShell } from './folder-item-card-shell'
 
 function getFileTypeIcon(
@@ -55,12 +56,14 @@ function FileCardInner({ item: file, ...props }: ItemCardProps<SidebarFile>) {
   const FileIcon = getFileTypeIcon(file.contentType, file.name)
   const [erroredUrl, setErroredUrl] = useState<string | null>(null)
   const imageError = erroredUrl === file.previewUrl
+  const visualState = useSidebarItemVisualState(file)
 
   return (
     <FolderItemCardShell
       {...props}
       item={file}
-      renderPreview={(visualState) => (
+      visualState={visualState}
+      preview={
         <div className="w-full flex-1 bg-muted relative rounded-sm overflow-hidden flex items-center justify-center">
           {file.previewUrl && !imageError ? (
             <img
@@ -75,7 +78,7 @@ function FileCardInner({ item: file, ...props }: ItemCardProps<SidebarFile>) {
             <FileIcon className={cn('size-12 select-none', sidebarItemIconClass(visualState))} />
           )}
         </div>
-      )}
+      }
     />
   )
 }

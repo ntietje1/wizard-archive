@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useCanvasEngine } from '../react/canvas-engine-context-value'
 import { useCanvasEngineSelector } from '../react/use-canvas-engine'
@@ -23,7 +23,18 @@ type CanvasNodeShellSnapshot = {
   visible: boolean
 }
 
-export const CanvasNodeWrapper = memo(function CanvasNodeWrapper({
+function handleCanvasNodeKeyDown(event: ReactKeyboardEvent) {
+  if (event.key !== 'Enter' && event.key !== ' ') {
+    return
+  }
+  if (event.target !== event.currentTarget && isCanvasInteractiveKeyboardTarget(event.target)) {
+    return
+  }
+
+  event.preventDefault()
+}
+
+export function CanvasNodeWrapper({
   children,
   nodeId,
   onNodeClick,
@@ -40,7 +51,7 @@ export const CanvasNodeWrapper = memo(function CanvasNodeWrapper({
   )
   const canvasEngine = useCanvasEngine()
   const { domRuntime } = useCanvasViewportRuntime()
-  const nodeRef = useRef<HTMLDivElement | null>(null)
+  const nodeRef = useRef<HTMLButtonElement | null>(null)
   const shellMounted = shell !== null
   const shellId = shell?.id
 
@@ -77,26 +88,16 @@ export const CanvasNodeWrapper = memo(function CanvasNodeWrapper({
   }
 
   const getCurrentNode = () => canvasEngine.getSnapshot().nodeLookup.get(nodeId)?.node ?? null
-  const handleNodeKeyDown = (event: ReactKeyboardEvent) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      if (event.target !== event.currentTarget && isCanvasInteractiveKeyboardTarget(event.target)) {
-        return
-      }
-
-      event.preventDefault()
-    }
-  }
-
   return (
-    <div
+    <button
+      type="button"
       ref={nodeRef}
       className={cn(
-        'canvas-node-shell absolute left-0 top-0 touch-none select-none',
+        'canvas-node-shell absolute left-0 top-0 touch-none select-none appearance-none border-0 bg-transparent p-0 text-inherit',
         shell.className,
       )}
       data-node-id={shell.id}
       data-node-type={shell.type}
-      role="group"
       aria-label={`${shell.type ?? 'canvas'} node`}
       tabIndex={-1}
       style={{
@@ -119,12 +120,12 @@ export const CanvasNodeWrapper = memo(function CanvasNodeWrapper({
           onNodeContextMenu(event, node)
         }
       }}
-      onKeyDown={handleNodeKeyDown}
+      onKeyDown={handleCanvasNodeKeyDown}
     >
       {children}
-    </div>
+    </button>
   )
-})
+}
 
 function selectCanvasNodeShellSnapshot(
   internalNode: CanvasInternalNode | undefined,

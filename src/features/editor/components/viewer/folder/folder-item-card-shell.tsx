@@ -11,7 +11,6 @@ import { Button } from '~/features/shadcn/components/button'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useEditorLinkProps } from '~/features/sidebar/hooks/useEditorLinkProps'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'
-import { useSidebarItemVisualState } from '~/features/sidebar/hooks/useSelectedItem'
 import type { SidebarItemVisualState } from '~/features/sidebar/utils/sidebar-item-visual-state'
 import {
   sidebarItemNameClass,
@@ -31,14 +30,15 @@ export function FolderItemCardShell<TItem extends AnySidebarItem>({
   parentId,
   visibleItemIds,
   itemSurface = 'folder-view',
-  renderPreview,
+  preview,
+  visualState,
 }: ItemCardProps<TItem> & {
-  renderPreview: (visualState: SidebarItemVisualState) => ReactNode
+  preview: ReactNode
+  visualState: SidebarItemVisualState
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const linkProps = useEditorLinkProps(item)
   const { setLastSelectedItem } = useLastEditorItem()
-  const visualState = useSidebarItemVisualState(item)
   const { contextMenuRef, handleMoreOptions } = useContextMenu()
   const { handleItemClick, handleItemContextMenu } = useItemSelectionInteractions(item, {
     surface: itemSurface,
@@ -112,7 +112,7 @@ export function FolderItemCardShell<TItem extends AnySidebarItem>({
                 <MoreVertical className={cn('size-4', sidebarItemIconClass(visualState))} />
               </Button>
             </div>
-            {renderPreview(visualState)}
+            {preview}
           </Card>
         </Link>
       </div>
