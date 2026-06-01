@@ -6,6 +6,7 @@ export type BlockNoteSelectionSnapshot = Record<string, unknown>
 
 type BlockNoteFocusableEditor = {
   focus: () => void
+  prosemirrorView?: BlockNoteEditorView | null
 }
 
 type BlockNoteStyleReader = {
@@ -97,10 +98,6 @@ export function setBlockNotePendingTextColor(
 function getBlockNoteEditorView(
   editor: BlockNoteFocusableEditor | null,
 ): BlockNoteEditorView | null {
-  const tiptapEditor = (editor as { _tiptapEditor?: { view?: BlockNoteEditorView } } | null)
-    ?._tiptapEditor
-  if (editor && (!tiptapEditor || typeof tiptapEditor !== 'object')) {
-    throw new TypeError('getBlockNoteEditorView: unexpected BlockNote editor shape')
-  }
-  return tiptapEditor?.view ?? null
+  const view = editor?.prosemirrorView
+  return view && typeof view === 'object' ? view : null
 }

@@ -281,7 +281,7 @@
   --bn-colors-hovered-background: var(--accent);
 
   /* Selected state */
-  --bn-colors-selected-text: currentColor;
+  --bn-colors-selected-text: currentcolor;
   --bn-colors-selected-background: color-mix(in srgb, var(--primary) 33%, transparent);
 
   /* Disabled state */
