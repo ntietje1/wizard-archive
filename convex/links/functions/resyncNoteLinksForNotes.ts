@@ -1,4 +1,4 @@
-import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import { syncNoteLinks } from './syncNoteLinks'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Block } from '../../blocks/types'

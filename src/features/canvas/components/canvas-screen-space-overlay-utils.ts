@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { useCanvasEngine } from '../react/use-canvas-engine'
+import { useCanvasEngine } from '../react/canvas-engine-context-value'
 import type { CanvasViewport } from '../types/canvas-domain-types'
 import type { Bounds } from '../utils/canvas-geometry-utils'
 

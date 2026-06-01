@@ -1,7 +1,7 @@
 import { render, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SHARE_STATUS } from 'shared/editor-blocks/share-status'
-import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { NoteContent } from '../note-content'
 import { createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'

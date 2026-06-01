@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { hasAtLeastPermissionLevel } from '../hasAtLeastPermissionLevel'
-import { PERMISSION_LEVEL } from '../types'
+import { hasAtLeastPermissionLevel } from '../../../shared/permissions/hasAtLeastPermissionLevel'
+import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 
 describe('hasAtLeastPermissionLevel', () => {
   const { NONE, VIEW, EDIT, FULL_ACCESS } = PERMISSION_LEVEL

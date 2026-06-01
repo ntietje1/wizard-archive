@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { CAMPAIGN_MEMBER_ROLE } from '~/features/campaigns/campaign-types'
-import { EDITOR_MODE } from 'convex/editors/types'
-import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { EDITOR_MODE } from 'shared/editor/types'
+import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import type { ActionHandlers } from '~/features/context-menu/menu-registry'
 import type {
   ContextMenuCommand,

@@ -1,11 +1,10 @@
-import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
-import type { Id } from '../../_generated/dataModel'
-import type { AnySidebarItem } from '../types/types'
+import { SIDEBAR_ITEM_TYPES } from '../types'
+import type { SidebarItemId, AnySidebarItem } from './types'
 
 type SidebarTreeItem = Pick<AnySidebarItem, '_id' | 'parentId' | 'type'>
 
 function indexChildrenByParent(items: Array<SidebarTreeItem>) {
-  const childrenByParent = new Map<Id<'sidebarItems'>, Array<SidebarTreeItem>>()
+  const childrenByParent = new Map<SidebarItemId, Array<SidebarTreeItem>>()
   for (const item of items) {
     if (!item.parentId) continue
     const siblings = childrenByParent.get(item.parentId)
@@ -20,11 +19,11 @@ function indexChildrenByParent(items: Array<SidebarTreeItem>) {
 
 function addChildDescendant(
   child: SidebarTreeItem,
-  rootFolderId: Id<'sidebarItems'>,
-  descendants: Set<Id<'sidebarItems'>>,
-  stack: Array<{ id: Id<'sidebarItems'>; depth: number; ancestors: Set<Id<'sidebarItems'>> }>,
+  rootFolderId: SidebarItemId,
+  descendants: Set<SidebarItemId>,
+  stack: Array<{ id: SidebarItemId; depth: number; ancestors: Set<SidebarItemId> }>,
   depth: number,
-  ancestors: Set<Id<'sidebarItems'>>,
+  ancestors: Set<SidebarItemId>,
 ) {
   if (child._id === rootFolderId || ancestors.has(child._id)) {
     throw new Error(`Folder ${child._id} appears as its own descendant`)
@@ -38,10 +37,10 @@ function addChildDescendant(
 }
 
 export function collectDescendantIdsFromItems(
-  folderId: Id<'sidebarItems'>,
+  folderId: SidebarItemId,
   items: Array<SidebarTreeItem>,
   { maxDepth = 50 }: { maxDepth?: number } = {},
-): Set<Id<'sidebarItems'>> {
+): Set<SidebarItemId> {
   if (!Number.isInteger(maxDepth) || maxDepth < 1) {
     throw new Error('maxDepth must be an integer greater than or equal to 1')
   }
@@ -51,11 +50,11 @@ export function collectDescendantIdsFromItems(
 
   const childrenByParent = indexChildrenByParent(items)
 
-  const result = new Set<Id<'sidebarItems'>>()
+  const result = new Set<SidebarItemId>()
   const stack: Array<{
-    id: Id<'sidebarItems'>
+    id: SidebarItemId
     depth: number
-    ancestors: Set<Id<'sidebarItems'>>
+    ancestors: Set<SidebarItemId>
   }> = [{ id: folderId, depth: 0, ancestors: new Set([folderId]) }]
 
   while (stack.length > 0) {

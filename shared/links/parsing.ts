@@ -33,7 +33,7 @@ export function isDangerousUrl(str: string): boolean {
   return DANGEROUS_URL_PREFIXES.some((prefix) => lower.startsWith(prefix))
 }
 
-export interface ParsedWikiLinkFields {
+export type ParsedWikiLinkFields = {
   pathKind: LinkPathKind
   itemPath: Array<string>
   itemName: string
@@ -73,7 +73,7 @@ export function parseWikiLinkText(text: string): ParsedWikiLinkFields {
   return { pathKind, itemPath, itemName, headingPath, displayName }
 }
 
-export interface ParsedMdLinkFields {
+export type ParsedMdLinkFields = {
   target: string
   isExternal: boolean
   pathKind: LinkPathKind

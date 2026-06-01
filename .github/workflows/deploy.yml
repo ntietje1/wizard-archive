@@ -107,6 +107,7 @@ jobs:
 
           vp check
           vp run lint:convex
+          vp run check:no-reexports
           vp build --mode production
 
           if [[ "${DEPLOY_CONVEX}" == "true" ]]; then

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../../types/baseTypes'
-import { createFileSystemReadModel } from '../readModel'
+import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../../../../shared/sidebar-items/types'
+import { createFileSystemReadModel } from '../../../../shared/sidebar-items/filesystem/read-model'
 import { createSidebarItem } from './testSidebarItem'
 import type { Id } from '../../../_generated/dataModel'
 

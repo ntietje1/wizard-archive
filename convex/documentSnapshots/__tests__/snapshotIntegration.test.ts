@@ -8,7 +8,7 @@ import {
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createGameMap, createNote } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
-import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import { SNAPSHOT_TYPE } from '../schema'
 import { makeYjsUpdate } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
 import { SNAPSHOT_IDLE_MS, SNAPSHOT_MIN_INTERVAL_MS } from '../../yjsSync/constants'

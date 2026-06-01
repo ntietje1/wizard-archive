@@ -1,13 +1,13 @@
-import type { CreateParentTarget } from 'convex/sidebarItems/validation/parent'
+import type { CreateParentTarget } from 'shared/sidebar-items/parent-target'
 import { coerceSidebarItemColorForInput } from 'shared/sidebar-items/color'
 import { coerceSidebarItemIconNameForInput } from 'shared/sidebar-items/icon'
 import type { SidebarItemType } from 'shared/sidebar-items/types'
 import { assertSidebarItemName } from 'shared/sidebar-items/name'
 import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { Id } from 'convex/_generated/dataModel'
-import { validateCreateItemLocally } from 'convex/sidebarItems/validation/parent'
+import { validateCreateItemLocally } from 'shared/sidebar-items/parent-target'
 import { useFileSystem } from '~/features/filesystem/useFileSystem'
-import { deduplicateName } from 'convex/sidebarItems/functions/defaultItemName'
+import { deduplicateName } from 'shared/sidebar-items/default-name'
 import { useFileSystemReadModel } from './useFileSystemReadModel'
 
 interface CreateItemBase {

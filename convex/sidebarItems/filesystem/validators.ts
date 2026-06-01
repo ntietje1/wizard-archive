@@ -8,8 +8,8 @@ import {
   sidebarItemStatusValidator,
   sidebarItemTypeValidator,
 } from '../schema/validators'
-import { FILE_SYSTEM_COMMAND_TYPE } from './commands'
-import { FILE_SYSTEM_EVENT_TYPE } from './receipts'
+import { FILE_SYSTEM_COMMAND_TYPE } from '../../../shared/sidebar-items/filesystem/commands'
+import { FILE_SYSTEM_EVENT_TYPE } from '../../../shared/sidebar-items/filesystem/receipts'
 import { createParentTargetValidator } from '../validation/parent'
 
 const createCommandValidator = v.object({

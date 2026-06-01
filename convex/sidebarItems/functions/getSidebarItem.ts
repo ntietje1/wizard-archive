@@ -1,4 +1,4 @@
-import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import { assertNever } from '../../common/types'
 import { isUndoHiddenSidebarItem } from '../types/status'
 import type { Doc, Id } from '../../_generated/dataModel'

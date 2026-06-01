@@ -1,9 +1,10 @@
 import { SIDEBAR_ITEM_STATUS } from 'shared/sidebar-items/types'
-import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { FileSystemPatch } from 'convex/sidebarItems/filesystem/receipts'
-import { applyFileSystemPatchesToSnapshot as applyPatchesToItemSnapshot } from 'convex/sidebarItems/filesystem/patchProjection'
-import type { AnySidebarItem, AnySidebarItemRow } from 'convex/sidebarItems/types/types'
+import type { FileSystemPatch } from 'shared/sidebar-items/filesystem/receipts'
+import { applyFileSystemPatchesToSnapshot as applyPatchesToItemSnapshot } from 'shared/sidebar-items/filesystem/patch-projection'
+import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { SidebarItemPatchRow } from 'shared/sidebar-items/filesystem/types'
 import { isOptimisticSidebarItemId } from './optimistic-sidebar-items'
 
 export type SidebarCacheSnapshot = {
@@ -11,7 +12,7 @@ export type SidebarCacheSnapshot = {
   trash: Array<AnySidebarItem>
 }
 
-type CacheableSidebarItem = AnySidebarItemRow &
+type CacheableSidebarItem = SidebarItemPatchRow &
   Partial<Pick<AnySidebarItem, 'shares' | 'isBookmarked' | 'myPermissionLevel' | 'previewUrl'>>
 
 type SidebarCacheFields = Pick<

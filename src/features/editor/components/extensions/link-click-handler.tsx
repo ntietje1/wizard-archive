@@ -11,7 +11,7 @@ import { useEditorDomElement } from '~/features/editor/hooks/useEditorDomElement
 import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
-import { CREATE_PARENT_TARGET_KIND } from 'convex/sidebarItems/validation/parent'
+import { CREATE_PARENT_TARGET_KIND } from 'shared/sidebar-items/parent-target'
 import type { CreateItemArgs } from '~/features/filesystem/useCreateFileSystemItem'
 import type { ValidationResult } from 'shared/sidebar-items/name'
 
@@ -214,7 +214,10 @@ export function LinkClickHandler({
   )
   const ctrlHeldRef = useRef(false)
   const mousePosRef = useRef<{ x: number; y: number } | null>(null)
-  const creatingLinksRef = useRef(new Set<string>())
+  const creatingLinksRef = useRef<Set<string> | null>(null)
+  if (creatingLinksRef.current === null) {
+    creatingLinksRef.current = new Set()
+  }
   const tooltipActionsRef = useRef({
     hide: () => setTooltip(HIDDEN_TOOLTIP),
     showForPoint: (_x: number, _y: number) => {},
@@ -319,17 +322,19 @@ export function LinkClickHandler({
       setTooltip(HIDDEN_TOOLTIP)
 
       const creationKey = getLinkCreationKey(link)
-      if (!creationKey || creatingLinksRef.current.has(creationKey)) return
+      const creatingLinks = creatingLinksRef.current
+      if (!creatingLinks) throw new Error('Link creation tracker was not initialized')
+      if (!creationKey || creatingLinks.has(creationKey)) return
       if (!feedback.isValid) return
 
-      creatingLinksRef.current.add(creationKey)
+      creatingLinks.add(creationKey)
       try {
         const result = await createItem(feedback.createArgs)
         if (result) void navigateToItem(result.slug)
       } catch (error) {
         handleError(error, 'Failed to create note')
       } finally {
-        creatingLinksRef.current.delete(creationKey)
+        creatingLinks.delete(creationKey)
       }
     }
 

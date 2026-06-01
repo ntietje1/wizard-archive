@@ -1,7 +1,7 @@
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
-import { parseWikiLinkText } from 'convex/links/linkParsers'
-import { getMinDisambiguationPath, resolveParsedItemPath } from 'convex/links/linkResolution'
+import { parseWikiLinkText } from 'shared/links/parsing'
+import { getMinDisambiguationPath, resolveParsedItemPath } from 'shared/links/resolution'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import {
   buildExternalNoteValuePrefix,

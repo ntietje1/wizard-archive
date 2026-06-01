@@ -10,7 +10,8 @@ import {
 import { useCanvasRichTextFormattingSnapshot } from '../nodes/shared/canvas-rich-text-formatting-session'
 import { measureCanvasPerformance } from '../runtime/performance/canvas-performance-metrics'
 import { useCanvasToolPropertyContext, useCanvasToolStore } from '../stores/canvas-tool-store'
-import { useCanvasEngine, useCanvasEngineSelector } from '../react/use-canvas-engine'
+import { useCanvasEngine } from '../react/canvas-engine-context-value'
+import { useCanvasEngineSelector } from '../react/use-canvas-engine'
 import {
   areCanvasPropertyEdgesEqual,
   areCanvasPropertyNodesEqual,

@@ -1,5 +1,5 @@
-import type { SidebarItemType } from '../sidebarItems/types/baseTypes'
-import type { PermissionLevel } from '../permissions/types'
+import type { SidebarItemType } from '../../shared/sidebar-items/types'
+import type { PermissionLevel } from '../../shared/permissions/types'
 import type { Id } from '../_generated/dataModel'
 
 export type SidebarItemShare = {

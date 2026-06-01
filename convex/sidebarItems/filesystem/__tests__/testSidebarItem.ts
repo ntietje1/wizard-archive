@@ -1,9 +1,9 @@
-import { PERMISSION_LEVEL } from '../../../permissions/types'
+import { PERMISSION_LEVEL } from '../../../../shared/permissions/types'
 import {
   SIDEBAR_ITEM_LOCATION,
   SIDEBAR_ITEM_STATUS,
   SIDEBAR_ITEM_TYPES,
-} from '../../types/baseTypes'
+} from '../../../../shared/sidebar-items/types'
 import { slugify } from '../../../../shared/slugs'
 import type { Id } from '../../../_generated/dataModel'
 import type { AnySidebarItem } from '../../types/types'

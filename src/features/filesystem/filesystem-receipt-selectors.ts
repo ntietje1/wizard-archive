@@ -5,7 +5,7 @@ import type {
   FileSystemMessageKind,
   FileSystemReceiptMessage,
   FileSystemTransactionReceipt,
-} from 'convex/sidebarItems/filesystem/receipts'
+} from 'shared/sidebar-items/filesystem/receipts'
 import { assertSidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 

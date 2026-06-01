@@ -1,4 +1,5 @@
-import { ERROR_CODE, throwClientError } from '../errors'
+import { ERROR_CODE } from '../../shared/errors/client'
+import { throwClientError } from '../errors'
 import { blockNoteBlockSchema } from '../../shared/editor-blocks/blockSchemas'
 import type { CustomBlock } from '../../shared/editor-blocks/types'
 

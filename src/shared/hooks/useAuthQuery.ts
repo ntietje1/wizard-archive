@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { useConvexAuth } from 'convex/react'
-import { ERROR_CODE, isClientError } from 'convex/errors'
+import { ERROR_CODE, isClientError } from 'shared/errors/client'
 import type { UseQueryOptions, UseQueryResult } from '@tanstack/react-query'
 import type { FunctionArgs, FunctionReference, FunctionReturnType } from 'convex/server'
 

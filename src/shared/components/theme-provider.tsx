@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { keepPreviousData, useQueryClient } from '@tanstack/react-query'
 import { api } from 'convex/_generated/api'
-import type { UserPreferences } from 'convex/userPreferences/types'
+import type { UserPreferences } from 'shared/user-preferences/types'
 import type { Theme } from '~/features/settings/hooks/useTheme'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { handleError } from '~/shared/utils/logger'
@@ -68,6 +68,7 @@ export function ThemeProvider({
   const setTheme = (newTheme: Theme) => {
     setThemeMutation.mutate({ theme: newTheme })
   }
+  const themeContextValue = { theme, setTheme }
 
   useEffect(() => {
     applyThemeClass(resolved)
@@ -88,7 +89,7 @@ export function ThemeProvider({
   }, [theme])
 
   return (
-    <ThemeProviderContext.Provider value={{ theme, setTheme }}>
+    <ThemeProviderContext.Provider value={themeContextValue}>
       {children}
     </ThemeProviderContext.Provider>
   )

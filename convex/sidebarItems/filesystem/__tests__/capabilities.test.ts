@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { CAMPAIGN_MEMBER_ROLE } from '../../../campaigns/types'
-import { PERMISSION_LEVEL } from '../../../permissions/types'
-import { SIDEBAR_ITEM_TYPES } from '../../types/baseTypes'
+import { PERMISSION_LEVEL } from '../../../../shared/permissions/types'
+import { SIDEBAR_ITEM_TYPES } from '../../../../shared/sidebar-items/types'
 import { createSidebarItem } from './testSidebarItem'
 import {
   evaluateCopy,
@@ -9,7 +9,7 @@ import {
   evaluatePasteTarget,
   evaluatePermanentDelete,
   evaluateTrash,
-} from '../capabilities'
+} from '../../../../shared/sidebar-items/filesystem/capabilities'
 describe('sidebar operation capabilities', () => {
   it('rejects player trashing a folder', () => {
     const result = evaluateTrash(

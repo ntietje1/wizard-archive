@@ -1,13 +1,14 @@
-import { ERROR_CODE, throwClientError } from '../../errors'
+import { ERROR_CODE } from '../../../shared/errors/client'
+import { throwClientError } from '../../errors'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { logEditHistory } from '../../editHistory/log'
-import { PERMISSION_LEVEL } from '../../permissions/types'
+import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { requireItemAccess } from '../../sidebarItems/validation/access'
 import { getUserProfileById } from '../../users/functions/getUserProfile'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
-import type { PermissionLevel } from '../../permissions/types'
+import type { PermissionLevel } from '../../../shared/permissions/types'
 import type { AnySidebarItem } from '../../sidebarItems/types/types'
 
 type ExistingShare = Doc<'sidebarItemShares'> | null

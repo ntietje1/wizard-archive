@@ -7,16 +7,16 @@ import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type {
   FileSystemCommand,
   FileSystemOperationDecision,
-} from 'convex/sidebarItems/filesystem/commands'
+} from 'shared/sidebar-items/filesystem/commands'
 import type {
   FileSystemPatch,
   FileSystemTransactionReceipt,
-} from 'convex/sidebarItems/filesystem/receipts'
+} from 'shared/sidebar-items/filesystem/receipts'
 import type {
   ConflictDecision,
   ItemOperationConflict,
-} from 'convex/sidebarItems/filesystem/conflicts'
-import { normalizeSelectedRoots } from 'convex/sidebarItems/filesystem/selection'
+} from 'shared/sidebar-items/filesystem/conflicts'
+import { normalizeSelectedRoots } from 'shared/sidebar-items/filesystem/selection'
 import { FileSystemEmptyTrashDialog, FileSystemPermanentDeleteDialog } from './filesystem-dialogs'
 import { ItemOperationConflictDialog } from './item-operation-conflict-dialog'
 import { shouldRecordFileSystemUndo, useFileSystemUndoStore } from './filesystem-undo-store'
@@ -150,7 +150,10 @@ function useFileSystemValue(): FileSystemProviderState {
   const [pendingTrashFolder, setPendingTrashFolder] = useState<AnySidebarItem | null>(null)
   const [pendingOperationCount, setPendingOperationCount] = useState(0)
   const pendingOperationCountRef = useRef(0)
-  const mutationQueueRef = useRef(Promise.resolve())
+  const mutationQueueRef = useRef<Promise<void> | null>(null)
+  if (mutationQueueRef.current === null) {
+    mutationQueueRef.current = Promise.resolve()
+  }
 
   useEffect(() => {
     if (!campaignId) return
@@ -190,7 +193,9 @@ function useFileSystemValue(): FileSystemProviderState {
 
   const runQueuedMutation = (operation: () => Promise<FileSystemTransactionReceipt | null>) => {
     // mutationQueueRef is a Promise chain; using operation for both outcomes keeps later mutations serialized after failures.
-    const result = mutationQueueRef.current.then(operation, operation)
+    const mutationQueue = mutationQueueRef.current
+    if (!mutationQueue) throw new Error('Filesystem mutation queue was not initialized')
+    const result = mutationQueue.then(operation, operation)
     mutationQueueRef.current = result.then(
       () => undefined,
       () => undefined,
@@ -652,8 +657,7 @@ function useFileSystemValue(): FileSystemProviderState {
     },
     dialog: (
       <>
-        <div
-          role="status"
+        <output
           aria-live="polite"
           aria-atomic="true"
           data-testid="filesystem-operation-status"
@@ -661,7 +665,7 @@ function useFileSystemValue(): FileSystemProviderState {
           className="sr-only"
         >
           {pendingOperationCount > 0 ? 'Filesystem operation in progress' : null}
-        </div>
+        </output>
         {conflictDialog}
         {deleteForeverDialog}
         {emptyTrashDialog}

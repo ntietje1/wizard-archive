@@ -6,6 +6,7 @@ import type { ItemCardProps } from './item-card'
 import { Card } from '~/features/shadcn/components/card'
 import { cn } from '~/features/shadcn/lib/utils'
 import { sidebarItemIconClass } from '~/features/sidebar/utils/sidebar-item-visual-state'
+import { useSidebarItemVisualState } from '~/features/sidebar/hooks/useSelectedItem'
 import { FolderItemCardShell } from './folder-item-card-shell'
 
 function CanvasCardSkeleton() {
@@ -27,12 +28,14 @@ function CanvasCardSkeleton() {
 function CanvasCardInner({ item: canvas, ...props }: ItemCardProps<Canvas>) {
   const [erroredUrl, setErroredUrl] = useState<string | null>(null)
   const imageError = erroredUrl === canvas.previewUrl
+  const visualState = useSidebarItemVisualState(canvas)
 
   return (
     <FolderItemCardShell
       {...props}
       item={canvas}
-      renderPreview={(visualState) => (
+      visualState={visualState}
+      preview={
         <div className="w-full flex-1 bg-muted relative rounded-sm overflow-hidden">
           {canvas.previewUrl && !imageError ? (
             <img
@@ -49,7 +52,7 @@ function CanvasCardInner({ item: canvas, ...props }: ItemCardProps<Canvas>) {
           )}
           <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10" />
         </div>
-      )}
+      }
     />
   )
 }

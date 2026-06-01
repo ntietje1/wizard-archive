@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   createCanvasNodePlacement,
   getCanvasNodeInspectableProperties,
-  normalizeCanvasNode,
 } from '../canvas-node-modules'
+import { normalizeCanvasNode } from '../canvas-node-normalization'
 import type { Id } from 'convex/_generated/dataModel'
 import { canvasNodeTypes } from '../canvas-node-renderers'
 import { TextNode } from '../text/text-node'

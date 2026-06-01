@@ -1,4 +1,4 @@
-import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { createElement } from 'react'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'

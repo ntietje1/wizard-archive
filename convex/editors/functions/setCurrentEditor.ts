@@ -1,7 +1,7 @@
-import { EDITOR_MODE, SORT_DIRECTIONS, SORT_ORDERS } from '../types'
+import { EDITOR_MODE, SORT_DIRECTIONS, SORT_ORDERS } from '../../../shared/editor/types'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
-import type { EditorMode, SortDirection, SortOrder } from '../types'
+import type { EditorMode, SortDirection, SortOrder } from '../../../shared/editor/types'
 
 export async function setCurrentEditor(
   ctx: CampaignMutationCtx,

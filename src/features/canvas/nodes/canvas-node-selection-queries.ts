@@ -5,8 +5,8 @@ import {
   matchesCanvasNodeLassoSelection,
   matchesCanvasNodePointSelection,
   matchesCanvasNodeRectangleSelection,
-  normalizeCanvasNode,
 } from './canvas-node-modules'
+import { normalizeCanvasNode } from './canvas-node-normalization'
 import type { AnyNormalizedCanvasNode } from './canvas-node-normalization'
 import { boundsFromPoints, rectIntersectsBounds } from '../utils/canvas-geometry-utils'
 import type { Point2D } from '../utils/canvas-awareness-types'

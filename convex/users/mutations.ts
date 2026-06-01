@@ -1,7 +1,8 @@
 import { v } from 'convex/values'
 import { authMutation } from '../functions'
 import { assertUsername, usernameValidator } from './validation'
-import { ERROR_CODE, throwClientError } from '../errors'
+import { ERROR_CODE } from '../../shared/errors/client'
+import { throwClientError } from '../errors'
 
 export const updateUsername = authMutation({
   args: {

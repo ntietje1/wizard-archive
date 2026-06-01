@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Id } from 'convex/_generated/dataModel'
-import type { FileSystemTransactionReceipt } from 'convex/sidebarItems/filesystem/receipts'
+import type { FileSystemTransactionReceipt } from 'shared/sidebar-items/filesystem/receipts'
 import {
   getReceiptRemovedRootIds,
   getReceiptSelectedRootIds,

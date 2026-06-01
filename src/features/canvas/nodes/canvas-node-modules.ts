@@ -258,8 +258,6 @@ export function createCanvasNodePlacement(
   }
 }
 
-export { normalizeCanvasNode }
-
 export function resizeCanvasNode(
   node: CanvasDocumentNode,
   resize: { width: number; height: number; position: CanvasPosition },

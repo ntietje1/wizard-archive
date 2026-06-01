@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import type { DropPlanningContext } from '~/features/dnd/utils/drop-planning-context'
 import {
   CANVAS_DROP_ZONE_TYPE,

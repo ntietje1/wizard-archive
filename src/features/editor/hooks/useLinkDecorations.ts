@@ -6,7 +6,7 @@ import {
   WIKI_LINK_REGEX,
   parseMdLinkTarget,
   parseWikiLinkText,
-} from 'convex/links/linkParsers'
+} from 'shared/links/parsing'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { LinkResolver } from './useLinkResolver'

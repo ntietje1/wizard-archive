@@ -1,10 +1,9 @@
 import type { Id } from '../_generated/dataModel'
 import type { ConvexValidatorFields } from '../common/types'
+import type { SIDEBAR_ITEM_TYPES, SidebarItemType } from '../../shared/sidebar-items/types'
 import type {
-  SIDEBAR_ITEM_TYPES,
   SidebarItem,
   SidebarItemFromDb,
-  SidebarItemType,
   SidebarItemWithContent,
 } from '../sidebarItems/types/baseTypes'
 import type { AnySidebarItem } from '../sidebarItems/types/types'

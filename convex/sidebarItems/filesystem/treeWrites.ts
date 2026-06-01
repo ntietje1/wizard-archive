@@ -1,4 +1,4 @@
-import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
+import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import { findUniqueSidebarItemSlug } from '../validation/orchestration'
 import { collectDescendants } from '../functions/collectDescendants'
 import { assertSidebarItemLifecycleConsistency, isTrashedSidebarItem } from '../types/status'
@@ -7,7 +7,7 @@ import type { Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
 import type { AnySidebarItemRow } from '../types/types'
 import type { SidebarItemName } from '../../../shared/sidebar-items/name'
-import type { SidebarItemFieldPatch } from './receipts'
+import type { SidebarItemFieldPatch } from '../../../shared/sidebar-items/filesystem/receipts'
 
 type ItemOperation = (ctx: MutationCtx, item: AnySidebarItemRow) => Promise<void>
 export type TrashTreePatch = Required<

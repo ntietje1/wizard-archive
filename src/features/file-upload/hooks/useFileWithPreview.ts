@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useConvex } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import { MAX_FILE_SIZE } from 'convex/storage/validation'
+import { MAX_FILE_SIZE } from 'shared/storage/validation'
 import { useFileUpload } from './useFileUpload'
 import type { Id } from 'convex/_generated/dataModel'
 import { logger } from '~/shared/utils/logger'

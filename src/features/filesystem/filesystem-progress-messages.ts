@@ -1,4 +1,4 @@
-import type { FileSystemCommand } from 'convex/sidebarItems/filesystem/commands'
+import type { FileSystemCommand } from 'shared/sidebar-items/filesystem/commands'
 
 function itemCountText(count: number) {
   return count === 1 ? 'item' : `${count} items`

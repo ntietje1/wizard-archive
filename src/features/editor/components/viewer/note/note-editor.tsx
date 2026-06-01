@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { ClientOnly } from '@tanstack/react-router'
-import { EDITOR_MODE } from 'convex/editors/types'
+import { EDITOR_MODE } from 'shared/editor/types'
 import { NoteContent } from '../../note-content'
 import type { EditorViewerProps } from '../sidebar-item-editor'
 import type { NoteWithContent } from 'convex/notes/types'

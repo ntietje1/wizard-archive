@@ -1,6 +1,6 @@
-import { SIDEBAR_ITEM_STATUS } from './baseTypes'
+import { SIDEBAR_ITEM_STATUS } from '../../../shared/sidebar-items/types'
 import type { Id } from '../../_generated/dataModel'
-import type { SidebarItemStatus } from './baseTypes'
+import type { SidebarItemStatus } from '../../../shared/sidebar-items/types'
 
 export type SidebarItemLifecycleFields = {
   status: SidebarItemStatus

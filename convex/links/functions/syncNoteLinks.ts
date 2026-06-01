@@ -3,14 +3,14 @@ import {
   WIKI_LINK_REGEX,
   parseMdLinkTarget,
   parseWikiLinkText,
-} from '../linkParsers'
-import { resolveParsedItemPath } from '../linkResolution'
+} from '../../../shared/links/parsing'
+import { resolveParsedItemPath } from '../../../shared/links/resolution'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
-import type { ParsedLinkData, LinkSyntax } from '../types'
+import type { LinkSyntax, ParsedLinkData } from '../../../shared/links/types'
 import type { Block } from '../../blocks/types'
 import type { AnySidebarItemRow } from '../../sidebarItems/types/types'
-import { SIDEBAR_ITEM_STATUS } from '../../sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_STATUS } from '../../../shared/sidebar-items/types'
 
 type CampaignScopedMutationCtx = Pick<MutationCtx, 'db'> & {
   campaign: Pick<Doc<'campaigns'>, '_id'>

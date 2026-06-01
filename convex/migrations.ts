@@ -1,7 +1,7 @@
 import { Migrations } from '@convex-dev/migrations'
 import { components, internal } from './_generated/api'
 import type { DataModel } from './_generated/dataModel'
-import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_STATUS } from './sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_STATUS } from '../shared/sidebar-items/types'
 
 export const migrations = new Migrations<DataModel>(components.migrations)
 export const run = migrations.runner()

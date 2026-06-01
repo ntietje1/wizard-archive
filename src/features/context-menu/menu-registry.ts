@@ -1,6 +1,6 @@
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
-import { EDITOR_MODE } from 'convex/editors/types'
-import type { PermissionLevel } from 'convex/permissions/types'
+import { EDITOR_MODE } from 'shared/editor/types'
+import type { PermissionLevel } from 'shared/permissions/types'
 import { createElement } from 'react'
 import {
   ArrowUpLeft,

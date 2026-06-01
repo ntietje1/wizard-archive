@@ -1,10 +1,10 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
-import { PERMISSION_LEVEL } from '../../permissions/types'
-import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
+import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { PermissionLevel } from '../../permissions/types'
+import type { PermissionLevel } from '../../../shared/permissions/types'
 import type { AnySidebarItemFromDb } from '../../sidebarItems/types/types'
 
 export async function resolveInheritedPermissions(

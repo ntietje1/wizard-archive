@@ -8,7 +8,7 @@ import {
   NAV_COLUMN_WIDTH,
 } from './sidebar-toolbar/constants'
 import { ResizableSidebar } from './resizable-sidebar'
-import type { PanelPreference } from 'convex/userPreferences/types'
+import type { PanelPreference } from 'shared/user-preferences/types'
 import { CampaignPanel } from '~/features/sidebar/components/campaign-panel/campaign-panel'
 import { ResizablePanel, ResizablePanelGroup } from '~/features/shadcn/components/resizable'
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'

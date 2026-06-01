@@ -1,4 +1,4 @@
-import { normalizeSelectedRoots } from 'convex/sidebarItems/filesystem/selection'
+import { normalizeSelectedRoots } from 'shared/sidebar-items/filesystem/selection'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 

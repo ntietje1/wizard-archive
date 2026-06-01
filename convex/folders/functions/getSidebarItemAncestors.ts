@@ -1,4 +1,4 @@
-import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import { enhanceBase } from '../../sidebarItems/functions/enhanceBaseSidebarItem'
 import { isTrashedSidebarItem } from '../../sidebarItems/types/status'

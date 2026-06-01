@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import { sidebarItemValidatorFields } from '../sidebarItems/schema/sidebarItemsTable'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../../shared/sidebar-items/types'
 import { permissionLevelValidator } from '../sidebarItems/schema/validators'
 import { blockShareStatusValidator, editorBlockInputValidator } from '../blocks/schema'
 import { folderValidator } from '../folders/baseSchema'

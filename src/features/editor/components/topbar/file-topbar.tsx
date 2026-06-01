@@ -1,4 +1,4 @@
-import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { Trash2 } from 'lucide-react'
 import { EditableBreadcrumb, EditableName, SidebarItemBreadcrumb } from './editable-breadcrumb'
 import { ItemButtonWrapper } from './topbar-item-content/item-button-wrapper'

@@ -1,9 +1,9 @@
 import { toast } from 'sonner'
 import { api } from 'convex/_generated/api'
-import { isMediaFile, isTextFile, validateFileForUpload } from 'convex/storage/validation'
+import { isMediaFile, isTextFile, validateFileForUpload } from 'shared/storage/validation'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
-import { deduplicateName } from 'convex/sidebarItems/functions/defaultItemName'
+import { deduplicateName } from 'shared/sidebar-items/default-name'
 import type { Id } from 'convex/_generated/dataModel'
 import type { DropResult, FolderStructure } from '~/features/file-upload/utils/folder-reader'
 import { logger } from '~/shared/utils/logger'
@@ -85,6 +85,23 @@ function uploadCompleteMessage(hasFolders: boolean, progress: UploadProgress) {
     return `Uploaded ${progress.processedFiles} file${progress.processedFiles !== 1 ? 's' : ''}${skippedText}`
   }
   return `Created ${progress.processedFolders} folder${progress.processedFolders !== 1 ? 's' : ''} and ${progress.processedFiles} file${progress.processedFiles !== 1 ? 's' : ''}${skippedText}`
+}
+
+function startSingleFileToast(
+  file: File,
+  fileName: string,
+  silent: boolean,
+): string | number | undefined {
+  if (silent) return undefined
+  const textFile = isTextFile(file.type, file.name)
+  return toast.loading(
+    <ToastContent
+      title={fileName}
+      message={textFile ? 'Processing...' : 'Uploading... 0%'}
+      progress={textFile ? undefined : 0}
+    />,
+    { duration: Infinity, style: TOAST_STYLE },
+  )
 }
 
 export function useFileDropHandler() {
@@ -174,23 +191,6 @@ export function useFileDropHandler() {
       }
     }
     return null
-  }
-
-  const startSingleFileToast = (
-    file: File,
-    fileName: string,
-    silent: boolean,
-  ): string | number | undefined => {
-    if (silent) return undefined
-    const textFile = isTextFile(file.type, file.name)
-    return toast.loading(
-      <ToastContent
-        title={fileName}
-        message={textFile ? 'Processing...' : 'Uploading... 0%'}
-        progress={textFile ? undefined : 0}
-      />,
-      { duration: Infinity, style: TOAST_STYLE },
-    )
   }
 
   const finishSingleFileUpload = ({
@@ -284,18 +284,27 @@ export function useFileDropHandler() {
       style: TOAST_STYLE,
     })
 
-    for (const { file } of folder.files) {
-      await uploadBatchFile(file, folderId, progress)
-      toast.loading(<FolderProgressContent progress={{ ...progress }} />, {
-        id: progress.toastId,
-        duration: Infinity,
-        style: TOAST_STYLE,
-      })
-    }
+    await folder.files.reduce<Promise<void>>(
+      (previousUpload, { file }) =>
+        previousUpload.then(() =>
+          uploadBatchFile(file, folderId, progress).then(() => {
+            toast.loading(<FolderProgressContent progress={{ ...progress }} />, {
+              id: progress.toastId,
+              duration: Infinity,
+              style: TOAST_STYLE,
+            })
+          }),
+        ),
+      Promise.resolve(undefined),
+    )
 
-    for (const subfolder of folder.subfolders) {
-      await uploadFolderRecursive(subfolder, folderId, progress)
-    }
+    await folder.subfolders.reduce<Promise<void>>(
+      (previousUpload, subfolder) =>
+        previousUpload.then(() =>
+          uploadFolderRecursive(subfolder, folderId, progress).then(() => undefined),
+        ),
+      Promise.resolve(undefined),
+    )
 
     return folderId
   }
@@ -307,10 +316,15 @@ export function useFileDropHandler() {
     hasFolders: boolean,
     stats: ReturnType<typeof getDropResultStats>,
   ) => {
-    for (const { file } of files) {
-      await uploadBatchFile(file, parentId, progress)
-      showBatchProgress(progress.toastId, hasFolders, stats, progress)
-    }
+    await files.reduce<Promise<void>>(
+      (previousUpload, { file }) =>
+        previousUpload.then(() =>
+          uploadBatchFile(file, parentId, progress).then(() => {
+            showBatchProgress(progress.toastId, hasFolders, stats, progress)
+          }),
+        ),
+      Promise.resolve(undefined),
+    )
   }
 
   const uploadBatchFile = async (
@@ -343,11 +357,11 @@ export function useFileDropHandler() {
     parentId: Id<'sidebarItems'> | null,
     progress: UploadProgress,
   ) => {
-    let lastFolderId: Id<'sidebarItems'> | undefined
-    for (const folder of rootFolders) {
-      lastFolderId = await uploadFolderRecursive(folder, parentId, progress)
-    }
-    return lastFolderId
+    return await rootFolders.reduce<Promise<Id<'sidebarItems'> | undefined>>(
+      (previousUpload, folder) =>
+        previousUpload.then(() => uploadFolderRecursive(folder, parentId, progress)),
+      Promise.resolve<Id<'sidebarItems'> | undefined>(undefined),
+    )
   }
 
   const handleDrop = async (dropResult: DropResult, options?: DropOptions): Promise<void> => {

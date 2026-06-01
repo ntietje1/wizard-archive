@@ -1,5 +1,5 @@
 import { convexBetterAuthReactStart } from '@convex-dev/better-auth/react-start'
-import { ERROR_CODE, isClientError } from 'convex/errors'
+import { ERROR_CODE, isClientError } from 'shared/errors/client'
 import { getConvexAuthProxyTarget } from './auth-proxy'
 import type { ConvexAuthProxyTarget } from './auth-proxy'
 

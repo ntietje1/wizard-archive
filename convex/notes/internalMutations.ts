@@ -3,7 +3,8 @@ import { internalMutation } from '../_generated/server'
 import { editorBlockInputValidator } from '../blocks/schema'
 import { parseEditorBlocks } from '../blocks/parseEditorBlocks'
 import { syncNoteIndexesFromBlocks } from './functions/syncNoteDerivedData'
-import { ERROR_CODE, throwClientError } from '../errors'
+import { ERROR_CODE } from '../../shared/errors/client'
+import { throwClientError } from '../errors'
 
 export const syncDerivedDataFromBlocks = internalMutation({
   args: {

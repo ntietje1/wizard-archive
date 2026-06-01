@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { SIDEBAR_ITEM_TYPES } from '../../types/baseTypes'
-import { deduplicateName, findUniqueDefaultName } from '../defaultItemName'
+import { SIDEBAR_ITEM_TYPES } from '../../../../shared/sidebar-items/types'
+import {
+  deduplicateName,
+  findUniqueDefaultName,
+} from '../../../../shared/sidebar-items/default-name'
 import { assertSidebarItemName } from '../../validation/name'
 
 describe('deduplicateName', () => {

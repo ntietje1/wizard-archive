@@ -1,13 +1,14 @@
-import { PERMISSION_LEVEL } from '../../permissions/types'
+import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { logEditHistory } from '../../editHistory/log'
-import { ERROR_CODE, throwClientError } from '../../errors'
+import { ERROR_CODE } from '../../../shared/errors/client'
+import { throwClientError } from '../../errors'
 import { getSidebarItem } from './getSidebarItem'
 import { requireItemAccess } from '../validation/access'
 import type { EditHistoryChange } from '../../editHistory/types'
 import type { WithoutSystemFields } from 'convex/server'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Doc, Id } from '../../_generated/dataModel'
-import type { SidebarItemType } from '../types/baseTypes'
+import type { SidebarItemType } from '../../../shared/sidebar-items/types'
 import type { AnySidebarItem } from '../types/types'
 
 export async function applySidebarItemContentUpdate({

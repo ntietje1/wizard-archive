@@ -7,7 +7,7 @@ import type {
   EditHistoryMetadataMap,
   LogEditHistoryArgs,
 } from './types'
-import type { SidebarItemType } from '../sidebarItems/types/baseTypes'
+import type { SidebarItemType } from '../../shared/sidebar-items/types'
 
 type EditHistoryCtx = Pick<MutationCtx, 'db'> & {
   campaign: Pick<Doc<'campaigns'>, '_id'>

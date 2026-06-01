@@ -1,7 +1,7 @@
 import { BlockNoteEditor } from '@blocknote/core'
 import { useEffect, useRef } from 'react'
 import { SHARE_STATUS } from 'shared/editor-blocks/share-status'
-import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { createEditorSchema } from '../editor-specs'
 import { NoteView } from './note-view'
 import { LinkClickHandler } from './extensions/link-click-handler'
@@ -162,9 +162,8 @@ function StaticNoteEditor({
   onEditorChange?: NoteEditorChangeHandler
 }) {
   const linkResolver = useLinkResolver(noteId, { isViewerMode: true })
-  const initializedEditorRef = useRef<CustomBlockNoteEditor | null>(null)
   const editor = useOwnedBlockNoteEditor({
-    identity: noteId ?? 'raw-static-note-content',
+    identity: `${noteId ?? 'raw-static-note-content'}:${JSON.stringify(content)}`,
     createEditor: () =>
       BlockNoteEditor.create({
         schema: createEditorSchema(),
@@ -178,18 +177,6 @@ function StaticNoteEditor({
     destroyEditor: destroyBlockNoteEditor,
     onEditorChange: (nextEditor) => onEditorChange?.(nextEditor, null, null),
   })
-
-  useEffect(() => {
-    if (!editor) return
-    if (initializedEditorRef.current !== editor) {
-      initializedEditorRef.current = editor
-      return
-    }
-    editor.replaceBlocks(
-      editor.document,
-      content as Parameters<CustomBlockNoteEditor['replaceBlocks']>[1],
-    )
-  }, [editor, content])
 
   if (!editor) return null
 

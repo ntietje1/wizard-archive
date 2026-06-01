@@ -1,5 +1,5 @@
 import type { Id } from '../_generated/dataModel'
-import type { SidebarItemType } from '../sidebarItems/types/baseTypes'
+import type { SidebarItemType } from '../../shared/sidebar-items/types'
 import type { SNAPSHOT_TYPE } from './schema'
 
 export type SnapshotType = (typeof SNAPSHOT_TYPE)[keyof typeof SNAPSHOT_TYPE]

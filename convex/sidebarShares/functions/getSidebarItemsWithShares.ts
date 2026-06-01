@@ -1,13 +1,14 @@
-import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import { requireItemAccess } from '../../sidebarItems/validation/access'
-import { PERMISSION_LEVEL } from '../../permissions/types'
+import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
-import { ERROR_CODE, throwClientError } from '../../errors'
+import { ERROR_CODE } from '../../../shared/errors/client'
+import { throwClientError } from '../../errors'
 import { resolveInheritedPermissions } from './sidebarItemPermissions'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { PermissionLevel } from '../../permissions/types'
+import type { PermissionLevel } from '../../../shared/permissions/types'
 import type { SidebarItemShare } from '../types'
 
 export interface SidebarItemWithShares {

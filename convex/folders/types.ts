@@ -1,5 +1,5 @@
+import type { SIDEBAR_ITEM_TYPES } from '../../shared/sidebar-items/types'
 import type {
-  SIDEBAR_ITEM_TYPES,
   SidebarItem,
   SidebarItemFromDb,
   SidebarItemWithContent,

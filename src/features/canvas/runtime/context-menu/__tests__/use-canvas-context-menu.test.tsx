@@ -10,7 +10,7 @@ import type {
   CanvasDocumentNode as Node,
 } from '~/features/canvas/domain/validation'
 import type { MouseEvent as ReactMouseEvent } from 'react'
-import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import * as Y from 'yjs'

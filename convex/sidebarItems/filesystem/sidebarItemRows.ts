@@ -1,4 +1,5 @@
-import { ERROR_CODE, throwClientError } from '../../errors'
+import { ERROR_CODE } from '../../../shared/errors/client'
+import { throwClientError } from '../../errors'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignQueryCtx } from '../../functions'
 import type { AnySidebarItemRow } from '../types/types'

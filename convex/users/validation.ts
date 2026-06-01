@@ -3,7 +3,8 @@ import {
   assertStoredUsername as assertSharedStoredUsername,
   assertUsername as assertSharedUsername,
 } from '../../shared/users/validation'
-import { ERROR_CODE, throwClientError } from '../errors'
+import { ERROR_CODE } from '../../shared/errors/client'
+import { throwClientError } from '../errors'
 import type { Username } from '../../shared/users/validation'
 
 export const usernameValidator = v.string()

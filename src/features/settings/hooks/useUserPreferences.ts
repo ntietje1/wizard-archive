@@ -1,7 +1,7 @@
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import type { QueryClient } from '@tanstack/react-query'
-import type { UserPreferences } from 'convex/userPreferences/types'
+import type { UserPreferences } from 'shared/user-preferences/types'
 
 export const userPreferencesQueryOptions = convexQuery(
   api.userPreferences.queries.getUserPreferences,

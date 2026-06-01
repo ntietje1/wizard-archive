@@ -1,5 +1,6 @@
 import type { CampaignSlug } from '../../../shared/campaigns/validation'
-import { ERROR_CODE, throwClientError } from '../../errors'
+import { ERROR_CODE } from '../../../shared/errors/client'
+import { throwClientError } from '../../errors'
 import { prepareCampaignDescription } from '../../../shared/campaigns/validation'
 import { prepareCampaignName } from '../validation'
 import type { WithoutSystemFields } from 'convex/server'

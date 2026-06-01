@@ -1,5 +1,6 @@
 import { assertSidebarItemName as assertSharedSidebarItemName } from '../../../shared/sidebar-items/name'
-import { ERROR_CODE, throwClientError } from '../../errors'
+import { ERROR_CODE } from '../../../shared/errors/client'
+import { throwClientError } from '../../errors'
 import type { SidebarItemName } from '../../../shared/sidebar-items/name'
 
 export function assertSidebarItemName(name: string): SidebarItemName {

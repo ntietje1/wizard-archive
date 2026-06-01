@@ -1,7 +1,8 @@
-import { ERROR_CODE, throwClientError } from '../../errors'
-import { hasAtLeastPermissionLevel } from '../../permissions/hasAtLeastPermissionLevel'
+import { ERROR_CODE } from '../../../shared/errors/client'
+import { throwClientError } from '../../errors'
+import { hasAtLeastPermissionLevel } from '../../../shared/permissions/hasAtLeastPermissionLevel'
 import { enhanceSidebarItem } from '../functions/enhanceSidebarItem'
-import type { PermissionLevel } from '../../permissions/types'
+import type { PermissionLevel } from '../../../shared/permissions/types'
 import type { CampaignQueryCtx } from '../../functions'
 import type { AnySidebarItemFromDb, EnhancedSidebarItem } from '../types/types'
 

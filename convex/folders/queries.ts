@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { campaignQuery } from '../functions'
 import { editorBlockInputValidator } from '../blocks/schema'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../../shared/sidebar-items/types'
 import {
   getRootContentsForDownload as getRootContentsForDownloadFn,
   getSidebarItemsForDownload as getSidebarItemsForDownloadFn,

@@ -1,25 +1,16 @@
-import type { Id } from '../_generated/dataModel'
-import { logger } from '../common/logger'
-import type { LinkPathKind } from './types'
+import type { LinkPathKind, LinkResolvableItem } from './types'
 
-export interface LinkResolvableItem {
-  _id: Id<'sidebarItems'>
-  name: string
-  parentId: Id<'sidebarItems'> | null
-}
-
-export function getItemPath<T extends LinkResolvableItem>(
+export function getItemPath<TItemId extends string, T extends LinkResolvableItem<TItemId>>(
   item: T,
-  itemsMap: Map<Id<'sidebarItems'>, T>,
+  itemsMap: Map<TItemId, T>,
 ): Array<string> {
   const path: Array<string> = []
   let current: T | undefined = item
-  const seen = new Set<Id<'sidebarItems'>>()
+  const seen = new Set<TItemId>()
 
   while (current && !seen.has(current._id)) {
     seen.add(current._id)
     if (!current.name) {
-      logger.warn('[getItemPath] Encountered item with empty name')
       return []
     }
     path.unshift(current.name)
@@ -43,8 +34,8 @@ function normalizePathSegment(pathSegment: string): string {
   return pathSegment.trim().toLowerCase()
 }
 
-function findChildByName<T extends LinkResolvableItem>(
-  parentId: Id<'sidebarItems'> | null,
+function findChildByName<TItemId extends string, T extends LinkResolvableItem<TItemId>>(
+  parentId: TItemId | null,
   name: string,
   allItems: Array<T>,
 ): T | undefined {
@@ -65,10 +56,10 @@ function matchesPathSuffix(
   return normalizedPath.every((segment, i) => normalizedFullPath[startIdx + i] === segment)
 }
 
-function forEachMatchingItem<T extends LinkResolvableItem>(
+function forEachMatchingItem<TItemId extends string, T extends LinkResolvableItem<TItemId>>(
   pathSegments: Array<string>,
   allItems: Array<T>,
-  itemsMap: Map<Id<'sidebarItems'>, T>,
+  itemsMap: Map<TItemId, T>,
   onMatch: (item: T) => boolean | void,
 ): void {
   const normalizedPath = normalizePathSegments(pathSegments)
@@ -83,11 +74,11 @@ function forEachMatchingItem<T extends LinkResolvableItem>(
   }
 }
 
-function rankMatches<T extends LinkResolvableItem>(
+function rankMatches<TItemId extends string, T extends LinkResolvableItem<TItemId>>(
   matches: Array<T>,
-  itemsMap: Map<Id<'sidebarItems'>, T>,
+  itemsMap: Map<TItemId, T>,
 ): Array<T> {
-  const pathCache = new Map<Id<'sidebarItems'>, Array<string>>()
+  const pathCache = new Map<TItemId, Array<string>>()
   const getPath = (item: T) => {
     let path = pathCache.get(item._id)
     if (!path) {
@@ -109,21 +100,24 @@ function rankMatches<T extends LinkResolvableItem>(
   })
 }
 
-export function resolveItemByPath<T extends LinkResolvableItem>(
+export function resolveItemByPath<TItemId extends string, T extends LinkResolvableItem<TItemId>>(
   pathSegments: Array<string>,
   allItems: Array<T>,
-  itemsMap: Map<Id<'sidebarItems'>, T>,
+  itemsMap: Map<TItemId, T>,
 ): T | undefined {
   if (pathSegments.length === 0) return undefined
 
   return resolveAllByPath(pathSegments, allItems, itemsMap)[0]
 }
 
-export function resolveRelativeItemByPath<T extends LinkResolvableItem>(
+export function resolveRelativeItemByPath<
+  TItemId extends string,
+  T extends LinkResolvableItem<TItemId>,
+>(
   pathSegments: Array<string>,
   allItems: Array<T>,
-  itemsMap: Map<Id<'sidebarItems'>, T>,
-  sourceParentId: Id<'sidebarItems'> | null | undefined,
+  itemsMap: Map<TItemId, T>,
+  sourceParentId: TItemId | null | undefined,
 ): T | undefined {
   if (pathSegments.length === 0 || sourceParentId === undefined) return undefined
 
@@ -163,22 +157,25 @@ export function resolveRelativeItemByPath<T extends LinkResolvableItem>(
   return currentParentId ? itemsMap.get(currentParentId) : undefined
 }
 
-export function resolveParsedItemPath<T extends LinkResolvableItem>(
+export function resolveParsedItemPath<
+  TItemId extends string,
+  T extends LinkResolvableItem<TItemId>,
+>(
   pathKind: LinkPathKind,
   pathSegments: Array<string>,
   allItems: Array<T>,
-  itemsMap: Map<Id<'sidebarItems'>, T>,
-  sourceParentId?: Id<'sidebarItems'> | null,
+  itemsMap: Map<TItemId, T>,
+  sourceParentId?: TItemId | null,
 ): T | undefined {
   return pathKind === 'relative'
     ? resolveRelativeItemByPath(pathSegments, allItems, itemsMap, sourceParentId)
     : resolveItemByPath(pathSegments, allItems, itemsMap)
 }
 
-export function resolveAllByPath<T extends LinkResolvableItem>(
+export function resolveAllByPath<TItemId extends string, T extends LinkResolvableItem<TItemId>>(
   pathSegments: Array<string>,
   allItems: Array<T>,
-  itemsMap: Map<Id<'sidebarItems'>, T>,
+  itemsMap: Map<TItemId, T>,
 ): Array<T> {
   if (pathSegments.length === 0) return []
 
@@ -190,10 +187,10 @@ export function resolveAllByPath<T extends LinkResolvableItem>(
   return rankMatches(matches, itemsMap)
 }
 
-export function isPathUnique<T extends LinkResolvableItem>(
+export function isPathUnique<TItemId extends string, T extends LinkResolvableItem<TItemId>>(
   pathSegments: Array<string>,
   allItems: Array<T>,
-  itemsMap: Map<Id<'sidebarItems'>, T>,
+  itemsMap: Map<TItemId, T>,
 ): boolean {
   if (pathSegments.length === 0) return false
 
@@ -206,11 +203,10 @@ export function isPathUnique<T extends LinkResolvableItem>(
   return matchCount === 1
 }
 
-export function getMinDisambiguationPath<T extends LinkResolvableItem>(
-  item: T,
-  allItems: Array<T>,
-  itemsMap: Map<Id<'sidebarItems'>, T>,
-): Array<string> {
+export function getMinDisambiguationPath<
+  TItemId extends string,
+  T extends LinkResolvableItem<TItemId>,
+>(item: T, allItems: Array<T>, itemsMap: Map<TItemId, T>): Array<string> {
   const fullPath = getItemPath(item, itemsMap)
   if (fullPath.length === 0) return item.name ? [item.name.trim()] : []
 

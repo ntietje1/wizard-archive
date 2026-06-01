@@ -5,7 +5,7 @@ import type { SidebarItemColor } from 'shared/sidebar-items/color'
 import type { SidebarItemIconName } from 'shared/sidebar-items/icon'
 import { toast } from 'sonner'
 import { Loader } from 'lucide-react'
-import { validateFileForUpload } from 'convex/storage/validation'
+import { validateFileForUpload } from 'shared/storage/validation'
 import type { Id } from 'convex/_generated/dataModel'
 import { usePdfPreviewUpload } from '~/features/previews/hooks/use-pdf-preview-upload'
 import { handleError } from '~/shared/utils/logger'
@@ -211,16 +211,12 @@ export function FileForm({ fileId, campaignId, parentId, onClose, onSuccess }: F
   const hasFile = !!(fileUpload.file || (file.data?.storageId && !fileUpload.removed))
 
   const isDisabled = form.state.isSubmitting || fileUpload.isUploading || isLoadingFile
+  const submitForm = () => {
+    void form.handleSubmit()
+  }
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault()
-        e.stopPropagation()
-        void form.handleSubmit()
-      }}
-      className="space-y-4"
-    >
+    <div className="space-y-4">
       <form.Field
         name="name"
         validators={{
@@ -315,7 +311,11 @@ export function FileForm({ fileId, campaignId, parentId, onClose, onSuccess }: F
             <Button type="button" variant="outline" onClick={onClose} disabled={isDisabled}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!hasFile || isDisabled || (fileId && !canSubmit)}>
+            <Button
+              type="button"
+              onClick={submitForm}
+              disabled={!hasFile || isDisabled || (fileId && !canSubmit)}
+            >
               {form.state.isSubmitting
                 ? fileId
                   ? 'Updating...'
@@ -327,6 +327,6 @@ export function FileForm({ fileId, campaignId, parentId, onClose, onSuccess }: F
           </div>
         )}
       </form.Subscribe>
-    </form>
+    </div>
   )
 }

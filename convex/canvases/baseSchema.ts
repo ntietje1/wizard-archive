@@ -1,5 +1,5 @@
 import { v } from 'convex/values'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../../shared/sidebar-items/types'
 import { sidebarItemValidatorFields } from '../sidebarItems/schema/sidebarItemsTable'
 
 export const canvasValidatorFields = {

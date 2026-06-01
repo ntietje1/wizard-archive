@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { SIDEBAR_ITEM_TYPES } from '../../types/baseTypes'
-import { collectDescendantIdsFromItems } from '../tree'
+import { SIDEBAR_ITEM_TYPES } from '../../../../shared/sidebar-items/types'
+import { collectDescendantIdsFromItems } from '../../../../shared/sidebar-items/filesystem/tree'
 import type { Id } from '../../../_generated/dataModel'
-import type { SidebarItemType } from '../../types/baseTypes'
+import type { SidebarItemType } from '../../../../shared/sidebar-items/types'
 
 function item(
   id: string,

@@ -1,10 +1,10 @@
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
-import { parseWikiLinkText } from 'convex/links/linkParsers'
+import { parseWikiLinkText } from 'shared/links/parsing'
 import {
   getMinDisambiguationPath,
   resolveParsedItemPath,
   resolveItemByPath,
-} from 'convex/links/linkResolution'
+} from 'shared/links/resolution'
 import type { Heading, HeadingLevel } from 'shared/editor-blocks/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'

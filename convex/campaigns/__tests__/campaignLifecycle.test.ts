@@ -3,7 +3,7 @@ import { createTestContext } from '../../_test/setup.helper'
 import { setupUser } from '../../_test/identities.helper'
 import { createFile, createFolder, createGameMap, createNote } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
-import { SIDEBAR_ITEM_STATUS } from '../../sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_STATUS } from '../../../shared/sidebar-items/types'
 
 describe('campaign lifecycle', () => {
   const t = createTestContext()

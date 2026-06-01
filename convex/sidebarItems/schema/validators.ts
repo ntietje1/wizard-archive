@@ -1,6 +1,10 @@
 import { v } from 'convex/values'
-import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
-import { PERMISSION_LEVEL } from '../../permissions/types'
+import {
+  SIDEBAR_ITEM_LOCATION,
+  SIDEBAR_ITEM_STATUS,
+  SIDEBAR_ITEM_TYPES,
+} from '../../../shared/sidebar-items/types'
+import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 
 export const sidebarItemSlugValidator = v.string()
 export const sidebarItemNameValidator = v.string()

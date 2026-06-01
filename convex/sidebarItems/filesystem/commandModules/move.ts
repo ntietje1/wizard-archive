@@ -1,6 +1,7 @@
-import { ERROR_CODE, throwClientError } from '../../../errors'
-import { PERMISSION_LEVEL } from '../../../permissions/types'
-import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../../types/baseTypes'
+import { ERROR_CODE } from '../../../../shared/errors/client'
+import { throwClientError } from '../../../errors'
+import { PERMISSION_LEVEL } from '../../../../shared/permissions/types'
+import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../../../../shared/sidebar-items/types'
 import {
   ensureSidebarItemNameAvailable,
   findUniqueSidebarItemSlug,
@@ -11,23 +12,24 @@ import { logEditHistory } from '../../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../../editHistory/types'
 import { resyncNoteLinksForNotes } from '../../../links/functions/resyncNoteLinksForNotes'
 import { getActiveSidebarItemRowsByParent } from '../../functions/getSidebarItemsByParent'
-import { planTransferOperations } from '../transferPlanner'
-import type { TransferOperation } from '../transferPlanner'
+import { planTransferOperations } from '../../../../shared/sidebar-items/filesystem/transfer-planner'
+import type { TransferOperation } from '../../../../shared/sidebar-items/filesystem/transfer-planner'
 import { collectSidebarChildrenMap } from '../children'
-import { normalizeSelectedRoots } from '../selection'
+import { normalizeSelectedRoots } from '../../../../shared/sidebar-items/filesystem/selection'
 import { addSidebarItemAncestorsToMap } from '../ancestors'
 import { collectDescendants } from '../../functions/collectDescendants'
-import { assertSidebarOperationAllowed, evaluateRestore } from '../capabilities'
-import { toDecisionRecord } from '../conflicts'
-import type { OperationDecision } from '../conflicts'
+import { evaluateRestore } from '../../../../shared/sidebar-items/filesystem/capabilities'
+import { assertSidebarOperationAllowed } from '../capabilities'
+import { toDecisionRecord } from '../../../../shared/sidebar-items/filesystem/conflicts'
+import type { OperationDecision } from '../../../../shared/sidebar-items/filesystem/conflicts'
 import { isActiveSidebarItem, isTrashedSidebarItem } from '../../types/status'
 import { createFileSystemWriteSession } from '../deltas'
-import { FILE_SYSTEM_EVENT_TYPE } from '../receipts'
-import { createFileSystemReadModel } from '../readModel'
+import { FILE_SYSTEM_EVENT_TYPE } from '../../../../shared/sidebar-items/filesystem/receipts'
+import { createFileSystemReadModel } from '../../../../shared/sidebar-items/filesystem/read-model'
 import { getSidebarItemRow } from '../sidebarItemRows'
 import { checkSidebarItemRowAccess, requireSidebarItemRowAccess } from '../access'
 import type { AccessibleSidebarItemRow } from '../access'
-import type { SidebarItemStatus } from '../../types/baseTypes'
+import type { SidebarItemStatus } from '../../../../shared/sidebar-items/types'
 import type { AnySidebarItemRow } from '../../types/types'
 import type { CampaignMutationCtx } from '../../../functions'
 import type { Id } from '../../../_generated/dataModel'
@@ -38,8 +40,11 @@ import type {
   MoveFileSystemCommand,
   RestoreFileSystemCommand,
   TrashFileSystemCommand,
-} from '../commands'
-import type { FileSystemDelta, FileSystemEvent } from '../receipts'
+} from '../../../../shared/sidebar-items/filesystem/commands'
+import type {
+  FileSystemDelta,
+  FileSystemEvent,
+} from '../../../../shared/sidebar-items/filesystem/receipts'
 
 const clearDeletion = { deletionTime: null, deletedBy: null }
 

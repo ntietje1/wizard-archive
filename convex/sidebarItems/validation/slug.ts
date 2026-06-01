@@ -1,5 +1,6 @@
 import { assertSidebarItemSlug as assertSharedSidebarItemSlug } from '../../../shared/sidebar-items/slug'
-import { ERROR_CODE, throwClientError } from '../../errors'
+import { ERROR_CODE } from '../../../shared/errors/client'
+import { throwClientError } from '../../errors'
 import type { SidebarItemSlug } from '../../../shared/sidebar-items/slug'
 
 export function assertSidebarItemSlug(value: string): SidebarItemSlug {

@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import type { Id } from 'convex/_generated/dataModel'
-import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { createNote } from '~/test/factories/sidebar-item-factory'
 import { useSidebarItemsShare } from '../useSidebarItemsShare'
 

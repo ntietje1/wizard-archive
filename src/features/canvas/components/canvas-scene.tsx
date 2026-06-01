@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import { CanvasAwarenessHost } from './canvas-awareness-host'
 import { CanvasConnectionLayer } from './canvas-connection-layer'
 import { CanvasEdgeRenderer } from './canvas-edge-renderer'
@@ -12,7 +12,7 @@ import { CanvasNodeResizeMetadataProvider } from '../nodes/shared/canvas-node-re
 import { useCanvasConnectionGesture } from '../runtime/interaction/canvas-connection-gesture'
 import { isCanvasInteractiveKeyboardTarget } from '../runtime/interaction/canvas-keyboard-targets'
 import { isCanvasEmptyPaneTarget } from '../runtime/interaction/canvas-pane-targets'
-import { useCanvasEngine } from '../react/use-canvas-engine'
+import { useCanvasEngine } from '../react/canvas-engine-context-value'
 import { useCanvasViewportRuntime } from '../runtime/providers/canvas-runtime'
 import type { CanvasConnection } from '../types/canvas-domain-types'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
@@ -77,27 +77,24 @@ export function CanvasScene({
       onEdgeContextMenu,
     }
   }, [onEdgeContextMenu, onNodeContextMenu, sceneHandlers])
-  const handleNodeClick = useCallback((event: ReactMouseEvent, node: CanvasDocumentNode) => {
+  const handleNodeClick = (event: ReactMouseEvent, node: CanvasDocumentNode) => {
     nodeHandlersRef.current.onNodeClick?.(event, node)
-  }, [])
-  const handleNodeContextMenu = useCallback((event: ReactMouseEvent, node: CanvasDocumentNode) => {
+  }
+  const handleNodeContextMenu = (event: ReactMouseEvent, node: CanvasDocumentNode) => {
     nodeHandlersRef.current.onNodeContextMenu(event, node)
-  }, [])
-  const handleSelectionContextMenu = useCallback(
-    (event: ReactMouseEvent, nodeId: string) => {
-      const node = canvasEngine.getSnapshot().nodeLookup.get(nodeId)?.node
-      if (node) {
-        handleNodeContextMenu(event, node)
-      }
-    },
-    [canvasEngine, handleNodeContextMenu],
-  )
-  const handleEdgeClick = useCallback((event: ReactMouseEvent, edge: CanvasDocumentEdge) => {
+  }
+  const handleSelectionContextMenu = (event: ReactMouseEvent, nodeId: string) => {
+    const node = canvasEngine.getSnapshot().nodeLookup.get(nodeId)?.node
+    if (node) {
+      handleNodeContextMenu(event, node)
+    }
+  }
+  const handleEdgeClick = (event: ReactMouseEvent, edge: CanvasDocumentEdge) => {
     edgeHandlersRef.current.onEdgeClick?.(event, edge)
-  }, [])
-  const handleEdgeContextMenu = useCallback((event: ReactMouseEvent, edge: CanvasDocumentEdge) => {
+  }
+  const handleEdgeContextMenu = (event: ReactMouseEvent, edge: CanvasDocumentEdge) => {
     edgeHandlersRef.current.onEdgeContextMenu(event, edge)
-  }, [])
+  }
 
   const handlePaneKeyDown = (event: ReactKeyboardEvent) => {
     if (event.key === ' ') {

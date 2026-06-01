@@ -1,10 +1,12 @@
-import type { Doc, Id } from '../../_generated/dataModel'
+import type {
+  FileSystemTransactionId,
+  SidebarItemId,
+  SidebarItemPatchRow,
+  StorageId,
+  UserProfileId,
+} from './types'
 import type { FileSystemCommand } from './commands'
-import type { SidebarItemColor } from '../../../shared/sidebar-items/color'
-import type { SidebarItemIconName } from '../../../shared/sidebar-items/icon'
-import type { SidebarItemName } from '../../../shared/sidebar-items/name'
-import type { SidebarItemSlug } from '../../../shared/sidebar-items/slug'
-import type { SidebarItemStatus } from '../types/baseTypes'
+import type { SidebarItemStatus } from '../types'
 
 export const FILE_SYSTEM_EVENT_TYPE = {
   created: 'created',
@@ -25,39 +27,39 @@ export type FileSystemEventType =
   (typeof FILE_SYSTEM_EVENT_TYPE)[keyof typeof FILE_SYSTEM_EVENT_TYPE]
 
 export type FileSystemEvent =
-  | { type: typeof FILE_SYSTEM_EVENT_TYPE.created; itemId: Id<'sidebarItems'>; slug: string }
-  | { type: typeof FILE_SYSTEM_EVENT_TYPE.updated; itemId: Id<'sidebarItems'> }
+  | { type: typeof FILE_SYSTEM_EVENT_TYPE.created; itemId: SidebarItemId; slug: string }
+  | { type: typeof FILE_SYSTEM_EVENT_TYPE.updated; itemId: SidebarItemId }
   | {
       type: typeof FILE_SYSTEM_EVENT_TYPE.renamed
-      itemId: Id<'sidebarItems'>
+      itemId: SidebarItemId
       slug: string
       previousSlug: string
     }
   | {
       type: typeof FILE_SYSTEM_EVENT_TYPE.copied
-      itemId: Id<'sidebarItems'>
-      sourceItemId: Id<'sidebarItems'>
+      itemId: SidebarItemId
+      sourceItemId: SidebarItemId
     }
-  | { type: typeof FILE_SYSTEM_EVENT_TYPE.moved; itemId: Id<'sidebarItems'> }
-  | { type: typeof FILE_SYSTEM_EVENT_TYPE.trashed; itemId: Id<'sidebarItems'> }
-  | { type: typeof FILE_SYSTEM_EVENT_TYPE.restored; itemId: Id<'sidebarItems'> }
+  | { type: typeof FILE_SYSTEM_EVENT_TYPE.moved; itemId: SidebarItemId }
+  | { type: typeof FILE_SYSTEM_EVENT_TYPE.trashed; itemId: SidebarItemId }
+  | { type: typeof FILE_SYSTEM_EVENT_TYPE.restored; itemId: SidebarItemId }
   | {
       type: typeof FILE_SYSTEM_EVENT_TYPE.replaced
-      itemId: Id<'sidebarItems'>
-      sourceItemId: Id<'sidebarItems'>
+      itemId: SidebarItemId
+      sourceItemId: SidebarItemId
     }
   | {
       type: typeof FILE_SYSTEM_EVENT_TYPE.mergedFolder
-      itemId: Id<'sidebarItems'>
-      sourceItemId: Id<'sidebarItems'>
+      itemId: SidebarItemId
+      sourceItemId: SidebarItemId
     }
-  | { type: typeof FILE_SYSTEM_EVENT_TYPE.deletedForever; itemId: Id<'sidebarItems'> }
+  | { type: typeof FILE_SYSTEM_EVENT_TYPE.deletedForever; itemId: SidebarItemId }
   | {
       type: typeof FILE_SYSTEM_EVENT_TYPE.skipped
-      itemId: Id<'sidebarItems'>
-      sourceItemId: Id<'sidebarItems'>
+      itemId: SidebarItemId
+      sourceItemId: SidebarItemId
     }
-  | { type: typeof FILE_SYSTEM_EVENT_TYPE.noop; itemId: Id<'sidebarItems'> }
+  | { type: typeof FILE_SYSTEM_EVENT_TYPE.noop; itemId: SidebarItemId }
 
 export type FileSystemMessageKind =
   | 'created'
@@ -78,58 +80,58 @@ export type FileSystemReceiptMessage = {
 }
 
 export type SidebarItemPatchFields = {
-  name: SidebarItemName
-  slug: SidebarItemSlug
-  iconName: SidebarItemIconName | null
-  color: SidebarItemColor | null
-  parentId: Id<'sidebarItems'> | null
+  name: string
+  slug: string
+  iconName: string | null
+  color: string | null
+  parentId: SidebarItemId | null
   status: SidebarItemStatus
-  previewStorageId: Id<'_storage'> | null
+  previewStorageId: StorageId | null
   previewLockedUntil: number | null
   previewClaimToken: string | null
   previewUpdatedAt: number | null
   updatedTime: number | null
-  updatedBy: Id<'userProfiles'> | null
+  updatedBy: UserProfileId | null
   deletionTime: number | null
-  deletedBy: Id<'userProfiles'> | null
+  deletedBy: UserProfileId | null
 }
 export type SidebarItemFieldPatch = Partial<SidebarItemPatchFields>
 export type SidebarItemPatchPrecondition = SidebarItemFieldPatch &
-  Partial<Pick<Doc<'sidebarItems'>, 'type' | 'createdBy'>>
+  Partial<Pick<SidebarItemPatchRow, 'type' | 'createdBy'>>
 
 export type FileSystemPatch =
   | {
       type: 'upsertSidebarItem'
-      item: Doc<'sidebarItems'>
+      item: SidebarItemPatchRow
     }
   | {
       type: 'updateSidebarItem'
-      itemId: Id<'sidebarItems'>
+      itemId: SidebarItemId
       before: SidebarItemPatchPrecondition
       fields: SidebarItemFieldPatch
     }
   | {
       type: 'removeSidebarItem'
-      itemId: Id<'sidebarItems'>
-      snapshot: Doc<'sidebarItems'>
+      itemId: SidebarItemId
+      snapshot: SidebarItemPatchRow
     }
 
 export type FileSystemChange =
   | {
       type: 'insertSidebarItem'
-      itemId: Id<'sidebarItems'>
-      after: Doc<'sidebarItems'>
+      itemId: SidebarItemId
+      after: SidebarItemPatchRow
     }
   | {
       type: 'updateSidebarItem'
-      itemId: Id<'sidebarItems'>
-      before: Doc<'sidebarItems'>
-      after: Doc<'sidebarItems'>
+      itemId: SidebarItemId
+      before: SidebarItemPatchRow
+      after: SidebarItemPatchRow
     }
   | {
       type: 'removeSidebarItem'
-      itemId: Id<'sidebarItems'>
-      before: Doc<'sidebarItems'>
+      itemId: SidebarItemId
+      before: SidebarItemPatchRow
     }
 
 export type FileSystemDelta = {
@@ -146,7 +148,7 @@ export function fileSystemSelfEvents(
     | typeof FILE_SYSTEM_EVENT_TYPE.restored
     | typeof FILE_SYSTEM_EVENT_TYPE.deletedForever
     | typeof FILE_SYSTEM_EVENT_TYPE.noop,
-  itemIds: Array<Id<'sidebarItems'>>,
+  itemIds: Array<SidebarItemId>,
 ): Array<FileSystemEvent> {
   return itemIds.map((itemId) => ({ type, itemId }))
 }
@@ -229,7 +231,7 @@ export function summarizeFileSystemReceipt(
 export type FileSystemTransactionDirection = 'forward' | 'undo' | 'redo'
 
 export type FileSystemTransactionReceipt = {
-  transactionId: Id<'filesystemTransactions'> | null
+  transactionId: FileSystemTransactionId | null
   direction: FileSystemTransactionDirection
   command: FileSystemCommand
   events: Array<FileSystemEvent>

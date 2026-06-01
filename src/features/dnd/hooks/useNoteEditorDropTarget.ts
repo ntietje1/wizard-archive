@@ -11,7 +11,7 @@ import {
   useActiveSidebarItems,
   useTrashSidebarItems,
 } from '~/features/sidebar/hooks/useSidebarItems'
-import { getMinDisambiguationPath } from 'convex/links/linkResolution'
+import { getMinDisambiguationPath } from 'shared/links/resolution'
 import { useNoteEditorStore } from '~/features/editor/stores/note-editor-store'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'

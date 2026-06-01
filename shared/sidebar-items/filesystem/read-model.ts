@@ -1,33 +1,33 @@
-import { SIDEBAR_ITEM_STATUS } from '../types/baseTypes'
-import type { Id } from '../../_generated/dataModel'
-import type { SidebarItemStatus } from '../types/baseTypes'
-import type { SidebarItemSlug } from '../../../shared/sidebar-items/slug'
+import type { SidebarItemId } from './types'
+import { SIDEBAR_ITEM_STATUS } from '../types'
+import type { SidebarItemStatus } from '../types'
+import type { SidebarItemSlug } from '../slug'
 
 export type FileSystemReadModelItem = {
-  _id: Id<'sidebarItems'>
+  _id: SidebarItemId
   slug?: string
-  parentId: Id<'sidebarItems'> | null
+  parentId: SidebarItemId | null
   status: SidebarItemStatus
 }
 
 export type FileSystemReadModel<T extends FileSystemReadModelItem> = {
   items: Array<T>
-  itemsById: Map<Id<'sidebarItems'>, T>
+  itemsById: Map<SidebarItemId, T>
   itemsBySlug: Map<SidebarItemSlug, T>
-  activeChildrenByParent: Map<Id<'sidebarItems'> | null, Array<T>>
-  getItem: (itemId: Id<'sidebarItems'>) => T | undefined
-  getItems: (itemIds: Array<Id<'sidebarItems'>>) => Array<T>
-  requireItems: (itemIds: Array<Id<'sidebarItems'>>) => Array<T>
+  activeChildrenByParent: Map<SidebarItemId | null, Array<T>>
+  getItem: (itemId: SidebarItemId) => T | undefined
+  getItems: (itemIds: Array<SidebarItemId>) => Array<T>
+  requireItems: (itemIds: Array<SidebarItemId>) => Array<T>
   getItemBySlug: (slug: SidebarItemSlug) => T | undefined
-  getActiveChildren: (parentId: Id<'sidebarItems'> | null) => Array<T>
+  getActiveChildren: (parentId: SidebarItemId | null) => Array<T>
 }
 
 export function createFileSystemReadModel<T extends FileSystemReadModelItem>(
   items: Array<T>,
 ): FileSystemReadModel<T> {
-  const itemsById = new Map<Id<'sidebarItems'>, T>()
+  const itemsById = new Map<SidebarItemId, T>()
   const itemsBySlug = new Map<SidebarItemSlug, T>()
-  const activeChildrenByParent = new Map<Id<'sidebarItems'> | null, Array<T>>()
+  const activeChildrenByParent = new Map<SidebarItemId | null, Array<T>>()
 
   for (const item of items) {
     if (itemsById.has(item._id)) throw new Error(`Duplicate sidebar item id: ${item._id}`)

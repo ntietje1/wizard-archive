@@ -3,8 +3,8 @@ import {
   evaluatePermanentDelete,
   evaluateRestore,
   evaluateTrash,
-} from 'convex/sidebarItems/filesystem/capabilities'
-import type { OperationSidebarItem } from 'convex/sidebarItems/filesystem/capabilities'
+} from 'shared/sidebar-items/filesystem/capabilities'
+import type { OperationSidebarItem } from 'shared/sidebar-items/filesystem/capabilities'
 import type { CampaignMemberRole } from '~/features/campaigns/campaign-types'
 import type { Id } from 'convex/_generated/dataModel'
 

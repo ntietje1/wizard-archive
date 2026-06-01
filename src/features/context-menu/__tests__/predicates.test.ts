@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { CAMPAIGN_MEMBER_ROLE } from '~/features/campaigns/campaign-types'
-import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import type { MenuContext } from '~/features/context-menu/types'
 import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'

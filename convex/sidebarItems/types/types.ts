@@ -3,7 +3,8 @@ import type { Note, NoteFromDb, NoteWithContent } from '../../notes/types'
 import type { Folder, FolderFromDb, FolderWithContent } from '../../folders/types'
 import type { FileFromDb, FileWithContent, SidebarFile } from '../../files/types'
 import type { Canvas, CanvasFromDb, CanvasWithContent } from '../../canvases/types'
-import type { SIDEBAR_ITEM_TYPES, SidebarItemRow, SidebarItemType } from './baseTypes'
+import type { SIDEBAR_ITEM_TYPES, SidebarItemType } from '../../../shared/sidebar-items/types'
+import type { SidebarItemRow } from './baseTypes'
 
 export type SidebarItemTypeKey = keyof typeof SIDEBAR_ITEM_TYPES
 

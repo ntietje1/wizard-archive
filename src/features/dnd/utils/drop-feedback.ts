@@ -4,7 +4,7 @@ import type { DropPlanningContext } from './drop-planning-context'
 import { resolveSurfaceDropCommand } from './surface-drop-planner'
 import { EMPTY_EDITOR_DROP_TYPE } from './drop-target-data'
 import type { SidebarDropData } from './drop-target-data'
-import type { FileSystemDropOptions } from 'convex/sidebarItems/filesystem/intentPlanning'
+import type { FileSystemDropOptions } from 'shared/sidebar-items/filesystem/intent-planning'
 import {
   resolveFileSystemDropTarget,
   resolveGlobalFileSystemDropCommand,

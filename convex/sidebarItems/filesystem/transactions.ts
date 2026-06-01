@@ -1,17 +1,18 @@
-import { ERROR_CODE, throwClientError } from '../../errors'
+import { ERROR_CODE } from '../../../shared/errors/client'
+import { throwClientError } from '../../errors'
 import {
   assertUndoablePatch,
   receiptPatchesFromChangeSet,
   redoPatchesFromChangeSet,
   undoPatchesFromChangeSet,
 } from './deltas'
-import { hasMismatchedPrecondition } from './patches'
-import { summarizeFileSystemReceipt } from './receipts'
-import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
+import { hasMismatchedPrecondition } from '../../../shared/sidebar-items/filesystem/patches'
+import { summarizeFileSystemReceipt } from '../../../shared/sidebar-items/filesystem/receipts'
+import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import { collectDescendants } from '../functions/collectDescendants'
 import { resyncNoteLinksForNotes } from '../../links/functions/resyncNoteLinksForNotes'
 import { hardDeleteTree } from './treeWrites'
-import { normalizedName } from './conflicts'
+import { normalizedName } from '../../../shared/sidebar-items/filesystem/conflicts'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 import type {
@@ -19,8 +20,11 @@ import type {
   FileSystemPatch,
   FileSystemTransactionDirection,
   FileSystemTransactionReceipt,
-} from './receipts'
-import type { FileSystemCommand, FileSystemOperationDecision } from './commands'
+} from '../../../shared/sidebar-items/filesystem/receipts'
+import type {
+  FileSystemCommand,
+  FileSystemOperationDecision,
+} from '../../../shared/sidebar-items/filesystem/commands'
 import type { AnySidebarItemRow } from '../types/types'
 
 const MAX_FILESYSTEM_UNDO_HISTORY = 50

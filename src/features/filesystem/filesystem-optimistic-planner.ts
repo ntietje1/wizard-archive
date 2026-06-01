@@ -1,16 +1,16 @@
-import { planTransferOperations } from 'convex/sidebarItems/filesystem/transferPlanner'
-import { normalizeSelectedRoots } from 'convex/sidebarItems/filesystem/selection'
+import { planTransferOperations } from 'shared/sidebar-items/filesystem/transfer-planner'
+import { normalizeSelectedRoots } from 'shared/sidebar-items/filesystem/selection'
 import {
   projectDeleteForeverRoots,
   projectMoveOperations,
   projectTrashRoots,
-} from 'convex/sidebarItems/filesystem/patchProjection'
-import type { FileSystemPatch } from 'convex/sidebarItems/filesystem/receipts'
+} from 'shared/sidebar-items/filesystem/patch-projection'
+import type { FileSystemPatch } from 'shared/sidebar-items/filesystem/receipts'
 import {
   CREATE_PARENT_TARGET_KIND,
   validateCreateParentTarget,
-} from 'convex/sidebarItems/validation/parent'
-import { deduplicateName } from 'convex/sidebarItems/functions/defaultItemName'
+} from 'shared/sidebar-items/parent-target'
+import { deduplicateName } from 'shared/sidebar-items/default-name'
 import { assertSidebarItemName } from 'shared/sidebar-items/name'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
@@ -23,19 +23,19 @@ import type {
   RenameFileSystemCommand,
   RestoreFileSystemCommand,
   TrashFileSystemCommand,
-} from 'convex/sidebarItems/filesystem/commands'
+} from 'shared/sidebar-items/filesystem/commands'
 import type {
   ConflictDecision,
   ItemOperationConflict,
-} from 'convex/sidebarItems/filesystem/conflicts'
-import type { TransferOperation } from 'convex/sidebarItems/filesystem/transferPlanner'
+} from 'shared/sidebar-items/filesystem/conflicts'
+import type { TransferOperation } from 'shared/sidebar-items/filesystem/transfer-planner'
 import {
   buildOptimisticCreatePreview,
   buildOptimisticRenamePreview,
   expectedOptimisticCreateSlug,
 } from './filesystem-optimistic-patches'
 import type { SidebarCacheSnapshot } from './filesystem-cache-patches'
-import type { FileSystemReadModel } from 'convex/sidebarItems/filesystem/readModel'
+import type { FileSystemReadModel } from 'shared/sidebar-items/filesystem/read-model'
 import { getRestoreTargetParentId } from './filesystem-targets'
 import type { SidebarOperationSurface } from './filesystem-targets'
 

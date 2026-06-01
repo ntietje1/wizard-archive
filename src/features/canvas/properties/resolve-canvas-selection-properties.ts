@@ -3,10 +3,8 @@ import {
   normalizeCanvasEdge,
   resolveCanvasEdgeType,
 } from '../edges/canvas-edge-registry'
-import {
-  getCanvasNodeInspectableProperties,
-  normalizeCanvasNode,
-} from '../nodes/canvas-node-modules'
+import { getCanvasNodeInspectableProperties } from '../nodes/canvas-node-modules'
+import { normalizeCanvasNode } from '../nodes/canvas-node-normalization'
 import { canvasToolSpecs } from '../tools/canvas-tool-modules'
 import { withActiveRichTextColorBinding } from './canvas-rich-text-property-binding'
 import { resolveCanvasProperties } from './resolve-canvas-properties'

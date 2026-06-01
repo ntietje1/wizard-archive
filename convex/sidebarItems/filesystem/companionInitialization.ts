@@ -4,10 +4,10 @@ import { createFileCompanion } from '../../files/functions/fileCompanion'
 import { createFolderCompanion } from '../../folders/functions/folderCompanion'
 import { createMapCompanion } from '../../gameMaps/functions/mapCompanion'
 import { createNoteCompanion } from '../../notes/functions/noteCompanion'
-import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
-import type { SidebarItemType } from '../types/baseTypes'
+import type { SidebarItemType } from '../../../shared/sidebar-items/types'
 
 export async function initializeEmptySidebarItemCompanion(
   ctx: CampaignMutationCtx,

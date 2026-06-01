@@ -2,8 +2,6 @@ import { useCallback, useRef, useSyncExternalStore } from 'react'
 import { useCanvasEngine } from './canvas-engine-context-value'
 import type { CanvasEngineEquality, CanvasEngineSnapshot } from '../system/canvas-engine-types'
 
-export { useCanvasEngine }
-
 export function useCanvasEngineSelector<T>(
   selector: (snapshot: CanvasEngineSnapshot) => T,
   equality: CanvasEngineEquality<T> = Object.is,

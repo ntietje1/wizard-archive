@@ -1,15 +1,14 @@
-import { isTrashedSidebarItem } from '../types/status'
-import { deduplicateName } from '../functions/defaultItemName'
+import type { SidebarItemId } from './types'
+import { isTrashedSidebarItem } from '../types'
+import { deduplicateName } from '../default-name'
 import {
   addPlannedFolderMergeOperations,
   applyConflictDecision,
   findNameConflict,
 } from './conflicts'
-import { ERROR_CODE, throwClientError } from '../../errors'
 import { normalizeSelectedRoots } from './selection'
 import type { ConflictDecision, ItemOperationConflict, PlannerItemStatus } from './conflicts'
 import type { OperationPlannerItem } from './selection'
-import type { Id } from '../../_generated/dataModel'
 
 const MAX_OPERATION_DEPTH = 50
 const MAX_ERROR_ITEMS = 10
@@ -17,30 +16,30 @@ const MAX_ERROR_ITEMS = 10
 export type TransferMode = 'copy' | 'move'
 export type TransferOperation =
   | {
-      sourceItemId: Id<'sidebarItems'>
+      sourceItemId: SidebarItemId
       action: 'place'
-      targetParentId: Id<'sidebarItems'> | null
+      targetParentId: SidebarItemId | null
       name?: string
     }
   | {
-      sourceItemId: Id<'sidebarItems'>
+      sourceItemId: SidebarItemId
       action: 'replace'
-      targetParentId: Id<'sidebarItems'> | null
-      destinationItemId: Id<'sidebarItems'>
+      targetParentId: SidebarItemId | null
+      destinationItemId: SidebarItemId
       name: string
     }
   | {
-      sourceItemId: Id<'sidebarItems'>
+      sourceItemId: SidebarItemId
       action: 'mergeFolder'
-      targetParentId: Id<'sidebarItems'> | null
-      destinationItemId: Id<'sidebarItems'>
+      targetParentId: SidebarItemId | null
+      destinationItemId: SidebarItemId
     }
 export type TransferOperationPlan =
   | {
       status: 'ready'
       conflicts: []
       operations: Array<TransferOperation>
-      skippedSourceItemIds?: Array<Id<'sidebarItems'>>
+      skippedSourceItemIds?: Array<SidebarItemId>
     }
   | {
       status: 'needs-decision'
@@ -50,19 +49,19 @@ export type TransferOperationPlan =
 
 type TransferPlannerContext = {
   mode: TransferMode
-  targetParentId: Id<'sidebarItems'> | null
+  targetParentId: SidebarItemId | null
   targetItems: Array<OperationPlannerItem>
-  decisions: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
+  decisions: Partial<Record<SidebarItemId, ConflictDecision>>
   defaultConflictDecision?: ConflictDecision
-  getChildren?: (parentId: Id<'sidebarItems'>) => Array<OperationPlannerItem>
-  itemsById: ReadonlyMap<Id<'sidebarItems'>, Pick<OperationPlannerItem, '_id' | 'parentId'>>
+  getChildren?: (parentId: SidebarItemId) => Array<OperationPlannerItem>
+  itemsById: ReadonlyMap<SidebarItemId, Pick<OperationPlannerItem, '_id' | 'parentId'>>
   depth: number
-  movingIds: Set<Id<'sidebarItems'>>
+  movingIds: Set<SidebarItemId>
   conflicts: Array<ItemOperationConflict>
   operations: Array<TransferOperation>
   reservedNames: Array<string>
-  usedDecisionSourceIds: Set<Id<'sidebarItems'>>
-  skippedSourceItemIds: Set<Id<'sidebarItems'>>
+  usedDecisionSourceIds: Set<SidebarItemId>
+  skippedSourceItemIds: Set<SidebarItemId>
 }
 
 function formatItemIdsForError(items: Array<OperationPlannerItem>): string {
@@ -164,15 +163,12 @@ function assertDecisionsMatchConflicts({
   decisions,
   usedDecisionSourceIds,
 }: {
-  decisions: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
-  usedDecisionSourceIds: ReadonlySet<Id<'sidebarItems'>>
+  decisions: Partial<Record<SidebarItemId, ConflictDecision>>
+  usedDecisionSourceIds: ReadonlySet<SidebarItemId>
 }) {
-  for (const sourceItemId of Object.keys(decisions) as Array<Id<'sidebarItems'>>) {
+  for (const sourceItemId of Object.keys(decisions) as Array<SidebarItemId>) {
     if (usedDecisionSourceIds.has(sourceItemId)) continue
-    throwClientError(
-      ERROR_CODE.VALIDATION_FAILED,
-      'Conflict decision does not match an item with a conflict',
-    )
+    throw new Error('Conflict decision does not match an item with a conflict')
   }
 }
 
@@ -183,22 +179,22 @@ export function planTransferOperations({
   targetItems,
   decisions = {},
   defaultConflictDecision,
-  usedDecisionSourceIds = new Set<Id<'sidebarItems'>>(),
-  skippedSourceItemIds = new Set<Id<'sidebarItems'>>(),
+  usedDecisionSourceIds = new Set<SidebarItemId>(),
+  skippedSourceItemIds = new Set<SidebarItemId>(),
   getChildren,
   itemsById,
   depth = 0,
 }: {
   mode: TransferMode
   items: Array<OperationPlannerItem>
-  itemsById: ReadonlyMap<Id<'sidebarItems'>, Pick<OperationPlannerItem, '_id' | 'parentId'>>
-  targetParentId: Id<'sidebarItems'> | null
+  itemsById: ReadonlyMap<SidebarItemId, Pick<OperationPlannerItem, '_id' | 'parentId'>>
+  targetParentId: SidebarItemId | null
   targetItems: Array<OperationPlannerItem>
-  decisions?: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
+  decisions?: Partial<Record<SidebarItemId, ConflictDecision>>
   defaultConflictDecision?: ConflictDecision
-  usedDecisionSourceIds?: Set<Id<'sidebarItems'>>
-  skippedSourceItemIds?: Set<Id<'sidebarItems'>>
-  getChildren?: (parentId: Id<'sidebarItems'>) => Array<OperationPlannerItem>
+  usedDecisionSourceIds?: Set<SidebarItemId>
+  skippedSourceItemIds?: Set<SidebarItemId>
+  getChildren?: (parentId: SidebarItemId) => Array<OperationPlannerItem>
   depth?: number
 }): TransferOperationPlan {
   if (depth > MAX_OPERATION_DEPTH) {

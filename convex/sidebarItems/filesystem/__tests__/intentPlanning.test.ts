@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { CAMPAIGN_MEMBER_ROLE } from '../../../campaigns/types'
-import { PERMISSION_LEVEL } from '../../../permissions/types'
-import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../../types/baseTypes'
-import { commonParentId, planFileSystemDropIntent, resolvePasteParentId } from '../intentPlanning'
+import { PERMISSION_LEVEL } from '../../../../shared/permissions/types'
+import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../../../../shared/sidebar-items/types'
+import {
+  commonParentId,
+  planFileSystemDropIntent,
+  resolvePasteParentId,
+} from '../../../../shared/sidebar-items/filesystem/intent-planning'
 import { createSidebarItem } from './testSidebarItem'
 import type { Id } from '../../../_generated/dataModel'
 

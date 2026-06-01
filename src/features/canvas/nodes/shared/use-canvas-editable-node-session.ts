@@ -5,8 +5,7 @@ import type {
 } from '../embed/use-rich-embed-lifecycle'
 import { useCanvasInteractionRuntime } from '../../runtime/providers/canvas-runtime'
 import { useCanvasEngineSelector } from '../../react/use-canvas-engine'
-import { isExclusivelySelectedNode } from '../../utils/canvas-selection-utils'
-import { areStringSetsEqual } from '../../system/canvas-selection'
+import { areStringSetsEqual, isExclusivelySelectedNode } from '../../system/canvas-selection'
 
 interface UseCanvasEditableNodeSessionOptions {
   id: string

@@ -2,7 +2,7 @@ import { v } from 'convex/values'
 import { campaignQuery } from '../functions'
 import { fileWithContentValidator } from './schema'
 import { getSidebarItemWithContent } from '../sidebarItems/functions/getSidebarItemWithContent'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../../shared/sidebar-items/types'
 
 export const getFile = campaignQuery({
   args: {

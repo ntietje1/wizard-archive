@@ -145,7 +145,7 @@ describe('CanvasReadOnlyPreview', () => {
       />,
     )
 
-    const nodeShells = await screen.findAllByRole('group', { name: 'text node' })
+    const nodeShells = await screen.findAllByLabelText('text node')
     expect(nodeShells[0]).toHaveStyle({
       pointerEvents: 'none',
     })
@@ -166,7 +166,7 @@ describe('CanvasReadOnlyPreview', () => {
       />,
     )
 
-    const nodeShells = await screen.findAllByRole('group', { name: 'text node' })
+    const nodeShells = await screen.findAllByLabelText('text node')
     expect(nodeShells[0]).toHaveStyle({
       pointerEvents: 'auto',
     })
@@ -272,7 +272,7 @@ describe('CanvasReadOnlyPreview', () => {
     const viewport = surface.querySelector<HTMLElement>('[data-canvas-viewport="true"]')
     expect(viewport).not.toBeNull()
 
-    const nodeShell = await screen.findByRole('group', { name: 'embed node' })
+    const nodeShell = await screen.findByLabelText('embed node')
 
     act(() => {
       emitResize(surface, { width: 100, height: 80 })

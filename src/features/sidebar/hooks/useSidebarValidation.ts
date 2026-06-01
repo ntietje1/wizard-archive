@@ -1,6 +1,6 @@
 import { validateSidebarItemNameWithSiblings } from 'shared/sidebar-items/name'
-import { validateNoCircularParent } from 'convex/sidebarItems/validation/parent'
-import { findUniqueDefaultName } from 'convex/sidebarItems/functions/defaultItemName'
+import { validateNoCircularParent } from 'shared/sidebar-items/parent-target'
+import { findUniqueDefaultName } from 'shared/sidebar-items/default-name'
 import type { SidebarItemType } from 'shared/sidebar-items/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'

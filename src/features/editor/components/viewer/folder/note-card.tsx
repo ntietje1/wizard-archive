@@ -6,6 +6,7 @@ import type { Note } from 'convex/notes/types'
 import { Card } from '~/features/shadcn/components/card'
 import { cn } from '~/features/shadcn/lib/utils'
 import { sidebarItemIconClass } from '~/features/sidebar/utils/sidebar-item-visual-state'
+import { useSidebarItemVisualState } from '~/features/sidebar/hooks/useSelectedItem'
 import { FolderItemCardShell } from './folder-item-card-shell'
 
 function NoteCardSkeleton() {
@@ -27,12 +28,14 @@ function NoteCardSkeleton() {
 function NoteCardInner({ item: note, ...props }: ItemCardProps<Note>) {
   const [erroredUrl, setErroredUrl] = useState<string | null>(null)
   const imgError = erroredUrl === note.previewUrl
+  const visualState = useSidebarItemVisualState(note)
 
   return (
     <FolderItemCardShell
       {...props}
       item={note}
-      renderPreview={(visualState) => (
+      visualState={visualState}
+      preview={
         <div className="w-full flex-1 bg-muted relative rounded-sm overflow-hidden">
           {note.previewUrl && !imgError ? (
             <img
@@ -50,7 +53,7 @@ function NoteCardInner({ item: note, ...props }: ItemCardProps<Note>) {
           )}
           <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10" />
         </div>
-      )}
+      }
     />
   )
 }

@@ -1,12 +1,13 @@
-import { ERROR_CODE, throwClientError } from '../../../errors'
+import { ERROR_CODE } from '../../../../shared/errors/client'
+import { throwClientError } from '../../../errors'
 import { logEditHistory } from '../../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../../editHistory/types'
-import { PERMISSION_LEVEL } from '../../../permissions/types'
+import { PERMISSION_LEVEL } from '../../../../shared/permissions/types'
 import { assertSidebarItemName } from '../../validation/name'
 import { requireOptionalSidebarItemColor } from '../../../../shared/sidebar-items/color'
 import { requireOptionalSidebarItemIconName } from '../../../../shared/sidebar-items/icon'
 import { prepareSidebarItemRename } from '../../validation/orchestration'
-import { FILE_SYSTEM_EVENT_TYPE } from '../receipts'
+import { FILE_SYSTEM_EVENT_TYPE } from '../../../../shared/sidebar-items/filesystem/receipts'
 import { createFileSystemWriteSession } from '../deltas'
 import { getSidebarItemRow } from '../sidebarItemRows'
 import { requireSidebarItemRowAccess } from '../access'
@@ -14,8 +15,11 @@ import { isActiveSidebarItem } from '../../types/status'
 import type { AccessibleSidebarItemRow } from '../access'
 import type { CampaignMutationCtx } from '../../../functions'
 import type { EditHistoryChange } from '../../../editHistory/types'
-import type { RenameFileSystemCommand } from '../commands'
-import type { FileSystemDelta, SidebarItemFieldPatch } from '../receipts'
+import type { RenameFileSystemCommand } from '../../../../shared/sidebar-items/filesystem/commands'
+import type {
+  FileSystemDelta,
+  SidebarItemFieldPatch,
+} from '../../../../shared/sidebar-items/filesystem/receipts'
 
 type SidebarItemUpdates = SidebarItemFieldPatch
 

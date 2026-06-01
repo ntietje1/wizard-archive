@@ -1,6 +1,6 @@
 import { useRef } from 'react'
-import { PERMISSION_LEVEL } from 'convex/permissions/types'
-import { hasAtLeastPermissionLevel } from 'convex/permissions/hasAtLeastPermissionLevel'
+import { PERMISSION_LEVEL } from 'shared/permissions/types'
+import { hasAtLeastPermissionLevel } from 'shared/permissions/hasAtLeastPermissionLevel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { useDraggable } from '~/features/dnd/hooks/useDraggable'
 import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
