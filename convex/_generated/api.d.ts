@@ -68,7 +68,6 @@ import type * as canvases_functions_rollbackCanvas from "../canvases/functions/r
 import type * as canvases_triggers from "../canvases/triggers.js";
 import type * as canvases_types from "../canvases/types.js";
 import type * as common_async from "../common/async.js";
-import type * as common_constants from "../common/constants.js";
 import type * as common_logger from "../common/logger.js";
 import type * as common_slug from "../common/slug.js";
 import type * as common_types from "../common/types.js";
@@ -123,7 +122,6 @@ import type * as gameMaps_mutations from "../gameMaps/mutations.js";
 import type * as gameMaps_queries from "../gameMaps/queries.js";
 import type * as gameMaps_triggers from "../gameMaps/triggers.js";
 import type * as gameMaps_types from "../gameMaps/types.js";
-import type * as gameMaps_validation from "../gameMaps/validation.js";
 import type * as http from "../http.js";
 import type * as httpBridge from "../httpBridge.js";
 import type * as links_functions_getBacklinksForItem from "../links/functions/getBacklinksForItem.js";
@@ -195,6 +193,7 @@ import type * as sidebarItems_functions_getSidebarItemsByParent from "../sidebar
 import type * as sidebarItems_functions_purgeExpiredTrash from "../sidebarItems/functions/purgeExpiredTrash.js";
 import type * as sidebarItems_functions_setPreviewImage from "../sidebarItems/functions/setPreviewImage.js";
 import type * as sidebarItems_internalMutations from "../sidebarItems/internalMutations.js";
+import type * as sidebarItems_lifecycleMigration from "../sidebarItems/lifecycleMigration.js";
 import type * as sidebarItems_mutations from "../sidebarItems/mutations.js";
 import type * as sidebarItems_queries from "../sidebarItems/queries.js";
 import type * as sidebarItems_schema_anySidebarItemValidator from "../sidebarItems/schema/anySidebarItemValidator.js";
@@ -320,7 +319,6 @@ declare const fullApi: ApiFromModules<{
   "canvases/triggers": typeof canvases_triggers;
   "canvases/types": typeof canvases_types;
   "common/async": typeof common_async;
-  "common/constants": typeof common_constants;
   "common/logger": typeof common_logger;
   "common/slug": typeof common_slug;
   "common/types": typeof common_types;
@@ -375,7 +373,6 @@ declare const fullApi: ApiFromModules<{
   "gameMaps/queries": typeof gameMaps_queries;
   "gameMaps/triggers": typeof gameMaps_triggers;
   "gameMaps/types": typeof gameMaps_types;
-  "gameMaps/validation": typeof gameMaps_validation;
   http: typeof http;
   httpBridge: typeof httpBridge;
   "links/functions/getBacklinksForItem": typeof links_functions_getBacklinksForItem;
@@ -447,6 +444,7 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/functions/purgeExpiredTrash": typeof sidebarItems_functions_purgeExpiredTrash;
   "sidebarItems/functions/setPreviewImage": typeof sidebarItems_functions_setPreviewImage;
   "sidebarItems/internalMutations": typeof sidebarItems_internalMutations;
+  "sidebarItems/lifecycleMigration": typeof sidebarItems_lifecycleMigration;
   "sidebarItems/mutations": typeof sidebarItems_mutations;
   "sidebarItems/queries": typeof sidebarItems_queries;
   "sidebarItems/schema/anySidebarItemValidator": typeof sidebarItems_schema_anySidebarItemValidator;

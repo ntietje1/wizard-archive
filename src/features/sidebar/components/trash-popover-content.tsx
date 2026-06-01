@@ -1,8 +1,8 @@
 import { useRef } from 'react'
 import { Link } from '@tanstack/react-router'
-import { TRASH_RETENTION_DAYS } from 'convex/common/constants'
 import { RotateCcw, SquareArrowOutUpRight, Trash2 } from 'lucide-react'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import { TRASH_RETENTION_DAYS } from 'shared/sidebar-items/trash-policy'
 import { handleError } from '~/shared/utils/logger'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { Button, buttonVariants } from '~/features/shadcn/components/button'
@@ -33,6 +33,12 @@ import {
 
 interface TrashPopoverContentProps {
   onClose: () => void
+}
+
+function getDeletionTimeLabel(item: AnySidebarItem) {
+  const dt = item.deletionTime
+  if (!dt) return ''
+  return new Date(dt).toLocaleDateString()
 }
 
 export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
@@ -70,12 +76,6 @@ export function TrashPopoverContent({ onClose }: TrashPopoverContentProps) {
 
   const handleItemClick = (item: AnySidebarItem) => {
     setLastSelectedItem(item.slug)
-  }
-
-  const getDeletionTimeLabel = (item: AnySidebarItem) => {
-    const dt = item.deletionTime
-    if (!dt) return ''
-    return new Date(dt).toLocaleDateString()
   }
 
   return (

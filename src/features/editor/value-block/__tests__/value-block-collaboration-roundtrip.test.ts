@@ -7,7 +7,10 @@ import { BlockNoteView } from '@blocknote/shadcn'
 import { createEditorSchema } from '../../editor-specs'
 import { ConvexYjsProvider } from '../../providers/convex-yjs-provider'
 import { NoteValueRuntimeContext } from '../value-block-runtime-context'
-import { blocksToYDoc as backendBlocksToYDoc, yDocToBlocks } from '~/features/editor/blocknote-yjs'
+import {
+  blocksToYDoc as backendBlocksToYDoc,
+  yDocToBlocks,
+} from 'shared/editor-blocks/blocknote-yjs'
 import type { CustomPartialBlock } from 'shared/editor-blocks/types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { Id } from 'convex/_generated/dataModel'

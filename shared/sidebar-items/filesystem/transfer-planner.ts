@@ -13,7 +13,7 @@ import type { OperationPlannerItem } from './selection'
 const MAX_OPERATION_DEPTH = 50
 const MAX_ERROR_ITEMS = 10
 
-export type TransferMode = 'copy' | 'move'
+type TransferMode = 'copy' | 'move'
 export type TransferOperation =
   | {
       sourceItemId: SidebarItemId
@@ -34,7 +34,7 @@ export type TransferOperation =
       targetParentId: SidebarItemId | null
       destinationItemId: SidebarItemId
     }
-export type TransferOperationPlan =
+type TransferOperationPlan =
   | {
       status: 'ready'
       conflicts: []

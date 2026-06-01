@@ -14,7 +14,7 @@ export type ClientErrorData = {
   message: string
 }
 
-export type ClientError = {
+type ClientError = {
   data: ClientErrorData
 }
 

@@ -6,7 +6,7 @@ import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createGameMap, createNote } from '../../_test/factories.helper'
 import { expectNotFound } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
-import { SNAPSHOT_TYPE } from '../schema'
+import { SNAPSHOT_TYPE } from '../../../shared/document-snapshots/types'
 import {
   makeYjsUpdate,
   makeYjsUpdateWithBlocks,

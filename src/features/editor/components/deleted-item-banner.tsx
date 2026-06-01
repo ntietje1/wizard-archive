@@ -1,7 +1,7 @@
-import { TRASH_RETENTION_DAYS } from 'convex/common/constants'
 import { RotateCcw, Trash2 } from 'lucide-react'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
+import { TRASH_RETENTION_DAYS } from 'shared/sidebar-items/trash-policy'
 import { handleError } from '~/shared/utils/logger'
 import { Banner, BannerButton } from '~/shared/components/banner'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'

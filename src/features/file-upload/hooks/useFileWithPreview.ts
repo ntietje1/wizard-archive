@@ -6,7 +6,7 @@ import { useFileUpload } from './useFileUpload'
 import type { Id } from 'convex/_generated/dataModel'
 import { logger } from '~/shared/utils/logger'
 
-export interface FileWithPreviewOptions {
+interface FileWithPreviewOptions {
   isOpen: boolean
   fileStorageId?: Id<'_storage'>
   uploadOnSelect?: boolean
@@ -15,7 +15,7 @@ export interface FileWithPreviewOptions {
   onUploadComplete?: (storageId: Id<'_storage'>) => void | Promise<void>
 }
 
-export interface FileMetadata {
+interface FileMetadata {
   name: string
   type: string
   size: number

@@ -3,7 +3,7 @@ import { SIDEBAR_ITEM_STATUS } from '../types'
 import type { SidebarItemStatus } from '../types'
 import type { SidebarItemSlug } from '../slug'
 
-export type FileSystemReadModelItem = {
+type FileSystemReadModelItem = {
   _id: SidebarItemId
   slug?: string
   parentId: SidebarItemId | null

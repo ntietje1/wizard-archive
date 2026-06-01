@@ -1,8 +1,8 @@
 import type { SidebarItemLocation, SidebarItemStatus, SidebarItemType } from '../types'
 import type { PermissionLevel } from '../../permissions/types'
 
-export type SharedId<TableName extends string> = string & { __tableName: TableName }
-export type CampaignId = SharedId<'campaigns'>
+type SharedId<TableName extends string> = string & { __tableName: TableName }
+type CampaignId = SharedId<'campaigns'>
 export type UserProfileId = SharedId<'userProfiles'>
 export type StorageId = SharedId<'_storage'>
 export type FileSystemTransactionId = SharedId<'filesystemTransactions'>

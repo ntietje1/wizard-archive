@@ -15,6 +15,7 @@
     "lint": "vp lint .",
     "lint:fix": "vp lint . --fix",
     "lint:convex": "eslint convex/ --no-warn-ignored",
+    "check:import-boundaries": "node scripts/check-import-boundaries.mjs",
     "check:no-reexports": "node scripts/check-no-reexports.mjs",
     "test:frontend": "vp test run --config vitest.config.ts",
     "test:frontend:watch": "vp test --config vitest.config.ts",

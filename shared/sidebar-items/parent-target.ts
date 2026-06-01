@@ -23,13 +23,9 @@ type BaseCreateParentTarget<TSegment> =
 
 export type CreateParentTarget = BaseCreateParentTarget<string>
 
-export type ParentPathSegment = SidebarItemName | '.' | '..'
+type ParentPathSegment = SidebarItemName | '.' | '..'
 
 export type ParsedCreateParentTarget = BaseCreateParentTarget<ParentPathSegment>
-
-export type CreateItemParentArgs = {
-  parentTarget: CreateParentTarget
-}
 
 const VIRTUAL_PARENT = Symbol('virtual-parent')
 

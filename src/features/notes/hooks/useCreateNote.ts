@@ -5,7 +5,7 @@ import { encodeStateAsUpdate } from 'yjs'
 import { useConvex } from '@convex-dev/react-query'
 import type { CreateParentTarget } from 'shared/sidebar-items/parent-target'
 import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
-import { blocksToYDoc } from '~/features/editor/blocknote-yjs'
+import { blocksToYDoc } from 'shared/editor-blocks/blocknote-yjs'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 

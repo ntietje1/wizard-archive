@@ -1,6 +1,6 @@
 import { internal } from '../../_generated/api'
-import { TRASH_RETENTION_DAYS } from '../../common/constants'
 import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { TRASH_RETENTION_DAYS } from '../../../shared/sidebar-items/trash-policy'
 import { hardDeleteTree } from '../filesystem/treeWrites'
 import type { MutationCtx } from '../../_generated/server'
 import type { Id } from '../../_generated/dataModel'
