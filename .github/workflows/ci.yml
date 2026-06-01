@@ -70,6 +70,8 @@ jobs:
     name: React Doctor
     runs-on: ubuntu-latest
     needs: [setup]
+    env:
+      DIFF_BASE: ${{ github.event.pull_request.base.ref }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -81,7 +83,7 @@ jobs:
       - run: vp install --frozen-lockfile
       - name: Run React Doctor (PR)
         if: github.event_name == 'pull_request'
-        run: vp dlx react-doctor@latest . --verbose --fail-on error --diff=origin/${{ github.event.pull_request.base.ref }}
+        run: vp dlx react-doctor@latest . --verbose --fail-on error --diff="origin/$DIFF_BASE"
       - name: Run React Doctor (main)
         if: github.ref == 'refs/heads/main'
         run: vp dlx react-doctor@latest . --verbose --fail-on error

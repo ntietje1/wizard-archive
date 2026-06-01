@@ -42,27 +42,28 @@ export function createFormattingToolbarTestEditor({
   const selectionListeners = new Set<() => void>()
   const changeListeners = new Set<() => void>()
   const focus = vi.fn()
+  const prosemirrorView = {
+    dispatch: vi.fn(),
+    dom: document.createElement('div'),
+    focus,
+    state: {
+      doc: proseMirrorTestSchema.node('doc', null, [
+        proseMirrorTestSchema.node('paragraph', null, [proseMirrorTestSchema.text('hello')]),
+      ]),
+      selection: {
+        from: 1,
+        to: 6,
+        toJSON: vi.fn(() => currentSelectionSnapshot),
+      },
+      tr: {
+        setSelection: vi.fn((selection: unknown) => selection),
+      },
+    },
+  }
 
   return {
     _tiptapEditor: {
-      view: {
-        dispatch: vi.fn(),
-        dom: document.createElement('div'),
-        focus,
-        state: {
-          doc: proseMirrorTestSchema.node('doc', null, [
-            proseMirrorTestSchema.node('paragraph', null, [proseMirrorTestSchema.text('hello')]),
-          ]),
-          selection: {
-            from: 1,
-            to: 6,
-            toJSON: vi.fn(() => currentSelectionSnapshot),
-          },
-          tr: {
-            setSelection: vi.fn((selection: unknown) => selection),
-          },
-        },
-      },
+      view: prosemirrorView,
     },
     addStyles: vi.fn(),
     document: currentSelectedBlocks,
@@ -90,6 +91,7 @@ export function createFormattingToolbarTestEditor({
       selectionListeners.add(callback)
       return () => selectionListeners.delete(callback)
     }),
+    prosemirrorView,
     removeStyles: vi.fn(),
     replaceBlocks: vi.fn(),
     schema: {

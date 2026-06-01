@@ -340,12 +340,7 @@ describe('EditorFormattingToolbar', () => {
 
     render(
       <>
-        <div
-          aria-label="Editor surface"
-          contentEditable
-          suppressContentEditableWarning
-          tabIndex={0}
-        >
+        <div aria-label="Editor surface" contentEditable suppressContentEditableWarning>
           hello
         </div>
         <EditorFormattingToolbar editor={editor as never} mode="full" visible />
