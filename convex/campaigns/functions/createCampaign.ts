@@ -1,5 +1,6 @@
 import type { CampaignSlug } from '../../../shared/campaigns/validation'
-import { ERROR_CODE, throwClientError } from '../../errors'
+import { ERROR_CODE } from '../../../shared/errors/client'
+import { throwClientError } from '../../errors'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS, CAMPAIGN_STATUS } from '../types'
 import { prepareCampaignDescription } from '../../../shared/campaigns/validation'
 import { prepareCampaignName } from '../validation'

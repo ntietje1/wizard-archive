@@ -1,8 +1,9 @@
-import { ERROR_CODE, throwClientError } from '../../errors'
-import { PERMISSION_LEVEL } from '../../permissions/types'
+import { ERROR_CODE } from '../../../shared/errors/client'
+import { throwClientError } from '../../errors'
+import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { requireItemAccess } from '../../sidebarItems/validation/access'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
-import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import { assertNever } from '../../common/types'
 import { rollbackNote } from '../../notes/functions/rollbackNote'
 import { rollbackCanvas } from '../../canvases/functions/rollbackCanvas'
@@ -10,7 +11,7 @@ import { rollbackGameMap } from '../../gameMaps/functions/rollbackGameMap'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { SidebarItemType } from '../../sidebarItems/types/baseTypes'
+import type { SidebarItemType } from '../../../shared/sidebar-items/types'
 
 export async function rollbackToSnapshot(
   ctx: CampaignMutationCtx,

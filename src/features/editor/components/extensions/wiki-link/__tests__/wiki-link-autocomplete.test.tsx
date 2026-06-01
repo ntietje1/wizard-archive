@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { buildSidebarItemMaps } from '~/features/sidebar/utils/sidebar-item-maps'
 import { createNote } from '~/test/factories/sidebar-item-factory'
 import { WikiLinkAutocomplete } from '../wiki-link-autocomplete'

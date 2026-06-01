@@ -7,7 +7,7 @@ import {
   useCanvasDocumentRuntime,
   useCanvasInteractionRuntime,
 } from '../../runtime/providers/canvas-runtime'
-import { useCanvasEngine } from '../../react/use-canvas-engine'
+import { useCanvasEngine } from '../../react/canvas-engine-context-value'
 import { resolveDefaultEmbedNodeResizeForLockedAspectRatio } from './embed-node-size'
 
 export function EmbeddedFileContent({ nodeId, file }: { nodeId: string; file: FileWithContent }) {

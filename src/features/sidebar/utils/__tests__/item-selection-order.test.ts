@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
+import { SORT_DIRECTIONS, SORT_ORDERS } from 'shared/editor/types'
 import {
   normalizeSelectedRoots,
   selectionBelongsToSurface,
-} from 'convex/sidebarItems/filesystem/selection'
+} from 'shared/sidebar-items/filesystem/selection'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { buildVisibleSidebarItemIds } from '~/features/sidebar/utils/item-selection-order'
-import type { SortOptions } from 'convex/editors/types'
+import type { SortOptions } from 'shared/editor/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { testId } from '~/test/helpers/test-id'

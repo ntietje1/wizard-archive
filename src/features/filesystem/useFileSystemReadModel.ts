@@ -1,6 +1,6 @@
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import { createFileSystemReadModel } from 'convex/sidebarItems/filesystem/readModel'
+import { createFileSystemReadModel } from 'shared/sidebar-items/filesystem/read-model'
 import { useMemo } from 'react'
 import {
   useActiveSidebarItems,

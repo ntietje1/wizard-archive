@@ -1,7 +1,7 @@
 import { expect } from 'vitest'
 import { ConvexError } from 'convex/values'
-import { isClientError } from '../errors'
-import type { ClientErrorCode } from '../errors'
+import { isClientError } from '../../shared/errors/client'
+import type { ClientErrorCode } from '../../shared/errors/client'
 
 export async function expectClientError(promise: Promise<unknown>, code: ClientErrorCode) {
   try {

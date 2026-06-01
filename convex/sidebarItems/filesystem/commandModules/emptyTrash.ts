@@ -1,11 +1,15 @@
 import { CAMPAIGN_MEMBER_ROLE } from '../../../campaigns/types'
-import { ERROR_CODE, throwClientError } from '../../../errors'
-import { SIDEBAR_ITEM_STATUS } from '../../types/baseTypes'
+import { ERROR_CODE } from '../../../../shared/errors/client'
+import { throwClientError } from '../../../errors'
+import { SIDEBAR_ITEM_STATUS } from '../../../../shared/sidebar-items/types'
 import { createFileSystemWriteSession } from '../deltas'
-import { FILE_SYSTEM_EVENT_TYPE, fileSystemSelfEvents } from '../receipts'
+import {
+  FILE_SYSTEM_EVENT_TYPE,
+  fileSystemSelfEvents,
+} from '../../../../shared/sidebar-items/filesystem/receipts'
 import type { CampaignMutationCtx } from '../../../functions'
-import type { EmptyTrashFileSystemCommand } from '../commands'
-import type { FileSystemDelta } from '../receipts'
+import type { EmptyTrashFileSystemCommand } from '../../../../shared/sidebar-items/filesystem/commands'
+import type { FileSystemDelta } from '../../../../shared/sidebar-items/filesystem/receipts'
 import type { AnySidebarItemRow } from '../../types/types'
 import type { Id } from '../../../_generated/dataModel'
 

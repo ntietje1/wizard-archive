@@ -3,7 +3,7 @@ import { api } from '../../_generated/api'
 import { asDm, setupCampaignContext } from '../../_test/identities.helper'
 import { createTestContext } from '../../_test/setup.helper'
 import { createFolder, createNote } from '../../_test/factories.helper'
-import type { FileSystemCommand } from '../filesystem/commands'
+import type { FileSystemCommand } from '../../../shared/sidebar-items/filesystem/commands'
 import type { Id } from '../../_generated/dataModel'
 import { assertSidebarItemName } from '../validation/name'
 

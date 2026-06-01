@@ -1,17 +1,23 @@
-import { ERROR_CODE, throwClientError } from '../../errors'
-import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
+import { ERROR_CODE } from '../../../shared/errors/client'
+import { throwClientError } from '../../errors'
+import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import { collectDescendants } from '../functions/collectDescendants'
 import { hardDeleteTree, restoreTreeDescendants, trashTree } from './treeWrites'
 import type { TrashTreePatch } from './treeWrites'
 import { insertFilesystemSidebarItem } from './sidebarItemWriter'
-import { diffSidebarItemFields, setPatchField, valuesMatch } from './patches'
+import {
+  diffSidebarItemFields,
+  setPatchField,
+  valuesMatch,
+} from '../../../shared/sidebar-items/filesystem/patches'
 import { assertSidebarItemColor } from '../../../shared/sidebar-items/color'
 import { assertSidebarItemIconName } from '../../../shared/sidebar-items/icon'
 import { assertSidebarItemName } from '../validation/name'
 import { assertSidebarItemSlug } from '../validation/slug'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { logEditHistory } from '../../editHistory/log'
-import { assertSidebarOperationAllowed, evaluateTrash } from './capabilities'
+import { evaluateTrash } from '../../../shared/sidebar-items/filesystem/capabilities'
+import { assertSidebarOperationAllowed } from './capabilities'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
 import type { AnySidebarItemRow } from '../types/types'
@@ -23,8 +29,9 @@ import type {
   FileSystemPatch,
   SidebarItemFieldPatch,
   SidebarItemPatchPrecondition,
-} from './receipts'
-import type { FileSystemCommand } from './commands'
+} from '../../../shared/sidebar-items/filesystem/receipts'
+import type { FileSystemCommand } from '../../../shared/sidebar-items/filesystem/commands'
+import type { SidebarItemPatchRow } from '../../../shared/sidebar-items/filesystem/types'
 
 const UNDOABLE_UPDATE_FIELD_KEYS = [
   'name',
@@ -37,7 +44,7 @@ const UNDOABLE_UPDATE_FIELD_KEYS = [
   'deletedBy',
 ] as const satisfies ReadonlyArray<keyof SidebarItemFieldPatch>
 
-function lifecyclePatchFields(item: Doc<'sidebarItems'>): SidebarItemFieldPatch {
+function lifecyclePatchFields(item: SidebarItemPatchRow): SidebarItemFieldPatch {
   return {
     status: item.status,
     deletionTime: item.deletionTime,
@@ -54,13 +61,13 @@ function undoHiddenSidebarItemFields(): SidebarItemFieldPatch {
 }
 
 function snapshotsMatch(
-  before: Doc<'sidebarItems'> | undefined,
-  after: Doc<'sidebarItems'> | null,
+  before: SidebarItemPatchRow | undefined,
+  after: SidebarItemPatchRow | null,
 ) {
   if (before === after) return true
   if (!before || !after) return false
-  const beforeKeys = Object.keys(before) as Array<keyof Doc<'sidebarItems'>>
-  const afterKeys = Object.keys(after) as Array<keyof Doc<'sidebarItems'>>
+  const beforeKeys = Object.keys(before) as Array<keyof SidebarItemPatchRow>
+  const afterKeys = Object.keys(after) as Array<keyof SidebarItemPatchRow>
   if (beforeKeys.length !== afterKeys.length) return false
   return beforeKeys.every(
     (key) =>
@@ -68,7 +75,7 @@ function snapshotsMatch(
   )
 }
 
-function changedItemPatch(before: Doc<'sidebarItems'>, after: Doc<'sidebarItems'>) {
+function changedItemPatch(before: SidebarItemPatchRow, after: SidebarItemPatchRow) {
   const { changed, previous } = diffSidebarItemFields(before, after)
   if (Object.keys(changed).length === 0) return null
   return {
@@ -79,7 +86,7 @@ function changedItemPatch(before: Doc<'sidebarItems'>, after: Doc<'sidebarItems'
   }
 }
 
-function changedUndoableItemPatch(before: Doc<'sidebarItems'>, after: Doc<'sidebarItems'>) {
+function changedUndoableItemPatch(before: SidebarItemPatchRow, after: SidebarItemPatchRow) {
   const fields: SidebarItemFieldPatch = {}
   const precondition: SidebarItemFieldPatch = {}
 
@@ -98,7 +105,7 @@ function changedUndoableItemPatch(before: Doc<'sidebarItems'>, after: Doc<'sideb
   }
 }
 
-function insertedItemForwardPatch(after: Doc<'sidebarItems'>): FileSystemPatch {
+function insertedItemForwardPatch(after: SidebarItemPatchRow): FileSystemPatch {
   const hidden = undoHiddenSidebarItemFields()
   const afterFields = lifecyclePatchFields(after)
   return {
@@ -109,7 +116,7 @@ function insertedItemForwardPatch(after: Doc<'sidebarItems'>): FileSystemPatch {
   }
 }
 
-function insertedItemInversePatch(after: Doc<'sidebarItems'>): FileSystemPatch {
+function insertedItemInversePatch(after: SidebarItemPatchRow): FileSystemPatch {
   return {
     type: 'updateSidebarItem',
     itemId: after._id,
@@ -118,7 +125,7 @@ function insertedItemInversePatch(after: Doc<'sidebarItems'>): FileSystemPatch {
   }
 }
 
-function insertedItemUndoPrecondition(after: Doc<'sidebarItems'>): SidebarItemPatchPrecondition {
+function insertedItemUndoPrecondition(after: SidebarItemPatchRow): SidebarItemPatchPrecondition {
   return {
     type: after.type,
     name: assertSidebarItemName(after.name),
@@ -213,12 +220,12 @@ export type FileSystemWriteSession = {
 async function collectTreeSnapshot(
   ctx: CampaignMutationCtx,
   item: AnySidebarItemRow,
-): Promise<Array<Doc<'sidebarItems'>>> {
+): Promise<Array<SidebarItemPatchRow>> {
   const root = await ctx.db.get('sidebarItems', item._id)
   if (!root) {
     throwClientError(ERROR_CODE.NOT_FOUND, 'Item not found')
   }
-  const items: Array<Doc<'sidebarItems'>> = [root]
+  const items: Array<SidebarItemPatchRow> = [root]
   if (root.type !== SIDEBAR_ITEM_TYPES.folders) return items
 
   const descendants = await collectDescendants(ctx, {
@@ -226,7 +233,7 @@ async function collectTreeSnapshot(
     status: root.status,
     folderId: root._id,
   })
-  items.push(...(descendants as Array<Doc<'sidebarItems'>>))
+  items.push(...(descendants as Array<SidebarItemPatchRow>))
   return items
 }
 
@@ -235,8 +242,8 @@ export function createFileSystemWriteSession(ctx: CampaignMutationCtx): FileSyst
 
   const recordChangedItem = (
     itemId: Id<'sidebarItems'>,
-    before: Doc<'sidebarItems'>,
-    after: Doc<'sidebarItems'> | null,
+    before: SidebarItemPatchRow,
+    after: SidebarItemPatchRow | null,
   ) => {
     if (snapshotsMatch(before, after)) return
     if (after) {
@@ -247,8 +254,8 @@ export function createFileSystemWriteSession(ctx: CampaignMutationCtx): FileSyst
   }
 
   const recordTreeUpdatePatches = (
-    beforeItems: Array<Doc<'sidebarItems'>>,
-    getAfter: (before: Doc<'sidebarItems'>) => Doc<'sidebarItems'> | null,
+    beforeItems: Array<SidebarItemPatchRow>,
+    getAfter: (before: SidebarItemPatchRow) => SidebarItemPatchRow | null,
   ) => {
     for (const before of beforeItems) {
       recordChangedItem(before._id, before, getAfter(before))

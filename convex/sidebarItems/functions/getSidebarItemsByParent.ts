@@ -1,5 +1,5 @@
 import { asyncMap } from 'convex-helpers'
-import { SIDEBAR_ITEM_STATUS } from '../types/baseTypes'
+import { SIDEBAR_ITEM_STATUS } from '../../../shared/sidebar-items/types'
 import { enhanceSidebarItem } from './enhanceSidebarItem'
 import { getSidebarItem } from './getSidebarItem'
 import type { AnySidebarItem } from '../types/types'

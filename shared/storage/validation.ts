@@ -1,12 +1,9 @@
-export type FileValidationResult = { valid: true } | { valid: false; error: string }
+type FileValidationResult = { valid: true } | { valid: false; error: string }
 
 export const MAX_FILE_SIZE = 100 * 1024 * 1024 // 100MB
 
-// Allowed MIME type prefixes and exact types
 const ALLOWED_MIME_PREFIXES = ['image/', 'video/', 'audio/', 'text/'] as const
 const ALLOWED_MIME_TYPES = ['application/pdf'] as const
-
-// Text file extensions for fallback detection
 const TEXT_EXTENSIONS = ['.txt', '.md'] as const
 
 export const FILE_UPLOAD_ACCEPT_PATTERN = [
@@ -18,9 +15,6 @@ export const FILE_UPLOAD_ACCEPT_PATTERN = [
   ...TEXT_EXTENSIONS,
 ].join(',')
 
-/**
- * Check if a content type is allowed for upload
- */
 export function isAllowedContentType(contentType: string | null): boolean {
   if (!contentType) return false
   const lowerType = contentType.toLowerCase()
@@ -30,9 +24,6 @@ export function isAllowedContentType(contentType: string | null): boolean {
   )
 }
 
-/**
- * Check if a file is a media file (image, video, audio, or PDF)
- */
 export function isMediaFile(contentType: string | null): boolean {
   if (!contentType) return false
   const lowerType = contentType.toLowerCase()
@@ -44,9 +35,6 @@ export function isMediaFile(contentType: string | null): boolean {
   )
 }
 
-/**
- * Check if a file is a text file by content type or filename
- */
 export function isTextFile(contentType: string | null, fileName?: string | null): boolean {
   if (contentType?.toLowerCase().startsWith('text/')) {
     return true
@@ -58,9 +46,6 @@ export function isTextFile(contentType: string | null, fileName?: string | null)
   return false
 }
 
-/**
- * Validate file size
- */
 export function validateFileSize(
   size: number,
   maxSize: number = MAX_FILE_SIZE,
@@ -75,9 +60,6 @@ export function validateFileSize(
   return { valid: true }
 }
 
-/**
- * Validate file type by content type and optional filename
- */
 export function validateFileType(
   contentType: string | null,
   fileName?: string | null,
@@ -94,30 +76,20 @@ export function validateFileType(
   return { valid: true }
 }
 
-/**
- * Combined validation for file uploads
- * Validates both file type and size
- */
 export function validateFileUpload(
   contentType: string | null,
   size: number,
   fileName?: string | null,
   maxSize: number = MAX_FILE_SIZE,
 ): FileValidationResult {
-  // Check type first
   const typeResult = validateFileType(contentType, fileName)
   if (!typeResult.valid) {
     return typeResult
   }
 
-  // Then check size
   return validateFileSize(size, maxSize)
 }
 
-/**
- * Frontend-compatible validation using File object
- * Use this in browser contexts where you have a File object
- */
 export function validateFileForUpload(file: {
   type: string
   size: number

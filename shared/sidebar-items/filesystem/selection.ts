@@ -1,15 +1,14 @@
-import type { Id } from '../../_generated/dataModel'
-import type { AnySidebarItemRow } from '../types/types'
+import type { SidebarItemId, AnySidebarItemRow } from './types'
 
 const MAX_OPERATION_DEPTH = 50
 type SidebarItemTreeNode = {
-  _id: Id<'sidebarItems'>
-  parentId: Id<'sidebarItems'> | null
+  _id: SidebarItemId
+  parentId: SidebarItemId | null
 }
 
 export function selectionBelongsToSurface(
-  selectedIds: Array<Id<'sidebarItems'>>,
-  visibleItemIds: Array<Id<'sidebarItems'>>,
+  selectedIds: Array<SidebarItemId>,
+  visibleItemIds: Array<SidebarItemId>,
 ): boolean {
   if (selectedIds.length === 0) return false
   const visible = new Set(visibleItemIds)
@@ -18,7 +17,7 @@ export function selectionBelongsToSurface(
 
 export function normalizeSelectedRoots<T extends SidebarItemTreeNode>(
   items: Array<T>,
-  allItemsMap: ReadonlyMap<Id<'sidebarItems'>, SidebarItemTreeNode>,
+  allItemsMap: ReadonlyMap<SidebarItemId, SidebarItemTreeNode>,
 ): Array<T> {
   return normalizeRootItems(items, allItemsMap)
 }
@@ -30,17 +29,17 @@ export type OperationPlannerItem = Pick<
 
 function normalizeRootItems<T extends SidebarItemTreeNode>(
   items: Array<T>,
-  allItemsMap: ReadonlyMap<Id<'sidebarItems'>, SidebarItemTreeNode>,
+  allItemsMap: ReadonlyMap<SidebarItemId, SidebarItemTreeNode>,
 ): Array<T> {
   const selectedIds = new Set(items.map((item) => item._id))
-  const normalizedIds = new Set<Id<'sidebarItems'>>()
+  const normalizedIds = new Set<SidebarItemId>()
 
   return items.filter((item) => {
     // De-duplicate repeated ids while preserving the first occurrence in selection order.
     if (normalizedIds.has(item._id)) return false
 
     let parentId = item.parentId
-    const seen = new Set<Id<'sidebarItems'>>([item._id])
+    const seen = new Set<SidebarItemId>([item._id])
     let depth = 0
 
     while (parentId) {

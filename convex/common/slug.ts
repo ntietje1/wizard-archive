@@ -1,7 +1,8 @@
 import { v } from 'convex/values'
 import { brandString } from '../../shared/branded'
 import { parseSlug as parseSharedSlug, validateSlug } from '../../shared/slugs'
-import { ERROR_CODE, throwClientError } from '../errors'
+import { ERROR_CODE } from '../../shared/errors/client'
+import { throwClientError } from '../errors'
 import type { BrandedString } from '../../shared/branded'
 import type { SlugOptions } from '../../shared/slugs'
 

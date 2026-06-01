@@ -1,6 +1,6 @@
 import type { MutationCtx } from '../../_generated/server'
 import type { Id } from '../../_generated/dataModel'
-import type { SidebarItemType } from '../../sidebarItems/types/baseTypes'
+import type { SidebarItemType } from '../../../shared/sidebar-items/types'
 import type { SnapshotType } from '../types'
 
 export async function createSnapshot(

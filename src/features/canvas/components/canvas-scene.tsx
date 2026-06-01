@@ -12,7 +12,7 @@ import { CanvasNodeResizeMetadataProvider } from '../nodes/shared/canvas-node-re
 import { useCanvasConnectionGesture } from '../runtime/interaction/canvas-connection-gesture'
 import { isCanvasInteractiveKeyboardTarget } from '../runtime/interaction/canvas-keyboard-targets'
 import { isCanvasEmptyPaneTarget } from '../runtime/interaction/canvas-pane-targets'
-import { useCanvasEngine } from '../react/use-canvas-engine'
+import { useCanvasEngine } from '../react/canvas-engine-context-value'
 import { useCanvasViewportRuntime } from '../runtime/providers/canvas-runtime'
 import type { CanvasConnection } from '../types/canvas-domain-types'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'

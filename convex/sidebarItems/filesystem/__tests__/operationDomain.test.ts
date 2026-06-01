@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { SIDEBAR_ITEM_TYPES } from '../../types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../../../../shared/sidebar-items/types'
 import { createSidebarItem } from './testSidebarItem'
-import { planTransferOperations } from '../transferPlanner'
-import { normalizeSelectedRoots } from '../selection'
-import type { OperationPlannerItem } from '../selection'
+import { planTransferOperations } from '../../../../shared/sidebar-items/filesystem/transfer-planner'
+import { normalizeSelectedRoots } from '../../../../shared/sidebar-items/filesystem/selection'
+import type { OperationPlannerItem } from '../../../../shared/sidebar-items/filesystem/selection'
 import type { Id } from '../../../_generated/dataModel'
 import type { AnySidebarItem } from '../../types/types'
 

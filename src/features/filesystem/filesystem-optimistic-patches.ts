@@ -1,16 +1,16 @@
 import { SIDEBAR_ITEM_LOCATION, SIDEBAR_ITEM_STATUS } from 'shared/sidebar-items/types'
-import { PERMISSION_LEVEL } from 'convex/permissions/types'
-import { diffSidebarItemFields } from 'convex/sidebarItems/filesystem/patches'
+import { PERMISSION_LEVEL } from 'shared/permissions/types'
+import { diffSidebarItemFields } from 'shared/sidebar-items/filesystem/patches'
 import { deduplicateSlug, slugify } from '../../../shared/slugs'
 import { assertSidebarItemSlug, SIDEBAR_ITEM_SLUG_MAX_LENGTH } from 'shared/sidebar-items/slug'
 import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { Id } from 'convex/_generated/dataModel'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type { FileSystemPatch } from 'convex/sidebarItems/filesystem/receipts'
+import type { FileSystemPatch } from 'shared/sidebar-items/filesystem/receipts'
 import type {
   CreateFileSystemCommand,
   RenameFileSystemCommand,
-} from 'convex/sidebarItems/filesystem/commands'
+} from 'shared/sidebar-items/filesystem/commands'
 import type { SidebarCacheSnapshot } from './filesystem-cache-patches'
 import { OPTIMISTIC_SIDEBAR_ITEM_ID_PREFIX } from './optimistic-sidebar-items'
 import { logger } from '~/shared/utils/logger'

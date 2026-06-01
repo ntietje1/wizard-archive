@@ -1,4 +1,4 @@
-import type { Id } from '../../_generated/dataModel'
+import type { SidebarItemId } from './types'
 import type { FileSystemCommand } from './commands'
 import type {
   OperationActorSnapshot,
@@ -7,7 +7,7 @@ import type {
   SidebarOperationRejectionCode,
 } from './capabilities'
 import { evaluateCopy, evaluateMoveToParent, evaluateRestore, evaluateTrash } from './capabilities'
-import { isTrashedSidebarItem } from '../types/status'
+import { isTrashedSidebarItem } from '../types'
 
 type FileSystemIntentCommand = Extract<
   FileSystemCommand,
@@ -20,8 +20,8 @@ export type FileSystemIntentResult =
   | { status: 'blocked'; reason: SidebarOperationRejectionCode | 'mixed_actions' }
 
 export type PasteTargetIntent =
-  | { kind: 'explicit'; parentId: Id<'sidebarItems'> | null }
-  | { kind: 'selectedCommonParent'; surfaceParentId: Id<'sidebarItems'> | null }
+  | { kind: 'explicit'; parentId: SidebarItemId | null }
+  | { kind: 'selectedCommonParent'; surfaceParentId: SidebarItemId | null }
 
 export type FileSystemDropTargetIntent =
   | { type: 'trash' }
@@ -32,21 +32,21 @@ export type FileSystemDropOptions = {
   copy?: boolean
 }
 
-export function commonParentId<T extends { parentId: Id<'sidebarItems'> | null }>(
+export function commonParentId<T extends { parentId: SidebarItemId | null }>(
   items: Array<T>,
-): Id<'sidebarItems'> | null | undefined {
+): SidebarItemId | null | undefined {
   if (items.length === 0) return undefined
   const parentId = items[0].parentId
   return items.every((item) => item.parentId === parentId) ? parentId : undefined
 }
 
-export function resolvePasteParentId<T extends { parentId: Id<'sidebarItems'> | null }>({
+export function resolvePasteParentId<T extends { parentId: SidebarItemId | null }>({
   items,
   target,
 }: {
   items: Array<T>
   target: PasteTargetIntent
-}): Id<'sidebarItems'> | null {
+}): SidebarItemId | null {
   if (target.kind === 'explicit') return target.parentId
   return commonParentId(items) ?? target.surfaceParentId
 }
@@ -62,7 +62,7 @@ function planTrashDropIntent({
   actor: OperationActorSnapshot
   items: Array<OperationSidebarItem>
 }): FileSystemIntentResult {
-  const itemIds: Array<Id<'sidebarItems'>> = []
+  const itemIds: Array<SidebarItemId> = []
 
   for (const item of items) {
     if (isTrashedSidebarItem(item)) continue
@@ -85,7 +85,7 @@ function planCopyDropIntent({
   items: Array<OperationSidebarItem>
   target: OperationTargetSnapshot
 }): FileSystemIntentResult {
-  const itemIds: Array<Id<'sidebarItems'>> = []
+  const itemIds: Array<SidebarItemId> = []
 
   for (const item of items) {
     const capability = evaluateCopy(actor, item, target)
@@ -120,8 +120,8 @@ function evaluateParentDrop(
 
 function readyParentCommand(
   action: 'move' | 'restore' | null,
-  itemIds: Array<Id<'sidebarItems'>>,
-  targetParentId: Id<'sidebarItems'> | null,
+  itemIds: Array<SidebarItemId>,
+  targetParentId: SidebarItemId | null,
 ): FileSystemIntentResult {
   if (!action || itemIds.length === 0) return { status: 'noop' }
   return { status: 'ready', command: { type: action, itemIds, targetParentId } }
@@ -137,7 +137,7 @@ function planParentDropIntent({
   target: OperationTargetSnapshot
 }): FileSystemIntentResult {
   let action: 'move' | 'restore' | null = null
-  const itemIds: Array<Id<'sidebarItems'>> = []
+  const itemIds: Array<SidebarItemId> = []
 
   for (const item of items) {
     const itemAction = getParentDropAction(item, target)

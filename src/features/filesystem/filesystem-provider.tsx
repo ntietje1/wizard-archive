@@ -7,16 +7,16 @@ import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type {
   FileSystemCommand,
   FileSystemOperationDecision,
-} from 'convex/sidebarItems/filesystem/commands'
+} from 'shared/sidebar-items/filesystem/commands'
 import type {
   FileSystemPatch,
   FileSystemTransactionReceipt,
-} from 'convex/sidebarItems/filesystem/receipts'
+} from 'shared/sidebar-items/filesystem/receipts'
 import type {
   ConflictDecision,
   ItemOperationConflict,
-} from 'convex/sidebarItems/filesystem/conflicts'
-import { normalizeSelectedRoots } from 'convex/sidebarItems/filesystem/selection'
+} from 'shared/sidebar-items/filesystem/conflicts'
+import { normalizeSelectedRoots } from 'shared/sidebar-items/filesystem/selection'
 import { FileSystemEmptyTrashDialog, FileSystemPermanentDeleteDialog } from './filesystem-dialogs'
 import { ItemOperationConflictDialog } from './item-operation-conflict-dialog'
 import { shouldRecordFileSystemUndo, useFileSystemUndoStore } from './filesystem-undo-store'

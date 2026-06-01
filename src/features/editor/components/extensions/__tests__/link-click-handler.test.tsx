@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
-import type * as ParentValidation from 'convex/sidebarItems/validation/parent'
+import type * as ParentValidation from 'shared/sidebar-items/parent-target'
 import { LinkClickHandler } from '../link-click-handler'
 import type { LinkType } from '~/features/editor/utils/link-decoration'
 
@@ -144,7 +144,7 @@ vi.mock('~/features/sidebar/hooks/useSidebarItems', () => ({
 
 vi.mock('~/features/filesystem/useCreateFileSystemItem', async () => {
   const { validateCreateItemLocally } = await vi.importActual<typeof ParentValidation>(
-    'convex/sidebarItems/validation/parent',
+    'shared/sidebar-items/parent-target',
   )
 
   return {

@@ -1,7 +1,7 @@
 import { BlockNoteEditor } from '@blocknote/core'
 import { useEffect, useRef } from 'react'
 import { SHARE_STATUS } from 'shared/editor-blocks/share-status'
-import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { createEditorSchema } from '../editor-specs'
 import { NoteView } from './note-view'
 import { LinkClickHandler } from './extensions/link-click-handler'

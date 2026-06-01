@@ -1,9 +1,10 @@
-import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
-import type { SidebarItemStatus } from '../types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import type { SidebarItemStatus } from '../../../shared/sidebar-items/types'
 import type { Id } from '../../_generated/dataModel'
 import type { MutationCtx, QueryCtx } from '../../_generated/server'
 import type { AnySidebarItemRow } from '../types/types'
-import { ERROR_CODE, throwClientError } from '../../errors'
+import { ERROR_CODE } from '../../../shared/errors/client'
+import { throwClientError } from '../../errors'
 import { collectSidebarChildrenMap } from '../filesystem/children'
 
 const MAX_DESCENDANT_DEPTH = 50

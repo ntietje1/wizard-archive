@@ -1,9 +1,9 @@
-import type { Id } from '../../_generated/dataModel'
-import type { SidebarItemColor } from '../../../shared/sidebar-items/color'
-import type { SidebarItemIconName } from '../../../shared/sidebar-items/icon'
-import type { SidebarItemName } from '../../../shared/sidebar-items/name'
-import type { CreateParentTarget } from '../validation/parent'
-import type { SidebarItemType } from '../types/baseTypes'
+import type { SidebarItemId } from './types'
+import type { SidebarItemColor } from '../color'
+import type { SidebarItemIconName } from '../icon'
+import type { SidebarItemName } from '../name'
+import type { CreateParentTarget } from '../parent-target'
+import type { SidebarItemType } from '../types'
 
 export const FILE_SYSTEM_COMMAND_TYPE = {
   create: 'create',
@@ -27,7 +27,7 @@ export type CreateFileSystemCommand = {
 
 export type RenameFileSystemCommand = {
   type: typeof FILE_SYSTEM_COMMAND_TYPE.rename
-  itemId: Id<'sidebarItems'>
+  itemId: SidebarItemId
   name?: SidebarItemName
   iconName?: SidebarItemIconName | null
   color?: SidebarItemColor | null
@@ -35,30 +35,30 @@ export type RenameFileSystemCommand = {
 
 export type MoveFileSystemCommand = {
   type: typeof FILE_SYSTEM_COMMAND_TYPE.move
-  itemIds: Array<Id<'sidebarItems'>>
-  targetParentId: Id<'sidebarItems'> | null
+  itemIds: Array<SidebarItemId>
+  targetParentId: SidebarItemId | null
 }
 
 export type CopyFileSystemCommand = {
   type: typeof FILE_SYSTEM_COMMAND_TYPE.copy
-  itemIds: Array<Id<'sidebarItems'>>
-  targetParentId: Id<'sidebarItems'> | null
+  itemIds: Array<SidebarItemId>
+  targetParentId: SidebarItemId | null
 }
 
 export type TrashFileSystemCommand = {
   type: typeof FILE_SYSTEM_COMMAND_TYPE.trash
-  itemIds: Array<Id<'sidebarItems'>>
+  itemIds: Array<SidebarItemId>
 }
 
 export type RestoreFileSystemCommand = {
   type: typeof FILE_SYSTEM_COMMAND_TYPE.restore
-  itemIds: Array<Id<'sidebarItems'>>
-  targetParentId: Id<'sidebarItems'> | null
+  itemIds: Array<SidebarItemId>
+  targetParentId: SidebarItemId | null
 }
 
 export type DeleteForeverFileSystemCommand = {
   type: typeof FILE_SYSTEM_COMMAND_TYPE.deleteForever
-  itemIds: Array<Id<'sidebarItems'>>
+  itemIds: Array<SidebarItemId>
 }
 
 export type EmptyTrashFileSystemCommand = {
@@ -76,7 +76,7 @@ export type FileSystemCommand =
   | EmptyTrashFileSystemCommand
 
 export type FileSystemOperationDecision = {
-  sourceItemId: Id<'sidebarItems'>
+  sourceItemId: SidebarItemId
   /**
    * skip: ignore this source item and continue.
    * replace: overwrite the existing destination with the source.

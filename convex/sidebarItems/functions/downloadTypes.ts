@@ -1,4 +1,4 @@
-import type { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
+import type { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import type { CustomBlock } from '../../../shared/editor-blocks/types'
 
 /**

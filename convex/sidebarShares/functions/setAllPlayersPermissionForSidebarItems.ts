@@ -1,11 +1,12 @@
 import { requireItemAccess } from '../../sidebarItems/validation/access'
-import { PERMISSION_LEVEL } from '../../permissions/types'
+import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import { logEditHistory } from '../../editHistory/log'
 import { EDIT_HISTORY_ACTION } from '../../editHistory/types'
 import { getSidebarItem } from '../../sidebarItems/functions/getSidebarItem'
-import { ERROR_CODE, throwClientError } from '../../errors'
+import { ERROR_CODE } from '../../../shared/errors/client'
+import { throwClientError } from '../../errors'
 import type { CampaignMutationCtx } from '../../functions'
-import type { PermissionLevel } from '../../permissions/types'
+import type { PermissionLevel } from '../../../shared/permissions/types'
 import type { Id } from '../../_generated/dataModel'
 
 const MAX_SHARE_ITEMS_PER_REQUEST = 100

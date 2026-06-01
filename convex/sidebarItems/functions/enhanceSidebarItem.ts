@@ -3,7 +3,7 @@ import { enhanceFolder, enhanceFolderWithContent } from '../../folders/functions
 import { enhanceGameMap, enhanceGameMapWithContent } from '../../gameMaps/functions/enhanceMap'
 import { enhanceNote, enhanceNoteWithContent } from '../../notes/functions/enhanceNote'
 import { enhanceCanvas, enhanceCanvasWithContent } from '../../canvases/functions/enhanceCanvas'
-import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import { assertNever } from '../../common/types'
 import type {
   AnySidebarItem,

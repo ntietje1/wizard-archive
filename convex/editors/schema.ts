@@ -1,7 +1,7 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { convexValidatorFields } from '../common/schema'
-import { EDITOR_MODE, SORT_DIRECTIONS, SORT_ORDERS } from './types'
+import { EDITOR_MODE, SORT_DIRECTIONS, SORT_ORDERS } from '../../shared/editor/types'
 
 export const sortOrderValidator = v.union(
   v.literal(SORT_ORDERS.Alphabetical),

@@ -1,5 +1,5 @@
 import { toast } from 'sonner'
-import { getClientErrorMessage } from 'convex/errors'
+import { getClientErrorMessage } from 'shared/errors/client'
 
 type LogFn = (...args: Array<unknown>) => void
 

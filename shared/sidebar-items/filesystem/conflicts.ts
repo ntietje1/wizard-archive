@@ -1,6 +1,5 @@
-import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
-import { ERROR_CODE, throwClientError } from '../../errors'
-import type { Id } from '../../_generated/dataModel'
+import type { SidebarItemId } from './types'
+import { SIDEBAR_ITEM_TYPES } from '../types'
 import type { OperationPlannerItem } from './selection'
 
 export type PlannerItemStatus = 'ready' | 'needs-decision'
@@ -10,8 +9,8 @@ export type ConflictDecision = {
 }
 export type ItemOperationConflict = {
   kind: 'name-conflict'
-  sourceItemId: Id<'sidebarItems'>
-  destinationItemId: Id<'sidebarItems'>
+  sourceItemId: SidebarItemId
+  destinationItemId: SidebarItemId
   sourceName: string
   destinationName: string
   sourceType: OperationPlannerItem['type']
@@ -19,11 +18,11 @@ export type ItemOperationConflict = {
 }
 
 export type ConflictPlanningContext = {
-  decisions: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
+  decisions: Partial<Record<SidebarItemId, ConflictDecision>>
   defaultConflictDecision?: ConflictDecision
   conflicts: Array<ItemOperationConflict>
-  usedDecisionSourceIds: Set<Id<'sidebarItems'>>
-  skippedSourceItemIds: Set<Id<'sidebarItems'>>
+  usedDecisionSourceIds: Set<SidebarItemId>
+  skippedSourceItemIds: Set<SidebarItemId>
 }
 
 export type ConflictDecisionHandlers = {
@@ -33,20 +32,17 @@ export type ConflictDecisionHandlers = {
 }
 
 export type OperationDecision = {
-  sourceItemId: Id<'sidebarItems'>
+  sourceItemId: SidebarItemId
   action: ConflictDecisionAction
 }
 
 export function toDecisionRecord(
   decisions: Array<OperationDecision> | undefined,
-): Partial<Record<Id<'sidebarItems'>, { action: ConflictDecisionAction }>> {
-  const record: Partial<Record<Id<'sidebarItems'>, { action: ConflictDecisionAction }>> = {}
+): Partial<Record<SidebarItemId, { action: ConflictDecisionAction }>> {
+  const record: Partial<Record<SidebarItemId, { action: ConflictDecisionAction }>> = {}
   for (const decision of decisions ?? []) {
     if (decision.sourceItemId in record) {
-      throwClientError(
-        ERROR_CODE.VALIDATION_FAILED,
-        `Repeated conflict decision for sidebar item ${decision.sourceItemId}`,
-      )
+      throw new Error(`Repeated conflict decision for sidebar item ${decision.sourceItemId}`)
     }
     record[decision.sourceItemId] = { action: decision.action }
   }
@@ -113,10 +109,7 @@ export function applyConflictDecision(
       handlers.replace()
       return 'ready'
     default:
-      throwClientError(
-        ERROR_CODE.VALIDATION_FAILED,
-        `Unknown conflict decision action: ${JSON.stringify(decision.action)}`,
-      )
+      throw new Error(`Unknown conflict decision action: ${JSON.stringify(decision.action)}`)
   }
 }
 
@@ -128,31 +121,31 @@ export function addPlannedFolderMergeOperations<TOperation>({
   createMergeOperation,
 }: {
   context: {
-    targetParentId: Id<'sidebarItems'> | null
-    decisions: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
-    getChildren?: (parentId: Id<'sidebarItems'>) => Array<OperationPlannerItem>
-    itemsById: ReadonlyMap<Id<'sidebarItems'>, Pick<OperationPlannerItem, '_id' | 'parentId'>>
+    targetParentId: SidebarItemId | null
+    decisions: Partial<Record<SidebarItemId, ConflictDecision>>
+    getChildren?: (parentId: SidebarItemId) => Array<OperationPlannerItem>
+    itemsById: ReadonlyMap<SidebarItemId, Pick<OperationPlannerItem, '_id' | 'parentId'>>
     depth: number
     conflicts: Array<ItemOperationConflict>
     operations: Array<TOperation>
     defaultConflictDecision?: ConflictDecision
     mode: 'copy' | 'move'
-    usedDecisionSourceIds: Set<Id<'sidebarItems'>>
-    skippedSourceItemIds: Set<Id<'sidebarItems'>>
+    usedDecisionSourceIds: Set<SidebarItemId>
+    skippedSourceItemIds: Set<SidebarItemId>
   }
   item: OperationPlannerItem
   conflictTarget: OperationPlannerItem
   planChildren: (args: {
     mode: 'copy' | 'move'
     items: Array<OperationPlannerItem>
-    targetParentId: Id<'sidebarItems'>
+    targetParentId: SidebarItemId
     targetItems: Array<OperationPlannerItem>
-    decisions: Partial<Record<Id<'sidebarItems'>, ConflictDecision>>
+    decisions: Partial<Record<SidebarItemId, ConflictDecision>>
     defaultConflictDecision?: ConflictDecision
-    usedDecisionSourceIds: Set<Id<'sidebarItems'>>
-    skippedSourceItemIds: Set<Id<'sidebarItems'>>
-    getChildren: (parentId: Id<'sidebarItems'>) => Array<OperationPlannerItem>
-    itemsById: ReadonlyMap<Id<'sidebarItems'>, Pick<OperationPlannerItem, '_id' | 'parentId'>>
+    usedDecisionSourceIds: Set<SidebarItemId>
+    skippedSourceItemIds: Set<SidebarItemId>
+    getChildren: (parentId: SidebarItemId) => Array<OperationPlannerItem>
+    itemsById: ReadonlyMap<SidebarItemId, Pick<OperationPlannerItem, '_id' | 'parentId'>>
     depth: number
   }) =>
     | { status: 'needs-decision'; conflicts: Array<ItemOperationConflict>; operations: [] }
@@ -160,12 +153,12 @@ export function addPlannedFolderMergeOperations<TOperation>({
         status: 'ready'
         conflicts: []
         operations: Array<TOperation>
-        skippedSourceItemIds?: Array<Id<'sidebarItems'>>
+        skippedSourceItemIds?: Array<SidebarItemId>
       }
   createMergeOperation: (args: {
-    sourceItemId: Id<'sidebarItems'>
-    targetParentId: Id<'sidebarItems'> | null
-    destinationItemId: Id<'sidebarItems'>
+    sourceItemId: SidebarItemId
+    targetParentId: SidebarItemId | null
+    destinationItemId: SidebarItemId
   }) => TOperation
 }): PlannerItemStatus {
   if (context.getChildren) {

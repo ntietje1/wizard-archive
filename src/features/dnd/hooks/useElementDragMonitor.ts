@@ -15,7 +15,7 @@ import {
   EMPTY_EDITOR_DROP_TYPE,
 } from '~/features/dnd/utils/drop-target-data'
 import { resolveDropFeedback } from '~/features/dnd/utils/drop-feedback'
-import type { FileSystemDropOptions } from 'convex/sidebarItems/filesystem/intentPlanning'
+import type { FileSystemDropOptions } from 'shared/sidebar-items/filesystem/intent-planning'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import type { DropOutcome } from '~/features/dnd/utils/drop-outcome'
 import { resolveFileSystemDropTarget } from '~/features/filesystem/filesystem-drop-planner'

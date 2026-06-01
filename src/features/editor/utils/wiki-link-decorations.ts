@@ -1,6 +1,6 @@
 import { Decoration } from '@tiptap/pm/view'
-import type { ParsedWikiLinkFields } from 'convex/links/linkParsers'
-import type { ResolvedLink } from 'convex/links/types'
+import type { ParsedWikiLinkFields } from 'shared/links/parsing'
+import type { ResolvedLink } from 'shared/links/types'
 import { createLinkDecorationState, LINK_ROLE } from './link-decoration'
 
 export interface WikiLinkDecorationMatch {

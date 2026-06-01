@@ -1,5 +1,5 @@
 import { normalizeCanvasEdge } from '../../edges/canvas-edge-registry'
-import { normalizeCanvasNode } from '../../nodes/canvas-node-modules'
+import { normalizeCanvasNode } from '../../nodes/canvas-node-normalization'
 import { embedNodeContextMenuContributors } from '../../nodes/embed/embed-node-context-menu'
 import type { CanvasSelectionSnapshot } from '../../system/canvas-selection'
 import type {

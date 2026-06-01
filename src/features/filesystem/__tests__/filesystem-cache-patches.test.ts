@@ -8,7 +8,7 @@ import {
   invertFileSystemPatches,
   projectMoveOperations,
   projectTrashRoots,
-} from 'convex/sidebarItems/filesystem/patchProjection'
+} from 'shared/sidebar-items/filesystem/patch-projection'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 
 const NOW = 1000

@@ -1,25 +1,15 @@
 import type { Id } from '../_generated/dataModel'
+import type {
+  LinkPathKind as SharedLinkPathKind,
+  LinkSyntax as SharedLinkSyntax,
+  ParsedLinkData as SharedParsedLinkData,
+  ResolvedLink as SharedResolvedLink,
+} from '../../shared/links/types'
 
-export type LinkSyntax = 'wiki' | 'md'
-export type LinkPathKind = 'global' | 'relative'
-
-export type ParsedLinkData = {
-  syntax: LinkSyntax
-  pathKind: LinkPathKind
-  itemPath: Array<string>
-  itemName: string
-  headingPath: Array<string>
-  displayName: string | null
-  rawTarget: string
-  isExternal: boolean
-}
-
-export type ResolvedLink = ParsedLinkData & {
-  resolved: boolean
-  itemId: Id<'sidebarItems'> | null
-  href: string | null
-  color: string | null
-}
+export type LinkPathKind = SharedLinkPathKind
+export type LinkSyntax = SharedLinkSyntax
+export type ParsedLinkData = SharedParsedLinkData
+export type ResolvedLink = SharedResolvedLink
 
 export type NoteLink = {
   _id: Id<'noteLinks'>

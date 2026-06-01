@@ -3,7 +3,7 @@ import { createTestContext } from '../../_test/setup.helper'
 import { asDm, asPlayer, setupCampaignContext, setupUser } from '../../_test/identities.helper'
 import { expectNotAuthenticated, expectPermissionDenied } from '../../_test/assertions.helper'
 import { api } from '../../_generated/api'
-import { EDITOR_MODE, SORT_DIRECTIONS, SORT_ORDERS } from '../types'
+import { EDITOR_MODE, SORT_DIRECTIONS, SORT_ORDERS } from '../../../shared/editor/types'
 
 describe('getCurrentEditor', () => {
   const t = createTestContext()

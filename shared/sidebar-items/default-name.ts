@@ -1,9 +1,8 @@
-import { deduplicateNumericSuffix } from './deduplicateNumericSuffix'
-import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
-import type { SidebarItemType } from '../types/baseTypes'
-import { assertSidebarItemName } from '../validation/name'
-import { SIDEBAR_ITEM_NAME_MAX_LENGTH } from '../../../shared/sidebar-items/name'
-import type { SidebarItemName } from '../../../shared/sidebar-items/name'
+import { deduplicateNumericSuffix } from './deduplicate-numeric-suffix'
+import { SIDEBAR_ITEM_TYPES } from './types'
+import type { SidebarItemType } from './types'
+import { assertSidebarItemName, SIDEBAR_ITEM_NAME_MAX_LENGTH } from './name'
+import type { SidebarItemName } from './name'
 
 export const defaultNameMap: Record<SidebarItemType, SidebarItemName> = {
   [SIDEBAR_ITEM_TYPES.folders]: assertSidebarItemName('Untitled Folder'),

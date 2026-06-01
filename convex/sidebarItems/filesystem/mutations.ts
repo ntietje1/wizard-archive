@@ -1,7 +1,8 @@
 import { v } from 'convex/values'
 import { campaignMutation } from '../../functions'
-import { ERROR_CODE, throwClientError } from '../../errors'
-import { FILE_SYSTEM_COMMAND_TYPE } from './commands'
+import { ERROR_CODE } from '../../../shared/errors/client'
+import { throwClientError } from '../../errors'
+import { FILE_SYSTEM_COMMAND_TYPE } from '../../../shared/sidebar-items/filesystem/commands'
 import { executeCreateCommand } from './commandModules/create'
 import { executeRenameCommand } from './commandModules/rename'
 import { executeCopyCommand } from './commandModules/copy'
@@ -21,8 +22,14 @@ import {
 } from './validators'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignMutationCtx } from '../../functions'
-import type { FileSystemCommand, FileSystemOperationDecision } from './commands'
-import type { FileSystemDelta, FileSystemTransactionReceipt } from './receipts'
+import type {
+  FileSystemCommand,
+  FileSystemOperationDecision,
+} from '../../../shared/sidebar-items/filesystem/commands'
+import type {
+  FileSystemDelta,
+  FileSystemTransactionReceipt,
+} from '../../../shared/sidebar-items/filesystem/receipts'
 
 const MAX_FILE_SYSTEM_COMMAND_ITEMS = 100
 

@@ -1,6 +1,6 @@
 import { FileUploadSection } from './file-upload-section'
 import type { UseFileWithPreviewReturn } from '~/features/file-upload/hooks/useFileWithPreview'
-import { FILE_UPLOAD_ACCEPT_PATTERN } from 'convex/storage/validation'
+import { FILE_UPLOAD_ACCEPT_PATTERN } from 'shared/storage/validation'
 
 interface GenericFileUploadSectionProps {
   label?: string

@@ -8,7 +8,7 @@ import {
   extractMdLinksFromText,
   WIKI_LINK_REGEX,
   MD_LINK_REGEX,
-} from '../linkParsers'
+} from '../../../shared/links/parsing'
 
 describe('parseWikiLinkText', () => {
   it('parses a simple name', () => {

@@ -1,12 +1,13 @@
 import { asyncMap } from 'convex-helpers'
-import { ERROR_CODE, throwClientError } from '../../errors'
+import { ERROR_CODE } from '../../../shared/errors/client'
+import { throwClientError } from '../../errors'
 import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'
 import { flattenBlocks } from './flattenBlocks'
 import type { Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
 import type { CustomBlock } from '../../../shared/editor-blocks/types'
 import type { Block, BlockInsert, PersistedFlatBlock } from '../types'
-import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import { isActiveSidebarItem } from '../../sidebarItems/types/status'
 
 export async function saveAllBlocksForNote(

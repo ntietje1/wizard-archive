@@ -1,6 +1,6 @@
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
-import { selectionBelongsToSurface } from 'convex/sidebarItems/filesystem/selection'
+import { selectionBelongsToSurface } from 'shared/sidebar-items/filesystem/selection'
 import {
   useActiveSidebarItems,
   useTrashSidebarItems,

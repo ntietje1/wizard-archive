@@ -1,6 +1,6 @@
 import { Decoration } from '@tiptap/pm/view'
-import type { ParsedMdLinkFields } from 'convex/links/linkParsers'
-import type { ResolvedLink } from 'convex/links/types'
+import type { ParsedMdLinkFields } from 'shared/links/parsing'
+import type { ResolvedLink } from 'shared/links/types'
 import { createLinkDecorationState, LINK_ROLE } from './link-decoration'
 
 export interface MdLinkDecorationMatch {

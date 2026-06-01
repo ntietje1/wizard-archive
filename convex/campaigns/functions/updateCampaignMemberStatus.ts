@@ -1,4 +1,5 @@
-import { ERROR_CODE, throwClientError } from '../../errors'
+import { ERROR_CODE } from '../../../shared/errors/client'
+import { throwClientError } from '../../errors'
 import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../types'
 import type { Id } from '../../_generated/dataModel'
 import type { DmMutationCtx } from '../../functions'

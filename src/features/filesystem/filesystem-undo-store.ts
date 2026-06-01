@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { FileSystemTransactionReceipt } from 'convex/sidebarItems/filesystem/receipts'
+import type { FileSystemTransactionReceipt } from 'shared/sidebar-items/filesystem/receipts'
 import type { Id } from 'convex/_generated/dataModel'
 
 const MAX_FILE_SYSTEM_HISTORY = 50

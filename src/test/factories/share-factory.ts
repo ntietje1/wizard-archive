@@ -1,5 +1,5 @@
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
-import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import type { SidebarItemShare } from 'convex/sidebarShares/types'
 import { testId } from '~/test/helpers/test-id'
 

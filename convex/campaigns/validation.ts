@@ -3,7 +3,8 @@ import {
   assertCampaignSlug as assertSharedCampaignSlug,
   prepareCampaignName as prepareSharedCampaignName,
 } from '../../shared/campaigns/validation'
-import { ERROR_CODE, throwClientError } from '../errors'
+import { ERROR_CODE } from '../../shared/errors/client'
+import { throwClientError } from '../errors'
 import type { CampaignSlug } from '../../shared/campaigns/validation'
 
 export const campaignSlugValidator = v.string()

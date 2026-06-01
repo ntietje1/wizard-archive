@@ -7,7 +7,7 @@ import {
   resolveAllByPath,
   isPathUnique,
   getMinDisambiguationPath,
-} from '../linkResolution'
+} from '../../../shared/links/resolution'
 import type { AnySidebarItem } from '../../sidebarItems/types/types'
 import type { Id } from '../../_generated/dataModel'
 import { assertSidebarItemName } from '../../sidebarItems/validation/name'

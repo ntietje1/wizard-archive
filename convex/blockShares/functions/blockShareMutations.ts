@@ -1,5 +1,6 @@
 import { asyncMap } from 'convex-helpers'
-import { ERROR_CODE, throwClientError } from '../../errors'
+import { ERROR_CODE } from '../../../shared/errors/client'
+import { throwClientError } from '../../errors'
 import { findBlockByBlockNoteId } from '../../blocks/functions/findBlockByBlockNoteId'
 import { patchBlockMetadata } from '../../blocks/functions/patchBlockMetadata'
 import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'

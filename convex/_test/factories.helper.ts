@@ -5,7 +5,7 @@ import {
   SIDEBAR_ITEM_LOCATION,
   SIDEBAR_ITEM_STATUS,
   SIDEBAR_ITEM_TYPES,
-} from '../sidebarItems/types/baseTypes'
+} from '../../shared/sidebar-items/types'
 import { SHARE_STATUS } from '../../shared/editor-blocks/share-status'
 import { slugify } from '../../shared/slugs'
 import { assertCampaignSlug } from '../campaigns/validation'
@@ -21,8 +21,8 @@ import type {
   SidebarItemLocation,
   SidebarItemStatus,
   SidebarItemType,
-} from '../sidebarItems/types/baseTypes'
-import type { PermissionLevel } from '../permissions/types'
+} from '../../shared/sidebar-items/types'
+import type { PermissionLevel } from '../../shared/permissions/types'
 import type { ShareStatus } from '../../shared/editor-blocks/share-status'
 import type {
   BlockNoteId,
@@ -35,12 +35,12 @@ import type {
 } from '../../shared/editor-blocks/types'
 import type { BlockInsert } from '../blocks/types'
 import type { SidebarItemName } from '../../shared/sidebar-items/name'
-import type { FileSystemOperationDecision } from '../sidebarItems/filesystem/commands'
+import type { FileSystemOperationDecision } from '../../shared/sidebar-items/filesystem/commands'
 import type {
   FileSystemEvent,
   FileSystemEventType,
   FileSystemTransactionReceipt,
-} from '../sidebarItems/filesystem/receipts'
+} from '../../shared/sidebar-items/filesystem/receipts'
 
 type T = TestConvex<typeof schema>
 type AuthedContext = TestConvexForDataModel<DataModel>

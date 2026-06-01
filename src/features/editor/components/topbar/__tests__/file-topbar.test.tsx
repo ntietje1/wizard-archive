@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { describe, expect, it, vi } from 'vitest'
 import { FileTopbar } from '../file-topbar'
 import { createNote } from '~/test/factories/sidebar-item-factory'

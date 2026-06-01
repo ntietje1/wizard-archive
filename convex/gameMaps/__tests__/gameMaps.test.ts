@@ -3,8 +3,8 @@ import { api } from '../../_generated/api'
 import { asDm, asPlayer, setupCampaignContext } from '../../_test/identities.helper'
 import { createGameMap, createNote } from '../../_test/factories.helper'
 import { createTestContext } from '../../_test/setup.helper'
-import { PERMISSION_LEVEL } from '../../permissions/types'
-import { SIDEBAR_ITEM_STATUS } from '../../sidebarItems/types/baseTypes'
+import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
+import { SIDEBAR_ITEM_STATUS } from '../../../shared/sidebar-items/types'
 
 describe('game map APIs', () => {
   it('creates one or many item pins with validated boundary coordinates', async () => {

@@ -1,6 +1,7 @@
 import { memo, useEffect, useRef } from 'react'
 import { cn } from '~/features/shadcn/lib/utils'
-import { useCanvasEngine, useCanvasEngineSelector } from '../react/use-canvas-engine'
+import { useCanvasEngine } from '../react/canvas-engine-context-value'
+import { useCanvasEngineSelector } from '../react/use-canvas-engine'
 import { isCanvasInteractiveKeyboardTarget } from '../runtime/interaction/canvas-keyboard-targets'
 import { useCanvasViewportRuntime } from '../runtime/providers/canvas-runtime'
 import type { CanvasInternalNode } from '../system/canvas-engine-types'

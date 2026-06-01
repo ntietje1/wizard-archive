@@ -25,3 +25,7 @@ export type SidebarItemType = (typeof SIDEBAR_ITEM_TYPES)[keyof typeof SIDEBAR_I
 export function isTrashedSidebarItem(item: { status: SidebarItemStatus }): boolean {
   return item.status === SIDEBAR_ITEM_STATUS.trashed
 }
+
+export function isActiveSidebarItem(item: { status: SidebarItemStatus }): boolean {
+  return item.status === SIDEBAR_ITEM_STATUS.active
+}

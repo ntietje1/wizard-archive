@@ -1,4 +1,4 @@
-import { SORT_DIRECTIONS, SORT_ORDERS } from 'convex/editors/types'
+import { SORT_DIRECTIONS, SORT_ORDERS } from 'shared/editor/types'
 import {
   ArrowDownAZ,
   ArrowUpAZ,
@@ -9,7 +9,7 @@ import {
   SortAsc,
   SortDesc,
 } from 'lucide-react'
-import type { SortDirection, SortOrder } from 'convex/editors/types'
+import type { SortDirection, SortOrder } from 'shared/editor/types'
 import { Button } from '~/features/shadcn/components/button'
 import {
   DropdownMenu,

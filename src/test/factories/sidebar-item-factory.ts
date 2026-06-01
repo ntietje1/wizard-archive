@@ -3,7 +3,7 @@ import {
   SIDEBAR_ITEM_STATUS,
   SIDEBAR_ITEM_TYPES,
 } from 'shared/sidebar-items/types'
-import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import type { SidebarItemColor } from 'shared/sidebar-items/color'
 import type { SidebarItemIconName } from 'shared/sidebar-items/icon'
 import { assertSidebarItemName } from 'shared/sidebar-items/name'
@@ -14,7 +14,7 @@ import type { Folder } from 'convex/folders/types'
 import type { GameMap } from 'convex/gameMaps/types'
 import type { SidebarFile } from 'convex/files/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { PermissionLevel } from 'convex/permissions/types'
+import type { PermissionLevel } from 'shared/permissions/types'
 import type { SidebarItemShare } from 'convex/sidebarShares/types'
 import type { SidebarItemLocation, SidebarItemStatus } from 'shared/sidebar-items/types'
 import { testId } from '~/test/helpers/test-id'

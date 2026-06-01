@@ -1,6 +1,6 @@
 import { asyncMap } from 'convex-helpers'
 import { GAME_MAP_SNAPSHOT_TYPE } from '../types'
-import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
 import { createSnapshot } from '../../documentSnapshots/functions/createSnapshot'
 import { logger } from '../../common/logger'

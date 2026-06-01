@@ -1,7 +1,7 @@
 import { asyncMap } from 'convex-helpers'
-import { parseWikiLinkText } from '../../links/linkParsers'
-import { resolveParsedItemPath } from '../../links/linkResolution'
-import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import { parseWikiLinkText } from '../../../shared/links/parsing'
+import { resolveParsedItemPath } from '../../../shared/links/resolution'
+import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import { isActiveSidebarItem } from '../../sidebarItems/types/status'
 import {
   collectFormulaReferences,

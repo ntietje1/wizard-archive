@@ -1,11 +1,3 @@
-export {
-  applyCanvasSelectionCommitMode,
-  areStringSetsEqual,
-  getNextSelectedIds,
-  isExclusivelySelectedNode,
-  mergeSelectedIds,
-} from '../system/canvas-selection'
-
 type PrimarySelectionModifierEvent = {
   ctrlKey: boolean
   metaKey: boolean

@@ -3,7 +3,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import type { SidebarItemColor } from 'shared/sidebar-items/color'
 import type { SidebarItemIconName } from 'shared/sidebar-items/icon'
-import type { CreateParentTarget } from 'convex/sidebarItems/validation/parent'
+import type { CreateParentTarget } from 'shared/sidebar-items/parent-target'
 import { useCreateFileSystemItem } from '~/features/filesystem/useCreateFileSystemItem'
 import { useCampaignMutation } from '~/shared/hooks/useCampaignMutation'
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { assertSidebarItemName } from 'shared/sidebar-items/name'
 import type { Id } from 'convex/_generated/dataModel'
-import type { FileSystemCommand } from 'convex/sidebarItems/filesystem/commands'
+import type { FileSystemCommand } from 'shared/sidebar-items/filesystem/commands'
 import {
   getCommandProgressToastText,
   getHistoryProgressToastText,

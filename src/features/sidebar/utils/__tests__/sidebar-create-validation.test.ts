@@ -3,7 +3,7 @@ import {
   CREATE_PARENT_TARGET_KIND,
   validateCreateItemLocally,
   validateCreateParentTarget,
-} from 'convex/sidebarItems/validation/parent'
+} from 'shared/sidebar-items/parent-target'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'

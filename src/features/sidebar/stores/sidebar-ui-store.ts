@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware'
 import { useShallow } from 'zustand/shallow'
 import type { Id } from 'convex/_generated/dataModel'
 import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
-import { selectionBelongsToSurface } from 'convex/sidebarItems/filesystem/selection'
+import { selectionBelongsToSurface } from 'shared/sidebar-items/filesystem/selection'
 
 export type ItemSurface = 'sidebar' | 'folder-view' | 'bookmarks' | 'trash'
 

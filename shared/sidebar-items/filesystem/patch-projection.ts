@@ -1,22 +1,20 @@
-import type { Doc, Id } from '../../_generated/dataModel'
-import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
-import type { FileSystemPatch, SidebarItemFieldPatch } from './receipts'
+import type { SidebarItemId, UserProfileId, SidebarItemPatchRow } from './types'
+import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../types'
+import type { FileSystemPatch } from './receipts'
 import { diffSidebarItemFields } from './patches'
-import type { TransferOperation } from './transferPlanner'
+import type { TransferOperation } from './transfer-planner'
 import { collectDescendantIdsFromItems } from './tree'
 
 type PatchProjectionItem = Extract<FileSystemPatch, { type: 'upsertSidebarItem' }>['item']
 
-export type FileSystemPatchSnapshot<T> = {
+type FileSystemPatchSnapshot<T> = {
   items: Array<T>
 }
 
-export type OptimisticPatchPair = {
+type OptimisticPatchPair = {
   forwardPatches: Array<FileSystemPatch>
   inversePatches: Array<FileSystemPatch>
 }
-
-type SidebarItemPatchRow = Doc<'sidebarItems'>
 
 function emptyPatchPair(): OptimisticPatchPair {
   return { forwardPatches: [], inversePatches: [] }
@@ -48,7 +46,7 @@ function pushRemove<T extends SidebarItemPatchRow>(patches: OptimisticPatchPair,
   patches.inversePatches.push({ type: 'upsertSidebarItem', item })
 }
 
-function treeItems<T extends SidebarItemPatchRow>(items: Array<T>, rootId: Id<'sidebarItems'>) {
+function treeItems<T extends SidebarItemPatchRow>(items: Array<T>, rootId: SidebarItemId) {
   const itemsById = new Map(items.map((item) => [item._id, item]))
   const root = itemsById.get(rootId)
   if (!root) return []
@@ -63,8 +61,8 @@ function treeItems<T extends SidebarItemPatchRow>(items: Array<T>, rootId: Id<'s
 
 export function projectTrashRoots<T extends SidebarItemPatchRow>(
   items: Array<T>,
-  rootIds: Array<Id<'sidebarItems'>>,
-  metadata: { now: number; userId: Id<'userProfiles'> | null },
+  rootIds: Array<SidebarItemId>,
+  metadata: { now: number; userId: UserProfileId | null },
 ): OptimisticPatchPair {
   const patches = emptyPatchPair()
   for (const rootId of rootIds) {
@@ -80,10 +78,10 @@ export function projectTrashRoots<T extends SidebarItemPatchRow>(
   return patches
 }
 
-export function projectRestoreRoots<T extends SidebarItemPatchRow>(
+function projectRestoreRoots<T extends SidebarItemPatchRow>(
   items: Array<T>,
-  rootIds: Array<Id<'sidebarItems'>>,
-  targetParentId: Id<'sidebarItems'> | null,
+  rootIds: Array<SidebarItemId>,
+  targetParentId: SidebarItemId | null,
 ): OptimisticPatchPair {
   const patches = emptyPatchPair()
   for (const rootId of rootIds) {
@@ -101,7 +99,7 @@ export function projectRestoreRoots<T extends SidebarItemPatchRow>(
 
 export function projectDeleteForeverRoots<T extends SidebarItemPatchRow>(
   items: Array<T>,
-  rootIds: Array<Id<'sidebarItems'>>,
+  rootIds: Array<SidebarItemId>,
 ): OptimisticPatchPair {
   const patches = emptyPatchPair()
   for (const rootId of rootIds) {
@@ -144,7 +142,7 @@ function projectMergeFolderOperation<T extends SidebarItemPatchRow>({
 }: {
   patches: OptimisticPatchPair
   activeItems: Array<T>
-  activeItemsById: ReadonlyMap<Id<'sidebarItems'>, T>
+  activeItemsById: ReadonlyMap<SidebarItemId, T>
   operation: Extract<TransferOperation, { action: 'mergeFolder' }>
   now: number
 }) {
@@ -161,9 +159,9 @@ function projectMoveOrRestoreOperation<T extends SidebarItemPatchRow>({
   operation,
 }: {
   patches: OptimisticPatchPair
-  activeItemsById: ReadonlyMap<Id<'sidebarItems'>, T>
+  activeItemsById: ReadonlyMap<SidebarItemId, T>
   trashItems: Array<T>
-  trashItemsById: ReadonlyMap<Id<'sidebarItems'>, T>
+  trashItemsById: ReadonlyMap<SidebarItemId, T>
   operation: Extract<TransferOperation, { action: 'place' | 'replace' }>
 }) {
   const source = activeItemsById.get(operation.sourceItemId)
@@ -217,16 +215,16 @@ export function projectMoveOperations<T extends SidebarItemPatchRow>({
   return patches
 }
 
-export function applyFileSystemPatchesToSnapshot<T extends { _id: Id<'sidebarItems'> }>(
+export function applyFileSystemPatchesToSnapshot<T extends { _id: SidebarItemId }>(
   snapshot: FileSystemPatchSnapshot<T>,
   patches: Array<FileSystemPatch>,
 ): FileSystemPatchSnapshot<T | PatchProjectionItem> {
-  const itemsById = new Map<Id<'sidebarItems'>, T | PatchProjectionItem>(
+  const itemsById = new Map<SidebarItemId, T | PatchProjectionItem>(
     snapshot.items.map((item) => [item._id, item]),
   )
   const order = snapshot.items.map((item) => item._id)
   const orderIds = new Set(order)
-  const removedIds = new Set<Id<'sidebarItems'>>()
+  const removedIds = new Set<SidebarItemId>()
 
   for (const patch of patches) {
     if (patch.type === 'removeSidebarItem') {
@@ -284,5 +282,3 @@ export function invertFileSystemPatches(patches: Array<FileSystemPatch>): Array<
     }
   })
 }
-
-export type { SidebarItemFieldPatch }

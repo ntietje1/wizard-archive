@@ -2,7 +2,7 @@ import { v } from 'convex/values'
 import { defineTable } from 'convex/server'
 import { sidebarItemValidatorFields } from '../sidebarItems/schema/sidebarItemsTable'
 import { convexValidatorFields } from '../common/schema'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../../shared/sidebar-items/types'
 
 const mapValidatorFields = {
   ...sidebarItemValidatorFields,

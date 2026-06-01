@@ -1,4 +1,4 @@
-import type { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import type { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import type { AnySidebarItem } from '../../sidebarItems/types/types'
 import type { DownloadItem } from '../../sidebarItems/functions/downloadTypes'
 

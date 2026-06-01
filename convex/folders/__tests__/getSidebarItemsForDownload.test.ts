@@ -10,7 +10,7 @@ import {
   createNote,
 } from '../../_test/factories.helper'
 import { api } from '../../_generated/api'
-import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import type { CustomBlock } from '../../../shared/editor-blocks/types'
 
 /** Extract the text of the first inline content entry from a block's content */

@@ -14,7 +14,7 @@ import { getKeyboardOpenItem } from '~/features/sidebar/utils/item-surface-keybo
 import { getKeyboardPasteParentId } from '~/features/filesystem/filesystem-targets'
 import { resolveSidebarOperationItems } from '~/features/filesystem/filesystem-operation-selection'
 import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
-import { selectionBelongsToSurface } from 'convex/sidebarItems/filesystem/selection'
+import { selectionBelongsToSurface } from 'shared/sidebar-items/filesystem/selection'
 import { handleError } from '~/shared/utils/logger'
 
 type ActiveItemSurface = NonNullable<

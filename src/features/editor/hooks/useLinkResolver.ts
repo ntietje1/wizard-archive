@@ -1,10 +1,10 @@
 import { useCallback, useMemo } from 'react'
 import { normalizeSidebarItemColorOrDefault } from 'shared/sidebar-items/color'
-import { isDangerousUrl } from 'convex/links/linkParsers'
-import { resolveParsedItemPath } from 'convex/links/linkResolution'
+import { isDangerousUrl } from 'shared/links/parsing'
+import { resolveParsedItemPath } from 'shared/links/resolution'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
-import type { ParsedLinkData, ResolvedLink } from 'convex/links/types'
+import type { ParsedLinkData, ResolvedLink } from 'shared/links/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 

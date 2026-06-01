@@ -1,6 +1,6 @@
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import { validateCanvasEmbedDropTarget } from '~/features/canvas/domain/dropValidation'
-import { validateNoteLinkDropTarget } from 'convex/links/dropValidation'
+import { validateNoteLinkDropTarget } from 'shared/links/drop-validation'
 import { validatePinDropTarget } from 'convex/gameMaps/validation'
 import { assertNever } from '~/shared/utils/utils'
 import type { SurfaceDropPlanningContext } from './drop-planning-context'

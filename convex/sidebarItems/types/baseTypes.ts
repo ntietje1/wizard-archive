@@ -1,18 +1,18 @@
 import type { Folder } from '../../folders/types'
 import type { Id } from '../../_generated/dataModel'
-import type { PermissionLevel } from '../../permissions/types'
+import type { PermissionLevel } from '../../../shared/permissions/types'
 import type { SidebarItemShare } from '../../sidebarShares/types'
 import type { SidebarItemColor } from '../../../shared/sidebar-items/color'
 import type { SidebarItemIconName } from '../../../shared/sidebar-items/icon'
 import type { SidebarItemName } from '../../../shared/sidebar-items/name'
 import type { SidebarItemSlug } from '../../../shared/sidebar-items/slug'
 import type { ConvexValidatorFields } from '../../common/types'
-
-export const SIDEBAR_ITEM_LOCATION = {
-  sidebar: 'sidebar',
-} as const
-
-export type SidebarItemLocation = (typeof SIDEBAR_ITEM_LOCATION)[keyof typeof SIDEBAR_ITEM_LOCATION]
+import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import type {
+  SidebarItemLocation,
+  SidebarItemStatus,
+  SidebarItemType,
+} from '../../../shared/sidebar-items/types'
 
 /**
  * Lifecycle visibility for a sidebar item.
@@ -22,23 +22,6 @@ export type SidebarItemLocation = (typeof SIDEBAR_ITEM_LOCATION)[keyof typeof SI
  * `deletionTime`/`deletedBy` recording the deletion metadata. `undoHidden` is an internal state for
  * rows hidden by local undo while preserving row IDs for deterministic redo.
  */
-export const SIDEBAR_ITEM_STATUS = {
-  active: 'active',
-  trashed: 'trashed',
-  undoHidden: 'undoHidden',
-} as const
-
-export type SidebarItemStatus = (typeof SIDEBAR_ITEM_STATUS)[keyof typeof SIDEBAR_ITEM_STATUS]
-
-export const SIDEBAR_ITEM_TYPES = {
-  notes: 'note',
-  folders: 'folder',
-  gameMaps: 'gameMap',
-  files: 'file',
-  canvases: 'canvas',
-} as const
-
-export type SidebarItemType = (typeof SIDEBAR_ITEM_TYPES)[keyof typeof SIDEBAR_ITEM_TYPES]
 
 export function assertSidebarItemType(type: string): SidebarItemType {
   if ((Object.values(SIDEBAR_ITEM_TYPES) as Array<string>).includes(type)) {

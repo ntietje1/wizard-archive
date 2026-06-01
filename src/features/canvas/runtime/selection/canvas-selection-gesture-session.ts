@@ -1,4 +1,4 @@
-import { applyCanvasSelectionCommitMode } from '../../utils/canvas-selection-utils'
+import { applyCanvasSelectionCommitMode } from '../../system/canvas-selection'
 import type {
   CanvasInteractionTools,
   CanvasSelectionController,

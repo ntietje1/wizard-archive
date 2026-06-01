@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   getNextSelectedIds,
   isExclusivelySelectedNode,
-  isPrimarySelectionModifier,
   areStringSetsEqual,
   mergeSelectedIds,
-} from '../canvas-selection-utils'
+} from '../../system/canvas-selection'
+import { isPrimarySelectionModifier } from '../canvas-selection-utils'
 
 describe('canvas-selection-utils', () => {
   it('treats ctrl as the primary selection modifier on windows and linux', () => {

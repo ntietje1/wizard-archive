@@ -1,4 +1,4 @@
-import type { Doc } from '../../_generated/dataModel'
+import type { SidebarItemPatchRow } from './types'
 import type { SidebarItemFieldPatch, SidebarItemPatchFields } from './receipts'
 
 export const SIDEBAR_ITEM_PATCH_FIELD_KEYS = [
@@ -19,7 +19,7 @@ export const SIDEBAR_ITEM_PATCH_FIELD_KEYS = [
 ] as const satisfies ReadonlyArray<keyof SidebarItemPatchFields>
 
 type SidebarItemPatchSource = Pick<
-  Doc<'sidebarItems'>,
+  SidebarItemPatchRow,
   (typeof SIDEBAR_ITEM_PATCH_FIELD_KEYS)[number]
 >
 

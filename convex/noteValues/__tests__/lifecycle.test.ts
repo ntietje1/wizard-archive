@@ -11,7 +11,7 @@ import {
 } from '../../_test/factories.helper'
 import { api, internal } from '../../_generated/api'
 import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'
-import { SIDEBAR_ITEM_TYPES } from '../../sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import { makeYjsUpdateWithBlocks } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
 import {
   hardDeleteValueTestNote,

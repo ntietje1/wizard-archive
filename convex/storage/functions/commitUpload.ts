@@ -1,6 +1,7 @@
-import { ERROR_CODE, throwClientError } from '../../errors'
+import { ERROR_CODE } from '../../../shared/errors/client'
+import { throwClientError } from '../../errors'
 import { FILE_STORAGE_STATUS } from '../types'
-import { validateFileUpload } from '../validation'
+import { validateFileUpload } from '../../../shared/storage/validation'
 import type { Id } from '../../_generated/dataModel'
 import type { AuthMutationCtx } from '../../functions'
 

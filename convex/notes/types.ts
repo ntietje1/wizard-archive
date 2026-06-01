@@ -1,11 +1,11 @@
 import type { CustomBlock } from '../../shared/editor-blocks/types'
+import type { SIDEBAR_ITEM_TYPES } from '../../shared/sidebar-items/types'
 import type {
-  SIDEBAR_ITEM_TYPES,
   SidebarItem,
   SidebarItemFromDb,
   SidebarItemWithContent,
 } from '../sidebarItems/types/baseTypes'
-import type { PermissionLevel } from '../permissions/types'
+import type { PermissionLevel } from '../../shared/permissions/types'
 import type { ShareStatus } from '../../shared/editor-blocks/share-status'
 import type { Id } from '../_generated/dataModel'
 

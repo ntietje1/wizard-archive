@@ -1,4 +1,4 @@
-import { parseMdLinkTarget, parseWikiLinkText } from 'convex/links/linkParsers'
+import { parseMdLinkTarget, parseWikiLinkText } from 'shared/links/parsing'
 import type { Decoration } from '@tiptap/pm/view'
 import { describe, expect, it } from 'vitest'
 import { buildMdLinkDecorationEntries } from '../md-link-decorations'

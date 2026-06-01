@@ -1,6 +1,6 @@
-import { PERMISSION_LEVEL } from 'convex/permissions/types'
+import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { ChevronDown, ChevronUp, Users } from 'lucide-react'
-import type { PermissionLevel } from 'convex/permissions/types'
+import type { PermissionLevel } from 'shared/permissions/types'
 import type { CampaignMember } from 'convex/campaigns/types'
 import type { UserProfile } from 'convex/users/types'
 import type {

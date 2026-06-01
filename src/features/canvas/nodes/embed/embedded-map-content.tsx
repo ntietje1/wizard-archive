@@ -6,7 +6,7 @@ import { useMapImageStatus } from '~/features/editor/components/viewer/map/use-m
 import { MapImagePreview } from '~/features/editor/components/viewer/map/map-image-preview'
 import { useMapRenderPins } from '~/features/editor/components/viewer/map/use-map-render-pins'
 import { useCanvasDocumentRuntime } from '../../runtime/providers/canvas-runtime'
-import { useCanvasEngine } from '../../react/use-canvas-engine'
+import { useCanvasEngine } from '../../react/canvas-engine-context-value'
 import { resolveDefaultEmbedNodeResizeForLockedAspectRatio } from './embed-node-size'
 
 export function EmbeddedMapContent({ nodeId, map }: { nodeId: string; map: GameMapWithContent }) {

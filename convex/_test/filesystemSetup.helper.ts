@@ -1,5 +1,5 @@
 import { api } from '../_generated/api'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../../shared/sidebar-items/types'
 import { assertSidebarItemName } from '../sidebarItems/validation/name'
 import { assertSidebarItemColor } from '../../shared/sidebar-items/color'
 import { assertSidebarItemIconName } from '../../shared/sidebar-items/icon'
@@ -10,11 +10,11 @@ import type { CustomBlock } from '../../shared/editor-blocks/types'
 import type {
   FileSystemEvent,
   FileSystemTransactionReceipt,
-} from '../sidebarItems/filesystem/receipts'
-import type { CreateParentTarget } from '../sidebarItems/validation/parent'
+} from '../../shared/sidebar-items/filesystem/receipts'
+import type { CreateParentTarget } from '../../shared/sidebar-items/parent-target'
 import type { SidebarItemColor } from '../../shared/sidebar-items/color'
 import type { SidebarItemIconName } from '../../shared/sidebar-items/icon'
-import type { SidebarItemType } from '../sidebarItems/types/baseTypes'
+import type { SidebarItemType } from '../../shared/sidebar-items/types'
 
 type AuthedContext = TestConvexForDataModel<DataModel>
 

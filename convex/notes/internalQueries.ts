@@ -1,8 +1,9 @@
 import { v } from 'convex/values'
 import { campaignInternalQuery, dmInternalQuery } from '../functions'
 import { checkYjsWriteAccess } from '../yjsSync/functions/checkYjsAccess'
-import { SIDEBAR_ITEM_TYPES } from '../sidebarItems/types/baseTypes'
-import { ERROR_CODE, throwClientError } from '../errors'
+import { SIDEBAR_ITEM_TYPES } from '../../shared/sidebar-items/types'
+import { ERROR_CODE } from '../../shared/errors/client'
+import { throwClientError } from '../errors'
 
 function assertNoteItem(item: { type: string }) {
   if (item.type !== SIDEBAR_ITEM_TYPES.notes) {

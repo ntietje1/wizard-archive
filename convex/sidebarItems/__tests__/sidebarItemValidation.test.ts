@@ -31,10 +31,10 @@ import {
   validateCreateParentTarget,
   validateNoCircularParent,
   validateNoCircularParentAsync,
-} from '../validation/parent'
+} from '../../../shared/sidebar-items/parent-target'
 import { validateSidebarItemSlug } from '../../../shared/sidebar-items/slug'
 import type { Id } from '../../_generated/dataModel'
-import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import type { AnySidebarItem } from '../types/types'
 
 describe('validateItemName', () => {

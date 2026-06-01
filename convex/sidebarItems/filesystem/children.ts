@@ -1,4 +1,4 @@
-import { SIDEBAR_ITEM_TYPES } from '../types/baseTypes'
+import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import type { Id } from '../../_generated/dataModel'
 import type { AnySidebarItem } from '../types/types'
 

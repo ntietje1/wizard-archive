@@ -9,7 +9,7 @@ import type { FolderHistoryMetadataMap } from '../folders/types'
 import type { Id } from '../_generated/dataModel'
 import type { MapHistoryMetadataMap } from '../gameMaps/types'
 import type { NoteHistoryMetadataMap } from '../notes/types'
-import type { SidebarItemType } from '../sidebarItems/types/baseTypes'
+import type { SidebarItemType } from '../../shared/sidebar-items/types'
 
 export const SHARED_HISTORY_ACTION = {
   created: 'created',

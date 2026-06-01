@@ -4,7 +4,7 @@ import type {
   ConflictDecision,
   ConflictDecisionAction,
   ItemOperationConflict,
-} from 'convex/sidebarItems/filesystem/conflicts'
+} from 'shared/sidebar-items/filesystem/conflicts'
 import { Button } from '~/features/shadcn/components/button'
 import {
   Dialog,

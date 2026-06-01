@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { api } from 'convex/_generated/api'
-import type { PanelPreference } from 'convex/userPreferences/types'
+import type { PanelPreference } from 'shared/user-preferences/types'
 import { usePanelPreferenceStore } from '~/features/settings/stores/panel-preference-store'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'

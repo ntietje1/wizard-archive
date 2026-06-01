@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vite-plus/test'
 import {
   MAX_FILE_SIZE,
   isAllowedContentType,
@@ -7,7 +7,7 @@ import {
   validateFileSize,
   validateFileType,
   validateFileUpload,
-} from '../validation'
+} from 'shared/storage/validation'
 
 describe('isAllowedContentType', () => {
   it('allows image types', () => {

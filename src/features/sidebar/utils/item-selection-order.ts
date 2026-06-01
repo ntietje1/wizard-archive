@@ -1,4 +1,4 @@
-import type { SortOptions } from 'convex/editors/types'
+import type { SortOptions } from 'shared/editor/types'
 import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
