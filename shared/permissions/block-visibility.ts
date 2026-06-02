@@ -16,12 +16,19 @@ export function getBlockVisibilityPermissionLevel({
 }: BlockVisibilityPermissionInput): PermissionLevel {
   if (isDm) return PERMISSION_LEVEL.EDIT
 
-  switch (shareStatus ?? SHARE_STATUS.NOT_SHARED) {
+  const normalizedShareStatus = shareStatus ?? SHARE_STATUS.NOT_SHARED
+  switch (normalizedShareStatus) {
     case SHARE_STATUS.ALL_SHARED:
       return PERMISSION_LEVEL.VIEW
     case SHARE_STATUS.INDIVIDUALLY_SHARED:
       return isIndividuallySharedWithMember ? PERMISSION_LEVEL.VIEW : PERMISSION_LEVEL.NONE
     case SHARE_STATUS.NOT_SHARED:
       return PERMISSION_LEVEL.NONE
+    default:
+      return assertUnhandledShareStatus(normalizedShareStatus)
   }
+}
+
+function assertUnhandledShareStatus(shareStatus: never): never {
+  throw new Error(`Unhandled SHARE_STATUS: ${String(shareStatus)}`)
 }

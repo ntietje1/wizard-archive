@@ -12,16 +12,16 @@ async function getBlockPermissionLevel(
   { block }: { block: Block },
 ): Promise<PermissionLevel> {
   const { membership } = ctx
+  const shareStatus = block.shareStatus ?? SHARE_STATUS.NOT_SHARED
 
   if (membership.role === CAMPAIGN_MEMBER_ROLE.DM) {
     return getBlockVisibilityPermissionLevel({
       isDm: true,
-      shareStatus: block.shareStatus,
+      shareStatus,
     })
   }
 
   const checkId = membership._id
-  const shareStatus = block.shareStatus ?? SHARE_STATUS.NOT_SHARED
 
   const isIndividuallySharedWithMember =
     shareStatus === SHARE_STATUS.INDIVIDUALLY_SHARED

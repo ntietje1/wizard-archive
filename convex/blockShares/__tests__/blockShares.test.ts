@@ -364,6 +364,25 @@ describe('block permission resolution', () => {
     expect(item.blockMeta[blockNoteId]).toBeUndefined()
   })
 
+  it('allows DM to access nullable block share status as not shared', async () => {
+    const ctx = await setupCampaignContext(t)
+    const dmAuth = asDm(ctx)
+    const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)
+
+    const { blockNoteId } = await createBlock(t, noteId, ctx.campaignId, {
+      shareStatus: null,
+    })
+
+    const result = await dmAuth.query(api.blocks.queries.getBlockWithShares, {
+      campaignId: ctx.campaignId,
+      noteId,
+      blockNoteId,
+    })
+    expect(result).not.toBeNull()
+    expect(result!.block).toBeTruthy()
+    expect(result!.shareStatus).toBe('not_shared')
+  })
+
   it('shows individually_shared block to shared player', async () => {
     const ctx = await setupCampaignContext(t)
     const { noteId } = await createNote(t, ctx.campaignId, ctx.dm.profile._id)

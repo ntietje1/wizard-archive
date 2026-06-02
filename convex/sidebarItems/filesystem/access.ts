@@ -3,6 +3,7 @@ import { throwClientError } from '../../errors'
 import { hasAtLeastPermissionLevel } from '../../../shared/permissions/hasAtLeastPermissionLevel'
 import { getPermissionRequirementForOperation } from '../../../shared/permissions/requirements'
 import { enhanceBase } from '../functions/enhanceBaseSidebarItem'
+import type { PermissionOperation } from '../../../shared/permissions/requirements'
 import type { PermissionLevel } from '../../../shared/permissions/types'
 import type { CampaignQueryCtx } from '../../functions'
 import type {
@@ -11,7 +12,6 @@ import type {
 } from '../../../shared/sidebar-items/model-types'
 
 export type AccessibleSidebarItemRow = EnhanceSidebarItem<AnySidebarItemRow>
-type PermissionOperation = Parameters<typeof getPermissionRequirementForOperation>[0]
 
 export async function checkSidebarItemRowAccess<T extends AnySidebarItemRow>(
   ctx: CampaignQueryCtx,

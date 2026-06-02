@@ -12,7 +12,7 @@ export const PERMISSION_OPERATION = {
   DELETE_SIDEBAR_ITEM_FOREVER: 'delete_sidebar_item_forever',
 } as const
 
-type PermissionOperation = (typeof PERMISSION_OPERATION)[keyof typeof PERMISSION_OPERATION]
+export type PermissionOperation = (typeof PERMISSION_OPERATION)[keyof typeof PERMISSION_OPERATION]
 
 const PERMISSION_OPERATION_REQUIREMENT = {
   [PERMISSION_OPERATION.READ_SIDEBAR_ITEM]: PERMISSION_LEVEL.VIEW,

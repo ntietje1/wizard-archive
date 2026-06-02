@@ -9,9 +9,9 @@ import { SHARE_STATUS } from '../../../shared/editor-blocks/share-status'
 import { hasAtLeastPermissionLevel } from '../../../shared/permissions/hasAtLeastPermissionLevel'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 
-describe('hasAtLeastPermissionLevel', () => {
-  const { NONE, VIEW, EDIT, FULL_ACCESS } = PERMISSION_LEVEL
+const { NONE, VIEW, EDIT, FULL_ACCESS } = PERMISSION_LEVEL
 
+describe('hasAtLeastPermissionLevel', () => {
   it('every level is at least itself', () => {
     for (const level of [NONE, VIEW, EDIT, FULL_ACCESS]) {
       expect(hasAtLeastPermissionLevel(level, level)).toBe(true)
@@ -47,12 +47,16 @@ describe('hasAtLeastPermissionLevel', () => {
   it('VIEW >= NONE', () => {
     expect(hasAtLeastPermissionLevel(VIEW, NONE)).toBe(true)
   })
+})
 
+describe('hasPermissionForRequirement', () => {
   it('treats null or missing permission as NONE for requirements', () => {
     expect(hasPermissionForRequirement(null, NONE)).toBe(true)
     expect(hasPermissionForRequirement(undefined, VIEW)).toBe(false)
   })
+})
 
+describe('hasPermissionForOperation', () => {
   it('uses named operation requirements for sidebar operations', () => {
     expect(hasPermissionForOperation(EDIT, PERMISSION_OPERATION.READ_SIDEBAR_ITEM)).toBe(true)
     expect(hasPermissionForOperation(EDIT, PERMISSION_OPERATION.RENAME_SIDEBAR_ITEM)).toBe(true)
@@ -65,7 +69,9 @@ describe('hasAtLeastPermissionLevel', () => {
       hasPermissionForOperation(FULL_ACCESS, PERMISSION_OPERATION.DELETE_SIDEBAR_ITEM_FOREVER),
     ).toBe(true)
   })
+})
 
+describe('getBlockVisibilityPermissionLevel', () => {
   it('uses named block visibility outcomes', () => {
     expect(
       getBlockVisibilityPermissionLevel({

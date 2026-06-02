@@ -165,6 +165,7 @@ describe('permission inheritance through nested folder trees', () => {
     const { leaf } = await setupFolderTree(t, ctx.campaignId, ctx.dm.profile._id, {
       depth: 1,
       inheritShares: [true],
+      leafType: 'note',
     })
 
     await createSidebarShare(t, {
