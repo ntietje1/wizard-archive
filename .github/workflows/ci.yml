@@ -39,6 +39,7 @@ jobs:
       - run: vp check
       - run: vp run lint:convex # TODO: remove this once plugins exist for oxlint
       - run: vp run check:no-reexports
+      - run: vp run check:import-boundaries
 
   fallow:
     if: github.event_name == 'pull_request'

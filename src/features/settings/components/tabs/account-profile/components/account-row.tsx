@@ -108,6 +108,7 @@ export function AccountRow({ profile }: { profile: UserProfile }) {
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        aria-label="Upload profile picture"
         className="hidden"
         onChange={handleFileSelect}
       />

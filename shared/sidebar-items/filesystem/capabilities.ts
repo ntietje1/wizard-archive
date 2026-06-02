@@ -1,10 +1,10 @@
 import type { SidebarItemId } from '../../common/ids'
 import type { FileSystemSidebarItem } from './types'
-import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/member-role'
+import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
 import { PERMISSION_LEVEL } from '../../permissions/types'
 import { hasAtLeastPermissionLevel } from '../../permissions/hasAtLeastPermissionLevel'
 import { SIDEBAR_ITEM_TYPES, isActiveSidebarItem, isTrashedSidebarItem } from '../types'
-import type { CampaignMemberRole } from '../../campaigns/member-role'
+import type { CampaignMemberRole } from '../../campaigns/types'
 import type { PermissionLevel } from '../../permissions/types'
 
 export type SidebarOperationRejectionCode =

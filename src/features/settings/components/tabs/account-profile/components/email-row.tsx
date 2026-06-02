@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { validateEmail } from 'shared/users/validation'
 import { Loader2, Mail } from 'lucide-react'
-import { toast } from 'sonner'
 import type { UserProfile } from 'shared/users/types'
 import { logger } from '~/shared/utils/logger'
 import { authClient } from '~/features/auth/utils/auth-client'
@@ -43,16 +42,7 @@ function EmailChangeDialog({ profile, onClose }: { profile: UserProfile; onClose
   const emailError = trimmedEmail ? validateEmail(trimmedEmail) : null
   const isUnchanged = trimmedEmail === profile.email
   const canSubmit = !emailError && !isUnchanged && !!trimmedEmail && !isLoading
-
-  const [prevProfileEmail, setPrevProfileEmail] = useState(profile.email)
-  if (profile.email !== prevProfileEmail) {
-    setPrevProfileEmail(profile.email)
-    if (sentTo && profile.email === sentTo) {
-      toast.success('Email changed successfully')
-      onClose()
-      return null
-    }
-  }
+  const sentEmailVerified = sentTo && profile.email === sentTo
 
   const handleSave = async () => {
     if (!canSubmit) return
@@ -76,20 +66,32 @@ function EmailChangeDialog({ profile, onClose }: { profile: UserProfile; onClose
     return (
       <>
         <div className="flex flex-col items-center gap-3 py-4 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-            <Mail className="h-6 w-6 text-primary" />
+          <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10">
+            <Mail className="size-6 text-primary" />
           </div>
           <div className="flex flex-col gap-1">
-            <p className="text-sm font-medium">Check your new email inbox</p>
-            <p className="text-sm text-muted-foreground">
-              We sent a verification link to <strong className="text-foreground">{sentTo}</strong>.
-              Click the link to complete the change.
-            </p>
+            {sentEmailVerified ? (
+              <>
+                <p className="text-sm font-medium">Email changed successfully</p>
+                <p className="text-sm text-muted-foreground">
+                  Your account now uses <strong className="text-foreground">{sentTo}</strong>.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-medium">Check your new email inbox</p>
+                <p className="text-sm text-muted-foreground">
+                  We sent a verification link to{' '}
+                  <strong className="text-foreground">{sentTo}</strong>. Click the link to complete
+                  the change.
+                </p>
+              </>
+            )}
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Done
+            Close
           </Button>
         </DialogFooter>
       </>
@@ -122,7 +124,7 @@ function EmailChangeDialog({ profile, onClose }: { profile: UserProfile; onClose
       </div>
       <DialogFooter showCloseButton>
         <Button onClick={handleSave} disabled={!canSubmit}>
-          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
+          {isLoading ? <Loader2 className="size-4 animate-spin" /> : 'Save'}
         </Button>
       </DialogFooter>
     </>

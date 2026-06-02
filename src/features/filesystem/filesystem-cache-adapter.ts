@@ -2,7 +2,7 @@ import type { FileSystemPatch } from 'shared/sidebar-items/filesystem/receipts'
 import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { createFileSystemReadModel } from 'shared/sidebar-items/filesystem/read-model'
 import type { FileSystemReadModel } from 'shared/sidebar-items/filesystem/read-model'
-import { applyFileSystemPatchesToSnapshot } from './filesystem-cache-patches'
+import { applyFileSystemPatchesToSidebarCache } from './filesystem-cache-patches'
 import type { SidebarCacheSnapshot } from './filesystem-cache-patches'
 import { SIDEBAR_ITEMS_VIEW } from '~/features/sidebar/hooks/useSidebarItems'
 import type { SidebarItemsView } from '~/features/sidebar/hooks/useSidebarItems'
@@ -58,7 +58,7 @@ export function createFileSystemCacheAdapter(cache: SidebarItemsCache): FileSyst
     getReadModel,
     applyPatches: (patches) => {
       if (patches.length === 0) return
-      replaceSnapshot((snapshot) => applyFileSystemPatchesToSnapshot(snapshot, patches))
+      replaceSnapshot((snapshot) => applyFileSystemPatchesToSidebarCache(snapshot, patches))
     },
   }
 }

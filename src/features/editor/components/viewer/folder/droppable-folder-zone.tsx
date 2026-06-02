@@ -4,7 +4,7 @@ import type { Folder } from 'shared/folders/types'
 import { cn } from '~/features/shadcn/lib/utils'
 import { useSidebarItemDropTarget } from '~/features/dnd/hooks/useSidebarItemDropTarget'
 
-interface DroppableFolderZoneProps extends HTMLAttributes<HTMLDivElement> {
+interface DroppableFolderZoneProps extends HTMLAttributes<HTMLElement> {
   folder: Folder
   children: ReactNode
 }
@@ -17,7 +17,7 @@ export function DroppableFolderZone({
   onFocusCapture,
   ...props
 }: DroppableFolderZoneProps) {
-  const ref = useRef<HTMLDivElement>(null)
+  const ref = useRef<HTMLElement>(null)
   const { isDropTarget, isTrashAction, isFileDropTarget } = useSidebarItemDropTarget({
     ref,
     item: folder,
@@ -30,9 +30,8 @@ export function DroppableFolderZone({
       : 'ring-2 ring-inset ring-ring/60 bg-ring/5'
 
   return (
-    <div
+    <section
       ref={ref}
-      role="group"
       aria-label={`${folder.name} folder contents`}
       tabIndex={-1}
       onPointerDownCapture={onPointerDownCapture}
@@ -45,6 +44,6 @@ export function DroppableFolderZone({
       {...props}
     >
       {children}
-    </div>
+    </section>
   )
 }

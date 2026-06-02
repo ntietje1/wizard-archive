@@ -99,7 +99,7 @@ function patchCanApplyToSidebarCache(
   return hasSidebarCacheFields(patch.item)
 }
 
-export function applyFileSystemPatchesToSnapshot(
+export function applyFileSystemPatchesToSidebarCache(
   snapshot: SidebarCacheSnapshot,
   patches: Array<FileSystemPatch>,
 ): SidebarCacheSnapshot {

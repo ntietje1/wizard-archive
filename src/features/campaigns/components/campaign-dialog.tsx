@@ -126,9 +126,7 @@ function CampaignForm({ mode, onClose, campaign, campaigns }: Omit<CampaignDialo
   return (
     <form
       noValidate
-      onSubmit={(e) => {
-        e.preventDefault()
-        e.stopPropagation()
+      action={() => {
         void form.handleSubmit()
       }}
       className="space-y-4"

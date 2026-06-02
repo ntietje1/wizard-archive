@@ -1,7 +1,7 @@
 import { api } from 'convex/_generated/api'
 import { toast } from 'sonner'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
-import { CAMPAIGN_MEMBER_ROLE } from '~/features/campaigns/campaign-types'
+import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import type { PermissionLevel } from 'shared/permissions/types'
 import type { Id } from 'convex/_generated/dataModel'

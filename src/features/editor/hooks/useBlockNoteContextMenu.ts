@@ -14,7 +14,7 @@ export interface BlockNoteContextMenuEvent {
   valueInlineEditable?: boolean
 }
 
-interface BlockNoteContextMenuContextType {
+export interface BlockNoteContextMenuContextType {
   editor: CustomBlockNoteEditor | null
   setEditor: (editor: CustomBlockNoteEditor | null) => void
   blockNoteId: BlockNoteId | undefined

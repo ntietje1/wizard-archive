@@ -97,14 +97,7 @@ export function SidebarItemEditDialog({ item, isOpen, onClose }: SidebarItemEdit
       description={`Update ${typeName.toLowerCase()} appearance and settings`}
       icon={FileEdit}
     >
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          void form.handleSubmit()
-        }}
-        className="space-y-4"
-      >
+      <form action={() => void form.handleSubmit()} className="space-y-4">
         {/* Name Field */}
         <form.Field
           name="name"

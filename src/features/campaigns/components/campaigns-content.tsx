@@ -68,7 +68,7 @@ export function CampaignsContent() {
               icon={Sword}
               minHeight="h-64"
             />
-            {[...(campaigns.data ?? [])]
+            {Array.from(campaigns.data ?? [])
               .sort((a, b) => b._creationTime - a._creationTime)
               .map((campaign: Campaign) => {
                 return (

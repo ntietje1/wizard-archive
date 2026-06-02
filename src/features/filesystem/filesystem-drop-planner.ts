@@ -1,4 +1,4 @@
-import { CAMPAIGN_MEMBER_ROLE } from '~/features/campaigns/campaign-types'
+import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import type { SidebarOperationRejectionCode } from 'shared/sidebar-items/filesystem/capabilities'
 import { planFileSystemDropIntent } from 'shared/sidebar-items/filesystem/intent-planning'
 import type { FileSystemDropOptions } from 'shared/sidebar-items/filesystem/intent-planning'

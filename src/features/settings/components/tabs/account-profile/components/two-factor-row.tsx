@@ -62,7 +62,7 @@ function DisableTwoFactorDialog({ onClose }: { onClose: () => void }) {
       </div>
       <DialogFooter showCloseButton>
         <Button variant="destructive" onClick={handleDisable} disabled={isDisabling}>
-          {isDisabling ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Disable 2FA'}
+          {isDisabling ? <Loader2 className="size-4 animate-spin" /> : 'Disable 2FA'}
         </Button>
       </DialogFooter>
     </>

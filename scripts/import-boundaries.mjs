@@ -1,7 +1,8 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
+import ts from 'typescript'
 
-const extensions = new Set(['.ts', '.tsx'])
+const extensions = new Set(['.js', '.mjs', '.cjs', '.ts', '.mts', '.tsx', '.jsx', '.cts'])
 const ignoredSegments = new Set([
   'node_modules',
   '.git',
@@ -89,10 +90,6 @@ function isAllowedSrcConvexImport(specifier) {
   return false
 }
 
-function classifyStaticImport(importDeclaration) {
-  return importDeclaration.trimStart().startsWith('import type ') ? 'type' : 'value'
-}
-
 function resolveBoundaryZone(filePath, specifier) {
   if (specifier.startsWith('~/')) return 'src'
   if (specifier.startsWith('src/')) return 'src'
@@ -143,39 +140,79 @@ function boundaryViolation(filePath, source, index, specifier, kind) {
   return null
 }
 
+function sourceFileKind(filePath) {
+  const extension = path.extname(filePath)
+  if (extension === '.jsx') return ts.ScriptKind.JSX
+  if (extension === '.tsx') return ts.ScriptKind.TSX
+  if (extension === '.js' || extension === '.mjs' || extension === '.cjs') return ts.ScriptKind.JS
+  return ts.ScriptKind.TS
+}
+
+function stringLiteralText(node) {
+  return node && (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node))
+    ? node.text
+    : null
+}
+
+function importTypeSpecifier(node) {
+  return ts.isLiteralTypeNode(node.argument) ? stringLiteralText(node.argument.literal) : null
+}
+
+function collectImports(filePath, source) {
+  const imports = []
+  const ast = ts.createSourceFile(
+    filePath,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    sourceFileKind(filePath),
+  )
+
+  function addImport(index, specifier, kind) {
+    if (specifier) imports.push({ index, kind, specifier })
+  }
+
+  function visit(node) {
+    if (ts.isImportDeclaration(node)) {
+      addImport(
+        node.getStart(ast),
+        stringLiteralText(node.moduleSpecifier),
+        node.importClause?.isTypeOnly ? 'type' : 'value',
+      )
+    } else if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+      addImport(node.getStart(ast), stringLiteralText(node.arguments[0]), 'value')
+    } else if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
+      if (node.expression.text === 'require') {
+        addImport(node.getStart(ast), stringLiteralText(node.arguments[0]), 'value')
+      }
+    } else if (ts.isImportTypeNode(node)) {
+      addImport(node.getStart(ast), importTypeSpecifier(node), 'type')
+    }
+
+    ts.forEachChild(node, visit)
+  }
+
+  visit(ast)
+  return imports
+}
+
 export function analyzeImportBoundaries(files) {
   const violations = []
 
   for (const { filePath, source } of files) {
-    for (const match of source.matchAll(
-      /(^|[\r\n])(\s*import\s+(?:type\s+)?[\s\S]*?\s+from\s+['"]([^'"]+)['"])/g,
-    )) {
-      const specifier = match[3]
-      const kind = classifyStaticImport(match[0])
+    for (const importExpression of collectImports(filePath, source)) {
       const violation = boundaryViolation(
         filePath,
         source,
-        match.index + match[1].length,
-        specifier,
-        kind,
-      )
-      if (violation) violations.push(violation)
-    }
-
-    for (const match of source.matchAll(/(^|[\r\n])(\s*import\s*\(\s*['"]([^'"]+)['"]\s*\))/g)) {
-      const specifier = match[3]
-      const violation = boundaryViolation(
-        filePath,
-        source,
-        match.index + match[1].length,
-        specifier,
-        'value',
+        importExpression.index,
+        importExpression.specifier,
+        importExpression.kind,
       )
       if (violation) violations.push(violation)
     }
   }
 
-  return violations
+  return Array.from(new Set(violations))
 }
 
 export function collectImportBoundarySources(root) {

@@ -1,6 +1,6 @@
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
-import { CAMPAIGN_MEMBER_STATUS } from '~/features/campaigns/campaign-types'
+import { CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/types'
 import { api } from 'convex/_generated/api'
 import type { CampaignMember } from 'shared/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'
@@ -67,7 +67,7 @@ export function RemovePlayerDialog({
             }}
           >
             {updateMemberStatus.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="size-4 animate-spin" />
             ) : (
               `Remove ${playerName}`
             )}

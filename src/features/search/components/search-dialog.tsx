@@ -71,15 +71,11 @@ function SearchResultsPanel({
         'flex flex-col min-h-0',
       )}
     >
-      <div
-        role="status"
-        aria-live="polite"
-        className="px-3 py-1.5 text-xs text-muted-foreground font-medium"
-      >
+      <output aria-live="polite" className="px-3 py-1.5 text-xs text-muted-foreground font-medium">
         {status}
-      </div>
+      </output>
       <ScrollArea className="flex-1">
-        <div id="search-results-list" role="listbox" aria-label="Search results" className="p-1">
+        <div id="search-results-list" aria-label="Search results" className="p-1">
           {!hasQuery && recentItems.length === 0 && (
             <div className="px-3 py-8 text-center text-sm text-muted-foreground">
               Type to search your vault
@@ -276,7 +272,6 @@ export function SearchDialog() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search…"
             aria-label="Search"
-            aria-expanded={true}
             aria-controls="search-results-list"
             aria-activedescendant={
               displayItems.length > 0 ? `search-result-${selectedIndex}` : undefined

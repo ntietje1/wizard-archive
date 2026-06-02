@@ -1,5 +1,5 @@
 import { Eye, X } from 'lucide-react'
-import { CAMPAIGN_MEMBER_ROLE } from '~/features/campaigns/campaign-types'
+import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
 import { Banner, BannerButton } from '~/shared/components/banner'
@@ -26,12 +26,12 @@ export function ViewAsBanner() {
       {isActive && (
         <div className="overflow-hidden">
           <Banner
-            icon={<Eye className="h-3.5 w-3.5" />}
+            icon={<Eye className="size-3.5" />}
             variant="accent"
             border="top"
             actions={
               <BannerButton onClick={() => setViewAsPlayerId(undefined)}>
-                <X className="h-3 w-3 mr-0.5" />
+                <X className="mr-0.5 size-3" />
                 Exit
               </BannerButton>
             }

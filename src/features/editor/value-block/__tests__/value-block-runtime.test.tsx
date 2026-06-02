@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { useContext, useState } from 'react'
+import { use, useState } from 'react'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { Id } from 'convex/_generated/dataModel'
@@ -243,7 +243,7 @@ function renderRuntimeProviderChip({
 }
 
 function useNoteValueRuntimeForTest() {
-  return useContext(NoteValueRuntimeContext)!
+  return use(NoteValueRuntimeContext)!
 }
 
 function evaluateTestDefinitions(

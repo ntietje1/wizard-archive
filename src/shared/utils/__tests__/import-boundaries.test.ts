@@ -53,6 +53,58 @@ describe('import boundary checks', () => {
     ])
   })
 
+  it('blocks side-effect imports from local Convex modules', () => {
+    expect(
+      analyzeImportBoundaries([
+        {
+          filePath: 'src/example.ts',
+          source: "import 'convex/gameMaps/validation'",
+        },
+      ]),
+    ).toEqual([
+      'src/example.ts:1 src may not import value from local Convex module convex/gameMaps/validation',
+    ])
+  })
+
+  it('blocks dynamic imports from local Convex modules', () => {
+    expect(
+      analyzeImportBoundaries([
+        {
+          filePath: 'src/example.ts',
+          source: "const validation = await import('convex/gameMaps/validation')",
+        },
+      ]),
+    ).toEqual([
+      'src/example.ts:1 src may not import value from local Convex module convex/gameMaps/validation',
+    ])
+  })
+
+  it('blocks require calls from local Convex modules', () => {
+    expect(
+      analyzeImportBoundaries([
+        {
+          filePath: 'src/example.cjs',
+          source: "const validation = require('convex/gameMaps/validation')",
+        },
+      ]),
+    ).toEqual([
+      'src/example.cjs:1 src may not import value from local Convex module convex/gameMaps/validation',
+    ])
+  })
+
+  it('blocks type import expressions from local Convex modules', () => {
+    expect(
+      analyzeImportBoundaries([
+        {
+          filePath: 'src/example.ts',
+          source: "type GameMap = import('convex/gameMaps/types').GameMap",
+        },
+      ]),
+    ).toEqual([
+      'src/example.ts:1 src may not import type from local Convex module convex/gameMaps/types',
+    ])
+  })
+
   it('blocks P01.1 contract families from returning to src imports', () => {
     expect(
       analyzeImportBoundaries([

@@ -2,7 +2,7 @@ import {
   CAMPAIGN_MEMBER_ROLE,
   CAMPAIGN_MEMBER_STATUS,
   CAMPAIGN_STATUS,
-} from '~/features/campaigns/campaign-types'
+} from 'shared/campaigns/types'
 import { assertCampaignSlug } from 'shared/campaigns/validation'
 import { createUser } from './user-factory'
 import type { Campaign, CampaignMember } from 'shared/campaigns/types'

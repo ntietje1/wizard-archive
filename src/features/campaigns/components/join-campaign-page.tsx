@@ -1,12 +1,13 @@
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useParams } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
 import { parseCampaignSlug } from 'shared/campaigns/validation'
 import { useConvexAuth } from 'convex/react'
-import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '~/features/campaigns/campaign-types'
+import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/types'
 import { parseUsername } from 'shared/users/validation'
 import { useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import { Loader2, Users } from 'lucide-react'
 import {
   Card,
@@ -20,14 +21,373 @@ import { Header } from '~/shared/components/header'
 import { SignInForm } from '~/features/auth/components/sign-in-form'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { StatusIcon } from '~/features/campaigns/components/status-icon'
-import { Route } from '~/routes/_app/join.$dmUsername.$campaignSlug'
+import type { Campaign, CampaignMember } from 'shared/campaigns/types'
 
 const PLACEHOLDER_USERNAME = parseUsername('placeholder')!
 const PLACEHOLDER_SLUG = parseCampaignSlug('placeholder')!
 
+type JoinCampaignCardContent = {
+  title: string
+  description: ReactNode
+  statusVariant: 'loading' | 'warning' | 'error' | 'success'
+  titleColor: string
+  children: ReactNode
+}
+
+type JoinCampaignCardContentOptions = {
+  campaign: Campaign | undefined
+  campaignMember: CampaignMember | null | undefined
+  isAuthLoading: boolean
+  isAuthenticated: boolean
+  isCampaignLoading: boolean
+  isCampaignUnavailable: boolean
+  joinCampaignStatus: string
+  onGoCampaignHome: () => void
+  onGoHome: () => void
+  onJoinCampaign: () => void
+  onShowSignIn: () => void
+}
+
+function LoadingInvitationState() {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3">
+      <Loader2 className="size-8 animate-spin text-primary" />
+      <p className="text-sm text-muted-foreground">Loading…</p>
+    </div>
+  )
+}
+
+function CampaignInvitationSummary({ campaign }: { campaign: Campaign }) {
+  return (
+    <div className="relative p-6 bg-muted rounded-lg border border-border">
+      <div className="absolute top-4 right-4 size-2 bg-primary/60 rounded-full" />
+      <h3 className="font-bold text-foreground mb-3 text-lg text-left">{campaign.name}</h3>
+      <p className="text-sm text-muted-foreground mb-4 leading-relaxed text-left">
+        {campaign.description || 'No description provided'}
+      </p>
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="p-1.5 bg-secondary rounded-full">
+          <Users className="size-3.5" />
+        </div>
+        <span>
+          Campaign by{' '}
+          <span className="font-medium text-foreground">@{campaign.dmUserProfile.username}</span>
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function buildJoinCampaignCardContent({
+  campaign,
+  campaignMember,
+  isAuthLoading,
+  isAuthenticated,
+  isCampaignLoading,
+  isCampaignUnavailable,
+  joinCampaignStatus,
+  onGoCampaignHome,
+  onGoHome,
+  onJoinCampaign,
+  onShowSignIn,
+}: JoinCampaignCardContentOptions): JoinCampaignCardContent {
+  if (isAuthLoading) {
+    return {
+      title: 'Loading User…',
+      description: 'Please wait a moment.',
+      statusVariant: 'loading',
+      titleColor: 'text-foreground',
+      children: <LoadingInvitationState />,
+    }
+  }
+
+  if (!isAuthenticated) return unauthenticatedCardContent(campaign, onShowSignIn)
+
+  if (isCampaignLoading) {
+    return {
+      title: 'Loading Campaign…',
+      description: 'Please wait a moment.',
+      statusVariant: 'loading',
+      titleColor: 'text-foreground',
+      children: <LoadingInvitationState />,
+    }
+  }
+
+  if (isCampaignUnavailable || !campaign) {
+    return {
+      title: 'Campaign Not Found',
+      description: "The campaign link you're trying to access doesn't exist or has been removed.",
+      statusVariant: 'error',
+      titleColor: 'text-destructive',
+      children: <BrowseCampaignsButton onClick={onGoHome} />,
+    }
+  }
+
+  if (campaignMember?.role === CAMPAIGN_MEMBER_ROLE.DM) {
+    return dmCardContent(campaign, onGoCampaignHome)
+  }
+
+  const memberContent = memberStatusCardContent(
+    campaign,
+    campaignMember,
+    onGoCampaignHome,
+    onGoHome,
+  )
+  if (memberContent) return memberContent
+
+  return joinRequestCardContent(campaign, joinCampaignStatus, onJoinCampaign)
+}
+
+function BrowseCampaignsButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button
+      onClick={onClick}
+      className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+    >
+      Browse Campaigns
+    </Button>
+  )
+}
+
+function unauthenticatedCardContent(
+  campaign: Campaign | undefined,
+  onShowSignIn: () => void,
+): JoinCampaignCardContent {
+  return {
+    title: "You've Been Invited!",
+    description: campaign ? (
+      <>
+        {campaign.dmUserProfile.name} has invited you to join <strong>{campaign.name}</strong>
+      </>
+    ) : (
+      "You've been invited to join a campaign."
+    ),
+    statusVariant: 'warning',
+    titleColor: 'text-foreground',
+    children: campaign ? (
+      <div className="flex flex-col gap-6">
+        <CampaignInvitationSummary campaign={campaign} />
+        <SignInButton onClick={onShowSignIn} />
+      </div>
+    ) : (
+      <SignInButton onClick={onShowSignIn} />
+    ),
+  }
+}
+
+function SignInButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button
+      onClick={onClick}
+      className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+    >
+      Sign In to Join
+    </Button>
+  )
+}
+
+function dmCardContent(campaign: Campaign, onGoCampaignHome: () => void): JoinCampaignCardContent {
+  return {
+    title: "You're the DM",
+    description: (
+      <>
+        This is your campaign, <strong>{campaign.name}</strong>. Share the link with your players so
+        they can join.
+      </>
+    ),
+    statusVariant: 'warning',
+    titleColor: 'text-foreground',
+    children: (
+      <div className="flex flex-col gap-3">
+        <GoToCampaignButton onClick={onGoCampaignHome} />
+      </div>
+    ),
+  }
+}
+
+function GoToCampaignButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button
+      onClick={onClick}
+      className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+    >
+      Go to Campaign
+    </Button>
+  )
+}
+
+function memberStatusCardContent(
+  campaign: Campaign,
+  campaignMember: CampaignMember | null | undefined,
+  onGoCampaignHome: () => void,
+  onGoHome: () => void,
+): JoinCampaignCardContent | null {
+  switch (campaignMember?.status) {
+    case CAMPAIGN_MEMBER_STATUS.Pending:
+      return pendingMemberCardContent(campaign)
+    case CAMPAIGN_MEMBER_STATUS.Accepted:
+      return acceptedMemberCardContent(campaign, onGoCampaignHome)
+    case CAMPAIGN_MEMBER_STATUS.Rejected:
+      return rejectedMemberCardContent(campaign, onGoHome)
+    case CAMPAIGN_MEMBER_STATUS.Removed:
+      return removedMemberCardContent(campaign, onGoHome)
+    default:
+      return null
+  }
+}
+
+function pendingMemberCardContent(campaign: Campaign): JoinCampaignCardContent {
+  return {
+    title: 'Request Sent',
+    description: (
+      <>
+        Your request to join <strong>{campaign.name}</strong> has been sent.{' '}
+        {"You'll gain access once the DM confirms your request."}
+      </>
+    ),
+    statusVariant: 'warning',
+    titleColor: 'text-foreground',
+    children: (
+      <div className="flex flex-col items-center gap-4">
+        <div className="p-4 bg-accent rounded-lg border border-primary/30">
+          <p className="text-sm text-accent-foreground font-medium">
+            This page will automatically update when you gain access.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="size-2 bg-primary/60 rounded-full" />
+          <span>Waiting for DM approval</span>
+        </div>
+      </div>
+    ),
+  }
+}
+
+function acceptedMemberCardContent(
+  campaign: Campaign,
+  onGoCampaignHome: () => void,
+): JoinCampaignCardContent {
+  return {
+    title: "You're In!",
+    description: (
+      <>
+        You now have access to <strong>{campaign.name}</strong>.
+      </>
+    ),
+    statusVariant: 'success',
+    titleColor: 'text-foreground',
+    children: <GoToCampaignButton onClick={onGoCampaignHome} />,
+  }
+}
+
+function rejectedMemberCardContent(
+  campaign: Campaign,
+  onGoHome: () => void,
+): JoinCampaignCardContent {
+  return {
+    title: 'Request Rejected',
+    description: (
+      <>
+        Your request to join <strong>{campaign.name}</strong> has been rejected.
+      </>
+    ),
+    statusVariant: 'error',
+    titleColor: 'text-destructive',
+    children: <ExitButton onClick={onGoHome} />,
+  }
+}
+
+function removedMemberCardContent(
+  campaign: Campaign,
+  onGoHome: () => void,
+): JoinCampaignCardContent {
+  return {
+    title: "You've Been Removed",
+    description: (
+      <p>
+        {"You've been removed from "}
+        <strong>{campaign.name}</strong>
+        {'.'}
+      </p>
+    ),
+    statusVariant: 'error',
+    titleColor: 'text-destructive',
+    children: <ExitButton onClick={onGoHome} />,
+  }
+}
+
+function ExitButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button
+      onClick={onClick}
+      className="w-full h-12 bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold"
+    >
+      Exit
+    </Button>
+  )
+}
+
+function joinRequestCardContent(
+  campaign: Campaign,
+  joinCampaignStatus: string,
+  onJoinCampaign: () => void,
+): JoinCampaignCardContent {
+  if (joinCampaignStatus === 'error') {
+    return {
+      title: 'Failed to Join',
+      description: 'Something went wrong while trying to join. Please try again.',
+      statusVariant: 'error',
+      titleColor: 'text-destructive',
+      children: (
+        <Button
+          onClick={onJoinCampaign}
+          className="w-full h-12 bg-destructive hover:bg-destructive/90 text-primary-foreground font-semibold"
+        >
+          Try Again
+        </Button>
+      ),
+    }
+  }
+
+  const isLoading = joinCampaignStatus === 'pending' || joinCampaignStatus === 'success'
+  if (isLoading) {
+    return {
+      title: 'Joining Campaign…',
+      description: "You're being added to the campaign…",
+      statusVariant: 'loading',
+      titleColor: 'text-foreground',
+      children: <LoadingInvitationState />,
+    }
+  }
+
+  return {
+    title: "You've Been Invited!",
+    description: (
+      <>
+        {campaign.dmUserProfile.name} has invited you to join <strong>{campaign.name}</strong>
+      </>
+    ),
+    statusVariant: 'warning',
+    titleColor: 'text-foreground',
+    children: (
+      <div className="flex flex-col gap-6">
+        <CampaignInvitationSummary campaign={campaign} />
+        <Button
+          onClick={onJoinCampaign}
+          className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold disabled:opacity-70 disabled:cursor-not-allowed"
+        >
+          <span>Join Campaign</span>
+        </Button>
+      </div>
+    ),
+  }
+}
+
 export function JoinCampaignPage() {
   const navigate = useNavigate()
-  const { dmUsername: rawDmUsername, campaignSlug: rawCampaignSlug } = Route.useParams()
+  const { dmUsername: rawDmUsername, campaignSlug: rawCampaignSlug } = useParams({
+    from: '/_app/join/$dmUsername/$campaignSlug/',
+  })
   const dmUsername = parseUsername(rawDmUsername)
   const campaignSlug = parseCampaignSlug(rawCampaignSlug)
   const queryDmUsername = dmUsername ?? PLACEHOLDER_USERNAME
@@ -105,311 +465,19 @@ export function JoinCampaignPage() {
     )
   }
 
-  const getCardContent = () => {
-    if (isAuthLoading) {
-      return {
-        title: 'Loading User...',
-        description: 'Please wait a moment.',
-        statusVariant: 'loading' as const,
-        titleColor: 'text-foreground',
-        children: (
-          <div className="flex flex-col items-center justify-center space-y-3">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          </div>
-        ),
-      }
-    }
-
-    if (!isAuthenticated) {
-      return {
-        title: "You've Been Invited!",
-        description: campaign ? (
-          <>
-            {campaign.dmUserProfile.name} has invited you to join <strong>{campaign.name}</strong>
-          </>
-        ) : (
-          "You've been invited to join a campaign."
-        ),
-        statusVariant: 'warning' as const,
-        titleColor: 'text-foreground',
-        children: campaign ? (
-          <div className="space-y-6">
-            <div className="relative p-6 bg-muted rounded-lg border border-border">
-              <div className="absolute top-4 right-4 w-2 h-2 bg-primary/60 rounded-full" />
-              <h3 className="font-bold text-foreground mb-3 text-lg text-left">{campaign.name}</h3>
-              <p className="text-sm text-muted-foreground mb-4 leading-relaxed text-left">
-                {campaign.description || 'No description provided'}
-              </p>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <div className="p-1.5 bg-secondary rounded-full">
-                  <Users className="h-3.5 w-3.5" />
-                </div>
-                <span>
-                  Campaign by{' '}
-                  <span className="font-medium text-foreground">
-                    @{campaign.dmUserProfile.username}
-                  </span>
-                </span>
-              </div>
-            </div>
-            <Button
-              onClick={() => setShowSignIn(true)}
-              className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-            >
-              Sign In to Join
-            </Button>
-          </div>
-        ) : (
-          <Button
-            onClick={() => setShowSignIn(true)}
-            className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-          >
-            Sign In to Join
-          </Button>
-        ),
-      }
-    }
-
-    if (campaignQuery.isLoading) {
-      return {
-        title: 'Loading Campaign...',
-        description: 'Please wait a moment.',
-        statusVariant: 'loading' as const,
-        titleColor: 'text-foreground',
-        children: (
-          <div className="flex flex-col items-center justify-center space-y-3">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          </div>
-        ),
-      }
-    }
-
-    if (campaignQuery.isError || !campaignQuery.data || !campaign) {
-      return {
-        title: 'Campaign Not Found',
-        description: "The campaign link you're trying to access doesn't exist or has been removed.",
-        statusVariant: 'error' as const,
-        titleColor: 'text-destructive',
-        children: (
-          <Button
-            onClick={goToHome}
-            className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-          >
-            Browse Campaigns
-          </Button>
-        ),
-      }
-    }
-
-    // DM state
-    if (campaignMember?.role === CAMPAIGN_MEMBER_ROLE.DM) {
-      return {
-        title: "You're the DM",
-        description: (
-          <>
-            This is your campaign, <strong>{campaign.name}</strong>. Share the link with your
-            players so they can join.
-          </>
-        ),
-        statusVariant: 'warning' as const,
-        titleColor: 'text-foreground',
-        children: (
-          <div className="flex flex-col gap-3">
-            <Button
-              onClick={goToCampaignHome}
-              className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-            >
-              Go to Campaign
-            </Button>
-          </div>
-        ),
-      }
-    }
-
-    // Request sent states
-    switch (campaignMember?.status) {
-      case CAMPAIGN_MEMBER_STATUS.Pending:
-        return {
-          title: 'Request Sent',
-          description: (
-            <>
-              Your request to join <strong>{campaign.name}</strong> has been sent.{' '}
-              {"You'll gain access once the DM confirms your request."}
-            </>
-          ),
-          statusVariant: 'warning' as const,
-          titleColor: 'text-foreground',
-          children: (
-            <div className="flex flex-col items-center space-y-4">
-              <div className="p-4 bg-accent rounded-lg border border-primary/30">
-                <p className="text-sm text-accent-foreground font-medium">
-                  This page will automatically update when you gain access.
-                </p>
-              </div>
-              <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                <div className="w-2 h-2 bg-primary/60 rounded-full"></div>
-                <span>Waiting for DM approval</span>
-              </div>
-            </div>
-          ),
-        }
-
-      case CAMPAIGN_MEMBER_STATUS.Accepted:
-        return {
-          title: "You're In!",
-          description: (
-            <>
-              You now have access to <strong>{campaign.name}</strong>.
-            </>
-          ),
-          statusVariant: 'success' as const,
-          titleColor: 'text-foreground',
-          children: (
-            <Button
-              onClick={goToCampaignHome}
-              className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-            >
-              Go to Campaign
-            </Button>
-          ),
-        }
-
-      case CAMPAIGN_MEMBER_STATUS.Rejected:
-        return {
-          title: 'Request Rejected',
-          description: (
-            <>
-              Your request to join <strong>{campaign.name}</strong> has been rejected.
-            </>
-          ),
-          statusVariant: 'error' as const,
-          titleColor: 'text-destructive',
-          children: (
-            <Button
-              onClick={goToHome}
-              className="w-full h-12 bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold"
-            >
-              Exit
-            </Button>
-          ),
-        }
-
-      case CAMPAIGN_MEMBER_STATUS.Removed:
-        return {
-          title: "You've Been Removed",
-          description: (
-            <p>
-              {"You've been removed from "}
-              <strong>{campaign.name}</strong>
-              {'.'}
-            </p>
-          ),
-          statusVariant: 'error' as const,
-          titleColor: 'text-destructive',
-          children: (
-            <Button
-              onClick={goToHome}
-              className="w-full h-12 bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold"
-            >
-              Exit
-            </Button>
-          ),
-        }
-    }
-
-    // Not requested yet states
-    switch (joinCampaign.status) {
-      case 'error':
-        return {
-          title: 'Failed to Join',
-          description: 'Something went wrong while trying to join. Please try again.',
-          statusVariant: 'error' as const,
-          titleColor: 'text-destructive',
-          children: (
-            <Button
-              onClick={handleJoinCampaign}
-              className="w-full h-12 bg-destructive hover:bg-destructive/90 text-primary-foreground font-semibold"
-            >
-              Try Again
-            </Button>
-          ),
-        }
-
-      case 'pending':
-      case 'success':
-      case 'idle':
-      default: {
-        const isLoading = joinCampaign.status === 'pending' || joinCampaign.status === 'success'
-
-        if (isLoading) {
-          return {
-            title: 'Joining Campaign...',
-            description: "You're being added to the campaign...",
-            statusVariant: 'loading' as const,
-            titleColor: 'text-foreground',
-            children: (
-              <div className="flex flex-col items-center justify-center space-y-3">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">Loading...</p>
-              </div>
-            ),
-          }
-        }
-        return {
-          title: "You've Been Invited!",
-          description: (
-            <>
-              {campaign.dmUserProfile.name} has invited you to join <strong>{campaign.name}</strong>
-            </>
-          ),
-          statusVariant: 'warning' as const,
-          titleColor: 'text-foreground',
-          children: (
-            <div className="space-y-6">
-              <div className="relative p-6 bg-muted rounded-lg border border-border">
-                <div className="absolute top-4 right-4 w-2 h-2 bg-primary/60 rounded-full" />
-                <h3 className="font-bold text-foreground mb-3 text-lg text-left">
-                  {campaign.name}
-                </h3>
-                <p className="text-sm text-muted-foreground mb-4 leading-relaxed text-left">
-                  {campaign.description || 'No description provided'}
-                </p>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <div className="p-1.5 bg-secondary rounded-full">
-                    <Users className="h-3.5 w-3.5" />
-                  </div>
-                  <span>
-                    Campaign by{' '}
-                    <span className="font-medium text-foreground">
-                      @{campaign.dmUserProfile.username}
-                    </span>
-                  </span>
-                </div>
-              </div>
-              <Button
-                onClick={handleJoinCampaign}
-                className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold disabled:opacity-70 disabled:cursor-not-allowed"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <div className="flex items-center justify-center">
-                    <Loader2 className="h-5 w-5 animate-spin mr-3" />
-                    <span>Joining Campaign...</span>
-                  </div>
-                ) : (
-                  <span>Join Campaign</span>
-                )}
-              </Button>
-            </div>
-          ),
-        }
-      }
-    }
-  }
-
-  const cardContent = getCardContent()
+  const cardContent = buildJoinCampaignCardContent({
+    campaign,
+    campaignMember,
+    isAuthLoading,
+    isAuthenticated,
+    isCampaignLoading: campaignQuery.isLoading,
+    isCampaignUnavailable: campaignQuery.isError || !campaignQuery.data,
+    joinCampaignStatus: joinCampaign.status,
+    onGoCampaignHome: goToCampaignHome,
+    onGoHome: goToHome,
+    onJoinCampaign: handleJoinCampaign,
+    onShowSignIn: () => setShowSignIn(true),
+  })
 
   if (!isAuthenticated && showSignIn) {
     return (
