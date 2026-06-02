@@ -17,6 +17,7 @@ import type * as auth_functions_onDeleteUser from "../auth/functions/onDeleteUse
 import type * as auth_functions_onUpdateUser from "../auth/functions/onUpdateUser.js";
 import type * as auth_functions_purgeExpiredAuthData from "../auth/functions/purgeExpiredAuthData.js";
 import type * as auth_httpActions from "../auth/httpActions.js";
+import type * as auth_identity from "../auth/identity.js";
 import type * as auth_internalMutations from "../auth/internalMutations.js";
 import type * as auth_routes from "../auth/routes.js";
 import type * as blockShares_actions from "../blockShares/actions.js";
@@ -256,6 +257,7 @@ declare const fullApi: ApiFromModules<{
   "auth/functions/onUpdateUser": typeof auth_functions_onUpdateUser;
   "auth/functions/purgeExpiredAuthData": typeof auth_functions_purgeExpiredAuthData;
   "auth/httpActions": typeof auth_httpActions;
+  "auth/identity": typeof auth_identity;
   "auth/internalMutations": typeof auth_internalMutations;
   "auth/routes": typeof auth_routes;
   "blockShares/actions": typeof blockShares_actions;

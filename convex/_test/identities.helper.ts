@@ -1,14 +1,25 @@
 import { addPlayerToCampaign, createCampaignWithDm, createUserProfile } from './factories.helper'
 import type { TestConvex, TestConvexForDataModel } from 'convex-test'
-import type { DataModel } from '../_generated/dataModel'
+import type { DataModel, Doc } from '../_generated/dataModel'
 import type schema from '../schema'
 
 type T = TestConvex<typeof schema>
 type AuthedContext = TestConvexForDataModel<DataModel>
 
+export function testAuthIdentityForKey(authProfileKey: string) {
+  return {
+    subject: authProfileKey,
+    tokenIdentifier: `test-token:${authProfileKey}`,
+  }
+}
+
+export function testAuthIdentity(profile: Pick<Doc<'userProfiles'>, 'authUserId'>) {
+  return testAuthIdentityForKey(profile.authUserId)
+}
+
 export async function setupUser(t: T) {
   const profile = await createUserProfile(t)
-  const authed = t.withIdentity({ subject: profile.authUserId })
+  const authed = t.withIdentity(testAuthIdentity(profile))
   return { authed, profile }
 }
 

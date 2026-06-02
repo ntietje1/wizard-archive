@@ -1,6 +1,6 @@
 import { assertStoredUsername } from '../validation'
 import type { Username } from '../../../shared/users/validation'
-import type { QueryCtx } from '../../_generated/server'
+import type { MutationCtx, QueryCtx } from '../../_generated/server'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { UserProfile, UserProfileFromDb } from '../../../shared/users/types'
 
@@ -24,16 +24,23 @@ async function enhanceProfile(ctx: QueryCtx, profile: UserProfileFromDb): Promis
   return { ...rest, imageUrl }
 }
 
-export async function getUserProfileByUserId(
+export async function getUserProfileByAuthProfileKey(
   ctx: QueryCtx,
-  { userId }: { userId: string },
+  { authProfileKey }: { authProfileKey: string },
 ): Promise<UserProfile | null> {
-  const profile = await ctx.db
-    .query('userProfiles')
-    .withIndex('by_user', (q) => q.eq('authUserId', userId))
-    .unique()
+  const profile = await getUserProfileDocByAuthProfileKey(ctx, { authProfileKey })
   if (!profile) return null
   return enhanceProfile(ctx, toUserProfileFromDb(profile))
+}
+
+export async function getUserProfileDocByAuthProfileKey(
+  ctx: QueryCtx | MutationCtx,
+  { authProfileKey }: { authProfileKey: string },
+): Promise<Doc<'userProfiles'> | null> {
+  return await ctx.db
+    .query('userProfiles')
+    .withIndex('by_user', (q) => q.eq('authUserId', authProfileKey))
+    .unique()
 }
 
 export async function getUserProfileByUsername(

@@ -10,8 +10,12 @@ import {
 import { assertCampaignSlug } from './campaigns/validation'
 import { ERROR_CODE } from '../shared/errors/client'
 import { throwClientError } from './errors'
+import { getAuthProfileKey } from './auth/identity'
 import { assertStoredUsername } from './users/validation'
-import { getUserProfileById } from './users/functions/getUserProfile'
+import {
+  getUserProfileById,
+  getUserProfileDocByAuthProfileKey,
+} from './users/functions/getUserProfile'
 import type { CustomCtx } from 'convex-helpers/server/customFunctions'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
@@ -37,10 +41,8 @@ function toCampaignFromDb(campaign: Doc<'campaigns'>): CampaignFromDb {
 export async function authenticate(ctx: QueryCtx | MutationCtx): Promise<AuthUser> {
   const identity = await ctx.auth.getUserIdentity()
   if (!identity) throwClientError(ERROR_CODE.NOT_AUTHENTICATED, 'Not authenticated')
-  const profile = await ctx.db
-    .query('userProfiles')
-    .withIndex('by_user', (q) => q.eq('authUserId', identity.subject))
-    .unique()
+  const authProfileKey = getAuthProfileKey(identity)
+  const profile = await getUserProfileDocByAuthProfileKey(ctx, { authProfileKey })
   if (!profile) throwClientError(ERROR_CODE.NOT_AUTHENTICATED, 'No profile found')
   return { identity, profile: toAuthenticatedProfile(profile) }
 }

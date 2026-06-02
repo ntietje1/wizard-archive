@@ -1,5 +1,7 @@
 import { v } from 'convex/values'
 import { query } from '../_generated/server'
+import { getAuthProfileKey } from '../auth/identity'
+import { getUserProfileDocByAuthProfileKey } from '../users/functions/getUserProfile'
 import { userPreferencesValidator } from './schema'
 import type { UserPreferences } from './types'
 
@@ -9,11 +11,9 @@ export const getUserPreferences = query({
   handler: async (ctx): Promise<UserPreferences | null> => {
     const userIdentity = await ctx.auth.getUserIdentity()
     if (!userIdentity) return null
+    const authProfileKey = getAuthProfileKey(userIdentity)
 
-    const profile = await ctx.db
-      .query('userProfiles')
-      .withIndex('by_user', (q) => q.eq('authUserId', userIdentity.subject))
-      .unique()
+    const profile = await getUserProfileDocByAuthProfileKey(ctx, { authProfileKey })
     if (!profile) return null
 
     return await ctx.db

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
 import { createUserProfile } from '../../_test/factories.helper'
+import { testAuthIdentity, testAuthIdentityForKey } from '../../_test/identities.helper'
 import {
   expectConflict,
   expectNotAuthenticated,
@@ -10,7 +11,7 @@ import { api } from '../../_generated/api'
 
 async function setupAuthedUser(t: ReturnType<typeof createTestContext>) {
   const profile = await createUserProfile(t)
-  const authed = t.withIdentity({ subject: profile.authUserId })
+  const authed = t.withIdentity(testAuthIdentity(profile))
   return { authed, profile }
 }
 
@@ -35,7 +36,7 @@ describe('getUserProfile', () => {
   })
 
   it('returns null when identity exists but no profile record', async () => {
-    const orphan = t.withIdentity({ subject: 'ghost-user' })
+    const orphan = t.withIdentity(testAuthIdentityForKey('ghost-user'))
     const result = await orphan.query(api.users.queries.getUserProfile, {})
     expect(result).toBeNull()
   })

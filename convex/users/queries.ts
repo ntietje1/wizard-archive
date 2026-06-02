@@ -1,9 +1,10 @@
 import { v } from 'convex/values'
 import { query } from '../_generated/server'
 import { authQuery } from '../functions'
+import { getAuthProfileKey } from '../auth/identity'
 import { assertUsername, usernameValidator } from './validation'
 import { userProfileValidator } from './schema'
-import { getUserProfileByUserId } from './functions/getUserProfile'
+import { getUserProfileByAuthProfileKey } from './functions/getUserProfile'
 import { checkUsernameExists as checkUsernameExistsFn } from './functions/checkUsernameExists'
 import type { UserProfile } from '../../shared/users/types'
 
@@ -13,7 +14,9 @@ export const getUserProfile = query({
   handler: async (ctx): Promise<UserProfile | null> => {
     const userIdentity = await ctx.auth.getUserIdentity()
     if (!userIdentity) return null
-    return await getUserProfileByUserId(ctx, { userId: userIdentity.subject })
+    return await getUserProfileByAuthProfileKey(ctx, {
+      authProfileKey: getAuthProfileKey(userIdentity),
+    })
   },
 })
 

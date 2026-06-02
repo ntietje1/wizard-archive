@@ -1,8 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import { createTestContext } from '../../_test/setup.helper'
+import { createUserProfile } from '../../_test/factories.helper'
+import { testAuthIdentity, testAuthIdentityForKey } from '../../_test/identities.helper'
 import { expectNotAuthenticated } from '../../_test/assertions.helper'
 import { onCreateUser } from '../functions/onCreateUser'
 import { api } from '../../_generated/api'
+
+async function getProfileByAuthUserId(t: ReturnType<typeof createTestContext>, authUserId: string) {
+  return await t.run(async (ctx) => {
+    return await ctx.db
+      .query('userProfiles')
+      .withIndex('by_user', (q) => q.eq('authUserId', authUserId))
+      .unique()
+  })
+}
 
 describe('onCreateUser', () => {
   const t = createTestContext()
@@ -18,12 +29,7 @@ describe('onCreateUser', () => {
       })
     })
 
-    const profile = await t.run(async (ctx) => {
-      return await ctx.db
-        .query('userProfiles')
-        .withIndex('by_user', (q) => q.eq('authUserId', 'auth-1'))
-        .unique()
-    })
+    const profile = await getProfileByAuthUserId(t, 'auth-1')
 
     expect(profile).not.toBeNull()
     expect(profile!.username).toBe('alice')
@@ -40,12 +46,7 @@ describe('onCreateUser', () => {
       })
     })
 
-    const profile = await t.run(async (ctx) => {
-      return await ctx.db
-        .query('userProfiles')
-        .withIndex('by_user', (q) => q.eq('authUserId', 'auth-2'))
-        .unique()
-    })
+    const profile = await getProfileByAuthUserId(t, 'auth-2')
 
     expect(profile).not.toBeNull()
     expect(profile!.username).toBe('bobsmith')
@@ -62,12 +63,7 @@ describe('onCreateUser', () => {
       })
     })
 
-    const profile = await t.run(async (ctx) => {
-      return await ctx.db
-        .query('userProfiles')
-        .withIndex('by_user', (q) => q.eq('authUserId', 'auth-abcd1234'))
-        .unique()
-    })
+    const profile = await getProfileByAuthUserId(t, 'auth-abcd1234')
 
     expect(profile).not.toBeNull()
     expect(profile!.username).toBe('user-abcd1234')
@@ -84,12 +80,7 @@ describe('onCreateUser', () => {
       })
     })
 
-    const profile = await t.run(async (ctx) => {
-      return await ctx.db
-        .query('userProfiles')
-        .withIndex('by_user', (q) => q.eq('authUserId', 'auth-short'))
-        .unique()
-    })
+    const profile = await getProfileByAuthUserId(t, 'auth-short')
 
     expect(profile).not.toBeNull()
     expect(profile!.username).toBe('user-abc')
@@ -116,18 +107,8 @@ describe('onCreateUser', () => {
       })
     })
 
-    const first = await t.run(async (ctx) => {
-      return await ctx.db
-        .query('userProfiles')
-        .withIndex('by_user', (q) => q.eq('authUserId', 'auth-dedup-first'))
-        .unique()
-    })
-    const second = await t.run(async (ctx) => {
-      return await ctx.db
-        .query('userProfiles')
-        .withIndex('by_user', (q) => q.eq('authUserId', 'auth-dedup-second'))
-        .unique()
-    })
+    const first = await getProfileByAuthUserId(t, 'auth-dedup-first')
+    const second = await getProfileByAuthUserId(t, 'auth-dedup-second')
 
     expect(first!.username).toBe('dedup')
     expect(second!.username).toBe('dedup-1')
@@ -146,12 +127,7 @@ describe('onCreateUser', () => {
       })
     })
 
-    const profile = await t.run(async (ctx) => {
-      return await ctx.db
-        .query('userProfiles')
-        .withIndex('by_user', (q) => q.eq('authUserId', 'auth-full'))
-        .unique()
-    })
+    const profile = await getProfileByAuthUserId(t, 'auth-full')
 
     expect(profile).not.toBeNull()
     expect(profile!.authUserId).toBe('auth-full')
@@ -170,8 +146,22 @@ describe('onCreateUser', () => {
 describe('authenticate edge cases', () => {
   const t = createTestContext()
 
+  it('uses the Better Auth user id as the profile lookup key', async () => {
+    const profile = await createUserProfile(t)
+    const identity = t.withIdentity({
+      ...testAuthIdentity(profile),
+      tokenIdentifier: 'different-stable-token-identifier',
+    })
+
+    const result = await identity.query(api.users.queries.checkUsernameExists, {
+      username: 'available-name',
+    })
+
+    expect(result).toBe(false)
+  })
+
   it('throws NOT_AUTHENTICATED when identity exists but no profile record', async () => {
-    const orphanIdentity = t.withIdentity({ subject: 'nonexistent-auth-id' })
+    const orphanIdentity = t.withIdentity(testAuthIdentityForKey('nonexistent-auth-id'))
     await expectNotAuthenticated(
       orphanIdentity.query(api.users.queries.checkUsernameExists, {
         username: 'anything',
@@ -185,7 +175,7 @@ describe('authenticate edge cases', () => {
   })
 
   it('returns null for getUserProfile when identity exists but no profile', async () => {
-    const orphan = t.withIdentity({ subject: 'no-profile-auth-id' })
+    const orphan = t.withIdentity(testAuthIdentityForKey('no-profile-auth-id'))
     const result = await orphan.query(api.users.queries.getUserProfile, {})
     expect(result).toBeNull()
   })
