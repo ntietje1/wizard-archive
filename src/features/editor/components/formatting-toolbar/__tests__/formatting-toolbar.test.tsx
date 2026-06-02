@@ -288,6 +288,28 @@ describe('EditorFormattingToolbar', () => {
     ).toBe('')
   })
 
+  it('does not touch an unmounted editor view DOM during toolbar cleanup', () => {
+    const editor = createEditor({
+      hasTextSelection: false,
+      selectionSnapshot: { anchor: 2, head: 2, type: 'text' },
+      selectedBlocks: [createParagraphBlock('paragraph-1', { textAlignment: 'left' })],
+    })
+    const { unmount } = render(
+      <EditorFormattingToolbar editor={editor as never} mode="full" visible />,
+    )
+
+    Object.defineProperty(editor.prosemirrorView, 'dom', {
+      configurable: true,
+      get() {
+        throw new Error(
+          "[tiptap error]: The editor view is not available. Cannot access view['dom']. The editor may not be mounted yet.",
+        )
+      },
+    })
+
+    expect(() => unmount()).not.toThrow()
+  })
+
   it('keeps palette surface clicks from blurring the editor', () => {
     const editor = createEditor({
       selectedBlocks: [createParagraphBlock('paragraph-1', { textAlignment: 'left' })],

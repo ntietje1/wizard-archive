@@ -82,7 +82,7 @@ export function setBlockNotePendingTextColor(
   editor: BlockNoteFocusableEditor | null,
   textColor: string | null,
 ) {
-  const editorElement = getBlockNoteEditorView(editor)?.dom
+  const editorElement = getBlockNoteEditorElement(editor)
   if (!editorElement) {
     return
   }
@@ -98,6 +98,24 @@ export function setBlockNotePendingTextColor(
 function getBlockNoteEditorView(
   editor: BlockNoteFocusableEditor | null,
 ): BlockNoteEditorView | null {
-  const view = editor?.prosemirrorView
+  let view: BlockNoteEditorView | null | undefined
+  try {
+    view = editor?.prosemirrorView
+  } catch {
+    return null
+  }
   return view && typeof view === 'object' ? view : null
+}
+
+function getBlockNoteEditorElement(editor: BlockNoteFocusableEditor | null): HTMLElement | null {
+  const view = getBlockNoteEditorView(editor)
+  if (!view) {
+    return null
+  }
+
+  try {
+    return view.dom ?? null
+  } catch {
+    return null
+  }
 }
