@@ -18,7 +18,7 @@ import { assertNever } from '../../common/types'
 import { deduplicateName } from '../../../shared/sidebar-items/default-name'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { AnySidebarItem } from '../../sidebarItems/types/types'
+import type { AnySidebarItem } from '../../../shared/sidebar-items/model-types'
 import type { DownloadItem } from '../../sidebarItems/functions/downloadTypes'
 
 type DownloadBuildContext = {

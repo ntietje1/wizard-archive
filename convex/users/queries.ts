@@ -5,7 +5,7 @@ import { assertUsername, usernameValidator } from './validation'
 import { userProfileValidator } from './schema'
 import { getUserProfileByUserId } from './functions/getUserProfile'
 import { checkUsernameExists as checkUsernameExistsFn } from './functions/checkUsernameExists'
-import type { UserProfile } from './types'
+import type { UserProfile } from '../../shared/users/types'
 
 export const getUserProfile = query({
   args: {},

@@ -9,7 +9,7 @@ import type { Doc, Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
 import type { LinkSyntax, ParsedLinkData } from '../../../shared/links/types'
 import type { Block } from '../../blocks/types'
-import type { AnySidebarItemRow } from '../../sidebarItems/types/types'
+import type { AnySidebarItemRow } from '../../../shared/sidebar-items/model-types'
 import { SIDEBAR_ITEM_STATUS } from '../../../shared/sidebar-items/types'
 
 type CampaignScopedMutationCtx = Pick<MutationCtx, 'db'> & {

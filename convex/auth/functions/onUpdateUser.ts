@@ -1,5 +1,5 @@
 import type { MutationCtx } from '../../_generated/server'
-import type { ProfileImage } from '../../users/types'
+import type { ProfileImage } from '../../../shared/users/types'
 
 type AuthUserDoc = {
   _id: string

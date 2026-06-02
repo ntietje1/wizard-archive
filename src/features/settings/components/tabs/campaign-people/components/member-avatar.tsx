@@ -1,4 +1,4 @@
-import type { CampaignMember } from 'convex/campaigns/types'
+import type { CampaignMember } from 'shared/campaigns/types'
 import { UserProfileImage } from '~/shared/components/user-profile-image'
 
 export function MemberAvatar({ member }: { member: CampaignMember }) {

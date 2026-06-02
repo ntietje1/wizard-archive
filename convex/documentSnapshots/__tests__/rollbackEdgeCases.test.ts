@@ -13,7 +13,7 @@ import {
   makeYjsUpdate,
   makeYjsUpdateWithBlocks,
 } from '../../yjsSync/__tests__/makeYjsUpdate.helper'
-import type { GameMapSnapshotData } from '../../gameMaps/types'
+import type { GameMapSnapshotData } from '../../../shared/game-maps/types'
 import type { CustomPartialBlock } from '../../../shared/editor-blocks/types'
 
 describe('rollback permission checks', () => {

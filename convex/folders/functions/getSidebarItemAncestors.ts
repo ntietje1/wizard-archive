@@ -4,7 +4,7 @@ import { enhanceBase } from '../../sidebarItems/functions/enhanceBaseSidebarItem
 import { isTrashedSidebarItem } from '../../sidebarItems/types/status'
 import type { CampaignQueryCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { Folder } from '../types'
+import type { Folder } from '../../../shared/folders/types'
 
 export async function getSidebarItemAncestors(
   ctx: CampaignQueryCtx,

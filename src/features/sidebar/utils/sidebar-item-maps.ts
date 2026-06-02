@@ -1,6 +1,6 @@
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { Folder } from 'convex/folders/types'
+import type { Folder } from 'shared/folders/types'
 import { isFolder } from '~/features/sidebar/utils/sidebar-item-utils'
 import { collectDescendantIdsFromSidebarItems } from '~/features/sidebar/utils/sidebar-item-tree'
 

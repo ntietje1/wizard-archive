@@ -4,8 +4,10 @@ import { hasAtLeastPermissionLevel } from '../../../shared/permissions/hasAtLeas
 import { enhanceBase } from '../functions/enhanceBaseSidebarItem'
 import type { PermissionLevel } from '../../../shared/permissions/types'
 import type { CampaignQueryCtx } from '../../functions'
-import type { AnySidebarItemRow } from '../types/types'
-import type { EnhanceSidebarItem } from '../types/baseTypes'
+import type {
+  AnySidebarItemRow,
+  EnhanceSidebarItem,
+} from '../../../shared/sidebar-items/model-types'
 
 export type AccessibleSidebarItemRow = EnhanceSidebarItem<AnySidebarItemRow>
 

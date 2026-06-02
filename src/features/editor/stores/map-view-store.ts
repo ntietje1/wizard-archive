@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { Id } from 'convex/_generated/dataModel'
-import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
+import type { GameMapWithContent, MapPinWithItem } from 'shared/game-maps/types'
 
 interface MapViewState {
   activeMap: GameMapWithContent | null

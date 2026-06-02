@@ -1,6 +1,6 @@
 import { useShallow } from 'zustand/shallow'
 import type { MouseEvent } from 'react'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { getItemSelectionIntent } from '~/features/sidebar/utils/item-selection-intent'
 import type { ItemSelectionModifierState } from '~/features/sidebar/utils/item-selection-intent'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'

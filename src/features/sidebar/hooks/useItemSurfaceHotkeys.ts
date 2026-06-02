@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useEditorNavigation } from '~/features/sidebar/hooks/useEditorNavigation'
 import { useLastEditorItem } from '~/features/sidebar/hooks/useLastEditorItem'

@@ -1,6 +1,6 @@
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
-import { CAMPAIGN_MEMBER_ROLE } from '../../campaigns/types'
+import { CAMPAIGN_MEMBER_ROLE } from '../../../shared/campaigns/types'
 import { getCampaignMembers } from '../../campaigns/functions/getCampaignMembers'
 import { getBlockSharesByBlock } from '../../blockShares/functions/getBlockSharesForBlock'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
@@ -14,7 +14,7 @@ import type { BlockNoteId } from '../../../shared/editor-blocks/types'
 import type { Block } from '../types'
 import type { ShareStatus } from '../../../shared/editor-blocks/share-status'
 import type { BlockShare } from '../../blockShares/types'
-import type { CampaignMember } from '../../campaigns/types'
+import type { CampaignMember } from '../../../shared/campaigns/types'
 
 export const getBlockWithShares = async (
   ctx: DmQueryCtx,

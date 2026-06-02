@@ -1,4 +1,4 @@
-import type { SidebarItemId } from './types'
+import type { SidebarItemId } from '../../common/ids'
 import type { FileSystemCommand } from './commands'
 import type {
   OperationActorSnapshot,
@@ -14,16 +14,16 @@ type FileSystemIntentCommand = Extract<
   { type: 'move' | 'copy' | 'restore' | 'trash' }
 >
 
-export type FileSystemIntentResult =
+type FileSystemIntentResult =
   | { status: 'ready'; command: FileSystemIntentCommand }
   | { status: 'noop' }
   | { status: 'blocked'; reason: SidebarOperationRejectionCode | 'mixed_actions' }
 
-export type PasteTargetIntent =
+type PasteTargetIntent =
   | { kind: 'explicit'; parentId: SidebarItemId | null }
   | { kind: 'selectedCommonParent'; surfaceParentId: SidebarItemId | null }
 
-export type FileSystemDropTargetIntent =
+type FileSystemDropTargetIntent =
   | { type: 'trash' }
   | { type: 'parent'; target: OperationTargetSnapshot }
   | { type: 'open' }

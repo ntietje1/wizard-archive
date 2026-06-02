@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { DropPlanningContext } from '~/features/dnd/utils/drop-planning-context'
 import type {
   CanvasDropZoneData,

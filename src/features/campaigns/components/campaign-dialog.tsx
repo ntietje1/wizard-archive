@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { validateCampaignName, validateCampaignSlug } from 'shared/campaigns/validation'
 import { Link, Sword } from 'lucide-react'
 import type { RefObject } from 'react'
-import type { Campaign } from 'convex/campaigns/types'
+import type { Campaign } from 'shared/campaigns/types'
 import { UrlPreview } from '~/features/campaigns/components/url-preview'
 import { Input } from '~/features/shadcn/components/input'
 import { Label } from '~/features/shadcn/components/label'
@@ -126,9 +126,7 @@ function CampaignForm({ mode, onClose, campaign, campaigns }: Omit<CampaignDialo
   return (
     <form
       noValidate
-      onSubmit={(e) => {
-        e.preventDefault()
-        e.stopPropagation()
+      action={() => {
         void form.handleSubmit()
       }}
       className="space-y-4"

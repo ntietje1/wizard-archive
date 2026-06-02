@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Id } from 'convex/_generated/dataModel'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { createNote } from '~/test/factories/sidebar-item-factory'
 import { useCurrentItem } from '../useCurrentItem'
 

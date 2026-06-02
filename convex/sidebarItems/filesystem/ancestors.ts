@@ -3,7 +3,7 @@ import { throwClientError } from '../../errors'
 import { getSidebarItemRow } from './sidebarItemRows'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignQueryCtx } from '../../functions'
-import type { AnySidebarItem } from '../types/types'
+import type { AnySidebarItem } from '../../../shared/sidebar-items/model-types'
 
 export async function addSidebarItemAncestorsToMap<
   T extends Pick<AnySidebarItem, '_id' | 'parentId'>,

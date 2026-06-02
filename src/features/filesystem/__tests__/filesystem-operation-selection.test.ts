@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Id } from 'convex/_generated/dataModel'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { SIDEBAR_ITEM_STATUS } from 'shared/sidebar-items/types'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import {

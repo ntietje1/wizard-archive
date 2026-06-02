@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ArrowLeftRight, History, Play, Settings, Square, UserPlus } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
-import type { Session } from 'convex/sessions/types'
+import type { Session } from 'shared/sessions/types'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useSession } from '~/features/sidebar/hooks/useGameSession'
 import { useSettingsStore } from '~/features/settings/hooks/settings-store'
@@ -50,7 +50,7 @@ export function CampaignPanelContent({ onClose }: { onClose: () => void }) {
           className="flex items-center gap-1 px-3 py-2 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
           onClick={() => setShowResume(false)}
         >
-          <History className="h-3.5 w-3.5" />
+          <History className="size-3.5" />
           Back
         </button>
         <div className="border-t" />
@@ -92,7 +92,7 @@ export function CampaignPanelContent({ onClose }: { onClose: () => void }) {
       <div className="px-3 pt-2">
         <div className="flex items-center gap-2">
           <span
-            className={`h-2 w-2 shrink-0 rounded-full ${hasActiveSession ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+            className={`size-2 shrink-0 rounded-full ${hasActiveSession ? 'bg-primary' : 'bg-muted-foreground/30'}`}
           />
           <span className="text-xs text-muted-foreground">
             {currentSession.data?.name ?? 'No active session'}
@@ -111,7 +111,7 @@ export function CampaignPanelContent({ onClose }: { onClose: () => void }) {
                 onClick={handleStop}
                 disabled={endCurrentSession.isPending}
               >
-                <Square className="h-4 w-4" />
+                <Square className="size-4" />
                 Stop Session
               </button>
             ) : (
@@ -121,7 +121,7 @@ export function CampaignPanelContent({ onClose }: { onClose: () => void }) {
                 onClick={handleStart}
                 disabled={startSession.isPending}
               >
-                <Play className="h-4 w-4" />
+                <Play className="size-4" />
                 Start Session
               </button>
             )}
@@ -131,7 +131,7 @@ export function CampaignPanelContent({ onClose }: { onClose: () => void }) {
               onClick={() => !hasActiveSession && setShowResume(true)}
               disabled={hasActiveSession}
             >
-              <History className="h-4 w-4" />
+              <History className="size-4" />
               Resume Session
             </button>
           </>
@@ -147,7 +147,7 @@ export function CampaignPanelContent({ onClose }: { onClose: () => void }) {
             onClose()
           }}
         >
-          <UserPlus className="h-4 w-4" />
+          <UserPlus className="size-4" />
           Invite Members
         </button>
 
@@ -159,7 +159,7 @@ export function CampaignPanelContent({ onClose }: { onClose: () => void }) {
             onClose()
           }}
         >
-          <Settings className="h-4 w-4" />
+          <Settings className="size-4" />
           Settings
         </button>
 
@@ -173,7 +173,7 @@ export function CampaignPanelContent({ onClose }: { onClose: () => void }) {
             onClose()
           }}
         >
-          <ArrowLeftRight className="h-4 w-4" />
+          <ArrowLeftRight className="size-4" />
           Switch Campaign
         </button>
       </div>

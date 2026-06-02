@@ -1,10 +1,10 @@
 import { hasAtLeastPermissionLevel } from 'shared/permissions/hasAtLeastPermissionLevel'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import type { PermissionLevel } from 'shared/permissions/types'
-import type { CampaignMember } from 'convex/campaigns/types'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { CampaignMember } from 'shared/campaigns/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { Folder } from 'convex/folders/types'
+import type { Folder } from 'shared/folders/types'
 
 type CampaignMemberId = CampaignMember['_id']
 

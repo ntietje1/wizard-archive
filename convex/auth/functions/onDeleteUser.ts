@@ -1,5 +1,5 @@
 import { asyncMap } from 'convex-helpers'
-import { CAMPAIGN_MEMBER_STATUS, CAMPAIGN_STATUS } from '../../campaigns/types'
+import { CAMPAIGN_MEMBER_STATUS, CAMPAIGN_STATUS } from '../../../shared/campaigns/types'
 import type { MutationCtx } from '../../_generated/server'
 
 type AuthUserDoc = {

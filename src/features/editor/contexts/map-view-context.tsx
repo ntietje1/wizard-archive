@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
+import type { GameMapWithContent, MapPinWithItem } from 'shared/game-maps/types'
 import { useMapViewStore } from '~/features/editor/stores/map-view-store'
 
 export function MapViewProvider({

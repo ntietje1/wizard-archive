@@ -1,4 +1,4 @@
-import type { NoteWithContent } from 'convex/notes/types'
+import type { NoteWithContent } from 'shared/notes/types'
 import { NoteContent } from '~/features/editor/components/note-content'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 

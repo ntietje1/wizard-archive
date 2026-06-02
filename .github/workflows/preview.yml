@@ -34,6 +34,7 @@ jobs:
           vp check
           vp run lint:convex
           vp run check:no-reexports
+          vp run check:import-boundaries
           vp build --mode production
         env:
           VITE_SITE_URL: ${{ env.PREVIEW_URL }}

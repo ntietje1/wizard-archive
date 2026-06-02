@@ -1,4 +1,4 @@
-import { CAMPAIGN_MEMBER_ROLE } from '~/features/campaigns/campaign-types'
+import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { assertUsername } from 'shared/users/validation'

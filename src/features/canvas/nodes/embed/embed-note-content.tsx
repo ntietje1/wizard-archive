@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useReducer, useRef } from 'react'
+import { useEffect, useReducer, useRef } from 'react'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
-import type { NoteWithContent } from 'convex/notes/types'
+import type { NoteWithContent } from 'shared/notes/types'
 import type { Doc } from 'yjs'
 import type { PendingRichEmbedActivationRef } from './use-rich-embed-lifecycle'
 import { NoteContent } from '~/features/editor/components/note-content'
@@ -42,9 +42,9 @@ export function EmbedNoteContent({
     },
   )
 
-  const isReady = useCallback(() => {
+  const isReady = () => {
     return !!doc
-  }, [doc])
+  }
 
   const onEditorChange = (newEditor: CustomBlockNoteEditor | null, newDoc: Doc | null) => {
     setEditorState({ doc: newDoc, editor: newEditor })

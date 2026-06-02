@@ -9,7 +9,7 @@ import { updateCampaignMemberStatus as updateCampaignMemberStatusFn } from './fu
 import { campaignMemberStatusValidator } from './schema'
 import { assertCampaignSlug, campaignSlugValidator } from './validation'
 import type { Id } from '../_generated/dataModel'
-import type { CampaignMemberStatus } from './types'
+import type { CampaignMemberStatus } from '../../shared/campaigns/types'
 
 export const createCampaign = authMutation({
   args: {

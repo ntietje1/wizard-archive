@@ -3,7 +3,7 @@ import { campaignQuery } from '../functions'
 import { sessionValidator } from './schema'
 import { getCurrentSession as getCurrentSessionFn } from './functions/getCurrentSession'
 import { getSessionsByCampaign as getSessionsByCampaignFn } from './functions/getSessionsByCampaign'
-import type { Session } from './types'
+import type { Session } from '../../shared/sessions/types'
 
 export const getCurrentSession = campaignQuery({
   args: {},

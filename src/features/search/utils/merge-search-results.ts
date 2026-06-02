@@ -1,6 +1,6 @@
 import type { Id } from 'convex/_generated/dataModel'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
-import type { BlockSearchResult } from 'convex/blocks/functions/searchBlocks'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
+import type { BlockSearchResult } from 'shared/search/types'
 
 export interface SearchResult {
   itemId: Id<'sidebarItems'>

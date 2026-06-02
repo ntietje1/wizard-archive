@@ -1,10 +1,9 @@
-import { forwardRef } from 'react'
-import type { KeyboardEvent, MouseEvent, ReactNode } from 'react'
+import type { KeyboardEvent, MouseEvent, ReactNode, Ref } from 'react'
 import {
   DEFAULT_SIDEBAR_ITEM_COLOR,
   normalizeSidebarItemColorOrDefault,
 } from 'shared/sidebar-items/color'
-import type { MapPinWithItem } from 'convex/gameMaps/types'
+import type { MapPinWithItem } from 'shared/game-maps/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { getSidebarItemIcon } from '~/shared/utils/category-icons'
 import { cn } from '~/features/shadcn/lib/utils'
@@ -13,6 +12,7 @@ import { PinMarker } from './pin-marker'
 const GHOST_PIN_COLOR = 'hsl(var(--muted-foreground))'
 
 interface MapPinsLayerProps {
+  ref?: Ref<HTMLDivElement>
   pins: Array<MapPinWithItem>
   isPinGhost: (pin: MapPinWithItem) => boolean
   hoveredPinId?: Id<'mapPins'> | null
@@ -26,49 +26,63 @@ interface MapPinsLayerProps {
   className?: string
 }
 
-export const MapPinsLayer = forwardRef<HTMLDivElement, MapPinsLayerProps>(function MapPinsLayer(
-  {
-    pins,
-    isPinGhost,
-    hoveredPinId = null,
-    draggingPinId = null,
-    moveModePinId = null,
-    interactive = false,
-    onHover,
-    onClick,
-    onContextMenu,
-    onDragStart,
-    className,
-  },
+export function MapPinsLayer({
   ref,
-) {
+  pins,
+  isPinGhost,
+  hoveredPinId = null,
+  draggingPinId = null,
+  moveModePinId = null,
+  interactive = false,
+  onHover,
+  onClick,
+  onContextMenu,
+  onDragStart,
+  className,
+}: MapPinsLayerProps) {
   return (
     <div ref={ref} className={cn('absolute inset-0 pointer-events-none', className)}>
-      {pins.map((pin) => (
-        <MapPin
-          key={pin._id}
-          pin={pin}
-          isGhost={isPinGhost(pin)}
-          isHovered={hoveredPinId === pin._id}
-          isDragging={draggingPinId === pin._id}
-          isInMoveMode={moveModePinId === pin._id}
-          interactive={interactive}
-          onHover={onHover}
-          onClick={onClick}
-          onContextMenu={onContextMenu}
-          onDragStart={onDragStart}
-        />
-      ))}
+      {pins.map((pin) => {
+        const interaction: MapPinInteractionState = {
+          isGhost: isPinGhost(pin),
+          isHovered: hoveredPinId === pin._id,
+          isDragging: draggingPinId === pin._id,
+          isInMoveMode: moveModePinId === pin._id,
+        }
+
+        return (
+          <MapPin
+            key={pin._id}
+            pin={pin}
+            interaction={interaction}
+            interactive={interactive}
+            onHover={onHover}
+            onClick={onClick}
+            onContextMenu={onContextMenu}
+            onDragStart={onDragStart}
+          />
+        )
+      })}
     </div>
   )
-})
+}
+
+type MapPinInteractionState = {
+  isGhost: boolean
+  isHovered: boolean
+  isDragging: boolean
+  isInMoveMode: boolean
+}
+
+type MapPinContainerState = {
+  isHovered: boolean
+  isDragging: boolean
+  isHidden: boolean
+}
 
 function MapPin({
   pin,
-  isGhost,
-  isHovered,
-  isDragging,
-  isInMoveMode,
+  interaction,
   interactive,
   onHover,
   onClick,
@@ -76,26 +90,27 @@ function MapPin({
   onDragStart,
 }: {
   pin: MapPinWithItem
-  isGhost: boolean
-  isHovered: boolean
-  isDragging: boolean
-  isInMoveMode: boolean
+  interaction: MapPinInteractionState
   interactive: boolean
   onHover?: (pinId: Id<'mapPins'> | null) => void
   onClick?: (event: MouseEvent | KeyboardEvent, pin: MapPinWithItem) => void
   onContextMenu?: (event: MouseEvent, pin: MapPinWithItem) => void
   onDragStart?: (event: MouseEvent, pin: MapPinWithItem) => void
 }) {
-  const presentation = getMapPinPresentation(pin, isGhost)
+  const { isHovered, isDragging, isInMoveMode } = interaction
+  const presentation = getMapPinPresentation(pin, interaction.isGhost)
+  const containerState = {
+    isHovered,
+    isDragging,
+    isHidden: presentation.isHidden,
+  }
   const hoverScale = interactive && isHovered && !isDragging ? 1.2 : 1
 
   return interactive ? (
     <InteractiveMapPin
       pin={pin}
       presentation={presentation}
-      isHovered={isHovered}
-      isDragging={isDragging}
-      isHidden={presentation.isHidden}
+      state={containerState}
       isInMoveMode={isInMoveMode}
       hoverScale={hoverScale}
       onHover={onHover}
@@ -104,12 +119,7 @@ function MapPin({
       onDragStart={onDragStart}
     />
   ) : (
-    <MapPinContainer
-      pin={pin}
-      isHovered={isHovered}
-      isDragging={isDragging}
-      isHidden={presentation.isHidden}
-    >
+    <MapPinContainer pin={pin} state={containerState}>
       <div
         className="transition-transform duration-100 ease-out"
         style={{
@@ -126,9 +136,7 @@ function MapPin({
 function InteractiveMapPin({
   pin,
   presentation,
-  isHovered,
-  isDragging,
-  isHidden,
+  state,
   isInMoveMode,
   hoverScale,
   onHover,
@@ -138,9 +146,7 @@ function InteractiveMapPin({
 }: {
   pin: MapPinWithItem
   presentation: MapPinPresentation
-  isHovered: boolean
-  isDragging: boolean
-  isHidden: boolean
+  state: MapPinContainerState
   isInMoveMode: boolean
   hoverScale: number
   onHover?: (pinId: Id<'mapPins'> | null) => void
@@ -151,9 +157,7 @@ function InteractiveMapPin({
   return (
     <MapPinContainer
       pin={pin}
-      isHovered={isHovered}
-      isDragging={isDragging}
-      isHidden={isHidden}
+      state={state}
       ariaLabel={presentation.itemName}
       interactive={true}
       onMouseEnter={() => onHover?.(pin._id)}
@@ -196,7 +200,10 @@ function InteractiveMapPin({
         <PinMarker color={presentation.color} icon={presentation.icon} />
       </div>
 
-      <MapPinTooltip itemName={presentation.itemName} isVisible={isHovered && !isDragging} />
+      <MapPinTooltip
+        itemName={presentation.itemName}
+        isVisible={state.isHovered && !state.isDragging}
+      />
     </MapPinContainer>
   )
 }
@@ -213,16 +220,14 @@ function MapPinTooltip({ itemName, isVisible }: { itemName: string; isVisible: b
       )}
     >
       {itemName}
-      <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-popover" />
+      <div className="absolute left-1/2 -translate-x-1/2 top-full size-0 border-x-4 border-x-transparent border-t-4 border-t-popover" />
     </div>
   )
 }
 
 function MapPinContainer({
   pin,
-  isHovered,
-  isDragging,
-  isHidden,
+  state,
   children,
   ariaLabel,
   interactive = false,
@@ -234,9 +239,7 @@ function MapPinContainer({
   onMouseDown,
 }: {
   pin: MapPinWithItem
-  isHovered: boolean
-  isDragging: boolean
-  isHidden: boolean
+  state: MapPinContainerState
   children: ReactNode
   ariaLabel?: string
   interactive?: boolean
@@ -252,9 +255,9 @@ function MapPinContainer({
     interactive
       ? 'pointer-events-auto cursor-pointer border-0 bg-transparent p-0'
       : 'pointer-events-none',
-    isHovered && !isDragging && 'z-20',
-    isDragging && 'z-30 opacity-70',
-    isHidden && !isDragging && 'opacity-60',
+    state.isHovered && !state.isDragging && 'z-20',
+    state.isDragging && 'z-30 opacity-70',
+    state.isHidden && !state.isDragging && 'opacity-60',
   )
   const style = {
     left: `${pin.x}%`,

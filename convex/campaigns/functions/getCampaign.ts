@@ -3,14 +3,19 @@ import type { CampaignSlug } from '../../../shared/campaigns/validation'
 import type { Username } from '../../../shared/users/validation'
 import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
-import { CAMPAIGN_MEMBER_STATUS, CAMPAIGN_STATUS } from '../types'
+import { CAMPAIGN_MEMBER_STATUS, CAMPAIGN_STATUS } from '../../../shared/campaigns/types'
 import {
   getUserProfileById,
   getUserProfileByUserId,
   getUserProfileByUsername,
 } from '../../users/functions/getUserProfile'
 import type { AuthQueryCtx } from '../../functions'
-import type { Campaign, CampaignFromDb, CampaignMember, CampaignMemberFromDb } from '../types'
+import type {
+  Campaign,
+  CampaignFromDb,
+  CampaignMember,
+  CampaignMemberFromDb,
+} from '../../../shared/campaigns/types'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { QueryCtx } from '../../_generated/server'
 

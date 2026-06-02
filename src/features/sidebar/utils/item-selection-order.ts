@@ -1,5 +1,5 @@
 import type { SortOptions } from 'shared/editor/types'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import { sortItemsByOptions } from '~/features/sidebar/hooks/useSidebarItems'

@@ -1,5 +1,5 @@
 import { ClientOnly } from '@tanstack/react-router'
-import { memo, Profiler, useMemo } from 'react'
+import { Profiler } from 'react'
 import { useDndStore } from '~/features/dnd/stores/dnd-store'
 import { ContextMenuHost } from '~/features/context-menu/components/context-menu-host'
 import { cn } from '~/features/shadcn/lib/utils'
@@ -19,7 +19,7 @@ import { CanvasScene } from './canvas-scene'
 import { CanvasToolbar } from './canvas-toolbar'
 import type { CanvasViewerSession } from '../runtime/session/use-canvas-viewer-session'
 import type { EditorViewerProps } from '~/features/editor/components/viewer/sidebar-item-editor'
-import type { CanvasWithContent } from 'convex/canvases/types'
+import type { CanvasWithContent } from 'shared/canvases/types'
 
 // React Profiler durations are milliseconds; this ignores trivial sampling noise.
 const MIN_TRIVIAL_COMMIT_DURATION_MS = 1
@@ -70,7 +70,7 @@ export function CanvasEditor({
   nodesMap,
   edgesMap,
 }: ReadyCanvasSession) {
-  const initialViewport = useMemo(() => loadPersistedCanvasViewport(canvasId), [canvasId])
+  const initialViewport = loadPersistedCanvasViewport(canvasId)
   const runtime = useCanvasEditorRuntime({
     nodesMap,
     edgesMap,
@@ -125,7 +125,7 @@ export function CanvasEditor({
   )
 }
 
-const CanvasEditorContent = memo(function CanvasEditorContent({
+function CanvasEditorContent({
   canEdit,
   runtime,
   canvasCursor,
@@ -144,11 +144,10 @@ const CanvasEditorContent = memo(function CanvasEditorContent({
     >
       <CanvasToolbar canEdit={canEdit} />
       <CanvasConditionalToolbar canEdit={canEdit} />
-      <div
+      <section
         ref={runtime.canvasSurfaceRef}
         className="relative z-0 h-full w-full"
         data-testid="canvas-surface"
-        role="region"
         aria-label="Canvas surface"
       >
         <CanvasScene
@@ -179,39 +178,8 @@ const CanvasEditorContent = memo(function CanvasEditorContent({
           isDropTarget={runtime.dropTarget.isDropTarget}
           isFileDropTarget={runtime.dropTarget.isFileDropTarget}
         />
-      </div>
+      </section>
     </div>
-  )
-}, areCanvasEditorContentPropsEqual)
-
-function areCanvasEditorContentPropsEqual(
-  previous: {
-    canEdit: boolean
-    runtime: ReturnType<typeof useCanvasEditorRuntime>
-    canvasCursor: string
-  },
-  next: {
-    canEdit: boolean
-    runtime: ReturnType<typeof useCanvasEditorRuntime>
-    canvasCursor: string
-  },
-) {
-  return (
-    previous.canEdit === next.canEdit &&
-    previous.canvasCursor === next.canvasCursor &&
-    previous.runtime.canvasEngine === next.runtime.canvasEngine &&
-    previous.runtime.canvasSurfaceRef === next.runtime.canvasSurfaceRef &&
-    previous.runtime.sceneHandlers === next.runtime.sceneHandlers &&
-    previous.runtime.contextMenu.hostRef === next.runtime.contextMenu.hostRef &&
-    previous.runtime.contextMenu.menu === next.runtime.contextMenu.menu &&
-    previous.runtime.contextMenu.openForNode === next.runtime.contextMenu.openForNode &&
-    previous.runtime.contextMenu.openForEdge === next.runtime.contextMenu.openForEdge &&
-    previous.runtime.contextMenu.openForPane === next.runtime.contextMenu.openForPane &&
-    previous.runtime.contextMenu.onClose === next.runtime.contextMenu.onClose &&
-    previous.runtime.dropTarget.dropOverlayRef === next.runtime.dropTarget.dropOverlayRef &&
-    previous.runtime.dropTarget.isDropTarget === next.runtime.dropTarget.isDropTarget &&
-    previous.runtime.dropTarget.isFileDropTarget === next.runtime.dropTarget.isFileDropTarget &&
-    previous.runtime.remoteUsers === next.runtime.remoteUsers
   )
 }
 
@@ -232,13 +200,12 @@ function CanvasPendingSelectionStatus({
   ].filter(Boolean)
 
   return (
-    <div
+    <output
       className="pointer-events-none absolute bottom-4 left-4 z-10 rounded-full border bg-background/90 px-3 py-1 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm"
-      role="status"
       aria-live="polite"
     >
       {`Selecting ${parts.join(', ')}`}
-    </div>
+    </output>
   )
 }
 

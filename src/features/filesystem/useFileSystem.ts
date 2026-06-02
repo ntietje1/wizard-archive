@@ -7,7 +7,7 @@ import type { SidebarItemName } from 'shared/sidebar-items/name'
 import type { CreateParentTarget } from 'shared/sidebar-items/parent-target'
 import type { SidebarItemSlug } from 'shared/sidebar-items/slug'
 import type { FileSystemDropOptions } from 'shared/sidebar-items/filesystem/intent-planning'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { FileSystemGlobalDropTarget } from './filesystem-drop-planner'
 
 // Public filesystem API. Callers describe user intent; this module owns command construction,

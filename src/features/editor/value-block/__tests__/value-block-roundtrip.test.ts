@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { BlockNoteEditor } from '@blocknote/core'
 import { blocksToYDoc as bnBlocksToYDoc } from '@blocknote/core/yjs'
 import { createEditorSchema } from '../../editor-specs'
-import { yDocToBlocks } from '~/features/editor/blocknote-yjs'
+import { yDocToBlocks } from 'shared/editor-blocks/blocknote-yjs'
 import type { CustomPartialBlock } from 'shared/editor-blocks/types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 

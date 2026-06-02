@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Share2 } from 'lucide-react'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { Button } from '~/features/shadcn/components/button'
 import { Popover, PopoverContent, PopoverTrigger } from '~/features/shadcn/components/popover'
 import { SidebarItemsSharePanel } from '~/features/sharing/components/sidebar-items-share-panel'

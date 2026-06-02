@@ -8,7 +8,7 @@ import {
 import { Share2 } from 'lucide-react'
 import type { CustomBlock } from 'shared/editor-blocks/types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
-import type { NoteWithContent } from 'convex/notes/types'
+import type { NoteWithContent } from 'shared/notes/types'
 import { AGGREGATE_SHARE_STATUS } from '~/features/sharing/utils/block-share-state'
 import type { AggregateShareStatus } from '~/features/sharing/utils/block-share-state'
 import { useBlocksShare } from '~/features/sharing/hooks/useBlocksShare'
@@ -77,17 +77,22 @@ export default function ShareSideMenuButton({ note }: { note: NoteWithContent })
 
   return (
     <ContextMenu onOpenChange={(open) => setSideMenuFrozen(sideMenuExtension, open)}>
-      <div role="button" tabIndex={0} onClick={handleButtonClick} onKeyDown={handleKeyDown}>
-        <ContextMenuTrigger
-          render={
+      <ContextMenuTrigger
+        render={
+          <button
+            type="button"
+            className="contents"
+            onClick={handleButtonClick}
+            onKeyDown={handleKeyDown}
+          >
             <Components.SideMenu.Button
               label={getShareButtonLabel(blockCount)}
               className={`!p-0 !px-0 !h-6 !w-6 ${buttonColorClass} ${isBusy ? 'opacity-50 cursor-wait' : ''}`}
               icon={<Share2 size={18} />}
             />
-          }
-        />
-      </div>
+          </button>
+        }
+      />
       <ContextMenuContent className="w-56 max-h-[var(--radix-context-menu-content-available-height)] overflow-y-auto z-[9999]">
         <ShareMenuContent
           label={getShareMenuLabel(blockCount, isMultiBlock)}

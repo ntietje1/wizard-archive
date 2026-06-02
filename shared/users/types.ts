@@ -1,15 +1,13 @@
-import type { UserIdentity } from 'convex/server'
-import type { Id } from '../_generated/dataModel'
-import type { Username } from '../../shared/users/validation'
+import type { StorageId, UserProfileId } from '../common/ids'
+import type { Username } from './validation'
 
 export type ProfileImage =
   | { type: 'external'; url: string }
-  | { type: 'storage'; storageId: Id<'_storage'> }
+  | { type: 'storage'; storageId: StorageId }
 
 export type UserProfileFromDb = {
-  _id: Id<'userProfiles'>
+  _id: UserProfileId
   _creationTime: number
-
   authUserId: string
   username: Username
   email: string | null
@@ -22,5 +20,3 @@ export type UserProfileFromDb = {
 export type UserProfile = Omit<UserProfileFromDb, 'profileImage'> & {
   imageUrl: string | null
 }
-
-export type AuthUser = { identity: UserIdentity; profile: UserProfileFromDb }

@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
 import { useItemSurfaceHotkeys } from '../useItemSurfaceHotkeys'
 import { buildSidebarItemMaps } from '~/features/sidebar/utils/sidebar-item-maps'

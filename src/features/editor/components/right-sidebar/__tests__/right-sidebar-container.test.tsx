@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { ReactNode } from 'react'
 import { RIGHT_SIDEBAR_CONTENT } from '../constants'
 import { RightSidebarContainer } from '../right-sidebar-container'

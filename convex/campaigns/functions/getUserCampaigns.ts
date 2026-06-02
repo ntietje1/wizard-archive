@@ -1,7 +1,7 @@
 import { asyncMap } from 'convex-helpers'
-import { CAMPAIGN_MEMBER_STATUS } from '../types'
+import { CAMPAIGN_MEMBER_STATUS } from '../../../shared/campaigns/types'
 import { getCampaign } from './getCampaign'
-import type { Campaign } from '../types'
+import type { Campaign } from '../../../shared/campaigns/types'
 import type { AuthQueryCtx } from '../../functions'
 
 export async function getUserCampaigns(ctx: AuthQueryCtx): Promise<Array<Campaign>> {

@@ -1,7 +1,8 @@
 import { SIDEBAR_ITEM_TYPES } from '../types'
-import type { SidebarItemId, AnySidebarItem } from './types'
+import type { SidebarItemId } from '../../common/ids'
+import type { FileSystemSidebarItem } from './types'
 
-type SidebarTreeItem = Pick<AnySidebarItem, '_id' | 'parentId' | 'type'>
+type SidebarTreeItem = Pick<FileSystemSidebarItem, '_id' | 'parentId' | 'type'>
 
 function indexChildrenByParent(items: Array<SidebarTreeItem>) {
   const childrenByParent = new Map<SidebarItemId, Array<SidebarTreeItem>>()

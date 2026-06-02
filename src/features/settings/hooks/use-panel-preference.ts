@@ -6,7 +6,7 @@ import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { handleError } from '~/shared/utils/logger'
 
-export type PanelPreferenceState = {
+type PanelPreferenceState = {
   size: number
   visible: boolean
   activeContentId: string | null

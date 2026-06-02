@@ -3,7 +3,7 @@ import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import type { Id } from 'convex/_generated/dataModel'
 import type { FileSystemPatch } from 'shared/sidebar-items/filesystem/receipts'
 import { applyFileSystemPatchesToSnapshot as applyPatchesToItemSnapshot } from 'shared/sidebar-items/filesystem/patch-projection'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { SidebarItemPatchRow } from 'shared/sidebar-items/filesystem/types'
 import { isOptimisticSidebarItemId } from './optimistic-sidebar-items'
 
@@ -99,7 +99,7 @@ function patchCanApplyToSidebarCache(
   return hasSidebarCacheFields(patch.item)
 }
 
-export function applyFileSystemPatchesToSnapshot(
+export function applyFileSystemPatchesToSidebarCache(
   snapshot: SidebarCacheSnapshot,
   patches: Array<FileSystemPatch>,
 ): SidebarCacheSnapshot {

@@ -6,7 +6,7 @@ import {
   encodeAwarenessUpdate,
   removeAwarenessStates,
 } from 'y-protocols/awareness'
-import type { YjsDocumentId } from 'convex/yjsSync/functions/types'
+import type { YjsDocumentId } from 'shared/yjs-sync/types'
 import { logger } from '~/shared/utils/logger'
 
 type AwarenessEntry = {

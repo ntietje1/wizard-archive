@@ -3,7 +3,7 @@ import { enhanceSidebarItem } from './enhanceSidebarItem'
 import { getSidebarItem } from './getSidebarItem'
 import type { Doc } from '../../_generated/dataModel'
 import type { SIDEBAR_ITEM_STATUS, SidebarItemStatus } from '../../../shared/sidebar-items/types'
-import type { AnySidebarItem } from '../types/types'
+import type { AnySidebarItem } from '../../../shared/sidebar-items/model-types'
 import type { CampaignQueryCtx } from '../../functions'
 
 type VisibleSidebarItemStatus = Exclude<SidebarItemStatus, typeof SIDEBAR_ITEM_STATUS.undoHidden>

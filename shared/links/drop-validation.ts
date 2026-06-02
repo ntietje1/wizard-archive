@@ -1,7 +1,7 @@
 import { isTrashedSidebarItem } from '../sidebar-items/types'
 import type { SidebarItemLocation, SidebarItemStatus } from '../sidebar-items/types'
 
-export type NoteLinkDropValidationCode = 'self_link' | 'trashed_item' | 'wrong_campaign'
+type NoteLinkDropValidationCode = 'self_link' | 'trashed_item' | 'wrong_campaign'
 
 export function validateNoteLinkDropTarget<
   TSidebarItemId extends string,

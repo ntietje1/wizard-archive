@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
-import { captureBlockNoteSelection } from '../blocknote-selection-adapter'
+import {
+  captureBlockNoteSelection,
+  setBlockNotePendingTextColor,
+} from '../blocknote-selection-adapter'
 
 describe('captureBlockNoteSelection', () => {
   it('reads the selection from the public ProseMirror view accessor', () => {
@@ -16,6 +19,20 @@ describe('captureBlockNoteSelection', () => {
     const editor = { focus: vi.fn() } as unknown as Parameters<typeof captureBlockNoteSelection>[0]
 
     expect(captureBlockNoteSelection(editor)).toBeNull()
+  })
+
+  it('treats an unmounted ProseMirror view accessor as unavailable', () => {
+    const editor = {
+      focus: vi.fn(),
+      get prosemirrorView() {
+        throw new Error(
+          "[tiptap error]: The editor view is not available. Cannot access view['dom']. The editor may not be mounted yet.",
+        )
+      },
+    } as unknown as Parameters<typeof captureBlockNoteSelection>[0]
+
+    expect(captureBlockNoteSelection(editor)).toBeNull()
+    expect(() => setBlockNotePendingTextColor(editor, null)).not.toThrow()
   })
 })
 

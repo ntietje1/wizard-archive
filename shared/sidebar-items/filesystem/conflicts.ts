@@ -1,4 +1,4 @@
-import type { SidebarItemId } from './types'
+import type { SidebarItemId } from '../../common/ids'
 import { SIDEBAR_ITEM_TYPES } from '../types'
 import type { OperationPlannerItem } from './selection'
 
@@ -17,7 +17,7 @@ export type ItemOperationConflict = {
   destinationType: OperationPlannerItem['type']
 }
 
-export type ConflictPlanningContext = {
+type ConflictPlanningContext = {
   decisions: Partial<Record<SidebarItemId, ConflictDecision>>
   defaultConflictDecision?: ConflictDecision
   conflicts: Array<ItemOperationConflict>
@@ -25,7 +25,7 @@ export type ConflictPlanningContext = {
   skippedSourceItemIds: Set<SidebarItemId>
 }
 
-export type ConflictDecisionHandlers = {
+type ConflictDecisionHandlers = {
   keepBoth: () => void
   replace: () => void
   mergeFolders: () => PlannerItemStatus

@@ -12,7 +12,7 @@ import type {
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import * as Y from 'yjs'
 import { testId } from '~/test/helpers/test-id'
 import { createCommands } from './canvas-context-menu-test-utils'

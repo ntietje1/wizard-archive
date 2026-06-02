@@ -4,7 +4,7 @@ import {
   validateCreateItemLocally,
   validateCreateParentTarget,
 } from 'shared/sidebar-items/parent-target'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
 import { createFolder, createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'

@@ -2,7 +2,7 @@ import { ERROR_CODE } from '../../../shared/errors/client'
 import { throwClientError } from '../../errors'
 import type { Id } from '../../_generated/dataModel'
 import type { CampaignQueryCtx } from '../../functions'
-import type { AnySidebarItemRow } from '../types/types'
+import type { AnySidebarItemRow } from '../../../shared/sidebar-items/model-types'
 
 export async function getSidebarItemRow(
   ctx: CampaignQueryCtx,

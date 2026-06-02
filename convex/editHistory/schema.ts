@@ -1,7 +1,7 @@
 import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { sidebarItemTypeValidator } from '../sidebarItems/schema/validators'
-import { EDIT_HISTORY_ACTION } from './types'
+import { EDIT_HISTORY_ACTION } from '../../shared/edit-history/types'
 
 const actions = Object.values(EDIT_HISTORY_ACTION).map((a) => v.literal(a))
 if (actions.length === 0) {

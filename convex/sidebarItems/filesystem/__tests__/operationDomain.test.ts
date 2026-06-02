@@ -5,7 +5,7 @@ import { planTransferOperations } from '../../../../shared/sidebar-items/filesys
 import { normalizeSelectedRoots } from '../../../../shared/sidebar-items/filesystem/selection'
 import type { OperationPlannerItem } from '../../../../shared/sidebar-items/filesystem/selection'
 import type { Id } from '../../../_generated/dataModel'
-import type { AnySidebarItem } from '../../types/types'
+import type { AnySidebarItem } from '../../../../shared/sidebar-items/model-types'
 
 function planMoveTransfer(
   args: Omit<Parameters<typeof planTransferOperations>[0], 'itemsById' | 'mode'> & {

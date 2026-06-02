@@ -1,6 +1,6 @@
 import { ERROR_CODE } from '../../../../shared/errors/client'
 import { throwClientError } from '../../../errors'
-import { CAMPAIGN_MEMBER_ROLE } from '../../../campaigns/types'
+import { CAMPAIGN_MEMBER_ROLE } from '../../../../shared/campaigns/types'
 import { PERMISSION_LEVEL } from '../../../../shared/permissions/types'
 import { hasAtLeastPermissionLevel } from '../../../../shared/permissions/hasAtLeastPermissionLevel'
 import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../../../../shared/sidebar-items/types'
@@ -21,7 +21,7 @@ import type { DeleteForeverFileSystemCommand } from '../../../../shared/sidebar-
 import type { FileSystemDelta } from '../../../../shared/sidebar-items/filesystem/receipts'
 import type { Id } from '../../../_generated/dataModel'
 import type { PermissionLevel } from '../../../../shared/permissions/types'
-import type { AnySidebarItemRow } from '../../types/types'
+import type { AnySidebarItemRow } from '../../../../shared/sidebar-items/model-types'
 
 const MAX_PERMANENT_DELETE_DEPTH = 50
 const MAX_PERMANENT_DELETE_BATCH_SIZE = 100

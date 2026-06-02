@@ -1,4 +1,4 @@
-import type { GameMapWithContent, MapPinWithItem } from 'convex/gameMaps/types'
+import type { GameMapWithContent, MapPinWithItem } from 'shared/game-maps/types'
 import { PERMISSION_LEVEL } from 'shared/permissions/types'
 import { effectiveHasAtLeastPermission } from '~/features/sharing/utils/permission-utils'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'

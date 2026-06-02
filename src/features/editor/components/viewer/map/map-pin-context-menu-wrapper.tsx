@@ -4,7 +4,7 @@ import { hasAtLeastPermissionLevel } from 'shared/permissions/hasAtLeastPermissi
 import { EditorContextMenu } from '~/features/context-menu/components/editor-context-menu'
 import { useMapView } from '~/features/editor/hooks/useMapView'
 import type { Id } from 'convex/_generated/dataModel'
-import type { MapPinWithItem } from 'convex/gameMaps/types'
+import type { MapPinWithItem } from 'shared/game-maps/types'
 import type { ContextMenuHostRef } from '~/features/context-menu/components/context-menu-host'
 import type { PinPosition } from './map-pin-placement'
 

@@ -1,8 +1,10 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
+import ts from 'typescript'
 
 const root = process.cwd()
-const extensions = new Set(['.js', '.mjs', '.cjs', '.ts', '.mts', '.tsx'])
+const extensions = new Set(['.js', '.mjs', '.cjs', '.ts', '.mts', '.tsx', '.jsx', '.cts'])
 const ignoredSegments = new Set([
   'node_modules',
   '.git',
@@ -51,88 +53,112 @@ function lineNumber(source, index) {
   return source.slice(0, index).split('\n').length
 }
 
-function parseImportBindings(importDeclaration) {
-  const bindings = new Set()
-  const namespaceMatch = importDeclaration.match(/import\s+\*\s+as\s+([A-Za-z_$][\w$]*)/)
-  if (namespaceMatch) bindings.add(namespaceMatch[1])
+function sourceFileKind(filePath) {
+  const extension = path.extname(filePath)
+  if (extension === '.jsx') return ts.ScriptKind.JSX
+  if (extension === '.tsx') return ts.ScriptKind.TSX
+  if (extension === '.js' || extension === '.mjs' || extension === '.cjs') return ts.ScriptKind.JS
+  return ts.ScriptKind.TS
+}
 
-  const defaultMatch = importDeclaration.match(/import\s+([A-Za-z_$][\w$]*)\s*(?:,|from)/)
-  if (defaultMatch && defaultMatch[1] !== 'type') bindings.add(defaultMatch[1])
-
-  const namedMatch = importDeclaration.match(/\{([\s\S]*?)\}/)
-  if (!namedMatch) return bindings
-
-  for (const rawSpecifier of namedMatch[1].split(',')) {
-    const specifier = rawSpecifier.trim().replace(/^type\s+/, '')
-    if (!specifier) continue
-    const aliasMatch = specifier.match(/\bas\s+([A-Za-z_$][\w$]*)$/)
-    if (aliasMatch) {
-      bindings.add(aliasMatch[1])
-      continue
-    }
-    const importedName = specifier.match(/^([A-Za-z_$][\w$]*)/)
-    if (importedName) bindings.add(importedName[1])
+function importedBindingNames(node) {
+  const bindings = []
+  const importClause = node.importClause
+  if (!importClause) return bindings
+  if (importClause.name) bindings.push(importClause.name.text)
+  const namedBindings = importClause.namedBindings
+  if (!namedBindings) return bindings
+  if (ts.isNamespaceImport(namedBindings)) bindings.push(namedBindings.name.text)
+  if (ts.isNamedImports(namedBindings)) {
+    for (const element of namedBindings.elements) bindings.push(element.name.text)
   }
-
   return bindings
 }
 
-function exportedBindingNames(exportDeclaration) {
-  const names = []
-  const namedMatch = exportDeclaration.match(/\{([\s\S]*?)\}/)
-  if (!namedMatch) return names
-  for (const rawSpecifier of namedMatch[1].split(',')) {
-    const specifier = rawSpecifier.trim().replace(/^type\s+/, '')
-    if (!specifier) continue
-    const localName = specifier.match(/^([A-Za-z_$][\w$]*)/)
-    if (localName) names.push(localName[1])
-  }
-  return names
+function exportedLocalName(element) {
+  return (element.propertyName ?? element.name).text
 }
 
-const violations = []
+function createAst(filePath, source) {
+  return ts.createSourceFile(
+    filePath,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    sourceFileKind(filePath),
+  )
+}
 
-for (const file of collectFiles(root)) {
-  const source = readFileSync(file, 'utf8')
-  const relativeFile = path.relative(root, file)
-
-  for (const match of source.matchAll(/\bexport\s+\*\s+from\s+['"][^'"]+['"]/g)) {
-    violations.push(`${relativeFile}:${lineNumber(source, match.index)} export * re-export`)
-  }
-
-  for (const match of source.matchAll(
-    /\bexport\s+(?:type\s+)?\{[\s\S]*?\}\s+from\s+['"][^'"]+['"]/g,
-  )) {
-    violations.push(`${relativeFile}:${lineNumber(source, match.index)} named re-export`)
-  }
-
+function collectImportedBindings(ast) {
   const importedBindings = new Set()
-  for (const match of source.matchAll(/\bimport\s+(?:type\s+)?[\s\S]*?\s+from\s+['"][^'"]+['"]/g)) {
-    for (const binding of parseImportBindings(match[0])) importedBindings.add(binding)
+  for (const statement of ast.statements) {
+    if (!ts.isImportDeclaration(statement)) continue
+    for (const binding of importedBindingNames(statement)) importedBindings.add(binding)
   }
-
-  for (const match of source.matchAll(/\bexport\s+(?:type\s+)?\{[\s\S]*?\}(?!\s+from)/g)) {
-    const exportedImportedBindings = exportedBindingNames(match[0]).filter((name) =>
-      importedBindings.has(name),
-    )
-    if (exportedImportedBindings.length > 0) {
-      violations.push(
-        `${relativeFile}:${lineNumber(source, match.index)} exported imported binding: ${exportedImportedBindings.join(', ')}`,
-      )
-    }
-  }
-
-  for (const match of source.matchAll(/\bexport\s+default\s+([A-Za-z_$][\w$]*)\s*(?:;|$)/gm)) {
-    if (importedBindings.has(match[1])) {
-      violations.push(
-        `${relativeFile}:${lineNumber(source, match.index)} default-exported imported binding: ${match[1]}`,
-      )
-    }
-  }
+  return importedBindings
 }
 
-if (violations.length > 0) {
-  console.error('Re-exports are not allowed:')
-  for (const violation of violations) console.error(`- ${violation}`)
-  process.exit(1)
+function reexportViolation(filePath, source, ast, statement) {
+  if (!ts.isExportDeclaration(statement) || !statement.moduleSpecifier) return null
+  const description = statement.exportClause ? 'named re-export' : 'export * re-export'
+  return `${filePath}:${lineNumber(source, statement.getStart(ast))} ${description}`
+}
+
+function exportedImportedBindingViolation(filePath, source, ast, statement, importedBindings) {
+  if (!ts.isExportDeclaration(statement)) return null
+  if (!statement.exportClause || !ts.isNamedExports(statement.exportClause)) return null
+
+  const exportedImportedBindings = statement.exportClause.elements
+    .map(exportedLocalName)
+    .filter((name) => importedBindings.has(name))
+  if (exportedImportedBindings.length === 0) return null
+
+  return `${filePath}:${lineNumber(source, statement.getStart(ast))} exported imported binding: ${exportedImportedBindings.join(', ')}`
+}
+
+function defaultExportedImportedBindingViolation(
+  filePath,
+  source,
+  ast,
+  statement,
+  importedBindings,
+) {
+  if (!ts.isExportAssignment(statement)) return null
+  if (!ts.isIdentifier(statement.expression)) return null
+  if (!importedBindings.has(statement.expression.text)) return null
+
+  return `${filePath}:${lineNumber(source, statement.getStart(ast))} default-exported imported binding: ${statement.expression.text}`
+}
+
+export function analyzeNoReexports(files) {
+  const violations = []
+  for (const { filePath, source } of files) {
+    const ast = createAst(filePath, source)
+    const importedBindings = collectImportedBindings(ast)
+
+    for (const statement of ast.statements) {
+      const violation =
+        reexportViolation(filePath, source, ast, statement) ??
+        exportedImportedBindingViolation(filePath, source, ast, statement, importedBindings) ??
+        defaultExportedImportedBindingViolation(filePath, source, ast, statement, importedBindings)
+      if (violation) violations.push(violation)
+    }
+  }
+  return violations
+}
+
+function collectNoReexportSources() {
+  return collectFiles(root).map((file) => ({
+    filePath: path.relative(root, file),
+    source: readFileSync(file, 'utf8'),
+  }))
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const violations = analyzeNoReexports(collectNoReexportSources())
+  if (violations.length > 0) {
+    console.error('Re-exports are not allowed:')
+    for (const violation of violations) console.error(`- ${violation}`)
+    process.exit(1)
+  }
 }

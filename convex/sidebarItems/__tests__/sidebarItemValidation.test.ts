@@ -35,7 +35,7 @@ import {
 import { validateSidebarItemSlug } from '../../../shared/sidebar-items/slug'
 import type { Id } from '../../_generated/dataModel'
 import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
-import type { AnySidebarItem } from '../types/types'
+import type { AnySidebarItem } from '../../../shared/sidebar-items/model-types'
 
 describe('validateItemName', () => {
   it('accepts a valid name', () => {

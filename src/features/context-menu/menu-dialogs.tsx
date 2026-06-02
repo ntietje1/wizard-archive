@@ -1,5 +1,5 @@
 import type { Id } from 'convex/_generated/dataModel'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { MapDialog } from '~/features/editor/components/forms/map-form/map-dialog'
 import { FileDialog } from '~/features/editor/components/forms/file-form/file-dialog'
 import { SidebarItemEditDialog } from '~/features/sidebar/components/forms/sidebar-item-edit-dialog'

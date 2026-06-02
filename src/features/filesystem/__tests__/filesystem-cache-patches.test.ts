@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { SIDEBAR_ITEM_STATUS } from 'shared/sidebar-items/types'
 import type { SidebarCacheSnapshot } from '../filesystem-cache-patches'
 import { createFileSystemCacheAdapter } from '../filesystem-cache-adapter'
-import { applyFileSystemPatchesToSnapshot } from '../filesystem-cache-patches'
+import { applyFileSystemPatchesToSidebarCache } from '../filesystem-cache-patches'
 import { OPTIMISTIC_SIDEBAR_ITEM_ID_PREFIX } from '../optimistic-sidebar-items'
 import {
   invertFileSystemPatches,
@@ -37,10 +37,12 @@ describe('filesystem cache patches', () => {
       fields: { parentId: folder._id },
     }
 
-    const moved = applyFileSystemPatchesToSnapshot({ sidebar: [folder, note], trash: [] }, [patch])
+    const moved = applyFileSystemPatchesToSidebarCache({ sidebar: [folder, note], trash: [] }, [
+      patch,
+    ])
     expect(moved.sidebar.find((item) => item._id === note._id)?.parentId).toBe(folder._id)
 
-    const restored = applyFileSystemPatchesToSnapshot(moved, invertFileSystemPatches([patch]))
+    const restored = applyFileSystemPatchesToSidebarCache(moved, invertFileSystemPatches([patch]))
     expect(restored.sidebar.find((item) => item._id === note._id)?.parentId).toBeNull()
   })
 
@@ -50,7 +52,7 @@ describe('filesystem cache patches', () => {
     const hidden = { ...note, status: SIDEBAR_ITEM_STATUS.undoHidden }
 
     expect(
-      applyFileSystemPatchesToSnapshot({ sidebar: [note], trash: [] }, [
+      applyFileSystemPatchesToSidebarCache({ sidebar: [note], trash: [] }, [
         {
           type: 'updateSidebarItem',
           itemId: note._id,
@@ -61,7 +63,7 @@ describe('filesystem cache patches', () => {
     ).toEqual({ sidebar: [], trash: [expect.objectContaining({ _id: note._id })] })
 
     expect(
-      applyFileSystemPatchesToSnapshot({ sidebar: [note], trash: [] }, [
+      applyFileSystemPatchesToSidebarCache({ sidebar: [note], trash: [] }, [
         {
           type: 'updateSidebarItem',
           itemId: note._id,
@@ -76,7 +78,7 @@ describe('filesystem cache patches', () => {
     const note = createNote()
 
     expect(
-      applyFileSystemPatchesToSnapshot({ sidebar: [], trash: [] }, [
+      applyFileSystemPatchesToSidebarCache({ sidebar: [], trash: [] }, [
         {
           type: 'updateSidebarItem',
           itemId: note._id,
@@ -87,7 +89,7 @@ describe('filesystem cache patches', () => {
     ).toEqual({ sidebar: [], trash: [] })
 
     expect(() =>
-      applyFileSystemPatchesToSnapshot({ sidebar: [], trash: [] }, [
+      applyFileSystemPatchesToSidebarCache({ sidebar: [], trash: [] }, [
         {
           type: 'updateSidebarItem',
           itemId: note._id,
@@ -102,7 +104,7 @@ describe('filesystem cache patches', () => {
     const note = createNote()
 
     expect(
-      applyFileSystemPatchesToSnapshot({ sidebar: [], trash: [] }, [
+      applyFileSystemPatchesToSidebarCache({ sidebar: [], trash: [] }, [
         { type: 'upsertSidebarItem', item: rawSidebarRow(note) },
       ]),
     ).toEqual({ sidebar: [], trash: [] })
@@ -114,13 +116,13 @@ describe('filesystem cache patches', () => {
       ...note,
       _id: `${OPTIMISTIC_SIDEBAR_ITEM_ID_PREFIX}1` as typeof note._id,
     }
-    const withOptimistic = applyFileSystemPatchesToSnapshot({ sidebar: [], trash: [] }, [
+    const withOptimistic = applyFileSystemPatchesToSidebarCache({ sidebar: [], trash: [] }, [
       { type: 'upsertSidebarItem', item: optimistic },
     ])
 
     expect(withOptimistic.sidebar).toEqual([expect.objectContaining({ _id: optimistic._id })])
 
-    const restored = applyFileSystemPatchesToSnapshot({ sidebar: [], trash: [] }, [
+    const restored = applyFileSystemPatchesToSidebarCache({ sidebar: [], trash: [] }, [
       { type: 'upsertSidebarItem', item: note },
     ])
     expect(restored.sidebar).toEqual([expect.objectContaining({ _id: note._id })])
@@ -134,7 +136,7 @@ describe('filesystem cache patches', () => {
       _id: `${OPTIMISTIC_SIDEBAR_ITEM_ID_PREFIX}created` as typeof created._id,
     }
 
-    const updated = applyFileSystemPatchesToSnapshot(
+    const updated = applyFileSystemPatchesToSidebarCache(
       { sidebar: [existing, optimistic], trash: [] },
       [
         {
@@ -163,12 +165,12 @@ describe('filesystem cache patches', () => {
       operations: [{ action: 'place', sourceItemId: note._id, targetParentId: folder._id }],
       now: NOW,
     })
-    const moved = applyFileSystemPatchesToSnapshot(snapshot, move.forwardPatches)
+    const moved = applyFileSystemPatchesToSidebarCache(snapshot, move.forwardPatches)
 
     expect(moved.sidebar.find((item) => item._id === note._id)?.parentId).toBe(folder._id)
     expect(snapshot.sidebar.find((item) => item._id === note._id)?.parentId).toBeNull()
     expect(
-      applyFileSystemPatchesToSnapshot(moved, move.inversePatches).sidebar.find(
+      applyFileSystemPatchesToSidebarCache(moved, move.inversePatches).sidebar.find(
         (item) => item._id === note._id,
       )?.parentId,
     ).toBeNull()
@@ -177,7 +179,7 @@ describe('filesystem cache patches', () => {
       now: NOW,
       userId: null,
     })
-    const trashed = applyFileSystemPatchesToSnapshot(snapshot, trash.forwardPatches)
+    const trashed = applyFileSystemPatchesToSidebarCache(snapshot, trash.forwardPatches)
     expect(trashed.trash).toEqual([
       expect.objectContaining({
         _id: note._id,

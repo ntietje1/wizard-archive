@@ -4,7 +4,10 @@ import { hasAtLeastPermissionLevel } from '../../../shared/permissions/hasAtLeas
 import { enhanceSidebarItem } from '../functions/enhanceSidebarItem'
 import type { PermissionLevel } from '../../../shared/permissions/types'
 import type { CampaignQueryCtx } from '../../functions'
-import type { AnySidebarItemFromDb, EnhancedSidebarItem } from '../types/types'
+import type {
+  AnySidebarItemFromDb,
+  EnhancedSidebarItem,
+} from '../../../shared/sidebar-items/model-types'
 
 export async function checkItemAccess<T extends AnySidebarItemFromDb>(
   ctx: CampaignQueryCtx,

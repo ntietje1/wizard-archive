@@ -1,6 +1,6 @@
 import { toast } from 'sonner'
 import { api } from 'convex/_generated/api'
-import type { Campaign } from 'convex/campaigns/types'
+import type { Campaign } from 'shared/campaigns/types'
 import { ConfirmationDialog } from '~/shared/components/confirmation-dialog'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { handleError } from '~/shared/utils/logger'

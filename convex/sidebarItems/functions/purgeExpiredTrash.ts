@@ -1,10 +1,10 @@
 import { internal } from '../../_generated/api'
-import { TRASH_RETENTION_DAYS } from '../../common/constants'
 import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
+import { TRASH_RETENTION_DAYS } from '../../../shared/sidebar-items/trash-policy'
 import { hardDeleteTree } from '../filesystem/treeWrites'
 import type { MutationCtx } from '../../_generated/server'
 import type { Id } from '../../_generated/dataModel'
-import type { AnySidebarItemRow } from '../types/types'
+import type { AnySidebarItemRow } from '../../../shared/sidebar-items/model-types'
 
 const TRASH_RETENTION_MS = TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000
 

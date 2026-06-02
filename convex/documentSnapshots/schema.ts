@@ -2,13 +2,7 @@ import { defineTable } from 'convex/server'
 import { v } from 'convex/values'
 import { sidebarItemTypeValidator } from '../sidebarItems/schema/validators'
 import { convexValidatorFields } from '../common/schema'
-import { NOTE_SNAPSHOT_TYPE } from '../notes/types'
-import { GAME_MAP_SNAPSHOT_TYPE } from '../gameMaps/types'
-
-export const SNAPSHOT_TYPE = {
-  yjs_state: NOTE_SNAPSHOT_TYPE,
-  game_map: GAME_MAP_SNAPSHOT_TYPE,
-} as const
+import { SNAPSHOT_TYPE } from '../../shared/document-snapshots/types'
 
 export const snapshotTypeValidator = v.union(
   v.literal(SNAPSHOT_TYPE.yjs_state),

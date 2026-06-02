@@ -2,7 +2,11 @@ import { customQuery, customMutation, customCtx } from 'convex-helpers/server/cu
 import { v } from 'convex/values'
 import { query, mutation, internalQuery } from './_generated/server'
 import { triggers } from './triggers'
-import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS, CAMPAIGN_STATUS } from './campaigns/types'
+import {
+  CAMPAIGN_MEMBER_ROLE,
+  CAMPAIGN_MEMBER_STATUS,
+  CAMPAIGN_STATUS,
+} from '../shared/campaigns/types'
 import { assertCampaignSlug } from './campaigns/validation'
 import { ERROR_CODE } from '../shared/errors/client'
 import { throwClientError } from './errors'
@@ -11,8 +15,8 @@ import { getUserProfileById } from './users/functions/getUserProfile'
 import type { CustomCtx } from 'convex-helpers/server/customFunctions'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import type { Doc, Id } from './_generated/dataModel'
-import type { AuthUser } from './users/types'
-import type { CampaignFromDb, CampaignMember } from './campaigns/types'
+import type { AuthUser } from './users/authTypes'
+import type { CampaignFromDb, CampaignMember } from '../shared/campaigns/types'
 
 // --- Context enrichment ---
 

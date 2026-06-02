@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import { Edit, Plus, Sword, Trash2, User, Users } from 'lucide-react'
 import { CampaignsContentError } from './campaigns-content-error'
-import type { Campaign } from 'convex/campaigns/types'
+import type { Campaign } from 'shared/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { CampaignDialog } from '~/features/campaigns/components/campaign-dialog'
 import { ContentGrid } from '~/features/campaigns/components/content-grid/content-grid'
@@ -68,7 +68,7 @@ export function CampaignsContent() {
               icon={Sword}
               minHeight="h-64"
             />
-            {[...(campaigns.data ?? [])]
+            {Array.from(campaigns.data ?? [])
               .sort((a, b) => b._creationTime - a._creationTime)
               .map((campaign: Campaign) => {
                 return (

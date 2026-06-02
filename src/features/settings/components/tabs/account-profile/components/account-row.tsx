@@ -3,7 +3,7 @@ import debounce from 'lodash-es/debounce'
 import { toast } from 'sonner'
 import { api } from 'convex/_generated/api'
 import { Camera, Loader2 } from 'lucide-react'
-import type { UserProfile } from 'convex/users/types'
+import type { UserProfile } from 'shared/users/types'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { handleError } from '~/shared/utils/logger'
 import { useFileUpload } from '~/features/file-upload/hooks/useFileUpload'
@@ -108,6 +108,7 @@ export function AccountRow({ profile }: { profile: UserProfile }) {
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        aria-label="Upload profile picture"
         className="hidden"
         onChange={handleFileSelect}
       />

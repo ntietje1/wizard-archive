@@ -1,4 +1,4 @@
-import type { Folder } from 'convex/folders/types'
+import type { Folder } from 'shared/folders/types'
 import { canDropFilesOnTarget } from '~/features/dnd/utils/drop-target-data'
 import { useDndDropTarget } from '~/features/dnd/hooks/useDndDropTarget'
 import { useExternalDropTarget } from '~/features/dnd/hooks/useExternalDropTarget'

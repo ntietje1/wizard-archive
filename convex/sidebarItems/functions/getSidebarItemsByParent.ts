@@ -2,7 +2,7 @@ import { asyncMap } from 'convex-helpers'
 import { SIDEBAR_ITEM_STATUS } from '../../../shared/sidebar-items/types'
 import { enhanceSidebarItem } from './enhanceSidebarItem'
 import { getSidebarItem } from './getSidebarItem'
-import type { AnySidebarItem } from '../types/types'
+import type { AnySidebarItem } from '../../../shared/sidebar-items/model-types'
 import type { Doc, Id } from '../../_generated/dataModel'
 import type { CampaignQueryCtx } from '../../functions'
 

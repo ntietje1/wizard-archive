@@ -9,20 +9,21 @@ import {
 import { MenuDialogs } from '../menu-dialogs'
 import { ContextMenuHost } from './context-menu-host'
 import type { ContextMenuHostRef } from './context-menu-host'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { ViewContext } from '../types'
 import { use, useRef } from 'react'
 import type { Ref } from 'react'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useMapViewOptional } from '~/features/editor/hooks/useMapView'
 import { BlockNoteContextMenuContext } from '~/features/editor/hooks/useBlockNoteContextMenu'
+import type { BlockNoteContextMenuContextType } from '~/features/editor/hooks/useBlockNoteContextMenu'
 import { useSession } from '~/features/sidebar/hooks/useGameSession'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import { resolveClickedSidebarOperationItems } from '~/features/filesystem/filesystem-operation-selection'
 import { useFileSystemReadModel } from '~/features/filesystem/useFileSystemReadModel'
 import { useEditorMode } from '~/features/sidebar/hooks/useEditorMode'
 import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
-import { CAMPAIGN_MEMBER_ROLE } from '~/features/campaigns/campaign-types'
+import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 
 interface EditorContextMenuProps {
   ref?: Ref<ContextMenuHostRef>
@@ -38,6 +39,12 @@ interface EditorContextMenuProps {
   onDialogClose?: () => void
 }
 
+const FILESYSTEM_SELECTION_SURFACES = new Set<ViewContext>([
+  VIEW_CONTEXT.SIDEBAR,
+  VIEW_CONTEXT.FOLDER_VIEW,
+  VIEW_CONTEXT.TRASH_VIEW,
+])
+
 export function EditorContextMenu({
   ref,
   viewContext,
@@ -51,70 +58,13 @@ export function EditorContextMenu({
   onDialogOpen,
   onDialogClose,
 }: EditorContextMenuProps) {
-  const fallbackRef = useRef<ContextMenuHostRef>(null)
-  const hostRef = ref ?? fallbackRef
-  const menuActions = useMenuActions({ onDialogOpen, onDialogClose })
-  const { campaign } = useCampaign()
-  const { currentSession } = useSession()
-  const mapView = useMapViewOptional()
-  const blockNoteContext = use(BlockNoteContextMenuContext)
-  const selectedItemIds = useSidebarUIStore((s) => s.selectedItemIds)
-  const filesystemReadModel = useFileSystemReadModel()
-  const editorMode = useEditorMode()
-  const campaignMembersQuery = useCampaignMembers()
-  const playerMembers =
-    campaignMembersQuery.data?.filter((member) => member.role === CAMPAIGN_MEMBER_ROLE.Player) ?? []
-  // Item selection is intentionally scoped to sidebar, folder, and trash surfaces.
-  // Update this when adding a VIEW_CONTEXT that should share filesystem selection.
-  const canUseItemSelection =
-    viewContext === VIEW_CONTEXT.SIDEBAR ||
-    viewContext === VIEW_CONTEXT.FOLDER_VIEW ||
-    viewContext === VIEW_CONTEXT.TRASH_VIEW
-  const selectedItems = resolveClickedSidebarOperationItems({
+  const { hostRef, menuActions, menu } = useEditorContextMenuModel({
+    ref,
+    viewContext,
     item,
-    selectedItemIds,
-    activeItemsMap: filesystemReadModel.activeItemsById,
-    trashedItemsMap: filesystemReadModel.trashedItemsById,
-    canUseItemSelection,
-  })
-  const primaryItem = selectedItems[0] ?? item
-
-  const menuContext = {
-    surface: viewContext,
-    item,
-    primaryItem,
-    selectedItems,
-    isItemTrashed: item?.isTrashed === true,
-    isTrashView: isTrashView || viewContext === VIEW_CONTEXT.TRASH_VIEW,
-    currentUserId: campaign.data?.myMembership?.userId,
-    memberRole: campaign.data?.myMembership?.role,
-    permissionLevel: item?.myPermissionLevel,
-    activeMap: mapView?.activeMap ?? undefined,
-    activePin: mapView?.activePin ?? undefined,
-    hasActiveSession: !!currentSession.data,
-    editor: blockNoteContext?.editor ?? undefined,
-    blockNoteId: blockNoteContext?.blockNoteId,
-    valueInlineId: blockNoteContext?.valueInlineId,
-    valueInlineInstanceId: blockNoteContext?.valueInlineInstanceId,
-    valueInlineEditable: blockNoteContext?.valueInlineEditable,
-    openValueInline: blockNoteContext?.openValueInline,
-  }
-
-  const menu = buildMenu({
-    context: menuContext,
-    services: {
-      actions: menuActions.actions,
-      filesystem: menuActions.filesystem,
-      editorMode,
-      viewAsPlayer: {
-        viewAsPlayerId: editorMode.viewAsPlayerId,
-        playerMembers,
-        setViewAsPlayerId: editorMode.setViewAsPlayerId,
-      },
-    },
-    contributors: editorContextMenuContributors,
-    commands: editorContextMenuCommands,
-    groupConfig,
+    isTrashView,
+    onDialogOpen,
+    onDialogClose,
   })
 
   return (
@@ -137,4 +87,120 @@ export function EditorContextMenu({
       )}
     </>
   )
+}
+
+function useEditorContextMenuModel({
+  ref,
+  viewContext,
+  item,
+  isTrashView,
+  onDialogOpen,
+  onDialogClose,
+}: {
+  ref?: Ref<ContextMenuHostRef>
+  viewContext: ViewContext
+  item?: AnySidebarItem
+  isTrashView?: boolean
+  onDialogOpen?: () => void
+  onDialogClose?: () => void
+}) {
+  const fallbackRef = useRef<ContextMenuHostRef>(null)
+  const hostRef = ref ?? fallbackRef
+  const menuActions = useMenuActions({ onDialogOpen, onDialogClose })
+  const { campaign } = useCampaign()
+  const { currentSession } = useSession()
+  const mapView = useMapViewOptional()
+  const blockNoteContext = use(BlockNoteContextMenuContext)
+  const selectedItemIds = useSidebarUIStore((s) => s.selectedItemIds)
+  const filesystemReadModel = useFileSystemReadModel()
+  const editorMode = useEditorMode()
+  const campaignMembersQuery = useCampaignMembers()
+  const playerMembers =
+    campaignMembersQuery.data?.filter((member) => member.role === CAMPAIGN_MEMBER_ROLE.Player) ?? []
+  const selectedItems = resolveClickedSidebarOperationItems({
+    item,
+    selectedItemIds,
+    activeItemsMap: filesystemReadModel.activeItemsById,
+    trashedItemsMap: filesystemReadModel.trashedItemsById,
+    canUseItemSelection: canUseItemSelection(viewContext),
+  })
+  const primaryItem = selectedItems[0] ?? item
+
+  const menuContext = buildEditorMenuContext({
+    blockNoteContext,
+    campaign,
+    currentSession,
+    item,
+    isTrashView,
+    mapView,
+    primaryItem,
+    selectedItems,
+    viewContext,
+  })
+
+  const menu = buildMenu({
+    context: menuContext,
+    services: {
+      actions: menuActions.actions,
+      filesystem: menuActions.filesystem,
+      editorMode,
+      viewAsPlayer: {
+        viewAsPlayerId: editorMode.viewAsPlayerId,
+        playerMembers,
+        setViewAsPlayerId: editorMode.setViewAsPlayerId,
+      },
+    },
+    contributors: editorContextMenuContributors,
+    commands: editorContextMenuCommands,
+    groupConfig,
+  })
+
+  return { hostRef, menuActions, menu }
+}
+
+function canUseItemSelection(viewContext: ViewContext) {
+  return FILESYSTEM_SELECTION_SURFACES.has(viewContext)
+}
+
+function buildEditorMenuContext({
+  blockNoteContext,
+  campaign,
+  currentSession,
+  item,
+  isTrashView,
+  mapView,
+  primaryItem,
+  selectedItems,
+  viewContext,
+}: {
+  blockNoteContext: BlockNoteContextMenuContextType | null
+  campaign: ReturnType<typeof useCampaign>['campaign']
+  currentSession: ReturnType<typeof useSession>['currentSession']
+  item?: AnySidebarItem
+  isTrashView?: boolean
+  mapView: ReturnType<typeof useMapViewOptional>
+  primaryItem?: AnySidebarItem
+  selectedItems: Array<AnySidebarItem>
+  viewContext: ViewContext
+}) {
+  return {
+    surface: viewContext,
+    item,
+    primaryItem,
+    selectedItems,
+    isItemTrashed: item?.isTrashed === true,
+    isTrashView: isTrashView || viewContext === VIEW_CONTEXT.TRASH_VIEW,
+    currentUserId: campaign.data?.myMembership?.userId,
+    memberRole: campaign.data?.myMembership?.role,
+    permissionLevel: item?.myPermissionLevel,
+    activeMap: mapView?.activeMap ?? undefined,
+    activePin: mapView?.activePin ?? undefined,
+    hasActiveSession: !!currentSession.data,
+    editor: blockNoteContext?.editor ?? undefined,
+    blockNoteId: blockNoteContext?.blockNoteId,
+    valueInlineId: blockNoteContext?.valueInlineId,
+    valueInlineInstanceId: blockNoteContext?.valueInlineInstanceId,
+    valueInlineEditable: blockNoteContext?.valueInlineEditable,
+    openValueInline: blockNoteContext?.openValueInline,
+  }
 }

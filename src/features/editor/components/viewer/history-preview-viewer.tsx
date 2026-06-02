@@ -1,8 +1,7 @@
-import { useMemo } from 'react'
 import * as Y from 'yjs'
 import { api } from 'convex/_generated/api'
 import { Loader2 } from 'lucide-react'
-import { SNAPSHOT_TYPE } from 'convex/documentSnapshots/schema'
+import { SNAPSHOT_TYPE } from 'shared/document-snapshots/types'
 import { SIDEBAR_ITEM_TYPES } from 'shared/sidebar-items/types'
 import {
   DEFAULT_SIDEBAR_ITEM_COLOR,
@@ -12,7 +11,7 @@ import { HistoryPreviewBanner } from './history-preview-banner'
 import type { Id } from 'convex/_generated/dataModel'
 import type { CustomBlock } from 'shared/editor-blocks/types'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
-import type { GameMapSnapshotData } from 'convex/gameMaps/types'
+import type { GameMapSnapshotData } from 'shared/game-maps/types'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'
 import { useCampaignQuery } from '~/shared/hooks/useCampaignQuery'
 import { CanvasReadOnlyPreview } from '~/features/canvas/components/canvas-read-only-preview'
@@ -21,8 +20,53 @@ import { NoteContent } from '~/features/editor/components/note-content'
 import { ScrollArea } from '~/features/shadcn/components/scroll-area'
 import { PinMarker } from '~/features/editor/components/viewer/map/pin-marker'
 import { resolvePinIcon } from '~/features/editor/components/viewer/map/pin-utils'
-import { yDocToBlocks } from '~/features/editor/blocknote-yjs'
+import { yDocToBlocks } from 'shared/editor-blocks/blocknote-yjs'
 import { logger } from '~/shared/utils/logger'
+
+function readNoteYjsSnapshot(data: ArrayBuffer): Array<CustomBlock> {
+  const doc = new Y.Doc()
+  try {
+    Y.applyUpdate(doc, new Uint8Array(data))
+    return yDocToBlocks(doc, 'document')
+  } catch (error) {
+    logger.error('Failed to parse note snapshot:', error)
+    return []
+  } finally {
+    doc.destroy()
+  }
+}
+
+function readCanvasSnapshot(data: ArrayBuffer): {
+  nodes: Array<CanvasDocumentNode>
+  edges: Array<CanvasDocumentEdge>
+} {
+  const doc = new Y.Doc()
+  try {
+    Y.applyUpdate(doc, new Uint8Array(data))
+
+    const nodesMap = doc.getMap<CanvasDocumentNode>('nodes')
+    const edgesMap = doc.getMap<CanvasDocumentEdge>('edges')
+
+    return {
+      nodes: Array.from(nodesMap.values()),
+      edges: Array.from(edgesMap.values()),
+    }
+  } catch (error) {
+    logger.error('Failed to parse canvas snapshot:', error)
+    return { nodes: [], edges: [] }
+  } finally {
+    doc.destroy()
+  }
+}
+
+function readGameMapSnapshot(data: ArrayBuffer): GameMapSnapshotData | null {
+  try {
+    return JSON.parse(new TextDecoder().decode(data))
+  } catch (error) {
+    logger.error('Failed to parse game map snapshot data:', error)
+    return null
+  }
+}
 
 export function HistoryPreviewViewer({ entryId }: { entryId: Id<'editHistory'> }) {
   const snapshotQuery = useCampaignQuery(api.documentSnapshots.queries.getSnapshotForHistoryEntry, {
@@ -101,18 +145,7 @@ function NoteYjsSnapshotPreview({
   noteId: Id<'sidebarItems'>
   data: ArrayBuffer
 }) {
-  const blocks = useMemo(() => {
-    const doc = new Y.Doc()
-    try {
-      Y.applyUpdate(doc, new Uint8Array(data))
-      return yDocToBlocks(doc, 'document')
-    } catch (error) {
-      logger.error('Failed to parse note snapshot:', error)
-      return [] as Array<CustomBlock>
-    } finally {
-      doc.destroy()
-    }
-  }, [data])
+  const blocks = readNoteYjsSnapshot(data)
 
   return (
     <ScrollArea className="flex-1 min-h-0">
@@ -127,28 +160,7 @@ function NoteYjsSnapshotPreview({
 }
 
 function CanvasSnapshotPreview({ data }: { data: ArrayBuffer }) {
-  const { nodes, edges } = useMemo(() => {
-    const doc = new Y.Doc()
-    try {
-      Y.applyUpdate(doc, new Uint8Array(data))
-
-      const nodesMap = doc.getMap<CanvasDocumentNode>('nodes')
-      const edgesMap = doc.getMap<CanvasDocumentEdge>('edges')
-
-      const parsedNodes = Array.from(nodesMap.values())
-      const parsedEdges = Array.from(edgesMap.values())
-
-      return { nodes: parsedNodes, edges: parsedEdges }
-    } catch (error) {
-      logger.error('Failed to parse canvas snapshot:', error)
-      return {
-        nodes: [] as Array<CanvasDocumentNode>,
-        edges: [] as Array<CanvasDocumentEdge>,
-      }
-    } finally {
-      doc.destroy()
-    }
-  }, [data])
+  const { nodes, edges } = readCanvasSnapshot(data)
 
   return (
     <div className="flex-1 min-h-0">
@@ -158,14 +170,7 @@ function CanvasSnapshotPreview({ data }: { data: ArrayBuffer }) {
 }
 
 function GameMapSnapshotPreview({ data }: { data: ArrayBuffer }) {
-  const snapshotData = useMemo<GameMapSnapshotData | null>(() => {
-    try {
-      return JSON.parse(new TextDecoder().decode(data))
-    } catch (error) {
-      logger.error('Failed to parse game map snapshot data:', error)
-      return null
-    }
-  }, [data])
+  const snapshotData = readGameMapSnapshot(data)
 
   const imageUrl = useAuthQuery(
     api.storage.queries.getDownloadUrl,

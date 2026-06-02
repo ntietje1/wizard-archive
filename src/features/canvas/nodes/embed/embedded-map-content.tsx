@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { Loader2 } from 'lucide-react'
-import type { GameMapWithContent } from 'convex/gameMaps/types'
+import type { GameMapWithContent } from 'shared/game-maps/types'
 import { MapPinsLayer } from '~/features/editor/components/viewer/map/map-pins-layer'
 import { useMapImageStatus } from '~/features/editor/components/viewer/map/use-map-image-status'
 import { MapImagePreview } from '~/features/editor/components/viewer/map/map-image-preview'

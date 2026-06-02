@@ -1,4 +1,4 @@
-import { EDIT_HISTORY_ACTION } from './types'
+import { EDIT_HISTORY_ACTION } from '../../shared/edit-history/types'
 import type { Doc, Id } from '../_generated/dataModel'
 import type { MutationCtx } from '../_generated/server'
 import type {
@@ -6,7 +6,7 @@ import type {
   EditHistoryChange,
   EditHistoryMetadataMap,
   LogEditHistoryArgs,
-} from './types'
+} from '../../shared/edit-history/types'
 import type { SidebarItemType } from '../../shared/sidebar-items/types'
 
 type EditHistoryCtx = Pick<MutationCtx, 'db'> & {

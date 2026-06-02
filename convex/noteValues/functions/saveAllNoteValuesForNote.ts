@@ -12,7 +12,7 @@ import { extractNoteValueDefinitions } from '../../../shared/note-values/extract
 import type { Id } from '../../_generated/dataModel'
 import type { MutationCtx } from '../../_generated/server'
 import type { CustomBlock } from '../../../shared/editor-blocks/types'
-import type { AnySidebarItemRow } from '../../sidebarItems/types/types'
+import type { AnySidebarItemRow } from '../../../shared/sidebar-items/model-types'
 import type {
   FormulaReferenceToken,
   NoteValueAuthoringDefinition,

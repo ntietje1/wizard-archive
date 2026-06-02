@@ -7,7 +7,7 @@ import {
 } from 'shared/links/resolution'
 import type { Heading, HeadingLevel } from 'shared/editor-blocks/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { NoteValueRuntimeState } from '../../../../../../shared/note-values/types'
 import { buildBreadcrumbs, getItemTypeLabel } from '~/features/sidebar/utils/sidebar-item-utils'
 import { filterSuggestionItems } from '~/features/editor/utils/filter-suggestion-items'

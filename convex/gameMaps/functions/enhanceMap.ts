@@ -9,8 +9,17 @@ import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import { enhanceNote } from '../../notes/functions/enhanceNote'
 import { assertNever } from '../../common/types'
 import type { CampaignQueryCtx } from '../../functions'
-import type { AnySidebarItem, AnySidebarItemFromDb } from '../../sidebarItems/types/types'
-import type { GameMap, GameMapFromDb, GameMapWithContent, MapPin, MapPinWithItem } from '../types'
+import type {
+  AnySidebarItem,
+  AnySidebarItemFromDb,
+} from '../../../shared/sidebar-items/model-types'
+import type {
+  GameMap,
+  GameMapFromDb,
+  GameMapWithContent,
+  MapPin,
+  MapPinWithItem,
+} from '../../../shared/game-maps/types'
 
 export const enhanceGameMap = async (
   ctx: CampaignQueryCtx,

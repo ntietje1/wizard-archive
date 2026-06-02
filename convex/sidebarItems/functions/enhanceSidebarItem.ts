@@ -10,7 +10,7 @@ import type {
   AnySidebarItemFromDb,
   EnhancedSidebarItem,
   WithContentSidebarItem,
-} from '../types/types'
+} from '../../../shared/sidebar-items/model-types'
 import type { CampaignQueryCtx } from '../../functions'
 
 export async function enhanceSidebarItem<T extends AnySidebarItemFromDb>(

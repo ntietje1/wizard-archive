@@ -1,5 +1,5 @@
 import { createContext } from 'react'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { CustomBlockNoteEditor } from '~/features/editor/editor-specs'
 import type { ViewContext } from '~/features/context-menu/types'
 import type { BlockNoteId } from 'shared/editor-blocks/types'
@@ -14,7 +14,7 @@ export interface BlockNoteContextMenuEvent {
   valueInlineEditable?: boolean
 }
 
-interface BlockNoteContextMenuContextType {
+export interface BlockNoteContextMenuContextType {
   editor: CustomBlockNoteEditor | null
   setEditor: (editor: CustomBlockNoteEditor | null) => void
   blockNoteId: BlockNoteId | undefined

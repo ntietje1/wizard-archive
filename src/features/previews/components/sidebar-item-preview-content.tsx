@@ -5,7 +5,7 @@ import { MapImagePreview } from '~/features/editor/components/viewer/map/map-ima
 import { FilePreview } from '~/features/editor/components/viewer/file/file-preview'
 import { assertNever } from '~/shared/utils/utils'
 import { CanvasThumbnailPreview } from './canvas-thumbnail-preview'
-import type { AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
 
 export function SidebarItemPreviewContent({ item }: { item: AnySidebarItemWithContent }) {
   switch (item.type) {

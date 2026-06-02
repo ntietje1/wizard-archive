@@ -13,7 +13,7 @@ import {
 import { deduplicateName } from 'shared/sidebar-items/default-name'
 import { assertSidebarItemName } from 'shared/sidebar-items/name'
 import type { Id } from 'convex/_generated/dataModel'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type {
   CopyFileSystemCommand,
   CreateFileSystemCommand,

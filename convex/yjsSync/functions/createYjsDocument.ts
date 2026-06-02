@@ -1,5 +1,5 @@
 import type { MutationCtx } from '../../_generated/server'
-import type { YjsDocumentId } from './types'
+import type { YjsDocumentId } from '../../../shared/yjs-sync/types'
 
 const EMPTY_YJS_UPDATE = new Uint8Array([0, 0]).buffer as ArrayBuffer
 

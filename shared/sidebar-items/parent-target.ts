@@ -1,4 +1,5 @@
-import type { SidebarItemId, AnySidebarItem } from './filesystem/types'
+import type { SidebarItemId } from '../common/ids'
+import type { AnySidebarItem } from './model-types'
 import { isPromiseLike } from '../common/async'
 import type { MaybePromise } from '../common/async'
 import { assertSidebarItemName, checkNameConflict, validateItemName } from './name'
@@ -23,13 +24,9 @@ type BaseCreateParentTarget<TSegment> =
 
 export type CreateParentTarget = BaseCreateParentTarget<string>
 
-export type ParentPathSegment = SidebarItemName | '.' | '..'
+type ParentPathSegment = SidebarItemName | '.' | '..'
 
 export type ParsedCreateParentTarget = BaseCreateParentTarget<ParentPathSegment>
-
-export type CreateItemParentArgs = {
-  parentTarget: CreateParentTarget
-}
 
 const VIRTUAL_PARENT = Symbol('virtual-parent')
 

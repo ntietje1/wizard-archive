@@ -2,10 +2,10 @@ import {
   CAMPAIGN_MEMBER_ROLE,
   CAMPAIGN_MEMBER_STATUS,
   CAMPAIGN_STATUS,
-} from '~/features/campaigns/campaign-types'
+} from 'shared/campaigns/types'
 import { assertCampaignSlug } from 'shared/campaigns/validation'
 import { createUser } from './user-factory'
-import type { Campaign, CampaignMember } from 'convex/campaigns/types'
+import type { Campaign, CampaignMember } from 'shared/campaigns/types'
 import { testId } from '~/test/helpers/test-id'
 
 let campaignCounter = 0

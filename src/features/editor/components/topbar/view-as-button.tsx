@@ -1,4 +1,4 @@
-import { CAMPAIGN_MEMBER_ROLE } from '~/features/campaigns/campaign-types'
+import { CAMPAIGN_MEMBER_ROLE } from 'shared/campaigns/types'
 import { Eye } from 'lucide-react'
 import { useState } from 'react'
 import { EmptyContextMenu } from '~/features/context-menu/components/empty-context-menu'

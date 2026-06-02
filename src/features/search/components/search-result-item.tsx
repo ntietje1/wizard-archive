@@ -24,11 +24,11 @@ export function SearchResultItem({
   onMouseEnter,
 }: SearchResultItemProps) {
   return (
-    <div
+    <button
+      type="button"
       id={id}
-      role="option"
-      aria-selected={isSelected}
-      className={`flex items-start gap-2 rounded-lg px-2 py-1.5 cursor-default select-none ${
+      aria-current={isSelected ? 'true' : undefined}
+      className={`flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left cursor-default select-none ${
         isSelected ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'
       }`}
       onClick={onClick}
@@ -49,6 +49,6 @@ export function SearchResultItem({
           <div className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{detail}</div>
         )}
       </div>
-    </div>
+    </button>
   )
 }

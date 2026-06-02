@@ -1,7 +1,7 @@
 import type { SidebarItemPatchRow } from './types'
 import type { SidebarItemFieldPatch, SidebarItemPatchFields } from './receipts'
 
-export const SIDEBAR_ITEM_PATCH_FIELD_KEYS = [
+const SIDEBAR_ITEM_PATCH_FIELD_KEYS = [
   'name',
   'slug',
   'iconName',
@@ -76,7 +76,7 @@ export function setPatchField(
   }
 }
 
-export function sidebarItemPatchFields(item: SidebarItemPatchSource): SidebarItemPatchFields {
+function sidebarItemPatchFields(item: SidebarItemPatchSource): SidebarItemPatchFields {
   const fields: SidebarItemFieldPatch = {}
   for (const key of SIDEBAR_ITEM_PATCH_FIELD_KEYS) {
     setPatchField(fields, key, item[key])

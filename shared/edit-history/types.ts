@@ -1,17 +1,17 @@
 import { CANVAS_HISTORY_ACTION } from '../canvases/types'
 import { FILE_HISTORY_ACTION } from '../files/types'
 import { FOLDER_HISTORY_ACTION } from '../folders/types'
-import { MAP_HISTORY_ACTION } from '../gameMaps/types'
+import { MAP_HISTORY_ACTION } from '../game-maps/types'
 import { NOTE_HISTORY_ACTION } from '../notes/types'
 import type { CanvasHistoryMetadataMap } from '../canvases/types'
+import type { CampaignId, CampaignMemberId, EditHistoryId, SidebarItemId } from '../common/ids'
 import type { FileHistoryMetadataMap } from '../files/types'
 import type { FolderHistoryMetadataMap } from '../folders/types'
-import type { Id } from '../_generated/dataModel'
-import type { MapHistoryMetadataMap } from '../gameMaps/types'
+import type { MapHistoryMetadataMap } from '../game-maps/types'
 import type { NoteHistoryMetadataMap } from '../notes/types'
-import type { SidebarItemType } from '../../shared/sidebar-items/types'
+import type { SidebarItemType } from '../sidebar-items/types'
 
-export const SHARED_HISTORY_ACTION = {
+const SHARED_HISTORY_ACTION = {
   created: 'created',
   copied: 'copied',
   renamed: 'renamed',
@@ -28,9 +28,9 @@ export const SHARED_HISTORY_ACTION = {
   inherit_shares_changed: 'inherit_shares_changed',
 } as const
 
-export type SharedHistoryMetadataMap = {
+type SharedHistoryMetadataMap = {
   created: null
-  copied: { copiedFromItemId: Id<'sidebarItems'>; copiedFromName: string }
+  copied: { copiedFromItemId: SidebarItemId; copiedFromName: string }
   renamed: { from: string; to: string }
   moved: { from: string | null; to: string | null }
   trashed: null
@@ -38,7 +38,7 @@ export type SharedHistoryMetadataMap = {
   icon_changed: { from: string | null; to: string | null }
   color_changed: { from: string | null; to: string | null }
   content_edited: null
-  rolled_back: { restoredFromHistoryEntryId: Id<'editHistory'> }
+  rolled_back: { restoredFromHistoryEntryId: EditHistoryId }
   updated: { changes: Array<EditHistoryChange> }
   permission_changed: {
     memberName: string | null
@@ -47,7 +47,7 @@ export type SharedHistoryMetadataMap = {
   }
   block_share_changed: {
     status: string
-    campaignMemberId?: Id<'campaignMembers'>
+    campaignMemberId?: CampaignMemberId
     blockCount?: number
   }
   inherit_shares_changed: {
@@ -83,12 +83,12 @@ export type EditHistoryChange = {
 
 export type EditHistoryEntry = {
   [K in EditHistoryAction]: {
-    _id: Id<'editHistory'>
+    _id: EditHistoryId
     _creationTime: number
-    itemId: Id<'sidebarItems'>
+    itemId: SidebarItemId
     itemType: SidebarItemType
-    campaignId: Id<'campaigns'>
-    campaignMemberId: Id<'campaignMembers'>
+    campaignId: CampaignId
+    campaignMemberId: CampaignMemberId
     action: K
     metadata: EditHistoryMetadataMap[K]
     hasSnapshot: boolean
@@ -97,7 +97,7 @@ export type EditHistoryEntry = {
 
 export type LogEditHistoryArgs = {
   [K in EditHistoryAction]: {
-    itemId: Id<'sidebarItems'>
+    itemId: SidebarItemId
     itemType: SidebarItemType
     action: K
   } & (EditHistoryMetadataMap[K] extends null

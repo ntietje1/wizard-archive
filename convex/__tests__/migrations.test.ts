@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getSidebarItemLifecycleMigrationPatch } from '../migrations'
+import { getSidebarItemLifecycleMigrationPatch } from '../sidebarItems/lifecycleMigration'
 
 describe('migrations', () => {
   describe('getSidebarItemLifecycleMigrationPatch', () => {

@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from 'convex/_generated/api'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { SIDEBAR_ITEMS_VIEW } from './useSidebarItems'
 import type { SidebarItemsView } from './useSidebarItems'

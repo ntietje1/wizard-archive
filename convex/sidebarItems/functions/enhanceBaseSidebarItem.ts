@@ -8,8 +8,11 @@ import {
   isTrashedSidebarItem,
   normalizeSidebarItemLifecycle,
 } from '../types/status'
-import type { AnySidebarItemRow } from '../types/types'
-import type { EnhanceSidebarItem, NormalizeSidebarItem } from '../types/baseTypes'
+import type {
+  AnySidebarItemRow,
+  EnhanceSidebarItem,
+  NormalizeSidebarItem,
+} from '../../../shared/sidebar-items/model-types'
 import type { CampaignQueryCtx } from '../../functions'
 
 function normalizeSidebarItemFields<T extends AnySidebarItemRow>(item: T): NormalizeSidebarItem<T> {

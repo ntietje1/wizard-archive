@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Loader2 } from 'lucide-react'
-import type { FileWithContent } from 'convex/files/types'
+import type { FileWithContent } from 'shared/files/types'
 import { FilePreview } from '~/features/editor/components/viewer/file/file-preview'
 import { resolveFilePreviewImageUrl } from '~/features/editor/components/viewer/file/file-preview-source'
 import {

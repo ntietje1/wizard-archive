@@ -1,4 +1,4 @@
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { SharePermissionMenu } from './share-permission-menu'
 import { useCampaign } from '~/features/campaigns/hooks/useCampaign'
 import { useSidebarItemsShare } from '~/features/sharing/hooks/useSidebarItemsShare'

@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import type { NoteWithContent } from 'convex/notes/types'
+import type { NoteWithContent } from 'shared/notes/types'
 import { createNote } from '~/test/factories/sidebar-item-factory'
 import { SidebarItemEditor } from '../sidebar-item-editor'
 

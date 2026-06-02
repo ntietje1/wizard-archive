@@ -4,7 +4,7 @@ import { createNote } from '~/test/factories/sidebar-item-factory'
 import { testId } from '~/test/helpers/test-id'
 import { useSidebarItemAvailabilityState } from '../useSidebarItemAvailabilityState'
 import type { Id } from 'convex/_generated/dataModel'
-import type { NoteWithContent } from 'convex/notes/types'
+import type { NoteWithContent } from 'shared/notes/types'
 
 const activeItemsState = vi.hoisted(() => ({
   data: [] as Array<Record<string, unknown>>,

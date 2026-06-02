@@ -8,7 +8,7 @@ import {
   isPathUnique,
   getMinDisambiguationPath,
 } from '../../../shared/links/resolution'
-import type { AnySidebarItem } from '../../sidebarItems/types/types'
+import type { AnySidebarItem } from '../../../shared/sidebar-items/model-types'
 import type { Id } from '../../_generated/dataModel'
 import { assertSidebarItemName } from '../../sidebarItems/validation/name'
 import { assertSidebarItemSlug } from '../../sidebarItems/validation/slug'

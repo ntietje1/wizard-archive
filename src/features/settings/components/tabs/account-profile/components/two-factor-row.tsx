@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { SettingsRow } from './settings-row'
-import type { UserProfile } from 'convex/users/types'
+import type { UserProfile } from 'shared/users/types'
 import { authClient } from '~/features/auth/utils/auth-client'
 import { Button } from '~/features/shadcn/components/button'
 import { Input } from '~/features/shadcn/components/input'
@@ -62,7 +62,7 @@ function DisableTwoFactorDialog({ onClose }: { onClose: () => void }) {
       </div>
       <DialogFooter showCloseButton>
         <Button variant="destructive" onClick={handleDisable} disabled={isDisabling}>
-          {isDisabling ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Disable 2FA'}
+          {isDisabling ? <Loader2 className="size-4 animate-spin" /> : 'Disable 2FA'}
         </Button>
       </DialogFooter>
     </>

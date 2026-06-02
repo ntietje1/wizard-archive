@@ -3,7 +3,7 @@ import { useCampaignMembers } from '~/features/players/hooks/useCampaignMembers'
 import { useActiveSidebarItems } from '~/features/sidebar/hooks/useSidebarItems'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import type { Id } from 'convex/_generated/dataModel'
-import type { AnySidebarItem, AnySidebarItemWithContent } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem, AnySidebarItemWithContent } from 'shared/sidebar-items/model-types'
 import { getCampaignMemberDisplayName } from '~/shared/utils/user-display-name'
 
 type SidebarItemAvailabilitySubject = 'item' | 'page'

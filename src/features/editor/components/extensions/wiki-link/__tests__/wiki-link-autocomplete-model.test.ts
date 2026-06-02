@@ -11,7 +11,7 @@ import {
 } from '../wiki-link-autocomplete-model'
 import type { Heading } from 'shared/editor-blocks/types'
 import type { Id } from 'convex/_generated/dataModel'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 
 function modelFor(
   query: string,

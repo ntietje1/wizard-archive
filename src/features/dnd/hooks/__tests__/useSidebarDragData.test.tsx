@@ -1,6 +1,6 @@
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { useSidebarDragData } from '~/features/dnd/hooks/useSidebarDragData'
 import { useSidebarUIStore } from '~/features/sidebar/stores/sidebar-ui-store'
 import {

@@ -58,7 +58,6 @@ import type * as campaigns_functions_updateCampaign from "../campaigns/functions
 import type * as campaigns_functions_updateCampaignMemberStatus from "../campaigns/functions/updateCampaignMemberStatus.js";
 import type * as campaigns_mutations from "../campaigns/mutations.js";
 import type * as campaigns_queries from "../campaigns/queries.js";
-import type * as campaigns_types from "../campaigns/types.js";
 import type * as campaigns_validation from "../campaigns/validation.js";
 import type * as canvases_baseSchema from "../canvases/baseSchema.js";
 import type * as canvases_functions_canvasCompanion from "../canvases/functions/canvasCompanion.js";
@@ -66,9 +65,7 @@ import type * as canvases_functions_enhanceCanvas from "../canvases/functions/en
 import type * as canvases_functions_getCanvasForDownload from "../canvases/functions/getCanvasForDownload.js";
 import type * as canvases_functions_rollbackCanvas from "../canvases/functions/rollbackCanvas.js";
 import type * as canvases_triggers from "../canvases/triggers.js";
-import type * as canvases_types from "../canvases/types.js";
 import type * as common_async from "../common/async.js";
-import type * as common_constants from "../common/constants.js";
 import type * as common_logger from "../common/logger.js";
 import type * as common_slug from "../common/slug.js";
 import type * as common_types from "../common/types.js";
@@ -81,7 +78,6 @@ import type * as documentSnapshots_queries from "../documentSnapshots/queries.js
 import type * as documentSnapshots_types from "../documentSnapshots/types.js";
 import type * as editHistory_log from "../editHistory/log.js";
 import type * as editHistory_queries from "../editHistory/queries.js";
-import type * as editHistory_types from "../editHistory/types.js";
 import type * as editors_functions_getCurrentEditor from "../editors/functions/getCurrentEditor.js";
 import type * as editors_functions_setCurrentEditor from "../editors/functions/setCurrentEditor.js";
 import type * as editors_mutations from "../editors/mutations.js";
@@ -97,7 +93,6 @@ import type * as files_functions_updateFile from "../files/functions/updateFile.
 import type * as files_mutations from "../files/mutations.js";
 import type * as files_queries from "../files/queries.js";
 import type * as files_triggers from "../files/triggers.js";
-import type * as files_types from "../files/types.js";
 import type * as folders_baseSchema from "../folders/baseSchema.js";
 import type * as folders_functions_enhanceFolder from "../folders/functions/enhanceFolder.js";
 import type * as folders_functions_folderCompanion from "../folders/functions/folderCompanion.js";
@@ -105,7 +100,6 @@ import type * as folders_functions_getItemsForDownload from "../folders/function
 import type * as folders_functions_getSidebarItemAncestors from "../folders/functions/getSidebarItemAncestors.js";
 import type * as folders_queries from "../folders/queries.js";
 import type * as folders_triggers from "../folders/triggers.js";
-import type * as folders_types from "../folders/types.js";
 import type * as functions from "../functions.js";
 import type * as gameMaps_baseSchema from "../gameMaps/baseSchema.js";
 import type * as gameMaps_functions_captureGameMapSnapshot from "../gameMaps/functions/captureGameMapSnapshot.js";
@@ -122,8 +116,6 @@ import type * as gameMaps_functions_updatePinVisibility from "../gameMaps/functi
 import type * as gameMaps_mutations from "../gameMaps/mutations.js";
 import type * as gameMaps_queries from "../gameMaps/queries.js";
 import type * as gameMaps_triggers from "../gameMaps/triggers.js";
-import type * as gameMaps_types from "../gameMaps/types.js";
-import type * as gameMaps_validation from "../gameMaps/validation.js";
 import type * as http from "../http.js";
 import type * as httpBridge from "../httpBridge.js";
 import type * as links_functions_getBacklinksForItem from "../links/functions/getBacklinksForItem.js";
@@ -149,7 +141,6 @@ import type * as notes_internalMutations from "../notes/internalMutations.js";
 import type * as notes_internalQueries from "../notes/internalQueries.js";
 import type * as notes_queries from "../notes/queries.js";
 import type * as notes_triggers from "../notes/triggers.js";
-import type * as notes_types from "../notes/types.js";
 import type * as sessions_functions_endCurrentSession from "../sessions/functions/endCurrentSession.js";
 import type * as sessions_functions_getCurrentSession from "../sessions/functions/getCurrentSession.js";
 import type * as sessions_functions_getSession from "../sessions/functions/getSession.js";
@@ -159,7 +150,6 @@ import type * as sessions_functions_startSession from "../sessions/functions/sta
 import type * as sessions_functions_updateSession from "../sessions/functions/updateSession.js";
 import type * as sessions_mutations from "../sessions/mutations.js";
 import type * as sessions_queries from "../sessions/queries.js";
-import type * as sessions_types from "../sessions/types.js";
 import type * as sidebarItems_filesystem___tests___testSidebarItem from "../sidebarItems/filesystem/__tests__/testSidebarItem.js";
 import type * as sidebarItems_filesystem_access from "../sidebarItems/filesystem/access.js";
 import type * as sidebarItems_filesystem_ancestors from "../sidebarItems/filesystem/ancestors.js";
@@ -195,6 +185,7 @@ import type * as sidebarItems_functions_getSidebarItemsByParent from "../sidebar
 import type * as sidebarItems_functions_purgeExpiredTrash from "../sidebarItems/functions/purgeExpiredTrash.js";
 import type * as sidebarItems_functions_setPreviewImage from "../sidebarItems/functions/setPreviewImage.js";
 import type * as sidebarItems_internalMutations from "../sidebarItems/internalMutations.js";
+import type * as sidebarItems_lifecycleMigration from "../sidebarItems/lifecycleMigration.js";
 import type * as sidebarItems_mutations from "../sidebarItems/mutations.js";
 import type * as sidebarItems_queries from "../sidebarItems/queries.js";
 import type * as sidebarItems_schema_anySidebarItemValidator from "../sidebarItems/schema/anySidebarItemValidator.js";
@@ -204,9 +195,7 @@ import type * as sidebarItems_schema_sidebarItemsTable from "../sidebarItems/sch
 import type * as sidebarItems_schema_validators from "../sidebarItems/schema/validators.js";
 import type * as sidebarItems_triggerTypes from "../sidebarItems/triggerTypes.js";
 import type * as sidebarItems_triggers from "../sidebarItems/triggers.js";
-import type * as sidebarItems_types_baseTypes from "../sidebarItems/types/baseTypes.js";
 import type * as sidebarItems_types_status from "../sidebarItems/types/status.js";
-import type * as sidebarItems_types_types from "../sidebarItems/types/types.js";
 import type * as sidebarItems_validation_access from "../sidebarItems/validation/access.js";
 import type * as sidebarItems_validation_name from "../sidebarItems/validation/name.js";
 import type * as sidebarItems_validation_orchestration from "../sidebarItems/validation/orchestration.js";
@@ -219,7 +208,6 @@ import type * as sidebarShares_functions_sidebarItemPermissions from "../sidebar
 import type * as sidebarShares_functions_sidebarItemShareMutations from "../sidebarShares/functions/sidebarItemShareMutations.js";
 import type * as sidebarShares_mutations from "../sidebarShares/mutations.js";
 import type * as sidebarShares_queries from "../sidebarShares/queries.js";
-import type * as sidebarShares_types from "../sidebarShares/types.js";
 import type * as storage_functions_commitUpload from "../storage/functions/commitUpload.js";
 import type * as storage_functions_getDownloadUrl from "../storage/functions/getDownloadUrl.js";
 import type * as storage_functions_getStorageMetadata from "../storage/functions/getStorageMetadata.js";
@@ -231,12 +219,12 @@ import type * as triggers from "../triggers.js";
 import type * as userPreferences_mutations from "../userPreferences/mutations.js";
 import type * as userPreferences_queries from "../userPreferences/queries.js";
 import type * as userPreferences_types from "../userPreferences/types.js";
+import type * as users_authTypes from "../users/authTypes.js";
 import type * as users_constants from "../users/constants.js";
 import type * as users_functions_checkUsernameExists from "../users/functions/checkUsernameExists.js";
 import type * as users_functions_getUserProfile from "../users/functions/getUserProfile.js";
 import type * as users_mutations from "../users/mutations.js";
 import type * as users_queries from "../users/queries.js";
-import type * as users_types from "../users/types.js";
 import type * as users_validation from "../users/validation.js";
 import type * as yjsSync__yjsNode from "../yjsSync/_yjsNode.js";
 import type * as yjsSync_constants from "../yjsSync/constants.js";
@@ -245,7 +233,6 @@ import type * as yjsSync_functions_copyYjsUpdates from "../yjsSync/functions/cop
 import type * as yjsSync_functions_createYjsDocument from "../yjsSync/functions/createYjsDocument.js";
 import type * as yjsSync_functions_deleteYjsDocument from "../yjsSync/functions/deleteYjsDocument.js";
 import type * as yjsSync_functions_rollbackYjsDocument from "../yjsSync/functions/rollbackYjsDocument.js";
-import type * as yjsSync_functions_types from "../yjsSync/functions/types.js";
 import type * as yjsSync_functions_uint8ToArrayBuffer from "../yjsSync/functions/uint8ToArrayBuffer.js";
 import type * as yjsSync_internalActions from "../yjsSync/internalActions.js";
 import type * as yjsSync_internalMutations from "../yjsSync/internalMutations.js";
@@ -310,7 +297,6 @@ declare const fullApi: ApiFromModules<{
   "campaigns/functions/updateCampaignMemberStatus": typeof campaigns_functions_updateCampaignMemberStatus;
   "campaigns/mutations": typeof campaigns_mutations;
   "campaigns/queries": typeof campaigns_queries;
-  "campaigns/types": typeof campaigns_types;
   "campaigns/validation": typeof campaigns_validation;
   "canvases/baseSchema": typeof canvases_baseSchema;
   "canvases/functions/canvasCompanion": typeof canvases_functions_canvasCompanion;
@@ -318,9 +304,7 @@ declare const fullApi: ApiFromModules<{
   "canvases/functions/getCanvasForDownload": typeof canvases_functions_getCanvasForDownload;
   "canvases/functions/rollbackCanvas": typeof canvases_functions_rollbackCanvas;
   "canvases/triggers": typeof canvases_triggers;
-  "canvases/types": typeof canvases_types;
   "common/async": typeof common_async;
-  "common/constants": typeof common_constants;
   "common/logger": typeof common_logger;
   "common/slug": typeof common_slug;
   "common/types": typeof common_types;
@@ -333,7 +317,6 @@ declare const fullApi: ApiFromModules<{
   "documentSnapshots/types": typeof documentSnapshots_types;
   "editHistory/log": typeof editHistory_log;
   "editHistory/queries": typeof editHistory_queries;
-  "editHistory/types": typeof editHistory_types;
   "editors/functions/getCurrentEditor": typeof editors_functions_getCurrentEditor;
   "editors/functions/setCurrentEditor": typeof editors_functions_setCurrentEditor;
   "editors/mutations": typeof editors_mutations;
@@ -349,7 +332,6 @@ declare const fullApi: ApiFromModules<{
   "files/mutations": typeof files_mutations;
   "files/queries": typeof files_queries;
   "files/triggers": typeof files_triggers;
-  "files/types": typeof files_types;
   "folders/baseSchema": typeof folders_baseSchema;
   "folders/functions/enhanceFolder": typeof folders_functions_enhanceFolder;
   "folders/functions/folderCompanion": typeof folders_functions_folderCompanion;
@@ -357,7 +339,6 @@ declare const fullApi: ApiFromModules<{
   "folders/functions/getSidebarItemAncestors": typeof folders_functions_getSidebarItemAncestors;
   "folders/queries": typeof folders_queries;
   "folders/triggers": typeof folders_triggers;
-  "folders/types": typeof folders_types;
   functions: typeof functions;
   "gameMaps/baseSchema": typeof gameMaps_baseSchema;
   "gameMaps/functions/captureGameMapSnapshot": typeof gameMaps_functions_captureGameMapSnapshot;
@@ -374,8 +355,6 @@ declare const fullApi: ApiFromModules<{
   "gameMaps/mutations": typeof gameMaps_mutations;
   "gameMaps/queries": typeof gameMaps_queries;
   "gameMaps/triggers": typeof gameMaps_triggers;
-  "gameMaps/types": typeof gameMaps_types;
-  "gameMaps/validation": typeof gameMaps_validation;
   http: typeof http;
   httpBridge: typeof httpBridge;
   "links/functions/getBacklinksForItem": typeof links_functions_getBacklinksForItem;
@@ -401,7 +380,6 @@ declare const fullApi: ApiFromModules<{
   "notes/internalQueries": typeof notes_internalQueries;
   "notes/queries": typeof notes_queries;
   "notes/triggers": typeof notes_triggers;
-  "notes/types": typeof notes_types;
   "sessions/functions/endCurrentSession": typeof sessions_functions_endCurrentSession;
   "sessions/functions/getCurrentSession": typeof sessions_functions_getCurrentSession;
   "sessions/functions/getSession": typeof sessions_functions_getSession;
@@ -411,7 +389,6 @@ declare const fullApi: ApiFromModules<{
   "sessions/functions/updateSession": typeof sessions_functions_updateSession;
   "sessions/mutations": typeof sessions_mutations;
   "sessions/queries": typeof sessions_queries;
-  "sessions/types": typeof sessions_types;
   "sidebarItems/filesystem/__tests__/testSidebarItem": typeof sidebarItems_filesystem___tests___testSidebarItem;
   "sidebarItems/filesystem/access": typeof sidebarItems_filesystem_access;
   "sidebarItems/filesystem/ancestors": typeof sidebarItems_filesystem_ancestors;
@@ -447,6 +424,7 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/functions/purgeExpiredTrash": typeof sidebarItems_functions_purgeExpiredTrash;
   "sidebarItems/functions/setPreviewImage": typeof sidebarItems_functions_setPreviewImage;
   "sidebarItems/internalMutations": typeof sidebarItems_internalMutations;
+  "sidebarItems/lifecycleMigration": typeof sidebarItems_lifecycleMigration;
   "sidebarItems/mutations": typeof sidebarItems_mutations;
   "sidebarItems/queries": typeof sidebarItems_queries;
   "sidebarItems/schema/anySidebarItemValidator": typeof sidebarItems_schema_anySidebarItemValidator;
@@ -456,9 +434,7 @@ declare const fullApi: ApiFromModules<{
   "sidebarItems/schema/validators": typeof sidebarItems_schema_validators;
   "sidebarItems/triggerTypes": typeof sidebarItems_triggerTypes;
   "sidebarItems/triggers": typeof sidebarItems_triggers;
-  "sidebarItems/types/baseTypes": typeof sidebarItems_types_baseTypes;
   "sidebarItems/types/status": typeof sidebarItems_types_status;
-  "sidebarItems/types/types": typeof sidebarItems_types_types;
   "sidebarItems/validation/access": typeof sidebarItems_validation_access;
   "sidebarItems/validation/name": typeof sidebarItems_validation_name;
   "sidebarItems/validation/orchestration": typeof sidebarItems_validation_orchestration;
@@ -471,7 +447,6 @@ declare const fullApi: ApiFromModules<{
   "sidebarShares/functions/sidebarItemShareMutations": typeof sidebarShares_functions_sidebarItemShareMutations;
   "sidebarShares/mutations": typeof sidebarShares_mutations;
   "sidebarShares/queries": typeof sidebarShares_queries;
-  "sidebarShares/types": typeof sidebarShares_types;
   "storage/functions/commitUpload": typeof storage_functions_commitUpload;
   "storage/functions/getDownloadUrl": typeof storage_functions_getDownloadUrl;
   "storage/functions/getStorageMetadata": typeof storage_functions_getStorageMetadata;
@@ -483,12 +458,12 @@ declare const fullApi: ApiFromModules<{
   "userPreferences/mutations": typeof userPreferences_mutations;
   "userPreferences/queries": typeof userPreferences_queries;
   "userPreferences/types": typeof userPreferences_types;
+  "users/authTypes": typeof users_authTypes;
   "users/constants": typeof users_constants;
   "users/functions/checkUsernameExists": typeof users_functions_checkUsernameExists;
   "users/functions/getUserProfile": typeof users_functions_getUserProfile;
   "users/mutations": typeof users_mutations;
   "users/queries": typeof users_queries;
-  "users/types": typeof users_types;
   "users/validation": typeof users_validation;
   "yjsSync/_yjsNode": typeof yjsSync__yjsNode;
   "yjsSync/constants": typeof yjsSync_constants;
@@ -497,7 +472,6 @@ declare const fullApi: ApiFromModules<{
   "yjsSync/functions/createYjsDocument": typeof yjsSync_functions_createYjsDocument;
   "yjsSync/functions/deleteYjsDocument": typeof yjsSync_functions_deleteYjsDocument;
   "yjsSync/functions/rollbackYjsDocument": typeof yjsSync_functions_rollbackYjsDocument;
-  "yjsSync/functions/types": typeof yjsSync_functions_types;
   "yjsSync/functions/uint8ToArrayBuffer": typeof yjsSync_functions_uint8ToArrayBuffer;
   "yjsSync/internalActions": typeof yjsSync_internalActions;
   "yjsSync/internalMutations": typeof yjsSync_internalMutations;

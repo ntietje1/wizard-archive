@@ -1,9 +1,9 @@
-import type { SIDEBAR_ITEM_TYPES } from '../../shared/sidebar-items/types'
+import type { SIDEBAR_ITEM_TYPES } from '../sidebar-items/types'
 import type {
   SidebarItem,
   SidebarItemFromDb,
   SidebarItemWithContent,
-} from '../sidebarItems/types/baseTypes'
+} from '../sidebar-items/model-types'
 
 export type FolderFromDb = SidebarItemFromDb<typeof SIDEBAR_ITEM_TYPES.folders> & {
   inheritShares: boolean

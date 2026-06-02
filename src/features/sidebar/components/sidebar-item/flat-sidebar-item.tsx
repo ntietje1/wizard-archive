@@ -1,6 +1,6 @@
 import { SidebarItemButtonBase } from './sidebar-item-button-base'
 import { DraggableSidebarItem } from './draggable-sidebar-item'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import type { Id } from 'convex/_generated/dataModel'
 import { useEditFileSystemItem } from '~/features/filesystem/useEditFileSystemItem'
 import { useFolderState } from '~/features/sidebar/hooks/useFolderState'

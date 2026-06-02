@@ -1,4 +1,5 @@
-import type { SidebarItemId, UserProfileId, SidebarItemPatchRow } from './types'
+import type { SidebarItemId, UserProfileId } from '../../common/ids'
+import type { SidebarItemPatchRow } from './types'
 import { SIDEBAR_ITEM_STATUS, SIDEBAR_ITEM_TYPES } from '../types'
 import type { FileSystemPatch } from './receipts'
 import { diffSidebarItemFields } from './patches'

@@ -5,7 +5,7 @@ import { throwClientError } from '../../errors'
 import { PERMISSION_LEVEL } from '../../../shared/permissions/types'
 import type { CampaignMutationCtx } from '../../functions'
 import type { Id } from '../../_generated/dataModel'
-import type { GameMapFromDb, MapPin } from '../types'
+import type { GameMapFromDb, MapPin } from '../../../shared/game-maps/types'
 
 export async function requirePinAccess(
   ctx: CampaignMutationCtx,

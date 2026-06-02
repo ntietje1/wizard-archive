@@ -1,4 +1,4 @@
-import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../campaigns/types'
+import { CAMPAIGN_MEMBER_ROLE, CAMPAIGN_MEMBER_STATUS } from '../../shared/campaigns/types'
 import type { SidebarItemColor } from '../../shared/sidebar-items/color'
 import type { SidebarItemIconName } from '../../shared/sidebar-items/icon'
 import {

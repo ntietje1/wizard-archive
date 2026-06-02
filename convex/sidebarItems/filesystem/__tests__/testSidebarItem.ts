@@ -6,7 +6,7 @@ import {
 } from '../../../../shared/sidebar-items/types'
 import { slugify } from '../../../../shared/slugs'
 import type { Id } from '../../../_generated/dataModel'
-import type { AnySidebarItem } from '../../types/types'
+import type { AnySidebarItem } from '../../../../shared/sidebar-items/model-types'
 
 function assertNeverSidebarItemType(type: never): never {
   throw new Error(`Unhandled sidebar item type: ${String(type)}`)

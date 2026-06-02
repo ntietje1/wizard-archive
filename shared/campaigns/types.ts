@@ -1,6 +1,5 @@
-import type { Id } from '../_generated/dataModel'
-import type { ConvexValidatorFields } from '../common/types'
-import type { CampaignSlug } from '../../shared/campaigns/validation'
+import type { CampaignId, CampaignMemberId, SessionId, UserProfileId } from '../common/ids'
+import type { CampaignSlug } from './validation'
 import type { UserProfile } from '../users/types'
 
 export const CAMPAIGN_STATUS = {
@@ -9,7 +8,7 @@ export const CAMPAIGN_STATUS = {
   Deleted: 'Deleted',
 } as const
 
-export type CampaignStatus = (typeof CAMPAIGN_STATUS)[keyof typeof CAMPAIGN_STATUS]
+type CampaignStatus = (typeof CAMPAIGN_STATUS)[keyof typeof CAMPAIGN_STATUS]
 
 export const CAMPAIGN_MEMBER_ROLE = {
   DM: 'DM',
@@ -28,13 +27,15 @@ export const CAMPAIGN_MEMBER_STATUS = {
 export type CampaignMemberStatus =
   (typeof CAMPAIGN_MEMBER_STATUS)[keyof typeof CAMPAIGN_MEMBER_STATUS]
 
-export type CampaignFromDb = ConvexValidatorFields<'campaigns'> & {
-  dmUserId: Id<'userProfiles'>
+export type CampaignFromDb = {
+  _id: CampaignId
+  _creationTime: number
+  dmUserId: UserProfileId
   name: string
   description: string
   slug: CampaignSlug
   status: CampaignStatus
-  currentSessionId: Id<'sessions'> | null
+  currentSessionId: SessionId | null
 }
 
 export type Campaign = CampaignFromDb & {
@@ -43,9 +44,11 @@ export type Campaign = CampaignFromDb & {
   playerCount: number
 }
 
-export type CampaignMemberFromDb = ConvexValidatorFields<'campaignMembers'> & {
-  userId: Id<'userProfiles'>
-  campaignId: Id<'campaigns'>
+export type CampaignMemberFromDb = {
+  _id: CampaignMemberId
+  _creationTime: number
+  userId: UserProfileId
+  campaignId: CampaignId
   role: CampaignMemberRole
   status: CampaignMemberStatus
 }

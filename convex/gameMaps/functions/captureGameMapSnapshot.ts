@@ -1,10 +1,10 @@
 import { asyncMap } from 'convex-helpers'
-import { GAME_MAP_SNAPSHOT_TYPE } from '../types'
+import { GAME_MAP_SNAPSHOT_TYPE } from '../../../shared/game-maps/types'
 import { SIDEBAR_ITEM_TYPES } from '../../../shared/sidebar-items/types'
 import { uint8ToArrayBuffer } from '../../yjsSync/functions/uint8ToArrayBuffer'
 import { createSnapshot } from '../../documentSnapshots/functions/createSnapshot'
 import { logger } from '../../common/logger'
-import type { GameMapSnapshotData } from '../types'
+import type { GameMapSnapshotData } from '../../../shared/game-maps/types'
 import type { MutationCtx } from '../../_generated/server'
 import type { Id } from '../../_generated/dataModel'
 

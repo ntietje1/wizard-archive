@@ -5,7 +5,7 @@ import { hasAtLeastPermissionLevel } from 'shared/permissions/hasAtLeastPermissi
 import { useCanvasToolStore } from '../../stores/canvas-tool-store'
 import type { CanvasDocumentEdge, CanvasDocumentNode } from '~/features/canvas/domain/validation'
 import type * as Y from 'yjs'
-import type { CanvasWithContent } from 'convex/canvases/types'
+import type { CanvasWithContent } from 'shared/canvases/types'
 import { useConvexYjsCollaboration } from '~/features/editor/hooks/useConvexYjsCollaboration'
 import { useResolvedTheme } from '~/features/settings/hooks/useTheme'
 import { useAuthQuery } from '~/shared/hooks/useAuthQuery'

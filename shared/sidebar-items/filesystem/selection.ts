@@ -1,4 +1,5 @@
-import type { SidebarItemId, AnySidebarItemRow } from './types'
+import type { SidebarItemId } from '../../common/ids'
+import type { FileSystemSidebarItemRow } from './types'
 
 const MAX_OPERATION_DEPTH = 50
 type SidebarItemTreeNode = {
@@ -23,7 +24,7 @@ export function normalizeSelectedRoots<T extends SidebarItemTreeNode>(
 }
 
 export type OperationPlannerItem = Pick<
-  AnySidebarItemRow,
+  FileSystemSidebarItemRow,
   '_id' | 'parentId' | 'name' | 'type' | 'status'
 >
 

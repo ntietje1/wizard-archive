@@ -4,7 +4,7 @@ import type { SidebarItemType } from './types'
 import { assertSidebarItemName, SIDEBAR_ITEM_NAME_MAX_LENGTH } from './name'
 import type { SidebarItemName } from './name'
 
-export const defaultNameMap: Record<SidebarItemType, SidebarItemName> = {
+const defaultNameMap: Record<SidebarItemType, SidebarItemName> = {
   [SIDEBAR_ITEM_TYPES.folders]: assertSidebarItemName('Untitled Folder'),
   [SIDEBAR_ITEM_TYPES.notes]: assertSidebarItemName('Untitled Note'),
   [SIDEBAR_ITEM_TYPES.gameMaps]: assertSidebarItemName('Untitled Map'),

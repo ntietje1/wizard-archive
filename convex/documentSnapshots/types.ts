@@ -1,8 +1,6 @@
 import type { Id } from '../_generated/dataModel'
 import type { SidebarItemType } from '../../shared/sidebar-items/types'
-import type { SNAPSHOT_TYPE } from './schema'
-
-export type SnapshotType = (typeof SNAPSHOT_TYPE)[keyof typeof SNAPSHOT_TYPE]
+import type { SnapshotType } from '../../shared/document-snapshots/types'
 
 export type DocumentSnapshot = {
   _id: Id<'documentSnapshots'>

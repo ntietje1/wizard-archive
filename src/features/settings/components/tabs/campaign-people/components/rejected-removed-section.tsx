@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { ChevronDown, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
-import { CAMPAIGN_MEMBER_STATUS } from '~/features/campaigns/campaign-types'
+import { CAMPAIGN_MEMBER_STATUS } from 'shared/campaigns/types'
 import { api } from 'convex/_generated/api'
 import { MemberRow } from './member-row'
-import type { CampaignMember } from 'convex/campaigns/types'
+import type { CampaignMember } from 'shared/campaigns/types'
 import type { Id } from 'convex/_generated/dataModel'
 import { useAppMutation } from '~/shared/hooks/useAppMutation'
 import { handleError } from '~/shared/utils/logger'
@@ -44,6 +44,7 @@ export function RejectedRemovedSection({
   return (
     <div className="flex flex-col gap-0">
       <button
+        type="button"
         className="flex items-center gap-1 text-sm font-medium text-muted-foreground mb-3"
         onClick={() => setShowRejected((s) => !s)}
       >

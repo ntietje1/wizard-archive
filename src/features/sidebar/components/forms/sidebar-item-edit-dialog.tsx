@@ -8,7 +8,7 @@ import { FileEdit, Loader } from 'lucide-react'
 import { getTypeName } from '../../utils/sidebar-item-utils'
 import { IconPicker } from './icon-picker'
 import { ColorPicker } from './color-picker'
-import type { AnySidebarItem } from 'convex/sidebarItems/types/types'
+import type { AnySidebarItem } from 'shared/sidebar-items/model-types'
 import { handleError } from '~/shared/utils/logger'
 import { FormDialog } from '~/shared/components/form-dialog'
 import { useNameValidation } from '~/shared/hooks/useNameValidation'
@@ -97,14 +97,7 @@ export function SidebarItemEditDialog({ item, isOpen, onClose }: SidebarItemEdit
       description={`Update ${typeName.toLowerCase()} appearance and settings`}
       icon={FileEdit}
     >
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          void form.handleSubmit()
-        }}
-        className="space-y-4"
-      >
+      <form action={() => void form.handleSubmit()} className="space-y-4">
         {/* Name Field */}
         <form.Field
           name="name"

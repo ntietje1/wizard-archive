@@ -1,11 +1,11 @@
 import type {
   FileSystemTransactionId,
   SidebarItemId,
-  SidebarItemPatchRow,
   StorageId,
   UserProfileId,
-} from './types'
+} from '../../common/ids'
 import type { FileSystemCommand } from './commands'
+import type { SidebarItemPatchRow } from './types'
 import type { SidebarItemStatus } from '../types'
 
 export const FILE_SYSTEM_EVENT_TYPE = {
@@ -153,7 +153,7 @@ export function fileSystemSelfEvents(
   return itemIds.map((itemId) => ({ type, itemId }))
 }
 
-export function summarizeFileSystemEvents(
+function summarizeFileSystemEvents(
   kind: FileSystemMessageKind,
   events: Array<FileSystemEvent>,
 ): FileSystemReceiptMessage {
@@ -188,7 +188,7 @@ export function summarizeFileSystemEvents(
   }
 }
 
-export function messageKindForFileSystemCommand(
+function messageKindForFileSystemCommand(
   command: FileSystemCommand,
   events: Array<FileSystemEvent>,
 ): FileSystemMessageKind {
